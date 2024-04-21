@@ -1867,7 +1867,7 @@ func TestSignUpViaOAuthWithMissingNickname(t *testing.T) {
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
-	gitlab := addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
+(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
 	// The Goth User returned by the oauth2 integration is missing
@@ -1901,7 +1901,7 @@ func TestSignUpViaOAuthWithMissingUsername(t *testing.T) {
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
-	gitlab := addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
+	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
 	// The Goth User returned by the oauth2 integration is missing
@@ -1933,7 +1933,7 @@ func TestSignUpViaOAuthWithNicknameAsUsername(t *testing.T) {
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
-	gitlab := addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
+	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
 	// The Goth User contains the nickname that'll be used as the Forgejo user's username
@@ -1951,7 +1951,7 @@ func TestSignUpViaOAuthWithNicknameAsUsername(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, test.RedirectURL(resp), "/")
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userGitLabUserID.(int64)})
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: strconv.ParseInt(userGitLabUserID, 10, 64)})
 	assert.Equal(t, userAfterLogin.Name, "nickname")
 }
 
@@ -1969,7 +1969,7 @@ func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
-	gitlab := addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
+	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
 	// The Goth User contains the nickname that'll be used as the Forgejo user's username
@@ -1987,7 +1987,7 @@ func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, test.RedirectURL(resp), "/")
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userGitLabUserID.(int64)})
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: strconv.ParseInt(userGitLabUserID, 10, 64)})
 	assert.Equal(t, userAfterLogin.Name, userGitLabUserID)
 }
 
@@ -2005,7 +2005,7 @@ func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
-	gitlab := addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
+	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
 	// The Goth User contains the nickname that'll be used as the Forgejo user's username
@@ -2023,7 +2023,7 @@ func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, test.RedirectURL(resp), "/")
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userGitLabUserID.(int64)})
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: strconv.ParseInt(userGitLabUserID, 10, 64)})
 	assert.Equal(t, userAfterLogin.Name, userGitLab.Email)
 }
 
@@ -2059,6 +2059,6 @@ func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, test.RedirectURL(resp), "/")
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userGitLabUserID.(int64)})
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: strconv.ParseInt(userGitLabUserID, 10, 64)})
 	assert.Equal(t, userAfterLogin.Name, "preferred_username")
 }
