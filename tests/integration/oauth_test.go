@@ -1887,7 +1887,7 @@ func TestSignUpViaOAuthWithMissingNickname(t *testing.T) {
 			Provider: gitlabName,
 			UserID:   userGitLabUserID,
 			Email:    userGitLab.Email,
-			RawData: map[string]interface{}{
+			RawData: map[string]any{}{
 				"preferred_username": "preferred_username",
 			},
 		}, nil
@@ -1973,7 +1973,7 @@ func TestSignUpViaOAuthWithNicknameAsUsername(t *testing.T) {
 			UserID:   userGitLabUserID,
 			Email:    userGitLab.Email,
 			NickName: "nickname",
-			RawData: map[string]interface{}{
+			RawData: map[string]any{}{
 				"preferred_username": "preferred_username",
 			},
 		}, nil
@@ -2019,7 +2019,7 @@ func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 			UserID:   userGitLabUserID,
 			Email:    userGitLab.Email,
 			NickName: "nickname",
-			RawData: map[string]interface{}{
+			RawData: map[string]any{}{
 				"preferred_username": "preferred_username",
 			},
 		}, nil
@@ -2065,7 +2065,7 @@ func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 			UserID:   userGitLabUserID,
 			Email:    userGitLab.Email,
 			NickName: "nickname",
-			RawData: map[string]interface{}{
+			RawData: map[string]any{}{
 				"preferred_username": "preferred_username",
 			},
 		}, nil
@@ -2111,7 +2111,7 @@ func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 			UserID:   userGitLabUserID,
 			Email:    userGitLab.Email,
 			NickName: "nickname",
-			RawData: map[string]interface{}{
+			RawData: map[string]any{}{
 				"preferred_username": "preferred_username",
 			},
 		}, nil
