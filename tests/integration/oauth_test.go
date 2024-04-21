@@ -1878,8 +1878,8 @@ func TestSignUpViaOAuthWithMissingNickname(t *testing.T) {
 			UserID:   userGitLabUserID,
 			Email:    userGitLab.Email,
 			RawData: map[string]interface{}{
-				preferred_username: "preferred_username"
-			}
+				preferred_username: "preferred_username",
+			},
 		}, nil
 	})()
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
@@ -1911,7 +1911,7 @@ func TestSignUpViaOAuthWithMissingUsername(t *testing.T) {
 			Provider: gitlabName,
 			UserID:   userGitLabUserID,
 			Email:    userGitLab.Email,
-			NickName: "nickname"
+			NickName: "nickname",
 		}, nil
 	})()
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
@@ -1944,8 +1944,8 @@ func TestSignUpViaOAuthWithNicknameAsUsername(t *testing.T) {
 			Email:    userGitLab.Email,
 			NickName: "nickname",
 			RawData: map[string]interface{}{
-				preferred_username: "preferred_username"
-			}
+				preferred_username: "preferred_username",
+			},
 		}, nil
 	})()
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
@@ -1980,8 +1980,8 @@ func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 			Email:    userGitLab.Email,
 			NickName: "nickname",
 			RawData: map[string]interface{}{
-				preferred_username: "preferred_username"
-			}
+				preferred_username: "preferred_username",
+			},
 		}, nil
 	})()
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
@@ -2016,8 +2016,8 @@ func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 			Email:    userGitLab.Email,
 			NickName: "nickname",
 			RawData: map[string]interface{}{
-				preferred_username: "preferred_username"
-			}
+				preferred_username: "preferred_username",
+			},
 		}, nil
 	})()
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
@@ -2052,8 +2052,8 @@ func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 			Email:    userGitLab.Email,
 			NickName: "nickname",
 			RawData: map[string]interface{}{
-				preferred_username: "preferred_username"
-			}
+				preferred_username: "preferred_username",
+			},
 		}, nil
 	})()
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
