@@ -63,6 +63,16 @@
 							<pre class="commit-body tw-hidden">{{RenderCommitBody $.Context .Message ($.Repository.ComposeMetas ctx)}}</pre>
 							{{end}}
 						</td>
+						<td class="text left aligned">
+							{{if $.CommitTagsMap}}
+								{{$tags := index $.CommitTagsMap .ID.String}}
+								{{if $tags}}
+									{{range $tags}}
+										{{- template "repo/tag/name" dict "RepoLink" $.Repository.Link "TagName" .TagName "IsRelease" (not .IsTag) -}}
+									{{end}}
+								{{end}}
+							{{end}}
+						</td>
 						{{if .Committer}}
 							<td class="text right aligned">{{DateUtils.TimeSince .Committer.When}}</td>
 						{{else}}
