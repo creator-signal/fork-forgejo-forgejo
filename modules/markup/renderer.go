@@ -200,8 +200,14 @@ func RegisterRenderer(renderer Renderer) {
 
 // GetRendererByFileName get renderer by filename
 func GetRendererByFileName(filename string) Renderer {
-	extension := strings.ToLower(filepath.Ext(filename))
-	return extRenderers[extension]
+	segments := strings.Split(filepath.Base(filename), ".")
+	for i, _ := range segments[1:] {
+		extension := strings.ToLower("." + strings.Join(segments[1+i:], "."))
+		if renderer, ok := extRenderers[extension]; ok {
+			return renderer
+		}
+	}
+	return nil
 }
 
 // GetRendererByType returns a renderer according type
@@ -365,8 +371,7 @@ func (err ErrUnsupportedRenderExtension) Error() string {
 }
 
 func renderFile(ctx *RenderContext, input io.Reader, output io.Writer) error {
-	extension := strings.ToLower(filepath.Ext(ctx.RelativePath))
-	if renderer, ok := extRenderers[extension]; ok {
+	if renderer := GetRendererByFileName(ctx.RelativePath); renderer != nil {
 		if r, ok := renderer.(ExternalRenderer); ok && r.DisplayInIFrame() {
 			if !ctx.InStandalonePage {
 				// for an external render, it could only output its content in a standalone page
@@ -376,7 +381,7 @@ func renderFile(ctx *RenderContext, input io.Reader, output io.Writer) error {
 		}
 		return render(ctx, renderer, input, output)
 	}
-	return ErrUnsupportedRenderExtension{extension}
+	return ErrUnsupportedRenderExtension{ctx.RelativePath[strings.Index(ctx.RelativePath, "."):]}
 }
 
 // Type returns if markup format via the filename
