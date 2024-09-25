@@ -5,7 +5,6 @@
 package setting
 
 import (
-	"encoding/base64"
 	"net"
 	"net/url"
 	"path"
@@ -14,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
 

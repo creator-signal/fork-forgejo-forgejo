@@ -29,8 +29,8 @@ func TestMakeAbsoluteAssetURL(t *testing.T) {
 }
 
 func TestMakeManifestData(t *testing.T) {
-	jsonBytes, err := GetManifestJson()
-	assert.NoError(t, err)
+	jsonBytes, err := GetManifestJSON()
+	require.NoError(t, err)
 	assert.True(t, json.Valid(jsonBytes))
 }
 
