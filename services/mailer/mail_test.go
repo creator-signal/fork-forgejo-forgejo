@@ -24,6 +24,7 @@ import (
 	"forgejo.org/modules/markup"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	sender_service "forgejo.org/services/mailer/sender"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -152,7 +153,7 @@ func TestMailerIssueTemplate(t *testing.T) {
 
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
-	expect := func(t *testing.T, msg *Message, issue *issues_model.Issue, expected ...string) {
+	expect := func(t *testing.T, msg *sender_service.Message, issue *issues_model.Issue, expected ...string) {
 		subject := msg.ToMessage().GetHeader("Subject")
 		msgbuf := new(bytes.Buffer)
 		_, _ = msg.ToMessage().WriteTo(msgbuf)
@@ -164,7 +165,7 @@ func TestMailerIssueTemplate(t *testing.T) {
 		AssertTranslatedLocale(t, wholemsg, "mail.issue")
 	}
 
-	testCompose := func(t *testing.T, ctx *mailCommentContext) *Message {
+	testCompose := func(t *testing.T, ctx *mailCommentContext) *sender_service.Message {
 		t.Helper()
 		recipients := []*user_model.User{{Name: "Test", Email: "test@gitea.com"}}
 
@@ -263,7 +264,7 @@ func TestTemplateSelection(t *testing.T) {
 	template.Must(bodyTemplates.New("pull/comment").Parse("pull/comment/body"))
 	template.Must(bodyTemplates.New("issue/close").Parse("issue/close/body"))
 
-	expect := func(t *testing.T, msg *Message, expSubject, expBody string) {
+	expect := func(t *testing.T, msg *sender_service.Message, expSubject, expBody string) {
 		subject := msg.ToMessage().GetHeader("Subject")
 		msgbuf := new(bytes.Buffer)
 		_, _ = msg.ToMessage().WriteTo(msgbuf)
@@ -349,7 +350,7 @@ func TestTemplateServices(t *testing.T) {
 		"//Re: //")
 }
 
-func testComposeIssueCommentMessage(t *testing.T, ctx *mailCommentContext, recipients []*user_model.User, fromMention bool, info string) *Message {
+func testComposeIssueCommentMessage(t *testing.T, ctx *mailCommentContext, recipients []*user_model.User, fromMention bool, info string) *sender_service.Message {
 	msgs, err := composeIssueCommentMessages(ctx, "en-US", recipients, fromMention, info)
 	require.NoError(t, err)
 	assert.Len(t, msgs, 1)

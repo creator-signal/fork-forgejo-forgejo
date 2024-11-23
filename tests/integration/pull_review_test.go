@@ -36,6 +36,7 @@ import (
 	issue_service "forgejo.org/services/issue"
 	"forgejo.org/services/mailer"
 	pull_service "forgejo.org/services/pull"
+	sender_service "forgejo.org/services/mailer/sender"
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
@@ -698,7 +699,7 @@ func TestPullRequestReplyMail(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(...*sender_service.Message) {
 			called = true
 		})()
 
@@ -726,7 +727,7 @@ func TestPullRequestReplyMail(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			called = true
 		})()
 
@@ -752,7 +753,7 @@ func TestPullRequestReplyMail(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			called := false
-			defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+			defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 				assert.Len(t, msgs, 2)
 				SortMailerMessages(msgs)
 				assert.Equal(t, "user1@example.com", msgs[0].To)
@@ -784,7 +785,7 @@ func TestPullRequestReplyMail(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			called := false
-			defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+			defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 				assert.Len(t, msgs, 2)
 				SortMailerMessages(msgs)
 				assert.Equal(t, "user1@example.com", msgs[0].To)

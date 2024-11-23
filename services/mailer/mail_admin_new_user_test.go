@@ -11,6 +11,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	sender_service "forgejo.org/services/mailer/sender"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +47,7 @@ func TestAdminNotificationMail_test(t *testing.T) {
 		defer test.MockVariableValue(&setting.Admin.SendNotificationEmailOnNewUser, true)()
 
 		called := false
-		defer MockMailSettings(func(msgs ...*Message) {
+		defer MockMailSettings(func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1, "Test provides only one admin user, so only one email must be sent")
 			assert.Equal(t, msgs[0].To, users[0].Email, "checks if the recipient is the admin of the instance")
 			manageUserURL := setting.AppURL + "admin/users/" + strconv.FormatInt(users[1].ID, 10)
@@ -62,7 +63,7 @@ func TestAdminNotificationMail_test(t *testing.T) {
 
 	t.Run("SendNotificationEmailOnNewUser_false", func(t *testing.T) {
 		defer test.MockVariableValue(&setting.Admin.SendNotificationEmailOnNewUser, false)()
-		defer MockMailSettings(func(msgs ...*Message) {
+		defer MockMailSettings(func(msgs ...*sender_service.Message) {
 			assert.Equal(t, 1, 0, "this shouldn't execute. MailNewUser must exit early since SEND_NOTIFICATION_EMAIL_ON_NEW_USER is disabled")
 		})()
 		MailNewUser(ctx, users[1])

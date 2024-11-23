@@ -30,9 +30,8 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/translation"
 	incoming_payload "forgejo.org/services/mailer/incoming/payload"
+	sender_service "forgejo.org/services/mailer/sender"
 	"forgejo.org/services/mailer/token"
-
-	"gopkg.in/gomail.v2"
 )
 
 const (
@@ -66,7 +65,7 @@ func SendTestMail(email string) error {
 		// No mail service configured
 		return nil
 	}
-	return gomail.Send(Sender, NewMessage(email, "Forgejo Test Email!", "Forgejo Test Email!").ToMessage())
+	return sender_service.Send(sender, sender_service.NewMessage(email, "Forgejo Test Email!", "Forgejo Test Email!"))
 }
 
 // sendUserMail sends a mail to the user
@@ -87,7 +86,7 @@ func sendUserMail(language string, u *user_model.User, tpl base.TplName, code, s
 		return err
 	}
 
-	msg := NewMessage(u.EmailTo(), subject, content.String())
+	msg := sender_service.NewMessage(u.EmailTo(), subject, content.String())
 	msg.Info = fmt.Sprintf("UID: %d, %s", u.ID, info)
 
 	SendAsync(msg)
@@ -154,7 +153,7 @@ func SendActivateEmailMail(ctx context.Context, u *user_model.User, email string
 		return err
 	}
 
-	msg := NewMessage(email, locale.TrString("mail.activate_email"), content.String())
+	msg := sender_service.NewMessage(email, locale.TrString("mail.activate_email"), content.String())
 	msg.Info = fmt.Sprintf("UID: %d, activate email", u.ID)
 
 	SendAsync(msg)
@@ -183,7 +182,7 @@ func SendRegisterNotifyMail(u *user_model.User) {
 		return
 	}
 
-	msg := NewMessage(u.EmailTo(), locale.TrString("mail.register_notify", setting.AppName), content.String())
+	msg := sender_service.NewMessage(u.EmailTo(), locale.TrString("mail.register_notify", setting.AppName), content.String())
 	msg.Info = fmt.Sprintf("UID: %d, registration notify", u.ID)
 
 	SendAsync(msg)
@@ -214,13 +213,13 @@ func SendCollaboratorMail(u, doer *user_model.User, repo *repo_model.Repository)
 		return
 	}
 
-	msg := NewMessage(u.EmailTo(), subject, content.String())
+	msg := sender_service.NewMessage(u.EmailTo(), subject, content.String())
 	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.ID)
 
 	SendAsync(msg)
 }
 
-func composeIssueCommentMessages(ctx *mailCommentContext, lang string, recipients []*user_model.User, fromMention bool, info string) ([]*Message, error) {
+func composeIssueCommentMessages(ctx *mailCommentContext, lang string, recipients []*user_model.User, fromMention bool, info string) ([]*sender_service.Message, error) {
 	var (
 		subject string
 		link    string
@@ -339,9 +338,9 @@ func composeIssueCommentMessages(ctx *mailCommentContext, lang string, recipient
 		return nil, err
 	}
 
-	msgs := make([]*Message, 0, len(recipients))
+	msgs := make([]*sender_service.Message, 0, len(recipients))
 	for _, recipient := range recipients {
-		msg := NewMessageFrom(
+		msg := sender_service.NewMessageFrom(
 			recipient.Email,
 			fromDisplayName(ctx.Doer),
 			setting.MailService.FromEmail,
@@ -417,10 +416,6 @@ func createReference(issue *issues_model.Issue, comment *issues_model.Comment, a
 	}
 
 	return fmt.Sprintf("<%s/%s/%d%s@%s>", issue.Repo.FullName(), path, issue.Index, extra, setting.Domain)
-}
-
-func createMessageIDForRelease(rel *repo_model.Release) string {
-	return fmt.Sprintf("<%s/releases/%d@%s>", rel.Repo.FullName(), rel.ID, setting.Domain)
 }
 
 func generateAdditionalHeaders(ctx *mailCommentContext, reason string, recipient *user_model.User) map[string]string {
@@ -613,7 +608,7 @@ func SendPasswordChange(u *user_model.User) error {
 		return err
 	}
 
-	msg := NewMessage(u.EmailTo(), locale.TrString("mail.password_change.subject"), content.String())
+	msg := sender_service.NewMessage(u.EmailTo(), locale.TrString("mail.password_change.subject"), content.String())
 	msg.Info = fmt.Sprintf("UID: %d, password change notification", u.ID)
 
 	SendAsync(msg)
@@ -643,7 +638,7 @@ func SendPrimaryMailChange(u *user_model.User, oldPrimaryEmail string) error {
 		return err
 	}
 
-	msg := NewMessage(u.EmailTo(oldPrimaryEmail), locale.TrString("mail.primary_mail_change.subject"), content.String())
+	msg := sender_service.NewMessage(u.EmailTo(oldPrimaryEmail), locale.TrString("mail.primary_mail_change.subject"), content.String())
 	msg.Info = fmt.Sprintf("UID: %d, primary email change notification", u.ID)
 
 	SendAsync(msg)
@@ -676,7 +671,7 @@ func SendDisabledTOTP(ctx context.Context, u *user_model.User) error {
 		return err
 	}
 
-	msg := NewMessage(u.EmailTo(), locale.TrString("mail.totp_disabled.subject"), content.String())
+	msg := sender_service.NewMessage(u.EmailTo(), locale.TrString("mail.totp_disabled.subject"), content.String())
 	msg.Info = fmt.Sprintf("UID: %d, 2fa disabled notification", u.ID)
 
 	SendAsync(msg)
@@ -710,7 +705,7 @@ func SendRemovedSecurityKey(ctx context.Context, u *user_model.User, securityKey
 		return err
 	}
 
-	msg := NewMessage(u.EmailTo(), locale.TrString("mail.removed_security_key.subject"), content.String())
+	msg := sender_service.NewMessage(u.EmailTo(), locale.TrString("mail.removed_security_key.subject"), content.String())
 	msg.Info = fmt.Sprintf("UID: %d, security key removed notification", u.ID)
 
 	SendAsync(msg)
@@ -743,7 +738,7 @@ func SendTOTPEnrolled(ctx context.Context, u *user_model.User) error {
 		return err
 	}
 
-	msg := NewMessage(u.EmailTo(), locale.TrString("mail.totp_enrolled.subject"), content.String())
+	msg := sender_service.NewMessage(u.EmailTo(), locale.TrString("mail.totp_enrolled.subject"), content.String())
 	msg.Info = fmt.Sprintf("UID: %d, enrolled into TOTP notification", u.ID)
 
 	SendAsync(msg)

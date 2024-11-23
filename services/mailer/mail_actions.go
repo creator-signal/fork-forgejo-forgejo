@@ -10,6 +10,7 @@ import (
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
+	sender_service "forgejo.org/services/mailer/sender"
 )
 
 const (
@@ -79,7 +80,7 @@ func sendMailActionRun(to *user_model.User, run *actions_model.ActionRun, priorS
 		return err
 	}
 
-	msg := NewMessage(to.EmailTo(), subject, content.String())
+	msg := sender_service.NewMessage(to.EmailTo(), subject, content.String())
 	msg.Info = subject
 	SendAsync(msg)
 

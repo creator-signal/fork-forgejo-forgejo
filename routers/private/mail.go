@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
 	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 )
 
 // SendEmail pushes messages to mail queue
@@ -81,7 +82,7 @@ func SendEmail(ctx *context.PrivateContext) {
 
 func sendEmail(ctx *context.PrivateContext, subject, message string, to []string) {
 	for _, email := range to {
-		msg := mailer.NewMessage(email, subject, message)
+		msg := sender_service.NewMessage(email, subject, message)
 		mailer.SendAsync(msg)
 	}
 

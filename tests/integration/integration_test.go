@@ -43,7 +43,7 @@ import (
 	auth_service "forgejo.org/services/auth"
 	"forgejo.org/services/auth/source/remote"
 	app_context "forgejo.org/services/context"
-	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 	user_service "forgejo.org/services/user"
 	"forgejo.org/tests"
 
@@ -745,8 +745,8 @@ func getHTMLDoc(t testing.TB, session *TestSession, urlStr string, expectedStatu
 	return NewHTMLParser(t, resp.Body)
 }
 
-func SortMailerMessages(msgs []*mailer.Message) {
-	slices.SortFunc(msgs, func(a, b *mailer.Message) int {
+func SortMailerMessages(msgs []*sender_service.Message) {
+	slices.SortFunc(msgs, func(a, b *sender_service.Message) int {
 		return strings.Compare(b.To, a.To)
 	})
 }

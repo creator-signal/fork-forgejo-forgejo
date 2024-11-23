@@ -12,6 +12,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ func TestForgotPassword(t *testing.T) {
 		t.Helper()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user.EmailTo(), msgs[0].To)
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.reset_password"), msgs[0].Subject)

@@ -13,6 +13,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
+	sender_service "forgejo.org/services/mailer/sender"
 )
 
 // SendRepoTransferNotifyMail triggers a notification e-mail when a pending repository transfer was created
@@ -79,7 +80,7 @@ func sendRepoTransferNotifyMailPerLang(lang string, newOwner, doer *user_model.U
 	}
 
 	for _, to := range emailTos {
-		msg := NewMessageFrom(to.EmailTo(), fromDisplayName(doer), setting.MailService.FromEmail, subject, content.String())
+		msg := sender_service.NewMessageFrom(to.EmailTo(), fromDisplayName(doer), setting.MailService.FromEmail, subject, content.String())
 		msg.Info = fmt.Sprintf("UID: %d, repository pending transfer notification", newOwner.ID)
 
 		SendAsync(msg)

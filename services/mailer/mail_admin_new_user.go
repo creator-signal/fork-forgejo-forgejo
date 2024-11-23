@@ -13,6 +13,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/templates"
 	"forgejo.org/modules/translation"
+	sender_service "forgejo.org/services/mailer/sender"
 )
 
 const (
@@ -68,9 +69,9 @@ func mailNewUser(_ context.Context, u *user_model.User, lang string, tos []strin
 		return
 	}
 
-	msgs := make([]*Message, 0, len(tos))
+	msgs := make([]*sender_service.Message, 0, len(tos))
 	for _, to := range tos {
-		msg := NewMessage(to, subject, mailBody.String())
+		msg := sender_service.NewMessage(to, subject, mailBody.String())
 		msg.Info = subject
 		msgs = append(msgs, msg)
 	}

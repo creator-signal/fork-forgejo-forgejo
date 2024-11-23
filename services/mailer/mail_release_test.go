@@ -12,6 +12,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 	release_service "forgejo.org/services/release"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func TestMailNewRelease(t *testing.T) {
 	t.Run("Normal", func(t *testing.T) {
 		called := false
 
-		defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
+		defer mailer.MockMailSettings(func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 2)
 			if user1.EmailTo() == msgs[0].To {
 				assert.Equal(t, user11.EmailTo(), msgs[1].To)
@@ -71,7 +72,7 @@ func TestMailNewRelease(t *testing.T) {
 		})
 		called := false
 
-		defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
+		defer mailer.MockMailSettings(func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user1.EmailTo(), msgs[0].To)
 
@@ -102,7 +103,7 @@ func TestMailNewRelease(t *testing.T) {
 
 		called := false
 
-		defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
+		defer mailer.MockMailSettings(func(msgs ...*sender_service.Message) {
 			called = true
 		})()
 

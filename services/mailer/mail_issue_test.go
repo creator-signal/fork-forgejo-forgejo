@@ -12,6 +12,7 @@ import (
 	user_model "forgejo.org/models/user"
 	issue_service "forgejo.org/services/issue"
 	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func TestCloseIssue(t *testing.T) {
 	defer require.NoError(t, unittest.PrepareTestDatabase())
 
 	called := false
-	defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
+	defer mailer.MockMailSettings(func(msgs ...*sender_service.Message) {
 		require.Len(t, msgs, 3)
 		msg := msgs[0]
 		assert.Equal(t, "Re: [user2/repo1] issue1 (Issue #1)", msg.Subject)
@@ -42,7 +43,7 @@ func TestCloseIssueByCommit(t *testing.T) {
 	defer require.NoError(t, unittest.PrepareTestDatabase())
 
 	called := false
-	defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
+	defer mailer.MockMailSettings(func(msgs ...*sender_service.Message) {
 		require.Len(t, msgs, 3)
 		msg := msgs[0]
 		assert.Equal(t, "Re: [user2/repo1] issue1 (Issue #1)", msg.Subject)

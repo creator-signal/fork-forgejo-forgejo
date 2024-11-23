@@ -19,12 +19,12 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/mailer/incoming"
 	incoming_payload "forgejo.org/services/mailer/incoming/payload"
+	sender_service "forgejo.org/services/mailer/sender"
 	token_service "forgejo.org/services/mailer/token"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/gomail.v2"
 )
 
 func TestIncomingEmail(t *testing.T) {

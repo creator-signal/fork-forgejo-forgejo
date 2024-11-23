@@ -29,6 +29,7 @@ import (
 	"forgejo.org/modules/translation"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
@@ -819,7 +820,7 @@ func TestUserTOTPMail(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user.EmailTo(), msgs[0].To)
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.totp_disabled.subject"), msgs[0].Subject)
@@ -839,7 +840,7 @@ func TestUserTOTPMail(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user.EmailTo(), msgs[0].To)
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.totp_disabled.subject"), msgs[0].Subject)
@@ -867,7 +868,7 @@ func TestUserSecurityKeyMail(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user.EmailTo(), msgs[0].To)
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.removed_security_key.subject"), msgs[0].Subject)
@@ -891,7 +892,7 @@ func TestUserSecurityKeyMail(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user.EmailTo(), msgs[0].To)
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.removed_security_key.subject"), msgs[0].Subject)
@@ -916,7 +917,7 @@ func TestUserSecurityKeyMail(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user.EmailTo(), msgs[0].To)
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.removed_security_key.subject"), msgs[0].Subject)
@@ -949,7 +950,7 @@ func TestUserTOTPEnrolled(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user.EmailTo(), msgs[0].To)
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.totp_enrolled.subject"), msgs[0].Subject)
@@ -967,7 +968,7 @@ func TestUserTOTPEnrolled(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		called := false
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1)
 			assert.Equal(t, user.EmailTo(), msgs[0].To)
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.totp_enrolled.subject"), msgs[0].Subject)
@@ -1119,7 +1120,7 @@ func TestUserActivate(t *testing.T) {
 
 	called := false
 	code := ""
-	defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+	defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 		called = true
 		assert.Len(t, msgs, 1)
 		assert.Equal(t, `"doesnotexist" <doesnotexist@example.com>`, msgs[0].To)
@@ -1186,7 +1187,7 @@ func parseMailHelper(t *testing.T, expectedTo, expectedSubject string) (cleanup 
 	called := false
 	code := ""
 
-	cleanup = test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+	cleanup = test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 		if called {
 			return
 		}

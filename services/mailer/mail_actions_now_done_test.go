@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	sender_service "forgejo.org/services/mailer/sender"
 	notify_service "forgejo.org/services/notify"
 
 	"github.com/stretchr/testify/assert"
@@ -180,7 +181,7 @@ func TestActionRunNowDoneNotificationMail(t *testing.T) {
 		user := getActionsNowDoneTestUser(t, "new_user", "new_user@example.com", "enabled")
 		defer CleanUpUsers(ctx, []*user_model.User{user})
 		assignUsers(user, user)
-		defer MockMailSettings(func(msgs ...*Message) {
+		defer MockMailSettings(func(msgs ...*sender_service.Message) {
 			assert.Fail(t, "no mail should be sent")
 		})()
 		notify_service.ActionRunNowDone(ctx, run2, actions_model.StatusRunning, nil)
@@ -190,7 +191,7 @@ func TestActionRunNowDoneNotificationMail(t *testing.T) {
 		user := getActionsNowDoneTestUser(t, "new_user1", "new_user1@example.com", "enabled")
 		defer CleanUpUsers(ctx, []*user_model.User{user})
 		assignUsers(user, user)
-		defer MockMailSettings(func(msgs ...*Message) {
+		defer MockMailSettings(func(msgs ...*sender_service.Message) {
 			assert.Fail(t, "no mail should be sent")
 		})()
 		run2.NotifyEmail = false
@@ -266,7 +267,7 @@ func TestActionRunNowDoneNotificationMail(t *testing.T) {
 
 			t.Run("SendNotificationEmailOnActionRunFailed", func(t *testing.T) {
 				mailSent := false
-				defer MockMailSettings(func(msgs ...*Message) {
+				defer MockMailSettings(func(msgs ...*sender_service.Message) {
 					assert.Len(t, msgs, 1)
 					msg := msgs[0]
 					assert.False(t, mailSent, "sent mail twice")
@@ -294,7 +295,7 @@ func TestActionRunNowDoneNotificationMail(t *testing.T) {
 
 			t.Run("SendNotificationEmailOnActionRunRecovered", func(t *testing.T) {
 				mailSent := false
-				defer MockMailSettings(func(msgs ...*Message) {
+				defer MockMailSettings(func(msgs ...*sender_service.Message) {
 					assert.Len(t, msgs, 1)
 					msg := msgs[0]
 					assert.False(t, mailSent, "sent mail twice")

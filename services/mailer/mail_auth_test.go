@@ -13,6 +13,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
 	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 	user_service "forgejo.org/services/user"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ func TestPasswordChangeMail(t *testing.T) {
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	called := false
-	defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
+	defer mailer.MockMailSettings(func(msgs ...*sender_service.Message) {
 		assert.Len(t, msgs, 1)
 		assert.Equal(t, user.EmailTo(), msgs[0].To)
 		assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.password_change.subject"), msgs[0].Subject)
@@ -44,7 +45,7 @@ func TestPrimaryMailChange(t *testing.T) {
 	secondEmail := unittest.AssertExistsAndLoadBean(t, &user_model.EmailAddress{ID: 35, UID: user.ID}, "is_primary = false")
 
 	called := false
-	defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
+	defer mailer.MockMailSettings(func(msgs ...*sender_service.Message) {
 		assert.False(t, called)
 		assert.Len(t, msgs, 1)
 		assert.Equal(t, user.EmailTo(firstEmail.Email), msgs[0].To)

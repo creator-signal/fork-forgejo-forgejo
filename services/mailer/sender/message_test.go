@@ -1,7 +1,7 @@
-// Copyright 2021 The Gogs Authors. All rights reserved.
+// Copyright 2024 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package mailer
+package sender
 
 import (
 	"strings"
@@ -49,7 +49,7 @@ func TestGenerateMessageIDForRelease(t *testing.T) {
 			Name:      "tag-test",
 		},
 	}
-	m := createMessageIDForRelease(&rel)
+	m := CreateMessageIDForRelease(&rel)
 	assert.Equal(t, "<test/tag-test/releases/42@localhost>", m)
 }
 

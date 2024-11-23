@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/templates"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
+	sender_service "forgejo.org/services/mailer/sender"
 
 	_ "forgejo.org/modules/testimport"
 
@@ -32,7 +33,7 @@ func AssertTranslatedLocale(t *testing.T, message string, prefixes ...string) {
 	}
 }
 
-func MockMailSettings(send func(msgs ...*Message)) func() {
+func MockMailSettings(send func(msgs ...*sender_service.Message)) func() {
 	translation.InitLocales(context.Background())
 	subjectTemplates, bodyTemplates = templates.Mailer(context.Background())
 	mailService := setting.Mailer{
