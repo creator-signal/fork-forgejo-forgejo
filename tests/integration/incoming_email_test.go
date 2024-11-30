@@ -281,11 +281,11 @@ func TestIncomingEmail(t *testing.T) {
 			token, err := token_service.CreateToken(token_service.ReplyHandlerType, user, payload)
 			require.NoError(t, err)
 
-			msg := gomail.NewMessage()
-			msg.SetHeader("To", strings.Replace(setting.IncomingEmail.ReplyToAddress, setting.IncomingEmail.TokenPlaceholder, token, 1))
-			msg.SetHeader("From", user.Email)
-			msg.SetBody("text/plain", token)
-			err = gomail.Send(&smtpTestSender{}, msg)
+			msg := sender_service.NewMessageFrom(
+				strings.Replace(setting.IncomingEmail.ReplyToAddress,
+					setting.IncomingEmail.TokenPlaceholder, token, 1),
+				user.Name, user.Email, "This is a test email", token)
+			err = sender_service.Send(&smtpTestSender{}, msg)
 			require.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
