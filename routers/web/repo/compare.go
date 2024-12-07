@@ -358,7 +358,7 @@ func ParseCompareInfo(ctx *context.Context) *common.CompareInfo {
 	// "OwnForkRepo"
 	var ownForkRepo *repo_model.Repository
 	if ctx.Doer != nil && baseRepo.OwnerID != ctx.Doer.ID {
-		repo := repo_model.GetForkedRepo(ctx, ctx.Doer.ID, baseRepo.ID)
+		repo, _ := repo_model.GetUserForkLax(ctx, baseRepo, ctx.Doer.ID)
 		if repo != nil {
 			ownForkRepo = repo
 			ctx.Data["OwnForkRepo"] = ownForkRepo
