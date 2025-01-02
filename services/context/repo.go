@@ -37,6 +37,7 @@ import (
 	"forgejo.org/modules/util"
 	asymkey_service "forgejo.org/services/asymkey"
 	redirect_service "forgejo.org/services/redirect"
+	funding_service "forgejo.org/services/funding"
 
 	"github.com/editorconfig/editorconfig-core-go/v2"
 )
@@ -719,6 +720,8 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 		ctx.Data["BranchName"] = ctx.Repo.Repository.DefaultBranch
 		return cancel
 	}
+
+	ctx.Data["Funding"], _ = funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
 
 	branchOpts := git_model.FindBranchOptions{
 		RepoID:          ctx.Repo.Repository.ID,

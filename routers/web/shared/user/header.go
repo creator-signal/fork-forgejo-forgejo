@@ -24,6 +24,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/routers/web/repo"
 	"forgejo.org/services/context"
+	funding_service "forgejo.org/services/funding"
 )
 
 // prepareContextForCommonProfile store some common data into context data for user's profile related pages (including the nav menu)
@@ -94,7 +95,7 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 	}
 }
 
-func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, profileClose func()) {
+func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, funding []*api.RepoFundingEntry, profileClose func()) {
 	profileDbRepo, err := repo_model.GetRepositoryByName(ctx, ctx.ContextUser.ID, ".profile")
 	if err == nil {
 		// Don't show profile content if .profile repository is a fork or private
@@ -125,13 +126,15 @@ func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profile
 							}
 						}
 					}
+					profileReadmeBlob, _ = commit.GetBlobByFoldedPath("README.md")
+					funding, _ = funding_service.GetFundingFromCommit(profileDbRepo, commit)
 				}
 			}
 		}
 	} else if !repo_model.IsErrRepoNotExist(err) {
 		log.Error("FindUserProfileReadme failed to GetRepositoryByName: %v", err)
 	}
-	return profileDbRepo, profileGitRepo, profileReadmeBlob, func() {
+	return profileDbRepo, profileGitRepo, profileReadmeBlob, funding, func() {
 		if profileGitRepo != nil {
 			_ = profileGitRepo.Close()
 		}
@@ -141,9 +144,12 @@ func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profile
 func RenderUserHeader(ctx *context.Context) {
 	prepareContextForCommonProfile(ctx)
 
-	_, _, profileReadmeBlob, profileClose := FindUserProfileReadme(ctx, ctx.Doer)
+	_, _, profileReadmeBlob, funding, profileClose := FindUserProfile(ctx, ctx.Doer)
 	defer profileClose()
 	ctx.Data["HasProfileReadme"] = profileReadmeBlob != nil
+
+	ctx.Data["Funding"] = funding
+	ctx.Data["FundingName"] = ctx.ContextUser.Name
 }
 
 func LoadHeaderCount(ctx *context.Context) error {

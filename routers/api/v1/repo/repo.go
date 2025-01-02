@@ -35,6 +35,7 @@ import (
 	actions_service "forgejo.org/services/actions"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
+	funding_service "forgejo.org/services/funding"
 	"forgejo.org/services/issue"
 	repo_service "forgejo.org/services/repository"
 	wiki_service "forgejo.org/services/wiki"
@@ -1352,15 +1353,15 @@ func ValidateIssueConfig(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/RepoIssueConfigValidation"
+	//     "$ref": "#/responses/ConfigValidation"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	_, err := issue.GetTemplateConfigFromDefaultBranch(ctx.Repo().Repository, ctx.Repo().GitRepo)
 
 	if err == nil {
-		ctx.JSON(http.StatusOK, api.IssueConfigValidation{Valid: true, Message: ""})
+		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: true, Message: ""})
 	} else {
-		ctx.JSON(http.StatusOK, api.IssueConfigValidation{Valid: false, Message: err.Error()})
+		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: false, Message: err.Error()})
 	}
 }
 
@@ -1419,4 +1420,68 @@ func ListRepoActivityFeeds(ctx *context.APIContext) {
 	ctx.SetTotalCountHeader(count)
 
 	ctx.JSON(http.StatusOK, convert.ToActivities(ctx, feeds, ctx.Doer()))
+}
+
+// GetFunding returns the funding for a repo
+func GetFunding(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/funding repository repoGetFunding
+	// ---
+	// summary: Returns the funding for a repo
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/RepoFunding"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	funding, _ := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+
+	if funding != nil {
+		ctx.JSON(http.StatusOK, funding)
+	} else {
+		ctx.JSON(http.StatusOK, make([]*api.RepoFundingEntry, 0))
+	}
+}
+
+// ValidateFunding returns the validation information for a funding config
+func ValidateFunding(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/funding/validate repository repoValidateFunding
+	// ---
+	// summary: Returns the validation information for a funding config
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/ConfigValidation"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	_, err := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+
+	if err == nil {
+		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: true, Message: ""})
+	} else {
+		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: false, Message: err.Error()})
+	}
 }
