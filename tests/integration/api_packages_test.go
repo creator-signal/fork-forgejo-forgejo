@@ -804,3 +804,77 @@ func TestPackageWithTwoFactor(t *testing.T) {
 		})
 	})
 }
+
+func TestPackageOverwrite(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	t.Run("Default behavior", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Upload a generic package
+		data1 := util.CryptoRandomBytes(5)
+		url := fmt.Sprintf("/api/packages/%s/generic/overwrite-test/1.1.1/file.bin", user.Name)
+		req := NewRequestWithBody(t, "PUT", url, bytes.NewReader(data1)).
+			AddBasicAuth(user.Name)
+		MakeRequest(t, req, http.StatusCreated)
+
+		getURL := fmt.Sprintf("/api/v1/packages/%s/generic/overwrite-test/1.1.1", user.Name)
+		req = NewRequest(t, "GET", getURL).
+			AddBasicAuth(user.Name)
+		MakeRequest(t, req, http.StatusOK)
+
+		// Upload new data to the same location - this should fail.
+		data2 := util.CryptoRandomBytes(5)
+		req = NewRequestWithBody(t, "PUT", url, bytes.NewReader(data2)).
+			AddBasicAuth(user.Name)
+		MakeRequest(t, req, http.StatusConflict)
+	})
+
+	t.Run("Allow overwrite", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Packages.AllowOverwrite, true)()
+
+		// Upload a generic package
+		data1 := util.CryptoRandomBytes(5)
+		url := fmt.Sprintf("/api/packages/%s/generic/overwrite-test/1.1.1/file.bin", user.Name)
+		req := NewRequestWithBody(t, "PUT", url, bytes.NewReader(data1)).
+			AddBasicAuth(user.Name)
+		MakeRequest(t, req, http.StatusCreated)
+
+		getURL := fmt.Sprintf("/api/v1/packages/%s/generic/overwrite-test/1.1.1", user.Name)
+		req = NewRequest(t, "GET", getURL).
+			AddBasicAuth(user.Name)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		var p1 *api.Package
+		DecodeJSON(t, resp, &p1)
+		origUpdatedAt := p1.CreatedAt
+
+		// Sleep a couple of seconds to let the package creation time update show up
+		time.Sleep(2 * time.Second)
+
+		// Upload new data to the same location - this should work
+		data2 := util.CryptoRandomBytes(5)
+		req = NewRequestWithBody(t, "PUT", url, bytes.NewReader(data2)).
+			AddBasicAuth(user.Name)
+		MakeRequest(t, req, http.StatusCreated)
+
+		// Check to see that the package version creation time has been updated
+		req = NewRequest(t, "GET", getURL).
+			AddBasicAuth(user.Name)
+		resp = MakeRequest(t, req, http.StatusOK)
+		var p *api.Package
+		DecodeJSON(t, resp, &p)
+		newUpdatedAt := p.CreatedAt
+		assert.Greater(t, newUpdatedAt, origUpdatedAt)
+
+		// Check to see that we do indeed download the updated version
+		rawURL := fmt.Sprintf("/api/packages/%s/generic/overwrite-test/1.1.1/file.bin", user.Name)
+		req = NewRequest(t, "GET", rawURL).
+			AddBasicAuth(user.Name)
+		resp = MakeRequest(t, req, http.StatusOK)
+		assert.True(t, bytes.Equal(data2, resp.Body.Bytes()))
+	})
+}

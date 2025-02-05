@@ -22,6 +22,7 @@ import (
 	packages_module "forgejo.org/modules/packages"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
+	"forgejo.org/modules/timeutil"
 	notify_service "forgejo.org/services/notify"
 )
 
@@ -280,7 +281,8 @@ func addFileToPackageVersionUnchecked(ctx context.Context, pv *packages_model.Pa
 		}
 	}
 
-	if pfci.OverwriteExisting {
+	overwritten := false
+	if pfci.OverwriteExisting || setting.Packages.AllowOverwrite {
 		pf, err := packages_model.GetFileForVersionByName(ctx, pv.ID, pfci.Filename, pfci.CompositeKey)
 		if err != nil && err != packages_model.ErrPackageFileNotExist {
 			return nil, pb, !exists, err
@@ -297,6 +299,7 @@ func addFileToPackageVersionUnchecked(ctx context.Context, pv *packages_model.Pa
 			if err := packages_model.DeleteFileByID(ctx, pf.ID); err != nil {
 				return nil, pb, !exists, err
 			}
+			overwritten = true
 		}
 	}
 
@@ -319,6 +322,16 @@ func addFileToPackageVersionUnchecked(ctx context.Context, pv *packages_model.Pa
 		if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypeFile, pf.ID, name, value); err != nil {
 			log.Error("Error setting package file property: %v", err)
 			return pf, pb, !exists, err
+		}
+	}
+
+	if overwritten {
+		e := db.GetEngine(ctx)
+		updateMap := map[string]any{
+			"created_unix": timeutil.TimeStampNow(),
+		}
+		if _, err = e.Table(new(packages_model.PackageVersion)).ID(pv.ID).Update(updateMap); err != nil {
+			return nil, pb, !exists, err
 		}
 	}
 
