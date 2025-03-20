@@ -25,7 +25,7 @@ func TestSettingF3(t *testing.T) {
 	t.Run("enabled", func(t *testing.T) {
 		restore()
 		cfg, err := NewConfigProviderFromData(`
-[F3]
+[f3]
 ENABLED = true
 `)
 		require.NoError(t, err)
@@ -37,7 +37,7 @@ ENABLED = true
 	t.Run("disabled by default", func(t *testing.T) {
 		restore()
 		cfg, err := NewConfigProviderFromData(`
-[F3]
+[f3]
 `)
 		require.NoError(t, err)
 		loadF3From(cfg)
@@ -47,7 +47,7 @@ ENABLED = true
 	t.Run("default f3 path", func(t *testing.T) {
 		restore()
 		cfg, err := NewConfigProviderFromData(`
-[F3]
+[f3]
 ENABLED = true
 `)
 		require.NoError(t, err)
@@ -61,7 +61,7 @@ ENABLED = true
 		restore()
 		other := t.TempDir()
 		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
-[F3]
+[f3]
 ENABLED = true
 PATH = %[1]s
 `, other))
