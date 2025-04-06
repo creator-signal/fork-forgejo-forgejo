@@ -23,6 +23,7 @@ import (
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/routers/web/repo"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/services/context"
 	funding_service "forgejo.org/services/funding"
 )

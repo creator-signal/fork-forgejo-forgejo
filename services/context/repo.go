@@ -722,6 +722,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	}
 
 	ctx.Data["Funding"], _ = funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+	ctx.Data["FundingName"] = ctx.Repo.Repository.OwnerName
 
 	branchOpts := git_model.FindBranchOptions{
 		RepoID:          ctx.Repo.Repository.ID,
