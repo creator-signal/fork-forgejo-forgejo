@@ -536,7 +536,7 @@ export default {
         <button class="ui basic small compact button primary" @click="approveRun()" v-if="canApprove">
           {{ locale.approve }}
         </button>
-        <button class="ui basic small compact button red" @click="cancelRun()" v-else-if="canCancel">
+        <button class="ui basic small compact button danger" @click="cancelRun()" v-else-if="run.canCancel">
           {{ locale.cancel }}
         </button>
         <button class="ui basic small compact button tw-mr-0 tw-whitespace-nowrap link-action" :data-url="`${run.link}/rerun`" v-else-if="canRerun">
