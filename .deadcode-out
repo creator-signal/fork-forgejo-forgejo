@@ -156,6 +156,10 @@ forgejo.org/modules/markup/mdstripper
 forgejo.org/modules/markup/orgmode
 	RenderString
 
+forgejo.org/modules/packages/opentofu/state
+	ParseMetadataFromStateFile
+	isEncryptedPayload
+
 forgejo.org/modules/process
 	Manager.ExecTimeout
 
