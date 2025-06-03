@@ -108,7 +108,6 @@ func Test_LikeUnmarshalJSON(t *testing.T) {
 
 func Test_ForgeLikeValidation(t *testing.T) {
 	// Successful
-
 	sut := new(ForgeLike)
 	sut.UnmarshalJSON([]byte(`{"type":"Like",
 	"actor":"https://repo.prod.meissa.de/api/activitypub/user-id/1",
@@ -118,36 +117,38 @@ func Test_ForgeLikeValidation(t *testing.T) {
 	assert.True(t, valid, "sut expected to be valid: %v\n", sut.Validate())
 
 	// Errors
-
 	sut.UnmarshalJSON([]byte(`{"actor":"https://repo.prod.meissa.de/api/activitypub/user-id/1",
 	"object":"https://codeberg.org/api/activitypub/repository-id/1",
 	"startTime": "2014-12-31T23:00:00-08:00"}`))
-	if err := validateAndCheckError(sut, "type should not be empty"); err != nil {
-		assert.Empty(t, err, "type should not be empty")
-	}
+	validate := sut.Validate()
+	assert.Len(t, validate, 2)
+	assert.Equal(t,
+		"Field type contains the value , which is not in allowed subset [Like]",
+		validate[1])
 
 	sut.UnmarshalJSON([]byte(`{"type":"bad-type",
 		"actor":"https://repo.prod.meissa.de/api/activitypub/user-id/1",
 	"object":"https://codeberg.org/api/activitypub/repository-id/1",
 	"startTime": "2014-12-31T23:00:00-08:00"}`))
-	if err := validateAndCheckError(sut, "Field type contains the value bad-type, which is not in allowed subset [Like]"); err != nil {
-		// assert.ErrorContains()
-		t.Error(err)
-	}
+	validate = sut.Validate()
+	assert.Len(t, validate, 1)
+	assert.Equal(t,
+		"Field type contains the value bad-type, which is not in allowed subset [Like]",
+		validate[0])
 
 	sut.UnmarshalJSON([]byte(`{"type":"Like",
 		"actor":"https://repo.prod.meissa.de/api/activitypub/user-id/1",
 	  "object":"https://codeberg.org/api/activitypub/repository-id/1",
 	  "startTime": "not a date"}`))
-	if err := validateAndCheckError(sut, "StartTime was invalid."); err != nil {
-		t.Error(err)
-	}
+	validate = sut.Validate()
+	assert.Len(t, validate, 1)
+	assert.Equal(t,
+		"StartTime was invalid.",
+		validate[0])
 }
 
 func TestActivityValidation_Attack(t *testing.T) {
 	sut := new(ForgeLike)
 	sut.UnmarshalJSON([]byte(`{rubbish}`))
-	if len(sut.Validate()) != 5 {
-		t.Errorf("5 validation errors expected but was: %v\n", len(sut.Validate()))
-	}
+	assert.Len(t, sut.Validate(), 5)
 }
