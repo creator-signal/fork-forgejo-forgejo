@@ -90,7 +90,6 @@ func FindFederatedUser(ctx context.Context, externalID string, federationHostID 
 	return user, federatedUser, nil
 }
 
-// TODO: rename for symetric name
 func GetFederatedUser(ctx context.Context, externalID string, federationHostID int64) (*User, *FederatedUser, error) {
 	user, federatedUser, err := FindFederatedUser(ctx, externalID, federationHostID)
 	if err != nil {

@@ -193,7 +193,6 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 		return nil, nil, err
 	}
 
-	// TODO: in case of gts we will need an extra request here ?
 	pubKeyBytes, err := decodePublicKeyPem(person.PublicKey.PublicKeyPem)
 	if err != nil {
 		return nil, nil, err
