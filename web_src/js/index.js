@@ -193,4 +193,7 @@ onDomReady(() => {
   initGltfViewer();
   initScopedAccessTokenCategories();
   initColorPickers();
+
+  // Deactivate CSS-only noJS usability supplements
+  document.body.classList.remove("no-js");
 });
