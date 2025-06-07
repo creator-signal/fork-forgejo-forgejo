@@ -195,5 +195,5 @@ onDomReady(() => {
   initColorPickers();
 
   // Deactivate CSS-only noJS usability supplements
-  document.body.classList.remove("no-js");
+  document.body.classList.remove('no-js');
 });
