@@ -1015,9 +1015,11 @@ pdf-object {
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions {
-  margin-top: 16px !important;
-  margin-bottom: -8px !important;
+  margin-left: calc(20px + 0.5rem) !important;
+  margin-top: 1rem !important;
+  margin-bottom: -1rem !important;
   border-top: none !important;
+  background: transparent !important;
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions .ui.label {
