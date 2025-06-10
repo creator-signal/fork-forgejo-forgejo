@@ -1015,7 +1015,7 @@ pdf-object {
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions {
-  gap: 0.5rem;
+  gap: var(--button-spacing);
   margin-left: calc(20px + 0.5rem) !important;
   margin-top: 1rem !important;
   margin-bottom: -1rem !important;
