@@ -16,6 +16,7 @@ import (
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
 	quota_model "forgejo.org/models/quota"
 	repo_model "forgejo.org/models/repo"
@@ -693,8 +694,18 @@ func SearchRepo(ctx *context.Context) {
 		ctx.JSON(http.StatusInternalServerError, nil)
 		return
 	}
-	if !ctx.Repo.CanRead(unit.TypeActions) {
-		git_model.CommitStatusesHideActionsURL(ctx, latestCommitStatuses)
+
+	hasActionsPermission := access_model.NewCachedPermissions(ctx.Doer, unit.TypeActions)
+	for _, status := range latestCommitStatuses {
+		ok, err := hasActionsPermission(ctx, status.Repo, perm.AccessModeRead)
+		if err != nil {
+			log.Error("hasActionsPermission: %v", err)
+			ctx.JSON(http.StatusInternalServerError, nil)
+			return
+		}
+		if !ok {
+			status.HideActionsURL(ctx)
+		}
 	}
 
 	results := make([]*repo_service.WebSearchRepository, len(repos))

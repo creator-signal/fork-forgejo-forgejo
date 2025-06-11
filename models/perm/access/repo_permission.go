@@ -385,6 +385,21 @@ func HasAccess(ctx context.Context, userID int64, repo *repo_model.Repository) (
 	return perm.HasAccess(), nil
 }
 
+func NewCachedPermissions(user *user_model.User, unitType unit.Type) func(context.Context, *repo_model.Repository, perm_model.AccessMode) (bool, error) {
+	permCache := make(map[int64]perm_model.AccessMode)
+	return func(ctx context.Context, repo *repo_model.Repository, testMode perm_model.AccessMode) (bool, error) {
+		var err error
+		mode, ok := permCache[repo.ID]
+		if !ok {
+			mode, err = AccessLevelUnit(ctx, user, repo, unitType)
+			if err == nil {
+				permCache[repo.ID] = mode
+			}
+		}
+		return testMode <= mode, err
+	}
+}
+
 // getUsersWithAccessMode returns users that have at least given access mode to the repository.
 func getUsersWithAccessMode(ctx context.Context, repo *repo_model.Repository, mode perm_model.AccessMode) (_ []*user_model.User, err error) {
 	if err = repo.LoadOwner(ctx); err != nil {

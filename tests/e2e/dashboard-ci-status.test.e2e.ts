@@ -14,6 +14,8 @@ test('Correct link and tooltip', async ({page}, testInfo) => {
     await page.goto('/user2/test_workflows/actions');
   }
 
+  // TODO: check permissions
+
   const searchResponse = page.waitForResponse((resp) => resp.url().includes('/repo/search?') && resp.status() === 200);
   const response = await page.goto('/?repo-search-query=test_workflows');
   expect(response?.status()).toBe(200);

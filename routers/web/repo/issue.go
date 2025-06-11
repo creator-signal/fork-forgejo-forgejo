@@ -343,15 +343,10 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		}
 	}
 
-	commitStatuses, lastStatus, err := pull_service.GetIssuesAllCommitStatus(ctx, issues)
+	commitStatuses, lastStatus, err := pull_service.GetIssuesAllCommitStatus(ctx, issues, ctx.Doer)
 	if err != nil {
 		ctx.ServerError("GetIssuesAllCommitStatus", err)
 		return
-	}
-	if !ctx.Repo.CanRead(unit.TypeActions) {
-		for key := range commitStatuses {
-			git_model.CommitStatusesHideActionsURL(ctx, commitStatuses[key])
-		}
 	}
 
 	if err := issues.LoadAttributes(ctx); err != nil {

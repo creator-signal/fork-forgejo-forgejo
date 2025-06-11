@@ -13,10 +13,8 @@ import (
 
 	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
-	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unit"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
@@ -306,28 +304,18 @@ func NotificationSubscriptions(ctx *context.Context) {
 		return
 	}
 
-	commitStatuses, lastStatus, err := pull_service.GetIssuesAllCommitStatus(ctx, issues)
+	commitStatuses, lastStatus, err := pull_service.GetIssuesAllCommitStatus(ctx, issues, ctx.Doer)
 	if err != nil {
 		ctx.ServerError("GetIssuesAllCommitStatus", err)
 		return
 	}
-	if !ctx.Repo.CanRead(unit.TypeActions) {
-		for key := range commitStatuses {
-			git_model.CommitStatusesHideActionsURL(ctx, commitStatuses[key])
-		}
-	}
+
 	ctx.Data["CommitLastStatus"] = lastStatus
+	ctx.Data["CommitStatus"] = lastStatus // TODO: adjust templates to use CommitLastStatus
 	ctx.Data["CommitStatuses"] = commitStatuses
 	ctx.Data["Issues"] = issues
 
 	ctx.Data["IssueRefEndNames"], ctx.Data["IssueRefURLs"] = issue_service.GetRefEndNamesAndURLs(issues, "")
-
-	commitStatus, err := pull_service.GetIssuesLastCommitStatus(ctx, issues)
-	if err != nil {
-		ctx.ServerError("GetIssuesLastCommitStatus", err)
-		return
-	}
-	ctx.Data["CommitStatus"] = commitStatus
 
 	approvalCounts, err := issues.GetApprovalCounts(ctx)
 	if err != nil {

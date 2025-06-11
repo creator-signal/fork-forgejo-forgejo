@@ -134,6 +134,8 @@ func FindReposLastestCommitStatuses(ctx context.Context, repos []*repo_model.Rep
 	for i, repo := range repos {
 		if cv := getCommitStatusCache(repo.ID, repo.DefaultBranch); cv != nil {
 			results[i] = &git_model.CommitStatus{
+				RepoID:    repo.ID,
+				Repo:      repo, // needed for status.HideActionsURL
 				State:     api.CommitStatusState(cv.State),
 				TargetURL: cv.TargetURL,
 			}
@@ -168,6 +170,7 @@ func FindReposLastestCommitStatuses(ctx context.Context, repos []*repo_model.Rep
 		for i, repo := range repos {
 			if repo.ID == summary.RepoID {
 				results[i] = summary
+				results[i].Repo = repo // needed for status.HideActionsURL
 				_ = slices.DeleteFunc(repoSHAs, func(repoSHA git_model.RepoSHA) bool {
 					return repoSHA.RepoID == repo.ID
 				})
@@ -190,9 +193,12 @@ func FindReposLastestCommitStatuses(ctx context.Context, repos []*repo_model.Rep
 	for i, repo := range repos {
 		if results[i] == nil {
 			results[i] = git_model.CalcCommitStatus(repoToItsLatestCommitStatuses[repo.ID])
-			if results[i] != nil && results[i].State != "" {
-				if err := updateCommitStatusCache(repo.ID, repo.DefaultBranch, results[i].State, results[i].TargetURL); err != nil {
-					log.Error("updateCommitStatusCache[%d:%s] failed: %v", repo.ID, repo.DefaultBranch, err)
+			if results[i] != nil {
+				results[i].Repo = repo // needed for status.HideActionsURL
+				if results[i].State != "" {
+					if err := updateCommitStatusCache(repo.ID, repo.DefaultBranch, results[i].State, results[i].TargetURL); err != nil {
+						log.Error("updateCommitStatusCache[%d:%s] failed: %v", repo.ID, repo.DefaultBranch, err)
+					}
 				}
 			}
 		}
