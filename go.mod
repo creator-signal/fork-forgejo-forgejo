@@ -17,7 +17,7 @@ require (
 	code.gitea.io/actions-proto-go v0.4.0
 	code.gitea.io/sdk/gitea v0.21.0
 	codeberg.org/gusted/mcaptcha v0.0.0-20220723083913-4f3072e1d570
-	connectrpc.com/connect v1.17.0
+	connectrpc.com/connect v1.18.1
 	github.com/42wim/httpsig v1.2.3
 	github.com/42wim/sshsig v0.0.0-20250502153856-5100632e8920
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358
@@ -89,7 +89,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/sergi/go-diff v1.4.0
-	github.com/shurcooL/vfsgen v0.0.0-20230704071429-0000e147ea92
 	github.com/stretchr/testify v1.10.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/ulikunitz/xz v0.5.12
@@ -222,7 +221,6 @@ require (
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/shurcooL/httpfs v0.0.0-20230704072500-f1e31cf0ba5c // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
@@ -245,8 +243,6 @@ require (
 )
 
 replace github.com/hashicorp/go-version => github.com/6543/go-version v1.3.1
-
-replace github.com/shurcooL/vfsgen => github.com/lunny/vfsgen v0.0.0-20220105142115-2c99e1ffdfa0
 
 replace github.com/nektos/act => code.forgejo.org/forgejo/act v1.26.0
 
