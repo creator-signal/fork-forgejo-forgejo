@@ -151,6 +151,11 @@ func FindReposLastestCommitStatuses(ctx context.Context, repos []*repo_model.Rep
 		}
 	}
 
+	if len(repoBranchNames) == 0 {
+		// Avoid performing further queries if everything was found in cache.
+		return results, nil
+	}
+
 	repoIDsToLatestCommitSHAs, err := git_model.FindBranchesByRepoAndBranchName(ctx, repoBranchNames)
 	if err != nil {
 		return nil, fmt.Errorf("FindBranchesByRepoAndBranchName: %v", err)
