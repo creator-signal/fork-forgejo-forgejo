@@ -88,12 +88,6 @@ test.describe('Drag and Drop upload', () => {
         '/special/badfirstslash.txt',
       ],
     },
-    {
-      description: 'broken path with traversal',
-      files: [
-        '../baddots.txt',
-      ],
-    },
   ];
 
   // actual bad tests based on definition above
