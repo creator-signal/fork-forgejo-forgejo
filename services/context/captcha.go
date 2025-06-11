@@ -20,6 +20,11 @@ import (
 	"code.forgejo.org/go-chi/captcha"
 )
 
+const (
+	ImageCaptchaWidthPixels  = captcha.StdWidth * 2
+	ImageCaptchaHeightPixels = captcha.StdHeight * 2
+)
+
 var (
 	imageCaptchaOnce sync.Once
 	imageCachePrefix = "captcha:"
