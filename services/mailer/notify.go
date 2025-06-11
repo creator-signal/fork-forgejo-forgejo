@@ -10,6 +10,7 @@ import (
 	actions_model "forgejo.org/models/actions"
 	activities_model "forgejo.org/models/activities"
 	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
@@ -172,7 +173,7 @@ func (m *mailNotifier) PullRequestPushCommits(ctx context.Context, doer *user_mo
 		log.Error("comment.Issue.PullRequest.LoadBaseRepo: %v", err)
 		return
 	}
-	if err := comment.LoadPushCommits(ctx); err != nil {
+	if err := comment.LoadPushCommits(ctx, access.Permission{}); err != nil { // hacky
 		log.Error("comment.LoadPushCommits: %v", err)
 	}
 	m.CreateIssueComment(ctx, doer, comment.Issue.Repo, comment.Issue, comment, nil)

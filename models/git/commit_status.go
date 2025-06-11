@@ -15,7 +15,9 @@ import (
 
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/db"
+	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
@@ -453,8 +455,8 @@ type SignCommitWithStatuses struct {
 	*asymkey_model.SignCommit
 }
 
-// ParseCommitsWithStatus checks commits latest statuses and calculates its worst status state
-func ParseCommitsWithStatus(ctx context.Context, oldCommits []*asymkey_model.SignCommit, repo *repo_model.Repository) []*SignCommitWithStatuses {
+// parseCommitsWithStatus checks commits latest statuses and calculates its worst status state
+func parseCommitsWithStatus(ctx context.Context, oldCommits []*asymkey_model.SignCommit, repo *repo_model.Repository, perm access_model.Permission) []*SignCommitWithStatuses {
 	newCommits := make([]*SignCommitWithStatuses, 0, len(oldCommits))
 
 	for _, c := range oldCommits {
@@ -465,6 +467,12 @@ func ParseCommitsWithStatus(ctx context.Context, oldCommits []*asymkey_model.Sig
 		if err != nil {
 			log.Error("GetLatestCommitStatus: %v", err)
 		} else {
+			for _, status := range statuses {
+				status.Repo = repo
+				if !perm.CanRead(unit.TypeActions) {
+					status.HideActionsURL(ctx)
+				}
+			}
 			commit.Statuses = statuses
 			commit.Status = CalcCommitStatus(statuses)
 		}
@@ -480,8 +488,8 @@ func hashCommitStatusContext(context string) string {
 }
 
 // ConvertFromGitCommit converts git commits into SignCommitWithStatuses
-func ConvertFromGitCommit(ctx context.Context, commits []*git.Commit, repo *repo_model.Repository) []*SignCommitWithStatuses {
-	return ParseCommitsWithStatus(ctx,
+func ConvertFromGitCommit(ctx context.Context, commits []*git.Commit, repo *repo_model.Repository, perm access_model.Permission) []*SignCommitWithStatuses {
+	return parseCommitsWithStatus(ctx,
 		asymkey_model.ParseCommitsWithSignature(
 			ctx,
 			user_model.ValidateCommitsWithEmails(ctx, commits),
@@ -491,6 +499,7 @@ func ConvertFromGitCommit(ctx context.Context, commits []*git.Commit, repo *repo
 			},
 		),
 		repo,
+		perm,
 	)
 }
 

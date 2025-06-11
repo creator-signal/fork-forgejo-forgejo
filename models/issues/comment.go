@@ -15,6 +15,7 @@ import (
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	"forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
 	project_model "forgejo.org/models/project"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
@@ -775,7 +776,7 @@ func (c *Comment) CodeCommentLink(ctx context.Context) string {
 }
 
 // LoadPushCommits Load push commits
-func (c *Comment) LoadPushCommits(ctx context.Context) (err error) {
+func (c *Comment) LoadPushCommits(ctx context.Context, perm access_model.Permission) (err error) {
 	if c.Content == "" || c.Commits != nil || c.Type != CommentTypePullRequestPush {
 		return nil
 	}
@@ -802,7 +803,7 @@ func (c *Comment) LoadPushCommits(ctx context.Context) (err error) {
 		}
 		defer closer.Close()
 
-		c.Commits = git_model.ConvertFromGitCommit(ctx, gitRepo.GetCommitsFromIDs(data.CommitIDs), c.Issue.Repo)
+		c.Commits = git_model.ConvertFromGitCommit(ctx, gitRepo.GetCommitsFromIDs(data.CommitIDs), c.Issue.Repo, perm)
 		c.CommitsNum = int64(len(c.Commits))
 	}
 

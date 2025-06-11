@@ -457,17 +457,7 @@ func RawDiff(ctx *context.Context) {
 }
 
 func processGitCommits(ctx *context.Context, gitCommits []*git.Commit) []*git_model.SignCommitWithStatuses {
-	commits := git_model.ConvertFromGitCommit(ctx, gitCommits, ctx.Repo.Repository)
-	if !ctx.Repo.CanRead(unit_model.TypeActions) {
-		for _, commit := range commits {
-			if commit.Status == nil {
-				continue
-			}
-			commit.Status.HideActionsURL(ctx)
-			git_model.CommitStatusesHideActionsURL(ctx, commit.Statuses)
-		}
-	}
-	return commits
+	return git_model.ConvertFromGitCommit(ctx, gitCommits, ctx.Repo.Repository, ctx.Repo.Permission)
 }
 
 func SetCommitNotes(ctx *context.Context) {

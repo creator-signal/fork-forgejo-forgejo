@@ -1790,18 +1790,9 @@ func ViewIssue(ctx *context.Context) {
 			}
 		} else if comment.Type == issues_model.CommentTypePullRequestPush {
 			participants = addParticipant(comment.Poster, participants)
-			if err = comment.LoadPushCommits(ctx); err != nil {
+			if err = comment.LoadPushCommits(ctx, ctx.Repo.Permission); err != nil {
 				ctx.ServerError("LoadPushCommits", err)
 				return
-			}
-			if !ctx.Repo.CanRead(unit.TypeActions) {
-				for _, commit := range comment.Commits {
-					if commit.Status == nil {
-						continue
-					}
-					commit.Status.HideActionsURL(ctx)
-					git_model.CommitStatusesHideActionsURL(ctx, commit.Statuses)
-				}
 			}
 		} else if comment.Type == issues_model.CommentTypeAddTimeManual ||
 			comment.Type == issues_model.CommentTypeStopTracking ||
