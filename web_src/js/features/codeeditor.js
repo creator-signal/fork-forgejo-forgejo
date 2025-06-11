@@ -65,6 +65,19 @@ export async function createMonaco(textarea, filename, editorOpts) {
   let {language, ...other} = editorOpts;
   if (!language) language = getLanguage(filename);
 
+  // defaults from https://github.com/microsoft/monaco-editor/blob/dd6bdfe8dae1b3c134fa7bc7b176b43fd294916e/src/language/json/monaco.contribution.ts#L307
+  // but with enableSchemaRequest enabled
+  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+    validate: true,
+    allowComments: true,
+    schemas: [],
+    enableSchemaRequest: true,
+    schemaRequest: 'warning',
+    schemaValidation: 'warning',
+    comments: 'error',
+    trailingCommas: 'error'
+  });
+
   const container = document.createElement('div');
   container.className = 'monaco-editor-container';
   textarea.parentNode.append(container);
