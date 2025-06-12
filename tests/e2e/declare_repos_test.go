@@ -54,7 +54,7 @@ func DeclareGitRepos(t *testing.T) func() {
 			},
 		}),
 		newRepo(t, 2, "file-uploads", []FileChanges{{
-			Filename: "README.md",
+			Filename: "UPLOAD_TEST.md",
 			Versions: []string{"# File upload test\nUse this repo to test various file upload features in new branches."},
 		}}),
 		newRepo(t, 2, "unicode-escaping", []FileChanges{{
