@@ -78,6 +78,7 @@ func newRepo(t *testing.T, userID int64, repoName string, fileChanges []FileChan
 		nil,
 	)
 
+	var lastCommitID string
 	for _, file := range fileChanges {
 		for i, version := range file.Versions {
 			operation := "update"
@@ -112,9 +113,12 @@ func newRepo(t *testing.T, userID int64, repoName string, fileChanges []FileChan
 					Author:    time.Now(),
 					Committer: time.Now(),
 				},
+				LastCommitID: lastCommitID,
 			})
 			require.NoError(t, err)
 			assert.NotEmpty(t, resp)
+
+			lastCommitID = resp.Commit.SHA
 		}
 	}
 
