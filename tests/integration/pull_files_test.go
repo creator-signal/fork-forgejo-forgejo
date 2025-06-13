@@ -69,7 +69,7 @@ func TestPullFilesCommitHeader(t *testing.T) {
 		})
 
 		t.Run("No next on last commit", func(t *testing.T) {
-			req := NewRequest(t, "GET", "/user2/commitsonpr/pulls/1/commits/1978192d98bb1b65e11c2cf37da854fbf94bffd6")
+			req := NewRequest(t, "GET", "/user2/commitsonpr/pulls/1/commits/9b93963cf6de4dc33f915bb67f192d099c301f43")
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
@@ -81,7 +81,7 @@ func TestPullFilesCommitHeader(t *testing.T) {
 			assert.True(t, buttons.Last().HasClass("disabled"), "'next' button should be disabled")
 
 			href, _ := buttons.First().Attr("href")
-			assert.Equal(t, "/user2/commitsonpr/pulls/1/commits/837d5c8125633d7d258f93b998e867eab0145520", href)
+			assert.Equal(t, "/user2/commitsonpr/pulls/1/commits/2d65d92dc800c6f448541240c18e82bf36b954bb", href)
 		})
 
 		t.Run("Both directions on middle commit", func(t *testing.T) {
