@@ -43,30 +43,27 @@ func StartPRCheckAndAutoMergeBySHA(ctx context.Context, sha string, repo *repo_m
 	return nil
 }
 
-// StartPRCheckAndAutoMerge start an automerge check and auto merge task for a pull request
 func StartPRCheckAndAutoMerge(ctx context.Context, pull *issues_model.PullRequest) {
 	if pull == nil || pull.HasMerged || !pull.CanAutoMerge() {
 		return
 	}
 
-	if err := pull.LoadBaseRepo(ctx); err != nil {
-		log.Error("LoadBaseRepo: %v", err)
-		return
+	commitID := pull.HeadCommitID
+	if commitID == "" {
+		commitID = getCommitIDFromRefName(ctx, pull)
 	}
 
-	gitRepo, err := gitrepo.OpenRepository(ctx, pull.BaseRepo)
-	if err != nil {
-		log.Error("OpenRepository: %v", err)
-		return
-	}
-	defer gitRepo.Close()
-	commitID, err := gitRepo.GetRefCommitID(pull.GetGitRefName())
-	if err != nil {
-		log.Error("GetRefCommitID: %v", err)
+	if commitID == "" {
 		return
 	}
 
 	addToQueue(pull, commitID)
+}
+
+var AddToQueueIfMergeable = func(ctx context.Context, pull *issues_model.PullRequest) {
+	if pull.Status == issues_model.PullRequestStatusMergeable {
+		StartPRCheckAndAutoMerge(ctx, pull)
+	}
 }
 
 func getPullRequestsByHeadSHA(ctx context.Context, sha string, repo *repo_model.Repository, filter func(*issues_model.PullRequest) bool) (map[int64]*issues_model.PullRequest, error) {
@@ -117,4 +114,25 @@ func getPullRequestsByHeadSHA(ctx context.Context, sha string, repo *repo_model.
 	}
 
 	return pulls, nil
+}
+
+func getCommitIDFromRefName(ctx context.Context, pull *issues_model.PullRequest) string {
+	if err := pull.LoadBaseRepo(ctx); err != nil {
+		log.Error("LoadBaseRepo: %v", err)
+		return ""
+	}
+
+	gitRepo, err := gitrepo.OpenRepository(ctx, pull.BaseRepo)
+	if err != nil {
+		log.Error("OpenRepository: %v", err)
+		return ""
+	}
+	defer gitRepo.Close()
+	commitID, err := gitRepo.GetRefCommitID(pull.GetGitRefName())
+	if err != nil {
+		log.Error("GetRefCommitID: %v", err)
+		return ""
+	}
+
+	return commitID
 }
