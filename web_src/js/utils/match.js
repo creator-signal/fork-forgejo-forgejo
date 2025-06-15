@@ -50,7 +50,6 @@ export function matchIssue(queryText, currentIssue = null) {
 
   if (!query) {
     return Array.from(issues)
-      .sort((a, b) => b.number - a.number)
       .slice(0, maxMatches);
   }
 
