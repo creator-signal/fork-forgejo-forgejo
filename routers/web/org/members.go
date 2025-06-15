@@ -83,6 +83,8 @@ func MembersAction(ctx *context.Context) {
 		return
 	}
 
+	redirectURL := ctx.FormString("redirect")
+
 	org := ctx.Org.Organization
 	var err error
 	switch ctx.Params(":action") {
@@ -134,7 +136,11 @@ func MembersAction(ctx *context.Context) {
 		return
 	}
 
-	log.Info("redirecting to", ctx.Org.OrgLink)
+	if redirectURL != "" {
+        ctx.JSONRedirect(redirectURL)
+		return
+    }
+
 	redirect := ctx.Org.OrgLink + "/members"
 	if ctx.Params(":action") == "leave" {
 		redirect = setting.AppSubURL + "/"
