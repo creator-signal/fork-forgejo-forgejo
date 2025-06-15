@@ -215,7 +215,20 @@ func Organization(ctx *context.Context) {
 		return
 	}
 
+	// Get public membership status for each organization
+    orgsIsPublicMember := make(map[int64]bool)
+    for _, org := range orgs {
+        isPublic, err := organization.IsPublicMembership(ctx, org.ID, ctx.Doer.ID)
+        if err != nil {
+            ctx.ServerError("IsPublicMembership", err)
+            return
+        }
+        orgsIsPublicMember[org.ID] = isPublic
+    }
+
 	ctx.Data["Orgs"] = orgs
+	ctx.Data["Total"] = total
+    ctx.Data["OrgsIsPublicMember"] = orgsIsPublicMember
 	pager := context.NewPagination(int(total), opts.PageSize, opts.Page, 5)
 	pager.SetDefaultParams(ctx)
 	ctx.Data["Page"] = pager

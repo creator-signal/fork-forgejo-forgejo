@@ -6,7 +6,6 @@ package org
 
 import (
 	"net/http"
-
 	"forgejo.org/models"
 	"forgejo.org/models/organization"
 	"forgejo.org/modules/base"
@@ -135,6 +134,7 @@ func MembersAction(ctx *context.Context) {
 		return
 	}
 
+	log.Info("redirecting to", ctx.Org.OrgLink)
 	redirect := ctx.Org.OrgLink + "/members"
 	if ctx.Params(":action") == "leave" {
 		redirect = setting.AppSubURL + "/"
