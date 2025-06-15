@@ -40,7 +40,7 @@ async function issueSuggestions(text) {
 export function initTextExpander(expander) {
   if (!expander) return;
 
-  expander?.addEventListener('text-expander-change', ({detail: {key, provide, text}}) => {
+  expander.addEventListener('text-expander-change', ({detail: {key, provide, text}}) => {
     if (key === ':') {
       const matches = matchEmoji(text);
       if (!matches.length) return provide({matched: false});
@@ -95,7 +95,7 @@ export function initTextExpander(expander) {
       }
     }
   });
-  expander?.addEventListener('text-expander-value', ({detail}) => {
+  expander.addEventListener('text-expander-value', ({detail}) => {
     if (detail?.item) {
       // add a space after @mentions and #issue as it's likely the user wants one
       const suffix = ['@', '#'].includes(detail.key) ? ' ' : '';

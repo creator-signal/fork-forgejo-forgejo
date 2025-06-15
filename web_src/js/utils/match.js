@@ -54,19 +54,21 @@ export function matchIssue(queryText, currentIssue = null) {
       .slice(0, maxMatches);
   }
 
-  const isDigital = /^\d+$/.test(query);
-  const results = [];
+  const isNumber = /^\d+$/.test(query);
+  const results = new Set();
 
-  if (isDigital) {
+  if (isNumber) {
     // Find issues/prs with number starting with the query (prefix), sorted by number ascending
     const prefixMatches = issues.filter((issue) =>
       String(issue.number).startsWith(query),
     ).sort((a, b) => a.number - b.number);
 
-    results.push(...prefixMatches);
+    for (const issue of prefixMatches) {
+      results.add(issue);
+    }
   }
 
-  if (!isDigital || results.length < maxMatches) {
+  if (!isNumber || results.length < maxMatches) {
     // Fallback: find by title match, sorted by number descending
     const titleMatches = issues
       .filter((issue) =>
@@ -76,12 +78,10 @@ export function matchIssue(queryText, currentIssue = null) {
 
     // Add only those not already in the result set
     for (const match of titleMatches) {
-      if (!results.includes(match)) {
-        results.push(match);
-        if (results.length >= maxMatches) break;
-      }
+      results.add(match);
+      if (results.size >= maxMatches) break;
     }
   }
 
-  return results.slice(0, maxMatches);
+  return Array.from(results).slice(0, maxMatches);
 }
