@@ -11,7 +11,7 @@ import (
 // Moderation settings
 var Moderation = struct {
 	Enabled                      bool          `ini:"ENABLED"`
-	RemoveResolvedReportsTimeout time.Duration `ini:"REMOVE_RESOLVED_REPORTS_TIMEOUT"`
+	RemoveResolvedReportsTimeout time.Duration `ini:"KEEP_RESOLVED_REPORTS_FOR"`
 }{
 	Enabled: false,
 }
@@ -23,6 +23,6 @@ func loadModerationFrom(rootCfg ConfigProvider) error {
 		return fmt.Errorf("failed to map Actions settings: %v", err)
 	}
 
-	Moderation.RemoveResolvedReportsTimeout = sec.Key("REMOVE_RESOLVED_REPORTS_TIMEOUT").MustDuration(10 * time.Minute)
+	Moderation.RemoveResolvedReportsTimeout = sec.Key("KEEP_RESOLVED_REPORTS_FOR").MustDuration(10 * time.Minute)
 	return nil
 }
