@@ -107,6 +107,7 @@ func handlePullRequestAutoMerge(pullID int64, sha string) {
 		return
 	}
 	if !exists {
+		log.Trace("GetScheduledMergeByPullID found nothing for PR %d", pullID)
 		return
 	}
 
