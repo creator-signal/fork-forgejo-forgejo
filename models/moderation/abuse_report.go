@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"slices"
+	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/log"
@@ -152,6 +153,25 @@ func ReportAbuse(ctx context.Context, report *AbuseReport) error {
 	_, err := db.GetEngine(ctx).Insert(report)
 
 	return err
+}
+
+// GetResolvedReports gets all resolved reports
+func GetResolvedReports(ctx context.Context, timeout time.Duration) ([]*AbuseReport, error) {
+	cond := builder.And(
+		builder.Or(
+			builder.Eq{"`status`": ReportStatusTypeHandled},
+			builder.Eq{"`status`": ReportStatusTypeIgnored},
+		),
+	)
+
+	if timeout > 0 {
+		cond = cond.And(builder.Lt{"created_unix": time.Now().Add(-timeout).Unix()})
+	}
+
+	abuse_reports := make([]*AbuseReport, 0, 30)
+	return abuse_reports, db.GetEngine(ctx).
+		Where(cond).
+		Find(&abuse_reports)
 }
 
 /*

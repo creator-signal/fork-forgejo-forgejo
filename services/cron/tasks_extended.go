@@ -229,18 +229,18 @@ func registerRebuildIssueIndexer() {
 func registerRemoveResolvedReports() {
 	type ReportConfig struct {
 		BaseConfig
-		Timeout time.Duration
+		ConfiguredTimeOut time.Duration
 	}
 	RegisterTaskFatal("remove_resolved_reports", &ReportConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    false,
 			RunAtStart: false,
-			Schedule:   "@every 72h",
+			Schedule:   "@every 24h",
 		},
-		Timeout: time.Duration(setting.Moderation.RemoveResolvedReportsTimeout) * time.Second,
+		ConfiguredTimeOut: time.Duration(setting.Moderation.RemoveResolvedReportsTimeout) * time.Second,
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
 		reportConfig := config.(*ReportConfig)
-		return moderation_service.RemoveResolvedReports(ctx, reportConfig.Timeout)
+		return moderation_service.RemoveResolvedReports(ctx, reportConfig.ConfiguredTimeOut)
 	})
 }
 
@@ -259,5 +259,7 @@ func initExtendedTasks() {
 	registerDeleteOldSystemNotices()
 	registerGCLFS()
 	registerRebuildIssueIndexer()
-	registerRemoveResolvedReports()
+	if setting.Moderation.Enabled {
+		registerRemoveResolvedReports()
+	}
 }

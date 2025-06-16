@@ -134,18 +134,19 @@ func CanReport(ctx context.Context, doer *user.User, contentType moderation.Repo
 func RemoveResolvedReports(ctx context.Context, timeout time.Duration) error {
 	log.Trace("Doing: RemoveResolvedReports")
 
-	status := moderation.ReportStatusTypeHandled
-	resolvedReports, err := db.GetEngine(ctx).Table("abuse_report").Where("status = ?", status).Exist()
+	resolved_reports, err := moderation.GetResolvedReports(ctx, timeout)
 	if err != nil {
 		return err
-	} else if resolvedReports {
-		_, err := db.GetEngine(ctx).Table("abuse_report").Where("status = ?", status).Delete()
+	}
+
+	for _, report := range resolved_reports {
+		_, err := db.GetEngine(ctx).ID(report.ID).Delete(&moderation.AbuseReport{})
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}
-
 	log.Trace("Finished: RemoveResolvedReports")
 	return nil
 }
