@@ -44,7 +44,7 @@ func notifyAll(ctx context.Context, action *activities_model.Action) error {
 	if err != nil {
 		return err
 	}
-	return nil
+	return err
 	// return federation_service.NotifyActivityPubFollowers(ctx, out)
 }
 

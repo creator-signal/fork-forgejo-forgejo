@@ -32,12 +32,12 @@ func CreateFederatedUser(ctx context.Context, user *User, federatedUser *Federat
 	if err != nil {
 		return err
 	}
-	defer func(committer db.Committer) {
+	defer func() {
 		err := committer.Close()
 		if err != nil {
 			log.Error("Error closing committer: %v", err)
 		}
-	}(committer)
+	}()
 
 	if err := CreateUser(ctx, user, &overwrite); err != nil {
 		return err
@@ -151,11 +151,11 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID string) (*User, *Federa
 	return user, federatedUser, nil
 }
 
-func UpdateFederatedUser(ctx context.Context, fedearatedUser *FederatedUser) error {
-	if res, err := validation.IsValid(fedearatedUser); !res {
+func UpdateFederatedUser(ctx context.Context, federatedUser *FederatedUser) error {
+	if res, err := validation.IsValid(federatedUser); !res {
 		return err
 	}
-	_, err := db.GetEngine(ctx).ID(fedearatedUser.ID).Update(fedearatedUser)
+	_, err := db.GetEngine(ctx).ID(federatedUser.ID).Update(federatedUser)
 	return err
 }
 
