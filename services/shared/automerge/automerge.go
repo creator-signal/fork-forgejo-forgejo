@@ -21,9 +21,9 @@ import (
 var PRAutoMergeQueue *queue.WorkerPoolQueue[string]
 
 func addToQueue(pr *issues_model.PullRequest, sha string) {
-	log.Trace("Adding pullID: %d to the pull requests patch checking queue with sha %s", pr.ID, sha)
+	log.Trace("Adding pullID: %d to the automerge queue with sha %s", pr.ID, sha)
 	if err := PRAutoMergeQueue.Push(fmt.Sprintf("%d_%s", pr.ID, sha)); err != nil {
-		log.Error("Error adding pullID: %d to the pull requests patch checking queue %v", pr.ID, err)
+		log.Error("Error adding pullID: %d to the automerge queue %v", pr.ID, err)
 	}
 }
 
