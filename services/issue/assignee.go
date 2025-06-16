@@ -54,8 +54,6 @@ func ToggleAssigneeWithNotify(ctx context.Context, issue *issues_model.Issue, do
 	if err != nil {
 		return false, nil, err
 	}
-	issue.AssigneeID = assigneeID
-	issue.Assignee = assignee
 
 	notify_service.IssueChangeAssignee(ctx, doer, issue, assignee, removed, comment)
 
