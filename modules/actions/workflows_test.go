@@ -151,8 +151,8 @@ func TestDetectMatched(t *testing.T) {
 			expected:       true,
 		},
 		{
-			desc:         "push to tag matches workflow with paths condition (should skip paths check)",
-			triggedEvent: webhook_module.HookEventPush,
+			desc:           "push to tag matches workflow with paths condition (should skip paths check)",
+			triggeredEvent: webhook_module.HookEventPush,
 			payload: &api.PushPayload{
 				Ref:    "refs/tags/v1.0.0",
 				Before: "0000000",
