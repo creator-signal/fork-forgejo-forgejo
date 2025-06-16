@@ -145,6 +145,12 @@ func RemoveResolvedReports(ctx context.Context, timeout time.Duration) error {
 			return err
 		}
 
+		if report.ShadowCopyID != 0 {
+			_, err := db.GetEngine(ctx).ID(report.ShadowCopyID).Delete(&moderation.AbuseReportShadowCopy{})
+			if err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 	log.Trace("Finished: RemoveResolvedReports")
