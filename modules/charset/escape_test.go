@@ -137,6 +137,12 @@ then resh (ר), and finally heh (ה) (which should appear leftmost).`,
 		result: "\xef\xbb\xbftest",
 		status: EscapeStatus{},
 	},
+	{
+		name:   "Page break",
+		text:   string([]byte{0x41, 0x0a, 0x0c, 0x0a, 0x42, 0x0a}),
+		result: `A` + "\n" + `<hr class="page-break">` + "\n" + `B` + "\n",
+		status: EscapeStatus{},
+	},
 }
 
 func TestEscapeControlReader(t *testing.T) {

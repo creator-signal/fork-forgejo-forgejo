@@ -140,6 +140,16 @@ func (e *escapeStreamer) handleRunes(data []byte, runes []rune, positions []int,
 			if err := e.invisibleRune(r); err != nil {
 				return err
 			}
+		case pageBreakRuneType:
+			if sb.Len() > 0 {
+				if err := e.PassthroughHTMLStreamer.Text(sb.String()); err != nil {
+					return err
+				}
+				sb.Reset()
+			}
+			if err := e.pageBreakRune(); err != nil {
+				return err
+			}
 		default:
 			_, _ = sb.WriteRune(r)
 		}
@@ -222,16 +232,31 @@ func (e *escapeStreamer) invisibleRune(r rune) error {
 	return e.EndTag("span")
 }
 
+func (e *escapeStreamer) pageBreakRune() error {
+	// e.escaped.Escaped = true
+	// No specific status for page breaks, as it's a visible element.
+
+	return e.StartTag("hr", html.Attribute{
+		Key: "class",
+		Val: "page-break",
+	})
+}
+
+
 type runeCountType struct {
 	numBasicRunes                int
 	numNonConfusingNonBasicRunes int
 	numAmbiguousRunes            int
 	numInvisibleRunes            int
 	numBrokenRunes               int
+	numPageBreakRunes            int
 }
 
 func (counts runeCountType) needsEscape() bool {
 	if counts.numBrokenRunes > 0 {
+		return true
+	}
+	if counts.numPageBreakRunes > 0 {
 		return true
 	}
 	if counts.numBasicRunes == 0 &&
@@ -249,6 +274,7 @@ const (
 	nonBasicASCIIRuneType
 	ambiguousRuneType
 	invisibleRuneType
+	pageBreakRuneType
 )
 
 func (e *escapeStreamer) runeTypes(runes ...rune) (types []runeType, confusables []rune, runeCounts runeCountType) {
@@ -256,6 +282,9 @@ func (e *escapeStreamer) runeTypes(runes ...rune) (types []runeType, confusables
 	for i, r := range runes {
 		var confusable rune
 		switch {
+		case r == '\u000c':
+			types[i] = pageBreakRuneType
+			runeCounts.numPageBreakRunes++
 		case r == utf8.RuneError:
 			types[i] = brokenRuneType
 			runeCounts.numBrokenRunes++

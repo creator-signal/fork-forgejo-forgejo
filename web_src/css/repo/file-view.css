@@ -37,3 +37,7 @@
   height: 100%;
   background: var(--color-highlight-fg);
 }
+
+hr.page-break {
+  border-width: 0.5px;
+}
