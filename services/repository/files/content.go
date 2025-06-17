@@ -213,12 +213,12 @@ func GetContents(ctx context.Context, repo *repo_model.Repository, treePath, ref
 		contentsResponse.Target = &targetFromContent
 	} else if entry.IsSubModule() {
 		contentsResponse.Type = string(ContentTypeSubmodule)
-		submoduleURL, err := commit.GetSubModule(treePath)
+		submodule, err := commit.GetSubmodule(treePath, entry)
 		if err != nil {
 			return nil, err
 		}
-		if submoduleURL != "" {
-			contentsResponse.SubmoduleGitURL = &submoduleURL
+		if submodule.URL != "" {
+			contentsResponse.SubmoduleGitURL = &submodule.URL
 		}
 	}
 	// Handle links
