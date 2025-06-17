@@ -17,10 +17,10 @@ var Moderation = struct {
 }
 
 func loadModerationFrom(rootCfg ConfigProvider) error {
-	sec := rootCfg.Section("actions")
+	sec := rootCfg.Section("moderation")
 	err := sec.MapTo(&Moderation)
 	if err != nil {
-		return fmt.Errorf("failed to map Actions settings: %v", err)
+		return fmt.Errorf("failed to map Moderation settings: %v", err)
 	}
 
 	Moderation.RemoveResolvedReportsTimeout = sec.Key("KEEP_RESOLVED_REPORTS_FOR").MustDuration(10 * time.Minute)
