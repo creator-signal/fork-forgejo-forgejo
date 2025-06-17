@@ -14,9 +14,6 @@
 					<div class="flex-item-main">
 						<div class="flex-item-title">
 							{{template "shared/user/name" .}}
-							{{if not $isPublic}}
-								<span class="ui label">{{ctx.Locale.Tr "org.members.private"}}</span>
-							{{end}}
 						</div>
 						{{if not $.PublicOnly}}
 							<div class="flex-item-body">
@@ -38,13 +35,6 @@
 						{{end}}
 					</div>
 					<div class="flex-item-trailing">
-						{{if or (eq $.SignedUser.ID .ID) $.IsOrganizationOwner}}
-							{{if $isPublic}}
-								<a class="ui tiny button link-action" href data-url="{{$.OrgLink}}/members/action/private?uid={{.ID}}">{{svg "octicon-eye-closed" 12 "icon"}}{{ctx.Locale.Tr "org.members.public_helper"}}</a>
-							{{else}}
-								<a class="ui tiny button link-action" href data-url="{{$.OrgLink}}/members/action/public?uid={{.ID}}">{{svg "octicon-eye" 12 "icon"}}{{ctx.Locale.Tr "org.members.private_helper"}}</a>
-							{{end}}
-						{{end}}
 						{{if eq $.SignedUser.ID .ID}}
 							<form>
 								<button class="ui red tiny button delete-button" data-modal-id="leave-organization"

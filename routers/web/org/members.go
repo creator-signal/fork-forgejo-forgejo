@@ -6,6 +6,7 @@ package org
 
 import (
 	"net/http"
+
 	"forgejo.org/models"
 	"forgejo.org/models/organization"
 	"forgejo.org/modules/base"
@@ -18,6 +19,7 @@ import (
 const (
 	// tplMembers template for organization members page
 	tplMembers base.TplName = "org/member/members"
+	tplSettingsOrganization base.TplName = "/user/settings/organization"
 )
 
 // Members render organization users page
@@ -79,7 +81,7 @@ func Members(ctx *context.Context) {
 func MembersAction(ctx *context.Context) {
 	uid := ctx.FormInt64("uid")
 	if uid == 0 {
-		ctx.Redirect("/user/settings/organization")
+		ctx.Redirect(tplSettingsOrganization)
 		return
 	}
 
@@ -106,7 +108,7 @@ func MembersAction(ctx *context.Context) {
 		err = models.RemoveOrgUser(ctx, org.ID, uid)
 		if organization.IsErrLastOrgOwner(err) {
 			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
-			ctx.JSONRedirect("/user/settings/organization")
+			ctx.JSONRedirect(tplSettingsOrganization)
 			return
 		}
 	case "leave":
@@ -118,7 +120,7 @@ func MembersAction(ctx *context.Context) {
 			})
 		} else if organization.IsErrLastOrgOwner(err) {
 			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
-			ctx.JSONRedirect("/user/settings/organization")
+			ctx.JSONRedirect(tplSettingsOrganization)
 		} else {
 			log.Error("RemoveOrgUser(%d,%d): %v", org.ID, ctx.Doer.ID, err)
 		}
@@ -134,7 +136,7 @@ func MembersAction(ctx *context.Context) {
 		return
 	}
 
-	redirect := "/user/settings/organization"
+	redirect := tplSettingsOrganization
 	if ctx.Params(":action") == "leave" {
 		redirect = setting.AppSubURL + "/"
 	}
