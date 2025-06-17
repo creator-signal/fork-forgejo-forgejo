@@ -26,10 +26,11 @@ type PullRequest struct {
 	IsLocked                bool       `json:"is_locked"`
 	Comments                int        `json:"comments"`
 	// number of review comments made on the diff of a PR review (not including comments on commits or issues in a PR)
-	ReviewComments int `json:"review_comments"`
-	Additions      int `json:"additions"`
-	Deletions      int `json:"deletions"`
-	ChangedFiles   int `json:"changed_files"`
+	ReviewComments int   `json:"review_comments"`
+	Additions      int   `json:"additions"`
+	Deletions      int   `json:"deletions"`
+	ChangedFiles   int   `json:"changed_files"`
+	Commits        int64 `json:"commits"`
 
 	HTMLURL  string `json:"html_url"`
 	DiffURL  string `json:"diff_url"`

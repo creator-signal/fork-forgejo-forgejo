@@ -239,6 +239,11 @@ func ToAPIPullRequest(ctx context.Context, pr *issues_model.PullRequest, doer *u
 		if err != nil {
 			log.Error("GetDiffShortStat: %v", err)
 		}
+
+		apiPullRequest.Commits, err = gitRepo.CommitsCountBetween(startCommitID, endCommitID)
+		if err != nil {
+			log.Error("CommitsCountBetween: %v", err)
+		}
 	}
 
 	if len(apiPullRequest.Head.Sha) == 0 && len(apiPullRequest.Head.Ref) != 0 {
