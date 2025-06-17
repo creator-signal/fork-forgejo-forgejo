@@ -75,7 +75,7 @@ export async function createMonaco(textarea, filename, editorOpts) {
     schemaRequest: 'warning',
     schemaValidation: 'warning',
     comments: 'error',
-    trailingCommas: 'error'
+    trailingCommas: 'error',
   });
 
   const container = document.createElement('div');
