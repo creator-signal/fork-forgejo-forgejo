@@ -82,7 +82,7 @@ func newRepo(t *testing.T, userID int64, repoName string, fileChanges []FileChan
 	for _, file := range fileChanges {
 		for i, version := range file.Versions {
 			operation := "update"
-			if i == 0 && file.Filename != "README.md" {
+			if i == 0 {
 				operation = "create"
 			}
 
