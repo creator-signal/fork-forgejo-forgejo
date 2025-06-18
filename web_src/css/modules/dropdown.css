@@ -34,11 +34,13 @@ details.dropdown > summary {
   padding: 0.5rem;
 }
 
-details.dropdown > summary:hover {
+details.dropdown > summary:hover,
+details.dropdown > summary + ul > li:hover {
   background: var(--color-hover);
 }
 
-details.dropdown[open] > summary {
+details.dropdown[open] > summary,
+details.dropdown > summary + ul > li:focus-within {
   background: var(--color-active);
 }
 
@@ -81,10 +83,6 @@ details.dropdown > summary + ul > li:first-child {
 
 details.dropdown > summary + ul > li:last-child {
   border-radius: 0 0 var(--border-radius) var(--border-radius);
-}
-
-details.dropdown > summary + ul > li:hover {
-  background: var(--color-hover)
 }
 
 /* Switch the direction at a width point where most of layout changes occur. */
