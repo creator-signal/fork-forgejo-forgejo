@@ -32,7 +32,7 @@
 						{{svg "octicon-person"}} {{ctx.Locale.Tr "user.unblock"}}
 					</button>
 				{{else}}
-					<button class="item orange text" type="submit" data-modal-id="block-user" hx-post="{{.ContextUser.HomeLink}}?action=block" hx-confirm="-">
+					<button class="item orange text" data-modal-id="block-user" hx-post="{{.ContextUser.HomeLink}}?action=block" hx-confirm="-">
 						{{svg "octicon-blocked"}} {{ctx.Locale.Tr "user.block"}}
 					</button>
 				{{end}}
