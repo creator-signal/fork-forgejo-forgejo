@@ -18,7 +18,7 @@ import (
 
 const (
 	// tplMembers template for organization members page
-	tplMembers base.TplName = "org/member/members"
+	tplMembers              base.TplName = "org/member/members"
 	tplSettingsOrganization base.TplName = "/user/settings/organization"
 )
 

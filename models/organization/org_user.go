@@ -136,3 +136,46 @@ func loadOrganizationOwners(ctx context.Context, users user_model.UserList, orgI
 	}
 	return ownerMaps, nil
 }
+
+// GetUserPublicMemberships returns a map of organization IDs to boolean values
+// indicating whether the user's membership in each organization is public
+func GetUserPublicMemberships(ctx context.Context, userID int64, orgIDs []int64) (map[int64]bool, error) {
+	result := make(map[int64]bool)
+
+	// Set default value (not public) for all orgs
+	for _, orgID := range orgIDs {
+		result[orgID] = false
+	}
+
+	if len(orgIDs) == 0 {
+		return result, nil
+	}
+
+	type PublicMembership struct {
+		OrgID int64 `xorm:"org_id"`
+	}
+
+	publicMemberships := make([]PublicMembership, 0, len(orgIDs))
+
+	sess := db.GetEngine(ctx).
+		Table("org_user").
+		Where("uid = ?", userID).
+		And("is_public = ?", true)
+
+	// Add the IN condition only if there are orgIDs
+	if len(orgIDs) > 0 {
+		sess = sess.In("org_id", orgIDs)
+	}
+
+	err := sess.Cols("org_id").Find(&publicMemberships)
+	if err != nil {
+		return nil, err
+	}
+
+	// Mark public memberships
+	for _, membership := range publicMemberships {
+		result[membership.OrgID] = true
+	}
+
+	return result, nil
+}

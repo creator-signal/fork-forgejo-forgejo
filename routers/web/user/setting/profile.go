@@ -217,13 +217,19 @@ func Organization(ctx *context.Context) {
 
 	// Get public membership status for each organization
 	orgsIsPublicMember := make(map[int64]bool)
-	for _, org := range orgs {
-		isPublic, err := organization.IsPublicMembership(ctx, org.ID, ctx.Doer.ID)
+	if len(orgs) > 0 {
+		// Extract all org IDs
+		orgIDs := make([]int64, 0, len(orgs))
+		for _, org := range orgs {
+			orgIDs = append(orgIDs, org.ID)
+		}
+
+		var err error
+		orgsIsPublicMember, err = organization.GetUserPublicMemberships(ctx, ctx.Doer.ID, orgIDs)
 		if err != nil {
-			ctx.ServerError("IsPublicMembership", err)
+			ctx.ServerError("GetUserPublicMemberships", err)
 			return
 		}
-		orgsIsPublicMember[org.ID] = isPublic
 	}
 
 	ctx.Data["Orgs"] = orgs
