@@ -1167,9 +1167,12 @@ func showLinkingLogin(ctx *context.Context, gothUser goth.User) {
 	ctx.Redirect(setting.AppSubURL + "/user/link_account")
 }
 
-func updateAvatarIfNeed(ctx *context.Context, url string, u *user_model.User) {
+func updateAvatarIfNeed(ctx *context.Context, accessToken string, url string, u *user_model.User) {
 	if setting.OAuth2Client.UpdateAvatar && len(url) > 0 {
-		resp, err := http.Get(url)
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Add("Authorization", "Bearer "+accessToken)
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err == nil {
 			defer func() {
 				_ = resp.Body.Close()
@@ -1235,7 +1238,7 @@ func updateSSHPubIfNeed(
 }
 
 func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model.User, gothUser goth.User) {
-	updateAvatarIfNeed(ctx, gothUser.AvatarURL, u)
+	updateAvatarIfNeed(ctx, gothUser.AccessToken, gothUser.AvatarURL, u)
 	err := updateSSHPubIfNeed(ctx, source, &gothUser, u)
 	if err != nil {
 		ctx.ServerError("updateSSHPubIfNeed", err)
