@@ -49,6 +49,10 @@ func TestBlob_GetBlobContent(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "file2\n", r)
 
+	r, err = testBlob.GetBlobContent(-1)
+	require.NoError(t, err)
+	require.Equal(t, "", r)
+
 	r, err = testBlob.GetBlobContent(4)
 	require.NoError(t, err)
 	require.Equal(t, "file", r)
