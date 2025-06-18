@@ -51,7 +51,7 @@ func TestBlob_GetBlobContent(t *testing.T) {
 
 	r, err = testBlob.GetBlobContent(-1)
 	require.NoError(t, err)
-	require.Equal(t, "", r)
+	require.Empty(t, r)
 
 	r, err = testBlob.GetBlobContent(4)
 	require.NoError(t, err)
@@ -60,6 +60,16 @@ func TestBlob_GetBlobContent(t *testing.T) {
 	r, err = testBlob.GetBlobContent(6)
 	require.NoError(t, err)
 	require.Equal(t, "file2\n", r)
+
+	t.Run("non-existing blob", func(t *testing.T) {
+		inexistingBlob, err := repo.GetBlob("00003ff740f9380390d5c9ddef4af18690000000")
+		require.NoError(t, err)
+
+		r, err := inexistingBlob.GetBlobContent(100)
+		require.Error(t, err)
+		require.IsType(t, ErrNotExist{}, err)
+		require.Empty(t, r)
+	})
 }
 
 func Benchmark_Blob_Data(b *testing.B) {
