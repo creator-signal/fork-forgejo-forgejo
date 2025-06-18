@@ -1,14 +1,14 @@
 <details class="dropdown dir-auto">
 	<summary data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">{{svg "octicon-kebab-horizontal"}}</summary>
 	<ul>
-		{{if .IsAdmin}}
-			<li>
-				<a href="{{AppSubUrl}}/admin/users/{{.ContextUser.ID}}" class="item">{{svg "octicon-gear"}}{{ctx.Locale.Tr "admin.users.details"}}</a>
-			</li>
-		{{end}}
 		{{if eq .SignedUserID .ContextUser.ID}}
 			<li>
 				<a href="{{AppSubUrl}}/user/settings" class="item">{{svg "octicon-pencil"}}{{ctx.Locale.Tr "profile.edit.link"}}</a>
+			</li>
+		{{end}}
+		{{if .IsAdmin}}
+			<li>
+				<a href="{{AppSubUrl}}/admin/users/{{.ContextUser.ID}}" class="item">{{svg "octicon-gear"}}{{ctx.Locale.Tr "admin.users.details"}}</a>
 			</li>
 		{{end}}
 		{{if and .EnableFeed (or .IsAdmin (eq .SignedUserID .ContextUser.ID) (not .ContextUser.KeepActivityPrivate))}}
