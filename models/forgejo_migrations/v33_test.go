@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_AddFederatedUserActivityTables(t *testing.T) {
+func Test_FederatedUserActivityMigration(t *testing.T) {
 	lc, cl := ft.NewLogChecker(log.DEFAULT, log.WARN)
 	lc.Filter("migration[33]")
 	defer cl()
@@ -40,7 +40,7 @@ func Test_AddFederatedUserActivityTables(t *testing.T) {
 		return
 	}
 
-	require.NoError(t, AddFederatedUserActivityTables(x))
+	require.NoError(t, FederatedUserActivityMigration(x))
 	logFiltered, _ := lc.Check(5 * time.Second)
 	assert.NotEmpty(t, logFiltered)
 }

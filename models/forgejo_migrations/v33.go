@@ -12,7 +12,21 @@ import (
 	"xorm.io/xorm"
 )
 
-func AddFederatedUserActivityTables(x *xorm.Engine) error {
+func dropOldFederationHostIndexes(x *xorm.Engine) {
+	// drop unique index on HostFqdn
+	type FederationHost struct {
+		ID       int64  `xorm:"pk autoincr"`
+		HostFqdn string `xorm:"host_fqdn UNIQUE INDEX VARCHAR(255) NOT NULL"`
+	}
+
+	err := x.DropIndexes(FederationHost{})
+	if err != nil {
+		log.Warn("migration[33]: There was an issue: %v", err)
+		return
+	}
+}
+
+func addFederatedUserActivityTables(x *xorm.Engine) {
 	type FederatedUserActivity struct {
 		ID           int64 `xorm:"pk autoincr"`
 		UserID       int64 `xorm:"NOT NULL INDEX user_id"`
@@ -24,7 +38,7 @@ func AddFederatedUserActivityTables(x *xorm.Engine) error {
 		Created      timeutil.TimeStamp `xorm:"created"`
 	}
 
-	// drop unique index on HostFqdn & add unique index on HostFqdn+HostPort
+	// add unique index on HostFqdn+HostPort
 	type FederationHost struct {
 		ID       int64  `xorm:"pk autoincr"`
 		HostFqdn string `xorm:"host_fqdn UNIQUE(federation_host) INDEX VARCHAR(255) NOT NULL"`
@@ -47,53 +61,28 @@ func AddFederatedUserActivityTables(x *xorm.Engine) error {
 
 	var err error
 
-	federationHostTable, err := x.TableInfo(FederationHost{})
-	if err != nil {
-		log.Warn("migration[33]: There was an issue: %v", err)
-		return nil
-	}
-	for _, index := range federationHostTable.Indexes {
-		if index.Name == "host_fqdn" {
-			sessMigration := x.NewSession()
-			defer sessMigration.Close()
-
-			if err := sessMigration.Begin(); err != nil {
-				return nil
-			}
-			sql := x.Dialect().DropIndexSQL(federationHostTable.Name, index)
-			_, err := sessMigration.Exec(sql)
-			if err != nil {
-				log.Warn("migration[33]: There was an issue: %v", err)
-			}
-			err = sessMigration.Commit()
-			if err != nil {
-				log.Warn("migration[33]: There was an issue: %v", err)
-			}
-		}
-	}
-
 	err = x.Sync(&FederationHost{})
 	if err != nil {
 		log.Warn("migration[33]: There was an issue: %v", err)
-		return nil
+		return
 	}
 
 	err = x.Sync(&FederatedUserActivity{})
 	if err != nil {
 		log.Warn("migration[33]: There was an issue: %v", err)
-		return nil
+		return
 	}
 
 	err = x.Sync(&FederatedUserFollower{})
 	if err != nil {
 		log.Warn("migration[33]: There was an issue: %v", err)
-		return nil
+		return
 	}
 
 	err = x.Sync(&FederatedUser{})
 	if err != nil {
 		log.Warn("migration[33]: There was an issue: %v", err)
-		return nil
+		return
 	}
 
 	// Migrate
@@ -101,13 +90,13 @@ func AddFederatedUserActivityTables(x *xorm.Engine) error {
 	defer sessMigration.Close()
 	if err := sessMigration.Begin(); err != nil {
 		log.Warn("migration[33]: There was an issue: %v", err)
-		return nil
+		return
 	}
 	federatedUsers := make([]*FederatedUser, 0)
 	err = sessMigration.OrderBy("id").Find(&federatedUsers)
 	if err != nil {
 		log.Warn("migration[33]: There was an issue: %v", err)
-		return nil
+		return
 	}
 
 	for _, federatedUser := range federatedUsers {
@@ -118,7 +107,7 @@ func AddFederatedUserActivityTables(x *xorm.Engine) error {
 			sql := "UPDATE `federated_user` SET `inbox_path` = ? WHERE `id` = ?"
 			if _, err := sessMigration.Exec(sql, fmt.Sprintf("/api/v1/activitypub/user-id/%v/inbox", federatedUser.UserID), federatedUser.ID); err != nil {
 				log.Warn("migration[33]: There was an issue: %v", err)
-				return nil
+				return
 			}
 		}
 	}
@@ -126,7 +115,12 @@ func AddFederatedUserActivityTables(x *xorm.Engine) error {
 	err = sessMigration.Commit()
 	if err != nil {
 		log.Warn("migration[33]: There was an issue: %v", err)
-		return nil
+		return
 	}
+}
+
+func FederatedUserActivityMigration(x *xorm.Engine) error {
+	dropOldFederationHostIndexes(x)
+	addFederatedUserActivityTables(x)
 	return nil
 }
