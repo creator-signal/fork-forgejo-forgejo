@@ -76,7 +76,7 @@ require (
 	github.com/meilisearch/meilisearch-go v0.31.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/microcosm-cc/bluemonday v1.0.27
-	github.com/minio/minio-go/v7 v7.0.93
+	github.com/minio/minio-go/v7 v7.0.94
 	github.com/msteinert/pam/v2 v2.1.0
 	github.com/nektos/act v0.2.52
 	github.com/niklasfasching/go-org v1.8.0
@@ -242,7 +242,7 @@ require (
 
 replace github.com/hashicorp/go-version => github.com/6543/go-version v1.3.1
 
-replace github.com/nektos/act => code.forgejo.org/forgejo/act v1.26.0
+replace github.com/nektos/act => code.forgejo.org/forgejo/act v1.28.0
 
 replace github.com/mholt/archiver/v3 => code.forgejo.org/forgejo/archiver/v3 v3.5.1
 
