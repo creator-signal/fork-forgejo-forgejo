@@ -4,6 +4,8 @@
 package issues
 
 import (
+	"context"
+	"net/url"
 	"slices"
 
 	"forgejo.org/models/organization"
@@ -373,4 +375,15 @@ func (t *RequestReviewTarget) Type() string {
 		return "user"
 	}
 	return "team"
+}
+
+func (t *RequestReviewTarget) Link(ctx context.Context) string {
+	if t.User != nil {
+		return "/" + url.PathEscape(t.User.Name)
+	}
+	org, err := organization.GetOrgByID(ctx, t.Team.OrgID)
+	if err != nil {
+		return ""
+	}
+	return "/org/" + url.PathEscape(org.Name) + "/teams/" + url.PathEscape(t.Team.Name)
 }
