@@ -33,5 +33,5 @@ func TestRequestReviewTarget(t *testing.T) {
 	assert.Equal(t, int64(-1), target.ID())
 	assert.Equal(t, "Ghost team", target.Name())
 	assert.Equal(t, "team", target.Type())
-	assert.Equal(t, "", target.Link(db.DefaultContext))
+	assert.Empty(t, target.Link(db.DefaultContext))
 }
