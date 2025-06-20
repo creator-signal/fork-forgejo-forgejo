@@ -64,10 +64,11 @@ export function matchIssue(queryText, currentIssue = null) {
 
     for (const issue of prefixMatches) {
       results.add(issue);
+      if (results.size >= maxMatches) break;
     }
   }
 
-  if (!isNumber || results.length < maxMatches) {
+  if (results.length < maxMatches) {
     // Fallback: find by title match, sorted by number descending
     const titleMatches = issues
       .filter((issue) =>
@@ -82,5 +83,5 @@ export function matchIssue(queryText, currentIssue = null) {
     }
   }
 
-  return Array.from(results).slice(0, maxMatches);
+  return Array.from(results);
 }
