@@ -68,7 +68,7 @@ export function matchIssue(queryText, currentIssue = null) {
     }
   }
 
-  if (results.length < maxMatches) {
+  if (results.size < maxMatches) {
     // Fallback: find by title match, sorted by number descending
     const titleMatches = issues
       .filter((issue) =>
