@@ -270,33 +270,63 @@ test.describe('Dependency dropdown', () => {
     expect(response?.status()).toBe(200);
 
     const depsBlock = page.locator('.issue-content-right .depending');
+    const deleteDepBtn = page.locator('.issue-content-right .depending .delete-dependency-button');
+
+    const input = page.locator('#new-dependency-drop-list .search');
+    const current = page.locator('#new-dependency-drop-list .text').first();
+    const menu = page.locator('#new-dependency-drop-list .menu');
+    const items = page.locator('#new-dependency-drop-list .menu .item');
+
+    const confirmDelete = async () => {
+      const modal = page.locator('.modal.remove-dependency');
+      await expect(modal).toBeVisible();
+      await expect(modal).toContainText('This will remove the dependency from this issue');
+      await modal.locator('button.ok').click();
+    };
+
+    // A kludge to set the dropdown to the *wrong* value so it lets us select the correct one next.
+    const resetDropdown = async () => {
+      if (await current.textContent().then((s) => s.includes('#4'))) return;
+      await input.click();
+      await input.fill('unrelated');
+      await expect(items.first()).toContainText('unrelated');
+      await items.first().click();
+      await expect(current).toContainText('#4');
+      await input.click();
+    };
+
+    await expect(depsBlock).toBeVisible();
+    while (await deleteDepBtn.first().isVisible()) {
+      await deleteDepBtn.first().click(); // wipe added dependencies from any previously failed tests
+      await confirmDelete();
+    }
     await expect(depsBlock).toContainText('No dependencies set');
 
-    const input = page.locator('.issue-content-right .depending .dropdown .search');
-    const current = page.locator('.issue-content-right .depending input[name="newDependency"]');
-    const menu = page.locator('.issue-content-right .depending .menu');
-    const items = page.locator('.issue-content-right .depending .menu .item');
     await input.scrollIntoViewIfNeeded();
     await input.click();
 
     const first = 'first issue here';
     const second = 'second issue here';
+    const newest = 'newest issue';
 
     // Without query, it should show issues in the same repo, sorted by date, except current one.
     await expect(menu).toBeVisible();
-    await expect(items).toHaveCount(2);
-    await expect(items.first()).toContainText(second);
+    await expect(items).toHaveCount(4); // 5 issues in this repo, minus current one
+    await expect(items.first()).toContainText(newest);
     await expect(items.last()).toContainText(first);
+    await resetDropdown();
 
     // With query, it should search all repos, but show current repo issues first.
-    await input.fill('seventh');
-    await expect(items).toHaveCount(2); // there is an issue in user2/repo2 containing the word "seventh"
+    await input.fill('right');
     await expect(items.first()).toContainText(second);
+    await expect.poll(() => items.count()).toBeGreaterThan(1); // there is an issue in user11/dependency-test-2 containing the word "right"
+    await resetDropdown();
 
     // When entering an issue number, it should always show that one first, then all text matches.
     await input.fill('1');
     await expect(items.first()).toContainText(first);
     await expect(items.nth(1)).toBeVisible();
+    await resetDropdown();
 
     // Should behave the same with a prefix
     await input.fill('#1');
@@ -304,11 +334,7 @@ test.describe('Dependency dropdown', () => {
 
     // Selecting an issue
     await items.first().click();
-    await expect(current).toHaveValue(/\d+/);
-
-    // Dropdown filters out currently selected issue. Whether that's good UX is debatable, but test for now.
-    await input.fill('#1');
-    await expect(items.first()).toBeHidden();
+    await expect(current).toContainText(first);
 
     // Add dependency
     const link = page.locator('.issue-content-right .depending .dependency a.title');
@@ -316,12 +342,10 @@ test.describe('Dependency dropdown', () => {
     await expect(link).toHaveAttribute('href', '/user11/dependency-test/issues/1');
 
     // Remove dependency
-    await page.locator('.issue-content-right .depending .delete-dependency-button').click();
+    await expect(deleteDepBtn).toBeVisible();
+    await deleteDepBtn.click();
 
-    const modal = page.locator('.modal.remove-dependency');
-    await expect(modal).toBeVisible();
-    await expect(modal).toContainText('This will remove the dependency from this issue');
-    await modal.locator('button.ok').click();
+    await confirmDelete();
 
     await expect(depsBlock).toContainText('No dependencies set');
   });

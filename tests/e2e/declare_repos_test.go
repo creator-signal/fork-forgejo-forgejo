@@ -42,6 +42,19 @@ type SetupRepo func(*user_model.User, *repo_model.Repository)
 // put your Git repo declarations in here
 // feel free to amend the helper function below or use the raw variant directly
 func DeclareGitRepos(t *testing.T) func() {
+
+	now := timeutil.TimeStampNow()
+	postIssue := func(repo *repo_model.Repository, user *user_model.User, age int64, title, content string) {
+		issue := &issues_model.Issue{
+			RepoID:      repo.ID,
+			PosterID:    user.ID,
+			Title:       title,
+			Content:     content,
+			CreatedUnix: now.Add(-age),
+		}
+		require.NoError(t, issue_service.NewIssue(db.DefaultContext, repo, issue, nil, nil, nil))
+	}
+
 	cleanupFunctions := []func(){
 		newRepo(t, 2, "diff-test", nil, []FileChanges{{
 			Filename: "testfile",
@@ -74,20 +87,21 @@ func DeclareGitRepos(t *testing.T) func() {
 				},
 			}),
 		}, []FileChanges{}, func(user *user_model.User, repo *repo_model.Repository) {
-			now := timeutil.TimeStampNow() - 3600
-			post := func(title, content string) {
-				issue := &issues_model.Issue{
-					RepoID:      repo.ID,
-					PosterID:    user.ID,
-					Title:       title,
-					Content:     content,
-					CreatedUnix: now - 300,
-				}
-				require.NoError(t, issue_service.NewIssue(db.DefaultContext, repo, issue, nil, nil, nil))
-			}
-			post("first issue here", "an issue created earlier")
-			post("second issue here (not 101)", "not the seventh issue, but in the right repo")
-			post("third issue here", "depends on things")
+			postIssue(repo, user, 500, "first issue here", "an issue created earlier")
+			postIssue(repo, user, 400, "second issue here (not 1)", "not the right issue, but in the right repo")
+			postIssue(repo, user, 300, "third issue here", "depends on things")
+			postIssue(repo, user, 200, "unrelated issue", "shrug emoji")
+			postIssue(repo, user, 100, "newest issue", "very new")
+		}),
+		newRepo(t, 11, "dependency-test-2", &tests.DeclarativeRepoOptions{
+			UnitConfig: optional.Some(map[unit_model.Type]convert.Conversion{
+				unit_model.TypeIssues: &repo_model.IssuesConfig{
+					EnableDependencies: true,
+				},
+			}),
+		}, []FileChanges{}, func(user *user_model.User, repo *repo_model.Repository) {
+			postIssue(repo, user, 450, "right issue", "an issue containing word right")
+			postIssue(repo, user, 150, "left issue", "an issue containing word left")
 		}),
 		// add your repo declarations here
 	}
