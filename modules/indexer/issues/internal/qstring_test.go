@@ -169,3 +169,35 @@ func TestIssueQueryString(t *testing.T) {
 		})
 	}
 }
+
+func TestToken_ParseIssueReference(t *testing.T) {
+	var tk Token
+	{
+		tk.Term = "123"
+		id, err := tk.ParseIssueReference()
+		require.NoError(t, err)
+		assert.Equal(t, id, int64(123))
+	}
+	{
+		tk.Term = "#123"
+		id, err := tk.ParseIssueReference()
+		require.NoError(t, err)
+		assert.Equal(t, id, int64(123))
+	}
+	{
+		tk.Term = "!123"
+		id, err := tk.ParseIssueReference()
+		require.NoError(t, err)
+		assert.Equal(t, id, int64(123))
+	}
+	{
+		tk.Term = "text"
+		_, err := tk.ParseIssueReference()
+		require.Error(t, err)
+	}
+	{
+		tk.Term = ""
+		_, err := tk.ParseIssueReference()
+		require.Error(t, err)
+	}
+}
