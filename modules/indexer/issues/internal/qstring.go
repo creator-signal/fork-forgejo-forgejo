@@ -107,6 +107,10 @@ nextEnd:
 
 // Tokenize the keyword
 func (o *SearchOptions) Tokens() (tokens []Token, err error) {
+	if o.Keyword == "" {
+		return nil, nil
+	}
+
 	in := strings.NewReader(o.Keyword)
 	it := Tokenizer{in: in}
 

@@ -156,13 +156,9 @@ func (b *Indexer) Delete(_ context.Context, ids ...int64) error {
 func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (*internal.SearchResult, error) {
 	var queries []query.Query
 
-	var tokens []internal.Token
-	if options.Keyword != "" {
-		parsed, err := options.Tokens()
-		if err != nil {
-			return nil, err
-		}
-		tokens = parsed
+	tokens, err := options.Tokens()
+	if err != nil {
+		return nil, err
 	}
 
 	if tokens != nil {
