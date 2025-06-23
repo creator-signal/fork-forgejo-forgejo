@@ -70,17 +70,6 @@ func userProfile(ctx *context.Context) {
 	ctx.Data["OpenGraphURL"] = ctx.ContextUser.HTMLURL()
 	ctx.Data["OpenGraphDescription"] = ctx.ContextUser.Description
 
-	// prepare heatmap data
-	if setting.Service.EnableUserHeatmap {
-		data, err := activities.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
-		if err != nil {
-			ctx.ServerError("GetUserHeatmapDataByUser", err)
-			return
-		}
-		ctx.Data["HeatmapData"] = data
-		ctx.Data["HeatmapTotalContributions"] = activities.GetTotalContributionsInHeatmap(data)
-	}
-
 	profileDbRepo, profileGitRepo, profileReadmeBlob, profileClose := shared_user.FindUserProfileReadme(ctx, ctx.Doer)
 	defer profileClose()
 
@@ -206,6 +195,17 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 		ctx.Data["FollowingFeeds"] = items
 		total = int(count)
 	case "activity":
+		// prepare heatmap data
+		if setting.Service.EnableUserHeatmap {
+			data, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
+			if err != nil {
+				ctx.ServerError("GetUserHeatmapDataByUser", err)
+				return
+			}
+			ctx.Data["HeatmapData"] = data
+			ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
+		}
+
 		date := ctx.FormString("date")
 		pagingNum = setting.UI.FeedPagingNum
 		items, count, err := activities.GetFeeds(ctx, activities.GetFeedsOptions{
@@ -284,10 +284,12 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 
 		total = int(count)
 	case "overview":
-		if bytes, err := profileReadme.GetBlobContent(setting.UI.MaxDisplayFileSize); err != nil {
-			log.Error("failed to GetBlobContent: %v", err)
+		if rc, _, err := profileReadme.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err != nil {
+			log.Error("failed to NewTruncatedReader: %v", err)
 		} else {
-			if profileContent, err := markdown.RenderString(&markup.RenderContext{
+			defer rc.Close()
+
+			if profileContent, err := markdown.RenderReader(&markup.RenderContext{
 				Ctx:     ctx,
 				GitRepo: profileGitRepo,
 				Links: markup.Links{
@@ -300,7 +302,7 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 					BranchPath: path.Join("branch", util.PathEscapeSegments(profileDbRepo.DefaultBranch)),
 				},
 				Metas: map[string]string{"mode": "document"},
-			}, bytes); err != nil {
+			}, rc); err != nil {
 				log.Error("failed to RenderString: %v", err)
 			} else {
 				ctx.Data["ProfileReadme"] = profileContent

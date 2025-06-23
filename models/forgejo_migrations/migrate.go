@@ -105,6 +105,10 @@ var migrations = []*Migration{
 	NewMigration("Migrate maven package name concatenation", ChangeMavenArtifactConcatenation),
 	// v32 -> v33
 	NewMigration("Add federated user activity tables, update the `federated_user` table & add indexes", FederatedUserActivityMigration),
+	// v33 -> v34
+	NewMigration("Add `notify-email` column to `action_run` table", AddNotifyEmailToActionRun),
+	// v34 -> v35
+	NewMigration("Add index to `stopped` column in `action_run` table", AddIndexToActionRunStopped),
 }
 
 // GetCurrentDBVersion returns the current Forgejo database version.
