@@ -170,7 +170,7 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 
 			if issueID, err := token.ParseIssueReference(); err == nil {
 				idQuery := inner_bleve.NumericEqualityQuery(issueID, "index")
-				idQuery.SetBoost(5.0)
+				idQuery.SetBoost(20.0)
 				innerQ.AddQuery(idQuery)
 			}
 
