@@ -42,7 +42,6 @@ type SetupRepo func(*user_model.User, *repo_model.Repository)
 // put your Git repo declarations in here
 // feel free to amend the helper function below or use the raw variant directly
 func DeclareGitRepos(t *testing.T) func() {
-
 	now := timeutil.TimeStampNow()
 	postIssue := func(repo *repo_model.Repository, user *user_model.User, age int64, title, content string) {
 		issue := &issues_model.Issue{
