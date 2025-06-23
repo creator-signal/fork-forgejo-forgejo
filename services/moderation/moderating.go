@@ -36,7 +36,7 @@ func GetShadowCopyMap(ctx *context.Context, ard *moderation.AbuseReportDetailed)
 			log.Warn("Unmarshal failed for shadow copy #%d. %v", ard.ShadowCopyID.Int64, err)
 			return nil
 		}
-		return data.GetValueMap()
+		return data.GetFieldsMap()
 	}
 	return nil
 }

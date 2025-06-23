@@ -51,15 +51,15 @@ type CommentData struct {
 	UpdatedUnix    timeutil.TimeStamp
 }
 
-// Implements GetValueMap() from ShadowCopyData interface, returning a list of <key, value> pairs
+// Implements GetFieldsMap() from ShadowCopyData interface, returning a list of <key, value> pairs
 // to be used when rendering the shadow copy for admins reviewing the corresponding abuse report(s).
-func (cd CommentData) GetValueMap() []moderation.ShadowCopyField {
+func (cd CommentData) GetFieldsMap() []moderation.ShadowCopyField {
 	return []moderation.ShadowCopyField{
 		{Key: "PosterID", Value: strconv.FormatInt(cd.PosterID, 10)},
 		{Key: "IssueID", Value: strconv.FormatInt(cd.IssueID, 10)},
-		{Key: "Name", Value: cd.Content},
+		{Key: "Content", Value: cd.Content},
 		{Key: "ContentVersion", Value: strconv.Itoa(cd.ContentVersion)},
-		{Key: "CreatedUnix", Value: cd.CreatedUnix.FormatDate()},
+		{Key: "CreatedUnix", Value: cd.CreatedUnix.AsLocalTime().String()},
 		{Key: "UpdatedUnix", Value: cd.UpdatedUnix.AsLocalTime().String()},
 	}
 }

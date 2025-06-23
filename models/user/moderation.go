@@ -37,9 +37,9 @@ type UserData struct { //revive:disable-line:exported
 	AvatarEmail string
 }
 
-// Implements GetValueMap() from ShadowCopyData interface, returning a list of <key, value> pairs
+// Implements GetFieldsMap() from ShadowCopyData interface, returning a list of <key, value> pairs
 // to be used when rendering the shadow copy for admins reviewing the corresponding abuse report(s).
-func (ud UserData) GetValueMap() []moderation.ShadowCopyField {
+func (ud UserData) GetFieldsMap() []moderation.ShadowCopyField {
 	return []moderation.ShadowCopyField{
 		{Key: "Name", Value: ud.Name},
 		{Key: "FullName", Value: ud.FullName},

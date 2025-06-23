@@ -37,9 +37,9 @@ type ShadowCopyField struct {
 // ShadowCopyData interface should be implemented by the type structs used for marshaling/unmarshaling the fields
 // preserved as shadow copies for abusive content reports (i.e. UserData, RepositoryData, IssueData, CommentData).
 type ShadowCopyData interface {
-	// GetValueMap returns a list of <key, value> pairs with the fields stored within shadow copies
+	// GetFieldsMap returns a list of <key, value> pairs with the fields stored within shadow copies
 	// of content reported as abusive, to be used when rendering a shadow copy in the admin UI.
-	GetValueMap() []ShadowCopyField
+	GetFieldsMap() []ShadowCopyField
 }
 
 func init() {
