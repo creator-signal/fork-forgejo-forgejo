@@ -99,7 +99,7 @@ func (t *Tokenizer) next() (tk Token, err error) {
 nextEnd:
 
 	tk.Term = sb.String()
-	if err == io.EOF && tk.Term != "" {
+	if err == io.EOF {
 		err = nil
 	} // do not consider EOF as an error at the end
 	return tk, err
@@ -111,7 +111,9 @@ func (o *SearchOptions) Tokens() (tokens []Token, err error) {
 	it := Tokenizer{in: in}
 
 	for token, err := it.next(); err == nil; token, err = it.next() {
-		tokens = append(tokens, token)
+		if token.Term != "" {
+			tokens = append(tokens, token)
+		}
 	}
 	if err != nil && err != io.EOF {
 		return nil, err
