@@ -43,28 +43,34 @@ func (ard AbuseReportDetailed) ContentTypeIconName() string {
 
 func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 	var reports []*AbuseReportDetailed
-	err := db.GetEngine(ctx).SQL(`SELECT AR.*, COUNT(AR.id) AS 'reported_times', U.name AS 'reporter_name', REFS.ref AS 'content_reference'
+	err := db.GetEngine(ctx).SQL(`SELECT AR.*, ARD.reported_times, U.name AS reporter_name, REFS.ref AS content_reference
 		FROM abuse_report AR
-		LEFT JOIN user U ON U.id = AR.reporter_id
 		INNER JOIN (
-			SELECT 1 AS 'type', id, concat('@', name) AS 'ref'
-			FROM user WHERE id IN (
+			SELECT min(id) AS id, count(id) AS reported_times
+			FROM abuse_report
+			WHERE status = 1
+			GROUP BY content_type, content_id
+		) ARD ON ARD.id = AR.id
+		LEFT JOIN "user" U ON U.id = AR.reporter_id
+		INNER JOIN (
+			SELECT 1 AS type, id, concat('@', name) AS "ref"
+			FROM "user" WHERE id IN (
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 1
 			)
 			UNION
-			SELECT 2 AS 'type', id, concat('/', owner_name, '/', name) AS 'ref'
+			SELECT 2 AS "type", id, concat('/', owner_name, '/', name) AS "ref"
 			FROM repository WHERE id IN (
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 2
 			)
 			UNION
-			SELECT 3 AS 'type', I.id, concat(IR.owner_name, '/', IR.name, '#', I.'index') AS 'ref'
+			SELECT 3 AS "type", I.id, concat(IR.owner_name, '/', IR.name, '#', I."index") AS "ref"
 			FROM issue I
 			LEFT JOIN repository IR ON IR.id = I.repo_id
 			WHERE I.id IN (
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 3
 			)
 			UNION
-			SELECT 4 AS 'type', C.id, concat('/', CIR.owner_name, '/', CIR.name, '/issues/', CI.'index', '#issuecomment-', C.id) AS 'ref'
+			SELECT 4 AS "type", C.id, concat('/', CIR.owner_name, '/', CIR.name, '/issues/', CI."index", '#issuecomment-', C.id) AS "ref"
 			FROM comment C
 			LEFT JOIN issue CI ON CI.id = C.issue_id
 			LEFT JOIN repository CIR ON CIR.id = CI.repo_id
@@ -72,8 +78,6 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 4
 			)
 		) REFS ON REFS.type = AR.content_type AND REFS.id = AR.content_id
-		WHERE AR.status = 1
-		GROUP BY AR.content_type, AR.content_id
 		ORDER BY AR.created_unix ASC`).
 		Find(&reports)
 	if err != nil {
@@ -84,17 +88,22 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 
 func GetOpenReportsByTypeAndContentID(ctx context.Context, contentType ReportedContentType, contentID int64) ([]*AbuseReportDetailed, error) {
 	var reports []*AbuseReportDetailed
+
+	// Some remarks concerning PostgreSQL:
+	// - user table should be escaped (e.g. `user`);
+	// - tried to use aliases for table names but errors like 'invalid reference to FROM-clause entry'
+	//   or 'missing FROM-clause entry' were returned;
 	err := db.GetEngine(ctx).
-		Select("AR.*, U.`name` AS 'reporter_name', SC.created_unix AS 'shadow_copy_date', SC.raw_value AS 'shadow_copy_raw_value'").
-		Table("abuse_report").Alias("AR").
-		Join("LEFT", []string{"user", "U"}, "U.id = AR.reporter_id").
-		Join("LEFT", []string{"abuse_report_shadow_copy", "SC"}, "SC.id = AR.shadow_copy_id").
+		Select("abuse_report.*, `user`.name AS reporter_name, abuse_report_shadow_copy.created_unix AS shadow_copy_date, abuse_report_shadow_copy.raw_value AS shadow_copy_raw_value").
+		Table("abuse_report").
+		Join("LEFT", "user", "`user`.id = abuse_report.reporter_id").
+		Join("LEFT", "abuse_report_shadow_copy", "abuse_report_shadow_copy.id = abuse_report.shadow_copy_id").
 		Where(builder.Eq{
 			"content_type": contentType,
 			"content_id":   contentID,
 			"status":       ReportStatusTypeOpen,
 		}).
-		Asc("AR.`created_unix`").
+		Asc("abuse_report.created_unix").
 		Find(&reports)
 
 	// TODO: Limit to first n or use pagination?!
