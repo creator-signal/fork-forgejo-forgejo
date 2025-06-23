@@ -13,13 +13,6 @@ forgejo.org/models
 	IsErrSHANotFound
 	IsErrMergeDivergingFastForwardOnly
 
-forgejo.org/models/activities
-	GetActivityByID
-	NewFederatedUserActivity
-	CreateUserActivity
-	GetFollowingFeeds
-	FederatedUserActivity.loadActor
-
 forgejo.org/models/auth
 	WebAuthnCredentials
 
@@ -58,17 +51,9 @@ forgejo.org/models/user
 	IsErrExternalLoginUserAlreadyExist
 	IsErrExternalLoginUserNotExist
 	NewFederatedUser
-	NewFederatedUserFollower
 	IsErrUserSettingIsNotExist
 	GetUserAllSettings
 	DeleteUserSetting
-	GetFederatedUser
-	GetFederatedUserByUserID
-	UpdateFederatedUser
-	GetFollowersForUser
-	AddFollower
-	RemoveFollower
-	IsFollowingAp
 
 forgejo.org/modules/activitypub
 	NewContext
@@ -99,24 +84,12 @@ forgejo.org/modules/eventsource
 	Event.String
 
 forgejo.org/modules/forgefed
-	NewForgeFollowFromAp
-	NewForgeFollow
-	ForgeFollow.MarshalJSON
-	ForgeFollow.UnmarshalJSON
-	ForgeFollow.Validate
 	NewForgeUndoLike
 	ForgeUndoLike.UnmarshalJSON
 	ForgeUndoLike.Validate
-	NewForgeUserActivityFromAp
-	NewForgeUserActivity
-	ForgeUserActivity.Validate
-	NewPersonIDFromModel
 	GetItemByType
 	JSONUnmarshalerFn
 	NotEmpty
-	NewForgeUserActivityNoteFromAp
-	newNote
-	ForgeUserActivityNote.Validate
 	ToRepository
 	OnRepository
 
@@ -228,7 +201,6 @@ forgejo.org/modules/util/filebuffer
 
 forgejo.org/modules/validation
 	IsErrNotValid
-	ValidateIDExists
 
 forgejo.org/modules/web
 	RouteMock

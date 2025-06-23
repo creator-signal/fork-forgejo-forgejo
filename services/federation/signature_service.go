@@ -21,7 +21,7 @@ import (
 )
 
 // Factory function for ActorID. Created struct is asserted to be valid
-func NewActorIDFromKeyId(ctx *context_service.Base, uri string) (fm.ActorID, error) {
+func NewActorIDFromKeyID(ctx *context_service.Base, uri string) (fm.ActorID, error) {
 	parsedURI, err := url.Parse(uri)
 	parsedURI.Fragment = ""
 	if err != nil {
@@ -70,7 +70,7 @@ func FindOrCreateFederatedUserKey(ctx *context_service.Base, keyID string) (pubK
 	}
 
 	if federatedUser == nil {
-		rawActorID, err := NewActorIDFromKeyId(ctx, keyID)
+		rawActorID, err := NewActorIDFromKeyID(ctx, keyID)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func FindOrCreateFederationHostKey(ctx *context_service.Base, keyID string) (pub
 	if err != nil {
 		return nil, err
 	}
-	rawActorID, err := NewActorIDFromKeyId(ctx, keyID)
+	rawActorID, err := NewActorIDFromKeyID(ctx, keyID)
 	if err != nil {
 		return nil, err
 	}

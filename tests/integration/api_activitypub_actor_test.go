@@ -58,7 +58,7 @@ func TestActorNewFromKeyId(t *testing.T) {
 
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		ctx, _ := contexttest.MockAPIContext(t, "/api/v1/activitypub/actor")
-		sut, err := federation.NewActorIDFromKeyId(ctx.Base, fmt.Sprintf("%sapi/v1/activitypub/actor#main-key", u))
+		sut, err := federation.NewActorIDFromKeyID(ctx.Base, fmt.Sprintf("%sapi/v1/activitypub/actor#main-key", u))
 		require.NoError(t, err)
 
 		port, err := strconv.ParseUint(u.Port(), 10, 16)
