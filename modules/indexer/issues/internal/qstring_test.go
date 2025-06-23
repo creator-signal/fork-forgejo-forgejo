@@ -156,6 +156,24 @@ var testOpts = []testIssueQueryStringOpt{
 			},
 		},
 	},
+	{
+		Keyword: "\\",
+		Results: nil,
+	},
+	{
+		Keyword: "\"",
+		Results: nil,
+	},
+	{
+		Keyword: "Hello \\",
+		Results: []Token{
+			{
+				Term:  "Hello",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+		},
+	},
 }
 
 func TestIssueQueryString(t *testing.T) {

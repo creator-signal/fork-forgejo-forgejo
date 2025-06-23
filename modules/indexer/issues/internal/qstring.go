@@ -99,7 +99,7 @@ func (t *Tokenizer) next() (tk Token, err error) {
 nextEnd:
 
 	tk.Term = sb.String()
-	if err == io.EOF {
+	if err == io.EOF && tk.Term != "" {
 		err = nil
 	} // do not consider EOF as an error at the end
 	return tk, err
