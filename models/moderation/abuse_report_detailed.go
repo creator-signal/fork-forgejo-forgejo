@@ -18,12 +18,6 @@ type AbuseReportDetailed struct {
 	ContentReference   string
 	ShadowCopyDate     timeutil.TimeStamp // only for details
 	ShadowCopyRawValue string             // only for details
-
-	ShadowCopyMap string
-}
-
-func (AbuseReportDetailed) TableName() string {
-	return "abuse_report"
 }
 
 func (ard AbuseReportDetailed) ContentTypeIconName() string {

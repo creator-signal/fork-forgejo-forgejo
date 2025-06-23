@@ -3,6 +3,7 @@
 	<h4 class="ui top attached header">
 		{{ctx.Locale.Tr "admin.moderation.reports"}}
 	</h4>
+	{{if .Reports}}
 	<div class="ui attached segment">
 		<div class="flex-item tw-items-center">
 			<div class="flex-item-leading">
@@ -18,6 +19,7 @@
 			</div>
 		</div>
 	</div>
+	{{end}}
 	<div class="ui attached segment">
 		{{if .Reports}}
 		<div class="flex-list">
@@ -43,7 +45,6 @@
 
 					{{if .ShadowCopyID.Valid}}
 						<details><summary>{{DateUtils.FullTime .ShadowCopyDate}} shadow copy</summary>
-						{{if not .ShadowCopyMap}}
 						<table class="ui very basic striped table unstackable">
 							{{range $scField := (call $.GetShadowCopyMap $.Context .)}}
 							<tr>
@@ -52,7 +53,6 @@
 							</tr>
 							{{end}}
 						</table>
-						{{end}}
 						</details>
 					{{end}}
 				</div>
