@@ -176,19 +176,19 @@ func TestToken_ParseIssueReference(t *testing.T) {
 		tk.Term = "123"
 		id, err := tk.ParseIssueReference()
 		require.NoError(t, err)
-		assert.Equal(t, id, int64(123))
+		assert.Equal(t, int64(123), id)
 	}
 	{
 		tk.Term = "#123"
 		id, err := tk.ParseIssueReference()
 		require.NoError(t, err)
-		assert.Equal(t, id, int64(123))
+		assert.Equal(t, int64(123), id)
 	}
 	{
 		tk.Term = "!123"
 		id, err := tk.ParseIssueReference()
 		require.NoError(t, err)
-		assert.Equal(t, id, int64(123))
+		assert.Equal(t, int64(123), id)
 	}
 	{
 		tk.Term = "text"
