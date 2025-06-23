@@ -95,6 +95,8 @@ func createSessions(t testing.TB) {
 		"user2",
 		"user11",
 		"user12",
+		"user18",
+		"user29",
 		"user40",
 	}
 

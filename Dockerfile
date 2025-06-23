@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/xx AS xx
 
-FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/golang:1.24-alpine3.21 AS build-env
+FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/golang:1.24-alpine3.22 AS build-env
 
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY:-https://proxy.golang.org,direct}
@@ -33,10 +33,10 @@ RUN apk --no-cache add build-base git nodejs npm
 COPY . ${GOPATH}/src/forgejo.org
 WORKDIR ${GOPATH}/src/forgejo.org
 
-RUN make clean
+RUN make clean-no-bindata
 RUN make frontend
 RUN go build contrib/environment-to-ini/environment-to-ini.go && xx-verify environment-to-ini
-RUN LDFLAGS="-buildid=" make RELEASE_VERSION=$RELEASE_VERSION GOFLAGS="-trimpath" go-check generate-backend static-executable && xx-verify gitea
+RUN LDFLAGS="-buildid=" make FORGEJO_GENERATE_SKIP_HASH=true RELEASE_VERSION=$RELEASE_VERSION GOFLAGS="-trimpath" go-check generate-backend static-executable && xx-verify gitea
 
 # Copy local files
 COPY docker/root /tmp/local
@@ -51,7 +51,7 @@ RUN chmod 755 /tmp/local/usr/bin/entrypoint \
               /go/src/forgejo.org/environment-to-ini
 RUN chmod 644 /go/src/forgejo.org/contrib/autocompletion/bash_autocomplete
 
-FROM data.forgejo.org/oci/alpine:3.21
+FROM data.forgejo.org/oci/alpine:3.22
 ARG RELEASE_VERSION
 LABEL maintainer="contact@forgejo.org" \
       org.opencontainers.image.authors="Forgejo" \
