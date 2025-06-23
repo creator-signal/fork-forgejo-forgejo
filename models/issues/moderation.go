@@ -25,6 +25,21 @@ type IssueData struct {
 	UpdatedUnix    timeutil.TimeStamp
 }
 
+// Implements GetFieldsMap() from ShadowCopyData interface, returning a list of <key, value> pairs
+// to be used when rendering the shadow copy for admins reviewing the corresponding abuse report(s).
+func (cd IssueData) GetFieldsMap() []moderation.ShadowCopyField {
+	return []moderation.ShadowCopyField{
+		{Key: "RepoID", Value: strconv.FormatInt(cd.RepoID, 10)},
+		{Key: "Index", Value: strconv.FormatInt(cd.Index, 10)},
+		{Key: "PosterID", Value: strconv.FormatInt(cd.PosterID, 10)},
+		{Key: "Content", Value: cd.Content},
+		{Key: "Title", Value: cd.Title},
+		{Key: "ContentVersion", Value: strconv.Itoa(cd.ContentVersion)},
+		{Key: "CreatedUnix", Value: cd.CreatedUnix.AsLocalTime().String()},
+		{Key: "UpdatedUnix", Value: cd.UpdatedUnix.AsLocalTime().String()},
+	}
+}
+
 // newIssueData creates a trimmed down issue to be used just to create a JSON structure
 // (keeping only the fields relevant for moderation purposes)
 func newIssueData(issue *Issue) IssueData {

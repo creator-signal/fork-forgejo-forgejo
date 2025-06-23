@@ -6,6 +6,7 @@ package moderation
 import (
 	"forgejo.org/models/issues"
 	"forgejo.org/models/moderation"
+	"forgejo.org/models/repo"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
@@ -24,11 +25,9 @@ func GetShadowCopyMap(ctx *context.Context, ard *moderation.AbuseReportDetailed)
 		case moderation.ReportedContentTypeUser:
 			data = new(user.UserData)
 		case moderation.ReportedContentTypeRepository:
-			// TODO: implement ShadowCopyData.GetValueMap() for RepositoryData
-			// data = new(repo.RepositoryData)
+			data = new(repo.RepositoryData)
 		case moderation.ReportedContentTypeIssue:
-			// TODO: implement ShadowCopyData.GetValueMap() for IssueData
-			// data = new(issues.IssueData)
+			data = new(issues.IssueData)
 		case moderation.ReportedContentTypeComment:
 			data = new(issues.CommentData)
 		}
