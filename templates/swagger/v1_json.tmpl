@@ -208,7 +208,33 @@
         }
       }
     },
-    "/activitypub/user-id/{user-id}/feed": {
+    "/activitypub/user-id/{user-id}/inbox": {
+      "post": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "activitypub"
+        ],
+        "summary": "Send to the inbox",
+        "operationId": "activitypubPersonInbox",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "user ID of the user",
+            "name": "user-id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "202": {
+            "$ref": "#/responses/empty"
+          }
+        }
+      }
+    },
+    "/activitypub/user-id/{user-id}/outbox": {
       "get": {
         "produces": [
           "application/json"
@@ -233,32 +259,6 @@
           },
           "403": {
             "$ref": "#/responses/forbidden"
-          }
-        }
-      }
-    },
-    "/activitypub/user-id/{user-id}/inbox": {
-      "post": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "activitypub"
-        ],
-        "summary": "Send to the inbox",
-        "operationId": "activitypubPersonInbox",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "user ID of the user",
-            "name": "user-id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "202": {
-            "$ref": "#/responses/empty"
           }
         }
       }
