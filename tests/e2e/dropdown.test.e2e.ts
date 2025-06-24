@@ -83,7 +83,7 @@ test('No JS', async ({browser}) => {
   await expect(dropdownContent).toBeHidden();
   await dropdownSummary.click();
   await expect(dropdownContent).toBeVisible();
-  await elsewhere.click({ force: true });
+  await elsewhere.click({force: true});
   await expect(dropdownContent).toBeHidden();
 
   // Open and close with keypressing
