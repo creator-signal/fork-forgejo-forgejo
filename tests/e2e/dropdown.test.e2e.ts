@@ -3,7 +3,7 @@
 
 // @watch start
 // templates/shared/user/**
-// web_src/js/modules/dropdownSummary.ts
+// web_src/js/modules/dropdown.ts
 // @watch end
 
 import {expect} from '@playwright/test';
