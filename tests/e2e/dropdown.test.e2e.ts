@@ -16,7 +16,7 @@ test('JS enhanced', async ({page}) => {
   const nojsNotice = page.locator('body .full noscript');
   await expect(nojsNotice).toBeHidden();
 
-  // Open and close with clicking
+  // Open and close with clicking summary
   const dropdown = page.locator('details.dropdown');
   const dropdownContent = page.locator('details.dropdown ul');
   await expect(dropdownContent).toBeHidden();
@@ -60,7 +60,7 @@ test('No JS', async ({browser}) => {
   await expect(nojsNotice).toBeVisible();
   await expect(nojsPage.locator('body')).toContainClass('no-js');
 
-  // Open and close
+  // Open and close with clicking summary
   const dropdown = nojsPage.locator('details.dropdown');
   const dropdownContent = nojsPage.locator('details.dropdown ul');
   await expect(dropdownContent).toBeHidden();
