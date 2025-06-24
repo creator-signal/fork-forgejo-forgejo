@@ -1,4 +1,5 @@
 // Copyright 2017 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package organization_test
@@ -225,4 +226,24 @@ func TestInconsistentOwnerTeam(t *testing.T) {
 	// External wiki and issue
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{ID: 1005, AccessMode: perm.AccessModeRead})
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{ID: 1006, AccessMode: perm.AccessModeRead})
+}
+
+func TestTeamGetOrg(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	assert.Equal(t, int64(3), team.GetOrg(db.DefaultContext).ID)
+
+	ghostTeam := organization.NewGhostTeam()
+	assert.Equal(t, int64(-1), ghostTeam.GetOrg(db.DefaultContext).ID)
+}
+
+func TestTeamLink(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	assert.Equal(t, "/org/org3/teams/team1", team.Link(db.DefaultContext))
+
+	ghostTeam := organization.NewGhostTeam()
+	assert.Equal(t, "/org/Ghost/teams/Ghost%20team", ghostTeam.Link(db.DefaultContext))
 }
