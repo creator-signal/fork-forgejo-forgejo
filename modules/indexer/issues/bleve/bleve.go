@@ -161,7 +161,7 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		return nil, err
 	}
 
-	if tokens != nil {
+	if len(tokens) > 0 {
 		q := bleve.NewBooleanQuery()
 		for _, token := range tokens {
 			innerQ := bleve.NewDisjunctionQuery(

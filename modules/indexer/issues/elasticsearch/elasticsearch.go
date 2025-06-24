@@ -154,7 +154,7 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		return nil, err
 	}
 
-	if tokens != nil {
+	if len(tokens) > 0 {
 		q := elastic.NewBoolQuery()
 		for _, token := range tokens {
 			innerQ := elastic.NewMultiMatchQuery(token.Term, "content", "comments").FieldWithBoost("title", 2.0).TieBreaker(0.5)
