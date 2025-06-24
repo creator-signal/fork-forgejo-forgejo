@@ -199,7 +199,14 @@ func (t *Team) GetOrg(ctx context.Context) *Organization {
 
 // Link returns the team's page link
 func (t *Team) Link(ctx context.Context) string {
-	return t.GetOrg(ctx).OrganisationLink() + "/teams/" + url.PathEscape(t.Name)
+	if t.IsGhost() {
+		return ""
+	}
+	org := t.GetOrg(ctx)
+	if org.IsGhost() {
+		return ""
+	}
+	return org.OrganisationLink() + "/teams/" + url.PathEscape(t.Name)
 }
 
 // IsUsableTeamName tests if a name could be as team name
@@ -302,10 +309,22 @@ func FixInconsistentOwnerTeams(ctx context.Context) (int64, error) {
 	return int64(len(teamIDs)), nil
 }
 
+const (
+	GhostTeamID        = -1
+	GhostTeamName      = "Ghost team"
+	GhostTeamLowerName = "ghost team"
+)
+
+// NewGhostTeam creates ghost team (for deleted team)
 func NewGhostTeam() *Team {
 	return &Team{
-		ID:        -1,
-		Name:      "Ghost team",
-		LowerName: "ghost team",
+		ID:        GhostTeamID,
+		Name:      GhostTeamName,
+		LowerName: GhostTeamLowerName,
 	}
+}
+
+// IsGhost returns if a team is a ghost team
+func (t *Team) IsGhost() bool {
+	return t.ID == GhostTeamID
 }

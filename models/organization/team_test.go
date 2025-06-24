@@ -16,14 +16,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTeam_IsOwnerTeam(t *testing.T) {
+func TestTeam(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
-	assert.True(t, team.IsOwnerTeam())
+	owners := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
+	assert.Equal(t, int64(3), owners.GetOrg(db.DefaultContext).ID)
+	assert.Equal(t, "/org/org3/teams/Owners", owners.Link(db.DefaultContext))
+	assert.False(t, owners.IsGhost())
+	assert.True(t, owners.IsOwnerTeam())
 
-	team = unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
-	assert.False(t, team.IsOwnerTeam())
+	team1 := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	assert.Equal(t, int64(3), team1.GetOrg(db.DefaultContext).ID)
+	assert.Equal(t, "/org/org3/teams/team1", team1.Link(db.DefaultContext))
+	assert.False(t, team1.IsGhost())
+	assert.False(t, team1.IsOwnerTeam())
+
+	ghost := organization.NewGhostTeam()
+	assert.Equal(t, int64(-1), ghost.ID)
+	assert.Equal(t, int64(-1), ghost.GetOrg(db.DefaultContext).ID)
+	assert.Empty(t, ghost.Link(db.DefaultContext))
+	assert.True(t, ghost.IsGhost())
+	assert.False(t, ghost.IsOwnerTeam())
+
+	ghosted := organization.Team{ID: 10, Name: "Ghosted"}
+	assert.Equal(t, int64(-1), ghosted.GetOrg(db.DefaultContext).ID)
+	assert.Empty(t, ghosted.Link(db.DefaultContext))
+	assert.False(t, ghosted.IsGhost())
+	assert.False(t, ghosted.IsOwnerTeam())
 }
 
 func TestTeam_IsMember(t *testing.T) {
@@ -226,24 +245,4 @@ func TestInconsistentOwnerTeam(t *testing.T) {
 	// External wiki and issue
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{ID: 1005, AccessMode: perm.AccessModeRead})
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{ID: 1006, AccessMode: perm.AccessModeRead})
-}
-
-func TestTeamGetOrg(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
-	assert.Equal(t, int64(3), team.GetOrg(db.DefaultContext).ID)
-
-	ghostTeam := organization.NewGhostTeam()
-	assert.Equal(t, int64(-1), ghostTeam.GetOrg(db.DefaultContext).ID)
-}
-
-func TestTeamLink(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
-	assert.Equal(t, "/org/org3/teams/team1", team.Link(db.DefaultContext))
-
-	ghostTeam := organization.NewGhostTeam()
-	assert.Equal(t, "/org/Ghost/teams/Ghost%20team", ghostTeam.Link(db.DefaultContext))
 }
