@@ -189,7 +189,7 @@ func (t *Team) UnitAccessMode(ctx context.Context, tp unit.Type) perm.AccessMode
 }
 
 // GetOrg returns the team's organization
-func (t *Team) GetOrg(ctx context.Context) *Organization{
+func (t *Team) GetOrg(ctx context.Context) *Organization {
 	org, err := GetOrgByID(ctx, t.OrgID)
 	if err != nil {
 		return OrgFromUser(user_model.NewGhostUser())

@@ -305,14 +305,14 @@ func TestIssueCommentChangeReviewRequest(t *testing.T) {
 		"octicon-eye", "User One", "/user1",
 		[]string{"user1 requested reviews from user2, team1"},
 		[]string{"/user1", "/user2", "/org/org3/teams/team1"})
-	assert.Empty(t, htmlDoc.Find("#issuecomment-" + strconv.FormatInt(comment4.ID, 10) + " .text").Text())
+	assert.Empty(t, htmlDoc.Find("#issuecomment-"+strconv.FormatInt(comment4.ID, 10)+" .text").Text())
 
 	// Remove and add request
 	testIssueCommentChangeEvent(t, htmlDoc, strconv.FormatInt(comment5.ID, 10),
 		"octicon-eye", "< U<se>r Tw<o > ><", "/user2",
 		[]string{"user2 requested reviews from user1 and removed review requests for team1"},
 		[]string{"/user2", "/user1", "/org/org3/teams/team1"})
-	assert.Empty(t, htmlDoc.Find("#issuecomment-" + strconv.FormatInt(comment6.ID, 10) + " .text").Text())
+	assert.Empty(t, htmlDoc.Find("#issuecomment-"+strconv.FormatInt(comment6.ID, 10)+" .text").Text())
 }
 
 func TestIssueCommentChangeLock(t *testing.T) {
