@@ -78,11 +78,12 @@ test('No JS', async ({browser}) => {
   await dropdownSummary.click();
   await expect(dropdownContent).toBeHidden();
 
-  // Close by clicking elsewhere
+  // Close by clicking elsewhere (by hitting ::before with increased z-index)
   const elsewhere = nojsPage.locator('#navbar');
   await expect(dropdownContent).toBeHidden();
   await dropdownSummary.click();
   await expect(dropdownContent).toBeVisible();
+  // eslint-disable-next-line playwright/no-force-option
   await elsewhere.click({force: true});
   await expect(dropdownContent).toBeHidden();
 
