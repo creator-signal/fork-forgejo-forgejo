@@ -3,7 +3,7 @@
  *
  * NoJS mode could be improved by forcing the same [name] onto all dropdowns, so
  * that the browser will automatically close all but the one that was just opened
- * using keyboard. But the code for that will not be as clean.
+ * using keyboard. But the code doing that will not be as clean.
 */
 
 :root details.dropdown {
@@ -85,8 +85,8 @@ details.dropdown > summary + ul > li:last-child {
   border-radius: 0 0 var(--border-radius) var(--border-radius);
 }
 
-/* Switch the direction at a width point where most of layout changes occur. */
-/* There's no easy way to check with CSS if LTR dropdown will fit on screen. */
+/* dir-auto option - switch the direction at a width point where most of layout changes occur. */
+/* There's no way to check with CSS if LTR dropdown will fit on screen without JS. */
 @media (max-width: 767.98px) {
   details.dropdown.dir-auto > summary + ul {
     inset-inline: 0 auto;
@@ -96,9 +96,10 @@ details.dropdown > summary + ul > li:last-child {
     direction: ltr;
   }
 }
-/* Note: dropdown.dir-rtl can be implemented when needed */
 /* Note: https://css-tricks.com/css-anchor-positioning-guide/
- * looks like a great thing but FF still doesn't support it. */
+*  looks like a great thing but FF still doesn't support it. */
+
+/* Note: dropdown.dir-rtl can be implemented when needed, e.g. for navbar profile dropdown on desktop layout. */
 
 details.dropdown > summary + ul > li > .item {
   padding: var(--dropdown-item-padding);
@@ -106,7 +107,7 @@ details.dropdown > summary + ul > li > .item {
   gap: 0.75rem;
   align-items: center;
   color: var(--color-text);
-  /* Suppress underline - hover changs background color */
+  /* Suppress underline - hover is indicated by background color */
   text-decoration: none;
 }
 
