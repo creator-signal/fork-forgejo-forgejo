@@ -45,12 +45,9 @@ func (t *Tokenizer) next() (tk Token, err error) {
 
 	// skip all leading white space
 	for {
-		if r, _, err = t.in.ReadRune(); err == nil && r == ' ' {
-			//nolint:staticcheck,wastedassign // SA4006 the variable is used after the loop
-			r, _, err = t.in.ReadRune()
-			continue
+		if r, _, err = t.in.ReadRune(); err != nil || r != ' ' {
+			break
 		}
-		break
 	}
 	if err != nil {
 		return tk, err
