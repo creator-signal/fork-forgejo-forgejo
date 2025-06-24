@@ -17,7 +17,7 @@ test('JS enhanced', async ({page}) => {
   await expect(nojsNotice).toBeHidden();
 
   // Open and close with clicking summary
-  const dropdown = page.locator('details.dropdown');
+  const dropdown = page.locator('details.dropdown summary');
   const dropdownContent = page.locator('details.dropdown ul');
   await expect(dropdownContent).toBeHidden();
   await dropdown.click();
@@ -25,7 +25,16 @@ test('JS enhanced', async ({page}) => {
   await dropdown.click();
   await expect(dropdownContent).toBeHidden();
 
+  // Open and close with clicking elsewhere
+  const elsewhere = page.locator('.username');
+  await expect(dropdownContent).toBeHidden();
+  await dropdown.click();
+  await expect(dropdownContent).toBeVisible();
+  await elsewhere.click();
+  await expect(dropdownContent).toBeHidden();
+
   // Open and close with keypressing
+  await dropdown.focus();
   await dropdown.press(`Enter`);
   await expect(dropdownContent).toBeVisible();
   await dropdown.press(`Space`);
@@ -67,6 +76,14 @@ test('No JS', async ({browser}) => {
   await dropdown.click();
   await expect(dropdownContent).toBeVisible();
   await dropdown.click();
+  await expect(dropdownContent).toBeHidden();
+
+  // Open and close with clicking elsewhere
+  const elsewhere = nojsPage.locator('#navbar');
+  await expect(dropdownContent).toBeHidden();
+  await dropdown.click();
+  await expect(dropdownContent).toBeVisible();
+  await elsewhere.click({ force: true });
   await expect(dropdownContent).toBeHidden();
 
   // Open and close with keypressing
