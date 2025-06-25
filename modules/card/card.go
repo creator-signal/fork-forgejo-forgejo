@@ -19,8 +19,8 @@ import (
 	_ "image/jpeg" // for processing jpeg images
 	_ "image/png"  // for processing png images
 
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 
 	"github.com/golang/freetype"
@@ -245,13 +245,27 @@ func fallbackImage() image.Image {
 
 // As defensively as possible, attempt to load an image from a presumed external and untrusted URL
 func (c *Card) fetchExternalImage(url string) (image.Image, bool) {
-	// Use a short timeout; in the event of any failure we'll be logging and returning a placeholder, but we don't want
-	// this rendering process to be slowed down
+	// Use the new HTTP client pool for image fetching operations
+	baseClient := httplib.GetDefaultClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
+
+	// Create custom transport with short timeout for image fetching
+	imageTransport := &http.Transport{
+		Proxy:                 baseTransport.Proxy,
+		DialContext:           baseTransport.DialContext,
+		ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          baseTransport.MaxIdleConns,
+		MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+		IdleConnTimeout:       baseTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+		DisableKeepAlives:     baseTransport.DisableKeepAlives,
+		TLSClientConfig:       baseTransport.TLSClientConfig,
+	}
+
 	client := &http.Client{
-		Timeout: 1 * time.Second, // 1 second timeout
-		Transport: &http.Transport{
-			Proxy: proxy.Proxy(),
-		},
+		Timeout:   1 * time.Second, // 1 second timeout for image fetching
+		Transport: imageTransport,
 	}
 
 	// Go expects a absolute URL, so we must change a relative to an absolute one

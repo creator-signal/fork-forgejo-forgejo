@@ -7,6 +7,7 @@ package driver
 import (
 	"net/http"
 
+	"forgejo.org/modules/httplib"
 	driver_options "forgejo.org/services/f3/driver/options"
 
 	"code.forgejo.org/f3/gof3/v3/options"
@@ -15,6 +16,8 @@ import (
 func newOptions() options.Interface {
 	o := &driver_options.Options{}
 	o.SetName(driver_options.Name)
-	o.SetNewMigrationHTTPClient(func() *http.Client { return &http.Client{} })
+	o.SetNewMigrationHTTPClient(func() *http.Client {
+		return httplib.GetMigrationClient()
+	})
 	return o
 }

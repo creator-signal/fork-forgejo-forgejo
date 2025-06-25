@@ -8,22 +8,52 @@ import (
 	"net/http"
 
 	"forgejo.org/modules/hostmatcher"
-	"forgejo.org/modules/proxy"
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/setting"
 )
 
 // NewMigrationHTTPClient returns a HTTP client for migration
 func NewMigrationHTTPClient() *http.Client {
+	// Use the new HTTP client pool for migration operations
+	baseClient := httplib.GetMigrationClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
+
+	// Create a custom transport with migration-specific settings
+	migrationTransport := &http.Transport{
+		Proxy:                 baseTransport.Proxy,
+		DialContext:           hostmatcher.NewDialContext("migration", allowList, blockList, setting.Proxy.ProxyURLFixed),
+		ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          baseTransport.MaxIdleConns,
+		MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+		IdleConnTimeout:       baseTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+		DisableKeepAlives:     baseTransport.DisableKeepAlives,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: setting.Migrations.SkipTLSVerify},
+	}
+
 	return &http.Client{
-		Transport: NewMigrationHTTPTransport(),
+		Transport: migrationTransport,
+		Timeout:   baseClient.Timeout,
 	}
 }
 
 // NewMigrationHTTPTransport returns a HTTP transport for migration
 func NewMigrationHTTPTransport() *http.Transport {
+	// Use the new HTTP client pool for migration operations
+	baseClient := httplib.GetMigrationClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
+
 	return &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: setting.Migrations.SkipTLSVerify},
-		Proxy:           proxy.Proxy(),
-		DialContext:     hostmatcher.NewDialContext("migration", allowList, blockList, setting.Proxy.ProxyURLFixed),
+		Proxy:                 baseTransport.Proxy,
+		DialContext:           hostmatcher.NewDialContext("migration", allowList, blockList, setting.Proxy.ProxyURLFixed),
+		ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          baseTransport.MaxIdleConns,
+		MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+		IdleConnTimeout:       baseTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+		DisableKeepAlives:     baseTransport.DisableKeepAlives,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: setting.Migrations.SkipTLSVerify},
 	}
 }

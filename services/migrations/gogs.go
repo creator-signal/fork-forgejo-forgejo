@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/proxy"
@@ -101,27 +102,42 @@ func NewGogsDownloader(ctx context.Context, baseURL, userName, password, token, 
 	downloader := GogsDownloader{
 		ctx:       ctx,
 		baseURL:   baseURL,
-		userName:  userName,
-		password:  password,
 		repoOwner: repoOwner,
 		repoName:  repoName,
+		userName:  userName,
+		password:  password,
 	}
 
+	// Use the new HTTP client pool for migration operations
+	baseClient := httplib.GetMigrationClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
+
 	var client *gogs.Client
-	if len(token) != 0 {
+	if len(token) > 0 {
 		client = gogs.NewClient(baseURL, token)
-		downloader.userName = token
 	} else {
-		transport := NewMigrationHTTPTransport()
-		transport.Proxy = func(req *http.Request) (*url.URL, error) {
-			req.SetBasicAuth(userName, password)
-			return proxy.Proxy()(req)
+		// Create custom transport with basic auth
+		migrationTransport := &http.Transport{
+			Proxy: func(req *http.Request) (*url.URL, error) {
+				req.SetBasicAuth(userName, password)
+				return proxy.Proxy()(req)
+			},
+			DialContext:           baseTransport.DialContext,
+			ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+			MaxIdleConns:          baseTransport.MaxIdleConns,
+			MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+			IdleConnTimeout:       baseTransport.IdleConnTimeout,
+			TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+			ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+			DisableKeepAlives:     baseTransport.DisableKeepAlives,
+			TLSClientConfig:       baseTransport.TLSClientConfig,
 		}
-		downloader.transport = transport
+		downloader.transport = migrationTransport
 
 		client = gogs.NewClient(baseURL, "")
 		client.SetHTTPClient(&http.Client{
 			Transport: &downloader,
+			Timeout:   baseClient.Timeout,
 		})
 	}
 

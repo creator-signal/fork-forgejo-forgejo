@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"strings"
 
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/json"
-	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/system"
 
@@ -75,11 +75,8 @@ func getVersionDNS(domainEndpoint string) (version string, err error) {
 // content is JSON. The "latest.version" path's value will be used as the latest
 // version available.
 func getVersionHTTP(httpEndpoint string) (version string, err error) {
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			Proxy: proxy.Proxy(),
-		},
-	}
+	// Use the new HTTP client pool for update checker operations
+	httpClient := httplib.GetDefaultClient()
 
 	req, err := http.NewRequest("GET", httpEndpoint, nil)
 	if err != nil {

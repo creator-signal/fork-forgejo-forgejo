@@ -13,11 +13,11 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"time"
 
 	webhook_model "forgejo.org/models/webhook"
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/hostmatcher"
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/process"
 	"forgejo.org/modules/proxy"
@@ -200,21 +200,33 @@ func webhookProxy(allowList *hostmatcher.HostMatchList) func(req *http.Request) 
 
 // Init starts the hooks delivery thread
 func Init() error {
-	timeout := time.Duration(setting.Webhook.DeliverTimeout) * time.Second
-
 	allowedHostListValue := setting.Webhook.AllowedHostList
 	if allowedHostListValue == "" {
 		allowedHostListValue = hostmatcher.MatchBuiltinExternal
 	}
 	allowedHostMatcher := hostmatcher.ParseHostMatchList("webhook.ALLOWED_HOST_LIST", allowedHostListValue)
 
+	// Use the new HTTP client pool for webhook delivery
+	baseClient := httplib.GetWebhookClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
+
+	// Create a custom transport with webhook-specific settings
+	webhookTransport := &http.Transport{
+		Proxy:                 webhookProxy(allowedHostMatcher),
+		DialContext:           hostmatcher.NewDialContext("webhook", allowedHostMatcher, nil, setting.Webhook.ProxyURLFixed),
+		ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          baseTransport.MaxIdleConns,
+		MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+		IdleConnTimeout:       baseTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+		DisableKeepAlives:     baseTransport.DisableKeepAlives,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: setting.Webhook.SkipTLSVerify},
+	}
+
 	webhookHTTPClient = &http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: setting.Webhook.SkipTLSVerify},
-			Proxy:           webhookProxy(allowedHostMatcher),
-			DialContext:     hostmatcher.NewDialContext("webhook", allowedHostMatcher, nil, setting.Webhook.ProxyURLFixed),
-		},
+		Transport: webhookTransport,
+		Timeout:   baseClient.Timeout,
 	}
 
 	hookQueue = queue.CreateUniqueQueue(graceful.GetManager().ShutdownContext(), "webhook_sender", handler)

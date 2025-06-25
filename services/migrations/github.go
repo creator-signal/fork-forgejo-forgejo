@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/proxy"
@@ -85,15 +86,19 @@ type GithubDownloaderV3 struct {
 
 // NewGithubDownloaderV3 creates a github Downloader via github v3 API
 func NewGithubDownloaderV3(ctx context.Context, baseURL, userName, password, token, repoOwner, repoName string) *GithubDownloaderV3 {
-	downloader := GithubDownloaderV3{
-		userName:   userName,
-		baseURL:    baseURL,
-		password:   password,
+	downloader := &GithubDownloaderV3{
 		ctx:        ctx,
+		baseURL:    baseURL,
 		repoOwner:  repoOwner,
 		repoName:   repoName,
+		userName:   userName,
+		password:   password,
 		maxPerPage: 100,
 	}
+
+	// Use the new HTTP client pool for migration operations
+	baseClient := httplib.GetMigrationClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
 
 	if token != "" {
 		tokens := strings.Split(token, ",")
@@ -102,23 +107,41 @@ func NewGithubDownloaderV3(ctx context.Context, baseURL, userName, password, tok
 			ts := oauth2.StaticTokenSource(
 				&oauth2.Token{AccessToken: token},
 			)
+
+			// Create custom transport with OAuth2
+			oauth2Transport := &oauth2.Transport{
+				Base:   NewMigrationHTTPTransport(),
+				Source: oauth2.ReuseTokenSource(nil, ts),
+			}
+
 			client := &http.Client{
-				Transport: &oauth2.Transport{
-					Base:   NewMigrationHTTPTransport(),
-					Source: oauth2.ReuseTokenSource(nil, ts),
-				},
+				Transport: oauth2Transport,
+				Timeout:   baseClient.Timeout,
 			}
 
 			downloader.addClient(client, baseURL)
 		}
 	} else {
-		transport := NewMigrationHTTPTransport()
-		transport.Proxy = func(req *http.Request) (*url.URL, error) {
-			req.SetBasicAuth(userName, password)
-			return proxy.Proxy()(req)
+		// Create custom transport with basic auth
+		migrationTransport := &http.Transport{
+			Proxy: func(req *http.Request) (*url.URL, error) {
+				req.SetBasicAuth(userName, password)
+				return proxy.Proxy()(req)
+			},
+			DialContext:           baseTransport.DialContext,
+			ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+			MaxIdleConns:          baseTransport.MaxIdleConns,
+			MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+			IdleConnTimeout:       baseTransport.IdleConnTimeout,
+			TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+			ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+			DisableKeepAlives:     baseTransport.DisableKeepAlives,
+			TLSClientConfig:       baseTransport.TLSClientConfig,
 		}
+
 		client := &http.Client{
-			Transport: transport,
+			Transport: migrationTransport,
+			Timeout:   baseClient.Timeout,
 		}
 		downloader.addClient(client, baseURL)
 	}

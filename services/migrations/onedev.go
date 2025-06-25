@@ -5,6 +5,7 @@ package migrations
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
@@ -88,19 +90,36 @@ func (d *OneDevDownloader) SetContext(ctx context.Context) {
 
 // NewOneDevDownloader creates a new downloader
 func NewOneDevDownloader(ctx context.Context, baseURL *url.URL, username, password, repoName string) *OneDevDownloader {
+	// Use the new HTTP client pool for migration operations
+	baseClient := httplib.GetMigrationClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
+
+	// Create custom transport with basic auth
+	migrationTransport := &http.Transport{
+		Proxy: func(req *http.Request) (*url.URL, error) {
+			if len(username) > 0 && len(password) > 0 {
+				req.SetBasicAuth(username, password)
+			}
+			return nil, nil
+		},
+		DialContext:           baseTransport.DialContext,
+		ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          baseTransport.MaxIdleConns,
+		MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+		IdleConnTimeout:       baseTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+		DisableKeepAlives:     baseTransport.DisableKeepAlives,
+		TLSClientConfig:       baseTransport.TLSClientConfig,
+	}
+
 	downloader := &OneDevDownloader{
 		ctx:      ctx,
 		baseURL:  baseURL,
 		repoName: repoName,
 		client: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					if len(username) > 0 && len(password) > 0 {
-						req.SetBasicAuth(username, password)
-					}
-					return nil, nil
-				},
-			},
+			Transport: migrationTransport,
+			Timeout:   baseClient.Timeout,
 		},
 		userMap:      make(map[int64]*onedevUser),
 		milestoneMap: make(map[int64]string),

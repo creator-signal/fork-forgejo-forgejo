@@ -17,10 +17,10 @@ import (
 	"strings"
 	"time"
 
-	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
+	user_model "forgejo.org/modules/user"
 
 	"github.com/42wim/httpsig"
 )
@@ -72,12 +72,28 @@ func NewClientFactory() (c *ClientFactory, err error) {
 		return nil, err
 	}
 
+	// Use the new HTTP client pool for ActivityPub operations
+	baseClient := httplib.GetDefaultClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
+
+	// Create custom transport for ActivityPub
+	activityPubTransport := &http.Transport{
+		Proxy:                 baseTransport.Proxy,
+		DialContext:           baseTransport.DialContext,
+		ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          baseTransport.MaxIdleConns,
+		MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+		IdleConnTimeout:       baseTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+		DisableKeepAlives:     baseTransport.DisableKeepAlives,
+		TLSClientConfig:       baseTransport.TLSClientConfig,
+	}
+
 	c = &ClientFactory{
 		client: &http.Client{
-			Transport: &http.Transport{
-				Proxy: proxy.Proxy(),
-			},
-			Timeout: 5 * time.Second,
+			Transport: activityPubTransport,
+			Timeout:   5 * time.Second, // ActivityPub specific timeout
 		},
 		algs:        setting.HttpsigAlgs,
 		digestAlg:   httpsig.DigestAlgorithm(setting.Federation.DigestAlgorithm),

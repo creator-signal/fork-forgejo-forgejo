@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strings"
 
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/proxy"
@@ -36,13 +37,27 @@ func (c *HTTPClient) BatchSize() int {
 
 func newHTTPClient(endpoint *url.URL, httpTransport *http.Transport) *HTTPClient {
 	if httpTransport == nil {
+		// Use the new HTTP client pool for LFS operations
+		baseClient := httplib.GetLFSClient()
+		baseTransport := baseClient.Transport.(*http.Transport)
+
+		// Create a custom transport with LFS-specific settings
 		httpTransport = &http.Transport{
-			Proxy: proxy.Proxy(),
+			Proxy:                 proxy.Proxy(),
+			DialContext:           baseTransport.DialContext,
+			ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+			MaxIdleConns:          baseTransport.MaxIdleConns,
+			MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+			IdleConnTimeout:       baseTransport.IdleConnTimeout,
+			TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+			ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+			DisableKeepAlives:     baseTransport.DisableKeepAlives,
 		}
 	}
 
 	hc := &http.Client{
 		Transport: httpTransport,
+		Timeout:   httplib.GetLFSClient().Timeout,
 	}
 
 	basic := &BasicTransferAdapter{hc}

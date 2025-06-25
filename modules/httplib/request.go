@@ -150,26 +150,44 @@ func (r *Request) getResponse() (*http.Response, error) {
 		return nil, err
 	}
 
-	trans := r.setting.Transport
-	if trans == nil {
-		// create default transport
-		trans = &http.Transport{
-			TLSClientConfig: r.setting.TLSClientConfig,
-			Proxy:           http.ProxyFromEnvironment,
-			DialContext:     TimeoutDialer(r.setting.ConnectTimeout),
-		}
-	} else if t, ok := trans.(*http.Transport); ok {
-		if t.TLSClientConfig == nil {
-			t.TLSClientConfig = r.setting.TLSClientConfig
-		}
-		if t.DialContext == nil {
-			t.DialContext = TimeoutDialer(r.setting.ConnectTimeout)
-		}
-	}
+	var client *http.Client
 
-	client := &http.Client{
-		Transport: trans,
-		Timeout:   r.setting.ReadWriteTimeout,
+	if r.setting.Transport != nil {
+		// Use custom transport if provided
+		trans := r.setting.Transport
+		if t, ok := trans.(*http.Transport); ok {
+			if t.TLSClientConfig == nil {
+				t.TLSClientConfig = r.setting.TLSClientConfig
+			}
+			if t.DialContext == nil {
+				t.DialContext = TimeoutDialer(r.setting.ConnectTimeout)
+			}
+		}
+		client = &http.Client{
+			Transport: trans,
+			Timeout:   r.setting.ReadWriteTimeout,
+		}
+	} else {
+		// Use the HTTP client pool for better connection reuse
+		poolClient := GetDefaultClient()
+
+		// Create a client with custom timeout if needed
+		if r.setting.ReadWriteTimeout != 0 {
+			client = &http.Client{
+				Transport: poolClient.Transport,
+				Timeout:   r.setting.ReadWriteTimeout,
+			}
+		} else {
+			client = poolClient
+		}
+
+		// Apply TLS config if needed
+		if r.setting.TLSClientConfig != nil {
+			client = GetGlobalClientPool().GetClientWithTLS("default", r.setting.TLSClientConfig)
+			if r.setting.ReadWriteTimeout != 0 {
+				client.Timeout = r.setting.ReadWriteTimeout
+			}
+		}
 	}
 
 	if len(r.setting.UserAgent) > 0 && len(r.req.Header.Get("User-Agent")) == 0 {

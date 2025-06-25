@@ -14,6 +14,8 @@ import (
 	"forgejo.org/models/packages"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/httplib"
+	"forgejo.org/modules/packages"
 	"forgejo.org/modules/setting"
 	"forgejo.org/tests"
 
@@ -167,7 +169,7 @@ func TestPackageGeneric(t *testing.T) {
 			location := resp.Header().Get("Location")
 			assert.NotEmpty(t, location)
 
-			resp2, err := (&http.Client{}).Get(location)
+			resp2, err := httplib.GetDefaultClient().Get(location)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusOK, resp2.StatusCode)
 

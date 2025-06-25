@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/proxy"
@@ -84,8 +85,30 @@ func (d *CodebaseDownloader) SetContext(ctx context.Context) {
 
 // NewCodebaseDownloader creates a new downloader
 func NewCodebaseDownloader(ctx context.Context, projectURL *url.URL, project, repoName, username, password string) *CodebaseDownloader {
-	baseURL, _ := url.Parse("https://api3.codebasehq.com")
+	// Use the new HTTP client pool for migration operations
+	baseClient := httplib.GetMigrationClient()
+	baseTransport := baseClient.Transport.(*http.Transport)
 
+	// Create custom transport with basic auth
+	migrationTransport := &http.Transport{
+		Proxy: func(req *http.Request) (*url.URL, error) {
+			if len(username) > 0 && len(password) > 0 {
+				req.SetBasicAuth(username, password)
+			}
+			return proxy.Proxy()(req)
+		},
+		DialContext:           baseTransport.DialContext,
+		ForceAttemptHTTP2:     baseTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          baseTransport.MaxIdleConns,
+		MaxIdleConnsPerHost:   baseTransport.MaxIdleConnsPerHost,
+		IdleConnTimeout:       baseTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   baseTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: baseTransport.ExpectContinueTimeout,
+		DisableKeepAlives:     baseTransport.DisableKeepAlives,
+		TLSClientConfig:       baseTransport.TLSClientConfig,
+	}
+
+	baseURL, _ := url.Parse(projectURL.String())
 	downloader := &CodebaseDownloader{
 		ctx:        ctx,
 		baseURL:    baseURL,
@@ -93,14 +116,8 @@ func NewCodebaseDownloader(ctx context.Context, projectURL *url.URL, project, re
 		project:    project,
 		repoName:   repoName,
 		client: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					if len(username) > 0 && len(password) > 0 {
-						req.SetBasicAuth(username, password)
-					}
-					return proxy.Proxy()(req)
-				},
-			},
+			Transport: migrationTransport,
+			Timeout:   baseClient.Timeout,
 		},
 		userMap:   make(map[int64]*codebaseUser),
 		commitMap: make(map[string]string),

@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
@@ -170,6 +171,9 @@ func buildMinioCredentials(config setting.MinioStorageConfig, iamEndpoint string
 		return credentials.NewStaticV4(config.AccessKeyID, config.SecretAccessKey, "")
 	}
 
+	// Use the new HTTP client pool for IAM operations
+	iamClient := httplib.GetDefaultClient()
+
 	// Otherwise, fallback to a credentials chain for S3 access
 	chain := []credentials.Provider{
 		// configure based upon MINIO_ prefixed environment variables
@@ -185,9 +189,7 @@ func buildMinioCredentials(config setting.MinioStorageConfig, iamEndpoint string
 		// read IAM role from EC2 metadata endpoint if available
 		&credentials.IAM{
 			Endpoint: iamEndpoint,
-			Client: &http.Client{
-				Transport: http.DefaultTransport,
-			},
+			Client:   iamClient,
 		},
 	}
 	return credentials.NewChainCredentials(chain)
