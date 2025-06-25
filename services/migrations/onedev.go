@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"forgejo.org/modules/httplib"
-	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/structs"

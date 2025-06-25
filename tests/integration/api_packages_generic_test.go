@@ -15,7 +15,6 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/httplib"
-	"forgejo.org/modules/packages"
 	"forgejo.org/modules/setting"
 	"forgejo.org/tests"
 

@@ -17,10 +17,10 @@ import (
 	"strings"
 	"time"
 
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
-	user_model "forgejo.org/modules/user"
 
 	"github.com/42wim/httpsig"
 )

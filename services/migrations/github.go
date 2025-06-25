@@ -145,7 +145,7 @@ func NewGithubDownloaderV3(ctx context.Context, baseURL, userName, password, tok
 		}
 		downloader.addClient(client, baseURL)
 	}
-	return &downloader
+	return downloader
 }
 
 // String implements Stringer
