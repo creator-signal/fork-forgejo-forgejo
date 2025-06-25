@@ -33,9 +33,6 @@ forgejo.org/models/dbfs
 	Create
 	Rename
 
-forgejo.org/models/forgefed
-	GetFederationHost
-
 forgejo.org/models/forgejo/semver
 	GetVersion
 	SetVersionString
@@ -67,7 +64,6 @@ forgejo.org/models/user
 	DeleteUserSetting
 	GetFederatedUser
 	GetFederatedUserByUserID
-	UpdateFederatedUser
 	GetFollowersForUser
 	AddFollower
 	RemoveFollower
