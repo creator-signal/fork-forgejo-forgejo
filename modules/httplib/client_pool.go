@@ -52,13 +52,13 @@ func (cp *ClientPool) GetClient(key string) *http.Client {
 		return client
 	}
 
-	client := cp.createClient(key)
+	client := cp.createClient()
 	cp.clients[key] = client
 	return client
 }
 
 // createClient creates a new HTTP client with optimized connection pooling
-func (cp *ClientPool) createClient(key string) *http.Client {
+func (cp *ClientPool) createClient() *http.Client {
 	transport := &http.Transport{
 		Proxy: proxy.Proxy(),
 		DialContext: (&net.Dialer{
