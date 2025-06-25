@@ -5,6 +5,7 @@ package federation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -46,7 +47,7 @@ func ProcessLikeActivity(ctx context.Context, form any, repositoryID int64) (int
 		return http.StatusInternalServerError, "Wrong FederationHost", err
 	}
 	if !activity.IsNewer(federationHost.LatestActivity) {
-		return http.StatusNotAcceptable, "Activity out of order.", fmt.Errorf("Activity already processed")
+		return http.StatusNotAcceptable, "Activity out of order.", errors.New("Activity already processed")
 	}
 	actorID, err := fm.NewPersonID(actorURI, string(federationHost.NodeInfo.SoftwareName))
 	if err != nil {
@@ -210,6 +211,11 @@ func CreateUserFromAP(ctx context.Context, personID fm.PersonID, federationHostI
 		return nil, nil, err
 	}
 
+	inbox, err := url.ParseRequestURI(person.Inbox.GetLink().String())
+	if err != nil {
+		return nil, nil, err
+	}
+
 	newUser := user.User{
 		LowerName:                    strings.ToLower(name),
 		Name:                         name,
@@ -226,6 +232,7 @@ func CreateUserFromAP(ctx context.Context, personID fm.PersonID, federationHostI
 	federatedUser := user.FederatedUser{
 		ExternalID:            personID.ID,
 		FederationHostID:      federationHostID,
+		InboxPath:             inbox.Path,
 		NormalizedOriginalURL: personID.AsURI(),
 	}
 

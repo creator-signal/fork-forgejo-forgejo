@@ -652,8 +652,11 @@ func (c *Comment) LoadAssigneeUserAndTeam(ctx context.Context) error {
 
 		if c.Issue.Repo.Owner.IsOrganization() {
 			c.AssigneeTeam, err = organization.GetTeamByID(ctx, c.AssigneeTeamID)
-			if err != nil && !organization.IsErrTeamNotExist(err) {
-				return err
+			if err != nil {
+				if !organization.IsErrTeamNotExist(err) {
+					return err
+				}
+				c.AssigneeTeam = organization.NewGhostTeam()
 			}
 		}
 	}
@@ -799,7 +802,7 @@ func (c *Comment) LoadPushCommits(ctx context.Context) (err error) {
 		}
 		defer closer.Close()
 
-		c.Commits = git_model.ConvertFromGitCommit(ctx, gitRepo.GetCommitsFromIDs(data.CommitIDs), c.Issue.Repo)
+		c.Commits = git_model.ParseCommitsWithStatus(ctx, gitRepo.GetCommitsFromIDs(data.CommitIDs), c.Issue.Repo)
 		c.CommitsNum = int64(len(c.Commits))
 	}
 

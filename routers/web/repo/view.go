@@ -1,5 +1,6 @@
-// Copyright 2017 The Gitea Authors. All rights reserved.
 // Copyright 2014 The Gogs Authors. All rights reserved.
+// Copyright 2017 The Gitea Authors. All rights reserved.
+// Copyright 2023 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -368,9 +369,6 @@ func loadLatestCommitData(ctx *context.Context, latestCommit *git.Commit) bool {
 		if err != nil {
 			log.Error("GetLatestCommitStatus: %v", err)
 		}
-		if !ctx.Repo.CanRead(unit_model.TypeActions) {
-			git_model.CommitStatusesHideActionsURL(ctx, statuses)
-		}
 
 		ctx.Data["LatestCommitStatus"] = git_model.CalcCommitStatus(statuses)
 		ctx.Data["LatestCommitStatuses"] = statuses
@@ -441,8 +439,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["FileError"] = ctx.Locale.Tr("actions.runs.invalid_workflow_helper", workFlowErr.Error())
 		}
 	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS"}, ctx.Repo.TreePath) {
-		if data, err := blob.GetBlobContent(setting.UI.MaxDisplayFileSize); err == nil {
-			_, warnings := issue_model.GetCodeOwnersFromContent(ctx, data)
+		if rc, size, err := blob.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err == nil {
+			_, warnings := issue_model.GetCodeOwnersFromReader(ctx, rc, size > setting.UI.MaxDisplayFileSize)
 			if len(warnings) > 0 {
 				ctx.Data["FileWarning"] = strings.Join(warnings, "\n")
 			}
@@ -626,6 +624,20 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		ctx.Data["IsVideoFile"] = true
 	case fInfo.st.IsAudio():
 		ctx.Data["IsAudioFile"] = true
+	case fInfo.st.Is3DModel():
+		ctx.Data["Is3DModelFile"] = true
+		switch {
+		case fInfo.st.IsGLB():
+			ctx.Data["IsGLBFile"] = true
+		case fInfo.st.IsSTL():
+			ctx.Data["IsSTLFile"] = true
+		case fInfo.st.IsGLTF():
+			ctx.Data["IsGLTFFile"] = true
+		case fInfo.st.IsOBJ():
+			ctx.Data["IsOBJFile"] = true
+		case fInfo.st.Is3MF():
+			ctx.Data["Is3MFFile"] = true
+		}
 	case fInfo.st.IsImage() && (setting.UI.SVG.Enabled || !fInfo.st.IsSvgImage()):
 		ctx.Data["IsImageFile"] = true
 		ctx.Data["CanCopyContent"] = true
@@ -1240,6 +1252,7 @@ func RenderUserCards(ctx *context.Context, total int, getter func(opts db.ListOp
 func Watchers(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.watchers")
 	ctx.Data["CardsTitle"] = ctx.Tr("repo.watchers")
+	ctx.Data["CardsNoneMsg"] = ctx.Tr("watch.list.none")
 	ctx.Data["PageIsWatchers"] = true
 
 	RenderUserCards(ctx, ctx.Repo.Repository.NumWatches, func(opts db.ListOptions) ([]*user_model.User, error) {
@@ -1251,6 +1264,7 @@ func Watchers(ctx *context.Context) {
 func Stars(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.stargazers")
 	ctx.Data["CardsTitle"] = ctx.Tr("repo.stargazers")
+	ctx.Data["CardsNoneMsg"] = ctx.Tr("stars.list.none")
 	ctx.Data["PageIsStargazers"] = true
 	RenderUserCards(ctx, ctx.Repo.Repository.NumStars, func(opts db.ListOptions) ([]*user_model.User, error) {
 		return repo_model.GetStargazers(ctx, ctx.Repo.Repository, opts)

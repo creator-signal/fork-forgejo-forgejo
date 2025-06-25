@@ -148,7 +148,7 @@ func TestAPActorID_APActorID(t *testing.T) {
 	assert.Equal(t, expected, url)
 }
 
-func TestAPActorKeyID(t *testing.T) {
+func TestKeyID(t *testing.T) {
 	user := user_model.User{ID: 1}
 	url := user.APActorKeyID()
 	expected := "https://try.gitea.io/api/v1/activitypub/user-id/1#main-key"
@@ -267,7 +267,7 @@ func TestHashPasswordDeterministic(t *testing.T) {
 			r2 := u.Passwd
 
 			assert.NotEqual(t, r1, r2)
-			assert.True(t, u.ValidatePassword(pass))
+			assert.True(t, u.ValidatePassword(t.Context(), pass))
 		}
 	}
 }

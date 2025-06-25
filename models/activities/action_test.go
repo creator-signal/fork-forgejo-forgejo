@@ -197,7 +197,8 @@ func TestNotifyWatchers(t *testing.T) {
 		RepoID:    1,
 		OpType:    activities_model.ActionStarRepo,
 	}
-	require.NoError(t, activities_model.NotifyWatchers(db.DefaultContext, action))
+	_, err := activities_model.NotifyWatchers(db.DefaultContext, action)
+	require.NoError(t, err)
 
 	// One watchers are inactive, thus action is only created for user 8, 1, 4, 11
 	unittest.AssertExistsAndLoadBean(t, &activities_model.Action{
@@ -224,24 +225,6 @@ func TestNotifyWatchers(t *testing.T) {
 		RepoID:    action.RepoID,
 		OpType:    action.OpType,
 	})
-}
-
-func TestGetFeedsCorrupted(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-	unittest.AssertExistsAndLoadBean(t, &activities_model.Action{
-		ID:     8,
-		RepoID: 1700,
-	})
-
-	actions, count, err := activities_model.GetFeeds(db.DefaultContext, activities_model.GetFeedsOptions{
-		RequestedUser:  user,
-		Actor:          user,
-		IncludePrivate: true,
-	})
-	require.NoError(t, err)
-	assert.Empty(t, actions)
-	assert.Equal(t, int64(0), count)
 }
 
 func TestConsistencyUpdateAction(t *testing.T) {
