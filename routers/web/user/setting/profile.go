@@ -233,7 +233,6 @@ func Organization(ctx *context.Context) {
 	}
 
 	ctx.Data["Orgs"] = orgs
-	ctx.Data["Total"] = total
 	ctx.Data["OrgsIsPublicMember"] = orgsIsPublicMember
 	pager := context.NewPagination(int(total), opts.PageSize, opts.Page, 5)
 	pager.SetDefaultParams(ctx)
