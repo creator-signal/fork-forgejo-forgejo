@@ -5,8 +5,10 @@ package moderation
 
 import (
 	"context"
+	"fmt"
 
 	"forgejo.org/models/db"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"xorm.io/builder"
 )
@@ -37,7 +39,19 @@ func (ard AbuseReportDetailed) ContentTypeIconName() string {
 
 func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 	var reports []*AbuseReportDetailed
-	err := db.GetEngine(ctx).SQL(`SELECT AR.*, ARD.reported_times, U.name AS reporter_name, REFS.ref AS content_reference
+
+	// - For PostgreSQL user table name should be escaped.
+	//   - Escaping can be done with double quotes (") but this doesn't work for MariaDB.
+	// - For SQLite index column name should be escaped.
+	//   - Escaping can be done with double quotes (") or backticks (`).
+	// - For MariaDB/MySQL there is no need to escape the above.
+	// - Therefore we will use double quotes (") but only for PostgreSQL and SQLite.
+	identifierEscapeChar := ``
+	if setting.Database.Type.IsPostgreSQL() || setting.Database.Type.IsSQLite3() {
+		identifierEscapeChar = `"`
+	}
+
+	err := db.GetEngine(ctx).SQL(fmt.Sprintf(`SELECT AR.*, ARD.reported_times, U.name AS reporter_name, REFS.ref AS content_reference
 		FROM abuse_report AR
 		INNER JOIN (
 			SELECT min(id) AS id, count(id) AS reported_times
@@ -45,10 +59,10 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 			WHERE status = 1
 			GROUP BY content_type, content_id
 		) ARD ON ARD.id = AR.id
-		LEFT JOIN "user" U ON U.id = AR.reporter_id
+		LEFT JOIN %[1]suser%[1]s U ON U.id = AR.reporter_id
 		INNER JOIN (
 			SELECT 1 AS type, id, concat('@', name) AS "ref"
-			FROM "user" WHERE id IN (
+			FROM %[1]suser%[1]s WHERE id IN (
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 1
 			)
 			UNION
@@ -57,14 +71,14 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 2
 			)
 			UNION
-			SELECT 3 AS "type", I.id, concat(IR.owner_name, '/', IR.name, '#', I."index") AS "ref"
+			SELECT 3 AS "type", I.id, concat(IR.owner_name, '/', IR.name, '#', I.%[1]sindex%[1]s) AS "ref"
 			FROM issue I
 			LEFT JOIN repository IR ON IR.id = I.repo_id
 			WHERE I.id IN (
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 3
 			)
 			UNION
-			SELECT 4 AS "type", C.id, concat('/', CIR.owner_name, '/', CIR.name, '/issues/', CI."index", '#issuecomment-', C.id) AS "ref"
+			SELECT 4 AS "type", C.id, concat('/', CIR.owner_name, '/', CIR.name, '/issues/', CI.%[1]sindex%[1]s, '#issuecomment-', C.id) AS "ref"
 			FROM comment C
 			LEFT JOIN issue CI ON CI.id = C.issue_id
 			LEFT JOIN repository CIR ON CIR.id = CI.repo_id
@@ -72,7 +86,7 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 4
 			)
 		) REFS ON REFS.type = AR.content_type AND REFS.id = AR.content_id
-		ORDER BY AR.created_unix ASC`).
+		ORDER BY AR.created_unix ASC`, identifierEscapeChar)).
 		Find(&reports)
 	if err != nil {
 		return nil, err
