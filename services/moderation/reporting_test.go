@@ -15,7 +15,7 @@ func TestMain(m *testing.M) {
 	unittest.MainTest(m)
 }
 
-func TestRemoveResolvedReportsTypeHandled(t *testing.T) {
+func TestRemoveResolvedReportsWhenNoTimeout(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	// Add a resolved report
 	resolvedReport := &report_model.AbuseReport{
@@ -31,5 +31,5 @@ func TestRemoveResolvedReportsTypeHandled(t *testing.T) {
 	require.NoError(t, err)
 
 	// Resolved reports older than a minute should be deleted.
-	unittest.AssertExistsIf(t, false, resolvedReport)
+	unittest.AssertExistsIf(t, true, resolvedReport)
 }
