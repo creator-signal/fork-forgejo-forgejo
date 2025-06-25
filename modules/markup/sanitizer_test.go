@@ -78,6 +78,7 @@ func Test_Sanitizer(t *testing.T) {
 
 		// Images lazy loading
 		`<img src="/image1" alt="image1" loading="lazy">`, `<img src="/image1" alt="image1" loading="lazy">`,
+		`<img src="/image1" alt="image1" loading="eager">`, `<img src="/image1" alt="image1">`,
 	}
 
 	for i := 0; i < len(testCases); i += 2 {
