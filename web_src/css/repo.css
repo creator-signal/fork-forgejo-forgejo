@@ -415,6 +415,11 @@ td .commit-summary {
   max-width: 600px !important;
 }
 
+model-viewer {
+  width: 100%;
+  height: 100vh;
+}
+
 .pdf-content {
   width: 100%;
   height: 100vh;
@@ -2468,8 +2473,21 @@ tbody.commit-list {
   display: flex;
 }
 
-#diff-file-boxes {
+#diff-content-container {
   flex: 1;
+}
+
+#diff-commit-header {
+  /* Counteract the `+2px` for width in `.segment` */
+  padding: 0 2px;
+}
+
+#diff-commit-header + h4,
+#diff-commit-header + #diff-file-boxes {
+  margin-top: 8px;
+}
+
+#diff-file-boxes {
   max-width: 100%;
   display: flex;
   flex-direction: column;

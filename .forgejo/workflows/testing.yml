@@ -91,6 +91,7 @@ jobs:
           RACE_ENABLED: 'true'
           TAGS: bindata
           TEST_ELASTICSEARCH_URL: http://elasticsearch:9200
+          TEST_MINIO_ENDPOINT: minio:9000
   test-e2e:
     if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
     runs-on: docker
@@ -114,6 +115,11 @@ jobs:
         run: |
           su forgejo -c 'make deps-frontend frontend'
       - uses: ./.forgejo/workflows-composite/build-backend
+      - name: Decide to run all tests
+        id: run-all
+        if: contains(github.event.pull_request.labels.*.name, 'run-all-playwright-tests') || contains(github.event.pull_request.title, 'playwright')
+        run: |
+          echo "all=1" >> "$GITHUB_OUTPUT"
       - name: Get changed files
         id: changed-files
         uses: https://data.forgejo.org/tj-actions/changed-files@v46
@@ -126,6 +132,7 @@ jobs:
           USE_REPO_TEST_DIR: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
           CHANGED_FILES: ${{steps.changed-files.outputs.all_changed_files}}
+          RUN_ALL: ${{steps.run-all.all}}
       - name: Upload test artifacts on failure
         if: failure()
         uses: https://data.forgejo.org/forgejo/upload-artifact@v4
