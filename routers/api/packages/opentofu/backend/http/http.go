@@ -214,14 +214,43 @@ func UpdateState(ctx *context.Context) {
 	ctx.Status(http.StatusCreated)
 }
 
+// DeleteState deletes all versions of the package/state file.
+func DeleteState(ctx *context.Context) {
+	// Get the package name from the request.
+	packageName := ctx.Params("packagename")
+	log.Debug("Processing OpenTofu/Terraform HTTP backend package deletion request: %s [OwnerID: %d]", packageName, ctx.Package.Owner.ID)
+
+	// Get all versions of the package/state file.
+	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypeOpenTofuState, packageName)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, fmt.Errorf("failed to get all versions of the state file: %w", err))
+		return
+	}
+
+	// If no package versions were found.
+	if len(pvs) == 0 {
+		apiError(ctx, http.StatusNotFound, "no package versions found")
+		return
+	}
+
+	for _, pv := range pvs {
+		if err := packages_service.RemovePackageVersion(ctx, ctx.Doer, pv); err != nil {
+			apiError(ctx, http.StatusInternalServerError, fmt.Errorf("failed to delete a state file version: %w", err))
+			return
+		}
+	}
+
+	log.Debug("Package %s successfully deleted [OwnerID: %d]", packageName, ctx.Package.Owner.ID)
+
+	// An HTTP status 204 No Content would be more appropriate here, but OpenTofu
+	// and Terraform only accept HTTP 200 OK status.
+	ctx.Status(http.StatusOK)
+}
+
 func LockState(ctx *context.Context) {
 	panic("Not yet implemented")
 }
 
 func UnlockState(ctx *context.Context) {
-	panic("Not yet implemented")
-}
-
-func DeleteState(ctx *context.Context) {
 	panic("Not yet implemented")
 }

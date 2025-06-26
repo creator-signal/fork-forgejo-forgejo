@@ -194,4 +194,38 @@ func TestPackageOpenTofuHttpBackend(t *testing.T) {
 			assert.Equal(t, unencryptedVersion4StateFile, string(bodyBytes))
 		})
 	})
+
+	t.Run("Delete", func(t *testing.T) {
+		// Sends a state deletion request without being authenticated.
+		t.Run("UnauthenticatedDeletionRequest", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, http.MethodDelete, rootURL+"/unauthenticated")
+			MakeRequest(t, req, http.StatusUnauthorized)
+		})
+
+		// Sends a deletion request for a non-existing package.
+		t.Run("NoStateFile", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, http.MethodDelete, rootURL+"/non-existing").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusNotFound)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
+		// Sends a deletion request to delete all versions of the previously uploaded
+		// 'v4-encrypted' package.
+		t.Run("DeleteEncryptedVersion4Package", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			packageName := "v4-encrypted"
+
+			req := NewRequest(t, http.MethodDelete, rootURL+"/"+packageName).AddBasicAuth(user.Name)
+			MakeRequest(t, req, http.StatusOK)
+
+			pvs, err := packages.GetVersionsByPackageName(db.DefaultContext, user.ID, packages.TypeOpenTofuState, packageName)
+			require.NoError(t, err)
+			assert.Empty(t, pvs)
+		})
+	})
 }
