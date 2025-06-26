@@ -72,7 +72,7 @@ func RepositoryInbox(ctx *context.APIContext) {
 	log.Info("RepositoryInbox: repo: %v", repository)
 	form := web.GetForm(ctx)
 	// TODO: Decide between like/undo{like} activity
-	httpStatus, title, err := federation.ProcessLikeActivity(ctx, form, repository.ID)
+	httpStatus, title, err := federation.ProcessRepositoryInbox(ctx, form)
 	if err != nil {
 		ctx.Error(httpStatus, title, err)
 	}

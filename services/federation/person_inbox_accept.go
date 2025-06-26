@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"net/http"
 
-	context_service "forgejo.org/services/context"
+	contextService "forgejo.org/services/context"
 
 	ap "github.com/go-ap/activitypub"
 )
 
-func processPersonInboxAccept(ctx *context_service.APIContext, activity *ap.Activity) {
+func processPersonInboxAccept(ctx *contextService.APIContext, activity *ap.Activity) {
 	if activity.Object.GetType() != ap.FollowType {
 		ctx.Error(http.StatusNotAcceptable, "Invalid object type for Accept activity", fmt.Errorf("Invalid object type for Accept activity: %v", activity.Object.GetType()))
 		return

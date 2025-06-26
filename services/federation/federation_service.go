@@ -18,7 +18,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/validation"
-	context_service "forgejo.org/services/context"
+	contextService "forgejo.org/services/context"
 
 	"github.com/google/uuid"
 )
@@ -33,7 +33,7 @@ func Init() error {
 	return initPendingQueue()
 }
 
-func FindOrCreateFederationHost(ctx *context_service.Base, actorURI string) (*forgefed.FederationHost, error) {
+func FindOrCreateFederationHost(ctx *contextService.Base, actorURI string) (*forgefed.FederationHost, error) {
 	rawActorID, err := fm.NewActorID(actorURI)
 	if err != nil {
 		return nil, err
@@ -52,8 +52,8 @@ func FindOrCreateFederationHost(ctx *context_service.Base, actorURI string) (*fo
 	return federationHost, nil
 }
 
-func FindOrCreateFederatedUser(ctx *context_service.Base, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
-	user, federatedUser, federationHost, err := findFederatedUser(ctx, actorURI)
+func FindOrCreateFederatedUser(ctx *contextService.Base, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
+	localUser, federatedUser, federationHost, err := findFederatedUser(ctx, actorURI)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -62,21 +62,21 @@ func FindOrCreateFederatedUser(ctx *context_service.Base, actorURI string) (*use
 		return nil, nil, nil, err
 	}
 
-	if user != nil {
-		log.Trace("Found local federatedUser: %#v", user)
+	if localUser != nil {
+		log.Trace("Found local federatedUser: %#v", localUser)
 	} else {
-		user, federatedUser, err = createUserFromAP(ctx, personID, federationHost.ID)
+		localUser, federatedUser, err = createUserFromAP(ctx, personID, federationHost.ID)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		log.Trace("Created federatedUser from ap: %#v", user)
+		log.Trace("Created federatedUser from ap: %#v", localUser)
 	}
-	log.Trace("Got user: %v", user.Name)
+	log.Trace("Got user: %v", localUser.Name)
 
-	return user, federatedUser, federationHost, nil
+	return localUser, federatedUser, federationHost, nil
 }
 
-func findFederatedUser(ctx *context_service.Base, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
+func findFederatedUser(ctx *contextService.Base, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
 	federationHost, err := FindOrCreateFederationHost(ctx, actorURI)
 	if err != nil {
 		return nil, nil, nil, err
@@ -86,12 +86,12 @@ func findFederatedUser(ctx *context_service.Base, actorURI string) (*user.User, 
 		return nil, nil, nil, err
 	}
 
-	user, federatedUser, err := user.FindFederatedUser(ctx, actorID.ID, federationHost.ID)
+	localUser, federatedUser, err := user.FindFederatedUser(ctx, actorID.ID, federationHost.ID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return user, federatedUser, federationHost, nil
+	return localUser, federatedUser, federationHost, nil
 }
 
 func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forgefed.FederationHost, error) {
@@ -183,7 +183,7 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 		fullName = name
 	}
 
-	password, err := password.Generate(32)
+	pwd, err := password.Generate(32)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -204,7 +204,7 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 		FullName:                     fullName,
 		Email:                        email,
 		EmailNotificationsPreference: "disabled",
-		Passwd:                       password,
+		Passwd:                       pwd,
 		MustChangePassword:           false,
 		LoginName:                    loginName,
 		Type:                         user.UserTypeRemoteUser,

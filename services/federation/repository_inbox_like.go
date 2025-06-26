@@ -17,7 +17,7 @@ import (
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/validation"
-	context_service "forgejo.org/services/context"
+	contextService "forgejo.org/services/context"
 )
 
 // ProcessLikeActivity receives a ForgeLike activity and does the following:
@@ -27,7 +27,7 @@ import (
 // Validation of incoming RepositoryID against Local RepositoryID
 // Star the repo if it wasn't already stared
 // Do some mitigation against out of order attacks
-func ProcessLikeActivity(ctx *context_service.APIContext, form any, repositoryID int64) (int, string, error) {
+func ProcessLikeActivity(ctx *contextService.APIContext, form any, repositoryID int64) (int, string, error) {
 	activity := form.(*fm.ForgeLike)
 	if res, err := validation.IsValid(activity); !res {
 		return http.StatusNotAcceptable, "Invalid activity", err
@@ -36,14 +36,14 @@ func ProcessLikeActivity(ctx *context_service.APIContext, form any, repositoryID
 
 	// parse actorID (person)
 	actorURI := activity.Actor.GetID().String()
-	user, _, federationHost, err := FindOrCreateFederatedUser(ctx.Base, actorURI)
+	localUser, _, federationHost, err := FindOrCreateFederatedUser(ctx.Base, actorURI)
 	if err != nil {
 		ctx.Error(http.StatusNotAcceptable, "Federated user not found", err)
 		return http.StatusInternalServerError, "FindOrCreateFederatedUser", err
 	}
 
 	if !activity.IsNewer(federationHost.LatestActivity) {
-		return http.StatusNotAcceptable, "Activity out of order.", errors.New("Activity already processed")
+		return http.StatusNotAcceptable, "Activity out of order.", errors.New("activity already processed")
 	}
 
 	// parse objectID (repository)
@@ -57,9 +57,9 @@ func ProcessLikeActivity(ctx *context_service.APIContext, form any, repositoryID
 	log.Trace("Object accepted: %#v", objectID)
 
 	// execute the activity if the repo was not stared already
-	alreadyStared := repo.IsStaring(ctx, user.ID, repositoryID)
+	alreadyStared := repo.IsStaring(ctx, localUser.ID, repositoryID)
 	if !alreadyStared {
-		err = repo.StarRepo(ctx, user.ID, repositoryID, true)
+		err = repo.StarRepo(ctx, localUser.ID, repositoryID, true)
 		if err != nil {
 			return http.StatusNotAcceptable, "Error staring", err
 		}
@@ -74,7 +74,7 @@ func ProcessLikeActivity(ctx *context_service.APIContext, form any, repositoryID
 }
 
 // Create or update a list of FollowingRepo structs
-func StoreFollowingRepoList(ctx *context_service.Context, localRepoID int64, followingRepoList []string) (int, string, error) {
+func StoreFollowingRepoList(ctx *contextService.Context, localRepoID int64, followingRepoList []string) (int, string, error) {
 	followingRepos := make([]*repo.FollowingRepo, 0, len(followingRepoList))
 	for _, uri := range followingRepoList {
 		federationHost, err := FindOrCreateFederationHost(ctx.Base, uri)

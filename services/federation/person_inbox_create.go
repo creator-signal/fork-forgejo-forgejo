@@ -9,12 +9,12 @@ import (
 	"forgejo.org/models/activities"
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
-	context_service "forgejo.org/services/context"
+	contextService "forgejo.org/services/context"
 
 	ap "github.com/go-ap/activitypub"
 )
 
-func processPersonInboxCreate(ctx *context_service.APIContext, activity *ap.Activity) {
+func processPersonInboxCreate(ctx *contextService.APIContext, activity *ap.Activity) {
 	createAct, err := fm.NewForgeUserActivityFromAp(*activity)
 	if err != nil {
 		log.Error("Invalid user activity: %v, %v", activity, err)
