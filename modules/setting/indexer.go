@@ -28,6 +28,7 @@ var Indexer = struct {
 	RepoType             string
 	RepoPath             string
 	RepoConnStr          string
+	RepoConnAuth         string
 	RepoIndexerName      string
 	MaxIndexerFileSize   int64
 	IncludePatterns      []Glob
@@ -45,6 +46,7 @@ var Indexer = struct {
 	RepoType:             "bleve",
 	RepoPath:             "indexers/repos.bleve",
 	RepoConnStr:          "",
+	RepoConnAuth:         "",
 	RepoIndexerName:      "gitea_codes",
 	MaxIndexerFileSize:   1024 * 1024,
 	ExcludeVendored:      true,
@@ -93,6 +95,17 @@ func loadIndexerFrom(rootCfg ConfigProvider) {
 		Indexer.RepoPath = filepath.ToSlash(filepath.Join(AppWorkPath, Indexer.RepoPath))
 	}
 	Indexer.RepoConnStr = sec.Key("REPO_INDEXER_CONN_STR").MustString("")
+	if Indexer.RepoType == "meilisearch" {
+		u, err := url.Parse(Indexer.RepoConnStr)
+		if err != nil {
+			log.Warn("Failed to parse REPO_INDEXER_CONN_STR: %v", err)
+			u = &url.URL{}
+		}
+		Indexer.RepoConnAuth, _ = u.User.Password()
+		u.User = nil
+		Indexer.RepoConnStr = u.String()
+	}
+
 	Indexer.RepoIndexerName = sec.Key("REPO_INDEXER_NAME").MustString("gitea_codes")
 
 	Indexer.IncludePatterns = IndexerGlobFromString(sec.Key("REPO_INDEXER_INCLUDE").MustString(""))

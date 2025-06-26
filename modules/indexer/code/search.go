@@ -7,10 +7,12 @@ import (
 	"bytes"
 	"context"
 	"html/template"
+	"sort"
 	"strings"
 
 	"forgejo.org/modules/highlight"
 	"forgejo.org/modules/indexer/code/internal"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/gitdiff"
 )
@@ -165,10 +167,22 @@ func HighlightSearchResultCode(filename string, lineNums []int, highlightRanges 
 		lines[i].Num = lineNums[i]
 		lines[i].FormattedContent = template.HTML(highlightedLines[i])
 	}
+
 	return lines
 }
 
+// searchResult routes the search result formatting based on the search engine type.
+// Uses single match formatting for standard engines and multi-match for Meilisearch.
 func searchResult(result *internal.SearchResult, startIndex, endIndex int) (*Result, error) {
+	if setting.Indexer.RepoType == "meilisearch" {
+		return searchResultMultiple(result)
+	}
+	return searchResultSingle(result, startIndex, endIndex)
+}
+
+// searchResultSingle formats a search result with a single match (e.g., Elasticsearch).
+// It builds the snippet with line numbers and highlights the matching range.
+func searchResultSingle(result *internal.SearchResult, startIndex, endIndex int) (*Result, error) {
 	startLineNum := 1 + strings.Count(result.Content[:startIndex], "\n")
 
 	var formattedLinesBuffer bytes.Buffer
@@ -209,6 +223,123 @@ func searchResult(result *internal.SearchResult, startIndex, endIndex int) (*Res
 		Language:    result.Language,
 		Color:       result.Color,
 		Lines:       HighlightSearchResultCode(result.Filename, lineNums, highlightRanges, formattedLinesBuffer.String()),
+	}, nil
+}
+
+// searchResultMultiple formats a search result with multiple matches (e.g., Meilisearch).
+// It extracts surrounding context lines, groups them into blocks, and highlights each match.
+func searchResultMultiple(result *internal.SearchResult) (*Result, error) {
+	sort.Slice(result.Matches, func(i, j int) bool {
+		return result.Matches[i].Start < result.Matches[j].Start
+	})
+
+	allLines := strings.Split(result.Content, "\n")
+	lineOffsets := make([]int, len(allLines)+1)
+	for i := 1; i <= len(allLines); i++ {
+		lineOffsets[i] = lineOffsets[i-1] + len(allLines[i-1]) + 1
+	}
+
+	linesToShow := make(map[int]bool)
+	for _, match := range result.Matches {
+		lineNum := 0
+		for i := 1; i < len(lineOffsets); i++ {
+			if match.Start < lineOffsets[i] {
+				lineNum = i
+				break
+			}
+		}
+
+		for i := max(1, lineNum-1); i <= min(len(allLines), lineNum+1); i++ {
+			linesToShow[i] = true
+		}
+	}
+
+	var sortedLines []int
+	for line := range linesToShow {
+		sortedLines = append(sortedLines, line)
+	}
+	sort.Ints(sortedLines)
+
+	var blocks [][]int
+	var currentBlock []int
+	for i, line := range sortedLines {
+		if i > 0 && line > sortedLines[i-1]+2 {
+			if len(currentBlock) > 0 {
+				blocks = append(blocks, currentBlock)
+				currentBlock = nil
+			}
+		}
+		currentBlock = append(currentBlock, line)
+	}
+	if len(currentBlock) > 0 {
+		blocks = append(blocks, currentBlock)
+	}
+
+	var resultLines []ResultLine
+	for _, block := range blocks {
+		if len(resultLines) > 0 {
+			resultLines = append(resultLines, ResultLine{
+				FormattedContent: template.HTML("<div class='code-separator'>...</div>"),
+			})
+		}
+
+		startLine := block[0]
+		endLine := block[len(block)-1]
+		startOffset := lineOffsets[startLine-1]
+		endOffset := lineOffsets[endLine] - 1
+
+		blockContent := result.Content[startOffset:endOffset]
+		blockLineNums := make([]int, endLine-startLine+1)
+		for i := range blockLineNums {
+			blockLineNums[i] = startLine + i
+		}
+
+		var highlightRanges [][3]int
+		processedPositions := make(map[int]bool)
+
+		for _, match := range result.Matches {
+			if match.Start >= startOffset && match.End <= endOffset {
+				lineInBlock := 0
+				for i := 1; i < len(lineOffsets); i++ {
+					if match.Start < lineOffsets[i] {
+						lineInBlock = i - startLine
+						break
+					}
+				}
+
+				lineStartInBlock := lineOffsets[startLine+lineInBlock-1] - startOffset
+				highlightStart := match.Start - startOffset - lineStartInBlock
+				highlightEnd := highlightStart + (match.End - match.Start)
+
+				posKey := lineInBlock*1000000 + highlightStart
+				if !processedPositions[posKey] {
+					highlightRanges = append(highlightRanges, [3]int{
+						lineInBlock,
+						highlightStart,
+						highlightEnd,
+					})
+					processedPositions[posKey] = true
+				}
+			}
+		}
+
+		highlightedLines := HighlightSearchResultCode(
+			result.Filename,
+			blockLineNums,
+			highlightRanges,
+			blockContent,
+		)
+		resultLines = append(resultLines, highlightedLines...)
+	}
+
+	return &Result{
+		RepoID:      result.RepoID,
+		Filename:    result.Filename,
+		CommitID:    result.CommitID,
+		UpdatedUnix: result.UpdatedUnix,
+		Language:    result.Language,
+		Color:       result.Color,
+		Lines:       resultLines,
 	}, nil
 }
 

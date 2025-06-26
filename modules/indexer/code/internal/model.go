@@ -23,6 +23,11 @@ type IndexerData struct {
 	RepoID int64
 }
 
+type Match struct {
+	Start int
+	End   int
+}
+
 // SearchResult result of performing a search in a repo
 type SearchResult struct {
 	RepoID      int64
@@ -33,6 +38,7 @@ type SearchResult struct {
 	CommitID    string
 	UpdatedUnix timeutil.TimeStamp
 	Language    string
+	Matches     []Match
 	Color       string
 }
 
