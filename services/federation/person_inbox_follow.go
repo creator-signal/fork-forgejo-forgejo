@@ -10,13 +10,13 @@ import (
 	"forgejo.org/models/user"
 	"forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
-	contextService "forgejo.org/services/context"
+	context_service "forgejo.org/services/context"
 
 	ap "github.com/go-ap/activitypub"
 	"github.com/go-ap/jsonld"
 )
 
-func processPersonFollow(ctx *contextService.APIContext, activity *ap.Activity) {
+func processPersonFollow(ctx *context_service.APIContext, activity *ap.Activity) {
 	follow, err := forgefed.NewForgeFollowFromAp(*activity)
 	if err != nil {
 		log.Error("Invalid follow activity: %s", err)
