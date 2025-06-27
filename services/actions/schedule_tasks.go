@@ -4,7 +4,9 @@
 package actions
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 	webhook_module "forgejo.org/modules/webhook"
 
 	"github.com/nektos/act/pkg/jobparser"
+	act_model "github.com/nektos/act/pkg/model"
 	"xorm.io/builder"
 )
 
@@ -139,6 +142,16 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 		return err
 	}
 
+	workflow, err := act_model.ReadWorkflow(bytes.NewReader(cron.Content))
+	if err != nil {
+		return err
+	}
+	notifications, err := workflow.Notifications()
+	if err != nil {
+		return err
+	}
+	run.NotifyEmail = notifications
+
 	// Parse the workflow specification from the cron schedule
 	workflows, err := jobparser.Parse(cron.Content, jobparser.WithVars(vars))
 	if err != nil {
@@ -205,7 +218,7 @@ func CancelPreviousJobs(ctx context.Context, repoID int64, ref, workflowID strin
 
 				// If the update affected 0 rows, it means the job has changed in the meantime, so we need to try again.
 				if n == 0 {
-					return fmt.Errorf("job has changed, try again")
+					return errors.New("job has changed, try again")
 				}
 
 				// Continue with the next job.

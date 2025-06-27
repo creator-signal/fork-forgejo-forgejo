@@ -13,6 +13,7 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -98,8 +99,7 @@ func TestSettingShowUserEmailProfile(t *testing.T) {
 
 func TestSettingLandingPage(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-
-	landingPage := setting.LandingPageURL
+	defer test.MockProtect(&setting.LandingPageURL)()
 
 	setting.LandingPageURL = setting.LandingPageHome
 	req := NewRequest(t, "GET", "/")
@@ -119,8 +119,6 @@ func TestSettingLandingPage(t *testing.T) {
 	req = NewRequest(t, "GET", "/")
 	resp = MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, "/user/login", resp.Header().Get("Location"))
-
-	setting.LandingPageURL = landingPage
 }
 
 func TestSettingSecurityAuthSource(t *testing.T) {
@@ -156,4 +154,52 @@ func TestSettingSecurityAuthSource(t *testing.T) {
 	resp := session.MakeRequest(t, req, http.StatusOK)
 	assert.Contains(t, resp.Body.String(), `gitlab-active`)
 	assert.Contains(t, resp.Body.String(), `gitlab-inactive`)
+}
+
+func TestUserAvatarSizeNotice(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user1")
+	req := NewRequest(t, "GET", "/user/settings")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	assert.Contains(t,
+		htmlDoc.doc.Find("form div:has(input#new-avatar) .help").Text(),
+		"Custom avatar may not exceed 1 MiB in size or be larger than 4096x4096 pixels")
+}
+
+func TestRepoAvatarSizeNotice(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user2")
+	req := NewRequest(t, "GET", "/user2/repo1/settings")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	assert.Contains(t,
+		htmlDoc.doc.Find("form div:has(input[name=\"avatar\"]) .help").Text(),
+		"Custom avatar may not exceed 1 MiB in size or be larger than 4096x4096 pixels")
+}
+
+func TestOrgAvatarSizeNotice(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user2")
+	req := NewRequest(t, "GET", "/org/org3/settings")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	assert.Contains(t,
+		htmlDoc.doc.Find("form div:has(input[name=\"avatar\"]) .help").Text(),
+		"Custom avatar may not exceed 1 MiB in size or be larger than 4096x4096 pixels")
+}
+
+func TestAdminAvatarSizeNotice(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user1")
+	req := NewRequest(t, "GET", "/admin/users/2/edit")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	assert.Contains(t,
+		htmlDoc.doc.Find("form div:has(input[name=\"avatar\"]) .help").Text(),
+		"Custom avatar may not exceed 1 MiB in size or be larger than 4096x4096 pixels")
 }

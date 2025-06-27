@@ -345,6 +345,14 @@ func handleWorkflows(
 			Status:            actions_model.StatusWaiting,
 		}
 
+		if workflow, err := model.ReadWorkflow(bytes.NewReader(dwf.Content)); err == nil {
+			notifications, err := workflow.Notifications()
+			if err != nil {
+				log.Error("Notifications: %w", err)
+			}
+			run.NotifyEmail = notifications
+		}
+
 		need, err := ifNeedApproval(ctx, run, input.Repo, input.Doer)
 		if err != nil {
 			log.Error("check if need approval for repo %d with user %d: %v", input.Repo.ID, input.Doer.ID, err)
@@ -366,8 +374,11 @@ func handleWorkflows(
 
 		jobs, err := jobparser.Parse(dwf.Content, jobparser.WithVars(vars))
 		if err != nil {
-			log.Error("jobparser.Parse: %v", err)
-			continue
+			run.Status = actions_model.StatusFailure
+			log.Info("jobparser.Parse: invalid workflow, setting job status to failed: %v", err)
+			jobs = []*jobparser.SingleWorkflow{{
+				Name: dwf.EntryName,
+			}}
 		}
 
 		// cancel running jobs if the event is push or pull_request_sync

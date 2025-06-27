@@ -24,6 +24,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
@@ -41,6 +42,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"xorm.io/xorm/convert"
 )
 
 func exitf(format string, args ...any) {
@@ -341,6 +343,7 @@ type DeclarativeRepoOptions struct {
 	Name          optional.Option[string]
 	EnabledUnits  optional.Option[[]unit_model.Type]
 	DisabledUnits optional.Option[[]unit_model.Type]
+	UnitConfig    optional.Option[map[unit_model.Type]convert.Conversion]
 	Files         optional.Option[[]*files_service.ChangeRepoFile]
 	WikiBranch    optional.Option[string]
 	AutoInit      optional.Option[bool]
@@ -389,9 +392,14 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 		enabledUnits = make([]repo_model.RepoUnit, len(units))
 
 		for i, unitType := range units {
+			var config convert.Conversion
+			if cfg, ok := opts.UnitConfig.Value()[unitType]; ok {
+				config = cfg
+			}
 			enabledUnits[i] = repo_model.RepoUnit{
 				RepoID: repo.ID,
 				Type:   unitType,
+				Config: config,
 			}
 		}
 	}
@@ -407,6 +415,9 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 	if opts.Files.Has() {
 		assert.True(t, autoInit, "Files cannot be specified if AutoInit is disabled")
 		files := opts.Files.Value()
+
+		commitID, err := gitrepo.GetBranchCommitID(git.DefaultContext, repo, "main")
+		require.NoError(t, err)
 
 		resp, err := files_service.ChangeRepoFiles(git.DefaultContext, repo, owner, &files_service.ChangeRepoFilesOptions{
 			Files:     files,
@@ -425,6 +436,7 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 				Author:    time.Now(),
 				Committer: time.Now(),
 			},
+			LastCommitID: commitID,
 		})
 		require.NoError(t, err)
 		assert.NotEmpty(t, resp)

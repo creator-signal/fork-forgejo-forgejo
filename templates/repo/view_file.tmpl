@@ -116,6 +116,12 @@
 						</audio>
 					{{else if .IsPDFFile}}
 						<div class="pdf-content is-loading" data-src="{{$.RawFileLink}}" data-fallback-button-text="{{ctx.Locale.Tr "repo.diff.view_file"}}"></div>
+					{{else if .Is3DModelFile}}
+						{{if .IsGLBFile}}
+							<model-viewer src="{{$.RawFileLink}}" ar shadow-intensity="2" camera-controls touch-action="pan-y"></model-viewer>
+						{{else}}
+							<a href="{{$.RawFileLink}}" rel="nofollow">{{ctx.Locale.Tr "repo.file_view_raw"}}</a>
+						{{end}}
 					{{else}}
 						<a href="{{$.RawFileLink}}" rel="nofollow">{{ctx.Locale.Tr "repo.file_view_raw"}}</a>
 					{{end}}
@@ -135,7 +141,7 @@
 						{{range $idx, $code := .FileContent}}
 						{{$line := Eval $idx "+" 1}}
 						<tr>
-							<td id="L{{$line}}" class="lines-num"><span id="L{{$line}}" data-line-number="{{$line}}"></span></td>
+							<td class="lines-num"><span id="L{{$line}}" data-line-number="{{$line}}"></span></td>
 							{{if $.EscapeStatus.Escaped}}
 								<td class="lines-escape">{{if (index $.LineEscapeStatus $idx).Escaped}}<button class="toggle-escape-button btn interact-bg" title="{{if (index $.LineEscapeStatus $idx).HasInvisible}}{{ctx.Locale.Tr "repo.invisible_runes_line"}} {{end}}{{if (index $.LineEscapeStatus $idx).HasAmbiguous}}{{ctx.Locale.Tr "repo.ambiguous_runes_line"}}{{end}}"></button>{{end}}</td>
 							{{end}}
