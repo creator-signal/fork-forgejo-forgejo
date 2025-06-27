@@ -4,6 +4,7 @@
 package moderation
 
 import (
+	stdCtx "context"
 	"errors"
 	"time"
 
@@ -131,7 +132,7 @@ func CanReport(ctx context.Context, doer *user.User, contentType moderation.Repo
 }
 
 // RemoveResolvedReports removes resolved reports
-func RemoveResolvedReports(ctx context.Context, timeout time.Duration) error {
+func RemoveResolvedReports(ctx stdCtx.Context, timeout time.Duration) error {
 	log.Trace("Doing: RemoveResolvedReports")
 
 	resolved_reports, err := moderation.GetResolvedReports(ctx, timeout)
@@ -151,7 +152,6 @@ func RemoveResolvedReports(ctx context.Context, timeout time.Duration) error {
 				return err
 			}
 		}
-		return nil
 	}
 	log.Trace("Finished: RemoveResolvedReports")
 	return nil
