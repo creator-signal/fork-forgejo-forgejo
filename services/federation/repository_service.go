@@ -12,13 +12,12 @@ import (
 	ap "github.com/go-ap/activitypub"
 )
 
-func ProcessRepositoryInbox(ctx *context_service.APIContext, form any) (int, string, error) {
+func ProcessRepositoryInbox(ctx *context_service.APIContext, form any, repositoryID int64) (int, string, error) {
 	activity := form.(*ap.Activity)
-	repository := ctx.Repo.Repository
 
 	switch activity.Type {
 	case ap.LikeType:
-		return ProcessLikeActivity(ctx, activity, repository.ID)
+		return ProcessLikeActivity(ctx, activity, repositoryID)
 	default:
 		return http.StatusNotAcceptable, "Invalid activity", fmt.Errorf("invalid activity: %v", activity.Type)
 	}
