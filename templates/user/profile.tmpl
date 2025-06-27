@@ -54,7 +54,11 @@
 					<div id="readme_profile" class="markup">{{.ProfileReadme}}</div>
 				{{else if eq .TabName "feed"}}
 					{{if eq .SignedUserID .ContextUser.ID}}
-						{{template "user/dashboard/ap_feed" .}}
+						{{if .FollowingFeeds}}
+							{{template "user/dashboard/ap_feed" .}}
+						{{else}}
+							{{template "user/dashboard/ap_feed_guide" .}}
+						{{end}}
 					{{end}}
 				{{else}}
 					{{template "shared/repo_search" .}}
