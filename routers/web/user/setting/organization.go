@@ -18,7 +18,7 @@ func MembersAction(ctx *context.Context) {
 	var redirect string
 	uid := ctx.FormInt64("uid")
 	if uid == 0 {
-		ctx.Redirect(string(tplSettingsOrganization))
+		ctx.Redirect("/" + string(tplSettingsOrganization))
 		return
 	}
 
@@ -66,6 +66,7 @@ func MembersAction(ctx *context.Context) {
 
 	if err != nil {
 		log.Error("Action(%s): %v", ctx.Params(":action"), err)
+		log.Error("DEBUG: uid=%d, orgID=%d, action=%s, error=%v", uid, org.ID, ctx.Params(":action"), err)
 		ctx.JSON(http.StatusOK, map[string]any{
 			"ok":  false,
 			"err": err.Error(),
@@ -74,7 +75,7 @@ func MembersAction(ctx *context.Context) {
 	}
 
 	if ctx.Doer.ID == uid {
-		redirect = string(tplSettingsOrganization)
+		redirect = "/" + string(tplSettingsOrganization)
 	} else {
 		redirect = ctx.Org.OrgLink + "/members"
 	}
