@@ -158,7 +158,7 @@ func (comments CommentList) loadOldMilestones(ctx context.Context) error {
 	}
 
 	for _, issue := range comments {
-		issue.OldMilestone = milestoneMaps[issue.MilestoneID]
+		issue.OldMilestone = milestoneMaps[issue.OldMilestoneID]
 	}
 	return nil
 }
