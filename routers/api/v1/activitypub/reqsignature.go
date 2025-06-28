@@ -81,7 +81,7 @@ func ReqHTTPUserOrInstanceSignature() func(ctx *gitea_context.APIContext) {
 	}
 }
 
-// ReqHTTPSignature function
+// ReqHTTPUserSignature function
 func ReqHTTPUserSignature() func(ctx *gitea_context.APIContext) {
 	return func(ctx *gitea_context.APIContext) {
 		if authenticated, err := verifyHTTPUserSignature(ctx); err != nil {

@@ -35,12 +35,13 @@ func ProcessPersonInbox(ctx *context_service.APIContext, form any) {
 	}
 
 	log.Error("Unsupported PersonInbox activity: %v", activity.Type)
-	ctx.Error(http.StatusNotAcceptable, "Unsupported acvitiy", fmt.Errorf("Unsupported activity: %v", activity.Type))
+	ctx.Error(http.StatusNotAcceptable, "Unsupported activity", fmt.Errorf("unsupported activity: %v", activity.Type))
 }
 
 func FollowRemoteActor(ctx *context_service.APIContext, localUser *user.User, actorURI string) error {
 	_, federatedUser, federationHost, err := FindOrCreateFederatedUser(ctx.Base, actorURI)
 	if err != nil {
+		log.Error("Federated user not found (%s): %v", actorURI, err)
 		ctx.Error(http.StatusNotAcceptable, "Federated user not found", err)
 		return err
 	}
