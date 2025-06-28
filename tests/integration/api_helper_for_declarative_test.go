@@ -48,20 +48,22 @@ func (ctx APITestContext) GitPath() string {
 	return fmt.Sprintf("%s/%s.git", ctx.Username, ctx.Reponame)
 }
 
-func doAPICreateRepository(ctx APITestContext, empty bool, objectFormat git.ObjectFormat, callback ...func(*testing.T, api.Repository)) func(*testing.T) {
+func doAPICreateRepository(ctx APITestContext, opts *api.CreateRepoOption, objectFormat git.ObjectFormat, callback ...func(*testing.T, api.Repository)) func(*testing.T) {
 	return func(t *testing.T) {
-		createRepoOption := &api.CreateRepoOption{
-			AutoInit:         !empty,
-			Description:      "Temporary repo",
-			Name:             ctx.Reponame,
-			Private:          true,
-			Template:         true,
-			Gitignores:       "",
-			License:          "WTFPL",
-			Readme:           "Default",
-			ObjectFormatName: objectFormat.Name(),
+		if opts == nil {
+			opts = &api.CreateRepoOption{
+				AutoInit:    true,
+				Description: "Temporary repo",
+				Name:        ctx.Reponame,
+				Private:     true,
+				Template:    true,
+				Gitignores:  "",
+				License:     "WTFPL",
+				Readme:      "Default",
+			}
 		}
-		req := NewRequestWithJSON(t, "POST", "/api/v1/user/repos", createRepoOption).
+		opts.ObjectFormatName = objectFormat.Name()
+		req := NewRequestWithJSON(t, "POST", "/api/v1/user/repos", opts).
 			AddTokenAuth(ctx.Token)
 		if ctx.ExpectedCode != 0 {
 			ctx.Session.MakeRequest(t, req, ctx.ExpectedCode)
