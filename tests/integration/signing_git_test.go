@@ -110,12 +110,13 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 
 		testCtx := NewAPITestContext(t, username, "initial-unsigned"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
 		t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-		t.Run("CheckMasterBranchUnsigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			assert.NotNil(t, branch.Commit)
 			assert.NotNil(t, branch.Commit.Verification)
 			assert.False(t, branch.Commit.Verification.Verified)
 			assert.Empty(t, branch.Commit.Verification.Signature)
-		}))
+		})
 		t.Run("CreateCRUDFile-Never", crudActionCreateFile(
 			t, testCtx, user, "master", "never", "unsigned-never.txt", func(t *testing.T, response api.FileResponse) {
 				assert.False(t, response.Verification.Verified)
@@ -192,12 +193,13 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 
 			testCtx := NewAPITestContext(t, username, "initial-pubkey"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
 			t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-			t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				branch := doAPIGetBranch(testCtx, "master")(t)
 				require.NotNil(t, branch.Commit)
 				require.NotNil(t, branch.Commit.Verification)
 				assert.True(t, branch.Commit.Verification.Verified)
 				assert.Equal(t, "fox@example.com", branch.Commit.Verification.Signer.Email)
-			}))
+			})
 		})
 
 		t.Run("No publickey", func(t *testing.T) {
@@ -205,11 +207,12 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 
 			testCtx := NewAPITestContext(t, "user4", "initial-no-pubkey"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
 			t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-			t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				branch := doAPIGetBranch(testCtx, "master")(t)
 				require.NotNil(t, branch.Commit)
 				require.NotNil(t, branch.Commit.Verification)
 				assert.False(t, branch.Commit.Verification.Verified)
-			}))
+			})
 		})
 	})
 
@@ -227,12 +230,13 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: user.ID})
 
 			t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-			t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				branch := doAPIGetBranch(testCtx, "master")(t)
 				require.NotNil(t, branch.Commit)
 				require.NotNil(t, branch.Commit.Verification)
 				assert.True(t, branch.Commit.Verification.Verified)
 				assert.Equal(t, "fox@example.com", branch.Commit.Verification.Signer.Email)
-			}))
+			})
 		})
 
 		t.Run("No 2fa", func(t *testing.T) {
@@ -240,11 +244,12 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 
 			testCtx := NewAPITestContext(t, "user4", "initial-no-2fa"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
 			t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-			t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				branch := doAPIGetBranch(testCtx, "master")(t)
 				require.NotNil(t, branch.Commit)
 				require.NotNil(t, branch.Commit.Verification)
 				assert.False(t, branch.Commit.Verification.Verified)
-			}))
+			})
 		})
 	})
 
@@ -254,12 +259,13 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 
 		testCtx := NewAPITestContext(t, username, "initial-always"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
 		t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-		t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.True(t, branch.Commit.Verification.Verified)
 			assert.Equal(t, "fox@example.com", branch.Commit.Verification.Signer.Email)
-		}))
+		})
 	})
 
 	t.Run("AlwaysSign-Initial-CRUD-Never", func(t *testing.T) {
@@ -369,12 +375,13 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			require.NoError(t, err)
 			t.Run("MergePR", doAPIMergePullRequest(testCtx, testCtx.Username, testCtx.Reponame, pr.Index))
 		})
-		t.Run("CheckMasterBranchUnsigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.False(t, branch.Commit.Verification.Verified)
 			assert.Empty(t, branch.Commit.Verification.Signature)
-		}))
+		})
 	})
 
 	t.Run("BaseSignedMerging", func(t *testing.T) {
@@ -387,12 +394,13 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			require.NoError(t, err)
 			t.Run("MergePR", doAPIMergePullRequest(testCtx, testCtx.Username, testCtx.Reponame, pr.Index))
 		})
-		t.Run("CheckMasterBranchUnsigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.False(t, branch.Commit.Verification.Verified)
 			assert.Empty(t, branch.Commit.Verification.Signature)
-		}))
+		})
 	})
 
 	t.Run("CommitsSignedMerging", func(t *testing.T) {
@@ -405,11 +413,12 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			require.NoError(t, err)
 			t.Run("MergePR", doAPIMergePullRequest(testCtx, testCtx.Username, testCtx.Reponame, pr.Index))
 		})
-		t.Run("CheckMasterBranchUnsigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.True(t, branch.Commit.Verification.Verified)
-		}))
+		})
 	})
 }
 
