@@ -340,7 +340,7 @@ export default sfc; // activate the IDE's Vue plugin
       <a :class="{item: true, active: tab === 'organizations'}" @click="changeTab('organizations')">{{ textMyOrgs }} <span class="ui grey label tw-ml-2">{{ organizationsTotalCount }}</span></a>
     </div>
     <div v-show="tab === 'repos'" class="ui tab active list dashboard-repos">
-      <h4 v-if="isOrganization" class="ui attached tw-mt-4 tw-flex tw-items-center">
+      <h4 v-if="isOrganization" class="ui tw-mt-4 tw-flex tw-items-center">
         <div class="tw-flex-1 tw-flex tw-gap-2 tw-items-center">
           {{ textMyRepos }}
           <span class="ui grey label">{{ reposTotalCount }}</span>
