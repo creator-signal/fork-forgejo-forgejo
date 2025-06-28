@@ -156,7 +156,7 @@ func ReportAbuse(ctx context.Context, report *AbuseReport) error {
 }
 
 // GetResolvedReports gets all resolved reports
-func GetResolvedReports(ctx context.Context, timeout time.Duration) ([]*AbuseReport, error) {
+func GetResolvedReports(ctx context.Context, keepReportsFor time.Duration) ([]*AbuseReport, error) {
 	cond := builder.And(
 		builder.Or(
 			builder.Eq{"`status`": ReportStatusTypeHandled},
@@ -164,8 +164,8 @@ func GetResolvedReports(ctx context.Context, timeout time.Duration) ([]*AbuseRep
 		),
 	)
 
-	if timeout > 0 {
-		cond = cond.And(builder.Lt{"created_unix": time.Now().Add(-timeout).Unix()})
+	if keepReportsFor > 0 {
+		cond = cond.And(builder.Lt{"created_unix": time.Now().Add(-keepReportsFor).Unix()})
 	}
 
 	abuseReports := make([]*AbuseReport, 0, 30)

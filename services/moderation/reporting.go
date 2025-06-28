@@ -132,10 +132,10 @@ func CanReport(ctx context.Context, doer *user.User, contentType moderation.Repo
 }
 
 // RemoveResolvedReports removes resolved reports
-func RemoveResolvedReports(ctx stdCtx.Context, timeout time.Duration) error {
+func RemoveResolvedReports(ctx stdCtx.Context, keepReportsFor time.Duration) error {
 	log.Trace("Doing: RemoveResolvedReports")
 
-	resolvedReports, err := moderation.GetResolvedReports(ctx, timeout)
+	resolvedReports, err := moderation.GetResolvedReports(ctx, keepReportsFor)
 	if err != nil {
 		return err
 	}

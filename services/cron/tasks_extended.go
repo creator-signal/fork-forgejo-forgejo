@@ -229,7 +229,7 @@ func registerRebuildIssueIndexer() {
 func registerRemoveResolvedReports() {
 	type ReportConfig struct {
 		BaseConfig
-		ConfiguredTimeOut time.Duration
+		ConfigKeepResolvedReportsFor time.Duration
 	}
 	RegisterTaskFatal("remove_resolved_reports", &ReportConfig{
 		BaseConfig: BaseConfig{
@@ -237,10 +237,10 @@ func registerRemoveResolvedReports() {
 			RunAtStart: false,
 			Schedule:   "@every 24h",
 		},
-		ConfiguredTimeOut: time.Duration(setting.Moderation.RemoveResolvedReportsTimeout) * time.Second,
+		ConfigKeepResolvedReportsFor: setting.Moderation.KeepResolvedReportsFor,
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
 		reportConfig := config.(*ReportConfig)
-		return moderation_service.RemoveResolvedReports(ctx, reportConfig.ConfiguredTimeOut)
+		return moderation_service.RemoveResolvedReports(ctx, reportConfig.ConfigKeepResolvedReportsFor)
 	})
 }
 
