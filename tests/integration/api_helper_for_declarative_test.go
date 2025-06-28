@@ -237,8 +237,8 @@ func doAPICreatePullRequest(ctx APITestContext, owner, repo, baseBranch, headBra
 	}
 }
 
-func doAPIGetPullRequest(ctx APITestContext, owner, repo string, index int64) func(*testing.T) (api.PullRequest, error) {
-	return func(t *testing.T) (api.PullRequest, error) {
+func doAPIGetPullRequest(ctx APITestContext, owner, repo string, index int64) func(*testing.T) api.PullRequest {
+	return func(t *testing.T) api.PullRequest {
 		req := NewRequest(t, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d", owner, repo, index)).
 			AddTokenAuth(ctx.Token)
 
@@ -248,10 +248,9 @@ func doAPIGetPullRequest(ctx APITestContext, owner, repo string, index int64) fu
 		}
 		resp := ctx.Session.MakeRequest(t, req, expected)
 
-		decoder := json.NewDecoder(resp.Body)
 		pr := api.PullRequest{}
-		err := decoder.Decode(&pr)
-		return pr, err
+		DecodeJSON(t, resp, &pr)
+		return pr
 	}
 }
 
@@ -347,21 +346,19 @@ func doAPICancelAutoMergePullRequest(ctx APITestContext, owner, repo string, ind
 	}
 }
 
-func doAPIGetBranch(ctx APITestContext, branch string, callback ...func(*testing.T, api.Branch)) func(*testing.T) {
-	return func(t *testing.T) {
+func doAPIGetBranch(ctx APITestContext, branch string) func(*testing.T) api.Branch {
+	return func(t *testing.T) api.Branch {
 		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/branches/%s", ctx.Username, ctx.Reponame, branch).
 			AddTokenAuth(ctx.Token)
+		expected := http.StatusOK
 		if ctx.ExpectedCode != 0 {
-			ctx.Session.MakeRequest(t, req, ctx.ExpectedCode)
-			return
+			expected = ctx.ExpectedCode
 		}
-		resp := ctx.Session.MakeRequest(t, req, http.StatusOK)
+		resp := ctx.Session.MakeRequest(t, req, expected)
 
-		var branch api.Branch
+		branch := api.Branch{}
 		DecodeJSON(t, resp, &branch)
-		if len(callback) > 0 {
-			callback[0](t, branch)
-		}
+		return branch
 	}
 }
 
