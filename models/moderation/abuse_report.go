@@ -168,10 +168,10 @@ func GetResolvedReports(ctx context.Context, timeout time.Duration) ([]*AbuseRep
 		cond = cond.And(builder.Lt{"created_unix": time.Now().Add(-timeout).Unix()})
 	}
 
-	abuse_reports := make([]*AbuseReport, 0, 30)
-	return abuse_reports, db.GetEngine(ctx).
+	abuseReports := make([]*AbuseReport, 0, 30)
+	return abuseReports, db.GetEngine(ctx).
 		Where(cond).
-		Find(&abuse_reports)
+		Find(&abuseReports)
 }
 
 /*
