@@ -647,7 +647,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	if util.IsEmptyString(repo.Description) {
 		ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.summary_card_alt", repo.FullName())
 	} else {
-		ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.summary_card_alt_description", repo.FullName(), repo.Description)
+		ctx.Data["OpenGraphImageAltText"] = ctx.Tr("og.repo.summary_card.alt_description", repo.FullName(), repo.Description)
 	}
 
 	if repo.IsFork {
