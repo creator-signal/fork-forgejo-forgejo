@@ -1199,9 +1199,9 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	}
 
 	// Check if head branch is valid.
-	headIsCommit := ctx.Repo.GitRepo.IsCommitExist(headBranch)
-	headIsBranch := ctx.Repo.GitRepo.IsBranchExist(headBranch)
-	headIsTag := ctx.Repo.GitRepo.IsTagExist(headBranch)
+	headIsCommit := headGitRepo.IsCommitExist(headBranch)
+	headIsBranch := headGitRepo.IsBranchExist(headBranch)
+	headIsTag := headGitRepo.IsTagExist(headBranch)
 	if !headIsCommit && !headIsBranch && !headIsTag {
 		// Check if headBranch is short sha commit hash
 		if headCommit, _ := headGitRepo.GetCommit(headBranch); headCommit != nil {
