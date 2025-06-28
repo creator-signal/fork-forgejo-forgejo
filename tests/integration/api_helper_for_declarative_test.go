@@ -362,6 +362,28 @@ func doAPIGetBranch(ctx APITestContext, branch string) func(*testing.T) api.Bran
 	}
 }
 
+func doAPICreateTag(ctx APITestContext, tag, target, message string, callback ...func(*testing.T, api.Tag)) func(*testing.T) {
+	return func(t *testing.T) {
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/tags", ctx.Username, ctx.Reponame), &api.CreateTagOption{
+			TagName: tag,
+			Message: message,
+			Target:  target,
+		}).
+			AddTokenAuth(ctx.Token)
+		if ctx.ExpectedCode != 0 {
+			ctx.Session.MakeRequest(t, req, ctx.ExpectedCode)
+			return
+		}
+		resp := ctx.Session.MakeRequest(t, req, http.StatusCreated)
+
+		var tag api.Tag
+		DecodeJSON(t, resp, &tag)
+		if len(callback) > 0 {
+			callback[0](t, tag)
+		}
+	}
+}
+
 func doAPICreateFile(ctx APITestContext, treepath string, options *api.CreateFileOptions, callback ...func(*testing.T, api.FileResponse)) func(*testing.T) {
 	return func(t *testing.T) {
 		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", ctx.Username, ctx.Reponame, treepath), &options).
