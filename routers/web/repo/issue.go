@@ -1308,7 +1308,7 @@ func roleDescriptor(ctx stdCtx.Context, repo *repo_model.Repository, poster *use
 	}
 
 	// Special user that can't have associated contributions and permissions in the repo.
-	if poster.IsGhost() || poster.IsActions() || poster.IsAPServerActor() {
+	if poster.IsSystem() || poster.IsAPServerActor() {
 		return roleDescriptor, nil
 	}
 
@@ -1693,7 +1693,7 @@ func ViewIssue(ctx *context.Context) {
 				return
 			}
 			ghostMilestone := &issues_model.Milestone{
-				ID:   -1,
+				ID:   issues_model.GhostMilestoneID,
 				Name: ctx.Locale.TrString("repo.issues.deleted_milestone"),
 			}
 			if comment.OldMilestoneID > 0 && comment.OldMilestone == nil {
@@ -2775,7 +2775,7 @@ func SearchIssues(ctx *context.Context) {
 		IncludedAnyLabelIDs: includedAnyLabels,
 		MilestoneIDs:        includedMilestones,
 		ProjectID:           projectID,
-		SortBy:              issue_indexer.SortByCreatedDesc,
+		SortBy:              issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
 	}
 
 	if since != 0 {
@@ -2804,9 +2804,10 @@ func SearchIssues(ctx *context.Context) {
 		}
 	}
 
-	// FIXME: It's unsupported to sort by priority repo when searching by indexer,
-	//        it's indeed an regression, but I think it is worth to support filtering by indexer first.
-	_ = ctx.FormInt64("priority_repo_id")
+	priorityRepoID := ctx.FormInt64("priority_repo_id")
+	if priorityRepoID > 0 {
+		searchOpt.PriorityRepoID = optional.Some(priorityRepoID)
+	}
 
 	ids, total, err := issue_indexer.SearchIssues(ctx, searchOpt)
 	if err != nil {
@@ -2944,7 +2945,7 @@ func ListIssues(ctx *context.Context) {
 		IsPull:    isPull,
 		IsClosed:  isClosed,
 		ProjectID: projectID,
-		SortBy:    issue_indexer.SortByCreatedDesc,
+		SortBy:    issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
 	}
 	if since != 0 {
 		searchOpt.UpdatedAfterUnix = optional.Some(since)
