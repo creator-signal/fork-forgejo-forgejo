@@ -341,8 +341,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
 github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/ianlancetaylor/demangle v0.0.0-20230524184225-eabc099b10ab/go.mod h1:gx7rwoVhcfuVKG5uya9Hs3Sxj7EIvldVofAWIUtGouw=
-github.com/inbucket/html2text v0.9.0 h1:ULJmVcBEMAcmLE+/rN815KG1Fx6+a4HhbUxiDiN+qks=
-github.com/inbucket/html2text v0.9.0/go.mod h1:QDaumzl+/OzlSVbNohhmg+yAy5pKjUjzCKW2BMvztKE=
+github.com/inbucket/html2text v1.0.0 h1:N5kza++4uBBDJ2Z3KUnTRyPNoBcW+YfOgNiNmNB+sgs=
+github.com/inbucket/html2text v1.0.0/go.mod h1:5TrhXQKGU+LXurODaSm55Y9eXoPBRnYiOz4x2XfUoJU=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
 github.com/jhillyerd/enmime/v2 v2.2.0 h1:Pe35MB96eZK5Q0XjlvPftOgWypQpd1gcbfJKAt7rsB8=
