@@ -142,7 +142,7 @@ func TestActionNowDoneNotification(t *testing.T) {
 		runner.succeedAtTask(t, task)
 
 		// we can't differentiate different runs without a delay
-		time.Sleep(time.Millisecond * 2000)
+		time.Sleep(time.Millisecond * 1100)
 
 		// 1: failed run
 		_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
@@ -151,7 +151,7 @@ func TestActionNowDoneNotification(t *testing.T) {
 		runner.failAtTask(t, task)
 
 		// we can't differentiate different runs without a delay
-		time.Sleep(time.Millisecond * 2000)
+		time.Sleep(time.Millisecond * 1100)
 
 		// 2: canceled run
 		_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
@@ -160,7 +160,7 @@ func TestActionNowDoneNotification(t *testing.T) {
 		require.NoError(t, actions_service.StopTask(db.DefaultContext, task.Id, actions_model.StatusCancelled))
 
 		// we can't differentiate different runs without a delay
-		time.Sleep(time.Millisecond * 2000)
+		time.Sleep(time.Millisecond * 1100)
 
 		// 3: successful run after failure
 		_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
@@ -169,7 +169,7 @@ func TestActionNowDoneNotification(t *testing.T) {
 		runner.succeedAtTask(t, task)
 
 		// we can't differentiate different runs without a delay
-		time.Sleep(time.Millisecond * 2000)
+		time.Sleep(time.Millisecond * 1100)
 
 		// 4: successful run after success
 		_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
