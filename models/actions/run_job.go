@@ -101,6 +101,19 @@ func GetRunJobsByRunID(ctx context.Context, runID int64) ([]*ActionRunJob, error
 	return jobs, nil
 }
 
+func GetRunJobsByRun(ctx context.Context, run *ActionRun) ([]*ActionRunJob, error) {
+	jobs, err := GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range jobs {
+		v.Run = run
+	}
+
+	return jobs, nil
+}
+
 // All calls to UpdateRunJobWithoutNotification that change run.Status for any run from a not done status to a done status must call the ActionRunNowDone notification channel.
 // Use the wrapper function UpdateRunJob instead.
 func UpdateRunJobWithoutNotification(ctx context.Context, job *ActionRunJob, cond builder.Cond, cols ...string) (int64, error) {
