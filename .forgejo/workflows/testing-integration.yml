@@ -63,3 +63,33 @@ jobs:
           RACE_ENABLED: true
           TEST_TAGS: sqlite sqlite_unlock_notify
           USE_REPO_TEST_DIR: 1
+  test-e2e:
+#    if: vars.ROLE == 'forgejo-coding'
+    if: vars.ROLE == 'forgejo-integration'
+    runs-on: docker
+    container:
+      image: 'data.forgejo.org/oci/playwright:latest'
+      options: --tmpfs /tmp:exec,noatime
+    steps:
+      - uses: https://data.forgejo.org/actions/checkout@v4
+        with:
+          fetch-depth: 20
+      - uses: ./.forgejo/workflows-composite/setup-env
+      - name: "Build frontend"
+        run: |
+          su forgejo -c 'make deps-frontend frontend'
+      - uses: ./.forgejo/workflows-composite/build-backend
+      - run: |
+          su forgejo -c 'make generate test-e2e-sqlite'
+        timeout-minutes: 120
+        env:
+          USE_REPO_TEST_DIR: 1
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          RUN_ALL: "1"
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: https://data.forgejo.org/forgejo/upload-artifact@v4
+        with:
+          name: test-artifacts.zip
+          path: tests/e2e/test-artifacts/
+          retention-days: 90
