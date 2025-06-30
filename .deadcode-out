@@ -244,6 +244,9 @@ forgejo.org/routers/web/org
 forgejo.org/services/context
 	GetPrivateContext
 
+forgejo.org/services/federation
+	Init
+
 forgejo.org/services/repository
 	IsErrForkAlreadyExist
 
