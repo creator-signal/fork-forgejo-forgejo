@@ -115,7 +115,7 @@ func (r *mockRunner) fetchTask(t *testing.T, timeout ...time.Duration) *runnerv1
 			return true
 		}
 		return false
-	}, fetchTimeout, time.Millisecond*100, "failed to fetch a task")
+	}, fetchTimeout, time.Millisecond*10, "failed to fetch a task")
 	return task
 }
 
