@@ -73,6 +73,9 @@ func (m *mockNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.
 		assert.Equal(m.t, m.lastRunID, lastRun.ID)
 		assert.Equal(m.t, actions_model.StatusSuccess, lastRun.Status)
 		assert.True(m.t, run.NotifyEmail)
+	case 5:
+		m.t.Log("the re-run of a job is never expected to send a notification")
+		m.t.Fail()
 	default:
 		assert.Fail(m.t, "too many notifications")
 	}
@@ -176,6 +179,12 @@ func TestActionNowDoneNotification(t *testing.T) {
 		require.NoError(t, err)
 		task = runner.fetchTask(t)
 		runner.succeedAtTask(t, task)
+
+		// 5: fail a re-run job
+		runJob := runner.getActionRunJob(t, task)
+		require.NoError(t, actions_service.ReRunJob(db.DefaultContext, runJob, false))
+		task = runner.fetchTask(t)
+		runner.failAtTask(t, task)
 
 		notifier.complete()
 	})

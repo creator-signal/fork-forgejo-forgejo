@@ -786,7 +786,11 @@ func (n *actionsNotifier) MigrateRepository(ctx context.Context, doer, u *user_m
 // priorRun before the update and updatedRun after.
 // The parameter lastRun in the ActionRunNowDone notification represents an entirely different ActionRun:
 // the ActionRun of the same workflow that finished before priorRun/updatedRun.
-func sendActionRunNowDoneNotificationIfNeeded(ctx context.Context, priorRun, updatedRun *actions_model.ActionRun) error {
+func sendActionRunNowDoneNotificationIfNeeded(ctx context.Context, priorRun, updatedRun *actions_model.ActionRun, job *actions_model.ActionRunJob) error {
+	if job != nil && job.Attempt > 1 {
+		// never send notifications when a job is re-run
+		return nil
+	}
 	if !priorRun.Status.IsDone() && updatedRun.Status.IsDone() {
 		lastRun, err := actions_model.GetRunBefore(ctx, updatedRun.RepoID, updatedRun.Stopped)
 		if err != nil && !errors.Is(err, util.ErrNotExist) {
@@ -822,7 +826,7 @@ func UpdateRun(ctx context.Context, run *actions_model.ActionRun, cols ...string
 	if err != nil {
 		return err
 	}
-	return sendActionRunNowDoneNotificationIfNeeded(ctx, priorRun, updatedRun)
+	return sendActionRunNowDoneNotificationIfNeeded(ctx, priorRun, updatedRun, nil)
 }
 
 // wrapper of UpdateRunJobWithoutNotification with a call to the ActionRunNowDone notification channel
@@ -851,5 +855,5 @@ func UpdateRunJob(ctx context.Context, job *actions_model.ActionRunJob, cond bui
 	if err != nil {
 		return affected, err
 	}
-	return affected, sendActionRunNowDoneNotificationIfNeeded(ctx, priorRun, updatedRun)
+	return affected, sendActionRunNowDoneNotificationIfNeeded(ctx, priorRun, updatedRun, job)
 }

@@ -203,6 +203,7 @@ func UpdateTaskByState(ctx context.Context, runnerID int64, state *runnerv1.Task
 			ID:      task.JobID,
 			Status:  task.Status,
 			Stopped: task.Stopped,
+			Attempt: task.Attempt,
 		}, nil); err != nil {
 			return nil, err
 		}
