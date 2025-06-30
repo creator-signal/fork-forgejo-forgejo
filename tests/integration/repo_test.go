@@ -5,15 +5,19 @@
 package integration
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
@@ -22,6 +26,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	repo_service "forgejo.org/services/repository"
@@ -193,9 +198,9 @@ func TestViewRepoWithSymlinks(t *testing.T) {
 
 // TestViewAsRepoAdmin tests PR #2167
 func TestViewAsRepoAdmin(t *testing.T) {
-	for _, user := range []string{"user2", "user4"} {
-		defer tests.PrepareTestEnv(t)()
+	defer tests.PrepareTestEnv(t)()
 
+	for _, user := range []string{"user2", "user4"} {
 		session := loginUser(t, user)
 
 		req := NewRequest(t, "GET", "/user2/repo1.git")
@@ -680,6 +685,79 @@ func TestViewCommit(t *testing.T) {
 	req.Header.Add("Accept", "text/html")
 	resp := MakeRequest(t, req, http.StatusNotFound)
 	assert.True(t, test.IsNormalPageCompleted(resp.Body.String()), "non-existing commit should render 404 page")
+}
+
+func TestViewCommitSignature(t *testing.T) {
+	t.Cleanup(func() {
+		// Cannot use t.Context(), it is in the done state.
+		require.NoError(t, git.InitFull(context.Background())) //nolint:usetesting
+	})
+
+	defer test.MockVariableValue(&setting.Repository.Signing.SigningName, "UwU")()
+	defer test.MockVariableValue(&setting.Repository.Signing.SigningEmail, "fox@example.com")()
+	defer test.MockVariableValue(&setting.Repository.Signing.CRUDActions, []string{"always"})()
+	defer test.MockVariableValue(&setting.Repository.Signing.InitialCommit, []string{"always"})()
+
+	filePath := "signed.txt"
+	fromBranch := "master"
+	toBranch := "branch-signed"
+
+	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+		// Use a new GNUPGPHOME to avoid messing with the existing GPG keyring.
+		tmpDir := t.TempDir()
+		require.NoError(t, os.Chmod(tmpDir, 0o700))
+		t.Setenv("GNUPGHOME", tmpDir)
+
+		rootKeyPair, err := importTestingKey()
+		require.NoError(t, err)
+		defer test.MockVariableValue(&setting.Repository.Signing.SigningKey, rootKeyPair.PrimaryKey.KeyIdShortString())()
+		defer test.MockVariableValue(&setting.Repository.Signing.Format, "openpgp")()
+
+		// Ensure the git config is updated with the new signing format.
+		require.NoError(t, git.InitFull(t.Context()))
+
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		testCtx := NewAPITestContext(t, user.Name, "commit-header-signed", auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+		u.Path = testCtx.GitPath()
+
+		t.Run("Create repository", doAPICreateRepository(testCtx, nil, git.Sha1ObjectFormat))
+
+		t.Run("Create commit", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			options := &api.CreateFileOptions{
+				FileOptions: api.FileOptions{
+					BranchName:    fromBranch,
+					NewBranchName: toBranch,
+					Message:       fmt.Sprintf("from:%s to:%s path:%s", fromBranch, toBranch, filePath),
+					Author: api.Identity{
+						Name:  user.FullName,
+						Email: user.Email,
+					},
+					Committer: api.Identity{
+						Name:  user.FullName,
+						Email: user.Email,
+					},
+				},
+				ContentBase64: base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "This is new text for %s", filePath)),
+			}
+
+			req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", testCtx.Username, testCtx.Reponame, filePath), &options).
+				AddTokenAuth(testCtx.Token)
+			resp := testCtx.Session.MakeRequest(t, req, http.StatusCreated)
+
+			var contents api.FileResponse
+			DecodeJSON(t, resp, &contents)
+
+			assert.True(t, contents.Verification.Verified)
+
+			req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/commit/%s", testCtx.Username, testCtx.Reponame, contents.Commit.SHA))
+			resp = testCtx.Session.MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			htmlDoc.AssertElement(t, ".commit-header-row.message.isSigned.isVerified", true)
+		})
+	})
 }
 
 func TestCommitView(t *testing.T) {
@@ -1453,51 +1531,34 @@ func TestInitInstructions(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	session := loginUser(t, user.Name)
 
-	sha256Repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-		Name:         optional.Some("sha256-instruction"),
-		AutoInit:     optional.Some(false),
-		EnabledUnits: optional.Some([]unit_model.Type{unit_model.TypeCode}),
-		ObjectFormat: optional.Some("sha256"),
-	})
-	defer f()
-
-	sha1Repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-		Name:         optional.Some("sha1-instruction"),
-		AutoInit:     optional.Some(false),
-		EnabledUnits: optional.Some([]unit_model.Type{unit_model.TypeCode}),
-		ObjectFormat: optional.Some("sha1"),
-	})
-	defer f()
-
-	portMatcher := regexp.MustCompile(`localhost:\d+`)
-
-	t.Run("sha256", func(t *testing.T) {
+	forEachObjectFormat(t, func(t *testing.T, objectFormat git.ObjectFormat) {
 		defer tests.PrintCurrentTest(t)()
+		name := objectFormat.Name()
+		var init string
+		if name == "sha1" {
+			init = "git init"
+		} else {
+			init = fmt.Sprintf("git init --object-format=%s", name)
+		}
 
-		resp := session.MakeRequest(t, NewRequest(t, "GET", "/"+sha256Repo.FullName()), http.StatusOK)
+		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
+			Name:         optional.Some(name + "-instruction"),
+			AutoInit:     optional.Some(false),
+			EnabledUnits: optional.Some([]unit_model.Type{unit_model.TypeCode}),
+			ObjectFormat: optional.Some(name),
+		})
+		defer f()
+
+		portMatcher := regexp.MustCompile(`localhost:\d+`)
+		resp := session.MakeRequest(t, NewRequest(t, "GET", "/"+repo.FullName()), http.StatusOK)
 
 		htmlDoc := NewHTMLParser(t, resp.Body)
-		assert.Equal(t, `touch README.md
-git init --object-format=sha256
+		assert.Equal(t, fmt.Sprintf(`touch README.md
+%s
 git switch -c main
 git add README.md
 git commit -m "first commit"
-git remote add origin http://localhost/user2/sha256-instruction.git
-git push -u origin main`, portMatcher.ReplaceAllString(htmlDoc.Find(".empty-repo-guide code").First().Text(), "localhost"))
-	})
-
-	t.Run("sha1", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		resp := session.MakeRequest(t, NewRequest(t, "GET", "/"+sha1Repo.FullName()), http.StatusOK)
-
-		htmlDoc := NewHTMLParser(t, resp.Body)
-		assert.Equal(t, `touch README.md
-git init
-git switch -c main
-git add README.md
-git commit -m "first commit"
-git remote add origin http://localhost/user2/sha1-instruction.git
-git push -u origin main`, portMatcher.ReplaceAllString(htmlDoc.Find(".empty-repo-guide code").First().Text(), "localhost"))
+git remote add origin http://localhost/user2/%s-instruction.git
+git push -u origin main`, init, name), portMatcher.ReplaceAllString(htmlDoc.Find(".empty-repo-guide code").First().Text(), "localhost"))
 	})
 }
