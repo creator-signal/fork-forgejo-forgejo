@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/unittest"
 	"forgejo.org/modules/setting"
 
 	pingv1 "code.gitea.io/actions-proto-go/ping/v1"
@@ -115,6 +117,20 @@ func (r *mockRunner) fetchTask(t *testing.T, timeout ...time.Duration) *runnerv1
 		return false
 	}, fetchTimeout, time.Millisecond*100, "failed to fetch a task")
 	return task
+}
+
+func (r *mockRunner) getActionTask(t *testing.T, task *runnerv1.Task) *actions_model.ActionTask {
+	return unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
+}
+
+func (r *mockRunner) getActionRunJob(t *testing.T, task *runnerv1.Task) *actions_model.ActionRunJob {
+	actionTask := r.getActionTask(t, task)
+	return unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: actionTask.JobID})
+}
+
+func (r *mockRunner) getActionRun(t *testing.T, task *runnerv1.Task) *actions_model.ActionRun {
+	actionRunJob := r.getActionRunJob(t, task)
+	return unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: actionRunJob.RunID})
 }
 
 type mockTaskOutcome struct {

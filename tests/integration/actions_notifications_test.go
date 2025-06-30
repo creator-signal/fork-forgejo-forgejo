@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"testing"
 
-	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
@@ -75,10 +74,8 @@ jobs:
 				createWorkflowFile(t, token, user2.Name, apiRepo.Name, testCase.treePath, opts)
 
 				task := runner.fetchTask(t)
-				actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
-				actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: actionTask.JobID})
-				actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: actionRunJob.RunID})
-				assert.Equal(t, testCase.notifyEmail, actionRun.NotifyEmail)
+				run := runner.getActionRun(t, task)
+				assert.Equal(t, testCase.notifyEmail, run.NotifyEmail)
 
 				httpContext := NewAPITestContext(t, user2.Name, apiRepo.Name, auth_model.AccessTokenScopeWriteRepository)
 				doAPIDeleteRepository(httpContext)(t)
