@@ -398,7 +398,7 @@ func Rerun(ctx *context_module.Context) {
 		for _, j := range jobs {
 			// if the job has needs, it should be set to "blocked" status to wait for other jobs
 			shouldBlock := len(j.Needs) > 0
-			if err := rerunJob(ctx, j, shouldBlock); err != nil {
+			if err := actions_service.ReRunJob(ctx, j, shouldBlock); err != nil {
 				ctx.Error(http.StatusInternalServerError, err.Error())
 				return
 			}
@@ -412,38 +412,13 @@ func Rerun(ctx *context_module.Context) {
 	for _, j := range rerunJobs {
 		// jobs other than the specified one should be set to "blocked" status
 		shouldBlock := j.JobID != job.JobID
-		if err := rerunJob(ctx, j, shouldBlock); err != nil {
+		if err := actions_service.ReRunJob(ctx, j, shouldBlock); err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
 			return
 		}
 	}
 
 	ctx.JSON(http.StatusOK, struct{}{})
-}
-
-func rerunJob(ctx *context_module.Context, job *actions_model.ActionRunJob, shouldBlock bool) error {
-	status := job.Status
-	if !status.IsDone() {
-		return nil
-	}
-
-	job.TaskID = 0
-	job.Status = actions_model.StatusWaiting
-	if shouldBlock {
-		job.Status = actions_model.StatusBlocked
-	}
-	job.Started = 0
-	job.Stopped = 0
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		_, err := actions_service.UpdateRunJob(ctx, job, builder.Eq{"status": status}, "task_id", "status", "started", "stopped")
-		return err
-	}); err != nil {
-		return err
-	}
-
-	actions_service.CreateCommitStatus(ctx, job)
-	return nil
 }
 
 func Logs(ctx *context_module.Context) {

@@ -4,8 +4,13 @@
 package actions
 
 import (
+	"context"
+
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
 	"forgejo.org/modules/container"
+
+	"xorm.io/builder"
 )
 
 // GetAllRerunJobs get all jobs that need to be rerun when job should be rerun
@@ -35,4 +40,29 @@ func GetAllRerunJobs(job *actions_model.ActionRunJob, allJobs []*actions_model.A
 	}
 
 	return rerunJobs
+}
+
+func ReRunJob(ctx context.Context, job *actions_model.ActionRunJob, shouldBlock bool) error {
+	status := job.Status
+	if !status.IsDone() {
+		return nil
+	}
+
+	job.TaskID = 0
+	job.Status = actions_model.StatusWaiting
+	if shouldBlock {
+		job.Status = actions_model.StatusBlocked
+	}
+	job.Started = 0
+	job.Stopped = 0
+
+	if err := db.WithTx(ctx, func(ctx context.Context) error {
+		_, err := UpdateRunJob(ctx, job, builder.Eq{"status": status}, "task_id", "status", "started", "stopped")
+		return err
+	}); err != nil {
+		return err
+	}
+
+	CreateCommitStatus(ctx, job)
+	return nil
 }
