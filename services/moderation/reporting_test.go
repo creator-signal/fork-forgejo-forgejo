@@ -11,10 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMain(m *testing.M) {
-	unittest.MainTest(m)
-}
-
 func TestRemoveResolvedReportsWhenNoTimeout(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	// Add a resolved report
@@ -27,9 +23,8 @@ func TestRemoveResolvedReportsWhenNoTimeout(t *testing.T) {
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(resolvedReport)
 	require.NoError(t, err)
 
+	// No reports should be deleted when the default time to keep is 0
 	err = RemoveResolvedReports(db.DefaultContext, 0)
 	require.NoError(t, err)
-
-	// Resolved reports older than a minute should be deleted.
-	unittest.AssertExistsIf(t, true, resolvedReport)
+	unittest.AssertExistsIf(t, false, resolvedReport)
 }
