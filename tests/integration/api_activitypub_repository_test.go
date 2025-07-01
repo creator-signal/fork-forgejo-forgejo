@@ -26,7 +26,6 @@ import (
 )
 
 func TestActivityPubRepository(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
