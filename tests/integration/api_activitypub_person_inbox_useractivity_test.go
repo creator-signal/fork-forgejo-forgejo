@@ -27,7 +27,6 @@ import (
 
 // Flow of this test is documented at: https://codeberg.org/forgejo-contrib/federation/src/branch/main/doc/user-activity-following.md
 func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
@@ -85,8 +84,6 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 }
 
 func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
-	defer unittest.OverrideFixtures("tests/integration/fixtures/TestActivityPubPersonInboxNoteToDistant")()
-	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
