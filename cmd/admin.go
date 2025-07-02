@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"forgejo.org/models/db"
@@ -14,8 +15,13 @@ import (
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/log"
 	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/services/cron"
 
 	"github.com/urfave/cli/v3"
+)
+
+const (
+	FlagTaskName = "taskname"
 )
 
 // CmdAdmin represents the available admin sub-command.
@@ -29,6 +35,7 @@ func cmdAdmin() *cli.Command {
 			subcmdRegenerate(),
 			subcmdAuth(),
 			subcmdSendMail(),
+			subcmdExecTask(),
 		},
 	}
 }
@@ -91,6 +98,21 @@ func subcmdSendMail() *cli.Command {
 				Name:    "force",
 				Aliases: []string{"f"},
 				Usage:   "A flag to bypass a confirmation step",
+			},
+		},
+	}
+}
+
+func subcmdExecTask() *cli.Command {
+	return &cli.Command{
+		Name:   "exectask",
+		Usage:  "Run a cron task manually",
+		Action: runExecTask,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  FlagTaskName,
+				Usage: "The task to execute",
+				Value: "",
 			},
 		},
 	}
@@ -175,4 +197,23 @@ func getReleaseCount(ctx context.Context, id int64) (int64, error) {
 			IncludeTags: true,
 		},
 	)
+}
+
+func runExecTask(ctx context.Context, c *cli.Command) error {
+	if !c.IsSet(FlagTaskName) {
+		return fmt.Errorf("--%s flag is missing", FlagTaskName)
+	}
+	taskName := c.String(FlagTaskName)
+
+	task := cron.GetTask(taskName)
+	if task == nil {
+		return fmt.Errorf("Unknown task: %s", taskName)
+	}
+
+	task.Run()
+
+	if task.Status != "finished" {
+		return errors.New(task.LastMessage)
+	}
+	return nil
 }
