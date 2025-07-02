@@ -28,7 +28,7 @@ func CreateFederatedUser(ctx context.Context, user *User, federatedUser *Federat
 	}
 
 	// Begin transaction
-	ctx, committer, err := db.TxContext((ctx))
+	txCtx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func CreateFederatedUser(ctx context.Context, user *User, federatedUser *Federat
 		}
 	}()
 
-	if err := CreateUser(ctx, user, &overwrite); err != nil {
+	if err := CreateUser(txCtx, user, &overwrite); err != nil {
 		return err
 	}
 
@@ -48,7 +48,7 @@ func CreateFederatedUser(ctx context.Context, user *User, federatedUser *Federat
 		return err
 	}
 
-	_, err = db.GetEngine(ctx).Insert(federatedUser)
+	_, err = db.GetEngine(txCtx).Insert(federatedUser)
 	if err != nil {
 		return err
 	}
