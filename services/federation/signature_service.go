@@ -123,7 +123,7 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 	return nil, nil
 }
 
-func FindOrCreateFederationHostKey(ctx *context_service.Base, keyID string) (pubKey any, err error) {
+func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey any, err error) {
 	keyURL, err := url.Parse(keyID)
 	if err != nil {
 		return nil, err
