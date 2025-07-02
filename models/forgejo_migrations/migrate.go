@@ -109,6 +109,7 @@ var migrations = []*Migration{
 	NewMigration("Add `notify-email` column to `action_run` table", AddNotifyEmailToActionRun),
 	// v34 -> v35
 	NewMigration("Add index to `stopped` column in `action_run` table", AddIndexToActionRunStopped),
+	NewMigration("Add `resolved_unix` column to `abuse_report` table", AddResolvedUnixToAbuseReport),
 }
 
 // GetCurrentDBVersion returns the current Forgejo database version.

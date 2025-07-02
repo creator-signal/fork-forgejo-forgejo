@@ -105,6 +105,7 @@ type AbuseReport struct {
 	// The ID of the corresponding shadow-copied content when exists; otherwise null.
 	ShadowCopyID sql.NullInt64      `xorm:"DEFAULT NULL"`
 	CreatedUnix  timeutil.TimeStamp `xorm:"created NOT NULL"`
+	ResolvedUnix timeutil.TimeStamp `xorm:"DEFAULT NULL"`
 }
 
 var ErrSelfReporting = errors.New("reporting yourself is not allowed")
@@ -165,7 +166,7 @@ func GetResolvedReports(ctx context.Context, keepReportsFor time.Duration) ([]*A
 	)
 
 	if keepReportsFor > 0 {
-		cond = cond.And(builder.Lt{"created_unix": time.Now().Add(-keepReportsFor).Unix()})
+		cond = cond.And(builder.Lt{"resolved_unix": time.Now().Add(-keepReportsFor).Unix()})
 	}
 
 	abuseReports := make([]*AbuseReport, 0, 30)
