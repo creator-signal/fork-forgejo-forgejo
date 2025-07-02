@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
-	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
@@ -52,7 +52,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 			distantUser15URL,
 			localUser2URL,
 		))
-		cf, err := activitypub.GetClientFactory(ctx)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
