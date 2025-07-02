@@ -4,6 +4,7 @@
 package federation
 
 import (
+	"context"
 	"crypto/x509"
 	"database/sql"
 	"encoding/pem"
@@ -15,13 +16,12 @@ import (
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
 	fm "forgejo.org/modules/forgefed"
-	context_service "forgejo.org/services/context"
 
 	ap "github.com/go-ap/activitypub"
 )
 
 // Factory function for ActorID. Created struct is asserted to be valid
-func NewActorIDFromKeyID(ctx *context_service.Base, uri string) (fm.ActorID, error) {
+func NewActorIDFromKeyID(ctx context.Context, uri string) (fm.ActorID, error) {
 	parsedURI, err := url.Parse(uri)
 	parsedURI.Fragment = ""
 	if err != nil {
@@ -29,6 +29,7 @@ func NewActorIDFromKeyID(ctx *context_service.Base, uri string) (fm.ActorID, err
 	}
 
 	actionsUser := user.NewAPServerActor()
+	// TODO: create here a new context for outgoing calls?
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return fm.ActorID{}, err
@@ -54,7 +55,7 @@ func NewActorIDFromKeyID(ctx *context_service.Base, uri string) (fm.ActorID, err
 	return result, err
 }
 
-func FindOrCreateFederatedUserKey(ctx *context_service.Base, keyID string) (pubKey any, err error) {
+func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any, err error) {
 	var federatedUser *user.FederatedUser
 	var keyURL *url.URL
 
@@ -183,8 +184,10 @@ func FindOrCreateFederationHostKey(ctx *context_service.Base, keyID string) (pub
 	return nil, nil
 }
 
-func fetchKeyFromAp(ctx *context_service.Base, keyURL url.URL) (pubKey any, pubKeyBytes []byte, apPerson *ap.Person, err error) {
+func fetchKeyFromAp(ctx context.Context, keyURL url.URL) (pubKey any, pubKeyBytes []byte, apPerson *ap.Person, err error) {
 	actionsUser := user.NewAPServerActor()
+
+	// TODO: create here a new ctx?
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return nil, nil, nil, err
