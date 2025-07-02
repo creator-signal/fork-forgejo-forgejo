@@ -2,6 +2,7 @@ package moderation
 
 import (
 	"testing"
+	"time"
 
 	"forgejo.org/models/db"
 	report_model "forgejo.org/models/moderation"
@@ -11,9 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRemoveResolvedReportsWhenNoTimeout(t *testing.T) {
+func TestRemoveResolvedReportsWhenNoTimeSet(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
-	// Add a resolved report
 	resolvedReport := &report_model.AbuseReport{
 		Status:     report_model.ReportStatusTypeHandled,
 		ReporterID: 1, ContentType: report_model.ReportedContentTypeRepository,
@@ -25,6 +25,42 @@ func TestRemoveResolvedReportsWhenNoTimeout(t *testing.T) {
 
 	// No reports should be deleted when the default time to keep is 0
 	err = RemoveResolvedReports(db.DefaultContext, 0)
+	require.NoError(t, err)
+	unittest.AssertExistsIf(t, false, resolvedReport)
+}
+
+func TestRemoveResolvedReportsWhenTimeSet(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	// keepReportsFor needs to an int64 to match what timeutil.Day expects so we cast the value
+	keepReportsFor := int64(4)
+	resolvedReport := &report_model.AbuseReport{
+		Status:     report_model.ReportStatusTypeHandled,
+		ReporterID: 1, ContentType: report_model.ReportedContentTypeRepository,
+		ContentID: 2, Category: report_model.AbuseCategoryTypeOther,
+		CreatedUnix:  timeutil.TimeStampNow(),
+		ResolvedUnix: timeutil.TimeStamp(time.Now().Unix() + timeutil.Day*keepReportsFor),
+	}
+	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(resolvedReport)
+	require.NoError(t, err)
+
+	err = RemoveResolvedReports(db.DefaultContext, 4)
+	require.NoError(t, err)
+	unittest.AssertExistsIf(t, true, resolvedReport)
+}
+
+func TestRemoveResolvedReportsWhenTimeSetButReportNew(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	resolvedReport := &report_model.AbuseReport{
+		Status:     report_model.ReportStatusTypeHandled,
+		ReporterID: 1, ContentType: report_model.ReportedContentTypeRepository,
+		ContentID: 2, Category: report_model.AbuseCategoryTypeOther,
+		CreatedUnix:  timeutil.TimeStampNow(),
+		ResolvedUnix: timeutil.TimeStampNow(),
+	}
+	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(resolvedReport)
+	require.NoError(t, err)
+
+	err = RemoveResolvedReports(db.DefaultContext, 4)
 	require.NoError(t, err)
 	unittest.AssertExistsIf(t, false, resolvedReport)
 }
