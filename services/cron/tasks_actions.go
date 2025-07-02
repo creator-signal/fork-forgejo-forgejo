@@ -25,7 +25,7 @@ func initActionsTasks() {
 }
 
 func registerStopZombieTasks() {
-	RegisterTaskFatal("stop_zombie_tasks", &BaseConfig{
+	RegisterTaskFatal(TaskStopZombieTasks, &BaseConfig{
 		Enabled:    true,
 		RunAtStart: true,
 		Schedule:   "@every 5m",
@@ -35,7 +35,7 @@ func registerStopZombieTasks() {
 }
 
 func registerStopEndlessTasks() {
-	RegisterTaskFatal("stop_endless_tasks", &BaseConfig{
+	RegisterTaskFatal(TaskStopEndlessTasks, &BaseConfig{
 		Enabled:    true,
 		RunAtStart: true,
 		Schedule:   "@every 30m",
@@ -45,7 +45,7 @@ func registerStopEndlessTasks() {
 }
 
 func registerCancelAbandonedJobs() {
-	RegisterTaskFatal("cancel_abandoned_jobs", &BaseConfig{
+	RegisterTaskFatal(TaskCancelAbandonedJobs, &BaseConfig{
 		Enabled:    true,
 		RunAtStart: true,
 		Schedule:   "@every 6h",
@@ -57,7 +57,7 @@ func registerCancelAbandonedJobs() {
 // registerScheduleTasks registers a scheduled task that runs every minute to start any due schedule tasks.
 func registerScheduleTasks() {
 	// Register the task with a unique name, enabled status, and schedule for every minute.
-	RegisterTaskFatal("start_schedule_tasks", &BaseConfig{
+	RegisterTaskFatal(TaskStartScheduleTasks, &BaseConfig{
 		Enabled:    true,
 		RunAtStart: false,
 		Schedule:   "@every 1m",
@@ -68,21 +68,21 @@ func registerScheduleTasks() {
 }
 
 func registerActionsCleanup() {
-	RegisterTaskFatal("cleanup_actions", &BaseConfig{
+	RegisterTaskFatal(TaskCleanupActions, &BaseConfig{
 		Enabled:    true,
 		RunAtStart: false,
-		Schedule:   "@midnight",
+		Schedule:   scheduleMidnight,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return actions_service.Cleanup(ctx)
 	})
 }
 
 func registerOfflineRunnersCleanup() {
-	RegisterTaskFatal("cleanup_offline_runners", &CleanupOfflineRunnersConfig{
+	RegisterTaskFatal(TaskCleanupOfflineRunners, &CleanupOfflineRunnersConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    false,
 			RunAtStart: false,
-			Schedule:   "@midnight",
+			Schedule:   scheduleMidnight,
 		},
 		GlobalScopeOnly: true,
 		OlderThan:       time.Hour * 24,

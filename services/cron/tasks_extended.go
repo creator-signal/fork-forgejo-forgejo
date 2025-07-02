@@ -21,11 +21,11 @@ import (
 )
 
 func registerDeleteInactiveUsers() {
-	RegisterTaskFatal("delete_inactive_accounts", &OlderThanConfig{
+	RegisterTaskFatal(TaskDeleteInactiveAccounts, &OlderThanConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    false,
 			RunAtStart: false,
-			Schedule:   "@annually",
+			Schedule:   scheduleAnnually,
 		},
 		OlderThan: time.Minute * time.Duration(setting.Service.ActiveCodeLives),
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
@@ -35,10 +35,10 @@ func registerDeleteInactiveUsers() {
 }
 
 func registerDeleteRepositoryArchives() {
-	RegisterTaskFatal("delete_repo_archives", &BaseConfig{
+	RegisterTaskFatal(TaskDeleteRepoArchives, &BaseConfig{
 		Enabled:    false,
 		RunAtStart: false,
-		Schedule:   "@annually",
+		Schedule:   scheduleAnnually,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return archiver_service.DeleteRepositoryArchives(ctx)
 	})
@@ -50,11 +50,11 @@ func registerGarbageCollectRepositories() {
 		Timeout time.Duration
 		Args    []string `delim:" "`
 	}
-	RegisterTaskFatal("git_gc_repos", &RepoHealthCheckConfig{
+	RegisterTaskFatal(TaskGitGcRepos, &RepoHealthCheckConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    false,
 			RunAtStart: false,
-			Schedule:   "@every 72h",
+			Schedule:   scheduleEvery72h,
 		},
 		Timeout: time.Duration(setting.Git.Timeout.GC) * time.Second,
 		Args:    setting.Git.GCArgs,
@@ -66,67 +66,67 @@ func registerGarbageCollectRepositories() {
 }
 
 func registerRewriteAllPublicKeys() {
-	RegisterTaskFatal("resync_all_sshkeys", &BaseConfig{
+	RegisterTaskFatal(TaskResyncAllSshkeys, &BaseConfig{
 		Enabled:    false,
 		RunAtStart: false,
-		Schedule:   "@every 72h",
+		Schedule:   scheduleEvery72h,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return asymkey_model.RewriteAllPublicKeys(ctx)
 	})
 }
 
 func registerRewriteAllPrincipalKeys() {
-	RegisterTaskFatal("resync_all_sshprincipals", &BaseConfig{
+	RegisterTaskFatal(TaskResyncAllSshprincipals, &BaseConfig{
 		Enabled:    false,
 		RunAtStart: false,
-		Schedule:   "@every 72h",
+		Schedule:   scheduleEvery72h,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return asymkey_model.RewriteAllPrincipalKeys(ctx)
 	})
 }
 
 func registerRepositoryUpdateHook() {
-	RegisterTaskFatal("resync_all_hooks", &BaseConfig{
+	RegisterTaskFatal(TaskResyncAllHooks, &BaseConfig{
 		Enabled:    false,
 		RunAtStart: false,
-		Schedule:   "@every 72h",
+		Schedule:   scheduleEvery72h,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return repo_service.SyncRepositoryHooks(ctx)
 	})
 }
 
 func registerReinitMissingRepositories() {
-	RegisterTaskFatal("reinit_missing_repos", &BaseConfig{
+	RegisterTaskFatal(TaskReinitMissingRepos, &BaseConfig{
 		Enabled:    false,
 		RunAtStart: false,
-		Schedule:   "@every 72h",
+		Schedule:   scheduleEvery72h,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return repo_service.ReinitMissingRepositories(ctx)
 	})
 }
 
 func registerDeleteMissingRepositories() {
-	RegisterTaskFatal("delete_missing_repos", &BaseConfig{
+	RegisterTaskFatal(TaskDeleteMissingRepos, &BaseConfig{
 		Enabled:    false,
 		RunAtStart: false,
-		Schedule:   "@every 72h",
+		Schedule:   scheduleEvery72h,
 	}, func(ctx context.Context, user *user_model.User, _ Config) error {
 		return repo_service.DeleteMissingRepositories(ctx, user)
 	})
 }
 
 func registerRemoveRandomAvatars() {
-	RegisterTaskFatal("delete_generated_repository_avatars", &BaseConfig{
+	RegisterTaskFatal(TaskDeleteGeneratedRepositoryAvatars, &BaseConfig{
 		Enabled:    false,
 		RunAtStart: false,
-		Schedule:   "@every 72h",
+		Schedule:   scheduleEvery72h,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return repo_service.RemoveRandomAvatars(ctx)
 	})
 }
 
 func registerDeleteOldActions() {
-	RegisterTaskFatal("delete_old_actions", &OlderThanConfig{
+	RegisterTaskFatal(TaskDeleteOldActions, &OlderThanConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    false,
 			RunAtStart: false,
@@ -145,7 +145,7 @@ func registerUpdateGiteaChecker() {
 		HTTPEndpoint   string
 		DomainEndpoint string
 	}
-	RegisterTaskFatal("update_checker", &UpdateCheckerConfig{
+	RegisterTaskFatal(TaskUpdateChecker, &UpdateCheckerConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    true,
 			RunAtStart: false,
@@ -160,7 +160,7 @@ func registerUpdateGiteaChecker() {
 }
 
 func registerDeleteOldSystemNotices() {
-	RegisterTaskFatal("delete_old_system_notices", &OlderThanConfig{
+	RegisterTaskFatal(TaskDeleteOldSystemNotices, &OlderThanConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    false,
 			RunAtStart: false,
@@ -184,7 +184,7 @@ func registerGCLFS() {
 		ProportionToCheckPerRepo float64
 	}
 
-	RegisterTaskFatal("gc_lfs", &GCLFSConfig{
+	RegisterTaskFatal(TaskGcLfs, &GCLFSConfig{
 		OlderThanConfig: OlderThanConfig{
 			BaseConfig: BaseConfig{
 				Enabled:    false,
@@ -216,10 +216,10 @@ func registerGCLFS() {
 }
 
 func registerRebuildIssueIndexer() {
-	RegisterTaskFatal("rebuild_issue_indexer", &BaseConfig{
+	RegisterTaskFatal(TaskRebuildIssueIndexer, &BaseConfig{
 		Enabled:    false,
 		RunAtStart: false,
-		Schedule:   "@annually",
+		Schedule:   scheduleAnnually,
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
 		return issue_indexer.PopulateIssueIndexer(ctx)
 	})

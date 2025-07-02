@@ -28,7 +28,7 @@ func registerUpdateMirrorTask() {
 		PushLimit int
 	}
 
-	RegisterTaskFatal("update_mirrors", &UpdateMirrorTaskConfig{
+	RegisterTaskFatal(TaskUpdateMirrors, &UpdateMirrorTaskConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    true,
 			RunAtStart: false,
@@ -48,11 +48,11 @@ func registerRepoHealthCheck() {
 		Timeout time.Duration
 		Args    []string `delim:" "`
 	}
-	RegisterTaskFatal("repo_health_check", &RepoHealthCheckConfig{
+	RegisterTaskFatal(TaskRepoHealthCheck, &RepoHealthCheckConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    true,
 			RunAtStart: false,
-			Schedule:   "@midnight",
+			Schedule:   scheduleMidnight,
 		},
 		Timeout: time.Duration(setting.Git.Timeout.Default) * time.Second,
 		Args:    []string{},
@@ -64,21 +64,21 @@ func registerRepoHealthCheck() {
 }
 
 func registerCheckRepoStats() {
-	RegisterTaskFatal("check_repo_stats", &BaseConfig{
+	RegisterTaskFatal(TaskCheckRepoStats, &BaseConfig{
 		Enabled:    true,
 		RunAtStart: true,
-		Schedule:   "@midnight",
+		Schedule:   scheduleMidnight,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return models.CheckRepoStats(ctx)
 	})
 }
 
 func registerArchiveCleanup() {
-	RegisterTaskFatal("archive_cleanup", &OlderThanConfig{
+	RegisterTaskFatal(TaskArchiveCleanup, &OlderThanConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    true,
 			RunAtStart: true,
-			Schedule:   "@midnight",
+			Schedule:   scheduleMidnight,
 		},
 		OlderThan: 24 * time.Hour,
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
@@ -88,11 +88,11 @@ func registerArchiveCleanup() {
 }
 
 func registerSyncExternalUsers() {
-	RegisterTaskFatal("sync_external_users", &UpdateExistingConfig{
+	RegisterTaskFatal(TaskSyncExternalUsers, &UpdateExistingConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    true,
 			RunAtStart: false,
-			Schedule:   "@midnight",
+			Schedule:   scheduleMidnight,
 		},
 		UpdateExisting: true,
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
@@ -102,11 +102,11 @@ func registerSyncExternalUsers() {
 }
 
 func registerDeletedBranchesCleanup() {
-	RegisterTaskFatal("deleted_branches_cleanup", &OlderThanConfig{
+	RegisterTaskFatal(TaskDeletedBranchesCleanup, &OlderThanConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    true,
 			RunAtStart: true,
-			Schedule:   "@midnight",
+			Schedule:   scheduleMidnight,
 		},
 		OlderThan: 24 * time.Hour,
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
@@ -117,21 +117,21 @@ func registerDeletedBranchesCleanup() {
 }
 
 func registerUpdateMigrationPosterID() {
-	RegisterTaskFatal("update_migration_poster_id", &BaseConfig{
+	RegisterTaskFatal(TaskUpdateMigrationPosterId, &BaseConfig{
 		Enabled:    true,
 		RunAtStart: true,
-		Schedule:   "@midnight",
+		Schedule:   scheduleMidnight,
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return migrations.UpdateMigrationPosterID(ctx)
 	})
 }
 
 func registerCleanupHookTaskTable() {
-	RegisterTaskFatal("cleanup_hook_task_table", &CleanupHookTaskConfig{
+	RegisterTaskFatal(TaskCleanupHookTaskTable, &CleanupHookTaskConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    true,
 			RunAtStart: false,
-			Schedule:   "@midnight",
+			Schedule:   scheduleMidnight,
 		},
 		CleanupType:  "OlderThan",
 		OlderThan:    168 * time.Hour,
@@ -143,11 +143,11 @@ func registerCleanupHookTaskTable() {
 }
 
 func registerCleanupPackages() {
-	RegisterTaskFatal("cleanup_packages", &OlderThanConfig{
+	RegisterTaskFatal(TaskCleanupPackages, &OlderThanConfig{
 		BaseConfig: BaseConfig{
 			Enabled:    true,
 			RunAtStart: true,
-			Schedule:   "@midnight",
+			Schedule:   scheduleMidnight,
 		},
 		OlderThan: 24 * time.Hour,
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
