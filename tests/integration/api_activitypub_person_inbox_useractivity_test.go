@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"forgejo.org/models/activities"
 	auth_model "forgejo.org/models/auth"
-	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
+	"forgejo.org/services/contexttest"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -69,9 +70,10 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 			localUser2URL,
 			distantNoteURL,
 		))
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
+		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
-		c, err := cf.WithKeysDirect(db.DefaultContext, mock.ApActor.PrivKey,
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
 		resp, err := c.Post(userActivity, localUser2Inbox)
@@ -115,9 +117,10 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 			distantUser15URL,
 			localUser2URL,
 		))
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
+		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
-		c, err := cf.WithKeysDirect(db.DefaultContext, mock.ApActor.PrivKey,
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
 		resp, err := c.Post(followActivity, localUser2Inbox)

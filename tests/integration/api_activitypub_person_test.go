@@ -8,14 +8,15 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
-	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
+	"forgejo.org/services/contexttest"
 	"forgejo.org/tests"
 
 	ap "github.com/go-ap/activitypub"
@@ -41,21 +42,22 @@ func TestActivityPubPerson(t *testing.T) {
 		// distantURL := federatedSrv.URL
 		// distantUser15URL := fmt.Sprintf("%s/api/v1/activitypub/user-id/15", distantURL)
 
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
-		require.NoError(t, err)
-
-		c, err := cf.WithKeysDirect(db.DefaultContext, mock.Persons[0].PrivKey,
-			mock.Persons[0].KeyID(federatedSrv.URL))
-		require.NoError(t, err)
-
 		// Unsigned request
 		t.Run("UnsignedRequest", func(t *testing.T) {
 			req := NewRequest(t, "GET", localUserURL)
 			MakeRequest(t, req, http.StatusBadRequest)
 		})
 
+		// Signed request
 		t.Run("SignedRequestValidation", func(t *testing.T) {
-			// Signed request
+			ctx, _ := contexttest.MockAPIContext(t, localUserURL)
+			cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
+			require.NoError(t, err)
+
+			c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
+				mock.Persons[0].KeyID(federatedSrv.URL))
+			require.NoError(t, err)
+
 			resp, err := c.GetBody(localUserURL)
 			require.NoError(t, err)
 
@@ -96,11 +98,12 @@ func TestActivityPubPersonInbox(t *testing.T) {
 		user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 		user1url := u.JoinPath("/api/v1/activitypub/user-id/1").String() + "#main-key"
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
-		require.NoError(t, err)
-		c, err := cf.WithKeys(db.DefaultContext, user1, user1url)
-		require.NoError(t, err)
 		user2inboxurl := u.JoinPath("/api/v1/activitypub/user-id/2/inbox").String()
+		ctx, _ := contexttest.MockAPIContext(t, user2inboxurl)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
+		require.NoError(t, err)
+		c, err := cf.WithKeys(ctx, user1, user1url)
+		require.NoError(t, err)
 
 		// Signed request "succeeds"
 		resp, err := c.Post([]byte{}, user2inboxurl)
