@@ -187,7 +187,6 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 func fetchKeyFromAp(ctx context.Context, keyURL url.URL) (pubKey any, pubKeyBytes []byte, apPerson *ap.Person, err error) {
 	actionsUser := user.NewAPServerActor()
 
-	// TODO: create here a new ctx?
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return nil, nil, nil, err

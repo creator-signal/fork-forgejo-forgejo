@@ -96,7 +96,6 @@ func findFederatedUser(ctx context.Context, actorURI string) (*user.User, *user.
 func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forgefed.FederationHost, error) {
 	actionsUser := user.NewAPServerActor()
 
-	// TODO: create a new ctx here?
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return nil, err
@@ -143,7 +142,6 @@ func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forge
 
 func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID int64) (*user.User, *user.FederatedUser, error) {
 	actionsUser := user.NewAPServerActor()
-	// TOODO: use a new ctx here ?
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return nil, nil, err
