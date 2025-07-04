@@ -4,6 +4,7 @@
 package federation
 
 import (
+	"fmt"
 	"net/http"
 
 	"forgejo.org/models/activities"
@@ -14,20 +15,18 @@ import (
 	ap "github.com/go-ap/activitypub"
 )
 
-func processPersonInboxCreate(ctx *context_service.APIContext, activity *ap.Activity) {
+func processPersonInboxCreate(ctx *context_service.APIContext, activity *ap.Activity) (int, error) {
 	createAct, err := fm.NewForgeUserActivityFromAp(*activity)
 	if err != nil {
 		log.Error("Invalid user activity: %v, %v", activity, err)
-		ctx.Error(http.StatusNotAcceptable, "Invalid user activity", err)
-		return
+		return 0, NewErrNotAcceptable(fmt.Sprintf("Invalid user activity: %v", err))
 	}
 
 	actorURI := createAct.Actor.GetLink().String()
 	user, _, _, err := findFederatedUser(ctx, actorURI)
 	if err != nil {
 		log.Error("Error finding federated user (%s): %v", actorURI, err)
-		ctx.Error(http.StatusNotAcceptable, "Error finding federated user", err)
-		return
+		return 0, NewErrNotAcceptable(fmt.Sprintf("Error finding federated user: %v", err))
 	}
 
 	federatedUserActivity, err := activities.NewFederatedUserActivity(
@@ -40,15 +39,13 @@ func processPersonInboxCreate(ctx *context_service.APIContext, activity *ap.Acti
 	)
 	if err != nil {
 		log.Error("Error creating federatedUserActivity (%s): %v", actorURI, err)
-		ctx.Error(http.StatusNotAcceptable, "Error creating federatedUserActivity", err)
-		return
+		return 0, NewErrNotAcceptable(fmt.Sprintf("Error creating federatedUserActivity: %v", err))
 	}
 
 	if err := activities.CreateUserActivity(ctx, &federatedUserActivity); err != nil {
 		log.Error("Unable to record activity: %v", err)
-		ctx.Error(http.StatusInternalServerError, "Unable to record activity", err)
-		return
+		return 0, NewErrNotAcceptable(fmt.Sprintf("Unable to record activity: %v", err))
 	}
 
-	ctx.Status(http.StatusNoContent)
+	return http.StatusNoContent, nil
 }

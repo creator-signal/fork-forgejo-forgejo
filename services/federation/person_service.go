@@ -16,7 +16,7 @@ import (
 	"github.com/go-ap/jsonld"
 )
 
-func ProcessPersonInbox(ctx *context_service.APIContext, form any) {
+func ProcessPersonInbox(ctx *context_service.APIContext, form any) error {
 	activity := form.(*ap.Activity)
 
 	switch activity.Type {
@@ -35,7 +35,7 @@ func ProcessPersonInbox(ctx *context_service.APIContext, form any) {
 	}
 
 	log.Error("Unsupported PersonInbox activity: %v", activity.Type)
-	ctx.Error(http.StatusNotAcceptable, "Unsupported acvitiy", fmt.Errorf("Unsupported activity: %v", activity.Type))
+	return NewErrNotAcceptable(fmt.Sprintf("Unsupported activity: %v", activity.Type))
 }
 
 func FollowRemoteActor(ctx *context_service.APIContext, localUser *user.User, actorURI string) error {
