@@ -1,4 +1,5 @@
 {
+    "common.accept_policy": "I accept the <a href=\"%s\" rel=\"noopener noreferrer\" target=\"_blank\">service policy</a>",
     "home.welcome.no_activity": "No activity",
     "home.welcome.activity_hint": "There is nothing in your feed yet. Your actions and activity from repositories that you watch will show up here.",
     "home.explore_repos": "Explore repositories",
@@ -94,6 +95,7 @@
     "mail.actions.run_info_previous_status": "Previous Run's Status: %[1]s",
     "mail.actions.run_info_ref": "Branch: %[1]s (%[2]s)",
     "mail.actions.run_info_trigger": "Triggered because: %[1]s by: %[2]s",
+    "form.must_accept_service_policy": "The service policy must be accepted",
     "repo.diff.commit.next-short": "Next",
     "repo.diff.commit.previous-short": "Prev",
     "discussion.locked": "This discussion has been locked. Commenting is limited to contributors.",
