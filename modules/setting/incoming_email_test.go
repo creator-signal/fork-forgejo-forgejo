@@ -4,6 +4,8 @@
 package setting
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,6 +35,21 @@ func Test_loadIncomingEmailFrom(t *testing.T) {
 
 		assert.Equal(t, "jane.doe@example.com", IncomingEmail.Username)
 		assert.Equal(t, "y0u'll n3v3r gUess th1S!!1", IncomingEmail.Password)
+	})
+
+	t.Run("Secrets", func(t *testing.T) {
+		uri := filepath.Join(t.TempDir(), "email_incoming_password")
+		password := "y0u'll n3v3r gUess th1S!!1"
+		if err := os.WriteFile(uri, []byte(password), 0o644); err != nil {
+			panic(err)
+		}
+
+		cfg, sec := makeBaseConfig()
+		sec.NewKey("PASSWORD_URI", "file:"+uri)
+
+		loadIncomingEmailFrom(cfg)
+
+		assert.Equal(t, password, IncomingEmail.Password)
 	})
 
 	t.Run("Port settings", func(t *testing.T) {
