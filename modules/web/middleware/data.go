@@ -58,6 +58,8 @@ func CommonTemplateContextData() ContextData {
 		"EnableOpenIDSignIn": setting.Service.EnableOpenIDSignIn,
 		"PageStartTime":      time.Now(),
 
+		"PolicyURL":      setting.Service.PolicyURL,
+
 		"RunModeIsProd": setting.IsProd,
 	}
 }

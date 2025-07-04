@@ -1,5 +1,6 @@
 {
     "common.accept_policy": "I accept the <a href=\"%s\" rel=\"noopener noreferrer\" target=\"_blank\">service policy</a>",
+    "common.service_policy": "Service policy",
     "home.welcome.no_activity": "No activity",
     "home.welcome.activity_hint": "There is nothing in your feed yet. Your actions and activity from repositories that you watch will show up here.",
     "home.explore_repos": "Explore repositories",
