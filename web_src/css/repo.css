@@ -1304,8 +1304,8 @@ td .commit-summary {
 .repository #rev-list .sha.label .detail.icon,
 .repository .timeline-item.commits-list .singular-commit .sha.label .detail.icon {
   background: var(--color-light);
-  margin: -6px -10px -4px 0;
-  padding: 5px 4px 5px 6px;
+  margin: 0;
+  padding: 5px 6px 5px 6px;
   border-left: 1px solid var(--color-light-border);
   border-top: 0;
   border-right: 0;
