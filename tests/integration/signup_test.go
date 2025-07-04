@@ -203,7 +203,7 @@ func TestSignupImageCaptcha(t *testing.T) {
 		"retype":               "examplePassword!1",
 		"img-captcha-id":       idCaptcha,
 		"img-captcha-response": digitStr,
-		"policy":    "true",
+		"policy":               "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 

@@ -89,7 +89,7 @@ var Service = struct {
 	ValidSiteURLSchemes                     []string
 	UsernameCooldownPeriod                  int64
 	MaxUserRedirects                        int64
-	PolicyURL				string
+	PolicyURL                               string
 
 	// OpenID settings
 	EnableOpenIDSignIn bool
