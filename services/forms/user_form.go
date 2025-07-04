@@ -96,6 +96,7 @@ type RegisterForm struct {
 	Email    string `binding:"Required;MaxSize(254)"`
 	Password string `binding:"MaxSize(255)"`
 	Retype   string
+	Policy   bool
 }
 
 // Validate validates the fields

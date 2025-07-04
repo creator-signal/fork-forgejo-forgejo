@@ -35,6 +35,15 @@
 					</div>
 				{{end}}
 
+				{{if .PolicyURL}}
+					<div class="required inline field">
+						<div class="ui checkbox">
+							<label>{{ctx.Locale.Tr "accept_policy" .PolicyURL}}</label>
+							<input name="policy" type="checkbox" required>
+						</div>
+					</div>
+				{{end}}
+
 				{{template "user/auth/captcha" .}}
 
 				<div class="inline field">
