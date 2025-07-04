@@ -173,7 +173,7 @@ jobs:
           release-version: "${{ steps.release-info.outputs.version }}"
           sha: "${{ steps.release-info.outputs.sha }}"
           token: "${{ secrets.TOKEN }}"
-          platforms: linux/amd64,linux/arm64,linux/arm/v6
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
           release-notes: "${{ steps.release-notes.outputs.value }}"
           binary-name: forgejo
           binary-path: /app/gitea/gitea
@@ -192,7 +192,7 @@ jobs:
           release-version: "${{ steps.release-info.outputs.version }}"
           sha: "${{ steps.release-info.outputs.sha }}"
           token: "${{ secrets.TOKEN }}"
-          platforms: linux/amd64,linux/arm64,linux/arm/v6
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
           suffix: -rootless
           dockerfile: Dockerfile.rootless
           override: "${{ steps.release-info.outputs.override }}"
