@@ -30,6 +30,7 @@ func TestSignup(t *testing.T) {
 		"email":     "exampleUser@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
+		"policy":    true,
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
