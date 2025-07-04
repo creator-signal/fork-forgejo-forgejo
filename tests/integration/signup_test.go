@@ -30,7 +30,7 @@ func TestSignup(t *testing.T) {
 		"email":     "exampleUser@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
-		"policy":    true,
+		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
@@ -49,6 +49,7 @@ func TestSignupAsRestricted(t *testing.T) {
 		"email":     "restrictedUser@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
+		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
@@ -81,6 +82,7 @@ func TestSignupEmail(t *testing.T) {
 			"email":     test.email,
 			"password":  "examplePassword!1",
 			"retype":    "examplePassword!1",
+			"policy":    "true",
 		})
 		resp := MakeRequest(t, req, test.wantStatus)
 		if test.wantMsg != "" {
@@ -106,6 +108,7 @@ func TestSignupEmailChangeForInactiveUser(t *testing.T) {
 		"email":     "wrong-email@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
+		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusOK)
 
@@ -148,6 +151,7 @@ func TestSignupEmailChangeForActiveUser(t *testing.T) {
 		"email":     "wrong-email-2@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
+		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
@@ -199,6 +203,7 @@ func TestSignupImageCaptcha(t *testing.T) {
 		"retype":               "examplePassword!1",
 		"img-captcha-id":       idCaptcha,
 		"img-captcha-response": digitStr,
+		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
