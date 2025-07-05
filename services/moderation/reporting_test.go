@@ -18,18 +18,19 @@ func TestRemoveResolvedReportsWhenNoTimeSet(t *testing.T) {
 		Status:     report_model.ReportStatusTypeHandled,
 		ReporterID: 1, ContentType: report_model.ReportedContentTypeRepository,
 		ContentID: 2, Category: report_model.AbuseCategoryTypeOther,
-		CreatedUnix: timeutil.TimeStampNow(),
+		CreatedUnix:  timeutil.TimeStampNow(),
+		ResolvedUnix: timeutil.TimeStampNow(),
 	}
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(resolvedReport)
 	require.NoError(t, err)
 
 	// No reports should be deleted when the default time to keep is 0
-	err = RemoveResolvedReports(db.DefaultContext, 0)
+	err = RemoveResolvedReports(db.DefaultContext, time.Second.Round(0))
 	require.NoError(t, err)
-	unittest.AssertExistsIf(t, false, resolvedReport)
+	unittest.AssertExistsIf(t, true, resolvedReport)
 }
 
-func TestRemoveResolvedReportsWhenTimeSet(t *testing.T) {
+func TestRemoveResolvedReportsWhenMatchTimeSet(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	// keepReportsFor needs to an int64 to match what timeutil.Day expects so we cast the value
 	keepReportsFor := int64(4)
@@ -38,14 +39,16 @@ func TestRemoveResolvedReportsWhenTimeSet(t *testing.T) {
 		ReporterID: 1, ContentType: report_model.ReportedContentTypeRepository,
 		ContentID: 2, Category: report_model.AbuseCategoryTypeOther,
 		CreatedUnix:  timeutil.TimeStampNow(),
-		ResolvedUnix: timeutil.TimeStamp(time.Now().Unix() + timeutil.Day*keepReportsFor),
+		ResolvedUnix: timeutil.TimeStamp(time.Now().Unix() - timeutil.Day*keepReportsFor),
 	}
+
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(resolvedReport)
 	require.NoError(t, err)
 
-	err = RemoveResolvedReports(db.DefaultContext, 4)
+	// Report should be deleted when older than the default time to keep
+	err = RemoveResolvedReports(db.DefaultContext, time.Second.Round(4))
 	require.NoError(t, err)
-	unittest.AssertExistsIf(t, true, resolvedReport)
+	unittest.AssertExistsIf(t, false, resolvedReport)
 }
 
 func TestRemoveResolvedReportsWhenTimeSetButReportNew(t *testing.T) {
@@ -60,7 +63,8 @@ func TestRemoveResolvedReportsWhenTimeSetButReportNew(t *testing.T) {
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(resolvedReport)
 	require.NoError(t, err)
 
-	err = RemoveResolvedReports(db.DefaultContext, 4)
+	// Report should not be deleted when newer than the default time to keep
+	err = RemoveResolvedReports(db.DefaultContext, time.Second.Round(4))
 	require.NoError(t, err)
-	unittest.AssertExistsIf(t, false, resolvedReport)
+	unittest.AssertExistsIf(t, true, resolvedReport)
 }
