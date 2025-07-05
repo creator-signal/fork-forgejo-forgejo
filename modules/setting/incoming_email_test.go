@@ -47,6 +47,7 @@ func Test_loadIncomingEmailFrom(t *testing.T) {
 		cfg, sec := makeBaseConfig()
 		sec.NewKey("PASSWORD_URI", "file:"+uri)
 
+		IncomingEmail.Password = ""
 		loadIncomingEmailFrom(cfg)
 
 		assert.Equal(t, password, IncomingEmail.Password)

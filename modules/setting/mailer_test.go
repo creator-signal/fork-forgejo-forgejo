@@ -66,6 +66,7 @@ func Test_loadMailerFrom(t *testing.T) {
 		sec.NewKey("ENABLED", "true")
 		sec.NewKey("PASSWD_URI", "file:"+uri)
 
+		MailService.Passwd = ""
 		loadMailerFrom(cfg)
 
 		assert.Equal(t, password, MailService.Passwd)
