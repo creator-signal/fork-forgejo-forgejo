@@ -50,7 +50,7 @@ func Test_loadIncomingEmailFrom(t *testing.T) {
 		IncomingEmail.Password = ""
 		loadIncomingEmailFrom(cfg)
 
-		assert.Equal(t, "th1S gUess n3v3r y0u'll!!1", MailService.Passwd)
+		assert.Equal(t, "th1S gUess n3v3r y0u'll!!1", IncomingEmail.Password)
 	})
 
 	t.Run("Port settings", func(t *testing.T) {
