@@ -244,6 +244,7 @@ func TestSignupWithPolicy(t *testing.T) {
 		"retype":    "examplePassword!1",
 		"policy":    "true",
 	})
+	MakeRequest(t, req, http.StatusOK)
 
 	// should be able to view new user's page
 	req = NewRequest(t, "GET", "/policyUser")
@@ -263,6 +264,7 @@ func TestSignupWithPolicyNonAcccepted(t *testing.T) {
 		"retype":    "examplePassword!1",
 		// no policy acceptance
 	})
+	MakeRequest(t, req, http.StatusForbidden)
 
 	// should be able to view new user's page
 	req = NewRequest(t, "GET", "/policyUserNA")
