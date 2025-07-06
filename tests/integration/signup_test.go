@@ -30,7 +30,6 @@ func TestSignup(t *testing.T) {
 		"email":     "exampleUser@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
-		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
@@ -49,7 +48,6 @@ func TestSignupAsRestricted(t *testing.T) {
 		"email":     "restrictedUser@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
-		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
@@ -82,7 +80,6 @@ func TestSignupEmail(t *testing.T) {
 			"email":     test.email,
 			"password":  "examplePassword!1",
 			"retype":    "examplePassword!1",
-			"policy":    "true",
 		})
 		resp := MakeRequest(t, req, test.wantStatus)
 		if test.wantMsg != "" {
@@ -108,7 +105,6 @@ func TestSignupEmailChangeForInactiveUser(t *testing.T) {
 		"email":     "wrong-email@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
-		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusOK)
 
@@ -151,7 +147,6 @@ func TestSignupEmailChangeForActiveUser(t *testing.T) {
 		"email":     "wrong-email-2@example.com",
 		"password":  "examplePassword!1",
 		"retype":    "examplePassword!1",
-		"policy":    "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
@@ -203,7 +198,6 @@ func TestSignupImageCaptcha(t *testing.T) {
 		"retype":               "examplePassword!1",
 		"img-captcha-id":       idCaptcha,
 		"img-captcha-response": digitStr,
-		"policy":               "true",
 	})
 	MakeRequest(t, req, http.StatusSeeOther)
 
@@ -235,4 +229,42 @@ func TestSignupFormUI(t *testing.T) {
 			htmlDoc.AssertElement(t, ".divider-text", false)
 		})
 	})
+}
+
+func TestSignupWithPolicy(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.Service.EnableCaptcha, false)()
+	defer test.MockVariableValue(&setting.Service.DefaultUserIsRestricted, true)()
+	defer test.MockVariableValue(&setting.Service.PolicyURL, "https://example.com/policy")()
+
+	req := NewRequestWithValues(t, "POST", "/user/sign_up", map[string]string{
+		"user_name": "policyUser",
+		"email":     "policyUser@example.com",
+		"password":  "examplePassword!1",
+		"retype":    "examplePassword!1",
+		"policy":    "true",
+	})
+
+	// should be able to view new user's page
+	req = NewRequest(t, "GET", "/policyUser")
+	MakeRequest(t, req, http.StatusOK)
+}
+
+func TestSignupWithPolicyNonAcccepted(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.Service.EnableCaptcha, false)()
+	defer test.MockVariableValue(&setting.Service.DefaultUserIsRestricted, true)()
+	defer test.MockVariableValue(&setting.Service.PolicyURL, "https://example.com/policy")()
+
+	req := NewRequestWithValues(t, "POST", "/user/sign_up", map[string]string{
+		"user_name": "policyUserNA",
+		"email":     "policyUserNA@example.com",
+		"password":  "examplePassword!1",
+		"retype":    "examplePassword!1",
+		// no policy acceptance
+	})
+
+	// should be able to view new user's page
+	req = NewRequest(t, "GET", "/policyUserNA")
+	MakeRequest(t, req, http.StatusNotFound)
 }
