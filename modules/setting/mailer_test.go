@@ -56,9 +56,9 @@ func Test_loadMailerFrom(t *testing.T) {
 
 	t.Run("Secrets", func(t *testing.T) {
 		uri := filepath.Join(t.TempDir(), "mailer_passwd")
-		password := "y0u'll n3v3r gUess th1S!!1"
-		if err := os.WriteFile(uri, []byte(password), 0o644); err != nil {
-			panic(err)
+
+		if err := os.WriteFile(uri, []byte("th1S gUess n3v3r y0u'll!!1"), 0o644); err != nil {
+			t.Fatal(err)
 		}
 
 		cfg, _ := NewConfigProviderFromData("")
@@ -69,7 +69,7 @@ func Test_loadMailerFrom(t *testing.T) {
 		MailService.Passwd = ""
 		loadMailerFrom(cfg)
 
-		assert.Equal(t, password, MailService.Passwd)
+		assert.Equal(t, "th1S gUess n3v3r y0u'll!!1", MailService.Passwd)
 	})
 
 	t.Run("sendmail argument sanitization", func(t *testing.T) {
