@@ -304,9 +304,9 @@ func SubmitReview(ctx context.Context, doer *user_model.User, gitRepo *git.Repos
 				return nil, nil, err
 			}
 
-			stale, err = checkIfPRContentChanged(ctx, testPatchCtx, commitID, headCommitID)
+			stale, err = testPatchCtx.gitRepo.CheckIfDiffDiffers(testPatchCtx.baseRev, commitID, headCommitID, testPatchCtx.env)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("CheckIfDiffDiffers: %w", err)
 			}
 		}
 	}

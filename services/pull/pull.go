@@ -4,7 +4,6 @@
 package pull
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -393,9 +392,9 @@ func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newC
 		return
 	}
 
-	changed, err := checkIfPRContentChanged(ctx, testPatchCtx, oldCommitID, newCommitID)
+	changed, err := testPatchCtx.gitRepo.CheckIfDiffDiffers(testPatchCtx.baseRev, oldCommitID, newCommitID, testPatchCtx.env)
 	if err != nil {
-		log.Error("checkIfPRContentChanged: %v", err)
+		log.Error("CheckIfDiffDiffers: %v", err)
 	}
 	if changed {
 		if err := issues_model.MarkReviewsAsStale(ctx, pr.IssueID); err != nil {
@@ -425,38 +424,6 @@ func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newC
 			log.Error("UpdateCommitDivergence: %v", err)
 		}
 	}
-}
-
-// checkIfPRContentChanged returns if the diff of the oldCommitID and
-// newCommitID with the merge base of the base branch has changed.
-func checkIfPRContentChanged(ctx context.Context, testPatchCtx *testPatchContext, oldCommitID, newCommitID string) (hasChanged bool, err error) {
-	// Use git-diff-tree(1) to output the difference of tree objects between the
-	// commits and the base branch using the merge-base between the two. It is
-	// faster than doing a normal three-way diff via git-diff(1) as it compares
-	// trees (equivalent to directory entries) instead of individual files. The
-	// raw output of the command essentially is hash over the contents over the
-	// tree that changes with its before and after hash. If two diffs are equal
-	// than so would be the raw output of this command.
-
-	oldDiff := &bytes.Buffer{}
-	err = git.
-		NewCommand(ctx, "diff-tree", "--raw", "--merge-base").
-		AddDynamicArguments(testPatchCtx.baseRev, oldCommitID).
-		Run(&git.RunOpts{Dir: testPatchCtx.gitRepo.Path, Env: testPatchCtx.env, Stdout: oldDiff})
-	if err != nil {
-		return false, err
-	}
-
-	newDiff := &bytes.Buffer{}
-	err = git.
-		NewCommand(ctx, "diff-tree", "--raw", "--merge-base").
-		AddDynamicArguments(testPatchCtx.baseRev, newCommitID).
-		Run(&git.RunOpts{Dir: testPatchCtx.gitRepo.Path, Env: testPatchCtx.env, Stdout: newDiff})
-	if err != nil {
-		return false, err
-	}
-
-	return !bytes.Equal(oldDiff.Bytes(), newDiff.Bytes()), nil
 }
 
 // PushToBaseRepo pushes commits from branches of head repository to
