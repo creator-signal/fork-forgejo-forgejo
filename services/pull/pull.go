@@ -388,6 +388,13 @@ func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newC
 		return
 	}
 
+	testPatchCtx, err := getTestPatchCtx(ctx, pr, true)
+	defer testPatchCtx.close()
+	if err != nil {
+		log.Error("testPatchCtx: %v", err)
+		return
+	}
+
 	changed, err := checkIfPRContentChanged(ctx, pr, oldCommitID, newCommitID)
 	if err != nil {
 		log.Error("checkIfPRContentChanged: %v", err)
@@ -410,9 +417,10 @@ func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newC
 	if err := issues_model.MarkReviewsAsNotStale(ctx, pr.IssueID, newCommitID); err != nil {
 		log.Error("MarkReviewsAsNotStale: %v", err)
 	}
-	divergence, err := GetDiverging(ctx, pr)
+
+	divergence, err := git.GetDivergingCommits(ctx, testPatchCtx.gitRepo.Path, testPatchCtx.baseRev, testPatchCtx.headRev, testPatchCtx.env)
 	if err != nil {
-		log.Error("GetDiverging: %v", err)
+		log.Error("GetDivergingCommits: %v", err)
 	} else {
 		err = pr.UpdateCommitDivergence(ctx, divergence.Ahead, divergence.Behind)
 		if err != nil {
