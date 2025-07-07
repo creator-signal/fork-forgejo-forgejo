@@ -384,37 +384,39 @@ func TestPullRequest(ctx context.Context, doer *user_model.User, repoID, olderTh
 // Update commit divergence.
 func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newCommitID, oldCommitID string, doer *user_model.User) {
 	objectFormat := git.ObjectFormatFromName(pr.BaseRepo.ObjectFormatName)
-	if newCommitID != "" && newCommitID != objectFormat.EmptyObjectID().String() {
-		changed, err := checkIfPRContentChanged(ctx, pr, oldCommitID, newCommitID)
-		if err != nil {
-			log.Error("checkIfPRContentChanged: %v", err)
-		}
-		if changed {
-			if err := issues_model.MarkReviewsAsStale(ctx, pr.IssueID); err != nil {
-				log.Error("MarkReviewsAsStale: %v", err)
-			}
+	if newCommitID == "" || newCommitID == objectFormat.EmptyObjectID().String() {
+		return
+	}
 
-			pb, err := git_model.GetFirstMatchProtectedBranchRule(ctx, pr.BaseRepoID, pr.BaseBranch)
-			if err != nil {
-				log.Error("GetFirstMatchProtectedBranchRule: %v", err)
-			}
-			if pb != nil && pb.DismissStaleApprovals {
-				if err := DismissApprovalReviews(ctx, doer, pr); err != nil {
-					log.Error("DismissApprovalReviews: %v", err)
-				}
-			}
+	changed, err := checkIfPRContentChanged(ctx, pr, oldCommitID, newCommitID)
+	if err != nil {
+		log.Error("checkIfPRContentChanged: %v", err)
+	}
+	if changed {
+		if err := issues_model.MarkReviewsAsStale(ctx, pr.IssueID); err != nil {
+			log.Error("MarkReviewsAsStale: %v", err)
 		}
-		if err := issues_model.MarkReviewsAsNotStale(ctx, pr.IssueID, newCommitID); err != nil {
-			log.Error("MarkReviewsAsNotStale: %v", err)
-		}
-		divergence, err := GetDiverging(ctx, pr)
+
+		pb, err := git_model.GetFirstMatchProtectedBranchRule(ctx, pr.BaseRepoID, pr.BaseBranch)
 		if err != nil {
-			log.Error("GetDiverging: %v", err)
-		} else {
-			err = pr.UpdateCommitDivergence(ctx, divergence.Ahead, divergence.Behind)
-			if err != nil {
-				log.Error("UpdateCommitDivergence: %v", err)
+			log.Error("GetFirstMatchProtectedBranchRule: %v", err)
+		}
+		if pb != nil && pb.DismissStaleApprovals {
+			if err := DismissApprovalReviews(ctx, doer, pr); err != nil {
+				log.Error("DismissApprovalReviews: %v", err)
 			}
+		}
+	}
+	if err := issues_model.MarkReviewsAsNotStale(ctx, pr.IssueID, newCommitID); err != nil {
+		log.Error("MarkReviewsAsNotStale: %v", err)
+	}
+	divergence, err := GetDiverging(ctx, pr)
+	if err != nil {
+		log.Error("GetDiverging: %v", err)
+	} else {
+		err = pr.UpdateCommitDivergence(ctx, divergence.Ahead, divergence.Behind)
+		if err != nil {
+			log.Error("UpdateCommitDivergence: %v", err)
 		}
 	}
 }
