@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -30,7 +29,6 @@ import (
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/sync"
-	"forgejo.org/modules/util"
 	gitea_context "forgejo.org/services/context"
 	issue_service "forgejo.org/services/issue"
 	notify_service "forgejo.org/services/notify"
@@ -395,7 +393,7 @@ func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newC
 		return
 	}
 
-	changed, err := checkIfPRContentChanged(ctx, pr, oldCommitID, newCommitID)
+	changed, err := checkIfPRContentChanged(ctx, testPatchCtx, oldCommitID, newCommitID)
 	if err != nil {
 		log.Error("checkIfPRContentChanged: %v", err)
 	}
@@ -429,61 +427,36 @@ func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newC
 	}
 }
 
-// checkIfPRContentChanged checks if diff to target branch has changed by push
-// A commit can be considered to leave the PR untouched if the patch/diff with its merge base is unchanged
-func checkIfPRContentChanged(ctx context.Context, pr *issues_model.PullRequest, oldCommitID, newCommitID string) (hasChanged bool, err error) {
-	prCtx, cancel, err := createTemporaryRepoForPR(ctx, pr)
+// checkIfPRContentChanged returns if the diff of the oldCommitID and
+// newCommitID with the merge base of the base branch has changed.
+func checkIfPRContentChanged(ctx context.Context, testPatchCtx *testPatchContext, oldCommitID, newCommitID string) (hasChanged bool, err error) {
+	// Use git-diff-tree(1) to output the difference of tree objects between the
+	// commits and the base branch using the merge-base between the two. It is
+	// faster than doing a normal three-way diff via git-diff(1) as it compares
+	// trees (equivalent to directory entries) instead of individual files. The
+	// raw output of the command essentially is hash over the contents over the
+	// tree that changes with its before and after hash. If two diffs are equal
+	// than so would be the raw output of this command.
+
+	oldDiff := &bytes.Buffer{}
+	err = git.
+		NewCommand(ctx, "diff-tree", "--raw", "--merge-base").
+		AddDynamicArguments(testPatchCtx.baseRev, oldCommitID).
+		Run(&git.RunOpts{Dir: testPatchCtx.gitRepo.Path, Env: testPatchCtx.env, Stdout: oldDiff})
 	if err != nil {
-		log.Error("CreateTemporaryRepoForPR %-v: %v", pr, err)
 		return false, err
 	}
-	defer cancel()
 
-	tmpRepo, err := git.OpenRepository(ctx, prCtx.tmpBasePath)
+	newDiff := &bytes.Buffer{}
+	err = git.
+		NewCommand(ctx, "diff-tree", "--raw", "--merge-base").
+		AddDynamicArguments(testPatchCtx.baseRev, newCommitID).
+		Run(&git.RunOpts{Dir: testPatchCtx.gitRepo.Path, Env: testPatchCtx.env, Stdout: newDiff})
 	if err != nil {
-		return false, fmt.Errorf("OpenRepository: %w", err)
-	}
-	defer tmpRepo.Close()
-
-	// Find the merge-base
-	_, base, err := tmpRepo.GetMergeBase("", "base", "tracking")
-	if err != nil {
-		return false, fmt.Errorf("GetMergeBase: %w", err)
+		return false, err
 	}
 
-	cmd := git.NewCommand(ctx, "diff", "--name-only", "-z").AddDynamicArguments(newCommitID, oldCommitID, base)
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return false, fmt.Errorf("unable to open pipe for to run diff: %w", err)
-	}
-
-	stderr := new(bytes.Buffer)
-	if err := cmd.Run(&git.RunOpts{
-		Dir:    prCtx.tmpBasePath,
-		Stdout: stdoutWriter,
-		Stderr: stderr,
-		PipelineFunc: func(ctx context.Context, cancel context.CancelFunc) error {
-			_ = stdoutWriter.Close()
-			defer func() {
-				_ = stdoutReader.Close()
-			}()
-			return util.IsEmptyReader(stdoutReader)
-		},
-	}); err != nil {
-		if err == util.ErrNotEmpty {
-			return true, nil
-		}
-		err = git.ConcatenateError(err, stderr.String())
-
-		log.Error("Unable to run diff on %s %s %s in tempRepo for PR[%d]%s/%s...%s/%s: Error: %v",
-			newCommitID, oldCommitID, base,
-			pr.ID, pr.BaseRepo.FullName(), pr.BaseBranch, pr.HeadRepo.FullName(), pr.HeadBranch,
-			err)
-
-		return false, fmt.Errorf("Unable to run git diff --name-only -z %s %s %s: %w", newCommitID, oldCommitID, base, err)
-	}
-
-	return false, nil
+	return !bytes.Equal(oldDiff.Bytes(), newDiff.Bytes()), nil
 }
 
 // PushToBaseRepo pushes commits from branches of head repository to
