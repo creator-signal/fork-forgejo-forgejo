@@ -4,6 +4,7 @@
 package federation
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -16,15 +17,12 @@ import (
 	"github.com/go-ap/jsonld"
 )
 
-func ProcessPersonInbox(ctx *context_service.APIContext, form any) error {
-	activity := form.(*ap.Activity)
-
+func ProcessPersonInbox(ctx context.Context, user *user.User, activity *ap.Activity) (int, error) {
 	switch activity.Type {
 	case ap.CreateType:
-		processPersonInboxCreate(ctx, activity)
-		return
+		return processPersonInboxCreate(ctx, user, activity)
 	case ap.FollowType:
-		processPersonFollow(ctx, activity)
+		processPersonFollow(ctx, user, activity)
 		return
 	case ap.UndoType:
 		processPersonInboxUndo(ctx, activity)

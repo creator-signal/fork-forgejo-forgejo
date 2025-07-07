@@ -4,18 +4,19 @@
 package federation
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"forgejo.org/models/activities"
+	"forgejo.org/models/user"
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
-	context_service "forgejo.org/services/context"
 
 	ap "github.com/go-ap/activitypub"
 )
 
-func processPersonInboxCreate(ctx *context_service.APIContext, activity *ap.Activity) (int, error) {
+func processPersonInboxCreate(ctx context.Context, user *user.User, activity *ap.Activity) (int, error) {
 	createAct, err := fm.NewForgeUserActivityFromAp(*activity)
 	if err != nil {
 		log.Error("Invalid user activity: %v, %v", activity, err)
@@ -23,15 +24,15 @@ func processPersonInboxCreate(ctx *context_service.APIContext, activity *ap.Acti
 	}
 
 	actorURI := createAct.Actor.GetLink().String()
-	user, _, _, err := findFederatedUser(ctx, actorURI)
+	federatedBaseUser, _, _, err := findFederatedUser(ctx, actorURI)
 	if err != nil {
 		log.Error("Error finding federated user (%s): %v", actorURI, err)
 		return 0, NewErrNotAcceptable(fmt.Sprintf("Error finding federated user: %v", err))
 	}
 
 	federatedUserActivity, err := activities.NewFederatedUserActivity(
-		ctx.ContextUser.ID,
 		user.ID,
+		federatedBaseUser.ID,
 		activity.Actor.GetLink().String(),
 		createAct.Note.Content.String(),
 		createAct.Note.URL.GetID().String(),

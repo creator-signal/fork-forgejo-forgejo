@@ -73,7 +73,8 @@ func PersonInbox(ctx *context.APIContext) {
 	//     "$ref": "#/responses/empty"
 
 	form := web.GetForm(ctx)
-	federation.ProcessPersonInbox(ctx, form)
+	activity := form.(*ap.Activity)
+	federation.ProcessPersonInbox(ctx, ctx.ContextUser, activity)
 }
 
 // PersonFeed returns the recorded activities in the user's feed
