@@ -62,6 +62,7 @@ func TestParseToken(t *testing.T) {
 	}{
 		"Token Uppercase":  {Header: "Token 1234567890123456789012345687901325467890", ExpectedToken: "1234567890123456789012345687901325467890", Expected: true},
 		"Token Lowercase":  {Header: "token 1234567890123456789012345687901325467890", ExpectedToken: "1234567890123456789012345687901325467890", Expected: true},
+		"Token Unicode":    {Header: "to\u212Aen 1234567890123456789012345687901325467890", ExpectedToken: "", Expected: false},
 		"Bearer Uppercase": {Header: "Bearer 1234567890123456789012345687901325467890", ExpectedToken: "1234567890123456789012345687901325467890", Expected: true},
 		"Bearer Lowercase": {Header: "bearer 1234567890123456789012345687901325467890", ExpectedToken: "1234567890123456789012345687901325467890", Expected: true},
 		"Missing type":     {Header: "1234567890123456789012345687901325467890", ExpectedToken: "", Expected: false},
