@@ -46,7 +46,7 @@ func TestToSnakeCase(t *testing.T) {
 	}
 }
 
-func TestAsciiEqualFold(t *testing.T) {
+func TestASCIIEqualFold(t *testing.T) {
 	cases := map[string]struct {
 		First    string
 		Second   string
