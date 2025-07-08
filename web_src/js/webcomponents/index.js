@@ -1,4 +1,3 @@
-import './polyfills.js';
 import './i18n.js';
 import './relative-time.js';
 import './origin-url.js';
