@@ -23,7 +23,7 @@
 			<tr data-entryname="{{$entry.Name}}" data-ready="{{if $commit}}true{{else}}false{{end}}" class="{{if not $commit}}not{{end}}ready entry">
 				<td class="name four wide">
 					<span class="truncate">
-						{{if $entry.IsSubModule}}
+						{{if $entry.IsSubmodule}}
 							{{$submodule := $item.Submodule}}
 							{{$refURL := $submodule.ResolveUpstreamURL $.Repository.HTMLURL}}
 							{{$icon := (svg "octicon-file-submodule" 16 "tw-mr-2")}}

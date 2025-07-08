@@ -1057,7 +1057,7 @@ func renderHomeCode(ctx *context.Context) {
 		return
 	}
 
-	if entry.IsSubModule() {
+	if entry.IsSubmodule() {
 		submodule, err := ctx.Repo.Commit.GetSubmodule(ctx.Repo.TreePath, entry)
 		if err != nil {
 			HandleGitError(ctx, "Repo.Commit.GetSubmodule", err)
