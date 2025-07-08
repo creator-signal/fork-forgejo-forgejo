@@ -66,7 +66,7 @@ func TestAsciiEqualFold(t *testing.T) {
 	for name := range cases {
 		c := cases[name]
 		t.Run(name, func(t *testing.T) {
-			Actual := AsciiEqualFold(c.First, c.Second)
+			Actual := ASCIIEqualFold(c.First, c.Second)
 			assert.Equal(t, c.Expected, Actual)
 		})
 	}

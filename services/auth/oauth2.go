@@ -126,7 +126,7 @@ func parseToken(req *http.Request) (string, bool) {
 	// check header token
 	if auHead := req.Header.Get("Authorization"); auHead != "" {
 		auths := strings.Fields(auHead)
-		if len(auths) == 2 && (util.AsciiEqualFold(auths[0], "token") || util.AsciiEqualFold(auths[0], "bearer")) {
+		if len(auths) == 2 && (util.ASCIIEqualFold(auths[0], "token") || util.ASCIIEqualFold(auths[0], "bearer")) {
 			return auths[1], true
 		}
 	}

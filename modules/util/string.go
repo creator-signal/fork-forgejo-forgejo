@@ -98,12 +98,12 @@ func UnsafeStringToBytes(s string) []byte {
 
 // AsciiEqualFold is taken from Golang, but reimplemented here, since the original is not exposed to public
 // Taken from: https://cs.opensource.google/go/go/+/refs/tags/go1.24.4:src/net/http/internal/ascii/print.go
-func AsciiEqualFold(s, t string) bool {
+func ASCIIEqualFold(s, t string) bool {
 	if len(s) != len(t) {
 		return false
 	}
 	for i := 0; i < len(s); i++ {
-		if AsciiLower(s[i]) != AsciiLower(t[i]) {
+		if ASCIILower(s[i]) != ASCIILower(t[i]) {
 			return false
 		}
 	}
@@ -111,7 +111,7 @@ func AsciiEqualFold(s, t string) bool {
 }
 
 // AsciiLower returns the ASCII lowercase version of b.
-func AsciiLower(b byte) byte {
+func ASCIILower(b byte) byte {
 	if 'A' <= b && b <= 'Z' {
 		return b + ('a' - 'A')
 	}
