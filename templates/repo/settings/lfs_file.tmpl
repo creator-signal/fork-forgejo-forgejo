@@ -34,7 +34,7 @@
 								<div class="pdf-content is-loading" data-src="{{$.RawFileLink}}" data-fallback-button-text="{{ctx.Locale.Tr "repo.diff.view_file"}}"></div>
 							{{else if .Is3DModelFile}}
 								{{if .IsGLBFile}}
-									<model-viewer src="{{$.RawFileLink}}" ar shadow-intensity="2" camera-controls touch-action="pan-y"></model-viewer>
+									<lazy-webc tag="model-viewer" src="{{$.RawFileLink}}" ar shadow-intensity="2" camera-controls touch-action="pan-y"></lazy-webc>
 								{{else}}
 									<a href="{{$.RawFileLink}}" rel="nofollow">{{ctx.Locale.Tr "repo.file_view_raw"}}!</a>
 								{{end}}
