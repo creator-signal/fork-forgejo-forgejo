@@ -1,4 +1,3 @@
-import './i18n.js';
 import './relative-time.js';
 import './origin-url.js';
 import './overflow-menu.js';
