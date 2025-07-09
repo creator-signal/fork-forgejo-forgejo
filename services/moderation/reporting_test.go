@@ -68,3 +68,25 @@ func TestRemoveResolvedReportsWhenTimeSetButReportNew(t *testing.T) {
 	require.NoError(t, err)
 	unittest.AssertExistsIf(t, true, resolvedReport)
 }
+
+func TestDoesNotRemoveOpenReports(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	// keepReportsFor needs to an int64 to match what timeutil.Day expects so we cast the value
+	keepReportsFor := int64(4)
+	resolvedReport := &report_model.AbuseReport{
+		Status:     report_model.ReportStatusTypeOpen,
+		ReporterID: 1, ContentType: report_model.ReportedContentTypeRepository,
+		ContentID: 2, Category: report_model.AbuseCategoryTypeOther,
+		CreatedUnix:  timeutil.TimeStampNow(),
+		ResolvedUnix: timeutil.TimeStamp(time.Now().Unix() - timeutil.Day*keepReportsFor),
+	}
+
+	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(resolvedReport)
+	require.NoError(t, err)
+
+	// Report should not be deleted when open
+	// and older than the default time to keep
+	err = RemoveResolvedReports(db.DefaultContext, time.Second.Round(4))
+	require.NoError(t, err)
+	unittest.AssertExistsIf(t, true, resolvedReport)
+}
