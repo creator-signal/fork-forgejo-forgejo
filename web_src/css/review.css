@@ -71,6 +71,10 @@
   max-width: 820px;
 }
 
+.add-comment .comment-code-cloud form {
+  margin-left: 42px;
+}
+
 @media (max-width: 767.98px) {
   .comment-code-cloud {
     max-width: none;
