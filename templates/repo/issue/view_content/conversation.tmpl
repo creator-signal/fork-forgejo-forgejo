@@ -51,7 +51,7 @@
 	<div id="code-comments-{{(index .comments 0).ID}}" class="comment-code-cloud ui segment{{if $resolved}} tw-hidden{{end}} tw-mb-2">
 		{{range .comments}}
 			{{$createdSubStr:= DateUtils.TimeSince .CreatedUnix}}
-			<div class="comment code-comment tw-pb-4" id="{{.HashTag}}">
+			<div class="comment code-comment tw-pb-6" id="{{.HashTag}}">
 				<div class="content">
 					<div class="header">
 						<div class="comment-header-left tw-flex tw-items-center">

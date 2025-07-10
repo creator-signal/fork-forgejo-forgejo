@@ -987,6 +987,10 @@ pdf-object {
   margin: 0;
 }
 
+.repository.view.issue .comment-list .code-comment:target {
+  outline: 1px solid var(--color-primary);
+}
+
 .repository.view.issue .comment-list .code-comment .header {
   display: flex;
   margin-bottom: 0.25rem;
