@@ -311,7 +311,6 @@ i.grey.icon.icon.icon.icon {
 }
 .repository.view.issue .comment-list .code-comment + .code-comment {
   margin: 1.25rem 0 !important;
-  padding-top: 1.25rem !important;
   border-top-color: var(--steel-650) !important;
 }
 .ui.labeled.icon.buttons > .button > .icon,
