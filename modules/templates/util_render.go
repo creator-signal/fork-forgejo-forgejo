@@ -281,11 +281,11 @@ func RenderReviewRequest(ctx context.Context, users []issues_model.RequestReview
 		if user.ID() > 0 {
 			usernames = append(usernames, fmt.Sprintf(
 				"<a href='%s' rel='nofollow'><strong>%s</strong></a>",
-				user.Link(ctx), user.Name()))
+				user.Link(ctx), html.EscapeString(user.Name())))
 		} else {
 			usernames = append(usernames, fmt.Sprintf(
 				"<strong>%s</strong>",
-				user.Name()))
+				html.EscapeString(user.Name())))
 		}
 	}
 
