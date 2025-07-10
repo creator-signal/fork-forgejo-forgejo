@@ -55,7 +55,7 @@ func GetContentHistoryList(ctx *context.Context) {
 	var results []map[string]any
 	for _, item := range items {
 		var actionText string
-		var contentFmt string = "%s<strong>%s</strong> %s %s"
+		contentFmt := "%s<strong>%s</strong> %s %s"
 		if item.IsFirstCreated {
 			actionText = ctx.Locale.TrString("repo.issues.content_history.created")
 		} else {
@@ -80,7 +80,7 @@ func GetContentHistoryList(ctx *context.Context) {
 		content := fmt.Sprintf(contentFmt, avatarHTML, name, actionText, timeSinceHTML)
 
 		results = append(results, map[string]any{
-			"name": content,
+			"name":  content,
 			"value": item.HistoryID,
 		})
 	}
