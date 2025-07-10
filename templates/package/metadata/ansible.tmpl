@@ -1,0 +1,7 @@
+{{if eq .PackageDescriptor.Package.Type "ansible"}}
+	{{range .PackageDescriptor.Metadata.CollectionInfo.Authors}}<div class="item" title="{{ctx.Locale.Tr "packages.details.author"}}">{{svg "octicon-person" 16 "tw-mr-2"}} {{.}}</div>{{end}}
+	{{range .PackageDescriptor.Metadata.CollectionInfo.License}}<div class="item" title="{{ctx.Locale.Tr "packages.details.license"}}">{{svg "octicon-law" 16 "tw-mr-2"}} {{.}}</div>{{end}}
+	{{if .PackageDescriptor.Metadata.CollectionInfo.Homepage}}<div class="item">{{svg "octicon-link-external" 16 "tw-mr-2"}} <a href="{{.PackageDescriptor.Metadata.CollectionInfo.Homepage}}" target="_blank" rel="noopener noreferrer me">{{ctx.Locale.Tr "packages.details.project_site"}}</a></div>{{end}}
+	{{if .PackageDescriptor.Metadata.CollectionInfo.Documentation}}<div class="item">{{svg "octicon-link-external" 16 "tw-mr-2"}} <a href="{{.PackageDescriptor.Metadata.CollectionInfo.Documentation}}" target="_blank" rel="noopener noreferrer me">{{ctx.Locale.Tr "packages.details.documentation_site"}}</a></div>{{end}}
+	{{if .PackageDescriptor.Metadata.CollectionInfo.Repository}}<div class="item">{{svg "octicon-link-external" 16 "tw-mr-2"}} <a href="{{.PackageDescriptor.Metadata.CollectionInfo.Repository}}" target="_blank" rel="noopener noreferrer me">{{ctx.Locale.Tr "packages.details.repository_site"}}</a></div>{{end}}
+{{end}}

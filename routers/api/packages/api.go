@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/packages/alpine"
 	"forgejo.org/routers/api/packages/alt"
+	"forgejo.org/routers/api/packages/ansible"
 	"forgejo.org/routers/api/packages/arch"
 	"forgejo.org/routers/api/packages/cargo"
 	"forgejo.org/routers/api/packages/chef"
@@ -150,6 +151,20 @@ func CommonRoutes() *web.Route {
 					r.Group("/{filename}", func() {
 						r.Get("", alpine.DownloadPackageFile)
 						r.Delete("", reqPackageAccess(perm.AccessModeWrite), alpine.DeletePackageFile)
+					})
+				})
+			})
+		}, reqPackageAccess(perm.AccessModeRead))
+		r.Group("/ansible", func() {
+			r.Get("/", ansible.Identity)
+			r.Group("/api", func() {
+				r.Get("/", ansible.AvailableApis)
+				r.Group("/v3", func() {
+					r.Post("/artifacts/collections", reqPackageAccess(perm.AccessModeWrite), enforcePackagesQuota(), ansible.UploadCollection)
+					r.Get("/imports/collections/{uuid}", ansible.ImportResult)
+					r.Group("/collections/{namespace}/{name}/versions", func() {
+						r.Get("/", ansible.ListVersions)
+						r.Get("/{version}/", ansible.ServeCollection)
 					})
 				})
 			})

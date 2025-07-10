@@ -360,6 +360,8 @@ func CheckSizeQuotaExceeded(ctx context.Context, doer, owner *user_model.User, p
 	switch packageType {
 	case packages_model.TypeAlpine:
 		typeSpecificSize = setting.Packages.LimitSizeAlpine
+	case packages_model.TypeAnsible:
+		typeSpecificSize = setting.Packages.LimitSizeAnsible
 	case packages_model.TypeArch:
 		typeSpecificSize = setting.Packages.LimitSizeArch
 	case packages_model.TypeCargo:

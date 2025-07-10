@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="999.99609pt"
+   preserveAspectRatio="xMidYMid"
+   viewBox="0 0 1333.3333 1333.3282"
+   width="1000pt"
+   version="1.1"
+   id="svg9"
+   sodipodi:docname="forgejo-ansible.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview9"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.23313492"
+     inkscape:cx="388.18723"
+     inkscape:cy="851.4383"
+     inkscape:window-width="2490"
+     inkscape:window-height="1371"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg9"
+     inkscape:document-units="pt" />
+  <g
+     id="g9"
+     transform="scale(5.2260529)">
+    <path
+       d="m 255.132,127.566 c 0,70.4551 -57.1101,127.565 -127.566,127.565 C 57.1159,255.131 0,198.0214 0,127.566 0,57.1159 57.1161,0 127.566,0 198.0221,0 255.132,57.1161 255.132,127.566"
+       fill="#1a1918"
+       id="path8" />
+    <path
+       d="m 129.713,77.9269 33.0116,81.4763 -49.8635,-39.2778 16.8519,-42.1984 z m 58.6445,100.245 -50.7786,-122.202 c -1.44952,-3.52436 -4.34807,-5.38926 -7.86591,-5.38926 -3.52436,0 -6.63386,1.86489 -8.08339,5.38926 l -55.7329,134.04 H 84.962 l 22.0623,-55.2653 65.8389,53.1899 c 2.64792,2.14114 4.55852,3.1095 7.0422,3.1095 4.97389,0 9.32146,-3.72878 9.32146,-9.11101 0,-0.87594 -0.30939,-2.2662 -0.86941,-3.76143 z"
+       fill="#ffffff"
+       id="path9" />
+  </g>
+</svg>

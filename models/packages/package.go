@@ -33,6 +33,7 @@ type Type string
 // List of supported packages
 const (
 	TypeAlpine    Type = "alpine"
+	TypeAnsible   Type = "ansible"
 	TypeArch      Type = "arch"
 	TypeCargo     Type = "cargo"
 	TypeChef      Type = "chef"
@@ -59,6 +60,7 @@ const (
 
 var TypeList = []Type{
 	TypeAlpine,
+	TypeAnsible,
 	TypeArch,
 	TypeCargo,
 	TypeChef,
@@ -88,6 +90,8 @@ func (pt Type) Name() string {
 	switch pt {
 	case TypeAlpine:
 		return "Alpine"
+	case TypeAnsible:
+		return "Ansible"
 	case TypeArch:
 		return "Arch"
 	case TypeCargo:
@@ -141,6 +145,8 @@ func (pt Type) SVGName() string {
 	switch pt {
 	case TypeAlpine:
 		return "gitea-alpine"
+	case TypeAnsible:
+		return "forgejo-ansible"
 	case TypeArch:
 		return "gitea-arch"
 	case TypeCargo:
