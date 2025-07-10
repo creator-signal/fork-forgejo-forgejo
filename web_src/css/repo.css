@@ -1010,6 +1010,10 @@ pdf-object {
   margin-left: calc(20px + 0.5rem);
 }
 
+.repository.view.issue .comment-list .code-comment .add-reaction {
+  padding: 0 0.5rem;
+}
+
 .repository.view.issue .comment-list .comment > .avatar {
   margin-top: 6px;
 }
