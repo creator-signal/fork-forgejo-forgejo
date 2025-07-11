@@ -28,7 +28,6 @@
     "mail.actions.not_successful_run": "Workflow %[1]s selhal v repozitáři %[2]s",
     "mail.actions.run_info_cur_status": "Stav tohoto procesu: %[1]s (právě aktualizováno z %[2]s)",
     "mail.actions.run_info_previous_status": "Stav předchozího procesu: %[1]s",
-    "mail.actions.run_info_ref": "Větev: %[1]s (%[2]s)",
     "mail.actions.run_info_trigger": "Spuštěno z důvodu: %[1]s od: %[2]s",
     "mail.actions.successful_run_after_failure_subject": "Workflow %[1]s obnoven v repozitáři %[2]s",
     "mail.actions.successful_run_after_failure": "Workflow %[1]s obnoven v repozitáři %[2]s",
@@ -105,5 +104,12 @@
     "settings.visibility.description": "Viditelnost profilu ovlivňuje možnost ostatních přistupovat k vašim veřejným repozitářům. <a href=\"%s\" target=\"_blank\">Zjistit více</a>",
     "avatar.constraints_hint": "Velikost vlastního avataru nesmí překročit %[1]s nebo být větší než %[2]dx%[3]d pixelů",
     "repo.diff.commit.next-short": "Další",
-    "repo.diff.commit.previous-short": "Předchozí"
+    "repo.diff.commit.previous-short": "Předchozí",
+    "profile.actions.tooltip": "Další akce",
+    "keys.gpg.link": "Klíče GPG",
+    "profile.edit.link": "Upravit profil",
+    "feed.atom.link": "Zdroj Atom",
+    "keys.ssh.link": "Klíče SSH",
+    "og.repo.summary_card.alt_description": "Karta se souhrnem repozitáře %[1]s, popsaným jako: %[2]s",
+    "mail.actions.run_info_sha": "Revize: %[1]s"
 }

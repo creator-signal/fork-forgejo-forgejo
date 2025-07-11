@@ -27,14 +27,12 @@ forgejo.org/models/db
 	TruncateBeans
 	InTransaction
 	DumpTables
+	GetTableNames
 
 forgejo.org/models/dbfs
 	file.renameTo
 	Create
 	Rename
-
-forgejo.org/models/forgefed
-	GetFederationHost
 
 forgejo.org/models/forgejo/semver
 	GetVersion
@@ -67,7 +65,6 @@ forgejo.org/models/user
 	DeleteUserSetting
 	GetFederatedUser
 	GetFederatedUserByUserID
-	UpdateFederatedUser
 	GetFollowersForUser
 	AddFollower
 	RemoveFollower
@@ -247,6 +244,9 @@ forgejo.org/routers/web/org
 
 forgejo.org/services/context
 	GetPrivateContext
+
+forgejo.org/services/federation
+	Init
 
 forgejo.org/services/repository
 	IsErrForkAlreadyExist
