@@ -72,7 +72,7 @@ func parseSubmoduleContent(r io.Reader) (map[string]Submodule, error) {
 	// https://git-scm.com/docs/git-config#_configuration_file
 
 	cfg := ini.Empty(ini.LoadOptions{
-		InsensitiveKeys: true, // "The variable names are case-insensitive"
+		InsensitiveKeys: true, // "The variable names are case-insensitive", but "Subsection names are case sensitive"
 	})
 	err := cfg.Append(r)
 	if err != nil {

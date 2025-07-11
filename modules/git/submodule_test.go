@@ -89,15 +89,14 @@ url = ../../ALP-pool/jakarta-servlet`,
 		},
 		{
 			fileContent: `# .gitmodules
-# A list of submodules for Seanpm2001/Its-time-to-cut-WideVine-DRM/
-# Start of submodule list
-
-# The submodule for the main project, not functional yet
+# Subsection names are case sensitive
 [submodule "Seanpm2001/Degoogle-your-life"]
 	path = Its-time-to-cut-WideVine-DRM/DeGoogle-Your-Life/submodule.gitmodules
 	url = https://github.com/seanpm2001/Degoogle-your-life/
 
-# End of submodule list
+[submodule "seanpm2001/degoogle-your-life"]
+	url = https://github.com/seanpm2001/degoogle-your-life/
+# This second section should not be merged with the first, because of casing
 `,
 			expectedPath: "Its-time-to-cut-WideVine-DRM/DeGoogle-Your-Life/submodule.gitmodules",
 			expected: Submodule{
