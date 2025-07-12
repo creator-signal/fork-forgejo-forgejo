@@ -37,11 +37,13 @@ export function validateTextareaNonEmpty(textarea) {
 const listPrefixRegex = /^\s*((\d+)[.)]\s|[-*+]\s{1,4}\[[ x]\]\s?|[-*+]\s|(>\s?)+)?/;
 
 class ComboMarkdownEditor {
+  static idSuffixCounter = 0;
+
   constructor(container, options = {}) {
     container._giteaComboMarkdownEditor = this;
     this.options = options;
     this.container = container;
-    this.elementIdSuffix = Math.random().toString(36).substring(2);
+    this.elementIdSuffix = ComboMarkdownEditor.idSuffixCounter++;
   }
 
   async init() {
