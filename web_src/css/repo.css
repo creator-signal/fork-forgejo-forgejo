@@ -985,6 +985,9 @@ pdf-object {
 
 .repository.view.issue .comment-list .code-comment {
   margin: 0;
+  padding-inline: 0.5rem;
+  padding-bottom: 1.5rem;
+  padding-top: 2px; /* Around 5px of whitespace are added by reaction octicon. 0.5rem=7px-5px=2px */
 }
 
 .repository.view.issue .comment-list .code-comment:target {
