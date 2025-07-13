@@ -638,7 +638,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 		if pull.Flow == issues_model.PullRequestFlowGithub {
 			headBranchExist = headGitRepo.IsBranchExist(pull.HeadBranch)
 		} else {
-			headBranchExist = git.IsReferenceExist(ctx, baseGitRepo.Path, pull.GetGitRefName())
+			headBranchExist = baseGitRepo.IsReferenceExist(pull.GetGitRefName())
 		}
 
 		if headBranchExist {
