@@ -186,8 +186,6 @@ var commitMessageProcessors = []processor{
 	commitCrossReferencePatternProcessor,
 	hashCurrentPatternProcessor,
 	emailAddressProcessor,
-	emojiProcessor,
-	emojiShortCodeProcessor,
 }
 
 // RenderCommitMessage will use the same logic as PostProcess, but will disable
