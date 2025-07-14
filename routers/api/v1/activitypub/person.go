@@ -74,7 +74,12 @@ func PersonInbox(ctx *context.APIContext) {
 
 	form := web.GetForm(ctx)
 	activity := form.(*ap.Activity)
-	federation.ProcessPersonInbox(ctx, ctx.ContextUser, activity)
+	result, err := federation.ProcessPersonInbox(ctx, ctx.ContextUser, activity)
+	if err != nil {
+		ctx.Error(federation.HttpStatus(err), "PersonInbox", err)
+		return
+	}
+	responseServiceResult(ctx, result)
 }
 
 // PersonFeed returns the recorded activities in the user's feed

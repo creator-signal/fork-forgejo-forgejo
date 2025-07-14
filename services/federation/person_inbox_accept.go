@@ -4,21 +4,19 @@
 package federation
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 
-	context_service "forgejo.org/services/context"
-
+	"forgejo.org/modules/log"
 	ap "github.com/go-ap/activitypub"
 )
 
-func processPersonInboxAccept(ctx *context_service.APIContext, activity *ap.Activity) {
+func processPersonInboxAccept(ctx context.Context, activity *ap.Activity) (ServiceResult, error) {
 	if activity.Object.GetType() != ap.FollowType {
-		ctx.Error(http.StatusNotAcceptable, "Invalid object type for Accept activity", fmt.Errorf("Invalid object type for Accept activity: %v", activity.Object.GetType()))
-		return
+		log.Error("Invalid object type for Accept activity: %v", activity.Object.GetType())
+		return ServiceResult{}, NewErrNotAcceptableF("Invalid object type for Accept activity: %v", activity.Object.GetType())
 	}
 
 	// We currently do not do anything here, we just drop it.
-
-	ctx.Status(http.StatusNoContent)
+	return NewServiceResultStatusOnly(http.StatusNoContent), nil
 }

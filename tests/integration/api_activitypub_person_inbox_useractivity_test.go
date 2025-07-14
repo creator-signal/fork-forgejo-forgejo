@@ -71,7 +71,7 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 			distantNoteURL,
 		))
 		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
-		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
+		cf, err := activitypub.NewClientFactoryWithTimeout(1 * time.Second)
 		require.NoError(t, err)
 		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
@@ -118,7 +118,7 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 			localUser2URL,
 		))
 		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
-		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
+		cf, err := activitypub.NewClientFactoryWithTimeout(1 * time.Second)
 		require.NoError(t, err)
 		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
