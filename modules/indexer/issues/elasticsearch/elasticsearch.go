@@ -149,12 +149,13 @@ func (b *Indexer) Delete(ctx context.Context, ids ...int64) error {
 func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (*internal.SearchResult, error) {
 	query := elastic.NewBoolQuery()
 
-	if options.Keyword != "" {
+	tokens, err := options.Tokens()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tokens) > 0 {
 		q := elastic.NewBoolQuery()
-		tokens, err := options.Tokens()
-		if err != nil {
-			return nil, err
-		}
 		for _, token := range tokens {
 			innerQ := elastic.NewMultiMatchQuery(token.Term, "content", "comments").FieldWithBoost("title", 2.0).TieBreaker(0.5)
 			if token.Fuzzy {
@@ -165,7 +166,7 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 			}
 			var eitherQ elastic.Query = innerQ
 			if issueID, err := token.ParseIssueReference(); err == nil {
-				indexQ := elastic.NewTermQuery("index", issueID).Boost(15.0)
+				indexQ := elastic.NewTermQuery("index", issueID).Boost(20)
 				eitherQ = elastic.NewDisMaxQuery().Query(indexQ).Query(innerQ).TieBreaker(0.5)
 			}
 			switch token.Kind {
@@ -187,6 +188,10 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 			q.Should(elastic.NewTermQuery("is_public", true))
 		}
 		query.Must(q)
+	}
+	if options.PriorityRepoID.Has() {
+		q := elastic.NewTermQuery("repo_id", options.PriorityRepoID.Value()).Boost(10)
+		query.Should(q)
 	}
 
 	if options.IsPull.Has() {

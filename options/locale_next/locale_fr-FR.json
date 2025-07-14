@@ -6,11 +6,10 @@
     },
     "repo.pulls.title_desc": {
         "one": "veut fusionner %[1]d commit depuis <code>%[2]s</code> vers <code id=\"%[4]s\">%[3]s</code>",
-        "many": "souhaite fusionner %[1]d révision(s) depuis <code>%[2]s</code> vers <code id=\"%[4]s\">%[3]s</code>",
+        "many": "veut fusionner %[1]d commits depuis <code>%[2]s</code> vers <code id=\"%[4]s\">%[3]s</code>",
         "other": ""
     },
     "search.milestone_kind": "Recherche dans les jalons…",
-    "mail.actions.run_info_ref": "Branche : %[1]s (%[2]s)",
     "discussion.locked": "Cette discussion a été bloqué. Les commentaires sont limités aux contributeurs.",
     "relativetime.now": "maintenant",
     "relativetime.future": "dans le future",

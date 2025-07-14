@@ -2775,7 +2775,7 @@ func SearchIssues(ctx *context.Context) {
 		IncludedAnyLabelIDs: includedAnyLabels,
 		MilestoneIDs:        includedMilestones,
 		ProjectID:           projectID,
-		SortBy:              issue_indexer.SortByCreatedDesc,
+		SortBy:              issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
 	}
 
 	if since != 0 {
@@ -2804,9 +2804,10 @@ func SearchIssues(ctx *context.Context) {
 		}
 	}
 
-	// FIXME: It's unsupported to sort by priority repo when searching by indexer,
-	//        it's indeed an regression, but I think it is worth to support filtering by indexer first.
-	_ = ctx.FormInt64("priority_repo_id")
+	priorityRepoID := ctx.FormInt64("priority_repo_id")
+	if priorityRepoID > 0 {
+		searchOpt.PriorityRepoID = optional.Some(priorityRepoID)
+	}
 
 	ids, total, err := issue_indexer.SearchIssues(ctx, searchOpt)
 	if err != nil {
@@ -2944,7 +2945,7 @@ func ListIssues(ctx *context.Context) {
 		IsPull:    isPull,
 		IsClosed:  isClosed,
 		ProjectID: projectID,
-		SortBy:    issue_indexer.SortByCreatedDesc,
+		SortBy:    issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
 	}
 	if since != 0 {
 		searchOpt.UpdatedAfterUnix = optional.Some(since)
@@ -3592,9 +3593,9 @@ func GetIssueAttachments(ctx *context.Context) {
 	if ctx.Written() {
 		return
 	}
-	attachments := make([]*api.Attachment, len(issue.Attachments))
+	attachments := make([]*api.WebAttachment, len(issue.Attachments))
 	for i := 0; i < len(issue.Attachments); i++ {
-		attachments[i] = convert.ToAttachment(ctx.Repo.Repository, issue.Attachments[i])
+		attachments[i] = convert.ToWebAttachment(ctx.Repo.Repository, issue.Attachments[i])
 	}
 	ctx.JSON(http.StatusOK, attachments)
 }
@@ -3627,13 +3628,13 @@ func GetCommentAttachments(ctx *context.Context) {
 		return
 	}
 
-	attachments := make([]*api.Attachment, 0)
 	if err := comment.LoadAttachments(ctx); err != nil {
 		ctx.ServerError("LoadAttachments", err)
 		return
 	}
+	attachments := make([]*api.WebAttachment, len(comment.Attachments))
 	for i := 0; i < len(comment.Attachments); i++ {
-		attachments = append(attachments, convert.ToAttachment(ctx.Repo.Repository, comment.Attachments[i]))
+		attachments[i] = convert.ToWebAttachment(ctx.Repo.Repository, comment.Attachments[i])
 	}
 	ctx.JSON(http.StatusOK, attachments)
 }

@@ -50,7 +50,6 @@ test.describe('Pull: Toggle WIP', () => {
 
   test('simple toggle', async ({page}, workerInfo) => {
     test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-    await page.goto('/user2/repo1/pulls/5');
     // toggle to WIP
     await toggle_wip_to({page}, true);
     await check_wip({page}, true);
@@ -261,4 +260,92 @@ test('New Issue: Milestone', async ({page}, workerInfo) => {
   await page.getByText('Clear milestone', {exact: true}).click();
   await expect(selectedMilestone).toContainText('No milestone');
   await save_visual(page);
+});
+
+test.describe('Dependency dropdown', () => {
+  test.use({user: 'user11'});
+  test('Issue: Dependencies', async ({page}) => {
+    const response = await page.goto('/user11/dependency-test/issues/3');
+    expect(response?.status()).toBe(200);
+
+    const depsBlock = page.locator('.issue-content-right .depending');
+    const deleteDepBtn = page.locator('.issue-content-right .depending .delete-dependency-button');
+
+    const input = page.locator('#new-dependency-drop-list .search');
+    const current = page.locator('#new-dependency-drop-list .text').first();
+    const menu = page.locator('#new-dependency-drop-list .menu');
+    const items = page.locator('#new-dependency-drop-list .menu .item');
+
+    const confirmDelete = async () => {
+      const modal = page.locator('.modal.remove-dependency');
+      await expect(modal).toBeVisible();
+      await expect(modal).toContainText('This will remove the dependency from this issue');
+      await modal.locator('button.ok').click();
+    };
+
+    // A kludge to set the dropdown to the *wrong* value so it lets us select the correct one next.
+    const resetDropdown = async () => {
+      if (await current.textContent().then((s) => s.includes('#4'))) return;
+      await input.click();
+      await input.fill('unrelated');
+      await expect(items.first()).toContainText('unrelated');
+      await items.first().click();
+      await expect(current).toContainText('#4');
+      await input.click();
+    };
+
+    await expect(depsBlock).toBeVisible();
+    while (await deleteDepBtn.first().isVisible()) {
+      await deleteDepBtn.first().click(); // wipe added dependencies from any previously failed tests
+      await confirmDelete();
+    }
+    await expect(depsBlock).toContainText('No dependencies set');
+
+    await input.scrollIntoViewIfNeeded();
+    await input.click();
+
+    const first = 'first issue here';
+    const second = 'second issue here';
+    const newest = 'newest issue';
+
+    // Without query, it should show issues in the same repo, sorted by date, except current one.
+    await expect(menu).toBeVisible();
+    await expect(items).toHaveCount(4); // 5 issues in this repo, minus current one
+    await expect(items.first()).toContainText(newest);
+    await expect(items.last()).toContainText(first);
+    await resetDropdown();
+
+    // With query, it should search all repos, but show current repo issues first.
+    await input.fill('right');
+    await expect(items.first()).toContainText(second);
+    await expect.poll(() => items.count()).toBeGreaterThan(1); // there is an issue in user11/dependency-test-2 containing the word "right"
+    await resetDropdown();
+
+    // When entering an issue number, it should always show that one first, then all text matches.
+    await input.fill('1');
+    await expect(items.first()).toContainText(first);
+    await expect(items.nth(1)).toBeVisible();
+    await resetDropdown();
+
+    // Should behave the same with a prefix
+    await input.fill('#1');
+    await expect(items.first()).toContainText(first);
+
+    // Selecting an issue
+    await items.first().click();
+    await expect(current).toContainText(first);
+
+    // Add dependency
+    const link = page.locator('.issue-content-right .depending .dependency a.title');
+    await page.locator('.issue-content-right .depending button').click();
+    await expect(link).toHaveAttribute('href', '/user11/dependency-test/issues/1');
+
+    // Remove dependency
+    await expect(deleteDepBtn).toBeVisible();
+    await deleteDepBtn.click();
+
+    await confirmDelete();
+
+    await expect(depsBlock).toContainText('No dependencies set');
+  });
 });

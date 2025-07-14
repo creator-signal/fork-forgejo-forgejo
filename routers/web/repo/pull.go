@@ -638,7 +638,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 		if pull.Flow == issues_model.PullRequestFlowGithub {
 			headBranchExist = headGitRepo.IsBranchExist(pull.HeadBranch)
 		} else {
-			headBranchExist = git.IsReferenceExist(ctx, baseGitRepo.Path, pull.GetGitRefName())
+			headBranchExist = baseGitRepo.IsReferenceExist(pull.GetGitRefName())
 		}
 
 		if headBranchExist {
@@ -995,6 +995,13 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		verification := asymkey_model.ParseCommitWithSignature(ctx, curCommit)
 		ctx.Data["Verification"] = verification
 		ctx.Data["Author"] = user_model.ValidateCommitWithEmail(ctx, curCommit)
+
+		if err := asymkey_model.CalculateTrustStatus(verification, ctx.Repo.Repository.GetTrustModel(), func(user *user_model.User) (bool, error) {
+			return repo_model.IsOwnerMemberCollaborator(ctx, ctx.Repo.Repository, user.ID)
+		}, nil); err != nil {
+			ctx.ServerError("CalculateTrustStatus", err)
+			return
+		}
 
 		note := &git.Note{}
 		err = git.GetNote(ctx, ctx.Repo.GitRepo, specifiedEndCommit, note)

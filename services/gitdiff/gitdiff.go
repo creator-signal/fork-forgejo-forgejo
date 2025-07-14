@@ -440,11 +440,29 @@ func getCommitFileLineCount(commit *git.Commit, filePath string) int {
 	if err != nil {
 		return 0
 	}
-	lineCount, err := blob.GetBlobLineCount()
+	reader, err := blob.DataAsync()
 	if err != nil {
 		return 0
 	}
-	return lineCount
+	defer reader.Close()
+	buf := make([]byte, 32*1024)
+	count := 1
+	lineSep := []byte{'\n'}
+
+	c, err := reader.Read(buf)
+	if c == 0 && err == io.EOF {
+		return 0
+	}
+	for {
+		count += bytes.Count(buf[:c], lineSep)
+		switch {
+		case err == io.EOF:
+			return count
+		case err != nil:
+			return count
+		}
+		c, err = reader.Read(buf)
+	}
 }
 
 // Diff represents a difference between two git trees.
@@ -1139,7 +1157,7 @@ func GetDiffSimple(ctx context.Context, gitRepo *git.Repository, opts *DiffOptio
 	// so if we are using at least this version of git we don't have to tell ParsePatch to do
 	// the skipping for us
 	parsePatchSkipToFile := opts.SkipTo
-	if opts.SkipTo != "" && git.CheckGitVersionAtLeast("2.31") == nil {
+	if opts.SkipTo != "" {
 		cmdDiff.AddOptionFormat("--skip-to=%s", opts.SkipTo)
 		parsePatchSkipToFile = ""
 	}
