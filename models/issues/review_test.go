@@ -8,6 +8,7 @@ import (
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
+	organization_model "forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
@@ -318,4 +319,74 @@ func TestAddReviewRequest(t *testing.T) {
 	_, err = issues_model.AddReviewRequest(db.DefaultContext, issue, reviewer, &user_model.User{})
 	require.Error(t, err)
 	assert.True(t, issues_model.IsErrReviewRequestOnClosedPR(err))
+}
+
+func TestAddTeamReviewRequest(t *testing.T) {
+	defer unittest.OverrideFixtures("models/fixtures/TestAddTeamReviewRequest")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("Protected not official team", func(t *testing.T) {
+		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 23})
+		require.NoError(t, issue.LoadRepo(db.DefaultContext))
+		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+		team := unittest.AssertExistsAndLoadBean(t, &organization_model.Team{ID: 2})
+
+		comment, err := issues_model.AddTeamReviewRequest(db.DefaultContext, issue, team, doer)
+		require.NoError(t, err)
+		require.NotNil(t, comment)
+
+		review, err := issues_model.GetTeamReviewerByIssueIDAndTeamID(db.DefaultContext, issue.ID, team.ID)
+		require.NoError(t, err)
+		require.NotNil(t, review)
+		assert.Equal(t, issues_model.ReviewTypeRequest, review.Type)
+		assert.Equal(t, team.ID, review.ReviewerTeamID)
+		// This review request should not be marked official because it is not a request for a team in the branch
+		// protection rule's whitelist...
+		assert.False(t, review.Official)
+	})
+
+	t.Run("Protected official team", func(t *testing.T) {
+		// Keep the same issue/doer as "Protected unofficial team" case, just changing requested team, to ensure that we
+		// don't hit another rule to make this official; `doer` is part of some logic in this code path.
+		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 23})
+		require.NoError(t, issue.LoadRepo(db.DefaultContext))
+		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+		team := unittest.AssertExistsAndLoadBean(t, &organization_model.Team{ID: 1})
+
+		comment, err := issues_model.AddTeamReviewRequest(db.DefaultContext, issue, team, doer)
+		require.NoError(t, err)
+		require.NotNil(t, comment)
+
+		review, err := issues_model.GetTeamReviewerByIssueIDAndTeamID(db.DefaultContext, issue.ID, team.ID)
+		require.NoError(t, err)
+		require.NotNil(t, review)
+		assert.Equal(t, issues_model.ReviewTypeRequest, review.Type)
+		assert.Equal(t, team.ID, review.ReviewerTeamID)
+		// Expected to be considered official because team 1 is in the review whitelist for this protected branch
+		assert.True(t, review.Official)
+	})
+
+	t.Run("Official individual reviewer creates a team review request", func(t *testing.T) {
+		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
+		require.NoError(t, issue.LoadRepo(db.DefaultContext))
+		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		team := unittest.AssertExistsAndLoadBean(t, &organization_model.Team{ID: 1})
+
+		comment, err := issues_model.AddTeamReviewRequest(db.DefaultContext, issue, team, doer)
+		require.NoError(t, err)
+		require.NotNil(t, comment)
+
+		review, err := issues_model.GetTeamReviewerByIssueIDAndTeamID(db.DefaultContext, issue.ID, team.ID)
+		require.NoError(t, err)
+		require.NotNil(t, review)
+		assert.Equal(t, issues_model.ReviewTypeRequest, review.Type)
+		assert.Equal(t, team.ID, review.ReviewerTeamID)
+		// Will not be marked as official because PR #2 there's no whitelist for this team on this repo
+		assert.False(t, review.Official)
+
+		// Adding the same team review request again should be a noop
+		comment, err = issues_model.AddTeamReviewRequest(db.DefaultContext, issue, team, doer)
+		require.NoError(t, err)
+		require.Nil(t, comment)
+	})
 }
