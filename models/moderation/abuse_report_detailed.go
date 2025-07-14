@@ -6,6 +6,7 @@ package moderation
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/setting"
@@ -34,6 +35,17 @@ func (ard AbuseReportDetailed) ContentTypeIconName() string {
 		return "octicon-comment"
 	default:
 		return "octicon-question"
+	}
+}
+
+func (ard AbuseReportDetailed) ContentURL() string {
+	switch ard.ContentType {
+	case ReportedContentTypeUser:
+		return strings.TrimLeft(ard.ContentReference, "@")
+	case ReportedContentTypeIssue:
+		return strings.ReplaceAll(ard.ContentReference, "#", "/issues/")
+	default:
+		return ard.ContentReference
 	}
 }
 
@@ -66,7 +78,7 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 1
 			)
 			UNION
-			SELECT 2 AS "type", id, concat('/', owner_name, '/', name) AS "ref"
+			SELECT 2 AS "type", id, concat(owner_name, '/', name) AS "ref"
 			FROM repository WHERE id IN (
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 2
 			)
@@ -78,7 +90,7 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 3
 			)
 			UNION
-			SELECT 4 AS "type", C.id, concat('/', CIR.owner_name, '/', CIR.name, '/issues/', CI.%[1]sindex%[1]s, '#issuecomment-', C.id) AS "ref"
+			SELECT 4 AS "type", C.id, concat(CIR.owner_name, '/', CIR.name, '/issues/', CI.%[1]sindex%[1]s, '#issuecomment-', C.id) AS "ref"
 			FROM comment C
 			LEFT JOIN issue CI ON CI.id = C.issue_id
 			LEFT JOIN repository CIR ON CIR.id = CI.repo_id
