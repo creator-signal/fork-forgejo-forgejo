@@ -299,7 +299,7 @@ test.describe('Dependency dropdown', () => {
       await deleteDepBtn.first().click(); // wipe added dependencies from any previously failed tests
       await confirmDelete();
     }
-    await expect(depsBlock).toContainText('No dependencies set');
+    await expect(depsBlock).toContainText('Add dependency…');
 
     await input.scrollIntoViewIfNeeded();
     await input.click();
@@ -346,7 +346,7 @@ test.describe('Dependency dropdown', () => {
 
     await confirmDelete();
 
-    await expect(depsBlock).toContainText('No dependencies set');
+    await expect(depsBlock).toContainText('Add dependency…');
   });
 });
 
