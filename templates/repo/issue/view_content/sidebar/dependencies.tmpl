@@ -2,13 +2,11 @@
 	{{if (and (not .BlockedByDependencies) (not .BlockedByDependenciesNotPermitted) (not .BlockingDependencies) (not .BlockingDependenciesNotPermitted))}}
 		<span class="text"><strong>{{ctx.Locale.Tr "repo.issues.dependency.title"}}</strong></span>
 		<br>
-		<p>
-			{{if .Issue.IsPull}}
-				{{ctx.Locale.Tr "repo.issues.dependency.pr_no_dependencies"}}
-			{{else}}
-				{{ctx.Locale.Tr "repo.issues.dependency.issue_no_dependencies"}}
-			{{end}}
-		</p>
+		{{if and .Issue.IsPull (not .CanCreateIssueDependencies)}}
+			<p>{{ctx.Locale.Tr "repo.issues.dependency.pr_no_dependencies"}}</p>
+		{{else if not .CanCreateIssueDependencies}}
+			<p>{{ctx.Locale.Tr "repo.issues.dependency.issue_no_dependencies"}}</p>
+		{{end}}
 	{{end}}
 
 	{{if or .BlockingDependencies .BlockingDependenciesNotPermitted}}
@@ -100,7 +98,7 @@
 	{{end}}
 
 	{{if and .CanCreateIssueDependencies (not .Repository.IsArchived)}}
-		<div>
+		<div id="dependenciesForm" class="tw-mt-2">
 			<form method="post" action="{{.Issue.Link}}/dependency/add" id="addDependencyForm">
 				{{$.CsrfTokenHtml}}
 				<div class="ui fluid action input">

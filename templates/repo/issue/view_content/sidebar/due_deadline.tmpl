@@ -19,25 +19,23 @@
 				</div>
 			</div>
 		</p>
-	{{else}}
+	{{else if not .HasIssuesOrPullsWritePermission}}
 		<p>{{ctx.Locale.Tr "repo.issues.due_date_not_set"}}</p>
 	{{end}}
 
 	{{if and .HasIssuesOrPullsWritePermission (not .Repository.IsArchived)}}
-		<div>
-			<div {{if ne .Issue.DeadlineUnix 0}} class="tw-hidden"{{end}} id="deadlineForm">
-				<form class="ui fluid action input issue-due-form" action="{{AppSubUrl}}/{{PathEscape .Repository.Owner.Name}}/{{PathEscape .Repository.Name}}/issues/{{.Issue.Index}}/deadline" method="post" id="update-issue-deadline-form">
-					{{$.CsrfTokenHtml}}
-					<input required placeholder="{{ctx.Locale.Tr "repo.issues.due_date_form"}}" {{if gt .Issue.DeadlineUnix 0}}value="{{.Issue.DeadlineUnix.FormatDate}}"{{end}} type="date" name="deadlineDate" id="deadlineDate">
-					<button class="ui icon button">
-						{{if ne .Issue.DeadlineUnix 0}}
-							{{svg "octicon-pencil"}}
-						{{else}}
-							{{svg "octicon-plus"}}
-						{{end}}
-					</button>
-				</form>
-			</div>
+		<div {{if ne .Issue.DeadlineUnix 0}} class="tw-hidden"{{else}}class="tw-mt-2"{{end}} id="deadlineForm">
+			<form class="ui fluid action input issue-due-form" action="{{AppSubUrl}}/{{PathEscape .Repository.Owner.Name}}/{{PathEscape .Repository.Name}}/issues/{{.Issue.Index}}/deadline" method="post" id="update-issue-deadline-form">
+				{{$.CsrfTokenHtml}}
+				<input required placeholder="{{ctx.Locale.Tr "repo.issues.due_date_form"}}" {{if gt .Issue.DeadlineUnix 0}}value="{{.Issue.DeadlineUnix.FormatDate}}"{{end}} type="date" name="deadlineDate" id="deadlineDate">
+				<button class="ui icon button">
+					{{if ne .Issue.DeadlineUnix 0}}
+						{{svg "octicon-pencil"}}
+					{{else}}
+						{{svg "octicon-plus"}}
+					{{end}}
+				</button>
+			</form>
 		</div>
 	{{end}}
 </div>
