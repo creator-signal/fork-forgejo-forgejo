@@ -198,9 +198,9 @@ func TestViewRepoWithSymlinks(t *testing.T) {
 
 // TestViewAsRepoAdmin tests PR #2167
 func TestViewAsRepoAdmin(t *testing.T) {
-	for _, user := range []string{"user2", "user4"} {
-		defer tests.PrepareTestEnv(t)()
+	defer tests.PrepareTestEnv(t)()
 
+	for _, user := range []string{"user2", "user4"} {
 		session := loginUser(t, user)
 
 		req := NewRequest(t, "GET", "/user2/repo1.git")
@@ -690,7 +690,7 @@ func TestViewCommit(t *testing.T) {
 func TestViewCommitSignature(t *testing.T) {
 	t.Cleanup(func() {
 		// Cannot use t.Context(), it is in the done state.
-		require.NoError(t, git.InitFull(context.Background())) //nolint:usetesting
+		require.NoError(t, git.InitFull(context.Background()))
 	})
 
 	defer test.MockVariableValue(&setting.Repository.Signing.SigningName, "UwU")()
