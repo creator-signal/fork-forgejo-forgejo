@@ -1070,6 +1070,10 @@ model-viewer {
   text-decoration: line-through;
 }
 
+.repository.view.issue .ui.deadline .item.is-closed .title {
+  text-decoration: line-through;
+}
+
 .repository .comment.form .content .field:first-child {
   clear: none;
 }
