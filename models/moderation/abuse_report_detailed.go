@@ -125,9 +125,6 @@ func GetOpenReportsByTypeAndContentID(ctx context.Context, contentType ReportedC
 		}).
 		Asc("abuse_report.created_unix").
 		Find(&reports)
-
-	// TODO: Limit to first n or use pagination?!
-
 	if err != nil {
 		return nil, err
 	}
