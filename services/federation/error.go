@@ -34,7 +34,7 @@ func (err ErrInternal) Error() string {
 	return fmt.Sprintf("InternalServerError: %v", err.Message)
 }
 
-func HttpStatus(err error) int {
+func HTTPStatus(err error) int {
 	switch err.(type) {
 	case ErrNotAcceptable:
 		return http.StatusNotAcceptable

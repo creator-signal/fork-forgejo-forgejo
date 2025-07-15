@@ -25,7 +25,7 @@ func ProcessPersonInbox(ctx context.Context, user *user.User, activity *ap.Activ
 	case ap.UndoType:
 		return processPersonInboxUndo(ctx, user, activity)
 	case ap.AcceptType:
-		return processPersonInboxAccept(ctx, activity)
+		return processPersonInboxAccept(activity)
 	}
 
 	log.Error("Unsupported PersonInbox activity: %v", activity.Type)

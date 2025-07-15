@@ -4,14 +4,13 @@
 package federation
 
 import (
-	"context"
 	"net/http"
 
 	"forgejo.org/modules/log"
 	ap "github.com/go-ap/activitypub"
 )
 
-func processPersonInboxAccept(ctx context.Context, activity *ap.Activity) (ServiceResult, error) {
+func processPersonInboxAccept(activity *ap.Activity) (ServiceResult, error) {
 	if activity.Object.GetType() != ap.FollowType {
 		log.Error("Invalid object type for Accept activity: %v", activity.Object.GetType())
 		return ServiceResult{}, NewErrNotAcceptablef("Invalid object type for Accept activity: %v", activity.Object.GetType())

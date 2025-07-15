@@ -76,7 +76,7 @@ func PersonInbox(ctx *context.APIContext) {
 	activity := form.(*ap.Activity)
 	result, err := federation.ProcessPersonInbox(ctx, ctx.ContextUser, activity)
 	if err != nil {
-		ctx.Error(federation.HttpStatus(err), "PersonInbox", err)
+		ctx.Error(federation.HTTPStatus(err), "PersonInbox", err)
 		return
 	}
 	responseServiceResult(ctx, result)

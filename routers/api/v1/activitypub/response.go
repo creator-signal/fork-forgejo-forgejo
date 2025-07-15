@@ -22,10 +22,10 @@ func responseServiceResult(ctx *context.APIContext, result federation.ServiceRes
 
 	switch {
 	case result.StatusOnly():
-		ctx.Resp.WriteHeader(result.HttpStatus)
+		ctx.Resp.WriteHeader(result.HTTPStatus)
 		return
 	case result.WithBytes():
-		ctx.Resp.WriteHeader(result.HttpStatus)
+		ctx.Resp.WriteHeader(result.HTTPStatus)
 		if _, err := ctx.Resp.Write(result.Bytes); err != nil {
 			log.Error("Error writing a response: %v", err)
 			ctx.Error(http.StatusInternalServerError, "Error writing a response", err)
@@ -41,7 +41,7 @@ func responseServiceResult(ctx *context.APIContext, result federation.ServiceRes
 			ctx.ServerError("Marshal", err)
 			return
 		}
-		ctx.Resp.WriteHeader(result.HttpStatus)
+		ctx.Resp.WriteHeader(result.HTTPStatus)
 		if _, err = ctx.Resp.Write(binary); err != nil {
 			log.Error("write to resp err: %v", err)
 		}
