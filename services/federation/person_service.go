@@ -29,7 +29,7 @@ func ProcessPersonInbox(ctx context.Context, user *user.User, activity *ap.Activ
 	}
 
 	log.Error("Unsupported PersonInbox activity: %v", activity.Type)
-	return ServiceResult{}, NewErrNotAcceptableF("Unsupported activity: %v", activity.Type)
+	return ServiceResult{}, NewErrNotAcceptablef("Unsupported activity: %v", activity.Type)
 }
 
 func FollowRemoteActor(ctx *context_service.APIContext, localUser *user.User, actorURI string) error {

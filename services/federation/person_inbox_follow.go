@@ -20,20 +20,20 @@ func processPersonFollow(ctx context.Context, ctxUser *user.User, activity *ap.A
 	follow, err := forgefed.NewForgeFollowFromAp(*activity)
 	if err != nil {
 		log.Error("Invalid follow activity: %s", err)
-		return ServiceResult{}, NewErrNotAcceptableF("Invalid follow activity: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Invalid follow activity: %v", err)
 	}
 
 	actorURI := follow.Actor.GetLink().String()
 	_, federatedUser, federationHost, err := FindOrCreateFederatedUser(ctx, actorURI)
 	if err != nil {
 		log.Error("Error finding or creating federated user (%s): %v", actorURI, err)
-		return ServiceResult{}, NewErrNotAcceptableF("Federated user not found: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Federated user not found: %v", err)
 	}
 
 	following, err := user.IsFollowingAp(ctx, ctxUser, federatedUser)
 	if err != nil {
 		log.Error("forgefed.IsFollowing: %v", err)
-		return ServiceResult{}, NewErrNotAcceptableF("forgefed.IsFollowing: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("forgefed.IsFollowing: %v", err)
 	}
 	if following {
 		// If the user is already following, we're good, nothing to do.
@@ -44,7 +44,7 @@ func processPersonFollow(ctx context.Context, ctxUser *user.User, activity *ap.A
 	follower, err := user.AddFollower(ctx, ctxUser, federatedUser)
 	if err != nil {
 		log.Error("Unable to add follower: %v", err)
-		return ServiceResult{}, NewErrNotAcceptableF("Unable to add follower: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Unable to add follower: %v", err)
 	}
 
 	accept := ap.AcceptNew(ap.IRI(fmt.Sprintf(
@@ -54,7 +54,7 @@ func processPersonFollow(ctx context.Context, ctxUser *user.User, activity *ap.A
 	payload, err := jsonld.WithContext(jsonld.IRI(ap.ActivityBaseURI)).Marshal(accept)
 	if err != nil {
 		log.Error("Unable to Marshal JSON: %v", err)
-		return ServiceResult{}, NewErrInternalF("MarshalJSON: %v", err)
+		return ServiceResult{}, NewErrInternalf("MarshalJSON: %v", err)
 	}
 
 	hostURL := federationHost.AsURL()
@@ -64,7 +64,7 @@ func processPersonFollow(ctx context.Context, ctxUser *user.User, activity *ap.A
 		Payload:  payload,
 	}); err != nil {
 		log.Error("Unable to push to pending queue: %v", err)
-		return ServiceResult{}, NewErrInternalF("Unable to push to pending queue: %v", err)
+		return ServiceResult{}, NewErrInternalf("Unable to push to pending queue: %v", err)
 	}
 
 	// Respond back with an accept

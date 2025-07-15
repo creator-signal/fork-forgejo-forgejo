@@ -12,7 +12,7 @@ type ErrNotAcceptable struct {
 	Message string
 }
 
-func NewErrNotAcceptableF(format string, a ...any) ErrNotAcceptable {
+func NewErrNotAcceptablef(format string, a ...any) ErrNotAcceptable {
 	message := fmt.Sprintf(format, a...)
 	return ErrNotAcceptable{Message: message}
 }
@@ -25,7 +25,7 @@ type ErrInternal struct {
 	Message string
 }
 
-func NewErrInternalF(format string, a ...any) ErrInternal {
+func NewErrInternalf(format string, a ...any) ErrInternal {
 	message := fmt.Sprintf(format, a...)
 	return ErrInternal{Message: message}
 }

@@ -19,14 +19,14 @@ func processPersonInboxCreate(ctx context.Context, user *user.User, activity *ap
 	createAct, err := fm.NewForgeUserActivityFromAp(*activity)
 	if err != nil {
 		log.Error("Invalid user activity: %v, %v", activity, err)
-		return ServiceResult{}, NewErrNotAcceptableF("Invalid user activity: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Invalid user activity: %v", err)
 	}
 
 	actorURI := createAct.Actor.GetLink().String()
 	federatedBaseUser, _, _, err := findFederatedUser(ctx, actorURI)
 	if err != nil {
 		log.Error("Error finding federated user (%s): %v", actorURI, err)
-		return ServiceResult{}, NewErrNotAcceptableF("Error finding federated user: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Error finding federated user: %v", err)
 	}
 
 	federatedUserActivity, err := activities.NewFederatedUserActivity(
@@ -39,12 +39,12 @@ func processPersonInboxCreate(ctx context.Context, user *user.User, activity *ap
 	)
 	if err != nil {
 		log.Error("Error creating federatedUserActivity (%s): %v", actorURI, err)
-		return ServiceResult{}, NewErrNotAcceptableF("Error creating federatedUserActivity: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Error creating federatedUserActivity: %v", err)
 	}
 
 	if err := activities.CreateUserActivity(ctx, &federatedUserActivity); err != nil {
 		log.Error("Unable to record activity: %v", err)
-		return ServiceResult{}, NewErrNotAcceptableF("Unable to record activity: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Unable to record activity: %v", err)
 	}
 
 	return NewServiceResultStatusOnly(http.StatusNoContent), nil
