@@ -69,7 +69,7 @@ func deliverToInbox(item deliveryQueueItem) error {
 		body, _ := io.ReadAll(io.LimitReader(res.Body, 16*1024))
 
 		log.Warn("Delivering to %s failed: %d %s, %v times", item.InboxURL, res.StatusCode, string(body), item.DeliveryCount)
-		return fmt.Errorf("Delivery failed")
+		return fmt.Errorf("delivery failed")
 	}
 
 	return nil

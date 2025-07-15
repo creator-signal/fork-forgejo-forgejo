@@ -14,7 +14,7 @@ import (
 
 func processPersonInboxAccept(ctx *context_service.APIContext, activity *ap.Activity) {
 	if activity.Object.GetType() != ap.FollowType {
-		ctx.Error(http.StatusNotAcceptable, "Invalid object type for Accept activity", fmt.Errorf("Invalid object type for Accept activity: %v", activity.Object.GetType()))
+		ctx.Error(http.StatusNotAcceptable, "Invalid object type for Accept activity", fmt.Errorf("invalid object type for Accept activity: %v", activity.Object.GetType()))
 		return
 	}
 
