@@ -115,7 +115,7 @@ func TestPersonIdValidation(t *testing.T) {
 
 	result, err := validation.IsValid(sut)
 	assert.False(t, result)
-	require.EqualError(t, err, "Validation Error: forgefed.PersonID: path should not be empty\npath: \"\" has to be a person specific api path")
+	require.EqualError(t, err, "Validation Error: forgefed.PersonID: Value path should not be empty\npath: \"\" has to be a person specific api path")
 
 	sut = PersonID{}
 	sut.ID = "1"
