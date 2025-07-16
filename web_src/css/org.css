@@ -98,15 +98,23 @@
   flex: 1;
 }
 
-.page-content.organization #org-info .ui.header {
+.page-content.organization #org-info .org-header {
   display: flex;
   align-items: center;
-  font-size: 36px;
   margin-bottom: 0;
 }
 
+.page-content.organization #org-info .org-title {
+  display: flex;
+  align-items: center;
+}
+
+.page-content.organization #org-info .org-title h1 {
+  margin: 0;
+}
+
 @media (max-width: 767.98px) {
-  .page-content.organization #org-info .ui.header {
+  .page-content.organization #org-info .org-header {
     flex-direction: column;
     margin-bottom: 1rem;
   }
