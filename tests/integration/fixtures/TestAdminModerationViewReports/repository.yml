@@ -41,5 +41,5 @@
   is_empty: false
   is_archived: false
   size: 0
-  topics: '[\bulk-email\,\email-services\,\spam\,\spamservices.co\]'
+  topics: "[\"bulk-email\",\"email-services\",\"spam\",\"spamservices.co\"]"
   created_unix: 1121422920 # 2005-07-15 10:22:00
