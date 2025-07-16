@@ -135,7 +135,7 @@ func Test_ForgeLikeValidation(t *testing.T) {
 	sut.UnmarshalJSON([]byte(`{"actor":"https://repo.prod.meissa.de/api/activitypub/user-id/1",
 	"object":"https://codeberg.org/api/activitypub/repository-id/1",
 	"startTime": "2014-12-31T23:00:00-08:00"}`))
-	if err := validateAndCheckError(sut, "type should not be empty"); err != nil {
+	if err := validateAndCheckError(sut, "Value type should not be empty"); err != nil {
 		t.Error(err)
 	}
 
