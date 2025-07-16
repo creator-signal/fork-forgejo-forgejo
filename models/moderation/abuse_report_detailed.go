@@ -11,6 +11,7 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
+
 	"xorm.io/builder"
 )
 
@@ -68,37 +69,38 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 		INNER JOIN (
 			SELECT min(id) AS id, count(id) AS reported_times
 			FROM abuse_report
-			WHERE status = 1
+			WHERE status = %[2]d
 			GROUP BY content_type, content_id
 		) ARD ON ARD.id = AR.id
 		LEFT JOIN %[1]suser%[1]s U ON U.id = AR.reporter_id
 		INNER JOIN (
-			SELECT 1 AS type, id, concat('@', name) AS "ref"
+			SELECT %[3]d AS type, id, concat('@', name) AS "ref"
 			FROM %[1]suser%[1]s WHERE id IN (
-				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 1
+				SELECT content_id FROM abuse_report WHERE status = %[2]d AND content_type = %[3]d
 			)
 			UNION
-			SELECT 2 AS "type", id, concat(owner_name, '/', name) AS "ref"
+			SELECT %[4]d AS "type", id, concat(owner_name, '/', name) AS "ref"
 			FROM repository WHERE id IN (
-				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 2
+				SELECT content_id FROM abuse_report WHERE status = %[2]d AND content_type = %[4]d
 			)
 			UNION
-			SELECT 3 AS "type", I.id, concat(IR.owner_name, '/', IR.name, '#', I.%[1]sindex%[1]s) AS "ref"
+			SELECT %[5]d AS "type", I.id, concat(IR.owner_name, '/', IR.name, '#', I.%[1]sindex%[1]s) AS "ref"
 			FROM issue I
 			LEFT JOIN repository IR ON IR.id = I.repo_id
 			WHERE I.id IN (
-				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 3
+				SELECT content_id FROM abuse_report WHERE status = %[2]d AND content_type = %[5]d
 			)
 			UNION
-			SELECT 4 AS "type", C.id, concat(CIR.owner_name, '/', CIR.name, '/issues/', CI.%[1]sindex%[1]s, '#issuecomment-', C.id) AS "ref"
+			SELECT %[6]d AS "type", C.id, concat(CIR.owner_name, '/', CIR.name, '/issues/', CI.%[1]sindex%[1]s, '#issuecomment-', C.id) AS "ref"
 			FROM comment C
 			LEFT JOIN issue CI ON CI.id = C.issue_id
 			LEFT JOIN repository CIR ON CIR.id = CI.repo_id
 			WHERE C.id IN (
-				SELECT content_id FROM abuse_report WHERE status = 1 AND content_type = 4
+				SELECT content_id FROM abuse_report WHERE status = %[2]d AND content_type = %[6]d
 			)
 		) REFS ON REFS.type = AR.content_type AND REFS.id = AR.content_id
-		ORDER BY AR.created_unix ASC`, identifierEscapeChar)).
+		ORDER BY AR.created_unix ASC`, identifierEscapeChar, ReportStatusTypeOpen,
+		ReportedContentTypeUser, ReportedContentTypeRepository, ReportedContentTypeIssue, ReportedContentTypeComment)).
 		Find(&reports)
 	if err != nil {
 		return nil, err
