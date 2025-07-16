@@ -147,7 +147,7 @@ func RemoveResolvedReports(ctx stdCtx.Context, keepReportsFor time.Duration) err
 				return err
 			}
 
-			if report.ShadowCopyID.Valid && report.ShadowCopyID.Int64 != 0 {
+			if report.ShadowCopyID.Valid {
 				_, err := db.GetEngine(ctx).ID(report.ShadowCopyID).Delete(&moderation.AbuseReportShadowCopy{})
 				if err != nil {
 					return err
