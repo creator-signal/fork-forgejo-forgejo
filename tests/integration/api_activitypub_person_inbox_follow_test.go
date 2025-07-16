@@ -8,14 +8,15 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
-	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
+	"forgejo.org/services/contexttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,6 +42,8 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 		localUser2URL := localUrl.JoinPath("/api/v1/activitypub/user-id/2").String()
 		localUser2Inbox := localUrl.JoinPath("/api/v1/activitypub/user-id/2/inbox").String()
 
+		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
+
 		// distant follows local
 		followActivity := []byte(fmt.Sprintf(
 			`{"type":"Follow",`+
@@ -49,9 +52,9 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 			distantUser15URL,
 			localUser2URL,
 		))
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
-		c, err := cf.WithKeysDirect(db.DefaultContext, mock.ApActor.PrivKey,
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
 		resp, err := c.Post(followActivity, localUser2Inbox)
@@ -81,7 +84,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 			distantUser15URL,
 			localUser2URL,
 		))
-		c, err = cf.WithKeysDirect(db.DefaultContext, mock.ApActor.PrivKey,
+		c, err = cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
 		resp, err = c.Post(undoFollowActivity, localUser2Inbox)

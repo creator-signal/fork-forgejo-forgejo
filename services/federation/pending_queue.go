@@ -44,7 +44,6 @@ func handlePending(item pendingQueueItem) error {
 		fmt.Sprintf("Checking delivery eligibility for Activity via user[%d] (%s), to federated user[%s]", item.Doer.ID, item.Doer.Name, item.InboxURL))
 	defer finished()
 
-	// TODO: fix linting
 	return deliveryQueue.Push(deliveryQueueItem{
 		Doer:     item.Doer,
 		Payload:  item.Payload,

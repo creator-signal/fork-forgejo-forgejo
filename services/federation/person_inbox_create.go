@@ -4,35 +4,34 @@
 package federation
 
 import (
+	"context"
 	"net/http"
 
 	"forgejo.org/models/activities"
+	"forgejo.org/models/user"
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
-	context_service "forgejo.org/services/context"
 
 	ap "github.com/go-ap/activitypub"
 )
 
-func processPersonInboxCreate(ctx *context_service.APIContext, activity *ap.Activity) {
+func processPersonInboxCreate(ctx context.Context, user *user.User, activity *ap.Activity) (ServiceResult, error) {
 	createAct, err := fm.NewForgeUserActivityFromAp(*activity)
 	if err != nil {
 		log.Error("Invalid user activity: %v, %v", activity, err)
-		ctx.Error(http.StatusNotAcceptable, "Invalid user activity", err)
-		return
+		return ServiceResult{}, NewErrNotAcceptablef("Invalid user activity: %v", err)
 	}
 
 	actorURI := createAct.Actor.GetLink().String()
-	user, _, _, err := findFederatedUser(ctx.Base, actorURI)
+	federatedBaseUser, _, _, err := findFederatedUser(ctx, actorURI)
 	if err != nil {
 		log.Error("Federated user not found (%s): %v", actorURI, err)
-		ctx.Error(http.StatusNotAcceptable, "Federated user not found", err)
-		return
+		return ServiceResult{}, NewErrNotAcceptablef("federated user not found (%s): %v", actorURI, err)
 	}
 
 	federatedUserActivity, err := activities.NewFederatedUserActivity(
-		ctx.ContextUser.ID,
 		user.ID,
+		federatedBaseUser.ID,
 		activity.Actor.GetLink().String(),
 		createAct.Note.Content.String(),
 		createAct.Note.URL.GetID().String(),
@@ -40,15 +39,13 @@ func processPersonInboxCreate(ctx *context_service.APIContext, activity *ap.Acti
 	)
 	if err != nil {
 		log.Error("Error creating federatedUserActivity (%s): %v", actorURI, err)
-		ctx.Error(http.StatusNotAcceptable, "Error creating federatedUserActivity", err)
-		return
+		return ServiceResult{}, NewErrNotAcceptablef("Error creating federatedUserActivity: %v", err)
 	}
 
 	if err := activities.CreateUserActivity(ctx, &federatedUserActivity); err != nil {
 		log.Error("Unable to record activity: %v", err)
-		ctx.Error(http.StatusInternalServerError, "Unable to record activity", err)
-		return
+		return ServiceResult{}, NewErrNotAcceptablef("Unable to record activity: %v", err)
 	}
 
-	ctx.Status(http.StatusNoContent)
+	return NewServiceResultStatusOnly(http.StatusNoContent), nil
 }

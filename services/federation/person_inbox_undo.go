@@ -4,45 +4,44 @@
 package federation
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 
 	"forgejo.org/models/user"
 	"forgejo.org/modules/log"
-	context_service "forgejo.org/services/context"
 
 	ap "github.com/go-ap/activitypub"
 )
 
-func processPersonInboxUndo(ctx *context_service.APIContext, activity *ap.Activity) {
+func processPersonInboxUndo(ctx context.Context, ctxUser *user.User, activity *ap.Activity) (ServiceResult, error) {
 	if activity.Object.GetType() != ap.FollowType {
-		ctx.Error(http.StatusNotAcceptable, "Invalid object type for Undo activity", fmt.Errorf("Invalid object type for Undo activity: %v", activity.Object.GetType()))
-		return
+		log.Error("Invalid object type for Undo activity: %v", activity.Object.GetType())
+		return ServiceResult{}, NewErrNotAcceptablef("Invalid object type for Undo activity: %v", activity.Object.GetType())
 	}
 
 	actorURI := activity.Actor.GetLink().String()
-	_, federatedUser, _, err := findFederatedUser(ctx.Base, actorURI)
+	_, federatedUser, _, err := findFederatedUser(ctx, actorURI)
 	if err != nil {
-		return
+		log.Error("User not found: %v", err)
+		return ServiceResult{}, NewErrInternalf("User not found: %v", err)
 	}
 
 	if federatedUser != nil {
-		following, err := user.IsFollowingAp(ctx, ctx.ContextUser, federatedUser)
+		following, err := user.IsFollowingAp(ctx, ctxUser, federatedUser)
 		if err != nil {
 			log.Error("forgefed.IsFollowing: %v", err)
-			ctx.Error(http.StatusInternalServerError, "forgefed.IsFollowing", err)
-			return
+			return ServiceResult{}, NewErrInternalf("forgefed.IsFollowing: %v", err)
 		}
 		if !following {
 			// The local user is not following the federated one, nothing to do.
-			log.Trace("Local user[%d] is not following federated user[%d]", ctx.ContextUser.ID, federatedUser.ID)
-			return
+			log.Trace("Local user[%d] is not following federated user[%d]", ctxUser.ID, federatedUser.ID)
+			return NewServiceResultStatusOnly(http.StatusNoContent), nil
 		}
-		if err := user.RemoveFollower(ctx, ctx.ContextUser, federatedUser); err != nil {
-			ctx.Error(http.StatusInternalServerError, "Unable to remove follower", err)
-			return
+		if err := user.RemoveFollower(ctx, ctxUser, federatedUser); err != nil {
+			log.Error("Unable to remove follower", err)
+			return ServiceResult{}, NewErrInternalf("Unable to remove follower: %v", err)
 		}
 	}
 
-	ctx.Status(http.StatusNoContent)
+	return NewServiceResultStatusOnly(http.StatusNoContent), nil
 }

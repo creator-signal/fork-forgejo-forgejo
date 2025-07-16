@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"forgejo.org/models/db"
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
@@ -19,6 +18,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
+	"forgejo.org/services/contexttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,14 +35,17 @@ func TestActivityPubRepository(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		repositoryID := 2
 
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
+		localRepository := fmt.Sprintf("%sapi/v1/activitypub/repository-id/%d", u, repositoryID)
+
+		ctx, _ := contexttest.MockAPIContext(t, localRepository)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeysDirect(db.DefaultContext, mock.Persons[0].PrivKey,
+		c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
 			mock.Persons[0].KeyID(federatedSrv.URL))
 		require.NoError(t, err)
 
-		resp, err := c.GetBody(fmt.Sprintf("%sapi/v1/activitypub/repository-id/%d", u, repositoryID))
+		resp, err := c.GetBody(localRepository)
 		require.NoError(t, err)
 		assert.Contains(t, string(resp), "@context")
 
@@ -76,15 +79,15 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		repositoryID := 2
 		timeNow := time.Now().UTC()
+		localRepoInbox := u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d/inbox", repositoryID)).String()
 
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
+		ctx, _ := contexttest.MockAPIContext(t, localRepoInbox)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeysDirect(db.DefaultContext, mock.Persons[0].PrivKey,
+		c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
 			mock.Persons[0].KeyID(federatedSrv.URL))
 		require.NoError(t, err)
-
-		repoInboxURL := u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d/inbox", repositoryID)).String()
 
 		activity1 := []byte(fmt.Sprintf(
 			`{"type":"Like",`+
@@ -94,7 +97,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 			timeNow.Format(time.RFC3339),
 			federatedSrv.URL, u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d", repositoryID)).String()))
 		t.Logf("activity: %s", activity1)
-		resp, err := c.Post(activity1, repoInboxURL)
+		resp, err := c.Post(activity1, localRepoInbox)
 
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -113,7 +116,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 			timeNow.Add(time.Second).Format(time.RFC3339),
 			federatedSrv.URL, u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d", repositoryID)).String()))
 		t.Logf("activity: %s", activity2)
-		resp, err = c.Post(activity2, repoInboxURL)
+		resp, err = c.Post(activity2, localRepoInbox)
 
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -142,7 +145,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 		unittest.AssertExistsAndLoadBean(t, &user.User{ID: federatedUser.UserID})
 
 		// Replay activity2.
-		resp, err = c.Post(activity2, repoInboxURL)
+		resp, err = c.Post(activity2, localRepoInbox)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
 	})
@@ -156,16 +159,17 @@ func TestActivityPubRepositoryInboxInvalid(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		apServerActor := user.NewAPServerActor()
 		repositoryID := 2
+		localRepo2Inbox := u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d/inbox", repositoryID)).String()
 
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
+		ctx, _ := contexttest.MockAPIContext(t, localRepo2Inbox)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeys(db.DefaultContext, apServerActor, apServerActor.KeyID())
+		c, err := cf.WithKeys(ctx, apServerActor, apServerActor.KeyID())
 		require.NoError(t, err)
 
-		repoInboxURL := u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d/inbox", repositoryID)).String()
 		activity := []byte(`{"type":"Wrong"}`)
-		resp, err := c.Post(activity, repoInboxURL)
+		resp, err := c.Post(activity, localRepo2Inbox)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
 	})

@@ -4,7 +4,7 @@
 package federation
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 
 	"forgejo.org/models/user"
@@ -16,26 +16,20 @@ import (
 	"github.com/go-ap/jsonld"
 )
 
-func ProcessPersonInbox(ctx *context_service.APIContext, form any) {
-	activity := form.(*ap.Activity)
-
+func ProcessPersonInbox(ctx context.Context, user *user.User, activity *ap.Activity) (ServiceResult, error) {
 	switch activity.Type {
 	case ap.CreateType:
-		processPersonInboxCreate(ctx, activity)
-		return
+		return processPersonInboxCreate(ctx, user, activity)
 	case ap.FollowType:
-		processPersonFollow(ctx, activity)
-		return
+		return processPersonFollow(ctx, user, activity)
 	case ap.UndoType:
-		processPersonInboxUndo(ctx, activity)
-		return
+		return processPersonInboxUndo(ctx, user, activity)
 	case ap.AcceptType:
-		processPersonInboxAccept(ctx, activity)
-		return
+		return processPersonInboxAccept(activity)
 	}
 
 	log.Error("Unsupported PersonInbox activity: %v", activity.Type)
-	ctx.Error(http.StatusNotAcceptable, "Unsupported activity", fmt.Errorf("unsupported activity: %v", activity.Type))
+	return ServiceResult{}, NewErrNotAcceptablef("unsupported activity: %v", activity.Type)
 }
 
 func FollowRemoteActor(ctx *context_service.APIContext, localUser *user.User, actorURI string) error {

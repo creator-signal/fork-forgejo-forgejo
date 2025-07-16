@@ -18,7 +18,6 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/validation"
-	context_service "forgejo.org/services/context"
 
 	"github.com/google/uuid"
 )
@@ -33,7 +32,7 @@ func Init() error {
 	return initPendingQueue()
 }
 
-func FindOrCreateFederationHost(ctx *context_service.Base, actorURI string) (*forgefed.FederationHost, error) {
+func FindOrCreateFederationHost(ctx context.Context, actorURI string) (*forgefed.FederationHost, error) {
 	rawActorID, err := fm.NewActorID(actorURI)
 	if err != nil {
 		return nil, err
@@ -52,7 +51,7 @@ func FindOrCreateFederationHost(ctx *context_service.Base, actorURI string) (*fo
 	return federationHost, nil
 }
 
-func FindOrCreateFederatedUser(ctx *context_service.Base, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
+func FindOrCreateFederatedUser(ctx context.Context, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
 	user, federatedUser, federationHost, err := findFederatedUser(ctx, actorURI)
 	if err != nil {
 		return nil, nil, nil, err
@@ -77,7 +76,7 @@ func FindOrCreateFederatedUser(ctx *context_service.Base, actorURI string) (*use
 	return user, federatedUser, federationHost, nil
 }
 
-func findFederatedUser(ctx *context_service.Base, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
+func findFederatedUser(ctx context.Context, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
 	federationHost, err := FindOrCreateFederationHost(ctx, actorURI)
 	if err != nil {
 		return nil, nil, nil, err
@@ -97,6 +96,7 @@ func findFederatedUser(ctx *context_service.Base, actorURI string) (*user.User, 
 
 func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forgefed.FederationHost, error) {
 	actionsUser := user.NewAPServerActor()
+
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return nil, err
