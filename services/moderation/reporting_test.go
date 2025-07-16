@@ -1,3 +1,6 @@
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package moderation
 
 import (
@@ -14,18 +17,20 @@ import (
 
 func TestRemoveResolvedReportsWhenNoTimeSet(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
+	// reportAge needs to be an int64 to match what timeutil.Day expects so we cast the value
+	reportAge := int64(20)
 	resolvedReport := &report_model.AbuseReport{
 		Status:     report_model.ReportStatusTypeHandled,
 		ReporterID: 1, ContentType: report_model.ReportedContentTypeRepository,
 		ContentID: 2, Category: report_model.AbuseCategoryTypeOther,
 		CreatedUnix:  timeutil.TimeStampNow(),
-		ResolvedUnix: timeutil.TimeStampNow(),
+		ResolvedUnix: timeutil.TimeStamp(time.Now().Unix() - timeutil.Day*reportAge),
 	}
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(resolvedReport)
 	require.NoError(t, err)
 
 	// No reports should be deleted when the default time to keep is 0
-	err = RemoveResolvedReports(db.DefaultContext, time.Second.Round(0))
+	err = RemoveResolvedReports(db.DefaultContext, time.Second)
 	require.NoError(t, err)
 	unittest.AssertExistsIf(t, true, resolvedReport)
 }
@@ -46,7 +51,7 @@ func TestRemoveResolvedReportsWhenMatchTimeSet(t *testing.T) {
 	require.NoError(t, err)
 
 	// Report should be deleted when older than the default time to keep
-	err = RemoveResolvedReports(db.DefaultContext, time.Second.Round(4))
+	err = RemoveResolvedReports(db.DefaultContext, time.Second*4)
 	require.NoError(t, err)
 	unittest.AssertExistsIf(t, false, resolvedReport)
 }
@@ -64,7 +69,7 @@ func TestRemoveResolvedReportsWhenTimeSetButReportNew(t *testing.T) {
 	require.NoError(t, err)
 
 	// Report should not be deleted when newer than the default time to keep
-	err = RemoveResolvedReports(db.DefaultContext, time.Second.Round(4))
+	err = RemoveResolvedReports(db.DefaultContext, time.Second*4)
 	require.NoError(t, err)
 	unittest.AssertExistsIf(t, true, resolvedReport)
 }
@@ -86,7 +91,7 @@ func TestDoesNotRemoveOpenReports(t *testing.T) {
 
 	// Report should not be deleted when open
 	// and older than the default time to keep
-	err = RemoveResolvedReports(db.DefaultContext, time.Second.Round(4))
+	err = RemoveResolvedReports(db.DefaultContext, time.Second*4)
 	require.NoError(t, err)
 	unittest.AssertExistsIf(t, true, resolvedReport)
 }

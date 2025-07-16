@@ -11,7 +11,8 @@ import (
 
 func AddResolvedUnixToAbuseReport(x *xorm.Engine) error {
 	type AbuseReport struct {
-		ResolvedUnix timeutil.TimeStamp
+		ID           int64              `xorm:"pk autoincr"`
+		ResolvedUnix timeutil.TimeStamp `xorm:"DEFAULT NULL"`
 	}
 
 	return x.Sync(&AbuseReport{})
