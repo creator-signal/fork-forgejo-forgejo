@@ -48,6 +48,10 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 		localSession2 := loginUser(t, localUser2.LoginName)
 		localSecssion2Token := getTokenForLoggedInUser(t, localSession2, auth_model.AccessTokenScopeWriteUser)
 
+		// view own empty feed on web UI
+		feedPage := NewHTMLParser(t, localSession2.MakeRequest(t, NewRequest(t, "GET", "/user2?tab=feed"), http.StatusOK).Body)
+		feedPage.AssertElement(t, "#empty-ap-feed", true)
+
 		// follow (local follows distant)
 		req := NewRequestWithJSON(t, "POST",
 			"/api/v1/user/activitypub/follow",
@@ -80,8 +84,12 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-		// check user activity exists on local
+		// check whether user activity exists in local instance
 		unittest.AssertExistsAndLoadBean(t, &activities.FederatedUserActivity{NoteURL: distantNoteURL})
+
+		// view own non-empty feed on web UI
+		feedPage = NewHTMLParser(t, localSession2.MakeRequest(t, NewRequest(t, "GET", "/user2?tab=feed"), http.StatusOK).Body)
+		feedPage.AssertElement(t, "#empty-ap-feed", false)
 	})
 }
 
