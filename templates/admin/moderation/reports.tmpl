@@ -25,7 +25,11 @@
 				</div>
 				<div class="flex-item-main">
 					<div class="flex-item-title">
+						{{if .ContentReference}}
 						<a href="{{AppSubUrl}}/{{.ContentURL}}">{{.ContentReference}}</a>
+						{{else}}
+						<em>{{ctx.Locale.Tr "admin.moderation.deleted_content_ref" .ContentType .ContentID }}</em>
+						{{end}}
 					</div>
 					<div class="flex-items-inline">
 						<span class="item tw-mr-2">

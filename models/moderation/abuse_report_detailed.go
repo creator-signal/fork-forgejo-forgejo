@@ -73,7 +73,7 @@ func GetOpenReports(ctx context.Context) ([]*AbuseReportDetailed, error) {
 			GROUP BY content_type, content_id
 		) ARD ON ARD.id = AR.id
 		LEFT JOIN %[1]suser%[1]s U ON U.id = AR.reporter_id
-		INNER JOIN (
+		LEFT JOIN (
 			SELECT %[3]d AS type, id, concat('@', name) AS "ref"
 			FROM %[1]suser%[1]s WHERE id IN (
 				SELECT content_id FROM abuse_report WHERE status = %[2]d AND content_type = %[3]d

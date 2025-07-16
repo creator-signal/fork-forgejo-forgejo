@@ -73,7 +73,7 @@ func AbuseReportDetails(ctx *context.Context) {
 
 	if err = setReportedContentDetails(ctx, reports[0]); err != nil {
 		if user.IsErrUserNotExist(err) || issues.IsErrCommentNotExist(err) || issues.IsErrIssueNotExist(err) || repo_model.IsErrRepoNotExist(err) {
-			ctx.Data["ContentReference"] = "Reported content no longer exists"
+			ctx.Data["ContentReference"] = ctx.Tr("admin.moderation.deleted_content_ref", reports[0].ContentType, reports[0].ContentID)
 		} else {
 			ctx.ServerError("Failed to load reported content details", err)
 			return

@@ -11,10 +11,8 @@
 			</div>
 			<div class="flex-item-main">
 				<div class="flex-item-title">
-					<a href="{{.ContentURL}}">{{.ContentReference}}</a>
-					{{if .Poster}}
-						<span> — {{.Poster}}</span>
-					{{end}}
+					{{if .ContentURL}}<a href="{{.ContentURL}}">{{.ContentReference}}</a>{{else}}<em>{{.ContentReference}}</em>{{end}}
+					{{if .Poster}}<span> — {{.Poster}}</span>{{end}}
 				</div>
 			</div>
 		</div>
