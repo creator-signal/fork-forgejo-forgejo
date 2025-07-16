@@ -81,10 +81,10 @@ func ReqHTTPUserOrInstanceSignature() func(ctx *services_context.APIContext) {
 	}
 }
 
-// ReqHTTPSignature function
-func ReqHTTPUserSignature() func(ctx *services_context.APIContext) {
-	return func(ctx *services_context.APIContext) {
-		if authenticated, err := verifyHTTPUserSignature(*ctx); err != nil {
+// ReqHTTPUserSignature function
+func ReqHTTPUserSignature() func(ctx *gitea_context.APIContext) {
+	return func(ctx *gitea_context.APIContext) {
+		if authenticated, err := verifyHTTPUserSignature(ctx); err != nil {
 			log.Warn("verifyHttpSignatures failed: %v", err)
 			ctx.Error(http.StatusBadRequest, "reqSignature", "request signature verification failed")
 		} else if !authenticated {

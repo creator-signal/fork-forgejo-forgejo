@@ -13,7 +13,7 @@ import (
 func processPersonInboxAccept(activity *ap.Activity) (ServiceResult, error) {
 	if activity.Object.GetType() != ap.FollowType {
 		log.Error("Invalid object type for Accept activity: %v", activity.Object.GetType())
-		return ServiceResult{}, NewErrNotAcceptablef("Invalid object type for Accept activity: %v", activity.Object.GetType())
+		return ServiceResult{}, NewErrNotAcceptablef("invalid object type for Accept activity: %v", activity.Object.GetType())
 	}
 
 	// We currently do not do anything here, we just drop it.

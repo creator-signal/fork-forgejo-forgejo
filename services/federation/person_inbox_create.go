@@ -25,8 +25,8 @@ func processPersonInboxCreate(ctx context.Context, user *user.User, activity *ap
 	actorURI := createAct.Actor.GetLink().String()
 	federatedBaseUser, _, _, err := findFederatedUser(ctx, actorURI)
 	if err != nil {
-		log.Error("Error finding federated user (%s): %v", actorURI, err)
-		return ServiceResult{}, NewErrNotAcceptablef("Error finding federated user: %v", err)
+		log.Error("Federated user not found (%s): %v", actorURI, err)
+		return ServiceResult{}, NewErrNotAcceptablef("federated user not found (%s): %v", actorURI, err)
 	}
 
 	federatedUserActivity, err := activities.NewFederatedUserActivity(

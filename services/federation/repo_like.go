@@ -38,12 +38,13 @@ func ProcessLikeActivity(ctx *context_service.APIContext, form any, repositoryID
 	actorURI := activity.Actor.GetID().String()
 	user, _, federationHost, err := FindOrCreateFederatedUser(ctx.Base, actorURI)
 	if err != nil {
+		log.Error("Federated user not found (%s): %v", actorURI, err)
 		ctx.Error(http.StatusNotAcceptable, "Federated user not found", err)
 		return http.StatusInternalServerError, "FindOrCreateFederatedUser", err
 	}
 
 	if !activity.IsNewer(federationHost.LatestActivity) {
-		return http.StatusNotAcceptable, "Activity out of order.", errors.New("Activity already processed")
+		return http.StatusNotAcceptable, "Activity out of order.", errors.New("activity already processed")
 	}
 
 	// parse objectID (repository)
