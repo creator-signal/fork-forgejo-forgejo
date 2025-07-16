@@ -399,16 +399,17 @@ func EndUploadBlob(ctx *context.Context) {
 		}
 		return
 	}
-	defer uploader.Close()
 
 	if ctx.Req.Body != nil {
 		if err := uploader.Append(ctx, ctx.Req.Body); err != nil {
+			uploader.Close()
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
 		}
 	}
 
 	if digest != digestFromHashSummer(uploader) {
+		uploader.Close()
 		apiErrorDefined(ctx, errDigestInvalid)
 		return
 	}
@@ -423,6 +424,7 @@ func EndUploadBlob(ctx *context.Context) {
 			Creator: ctx.Doer,
 		},
 	); err != nil {
+		uploader.Close()
 		switch err {
 		case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
 			apiError(ctx, http.StatusForbidden, err)
@@ -432,10 +434,8 @@ func EndUploadBlob(ctx *context.Context) {
 		return
 	}
 
-	// There was a strange bug: the "Close" fails with error "close .../tmp/package-upload/....: file already closed"
-	// AFAIK there should be no other "Close" call to the uploader between NewBlobUploader and this line.
-	// At least it's safe to call Close twice, so ignore the error.
-	_ = uploader.Close()
+	// Close the uploader before removing the file to ensure it's properly closed
+	uploader.Close()
 
 	if err := container_service.RemoveBlobUploadByID(ctx, uploader.ID); err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
