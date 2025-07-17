@@ -1,6 +1,6 @@
 // Copyright 2015 The Gogs Authors. All rights reserved.
 // Copyright 2019 The Gitea Authors. All rights reserved.
-// Copyright 2023 The Forgejo Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package user
@@ -12,7 +12,7 @@ import (
 	"path"
 	"strings"
 
-	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/activities"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
@@ -69,17 +69,6 @@ func userProfile(ctx *context.Context) {
 	ctx.Data["OpenGraphImageURL"] = ctx.ContextUser.AvatarLink(ctx)
 	ctx.Data["OpenGraphURL"] = ctx.ContextUser.HTMLURL()
 	ctx.Data["OpenGraphDescription"] = ctx.ContextUser.Description
-
-	// prepare heatmap data
-	if setting.Service.EnableUserHeatmap {
-		data, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
-		if err != nil {
-			ctx.ServerError("GetUserHeatmapDataByUser", err)
-			return
-		}
-		ctx.Data["HeatmapData"] = data
-		ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
-	}
 
 	profileDbRepo, profileGitRepo, profileReadmeBlob, profileClose := shared_user.FindUserProfileReadme(ctx, ctx.Doer)
 	defer profileClose()
@@ -185,10 +174,41 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 		} else {
 			ctx.Data["CardsNoneMsg"] = ctx.Tr("followers.outgoing.list.none", ctx.ContextUser.Name)
 		}
+	case "feed":
+		pagingNum = setting.UI.FeedPagingNum
+		items := make([]*activities.FederatedUserActivity, 0)
+		var count int64
+		if ctx.Doer != nil {
+			items, count, err = activities.GetFollowingFeeds(ctx,
+				ctx.Doer.ID,
+				activities.GetFollowingFeedsOptions{
+					ListOptions: db.ListOptions{
+						PageSize: pagingNum,
+						Page:     page,
+					},
+				})
+			if err != nil {
+				ctx.ServerError("GetFollowingFeeds", err)
+				return
+			}
+		}
+		ctx.Data["FollowingFeeds"] = items
+		total = int(count)
 	case "activity":
+		// prepare heatmap data
+		if setting.Service.EnableUserHeatmap {
+			data, err := activities.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
+			if err != nil {
+				ctx.ServerError("GetUserHeatmapDataByUser", err)
+				return
+			}
+			ctx.Data["HeatmapData"] = data
+			ctx.Data["HeatmapTotalContributions"] = activities.GetTotalContributionsInHeatmap(data)
+		}
+
 		date := ctx.FormString("date")
 		pagingNum = setting.UI.FeedPagingNum
-		items, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
+		items, count, err := activities.GetFeeds(ctx, activities.GetFeedsOptions{
 			RequestedUser:   ctx.ContextUser,
 			Actor:           ctx.Doer,
 			IncludePrivate:  showPrivate,
@@ -264,10 +284,12 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 
 		total = int(count)
 	case "overview":
-		if bytes, err := profileReadme.GetBlobContent(setting.UI.MaxDisplayFileSize); err != nil {
-			log.Error("failed to GetBlobContent: %v", err)
+		if rc, _, err := profileReadme.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err != nil {
+			log.Error("failed to NewTruncatedReader: %v", err)
 		} else {
-			if profileContent, err := markdown.RenderString(&markup.RenderContext{
+			defer rc.Close()
+
+			if profileContent, err := markdown.RenderReader(&markup.RenderContext{
 				Ctx:     ctx,
 				GitRepo: profileGitRepo,
 				Links: markup.Links{
@@ -280,7 +302,7 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 					BranchPath: path.Join("branch", util.PathEscapeSegments(profileDbRepo.DefaultBranch)),
 				},
 				Metas: map[string]string{"mode": "document"},
-			}, bytes); err != nil {
+			}, rc); err != nil {
 				log.Error("failed to RenderString: %v", err)
 			} else {
 				ctx.Data["ProfileReadme"] = profileContent

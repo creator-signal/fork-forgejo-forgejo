@@ -5,6 +5,7 @@ package db
 
 import (
 	"context"
+	"strconv"
 
 	"forgejo.org/models/db"
 	issue_model "forgejo.org/models/issues"
@@ -52,6 +53,7 @@ func (i *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 
 	cond := builder.NewCond()
 
+	var priorityIssueIndex int64
 	if options.Keyword != "" {
 		repoCond := builder.In("repo_id", options.RepoIDs)
 		if len(options.RepoIDs) == 1 {
@@ -71,12 +73,25 @@ func (i *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 				)),
 			),
 		)
+
+		term := options.Keyword
+		if term[0] == '#' || term[0] == '!' {
+			term = term[1:]
+		}
+		if issueID, err := strconv.ParseInt(term, 10, 64); err == nil {
+			cond = builder.Or(
+				builder.Eq{"`index`": issueID},
+				cond,
+			)
+			priorityIssueIndex = issueID
+		}
 	}
 
 	opt, err := ToDBOptions(ctx, options)
 	if err != nil {
 		return nil, err
 	}
+	opt.PriorityIssueIndex = priorityIssueIndex
 
 	// If pagesize == 0, return total count only. It's a special case for search count.
 	if options.Paginator != nil && options.Paginator.PageSize == 0 {

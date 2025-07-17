@@ -142,6 +142,72 @@
         }
       }
     },
+    "/activitypub/user-id/{user-id}/activities/{activity-id}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "activitypub"
+        ],
+        "summary": "Get a specific activity object of the user",
+        "operationId": "activitypubPersonActivityNote",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "user ID of the user",
+            "name": "user-id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "activity ID of the sought activity",
+            "name": "activity-id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActivityPub"
+          }
+        }
+      }
+    },
+    "/activitypub/user-id/{user-id}/activities/{activity-id}/activity": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "activitypub"
+        ],
+        "summary": "Get a specific activity of the user",
+        "operationId": "activitypubPersonActivity",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "user ID of the user",
+            "name": "user-id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "activity ID of the sought activity",
+            "name": "activity-id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActivityPub"
+          }
+        }
+      }
+    },
     "/activitypub/user-id/{user-id}/inbox": {
       "post": {
         "produces": [
@@ -162,8 +228,37 @@
           }
         ],
         "responses": {
-          "204": {
+          "202": {
             "$ref": "#/responses/empty"
+          }
+        }
+      }
+    },
+    "/activitypub/user-id/{user-id}/outbox": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "activitypub"
+        ],
+        "summary": "List the user's recorded activity",
+        "operationId": "activitypubPersonFeed",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "user ID of the user",
+            "name": "user-id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/PersonFeed"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
           }
         }
       }
@@ -4524,6 +4619,24 @@
             "description": "Number of items per page",
             "name": "limit",
             "in": "query"
+          },
+          {
+            "enum": [
+              "relevance",
+              "latest",
+              "oldest",
+              "recentupdate",
+              "leastupdate",
+              "mostcomment",
+              "leastcomment",
+              "nearduedate",
+              "farduedate"
+            ],
+            "type": "string",
+            "default": "latest",
+            "description": "Type of sort",
+            "name": "sort",
+            "in": "query"
           }
         ],
         "responses": {
@@ -4900,6 +5013,148 @@
         "responses": {
           "200": {
             "$ref": "#/responses/RegistrationToken"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/actions/runs": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "List a repository's action runs",
+        "operationId": "ListActionRuns",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results, default maximum page size is 50",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Returns workflow run triggered by the specified events. For example, `push`, `pull_request` or `workflow_dispatch`.",
+            "name": "event",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "enum": [
+                "unknown",
+                "waiting",
+                "running",
+                "success",
+                "failure",
+                "cancelled",
+                "skipped",
+                "blocked"
+              ],
+              "type": "string"
+            },
+            "description": "Returns workflow runs with the check run status or conclusion that is specified. For example, a conclusion can be success or a status can be in_progress. Only Forgejo Actions can set a status of waiting, pending, or requested.\n",
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "Returns the workflow run associated with the run number.\n",
+            "name": "run_number",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only returns workflow runs that are associated with the specified head_sha.",
+            "name": "head_sha",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActionRunList"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/actions/runs/{run_id}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Get an action run",
+        "operationId": "ActionRun",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the action run",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActionRun"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
           }
         }
       }
@@ -6755,6 +7010,9 @@
           "404": {
             "$ref": "#/responses/notFound"
           },
+          "409": {
+            "$ref": "#/responses/conflict"
+          },
           "413": {
             "$ref": "#/responses/quotaExceeded"
           },
@@ -6868,6 +7126,9 @@
           "404": {
             "$ref": "#/responses/notFound"
           },
+          "409": {
+            "$ref": "#/responses/conflict"
+          },
           "413": {
             "$ref": "#/responses/quotaExceeded"
           },
@@ -6931,6 +7192,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "409": {
+            "$ref": "#/responses/conflict"
           },
           "413": {
             "$ref": "#/responses/quotaExceeded"
@@ -7465,6 +7729,49 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/git/blobs": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Gets multiplbe blobs of a repository.",
+        "operationId": "GetBlobs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "a comma separated list of blob-sha (mind the overall URL-length limit of ~2,083 chars)",
+            "name": "shas",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/GitBlobList"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/git/blobs/{sha}": {
       "get": {
         "produces": [
@@ -7492,7 +7799,7 @@
           },
           {
             "type": "string",
-            "description": "sha of the commit",
+            "description": "sha of the blob to retrieve",
             "name": "sha",
             "in": "path",
             "required": true
@@ -7500,7 +7807,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/GitBlobResponse"
+            "$ref": "#/responses/GitBlob"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -12800,6 +13107,7 @@
             "enum": [
               "oldest",
               "recentupdate",
+              "recentclose",
               "leastupdate",
               "mostcomment",
               "leastcomment",
@@ -18234,6 +18542,38 @@
         }
       }
     },
+    "/user/activitypub/follow": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Follow a remote activitypub account",
+        "operationId": "userCurrentActivityPubFollow",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/APRemoteFollowOption"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/user/applications/oauth2": {
       "get": {
         "produces": [
@@ -20894,6 +21234,38 @@
       },
       "x-go-package": "forgejo.org/services/context"
     },
+    "APPersonFollowItem": {
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "x-go-name": "ActorID"
+        },
+        "note": {
+          "type": "string",
+          "x-go-name": "Note"
+        },
+        "original_item": {
+          "type": "string",
+          "x-go-name": "OriginalItem"
+        },
+        "original_url": {
+          "type": "string",
+          "x-go-name": "OriginalURL"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "APRemoteFollowOption": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "x-go-name": "Target"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "AccessToken": {
       "type": "object",
       "title": "AccessToken represents an API access token.",
@@ -20921,6 +21293,129 @@
         "token_last_eight": {
           "type": "string",
           "x-go-name": "TokenLastEight"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionRun": {
+      "description": "ActionRun represents an action run",
+      "type": "object",
+      "properties": {
+        "ScheduleID": {
+          "description": "the cron id for the schedule trigger",
+          "type": "integer",
+          "format": "int64"
+        },
+        "approved_by": {
+          "description": "who approved this action run",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ApprovedBy"
+        },
+        "commit_sha": {
+          "description": "the commit sha the action run ran on",
+          "type": "string",
+          "x-go-name": "CommitSHA"
+        },
+        "created": {
+          "description": "when the action run was created",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
+        "duration": {
+          "$ref": "#/definitions/Duration"
+        },
+        "event": {
+          "description": "the webhook event that causes the workflow to run",
+          "type": "string",
+          "x-go-name": "Event"
+        },
+        "event_payload": {
+          "description": "the payload of the webhook event that causes the workflow to run",
+          "type": "string",
+          "x-go-name": "EventPayload"
+        },
+        "html_url": {
+          "description": "the url of this action run",
+          "type": "string",
+          "x-go-name": "HTMLURL"
+        },
+        "id": {
+          "description": "the action run id",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "index_in_repo": {
+          "description": "a unique number for each run of a repository",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Index"
+        },
+        "is_fork_pull_request": {
+          "description": "If this is triggered by a PR from a forked repository or an untrusted user, we need to check if it is approved and limit permissions when running the workflow.",
+          "type": "boolean",
+          "x-go-name": "IsForkPullRequest"
+        },
+        "is_ref_deleted": {
+          "description": "has the commit/tag/… the action run ran on been deleted",
+          "type": "boolean",
+          "x-go-name": "IsRefDeleted"
+        },
+        "need_approval": {
+          "description": "may need approval if it's a fork pull request",
+          "type": "boolean",
+          "x-go-name": "NeedApproval"
+        },
+        "prettyref": {
+          "description": "the commit/tag/… the action run ran on",
+          "type": "string",
+          "x-go-name": "PrettyRef"
+        },
+        "repository": {
+          "$ref": "#/definitions/Repository"
+        },
+        "started": {
+          "description": "when the action run was started",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Started"
+        },
+        "status": {
+          "description": "the current status of this run",
+          "type": "string",
+          "x-go-name": "Status"
+        },
+        "stopped": {
+          "description": "when the action run was stopped",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Stopped"
+        },
+        "title": {
+          "description": "the action run's title",
+          "type": "string",
+          "x-go-name": "Title"
+        },
+        "trigger_event": {
+          "description": "the trigger event defined in the `on` configuration of the triggered workflow",
+          "type": "string",
+          "x-go-name": "TriggerEvent"
+        },
+        "trigger_user": {
+          "$ref": "#/definitions/User"
+        },
+        "updated": {
+          "description": "when the action run was last updated",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Updated"
+        },
+        "workflow_id": {
+          "description": "the name of workflow file",
+          "type": "string",
+          "x-go-name": "WorkflowID"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -22383,10 +22878,6 @@
           },
           "x-go-name": "Events"
         },
-        "is_system_webhook": {
-          "type": "boolean",
-          "x-go-name": "IsSystemWebhook"
-        },
         "type": {
           "type": "string",
           "enum": [
@@ -23414,6 +23905,12 @@
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
+    },
+    "Duration": {
+      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "time"
     },
     "EditAttachmentOptions": {
       "description": "EditAttachmentOptions options for editing attachments",
@@ -24713,8 +25210,8 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
-    "GitBlobResponse": {
-      "description": "GitBlobResponse represents a git blob",
+    "GitBlob": {
+      "description": "GitBlob represents a git blob",
       "type": "object",
       "properties": {
         "content": {
@@ -25377,6 +25874,25 @@
         "url": {
           "type": "string",
           "x-go-name": "URL"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ListActionRunResponse": {
+      "description": "ListActionRunResponse return a list of ActionRun",
+      "type": "object",
+      "properties": {
+        "total_count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalCount"
+        },
+        "workflow_runs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionRun"
+          },
+          "x-go-name": "Entries"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -28585,6 +29101,18 @@
         }
       }
     },
+    "ActionRun": {
+      "description": "ActionRun",
+      "schema": {
+        "$ref": "#/definitions/ActionRun"
+      }
+    },
+    "ActionRunList": {
+      "description": "ActionRunList",
+      "schema": {
+        "$ref": "#/definitions/ListActionRunResponse"
+      }
+    },
     "ActionVariable": {
       "description": "ActionVariable",
       "schema": {
@@ -28901,10 +29429,19 @@
         "$ref": "#/definitions/GeneralUISettings"
       }
     },
-    "GitBlobResponse": {
-      "description": "GitBlobResponse",
+    "GitBlob": {
+      "description": "GitBlob",
       "schema": {
-        "$ref": "#/definitions/GitBlobResponse"
+        "$ref": "#/definitions/GitBlob"
+      }
+    },
+    "GitBlobList": {
+      "description": "GitBlobList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/GitBlob"
+        }
       }
     },
     "GitHook": {
@@ -29163,6 +29700,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Package"
+        }
+      }
+    },
+    "PersonFeed": {
+      "description": "Personfeed",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/APPersonFollowItem"
         }
       }
     },

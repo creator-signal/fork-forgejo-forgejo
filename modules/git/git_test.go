@@ -14,7 +14,6 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/util"
 
-	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -116,13 +115,6 @@ func TestSyncConfigGPGFormat(t *testing.T) {
 		require.NoError(t, syncGitConfig())
 		assert.True(t, gitConfigContains("[gpg]"))
 		assert.True(t, gitConfigContains("format = ssh"))
-
-		t.Run("Old version", func(t *testing.T) {
-			oldVersion, err := version.NewVersion("2.33.0")
-			require.NoError(t, err)
-			defer test.MockVariableValue(&GitVersion, oldVersion)()
-			require.ErrorContains(t, syncGitConfig(), "ssh signing requires Git >= 2.34.0")
-		})
 
 		t.Run("No ssh-keygen binary", func(t *testing.T) {
 			require.NoError(t, r.Remove("ssh-keygen"))

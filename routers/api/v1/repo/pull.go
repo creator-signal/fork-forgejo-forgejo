@@ -71,7 +71,7 @@ func ListPullRequests(ctx *context.APIContext) {
 	//   in: query
 	//   description: Type of sort
 	//   type: string
-	//   enum: [oldest, recentupdate, leastupdate, mostcomment, leastcomment, priority]
+	//   enum: [oldest, recentupdate, recentclose, leastupdate, mostcomment, leastcomment, priority]
 	// - name: milestone
 	//   in: query
 	//   description: ID of the milestone
@@ -1084,7 +1084,6 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 		err        error
 	)
 
-	// If there is no head repository, it means pull request between same repository.
 	headInfos := strings.Split(form.Head, ":")
 	if len(headInfos) == 1 {
 		isSameRepo = true
@@ -1094,7 +1093,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 		headUser, err = user_model.GetUserByName(ctx, headInfos[0])
 		if err != nil {
 			if user_model.IsErrUserNotExist(err) {
-				ctx.NotFound("GetUserByName")
+				ctx.NotFound(fmt.Errorf("the owner %s does not exist", headInfos[0]))
 			} else {
 				ctx.Error(http.StatusInternalServerError, "GetUserByName", err)
 			}
@@ -1104,7 +1103,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 		// The head repository can also point to the same repo
 		isSameRepo = ctx.Repo.Owner.ID == headUser.ID
 	} else {
-		ctx.NotFound()
+		ctx.NotFound(fmt.Errorf("the head part of {basehead} %s must contain zero or one colon (:) but contains %d", form.Head, len(headInfos)-1))
 		return nil, nil, nil, "", ""
 	}
 
@@ -1116,16 +1115,10 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	baseIsBranch := ctx.Repo.GitRepo.IsBranchExist(baseBranch)
 	baseIsTag := ctx.Repo.GitRepo.IsTagExist(baseBranch)
 	if !baseIsCommit && !baseIsBranch && !baseIsTag {
-		// Check for short SHA usage
-		if baseCommit, _ := ctx.Repo.GitRepo.GetCommit(baseBranch); baseCommit != nil {
-			baseBranch = baseCommit.ID.String()
-		} else {
-			ctx.NotFound("BaseNotExist")
-			return nil, nil, nil, "", ""
-		}
+		ctx.NotFound(fmt.Errorf("could not find '%s' to be a commit, branch or tag in the base repository %s/%s", baseBranch, baseRepo.Owner.Name, baseRepo.Name))
+		return nil, nil, nil, "", ""
 	}
 
-	// Check if current user has fork of repository or in the same repository.
 	headRepo := repo_model.GetForkedRepo(ctx, headUser.ID, baseRepo.ID)
 	if headRepo == nil && !isSameRepo {
 		err := baseRepo.GetBaseRepo(ctx)
@@ -1134,13 +1127,11 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 			return nil, nil, nil, "", ""
 		}
 
-		// Check if baseRepo's base repository is the same as headUser's repository.
 		if baseRepo.BaseRepo == nil || baseRepo.BaseRepo.OwnerID != headUser.ID {
 			log.Trace("parseCompareInfo[%d]: does not have fork or in same repository", baseRepo.ID)
-			ctx.NotFound("GetBaseRepo")
+			ctx.NotFound(fmt.Errorf("%[1]s does not have a fork of %[2]s/%[3]s and %[2]s/%[3]s is not a fork of a repository from %[1]s", headUser.Name, baseRepo.Owner.Name, baseRepo.Name))
 			return nil, nil, nil, "", ""
 		}
-		// Assign headRepo so it can be used below.
 		headRepo = baseRepo.BaseRepo
 	}
 
@@ -1202,21 +1193,20 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	}
 
 	// Check if head branch is valid.
-	headIsCommit := ctx.Repo.GitRepo.IsCommitExist(headBranch)
-	headIsBranch := ctx.Repo.GitRepo.IsBranchExist(headBranch)
-	headIsTag := ctx.Repo.GitRepo.IsTagExist(headBranch)
+	headIsCommit := headGitRepo.IsCommitExist(headBranch)
+	headIsBranch := headGitRepo.IsBranchExist(headBranch)
+	headIsTag := headGitRepo.IsTagExist(headBranch)
 	if !headIsCommit && !headIsBranch && !headIsTag {
-		// Check if headBranch is short sha commit hash
-		if headCommit, _ := headGitRepo.GetCommit(headBranch); headCommit != nil {
-			headBranch = headCommit.ID.String()
-		} else {
-			headGitRepo.Close()
-			ctx.NotFound("IsRefExist", nil)
-			return nil, nil, nil, "", ""
-		}
+		ctx.NotFound(fmt.Errorf("could not find '%s' to be a commit, branch or tag in the head repository %s/%s", headBranch, headRepo.Owner.Name, headRepo.Name))
+		return nil, nil, nil, "", ""
 	}
 
 	headBranchRef := headBranch
+	if headIsBranch {
+		headBranchRef = git.BranchPrefix + headBranch
+	} else if headIsTag {
+		headBranchRef = git.TagPrefix + headBranch
+	}
 
 	compareInfo, err := headGitRepo.GetCompareInfo(repo_model.RepoPath(baseRepo.Owner.Name, baseRepo.Name), baseBranchRef, headBranchRef, false, false)
 	if err != nil {

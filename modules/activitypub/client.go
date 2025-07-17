@@ -66,6 +66,11 @@ type ClientFactory struct {
 
 // NewClient function
 func NewClientFactory() (c *ClientFactory, err error) {
+	return NewClientFactoryWithTimeout(5 * time.Second)
+}
+
+// NewClient function
+func NewClientFactoryWithTimeout(timeout time.Duration) (c *ClientFactory, err error) {
 	if err = containsRequiredHTTPHeaders(http.MethodGet, setting.Federation.GetHeaders); err != nil {
 		return nil, err
 	} else if err = containsRequiredHTTPHeaders(http.MethodPost, setting.Federation.PostHeaders); err != nil {
@@ -77,7 +82,7 @@ func NewClientFactory() (c *ClientFactory, err error) {
 			Transport: &http.Transport{
 				Proxy: proxy.Proxy(),
 			},
-			Timeout: 5 * time.Second,
+			Timeout: timeout,
 		},
 		algs:        setting.HttpsigAlgs,
 		digestAlg:   httpsig.DigestAlgorithm(setting.Federation.DigestAlgorithm),
@@ -89,6 +94,7 @@ func NewClientFactory() (c *ClientFactory, err error) {
 
 type APClientFactory interface {
 	WithKeys(ctx context.Context, user *user_model.User, pubID string) (APClient, error)
+	WithKeysDirect(ctx context.Context, privateKey, pubID string) (APClient, error)
 }
 
 // Client struct
@@ -103,12 +109,8 @@ type Client struct {
 }
 
 // NewRequest function
-func (cf *ClientFactory) WithKeys(ctx context.Context, user *user_model.User, pubID string) (APClient, error) {
-	priv, err := GetPrivateKey(ctx, user)
-	if err != nil {
-		return nil, err
-	}
-	privPem, _ := pem.Decode([]byte(priv))
+func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID string) (APClient, error) {
+	privPem, _ := pem.Decode([]byte(privateKey))
 	privParsed, err := x509.ParsePKCS1PrivateKey(privPem.Bytes)
 	if err != nil {
 		return nil, err
@@ -124,6 +126,14 @@ func (cf *ClientFactory) WithKeys(ctx context.Context, user *user_model.User, pu
 		pubID:       pubID,
 	}
 	return &c, nil
+}
+
+func (cf *ClientFactory) WithKeys(ctx context.Context, user *user_model.User, pubID string) (APClient, error) {
+	priv, err := GetPrivateKey(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	return cf.WithKeysDirect(ctx, priv, pubID)
 }
 
 // NewRequest function
@@ -149,12 +159,14 @@ func (c *Client) Post(b []byte, to string) (resp *http.Response, err error) {
 		return nil, err
 	}
 
-	signer, _, err := httpsig.NewSigner(c.algs, c.digestAlg, c.postHeaders, httpsig.Signature, httpsigExpirationTime)
-	if err != nil {
-		return nil, err
-	}
-	if err := signer.SignRequest(c.priv, c.pubID, req, b); err != nil {
-		return nil, err
+	if c.pubID != "" {
+		signer, _, err := httpsig.NewSigner(c.algs, c.digestAlg, c.postHeaders, httpsig.Signature, httpsigExpirationTime)
+		if err != nil {
+			return nil, err
+		}
+		if err := signer.SignRequest(c.priv, c.pubID, req, b); err != nil {
+			return nil, err
+		}
 	}
 
 	resp, err = c.client.Do(req)
@@ -167,12 +179,15 @@ func (c *Client) Get(to string) (resp *http.Response, err error) {
 	if req, err = c.newRequest(http.MethodGet, nil, to); err != nil {
 		return nil, err
 	}
-	signer, _, err := httpsig.NewSigner(c.algs, c.digestAlg, c.getHeaders, httpsig.Signature, httpsigExpirationTime)
-	if err != nil {
-		return nil, err
-	}
-	if err := signer.SignRequest(c.priv, c.pubID, req, nil); err != nil {
-		return nil, err
+
+	if c.pubID != "" {
+		signer, _, err := httpsig.NewSigner(c.algs, c.digestAlg, c.getHeaders, httpsig.Signature, httpsigExpirationTime)
+		if err != nil {
+			return nil, err
+		}
+		if err := signer.SignRequest(c.priv, c.pubID, req, nil); err != nil {
+			return nil, err
+		}
 	}
 
 	resp, err = c.client.Do(req)

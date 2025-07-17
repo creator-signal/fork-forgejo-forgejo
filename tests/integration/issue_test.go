@@ -629,7 +629,12 @@ func TestIssueCommentAttachment(t *testing.T) {
 	assert.NotEqual(t, 0, id)
 
 	req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/comments/%d/attachments", "user2", "repo1", id))
-	session.MakeRequest(t, req, http.StatusOK)
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	var attachments []*api.WebAttachment
+	DecodeJSON(t, resp, &attachments)
+	assert.Len(t, attachments, 1)
+	assert.Equal(t, attachments[0].UUID, uuid)
+	assert.Equal(t, "image/png", attachments[0].MimeType)
 
 	// Using the ID of a comment that does not belong to the repository must fail
 	req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/comments/%d/attachments", "user5", "repo4", id))
@@ -1350,8 +1355,6 @@ body:
 
 func TestIssueUnsubscription(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
-		defer tests.PrepareTestEnv(t)()
-
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
 			AutoInit: optional.Some(false),
@@ -1436,6 +1439,47 @@ func TestIssueCount(t *testing.T) {
 
 	allCount := htmlDoc.doc.Find("a[data-test-name='all-issue-count']").Text()
 	assert.Contains(t, allCount, "2\u00a0All")
+}
+
+func TestIssueDefaultValues(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	links := []string{"/user2/repo1/issues", "/user2/repo1/pulls"}
+	values := []url.Values{
+		{
+			"type": {"created_by"},
+		},
+		{
+			"poster": {"1"},
+		},
+		{
+			"sort": {"latest"},
+		},
+		{
+			"type":   {"all"},
+			"sort":   {"latest"},
+			"poster": {"1"},
+		},
+		{
+			"type":   {"assigned"},
+			"sort":   {"oldest"},
+			"poster": {"1"},
+		},
+	}
+
+	for _, link := range links {
+		t.Run(link[13:], func(t *testing.T) {
+			for _, value := range values {
+				req := NewRequestf(t, "GET", "%s?%s", link, value.Encode())
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				for name := range value {
+					assert.Equal(t, value.Get(name), htmlDoc.GetInputValueByName(name))
+				}
+			}
+		})
+	}
 }
 
 func TestIssuePostersSearch(t *testing.T) {

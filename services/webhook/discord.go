@@ -325,6 +325,12 @@ func (d discordConvertor) Package(p *api.PackagePayload) (DiscordPayload, error)
 	return d.createPayload(p.Sender, text, "", p.Package.HTMLURL, color), nil
 }
 
+func (d discordConvertor) Action(p *api.ActionPayload) (DiscordPayload, error) {
+	text, color := getActionPayloadInfo(p, noneLinkFormatter)
+
+	return d.createPayload(p.Run.TriggerUser, text, "", p.Run.HTMLURL, color), nil
+}
+
 var _ shared.PayloadConvertor[DiscordPayload] = discordConvertor{}
 
 func (discordHandler) NewRequest(ctx context.Context, w *webhook_model.Webhook, t *webhook_model.HookTask) (*http.Request, []byte, error) {
@@ -344,7 +350,7 @@ func parseHookPullRequestEventType(event webhook_module.HookEventType) (string, 
 	case webhook_module.HookEventPullRequestReviewApproved:
 		return "approved", nil
 	case webhook_module.HookEventPullRequestReviewRejected:
-		return "rejected", nil
+		return "requested changes", nil
 	case webhook_module.HookEventPullRequestReviewComment:
 		return "comment", nil
 	default:

@@ -92,6 +92,7 @@ import (
 	_ "forgejo.org/routers/api/v1/swagger" // for swagger generation
 
 	"code.forgejo.org/go-chi/binding"
+	ap "github.com/go-ap/activitypub"
 )
 
 func sudo() func(ctx *context.APIContext) {
@@ -826,24 +827,27 @@ func Routes() *web.Route {
 		if setting.Federation.Enabled {
 			m.Get("/nodeinfo", misc.NodeInfo)
 			m.Group("/activitypub", func() {
-				// deprecated, remove in 1.20, use /user-id/{user-id} instead
-				m.Group("/user/{username}", func() {
-					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Person)
-					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.PersonInbox)
-				}, context.UserAssignmentAPI(), checkTokenPublicOnly())
 				m.Group("/user-id/{user-id}", func() {
-					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Person)
-					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.PersonInbox)
+					m.Get("", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.Person)
+					m.Post("/inbox",
+						activitypub.ReqHTTPUserSignature(),
+						bind(ap.Activity{}),
+						activitypub.PersonInbox)
+					m.Group("/activities/{activity-id}", func() {
+						m.Get("", activitypub.PersonActivityNote)
+						m.Get("/activity", activitypub.PersonActivity)
+					})
+					m.Get("/outbox", activitypub.ReqHTTPUserSignature(), activitypub.PersonFeed)
 				}, context.UserIDAssignmentAPI(), checkTokenPublicOnly())
 				m.Group("/actor", func() {
 					m.Get("", activitypub.Actor)
-					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.ActorInbox)
+					m.Post("/inbox", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.ActorInbox)
 				})
 				m.Group("/repository-id/{repository-id}", func() {
-					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Repository)
+					m.Get("", activitypub.ReqHTTPUserSignature(), activitypub.Repository)
 					m.Post("/inbox",
 						bind(forgefed.ForgeLike{}),
-						activitypub.ReqHTTPSignature(),
+						activitypub.ReqHTTPUserSignature(),
 						activitypub.RepositoryInbox)
 				}, context.RepositoryIDAssignmentAPI())
 			}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryActivityPub))
@@ -978,6 +982,11 @@ func Routes() *web.Route {
 					m.Delete("", user.Unfollow)
 				}, context.UserAssignmentAPI())
 			})
+			if setting.Federation.Enabled {
+				m.Group("/activitypub", func() {
+					m.Post("/follow", bind(api.APRemoteFollowOption{}), user.ActivityPubFollow)
+				})
+			}
 
 			// (admin:public_key scope)
 			m.Group("/keys", func() {
@@ -1172,6 +1181,10 @@ func Routes() *web.Route {
 				}, reqToken(), reqAdmin())
 				m.Group("/actions", func() {
 					m.Get("/tasks", repo.ListActionTasks)
+					m.Group("/runs", func() {
+						m.Get("", repo.ListActionRuns)
+						m.Get("/{run_id}", repo.GetActionRun)
+					})
 
 					m.Group("/workflows", func() {
 						m.Group("/{workflowname}", func() {
@@ -1306,6 +1319,7 @@ func Routes() *web.Route {
 					m.Get("/refs", repo.GetGitAllRefs)
 					m.Get("/refs/*", repo.GetGitRefs)
 					m.Get("/trees/{sha}", repo.GetTree)
+					m.Get("/blobs", repo.GetBlobs)
 					m.Get("/blobs/{sha}", repo.GetBlob)
 					m.Get("/tags/{sha}", repo.GetAnnotatedTag)
 					m.Group("/notes/{sha}", func() {

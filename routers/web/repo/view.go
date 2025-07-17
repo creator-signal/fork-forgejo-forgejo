@@ -228,7 +228,7 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 	n, _ := util.ReadAtMost(dataRc, buf)
 	buf = buf[:n]
 
-	st := typesniffer.DetectContentType(buf)
+	st := typesniffer.DetectContentType(buf, blob.Name())
 	isTextFile := st.IsText()
 
 	// FIXME: what happens when README file is an image?
@@ -262,7 +262,7 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 	}
 	buf = buf[:n]
 
-	st = typesniffer.DetectContentType(buf)
+	st = typesniffer.DetectContentType(buf, blob.Name())
 
 	return buf, dataRc, &fileInfo{st.IsText(), true, meta.Size, &meta.Pointer, st}, nil
 }
@@ -369,9 +369,6 @@ func loadLatestCommitData(ctx *context.Context, latestCommit *git.Commit) bool {
 		if err != nil {
 			log.Error("GetLatestCommitStatus: %v", err)
 		}
-		if !ctx.Repo.CanRead(unit_model.TypeActions) {
-			git_model.CommitStatusesHideActionsURL(ctx, statuses)
-		}
 
 		ctx.Data["LatestCommitStatus"] = git_model.CalcCommitStatus(statuses)
 		ctx.Data["LatestCommitStatuses"] = statuses
@@ -442,8 +439,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["FileError"] = ctx.Locale.Tr("actions.runs.invalid_workflow_helper", workFlowErr.Error())
 		}
 	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS"}, ctx.Repo.TreePath) {
-		if data, err := blob.GetBlobContent(setting.UI.MaxDisplayFileSize); err == nil {
-			_, warnings := issue_model.GetCodeOwnersFromContent(ctx, data)
+		if rc, size, err := blob.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err == nil {
+			_, warnings := issue_model.GetCodeOwnersFromReader(ctx, rc, size > setting.UI.MaxDisplayFileSize)
 			if len(warnings) > 0 {
 				ctx.Data["FileWarning"] = strings.Join(warnings, "\n")
 			}
@@ -627,6 +624,20 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		ctx.Data["IsVideoFile"] = true
 	case fInfo.st.IsAudio():
 		ctx.Data["IsAudioFile"] = true
+	case fInfo.st.Is3DModel():
+		ctx.Data["Is3DModelFile"] = true
+		switch {
+		case fInfo.st.IsGLB():
+			ctx.Data["IsGLBFile"] = true
+		case fInfo.st.IsSTL():
+			ctx.Data["IsSTLFile"] = true
+		case fInfo.st.IsGLTF():
+			ctx.Data["IsGLTFFile"] = true
+		case fInfo.st.IsOBJ():
+			ctx.Data["IsOBJFile"] = true
+		case fInfo.st.Is3MF():
+			ctx.Data["Is3MFFile"] = true
+		}
 	case fInfo.st.IsImage() && (setting.UI.SVG.Enabled || !fInfo.st.IsSvgImage()):
 		ctx.Data["IsImageFile"] = true
 		ctx.Data["CanCopyContent"] = true

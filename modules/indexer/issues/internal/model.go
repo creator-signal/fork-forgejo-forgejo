@@ -14,6 +14,7 @@ type IndexerData struct {
 	ID       int64 `json:"id"`
 	RepoID   int64 `json:"repo_id"`
 	IsPublic bool  `json:"is_public"` // If the repo is public
+	Index    int64 `json:"index"`
 
 	// Fields used for keyword searching
 	Title    string   `json:"title"`
@@ -74,8 +75,9 @@ type SearchResult struct {
 type SearchOptions struct {
 	Keyword string // keyword to search
 
-	RepoIDs   []int64 // repository IDs which the issues belong to
-	AllPublic bool    // if include all public repositories
+	RepoIDs        []int64                // repository IDs which the issues belong to
+	AllPublic      bool                   // if include all public repositories
+	PriorityRepoID optional.Option[int64] // issues from this repository will be prioritized when SortByScore
 
 	IsPull   optional.Option[bool] // if the issues is a pull request
 	IsClosed optional.Option[bool] // if the issues is closed

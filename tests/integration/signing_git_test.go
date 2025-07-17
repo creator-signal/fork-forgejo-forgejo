@@ -105,13 +105,14 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 		defer tests.PrintCurrentTest(t)()
 
 		testCtx := NewAPITestContext(t, username, "initial-unsigned"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-		t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-		t.Run("CheckMasterBranchUnsigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			assert.NotNil(t, branch.Commit)
 			assert.NotNil(t, branch.Commit.Verification)
 			assert.False(t, branch.Commit.Verification.Verified)
 			assert.Empty(t, branch.Commit.Verification.Signature)
-		}))
+		})
 		t.Run("CreateCRUDFile-Never", crudActionCreateFile(
 			t, testCtx, user, "master", "never", "unsigned-never.txt", func(t *testing.T, response api.FileResponse) {
 				assert.False(t, response.Verification.Verified)
@@ -187,25 +188,27 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			defer tests.PrintCurrentTest(t)()
 
 			testCtx := NewAPITestContext(t, username, "initial-pubkey"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-			t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-			t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+			t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				branch := doAPIGetBranch(testCtx, "master")(t)
 				require.NotNil(t, branch.Commit)
 				require.NotNil(t, branch.Commit.Verification)
 				assert.True(t, branch.Commit.Verification.Verified)
 				assert.Equal(t, "fox@example.com", branch.Commit.Verification.Signer.Email)
-			}))
+			})
 		})
 
 		t.Run("No publickey", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			testCtx := NewAPITestContext(t, "user4", "initial-no-pubkey"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-			t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-			t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+			t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				branch := doAPIGetBranch(testCtx, "master")(t)
 				require.NotNil(t, branch.Commit)
 				require.NotNil(t, branch.Commit.Verification)
 				assert.False(t, branch.Commit.Verification.Verified)
-			}))
+			})
 		})
 	})
 
@@ -222,25 +225,27 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			testCtx := NewAPITestContext(t, username, "initial-2fa"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
 			unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: user.ID})
 
-			t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-			t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+			t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				branch := doAPIGetBranch(testCtx, "master")(t)
 				require.NotNil(t, branch.Commit)
 				require.NotNil(t, branch.Commit.Verification)
 				assert.True(t, branch.Commit.Verification.Verified)
 				assert.Equal(t, "fox@example.com", branch.Commit.Verification.Signer.Email)
-			}))
+			})
 		})
 
-		t.Run("No publickey", func(t *testing.T) {
+		t.Run("No 2fa", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			testCtx := NewAPITestContext(t, "user4", "initial-no-2fa"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-			t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-			t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+			t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				branch := doAPIGetBranch(testCtx, "master")(t)
 				require.NotNil(t, branch.Commit)
 				require.NotNil(t, branch.Commit.Verification)
 				assert.False(t, branch.Commit.Verification.Verified)
-			}))
+			})
 		})
 	})
 
@@ -249,13 +254,14 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 		setting.Repository.Signing.InitialCommit = []string{"always"}
 
 		testCtx := NewAPITestContext(t, username, "initial-always"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-		t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
-		t.Run("CheckMasterBranchSigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+		t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.True(t, branch.Commit.Verification.Verified)
 			assert.Equal(t, "fox@example.com", branch.Commit.Verification.Signer.Email)
-		}))
+		})
 	})
 
 	t.Run("AlwaysSign-Initial-CRUD-Never", func(t *testing.T) {
@@ -263,7 +269,7 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 		setting.Repository.Signing.CRUDActions = []string{"never"}
 
 		testCtx := NewAPITestContext(t, username, "initial-always-never"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-		t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
+		t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
 		t.Run("CreateCRUDFile-Never", crudActionCreateFile(
 			t, testCtx, user, "master", "never", "unsigned-never.txt", func(t *testing.T, response api.FileResponse) {
 				assert.False(t, response.Verification.Verified)
@@ -275,7 +281,7 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 		setting.Repository.Signing.CRUDActions = []string{"parentsigned"}
 
 		testCtx := NewAPITestContext(t, username, "initial-always-parent"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-		t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
+		t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
 		t.Run("CreateCRUDFile-ParentSigned", crudActionCreateFile(
 			t, testCtx, user, "master", "parentsigned", "signed-parent.txt", func(t *testing.T, response api.FileResponse) {
 				assert.True(t, response.Verification.Verified)
@@ -283,12 +289,71 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			}))
 	})
 
+	t.Run("AlwaysSign-Initial-CRUD-Pubkey", func(t *testing.T) {
+		setting.Repository.Signing.CRUDActions = []string{"pubkey"}
+
+		t.Run("Has publickey", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			testCtx := NewAPITestContext(t, username, "initial-always-pubkey"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+			t.Run("CreateCRUDFile-Pubkey", crudActionCreateFile(
+				t, testCtx, user, "master", "pubkey", "signed-pubkey.txt", func(t *testing.T, response api.FileResponse) {
+					assert.True(t, response.Verification.Verified)
+					assert.Equal(t, "fox@example.com", response.Verification.Signer.Email)
+				}))
+		})
+
+		t.Run("No publickey", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			testCtx := NewAPITestContext(t, "user4", "initial-always-no-pubkey"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+			t.Run("CreateCRUDFile-Pubkey", crudActionCreateFile(
+				t, testCtx, user, "master", "pubkey", "unsigned-pubkey.txt", func(t *testing.T, response api.FileResponse) {
+					assert.False(t, response.Verification.Verified)
+				}))
+		})
+	})
+
+	t.Run("AlwaysSign-Initial-CRUD-Twofa", func(t *testing.T) {
+		setting.Repository.Signing.CRUDActions = []string{"twofa"}
+
+		t.Run("Has 2fa", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			t.Cleanup(func() {
+				unittest.AssertSuccessfulDelete(t, &auth_model.WebAuthnCredential{UserID: user.ID})
+			})
+
+			testCtx := NewAPITestContext(t, username, "initial-always-twofa"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: user.ID})
+			t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+			t.Run("CreateCRUDFile-Twofa", crudActionCreateFile(
+				t, testCtx, user, "master", "twofa", "signed-twofa.txt", func(t *testing.T, response api.FileResponse) {
+					assert.True(t, response.Verification.Verified)
+					assert.Equal(t, "fox@example.com", response.Verification.Signer.Email)
+				}))
+		})
+
+		t.Run("No 2fa", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			testCtx := NewAPITestContext(t, "user4", "initial-always-no-twofa"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+			t.Run("CreateCRUDFile-Pubkey", crudActionCreateFile(
+				t, testCtx, user, "master", "twofa", "unsigned-twofa.txt", func(t *testing.T, response api.FileResponse) {
+					assert.False(t, response.Verification.Verified)
+				}))
+		})
+	})
+
 	t.Run("AlwaysSign-Initial-CRUD-Always", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 		setting.Repository.Signing.CRUDActions = []string{"always"}
 
 		testCtx := NewAPITestContext(t, username, "initial-always-always"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-		t.Run("CreateRepository", doAPICreateRepository(testCtx, false, objectFormat))
+		t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
 		t.Run("CreateCRUDFile-Always", crudActionCreateFile(
 			t, testCtx, user, "master", "always", "signed-always.txt", func(t *testing.T, response api.FileResponse) {
 				assert.True(t, response.Verification.Verified)
@@ -306,12 +371,13 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			require.NoError(t, err)
 			t.Run("MergePR", doAPIMergePullRequest(testCtx, testCtx.Username, testCtx.Reponame, pr.Index))
 		})
-		t.Run("CheckMasterBranchUnsigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.False(t, branch.Commit.Verification.Verified)
 			assert.Empty(t, branch.Commit.Verification.Signature)
-		}))
+		})
 	})
 
 	t.Run("BaseSignedMerging", func(t *testing.T) {
@@ -324,12 +390,13 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			require.NoError(t, err)
 			t.Run("MergePR", doAPIMergePullRequest(testCtx, testCtx.Username, testCtx.Reponame, pr.Index))
 		})
-		t.Run("CheckMasterBranchUnsigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.False(t, branch.Commit.Verification.Verified)
 			assert.Empty(t, branch.Commit.Verification.Signature)
-		}))
+		})
 	})
 
 	t.Run("CommitsSignedMerging", func(t *testing.T) {
@@ -342,11 +409,12 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			require.NoError(t, err)
 			t.Run("MergePR", doAPIMergePullRequest(testCtx, testCtx.Username, testCtx.Reponame, pr.Index))
 		})
-		t.Run("CheckMasterBranchUnsigned", doAPIGetBranch(testCtx, "master", func(t *testing.T, branch api.Branch) {
+		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.True(t, branch.Commit.Verification.Verified)
-		}))
+		})
 	})
 }
 
