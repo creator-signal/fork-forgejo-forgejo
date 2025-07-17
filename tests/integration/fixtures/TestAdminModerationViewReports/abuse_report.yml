@@ -88,7 +88,6 @@
   shadow_copy_id: null
   created_unix: 1121424000 # 2005-07-15 10:40:00
 
-
 -
   id: 9
   status: 1
@@ -98,4 +97,15 @@
   category: 2       # Spam
   remarks: This user is just spamming wherever they can.
   shadow_copy_id: null
-  created_unix: 1121424030 # 2005-07-15 10:40:00
+  created_unix: 1121424030 # 2005-07-15 10:40:30
+
+-
+  id: 10
+  status: 1
+  reporter_id: 1005 # @reporter2
+  content_type: 1   # User (users or organizations)
+  content_id: 9999  # Ghost user
+  category: 1       # Other
+  remarks: Check this spammer as soon as possible, before they delete their account.
+  shadow_copy_id: null
+  created_unix: 1121424150 # 2005-07-15 10:42:30

@@ -24,13 +24,21 @@ func testReportDetails(t *testing.T, htmlDoc *HTMLDoc, reportID, contentIcon, co
 
 	// Check content reference and URL
 	title := htmlDoc.Find("#report-" + reportID + " .flex-item-main .flex-item-title a")
-	assert.Equal(t, 1, title.Length())
+	if len(contentURL) == 0 {
+		// No URL means that the content was already deleted, so we should not find the anchor element.
+		assert.Zero(t, title.Length())
+		// Instead we should find an emphasis element.
+		title = htmlDoc.Find("#report-" + reportID + " .flex-item-main .flex-item-title em")
+		assert.Equal(t, 1, title.Length())
+		assert.Equal(t, contentRef, title.Text())
+	} else {
+		assert.Equal(t, 1, title.Length())
+		assert.Equal(t, contentRef, title.Text())
 
-	assert.Equal(t, contentRef, title.Text())
-
-	href, exists := title.Attr("href")
-	assert.True(t, exists)
-	assert.Equal(t, contentURL, href)
+		href, exists := title.Attr("href")
+		assert.True(t, exists)
+		assert.Equal(t, contentURL, href)
+	}
 
 	// Check category
 	cat := htmlDoc.Find("#report-" + reportID + " .flex-item-main .flex-items-inline .item:nth-child(3)")
@@ -77,7 +85,7 @@ func TestAdminModerationViewReports(t *testing.T) {
 			// Check how many reports are being displayed.
 			// Reports linked to the same content (type and id) should be grouped; therefore we should see only 6 instead of 9.
 			reports := htmlDoc.Find(".admin-setting-content .flex-list .flex-item.report")
-			assert.Equal(t, 6, reports.Length())
+			assert.Equal(t, 7, reports.Length())
 
 			// Check details for shown reports.
 			testReportDetails(t, htmlDoc, "1", "octicon-person", "@SPAM-services", "/SPAM-services", "Illegal content", "1")
@@ -88,6 +96,8 @@ func TestAdminModerationViewReports(t *testing.T) {
 			// #5 is combined with #6
 			testReportDetails(t, htmlDoc, "5", "octicon-comment", "contributor/first/issues/1#issuecomment-1001", "/contributor/first/issues/1#issuecomment-1001", "Malware", "2")
 			testReportDetails(t, htmlDoc, "8", "octicon-issue-opened", "contributor/first#1", "/contributor/first/issues/1", "Other violations of platform rules", "1")
+			// #10 is for a Ghost user
+			testReportDetails(t, htmlDoc, "10", "octicon-person", "Reported content with type 1 and id 9999 no longer exists", "", "Other violations of platform rules", "1")
 		})
 	})
 

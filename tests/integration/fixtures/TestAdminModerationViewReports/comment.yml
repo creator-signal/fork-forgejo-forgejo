@@ -4,8 +4,6 @@
   poster_id: 1002 # @spammer01
   issue_id: 1001 # contributor/first#1
   content: And the first spammer; check SPAM-services/spammer-Tools#1
-  content_version: 0
-  patch:
   created_unix: 1121422990 # 2005-07-15 10:23:10
 
 -
