@@ -437,11 +437,11 @@ func EndUploadBlob(ctx *context.Context) {
 		return
 	}
 
+	doClose = false
 	if err := uploader.Close(); err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	doClose = false
 
 	if err := container_service.RemoveBlobUploadByID(ctx, uploader.ID); err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
