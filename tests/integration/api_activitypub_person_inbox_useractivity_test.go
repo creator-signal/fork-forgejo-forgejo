@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"forgejo.org/models/activities"
 	auth_model "forgejo.org/models/auth"
-	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
+	"forgejo.org/services/contexttest"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,6 @@ import (
 
 // Flow of this test is documented at: https://codeberg.org/forgejo-contrib/federation/src/branch/main/doc/user-activity-following.md
 func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
@@ -47,6 +47,10 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 		localUser2Inbox := localUrl.JoinPath("/api/v1/activitypub/user-id/2/inbox").String()
 		localSession2 := loginUser(t, localUser2.LoginName)
 		localSecssion2Token := getTokenForLoggedInUser(t, localSession2, auth_model.AccessTokenScopeWriteUser)
+
+		// view own empty feed on web UI
+		feedPage := NewHTMLParser(t, localSession2.MakeRequest(t, NewRequest(t, "GET", "/user2?tab=feed"), http.StatusOK).Body)
+		feedPage.AssertElement(t, "#empty-ap-feed", true)
 
 		// follow (local follows distant)
 		req := NewRequestWithJSON(t, "POST",
@@ -70,23 +74,26 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 			localUser2URL,
 			distantNoteURL,
 		))
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
+		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
-		c, err := cf.WithKeysDirect(db.DefaultContext, mock.ApActor.PrivKey,
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
 		resp, err := c.Post(userActivity, localUser2Inbox)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-		// check user activity exists on local
+		// check whether user activity exists in local instance
 		unittest.AssertExistsAndLoadBean(t, &activities.FederatedUserActivity{NoteURL: distantNoteURL})
+
+		// view own non-empty feed on web UI
+		feedPage = NewHTMLParser(t, localSession2.MakeRequest(t, NewRequest(t, "GET", "/user2?tab=feed"), http.StatusOK).Body)
+		feedPage.AssertElement(t, "#empty-ap-feed", false)
 	})
 }
 
 func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
-	defer unittest.OverrideFixtures("tests/integration/fixtures/TestActivityPubPersonInboxNoteToDistant")()
-	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
@@ -118,9 +125,10 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 			distantUser15URL,
 			localUser2URL,
 		))
-		cf, err := activitypub.GetClientFactory(db.DefaultContext)
+		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
-		c, err := cf.WithKeysDirect(db.DefaultContext, mock.ApActor.PrivKey,
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
 		resp, err := c.Post(followActivity, localUser2Inbox)

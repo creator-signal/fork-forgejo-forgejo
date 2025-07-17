@@ -38,6 +38,7 @@ func ProcessLikeActivity(ctx *context_service.APIContext, form any, repositoryID
 	actorURI := activity.Actor.GetID().String()
 	user, _, federationHost, err := FindOrCreateFederatedUser(ctx.Base, actorURI)
 	if err != nil {
+		log.Error("Federated user not found (%s): %v", actorURI, err)
 		ctx.Error(http.StatusNotAcceptable, "Federated user not found", err)
 		return http.StatusInternalServerError, "FindOrCreateFederatedUser", err
 	}

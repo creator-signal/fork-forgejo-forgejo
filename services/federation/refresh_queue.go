@@ -73,7 +73,7 @@ func refreshSingleItem(item refreshQueueItem) error {
 
 	if federatedUser.InboxPath != refetchFederatedUser.InboxPath {
 		federatedUser.InboxPath = refetchFederatedUser.InboxPath
-		if err := federatedUser.UpdateFederatedUser(ctx); err != nil {
+		if err := user.UpdateFederatedUser(ctx, federatedUser); err != nil {
 			return err
 		}
 	}

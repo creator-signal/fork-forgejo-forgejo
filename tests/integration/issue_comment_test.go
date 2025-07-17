@@ -88,27 +88,48 @@ func TestIssueCommentChangeMilestone(t *testing.T) {
 	testIssueCommentChangeEvent(t, htmlDoc, "2000",
 		"octicon-milestone", "User One", "/user1",
 		[]string{"user1 added this to the milestone1 milestone"},
-		[]string{"/user1"})
-	// []string{"/user1", "/user2/repo1/milestone/1"})
+		[]string{"/user1", "/user2/repo1/milestone/1"})
 
 	// Modify milestone
 	testIssueCommentChangeEvent(t, htmlDoc, "2001",
 		"octicon-milestone", "User One", "/user1",
 		[]string{"user1 modified the milestone from milestone1 to milestone2"},
-		[]string{"/user1"})
-	// []string{"/user1", "/user2/repo1/milestone/1", "/user2/repo1/milestone/2"})
+		[]string{"/user1", "/user2/repo1/milestone/1", "/user2/repo1/milestone/2"})
 
 	// Remove milestone
 	testIssueCommentChangeEvent(t, htmlDoc, "2002",
 		"octicon-milestone", "User One", "/user1",
 		[]string{"user1 removed this from the milestone2 milestone"},
-		[]string{"/user1"})
-	// []string{"/user1", "/user2/repo1/milestone/2"})
+		[]string{"/user1", "/user2/repo1/milestone/2"})
 
-	// Deleted milestone
+	// Added milestone that in the meantime was deleted
 	testIssueCommentChangeEvent(t, htmlDoc, "2003",
 		"octicon-milestone", "User One", "/user1",
 		[]string{"user1 added this to the (deleted) milestone"},
+		[]string{"/user1"})
+
+	// Modified milestone - from a meantime deleted one to a valid one
+	testIssueCommentChangeEvent(t, htmlDoc, "2004",
+		"octicon-milestone", "User One", "/user1",
+		[]string{"user1 modified the milestone from (deleted) to milestone1"},
+		[]string{"/user1", "/user2/repo1/milestone/1"})
+
+	// Modified milestone - from a valid one to a meantime deleted one
+	testIssueCommentChangeEvent(t, htmlDoc, "2005",
+		"octicon-milestone", "User One", "/user1",
+		[]string{"user1 modified the milestone from milestone1 to (deleted)"},
+		[]string{"/user1", "/user2/repo1/milestone/1"})
+
+	// Modified milestone - from a meantime deleted one to a meantime deleted one
+	testIssueCommentChangeEvent(t, htmlDoc, "2006",
+		"octicon-milestone", "User One", "/user1",
+		[]string{"user1 modified the milestone from (deleted) to (deleted)"},
+		[]string{"/user1"})
+
+	// Removed milestone that in the meantime was deleted
+	testIssueCommentChangeEvent(t, htmlDoc, "2007",
+		"octicon-milestone", "User One", "/user1",
+		[]string{"user1 removed this from the (deleted) milestone"},
 		[]string{"/user1"})
 }
 
@@ -123,22 +144,19 @@ func TestIssueCommentChangeProject(t *testing.T) {
 	testIssueCommentChangeEvent(t, htmlDoc, "2010",
 		"octicon-project", "User One", "/user1",
 		[]string{"user1 added this to the First project project"},
-		[]string{"/user1"})
-	// []string{"/user1", "/user2/repo1/projects/1"})
+		[]string{"/user1", "/user2/repo1/projects/1"})
 
 	// Modify project
 	testIssueCommentChangeEvent(t, htmlDoc, "2011",
 		"octicon-project", "User One", "/user1",
 		[]string{"user1 modified the project from First project to second project"},
-		[]string{"/user1"})
-	// []string{"/user1", "/user2/repo1/projects/1", "/user2/repo1/projects/2"})
+		[]string{"/user1", "/user2/repo1/projects/1", "/user2/repo1/projects/2"})
 
 	// Remove project
 	testIssueCommentChangeEvent(t, htmlDoc, "2012",
 		"octicon-project", "User One", "/user1",
 		[]string{"user1 removed this from the second project project"},
-		[]string{"/user1"})
-	// []string{"/user1", "/user2/repo1/projects/2"})
+		[]string{"/user1", "/user2/repo1/projects/2"})
 
 	// Deleted project
 	testIssueCommentChangeEvent(t, htmlDoc, "2013",
