@@ -108,6 +108,7 @@
 
 .page-content.organization #org-info .org-title h1 {
   margin: 0;
+  font-size: 2.5rem;
 }
 
 @media (max-width: 767.98px) {
