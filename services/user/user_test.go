@@ -316,7 +316,7 @@ func TestCreateShadowCopyOnUserUpdate(t *testing.T) {
 		Pronouns:    optional.Some(newDummyValue),
 		Description: optional.Some(newDummyValue),
 	}
-	require.NoError(t, UpdateUser(db.DefaultContext, abuser, opts))
+	require.NoError(t, UpdateUser(t.Context(), abuser, opts))
 
 	// Reload the report.
 	report = unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReport{ID: report.ID})

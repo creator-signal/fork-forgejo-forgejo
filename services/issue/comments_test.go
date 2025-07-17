@@ -174,7 +174,7 @@ func TestCreateShadowCopyOnCommentUpdate(t *testing.T) {
 	// The abusive user is updating their comment.
 	oldContent := comment.Content
 	comment.Content = newCommentContent
-	require.NoError(t, issue_service.UpdateComment(db.DefaultContext, comment, 0, poster, oldContent))
+	require.NoError(t, issue_service.UpdateComment(t.Context(), comment, 0, poster, oldContent))
 
 	// Reload the report.
 	report = unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReport{ID: report.ID})
