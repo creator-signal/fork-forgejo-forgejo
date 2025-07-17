@@ -242,7 +242,7 @@ func ServeCollection(ctx *context.Context) {
 	}
 
 	if len(pd.Files) == 0 {
-		apiError(ctx, http.StatusInternalServerError, err)
+		apiError(ctx, http.StatusInternalServerError, "The package has no files attached to it. This seems to be an internal error.")
 		return
 	}
 	fileDescriptor := pd.Files[0].File
