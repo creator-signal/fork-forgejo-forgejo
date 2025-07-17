@@ -1,19 +1,19 @@
 import $ from 'jquery';
 import '../vendor/jquery.are-you-sure.js';
-import { clippie } from 'clippie';
-import { createDropzone } from './dropzone.js';
-import { showGlobalErrorMessage } from '../bootstrap.js';
-import { handleGlobalEnterQuickSubmit } from './comp/QuickSubmit.js';
-import { svg } from '../svg.js';
-import { hideElem, showElem, toggleElem, initSubmitEventPolyfill, submitEventSubmitter } from '../utils/dom.js';
-import { htmlEscape } from 'escape-goat';
-import { showTemporaryTooltip } from '../modules/tippy.js';
-import { confirmModal } from './comp/ConfirmModal.js';
-import { showErrorToast } from '../modules/toast.js';
-import { request, POST, GET } from '../modules/fetch.js';
+import {clippie} from 'clippie';
+import {createDropzone} from './dropzone.js';
+import {showGlobalErrorMessage} from '../bootstrap.js';
+import {handleGlobalEnterQuickSubmit} from './comp/QuickSubmit.js';
+import {svg} from '../svg.js';
+import {hideElem, showElem, toggleElem, initSubmitEventPolyfill, submitEventSubmitter} from '../utils/dom.js';
+import {htmlEscape} from 'escape-goat';
+import {showTemporaryTooltip} from '../modules/tippy.js';
+import {confirmModal} from './comp/ConfirmModal.js';
+import {showErrorToast} from '../modules/toast.js';
+import {request, POST, GET} from '../modules/fetch.js';
 import '../htmx.js';
 
-const { appUrl, appSubUrl, csrfToken, i18n } = window.config;
+const {appUrl, appSubUrl, csrfToken, i18n} = window.config;
 
 export function initGlobalFormDirtyLeaveConfirm() {
   // Warn users that try to leave a page after entering data into a form.
@@ -82,7 +82,7 @@ async function fetchActionDoRequest(actionElem, url, opt) {
   try {
     const resp = await request(url, opt);
     if (resp.status === 200) {
-      let { redirect } = await resp.json();
+      let {redirect} = await resp.json();
       redirect = redirect || actionElem.getAttribute('data-redirect');
       actionElem.classList.remove('dirty'); // remove the areYouSure check before reloading
       if (redirect) {
@@ -96,7 +96,7 @@ async function fetchActionDoRequest(actionElem, url, opt) {
       // the code was quite messy, sometimes the backend uses "err", sometimes it uses "error", and even "user_error"
       // but at the moment, as a new approach, we only use "errorMessage" here, backend can use JSONError() to respond.
       if (data.errorMessage) {
-        showErrorToast(data.errorMessage, { useHtmlBody: data.renderFormat === 'html' });
+        showErrorToast(data.errorMessage, {useHtmlBody: data.renderFormat === 'html'});
       } else {
         showErrorToast(`server error: ${resp.status}`);
       }
@@ -134,7 +134,7 @@ async function formFetchAction(e) {
   }
 
   let reqUrl = formActionUrl;
-  const reqOpt = { method: formMethod.toUpperCase() };
+  const reqOpt = {method: formMethod.toUpperCase()};
   if (formMethod.toLowerCase() === 'get') {
     const params = new URLSearchParams();
     for (const [key, value] of formData) {
@@ -216,7 +216,7 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
 
   const initFilePreview = (file, data, isReload = false) => {
     file.uuid = data.uuid;
-    fileUuidDict[file.uuid] = { submitted: isReload };
+    fileUuidDict[file.uuid] = {submitted: isReload};
     const input = document.createElement('input');
     input.id = data.uuid;
     input.name = 'files';
@@ -258,7 +258,7 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
 
   const dz = await createDropzone(dropzoneEl, {
     url: dropzoneEl.getAttribute('data-upload-url'),
-    headers: { 'X-Csrf-Token': csrfToken },
+    headers: {'X-Csrf-Token': csrfToken},
     maxFiles: dropzoneEl.getAttribute('data-max-file'),
     maxFilesize: dropzoneEl.getAttribute('data-max-size'),
     acceptedFiles: (['*/*', ''].includes(dropzoneEl.getAttribute('data-accepts')) ? null : dropzoneEl.getAttribute('data-accepts')),
@@ -279,7 +279,7 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
         if (disableRemovedfileEvent) return;
         if (dropzoneEl.getAttribute('data-remove-url') && !fileUuidDict[file.uuid].submitted) {
           try {
-            await POST(dropzoneEl.getAttribute('data-remove-url'), { data: new URLSearchParams({ file: file.uuid }) });
+            await POST(dropzoneEl.getAttribute('data-remove-url'), {data: new URLSearchParams({file: file.uuid})});
           } catch (error) {
             console.error(error);
           }
@@ -311,8 +311,8 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
               const imgSrc = `${dropzoneEl.getAttribute('data-link-url')}/${attachment.uuid}`;
               dz.emit('thumbnail', attachment, imgSrc);
             }
-            initFilePreview(attachment, { uuid: attachment.uuid }, true);
-            fileUuidDict[attachment.uuid] = { submitted: true };
+            initFilePreview(attachment, {uuid: attachment.uuid}, true);
+            fileUuidDict[attachment.uuid] = {submitted: true};
           }
         } catch (error) {
           console.error(error);
@@ -350,7 +350,7 @@ async function linkAction(e) {
   const url = el.getAttribute('data-url');
   const doRequest = async () => {
     el.disabled = true;
-    await fetchActionDoRequest(el, url, { method: 'POST' });
+    await fetchActionDoRequest(el, url, {method: 'POST'});
     el.disabled = false;
   };
 
@@ -361,7 +361,7 @@ async function linkAction(e) {
   }
 
   const isRisky = el.classList.contains('red') || el.classList.contains('yellow') || el.classList.contains('orange') || el.classList.contains('negative');
-  if (await confirmModal({ content: modalConfirmContent, buttonColor: isRisky ? 'orange' : 'primary' })) {
+  if (await confirmModal({content: modalConfirmContent, buttonColor: isRisky ? 'orange' : 'primary'})) {
     await doRequest();
   }
 }
@@ -405,7 +405,7 @@ export function initGlobalLinkActions() {
           }
         }
 
-        const response = await POST($this.data('url'), { data: postData });
+        const response = await POST($this.data('url'), {data: postData});
         if (response.ok) {
           const data = await response.json();
           window.location.href = data.redirect;
