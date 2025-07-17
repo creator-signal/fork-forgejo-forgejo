@@ -13,7 +13,6 @@ import (
 	"time"
 
 	packages_model "forgejo.org/models/packages"
-	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	ansible_module "forgejo.org/modules/packages/ansible"
 	"forgejo.org/modules/setting"
@@ -54,7 +53,6 @@ func AvailableApis(ctx *context.Context) {
 // UploadCollection receives a collection via HTTP POST
 // The collection is passed via the "file" multipart form element
 func UploadCollection(ctx *context.Context) {
-	// Grad the data from the "file" form element
 	file, fileHeader, err := ctx.Req.FormFile("file")
 	if err != nil {
 		apiError(ctx, http.StatusBadRequest, err)
@@ -62,19 +60,14 @@ func UploadCollection(ctx *context.Context) {
 	}
 	defer file.Close()
 
-	log.Warn("%v", fileHeader)
-
 	var receivedData io.Reader
 	// If the package is uploaded through galaxy client the data in the form is encoded as base64
 	if fileHeader.Header.Get("Content-Transfer-Encoding") == "base64" {
-		// Decode the base64 encoding of the payload and process data
 		receivedData = base64.NewDecoder(base64.StdEncoding, file)
 	} else {
-		// Just pass the data through
 		receivedData = file
 	}
 
-	// Grab the data to process it later
 	buffer, err := packages_module.CreateHashedBufferFromReader(receivedData)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
@@ -82,7 +75,6 @@ func UploadCollection(ctx *context.Context) {
 	}
 	defer buffer.Close()
 
-	// Pass the data to the ansible metadata generation
 	pck, err := ansible_module.BuildCollectionFromArchive(buffer)
 	if err != nil {
 		if errors.Is(err, util.ErrInvalidArgument) {
@@ -99,7 +91,6 @@ func UploadCollection(ctx *context.Context) {
 		return
 	}
 
-	// Actually process the data in the package system
 	_, _, err = packages_service.CreatePackageAndAddFile(
 		ctx,
 		&packages_service.PackageCreationInfo{
@@ -168,30 +159,25 @@ func ImportResult(ctx *context.Context) {
 // ListVersions returns a JSON response with a list of the available collection versions
 // as well as set of general metadata of the collection
 func ListVersions(ctx *context.Context) {
-	// Grab parameters from request url
 	packageNamespace := ctx.Params("namespace")
 	packageName := ctx.Params("name")
 
-	// Search all package versions matching the namespace and name
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypeAnsible, packageNamespace+"."+packageName)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	// Abort early if no versions have been found
 	if len(pvs) == 0 {
-		apiError(ctx, http.StatusNotFound, nil)
+		apiError(ctx, http.StatusNotFound, "Requested collection has no artifact attached to it")
 		return
 	}
 
-	// Grab the package descriptors for each package version
 	pds, err := packages_model.GetPackageDescriptors(ctx, pvs)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	// Sort all versions according to semantic versioning scheme
 	sort.Slice(pds, func(i, j int) bool {
 		return pds[i].SemVer.GreaterThan(pds[j].SemVer)
 	})
@@ -214,7 +200,6 @@ func ListVersions(ctx *context.Context) {
 		Data []AnsibleVersionsResponseData `json:"data"`
 	}
 
-	// Prepare the list with all version data
 	responseCoreData := make([]AnsibleVersionsResponseData, 0, len(pds))
 	for _, pd := range pds {
 		responseCoreData = append(responseCoreData, AnsibleVersionsResponseData{
@@ -237,12 +222,10 @@ func ListVersions(ctx *context.Context) {
 
 // ServeCollection returns a JSON object with the data of a single version of a collection.
 func ServeCollection(ctx *context.Context) {
-	// Grab parameters from request url
 	packageNamespace := ctx.Params("namespace")
 	packageName := ctx.Params("name")
 	packageVersion := ctx.Params("version")
 
-	// Grab the requested package in the right version
 	pv, err := packages_model.GetVersionByNameAndVersion(ctx, ctx.Package.Owner.ID, packages_model.TypeAnsible, packageNamespace+"."+packageName, packageVersion)
 	if err != nil {
 		if errors.Is(err, packages_model.ErrPackageNotExist) {
@@ -252,22 +235,18 @@ func ServeCollection(ctx *context.Context) {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	// Get the Package descriptor from the version
 	pd, err := packages_model.GetPackageDescriptor(ctx, pv)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	// Make sure there is a file attached to the collection
 	if len(pd.Files) == 0 {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	// Grab the file descriptor from the first attached file
 	fileDescriptor := pd.Files[0].File
 
-	// Stuctures for the desired response format
 	type AnsibleSpecificVersionResponseNamespace struct {
 		Name string  `json:"name"`
 		Hash *string `json:"metadata_sha256"`

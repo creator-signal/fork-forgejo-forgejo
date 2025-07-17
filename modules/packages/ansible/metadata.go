@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"forgejo.org/modules/json"
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
 
 	"gopkg.in/yaml.v3"
@@ -54,7 +53,7 @@ type FileManifestFile struct {
 func BuildCollectionFromArchive(r io.Reader) (*CollectionManifest, error) {
 	gzr, err := gzip.NewReader(r)
 	if err != nil {
-		return nil, err
+		return nil, util.NewSilentWrapErrorf(err, "Error creating Gzip reader for collection data")
 	}
 	defer gzr.Close()
 
@@ -70,7 +69,7 @@ func BuildCollectionFromArchive(r io.Reader) (*CollectionManifest, error) {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, util.NewSilentWrapErrorf(err, "Problem reading collection tar archive")
 		}
 		// Skip directories
 		if header.Typeflag != tar.TypeReg {
@@ -81,14 +80,14 @@ func BuildCollectionFromArchive(r io.Reader) (*CollectionManifest, error) {
 		if strings.HasSuffix(header.FileInfo().Name(), "MANIFEST.json") {
 			manifestData, err = io.ReadAll(tarReader)
 			if err != nil {
-				return nil, err
+				return nil, util.NewSilentWrapErrorf(err, "Problem reading MANIFEST.json")
 			}
 		}
 		// Grab the required ansible version from the meta/runtime.yml file
 		if strings.HasSuffix(header.Name, "meta/runtime.yml") {
 			runtimeData, err = io.ReadAll(tarReader)
 			if err != nil {
-				return nil, err
+				return nil, util.NewSilentWrapErrorf(err, "Problem reading meta/runtime.yml")
 			}
 		}
 
@@ -104,15 +103,14 @@ func BuildCollectionFromArchive(r io.Reader) (*CollectionManifest, error) {
 		return nil, ErrMissingRuntimeFile
 	}
 
-	log.Info("Building collection from gathered metadata")
 	var metadata *CollectionManifest
 	err = json.Unmarshal(manifestData, &metadata)
 	if err != nil {
-		return nil, err
+		return nil, util.NewSilentWrapErrorf(err, "Problem unmarshalling MANIFEST.json")
 	}
 	err = yaml.Unmarshal(runtimeData, &(metadata.CollectionInfo))
 	if err != nil {
-		return nil, err
+		return nil, util.NewSilentWrapErrorf(err, "Problem unmarshalling runtime.yml")
 	}
 	return metadata, nil
 }
