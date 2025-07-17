@@ -173,6 +173,18 @@ func httpBase(ctx *context.Context) *serviceHandler {
 			return nil
 		}
 
+		if ctx.Doer.MustHaveTwoFactor() {
+			hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
+			if err != nil {
+				ctx.ServerError("HasTwoFactorByUID", err)
+				return nil
+			}
+			if !hasTwoFactor {
+				ctx.PlainText(http.StatusForbidden, "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts. Enable it at: "+setting.AppURL+"/user/settings/security")
+				return nil
+			}
+		}
+
 		environ = []string{
 			repo_module.EnvRepoUsername + "=" + username,
 			repo_module.EnvRepoName + "=" + reponame,

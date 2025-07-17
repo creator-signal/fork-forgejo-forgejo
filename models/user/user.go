@@ -234,6 +234,34 @@ func GetAllAdmins(ctx context.Context) ([]*User, error) {
 	return users, db.GetEngine(ctx).OrderBy("id").Where("type = ?", UserTypeIndividual).And("is_admin = ?", true).Find(&users)
 }
 
+// MustHaveTwoFactor returns true if the user is a individual and requires 2fa
+func (u *User) MustHaveTwoFactor() bool {
+	if !u.IsIndividual() || setting.GlobalRequireTwoFactor.IsNone() {
+		return false
+	}
+
+	return setting.GlobalRequireTwoFactor.IsAll() || (u.IsAdmin && setting.GlobalRequireTwoFactor.IsAdmin())
+}
+
+// IsAccessAllowed determines whether the user is permitted to log in based on
+// their activation status, login prohibition, account type, 2FA requirement,
+// and 2FA enrollment status.
+func (u *User) IsAccessAllowed(ctx context.Context) bool {
+	if !u.IsActive || u.ProhibitLogin || !u.IsIndividual() || u.IsGhost() {
+		return false
+	}
+	if !u.MustHaveTwoFactor() {
+		return true
+	}
+
+	hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, u.ID)
+	if err != nil {
+		log.Error("Error getting 2fa: %s", err)
+		return false
+	}
+	return hasTwoFactor
+}
+
 // IsLocal returns true if user login type is LoginPlain.
 func (u *User) IsLocal() bool {
 	return u.LoginType <= auth.Plain

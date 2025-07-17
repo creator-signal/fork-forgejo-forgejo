@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/auth"
 	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
@@ -21,6 +22,26 @@ import (
 	repo_service "forgejo.org/services/repository"
 	wiki_service "forgejo.org/services/wiki"
 )
+
+func checkTwoFactor(ctx *context.PrivateContext, user *user_model.User) {
+	if !user.MustHaveTwoFactor() {
+		return
+	}
+
+	hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, user.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, private.Response{
+			UserMsg: fmt.Sprintf("Error getting 2fa: %s", err),
+		})
+		return
+	}
+	if !hasTwoFactor {
+		ctx.JSON(http.StatusForbidden, private.Response{
+			UserMsg: "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts. Enable it at: " + setting.AppURL + "/user/settings/security",
+		})
+		return
+	}
+}
 
 // ServNoCommand returns information about the provided keyid
 func ServNoCommand(ctx *context.PrivateContext) {
@@ -69,6 +90,12 @@ func ServNoCommand(ctx *context.PrivateContext) {
 			})
 			return
 		}
+
+		checkTwoFactor(ctx, user)
+		if ctx.Written() {
+			return
+		}
+
 		results.Owner = user
 	}
 	ctx.JSON(http.StatusOK, &results)
@@ -263,6 +290,11 @@ func ServCommand(ctx *context.PrivateContext) {
 			ctx.JSON(http.StatusForbidden, private.Response{
 				UserMsg: "Your account is disabled.",
 			})
+			return
+		}
+
+		checkTwoFactor(ctx, user)
+		if ctx.Written() {
 			return
 		}
 
