@@ -30,7 +30,7 @@ func TestRemoveResolvedReportsWhenNoTimeSet(t *testing.T) {
 	require.NoError(t, err)
 
 	// No reports should be deleted when the default time to keep is 0
-	err = RemoveResolvedReports(db.DefaultContext, time.Second)
+	err = RemoveResolvedReports(db.DefaultContext, time.Second*0)
 	require.NoError(t, err)
 	unittest.AssertExistsIf(t, true, resolvedReport)
 }
