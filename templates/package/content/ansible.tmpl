@@ -9,8 +9,8 @@
 			<div class="field">
 				<label>{{svg "octicon-terminal"}} {{ctx.Locale.Tr "packages.ansible.requirement"}}</label>
 				<div class="markup"><pre class="code-block"><code>- name: '{{$.PackageDescriptor.Package.Name}}'
-  version: '{{$.PackageDescriptor.Version.Version}}'
-  source: '<origin-url data-url="{{AppSubUrl}}/api/packages/{{$.PackageDescriptor.Owner.Name}}/ansible"></origin-url>'</code></pre></div>
+	version: '{{$.PackageDescriptor.Version.Version}}'
+	source: '<origin-url data-url="{{AppSubUrl}}/api/packages/{{$.PackageDescriptor.Owner.Name}}/ansible"></origin-url>'</code></pre></div>
 			</div>
 			<div class="field">
 				<label>{{ctx.Locale.Tr "packages.registry.documentation" "Ansible" "https://forgejo.org/docs/latest/user/packages/ansible/"}}</label>
