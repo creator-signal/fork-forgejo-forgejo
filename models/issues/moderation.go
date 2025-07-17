@@ -95,7 +95,7 @@ func IfNeededCreateShadowCopyForComment(ctx context.Context, comment *Comment, f
 
 	if shadowCopyNeeded {
 		if forUpdates {
-			// get the unaltered comment fields
+			// get the unaltered comment fields (for updates the provided variable is already altered but not yet saved)
 			if comment, err = GetCommentByID(ctx, comment.ID); err != nil {
 				return err
 			}

@@ -4,10 +4,13 @@
 package issue_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"forgejo.org/models/db"
+	"forgejo.org/models/issues"
 	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/moderation"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	webhook_model "forgejo.org/models/webhook"
@@ -147,4 +150,40 @@ func TestUpdateComment(t *testing.T) {
 		// Issue history was not saved for this comment.
 		unittest.AssertNotExistsBean(t, &issues_model.ContentHistory{CommentID: comment.ID})
 	})
+}
+
+func TestCreateShadowCopyOnCommentUpdate(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	userAlexSmithID := int64(42)
+	spamCommentID := int64(18) // posted by @alexsmith
+	abuseReportID := int64(1)  // submitted for above comment
+	newCommentContent := "If anyone needs help, just contact me."
+
+	// Retrieve the abusive user (@alexsmith), their SPAM comment and the abuse report already created for this comment.
+	poster := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userAlexSmithID})
+	comment := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: spamCommentID, PosterID: poster.ID})
+	report := unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReport{
+		ID:          abuseReportID,
+		ContentType: moderation.ReportedContentTypeComment,
+		ContentID:   comment.ID,
+	})
+	// The report should not already have a shadow copy linked.
+	assert.Equal(t, false, report.ShadowCopyID.Valid)
+
+	// The abusive user is updating their comment.
+	oldContent := comment.Content
+	comment.Content = newCommentContent
+	require.NoError(t, issue_service.UpdateComment(db.DefaultContext, comment, 0, poster, oldContent))
+
+	// Reload the report.
+	report = unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReport{ID: report.ID})
+	// A shadow copy should have been created and linked to our report.
+	assert.Equal(t, true, report.ShadowCopyID.Valid)
+	// Retrieve the newly created shadow copy and unmarshal the stored JSON so that we can check the values.
+	shadowCopy := unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReportShadowCopy{ID: report.ShadowCopyID.Int64})
+	shadowCopyCommentData := new(issues.CommentData)
+	require.NoError(t, json.Unmarshal([]byte(shadowCopy.RawValue), &shadowCopyCommentData))
+	// Check to see if the initial content of the comment was stored within the shadow copy.
+	assert.Equal(t, oldContent, shadowCopyCommentData.Content)
 }
