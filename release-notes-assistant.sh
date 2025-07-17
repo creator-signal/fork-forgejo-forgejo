@@ -64,7 +64,7 @@ function test_main() {
   test "$(categorize)" = 'ZE Other changes without a feature or bug label'
 
   test_payload_labels
-  test "$(categorize)" = 'ZF Included for completeness but not worth a release note'
+  test "$(categorize)" = 'ZF Included for completeness but not user-facing (chores, etc.)'
 
   test_payload_draft "fix(security)!: breaking security bug fix"
   test "$(categorize)" = 'AA Breaking security bug fixes'
