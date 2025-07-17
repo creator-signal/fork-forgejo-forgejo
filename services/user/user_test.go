@@ -282,9 +282,10 @@ func TestDeleteInactiveUsers(t *testing.T) {
 }
 
 func TestCreateShadowCopyOnUserUpdate(t *testing.T) {
+	defer unittest.OverrideFixtures("models/fixtures/ModerationFeatures")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	userAlexSmithID := int64(42)
+	userAlexSmithID := int64(1002)
 	abuseReportID := int64(2)     // submitted for @alexsmith
 	newDummyValue := "[REDACTED]" // used for updating profile text fields
 

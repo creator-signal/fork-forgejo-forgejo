@@ -152,9 +152,10 @@ func TestUpdateComment(t *testing.T) {
 }
 
 func TestCreateShadowCopyOnCommentUpdate(t *testing.T) {
+	defer unittest.OverrideFixtures("models/fixtures/ModerationFeatures")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	userAlexSmithID := int64(42)
+	userAlexSmithID := int64(1002)
 	spamCommentID := int64(18) // posted by @alexsmith
 	abuseReportID := int64(1)  // submitted for above comment
 	newCommentContent := "If anyone needs help, just contact me."

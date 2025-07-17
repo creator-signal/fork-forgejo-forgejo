@@ -154,14 +154,6 @@
   content: '{"is_force_push":true,"commit_ids":["1978192d98bb1b65e11c2cf37da854fbf94bffd6", "9b93963cf6de4dc33f915bb67f192d099c301f43"]}'
   created_unix: 1749734240
 
-- # This is a spam comment (abusive content), created for testing moderation functionalities.
-  id: 18
-  type: 0 # Standard comment
-  poster_id: 42 # @alexsmith
-  issue_id: 7 # user2/repo2#2
-  content: If anyone needs help for promoting their business online using SEO, just contact me (check my profile page).
-  created_unix: 1752697860 # 2025-07-16 20:31:00
-
 -
   id: 2000
   type: 8 # milestone

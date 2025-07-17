@@ -11,11 +11,11 @@
 
 -
   id: 2
-  status: 1       # Open
-  reporter_id: 2  # @user2
-  content_type: 1 # User (users or organizations)
-  content_id: 42  # @alexsmith
-  category: 2     # Spam
+  status: 1        # Open
+  reporter_id: 2   # @user2
+  content_type: 1  # User (users or organizations)
+  content_id: 1002 # @alexsmith
+  category: 2      # Spam
   remarks: This user just posted a spammy comment on my issue.
   shadow_copy_id: null
   created_unix: 1752698010 # 2025-07-16 20:33:30
