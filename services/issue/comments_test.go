@@ -4,16 +4,15 @@
 package issue_test
 
 import (
-	"encoding/json"
 	"testing"
 
 	"forgejo.org/models/db"
-	"forgejo.org/models/issues"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/moderation"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	webhook_model "forgejo.org/models/webhook"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	issue_service "forgejo.org/services/issue"
@@ -169,7 +168,7 @@ func TestCreateShadowCopyOnCommentUpdate(t *testing.T) {
 		ContentID:   comment.ID,
 	})
 	// The report should not already have a shadow copy linked.
-	assert.Equal(t, false, report.ShadowCopyID.Valid)
+	assert.False(t, report.ShadowCopyID.Valid)
 
 	// The abusive user is updating their comment.
 	oldContent := comment.Content
@@ -179,10 +178,10 @@ func TestCreateShadowCopyOnCommentUpdate(t *testing.T) {
 	// Reload the report.
 	report = unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReport{ID: report.ID})
 	// A shadow copy should have been created and linked to our report.
-	assert.Equal(t, true, report.ShadowCopyID.Valid)
+	assert.True(t, report.ShadowCopyID.Valid)
 	// Retrieve the newly created shadow copy and unmarshal the stored JSON so that we can check the values.
 	shadowCopy := unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReportShadowCopy{ID: report.ShadowCopyID.Int64})
-	shadowCopyCommentData := new(issues.CommentData)
+	shadowCopyCommentData := new(issues_model.CommentData)
 	require.NoError(t, json.Unmarshal([]byte(shadowCopy.RawValue), &shadowCopyCommentData))
 	// Check to see if the initial content of the comment was stored within the shadow copy.
 	assert.Equal(t, oldContent, shadowCopyCommentData.Content)

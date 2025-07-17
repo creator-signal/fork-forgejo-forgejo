@@ -4,7 +4,6 @@
 package user
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,8 +19,8 @@ import (
 	"forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
-	"forgejo.org/models/user"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
@@ -297,10 +296,10 @@ func TestCreateShadowCopyOnUserUpdate(t *testing.T) {
 		ContentID:   abuser.ID,
 	})
 	// The report should not already have a shadow copy linked.
-	assert.Equal(t, false, report.ShadowCopyID.Valid)
+	assert.False(t, report.ShadowCopyID.Valid)
 
 	// Keep a copy of old field values before updating them.
-	oldUserData := user.UserData{
+	oldUserData := user_model.UserData{
 		FullName:    abuser.FullName,
 		Location:    abuser.Location,
 		Website:     abuser.Website,
@@ -321,10 +320,10 @@ func TestCreateShadowCopyOnUserUpdate(t *testing.T) {
 	// Reload the report.
 	report = unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReport{ID: report.ID})
 	// A shadow copy should have been created and linked to our report.
-	assert.Equal(t, true, report.ShadowCopyID.Valid)
+	assert.True(t, report.ShadowCopyID.Valid)
 	// Retrieve the newly created shadow copy and unmarshal the stored JSON so that we can check the values.
 	shadowCopy := unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReportShadowCopy{ID: report.ShadowCopyID.Int64})
-	shadowCopyUserData := new(user.UserData)
+	shadowCopyUserData := new(user_model.UserData)
 	require.NoError(t, json.Unmarshal([]byte(shadowCopy.RawValue), &shadowCopyUserData))
 	// Check to see if the initial field values of the user were stored within the shadow copy.
 	assert.Equal(t, oldUserData.FullName, shadowCopyUserData.FullName)
