@@ -4,25 +4,20 @@
 package migrations
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"forgejo.org/modules/proxy"
-	"forgejo.org/modules/util"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
-	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/structs"
-
-	"github.com/PuerkitoBio/goquery"
+	"forgejo.org/modules/util"
 )
 
 var (
@@ -97,25 +92,25 @@ type PagureIssueContext struct {
 // PagureIssuesResponse describes a list of issue tickets under an issue tracker
 type PagureIssuesResponse struct {
 	Issues []struct {
-		Assignee     interface{}   `json:"assignee"`
-		Blocks       []string      `json:"blocks"`
-		CloseStatus  string        `json:"close_status"`
-		ClosedAt     string        `json:"closed_at"`
-		ClosedBy     interface{}   `json:"closed_by"`
-		Comments     []interface{} `json:"comments"`
-		Content      string        `json:"content"`
-		CustomFields []interface{} `json:"custom_fields"`
-		DateCreated  string        `json:"date_created"`
-		Depends      []interface{} `json:"depends"`
-		ID           int64         `json:"id"`
-		LastUpdated  string        `json:"last_updated"`
-		Milestone    string        `json:"milestone"`
-		Priority     int64         `json:"priority"`
-		Private      bool          `json:"private"`
-		Status       string        `json:"status"`
-		Tags         []string      `json:"tags"`
-		Title        string        `json:"title"`
-		User         PagureUser    `json:"user"`
+		Assignee     any        `json:"assignee"`
+		Blocks       []string   `json:"blocks"`
+		CloseStatus  string     `json:"close_status"`
+		ClosedAt     string     `json:"closed_at"`
+		ClosedBy     any        `json:"closed_by"`
+		Comments     []any      `json:"comments"`
+		Content      string     `json:"content"`
+		CustomFields []any      `json:"custom_fields"`
+		DateCreated  string     `json:"date_created"`
+		Depends      []any      `json:"depends"`
+		ID           int64      `json:"id"`
+		LastUpdated  string     `json:"last_updated"`
+		Milestone    string     `json:"milestone"`
+		Priority     int64      `json:"priority"`
+		Private      bool       `json:"private"`
+		Status       string     `json:"status"`
+		Tags         []string   `json:"tags"`
+		Title        string     `json:"title"`
+		User         PagureUser `json:"user"`
 	} `json:"issues"`
 	Pagination struct {
 		First   string  `json:"first"`
@@ -135,6 +130,18 @@ type PagureIssueDetail struct {
 	ID           int64      `json:"id"`
 	Notification bool       `json:"notification"`
 	User         PagureUser `json:"user"`
+}
+
+// PagureCommitInfo describes a commit
+type PagureCommitInfo struct {
+	Author           string   `json:"author"`
+	CommitTime       int64    `json:"commit_time"`
+	CommitTimeOffset int      `json:"commit_time_offset"`
+	Committer        string   `json:"committer"`
+	Hash             string   `json:"hash"`
+	Message          string   `json:"message"`
+	ParentIDs        []string `json:"parent_ids"`
+	TreeID           string   `json:"tree_id"`
 }
 
 // PagurePRRresponse describes a list of pull requests under an issue tracker
@@ -166,13 +173,13 @@ type PagurePRResponse struct {
 // processDate converts epoch time string to Go formatted time
 func processDate(dateStr *string) time.Time {
 	date := time.Time{}
-	if dateStr == nil {
+	if dateStr == nil || *dateStr == "" {
 		return date
 	}
 
 	unix, err := strconv.Atoi(*dateStr)
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Error("Error:", err)
 		return date
 	}
 
@@ -187,7 +194,7 @@ func (f *PagureDownloaderFactory) New(ctx context.Context, opts base.MigrateOpti
 		return nil, err
 	}
 
-	repoName := ""
+	var repoName string
 
 	fields := strings.Split(strings.Trim(u.Path, "/"), "/")
 	if len(fields) == 2 {
@@ -216,7 +223,7 @@ func (d *PagureDownloader) SetContext(ctx context.Context) {
 
 // NewPagureDownloader creates a new downloader object
 func NewPagureDownloader(ctx context.Context, baseURL *url.URL, token, repoName string) *PagureDownloader {
-	privateIssuesOnlyRepo := false
+	var privateIssuesOnlyRepo bool
 	if token != "" {
 		privateIssuesOnlyRepo = true
 	}
@@ -357,10 +364,10 @@ func (d *PagureDownloader) GetLabels() ([]*base.Label, error) {
 		})
 	}
 
-	for _, close_status := range d.meta.CloseStatuses {
+	for _, closeStatus := range d.meta.CloseStatuses {
 		labels = append(labels, &base.Label{
-			Name:        "Closed As/" + close_status,
-			Description: "Closed with the reason of " + close_status,
+			Name:        "Closed As/" + closeStatus,
+			Description: "Closed with the reason of " + closeStatus,
 			Color:       "FF0000",
 			Exclusive:   true,
 		})
@@ -424,17 +431,15 @@ func (d *PagureDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, er
 				labels = append(labels, &base.Label{Name: "Priority/" + priorityValue})
 			}
 		}
-		poster := d.tryGetUser(issue.User.Name)
-		log.Info("Adding issue: %d", issue.ID)
+		log.Trace("Adding issue: %d", issue.ID)
 
 		closedat := processDate(&issue.ClosedAt)
 
 		issues = append(issues, &base.Issue{
 			Title:        issue.Title,
 			Number:       issue.ID,
-			PosterName:   poster.Name,
-			PosterID:     poster.ID,
-			PosterEmail:  poster.Email,
+			PosterName:   issue.User.Name,
+			PosterID:     -1,
 			Content:      issue.Content,
 			Milestone:    issue.Milestone,
 			State:        strings.ToLower(issue.Status),
@@ -465,7 +470,7 @@ func (d *PagureDownloader) GetComments(commentable base.Commentable) ([]*base.Co
 	list := struct {
 		Comments []PagureIssueDetail `json:"comments"`
 	}{}
-	endpoint := ""
+	var endpoint string
 
 	if context.IsPullRequest {
 		endpoint = fmt.Sprintf("/api/0/%s/pull-request/%d", d.repoName, commentable.GetForeignIndex())
@@ -485,17 +490,15 @@ func (d *PagureDownloader) GetComments(commentable base.Commentable) ([]*base.Co
 			log.Error("Empty comment")
 			continue
 		}
-		poster := d.tryGetUser(unit.User.Name)
 
-		log.Info("Adding comment: %d", unit.ID)
+		log.Trace("Adding comment: %d", unit.ID)
 		c := &base.Comment{
-			IssueIndex:  commentable.GetLocalIndex(),
-			Index:       unit.ID,
-			PosterID:    poster.ID,
-			PosterName:  poster.Name,
-			PosterEmail: poster.Email,
-			Content:     unit.Comment,
-			Created:     processDate(&unit.DateCreated),
+			IssueIndex: commentable.GetLocalIndex(),
+			Index:      unit.ID,
+			PosterName: unit.User.Name,
+			PosterID:   -1,
+			Content:    unit.Comment,
+			Created:    processDate(&unit.DateCreated),
 		}
 		comments = append(comments, c)
 	}
@@ -508,11 +511,13 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 	// Could not figure out how to disable this in opts, so if a private issues only repo,
 	// We just return an empty list
 	if d.privateIssuesOnlyRepo {
-		pullRequests := make([]*base.PullRequest, 0, 0)
+		pullRequests := make([]*base.PullRequest, 0)
 		return pullRequests, true, nil
 	}
 
 	rawPullRequests := PagurePRResponse{}
+	commit := PagureCommitInfo{}
+
 	err := d.callAPI(
 		"/api/0/"+d.repoName+"/pull-requests",
 		map[string]string{
@@ -529,8 +534,8 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 	pullRequests := make([]*base.PullRequest, 0, len(rawPullRequests.Requests))
 
 	for _, pr := range rawPullRequests.Requests {
-		poster := d.tryGetUser(pr.User.Name)
-		state, merged, baseSHA := "", false, ""
+		var state, baseSHA string
+		var merged bool
 		labels := []*base.Label{}
 
 		for _, tag := range pr.Tags {
@@ -538,66 +543,32 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 		}
 		mergedtime := processDate(&pr.ClosedAt)
 
-		if strings.ToLower(pr.Status) == "merged" {
-			state, merged = "closed", true
-			// If it is a merged PR, we need to get the earliest commit (CommitStop), and load the Pagure HTML
-			// page for that commit, and get the parent commit for it. The Pagure API does not do this.
-			fullURL := d.baseURL.ResolveReference(&url.URL{Path: d.repoName + "/c/" + pr.CommitStop, RawQuery: "branch=" + pr.Branch})
-			req, err := http.NewRequestWithContext(d.ctx, "GET", fullURL.String(), nil)
-			if err != nil {
-				log.Error("Error creating request: %v", err)
-				return nil, false, err
-			}
+		err = d.callAPI("/api/0/"+d.repoName+"/c/"+pr.CommitStop+"/info", nil, &commit)
+		if err != nil {
+			return nil, false, err
+		}
 
-			resp, err := d.client.Do(req)
-			if err != nil {
-				log.Error("Error making request: %v", err)
-				return nil, false, err
-			}
-			defer resp.Body.Close()
-
-			bodyBytes, err := io.ReadAll(resp.Body)
-			if err != nil {
-				log.Error("Error reading response body: %v", err)
-				return nil, false, err
-			}
-			doc, err := goquery.NewDocumentFromReader(bytes.NewReader(bodyBytes))
-			if err != nil {
-				log.Error("Error reading response body: %v", err)
-				return nil, false, err
-			}
-
-			doc.Find(".ml-auto .btn-group a.btn.btn-outline-primary.btn-sm").Each(func(i int, s *goquery.Selection) {
-				// For each item found, get the title
-				if s.Text() == "parent" {
-					// Get the title attribute
-					title, exists := s.Attr("title")
-					if exists {
-						baseSHA = title
-					}
-				}
-			})
-
+		if util.ASCIIEqualFold(pr.Status, "merged") {
+			state, merged, baseSHA = "closed", true, commit.ParentIDs[0]
 		} else if util.ASCIIEqualFold(pr.Status, "open") {
-			state, merged, baseSHA = "open", false, ""
+			state, merged, baseSHA = "open", false, commit.ParentIDs[0]
 		} else {
-			state, merged, baseSHA = "closed", false, ""
+			state, merged, baseSHA = "closed", false, commit.ParentIDs[0]
 		}
 
 		pullRequests = append(pullRequests, &base.PullRequest{
-			Title:       pr.Title,
-			Number:      int64(pr.ID),
-			PosterName:  poster.Name,
-			PosterID:    poster.ID,
-			PosterEmail: poster.Email,
-			Content:     pr.InitialComment,
-			State:       state,
-			Created:     processDate(&pr.DateCreated),
-			Updated:     processDate(&pr.LastUpdated),
-			MergedTime:  &mergedtime,
-			Closed:      &mergedtime,
-			Merged:      merged,
-			Labels:      labels,
+			Title:      pr.Title,
+			Number:     int64(pr.ID),
+			PosterName: pr.User.Name,
+			PosterID:   -1,
+			Content:    pr.InitialComment,
+			State:      state,
+			Created:    processDate(&pr.DateCreated),
+			Updated:    processDate(&pr.LastUpdated),
+			MergedTime: &mergedtime,
+			Closed:     &mergedtime,
+			Merged:     merged,
+			Labels:     labels,
 			Head: base.PullRequestBranch{
 				Ref:      pr.BranchFrom,
 				SHA:      pr.CommitStop,
@@ -625,64 +596,5 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 
 // GetTopics return repository topics from Pagure
 func (d *PagureDownloader) GetTopics() ([]string, error) {
-	info := PagureRepoInfo{}
-	err := d.callAPI(
-		"/api/0/"+d.repoName,
-		nil,
-		&info,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return info.Topics, nil
-}
-
-func (d *PagureDownloader) tryGetUser(name string) *user_model.User {
-	user, ok := d.userMap[name]
-
-	temp := struct {
-		User PagureUser `json:"user"`
-	}{}
-
-	if !ok {
-		err := d.callAPI(
-			fmt.Sprintf("/api/0/user/%s", name),
-			nil,
-			&temp,
-		)
-		if err != nil {
-			user = &PagureUser{
-				Name:     name,
-				Fullname: name,
-			}
-		} else {
-			user = &temp.User
-		}
-		d.userMap[name] = user
-	}
-
-	fuser, err := user_model.GetUserByName(d.ctx, user.Name)
-	if err != nil {
-		u := &user_model.User{
-			Name:        user.Name,
-			Email:       user.Name + "@fedoraproject.org",
-			LoginName:   user.Name,
-			LoginSource: 1, //FAS HARDCODED PROLLY BAD
-			FullName:    user.Fullname,
-		}
-		fmt.Println("IDHAR ", *u, " HAI")
-		err := user_model.CreateUser(d.ctx, u)
-		if err != nil {
-			log.Error("Error creating user: `%s` - %v", u.Name, err)
-			return nil
-		}
-		newuser, err := user_model.GetUserByName(d.ctx, user.Name)
-		if err != nil {
-			log.Error("Error getting user: %v", err)
-			return nil
-		}
-		return newuser
-	} else {
-		return fuser
-	}
+	return d.meta.Topics, nil
 }

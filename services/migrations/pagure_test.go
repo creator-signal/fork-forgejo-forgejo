@@ -5,18 +5,18 @@ package migrations
 
 import (
 	"fmt"
-	base "forgejo.org/modules/migration"
-	"github.com/stretchr/testify/assert"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"forgejo.org/models/unittest"
+	base "forgejo.org/modules/migration"
+
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// TODO: Segregate the tests for PRIVATE issues and PUBLIC issues
 
 func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 	// Skip tests if Pagure token is not found
@@ -24,15 +24,13 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 	clonePassword := os.Getenv("PAGURE_CLONE_PASSWORD")
 	apiUser := os.Getenv("PAGURE_API_USER")
 	apiPassword := os.Getenv("PAGURE_API_TOKEN")
-	if apiUser == "" || apiPassword == "" {
-		t.Skip("skipped test because a PAGURE_ variable was not in the environment")
-	}
 
 	cloneAddr := fmt.Sprintf("https://%s:%s@pagure.io/protop2g-test-srce.git", cloneUser, clonePassword)
 	u, _ := url.Parse(cloneAddr)
-	if cloneUser != "" {
-		u.User = url.UserPassword(cloneUser, clonePassword)
-	}
+
+	fixtPath := "./testdata/pagure/full_download/unauthorized"
+	server := unittest.NewMockWebServer(t, "https://pagure.io", fixtPath, false)
+	defer server.Close()
 
 	factory := &PagureDownloaderFactory{}
 	downloader, err := factory.New(t.Context(), base.MigrateOptions{
@@ -40,9 +38,7 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 		AuthUsername: apiUser,
 		AuthPassword: apiPassword,
 	})
-	if err != nil {
-		t.Fatalf("Error creating Pagure downloader: %v", err.Error())
-	}
+	require.NoError(t, err)
 
 	repo, err := downloader.GetRepoInfo()
 	require.NoError(t, err)
@@ -53,18 +49,14 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 		Owner:       "",
 		Description: "The source namespace for the Pagure Exporter project to run tests against",
 		CloneURL:    cloneAddr,
-		OriginalURL: strings.Replace(cloneAddr, ".git", "", -1),
+		OriginalURL: strings.ReplaceAll(cloneAddr, ".git", ""),
 	}, repo)
 
 	topics, err := downloader.GetTopics()
 	require.NoError(t, err)
 
 	// Testing repository topics migration
-	for iter, item := range []string{"srce", "test", "gridhead", "protop2g"} {
-		if topics[iter] != item {
-			t.Errorf("Topic '%s' not found in repo '%s'", item, repo.Name)
-		}
-	}
+	assert.Equal(t, []string{"srce", "test", "gridhead", "protop2g"}, topics)
 
 	// Testing labels migration
 	labels, err := downloader.GetLabels()
@@ -79,17 +71,16 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 	// Testing issue tickets migration
 	assertIssuesEqual(t, []*base.Issue{
 		{
-			Number:      2,
-			Title:       "This is the title of the second test issue",
-			Content:     "This is the body of the second test issue",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "closed",
-			Milestone:   "Milestone BBBB",
-			Created:     time.Date(2023, time.October, 13, 4, 1, 16, 0, time.UTC),
-			Updated:     time.Date(2025, time.June, 25, 6, 25, 57, 0, time.UTC),
-			Closed:      timePtr(time.Date(2025, time.June, 25, 6, 22, 59, 0, time.UTC)),
+			Number:     2,
+			Title:      "This is the title of the second test issue",
+			Content:    "This is the body of the second test issue",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "closed",
+			Milestone:  "Milestone BBBB",
+			Created:    time.Date(2023, time.October, 13, 4, 1, 16, 0, time.UTC),
+			Updated:    time.Date(2025, time.June, 25, 6, 25, 57, 0, time.UTC),
+			Closed:     timePtr(time.Date(2025, time.June, 25, 6, 22, 59, 0, time.UTC)),
 			Labels: []*base.Label{
 				{
 					Name: "cccc",
@@ -106,17 +97,16 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			},
 		},
 		{
-			Number:      1,
-			Title:       "This is the title of the first test issue",
-			Content:     "This is the body of the first test issue",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "open",
-			Milestone:   "Milestone AAAA",
-			Created:     time.Date(2023, time.October, 13, 3, 57, 42, 0, time.UTC),
-			Updated:     time.Date(2025, time.June, 25, 6, 25, 45, 0, time.UTC),
-			Closed:      timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
+			Number:     1,
+			Title:      "This is the title of the first test issue",
+			Content:    "This is the body of the first test issue",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "open",
+			Milestone:  "Milestone AAAA",
+			Created:    time.Date(2023, time.October, 13, 3, 57, 42, 0, time.UTC),
+			Updated:    time.Date(2025, time.June, 25, 6, 25, 45, 0, time.UTC),
+			Closed:     timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
 			Labels: []*base.Label{
 				{
 					Name: "aaaa",
@@ -136,85 +126,76 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 	require.NoError(t, err)
 	assertCommentsEqual(t, []*base.Comment{
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2023, time.October, 13, 4, 3, 30, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue tagged with: cccc, dddd",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2023, time.October, 13, 4, 3, 30, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue tagged with: cccc, dddd",
 		},
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2023, time.October, 13, 4, 6, 4, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "The is the first comment under the second test issue",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2023, time.October, 13, 4, 6, 4, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "The is the first comment under the second test issue",
 		},
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2023, time.October, 13, 4, 6, 16, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "The is the second comment under the second test issue",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2023, time.October, 13, 4, 6, 16, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "The is the second comment under the second test issue",
 		},
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2023, time.October, 13, 4, 7, 12, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue status updated to: Closed (was: Open)",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2023, time.October, 13, 4, 7, 12, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue status updated to: Closed (was: Open)",
 		},
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.May, 8, 4, 50, 21, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: Milestone BBBB",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.May, 8, 4, 50, 21, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: Milestone BBBB",
 		},
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.June, 25, 6, 22, 52, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: None (was: Milestone BBBB)\n- Issue status updated to: Open (was: Closed)",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.June, 25, 6, 22, 52, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: None (was: Milestone BBBB)\n- Issue status updated to: Open (was: Closed)",
 		},
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.June, 25, 6, 23, 02, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue close_status updated to: Complete\n- Issue status updated to: Closed (was: Open)",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.June, 25, 6, 23, 0o2, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue close_status updated to: Complete\n- Issue status updated to: Closed (was: Open)",
 		},
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.June, 25, 6, 24, 34, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: Milestone BBBB",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.June, 25, 6, 24, 34, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: Milestone BBBB",
 		},
 		{
-			IssueIndex:  2,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.June, 25, 6, 25, 57, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue priority set to: Rare",
+			IssueIndex: 2,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.June, 25, 6, 25, 57, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue priority set to: Rare",
 		},
 	}, comments)
 
@@ -225,18 +206,17 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 	// Testing pull requests migrated
 	assertPullRequestsEqual(t, []*base.PullRequest{
 		{
-			Number:      10,
-			Title:       "Change the branch identity to `test-ffff` in the README.md file",
-			Content:     "Signed-off-by: Akashdeep Dhar <akashdeep.dhar@gmail.com>",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "closed",
-			Created:     time.Date(2025, time.May, 19, 6, 12, 45, 0, time.UTC),
-			Updated:     time.Date(2025, time.May, 19, 6, 17, 11, 0, time.UTC),
-			Closed:      timePtr(time.Date(2025, time.May, 19, 6, 17, 11, 0, time.UTC)),
-			MergedTime:  timePtr(time.Date(2025, time.May, 19, 6, 17, 11, 0, time.UTC)),
-			Merged:      true,
+			Number:     10,
+			Title:      "Change the branch identity to `test-ffff` in the README.md file",
+			Content:    "Signed-off-by: Akashdeep Dhar <akashdeep.dhar@gmail.com>",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "closed",
+			Created:    time.Date(2025, time.May, 19, 6, 12, 45, 0, time.UTC),
+			Updated:    time.Date(2025, time.May, 19, 6, 17, 11, 0, time.UTC),
+			Closed:     timePtr(time.Date(2025, time.May, 19, 6, 17, 11, 0, time.UTC)),
+			MergedTime: timePtr(time.Date(2025, time.May, 19, 6, 17, 11, 0, time.UTC)),
+			Merged:     true,
 			Labels: []*base.Label{
 				{
 					Name: "ffff",
@@ -254,18 +234,17 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			},
 		},
 		{
-			Number:      9,
-			Title:       "Change the branch identity to `test-eeee` in the README.md file",
-			Content:     "Signed-off-by: Akashdeep Dhar <akashdeep.dhar@gmail.com>",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "closed",
-			Created:     time.Date(2025, time.May, 19, 6, 12, 41, 0, time.UTC),
-			Updated:     time.Date(2025, time.May, 19, 6, 14, 3, 0, time.UTC),
-			Closed:      timePtr(time.Date(2025, time.May, 19, 6, 14, 3, 0, time.UTC)),
-			MergedTime:  timePtr(time.Date(2025, time.May, 19, 6, 14, 3, 0, time.UTC)),
-			Merged:      true,
+			Number:     9,
+			Title:      "Change the branch identity to `test-eeee` in the README.md file",
+			Content:    "Signed-off-by: Akashdeep Dhar <akashdeep.dhar@gmail.com>",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "closed",
+			Created:    time.Date(2025, time.May, 19, 6, 12, 41, 0, time.UTC),
+			Updated:    time.Date(2025, time.May, 19, 6, 14, 3, 0, time.UTC),
+			Closed:     timePtr(time.Date(2025, time.May, 19, 6, 14, 3, 0, time.UTC)),
+			MergedTime: timePtr(time.Date(2025, time.May, 19, 6, 14, 3, 0, time.UTC)),
+			Merged:     true,
 			Labels: []*base.Label{
 				{
 					Name: "eeee",
@@ -283,18 +262,17 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			},
 		},
 		{
-			Number:      8,
-			Title:       "Change the branch identity to `test-dddd` in the README.md file",
-			Content:     "Signed-off-by: Akashdeep Dhar <testaddr@testaddr.com>",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "closed",
-			Created:     time.Date(2025, time.May, 5, 6, 45, 32, 0, time.UTC),
-			Updated:     time.Date(2025, time.May, 5, 6, 54, 13, 0, time.UTC),
-			Closed:      timePtr(time.Date(2025, time.May, 5, 6, 54, 13, 0, time.UTC)),
-			MergedTime:  timePtr(time.Date(2025, time.May, 5, 6, 54, 13, 0, time.UTC)), // THIS IS WRONG
-			Merged:      false,
+			Number:     8,
+			Title:      "Change the branch identity to `test-dddd` in the README.md file",
+			Content:    "Signed-off-by: Akashdeep Dhar <testaddr@testaddr.com>",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "closed",
+			Created:    time.Date(2025, time.May, 5, 6, 45, 32, 0, time.UTC),
+			Updated:    time.Date(2025, time.May, 5, 6, 54, 13, 0, time.UTC),
+			Closed:     timePtr(time.Date(2025, time.May, 5, 6, 54, 13, 0, time.UTC)),
+			MergedTime: timePtr(time.Date(2025, time.May, 5, 6, 54, 13, 0, time.UTC)), // THIS IS WRONG
+			Merged:     false,
 			Labels: []*base.Label{
 				{
 					Name: "dddd",
@@ -307,23 +285,22 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			},
 			Base: base.PullRequestBranch{
 				Ref:      "main",
-				SHA:      "",
+				SHA:      "3f12d300f62f1c5b8a1d3265bd85d61cf6d924d7",
 				RepoName: "protop2g-test-srce",
 			},
 		},
 		{
-			Number:      7,
-			Title:       "Change the branch identity to `test-cccc` in the README.md file",
-			Content:     "Signed-off-by: Akashdeep Dhar <testaddr@testaddr.com>",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "closed",
-			Created:     time.Date(2025, time.May, 5, 6, 45, 6, 0, time.UTC),
-			Updated:     time.Date(2025, time.May, 5, 6, 54, 3, 0, time.UTC),          // IT SHOULD BE NIL
-			Closed:      timePtr(time.Date(2025, time.May, 5, 6, 54, 3, 0, time.UTC)), // IT is CLOSED, Not MERGED so SHOULD NOT BE NIL
-			MergedTime:  timePtr(time.Date(2025, time.May, 5, 6, 54, 3, 0, time.UTC)), // THIS IS WRONG
-			Merged:      false,
+			Number:     7,
+			Title:      "Change the branch identity to `test-cccc` in the README.md file",
+			Content:    "Signed-off-by: Akashdeep Dhar <testaddr@testaddr.com>",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "closed",
+			Created:    time.Date(2025, time.May, 5, 6, 45, 6, 0, time.UTC),
+			Updated:    time.Date(2025, time.May, 5, 6, 54, 3, 0, time.UTC),          // IT SHOULD BE NIL
+			Closed:     timePtr(time.Date(2025, time.May, 5, 6, 54, 3, 0, time.UTC)), // IT is CLOSED, Not MERGED so SHOULD NOT BE NIL
+			MergedTime: timePtr(time.Date(2025, time.May, 5, 6, 54, 3, 0, time.UTC)), // THIS IS WRONG
+			Merged:     false,
 			Labels: []*base.Label{
 				{
 					Name: "cccc",
@@ -336,23 +313,22 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			},
 			Base: base.PullRequestBranch{
 				Ref:      "main",
-				SHA:      "",
+				SHA:      "3f12d300f62f1c5b8a1d3265bd85d61cf6d924d7",
 				RepoName: "protop2g-test-srce",
 			},
 		},
 		{
-			Number:      6,
-			Title:       "Change the branch identity to `test-bbbb` in the README.md file",
-			Content:     "Signed-off-by: Akashdeep Dhar <testaddr@testaddr.com>",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "open",
-			Created:     time.Date(2025, time.May, 5, 6, 44, 30, 0, time.UTC),
-			Updated:     time.Date(2025, time.May, 19, 8, 30, 50, 0, time.UTC),
-			Closed:      timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
-			MergedTime:  timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
-			Merged:      false,
+			Number:     6,
+			Title:      "Change the branch identity to `test-bbbb` in the README.md file",
+			Content:    "Signed-off-by: Akashdeep Dhar <testaddr@testaddr.com>",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "open",
+			Created:    time.Date(2025, time.May, 5, 6, 44, 30, 0, time.UTC),
+			Updated:    time.Date(2025, time.May, 19, 8, 30, 50, 0, time.UTC),
+			Closed:     timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
+			MergedTime: timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
+			Merged:     false,
 			Labels: []*base.Label{
 				{
 					Name: "bbbb",
@@ -365,23 +341,22 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			},
 			Base: base.PullRequestBranch{
 				Ref:      "main",
-				SHA:      "",
+				SHA:      "3f12d300f62f1c5b8a1d3265bd85d61cf6d924d7",
 				RepoName: "protop2g-test-srce",
 			},
 		},
 		{
-			Number:      5,
-			Title:       "Change the branch identity to `test-aaaa` in the README.md file",
-			Content:     "Signed-off-by: Akashdeep Dhar <testaddr@testaddr.com>",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "open",
-			Created:     time.Date(2025, time.May, 5, 6, 43, 57, 0, time.UTC),
-			Updated:     time.Date(2025, time.May, 19, 6, 29, 45, 0, time.UTC),
-			Closed:      timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
-			MergedTime:  timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
-			Merged:      false,
+			Number:     5,
+			Title:      "Change the branch identity to `test-aaaa` in the README.md file",
+			Content:    "Signed-off-by: Akashdeep Dhar <testaddr@testaddr.com>",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "open",
+			Created:    time.Date(2025, time.May, 5, 6, 43, 57, 0, time.UTC),
+			Updated:    time.Date(2025, time.May, 19, 6, 29, 45, 0, time.UTC),
+			Closed:     timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
+			MergedTime: timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
+			Merged:     false,
 			Labels: []*base.Label{
 				{
 					Name: "aaaa",
@@ -394,7 +369,7 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			},
 			Base: base.PullRequestBranch{
 				Ref:      "main",
-				SHA:      "",
+				SHA:      "3f12d300f62f1c5b8a1d3265bd85d61cf6d924d7",
 				RepoName: "protop2g-test-srce",
 			},
 		},
@@ -405,31 +380,28 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 	require.NoError(t, err)
 	assertCommentsEqual(t, []*base.Comment{
 		{
-			IssueIndex:  5,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.May, 5, 6, 44, 13, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Pull-request tagged with: aaaa",
+			IssueIndex: 5,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.May, 5, 6, 44, 13, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Pull-request tagged with: aaaa",
 		},
 		{
-			IssueIndex:  5,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.May, 7, 5, 25, 21, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "This is the first comment under this pull request.",
+			IssueIndex: 5,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.May, 7, 5, 25, 21, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "This is the first comment under this pull request.",
 		},
 		{
-			IssueIndex:  5,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.May, 7, 5, 25, 29, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "This is the second comment under this pull request.",
+			IssueIndex: 5,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.May, 7, 5, 25, 29, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "This is the second comment under this pull request.",
 		},
 	}, comments)
 
@@ -459,7 +431,7 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 		},
 	}
 
-	// Having tests fail just because of dissimilar ordering is stupid
+	// We do not like when tests fail just because of dissimilar ordering
 	for _, item := range milestones {
 		assertMilestoneEqual(t, item, dict[item.Title])
 	}
@@ -477,9 +449,10 @@ func TestPagureDownloadRepoWithPrivateIssues(t *testing.T) {
 
 	cloneAddr := fmt.Sprintf("https://%s:%s@pagure.io/protop2g-test-srce.git", cloneUser, clonePassword)
 	u, _ := url.Parse(cloneAddr)
-	if cloneUser != "" {
-		u.User = url.UserPassword(cloneUser, clonePassword)
-	}
+
+	fixtPath := "./testdata/pagure/full_download/authorized"
+	server := unittest.NewMockWebServer(t, "https://pagure.io", fixtPath, false)
+	defer server.Close()
 
 	factory := &PagureDownloaderFactory{}
 	downloader, err := factory.New(t.Context(), base.MigrateOptions{
@@ -488,9 +461,7 @@ func TestPagureDownloadRepoWithPrivateIssues(t *testing.T) {
 		AuthPassword: apiPassword,
 		AuthToken:    apiPassword,
 	})
-	if err != nil {
-		t.Fatalf("Error creating Pagure downloader: %v", err.Error())
-	}
+	require.NoError(t, err)
 
 	repo, err := downloader.GetRepoInfo()
 	require.NoError(t, err)
@@ -501,18 +472,14 @@ func TestPagureDownloadRepoWithPrivateIssues(t *testing.T) {
 		Owner:       "",
 		Description: "The source namespace for the Pagure Exporter project to run tests against",
 		CloneURL:    cloneAddr,
-		OriginalURL: strings.Replace(cloneAddr, ".git", "", -1),
+		OriginalURL: strings.ReplaceAll(cloneAddr, ".git", ""),
 	}, repo)
 
 	topics, err := downloader.GetTopics()
 	require.NoError(t, err)
 
 	// Testing repository topics migration
-	for iter, item := range []string{"srce", "test", "gridhead", "protop2g"} {
-		if topics[iter] != item {
-			t.Errorf("Topic '%s' not found in repo '%s'", item, repo.Name)
-		}
-	}
+	assert.Equal(t, []string{"srce", "test", "gridhead", "protop2g"}, topics)
 
 	// Testing labels migration
 	labels, err := downloader.GetLabels()
@@ -527,17 +494,16 @@ func TestPagureDownloadRepoWithPrivateIssues(t *testing.T) {
 	// Testing issue tickets migration
 	assertIssuesEqual(t, []*base.Issue{
 		{
-			Number:      4,
-			Title:       "This is the title of the fourth test issue",
-			Content:     "This is the body of the fourth test issue",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "closed",
-			Milestone:   "Milestone DDDD",
-			Created:     time.Date(2023, time.November, 21, 8, 6, 56, 0, time.UTC),
-			Updated:     time.Date(2025, time.June, 25, 6, 26, 26, 0, time.UTC),
-			Closed:      timePtr(time.Date(2025, time.June, 25, 6, 23, 51, 0, time.UTC)),
+			Number:     4,
+			Title:      "This is the title of the fourth test issue",
+			Content:    "This is the body of the fourth test issue",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "closed",
+			Milestone:  "Milestone DDDD",
+			Created:    time.Date(2023, time.November, 21, 8, 6, 56, 0, time.UTC),
+			Updated:    time.Date(2025, time.June, 25, 6, 26, 26, 0, time.UTC),
+			Closed:     timePtr(time.Date(2025, time.June, 25, 6, 23, 51, 0, time.UTC)),
 			Labels: []*base.Label{
 				{
 					Name: "gggg",
@@ -554,17 +520,16 @@ func TestPagureDownloadRepoWithPrivateIssues(t *testing.T) {
 			},
 		},
 		{
-			Number:      3,
-			Title:       "This is the title of the third test issue",
-			Content:     "This is the body of the third test issue",
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			State:       "open",
-			Milestone:   "Milestone CCCC",
-			Created:     time.Date(2023, time.November, 21, 8, 3, 57, 0, time.UTC),
-			Updated:     time.Date(2025, time.June, 25, 6, 26, 7, 0, time.UTC),
-			Closed:      timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
+			Number:     3,
+			Title:      "This is the title of the third test issue",
+			Content:    "This is the body of the third test issue",
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			State:      "open",
+			Milestone:  "Milestone CCCC",
+			Created:    time.Date(2023, time.November, 21, 8, 3, 57, 0, time.UTC),
+			Updated:    time.Date(2025, time.June, 25, 6, 26, 7, 0, time.UTC),
+			Closed:     timePtr(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
 			Labels: []*base.Label{
 				{
 					Name: "eeee",
@@ -583,86 +548,69 @@ func TestPagureDownloadRepoWithPrivateIssues(t *testing.T) {
 	comments, _, err := downloader.GetComments(issues[0])
 	require.NoError(t, err)
 	assertCommentsEqual(t, []*base.Comment{
-		//{
-		//	IssueIndex:  4,
-		//	PosterName:  "t0xic0der",
-		//	PosterEmail: "t0xic0der@fedoraproject.org",
-		//	PosterID:    42,
-		//	Created:     time.Date(2023, time.October, 13, 4, 3, 30, 0, time.UTC),
-		//	Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-		//	Content:     "**Metadata Update from @t0xic0der**:\n- Issue tagged with: cccc, dddd",
-		//},
 		{
-			IssueIndex:  4,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2023, time.November, 21, 8, 7, 25, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "This is the first comment under the fourth test issue",
+			IssueIndex: 4,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2023, time.November, 21, 8, 7, 25, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "This is the first comment under the fourth test issue",
 		},
 		{
-			IssueIndex:  4,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2023, time.November, 21, 8, 7, 34, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "This is the second comment under the fourth test issue",
+			IssueIndex: 4,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2023, time.November, 21, 8, 7, 34, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "This is the second comment under the fourth test issue",
 		},
 		{
-			IssueIndex:  4,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2023, time.November, 21, 8, 8, 1, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue status updated to: Closed (was: Open)",
+			IssueIndex: 4,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2023, time.November, 21, 8, 8, 1, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue status updated to: Closed (was: Open)",
 		},
 		{
-			IssueIndex:  4,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.May, 8, 4, 50, 46, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: Milestone DDDD",
+			IssueIndex: 4,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.May, 8, 4, 50, 46, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: Milestone DDDD",
 		},
 		{
-			IssueIndex:  4,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.June, 25, 6, 23, 46, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: None (was: Milestone DDDD)\n- Issue status updated to: Open (was: Closed)",
+			IssueIndex: 4,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.June, 25, 6, 23, 46, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: None (was: Milestone DDDD)\n- Issue status updated to: Open (was: Closed)",
 		},
 		{
-			IssueIndex:  4,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.June, 25, 6, 23, 52, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue close_status updated to: Baseless\n- Issue status updated to: Closed (was: Open)",
+			IssueIndex: 4,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.June, 25, 6, 23, 52, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue close_status updated to: Baseless\n- Issue status updated to: Closed (was: Open)",
 		},
 		{
-			IssueIndex:  4,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.June, 25, 6, 24, 55, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: Milestone DDDD",
+			IssueIndex: 4,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.June, 25, 6, 24, 55, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue set to the milestone: Milestone DDDD",
 		},
 		{
-			IssueIndex:  4,
-			PosterName:  "t0xic0der",
-			PosterEmail: "t0xic0der@fedoraproject.org",
-			PosterID:    42,
-			Created:     time.Date(2025, time.June, 25, 6, 26, 26, 0, time.UTC),
-			Updated:     time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
-			Content:     "**Metadata Update from @t0xic0der**:\n- Issue priority set to: Common",
+			IssueIndex: 4,
+			PosterName: "t0xic0der",
+			PosterID:   -1,
+			Created:    time.Date(2025, time.June, 25, 6, 26, 26, 0, time.UTC),
+			Updated:    time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Content:    "**Metadata Update from @t0xic0der**:\n- Issue priority set to: Common",
 		},
 	}, comments)
 }
