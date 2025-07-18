@@ -4,21 +4,16 @@
 package federation
 
 import (
-	"fmt"
-	"net/http"
-
-	context_service "forgejo.org/services/context"
+	"context"
 
 	ap "github.com/go-ap/activitypub"
 )
 
-func ProcessRepositoryInbox(ctx *context_service.APIContext, form any, repositoryID int64) (int, string, error) {
-	activity := form.(*ap.Activity)
-
+func ProcessRepositoryInbox(ctx context.Context, activity *ap.Activity, repositoryID int64) (ServiceResult, error) {
 	switch activity.Type {
 	case ap.LikeType:
 		return ProcessLikeActivity(ctx, activity, repositoryID)
 	default:
-		return http.StatusNotAcceptable, "Invalid activity", fmt.Errorf("invalid activity: %v", activity.Type)
+		return ServiceResult{}, NewErrNotAcceptablef("Not a like activity: %v", activity.Object.GetType())
 	}
 }

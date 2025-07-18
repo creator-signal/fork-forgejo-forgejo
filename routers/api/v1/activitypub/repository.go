@@ -71,9 +71,11 @@ func RepositoryInbox(ctx *context.APIContext) {
 	repository := ctx.Repo.Repository
 	log.Info("RepositoryInbox: repo: %v", repository)
 	form := web.GetForm(ctx)
-	httpStatus, title, err := federation.ProcessRepositoryInbox(ctx, form, repository.ID)
+	activity := form.(*ap.Activity)
+	result, err := federation.ProcessRepositoryInbox(ctx, activity, repository.ID)
 	if err != nil {
-		ctx.Error(httpStatus, title, err)
+		ctx.Error(federation.HTTPStatus(err), "Processing Repository Inbox failed", result)
+		return
 	}
-	ctx.Status(http.StatusNoContent)
+	responseServiceResult(ctx, result)
 }
