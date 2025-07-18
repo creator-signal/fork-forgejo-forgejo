@@ -983,7 +983,7 @@ func NewIssue(ctx *context.Context) {
 		project, err := project_model.GetProjectByID(ctx, projectID)
 		if err != nil {
 			log.Error("GetProjectByID: %d: %v", projectID, err)
-		} else if project.RepoID != ctx.Repo.Repository.ID {
+		} else if project.RepoID != ctx.Repo.Repository.ID && project.OwnerID != ctx.Repo.Repository.OwnerID {
 			log.Error("GetProjectByID: %d: %v", projectID, fmt.Errorf("project[%d] not in repo [%d]", project.ID, ctx.Repo.Repository.ID))
 		} else {
 			ctx.Data["project_id"] = projectID
