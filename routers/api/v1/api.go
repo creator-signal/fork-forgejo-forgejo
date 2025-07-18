@@ -831,7 +831,6 @@ func Routes() *web.Route {
 					m.Post("/inbox",
 						activitypub.ReqHTTPUserSignature(),
 						bind(ap.Activity{}),
-						bind(ap.Activity{}),
 						activitypub.PersonInbox)
 					m.Group("/activities/{activity-id}", func() {
 						m.Get("", activitypub.PersonActivityNote)
