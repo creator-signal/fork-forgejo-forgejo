@@ -31,7 +31,7 @@
 							{{end}}
 							{{if $moderationEntryNeeded}}
 								<li>
-									<a class="item" href="{{AppSubUrl}}/report_abuse?type=org&id={{$.Org.ID}}">{{svg "octicon-stop"}}{{ctx.Locale.Tr "moderation.report_abuse"}}</a>
+									<a class="item orange text" href="{{AppSubUrl}}/report_abuse?type=org&id={{$.Org.ID}}">{{svg "octicon-stop"}}{{ctx.Locale.Tr "moderation.report_abuse"}}</a>
 								</li>
 							{{end}}
 						</ul>
