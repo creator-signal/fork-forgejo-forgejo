@@ -147,7 +147,6 @@ quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequa
 			doc.AssertElement(t, "details.dropdown a[href^='/report_abuse']", true)
 
 			// But the org owner shouldn't see the report option
-			defer test.MockVariableValue(&setting.Moderation.Enabled, true)()
 			doc = NewHTMLParser(t, loginUser(t, "user1").MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
 			doc.AssertElement(t, "details.dropdown", false)
 		})
