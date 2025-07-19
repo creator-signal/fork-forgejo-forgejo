@@ -94,12 +94,6 @@
   flex: 1;
 }
 
-.page-content.organization #org-info .org-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0;
-}
-
 .page-content.organization #org-info .org-title {
   display: flex;
   column-gap: 1rem;
