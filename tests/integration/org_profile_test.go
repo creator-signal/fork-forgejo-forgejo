@@ -125,6 +125,7 @@ quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequa
 			defer test.MockVariableValue(&setting.Other.EnableFeed, false)()
 			defer test.MockVariableValue(&setting.Moderation.Enabled, false)()
 
+			// The dropdown won't appear if no entries are available, for both guests and logged in users
 			doc := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
 			doc.AssertElement(t, "details.dropdown", false)
 
@@ -139,8 +140,7 @@ quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequa
 
 			// The report option shouldn't be available to a guest
 			doc := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
-			doc.AssertElement(t, "details.dropdown a[href='/org3.rss']", true)
-			doc.AssertElement(t, "details.dropdown a[href^='/report_abuse']", false)
+			doc.AssertElement(t, "details.dropdown", false)
 
 			// But should be available to a logged in user
 			doc = NewHTMLParser(t, loginUser(t, "user10").MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
