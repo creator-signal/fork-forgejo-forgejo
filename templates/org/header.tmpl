@@ -22,8 +22,8 @@
 					<a class="ui basic button tw-mr-0" href="{{.OrgLink}}/dashboard">{{ctx.Locale.Tr "org.open_dashboard"}}</a>
 				{{end}}
 				{{if and .IsModerationEnabled .IsSigned (not .IsOrganizationOwner)}}
-					<details class="dropdown dir-auto">
-						<summary data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">{{svg "octicon-kebab-horizontal"}}</summary>
+					<details class="dropdown dir-rtl">
+						<summary data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">{{svg "octicon-kebab-horizontal" 20}}</summary>
 						<ul>
 							<li>
 								<a class="item" href="{{AppSubUrl}}/report_abuse?type=org&id={{$.Org.ID}}">{{ctx.Locale.Tr "moderation.report_abuse"}}</a>
