@@ -8286,29 +8286,6 @@ Floated Menu / Item
   color: rgba(0, 0, 0, 0.85);
 }
 
-/* Resort to margin positioning if legacy */
-
-.ui.legacy.legacy.modal,
-.ui.legacy.legacy.page.dimmer > .ui.modal {
-  left: 50% !important;
-}
-
-.ui.legacy.legacy.modal:not(.aligned),
-.ui.legacy.legacy.page.dimmer > .ui.modal:not(.aligned) {
-  top: 50%;
-}
-
-.ui.legacy.legacy.page.dimmer > .ui.scrolling.modal:not(.aligned),
-.ui.page.dimmer > .ui.scrolling.legacy.legacy.modal:not(.aligned),
-.ui.top.aligned.legacy.legacy.page.dimmer > .ui.modal:not(.aligned),
-.ui.top.aligned.dimmer > .ui.legacy.legacy.modal:not(.aligned) {
-  top: auto;
-}
-
-.ui.legacy.overlay.fullscreen.modal {
-  margin-top: -2rem !important;
-}
-
 /*******************************
              States
 *******************************/
