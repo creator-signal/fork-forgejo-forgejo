@@ -47,6 +47,7 @@
 @variationListInverted: false;
 @variationMenuInverted: false;
 @variationMessageInverted: false;
+@variationModalBasic: false;
 @variationModalInverted: false;
 @variationModalLegacy: false;
 @variationModalSizes: mini, tiny, small;

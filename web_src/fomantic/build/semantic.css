@@ -8253,39 +8253,6 @@ Floated Menu / Item
              Types
 *******************************/
 
-.ui.basic.modal {
-  background-color: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none !important;
-  color: #FFFFFF;
-}
-
-.ui.basic.modal > .header,
-.ui.basic.modal > .content,
-.ui.basic.modal > .actions {
-  background-color: transparent;
-}
-
-.ui.basic.modal > .header {
-  color: #FFFFFF;
-  border-bottom: none;
-}
-
-.ui.basic.modal > .close {
-  top: 1rem;
-  right: 1.5rem;
-  color: #FFFFFF;
-}
-
-.ui.inverted.dimmer > .basic.modal {
-  color: rgba(0, 0, 0, 0.87);
-}
-
-.ui.inverted.dimmer > .ui.basic.modal > .header {
-  color: rgba(0, 0, 0, 0.85);
-}
-
 /*******************************
              States
 *******************************/
@@ -8417,10 +8384,6 @@ Floated Menu / Item
   top: 1.0535rem;
   right: 1rem;
   color: rgba(0, 0, 0, 0.87);
-}
-
-.ui.basic.fullscreen.modal > .close {
-  color: #FFFFFF;
 }
 
 /*--------------
