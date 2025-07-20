@@ -33,6 +33,7 @@
 @variationFlyoutInverted: false;
 @variationFormInverted: false;
 @variationFormTransparent: false;
+@variationFormSizes: false;
 @variationGridDoubling: false;
 @variationGridInverted: false;
 @variationHeaderInverted: false;

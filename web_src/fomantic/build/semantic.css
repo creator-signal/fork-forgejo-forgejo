@@ -5927,30 +5927,6 @@ select.ui.dropdown {
   font-size: 1rem;
 }
 
-.ui.mini.form,
-.ui.mini.form .field .dropdown,
-.ui.mini.form .field .dropdown .menu > .item {
-  font-size: 0.78571429rem;
-}
-
-.ui.tiny.form,
-.ui.tiny.form .field .dropdown,
-.ui.tiny.form .field .dropdown .menu > .item {
-  font-size: 0.85714286rem;
-}
-
-.ui.small.form,
-.ui.small.form .field .dropdown,
-.ui.small.form .field .dropdown .menu > .item {
-  font-size: 0.92857143rem;
-}
-
-.ui.large.form,
-.ui.large.form .field .dropdown,
-.ui.large.form .field .dropdown .menu > .item {
-  font-size: 1.14285714rem;
-}
-
 /*******************************
          Theme Overrides
 *******************************/
