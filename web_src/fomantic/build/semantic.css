@@ -574,19 +574,6 @@
   color: #FFFFFF;
 }
 
-/*--------------
-      Circular
-  ---------------*/
-
-.ui.circular.button {
-  border-radius: 10em;
-}
-
-.ui.circular.button > .icon {
-  width: 1em;
-  vertical-align: baseline;
-}
-
 /*-------------------
           Fluid
   --------------------*/
