@@ -29,6 +29,7 @@
 @variationDimmerInverted: false;
 @variationDividerInverted: false;
 @variationDropdownInverted: false;
+@variationDropdownScrollhint: false;
 @variationDropdownSimple: false;
 @variationFeedInverted: false;
 @variationFlyoutInverted: false;
