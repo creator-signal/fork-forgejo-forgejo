@@ -588,51 +588,6 @@
 }
 
 /*-------------------
-        Or Buttons
-  --------------------*/
-
-.ui.buttons .or {
-  position: relative;
-  width: 0.3em;
-  height: 2.57142857em;
-  z-index: 3;
-}
-
-.ui.buttons .or:before {
-  position: absolute;
-  text-align: center;
-  border-radius: 500rem;
-  content: 'or';
-  top: 50%;
-  left: 50%;
-  background-color: #FFFFFF;
-  text-shadow: none;
-  margin-top: -0.89285714em;
-  margin-left: -0.89285714em;
-  width: 1.78571429em;
-  height: 1.78571429em;
-  line-height: 1.78571429em;
-  color: rgba(0, 0, 0, 0.4);
-  font-style: normal;
-  font-weight: 500;
-  box-shadow: 0 0 0 1px transparent inset;
-}
-
-.ui.buttons .or[data-text]:before {
-  content: attr(data-text);
-}
-
-/* Fluid Or */
-
-.ui.fluid.buttons .or {
-  width: 0 !important;
-}
-
-.ui.fluid.buttons .or:after {
-  display: none;
-}
-
-/*-------------------
           Fluid
   --------------------*/
 

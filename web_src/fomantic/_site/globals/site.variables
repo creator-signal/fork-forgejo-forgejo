@@ -18,6 +18,7 @@
 @variationButtonInverted: false;
 @variationButtonSocial: false;
 @variationButtonTertiary: false;
+@variationButtonOr: false;
 @variationCalendarInverted: false;
 @variationCardInverted: false;
 @variationCheckboxInverted: false;
