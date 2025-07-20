@@ -63,6 +63,7 @@
 @variationPopupInverted: false;
 @variationPopupTooltip: false;
 @variationProgressInverted: false;
+@variationSearchAligned: false;
 @variationSearchCategory: false;
 @variationSearchShort: false;
 @variationSearchLong: false;
