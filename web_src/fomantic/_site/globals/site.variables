@@ -21,6 +21,7 @@
 @variationButtonSocial: false;
 @variationButtonTertiary: false;
 @variationButtonOr: false;
+@variationButtonSizes: mini, tiny, small;
 @variationCalendarInverted: false;
 @variationCardInverted: false;
 @variationCheckboxInverted: false;
