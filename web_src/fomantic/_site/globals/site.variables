@@ -17,6 +17,7 @@
 @variationButtonCircular: false;
 @variationButtonFloated: false;
 @variationButtonInverted: false;
+@variationButtonToggle: false;
 @variationButtonSocial: false;
 @variationButtonTertiary: false;
 @variationButtonOr: false;

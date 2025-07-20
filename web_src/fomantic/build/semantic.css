@@ -553,27 +553,6 @@
   animation: loader 2s linear infinite;
 }
 
-/*--------------
-       Toggle
-  ---------------*/
-
-/* Toggle (Modifies active state to give affordances) */
-
-.ui.toggle.buttons .active.button,
-.ui.buttons .button.toggle.active,
-.ui.button.toggle.active {
-  background-color: #21BA45;
-  box-shadow: none;
-  text-shadow: none;
-  color: #FFFFFF;
-}
-
-.ui.button.toggle.active:hover {
-  background-color: #16ab39;
-  text-shadow: none;
-  color: #FFFFFF;
-}
-
 /*-------------------
           Fluid
   --------------------*/
