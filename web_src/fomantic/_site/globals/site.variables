@@ -50,6 +50,7 @@
 @variationModalBasic: false;
 @variationModalInverted: false;
 @variationModalLegacy: false;
+@variationModalOverlay: false;
 @variationModalSizes: mini, tiny, small;
 @variationNagInverted: false;
 @variationPlaceholderInverted: false;
