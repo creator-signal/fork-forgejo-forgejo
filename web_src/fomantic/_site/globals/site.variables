@@ -47,6 +47,7 @@
 @variationLabelRibbon: false;
 @variationLabelTag: false;
 @variationListInverted: false;
+@variationMenuFitted: false;
 @variationMenuFixed: false;
 @variationMenuInverted: false;
 @variationMessageInverted: false;

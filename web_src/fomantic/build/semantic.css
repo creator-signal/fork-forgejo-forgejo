@@ -7316,30 +7316,6 @@ Floated Menu / Item
 }
 
 /*--------------
-       Fitted
-  ---------------*/
-
-.ui.fitted.menu .item,
-.ui.fitted.menu .item .menu .item,
-.ui.menu .fitted.item {
-  padding: 0;
-}
-
-.ui.horizontally.fitted.menu .item,
-.ui.horizontally.fitted.menu .item .menu .item,
-.ui.menu .horizontally.fitted.item {
-  padding-top: 0.92857143em;
-  padding-bottom: 0.92857143em;
-}
-
-.ui.vertically.fitted.menu .item,
-.ui.vertically.fitted.menu .item .menu .item,
-.ui.menu .vertically.fitted.item {
-  padding-left: 1.14285714em;
-  padding-right: 1.14285714em;
-}
-
-/*--------------
      Borderless
   ---------------*/
 
