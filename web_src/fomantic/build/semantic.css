@@ -8406,14 +8406,6 @@ Floated Menu / Item
       Active
 ---------------*/
 
-.ui.category.search > .results .category.active {
-  background: #F3F4F5;
-}
-
-.ui.category.search > .results .category.active > .name {
-  color: rgba(0, 0, 0, 0.87);
-}
-
 .ui.search > .results .result.active,
 .ui.category.search > .results .category .result.active {
   position: relative;
@@ -8480,75 +8472,6 @@ Floated Menu / Item
 .ui.search.selection > .icon.input > .remove.icon:hover {
   opacity: 1;
   color: #DB2828;
-}
-
-/*--------------
-      Category
-  ---------------*/
-
-.ui.category.search .results {
-  width: 28em;
-}
-
-.ui.category.search .results.animating,
-.ui.category.search .results.visible {
-  display: table;
-}
-
-/* Category */
-
-.ui.category.search > .results .category {
-  display: table-row;
-  background: #F3F4F5;
-  box-shadow: none;
-  transition: background 0.1s ease, border-color 0.1s ease;
-}
-
-/* Last Category */
-
-.ui.category.search > .results .category:last-child {
-  border-bottom: none;
-}
-
-/* First / Last */
-
-.ui.category.search > .results .category:first-child .name + .result {
-  border-radius: 0 0.28571429rem 0 0;
-}
-
-.ui.category.search > .results .category:last-child .result:last-child {
-  border-radius: 0 0 0.28571429rem 0;
-}
-
-/* Category Result Name */
-
-.ui.category.search > .results .category > .name {
-  display: table-cell;
-  text-overflow: ellipsis;
-  width: 100px;
-  white-space: nowrap;
-  background: transparent;
-  font-family: var(--fonts-regular);
-  font-size: 1em;
-  padding: 0.4em 1em;
-  font-weight: 500;
-  color: rgba(0, 0, 0, 0.4);
-  border-bottom: 1px solid rgba(34, 36, 38, 0.1);
-}
-
-/* Category Result */
-
-.ui.category.search > .results .category .results {
-  display: table-cell;
-  background: #FFFFFF;
-  border-left: 1px solid rgba(34, 36, 38, 0.15);
-  border-bottom: 1px solid rgba(34, 36, 38, 0.1);
-}
-
-.ui.category.search > .results .category .result {
-  border-bottom: 1px solid rgba(34, 36, 38, 0.1);
-  transition: background 0.1s ease, border-color 0.1s ease;
-  padding: 0.85714286em 1.14285714em;
 }
 
 /*******************************
