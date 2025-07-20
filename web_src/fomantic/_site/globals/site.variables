@@ -46,6 +46,7 @@
 @variationLabelRibbon: false;
 @variationLabelTag: false;
 @variationListInverted: false;
+@variationMenuFixed: false;
 @variationMenuInverted: false;
 @variationMessageInverted: false;
 @variationModalBasic: false;
