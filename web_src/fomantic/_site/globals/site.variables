@@ -14,6 +14,7 @@
 @variationButtonAnimated: false;
 @variationButtonAnimatedFade: false;
 @variationButtonAttached: false;
+@variationButtonFloated: false;
 @variationButtonInverted: false;
 @variationButtonSocial: false;
 @variationButtonTertiary: false;

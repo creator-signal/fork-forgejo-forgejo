@@ -288,24 +288,6 @@
 *******************************/
 
 /*-------------------
-         Floated
-  --------------------*/
-
-.ui[class*="left floated"].buttons,
-.ui[class*="left floated"].button {
-  float: left;
-  margin-left: 0;
-  margin-right: 0.25em;
-}
-
-.ui[class*="right floated"].buttons,
-.ui[class*="right floated"].button {
-  float: right;
-  margin-right: 0;
-  margin-left: 0.25em;
-}
-
-/*-------------------
          Compact
   --------------------*/
 
