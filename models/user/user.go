@@ -182,11 +182,11 @@ func (u *User) BeforeUpdate() {
 		u.MaxRepoCreation = -1
 	}
 
-	// Organization does not need email
-	u.Email = strings.ToLower(u.Email)
+	// Ensure AvatarEmail is set for non-organization users, because organization
+	// are not required to have a email set.
 	if !u.IsOrganization() {
 		if len(u.AvatarEmail) == 0 {
-			u.AvatarEmail = u.Email
+			u.AvatarEmail = strings.ToLower(u.Email)
 		}
 	}
 
@@ -927,7 +927,9 @@ func UpdateUserCols(ctx context.Context, u *User, cols ...string) error {
 
 	// If the user was reported as abusive and any of the columns being updated is relevant
 	// for moderation purposes a shadow copy should be created before first update.
-	if err := IfNeededCreateShadowCopyForUser(ctx, u, cols...); err != nil {
+	// Since u is already altered at this point we are sending nil instead as an argument
+	// so that the unaltered version will be retrieved from DB.
+	if err := IfNeededCreateShadowCopyForUser(ctx, u.ID, nil, cols...); err != nil {
 		return err
 	}
 

@@ -16,8 +16,8 @@ const (
 	tplActionNowDone base.TplName = "actions/now_done"
 )
 
-// requires !run.Status.IsSuccess() or !lastRun.Status.IsSuccess()
-func MailActionRun(run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun) error {
+var MailActionRun = mailActionRun // make it mockable
+func mailActionRun(run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun) error {
 	if setting.MailService == nil {
 		// No mail service configured
 		return nil
@@ -60,7 +60,6 @@ func sendMailActionRun(to *user_model.User, run *actions_model.ActionRun, priorS
 	if len(commitSHA) > 7 {
 		commitSHA = commitSHA[:7]
 	}
-	branch := run.PrettyRef()
 
 	data := map[string]any{
 		"locale":          locale,
@@ -73,7 +72,6 @@ func sendMailActionRun(to *user_model.User, run *actions_model.ActionRun, priorS
 		"LastRun":         lastRun,
 		"PriorStatus":     priorStatus,
 		"CommitSHA":       commitSHA,
-		"Branch":          branch,
 		"IsSuccess":       run.Status.IsSuccess(),
 	}
 

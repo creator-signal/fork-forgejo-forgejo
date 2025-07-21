@@ -50,7 +50,6 @@ test.describe('Pull: Toggle WIP', () => {
 
   test('simple toggle', async ({page}, workerInfo) => {
     test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-    await page.goto('/user2/repo1/pulls/5');
     // toggle to WIP
     await toggle_wip_to({page}, true);
     await check_wip({page}, true);
@@ -222,7 +221,7 @@ test('Issue: Milestone', async ({page}, workerInfo) => {
   const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  const selectedMilestone = page.locator('.issue-content-right .select-milestone.list');
+  const selectedMilestone = page.locator('.issue-content-right #selected-milestone');
   const milestoneDropdown = page.locator('.issue-content-right .select-milestone.dropdown');
   await expect(selectedMilestone).toContainText('No milestone');
 

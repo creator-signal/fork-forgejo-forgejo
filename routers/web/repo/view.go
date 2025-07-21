@@ -228,7 +228,7 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 	n, _ := util.ReadAtMost(dataRc, buf)
 	buf = buf[:n]
 
-	st := typesniffer.DetectContentType(buf)
+	st := typesniffer.DetectContentType(buf, blob.Name())
 	isTextFile := st.IsText()
 
 	// FIXME: what happens when README file is an image?
@@ -262,7 +262,7 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 	}
 	buf = buf[:n]
 
-	st = typesniffer.DetectContentType(buf)
+	st = typesniffer.DetectContentType(buf, blob.Name())
 
 	return buf, dataRc, &fileInfo{st.IsText(), true, meta.Size, &meta.Pointer, st}, nil
 }
@@ -1057,14 +1057,13 @@ func renderHomeCode(ctx *context.Context) {
 		return
 	}
 
-	if entry.IsSubModule() {
-		subModuleURL, err := ctx.Repo.Commit.GetSubModule(entry.Name())
+	if entry.IsSubmodule() {
+		submodule, err := ctx.Repo.Commit.GetSubmodule(ctx.Repo.TreePath, entry)
 		if err != nil {
-			HandleGitError(ctx, "Repo.Commit.GetSubModule", err)
+			HandleGitError(ctx, "Repo.Commit.GetSubmodule", err)
 			return
 		}
-		subModuleFile := git.NewSubModuleFile(ctx.Repo.Commit, subModuleURL, entry.ID.String())
-		ctx.Redirect(subModuleFile.RefURL(setting.AppURL, ctx.Repo.Repository.FullName(), setting.SSH.Domain))
+		ctx.Redirect(submodule.ResolveUpstreamURL(ctx.Repo.Repository.HTMLURL()))
 	} else if entry.IsDir() {
 		renderDirectory(ctx)
 	} else {
