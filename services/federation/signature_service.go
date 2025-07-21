@@ -29,7 +29,6 @@ func NewActorIDFromKeyID(ctx context.Context, uri string) (fm.ActorID, error) {
 	}
 
 	actionsUser := user.NewAPServerActor()
-	// TODO: create here a new context for outgoing calls?
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return fm.ActorID{}, err
