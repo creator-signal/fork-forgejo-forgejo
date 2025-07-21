@@ -64,6 +64,8 @@ func TestAdminModerationViewReports(t *testing.T) {
 
 			req := NewRequest(t, "GET", "/admin/moderation/reports")
 			MakeRequest(t, req, http.StatusSeeOther)
+			req = NewRequest(t, "GET", "/admin/moderation/reports/type/1/id/1002")
+			MakeRequest(t, req, http.StatusSeeOther)
 		})
 
 		t.Run("Normal user", func(t *testing.T) {
@@ -71,6 +73,8 @@ func TestAdminModerationViewReports(t *testing.T) {
 
 			session := loginUser(t, "user2")
 			req := NewRequest(t, "GET", "/admin/moderation/reports")
+			session.MakeRequest(t, req, http.StatusForbidden)
+			req = NewRequest(t, "GET", "/admin/moderation/reports/type/1/id/1002")
 			session.MakeRequest(t, req, http.StatusForbidden)
 		})
 
@@ -98,6 +102,26 @@ func TestAdminModerationViewReports(t *testing.T) {
 			testReportDetails(t, htmlDoc, "8", "octicon-issue-opened", "contributor/first#1", "/contributor/first/issues/1", "Other violations of platform rules", "1")
 			// #10 is for a Ghost user
 			testReportDetails(t, htmlDoc, "10", "octicon-person", "Reported content with type 1 and id 9999 no longer exists", "", "Other violations of platform rules", "1")
+
+			t.Run("reports details page", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				req = NewRequest(t, "GET", "/admin/moderation/reports/type/1/id/1002")
+				resp = session.MakeRequest(t, req, http.StatusOK)
+				htmlDoc = NewHTMLParser(t, resp.Body)
+
+				// Check the title (content reference) and corresponding URL
+				title := htmlDoc.Find(".admin-setting-content .flex-item-main .flex-item-title a")
+				assert.Equal(t, 1, title.Length())
+				assert.Equal(t, "spammer01", title.Text())
+				href, exists := title.Attr("href")
+				assert.True(t, exists)
+				assert.Equal(t, "/spammer01", href)
+
+				// Check how many reports are being displayed for user 1002.
+				reports = htmlDoc.Find(".admin-setting-content .flex-list .flex-item")
+				assert.Equal(t, 3, reports.Length())
+			})
 		})
 	})
 
@@ -107,6 +131,8 @@ func TestAdminModerationViewReports(t *testing.T) {
 
 			req := NewRequest(t, "GET", "/admin/moderation/reports")
 			MakeRequest(t, req, http.StatusNotFound)
+			req = NewRequest(t, "GET", "/admin/moderation/reports/type/1/id/1002")
+			MakeRequest(t, req, http.StatusNotFound)
 		})
 
 		t.Run("Normal user", func(t *testing.T) {
@@ -115,6 +141,8 @@ func TestAdminModerationViewReports(t *testing.T) {
 			session := loginUser(t, "user2")
 			req := NewRequest(t, "GET", "/admin/moderation/reports")
 			session.MakeRequest(t, req, http.StatusNotFound)
+			req = NewRequest(t, "GET", "/admin/moderation/reports/type/1/id/1002")
+			session.MakeRequest(t, req, http.StatusNotFound)
 		})
 
 		t.Run("Admin user", func(t *testing.T) {
@@ -122,6 +150,8 @@ func TestAdminModerationViewReports(t *testing.T) {
 
 			session := loginUser(t, "user1")
 			req := NewRequest(t, "GET", "/admin/moderation/reports")
+			session.MakeRequest(t, req, http.StatusNotFound)
+			req = NewRequest(t, "GET", "/admin/moderation/reports/type/1/id/1002")
 			session.MakeRequest(t, req, http.StatusNotFound)
 		})
 	})

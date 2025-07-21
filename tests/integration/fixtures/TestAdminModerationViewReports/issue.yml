@@ -16,10 +16,7 @@
   index: 1
   poster_id: 1002
   name: Professional marketing services
-  content: I am a professional spammer.
-    # I am a professional spammer.
-    # Visit my website at spammer.xyz services for a list of available services.
-    # Or send me an email: master@spam.net.
+  content: Visit my website at spammer.xyz/services for a list of available services.
   is_closed: false
   is_pull: false
   num_comments: 0
