@@ -6,9 +6,10 @@
     "docker:pinDigests",
     "helpers:pinGitHubActionDigests"
   ],
-  "baseBranches": [
+  "baseBranchPatterns": [
     "$default",
-    "/^v11\\.\\d+/forgejo$/"
+    "/^v11\\.\\d+/forgejo$/",
+    "/^v12\\.\\d+/forgejo$/"
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths", "npmDedupe"],
   "prConcurrentLimit": 10,
