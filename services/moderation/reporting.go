@@ -163,7 +163,6 @@ func RemoveResolvedReports(ctx stdCtx.Context, keepReportsFor time.Duration) err
 
 		log.Trace("Finished: RemoveResolvedReports")
 		return nil
-	} else {
-		return nil
 	}
+	return nil
 }
