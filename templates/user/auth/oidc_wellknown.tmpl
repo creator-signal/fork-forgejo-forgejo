@@ -1,5 +1,5 @@
 {
-    "issuer": "{{.Issuer | JSEscape}}",
+    "issuer": "{{AppUrl | JSEscape}}",
     "authorization_endpoint": "{{AppUrl | JSEscape}}login/oauth/authorize",
     "token_endpoint": "{{AppUrl | JSEscape}}login/oauth/access_token",
     "jwks_uri": "{{AppUrl | JSEscape}}login/oauth/keys",

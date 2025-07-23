@@ -225,7 +225,7 @@ func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, ser
 		idToken := &oauth2.OIDCToken{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(expirationDate.AsTime()),
-				Issuer:    strings.TrimSuffix(setting.AppURL, "/"),
+				Issuer:    setting.AppURL,
 				Audience:  []string{app.ClientID},
 				Subject:   fmt.Sprint(grant.UserID),
 			},
@@ -409,7 +409,7 @@ func IntrospectOAuth(ctx *context.Context) {
 			if err == nil && app != nil {
 				response.Active = true
 				response.Scope = grant.Scope
-				response.Issuer = strings.TrimSuffix(setting.AppURL, "/")
+				response.Issuer = setting.AppURL
 				response.Audience = []string{app.ClientID}
 				response.Subject = fmt.Sprint(grant.UserID)
 			}
@@ -669,7 +669,6 @@ func GrantApplicationOAuth(ctx *context.Context) {
 // OIDCWellKnown generates JSON so OIDC clients know Gitea's capabilities
 func OIDCWellKnown(ctx *context.Context) {
 	ctx.Data["SigningKey"] = oauth2.DefaultSigningKey
-	ctx.Data["Issuer"] = strings.TrimSuffix(setting.AppURL, "/")
 	ctx.JSONTemplate("user/auth/oidc_wellknown")
 }
 
