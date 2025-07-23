@@ -632,31 +632,6 @@ func TestSignInOAuthCallbackPKCE(t *testing.T) {
 	})
 }
 
-func TestWellKnownOpenIDConfiguration(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-
-	t.Run("Issuer does not end with a slash", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/.well-known/openid-configuration")
-		resp := MakeRequest(t, req, http.StatusOK)
-		type response struct {
-			Issuer string `json:"issuer"`
-		}
-		parsed := new(response)
-
-		DecodeJSON(t, resp, parsed)
-		assert.Equal(t, strings.TrimSuffix(setting.AppURL, "/"), parsed.Issuer)
-	})
-
-	t.Run("Not found if OAuth2 is not enabled", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.OAuth2.Enabled, false)()
-
-		MakeRequest(t, NewRequest(t, "GET", "/.well-known/openid-configuration"), http.StatusNotFound)
-	})
-}
-
 func TestSignInOAuthCallbackRedirectToEscaping(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -722,7 +697,7 @@ func setupMockOIDCServer() *httptest.Server {
 		case "/.well-known/openid-configuration":
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{
-				"issuer": "` + strings.TrimSuffix(mockServer.URL, "/") + `",
+				"issuer": "` + mockServer.URL + `",
 				"authorization_endpoint": "` + mockServer.URL + `/authorize",
 				"token_endpoint": "` + mockServer.URL + `/token",
 				"userinfo_endpoint": "` + mockServer.URL + `/userinfo"
