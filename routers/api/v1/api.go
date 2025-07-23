@@ -22,6 +22,8 @@
 //
 //	Security:
 //	- BasicAuth :
+//	- Token :
+//	- AccessToken :
 //	- AuthorizationHeaderToken :
 //	- SudoParam :
 //	- SudoHeader :
@@ -30,6 +32,16 @@
 //	SecurityDefinitions:
 //	BasicAuth:
 //	     type: basic
+//	Token:
+//	     type: apiKey
+//	     name: token
+//	     in: query
+//	     description: This authentication option is deprecated for removal in Gitea 1.23. Please use AuthorizationHeaderToken instead.
+//	AccessToken:
+//	     type: apiKey
+//	     name: access_token
+//	     in: query
+//	     description: This authentication option is deprecated for removal in Gitea 1.23. Please use AuthorizationHeaderToken instead.
 //	AuthorizationHeaderToken:
 //	     type: apiKey
 //	     name: Authorization
