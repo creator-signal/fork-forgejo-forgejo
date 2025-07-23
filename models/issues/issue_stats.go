@@ -73,6 +73,11 @@ func CountIssues(ctx context.Context, opts *IssuesOptions, otherConds ...builder
 		Select("COUNT(issue.id) AS count").
 		Table("issue").
 		Join("INNER", "repository", "`issue`.repo_id = `repository`.id")
+	return CountIssuesFromSession(sess, opts, otherConds...)
+}
+
+// CountIssuesFromSession number return of issues by given conditions and a xorm session.
+func CountIssuesFromSession(sess *xorm.Session, opts *IssuesOptions, otherConds ...builder.Cond) (int64, error) {
 	applyConditions(sess, opts)
 
 	for _, cond := range otherConds {

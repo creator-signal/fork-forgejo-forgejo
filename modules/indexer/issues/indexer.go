@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/indexer/issues/bleve"
 	"forgejo.org/modules/indexer/issues/db"
+	"forgejo.org/modules/indexer/issues/dbfts"
 	"forgejo.org/modules/indexer/issues/elasticsearch"
 	"forgejo.org/modules/indexer/issues/internal"
 	"forgejo.org/modules/indexer/issues/meilisearch"
@@ -104,6 +105,12 @@ func InitIssueIndexer(syncReindex bool) {
 			}
 		case "db":
 			issueIndexer = db.NewIndexer()
+		case "dbfts":
+			issueIndexer = dbfts.NewIndexer()
+			existed, err = issueIndexer.Init(ctx)
+			if err != nil {
+				log.Fatal("Unable to setup DB fts Error: %v", err)
+			}
 		case "meilisearch":
 			issueIndexer = meilisearch.NewIndexer(setting.Indexer.IssueConnStr, setting.Indexer.IssueConnAuth, setting.Indexer.IssueIndexerName)
 			existed, err = issueIndexer.Init(ctx)

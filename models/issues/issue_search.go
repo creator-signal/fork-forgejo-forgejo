@@ -493,6 +493,11 @@ func Issues(ctx context.Context, opts *IssuesOptions) (IssueList, error) {
 func IssueIDs(ctx context.Context, opts *IssuesOptions, otherConds ...builder.Cond) ([]int64, int64, error) {
 	sess := db.GetEngine(ctx).
 		Join("INNER", "repository", "`issue`.repo_id = `repository`.id")
+	return IssueIDsFromSession(sess, opts, otherConds...)
+}
+
+// IssueIDsFromSession returns a list of issue ids by given conditions and a xorm session.
+func IssueIDsFromSession(sess *xorm.Session, opts *IssuesOptions, otherConds ...builder.Cond) ([]int64, int64, error) {
 	applyConditions(sess, opts)
 	for _, cond := range otherConds {
 		sess.And(cond)
