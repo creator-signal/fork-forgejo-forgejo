@@ -140,7 +140,7 @@ func loadCommonSettingsFrom(cfg ConfigProvider) error {
 	if err := loadActionsFrom(cfg); err != nil {
 		return err
 	}
-	if err := loadModerationFrom(CfgProvider); err != nil {
+	if err := loadModerationFrom(cfg); err != nil {
 		return err
 	}
 
