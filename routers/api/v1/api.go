@@ -36,12 +36,12 @@
 //	     type: apiKey
 //	     name: token
 //	     in: query
-//	     description: This authentication option is deprecated for removal in Gitea 1.23. Please use AuthorizationHeaderToken instead.
+//	     description: This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.
 //	AccessToken:
 //	     type: apiKey
 //	     name: access_token
 //	     in: query
-//	     description: This authentication option is deprecated for removal in Gitea 1.23. Please use AuthorizationHeaderToken instead.
+//	     description: This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.
 //	AuthorizationHeaderToken:
 //	     type: apiKey
 //	     name: Authorization
