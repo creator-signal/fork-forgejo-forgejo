@@ -47,7 +47,7 @@ GO_LICENSES_PACKAGE ?= github.com/google/go-licenses@v1.6.0 # renovate: datasour
 GOVULNCHECK_PACKAGE ?= golang.org/x/vuln/cmd/govulncheck@v1 # renovate: datasource=go
 DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.35.0 # renovate: datasource=go
 GOMOCK_PACKAGE ?= go.uber.org/mock/mockgen@v0.5.2 # renovate: datasource=go
-RENOVATE_NPM_PACKAGE ?= renovate@41.40.0 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
+RENOVATE_NPM_PACKAGE ?= renovate@41.42.5 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
 
 # https://github.com/disposable-email-domains/disposable-email-domains/commits/main/
 DISPOSABLE_EMAILS_SHA ?= 0c27e671231d27cf66370034d7f6818037416989 # renovate: ...
@@ -940,6 +940,7 @@ fomantic:
 	cd $(FOMANTIC_WORK_DIR) && npm install --no-save
 	cp -f $(FOMANTIC_WORK_DIR)/theme.config.less $(FOMANTIC_WORK_DIR)/node_modules/fomantic-ui/src/theme.config
 	cp -rf $(FOMANTIC_WORK_DIR)/_site $(FOMANTIC_WORK_DIR)/node_modules/fomantic-ui/src/
+	rm -rf $(FOMANTIC_WORK_DIR)/node_modules/fomantic-ui/src/themes/default/modules/dropdown.overrides
 	$(SED_INPLACE) -e 's/  overrideBrowserslist\r/  overrideBrowserslist: ["defaults"]\r/g' $(FOMANTIC_WORK_DIR)/node_modules/fomantic-ui/tasks/config/tasks.js
 	cd $(FOMANTIC_WORK_DIR) && npx gulp -f node_modules/fomantic-ui/gulpfile.js build
 	# fomantic uses "touchstart" as click event for some browsers, it's not ideal, so we force fomantic to always use "click" as click event
