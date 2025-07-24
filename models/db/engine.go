@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 
@@ -187,8 +188,8 @@ func InitEngine(ctx context.Context) error {
 
 		if setting.Database.SlowQueryThreshold > 0 {
 			eng.AddHook(&SlowQueryHook{
-				Treshold: setting.Database.SlowQueryThreshold,
-				Logger:   log.GetLogger("xorm"),
+				Threshold: setting.Database.SlowQueryThreshold,
+				Logger:    log.GetLogger("xorm"),
 			})
 		}
 
@@ -390,8 +391,8 @@ func (TracingHook) AfterProcess(c *contexts.ContextHook) error {
 }
 
 type SlowQueryHook struct {
-	Treshold time.Duration
-	Logger   log.Logger
+	Threshold time.Duration
+	Logger    log.Logger
 }
 
 var _ contexts.Hook = &SlowQueryHook{}
@@ -401,7 +402,7 @@ func (SlowQueryHook) BeforeProcess(c *contexts.ContextHook) (context.Context, er
 }
 
 func (h *SlowQueryHook) AfterProcess(c *contexts.ContextHook) error {
-	if c.ExecuteTime >= h.Treshold {
+	if c.ExecuteTime >= h.Threshold {
 		h.Logger.Log(8, log.WARN, "[Slow SQL Query] %s %v - %v", c.SQL, c.Args, c.ExecuteTime)
 	}
 	return nil
@@ -437,4 +438,13 @@ func GetMasterEngine(x Engine) (*xorm.Engine, error) {
 	}
 
 	return engine, nil
+}
+
+// GetTableNames returns the table name of all registered models.
+func GetTableNames() container.Set[string] {
+	names := make(container.Set[string])
+	for _, table := range tables {
+		names.Add(x.TableName(table))
+	}
+	return names
 }

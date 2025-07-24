@@ -1,10 +1,11 @@
 // Copyright 2023 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package forgejo_migrations //nolint:revive
+package forgejo_migrations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -96,6 +97,21 @@ var migrations = []*Migration{
 	NewMigration("Add pronoun privacy settings to user", AddHidePronounsOptionToUser),
 	// v28 -> v29
 	NewMigration("Add public key information to `FederatedUser` and `FederationHost`", AddPublicKeyInformationForFederation),
+	// v29 -> v30
+	NewMigration("Migrate `User.NormalizedFederatedURI` column to extract port & schema into FederatedHost", MigrateNormalizedFederatedURI),
+	// v30 -> v31
+	NewMigration("Normalize repository.topics to empty slice instead of null", SetTopicsAsEmptySlice),
+	// v31 -> v32
+	NewMigration("Migrate maven package name concatenation", ChangeMavenArtifactConcatenation),
+	// v32 -> v33
+	NewMigration("Add federated user activity tables, update the `federated_user` table & add indexes", FederatedUserActivityMigration),
+	// v33 -> v34
+	NewMigration("Add `notify-email` column to `action_run` table", AddNotifyEmailToActionRun),
+	// v34 -> v35
+	NewMigration("Noop because of https://codeberg.org/forgejo/forgejo/issues/8373", NoopAddIndexToActionRunStopped),
+	// v35 -> v36
+	NewMigration("Fix wiki unit default permission", FixWikiUnitDefaultPermission),
+	NewMigration("Add `branch_filter` to `push_mirror` table", AddPushMirrorBranchFilter),
 }
 
 // GetCurrentDBVersion returns the current Forgejo database version.
@@ -128,7 +144,7 @@ func EnsureUpToDate(x *xorm.Engine) error {
 	}
 
 	if currentDB < 0 {
-		return fmt.Errorf("database has not been initialized")
+		return errors.New("database has not been initialized")
 	}
 
 	expected := ExpectedVersion()

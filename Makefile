@@ -37,19 +37,17 @@ endif
 XGO_VERSION := go-1.21.x
 
 AIR_PACKAGE ?= github.com/air-verse/air@v1 # renovate: datasource=go
-EDITORCONFIG_CHECKER_PACKAGE ?= github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@v3.2.1 # renovate: datasource=go
-GOFUMPT_PACKAGE ?= mvdan.cc/gofumpt@v0.7.0 # renovate: datasource=go
-GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.0.2 # renovate: datasource=go
+EDITORCONFIG_CHECKER_PACKAGE ?= github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@v3.3.0 # renovate: datasource=go
+GOFUMPT_PACKAGE ?= mvdan.cc/gofumpt@v0.8.0 # renovate: datasource=go
+GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2 # renovate: datasource=go
 GXZ_PACKAGE ?= github.com/ulikunitz/xz/cmd/gxz@v0.5.11 # renovate: datasource=go
-MISSPELL_PACKAGE ?= github.com/golangci/misspell/cmd/misspell@v0.6.0 # renovate: datasource=go
 SWAGGER_PACKAGE ?= github.com/go-swagger/go-swagger/cmd/swagger@v0.31.0 # renovate: datasource=go
 XGO_PACKAGE ?= src.techknowlogick.com/xgo@latest
 GO_LICENSES_PACKAGE ?= github.com/google/go-licenses@v1.6.0 # renovate: datasource=go
 GOVULNCHECK_PACKAGE ?= golang.org/x/vuln/cmd/govulncheck@v1 # renovate: datasource=go
-DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.31.0 # renovate: datasource=go
-GOMOCK_PACKAGE ?= go.uber.org/mock/mockgen@v0.5.1 # renovate: datasource=go
-GOPLS_PACKAGE ?= golang.org/x/tools/gopls@v0.18.1 # renovate: datasource=go
-RENOVATE_NPM_PACKAGE ?= renovate@39.233.5 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
+DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.35.0 # renovate: datasource=go
+GOMOCK_PACKAGE ?= go.uber.org/mock/mockgen@v0.5.2 # renovate: datasource=go
+RENOVATE_NPM_PACKAGE ?= renovate@41.42.5 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
 
 # https://github.com/disposable-email-domains/disposable-email-domains/commits/main/
 DISPOSABLE_EMAILS_SHA ?= 0c27e671231d27cf66370034d7f6818037416989 # renovate: ...
@@ -92,28 +90,21 @@ else
     FORGEJO_VERSION_API ?= $(GITEA_VERSION)+${GITEA_COMPATIBILITY}
   else
     # drop the "g" prefix prepended by git describe to the commit hash
-    FORGEJO_VERSION ?= $(shell git describe --exclude '*-test' --tags --always | sed 's/^v//' | sed 's/\-g/-/')+${GITEA_COMPATIBILITY}
+    FORGEJO_VERSION ?= $(shell git describe --exclude '*-test' --tags --always 2>/dev/null | sed 's/^v//' | sed 's/\-g/-/')
+    ifneq ($(FORGEJO_VERSION),)
+      ifeq ($(findstring $(GITEA_COMPATIBILITY),$(FORGEJO_VERSION)),)
+        FORGEJO_VERSION := $(FORGEJO_VERSION)+$(GITEA_COMPATIBILITY)
+      endif
+    endif
   endif
 endif
 FORGEJO_VERSION_MAJOR=$(shell echo $(FORGEJO_VERSION) | sed -e 's/\..*//')
 FORGEJO_VERSION_MINOR=$(shell echo $(FORGEJO_VERSION) | sed -E -e 's/^([0-9]+\.[0-9]+).*/\1/')
 
-show-version-full:
-	@echo ${FORGEJO_VERSION}
-
-show-version-major:
-	@echo ${FORGEJO_VERSION_MAJOR}
-
-show-version-minor:
-	@echo ${FORGEJO_VERSION_MINOR}
-
 RELEASE_VERSION ?= ${FORGEJO_VERSION}
 VERSION ?= ${RELEASE_VERSION}
 
 FORGEJO_VERSION_API ?= ${FORGEJO_VERSION}
-
-show-version-api:
-	@echo ${FORGEJO_VERSION_API}
 
 # Strip binaries by default to reduce size, allow overriding for debugging
 STRIP ?= 1
@@ -137,7 +128,7 @@ WEBPACK_CONFIGS := webpack.config.js tailwind.config.js
 WEBPACK_DEST := public/assets/js/index.js public/assets/css/index.css
 WEBPACK_DEST_ENTRIES := public/assets/js public/assets/css public/assets/fonts
 
-BINDATA_DEST := modules/public/bindata.go modules/options/bindata.go modules/templates/bindata.go
+BINDATA_DEST := modules/migration/bindata.go modules/public/bindata.go modules/options/bindata.go modules/templates/bindata.go
 BINDATA_HASH := $(addsuffix .hash,$(BINDATA_DEST))
 
 GENERATED_GO_DEST := modules/charset/invisible_gen.go modules/charset/ambiguous_gen.go
@@ -208,7 +199,7 @@ all: build
 .PHONY: help
 help:
 	@echo "Make Routines:"
-	@echo " - \"\"                             equivalent to \"build\""
+	@echo " - \"\"                               equivalent to \"build\""
 	@echo " - build                            build everything"
 	@echo " - frontend                         build frontend files"
 	@echo " - backend                          build backend files"
@@ -221,31 +212,22 @@ help:
 	@echo " - deps-frontend                    install frontend dependencies"
 	@echo " - deps-backend                     install backend dependencies"
 	@echo " - deps-tools                       install tool dependencies"
-	@echo " - deps-py                          install python dependencies"
 	@echo " - lint                             lint everything"
 	@echo " - lint-fix                         lint everything and fix issues"
 	@echo " - lint-frontend                    lint frontend files"
 	@echo " - lint-frontend-fix                lint frontend files and fix issues"
 	@echo " - lint-backend                     lint backend files"
 	@echo " - lint-backend-fix                 lint backend files and fix issues"
-	@echo " - lint-codespell                   lint typos"
-	@echo " - lint-codespell-fix               lint typos and fix them automatically"
-	@echo " - lint-codespell-fix-i             lint typos and fix them interactively"
 	@echo " - lint-go                          lint go files"
 	@echo " - lint-go-fix                      lint go files and fix issues"
 	@echo " - lint-go-vet                      lint go files with vet"
-	@echo " - lint-go-gopls                    lint go files with gopls"
 	@echo " - lint-js                          lint js files"
 	@echo " - lint-js-fix                      lint js files and fix issues"
 	@echo " - lint-css                         lint css files"
 	@echo " - lint-css-fix                     lint css files and fix issues"
 	@echo " - lint-md                          lint markdown files"
 	@echo " - lint-swagger                     lint swagger files"
-	@echo " - lint-templates                   lint template files"
 	@echo " - lint-renovate                    lint renovate files"
-	@echo " - lint-yaml                        lint yaml files"
-	@echo " - lint-spell                       lint spelling"
-	@echo " - lint-spell-fix                   lint spelling and fix issues"
 	@echo " - checks                           run various consistency checks"
 	@echo " - checks-frontend                  check frontend files"
 	@echo " - checks-backend                   check backend files"
@@ -275,6 +257,30 @@ help:
 	@echo " - test[\#TestSpecificName]         run unit test"
 	@echo " - test-sqlite[\#TestSpecificName]  run integration test for sqlite"
 	@echo " - reproduce-build\#version         build a reproducible binary for the specified release version"
+
+.PHONY: verify-version
+verify-version:
+ifeq ($(FORGEJO_VERSION),)
+	@echo "Error: Could not determine FORGEJO_VERSION; version file $(STORED_VERSION_FILE) not present and no suitable git tag found"
+	@echo 'In most cases this likely means you forgot to fetch git tags, you can fix this by executing `git fetch --tags`. If this is not possible and this is part of a custom build process, then you can set a specific version by writing it to $(STORED_VERSION_FILE) (This must be a semver compatible version).'
+	@false
+endif
+
+.PHONY: show-version-full
+show-version-full: verify-version
+	@echo ${FORGEJO_VERSION}
+
+.PHONY: show-version-major
+show-version-major: verify-version
+	@echo ${FORGEJO_VERSION_MAJOR}
+
+.PHONY: show-version-minor
+show-version-minor: verify-version
+	@echo ${FORGEJO_VERSION_MINOR}
+
+.PHONY: show-version-api
+show-version-api: verify-version
+	@echo ${FORGEJO_VERSION_API}
 
 ###
 # Check system and environment requirements
@@ -317,8 +323,12 @@ clean-all: clean
 	rm -rf $(WEBPACK_DEST_ENTRIES) node_modules
 
 .PHONY: clean
-clean:
-	rm -rf $(EXECUTABLE) $(DIST) $(BINDATA_DEST) $(BINDATA_HASH) \
+clean: clean-no-bindata
+	rm -rf $(BINDATA_DEST) $(BINDATA_HASH)
+
+.PHONY: clean-no-bindata
+clean-no-bindata:
+	rm -rf $(EXECUTABLE) $(DIST) \
 		integrations*.test \
 		e2e*.test \
 		tests/integration/gitea-integration-* \
@@ -401,10 +411,10 @@ checks-frontend: lockfile-check svg-check
 checks-backend: tidy-check swagger-check fmt-check swagger-validate security-check
 
 .PHONY: lint
-lint: lint-frontend lint-backend lint-spell
+lint: lint-frontend lint-backend
 
 .PHONY: lint-fix
-lint-fix: lint-frontend-fix lint-backend-fix lint-spell-fix
+lint-fix: lint-frontend-fix lint-backend-fix
 
 .PHONY: lint-frontend
 lint-frontend: lint-js lint-css
@@ -417,18 +427,6 @@ lint-backend: lint-go lint-go-vet lint-editorconfig lint-renovate lint-locale li
 
 .PHONY: lint-backend-fix
 lint-backend-fix: lint-go-fix lint-go-vet lint-editorconfig lint-disposable-emails-fix
-
-.PHONY: lint-codespell
-lint-codespell: deps-py
-	@poetry run codespell
-
-.PHONY: lint-codespell-fix
-lint-codespell-fix: deps-py
-	@poetry run codespell -w
-
-.PHONY: lint-codespell-fix-i
-lint-codespell-fix-i: deps-py
-	@poetry run codespell -w -i 3 -C 2
 
 .PHONY: lint-js
 lint-js: node_modules
@@ -452,8 +450,8 @@ lint-swagger: node_modules
 
 .PHONY: lint-renovate
 lint-renovate: node_modules
-	npx --yes --package $(RENOVATE_NPM_PACKAGE) -- renovate-config-validator --strict > .lint-renovate 2>&1 || true
-	@if grep --quiet --extended-regexp -e '^( WARN:|ERROR:)' .lint-renovate ; then cat .lint-renovate ; rm .lint-renovate ; exit 1 ; fi
+	npx --yes --package $(RENOVATE_NPM_PACKAGE) -- renovate-config-validator > .lint-renovate 2>&1 || true
+	@if grep --quiet --extended-regexp -e '^( ERROR:)' .lint-renovate ; then cat .lint-renovate ; rm .lint-renovate ; exit 1 ; fi
 	@rm .lint-renovate
 
 .PHONY: lint-locale
@@ -467,14 +465,6 @@ lint-locale-usage:
 .PHONY: lint-md
 lint-md: node_modules
 	npx markdownlint docs *.md
-
-.PHONY: lint-spell
-lint-spell: lint-codespell
-	@go run $(MISSPELL_PACKAGE) -error $(SPELLCHECK_FILES)
-
-.PHONY: lint-spell-fix
-lint-spell-fix: lint-codespell-fix
-	@go run $(MISSPELL_PACKAGE) -w $(SPELLCHECK_FILES)
 
 RUN_DEADCODE = $(GO) run $(DEADCODE_PACKAGE) -generated=false -f='{{println .Path}}{{range .Funcs}}{{printf "\t%s\n" .Name}}{{end}}{{println}}' -test forgejo.org
 
@@ -495,11 +485,6 @@ lint-go-vet:
 	@echo "Running go vet..."
 	@$(GO) vet ./...
 
-.PHONY: lint-go-gopls
-lint-go-gopls:
-	@echo "Running gopls check..."
-	@GO=$(GO) GOPLS_PACKAGE=$(GOPLS_PACKAGE) tools/lint-go-gopls.sh $(GO_SOURCES_NO_BINDATA)
-
 .PHONY: lint-editorconfig
 lint-editorconfig:
 	$(GO) run $(EDITORCONFIG_CHECKER_PACKAGE) templates .forgejo/workflows
@@ -511,15 +496,6 @@ lint-disposable-emails:
 .PHONY: lint-disposable-emails-fix
 lint-disposable-emails-fix:
 	$(GO) run build/generate-disposable-email.go -r $(DISPOSABLE_EMAILS_SHA)
-
-.PHONY: lint-templates
-lint-templates: .venv node_modules
-	@node tools/lint-templates-svg.js
-	@poetry run djlint $(shell find templates -type f -iname '*.tmpl')
-
-.PHONY: lint-yaml
-lint-yaml: .venv
-	@poetry run yamllint -s .
 
 .PHONY: security-check
 security-check:
@@ -577,7 +553,7 @@ test-check:
 
 .PHONY: test\#%
 test\#%:
-	@echo "Running go test with -tags '$(TEST_TAGS)'..."
+	@echo "Running go test with $(GOTESTFLAGS) -tags '$(TEST_TAGS)'..."
 	@$(GOTEST) $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -run $(subst .,/,$*) $(GO_TEST_PACKAGES)
 
 .PHONY: coverage
@@ -816,7 +792,7 @@ check: test
 ###
 
 .PHONY: install $(TAGS_PREREQ)
-install: $(wildcard *.go)
+install: $(wildcard *.go) | verify-version
 	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) install -v -tags '$(TAGS)' -ldflags '$(LDFLAGS)'
 
 .PHONY: build
@@ -844,13 +820,13 @@ generate-go: $(TAGS_PREREQ)
 merge-locales:
 	@echo "NOT NEEDED: THIS IS A NOOP AS OF Forgejo 7.0 BUT KEPT FOR BACKWARD COMPATIBILITY"
 
-$(EXECUTABLE): $(GO_SOURCES) $(TAGS_PREREQ)
+$(EXECUTABLE): $(GO_SOURCES) $(TAGS_PREREQ) | verify-version
 	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) build $(GOFLAGS) $(EXTRA_GOFLAGS) -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o $@
 
 forgejo: $(EXECUTABLE)
 	ln -f $(EXECUTABLE) forgejo
 
-static-executable: $(GO_SOURCES) $(TAGS_PREREQ)
+static-executable: $(GO_SOURCES) $(TAGS_PREREQ) | verify-version
 	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) build $(GOFLAGS) $(EXTRA_GOFLAGS) -tags 'netgo osusergo $(TAGS)' -ldflags '-linkmode external -extldflags "-static" $(LDFLAGS)' -o $(EXECUTABLE)
 
 .PHONY: release
@@ -863,18 +839,18 @@ $(DIST_DIRS):
 	mkdir -p $(DIST_DIRS)
 
 .PHONY: release-linux
-release-linux: | $(DIST_DIRS)
+release-linux: | $(DIST_DIRS) verify-version
 	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) run $(XGO_PACKAGE) -go $(XGO_VERSION) -dest $(DIST)/binaries -tags 'netgo osusergo $(TAGS)' -ldflags '-linkmode external -extldflags "-static" $(LDFLAGS)' -targets '$(LINUX_ARCHS)' -out forgejo-$(VERSION) .
 ifeq ($(CI),true)
 	cp /build/* $(DIST)/binaries
 endif
 
 .PHONY: release-darwin
-release-darwin: | $(DIST_DIRS)
+release-darwin: | $(DIST_DIRS) verify-version
 	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) run $(XGO_PACKAGE) -go $(XGO_VERSION) -dest $(DIST)/binaries -tags 'netgo osusergo $(TAGS)' -ldflags '$(LDFLAGS)' -targets 'darwin-10.12/amd64,darwin-10.12/arm64' -out gitea-$(VERSION) .
 
 .PHONY: release-freebsd
-release-freebsd: | $(DIST_DIRS)
+release-freebsd: | $(DIST_DIRS) verify-version
 	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) run $(XGO_PACKAGE) -go $(XGO_VERSION) -dest $(DIST)/binaries -tags 'netgo osusergo $(TAGS)' -ldflags '$(LDFLAGS)' -targets 'freebsd/amd64' -out gitea-$(VERSION) .
 
 .PHONY: release-copy
@@ -928,10 +904,7 @@ reproduce-build\#%:
 ###
 
 .PHONY: deps
-deps: deps-frontend deps-backend deps-tools deps-py
-
-.PHONY: deps-py
-deps-py: .venv
+deps: deps-frontend deps-backend deps-tools
 
 .PHONY: deps-frontend
 deps-frontend: node_modules
@@ -947,13 +920,11 @@ deps-tools:
 	$(GO) install $(GOFUMPT_PACKAGE)
 	$(GO) install $(GOLANGCI_LINT_PACKAGE)
 	$(GO) install $(GXZ_PACKAGE)
-	$(GO) install $(MISSPELL_PACKAGE)
 	$(GO) install $(SWAGGER_PACKAGE)
 	$(GO) install $(XGO_PACKAGE)
 	$(GO) install $(GO_LICENSES_PACKAGE)
 	$(GO) install $(GOVULNCHECK_PACKAGE)
 	$(GO) install $(GOMOCK_PACKAGE)
-	$(GO) install $(GOPLS_PACKAGE)
 
 node_modules: package-lock.json
 	npm install --no-save
@@ -969,6 +940,7 @@ fomantic:
 	cd $(FOMANTIC_WORK_DIR) && npm install --no-save
 	cp -f $(FOMANTIC_WORK_DIR)/theme.config.less $(FOMANTIC_WORK_DIR)/node_modules/fomantic-ui/src/theme.config
 	cp -rf $(FOMANTIC_WORK_DIR)/_site $(FOMANTIC_WORK_DIR)/node_modules/fomantic-ui/src/
+	rm -rf $(FOMANTIC_WORK_DIR)/node_modules/fomantic-ui/src/themes/default/modules/dropdown.overrides
 	$(SED_INPLACE) -e 's/  overrideBrowserslist\r/  overrideBrowserslist: ["defaults"]\r/g' $(FOMANTIC_WORK_DIR)/node_modules/fomantic-ui/tasks/config/tasks.js
 	cd $(FOMANTIC_WORK_DIR) && npx gulp -f node_modules/fomantic-ui/gulpfile.js build
 	# fomantic uses "touchstart" as click event for some browsers, it's not ideal, so we force fomantic to always use "click" as click event
@@ -1017,8 +989,7 @@ generate-gomock:
 
 .PHONY: generate-images
 generate-images: | node_modules
-	npm install --no-save fabric@6 imagemin-zopfli@7
-	node tools/generate-images.js $(TAGS)
+	node tools/generate-images.js
 
 .PHONY: generate-manpage
 generate-manpage:

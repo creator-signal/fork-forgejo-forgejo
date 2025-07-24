@@ -7,6 +7,7 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"path"
 	"regexp"
@@ -29,7 +30,9 @@ import (
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
 	files_service "forgejo.org/services/repository/files"
+	user_service "forgejo.org/services/user"
 	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
@@ -120,7 +123,6 @@ func TestViewIssuesKeyword(t *testing.T) {
 		Index:  1,
 	})
 	issues.UpdateIssueIndexer(t.Context(), issue.ID)
-	time.Sleep(time.Second * 1)
 
 	const keyword = "first"
 	req := NewRequestf(t, "GET", "%s/issues?q=%s", repo.Link(), keyword)
@@ -214,6 +216,108 @@ func TestNoLoginViewIssue(t *testing.T) {
 
 	req := NewRequest(t, "GET", "/user2/repo1/issues/1")
 	MakeRequest(t, req, http.StatusOK)
+}
+
+func TestViewIssueCommentBox(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	locale := translation.NewLocale("en-US")
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+	collaborator := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	viewer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	ownerSession := loginUser(t, owner.Name)
+	collaboratorSession := loginUser(t, collaborator.Name)
+	viewerSession := loginUser(t, viewer.Name)
+
+	openIssueURL, _ := testIssueWithBean(t, owner.Name, repo.ID, "Open", "Description")
+
+	warningSignin := string(locale.Tr("repo.issues.sign_in_require_desc", fmt.Sprintf("/user/login?redirect_to=%s", url.QueryEscape(openIssueURL))))
+	warningLocked := locale.TrString("discussion.locked")
+	warningBlocked := locale.TrString("repo.comment.blocked_by_user")
+
+	assertCommentForm := func(session *TestSession, url string, shouldExist bool) *HTMLDoc {
+		var resp *httptest.ResponseRecorder
+
+		req := NewRequest(t, "GET", url)
+		if session != nil {
+			resp = session.MakeRequest(t, req, http.StatusOK)
+		} else {
+			resp = MakeRequest(t, req, http.StatusOK)
+		}
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, ".issue-content #comment-form", shouldExist)
+
+		return htmlDoc
+	}
+
+	assertWarning := func(session *TestSession, url, warning string) {
+		htmlDoc := assertCommentForm(session, url, false)
+
+		timeline := htmlDoc.doc.Find(".issue-content .ui.timeline").Children()
+		assert.Positivef(t, timeline.Length(), "There should be at least one entry in the timeline")
+
+		html, _ := timeline.Last().Html()
+		assert.Equal(t, strings.TrimSpace(html), warning)
+	}
+
+	t.Run("Owner can see comment box", func(t *testing.T) {
+		assertCommentForm(ownerSession, openIssueURL, true)
+	})
+
+	t.Run("Collaborator can see comment box", func(t *testing.T) {
+		assertCommentForm(collaboratorSession, openIssueURL, true)
+	})
+
+	t.Run("Viewer can see comment box", func(t *testing.T) {
+		assertCommentForm(viewerSession, openIssueURL, true)
+	})
+
+	t.Run("Anonymous will see singin warning", func(t *testing.T) {
+		assertWarning(nil, openIssueURL, warningSignin)
+	})
+
+	lockedIssueURL, lockedIssue := testIssueWithBean(t, owner.Name, repo.ID, "Locked", "Description")
+
+	// Lock the issue
+	req := NewRequest(t, "GET", lockedIssueURL)
+	resp := ownerSession.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+
+	req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/lock", lockedIssueURL), map[string]string{
+		"_csrf":  htmlDoc.GetCSRF(),
+		"reason": "Too heated",
+	})
+	_ = ownerSession.MakeRequest(t, req, http.StatusOK)
+
+	lockedIssue = unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: lockedIssue.ID})
+	assert.True(t, lockedIssue.IsLocked)
+
+	t.Run("Owner can see comment box in locked issue", func(t *testing.T) {
+		assertCommentForm(ownerSession, lockedIssueURL, true)
+	})
+
+	t.Run("Collaborator can see comment box in locked issue", func(t *testing.T) {
+		assertCommentForm(collaboratorSession, lockedIssueURL, true)
+	})
+
+	t.Run("Viewer will see warning in locked issue", func(t *testing.T) {
+		assertWarning(viewerSession, lockedIssueURL, warningLocked)
+	})
+
+	t.Run("Anonymous will see warning in locked issue", func(t *testing.T) {
+		assertWarning(nil, lockedIssueURL, warningLocked)
+	})
+
+	err := user_service.BlockUser(db.DefaultContext, owner.ID, viewer.ID)
+	require.NoError(t, err)
+
+	t.Run("Blocked viewer will see warning", func(t *testing.T) {
+		assertWarning(viewerSession, lockedIssueURL, warningBlocked)
+		assertWarning(viewerSession, openIssueURL, warningBlocked)
+	})
 }
 
 func testNewIssue(t *testing.T, session *TestSession, user, repo, title, content string) string {
@@ -525,7 +629,12 @@ func TestIssueCommentAttachment(t *testing.T) {
 	assert.NotEqual(t, 0, id)
 
 	req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/comments/%d/attachments", "user2", "repo1", id))
-	session.MakeRequest(t, req, http.StatusOK)
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	var attachments []*api.WebAttachment
+	DecodeJSON(t, resp, &attachments)
+	assert.Len(t, attachments, 1)
+	assert.Equal(t, attachments[0].UUID, uuid)
+	assert.Equal(t, "image/png", attachments[0].MimeType)
 
 	// Using the ID of a comment that does not belong to the repository must fail
 	req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/comments/%d/attachments", "user5", "repo4", id))
@@ -1084,7 +1193,7 @@ func TestIssueReferenceURL(t *testing.T) {
 }
 
 func TestGetContentHistory(t *testing.T) {
-	defer tests.AddFixtures("tests/integration/fixtures/TestGetContentHistory/")()
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestGetContentHistory")()
 	defer tests.PrepareTestEnv(t)()
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
@@ -1136,7 +1245,7 @@ func TestGetContentHistory(t *testing.T) {
 }
 
 func TestCommitRefComment(t *testing.T) {
-	defer tests.AddFixtures("tests/integration/fixtures/TestCommitRefComment/")()
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestCommitRefComment")()
 	defer tests.PrepareTestEnv(t)()
 
 	t.Run("Pull request", func(t *testing.T) {
@@ -1246,8 +1355,6 @@ body:
 
 func TestIssueUnsubscription(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
-		defer tests.PrepareTestEnv(t)()
-
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
 			AutoInit: optional.Some(false),
@@ -1332,6 +1439,47 @@ func TestIssueCount(t *testing.T) {
 
 	allCount := htmlDoc.doc.Find("a[data-test-name='all-issue-count']").Text()
 	assert.Contains(t, allCount, "2\u00a0All")
+}
+
+func TestIssueDefaultValues(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	links := []string{"/user2/repo1/issues", "/user2/repo1/pulls"}
+	values := []url.Values{
+		{
+			"type": {"created_by"},
+		},
+		{
+			"poster": {"1"},
+		},
+		{
+			"sort": {"latest"},
+		},
+		{
+			"type":   {"all"},
+			"sort":   {"latest"},
+			"poster": {"1"},
+		},
+		{
+			"type":   {"assigned"},
+			"sort":   {"oldest"},
+			"poster": {"1"},
+		},
+	}
+
+	for _, link := range links {
+		t.Run(link[13:], func(t *testing.T) {
+			for _, value := range values {
+				req := NewRequestf(t, "GET", "%s?%s", link, value.Encode())
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				for name := range value {
+					assert.Equal(t, value.Get(name), htmlDoc.GetInputValueByName(name))
+				}
+			}
+		})
+	}
 }
 
 func TestIssuePostersSearch(t *testing.T) {

@@ -36,12 +36,12 @@
 //	     type: apiKey
 //	     name: token
 //	     in: query
-//	     description: This authentication option is deprecated for removal in Gitea 1.23. Please use AuthorizationHeaderToken instead.
+//	     description: This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.
 //	AccessToken:
 //	     type: apiKey
 //	     name: access_token
 //	     in: query
-//	     description: This authentication option is deprecated for removal in Gitea 1.23. Please use AuthorizationHeaderToken instead.
+//	     description: This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.
 //	AuthorizationHeaderToken:
 //	     type: apiKey
 //	     name: Authorization
@@ -104,6 +104,7 @@ import (
 	_ "forgejo.org/routers/api/v1/swagger" // for swagger generation
 
 	"code.forgejo.org/go-chi/binding"
+	ap "github.com/go-ap/activitypub"
 )
 
 func sudo() func(ctx *context.APIContext) {
@@ -838,24 +839,22 @@ func Routes() *web.Route {
 		if setting.Federation.Enabled {
 			m.Get("/nodeinfo", misc.NodeInfo)
 			m.Group("/activitypub", func() {
-				// deprecated, remove in 1.20, use /user-id/{user-id} instead
-				m.Group("/user/{username}", func() {
-					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Person)
-					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.PersonInbox)
-				}, context.UserAssignmentAPI(), checkTokenPublicOnly())
 				m.Group("/user-id/{user-id}", func() {
-					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Person)
-					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.PersonInbox)
+					m.Get("", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.Person)
+					m.Post("/inbox",
+						activitypub.ReqHTTPUserSignature(),
+						bind(ap.Activity{}),
+						activitypub.PersonInbox)
 				}, context.UserIDAssignmentAPI(), checkTokenPublicOnly())
 				m.Group("/actor", func() {
 					m.Get("", activitypub.Actor)
-					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.ActorInbox)
+					m.Post("/inbox", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.ActorInbox)
 				})
 				m.Group("/repository-id/{repository-id}", func() {
-					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Repository)
+					m.Get("", activitypub.ReqHTTPUserSignature(), activitypub.Repository)
 					m.Post("/inbox",
 						bind(forgefed.ForgeLike{}),
-						activitypub.ReqHTTPSignature(),
+						activitypub.ReqHTTPUserSignature(),
 						activitypub.RepositoryInbox)
 				}, context.RepositoryIDAssignmentAPI())
 			}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryActivityPub))
@@ -865,6 +864,7 @@ func Routes() *web.Route {
 		m.Group("", func() {
 			m.Get("/version", misc.Version)
 			m.Get("/signing-key.gpg", misc.SigningKey)
+			m.Get("/signing-key.ssh", misc.SSHSigningKey)
 			m.Post("/markup", reqToken(), bind(api.MarkupOption{}), misc.Markup)
 			m.Post("/markdown", reqToken(), bind(api.MarkdownOption{}), misc.Markdown)
 			m.Post("/markdown/raw", reqToken(), misc.MarkdownRaw)
@@ -1184,9 +1184,13 @@ func Routes() *web.Route {
 				}, reqToken(), reqAdmin())
 				m.Group("/actions", func() {
 					m.Get("/tasks", repo.ListActionTasks)
+					m.Group("/runs", func() {
+						m.Get("", repo.ListActionRuns)
+						m.Get("/{run_id}", repo.GetActionRun)
+					})
 
 					m.Group("/workflows", func() {
-						m.Group("/{workflowname}", func() {
+						m.Group("/{workflowfilename}", func() {
 							m.Post("/dispatches", reqToken(), reqRepoWriter(unit.TypeActions), mustNotBeArchived, bind(api.DispatchWorkflowOption{}), repo.DispatchWorkflow)
 						})
 					})
@@ -1318,6 +1322,7 @@ func Routes() *web.Route {
 					m.Get("/refs", repo.GetGitAllRefs)
 					m.Get("/refs/*", repo.GetGitRefs)
 					m.Get("/trees/{sha}", repo.GetTree)
+					m.Get("/blobs", repo.GetBlobs)
 					m.Get("/blobs/{sha}", repo.GetBlob)
 					m.Get("/tags/{sha}", repo.GetAnnotatedTag)
 					m.Group("/notes/{sha}", func() {
@@ -1497,16 +1502,16 @@ func Routes() *web.Route {
 			m.Group("/{type}/{name}", func() {
 				m.Group("/{version}", func() {
 					m.Get("", packages.GetPackage)
-					m.Delete("", reqPackageAccess(perm.AccessModeWrite), packages.DeletePackage)
+					m.Delete("", reqToken(), reqPackageAccess(perm.AccessModeWrite), packages.DeletePackage)
 					m.Get("/files", packages.ListPackageFiles)
 				})
 
-				m.Post("/-/link/{repo_name}", reqPackageAccess(perm.AccessModeWrite), packages.LinkPackage)
-				m.Post("/-/unlink", reqPackageAccess(perm.AccessModeWrite), packages.UnlinkPackage)
+				m.Post("/-/link/{repo_name}", reqToken(), reqPackageAccess(perm.AccessModeWrite), packages.LinkPackage)
+				m.Post("/-/unlink", reqToken(), reqPackageAccess(perm.AccessModeWrite), packages.UnlinkPackage)
 			})
 
 			m.Get("/", packages.ListPackages)
-		}, reqToken(), tokenRequiresScopes(auth_model.AccessTokenScopeCategoryPackage), context.UserAssignmentAPI(), context.PackageAssignmentAPI(), reqPackageAccess(perm.AccessModeRead), checkTokenPublicOnly())
+		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryPackage), context.UserAssignmentAPI(), context.PackageAssignmentAPI(), reqPackageAccess(perm.AccessModeRead), checkTokenPublicOnly())
 
 		// Organizations
 		m.Get("/user/orgs", reqToken(), tokenRequiresScopes(auth_model.AccessTokenScopeCategoryUser, auth_model.AccessTokenScopeCategoryOrganization), org.ListMyOrgs)

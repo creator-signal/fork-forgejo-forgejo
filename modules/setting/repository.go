@@ -1,15 +1,19 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package setting
 
 import (
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"forgejo.org/modules/log"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // enumerates all the policy repository creating
@@ -25,6 +29,8 @@ var MaxUserCardsPerPage = 36
 
 // MaxForksPerPage sets maximum amount of forks shown per page
 var MaxForksPerPage = 40
+
+var SSHInstanceKey ssh.PublicKey
 
 // Repository settings
 var (
@@ -47,6 +53,7 @@ var (
 		DisabledRepoUnits                       []string
 		DefaultRepoUnits                        []string
 		DefaultForkRepoUnits                    []string
+		DefaultMirrorRepoUnits                  []string
 		PrefixArchiveFiles                      bool
 		DisableMigrations                       bool
 		DisableStars                            bool
@@ -90,7 +97,6 @@ var (
 			DefaultUpdateStyle                       string
 			PopulateSquashCommentWithCommitMessages  bool
 			AddCoCommitterTrailers                   bool
-			TestConflictingPatchesWithGitApply       bool
 			RetargetChildrenOnMerge                  bool
 		} `ini:"repository.pull-request"`
 
@@ -109,6 +115,7 @@ var (
 			SigningKey        string
 			SigningName       string
 			SigningEmail      string
+			Format            string
 			InitialCommit     []string
 			CRUDActions       []string `ini:"CRUD_ACTIONS"`
 			Merges            []string
@@ -170,6 +177,7 @@ var (
 		DisabledRepoUnits:                       []string{},
 		DefaultRepoUnits:                        []string{},
 		DefaultForkRepoUnits:                    []string{},
+		DefaultMirrorRepoUnits:                  []string{},
 		PrefixArchiveFiles:                      true,
 		DisableMigrations:                       false,
 		DisableStars:                            false,
@@ -220,7 +228,6 @@ var (
 			DefaultUpdateStyle                       string
 			PopulateSquashCommentWithCommitMessages  bool
 			AddCoCommitterTrailers                   bool
-			TestConflictingPatchesWithGitApply       bool
 			RetargetChildrenOnMerge                  bool
 		}{
 			WorkInProgressPrefixes: []string{"WIP:", "[WIP]"},
@@ -262,6 +269,7 @@ var (
 			SigningKey        string
 			SigningName       string
 			SigningEmail      string
+			Format            string
 			InitialCommit     []string
 			CRUDActions       []string `ini:"CRUD_ACTIONS"`
 			Merges            []string
@@ -271,6 +279,7 @@ var (
 			SigningKey:        "default",
 			SigningName:       "",
 			SigningEmail:      "",
+			Format:            "openpgp",
 			InitialCommit:     []string{"always"},
 			CRUDActions:       []string{"pubkey", "twofa", "parentsigned"},
 			Merges:            []string{"pubkey", "twofa", "basesigned", "commitssigned"},
@@ -376,4 +385,15 @@ func loadRepositoryFrom(rootCfg ConfigProvider) {
 		log.Fatal("loadRepoArchiveFrom: %v", err)
 	}
 	Repository.EnableFlags = sec.Key("ENABLE_FLAGS").MustBool()
+
+	if Repository.Signing.Format == "ssh" && Repository.Signing.SigningKey != "none" && Repository.Signing.SigningKey != "" {
+		sshPublicKey, err := os.ReadFile(Repository.Signing.SigningKey)
+		if err != nil {
+			log.Fatal("Could not read repository signing key in %q: %v", Repository.Signing.SigningKey, err)
+		}
+		SSHInstanceKey, _, _, _, err = ssh.ParseAuthorizedKey(sshPublicKey)
+		if err != nil {
+			log.Fatal("Could not parse the SSH signing key %q: %v", sshPublicKey, err)
+		}
+	}
 }

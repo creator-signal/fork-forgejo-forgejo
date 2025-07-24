@@ -12,6 +12,7 @@
 @import "./modules/segment.css";
 @import "./modules/grid.css";
 @import "./modules/message.css";
+@import "./modules/tab.css";
 @import "./modules/table.css";
 @import "./modules/card.css";
 @import "./modules/checkbox.css";
@@ -19,6 +20,7 @@
 @import "./modules/dimmer.css";
 
 @import "./modules/switch.css";
+@import "./modules/dropdown.css";
 @import "./modules/select.css";
 @import "./modules/tippy.css";
 @import "./modules/breadcrumb.css";
@@ -27,6 +29,7 @@
 @import "./modules/toast.css";
 @import "./modules/svg.css";
 @import "./modules/flexcontainer.css";
+@import "./modules/user-cards.css";
 
 @import "./shared/flex-list.css";
 @import "./shared/milestone.css";
@@ -56,6 +59,7 @@
 @import "./form.css";
 
 @import "./repo.css";
+@import "./repo/file-view.css";
 @import "./repo/release-tag.css";
 @import "./repo/issue-card.css";
 @import "./repo/issue-label.css";
@@ -75,6 +79,7 @@
 @import "./explore.css";
 @import "./review.css";
 @import "./actions.css";
+@import "./migrate.css";
 
 @tailwind utilities;
 @import "./helpers.css";

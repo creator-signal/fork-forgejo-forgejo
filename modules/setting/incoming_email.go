@@ -4,6 +4,7 @@
 package setting
 
 import (
+	"errors"
 	"fmt"
 	"net/mail"
 	"strings"
@@ -43,9 +44,14 @@ func loadIncomingEmailFrom(rootCfg ConfigProvider) {
 	if sec.HasKey("USER") && !sec.HasKey("USERNAME") {
 		IncomingEmail.Username = sec.Key("USER").String()
 	}
+
 	if sec.HasKey("PASSWD") && !sec.HasKey("PASSWORD") {
-		IncomingEmail.Password = sec.Key("PASSWD").String()
+		sec.Key("PASSWORD").SetValue(sec.Key("PASSWD").String())
 	}
+	if sec.HasKey("PASSWD_URI") && !sec.HasKey("PASSWORD_URI") {
+		sec.Key("PASSWORD_URI").SetValue(sec.Key("PASSWD_URI").String())
+	}
+	IncomingEmail.Password = loadSecret(sec, "PASSWORD_URI", "PASSWORD")
 
 	// Infer Port if not set
 	if IncomingEmail.Port == 0 {
@@ -68,7 +74,7 @@ func checkReplyToAddress() error {
 	}
 
 	if parsed.Name != "" {
-		return fmt.Errorf("name must not be set")
+		return errors.New("name must not be set")
 	}
 
 	c := strings.Count(IncomingEmail.ReplyToAddress, IncomingEmail.TokenPlaceholder)

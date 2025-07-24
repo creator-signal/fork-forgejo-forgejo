@@ -18,6 +18,7 @@
   /* other variables */
   --border-radius: 4px;
   --border-radius-medium: 6px;
+  --border-radius-large: 25px;
   --border-radius-full: 99999px; /* TODO: use calc(infinity * 1px) */
   --opacity-disabled: 0.55;
   --height-loading: 16rem;
@@ -94,6 +95,17 @@ kbd,
 samp,
 .tw-font-mono {
   font-size: 0.95em; /* compensate for monospace fonts being usually slightly larger */
+}
+
+kbd {
+  padding: 0.15em 0.35em;
+  line-height: 10px;
+  color: var(--color-text-light);
+  vertical-align: middle;
+  background-color: var(--color-markup-code-inline);
+  border: 1px solid var(--color-secondary);
+  border-radius: var(--border-radius);
+  box-shadow: inset 0 -1px 0 var(--color-secondary);
 }
 
 b,
@@ -534,11 +546,6 @@ a.label,
   background: var(--color-active);
 }
 
-.ui.secondary.menu.tight .item {
-  padding-left: 0.85714286em;
-  padding-right: 0.85714286em;
-}
-
 /* remove the menu clearfix so that it won't add undesired gaps when using "gap" */
 .ui.menu::after {
   content: normal;
@@ -675,10 +682,6 @@ img.ui.avatar,
   color: var(--color-yellow) !important;
 }
 
-.text.olive {
-  color: var(--color-olive) !important;
-}
-
 .text.green {
   color: var(--color-green) !important;
 }
@@ -691,16 +694,8 @@ img.ui.avatar,
   color: var(--color-blue) !important;
 }
 
-.text.violet {
-  color: var(--color-violet) !important;
-}
-
 .text.purple {
   color: var(--color-purple) !important;
-}
-
-.text.pink {
-  color: var(--color-pink) !important;
 }
 
 .text.brown {
@@ -820,19 +815,6 @@ img.ui.avatar,
   margin-left: 25px;
 }
 
-.ui .sha.label {
-  font-family: var(--fonts-monospace);
-  font-size: 13px;
-  font-weight: var(--font-weight-normal);
-  margin: 0 6px;
-  padding: 5px 10px;
-  flex-shrink: 0;
-}
-
-.ui .sha.label .shortsha {
-  display: inline-block; /* not sure whether it is still needed */
-}
-
 .ui .button.truncate {
   display: inline-block;
   max-width: 100%;
@@ -850,46 +832,6 @@ img.ui.avatar,
 .ui.inline.delete-button {
   padding: 8px 15px;
   font-weight: var(--font-weight-normal);
-}
-
-.ui .background.red {
-  background-color: var(--color-red) !important;
-}
-
-.ui .background.blue {
-  background-color: var(--color-blue) !important;
-}
-
-.ui .background.black {
-  background-color: var(--color-black) !important;
-}
-
-.ui .background.grey {
-  background-color: var(--color-grey) !important;
-}
-
-.ui .background.light.grey {
-  background-color: var(--color-grey) !important;
-}
-
-.ui .background.green {
-  background-color: var(--color-green) !important;
-}
-
-.ui .background.purple {
-  background-color: var(--color-purple) !important;
-}
-
-.ui .background.yellow {
-  background-color: var(--color-yellow) !important;
-}
-
-.ui .background.orange {
-  background-color: var(--color-orange) !important;
-}
-
-.ui .background.gold {
-  background-color: var(--color-gold) !important;
 }
 
 .ui .migrate {
@@ -951,7 +893,15 @@ img.ui.avatar,
 @media (max-width: 767.98px) {
   .ui.pagination.menu .item:not(.active,.navigation),
   .ui.pagination.menu .item.navigation span.navigation_label {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 }
 
@@ -1053,10 +1003,11 @@ overflow-menu .overflow-menu-items {
 
 overflow-menu .overflow-menu-items .item {
   margin-bottom: 0 !important; /* reset fomantic's margin, because the active menu has special bottom border */
+  height: 100%;
 }
 
 overflow-menu .overflow-menu-items .item > .svg {
-  align-self: baseline;
+  align-self: center;
 }
 
 overflow-menu .ui.label {
@@ -1174,41 +1125,6 @@ svg.text.purple,
   padding-left: 1ch;
 }
 
-.lines-escape {
-  width: 0;
-}
-
-.lines-code {
-  padding-left: 5px;
-}
-
-.file-view tr.active {
-  color: inherit !important;
-  background: inherit !important;
-}
-
-.file-view tr.active .lines-num,
-.file-view tr.active .lines-code {
-  background: var(--color-highlight-bg) !important;
-}
-
-.file-view tr.active:last-of-type .lines-code {
-  border-bottom-right-radius: var(--border-radius);
-}
-
-.file-view tr.active .lines-num {
-  position: relative;
-}
-
-.file-view tr.active .lines-num::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  width: 2px;
-  height: 100%;
-  background: var(--color-highlight-fg);
-}
-
 .code-inner {
   font: 12px var(--fonts-monospace);
   white-space: pre-wrap;
@@ -1280,10 +1196,6 @@ svg.text.purple,
 
 .code-view table {
   width: 100%;
-}
-
-.migrate .svg.gitea-git {
-  color: var(--color-git);
 }
 
 .color-icon {
@@ -1361,10 +1273,6 @@ table th[data-sortt-desc] .svg {
 
 .ui.secondary.pointing.menu {
   border-color: var(--color-secondary);
-}
-
-.ui.tabular.menu .item {
-  height: 100%;
 }
 
 .ui.tabular.menu .item,

@@ -1,4 +1,5 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"forgejo.org/models/asymkey"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
@@ -101,14 +103,14 @@ func getExpectedFileResponseForRepofilesDelete() *api.FileResponse {
 		},
 		Verification: &api.PayloadCommitVerification{
 			Verified:  false,
-			Reason:    "gpg.error.not_signed_commit",
+			Reason:    asymkey.NotSigned,
 			Signature: "",
 			Payload:   "",
 		},
 	}
 }
 
-func getExpectedFileResponseForRepofilesCreate(commitID, lastCommitSHA string) *api.FileResponse {
+func getExpectedFileResponseForRepofilesCreate(commitID, lastCommitSHA string, lastCommitWhen time.Time) *api.FileResponse {
 	treePath := "new/file.txt"
 	encoding := "base64"
 	content := "VGhpcyBpcyBhIE5FVyBmaWxl"
@@ -118,18 +120,19 @@ func getExpectedFileResponseForRepofilesCreate(commitID, lastCommitSHA string) *
 	downloadURL := setting.AppURL + "user2/repo1/raw/branch/master/" + treePath
 	return &api.FileResponse{
 		Content: &api.ContentsResponse{
-			Name:          filepath.Base(treePath),
-			Path:          treePath,
-			SHA:           "103ff9234cefeee5ec5361d22b49fbb04d385885",
-			LastCommitSHA: lastCommitSHA,
-			Type:          "file",
-			Size:          18,
-			Encoding:      &encoding,
-			Content:       &content,
-			URL:           &selfURL,
-			HTMLURL:       &htmlURL,
-			GitURL:        &gitURL,
-			DownloadURL:   &downloadURL,
+			Name:           filepath.Base(treePath),
+			Path:           treePath,
+			SHA:            "103ff9234cefeee5ec5361d22b49fbb04d385885",
+			LastCommitSHA:  lastCommitSHA,
+			LastCommitWhen: lastCommitWhen,
+			Type:           "file",
+			Size:           18,
+			Encoding:       &encoding,
+			Content:        &content,
+			URL:            &selfURL,
+			HTMLURL:        &htmlURL,
+			GitURL:         &gitURL,
+			DownloadURL:    &downloadURL,
 			Links: &api.FileLinksResponse{
 				Self:    &selfURL,
 				GitURL:  &gitURL,
@@ -170,14 +173,14 @@ func getExpectedFileResponseForRepofilesCreate(commitID, lastCommitSHA string) *
 		},
 		Verification: &api.PayloadCommitVerification{
 			Verified:  false,
-			Reason:    "gpg.error.not_signed_commit",
+			Reason:    asymkey.NotSigned,
 			Signature: "",
 			Payload:   "",
 		},
 	}
 }
 
-func getExpectedFileResponseForRepofilesUpdate(commitID, filename, lastCommitSHA string) *api.FileResponse {
+func getExpectedFileResponseForRepofilesUpdate(commitID, filename, lastCommitSHA string, lastCommitWhen time.Time) *api.FileResponse {
 	encoding := "base64"
 	content := "VGhpcyBpcyBVUERBVEVEIGNvbnRlbnQgZm9yIHRoZSBSRUFETUUgZmlsZQ=="
 	selfURL := setting.AppURL + "api/v1/repos/user2/repo1/contents/" + filename + "?ref=master"
@@ -186,18 +189,19 @@ func getExpectedFileResponseForRepofilesUpdate(commitID, filename, lastCommitSHA
 	downloadURL := setting.AppURL + "user2/repo1/raw/branch/master/" + filename
 	return &api.FileResponse{
 		Content: &api.ContentsResponse{
-			Name:          filename,
-			Path:          filename,
-			SHA:           "dbf8d00e022e05b7e5cf7e535de857de57925647",
-			LastCommitSHA: lastCommitSHA,
-			Type:          "file",
-			Size:          43,
-			Encoding:      &encoding,
-			Content:       &content,
-			URL:           &selfURL,
-			HTMLURL:       &htmlURL,
-			GitURL:        &gitURL,
-			DownloadURL:   &downloadURL,
+			Name:           filename,
+			Path:           filename,
+			SHA:            "dbf8d00e022e05b7e5cf7e535de857de57925647",
+			LastCommitSHA:  lastCommitSHA,
+			LastCommitWhen: lastCommitWhen,
+			Type:           "file",
+			Size:           43,
+			Encoding:       &encoding,
+			Content:        &content,
+			URL:            &selfURL,
+			HTMLURL:        &htmlURL,
+			GitURL:         &gitURL,
+			DownloadURL:    &downloadURL,
 			Links: &api.FileLinksResponse{
 				Self:    &selfURL,
 				GitURL:  &gitURL,
@@ -238,7 +242,7 @@ func getExpectedFileResponseForRepofilesUpdate(commitID, filename, lastCommitSHA
 		},
 		Verification: &api.PayloadCommitVerification{
 			Verified:  false,
-			Reason:    "gpg.error.not_signed_commit",
+			Reason:    asymkey.NotSigned,
 			Signature: "",
 			Payload:   "",
 		},
@@ -264,7 +268,7 @@ func TestChangeRepoFiles(t *testing.T) {
 			require.NoError(t, err)
 			lastCommit, err := gitRepo.GetCommitByPath("new/file.txt")
 			require.NoError(t, err)
-			expectedFileResponse := getExpectedFileResponseForRepofilesCreate(commitID, lastCommit.ID.String())
+			expectedFileResponse := getExpectedFileResponseForRepofilesCreate(commitID, lastCommit.ID.String(), lastCommit.Committer.When)
 			assert.Equal(t, expectedFileResponse.Content, filesResponse.Files[0])
 			assert.Equal(t, expectedFileResponse.Commit.SHA, filesResponse.Commit.SHA)
 			assert.Equal(t, expectedFileResponse.Commit.HTMLURL, filesResponse.Commit.HTMLURL)
@@ -282,7 +286,31 @@ func TestChangeRepoFiles(t *testing.T) {
 			require.NoError(t, err)
 			lastCommit, err := commit.GetCommitByPath(opts.Files[0].TreePath)
 			require.NoError(t, err)
-			expectedFileResponse := getExpectedFileResponseForRepofilesUpdate(commit.ID.String(), opts.Files[0].TreePath, lastCommit.ID.String())
+			expectedFileResponse := getExpectedFileResponseForRepofilesUpdate(commit.ID.String(), opts.Files[0].TreePath, lastCommit.ID.String(), lastCommit.Committer.When)
+			assert.Equal(t, expectedFileResponse.Content, filesResponse.Files[0])
+			assert.Equal(t, expectedFileResponse.Commit.SHA, filesResponse.Commit.SHA)
+			assert.Equal(t, expectedFileResponse.Commit.HTMLURL, filesResponse.Commit.HTMLURL)
+			assert.Equal(t, expectedFileResponse.Commit.Author.Email, filesResponse.Commit.Author.Email)
+			assert.Equal(t, expectedFileResponse.Commit.Author.Name, filesResponse.Commit.Author.Name)
+		})
+
+		t.Run("Update with commit ID (without blob sha)", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			opts := getUpdateRepoFilesOptions(repo)
+
+			commit, err := gitRepo.GetBranchCommit(opts.NewBranch)
+			require.NoError(t, err)
+
+			opts.Files[0].SHA = ""
+			opts.LastCommitID = commit.ID.String()
+			filesResponse, err := files_service.ChangeRepoFiles(git.DefaultContext, repo, doer, opts)
+			require.NoError(t, err)
+
+			commit, err = gitRepo.GetBranchCommit(opts.NewBranch)
+			require.NoError(t, err)
+			lastCommit, err := commit.GetCommitByPath(opts.Files[0].TreePath)
+			require.NoError(t, err)
+			expectedFileResponse := getExpectedFileResponseForRepofilesUpdate(commit.ID.String(), opts.Files[0].TreePath, lastCommit.ID.String(), lastCommit.Committer.When)
 			assert.Equal(t, expectedFileResponse.Content, filesResponse.Files[0])
 			assert.Equal(t, expectedFileResponse.Commit.SHA, filesResponse.Commit.SHA)
 			assert.Equal(t, expectedFileResponse.Commit.HTMLURL, filesResponse.Commit.HTMLURL)
@@ -303,7 +331,7 @@ func TestChangeRepoFiles(t *testing.T) {
 			require.NoError(t, err)
 			lastCommit, err := commit.GetCommitByPath(opts.Files[0].TreePath)
 			require.NoError(t, err)
-			expectedFileResponse := getExpectedFileResponseForRepofilesUpdate(commit.ID.String(), opts.Files[0].TreePath, lastCommit.ID.String())
+			expectedFileResponse := getExpectedFileResponseForRepofilesUpdate(commit.ID.String(), opts.Files[0].TreePath, lastCommit.ID.String(), lastCommit.Committer.When)
 
 			// assert that the old file no longer exists in the last commit of the branch
 			fromEntry, err := commit.GetTreeEntryByPath(opts.Files[0].FromTreePath)
@@ -339,7 +367,7 @@ func TestChangeRepoFiles(t *testing.T) {
 
 			commit, _ := gitRepo.GetBranchCommit(repo.DefaultBranch)
 			lastCommit, _ := commit.GetCommitByPath(opts.Files[0].TreePath)
-			expectedFileResponse := getExpectedFileResponseForRepofilesUpdate(commit.ID.String(), opts.Files[0].TreePath, lastCommit.ID.String())
+			expectedFileResponse := getExpectedFileResponseForRepofilesUpdate(commit.ID.String(), opts.Files[0].TreePath, lastCommit.ID.String(), lastCommit.Committer.When)
 			assert.Equal(t, expectedFileResponse.Content, filesResponse.Files[0])
 		})
 
@@ -408,6 +436,26 @@ func TestChangeRepoFilesErrors(t *testing.T) {
 			assert.Nil(t, filesResponse)
 			require.Error(t, err)
 			expectedError := "sha does not match [given: " + opts.Files[0].SHA + ", expected: " + origSHA + "]"
+			assert.EqualError(t, err, expectedError)
+		})
+
+		t.Run("missing SHA", func(t *testing.T) {
+			opts := getUpdateRepoFilesOptions(repo)
+			opts.Files[0].SHA = ""
+			filesResponse, err := files_service.ChangeRepoFiles(git.DefaultContext, repo, doer, opts)
+			assert.Nil(t, filesResponse)
+			require.Error(t, err)
+			expectedError := "a SHA or commit ID must be provided when updating a file"
+			assert.EqualError(t, err, expectedError)
+		})
+
+		t.Run("bad last commit ID", func(t *testing.T) {
+			opts := getUpdateRepoFilesOptions(repo)
+			opts.LastCommitID = "bad"
+			filesResponse, err := files_service.ChangeRepoFiles(git.DefaultContext, repo, doer, opts)
+			assert.Nil(t, filesResponse)
+			require.Error(t, err)
+			expectedError := "ConvertToSHA1: Invalid last commit ID: object does not exist [id: bad, rel_path: ]"
 			assert.EqualError(t, err, expectedError)
 		})
 

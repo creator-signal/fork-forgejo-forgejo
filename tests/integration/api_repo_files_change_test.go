@@ -104,6 +104,10 @@ func TestAPIChangeFiles(t *testing.T) {
 			var filesResponse api.FilesResponse
 			DecodeJSON(t, resp, &filesResponse)
 
+			// Testify cannot assert time.Time correctly.
+			expectedCreateFileResponse.Content.LastCommitWhen = filesResponse.Files[0].LastCommitWhen
+			expectedUpdateFileResponse.Content.LastCommitWhen = filesResponse.Files[1].LastCommitWhen
+
 			// check create file
 			assert.Equal(t, expectedCreateFileResponse.Content, filesResponse.Files[0])
 
@@ -210,7 +214,7 @@ func TestAPIChangeFiles(t *testing.T) {
 		changeFilesOptions.Files[0].SHA = "badsha"
 		req = NewRequestWithJSON(t, "POST", url, &changeFilesOptions).
 			AddTokenAuth(token2)
-		resp = MakeRequest(t, req, http.StatusUnprocessableEntity)
+		resp = MakeRequest(t, req, http.StatusConflict)
 		expectedAPIError := context.APIError{
 			Message: "sha does not match [given: " + changeFilesOptions.Files[0].SHA + ", expected: " + correctSHA + "]",
 			URL:     setting.API.SwaggerURL,

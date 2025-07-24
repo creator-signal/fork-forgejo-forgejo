@@ -22,7 +22,6 @@ import {initRepoIssueContentHistory} from './features/repo-issue-content.js';
 import {initStopwatch} from './features/stopwatch.js';
 import {initFindFileInRepo} from './features/repo-findfile.js';
 import {initCommentContent, initMarkupContent} from './markup/content.js';
-import {initPdfViewer} from './render/pdf.js';
 
 import {initUserAuthOauth2, initUserAuth} from './features/user-auth.js';
 import {
@@ -74,6 +73,7 @@ import {initCopyContent} from './features/copycontent.js';
 import {initCaptcha} from './features/captcha.js';
 import {initRepositoryActionView} from './components/RepoActionView.vue';
 import {initGlobalTooltips} from './modules/tippy.js';
+import {initDropdowns} from './modules/dropdown.ts';
 import {initGiteaFomantic} from './modules/fomantic.js';
 import {onDomReady} from './utils/dom.js';
 import {initRepoIssueList} from './features/repo-issue-list.js';
@@ -102,6 +102,7 @@ onDomReady(() => {
   initGlobalEnterQuickSubmit();
   initGlobalFormDirtyLeaveConfirm();
   initGlobalLinkActions();
+  initDropdowns();
 
   initCommonOrganization();
   initCommonIssueListQuickGoto();
@@ -186,7 +187,9 @@ onDomReady(() => {
   initUserAuthWebAuthnRegister();
   initUserAuth();
   initRepoDiffView();
-  initPdfViewer();
   initScopedAccessTokenCategories();
   initColorPickers();
+
+  // Deactivate CSS-only noJS usability supplements
+  document.body.classList.remove('no-js');
 });

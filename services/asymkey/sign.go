@@ -10,7 +10,6 @@ import (
 
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/auth"
-	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
@@ -90,6 +89,13 @@ func SigningKey(ctx context.Context, repoPath string) (string, *git.Signature) {
 		return "", nil
 	}
 
+	if setting.Repository.Signing.Format == "ssh" {
+		return setting.Repository.Signing.SigningKey, &git.Signature{
+			Name:  setting.Repository.Signing.SigningName,
+			Email: setting.Repository.Signing.SigningEmail,
+		}
+	}
+
 	if setting.Repository.Signing.SigningKey == "default" || setting.Repository.Signing.SigningKey == "" {
 		// Can ignore the error here as it means that commit.gpgsign is not set
 		value, _, _ := git.NewCommand(ctx, "config", "--get", "commit.gpgsign").RunStdString(&git.RunOpts{Dir: repoPath})
@@ -145,22 +151,19 @@ Loop:
 		case always:
 			break Loop
 		case pubkey:
-			keys, err := db.Find[asymkey_model.GPGKey](ctx, asymkey_model.FindGPGKeyOptions{
-				OwnerID:        u.ID,
-				IncludeSubKeys: true,
-			})
+			hasPubKey, err := asymkey_model.HasAsymKeyByUID(ctx, u.ID)
 			if err != nil {
 				return false, "", nil, err
 			}
-			if len(keys) == 0 {
+			if !hasPubKey {
 				return false, "", nil, &ErrWontSign{pubkey}
 			}
 		case twofa:
-			twofaModel, err := auth.GetTwoFactorByUID(ctx, u.ID)
-			if err != nil && !auth.IsErrTwoFactorNotEnrolled(err) {
+			hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, u.ID)
+			if err != nil {
 				return false, "", nil, err
 			}
-			if twofaModel == nil {
+			if !hasTwoFactor {
 				return false, "", nil, &ErrWontSign{twofa}
 			}
 		}
@@ -185,22 +188,19 @@ Loop:
 		case always:
 			break Loop
 		case pubkey:
-			keys, err := db.Find[asymkey_model.GPGKey](ctx, asymkey_model.FindGPGKeyOptions{
-				OwnerID:        u.ID,
-				IncludeSubKeys: true,
-			})
+			hasPubKey, err := asymkey_model.HasAsymKeyByUID(ctx, u.ID)
 			if err != nil {
 				return false, "", nil, err
 			}
-			if len(keys) == 0 {
+			if !hasPubKey {
 				return false, "", nil, &ErrWontSign{pubkey}
 			}
 		case twofa:
-			twofaModel, err := auth.GetTwoFactorByUID(ctx, u.ID)
-			if err != nil && !auth.IsErrTwoFactorNotEnrolled(err) {
+			hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, u.ID)
+			if err != nil {
 				return false, "", nil, err
 			}
-			if twofaModel == nil {
+			if !hasTwoFactor {
 				return false, "", nil, &ErrWontSign{twofa}
 			}
 		case parentSigned:
@@ -241,22 +241,19 @@ Loop:
 		case always:
 			break Loop
 		case pubkey:
-			keys, err := db.Find[asymkey_model.GPGKey](ctx, asymkey_model.FindGPGKeyOptions{
-				OwnerID:        u.ID,
-				IncludeSubKeys: true,
-			})
+			hasPubKey, err := asymkey_model.HasAsymKeyByUID(ctx, u.ID)
 			if err != nil {
 				return false, "", nil, err
 			}
-			if len(keys) == 0 {
+			if !hasPubKey {
 				return false, "", nil, &ErrWontSign{pubkey}
 			}
 		case twofa:
-			twofaModel, err := auth.GetTwoFactorByUID(ctx, u.ID)
-			if err != nil && !auth.IsErrTwoFactorNotEnrolled(err) {
+			hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, u.ID)
+			if err != nil {
 				return false, "", nil, err
 			}
-			if twofaModel == nil {
+			if !hasTwoFactor {
 				return false, "", nil, &ErrWontSign{twofa}
 			}
 		case parentSigned:
@@ -306,22 +303,19 @@ Loop:
 		case always:
 			break Loop
 		case pubkey:
-			keys, err := db.Find[asymkey_model.GPGKey](ctx, asymkey_model.FindGPGKeyOptions{
-				OwnerID:        u.ID,
-				IncludeSubKeys: true,
-			})
+			hasPubKey, err := asymkey_model.HasAsymKeyByUID(ctx, u.ID)
 			if err != nil {
 				return false, "", nil, err
 			}
-			if len(keys) == 0 {
+			if !hasPubKey {
 				return false, "", nil, &ErrWontSign{pubkey}
 			}
 		case twofa:
-			twofaModel, err := auth.GetTwoFactorByUID(ctx, u.ID)
-			if err != nil && !auth.IsErrTwoFactorNotEnrolled(err) {
+			hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, u.ID)
+			if err != nil {
 				return false, "", nil, err
 			}
-			if twofaModel == nil {
+			if !hasTwoFactor {
 				return false, "", nil, &ErrWontSign{twofa}
 			}
 		case approved:

@@ -42,6 +42,36 @@ var testOpts = []testIssueQueryStringOpt{
 		},
 	},
 	{
+		Keyword: "Hello  World",
+		Results: []Token{
+			{
+				Term:  "Hello",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+			{
+				Term:  "World",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+		},
+	},
+	{
+		Keyword: " Hello World ",
+		Results: []Token{
+			{
+				Term:  "Hello",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+			{
+				Term:  "World",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+		},
+	},
+	{
 		Keyword: "+Hello +World",
 		Results: []Token{
 			{
@@ -156,6 +186,68 @@ var testOpts = []testIssueQueryStringOpt{
 			},
 		},
 	},
+	{
+		Keyword: "\\",
+		Results: nil,
+	},
+	{
+		Keyword: "\"",
+		Results: nil,
+	},
+	{
+		Keyword: "Hello \\",
+		Results: []Token{
+			{
+				Term:  "Hello",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+		},
+	},
+	{
+		Keyword: "\"\"",
+		Results: nil,
+	},
+	{
+		Keyword: "\" World \"",
+		Results: []Token{
+			{
+				Term:  " World ",
+				Fuzzy: false,
+				Kind:  BoolOptShould,
+			},
+		},
+	},
+	{
+		Keyword: "\"\" World \"\"",
+		Results: []Token{
+			{
+				Term:  "World",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+		},
+	},
+	{
+		Keyword: "Best \"Hello World\" Ever",
+		Results: []Token{
+			{
+				Term:  "Best",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+			{
+				Term:  "Hello World",
+				Fuzzy: false,
+				Kind:  BoolOptShould,
+			},
+			{
+				Term:  "Ever",
+				Fuzzy: true,
+				Kind:  BoolOptShould,
+			},
+		},
+	},
 }
 
 func TestIssueQueryString(t *testing.T) {
@@ -167,5 +259,37 @@ func TestIssueQueryString(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, res.Results, tokens)
 		})
+	}
+}
+
+func TestToken_ParseIssueReference(t *testing.T) {
+	var tk Token
+	{
+		tk.Term = "123"
+		id, err := tk.ParseIssueReference()
+		require.NoError(t, err)
+		assert.Equal(t, int64(123), id)
+	}
+	{
+		tk.Term = "#123"
+		id, err := tk.ParseIssueReference()
+		require.NoError(t, err)
+		assert.Equal(t, int64(123), id)
+	}
+	{
+		tk.Term = "!123"
+		id, err := tk.ParseIssueReference()
+		require.NoError(t, err)
+		assert.Equal(t, int64(123), id)
+	}
+	{
+		tk.Term = "text"
+		_, err := tk.ParseIssueReference()
+		require.Error(t, err)
+	}
+	{
+		tk.Term = ""
+		_, err := tk.ParseIssueReference()
+		require.Error(t, err)
 	}
 }

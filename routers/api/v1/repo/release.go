@@ -4,6 +4,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -226,7 +227,7 @@ func CreateRelease(ctx *context.APIContext) {
 
 	form := web.GetForm(ctx).(*api.CreateReleaseOption)
 	if ctx.Repo.Repository.IsEmpty {
-		ctx.Error(http.StatusUnprocessableEntity, "RepoIsEmpty", fmt.Errorf("repo is empty"))
+		ctx.Error(http.StatusUnprocessableEntity, "RepoIsEmpty", errors.New("repo is empty"))
 		return
 	}
 	rel, err := repo_model.GetRelease(ctx, ctx.Repo.Repository.ID, form.TagName)
@@ -267,7 +268,7 @@ func CreateRelease(ctx *context.APIContext) {
 		}
 	} else {
 		if !rel.IsTag {
-			ctx.Error(http.StatusConflict, "GetRelease", "Release is has no Tag")
+			ctx.Error(http.StatusConflict, "GetRelease", "Release has no Tag")
 			return
 		}
 

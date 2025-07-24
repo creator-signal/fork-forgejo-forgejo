@@ -23,7 +23,7 @@ import (
 const (
 	issueIndexerAnalyzer      = "issueIndexer"
 	issueIndexerDocType       = "issueIndexerDocType"
-	issueIndexerLatestVersion = 4
+	issueIndexerLatestVersion = 5
 )
 
 const unicodeNormalizeName = "unicodeNormalize"
@@ -69,6 +69,7 @@ func generateIssueIndexMapping() (mapping.IndexMapping, error) {
 
 	docMapping.AddFieldMappingsAt("is_public", boolFieldMapping)
 
+	docMapping.AddFieldMappingsAt("index", numberFieldMapping)
 	docMapping.AddFieldMappingsAt("title", textFieldMapping)
 	docMapping.AddFieldMappingsAt("content", textFieldMapping)
 	docMapping.AddFieldMappingsAt("comments", textFieldMapping)
@@ -155,17 +156,24 @@ func (b *Indexer) Delete(_ context.Context, ids ...int64) error {
 func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (*internal.SearchResult, error) {
 	var queries []query.Query
 
-	if options.Keyword != "" {
-		tokens, err := options.Tokens()
-		if err != nil {
-			return nil, err
-		}
+	tokens, err := options.Tokens()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tokens) > 0 {
 		q := bleve.NewBooleanQuery()
 		for _, token := range tokens {
 			innerQ := bleve.NewDisjunctionQuery(
-				inner_bleve.MatchPhraseQuery(token.Term, "title", issueIndexerAnalyzer, token.Fuzzy),
-				inner_bleve.MatchPhraseQuery(token.Term, "content", issueIndexerAnalyzer, token.Fuzzy),
-				inner_bleve.MatchPhraseQuery(token.Term, "comments", issueIndexerAnalyzer, token.Fuzzy))
+				inner_bleve.MatchPhraseQuery(token.Term, "title", issueIndexerAnalyzer, token.Fuzzy, 2.0),
+				inner_bleve.MatchPhraseQuery(token.Term, "content", issueIndexerAnalyzer, token.Fuzzy, 1.0),
+				inner_bleve.MatchPhraseQuery(token.Term, "comments", issueIndexerAnalyzer, token.Fuzzy, 1.0))
+
+			if issueID, err := token.ParseIssueReference(); err == nil {
+				idQuery := inner_bleve.NumericEqualityQuery(issueID, "index")
+				idQuery.SetBoost(20.0)
+				innerQ.AddQuery(idQuery)
+			}
 
 			switch token.Kind {
 			case internal.BoolOptMust:
@@ -188,6 +196,15 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 			repoQueries = append(repoQueries, inner_bleve.BoolFieldQuery(true, "is_public"))
 		}
 		queries = append(queries, bleve.NewDisjunctionQuery(repoQueries...))
+	}
+
+	if options.PriorityRepoID.Has() {
+		eq := inner_bleve.NumericEqualityQuery(options.PriorityRepoID.Value(), "repo_id")
+		eq.SetBoost(10.0)
+		meh := bleve.NewMatchAllQuery()
+		meh.SetBoost(0)
+		should := bleve.NewDisjunctionQuery(eq, meh)
+		queries = append(queries, should)
 	}
 
 	if options.IsPull.Has() {

@@ -242,7 +242,7 @@ func SignInPost(ctx *context.Context) {
 
 	// If this user is enrolled in 2FA TOTP, we can't sign the user in just yet.
 	// Instead, redirect them to the 2FA authentication page.
-	hasTOTPtwofa, err := auth.HasTwoFactorByUID(ctx, u.ID)
+	hasTOTPtwofa, err := auth.HasTOTPByUID(ctx, u.ID)
 	if err != nil {
 		ctx.ServerError("UserSignIn", err)
 		return
@@ -552,9 +552,6 @@ func createUserInContext(ctx *context.Context, tpl base.TplName, form any, u *us
 		case user_model.IsErrCooldownPeriod(err):
 			ctx.Data["Err_UserName"] = true
 			ctx.RenderWithErr(ctx.Locale.Tr("form.username_claiming_cooldown", err.(user_model.ErrCooldownPeriod).ExpireTime.Format(time.RFC1123Z)), tpl, form)
-		case validation.IsErrEmailCharIsNotSupported(err):
-			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr(ctx.Tr("form.email_invalid"), tpl, form)
 		case validation.IsErrEmailInvalid(err):
 			ctx.Data["Err_Email"] = true
 			ctx.RenderWithErr(ctx.Tr("form.email_invalid"), tpl, form)
@@ -767,7 +764,7 @@ func ActivatePost(ctx *context.Context) {
 			ctx.HTML(http.StatusOK, TplActivate)
 			return
 		}
-		if !user.ValidatePassword(password) {
+		if !user.ValidatePassword(ctx, password) {
 			ctx.Data["IsPasswordInvalid"] = true
 			ctx.HTML(http.StatusOK, TplActivate)
 			return

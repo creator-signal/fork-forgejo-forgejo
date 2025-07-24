@@ -1,4 +1,5 @@
 // Copyright 2021 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package feed
@@ -24,7 +25,7 @@ import (
 	"forgejo.org/services/context"
 
 	"github.com/gorilla/feeds"
-	"github.com/jaytaylor/html2text"
+	"github.com/inbucket/html2text"
 )
 
 func toBranchLink(ctx *context.Context, act *activities_model.Action) string {
@@ -209,7 +210,7 @@ func feedActionsToFeedItems(ctx *context.Context, actions activities_model.Actio
 		{
 			switch act.OpType {
 			case activities_model.ActionCommitRepo, activities_model.ActionMirrorSyncPush:
-				push := templates.ActionContent2Commits(act)
+				push := templates.ActionContent2Commits(ctx, act)
 
 				for _, commit := range push.Commits {
 					if len(desc) != 0 {

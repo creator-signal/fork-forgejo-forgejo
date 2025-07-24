@@ -28,6 +28,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 	webhook_module "forgejo.org/modules/webhook"
+	actions_service "forgejo.org/services/actions"
 	notify_service "forgejo.org/services/notify"
 	pull_service "forgejo.org/services/pull"
 	files_service "forgejo.org/services/repository/files"
@@ -250,7 +251,7 @@ func SyncBranchesToDB(ctx context.Context, repoID, pusherID int64, branchNames, 
 	// For other batches, it will hit optimization 4.
 
 	if len(branchNames) != len(commitIDs) {
-		return fmt.Errorf("branchNames and commitIDs length not match")
+		return errors.New("branchNames and commitIDs length not match")
 	}
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
@@ -377,7 +378,7 @@ func RenameBranch(ctx context.Context, repo *repo_model.Repository, doer *user_m
 				log.Error("DeleteCronTaskByRepo: %v", err)
 			}
 			// cancel running cron jobs of this repository and delete old schedules
-			if err := actions_model.CancelPreviousJobs(
+			if err := actions_service.CancelPreviousJobs(
 				ctx,
 				repo.ID,
 				from,
@@ -578,7 +579,7 @@ func SetRepoDefaultBranch(ctx context.Context, repo *repo_model.Repository, gitR
 			log.Error("DeleteCronTaskByRepo: %v", err)
 		}
 		// cancel running cron jobs of this repository and delete old schedules
-		if err := actions_model.CancelPreviousJobs(
+		if err := actions_service.CancelPreviousJobs(
 			ctx,
 			repo.ID,
 			oldDefaultBranchName,

@@ -5,20 +5,26 @@
 package integration
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/test"
@@ -93,16 +99,9 @@ func TestPullView_SelfReviewNotification(t *testing.T) {
 		require.NoError(t, err)
 
 		// create a new branch to prepare for pull request
-		_, err = files_service.ChangeRepoFiles(db.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
-			NewBranch: "codeowner-basebranch",
-			Files: []*files_service.ChangeRepoFile{
-				{
-					Operation:     "update",
-					TreePath:      "README.md",
-					ContentReader: strings.NewReader("# This is a new project\n"),
-				},
-			},
-		})
+		err = updateFileInBranch(user2, repo, "README.md", "codeowner-basebranch",
+			strings.NewReader("# This is a new project\n"),
+		)
 		require.NoError(t, err)
 
 		// Create a pull request.
@@ -366,16 +365,9 @@ func TestPullView_CodeOwner(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			// create a new branch to prepare for pull request
-			_, err := files_service.ChangeRepoFiles(db.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
-				NewBranch: "codeowner-basebranch",
-				Files: []*files_service.ChangeRepoFile{
-					{
-						Operation:     "update",
-						TreePath:      "README.md",
-						ContentReader: strings.NewReader("# This is a new project\n"),
-					},
-				},
-			})
+			err := updateFileInBranch(user2, repo, "README.md", "codeowner-basebranch",
+				strings.NewReader("# This is a new project\n"),
+			)
 			require.NoError(t, err)
 
 			// Create a pull request.
@@ -400,31 +392,18 @@ func TestPullView_CodeOwner(t *testing.T) {
 		})
 
 		// change the default branch CODEOWNERS file to change README.md's codeowner
-		_, err := files_service.ChangeRepoFiles(db.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
-			Files: []*files_service.ChangeRepoFile{
-				{
-					Operation:     "update",
-					TreePath:      "CODEOWNERS",
-					ContentReader: strings.NewReader("README.md @user8\n"),
-				},
-			},
-		})
+		err := updateFileInBranch(user2, repo, "CODEOWNERS", "",
+			strings.NewReader("README.md @user8\n"),
+		)
 		require.NoError(t, err)
 
 		t.Run("Second Pull Request", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			// create a new branch to prepare for pull request
-			_, err = files_service.ChangeRepoFiles(db.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
-				NewBranch: "codeowner-basebranch2",
-				Files: []*files_service.ChangeRepoFile{
-					{
-						Operation:     "update",
-						TreePath:      "README.md",
-						ContentReader: strings.NewReader("# This is a new project2\n"),
-					},
-				},
-			})
+			err := updateFileInBranch(user2, repo, "README.md", "codeowner-basebranch2",
+				strings.NewReader("# This is a new project2\n"),
+			)
 			require.NoError(t, err)
 
 			// Create a pull request.
@@ -446,16 +425,9 @@ func TestPullView_CodeOwner(t *testing.T) {
 			require.NoError(t, err)
 
 			// create a new branch to prepare for pull request
-			_, err = files_service.ChangeRepoFiles(db.DefaultContext, forkedRepo, user5, &files_service.ChangeRepoFilesOptions{
-				NewBranch: "codeowner-basebranch-forked",
-				Files: []*files_service.ChangeRepoFile{
-					{
-						Operation:     "update",
-						TreePath:      "README.md",
-						ContentReader: strings.NewReader("# This is a new forked project\n"),
-					},
-				},
-			})
+			err = updateFileInBranch(user5, forkedRepo, "README.md", "codeowner-basebranch-forked",
+				strings.NewReader("# This is a new forked project\n"),
+			)
 			require.NoError(t, err)
 
 			session := loginUser(t, "user5")
@@ -652,7 +624,7 @@ func getUserNotificationCount(t *testing.T, session *TestSession, csrf string) s
 }
 
 func TestPullRequestReplyMail(t *testing.T) {
-	defer tests.AddFixtures("tests/integration/fixtures/TestPullRequestReplyMail/")()
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestPullRequestReplyMail")()
 	defer tests.PrepareTestEnv(t)()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -712,6 +684,7 @@ func TestPullRequestReplyMail(t *testing.T) {
 			called := false
 			defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
 				assert.Len(t, msgs, 2)
+				SortMailerMessages(msgs)
 				assert.Equal(t, "user1@example.com", msgs[0].To)
 				assert.Equal(t, "Re: [user2/repo1] issue2 (PR #2)", msgs[0].Subject)
 				assert.Contains(t, msgs[0].Body, "Notification time!")
@@ -740,6 +713,7 @@ func TestPullRequestReplyMail(t *testing.T) {
 			called := false
 			defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
 				assert.Len(t, msgs, 2)
+				SortMailerMessages(msgs)
 				assert.Equal(t, "user1@example.com", msgs[0].To)
 				assert.Equal(t, "Re: [user2/repo1] issue2 (PR #2)", msgs[0].Subject)
 				assert.Contains(t, msgs[0].Body, "Notification time 2!")
@@ -759,6 +733,298 @@ func TestPullRequestReplyMail(t *testing.T) {
 
 			assert.True(t, called)
 			unittest.AssertExistsIf(t, true, &issues_model.Comment{Content: "Notification time 2!", IssueID: 2})
+		})
+	})
+}
+
+func updateFileInBranch(user *user_model.User, repo *repo_model.Repository, treePath, newBranch string, content io.ReadSeeker) error {
+	oldBranch, err := gitrepo.GetDefaultBranch(git.DefaultContext, repo)
+	if err != nil {
+		return err
+	}
+
+	commitID, err := gitrepo.GetBranchCommitID(git.DefaultContext, repo, oldBranch)
+	if err != nil {
+		return err
+	}
+
+	opts := &files_service.ChangeRepoFilesOptions{
+		Files: []*files_service.ChangeRepoFile{
+			{
+				Operation:     "update",
+				TreePath:      treePath,
+				ContentReader: content,
+			},
+		},
+		OldBranch:    oldBranch,
+		NewBranch:    newBranch,
+		Author:       nil,
+		Committer:    nil,
+		LastCommitID: commitID,
+	}
+	_, err = files_service.ChangeRepoFiles(git.DefaultContext, repo, user, opts)
+	return err
+}
+
+func TestPullRequestStaleReview(t *testing.T) {
+	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		session := loginUser(t, user2.Name)
+
+		// Create temporary repository.
+		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "",
+			[]unit_model.Type{unit_model.TypePullRequests}, nil,
+			[]*files_service.ChangeRepoFile{
+				{
+					Operation:     "create",
+					TreePath:      "FUNFACT",
+					ContentReader: strings.NewReader("Smithy was the runner up to be Forgejo's name"),
+				},
+			},
+		)
+		defer f()
+
+		clone := func(t *testing.T, clone string) string {
+			t.Helper()
+
+			dstPath := t.TempDir()
+			cloneURL, _ := url.Parse(clone)
+			cloneURL.User = url.UserPassword("user2", userPassword)
+			require.NoError(t, git.CloneWithArgs(t.Context(), nil, cloneURL.String(), dstPath, git.CloneRepoOptions{}))
+
+			return dstPath
+		}
+
+		firstCommit := func(t *testing.T, dstPath string) string {
+			t.Helper()
+
+			require.NoError(t, os.WriteFile(path.Join(dstPath, "README.md"), []byte("## test content"), 0o600))
+			require.NoError(t, git.AddChanges(dstPath, true))
+			require.NoError(t, git.CommitChanges(dstPath, git.CommitChangesOptions{
+				Committer: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Author: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Message: "Add README.",
+			}))
+			stdout := &bytes.Buffer{}
+			require.NoError(t, git.NewCommand(t.Context(), "rev-parse", "HEAD").Run(&git.RunOpts{Dir: dstPath, Stdout: stdout}))
+
+			return strings.TrimSpace(stdout.String())
+		}
+
+		secondCommit := func(t *testing.T, dstPath string) {
+			require.NoError(t, os.WriteFile(path.Join(dstPath, "README.md"), []byte("## I prefer this heading"), 0o600))
+			require.NoError(t, git.AddChanges(dstPath, true))
+			require.NoError(t, git.CommitChanges(dstPath, git.CommitChangesOptions{
+				Committer: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Author: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Message: "Add README.",
+			}))
+		}
+
+		firstReview := func(t *testing.T, firstCommitID string, index int64) {
+			t.Helper()
+
+			resp := session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/%s/pulls/%d/files/reviews/new_comment", repo.FullName(), index)), http.StatusOK)
+			doc := NewHTMLParser(t, resp.Body)
+
+			req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/pulls/%d/files/reviews/comments", repo.FullName(), index), map[string]string{
+				"_csrf":            doc.GetCSRF(),
+				"origin":           doc.GetInputValueByName("origin"),
+				"latest_commit_id": firstCommitID,
+				"side":             "proposed",
+				"line":             "1",
+				"path":             "FUNFACT",
+				"diff_start_cid":   doc.GetInputValueByName("diff_start_cid"),
+				"diff_end_cid":     doc.GetInputValueByName("diff_end_cid"),
+				"diff_base_cid":    doc.GetInputValueByName("diff_base_cid"),
+				"content":          "nitpicking comment",
+				"pending_review":   "",
+			})
+			session.MakeRequest(t, req, http.StatusOK)
+
+			req = NewRequestWithValues(t, "POST", "/"+repo.FullName()+"/pulls/1/files/reviews/submit", map[string]string{
+				"_csrf":     doc.GetCSRF(),
+				"commit_id": firstCommitID,
+				"content":   "looks good",
+				"type":      "comment",
+			})
+			session.MakeRequest(t, req, http.StatusOK)
+		}
+
+		staleReview := func(t *testing.T, firstCommitID string, index int64) {
+			// Review based on the first commit, which is a stale review because the
+			// PR's head is at the seconnd commit.
+			req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/pulls/%d/files/reviews/submit", repo.FullName(), index), map[string]string{
+				"_csrf":     GetCSRF(t, session, fmt.Sprintf("/%s/pulls/%d/files/reviews/new_comment", repo.FullName(), index)),
+				"commit_id": firstCommitID,
+				"content":   "looks good",
+				"type":      "approve",
+			})
+			session.MakeRequest(t, req, http.StatusOK)
+		}
+
+		t.Run("Across repositories", func(t *testing.T) {
+			testRepoFork(t, session, "user2", repo.Name, "org3", "forked-repo")
+
+			// Clone it.
+			dstPath := clone(t, fmt.Sprintf("%sorg3/forked-repo.git", u.String()))
+
+			// Create first commit.
+			firstCommitID := firstCommit(t, dstPath)
+
+			// Create PR across repositories.
+			require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "main").Run(&git.RunOpts{Dir: dstPath}))
+			session.MakeRequest(t, NewRequestWithValues(t, "POST", repo.FullName()+"/compare/main...org3/forked-repo:main", map[string]string{
+				"_csrf": GetCSRF(t, session, repo.FullName()+"/compare/main...org3/forked-repo:main"),
+				"title": "pull request",
+			}), http.StatusOK)
+			pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{Index: 1, BaseRepoID: repo.ID})
+
+			t.Run("Mark review as stale", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Create first review
+				firstReview(t, firstCommitID, pr.Index)
+
+				// Review is not stale.
+				review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID})
+				assert.False(t, review.Stale)
+
+				// Create second commit
+				secondCommit(t, dstPath)
+
+				// Push to PR.
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "main").Run(&git.RunOpts{Dir: dstPath}))
+
+				// Review is stale.
+				assert.Eventually(t, func() bool {
+					return unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID}).Stale == true
+				}, time.Second*10, time.Microsecond*100)
+			})
+
+			t.Run("Create stale review", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Review based on the first commit, which is a stale review because the
+				// PR's head is at the seconnd commit.
+				staleReview(t, firstCommitID, pr.Index)
+
+				// There does not exist a review that is not stale, because all reviews
+				// are based on the first commit and the PR's head is at the second commit.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = false")
+			})
+
+			t.Run("Mark unstale", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Force push the PR to the first commit.
+				require.NoError(t, git.NewCommand(t.Context(), "reset", "--hard", "HEAD~1").Run(&git.RunOpts{Dir: dstPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "--force-with-lease", "origin", "main").Run(&git.RunOpts{Dir: dstPath}))
+
+				// There does not exist a review that is stale, because all reviews
+				// are based on the first commit and thus all reviews are no longer marked
+				// as stale.
+				assert.Eventually(t, func() bool {
+					return !unittest.BeanExists(t, &issues_model.Review{IssueID: pr.IssueID}, "stale = true")
+				}, time.Second*10, time.Microsecond*100)
+			})
+
+			t.Run("Diff did not change", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Create a empty commit and push it to the PR.
+				require.NoError(t, git.NewCommand(t.Context(), "commit", "--allow-empty", "-m", "Empty commit").Run(&git.RunOpts{Dir: dstPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "main").Run(&git.RunOpts{Dir: dstPath}))
+
+				// There does not exist a review that is stale, because the diff did not
+				// change.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = true")
+			})
+		})
+
+		t.Run("AGit", func(t *testing.T) {
+			dstPath := clone(t, fmt.Sprintf("%suser2/%s.git", u.String(), repo.Name))
+
+			// Create first commit.
+			firstCommitID := firstCommit(t, dstPath)
+
+			// Create agit PR.
+			require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr").Run(&git.RunOpts{Dir: dstPath}))
+
+			pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{Index: 2, BaseRepoID: repo.ID})
+
+			t.Run("Mark review as stale", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				firstReview(t, firstCommitID, pr.Index)
+
+				// Review is not stale.
+				review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID})
+				assert.False(t, review.Stale)
+
+				// Create second commit
+				secondCommit(t, dstPath)
+
+				// Push to agit PR.
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr").Run(&git.RunOpts{Dir: dstPath}))
+
+				// Review is stale.
+				review = unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID})
+				assert.True(t, review.Stale)
+			})
+
+			t.Run("Create stale review", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Review based on the first commit, which is a stale review because the
+				// PR's head is at the seconnd commit.
+				staleReview(t, firstCommitID, pr.Index)
+
+				// There does not exist a review that is not stale, because all reviews
+				// are based on the first commit and the PR's head is at the second commit.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = false")
+			})
+
+			t.Run("Mark unstale", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Force push the PR to the first commit.
+				require.NoError(t, git.NewCommand(t.Context(), "reset", "--hard", "HEAD~1").Run(&git.RunOpts{Dir: dstPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr", "-o", "force-push").Run(&git.RunOpts{Dir: dstPath}))
+
+				// There does not exist a review that is stale, because all reviews
+				// are based on the first commit and thus all reviews are no longer marked
+				// as stale.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = true")
+			})
+
+			t.Run("Diff did not change", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Create a empty commit and push it to the PR.
+				require.NoError(t, git.NewCommand(t.Context(), "commit", "--allow-empty", "-m", "Empty commit").Run(&git.RunOpts{Dir: dstPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr").Run(&git.RunOpts{Dir: dstPath}))
+
+				// There does not exist a review that is stale, because the diff did not
+				// change.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = true")
+			})
 		})
 	})
 }

@@ -5,7 +5,7 @@
 package markdown
 
 import (
-	"fmt"
+	"errors"
 	"html/template"
 	"io"
 	"strings"
@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/markup/common"
 	"forgejo.org/modules/markup/markdown/callout"
 	"forgejo.org/modules/markup/markdown/math"
+	markdownutil "forgejo.org/modules/markup/markdown/util"
 	"forgejo.org/modules/setting"
 	giteautil "forgejo.org/modules/util"
 
@@ -34,11 +35,6 @@ var (
 	specMarkdownOnce sync.Once
 )
 
-var (
-	renderContextKey = parser.NewContextKey()
-	renderConfigKey  = parser.NewContextKey()
-)
-
 type limitWriter struct {
 	w     io.Writer
 	sum   int64
@@ -54,7 +50,7 @@ func (l *limitWriter) Write(data []byte) (int, error) {
 		if err != nil {
 			return n, err
 		}
-		return n, fmt.Errorf("rendered content too large - truncating render")
+		return n, errors.New("rendered content too large - truncating render")
 	}
 	n, err := l.w.Write(data)
 	l.sum += int64(n)
@@ -64,7 +60,7 @@ func (l *limitWriter) Write(data []byte) (int, error) {
 // newParserContext creates a parser.Context with the render context set
 func newParserContext(ctx *markup.RenderContext) parser.Context {
 	pc := parser.NewContext(parser.WithIDs(newPrefixedIDs()))
-	pc.Set(renderContextKey, ctx)
+	pc.Set(markdownutil.RenderContextKey, ctx)
 	return pc
 }
 
@@ -192,7 +188,7 @@ func actualRender(ctx *markup.RenderContext, input io.Reader, output io.Writer) 
 	}
 	rc.metaLength = metaLength
 
-	pc.Set(renderConfigKey, rc)
+	pc.Set(markdownutil.RenderConfigKey, rc)
 
 	if err := converter.Convert(buf, lw, parser.WithContext(pc)); err != nil {
 		log.Error("Unable to render: %v", err)
@@ -267,8 +263,13 @@ func Render(ctx *markup.RenderContext, input io.Reader, output io.Writer) error 
 
 // RenderString renders Markdown string to HTML with all specific handling stuff and return string
 func RenderString(ctx *markup.RenderContext, content string) (template.HTML, error) {
+	return RenderReader(ctx, strings.NewReader(content))
+}
+
+// RenderReader renders Markdown io.Reader to HTML with all specific handling stuff and return string
+func RenderReader(ctx *markup.RenderContext, input io.Reader) (template.HTML, error) {
 	var buf strings.Builder
-	if err := Render(ctx, strings.NewReader(content), &buf); err != nil {
+	if err := Render(ctx, input, &buf); err != nil {
 		return "", err
 	}
 	return template.HTML(buf.String()), nil

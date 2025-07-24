@@ -32,6 +32,7 @@ import (
 	"forgejo.org/routers/web/feed"
 	"forgejo.org/routers/web/healthcheck"
 	"forgejo.org/routers/web/misc"
+	"forgejo.org/routers/web/moderation"
 	"forgejo.org/routers/web/org"
 	org_setting "forgejo.org/routers/web/org/setting"
 	"forgejo.org/routers/web/repo"
@@ -116,7 +117,7 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 	return func(ctx *context.Context) {
 		ar, err := common.AuthShared(ctx.Base, ctx.Session, authMethod)
 		if err != nil {
-			log.Error("Failed to verify user: %v", err)
+			log.Info("Failed to verify user: %v", err)
 			ctx.Error(http.StatusUnauthorized, ctx.Locale.TrString("auth.unauthorized_credentials", "https://codeberg.org/forgejo/forgejo/issues/2809"))
 			return
 		}
@@ -474,6 +475,11 @@ func registerRoutes(m *web.Route) {
 		m.Get("/search", repo.SearchIssues)
 	}, reqSignIn)
 
+	if setting.Moderation.Enabled {
+		m.Get("/report_abuse", reqSignIn, moderation.NewReport)
+		m.Post("/report_abuse", reqSignIn, web.Bind(forms.ReportAbuseForm{}), moderation.CreatePost)
+	}
+
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/milestones", reqSignIn, reqMilestonesDashboardPageEnabled, user.Milestones)
 
@@ -775,7 +781,14 @@ func registerRoutes(m *web.Route) {
 			addSettingsRunnersRoutes()
 			addSettingsVariablesRoutes()
 		})
-	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled))
+
+		if setting.Moderation.Enabled {
+			m.Group("/moderation/reports", func() {
+				m.Get("", admin.AbuseReports)
+				m.Get("/type/{type:1|2|3|4}/id/{id}", admin.AbuseReportDetails)
+			})
+		}
+	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 
 	m.Group("", func() {
@@ -1393,7 +1406,7 @@ func registerRoutes(m *web.Route) {
 			m.Get("", actions.List)
 			m.Post("/disable", reqRepoAdmin, actions.DisableWorkflowFile)
 			m.Post("/enable", reqRepoAdmin, actions.EnableWorkflowFile)
-			m.Post("/manual", reqRepoAdmin, actions.ManualRunWorkflow)
+			m.Post("/manual", reqRepoActionsWriter, actions.ManualRunWorkflow)
 
 			m.Group("/runs", func() {
 				m.Get("/latest", actions.ViewLatest)
@@ -1504,7 +1517,10 @@ func registerRoutes(m *web.Route) {
 			m.Group("/commits", func() {
 				m.Get("", context.RepoRef(), repo.SetWhitespaceBehavior, repo.GetPullDiffStats, repo.ViewPullCommits)
 				m.Get("/list", context.RepoRef(), repo.GetPullCommits)
-				m.Get("/{sha:[a-f0-9]{4,40}}", context.RepoRef(), repo.SetEditorconfigIfExists, repo.SetDiffViewStyle, repo.SetWhitespaceBehavior, repo.SetShowOutdatedComments, repo.ViewPullFilesForSingleCommit)
+				m.Group("/{sha:[a-f0-9]{4,40}}", func() {
+					m.Get("", context.RepoRef(), repo.SetEditorconfigIfExists, repo.SetDiffViewStyle, repo.SetWhitespaceBehavior, repo.SetShowOutdatedComments, repo.ViewPullFilesForSingleCommit)
+					m.Post("/reviews/submit", context.RepoMustNotBeArchived(), web.Bind(forms.SubmitReviewForm{}), repo.SubmitReview)
+				})
 			})
 			m.Post("/merge", context.RepoMustNotBeArchived(), web.Bind(forms.MergePullRequestForm{}), context.EnforceQuotaWeb(quota_model.LimitSubjectSizeGitAll, context.QuotaTargetRepo), repo.MergePullRequest)
 			m.Post("/cancel_auto_merge", context.RepoMustNotBeArchived(), repo.CancelAutoMergePullRequest)
@@ -1593,7 +1609,7 @@ func registerRoutes(m *web.Route) {
 		}
 		m.Get("/commit/{sha:([a-f0-9]{4,64})}.{ext:patch|diff}", repo.MustBeNotEmpty, reqRepoCodeReader, repo.RawDiff)
 
-		m.Get("/sync_fork/{branch}", context.RepoMustNotBeArchived(), repo.MustBeNotEmpty, reqRepoCodeWriter, repo.SyncFork)
+		m.Post("/sync_fork", context.RepoMustNotBeArchived(), repo.MustBeNotEmpty, reqRepoCodeWriter, repo.SyncFork)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
 	m.Post("/{username}/{reponame}/lastcommit/*", ignSignInAndCsrf, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)

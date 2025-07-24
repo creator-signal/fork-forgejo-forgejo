@@ -632,6 +632,31 @@ func TestSignInOAuthCallbackPKCE(t *testing.T) {
 	})
 }
 
+func TestWellKnownOpenIDConfiguration(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("Issuer does not end with a slash", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/.well-known/openid-configuration")
+		resp := MakeRequest(t, req, http.StatusOK)
+		type response struct {
+			Issuer string `json:"issuer"`
+		}
+		parsed := new(response)
+
+		DecodeJSON(t, resp, parsed)
+		assert.Equal(t, strings.TrimSuffix(setting.AppURL, "/"), parsed.Issuer)
+	})
+
+	t.Run("Not found if OAuth2 is not enabled", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.OAuth2.Enabled, false)()
+
+		MakeRequest(t, NewRequest(t, "GET", "/.well-known/openid-configuration"), http.StatusNotFound)
+	})
+}
+
 func TestSignInOAuthCallbackRedirectToEscaping(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -697,7 +722,7 @@ func setupMockOIDCServer() *httptest.Server {
 		case "/.well-known/openid-configuration":
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{
-				"issuer": "` + mockServer.URL + `",
+				"issuer": "` + strings.TrimSuffix(mockServer.URL, "/") + `",
 				"authorization_endpoint": "` + mockServer.URL + `/authorize",
 				"token_endpoint": "` + mockServer.URL + `/token",
 				"userinfo_endpoint": "` + mockServer.URL + `/userinfo"
@@ -1430,4 +1455,95 @@ func TestOAuth_GrantScopesReadPublicGroupsWithTheReadScope(t *testing.T) {
 	for _, privOrg := range []string{"org7", "org7:owners", "privated_org", "privated_org:team14writeauth"} {
 		assert.Contains(t, parsedUserInfo.Groups, privOrg)
 	}
+}
+
+func TestSignUpViaOAuthDefaultRestricted(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.Service.DefaultUserIsRestricted, true)()
+
+	gitlabName := "gitlab"
+	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
+	userGitLabUserID := "BB(5)=47176870"
+
+	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
+		return goth.User{
+			Provider: gitlabName,
+			UserID:   userGitLabUserID,
+			Name:     "gitlab-user",
+			NickName: "gitlab-user",
+			Email:    "gitlab@example.com",
+		}, nil
+	})()
+	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
+	resp := MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/", test.RedirectURL(resp))
+
+	unittest.AssertExistsIf(t, true, &user_model.User{Name: "gitlab-user"}, "is_restricted = true")
+}
+
+func TestSignUpViaOAuthLinking2FA(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.AccountLinking, setting.OAuth2AccountLinkingAuto)()
+
+	// Fake that user 2 is enrolled into WebAuthn.
+	t.Cleanup(func() {
+		unittest.AssertSuccessfulDelete(t, &auth_model.WebAuthnCredential{UserID: 2})
+	})
+	unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: 2})
+
+	gitlabName := "gitlab"
+	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
+	userGitLabUserID := "BB(4)=107"
+
+	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
+		return goth.User{
+			Provider: gitlabName,
+			UserID:   userGitLabUserID,
+			NickName: "user2",
+			Email:    "user2@example.com",
+		}, nil
+	})()
+	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
+	resp := MakeRequest(t, req, http.StatusSeeOther)
+
+	// Make sure the user has to go through 2FA after linking.
+	assert.Equal(t, "/user/webauthn", test.RedirectURL(resp))
+}
+
+func TestSignUpViaOAuth2FA(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.AccountLinking, setting.OAuth2AccountLinkingAuto)()
+
+	gitlabName := "gitlab"
+	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
+	userGitLabUserID := "BB(3)=21"
+
+	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
+		return goth.User{
+			Provider: gitlabName,
+			UserID:   userGitLabUserID,
+			NickName: "user2",
+			Email:    "user2@example.com",
+		}, nil
+	})()
+	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
+	resp := MakeRequest(t, req, http.StatusSeeOther)
+
+	// Make sure the user can login normally and is linked.
+	assert.Equal(t, "/", test.RedirectURL(resp))
+
+	// Fake that user 2 is enrolled into WebAuthn.
+	t.Cleanup(func() {
+		unittest.AssertSuccessfulDelete(t, &auth_model.WebAuthnCredential{UserID: 2})
+	})
+	unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: 2})
+
+	req = NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+
+	// Make sure user has to go through 2FA.
+	assert.Equal(t, "/user/webauthn", test.RedirectURL(resp))
 }

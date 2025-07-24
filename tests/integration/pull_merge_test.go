@@ -40,10 +40,10 @@ import (
 	"forgejo.org/services/forms"
 	"forgejo.org/services/pull"
 	commitstatus_service "forgejo.org/services/repository/commitstatus"
-	files_service "forgejo.org/services/repository/files"
 	webhook_service "forgejo.org/services/webhook"
 	"forgejo.org/tests"
 
+	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -302,13 +302,37 @@ func TestCantMergeConflict(t *testing.T) {
 		gitRepo, err := gitrepo.OpenRepository(git.DefaultContext, repo1)
 		require.NoError(t, err)
 
-		err = pull.Merge(t.Context(), pr, user1, gitRepo, repo_model.MergeStyleMerge, "", "CONFLICT", false)
-		require.Error(t, err, "Merge should return an error due to conflict")
-		assert.True(t, models.IsErrMergeConflicts(err), "Merge error is not a conflict error")
+		t.Run("Rebase", func(t *testing.T) {
+			t.Run("Git version without replay", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+				oldVersion, err := version.NewVersion("2.43.0")
+				require.NoError(t, err)
+				defer test.MockVariableValue(&git.GitVersion, oldVersion)()
 
-		err = pull.Merge(t.Context(), pr, user1, gitRepo, repo_model.MergeStyleRebase, "", "CONFLICT", false)
-		require.Error(t, err, "Merge should return an error due to conflict")
-		assert.True(t, models.IsErrRebaseConflicts(err), "Merge error is not a conflict error")
+				err = pull.Merge(t.Context(), pr, user1, gitRepo, repo_model.MergeStyleRebase, "", "CONFLICT", false)
+				require.Error(t, err, "Merge should return an error due to conflict")
+				assert.True(t, models.IsErrRebaseConflicts(err), "Merge error is not a conflict error")
+			})
+			t.Run("Git version with replay", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+				if git.CheckGitVersionAtLeast("2.44") != nil {
+					t.SkipNow()
+				}
+
+				err = pull.Merge(t.Context(), pr, user1, gitRepo, repo_model.MergeStyleRebase, "", "CONFLICT", false)
+				require.Error(t, err, "Merge should return an error due to conflict")
+				assert.True(t, models.IsErrRebaseConflicts(err), "Merge error is not a conflict error")
+			})
+		})
+
+		t.Run("Merge", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			err = pull.Merge(t.Context(), pr, user1, gitRepo, repo_model.MergeStyleMerge, "", "CONFLICT", false)
+			require.Error(t, err, "Merge should return an error due to conflict")
+			assert.True(t, models.IsErrMergeConflicts(err), "Merge error is not a conflict error")
+		})
+
 		gitRepo.Close()
 	})
 }
@@ -492,78 +516,6 @@ func TestCantFastForwardOnlyMergeDiverging(t *testing.T) {
 	})
 }
 
-func TestConflictChecking(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-
-		// Create new clean repo to test conflict checking.
-		baseRepo, _, f := tests.CreateDeclarativeRepo(t, user, "conflict-checking", nil, nil, nil)
-		defer f()
-
-		// create a commit on new branch.
-		_, err := files_service.ChangeRepoFiles(git.DefaultContext, baseRepo, user, &files_service.ChangeRepoFilesOptions{
-			Files: []*files_service.ChangeRepoFile{
-				{
-					Operation:     "create",
-					TreePath:      "important_file",
-					ContentReader: strings.NewReader("Just a non-important file"),
-				},
-			},
-			Message:   "Add a important file",
-			OldBranch: "main",
-			NewBranch: "important-secrets",
-		})
-		require.NoError(t, err)
-
-		// create a commit on main branch.
-		_, err = files_service.ChangeRepoFiles(git.DefaultContext, baseRepo, user, &files_service.ChangeRepoFilesOptions{
-			Files: []*files_service.ChangeRepoFile{
-				{
-					Operation:     "create",
-					TreePath:      "important_file",
-					ContentReader: strings.NewReader("Not the same content :P"),
-				},
-			},
-			Message:   "Add a important file",
-			OldBranch: "main",
-			NewBranch: "main",
-		})
-		require.NoError(t, err)
-
-		// create Pull to merge the important-secrets branch into main branch.
-		pullIssue := &issues_model.Issue{
-			RepoID:   baseRepo.ID,
-			Title:    "PR with conflict!",
-			PosterID: user.ID,
-			Poster:   user,
-			IsPull:   true,
-		}
-
-		pullRequest := &issues_model.PullRequest{
-			HeadRepoID: baseRepo.ID,
-			BaseRepoID: baseRepo.ID,
-			HeadBranch: "important-secrets",
-			BaseBranch: "main",
-			HeadRepo:   baseRepo,
-			BaseRepo:   baseRepo,
-			Type:       issues_model.PullRequestGitea,
-		}
-		err = pull.NewPullRequest(git.DefaultContext, baseRepo, pullIssue, nil, nil, pullRequest, nil)
-		require.NoError(t, err)
-
-		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{Title: "PR with conflict!"})
-		require.NoError(t, issue.LoadPullRequest(db.DefaultContext))
-		conflictingPR := issue.PullRequest
-
-		// Ensure conflictedFiles is populated.
-		assert.Len(t, conflictingPR.ConflictedFiles, 1)
-		// Check if status is correct.
-		assert.Equal(t, issues_model.PullRequestStatusConflict, conflictingPR.Status)
-		// Ensure that mergeable returns false
-		assert.False(t, conflictingPR.Mergeable(db.DefaultContext))
-	})
-}
-
 func TestPullRetargetChildOnBranchDelete(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
 		session := loginUser(t, "user1")
@@ -633,7 +585,6 @@ func TestPullMergeIndexerNotifier(t *testing.T) {
 		createPullResp := testPullCreate(t, session, "user1", "repo1", false, "master", "master", "Indexer notifier test pull")
 
 		require.NoError(t, queue.GetManager().FlushAll(t.Context(), 0))
-		time.Sleep(time.Second)
 
 		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{
 			OwnerName: "user2",
@@ -672,7 +623,6 @@ func TestPullMergeIndexerNotifier(t *testing.T) {
 		assert.True(t, issue.IsClosed)
 
 		require.NoError(t, queue.GetManager().FlushAll(t.Context(), 0))
-		time.Sleep(time.Second)
 
 		// search issues again
 		searchIssuesResp = session.MakeRequest(t, NewRequest(t, "GET", link.String()), http.StatusOK)
@@ -941,8 +891,6 @@ func testPullAutoMergeAfterCommitStatusSucceed(t *testing.T, ctx APITestContext,
 	})
 	require.NoError(t, err)
 
-	time.Sleep(2 * time.Second)
-
 	// approve PR if necessary
 	if approval {
 		// reload PR again
@@ -956,8 +904,6 @@ func testPullAutoMergeAfterCommitStatusSucceed(t *testing.T, ctx APITestContext,
 		resp := approveSession.MakeRequest(t, req, http.StatusOK)
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		testSubmitReview(t, approveSession, htmlDoc.GetCSRF(), "user2", "repo1", strconv.Itoa(int(pr.Index)), sha, "approve", http.StatusOK)
-
-		time.Sleep(2 * time.Second)
 	}
 
 	// reload PR again
@@ -1138,8 +1084,6 @@ func TestPullAutoMergeAfterCommitStatusSucceedAndApprovalForAgitFlow(t *testing.
 		})
 		require.NoError(t, err)
 
-		time.Sleep(2 * time.Second)
-
 		// reload pr again
 		pr = unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pr.ID})
 		assert.False(t, pr.HasMerged)
@@ -1151,8 +1095,6 @@ func TestPullAutoMergeAfterCommitStatusSucceedAndApprovalForAgitFlow(t *testing.
 		resp := approveSession.MakeRequest(t, req, http.StatusOK)
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		testSubmitReview(t, approveSession, htmlDoc.GetCSRF(), "user2", "repo1", strconv.Itoa(int(pr.Index)), sha, "approve", http.StatusOK)
-
-		time.Sleep(2 * time.Second)
 
 		// realod pr again
 		pr = unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pr.ID})
@@ -1191,5 +1133,75 @@ func TestPullDeleteBranchPerms(t *testing.T) {
 		// Check that the branch still exist.
 		req = NewRequest(t, "GET", "/user2/repo1/src/branch/base-pr")
 		user4Session.MakeRequest(t, req, http.StatusOK)
+	})
+}
+
+// Test that rebasing only happens when its necessary.
+func TestRebaseWhenNecessary(t *testing.T) {
+	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+		session := loginUser(t, "user1")
+		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
+
+		t.Run("No rebase needed", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			testEditFile(t, session, "user1", "repo1", "master", "README.md", "Hello, World (Edited)\n")
+
+			resp := testPullCreate(t, session, "user1", "repo1", false, "master", "master", "This is a pull title")
+			pullLink := test.RedirectURL(resp)
+
+			resp = session.MakeRequest(t, NewRequest(t, "GET", test.RedirectURL(resp)+"/commits"), http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			commitLinkBefore, ok := htmlDoc.Find("a.sha").Attr("href")
+			assert.True(t, ok)
+			commitBefore := commitLinkBefore[strings.LastIndexByte(commitLinkBefore, '/'):]
+
+			elem := strings.Split(pullLink, "/")
+			testPullMerge(t, session, elem[1], elem[2], elem[4], repo_model.MergeStyleRebase, false)
+
+			resp = session.MakeRequest(t, NewRequest(t, "GET", "/user2/repo1"), http.StatusOK)
+			htmlDoc = NewHTMLParser(t, resp.Body)
+			commitLinkAfter, ok := htmlDoc.Find(".latest-commit a.sha").Attr("href")
+			assert.True(t, ok)
+			commitAfter := commitLinkAfter[strings.LastIndexByte(commitLinkAfter, '/'):]
+
+			assert.Equal(t, commitBefore, commitAfter)
+		})
+
+		t.Run("Rebase needed", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			// Make user2/repo1 ahead of user1/repo1
+			testEditFile(t, session, "user2", "repo1", "master", "README.md", "Hello, World (Edited 2x)\n")
+
+			// To avoid conflicts, create a new file on /user/repo1.
+			session.MakeRequest(t, NewRequestWithValues(t, "POST", "/user1/repo1/_new/master", map[string]string{
+				"_csrf":          GetCSRF(t, session, "/user/settings"),
+				"commit_choice":  "direct",
+				"tree_path":      "test-file.md",
+				"content":        "newly-added-test-file",
+				"commit_mail_id": "-1",
+			}), http.StatusSeeOther)
+
+			resp := testPullCreate(t, session, "user1", "repo1", false, "master", "master", "This is another pull")
+			pullLink := test.RedirectURL(resp)
+
+			resp = session.MakeRequest(t, NewRequest(t, "GET", test.RedirectURL(resp)+"/commits"), http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			commitLinkBefore, ok := htmlDoc.Find("a.sha").Attr("href")
+			assert.True(t, ok)
+			commitBefore := commitLinkBefore[strings.LastIndexByte(commitLinkBefore, '/'):]
+
+			elem := strings.Split(pullLink, "/")
+			testPullMerge(t, session, elem[1], elem[2], elem[4], repo_model.MergeStyleRebase, false)
+
+			resp = session.MakeRequest(t, NewRequest(t, "GET", "/user2/repo1"), http.StatusOK)
+			htmlDoc = NewHTMLParser(t, resp.Body)
+			commitLinkAfter, ok := htmlDoc.Find(".latest-commit a.sha").Attr("href")
+			assert.True(t, ok)
+			commitAfter := commitLinkAfter[strings.LastIndexByte(commitLinkAfter, '/'):]
+
+			assert.NotEqual(t, commitBefore, commitAfter)
+		})
 	})
 }

@@ -5,6 +5,7 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -54,6 +55,7 @@ type ActionRun struct {
 	PreviousDuration time.Duration
 	Created          timeutil.TimeStamp `xorm:"created"`
 	Updated          timeutil.TimeStamp `xorm:"updated"`
+	NotifyEmail      bool
 }
 
 func init() {
@@ -185,77 +187,9 @@ func updateRepoRunsNumbers(ctx context.Context, repo *repo_model.Repository) err
 	return err
 }
 
-// CancelPreviousJobs cancels all previous jobs of the same repository, reference, workflow, and event.
-// It's useful when a new run is triggered, and all previous runs needn't be continued anymore.
-func CancelPreviousJobs(ctx context.Context, repoID int64, ref, workflowID string, event webhook_module.HookEventType) error {
-	// Find all runs in the specified repository, reference, and workflow with non-final status
-	runs, total, err := db.FindAndCount[ActionRun](ctx, FindRunOptions{
-		RepoID:       repoID,
-		Ref:          ref,
-		WorkflowID:   workflowID,
-		TriggerEvent: event,
-		Status:       []Status{StatusRunning, StatusWaiting, StatusBlocked},
-	})
-	if err != nil {
-		return err
-	}
-
-	// If there are no runs found, there's no need to proceed with cancellation, so return nil.
-	if total == 0 {
-		return nil
-	}
-
-	// Iterate over each found run and cancel its associated jobs.
-	for _, run := range runs {
-		// Find all jobs associated with the current run.
-		jobs, err := db.Find[ActionRunJob](ctx, FindRunJobOptions{
-			RunID: run.ID,
-		})
-		if err != nil {
-			return err
-		}
-
-		// Iterate over each job and attempt to cancel it.
-		for _, job := range jobs {
-			// Skip jobs that are already in a terminal state (completed, cancelled, etc.).
-			status := job.Status
-			if status.IsDone() {
-				continue
-			}
-
-			// If the job has no associated task (probably an error), set its status to 'Cancelled' and stop it.
-			if job.TaskID == 0 {
-				job.Status = StatusCancelled
-				job.Stopped = timeutil.TimeStampNow()
-
-				// Update the job's status and stopped time in the database.
-				n, err := UpdateRunJob(ctx, job, builder.Eq{"task_id": 0}, "status", "stopped")
-				if err != nil {
-					return err
-				}
-
-				// If the update affected 0 rows, it means the job has changed in the meantime, so we need to try again.
-				if n == 0 {
-					return fmt.Errorf("job has changed, try again")
-				}
-
-				// Continue with the next job.
-				continue
-			}
-
-			// If the job has an associated task, try to stop the task, effectively cancelling the job.
-			if err := StopTask(ctx, job.TaskID, StatusCancelled); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Return nil to indicate successful cancellation of all running and waiting jobs.
-	return nil
-}
-
 // InsertRun inserts a run
 // The title will be cut off at 255 characters if it's longer than 255 characters.
+// We don't have to send the ActionRunNowDone notification here because there are no runs that start in a not done status.
 func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWorkflow) error {
 	ctx, commiter, err := db.TxContext(ctx)
 	if err != nil {
@@ -290,29 +224,38 @@ func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWork
 	var hasWaiting bool
 	for _, v := range jobs {
 		id, job := v.Job()
-		needs := job.Needs()
-		if err := v.SetJob(id, job.EraseNeeds()); err != nil {
-			return err
+		status := StatusFailure
+		payload := []byte{}
+		needs := []string{}
+		name := run.Title
+		runsOn := []string{}
+		if job != nil {
+			needs = job.Needs()
+			if err := v.SetJob(id, job.EraseNeeds()); err != nil {
+				return err
+			}
+			payload, _ = v.Marshal()
+
+			if len(needs) > 0 || run.NeedApproval {
+				status = StatusBlocked
+			} else {
+				status = StatusWaiting
+				hasWaiting = true
+			}
+			name, _ = util.SplitStringAtByteN(job.Name, 255)
+			runsOn = job.RunsOn()
 		}
-		payload, _ := v.Marshal()
-		status := StatusWaiting
-		if len(needs) > 0 || run.NeedApproval {
-			status = StatusBlocked
-		} else {
-			hasWaiting = true
-		}
-		job.Name, _ = util.SplitStringAtByteN(job.Name, 255)
 		runJobs = append(runJobs, &ActionRunJob{
 			RunID:             run.ID,
 			RepoID:            run.RepoID,
 			OwnerID:           run.OwnerID,
 			CommitSHA:         run.CommitSHA,
 			IsForkPullRequest: run.IsForkPullRequest,
-			Name:              job.Name,
+			Name:              name,
 			WorkflowPayload:   payload,
 			JobID:             id,
 			Needs:             needs,
-			RunsOn:            job.RunsOn(),
+			RunsOn:            runsOn,
 			Status:            status,
 		})
 	}
@@ -339,6 +282,12 @@ func GetLatestRun(ctx context.Context, repoID int64) (*ActionRun, error) {
 		return nil, fmt.Errorf("latest run: %w", util.ErrNotExist)
 	}
 	return &run, nil
+}
+
+func GetRunBefore(ctx context.Context, _ *ActionRun) (*ActionRun, error) {
+	// TODO return the most recent run related to the run given in argument
+	// see https://codeberg.org/forgejo/user-research/issues/63 for context
+	return nil, nil
 }
 
 func GetLatestRunForBranchAndWorkflow(ctx context.Context, repoID int64, branch, workflowFile, event string) (*ActionRun, error) {
@@ -389,7 +338,9 @@ func GetRunByIndex(ctx context.Context, repoID, index int64) (*ActionRun, error)
 // UpdateRun updates a run.
 // It requires the inputted run has Version set.
 // It will return error if the version is not matched (it means the run has been changed after loaded).
-func UpdateRun(ctx context.Context, run *ActionRun, cols ...string) error {
+// All calls to UpdateRunWithoutNotification that change run.Status from a not done status to a done status must call the ActionRunNowDone notification channel.
+// Use the wrapper function UpdateRun instead.
+func UpdateRunWithoutNotification(ctx context.Context, run *ActionRun, cols ...string) error {
 	sess := db.GetEngine(ctx).ID(run.ID)
 	if len(cols) > 0 {
 		sess.Cols(cols...)
@@ -400,7 +351,7 @@ func UpdateRun(ctx context.Context, run *ActionRun, cols ...string) error {
 		return err
 	}
 	if affected == 0 {
-		return fmt.Errorf("run has changed")
+		return errors.New("run has changed")
 		// It's impossible that the run is not found, since Gitea never deletes runs.
 	}
 

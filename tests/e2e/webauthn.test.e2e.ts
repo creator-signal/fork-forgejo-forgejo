@@ -40,9 +40,8 @@ test('WebAuthn register & login flow', async ({browser, request}, workerInfo) =>
   // Logout.
   await expect(async () => {
     await page.locator('div[aria-label="Profile and settings…"]').click();
-    await page.getByText('Sign Out').click();
+    await page.getByText('Sign out').click();
   }).toPass();
-  await page.waitForURL(`${workerInfo.project.use.baseURL}/`);
 
   // Login.
   response = await page.goto('/user/login');

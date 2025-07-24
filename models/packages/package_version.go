@@ -211,10 +211,13 @@ func (opts *PackageSearchOptions) ToConds() builder.Cond {
 		cond = cond.And(builder.Eq{"package.id": opts.PackageID})
 	}
 	if opts.Name.Value != "" {
+		// potential drawback if Type is all / undefined
+		name := ResolvePackageName(opts.Name.Value, opts.Type)
+
 		if opts.Name.ExactMatch {
-			cond = cond.And(builder.Eq{"package.lower_name": strings.ToLower(opts.Name.Value)})
+			cond = cond.And(builder.Eq{"package.lower_name": name})
 		} else {
-			cond = cond.And(builder.Like{"package.lower_name", strings.ToLower(opts.Name.Value)})
+			cond = cond.And(builder.Like{"package.lower_name", name})
 		}
 	}
 	if opts.Version.Value != "" {
@@ -279,9 +282,7 @@ func (opts *PackageSearchOptions) configureOrderBy(e db.Engine) {
 	default:
 		e.Desc("package_version.created_unix")
 	}
-
-	// Sort by id for stable order with duplicates in the other field
-	e.Asc("package_version.id")
+	e.Desc("package_version.id") // Sort by id for stable order with duplicates in the other field
 }
 
 // SearchVersions gets all versions of packages matching the search options

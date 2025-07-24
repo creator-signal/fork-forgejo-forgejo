@@ -141,6 +141,7 @@ type RepoSettingForm struct {
 	PushMirrorSyncOnCommit bool
 	PushMirrorInterval     string
 	PushMirrorUseSSH       bool
+	PushMirrorBranchFilter string `binding:"MaxSize(2048)" preprocess:"TrimSpace"`
 	Private                bool
 	Template               bool
 	EnablePrune            bool
@@ -277,6 +278,9 @@ type WebhookCoreForm struct {
 	Wiki                     bool
 	Repository               bool
 	Package                  bool
+	ActionFailure            bool
+	ActionRecover            bool
+	ActionSuccess            bool
 	Active                   bool
 	BranchFilter             string `binding:"GlobPattern"`
 	AuthorizationHeader      string

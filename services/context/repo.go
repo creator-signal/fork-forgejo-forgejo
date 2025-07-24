@@ -594,6 +594,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	ctx.Data["CanWriteIssues"] = ctx.Repo.CanWrite(unit_model.TypeIssues)
 	ctx.Data["CanWritePulls"] = ctx.Repo.CanWrite(unit_model.TypePullRequests)
 	ctx.Data["CanWriteActions"] = ctx.Repo.CanWrite(unit_model.TypeActions)
+	ctx.Data["IsModerationEnabled"] = setting.Moderation.Enabled
 
 	canSignedUserFork, err := repo_module.CanUserForkRepo(ctx, ctx.Doer, ctx.Repo.Repository)
 	if err != nil {
@@ -644,7 +645,11 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	ctx.Data["OpenGraphImageURL"] = repo.SummaryCardURL()
 	ctx.Data["OpenGraphImageWidth"] = cardWidth
 	ctx.Data["OpenGraphImageHeight"] = cardHeight
-	ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.summary_card_alt", repo.FullName())
+	if util.IsEmptyString(repo.Description) {
+		ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.summary_card_alt", repo.FullName())
+	} else {
+		ctx.Data["OpenGraphImageAltText"] = ctx.Tr("og.repo.summary_card.alt_description", repo.FullName(), repo.Description)
+	}
 
 	if repo.IsFork {
 		RetrieveBaseRepo(ctx, repo)

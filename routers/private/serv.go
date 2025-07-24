@@ -14,7 +14,6 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/private"
 	"forgejo.org/modules/setting"
@@ -296,8 +295,14 @@ func ServCommand(ctx *context.PrivateContext) {
 				return
 			}
 		} else {
-			// Because of the special ref "refs/for" we will need to delay write permission check
-			if git.SupportProcReceive && unitType == unit.TypeCode {
+			// We don't know yet which references the Git client wants to write to,
+			// but for AGit flow we have to degrade this check to a read permission.
+			// So if we support proc-receive (needed for AGit flow) and the unit type
+			// is code and we know the Git client wants to write to us, then degrade
+			// the permission check to read. The pre-receive hook will do another
+			// permission check which ensure for non AGit flow references the write
+			// permission is checked.
+			if unitType == unit.TypeCode && ctx.FormString("verb") == "git-receive-pack" {
 				mode = perm.AccessModeRead
 			}
 

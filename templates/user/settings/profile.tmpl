@@ -83,6 +83,7 @@
 								{{end}}
 							</div>
 						</div>
+						<span class="help">{{ctx.Locale.Tr "settings.visibility.description" "https://forgejo.org/docs/latest/user/repo-permissions/#profile-and-visibility"}}</span>
 					</label>
 
 					<label>
@@ -108,7 +109,7 @@
 			</form>
 		</div>
 
-		<h4 class="ui top attached header">
+		<h4 id="avatar-settings" class="ui top attached header">
 			{{ctx.Locale.Tr "settings.avatar"}}
 		</h4>
 		<div class="ui attached segment">
@@ -137,6 +138,7 @@
 				<div class="inline field tw-pl-4">
 					<label for="new-avatar">{{ctx.Locale.Tr "settings.choose_new_avatar"}}</label>
 					<input id="new-avatar" name="avatar" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+					<br/><span class=help>{{ctx.Locale.Tr "avatar.constraints_hint" (ctx.Locale.TrSize .MaxAvatarFileSize) .MaxAvatarWidth .MaxAvatarHeight}}</span>
 				</div>
 
 				<div class="field">

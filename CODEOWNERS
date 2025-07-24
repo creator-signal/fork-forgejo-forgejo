@@ -9,10 +9,11 @@
 # Files related to frontend development.
 
 # Javascript and CSS code.
-web_src/.* @caesar @crystal @gusted
+web_src/.* @beowulf @gusted
+web_src/css/.* @0ko
 
 # HTML templates used by the backend.
-templates/.* @caesar @crystal @gusted
+templates/.* @beowulf @gusted
 ## the issue sidebar was touched by fnetx
 templates/repo/issue/view_content/sidebar.* @fnetx
 

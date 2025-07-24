@@ -291,7 +291,7 @@ func LFSFileGet(ctx *context.Context) {
 	}
 	buf = buf[:n]
 
-	st := typesniffer.DetectContentType(buf)
+	st := typesniffer.DetectContentType(buf, "")
 	ctx.Data["IsTextFile"] = st.IsText()
 	isRepresentableAsText := st.IsRepresentableAsText()
 
@@ -342,6 +342,20 @@ func LFSFileGet(ctx *context.Context) {
 		ctx.Data["IsVideoFile"] = true
 	case st.IsAudio():
 		ctx.Data["IsAudioFile"] = true
+	case st.Is3DModel():
+		ctx.Data["Is3DModelFile"] = true
+		switch {
+		case st.IsGLB():
+			ctx.Data["IsGLBFile"] = true
+		case st.IsSTL():
+			ctx.Data["IsSTLFile"] = true
+		case st.IsGLTF():
+			ctx.Data["IsGLTFFile"] = true
+		case st.IsOBJ():
+			ctx.Data["IsOBJFile"] = true
+		case st.Is3MF():
+			ctx.Data["Is3MFFile"] = true
+		}
 	case st.IsImage() && (setting.UI.SVG.Enabled || !st.IsSvgImage()):
 		ctx.Data["IsImageFile"] = true
 	}

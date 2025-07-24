@@ -50,6 +50,9 @@ func Settings(ctx *context.Context) {
 	ctx.Data["RepoAdminChangeTeamAccess"] = ctx.Org.Organization.RepoAdminChangeTeamAccess
 	ctx.Data["ContextUser"] = ctx.ContextUser
 	ctx.Data["CooldownPeriod"] = setting.Service.UsernameCooldownPeriod
+	ctx.Data["MaxAvatarFileSize"] = setting.Avatar.MaxFileSize
+	ctx.Data["MaxAvatarWidth"] = setting.Avatar.MaxWidth
+	ctx.Data["MaxAvatarHeight"] = setting.Avatar.MaxHeight
 
 	err := shared_user.LoadHeaderCount(ctx)
 	if err != nil {
@@ -68,6 +71,9 @@ func SettingsPost(ctx *context.Context) {
 	ctx.Data["PageIsSettingsOptions"] = true
 	ctx.Data["CurrentVisibility"] = ctx.Org.Organization.Visibility
 	ctx.Data["CooldownPeriod"] = setting.Service.UsernameCooldownPeriod
+	ctx.Data["MaxAvatarFileSize"] = setting.Avatar.MaxFileSize
+	ctx.Data["MaxAvatarWidth"] = setting.Avatar.MaxWidth
+	ctx.Data["MaxAvatarHeight"] = setting.Avatar.MaxHeight
 
 	if ctx.HasError() {
 		ctx.HTML(http.StatusOK, tplSettingsOptions)

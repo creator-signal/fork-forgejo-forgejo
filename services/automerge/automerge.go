@@ -32,7 +32,7 @@ func Init() error {
 
 	shared_automerge.PRAutoMergeQueue = queue.CreateUniqueQueue(graceful.GetManager().ShutdownContext(), "pr_auto_merge", handler)
 	if shared_automerge.PRAutoMergeQueue == nil {
-		return fmt.Errorf("unable to create pr_auto_merge queue")
+		return errors.New("unable to create pr_auto_merge queue")
 	}
 	go graceful.GetManager().RunWithCancel(shared_automerge.PRAutoMergeQueue)
 	return nil
@@ -107,6 +107,7 @@ func handlePullRequestAutoMerge(pullID int64, sha string) {
 		return
 	}
 	if !exists {
+		log.Trace("GetScheduledMergeByPullID found nothing for PR %d", pullID)
 		return
 	}
 
@@ -161,7 +162,7 @@ func handlePullRequestAutoMerge(pullID int64, sha string) {
 			return
 		}
 	case issues_model.PullRequestFlowAGit:
-		headBranchExist := git.IsReferenceExist(ctx, baseGitRepo.Path, pr.GetGitRefName())
+		headBranchExist := baseGitRepo.IsReferenceExist(pr.GetGitRefName())
 		if !headBranchExist {
 			log.Warn("Head branch of auto merge %-v does not exist [HeadRepoID: %d, Branch(Agit): %s]", pr, pr.HeadRepoID, pr.HeadBranch)
 			return
@@ -202,6 +203,10 @@ func handlePullRequestAutoMerge(pullID int64, sha string) {
 		}
 		log.Error("%-v CheckPullMergeable: %v", pr, err)
 		return
+	}
+
+	if err := pull_model.DeleteScheduledAutoMerge(ctx, pr.ID); err != nil && !db.IsErrNotExist(err) {
+		log.Error("DeleteScheduledAutoMerge[%d]: %v", pr.ID, err)
 	}
 
 	if err := pull_service.Merge(ctx, pr, doer, baseGitRepo, scheduledPRM.MergeStyle, "", scheduledPRM.Message, true); err != nil {

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/util"
 
 	"github.com/stretchr/testify/assert"
@@ -84,13 +85,57 @@ func TestGitConfig(t *testing.T) {
 }
 
 func TestSyncConfig(t *testing.T) {
-	oldGitConfig := setting.GitConfig
-	defer func() {
-		setting.GitConfig = oldGitConfig
-	}()
+	defer test.MockProtect(&setting.GitConfig)()
 
 	setting.GitConfig.Options["sync-test.cfg-key-a"] = "CfgValA"
 	require.NoError(t, syncGitConfig())
 	assert.True(t, gitConfigContains("[sync-test]"))
 	assert.True(t, gitConfigContains("cfg-key-a = CfgValA"))
+}
+
+func TestSyncConfigGPGFormat(t *testing.T) {
+	defer test.MockProtect(&setting.GitConfig)()
+
+	t.Run("No format", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.Repository.Signing.Format, "")()
+		require.NoError(t, syncGitConfig())
+		assert.True(t, gitConfigContains("[gpg]"))
+		assert.True(t, gitConfigContains("format = openpgp"))
+	})
+
+	t.Run("SSH format", func(t *testing.T) {
+		r, err := os.OpenRoot(t.TempDir())
+		require.NoError(t, err)
+		f, err := r.OpenFile("ssh-keygen", os.O_CREATE|os.O_TRUNC, 0o700)
+		require.NoError(t, f.Close())
+		require.NoError(t, err)
+		t.Setenv("PATH", r.Name())
+		defer test.MockVariableValue(&setting.Repository.Signing.Format, "ssh")()
+
+		require.NoError(t, syncGitConfig())
+		assert.True(t, gitConfigContains("[gpg]"))
+		assert.True(t, gitConfigContains("format = ssh"))
+
+		t.Run("No ssh-keygen binary", func(t *testing.T) {
+			require.NoError(t, r.Remove("ssh-keygen"))
+			require.ErrorContains(t, syncGitConfig(), "git signing requires a ssh-keygen binary")
+		})
+
+		t.Run("Dynamic ssh-keygen binary location", func(t *testing.T) {
+			f, err := r.OpenFile("ssh-keygen-2", os.O_CREATE|os.O_TRUNC, 0o700)
+			require.NoError(t, f.Close())
+			require.NoError(t, err)
+			defer test.MockVariableValue(&setting.GitConfig.Options, map[string]string{
+				"gpg.ssh.program": "ssh-keygen-2",
+			})()
+			require.NoError(t, syncGitConfig())
+		})
+	})
+
+	t.Run("OpenPGP format", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.Repository.Signing.Format, "openpgp")()
+		require.NoError(t, syncGitConfig())
+		assert.True(t, gitConfigContains("[gpg]"))
+		assert.True(t, gitConfigContains("format = openpgp"))
+	})
 }

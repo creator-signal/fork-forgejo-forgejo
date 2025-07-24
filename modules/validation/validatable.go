@@ -1,5 +1,4 @@
-// Copyright 2024 The Forgejo Authors. All rights reserved.
-// Copyright 2023 The Forgejo Authors. All rights reserved.
+// Copyright 2023, 2024, 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package validation
@@ -11,6 +10,8 @@ import (
 	"unicode/utf8"
 
 	"forgejo.org/modules/timeutil"
+
+	ap "github.com/go-ap/activitypub"
 )
 
 // ErrNotValid represents an validation error
@@ -33,13 +34,20 @@ type Validateable interface {
 }
 
 func IsValid(v Validateable) (bool, error) {
-	if err := v.Validate(); len(err) > 0 {
+	if valdationErrors := v.Validate(); len(valdationErrors) > 0 {
 		typeof := reflect.TypeOf(v)
-		errString := strings.Join(err, "\n")
+		errString := strings.Join(valdationErrors, "\n")
 		return false, ErrNotValid{fmt.Sprint(typeof, ": ", errString)}
 	}
 
 	return true, nil
+}
+
+func ValidateIDExists(value ap.Item, name string) []string {
+	if value == nil {
+		return []string{fmt.Sprintf("%v should not be nil", name)}
+	}
+	return ValidateNotEmpty(value.GetID().String(), name)
 }
 
 func ValidateNotEmpty(value any, name string) []string {
@@ -51,6 +59,10 @@ func ValidateNotEmpty(value any, name string) []string {
 		}
 	case timeutil.TimeStamp:
 		if v.IsZero() {
+			isValid = false
+		}
+	case uint16:
+		if v == 0 {
 			isValid = false
 		}
 	case int64:
@@ -80,5 +92,5 @@ func ValidateOneOf(value any, allowed []any, name string) []string {
 			return []string{}
 		}
 	}
-	return []string{fmt.Sprintf("Value %v is not contained in allowed values %v", value, allowed)}
+	return []string{fmt.Sprintf("Field %s contains the value %v, which is not in allowed subset %v", name, value, allowed)}
 }

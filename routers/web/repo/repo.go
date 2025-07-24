@@ -693,9 +693,6 @@ func SearchRepo(ctx *context.Context) {
 		ctx.JSON(http.StatusInternalServerError, nil)
 		return
 	}
-	if !ctx.Repo.CanRead(unit.TypeActions) {
-		git_model.CommitStatusesHideActionsURL(ctx, latestCommitStatuses)
-	}
 
 	results := make([]*repo_service.WebSearchRepository, len(repos))
 	for i, repo := range repos {
@@ -785,7 +782,7 @@ func PrepareBranchList(ctx *context.Context) {
 
 func SyncFork(ctx *context.Context) {
 	redirectURL := fmt.Sprintf("%s/src/branch/%s", ctx.Repo.RepoLink, util.PathEscapeSegments(ctx.Repo.BranchName))
-	branch := ctx.Params("branch")
+	branch := ctx.FormString("branch")
 
 	syncForkInfo, err := repo_service.GetSyncForkInfo(ctx, ctx.Repo.Repository, branch)
 	if err != nil {

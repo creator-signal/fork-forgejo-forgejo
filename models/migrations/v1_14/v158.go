@@ -1,10 +1,10 @@
 // Copyright 2020 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package v1_14 //nolint
+package v1_14
 
 import (
-	"fmt"
+	"errors"
 	"strconv"
 
 	"forgejo.org/modules/log"
@@ -72,7 +72,7 @@ func UpdateCodeCommentReplies(x *xorm.Engine) error {
 		case setting.Database.Type.IsSQLite3():
 			sqlCmd = sqlSelect + sqlTail + " LIMIT " + strconv.Itoa(batchSize) + " OFFSET " + strconv.Itoa(start)
 		default:
-			return fmt.Errorf("Unsupported database type")
+			return errors.New("Unsupported database type")
 		}
 
 		if err := sess.SQL(sqlCmd).Find(&comments); err != nil {

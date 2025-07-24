@@ -1,11 +1,13 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
@@ -247,6 +249,12 @@ func (a *Action) GetActDisplayNameTitle(ctx context.Context) string {
 	return a.GetActFullName(ctx)
 }
 
+// GetRepo returns the repository of the action.
+func (a *Action) GetRepo(ctx context.Context) *repo_model.Repository {
+	a.loadRepo(ctx)
+	return a.Repo
+}
+
 // GetRepoUserName returns the name of the action repository owner.
 func (a *Action) GetRepoUserName(ctx context.Context) string {
 	a.loadRepo(ctx)
@@ -434,6 +442,12 @@ func (a *Action) GetIssueContent(ctx context.Context) string {
 	return a.Issue.Content
 }
 
+func GetActivityByID(ctx context.Context, id int64) (*Action, error) {
+	var act Action
+	_, err := db.GetEngine(ctx).ID(id).Get(&act)
+	return &act, err
+}
+
 // GetFeedsOptions options for retrieving feeds
 type GetFeedsOptions struct {
 	db.ListOptions
@@ -451,7 +465,7 @@ type GetFeedsOptions struct {
 // GetFeeds returns actions according to the provided options
 func GetFeeds(ctx context.Context, opts GetFeedsOptions) (ActionList, int64, error) {
 	if opts.RequestedUser == nil && opts.RequestedTeam == nil && opts.RequestedRepo == nil {
-		return nil, 0, fmt.Errorf("need at least one of these filters: RequestedUser, RequestedTeam, RequestedRepo")
+		return nil, 0, errors.New("need at least one of these filters: RequestedUser, RequestedTeam, RequestedRepo")
 	}
 
 	cond, err := activityQueryCondition(ctx, opts)
@@ -590,13 +604,14 @@ func DeleteOldActions(ctx context.Context, olderThan time.Duration) (err error) 
 }
 
 // NotifyWatchers creates batch of actions for every watcher.
-func NotifyWatchers(ctx context.Context, actions ...*Action) error {
+func NotifyWatchers(ctx context.Context, actions ...*Action) ([]Action, error) {
 	var watchers []*repo_model.Watch
 	var repo *repo_model.Repository
 	var err error
 	var permCode []bool
 	var permIssue []bool
 	var permPR []bool
+	var out []Action
 
 	e := db.GetEngine(ctx)
 
@@ -607,14 +622,14 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 			// Add feeds for user self and all watchers.
 			watchers, err = repo_model.GetWatchers(ctx, act.RepoID)
 			if err != nil {
-				return fmt.Errorf("get watchers: %w", err)
+				return nil, fmt.Errorf("get watchers: %w", err)
 			}
 
 			// Be aware that optimizing this correctly into the `GetWatchers` SQL
 			// query is for most cases less performant than doing this.
 			blockedDoerUserIDs, err := user_model.ListBlockedByUsersID(ctx, act.ActUserID)
 			if err != nil {
-				return fmt.Errorf("user_model.ListBlockedByUsersID: %w", err)
+				return nil, fmt.Errorf("user_model.ListBlockedByUsersID: %w", err)
 			}
 
 			if len(blockedDoerUserIDs) > 0 {
@@ -629,8 +644,9 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 		// Add feed for actioner.
 		act.UserID = act.ActUserID
 		if _, err = e.Insert(act); err != nil {
-			return fmt.Errorf("insert new actioner: %w", err)
+			return nil, fmt.Errorf("insert new actioner: %w", err)
 		}
+		out = append(out, *act)
 
 		if repoChanged {
 			act.loadRepo(ctx)
@@ -638,7 +654,7 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 
 			// check repo owner exist.
 			if err := act.Repo.LoadOwner(ctx); err != nil {
-				return fmt.Errorf("can't get repo owner: %w", err)
+				return nil, fmt.Errorf("can't get repo owner: %w", err)
 			}
 		} else if act.Repo == nil {
 			act.Repo = repo
@@ -649,7 +665,7 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 			act.ID = 0
 			act.UserID = act.Repo.Owner.ID
 			if err = db.Insert(ctx, act); err != nil {
-				return fmt.Errorf("insert new actioner: %w", err)
+				return nil, fmt.Errorf("insert new actioner: %w", err)
 			}
 		}
 
@@ -702,26 +718,29 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 			}
 
 			if err = db.Insert(ctx, act); err != nil {
-				return fmt.Errorf("insert new action: %w", err)
+				return nil, fmt.Errorf("insert new action: %w", err)
 			}
 		}
 	}
-	return nil
+	return out, nil
 }
 
 // NotifyWatchersActions creates batch of actions for every watcher.
-func NotifyWatchersActions(ctx context.Context, acts []*Action) error {
+func NotifyWatchersActions(ctx context.Context, acts []*Action) ([]Action, error) {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer committer.Close()
+	var out []Action
 	for _, act := range acts {
-		if err := NotifyWatchers(ctx, act); err != nil {
-			return err
+		as, err := NotifyWatchers(ctx, act)
+		if err != nil {
+			return nil, err
 		}
+		out = append(out, as...)
 	}
-	return committer.Commit()
+	return out, committer.Commit()
 }
 
 // DeleteIssueActions delete all actions related with issueID

@@ -139,7 +139,7 @@ func notify(ctx context.Context, input *notifyInput) error {
 		return nil
 	}
 	if unit_model.TypeActions.UnitGlobalDisabled() {
-		if err := actions_model.CleanRepoScheduleTasks(ctx, input.Repo, true); err != nil {
+		if err := CleanRepoScheduleTasks(ctx, input.Repo, true); err != nil {
 			log.Error("CleanRepoScheduleTasks: %v", err)
 		}
 		return nil
@@ -345,6 +345,14 @@ func handleWorkflows(
 			Status:            actions_model.StatusWaiting,
 		}
 
+		if workflow, err := model.ReadWorkflow(bytes.NewReader(dwf.Content), false); err == nil {
+			notifications, err := workflow.Notifications()
+			if err != nil {
+				log.Error("Notifications: %w", err)
+			}
+			run.NotifyEmail = notifications
+		}
+
 		need, err := ifNeedApproval(ctx, run, input.Repo, input.Doer)
 		if err != nil {
 			log.Error("check if need approval for repo %d with user %d: %v", input.Repo.ID, input.Doer.ID, err)
@@ -364,16 +372,19 @@ func handleWorkflows(
 			continue
 		}
 
-		jobs, err := jobparser.Parse(dwf.Content, jobparser.WithVars(vars))
+		jobs, err := jobparser.Parse(dwf.Content, false, jobparser.WithVars(vars))
 		if err != nil {
-			log.Error("jobparser.Parse: %v", err)
-			continue
+			run.Status = actions_model.StatusFailure
+			log.Info("jobparser.Parse: invalid workflow, setting job status to failed: %v", err)
+			jobs = []*jobparser.SingleWorkflow{{
+				Name: dwf.EntryName,
+			}}
 		}
 
 		// cancel running jobs if the event is push or pull_request_sync
 		if run.Event == webhook_module.HookEventPush ||
 			run.Event == webhook_module.HookEventPullRequestSync {
-			if err := actions_model.CancelPreviousJobs(
+			if err := CancelPreviousJobs(
 				ctx,
 				run.RepoID,
 				run.Ref,
@@ -504,7 +515,7 @@ func handleSchedules(
 		log.Error("CountSchedules: %v", err)
 		return err
 	} else if count > 0 {
-		if err := actions_model.CleanRepoScheduleTasks(ctx, input.Repo, false); err != nil {
+		if err := CleanRepoScheduleTasks(ctx, input.Repo, false); err != nil {
 			log.Error("CleanRepoScheduleTasks: %v", err)
 		}
 	}
@@ -526,7 +537,7 @@ func handleSchedules(
 	crons := make([]*actions_model.ActionSchedule, 0, len(detectedWorkflows))
 	for _, dwf := range detectedWorkflows {
 		// Check cron job condition. Only working in default branch
-		workflow, err := model.ReadWorkflow(bytes.NewReader(dwf.Content))
+		workflow, err := model.ReadWorkflow(bytes.NewReader(dwf.Content), false)
 		if err != nil {
 			log.Error("ReadWorkflow: %v", err)
 			continue

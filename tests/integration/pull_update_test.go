@@ -89,7 +89,6 @@ func TestAPIPullUpdateByRebase(t *testing.T) {
 
 func TestAPIViewUpdateSettings(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
-		defer tests.PrepareTestEnv(t)()
 		// Create PR to test
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		org26 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 26})
@@ -136,7 +135,6 @@ func TestViewPullUpdateByRebase(t *testing.T) {
 
 func testViewPullUpdate(t *testing.T, updateStyle string) {
 	defer test.MockVariableValue(&setting.Repository.PullRequest.DefaultUpdateStyle, updateStyle)()
-	defer tests.PrepareTestEnv(t)()
 	// Create PR to test
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	org26 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 26})
@@ -272,4 +270,20 @@ func createOutdatedPR(t *testing.T, actor, forkOrg *user_model.User) *issues_mod
 	require.NoError(t, issue.LoadPullRequest(db.DefaultContext))
 
 	return issue.PullRequest
+}
+
+func TestStatusDuringUpdate(t *testing.T) {
+	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+		session := loginUser(t, "user2")
+
+		// Adjust this pull request to be in the conflict checker and having a head
+		// branch that is pointing to the an incorrect commit ID.
+		_, err := db.GetEngine(t.Context()).Cols("status", "head_branch").Update(&issues_model.PullRequest{ID: 5, Status: issues_model.PullRequestStatusChecking, HeadBranch: "master"})
+		require.NoError(t, err)
+
+		resp := session.MakeRequest(t, NewRequest(t, "GET", "/user2/repo1/pulls/5"), http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		assert.Contains(t, htmlDoc.Find(".merge-section .item").Text(), "Merge conflict checking is in progress. Try again in few moments.")
+	})
 }

@@ -1,4 +1,5 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"forgejo.org/models/asymkey"
 	auth_model "forgejo.org/models/auth"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
@@ -106,7 +108,7 @@ func getExpectedFileResponseForCreate(repoFullName, commitID, treePath, latestCo
 		},
 		Verification: &api.PayloadCommitVerification{
 			Verified:  false,
-			Reason:    "gpg.error.not_signed_commit",
+			Reason:    asymkey.NotSigned,
 			Signature: "",
 			Payload:   "",
 		},
@@ -177,6 +179,8 @@ func TestAPICreateFile(t *testing.T) {
 			expectedFileResponse := getExpectedFileResponseForCreate("user2/repo1", commitID, treePath, latestCommit.ID.String())
 			var fileResponse api.FileResponse
 			DecodeJSON(t, resp, &fileResponse)
+			// Testify cannot assert time.Time correctly.
+			expectedFileResponse.Content.LastCommitWhen = fileResponse.Content.LastCommitWhen
 			assert.Equal(t, expectedFileResponse.Content, fileResponse.Content)
 			assert.Equal(t, expectedFileResponse.Commit.SHA, fileResponse.Commit.SHA)
 			assert.Equal(t, expectedFileResponse.Commit.HTMLURL, fileResponse.Commit.HTMLURL)
@@ -283,7 +287,14 @@ func TestAPICreateFile(t *testing.T) {
 		// Test creating a file in an empty repository
 		forEachObjectFormat(t, func(t *testing.T, objectFormat git.ObjectFormat) {
 			reponame := "empty-repo-" + objectFormat.Name()
-			doAPICreateRepository(NewAPITestContext(t, "user2", reponame, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser), true, objectFormat)(t)
+			ctx := NewAPITestContext(t, "user2", reponame, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			opts := &api.CreateRepoOption{
+				Description: "Temporary repo",
+				Name:        ctx.Reponame,
+				Private:     true,
+				Template:    true,
+			}
+			doAPICreateRepository(ctx, opts, objectFormat)(t)
 			createFileOptions = getCreateFileOptions()
 			fileID++
 			treePath = fmt.Sprintf("new/file%d.txt", fileID)
@@ -296,6 +307,8 @@ func TestAPICreateFile(t *testing.T) {
 			latestCommit, _ := gitRepo.GetCommitByPath(treePath)
 			expectedFileResponse := getExpectedFileResponseForCreate("user2/"+reponame, commitID, treePath, latestCommit.ID.String())
 			DecodeJSON(t, resp, &fileResponse)
+			// Testify cannot assert time.Time correctly.
+			expectedFileResponse.Content.LastCommitWhen = fileResponse.Content.LastCommitWhen
 			assert.Equal(t, expectedFileResponse.Content, fileResponse.Content)
 			assert.Equal(t, expectedFileResponse.Commit.SHA, fileResponse.Commit.SHA)
 			assert.Equal(t, expectedFileResponse.Commit.HTMLURL, fileResponse.Commit.HTMLURL)

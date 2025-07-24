@@ -21,16 +21,12 @@ type TreeEntry struct {
 	entryMode EntryMode
 	name      string
 
-	size     int64
-	sized    bool
-	fullName string
+	size  int64
+	sized bool
 }
 
 // Name returns the name of the entry
 func (te *TreeEntry) Name() string {
-	if te.fullName != "" {
-		return te.fullName
-	}
 	return te.name
 }
 
@@ -68,8 +64,8 @@ func (te *TreeEntry) Size() int64 {
 	return te.size
 }
 
-// IsSubModule if the entry is a sub module
-func (te *TreeEntry) IsSubModule() bool {
+// IsSubmodule if the entry is a submodule
+func (te *TreeEntry) IsSubmodule() bool {
 	return te.entryMode == EntryModeCommit
 }
 
@@ -116,32 +112,37 @@ func (te *TreeEntry) Type() string {
 	}
 }
 
+// LinkTarget returns the target of the symlink as string.
+func (te *TreeEntry) LinkTarget() (string, error) {
+	if !te.IsLink() {
+		return "", ErrBadLink{te.Name(), "not a symlink"}
+	}
+
+	const symlinkLimit = 4096 // according to git config core.longpaths https://stackoverflow.com/a/22575737
+	blob := te.Blob()
+	if blob.Size() > symlinkLimit {
+		return "", ErrBadLink{te.Name(), "symlink too large"}
+	}
+
+	rc, size, err := blob.NewTruncatedReader(symlinkLimit)
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+
+	buf := make([]byte, int(size))
+	_, err = io.ReadFull(rc, buf)
+	return string(buf), err
+}
+
 // FollowLink returns the entry pointed to by a symlink
 func (te *TreeEntry) FollowLink() (*TreeEntry, string, error) {
-	if !te.IsLink() {
-		return nil, "", ErrBadLink{te.Name(), "not a symlink"}
-	}
-
 	// read the link
-	r, err := te.Blob().DataAsync()
+	lnk, err := te.LinkTarget()
 	if err != nil {
 		return nil, "", err
 	}
-	closed := false
-	defer func() {
-		if !closed {
-			_ = r.Close()
-		}
-	}()
-	buf := make([]byte, te.Size())
-	_, err = io.ReadFull(r, buf)
-	if err != nil {
-		return nil, "", err
-	}
-	_ = r.Close()
-	closed = true
 
-	lnk := string(buf)
 	t := te.ptree
 
 	// traverse up directories
@@ -209,7 +210,7 @@ func (te *TreeEntry) Tree() *Tree {
 
 // GetSubJumpablePathName return the full path of subdirectory jumpable ( contains only one directory )
 func (te *TreeEntry) GetSubJumpablePathName() string {
-	if te.IsSubModule() || !te.IsDir() {
+	if te.IsSubmodule() || !te.IsDir() {
 		return ""
 	}
 	tree, err := te.ptree.SubTree(te.Name())
@@ -236,7 +237,7 @@ type customSortableEntries struct {
 
 var sorter = []func(t1, t2 *TreeEntry, cmp func(s1, s2 string) bool) bool{
 	func(t1, t2 *TreeEntry, cmp func(s1, s2 string) bool) bool {
-		return (t1.IsDir() || t1.IsSubModule()) && !t2.IsDir() && !t2.IsSubModule()
+		return (t1.IsDir() || t1.IsSubmodule()) && !t2.IsDir() && !t2.IsSubmodule()
 	},
 	func(t1, t2 *TreeEntry, cmp func(s1, s2 string) bool) bool {
 		return cmp(t1.Name(), t2.Name())

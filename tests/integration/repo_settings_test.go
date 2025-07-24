@@ -6,26 +6,22 @@ package integration
 import (
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 
 	"forgejo.org/models/db"
-	"forgejo.org/models/forgefed"
 	git_model "forgejo.org/models/git"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
-	"forgejo.org/modules/test"
-	"forgejo.org/modules/validation"
 	gitea_context "forgejo.org/services/context"
 	repo_service "forgejo.org/services/repository"
 	user_service "forgejo.org/services/user"
 	"forgejo.org/tests"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,6 +34,47 @@ func TestRepoSettingsUnits(t *testing.T) {
 
 	req := NewRequest(t, "GET", fmt.Sprintf("%s/settings/units", repo.Link()))
 	session.MakeRequest(t, req, http.StatusOK)
+}
+
+func TestRepoSettingsAdminOptions(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{IsAdmin: true})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: "repo1"})
+	link := repo.Link()
+
+	hasAdminOpts := func(t *testing.T, doer string, admin bool) {
+		session := loginUser(t, doer)
+
+		req := NewRequest(t, "GET", fmt.Sprintf("%s/settings", link))
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		html := NewHTMLParser(t, resp.Body)
+
+		elems := html.doc.Find("button[name=request_reindex_type]")
+		if !admin {
+			assert.Empty(t, elems.Nodes)
+			return
+		}
+
+		values := []string{"code", "issues", "stats"}
+		if !setting.Indexer.RepoIndexerEnabled {
+			values = values[1:]
+		}
+		elems.Each(func(i int, s *goquery.Selection) {
+			attr, exists := s.Attr("value")
+			require.True(t, exists)
+			assert.Equal(t, values[i], attr)
+		})
+	}
+
+	t.Run("guest", func(t *testing.T) {
+		hasAdminOpts(t, user.Name, false)
+	})
+
+	t.Run("admin", func(t *testing.T) {
+		hasAdminOpts(t, admin.Name, true)
+	})
 }
 
 func TestRepoAddMoreUnitsHighlighting(t *testing.T) {
@@ -267,68 +304,5 @@ func TestProtectedBranch(t *testing.T) {
 
 		// Verify it wasn't added.
 		unittest.AssertCount(t, &git_model.ProtectedBranch{RuleName: "master", RepoID: repo.ID}, 1)
-	})
-}
-
-func TestRepoFollowing(t *testing.T) {
-	setting.Federation.Enabled = true
-	defer tests.PrepareTestEnv(t)()
-	defer func() {
-		setting.Federation.Enabled = false
-	}()
-
-	mock := test.NewFederationServerMock()
-	federatedSrv := mock.DistantServer(t)
-	defer federatedSrv.Close()
-
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1, OwnerID: user.ID})
-	session := loginUser(t, user.Name)
-
-	t.Run("Add a following repo", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-		link := fmt.Sprintf("/%s/settings", repo.FullName())
-
-		req := NewRequestWithValues(t, "POST", link, map[string]string{
-			"_csrf":           GetCSRF(t, session, link),
-			"action":          "federation",
-			"following_repos": fmt.Sprintf("%s/api/v1/activitypub/repository-id/1", federatedSrv.URL),
-		})
-		session.MakeRequest(t, req, http.StatusSeeOther)
-
-		// Verify it was added.
-		federationHost := unittest.AssertExistsAndLoadBean(t, &forgefed.FederationHost{HostFqdn: "127.0.0.1"})
-		unittest.AssertExistsAndLoadBean(t, &repo_model.FollowingRepo{
-			ExternalID:       "1",
-			FederationHostID: federationHost.ID,
-		})
-	})
-
-	t.Run("Star a repo having a following repo", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-		repoLink := fmt.Sprintf("/%s", repo.FullName())
-		link := fmt.Sprintf("%s/action/star", repoLink)
-		req := NewRequestWithValues(t, "POST", link, map[string]string{
-			"_csrf": GetCSRF(t, session, repoLink),
-		})
-
-		session.MakeRequest(t, req, http.StatusOK)
-
-		// Verify distant server received a like activity
-		like := fm.ForgeLike{}
-		err := like.UnmarshalJSON([]byte(mock.LastPost))
-		if err != nil {
-			t.Errorf("Error unmarshalling ForgeLike: %q", err)
-		}
-		if isValid, err := validation.IsValid(like); !isValid {
-			t.Errorf("ForgeLike is not valid: %q", err)
-		}
-		activityType := like.Type
-		object := like.Object.GetLink().String()
-		isLikeType := activityType == "Like"
-		isCorrectObject := strings.HasSuffix(object, "/api/v1/activitypub/repository-id/1")
-		if !isLikeType || !isCorrectObject {
-			t.Errorf("Activity is not a like for this repo")
-		}
 	})
 }

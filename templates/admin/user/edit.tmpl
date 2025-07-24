@@ -9,7 +9,7 @@
 				{{.CsrfTokenHtml}}
 				<div class="field {{if .Err_UserName}}error{{end}}">
 					<label for="user_name">{{ctx.Locale.Tr "username"}}</label>
-					<input id="user_name" name="user_name" value="{{.User.Name}}" autofocus {{if not .User.IsLocal}}disabled{{end}} maxlength="40">
+					<input id="user_name" name="user_name" value="{{.User.Name}}" autofocus {{if not .User.IsLocal}}disabled{{end}} maxlength="40" autocorrect="off" autocapitalize="none">
 				</div>
 				<!-- Types and name -->
 				<div class="inline required field {{if .Err_LoginType}}error{{end}}">
@@ -208,6 +208,7 @@
 				<div class="inline field tw-pl-4">
 					<label for="avatar">{{ctx.Locale.Tr "settings.choose_new_avatar"}}</label>
 					<input name="avatar" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+					<br/><span class=help>{{ctx.Locale.Tr "avatar.constraints_hint" (ctx.Locale.TrSize .MaxAvatarFileSize) .MaxAvatarWidth .MaxAvatarHeight}}</span>
 				</div>
 
 				<div class="field">

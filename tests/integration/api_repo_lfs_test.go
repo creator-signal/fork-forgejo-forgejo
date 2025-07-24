@@ -21,6 +21,7 @@ import (
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -63,7 +64,7 @@ func TestAPILFSMediaType(t *testing.T) {
 
 func createLFSTestRepository(t *testing.T, name string) *repo_model.Repository {
 	ctx := NewAPITestContext(t, "user2", "lfs-"+name+"-repo", auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-	t.Run("CreateRepo", doAPICreateRepository(ctx, false, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
+	t.Run("CreateRepo", doAPICreateRepository(ctx, nil, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
 
 	repo, err := repo_model.GetRepositoryByOwnerAndName(db.DefaultContext, "user2", "lfs-"+name+"-repo")
 	require.NoError(t, err)
@@ -228,9 +229,7 @@ func TestAPILFSBatch(t *testing.T) {
 
 		t.Run("FileTooBig", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
-
-			oldMaxFileSize := setting.LFS.MaxFileSize
-			setting.LFS.MaxFileSize = 2
+			defer test.MockVariableValue(&setting.LFS.MaxFileSize, 2)()
 
 			req := newRequest(t, &lfs.BatchRequest{
 				Operation: "upload",
@@ -245,8 +244,6 @@ func TestAPILFSBatch(t *testing.T) {
 			assert.NotNil(t, br.Objects[0].Error)
 			assert.Equal(t, http.StatusUnprocessableEntity, br.Objects[0].Error.Code)
 			assert.Equal(t, "Size must be less than or equal to 2", br.Objects[0].Error.Message)
-
-			setting.LFS.MaxFileSize = oldMaxFileSize
 		})
 
 		t.Run("AddMeta", func(t *testing.T) {

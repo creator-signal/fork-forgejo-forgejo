@@ -59,7 +59,7 @@ func checkJobsOfRun(ctx context.Context, runID int64) error {
 		for _, job := range jobs {
 			if status, ok := updates[job.ID]; ok {
 				job.Status = status
-				if n, err := actions_model.UpdateRunJob(ctx, job, builder.Eq{"status": actions_model.StatusBlocked}, "status"); err != nil {
+				if n, err := UpdateRunJob(ctx, job, builder.Eq{"status": actions_model.StatusBlocked}, "status"); err != nil {
 					return err
 				} else if n != 1 {
 					return fmt.Errorf("no affected for updating blocked job %v", job.ID)
@@ -142,7 +142,7 @@ func (r *jobStatusResolver) resolve() map[int64]actions_model.Status {
 			} else {
 				// Check if the job has an "if" condition
 				hasIf := false
-				if wfJobs, _ := jobparser.Parse(r.jobMap[id].WorkflowPayload); len(wfJobs) == 1 {
+				if wfJobs, _ := jobparser.Parse(r.jobMap[id].WorkflowPayload, false); len(wfJobs) == 1 {
 					_, wfJob := wfJobs[0].Job()
 					hasIf = len(wfJob.If.Value) > 0
 				}

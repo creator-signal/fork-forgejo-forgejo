@@ -147,6 +147,10 @@ func loadMailerFrom(rootCfg ConfigProvider) {
 	if sec.HasKey("PASSWORD") && !sec.HasKey("PASSWD") {
 		sec.Key("PASSWD").SetValue(sec.Key("PASSWORD").String())
 	}
+	if sec.HasKey("PASSWORD_URI") && !sec.HasKey("PASSWD_URI") {
+		sec.Key("PASSWD_URI").SetValue(sec.Key("PASSWORD_URI").String())
+	}
+	sec.Key("PASSWD").SetValue(loadSecret(sec, "PASSWD_URI", "PASSWD"))
 
 	// Set default values & validate
 	sec.Key("NAME").MustString(AppName)
@@ -214,6 +218,11 @@ func loadMailerFrom(rootCfg ConfigProvider) {
 		MailService.SendmailArgs, err = shellquote.Split(sec.Key("SENDMAIL_ARGS").String())
 		if err != nil {
 			log.Error("Failed to parse Sendmail args: '%s' with error %v", sec.Key("SENDMAIL_ARGS").String(), err)
+		}
+
+		if len(MailService.SendmailArgs) == 0 || MailService.SendmailArgs[len(MailService.SendmailArgs)-1] != "--" {
+			log.Warn("SENDMAIL_ARGS setting does not end in \"--\", appending it to prevent argument injection")
+			MailService.SendmailArgs = append(MailService.SendmailArgs, "--")
 		}
 	case "smtp", "smtps", "smtp+starttls", "smtp+unix":
 		ips := tryResolveAddr(MailService.SMTPAddr)

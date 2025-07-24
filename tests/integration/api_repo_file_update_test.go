@@ -1,4 +1,5 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"forgejo.org/models/asymkey"
 	auth_model "forgejo.org/models/auth"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
@@ -97,7 +99,7 @@ func getExpectedFileResponseForUpdate(commitID, treePath, lastCommitSHA string) 
 		},
 		Verification: &api.PayloadCommitVerification{
 			Verified:  false,
-			Reason:    "gpg.error.not_signed_commit",
+			Reason:    asymkey.NotSigned,
 			Signature: "",
 			Payload:   "",
 		},
@@ -140,6 +142,8 @@ func TestAPIUpdateFile(t *testing.T) {
 			expectedFileResponse := getExpectedFileResponseForUpdate(commitID, treePath, lasCommit.ID.String())
 			var fileResponse api.FileResponse
 			DecodeJSON(t, resp, &fileResponse)
+			// Testify cannot assert time.Time correctly.
+			expectedFileResponse.Content.LastCommitWhen = fileResponse.Content.LastCommitWhen
 			assert.Equal(t, expectedFileResponse.Content, fileResponse.Content)
 			assert.Equal(t, expectedFileResponse.Commit.SHA, fileResponse.Commit.SHA)
 			assert.Equal(t, expectedFileResponse.Commit.HTMLURL, fileResponse.Commit.HTMLURL)
@@ -210,7 +214,7 @@ func TestAPIUpdateFile(t *testing.T) {
 		updateFileOptions.SHA = "badsha"
 		req = NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user2.Name, repo1.Name, treePath), &updateFileOptions).
 			AddTokenAuth(token2)
-		resp = MakeRequest(t, req, http.StatusUnprocessableEntity)
+		resp = MakeRequest(t, req, http.StatusConflict)
 		expectedAPIError := context.APIError{
 			Message: "sha does not match [given: " + updateFileOptions.SHA + ", expected: " + correctSHA + "]",
 			URL:     setting.API.SwaggerURL,

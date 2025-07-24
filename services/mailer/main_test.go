@@ -7,7 +7,10 @@ import (
 	"context"
 	"testing"
 
+	"forgejo.org/models/db"
+	organization_model "forgejo.org/models/organization"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/templates"
 	"forgejo.org/modules/test"
@@ -43,6 +46,17 @@ func MockMailSettings(send func(msgs ...*Message)) func() {
 	return func() {
 		for _, cleanup := range cleanups {
 			cleanup()
+		}
+	}
+}
+
+func CleanUpUsers(ctx context.Context, users []*user_model.User) {
+	for _, u := range users {
+		if u.IsOrganization() {
+			organization_model.DeleteOrganization(ctx, (*organization_model.Organization)(u))
+		} else {
+			db.DeleteByID[user_model.User](ctx, u.ID)
+			db.DeleteByBean(ctx, &user_model.EmailAddress{UID: u.ID})
 		}
 	}
 }

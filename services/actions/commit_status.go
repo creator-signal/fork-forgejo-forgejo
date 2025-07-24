@@ -5,6 +5,7 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 
@@ -50,7 +51,7 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 			return fmt.Errorf("GetPushEventPayload: %w", err)
 		}
 		if payload.HeadCommit == nil {
-			return fmt.Errorf("head commit is missing in event payload")
+			return errors.New("head commit is missing in event payload")
 		}
 		sha = payload.HeadCommit.ID
 	case webhook_module.HookEventPullRequest, webhook_module.HookEventPullRequestSync, webhook_module.HookEventPullRequestLabel, webhook_module.HookEventPullRequestAssign, webhook_module.HookEventPullRequestMilestone:
@@ -64,9 +65,9 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 			return fmt.Errorf("GetPullRequestEventPayload: %w", err)
 		}
 		if payload.PullRequest == nil {
-			return fmt.Errorf("pull request is missing in event payload")
+			return errors.New("pull request is missing in event payload")
 		} else if payload.PullRequest.Head == nil {
-			return fmt.Errorf("head of pull request is missing in event payload")
+			return errors.New("head of pull request is missing in event payload")
 		}
 		sha = payload.PullRequest.Head.Sha
 	case webhook_module.HookEventRelease:
@@ -79,7 +80,7 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 	repo := run.Repo
 	// TODO: store workflow name as a field in ActionRun to avoid parsing
 	runName := path.Base(run.WorkflowID)
-	if wfs, err := jobparser.Parse(job.WorkflowPayload); err == nil && len(wfs) > 0 {
+	if wfs, err := jobparser.Parse(job.WorkflowPayload, false); err == nil && len(wfs) > 0 {
 		runName = wfs[0].Name
 	}
 	ctxname := fmt.Sprintf("%s / %s (%s)", runName, job.Name, event)

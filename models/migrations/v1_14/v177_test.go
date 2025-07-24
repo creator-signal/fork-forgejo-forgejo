@@ -1,7 +1,7 @@
 // Copyright 2021 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package v1_14 //nolint
+package v1_14
 
 import (
 	"testing"
@@ -73,12 +73,12 @@ func Test_DeleteOrphanedIssueLabels(t *testing.T) {
 
 	// Now test what is left
 	if _, ok := postMigration[2]; ok {
-		t.Errorf("Orphaned Label[2] survived the migration")
+		t.Error("Orphaned Label[2] survived the migration")
 		return
 	}
 
 	if _, ok := postMigration[5]; ok {
-		t.Errorf("Orphaned Label[5] survived the migration")
+		t.Error("Orphaned Label[5] survived the migration")
 		return
 	}
 

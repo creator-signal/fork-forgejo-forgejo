@@ -25,7 +25,6 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/validation"
-	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,6 +44,28 @@ func TestIsValidUserID(t *testing.T) {
 	assert.True(t, user_model.IsValidUserID(user_model.GhostUserID))
 	assert.True(t, user_model.IsValidUserID(user_model.ActionsUserID))
 	assert.True(t, user_model.IsValidUserID(200))
+}
+
+func TestUserLinks(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	assert.Equal(t, "/", user1.DashboardLink())
+	assert.Equal(t, "/user1", user1.HomeLink())
+	assert.Equal(t, "https://try.gitea.io/user1", user1.HTMLURL())
+	assert.Empty(t, user1.OrganisationLink())
+
+	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
+	assert.Equal(t, "/org/org3/dashboard", org3.DashboardLink())
+	assert.Equal(t, "/org3", org3.HomeLink())
+	assert.Equal(t, "https://try.gitea.io/org3", org3.HTMLURL())
+	assert.Equal(t, "/org/org3", org3.OrganisationLink())
+
+	ghost := user_model.NewGhostUser()
+	assert.Empty(t, ghost.DashboardLink())
+	assert.Empty(t, ghost.HomeLink())
+	assert.Empty(t, ghost.HTMLURL())
+	assert.Empty(t, ghost.OrganisationLink())
 }
 
 func TestGetUserFromMap(t *testing.T) {
@@ -73,7 +94,7 @@ func TestGetUserFromMap(t *testing.T) {
 }
 
 func TestGetUserByName(t *testing.T) {
-	defer tests.AddFixtures("models/user/fixtures/")()
+	defer unittest.OverrideFixtures("models/user/fixtures")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	{
@@ -120,7 +141,7 @@ func TestCanCreateOrganization(t *testing.T) {
 }
 
 func TestGetAllUsers(t *testing.T) {
-	defer tests.AddFixtures("models/user/fixtures/")()
+	defer unittest.OverrideFixtures("models/user/fixtures")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	users, err := user_model.GetAllUsers(db.DefaultContext)
@@ -149,15 +170,15 @@ func TestAPActorID_APActorID(t *testing.T) {
 	assert.Equal(t, expected, url)
 }
 
-func TestAPActorKeyID(t *testing.T) {
+func TestKeyID(t *testing.T) {
 	user := user_model.User{ID: 1}
-	url := user.APActorKeyID()
+	url := user.KeyID()
 	expected := "https://try.gitea.io/api/v1/activitypub/user-id/1#main-key"
 	assert.Equal(t, expected, url)
 }
 
 func TestSearchUsers(t *testing.T) {
-	defer tests.AddFixtures("models/user/fixtures/")()
+	defer unittest.OverrideFixtures("models/user/fixtures")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 	testSuccess := func(opts *user_model.SearchUserOptions, expectedUserOrOrgIDs []int64) {
 		users, _, err := user_model.SearchUsers(db.DefaultContext, opts)
@@ -268,7 +289,7 @@ func TestHashPasswordDeterministic(t *testing.T) {
 			r2 := u.Passwd
 
 			assert.NotEqual(t, r1, r2)
-			assert.True(t, u.ValidatePassword(pass))
+			assert.True(t, u.ValidatePassword(t.Context(), pass))
 		}
 	}
 }
@@ -325,7 +346,7 @@ func TestCreateUserInvalidEmail(t *testing.T) {
 
 	err := user_model.CreateUser(db.DefaultContext, user)
 	require.Error(t, err)
-	assert.True(t, validation.IsErrEmailCharIsNotSupported(err))
+	assert.True(t, validation.IsErrEmailInvalid(err))
 }
 
 func TestCreateUserEmailAlreadyUsed(t *testing.T) {
@@ -617,11 +638,8 @@ func TestGetAllAdmins(t *testing.T) {
 }
 
 func Test_ValidateUser(t *testing.T) {
-	oldSetting := setting.Service.AllowedUserVisibilityModesSlice
-	defer func() {
-		setting.Service.AllowedUserVisibilityModesSlice = oldSetting
-	}()
-	setting.Service.AllowedUserVisibilityModesSlice = []bool{true, false, true}
+	defer test.MockVariableValue(&setting.Service.AllowedUserVisibilityModesSlice, []bool{true, false, true})()
+
 	kases := map[*user_model.User]bool{
 		{ID: 1, Visibility: structs.VisibleTypePublic}:  true,
 		{ID: 2, Visibility: structs.VisibleTypeLimited}: false,
@@ -633,11 +651,8 @@ func Test_ValidateUser(t *testing.T) {
 }
 
 func Test_NormalizeUserFromEmail(t *testing.T) {
-	oldSetting := setting.Service.AllowDotsInUsernames
-	defer func() {
-		setting.Service.AllowDotsInUsernames = oldSetting
-	}()
-	setting.Service.AllowDotsInUsernames = true
+	defer test.MockVariableValue(&setting.Service.AllowDotsInUsernames, true)()
+
 	testCases := []struct {
 		Input             string
 		Expected          string
@@ -646,6 +661,7 @@ func Test_NormalizeUserFromEmail(t *testing.T) {
 		{"test", "test", true},
 		{"Sinéad.O'Connor", "Sinead.OConnor", true},
 		{"Æsir", "AEsir", true},
+		{"Flußpferd", "Flusspferd", true},
 		// \u00e9\u0065\u0301
 		{"éé", "ee", true},
 		{"Awareness Hub", "Awareness-Hub", true},
@@ -702,12 +718,7 @@ func TestDisabledUserFeatures(t *testing.T) {
 	testValues := container.SetOf(setting.UserFeatureDeletion,
 		setting.UserFeatureManageSSHKeys,
 		setting.UserFeatureManageGPGKeys)
-
-	oldSetting := setting.Admin.ExternalUserDisableFeatures
-	defer func() {
-		setting.Admin.ExternalUserDisableFeatures = oldSetting
-	}()
-	setting.Admin.ExternalUserDisableFeatures = testValues
+	defer test.MockVariableValue(&setting.Admin.ExternalUserDisableFeatures, testValues)()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 

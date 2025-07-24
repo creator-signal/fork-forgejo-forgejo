@@ -178,10 +178,12 @@ func prepareOrgProfileReadme(ctx *context.Context, profileGitRepo *git.Repositor
 		return
 	}
 
-	if bytes, err := profileReadme.GetBlobContent(setting.UI.MaxDisplayFileSize); err != nil {
-		log.Error("failed to GetBlobContent: %v", err)
+	if rc, _, err := profileReadme.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err != nil {
+		log.Error("failed to NewTruncatedReader: %v", err)
 	} else {
-		if profileContent, err := markdown.RenderString(&markup.RenderContext{
+		defer rc.Close()
+
+		if profileContent, err := markdown.RenderReader(&markup.RenderContext{
 			Ctx:     ctx,
 			GitRepo: profileGitRepo,
 			Links: markup.Links{
@@ -191,7 +193,7 @@ func prepareOrgProfileReadme(ctx *context.Context, profileGitRepo *git.Repositor
 				BranchPath: path.Join("branch", util.PathEscapeSegments(profileDbRepo.DefaultBranch)),
 			},
 			Metas: map[string]string{"mode": "document"},
-		}, bytes); err != nil {
+		}, rc); err != nil {
 			log.Error("failed to RenderString: %v", err)
 		} else {
 			ctx.Data["ProfileReadme"] = profileContent
