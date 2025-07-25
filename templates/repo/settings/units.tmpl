@@ -8,6 +8,9 @@
 			{{template "repo/settings/units/pulls" .}}
 		{{end}}
 		{{template "repo/settings/units/wiki" .}}
+		{{if .EnableActions}}
+			{{template "repo/settings/units/actions" .}}
+		{{end}}
 	</form>
 </div>
 {{template "repo/settings/layout_footer" .}}

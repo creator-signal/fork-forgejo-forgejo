@@ -247,6 +247,7 @@ func UnitsPost(ctx *context.Context) {
 		units = append(units, repo_model.RepoUnit{
 			RepoID: repo.ID,
 			Type:   unit_model.TypeActions,
+			Config: &repo_model.ActionsConfig{},
 		})
 	} else if !unit_model.TypeActions.UnitGlobalDisabled() {
 		deleteUnitTypes = append(deleteUnitTypes, unit_model.TypeActions)

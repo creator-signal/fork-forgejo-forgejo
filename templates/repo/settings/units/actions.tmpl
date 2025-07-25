@@ -1,0 +1,26 @@
+<h4 class="ui top attached header" id="actions">
+	{{ctx.Locale.Tr "repo.actions"}}
+</h4>
+<div class="ui attached segment">
+	{{$actionsUnitEnabled := .Repository.UnitEnabled $.Context $.UnitTypeActions}}
+	{{$actionsGlobalDisabled := .UnitTypeActions.UnitGlobalDisabled}}
+	{{$actionsUnit := .Repository.MustGetUnit $.Context $.UnitTypeActions}}
+
+	<div class="inline field">
+		<label>{{ctx.Locale.Tr "actions.actions"}}</label>
+		<div class="ui checkbox{{if $actionsGlobalDisabled}} disabled{{end}}"{{if $actionsGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
+			<input class="enable-system" name="enable_actions" type="checkbox" {{if $actionsUnitEnabled}}checked{{end}}>
+			<label>{{ctx.Locale.Tr "repo.settings.actions_desc"}}</label>
+		</div>
+	</div>
+
+	<div class="inline field">
+		<div class="field{{if not $actionsUnitEnabled}} disabled{{end}}" id="pull_box">
+		</div>
+	</div>
+
+	<div class="divider"></div>
+	<div class="field">
+		<button class="ui primary button">{{ctx.Locale.Tr "repo.settings.update_settings"}}</button>
+	</div>
+</div>

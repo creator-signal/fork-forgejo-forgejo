@@ -1067,13 +1067,27 @@ func updateRepoUnits(ctx *context.APIContext, owner string, repo *repo_model.Rep
 		}
 	}
 
-	if opts.HasActions != nil && !unit_model.TypeActions.UnitGlobalDisabled() {
-		if *opts.HasActions {
+	currHasActions := repo.UnitEnabled(ctx, unit_model.TypeActions)
+	newHasActions := currHasActions
+	if opts.HasActions != nil {
+		newHasActions = *opts.HasActions
+	}
+	if currHasActions || newHasActions {
+		if newHasActions && !unit_model.TypeActions.UnitGlobalDisabled() {
+			unit, err := repo.GetUnit(ctx, unit_model.TypeActions)
+			var config *repo_model.ActionsConfig
+			if err != nil {
+				config = &repo_model.ActionsConfig{}
+			} else {
+				config = unit.ActionsConfig()
+			}
+
 			units = append(units, repo_model.RepoUnit{
 				RepoID: repo.ID,
 				Type:   unit_model.TypeActions,
+				Config: config,
 			})
-		} else {
+		} else if !newHasActions && !unit_model.TypeActions.UnitGlobalDisabled() {
 			deleteUnitTypes = append(deleteUnitTypes, unit_model.TypeActions)
 		}
 	}

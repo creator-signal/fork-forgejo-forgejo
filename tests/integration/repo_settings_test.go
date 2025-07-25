@@ -36,6 +36,50 @@ func TestRepoSettingsUnits(t *testing.T) {
 	session.MakeRequest(t, req, http.StatusOK)
 }
 
+func TestRepoSettingsUnitsAvailable(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: "repo1"})
+	session := loginUser(t, user.Name)
+
+	req := NewRequest(t, "GET", fmt.Sprintf("%s/settings/units", repo.Link()))
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+
+	for _, x := range []string{
+		"h4#overview.header",
+		"h4#issues.header",
+		"h4#pulls.header",
+		"h4#wiki.header",
+		"h4#actions.header",
+	} {
+		htmlDoc.AssertElement(t, x, true)
+	}
+}
+
+func TestRepoSettingsActions(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: "repo1"})
+	session := loginUser(t, user.Name)
+	link := fmt.Sprintf("%s/settings/units", repo.Link())
+
+	t.Run("inputs", func(t *testing.T) {
+		req := NewRequest(t, "GET", link)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		for _, x := range []string{
+			"input[name='enable_actions']",
+		} {
+			t.Run(x, func(t *testing.T) {
+				htmlDoc.AssertElement(t, x, true)
+			})
+		}
+	})
+}
+
 func TestRepoSettingsAdminOptions(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 

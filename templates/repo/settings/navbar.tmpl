@@ -19,6 +19,11 @@
 				<a class="item" href="{{.RepoLink}}/settings/units#wiki">
 					{{ctx.Locale.Tr "repo.wiki"}}
 				</a>
+				{{if .EnableActions}}
+					<a class="item" href="{{.RepoLink}}/settings/units#actions">
+						{{ctx.Locale.Tr "repo.actions"}}
+					</a>
+				{{end}}
 			</div>
 		</details>
 		<a class="{{if .PageIsSettingsCollaboration}}active {{end}}item" href="{{.RepoLink}}/settings/collaboration">
