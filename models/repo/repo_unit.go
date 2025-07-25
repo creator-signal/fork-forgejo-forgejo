@@ -221,7 +221,8 @@ func (cfg *PullRequestsConfig) GetDefaultUpdateStyle() UpdateStyle {
 }
 
 type ActionsConfig struct {
-	DisabledWorkflows []string
+	DisabledWorkflows     []string
+	AlwaysRequireApproval bool
 }
 
 func (cfg *ActionsConfig) EnableWorkflow(file string) {

@@ -198,6 +198,7 @@ type RepoUnitSettingForm struct {
 	PullsAllowRebaseUpdate                bool
 	DefaultDeleteBranchAfterMerge         bool
 	DefaultAllowMaintainerEdit            bool
+	ActionsAlwaysRequireApproval          bool
 	EnableTimetracker                     bool
 	AllowOnlyContributorsToTrackTime      bool
 	EnableIssueDependencies               bool

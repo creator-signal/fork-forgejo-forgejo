@@ -1077,9 +1077,15 @@ func updateRepoUnits(ctx *context.APIContext, owner string, repo *repo_model.Rep
 			unit, err := repo.GetUnit(ctx, unit_model.TypeActions)
 			var config *repo_model.ActionsConfig
 			if err != nil {
-				config = &repo_model.ActionsConfig{}
+				config = &repo_model.ActionsConfig{
+					AlwaysRequireApproval: false,
+				}
 			} else {
 				config = unit.ActionsConfig()
+			}
+
+			if opts.AlwaysRequireApproval != nil {
+				config.AlwaysRequireApproval = *opts.AlwaysRequireApproval
 			}
 
 			units = append(units, repo_model.RepoUnit{

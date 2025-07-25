@@ -134,8 +134,11 @@ func innerToRepo(ctx context.Context, repo *repo_model.Repository, permissionInR
 	}
 
 	hasActions := false
-	if _, err := repo.GetUnit(ctx, unit_model.TypeActions); err == nil {
+	alwaysRequireApproval := false
+	if unit, err := repo.GetUnit(ctx, unit_model.TypeActions); err == nil {
+		config := unit.ActionsConfig()
 		hasActions = true
+		alwaysRequireApproval = config.AlwaysRequireApproval
 	}
 
 	if err := repo.LoadOwner(ctx); err != nil {
@@ -235,6 +238,7 @@ func innerToRepo(ctx context.Context, repo *repo_model.Repository, permissionInR
 		DefaultMergeStyle:             string(defaultMergeStyle),
 		DefaultUpdateStyle:            string(defaultUpdateStyle),
 		DefaultAllowMaintainerEdit:    defaultAllowMaintainerEdit,
+		AlwaysRequireApproval:         alwaysRequireApproval,
 		AvatarURL:                     repo.AvatarLink(ctx),
 		Internal:                      !repo.IsPrivate && repo.Owner.Visibility == api.VisibleTypePrivate,
 		MirrorInterval:                mirrorInterval,

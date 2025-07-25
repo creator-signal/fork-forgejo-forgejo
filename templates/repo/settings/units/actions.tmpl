@@ -16,6 +16,14 @@
 
 	<div class="inline field">
 		<div class="field{{if not $actionsUnitEnabled}} disabled{{end}}" id="pull_box">
+			<div class="field">
+				<div class="field">
+					<div class="ui checkbox">
+						<input name="actions_always_require_approval" type="checkbox" {{if $actionsUnit.ActionsConfig.AlwaysRequireApproval}}checked{{end}}>
+						<label>{{ctx.Locale.Tr "repo.settings.actions.always_require_approval"}}</label>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 

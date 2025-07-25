@@ -39,6 +39,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func cleanActionRuns(t *testing.T, repo *repo_model.Repository) {
+	unittest.AssertSuccessfulDelete(t, &actions_model.ActionRun{RepoID: repo.ID})
+	unittest.AssertSuccessfulDelete(t, &actions_model.ActionRunJob{RepoID: repo.ID})
+}
+
+// wait for ActionRun(s) to be created
+func waitActions(t *testing.T, baseRepo *repo_model.Repository, lenRuns int) (actionRuns []*actions_model.ActionRun) {
+	require.Eventually(t, func() bool {
+		actionRuns = make([]*actions_model.ActionRun, 0)
+		require.NoError(t, db.GetEngine(db.DefaultContext).Where("repo_id=?", baseRepo.ID).Find(&actionRuns))
+		return len(actionRuns) == lenRuns
+	}, 30*time.Second, 1*time.Second)
+	return actionRuns
+}
+
 func TestActionsPullRequestCommitStatus(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // owner of the base repo
@@ -303,25 +318,14 @@ jobs:
 		} {
 			t.Run(testCase.onType, func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
-				defer func() {
-					// cleanup leftovers, start from scratch
-					unittest.AssertSuccessfulDelete(t, &actions_model.ActionRun{RepoID: baseRepo.ID})
-					unittest.AssertSuccessfulDelete(t, &actions_model.ActionRunJob{RepoID: baseRepo.ID})
-				}()
+				defer cleanActionRuns(t, baseRepo)
 
 				// trigger the onType event
 				testCase.doSomething()
 				count := testCase.actionRunCount
 				context := fmt.Sprintf("%[1]s / %[1]s (pull_request)", testCase.onType)
 
-				var actionRuns []*actions_model.ActionRun
-
-				// wait for ActionRun(s) to be created
-				require.Eventually(t, func() bool {
-					actionRuns = make([]*actions_model.ActionRun, 0)
-					require.NoError(t, db.GetEngine(db.DefaultContext).Where("repo_id=?", baseRepo.ID).Find(&actionRuns))
-					return len(actionRuns) == count
-				}, 30*time.Second, 1*time.Second)
+				actionRuns := waitActions(t, baseRepo, count)
 
 				// verify the expected  ActionRuns were created
 				sha, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
@@ -347,6 +351,68 @@ jobs:
 				testCase.assert(t, sha, testCase.onType, testCase.action, actionRuns)
 			})
 		}
+	})
+}
+
+func TestActionsAlwaysRequireApproval(t *testing.T) {
+	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+		setApprovalOption := func(val bool, token string) {
+			req := NewRequestWithJSON(t, "PATCH", "/api/v1/repos/user2/repo-pull-request", &api.EditRepoOption{
+				AlwaysRequireApproval: &val,
+			}).AddTokenAuth(token)
+			MakeRequest(t, req, http.StatusOK)
+		}
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		session := loginUser(t, "user2")
+		tokenRepoSettings := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+		files := []*files_service.ChangeRepoFile{{
+			Operation: "create",
+			TreePath:  ".forgejo/workflows/approval.yml",
+			ContentReader: strings.NewReader(`
+on:
+  push:
+jobs:
+  echo:
+    runs-on: docker
+    steps:
+      - run: true
+`),
+		}}
+
+		baseRepo, _, f := tests.CreateDeclarativeRepo(t, user2, "repo-pull-request",
+			[]unit_model.Type{unit_model.TypeActions}, nil, files)
+		defer f()
+		baseGitRepo, err := gitrepo.OpenRepository(t.Context(), baseRepo)
+		require.NoError(t, err)
+		defer baseGitRepo.Close()
+		cleanActionRuns(t, baseRepo) // the creation of the repo created a workflow run
+
+		t.Run("true", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			defer cleanActionRuns(t, baseRepo)
+
+			setApprovalOption(true, tokenRepoSettings)
+			testEditFile(t, session, "user2", "repo-pull-request", "main", "README.md", "Hello, world 2")
+			actionRuns := waitActions(t, baseRepo, 1)
+
+			for _, actionRun := range actionRuns {
+				assert.True(t, actionRun.NeedApproval)
+			}
+		})
+		t.Run("false", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			defer cleanActionRuns(t, baseRepo)
+
+			setApprovalOption(false, tokenRepoSettings)
+			testEditFile(t, session, "user2", "repo-pull-request", "main", "README.md", "Hello, world 2")
+			actionRuns := waitActions(t, baseRepo, 1)
+
+			for _, actionRun := range actionRuns {
+				assert.False(t, actionRun.NeedApproval)
+			}
+		})
 	})
 }
 

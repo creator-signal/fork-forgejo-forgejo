@@ -72,6 +72,7 @@ func TestRepoSettingsActions(t *testing.T) {
 
 		for _, x := range []string{
 			"input[name='enable_actions']",
+			"input[name='actions_always_require_approval']",
 		} {
 			t.Run(x, func(t *testing.T) {
 				htmlDoc.AssertElement(t, x, true)

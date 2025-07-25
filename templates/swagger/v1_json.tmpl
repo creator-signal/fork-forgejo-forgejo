@@ -25135,6 +25135,11 @@
           "type": "boolean",
           "x-go-name": "AllowSquash"
         },
+        "always_require_approval": {
+          "description": "either `true` to always require approval before ci will execute",
+          "type": "boolean",
+          "x-go-name": "AlwaysRequireApproval"
+        },
         "archived": {
           "description": "set to `true` to archive this repository.",
           "type": "boolean",
@@ -28470,6 +28475,10 @@
         "allow_squash_merge": {
           "type": "boolean",
           "x-go-name": "AllowSquash"
+        },
+        "always_require_approval": {
+          "type": "boolean",
+          "x-go-name": "AlwaysRequireApproval"
         },
         "archived": {
           "type": "boolean",

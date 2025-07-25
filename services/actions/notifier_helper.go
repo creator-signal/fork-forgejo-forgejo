@@ -463,6 +463,12 @@ func notifyPackage(ctx context.Context, sender *user_model.User, pd *packages_mo
 }
 
 func ifNeedApproval(ctx context.Context, run *actions_model.ActionRun, repo *repo_model.Repository, user *user_model.User) (bool, error) {
+	// 0. need approval if the repository has opted to use the repo setting
+	if repo.MustGetUnit(ctx, unit_model.TypeActions).ActionsConfig().AlwaysRequireApproval {
+		log.Trace("need approval because the repo is configured to always require it")
+		return true, nil
+	}
+
 	// 1. don't need approval if it's not a fork PR
 	// 2. don't need approval if the event is `pull_request_target` since the workflow will run in the context of base branch
 	// 		see https://docs.github.com/en/actions/managing-workflow-runs/approving-workflow-runs-from-public-forks#about-workflow-runs-from-public-forks
