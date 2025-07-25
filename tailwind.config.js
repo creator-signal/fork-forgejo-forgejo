@@ -38,6 +38,7 @@ export default {
     'models/avatars/avatar.go',
     'modules/markup/file_preview.go',
     'modules/markup/sanitizer.go',
+    'modules/templates/docs.go',
     'services/auth/source/oauth2/*.go',
     'routers/web/repo/{view,blame,issue_content_history}.go',
   ].filter(Boolean),

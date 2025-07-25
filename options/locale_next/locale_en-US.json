@@ -101,6 +101,7 @@
     "mail.actions.run_info_sha": "Commit: %[1]s",
     "mail.actions.run_info_trigger": "Triggered because: %[1]s by: %[2]s",
     "docs.learn_more": "Learn more",
+    "docs.close": "Close help",
     "docs.user_settings.biography.title": "Biography",
     "docs.user_settings.biography.content": "The biography allows you to show a short text (maximum 255 characters) on your profile. Markdown is supported. If you want to write more text, you can create a repository named '.profile' and edit the README.md file. This will alsow show up on your profile and allows for more customization than the biography.",
     "repo.diff.commit.next-short": "Next",

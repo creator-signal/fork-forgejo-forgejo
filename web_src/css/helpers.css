@@ -1,3 +1,7 @@
+a.help-icon {
+  color: inherit;
+}
+
 /*
 Gitea's tailwind-style CSS helper classes have `gt-` prefix.
 Gitea's private styles use `g-` prefix.
