@@ -16,5 +16,7 @@
 	<script src="{{AssetUrlPrefix}}/js/index.js?v={{AssetVersion}}" onerror="alert('{{ctx.Locale.Tr "alert.asset_load_failed"}}'.replace('{path}', this.src))"></script>
 
 	{{template "custom/footer" .}}
+	
+	{{RenderDocsModals ctx}}
 </body>
 </html>

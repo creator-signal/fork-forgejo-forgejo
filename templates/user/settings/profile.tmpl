@@ -41,7 +41,7 @@
 					</label>
 
 					<label {{if .Err_Biography}}class="field error"{{end}}>
-						{{ctx.Locale.Tr "user.user_bio"}}
+						{{ctx.Locale.Tr "user.user_bio"}} {{Docs ctx "user_settings.biography"}}
 						<textarea name="biography" rows="2" placeholder="{{ctx.Locale.Tr "settings.biography_placeholder"}}" maxlength="255">{{.SignedUser.Description}}</textarea>
 					</label>
 

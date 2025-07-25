@@ -1,3 +1,43 @@
+dialog:target {
+  display: block;
+  position: absolute;
+  z-index: 1001;
+  text-align: left;
+  border: none;
+  background: var(--color-body);
+  box-shadow: 1px 3px 3px 0 var(--color-shadow), 1px 3px 15px 2px var(--color-shadow);
+  transform-origin: 50% 25%;
+  flex: 0 0 auto;
+  border-radius: 0.28571429rem;
+  outline: none;
+  padding: 0;
+  max-width: min(800px, 90vw);
+}
+
+.ui.dimmer:has(dialog) > a {
+  width: 100%;
+  height: 100%;
+  cursor: default;
+}
+
+dialog header {
+  font-size: 1.42857143rem;
+  display: block;
+  font-family: var(--fonts-regular);
+  background: #fff;
+  margin: 0;
+  padding: 1.25rem 1.5rem;
+  box-shadow: none;
+  border-bottom: 1px solid rgba(34, 36, 38, 0.15);
+}
+
+dialog > article {
+  display: block;
+  width: 100%;
+  font-size: 1em;
+  line-height: 1.4;
+}
+
 .ui.modal.g-modal-confirm {
   max-width: min(800px, 90vw);
   width: fit-content;
@@ -15,7 +55,7 @@
   color: var(--color-text-dark);
 }
 
-.ui.modal > .header {
+.ui.modal > .header, dialog header {
   /* can't use display:flex, because some headers have space-separated elements, eg: delete branch modal */
   color: var(--color-text-dark);
   background: var(--color-body);
@@ -47,6 +87,7 @@ These inconsistent layouts should be refactored to simple ones.
 */
 
 .ui.modal > .content,
+dialog .content,
 .ui.modal form > .content {
   padding: 1.5em;
   background: var(--color-body);

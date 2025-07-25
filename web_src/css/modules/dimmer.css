@@ -2,7 +2,7 @@ body:has(> .ui.active.dimmer) {
   overflow: hidden;
 }
 
-.ui.active.dimmer {
+.ui.active.dimmer, .ui.dimmer:has(dialog:target) {
   display: flex;
   opacity: 1;
 }

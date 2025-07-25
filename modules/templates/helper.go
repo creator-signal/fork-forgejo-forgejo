@@ -193,6 +193,8 @@ func NewFuncMap() template.FuncMap {
 
 		// -----------------------------------------------------------------
 		// misc
+		"Docs":                     RenderDocs,
+		"RenderDocsModals":         RenderDocsModals,
 		"ShortSha":                 base.ShortSha,
 		"ActionContent2Commits":    ActionContent2Commits,
 		"IsMultilineCommitMessage": IsMultilineCommitMessage,
