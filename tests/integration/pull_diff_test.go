@@ -125,7 +125,7 @@ func TestPullDiff_AGitNotEditable(t *testing.T) {
 		require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr").Run(&git.RunOpts{Dir: dstPath}))
 
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{Index: 1, BaseRepoID: repo.ID})
-		assert.Equal(t, pr.Flow, issues_model.PullRequestFlowAGit)
+		assert.Equal(t, issues_model.PullRequestFlowAGit, pr.Flow)
 
 		resp := session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/%s/pulls/%d/files", repo.FullName(), pr.Index)), http.StatusOK)
 
