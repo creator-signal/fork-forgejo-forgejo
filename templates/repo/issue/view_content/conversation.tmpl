@@ -54,13 +54,13 @@
 			<div class="comment code-comment" id="{{.HashTag}}">
 				<div class="content">
 					<div class="header">
-						<div class="comment-header-left tw-flex tw-items-center">
+						<div class="comment-header-left tw-flex">
 							{{if not .OriginalAuthor}}
 								<a class="avatar">
 									{{ctx.AvatarUtils.Avatar .Poster 20}}
 								</a>
 							{{end}}
-							<span class="text grey muted-links">
+							<span class="text grey muted-links tw-self-center">
 								{{if .OriginalAuthor}}
 									<span class="text black">
 										{{svg (MigrationIcon $.Repository.GetOriginalURLHostname)}}
