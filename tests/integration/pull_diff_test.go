@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -98,7 +97,7 @@ func TestPullDiff_AGitNotEditable(t *testing.T) {
 			return dstPath
 		}
 
-		firstCommit := func(t *testing.T, dstPath string) string {
+		firstCommit := func(t *testing.T, dstPath string) {
 			t.Helper()
 
 			require.NoError(t, os.WriteFile(path.Join(dstPath, "README.md"), []byte("## test content"), 0o600))
@@ -116,10 +115,6 @@ func TestPullDiff_AGitNotEditable(t *testing.T) {
 				},
 				Message: "Add README.",
 			}))
-			stdout := &bytes.Buffer{}
-			require.NoError(t, git.NewCommand(t.Context(), "rev-parse", "HEAD").Run(&git.RunOpts{Dir: dstPath, Stdout: stdout}))
-
-			return strings.TrimSpace(stdout.String())
 		}
 		dstPath := clone(t, fmt.Sprintf("%suser2/%s.git", u.String(), repo.Name))
 
