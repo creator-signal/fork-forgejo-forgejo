@@ -237,7 +237,7 @@ func registerRemoveResolvedReports() {
 			RunAtStart: false,
 			Schedule:   "@every 24h",
 		},
-		ConfigKeepResolvedReportsFor: setting.Moderation.KeepResolvedReportsForHours,
+		ConfigKeepResolvedReportsFor: setting.Moderation.KeepResolvedReportsFor,
 	}, func(ctx context.Context, _ *user_model.User, config Config) error {
 		reportConfig := config.(*ReportConfig)
 		return moderation_service.RemoveResolvedReports(ctx, reportConfig.ConfigKeepResolvedReportsFor)
