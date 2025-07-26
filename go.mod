@@ -71,7 +71,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/markbates/goth v1.80.0
 	github.com/mattn/go-isatty v0.0.20
-	github.com/mattn/go-sqlite3 v1.14.28
+	github.com/mattn/go-sqlite3 v1.14.29
 	github.com/meilisearch/meilisearch-go v0.31.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/microcosm-cc/bluemonday v1.0.27
@@ -244,7 +244,7 @@ require (
 
 replace github.com/hashicorp/go-version => github.com/6543/go-version v1.3.1
 
-replace github.com/nektos/act => code.forgejo.org/forgejo/act v1.32.0
+replace github.com/nektos/act => code.forgejo.org/forgejo/act v1.33.0
 
 replace github.com/mholt/archiver/v3 => code.forgejo.org/forgejo/archiver/v3 v3.5.1
 
