@@ -135,34 +135,36 @@ func CanReport(ctx context.Context, doer *user.User, contentType moderation.Repo
 func RemoveResolvedReports(ctx stdCtx.Context, keepReportsFor time.Duration) error {
 	log.Trace("Doing: RemoveResolvedReports")
 
-	if keepReportsFor > 0 {
-		err := db.WithTx(ctx, func(ctx stdCtx.Context) error {
-			resolvedReports, err := moderation.GetResolvedReports(ctx, keepReportsFor)
-			if err != nil {
-				return err
-			}
+	if keepReportsFor <= 0 {
+		return nil
+	}
 
-			for _, report := range resolvedReports {
-				_, err := db.GetEngine(ctx).ID(report.ID).Delete(&moderation.AbuseReport{})
-				if err != nil {
-					return err
-				}
-
-				if report.ShadowCopyID.Valid {
-					_, err := db.GetEngine(ctx).ID(report.ShadowCopyID).Delete(&moderation.AbuseReportShadowCopy{})
-					if err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		})
+	err := db.WithTx(ctx, func(ctx stdCtx.Context) error {
+		resolvedReports, err := moderation.GetResolvedReports(ctx, keepReportsFor)
 		if err != nil {
 			return err
 		}
 
-		log.Trace("Finished: RemoveResolvedReports")
+		for _, report := range resolvedReports {
+			_, err := db.GetEngine(ctx).ID(report.ID).Delete(&moderation.AbuseReport{})
+			if err != nil {
+				return err
+			}
+
+			if report.ShadowCopyID.Valid {
+				_, err := db.GetEngine(ctx).ID(report.ShadowCopyID).Delete(&moderation.AbuseReportShadowCopy{})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		return nil
+	})
+	if err != nil {
+		return err
 	}
+
+	log.Trace("Finished: RemoveResolvedReports")
 	return nil
 }
