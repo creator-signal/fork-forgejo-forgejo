@@ -57,6 +57,13 @@
   margin-bottom: 0.5em;
 }
 
+/* `.ui.label` implies `min-width: 0` breaking the layout.
+   (https://codeberg.org/forgejo/forgejo/pulls/8138#issuecomment-5960251)
+   When it becomes possible, feel free to replace with something better. */
+.collapsible-comment-box .ui.label {
+  min-width: unset;
+}
+
 .show-outdated:hover,
 .hide-outdated:hover {
   text-decoration: underline;
