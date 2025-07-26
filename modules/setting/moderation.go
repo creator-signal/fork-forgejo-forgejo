@@ -23,6 +23,8 @@ func loadModerationFrom(rootCfg ConfigProvider) error {
 		return fmt.Errorf("failed to map Moderation settings: %v", err)
 	}
 
-	Moderation.KeepResolvedReportsFor = sec.Key("KEEP_RESOLVED_REPORTS_FOR").MustDuration(10 * time.Minute)
+	// keep reports for one week by default. Since time.Duration stops at the unit of an hour
+	// we are using the value of 24 (hours) * 7 (days) which gives us the value of 168
+	Moderation.KeepResolvedReportsFor = sec.Key("KEEP_RESOLVED_REPORTS_FOR").MustDuration(168 * time.Hour)
 	return nil
 }
