@@ -10,8 +10,8 @@ import (
 
 // Moderation settings
 var Moderation = struct {
-	Enabled                bool          `ini:"ENABLED"`
-	KeepResolvedReportsFor time.Duration `ini:"KEEP_RESOLVED_REPORTS_FOR"`
+	Enabled                     bool          `ini:"ENABLED"`
+	KeepResolvedReportsForHours time.Duration `ini:"KEEP_RESOLVED_REPORTS_FOR"`
 }{
 	Enabled: false,
 }
@@ -25,6 +25,6 @@ func loadModerationFrom(rootCfg ConfigProvider) error {
 
 	// keep reports for one week by default. Since time.Duration stops at the unit of an hour
 	// we are using the value of 24 (hours) * 7 (days) which gives us the value of 168
-	Moderation.KeepResolvedReportsFor = sec.Key("KEEP_RESOLVED_REPORTS_FOR").MustDuration(168 * time.Hour)
+	Moderation.KeepResolvedReportsForHours = sec.Key("KEEP_RESOLVED_REPORTS_FOR").MustDuration(168 * time.Hour)
 	return nil
 }
