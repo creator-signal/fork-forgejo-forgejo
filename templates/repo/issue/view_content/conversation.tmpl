@@ -3,7 +3,7 @@
 {{$resolveDoer := (index .comments 0).ResolveDoer}}
 {{$isNotPending := (not (eq (index .comments 0).Review.Type 0))}}
 <div class="ui segments conversation-holder">
-	<div class="ui segment collapsible-comment-box tw-py-2 tw-flex tw-items-center tw-justify-between">
+	<div class="ui segment collapsible-comment-box tw-py-2 tw-gap-2 tw-flex tw-items-center tw-justify-between">
 		<div class="tw-flex tw-items-center tw-gap-2">
 			<a href="{{(index .comments 0).CodeCommentLink ctx}}" class="file-comment tw-break-anywhere">{{(index .comments 0).TreePath}}</a>
 			{{if $invalid}}
