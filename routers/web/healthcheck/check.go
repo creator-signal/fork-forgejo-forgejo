@@ -35,11 +35,11 @@ const (
 	// be provided, utilizing optional fields of the Response.
 	Pass status = "pass"
 	Fail status = "fail"
-	warn status = "warn"
+	Warn status = "warn"
 )
 
 func (s status) ToHTTPStatus() int {
-	if s == Pass || s == warn {
+	if s == Pass || s == Warn {
 		return http.StatusOK
 	}
 	return http.StatusFailedDependency
