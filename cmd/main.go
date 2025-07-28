@@ -168,6 +168,7 @@ func innerNewMainApp(version, versionExtra string, subCmdsStandaloneArgs, subCmd
 	// these sub-commands need to use config file
 	subCmdWithConfig := []*cli.Command{
 		cmdHelp(), // the "help" sub-command was used to show the more information for "work path" and "custom config"
+		cmdHealth(),
 		cmdWeb(),
 		cmdServ(),
 		cmdHook(),
