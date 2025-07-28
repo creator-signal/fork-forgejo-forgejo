@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	ap "github.com/go-ap/activitypub"
-
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/repo"
 	"forgejo.org/models/user"
