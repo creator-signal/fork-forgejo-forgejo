@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
@@ -26,12 +25,10 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
-	gitea_context "forgejo.org/services/context"
 	"forgejo.org/services/mailer"
 	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -853,32 +850,6 @@ func TestUserTOTPEnrolled(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	session := loginUser(t, user.Name)
 
-	enrollTOTP := func(t *testing.T) {
-		t.Helper()
-
-		req := NewRequest(t, "GET", "/user/settings/security/two_factor/enroll")
-		resp := session.MakeRequest(t, req, http.StatusOK)
-
-		htmlDoc := NewHTMLParser(t, resp.Body)
-		totpSecretKey, has := htmlDoc.Find(".twofa img[src^='data:image/png;base64']").Attr("alt")
-		assert.True(t, has)
-
-		currentTOTP, err := totp.GenerateCode(totpSecretKey, time.Now())
-		require.NoError(t, err)
-
-		req = NewRequestWithValues(t, "POST", "/user/settings/security/two_factor/enroll", map[string]string{
-			"_csrf":    htmlDoc.GetCSRF(),
-			"passcode": currentTOTP,
-		})
-		session.MakeRequest(t, req, http.StatusSeeOther)
-
-		flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
-		assert.NotNil(t, flashCookie)
-		assert.Contains(t, flashCookie.Value, "success%3DYour%2Baccount%2Bhas%2Bbeen%2Bsuccessfully%2Benrolled.")
-
-		unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: user.ID})
-	}
-
 	t.Run("No WebAuthn enabled", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
@@ -891,7 +862,8 @@ func TestUserTOTPEnrolled(t *testing.T) {
 			called = true
 		})()
 
-		enrollTOTP(t)
+		session.EnrollTOTP(t)
+		unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: user.ID})
 
 		assert.True(t, called)
 	})
@@ -909,7 +881,8 @@ func TestUserTOTPEnrolled(t *testing.T) {
 		})()
 
 		unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: user.ID, Name: "Cueball's primary key"})
-		enrollTOTP(t)
+		session.EnrollTOTP(t)
+		unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: user.ID})
 
 		assert.True(t, called)
 	})

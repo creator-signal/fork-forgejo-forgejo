@@ -33,6 +33,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/keying"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/testlogger"
@@ -50,6 +51,7 @@ import (
 	"github.com/markbates/goth/gothic"
 	goth_github "github.com/markbates/goth/providers/github"
 	goth_gitlab "github.com/markbates/goth/providers/gitlab"
+	"github.com/pquerna/otp/totp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -276,6 +278,30 @@ func (s *TestSession) MakeRequestNilResponseHashSumRecorder(t testing.TB, rw *Re
 	return resp
 }
 
+func (s *TestSession) EnrollTOTP(t testing.TB) {
+	t.Helper()
+
+	req := NewRequest(t, "GET", "/user/settings/security/two_factor/enroll")
+	resp := s.MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	totpSecretKey, has := htmlDoc.Find(".twofa img[src^='data:image/png;base64']").Attr("alt")
+	assert.True(t, has)
+
+	currentTOTP, err := totp.GenerateCode(totpSecretKey, time.Now())
+	require.NoError(t, err)
+
+	req = NewRequestWithValues(t, "POST", "/user/settings/security/two_factor/enroll", map[string]string{
+		"_csrf":    htmlDoc.GetCSRF(),
+		"passcode": currentTOTP,
+	})
+	s.MakeRequest(t, req, http.StatusSeeOther)
+
+	flashCookie := s.GetCookie(gitea_context.CookieNameFlash)
+	assert.NotNil(t, flashCookie)
+	assert.Contains(t, flashCookie.Value, "success%3DYour%2Baccount%2Bhas%2Bbeen%2Bsuccessfully%2Benrolled.")
+}
+
 const userPassword = "password"
 
 func emptyTestSession(t testing.TB) *TestSession {
@@ -414,6 +440,31 @@ func loginUserWithPasswordRemember(t testing.TB, userName, password string, reme
 	baseURL, err := url.Parse(setting.AppURL)
 	require.NoError(t, err)
 	session.jar.SetCookies(baseURL, cr.Cookies())
+
+	return session
+}
+
+func loginUserWithTOTP(t testing.TB, user *user_model.User) *TestSession {
+	t.Helper()
+	session := loginUser(t, user.Name)
+
+	twoFactor, err := auth.GetTwoFactorByUID(db.DefaultContext, user.ID)
+	require.NoError(t, err)
+
+	key := keying.DeriveKey(keying.ContextTOTP)
+	code, err := key.Decrypt(twoFactor.Secret, keying.ColumnAndID("secret", twoFactor.ID))
+	require.NoError(t, err)
+
+	passcode, err := totp.GenerateCode(string(code), time.Now())
+	require.NoError(t, err)
+
+	req := NewRequest(t, "GET", "/user/two_factor")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	req = NewRequestWithValues(t, "POST", "/user/two_factor", map[string]string{
+		"_csrf":    NewHTMLParser(t, resp.Body).GetCSRF(),
+		"passcode": passcode,
+	})
+	session.MakeRequest(t, req, http.StatusSeeOther)
 
 	return session
 }

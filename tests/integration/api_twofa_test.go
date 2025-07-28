@@ -5,6 +5,7 @@ package integration
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/tests"
 
 	"github.com/pquerna/otp/totp"
@@ -78,4 +81,125 @@ func TestAPIWebAuthn(t *testing.T) {
 	DecodeJSON(t, resp, &userParsed)
 
 	assert.Equal(t, "Basic authorization is not allowed while having security keys enrolled", userParsed.Message)
+}
+
+func TestAPIWithRequiredTwoFactor(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	type userResponse struct {
+		Message string `json:"message"`
+	}
+
+	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	inactiveUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 9})
+	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
+	prohibitLoginUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 37})
+
+	const require2FaMessage = "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts"
+	const prohibitedMessage = "This account is prohibited from signing in, please contact your site administrator."
+	const loginNotAllowedMessage = "user is not allowed login"
+
+	runTest := func(t *testing.T, user *user_model.User, useTOTP bool, status int, messagePrefix string) {
+		defer unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: user.ID})
+
+		passcode := func() string {
+			if !useTOTP {
+				return ""
+			}
+
+			otpKey, err := totp.Generate(totp.GenerateOpts{
+				SecretSize:  40,
+				Issuer:      "forgejo-test",
+				AccountName: user.Name,
+			})
+			require.NoError(t, err)
+
+			require.NoError(t, auth_model.NewTwoFactor(db.DefaultContext, &auth_model.TwoFactor{UID: user.ID}, otpKey.Secret()))
+
+			passcode, err := totp.GenerateCode(otpKey.Secret(), time.Now())
+			require.NoError(t, err)
+			return passcode
+		}()
+
+		req := NewRequest(t, "GET", "/api/v1/user").
+			AddBasicAuth(user.Name)
+
+		if useTOTP {
+			MakeRequest(t, req, http.StatusUnauthorized)
+
+			req = NewRequestf(t, "GET", "/api/v1/user").
+				AddBasicAuth(user.Name)
+			req.Header.Set("X-Forgejo-OTP", passcode)
+		}
+
+		resp := MakeRequest(t, req, status)
+
+		if messagePrefix != "" {
+			var response userResponse
+			DecodeJSON(t, resp, &response)
+
+			assert.True(t, strings.HasPrefix(response.Message, messagePrefix))
+		}
+	}
+
+	t.Run("NoneTwoFactorRequired", func(t *testing.T) {
+		// this should be the default, so don't have to set the variable
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusOK, "")
+			runTest(t, normalUser, false, http.StatusOK, "")
+			runTest(t, inactiveUser, false, http.StatusForbidden, prohibitedMessage)
+			runTest(t, restrictedUser, false, http.StatusOK, "")
+			runTest(t, prohibitLoginUser, false, http.StatusUnauthorized, loginNotAllowedMessage)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK, "")
+			runTest(t, normalUser, true, http.StatusOK, "")
+			runTest(t, inactiveUser, true, http.StatusForbidden, prohibitedMessage)
+			runTest(t, restrictedUser, true, http.StatusOK, "")
+			runTest(t, prohibitLoginUser, true, http.StatusUnauthorized, loginNotAllowedMessage)
+		})
+	})
+
+	t.Run("AllTwoFactorRequired", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AllTwoFactorRequired)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusForbidden, require2FaMessage)
+			runTest(t, normalUser, false, http.StatusForbidden, require2FaMessage)
+			runTest(t, inactiveUser, false, http.StatusForbidden, prohibitedMessage)
+			runTest(t, restrictedUser, false, http.StatusForbidden, require2FaMessage)
+			runTest(t, prohibitLoginUser, false, http.StatusUnauthorized, loginNotAllowedMessage)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK, "")
+			runTest(t, normalUser, true, http.StatusOK, "")
+			runTest(t, inactiveUser, true, http.StatusForbidden, prohibitedMessage)
+			runTest(t, restrictedUser, true, http.StatusOK, "")
+			runTest(t, prohibitLoginUser, true, http.StatusUnauthorized, loginNotAllowedMessage)
+		})
+	})
+
+	t.Run("AdminTwoFactorRequired", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AdminTwoFactorRequired)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusForbidden, require2FaMessage)
+			runTest(t, normalUser, false, http.StatusOK, "")
+			runTest(t, inactiveUser, false, http.StatusForbidden, prohibitedMessage)
+			runTest(t, restrictedUser, false, http.StatusOK, "")
+			runTest(t, prohibitLoginUser, false, http.StatusUnauthorized, loginNotAllowedMessage)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK, "")
+			runTest(t, normalUser, true, http.StatusOK, "")
+			runTest(t, inactiveUser, true, http.StatusForbidden, prohibitedMessage)
+			runTest(t, restrictedUser, true, http.StatusOK, "")
+			runTest(t, prohibitLoginUser, true, http.StatusUnauthorized, loginNotAllowedMessage)
+		})
+	})
 }

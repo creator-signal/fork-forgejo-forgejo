@@ -5,11 +5,13 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 
+	"forgejo.org/models/auth"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
@@ -138,6 +140,104 @@ func TestDisableSignin(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 			req := NewRequest(t, "POST", "/user/login")
 			MakeRequest(t, req, http.StatusOK)
+		})
+	})
+}
+
+func TestGlobalRequireTwoFactor(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
+
+	runTest := func(t *testing.T, user *user_model.User, useTOTP, loginAllowed bool) {
+		defer unittest.AssertSuccessfulDelete(t, &auth.TwoFactor{UID: user.ID})
+
+		session := func() *TestSession {
+			if !useTOTP {
+				return loginUser(t, user.Name)
+			}
+
+			sess := loginUser(t, user.Name)
+			sess.EnrollTOTP(t)
+			sess.MakeRequest(t, NewRequest(t, "POST", "/user/logout"), http.StatusOK)
+
+			return loginUserWithTOTP(t, user)
+		}()
+
+		req := NewRequest(t, "GET", fmt.Sprintf("/%s", user.Name))
+
+		if loginAllowed {
+			session.MakeRequest(t, req, http.StatusOK)
+		} else {
+			resp := session.MakeRequest(t, req, http.StatusSeeOther)
+			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
+
+			req = NewRequest(t, "GET", "/user/settings/security")
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			assert.Equal(t, "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts.", htmlDoc.doc.Find(".ui.red.message").Text())
+			assert.Equal(t, 1, htmlDoc.doc.Find(".navbar-left > a.item").Length()) // only show the Logo, no other links
+
+			userLinks := htmlDoc.doc.Find(".navbar-right .user-menu a.item")
+			assert.Equal(t, 1, userLinks.Length()) // only logout link
+			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
+
+			headings := htmlDoc.doc.Find(".user-setting-content h4.attached.header")
+			assert.Equal(t, 2, headings.Length())
+			assert.Equal(t, "Two-factor authentication (TOTP)", strings.TrimSpace(headings.First().Text()))
+			assert.Equal(t, "Two-factor authentication (Security keys)", strings.TrimSpace(headings.Last().Text()))
+		}
+	}
+
+	t.Run("NoneTwoFactorRequired", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, true)
+			runTest(t, normalUser, false, true)
+			runTest(t, restrictedUser, false, true)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, true)
+			runTest(t, normalUser, true, true)
+			runTest(t, restrictedUser, true, true)
+		})
+	})
+
+	t.Run("AllTwoFactorRequired", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AllTwoFactorRequired)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, false)
+			runTest(t, normalUser, false, false)
+			runTest(t, restrictedUser, false, false)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, true)
+			runTest(t, normalUser, true, true)
+			runTest(t, restrictedUser, true, true)
+		})
+	})
+
+	t.Run("AdminTwoFactorRequired", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AdminTwoFactorRequired)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, false)
+			runTest(t, normalUser, false, true)
+			runTest(t, restrictedUser, false, true)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, true)
+			runTest(t, normalUser, true, true)
+			runTest(t, restrictedUser, true, true)
 		})
 	})
 }
