@@ -434,7 +434,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		if err != nil {
 			log.Error("actions.GetContentFromEntry: %v", err)
 		}
-		_, workFlowErr := model.ReadWorkflow(bytes.NewReader(content))
+		_, workFlowErr := model.ReadWorkflow(bytes.NewReader(content), true)
 		if workFlowErr != nil {
 			ctx.Data["FileError"] = ctx.Locale.Tr("actions.runs.invalid_workflow_helper", workFlowErr.Error())
 		}
@@ -1057,14 +1057,13 @@ func renderHomeCode(ctx *context.Context) {
 		return
 	}
 
-	if entry.IsSubModule() {
-		subModuleURL, err := ctx.Repo.Commit.GetSubModule(entry.Name())
+	if entry.IsSubmodule() {
+		submodule, err := ctx.Repo.Commit.GetSubmodule(ctx.Repo.TreePath, entry)
 		if err != nil {
-			HandleGitError(ctx, "Repo.Commit.GetSubModule", err)
+			HandleGitError(ctx, "Repo.Commit.GetSubmodule", err)
 			return
 		}
-		subModuleFile := git.NewSubModuleFile(ctx.Repo.Commit, subModuleURL, entry.ID.String())
-		ctx.Redirect(subModuleFile.RefURL(setting.AppURL, ctx.Repo.Repository.FullName(), setting.SSH.Domain))
+		ctx.Redirect(submodule.ResolveUpstreamURL(ctx.Repo.Repository.HTMLURL()))
 	} else if entry.IsDir() {
 		renderDirectory(ctx)
 	} else {

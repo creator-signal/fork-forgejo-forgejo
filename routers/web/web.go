@@ -117,7 +117,7 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 	return func(ctx *context.Context) {
 		ar, err := common.AuthShared(ctx.Base, ctx.Session, authMethod)
 		if err != nil {
-			log.Error("Failed to verify user: %v", err)
+			log.Info("Failed to verify user: %v", err)
 			ctx.Error(http.StatusUnauthorized, ctx.Locale.TrString("auth.unauthorized_credentials", "https://codeberg.org/forgejo/forgejo/issues/2809"))
 			return
 		}
@@ -781,7 +781,14 @@ func registerRoutes(m *web.Route) {
 			addSettingsRunnersRoutes()
 			addSettingsVariablesRoutes()
 		})
-	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled))
+
+		if setting.Moderation.Enabled {
+			m.Group("/moderation/reports", func() {
+				m.Get("", admin.AbuseReports)
+				m.Get("/type/{type:1|2|3|4}/id/{id}", admin.AbuseReportDetails)
+			})
+		}
+	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 
 	m.Group("", func() {

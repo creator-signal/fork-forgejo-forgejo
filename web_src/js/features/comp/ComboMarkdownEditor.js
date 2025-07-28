@@ -10,8 +10,7 @@ import {easyMDEToolbarActions} from './EasyMDEToolbarActions.js';
 import {initTextExpander} from './TextExpander.js';
 import {showErrorToast, showHintToast} from '../../modules/toast.js';
 import {POST} from '../../modules/fetch.js';
-
-let elementIdCounter = 0;
+import {initTab} from '../../modules/tab.ts';
 
 /**
  * validate if the given textarea is non-empty.
@@ -39,10 +38,13 @@ export function validateTextareaNonEmpty(textarea) {
 const listPrefixRegex = /^\s*((\d+)[.)]\s|[-*+]\s{1,4}\[[ x]\]\s?|[-*+]\s|(>\s?)+)?/;
 
 class ComboMarkdownEditor {
+  static idSuffixCounter = 0;
+
   constructor(container, options = {}) {
     container._giteaComboMarkdownEditor = this;
     this.options = options;
     this.container = container;
+    this.elementIdSuffix = ComboMarkdownEditor.idSuffixCounter++;
   }
 
   async init() {
@@ -55,8 +57,6 @@ class ComboMarkdownEditor {
     this.setupLinkInserter();
 
     await this.switchToUserPreference();
-
-    elementIdCounter++;
   }
 
   applyEditorHeights(el, heights) {
@@ -74,7 +74,7 @@ class ComboMarkdownEditor {
   setupTextarea() {
     this.textarea = this.container.querySelector('.markdown-text-editor');
     this.textarea._giteaComboMarkdownEditor = this;
-    this.textarea.id = `_combo_markdown_editor_${elementIdCounter}`;
+    this.textarea.id = `_combo_markdown_editor_${this.elementIdSuffix}`;
     this.textarea.addEventListener('input', (e) => this.options?.onContentChanged?.(this, e));
     this.applyEditorHeights(this.textarea, this.options.editorHeights);
 
@@ -96,8 +96,8 @@ class ComboMarkdownEditor {
     this.textareaMarkdownToolbar.querySelector('button[data-md-action="unindent"]')?.addEventListener('click', () => {
       this.indentSelection(true, false);
     });
-    this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-table"]')?.setAttribute('data-modal', `div[data-markdown-table-modal-id="${elementIdCounter}"]`);
-    this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-link"]')?.setAttribute('data-modal', `div[data-markdown-link-modal-id="${elementIdCounter}"]`);
+    this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-table"]')?.setAttribute('data-modal', `div[data-markdown-table-modal-id="${this.elementIdSuffix}"]`);
+    this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-link"]')?.setAttribute('data-modal', `div[data-markdown-link-modal-id="${this.elementIdSuffix}"]`);
 
     // Track whether any actual input or pointer action was made after focusing, and only intercept Tab presses after that.
     this.tabEnabled = false;
@@ -195,25 +195,26 @@ class ComboMarkdownEditor {
   setupDropzone() {
     const dropzoneParentContainer = this.container.getAttribute('data-dropzone-parent-container');
     if (dropzoneParentContainer) {
-      this.dropzone = this.container.closest(this.container.getAttribute('data-dropzone-parent-container'))?.querySelector('.dropzone');
+      this.dropzone = this.container.closest(dropzoneParentContainer)?.querySelector('.dropzone');
     }
   }
 
   setupTab() {
     const $container = $(this.container);
-    const tabs = $container[0].querySelectorAll('.switch > .item');
+    const switchEl = $container[0].querySelector('.switch');
+    const tabs = switchEl.querySelectorAll('.item');
 
     // Fomantic Tab requires the "data-tab" to be globally unique.
     // So here it uses our defined "data-tab-for" and "data-tab-panel" to generate the "data-tab" attribute for Fomantic.
     const tabEditor = Array.from(tabs).find((tab) => tab.getAttribute('data-tab-for') === 'markdown-writer');
     const tabPreviewer = Array.from(tabs).find((tab) => tab.getAttribute('data-tab-for') === 'markdown-previewer');
-    tabEditor.setAttribute('data-tab', `markdown-writer-${elementIdCounter}`);
-    tabPreviewer.setAttribute('data-tab', `markdown-previewer-${elementIdCounter}`);
+    tabEditor.setAttribute('data-tab', `markdown-writer-${this.elementIdSuffix}`);
+    tabPreviewer.setAttribute('data-tab', `markdown-previewer-${this.elementIdSuffix}`);
     const toolbar = $container[0].querySelector('markdown-toolbar');
     const panelEditor = $container[0].querySelector('.ui.tab[data-tab-panel="markdown-writer"]');
     const panelPreviewer = $container[0].querySelector('.ui.tab[data-tab-panel="markdown-previewer"]');
-    panelEditor.setAttribute('data-tab', `markdown-writer-${elementIdCounter}`);
-    panelPreviewer.setAttribute('data-tab', `markdown-previewer-${elementIdCounter}`);
+    panelEditor.setAttribute('data-tab', `markdown-writer-${this.elementIdSuffix}`);
+    panelPreviewer.setAttribute('data-tab', `markdown-previewer-${this.elementIdSuffix}`);
 
     tabEditor.addEventListener('click', () => {
       toolbar.classList.remove('markdown-toolbar-hidden');
@@ -222,7 +223,7 @@ class ComboMarkdownEditor {
       });
     });
 
-    $(tabs).tab();
+    initTab(switchEl);
 
     this.previewUrl = tabPreviewer.getAttribute('data-preview-url');
     this.previewContext = tabPreviewer.getAttribute('data-preview-context');
@@ -276,10 +277,10 @@ class ComboMarkdownEditor {
 
   setupTableInserter() {
     const newTableModal = this.container.querySelector('div[data-modal-name="new-markdown-table"]');
-    newTableModal.setAttribute('data-markdown-table-modal-id', elementIdCounter);
+    newTableModal.setAttribute('data-markdown-table-modal-id', this.elementIdSuffix);
 
     const button = newTableModal.querySelector('button[data-selector-name="ok-button"]');
-    button.setAttribute('data-element-id', elementIdCounter);
+    button.setAttribute('data-element-id', this.elementIdSuffix);
     button.addEventListener('click', this.addNewTable);
   }
 
@@ -311,8 +312,8 @@ class ComboMarkdownEditor {
 
   setupLinkInserter() {
     const newLinkModal = this.container.querySelector('div[data-modal-name="new-markdown-link"]');
-    newLinkModal.setAttribute('data-markdown-link-modal-id', elementIdCounter);
-    const textarea = document.getElementById(`_combo_markdown_editor_${elementIdCounter}`);
+    newLinkModal.setAttribute('data-markdown-link-modal-id', this.elementIdSuffix);
+    const textarea = document.getElementById(`_combo_markdown_editor_${this.elementIdSuffix}`);
 
     $(newLinkModal).modal({
       // Pre-fill the description field from the selection to create behavior similar
@@ -331,7 +332,7 @@ class ComboMarkdownEditor {
     });
 
     const button = newLinkModal.querySelector('button[data-selector-name="ok-button"]');
-    button.setAttribute('data-element-id', elementIdCounter);
+    button.setAttribute('data-element-id', this.elementIdSuffix);
     button.addEventListener('click', this.addNewLink);
   }
 

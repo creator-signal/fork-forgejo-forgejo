@@ -296,6 +296,9 @@ func (u *User) CanImportLocal() bool {
 
 // DashboardLink returns the user dashboard page link.
 func (u *User) DashboardLink() string {
+	if u.IsGhost() {
+		return ""
+	}
 	if u.IsOrganization() {
 		return u.OrganisationLink() + "/dashboard"
 	}
@@ -304,16 +307,25 @@ func (u *User) DashboardLink() string {
 
 // HomeLink returns the user or organization home page link.
 func (u *User) HomeLink() string {
+	if u.IsGhost() {
+		return ""
+	}
 	return setting.AppSubURL + "/" + url.PathEscape(u.Name)
 }
 
 // HTMLURL returns the user or organization's full link.
 func (u *User) HTMLURL() string {
+	if u.IsGhost() {
+		return ""
+	}
 	return setting.AppURL + url.PathEscape(u.Name)
 }
 
 // OrganisationLink returns the organization sub page link.
 func (u *User) OrganisationLink() string {
+	if u.IsGhost() || !u.IsOrganization() {
+		return ""
+	}
 	return setting.AppSubURL + "/org/" + url.PathEscape(u.Name)
 }
 
@@ -927,7 +939,9 @@ func UpdateUserCols(ctx context.Context, u *User, cols ...string) error {
 
 	// If the user was reported as abusive and any of the columns being updated is relevant
 	// for moderation purposes a shadow copy should be created before first update.
-	if err := IfNeededCreateShadowCopyForUser(ctx, u, cols...); err != nil {
+	// Since u is already altered at this point we are sending nil instead as an argument
+	// so that the unaltered version will be retrieved from DB.
+	if err := IfNeededCreateShadowCopyForUser(ctx, u.ID, nil, cols...); err != nil {
 		return err
 	}
 

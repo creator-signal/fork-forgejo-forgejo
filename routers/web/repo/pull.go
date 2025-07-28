@@ -638,7 +638,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 		if pull.Flow == issues_model.PullRequestFlowGithub {
 			headBranchExist = headGitRepo.IsBranchExist(pull.HeadBranch)
 		} else {
-			headBranchExist = git.IsReferenceExist(ctx, baseGitRepo.Path, pull.GetGitRefName())
+			headBranchExist = baseGitRepo.IsReferenceExist(pull.GetGitRefName())
 		}
 
 		if headBranchExist {
@@ -1152,7 +1152,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 			ctx.ServerError("GetUserRepoPermission", err)
 			return
 		}
-		ctx.Data["HeadBranchIsEditable"] = pull.HeadRepo.CanEnableEditor() && issues_model.CanMaintainerWriteToBranch(ctx, headRepoPerm, pull.HeadBranch, ctx.Doer)
+		ctx.Data["HeadBranchIsEditable"] = pull.HeadRepo.CanEnableEditor() && issues_model.CanMaintainerWriteToBranch(ctx, headRepoPerm, pull.HeadBranch, ctx.Doer) && pull.Flow != issues_model.PullRequestFlowAGit
 		ctx.Data["SourceRepoLink"] = pull.HeadRepo.Link()
 		ctx.Data["HeadBranch"] = pull.HeadBranch
 	}

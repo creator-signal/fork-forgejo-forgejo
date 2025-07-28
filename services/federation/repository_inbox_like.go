@@ -19,6 +19,8 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/validation"
 	context_service "forgejo.org/services/context"
+
+	ap "github.com/go-ap/activitypub"
 )
 
 // ProcessLikeActivity receives a ForgeLike activity and does the following:

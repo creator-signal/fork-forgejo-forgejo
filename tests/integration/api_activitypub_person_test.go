@@ -108,6 +108,6 @@ func TestActivityPubPersonInbox(t *testing.T) {
 		// Signed request "succeeds"
 		resp, err := c.Post([]byte{}, user2inboxurl)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 }
