@@ -6,6 +6,7 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"html/template"
@@ -61,6 +62,19 @@ type ErrRepoIsArchived struct {
 
 func (err ErrRepoIsArchived) Error() string {
 	return fmt.Sprintf("%s is archived", err.Repo.LogString())
+}
+
+type ErrRepoHasNoAlternate struct {
+	Repo *Repository
+}
+
+func (err ErrRepoHasNoAlternate) Error() string {
+	return fmt.Sprintf("%s has no alternate", err.Repo.LogString())
+}
+
+func IsErrRepoHasNoAlternate(err error) bool {
+	_, ok := err.(ErrRepoHasNoAlternate)
+	return ok
 }
 
 var (
@@ -169,6 +183,8 @@ type Repository struct {
 	IsFork                          bool               `xorm:"INDEX NOT NULL DEFAULT false"`
 	ForkID                          int64              `xorm:"INDEX"`
 	BaseRepo                        *Repository        `xorm:"-"`
+	AlternateID                     sql.NullInt64      `xorm:"INDEX DEFAULT NULL REFERENCES(alternate, id)"`
+	Alternate                       *Alternate         `xorm:"-"`
 	IsTemplate                      bool               `xorm:"INDEX NOT NULL DEFAULT false"`
 	TemplateID                      int64              `xorm:"INDEX"`
 	Size                            int64              `xorm:"NOT NULL DEFAULT 0"`
@@ -577,6 +593,36 @@ func (repo *Repository) GetRootBaseRepo(ctx context.Context) (*Repository, error
 		current = next
 	}
 	return current, nil
+}
+
+// GetAlternate populates repo.Alternate if an alternate exists and
+// returns an error otherwise.
+func (repo *Repository) GetAlternate(ctx context.Context) (err error) {
+	if repo.Alternate != nil {
+		return nil
+	}
+
+	if !repo.AlternateID.Valid {
+		return ErrRepoHasNoAlternate{repo}
+	}
+
+	repo.Alternate, err = GetAlternateByID(ctx, repo.AlternateID.Int64)
+	return err
+}
+
+func (repo *Repository) UpdateAlternate(ctx context.Context, alternate *Alternate) (err error) {
+	if alternate == nil {
+		repo.AlternateID.Int64 = 0
+		repo.AlternateID.Valid = false
+		repo.Alternate = nil
+	} else {
+		repo.AlternateID.Int64 = alternate.ID
+		repo.AlternateID.Valid = true
+		repo.Alternate = alternate
+	}
+
+	_, err = db.GetEngine(ctx).ID(repo.ID).Cols("alternate_id").Update(repo)
+	return err
 }
 
 // IsGenerated returns whether _this_ repository was generated from a template
