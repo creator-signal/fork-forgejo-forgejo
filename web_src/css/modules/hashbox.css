@@ -59,7 +59,7 @@
 }
 
 .sha.label.isSigned.isWarning:hover {
-  background: var(--color-red-badge-hover-bg) !important;
+  background: var(--color-red-badge-hover-bg);
 }
 
 .sha.label.isSigned.isVerified {
@@ -73,7 +73,7 @@
 }
 
 .sha.label.isSigned.isVerified:hover {
-  background: var(--color-green-badge-hover-bg) !important;
+  background: var(--color-green-badge-hover-bg);
 }
 
 .sha.label.isSigned.isVerifiedUntrusted {
@@ -87,7 +87,7 @@
 }
 
 .sha.label.isSigned.isVerifiedUntrusted:hover {
-  background: var(--color-yellow-badge-hover-bg) !important;
+  background: var(--color-yellow-badge-hover-bg);
 }
 
 .sha.label.isSigned.isVerifiedUnmatched {
@@ -101,5 +101,5 @@
 }
 
 .sha.label.isSigned.isVerifiedUnmatched:hover {
-  background: var(--color-orange-badge-hover-bg) !important;
+  background: var(--color-orange-badge-hover-bg);
 }
