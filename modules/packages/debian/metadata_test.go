@@ -173,7 +173,6 @@ func TestParseControlFile(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotNil(t, p)
 		}
-
 	})
 
 	t.Run("Valid", func(t *testing.T) {
