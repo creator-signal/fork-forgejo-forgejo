@@ -3,7 +3,7 @@
   flex-shrink: 0;
   gap: 0;
   align-items: center;
-  margin: 0 6px; /* not universally appropriate, needs to go */
+  margin: 0 6px; /* needs to go but looked into case-by-case */
   padding: 0;
   min-width: 0; /* from .ui.label, may be bad actually */
   background: var(--color-label-bg);
@@ -18,8 +18,9 @@
 }
 
 .primary.sha.label {
-  border: none !important;
-  background: var(--color-primary) !important;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
 }
 
 .sha.label .shortsha {
