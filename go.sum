@@ -4,8 +4,8 @@ code.forgejo.org/f3/gof3/v3 v3.11.0 h1:f/xToKwqTgxG6PYxvewywjDQyCcyHEEJ6sZqUitFs
 code.forgejo.org/f3/gof3/v3 v3.11.0/go.mod h1:4FaRUNSQGBiD1M0DuB0yNv+Z2wMtlOeckgygHSSq4KQ=
 code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20191008002943-06d1c002b251 h1:HTZl3CBk3ABNYtFI6TPLvJgGKFIhKT5CBk0sbOtkDKU=
 code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20191008002943-06d1c002b251/go.mod h1:PphB88CPbx601QrWPMZATeorACeVmQlyv3u+uUMbSaM=
-code.forgejo.org/forgejo/act v1.32.0 h1:hns2WvrJs6qWCmvzoSllNGNzSvcDMcSvJvVtQj3FaQc=
-code.forgejo.org/forgejo/act v1.32.0/go.mod h1:WkmxVBteC4zoyQGYp8ZFZY7Xb+jat+b7ChvqW6TxqF8=
+code.forgejo.org/forgejo/act v1.33.0 h1:ayQTXkpk+Vj5/yQMNZagA0xpQgGVeSbcrPXcIS3K1kY=
+code.forgejo.org/forgejo/act v1.33.0/go.mod h1:WkmxVBteC4zoyQGYp8ZFZY7Xb+jat+b7ChvqW6TxqF8=
 code.forgejo.org/forgejo/archiver/v3 v3.5.1 h1:UmmbA7D5550uf71SQjarmrn6yKwOGxtEjb3jaYYtmSE=
 code.forgejo.org/forgejo/archiver/v3 v3.5.1/go.mod h1:e3dqJ7H78uzsRSEACH1joayhuSyhnonssnDhppzS1L4=
 code.forgejo.org/forgejo/go-rpmutils v1.0.0 h1:RZGGeKt70p/WaIEL97pyT6uiiEIoN8/aLmS5Z6WmX0M=
@@ -395,8 +395,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/mattn/go-runewidth v0.0.16 h1:E5ScNMtiwvlvB5paMFdw9p4kSQzbXFikJ5SQO6TULQc=
 github.com/mattn/go-runewidth v0.0.16/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
-github.com/mattn/go-sqlite3 v1.14.28 h1:ThEiQrnbtumT+QMknw63Befp/ce/nUPgBPMlRFEum7A=
-github.com/mattn/go-sqlite3 v1.14.28/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
+github.com/mattn/go-sqlite3 v1.14.29 h1:1O6nRLJKvsi1H2Sj0Hzdfojwt8GiGKm+LOfLaBFaouQ=
+github.com/mattn/go-sqlite3 v1.14.29/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
 github.com/meilisearch/meilisearch-go v0.31.0 h1:yZRhY1qJqdH8h6GFZALGtkDLyj8f9v5aJpsNMyrUmnY=
 github.com/meilisearch/meilisearch-go v0.31.0/go.mod h1:aNtyuwurDg/ggxQIcKqWH6G9g2ptc8GyY7PLY4zMn/g=
 github.com/mholt/acmez/v3 v3.1.2 h1:auob8J/0FhmdClQicvJvuDavgd5ezwLBfKuYmynhYzc=

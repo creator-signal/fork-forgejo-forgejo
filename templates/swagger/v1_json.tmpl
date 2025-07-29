@@ -20285,6 +20285,20 @@
             "in": "query"
           },
           {
+            "enum": [
+              "oldest",
+              "newest",
+              "alphabetically",
+              "reversealphabetically",
+              "recentupdate",
+              "leastupdate"
+            ],
+            "type": "string",
+            "description": "sort order of results",
+            "name": "sort",
+            "in": "query"
+          },
+          {
             "type": "integer",
             "description": "page number of results to return (1-based)",
             "name": "page",
@@ -30084,6 +30098,12 @@
     }
   },
   "securityDefinitions": {
+    "AccessToken": {
+      "description": "This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.",
+      "type": "apiKey",
+      "name": "access_token",
+      "in": "query"
+    },
     "AuthorizationHeaderToken": {
       "description": "API tokens must be prepended with \"token\" followed by a space.",
       "type": "apiKey",
@@ -30110,11 +30130,23 @@
       "type": "apiKey",
       "name": "X-FORGEJO-OTP",
       "in": "header"
+    },
+    "Token": {
+      "description": "This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.",
+      "type": "apiKey",
+      "name": "token",
+      "in": "query"
     }
   },
   "security": [
     {
       "BasicAuth": []
+    },
+    {
+      "Token": []
+    },
+    {
+      "AccessToken": []
     },
     {
       "AuthorizationHeaderToken": []

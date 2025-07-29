@@ -22,6 +22,8 @@
 //
 //	Security:
 //	- BasicAuth :
+//	- Token :
+//	- AccessToken :
 //	- AuthorizationHeaderToken :
 //	- SudoParam :
 //	- SudoHeader :
@@ -30,6 +32,16 @@
 //	SecurityDefinitions:
 //	BasicAuth:
 //	     type: basic
+//	Token:
+//	     type: apiKey
+//	     name: token
+//	     in: query
+//	     description: This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.
+//	AccessToken:
+//	     type: apiKey
+//	     name: access_token
+//	     in: query
+//	     description: This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.
 //	AuthorizationHeaderToken:
 //	     type: apiKey
 //	     name: Authorization
@@ -69,7 +81,6 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
@@ -841,7 +852,7 @@ func Routes() *web.Route {
 				m.Group("/repository-id/{repository-id}", func() {
 					m.Get("", activitypub.ReqHTTPUserSignature(), activitypub.Repository)
 					m.Post("/inbox",
-						bind(forgefed.ForgeLike{}),
+						bind(ap.Activity{}),
 						activitypub.ReqHTTPUserSignature(),
 						activitypub.RepositoryInbox)
 				}, context.RepositoryIDAssignmentAPI())
