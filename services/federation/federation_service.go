@@ -23,7 +23,13 @@ import (
 )
 
 func Init() error {
-	return nil
+	if err := initDeliveryQueue(); err != nil {
+		return err
+	}
+	if err := initRefreshQueue(); err != nil {
+		return err
+	}
+	return initPendingQueue()
 }
 
 func FindOrCreateFederationHost(ctx context.Context, actorURI string) (*forgefed.FederationHost, error) {
