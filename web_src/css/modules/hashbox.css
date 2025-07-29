@@ -1,18 +1,26 @@
-.ui .sha.label {
+.sha.label {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 0;
+  align-items: center;
+  margin: 0 6px; /* not universally appropriate, needs to go */
+  padding: 0;
+  min-width: 0; /* from .ui.label, may be bad actually */
+  background: var(--color-label-bg);
+  color: var(--color-label-text);
+  border-radius: 0.28571429rem;
+  white-space: nowrap;
   font-family: var(--fonts-monospace);
   font-size: 13px;
   font-weight: var(--font-weight-normal);
-  margin: 0 6px;
-  padding: 0;
-  gap: 0;
-  flex-shrink: 0;
+  line-height: 1;
 }
 
-.ui.ui .sha.label {
+.sha.label {
   border: 1px solid var(--color-light-border);
 }
 
-.ui.primary.sha.label {
+.primary.sha.label {
   border: none !important;
   background: var(--color-primary) !important;
 }
