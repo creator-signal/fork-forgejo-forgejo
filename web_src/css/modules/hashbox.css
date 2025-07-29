@@ -8,7 +8,7 @@
   min-width: 0; /* from .ui.label, may be bad actually */
   background: var(--color-label-bg);
   color: var(--color-label-text);
-  border-radius: 0.28571429rem;
+  border-radius: var(--border-radius);
   white-space: nowrap;
   font-family: var(--fonts-monospace);
   font-size: 13px;
@@ -34,6 +34,7 @@
   background: var(--color-light);
   padding: 0.25rem 0.33rem;
   border-left: 1px solid var(--color-light-border);
+  border-radius: inherit;
 }
 
 .sha.label .signature-author {
