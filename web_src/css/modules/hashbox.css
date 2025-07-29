@@ -8,16 +8,13 @@
   min-width: 0; /* from .ui.label, may be bad actually */
   background: var(--color-label-bg);
   color: var(--color-label-text);
+  border: 1px solid var(--color-light-border);
   border-radius: var(--border-radius);
   white-space: nowrap;
   font-family: var(--fonts-monospace);
   font-size: 13px;
   font-weight: var(--font-weight-normal);
   line-height: 1;
-}
-
-.sha.label {
-  border: 1px solid var(--color-light-border);
 }
 
 .primary.sha.label {
