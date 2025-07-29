@@ -35,8 +35,8 @@
 
 .sha.label .signature-author .avatar {
   height: 16px;
-  margin-bottom: 0;
   width: 16px;
+  margin: 0 !important; /* In some areas selectors with .avatar are too broad */
 }
 
 .sha.label.isSigned.isWarning {
