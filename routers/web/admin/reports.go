@@ -223,7 +223,7 @@ func PerformAction(ctx *context.Context) {
 	case moderation_service.ContentActionDeleteComment:
 		deleteComment(ctx, contentType, contentID, reportAction)
 	default:
-		ctx.Flash.Warning(ctx.Tr("admin.moderation.unknown_action"), true)
+		ctx.Flash.Warning(ctx.Tr("moderation.unknown_action"), true)
 		ctx.HTML(http.StatusOK, tplAlert)
 	}
 }
@@ -252,7 +252,7 @@ func updateReportStatus(ctx *context.Context, contentType moderation.ReportedCon
 
 func suspendAccount(ctx *context.Context, contentType moderation.ReportedContentType, contentID int64, reportAction moderation_service.ReportAction) {
 	if contentID == ctx.Doer.ID {
-		ctx.Flash.Warning(ctx.Tr("admin.users.cannot_suspend_self"), true)
+		ctx.Flash.Warning(ctx.Tr("moderation.users.cannot_suspend_self"), true)
 		ctx.HTML(http.StatusOK, tplAlert)
 		return
 	}
@@ -265,13 +265,13 @@ func suspendAccount(ctx *context.Context, contentType moderation.ReportedContent
 	}
 
 	if u.IsOrganization() {
-		ctx.Flash.Warning(ctx.Tr("admin.users.cannot_suspend_org"), true)
+		ctx.Flash.Warning(ctx.Tr("moderation.users.cannot_suspend_org"), true)
 		ctx.HTML(http.StatusOK, tplAlert)
 		return
 	}
 
 	if u.ProhibitLogin {
-		ctx.Flash.Info(ctx.Tr("admin.users.already_suspended"), true)
+		ctx.Flash.Info(ctx.Tr("moderation.users.already_suspended"), true)
 		ctx.HTML(http.StatusOK, tplAlert)
 		return
 	}
@@ -288,7 +288,7 @@ func suspendAccount(ctx *context.Context, contentType moderation.ReportedContent
 		updateReportStatus(ctx, contentType, contentID, reportAction)
 	}
 
-	ctx.Flash.Success(ctx.Tr("admin.users.suspend_success"), true)
+	ctx.Flash.Success(ctx.Tr("moderation.users.suspend_success"), true)
 	ctx.HTML(http.StatusOK, tplAlert)
 }
 
@@ -374,7 +374,7 @@ func deleteIssue(ctx *context.Context, contentType moderation.ReportedContentTyp
 
 	updateReportStatus(ctx, contentType, contentID, reportAction)
 
-	ctx.Flash.Success(ctx.Tr("admin.issue.deletion_success"), true)
+	ctx.Flash.Success(ctx.Tr("moderation.issue.deletion_success"), true)
 	ctx.HTML(http.StatusOK, tplAlert)
 }
 
@@ -392,6 +392,6 @@ func deleteComment(ctx *context.Context, contentType moderation.ReportedContentT
 
 	updateReportStatus(ctx, contentType, contentID, reportAction)
 
-	ctx.Flash.Success(ctx.Tr("admin.comment.deletion_success"), true)
+	ctx.Flash.Success(ctx.Tr("moderation.comment.deletion_success"), true)
 	ctx.HTML(http.StatusOK, tplAlert)
 }
