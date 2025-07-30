@@ -17,7 +17,8 @@ import (
 type Repository struct {
 	Path string
 
-	tagCache *ObjectCache
+	tagCache    *ObjectCache
+	commitGraph CommitGraph
 
 	gpgSettings *GPGSettings
 
@@ -120,5 +121,6 @@ func (repo *Repository) Close() error {
 	}
 	repo.LastCommitCache = nil
 	repo.tagCache = nil
+	repo.commitGraph = nil
 	return nil
 }

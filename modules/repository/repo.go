@@ -70,6 +70,10 @@ func SyncReleasesWithTags(ctx context.Context, repo *repo_model.Repository, gitR
 		return pullMirrorReleaseSync(ctx, repo, gitRepo)
 	}
 
+	if err := gitRepo.LoadCommitGraph(ctx); err != nil {
+		return fmt.Errorf("unable to LoadCommitGraph in Repo[%d:%s/%s]: %w", repo.ID, repo.OwnerName, repo.Name, err)
+	}
+
 	existingRelTags := make(container.Set[string])
 	opts := repo_model.FindReleasesOptions{
 		IncludeDrafts: true,

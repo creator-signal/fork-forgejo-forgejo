@@ -40,6 +40,31 @@ func TestCommitsCountWithoutBase(t *testing.T) {
 	assert.Equal(t, int64(2), commitsCount)
 }
 
+func TestCommitsCountWithGraph(t *testing.T) {
+	bareRepo1Path := filepath.Join(testReposDir, "repo1_bare")
+
+	gitRepo, err := openRepositoryWithDefaultContext(bareRepo1Path)
+	require.NoError(t, err)
+	assert.NotNil(t, gitRepo)
+	defer gitRepo.Close()
+
+	c, err := gitRepo.GetBranchCommit("master")
+	require.NoError(t, err)
+
+	commitsCount, err := c.CommitsCount()
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(7), commitsCount)
+
+	err = gitRepo.LoadCommitGraph(DefaultContext)
+	require.NoError(t, err)
+
+	commitsCount, err = c.CommitsCount()
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(7), commitsCount)
+}
+
 func TestGetFullCommitID(t *testing.T) {
 	bareRepo1Path := filepath.Join(testReposDir, "repo1_bare")
 

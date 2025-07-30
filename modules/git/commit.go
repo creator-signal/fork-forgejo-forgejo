@@ -9,11 +9,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os/exec"
 	"strconv"
 	"strings"
 
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
 )
@@ -186,6 +188,35 @@ func CommitsCount(ctx context.Context, opts CommitsCountOptions) (int64, error) 
 
 // CommitsCount returns number of total commits of until current revision.
 func (c *Commit) CommitsCount() (int64, error) {
+	if c.repo.commitGraph != nil {
+		seenCommits := make(container.Set[ObjectIDKey])
+		workingSet := []ObjectID{c.ID}
+
+		for len(workingSet) > 0 {
+			cur := workingSet[0]
+			curKey := cur.Key()
+			workingSet = workingSet[1:]
+
+			if seenCommits.Contains(curKey) {
+				continue
+			}
+			seenCommits.Add(curKey)
+
+			parents, found := c.repo.commitGraph[curKey]
+			if !found {
+				return 0, fmt.Errorf("commit %s not found in commit graph", cur)
+			}
+
+			for _, parent := range parents {
+				if !seenCommits.Contains(parent.Key()) {
+					workingSet = append(workingSet, parent)
+				}
+			}
+		}
+
+		return int64(len(seenCommits)), nil
+	}
+
 	return CommitsCount(c.repo.Ctx, CommitsCountOptions{
 		RepoPath: c.repo.Path,
 		Revision: []string{c.ID.String()},
