@@ -55,7 +55,7 @@
     "vue-chartjs": "5.3.1",
     "vue-loader": "17.4.2",
     "vue3-calendar-heatmap": "2.0.5",
-    "webpack": "5.100.2",
+    "webpack": "5.101.0",
     "webpack-cli": "6.0.1",
     "wrap-ansi": "9.0.0"
   },
@@ -100,9 +100,6 @@
     "typescript-eslint": "8.37.0",
     "vite-string-plugin": "1.4.6",
     "vitest": "3.2.4"
-  },
-  "overrides": {
-    "stylus": "github:stylus/stylus#0.57.0"
   },
   "browserslist": [
     "defaults"
