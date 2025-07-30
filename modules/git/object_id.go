@@ -9,11 +9,14 @@ import (
 	"fmt"
 )
 
+type ObjectIDKey [32]byte
+
 type ObjectID interface {
 	String() string
 	IsZero() bool
 	RawValue() []byte
 	Type() ObjectFormat
+	Key() ObjectIDKey
 }
 
 /* SHA1 */
@@ -29,6 +32,12 @@ func (h *Sha1Hash) IsZero() bool {
 }
 func (h *Sha1Hash) RawValue() []byte { return h[:] }
 func (*Sha1Hash) Type() ObjectFormat { return Sha1ObjectFormat }
+
+func (h *Sha1Hash) Key() ObjectIDKey {
+	var res ObjectIDKey
+	copy(res[:], h[:])
+	return res
+}
 
 var _ ObjectID = &Sha1Hash{}
 
@@ -53,6 +62,9 @@ func (h *Sha256Hash) IsZero() bool {
 }
 func (h *Sha256Hash) RawValue() []byte { return h[:] }
 func (*Sha256Hash) Type() ObjectFormat { return Sha256ObjectFormat }
+func (h *Sha256Hash) Key() ObjectIDKey { return ObjectIDKey(*h) }
+
+var _ ObjectID = &Sha256Hash{}
 
 /* utility */
 func NewIDFromString(hexHash string) (ObjectID, error) {
