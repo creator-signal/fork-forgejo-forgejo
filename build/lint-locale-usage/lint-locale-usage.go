@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"go/ast"
 	goParser "go/parser"
@@ -12,6 +13,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -63,8 +65,118 @@ func InitLocaleTrFunctions() map[string][]uint {
 
 type Handler struct {
 	OnMsgid            func(fset *token.FileSet, pos token.Pos, msgid string)
+	OnMsgidPrefix      func(fset *token.FileSet, pos token.Pos, msgidPrefix string)
 	OnUnexpectedInvoke func(fset *token.FileSet, pos token.Pos, funcname string, argc int)
+	OnWarning          func(fset *token.FileSet, pos token.Pos, msg string)
 	LocaleTrFunctions  map[string][]uint
+}
+
+type StringTrie interface {
+	Matches(key []string) bool
+}
+
+type StringTrieMap map[string]StringTrie
+
+func (m *StringTrieMap) Matches(key []string) bool {
+	if len(key) == 0 || m == nil {
+		return true
+	}
+	value, ok := (*m)[key[0]]
+	if !ok {
+		return false
+	}
+	if value == nil {
+		return true
+	}
+	return value.Matches(key[1:])
+}
+
+func (m *StringTrieMap) Insert(key []string) {
+	if m == nil {
+		return
+	}
+
+	switch len(key) {
+	case 0:
+		return
+
+	case 1:
+		(*m)[key[0]] = nil
+
+	default:
+		if value, ok := (*m)[key[0]]; ok {
+			if value == nil {
+				return
+			}
+		} else {
+			tmp := make(StringTrieMap)
+			(*m)[key[0]] = &tmp
+		}
+		(*m)[key[0]].(*StringTrieMap).Insert(key[1:])
+	}
+}
+
+func DecodeKeyForStm(key string) []string {
+	ret := strings.Split(key, ".")
+	i := len(ret)
+	for i > 0 && ret[i-1] == "" {
+		i--
+	}
+	return ret[:i]
+}
+
+func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], allowedMaskedPrefixes *StringTrieMap) error {
+	file, err := os.Open(fname)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.HasSuffix(line, ".") {
+			allowedMaskedPrefixes.Insert(DecodeKeyForStm(line))
+		} else {
+			(*usedMsgids)[line] = struct{}{}
+		}
+	}
+	return scanner.Err()
+}
+
+func (handler Handler) HandleGoTrBasicLit(fset *token.FileSet, argLit *ast.BasicLit) {
+	if argLit.Kind == token.STRING {
+		// extract string content
+		arg, err := strconv.Unquote(argLit.Value)
+		if err == nil {
+			// found interesting strings
+			if strings.HasSuffix(arg, ".") || strings.HasSuffix(arg, "_") {
+				handler.OnMsgidPrefix(fset, argLit.ValuePos, arg)
+			} else {
+				handler.OnMsgid(fset, argLit.ValuePos, arg)
+			}
+		}
+	}
+}
+
+func (handler Handler) HandleGoTrArgument(fset *token.FileSet, n ast.Expr) {
+	if argLit, ok := n.(*ast.BasicLit); ok {
+		handler.HandleGoTrBasicLit(fset, argLit)
+	} else if argBinExpr, ok := n.(*ast.BinaryExpr); ok {
+		if argBinExpr.Op != token.ADD {
+			// pass
+		} else if argLit, ok := argBinExpr.X.(*ast.BasicLit); ok && argLit.Kind == token.STRING {
+			// extract string content
+			arg, err := strconv.Unquote(argLit.Value)
+			if err == nil {
+				// found interesting strings
+				handler.OnMsgidPrefix(fset, argLit.ValuePos, arg)
+			}
+		}
+	}
 }
 
 // the `Handle*File` functions follow the following calling convention:
@@ -74,7 +186,7 @@ type Handler struct {
 
 func (handler Handler) HandleGoFile(fname string, src any) error {
 	fset := token.NewFileSet()
-	node, err := goParser.ParseFile(fset, fname, src, goParser.SkipObjectResolution)
+	node, err := goParser.ParseFile(fset, fname, src, goParser.SkipObjectResolution|goParser.ParseComments)
 	if err != nil {
 		return LocatedError{
 			Location: fname,
@@ -86,44 +198,113 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 	ast.Inspect(node, func(n ast.Node) bool {
 		// search for function calls of the form `anything.Tr(any-string-lit, ...)`
 
-		call, ok := n.(*ast.CallExpr)
-		if !ok || len(call.Args) < 1 {
-			return true
-		}
+		if call, ok := n.(*ast.CallExpr); ok && len(call.Args) >= 1 {
+			funSel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
 
-		funSel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
-		}
+			ltf, ok := handler.LocaleTrFunctions[funSel.Sel.Name]
+			if !ok {
+				return true
+			}
 
-		ltf, ok := handler.LocaleTrFunctions[funSel.Sel.Name]
-		if !ok {
-			return true
-		}
+			var gotUnexpectedInvoke *int
 
-		var gotUnexpectedInvoke *int
+			for _, argNum := range ltf {
+				if len(call.Args) < int(argNum+1) {
+					argc := len(call.Args)
+					gotUnexpectedInvoke = &argc
+				} else {
+					handler.HandleGoTrArgument(fset, call.Args[int(argNum)])
+				}
+			}
 
-		for _, argNum := range ltf {
-			if len(call.Args) >= int(argNum+1) {
-				argLit, ok := call.Args[int(argNum)].(*ast.BasicLit)
-				if !ok || argLit.Kind != token.STRING {
-					continue
+			if gotUnexpectedInvoke != nil {
+				handler.OnUnexpectedInvoke(fset, funSel.Sel.NamePos, funSel.Sel.Name, *gotUnexpectedInvoke)
+			}
+		} else if composite, ok := n.(*ast.CompositeLit); ok {
+			ident, ok := composite.Type.(*ast.Ident)
+			if !ok {
+				return true
+			}
+
+			// special case: models/unit/unit.go
+			if strings.HasSuffix(fname, "unit.go") && ident.Name == "Unit" && len(composite.Elts) == 6 {
+				// NameKey has index 2
+				//   invoked like '{{ctx.Locale.Tr $unit.NameKey}}'
+				nameKey, ok := composite.Elts[2].(*ast.BasicLit)
+				if !ok || nameKey.Kind != token.STRING {
+					handler.OnWarning(fset, composite.Elts[2].Pos(), "unexpected initialization of 'Unit'")
+					return true
 				}
 
 				// extract string content
-				arg, err := strconv.Unquote(argLit.Value)
+				arg, err := strconv.Unquote(nameKey.Value)
 				if err == nil {
 					// found interesting strings
-					handler.OnMsgid(fset, argLit.ValuePos, arg)
+					handler.OnMsgid(fset, nameKey.ValuePos, arg)
 				}
-			} else {
-				argc := len(call.Args)
-				gotUnexpectedInvoke = &argc
 			}
-		}
+		} else if function, ok := n.(*ast.FuncDecl); ok {
+			matches := false
+			if function.Doc != nil {
+				for _, comment := range function.Doc.List {
+					if strings.TrimSpace(comment.Text) == "//llu:returnsTrKey" {
+						matches = true
+						break
+					}
+				}
+			}
+			if !matches {
+				return true
+			}
+			results := function.Type.Results.List
+			if len(results) != 1 {
+				handler.OnWarning(fset, function.Type.Func, fmt.Sprintf("function %s has unexpected return type; expected single return value", function.Name.Name))
+				return true
+			}
 
-		if gotUnexpectedInvoke != nil {
-			handler.OnUnexpectedInvoke(fset, funSel.Sel.NamePos, funSel.Sel.Name, *gotUnexpectedInvoke)
+			ast.Inspect(function.Body, func(n ast.Node) bool {
+				// search for return stmts
+				// TODO: what about nested functions?
+				if ret, ok := n.(*ast.ReturnStmt); ok {
+					for _, res := range ret.Results {
+						ast.Inspect(res, func(n ast.Node) bool {
+							if expr, ok := n.(ast.Expr); ok {
+								handler.HandleGoTrArgument(fset, expr)
+							}
+							return true
+						})
+					}
+					return false
+				}
+				return true
+			})
+			return true
+		} else if decl, ok := n.(*ast.GenDecl); ok && (decl.Tok == token.CONST || decl.Tok == token.VAR) {
+			matches := false
+			if decl.Doc != nil {
+				for _, comment := range decl.Doc.List {
+					if strings.TrimSpace(comment.Text) == "// llu:TrKeys" {
+						matches = true
+						break
+					}
+				}
+			}
+			if !matches {
+				return true
+			}
+			for _, spec := range decl.Specs {
+				// interpret all contained strings as message IDs
+				ast.Inspect(spec, func(n ast.Node) bool {
+					if argLit, ok := n.(*ast.BasicLit); ok {
+						handler.HandleGoTrBasicLit(fset, argLit)
+						return false
+					}
+					return true
+				})
+			}
 		}
 
 		return true
@@ -163,22 +344,26 @@ func (handler Handler) handleTemplateNode(fset *token.FileSet, node tmplParser.N
 			return
 		}
 
-		nodeChain, ok := nodeCommand.Args[0].(*tmplParser.ChainNode)
-		if !ok {
-			return
-		}
-
-		nodeIdent, ok := nodeChain.Node.(*tmplParser.IdentifierNode)
-		if !ok || nodeIdent.Ident != "ctx" || len(nodeChain.Field) != 2 || nodeChain.Field[0] != "Locale" {
-			return
-		}
-
-		ltf, ok := handler.LocaleTrFunctions[nodeChain.Field[1]]
-		if !ok {
-			return
+		funcname := ""
+		if nodeChain, ok := nodeCommand.Args[0].(*tmplParser.ChainNode); ok {
+			if nodeIdent, ok := nodeChain.Node.(*tmplParser.IdentifierNode); ok {
+				if nodeIdent.Ident != "ctx" || len(nodeChain.Field) != 2 || nodeChain.Field[0] != "Locale" {
+					return
+				}
+				funcname = nodeChain.Field[1]
+			}
+		} else if nodeField, ok := nodeCommand.Args[0].(*tmplParser.FieldNode); ok {
+			if len(nodeField.Ident) != 2 || !(nodeField.Ident[0] == "locale" || nodeField.Ident[0] == "Locale") {
+				return
+			}
+			funcname = nodeField.Ident[1]
 		}
 
 		var gotUnexpectedInvoke *int
+		ltf, ok := handler.LocaleTrFunctions[funcname]
+		if !ok {
+			return
+		}
 
 		for _, argNum := range ltf {
 			if len(nodeCommand.Args) >= int(argNum+2) {
@@ -195,7 +380,7 @@ func (handler Handler) handleTemplateNode(fset *token.FileSet, node tmplParser.N
 		}
 
 		if gotUnexpectedInvoke != nil {
-			handler.OnUnexpectedInvoke(fset, token.Pos(nodeChain.Pos), nodeChain.Field[1], *gotUnexpectedInvoke)
+			handler.OnUnexpectedInvoke(fset, token.Pos(nodeCommand.Pos), funcname, *gotUnexpectedInvoke)
 		}
 
 	default:
@@ -273,6 +458,7 @@ func (handler Handler) HandleTemplateFile(fname string, src any) error {
 // Possible command line flags:
 //
 //	--allow-missing-msgids        don't return an error code if missing message IDs are found
+//	--allow-unused-msgids         don't return an error code if unused message IDs are found
 //
 // EXIT CODES:
 //
@@ -281,13 +467,45 @@ func (handler Handler) HandleTemplateFile(fname string, src any) error {
 //	2  unable to parse locale ini/json files
 //	3  unable to parse go or text/template files
 //	4  found missing message IDs
+//	5  found unused message IDs
+//	6  invalid command line argument
+//	7  unable to parse allowed masked usages file
+//
+// SPECIAL GO DOC COMMENTS:
+//
+//	//llu:returnsTrKey
+//					can be used in front of functions to indicate
+//					that the function returns message IDs
+//
+//	// llu:TrKeys
+//					can be used in front of 'const' and 'var' blocks
+//					in order to mark all contained strings as message IDs
 //
 //nolint:forbidigo
 func main() {
 	allowMissingMsgids := false
+	allowUnusedMsgids := false
+	usedMsgids := make(container.Set[string])
+	allowedMaskedPrefixes := make(StringTrieMap)
+
 	for _, arg := range os.Args[1:] {
-		if arg == "--allow-missing-msgids" {
+		switch arg {
+		case "--allow-missing-msgids":
 			allowMissingMsgids = true
+
+		case "--allow-unused-msgids":
+			allowUnusedMsgids = true
+
+		default:
+			if argval, found := strings.CutPrefix(arg, "--allow-masked-usages-from="); found {
+				if err := ParseAllowedMaskedUsages(argval, &usedMsgids, &allowedMaskedPrefixes); err != nil {
+					fmt.Printf("%s:\tERROR: unable to parse masked usages: %s\n", argval, err.Error())
+					os.Exit(7)
+				}
+			} else {
+				fmt.Printf("<command line>:\tERROR: unknown argument: %s\n", arg)
+				os.Exit(6)
+			}
 		}
 	}
 
@@ -335,15 +553,24 @@ func main() {
 	gotAnyMsgidError := false
 
 	handler := Handler{
+		OnMsgidPrefix: func(fset *token.FileSet, pos token.Pos, msgidPrefix string) {
+			// TODO: perhaps we should check if we have any strings with such a prefix, but that's slow...
+			allowedMaskedPrefixes.Insert(DecodeKeyForStm(msgidPrefix))
+		},
 		OnMsgid: func(fset *token.FileSet, pos token.Pos, msgid string) {
 			if !msgids.Contains(msgid) {
 				gotAnyMsgidError = true
 				fmt.Printf("%s:\tmissing msgid: %s\n", fset.Position(pos).String(), msgid)
+			} else {
+				usedMsgids[msgid] = struct{}{}
 			}
 		},
 		OnUnexpectedInvoke: func(fset *token.FileSet, pos token.Pos, funcname string, argc int) {
 			gotAnyMsgidError = true
 			fmt.Printf("%s:\tunexpected invocation of %s with %d arguments\n", fset.Position(pos).String(), funcname, argc)
+		},
+		OnWarning: func(fset *token.FileSet, pos token.Pos, msg string) {
+			fmt.Printf("%s:\tWARNING: %s\n", fset.Position(pos).String(), msg)
 		},
 		LocaleTrFunctions: InitLocaleTrFunctions(),
 	}
@@ -377,7 +604,27 @@ func main() {
 		os.Exit(1)
 	}
 
+	unusedMsgids := []string{}
+
+	for msgid := range msgids {
+		if !usedMsgids.Contains(msgid) && !allowedMaskedPrefixes.Matches(DecodeKeyForStm(msgid)) {
+			unusedMsgids = append(unusedMsgids, msgid)
+		}
+	}
+
+	sort.Strings(unusedMsgids)
+
+	if len(unusedMsgids) != 0 {
+		fmt.Printf("=== unused msgids (%d): ===\n", len(unusedMsgids))
+		for _, msgid := range unusedMsgids {
+			fmt.Printf("- %s\n", msgid)
+		}
+	}
+
 	if !allowMissingMsgids && gotAnyMsgidError {
 		os.Exit(4)
+	}
+	if !allowUnusedMsgids && len(unusedMsgids) != 0 {
+		os.Exit(5)
 	}
 }

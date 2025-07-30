@@ -1,0 +1,62 @@
+# translation tooling test keys
+meta.last_line
+translation_meta.test
+
+# models/admin/task.go: instances of $TranslatableMessage.Format
+# this also gets instantiate as a Messenger once
+org.matrix.custom.html
+migrate.migrating_failed.error
+
+# models/asymkey/gpg_key_object_verification.go: $ObjectVerification.Reason
+# unfortunately, it is non-trivial to parse all the occurences
+gpg.error.extract_sign
+gpg.error.failed_retrieval_gpg_keys
+gpg.error.generate_hash
+gpg.error.no_committer_account
+
+# models/system/notice.go: func (n *Notice) TrStr() string
+admin.notices.type_1
+admin.notices.type_2
+
+# modules/setting/ui.go
+themes.names.
+
+# routers/web/repo/helper.go: "repo.tree_path_not_found_"+refType
+repo.tree_path_not_found_branch
+repo.tree_path_not_found_commit
+repo.tree_path_not_found_tag
+
+# services/context/context.go
+relativetime.
+
+# templates/mail/issue/default.tmpl: $.locale.Tr
+mail.issue.in_tree_path
+
+# templates/org/team/new.tmpl: ctx.Locale.Tr (print "repo.permissions." $unit.Name ".read")}, and such
+repo.permissions.
+
+# templates/package/metadata/arch.tmpl: $.locale.Tr
+packages.details.license
+
+# templates/repo/editor/commit_form.tmpl: ctx.Locale.Tr (printf "repo.signing.wont_sign.%s" .CanCommitToBranch.WontSignReason)
+repo.signing.wont_sign.
+
+# templates/repo/issue/view_content.tmpl: indirection via $closeTranslationKey
+repo.issues.close
+repo.pulls.close
+
+# templates/repo/issue/view_content/comments.tmpl: indirection via $refTr
+repo.issues.ref_closing_from
+repo.issues.ref_issue_from
+repo.issues.ref_pull_from
+repo.issues.ref_reopening_from
+
+# templates/repo/issue/view_content/comments.tmpl: ctx.Locale.Tr (printf "projects.type-%d.display_name" .OldProject.Type)
+projects.type-1.display_name
+projects.type-2.display_name
+projects.type-3.display_name
+
+# modules/migration/messenger.go: invocations of Messenger
+# services/migrations/migrate.go: messenger(...)
+# *: repo.migrate.*.description (unknown where they come from)
+repo.migrate.
