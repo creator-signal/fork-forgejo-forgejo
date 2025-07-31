@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
 	"forgejo.org/services/contexttest"
+	"forgejo.org/services/federation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,8 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
+
+	federation.Init()
 
 	mock := test.NewFederationServerMock()
 	federatedSrv := mock.DistantServer(t)
