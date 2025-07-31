@@ -30,6 +30,44 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRepoUpload(t *testing.T) {
+
+	unittest.PrepareTestEnv(t)
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	var (
+		opts = base.MigrateOptions{
+			Issues: true,
+		}
+		repoName = "test_repo"
+		uploader = NewGiteaLocalUploader(graceful.GetManager().HammerContext(), user, user.Name, repoName)
+	)
+	defer uploader.Close()
+
+	//token := os.Getenv("GITHUB_READ_TOKEN")
+	fixturePath := "./testdata/github/full_download"
+	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, false)
+	defer server.Close()
+
+	// Mock Data
+	repoMock := &base.Repository{
+		Name:          repoName,
+		Owner:         "go-gitea",
+		Description:   "Some mock repo",
+		CloneURL:      server.URL + "/go-gitea/test_repo.git",
+		OriginalURL:   server.URL + "/go-gitea/test_repo",
+		DefaultBranch: "master",
+		Website:       "https://codeberg.org/forgejo/forgejo/",
+	}
+
+	// Create Repo
+	if err := uploader.CreateRepo(repoMock, opts); err != nil {
+		log.Error(err.Error())
+		t.Fail()
+	}
+
+	unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: repoName})
+}
+
 func TestGiteaUploadRepo(t *testing.T) {
 	// FIXME: Since no accesskey or user/password will trigger rate limit of github, just skip
 	t.Skip()
