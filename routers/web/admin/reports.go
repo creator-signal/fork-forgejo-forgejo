@@ -256,20 +256,20 @@ func suspendAccount(ctx *context.Context, contentType moderation.ReportedContent
 		return
 	}
 
-	u, err := user.GetUserByID(ctx, contentID)
+	reportedUser, err := user.GetUserByID(ctx, contentID)
 	if err != nil {
 		// TODO: previous flash message does not get cleared when returning an error
 		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the user » %s", err.Error()))
 		return
 	}
 
-	if u.IsOrganization() {
+	if reportedUser.IsOrganization() {
 		ctx.Flash.Warning(ctx.Tr("moderation.users.cannot_suspend_org"), true)
 		ctx.HTML(http.StatusOK, tplAlert)
 		return
 	}
 
-	if u.ProhibitLogin {
+	if reportedUser.ProhibitLogin {
 		ctx.Flash.Info(ctx.Tr("moderation.users.already_suspended"), true)
 		ctx.HTML(http.StatusOK, tplAlert)
 		return
@@ -277,7 +277,7 @@ func suspendAccount(ctx *context.Context, contentType moderation.ReportedContent
 
 	authOpts := &user_service.UpdateAuthOptions{ProhibitLogin: optional.Some(true)}
 	// TODO: should we implement a new, simpler, SuspendAccount() method?!
-	if err = user_service.UpdateAuth(ctx, u, authOpts); err != nil {
+	if err = user_service.UpdateAuth(ctx, reportedUser, authOpts); err != nil {
 		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to suspend the user » %s", err.Error()))
 		return
 	}
@@ -299,25 +299,25 @@ func deleteAccount(ctx *context.Context, contentType moderation.ReportedContentT
 		return
 	}
 
-	u, err := user.GetUserByID(ctx, contentID)
+	reportedUser, err := user.GetUserByID(ctx, contentID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the user » %s", err.Error()))
 		return
 	}
 
-	if u.IsOrganization() {
-		org := organization.OrgFromUser(u)
-		if err = org_service.DeleteOrganization(ctx, org, true); err != nil {
+	if reportedUser.IsOrganization() {
+		reportedOrg := organization.OrgFromUser(reportedUser)
+		if err = org_service.DeleteOrganization(ctx, reportedOrg, true); err != nil {
 			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the organization » %s", err.Error()))
 			return
 		}
-		log.Trace("Organization deleted by admin (%s): %s", ctx.Doer.Name, u.Name)
+		log.Trace("Organization deleted by admin (%s): %s", ctx.Doer.Name, reportedOrg.Name)
 	} else {
-		if err = user_service.DeleteUser(ctx, u, true); err != nil {
+		if err = user_service.DeleteUser(ctx, reportedUser, true); err != nil {
 			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the user » %s", err.Error()))
 			return
 		}
-		log.Trace("Account deleted by admin (%s): %s", ctx.Doer.Name, u.Name)
+		log.Trace("Account deleted by admin (%s): %s", ctx.Doer.Name, reportedUser.Name)
 	}
 
 	// TODO: when deleting content maybe we should always mark the reports as handled (does it makes sense to keep them open?!)
