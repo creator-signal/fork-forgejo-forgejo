@@ -118,6 +118,38 @@ func TestRepoUpload(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, issues, 2)
 
+	// Create and Test Comment Uploading
+	issueComment := &base.Comment{
+		IssueIndex:  6,
+		Index:       0,
+		CommentType: "comment",
+		PosterID:    119759884,
+		PosterName:  "Fluffy728",
+		PosterEmail: "",
+		Created:     time.Now().Add(time.Duration(1)),
+		Updated:     time.Now().Add(time.Duration(1)),
+		Content:     "Mock Comment",
+		Reactions:   nil,
+		Meta:        nil,
+	}
+	prComment := &base.Comment{
+		IssueIndex:  4,
+		Index:       0,
+		CommentType: "comment",
+		PosterID:    119759884,
+		PosterName:  "Fluffy728",
+		PosterEmail: "",
+		Created:     time.Now().Add(time.Duration(2)),
+		Updated:     time.Now().Add(time.Duration(2)),
+		Content:     "Mock Comment",
+		Reactions:   nil,
+		Meta:        nil,
+	}
+	if err := uploader.CreateComments(issueComment, prComment); err != nil {
+		log.Error(err.Error())
+		t.Fail()
+	}
+
 }
 
 func TestGiteaUploadRepo(t *testing.T) {
