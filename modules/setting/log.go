@@ -57,7 +57,7 @@ func prepareLoggerConfig(rootCfg ConfigProvider) {
 	sec := rootCfg.Section("log")
 
 	// Priority: `LOGGER_DEFAULT_MODE` -> `logger.default.MODE`
-	deprecatedSetting(rootCfg, "log", "logger.default.MODE", "log", "LOGGER_DEFAULT_MODE", "v14")
+	deprecatedSettingWarning(rootCfg, "log", "logger.default.MODE", "log", "LOGGER_DEFAULT_MODE")
 	hasNoValue := !sec.HasKey("LOGGER_DEFAULT_MODE")
 	if hasNoValue && sec.HasKey("logger.default.MODE") {
 		sec.Key("LOGGER_DEFAULT_MODE").SetValue(sec.Key("logger.default.MODE").String())
@@ -68,9 +68,9 @@ func prepareLoggerConfig(rootCfg ConfigProvider) {
 	}
 
 	// Priority: `ENABLE_ACCESS_LOG` -> `LOGGER_ACCESS_MODE` -> `logger.access.MODE` -> `ACCESS`
-	deprecatedSetting(rootCfg, "log", "ACCESS", "log", "LOGGER_ACCESS_MODE", "v14")
-	deprecatedSetting(rootCfg, "log", "ENABLE_ACCESS_LOG", "log", "LOGGER_ACCESS_MODE", "v14")
-	deprecatedSetting(rootCfg, "log", "logger.access.MODE", "log", "LOGGER_ACCESS_MODE", "v14")
+	deprecatedSettingWarning(rootCfg, "log", "ACCESS", "log", "LOGGER_ACCESS_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "ENABLE_ACCESS_LOG", "log", "LOGGER_ACCESS_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "logger.access.MODE", "log", "LOGGER_ACCESS_MODE")
 	hasNoValue = !sec.HasKey("LOGGER_ACCESS_MODE")
 	if hasNoValue && sec.HasKey("logger.access.MODE") {
 		sec.Key("LOGGER_ACCESS_MODE").SetValue(sec.Key("logger.access.MODE").String())
@@ -84,9 +84,9 @@ func prepareLoggerConfig(rootCfg ConfigProvider) {
 	}
 
 	// Priority: `DISABLE_ROUTER_LOG` -> `LOGGER_ROUTER_MODE` -> `logger.router.MODE` -> `ROUTER`
-	deprecatedSetting(rootCfg, "log", "ROUTER", "log", "LOGGER_ROUTER_MODE", "v14")
-	deprecatedSetting(rootCfg, "log", "DISABLE_ROUTER_LOG", "log", "LOGGER_ROUTER_MODE", "v14")
-	deprecatedSetting(rootCfg, "log", "logger.router.MODE", "log", "LOGGER_ROUTER_MODE", "v14")
+	deprecatedSettingWarning(rootCfg, "log", "ROUTER", "log", "LOGGER_ROUTER_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "DISABLE_ROUTER_LOG", "log", "LOGGER_ROUTER_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "logger.router.MODE", "log", "LOGGER_ROUTER_MODE")
 	hasNoValue = !sec.HasKey("LOGGER_ROUTER_MODE")
 	if hasNoValue && sec.HasKey("logger.router.MODE") {
 		sec.Key("LOGGER_ROUTER_MODE").SetValue(sec.Key("logger.router.MODE").String())
@@ -105,9 +105,9 @@ func prepareLoggerConfig(rootCfg ConfigProvider) {
 	}
 
 	// Priority: `ENABLE_XORM_LOG` -> `LOGGER_XORM_MODE` -> `logger.xorm.MODE` -> `XORM`
-	deprecatedSetting(rootCfg, "log", "XORM", "log", "LOGGER_XORM_MODE", "v14")
-	deprecatedSetting(rootCfg, "log", "ENABLE_XORM_LOG", "log", "LOGGER_XORM_MODE", "v14")
-	deprecatedSetting(rootCfg, "log", "logger.xorm.MODE", "log", "LOGGER_XORM_MODE", "v14")
+	deprecatedSettingWarning(rootCfg, "log", "XORM", "log", "LOGGER_XORM_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "ENABLE_XORM_LOG", "log", "LOGGER_XORM_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "logger.xorm.MODE", "log", "LOGGER_XORM_MODE")
 	hasNoValue = !sec.HasKey("LOGGER_XORM_MODE")
 	if hasNoValue && sec.HasKey("logger.xorm.MODE") {
 		sec.Key("LOGGER_XORM_MODE").SetValue(sec.Key("logger.xorm.MODE").String())
