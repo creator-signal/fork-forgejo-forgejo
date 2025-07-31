@@ -43,7 +43,6 @@ func TestRepoUpload(t *testing.T) {
 	)
 	defer uploader.Close()
 
-	//token := os.Getenv("GITHUB_READ_TOKEN")
 	fixturePath := "./testdata/github/full_download"
 	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, false)
 	defer server.Close()
@@ -65,7 +64,60 @@ func TestRepoUpload(t *testing.T) {
 		t.Fail()
 	}
 
-	unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: repoName})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: repoName})
+
+	// Create and Test Issues Uploading
+	issueA := &base.Issue{
+		Title:        "Hi guys I have some feedback to share",
+		Number:       6,
+		PosterID:     119759884,
+		PosterName:   "Fluffy728",
+		PosterEmail:  "",
+		Content:      "Mock Content",
+		Milestone:    "Mock Milestone",
+		State:        "open",
+		Created:      time.Now(),
+		Updated:      time.Now().Add(time.Duration(1)),
+		Labels:       nil,
+		Reactions:    nil,
+		Closed:       nil,
+		IsLocked:     false,
+		Assignees:    nil,
+		ForeignIndex: 0,
+	}
+
+	issueB := &base.Issue{
+		Title:        "More Feedback",
+		Number:       7,
+		PosterID:     119759884,
+		PosterName:   "Fluffy728",
+		PosterEmail:  "",
+		Content:      "Mock Content",
+		Milestone:    "Mock Milestone",
+		State:        "open",
+		Created:      time.Now(),
+		Updated:      time.Now().Add(time.Duration(1)),
+		Labels:       nil,
+		Reactions:    nil,
+		Closed:       nil,
+		IsLocked:     false,
+		Assignees:    nil,
+		ForeignIndex: 0,
+	}
+
+	if err := uploader.CreateIssues(issueA, issueB); err != nil {
+		log.Error(err.Error())
+		t.Fail()
+	}
+
+	issues, err := issues_model.Issues(db.DefaultContext, &issues_model.IssuesOptions{
+		RepoIDs:  []int64{repo.ID},
+		IsPull:   optional.Some(false),
+		SortType: "oldest",
+	})
+	require.NoError(t, err)
+	assert.Len(t, issues, 2)
+
 }
 
 func TestGiteaUploadRepo(t *testing.T) {
