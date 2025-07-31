@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"forgejo.org/models"
 	"forgejo.org/models/issues"
 	"forgejo.org/models/moderation"
 	"forgejo.org/models/organization"
@@ -309,26 +308,13 @@ func deleteAccount(ctx *context.Context, contentType moderation.ReportedContentT
 	if u.IsOrganization() {
 		org := organization.OrgFromUser(u)
 		if err = org_service.DeleteOrganization(ctx, org, true); err != nil {
-			if models.IsErrUserOwnRepos(err) ||
-				models.IsErrUserOwnPackages(err) {
-				ctx.Error(http.StatusUnprocessableEntity, fmt.Sprintf("Cannot delete organization » %s", err.Error()))
-			} else {
-				ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the organization » %s", err.Error()))
-			}
+			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the organization » %s", err.Error()))
 			return
 		}
 		log.Trace("Organization deleted by admin (%s): %s", ctx.Doer.Name, u.Name)
 	} else {
 		if err = user_service.DeleteUser(ctx, u, true); err != nil {
-			if models.IsErrUserOwnRepos(err) ||
-				models.IsErrUserHasOrgs(err) ||
-				models.IsErrUserOwnPackages(err) ||
-				models.IsErrDeleteLastAdminUser(err) {
-				// TODO: Is it possible to get such errors when deleting with purge=true?!
-				ctx.Error(http.StatusUnprocessableEntity, fmt.Sprintf("Cannot delete user » %s", err.Error()))
-			} else {
-				ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the user » %s", err.Error()))
-			}
+			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the user » %s", err.Error()))
 			return
 		}
 		log.Trace("Account deleted by admin (%s): %s", ctx.Doer.Name, u.Name)
