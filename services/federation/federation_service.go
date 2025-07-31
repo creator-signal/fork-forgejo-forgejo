@@ -23,6 +23,9 @@ import (
 )
 
 func Init() error {
+	if !setting.Federation.Enabled {
+		return nil
+	}
 	if err := initDeliveryQueue(); err != nil {
 		return err
 	}
