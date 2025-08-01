@@ -26,10 +26,7 @@ func Init() error {
 	if !setting.Federation.Enabled {
 		return nil
 	}
-	if err := initDeliveryQueue(); err != nil {
-		return err
-	}
-	return initPendingQueue()
+	return initDeliveryQueue()
 }
 
 func FindOrCreateFederationHost(ctx context.Context, actorURI string) (*forgefed.FederationHost, error) {
