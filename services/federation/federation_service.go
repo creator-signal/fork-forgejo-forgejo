@@ -29,9 +29,6 @@ func Init() error {
 	if err := initDeliveryQueue(); err != nil {
 		return err
 	}
-	if err := initRefreshQueue(); err != nil {
-		return err
-	}
 	return initPendingQueue()
 }
 
