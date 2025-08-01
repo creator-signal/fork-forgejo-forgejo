@@ -117,5 +117,8 @@
     "admin.config.global_require_2fa.none": "No",
     "admin.config.global_require_2fa.all": "All",
     "admin.config.global_require_2fa.admin": "Admin",
+    "settings.twofa_reenroll_desc": "Re-enroll your two-factor authentication",
+    "settings.twofa_reenroll": "Re-enroll two-factor authentication",
+    "settings.disable_required_twofa_desc": "Disabling two-factor authentication will prevent you from accessing your account. Continue?",
     "meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }

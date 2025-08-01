@@ -592,6 +592,8 @@ func registerRoutes(m *web.Route) {
 				m.Post("/disable", security.DisableTwoFactor)
 				m.Get("/enroll", security.EnrollTwoFactor)
 				m.Post("/enroll", web.Bind(forms.TwoFactorAuthForm{}), security.EnrollTwoFactorPost)
+				m.Get("/reenroll", security.ReenrollTwoFactor)
+				m.Post("/reenroll", web.Bind(forms.TwoFactorAuthForm{}), security.ReenrollTwoFactorPost)
 			})
 			m.Group("/webauthn", func() {
 				m.Post("/request_register", web.Bind(forms.WebauthnRegistrationForm{}), security.WebAuthnRegister)
