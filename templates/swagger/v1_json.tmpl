@@ -334,7 +334,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "List all emails",
+        "summary": "List all users' email addresses",
         "operationId": "adminGetAllEmails",
         "parameters": [
           {
@@ -368,7 +368,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Search all emails",
+        "summary": "Search users' email addresses",
         "operationId": "adminSearchEmails",
         "parameters": [
           {
@@ -408,7 +408,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "List system's webhooks",
+        "summary": "List global (system) webhooks",
         "operationId": "adminListHooks",
         "parameters": [
           {
@@ -1315,7 +1315,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Create a user",
+        "summary": "Create a user account",
         "operationId": "adminCreateUser",
         "parameters": [
           {
@@ -1350,7 +1350,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Delete a user",
+        "summary": "Delete user account",
         "operationId": "adminDeleteUser",
         "parameters": [
           {
@@ -1437,7 +1437,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Add a public key on behalf of a user",
+        "summary": "Add an SSH public key to user's account",
         "operationId": "adminCreatePublicKey",
         "parameters": [
           {
@@ -1476,7 +1476,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Delete a user's public key",
+        "summary": "Remove a public key from user's account",
         "operationId": "adminDeleteUserPublicKey",
         "parameters": [
           {
@@ -2253,7 +2253,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get list of organizations",
+        "summary": "List all organizations",
         "operationId": "orgGetAll",
         "parameters": [
           {
@@ -2476,7 +2476,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "List an organization's actions secrets",
+        "summary": "List actions secrets of an organization",
         "operationId": "orgListActionsSecrets",
         "parameters": [
           {
@@ -2609,7 +2609,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get an org-level variables list",
+        "summary": "List variables of an organization",
         "operationId": "getOrgVariablesList",
         "parameters": [
           {
@@ -2653,7 +2653,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get an org-level variable",
+        "summary": "Get organization's variable by name",
         "operationId": "getOrgVariable",
         "parameters": [
           {
@@ -2693,7 +2693,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Update an org-level variable",
+        "summary": "Update variable in organization",
         "operationId": "updateOrgVariable",
         "parameters": [
           {
@@ -2743,7 +2743,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Create an org-level variable",
+        "summary": "Create a new variable in organization",
         "operationId": "createOrgVariable",
         "parameters": [
           {
@@ -2790,7 +2790,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Delete an org-level variable",
+        "summary": "Delete organization's variable by name",
         "operationId": "deleteOrgVariable",
         "parameters": [
           {
@@ -2883,7 +2883,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Update Avatar",
+        "summary": "Update an organization's avatar",
         "operationId": "orgUpdateAvatar",
         "parameters": [
           {
@@ -2917,7 +2917,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Delete Avatar",
+        "summary": "Delete an organization's avatar. It will be replaced by a default one",
         "operationId": "orgDeleteAvatar",
         "parameters": [
           {
@@ -5825,7 +5825,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "Update avatar",
+        "summary": "Update a repository's avatar",
         "operationId": "repoUpdateAvatar",
         "parameters": [
           {
@@ -5866,7 +5866,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "Delete avatar",
+        "summary": "Delete a repository's avatar",
         "operationId": "repoDeleteAvatar",
         "parameters": [
           {
@@ -13785,7 +13785,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "create review requests for a pull request",
+        "summary": "Create review requests for a pull request",
         "operationId": "repoCreatePullReviewRequests",
         "parameters": [
           {
@@ -13838,7 +13838,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "cancel review requests for a pull request",
+        "summary": "Cancel review requests for a pull request",
         "operationId": "repoDeletePullReviewRequests",
         "parameters": [
           {
@@ -14653,7 +14653,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "add a push mirror to the repository",
+        "summary": "Set up a new push mirror in a repository",
         "operationId": "repoAddPushMirror",
         "parameters": [
           {
@@ -14797,7 +14797,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "deletes a push mirror from a repository by remoteName",
+        "summary": "Remove a push mirror from a repository by remoteName",
         "operationId": "repoDeletePushMirror",
         "parameters": [
           {
@@ -18121,12 +18121,12 @@
         "tags": [
           "repository"
         ],
-        "summary": "search topics via keyword",
+        "summary": "Search for topics by keyword",
         "operationId": "topicSearch",
         "parameters": [
           {
             "type": "string",
-            "description": "keywords to search",
+            "description": "keyword to search for",
             "name": "q",
             "in": "query",
             "required": true
@@ -18617,7 +18617,7 @@
         "tags": [
           "user"
         ],
-        "summary": "creates a new OAuth2 application",
+        "summary": "Creates a new OAuth2 application",
         "operationId": "userCreateOAuth2Application",
         "parameters": [
           {
@@ -18653,7 +18653,7 @@
         "tags": [
           "user"
         ],
-        "summary": "get an OAuth2 Application",
+        "summary": "Get an OAuth2 application",
         "operationId": "userGetOAuth2Application",
         "parameters": [
           {
@@ -18687,7 +18687,7 @@
         "tags": [
           "user"
         ],
-        "summary": "delete an OAuth2 Application",
+        "summary": "Delete an OAuth2 application",
         "operationId": "userDeleteOAuth2Application",
         "parameters": [
           {
@@ -18721,7 +18721,7 @@
         "tags": [
           "user"
         ],
-        "summary": "update an OAuth2 Application, this includes regenerating the client secret",
+        "summary": "Update an OAuth2 application, this includes regenerating the client secret",
         "operationId": "userUpdateOAuth2Application",
         "parameters": [
           {
@@ -18765,7 +18765,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Update Avatar",
+        "summary": "Update avatar of the current user",
         "operationId": "userUpdateAvatar",
         "parameters": [
           {
@@ -18795,7 +18795,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Delete Avatar",
+        "summary": "Delete avatar of the current user. It will be replaced by a default one",
         "operationId": "userDeleteAvatar",
         "responses": {
           "204": {
@@ -18818,7 +18818,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Blocks a user from the doer.",
+        "summary": "Blocks a user from the doer",
         "operationId": "userBlockUser",
         "parameters": [
           {
@@ -18856,7 +18856,7 @@
         "tags": [
           "user"
         ],
-        "summary": "List the authenticated user's email addresses",
+        "summary": "List all email addresses of the current user",
         "operationId": "userListEmails",
         "responses": {
           "200": {
@@ -18877,7 +18877,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Add email addresses",
+        "summary": "Add an email addresses to the current user's account",
         "operationId": "userAddEmail",
         "parameters": [
           {
@@ -18910,7 +18910,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Delete email addresses",
+        "summary": "Delete email addresses from the current user's account",
         "operationId": "userDeleteEmail",
         "parameters": [
           {
@@ -19207,7 +19207,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Create a GPG key",
+        "summary": "Add a GPG public key to current user's account",
         "operationId": "userCurrentPostGPGKey",
         "parameters": [
           {
@@ -19279,7 +19279,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Remove a GPG key",
+        "summary": "Remove a GPG public key from current user's account",
         "operationId": "userCurrentDeleteGPGKey",
         "parameters": [
           {
@@ -19989,7 +19989,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Get user settings",
+        "summary": "Get current user's account settings",
         "operationId": "getUserSettings",
         "responses": {
           "200": {
@@ -20010,7 +20010,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Update user settings",
+        "summary": "Update settings in current user's account",
         "operationId": "updateUserSettings",
         "parameters": [
           {
@@ -20357,7 +20357,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Unblocks a user from the doer.",
+        "summary": "Unblocks a user from the doer",
         "operationId": "userUnblockUser",
         "parameters": [
           {
@@ -21030,7 +21030,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Create an access token",
+        "summary": "Generate an access token for the current user",
         "operationId": "userCreateToken",
         "parameters": [
           {
@@ -21072,7 +21072,7 @@
         "tags": [
           "user"
         ],
-        "summary": "delete an access token",
+        "summary": "Delete an access token from current user's account",
         "operationId": "userDeleteAccessToken",
         "parameters": [
           {
