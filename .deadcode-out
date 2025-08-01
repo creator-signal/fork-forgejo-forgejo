@@ -55,6 +55,7 @@ forgejo.org/models/user
 	IsErrUserSettingIsNotExist
 	GetUserAllSettings
 	DeleteUserSetting
+	GetFederatedUser
 
 forgejo.org/modules/activitypub
 	NewContext
@@ -88,6 +89,7 @@ forgejo.org/modules/forgefed
 	NewForgeUndoLike
 	ForgeUndoLike.UnmarshalJSON
 	ForgeUndoLike.Validate
+	NewPersonIDFromModel
 	GetItemByType
 	JSONUnmarshalerFn
 	NotEmpty
