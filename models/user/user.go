@@ -236,18 +236,17 @@ func GetAllAdmins(ctx context.Context) ([]*User, error) {
 
 // MustHaveTwoFactor returns true if the user is a individual and requires 2fa
 func (u *User) MustHaveTwoFactor() bool {
-	if !u.IsIndividual() || setting.GlobalRequireTwoFactor.IsNone() {
+	if !u.IsIndividual() || setting.GlobalTwoFactorRequirement.IsNone() {
 		return false
 	}
 
-	return setting.GlobalRequireTwoFactor.IsAll() || (u.IsAdmin && setting.GlobalRequireTwoFactor.IsAdmin())
+	return setting.GlobalTwoFactorRequirement.IsAll() || (u.IsAdmin && setting.GlobalTwoFactorRequirement.IsAdmin())
 }
 
 // IsAccessAllowed determines whether the user is permitted to log in based on
-// their activation status, login prohibition, account type, 2FA requirement,
-// and 2FA enrollment status.
+// their activation status, login prohibition, 2FA requirement and 2FA enrollment status.
 func (u *User) IsAccessAllowed(ctx context.Context) bool {
-	if !u.IsActive || u.ProhibitLogin || !u.IsIndividual() || u.IsGhost() {
+	if !u.IsActive || u.ProhibitLogin {
 		return false
 	}
 	if !u.MustHaveTwoFactor() {

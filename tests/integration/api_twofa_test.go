@@ -143,7 +143,7 @@ func TestAPIWithRequiredTwoFactor(t *testing.T) {
 		}
 	}
 
-	t.Run("NoneTwoFactorRequired", func(t *testing.T) {
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
 		// this should be the default, so don't have to set the variable
 
 		t.Run("no 2fa", func(t *testing.T) {
@@ -163,8 +163,8 @@ func TestAPIWithRequiredTwoFactor(t *testing.T) {
 		})
 	})
 
-	t.Run("AllTwoFactorRequired", func(t *testing.T) {
-		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AllTwoFactorRequired)()
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
 
 		t.Run("no 2fa", func(t *testing.T) {
 			runTest(t, adminUser, false, http.StatusForbidden, require2FaMessage)
@@ -183,8 +183,8 @@ func TestAPIWithRequiredTwoFactor(t *testing.T) {
 		})
 	})
 
-	t.Run("AdminTwoFactorRequired", func(t *testing.T) {
-		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AdminTwoFactorRequired)()
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
 
 		t.Run("no 2fa", func(t *testing.T) {
 			runTest(t, adminUser, false, http.StatusForbidden, require2FaMessage)

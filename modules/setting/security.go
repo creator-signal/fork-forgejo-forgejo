@@ -20,7 +20,7 @@ var (
 	SecretKey                          string
 	InternalToken                      string // internal access token
 	LogInRememberDays                  int
-	GlobalRequireTwoFactor             RequireTwoFactorType
+	GlobalTwoFactorRequirement         TwoFactorRequirementType
 	CookieRememberName                 string
 	ReverseProxyAuthUser               string
 	ReverseProxyAuthEmail              string
@@ -114,7 +114,7 @@ func loadSecurityFrom(rootCfg ConfigProvider) {
 	}
 	keying.Init([]byte(SecretKey))
 
-	GlobalRequireTwoFactor = NewRequireTwoFactorType(sec.Key("GLOBAL_REQUIRE_TWO_FACTOR").String())
+	GlobalTwoFactorRequirement = NewTwoFactorRequirementType(sec.Key("GLOBAL_TWO_FACTOR_REQUIREMENT").String())
 
 	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").MustString("gitea_incredible")
 
@@ -175,37 +175,37 @@ func loadSecurityFrom(rootCfg ConfigProvider) {
 	}
 }
 
-type RequireTwoFactorType string
+type TwoFactorRequirementType string
 
 const (
-	NoneTwoFactorRequired  RequireTwoFactorType = "none"
-	AllTwoFactorRequired   RequireTwoFactorType = "all"
-	AdminTwoFactorRequired RequireTwoFactorType = "admin"
+	NoneTwoFactorRequirement  TwoFactorRequirementType = "none"
+	AllTwoFactorRequirement   TwoFactorRequirementType = "all"
+	AdminTwoFactorRequirement TwoFactorRequirementType = "admin"
 )
 
-func NewRequireTwoFactorType(requireTwoFactor string) RequireTwoFactorType {
-	switch requireTwoFactor {
-	case AllTwoFactorRequired.String():
-		return AllTwoFactorRequired
-	case AdminTwoFactorRequired.String():
-		return AdminTwoFactorRequired
+func NewTwoFactorRequirementType(twoFactorRequirement string) TwoFactorRequirementType {
+	switch twoFactorRequirement {
+	case AllTwoFactorRequirement.String():
+		return AllTwoFactorRequirement
+	case AdminTwoFactorRequirement.String():
+		return AdminTwoFactorRequirement
 	default:
-		return NoneTwoFactorRequired
+		return NoneTwoFactorRequirement
 	}
 }
 
-func (r RequireTwoFactorType) String() string {
+func (r TwoFactorRequirementType) String() string {
 	return string(r)
 }
 
-func (r RequireTwoFactorType) IsNone() bool {
-	return r == NoneTwoFactorRequired
+func (r TwoFactorRequirementType) IsNone() bool {
+	return r == NoneTwoFactorRequirement
 }
 
-func (r RequireTwoFactorType) IsAll() bool {
-	return r == AllTwoFactorRequired
+func (r TwoFactorRequirementType) IsAll() bool {
+	return r == AllTwoFactorRequirement
 }
 
-func (r RequireTwoFactorType) IsAdmin() bool {
-	return r == AdminTwoFactorRequired
+func (r TwoFactorRequirementType) IsAdmin() bool {
+	return r == AdminTwoFactorRequirement
 }

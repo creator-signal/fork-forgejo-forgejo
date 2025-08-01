@@ -641,37 +641,37 @@ func TestMustHaveTwoFactor(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
 	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
 	_, ghostUser := user_model.GetUserFromMap(int64(user_model.GhostUserID), map[int64]*user_model.User{})
 
-	t.Run("NoneTwoFactorRequired", func(t *testing.T) {
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
 		// this should be the default, so don't have to set the variable
 		assert.False(t, adminUser.MustHaveTwoFactor())
-		assert.False(t, org.MustHaveTwoFactor())
 		assert.False(t, normalUser.MustHaveTwoFactor())
 		assert.False(t, restrictedUser.MustHaveTwoFactor())
+		assert.False(t, org.MustHaveTwoFactor())
 		assert.False(t, ghostUser.MustHaveTwoFactor())
 	})
 
-	t.Run("AllTwoFactorRequired", func(t *testing.T) {
-		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AllTwoFactorRequired)()
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
 
 		assert.True(t, adminUser.MustHaveTwoFactor())
-		assert.False(t, org.MustHaveTwoFactor())
 		assert.True(t, normalUser.MustHaveTwoFactor())
 		assert.True(t, restrictedUser.MustHaveTwoFactor())
+		assert.False(t, org.MustHaveTwoFactor())
 		assert.True(t, ghostUser.MustHaveTwoFactor())
 	})
 
-	t.Run("AdminTwoFactorRequired", func(t *testing.T) {
-		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AdminTwoFactorRequired)()
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
 
 		assert.True(t, adminUser.MustHaveTwoFactor())
-		assert.False(t, org.MustHaveTwoFactor())
 		assert.False(t, normalUser.MustHaveTwoFactor())
 		assert.False(t, restrictedUser.MustHaveTwoFactor())
+		assert.False(t, org.MustHaveTwoFactor())
 		assert.False(t, ghostUser.MustHaveTwoFactor())
 	})
 }
@@ -689,9 +689,9 @@ func TestIsAccessAllowed(t *testing.T) {
 	}
 
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
 	inactiveUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 9})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
 	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
 	prohibitLoginUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 37})
 	_, ghostUser := user_model.GetUserFromMap(int64(user_model.GhostUserID), map[int64]*user_model.User{})
@@ -699,14 +699,14 @@ func TestIsAccessAllowed(t *testing.T) {
 	// users with enabled WebAuthn
 	normalWebAuthnUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 32})
 
-	t.Run("NoneTwoFactorRequired", func(t *testing.T) {
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
 		// this should be the default, so don't have to set the variable
 
 		t.Run("no 2fa", func(t *testing.T) {
 			runTest(t, adminUser, false, true)
-			runTest(t, org, false, false)
 			runTest(t, normalUser, false, true)
 			runTest(t, inactiveUser, false, false)
+			runTest(t, org, false, true)
 			runTest(t, restrictedUser, false, true)
 			runTest(t, prohibitLoginUser, false, false)
 			runTest(t, ghostUser, false, false)
@@ -716,22 +716,22 @@ func TestIsAccessAllowed(t *testing.T) {
 			runTest(t, normalWebAuthnUser, false, true)
 
 			runTest(t, adminUser, true, true)
-			runTest(t, org, true, false)
 			runTest(t, normalUser, true, true)
 			runTest(t, inactiveUser, true, false)
+			runTest(t, org, true, true)
 			runTest(t, restrictedUser, true, true)
 			runTest(t, prohibitLoginUser, true, false)
 		})
 	})
 
-	t.Run("AllTwoFactorRequired", func(t *testing.T) {
-		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AllTwoFactorRequired)()
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
 
 		t.Run("no 2fa", func(t *testing.T) {
 			runTest(t, adminUser, false, false)
-			runTest(t, org, false, false)
 			runTest(t, normalUser, false, false)
 			runTest(t, inactiveUser, false, false)
+			runTest(t, org, false, true)
 			runTest(t, restrictedUser, false, false)
 			runTest(t, prohibitLoginUser, false, false)
 			runTest(t, ghostUser, false, false)
@@ -741,22 +741,22 @@ func TestIsAccessAllowed(t *testing.T) {
 			runTest(t, normalWebAuthnUser, false, true)
 
 			runTest(t, adminUser, true, true)
-			runTest(t, org, true, false)
 			runTest(t, normalUser, true, true)
 			runTest(t, inactiveUser, true, false)
+			runTest(t, org, true, true)
 			runTest(t, restrictedUser, true, true)
 			runTest(t, prohibitLoginUser, true, false)
 		})
 	})
 
-	t.Run("AdminTwoFactorRequired", func(t *testing.T) {
-		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AdminTwoFactorRequired)()
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
 
 		t.Run("no 2fa", func(t *testing.T) {
 			runTest(t, adminUser, false, false)
-			runTest(t, org, false, false)
 			runTest(t, normalUser, false, true)
 			runTest(t, inactiveUser, false, false)
+			runTest(t, org, false, true)
 			runTest(t, restrictedUser, false, true)
 			runTest(t, prohibitLoginUser, false, false)
 			runTest(t, ghostUser, false, false)
@@ -766,9 +766,9 @@ func TestIsAccessAllowed(t *testing.T) {
 			runTest(t, normalWebAuthnUser, false, true)
 
 			runTest(t, adminUser, true, true)
-			runTest(t, org, true, false)
 			runTest(t, normalUser, true, true)
 			runTest(t, inactiveUser, true, false)
+			runTest(t, org, true, true)
 			runTest(t, restrictedUser, true, true)
 			runTest(t, prohibitLoginUser, true, false)
 		})

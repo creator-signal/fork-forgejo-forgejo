@@ -201,7 +201,7 @@ func TestAPIPrivateServAndNoServWithRequiredTwoFactor(t *testing.T) {
 		normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
 		restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
 
-		t.Run("NoneTwoFactorRequired", func(t *testing.T) {
+		t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
 			// this should be the default, so don't have to set the variable
 
 			t.Run("no 2fa", func(t *testing.T) {
@@ -217,8 +217,8 @@ func TestAPIPrivateServAndNoServWithRequiredTwoFactor(t *testing.T) {
 			})
 		})
 
-		t.Run("AllTwoFactorRequired", func(t *testing.T) {
-			defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AllTwoFactorRequired)()
+		t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+			defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
 
 			t.Run("no 2fa", func(t *testing.T) {
 				runTest(t, adminUser, false, false)
@@ -233,8 +233,8 @@ func TestAPIPrivateServAndNoServWithRequiredTwoFactor(t *testing.T) {
 			})
 		})
 
-		t.Run("AdminTwoFactorRequired", func(t *testing.T) {
-			defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AdminTwoFactorRequired)()
+		t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+			defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
 
 			t.Run("no 2fa", func(t *testing.T) {
 				runTest(t, adminUser, false, false)

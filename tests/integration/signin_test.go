@@ -144,7 +144,7 @@ func TestDisableSignin(t *testing.T) {
 	})
 }
 
-func TestGlobalRequireTwoFactor(t *testing.T) {
+func TestGlobalTwoFactorRequirement(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -191,7 +191,7 @@ func TestGlobalRequireTwoFactor(t *testing.T) {
 		}
 	}
 
-	t.Run("NoneTwoFactorRequired", func(t *testing.T) {
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		t.Run("no 2fa", func(t *testing.T) {
@@ -207,9 +207,9 @@ func TestGlobalRequireTwoFactor(t *testing.T) {
 		})
 	})
 
-	t.Run("AllTwoFactorRequired", func(t *testing.T) {
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AllTwoFactorRequired)()
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
 
 		t.Run("no 2fa", func(t *testing.T) {
 			runTest(t, adminUser, false, false)
@@ -224,9 +224,9 @@ func TestGlobalRequireTwoFactor(t *testing.T) {
 		})
 	})
 
-	t.Run("AdminTwoFactorRequired", func(t *testing.T) {
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.GlobalRequireTwoFactor, setting.AdminTwoFactorRequired)()
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
 
 		t.Run("no 2fa", func(t *testing.T) {
 			runTest(t, adminUser, false, false)
