@@ -52,7 +52,7 @@ func FollowRemoteActor(ctx *context_service.APIContext, localUser *user.User, ac
 	}
 
 	hostURL := federationHost.AsURL()
-	return pendingQueue.Push(pendingQueueItem{
+	return deliveryQueue.Push(deliveryQueueItem{
 		InboxURL: hostURL.JoinPath(federatedUser.InboxPath).String(),
 		Doer:     localUser,
 		Payload:  payload,

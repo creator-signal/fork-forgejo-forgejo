@@ -47,7 +47,7 @@ func SendUserActivity(ctx context.Context, doer *user.User, activity *activities
 		}
 
 		hostURL := federationHost.AsURL()
-		if err := pendingQueue.Push(pendingQueueItem{
+		if err := deliveryQueue.Push(deliveryQueueItem{
 			InboxURL: hostURL.JoinPath(federatedUserFollower.InboxPath).String(),
 			Doer:     doer,
 			Payload:  payload,

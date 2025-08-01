@@ -58,7 +58,7 @@ func processPersonFollow(ctx context.Context, ctxUser *user.User, activity *ap.A
 	}
 
 	hostURL := federationHost.AsURL()
-	if err := pendingQueue.Push(pendingQueueItem{
+	if err := deliveryQueue.Push(deliveryQueueItem{
 		InboxURL: hostURL.JoinPath(federatedUser.InboxPath).String(),
 		Doer:     ctxUser,
 		Payload:  payload,
