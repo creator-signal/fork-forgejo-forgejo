@@ -4,8 +4,7 @@ translation_meta.test
 
 # models/admin/task.go: instances of $TranslatableMessage.Format
 # this also gets instantiate as a Messenger once
-org.matrix.custom.html
-migrate.migrating_failed.error
+repo.migrate.migrating_failed.error
 
 # models/asymkey/gpg_key_object_verification.go: $ObjectVerification.Reason
 # unfortunately, it is non-trivial to parse all the occurences
