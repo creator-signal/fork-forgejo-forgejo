@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"go/token"
 	"io/fs"
@@ -118,15 +119,21 @@ func DecodeKeyForStm(key string) []string {
 	return ret[:i]
 }
 
-func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], allowedMaskedPrefixes *StringTrieMap) error {
+func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], allowedMaskedPrefixes *StringTrieMap, chkMsgid func(msgid string) bool) error {
 	file, err := os.Open(fname)
 	if err != nil {
-		return err
+		return LocatedError{
+			Location: fname,
+			Kind:     "Open",
+			Err:      err,
+		}
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	lno := 0
 	for scanner.Scan() {
+		lno++
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
@@ -134,10 +141,24 @@ func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], a
 		if strings.HasSuffix(line, ".") {
 			allowedMaskedPrefixes.Insert(DecodeKeyForStm(line))
 		} else {
+			if !chkMsgid(line) {
+				return LocatedError{
+					Location: fmt.Sprintf("%s: line %d", fname, lno),
+					Kind:     "undefined msgid",
+					Err:      errors.New(line),
+				}
+			}
 			(*usedMsgids)[line] = struct{}{}
 		}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return LocatedError{
+			Location: fname,
+			Kind:     "Scanner",
+			Err:      err,
+		}
+	}
+	return nil
 }
 
 // This command assumes that we get started from the project root directory
@@ -175,35 +196,6 @@ func main() {
 	usedMsgids := make(container.Set[string])
 	allowedMaskedPrefixes := make(StringTrieMap)
 
-	for _, arg := range os.Args[1:] {
-		switch arg {
-		case "--allow-missing-msgids":
-			allowMissingMsgids = true
-
-		case "--allow-unused-msgids":
-			allowUnusedMsgids = true
-
-		default:
-			if argval, found := strings.CutPrefix(arg, "--allow-masked-usages-from="); found {
-				if err := ParseAllowedMaskedUsages(argval, &usedMsgids, &allowedMaskedPrefixes); err != nil {
-					fmt.Printf("%s:\tERROR: unable to parse masked usages: %s\n", argval, err.Error())
-					os.Exit(7)
-				}
-			} else {
-				fmt.Printf("<command line>:\tERROR: unknown argument: %s\n", arg)
-				os.Exit(6)
-			}
-		}
-	}
-
-	onError := func(err error) {
-		if err == nil {
-			return
-		}
-		fmt.Println(err.Error())
-		os.Exit(3)
-	}
-
 	msgids := make(container.Set[string])
 
 	localeFile := filepath.Join(filepath.Join("options", "locale"), "locale_en-US.ini")
@@ -238,6 +230,37 @@ func main() {
 	}
 
 	gotAnyMsgidError := false
+
+	for _, arg := range os.Args[1:] {
+		switch arg {
+		case "--allow-missing-msgids":
+			allowMissingMsgids = true
+
+		case "--allow-unused-msgids":
+			allowUnusedMsgids = true
+
+		default:
+			if argval, found := strings.CutPrefix(arg, "--allow-masked-usages-from="); found {
+				if err := ParseAllowedMaskedUsages(argval, &usedMsgids, &allowedMaskedPrefixes, func(msgid string) bool {
+					return msgids.Contains(msgid)
+				}); err != nil {
+					fmt.Printf("%s\n", err.Error())
+					os.Exit(7)
+				}
+			} else {
+				fmt.Printf("<command line>:\tERROR: unknown argument: %s\n", arg)
+				os.Exit(6)
+			}
+		}
+	}
+
+	onError := func(err error) {
+		if err == nil {
+			return
+		}
+		fmt.Println(err.Error())
+		os.Exit(3)
+	}
 
 	handler := Handler{
 		OnMsgidPrefix: func(fset *token.FileSet, pos token.Pos, msgidPrefix string) {
