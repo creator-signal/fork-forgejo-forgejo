@@ -369,7 +369,7 @@ func prepareMigrationTasks() []*migration {
 		newMigration(303, "Gitea last drop", v1_23.GiteaLastDrop),
 		newMigration(304, "Migrate `secret` column to store keying material", forgejo_migrations.MigrateTwoFactorToKeying),
 
-		newMigration(305, "Add index for release sha1", v1_23.AddIndexForReleaseSha1),
+		newMigration(305, "Add index for release sha1", forgejo_migrations.AddIndexForReleaseSha1),
 	}
 	return preparedMigrations
 }
