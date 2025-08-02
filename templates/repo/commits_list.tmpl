@@ -4,7 +4,7 @@
 				<tr>
 					<th class="three wide">{{ctx.Locale.Tr "repo.commits.author"}}</th>
 					<th class="two wide sha">{{StringUtils.ToUpper $.Repository.ObjectFormatName}}</th>
-					<th class="eight wide message">{{ctx.Locale.Tr "repo.commits.message"}}</th>
+					<th class="nine wide message">{{ctx.Locale.Tr "repo.commits.message"}}</th>
 					<th class="two wide right aligned">{{ctx.Locale.Tr "repo.commits.date"}}</th>
 					<th class="one wide"></th>
 				</tr>
@@ -55,15 +55,6 @@
 								<span class="commit-summary {{if gt .ParentCount 1}} grey text{{end}}" title="{{.Summary}}">{{RenderCommitMessageLinkSubject $.Context .Message $commitLink ($.Repository.ComposeMetas ctx)}}</span>
 							{{end}}
 							</span>
-							{{if IsMultilineCommitMessage .Message}}
-							<button class="ui button js-toggle-commit-body ellipsis-button" aria-expanded="false">...</button>
-							{{end}}
-							{{template "repo/commit_statuses" dict "Status" .Status "Statuses" .Statuses}}
-							{{if IsMultilineCommitMessage .Message}}
-							<pre class="commit-body tw-hidden">{{RenderCommitBody $.Context .Message ($.Repository.ComposeMetas ctx)}}</pre>
-							{{end}}
-						</td>
-						<td class="text left aligned">
 							{{if $.CommitTagsMap}}
 								{{$tags := index $.CommitTagsMap .ID.String}}
 								{{if $tags}}
@@ -71,6 +62,13 @@
 										{{- template "repo/tag/name" dict "RepoLink" $.Repository.Link "TagName" .TagName "IsRelease" (not .IsTag) -}}
 									{{end}}
 								{{end}}
+							{{end}}
+							{{if IsMultilineCommitMessage .Message}}
+							<button class="ui button js-toggle-commit-body ellipsis-button" aria-expanded="false">...</button>
+							{{end}}
+							{{template "repo/commit_statuses" dict "Status" .Status "Statuses" .Statuses}}
+							{{if IsMultilineCommitMessage .Message}}
+							<pre class="commit-body tw-hidden">{{RenderCommitBody $.Context .Message ($.Repository.ComposeMetas ctx)}}</pre>
 							{{end}}
 						</td>
 						{{if .Committer}}
