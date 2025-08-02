@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestRepoCommitsTemplateVariables ensures that template variables in commits_list.tmpl are correctly referenced and the template renders without errors.
+// TestRepoCommitsTemplateVariables ensures that template variables in commits_list.tmpl are correctly referenced
 func TestRepoCommitsTemplateVariables(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -25,7 +25,6 @@ func TestRepoCommitsTemplateVariables(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.Code, "Template should render without errors")
 
 	doc := NewHTMLParser(t, resp.Body)
-	// Verify critical template variables are rendered correctly
 
 	// 1. Repository.Link is used in tag template
 	tagLinks := doc.doc.Find("a.ui.label.basic[href*='/src/tag/']")
@@ -53,8 +52,8 @@ func TestRepoCommitsTemplateVariables(t *testing.T) {
 	assert.Contains(t, firstCommitLink, "/user2/repo1/commit/", "RepoLink should be correctly used in commit URLs")
 
 	// 5. CommitTagsMap is used for tag rendering
-	// If $.CommitTagsMap is mistyped, the template would fail with 500 error
-	// The detailed tag rendering tests are in repo_commits_tags_test.go
+	// If $.CommitTagsMap is mistyped, the template would fail with a 500 error
+	// (for detailed tag rendering tests see repo_commits_tags_test.go)
 	tagLabels := doc.doc.Find("#commits-table tbody tr td.message a.ui.label.basic")
 	if tagLabels.Length() > 0 {
 		assert.NotContains(t, tagLabels.First().Text(), "{{", "Tags should be properly rendered without template syntax")

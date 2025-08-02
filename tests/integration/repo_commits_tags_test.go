@@ -51,22 +51,22 @@ func TestRepoCommitsWithTags(t *testing.T) {
 	})
 	assert.True(t, tagFound, "Should find v1.1 tag")
 
-	// 2. tags appear after the commit messsage and status indicators
+	// 3. tags appear after the commit messsage and status indicators
 	messageHTML, _ := messageCell.Html()
 	messageWrapperPos := strings.Index(messageHTML, "message-wrapper")
 	ellipsisButtonPos := strings.Index(messageHTML, "ellipsis-button")
 	commitStatusPos := strings.Index(messageHTML, "commit-status")
 	tagLabelPos := strings.Index(messageHTML, "ui label basic")
 
-	// Tags should appear after the message wrapper
+	// 4. Tags should appear after the message wrapper
 	assert.Greater(t, tagLabelPos, messageWrapperPos, "Tags should appear after message wrapper")
 
-	// If ellipsis button exists, tags should appear after that one
+	// 5. If ellipsis button exists, tags should appear after that one
 	if ellipsisButtonPos > 0 {
 		assert.Greater(t, tagLabelPos, ellipsisButtonPos, "Tags should appear after ellipsis button")
 	}
 
-	// If commit status exists, tags should appear after that one
+	// 6. If commit status exists, tags should appear after that one
 	if commitStatusPos > 0 {
 		assert.Greater(t, tagLabelPos, commitStatusPos, "Tags should appear after commit status")
 	}
