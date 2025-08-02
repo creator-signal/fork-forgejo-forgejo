@@ -44,11 +44,11 @@ func TestRepoCommitsTemplateVariables(t *testing.T) {
 
 	// 3. Repository.ComposeMetas is used for rendering commit messages
 	commitMessages := doc.doc.Find("#commits-table tbody tr td.message .commit-summary")
-	assert.Greater(t, commitMessages.Length(), 0, "Should have commit messages rendered")
+	assert.Positive(t, commitMessages.Length(), "Should have commit messages rendered")
 
 	// 4. RepoLink variable is used throughout
 	commitLinks := doc.doc.Find("#commits-table tbody tr td.sha a[href*='/commit/']")
-	assert.Greater(t, commitLinks.Length(), 0, "Should have commit links")
+	assert.Positive(t, commitLinks.Length(), "Should have commit links")
 	firstCommitLink, _ := commitLinks.First().Attr("href")
 	assert.Contains(t, firstCommitLink, "/user2/repo1/commit/", "RepoLink should be correctly used in commit URLs")
 
