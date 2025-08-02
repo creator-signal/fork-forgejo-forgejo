@@ -177,14 +177,16 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			req = NewRequest(t, "GET", "/user/settings/security")
 			resp = session.MakeRequest(t, req, http.StatusOK)
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			assert.Equal(t, "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts.", htmlDoc.doc.Find(".ui.red.message").Text())
-			assert.Equal(t, 1, htmlDoc.doc.Find(".navbar-left > a.item").Length()) // only show the Logo, no other links
+			assert.Equal(t, "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts.", htmlDoc.Find(".ui.red.message").Text())
+			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length()) // only show the Logo, no other links
 
-			userLinks := htmlDoc.doc.Find(".navbar-right .user-menu a.item")
+			userLinks := htmlDoc.Find(".navbar-right .user-menu a.item")
 			assert.Equal(t, 1, userLinks.Length()) // only logout link
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
 
-			headings := htmlDoc.doc.Find(".user-setting-content h4.attached.header")
+			assert.Empty(t, htmlDoc.Find("a:container('Re-enroll two-factor authentication')").Length())
+
+			headings := htmlDoc.Find(".user-setting-content h4.attached.header")
 			assert.Equal(t, 2, headings.Length())
 			assert.Equal(t, "Two-factor authentication (TOTP)", strings.TrimSpace(headings.First().Text()))
 			assert.Equal(t, "Two-factor authentication (Security keys)", strings.TrimSpace(headings.Last().Text()))

@@ -156,6 +156,81 @@ func TestSettingSecurityAuthSource(t *testing.T) {
 	assert.Contains(t, resp.Body.String(), `gitlab-inactive`)
 }
 
+func TestSettingSecurityTwoFactorRequirement(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	runTest := func(t *testing.T, user *user_model.User, forceTOTP, showReroll, showUnroll bool) {
+		defer unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: user.ID})
+
+		session := func() *TestSession {
+			if !forceTOTP && !user.MustHaveTwoFactor() {
+				return loginUser(t, user.Name)
+			}
+
+			sess := loginUser(t, user.Name)
+			sess.EnrollTOTP(t)
+			sess.MakeRequest(t, NewRequest(t, "POST", "/user/logout"), http.StatusOK)
+
+			return loginUserWithTOTP(t, user)
+		}()
+
+		resp := session.MakeRequest(t, NewRequest(t, "GET", "user/settings/security"), http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		if showReroll {
+			assert.Equal(t, 1, htmlDoc.FindByText("a", "Re-enroll two-factor authentication").Length())
+		} else {
+			assert.Empty(t, htmlDoc.FindByText("a", "Re-enroll two-factor authentication").Length())
+		}
+		if showUnroll {
+			assert.Equal(t, 1, htmlDoc.Find("#disable-form").Length())
+		} else {
+			assert.Empty(t, htmlDoc.Find("#disable-form").Length())
+		}
+	}
+
+	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
+
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, false, false)
+			runTest(t, normalUser, false, false, false)
+			runTest(t, restrictedUser, false, false, false)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, true, true)
+			runTest(t, normalUser, true, true, true)
+			runTest(t, restrictedUser, true, true, true)
+		})
+	})
+
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
+
+		runTest(t, adminUser, false, true, false)
+		runTest(t, normalUser, false, true, false)
+		runTest(t, restrictedUser, false, true, false)
+	})
+
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, true, false)
+			runTest(t, normalUser, false, false, false)
+			runTest(t, restrictedUser, false, false, false)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, true, false)
+			runTest(t, normalUser, true, true, true)
+			runTest(t, restrictedUser, true, true, true)
+		})
+	})
+}
+
 func TestUserAvatarSizeNotice(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 

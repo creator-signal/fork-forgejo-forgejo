@@ -76,6 +76,13 @@ func (doc *HTMLDoc) Find(selector string) *goquery.Selection {
 	return doc.doc.Find(selector)
 }
 
+// FindByText gets all elements by selector that also has the given text
+func (doc *HTMLDoc) FindByText(selector, text string) *goquery.Selection {
+	return doc.doc.Find(selector).FilterFunction(func(i int, s *goquery.Selection) bool {
+		return s.Text() == text
+	})
+}
+
 // GetCSRF for getting CSRF token value from input
 func (doc *HTMLDoc) GetCSRF() string {
 	return doc.GetInputValueByName("_csrf")
