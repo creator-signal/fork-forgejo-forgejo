@@ -55,6 +55,10 @@
 								<span class="commit-summary {{if gt .ParentCount 1}} grey text{{end}}" title="{{.Summary}}">{{RenderCommitMessageLinkSubject $.Context .Message $commitLink ($.Repository.ComposeMetas ctx)}}</span>
 							{{end}}
 							</span>
+							{{if IsMultilineCommitMessage .Message}}
+							<button class="ui button js-toggle-commit-body ellipsis-button" aria-expanded="false">...</button>
+							{{end}}
+							{{template "repo/commit_statuses" dict "Status" .Status "Statuses" .Statuses}}
 							{{if $.CommitTagsMap}}
 								{{$tags := index $.CommitTagsMap .ID.String}}
 								{{if $tags}}
@@ -63,10 +67,6 @@
 									{{end}}
 								{{end}}
 							{{end}}
-							{{if IsMultilineCommitMessage .Message}}
-							<button class="ui button js-toggle-commit-body ellipsis-button" aria-expanded="false">...</button>
-							{{end}}
-							{{template "repo/commit_statuses" dict "Status" .Status "Statuses" .Statuses}}
 							{{if IsMultilineCommitMessage .Message}}
 							<pre class="commit-body tw-hidden">{{RenderCommitBody $.Context .Message ($.Repository.ComposeMetas ctx)}}</pre>
 							{{end}}
