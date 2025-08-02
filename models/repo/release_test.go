@@ -51,10 +51,10 @@ func TestReleaseDisplayName(t *testing.T) {
 }
 
 func Test_FindTagsByCommitIDs(t *testing.T) {
-	assert.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareTestDatabase())
 
 	sha1Rels, err := FindTagsByCommitIDs(db.DefaultContext, 1, "65f1bf27bc3bf70f64657658635e66094edbcb4d")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, sha1Rels, 1)
 	rels := sha1Rels["65f1bf27bc3bf70f64657658635e66094edbcb4d"]
 	assert.Len(t, rels, 3)
