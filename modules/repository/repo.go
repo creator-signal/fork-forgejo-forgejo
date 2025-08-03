@@ -151,9 +151,28 @@ func PushUpdateAddTag(ctx context.Context, repo *repo_model.Repository, gitRepo 
 		createdAt = sig.When
 	}
 
-	commitsCount, err := commit.CommitsCount()
-	if err != nil {
-		return fmt.Errorf("unable to get CommitsCount: %w", err)
+	var commitsCount int64
+	if repo.IsFork {
+		// If the repository is a fork, try to avoid expensive commit counting by
+		// getting this information from the original repository (if it exists).
+		release := &repo_model.Release{
+			RepoID: repo.ForkID,
+			Sha1:   commit.ID.String(),
+		}
+		has, err := db.GetEngine(ctx).Get(release)
+		if err != nil {
+			return fmt.Errorf("GetRelease: %w", err)
+		}
+		if has {
+			commitsCount = release.NumCommits
+		}
+	}
+
+	if commitsCount == 0 {
+		commitsCount, err = commit.CommitsCount()
+		if err != nil {
+			return fmt.Errorf("unable to get CommitsCount: %w", err)
+		}
 	}
 
 	rel := repo_model.Release{
