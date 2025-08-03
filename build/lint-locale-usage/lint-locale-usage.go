@@ -110,15 +110,6 @@ func (m *StringTrieMap) Insert(key []string) {
 	}
 }
 
-func DecodeKeyForStm(key string) []string {
-	ret := strings.Split(key, ".")
-	i := len(ret)
-	for i > 0 && ret[i-1] == "" {
-		i--
-	}
-	return ret[:i]
-}
-
 func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], allowedMaskedPrefixes *StringTrieMap, chkMsgid func(msgid string) bool) error {
 	file, err := os.Open(fname)
 	if err != nil {
@@ -138,8 +129,8 @@ func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], a
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if strings.HasSuffix(line, ".") {
-			allowedMaskedPrefixes.Insert(DecodeKeyForStm(line))
+		if linePrefix, found := strings.CutSuffix(line, "."); found {
+			allowedMaskedPrefixes.Insert(strings.Split(linePrefix, "."))
 		} else {
 			if !chkMsgid(line) {
 				return LocatedError{
@@ -273,7 +264,7 @@ func main() {
 
 	handler := Handler{
 		OnMsgidPrefix: func(fset *token.FileSet, pos token.Pos, msgidPrefix string) {
-			if !allowedMaskedPrefixes.Matches(DecodeKeyForStm(msgidPrefix)) {
+			if !allowedMaskedPrefixes.Matches(strings.Split(msgidPrefix, ".")) {
 				gotAnyMsgidError = true
 				fmt.Printf("%s:\tmissing msgid prefix: %s\n", fset.Position(pos).String(), msgidPrefix)
 			}
@@ -328,7 +319,7 @@ func main() {
 	unusedMsgids := []string{}
 
 	for msgid := range msgids {
-		if !usedMsgids.Contains(msgid) && !allowedMaskedPrefixes.Matches(DecodeKeyForStm(msgid)) {
+		if !usedMsgids.Contains(msgid) && !allowedMaskedPrefixes.Matches(strings.Split(msgid, ".")) {
 			unusedMsgids = append(unusedMsgids, msgid)
 		}
 	}
