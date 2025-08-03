@@ -20,7 +20,11 @@ func (handler Handler) handleGoTrBasicLit(fset *token.FileSet, argLit *ast.Basic
 		if err == nil {
 			// found interesting strings
 			if strings.HasSuffix(arg, ".") || strings.HasSuffix(arg, "_") {
-				handler.OnMsgidPrefix(fset, argLit.ValuePos, arg)
+				prep, trunc := PrepareMsgidPrefix(arg)
+				if trunc {
+					handler.OnWarning(fset, argLit.ValuePos, fmt.Sprintf("needed to truncate message id prefix: %s", arg))
+				}
+				handler.OnMsgidPrefix(fset, argLit.ValuePos, prep)
 			} else {
 				handler.OnMsgid(fset, argLit.ValuePos, arg)
 			}

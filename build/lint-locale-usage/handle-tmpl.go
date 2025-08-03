@@ -5,8 +5,10 @@
 package main
 
 import (
+	"fmt"
 	"go/token"
 	"os"
+	"strings"
 	"text/template"
 	tmplParser "text/template/parse"
 
@@ -68,12 +70,7 @@ func (handler Handler) handleTemplateNode(fset *token.FileSet, node tmplParser.N
 
 		for _, argNum := range ltf {
 			if len(nodeCommand.Args) >= int(argNum+2) {
-				nodeString, ok := nodeCommand.Args[int(argNum+1)].(*tmplParser.StringNode)
-				if ok {
-					// found interesting strings
-					// the column numbers are a bit "off", but much better than nothing
-					handler.OnMsgid(fset, token.Pos(nodeString.Pos), nodeString.Text)
-				}
+				handler.handleTemplateMsgid(fset, nodeCommand.Args[int(argNum+1)])
 			} else {
 				argc := len(nodeCommand.Args) - 1
 				gotUnexpectedInvoke = &argc
@@ -85,6 +82,82 @@ func (handler Handler) handleTemplateNode(fset *token.FileSet, node tmplParser.N
 		}
 
 	default:
+	}
+}
+
+func (handler Handler) handleTemplateMsgid(fset *token.FileSet, node tmplParser.Node) {
+	// the column numbers are a bit "off", but much better than nothing
+	pos := token.Pos(node.Position())
+
+	switch node.Type() {
+	case tmplParser.NodeString:
+		nodeString := node.(*tmplParser.StringNode)
+		// found interesting strings
+		handler.OnMsgid(fset, pos, nodeString.Text)
+
+	case tmplParser.NodePipe:
+		nodePipe := node.(*tmplParser.PipeNode)
+		handler.handleTemplatePipeNode(fset, nodePipe)
+
+		if len(nodePipe.Cmds) == 0 {
+			handler.OnWarning(fset, pos, fmt.Sprintf("unsupported invocation of locate function (no commands): %s", node.String()))
+		} else if len(nodePipe.Cmds) != 1 {
+			handler.OnWarning(fset, pos, fmt.Sprintf("unsupported invocation of locate function (too many commands): %s", node.String()))
+			return
+		}
+		nodeCommand := nodePipe.Cmds[0]
+		if len(nodeCommand.Args) < 2 {
+			handler.OnWarning(fset, pos, fmt.Sprintf("unsupported invocation of locate function (not enough arguments): %s", node.String()))
+			return
+		}
+
+		nodeIdent, ok := nodeCommand.Args[0].(*tmplParser.IdentifierNode)
+		if !ok || (nodeIdent.Ident != "print" && nodeIdent.Ident != "printf") {
+			// handler.OnWarning(fset, pos, fmt.Sprintf("unsupported invocation of locate function (bad command): %s", node.String()))
+			return
+		}
+
+		nodeString, ok := nodeCommand.Args[1].(*tmplParser.StringNode)
+		if !ok {
+			//handler.OnWarning(
+			//	fset,
+			//	pos,
+			//	fmt.Sprintf("unsupported invocation of locate function (string should be first argument to %s): %s", nodeIdent.Ident, node.String()),
+			//)
+			return
+		}
+
+		msgidPrefix := nodeString.Text
+		stringPos := token.Pos(nodeString.Pos)
+
+		if len(nodeCommand.Args) == 2 {
+			// found interesting strings
+			handler.OnMsgid(fset, stringPos, msgidPrefix)
+		} else {
+			if nodeIdent.Ident == "printf" {
+				parts := strings.SplitN(msgidPrefix, "%", 2)
+				if len(parts) != 2 {
+					handler.OnWarning(
+						fset,
+						stringPos,
+						fmt.Sprintf("unsupported invocation of locate function (format string doesn't match \"prefix%%smth\" pattern): %s", nodeString.String()),
+					)
+					return
+				}
+				msgidPrefix = parts[0]
+			}
+
+			msgidPrefixFin, truncated := PrepareMsgidPrefix(msgidPrefix)
+			if truncated {
+				handler.OnWarning(fset, stringPos, fmt.Sprintf("needed to truncate message id prefix: %s", msgidPrefix))
+			}
+
+			// found interesting strings
+			handler.OnMsgidPrefix(fset, stringPos, msgidPrefixFin)
+		}
+
+	default:
+		// handler.OnWarning(fset, pos, fmt.Sprintf("unknown invocation of locate function: %s", node.String()))
 	}
 }
 

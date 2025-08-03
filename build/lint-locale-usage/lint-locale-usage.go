@@ -161,6 +161,15 @@ func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], a
 	return nil
 }
 
+// Truncating a message id prefix to the last dot
+func PrepareMsgidPrefix(s string) (string, bool) {
+	index := strings.LastIndexByte(s, 0x2e)
+	if index == -1 {
+		return "", true
+	}
+	return s[:index], index != len(s)-1
+}
+
 // This command assumes that we get started from the project root directory
 //
 // Possible command line flags:
