@@ -44,11 +44,8 @@ admin.dashboard.
 # routers/web/repo/activity.go
 repo.activity.period.
 
-# routers/web/repo/helper.go: "repo.tree_path_not_found_"+refType
-repo.
-repo.tree_path_not_found_branch
-repo.tree_path_not_found_commit
-repo.tree_path_not_found_tag
+# routers/web/repo/helper.go
+repo.tree_path_not_found.
 
 # services/context/context.go
 relativetime.
