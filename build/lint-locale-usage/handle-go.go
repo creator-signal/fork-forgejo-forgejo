@@ -43,7 +43,11 @@ func (handler Handler) handleGoTrArgument(fset *token.FileSet, n ast.Expr) {
 			arg, err := strconv.Unquote(argLit.Value)
 			if err == nil {
 				// found interesting strings
-				handler.OnMsgidPrefix(fset, argLit.ValuePos, arg)
+				prep, trunc := PrepareMsgidPrefix(arg)
+				if trunc {
+					handler.OnWarning(fset, argLit.ValuePos, fmt.Sprintf("needed to truncate message id prefix: %s", arg))
+				}
+				handler.OnMsgidPrefix(fset, argLit.ValuePos, prep)
 			}
 		}
 	}

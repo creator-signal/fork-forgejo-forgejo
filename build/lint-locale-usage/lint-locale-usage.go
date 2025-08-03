@@ -273,8 +273,10 @@ func main() {
 
 	handler := Handler{
 		OnMsgidPrefix: func(fset *token.FileSet, pos token.Pos, msgidPrefix string) {
-			// TODO: perhaps we should check if we have any strings with such a prefix, but that's slow...
-			allowedMaskedPrefixes.Insert(DecodeKeyForStm(msgidPrefix))
+			if !allowedMaskedPrefixes.Matches(DecodeKeyForStm(msgidPrefix)) {
+				gotAnyMsgidError = true
+				fmt.Printf("%s:\tmissing msgid prefix: %s\n", fset.Position(pos).String(), msgidPrefix)
+			}
 		},
 		OnMsgid: func(fset *token.FileSet, pos token.Pos, msgid string) {
 			if !msgids.Contains(msgid) {
