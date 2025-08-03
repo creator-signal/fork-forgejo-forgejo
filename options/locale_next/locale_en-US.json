@@ -115,9 +115,9 @@
     "admin.config.security": "Security configuration",
     "admin.config.global_2fa_requirement": "Global two-factor requirement",
     "admin.config.global_2fa_requirement.none": "No",
-    "admin.config.global_2fa_requirement.all": "Everyone",
+    "admin.config.global_2fa_requirement.all": "All users",
     "admin.config.global_2fa_requirement.admin": "Administrators",
-    "settings.twofa_reenroll_desc": "Re-enroll your two-factor authentication",
     "settings.twofa_reenroll": "Re-enroll two-factor authentication",
+    "settings.twofa_reenroll.description": "Re-enroll your two-factor authentication",
     "meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }

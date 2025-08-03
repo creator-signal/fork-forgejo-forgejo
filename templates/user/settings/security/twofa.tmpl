@@ -6,7 +6,7 @@
 	{{if .TOTPEnrolled}}
 	<p>{{ctx.Locale.Tr "settings.twofa_is_enrolled"}}</p>
 	<div class="inline field">
-		<p>{{ctx.Locale.Tr "settings.twofa_reenroll_desc"}}</p>
+		<p>{{ctx.Locale.Tr "settings.twofa_reenroll.description"}}</p>
 		<a class="ui primary button" href="{{AppSubUrl}}/user/settings/security/two_factor/reenroll">{{ctx.Locale.Tr "settings.twofa_reenroll"}}</a>
 	</div>
 	<form class="ui form" action="{{AppSubUrl}}/user/settings/security/two_factor/regenerate_scratch" method="post" enctype="multipart/form-data">
