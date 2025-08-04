@@ -20,7 +20,7 @@ func TestRepoCommitsTemplateVariables(t *testing.T) {
 	session := loginUser(t, "user2")
 
 	// Test the main commits page
-	req := NewRequest(t, "GET", "/user2/repo1/commits/branch/main")
+	req := NewRequest(t, "GET", "/user2/repo1/commits/branch/master")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 	assert.Equal(t, http.StatusOK, resp.Code, "Template should render without errors")
 
