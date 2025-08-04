@@ -644,7 +644,7 @@ func TestMustHaveTwoFactor(t *testing.T) {
 	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
 	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
 	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
-	_, ghostUser := user_model.GetUserFromMap(int64(user_model.GhostUserID), map[int64]*user_model.User{})
+	ghostUser := user_model.NewGhostUser()
 
 	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
 		// this should be the default, so don't have to set the variable
@@ -680,12 +680,13 @@ func TestIsAccessAllowed(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	runTest := func(t *testing.T, user *user_model.User, useTOTP, accessAllowed bool) {
+		t.Helper()
 		if useTOTP {
 			unittest.AssertSuccessfulInsert(t, &auth.TwoFactor{UID: user.ID})
 			defer unittest.AssertSuccessfulDelete(t, &auth.TwoFactor{UID: user.ID})
 		}
 
-		assert.Equal(t, accessAllowed, user.IsAccessAllowed(db.DefaultContext))
+		assert.Equal(t, accessAllowed, user.IsAccessAllowed(t.Context()))
 	}
 
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -694,7 +695,7 @@ func TestIsAccessAllowed(t *testing.T) {
 	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
 	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
 	prohibitLoginUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 37})
-	_, ghostUser := user_model.GetUserFromMap(int64(user_model.GhostUserID), map[int64]*user_model.User{})
+	ghostUser := user_model.NewGhostUser()
 
 	// users with enabled WebAuthn
 	normalWebAuthnUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 32})

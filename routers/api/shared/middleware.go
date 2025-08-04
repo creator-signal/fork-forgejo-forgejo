@@ -98,12 +98,15 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 			if ctx.Doer.MustHaveTwoFactor() {
 				hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
 				if err != nil {
+					ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
+					log.Error("Error getting 2fa: %s", err)
 					ctx.JSON(http.StatusInternalServerError, map[string]string{
 						"message": fmt.Sprintf("Error getting 2fa: %s", err),
 					})
 					return
 				}
 				if !hasTwoFactor {
+					ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
 					ctx.JSON(http.StatusForbidden, map[string]string{
 						"message": "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts. Enable it at: " + setting.AppURL + "/user/settings/security",
 					})

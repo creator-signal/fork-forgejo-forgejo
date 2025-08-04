@@ -160,31 +160,25 @@ func TestSettingSecurityTwoFactorRequirement(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	runTest := func(t *testing.T, user *user_model.User, forceTOTP, showReroll, showUnroll bool) {
+		t.Helper()
 		defer unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: user.ID})
 
-		session := func() *TestSession {
-			if !forceTOTP && !user.MustHaveTwoFactor() {
-				return loginUser(t, user.Name)
-			}
-
-			sess := loginUser(t, user.Name)
-			sess.EnrollTOTP(t)
-			sess.MakeRequest(t, NewRequest(t, "POST", "/user/logout"), http.StatusOK)
-
-			return loginUserWithTOTP(t, user)
-		}()
+		useTOTP := forceTOTP || user.MustHaveTwoFactor()
+		session := loginUserMaybeTOTP(t, user, useTOTP)
 
 		resp := session.MakeRequest(t, NewRequest(t, "GET", "user/settings/security"), http.StatusOK)
 		htmlDoc := NewHTMLParser(t, resp.Body)
-		if showReroll {
-			assert.Equal(t, 1, htmlDoc.FindByText("a", "Re-enroll two-factor authentication").Length())
+		htmlDoc.AssertSelection(t, htmlDoc.FindByText("a", "Re-enroll two-factor authentication"), showReroll)
+		htmlDoc.AssertElement(t, "#disable-form", showUnroll)
+
+		req := NewRequestWithValues(t, "POST", "user/settings/security/two_factor/disable", map[string]string{
+			"_csrf": htmlDoc.GetCSRF(),
+		})
+		if user.MustHaveTwoFactor() {
+			session.MakeRequest(t, req, http.StatusNotFound)
 		} else {
-			assert.Empty(t, htmlDoc.FindByText("a", "Re-enroll two-factor authentication").Length())
-		}
-		if showUnroll {
-			assert.Equal(t, 1, htmlDoc.Find("#disable-form").Length())
-		} else {
-			assert.Empty(t, htmlDoc.Find("#disable-form").Length())
+			resp := session.MakeRequest(t, req, http.StatusSeeOther)
+			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
 		}
 	}
 

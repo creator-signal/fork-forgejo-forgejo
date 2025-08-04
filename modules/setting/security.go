@@ -177,6 +177,7 @@ func loadSecurityFrom(rootCfg ConfigProvider) {
 
 type TwoFactorRequirementType string
 
+// llu:TrKeysSuffix admin.config.global_2fa_requirement.
 const (
 	NoneTwoFactorRequirement  TwoFactorRequirementType = "none"
 	AllTwoFactorRequirement   TwoFactorRequirementType = "all"

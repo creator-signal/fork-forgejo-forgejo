@@ -6,7 +6,6 @@
 package web
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -55,10 +54,13 @@ func Home(ctx *context.Context) {
 		if ctx.Doer.MustHaveTwoFactor() {
 			hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
 			if err != nil {
-				ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Error getting 2fa: %s", err))
+				ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
+				log.Error("Error getting 2fa: %s", err)
+				ctx.Error(http.StatusInternalServerError, "HasTwoFactorByUID", err.Error())
 				return
 			}
 			if !hasTwoFactor {
+				ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
 				ctx.Redirect(setting.AppSubURL + "/user/settings/security")
 				return
 			}

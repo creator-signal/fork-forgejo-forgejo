@@ -175,7 +175,8 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 			if ctx.Doer.MustHaveTwoFactor() && !strings.HasPrefix(ctx.Req.URL.Path, "/user/settings/security") {
 				hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
 				if err != nil {
-					ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Error getting 2fa: %s", err))
+					log.Error("Error getting 2fa: %s", err)
+					ctx.Error(http.StatusInternalServerError, "HasTwoFactorByUID", err.Error())
 					return
 				}
 				if !hasTwoFactor {

@@ -30,14 +30,15 @@ func checkTwoFactor(ctx *context.PrivateContext, user *user_model.User) {
 
 	hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, user.ID)
 	if err != nil {
+		log.Error("Error getting 2fa: %s", err)
 		ctx.JSON(http.StatusInternalServerError, private.Response{
-			UserMsg: fmt.Sprintf("Error getting 2fa: %s", err),
+			Err: fmt.Sprintf("Error getting 2fa: %s", err),
 		})
 		return
 	}
 	if !hasTwoFactor {
 		ctx.JSON(http.StatusForbidden, private.Response{
-			UserMsg: "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts. Enable it at: " + setting.AppURL + "/user/settings/security",
+			UserMsg: string(ctx.Tr("error.must_enable_2fa", setting.AppURL)),
 		})
 		return
 	}

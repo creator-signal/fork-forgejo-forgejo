@@ -101,6 +101,7 @@ func TestAPIWithRequiredTwoFactor(t *testing.T) {
 	const loginNotAllowedMessage = "user is not allowed login"
 
 	runTest := func(t *testing.T, user *user_model.User, useTOTP bool, status int, messagePrefix string) {
+		t.Helper()
 		defer unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: user.ID})
 
 		passcode := func() string {
@@ -115,7 +116,7 @@ func TestAPIWithRequiredTwoFactor(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			require.NoError(t, auth_model.NewTwoFactor(db.DefaultContext, &auth_model.TwoFactor{UID: user.ID}, otpKey.Secret()))
+			require.NoError(t, auth_model.NewTwoFactor(t.Context(), &auth_model.TwoFactor{UID: user.ID}, otpKey.Secret()))
 
 			passcode, err := totp.GenerateCode(otpKey.Secret(), time.Now())
 			require.NoError(t, err)

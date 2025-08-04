@@ -11,16 +11,14 @@ import (
 
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/auth"
-	"forgejo.org/models/db"
 	"forgejo.org/models/perm"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/private"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
-	repo_service "forgejo.org/services/repository"
+	"forgejo.org/tests"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -168,11 +166,9 @@ func TestAPIPrivateServAndNoServWithRequiredTwoFactor(t *testing.T) {
 		defer cancel()
 
 		runTest := func(t *testing.T, user *user_model.User, useTOTP, servAllowed bool) {
-			repo, err := repo_service.CreateRepository(db.DefaultContext, user, user, repo_service.CreateRepoOptions{
-				Name: "tmp-repo-" + uuid.NewString(),
-			})
-			require.NoError(t, err)
-			defer repo_service.DeleteRepository(db.DefaultContext, user, repo, false)
+			t.Helper()
+			repo, _, reset := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{})
+			defer reset()
 
 			pubKey, err := asymkey_model.AddPublicKey(ctx, user.ID, "tmp-key-"+user.Name, "sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBGXEEzWmm1dxb+57RoK5KVCL0w2eNv9cqJX2AGGVlkFsVDhOXHzsadS3LTK4VlEbbrDMJdoti9yM8vclA8IeRacAAAAEc3NoOg== nocomment", 0)
 			require.NoError(t, err)

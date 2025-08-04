@@ -56,6 +56,11 @@ func DisableTwoFactor(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSecurity"] = true
 
+	if ctx.Doer.MustHaveTwoFactor() {
+		ctx.NotFound("DisableTwoFactor", nil)
+		return
+	}
+
 	disableTwoFactor(ctx)
 	if ctx.Written() {
 		return
@@ -267,8 +272,8 @@ func ReenrollTwoFactor(ctx *context.Context) {
 	ctx.Data["PageIsSettingsSecurity"] = true
 	ctx.Data["ReenrollTwofa"] = true
 
-	t, err := auth.GetTwoFactorByUID(ctx, ctx.Doer.ID)
-	if t == nil || auth.IsErrTwoFactorNotEnrolled(err) {
+	_, err := auth.GetTwoFactorByUID(ctx, ctx.Doer.ID)
+	if auth.IsErrTwoFactorNotEnrolled(err) {
 		ctx.Flash.Error(ctx.Tr("settings.twofa_not_enrolled"))
 		ctx.Redirect(setting.AppSubURL + "/user/settings/security")
 		return

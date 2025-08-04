@@ -152,19 +152,10 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
 
 	runTest := func(t *testing.T, user *user_model.User, useTOTP, loginAllowed bool) {
+		t.Helper()
 		defer unittest.AssertSuccessfulDelete(t, &auth.TwoFactor{UID: user.ID})
 
-		session := func() *TestSession {
-			if !useTOTP {
-				return loginUser(t, user.Name)
-			}
-
-			sess := loginUser(t, user.Name)
-			sess.EnrollTOTP(t)
-			sess.MakeRequest(t, NewRequest(t, "POST", "/user/logout"), http.StatusOK)
-
-			return loginUserWithTOTP(t, user)
-		}()
+		session := loginUserMaybeTOTP(t, user, useTOTP)
 
 		req := NewRequest(t, "GET", fmt.Sprintf("/%s", user.Name))
 
@@ -184,7 +175,7 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			assert.Equal(t, 1, userLinks.Length()) // only logout link
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
 
-			assert.Empty(t, htmlDoc.Find("a:container('Re-enroll two-factor authentication')").Length())
+			assert.Equal(t, 0, htmlDoc.FindByText("a", "Re-enroll two-factor authentication").Length())
 
 			headings := htmlDoc.Find(".user-setting-content h4.attached.header")
 			assert.Equal(t, 2, headings.Length())

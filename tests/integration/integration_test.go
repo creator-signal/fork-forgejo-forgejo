@@ -458,15 +458,24 @@ func loginUserWithTOTP(t testing.TB, user *user_model.User) *TestSession {
 	passcode, err := totp.GenerateCode(string(code), time.Now())
 	require.NoError(t, err)
 
-	req := NewRequest(t, "GET", "/user/two_factor")
-	resp := session.MakeRequest(t, req, http.StatusOK)
-	req = NewRequestWithValues(t, "POST", "/user/two_factor", map[string]string{
-		"_csrf":    NewHTMLParser(t, resp.Body).GetCSRF(),
+	req := NewRequestWithValues(t, "POST", "/user/two_factor", map[string]string{
+		"_csrf":    GetCSRF(t, session, "/user/two_factor"),
 		"passcode": passcode,
 	})
 	session.MakeRequest(t, req, http.StatusSeeOther)
 
 	return session
+}
+
+func loginUserMaybeTOTP(t testing.TB, user *user_model.User, useTOTP bool) *TestSession {
+	if useTOTP {
+		sess := loginUser(t, user.Name)
+		sess.EnrollTOTP(t)
+		sess.MakeRequest(t, NewRequest(t, "POST", "/user/logout"), http.StatusOK)
+
+		return loginUserWithTOTP(t, user)
+	}
+	return loginUser(t, user.Name)
 }
 
 // token has to be unique this counter take care of
