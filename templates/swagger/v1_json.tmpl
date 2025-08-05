@@ -234,6 +234,35 @@
         }
       }
     },
+    "/activitypub/user-id/{user-id}/outbox": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "activitypub"
+        ],
+        "summary": "List the user's recorded activity",
+        "operationId": "activitypubPersonFeed",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "user ID of the user",
+            "name": "user-id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/PersonFeed"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          }
+        }
+      }
+    },
     "/admin/cron": {
       "get": {
         "produces": [
@@ -21187,6 +21216,38 @@
       },
       "x-go-package": "forgejo.org/services/context"
     },
+    "APPersonFollowItem": {
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "x-go-name": "ActorID"
+        },
+        "note": {
+          "type": "string",
+          "x-go-name": "Note"
+        },
+        "original_item": {
+          "type": "string",
+          "x-go-name": "OriginalItem"
+        },
+        "original_url": {
+          "type": "string",
+          "x-go-name": "OriginalURL"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "APRemoteFollowOption": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "x-go-name": "Target"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "AccessToken": {
       "type": "object",
       "title": "AccessToken represents an API access token.",
@@ -29629,6 +29690,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Package"
+        }
+      }
+    },
+    "PersonFeed": {
+      "description": "Personfeed",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/APPersonFollowItem"
         }
       }
     },
