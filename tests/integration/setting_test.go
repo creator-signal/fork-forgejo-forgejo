@@ -170,6 +170,7 @@ func TestSettingSecurityTwoFactorRequirement(t *testing.T) {
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		htmlDoc.AssertSelection(t, htmlDoc.FindByText("a", "Re-enroll two-factor authentication"), showReroll)
 		htmlDoc.AssertElement(t, "#disable-form", showUnroll)
+		htmlDoc.AssertSelection(t, htmlDoc.FindByText("p", "This Forgejo instance requires users to have two-factor authentication. You can't disable two-factor authentication"), showReroll && !showUnroll)
 
 		req := NewRequestWithValues(t, "POST", "user/settings/security/two_factor/disable", map[string]string{
 			"_csrf": htmlDoc.GetCSRF(),
