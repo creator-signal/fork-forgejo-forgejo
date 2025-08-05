@@ -38,7 +38,7 @@ func checkTwoFactor(ctx *context.PrivateContext, user *user_model.User) {
 	}
 	if !hasTwoFactor {
 		ctx.JSON(http.StatusForbidden, private.Response{
-			UserMsg: string(ctx.Tr("error.must_enable_2fa", setting.AppURL)),
+			UserMsg: string(ctx.Tr("error.must_enable_2fa", fmt.Sprintf("%suser/settings/security", setting.AppURL))),
 		})
 		return
 	}
