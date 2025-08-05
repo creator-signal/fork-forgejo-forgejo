@@ -28,11 +28,15 @@ func processPersonInboxCreate(ctx context.Context, user *user.User, activity *ap
 		log.Error("Federated user not found (%s): %v", actorURI, err)
 		return ServiceResult{}, NewErrNotAcceptablef("federated user not found (%s): %v", actorURI, err)
 	}
+	if federatedBaseUser == nil {
+		log.Error("Federated user not found (%s): %v", actorURI, err)
+		return ServiceResult{}, NewErrNotAcceptablef("federated user not found (%s): %v", actorURI, err)
+	}
 
 	federatedUserActivity, err := activities.NewFederatedUserActivity(
 		user.ID,
 		federatedBaseUser.ID,
-		activity.Actor.GetLink().String(),
+		createAct.Actor.GetLink().String(),
 		createAct.Note.Content.String(),
 		createAct.Note.URL.GetID().String(),
 		*activity,
