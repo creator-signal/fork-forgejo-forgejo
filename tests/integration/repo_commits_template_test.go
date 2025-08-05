@@ -38,8 +38,8 @@ func TestRepoCommitsTemplateVariables(t *testing.T) {
 	assert.Equal(t, 1, shaHeader.Length(), "SHA column header should exist")
 	headerText := strings.TrimSpace(shaHeader.Text())
 	assert.NotEmpty(t, headerText, "SHA column header should have text (ObjectFormatName)")
-	// Should be uppercase SHA or SHA256 depending on the repository format
-	assert.True(t, headerText == "SHA" || headerText == "SHA256", "ObjectFormatName should be rendered correctly")
+	// Should be uppercase SHA1 or SHA256 depending on the repository format
+	assert.True(t, headerText == "SHA1" || headerText == "SHA256", "ObjectFormatName should be rendered correctly, got: %s", headerText)
 
 	// 3. Repository.ComposeMetas is used for rendering commit messages
 	commitMessages := doc.doc.Find("#commits-table tbody tr td.message .commit-summary")

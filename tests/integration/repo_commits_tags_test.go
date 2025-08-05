@@ -20,7 +20,7 @@ func TestRepoCommitsWithTags(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	session := loginUser(t, "user2")
-	req := NewRequest(t, "GET", "/user2/repo1/commits/branch/main")
+	req := NewRequest(t, "GET", "/user2/repo1/commits/branch/master")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	doc := NewHTMLParser(t, resp.Body)
