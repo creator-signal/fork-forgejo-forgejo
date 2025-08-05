@@ -15,7 +15,7 @@
 		<button class="ui primary button">{{ctx.Locale.Tr "settings.twofa_scratch_token_regenerate"}}</button>
 	</form>
 	{{if .SignedUser.MustHaveTwoFactor}}
-		<p class="tw-mt-4 tw-mb-0">{{ctx.Locale.Tr "settings.twofa_is_required"}}</p>
+		<p class="tw-mt-4 tw-mb-0">{{ctx.Locale.Tr "settings.twofa_unroll_unavailable"}}</p>
 	{{else}}
 		<form class="ui form" action="{{AppSubUrl}}/user/settings/security/two_factor/disable" method="post" enctype="multipart/form-data" id="disable-form">
 			{{.CsrfTokenHtml}}
