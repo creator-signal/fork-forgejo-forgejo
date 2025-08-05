@@ -73,7 +73,7 @@
 							</button>
 							{{if .ContentReference}} {{/* the reference is missing when the content was already deleted */}}
 							<details class="item dropdown dir-auto">
-								<summary class="tw-p-1" data-tooltip-content="{{ctx.Locale.Tr "more_actions_dropdown.tooltip"}}">{{svg "octicon-kebab-horizontal"}}</summary>
+								<summary class="tw-p-1" data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">{{svg "octicon-kebab-horizontal"}}</summary>
 								<ul
 										hx-target="{{$reportDivSelector}}" hx-indicator="{{$reportDivSelector}}"
 										hx-vals='{"content_type": {{.ContentType}}, "content_id": {{.ContentID}}}'>
