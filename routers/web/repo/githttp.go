@@ -180,7 +180,7 @@ func httpBase(ctx *context.Context) *serviceHandler {
 				return nil
 			}
 			if !hasTwoFactor {
-				ctx.PlainText(http.StatusForbidden, "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts. Enable it at: "+setting.AppURL+"/user/settings/security")
+				ctx.PlainText(http.StatusForbidden, ctx.Locale.TrString("error.must_enable_2fa", fmt.Sprintf("%suser/settings/security", setting.AppURL)))
 				return nil
 			}
 		}

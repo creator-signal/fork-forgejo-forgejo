@@ -147,6 +147,8 @@ func TestDisableSignin(t *testing.T) {
 func TestGlobalTwoFactorRequirement(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
+	locale := translation.NewLocale("en-US")
+
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
 	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
@@ -168,19 +170,19 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			req = NewRequest(t, "GET", "/user/settings/security")
 			resp = session.MakeRequest(t, req, http.StatusOK)
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			assert.Equal(t, "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts.", htmlDoc.Find(".ui.red.message").Text())
+			assert.Equal(t, locale.TrString("settings.must_enable_2fa"), htmlDoc.Find(".ui.red.message").Text())
 			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length()) // only show the Logo, no other links
 
 			userLinks := htmlDoc.Find(".navbar-right .user-menu a.item")
 			assert.Equal(t, 1, userLinks.Length()) // only logout link
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
 
-			assert.Equal(t, 0, htmlDoc.FindByText("a", "Re-enroll two-factor authentication").Length())
+			assert.Equal(t, 0, htmlDoc.FindByText("a", locale.TrString("settings.twofa_reenroll")).Length())
 
 			headings := htmlDoc.Find(".user-setting-content h4.attached.header")
 			assert.Equal(t, 2, headings.Length())
-			assert.Equal(t, "Two-factor authentication (TOTP)", strings.TrimSpace(headings.First().Text()))
-			assert.Equal(t, "Two-factor authentication (Security keys)", strings.TrimSpace(headings.Last().Text()))
+			assert.Equal(t, locale.TrString("settings.twofa"), strings.TrimSpace(headings.First().Text()))
+			assert.Equal(t, locale.TrString("settings.webauthn"), strings.TrimSpace(headings.Last().Text()))
 		}
 	}
 

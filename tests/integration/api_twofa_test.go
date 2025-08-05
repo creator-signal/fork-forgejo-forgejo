@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
 
 	"github.com/pquerna/otp/totp"
@@ -90,13 +92,15 @@ func TestAPIWithRequiredTwoFactor(t *testing.T) {
 		Message string `json:"message"`
 	}
 
+	locale := translation.NewLocale("en-US")
+
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
 	inactiveUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 9})
 	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
 	prohibitLoginUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 37})
 
-	const require2FaMessage = "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts"
+	require2FaMessage := locale.TrString("error.must_enable_2fa", fmt.Sprintf("%suser/settings/security", setting.AppURL))
 	const prohibitedMessage = "This account is prohibited from signing in, please contact your site administrator."
 	const loginNotAllowedMessage = "user is not allowed login"
 

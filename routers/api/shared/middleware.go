@@ -108,7 +108,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 				if !hasTwoFactor {
 					ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
 					ctx.JSON(http.StatusForbidden, map[string]string{
-						"message": "This Forgejo instance requires users to enable two-factor authentication before they can access their accounts. Enable it at: " + setting.AppURL + "/user/settings/security",
+						"message": ctx.Locale.TrString("error.must_enable_2fa", fmt.Sprintf("%suser/settings/security", setting.AppURL)),
 					})
 					return
 				}
