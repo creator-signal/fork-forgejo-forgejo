@@ -14,6 +14,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -159,6 +160,8 @@ func TestSettingSecurityAuthSource(t *testing.T) {
 func TestSettingSecurityTwoFactorRequirement(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
+	locale := translation.NewLocale("en-US")
+
 	runTest := func(t *testing.T, user *user_model.User, forceTOTP, showReroll, showUnroll bool) {
 		t.Helper()
 		defer unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: user.ID})
@@ -168,9 +171,9 @@ func TestSettingSecurityTwoFactorRequirement(t *testing.T) {
 
 		resp := session.MakeRequest(t, NewRequest(t, "GET", "user/settings/security"), http.StatusOK)
 		htmlDoc := NewHTMLParser(t, resp.Body)
-		htmlDoc.AssertSelection(t, htmlDoc.FindByText("a", "Re-enroll two-factor authentication"), showReroll)
+		htmlDoc.AssertSelection(t, htmlDoc.FindByText("a", locale.TrString("settings.twofa_reenroll")), showReroll)
 		htmlDoc.AssertElement(t, "#disable-form", showUnroll)
-		htmlDoc.AssertSelection(t, htmlDoc.FindByText("p", "This Forgejo instance requires users to have two-factor authentication. You can't disable two-factor authentication"), showReroll && !showUnroll)
+		htmlDoc.AssertSelection(t, htmlDoc.FindByText("p", locale.TrString("settings.twofa_unroll_unavailable")), showReroll && !showUnroll)
 
 		req := NewRequestWithValues(t, "POST", "user/settings/security/two_factor/disable", map[string]string{
 			"_csrf": htmlDoc.GetCSRF(),
