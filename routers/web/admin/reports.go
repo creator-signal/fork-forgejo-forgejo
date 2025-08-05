@@ -240,7 +240,7 @@ func updateReportStatus(ctx *context.Context, contentType moderation.ReportedCon
 	}
 
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to update the status of the report » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to update the status of the report: %s", err.Error()))
 		return
 	}
 
@@ -259,7 +259,7 @@ func suspendAccount(ctx *context.Context, contentType moderation.ReportedContent
 	reportedUser, err := user.GetUserByID(ctx, contentID)
 	if err != nil {
 		// TODO: previous flash message does not get cleared when returning an error
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the user » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the user: %s", err.Error()))
 		return
 	}
 
@@ -284,7 +284,7 @@ func suspendAccount(ctx *context.Context, contentType moderation.ReportedContent
 	authOpts := &user_service.UpdateAuthOptions{ProhibitLogin: optional.Some(true)}
 	// TODO: should we implement a new, simpler, SuspendAccount() method?!
 	if err = user_service.UpdateAuth(ctx, reportedUser, authOpts); err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to suspend the user » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to suspend the user: %s", err.Error()))
 		return
 	}
 
@@ -307,7 +307,7 @@ func deleteAccount(ctx *context.Context, contentType moderation.ReportedContentT
 
 	reportedUser, err := user.GetUserByID(ctx, contentID)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the user » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the user: %s", err.Error()))
 		return
 	}
 
@@ -321,13 +321,13 @@ func deleteAccount(ctx *context.Context, contentType moderation.ReportedContentT
 	if reportedUser.IsOrganization() {
 		reportedOrg := organization.OrgFromUser(reportedUser)
 		if err = org_service.DeleteOrganization(ctx, reportedOrg, true); err != nil {
-			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the organization » %s", err.Error()))
+			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the organization: %s", err.Error()))
 			return
 		}
 		log.Trace("Organization deleted by admin (%s): %s", ctx.Doer.Name, reportedOrg.Name)
 	} else {
 		if err = user_service.DeleteUser(ctx, reportedUser, true); err != nil {
-			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the user » %s", err.Error()))
+			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the user: %s", err.Error()))
 			return
 		}
 		log.Trace("Account deleted by admin (%s): %s", ctx.Doer.Name, reportedUser.Name)
@@ -343,12 +343,12 @@ func deleteAccount(ctx *context.Context, contentType moderation.ReportedContentT
 func deleteRepository(ctx *context.Context, contentType moderation.ReportedContentType, contentID int64, reportAction moderation_service.ReportAction) {
 	repo, err := repo_model.GetRepositoryByID(ctx, contentID)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the repository » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the repository: %s", err.Error()))
 		return
 	}
 
 	if err = repo_service.DeleteRepository(ctx, ctx.Doer, repo, true); err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the repository » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the repository: %s", err.Error()))
 		return
 	}
 	log.Trace("Repository deleted: %s", repo.FullName())
@@ -362,12 +362,12 @@ func deleteRepository(ctx *context.Context, contentType moderation.ReportedConte
 func deleteIssue(ctx *context.Context, contentType moderation.ReportedContentType, contentID int64, reportAction moderation_service.ReportAction) {
 	issue, err := issues.GetIssueByID(ctx, contentID)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the issue » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the issue: %s", err.Error()))
 		return
 	}
 
 	if err = issue_service.DeleteIssue(ctx, ctx.Doer, nil, issue); err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the issue » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the issue: %s", err.Error()))
 		return
 	}
 
@@ -380,12 +380,12 @@ func deleteIssue(ctx *context.Context, contentType moderation.ReportedContentTyp
 func deleteComment(ctx *context.Context, contentType moderation.ReportedContentType, contentID int64, reportAction moderation_service.ReportAction) {
 	comment, err := issues.GetCommentByID(ctx, contentID)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the comment » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the comment: %s", err.Error()))
 		return
 	}
 
 	if err = issue_service.DeleteComment(ctx, ctx.Doer, comment); err != nil {
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the comment » %s", err.Error()))
+		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to delete the comment: %s", err.Error()))
 		return
 	}
 
