@@ -10,11 +10,37 @@ import (
 	"time"
 
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 
+	"github.com/google/go-github/v64/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestGithubDownloaderFilterComments(t *testing.T) {
+	// Create mock opts
+	// Create mock github comments
+	// 1 with issue url, 1 with pull url
+	// call downloader.removeCommentsByOpts
+	// check that comments are only related to PRs
+
+	var githubComments []*github.IssueComment
+
+	filteredComments, _, err := downloader.filterComments(githubComments)
+	pullRequestIssueIndex := int64(4)
+
+	if err != nil {
+		log.Error(err.Error())
+		t.Fail()
+	}
+
+	// Check each issue index not being from the PR
+	for _, comment := range comments {
+		assert.True(t, comment.IssueIndex != pullRequestIssueIndex)
+	}
+
+}
 
 func TestGitHubDownloadRepo(t *testing.T) {
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //

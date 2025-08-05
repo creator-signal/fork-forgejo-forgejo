@@ -583,6 +583,7 @@ func (g *GithubDownloaderV3) getComments(commentable base.Commentable) ([]*base.
 }
 
 // GetAllComments returns repository comments according page and perPageSize
+// TODO Add opts parameter which is used in defining if comments should be filtered
 func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment, bool, error) {
 	var (
 		allComments = make([]*base.Comment, 0, perPage)
@@ -603,6 +604,7 @@ func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment,
 
 	g.waitAndPickClient()
 	comments, resp, err := g.getClient().Issues.ListComments(g.ctx, g.repoOwner, g.repoName, 0, opt)
+	// TODO: Here we'll do the filtering with a private function
 	if err != nil {
 		return nil, false, fmt.Errorf("error while listing repos: %w", err)
 	}
