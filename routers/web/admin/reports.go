@@ -263,6 +263,12 @@ func suspendAccount(ctx *context.Context, contentType moderation.ReportedContent
 		return
 	}
 
+	if reportedUser.IsAdmin {
+		ctx.Flash.Warning(ctx.Tr("moderation.users.cannot_suspend_admins"), true)
+		ctx.HTML(http.StatusOK, tplAlert)
+		return
+	}
+
 	if reportedUser.IsOrganization() {
 		ctx.Flash.Warning(ctx.Tr("moderation.users.cannot_suspend_org"), true)
 		ctx.HTML(http.StatusOK, tplAlert)
@@ -302,6 +308,13 @@ func deleteAccount(ctx *context.Context, contentType moderation.ReportedContentT
 	reportedUser, err := user.GetUserByID(ctx, contentID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the user » %s", err.Error()))
+		return
+	}
+
+	if reportedUser.IsAdmin {
+		ctx.Resp.Header().Add("HX-Reswap", "none") // prevent removing the report from the list
+		ctx.Flash.Warning(ctx.Tr("moderation.users.cannot_delete_admins"), true)
+		ctx.HTML(http.StatusOK, tplAlert)
 		return
 	}
 
