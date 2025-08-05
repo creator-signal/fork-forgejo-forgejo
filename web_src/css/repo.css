@@ -2797,7 +2797,7 @@ tbody.commit-list {
     grid-column: 1;
     justify-self: left;
   }
-  
+
   .commit-timeline .mobile-btn {
     display: grid;
     grid-row: 3;
