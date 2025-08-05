@@ -13,44 +13,84 @@ import (
 	"strings"
 )
 
-func (handler Handler) handleGoTrBasicLit(fset *token.FileSet, argLit *ast.BasicLit) {
+func (handler Handler) handleGoTrBasicLit(fset *token.FileSet, argLit *ast.BasicLit, prefix string) {
 	if argLit.Kind == token.STRING {
 		// extract string content
 		arg, err := strconv.Unquote(argLit.Value)
-		if err == nil {
-			// found interesting strings
-			if strings.HasSuffix(arg, ".") || strings.HasSuffix(arg, "_") {
-				prep, trunc := PrepareMsgidPrefix(arg)
-				if trunc {
-					handler.OnWarning(fset, argLit.ValuePos, fmt.Sprintf("needed to truncate message id prefix: %s", arg))
-				}
-				handler.OnMsgidPrefix(fset, argLit.ValuePos, prep)
-			} else {
-				handler.OnMsgid(fset, argLit.ValuePos, arg)
+		if err != nil {
+			return
+		}
+		// found interesting strings
+		arg = prefix + arg
+		if strings.HasSuffix(arg, ".") || strings.HasSuffix(arg, "_") {
+			prep, trunc := PrepareMsgidPrefix(arg)
+			if trunc {
+				handler.OnWarning(fset, argLit.ValuePos, fmt.Sprintf("needed to truncate message id prefix: %s", arg))
 			}
+			handler.OnMsgidPrefix(fset, argLit.ValuePos, prep)
+		} else {
+			handler.OnMsgid(fset, argLit.ValuePos, arg)
 		}
 	}
 }
 
-func (handler Handler) handleGoTrArgument(fset *token.FileSet, n ast.Expr) {
+func (handler Handler) handleGoTrArgument(fset *token.FileSet, n ast.Expr, prefix string) {
 	if argLit, ok := n.(*ast.BasicLit); ok {
-		handler.handleGoTrBasicLit(fset, argLit)
+		handler.handleGoTrBasicLit(fset, argLit, prefix)
 	} else if argBinExpr, ok := n.(*ast.BinaryExpr); ok {
 		if argBinExpr.Op != token.ADD {
 			// pass
 		} else if argLit, ok := argBinExpr.X.(*ast.BasicLit); ok && argLit.Kind == token.STRING {
 			// extract string content
 			arg, err := strconv.Unquote(argLit.Value)
-			if err == nil {
-				// found interesting strings
-				prep, trunc := PrepareMsgidPrefix(arg)
-				if trunc {
-					handler.OnWarning(fset, argLit.ValuePos, fmt.Sprintf("needed to truncate message id prefix: %s", arg))
-				}
-				handler.OnMsgidPrefix(fset, argLit.ValuePos, prep)
+			if err != nil {
+				return
 			}
+			// found interesting strings
+			arg = prefix + arg
+			prep, trunc := PrepareMsgidPrefix(arg)
+			if trunc {
+				handler.OnWarning(fset, argLit.ValuePos, fmt.Sprintf("needed to truncate message id prefix: %s", arg))
+			}
+			handler.OnMsgidPrefix(fset, argLit.ValuePos, prep)
 		}
 	}
+}
+
+func (handler Handler) handleGoCommentGroup(fset *token.FileSet, cg *ast.CommentGroup, commentPrefix string) *string {
+	matches := false
+	matchInsPrefix := ""
+	var multimatches *token.Pos
+	if cg == nil {
+		return nil
+	}
+	commentPrefix = "//" + commentPrefix
+	for _, comment := range cg.List {
+		ctxt := strings.TrimSpace(comment.Text)
+		if ctxt == commentPrefix {
+			if matches {
+				multimatches = &comment.Slash
+			}
+			matches = true
+		} else if after, found := strings.CutPrefix(ctxt, commentPrefix+"Suffix "); found {
+			if matches {
+				multimatches = &comment.Slash
+			}
+			matches = true
+			matchInsPrefix = strings.TrimSpace(after)
+		}
+	}
+	if !matches {
+		return nil
+	}
+	if multimatches != nil {
+		handler.OnWarning(
+			fset,
+			*multimatches,
+			fmt.Sprintf("encountered multiple %s... directives", strings.TrimSpace(commentPrefix)),
+		)
+	}
+	return &matchInsPrefix
 }
 
 // the `Handle*File` functions follow the following calling convention:
@@ -90,7 +130,7 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 					argc := len(call.Args)
 					gotUnexpectedInvoke = &argc
 				} else {
-					handler.handleGoTrArgument(fset, call.Args[int(argNum)])
+					handler.handleGoTrArgument(fset, call.Args[int(argNum)], "")
 				}
 			}
 
@@ -121,16 +161,8 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 				}
 			}
 		} else if function, ok := n.(*ast.FuncDecl); ok {
-			matches := false
-			if function.Doc != nil {
-				for _, comment := range function.Doc.List {
-					if strings.TrimSpace(comment.Text) == "//llu:returnsTrKey" {
-						matches = true
-						break
-					}
-				}
-			}
-			if !matches {
+			matchInsPrefix := handler.handleGoCommentGroup(fset, function.Doc, "llu:returnsTrKey")
+			if matchInsPrefix == nil {
 				return true
 			}
 			results := function.Type.Results.List
@@ -146,7 +178,7 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 					for _, res := range ret.Results {
 						ast.Inspect(res, func(n ast.Node) bool {
 							if expr, ok := n.(ast.Expr); ok {
-								handler.handleGoTrArgument(fset, expr)
+								handler.handleGoTrArgument(fset, expr, *matchInsPrefix)
 							}
 							return true
 						})
@@ -157,23 +189,15 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 			})
 			return true
 		} else if decl, ok := n.(*ast.GenDecl); ok && (decl.Tok == token.CONST || decl.Tok == token.VAR) {
-			matches := false
-			if decl.Doc != nil {
-				for _, comment := range decl.Doc.List {
-					if strings.TrimSpace(comment.Text) == "// llu:TrKeys" {
-						matches = true
-						break
-					}
-				}
-			}
-			if !matches {
+			matchInsPrefix := handler.handleGoCommentGroup(fset, decl.Doc, " llu:TrKeys")
+			if matchInsPrefix == nil {
 				return true
 			}
 			for _, spec := range decl.Specs {
 				// interpret all contained strings as message IDs
 				ast.Inspect(spec, func(n ast.Node) bool {
 					if argLit, ok := n.(*ast.BasicLit); ok {
-						handler.handleGoTrBasicLit(fset, argLit)
+						handler.handleGoTrBasicLit(fset, argLit, *matchInsPrefix)
 						return false
 					}
 					return true
