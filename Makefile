@@ -208,6 +208,7 @@ help:
 	@echo " - watch-backend                    watch backend files and continuously rebuild"
 	@echo " - clean                            delete backend and integration files"
 	@echo " - clean-all                        delete backend, frontend and integration files"
+	@echo " - coverage[\#package]              generate coverage report filteres for package"
 	@echo " - deps                             install dependencies"
 	@echo " - deps-frontend                    install frontend dependencies"
 	@echo " - deps-backend                     install backend dependencies"
@@ -257,7 +258,7 @@ help:
 	@echo " - test[\#TestSpecificName]         run unit test"
 	@echo " - test-sqlite[\#TestSpecificName]  run integration test for sqlite"
 	@echo " - reproduce-build\#version         build a reproducible binary for the specified release version"
-	@echo " - prepare-pr[\#TestSpecificName]   fmt, fix-lint, test-backend & test-sqlite with given testspec."
+	@echo " - prepare-pr[\#TestSpecificName]   fmt, lint-fix, test-backend & test-sqlite with given testspec."
 
 .PHONY: verify-version
 verify-version:
