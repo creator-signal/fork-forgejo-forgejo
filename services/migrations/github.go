@@ -57,7 +57,7 @@ func (f *GithubDownloaderV3Factory) New(ctx context.Context, opts base.MigrateOp
 
 	log.Trace("Create github downloader BaseURL: %s %s/%s", baseURL, oldOwner, oldName)
 
-	return NewGithubDownloaderV3(ctx, baseURL, opts.AuthUsername, opts.AuthPassword, opts.AuthToken, oldOwner, oldName), nil
+	return NewGithubDownloaderV3(ctx, opts.PullRequests, opts.Issues, baseURL, opts.AuthUsername, opts.AuthPassword, opts.AuthToken, oldOwner, oldName), nil
 }
 
 // GitServiceType returns the type of git service
@@ -69,30 +69,34 @@ func (f *GithubDownloaderV3Factory) GitServiceType() structs.GitServiceType {
 // from github via APIv3
 type GithubDownloaderV3 struct {
 	base.NullDownloader
-	ctx           context.Context
-	clients       []*github.Client
-	baseURL       string
-	repoOwner     string
-	repoName      string
-	userName      string
-	password      string
-	rates         []*github.Rate
-	curClientIdx  int
-	maxPerPage    int
-	SkipReactions bool
-	SkipReviews   bool
+	ctx             context.Context
+	clients         []*github.Client
+	baseURL         string
+	repoOwner       string
+	repoName        string
+	userName        string
+	password        string
+	getPullRequests bool
+	getIssues       bool
+	rates           []*github.Rate
+	curClientIdx    int
+	maxPerPage      int
+	SkipReactions   bool
+	SkipReviews     bool
 }
 
 // NewGithubDownloaderV3 creates a github Downloader via github v3 API
-func NewGithubDownloaderV3(ctx context.Context, baseURL, userName, password, token, repoOwner, repoName string) *GithubDownloaderV3 {
+func NewGithubDownloaderV3(ctx context.Context, getPullRequests, getIssues bool, baseURL, userName, password, token, repoOwner, repoName string) *GithubDownloaderV3 {
 	downloader := GithubDownloaderV3{
-		userName:   userName,
-		baseURL:    baseURL,
-		password:   password,
-		ctx:        ctx,
-		repoOwner:  repoOwner,
-		repoName:   repoName,
-		maxPerPage: 100,
+		userName:        userName,
+		baseURL:         baseURL,
+		password:        password,
+		ctx:             ctx,
+		repoOwner:       repoOwner,
+		repoName:        repoName,
+		maxPerPage:      100,
+		getPullRequests: getPullRequests,
+		getIssues:       getIssues,
 	}
 
 	if token != "" {
@@ -582,8 +586,17 @@ func (g *GithubDownloaderV3) getComments(commentable base.Commentable) ([]*base.
 	return allComments, nil
 }
 
+func (g *GithubDownloaderV3) filterByHTMLURL(comments []*github.IssueComment, filterBy string) []*github.IssueComment {
+	var result []*github.IssueComment
+	for _, val := range comments {
+		if !strings.Contains(*val.HTMLURL, filterBy) {
+			result = append(result, val)
+		}
+	}
+	return result
+}
+
 // GetAllComments returns repository comments according page and perPageSize
-// TODO Add opts parameter which is used in defining if comments should be filtered
 func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment, bool, error) {
 	var (
 		allComments = make([]*base.Comment, 0, perPage)
@@ -604,11 +617,16 @@ func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment,
 
 	g.waitAndPickClient()
 	comments, resp, err := g.getClient().Issues.ListComments(g.ctx, g.repoOwner, g.repoName, 0, opt)
-	// TODO: Here we'll do the filtering with a private function
 	if err != nil {
 		return nil, false, fmt.Errorf("error while listing repos: %w", err)
 	}
 	isEnd := resp.NextPage == 0
+
+	if g.getIssues && !g.getPullRequests {
+		comments = g.filterByHTMLURL(comments, "/issues/")
+	} else if !g.getIssues && g.getPullRequests {
+		comments = g.filterByHTMLURL(comments, "/pull/")
+	}
 
 	log.Trace("Request get comments %d/%d, but in fact get %d, next page is %d", perPage, page, len(comments), resp.NextPage)
 	g.setRate(&resp.Rate)
