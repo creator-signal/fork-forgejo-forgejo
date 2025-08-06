@@ -65,6 +65,7 @@ func TestRepoUpload(t *testing.T) {
 	}
 
 	// Create Repo
+	// TODO the repo cloned by the uploader is located in ./testdata/github/full_download/go-gitea, we may want to change the location if feasible
 	if err := uploader.CreateRepo(repoMock, opts); err != nil {
 		log.Error(err.Error())
 		t.Fail()
