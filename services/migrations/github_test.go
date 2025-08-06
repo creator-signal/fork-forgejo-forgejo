@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"forgejo.org/models/unittest"
-	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 
 	"github.com/google/go-github/v64/github"
@@ -19,27 +18,83 @@ import (
 )
 
 func TestGithubDownloaderFilterComments(t *testing.T) {
-	// Create mock opts
-	// Create mock github comments
-	// 1 with issue url, 1 with pull url
-	// call downloader.removeCommentsByOpts
-	// check that comments are only related to PRs
+	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
+
+	token := os.Getenv("GITHUB_READ_TOKEN")
+	fixturePath := "./testdata/github/full_download"
+	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, token != "")
+	defer server.Close()
+
+	downloader := NewGithubDownloaderV3(t.Context(), server.URL, "", "", token, "go-gitea", "test_repo")
+	err := downloader.RefreshRate()
+	require.NoError(t, err)
 
 	var githubComments []*github.IssueComment
+	issueID := int64(7)
+	iNodeId := "MDEyOklzc3VlQ29tbWVudDE=" // "IssueComment1"
+	iBody := "Hello"
+	iCreated := new(github.Timestamp)
+	iUpdated := new(github.Timestamp)
+	iCreated.Time = time.Date(2025, 01, 01, 12, 0, 0, 0, time.UTC)
+	iUpdated.Time = time.Date(2025, 01, 01, 12, 1, 0, 0, time.UTC)
+	iAssociation := "COLLABORATOR"
+	iUrl := "https://api.github.com/repos/PatDyn/some-test-repo/issues/comments/3155427415" //TODO This needs to point to forgejo owned test rep
+	iHtmlURL := "https://github.com/PatDyn/some-test-repo/issues/7#issuecomment-3155427415"
+	iIssueURL := "https://api.github.com/repos/PatDyn/some-test-repo/issues/7"
 
-	filteredComments, _, err := downloader.filterComments(githubComments)
-	pullRequestIssueIndex := int64(4)
+	githubComments = append(githubComments,
+		&github.IssueComment{
+			ID:                &issueID,
+			NodeID:            &iNodeId,
+			Body:              &iBody,
+			Reactions:         nil,
+			CreatedAt:         iCreated,
+			UpdatedAt:         iUpdated,
+			AuthorAssociation: &iAssociation,
+			URL:               &iUrl,
+			HTMLURL:           &iHtmlURL,
+			IssueURL:          &iIssueURL,
+		},
+	)
 
-	if err != nil {
-		log.Error(err.Error())
-		t.Fail()
-	}
+	prID := int64(4)
+	pNodeId := "IC_kwDOPQx9Mc65LHhx"
+	pBody := "Hello"
+	pCreated := new(github.Timestamp)
+	pUpdated := new(github.Timestamp)
+	pCreated.Time = time.Date(2025, 01, 01, 11, 0, 0, 0, time.UTC)
+	pUpdated.Time = time.Date(2025, 01, 01, 11, 1, 0, 0, time.UTC)
+	pAssociation := "COLLABORATOR"
+	pUrl := "https://api.github.com/repos/PatDyn/some-test-repo/issues/comments/3106699377" //TODO This needs to point to forgejo owned test rep
+	pHtmlURL := "https://github.com/PatDyn/some-test-repo/pull/4#issuecomment-3106699377"
+	pIssueURL := "https://api.github.com/repos/PatDyn/some-test-repo/issues/4"
+
+	githubComments = append(githubComments, &github.IssueComment{
+		ID:                &prID,
+		NodeID:            &pNodeId,
+		Body:              &pBody,
+		Reactions:         nil,
+		CreatedAt:         pCreated,
+		UpdatedAt:         pUpdated,
+		AuthorAssociation: &pAssociation,
+		URL:               &pUrl,
+		HTMLURL:           &pHtmlURL,
+		IssueURL:          &pIssueURL,
+	})
+
+	filteredComments := downloader.filterByHTMLURL(githubComments, "/pull/")
 
 	// Check each issue index not being from the PR
-	for _, comment := range comments {
-		assert.True(t, comment.IssueIndex != pullRequestIssueIndex)
+	for _, comment := range filteredComments {
+		assert.True(t, *comment.ID != prID)
 	}
 
+	filteredComments = downloader.filterByHTMLURL(githubComments, "/issues/")
+
+	// Check each issue index not being from the issue
+	for _, comment := range filteredComments {
+		assert.True(t, *comment.ID != issueID)
+	}
 }
 
 func TestGitHubDownloadRepo(t *testing.T) {
