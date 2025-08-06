@@ -31,7 +31,7 @@ func TestReleaseFeed(t *testing.T) {
 		assert.Equal(t, `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Releases for user2/repo1</title>
-    <link>http://localhost/user2/repo1/release</link>
+    <link>http://localhost/user2/repo1/releases</link>
     <description></description>
     <pubDate></pubDate>
     <item>
@@ -62,9 +62,9 @@ func TestReleaseFeed(t *testing.T) {
 		resp := MakeRequest(t, NewRequest(t, "GET", "/user2/repo1/releases.atom"), http.StatusOK)
 		assert.Equal(t, `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
   <title>Releases for user2/repo1</title>
-  <id>http://localhost/user2/repo1/release</id>
+  <id>http://localhost/user2/repo1/releases</id>
   <updated></updated>
-  <link href="http://localhost/user2/repo1/release"></link>
+  <link href="http://localhost/user2/repo1/releases"></link>
   <entry>
     <title>pre-release</title>
     <updated></updated>
