@@ -115,7 +115,7 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 
 		localUser2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		localUser2URL := localUrl.JoinPath("/api/v1/activitypub/user-id/2").String()
-		localUser2Inbox := localUrl.JoinPath("/api/v1/activitypub/user-id/2/inbox").String()
+		localUser2Inbox := fmt.Sprintf("%v/inbox", localUser2URL)
 		localSession2 := loginUser(t, localUser2.LoginName)
 		localSecssion2Token := getTokenForLoggedInUser(t, localSession2, auth_model.AccessTokenScopeWriteIssue)
 
@@ -147,6 +147,22 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 			Body:  "Nothing to see here!",
 		}).AddTokenAuth(localSecssion2Token)
 		MakeRequest(t, req, http.StatusCreated)
+
+		// distant request outbox
+		localUser2Outbox := fmt.Sprintf("%v/outbox", localUser2URL)
+		resp, err = c.Get(localUser2Outbox)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// distant request activity & activity note
+		localUser2ActivityNote := fmt.Sprintf("%v/activities/1", localUser2URL)
+		localUser2Activity := fmt.Sprintf("%v/activities/1/activity", localUser2URL)
+		resp, err = c.Get(localUser2ActivityNote)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		resp, err = c.Get(localUser2Activity)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		// check for activity on distant inbox
 		assert.Contains(t, mock.LastPost, "user2</a> opened issue")
