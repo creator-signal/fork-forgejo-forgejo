@@ -24,6 +24,7 @@ import (
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
+	"forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 	repo_module "forgejo.org/modules/repository"
@@ -192,24 +193,24 @@ func httpBase(ctx *context.Context) *serviceHandler {
 					ctx.ServerError("GetTaskByID", err)
 					return nil
 				}
-				if task.RepoID != repo.ID {
-					ctx.PlainText(http.StatusForbidden, "User permission denied")
-					return nil
+				actionPerm := accessMode
+				if task.RepoID == repo.ID {
+					if !task.IsForkPullRequest {
+						actionPerm = perm.AccessModeWrite
+					}
+				} else {
+					p, err := access_model.GetUserRepoPermission(ctx, repo, user.NewActionsUser())
+					if err != nil {
+						ctx.ServerError("GetUserRepoPermission", err)
+						return nil
+					}
+					if !p.CanAccess(actionPerm, unitType) {
+						ctx.PlainText(http.StatusNotFound, "Repository not found")
+						return nil
+					}
 				}
 
-				if task.IsForkPullRequest {
-					if accessMode > perm.AccessModeRead {
-						ctx.PlainText(http.StatusForbidden, "User permission denied")
-						return nil
-					}
-					environ = append(environ, fmt.Sprintf("%s=%d", repo_module.EnvActionPerm, perm.AccessModeRead))
-				} else {
-					if accessMode > perm.AccessModeWrite {
-						ctx.PlainText(http.StatusForbidden, "User permission denied")
-						return nil
-					}
-					environ = append(environ, fmt.Sprintf("%s=%d", repo_module.EnvActionPerm, perm.AccessModeWrite))
-				}
+				environ = append(environ, fmt.Sprintf("%s=%d", repo_module.EnvActionPerm, actionPerm))
 			} else {
 				p, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
 				if err != nil {
