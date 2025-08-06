@@ -257,6 +257,7 @@ help:
 	@echo " - test[\#TestSpecificName]         run unit test"
 	@echo " - test-sqlite[\#TestSpecificName]  run integration test for sqlite"
 	@echo " - reproduce-build\#version         build a reproducible binary for the specified release version"
+	@echo " - prepare-pr[\#TestSpecificName]   fmt, fix-lint, test-backend & test-sqlite with given testspec."
 
 .PHONY: verify-version
 verify-version:
@@ -561,6 +562,15 @@ coverage:
 	grep '^\(mode: .*\)\|\(.*:[0-9]\+\.[0-9]\+,[0-9]\+\.[0-9]\+ [0-9]\+ [0-9]\+\)$$' coverage.out > coverage-bodged.out
 	grep '^\(mode: .*\)\|\(.*:[0-9]\+\.[0-9]\+,[0-9]\+\.[0-9]\+ [0-9]\+ [0-9]\+\)$$' integration.coverage.out > integration.coverage-bodged.out
 	$(GO) run build/gocovmerge.go integration.coverage-bodged.out coverage-bodged.out > coverage.all
+	$(GO) tool cover -html=coverage.filtered -o coverage.html
+
+.PHONY: coverage\#%
+coverage\#%:
+	grep '^\(mode: .*\)\|\(.*:[0-9]\+\.[0-9]\+,[0-9]\+\.[0-9]\+ [0-9]\+ [0-9]\+\)$$' coverage.out > coverage-bodged.out
+	grep '^\(mode: .*\)\|\(.*:[0-9]\+\.[0-9]\+,[0-9]\+\.[0-9]\+ [0-9]\+ [0-9]\+\)$$' integration.coverage.out > integration.coverage-bodged.out
+	$(GO) run build/gocovmerge.go integration.coverage-bodged.out coverage-bodged.out > coverage.all
+	grep -e "mode:" -e "$(subst .,/,$*)" coverage.all > coverage.filtered
+	$(GO) tool cover -html=coverage.filtered -o coverage.html
 
 .PHONY: unit-test-coverage
 unit-test-coverage:
@@ -786,6 +796,14 @@ e2e.sqlite.test: $(GO_SOURCES)
 
 .PHONY: check
 check: test
+
+.PHONY: prepare-pr
+prepare-pr: fmt lint-fix clean build unit-test-coverage integrations.cover.sqlite.test generate-ini-sqlite
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/sqlite.ini $(GOTESTCOMPILEDRUNPREFIX) ./integrations.cover.sqlite.test -test.coverprofile=integration.coverage.out $(GOTESTCOMPILEDRUNSUFFIX)
+
+.PHONY: prepare-pr\#%
+prepare-pr\#%: fmt lint-fix clean build unit-test-coverage integrations.cover.sqlite.test generate-ini-sqlite
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/sqlite.ini $(GOTESTCOMPILEDRUNPREFIX) ./integrations.cover.sqlite.test -test.coverprofile=integration.coverage.out -test.run $(subst .,/,$*)
 
 ###
 # Production / build targets
