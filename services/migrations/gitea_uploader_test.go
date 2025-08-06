@@ -31,6 +31,12 @@ import (
 )
 
 func TestRepoUpload(t *testing.T) {
+	t.Skip("TODO: This test will be reactivated once the forgejo github repo is available")
+	// Once the github repo is available we need to do the following:
+	// Do a download test once with a GH token which will collect the API responses
+	// Set up mock server here
+	// Testcase: Do the download/upload operations for repo, issues, prs, comments. Operations must not fail
+	// Testcase: We can check that each issue has its proper comment attached
 
 	unittest.PrepareTestEnv(t)
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -133,7 +139,7 @@ func TestRepoUpload(t *testing.T) {
 		Meta:        nil,
 	}
 	prComment := &base.Comment{
-		IssueIndex:  4,
+		IssueIndex:  7,
 		Index:       0,
 		CommentType: "comment",
 		PosterID:    119759884,
