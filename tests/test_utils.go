@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -42,6 +43,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"xorm.io/xorm/convert"
 )
 
 func exitf(format string, args ...any) {
@@ -311,9 +313,26 @@ func PrepareCleanPackageData(t testing.TB) {
 	require.NoError(t, storage.Clean(storage.Packages))
 }
 
+// inTestEnv keeps track if we are current inside a test environment, this is
+// used to detect if testing code tries to prepare a test environment more than
+// once.
+var inTestEnv atomic.Bool
+
 func PrepareTestEnv(t testing.TB, skip ...int) func() {
 	t.Helper()
-	deferFn := PrintCurrentTest(t, util.OptionalArg(skip)+1)
+
+	if !inTestEnv.CompareAndSwap(false, true) {
+		t.Fatal("Cannot prepare a test environment if you are already in a test environment. This is a bug in your testing code.")
+	}
+
+	deferPrintCurrentTest := PrintCurrentTest(t, util.OptionalArg(skip)+1)
+	deferFn := func() {
+		deferPrintCurrentTest()
+
+		if !inTestEnv.CompareAndSwap(true, false) {
+			t.Fatal("Tried to leave test environment, but we are no longer in a test environment. This should not happen.")
+		}
+	}
 
 	cancelProcesses(t, 30*time.Second)
 	t.Cleanup(func() { cancelProcesses(t, 0) }) // cancel remaining processes in a non-blocking way
@@ -342,6 +361,7 @@ type DeclarativeRepoOptions struct {
 	Name          optional.Option[string]
 	EnabledUnits  optional.Option[[]unit_model.Type]
 	DisabledUnits optional.Option[[]unit_model.Type]
+	UnitConfig    optional.Option[map[unit_model.Type]convert.Conversion]
 	Files         optional.Option[[]*files_service.ChangeRepoFile]
 	WikiBranch    optional.Option[string]
 	AutoInit      optional.Option[bool]
@@ -390,9 +410,14 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 		enabledUnits = make([]repo_model.RepoUnit, len(units))
 
 		for i, unitType := range units {
+			var config convert.Conversion
+			if cfg, ok := opts.UnitConfig.Value()[unitType]; ok {
+				config = cfg
+			}
 			enabledUnits[i] = repo_model.RepoUnit{
 				RepoID: repo.ID,
 				Type:   unitType,
+				Config: config,
 			}
 		}
 	}

@@ -6,6 +6,7 @@
 package setting
 
 import (
+	go_context "context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -64,6 +65,9 @@ func SettingsCtxData(ctx *context.Context) {
 	ctx.Data["DisableNewPushMirrors"] = setting.Mirror.DisableNewPush
 	ctx.Data["DefaultMirrorInterval"] = setting.Mirror.DefaultInterval
 	ctx.Data["MinimumMirrorInterval"] = setting.Mirror.MinInterval
+	ctx.Data["MaxAvatarFileSize"] = setting.Avatar.MaxFileSize
+	ctx.Data["MaxAvatarWidth"] = setting.Avatar.MaxWidth
+	ctx.Data["MaxAvatarHeight"] = setting.Avatar.MaxHeight
 
 	signing, _ := asymkey_service.SigningKey(ctx, ctx.Repo.Repository.RepoPath())
 	ctx.Data["SigningKeyAvailable"] = len(signing) > 0
@@ -150,11 +154,9 @@ func UnitsPost(ctx *context.Context) {
 		})
 		deleteUnitTypes = append(deleteUnitTypes, unit_model.TypeWiki)
 	} else if form.EnableWiki && !form.EnableExternalWiki && !unit_model.TypeWiki.UnitGlobalDisabled() {
-		var wikiPermissions repo_model.UnitAccessMode
+		wikiPermissions := repo_model.UnitAccessModeUnset
 		if form.GloballyWriteableWiki {
 			wikiPermissions = repo_model.UnitAccessModeWrite
-		} else {
-			wikiPermissions = repo_model.UnitAccessModeRead
 		}
 		units = append(units, repo_model.RepoUnit{
 			RepoID:             repo.ID,
@@ -588,6 +590,23 @@ func SettingsPost(ctx *context.Context) {
 			ctx.ServerError("UpdatePushMirrorInterval", err)
 			return
 		}
+
+		if m.BranchFilter != form.PushMirrorBranchFilter {
+			// replace `remote.<remote>.push` in config and db
+			m.BranchFilter = form.PushMirrorBranchFilter
+			if err := db.WithTx(ctx, func(ctx go_context.Context) error {
+				// Update the DB
+				if err = repo_model.UpdatePushMirrorBranchFilter(ctx, m); err != nil {
+					return err
+				}
+				// Update the repo config
+				return mirror_service.UpdatePushMirrorBranchFilter(ctx, m)
+			}); err != nil {
+				ctx.ServerError("UpdatePushMirrorBranchFilter", err)
+				return
+			}
+		}
+
 		// Background why we are adding it to Queue
 		// If we observed its implementation in the context of `push-mirror-sync` where it
 		// is evident that pushing to the queue is necessary for updates.
@@ -683,6 +702,7 @@ func SettingsPost(ctx *context.Context) {
 			SyncOnCommit:  form.PushMirrorSyncOnCommit,
 			Interval:      interval,
 			RemoteAddress: remoteAddress,
+			BranchFilter:  form.PushMirrorBranchFilter,
 		}
 
 		var plainPrivateKey []byte

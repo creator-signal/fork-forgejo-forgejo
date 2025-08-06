@@ -615,7 +615,7 @@ func ListActionTasks(ctx *context.APIContext) {
 
 // DispatchWorkflow dispatches a workflow
 func DispatchWorkflow(ctx *context.APIContext) {
-	// swagger:operation POST /repos/{owner}/{repo}/actions/workflows/{workflowname}/dispatches repository DispatchWorkflow
+	// swagger:operation POST /repos/{owner}/{repo}/actions/workflows/{workflowfilename}/dispatches repository DispatchWorkflow
 	// ---
 	// summary: Dispatches a workflow
 	// consumes:
@@ -631,7 +631,7 @@ func DispatchWorkflow(ctx *context.APIContext) {
 	//   description: name of the repo
 	//   type: string
 	//   required: true
-	// - name: workflowname
+	// - name: workflowfilename
 	//   in: path
 	//   description: name of the workflow
 	//   type: string
@@ -649,13 +649,13 @@ func DispatchWorkflow(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	opt := web.GetForm(ctx).(*api.DispatchWorkflowOption)
-	name := ctx.Params("workflowname")
+	name := ctx.Params("workflowfilename")
 
 	if len(opt.Ref) == 0 {
 		ctx.Error(http.StatusBadRequest, "ref", "ref is empty")
 		return
 	} else if len(name) == 0 {
-		ctx.Error(http.StatusBadRequest, "workflowname", "workflow name is empty")
+		ctx.Error(http.StatusBadRequest, "workflowfilename", "workflow file name is empty")
 		return
 	}
 
@@ -748,7 +748,7 @@ func ListActionRuns(ctx *context.APIContext) {
 	//   type: string
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/RepoActionRunList"
+	//     "$ref": "#/responses/ActionRunList"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "403":
@@ -779,16 +779,16 @@ func ListActionRuns(ctx *context.APIContext) {
 		return
 	}
 
-	res := new(api.ListRepoActionRunResponse)
+	res := new(api.ListActionRunResponse)
 	res.TotalCount = total
 
-	res.Entries = make([]*api.RepoActionRun, len(runs))
+	res.Entries = make([]*api.ActionRun, len(runs))
 	for i, r := range runs {
-		cr, err := convert.ToRepoActionRun(ctx, r)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "ToActionRun", err)
+		if err := r.LoadAttributes(ctx); err != nil {
+			ctx.Error(http.StatusInternalServerError, "LoadAttributes", err)
 			return
 		}
+		cr := convert.ToActionRun(ctx, r, ctx.Doer)
 		res.Entries[i] = cr
 	}
 
@@ -821,7 +821,7 @@ func GetActionRun(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/RepoActionRun"
+	//     "$ref": "#/responses/ActionRun"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "403":
@@ -839,16 +839,17 @@ func GetActionRun(ctx *context.APIContext) {
 		return
 	}
 
+	// Action runs lives in its own table, therefore we check that the
+	// run with the requested ID is owned by the repository
 	if ctx.Repo.Repository.ID != run.RepoID {
 		ctx.Error(http.StatusNotFound, "GetRunById", util.ErrNotExist)
 		return
 	}
 
-	res, err := convert.ToRepoActionRun(ctx, run)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "ToRepoActionRun", err)
+	if err := run.LoadAttributes(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadAttributes", err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, res)
+	ctx.JSON(http.StatusOK, convert.ToActionRun(ctx, run, ctx.Doer))
 }

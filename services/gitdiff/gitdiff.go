@@ -85,11 +85,20 @@ type DiffLine struct {
 
 // DiffLineSectionInfo represents diff line section meta data
 type DiffLineSectionInfo struct {
-	Path          string
-	LastLeftIdx   int
-	LastRightIdx  int
-	LeftIdx       int
-	RightIdx      int
+	Path string
+
+	// Last(Left/Right)Idx do not directly relate to this diff section, but indicate the last line number in the
+	// previous diff section. Set to 0 for the first diff section of a file, and 1 for the first line of code in the
+	// file.
+	LastLeftIdx  int
+	LastRightIdx int
+
+	// (Left/Right)Idx are the first line number in this diff section
+	LeftIdx  int
+	RightIdx int
+
+	// Number of lines contained within each diff section.  In the UI, these fields are set to 0 in cases where a
+	// section is being used as a placeholder at the end of a diff to allow expansion into the remainder of the file.
 	LeftHunkSize  int
 	RightHunkSize int
 }
@@ -157,7 +166,7 @@ func (d *DiffLine) GetExpandDirection() DiffLineExpandDirection {
 	}
 	if d.SectionInfo.LastLeftIdx <= 0 && d.SectionInfo.LastRightIdx <= 0 {
 		return DiffLineExpandUp
-	} else if d.SectionInfo.RightIdx-d.SectionInfo.LastRightIdx > BlobExcerptChunkSize && d.SectionInfo.RightHunkSize > 0 {
+	} else if d.SectionInfo.RightIdx-d.SectionInfo.LastRightIdx-1 > BlobExcerptChunkSize && d.SectionInfo.RightHunkSize > 0 {
 		return DiffLineExpandUpDown
 	} else if d.SectionInfo.LeftHunkSize <= 0 && d.SectionInfo.RightHunkSize <= 0 {
 		return DiffLineExpandDown
@@ -440,11 +449,29 @@ func getCommitFileLineCount(commit *git.Commit, filePath string) int {
 	if err != nil {
 		return 0
 	}
-	lineCount, err := blob.GetBlobLineCount()
+	reader, err := blob.DataAsync()
 	if err != nil {
 		return 0
 	}
-	return lineCount
+	defer reader.Close()
+	buf := make([]byte, 32*1024)
+	count := 1
+	lineSep := []byte{'\n'}
+
+	c, err := reader.Read(buf)
+	if c == 0 && err == io.EOF {
+		return 0
+	}
+	for {
+		count += bytes.Count(buf[:c], lineSep)
+		switch {
+		case err == io.EOF:
+			return count
+		case err != nil:
+			return count
+		}
+		c, err = reader.Read(buf)
+	}
 }
 
 // Diff represents a difference between two git trees.
@@ -1139,7 +1166,7 @@ func GetDiffSimple(ctx context.Context, gitRepo *git.Repository, opts *DiffOptio
 	// so if we are using at least this version of git we don't have to tell ParsePatch to do
 	// the skipping for us
 	parsePatchSkipToFile := opts.SkipTo
-	if opts.SkipTo != "" && git.CheckGitVersionAtLeast("2.31") == nil {
+	if opts.SkipTo != "" {
 		cmdDiff.AddOptionFormat("--skip-to=%s", opts.SkipTo)
 		parsePatchSkipToFile = ""
 	}

@@ -87,14 +87,44 @@ func TestIndexer(t *testing.T, indexer internal.Indexer) {
 	}
 }
 
+func allResults(t *testing.T, data map[int64]*internal.IndexerData, result *internal.SearchResult) {
+	assert.Len(t, result.Hits, len(data))
+	assert.Equal(t, len(data), int(result.Total))
+}
+
 var cases = []*testIndexerCase{
 	{
 		Name:          "default",
 		SearchOptions: &internal.SearchOptions{},
-		Expected: func(t *testing.T, data map[int64]*internal.IndexerData, result *internal.SearchResult) {
-			assert.Len(t, result.Hits, len(data))
-			assert.Equal(t, len(data), int(result.Total))
+		Expected:      allResults,
+	},
+	{
+		Name: "empty keyword",
+		SearchOptions: &internal.SearchOptions{
+			Keyword: "",
 		},
+		Expected: allResults,
+	},
+	{
+		Name: "whitespace keyword",
+		SearchOptions: &internal.SearchOptions{
+			Keyword: "    ",
+		},
+		Expected: allResults,
+	},
+	{
+		Name: "dangling slash in keyword",
+		SearchOptions: &internal.SearchOptions{
+			Keyword: "\\",
+		},
+		Expected: allResults,
+	},
+	{
+		Name: "dangling quote in keyword",
+		SearchOptions: &internal.SearchOptions{
+			Keyword: "\"",
+		},
+		Expected: allResults,
 	},
 	{
 		Name: "empty",
@@ -738,6 +768,25 @@ var cases = []*testIndexerCase{
 			for i, v := range result.Hits {
 				if i < len(result.Hits)-1 {
 					assert.LessOrEqual(t, data[v.ID].DeadlineUnix, data[result.Hits[i+1].ID].DeadlineUnix)
+				}
+			}
+		},
+	},
+	{
+		Name: "PriorityRepoID",
+		SearchOptions: &internal.SearchOptions{
+			IsPull:         optional.Some(false),
+			IsClosed:       optional.Some(false),
+			PriorityRepoID: optional.Some(int64(3)),
+			Paginator:      &db.ListOptionsAll,
+			SortBy:         internal.SortByScore,
+		},
+		Expected: func(t *testing.T, data map[int64]*internal.IndexerData, result *internal.SearchResult) {
+			for i, v := range result.Hits {
+				if i < 7 {
+					assert.Equal(t, int64(3), data[v.ID].RepoID)
+				} else {
+					assert.NotEqual(t, int64(3), data[v.ID].RepoID)
 				}
 			}
 		},

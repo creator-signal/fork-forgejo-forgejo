@@ -44,41 +44,27 @@ func (m *mockNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.
 		assert.Equal(m.t, actions_model.StatusSuccess, run.Status)
 		assert.Equal(m.t, actions_model.StatusRunning, priorStatus)
 		assert.Nil(m.t, lastRun)
+		assert.True(m.t, run.NotifyEmail)
 	case 1:
 		assert.Equal(m.t, m.runID, run.ID)
 		assert.Equal(m.t, actions_model.StatusFailure, run.Status)
 		assert.Equal(m.t, actions_model.StatusRunning, priorStatus)
-		assert.Equal(m.t, m.lastRunID, lastRun.ID)
-		assert.Equal(m.t, actions_model.StatusSuccess, lastRun.Status)
+		assert.True(m.t, run.NotifyEmail)
 	case 2:
 		assert.Equal(m.t, m.runID, run.ID)
 		assert.Equal(m.t, actions_model.StatusCancelled, run.Status)
 		assert.Equal(m.t, actions_model.StatusRunning, priorStatus)
-		assert.Equal(m.t, m.lastRunID, lastRun.ID)
-		assert.Equal(m.t, actions_model.StatusFailure, lastRun.Status)
-	case 3:
-		assert.Equal(m.t, m.runID, run.ID)
-		assert.Equal(m.t, actions_model.StatusSuccess, run.Status)
-		assert.Equal(m.t, actions_model.StatusRunning, priorStatus)
-		assert.Equal(m.t, m.lastRunID, lastRun.ID)
-		assert.Equal(m.t, actions_model.StatusCancelled, lastRun.Status)
-	case 4:
-		assert.Equal(m.t, m.runID, run.ID)
-		assert.Equal(m.t, actions_model.StatusSuccess, run.Status)
-		assert.Equal(m.t, actions_model.StatusRunning, priorStatus)
-		assert.Equal(m.t, m.lastRunID, lastRun.ID)
-		assert.Equal(m.t, actions_model.StatusSuccess, lastRun.Status)
+		assert.True(m.t, run.NotifyEmail)
 	default:
 		assert.Fail(m.t, "too many notifications")
 	}
-	m.lastRunID = m.runID
 	m.runID++
 	m.testIdx++
 }
 
 // ensure all tests have been run
 func (m *mockNotifier) complete() {
-	assert.Equal(m.t, 5, m.testIdx)
+	assert.Equal(m.t, 3, m.testIdx)
 }
 
 func TestActionNowDoneNotification(t *testing.T) {
@@ -101,6 +87,7 @@ func TestActionNowDoneNotification(t *testing.T) {
 					TreePath:  ".forgejo/workflows/dispatch.yml",
 					ContentReader: strings.NewReader(
 						"name: test\n" +
+							"enable-email-notifications: true\n" +
 							"on: [workflow_dispatch]\n" +
 							"jobs:\n" +
 							"  test:\n" +
@@ -152,24 +139,6 @@ func TestActionNowDoneNotification(t *testing.T) {
 		require.NoError(t, err)
 		task = runner.fetchTask(t)
 		require.NoError(t, actions_service.StopTask(db.DefaultContext, task.Id, actions_model.StatusCancelled))
-
-		// we can't differentiate different runs without a delay
-		time.Sleep(time.Millisecond * 2000)
-
-		// 3: successful run after failure
-		_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
-		require.NoError(t, err)
-		task = runner.fetchTask(t)
-		runner.succeedAtTask(t, task)
-
-		// we can't differentiate different runs without a delay
-		time.Sleep(time.Millisecond * 2000)
-
-		// 4: successful run after success
-		_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
-		require.NoError(t, err)
-		task = runner.fetchTask(t)
-		runner.succeedAtTask(t, task)
 
 		notifier.complete()
 	})

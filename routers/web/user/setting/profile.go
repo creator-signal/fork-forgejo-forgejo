@@ -51,6 +51,9 @@ func Profile(ctx *context.Context) {
 	ctx.Data["DisableGravatar"] = setting.Config().Picture.DisableGravatar.Value(ctx)
 	ctx.Data["CooldownPeriod"] = setting.Service.UsernameCooldownPeriod
 	ctx.Data["CommonPronouns"] = commonPronouns
+	ctx.Data["MaxAvatarFileSize"] = setting.Avatar.MaxFileSize
+	ctx.Data["MaxAvatarWidth"] = setting.Avatar.MaxWidth
+	ctx.Data["MaxAvatarHeight"] = setting.Avatar.MaxHeight
 
 	ctx.HTML(http.StatusOK, tplSettingsProfile)
 }
@@ -63,6 +66,9 @@ func ProfilePost(ctx *context.Context) {
 	ctx.Data["DisableGravatar"] = setting.Config().Picture.DisableGravatar.Value(ctx)
 	ctx.Data["CooldownPeriod"] = setting.Service.UsernameCooldownPeriod
 	ctx.Data["CommonPronouns"] = commonPronouns
+	ctx.Data["MaxAvatarFileSize"] = setting.Avatar.MaxFileSize
+	ctx.Data["MaxAvatarWidth"] = setting.Avatar.MaxWidth
+	ctx.Data["MaxAvatarHeight"] = setting.Avatar.MaxHeight
 
 	if ctx.HasError() {
 		ctx.HTML(http.StatusOK, tplSettingsProfile)
@@ -145,7 +151,7 @@ func UpdateAvatarSetting(ctx *context.Context, form *forms.AvatarForm, ctxUser *
 			return fmt.Errorf("io.ReadAll: %w", err)
 		}
 
-		st := typesniffer.DetectContentType(data)
+		st := typesniffer.DetectContentType(data, "")
 		if !st.IsImage() || st.IsSvgImage() {
 			return errors.New(ctx.Locale.TrString("settings.uploaded_avatar_not_a_image"))
 		}
