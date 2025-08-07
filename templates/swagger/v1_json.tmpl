@@ -18542,6 +18542,38 @@
         }
       }
     },
+    "/user/activitypub/follow": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Follow a remote activitypub account",
+        "operationId": "userCurrentActivityPubFollow",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/APRemoteFollowOption"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/user/applications/oauth2": {
       "get": {
         "produces": [
@@ -21234,6 +21266,16 @@
         "original_url": {
           "type": "string",
           "x-go-name": "OriginalURL"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "APRemoteFollowOption": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "x-go-name": "Target"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"

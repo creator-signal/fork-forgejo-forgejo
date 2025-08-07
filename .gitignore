@@ -35,7 +35,8 @@ _testmain.go
 *.test
 *.prof
 
-*coverage.out
+*coverage**.out
+*coverage**.filtered
 coverage.all
 coverage.html
 coverage.html.gz
@@ -132,3 +133,4 @@ prime/
 # Manpage
 /man
 tests/integration/api_activitypub_person_inbox_useractivity_test.go
+coverage-bodged.out
