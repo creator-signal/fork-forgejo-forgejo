@@ -16,7 +16,7 @@
 name: testing-integration
 
 on:
-  pull_request:
+#  pull_request:
   push:
     tags: 'v[0-9]+.[0-9]+.*'
     branches:
@@ -67,8 +67,8 @@ jobs:
           TEST_TAGS: sqlite sqlite_unlock_notify
           USE_REPO_TEST_DIR: 1
   test-mariadb:
-    if: vars.ROLE == 'forgejo-coding'
-#    if: vars.ROLE == 'forgejo-integration'
+#    if: vars.ROLE == 'forgejo-coding'
+    if: vars.ROLE == 'forgejo-integration'
     runs-on: docker
     name: ${{ format('test-mariadb (v{0})', matrix.version) }}
     strategy:
