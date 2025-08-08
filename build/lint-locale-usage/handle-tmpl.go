@@ -153,7 +153,7 @@ func (handler Handler) handleTemplateMsgid(fset *token.FileSet, node tmplParser.
 			}
 
 			// found interesting strings
-			handler.OnMsgidPrefix(fset, stringPos, msgidPrefixFin)
+			handler.OnMsgidPrefix(fset, stringPos, msgidPrefixFin, truncated)
 		}
 
 	default:

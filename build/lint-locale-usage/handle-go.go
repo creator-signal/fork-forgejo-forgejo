@@ -27,7 +27,7 @@ func (handler Handler) handleGoTrBasicLit(fset *token.FileSet, argLit *ast.Basic
 			if trunc {
 				handler.OnWarning(fset, argLit.ValuePos, fmt.Sprintf("needed to truncate message id prefix: %s", arg))
 			}
-			handler.OnMsgidPrefix(fset, argLit.ValuePos, prep)
+			handler.OnMsgidPrefix(fset, argLit.ValuePos, prep, trunc)
 		} else {
 			handler.OnMsgid(fset, argLit.ValuePos, arg)
 		}
@@ -52,7 +52,7 @@ func (handler Handler) handleGoTrArgument(fset *token.FileSet, n ast.Expr, prefi
 			if trunc {
 				handler.OnWarning(fset, argLit.ValuePos, fmt.Sprintf("needed to truncate message id prefix: %s", arg))
 			}
-			handler.OnMsgidPrefix(fset, argLit.ValuePos, prep)
+			handler.OnMsgidPrefix(fset, argLit.ValuePos, prep, trunc)
 		}
 	}
 }

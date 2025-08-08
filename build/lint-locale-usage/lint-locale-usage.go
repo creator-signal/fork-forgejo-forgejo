@@ -60,7 +60,7 @@ func InitLocaleTrFunctions() map[string][]uint {
 
 type Handler struct {
 	OnMsgid            func(fset *token.FileSet, pos token.Pos, msgid string)
-	OnMsgidPrefix      func(fset *token.FileSet, pos token.Pos, msgidPrefix string)
+	OnMsgidPrefix      func(fset *token.FileSet, pos token.Pos, msgidPrefix string, truncated bool)
 	OnUnexpectedInvoke func(fset *token.FileSet, pos token.Pos, funcname string, argc int)
 	OnWarning          func(fset *token.FileSet, pos token.Pos, msg string)
 	LocaleTrFunctions  map[string][]uint
@@ -290,8 +290,11 @@ func main() {
 	}
 
 	handler := Handler{
-		OnMsgidPrefix: func(fset *token.FileSet, pos token.Pos, msgidPrefix string) {
-			if !allowedMaskedPrefixes.Matches(strings.Split(msgidPrefix, ".")) {
+		OnMsgidPrefix: func(fset *token.FileSet, pos token.Pos, msgidPrefix string, truncated bool) {
+			msgidPrefixSplit := strings.Split(msgidPrefix, ".")
+			if !truncated {
+				allowedMaskedPrefixes.Insert(msgidPrefixSplit)
+			} else if !allowedMaskedPrefixes.Matches(msgidPrefixSplit) {
 				gotAnyMsgidError = true
 				fmt.Printf("%s:\tmissing msgid prefix: %s\n", fset.Position(pos).String(), msgidPrefix)
 			}
