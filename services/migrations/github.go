@@ -596,6 +596,14 @@ func (g *GithubDownloaderV3) filterByHTMLURL(comments []*github.IssueComment, fi
 	return result
 }
 
+func (g *GithubDownloaderV3) filterPRComments(comments []*github.IssueComment) []*github.IssueComment {
+	return g.filterByHTMLURL(comments, "/pull/")
+}
+
+func (g *GithubDownloaderV3) filterIssueComments(comments []*github.IssueComment) []*github.IssueComment {
+	return g.filterByHTMLURL(comments, "/issues/")
+}
+
 // GetAllComments returns repository comments according page and perPageSize
 func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment, bool, error) {
 	var (
@@ -623,9 +631,9 @@ func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment,
 	isEnd := resp.NextPage == 0
 
 	if g.getIssues && !g.getPullRequests {
-		comments = g.filterByHTMLURL(comments, "/issues/")
+		comments = g.filterPRComments(comments)
 	} else if !g.getIssues && g.getPullRequests {
-		comments = g.filterByHTMLURL(comments, "/pull/")
+		comments = g.filterIssueComments(comments)
 	}
 
 	log.Trace("Request get comments %d/%d, but in fact get %d, next page is %d", perPage, page, len(comments), resp.NextPage)

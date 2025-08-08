@@ -82,14 +82,14 @@ func TestGithubDownloaderFilterComments(t *testing.T) {
 		IssueURL:          &pIssueURL,
 	})
 
-	filteredComments := downloader.filterByHTMLURL(githubComments, "/pull/")
+	filteredComments := downloader.filterPRComments(githubComments)
 
 	// Check each issue index not being from the PR
 	for _, comment := range filteredComments {
 		assert.True(t, *comment.ID != prID)
 	}
 
-	filteredComments = downloader.filterByHTMLURL(githubComments, "/issues/")
+	filteredComments = downloader.filterIssueComments(githubComments)
 
 	// Check each issue index not being from the issue
 	for _, comment := range filteredComments {
