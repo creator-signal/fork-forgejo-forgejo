@@ -146,13 +146,13 @@ func drawRepoSummaryCard(ctx *context.Context, repo *repo_model.Repository) (*ca
 	repoName, repoDescription := repoSummary.Split(false, 30)
 
 	repoName.SetMargin(10)
-	_, err = repoName.DrawText(repo.FullName(), color.Black, 56, card.Top, card.Left)
+	_, err = repoName.DrawText(repo.FullName(), setting.Card.Text.PrimaryColor, 56, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
 
 	repoDescription.SetMargin(10)
-	_, err = repoDescription.DrawText(repo.Description, color.Gray{128}, 36, card.Top, card.Left)
+	_, err = repoDescription.DrawText(repo.Description, setting.Card.Text.SecondaryColor, 36, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func drawRepoSummaryCard(ctx *context.Context, repo *repo_model.Repository) (*ca
 	topCountText := fmt.Sprintf("%s • %s • %s", starsText, forksText, releasesText)
 
 	topCountCard.SetMargin(10)
-	_, err = topCountCard.DrawText(topCountText, color.Gray{128}, 36, card.Top, card.Left)
+	_, err = topCountCard.DrawText(topCountText, setting.Card.Text.SecondaryColor, 36, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func drawRepoSummaryCard(ctx *context.Context, repo *repo_model.Repository) (*ca
 	bottomCountText := fmt.Sprintf("%s • %s", issuesText, pullRequestsText)
 
 	bottomCountCard.SetMargin(10)
-	_, err = bottomCountCard.DrawText(bottomCountText, color.Gray{128}, 36, card.Top, card.Left)
+	_, err = bottomCountCard.DrawText(bottomCountText, setting.Card.Text.SecondaryColor, 36, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
@@ -243,13 +243,13 @@ func drawIssueSummaryCard(ctx *context.Context, issue *issue_model.Issue) (*card
 	repoInfo, issueDescription := issueSummary.Split(false, 15)
 
 	repoInfo.SetMargin(10)
-	_, err = repoInfo.DrawText(fmt.Sprintf("%s - #%d", issue.Repo.FullName(), issue.Index), color.Gray{128}, 36, card.Top, card.Left)
+	_, err = repoInfo.DrawText(fmt.Sprintf("%s - #%d", issue.Repo.FullName(), issue.Index), setting.Card.Text.SecondaryColor, 36, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
 
 	issueDescription.SetMargin(10)
-	_, err = issueDescription.DrawText(issue.Title, color.Black, 56, card.Top, card.Left)
+	_, err = issueDescription.DrawText(issue.Title, setting.Card.Text.PrimaryColor, 56, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func drawIssueSummaryCard(ctx *context.Context, issue *issue_model.Issue) (*card
 				),
 				state,
 			),
-			color.Gray{128}, 36, card.Top, card.Left)
+			setting.Card.Text.SecondaryColor, 36, card.Top, card.Left)
 	} else {
 		_, err = issueStats.DrawText(
 			fmt.Sprintf("%s, %s",
@@ -318,7 +318,7 @@ func drawIssueSummaryCard(ctx *context.Context, issue *issue_model.Issue) (*card
 				),
 				state,
 			),
-			color.Gray{128}, 36, card.Top, card.Left)
+			setting.Card.Text.SecondaryColor, 36, card.Top, card.Left)
 	}
 	if err != nil {
 		return nil, err
@@ -332,7 +332,7 @@ func drawIssueSummaryCard(ctx *context.Context, issue *issue_model.Issue) (*card
 			issue.Poster.Name,
 			issue.Created.AsTime().Format(time.DateOnly),
 		),
-		color.Gray{128}, 36, card.Middle, card.Left)
+		setting.Card.Text.SecondaryColor, 36, card.Middle, card.Left)
 	if err != nil {
 		return nil, err
 	}
@@ -357,13 +357,13 @@ func drawReleaseSummaryCard(ctx *context.Context, release *repo_model.Release) (
 	repoInfo, releaseDescription := releaseSummary.Split(false, 15)
 
 	repoInfo.SetMargin(10)
-	_, err = repoInfo.DrawText(release.Repo.FullName(), color.Gray{128}, 36, card.Top, card.Left)
+	_, err = repoInfo.DrawText(release.Repo.FullName(), setting.Card.Text.SecondaryColor, 36, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
 
 	releaseDescription.SetMargin(10)
-	_, err = releaseDescription.DrawText(release.DisplayName(), color.Black, 56, card.Top, card.Left)
+	_, err = releaseDescription.DrawText(release.DisplayName(), setting.Card.Text.PrimaryColor, 56, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
@@ -388,12 +388,12 @@ func drawReleaseSummaryCard(ctx *context.Context, release *repo_model.Release) (
 		strconv.FormatInt(downloadCount, 10),
 	)
 
-	_, err = downloadCountCard.DrawText(string(downloadCountText), color.Gray{128}, 36, card.Bottom, card.Left)
+	_, err = downloadCountCard.DrawText(string(downloadCountText), setting.Card.Text.SecondaryColor, 36, card.Bottom, card.Left)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = releaseDateCard.DrawText(release.CreatedUnix.AsTime().Format(time.DateOnly), color.Gray{128}, 36, card.Bottom, card.Left)
+	_, err = releaseDateCard.DrawText(release.CreatedUnix.AsTime().Format(time.DateOnly), setting.Card.Text.SecondaryColor, 36, card.Bottom, card.Left)
 	if err != nil {
 		return nil, err
 	}
