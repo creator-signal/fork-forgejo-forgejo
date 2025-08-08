@@ -112,10 +112,8 @@ func TestRepoUpload(t *testing.T) {
 		ForeignIndex: 0,
 	}
 
-	if err := uploader.CreateIssues(issueA, issueB); err != nil {
-		log.Error(err.Error())
-		t.Fail()
-	}
+	err := uploader.CreateIssues(issueA, issueB)
+	require.NoError(t, err)
 
 	issues, err := issues_model.Issues(db.DefaultContext, &issues_model.IssuesOptions{
 		RepoIDs:  []int64{repo.ID},
@@ -152,10 +150,8 @@ func TestRepoUpload(t *testing.T) {
 		Reactions:   nil,
 		Meta:        nil,
 	}
-	if err := uploader.CreateComments(issueComment, prComment); err != nil {
-		log.Error(err.Error())
-		t.Fail()
-	}
+	err = uploader.CreateComments(issueComment, prComment)
+	require.NoError(t, err)
 
 }
 
