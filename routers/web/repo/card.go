@@ -142,23 +142,23 @@ func drawRepoSummaryCard(ctx *context.Context, repo *repo_model.Repository) (*ca
 
 	contentCard.SetMargin(60)
 	topSection, bottomSection := contentCard.Split(false, 75)
-	issueSummary, issueIcon := topSection.Split(true, 80)
-	repoInfo, issueDescription := issueSummary.Split(false, 30)
+	repoSummary, repoIcon := topSection.Split(true, 80)
+	repoName, repoDescription := repoSummary.Split(false, 30)
 
-	repoInfo.SetMargin(10)
-	_, err = repoInfo.DrawText(repo.FullName(), color.Black, 56, card.Top, card.Left)
+	repoName.SetMargin(10)
+	_, err = repoName.DrawText(repo.FullName(), color.Black, 56, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
 
-	issueDescription.SetMargin(10)
-	_, err = issueDescription.DrawText(repo.Description, color.Gray{128}, 36, card.Top, card.Left)
+	repoDescription.SetMargin(10)
+	_, err = repoDescription.DrawText(repo.Description, color.Gray{128}, 36, card.Top, card.Left)
 	if err != nil {
 		return nil, err
 	}
 
-	issueIcon.SetMargin(10)
-	err = drawRepoIcon(ctx, issueIcon, repo)
+	repoIcon.SetMargin(10)
+	err = drawRepoIcon(ctx, repoIcon, repo)
 	if err != nil {
 		return nil, err
 	}
