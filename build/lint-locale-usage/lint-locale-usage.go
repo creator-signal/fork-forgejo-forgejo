@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"go/token"
 	"io/fs"
@@ -161,40 +162,78 @@ func PrepareMsgidPrefix(s string) (string, bool) {
 	return s[:index], index != len(s)-1
 }
 
-// This command assumes that we get started from the project root directory
-//
-// Possible command line flags:
-//
-//	--allow-missing-msgids        don't return an error code if missing message IDs are found
-//	--allow-unused-msgids         don't return an error code if unused message IDs are found
-//
-// EXIT CODES:
-//
-//	0  success, no issues found
-//	1  unable to walk directory tree
-//	2  unable to parse locale ini/json files
-//	3  unable to parse go or text/template files
-//	4  found missing message IDs
-//	5  found unused message IDs
-//	6  invalid command line argument
-//	7  unable to parse allowed masked usages file
-//
-// SPECIAL GO DOC COMMENTS:
-//
-//	//llu:returnsTrKey
-//					can be used in front of functions to indicate
-//					that the function returns message IDs
-//
-//	// llu:TrKeys
-//					can be used in front of 'const' and 'var' blocks
-//					in order to mark all contained strings as message IDs
-//
+func Usage() {
+	outp := flag.CommandLine.Output()
+	fmt.Fprintf(outp, "Usage of %s:\n", os.Args[0])
+	flag.PrintDefaults()
+
+	fmt.Fprintf(outp, "\nThis command assumes that it gets started from the project root directory.\n")
+
+	fmt.Fprintf(outp, "\nExit codes:\n")
+	for _, i := range []string{
+		"0\tsuccess, no issues found",
+		"1\tunable to walk directory tree",
+		"2\tunable to parse locale ini/json files",
+		"3\tunable to parse go or text/template files",
+		"4\tfound missing message IDs",
+		"5\tfound unused message IDs",
+	} {
+		fmt.Fprintf(outp, "\t%s\n", i)
+	}
+
+	fmt.Fprintf(outp, "\nSpecial Go doc comments:\n")
+	for _, i := range []string{
+		"//llu:returnsTrKey",
+		"\tcan be used in front of functions to indicate",
+		"\tthat the function returns message IDs",
+		"",
+		"//llu:returnsTrKeySuffix prefix.",
+		"\tsimilar to llu:returnsTrKey, but the given prefix is prepended",
+		"\tto the found strings before interpreting them as msgids",
+		"",
+		"// llu:TrKeys",
+		"\tcan be used in front of 'const' and 'var' blocks",
+		"\tin order to mark all contained strings as message IDs",
+		"",
+		"// llu:TrKeysSuffix prefix.",
+		"\tlike llu:returnsTrKeySuffix, but for 'const' and 'var' blocks",
+	} {
+		if i == "" {
+			fmt.Fprintf(outp, "\n")
+		} else {
+			fmt.Fprintf(outp, "\t%s\n", i)
+		}
+	}
+}
+
 //nolint:forbidigo
 func main() {
 	allowMissingMsgids := false
 	allowUnusedMsgids := false
 	usedMsgids := make(container.Set[string])
 	allowedMaskedPrefixes := make(StringTrieMap)
+
+	// It's possible for execl to hand us an empty os.Args.
+	if len(os.Args) == 0 {
+		flag.CommandLine = flag.NewFlagSet("lint-locale-usage", flag.ExitOnError)
+	} else {
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	}
+	flag.CommandLine.Usage = Usage
+	flag.Usage = Usage
+
+	flag.BoolVar(
+		&allowMissingMsgids,
+		"allow-missing-msgids",
+		false,
+		"don't return an error code if missing message IDs are found",
+	)
+	flag.BoolVar(
+		&allowUnusedMsgids,
+		"allow-unused-msgids",
+		false,
+		"don't return an error code if unused message IDs are found",
+	)
 
 	msgids := make(container.Set[string])
 
@@ -231,28 +270,16 @@ func main() {
 
 	gotAnyMsgidError := false
 
-	for _, arg := range os.Args[1:] {
-		switch arg {
-		case "--allow-missing-msgids":
-			allowMissingMsgids = true
-
-		case "--allow-unused-msgids":
-			allowUnusedMsgids = true
-
-		default:
-			if argval, found := strings.CutPrefix(arg, "--allow-masked-usages-from="); found {
-				if err := ParseAllowedMaskedUsages(argval, &usedMsgids, &allowedMaskedPrefixes, func(msgid string) bool {
-					return msgids.Contains(msgid)
-				}); err != nil {
-					fmt.Printf("%s\n", err.Error())
-					os.Exit(7)
-				}
-			} else {
-				fmt.Printf("<command line>:\tERROR: unknown argument: %s\n", arg)
-				os.Exit(6)
-			}
-		}
-	}
+	flag.Func(
+		"allow-masked-usages-from",
+		"supply a file containing a newline-separated list of allowed masked usages",
+		func(argval string) error {
+			return ParseAllowedMaskedUsages(argval, &usedMsgids, &allowedMaskedPrefixes, func(msgid string) bool {
+				return msgids.Contains(msgid)
+			})
+		},
+	)
+	flag.Parse()
 
 	onError := func(err error) {
 		if err == nil {
