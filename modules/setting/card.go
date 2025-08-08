@@ -1,16 +1,20 @@
 package setting
 
 import (
+	"image"
 	"image/color"
+	"os"
 	"regexp"
 	"strconv"
 
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/util"
 )
 
 var Card = struct {
 	Background struct {
 		Color color.Color
+		Image image.Image
 	}
 	Text struct {
 		PrimaryColor   color.Color
@@ -19,8 +23,10 @@ var Card = struct {
 }{
 	Background: struct {
 		Color color.Color
+		Image image.Image
 	}{
 		Color: color.White,
+		Image: nil,
 	},
 	Text: struct {
 		PrimaryColor   color.Color
@@ -72,7 +78,19 @@ func loadBackground(src string) {
 		return
 	}
 
-	log.Error("card.BACKGROUND must be 'rgb(...)'")
+	file, err := os.Open(util.FilePathJoinAbs(CustomPath, src))
+	if err != nil {
+		log.Error("failed to read summary card background file: %v", err)
+		return
+	}
+
+	img, _, err := image.Decode(file)
+	if err != nil {
+		log.Error("failed to decode summary card background image: %v", err)
+		return
+	}
+
+	Card.Background.Image = img
 }
 
 func loadTextPrimary(src string) {

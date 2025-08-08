@@ -52,7 +52,11 @@ func DefaultSize() (int, int) {
 // NewCard creates a new card with the given dimensions in pixels
 func NewCard(width, height int) (*Card, error) {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	draw.Draw(img, img.Bounds(), image.NewUniform(setting.Card.Background.Color), image.Point{}, draw.Src)
+	if setting.Card.Background.Image != nil {
+		draw.Draw(img, img.Bounds(), setting.Card.Background.Image, image.Point{}, draw.Src)
+	} else {
+		draw.Draw(img, img.Bounds(), image.NewUniform(setting.Card.Background.Color), image.Point{}, draw.Src)
+	}
 
 	font, err := fontCache()
 	if err != nil {
