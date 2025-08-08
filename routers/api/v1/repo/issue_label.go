@@ -215,7 +215,11 @@ func DeleteIssueLabel(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	if ctx.Req.Header.Get("Accept") == "application/vnd.github+json" {
+		ctx.JSON(http.StatusOK, convert.ToLabelList([]*issues_model.Label{label}, ctx.Repo.Repository, ctx.Repo.Owner))
+	} else {
+		ctx.Status(http.StatusNoContent)
+	}
 }
 
 // ReplaceIssueLabels replace labels for an issue
