@@ -11,10 +11,13 @@ import (
 	"testing"
 
 	"forgejo.org/models/db"
+	"forgejo.org/models/issues"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
 	issue_service "forgejo.org/services/issue"
+	pr_service "forgejo.org/services/pull"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 
@@ -117,6 +120,46 @@ func TestDashboardActionEscaping(t *testing.T) {
 		htmlDoc.doc.Find("#activity-feed .flex-item-main .markup").Each(func(i int, s *goquery.Selection) {
 			count++
 			assert.Equal(t, "Comment with a | in it\n", s.Text())
+		})
+
+		assert.Equal(t, 4, count)
+	})
+}
+
+func TestDashboardReviewWorkflows(t *testing.T) {
+	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+		user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+		sess := loginUser(t, user4.Name)
+
+		repo, _, f := tests.CreateDeclarativeRepo(t, user4, "",
+			[]unit_model.Type{unit_model.TypePullRequests, unit_model.TypeIssues}, nil,
+			[]*files_service.ChangeRepoFile{},
+		)
+		defer f()
+		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+		require.NoError(t, err)
+
+		pr := createPullRequest(t, user4, repo, "testing", "My very first PR!")
+
+		review, _, err := pr_service.SubmitReview(db.DefaultContext, user4, gitRepo, pr.Issue, issues.ReviewTypeReject, "This isn't good enough!", "HEAD", []string{})
+		require.NoError(t, err)
+
+		_, err = pr_service.DismissReview(db.DefaultContext, review.ID, repo.ID, "Come on, give the newbie a break!", user4, true, true)
+		require.NoError(t, err)
+
+		response := sess.MakeRequest(t, NewRequest(t, "GET", "/"), http.StatusOK)
+		htmlDoc := NewHTMLParser(t, response.Body)
+
+		count := 0
+		htmlDoc.doc.Find("#activity-feed .flex-item-main .title").Each(func(i int, s *goquery.Selection) {
+			count++
+			assert.Equal(t, "My very first PR!", s.Text())
+		})
+		htmlDoc.doc.Find("#activity-feed .flex-item-main .flex-item-body").Each(func(i int, s *goquery.Selection) {
+			count++
+			if s.Text() != "Reason:" && s.Text() != "Come on, give the newbie a break!" {
+				assert.Fail(t, "Unexpected feed text", "Expected 'Reason:' and reason explanation, but found: %q", s.Text())
+			}
 		})
 
 		assert.Equal(t, 4, count)
