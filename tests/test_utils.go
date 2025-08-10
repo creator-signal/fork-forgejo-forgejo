@@ -272,6 +272,11 @@ func PrepareGitRepoDirectory(t testing.TB) {
 }
 
 func PrepareArtifactsStorage(t testing.TB) {
+	if setting.Actions.ArtifactStorage.Type != setting.LocalStorageType {
+		t.Skip("Test skipped for non local storage.")
+		return
+	}
+
 	// prepare actions artifacts directory and files
 	require.NoError(t, storage.Clean(storage.ActionsArtifacts))
 
