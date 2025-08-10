@@ -19,7 +19,6 @@ import (
 	"forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
-
 	federation_service "forgejo.org/services/federation"
 	notify_service "forgejo.org/services/notify"
 )
