@@ -143,3 +143,49 @@ func TestPushCommits(t *testing.T) {
 		assert.JSONEq(t, `{"Commits":[{"Sha1":"69554a6","Message":"not signed commit","AuthorEmail":"user2@example.com","AuthorName":"User2","CommitterEmail":"user2@example.com","CommitterName":"User2","Signature":null,"Verification":null,"Timestamp":"0001-01-01T00:00:00Z"}],"HeadCommit":{"Sha1":"69554a6","Message":"","AuthorEmail":"","AuthorName":"","CommitterEmail":"","CommitterName":"","Signature":null,"Verification":null,"Timestamp":"0001-01-01T00:00:00Z"},"CompareURL":"","Len":0}`, newNotification.Content)
 	})
 }
+
+func TestAbbreviatedComment(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "short single line comment",
+			input:    "This is a short comment",
+			expected: "This is a short comment",
+		},
+		{
+			name:     "empty comment",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "multiline comment - only first line",
+			input:    "First line of comment\nSecond line\nThird line",
+			expected: "First line of comment",
+		},
+		{
+			name:     "before clip boundry",
+			input:    strings.Repeat("abc ", 50),
+			expected: strings.Repeat("abc ", 50),
+		},
+		{
+			name:     "after clip boundry",
+			input:    strings.Repeat("abc ", 51),
+			expected: "abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc…",
+		},
+		{
+			name:     "byte-split would land in middle of a rune",
+			input:    strings.Repeat("🎉", 200),
+			expected: "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉…",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := abbreviatedComment(tt.input)
+			assert.Equal(t, tt.expected, result, "abbreviatedComment(%q)", tt.input)
+		})
+	}
+}
