@@ -163,17 +163,37 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 
 		if loginAllowed {
 			session.MakeRequest(t, req, http.StatusOK)
+
+			// not found page
+			req = NewRequest(t, "GET", "/absolutly/not/found")
+			req.Header.Add("Accept", "text/html")
+			resp := session.MakeRequest(t, req, http.StatusNotFound)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			assert.Greater(t, htmlDoc.Find(".navbar-left > a.item").Length(), 1) // show the Logo, and other links
+			assert.Greater(t, htmlDoc.Find(".navbar-right .user-menu a.item").Length(), 1)
 		} else {
 			resp := session.MakeRequest(t, req, http.StatusSeeOther)
 			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
 
-			req = NewRequest(t, "GET", "/user/settings/security")
-			resp = session.MakeRequest(t, req, http.StatusOK)
+			// not found page
+			req = NewRequest(t, "GET", "/absolutly/not/found")
+			req.Header.Add("Accept", "text/html")
+			resp = session.MakeRequest(t, req, http.StatusNotFound)
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			assert.Equal(t, locale.TrString("settings.must_enable_2fa"), htmlDoc.Find(".ui.red.message").Text())
 			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length()) // only show the Logo, no other links
 
 			userLinks := htmlDoc.Find(".navbar-right .user-menu a.item")
+			assert.Equal(t, 1, userLinks.Length()) // only logout link
+			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
+
+			// 2fa page
+			req = NewRequest(t, "GET", "/user/settings/security")
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc = NewHTMLParser(t, resp.Body)
+			assert.Equal(t, locale.TrString("settings.must_enable_2fa"), htmlDoc.Find(".ui.red.message").Text())
+			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length()) // only show the Logo, no other links
+
+			userLinks = htmlDoc.Find(".navbar-right .user-menu a.item")
 			assert.Equal(t, 1, userLinks.Length()) // only logout link
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
 
