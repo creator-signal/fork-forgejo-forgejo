@@ -180,6 +180,11 @@ func TestAbbreviatedComment(t *testing.T) {
 			input:    strings.Repeat("🎉", 200),
 			expected: "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉…",
 		},
+		{
+			name:     "mermaid block",
+			input:    "Interesting point, here's a digram with my thoughts:\n```mermaid\ngraph LR\n   a -->|some text| b\n```",
+			expected: "Interesting point, here's a digram with my thoughts:",
+		},
 	}
 
 	for _, tt := range tests {
