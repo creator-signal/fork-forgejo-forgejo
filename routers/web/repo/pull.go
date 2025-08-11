@@ -70,7 +70,7 @@ const (
 // look for a pull request template, e.g. ".forgejo/PULL_REQUEST_TEMPLATE.md".
 func generatePullRequestTemplateLocations() []string {
 	var result []string
-	prefixes := []string{"", ".forgejo/", ".gitea/", ".github"}
+	prefixes := []string{"", ".forgejo/", ".gitea/", ".github/", "docs/"}
 	filenames := []string{"PULL_REQUEST_TEMPLATE", "pull_request_template"}
 	extensions := []string{".md", ".yaml", ".yml"}
 
