@@ -171,6 +171,16 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			htmlDoc := NewHTMLParser(t, resp.Body)
 			assert.Greater(t, htmlDoc.Find(".navbar-left > a.item").Length(), 1) // show the Logo, and other links
 			assert.Greater(t, htmlDoc.Find(".navbar-right .user-menu a.item").Length(), 1)
+
+			// 500 page
+			reset := enableDevtest()
+			req = NewRequest(t, "GET", "/devtest/error/500")
+			req.Header.Add("Accept", "text/html")
+			resp = session.MakeRequest(t, req, http.StatusInternalServerError)
+			htmlDoc = NewHTMLParser(t, resp.Body)
+			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length())
+			htmlDoc.AssertElement(t, ".navbar-right", false)
+			reset()
 		} else {
 			resp := session.MakeRequest(t, req, http.StatusSeeOther)
 			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
@@ -185,6 +195,16 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			userLinks := htmlDoc.Find(".navbar-right .user-menu a.item")
 			assert.Equal(t, 1, userLinks.Length()) // only logout link
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
+
+			// 500 page
+			reset := enableDevtest()
+			req = NewRequest(t, "GET", "/devtest/error/500")
+			req.Header.Add("Accept", "text/html")
+			resp = session.MakeRequest(t, req, http.StatusInternalServerError)
+			htmlDoc = NewHTMLParser(t, resp.Body)
+			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length())
+			htmlDoc.AssertElement(t, ".navbar-right", false)
+			reset()
 
 			// 2fa page
 			req = NewRequest(t, "GET", "/user/settings/security")
