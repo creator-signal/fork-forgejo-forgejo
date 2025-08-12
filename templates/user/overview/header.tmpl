@@ -41,7 +41,7 @@
 					{{svg "octicon-rss"}} {{ctx.Locale.Tr "user.activity"}}
 				</a>
 			{{end}}
-			{{if eq .SignedUserID .ContextUser.ID}}
+			{{if and FederationEnabled (eq .SignedUserID .ContextUser.ID)}}
 			<a class="{{if eq .TabName "feed"}}active {{end}}item" href="{{.ContextUser.HomeLink}}?tab=feed">
 				{{svg "octicon-rss"}} Feed
 			</a>
