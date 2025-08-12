@@ -31,12 +31,6 @@ import (
 )
 
 func TestCommentUpload(t *testing.T) {
-	// Once the github repo is available we need to do the following:
-	// Do a download test once with a GH token which will collect the API responses
-	// Set up mock server here
-	// Testcase: Do the download/upload operations for repo, issues, prs, comments. Operations must not fail
-	// Testcase: We can check that each issue has its proper comment attached
-
 	unittest.PrepareTestEnv(t)
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	var (
