@@ -30,8 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRepoUpload(t *testing.T) {
-	t.Skip("TODO: This test will be reactivated once the forgejo github repo is available")
+func TestCommentUpload(t *testing.T) {
 	// Once the github repo is available we need to do the following:
 	// Do a download test once with a GH token which will collect the API responses
 	// Set up mock server here
@@ -56,10 +55,10 @@ func TestRepoUpload(t *testing.T) {
 	// Mock Data
 	repoMock := &base.Repository{
 		Name:          repoName,
-		Owner:         "go-gitea",
+		Owner:         "forgejo",
 		Description:   "Some mock repo",
-		CloneURL:      server.URL + "/go-gitea/test_repo.git",
-		OriginalURL:   server.URL + "/go-gitea/test_repo",
+		CloneURL:      server.URL + "/forgejo/test_repo.git",
+		OriginalURL:   server.URL + "/forgejo/test_repo",
 		DefaultBranch: "master",
 		Website:       "https://codeberg.org/forgejo/forgejo/",
 	}
@@ -75,16 +74,16 @@ func TestRepoUpload(t *testing.T) {
 
 	// Create and Test Issues Uploading
 	issueA := &base.Issue{
-		Title:        "Hi guys I have some feedback to share",
-		Number:       6,
-		PosterID:     119759884,
-		PosterName:   "Fluffy728",
+		Title:        "First issue",
+		Number:       1,
+		PosterID:     37243484,
+		PosterName:   "PatDyn",
 		PosterEmail:  "",
 		Content:      "Mock Content",
 		Milestone:    "Mock Milestone",
 		State:        "open",
-		Created:      time.Now(),
-		Updated:      time.Now().Add(time.Duration(1)),
+		Created:      time.Date(2025, 8, 7, 12, 44, 7, 0, time.UTC),
+		Updated:      time.Date(2025, 8, 7, 12, 44, 47, 0, time.UTC),
 		Labels:       nil,
 		Reactions:    nil,
 		Closed:       nil,
@@ -94,16 +93,16 @@ func TestRepoUpload(t *testing.T) {
 	}
 
 	issueB := &base.Issue{
-		Title:        "More Feedback",
-		Number:       7,
-		PosterID:     119759884,
-		PosterName:   "Fluffy728",
+		Title:        "Second Issue",
+		Number:       2,
+		PosterID:     37243484,
+		PosterName:   "PatDyn",
 		PosterEmail:  "",
 		Content:      "Mock Content",
 		Milestone:    "Mock Milestone",
 		State:        "open",
-		Created:      time.Now(),
-		Updated:      time.Now().Add(time.Duration(1)),
+		Created:      time.Date(2025, 8, 7, 12, 45, 44, 0, time.UTC),
+		Updated:      time.Date(2025, 8, 7, 13, 7, 25, 0, time.UTC),
 		Labels:       nil,
 		Reactions:    nil,
 		Closed:       nil,
@@ -125,27 +124,27 @@ func TestRepoUpload(t *testing.T) {
 
 	// Create and Test Comment Uploading
 	issueComment := &base.Comment{
-		IssueIndex:  6,
+		IssueIndex:  1,
 		Index:       0,
 		CommentType: "comment",
-		PosterID:    119759884,
-		PosterName:  "Fluffy728",
+		PosterID:    37243484,
+		PosterName:  "PatDyn",
 		PosterEmail: "",
-		Created:     time.Now().Add(time.Duration(1)),
-		Updated:     time.Now().Add(time.Duration(1)),
+		Created:     time.Date(2025, 8, 7, 12, 44, 24, 0, time.UTC),
+		Updated:     time.Date(2025, 8, 7, 12, 44, 24, 0, time.UTC),
 		Content:     "Mock Comment",
 		Reactions:   nil,
 		Meta:        nil,
 	}
 	prComment := &base.Comment{
-		IssueIndex:  7,
+		IssueIndex:  2,
 		Index:       0,
 		CommentType: "comment",
-		PosterID:    119759884,
-		PosterName:  "Fluffy728",
+		PosterID:    37243484,
+		PosterName:  "PatDyn",
 		PosterEmail: "",
-		Created:     time.Now().Add(time.Duration(2)),
-		Updated:     time.Now().Add(time.Duration(2)),
+		Created:     time.Date(2025, 8, 7, 13, 7, 25, 0, time.UTC),
+		Updated:     time.Date(2025, 8, 7, 13, 7, 25, 0, time.UTC),
 		Content:     "Mock Comment",
 		Reactions:   nil,
 		Meta:        nil,
