@@ -25,7 +25,7 @@ func TestGithubDownloaderFilterComments(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, token != "")
 	defer server.Close()
 
-	downloader := NewGithubDownloaderV3(t.Context(), true, true, server.URL, "", "", token, "go-gitea", "test_repo")
+	downloader := NewGithubDownloaderV3(t.Context(), true, true, server.URL, "", "", token, "forgejo", "test_repo")
 	err := downloader.RefreshRate()
 	require.NoError(t, err)
 
@@ -38,9 +38,9 @@ func TestGithubDownloaderFilterComments(t *testing.T) {
 	iCreated.Time = time.Date(2025, 01, 01, 12, 0, 0, 0, time.UTC)
 	iUpdated.Time = time.Date(2025, 01, 01, 12, 1, 0, 0, time.UTC)
 	iAssociation := "COLLABORATOR"
-	iUrl := "https://api.github.com/repos/PatDyn/some-test-repo/issues/comments/3155427415" //TODO This needs to point to forgejo owned test rep
-	iHtmlURL := "https://github.com/PatDyn/some-test-repo/issues/7#issuecomment-3155427415"
-	iIssueURL := "https://api.github.com/repos/PatDyn/some-test-repo/issues/7"
+	iUrl := "https://api.github.com/repos/forgejo/test_repo/issues/comments/3164032267"
+	iHtmlURL := "https://github.com/forgejo/test_repo/issues/1#issuecomment-3164032267"
+	iIssueURL := "https://api.github.com/repos/forgejo/test_repo/issues/1"
 
 	githubComments = append(githubComments,
 		&github.IssueComment{
@@ -65,9 +65,9 @@ func TestGithubDownloaderFilterComments(t *testing.T) {
 	pCreated.Time = time.Date(2025, 01, 01, 11, 0, 0, 0, time.UTC)
 	pUpdated.Time = time.Date(2025, 01, 01, 11, 1, 0, 0, time.UTC)
 	pAssociation := "COLLABORATOR"
-	pUrl := "https://api.github.com/repos/PatDyn/some-test-repo/issues/comments/3106699377" //TODO This needs to point to forgejo owned test rep
-	pHtmlURL := "https://github.com/PatDyn/some-test-repo/pull/4#issuecomment-3106699377"
-	pIssueURL := "https://api.github.com/repos/PatDyn/some-test-repo/issues/4"
+	pUrl := "https://api.github.com/repos/forgejo/test_repo/issues/comments/3164118916" //TODO This needs to point to forgejo owned test rep
+	pHtmlURL := "https://github.com/forgejo/test_repo/pull/3#issuecomment-3164118916"
+	pIssueURL := "https://api.github.com/repos/forgejo/test_repo/issues/3"
 
 	githubComments = append(githubComments, &github.IssueComment{
 		ID:                &prID,
