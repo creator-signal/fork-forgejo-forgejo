@@ -22,7 +22,7 @@ func TestGithubDownloaderFilterComments(t *testing.T) {
 
 	token := os.Getenv("GITHUB_READ_TOKEN")
 	fixturePath := "./testdata/github/full_download"
-	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, token != "")
+	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, false)
 	defer server.Close()
 
 	downloader := NewGithubDownloaderV3(t.Context(), true, true, server.URL, "", "", token, "forgejo", "test_repo")
@@ -102,7 +102,7 @@ func TestGitHubDownloadRepo(t *testing.T) {
 
 	token := os.Getenv("GITHUB_READ_TOKEN")
 	fixturePath := "./testdata/github/full_download"
-	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, token != "")
+	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, false)
 	defer server.Close()
 
 	downloader := NewGithubDownloaderV3(t.Context(), true, true, server.URL, "", "", token, "forgejo", "test_repo")
