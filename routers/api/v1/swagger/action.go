@@ -56,3 +56,10 @@ type swaggerRegistrationToken struct {
 	// in: body
 	Body shared.RegistrationToken `json:"body"`
 }
+
+// ActionJob is a detailed action job with steps
+// swagger:response ActionJob
+type swaggerActionJob struct {
+	// in:body
+	Body *api.ActionJobResponse `json:"body"`
+}

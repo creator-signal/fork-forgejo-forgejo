@@ -4,13 +4,20 @@
 package repo
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"strings"
+	"time"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	secret_model "forgejo.org/models/secret"
+	"forgejo.org/modules/actions"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
@@ -848,4 +855,528 @@ func GetActionRun(ctx *context.APIContext) {
 	}
 
 	ctx.JSON(http.StatusOK, convert.ToActionRun(ctx, run, ctx.Doer))
+}
+
+// GetActionJob get a specific job of a run
+func GetActionJob(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run}/jobs/{job} repository repoGetActionJob
+	// ---
+	// summary: Get a specific job of a workflow run
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: run
+	//   in: path
+	//   description: index of the workflow run
+	//   type: integer
+	//   required: true
+	// - name: job
+	//   in: path
+	//   description: index of the job within the run
+	//   type: integer
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/ActionJob"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	runIndex := ctx.ParamsInt64(":run")
+	jobIndex := ctx.ParamsInt64(":job")
+
+	job, jobs := getRunJobsForAPI(ctx, runIndex, jobIndex)
+	if ctx.Written() {
+		return
+	}
+
+	// Convert job to API response
+	resp, err := convert.ToActionJobResponse(ctx, job, jobs)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "ToActionJobResponse", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, resp)
+}
+
+// GetActionJobLogs get logs of a specific job
+func GetActionJobLogs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run}/jobs/{job}/logs repository repoGetActionJobLogs
+	// ---
+	// summary: Get logs for a workflow job
+	// produces:
+	// - text/plain
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: run
+	//   in: path
+	//   description: index of the workflow run
+	//   type: integer
+	//   required: true
+	// - name: job
+	//   in: path
+	//   description: index of the job within the run
+	//   type: integer
+	//   required: true
+	// - name: tail
+	//   in: query
+	//   description: Return the last N lines from the log (cannot be combined with head)
+	//   type: integer
+	// - name: head
+	//   in: query
+	//   description: Return the first N lines from the log (cannot be combined with tail)
+	//   type: integer
+	// - name: offset
+	//   in: query
+	//   description: Line offset to start from (0-based, can be combined with head or tail)
+	//   type: integer
+	// - name: format
+	//   in: query
+	//   description: Response format (text or json, defaults to text)
+	//   type: string
+	//   enum: [text, json]
+	// responses:
+	//   "200":
+	//     description: Job logs as plain text or JSON array
+	//     schema:
+	//       type: string
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	runIndex := ctx.ParamsInt64(":run")
+	jobIndex := ctx.ParamsInt64(":job")
+
+	job, _ := getRunJobsForAPI(ctx, runIndex, jobIndex)
+	if ctx.Written() {
+		return
+	}
+
+	if job.TaskID == 0 {
+		ctx.NotFound("Job has not started", nil)
+		return
+	}
+
+	task, err := actions_model.GetTaskByID(ctx, job.TaskID)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.NotFound("Task not found", err)
+			return
+		}
+		ctx.Error(http.StatusInternalServerError, "GetTaskByID", err)
+		return
+	}
+
+	if task.LogExpired {
+		ctx.NotFound("Logs have been cleaned up", nil)
+		return
+	}
+
+	// Parse query parameters
+	tail := ctx.FormInt64("tail")
+	head := ctx.FormInt64("head")
+	offset := ctx.FormInt64("offset")
+	format := ctx.FormString("format")
+	if format == "" {
+		format = "text"
+	}
+
+	// Validate parameters - tail and head are mutually exclusive
+	if tail > 0 && head > 0 {
+		ctx.Error(http.StatusBadRequest, "InvalidParameters", "Cannot specify both 'tail' and 'head' parameters")
+		return
+	}
+
+	// Validate format parameter
+	if format != "text" && format != "json" {
+		ctx.Error(http.StatusBadRequest, "InvalidFormat", "Format must be 'text' or 'json'")
+		return
+	}
+
+	// Handle different modes
+	if tail > 0 || head > 0 || offset > 0 || format == "json" {
+		// Use partial/structured log retrieval
+		if err := servePartialLogs(ctx, task, tail, head, offset, format); err != nil {
+			if errors.Is(err, util.ErrInvalidArgument) {
+				ctx.Error(http.StatusBadRequest, "InvalidParameters", err.Error())
+			} else if errors.Is(err, os.ErrNotExist) {
+				ctx.Error(http.StatusNotFound, "LogsNotFound", "Log file not found")
+			} else {
+				ctx.Error(http.StatusInternalServerError, "ServePartialLogs", err)
+			}
+		}
+		return
+	}
+
+	// Default: serve complete log file
+	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "LogsNotFound", "Log file not found")
+		} else {
+			ctx.Error(http.StatusInternalServerError, "OpenLogs", err)
+		}
+		return
+	}
+	defer reader.Close()
+
+	workflowName := job.Run.WorkflowID
+	if p := strings.Index(workflowName, "."); p > 0 {
+		workflowName = workflowName[0:p]
+	}
+
+	ctx.ServeContent(reader, &context.ServeHeaderOptions{
+		Filename:           fmt.Sprintf("%v-%v-%v.log", workflowName, job.Name, task.ID),
+		ContentLength:      &task.LogSize,
+		ContentType:        "text/plain",
+		ContentTypeCharset: "utf-8",
+		Disposition:        "inline", // Use inline for API, attachment for web UI download
+	})
+}
+
+// servePartialLogs serves partial or formatted logs based on query parameters
+func servePartialLogs(ctx *context.APIContext, task *actions_model.ActionTask, tail, head, offset int64, format string) error {
+	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("log file not found: %w", err)
+		}
+		return err
+	}
+	defer reader.Close()
+
+	var lines []string
+	var timestamps []time.Time
+
+	if tail > 0 {
+		// Tail mode: read last N lines
+		lines, timestamps, err = readTailLines(reader, tail, offset)
+	} else if head > 0 {
+		// Head mode: read first N lines from offset
+		lines, timestamps, err = readHeadLines(ctx, task, head, offset)
+	} else if offset > 0 {
+		// Offset only: read all lines from offset
+		lines, timestamps, err = readHeadLines(ctx, task, -1, offset)
+	} else if format == "json" {
+		// JSON format with no filters: read all lines
+		lines, timestamps, err = readHeadLines(ctx, task, -1, 0)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Format and serve the response
+	if format == "json" {
+		type LogLine struct {
+			LineNumber int64     `json:"line_number"`
+			Timestamp  time.Time `json:"timestamp"`
+			Content    string    `json:"content"`
+		}
+
+		jsonLines := make([]LogLine, len(lines))
+		startLine := offset
+		if tail > 0 && len(lines) > 0 {
+			// For tail mode, calculate the starting line number
+			// This is approximate since we don't know total lines without reading the whole file
+			startLine = offset
+			if offset == 0 {
+				// If no offset, we need to count total lines (expensive but necessary for accuracy)
+				totalLines, _ := countTotalLines(reader)
+				startLine = totalLines - int64(len(lines))
+			}
+		}
+
+		for i, line := range lines {
+			jsonLines[i] = LogLine{
+				LineNumber: startLine + int64(i) + 1, // 1-based line numbers
+				Content:    line,
+			}
+			if i < len(timestamps) {
+				jsonLines[i].Timestamp = timestamps[i]
+			}
+		}
+
+		ctx.JSON(http.StatusOK, jsonLines)
+	} else {
+		// Plain text format
+		ctx.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		for _, line := range lines {
+			if _, err := fmt.Fprintln(ctx.Resp, line); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// readHeadLines reads N lines from the log starting at line offset (0-based)
+func readHeadLines(ctx *context.APIContext, task *actions_model.ActionTask, limit, offset int64) ([]string, []time.Time, error) {
+	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer reader.Close()
+
+	// Seek to beginning
+	if _, err := reader.Seek(0, io.SeekStart); err != nil {
+		return nil, nil, err
+	}
+
+	scanner := bufio.NewScanner(reader)
+	maxLineSize := 64*1024 + 100 // MaxLineSize + timestamp format length
+	scanner.Buffer(make([]byte, maxLineSize), maxLineSize)
+
+	var lines []string
+	var timestamps []time.Time
+	var currentLine int64
+
+	for scanner.Scan() {
+		// Skip lines before offset
+		if currentLine < offset {
+			currentLine++
+			continue
+		}
+
+		// Stop if we've read enough lines
+		if limit >= 0 && int64(len(lines)) >= limit {
+			break
+		}
+
+		lineText := scanner.Text()
+		t, content, err := actions.ParseLog(lineText)
+		if err == nil {
+			lines = append(lines, content)
+			timestamps = append(timestamps, t)
+		}
+		currentLine++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	return lines, timestamps, nil
+}
+
+// readTailLines reads the last N lines, optionally ending at a given line offset
+func readTailLines(reader io.ReadSeekCloser, tail, offset int64) ([]string, []time.Time, error) {
+	if offset > 0 {
+		// When offset is specified with tail, we read N lines ending at line offset
+		// E.g., offset=10&tail=5 returns lines 6-10 (1-based)
+		// Convert to 0-based: we want lines at indices 5-9
+		startLine := offset - tail
+		if startLine < 0 {
+			startLine = 0
+		}
+		// Seek to beginning and skip to startLine
+		if _, err := reader.Seek(0, io.SeekStart); err != nil {
+			return nil, nil, err
+		}
+
+		scanner := bufio.NewScanner(reader)
+		maxLineSize := 64*1024 + 100
+		scanner.Buffer(make([]byte, maxLineSize), maxLineSize)
+
+		var lines []string
+		var timestamps []time.Time
+		var currentLine int64
+
+		for scanner.Scan() {
+			if currentLine < startLine {
+				currentLine++
+				continue
+			}
+			if currentLine >= offset {
+				break
+			}
+
+			lineText := scanner.Text()
+			t, content, err := actions.ParseLog(lineText)
+			if err == nil {
+				lines = append(lines, content)
+				timestamps = append(timestamps, t)
+			}
+			currentLine++
+		}
+
+		if err := scanner.Err(); err != nil {
+			return nil, nil, err
+		}
+
+		return lines, timestamps, nil
+	}
+
+	// No offset: read last N lines from end of file
+	// Strategy: seek backwards from end and read lines
+	size, err := reader.Seek(0, io.SeekEnd)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	const chunkSize = 8192 // Read in 8KB chunks
+	var lines []string
+	var timestamps []time.Time
+	var leftover []byte
+	seekPos := size
+
+	for seekPos > 0 && int64(len(lines)) < tail {
+		// Calculate how much to read
+		readSize := chunkSize
+		if seekPos < chunkSize {
+			readSize = int(seekPos)
+		}
+		seekPos -= int64(readSize)
+
+		// Seek to position and read chunk
+		if _, err := reader.Seek(seekPos, io.SeekStart); err != nil {
+			return nil, nil, err
+		}
+
+		chunk := make([]byte, readSize)
+		n, err := reader.Read(chunk)
+		if err != nil && err != io.EOF {
+			return nil, nil, err
+		}
+		chunk = chunk[:n]
+
+		// Combine with leftover from previous iteration
+		if leftover != nil {
+			chunk = append(chunk, leftover...)
+		}
+
+		// Split into lines (process from end to beginning)
+		chunkLines := bytes.Split(chunk, []byte("\n"))
+
+		// The first element might be incomplete (partial line)
+		if seekPos > 0 {
+			leftover = chunkLines[0]
+			chunkLines = chunkLines[1:]
+		} else {
+			leftover = nil
+		}
+
+		// Process lines in reverse order (since we're reading backwards)
+		for i := len(chunkLines) - 1; i >= 0; i-- {
+			if len(chunkLines[i]) > 0 {
+				lineStr := string(chunkLines[i])
+				// Parse timestamp from log format
+				t, content, err := actions.ParseLog(lineStr)
+				if err == nil {
+					lines = append([]string{content}, lines...)
+					timestamps = append([]time.Time{t}, timestamps...)
+					if int64(len(lines)) >= tail {
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// Handle any remaining leftover as the first line
+	if len(leftover) > 0 && int64(len(lines)) < tail {
+		lineStr := string(leftover)
+		t, content, err := actions.ParseLog(lineStr)
+		if err == nil {
+			lines = append([]string{content}, lines...)
+			timestamps = append([]time.Time{t}, timestamps...)
+		}
+	}
+
+	// Trim to exact number of requested lines if we got more
+	if int64(len(lines)) > tail {
+		startIdx := len(lines) - int(tail)
+		lines = lines[startIdx:]
+		timestamps = timestamps[startIdx:]
+	}
+
+	return lines, timestamps, nil
+}
+
+// countTotalLines counts the total number of lines in the log file
+func countTotalLines(reader io.ReadSeekCloser) (int64, error) {
+	// Save current position
+	currentPos, err := reader.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		_, _ = reader.Seek(currentPos, io.SeekStart)
+	}()
+
+	// Count lines from beginning
+	if _, err := reader.Seek(0, io.SeekStart); err != nil {
+		return 0, err
+	}
+
+	scanner := bufio.NewScanner(reader)
+	var count int64
+	for scanner.Scan() {
+		count++
+	}
+
+	return count, scanner.Err()
+}
+
+// Helper function to get run jobs for API endpoints
+func getRunJobsForAPI(ctx *context.APIContext, runIndex, jobIndex int64) (*actions_model.ActionRunJob, []*actions_model.ActionRunJob) {
+	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.NotFound("Run not found", err)
+			return nil, nil
+		}
+		ctx.Error(http.StatusInternalServerError, "GetRunByIndex", err)
+		return nil, nil
+	}
+	run.Repo = ctx.Repo.Repository
+
+	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetRunJobsByRunID", err)
+		return nil, nil
+	}
+
+	if len(jobs) == 0 {
+		ctx.NotFound("No jobs found", nil)
+		return nil, nil
+	}
+
+	for _, v := range jobs {
+		v.Run = run
+	}
+
+	if jobIndex >= 0 && jobIndex < int64(len(jobs)) {
+		return jobs[jobIndex], jobs
+	}
+
+	// If jobIndex is out of range, return 404
+	ctx.NotFound("Job not found", nil)
+	return nil, nil
 }

@@ -5196,6 +5196,147 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/runs/{run}/jobs/{job}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Get a specific job of a workflow run",
+        "operationId": "repoGetActionJob",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "index of the workflow run",
+            "name": "run",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "index of the job within the run",
+            "name": "job",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActionJob"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/actions/runs/{run}/jobs/{job}/logs": {
+      "get": {
+        "produces": [
+          "text/plain",
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Get logs for a workflow job",
+        "operationId": "repoGetActionJobLogs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "index of the workflow run",
+            "name": "run",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "index of the job within the run",
+            "name": "job",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "Return the last N lines from the log (cannot be combined with head)",
+            "name": "tail",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Return the first N lines from the log (cannot be combined with tail)",
+            "name": "head",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Line offset to start from (0-based, can be combined with head or tail)",
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "enum": [
+              "text",
+              "json"
+            ],
+            "type": "string",
+            "description": "Response format (text or json, defaults to text)",
+            "name": "format",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job logs as plain text or JSON array",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/secrets": {
       "get": {
         "produces": [
@@ -21405,6 +21546,99 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "ActionJobResponse": {
+      "description": "ActionJobResponse represents a detailed action job with steps",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "job_id": {
+          "type": "string",
+          "x-go-name": "JobID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "needs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Needs"
+        },
+        "run": {
+          "$ref": "#/definitions/ActionRunSummary"
+        },
+        "run_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "RunID"
+        },
+        "started": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Started"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        },
+        "steps": {
+          "description": "Steps are only included if the job has started",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionJobStep"
+          },
+          "x-go-name": "Steps"
+        },
+        "stopped": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Stopped"
+        },
+        "task_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TaskID"
+        },
+        "total_jobs": {
+          "description": "Total number of jobs in the run",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalJobs"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionJobStep": {
+      "description": "ActionJobStep represents a step in an action job",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "started": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Started"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        },
+        "stopped": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Stopped"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "ActionRun": {
       "description": "ActionRun represents an action run",
       "type": "object",
@@ -21581,6 +21815,26 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "TaskID"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionRunSummary": {
+      "description": "ActionRunSummary represents a summary of an action run",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -29245,6 +29499,12 @@
         "items": {
           "$ref": "#/definitions/AccessToken"
         }
+      }
+    },
+    "ActionJob": {
+      "description": "ActionJob is a detailed action job with steps",
+      "schema": {
+        "$ref": "#/definitions/ActionJobResponse"
       }
     },
     "ActionRun": {
