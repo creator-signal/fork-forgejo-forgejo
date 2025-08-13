@@ -173,18 +173,6 @@ func httpBase(ctx *context.Context) *serviceHandler {
 			return nil
 		}
 
-		if ctx.Doer.MustHaveTwoFactor() {
-			hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
-			if err != nil {
-				ctx.ServerError("HasTwoFactorByUID", err)
-				return nil
-			}
-			if !hasTwoFactor {
-				ctx.PlainText(http.StatusForbidden, ctx.Locale.TrString("error.must_enable_2fa", fmt.Sprintf("%suser/settings/security", setting.AppURL)))
-				return nil
-			}
-		}
-
 		environ = []string{
 			repo_module.EnvRepoUsername + "=" + username,
 			repo_module.EnvRepoName + "=" + reponame,
