@@ -1597,6 +1597,7 @@ func ViewIssue(ctx *context.Context) {
 		ok                   bool
 		marked               = make(map[int64]issues_model.RoleDescriptor)
 		comment              *issues_model.Comment
+		commentIdx           int
 		participants         = make([]*user_model.User, 1, 10)
 		latestCloseCommentID int64
 	)
@@ -1652,15 +1653,17 @@ func ViewIssue(ctx *context.Context) {
 		return
 	}
 
-	for _, comment = range issue.Comments {
+	for commentIdx, comment = range issue.Comments {
 		comment.Issue = issue
+		metas := ctx.Repo.Repository.ComposeMetas(ctx)
+		metas["scope"] = fmt.Sprintf("comment-%d", commentIdx)
 
 		if comment.Type == issues_model.CommentTypeComment || comment.Type == issues_model.CommentTypeReview {
 			comment.RenderedContent, err = markdown.RenderString(&markup.RenderContext{
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
 				},
-				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				Metas:   metas,
 				GitRepo: ctx.Repo.GitRepo,
 				Ctx:     ctx,
 			}, comment.Content)
@@ -1737,7 +1740,7 @@ func ViewIssue(ctx *context.Context) {
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
 				},
-				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				Metas:   metas,
 				GitRepo: ctx.Repo.GitRepo,
 				Ctx:     ctx,
 			}, comment.Content)
