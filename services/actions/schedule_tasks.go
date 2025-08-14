@@ -18,8 +18,8 @@ import (
 	"forgejo.org/modules/timeutil"
 	webhook_module "forgejo.org/modules/webhook"
 
-	"github.com/nektos/act/pkg/jobparser"
-	act_model "github.com/nektos/act/pkg/model"
+	"code.forgejo.org/forgejo/runner/v9/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v9/act/model"
 	"xorm.io/builder"
 )
 
@@ -153,7 +153,7 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 	run.NotifyEmail = notifications
 
 	// Parse the workflow specification from the cron schedule
-	workflows, err := jobparser.Parse(cron.Content, false, jobparser.WithVars(vars))
+	workflows, err := jobParser(cron.Content, jobparser.WithVars(vars))
 	if err != nil {
 		return err
 	}

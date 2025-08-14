@@ -1,7 +1,8 @@
 #
 # Additional integration tests designed to run once a day when
 # `mirror.yml` pushes to https://codeberg.org/forgejo-integration/forgejo
-# and send a notification via email should they fail.
+# and send a notification via email to the contact email of the
+# organization should they fail.
 #
 # For debug purposes:
 #
@@ -21,6 +22,8 @@ on:
     branches:
       - 'forgejo'
       - 'v*/forgejo'
+
+enable-email-notifications: true
 
 jobs:
   test-unit:
@@ -62,4 +65,35 @@ jobs:
           TAGS: sqlite sqlite_unlock_notify
           RACE_ENABLED: true
           TEST_TAGS: sqlite sqlite_unlock_notify
+          USE_REPO_TEST_DIR: 1
+  test-mariadb:
+#    if: vars.ROLE == 'forgejo-coding'
+    if: vars.ROLE == 'forgejo-integration'
+    runs-on: docker
+    name: ${{ format('test-mariadb (v{0})', matrix.version) }}
+    strategy:
+      matrix:
+        version: ['10.6', '11.8']
+    container:
+      image: 'data.forgejo.org/oci/node:22-bookworm'
+      options: --tmpfs /tmp:exec,noatime
+    services:
+      mysql:
+        image: ${{ format('data.forgejo.org/oci/mariadb:{0}', matrix.version) }}
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: yes
+          MARIADB_DATABASE: testgitea
+        options: --tmpfs /var/lib/mysql:noatime
+    steps:
+      - uses: https://data.forgejo.org/actions/checkout@v4
+      - uses: ./.forgejo/workflows-composite/setup-env
+      - name: install dependencies & git >= 2.42
+        uses: ./.forgejo/workflows-composite/apt-install-from
+        with:
+          packages: git git-lfs
+      - uses: ./.forgejo/workflows-composite/build-backend
+      - run: |
+          su forgejo -c 'make test-mysql-migration test-mysql'
+        timeout-minutes: 120
+        env:
           USE_REPO_TEST_DIR: 1
