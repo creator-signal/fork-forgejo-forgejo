@@ -31,54 +31,54 @@ func TestGithubDownloaderFilterComments(t *testing.T) {
 
 	var githubComments []*github.IssueComment
 	issueID := int64(7)
-	iNodeId := "MDEyOklzc3VlQ29tbWVudDE=" // "IssueComment1"
+	iNodeID := "MDEyOklzc3VlQ29tbWVudDE=" // "IssueComment1"
 	iBody := "Hello"
 	iCreated := new(github.Timestamp)
 	iUpdated := new(github.Timestamp)
-	iCreated.Time = time.Date(2025, 01, 01, 12, 0, 0, 0, time.UTC)
-	iUpdated.Time = time.Date(2025, 01, 01, 12, 1, 0, 0, time.UTC)
+	iCreated.Time = time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
+	iUpdated.Time = time.Date(2025, 1, 1, 12, 1, 0, 0, time.UTC)
 	iAssociation := "COLLABORATOR"
-	iUrl := "https://api.github.com/repos/forgejo/test_repo/issues/comments/3164032267"
-	iHtmlURL := "https://github.com/forgejo/test_repo/issues/1#issuecomment-3164032267"
+	iURL := "https://api.github.com/repos/forgejo/test_repo/issues/comments/3164032267"
+	iHTMLURL := "https://github.com/forgejo/test_repo/issues/1#issuecomment-3164032267"
 	iIssueURL := "https://api.github.com/repos/forgejo/test_repo/issues/1"
 
 	githubComments = append(githubComments,
 		&github.IssueComment{
 			ID:                &issueID,
-			NodeID:            &iNodeId,
+			NodeID:            &iNodeID,
 			Body:              &iBody,
 			Reactions:         nil,
 			CreatedAt:         iCreated,
 			UpdatedAt:         iUpdated,
 			AuthorAssociation: &iAssociation,
-			URL:               &iUrl,
-			HTMLURL:           &iHtmlURL,
+			URL:               &iURL,
+			HTMLURL:           &iHTMLURL,
 			IssueURL:          &iIssueURL,
 		},
 	)
 
 	prID := int64(4)
-	pNodeId := "IC_kwDOPQx9Mc65LHhx"
+	pNodeID := "IC_kwDOPQx9Mc65LHhx"
 	pBody := "Hello"
 	pCreated := new(github.Timestamp)
 	pUpdated := new(github.Timestamp)
-	pCreated.Time = time.Date(2025, 01, 01, 11, 0, 0, 0, time.UTC)
-	pUpdated.Time = time.Date(2025, 01, 01, 11, 1, 0, 0, time.UTC)
+	pCreated.Time = time.Date(2025, 1, 1, 11, 0, 0, 0, time.UTC)
+	pUpdated.Time = time.Date(2025, 1, 1, 11, 1, 0, 0, time.UTC)
 	pAssociation := "COLLABORATOR"
-	pUrl := "https://api.github.com/repos/forgejo/test_repo/issues/comments/3164118916" //TODO This needs to point to forgejo owned test rep
-	pHtmlURL := "https://github.com/forgejo/test_repo/pull/3#issuecomment-3164118916"
+	pURL := "https://api.github.com/repos/forgejo/test_repo/issues/comments/3164118916"
+	pHTMLURL := "https://github.com/forgejo/test_repo/pull/3#issuecomment-3164118916"
 	pIssueURL := "https://api.github.com/repos/forgejo/test_repo/issues/3"
 
 	githubComments = append(githubComments, &github.IssueComment{
 		ID:                &prID,
-		NodeID:            &pNodeId,
+		NodeID:            &pNodeID,
 		Body:              &pBody,
 		Reactions:         nil,
 		CreatedAt:         pCreated,
 		UpdatedAt:         pUpdated,
 		AuthorAssociation: &pAssociation,
-		URL:               &pUrl,
-		HTMLURL:           &pHtmlURL,
+		URL:               &pURL,
+		HTMLURL:           &pHTMLURL,
 		IssueURL:          &pIssueURL,
 	})
 
@@ -86,14 +86,14 @@ func TestGithubDownloaderFilterComments(t *testing.T) {
 
 	// Check each issue index not being from the PR
 	for _, comment := range filteredComments {
-		assert.True(t, *comment.ID != prID)
+		assert.NotEqual(t, *comment.ID, prID)
 	}
 
 	filteredComments = downloader.filterIssueComments(githubComments)
 
 	// Check each issue index not being from the issue
 	for _, comment := range filteredComments {
-		assert.True(t, *comment.ID != issueID)
+		assert.NotEqual(t, *comment.ID, issueID)
 	}
 }
 

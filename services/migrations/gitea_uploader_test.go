@@ -144,7 +144,6 @@ func TestCommentUpload(t *testing.T) {
 	}
 	err = uploader.CreateComments(issueComment, prComment)
 	require.NoError(t, err)
-
 }
 
 func TestGiteaUploadRepo(t *testing.T) {
