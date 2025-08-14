@@ -5,7 +5,6 @@
 package migrations
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -40,17 +39,6 @@ import (
 )
 
 var _ base.Uploader = &GiteaLocalUploader{}
-
-// validateAndBufferAsset buffers asset content to prevent S3 upload failures
-func validateAndBufferAsset(rc io.ReadCloser) (io.ReadCloser, error) {
-	defer rc.Close()
-	buf := &bytes.Buffer{}
-	_, err := io.Copy(buf, rc)
-	if err != nil {
-		return nil, err
-	}
-	return io.NopCloser(buf), nil
-}
 
 // GiteaLocalUploader implements an Uploader to gitea sites
 type GiteaLocalUploader struct {
@@ -358,14 +346,8 @@ func (g *GiteaLocalUploader) CreateReleases(releases ...*base.Release) error {
 				if rc == nil {
 					return nil
 				}
-				// Buffer the asset content before storage upload to prevent S3 failures
-				bufferedRC, err := validateAndBufferAsset(rc)
-				if err != nil {
-					return err
-				}
-				defer bufferedRC.Close()
-
-				_, err = storage.Attachments.Save(attach.RelativePath(), bufferedRC, int64(*asset.Size))
+				_, err = storage.Attachments.Save(attach.RelativePath(), rc, int64(*asset.Size))
+				rc.Close()
 				return err
 			}()
 			if err != nil {

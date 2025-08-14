@@ -6,11 +6,9 @@ package migrations
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -517,32 +515,4 @@ func TestGiteaUploadUpdateGitForPullRequest(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestValidateAndBufferAsset tests uploads to S3 backends are properly buffered
-func TestValidateAndBufferAsset(t *testing.T) {
-	t.Run("buffers content successfully", func(t *testing.T) {
-		content := "test asset content for S3 upload"
-		rc := io.NopCloser(strings.NewReader(content))
-
-		bufferedRC, err := validateAndBufferAsset(rc)
-		require.NoError(t, err)
-		defer bufferedRC.Close()
-
-		result, err := io.ReadAll(bufferedRC)
-		require.NoError(t, err)
-		assert.Equal(t, content, string(result))
-	})
-
-	t.Run("handles empty content", func(t *testing.T) {
-		rc := io.NopCloser(strings.NewReader(""))
-
-		bufferedRC, err := validateAndBufferAsset(rc)
-		require.NoError(t, err)
-		defer bufferedRC.Close()
-
-		result, err := io.ReadAll(bufferedRC)
-		require.NoError(t, err)
-		assert.Empty(t, result)
-	})
 }
