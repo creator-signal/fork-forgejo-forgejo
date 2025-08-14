@@ -166,7 +166,23 @@ func GetActionRepoPermission(ctx context.Context, repo *repo_model.Repository, t
 		return actionsTaskRepoPermission(ctx, repo, mode)
 	}
 
-	return Permission{AccessMode: perm_model.AccessModeNone}, nil
+	// actions tasks may not access any other private repo
+	if repo.IsPrivate {
+		return Permission{AccessMode: perm_model.AccessModeNone}, nil
+	}
+
+	// load owner for visibility check
+	if err := repo.LoadOwner(ctx); err != nil {
+		return Permission{}, err
+	}
+
+	// actions tokens may not access repos belonging to private users/orgs
+	if repo.Owner.Visibility.IsPrivate() {
+		return Permission{AccessMode: perm_model.AccessModeNone}, nil
+	}
+
+	// otherwise, actions tasks may read public repos belonging to public or limited owners
+	return actionsTaskRepoPermission(ctx, repo, perm_model.AccessModeRead)
 }
 
 // GetUserRepoPermission returns the user permissions to the repository
