@@ -25,7 +25,7 @@ func TestGithubDownloaderFilterComments(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, false)
 	defer server.Close()
 
-	downloader := NewGithubDownloaderV3(t.Context(), true, true, server.URL, "", "", token, "forgejo", "test_repo")
+	downloader := NewGithubDownloaderV3(t.Context(), server.URL, true, true, "", "", token, "forgejo", "test_repo")
 	err := downloader.RefreshRate()
 	require.NoError(t, err)
 
@@ -105,7 +105,7 @@ func TestGitHubDownloadRepo(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, false)
 	defer server.Close()
 
-	downloader := NewGithubDownloaderV3(t.Context(), true, true, server.URL, "", "", token, "forgejo", "test_repo")
+	downloader := NewGithubDownloaderV3(t.Context(), server.URL, true, true, "", "", token, "forgejo", "test_repo")
 	err := downloader.RefreshRate()
 	require.NoError(t, err)
 

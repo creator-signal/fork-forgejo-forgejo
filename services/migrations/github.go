@@ -57,7 +57,7 @@ func (f *GithubDownloaderV3Factory) New(ctx context.Context, opts base.MigrateOp
 
 	log.Trace("Create github downloader BaseURL: %s %s/%s", baseURL, oldOwner, oldName)
 
-	return NewGithubDownloaderV3(ctx, opts.PullRequests, opts.Issues, baseURL, opts.AuthUsername, opts.AuthPassword, opts.AuthToken, oldOwner, oldName), nil
+	return NewGithubDownloaderV3(ctx, baseURL, opts.PullRequests, opts.Issues, opts.AuthUsername, opts.AuthPassword, opts.AuthToken, oldOwner, oldName), nil
 }
 
 // GitServiceType returns the type of git service
@@ -86,7 +86,7 @@ type GithubDownloaderV3 struct {
 }
 
 // NewGithubDownloaderV3 creates a github Downloader via github v3 API
-func NewGithubDownloaderV3(ctx context.Context, getPullRequests, getIssues bool, baseURL, userName, password, token, repoOwner, repoName string) *GithubDownloaderV3 {
+func NewGithubDownloaderV3(ctx context.Context, baseURL string, getPullRequests, getIssues bool, userName, password, token, repoOwner, repoName string) *GithubDownloaderV3 {
 	downloader := GithubDownloaderV3{
 		userName:        userName,
 		baseURL:         baseURL,
