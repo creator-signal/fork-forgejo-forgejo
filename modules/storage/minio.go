@@ -76,9 +76,11 @@ var getBucketVersioning = func(ctx context.Context, minioClient *minio.Client, b
 	return err
 }
 
+var initializationTimeout = 30 * time.Second
+
 // NewMinioStorage returns a minio storage
 func NewMinioStorage(ctx context.Context, cfg *setting.Storage) (ObjectStorage, error) {
-	initCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	initCtx, cancel := context.WithTimeout(ctx, initializationTimeout)
 	defer cancel()
 
 	config := cfg.MinioConfig

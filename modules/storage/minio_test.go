@@ -5,10 +5,12 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"forgejo.org/modules/setting"
 
@@ -216,4 +218,46 @@ func TestMinioCredentials(t *testing.T) {
 			assert.Equal(t, ExpectedSecretAccessKey+"IAM", v.SecretAccessKey)
 		})
 	})
+}
+
+func TestNewMinioStorageInitializationTimeout(t *testing.T) {
+	oldGetBucketVersioning := getBucketVersioning
+	defer func() { getBucketVersioning = oldGetBucketVersioning }()
+	getBucketVersioning = func(ctx context.Context, minioClient *minio.Client, bucket string) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(1 * time.Millisecond):
+			return minio.ErrorResponse{
+				StatusCode: http.StatusBadRequest,
+				Code:       "TestError",
+				Message:    "Mocked error for testing",
+			}
+		}
+	}
+
+	settings := &setting.Storage{
+		MinioConfig: setting.MinioStorageConfig{
+			Endpoint:        "localhost",
+			AccessKeyID:     "123456",
+			SecretAccessKey: "12345678",
+			Bucket:          "bucket",
+			Location:        "us-east-1",
+		},
+	}
+
+	// Verify that we reach `getBucketVersioning` and return the error from our mock.
+	storage, err := NewMinioStorage(t.Context(), settings)
+	assert.ErrorContains(t, err, "Mocked error for testing")
+	assert.Nil(t, storage)
+
+	oldInitializationTimeout := initializationTimeout
+	defer func() { initializationTimeout = oldInitializationTimeout }()
+	initializationTimeout = 1 * time.Nanosecond
+
+	// Now that the timeout is super low, verify that we get a context deadline exceeded error from our mock.
+	storage, err = NewMinioStorage(t.Context(), settings)
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded), "err must be a context deadline exceeded error, but was %v", err)
+	assert.Nil(t, storage)
 }
