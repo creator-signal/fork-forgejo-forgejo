@@ -5,7 +5,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
@@ -221,9 +221,7 @@ func TestMinioCredentials(t *testing.T) {
 }
 
 func TestNewMinioStorageInitializationTimeout(t *testing.T) {
-	oldGetBucketVersioning := getBucketVersioning
-	defer func() { getBucketVersioning = oldGetBucketVersioning }()
-	getBucketVersioning = func(ctx context.Context, minioClient *minio.Client, bucket string) error {
+	defer test.MockVariableValue(&getBucketVersioning, func(ctx context.Context, minioClient *minio.Client, bucket string) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -234,7 +232,7 @@ func TestNewMinioStorageInitializationTimeout(t *testing.T) {
 				Message:    "Mocked error for testing",
 			}
 		}
-	}
+	})()
 
 	settings := &setting.Storage{
 		MinioConfig: setting.MinioStorageConfig{
@@ -248,16 +246,14 @@ func TestNewMinioStorageInitializationTimeout(t *testing.T) {
 
 	// Verify that we reach `getBucketVersioning` and return the error from our mock.
 	storage, err := NewMinioStorage(t.Context(), settings)
-	assert.ErrorContains(t, err, "Mocked error for testing")
+	require.ErrorContains(t, err, "Mocked error for testing")
 	assert.Nil(t, storage)
 
-	oldInitializationTimeout := initializationTimeout
-	defer func() { initializationTimeout = oldInitializationTimeout }()
-	initializationTimeout = 1 * time.Nanosecond
+	defer test.MockVariableValue(&initializationTimeout, 1*time.Nanosecond)()
 
 	// Now that the timeout is super low, verify that we get a context deadline exceeded error from our mock.
 	storage, err = NewMinioStorage(t.Context(), settings)
-	assert.Error(t, err)
-	assert.True(t, errors.Is(err, context.DeadlineExceeded), "err must be a context deadline exceeded error, but was %v", err)
+	require.Error(t, err)
+	require.ErrorIs(t, err, context.DeadlineExceeded, "err must be a context deadline exceeded error, but was %v", err)
 	assert.Nil(t, storage)
 }
