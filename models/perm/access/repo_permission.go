@@ -137,25 +137,11 @@ func (p *Permission) LogString() string {
 	return fmt.Sprintf(format, args...)
 }
 
-func actionsTaskRepoPermission(ctx context.Context, repo *repo_model.Repository, mode perm_model.AccessMode) (Permission, error) {
-	// actions tokens can only access a repo's code unit for the moment
-	codeUnit, err := repo.GetUnit(ctx, unit.TypeCode)
-	if err != nil {
-		return Permission{}, err
-	}
-
-	var perm Permission
-	perm.AccessMode = mode
-	perm.Units = []*repo_model.RepoUnit{codeUnit}
-	perm.UnitsMode = make(map[unit.Type]perm_model.AccessMode)
-	perm.UnitsMode[codeUnit.Type] = perm.AccessMode
-	return perm, nil
-}
-
 func GetActionRepoPermission(ctx context.Context, repo *repo_model.Repository, task *actions_model.ActionTask) (Permission, error) {
 	// straight forward case: an actions task is attempting to access its own repo
 	if task.RepoID == repo.ID {
 		var mode perm_model.AccessMode
+
 		// determine default access mode for repo:
 		if task.IsForkPullRequest {
 			mode = perm_model.AccessModeRead
@@ -163,26 +149,19 @@ func GetActionRepoPermission(ctx context.Context, repo *repo_model.Repository, t
 			mode = perm_model.AccessModeWrite
 		}
 
-		return actionsTaskRepoPermission(ctx, repo, mode)
+		if err := repo.LoadUnits(ctx); err != nil {
+			return Permission{}, err
+		}
+
+		perm := Permission{
+			AccessMode: mode,
+			Units:      repo.Units,
+		}
+
+		return perm, nil
 	}
 
-	// actions tasks may not access any other private repo
-	if repo.IsPrivate {
-		return Permission{AccessMode: perm_model.AccessModeNone}, nil
-	}
-
-	// load owner for visibility check
-	if err := repo.LoadOwner(ctx); err != nil {
-		return Permission{}, err
-	}
-
-	// actions tokens may not access repos belonging to private users/orgs
-	if repo.Owner.Visibility.IsPrivate() {
-		return Permission{AccessMode: perm_model.AccessModeNone}, nil
-	}
-
-	// otherwise, actions tasks may read public repos belonging to public or limited owners
-	return actionsTaskRepoPermission(ctx, repo, perm_model.AccessModeRead)
+	return GetUserRepoPermission(ctx, repo, user_model.NewActionsUser())
 }
 
 // GetUserRepoPermission returns the user permissions to the repository

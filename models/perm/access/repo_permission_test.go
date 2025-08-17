@@ -8,21 +8,17 @@ import (
 	perm_model "forgejo.org/models/perm"
 	"forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func assertCodeAccess(t *testing.T, mode perm_model.AccessMode, perm *access.Permission) {
-	assert.Equal(t, mode, perm.AccessMode)
+func assertAccess(t *testing.T, expectedMode perm_model.AccessMode, perm *access.Permission) {
+	assert.Equal(t, expectedMode, perm.AccessMode)
 
-	if mode > perm_model.AccessModeNone {
-		assert.Len(t, perm.Units, 1)
-		assert.Equal(t, unit.TypeCode, perm.Units[0].Type)
-		assert.Equal(t, mode, perm.UnitsMode[unit.TypeCode])
-	} else {
-		assert.Len(t, perm.Units, 0)
+	for _, unit := range perm.Units {
+		assert.Equal(t, expectedMode, perm.UnitAccessMode(unit.Type))
 	}
 }
 
@@ -34,7 +30,7 @@ func TestActionTaskCanAccessOwnRepo(t *testing.T) {
 
 	perm, err := access.GetActionRepoPermission(db.DefaultContext, repo, actionTask)
 	require.NoError(t, err)
-	assertCodeAccess(t, perm_model.AccessModeWrite, &perm)
+	assertAccess(t, perm_model.AccessModeWrite, &perm)
 }
 
 func TestActionTaskCanAccessPublicRepo(t *testing.T) {
@@ -45,7 +41,7 @@ func TestActionTaskCanAccessPublicRepo(t *testing.T) {
 
 	perm, err := access.GetActionRepoPermission(db.DefaultContext, repo, actionTask)
 	require.NoError(t, err)
-	assertCodeAccess(t, perm_model.AccessModeRead, &perm)
+	assertAccess(t, perm_model.AccessModeRead, &perm)
 }
 
 func TestActionTaskCanAccessPublicRepoOfLimitedOrg(t *testing.T) {
@@ -56,7 +52,7 @@ func TestActionTaskCanAccessPublicRepoOfLimitedOrg(t *testing.T) {
 
 	perm, err := access.GetActionRepoPermission(db.DefaultContext, repo, actionTask)
 	require.NoError(t, err)
-	assertCodeAccess(t, perm_model.AccessModeRead, &perm)
+	assertAccess(t, perm_model.AccessModeRead, &perm)
 }
 
 func TestActionTaskNoAccessPublicRepoOfPrivateOrg(t *testing.T) {
@@ -67,7 +63,7 @@ func TestActionTaskNoAccessPublicRepoOfPrivateOrg(t *testing.T) {
 
 	perm, err := access.GetActionRepoPermission(db.DefaultContext, repo, actionTask)
 	require.NoError(t, err)
-	assertCodeAccess(t, perm_model.AccessModeNone, &perm)
+	assertAccess(t, perm_model.AccessModeNone, &perm)
 }
 
 func TestActionTaskNoAccessPrivateRepo(t *testing.T) {
@@ -78,5 +74,5 @@ func TestActionTaskNoAccessPrivateRepo(t *testing.T) {
 
 	perm, err := access.GetActionRepoPermission(db.DefaultContext, repo, actionTask)
 	require.NoError(t, err)
-	assertCodeAccess(t, perm_model.AccessModeNone, &perm)
+	assertAccess(t, perm_model.AccessModeNone, &perm)
 }
