@@ -668,6 +668,27 @@ func ArtifactsDeleteView(ctx *context_module.Context) {
 	ctx.JSON(http.StatusOK, struct{}{})
 }
 
+func artifactsFindByNameOrID(ctx *context_module.Context, runID int64, nameOrID string) []*actions_model.ActionArtifact {
+	opts := actions_model.FindArtifactsOptions{
+		RunID: runID,
+	}
+	if id, err := strconv.ParseInt(nameOrID, 10, 64); err == nil {
+		opts.ID = id
+	} else {
+		opts.ArtifactName = nameOrID
+	}
+	artifacts, err := db.Find[actions_model.ActionArtifact](ctx, opts)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return nil
+	}
+	if len(artifacts) == 0 {
+		ctx.Error(http.StatusNotFound, "artifact not found")
+		return nil
+	}
+	return artifacts
+}
+
 func ArtifactsDownloadView(ctx *context_module.Context) {
 	runIndex := ctx.ParamsInt64("run")
 	artifactName := ctx.Params("artifact_name")
@@ -682,16 +703,8 @@ func ArtifactsDownloadView(ctx *context_module.Context) {
 		return
 	}
 
-	artifacts, err := db.Find[actions_model.ActionArtifact](ctx, actions_model.FindArtifactsOptions{
-		RunID:        run.ID,
-		ArtifactName: artifactName,
-	})
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
-	}
-	if len(artifacts) == 0 {
-		ctx.Error(http.StatusNotFound, "artifact not found")
+	artifacts := artifactsFindByNameOrID(ctx, run.ID, artifactName)
+	if ctx.Written() {
 		return
 	}
 
