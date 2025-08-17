@@ -691,7 +691,7 @@ func TestAPIInternalAndExternalIssueTracker(t *testing.T) {
 		MakeRequest(t, NewRequestWithValues(t, "PATCH", getPath("/%d", deleteIssue.Index), map[string]string{"title": uuid.NewString()}).AddTokenAuth(token), createdStatus)
 		MakeRequest(t, NewRequest(t, "DELETE", getPath("/%d", deleteIssue.Index)).AddTokenAuth(token), noContentStatus)
 
-		MakeRequest(t, NewRequest(t, "GET", getPath("/pinned")).AddTokenAuth(token), http.StatusOK)
+		MakeRequest(t, NewRequest(t, "GET", getPath("/pinned")).AddTokenAuth(token), okStatus)
 
 		// comments
 		MakeRequest(t, NewRequest(t, "GET", getPath("/comments")).AddTokenAuth(token), http.StatusOK)

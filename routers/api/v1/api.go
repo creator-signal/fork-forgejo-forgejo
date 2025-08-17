@@ -492,15 +492,13 @@ func reqRepoBranchWriter(ctx *context.APIContext) {
 }
 
 // reqRepoReader user should have specific read permission or be a repo admin or a site admin
-func reqRepoReader(unitTypes ...unit.Type) func(ctx *context.APIContext) {
+func reqRepoReader(unitType unit.Type) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
-		if !slices.ContainsFunc(unitTypes, func(unitType unit.Type) bool {
-			return ctx.Repo.Repository.UnitEnabled(ctx, unitType)
-		}) {
+		if !ctx.Repo.Repository.UnitEnabled(ctx, unitType) {
 			ctx.NotFound()
 			return
 		}
-		if !ctx.Repo.CanReadAny(unitTypes...) && !ctx.IsUserRepoAdmin() && !ctx.IsUserSiteAdmin() {
+		if !ctx.Repo.CanRead(unitType) && !ctx.IsUserRepoAdmin() && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden, "reqRepoReader", "user should have specific read permission or be a repo admin or a site admin")
 			return
 		}
@@ -1429,7 +1427,7 @@ func Routes() *web.Route {
 				m.Group("/issues", func() {
 					m.Combo("").Get(repo.ListIssues).
 						Post(reqToken(), mustNotBeArchived, bind(api.CreateIssueOption{}), reqRepoReader(unit.TypeIssues), repo.CreateIssue)
-					m.Get("/pinned", reqRepoReader(unit.TypeIssues, unit.TypePullRequests), repo.ListPinnedIssues)
+					m.Get("/pinned", reqRepoReader(unit.TypeIssues), repo.ListPinnedIssues)
 					m.Group("/comments", func() {
 						m.Get("", repo.ListRepoIssueComments)
 						m.Group("/{id}", func() {
