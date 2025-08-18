@@ -663,6 +663,12 @@ func Edit(ctx *context.APIContext) {
 		}
 	}
 
+	if opts.ConvertToNormalRepo != nil {
+		if err := convertMirrorToNormalRepo(ctx); err != nil {
+			return
+		}
+	}
+
 	repo, err := repo_model.GetRepositoryByID(ctx, ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.InternalServerError(err)
@@ -1134,6 +1140,23 @@ func updateMirror(ctx *context.APIContext, opts api.EditRepoOption) error {
 	if err := repo_model.UpdateMirror(ctx, mirror); err != nil {
 		log.Error("Failed to Set Mirror Interval: %s", err)
 		ctx.Error(http.StatusUnprocessableEntity, "MirrorInterval", err)
+		return err
+	}
+
+	return nil
+}
+
+// convertMirrorToNormalRepository converts a mirror to a normal repo
+func convertMirrorToNormalRepo(ctx *context.APIContext) error {
+	repo := ctx.Repo.Repository
+
+	if !repo.IsMirror {
+		return nil
+	}
+
+	if err := repo_service.ConvertMirrorToNormalRepo(ctx, repo); err != nil {
+		log.Error("Failed to Disable Mirror: %s", err)
+		ctx.Error(http.StatusUnprocessableEntity, "ConvertMirror", err)
 		return err
 	}
 
