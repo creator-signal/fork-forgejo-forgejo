@@ -260,4 +260,4 @@ replace github.com/gliderlabs/ssh => code.forgejo.org/forgejo/ssh v0.0.0-2024121
 
 replace git.sr.ht/~mariusor/go-xsd-duration => code.forgejo.org/forgejo/go-xsd-duration v0.0.0-20220703122237-02e73435a078
 
-replace code.forgejo.org/forgejo/runner/v9 => code.forgejo.org/forgejo/runner/v9 v9.1.1-0.20250818092658-07fadb34618e
+replace code.forgejo.org/forgejo/runner/v9 => code.forgejo.org/forgejo/runner/v9 v9.1.1-0.20250818112215-54130f2380bd
