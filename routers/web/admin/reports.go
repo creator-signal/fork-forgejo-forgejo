@@ -258,7 +258,6 @@ func suspendAccount(ctx *context.Context, contentType moderation.ReportedContent
 
 	reportedUser, err := user.GetUserByID(ctx, contentID)
 	if err != nil {
-		// TODO: previous flash message does not get cleared when returning an error
 		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve the user: %s", err.Error()))
 		return
 	}
