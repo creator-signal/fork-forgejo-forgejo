@@ -43,7 +43,7 @@
 			{{end}}
 			{{if and FederationEnabled (eq .SignedUserID .ContextUser.ID)}}
 			<a class="{{if eq .TabName "feed"}}active {{end}}item" href="{{.ContextUser.HomeLink}}?tab=feed">
-				{{svg "octicon-rss"}} Feed
+				{{svg "octicon-rss"}} {{ctx.Locale.Tr "activitypub_feed.feed"}}
 			</a>
 			{{end}}
 			{{if not .DisableStars}}
