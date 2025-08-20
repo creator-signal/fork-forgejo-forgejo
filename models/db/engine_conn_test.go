@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 // TestConnectionLimitDistribution verifies that MAX_OPEN_CONNS is properly distributed across all engines in an EngineGroup
 func TestConnectionLimitDistribution(t *testing.T) {
 	origMaxOpen := setting.Database.MaxOpenConns
@@ -24,52 +23,52 @@ func TestConnectionLimitDistribution(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name               string
-		maxOpenConns       int
-		maxIdleConns       int
-		numReplicas        int
-		expectedPerEngine  int
-		expectedPerIdle    int
+		name              string
+		maxOpenConns      int
+		maxIdleConns      int
+		numReplicas       int
+		expectedPerEngine int
+		expectedPerIdle   int
 	}{
 		{
-			name:               "Single database (no replicas)",
-			maxOpenConns:       100,
-			maxIdleConns:       10,
-			numReplicas:        1,  // Falls back to primary, so 1 primary + 1 replica pointing to same DB
-			expectedPerEngine:  50, // 100 / 2
-			expectedPerIdle:    5,  // 10 / 2
+			name:              "Single database (no replicas)",
+			maxOpenConns:      100,
+			maxIdleConns:      10,
+			numReplicas:       1,  // Falls back to primary, so 1 primary + 1 replica pointing to same DB
+			expectedPerEngine: 50, // 100 / 2
+			expectedPerIdle:   5,  // 10 / 2
 		},
 		{
-			name:               "One primary, one replica",
-			maxOpenConns:       100,
-			maxIdleConns:       10,
-			numReplicas:        1,  // 1 primary + 1 actual replica
-			expectedPerEngine:  50, // 100 / 2
-			expectedPerIdle:    5,  // 10 / 2
+			name:              "One primary, one replica",
+			maxOpenConns:      100,
+			maxIdleConns:      10,
+			numReplicas:       1,  // 1 primary + 1 actual replica
+			expectedPerEngine: 50, // 100 / 2
+			expectedPerIdle:   5,  // 10 / 2
 		},
 		{
-			name:               "One primary, two replicas (uneven split)",
-			maxOpenConns:       100,
-			maxIdleConns:       12,
-			numReplicas:        2,  // 1 primary + 2 replicas = 3 engines total
-			expectedPerEngine:  33, // 100 / 3 = 33 (integer division, 1 connection unused)
-			expectedPerIdle:    4,  // 12 / 3 = 4
+			name:              "One primary, two replicas (uneven split)",
+			maxOpenConns:      100,
+			maxIdleConns:      12,
+			numReplicas:       2,  // 1 primary + 2 replicas = 3 engines total
+			expectedPerEngine: 33, // 100 / 3 = 33 (integer division, 1 connection unused)
+			expectedPerIdle:   4,  // 12 / 3 = 4
 		},
 		{
-			name:               "Limit smaller than engine count (shouldn't happen but better to test nonetheless)",
-			maxOpenConns:       2,
-			maxIdleConns:       1,
-			numReplicas:        2, // 1 primary + 2 replicas = 3 engines total
-			expectedPerEngine:  1, // 2 / 3 = 0, but minimum is 1
-			expectedPerIdle:    1, // 1 / 3 = 0, but minimum is 1
+			name:              "Limit smaller than engine count (shouldn't happen but better to test nonetheless)",
+			maxOpenConns:      2,
+			maxIdleConns:      1,
+			numReplicas:       2, // 1 primary + 2 replicas = 3 engines total
+			expectedPerEngine: 1, // 2 / 3 = 0, but minimum is 1
+			expectedPerIdle:   1, // 1 / 3 = 0, but minimum is 1
 		},
 		{
-			name:               "Zero connections should default to 1",
-			maxOpenConns:       0,
-			maxIdleConns:       0,
-			numReplicas:        2,
-			expectedPerEngine:  1,
-			expectedPerIdle:    1,
+			name:              "Zero connections should default to 1",
+			maxOpenConns:      0,
+			maxIdleConns:      0,
+			numReplicas:       2,
+			expectedPerEngine: 1,
+			expectedPerIdle:   1,
 		},
 	}
 
