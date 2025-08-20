@@ -5,9 +5,9 @@
 				<p>
 					<a href="{{.ActorURI}}">{{.Actor.Name}}</a>
 					{{if .NoteURL}}
-						<a href="{{.NoteURL}}">{{ctx.Locale.Tr "activitypub_feed.wrote"}}</a>
+						<a href="{{.NoteURL}}">{{ctx.Locale.Tr "user.activitypub_feed.wrote"}}</a>
 					{{else}}
-						{{ctx.Locale.Tr "activitypub_feed.wrote"}}
+						{{ctx.Locale.Tr "user.activitypub_feed.wrote"}}
 					{{end}}:
 				</p>
 			{{end}}
