@@ -140,6 +140,34 @@ func newXORMEngineGroup() (Engine, error) {
 		slaveEngines = append(slaveEngines, slaveEngine)
 	}
 
+	// Distribute connection limits across all engines to honor MAX_OPEN_CONNS
+	perEngineMaxConns := setting.Database.MaxOpenConns / (1 + len(slaveEngines))
+	perEngineMaxIdle := setting.Database.MaxIdleConns / (1 + len(slaveEngines))
+
+	// Ensure at least 1 connection per engine
+	if perEngineMaxConns < 1 {
+		if setting.Database.MaxOpenConns > 0 {
+			log.Warn("database.MAX_OPEN_CONNS=%d is too small for %d engines, forcing 1 connection per engine",
+				setting.Database.MaxOpenConns, 1+len(slaveEngines))
+		}
+		perEngineMaxConns = 1
+	}
+	if perEngineMaxIdle < 1 {
+		perEngineMaxIdle = 1
+	}
+
+	masterEngine.SetMaxOpenConns(perEngineMaxConns)
+	masterEngine.SetMaxIdleConns(perEngineMaxIdle)
+	masterEngine.SetConnMaxLifetime(setting.Database.ConnMaxLifetime)
+	masterEngine.SetConnMaxIdleTime(setting.Database.ConnMaxIdleTime)
+
+	for _, slaveEngine := range slaveEngines {
+		slaveEngine.SetMaxOpenConns(perEngineMaxConns)
+		slaveEngine.SetMaxIdleConns(perEngineMaxIdle)
+		slaveEngine.SetConnMaxLifetime(setting.Database.ConnMaxLifetime)
+		slaveEngine.SetConnMaxIdleTime(setting.Database.ConnMaxIdleTime)
+	}
+
 	policy := setting.BuildLoadBalancePolicy(&setting.Database, slaveEngines)
 
 	// Create the EngineGroup using the selected policy
@@ -180,10 +208,7 @@ func InitEngine(ctx context.Context) error {
 		// so use a log file instead of printing to stdout.
 		eng.SetLogger(NewXORMLogger(setting.Database.LogSQL))
 		eng.ShowSQL(setting.Database.LogSQL)
-		eng.SetMaxOpenConns(setting.Database.MaxOpenConns)
-		eng.SetMaxIdleConns(setting.Database.MaxIdleConns)
-		eng.SetConnMaxLifetime(setting.Database.ConnMaxLifetime)
-		eng.SetConnMaxIdleTime(setting.Database.ConnMaxIdleTime)
+		// IMPORTANT: Connection limits are set per-engine in newXORMEngineGroup to properly distribute MAX_OPEN_CONNS across all engines
 		eng.SetDefaultContext(ctx)
 
 		if setting.Database.SlowQueryThreshold > 0 {
