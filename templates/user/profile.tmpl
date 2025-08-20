@@ -51,12 +51,12 @@
 				{{else if eq .TabName "followers"}}
 					{{template "repo/user_cards" .}}
 				{{else if eq .TabName "overview"}}
-					<div id="readme_profile" class="{{ if not .IsProfileReadmePlain }}markup{{ end }}">
-					{{ if .IsProfileReadmePlain }}
-						<pre>{{ .ProfileReadme }}</pre>
-					{{ else }}
-						{{ .ProfileReadme }}
-					{{ end }}
+					<div id="readme_profile" class="{{if not .IsProfileReadmePlain}}markup{{end}}">
+					{{if .IsProfileReadmePlain}}
+						<pre>{{.ProfileReadme}}</pre>
+					{{else}}
+						{{.ProfileReadme}}
+					{{end}}
 					</div>
 				{{else}}
 					{{template "shared/repo_search" .}}

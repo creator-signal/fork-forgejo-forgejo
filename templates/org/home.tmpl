@@ -11,12 +11,12 @@
 		<div class="ui mobile reversed stackable grid">
 			<div class="ui {{if .ShowMemberAndTeamTab}}eleven wide{{end}} column">
 				{{if .ProfileReadme}}
-					<div id="readme_profile" class="{{ if not .IsProfileReadmePlain }}markup{{ end }}">
-					{{ if .IsProfileReadmePlain }}
-						<pre>{{ .ProfileReadme }}</pre>
-					{{ else }}
-						{{ .ProfileReadme }}
-					{{ end }}
+					<div id="readme_profile" class="{{if not .IsProfileReadmePlain}}markup{{end}}">
+					{{if .IsProfileReadmePlain}}
+						<pre>{{.ProfileReadme}}</pre>
+					{{else}}
+						{{.ProfileReadme}}
+					{{end}}
 					</div>
 				{{end}}
 				{{template "shared/repo_search" .}}
