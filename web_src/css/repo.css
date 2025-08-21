@@ -1975,6 +1975,8 @@ details.repo-search-result summary::marker {
 .commit-header-row,
 .tag-signature-row {
   padding: 0.75rem 1rem !important;
+  row-gap: 0.5rem;
+  column-gap: 1rem;
 }
 
 .ui.attached.message.tag-signature-row {
