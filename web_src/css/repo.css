@@ -1022,10 +1022,19 @@ pdf-object {
   padding: 0 0.5rem;
 }
 
+/* emulation of horizontal rule between comments originating from forgejo- themes, commit faab0c670e */
+
 .repository.view.issue .comment-list .code-comment + .code-comment {
   margin-top: 1rem !important;
   padding-top: 1rem !important;
   border-top: 1px solid var(--color-secondary) !important;
+}
+
+@media (max-width: 768px) {
+  .repository.view.issue .comment-list .code-comment + .code-comment {
+    margin-top: 0.5rem !important;
+    padding-top: 0.5rem !important;
+  }
 }
 
 .repository.view.issue .comment-list .comment > .avatar {
