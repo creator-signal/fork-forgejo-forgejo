@@ -1985,12 +1985,6 @@ details.repo-search-result summary::marker {
   column-gap: 1rem;
 }
 
-.signature-row div {
-  margin-top: auto !important;
-  margin-bottom: auto !important;
-  display: inline-block !important;
-}
-
 .commit-header-buttons {
   display: flex;
   gap: 4px;
