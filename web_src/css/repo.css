@@ -1974,8 +1974,6 @@ details.repo-search-result summary::marker {
 
 .commit-header-row {
   min-height: 50px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
 }
 
 .signature-row {
