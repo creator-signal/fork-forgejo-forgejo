@@ -1984,10 +1984,6 @@ details.repo-search-result summary::marker {
   column-gap: 1rem;
 }
 
-.ui.attached.message.signature-row {
-  border-radius: var(--border-radius);
-}
-
 .signature-row div {
   margin-top: auto !important;
   margin-bottom: auto !important;
