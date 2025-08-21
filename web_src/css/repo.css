@@ -991,7 +991,7 @@ pdf-object {
 
 @media (max-width: 768px) {
   .repository.view.issue .comment-list .code-comment {
-    padding: 0.25rem 0.25rem 1.25rem;
+    padding: 0.33rem 0.33rem 1.33rem;
   }
 }
 
