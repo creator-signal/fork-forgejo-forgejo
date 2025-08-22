@@ -95,8 +95,7 @@ func generateIssueTemplateLocations() []string {
 	return result
 }
 
-// IssueTemplateCandidates issue templates
-var IssueTemplateCandidates = generateIssueTemplateLocations()
+var issueTemplateCandidates = generateIssueTemplateLocations()
 
 // MustAllowUserComment checks to make sure if an issue is locked.
 // If locked and user has permissions to write to the repository,
@@ -999,7 +998,7 @@ func NewIssue(ctx *context.Context) {
 	ctx.Data["Tags"] = tags
 
 	_, templateErrs := issue_service.GetTemplatesFromDefaultBranch(ctx.Repo.Repository, ctx.Repo.GitRepo)
-	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, IssueTemplateCandidates)
+	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, issueTemplateCandidates)
 	for k, v := range errs {
 		templateErrs[k] = v
 	}
