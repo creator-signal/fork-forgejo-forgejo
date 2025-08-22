@@ -24,22 +24,27 @@ func verifyHTTPUserOrInstanceSignature(ctx services_context.APIContext) (authent
 	// 1. Figure out what key we need to verify
 	v, err := httpsig.NewVerifier(r)
 	if err != nil {
+		log.Debug("Request %q requires HTTPUserOrInstanceSignature. Verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
 
+	log.Debug("Request %q requires HTTPUserOrInstanceSignature. Signed by KeyId: %v", r.URL.Path, v.KeyId())
 	signatureAlgorithm := httpsig.Algorithm(setting.Federation.SignatureAlgorithms[0])
 	pubKey, err := federation.FindOrCreateFederatedUserKey(ctx, v.KeyId())
 	if err != nil || pubKey == nil {
 		pubKey, err = federation.FindOrCreateFederationHostKey(ctx, v.KeyId())
 		if err != nil {
+			log.Debug("Request %q requires HTTPUserOrInstanceSignature. Verification failed: %v", r.URL.Path, err)
 			return false, err
 		}
 	}
 
 	err = v.Verify(pubKey, signatureAlgorithm)
 	if err != nil {
+		log.Debug("Request %q requires HTTPUserOrInstanceSignature. Verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
+	log.Debug("Request %q requires HTTPUserOrInstanceSignature. Signature was valid.", r.URL.Path)
 	return true, nil
 }
 
@@ -53,19 +58,24 @@ func verifyHTTPUserSignature(ctx services_context.APIContext) (authenticated boo
 	// 1. Figure out what key we need to verify
 	v, err := httpsig.NewVerifier(r)
 	if err != nil {
+		log.Debug("Request %q requires HTTPUserSignature. Verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
 
+	log.Debug("Request %q requires HTTPUserSignature. Signed by KeyId: %v", r.URL.Path, v.KeyId())
 	signatureAlgorithm := httpsig.Algorithm(setting.Federation.SignatureAlgorithms[0])
 	pubKey, err := federation.FindOrCreateFederatedUserKey(ctx, v.KeyId())
 	if err != nil {
+		log.Debug("Request %q requires HTTPUserSignature. Verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
 
 	err = v.Verify(pubKey, signatureAlgorithm)
 	if err != nil {
+		log.Debug("Request %q requires HTTPUserSignature. Verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
+	log.Debug("Request %q requires HTTPUserSignature. Signature was valid.", r.URL.Path)
 	return true, nil
 }
 
@@ -73,7 +83,6 @@ func verifyHTTPUserSignature(ctx services_context.APIContext) (authenticated boo
 func ReqHTTPUserOrInstanceSignature() func(ctx *services_context.APIContext) {
 	return func(ctx *services_context.APIContext) {
 		if authenticated, err := verifyHTTPUserOrInstanceSignature(*ctx); err != nil {
-			log.Warn("verifyHttpSignatures failed: %v", err)
 			ctx.Error(http.StatusBadRequest, "reqSignature", "request signature verification failed")
 		} else if !authenticated {
 			ctx.Error(http.StatusForbidden, "reqSignature", "request signature verification failed")
@@ -85,7 +94,6 @@ func ReqHTTPUserOrInstanceSignature() func(ctx *services_context.APIContext) {
 func ReqHTTPUserSignature() func(ctx *services_context.APIContext) {
 	return func(ctx *services_context.APIContext) {
 		if authenticated, err := verifyHTTPUserSignature(*ctx); err != nil {
-			log.Warn("verifyHttpSignatures failed: %v", err)
 			ctx.Error(http.StatusBadRequest, "reqSignature", "request signature verification failed")
 		} else if !authenticated {
 			ctx.Error(http.StatusForbidden, "reqSignature", "request signature verification failed")

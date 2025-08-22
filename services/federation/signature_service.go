@@ -16,6 +16,7 @@ import (
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
 	fm "forgejo.org/modules/forgefed"
+	"forgejo.org/modules/log"
 
 	ap "github.com/go-ap/activitypub"
 )
@@ -55,6 +56,7 @@ func NewActorIDFromKeyID(ctx context.Context, uri string) (fm.ActorID, error) {
 }
 
 func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any, err error) {
+	log.Trace("FindOrCreateFederatedUserKey: %v", keyID)
 	var federatedUser *user.FederatedUser
 	var keyURL *url.URL
 
@@ -91,6 +93,7 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 		if err != nil {
 			return nil, err
 		}
+		log.Trace("FindOrCreateFederatedUserKey: %v. Found pubKey %v", keyID, pubKey)
 		return pubKey, nil
 	}
 
@@ -117,12 +120,15 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 		if err != nil {
 			return nil, err
 		}
+		log.Trace("FindOrCreateFederatedUserKey: %v. Found pubKey %v", keyID, pubKey)
 		return pubKey, nil
 	}
+	log.Trace("FindOrCreateFederatedUserKey: %v. Found no pubKey", keyID)
 	return nil, nil
 }
 
 func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey any, err error) {
+	log.Trace("FindOrCreateFederationHostKey: %v", keyID)
 	keyURL, err := url.Parse(keyID)
 	if err != nil {
 		return nil, err
@@ -151,6 +157,7 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 		if err != nil {
 			return nil, err
 		}
+		log.Trace("FindOrCreateFederationHostKey: %v. Found pubKey: %v", keyID, pubKey)
 		return pubKey, nil
 	}
 
@@ -178,12 +185,15 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 		if err != nil {
 			return nil, err
 		}
+		log.Trace("FindOrCreateFederationHostKey: %v. Found pubKey: %v", keyID, pubKey)
 		return pubKey, nil
 	}
+	log.Trace("FindOrCreateFederationHostKey: %v. Found no pubKey.", keyID)
 	return nil, nil
 }
 
 func fetchKeyFromAp(ctx context.Context, keyURL url.URL) (pubKey any, pubKeyBytes []byte, apPerson *ap.Person, err error) {
+	log.Trace("fetchKeyFromAp: for keyURL %v", keyURL)
 	actionsUser := user.NewAPServerActor()
 
 	clientFactory, err := activitypub.GetClientFactory(ctx)
@@ -222,6 +232,7 @@ func fetchKeyFromAp(ctx context.Context, keyURL url.URL) (pubKey any, pubKeyByte
 		return nil, nil, nil, err
 	}
 
+	log.Trace("fetchKeyFromAp: for keyURL %v. Fetched pubKey %v", keyURL, pubKey)
 	return pubKey, pubKeyBytes, person, err
 }
 
