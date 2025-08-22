@@ -32,7 +32,7 @@ func LinkAccount(ctx *context.Context) {
 	ctx.Data["DisablePassword"] = !setting.Service.RequireExternalRegistrationPassword || setting.Service.AllowOnlyExternalRegistration
 	ctx.Data["Title"] = ctx.Tr("link_account")
 	ctx.Data["LinkAccountMode"] = true
-	if setting.Service.EnableCaptcha && setting.Service.RequireExternalRegistrationCaptcha {
+	if setting.Service.RequireExternalRegistrationCaptcha {
 		context.SetCaptchaData(ctx)
 	}
 	ctx.Data["DisableRegistration"] = setting.Service.DisableRegistration
@@ -188,7 +188,7 @@ func LinkAccountPostRegister(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("link_account")
 	ctx.Data["LinkAccountMode"] = true
 	ctx.Data["LinkAccountModeRegister"] = true
-	if setting.Service.EnableCaptcha && setting.Service.RequireExternalRegistrationCaptcha {
+	if setting.Service.RequireExternalRegistrationCaptcha {
 		context.SetCaptchaData(ctx)
 	}
 	ctx.Data["DisableRegistration"] = setting.Service.DisableRegistration
