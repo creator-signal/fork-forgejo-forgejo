@@ -26,6 +26,7 @@ import (
 	"forgejo.org/modules/actions"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
@@ -80,6 +81,18 @@ func View(ctx *context_module.Context) {
 	ctx.Data["AttemptNumber"] = attemptNumber
 	ctx.Data["WorkflowName"] = workflowName
 	ctx.Data["WorkflowURL"] = ctx.Repo.RepoLink + "/actions?workflow=" + workflowName
+
+	viewResponse := getViewResponse(ctx, &ViewRequest{}, runIndex, jobIndex, attemptNumber)
+	if ctx.Written() {
+		return
+	}
+
+	var buf1 strings.Builder
+	if err := json.NewEncoder(&buf1).Encode(viewResponse); err != nil {
+		ctx.ServerError("EncodingError", err)
+		return
+	}
+	ctx.Data["InitialData"] = buf1.String()
 
 	ctx.HTML(http.StatusOK, tplViewActions)
 }
@@ -230,14 +243,23 @@ func ViewPost(ctx *context_module.Context) {
 	// which uses 1-based numbering... would be confusing as "Index" if it later can't be used to index an slice/array.
 	attemptNumber := ctx.ParamsInt64("attempt")
 
-	current, jobs := getRunJobs(ctx, runIndex, jobIndex)
+	resp := getViewResponse(ctx, req, runIndex, jobIndex, attemptNumber)
 	if ctx.Written() {
 		return
+	}
+
+	ctx.JSON(http.StatusOK, resp)
+}
+
+func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jobIndex, attemptNumber int64) *ViewResponse {
+	current, jobs := getRunJobs(ctx, runIndex, jobIndex)
+	if ctx.Written() {
+		return nil
 	}
 	run := current.Run
 	if err := run.LoadAttributes(ctx); err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+		return nil
 	}
 
 	resp := &ViewResponse{}
@@ -309,12 +331,12 @@ func ViewPost(ctx *context_module.Context) {
 		task, err = actions_model.GetTaskByJobAttempt(ctx, current.ID, attemptNumber)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
+			return nil
 		}
 		task.Job = current
 		if err := task.LoadAttributes(ctx); err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
+			return nil
 		}
 	}
 
@@ -329,7 +351,7 @@ func ViewPost(ctx *context_module.Context) {
 		taskAttempts, err := task.GetAllAttempts(ctx)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
+			return nil
 		}
 		allAttempts := make([]*TaskAttempt, len(taskAttempts))
 		for i, actionTask := range taskAttempts {
@@ -396,7 +418,7 @@ func ViewPost(ctx *context_module.Context) {
 				logRows, err := actions.ReadLogs(ctx, task.LogInStorage, task.LogFilename, offset, length)
 				if err != nil {
 					ctx.Error(http.StatusInternalServerError, err.Error())
-					return
+					return nil
 				}
 
 				for i, row := range logRows {
@@ -417,7 +439,7 @@ func ViewPost(ctx *context_module.Context) {
 		}
 	}
 
-	ctx.JSON(http.StatusOK, resp)
+	return resp
 }
 
 // Rerun will rerun jobs in the given run

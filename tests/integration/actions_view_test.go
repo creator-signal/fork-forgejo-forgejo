@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -141,4 +142,11 @@ func TestActionViewsView(t *testing.T) {
 	htmlDoc.AssertAttrEqual(t, selector, "data-run-index", "187")
 	htmlDoc.AssertAttrEqual(t, selector, "data-job-index", "0")
 	htmlDoc.AssertAttrEqual(t, selector, "data-attempt-number", "1")
+	htmlDoc.AssertAttrPredicate(t, selector, "data-initial-post-response", func(actual string) bool {
+		// Remove dynamic "duration" fields for comparison.
+		pattern := `"duration":"[^"]*"`
+		re := regexp.MustCompile(pattern)
+		actualClean := re.ReplaceAllString(actual, `"duration":"_duration_"`)
+		return assert.JSONEq(t, "{\"state\":{\"run\":{\"link\":\"/user2/repo1/actions/runs/187\",\"title\":\"update actions\",\"titleHTML\":\"update actions\",\"status\":\"success\",\"canCancel\":false,\"canApprove\":false,\"canRerun\":false,\"canDeleteArtifact\":false,\"done\":true,\"jobs\":[{\"id\":292,\"name\":\"job_2\",\"status\":\"success\",\"canRerun\":false,\"duration\":\"_duration_\"},{\"id\":393,\"name\":\"job_2\",\"status\":\"waiting\",\"canRerun\":false,\"duration\":\"_duration_\"},{\"id\":394,\"name\":\"job_2\",\"status\":\"waiting\",\"canRerun\":false,\"duration\":\"_duration_\"},{\"id\":395,\"name\":\"job_2\",\"status\":\"waiting\",\"canRerun\":false,\"duration\":\"_duration_\"}],\"commit\":{\"localeCommit\":\"Commit\",\"localePushedBy\":\"pushed by\",\"localeWorkflow\":\"Workflow\",\"shortSHA\":\"985f0301db\",\"link\":\"/user2/repo1/commit/985f0301dba5e7b34be866819cd15ad3d8f508ee\",\"pusher\":{\"displayName\":\"user1\",\"link\":\"/user1\"},\"branch\":{\"name\":\"branch2\",\"link\":\"/user2/repo1/src/branch/branch2\",\"isDeleted\":false}}},\"currentJob\":{\"title\":\"job_2\",\"detail\":\"Success\",\"steps\":[{\"summary\":\"Set up job\",\"duration\":\"_duration_\",\"status\":\"running\"},{\"summary\":\"Complete job\",\"duration\":\"_duration_\",\"status\":\"waiting\"}]}},\"logs\":{\"stepsLog\":[]}}\n", actualClean)
+	})
 }
