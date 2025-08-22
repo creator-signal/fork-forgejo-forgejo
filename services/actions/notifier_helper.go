@@ -219,7 +219,7 @@ func notify(ctx context.Context, input *notifyInput) error {
 		}
 	}
 
-	if input.PullRequest != nil {
+	if input.PullRequest != nil && !actions_module.IsDefaultBranchWorkflow(input.Event) {
 		// detect pull_request_target workflows
 		baseRef := git.BranchPrefix + input.PullRequest.BaseBranch
 		baseCommit, err := gitRepo.GetCommit(baseRef)
@@ -315,7 +315,7 @@ func handleWorkflows(
 	}
 
 	isForkPullRequest := false
-	if pr := input.PullRequest; pr != nil {
+	if pr := input.PullRequest; pr != nil && !actions_module.IsDefaultBranchWorkflow(input.Event) {
 		switch pr.Flow {
 		case issues_model.PullRequestFlowGithub:
 			isForkPullRequest = pr.IsFromFork()
