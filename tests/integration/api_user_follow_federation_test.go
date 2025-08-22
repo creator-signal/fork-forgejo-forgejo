@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Flow of this test is documented at: https://codeberg.org/forgejo-contrib/federation/src/branch/main/doc/user-activity-following.md
 func TestActivityPubFollowFederated(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()

@@ -12,7 +12,7 @@ import (
 	"path"
 	"strings"
 
-	"forgejo.org/models/activities"
+	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
@@ -175,40 +175,42 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 			ctx.Data["CardsNoneMsg"] = ctx.Tr("followers.outgoing.list.none", ctx.ContextUser.Name)
 		}
 	case "feed":
-		pagingNum = setting.UI.FeedPagingNum
-		items := make([]*activities.FederatedUserActivity, 0)
-		var count int64
-		if ctx.Doer != nil {
-			items, count, err = activities.GetFollowingFeeds(ctx,
-				ctx.Doer.ID,
-				activities.GetFollowingFeedsOptions{
-					ListOptions: db.ListOptions{
-						PageSize: pagingNum,
-						Page:     page,
-					},
-				})
-			if err != nil {
-				ctx.ServerError("GetFollowingFeeds", err)
-				return
+		if setting.Federation.Enabled {
+			pagingNum = setting.UI.FeedPagingNum
+			items := make([]*activities_model.FederatedUserActivity, 0)
+			var count int64
+			if ctx.Doer != nil {
+				items, count, err = activities_model.GetFollowingFeeds(ctx,
+					ctx.Doer.ID,
+					activities_model.GetFollowingFeedsOptions{
+						ListOptions: db.ListOptions{
+							PageSize: pagingNum,
+							Page:     page,
+						},
+					})
+				if err != nil {
+					ctx.ServerError("GetFollowingFeeds", err)
+					return
+				}
 			}
+			ctx.Data["FollowingFeeds"] = items
+			total = int(count)
 		}
-		ctx.Data["FollowingFeeds"] = items
-		total = int(count)
 	case "activity":
 		// prepare heatmap data
 		if setting.Service.EnableUserHeatmap {
-			data, err := activities.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
+			data, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
 			if err != nil {
 				ctx.ServerError("GetUserHeatmapDataByUser", err)
 				return
 			}
 			ctx.Data["HeatmapData"] = data
-			ctx.Data["HeatmapTotalContributions"] = activities.GetTotalContributionsInHeatmap(data)
+			ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
 		}
 
 		date := ctx.FormString("date")
 		pagingNum = setting.UI.FeedPagingNum
-		items, count, err := activities.GetFeeds(ctx, activities.GetFeedsOptions{
+		items, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
 			RequestedUser:   ctx.ContextUser,
 			Actor:           ctx.Doer,
 			IncludePrivate:  showPrivate,
