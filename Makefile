@@ -45,9 +45,9 @@ SWAGGER_PACKAGE ?= github.com/go-swagger/go-swagger/cmd/swagger@v0.31.0 # renova
 XGO_PACKAGE ?= src.techknowlogick.com/xgo@latest
 GO_LICENSES_PACKAGE ?= github.com/google/go-licenses@v1.6.0 # renovate: datasource=go
 GOVULNCHECK_PACKAGE ?= golang.org/x/vuln/cmd/govulncheck@v1 # renovate: datasource=go
-DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.35.0 # renovate: datasource=go
-GOMOCK_PACKAGE ?= go.uber.org/mock/mockgen@v0.5.2 # renovate: datasource=go
-RENOVATE_NPM_PACKAGE ?= renovate@41.61.0 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
+DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.36.0 # renovate: datasource=go
+GOMOCK_PACKAGE ?= go.uber.org/mock/mockgen@v0.6.0 # renovate: datasource=go
+RENOVATE_NPM_PACKAGE ?= renovate@41.76.0 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
 
 # https://github.com/disposable-email-domains/disposable-email-domains/commits/main/
 DISPOSABLE_EMAILS_SHA ?= 0c27e671231d27cf66370034d7f6818037416989 # renovate: ...
@@ -638,6 +638,7 @@ generate-ini-pgsql:
 		-e 's|{{TEST_LOGGER}}|$(or $(TEST_LOGGER),test$(COMMA)file)|g' \
 		-e 's|{{TEST_TYPE}}|$(or $(TEST_TYPE),integration)|g' \
 		-e 's|{{TEST_STORAGE_TYPE}}|$(or $(TEST_STORAGE_TYPE),minio)|g' \
+		-e 's|{{TEST_S3_HOST}}|$(or $(TEST_S3_HOST),minio:9000)|g' \
 			tests/pgsql.ini.tmpl > tests/pgsql.ini
 
 .PHONY: test-pgsql
