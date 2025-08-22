@@ -24,27 +24,27 @@ func verifyHTTPUserOrInstanceSignature(ctx services_context.APIContext) (authent
 	// 1. Figure out what key we need to verify
 	v, err := httpsig.NewVerifier(r)
 	if err != nil {
-		log.Debug("Request %q requires HTTPUserOrInstanceSignature. Verification failed: %v", r.URL.Path, err)
+		log.Debug("For %q verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
 
-	log.Debug("Request %q requires HTTPUserOrInstanceSignature. Signed by KeyId: %v", r.URL.Path, v.KeyId())
+	log.Debug("Verify %q, signed by KeyId: %v", r.URL.Path, v.KeyId())
 	signatureAlgorithm := httpsig.Algorithm(setting.Federation.SignatureAlgorithms[0])
 	pubKey, err := federation.FindOrCreateFederatedUserKey(ctx, v.KeyId())
 	if err != nil || pubKey == nil {
 		pubKey, err = federation.FindOrCreateFederationHostKey(ctx, v.KeyId())
 		if err != nil {
-			log.Debug("Request %q requires HTTPUserOrInstanceSignature. Verification failed: %v", r.URL.Path, err)
+			log.Debug("For %q verification failed: %v", r.URL.Path, err)
 			return false, err
 		}
 	}
 
 	err = v.Verify(pubKey, signatureAlgorithm)
 	if err != nil {
-		log.Debug("Request %q requires HTTPUserOrInstanceSignature. Verification failed: %v", r.URL.Path, err)
+		log.Debug("For %q verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
-	log.Debug("Request %q requires HTTPUserOrInstanceSignature. Signature was valid.", r.URL.Path)
+	log.Debug("For %q signature was valid.", r.URL.Path)
 	return true, nil
 }
 
@@ -58,24 +58,24 @@ func verifyHTTPUserSignature(ctx services_context.APIContext) (authenticated boo
 	// 1. Figure out what key we need to verify
 	v, err := httpsig.NewVerifier(r)
 	if err != nil {
-		log.Debug("Request %q requires HTTPUserSignature. Verification failed: %v", r.URL.Path, err)
+		log.Debug("For %q verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
 
-	log.Debug("Request %q requires HTTPUserSignature. Signed by KeyId: %v", r.URL.Path, v.KeyId())
+	log.Debug("Verifyt %q, signed by KeyId: %v", r.URL.Path, v.KeyId())
 	signatureAlgorithm := httpsig.Algorithm(setting.Federation.SignatureAlgorithms[0])
 	pubKey, err := federation.FindOrCreateFederatedUserKey(ctx, v.KeyId())
 	if err != nil {
-		log.Debug("Request %q requires HTTPUserSignature. Verification failed: %v", r.URL.Path, err)
+		log.Debug("For %q verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
 
 	err = v.Verify(pubKey, signatureAlgorithm)
 	if err != nil {
-		log.Debug("Request %q requires HTTPUserSignature. Verification failed: %v", r.URL.Path, err)
+		log.Debug("For %q verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
-	log.Debug("Request %q requires HTTPUserSignature. Signature was valid.", r.URL.Path)
+	log.Debug("For %q signature was valid.", r.URL.Path)
 	return true, nil
 }
 
