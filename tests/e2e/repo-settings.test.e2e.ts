@@ -12,6 +12,13 @@ import {validate_form} from './shared/forms.ts';
 
 test.use({user: 'user2'});
 
+test('repo unit settings', async ({page}, workerInfo) => {
+  test.skip(workerInfo.project.name === 'Mobile Safari', 'Cannot get it to work - as usual');
+  const response = await page.goto('/user2/repo1/settings/units');
+  expect(response?.status()).toBe(200);
+  await save_visual(page);
+});
+
 test('repo webhook settings', async ({page}, workerInfo) => {
   test.skip(workerInfo.project.name === 'Mobile Safari', 'Cannot get it to work - as usual');
   const response = await page.goto('/user2/repo1/settings/hooks/forgejo/new');
