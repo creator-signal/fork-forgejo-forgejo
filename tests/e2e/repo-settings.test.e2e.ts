@@ -13,6 +13,12 @@ import {validate_form} from './shared/forms.ts';
 
 test.use({user: 'user2'});
 
+test('repo unit settings', async ({page}) => {
+  const response = await page.goto('/user2/repo1/settings/units');
+  expect(response?.status()).toBe(200);
+  await screenshot(page, page.locator('.ui.container.flex-container'));
+});
+
 test('repo webhook settings', async ({page}) => {
   const response = await page.goto('/user2/repo1/settings/hooks/forgejo/new');
   expect(response?.status()).toBe(200);
