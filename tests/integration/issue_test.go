@@ -1524,3 +1524,47 @@ func TestIssuePostersSearch(t *testing.T) {
 		assert.EqualValues(t, 1, data.Results[0].UserID)
 	})
 }
+
+func TestIssueTimelineLabels(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "/user2/repo1/issues/1")
+	resp := MakeRequest(t, req, http.StatusOK)
+	assert.NotContains(t, resp.Body.String(), `status-page-500`)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	filterLinks := htmlDoc.Find(".timeline .labels-list a")
+	assert.Equal(t, 9, filterLinks.Length())
+}
+
+func TestIssueAndPullRedirect(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "/user2/repo1/issues/1")
+	MakeRequest(t, req, http.StatusOK)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/2")
+	MakeRequest(t, req, http.StatusOK)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1")
+	resp := MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1/commits")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1/files")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/issues/2")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/pulls/2", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/issues/9999999")
+	MakeRequest(t, req, http.StatusNotFound)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/9999999")
+	MakeRequest(t, req, http.StatusNotFound)
+}

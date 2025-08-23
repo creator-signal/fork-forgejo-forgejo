@@ -4,8 +4,10 @@
 package shared
 
 import (
+	"fmt"
 	"net/http"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/routers/common"
@@ -92,6 +94,25 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 				})
 				return
 			}
+
+			if ctx.Doer.MustHaveTwoFactor() {
+				hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
+				if err != nil {
+					ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
+					log.Error("Error getting 2fa: %s", err)
+					ctx.JSON(http.StatusInternalServerError, map[string]string{
+						"message": fmt.Sprintf("Error getting 2fa: %s", err),
+					})
+					return
+				}
+				if !hasTwoFactor {
+					ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
+					ctx.JSON(http.StatusForbidden, map[string]string{
+						"message": ctx.Locale.TrString("error.must_enable_2fa", fmt.Sprintf("%suser/settings/security", setting.AppURL)),
+					})
+					return
+				}
+			}
 		}
 
 		// Redirect to dashboard if user tries to visit any non-login page.
@@ -130,7 +151,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 // check for and warn against deprecated authentication options
 func checkDeprecatedAuthMethods(ctx *context.APIContext) {
 	if ctx.FormString("token") != "" || ctx.FormString("access_token") != "" {
-		ctx.Resp.Header().Set("Warning", "token and access_token API authentication is deprecated and will be removed in gitea 1.23. Please use AuthorizationHeaderToken instead. Existing queries will continue to work but without authorization.")
+		ctx.Resp.Header().Set("Warning", "token and access_token API authentication is deprecated and will be removed in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead. Existing queries will continue to work but without authorization.")
 	}
 }
 

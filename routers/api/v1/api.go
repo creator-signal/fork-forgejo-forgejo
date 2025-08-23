@@ -81,7 +81,6 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
@@ -845,6 +844,11 @@ func Routes() *web.Route {
 						activitypub.ReqHTTPUserSignature(),
 						bind(ap.Activity{}),
 						activitypub.PersonInbox)
+					m.Group("/activities/{activity-id}", func() {
+						m.Get("", activitypub.PersonActivityNote)
+						m.Get("/activity", activitypub.PersonActivity)
+					})
+					m.Get("/outbox", activitypub.ReqHTTPUserSignature(), activitypub.PersonFeed)
 				}, context.UserIDAssignmentAPI(), checkTokenPublicOnly())
 				m.Group("/actor", func() {
 					m.Get("", activitypub.Actor)
@@ -853,7 +857,7 @@ func Routes() *web.Route {
 				m.Group("/repository-id/{repository-id}", func() {
 					m.Get("", activitypub.ReqHTTPUserSignature(), activitypub.Repository)
 					m.Post("/inbox",
-						bind(forgefed.ForgeLike{}),
+						bind(ap.Activity{}),
 						activitypub.ReqHTTPUserSignature(),
 						activitypub.RepositoryInbox)
 				}, context.RepositoryIDAssignmentAPI())

@@ -140,6 +140,10 @@ func loadCommonSettingsFrom(cfg ConfigProvider) error {
 	if err := loadActionsFrom(cfg); err != nil {
 		return err
 	}
+	if err := loadModerationFrom(cfg); err != nil {
+		return err
+	}
+
 	loadUIFrom(cfg)
 	loadAdminFrom(cfg)
 	loadAPIFrom(cfg)
@@ -223,7 +227,6 @@ func LoadSettings() {
 	loadProjectFrom(CfgProvider)
 	loadMimeTypeMapFrom(CfgProvider)
 	loadF3From(CfgProvider)
-	loadModerationFrom(CfgProvider)
 }
 
 // LoadSettingsForInstall initializes the settings for install

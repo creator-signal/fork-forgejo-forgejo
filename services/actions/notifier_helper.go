@@ -30,8 +30,8 @@ import (
 	webhook_module "forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
 
-	"github.com/nektos/act/pkg/jobparser"
-	"github.com/nektos/act/pkg/model"
+	"code.forgejo.org/forgejo/runner/v9/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v9/act/model"
 )
 
 type methodCtx struct{}
@@ -372,7 +372,7 @@ func handleWorkflows(
 			continue
 		}
 
-		jobs, err := jobparser.Parse(dwf.Content, false, jobparser.WithVars(vars))
+		jobs, err := jobParser(dwf.Content, jobparser.WithVars(vars))
 		if err != nil {
 			run.Status = actions_model.StatusFailure
 			log.Info("jobparser.Parse: invalid workflow, setting job status to failed: %v", err)

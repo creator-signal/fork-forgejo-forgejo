@@ -57,7 +57,7 @@ import (
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 
-	"github.com/nektos/act/pkg/model"
+	"code.forgejo.org/forgejo/runner/v9/act/model"
 
 	_ "golang.org/x/image/bmp"  // for processing bmp images
 	_ "golang.org/x/image/webp" // for processing webp images
@@ -439,7 +439,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		if workFlowErr != nil {
 			ctx.Data["FileError"] = ctx.Locale.Tr("actions.runs.invalid_workflow_helper", workFlowErr.Error())
 		}
-	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS"}, ctx.Repo.TreePath) {
+	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS", ".forgejo/CODEOWNERS"}, ctx.Repo.TreePath) {
 		if rc, size, err := blob.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err == nil {
 			_, warnings := issue_model.GetCodeOwnersFromReader(ctx, rc, size > setting.UI.MaxDisplayFileSize)
 			if len(warnings) > 0 {
@@ -1233,7 +1233,7 @@ func checkOutdatedBranch(ctx *context.Context) {
 	}
 
 	if dbBranch.CommitID != commit.ID.String() {
-		ctx.Flash.Warning(ctx.Tr("repo.error.broken_git_hook", "https://docs.gitea.com/help/faq#push-hook--webhook--actions-arent-running"), true)
+		ctx.Flash.Warning(ctx.Tr("warning.repository.out_of_sync"), true)
 	}
 }
 

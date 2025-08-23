@@ -111,7 +111,14 @@ var migrations = []*Migration{
 	NewMigration("Noop because of https://codeberg.org/forgejo/forgejo/issues/8373", NoopAddIndexToActionRunStopped),
 	// v35 -> v36
 	NewMigration("Fix wiki unit default permission", FixWikiUnitDefaultPermission),
+	// v36 -> v37
 	NewMigration("Add `branch_filter` to `push_mirror` table", AddPushMirrorBranchFilter),
+	// v37 -> v38
+	NewMigration("Add `resolved_unix` column to `abuse_report` table", AddResolvedUnixToAbuseReport),
+	// v38 -> v39
+	NewMigration("Migrate `data` column of `secret` table to store keying material", MigrateActionSecretsToKeying),
+	// v39 -> v40
+	NewMigration("Add index for release sha1", AddIndexForReleaseSha1),
 }
 
 // GetCurrentDBVersion returns the current Forgejo database version.
