@@ -102,6 +102,12 @@ func (input *notifyInput) WithPayload(payload api.Payloader) *notifyInput {
 	return input
 }
 
+// for cases like issue comments on PRs, which have the PR data, but don't run on its ref
+func (input *notifyInput) WithPullRequestData(pr *issues_model.PullRequest) *notifyInput {
+	input.PullRequest = pr
+	return input
+}
+
 func (input *notifyInput) WithPullRequest(pr *issues_model.PullRequest) *notifyInput {
 	input.PullRequest = pr
 	if input.Ref == "" {
