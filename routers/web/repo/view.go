@@ -449,7 +449,13 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 	} else if funding_service.IsFundingConfig(ctx.Repo.TreePath) {
 		_, fundingErr := funding_service.GetFundingFromPath(ctx.Repo.Repository, ctx.Repo.TreePath, ctx.Repo.Commit)
 		if fundingErr != nil {
-			ctx.Data["FileError"] = strings.TrimSpace(fundingErr.Error())
+			if funding_service.IsErrInvalidFundingProvider(fundingErr) {
+				ctx.Data["FileError"] = ctx.Locale.Tr("funding.invalid_provider_error", fundingErr.(funding_service.ErrInvalidFundingProvider).Name)
+			} else if funding_service.IsErrInvalidYamlType(fundingErr) {
+				ctx.Data["FileError"] = ctx.Locale.Tr("funding.invalid_yaml_type_error", fundingErr.(funding_service.ErrInvalidYamlType).Name)
+			} else {
+				ctx.Data["FileError"] = strings.TrimSpace(fundingErr.Error())
+			}
 		}
 	}
 

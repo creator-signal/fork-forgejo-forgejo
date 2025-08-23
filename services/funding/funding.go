@@ -23,6 +23,36 @@ var fundingCandidates = []string{
 	".github/FUNDING",
 }
 
+// ErrInvalidFundingProvider represents a "InvalidFundingProvider" kind of error.
+type ErrInvalidFundingProvider struct {
+	Name string
+}
+
+// IsErrInvalidFundingProvider checks if an error is a ErrInvalidFundingProvider.
+func IsErrInvalidFundingProvider(err error) bool {
+	_, ok := err.(ErrInvalidFundingProvider)
+	return ok
+}
+
+func (err ErrInvalidFundingProvider) Error() string {
+	return fmt.Sprintf("funding provider %s is unknown", err.Name)
+}
+
+// ErrInvalidYamlType represents a "InvalidYamlType" kind of error.
+type ErrInvalidYamlType struct {
+	Name string
+}
+
+// IsErrInvalidYamlType checks if an error is a ErrInvalidYamlType.
+func IsErrInvalidYamlType(err error) bool {
+	_, ok := err.(ErrInvalidYamlType)
+	return ok
+}
+
+func (err ErrInvalidYamlType) Error() string {
+	return fmt.Sprintf("%s has a invalid type. Expected string or string array", err.Name)
+}
+
 func getFundingEntry(provider *api.FundingProvider, text string) *api.RepoFundingEntry {
 	entry := new(api.RepoFundingEntry)
 	entry.Text = fmt.Sprintf(provider.Text, text)
@@ -67,7 +97,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 	for providerName, fundingData := range fundingMap {
 		provider := setting.GetFundingProviderByName(providerName)
 		if provider == nil {
-			return nil, fmt.Errorf("funding provider %s not found", providerName)
+			return nil, ErrInvalidFundingProvider{Name: providerName}
 		}
 
 		dataType := reflect.TypeOf(fundingData)
@@ -79,12 +109,12 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 			for i := 0; i < stringSlice.Len(); i++ {
 				str, ok := stringSlice.Index(i).Interface().(string)
 				if !ok {
-					return nil, fmt.Errorf("%s has a invalid type. Expected string or string array", providerName)
+					return nil, ErrInvalidYamlType{Name: providerName}
 				}
 				entryList = append(entryList, getFundingEntry(provider, str))
 			}
 		default:
-			return nil, fmt.Errorf("%s has a invalid type. Expected string or string array", providerName)
+			return nil, ErrInvalidYamlType{Name: providerName}
 		}
 	}
 
