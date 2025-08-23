@@ -18,7 +18,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func createFundingConfig(t *testing.T, user *user_model.User, repo *repo_model.Repository, fundingConfig map[string]any) {
