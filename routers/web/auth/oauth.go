@@ -1203,7 +1203,7 @@ func updateAvatarIfNeed(ctx *context.Context, avatarUrl string, u *user_model.Us
 			}
 		}
 
-		if int64(len(data)) <= setting.Avatar.MaxFileSize {
+		if data != nil && int64(len(data)) <= setting.Avatar.MaxFileSize {
 			_ = user_service.UploadAvatar(ctx, u, data)
 		}
 	}
