@@ -48,6 +48,7 @@ import (
 	"github.com/markbates/goth/providers/fitbit"
 	"github.com/markbates/goth/providers/openidConnect"
 	"github.com/markbates/goth/providers/zoom"
+	"github.com/vincent-petithory/dataurl"
 	go_oauth2 "golang.org/x/oauth2"
 )
 
@@ -1172,20 +1173,38 @@ func showLinkingLogin(ctx *context.Context, gothUser goth.User) {
 	ctx.Redirect(setting.AppSubURL + "/user/link_account")
 }
 
-func updateAvatarIfNeed(ctx *context.Context, url string, u *user_model.User) {
-	if setting.OAuth2Client.UpdateAvatar && len(url) > 0 {
-		resp, err := http.Get(url)
-		if err == nil {
-			defer func() {
-				_ = resp.Body.Close()
-			}()
+func updateAvatarIfNeed(ctx *context.Context, avatarUrl string, u *user_model.User) {
+	if setting.OAuth2Client.UpdateAvatar && len(avatarUrl) > 0 {
+		var data []byte
+		url, err := url.Parse(avatarUrl)
+		if err != nil {
+			return
 		}
-		// ignore any error
-		if err == nil && resp.StatusCode == http.StatusOK {
-			data, err := io.ReadAll(io.LimitReader(resp.Body, setting.Avatar.MaxFileSize+1))
-			if err == nil && int64(len(data)) <= setting.Avatar.MaxFileSize {
-				_ = user_service.UploadAvatar(ctx, u, data)
+
+		if url.Scheme == "data" {
+			dataURL, err := dataurl.DecodeString(avatarUrl)
+			if err != nil {
+				return
 			}
+			data = dataURL.Data
+		} else {
+			resp, err := http.Get(avatarUrl)
+			if err == nil {
+				defer func() {
+					_ = resp.Body.Close()
+				}()
+			}
+			// ignore any error
+			if err == nil && resp.StatusCode == http.StatusOK {
+				data, err = io.ReadAll(io.LimitReader(resp.Body, setting.Avatar.MaxFileSize+1))
+				if err != nil {
+					return
+				}
+			}
+		}
+
+		if int64(len(data)) <= setting.Avatar.MaxFileSize {
+			_ = user_service.UploadAvatar(ctx, u, data)
 		}
 	}
 }
