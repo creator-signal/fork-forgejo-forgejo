@@ -1173,22 +1173,22 @@ func showLinkingLogin(ctx *context.Context, gothUser goth.User) {
 	ctx.Redirect(setting.AppSubURL + "/user/link_account")
 }
 
-func updateAvatarIfNeed(ctx *context.Context, avatarUrl string, u *user_model.User) {
-	if setting.OAuth2Client.UpdateAvatar && len(avatarUrl) > 0 {
+func updateAvatarIfNeed(ctx *context.Context, avatarURL string, u *user_model.User) {
+	if setting.OAuth2Client.UpdateAvatar && len(avatarURL) > 0 {
 		var data []byte
-		url, err := url.Parse(avatarUrl)
+		url, err := url.Parse(avatarURL)
 		if err != nil {
 			return
 		}
 
 		if url.Scheme == "data" {
-			dataURL, err := dataurl.DecodeString(avatarUrl)
+			dataURL, err := dataurl.DecodeString(avatarURL)
 			if err != nil {
 				return
 			}
 			data = dataURL.Data
 		} else {
-			resp, err := http.Get(avatarUrl)
+			resp, err := http.Get(avatarURL)
 			if err == nil {
 				defer func() {
 					_ = resp.Body.Close()
