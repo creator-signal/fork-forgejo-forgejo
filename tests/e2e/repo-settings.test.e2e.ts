@@ -39,7 +39,9 @@ test.describe('repo branch protection settings', () => {
     test.skip(await deleteButton.isHidden(), 'Nothing to delete at this time');
     await deleteButton.click();
     await page.getByText('Yes').click();
-    await page.waitForLoadState('load');
+    // Here page.waitForLoadState('domcontentloaded') does not work reliably.
+    // Instead, wait for the delete button to disappear.
+    await expect(deleteButton).toHaveCount(0, { timeout: 5000 });
   });
 
   test('form', async ({page}) => {
@@ -57,9 +59,14 @@ test.describe('repo branch protection settings', () => {
     // verify header is in edit mode
     await page.waitForLoadState('domcontentloaded');
     await save_visual(page);
-    await page.getByText('Edit').click();
-    await page.waitForLoadState('load');
-    await expect(page.locator('.repo-setting-content .header')).toContainText('Protection rules for branch', {ignoreCase: true, timeout: 5000});
+
+    // wait for the edit button to appear, then click it
+    const editButton = page.locator('a[href="/user2/repo1/settings/branches/edit?rule_name=testrule"]');
+    await editButton.waitFor({timeout: 5000});
+    await editButton.click();
+    
+    await page.waitForLoadState();
+    await expect(page.locator('.repo-setting-content .header')).toContainText('Protection rules for branch', {ignoreCase: true, timeout: 5000, useInnerText: true});
     await save_visual(page);
   });
 });
