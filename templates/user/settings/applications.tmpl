@@ -73,6 +73,35 @@
 						<input class="enable-system tw-mt-1 tw-mr-1" type="radio" name="scope" value="" checked>
 						{{ctx.Locale.Tr "settings.permissions_access_all"}}
 					</label>
+					<label class="tw-cursor-pointer">
+						<input class="enable-system tw-mt-1 tw-mr-1" type="radio" name="scope" value="" checked>
+					<label>{{ctx.Locale.Tr "settings.repo_access"}}</label>
+					</label>
+				  <details class="ui optional field">
+					  <summary class="tw-pb-4 tw-pl-1">
+						  {{ctx.Locale.Tr "settings.select_repositories"}}
+					  </summary>
+						<p>{{ctx.Locale.Tr "settings.access_repo_token_desc" (printf "%s/api/swagger" AppSubUrl) "https://forgejo.org/docs/latest/user/token-scope/"}}</p>
+				  {{if .Repos}}
+						<select class="ui selection dropdown middle aligned divided list" id="repositories" name="repositories" autofocus>
+						  <option value="">{{ctx.Locale.Tr "settings.repo_select"}}</option>
+						  {{range $repo := .Repos}}
+							<option value="{{$repo.Name}}">{{$repo.OwnerName}}/{{$repo.Name}}</option>
+						  {{end}}
+						</select>
+					  {{template "base/paginate" .}}
+				  {{else}}
+					  <div class="item">
+						  {{ctx.Locale.Tr "settings.repos_none"}}
+					  </div>
+				  {{end}}
+					<div class="scoped-access-token"
+						data-is-admin="{{if .IsAdmin}}true{{else}}false{{end}}"
+						data-no-access-label="{{ctx.Locale.Tr "settings.permission_no_access"}}"
+						data-read-label="{{ctx.Locale.Tr "settings.permission_read"}}"
+						data-write-label="{{ctx.Locale.Tr "settings.permission_write"}}"
+					></div>
+				</details>
 				</div>
 				<details class="ui optional field">
 					<summary class="tw-pb-4 tw-pl-1">

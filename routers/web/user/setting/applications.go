@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	auth_model "forgejo.org/models/auth"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/db"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
@@ -28,6 +29,34 @@ func Applications(ctx *context.Context) {
 
 	loadApplicationsData(ctx)
 
+	opts := db.ListOptions{
+		PageSize: setting.UI.Admin.UserPagingNum,
+		Page:     ctx.FormInt("page"),
+	}
+
+	if opts.Page <= 0 {
+		opts.Page = 1
+	}
+
+	ctxUser := ctx.Doer
+
+	repos, _, err := repo_model.GetUserRepositories(ctx, &repo_model.SearchRepoOptions{Actor: ctxUser, Private: true, ListOptions: opts})
+	if err != nil {
+		ctx.ServerError("GetUserRepositories", err)
+		return
+	}
+
+	for i := range repos {
+		if repos[i].IsFork {
+			if err := repos[i].GetBaseRepo(ctx); err != nil {
+				ctx.ServerError("GetBaseRepo", err)
+				return
+			}
+		}
+	}
+
+	ctx.Data["Repos"] = repos
+	ctx.Data["ContextUser"] = ctxUser
 	ctx.HTML(http.StatusOK, tplSettingsApplications)
 }
 
