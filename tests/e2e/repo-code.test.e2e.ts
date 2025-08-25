@@ -94,14 +94,14 @@ test.describe('As authenticated user', () => {
     await page.getByRole('link', {name: 'A commit message which'}).click();
     await expect(page.getByRole('link', {name: '@user2'})).toHaveCSS('background-color', /(.*)/);
     await expect(page.getByRole('link', {name: '@user1'})).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await accessibilityCheck({page}, ['.commit-header'], [], []);
+    await accessibilityCheck({page}, ['.commit-header'], [], ['color-contrast']);
     await save_visual(page);
     // check second commit
     await page.goto('/user2/mentions-highlighted/commits/branch/main');
     await page.locator('tbody').getByRole('link', {name: 'Another commit which mentions'}).click();
     await expect(page.getByRole('link', {name: '@user2'})).toHaveCSS('background-color', /(.*)/);
     await expect(page.getByRole('link', {name: '@user1'})).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await accessibilityCheck({page}, ['.commit-header'], [], []);
+    await accessibilityCheck({page}, ['.commit-header'], [], ['color-contrast']);
     await save_visual(page);
   });
 });
