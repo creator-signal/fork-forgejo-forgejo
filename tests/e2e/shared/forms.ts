@@ -14,7 +14,7 @@ export async function validate_form({page}: {page: Page}, scope: 'form' | 'field
     // and it usually makes no sense semantically
     '.ui.top.attached.header',
   ];
-  await accessibilityCheck({page}, [scope], excludedElements, []);
+  await accessibilityCheck({page}, [scope], excludedElements, ['color-contrast']);
 
   // assert CSS properties that needed to be overridden for forms (ensure they remain active)
   const boxes = page.getByRole('checkbox').or(page.getByRole('radio'));

@@ -13,7 +13,6 @@ import {validate_form} from './shared/forms.ts';
 test.use({user: 'user2'});
 
 test('repo webhook settings', async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Cannot get it to work - as usual');
   const response = await page.goto('/user2/repo1/settings/hooks/forgejo/new');
   expect(response?.status()).toBe(200);
 
@@ -32,33 +31,35 @@ test('repo webhook settings', async ({page}, workerInfo) => {
 });
 
 test.describe('repo branch protection settings', () => {
-  test('form', async ({page}, {project}) => {
-    test.skip(project.name === 'Mobile Safari', 'Cannot get it to work - as usual');
+  test.afterEach(async ({page}) => {
+    // delete the rule for the next test
+    await page.goto('/user2/repo1/settings/branches/');
+    await page.waitForLoadState('domcontentloaded');
+    const deleteButton = await page.locator('.delete-button').first();
+    test.skip(await deleteButton.isHidden(), 'Nothing to delete at this time');
+    await deleteButton.click();
+    await page.getByText('Yes').click();
+    await page.waitForLoadState('load');
+  });
+  
+  test('form', async ({page}) => {
     const response = await page.goto('/user2/repo1/settings/branches/edit');
     expect(response?.status()).toBe(200);
 
     await validate_form({page}, 'fieldset');
+    await save_visual(page);
 
     // verify header is new
     await expect(page.locator('h4')).toContainText('new');
     await page.locator('input[name="rule_name"]').fill('testrule');
     await save_visual(page);
-    await page.getByText('Save rule').click();
+    await page.locator('button:text("Save rule")').click();
     // verify header is in edit mode
     await page.waitForLoadState('domcontentloaded');
     await save_visual(page);
     await page.getByText('Edit').click();
-    await expect(page.locator('h4')).toContainText('Protection rules for branch');
-    await save_visual(page);
-  });
-
-  test.afterEach(async ({page}) => {
-    // delete the rule for the next test
-    await page.goto('/user2/repo1/settings/branches/');
-    await page.waitForLoadState('domcontentloaded');
-    test.skip(await page.getByText('Delete rule').isHidden(), 'Nothing to delete at this time');
-    await page.getByText('Delete rule').click();
-    await page.getByText('Yes').click();
     await page.waitForLoadState('load');
+    await expect(page.locator('.repo-setting-content .header')).toContainText('Protection rules for branch', {ignoreCase: true, timeout: 5000});
+    await save_visual(page);
   });
 });
