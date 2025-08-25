@@ -12,7 +12,7 @@ import {validate_form} from './shared/forms.ts';
 
 test.use({user: 'user2'});
 
-test('repo webhook settings', async ({page}, workerInfo) => {
+test('repo webhook settings', async ({page}) => {
   const response = await page.goto('/user2/repo1/settings/hooks/forgejo/new');
   expect(response?.status()).toBe(200);
 
@@ -35,13 +35,13 @@ test.describe('repo branch protection settings', () => {
     // delete the rule for the next test
     await page.goto('/user2/repo1/settings/branches/');
     await page.waitForLoadState('domcontentloaded');
-    const deleteButton = await page.locator('.delete-button').first();
+    const deleteButton = page.locator('.delete-button').first();
     test.skip(await deleteButton.isHidden(), 'Nothing to delete at this time');
     await deleteButton.click();
     await page.getByText('Yes').click();
     await page.waitForLoadState('load');
   });
-  
+
   test('form', async ({page}) => {
     const response = await page.goto('/user2/repo1/settings/branches/edit');
     expect(response?.status()).toBe(200);

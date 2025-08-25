@@ -33,7 +33,7 @@ test.describe('Pull: Toggle WIP', () => {
     } else {
       await expect(elemTitle).toBeVisible();
       await expect(stateLabel).toBeVisible();
-      
+
       await expect(elemTitle).not.toContainText('WIP');
       await expect(stateLabel).toContainText('Open');
     }
