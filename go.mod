@@ -93,6 +93,7 @@ require (
 	github.com/ulikunitz/xz v0.5.12
 	github.com/urfave/cli/v3 v3.4.1
 	github.com/valyala/fastjson v1.6.4
+	github.com/vincent-petithory/dataurl v1.0.0
 	github.com/yohcop/openid-go v1.0.1
 	github.com/yuin/goldmark v1.7.13
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
@@ -235,7 +236,6 @@ require (
 	github.com/sorairolake/lzip-go v0.3.5 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
-	github.com/vincent-petithory/dataurl v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/zeebo/assert v1.3.0 // indirect
