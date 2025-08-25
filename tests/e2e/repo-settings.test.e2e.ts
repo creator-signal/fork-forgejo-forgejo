@@ -41,7 +41,7 @@ test.describe('repo branch protection settings', () => {
     await page.getByText('Yes').click();
     // Here page.waitForLoadState('domcontentloaded') does not work reliably.
     // Instead, wait for the delete button to disappear.
-    await expect(deleteButton).toHaveCount(0, { timeout: 5000 });
+    await expect(deleteButton).toHaveCount(0, {timeout: 5000});
   });
 
   test('form', async ({page}) => {
@@ -64,7 +64,7 @@ test.describe('repo branch protection settings', () => {
     const editButton = page.locator('a[href="/user2/repo1/settings/branches/edit?rule_name=testrule"]');
     await editButton.waitFor({timeout: 5000});
     await editButton.click();
-    
+
     await page.waitForLoadState();
     await expect(page.locator('.repo-setting-content .header')).toContainText('Protection rules for branch', {ignoreCase: true, timeout: 5000, useInnerText: true});
     await save_visual(page);
