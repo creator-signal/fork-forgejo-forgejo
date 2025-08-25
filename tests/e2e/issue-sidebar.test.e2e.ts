@@ -14,7 +14,7 @@ test.use({user: 'user2'});
 test.describe('Pull: Toggle WIP', () => {
   const prTitle = 'pull5';
 
-  async function toggle_wip({ page }) {
+  async function toggle_wip({page}) {
     const wipToggle = page.locator('.toggle-wip > a');
     await expect(wipToggle).toBeVisible();
     await wipToggle.click();
@@ -25,7 +25,7 @@ test.describe('Pull: Toggle WIP', () => {
     // ]);
   }
 
-  async function check_wip({ page }, is: boolean) {
+  async function check_wip({page}, is: boolean) {
     const elemTitle = page.locator('#issue-title-display > h1');
     const stateLabel = page.locator('.issue-state-label');
 
