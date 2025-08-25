@@ -154,6 +154,7 @@ test.describe('workflow list dynamic refresh', () => {
     // Workflow run dialog
     await expect(page.locator('input[name="inputs[string2]"]')).toBeHidden();
     await page.locator('#workflow_dispatch_dropdown>button').click();
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('input[name="inputs[string2]"]')).toBeVisible();
     await page.locator('#workflow_dispatch_dropdown>button').click();
 

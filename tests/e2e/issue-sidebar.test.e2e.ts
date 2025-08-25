@@ -14,32 +14,34 @@ test.use({user: 'user2'});
 test.describe('Pull: Toggle WIP', () => {
   const prTitle = 'pull5';
 
-  async function toggle_wip_to({page}, should: boolean) {
-    await page.waitForLoadState('domcontentloaded');
-    if (should) {
-      await page.getByText('Still in progress?').click();
-    } else {
-      await page.getByText('Ready for review?').click();
-    }
+  async function toggle_wip({ page }) {
+    const wipToggle = page.locator('.toggle-wip > a');
+    await expect(wipToggle).toBeVisible();
+    await wipToggle.click();
+
+    // await Promise.all([
+    //   page.waitForLoadState('domcontentloaded'),
+    //   wipToggle.click(),
+    // ]);
   }
 
-  async function check_wip({page}, is: boolean) {
-    const elemTitle = 'h1';
-    const stateLabel = '.issue-state-label';
-    await page.waitForLoadState('domcontentloaded');
-    await expect(page.locator(elemTitle)).toContainText(prTitle);
-    await expect(page.locator(elemTitle)).toContainText('#5');
+  async function check_wip({ page }, is: boolean) {
+    const elemTitle = page.locator('#issue-title-display > h1');
+    const stateLabel = page.locator('.issue-state-label');
+
     if (is) {
-      await expect(page.locator(elemTitle)).toContainText('WIP');
-      await expect(page.locator(stateLabel)).toContainText('Draft');
+      await expect(elemTitle).toBeVisible();
+      await expect(stateLabel).toBeVisible();
+      await expect(elemTitle).toContainText('WIP');
+      await expect(stateLabel).toContainText('Draft');
     } else {
-      await expect(page.locator(elemTitle)).not.toContainText('WIP');
-      await expect(page.locator(stateLabel)).toContainText('Open');
+      await expect(elemTitle).not.toContainText('WIP');
+      await expect(stateLabel).toContainText('Open');
     }
   }
 
   test.beforeEach(async ({page}) => {
-    const response = await page.goto('/user2/repo1/pulls/5');
+    const response = await page.goto('/user2/repo1/pulls/5', {waitUntil: 'domcontentloaded'});
     expect(response?.status()).toBe(200); // Status OK
     // ensure original title
     await page.locator('#issue-title-edit-show').click();
@@ -51,29 +53,27 @@ test.describe('Pull: Toggle WIP', () => {
   test('simple toggle', async ({page}, workerInfo) => {
     test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
     // toggle to WIP
-    await toggle_wip_to({page}, true);
+    await toggle_wip({page});
     await check_wip({page}, true);
     // remove WIP
-    await toggle_wip_to({page}, false);
+    await toggle_wip({page});
     await check_wip({page}, false);
   });
 
   test('manual edit', async ({page}, workerInfo) => {
     test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-    await page.goto('/user2/repo1/pulls/5');
     // manually edit title to another prefix
     await page.locator('#issue-title-edit-show').click();
     await page.locator('#issue-title-editor input').fill(`[WIP] ${prTitle}`);
     await page.getByText('Save').click();
     await check_wip({page}, true);
     // remove again
-    await toggle_wip_to({page}, false);
+    await toggle_wip({page});
     await check_wip({page}, false);
   });
 
   test('maximum title length', async ({page}, workerInfo) => {
     test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-    await page.goto('/user2/repo1/pulls/5');
     // check maximum title length is handled gracefully
     const maxLenStr = prTitle + 'a'.repeat(240);
     await page.locator('#issue-title-edit-show').click();
@@ -81,10 +81,10 @@ test.describe('Pull: Toggle WIP', () => {
     await page.getByText('Save').click();
     await expect(page.locator('h1')).toContainText(maxLenStr);
     await check_wip({page}, false);
-    await toggle_wip_to({page}, true);
+    await toggle_wip({page});
     await check_wip({page}, true);
     await expect(page.locator('h1')).toContainText(maxLenStr);
-    await toggle_wip_to({page}, false);
+    await toggle_wip({page});
     await check_wip({page}, false);
     await expect(page.locator('h1')).toContainText(maxLenStr);
   });

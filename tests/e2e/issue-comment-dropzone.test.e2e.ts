@@ -78,6 +78,8 @@ test('Re-add images to dropzone on edit', async ({page}, workerInfo) => {
   await pasteImage(page.locator('.markdown-text-editor'));
   await page.getByRole('button', {name: 'Create issue'}).click();
 
+  await page.waitForLoadState('domcontentloaded');
+
   await expect(page).toHaveURL(/\/user2\/repo1\/issues\/\d+$/);
   await page.click('.comment-container .context-menu');
   await page.click('.comment-container .menu > .edit-content');
