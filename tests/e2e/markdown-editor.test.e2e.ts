@@ -375,6 +375,9 @@ test('Markdown insert link', async ({page}) => {
 
   const newLinkModal = page.locator('div[data-markdown-link-modal-id="0"]');
   await expect(newLinkModal).toBeVisible();
+
+  // Add 'color-contrast' to disabled rules as the modal has low contrast in dark mode,
+  // fix later with ui improvements.
   await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], ['color-contrast']);
   await save_visual(page);
 
