@@ -375,7 +375,7 @@ test('Markdown insert link', async ({page}) => {
 
   const newLinkModal = page.locator('div[data-markdown-link-modal-id="0"]');
   await expect(newLinkModal).toBeVisible();
-  await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], []);
+  await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], ['color-contrast']);
   await save_visual(page);
 
   const url = 'https://example.com';

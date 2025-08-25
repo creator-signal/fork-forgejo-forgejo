@@ -18,11 +18,6 @@ test.describe('Pull: Toggle WIP', () => {
     const wipToggle = page.locator('.toggle-wip > a');
     await expect(wipToggle).toBeVisible();
     await wipToggle.click();
-
-    // await Promise.all([
-    //   page.waitForLoadState('domcontentloaded'),
-    //   wipToggle.click(),
-    // ]);
   }
 
   async function check_wip({page}, is: boolean) {
@@ -32,9 +27,13 @@ test.describe('Pull: Toggle WIP', () => {
     if (is) {
       await expect(elemTitle).toBeVisible();
       await expect(stateLabel).toBeVisible();
+
       await expect(elemTitle).toContainText('WIP');
       await expect(stateLabel).toContainText('Draft');
     } else {
+      await expect(elemTitle).toBeVisible();
+      await expect(stateLabel).toBeVisible();
+      
       await expect(elemTitle).not.toContainText('WIP');
       await expect(stateLabel).toContainText('Open');
     }

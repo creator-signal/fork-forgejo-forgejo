@@ -28,7 +28,7 @@ export async function accessibilityCheck({page}: {page: Page}, includes: string[
   // Since this was only happening with some browsers and not always,
   // my bet is on a transition effect on dark/light mode switch.
   // Waiting a little seems to work around this.
-  await page.waitForTimeout(100); // eslint-disable-line playwright/no-wait-for-timeout
+  await page.waitForLoadState(); // eslint-disable-line playwright/no-wait-for-timeout
   accessibilityScanResults = await accessibilityScanner.analyze();
   expect(accessibilityScanResults.violations).toEqual([]);
   await page.emulateMedia({colorScheme: 'light'});
