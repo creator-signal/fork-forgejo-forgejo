@@ -107,6 +107,25 @@ func TestQuotaRuleNoEvaluation(t *testing.T) {
 	assert.False(t, has)
 }
 
+// test for issue #9019
+func TestQuotaRuleNoEvaluationUnlimited(t *testing.T) {
+	rule := quota_model.Rule{
+		Limit: -1,
+		Subjects: quota_model.LimitSubjects{
+			quota_model.LimitSubjectSizeAssetsAttachmentsAll,
+		},
+	}
+	used := quota_model.Used{}
+	used.Size.Repos.Public = 4096
+
+	_, has := rule.Evaluate(used, quota_model.LimitSubjectSizeReposAll)
+
+	// We have a rule for "size:assets:attachments:all", and query for
+	// "size:repos:all". We don't cover that subject, so the evaluation returns
+	// with no rules found.
+	assert.False(t, has)
+}
+
 func TestQuotaRuleDirectEvaluation(t *testing.T) {
 	// This function is meant to test direct rule evaluation: cases where we set
 	// a rule for a subject, and we evaluate against the same subject.

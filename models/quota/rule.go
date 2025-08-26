@@ -36,18 +36,21 @@ func (r Rule) Sum(used Used) int64 {
 	return sum
 }
 
-func (r Rule) Evaluate(used Used, forSubject LimitSubject) (bool, bool) {
-	// If there's no limit, short circuit out
-	if r.Limit == -1 {
-		return true, true
-	}
-
-	// If the rule does not cover forSubject, bail out early
+func (r Rule) Evaluate(used Used, forSubject LimitSubject) (pass, match bool) {
 	if !slices.Contains(r.Subjects, forSubject) {
-		return false, false
+		// this rule does not match the subject being tested
+		return pass, match
 	}
 
-	return r.Sum(used) <= r.Limit, true
+	match = true
+
+	if r.Limit == -1 {
+		// Unlimited, any value is a pass
+		pass = true
+	} else {
+		pass = r.Sum(used) <= r.Limit
+	}
+	return pass, match
 }
 
 func (r *Rule) Edit(ctx context.Context, limit *int64, subjects *LimitSubjects) (*Rule, error) {
