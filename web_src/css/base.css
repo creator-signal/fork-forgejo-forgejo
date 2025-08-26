@@ -50,7 +50,7 @@
 }
 
 :root * {
-  --fonts-regular: var(--fonts-override, var(--fonts-proportional)), "Noto Sans", "Noto Sans Hebrew", "Liberation Sans", sans-serif, var(--fonts-emoji);
+  --fonts-regular: var(--fonts-override, var(--fonts-proportional)), "Liberation Sans", sans-serif, var(--fonts-emoji);
 }
 
 *, ::before, ::after {
