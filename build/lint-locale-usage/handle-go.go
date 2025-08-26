@@ -107,8 +107,12 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 	ast.Inspect(node, func(n ast.Node) bool {
 		// search for function calls of the form `anything.Tr(any-string-lit, ...)`
 
-		if call, ok := n.(*ast.CallExpr); ok && len(call.Args) >= 1 {
-			funSel, ok := call.Fun.(*ast.SelectorExpr)
+		switch n2 := n.(type) {
+		case *ast.CallExpr:
+			if len(n2.Args) == 0 {
+				return true
+			}
+			funSel, ok := n2.Fun.(*ast.SelectorExpr)
 			if !ok {
 				return true
 			}
@@ -121,30 +125,30 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 			var gotUnexpectedInvoke *int
 
 			for _, argNum := range ltf {
-				if len(call.Args) <= int(argNum) {
-					argc := len(call.Args)
+				if len(n2.Args) <= int(argNum) {
+					argc := len(n2.Args)
 					gotUnexpectedInvoke = &argc
 				} else {
-					handler.handleGoTrArgument(fset, call.Args[int(argNum)], "")
+					handler.handleGoTrArgument(fset, n2.Args[int(argNum)], "")
 				}
 			}
 
 			if gotUnexpectedInvoke != nil {
 				handler.OnUnexpectedInvoke(fset, funSel.Sel.NamePos, funSel.Sel.Name, *gotUnexpectedInvoke)
 			}
-		} else if composite, ok := n.(*ast.CompositeLit); ok {
-			ident, ok := composite.Type.(*ast.Ident)
+		case *ast.CompositeLit:
+			ident, ok := n2.Type.(*ast.Ident)
 			if !ok {
 				return true
 			}
 
 			// special case: models/unit/unit.go
-			if strings.HasSuffix(fname, "unit.go") && ident.Name == "Unit" && len(composite.Elts) == 6 {
+			if strings.HasSuffix(fname, "unit.go") && ident.Name == "Unit" && len(n2.Elts) == 6 {
 				// NameKey has index 2
 				//   invoked like '{{ctx.Locale.Tr $unit.NameKey}}'
-				nameKey, ok := composite.Elts[2].(*ast.BasicLit)
+				nameKey, ok := n2.Elts[2].(*ast.BasicLit)
 				if !ok || nameKey.Kind != token.STRING {
-					handler.OnWarning(fset, composite.Elts[2].Pos(), "unexpected initialization of 'Unit'")
+					handler.OnWarning(fset, n2.Elts[2].Pos(), "unexpected initialization of 'Unit'")
 					return true
 				}
 
@@ -155,18 +159,18 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 					handler.OnMsgid(fset, nameKey.ValuePos, arg)
 				}
 			}
-		} else if function, ok := n.(*ast.FuncDecl); ok {
-			matchInsPrefix := handler.handleGoCommentGroup(fset, function.Doc, "llu:returnsTrKey")
+		case *ast.FuncDecl:
+			matchInsPrefix := handler.handleGoCommentGroup(fset, n2.Doc, "llu:returnsTrKey")
 			if matchInsPrefix == nil {
 				return true
 			}
-			results := function.Type.Results.List
+			results := n2.Type.Results.List
 			if len(results) != 1 {
-				handler.OnWarning(fset, function.Type.Func, fmt.Sprintf("function %s has unexpected return type; expected single return value", function.Name.Name))
+				handler.OnWarning(fset, n2.Type.Func, fmt.Sprintf("function %s has unexpected return type; expected single return value", n2.Name.Name))
 				return true
 			}
 
-			ast.Inspect(function.Body, func(n ast.Node) bool {
+			ast.Inspect(n2.Body, func(n ast.Node) bool {
 				// search for return stmts
 				// TODO: what about nested functions?
 				if ret, ok := n.(*ast.ReturnStmt); ok {
@@ -183,12 +187,15 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 				return true
 			})
 			return true
-		} else if decl, ok := n.(*ast.GenDecl); ok && (decl.Tok == token.CONST || decl.Tok == token.VAR) {
-			matchInsPrefix := handler.handleGoCommentGroup(fset, decl.Doc, " llu:TrKeys")
+		case *ast.GenDecl:
+			if !(n2.Tok == token.CONST || n2.Tok == token.VAR) {
+				return true
+			}
+			matchInsPrefix := handler.handleGoCommentGroup(fset, n2.Doc, " llu:TrKeys")
 			if matchInsPrefix == nil {
 				return true
 			}
-			for _, spec := range decl.Specs {
+			for _, spec := range n2.Specs {
 				// interpret all contained strings as message IDs
 				ast.Inspect(spec, func(n ast.Node) bool {
 					if argLit, ok := n.(*ast.BasicLit); ok {
