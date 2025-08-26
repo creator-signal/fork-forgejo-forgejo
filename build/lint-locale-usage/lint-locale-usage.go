@@ -72,11 +72,11 @@ type StringTrie interface {
 
 type StringTrieMap map[string]StringTrie
 
-func (m *StringTrieMap) Matches(key []string) bool {
+func (m StringTrieMap) Matches(key []string) bool {
 	if len(key) == 0 || m == nil {
 		return true
 	}
-	value, ok := (*m)[key[0]]
+	value, ok := m[key[0]]
 	if !ok {
 		return false
 	}
@@ -86,7 +86,7 @@ func (m *StringTrieMap) Matches(key []string) bool {
 	return value.Matches(key[1:])
 }
 
-func (m *StringTrieMap) Insert(key []string) {
+func (m StringTrieMap) Insert(key []string) {
 	if m == nil {
 		return
 	}
@@ -96,22 +96,21 @@ func (m *StringTrieMap) Insert(key []string) {
 		return
 
 	case 1:
-		(*m)[key[0]] = nil
+		m[key[0]] = nil
 
 	default:
-		if value, ok := (*m)[key[0]]; ok {
+		if value, ok := m[key[0]]; ok {
 			if value == nil {
 				return
 			}
 		} else {
-			tmp := make(StringTrieMap)
-			(*m)[key[0]] = &tmp
+			m[key[0]] = make(StringTrieMap)
 		}
-		(*m)[key[0]].(*StringTrieMap).Insert(key[1:])
+		m[key[0]].(StringTrieMap).Insert(key[1:])
 	}
 }
 
-func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], allowedMaskedPrefixes *StringTrieMap, chkMsgid func(msgid string) bool) error {
+func ParseAllowedMaskedUsages(fname string, usedMsgids container.Set[string], allowedMaskedPrefixes StringTrieMap, chkMsgid func(msgid string) bool) error {
 	file, err := os.Open(fname)
 	if err != nil {
 		return LocatedError{
@@ -140,7 +139,7 @@ func ParseAllowedMaskedUsages(fname string, usedMsgids *container.Set[string], a
 					Err:      errors.New(line),
 				}
 			}
-			(*usedMsgids)[line] = struct{}{}
+			usedMsgids.Add(line)
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -186,6 +185,7 @@ func Usage() {
 		"//llu:returnsTrKey",
 		"\tcan be used in front of functions to indicate",
 		"\tthat the function returns message IDs",
+		"\tWARNING: this currently doesn't support nested functions properly",
 		"",
 		"//llu:returnsTrKeySuffix prefix.",
 		"\tsimilar to llu:returnsTrKey, but the given prefix is prepended",
@@ -274,7 +274,7 @@ func main() {
 		"allow-masked-usages-from",
 		"supply a file containing a newline-separated list of allowed masked usages",
 		func(argval string) error {
-			return ParseAllowedMaskedUsages(argval, &usedMsgids, &allowedMaskedPrefixes, func(msgid string) bool {
+			return ParseAllowedMaskedUsages(argval, usedMsgids, allowedMaskedPrefixes, func(msgid string) bool {
 				return msgids.Contains(msgid)
 			})
 		},
@@ -304,7 +304,7 @@ func main() {
 				gotAnyMsgidError = true
 				fmt.Printf("%s:\tmissing msgid: %s\n", fset.Position(pos).String(), msgid)
 			} else {
-				usedMsgids[msgid] = struct{}{}
+				usedMsgids.Add(msgid)
 			}
 		},
 		OnUnexpectedInvoke: func(fset *token.FileSet, pos token.Pos, funcname string, argc int) {

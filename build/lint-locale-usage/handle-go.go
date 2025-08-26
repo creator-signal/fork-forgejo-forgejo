@@ -58,39 +58,34 @@ func (handler Handler) handleGoTrArgument(fset *token.FileSet, n ast.Expr, prefi
 }
 
 func (handler Handler) handleGoCommentGroup(fset *token.FileSet, cg *ast.CommentGroup, commentPrefix string) *string {
-	matches := false
-	matchInsPrefix := ""
-	var multimatches *token.Pos
 	if cg == nil {
 		return nil
 	}
+	var matches []token.Pos
+	matchInsPrefix := ""
 	commentPrefix = "//" + commentPrefix
 	for _, comment := range cg.List {
 		ctxt := strings.TrimSpace(comment.Text)
 		if ctxt == commentPrefix {
-			if matches {
-				multimatches = &comment.Slash
-			}
-			matches = true
+			matches = append(matches, comment.Slash)
 		} else if after, found := strings.CutPrefix(ctxt, commentPrefix+"Suffix "); found {
-			if matches {
-				multimatches = &comment.Slash
-			}
-			matches = true
+			matches = append(matches, comment.Slash)
 			matchInsPrefix = strings.TrimSpace(after)
 		}
 	}
-	if !matches {
+	switch len(matches) {
+	case 0:
 		return nil
-	}
-	if multimatches != nil {
+	case 1:
+		return &matchInsPrefix
+	default:
 		handler.OnWarning(
 			fset,
-			*multimatches,
-			fmt.Sprintf("encountered multiple %s... directives", strings.TrimSpace(commentPrefix)),
+			matches[0],
+			fmt.Sprintf("encountered multiple %s... directives, ignoring", strings.TrimSpace(commentPrefix)),
 		)
+		return &matchInsPrefix
 	}
-	return &matchInsPrefix
 }
 
 // the `Handle*File` functions follow the following calling convention:
@@ -126,7 +121,7 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 			var gotUnexpectedInvoke *int
 
 			for _, argNum := range ltf {
-				if len(call.Args) < int(argNum+1) {
+				if len(call.Args) <= int(argNum) {
 					argc := len(call.Args)
 					gotUnexpectedInvoke = &argc
 				} else {
