@@ -143,12 +143,15 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 			}
 
 			// special case: models/unit/unit.go
-			if strings.HasSuffix(fname, "unit.go") && ident.Name == "Unit" && len(n2.Elts) == 6 {
+			if strings.HasSuffix(fname, "unit.go") && ident.Name == "Unit" {
+				if len(n2.Elts) != 6 {
+					handler.OnWarning(fset, n2.Pos(), "unexpected initialization of 'Unit' (unexpected number of arguments)")
+				}
 				// NameKey has index 2
 				//   invoked like '{{ctx.Locale.Tr $unit.NameKey}}'
 				nameKey, ok := n2.Elts[2].(*ast.BasicLit)
 				if !ok || nameKey.Kind != token.STRING {
-					handler.OnWarning(fset, n2.Elts[2].Pos(), "unexpected initialization of 'Unit'")
+					handler.OnWarning(fset, n2.Elts[2].Pos(), "unexpected initialization of 'Unit' (expected string literal as NameKey)")
 					return true
 				}
 
