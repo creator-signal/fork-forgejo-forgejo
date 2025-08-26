@@ -17,7 +17,7 @@ import (
 func TestVerifySSHkeyPage(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	// user2 has an SSH key in fixtures to test
+	// user2 has an SSH key in fixtures to test this on
 	session := loginUser(t, "user2")
 
 	page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/user/settings/keys"), http.StatusOK).Body)
