@@ -238,6 +238,35 @@ func TestRender_links(t *testing.T) {
 	markup.CustomLinkURLSchemes(setting.Markdown.CustomURLSchemes)
 }
 
+func TestRender_PullReviewCommitLink(t *testing.T) {
+	setting.AppURL = markup.TestAppURL
+
+	sha := "190d9492934af498c3f669d6a2431dc5459e5b20"
+	prCommitLink := util.URLJoin(markup.TestRepoURL, "pulls", "1", "commits", sha)
+
+	test := func(input, expected string) {
+		buffer, err := markup.RenderString(&markup.RenderContext{
+			Ctx:          git.DefaultContext,
+			RelativePath: ".md",
+			Links: markup.Links{
+				AbsolutePrefix: true,
+				Base:           markup.TestRepoURL,
+			},
+			Metas: localMetas,
+		}, input)
+		require.NoError(t, err)
+		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(buffer))
+	}
+
+	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`)
+
+	prCommitLink = util.URLJoin(markup.TestAppURL, "sub1", "sub2", markup.TestOrgRepo, "pulls", "1", "commits", sha)
+	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`)
+
+	prCommitLink = "https://codeberg.org/forgejo/forgejo/pulls/7979/commits/4d968c08e0a8d24bd2f3fb2a3a48b37e6d84a327#diff-7649acfa98a9ee3faf0d28b488bbff428317fc72"
+	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!7979 (commit <code>4d968c08e0</code>)</a></p>`)
+}
+
 func TestRender_email(t *testing.T) {
 	setting.AppURL = markup.TestAppURL
 

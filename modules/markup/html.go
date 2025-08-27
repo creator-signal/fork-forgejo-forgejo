@@ -60,6 +60,9 @@ var (
 	// comparePattern matches "http://domain/org/repo/compare/COMMIT1...COMMIT2#hash"
 	comparePattern = regexp.MustCompile(`https?://(?:\S+/){4,5}([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(#[-+~_%.a-zA-Z0-9]+)?`)
 
+	// pullReviewCommitPattern matches "https://domain.tld/<subpath...>/<owner>/<repo>/pulls/<id>/commits/<sha>"
+	pullReviewCommitPattern = regexp.MustCompile(`https?://(?:[^/]+/){3,}pulls/(\d+)/commits/([0-9a-f]{7,64})(#[-+~_%.a-zA-Z0-9]+)?`)
+
 	validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://`)
 
 	// While this email regex is definitely not perfect and I'm sure you can come up
@@ -147,6 +150,7 @@ func (p *postProcessError) Error() string {
 type processor func(ctx *RenderContext, node *html.Node)
 
 var defaultProcessors = []processor{
+	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
 	filePreviewPatternProcessor,
@@ -177,6 +181,7 @@ func PostProcess(
 }
 
 var commitMessageProcessors = []processor{
+	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
 	fullHashPatternProcessor,
@@ -209,6 +214,7 @@ func RenderCommitMessage(
 }
 
 var commitMessageSubjectProcessors = []processor{
+	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
 	fullHashPatternProcessor,
@@ -792,6 +798,56 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 	}
 }
 
+// pullReviewCommitPatternProcessor creates links to pull review commits.
+func pullReviewCommitPatternProcessor(ctx *RenderContext, node *html.Node) {
+	next := node.NextSibling
+	for node != nil && node != next {
+		m := pullReviewCommitPattern.FindStringSubmatchIndex(node.Data)
+		if m == nil {
+			return
+		}
+
+		urlFull := node.Data[m[0]:m[1]]
+		id := node.Data[m[2]:m[3]]
+		sha := base.ShortSha(node.Data[m[4]:m[5]])
+
+		// Create an `<a>` node with a text of
+		// `!123 (commit <code>abcdef1234</code>)`
+		aNode := &html.Node{
+			Type: html.ElementNode,
+			Data: atom.A.String(),
+			Attr: []html.Attribute{{Key: "href", Val: urlFull}, {Key: "class", Val: "commit"}},
+		}
+
+		aNode.AppendChild(&html.Node{
+			Type: html.TextNode,
+			Data: "!" + id + " (commit ",
+		})
+
+		textNode := &html.Node{
+			Type: html.TextNode,
+			Data: sha,
+		}
+
+		codeNode := &html.Node{
+			Type: html.ElementNode,
+			Data: atom.Code.String(),
+			Attr: []html.Attribute{{Key: "class", Val: "nohighlight"}},
+		}
+
+		codeNode.AppendChild(textNode)
+		aNode.AppendChild(codeNode)
+
+		aNode.AppendChild(&html.Node{
+			Type: html.TextNode,
+			Data: ")",
+		})
+
+		replaceContent(node, m[0], m[1], aNode)
+		node = node.NextSibling.NextSibling
+	}
+}
+
 func fullIssuePatternProcessor(ctx *RenderContext, node *html.Node) {
 	if ctx.Metas == nil {
 		return
@@ -948,7 +1004,7 @@ func commitCrossReferencePatternProcessor(ctx *RenderContext, node *html.Node) {
 	}
 }
 
-// fullHashPatternProcessor renders SHA containing URLs
+// fullHashPatternProcessor renders URLs that contain a SHA
 func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 	if ctx.Metas == nil {
 		return
