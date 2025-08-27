@@ -105,5 +105,5 @@ func TestRepoConvertToNormalRepo(t *testing.T) {
 	web.SetForm(ctx, &opts)
 	Edit(ctx)
 	assert.Equal(t, http.StatusOK, ctx.Resp.Status())
-	assert.Equal(t, false, ctx.Repo.Repository.IsMirror)
+	assert.False(t, ctx.Repo.Repository.IsMirror)
 }

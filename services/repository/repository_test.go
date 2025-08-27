@@ -52,5 +52,5 @@ func TestConvertMirrorToNormalRepo(t *testing.T) {
 
 	err = ConvertMirrorToNormalRepo(db.DefaultContext, repo)
 	require.NoError(t, err)
-	assert.Equal(t, false, repo.IsMirror)
+	assert.False(t, repo.IsMirror)
 }

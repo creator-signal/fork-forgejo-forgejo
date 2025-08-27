@@ -127,11 +127,7 @@ func ConvertMirrorToNormalRepo(ctx context.Context, repo *repo_model.Repository)
 		return err
 	}
 
-	if err = repo_model.DeleteMirrorByRepoID(ctx, repo.ID); err != nil {
-		return err
-	}
-
-	return nil
+	return repo_model.DeleteMirrorByRepoID(ctx, repo.ID)
 }
 
 // LinkedRepository returns the linked repo if any
