@@ -76,33 +76,26 @@ const (
 	issueTemplateTitleKey = "IssueTemplateTitle"
 )
 
-// IssueTemplateCandidates issue templates
-var IssueTemplateCandidates = []string{
-	"ISSUE_TEMPLATE.md",
-	"ISSUE_TEMPLATE.yaml",
-	"ISSUE_TEMPLATE.yml",
-	"issue_template.md",
-	"issue_template.yaml",
-	"issue_template.yml",
-	".forgejo/ISSUE_TEMPLATE.md",
-	".forgejo/ISSUE_TEMPLATE.yaml",
-	".forgejo/ISSUE_TEMPLATE.yml",
-	".forgejo/issue_template.md",
-	".forgejo/issue_template.yaml",
-	".forgejo/issue_template.yml",
-	".gitea/ISSUE_TEMPLATE.md",
-	".gitea/ISSUE_TEMPLATE.yaml",
-	".gitea/ISSUE_TEMPLATE.yml",
-	".gitea/issue_template.md",
-	".gitea/issue_template.yaml",
-	".gitea/issue_template.yml",
-	".github/ISSUE_TEMPLATE.md",
-	".github/ISSUE_TEMPLATE.yaml",
-	".github/ISSUE_TEMPLATE.yml",
-	".github/issue_template.md",
-	".github/issue_template.yaml",
-	".github/issue_template.yml",
+// generateIssueTemplateLocations generates all the file paths where we
+// look for an issue template, e.g. ".forgejo/ISSUE_TEMPLATE.md".
+func generateIssueTemplateLocations() []string {
+	var result []string
+	prefixes := []string{"", ".forgejo/", ".gitea/", ".github/", "docs/"}
+	filenames := []string{"ISSUE_TEMPLATE", "issue_template"}
+	extensions := []string{".md", ".yaml", ".yml"}
+
+	for _, prefix := range prefixes {
+		for _, filename := range filenames {
+			for _, extension := range extensions {
+				result = append(result, prefix+filename+extension)
+			}
+		}
+	}
+
+	return result
 }
+
+var issueTemplateCandidates = generateIssueTemplateLocations()
 
 // MustAllowUserComment checks to make sure if an issue is locked.
 // If locked and user has permissions to write to the repository,
@@ -1005,7 +998,7 @@ func NewIssue(ctx *context.Context) {
 	ctx.Data["Tags"] = tags
 
 	_, templateErrs := issue_service.GetTemplatesFromDefaultBranch(ctx.Repo.Repository, ctx.Repo.GitRepo)
-	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, IssueTemplateCandidates)
+	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, issueTemplateCandidates)
 	for k, v := range errs {
 		templateErrs[k] = v
 	}
@@ -1597,6 +1590,7 @@ func ViewIssue(ctx *context.Context) {
 		ok                   bool
 		marked               = make(map[int64]issues_model.RoleDescriptor)
 		comment              *issues_model.Comment
+		commentIdx           int
 		participants         = make([]*user_model.User, 1, 10)
 		latestCloseCommentID int64
 	)
@@ -1652,15 +1646,17 @@ func ViewIssue(ctx *context.Context) {
 		return
 	}
 
-	for _, comment = range issue.Comments {
+	for commentIdx, comment = range issue.Comments {
 		comment.Issue = issue
+		metas := ctx.Repo.Repository.ComposeMetas(ctx)
+		metas["scope"] = fmt.Sprintf("comment-%d", commentIdx)
 
 		if comment.Type == issues_model.CommentTypeComment || comment.Type == issues_model.CommentTypeReview {
 			comment.RenderedContent, err = markdown.RenderString(&markup.RenderContext{
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
 				},
-				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				Metas:   metas,
 				GitRepo: ctx.Repo.GitRepo,
 				Ctx:     ctx,
 			}, comment.Content)
@@ -1737,7 +1733,7 @@ func ViewIssue(ctx *context.Context) {
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
 				},
-				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				Metas:   metas,
 				GitRepo: ctx.Repo.GitRepo,
 				Ctx:     ctx,
 			}, comment.Content)
