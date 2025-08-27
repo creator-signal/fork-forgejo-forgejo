@@ -5,10 +5,12 @@
 package repo
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	"forgejo.org/modules/label"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
@@ -282,4 +284,80 @@ func DeleteLabel(ctx *context.APIContext) {
 	}
 
 	ctx.Status(http.StatusNoContent)
+}
+
+// MoveLabel moves a label from a repo to an organization
+func MoveLabel(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/labels/{id}/move issue issueMoveLabel
+	// ---
+	// summary: Moves a label from a repo o an organization
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: id
+	//   in: path
+	//   description: id of the label to move
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/Label"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	labelID := ctx.ParamsInt64(":id")
+
+	err := ctx.Repo.Repository.LoadOwner(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadOwner", err)
+		return
+	}
+
+	if !ctx.Repo.Repository.Owner.IsOrganization() {
+		ctx.Error(http.StatusBadRequest, "noOrg", fmt.Sprintf("%s is not an organization", ctx.Repo.Repository.Name))
+		return
+	}
+
+	isOwner, err := org_model.IsOrganizationOwner(ctx, ctx.Repo.Repository.Owner.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "IsOrganizationOwner", err)
+		return
+	}
+
+	if !isOwner {
+		ctx.Error(http.StatusForbidden, "reqToken", fmt.Sprintf("user %s is not an owner of organization %s", ctx.Doer.Name, ctx.Repo.Repository.Owner.Name))
+		return
+	}
+
+	err = issues_model.MoveLabelToOrganization(ctx, ctx.Repo.Repository.ID, labelID)
+	if err != nil {
+		if issues_model.IsErrRepoLabelNotExist(err) {
+			ctx.NotFound()
+		} else {
+			ctx.Error(http.StatusInternalServerError, "MoveLabelToOrganization", err)
+		}
+		return
+	}
+
+	label, err := issues_model.GetLabelByID(ctx, labelID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetLabelByID", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToLabel(label, nil, ctx.Repo.Repository.Owner))
 }

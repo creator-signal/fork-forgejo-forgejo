@@ -4,11 +4,13 @@
 package repo
 
 import (
+	"fmt"
 	"net/http"
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
+	org_model "forgejo.org/models/organization"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/label"
 	"forgejo.org/modules/log"
@@ -148,6 +150,34 @@ func UpdateLabel(ctx *context.Context) {
 		return
 	}
 	ctx.Redirect(ctx.Repo.RepoLink + "/labels")
+}
+
+// MoveLabel moves a label to an organization
+func MoveLabel(ctx *context.Context) {
+	form := web.GetForm(ctx).(*forms.MoveLabelForm)
+
+	isOwner, err := org_model.IsOrganizationOwner(ctx, ctx.Repo.Repository.OwnerID, ctx.Doer.ID)
+	if err != nil {
+		ctx.ServerError("IsOrganizationOwner", err)
+		return
+	}
+
+	if !isOwner {
+		ctx.Error(http.StatusForbidden, "notOwner", fmt.Sprintf("%s is not an owner of %d", ctx.Doer.Name, ctx.Repo.Repository.OwnerID))
+		return
+	}
+
+	err = issues_model.MoveLabelToOrganization(ctx, ctx.Repo.Repository.ID, form.ID)
+	if err != nil {
+		if issues_model.IsErrRepoLabelNotExist(err) {
+			ctx.NotFound("MoveLabelToOrganization", err)
+		} else {
+			ctx.ServerError("MoveLabelToOrganization", err)
+		}
+		return
+	}
+
+	ctx.Redirect(fmt.Sprintf("%s/labels", ctx.Repo.RepoLink))
 }
 
 // DeleteLabel delete a label

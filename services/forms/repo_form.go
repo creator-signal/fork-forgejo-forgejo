@@ -433,6 +433,11 @@ func (f *CreateLabelForm) Validate(req *http.Request, errs binding.Errors) bindi
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+// MoveLabelForm form for moving a label
+type MoveLabelForm struct {
+	ID int64
+}
+
 // InitializeLabelsForm form for initializing labels
 type InitializeLabelsForm struct {
 	TemplateName string `binding:"Required"`

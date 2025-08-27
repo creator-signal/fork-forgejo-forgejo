@@ -70,3 +70,17 @@
 		</button>
 	</div>
 </div>
+
+<div class="ui small move-label modal">
+	<div class="header">
+		{{ctx.Locale.Tr "repo.issues.label_move_header"}}
+	</div>
+	<div class="content">
+		<form class="ui move-label form ignore-dirty" action="{{$.Link}}/move" method="post">
+			{{.CsrfTokenHtml}}
+			<input id="move-label-id" name="id" type="hidden">
+			<p>{{ctx.Locale.Tr "repo.issues.label_move_content"}}</p>
+		</form>
+	</div>
+	{{template "base/modal_actions_confirm" .}}
+</div>

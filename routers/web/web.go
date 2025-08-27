@@ -1271,6 +1271,7 @@ func registerRoutes(m *web.Route) {
 		m.Group("/labels", func() {
 			m.Post("/new", web.Bind(forms.CreateLabelForm{}), repo.NewLabel)
 			m.Post("/edit", web.Bind(forms.CreateLabelForm{}), repo.UpdateLabel)
+			m.Post("/move", web.Bind(forms.MoveLabelForm{}), repo.MoveLabel)
 			m.Post("/delete", repo.DeleteLabel)
 			m.Post("/initialize", web.Bind(forms.InitializeLabelsForm{}), repo.InitializeLabels)
 		}, context.RepoMustNotBeArchived(), reqRepoIssuesOrPullsWriter, context.RepoRef())

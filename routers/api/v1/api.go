@@ -1484,9 +1484,13 @@ func Routes() *web.Route {
 				m.Group("/labels", func() {
 					m.Combo("").Get(repo.ListLabels).
 						Post(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), bind(api.CreateLabelOption{}), repo.CreateLabel)
-					m.Combo("/{id}").Get(repo.GetLabel).
-						Patch(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), bind(api.EditLabelOption{}), repo.EditLabel).
-						Delete(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), repo.DeleteLabel)
+					m.Group("/{id}", func() {
+						m.Combo("").
+							Get(repo.GetLabel).
+							Patch(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), bind(api.EditLabelOption{}), repo.EditLabel).
+							Delete(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), repo.DeleteLabel)
+						m.Post("/move", reqToken(), tokenRequiresScopes(auth_model.AccessTokenScopeCategoryOrganization), reqRepoWriter(unit.TypeIssues), repo.MoveLabel)
+					})
 				})
 				m.Group("/milestones", func() {
 					m.Combo("").Get(repo.ListMilestones).

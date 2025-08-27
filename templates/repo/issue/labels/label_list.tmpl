@@ -48,6 +48,9 @@
 					{{if or ($.PageIsOrgSettingsLabels) (and (not $.Repository.IsArchived) (or $.CanWriteIssues $.CanWritePulls))}}
 						<a class="edit-label-button" href="#" data-id="{{.ID}}" data-title="{{.Name}}" {{if .Exclusive}}data-exclusive{{end}} {{if gt .ArchivedUnix 0}}data-is-archived{{end}} data-num-issues="{{.NumIssues}}" data-description="{{.Description}}" data-color={{.Color}}>{{svg "octicon-pencil"}} {{ctx.Locale.Tr "repo.issues.label_edit"}}</a>
 						<a class="delete-button" href="#" data-url="{{$.Link}}/delete" data-id="{{.ID}}" data-modal-id="delete-label">{{svg "octicon-trash"}} {{ctx.Locale.Tr "repo.issues.label_delete"}}</a>
+						{{if and (not $.PageIsOrgSettingsLabels) ($.IsOrganizationOwner)}}
+							<a class="move-label-button" href="#" data-id="{{.ID}}">{{svg "octicon-redo"}} {{ctx.Locale.Tr "repo.issues.label_move_button"}}</a>
+						{{end}}
 					{{end}}
 				</div>
 			</div>

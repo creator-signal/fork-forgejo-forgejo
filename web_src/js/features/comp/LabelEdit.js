@@ -94,3 +94,18 @@ export function initCompLabelEdit(selector) {
     updateExclusiveLabelEdit('.edit-label');
   });
 }
+
+$('.move-label-button').on('click', function () {
+  $('#move-label-id').val($(this).data('id'));
+
+  $('.move-label.modal').modal({
+    onApprove() {
+      const form = document.querySelector('.move-label.form');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return false;
+      }
+      document.querySelector('.move-label.form').requestSubmit();
+    },
+  }).modal('show');
+});

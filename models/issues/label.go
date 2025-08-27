@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/label"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/timeutil"
@@ -77,6 +78,22 @@ func (err ErrLabelNotExist) Error() string {
 
 func (err ErrLabelNotExist) Unwrap() error {
 	return util.ErrNotExist
+}
+
+// ErrLabelOwnerNotOrg represents a "LabelOwnerNotOrg" kind of error.
+type ErrLabelOwnerNotOrg struct {
+	LabelID int64
+	OwnerID int64
+}
+
+// IsErrLabelOwnerNotOrg checks if an error is a ErrLabelOwnerNotOrg.
+func IsErrLabelOwnerNotOrg(err error) bool {
+	_, ok := err.(ErrLabelOwnerNotOrg)
+	return ok
+}
+
+func (err ErrLabelOwnerNotOrg) Error() string {
+	return fmt.Sprintf("owner %d of label %d is not an organization", err.OwnerID, err.LabelID)
 }
 
 // Label represents a label of repository for issues.
@@ -282,6 +299,33 @@ func DeleteLabel(ctx context.Context, id, labelID int64) error {
 	}
 
 	return committer.Commit()
+}
+
+// MoveLabelToOrganization moves a label from a repo to an organization
+func MoveLabelToOrganization(ctx context.Context, repoID, labelID int64) error {
+	label, err := GetLabelInRepoByID(ctx, repoID, labelID)
+	if err != nil {
+		return err
+	}
+
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		return err
+	}
+
+	err = repo.LoadOwner(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !repo.Owner.IsOrganization() {
+		return ErrLabelOwnerNotOrg{LabelID: labelID, OwnerID: repo.Owner.ID}
+	}
+
+	label.RepoID = 0
+	label.OrgID = repo.Owner.ID
+
+	return updateLabelCols(ctx, label, "repo_id", "org_id")
 }
 
 // GetLabelByID returns a label by given ID.

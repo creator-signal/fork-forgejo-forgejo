@@ -6,6 +6,7 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -360,4 +361,37 @@ func TestAPIReplaceIssueLabelsActionsToken(t *testing.T) {
 		Labels: []any{label.Name},
 	}).AddTokenAuth(task.Token)
 	MakeRequest(t, req, http.StatusForbidden)
+}
+
+func TestAPIMoveLabel(t *testing.T) {
+	require.NoError(t, unittest.LoadFixtures())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+
+	session := loginUser(t, "user2")
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue, auth_model.AccessTokenScopeWriteOrganization)
+
+	// CReate a new label
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/labels", repo.OwnerName, repo.Name), &api.CreateLabelOption{
+		Name:  "TestL 1",
+		Color: "abcdef",
+	}).AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusCreated)
+	label := new(api.Label)
+	DecodeJSON(t, resp, &label)
+
+	apiURL, err := url.Parse(label.URL)
+	require.NoError(t, err)
+	assert.Equal(t, fmt.Sprintf("/api/v1/repos/%s/%s/labels/%d", repo.OwnerName, repo.Name, label.ID), apiURL.Path)
+
+	// Move label
+	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/labels/%d/move", repo.OwnerName, repo.Name, label.ID)).
+		AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &label)
+
+	apiURL, err = url.Parse(label.URL)
+	require.NoError(t, err)
+	assert.Equal(t, fmt.Sprintf("/api/v1/orgs/%s/labels/%d", owner.Name, label.ID), apiURL.Path)
 }
