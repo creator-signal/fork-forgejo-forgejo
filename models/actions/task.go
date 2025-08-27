@@ -148,6 +148,21 @@ func (task *ActionTask) GenerateToken() (err error) {
 	return err
 }
 
+// Retrieve all the attempts from the same job as the target `ActionTask`.  Limited fields are queried to avoid loading
+// the LogIndexes blob when not needed.
+func (task *ActionTask) GetAllAttempts(ctx context.Context) ([]*ActionTask, error) {
+	var attempts []*ActionTask
+	err := db.GetEngine(ctx).
+		Cols("id", "attempt", "status", "started").
+		Where("job_id=?", task.JobID).
+		Desc("attempt").
+		Find(&attempts)
+	if err != nil {
+		return nil, err
+	}
+	return attempts, nil
+}
+
 func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
 	var task ActionTask
 	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&task)
