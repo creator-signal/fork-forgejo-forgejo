@@ -4,6 +4,8 @@ go 1.24.0
 
 toolchain go1.24.7
 
+replace xorm.io/xorm v1.3.9 => code.forgejo.org/xorm/xorm v1.3.9-forgejo.1
+
 require (
 	code.forgejo.org/f3/gof3/v3 v3.11.0
 	code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20191008002943-06d1c002b251
