@@ -82,6 +82,7 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 			return nil, err
 		}
 	} else {
+		// TODO: This could be removed as federatedHost is not used in following code?
 		_, err = forgefed.GetFederationHost(ctx, federatedUser.FederationHostID)
 		if err != nil {
 			return nil, err

@@ -848,14 +848,14 @@ func Routes() *web.Route {
 						m.Get("", activitypub.PersonActivityNote)
 						m.Get("/activity", activitypub.PersonActivity)
 					})
-					m.Get("/outbox", activitypub.ReqHTTPUserSignature(), activitypub.PersonFeed)
+					m.Get("/outbox", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.PersonFeed)
 				}, context.UserIDAssignmentAPI(), checkTokenPublicOnly())
 				m.Group("/actor", func() {
 					m.Get("", activitypub.Actor)
 					m.Post("/inbox", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.ActorInbox)
 				})
 				m.Group("/repository-id/{repository-id}", func() {
-					m.Get("", activitypub.ReqHTTPUserSignature(), activitypub.Repository)
+					m.Get("", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.Repository)
 					m.Post("/inbox",
 						bind(ap.Activity{}),
 						activitypub.ReqHTTPUserSignature(),
