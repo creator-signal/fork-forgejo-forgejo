@@ -112,3 +112,17 @@ func TestActionViewsArtifactDownload(t *testing.T) {
 		assert.Equal(t, strings.Repeat("D", 100), resp.Body.String())
 	})
 }
+
+func TestActionViewsView(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "/user2/repo1/actions/runs/187")
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	selector := "#repo-action-view"
+	// Verify key properties going into the `repo-action-view` to initialize the Vue component.
+	htmlDoc.AssertAttrEqual(t, selector, "data-run-index", "187")
+	htmlDoc.AssertAttrEqual(t, selector, "data-job-index", "0")
+	htmlDoc.AssertAttrEqual(t, selector, "data-attempt-number", "0")
+}

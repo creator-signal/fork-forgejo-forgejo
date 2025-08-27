@@ -141,7 +141,7 @@ func Test_artifactsFindByNameOrID(t *testing.T) {
 	}
 }
 
-func baseExpectedResponse() *ViewResponse {
+func baseExpectedViewResponse() *ViewResponse {
 	return &ViewResponse{
 		State: ViewState{
 			Run: ViewRunInfo{
@@ -208,22 +208,27 @@ func TestActionsViewViewPost(t *testing.T) {
 		name           string
 		runIndex       int64
 		jobIndex       int64
+		attemptNumber  int64
 		expected       *ViewResponse
 		expectedTweaks func(*ViewResponse)
 	}{
 		{
-			name:     "base case",
-			runIndex: 187,
-			jobIndex: 0,
-			expected: baseExpectedResponse(),
+			name:          "base case",
+			runIndex:      187,
+			jobIndex:      0,
+			attemptNumber: 1,
+			expected:      baseExpectedViewResponse(),
 			expectedTweaks: func(resp *ViewResponse) {
+				resp.State.CurrentJob.Steps[0].Status = "success"
+				resp.State.CurrentJob.Steps[1].Status = "success"
 			},
 		},
 		{
-			name:     "run with waiting jobs",
-			runIndex: 189,
-			jobIndex: 0,
-			expected: baseExpectedResponse(),
+			name:          "run with waiting jobs",
+			runIndex:      189,
+			jobIndex:      0,
+			attemptNumber: 1,
+			expected:      baseExpectedViewResponse(),
 			expectedTweaks: func(resp *ViewResponse) {
 				// Variations from runIndex 187 -> runIndex 189 that are not the subject of this test...
 				resp.State.Run.Link = "/user5/repo4/actions/runs/189"
@@ -264,6 +269,17 @@ func TestActionsViewViewPost(t *testing.T) {
 				resp.State.Run.Done = false
 			},
 		},
+		{
+			name:          "attempt 3",
+			runIndex:      187,
+			jobIndex:      0,
+			attemptNumber: 3,
+			expected:      baseExpectedViewResponse(),
+			expectedTweaks: func(resp *ViewResponse) {
+				resp.State.CurrentJob.Steps[0].Status = "running"
+				resp.State.CurrentJob.Steps[1].Status = "waiting"
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -273,10 +289,11 @@ func TestActionsViewViewPost(t *testing.T) {
 			contexttest.LoadRepo(t, ctx, 4)
 			ctx.SetParams(":run", fmt.Sprintf("%d", tt.runIndex))
 			ctx.SetParams(":job", fmt.Sprintf("%d", tt.jobIndex))
+			ctx.SetParams(":attempt", fmt.Sprintf("%d", tt.attemptNumber))
 			web.SetForm(ctx, &ViewRequest{})
 
 			ViewPost(ctx)
-			require.Equal(t, http.StatusOK, resp.Result().StatusCode)
+			require.Equal(t, http.StatusOK, resp.Result().StatusCode, "failure in ViewPost(): %q", resp.Body.String())
 
 			var actual ViewResponse
 			err := json.Unmarshal(resp.Body.Bytes(), &actual)

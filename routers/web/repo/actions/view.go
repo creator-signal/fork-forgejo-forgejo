@@ -44,6 +44,9 @@ func View(ctx *context_module.Context) {
 	ctx.Data["PageIsActions"] = true
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
+	// "Number" is used as a suffix, not "Index" since this matches the ActionTask's Attempt field which uses 1-based
+	// numbering... it's confusing to use an "Index" if it later can't be used to access a slice or array.
+	attemptNumber := ctx.ParamsInt64("attempt")
 
 	job, _ := getRunJobs(ctx, runIndex, jobIndex)
 	if ctx.Written() {
@@ -56,6 +59,7 @@ func View(ctx *context_module.Context) {
 	ctx.Data["RunID"] = job.Run.ID
 	ctx.Data["JobIndex"] = jobIndex
 	ctx.Data["ActionsURL"] = ctx.Repo.RepoLink + "/actions"
+	ctx.Data["AttemptNumber"] = attemptNumber
 	ctx.Data["WorkflowName"] = workflowName
 	ctx.Data["WorkflowURL"] = ctx.Repo.RepoLink + "/actions?workflow=" + workflowName
 
@@ -197,6 +201,7 @@ func ViewPost(ctx *context_module.Context) {
 	req := web.GetForm(ctx).(*ViewRequest)
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
+	attemptNumber := ctx.ParamsInt64("attempt")
 
 	current, jobs := getRunJobs(ctx, runIndex, jobIndex)
 	if ctx.Written() {
@@ -274,7 +279,7 @@ func ViewPost(ctx *context_module.Context) {
 	var task *actions_model.ActionTask
 	if current.TaskID > 0 {
 		var err error
-		task, err = actions_model.GetTaskByID(ctx, current.TaskID)
+		task, err = actions_model.GetTaskByJobAttempt(ctx, current.ID, attemptNumber)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
 			return

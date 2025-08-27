@@ -17,6 +17,7 @@ const sfc = {
     runIndex: String,
     runID: String,
     jobIndex: String,
+    attemptNumber: String,
     actionsURL: String,
     workflowName: String,
     workflowURL: String,
@@ -242,9 +243,10 @@ const sfc = {
     },
 
     async fetchJob(logCursors) {
-      const resp = await POST(`${this.actionsURL}/runs/${this.runIndex}/jobs/${this.jobIndex}`, {
-        data: {logCursors},
-      });
+      const resp = await POST(
+        `${this.actionsURL}/runs/${this.runIndex}/jobs/${this.jobIndex}/attempt/${this.attemptNumber}`,
+        {data: {logCursors}},
+      );
       return await resp.json();
     },
 
@@ -389,6 +391,7 @@ export function initRepositoryActionView() {
     runIndex: el.getAttribute('data-run-index'),
     runID: el.getAttribute('data-run-id'),
     jobIndex: el.getAttribute('data-job-index'),
+    attemptNumber: el.getAttribute('data-attempt-number'),
     actionsURL: el.getAttribute('data-actions-url'),
     workflowName: el.getAttribute('data-workflow-name'),
     workflowURL: el.getAttribute('data-workflow-url'),
