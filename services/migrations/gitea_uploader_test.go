@@ -152,7 +152,6 @@ func TestCommentUpload(t *testing.T) {
 	require.NoError(t, issues[1].LoadDiscussComments(db.DefaultContext))
 	assert.Len(t, issues[0].Comments, 1)
 	assert.Len(t, issues[1].Comments, 1)
-
 }
 
 func TestGiteaUploadRepo(t *testing.T) {
