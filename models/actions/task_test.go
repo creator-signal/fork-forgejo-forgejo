@@ -34,3 +34,15 @@ func TestActionTask_GetAllAttempts(t *testing.T) {
 	assert.Equal(t, StatusRunning, allAttempts[0].Status, "read Status field")
 	assert.Equal(t, timeutil.TimeStamp(1683636528), allAttempts[0].Started, "read Started field")
 }
+
+func TestActionTask_GetTaskByJobAttempt(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	task, err := GetTaskByJobAttempt(t.Context(), 192, 2)
+	require.NoError(t, err)
+	assert.EqualValues(t, 192, task.JobID)
+	assert.EqualValues(t, 2, task.Attempt)
+
+	_, err = GetTaskByJobAttempt(t.Context(), 192, 100)
+	assert.ErrorContains(t, err, "task with job_id 192 and attempt 100: resource does not exist")
+}

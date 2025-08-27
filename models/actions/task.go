@@ -175,6 +175,18 @@ func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
 	return &task, nil
 }
 
+func GetTaskByJobAttempt(ctx context.Context, jobID, attempt int64) (*ActionTask, error) {
+	var task ActionTask
+	has, err := db.GetEngine(ctx).Where("job_id=?", jobID).Where("attempt=?", attempt).Get(&task)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf("task with job_id %d and attempt %d: %w", jobID, attempt, util.ErrNotExist)
+	}
+
+	return &task, nil
+}
+
 func GetRunningTaskByToken(ctx context.Context, token string) (*ActionTask, error) {
 	errNotExist := fmt.Errorf("task with token %q: %w", token, util.ErrNotExist)
 	if token == "" {
