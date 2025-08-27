@@ -65,7 +65,7 @@ func TestCommentUpload(t *testing.T) {
 	// Create and Test Issues Uploading
 	issueA := &base.Issue{
 		Title:        "First issue",
-		Number:       1,
+		Number:       0,
 		PosterID:     37243484,
 		PosterName:   "PatDyn",
 		PosterEmail:  "",
@@ -84,7 +84,7 @@ func TestCommentUpload(t *testing.T) {
 
 	issueB := &base.Issue{
 		Title:        "Second Issue",
-		Number:       2,
+		Number:       1,
 		PosterID:     37243484,
 		PosterName:   "PatDyn",
 		PosterEmail:  "",
@@ -98,7 +98,7 @@ func TestCommentUpload(t *testing.T) {
 		Closed:       nil,
 		IsLocked:     false,
 		Assignees:    nil,
-		ForeignIndex: 0,
+		ForeignIndex: 1,
 	}
 
 	err := uploader.CreateIssues(issueA, issueB)
@@ -107,14 +107,14 @@ func TestCommentUpload(t *testing.T) {
 	issues, err := issues_model.Issues(db.DefaultContext, &issues_model.IssuesOptions{
 		RepoIDs:  []int64{repo.ID},
 		IsPull:   optional.Some(false),
-		SortType: "oldest",
+		SortType: "newest",
 	})
 	require.NoError(t, err)
 	assert.Len(t, issues, 2)
 
 	// Create and Test Comment Uploading
-	issueComment := &base.Comment{
-		IssueIndex:  1,
+	issueAComment := &base.Comment{
+		IssueIndex:  0,
 		Index:       0,
 		CommentType: "comment",
 		PosterID:    37243484,
@@ -122,25 +122,37 @@ func TestCommentUpload(t *testing.T) {
 		PosterEmail: "",
 		Created:     time.Date(2025, 8, 7, 12, 44, 24, 0, time.UTC),
 		Updated:     time.Date(2025, 8, 7, 12, 44, 24, 0, time.UTC),
-		Content:     "Mock Comment",
+		Content:     "First Mock Comment",
 		Reactions:   nil,
 		Meta:        nil,
 	}
-	prComment := &base.Comment{
-		IssueIndex:  2,
-		Index:       0,
+	issueBComment := &base.Comment{
+		IssueIndex:  1,
+		Index:       1,
 		CommentType: "comment",
 		PosterID:    37243484,
 		PosterName:  "PatDyn",
 		PosterEmail: "",
 		Created:     time.Date(2025, 8, 7, 13, 7, 25, 0, time.UTC),
 		Updated:     time.Date(2025, 8, 7, 13, 7, 25, 0, time.UTC),
-		Content:     "Mock Comment",
+		Content:     "Second Mock Comment",
 		Reactions:   nil,
 		Meta:        nil,
 	}
-	err = uploader.CreateComments(issueComment, prComment)
+	require.NoError(t, uploader.CreateComments(issueBComment, issueAComment))
+
+	issues, err = issues_model.Issues(db.DefaultContext, &issues_model.IssuesOptions{
+		RepoIDs:  []int64{repo.ID},
+		IsPull:   optional.Some(false),
+		SortType: "newest",
+	})
 	require.NoError(t, err)
+	assert.Len(t, issues, 2)
+	require.NoError(t, issues[0].LoadDiscussComments(db.DefaultContext))
+	require.NoError(t, issues[1].LoadDiscussComments(db.DefaultContext))
+	assert.Len(t, issues[0].Comments, 1)
+	assert.Len(t, issues[1].Comments, 1)
+
 }
 
 func TestGiteaUploadRepo(t *testing.T) {
