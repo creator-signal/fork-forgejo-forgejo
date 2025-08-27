@@ -158,9 +158,10 @@ type ViewRunInfo struct {
 }
 
 type ViewCurrentJob struct {
-	Title  string         `json:"title"`
-	Detail string         `json:"detail"`
-	Steps  []*ViewJobStep `json:"steps"`
+	Title       string         `json:"title"`
+	Detail      string         `json:"detail"`
+	Steps       []*ViewJobStep `json:"steps"`
+	AllAttempts []*TaskAttempt `json:"allAttempts"`
 }
 
 type ViewLogs struct {
@@ -213,6 +214,12 @@ type ViewStepLogLine struct {
 	Index     int64   `json:"index"`
 	Message   string  `json:"message"`
 	Timestamp float64 `json:"timestamp"`
+}
+
+type TaskAttempt struct {
+	Number  int64         `json:"number"`
+	Started template.HTML `json:"time_since_started_html"`
+	Status  string        `json:"status"`
 }
 
 func ViewPost(ctx *context_module.Context) {
@@ -319,8 +326,22 @@ func ViewPost(ctx *context_module.Context) {
 	resp.State.CurrentJob.Steps = make([]*ViewJobStep, 0) // marshal to '[]' instead of 'null' in json
 	resp.Logs.StepsLog = make([]*ViewStepLog, 0)          // marshal to '[]' instead of 'null' in json
 	if task != nil {
-		steps := actions.FullSteps(task)
+		taskAttempts, err := task.GetAllAttempts(ctx)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, err.Error())
+			return
+		}
+		allAttempts := make([]*TaskAttempt, len(taskAttempts))
+		for i, actionTask := range taskAttempts {
+			allAttempts[i] = &TaskAttempt{
+				Number:  actionTask.Attempt,
+				Started: templates.TimeSince(actionTask.Started),
+				Status:  actionTask.Status.String(),
+			}
+		}
+		resp.State.CurrentJob.AllAttempts = allAttempts
 
+		steps := actions.FullSteps(task)
 		for _, v := range steps {
 			resp.State.CurrentJob.Steps = append(resp.State.CurrentJob.Steps, &ViewJobStep{
 				Summary:  v.Name,

@@ -193,6 +193,23 @@ func baseExpectedViewResponse() *ViewResponse {
 						Status:  "waiting",
 					},
 				},
+				AllAttempts: []*TaskAttempt{
+					{
+						Number:  3,
+						Started: template.HTML("<relative-time prefix=\"\" tense=\"past\" datetime=\"2023-05-09T12:48:48Z\" data-tooltip-content data-tooltip-interactive=\"true\">2023-05-09 12:48:48 +00:00</relative-time>"),
+						Status:  "running",
+					},
+					{
+						Number:  2,
+						Started: template.HTML("<relative-time prefix=\"\" tense=\"past\" datetime=\"2023-05-09T12:48:48Z\" data-tooltip-content data-tooltip-interactive=\"true\">2023-05-09 12:48:48 +00:00</relative-time>"),
+						Status:  "success",
+					},
+					{
+						Number:  1,
+						Started: template.HTML("<relative-time prefix=\"\" tense=\"past\" datetime=\"2023-05-09T12:48:48Z\" data-tooltip-content data-tooltip-interactive=\"true\">2023-05-09 12:48:48 +00:00</relative-time>"),
+						Status:  "success",
+					},
+				},
 			},
 		},
 		Logs: ViewLogs{
@@ -259,6 +276,13 @@ func TestActionsViewViewPost(t *testing.T) {
 					},
 					{
 						Summary: "Complete job",
+						Status:  "success",
+					},
+				}
+				resp.State.CurrentJob.AllAttempts = []*TaskAttempt{
+					{
+						Number:  1,
+						Started: template.HTML("<relative-time prefix=\"\" tense=\"past\" datetime=\"2023-05-09T12:48:48Z\" data-tooltip-content data-tooltip-interactive=\"true\">2023-05-09 12:48:48 +00:00</relative-time>"),
 						Status:  "success",
 					},
 				}
