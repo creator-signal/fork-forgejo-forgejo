@@ -58,10 +58,7 @@ func TestCommentUpload(t *testing.T) {
 	}
 
 	// Create Repo
-	if err := uploader.CreateRepo(repoMock, opts); err != nil {
-		log.Error(err.Error())
-		t.Fail()
-	}
+	require.NoError(t, uploader.CreateRepo(repoMock, opts))
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: repoName})
 
