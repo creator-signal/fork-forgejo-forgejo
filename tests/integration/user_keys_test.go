@@ -12,6 +12,7 @@ import (
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVerifySSHkeyPage(t *testing.T) {
@@ -28,7 +29,7 @@ func TestVerifySSHkeyPage(t *testing.T) {
 
 	// QueryUnescape the link for selector matching
 	link, err := url.QueryUnescape(link)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// The hint contains a link to the same page the user is at now to get it reloaded if followed
 	page.AssertElement(t, fmt.Sprintf("#keys-ssh form[action='/user/settings/keys'] .help a[href='%s']", link), true)
