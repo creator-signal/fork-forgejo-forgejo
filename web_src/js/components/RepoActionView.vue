@@ -506,6 +506,8 @@ export function initRepositoryActionView() {
       showFullScreen: el.getAttribute('data-locale-show-full-screen'),
       downloadLogs: el.getAttribute('data-locale-download-logs'),
       runAttemptLabel: el.getAttribute('data-locale-run-attempt-label'),
+      viewingOutOfDateRun: el.getAttribute('data-locale-viewing-out-of-date-run'),
+      viewMostRecentRun: el.getAttribute('data-locale-view-most-recent-run'),
       status: {
         unknown: el.getAttribute('data-locale-status-unknown'),
         waiting: el.getAttribute('data-locale-status-waiting'),
@@ -523,6 +525,15 @@ export function initRepositoryActionView() {
 </script>
 <template>
   <div class="ui container fluid padded action-view-container">
+    <div class="action-view-header job-out-of-date-warning" v-if="!currentingViewingMostRecentAttempt">
+      <div class="ui warning message">
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <span v-html="viewingOutOfDateRunLabel"/>
+        <button class="tw-ml-8 ui basic small compact button" @click="navigateToMostRecentAttempt()">
+          {{ locale.viewMostRecentRun }}
+        </button>
+      </div>
+    </div>
     <div class="action-view-header">
       <div class="action-info-summary">
         <div class="action-info-summary-title">

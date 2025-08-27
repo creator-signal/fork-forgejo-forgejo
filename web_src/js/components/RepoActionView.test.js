@@ -68,6 +68,9 @@ test('processes ##[group] and ##[endgroup]', async () => {
         showLogSeconds: '',
         showFullScreen: '',
         downloadLogs: '',
+        runAttemptLabel: '',
+        viewingOutOfDateRun: '',
+        viewMostRecentRun: '',
         status: {
           unknown: '',
           waiting: '',
@@ -193,6 +196,9 @@ test('load multiple steps on a finished action', async () => {
         showLogSeconds: '',
         showFullScreen: '',
         downloadLogs: '',
+        runAttemptLabel: '',
+        viewingOutOfDateRun: '',
+        viewMostRecentRun: '',
         status: {
           unknown: '',
           waiting: '',
@@ -291,7 +297,7 @@ function configureForMultipleAttemptTests({viewHistorical}) {
         showFullScreen: '',
         downloadLogs: '',
         runAttemptLabel: 'Run attempt %[1]s %[2]s',
-        viewingOutOfDateRun: 'oh no, out of date since %[1]s give or take',
+        viewingOutOfDateRun: 'oh no, out of date since %[1]s give or take or so',
         viewMostRecentRun: '',
         status: {
           unknown: '',
@@ -313,6 +319,9 @@ test('display baseline with most-recent attempt', async () => {
   const wrapper = configureForMultipleAttemptTests({viewHistorical: false});
   await flushPromises();
 
+  // Warning dialog for viewing an out-of-date attempt...
+  expect(wrapper.findAll('.job-out-of-date-warning').length).toEqual(0);
+
   // Approve button should be visible; can't have all three at once but at least this verifies the inverse of the
   // historical attempt test below.
   expect(wrapper.findAll('button').filter((button) => button.text() === 'Locale Approve').length).toEqual(1);
@@ -328,6 +337,15 @@ test('display baseline with most-recent attempt', async () => {
 
 test('display reconfigured for historical attempt', async () => {
   const wrapper = configureForMultipleAttemptTests({viewHistorical: true});
+  await flushPromises();
+
+  // Warning dialog for viewing an out-of-date attempt...
+  expect(wrapper.findAll('.job-out-of-date-warning').length).toEqual(1);
+  expect(wrapper.get('.job-out-of-date-warning').text()).toEqual('oh no, out of date since two days ago give or take or so');
+  await wrapper.get('.job-out-of-date-warning button').trigger('click');
+  expect(window.location.href).toEqual(toAbsoluteUrl('/user1/repo2/actions/runs/123/jobs/1'));
+  // eslint-disable-next-line no-restricted-globals
+  history.back();
   await flushPromises();
 
   // Approve, Cancel, Re-run all buttons should all be suppressed...
