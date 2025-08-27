@@ -40,12 +40,30 @@ import (
 	"xorm.io/builder"
 )
 
+func RedirectToLatestAttempt(ctx *context_module.Context) {
+	runIndex := ctx.ParamsInt64("run")
+	jobIndex := ctx.ParamsInt64("job")
+
+	job, _ := getRunJobs(ctx, runIndex, jobIndex)
+	if ctx.Written() {
+		return
+	}
+
+	jobURL, err := job.HTMLURL(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ctx.Redirect(jobURL, http.StatusTemporaryRedirect)
+}
+
 func View(ctx *context_module.Context) {
 	ctx.Data["PageIsActions"] = true
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
-	// "Number" is used as a suffix, not "Index" since this matches the ActionTask's Attempt field which uses 1-based
-	// numbering... it's confusing to use an "Index" if it later can't be used to access a slice or array.
+	// note: this is `attemptNumber` not `attemptIndex` since this value has to matches the ActionTask's Attempt field
+	// which uses 1-based numbering... would be confusing as "Index" if it later can't be used to index an slice/array.
 	attemptNumber := ctx.ParamsInt64("attempt")
 
 	job, _ := getRunJobs(ctx, runIndex, jobIndex)
@@ -201,6 +219,8 @@ func ViewPost(ctx *context_module.Context) {
 	req := web.GetForm(ctx).(*ViewRequest)
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
+	// note: this is `attemptNumber` not `attemptIndex` since this value has to matches the ActionTask's Attempt field
+	// which uses 1-based numbering... would be confusing as "Index" if it later can't be used to index an slice/array.
 	attemptNumber := ctx.ParamsInt64("attempt")
 
 	current, jobs := getRunJobs(ctx, runIndex, jobIndex)

@@ -1444,11 +1444,11 @@ func registerRoutes(m *web.Route) {
 				m.Get("/latest", actions.ViewLatest)
 				m.Group("/{run}", func() {
 					m.Combo("").
-						Get(actions.View).
+						Get(actions.RedirectToLatestAttempt).
 						Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 					m.Group("/jobs/{job}", func() {
 						m.Combo("").
-							Get(actions.View).
+							Get(actions.RedirectToLatestAttempt).
 							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 						m.Post("/rerun", reqRepoActionsWriter, actions.Rerun)
 						m.Get("/logs", actions.Logs)

@@ -318,3 +318,71 @@ func TestActionsViewViewPost(t *testing.T) {
 		})
 	}
 }
+
+func TestActionsViewRedirectToLatestAttempt(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	tests := []struct {
+		name         string
+		runIndex     int64
+		jobIndex     int64
+		expectedCode int
+		expectedURL  string
+	}{
+		{
+			name:        "no job index",
+			runIndex:    187,
+			jobIndex:    -1,
+			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/0/attempt/1",
+		},
+		{
+			name:        "job w/ 1 attempt",
+			runIndex:    187,
+			jobIndex:    0,
+			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/0/attempt/1",
+		},
+		{
+			name:        "job w/ multiple attempts",
+			runIndex:    187,
+			jobIndex:    2,
+			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/2/attempt/2",
+		},
+		{
+			name:         "run out-of-range",
+			runIndex:     5000,
+			jobIndex:     -1,
+			expectedCode: http.StatusNotFound,
+		},
+		// Odd behavior with an out-of-bound jobIndex -- defaults to the first job.  This is existing behavior
+		// documented in the getRunJobs internal helper which... seems not perfect for the redirect... but it's high
+		// risk to change and it's an OK user outcome to be redirected to something valid in the requested run.
+		{
+			name:        "job out-of-range",
+			runIndex:    187,
+			jobIndex:    500,
+			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/0/attempt/1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, resp := contexttest.MockContext(t, "user2/repo1/actions/runs/0")
+			contexttest.LoadUser(t, ctx, 2)
+			contexttest.LoadRepo(t, ctx, 1)
+			ctx.SetParams(":run", fmt.Sprintf("%d", tt.runIndex))
+			if tt.jobIndex != -1 {
+				ctx.SetParams(":job", fmt.Sprintf("%d", tt.jobIndex))
+			}
+
+			RedirectToLatestAttempt(ctx)
+			if tt.expectedCode == 0 {
+				assert.Equal(t, http.StatusTemporaryRedirect, resp.Code)
+				url, err := resp.Result().Location()
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedURL, url.String())
+			} else {
+				assert.Equal(t, tt.expectedCode, resp.Code)
+			}
+		})
+	}
+}
