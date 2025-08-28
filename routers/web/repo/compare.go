@@ -386,18 +386,12 @@ func ParseCompareInfo(ctx *context.Context) *common.CompareInfo {
 		has = ci.HeadRepo != nil
 	}
 
-	// 6. If the baseRepo is a fork and the headUser has a fork of that use that
-	if !has && baseRepo.IsFork {
-		ci.HeadRepo = repo_model.GetForkedRepo(ctx, ci.HeadUser.ID, baseRepo.ForkID)
-		has = ci.HeadRepo != nil
-	}
-
-	// 7. Otherwise if we're not the same repo and haven't found a repo give up
+	// 6. Otherwise if we're not the same repo and haven't found a repo give up
 	if !isSameRepo && !has {
 		ctx.Data["PageIsComparePull"] = false
 	}
 
-	// 8. Finally open the git repo
+	// 7. Finally open the git repo
 	if isSameRepo {
 		ci.HeadRepo = ctx.Repo.Repository
 		ci.HeadGitRepo = ctx.Repo.GitRepo
