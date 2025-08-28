@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
 	actions_model "forgejo.org/models/actions"
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/auth"
@@ -507,4 +508,28 @@ func ToChangedFile(f *gitdiff.DiffFile, repo *repo_model.Repository, commit stri
 	}
 
 	return file
+}
+
+func ToActionRunner(ctx context.Context, runner *actions_model.ActionRunner) *api.ActionRunner {
+	status := runner.Status()
+	apiStatus := "offline"
+	if runner.IsOnline() {
+		apiStatus = "online"
+	}
+	labels := make([]*api.ActionRunnerLabel, len(runner.AgentLabels))
+	for i, label := range runner.AgentLabels {
+		labels[i] = &api.ActionRunnerLabel{
+			ID:   int64(i),
+			Name: label,
+			Type: "custom",
+		}
+	}
+	return &api.ActionRunner{
+		ID:     runner.ID,
+		Name:   runner.Name,
+		Status: apiStatus,
+		Busy:   status == runnerv1.RunnerStatus_RUNNER_STATUS_ACTIVE,
+		// Ephemeral: runner.Ephemeral,
+		Labels: labels,
+	}
 }
