@@ -19,7 +19,6 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
-	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/optional"
@@ -38,7 +37,7 @@ func TestCommentUpload(t *testing.T) {
 			Issues: true,
 		}
 		repoName = "test_repo"
-		uploader = NewGiteaLocalUploader(graceful.GetManager().HammerContext(), user, user.Name, repoName)
+		uploader = NewGiteaLocalUploader(t.Context(), user, user.Name, repoName)
 	)
 	defer uploader.Close()
 
@@ -166,7 +165,7 @@ func TestGiteaUploadRepo(t *testing.T) {
 		ctx        = t.Context()
 		downloader = NewGithubDownloaderV3(ctx, "https://github.com", true, true, "", "", "", "go-xorm", "builder")
 		repoName   = "builder-" + time.Now().Format("2006-01-02-15-04-05")
-		uploader   = NewGiteaLocalUploader(graceful.GetManager().HammerContext(), user, user.Name, repoName)
+		uploader   = NewGiteaLocalUploader(t.Context(), user, user.Name, repoName)
 	)
 
 	err := migrateRepository(db.DefaultContext, user, downloader, uploader, base.MigrateOptions{
