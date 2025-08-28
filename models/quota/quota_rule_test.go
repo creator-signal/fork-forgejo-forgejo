@@ -144,13 +144,12 @@ func TestQuotaRuleDirectEvaluation(t *testing.T) {
 	}
 
 	t.Run("limit:0", func(t *testing.T) {
-		// With limit:0, nothing used is fine.
+		// With limit:0, any usage will fail evaluation, including 0
 		t.Run("used:0", func(t *testing.T) {
 			for subject := quota_model.LimitSubjectFirst; subject <= quota_model.LimitSubjectLast; subject++ {
-				runTest(t, subject, 0, 0, true)
+				runTest(t, subject, 0, 0, false)
 			}
 		})
-		// With limit:0, any usage will fail evaluation
 		t.Run("used:512", func(t *testing.T) {
 			for subject := quota_model.LimitSubjectFirst; subject <= quota_model.LimitSubjectLast; subject++ {
 				runTest(t, subject, 0, 512, false)
@@ -267,7 +266,7 @@ func TestQuotaRuleSizeAll(t *testing.T) {
 				{"unlimited", -1, true},
 				{"limit-1M", 1024 * 1024, true},
 				{"limit-5k", 5 * 1024, true},
-				{"limit-0", 0, true},
+				{"limit-0", 0, false},
 			},
 		},
 		{

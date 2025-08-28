@@ -67,7 +67,7 @@ func (r Rule) Evaluate(used Used, forSubject LimitSubject) (match, allow bool) {
 		// Unlimited, any value is allowed
 		allow = true
 	} else {
-		allow = r.Sum(used) <= r.Limit
+		allow = r.Sum(used) < r.Limit
 	}
 	return match, allow
 }
