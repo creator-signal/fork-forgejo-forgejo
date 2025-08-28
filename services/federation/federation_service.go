@@ -59,14 +59,17 @@ func FindOrCreateFederatedUser(ctx context.Context, actorURI string) (*user.User
 	}
 
 	if user != nil {
-		log.Trace("Local ActivityPub user found (actorURI: %#v, user: %#v)", actorURI, user)
+		log.Trace("Local ActivityPub user found (actorURI: %#v, user: %v)", actorURI, user.Name)
 	} else {
 		log.Trace("Attempting to create new user and federatedUser for actorURI: %#v", actorURI)
 		user, federatedUser, err = createUserFromAP(ctx, personID, federationHost.ID)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		log.Trace("Created user %#v with federatedUser %#v from distant server", user, federatedUser)
+		userToLog := *user
+		userToLog.Passwd = "xxxx"
+		userToLog.Salt = "xxxx"
+		log.Trace("Created user %#v with federatedUser %#v from distant server", userToLog, federatedUser)
 	}
 	log.Trace("Got user: %v", user.Name)
 

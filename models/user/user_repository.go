@@ -141,7 +141,7 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID string) (*User, *Federa
 		return nil, nil, err
 	}
 
-	log.Trace("FindFederatedUserByKeyID: %v found user %v, federated_user %v", keyID, user, federatedUser)
+	log.Trace("FindFederatedUserByKeyID: %v found user.ID %v, federated_user %v", keyID, user.ID, federatedUser)
 	return user, federatedUser, nil
 }
 

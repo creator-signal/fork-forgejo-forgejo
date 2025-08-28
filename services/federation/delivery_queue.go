@@ -59,7 +59,8 @@ func deliverToInbox(item deliveryQueueItem) error {
 		return err
 	}
 
-	log.Trace("Delivering to: %s, signedBy: %s, payload: %q", item.InboxURL, item.Doer.ID, item.Payload)
+	// TODO: Find a good way to log payload without exposing secrets.
+	log.Trace("Delivering to: %s, signedBy: %s", item.InboxURL, item.Doer.ID)
 	res, err := apclient.Post(item.Payload, item.InboxURL)
 	if err != nil {
 		log.Info("Delivering to: %s failed: %s, times: %v", item.InboxURL, err, item.DeliveryCount)
