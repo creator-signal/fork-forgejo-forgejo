@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"testing"
 
-	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	api "forgejo.org/modules/structs"
@@ -15,7 +14,6 @@ import (
 	"forgejo.org/services/contexttest"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRepoEdit(t *testing.T) {
@@ -90,12 +88,12 @@ func TestRepoEditNameChange(t *testing.T) {
 func TestRepoConvertToNormalRepo(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 
-	ctx, _ := contexttest.MockAPIContext(t, "user2/repo1") // TODO: is this a mirror? doesn't look like it, how to test?
-	contexttest.LoadRepo(t, ctx, 1)
-	contexttest.LoadUser(t, ctx, 2)
+	ctx, _ := contexttest.MockAPIContext(t, "user3/repo5")
+	contexttest.LoadRepo(t, ctx, 5)
+	contexttest.LoadUser(t, ctx, 3)
 	ctx.Repo.Owner = ctx.Doer
-	err := repo_model.UpdateRepositoryCols(db.DefaultContext, ctx.Repo.Repository, "is_mirror")
-	require.NoError(t, err)
+
+	assert.True(t, ctx.Repo.Repository.IsMirror)
 
 	disableMirror := true
 	opts := api.EditRepoOption{
