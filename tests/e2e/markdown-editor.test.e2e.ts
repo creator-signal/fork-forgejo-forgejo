@@ -7,7 +7,6 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {accessibilityCheck} from './shared/accessibility.ts';
 import {save_visual, test} from './utils_e2e.ts';
 
 test.use({user: 'user2'});
@@ -366,32 +365,37 @@ test('Markdown insert table', async ({page}) => {
   await save_visual(page);
 });
 
-test('Markdown insert link', async ({page}) => {
-  const response = await page.goto('/user2/repo1/issues/new');
-  expect(response?.status()).toBe(200);
-
-  const newLinkButton = page.locator('button[data-md-action="new-link"]');
-  await newLinkButton.click();
-
-  const newLinkModal = page.locator('div[data-markdown-link-modal-id="0"]');
-  await expect(newLinkModal).toBeVisible();
-  await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], []);
-  await save_visual(page);
-
-  const url = 'https://example.com';
-  const description = 'Where does this lead?';
-
-  await newLinkModal.locator('input[name="link-url"]').fill(url);
-  await newLinkModal.locator('input[name="link-description"]').fill(description);
-
-  await newLinkModal.locator('button[data-selector-name="ok-button"]').click();
-
-  await expect(newLinkModal).toBeHidden();
-
-  const textarea = page.locator('textarea[name=content]');
-  await expect(textarea).toHaveValue(`[${description}](${url})`);
-  await save_visual(page);
-});
+//
+// TODO: Test disabled because it is flaky.
+// See https://codeberg.org/forgejo/forgejo/issues/9046
+//
+// test('Markdown insert link', async ({page}) => {
+// const response = await page.goto('/user2/repo1/issues/new');
+// expect(response?.status()).toBe(200);
+//
+// const newLinkButton = page.locator('button[data-md-action="new-link"]');
+// await newLinkButton.click();
+//
+// const newLinkModal = page.locator('div[data-markdown-link-modal-id="0"]');
+// await expect(newLinkModal).toBeVisible();
+// await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], []);
+// await save_visual(page);
+//
+// const url = 'https://example.com';
+// const description = 'Where does this lead?';
+//
+// await newLinkModal.locator('input[name="link-url"]').fill(url);
+// await newLinkModal.locator('input[name="link-description"]').fill(description);
+//
+// await newLinkModal.locator('button[data-selector-name="ok-button"]').click();
+//
+// await expect(newLinkModal).toBeHidden();
+//
+// const textarea = page.locator('textarea[name=content]');
+// await expect(textarea).toHaveValue(`[${description}](${url})`);
+// await save_visual(page);
+// });
+//
 
 test('text expander has higher prio then prefix continuation', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/new');
