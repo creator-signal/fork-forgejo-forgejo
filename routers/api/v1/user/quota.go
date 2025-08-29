@@ -33,9 +33,17 @@ func CheckQuota(ctx *context.APIContext) {
 	// summary: Check if the authenticated user is over quota for a given subject
 	// produces:
 	// - application/json
+	// parameters:
+	// - name: subject
+	//   in: query
+	//   description: subject of the quota
+	//   type: string
+	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/boolean"
+	//     description: whether it is acceptable.
+	//     schema:
+	//       type: boolean
 	//   "401":
 	//     "$ref": "#/responses/unauthorized"
 	//   "403":
