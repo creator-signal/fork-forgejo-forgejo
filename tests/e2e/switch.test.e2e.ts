@@ -54,4 +54,9 @@ test('Switch CSS properties', async ({browser}) => {
   await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, noBg, normalMargin, normalMargin, normalPadding, normalPadding);
   await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, noBg, normalMargin, specialLeftMargin, normalPadding, specialPadding);
   await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', true, activeBg, normalMargin, normalMargin, normalPadding, normalPadding);
+
+  // E2E already runs clients with both fine and coarse pointer simulated
+  // This test will verify that coarse-related CSS is working as intended
+  const itemHeight = await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches) ? 41 : 34;
+  await expect((await page.locator('#issue-filters .switch > .item:nth-child(1)').boundingBox()).height).toBe(itemHeight);
 });
