@@ -29,13 +29,13 @@ test('Switch CSS properties', async ({browser}) => {
     } else {
       await expect(item).not.toHaveClass(/active/);
     }
-    expect(await item.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(background);
-    expect(await item.evaluate((el) => getComputedStyle(el).marginLeft)).toBe(marginLeft);
-    expect(await item.evaluate((el) => getComputedStyle(el).marginRight)).toBe(marginRight);
-    expect(await item.evaluate((el) => getComputedStyle(el).paddingLeft)).toBe(paddingLeft);
-    expect(await item.evaluate((el) => getComputedStyle(el).paddingRight)).toBe(paddingRight);
+    const cs = await item.evaluate((el) => { return getComputedStyle(el); });
+    expect(cs.backgroundColor).toBe(background);
+    expect(cs.marginLeft).toBe(marginLeft);
+    expect(cs.marginRight).toBe(marginRight);
+    expect(cs.paddingLeft).toBe(paddingLeft);
+    expect(cs.paddingRight).toBe(paddingRight);
   }
-
 
   await page.goto('/user2/repo1/pulls');
 
