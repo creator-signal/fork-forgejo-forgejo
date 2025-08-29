@@ -1,5 +1,6 @@
 :root .switch {
   --switch-padding-y: .5em;
+  --switch-padding-x: 1.125em;
 }
 
 @media (pointer: coarse) {
@@ -23,7 +24,7 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  padding: var(--switch-padding-y) 1.125em;
+  padding: var(--switch-padding-y) var(--switch-padding-x);
   color: var(--color-text);
   border-radius: var(--border-radius);
   text-wrap: nowrap;
@@ -34,17 +35,17 @@
 }
 
 .switch > .item:first-child {
-  padding-right: calc(1.125em + var(--border-radius));
+  padding-right: calc(var(--switch-padding-x) + var(--border-radius));
 }
 
 .switch > .item:not(:first-child) {
   margin-left: calc(-1 * var(--border-radius));
-  padding-left: calc(1.125em + var(--border-radius));
+  padding-left: calc(var(--switch-padding-x) + var(--border-radius));
 }
 
 .switch .active.item {
   z-index: 2;
-  padding-left: 1.125em;
+  padding-left: var(--switch-padding-x);
   background: var(--color-active);
   outline: 1px solid var(--color-input-border);
 }
