@@ -31,6 +31,7 @@ SPDX-License-Identifier: GPL-3.0-or-later */
   color: var(--color-text);
   border-radius: var(--border-radius);
   text-wrap: nowrap;
+  transition: background-color 0.1s ease;
 }
 
 .switch > .item:hover {
