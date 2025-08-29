@@ -16,20 +16,20 @@ test('Switch CSS properties', async ({browser}) => {
   const noBg = 'rgba(0, 0, 0, 0)';
   const activeBg = 'rgb(226, 226, 229)';
 
-  const normalMargin = "0px";
-  const normalPadding = "15.75px";
+  const normalMargin = '0px';
+  const normalPadding = '15.75px';
 
-  const specialLeftMargin = "-4px";
-  const specialPadding = "19.75px";
+  const specialLeftMargin = '-4px';
+  const specialPadding = '19.75px';
 
-  async function evaluateSwitchItem(page, selector, isActive, background, marginLeft, marginRight, paddingLeft, paddingRight ) {
+  async function evaluateSwitchItem(page, selector, isActive, background, marginLeft, marginRight, paddingLeft, paddingRight) {
     const item = page.locator(selector);
     if (isActive) {
       await expect(item).toHaveClass(/active/);
     } else {
       await expect(item).not.toHaveClass(/active/);
     }
-    const cs = await item.evaluate((el) => { return getComputedStyle(el); });
+    const cs = await item.evaluate((el) => { return getComputedStyle(el) });
     expect(cs.backgroundColor).toBe(background);
     expect(cs.marginLeft).toBe(marginLeft);
     expect(cs.marginRight).toBe(marginRight);
@@ -58,5 +58,5 @@ test('Switch CSS properties', async ({browser}) => {
   // E2E already runs clients with both fine and coarse pointer simulated
   // This test will verify that coarse-related CSS is working as intended
   const itemHeight = await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches) ? 41 : 34;
-  await expect((await page.locator('#issue-filters .switch > .item:nth-child(1)').boundingBox()).height).toBe(itemHeight);
+  expect((await page.locator('#issue-filters .switch > .item:nth-child(1)').boundingBox()).height).toBe(itemHeight);
 });
