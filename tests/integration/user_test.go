@@ -1160,6 +1160,70 @@ func TestUserPasswordReset(t *testing.T) {
 	assert.True(t, unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}).ValidatePassword(t.Context(), "new_password"))
 }
 
+func TestUserPasswordResetOAuth2(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestUserPasswordResetOAuth2")()
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("OAuth2 user without password", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1001})
+		assert.True(t, user.IsOAuth2())
+		assert.False(t, user.IsPasswordSet())
+		assert.False(t, user.IsLocal())
+
+		session := emptyTestSession(t)
+		req := NewRequestWithValues(t, "POST", "/user/forgot_password", map[string]string{
+			"_csrf": GetCSRF(t, session, "/user/forgot_password"),
+			"email": user.Email,
+		})
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		assert.Contains(t,
+			htmlDoc.doc.Find(".ui.negative.message").Text(),
+			translation.NewLocale("en-US").TrString("auth.non_local_account"),
+		)
+	})
+
+	t.Run("OAuth2 user with password", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1000})
+		assert.True(t, user.IsOAuth2())
+		assert.True(t, user.IsPasswordSet())
+		assert.False(t, user.IsLocal())
+
+		cleanup, code, called := parseMailHelper(t, user.EmailTo(), string(translation.NewLocale("en-US").Tr("mail.reset_password")))
+		defer cleanup()
+
+		session := emptyTestSession(t)
+		req := NewRequestWithValues(t, "POST", "/user/forgot_password", map[string]string{
+			"_csrf": GetCSRF(t, session, "/user/forgot_password"),
+			"email": user.Email,
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+		assert.True(t, *called)
+
+		user.Passwd = ""
+		err := user_model.UpdateUserCols(db.DefaultContext, user, "passwd")
+		require.NoError(t, err)
+
+		req = NewRequestWithValues(t, "POST", "/user/recover_account", map[string]string{
+			"_csrf":    GetCSRF(t, session, "/user/recover_account"),
+			"code":     *code,
+			"password": "new_password",
+		})
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		assert.Contains(t,
+			htmlDoc.doc.Find(".ui.negative.message").Text(),
+			translation.NewLocale("en-US").TrString("auth.non_local_account"),
+		)
+	})
+}
+
 func TestActivateEmailAddress(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Service.RegisterEmailConfirm, true)()
