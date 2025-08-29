@@ -134,6 +134,11 @@ func commonResetPassword(ctx *context.Context, shouldDeleteToken bool) (*user_mo
 		}
 	}
 
+	if !u.IsLocal() && !(u.IsOAuth2() && u.IsPasswordSet()) {
+		ctx.Flash.Error(ctx.Tr("auth.non_local_account"), true)
+		return nil, nil
+	}
+
 	twofa, err := auth.GetTwoFactorByUID(ctx, u.ID)
 	if err != nil {
 		if !auth.IsErrTwoFactorNotEnrolled(err) {
