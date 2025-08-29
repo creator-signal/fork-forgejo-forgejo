@@ -482,7 +482,6 @@ a.label,
   margin-top: -0.25rem;
   margin-bottom: -0.25rem;
 }
-
 .ui.dropdown .menu > .item > svg {
   margin-right: .78rem; /* use the same margin as for <img> */
 }
@@ -530,7 +529,6 @@ a.label,
   margin-right: 0;
   gap: .35714286em;
 }
-
 .ui.secondary.menu .item {
   margin-left: 0;
   margin-right: 0;
@@ -581,7 +579,6 @@ a.label,
   visibility: hidden;
   display: none;
 }
-
 .visible.transition {
   display: block !important;
   visibility: visible !important;
@@ -658,7 +655,6 @@ img.ui.avatar,
 .page-content > :first-child:not(.secondary-nav) {
   margin-top: var(--page-spacing);
 }
-
 /* if .ui.grid is the first child the first grid-column has 'padding-top: 1rem' which we need
    to compensate here */
 .page-content > :first-child.ui.grid {
@@ -752,7 +748,6 @@ img.ui.avatar,
 .ui.upward.active.selection.dropdown:hover .menu {
   box-shadow: 0 6px 18px var(--color-shadow);
 }
-
 .ui.floating.dropdown .menu {
   box-shadow: 0 6px 18px var(--color-shadow) !important;
 }
@@ -960,7 +955,6 @@ img.ui.avatar,
 blockquote.attention-note {
   border-left-color: var(--color-blue-dark-1);
 }
-
 strong.attention-note, svg.attention-note {
   color: var(--color-blue-dark-1);
 }
@@ -968,7 +962,6 @@ strong.attention-note, svg.attention-note {
 blockquote.attention-tip {
   border-left-color: var(--color-success-text);
 }
-
 strong.attention-tip, svg.attention-tip {
   color: var(--color-success-text);
 }
@@ -976,7 +969,6 @@ strong.attention-tip, svg.attention-tip {
 blockquote.attention-important {
   border-left-color: var(--color-violet-dark-1);
 }
-
 strong.attention-important, svg.attention-important {
   color: var(--color-violet-dark-1);
 }
@@ -984,7 +976,6 @@ strong.attention-important, svg.attention-important {
 blockquote.attention-warning {
   border-left-color: var(--color-warning-text);
 }
-
 strong.attention-warning, svg.attention-warning {
   color: var(--color-warning-text);
 }
@@ -992,7 +983,6 @@ strong.attention-warning, svg.attention-warning {
 blockquote.attention-caution {
   border-left-color: var(--color-red-dark-1);
 }
-
 strong.attention-caution, svg.attention-caution {
   color: var(--color-red-dark-1);
 }
@@ -1038,12 +1028,10 @@ svg.text.green,
 .text.green svg {
   color: var(--color-icon-green) !important;
 }
-
 svg.text.red,
 .text.red svg {
   color: var(--color-icon-red) !important;
 }
-
 svg.text.purple,
 .text.purple svg {
   color: var(--color-icon-purple) !important;
@@ -1372,11 +1360,9 @@ table th[data-sortt-desc] .svg {
 .ui.dropdown.tiny.button {
   padding-right: 20px;
 }
-
 .ui.dropdown.button {
   padding-right: 22px;
 }
-
 .ui.dropdown.large.button {
   padding-right: 24px;
 }
