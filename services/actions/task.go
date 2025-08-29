@@ -14,6 +14,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
+	notify_service "forgejo.org/services/notify"
 
 	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -22,8 +23,9 @@ import (
 
 func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKey *string) (*runnerv1.Task, bool, error) {
 	var (
-		task *runnerv1.Task
-		job  *actions_model.ActionRunJob
+		task       *runnerv1.Task
+		job        *actions_model.ActionRunJob
+		actionTask *actions_model.ActionTask
 	)
 
 	if runner.Ephemeral {
@@ -40,7 +42,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 	}
 
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		t, ok, err := actions_model.CreateTaskForRunner(ctx, runner, requestKey)
+		actionTask, ok, err := actions_model.CreateTaskForRunner(ctx, runner, requestKey)
 		if err != nil {
 			return fmt.Errorf("CreateTaskForRunner: %w", err)
 		}
@@ -48,17 +50,17 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 			return nil
 		}
 
-		if err := t.LoadAttributes(ctx); err != nil {
+		if err := actionTask.LoadAttributes(ctx); err != nil {
 			return fmt.Errorf("task LoadAttributes: %w", err)
 		}
-		job = t.Job
+		job = actionTask.Job
 
-		secrets, err := getSecretsOfTask(ctx, t)
+		secrets, err := getSecretsOfTask(ctx, actionTask)
 		if err != nil {
 			return fmt.Errorf("GetSecretsOfTask: %w", err)
 		}
 
-		vars, err := actions_model.GetVariablesOfRun(ctx, t.Job.Run)
+		vars, err := actions_model.GetVariablesOfRun(ctx, actionTask.Job.Run)
 		if err != nil {
 			return fmt.Errorf("GetVariablesOfRun: %w", err)
 		}
@@ -68,14 +70,14 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 			return fmt.Errorf("findTaskNeeds: %w", err)
 		}
 
-		taskContext, err := generateTaskContext(t)
+		taskContext, err := generateTaskContext(actionTask)
 		if err != nil {
 			return fmt.Errorf("generateTaskContext: %w", err)
 		}
 
 		task = &runnerv1.Task{
-			Id:              t.ID,
-			WorkflowPayload: t.Job.WorkflowPayload,
+			Id:              actionTask.ID,
+			WorkflowPayload: actionTask.Job.WorkflowPayload,
 			Context:         taskContext,
 			Secrets:         secrets,
 			Vars:            vars,
@@ -92,6 +94,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 	}
 
 	CreateCommitStatus(ctx, job)
+	notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, actionTask)
 
 	return task, true, nil
 }
@@ -232,6 +235,12 @@ func StopTask(ctx context.Context, taskID int64, status actions_model.Status) er
 
 	if err := actions_model.UpdateTask(ctx, task, "status", "stopped"); err != nil {
 		return err
+	}
+
+	if err := task.LoadJob(ctx); err == nil {
+		if err := task.Job.LoadAttributes(ctx); err == nil {
+			notify_service.WorkflowJobStatusUpdate(ctx, task.Job.Run.Repo, task.Job.Run.TriggerUser, task.Job, task)
+		}
 	}
 
 	runner := &actions_model.ActionRunner{}

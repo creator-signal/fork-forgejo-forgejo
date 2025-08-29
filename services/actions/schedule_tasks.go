@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	webhook_module "forgejo.org/modules/webhook"
+	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
@@ -194,8 +195,22 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 		return err
 	}
 
-	if err := consistencyCheckRun(ctx, run); err != nil {
+	failed, err := consistencyCheckRun(ctx, run)
+	if err != nil {
 		return err
+	}
+	allJobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		return err
+	}
+	err = run.LoadAttributes(ctx)
+	if err != nil {
+		return err
+	}
+	if !failed {
+		for _, job := range allJobs {
+			notify_service.WorkflowJobStatusUpdate(ctx, run.Repo, run.TriggerUser, job, nil)
+		}
 	}
 
 	// Return nil if no errors occurred

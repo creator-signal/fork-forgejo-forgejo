@@ -214,6 +214,7 @@ func addHook(ctx *context.APIContext, form *api.CreateHookOption, ownerID, repoI
 				ActionRunFailure:         util.SliceContainsString(form.Events, string(webhook_module.HookEventActionRunFailure), true),
 				ActionRunRecover:         util.SliceContainsString(form.Events, string(webhook_module.HookEventActionRunRecover), true),
 				ActionRunSuccess:         util.SliceContainsString(form.Events, string(webhook_module.HookEventActionRunSuccess), true),
+				WorkflowJob:              util.SliceContainsString(form.Events, string(webhook_module.HookEventWorkflowJob), true),
 			},
 			BranchFilter: form.BranchFilter,
 		},

@@ -4,6 +4,7 @@
 package webhook
 
 import (
+	"fmt"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
@@ -19,6 +20,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/timeutil"
 	webhook_module "forgejo.org/modules/webhook"
 
 	"github.com/stretchr/testify/assert"
@@ -142,7 +144,7 @@ func TestAction(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	triggerUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2, OwnerID: triggerUser.ID})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2, OwnerID: triggerUser.ID, Owner: triggerUser})
 
 	oldSuccessRun := &actions_model.ActionRun{
 		ID:            1,
@@ -307,5 +309,116 @@ func TestAction(t *testing.T) {
 		assert.Equal(t, actions_model.StatusWaiting.String(), payloadContent.PriorStatus)
 		assertActionEqual(t, newFailureRun, payloadContent.Run)
 		assertActionEqual(t, oldSuccessRun, payloadContent.LastRun)
+	})
+
+	t.Run("Workflow Job Status update", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.Webhook.PayloadCommitLimit, 10)()
+
+		now := timeutil.TimeStampNow()
+		actionRunJob := &actions_model.ActionRunJob{
+			ID:      1,
+			RunID:   oldSuccessRun.ID,
+			Run:     oldSuccessRun,
+			RepoID:  repo.ID,
+			OwnerID: triggerUser.ID,
+			Status:  actions_model.StatusWaiting,
+			Name:    "test-job",
+			RunsOn:  []string{"ubuntu-latest"},
+			Attempt: 1,
+			Created: now,
+			Started: now,
+			Stopped: now,
+		}
+
+		actionRunner := &actions_model.ActionRunner{
+			ID:   10,
+			Name: "test-runner",
+		}
+		require.NoError(t, db.Insert(db.DefaultContext, actionRunner))
+
+		actionTask := &actions_model.ActionTask{
+			ID:       1,
+			JobID:    actionRunJob.ID,
+			Status:   actions_model.StatusFailure,
+			RunnerID: actionRunner.ID,
+		}
+		// Create task steps
+		taskSteps := []*actions_model.ActionTaskStep{
+			{
+				Name:    "checkout",
+				TaskID:  actionTask.ID,
+				Index:   0,
+				Status:  actions_model.StatusSuccess,
+				RepoID:  repo.ID,
+				Started: now,
+				Stopped: now,
+			},
+			{
+				Name:    "build",
+				TaskID:  actionTask.ID,
+				Index:   1,
+				Status:  actions_model.StatusFailure,
+				RepoID:  repo.ID,
+				Started: now,
+				Stopped: now,
+			},
+		}
+		actionTask.Steps = taskSteps
+
+		NewNotifier().WorkflowJobStatusUpdate(db.DefaultContext, repo, triggerUser, actionRunJob, actionTask)
+
+		hookTask := unittest.AssertExistsAndLoadBean(t, &webhook_model.HookTask{}, unittest.Cond("event_type == 'workflow_job'"))
+		assert.Equal(t, webhook_module.HookEventWorkflowJob, hookTask.EventType)
+
+		var payloadContent structs.WorkflowJobPayload
+		require.NoError(t, json.Unmarshal([]byte(hookTask.PayloadContent), &payloadContent))
+
+		// Test Action and basic fields
+		assert.Equal(t, "queued", payloadContent.Action)
+		assert.NotNil(t, payloadContent.WorkflowJob)
+		assert.Equal(t, actionRunJob.ID, payloadContent.WorkflowJob.ID)
+		assert.Equal(t, actionRunJob.RunID, payloadContent.WorkflowJob.RunID)
+		assert.Equal(t, actionRunJob.Name, payloadContent.WorkflowJob.Name)
+		assert.Equal(t, actionRunJob.RunsOn, payloadContent.WorkflowJob.Labels)
+		assert.Equal(t, actionRunJob.Attempt, payloadContent.WorkflowJob.RunAttempt)
+
+		// Test URLs
+		assert.Contains(t, payloadContent.WorkflowJob.URL, fmt.Sprintf("/actions/runs/%d/jobs/%d", actionRunJob.RunID, actionRunJob.ID))
+		assert.Contains(t, payloadContent.WorkflowJob.HTMLURL, fmt.Sprintf("/jobs/%d", 0))
+		assert.Contains(t, payloadContent.WorkflowJob.RunURL, fmt.Sprintf("/actions/runs/%d", actionRunJob.RunID))
+
+		// Test commit info
+		assert.Equal(t, oldSuccessRun.CommitSHA, payloadContent.WorkflowJob.HeadSha)
+		assert.Equal(t, git.RefName(oldSuccessRun.Ref).BranchName(), payloadContent.WorkflowJob.HeadBranch)
+
+		// Test runner info
+		assert.Equal(t, actionRunner.ID, payloadContent.WorkflowJob.RunnerID)
+		assert.Equal(t, actionRunner.Name, payloadContent.WorkflowJob.RunnerName)
+
+		// Test steps
+		require.Len(t, payloadContent.WorkflowJob.Steps, 2)
+		assert.Equal(t, "checkout", payloadContent.WorkflowJob.Steps[0].Name)
+		assert.Equal(t, int64(0), payloadContent.WorkflowJob.Steps[0].Number)
+		assert.Equal(t, "queued", payloadContent.WorkflowJob.Steps[0].Status)
+		assert.Empty(t, payloadContent.WorkflowJob.Steps[0].Conclusion)
+
+		assert.Equal(t, "build", payloadContent.WorkflowJob.Steps[1].Name)
+		assert.Equal(t, int64(1), payloadContent.WorkflowJob.Steps[1].Number)
+		assert.Equal(t, "queued", payloadContent.WorkflowJob.Steps[1].Status)
+		assert.Empty(t, payloadContent.WorkflowJob.Steps[1].Conclusion)
+
+		// Test timestamps
+		assert.Equal(t, actionRunJob.Created.AsTime().UTC(), payloadContent.WorkflowJob.CreatedAt)
+		assert.Equal(t, actionRunJob.Started.AsTime().UTC(), payloadContent.WorkflowJob.StartedAt)
+		assert.Equal(t, actionRunJob.Stopped.AsTime().UTC(), payloadContent.WorkflowJob.CompletedAt)
+
+		// Test repository info
+		assert.NotNil(t, payloadContent.Repo)
+		assert.Equal(t, repo.ID, payloadContent.Repo.ID)
+		assert.Equal(t, repo.Name, payloadContent.Repo.Name)
+		assert.Equal(t, repo.FullName(), payloadContent.Repo.FullName)
+
+		// Test organization info (should be nil in this case since repo owner is not an org)
+		assert.Nil(t, payloadContent.Organization)
 	})
 }

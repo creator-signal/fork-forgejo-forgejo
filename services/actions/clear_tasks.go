@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
+	notify_service "forgejo.org/services/notify"
 )
 
 // StopZombieTasks stops the task which have running status, but haven't been updated for a long time
@@ -87,6 +88,7 @@ func CancelAbandonedJobs(ctx context.Context) error {
 
 	now := timeutil.TimeStampNow()
 	for _, job := range jobs {
+		hasBeenCancelled := true
 		job.Status = actions_model.StatusCancelled
 		job.Stopped = now
 		if err := db.WithTx(ctx, func(ctx context.Context) error {
@@ -94,9 +96,17 @@ func CancelAbandonedJobs(ctx context.Context) error {
 			return err
 		}); err != nil {
 			log.Warn("cancel abandoned job %v: %v", job.ID, err)
+			hasBeenCancelled = false
 			// go on
 		}
 		CreateCommitStatus(ctx, job)
+
+		if hasBeenCancelled {
+			err = job.LoadAttributes(ctx)
+			if err == nil {
+				notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+			}
+		}
 	}
 
 	return nil

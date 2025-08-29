@@ -37,6 +37,7 @@ const (
 	HookEventActionRunFailure          HookEventType = "action_run_failure"
 	HookEventActionRunRecover          HookEventType = "action_run_recover"
 	HookEventActionRunSuccess          HookEventType = "action_run_success"
+	HookEventWorkflowJob               HookEventType = "workflow_job"
 )
 
 // Event returns the HookEventType as an event string
@@ -75,6 +76,8 @@ func (h HookEventType) Event() string {
 		return "action_run_recover"
 	case HookEventActionRunSuccess:
 		return "action_run_success"
+	case HookEventWorkflowJob:
+		return "workflow_job"
 	}
 	return ""
 }

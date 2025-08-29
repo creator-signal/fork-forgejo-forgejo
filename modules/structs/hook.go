@@ -461,6 +461,21 @@ func (p *RepositoryPayload) JSONPayload() ([]byte, error) {
 	return json.MarshalIndent(p, "", " ")
 }
 
+// WorkflowJobPayload represents a payload information of workflow job event.
+type WorkflowJobPayload struct {
+	Action       string             `json:"action"`
+	WorkflowJob  *ActionWorkflowJob `json:"workflow_job"`
+	PullRequest  *PullRequest       `json:"pull_request,omitempty"`
+	Organization *Organization      `json:"organization,omitempty"`
+	Repo         *Repository        `json:"repository"`
+	Sender       *User              `json:"sender"`
+}
+
+// JSONPayload implements Payload
+func (p *WorkflowJobPayload) JSONPayload() ([]byte, error) {
+	return json.MarshalIndent(p, "", "  ")
+}
+
 // HookPackageAction an action that happens to a package
 type HookPackageAction string
 

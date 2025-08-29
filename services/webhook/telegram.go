@@ -211,6 +211,12 @@ func (telegramConvertor) Action(p *api.ActionPayload) (TelegramPayload, error) {
 	return createTelegramPayload(text), nil
 }
 
+func (telegramConvertor) WorkflowJob(p *api.WorkflowJobPayload) (TelegramPayload, error) {
+	text, _ := getWorkflowJobPayloadInfo(p, htmlLinkFormatter, true)
+
+	return createTelegramPayload(text), nil
+}
+
 func createTelegramPayload(message string) TelegramPayload {
 	return TelegramPayload{
 		Message:           markup.Sanitize(strings.TrimSpace(message)),

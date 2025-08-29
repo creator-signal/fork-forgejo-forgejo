@@ -201,6 +201,12 @@ type feishuConvertor struct{}
 
 var _ shared.PayloadConvertor[FeishuPayload] = feishuConvertor{}
 
+func (feishuConvertor) WorkflowJob(p *api.WorkflowJobPayload) (FeishuPayload, error) {
+	text, _ := getWorkflowJobPayloadInfo(p, noneLinkFormatter, true)
+
+	return newFeishuTextPayload(text), nil
+}
+
 func (feishuHandler) NewRequest(ctx context.Context, w *webhook_model.Webhook, t *webhook_model.HookTask) (*http.Request, []byte, error) {
 	return shared.NewJSONRequest(feishuConvertor{}, w, t, true)
 }

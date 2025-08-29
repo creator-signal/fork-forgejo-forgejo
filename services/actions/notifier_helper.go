@@ -29,6 +29,7 @@ import (
 	"forgejo.org/modules/util"
 	webhook_module "forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
+	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"code.forgejo.org/forgejo/runner/v12/act/model"
@@ -467,9 +468,19 @@ func handleWorkflows(
 		}
 		CreateCommitStatus(ctx, alljobs...)
 
-		if err := consistencyCheckRun(ctx, run); err != nil {
+		failed, err := consistencyCheckRun(ctx, run)
+		if err != nil {
 			log.Error("SanityCheckRun: %v", err)
 			continue
+		}
+		// consistencyCheckRun already called killRun → WorkflowJobStatusUpdate with the correct
+		// status for each affected job.  Skip the loop to avoid sending stale (pre-DB-update) data.
+		if failed {
+			continue
+		}
+
+		for _, job := range alljobs {
+			notify_service.WorkflowJobStatusUpdate(ctx, input.Repo, input.Doer, job, nil)
 		}
 	}
 	return nil

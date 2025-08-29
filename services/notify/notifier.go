@@ -79,4 +79,6 @@ type Notifier interface {
 	ChangeDefaultBranch(ctx context.Context, repo *repo_model.Repository)
 
 	ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun)
+
+	WorkflowJobStatusUpdate(ctx context.Context, repo *repo_model.Repository, sender *user_model.User, job *actions_model.ActionRunJob, task *actions_model.ActionTask)
 }

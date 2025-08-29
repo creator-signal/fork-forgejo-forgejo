@@ -282,6 +282,12 @@ func (d discordConvertor) Review(p *api.PullRequestPayload, event webhook_module
 	return d.createPayload(p.Sender, title, text, p.PullRequest.HTMLURL, color), nil
 }
 
+func (d discordConvertor) WorkflowJob(p *api.WorkflowJobPayload) (DiscordPayload, error) {
+	text, color := getWorkflowJobPayloadInfo(p, noneLinkFormatter, false)
+
+	return d.createPayload(p.Sender, text, "", p.WorkflowJob.HTMLURL, color), nil
+}
+
 // Repository implements PayloadConvertor Repository method
 func (d discordConvertor) Repository(p *api.RepositoryPayload) (DiscordPayload, error) {
 	var title, url string

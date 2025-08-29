@@ -75,7 +75,7 @@ func TestWebhook_EventsArray(t *testing.T) {
 		"pull_request_comment", "pull_request_review_approved", "pull_request_review_rejected",
 		"pull_request_review_comment", "pull_request_sync", "wiki", "repository", "release",
 		"package", "pull_request_review_request", "action_run_failure",
-		"action_run_recover", "action_run_success",
+		"action_run_recover", "action_run_success", "workflow_job",
 	},
 		(&Webhook{
 			HookEvent: &webhook_module.HookEvent{SendEverything: true},
@@ -124,7 +124,7 @@ func TestCreateWebhook(t *testing.T) {
 			RepoID:      3,
 			URL:         "https://www.example.com/unit_test",
 			ContentType: ContentTypeJSON,
-			Events:      `{"push_only":false,"send_everything":false,"choose_events":true,"events":{"create":true,"delete":true,"fork":true,"issues":true,"issue_assign":true,"issue_label":true,"issue_milestone":true,"issue_comment":true,"push":true,"pull_request":true,"pull_request_assign":true,"pull_request_label":true,"pull_request_milestone":true,"pull_request_comment":true,"pull_request_review":true,"pull_request_sync":true,"pull_request_review_request":true,"wiki":true,"repository":true,"release":true,"package":true,"action_run_failure":true,"action_run_recover":true,"action_run_success":true}}`,
+			Events:      `{"push_only":false,"send_everything":false,"choose_events":true,"events":{"create":true,"delete":true,"fork":true,"issues":true,"issue_assign":true,"issue_label":true,"issue_milestone":true,"issue_comment":true,"push":true,"pull_request":true,"pull_request_assign":true,"pull_request_label":true,"pull_request_milestone":true,"pull_request_comment":true,"pull_request_review":true,"pull_request_sync":true,"pull_request_review_request":true,"wiki":true,"repository":true,"release":true,"package":true,"action_run_failure":true,"action_run_recover":true,"action_run_success":true,"workflow_job":true}}`,
 		}
 		unittest.AssertNotExistsBean(t, hook)
 		require.NoError(t, CreateWebhook(db.DefaultContext, hook, ""))
@@ -159,6 +159,7 @@ func TestCreateWebhook(t *testing.T) {
 			string(webhook_module.HookEventActionRunFailure),
 			string(webhook_module.HookEventActionRunRecover),
 			string(webhook_module.HookEventActionRunSuccess),
+			string(webhook_module.HookEventWorkflowJob),
 		},
 			hookFromDb.EventsArray())
 	})

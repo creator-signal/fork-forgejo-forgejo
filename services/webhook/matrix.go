@@ -279,6 +279,12 @@ func (m matrixConvertor) Action(p *api.ActionPayload) (MatrixPayload, error) {
 	return m.newPayload(text)
 }
 
+func (m matrixConvertor) WorkflowJob(p *api.WorkflowJobPayload) (MatrixPayload, error) {
+	text, _ := getWorkflowJobPayloadInfo(p, htmlLinkFormatter, true)
+
+	return m.newPayload(text)
+}
+
 var urlRegex = regexp.MustCompile(`<a [^>]*?href="([^">]*?)">(.*?)</a>`)
 
 func getMessageBody(htmlText string) string {

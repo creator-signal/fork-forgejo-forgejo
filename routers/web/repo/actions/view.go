@@ -38,6 +38,7 @@ import (
 	"forgejo.org/routers/common"
 	actions_service "forgejo.org/services/actions"
 	app_context "forgejo.org/services/context"
+	notify_service "forgejo.org/services/notify"
 
 	"xorm.io/builder"
 )
@@ -591,6 +592,9 @@ func rerunJob(ctx *app_context.Context, job *actions_model.ActionRunJob, shouldB
 	}
 
 	actions_service.CreateCommitStatus(ctx, job)
+	_ = job.LoadAttributes(ctx)
+	notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+
 	return nil
 }
 
@@ -652,6 +656,8 @@ func Cancel(ctx *app_context.Context) {
 		return
 	}
 
+	var updatedjobs []*actions_model.ActionRunJob
+
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
 		for _, job := range jobs {
 			status := job.Status
@@ -668,6 +674,9 @@ func Cancel(ctx *app_context.Context) {
 				if n == 0 {
 					return errors.New("job has changed, try again")
 				}
+				if n > 0 {
+					updatedjobs = append(updatedjobs, job)
+				}
 				continue
 			}
 			if err := actions_service.StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
@@ -681,6 +690,11 @@ func Cancel(ctx *app_context.Context) {
 	}
 
 	actions_service.CreateCommitStatus(ctx, jobs...)
+
+	for _, job := range updatedjobs {
+		_ = job.LoadAttributes(ctx)
+		notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+	}
 
 	ctx.JSON(http.StatusOK, struct{}{})
 }

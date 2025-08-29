@@ -30,6 +30,7 @@ type HookEvents struct {
 	ActionRunFailure         bool `json:"action_run_failure"`
 	ActionRunRecover         bool `json:"action_run_recover"`
 	ActionRunSuccess         bool `json:"action_run_success"`
+	WorkflowJob              bool `json:"workflow_job"`
 }
 
 // HookEvent represents events that will deliver a hook.

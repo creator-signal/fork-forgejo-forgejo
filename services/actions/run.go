@@ -11,6 +11,7 @@ import (
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	"forgejo.org/modules/timeutil"
+	notify_service "forgejo.org/services/notify"
 )
 
 func killRun(ctx context.Context, run *actions_model.ActionRun, newStatus actions_model.Status) error {
@@ -31,6 +32,9 @@ func killRun(ctx context.Context, run *actions_model.ActionRun, newStatus action
 				if err != nil {
 					return err
 				}
+				if err := job.LoadAttributes(ctx); err == nil {
+					notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+				}
 				continue
 			}
 			if err := StopTask(ctx, job.TaskID, newStatus); err != nil {
@@ -43,7 +47,6 @@ func killRun(ctx context.Context, run *actions_model.ActionRun, newStatus action
 				return err
 			}
 		}
-
 		CreateCommitStatus(ctx, jobs...)
 
 		return nil
@@ -67,6 +70,9 @@ func ApproveRun(ctx context.Context, run *actions_model.ActionRun, doerID int64)
 				if err != nil {
 					return err
 				}
+			}
+			if err := job.LoadAttributes(ctx); err == nil {
+				notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
 			}
 		}
 		CreateCommitStatus(ctx, jobs...)
@@ -96,24 +102,26 @@ func FailRunPreExecutionError(ctx context.Context, run *actions_model.ActionRun,
 }
 
 // Perform pre-execution checks that would affect the ability for a job to reach an executing stage.
-func consistencyCheckRun(ctx context.Context, run *actions_model.ActionRun) error {
+// Returns (true, nil) if a pre-execution error was detected and the run was failed via FailRunPreExecutionError.
+func consistencyCheckRun(ctx context.Context, run *actions_model.ActionRun) (bool, error) {
 	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	for _, job := range jobs {
-		if stop, err := checkJobWillRevisit(ctx, job); err != nil {
-			return err
+		var stop bool
+		if stop, err = checkJobWillRevisit(ctx, job); err != nil {
+			return false, err
 		} else if stop {
-			break
+			return true, nil
 		}
-		if stop, err := checkJobRunsOnStaticMatrixError(ctx, job); err != nil {
-			return err
+		if stop, err = checkJobRunsOnStaticMatrixError(ctx, job); err != nil {
+			return false, err
 		} else if stop {
-			break
+			return true, nil
 		}
 	}
-	return nil
+	return false, nil
 }
 
 func checkJobWillRevisit(ctx context.Context, job *actions_model.ActionRunJob) (bool, error) {

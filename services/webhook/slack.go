@@ -223,6 +223,12 @@ func (s slackConvertor) Package(p *api.PackagePayload) (SlackPayload, error) {
 	return s.createPayload(text, nil), nil
 }
 
+func (s slackConvertor) WorkflowJob(p *api.WorkflowJobPayload) (SlackPayload, error) {
+	text, _ := getWorkflowJobPayloadInfo(p, SlackLinkFormatter, true)
+
+	return s.createPayload(text, nil), nil
+}
+
 // Push implements payloadConvertor Push method
 func (s slackConvertor) Push(p *api.PushPayload) (SlackPayload, error) {
 	// n new commits

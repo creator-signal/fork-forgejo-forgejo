@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/queue"
+	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"xorm.io/builder"
@@ -65,6 +66,7 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 	if err != nil {
 		return err
 	}
+	var updatedjobs []*actions_model.ActionRunJob
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
 		idToJobs := make(map[string][]*actions_model.ActionRunJob, len(jobs))
 		for _, job := range jobs {
@@ -109,6 +111,7 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 				} else if n != 1 {
 					return fmt.Errorf("no affected for updating blocked job %v", job.ID)
 				}
+				updatedjobs = append(updatedjobs, job)
 			}
 		}
 		return nil
@@ -116,6 +119,12 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 		return err
 	}
 	CreateCommitStatus(ctx, jobs...)
+	for _, job := range updatedjobs {
+		err = job.LoadAttributes(ctx)
+		if err == nil {
+			notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+		}
+	}
 
 	// tryHandleIncompleteMatrix can create new jobs in this run which may initially be persisted in the DB as blocked
 	// because they have non-empty `needs`. In that case, we need to recursively run the job emitter so that new jobs

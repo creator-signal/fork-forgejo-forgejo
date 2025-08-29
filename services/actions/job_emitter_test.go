@@ -11,7 +11,9 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/test"
 	notify_service "forgejo.org/services/notify"
 
@@ -282,13 +284,26 @@ type callArgsActionRunNowDone struct {
 	priorStatus actions_model.Status
 	lastRun     *actions_model.ActionRun
 }
+
+type callArgsWorkflowJobStatusUpdate struct {
+	repo   *repo_model.Repository
+	sender *user_model.User
+	job    *actions_model.ActionRunJob
+	task   *actions_model.ActionTask
+}
+
 type mockNotifier struct {
 	notify_service.NullNotifier
-	calls []*callArgsActionRunNowDone
+	calls                  []*callArgsActionRunNowDone
+	workflowJobStatusCalls []*callArgsWorkflowJobStatusUpdate
 }
 
 func (m *mockNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun) {
 	m.calls = append(m.calls, &callArgsActionRunNowDone{run, priorStatus, lastRun})
+}
+
+func (m *mockNotifier) WorkflowJobStatusUpdate(_ context.Context, repo *repo_model.Repository, sender *user_model.User, job *actions_model.ActionRunJob, task *actions_model.ActionTask) {
+	m.workflowJobStatusCalls = append(m.workflowJobStatusCalls, &callArgsWorkflowJobStatusUpdate{repo, sender, job, task})
 }
 
 func Test_tryHandleIncompleteMatrix(t *testing.T) {

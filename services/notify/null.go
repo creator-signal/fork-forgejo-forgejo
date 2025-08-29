@@ -216,3 +216,6 @@ func (*NullNotifier) ChangeDefaultBranch(ctx context.Context, repo *repo_model.R
 // ActionRunNowDone places a place holder function
 func (*NullNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun) {
 }
+
+func (*NullNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_model.Repository, sender *user_model.User, job *actions_model.ActionRunJob, task *actions_model.ActionTask) {
+}

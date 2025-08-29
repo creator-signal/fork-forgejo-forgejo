@@ -17,11 +17,13 @@ import (
 	"forgejo.org/modules/actions"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
+	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
@@ -192,7 +194,22 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		return run, jobNames, err
 	}
 
-	return run, jobNames, consistencyCheckRun(ctx, run)
+	failed, err := consistencyCheckRun(ctx, run)
+	if err != nil {
+		return run, jobNames, err
+	}
+
+	allJobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		log.Error("FindRunJobs: %v", err)
+	}
+	if !failed {
+		for _, job := range allJobs {
+			notify_service.WorkflowJobStatusUpdate(ctx, repo, doer, job, nil)
+		}
+	}
+
+	return run, jobNames, err
 }
 
 func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Workflow, error) {

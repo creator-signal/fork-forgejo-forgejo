@@ -20,6 +20,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	webhook_module "forgejo.org/modules/webhook"
+	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"code.forgejo.org/forgejo/runner/v12/act/model"
@@ -204,6 +205,10 @@ func TestActionsNotifier_ConcurrencyGroup(t *testing.T) {
 func TestActionsNotifier_PreExecutionErrorInvalidJobs(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
+
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
 
@@ -223,10 +228,18 @@ func TestActionsNotifier_PreExecutionErrorInvalidJobs(t *testing.T) {
 	assert.Empty(t, createdRun.PreExecutionError)
 	assert.Equal(t, actions_model.ErrorCodeJobParsingError, createdRun.PreExecutionErrorCode)
 	assert.Equal(t, []any{"model.ReadWorkflow: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `hello, ...` into map[string]*model.Job"}, createdRun.PreExecutionErrorDetails)
+
+	require.Len(t, notifier.workflowJobStatusCalls, 1)
+	assert.Equal(t, actions_model.StatusFailure, notifier.workflowJobStatusCalls[0].job.Status)
+	assert.Nil(t, notifier.workflowJobStatusCalls[0].task)
 }
 
 func TestActionsNotifier_PreExecutionEventDetectionError(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
@@ -248,10 +261,18 @@ func TestActionsNotifier_PreExecutionEventDetectionError(t *testing.T) {
 	assert.Empty(t, createdRun.PreExecutionError)
 	assert.Equal(t, actions_model.ErrorCodeEventDetectionError, createdRun.PreExecutionErrorCode)
 	assert.Equal(t, []any{"nothing is not a valid event"}, createdRun.PreExecutionErrorDetails)
+
+	require.Len(t, notifier.workflowJobStatusCalls, 1)
+	assert.Equal(t, actions_model.StatusFailure, notifier.workflowJobStatusCalls[0].job.Status)
+	assert.Nil(t, notifier.workflowJobStatusCalls[0].task)
 }
 
 func TestActionsNotifier_handleWorkflows_setRunTrustForPullRequest(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 	// poster is not trusted implicitly
@@ -273,10 +294,17 @@ func TestActionsNotifier_handleWorkflows_setRunTrustForPullRequest(t *testing.T)
 	assert.Equal(t, pr.Issue.PosterID, run.PullRequestPosterID)
 	assert.Equal(t, pr.ID, run.PullRequestID)
 	assert.True(t, run.NeedApproval)
+
+	require.Len(t, notifier.workflowJobStatusCalls, 1)
+	assert.Nil(t, notifier.workflowJobStatusCalls[0].task)
 }
 
 func TestActionsNotifier_DynamicMatrix(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
@@ -301,10 +329,18 @@ func TestActionsNotifier_DynamicMatrix(t *testing.T) {
 	// With a matrix that contains ${{ needs ... }} references, the only requirement to work is that when the job is
 	// first inserted it is tagged w/ incomplete_matrix
 	assert.Contains(t, string(job.WorkflowPayload), "incomplete_matrix: true")
+
+	require.Len(t, notifier.workflowJobStatusCalls, 1)
+	assert.Equal(t, job.ID, notifier.workflowJobStatusCalls[0].job.ID)
+	assert.Nil(t, notifier.workflowJobStatusCalls[0].task)
 }
 
 func TestActionsNotifier_RunsOnNeeds(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
@@ -329,10 +365,18 @@ func TestActionsNotifier_RunsOnNeeds(t *testing.T) {
 	// With a runs-on that contains ${{ needs ... }} references, the only requirement to work is that when the job is
 	// first inserted it is tagged w/ incomplete_runs_on.
 	assert.Contains(t, string(job.WorkflowPayload), "incomplete_runs_on: true")
+
+	require.Len(t, notifier.workflowJobStatusCalls, 1)
+	assert.Equal(t, job.ID, notifier.workflowJobStatusCalls[0].job.ID)
+	assert.Nil(t, notifier.workflowJobStatusCalls[0].task)
 }
 
 func TestActionsNotifier_WorkflowDetection(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
@@ -355,6 +399,10 @@ func TestActionsNotifier_WorkflowDetection(t *testing.T) {
 
 	assert.Equal(t, ".forgejo/workflows", runs[0].WorkflowDirectory)
 	assert.Equal(t, "test.yml", runs[0].WorkflowID)
+
+	require.Len(t, notifier.workflowJobStatusCalls, 1)
+	assert.Equal(t, jobs[0].ID, notifier.workflowJobStatusCalls[0].job.ID)
+	assert.Nil(t, notifier.workflowJobStatusCalls[0].task)
 }
 
 // Verifies that the notifier_helper's `handleWorkflows` provides the local & remote reusable workflow expansion

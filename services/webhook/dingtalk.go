@@ -213,6 +213,12 @@ func (dc dingtalkConvertor) Action(p *api.ActionPayload) (DingtalkPayload, error
 	return createDingtalkPayload(text, text, "view action", p.Run.HTMLURL), nil
 }
 
+func (dingtalkConvertor) WorkflowJob(p *api.WorkflowJobPayload) (DingtalkPayload, error) {
+	text, _ := getWorkflowJobPayloadInfo(p, noneLinkFormatter, true)
+
+	return createDingtalkPayload(text, text, "Workflow Job", p.WorkflowJob.HTMLURL), nil
+}
+
 func createDingtalkPayload(title, text, singleTitle, singleURL string) DingtalkPayload {
 	return DingtalkPayload{
 		MsgType: "actionCard",

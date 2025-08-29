@@ -115,6 +115,7 @@ func TestHookEventInclusion(t *testing.T) {
 			string(webhook_module.HookEventActionRunFailure),
 			string(webhook_module.HookEventActionRunRecover),
 			string(webhook_module.HookEventActionRunSuccess),
+			string(webhook_module.HookEventWorkflowJob),
 		},
 	}
 	hook, ok := addHook(ctx, &opts, 2, 1)

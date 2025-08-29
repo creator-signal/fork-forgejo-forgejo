@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	webhook_model "forgejo.org/models/webhook"
+	"forgejo.org/modules/base"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
@@ -326,6 +327,37 @@ func getActionPayloadInfo(p *api.ActionPayload, linkFormatter linkFormatter) (te
 	case api.HookActionSuccess:
 		text = fmt.Sprintf("%s Action Succeeded in %s %s", runLink, repoLink, p.Run.PrettyRef)
 		color = greenColor
+	}
+
+	return text, color
+}
+
+func getWorkflowJobPayloadInfo(p *api.WorkflowJobPayload, linkFormatter linkFormatter, withSender bool) (text string, color int) {
+	description := p.WorkflowJob.Conclusion
+	if description == "" {
+		description = p.WorkflowJob.Status
+	}
+	refLink := linkFormatter(p.WorkflowJob.HTMLURL, fmt.Sprintf("%s(#%d)", p.WorkflowJob.Name, p.WorkflowJob.RunID)+"["+base.ShortSha(p.WorkflowJob.HeadSha)+"]:"+description)
+
+	text = fmt.Sprintf("Workflow Job %s: %s", p.Action, refLink)
+	switch description {
+	case "waiting":
+		color = orangeColor
+	case "queued":
+		color = orangeColorLight
+	case "success":
+		color = greenColor
+	case "failure":
+		color = redColor
+	case "cancelled":
+		color = yellowColor
+	case "skipped":
+		color = purpleColor
+	default:
+		color = greyColor
+	}
+	if withSender {
+		text += fmt.Sprintf(" by %s", linkFormatter(setting.AppURL+url.PathEscape(p.Sender.UserName), p.Sender.UserName))
 	}
 
 	return text, color

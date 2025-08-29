@@ -37,6 +37,7 @@ type PayloadConvertor[T any] interface {
 	Wiki(*api.WikiPayload) (T, error)
 	Package(*api.PackagePayload) (T, error)
 	Action(*api.ActionPayload) (T, error)
+	WorkflowJob(*api.WorkflowJobPayload) (T, error)
 }
 
 func convertUnmarshalledJSON[T, P any](convert func(P) (T, error), data []byte) (T, error) {

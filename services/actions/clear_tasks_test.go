@@ -8,6 +8,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/unittest"
+	notify_service "forgejo.org/services/notify"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,6 +17,10 @@ import (
 func TestCancelAbandonedJobs(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/TestCancelAbandonedJobs")()
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
 
 	require.NoError(t, CancelAbandonedJobs(t.Context()))
 
@@ -38,4 +43,11 @@ func TestCancelAbandonedJobs(t *testing.T) {
 	// related run needs approval, not to be abandoned
 	job = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 604})
 	assert.Equal(t, actions_model.StatusWaiting, job.Status)
+
+	// WorkflowJobStatusUpdate is called once for each abandoned job (600 and 601)
+	require.Len(t, notifier.workflowJobStatusCalls, 2)
+	cancelledJobIDs := []int64{notifier.workflowJobStatusCalls[0].job.ID, notifier.workflowJobStatusCalls[1].job.ID}
+	assert.ElementsMatch(t, []int64{600, 601}, cancelledJobIDs)
+	assert.Nil(t, notifier.workflowJobStatusCalls[0].task)
+	assert.Nil(t, notifier.workflowJobStatusCalls[1].task)
 }

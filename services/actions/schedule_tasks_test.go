@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
 	webhook_module "forgejo.org/modules/webhook"
+	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"code.forgejo.org/forgejo/runner/v12/act/model"
@@ -78,6 +79,10 @@ jobs:
 func TestCreateScheduleTask(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2, OwnerID: 2})
+
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
 
 	assertConstant := func(t *testing.T, cron *actions_model.ActionSchedule, run *actions_model.ActionRun) {
 		t.Helper()
@@ -173,6 +178,8 @@ jobs:
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			notifier.workflowJobStatusCalls = nil
+
 			require.NoError(t, CreateScheduleTask(t.Context(), &testCase.cron))
 			require.Equal(t, len(testCase.want), unittest.GetCount(t, actions_model.ActionRun{RepoID: repo.ID}))
 			for _, expected := range testCase.want {
@@ -180,6 +187,10 @@ jobs:
 				assertConstant(t, &testCase.cron, run)
 				assertMutable(t, &expected, run)
 			}
+
+			require.Len(t, notifier.workflowJobStatusCalls, 1)
+			assert.Nil(t, notifier.workflowJobStatusCalls[0].task)
+
 			unittest.AssertSuccessfulDelete(t, actions_model.ActionRun{RepoID: repo.ID})
 		})
 	}
