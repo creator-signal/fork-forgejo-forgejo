@@ -34,14 +34,16 @@
   background: var(--color-hover);
 }
 
-/* Fist item is always being crawled under/upon by it's neighbor */
-.switch > .item:first-child {
+/* Item that hash to crawl under/upon by it's active neighbor on the right, so
+when it is hovered, there are no ugly unpainted v/^ shapes between them */
+.switch > .item:has(+ .active.item) {
+  margin-right: calc(-1 * var(--border-radius));
   padding-right: calc(var(--switch-padding-x) + var(--border-radius));
 }
 
-/* These items are crawling under/upon their left neighbor when two neighbors are
-active and hovered, there are no ugly unpainted v/^ shapes between them */
-.switch > .item:not(:first-child) {
+/* Item that has to crawl under/upon it's active neighbor on the lefts, so
+when it is hovered, there are no ugly unpainted v/^ shapes between them */
+.switch > .active.item + .item {
   margin-left: calc(-1 * var(--border-radius));
   padding-left: calc(var(--switch-padding-x) + var(--border-radius));
 }
