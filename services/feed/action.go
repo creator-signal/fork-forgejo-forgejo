@@ -510,9 +510,12 @@ func prepareCommitsForFeed(commits *repository.PushCommits) *repository.PushComm
 	numCommits := min(len(commits.Commits), setting.UI.FeedMaxCommitNum)
 	retval := repository.PushCommits{
 		Commits:    make([]*repository.PushCommit, 0, numCommits),
-		HeadCommit: prepareCommitForFeed(commits.HeadCommit),
+		HeadCommit: nil,
 		CompareURL: commits.CompareURL,
 		Len:        commits.Len,
+	}
+	if commits.HeadCommit != nil {
+		retval.HeadCommit = prepareCommitForFeed(commits.HeadCommit)
 	}
 	for i, commit := range commits.Commits {
 		if i == numCommits {
