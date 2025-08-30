@@ -38,7 +38,7 @@ SPDX-License-Identifier: GPL-3.0-or-later */
   background: var(--color-hover);
 }
 
-/* Item that hash to crawl under/upon by it's active neighbor on the right, so
+/* Item that has to crawl under/upon by it's active neighbor on the right, so
 when it is hovered, there are no ugly unpainted v/^ shapes between them */
 .switch > .item:has(+ .active.item) {
   margin-right: calc(-1 * var(--border-radius));
