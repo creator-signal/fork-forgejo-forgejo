@@ -11,6 +11,8 @@ import (
 	"go/token"
 	"strconv"
 	"strings"
+
+	"forgejo.org/modules/container"
 )
 
 func (handler Handler) handleGoTrBasicLit(fset *token.FileSet, argLit *ast.BasicLit, prefix string) {
@@ -164,31 +166,63 @@ func (handler Handler) HandleGoFile(fname string, src any) error {
 			}
 		case *ast.FuncDecl:
 			matchInsPrefix := handler.handleGoCommentGroup(fset, n2.Doc, "llu:returnsTrKey")
-			if matchInsPrefix == nil {
-				return true
-			}
-			results := n2.Type.Results.List
-			if len(results) != 1 {
-				handler.OnWarning(fset, n2.Type.Func, fmt.Sprintf("function %s has unexpected return type; expected single return value", n2.Name.Name))
-				return true
+			if matchInsPrefix != nil {
+				results := n2.Type.Results.List
+				if len(results) != 1 {
+					handler.OnWarning(fset, n2.Type.Func, fmt.Sprintf("function %s has unexpected return type; expected single return value", n2.Name.Name))
+					return true
+				}
+				ast.Inspect(n2.Body, func(n ast.Node) bool {
+					// search for return stmts
+					// TODO: what about nested functions?
+					if ret, ok := n.(*ast.ReturnStmt); ok {
+						for _, res := range ret.Results {
+							ast.Inspect(res, func(n ast.Node) bool {
+								if expr, ok := n.(ast.Expr); ok {
+									handler.handleGoTrArgument(fset, expr, *matchInsPrefix)
+								}
+								return true
+							})
+						}
+						return false
+					}
+					return true
+				})
 			}
 
-			ast.Inspect(n2.Body, func(n ast.Node) bool {
-				// search for return stmts
-				// TODO: what about nested functions?
-				if ret, ok := n.(*ast.ReturnStmt); ok {
-					for _, res := range ret.Results {
-						ast.Inspect(res, func(n ast.Node) bool {
-							if expr, ok := n.(ast.Expr); ok {
-								handler.handleGoTrArgument(fset, expr, *matchInsPrefix)
+			// special case: services/migrations/migrate.go
+			if strings.HasSuffix(fname, "migrate.go") {
+				messenger := make(container.Set[string])
+				for _, i := range n2.Type.Params.List {
+					if ret, ok := i.Type.(*ast.SelectorExpr); ok && ret.Sel.Name == "Messenger" {
+						if ret, ok := ret.X.(*ast.Ident); ok && ret.Name == "base" {
+							for _, j := range i.Names {
+								messenger.Add(j.Name)
 							}
-							return true
-						})
+						}
 					}
-					return false
 				}
-				return true
-			})
+				if len(messenger) == 0 {
+					return true
+				}
+				ast.Inspect(n2.Body, func(n ast.Node) bool {
+					// search for "messenger" function calls
+					call, ok := n.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					if ret, ok := call.Fun.(*ast.Ident); !(ok && messenger.Contains(ret.Name)) {
+						return true
+					}
+					if len(call.Args) != 1 {
+						handler.OnWarning(fset, call.Lparen, "unexpected invocation of base.Messenger (expected exactly 1 argument)")
+						return true
+					}
+					handler.handleGoTrArgument(fset, call.Args[0], "")
+					return true
+				})
+			}
+
 			return true
 		case *ast.GenDecl:
 			if !(n2.Tok == token.CONST || n2.Tok == token.VAR) {
