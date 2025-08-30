@@ -38,16 +38,13 @@ SPDX-License-Identifier: GPL-3.0-or-later */
   background: var(--color-hover);
 }
 
-/* Item that has to crawl under/upon by it's active neighbor on the right, so
-when it is hovered, there are no ugly unpainted v/^ shapes between them */
-.switch > .item:has(+ .active.item) {
+/* Item that has to crawl under it's active neighbor, so when it is hovered,
+there are no ugly unpainted v/^ shapes between them */
+.switch > .item:has(+ .active.item) { /* Active neighbor is next item */
   margin-right: calc(-1 * var(--border-radius));
   padding-right: calc(var(--switch-padding-x) + var(--border-radius));
 }
-
-/* Item that has to crawl under/upon it's active neighbor on the lefts, so
-when it is hovered, there are no ugly unpainted v/^ shapes between them */
-.switch > .active.item + .item {
+.switch > .active.item + .item { /* Active neighbor is previous item */
   margin-left: calc(-1 * var(--border-radius));
   padding-left: calc(var(--switch-padding-x) + var(--border-radius));
 }
