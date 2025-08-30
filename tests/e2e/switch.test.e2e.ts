@@ -29,7 +29,16 @@ test('Switch CSS properties', async ({browser}) => {
     } else {
       await expect(item).not.toHaveClass(/active/);
     }
-    const cs = await item.evaluate((el) => { return getComputedStyle(el) });
+    const cs = await item.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return {
+        backgroundColor: s.backgroundColor,
+        marginLeft: s.marginLeft,
+        marginRight: s.marginRight,
+        paddingLeft: s.paddingLeft,
+        paddingRight: s.paddingRight,
+      };
+    });
     expect(cs.backgroundColor).toBe(background);
     expect(cs.marginLeft).toBe(marginLeft);
     expect(cs.marginRight).toBe(marginRight);
