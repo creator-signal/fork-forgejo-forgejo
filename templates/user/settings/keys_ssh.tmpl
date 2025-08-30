@@ -122,13 +122,4 @@
 		</div>
 		{{template "base/modal_actions_confirm" .}}
 	</div>
-	<script>
-		document.addEventListener('DOMContentLoaded', function() {
-			const cancelButton = document.getElementById('cancel-ssh-button');
-			cancelButton.addEventListener('click', function(e) {
-				document.getElementById('ssh-key-title').value = '';
-				document.getElementById('ssh-key-content').value = '';
-			});
-		});
-	</script>
 </div>
