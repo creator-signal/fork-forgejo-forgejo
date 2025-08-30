@@ -30,6 +30,7 @@ test('Switch CSS properties', async ({browser}) => {
       await expect(item).not.toHaveClass(/active/);
     }
     const cs = await item.evaluate((el) => {
+      // In Firefox getComputedStyle is undefined if returned from evaluate
       const s = getComputedStyle(el);
       return {
         backgroundColor: s.backgroundColor,
@@ -67,5 +68,6 @@ test('Switch CSS properties', async ({browser}) => {
   // E2E already runs clients with both fine and coarse pointer simulated
   // This test will verify that coarse-related CSS is working as intended
   const itemHeight = await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches) ? 41 : 34;
-  expect((await page.locator('#issue-filters .switch > .item:nth-child(1)').boundingBox()).height).toBe(itemHeight);
+  // In Firefox Math.round is needed because .height is 33.99998474121094
+  expect(Math.round((await page.locator('#issue-filters .switch > .item:nth-child(1)').boundingBox()).height)).toBe(itemHeight);
 });
