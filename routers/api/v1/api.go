@@ -99,6 +99,7 @@ import (
 	"forgejo.org/services/auth"
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
+	redirect_service "forgejo.org/services/redirect"
 
 	_ "forgejo.org/routers/api/v1/swagger" // for swagger generation
 
@@ -153,12 +154,12 @@ func repoAssignment() func(ctx *context.APIContext) {
 			owner, err = user_model.GetUserByName(ctx, userName)
 			if err != nil {
 				if user_model.IsErrUserNotExist(err) {
-					if redirectUserID, err := user_model.LookupUserRedirect(ctx, userName); err == nil {
+					if redirectUserID, err := redirect_service.LookupUserRedirect(ctx, ctx.Doer, userName); err == nil {
 						context.RedirectToUser(ctx.Base, userName, redirectUserID)
 					} else if user_model.IsErrUserRedirectNotExist(err) {
 						ctx.NotFound("GetUserByName", err)
 					} else {
-						ctx.Error(http.StatusInternalServerError, "LookupUserRedirect", err)
+						ctx.Error(http.StatusInternalServerError, "LookupRedirect", err)
 					}
 				} else {
 					ctx.Error(http.StatusInternalServerError, "GetUserByName", err)
@@ -173,7 +174,7 @@ func repoAssignment() func(ctx *context.APIContext) {
 		repo, err := repo_model.GetRepositoryByName(ctx, owner.ID, repoName)
 		if err != nil {
 			if repo_model.IsErrRepoNotExist(err) {
-				redirectRepoID, err := repo_model.LookupRedirect(ctx, owner.ID, repoName)
+				redirectRepoID, err := redirect_service.LookupRepoRedirect(ctx, ctx.Doer, owner.ID, repoName)
 				if err == nil {
 					context.RedirectToRepo(ctx.Base, redirectRepoID)
 				} else if repo_model.IsErrRedirectNotExist(err) {
@@ -414,8 +415,11 @@ func reqBasicOrRevProxyAuth() func(ctx *context.APIContext) {
 		if ctx.IsSigned && setting.Service.EnableReverseProxyAuthAPI && ctx.Data["AuthedMethod"].(string) == auth.ReverseProxyMethodName {
 			return
 		}
-		if !ctx.IsBasicAuth {
-			ctx.Error(http.StatusUnauthorized, "reqBasicAuth", "auth required")
+
+		// Require basic authorization method to be used and that basic
+		// authorization used password login to verify the user.
+		if passwordLogin, ok := ctx.Data["IsPasswordLogin"].(bool); !ok || !passwordLogin {
+			ctx.Error(http.StatusUnauthorized, "reqBasicAuth", "auth method not allowed")
 			return
 		}
 	}
@@ -638,13 +642,13 @@ func orgAssignment(args ...bool) func(ctx *context.APIContext) {
 			ctx.Org.Organization, err = organization.GetOrgByName(ctx, ctx.Params(":org"))
 			if err != nil {
 				if organization.IsErrOrgNotExist(err) {
-					redirectUserID, err := user_model.LookupUserRedirect(ctx, ctx.Params(":org"))
+					redirectUserID, err := redirect_service.LookupUserRedirect(ctx, ctx.Doer, ctx.Params(":org"))
 					if err == nil {
 						context.RedirectToUser(ctx.Base, ctx.Params(":org"), redirectUserID)
 					} else if user_model.IsErrUserRedirectNotExist(err) {
 						ctx.NotFound("GetOrgByName", err)
 					} else {
-						ctx.Error(http.StatusInternalServerError, "LookupUserRedirect", err)
+						ctx.Error(http.StatusInternalServerError, "LookupRedirect", err)
 					}
 				} else {
 					ctx.Error(http.StatusInternalServerError, "GetOrgByName", err)
@@ -1431,7 +1435,7 @@ func Routes() *web.Route {
 								Post(reqToken(), bind(api.IssueLabelsOption{}), repo.AddIssueLabels).
 								Put(reqToken(), bind(api.IssueLabelsOption{}), repo.ReplaceIssueLabels).
 								Delete(reqToken(), bind(api.DeleteLabelsOption{}), repo.ClearIssueLabels)
-							m.Delete("/{id}", reqToken(), bind(api.DeleteLabelsOption{}), repo.DeleteIssueLabel)
+							m.Delete("/{identifier}", reqToken(), bind(api.DeleteLabelsOption{}), repo.DeleteIssueLabel)
 						})
 						m.Group("/times", func() {
 							m.Combo("").
