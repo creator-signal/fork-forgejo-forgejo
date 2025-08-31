@@ -508,6 +508,7 @@ test('initial load schedules refresh when job is not done', async () => {
         locale: testLocale,
       },
     });
+    await flushPromises();
     const container = wrapper.find('.action-view-container');
     expect(container.exists()).toBe(true);
     expect(container.classes()).not.toContain('interval-pending');
@@ -527,9 +528,10 @@ test('initial load schedules refresh when job is not done', async () => {
         locale: testLocale,
       },
     });
+    await flushPromises();
     const container = wrapper.find('.action-view-container');
     expect(container.exists()).toBe(true);
-    expect(container.classes()).not.toContain('interval-pending');
+    expect(container.classes()).toContain('interval-pending');
     wrapper.unmount();
   }
 });
