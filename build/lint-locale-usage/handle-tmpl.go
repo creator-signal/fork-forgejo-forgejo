@@ -48,18 +48,29 @@ func (handler Handler) handleTemplateNode(fset *token.FileSet, node tmplParser.N
 		}
 
 		funcname := ""
-		if nodeChain, ok := nodeCommand.Args[0].(*tmplParser.ChainNode); ok {
+		switch nodeCommand.Args[0].Type() {
+		case tmplParser.NodeChain:
+			nodeChain := nodeCommand.Args[0].(*tmplParser.ChainNode)
 			if nodeIdent, ok := nodeChain.Node.(*tmplParser.IdentifierNode); ok {
 				if nodeIdent.Ident != "ctx" || len(nodeChain.Field) != 2 || nodeChain.Field[0] != "Locale" {
 					return
 				}
 				funcname = nodeChain.Field[1]
 			}
-		} else if nodeField, ok := nodeCommand.Args[0].(*tmplParser.FieldNode); ok {
+
+		case tmplParser.NodeField:
+			nodeField := nodeCommand.Args[0].(*tmplParser.FieldNode)
 			if len(nodeField.Ident) != 2 || !(nodeField.Ident[0] == "locale" || nodeField.Ident[0] == "Locale") {
 				return
 			}
 			funcname = nodeField.Ident[1]
+
+		case tmplParser.NodeVariable:
+			nodeVar := nodeCommand.Args[0].(*tmplParser.VariableNode)
+			if len(nodeVar.Ident) != 3 || !(nodeVar.Ident[0] == "$" && nodeVar.Ident[1] == "locale") {
+				return
+			}
+			funcname = nodeVar.Ident[2]
 		}
 
 		var gotUnexpectedInvoke *int

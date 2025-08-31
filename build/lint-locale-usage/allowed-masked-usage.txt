@@ -23,12 +23,6 @@ themes.names.
 # services/context/context.go
 relativetime.
 
-# templates/mail/issue/default.tmpl: $.locale.Tr
-mail.issue.in_tree_path
-
-# templates/package/metadata/arch.tmpl: $.locale.Tr
-packages.details.license
-
 # templates/repo/issue/view_content.tmpl: indirection via $closeTranslationKey
 repo.issues.close
 repo.pulls.close
