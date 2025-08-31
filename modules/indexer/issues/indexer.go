@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -281,38 +280,13 @@ const (
 	SortByDeadlineAsc  = internal.SortByDeadlineAsc
 )
 
-// ParseSortBy parses the `sortBy` string and returns the associated `SortBy`
-// value, if one exists. Otherwise return `defaultSortBy`.
-func ParseSortBy(sortBy string, defaultSortBy internal.SortBy) internal.SortBy {
-	switch strings.ToLower(sortBy) {
-	case "relevance":
-		return SortByScore
-	case "latest":
-		return SortByCreatedDesc
-	case "oldest":
-		return SortByCreatedAsc
-	case "recentupdate":
-		return SortByUpdatedDesc
-	case "leastupdate":
-		return SortByUpdatedAsc
-	case "mostcomment":
-		return SortByCommentsDesc
-	case "leastcomment":
-		return SortByCommentsAsc
-	case "nearduedate":
-		return SortByDeadlineAsc
-	case "farduedate":
-		return SortByDeadlineDesc
-	default:
-		return defaultSortBy
-	}
-}
+var ParseSortBy = internal.ParseSortBy
 
 // SearchIssues search issues by options.
 func SearchIssues(ctx context.Context, opts *SearchOptions) ([]int64, int64, error) {
 	indexer := *globalIndexer.Load()
 
-	if opts.Keyword == "" {
+	if len(opts.Tokens) == 0 {
 		// This is a conservative shortcut.
 		// If the keyword is empty, db has better (at least not worse) performance to filter issues.
 		// When the keyword is empty, it tends to listing rather than searching issues.

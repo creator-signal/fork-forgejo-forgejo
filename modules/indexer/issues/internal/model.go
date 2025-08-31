@@ -4,6 +4,8 @@
 package internal
 
 import (
+	"strings"
+
 	"forgejo.org/models/db"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/timeutil"
@@ -73,7 +75,7 @@ type SearchResult struct {
 // It can handle almost all cases, if there is an exception, we can add a new field, like NoLabelOnly.
 // Unfortunately, we still use db for the indexer and have to convert between db.NoConditionID and nil for legacy reasons.
 type SearchOptions struct {
-	Keyword string // keyword to search
+	Tokens []Token
 
 	RepoIDs        []int64                // repository IDs which the issues belong to
 	AllPublic      bool                   // if include all public repositories
@@ -149,3 +151,55 @@ const (
 	//                    but what if the issue belongs to multiple projects?
 	//                    Since it's unsupported to search issues with keyword in project page, we don't need to support it.
 )
+
+// ParseSortBy parses the `sortBy` string and returns the associated `SortBy`
+// value, if one exists. Otherwise return `defaultSortBy`.
+func ParseSortBy(sortBy string, defaultSortBy SortBy) SortBy {
+	switch strings.ToLower(sortBy) {
+	case "relevance":
+		return SortByScore
+	case "latest":
+		return SortByCreatedDesc
+	case "oldest":
+		return SortByCreatedAsc
+	case "recentupdate":
+		return SortByUpdatedDesc
+	case "leastupdate":
+		return SortByUpdatedAsc
+	case "mostcomment":
+		return SortByCommentsDesc
+	case "leastcomment":
+		return SortByCommentsAsc
+	case "nearduedate":
+		return SortByDeadlineAsc
+	case "farduedate":
+		return SortByDeadlineDesc
+	default:
+		return defaultSortBy
+	}
+}
+
+func (s SortBy) ToIssueSort() string {
+	switch s {
+	case SortByScore:
+		return "relevance"
+	case SortByCreatedDesc:
+		return "latest"
+	case SortByCreatedAsc:
+		return "oldest"
+	case SortByUpdatedDesc:
+		return "recentupdate"
+	case SortByUpdatedAsc:
+		return "leastupdate"
+	case SortByCommentsDesc:
+		return "mostcomment"
+	case SortByCommentsAsc:
+		return "leastcomment"
+	case SortByDeadlineAsc:
+		return "nearduedate"
+	case SortByDeadlineDesc:
+		return "farduedate"
+	}
+
+	return "latest"
+}

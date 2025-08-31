@@ -3,7 +3,10 @@
 
 package util
 
-import "unsafe"
+import (
+	"strings"
+	"unsafe"
+)
 
 func isSnakeCaseUpper(c byte) bool {
 	return 'A' <= c && c <= 'Z'
@@ -116,4 +119,35 @@ func ASCIILower(b byte) byte {
 		return b + ('a' - 'A')
 	}
 	return b
+}
+
+func RemoveAllStr(s string, all ...string) string {
+	pairs := make([]string, len(all)*2)
+	for _, pair := range all {
+		pairs = append(pairs, pair)
+		pairs = append(pairs, "")
+	}
+	sr := strings.NewReplacer(pairs...)
+	return sr.Replace(s)
+}
+
+func RemoveAllPrefix(s string, all ...string) string {
+	sb := strings.Builder{}
+	for field := range strings.FieldsSeq(s) {
+		if hasAnyPrefix(s, all...) {
+			continue
+		}
+		sb.WriteString(field)
+		sb.WriteRune(' ')
+	}
+	return sb.String()
+}
+
+func hasAnyPrefix(s string, all ...string) bool {
+	for _, prefix := range all {
+		if strings.HasPrefix(s, prefix) {
+			return true
+		}
+	}
+	return false
 }

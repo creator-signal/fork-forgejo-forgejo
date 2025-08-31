@@ -4,9 +4,16 @@
 package internal
 
 import (
+	"cmp"
+	"context"
 	"io"
 	"strconv"
 	"strings"
+	"time"
+
+	"forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 )
 
 type BoolOpt int
@@ -21,6 +28,11 @@ type Token struct {
 	Term  string
 	Kind  BoolOpt
 	Fuzzy bool
+}
+
+// Helper function to check if the term starts with a prefix.
+func (tk *Token) IsOf(prefix string) bool {
+	return strings.HasPrefix(tk.Term, prefix) && len(tk.Term) > len(prefix)
 }
 
 func (tk *Token) ParseIssueReference() (int64, error) {
@@ -102,23 +114,129 @@ nextEnd:
 	return tk, err
 }
 
-// Tokenize the keyword
-func (o *SearchOptions) Tokens() (tokens []Token, err error) {
-	if o.Keyword == "" {
-		return nil, nil
+type UserFilter int
+
+const (
+	UserFilterAuthor UserFilter = iota
+	UserFilterAssign
+	UserFilterMention
+	UserFilterReview
+)
+
+// Parses the keyword and sets the
+func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err error) {
+	if keyword == "" {
+		return nil
 	}
 
-	in := strings.NewReader(o.Keyword)
+	in := strings.NewReader(keyword)
 	it := Tokenizer{in: in}
 
+	var (
+		tokens     []Token
+		userNames  []string
+		userFilter []UserFilter
+	)
+
 	for token, err := it.next(); err == nil; token, err = it.next() {
-		if token.Term != "" {
+		if token.Term == "" {
+			continue
+		}
+
+		// For an exact search (wrapped in quotes)
+		// push the token to the list.
+		if !token.Fuzzy {
+			tokens = append(tokens, token)
+			continue
+		}
+
+		// Otherwise, try to match the token with a preset filter.
+		switch {
+		// is:open  => open & -is:open => closed
+		case token.Term == "is:open":
+			o.IsClosed = optional.Some(token.Kind == BoolOptNot)
+
+		// Similarly, is:closed & -is:closed
+		case token.Term == "is:closed":
+			o.IsClosed = optional.Some(token.Kind != BoolOptNot)
+
+		// The rest of the presets MUST NOT be a negation.
+		case token.Kind == BoolOptNot:
+			tokens = append(tokens, token)
+
+		// is:all: Do not consider -is:all.
+		case token.Term == "is:all":
+			o.IsClosed = optional.None[bool]()
+
+		// sort:<by>, for example, sort:latest
+		case token.IsOf("sort:"):
+			o.SortBy = ParseSortBy(token.Term[5:], cmp.Or(o.SortBy, SortByScore))
+
+		// after:<date> and before:<date>.
+		// for example, after:2025-08-29
+		case token.IsOf("after:"):
+			o.UpdatedAfterUnix = toUnix(token.Term[6:])
+		case token.IsOf("before:"):
+			o.UpdatedBeforeUnix = toUnix(token.Term[7:])
+
+		// for user filter's
+		// append the names and roles
+		case token.IsOf("author:"):
+			userNames = append(userNames, token.Term[7:])
+			userFilter = append(userFilter, UserFilterAuthor)
+		case token.IsOf("assign:"):
+			userNames = append(userNames, token.Term[7:])
+			userFilter = append(userFilter, UserFilterAssign)
+		case token.IsOf("review:"):
+			userNames = append(userNames, token.Term[7:])
+			userFilter = append(userFilter, UserFilterReview)
+		case token.IsOf("mention:"):
+			userNames = append(userNames, token.Term[8:])
+			userFilter = append(userFilter, UserFilterMention)
+
+		default:
 			tokens = append(tokens, token)
 		}
 	}
 	if err != nil && err != io.EOF {
-		return nil, err
+		return err
 	}
 
-	return tokens, nil
+	o.Tokens = tokens
+
+	ids, err := user.GetUserIDsByNames(ctx, userNames, true)
+	if err != nil {
+		return err
+	}
+
+	for i, id := range ids {
+		// Skip all invalid IDs.
+		// Hopefully this won't be too astonishing for the user.
+		if id <= 0 {
+			continue
+		}
+		val := optional.Some(id)
+		switch userFilter[i] {
+		case UserFilterAuthor:
+			o.PosterID = val
+		case UserFilterAssign:
+			o.AssigneeID = val
+		case UserFilterReview:
+			o.ReviewedID = val
+		case UserFilterMention:
+			o.MentionID = val
+		}
+	}
+
+	return nil
+}
+
+func toUnix(value string) optional.Option[int64] {
+	time, err := time.Parse(time.DateOnly, value)
+	if err != nil {
+		log.Warn("Failed to parse date '%v'", err)
+		return optional.None[int64]()
+	}
+
+	return optional.Some(time.Unix())
 }
