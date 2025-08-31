@@ -86,13 +86,23 @@ func View(ctx *context_module.Context) {
 	if ctx.Written() {
 		return
 	}
+	artifactsViewResponse := getArtifactsViewResponse(ctx, runIndex)
+	if ctx.Written() {
+		return
+	}
 
-	var buf1 strings.Builder
+	var buf1, buf2 strings.Builder
 	if err := json.NewEncoder(&buf1).Encode(viewResponse); err != nil {
 		ctx.ServerError("EncodingError", err)
 		return
 	}
 	ctx.Data["InitialData"] = buf1.String()
+
+	if err := json.NewEncoder(&buf2).Encode(artifactsViewResponse); err != nil {
+		ctx.ServerError("EncodingError", err)
+		return
+	}
+	ctx.Data["InitialArtifactsData"] = buf2.String()
 
 	ctx.HTML(http.StatusOK, tplViewActions)
 }
@@ -707,19 +717,27 @@ type ArtifactsViewItem struct {
 
 func ArtifactsView(ctx *context_module.Context) {
 	runIndex := ctx.ParamsInt64("run")
+	artifactsResponse := getArtifactsViewResponse(ctx, runIndex)
+	if ctx.Written() {
+		return
+	}
+	ctx.JSON(http.StatusOK, artifactsResponse)
+}
+
+func getArtifactsViewResponse(ctx *context_module.Context, runIndex int64) *ArtifactsViewResponse {
 	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, err.Error())
-			return
+			return nil
 		}
 		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+		return nil
 	}
 	artifacts, err := actions_model.ListUploadedArtifactsMeta(ctx, run.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+		return nil
 	}
 	artifactsResponse := ArtifactsViewResponse{
 		Artifacts: make([]*ArtifactsViewItem, 0, len(artifacts)),
@@ -735,7 +753,7 @@ func ArtifactsView(ctx *context_module.Context) {
 			Status: status,
 		})
 	}
-	ctx.JSON(http.StatusOK, artifactsResponse)
+	return &artifactsResponse
 }
 
 func ArtifactsDeleteView(ctx *context_module.Context) {
