@@ -2,7 +2,7 @@ import {expect, type Page, type TestInfo} from '@playwright/test';
 import {AxeBuilder} from '@axe-core/playwright';
 
 export async function accessibilityCheck({page, workerInfo}: {page: Page, workerInfo: TestInfo}, includes: string[], excludes: string[], disabledRules: string[]) {
-  if (['Mobile Safari', 'webkit'].includes(workerInfo.project.name)) {
+  if (workerInfo !== undefined && ['Mobile Safari', 'webkit'].includes(workerInfo.project.name)) {
     // In webkit this check isn't reliable so we skip it.
     // See https://codeberg.org/forgejo/forgejo/pulls/9051#issuecomment-6843526
     return;
