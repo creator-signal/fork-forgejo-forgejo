@@ -172,12 +172,19 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		case token.IsOf("sort:"):
 			o.SortBy = ParseSortBy(token.Term[5:], cmp.Or(o.SortBy, SortByScore))
 
-		// after:<date> and before:<date>.
-		// for example, after:2025-08-29
-		case token.IsOf("after:"):
-			o.UpdatedAfterUnix = toUnix(token.Term[6:])
-		case token.IsOf("before:"):
-			o.UpdatedBeforeUnix = toUnix(token.Term[7:])
+		// modified:[ < | > ]<date>.
+		// for example, modified:>2025-08-29
+		case token.IsOf("modified:"):
+			switch token.Term[9] {
+			case '>':
+				o.UpdatedAfterUnix = toUnix(token.Term[10:])
+			case '<':
+				o.UpdatedBeforeUnix = toUnix(token.Term[10:])
+			default:
+				t := toUnix(token.Term[9:])
+				o.UpdatedAfterUnix = t
+				o.UpdatedAfterUnix = t
+			}
 
 		// for user filter's
 		// append the names and roles

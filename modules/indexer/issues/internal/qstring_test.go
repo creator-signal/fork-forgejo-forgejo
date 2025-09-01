@@ -286,19 +286,26 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 	}{
 		// Generic Cases
 		{
-			Keyword: "after:2025-08-28",
+			Keyword: "modified:>2025-08-28",
 			Opts: &SearchOptions{
 				UpdatedAfterUnix: optional.Some(int64(1756339200)),
 			},
 		},
 		{
-			Keyword: "before:2025-08-28",
+			Keyword: "modified:<2025-08-28",
 			Opts: &SearchOptions{
 				UpdatedBeforeUnix: optional.Some(int64(1756339200)),
 			},
 		},
 		{
-			Keyword: "after:2025-08-28 before:2025-08-28",
+			Keyword: "modified:>2025-08-28 modified:<2025-08-28",
+			Opts: &SearchOptions{
+				UpdatedAfterUnix:  optional.Some(int64(1756339200)),
+				UpdatedBeforeUnix: optional.Some(int64(1756339200)),
+			},
+		},
+		{
+			Keyword: "modified:2025-08-28",
 			Opts: &SearchOptions{
 				UpdatedAfterUnix:  optional.Some(int64(1756339200)),
 				UpdatedBeforeUnix: optional.Some(int64(1756339200)),
