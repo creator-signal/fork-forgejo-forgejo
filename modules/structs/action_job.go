@@ -7,18 +7,18 @@ import (
 	"time"
 )
 
-// ActionJobStep represents a step in an action job
+// ActionRunJobStep represents a step in an action run job
 // swagger:model
-type ActionJobStep struct {
+type ActionRunJobStep struct {
 	Name    string    `json:"name"`
 	Status  string    `json:"status"`
 	Started time.Time `json:"started"`
 	Stopped time.Time `json:"stopped"`
 }
 
-// ActionJobResponse represents a detailed action job with steps
+// ActionRunJobResponse represents a detailed action run job with steps
 // swagger:model
-type ActionJobResponse struct {
+type ActionRunJobResponse struct {
 	ID      int64     `json:"id"`
 	RunID   int64     `json:"run_id"`
 	Name    string    `json:"name"`
@@ -29,7 +29,7 @@ type ActionJobResponse struct {
 	Needs   []string  `json:"needs"`
 	TaskID  int64     `json:"task_id"`
 	// Steps are only included if the job has started
-	Steps []*ActionJobStep `json:"steps,omitempty"`
+	Steps []*ActionRunJobStep `json:"steps,omitempty"`
 	// Run information
 	Run *ActionRunSummary `json:"run"`
 	// Total number of jobs in the run

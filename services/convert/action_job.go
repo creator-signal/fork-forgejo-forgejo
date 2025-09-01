@@ -10,9 +10,9 @@ import (
 	"forgejo.org/services/context"
 )
 
-// ToActionJobResponse converts an ActionRunJob to an API response with steps
-func ToActionJobResponse(ctx *context.APIContext, job *actions_model.ActionRunJob, jobs []*actions_model.ActionRunJob) (*api.ActionJobResponse, error) {
-	resp := &api.ActionJobResponse{
+// ToActionRunJobResponse converts an ActionRunJob to an API response with steps
+func ToActionRunJobResponse(ctx *context.APIContext, job *actions_model.ActionRunJob, jobs []*actions_model.ActionRunJob) (*api.ActionRunJobResponse, error) {
+	resp := &api.ActionRunJobResponse{
 		ID:        job.ID,
 		RunID:     job.RunID,
 		Name:      job.Name,
@@ -38,9 +38,9 @@ func ToActionJobResponse(ctx *context.APIContext, job *actions_model.ActionRunJo
 			task.Job = job
 			if err := task.LoadAttributes(ctx); err == nil {
 				steps := actions.FullSteps(task)
-				resp.Steps = make([]*api.ActionJobStep, 0, len(steps))
+				resp.Steps = make([]*api.ActionRunJobStep, 0, len(steps))
 				for _, step := range steps {
-					resp.Steps = append(resp.Steps, &api.ActionJobStep{
+					resp.Steps = append(resp.Steps, &api.ActionRunJobStep{
 						Name:    step.Name,
 						Status:  step.Status.String(),
 						Started: step.Started.AsTime(),

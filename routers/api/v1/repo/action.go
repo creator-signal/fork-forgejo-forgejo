@@ -857,9 +857,9 @@ func GetActionRun(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, convert.ToActionRun(ctx, run, ctx.Doer))
 }
 
-// GetActionJob get a specific job of a run
-func GetActionJob(ctx *context.APIContext) {
-	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run}/jobs/{job} repository repoGetActionJob
+// GetActionRunJob get a specific job of a run
+func GetActionRunJob(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run}/jobs/{job} repository repoGetActionRunJob
 	// ---
 	// summary: Get a specific job of a workflow run
 	// produces:
@@ -887,7 +887,7 @@ func GetActionJob(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/ActionJob"
+	//     "$ref": "#/responses/ActionRunJob"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 	//   "404":
@@ -902,18 +902,18 @@ func GetActionJob(ctx *context.APIContext) {
 	}
 
 	// Convert job to API response
-	resp, err := convert.ToActionJobResponse(ctx, job, jobs)
+	resp, err := convert.ToActionRunJobResponse(ctx, job, jobs)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "ToActionJobResponse", err)
+		ctx.Error(http.StatusInternalServerError, "ToActionRunJobResponse", err)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, resp)
 }
 
-// GetActionJobLogs get logs of a specific job
-func GetActionJobLogs(ctx *context.APIContext) {
-	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run}/jobs/{job}/logs repository repoGetActionJobLogs
+// GetActionRunJobLogs get logs of a specific job
+func GetActionRunJobLogs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run}/jobs/{job}/logs repository repoGetActionRunJobLogs
 	// ---
 	// summary: Get logs for a workflow job
 	// produces:
@@ -1084,6 +1084,9 @@ func servePartialLogs(ctx *context.APIContext, task *actions_model.ActionTask, t
 		lines, timestamps, err = readHeadLines(ctx, task, -1, offset)
 	} else if format == "json" {
 		// JSON format with no filters: read all lines
+		lines, timestamps, err = readHeadLines(ctx, task, -1, 0)
+	} else {
+		// Default: read all lines
 		lines, timestamps, err = readHeadLines(ctx, task, -1, 0)
 	}
 

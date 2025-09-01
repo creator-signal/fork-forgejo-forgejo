@@ -103,7 +103,7 @@ jobs:
 			repo.OwnerName, repo.Name, run.Index)).
 			AddTokenAuth(token)
 		resp := MakeRequest(t, req, http.StatusOK)
-		var jobResp api.ActionJobResponse
+		var jobResp api.ActionRunJobResponse
 		DecodeJSON(t, resp, &jobResp)
 		assert.Equal(t, job.ID, jobResp.ID)
 

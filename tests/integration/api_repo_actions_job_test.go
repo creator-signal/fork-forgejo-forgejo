@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAPIGetActionJob(t *testing.T) {
+func TestAPIGetActionRunJob(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
@@ -103,7 +103,7 @@ jobs:
 	})
 }
 
-func TestAPIGetActionJobLogs(t *testing.T) {
+func TestAPIGetActionRunJobLogs(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
@@ -181,7 +181,7 @@ jobs:
 	})
 }
 
-func TestAPIGetActionJobAuth(t *testing.T) {
+func TestAPIGetActionRunJobAuth(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
