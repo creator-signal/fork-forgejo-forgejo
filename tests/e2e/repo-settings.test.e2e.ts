@@ -59,9 +59,8 @@ test.describe('repo branch protection settings', () => {
     await page.waitForLoadState('domcontentloaded');
     await save_visual(page);
 
-    // wait for the edit button to appear, then click it
+    // find the edit button and click it
     const editButton = page.locator('a[href="/user2/repo1/settings/branches/edit?rule_name=testrule"]');
-    await editButton.waitFor();
     await editButton.click();
 
     await page.waitForLoadState();
