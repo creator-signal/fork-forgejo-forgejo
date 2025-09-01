@@ -35,7 +35,7 @@ test('User: Profile settings', async ({browser}, workerInfo) => {
   await page.getByLabel('Hide email address Your email').uncheck();
   await page.getByLabel('Hide activity from profile').check();
 
-  await validate_form({page}, 'fieldset');
+  await validate_form({page, workerInfo}, 'fieldset');
   await save_visual(page);
   await page.getByRole('button', {name: 'Update profile'}).click();
   await expect(page.getByText('Your profile has been updated.')).toBeVisible();
@@ -58,7 +58,7 @@ test('User: Profile settings', async ({browser}, workerInfo) => {
   await page.getByLabel('Hide email address Your email').check();
   await page.getByLabel('Hide activity from profile').uncheck();
   await expect(page.getByText('Your profile has been updated.')).toBeHidden();
-  await validate_form({page}, 'fieldset');
+  await validate_form({page, workerInfo}, 'fieldset');
   await save_visual(page);
   await page.getByRole('button', {name: 'Update profile'}).click();
   await expect(page.getByText('Your profile has been updated.')).toBeVisible();

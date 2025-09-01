@@ -21,7 +21,7 @@ test('repo webhook settings', async ({page}, workerInfo) => {
   await expect(page.locator('.hide-unless-checked')).toBeVisible();
 
   // check accessibility including the custom events (now visible) part
-  await validate_form({page}, 'fieldset');
+  await validate_form({page, workerInfo}, 'fieldset');
   await save_visual(page);
 
   await page.locator('input[name="events"][value="push_only"]').click();
@@ -32,12 +32,12 @@ test('repo webhook settings', async ({page}, workerInfo) => {
 });
 
 test.describe('repo branch protection settings', () => {
-  test('form', async ({page}, {project}) => {
-    test.skip(project.name === 'Mobile Safari', 'Cannot get it to work - as usual');
+  test('form', async ({page}, workerInfo) => {
+    test.skip(workerInfo.project.name === 'Mobile Safari', 'Cannot get it to work - as usual');
     const response = await page.goto('/user2/repo1/settings/branches/edit');
     expect(response?.status()).toBe(200);
 
-    await validate_form({page}, 'fieldset');
+    await validate_form({page, workerInfo}, 'fieldset');
 
     // verify header is new
     await expect(page.locator('h4')).toContainText('new');

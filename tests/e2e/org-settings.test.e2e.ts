@@ -24,5 +24,5 @@ test('org team settings', async ({page}, workerInfo) => {
   await save_visual(page);
 
   // we are validating the form here to include the part that could be hidden
-  await validate_form({page});
+  await validate_form({page, workerInfo});
 });

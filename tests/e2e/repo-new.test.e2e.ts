@@ -9,14 +9,14 @@ import {validate_form} from './shared/forms.ts';
 
 test.use({user: 'user2'});
 
-test('New repo: invalid', async ({page}) => {
+test('New repo: invalid', async ({page}, workerInfo) => {
   const response = await page.goto('/repo/create');
   expect(response?.status()).toBe(200);
   // check that relevant form content is hidden or available
   await expect(page.getByRole('group', {name: 'Use a template You can select'}).getByRole('combobox')).toBeVisible();
   await expect(page.getByText('.gitignore Select .gitignore')).toBeHidden();
   await expect(page.getByText('Labels Select a label set')).toBeHidden();
-  await validate_form({page}, 'fieldset');
+  await validate_form({page, workerInfo}, 'fieldset');
   await save_visual(page);
 
   await page.getByLabel('Repository name').fill('*invalid');

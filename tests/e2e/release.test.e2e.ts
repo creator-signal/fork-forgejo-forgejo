@@ -24,7 +24,7 @@ test.describe('repo branch protection settings', () => {
 
     // Fill out form and create new release
     await expect(page).toHaveURL('/user2/repo2/releases/new');
-    await validate_form({page}, 'fieldset');
+    await validate_form({page, workerInfo}, 'fieldset');
     const textarea = page.locator('input[name=tag_name]');
     await textarea.pressSequentially('2.0');
     await expect(page.locator('input[name=title]')).toHaveValue('2.0');
@@ -57,7 +57,7 @@ test.describe('repo branch protection settings', () => {
 
     // Validate edit page and edit the release
     await expect(page).toHaveURL('/user2/repo2/releases/edit/2.0');
-    await validate_form({page}, 'fieldset');
+    await validate_form({page, workerInfo}, 'fieldset');
     await expect(page.locator('.attachment_edit:visible')).toHaveCount(2);
     await expect(page.locator('.attachment_edit:visible').nth(0)).toHaveValue('Test');
     await expect(page.locator('.attachment_edit:visible').nth(1)).toHaveValue('https://forgejo.org/');
