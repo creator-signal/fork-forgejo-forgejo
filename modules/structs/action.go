@@ -101,23 +101,23 @@ type ActionRunJobResponse struct {
 	RunID   int64     `json:"run_id"`
 	Name    string    `json:"name"`
 	Status  string    `json:"status"`
-	Started time.Time `json:"started,omitempty"`
-	Stopped time.Time `json:"stopped,omitempty"`
+	Started time.Time `json:"started,omitzero"`
+	Stopped time.Time `json:"stopped,omitzero"`
+	// job id in workflow, not job's database ID
 	JobID   string    `json:"job_id"`
 	Needs   []string  `json:"needs"`
 	TaskID  int64     `json:"task_id"`
 	// Steps are only included if the job has started
 	Steps []*ActionRunJobStep `json:"steps,omitempty"`
 	// Run information
-	Run *ActionRunSummary `json:"run"`
-	// Total number of jobs in the run
-	TotalJobs int `json:"total_jobs"`
+	Run *ActionRunSummary `json:"run,omitempty"`
 }
 
 // ActionRunSummary represents a summary of an action run
 // swagger:model
 type ActionRunSummary struct {
-	ID     int64  `json:"id"`
-	Title  string `json:"title"`
-	Status string `json:"status"`
+	ID        int64  `json:"id"`
+	Title     string `json:"title"`
+	Status    string `json:"status"`
+	JobsCount int    `json:"jobs_count"`
 }

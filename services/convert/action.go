@@ -53,14 +53,13 @@ func ToActionRun(ctx context.Context, run *actions_model.ActionRun, doer *user_m
 // ToActionRunJobResponse converts an ActionRunJob to an API response with steps
 func ToActionRunJobResponse(ctx *service_context.APIContext, job *actions_model.ActionRunJob, jobs []*actions_model.ActionRunJob) (*api.ActionRunJobResponse, error) {
 	resp := &api.ActionRunJobResponse{
-		ID:        job.ID,
-		RunID:     job.RunID,
-		Name:      job.Name,
-		Status:    job.Status.String(),
-		JobID:     job.JobID,
-		Needs:     job.Needs,
-		TaskID:    job.TaskID,
-		TotalJobs: len(jobs),
+		ID:     job.ID,
+		RunID:  job.RunID,
+		Name:   job.Name,
+		Status: job.Status.String(),
+		JobID:  job.JobID,
+		Needs:  job.Needs,
+		TaskID: job.TaskID,
 	}
 
 	// Convert timestamps
@@ -94,9 +93,10 @@ func ToActionRunJobResponse(ctx *service_context.APIContext, job *actions_model.
 	// Add run information
 	if job.Run != nil {
 		resp.Run = &api.ActionRunSummary{
-			ID:     job.Run.ID,
-			Title:  job.Run.Title,
-			Status: job.Run.Status.String(),
+			ID:        job.Run.ID,
+			Title:     job.Run.Title,
+			Status:    job.Run.Status.String(),
+			JobsCount: len(jobs),
 		}
 	}
 
