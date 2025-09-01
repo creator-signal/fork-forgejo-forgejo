@@ -1,7 +1,12 @@
 import {expect, type Page} from '@playwright/test';
 import {AxeBuilder} from '@axe-core/playwright';
 
-export async function accessibilityCheck({page}: {page: Page}, includes: string[], excludes: string[], disabledRules: string[]) {
+export async function accessibilityCheck({page, browserName}: {page: Page, browserName: string}, includes: string[], excludes: string[], disabledRules: string[]) {
+  if (browserName == 'webkit') {
+    // In webkit this check isn't reliable so we skip it.
+    // See https://codeberg.org/forgejo/forgejo/pulls/9051#issuecomment-6843526
+    return;
+  }
   // contrast of inline links is still a global issue in Forgejo
   disabledRules.push('link-in-text-block');
 

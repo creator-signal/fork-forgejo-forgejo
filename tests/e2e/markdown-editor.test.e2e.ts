@@ -366,7 +366,7 @@ test('Markdown insert table', async ({page}) => {
   await save_visual(page);
 });
 
-test('Markdown insert link', async ({page}) => {
+test('Markdown insert link', async ({page, browserName}) => {
   const response = await page.goto('/user2/repo1/issues/new');
   expect(response?.status()).toBe(200);
 
@@ -375,7 +375,7 @@ test('Markdown insert link', async ({page}) => {
 
   const newLinkModal = page.locator('div[data-markdown-link-modal-id="0"]');
   await expect(newLinkModal).toBeVisible();
-  await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], []);
+  await accessibilityCheck({page, browserName}, ['[data-modal-name="new-markdown-link"]'], [], []);
   await save_visual(page);
 
   const url = 'https://example.com';

@@ -88,20 +88,20 @@ test('Readable diff', async ({page}, workerInfo) => {
 test.describe('As authenticated user', () => {
   test.use({user: 'user2'});
 
-  test('Username highlighted in commits', async ({page}) => {
+  test('Username highlighted in commits', async ({page, browserName}) => {
     await page.goto('/user2/mentions-highlighted/commits/branch/main');
     // check first commit
     await page.getByRole('link', {name: 'A commit message which'}).click();
     await expect(page.getByRole('link', {name: '@user2'})).toHaveCSS('background-color', /(.*)/);
     await expect(page.getByRole('link', {name: '@user1'})).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await accessibilityCheck({page}, ['.commit-header'], [], []);
+    await accessibilityCheck({page, browserName}, ['.commit-header'], [], []);
     await save_visual(page);
     // check second commit
     await page.goto('/user2/mentions-highlighted/commits/branch/main');
     await page.locator('tbody').getByRole('link', {name: 'Another commit which mentions'}).click();
     await expect(page.getByRole('link', {name: '@user2'})).toHaveCSS('background-color', /(.*)/);
     await expect(page.getByRole('link', {name: '@user1'})).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await accessibilityCheck({page}, ['.commit-header'], [], []);
+    await accessibilityCheck({page, browserName}, ['.commit-header'], [], []);
     await save_visual(page);
   });
 });
