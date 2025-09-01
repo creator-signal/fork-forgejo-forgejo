@@ -4,8 +4,6 @@
 package internal
 
 import (
-	"strings"
-
 	"forgejo.org/models/db"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/timeutil"
@@ -151,33 +149,6 @@ const (
 	//                    but what if the issue belongs to multiple projects?
 	//                    Since it's unsupported to search issues with keyword in project page, we don't need to support it.
 )
-
-// ParseSortBy parses the `sortBy` string and returns the associated `SortBy`
-// value, if one exists. Otherwise return `defaultSortBy`.
-func ParseSortBy(sortBy string, defaultSortBy SortBy) SortBy {
-	switch strings.ToLower(sortBy) {
-	case "relevance":
-		return SortByScore
-	case "latest":
-		return SortByCreatedDesc
-	case "oldest":
-		return SortByCreatedAsc
-	case "recentupdate":
-		return SortByUpdatedDesc
-	case "leastupdate":
-		return SortByUpdatedAsc
-	case "mostcomment":
-		return SortByCommentsDesc
-	case "leastcomment":
-		return SortByCommentsAsc
-	case "nearduedate":
-		return SortByDeadlineAsc
-	case "farduedate":
-		return SortByDeadlineDesc
-	default:
-		return defaultSortBy
-	}
-}
 
 func (s SortBy) ToIssueSort() string {
 	switch s {

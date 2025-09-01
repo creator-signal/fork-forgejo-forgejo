@@ -4,7 +4,6 @@
 package internal
 
 import (
-	"cmp"
 	"context"
 	"io"
 	"strconv"
@@ -160,6 +159,11 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		case token.Term == "is:closed":
 			o.IsClosed = optional.Some(token.Kind != BoolOptNot)
 
+		// [-]sort:<by>,
+		// for example, sort:created / -sort:comments
+		case token.IsOf("sort:"):
+			o.SortBy = parseSortBy(token.Term[5:], token.Kind != BoolOptNot)
+
 		// The rest of the presets MUST NOT be a negation.
 		case token.Kind == BoolOptNot:
 			tokens = append(tokens, token)
@@ -167,10 +171,6 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		// is:all: Do not consider -is:all.
 		case token.Term == "is:all":
 			o.IsClosed = optional.None[bool]()
-
-		// sort:<by>, for example, sort:latest
-		case token.IsOf("sort:"):
-			o.SortBy = ParseSortBy(token.Term[5:], cmp.Or(o.SortBy, SortByScore))
 
 		// modified:[ < | > ]<date>.
 		// for example, modified:>2025-08-29
@@ -246,4 +246,27 @@ func toUnix(value string) optional.Option[int64] {
 	}
 
 	return optional.Some(time.Unix())
+}
+
+func parseSortBy(sortBy string, asc bool) SortBy {
+	switch sortBy {
+	case "created":
+		return iif(asc, SortByCreatedAsc, SortByCreatedDesc)
+	case "comments":
+		return iif(asc, SortByCommentsAsc, SortByCommentsDesc)
+	case "updated":
+		return iif(asc, SortByUpdatedAsc, SortByUpdatedDesc)
+	case "deadline":
+		return iif(asc, SortByDeadlineAsc, SortByDeadlineDesc)
+	default:
+		return SortByScore
+	}
+}
+
+func iif[T any](t bool, a T, b T) T {
+	if t {
+		return a
+	} else {
+		return b
+	}
 }
