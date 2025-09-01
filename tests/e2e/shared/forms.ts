@@ -1,7 +1,7 @@
-import {expect, type Page} from '@playwright/test';
+import {expect, type Page, type TestInfo} from '@playwright/test';
 import {accessibilityCheck} from './accessibility.ts';
 
-export async function validate_form({page, browserName}: {page: Page, browserName: string}, scope: 'form' | 'fieldset' = 'form') {
+export async function validate_form({page, workerInfo}: {page: Page, workerInfo: TestInfo}, scope: 'form' | 'fieldset' = 'form') {
   const excludedElements = [
     // exclude automated tooltips from accessibility scan, remove when fixed
     'span[data-tooltip-content',
@@ -14,7 +14,7 @@ export async function validate_form({page, browserName}: {page: Page, browserNam
     // and it usually makes no sense semantically
     '.ui.top.attached.header',
   ];
-  await accessibilityCheck({page, browserName}, [scope], excludedElements, []);
+  await accessibilityCheck({page, workerInfo}, [scope], excludedElements, []);
 
   // assert CSS properties that needed to be overridden for forms (ensure they remain active)
   const boxes = page.getByRole('checkbox').or(page.getByRole('radio'));

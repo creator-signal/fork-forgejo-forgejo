@@ -7,9 +7,9 @@ import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 import {accessibilityCheck} from './shared/accessibility.ts';
 
-test('Pagination a11y', async ({page, browserName}) => {
+test('Pagination a11y', async ({page}, workerInfo) => {
   await page.goto('/explore/repos');
 
   await expect(page.locator('.pagination')).toBeVisible();
-  await accessibilityCheck({page, browserName}, ['.pagination'], [], []);
+  await accessibilityCheck({page, workerInfo}, ['.pagination'], [], []);
 });
