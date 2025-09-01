@@ -5196,7 +5196,7 @@
         }
       }
     },
-    "/repos/{owner}/{repo}/actions/runs/{run}/jobs/{job}": {
+    "/repos/{owner}/{repo}/actions/runs/{run_index}/jobs/{job_index}": {
       "get": {
         "produces": [
           "application/json"
@@ -5204,7 +5204,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "Get a specific job of a workflow run",
+        "summary": "Get a specific job of an action run",
         "operationId": "repoGetActionRunJob",
         "parameters": [
           {
@@ -5223,15 +5223,15 @@
           },
           {
             "type": "integer",
-            "description": "index of the workflow run",
-            "name": "run",
+            "description": "index of the action run",
+            "name": "run_index",
             "in": "path",
             "required": true
           },
           {
             "type": "integer",
             "description": "index of the job within the run",
-            "name": "job",
+            "name": "job_index",
             "in": "path",
             "required": true
           }
@@ -5249,7 +5249,7 @@
         }
       }
     },
-    "/repos/{owner}/{repo}/actions/runs/{run}/jobs/{job}/logs": {
+    "/repos/{owner}/{repo}/actions/runs/{run_index}/jobs/{job_index}/logs": {
       "get": {
         "produces": [
           "text/plain",
@@ -5258,7 +5258,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "Get logs for a workflow job",
+        "summary": "Get logs for an action run job",
         "operationId": "repoGetActionRunJobLogs",
         "parameters": [
           {
@@ -5277,15 +5277,15 @@
           },
           {
             "type": "integer",
-            "description": "index of the workflow run",
-            "name": "run",
+            "description": "index of the action run",
+            "name": "run_index",
             "in": "path",
             "required": true
           },
           {
             "type": "integer",
             "description": "index of the job within the run",
-            "name": "job",
+            "name": "job_index",
             "in": "path",
             "required": true
           },
@@ -21736,6 +21736,7 @@
           "x-go-name": "ID"
         },
         "job_id": {
+          "description": "job id in workflow, not job's database ID",
           "type": "string",
           "x-go-name": "JobID"
         },
@@ -21784,12 +21785,6 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "TaskID"
-        },
-        "total_jobs": {
-          "description": "Total number of jobs in the run",
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "TotalJobs"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -21827,6 +21822,11 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "ID"
+        },
+        "jobs_count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "JobsCount"
         },
         "status": {
           "type": "string",

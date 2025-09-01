@@ -859,9 +859,9 @@ func GetActionRun(ctx *context.APIContext) {
 
 // GetActionRunJob get a specific job of a run
 func GetActionRunJob(ctx *context.APIContext) {
-	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run}/jobs/{job} repository repoGetActionRunJob
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_index}/jobs/{job_index} repository repoGetActionRunJob
 	// ---
-	// summary: Get a specific job of a workflow run
+	// summary: Get a specific job of an action run
 	// produces:
 	// - application/json
 	// parameters:
@@ -875,12 +875,12 @@ func GetActionRunJob(ctx *context.APIContext) {
 	//   description: name of the repo
 	//   type: string
 	//   required: true
-	// - name: run
+	// - name: run_index
 	//   in: path
-	//   description: index of the workflow run
+	//   description: index of the action run
 	//   type: integer
 	//   required: true
-	// - name: job
+	// - name: job_index
 	//   in: path
 	//   description: index of the job within the run
 	//   type: integer
@@ -893,8 +893,8 @@ func GetActionRunJob(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	runIndex := ctx.ParamsInt64(":run")
-	jobIndex := ctx.ParamsInt64(":job")
+	runIndex := ctx.ParamsInt64(":run_index")
+	jobIndex := ctx.ParamsInt64(":job_index")
 
 	job, jobs := getRunJobsForAPI(ctx, runIndex, jobIndex)
 	if ctx.Written() {
@@ -913,9 +913,9 @@ func GetActionRunJob(ctx *context.APIContext) {
 
 // GetActionRunJobLogs get logs of a specific job
 func GetActionRunJobLogs(ctx *context.APIContext) {
-	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run}/jobs/{job}/logs repository repoGetActionRunJobLogs
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_index}/jobs/{job_index}/logs repository repoGetActionRunJobLogs
 	// ---
-	// summary: Get logs for a workflow job
+	// summary: Get logs for an action run job
 	// produces:
 	// - text/plain
 	// - application/json
@@ -930,12 +930,12 @@ func GetActionRunJobLogs(ctx *context.APIContext) {
 	//   description: name of the repo
 	//   type: string
 	//   required: true
-	// - name: run
+	// - name: run_index
 	//   in: path
-	//   description: index of the workflow run
+	//   description: index of the action run
 	//   type: integer
 	//   required: true
-	// - name: job
+	// - name: job_index
 	//   in: path
 	//   description: index of the job within the run
 	//   type: integer
@@ -969,8 +969,8 @@ func GetActionRunJobLogs(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	runIndex := ctx.ParamsInt64(":run")
-	jobIndex := ctx.ParamsInt64(":job")
+	runIndex := ctx.ParamsInt64(":run_index")
+	jobIndex := ctx.ParamsInt64(":job_index")
 
 	job, _ := getRunJobsForAPI(ctx, runIndex, jobIndex)
 	if ctx.Written() {
