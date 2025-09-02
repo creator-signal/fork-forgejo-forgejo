@@ -236,8 +236,6 @@ type EditRepoOption struct {
 	MirrorInterval *string `json:"mirror_interval,omitempty"`
 	// enable prune - remove obsolete remote-tracking references when mirroring
 	EnablePrune *bool `json:"enable_prune,omitempty"`
-	// convert to normal repo - convert a mirror to a normal repo
-	ConvertToNormalRepo *bool `json:"convert_to_normal_repo,omitempty"`
 }
 
 // GenerateRepoOption options when creating repository using a template

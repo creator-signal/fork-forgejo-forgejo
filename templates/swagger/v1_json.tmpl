@@ -7272,6 +7272,45 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/convert": {
+      "post": {
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Convert a mirror repo to a normal repo.",
+        "operationId": "repository",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo to convert",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo to convert",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Repository"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/diffpatch": {
       "post": {
         "consumes": [
@@ -24426,11 +24465,6 @@
           "description": "either `true` to enable AutodetectManualMerge, or `false` to prevent it. Note: In some special cases, misjudgments can occur.",
           "type": "boolean",
           "x-go-name": "AutodetectManualMerge"
-        },
-        "convert_to_normal_repo": {
-          "description": "convert to normal repo - convert a mirror to a normal repo",
-          "type": "boolean",
-          "x-go-name": "ConvertToNormalRepo"
         },
         "default_allow_maintainer_edit": {
           "description": "set to `true` to allow edits from maintainers by default",

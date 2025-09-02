@@ -92,16 +92,9 @@ func TestRepoConvertToNormalRepo(t *testing.T) {
 	contexttest.LoadRepo(t, ctx, 5)
 	contexttest.LoadUser(t, ctx, 3)
 	ctx.Repo.Owner = ctx.Doer
-
 	assert.True(t, ctx.Repo.Repository.IsMirror)
 
-	disableMirror := true
-	opts := api.EditRepoOption{
-		ConvertToNormalRepo: &disableMirror,
-	}
-
-	web.SetForm(ctx, &opts)
-	Edit(ctx)
+	Convert(ctx)
 	assert.Equal(t, http.StatusOK, ctx.Resp.Status())
 	assert.False(t, ctx.Repo.Repository.IsMirror)
 }

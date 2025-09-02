@@ -663,10 +663,44 @@ func Edit(ctx *context.APIContext) {
 		}
 	}
 
-	if opts.ConvertToNormalRepo != nil {
-		if err := convertMirrorToNormalRepo(ctx); err != nil {
-			return
-		}
+	repo, err := repo_model.GetRepositoryByID(ctx, ctx.Repo.Repository.ID)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToRepo(ctx, repo, ctx.Repo.Permission))
+}
+
+// Convert converts a mirror to a normal repo
+func Convert(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/convert repository
+	// ---
+	// summary: Convert a mirror repo to a normal repo.
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo to convert
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo to convert
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/Repository"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
+	if err := convertMirrorToNormalRepo(ctx); err != nil {
+		return
 	}
 
 	repo, err := repo_model.GetRepositoryByID(ctx, ctx.Repo.Repository.ID)
