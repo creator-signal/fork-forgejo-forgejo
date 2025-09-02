@@ -674,7 +674,7 @@ func Edit(ctx *context.APIContext) {
 
 // Convert converts a mirror to a normal repo
 func Convert(ctx *context.APIContext) {
-	// swagger:operation POST /repos/{owner}/{repo}/convert repository
+	// swagger:operation POST /repos/{owner}/{repo}/convert repository repoConvert
 	// ---
 	// summary: Convert a mirror repo to a normal repo.
 	// produces:
