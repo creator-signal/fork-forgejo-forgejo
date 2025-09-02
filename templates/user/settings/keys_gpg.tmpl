@@ -92,7 +92,7 @@
 							<input readonly="" value="{{$.TokenToSign}}">
 							<div class="help">
 								<p>{{ctx.Locale.Tr "settings.gpg_token_help"}}</p>
-								<p><code>{{printf `echo "%s" | gpg -a --default-key %s --detach-sign` $.TokenToSign .PaddedKeyID}}</code></p>
+								<p><code>{{printf `echo "%s" | gpg -a --default-key %s --detach-sig` $.TokenToSign .PaddedKeyID}}</code></p>
 							</div>
 							<br>
 						</div>
