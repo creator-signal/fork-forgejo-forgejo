@@ -28,7 +28,7 @@ func (handler Handler) HandleGoTrBasicLit(fset *token.FileSet, argLit *ast.Basic
 			}
 			handler.OnMsgidPrefix(fset, argLit.ValuePos, prep, trunc)
 		} else {
-			handler.OnMsgid(fset, argLit.ValuePos, arg)
+			handler.OnMsgid(fset, argLit.ValuePos, arg, false)
 		}
 	}
 }

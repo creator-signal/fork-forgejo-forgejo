@@ -104,7 +104,7 @@ func (handler Handler) handleTemplateMsgid(fset *token.FileSet, node tmplParser.
 	case tmplParser.NodeString:
 		nodeString := node.(*tmplParser.StringNode)
 		// found interesting strings
-		handler.OnMsgid(fset, pos, nodeString.Text)
+		handler.OnMsgid(fset, pos, nodeString.Text, false)
 
 	case tmplParser.NodePipe:
 		nodePipe := node.(*tmplParser.PipeNode)
@@ -143,7 +143,7 @@ func (handler Handler) handleTemplateMsgid(fset *token.FileSet, node tmplParser.
 
 		if len(nodeCommand.Args) == 2 {
 			// found interesting strings
-			handler.OnMsgid(fset, stringPos, msgidPrefix)
+			handler.OnMsgid(fset, stringPos, msgidPrefix, false)
 		} else {
 			if nodeIdent.Ident == "printf" {
 				parts := strings.SplitN(msgidPrefix, "%", 2)

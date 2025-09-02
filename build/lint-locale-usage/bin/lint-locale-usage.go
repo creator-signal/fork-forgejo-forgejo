@@ -173,6 +173,7 @@ func Usage() {
 func main() {
 	allowMissingMsgids := false
 	allowUnusedMsgids := false
+	allowWeakMissingMsgids := true
 	usedMsgids := make(container.Set[string])
 	allowedMaskedPrefixes := make(StringTrieMap)
 
@@ -190,6 +191,12 @@ func main() {
 		"allow-missing-msgids",
 		false,
 		"don't return an error code if missing message IDs are found",
+	)
+	flag.BoolVar(
+		&allowWeakMissingMsgids,
+		"allow-weak-missing-msgids",
+		true,
+		"Don't return an error code if missing 'weak' (e.g. \"form.$msgid\") message IDs are found",
 	)
 	flag.BoolVar(
 		&allowUnusedMsgids,
@@ -262,8 +269,11 @@ func main() {
 				fmt.Printf("%s:\tmissing msgid prefix: %s\n", fset.Position(pos).String(), msgidPrefix)
 			}
 		},
-		OnMsgid: func(fset *token.FileSet, pos token.Pos, msgid string) {
+		OnMsgid: func(fset *token.FileSet, pos token.Pos, msgid string, weak bool) {
 			if !msgids.Contains(msgid) {
+				if weak && allowWeakMissingMsgids {
+					return
+				}
 				gotAnyMsgidError = true
 				fmt.Printf("%s:\tmissing msgid: %s\n", fset.Position(pos).String(), msgid)
 			} else {

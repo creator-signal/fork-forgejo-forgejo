@@ -33,6 +33,6 @@ func HandleCompositeUnit(handler llu.Handler, fset *token.FileSet, n *ast.Compos
 	arg, err := strconv.Unquote(nameKey.Value)
 	if err == nil {
 		// found interesting strings
-		handler.OnMsgid(fset, nameKey.ValuePos, arg)
+		handler.OnMsgid(fset, nameKey.ValuePos, arg, false)
 	}
 }

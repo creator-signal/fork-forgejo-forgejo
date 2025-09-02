@@ -45,7 +45,7 @@ func InitLocaleTrFunctions() map[string][]uint {
 }
 
 type Handler struct {
-	OnMsgid            func(fset *token.FileSet, pos token.Pos, msgid string)
+	OnMsgid            func(fset *token.FileSet, pos token.Pos, msgid string, weak bool)
 	OnMsgidPrefix      func(fset *token.FileSet, pos token.Pos, msgidPrefix string, truncated bool)
 	OnUnexpectedInvoke func(fset *token.FileSet, pos token.Pos, funcname string, argc int)
 	OnWarning          func(fset *token.FileSet, pos token.Pos, msg string)

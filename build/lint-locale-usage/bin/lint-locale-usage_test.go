@@ -15,7 +15,7 @@ import (
 
 func buildHandler(ret *[]string) llu.Handler {
 	return llu.Handler{
-		OnMsgid: func(fset *token.FileSet, pos token.Pos, msgid string) {
+		OnMsgid: func(fset *token.FileSet, pos token.Pos, msgid string, weak bool) {
 			*ret = append(*ret, msgid)
 		},
 		OnUnexpectedInvoke: func(fset *token.FileSet, pos token.Pos, funcname string, argc int) {},
