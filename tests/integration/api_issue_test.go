@@ -697,13 +697,13 @@ func TestAPIInternalAndExternalIssueTracker(t *testing.T) {
 		MakeRequest(t, NewRequest(t, "GET", getPath("/comments")).AddTokenAuth(token), http.StatusOK)
 		MakeRequest(t, NewRequest(t, "GET", getPath("/%d/comments", issue.Index)).AddTokenAuth(token), okStatus)
 		resp := MakeRequest(t, NewRequestWithValues(t, "POST", getPath("/%d/comments", issue.Index), map[string]string{"body": uuid.NewString()}).AddTokenAuth(token), createdStatus)
-		var comment *api.Comment
+		var comment api.Comment
 		DecodeJSON(t, resp, &comment)
 		resp = MakeRequest(t, NewRequestWithValues(t, "POST", getPath("/%d/comments", issue.Index), map[string]string{"body": uuid.NewString()}).AddTokenAuth(token), createdStatus)
-		var commentTwo *api.Comment
+		var commentTwo api.Comment
 		DecodeJSON(t, resp, &commentTwo)
 		resp = MakeRequest(t, NewRequestWithValues(t, "POST", getPath("/%d/comments", issue.Index), map[string]string{"body": uuid.NewString()}).AddTokenAuth(token), createdStatus)
-		var commentThree *api.Comment
+		var commentThree api.Comment
 		DecodeJSON(t, resp, &commentThree)
 		MakeRequest(t, NewRequest(t, "GET", getPath("/comments/%d", commentTwo.ID)).AddTokenAuth(token), okStatus)
 		MakeRequest(t, NewRequestWithValues(t, "PATCH", getPath("/comments/%d", commentTwo.ID), map[string]string{"body": uuid.NewString()}).AddTokenAuth(token), okStatus)
@@ -722,7 +722,7 @@ func TestAPIInternalAndExternalIssueTracker(t *testing.T) {
 		req := NewRequestWithBody(t, "POST", getPath("/comments/%d/assets", comment.ID), bytes.NewReader(body.Bytes())).AddTokenAuth(token)
 		req.Header.Add("Content-Type", contentType)
 		resp = MakeRequest(t, req, createdStatus)
-		var commentAttachment *api.Attachment
+		var commentAttachment api.Attachment
 		DecodeJSON(t, resp, &commentAttachment)
 		MakeRequest(t, NewRequest(t, "GET", getPath("/comments/%d/assets/%d", comment.ID, commentAttachment.ID)).AddTokenAuth(token), okStatus)
 		MakeRequest(t, NewRequestWithValues(t, "PATCH", getPath("/comments/%d/assets/%d", comment.ID, commentAttachment.ID), map[string]string{"name": uuid.NewString()}).AddTokenAuth(token), createdStatus)
@@ -735,7 +735,7 @@ func TestAPIInternalAndExternalIssueTracker(t *testing.T) {
 		labelName := uuid.NewString()
 		labelCreateURL := fmt.Sprintf("/api/v1/repos/%s/%s/labels", repo.OwnerName, repo.Name)
 		resp = MakeRequest(t, NewRequestWithValues(t, "POST", labelCreateURL, map[string]string{"name": labelName, "color": "#333333"}).AddTokenAuth(token), http.StatusCreated)
-		var label *api.Label
+		var label api.Label
 		DecodeJSON(t, resp, &label)
 
 		MakeRequest(t, NewRequest(t, "GET", getPath("/%d/labels", issue.Index)).AddTokenAuth(token), okStatus)
@@ -747,7 +747,7 @@ func TestAPIInternalAndExternalIssueTracker(t *testing.T) {
 		// times
 		MakeRequest(t, NewRequest(t, "GET", getPath("/%d/times", issue.Index)).AddTokenAuth(token), okStatus)
 		resp = MakeRequest(t, NewRequestWithJSON(t, "POST", getPath("/%d/times", issue.Index), api.AddTimeOption{Time: 60}).AddTokenAuth(token), okStatus)
-		var trackedTime *api.TrackedTime
+		var trackedTime api.TrackedTime
 		DecodeJSON(t, resp, &trackedTime)
 		MakeRequest(t, NewRequest(t, "DELETE", getPath("/%d/times", issue.Index)).AddTokenAuth(token), noContentStatus)
 		resp = MakeRequest(t, NewRequestWithJSON(t, "POST", getPath("/%d/times", issue.Index), api.AddTimeOption{Time: 75}).AddTokenAuth(token), okStatus)
@@ -779,7 +779,7 @@ func TestAPIInternalAndExternalIssueTracker(t *testing.T) {
 		req = NewRequestWithBody(t, "POST", getPath("/%d/assets", issue.Index), bytes.NewReader(body.Bytes())).AddTokenAuth(token)
 		req.Header.Add("Content-Type", contentType)
 		resp = MakeRequest(t, req, createdStatus)
-		var attachment *api.Attachment
+		var attachment api.Attachment
 		DecodeJSON(t, resp, &attachment)
 		MakeRequest(t, NewRequest(t, "GET", getPath("/%d/assets/%d", issue.Index, attachment.ID)).AddTokenAuth(token), okStatus)
 		MakeRequest(t, NewRequestWithValues(t, "PATCH", getPath("/%d/assets/%d", issue.Index, attachment.ID), map[string]string{"name": uuid.NewString()}).AddTokenAuth(token), createdStatus)
