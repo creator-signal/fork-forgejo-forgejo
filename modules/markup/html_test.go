@@ -749,6 +749,9 @@ func TestRender_FilePreview(t *testing.T) {
 			Ctx:          git.DefaultContext,
 			RelativePath: ".md",
 			Metas:        metas,
+			Links: markup.Links{
+				Base: markup.TestRepoURL,
+			},
 		}, input)
 		require.NoError(t, err)
 		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(buffer))
@@ -861,7 +864,7 @@ func TestRender_FilePreview(t *testing.T) {
 
 		testRender(
 			urlWithSub,
-			`<p><a href="http://localhost:3000/sub/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3" rel="nofollow"><code>190d949293/path/to/file.go (L2-L3)</code></a></p>`,
+			`<p><a href="http://localhost:3000/sub/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3" rel="nofollow"><code>gogits/gogs@190d949293/path/to/file.go (L2-L3)</code></a></p>`,
 			localMetas,
 		)
 

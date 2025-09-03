@@ -55,7 +55,7 @@ var (
 	shortLinkPattern = regexp.MustCompile(`\[\[(.*?)\]\](\w*)`)
 
 	// anyHashPattern splits url containing SHA into parts
-	anyHashPattern = regexp.MustCompile(`https?://(?:(?:\S+/){3,4}(?:commit|tree|blob)/)([0-9a-f]{7,64})(/[-+~_%.a-zA-Z0-9/]+)?(\?[-+~_%\.a-zA-Z0-9=&]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
+	anyHashPattern = regexp.MustCompile(`https?://[^\s/]+/(\S+/(?:commit|tree|blob))/([0-9a-f]{7,64})(/[-+~_%.a-zA-Z0-9/]+)?(\?[-+~_%\.a-zA-Z0-9=&]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	// comparePattern matches "http://domain/org/repo/compare/COMMIT1...COMMIT2#hash"
 	comparePattern = regexp.MustCompile(`https?://(?:\S+/){4,5}([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(#[-+~_%.a-zA-Z0-9]+)?`)
@@ -1018,37 +1018,93 @@ func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 		}
 
 		urlFull := node.Data[m[0]:m[1]]
-		text := base.ShortSha(node.Data[m[2]:m[3]])
 
-		// 3rd capture group matches a optional path
-		subpath := ""
-		if m[5] > 0 {
-			subpath = node.Data[m[4]:m[5]]
+		// In most cases, the URL will look like this:
+		// `https://domain.tld/<owner>/<repo>/<path>/<sha>`.
+		// The amount of components in `<path>` is variable, but that alone is doable with regexp.
+		//
+		// However, Forgejo also allows being hosted on a sub path, i.e.
+		// `https://domain.tld/<sub>/<owner>/<repo>/<path>/<sha>`.
+		// And this sub path can also have any amount of components. But fishing out a section
+		// between two variable length matches is not something regular grammars are capable of.
+		//
+		// Instead, the regexp extracts the entire path section before the SHA
+		// (i.e. `<sub>/<owner>/<repo>/<path>`), and we find the components we need by counting.
+		// `<sub>` is unknown, but the possible values for `<path>` are defined by us
+		// (see `router/web/web.go`). So we count from the back.
+		subPath := node.Data[m[2]:m[3]]
+
+		components := strings.Split(subPath, "/")
+		componentCount := len(components)
+
+		// In most cases, the `<owner>` component is right at the start of the path.
+		ownerIndex := 0
+
+		// But if there are more than three components, this could be `<sub>` or an app route
+		// with two components. Or both.
+		if componentCount > 3 {
+			// As mentioned, we count from the back. We decrement for the `<repo>` component, and the one
+			// component from the app route that's guaranteed to be there.
+			// We also adjust this to be an array index, so we subtract one more.
+			ownerIndex = componentCount - 3
+
+			// We then check for known app routes that use two components.
+			// Currently, this checks for:
+			// - `src/commit`
+			// - `commits/commit`
+			//
+			// This does have one scenario where we cannot figure things out reliably:
+			// If there is a sub path, and the repository is named like one of the known app routes
+			// (e.g. `src`), we cannot distinguish between the repo and the app route.
+			// We assume that naming a repository like that is uncommon, and prioritize the case where its
+			// part of the app route.
+			if components[componentCount-1] == "commit" &&
+				(components[componentCount-2] == "src" || components[componentCount-2] == "commits") {
+				ownerIndex--
+			}
+		}
+
+		repoSlug := components[ownerIndex] + "/" + components[ownerIndex+1]
+
+		text := base.ShortSha(node.Data[m[4]:m[5]])
+
+		// We need to figure out the base of the provided URL, which is up to and including the
+		// `<owner>/<repo>` slug.
+		// With that we can determine if it matches the current repo, or if the slug should be shown.
+		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
+		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
+			text = repoSlug + "@" + text
+		}
+
+		// 3rd capture group matches an optional file path after the SHA
+		filePath := ""
+		if m[7] > 0 {
+			filePath = node.Data[m[6]:m[7]]
 		}
 
 		// 5th capture group matches a optional url hash
 		hash := ""
-		if m[9] > 0 {
-			hash = node.Data[m[8]:m[9]][1:]
+		if m[11] > 0 {
+			hash = node.Data[m[10]:m[11]][1:]
 		}
 
 		start := m[0]
 		end := m[1]
 
-		// If url ends in '.', it's very likely that it is not part of the
-		// actual url but used to finish a sentence.
+		// If the URL ends in '.', it's very likely that it is not part of the
+		// actual URL but used to finish a sentence.
 		if strings.HasSuffix(urlFull, ".") {
 			end--
 			urlFull = urlFull[:len(urlFull)-1]
 			if hash != "" {
 				hash = hash[:len(hash)-1]
-			} else if subpath != "" {
-				subpath = subpath[:len(subpath)-1]
+			} else if filePath != "" {
+				filePath = filePath[:len(filePath)-1]
 			}
 		}
 
-		if subpath != "" {
-			text += subpath
+		if filePath != "" {
+			text += filePath
 		}
 
 		if hash != "" {
