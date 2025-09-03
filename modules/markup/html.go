@@ -1094,6 +1094,11 @@ func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 		hash := ""
 		if m[11] > 0 {
 			hash = node.Data[m[10]:m[11]][1:]
+
+			// Truncate long diff IDs
+			if len(hash) > 15 && strings.HasPrefix(hash, "diff-") {
+				hash = hash[:15]
+			}
 		}
 
 		start := m[0]

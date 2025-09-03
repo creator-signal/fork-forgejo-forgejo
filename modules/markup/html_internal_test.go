@@ -340,8 +340,16 @@ func TestRender_AutoLink(t *testing.T) {
 		tmp := util.URLJoin(TestRepoURL, "commit", "d8a994ef243349f321568f9e36d5c3f444b99cae")
 		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24</code></a>", TestRepoURL)
 		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">"+TestOrgRepo+"@d8a994ef24</code></a>", "https://localhost/forgejo/forgejo")
-		tmp += "#diff-2"
-		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>", TestRepoURL)
+		test(
+			tmp+"#diff-2",
+			"<a href=\""+tmp+"#diff-2\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>",
+			TestRepoURL,
+		)
+		test(
+			tmp+"#diff-953bb4f01b7c77fa18f0cd54211255051e647dbc",
+			"<a href=\""+tmp+"#diff-953bb4f01b7c77fa18f0cd54211255051e647dbc\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-953bb4f01b)</code></a>",
+			TestRepoURL,
+		)
 
 		// render other commit URLs
 		tmp = "https://external-link.gitea.io/go-gitea/gitea/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2"
