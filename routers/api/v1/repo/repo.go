@@ -697,8 +697,6 @@ func Convert(ctx *context.APIContext) {
 	//     "$ref": "#/responses/forbidden"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	//   "422":
-	//     "$ref": "#/responses/validationError"
 	if err := convertMirrorToNormalRepo(ctx); err != nil {
 		return
 	}
