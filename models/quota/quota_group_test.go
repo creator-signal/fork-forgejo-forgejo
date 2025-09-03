@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	quota_model "forgejo.org/models/quota"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -193,12 +195,34 @@ func TestQuotaGroupListAllDeny(t *testing.T) {
 	assert.False(t, allow)
 }
 
-func TestQuotaGroupListEmpty(t *testing.T) {
+// An empty group list should result in the use of the built in Default
+// group: size:all defaulting to unlimited
+func TestQuotaDefaultGroup(t *testing.T) {
 	groups := quota_model.GroupList{}
 
 	used := quota_model.Used{}
 	used.Size.Repos.Public = 2048
 
-	allow := groups.Evaluate(used, quota_model.LimitSubjectSizeAll)
-	assert.True(t, allow)
+	testSets := []struct {
+		name        string
+		limit       int64
+		expectAllow bool
+	}{
+		{"unlimited", -1, true},
+		{"limit-allow", 1024 * 1024, true},
+		{"limit-deny", 1024, false},
+	}
+
+	for _, testSet := range testSets {
+		t.Run(testSet.name, func(t *testing.T) {
+			defer test.MockVariableValue(&setting.Quota.Default.Total, testSet.limit)()
+
+			for subject := quota_model.LimitSubjectFirst; subject <= quota_model.LimitSubjectLast; subject++ {
+				t.Run(subject.String(), func(t *testing.T) {
+					allow := groups.Evaluate(used, subject)
+					assert.Equal(t, testSet.expectAllow, allow)
+				})
+			}
+		})
+	}
 }

@@ -16,6 +16,21 @@ type Rule struct {
 	Subjects LimitSubjects `json:"subjects,omitempty"`
 }
 
+var subjectToParent = map[LimitSubject]LimitSubject{
+	LimitSubjectSizeGitAll:                    LimitSubjectSizeAll,
+	LimitSubjectSizeGitLFS:                    LimitSubjectSizeGitAll,
+	LimitSubjectSizeReposAll:                  LimitSubjectSizeGitAll,
+	LimitSubjectSizeReposPublic:               LimitSubjectSizeReposAll,
+	LimitSubjectSizeReposPrivate:              LimitSubjectSizeReposAll,
+	LimitSubjectSizeAssetsAll:                 LimitSubjectSizeAll,
+	LimitSubjectSizeAssetsAttachmentsAll:      LimitSubjectSizeAssetsAll,
+	LimitSubjectSizeAssetsAttachmentsIssues:   LimitSubjectSizeAssetsAttachmentsAll,
+	LimitSubjectSizeAssetsAttachmentsReleases: LimitSubjectSizeAssetsAttachmentsAll,
+	LimitSubjectSizeAssetsArtifacts:           LimitSubjectSizeAssetsAll,
+	LimitSubjectSizeAssetsPackagesAll:         LimitSubjectSizeAssetsAll,
+	LimitSubjectSizeWiki:                      LimitSubjectSizeAssetsAll,
+}
+
 func (r *Rule) TableName() string {
 	return "quota_rule"
 }
@@ -39,6 +54,10 @@ func (r Rule) Sum(used Used) int64 {
 func (r Rule) Evaluate(used Used, forSubject LimitSubject) (match, allow bool) {
 	if !slices.Contains(r.Subjects, forSubject) {
 		// this rule does not match the subject being tested
+		parent := subjectToParent[forSubject]
+		if parent != LimitSubjectNone {
+			return r.Evaluate(used, parent)
+		}
 		return false, false
 	}
 
