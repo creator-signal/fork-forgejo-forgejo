@@ -328,46 +328,71 @@ func TestRender_AutoLink(t *testing.T) {
 		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(buffer.String()))
 	}
 
-	// render valid issue URLs
-	test(util.URLJoin(TestRepoURL, "issues", "3333"),
-		numericIssueLink(util.URLJoin(TestRepoURL, "issues"), "ref-issue", 3333, "#"),
-		TestRepoURL)
+	t.Run("Issue", func(t *testing.T) {
+		// render valid issue URLs
+		test(util.URLJoin(TestRepoURL, "issues", "3333"),
+			numericIssueLink(util.URLJoin(TestRepoURL, "issues"), "ref-issue", 3333, "#"),
+			TestRepoURL)
+	})
 
-	// render valid commit URLs
-	tmp := util.URLJoin(TestRepoURL, "commit", "d8a994ef243349f321568f9e36d5c3f444b99cae")
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24</code></a>", TestRepoURL)
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">"+TestOrgRepo+"@d8a994ef24</code></a>", "https://localhost/forgejo/forgejo")
-	tmp += "#diff-2"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>", TestRepoURL)
+	t.Run("Commit", func(t *testing.T) {
+		// render valid commit URLs
+		tmp := util.URLJoin(TestRepoURL, "commit", "d8a994ef243349f321568f9e36d5c3f444b99cae")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24</code></a>", TestRepoURL)
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">"+TestOrgRepo+"@d8a994ef24</code></a>", "https://localhost/forgejo/forgejo")
+		tmp += "#diff-2"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>", TestRepoURL)
 
-	// render other commit URLs
-	tmp = "https://external-link.gitea.io/go-gitea/gitea/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">go-gitea/gitea@d8a994ef24 (diff-2)</code></a>", TestRepoURL)
+		// render other commit URLs
+		tmp = "https://external-link.gitea.io/go-gitea/gitea/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">go-gitea/gitea@d8a994ef24 (diff-2)</code></a>", TestRepoURL)
 
-	tmp = "http://localhost:3000/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/gogits/gogs")
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+		tmp = "http://localhost:3000/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
 
-	tmp = "http://localhost:3000/sub/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/sub/gogits/gogs")
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "http://localhost:3000/gogits/gogs")
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+		tmp = "http://localhost:3000/sub/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/sub/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "http://localhost:3000/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
 
-	tmp = "http://localhost:3000/sub1/sub2/sub3/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/sub1/sub2/sub3/gogits/gogs")
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "http://localhost:3000/sub1/gogits/gogs")
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+		tmp = "http://localhost:3000/sub1/sub2/sub3/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/sub1/sub2/sub3/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "http://localhost:3000/sub1/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
 
-	// if the repository happens to be named like one of the known app routes (e.g. `src`),
-	// we can parse the URL correctly, if there is no sub path
-	tmp = "http://localhost:3000/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/src@190d949293</code></a>", TestRepoURL)
-	tmp = "http://localhost:3000/gogits/src/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/src@190d949293</code></a>", TestRepoURL)
-	// but if there is a sub path, we cannot reliably distinguish the repo name from the app route
-	tmp = "http://localhost:3000/sub/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">sub/gogits@190d949293</code></a>", TestRepoURL)
+		// if the repository happens to be named like one of the known app routes (e.g. `src`),
+		// we can parse the URL correctly, if there is no sub path
+		tmp = "http://localhost:3000/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/src@190d949293</code></a>", TestRepoURL)
+		tmp = "http://localhost:3000/gogits/src/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/src@190d949293</code></a>", TestRepoURL)
+		// but if there is a sub path, we cannot reliably distinguish the repo name from the app route
+		tmp = "http://localhost:3000/sub/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">sub/gogits@190d949293</code></a>", TestRepoURL)
+	})
+
+	t.Run("Compare", func(t *testing.T) {
+		tmp := util.URLJoin(TestRepoURL, "compare", "d8a994ef243349f321568f9e36d5c3f444b99cae..190d9492934af498c3f669d6a2431dc5459e5b20")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">d8a994ef24..190d949293</code></a>", TestRepoURL)
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">"+TestOrgRepo+"@d8a994ef24..190d949293</code></a>", "https://localhost/forgejo/forgejo")
+
+		tmp = "http://localhost:3000/sub/gogits/gogs/compare/190d9492934af498c3f669d6a2431dc5459e5b20..d8a994ef243349f321568f9e36d5c3f444b99cae"
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">190d949293..d8a994ef24</code></a>", "http://localhost:3000/sub/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "http://localhost:3000/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+
+		tmp = "http://localhost:3000/sub1/sub2/sub3/gogits/gogs/compare/190d9492934af498c3f669d6a2431dc5459e5b20..d8a994ef243349f321568f9e36d5c3f444b99cae"
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">190d949293..d8a994ef24</code></a>", "http://localhost:3000/sub1/sub2/sub3/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "http://localhost:3000/sub1/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+	})
+
+	t.Run("Invalid URLs", func(t *testing.T) {
+		tmp := "https://local host/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\"https://local\" class=\"link\">https://local</a> host/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20", TestRepoURL)
+	})
 }
 
 func TestRender_IssueIndexPatternRef(t *testing.T) {

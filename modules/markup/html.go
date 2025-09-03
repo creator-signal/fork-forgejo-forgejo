@@ -58,10 +58,10 @@ var (
 	anyHashPattern = regexp.MustCompile(`https?://[^\s/]+/(\S+/(?:commit|tree|blob))/([0-9a-f]{7,64})(/[-+~_%.a-zA-Z0-9/]+)?(\?[-+~_%\.a-zA-Z0-9=&]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	// comparePattern matches "http://domain/org/repo/compare/COMMIT1...COMMIT2#hash"
-	comparePattern = regexp.MustCompile(`https?://(?:\S+/){4,5}([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(#[-+~_%.a-zA-Z0-9]+)?`)
+	comparePattern = regexp.MustCompile(`https?://[^\s/]+/(?:\S+/)?([^\s/]+/[^\s/]+)/compare/([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	// pullReviewCommitPattern matches "https://domain.tld/<subpath...>/<owner>/<repo>/pulls/<id>/commits/<sha>"
-	pullReviewCommitPattern = regexp.MustCompile(`https?://(?:[^/]+/){3,}pulls/(\d+)/commits/([0-9a-f]{7,64})(#[-+~_%.a-zA-Z0-9]+)?`)
+	pullReviewCommitPattern = regexp.MustCompile(`https?://[^\s/]+/(?:\S+/)?([^\s/]+/[^\s/]+)/pulls/(\d+)/commits/([0-9a-f]{7,64})(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://`)
 
@@ -808,8 +808,9 @@ func pullReviewCommitPatternProcessor(ctx *RenderContext, node *html.Node) {
 		}
 
 		urlFull := node.Data[m[0]:m[1]]
-		id := node.Data[m[2]:m[3]]
-		sha := base.ShortSha(node.Data[m[4]:m[5]])
+		repoSlug := node.Data[m[2]:m[3]]
+		id := node.Data[m[4]:m[5]]
+		sha := base.ShortSha(node.Data[m[6]:m[7]])
 
 		// Create an `<a>` node with a text of
 		// `!123 (commit <code>abcdef1234</code>)`
@@ -819,9 +820,16 @@ func pullReviewCommitPatternProcessor(ctx *RenderContext, node *html.Node) {
 			Attr: []html.Attribute{{Key: "href", Val: urlFull}, {Key: "class", Val: "commit"}},
 		}
 
+		text := "!" + id + " (commit "
+
+		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
+		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
+			text = repoSlug + "@" + text
+		}
+
 		aNode.AppendChild(&html.Node{
 			Type: html.TextNode,
-			Data: "!" + id + " (commit ",
+			Data: text,
 		})
 
 		textNode := &html.Node{
@@ -1127,28 +1135,29 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 			return
 		}
 
-		// Ensure that every group (m[0]...m[7]) has a match
-		for i := 0; i < 8; i++ {
+		// Ensure that every group (m[0]...m[9]) has a match
+		for i := 0; i < 10; i++ {
 			if m[i] == -1 {
 				return
 			}
 		}
 
 		urlFull := node.Data[m[0]:m[1]]
-		text1 := base.ShortSha(node.Data[m[2]:m[3]])
-		textDots := base.ShortSha(node.Data[m[4]:m[5]])
-		text2 := base.ShortSha(node.Data[m[6]:m[7]])
+		repoSlug := node.Data[m[2]:m[3]]
+		text1 := base.ShortSha(node.Data[m[4]:m[5]])
+		textDots := base.ShortSha(node.Data[m[6]:m[7]])
+		text2 := base.ShortSha(node.Data[m[8]:m[9]])
 
 		hash := ""
-		if m[9] > 0 {
-			hash = node.Data[m[8]:m[9]][1:]
+		if m[11] > 0 {
+			hash = node.Data[m[10]:m[11]][1:]
 		}
 
 		start := m[0]
 		end := m[1]
 
-		// If url ends in '.', it's very likely that it is not part of the
-		// actual url but used to finish a sentence.
+		// If the URL ends in '.', it's very likely that it is not part of the
+		// actual URL but used to finish a sentence.
 		if strings.HasSuffix(urlFull, ".") {
 			end--
 			urlFull = urlFull[:len(urlFull)-1]
@@ -1160,6 +1169,12 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 		}
 
 		text := text1 + textDots + text2
+
+		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
+		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
+			text = repoSlug + "@" + text
+		}
+
 		if hash != "" {
 			text += " (" + hash + ")"
 		}

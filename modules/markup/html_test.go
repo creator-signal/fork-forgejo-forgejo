@@ -244,13 +244,13 @@ func TestRender_PullReviewCommitLink(t *testing.T) {
 	sha := "190d9492934af498c3f669d6a2431dc5459e5b20"
 	prCommitLink := util.URLJoin(markup.TestRepoURL, "pulls", "1", "commits", sha)
 
-	test := func(input, expected string) {
+	test := func(input, expected, base string) {
 		buffer, err := markup.RenderString(&markup.RenderContext{
 			Ctx:          git.DefaultContext,
 			RelativePath: ".md",
 			Links: markup.Links{
 				AbsolutePrefix: true,
-				Base:           markup.TestRepoURL,
+				Base:           base,
 			},
 			Metas: localMetas,
 		}, input)
@@ -258,13 +258,23 @@ func TestRender_PullReviewCommitLink(t *testing.T) {
 		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(buffer))
 	}
 
-	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`)
+	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`, markup.TestRepoURL)
 
 	prCommitLink = util.URLJoin(markup.TestAppURL, "sub1", "sub2", markup.TestOrgRepo, "pulls", "1", "commits", sha)
-	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`)
+	test(
+		prCommitLink,
+		`<p><a href="`+prCommitLink+`" rel="nofollow">!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`,
+		util.URLJoin(markup.TestAppURL, "sub1", "sub2", markup.TestOrgRepo),
+	)
+	test(
+		prCommitLink,
+		`<p><a href="`+prCommitLink+`" rel="nofollow">`+markup.TestOrgRepo+`@!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`,
+		markup.TestRepoURL,
+	)
 
 	prCommitLink = "https://codeberg.org/forgejo/forgejo/pulls/7979/commits/4d968c08e0a8d24bd2f3fb2a3a48b37e6d84a327#diff-7649acfa98a9ee3faf0d28b488bbff428317fc72"
-	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!7979 (commit <code>4d968c08e0</code>)</a></p>`)
+	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!7979 (commit <code>4d968c08e0</code>)</a></p>`, "https://codeberg.org/forgejo/forgejo")
+	test(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">forgejo/forgejo@!7979 (commit <code>4d968c08e0</code>)</a></p>`, markup.TestRepoURL)
 }
 
 func TestRender_email(t *testing.T) {
@@ -712,6 +722,9 @@ func TestIssue18471(t *testing.T) {
 	err := markup.PostProcess(&markup.RenderContext{
 		Ctx:   git.DefaultContext,
 		Metas: localMetas,
+		Links: markup.Links{
+			Base: "http://domain/org/repo",
+		},
 	}, strings.NewReader(data), &res)
 
 	require.NoError(t, err)
