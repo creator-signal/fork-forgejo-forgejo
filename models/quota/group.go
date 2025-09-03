@@ -179,27 +179,6 @@ func (g *Group) RemoveRuleByName(ctx context.Context, ruleName string) error {
 	return committer.Commit()
 }
 
-var affectsMap = map[LimitSubject]LimitSubjects{
-	LimitSubjectSizeAll: {
-		LimitSubjectSizeReposAll,
-		LimitSubjectSizeGitLFS,
-		LimitSubjectSizeAssetsAll,
-	},
-	LimitSubjectSizeReposAll: {
-		LimitSubjectSizeReposPublic,
-		LimitSubjectSizeReposPrivate,
-	},
-	LimitSubjectSizeAssetsAll: {
-		LimitSubjectSizeAssetsAttachmentsAll,
-		LimitSubjectSizeAssetsArtifacts,
-		LimitSubjectSizeAssetsPackagesAll,
-	},
-	LimitSubjectSizeAssetsAttachmentsAll: {
-		LimitSubjectSizeAssetsAttachmentsIssues,
-		LimitSubjectSizeAssetsAttachmentsReleases,
-	},
-}
-
 // Evaluate returns whether the size used is acceptable for the topic if a rule
 // was found, and returns the smallest limit of all applicable rules or the
 // first limit found to be unacceptable for the size used.
@@ -214,22 +193,6 @@ func (g *Group) Evaluate(used Used, forSubject LimitSubject) (bool, bool, int64)
 			}
 			found = true
 			foundLimit = min(foundLimit, rule.Limit)
-		}
-	}
-
-	if !found {
-		// If Evaluation for forSubject did not succeed, try evaluating against
-		// subjects below
-
-		for _, subject := range affectsMap[forSubject] {
-			ok, has, limit := g.Evaluate(used, subject)
-			if has {
-				if !ok {
-					return false, true, limit
-				}
-				found = true
-				foundLimit = min(foundLimit, limit)
-			}
 		}
 	}
 
