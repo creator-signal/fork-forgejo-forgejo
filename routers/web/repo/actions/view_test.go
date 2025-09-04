@@ -410,3 +410,49 @@ func TestActionsViewRedirectToLatestAttempt(t *testing.T) {
 		})
 	}
 }
+
+func TestActionsRerun(t *testing.T) {
+	tests := []struct {
+		name         string
+		runIndex     int64
+		jobIndex     int64
+		expectedCode int
+		expectedURL  string
+	}{
+		{
+			name:        "rerun all",
+			runIndex:    187,
+			jobIndex:    -1,
+			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/0/attempt/2",
+		},
+		{
+			name:        "rerun job",
+			runIndex:    187,
+			jobIndex:    2,
+			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/2/attempt/3",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, resp := contexttest.MockContext(t, "user2/repo1/actions/runs/187/rerun")
+			contexttest.LoadUser(t, ctx, 2)
+			contexttest.LoadRepo(t, ctx, 1)
+			ctx.SetParams(":run", fmt.Sprintf("%d", tt.runIndex))
+			if tt.jobIndex != -1 {
+				ctx.SetParams(":job", fmt.Sprintf("%d", tt.jobIndex))
+			}
+
+			Rerun(ctx)
+			require.Equal(t, http.StatusOK, resp.Result().StatusCode, "failure in Rerun(): %q", resp.Body.String())
+
+			var actual redirectObject
+			err := json.Unmarshal(resp.Body.Bytes(), &actual)
+			require.NoError(t, err)
+
+			// Note: this test isn't doing any functional testing of the Rerun handler's actual ability to set up a job
+			// rerun.  This test was added when the redirect to the correct `attempt` was added and only covers that
+			// addition at this time.
+			assert.Equal(t, redirectObject{Redirect: tt.expectedURL}, actual)
+		})
+	}
+}
