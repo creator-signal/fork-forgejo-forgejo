@@ -10,6 +10,7 @@ import (
 	goParser "go/parser"
 	"go/token"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -130,7 +131,11 @@ func HandleGoFile(handler llu.Handler, fname string, src any) error {
 				for _, spec := range n2.Specs {
 					tspec := spec.(*ast.TypeSpec)
 					structNode, ok := tspec.Type.(*ast.StructType)
-					if !(strings.HasSuffix(tspec.Name.Name, "Form") && ok) {
+					if !ok || !(strings.HasSuffix(tspec.Name.Name, "Form") ||
+						(tspec.Doc != nil &&
+							slices.ContainsFunc(tspec.Doc.List, func(c *ast.Comment) bool {
+								return c.Text == "// swagger:model"
+							}))) {
 						continue
 					}
 					for _, field := range structNode.Fields.List {
