@@ -304,6 +304,40 @@ func TestActionsViewViewPost(t *testing.T) {
 				resp.State.CurrentJob.Steps[1].Status = "waiting"
 			},
 		},
+		{
+			// This ActionRunJob has TaskID: null, which allows us to access out-of-range attempts without errors and
+			// with just some stub data for the UI to start waiting around on.
+			name:          "attempt out-of-bounds on non-picked task",
+			runIndex:      190,
+			jobIndex:      0,
+			attemptNumber: 100,
+			expected:      baseExpectedViewResponse(),
+			expectedTweaks: func(resp *ViewResponse) {
+				// Variations from runIndex 187 -> runIndex 190 that are not the subject of this test...
+				resp.State.Run.Link = "/user5/repo4/actions/runs/190"
+				resp.State.Run.Title = "job output"
+				resp.State.Run.TitleHTML = "job output"
+				resp.State.Run.Done = false
+				resp.State.Run.Jobs = []*ViewJob{
+					{
+						ID:     396,
+						Name:   "job_2",
+						Status: "waiting",
+					},
+				}
+				resp.State.Run.Commit.Branch = ViewBranch{
+					Name:      "test",
+					Link:      "/user5/repo4/src/branch/test",
+					IsDeleted: true,
+				}
+
+				// Expected blank data in the response because this job isn't picked by a runner yet.  Keep details here
+				// in-sync with the RepoActionView 'view non-picked action run job' test.
+				resp.State.CurrentJob.Detail = "actions.status.waiting"
+				resp.State.CurrentJob.Steps = []*ViewJobStep{}
+				resp.State.CurrentJob.AllAttempts = nil
+			},
+		},
 	}
 
 	for _, tt := range tests {

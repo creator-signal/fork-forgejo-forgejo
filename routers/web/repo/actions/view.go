@@ -336,6 +336,11 @@ func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jo
 	}
 
 	var task *actions_model.ActionTask
+	// TaskID will be set only when the ActionRunJob has been picked by a runner, resulting in an ActionTask being
+	// created representing the specific task.  If current.TaskID is not set, then the user is attempting to view a job
+	// that hasn't been picked up by a runner... in this case we're not going to try to fetch the specific attempt.
+	// This helps to support the UI displaying a useful and error-free page when viewing a job that is queued but not
+	// picked, or an attempt that is queued for rerun but not yet picked.
 	if current.TaskID > 0 {
 		var err error
 		task, err = actions_model.GetTaskByJobAttempt(ctx, current.ID, attemptNumber)
@@ -357,6 +362,7 @@ func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jo
 	}
 	resp.State.CurrentJob.Steps = make([]*ViewJobStep, 0) // marshal to '[]' instead of 'null' in json
 	resp.Logs.StepsLog = make([]*ViewStepLog, 0)          // marshal to '[]' instead of 'null' in json
+	// As noted above with TaskID; task will be nil when the job hasn't be picked yet...
 	if task != nil {
 		taskAttempts, err := task.GetAllAttempts(ctx)
 		if err != nil {
