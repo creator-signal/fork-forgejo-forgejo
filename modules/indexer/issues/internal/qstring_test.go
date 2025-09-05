@@ -336,7 +336,19 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 			},
 		},
 		{
-			Keyword: "test author:test mention:test before:2025-08-28",
+			Keyword: "sort:updated:asc",
+			Opts: &SearchOptions{
+				SortBy: SortByUpdatedAsc,
+			},
+		},
+		{
+			Keyword: "sort:test",
+			Opts: &SearchOptions{
+				SortBy: SortByScore,
+			},
+		},
+		{
+			Keyword: "test author:test mention:test before:2025-08-28 sort:comments:desc",
 			Opts: &SearchOptions{
 				Tokens: []Token{
 					{
@@ -348,6 +360,7 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 				MentionID:         optional.Some(int64(2)),
 				PosterID:          optional.Some(int64(2)),
 				UpdatedBeforeUnix: optional.Some(int64(1756339200)),
+				SortBy:            SortByCommentsDesc,
 			},
 		},
 

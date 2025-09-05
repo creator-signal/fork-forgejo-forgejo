@@ -20,11 +20,15 @@
 					<input type="hidden" name="type" value="{{$.ViewType}}">
 					<input type="hidden" name="sort" value="{{$.SortType}}">
 					<input type="hidden" name="state" value="{{$.State}}">
+					{{$placeholder := ctx.Locale.Tr "search.issue_kind"}}
 					{{if .PageIsPulls}}
-						{{template "shared/search/combo" dict "Value" $.Keyword "Placeholder" (ctx.Locale.Tr "search.pull_kind") "Tooltip" (ctx.Locale.Tr "explore.go_to")}}
-					{{else}}
-						{{template "shared/search/combo" dict "Value" $.Keyword "Placeholder" (ctx.Locale.Tr "search.issue_kind") "Tooltip" (ctx.Locale.Tr "explore.go_to")}}
+						{{$placeholder = ctx.Locale.Tr "search.pull_kind"}}
 					{{end}}
+					{{template "shared/search/combo"
+						dict
+							"Value" $.Keyword
+							"Placeholder" $placeholder
+							"Tooltip" (ctx.Locale.Tr "explore.go_to")}}
 				</div>
 			</form>
 			<div class="ui secondary menu tw-mt-0">
