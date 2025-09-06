@@ -17,7 +17,7 @@
 		<div class="ui bottom active tab segment">
 			{{if eq .Status 1}}
 				<div class="tw-flex tw-justify-between tw-flex-wrap">
-					<div class="small-menu-items ui compact tiny menu">
+					<div class="switch">
 						<a class="{{if eq .State "all"}}active {{end}}item" href="?sort={{$.SortType}}&state=all&issueType={{$.IssueType}}&labels={{$.Labels}}">
 							{{ctx.Locale.Tr "all"}}
 						</a>
