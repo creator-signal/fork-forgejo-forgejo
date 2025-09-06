@@ -1,7 +1,7 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Title}}" class="page-content user notification">
 	<div class="ui container">
-		<div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+		<div class="tw-flex tw-items-center tw-justify-between tw-mb-4 tw-gap-2">
 			<div class="switch">
 				<a href="{{AppSubUrl}}/notifications/subscriptions" class="{{if eq .Status 1}}active {{end}}item">
 					{{ctx.Locale.Tr "notification.subscriptions"}}
