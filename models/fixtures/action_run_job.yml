@@ -106,7 +106,7 @@
   commit_sha: 985f0301dba5e7b34be866819cd15ad3d8f508ee
   is_fork_pull_request: 0
   name: job_2
-  attempt: 1
+  attempt: 2
   job_id: job_2
   task_id: 47
   status: 5
@@ -124,6 +124,21 @@
   attempt: 1
   job_id: job_2
   task_id: 47
+  status: 5
+  runs_on: '["fedora"]'
+  started: 1683636528
+  stopped: 1683636626
+-
+  id: 396
+  run_id: 794
+  repo_id: 4
+  owner_id: 1
+  commit_sha: 985f0301dba5e7b34be866819cd15ad3d8f508ee
+  is_fork_pull_request: 0
+  name: job_2
+  attempt: 1
+  job_id: job_2
+  task_id: null
   status: 5
   runs_on: '["fedora"]'
   started: 1683636528

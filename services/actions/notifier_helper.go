@@ -30,8 +30,8 @@ import (
 	webhook_module "forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
 
-	"github.com/nektos/act/pkg/jobparser"
-	"github.com/nektos/act/pkg/model"
+	"code.forgejo.org/forgejo/runner/v9/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v9/act/model"
 )
 
 type methodCtx struct{}
@@ -99,6 +99,12 @@ func (input *notifyInput) WithRef(ref string) *notifyInput {
 
 func (input *notifyInput) WithPayload(payload api.Payloader) *notifyInput {
 	input.Payload = payload
+	return input
+}
+
+// for cases like issue comments on PRs, which have the PR data, but don't run on its ref
+func (input *notifyInput) WithPullRequestData(pr *issues_model.PullRequest) *notifyInput {
+	input.PullRequest = pr
 	return input
 }
 
@@ -219,7 +225,7 @@ func notify(ctx context.Context, input *notifyInput) error {
 		}
 	}
 
-	if input.PullRequest != nil {
+	if input.PullRequest != nil && !actions_module.IsDefaultBranchWorkflow(input.Event) {
 		// detect pull_request_target workflows
 		baseRef := git.BranchPrefix + input.PullRequest.BaseBranch
 		baseCommit, err := gitRepo.GetCommit(baseRef)
@@ -315,7 +321,7 @@ func handleWorkflows(
 	}
 
 	isForkPullRequest := false
-	if pr := input.PullRequest; pr != nil {
+	if pr := input.PullRequest; pr != nil && !actions_module.IsDefaultBranchWorkflow(input.Event) {
 		switch pr.Flow {
 		case issues_model.PullRequestFlowGithub:
 			isForkPullRequest = pr.IsFromFork()
@@ -372,7 +378,7 @@ func handleWorkflows(
 			continue
 		}
 
-		jobs, err := jobparser.Parse(dwf.Content, false, jobparser.WithVars(vars))
+		jobs, err := jobParser(dwf.Content, jobparser.WithVars(vars))
 		if err != nil {
 			run.Status = actions_model.StatusFailure
 			log.Info("jobparser.Parse: invalid workflow, setting job status to failed: %v", err)

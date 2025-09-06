@@ -557,9 +557,13 @@ func createCodeLink(href, content, class string) *html.Node {
 		a.Attr = append(a.Attr, html.Attribute{Key: "class", Val: class})
 	}
 
+	unescaped, err := url.QueryUnescape(content)
+	if err != nil {
+		unescaped = content
+	}
 	text := &html.Node{
 		Type: html.TextNode,
-		Data: content,
+		Data: unescaped,
 	}
 
 	code := &html.Node{
@@ -1142,7 +1146,7 @@ func emojiShortCodeProcessor(ctx *RenderContext, node *html.Node) {
 		converted := emoji.FromAlias(alias)
 		if converted == nil {
 			// check if this is a custom reaction
-			if _, exist := setting.UI.CustomEmojisMap[alias]; exist {
+			if setting.UI.CustomEmojisLookup.Contains(alias) {
 				replaceContent(node, m[0], m[1], createCustomEmoji(alias))
 				node = node.NextSibling.NextSibling
 				start = 0

@@ -299,6 +299,13 @@
 							<p class="help">{{ctx.Locale.Tr "admin.auths.skip_local_two_fa_helper"}}</p>
 						</div>
 					</div>
+					<div class="optional field">
+						<div class="ui checkbox">
+							<label for="allow_username_change"><strong>{{ctx.Locale.Tr "admin.auths.allow_username_change"}}</strong></label>
+							<input id="allow_username_change" name="allow_username_change" type="checkbox" {{if $cfg.AllowUsernameChange}}checked{{end}}>
+							<p class="help">{{ctx.Locale.Tr "admin.auths.allow_username_change.description"}}</p>
+						</div>
+					</div>
 					<div class="oauth2_use_custom_url inline field">
 						<div class="ui checkbox">
 							<label><strong>{{ctx.Locale.Tr "admin.auths.oauth2_use_custom_url"}}</strong></label>
@@ -397,7 +404,7 @@
 
 				<div class="field">
 					<button class="ui primary button">{{ctx.Locale.Tr "admin.auths.update"}}</button>
-					<button class="ui red button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Source.ID}}">{{ctx.Locale.Tr "admin.auths.delete"}}</button>
+					<button class="ui red button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Source.ID}}" data-modal-id="delete-auth-source">{{ctx.Locale.Tr "admin.auths.delete"}}</button>
 				</div>
 			</form>
 		</div>
@@ -414,7 +421,7 @@
 		</div>
 	</div>
 
-<div class="ui g-modal-confirm delete modal">
+<div class="ui g-modal-confirm delete modal" id="delete-auth-source">
 	<div class="header">
 		{{svg "octicon-trash"}}
 		{{ctx.Locale.Tr "admin.auths.delete_auth_title"}}

@@ -984,23 +984,57 @@ pdf-object {
 }
 
 .repository.view.issue .comment-list .code-comment {
-  border: 1px solid transparent;
   margin: 0;
+  /* top: around 5px of whitespace are added by reaction octicon. (0.5rem=7px)-5px=2px */
+  padding: 2px 0.5rem 1.5rem;
 }
 
-.repository.view.issue .comment-list .code-comment .comment-header {
-  background: transparent;
-  border-bottom: 0 !important;
-  padding: 0 !important;
+@media (max-width: 768px) {
+  .repository.view.issue .comment-list .code-comment {
+    padding: 0.33rem 0.33rem 1.33rem;
+  }
 }
 
-.repository.view.issue .comment-list .code-comment .comment-header::after,
-.repository.view.issue .comment-list .code-comment .comment-header::before {
-  display: none;
+.repository.view.issue .comment-list .code-comment:target {
+  outline: 1px solid var(--color-primary);
+}
+
+.repository.view.issue .comment-list .code-comment .header {
+  display: flex;
+  margin-bottom: 0.25rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.repository.view.issue .comment-list .code-comment .header .comment-header-left {
+  gap: 0.5rem;
+}
+
+.repository.view.issue .comment-list .code-comment .header .avatar {
+  margin: 0 !important;
 }
 
 .repository.view.issue .comment-list .code-comment .comment-content {
-  margin-left: 36px;
+  margin-left: calc(20px + 0.5rem);
+}
+
+.repository.view.issue .comment-list .code-comment .add-reaction {
+  padding: 0 0.5rem;
+}
+
+/* emulation of horizontal rule between comments originating from forgejo- themes, commit faab0c670e */
+
+.repository.view.issue .comment-list .code-comment + .code-comment {
+  margin-top: 1rem !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid var(--color-secondary) !important;
+}
+
+@media (max-width: 768px) {
+  .repository.view.issue .comment-list .code-comment + .code-comment {
+    margin-top: 0.5rem !important;
+    padding-top: 0.5rem !important;
+  }
 }
 
 .repository.view.issue .comment-list .comment > .avatar {
@@ -1012,15 +1046,19 @@ pdf-object {
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions {
-  margin-top: 16px !important;
-  margin-bottom: -8px !important;
+  gap: var(--button-spacing);
+  flex-wrap: wrap;
+  width: unset !important;
+  margin-left: calc(20px + 0.5rem) !important;
+  margin-top: 1rem !important;
+  margin-bottom: -1rem !important;
   border-top: none !important;
+  background: transparent !important;
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions .ui.label {
   border: 1px solid;
   padding: 5px 8px !important;
-  margin: 0 2px;
   border-radius: var(--border-radius);
   border-color: var(--color-secondary-dark-1) !important;
 }
@@ -1236,103 +1274,6 @@ pdf-object {
 
 .repository #commits-table.ui.basic.striped.table tbody tr:nth-child(2n) {
   background-color: var(--color-light) !important;
-}
-
-.ui .sha.label {
-  font-family: var(--fonts-monospace);
-  font-size: 13px;
-  font-weight: var(--font-weight-normal);
-  margin: 0 6px;
-  padding: 0;
-  gap: 0;
-  flex-shrink: 0;
-}
-
-.ui.ui .sha.label {
-  border: 1px solid var(--color-light-border);
-}
-
-.ui.primary.sha.label {
-  border: none !important;
-  background: var(--color-primary) !important;
-}
-
-.sha.label .shortsha {
-  padding: 0.33rem 0.5rem;
-}
-
-.sha.label .signature {
-  color: var(--color-text);
-  background: var(--color-light);
-  padding: 0.25rem 0.33rem;
-  border-left: 1px solid var(--color-light-border);
-}
-
-.sha.label .signature-author {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.sha.label .signature-author .avatar {
-  height: 16px;
-  margin-bottom: 0;
-  width: 16px;
-}
-
-.sha.label.isSigned.isWarning {
-  border: 1px solid var(--color-red-badge);
-  background: var(--color-red-badge-bg);
-}
-
-.sha.label.isSigned.isWarning .signature {
-  border-left: 1px solid var(--color-red-badge);
-  color: var(--color-red-badge);
-}
-
-.sha.label.isSigned.isWarning:hover {
-  background: var(--color-red-badge-hover-bg) !important;
-}
-
-.sha.label.isSigned.isVerified {
-  border: 1px solid var(--color-green-badge);
-  background: var(--color-green-badge-bg);
-}
-
-.sha.label.isSigned.isVerified .signature {
-  border-left: 1px solid var(--color-green-badge);
-  color: var(--color-green-badge);
-}
-
-.sha.label.isSigned.isVerified:hover {
-  background: var(--color-green-badge-hover-bg) !important;
-}
-
-.sha.label.isSigned.isVerifiedUntrusted {
-  border: 1px solid var(--color-yellow-badge);
-  background: var(--color-yellow-badge-bg);
-}
-
-.sha.label.isSigned.isVerifiedUntrusted .signature {
-  border-left: 1px solid var(--color-yellow-badge);
-  color: var(--color-yellow-badge);
-}
-
-.sha.label.isSigned.isVerifiedUntrusted:hover {
-  background: var(--color-yellow-badge-hover-bg) !important;
-}
-
-.sha.label.isSigned.isVerifiedUnmatched {
-  border: 1px solid var(--color-orange-badge);
-  background: var(--color-orange-badge-bg);
-}
-
-.sha.label.isSigned.isVerifiedUnmatched .signature {
-  border-left: 1px solid var(--color-orange-badge);
-  color: var(--color-orange-badge);
-}
-
-.sha.label.isSigned.isVerifiedUnmatched:hover {
-  background: var(--color-orange-badge-hover-bg) !important;
 }
 
 .repository .data-table {
@@ -2128,7 +2069,7 @@ details.repo-search-result summary::marker {
   margin: 0 !important;
   position: relative;
   color: var(--color-text);
-  min-height: var(--repo-header-issue-min-height);
+  min-height: 41px;
   background-color: var(--color-box-header);
   display: flex;
   justify-content: space-between;
@@ -2178,11 +2119,11 @@ details.repo-search-result summary::marker {
   left: 7px;
 }
 
-.comment-header .actions a:not(.label) {
-  padding: 0.5rem !important;
+.comment-header-right.actions a:not(.label) {
+  padding: 0.5rem;
 }
 
-.comment-header .actions .label {
+.comment-header-right.actions .label {
   margin: 0 !important;
 }
 

@@ -5,9 +5,12 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"os"
 	"path"
 	"path/filepath"
@@ -495,6 +498,25 @@ func CreateDeclarativeRepo(t *testing.T, owner *user_model.User, name string, en
 	}
 	if enabledUnits != nil {
 		opts.EnabledUnits = optional.Some(enabledUnits)
+
+		for _, unitType := range enabledUnits {
+			if unitType == unit_model.TypePullRequests {
+				opts.UnitConfig = optional.Some(map[unit_model.Type]convert.Conversion{
+					unit_model.TypePullRequests: &repo_model.PullRequestsConfig{
+						AllowMerge:           true,
+						AllowRebase:          true,
+						AllowRebaseMerge:     true,
+						AllowSquash:          true,
+						AllowFastForwardOnly: true,
+						AllowManualMerge:     true,
+						AllowRebaseUpdate:    true,
+						DefaultMergeStyle:    repo_model.MergeStyleMerge,
+						DefaultUpdateStyle:   repo_model.UpdateStyleMerge,
+					},
+				})
+				break
+			}
+		}
 	}
 	if disabledUnits != nil {
 		opts.DisabledUnits = optional.Some(disabledUnits)
@@ -504,4 +526,14 @@ func CreateDeclarativeRepo(t *testing.T, owner *user_model.User, name string, en
 	}
 
 	return CreateDeclarativeRepoWithOptions(t, owner, opts)
+}
+
+func WriteImageBody(t *testing.T, buff bytes.Buffer, filename string, body *bytes.Buffer) string {
+	writer := multipart.NewWriter(body)
+	defer writer.Close()
+	part, err := writer.CreateFormFile("attachment", filename)
+	require.NoError(t, err)
+	_, err = io.Copy(part, &buff)
+	require.NoError(t, err)
+	return writer.FormDataContentType()
 }
