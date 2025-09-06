@@ -5,11 +5,11 @@ package files
 import (
 	"fmt"
 	"path"
-	"regexp"
 	"strings"
 )
 
-var fileNameComponentSanitizeRegexp = regexp.MustCompile(`(?i)[<>:\"/\\|?*\x{0000}-\x{001F}]|^(con|prn|aux|nul|com\d|lpt\d)$`)
+// This is keep in for the case that in the future, parts of the filenames need sanitizing
+// var fileNameComponentSanitizeRegexp = regexp.MustCompile(`(?i)[<>:\"/\\|?*\x{0000}-\x{001F}]|^(con|prn|aux|nul|com\d|lpt\d)$`)
 
 // SanitizePath cleans and validates a file path
 func SanitizePath(inputPath string) (string, error) {
@@ -40,8 +40,11 @@ func SanitizePath(inputPath string) (string, error) {
 	// Sanitize each path component
 	var sanitizedComponents []string
 	for _, component := range pathComponents {
-		// Trim whitespace and apply regex sanitization
-		sanitizedComponent := strings.TrimSpace(fileNameComponentSanitizeRegexp.ReplaceAllString(component, "_"))
+		// Alternaitve option if parts of the filenames need sanitizing (Trim whitespace and apply regex sanitization)
+		// sanitizedComponent := strings.TrimSpace(fileNameComponentSanitizeRegexp.ReplaceAllString(component, "_"))
+
+		// Trim whitespace
+		sanitizedComponent := strings.TrimSpace(component)
 
 		// Skip empty components after sanitization
 		if sanitizedComponent != "" {

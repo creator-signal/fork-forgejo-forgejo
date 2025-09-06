@@ -66,27 +66,32 @@ func TestSanitizePath(t *testing.T) {
 			input:    "folder/../other/file.txt",
 			expected: "other/file.txt",
 		},
-
-		// Character sanitization
 		{
-			name:     "illegal characters replaced",
+			name:     "< and >",
 			input:    "file<name>.txt",
-			expected: "file_name_.txt",
+			expected: "file<name>.txt",
 		},
 		{
-			name:     "multiple illegal characters",
+			name:     ": and | and ? and *",
 			input:    "file:name|with?bad*chars.txt",
-			expected: "file_name_with_bad_chars.txt",
-		},
-		{
-			name:     "quotes in filename",
-			input:    `file"name.txt`,
-			expected: "file_name.txt",
+			expected: "file:name|with?bad*chars.txt",
 		},
 		{
 			name:     "control characters",
 			input:    "file\x00\x01name.txt",
-			expected: "file__name.txt",
+			expected: "file\x00\x01name.txt",
+		},
+		{
+			name:     "only special characters",
+			input:    "<>:\"|?*",
+			expected: "<>:\"|?*",
+		},
+
+		// Character sanitization
+		{
+			name:     "quotes in filename",
+			input:    `file"name.txt`,
+			expected: "file\"name.txt",
 		},
 
 		// Whitespace handling
@@ -123,11 +128,6 @@ func TestSanitizePath(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:     "only illegal characters",
-			input:    "<>:\"|?*",
-			expected: "_______",
-		},
-		{
 			name:        "only whitespace",
 			input:       "   ",
 			expectError: true,
@@ -146,8 +146,8 @@ func TestSanitizePath(t *testing.T) {
 		// Complex combinations
 		{
 			name:     "complex path with multiple issues",
-			input:    "folder\\with:illegal|chars/normal_file.txt",
-			expected: "folder/with_illegal_chars/normal_file.txt",
+			input:    "folder\\with:special|chars/normal_file.txt",
+			expected: "folder/with:special|chars/normal_file.txt",
 		},
 		{
 			name:     "unicode characters preserved",
