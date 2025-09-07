@@ -73,7 +73,7 @@ require (
 	github.com/markbates/goth v1.80.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-sqlite3 v1.14.32
-	github.com/meilisearch/meilisearch-go v0.33.0
+	github.com/meilisearch/meilisearch-go v0.33.3
 	github.com/mholt/archives v0.1.3
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/minio/minio-go/v7 v7.0.95
@@ -88,7 +88,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/sergi/go-diff v1.4.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/ulikunitz/xz v0.5.15
 	github.com/urfave/cli/v3 v3.4.1
