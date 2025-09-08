@@ -1117,7 +1117,12 @@ func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 		}
 
 		if filePath != "" {
-			text += filePath
+			decoded, err := url.QueryUnescape(filePath)
+			if err != nil {
+				text += decoded
+			} else {
+				text += filePath
+			}
 		}
 
 		if hash != "" {
