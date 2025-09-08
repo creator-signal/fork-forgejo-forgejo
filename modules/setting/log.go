@@ -308,7 +308,3 @@ func IsAccessLogEnabled() bool {
 func IsRouteLogEnabled() bool {
 	return log.IsLoggerEnabled("router")
 }
-
-func IsSSHLogEnabled() bool {
-	return log.IsLoggerEnabled("ssh")
-}
