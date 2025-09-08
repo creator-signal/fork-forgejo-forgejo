@@ -22,41 +22,45 @@ func TestAPIConvert(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-	user20 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 20})
-	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
-	repo25 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 25})
+	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+	repo5 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 5})
+	repo4 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+	org3 := "org3"
 
-	// Get user20's token
-	session := loginUser(t, user20.Name)
-	token3 := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 	// Get user2's token
-	session = loginUser(t, user2.Name)
+	session := loginUser(t, user2.Name)
 	token2 := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+	// Get user5's token
+	session = loginUser(t, user5.Name)
+	token5 := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 
-	req := NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", user20.Name, repo25.Name)).AddTokenAuth(token3)
+	req := NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", org3, repo5.Name)).AddTokenAuth(token2)
 	resp := MakeRequest(t, req, http.StatusOK)
 	var repo api.Repository
 	DecodeJSON(t, resp, &repo)
 	assert.NotNil(t, repo)
 	assert.False(t, repo.Mirror)
 
-	repo25edited := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 5})
-	assert.False(t, repo25edited.IsMirror)
+	repo5edited := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 5})
+	assert.False(t, repo5edited.IsMirror)
 
-	// Test editing a non-existing repo
+	// Test editing a non-existing repo return 404
 	name := "repodoesnotexist"
-	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", user20.Name, name)).AddTokenAuth(token3)
+	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", org3, name)).AddTokenAuth(token2)
 	_ = MakeRequest(t, req, http.StatusNotFound)
 
-	// Test copnverting by user2 who isn't owner
-	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", user2.Name, repo25.Name)).AddTokenAuth(token2)
-	MakeRequest(t, req, http.StatusNotFound)
+	// Test converting a repo when not owner returns 422
+	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", org3, repo5.Name)).AddTokenAuth(token2)
+	MakeRequest(t, req, http.StatusUnprocessableEntity)
 
-	// Tests a repo with no token given so will fail
-	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", user20.Name, repo25.Name))
-	_ = MakeRequest(t, req, http.StatusForbidden)
+	// Tests converting a repo with no token returns 404
+	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", org3, repo5.Name))
+	_ = MakeRequest(t, req, http.StatusNotFound)
 
-	// Test converting a repo that is not a mirror does nothing
-	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", user2.Name, repo1.Name)).AddTokenAuth(token2)
-	_ = MakeRequest(t, req, http.StatusOK)
+	// Test converting a repo that is not a mirror does nothing and returns 422
+	req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/convert", user5.Name, repo4.Name)).AddTokenAuth(token5)
+	_ = MakeRequest(t, req, http.StatusUnprocessableEntity)
+	repo4edited := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+	assert.False(t, repo4edited.IsMirror)
+
 }

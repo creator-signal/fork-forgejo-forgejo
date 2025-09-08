@@ -697,6 +697,9 @@ func Convert(ctx *context.APIContext) {
 	//     "$ref": "#/responses/forbidden"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
+
 	if err := convertMirrorToNormalRepo(ctx); err != nil {
 		return
 	}
@@ -1183,6 +1186,8 @@ func convertMirrorToNormalRepo(ctx *context.APIContext) error {
 	repo := ctx.Repo.Repository
 
 	if !repo.IsMirror {
+		err := errors.New("Repository is not a mirror")
+		ctx.Error(http.StatusUnprocessableEntity, "ConvertMirror", err)
 		return nil
 	}
 
