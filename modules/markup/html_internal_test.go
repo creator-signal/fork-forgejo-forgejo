@@ -395,6 +395,14 @@ func TestRender_AutoLink(t *testing.T) {
 		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">190d949293..d8a994ef24</code></a>", "http://localhost:3000/sub1/sub2/sub3/gogits/gogs")
 		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "http://localhost:3000/sub1/gogits/gogs")
 		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+
+		tmp = "https://codeberg.org/forgejo/forgejo/compare/8bbac4c679bea930c74849c355a60ed3c52f8eb5...e2278e5a38187a1dc84dc41d583ec8b44e7257c1?files=options/locale/locale_fi-FI.ini"
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">8bbac4c679...e2278e5a38 (options/locale/locale_fi-FI.ini)</code></a>", "https://codeberg.org/forgejo/forgejo")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">forgejo/forgejo@8bbac4c679...e2278e5a38 (options/locale/locale_fi-FI.ini)</code></a>", TestRepoURL)
+		test(tmp+".", "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">forgejo/forgejo@8bbac4c679...e2278e5a38 (options/locale/locale_fi-FI.ini)</code></a>.", TestRepoURL)
+
+		tmp = "https://codeberg.org/forgejo/forgejo/compare/8bbac4c679bea930c74849c355a60ed3c52f8eb5...e2278e5a38187a1dc84dc41d583ec8b44e7257c1?files=options/locale/locale_fi-FI.ini#L2"
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">8bbac4c679...e2278e5a38 (options/locale/locale_fi-FI.ini#L2)</code></a>", "https://codeberg.org/forgejo/forgejo")
 	})
 
 	t.Run("Invalid URLs", func(t *testing.T) {

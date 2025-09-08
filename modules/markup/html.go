@@ -58,7 +58,7 @@ var (
 	anyHashPattern = regexp.MustCompile(`https?://[^\s/]+/(\S+/(?:commit|tree|blob))/([0-9a-f]{7,64})(/[-+~_%.a-zA-Z0-9/]+)?(\?[-+~_%\.a-zA-Z0-9=&]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	// comparePattern matches "http://domain/org/repo/compare/COMMIT1...COMMIT2#hash"
-	comparePattern = regexp.MustCompile(`https?://[^\s/]+/(?:\S+/)?([^\s/]+/[^\s/]+)/compare/([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(#[-+~_%.a-zA-Z0-9]+)?`)
+	comparePattern = regexp.MustCompile(`https?://[^\s/]+/(?:\S+/)?([^\s/]+/[^\s/]+)/compare/([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(\?[-+~_%\.a-zA-Z0-9=&/]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	// pullReviewCommitPattern matches "https://domain.tld/<subpath...>/<owner>/<repo>/pulls/<id>/commits/<sha>"
 	pullReviewCommitPattern = regexp.MustCompile(`https?://[^\s/]+/(?:\S+/)?([^\s/]+/[^\s/]+)/pulls/(\d+)/commits/([0-9a-f]{7,64})(#[-+~_%.a-zA-Z0-9]+)?`)
@@ -1158,9 +1158,14 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 		textDots := base.ShortSha(node.Data[m[6]:m[7]])
 		text2 := base.ShortSha(node.Data[m[8]:m[9]])
 
-		hash := ""
+		query := ""
 		if m[11] > 0 {
-			hash = node.Data[m[10]:m[11]][1:]
+			query = node.Data[m[10]:m[11]][1:]
+		}
+
+		hash := ""
+		if m[13] > 0 {
+			hash = node.Data[m[12]:m[13]][1:]
 		}
 
 		start := m[0]
@@ -1173,6 +1178,8 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 			urlFull = urlFull[:len(urlFull)-1]
 			if hash != "" {
 				hash = hash[:len(hash)-1]
+			} else if query != "" {
+				query = query[:len(query)-1]
 			} else if text2 != "" {
 				text2 = text2[:len(text2)-1]
 			}
@@ -1185,8 +1192,24 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 			text = repoSlug + "@" + text
 		}
 
+		extra := ""
+		if query != "" {
+			query, err := url.ParseQuery(query)
+			if err == nil && query.Has("files") {
+				extra = query.Get("files")
+			}
+		}
+
 		if hash != "" {
-			text += " (" + hash + ")"
+			if extra != "" {
+				extra += "#"
+			}
+
+			extra += hash
+		}
+
+		if extra != "" {
+			text += " (" + extra + ")"
 		}
 		replaceContent(node, start, end, createCodeLink(urlFull, text, "compare"))
 		node = node.NextSibling.NextSibling
