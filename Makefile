@@ -287,14 +287,14 @@ show-version-api: verify-version
 .PHONY: compute-go-test-packages
 compute-go-test-packages:
 ifeq ($(HAS_GO), yes)
-	$(eval GO_TEST_PACKAGES := $(filter-out $(shell $(GO) list code.gitea.io/gitea/models/migrations/...) $(shell $(GO) list code.gitea.io/gitea/models/forgejo_migrations/...) code.gitea.io/gitea/tests/integration/migration-test code.gitea.io/gitea/tests code.gitea.io/gitea/tests/integration code.gitea.io/gitea/tests/e2e,$(shell $(GO) list ./...)))
+	$(eval GO_TEST_PACKAGES ?= $(filter-out $(shell $(GO) list forgejo.org/models/migrations/...) $(shell $(GO) list forgejo.org/models/forgejo_migrations/...) forgejo.org/tests/integration/migration-test forgejo.org/tests forgejo.org/tests/integration forgejo.org/tests/e2e,$(shell $(GO) list ./...)))
 endif
 
 # Target to compute MIGRATION_PACKAGES - only runs when needed
 .PHONY: compute-migration-packages
 compute-migration-packages:
 ifeq ($(HAS_GO), yes)
-	$(eval MIGRATION_PACKAGES := $(shell $(GO) list code.gitea.io/gitea/models/migrations/... code.gitea.io/gitea/models/forgejo_migrations/...))
+	$(eval MIGRATION_PACKAGES := $(shell $(GO) list forgejo.org/models/migrations/... forgejo.org/models/forgejo_migrations/...))
 endif
 
 ###
@@ -585,7 +585,7 @@ coverage-show-html: coverage-convert
 coverage-show-percentage: coverage-convert
 	go tool cover -func=coverage/textfmt.out
 
-coverage-run:
+coverage-run: | compute-go-test-packages
 	contrib/coverage-helper.sh test_packages $(COVERAGE_TEST_PACKAGES)
 
 coverage-run-%: generate-ini-%
