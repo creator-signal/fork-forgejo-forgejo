@@ -15,6 +15,7 @@ import (
 	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,5 +63,4 @@ func TestAPIConvert(t *testing.T) {
 	_ = MakeRequest(t, req, http.StatusUnprocessableEntity)
 	repo4edited := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
 	assert.False(t, repo4edited.IsMirror)
-
 }
