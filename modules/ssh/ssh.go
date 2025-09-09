@@ -292,15 +292,6 @@ func Listen(host string, port int, ciphers, keyExchanges, macs []string) {
 			config.KeyExchanges = keyExchanges
 			config.MACs = macs
 			config.Ciphers = ciphers
-			if logger.IsEnabled() {
-				config.AuthLogCallback = func(conn gossh.ConnMetadata, method string, err error) {
-					if err != nil {
-						logger.Error("While '%s' tried to authenticate to ssh for '%s' with error: %v", conn.User(), method, err)
-						return
-					}
-					logger.Info("'%s' authenticated for '%s' with ssh", conn.User(), method)
-				}
-			}
 			return config
 		},
 		ConnectionFailedCallback: sshConnectionFailed,

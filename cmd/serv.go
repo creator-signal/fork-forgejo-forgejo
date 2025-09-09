@@ -89,7 +89,6 @@ var (
 )
 
 func sshLog(ctx context.Context, level log.Level, message string) error {
-	// Don't send an log if this is done in a test or no InternalToken is set.
 	if testing.Testing() || setting.InternalToken == "" {
 		return nil
 	}
