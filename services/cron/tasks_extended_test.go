@@ -11,6 +11,7 @@ import (
 	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_GCLFSConfig(t *testing.T) {
@@ -24,7 +25,7 @@ LAST_UPDATED_MORE_THAN_AGO = "7h"
 NUMBER_TO_CHECK_PER_REPO = 10
 PROPORTION_TO_CHECK_PER_REPO = 0.1
 `)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer test.MockVariableValue(&setting.CfgProvider, cfg)()
 
 	config := &GCLFSConfig{
@@ -40,7 +41,7 @@ PROPORTION_TO_CHECK_PER_REPO = 0.1
 	}
 
 	_, err = setting.GetCronSettings("gc_lfs", config)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, config.Enabled)
 	assert.True(t, config.RunAtStart)
 	assert.Equal(t, "@every 2h", config.Schedule)

@@ -69,7 +69,7 @@ EXTEND = true
 THIRD = white rabbit
 `
 	cfg, err := NewConfigProviderFromData(iniStr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	extended := &Extended2{
 		Extended: Extended{
@@ -84,7 +84,7 @@ THIRD = white rabbit
 	}
 
 	_, err = getCronSettings(cfg, "test", extended)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// This confirms the first level of embedding works
 	assert.Equal(t, "white rabbit", extended.Third)
