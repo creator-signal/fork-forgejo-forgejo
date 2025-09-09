@@ -588,7 +588,7 @@ coverage-show-percentage: coverage-convert
 coverage-run: | compute-go-test-packages
 	contrib/coverage-helper.sh test_packages $(COVERAGE_TEST_PACKAGES)
 
-coverage-run-%: generate-ini-%
+coverage-run-%: generate-ini-% | compute-migration-packages
   #
   # Migration tests go first
   #
