@@ -88,7 +88,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/sergi/go-diff v1.4.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/ulikunitz/xz v0.5.15
 	github.com/urfave/cli/v3 v3.4.1
