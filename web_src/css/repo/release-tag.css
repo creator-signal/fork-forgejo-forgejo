@@ -128,9 +128,11 @@
 
 .ui.ui.ui.tag-label {
   margin-left: 0.25rem;
-  border-color: var(--color-primary);
 }
 
-.ui.ui.ui.tag-label:hover {
+.ui.ui.ui.tag-label.IsRelease {
+  border-color: var(--color-primary);
+}
+.ui.ui.ui.tag-label.IsRelease:hover {
   border-color: var(--color-primary-dark-1);
 }
