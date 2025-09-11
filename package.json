@@ -37,8 +37,8 @@
     "monaco-editor": "0.52.2",
     "monaco-editor-webpack-plugin": "7.1.0",
     "pdfobject": "2.3.0",
-    "postcss": "8.5.5",
-    "postcss-loader": "8.1.1",
+    "postcss": "8.5.6",
+    "postcss-loader": "8.2.0",
     "postcss-nesting": "13.0.2",
     "pretty-ms": "9.0.0",
     "sortablejs": "1.15.6",
@@ -57,7 +57,7 @@
     "vue3-calendar-heatmap": "2.0.5",
     "webpack": "5.101.3",
     "webpack-cli": "6.0.1",
-    "wrap-ansi": "9.0.0"
+    "wrap-ansi": "9.0.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
@@ -80,7 +80,7 @@
     "eslint-plugin-regexp": "2.10.0",
     "eslint-plugin-sonarjs": "3.0.4",
     "eslint-plugin-toml": "0.12.0",
-    "eslint-plugin-unicorn": "60.0.0",
+    "eslint-plugin-unicorn": "61.0.1",
     "eslint-plugin-vitest-globals": "1.5.0",
     "eslint-plugin-vue": "10.4.0",
     "eslint-plugin-vue-scoped-css": "2.11.0",

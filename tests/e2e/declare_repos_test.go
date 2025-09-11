@@ -21,6 +21,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	issue_service "forgejo.org/services/issue"
 	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/services/wiki"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -79,10 +80,17 @@ func DeclareGitRepos(t *testing.T) func() {
 			Filename: "UPLOAD_TEST.md",
 			Versions: []string{"# File upload test\nUse this repo to test various file upload features in new branches."},
 		}}, nil),
-		newRepo(t, 2, "unicode-escaping", nil, []FileChanges{{
+		newRepo(t, 2, "unicode-escaping", &tests.DeclarativeRepoOptions{
+			EnabledUnits: optional.Some([]unit_model.Type{unit_model.TypeCode, unit_model.TypeWiki}),
+		}, []FileChanges{{
 			Filename: "a-file",
 			Versions: []string{"{a}{а}"},
-		}}, nil),
+		}}, func(user *user_model.User, repo *repo_model.Repository) {
+			wiki.InitWiki(db.DefaultContext, repo)
+			wiki.AddWikiPage(db.DefaultContext, user, repo, "Home", "{a}{а}", "{a}{а}")
+			wiki.AddWikiPage(db.DefaultContext, user, repo, "_Sidebar", "{a}{а}", "{a}{а}")
+			wiki.AddWikiPage(db.DefaultContext, user, repo, "_Footer", "{a}{а}", "{a}{а}")
+		}),
 		newRepo(t, 2, "multiple-combo-boxes", nil, []FileChanges{{
 			Filename: ".forgejo/issue_template/multi-combo-boxes.yaml",
 			Versions: []string{`
