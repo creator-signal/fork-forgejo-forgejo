@@ -93,25 +93,27 @@ func TestViewIssuesSortByType(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 
 	session := loginUser(t, user.Name)
-	req := NewRequest(t, "GET", repo.Link()+"/issues?type=created_by")
-	resp := session.MakeRequest(t, req, http.StatusOK)
+	for _, path := range []string{"/issues?type=created_by", "/issues?q=sort:created:asc"} {
+		req := NewRequest(t, "GET", repo.Link()+path)
+		resp := session.MakeRequest(t, req, http.StatusOK)
 
-	htmlDoc := NewHTMLParser(t, resp.Body)
-	issuesSelection := getIssuesSelection(t, htmlDoc)
-	expectedNumIssues := unittest.GetCount(t,
-		&issues_model.Issue{RepoID: repo.ID, PosterID: user.ID},
-		unittest.Cond("is_closed=?", false),
-		unittest.Cond("is_pull=?", false),
-	)
-	if expectedNumIssues > setting.UI.IssuePagingNum {
-		expectedNumIssues = setting.UI.IssuePagingNum
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		issuesSelection := getIssuesSelection(t, htmlDoc)
+		expectedNumIssues := unittest.GetCount(t,
+			&issues_model.Issue{RepoID: repo.ID, PosterID: user.ID},
+			unittest.Cond("is_closed=?", false),
+			unittest.Cond("is_pull=?", false),
+		)
+		if expectedNumIssues > setting.UI.IssuePagingNum {
+			expectedNumIssues = setting.UI.IssuePagingNum
+		}
+		assert.Equal(t, expectedNumIssues, issuesSelection.Length())
+
+		issuesSelection.Each(func(_ int, selection *goquery.Selection) {
+			issue := getIssue(t, repo.ID, selection)
+			assert.Equal(t, user.ID, issue.PosterID)
+		})
 	}
-	assert.Equal(t, expectedNumIssues, issuesSelection.Length())
-
-	issuesSelection.Each(func(_ int, selection *goquery.Selection) {
-		issue := getIssue(t, repo.ID, selection)
-		assert.Equal(t, user.ID, issue.PosterID)
-	})
 }
 
 func TestViewIssuesKeyword(t *testing.T) {
@@ -171,6 +173,15 @@ func TestViewIssuesSearchOptions(t *testing.T) {
 
 	t.Run("All issues", func(t *testing.T) {
 		req := NewRequestf(t, "GET", "%s/issues?state=all", repo.Link())
+		resp := MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		issuesSelection := getIssuesSelection(t, htmlDoc)
+		assert.Equal(t, 3, issuesSelection.Length())
+	})
+
+	t.Run("All issues keyword override", func(t *testing.T) {
+		// Keyword should override the state parameter
+		req := NewRequestf(t, "GET", "%s/issues?q=is:all&state=open", repo.Link())
 		resp := MakeRequest(t, req, http.StatusOK)
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		issuesSelection := getIssuesSelection(t, htmlDoc)
