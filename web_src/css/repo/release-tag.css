@@ -127,13 +127,9 @@
 }
 
 .ui.label.basic.tag-label {
-  background: transparent !important;
-  border-color: var(--color-primary) !important;
-  color: var(--color-text-light);
+  border-color: var(--color-primary);
 }
 
 a.ui.label.basic.tag-label:hover {
-  background: var(--color-hover) !important;
-  border-color: var(--color-primary-dark-1) !important;
-  color: var(--color-text);
+  border-color: var(--color-primary-dark-1);
 }
