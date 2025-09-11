@@ -127,6 +127,7 @@
 }
 
 .ui.label.basic.tag-label {
+  margin-left: 0.25rem;
   border-color: var(--color-primary);
 }
 
