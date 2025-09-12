@@ -121,30 +121,30 @@ func TestMigrateWithIssueComments(t *testing.T) {
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
 		maxResponseItems := 10
 		numComments := 21
-		test.MockVariableValue(&setting.API.MaxResponseItems, maxResponseItems)()
+		defer test.MockVariableValue(&setting.API.MaxResponseItems, maxResponseItems)()
 
 		require.NoError(t, migrations.Init())
 
-		ownerName := "user2"
-		repoName := "repo1"
+		ownerName := "user5"
+		repoName := "repo4"
 		repoOwner := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: ownerName})
 		session := loginUser(t, ownerName)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeReadMisc)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeReadMisc, auth_model.AccessTokenScopeAll)
 
 		// Add issue to repo
 		issueUrl := testNewIssue(t, session, ownerName, repoName, "testIssue", "testIssue")
 		t.Logf("issueUrl %v", issueUrl)
 
-		// Add 21 comments or so to issue
+		// Add comments to issue
 		for i := 1; i <= numComments; i++ {
 			testIssueAddComment(t, session, issueUrl, strconv.Itoa(i), "")
 		}
 
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: repoOwner.ID, Name: repoName})
-		assert.Equal(t, 3, repo.NumIssues)
+		assert.Equal(t, 1, repo.NumIssues)
 
-		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{RepoID: repo.ID, Index: 6})
-		assert.Equal(t, 21, issue.NumComments)
+		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{RepoID: repo.ID, Index: 1})
+		assert.Equal(t, numComments, issue.NumComments)
 
 		for _, s := range []struct {
 			svc structs.GitServiceType
@@ -184,7 +184,9 @@ func TestMigrateWithIssueComments(t *testing.T) {
 				// Step 5: a redirection displays the migrated repository
 				assert.Equal(t, fmt.Sprintf("/%s/%s", ownerName, migratedRepoName), test.RedirectURL(resp))
 				// Step 6: check the repo was created
-				unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{Name: migratedRepoName})
+				migratedRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{Name: migratedRepoName})
+				issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{RepoID: migratedRepo.ID, Index: 1})
+				assert.Equal(t, numComments, issue.NumComments)
 			})
 		}
 	})
