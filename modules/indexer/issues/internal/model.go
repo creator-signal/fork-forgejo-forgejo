@@ -106,6 +106,8 @@ type SearchOptions struct {
 	UpdatedAfterUnix  optional.Option[int64]
 	UpdatedBeforeUnix optional.Option[int64]
 
+	IsArchived optional.Option[bool]
+
 	Paginator *db.ListOptions
 
 	SortBy SortBy // sort by field
