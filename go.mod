@@ -104,7 +104,7 @@ require (
 	golang.org/x/net v0.43.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sync v0.16.0
-	golang.org/x/sys v0.35.0
+	golang.org/x/sys v0.36.0
 	golang.org/x/text v0.28.0
 	google.golang.org/protobuf v1.36.9
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -260,3 +260,5 @@ replace github.com/mholt/archiver/v3 => code.forgejo.org/forgejo/archiver/v3 v3.
 replace github.com/gliderlabs/ssh => code.forgejo.org/forgejo/ssh v0.0.0-20241211213324-5fc306ca0616
 
 replace git.sr.ht/~mariusor/go-xsd-duration => code.forgejo.org/forgejo/go-xsd-duration v0.0.0-20220703122237-02e73435a078
+
+replace code.forgejo.org/forgejo/runner/v11 => code.forgejo.org/forgejo/runner/v11 v11.0.1-0.20250912053159-b6c9da470edc
