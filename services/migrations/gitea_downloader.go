@@ -478,7 +478,7 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 			return nil, false, fmt.Errorf("error while listing comments for issue #%d. Error: %w", commentable.GetForeignIndex(), err)
 		}
 
-		for _, comment := range comments {
+		for idx, comment := range comments {
 			reactions, err := g.getCommentReactions(comment.ID)
 			if err != nil {
 				WarnAndNotice("Unable to load comment reactions during migrating issue #%d for comment %d in %s. Error: %v", commentable.GetForeignIndex(), comment.ID, g, err)
@@ -495,6 +495,10 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 				Updated:     comment.Updated,
 				Reactions:   reactions,
 			})
+
+			if idx == len(comments)-1 {
+				break
+			}
 		}
 
 		if !g.pagination || len(comments) < g.maxPerPage {
