@@ -461,7 +461,7 @@ func (g *GiteaDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, err
 // GetComments returns comments according issueNumber
 func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Comment, bool, error) {
 	allComments := make([]*base.Comment, 0, g.maxPerPage)
-
+	done := false
 	for i := 1; ; i++ {
 		// make sure gitea can shutdown gracefully
 		select {
@@ -497,11 +497,11 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 			})
 
 			if idx == len(comments)-1 {
-				break
+				done = true
 			}
 		}
 
-		if !g.pagination || len(comments) < g.maxPerPage {
+		if !g.pagination || len(comments) < g.maxPerPage || done {
 			break
 		}
 	}
