@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	packages_model "forgejo.org/models/packages"
+	opentofu_model "forgejo.org/models/packages/opentofu"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	packages_module "forgejo.org/modules/packages"
@@ -110,6 +111,30 @@ func UpdateState(ctx *context.Context) {
 	packageName := ctx.Params("packagename")
 	log.Debug("Processing OpenTofu/Terraform HTTP backend package update request: %s [OwnerID: %d]", packageName, ctx.Package.Owner.ID)
 
+	// Get the state lock from the database.
+	lock, err := opentofu_model.GetLock(ctx, packageName, ctx.Package.Owner.ID)
+	if err != nil {
+		if !opentofu_model.IsErrStateLockNotExist(err) {
+			apiError(ctx, http.StatusInternalServerError, fmt.Errorf("failed to get the state lock status: %w", err))
+			return
+		}
+	}
+
+	// If the state file is locked.
+	if lock != nil {
+		// Get the lock ID from the request.
+		lockID := ctx.Req.URL.Query().Get("ID")
+
+		// If the caller is not the one having locked the state file.
+		if lockID == "" {
+			apiError(ctx, http.StatusConflict, "the state file is locked, but no lock ID was provided")
+			return
+		} else if lockID != lock.LockID {
+			apiError(ctx, http.StatusUnauthorized, fmt.Errorf("invalid lock ID: %s", lockID))
+			return
+		}
+	}
+
 	// Check the size of the state file.
 	contentLength := ctx.Req.ContentLength
 	log.Debug("Update request's content length: %d", contentLength)
@@ -122,15 +147,6 @@ func UpdateState(ctx *context.Context) {
 	} else if setting.Packages.LimitSizeOpenTofuState > -1 && contentLength > setting.Packages.LimitSizeOpenTofuState {
 		apiError(ctx, http.StatusRequestEntityTooLarge, "request body exceeds the package size limit defined by the server")
 		return
-	}
-
-	// Get the optional lock ID from the request.
-	lockID := ctx.Req.Header.Get("ID")
-	if lockID != "" {
-		log.Debug("Update request has lock ID: %s", lockID)
-
-		// TODO
-		panic("Not yet implemented")
 	}
 
 	// Read the state file from the request body.
