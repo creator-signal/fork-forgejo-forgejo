@@ -73,9 +73,9 @@ func (su *StringUtils) ToUpper(s string) string {
 }
 
 func (su *StringUtils) RemoveAll(s string, all ...string) string {
-	return util.RemoveAllStr(s, all...)
+	return util.RemoveAllStr(s, false, all...)
 }
 
 func (su *StringUtils) RemoveAllPrefix(s string, all ...string) string {
-	return util.RemoveAllPrefix(s, all...)
+	return util.RemoveAllStr(s, true, all...)
 }

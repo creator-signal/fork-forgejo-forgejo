@@ -447,7 +447,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		return
 	}
 
-	cleanedKeyword := util.RemoveAllStr(keyword, "is:open", "-is:open", "is:closed", "-is:closed", "is:all")
+	cleanedKeyword := util.RemoveAllStr(keyword, false, "is:open", "-is:open", "is:closed", "-is:closed", "is:all")
 
 	ctx.Data["PinnedIssues"] = pinned
 	ctx.Data["IsRepoAdmin"] = ctx.IsSigned && (ctx.Repo.IsAdmin() || ctx.Doer.IsAdmin)

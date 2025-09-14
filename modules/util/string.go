@@ -4,6 +4,7 @@
 package util
 
 import (
+	"slices"
 	"strings"
 	"unsafe"
 )
@@ -121,31 +122,34 @@ func ASCIILower(b byte) byte {
 	return b
 }
 
-func RemoveAllStr(s string, all ...string) string {
-	pairs := make([]string, len(all)*2)
-	for _, pair := range all {
-		pairs = append(pairs, pair)
-		pairs = append(pairs, "")
+func RemoveAllStr(s string, prefix bool, all ...string) string {
+	if len(s) == 0 {
+		return ""
 	}
-	sr := strings.NewReplacer(pairs...)
-	return sr.Replace(s)
-}
 
-func RemoveAllPrefix(s string, all ...string) string {
-	sb := strings.Builder{}
+	sb, first := strings.Builder{}, true
 	for field := range strings.FieldsSeq(s) {
-		if hasAnyPrefix(s, all...) {
+		if hasAny(field, prefix, all...) {
 			continue
 		}
-		sb.WriteString(field)
+		if first {
+			first = false
+			goto write
+		}
 		sb.WriteRune(' ')
+	write:
+		sb.WriteString(field)
 	}
 	return sb.String()
 }
 
-func hasAnyPrefix(s string, all ...string) bool {
-	for _, prefix := range all {
-		if strings.HasPrefix(s, prefix) {
+func hasAny(s string, prefix bool, all ...string) bool {
+	if !prefix {
+		return slices.Contains(all, s)
+	}
+
+	for _, field := range all {
+		if strings.HasPrefix(s, field) {
 			return true
 		}
 	}
