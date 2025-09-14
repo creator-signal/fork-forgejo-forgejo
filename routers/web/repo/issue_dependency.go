@@ -27,7 +27,15 @@ func AddDependency(ctx *context.Context) {
 		return
 	}
 
-	depID := ctx.FormInt64("newDependency")
+	// Get the dependency id
+	searchText := ctx.FormString("rawSearch")
+	refIssue, err := issue.GetIssueByCrossReference(ctx, ctx.Doer, searchText)
+	var depID int64
+	if err != nil && refIssue != nil {
+		depID = refIssue.ID
+	} else {
+		depID = ctx.FormInt64("newDependency")
+	}
 
 	if err = issue.LoadRepo(ctx); err != nil {
 		ctx.ServerError("LoadRepo", err)

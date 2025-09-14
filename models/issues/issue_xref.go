@@ -5,6 +5,7 @@ package issues
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"forgejo.org/models/db"
@@ -135,6 +136,39 @@ func (issue *Issue) createCrossReferences(stdCtx context.Context, ctx *crossRefe
 		}
 	}
 	return nil
+}
+
+func (issue *Issue) GetIssueByCrossReference(stdCtx context.Context, doer *user_model.User, plaincontent string) (*Issue, error) {
+	// We are not actually _creating_ a "reference comment", just looking up the
+	// id of which issue is getting referenced. So, most of the values in the
+	// crossReferenceContext aren't applicable.
+	xrefCtx := &crossReferencesContext{
+		Doer:      doer,
+		OrigIssue: issue,
+	}
+
+	xrefs, err := issue.getCrossReferences(stdCtx, xrefCtx, plaincontent, "")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(xrefs) == 0 {
+		return nil, nil
+	}
+
+	// Really, we want to enforce that 'plaincontent' is exactly 'foo/bar#1', no other text.
+	// But the parsing is complicated, and "one reference, no actions" gets pretty close.
+	if len(xrefs) > 1 {
+		return nil, errors.New("ambiguous reference")
+	}
+
+	xref := xrefs[0]
+
+	if xref.Action != references.XRefActionNone {
+		return nil, errors.New("xref actions not permitted in lookup")
+	}
+
+	return xref.Issue, nil
 }
 
 func (issue *Issue) getCrossReferences(stdCtx context.Context, ctx *crossReferencesContext, plaincontent, mdcontent string) ([]*crossReference, error) {
