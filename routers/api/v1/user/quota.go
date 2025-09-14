@@ -41,7 +41,7 @@ func CheckQuota(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     description: whether it is acceptable.
+	//     description: Returns true if the action is accepted.
 	//     schema:
 	//       type: boolean
 	//   "401":
