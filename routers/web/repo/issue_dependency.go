@@ -29,12 +29,22 @@ func AddDependency(ctx *context.Context) {
 
 	// Get the dependency id
 	searchText := ctx.FormString("rawSearch")
-	refIssue, err := issue.GetIssueByCrossReference(ctx, ctx.Doer, searchText)
+
 	var depID int64
-	if err != nil && refIssue != nil {
-		depID = refIssue.ID
-	} else {
+	// If there is searchText in the UI, the previous issue selection is obscured.
+	// So, when the user clicks the button, we should try to add based on the text
+	// which is currently shown, not the hidden previous selection.
+	if searchText == "" {
 		depID = ctx.FormInt64("newDependency")
+	} else {
+		refIssue, err := issue.GetIssueByCrossReference(ctx, ctx.Doer, searchText)
+
+		if err != nil || refIssue == nil {
+			ctx.Flash.Error(ctx.Tr("repo.issues.dependency.add_error_dep_issue_not_exist"))
+			return
+		}
+
+		depID = refIssue.ID
 	}
 
 	if err = issue.LoadRepo(ctx); err != nil {
