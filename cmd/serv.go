@@ -228,11 +228,6 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	username := rr[0]
 	reponame := strings.TrimSuffix(rr[1], ".git")
 
-	// LowerCase and trim the repoPath as that's how they are stored.
-	// This should be done after splitting the repoPath into username and reponame
-	// so that username and reponame are not affected.
-	repoPath = strings.ToLower(strings.TrimSpace(repoPath))
-
 	if alphaDashDotPattern.MatchString(reponame) {
 		return fail(ctx, "Invalid repo name", "Invalid repo name: %s", reponame)
 	}
@@ -275,6 +270,11 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	if extra.HasError() {
 		return fail(ctx, extra.UserMsg, "ServCommand failed: %s", extra.Error)
 	}
+
+	// LowerCase and trim the repoPath as that's how they are stored.
+	// This should be done after splitting the repoPath into username and reponame
+	// so that username and reponame are not affected.
+	repoPath = strings.ToLower(results.OwnerName + "/" + results.RepoName + ".git")
 
 	// LFS token authentication
 	if verb == lfsAuthenticateVerb {
