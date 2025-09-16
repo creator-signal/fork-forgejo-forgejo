@@ -12,7 +12,7 @@ import (
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/util"
 
-	"go.yaml.in/yaml"
+	"go.yaml.in/yaml/v3"
 )
 
 var (
