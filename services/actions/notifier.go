@@ -227,7 +227,7 @@ func notifyIssueChange(ctx context.Context, doer *user_model.User, issue *issues
 
 	var apiLabel *api.Label
 	if action == api.HookIssueLabelUpdated || action == api.HookIssueLabelCleared {
-		apiLabel = convert.ToLabel(label, issue.Repo, nil)
+		apiLabel = convert.ToLabel(label, issue.Repo, issue.Repo.Owner)
 	}
 
 	if issue.IsPull {
@@ -343,7 +343,7 @@ func notifyIssueCommentChange(ctx context.Context, doer *user_model.User, commen
 		newNotifyInputFromIssue(comment.Issue, event).
 			WithDoer(doer).
 			WithPayload(payload).
-			WithPullRequest(comment.Issue.PullRequest).
+			WithPullRequestData(comment.Issue.PullRequest).
 			Notify(ctx)
 		return
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/auth"
 	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
@@ -21,6 +22,29 @@ import (
 	repo_service "forgejo.org/services/repository"
 	wiki_service "forgejo.org/services/wiki"
 )
+
+var sshLogger = log.GetManager().GetLogger("ssh")
+
+func checkTwoFactor(ctx *context.PrivateContext, user *user_model.User) {
+	if !user.MustHaveTwoFactor() {
+		return
+	}
+
+	hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, user.ID)
+	if err != nil {
+		sshLogger.Error("Error getting 2fa: %s", err)
+		ctx.JSON(http.StatusInternalServerError, private.Response{
+			Err: fmt.Sprintf("Error getting 2fa: %s", err),
+		})
+		return
+	}
+	if !hasTwoFactor {
+		ctx.JSON(http.StatusForbidden, private.Response{
+			UserMsg: ctx.Locale.TrString("error.must_enable_2fa", fmt.Sprintf("%suser/settings/security", setting.AppURL)),
+		})
+		return
+	}
+}
 
 // ServNoCommand returns information about the provided keyid
 func ServNoCommand(ctx *context.PrivateContext) {
@@ -40,7 +64,7 @@ func ServNoCommand(ctx *context.PrivateContext) {
 			})
 			return
 		}
-		log.Error("Unable to get public key: %d Error: %v", keyID, err)
+		sshLogger.Error("Unable to get public key: %d Error: %v", keyID, err)
 		ctx.JSON(http.StatusInternalServerError, private.Response{
 			Err: err.Error(),
 		})
@@ -57,7 +81,7 @@ func ServNoCommand(ctx *context.PrivateContext) {
 				})
 				return
 			}
-			log.Error("Unable to get owner with id: %d for public key: %d Error: %v", key.OwnerID, keyID, err)
+			sshLogger.Error("Unable to get owner with id: %d for public key: %d Error: %v", key.OwnerID, keyID, err)
 			ctx.JSON(http.StatusInternalServerError, private.Response{
 				Err: err.Error(),
 			})
@@ -69,6 +93,12 @@ func ServNoCommand(ctx *context.PrivateContext) {
 			})
 			return
 		}
+
+		checkTwoFactor(ctx, user)
+		if ctx.Written() {
+			return
+		}
+
 		results.Owner = user
 	}
 	ctx.JSON(http.StatusOK, &results)
@@ -110,13 +140,13 @@ func ServCommand(ctx *context.PrivateContext) {
 	if err != nil {
 		if user_model.IsErrUserNotExist(err) {
 			// User is fetching/cloning a non-existent repository
-			log.Warn("Failed authentication attempt (cannot find repository: %s/%s) from %s", results.OwnerName, results.RepoName, ctx.RemoteAddr())
+			sshLogger.Warn("Failed authentication attempt (cannot find repository: %s/%s) from %s", results.OwnerName, results.RepoName, ctx.RemoteAddr())
 			ctx.JSON(http.StatusNotFound, private.Response{
 				UserMsg: fmt.Sprintf("Cannot find repository: %s/%s", results.OwnerName, results.RepoName),
 			})
 			return
 		}
-		log.Error("Unable to get repository owner: %s/%s Error: %v", results.OwnerName, results.RepoName, err)
+		sshLogger.Error("Unable to get repository owner: %s/%s Error: %v", results.OwnerName, results.RepoName, err)
 		ctx.JSON(http.StatusForbidden, private.Response{
 			UserMsg: fmt.Sprintf("Unable to get repository owner: %s/%s %v", results.OwnerName, results.RepoName, err),
 		})
@@ -138,7 +168,7 @@ func ServCommand(ctx *context.PrivateContext) {
 			for _, verb := range ctx.FormStrings("verb") {
 				if verb == "git-upload-pack" {
 					// User is fetching/cloning a non-existent repository
-					log.Warn("Failed authentication attempt (cannot find repository: %s/%s) from %s", results.OwnerName, results.RepoName, ctx.RemoteAddr())
+					sshLogger.Warn("Failed authentication attempt (cannot find repository: %s/%s) from %s", results.OwnerName, results.RepoName, ctx.RemoteAddr())
 					ctx.JSON(http.StatusNotFound, private.Response{
 						UserMsg: fmt.Sprintf("Cannot find repository: %s/%s", results.OwnerName, results.RepoName),
 					})
@@ -146,7 +176,7 @@ func ServCommand(ctx *context.PrivateContext) {
 				}
 			}
 		} else {
-			log.Error("Unable to get repository: %s/%s Error: %v", results.OwnerName, results.RepoName, err)
+			sshLogger.Error("Unable to get repository: %s/%s Error: %v", results.OwnerName, results.RepoName, err)
 			ctx.JSON(http.StatusInternalServerError, private.Response{
 				Err: fmt.Sprintf("Unable to get repository: %s/%s %v", results.OwnerName, results.RepoName, err),
 			})
@@ -191,7 +221,7 @@ func ServCommand(ctx *context.PrivateContext) {
 			})
 			return
 		}
-		log.Error("Unable to get public key: %d Error: %v", keyID, err)
+		sshLogger.Error("Unable to get public key: %d Error: %v", keyID, err)
 		ctx.JSON(http.StatusInternalServerError, private.Response{
 			Err: fmt.Sprintf("Unable to get key: %d  Error: %v", keyID, err),
 		})
@@ -224,7 +254,7 @@ func ServCommand(ctx *context.PrivateContext) {
 				})
 				return
 			}
-			log.Error("Unable to get deploy for public (deploy) key: %d in %-v Error: %v", key.ID, repo, err)
+			sshLogger.Error("Unable to get deploy for public (deploy) key: %d in %-v Error: %v", key.ID, repo, err)
 			ctx.JSON(http.StatusInternalServerError, private.Response{
 				Err: fmt.Sprintf("Unable to get Deploy Key for Public Key: %d:%s in %s/%s.", key.ID, key.Name, results.OwnerName, results.RepoName),
 			})
@@ -252,7 +282,7 @@ func ServCommand(ctx *context.PrivateContext) {
 				})
 				return
 			}
-			log.Error("Unable to get owner: %d for public key: %d:%s Error: %v", key.OwnerID, key.ID, key.Name, err)
+			sshLogger.Error("Unable to get owner: %d for public key: %d:%s Error: %v", key.OwnerID, key.ID, key.Name, err)
 			ctx.JSON(http.StatusInternalServerError, private.Response{
 				Err: fmt.Sprintf("Unable to get Owner: %d for Deploy Key: %d:%s in %s/%s.", key.OwnerID, key.ID, key.Name, ownerName, repoName),
 			})
@@ -263,6 +293,11 @@ func ServCommand(ctx *context.PrivateContext) {
 			ctx.JSON(http.StatusForbidden, private.Response{
 				UserMsg: "Your account is disabled.",
 			})
+			return
+		}
+
+		checkTwoFactor(ctx, user)
+		if ctx.Written() {
 			return
 		}
 
@@ -308,7 +343,7 @@ func ServCommand(ctx *context.PrivateContext) {
 
 			perm, err := access_model.GetUserRepoPermission(ctx, repo, user)
 			if err != nil {
-				log.Error("Unable to get permissions for %-v with key %d in %-v Error: %v", user, key.ID, repo, err)
+				sshLogger.Error("Unable to get permissions for %-v with key %d in %-v Error: %v", user, key.ID, repo, err)
 				ctx.JSON(http.StatusInternalServerError, private.Response{
 					Err: fmt.Sprintf("Unable to get permissions for user %d:%s with key %d in %s/%s Error: %v", user.ID, user.Name, key.ID, results.OwnerName, results.RepoName, err),
 				})
@@ -318,7 +353,7 @@ func ServCommand(ctx *context.PrivateContext) {
 			userMode := perm.UnitAccessMode(unitType)
 
 			if userMode < mode {
-				log.Warn("Failed authentication attempt for %s with key %s (not authorized to %s %s/%s) from %s", user.Name, key.Name, modeString, ownerName, repoName, ctx.RemoteAddr())
+				sshLogger.Warn("Failed authentication attempt for %s with key %s (not authorized to %s %s/%s) from %s", user.Name, key.Name, modeString, ownerName, repoName, ctx.RemoteAddr())
 				ctx.JSON(http.StatusUnauthorized, private.Response{
 					UserMsg: fmt.Sprintf("User: %d:%s with Key: %d:%s is not authorized to %s %s/%s.", user.ID, user.Name, key.ID, key.Name, modeString, ownerName, repoName),
 				})
@@ -352,7 +387,7 @@ func ServCommand(ctx *context.PrivateContext) {
 
 		repo, err = repo_service.PushCreateRepo(ctx, user, owner, results.RepoName)
 		if err != nil {
-			log.Error("pushCreateRepo: %v", err)
+			sshLogger.Error("pushCreateRepo: %v", err)
 			ctx.JSON(http.StatusNotFound, private.Response{
 				UserMsg: fmt.Sprintf("Cannot find repository: %s/%s", results.OwnerName, results.RepoName),
 			})
@@ -370,7 +405,7 @@ func ServCommand(ctx *context.PrivateContext) {
 				})
 				return
 			}
-			log.Error("Failed to get the wiki unit in %-v Error: %v", repo, err)
+			sshLogger.Error("Failed to get the wiki unit in %-v Error: %v", repo, err)
 			ctx.JSON(http.StatusInternalServerError, private.Response{
 				Err: fmt.Sprintf("Failed to get the wiki unit in %s/%s Error: %v", ownerName, repoName, err),
 			})
@@ -379,14 +414,14 @@ func ServCommand(ctx *context.PrivateContext) {
 
 		// Finally if we're trying to touch the wiki we should init it
 		if err = wiki_service.InitWiki(ctx, repo); err != nil {
-			log.Error("Failed to initialize the wiki in %-v Error: %v", repo, err)
+			sshLogger.Error("Failed to initialize the wiki in %-v Error: %v", repo, err)
 			ctx.JSON(http.StatusInternalServerError, private.Response{
 				Err: fmt.Sprintf("Failed to initialize the wiki in %s/%s Error: %v", ownerName, repoName, err),
 			})
 			return
 		}
 	}
-	log.Debug("Serv Results:\nIsWiki: %t\nDeployKeyID: %d\nKeyID: %d\tKeyName: %s\nUserName: %s\nUserID: %d\nOwnerName: %s\nRepoName: %s\nRepoID: %d",
+	sshLogger.Info("Serv Results:\n\tIsWiki: %t\n\tDeployKeyID: %d\n\tKeyID: %d\tKeyName: %s\n\tUserName: %s\n\tUserID: %d\n\tOwnerName: %s\n\tRepoName: %s\n\tRepoID: %d",
 		results.IsWiki,
 		results.DeployKeyID,
 		results.KeyID,
