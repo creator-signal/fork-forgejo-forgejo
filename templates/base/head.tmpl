@@ -29,7 +29,9 @@
 	{{template "custom/body_outer_pre" .}}
 
 	<div class="full height">
-		<noscript>{{ctx.Locale.Tr "js_notice"}}</noscript>
+		<noscript>
+			<div class="tw-ml-2 tw-mr-2">{{ctx.Locale.Tr "js_notice"}}</div>
+		</noscript>
 
 		{{template "custom/body_inner_pre" .}}
 
