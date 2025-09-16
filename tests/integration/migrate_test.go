@@ -132,12 +132,12 @@ func TestMigrateWithIssueComments(t *testing.T) {
 		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeReadMisc, auth_model.AccessTokenScopeAll)
 
 		// Add issue to repo
-		issueUrl := testNewIssue(t, session, ownerName, repoName, "testIssue", "testIssue")
-		t.Logf("issueUrl %v", issueUrl)
+		issueURL := testNewIssue(t, session, ownerName, repoName, "testIssue", "testIssue")
+		t.Logf("issueUrl %v", issueURL)
 
 		// Add comments to issue
 		for i := 1; i <= numComments; i++ {
-			testIssueAddComment(t, session, issueUrl, strconv.Itoa(i), "")
+			testIssueAddComment(t, session, issueURL, strconv.Itoa(i), "")
 		}
 
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: repoOwner.ID, Name: repoName})
