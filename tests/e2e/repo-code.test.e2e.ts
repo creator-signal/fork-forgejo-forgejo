@@ -141,3 +141,16 @@ test('File folding', async ({page}) => {
   await foldFileButton.click();
   await expect(diffFileBody).toBeVisible();
 });
+
+test('Copy line permalink', async ({page}, workerInfo) => {
+  test.skip(['Mobile Safari', 'webkit'].includes(workerInfo.project.name), 'Apple clipboard API addon - starting at just $499!');
+
+  const response = await page.goto('/user2/repo1/src/branch/master/README.md?display=source#L1');
+  expect(response?.status()).toBe(200);
+
+  await page.locator('.code-line-button').click();
+  // eslint-disable-next-line playwright/no-force-option
+  await page.locator('.tippy-box .copy-line-permalink').click({force: true});
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboardText).toContain('README.md?display=source#L1');
+});
