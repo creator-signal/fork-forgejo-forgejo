@@ -33,6 +33,10 @@ func syncDoctorForeignKey(x *xorm.Engine, beans []any) error {
 }
 
 func AddForeignKeysStopwatchTrackedTime(x *xorm.Engine) error {
+	type Stopwatch struct {
+		IssueID int64 `xorm:"INDEX REFERENCES(issue, id)"`
+		UserID  int64 `xorm:"INDEX REFERENCES(user, id)"`
+	}
 	type TrackedTime struct {
 		ID      int64 `xorm:"pk autoincr"`
 		IssueID int64 `xorm:"INDEX REFERENCES(issue, id)"`
@@ -60,6 +64,7 @@ func AddForeignKeysStopwatchTrackedTime(x *xorm.Engine) error {
 	}
 
 	return syncDoctorForeignKey(x, []any{
+		new(Stopwatch),
 		new(TrackedTime),
 	})
 }
