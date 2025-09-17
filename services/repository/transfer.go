@@ -421,6 +421,28 @@ func CancelRepositoryTransfer(ctx context.Context, repo *repo_model.Repository) 
 	}
 	defer committer.Close()
 
+	repoTransfer, err := models.GetPendingRepositoryTransfer(ctx, repo)
+	if err != nil {
+		return err
+	}
+
+	if err := repoTransfer.LoadAttributes(ctx); err != nil {
+		return err
+	}
+
+	if repoTransfer.Recipient.IsOrganization() {
+		collaboration := &repo_model.Collaboration{
+			RepoID: repo.ID,
+			UserID: repoTransfer.RecipientID,
+		}
+		if _, err := db.GetEngine(ctx).Delete(collaboration); err != nil {
+			return err
+		}
+		if err := access_model.RecalculateUserAccess(ctx, repo, repoTransfer.RecipientID); err != nil {
+			return err
+		}
+	}
+
 	repo.Status = repo_model.RepositoryReady
 	if err := repo_model.UpdateRepositoryCols(ctx, repo, "status"); err != nil {
 		return err

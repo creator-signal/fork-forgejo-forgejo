@@ -81,6 +81,39 @@ func TestStartRepositoryTransferSetPermission(t *testing.T) {
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{}, &user_model.User{}, &organization.Team{})
 }
 
+func TestCancelRepositoryTransferToOrg(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// User 20 have read only access to org 17 and owns repo 30
+	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 20})
+	recipient := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 30})
+	repo.Owner = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+
+	// org 17 should not have access to repo 30 yet
+	hasAccess, err := access_model.HasAccess(db.DefaultContext, recipient.ID, repo)
+	require.NoError(t, err)
+	assert.False(t, hasAccess)
+
+	require.NoError(t, StartRepositoryTransfer(db.DefaultContext, doer, recipient, repo, nil))
+
+	// org 17 should now have access to repo 30
+	hasAccess, err = access_model.HasAccess(db.DefaultContext, recipient.ID, repo)
+	require.NoError(t, err)
+	assert.True(t, hasAccess)
+
+	unittest.CheckConsistencyFor(t, &repo_model.Repository{}, &user_model.User{}, &organization.Team{})
+
+	require.NoError(t, CancelRepositoryTransfer(db.DefaultContext, repo))
+
+	// org 17 should not have access to repo 30 anymore
+	hasAccess, err = access_model.HasAccess(db.DefaultContext, recipient.ID, repo)
+	require.NoError(t, err)
+	assert.False(t, hasAccess)
+
+	unittest.CheckConsistencyFor(t, &repo_model.Repository{}, &user_model.User{}, &organization.Team{})
+}
+
 func TestRepositoryTransfer(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
