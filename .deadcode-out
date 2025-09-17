@@ -21,6 +21,7 @@ forgejo.org/models/db
 	InTransaction
 	DumpTables
 	GetTableNames
+	TableNameInsertionOrderSortFunc
 
 forgejo.org/models/dbfs
 	file.renameTo

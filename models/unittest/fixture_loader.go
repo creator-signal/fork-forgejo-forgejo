@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"forgejo.org/models/db"
 	"forgejo.org/modules/container"
 
 	"go.yaml.in/yaml/v3"
@@ -88,6 +90,8 @@ func newFixtureLoader(db *sql.DB, dialect string, fixturePaths []string, allTabl
 			name: table,
 		})
 	}
+
+	l.orderFixtures()
 
 	return l, nil
 }
@@ -184,6 +188,14 @@ func (l *loader) buildFixtureFile(fixturePath string) (*fixtureFile, error) {
 	return fixture, nil
 }
 
+// Reorganize `fixtureFiles` based upon the order that they'll need to be inserted into the database to satisfy foreign
+// key constraints.
+func (l *loader) orderFixtures() {
+	slices.SortFunc(l.fixtureFiles, func(v1, v2 *fixtureFile) int {
+		return db.TableNameInsertionOrderSortFunc(v1.name, v2.name)
+	})
+}
+
 func (l *loader) Load() error {
 	// Start transaction.
 	tx, err := l.db.Begin()
@@ -197,14 +209,18 @@ func (l *loader) Load() error {
 
 	// Clean the table and re-insert the fixtures.
 	tableDeleted := make(container.Set[string])
-	for _, fixture := range l.fixtureFiles {
+
+	// Issue deletes first, in reverse of insertion order, to maintain foreign key constraints.
+	for i := len(l.fixtureFiles) - 1; i >= 0; i-- {
+		fixture := l.fixtureFiles[i]
 		if !tableDeleted.Contains(fixture.name) {
 			if _, err := tx.Exec(fmt.Sprintf("DELETE FROM %s", l.quoteKeyword(fixture.name))); err != nil {
 				return fmt.Errorf("cannot delete table %s: %w", fixture.name, err)
 			}
 			tableDeleted.Add(fixture.name)
 		}
-
+	}
+	for _, fixture := range l.fixtureFiles {
 		for _, insertSQL := range fixture.insertSQLs {
 			if _, err := tx.Exec(insertSQL.statement, insertSQL.values...); err != nil {
 				return fmt.Errorf("cannot insert %q with values %q: %w", insertSQL.statement, insertSQL.values, err)
