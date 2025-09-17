@@ -127,3 +127,17 @@ test('Unicode escape highlight', async ({page}) => {
   await expect(page.locator('.tippy-box .view_git_blame[href$="/a-file#L1"]')).toBeVisible();
   await expect(page.locator('.tippy-box .copy-line-permalink[data-url$="/a-file#L1"]')).toBeVisible();
 });
+
+test('File folding', async ({page}) => {
+  const filePath = '/user2/repo1/commit/65f1bf27bc3bf70f64657658635e66094edbcb4d';
+
+  const response = await page.goto(filePath);
+  expect(response?.status()).toBe(200);
+
+  const foldFileButton = page.locator('.fold-file');
+  const diffFileBody = page.locator('.diff-file-body');
+  await foldFileButton.click();
+  await expect(diffFileBody).toBeHidden();
+  await foldFileButton.click();
+  await expect(diffFileBody).toBeVisible();
+});
