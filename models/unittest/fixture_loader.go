@@ -41,7 +41,7 @@ func newFixtureLoader(db *sql.DB, dialect string, fixturePaths []string, allTabl
 		fixtureFiles: []*fixtureFile{},
 	}
 
-	tablesWithoutFixture := allTableNames
+	tablesWithoutFixture := allTableNames.Clone()
 
 	// Load fixtures
 	for _, fixturePath := range fixturePaths {
@@ -63,8 +63,10 @@ func newFixtureLoader(db *sql.DB, dialect string, fixturePaths []string, allTabl
 					if err != nil {
 						return nil, err
 					}
-					l.fixtureFiles = append(l.fixtureFiles, fixtureFile)
-					tablesWithoutFixture.Remove(fixtureFile.name)
+					if allTableNames.Contains(fixtureFile.name) {
+						l.fixtureFiles = append(l.fixtureFiles, fixtureFile)
+						tablesWithoutFixture.Remove(fixtureFile.name)
+					}
 				}
 			}
 		} else {
@@ -72,7 +74,10 @@ func newFixtureLoader(db *sql.DB, dialect string, fixturePaths []string, allTabl
 			if err != nil {
 				return nil, err
 			}
-			l.fixtureFiles = append(l.fixtureFiles, fixtureFile)
+			if allTableNames.Contains(fixtureFile.name) {
+				l.fixtureFiles = append(l.fixtureFiles, fixtureFile)
+				tablesWithoutFixture.Remove(fixtureFile.name)
+			}
 		}
 	}
 
