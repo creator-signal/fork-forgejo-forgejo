@@ -24,7 +24,7 @@ function getLineEls() {
   return document.querySelectorAll(`.code-view td.lines-code${isBlame() ? '.blame-code' : ''}`);
 }
 
-function selectRange($linesEls, $selectionEndEl, $selectionStartEls) {
+function selectRange($linesEls, $selectionEndEl, $selectionStartEls?) {
   for (const el of $linesEls) {
     el.closest('tr').classList.remove('active');
   }
@@ -142,11 +142,7 @@ export function initRepoCodeView() {
       }
       selectRange($(linesEls), $(selectedEls), from ? $(from) : null);
 
-      if (window.getSelection) {
-        window.getSelection().removeAllRanges();
-      } else {
-        document.selection.empty();
-      }
+      window.getSelection().removeAllRanges();
 
       showLineButton();
     });
