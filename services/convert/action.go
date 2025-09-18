@@ -75,7 +75,7 @@ func ToActionRunJobResponse(ctx *service_context.APIContext, job *actions_model.
 		task, err := actions_model.GetTaskByID(ctx, job.TaskID)
 		if err == nil {
 			task.Job = job
-			if err := task.LoadAttributes(ctx); err == nil {
+			if err := task.LoadSteps(ctx); err == nil {
 				steps := actions.FullSteps(task)
 				resp.Steps = make([]*api.ActionRunJobStep, 0, len(steps))
 				for _, step := range steps {

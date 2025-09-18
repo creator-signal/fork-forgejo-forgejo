@@ -1020,7 +1020,7 @@ func GetActionRunJobLogs(ctx *context.APIContext) {
 
 	// Handle different modes
 	if tail > 0 || head > 0 || offset > 0 || format == "json" {
-		// Use partial/structured log retrieval
+		// Use partial/structured log retrieval (includes all logs when format=json)
 		if err := servePartialLogs(ctx, task, tail, head, offset, format); err != nil {
 			if errors.Is(err, util.ErrInvalidArgument) {
 				ctx.Error(http.StatusBadRequest, "InvalidParameters", err.Error())
@@ -1033,7 +1033,7 @@ func GetActionRunJobLogs(ctx *context.APIContext) {
 		return
 	}
 
-	// Default: serve complete log file
+	// Default: serve complete log file as plain text
 	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

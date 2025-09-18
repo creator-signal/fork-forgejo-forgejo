@@ -143,6 +143,21 @@ func (task *ActionTask) LoadAttributes(ctx context.Context) error {
 	return nil
 }
 
+// LoadSteps loads only the steps for this task without loading all other attributes
+func (task *ActionTask) LoadSteps(ctx context.Context) error {
+	if task == nil {
+		return nil
+	}
+	if task.Steps == nil { // be careful, an empty slice (not nil) also means loaded
+		steps, err := GetTaskStepsByTaskID(ctx, task.ID)
+		if err != nil {
+			return err
+		}
+		task.Steps = steps
+	}
+	return nil
+}
+
 func (task *ActionTask) GenerateToken() (err error) {
 	task.Token, task.TokenSalt, task.TokenHash, task.TokenLastEight, err = generateSaltedToken()
 	return err
