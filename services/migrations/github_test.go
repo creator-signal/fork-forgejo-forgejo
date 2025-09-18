@@ -467,7 +467,7 @@ func TestGithubIssuePagination(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, token != "")
 	defer server.Close()
 
-	downloader := NewGithubDownloaderV3(t.Context(), server.URL, true, true, "", "", token, "galaxyproject", "galaxy")
+	downloader := NewGithubDownloaderV3(t.Context(), "https://api.github.com", true, true, "", "", token, "galaxyproject", "galaxy")
 	downloader.SkipReactions = true
 	err := downloader.RefreshRate()
 	require.NoError(t, err)
@@ -478,21 +478,16 @@ func TestGithubIssuePagination(t *testing.T) {
 	assertRepositoryEqual(t, &base.Repository{
 		Name:          "galaxy",
 		Owner:         "galaxyproject",
-		Description:   "Data intensive science for everyone. ",
-		CloneURL:      server.URL + "/galaxyproject/galaxy.git",
-		OriginalURL:   server.URL + "/galaxyproject/galaxy",
-		DefaultBranch: "main",
-		Website:       "galaxyproject.org",
+		Description:   "Data intensive science for everyone.",
+		CloneURL:      "https://github.com/galaxyproject/galaxy.git",
+		OriginalURL:   "https://github.com/galaxyproject/galaxy",
+		DefaultBranch: "dev",
+		Website:       "https://galaxyproject.org",
 	}, repo)
 
 	per_page := 45
-
-	for page := 1; page <= 99; page++ {
+	for page := 1; page <= 250; page++ {
 		_, _, err = downloader.GetIssues(page, per_page)
+		require.NoError(t, err)
 	}
-
-	// for page := 1; page <= 99; page++ {
-	// 	_, _, err = downloader.GetPullRequests(page, per_page)
-	// }
-	require.NoError(t, err)
 }
