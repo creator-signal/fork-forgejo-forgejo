@@ -468,13 +468,31 @@ func TestGithubIssuePagination(t *testing.T) {
 	defer server.Close()
 
 	downloader := NewGithubDownloaderV3(t.Context(), server.URL, true, true, "", "", token, "galaxyproject", "galaxy")
+	downloader.SkipReactions = true
 	err := downloader.RefreshRate()
 	require.NoError(t, err)
 
-	per_page := 50
+	repo, err := downloader.GetRepoInfo()
+	require.NoError(t, err)
 
-	for page := 1; page <= 25; page++ {
+	assertRepositoryEqual(t, &base.Repository{
+		Name:          "galaxy",
+		Owner:         "galaxyproject",
+		Description:   "Data intensive science for everyone. ",
+		CloneURL:      server.URL + "/galaxyproject/galaxy.git",
+		OriginalURL:   server.URL + "/galaxyproject/galaxy",
+		DefaultBranch: "main",
+		Website:       "galaxyproject.org",
+	}, repo)
+
+	per_page := 45
+
+	for page := 1; page <= 99; page++ {
 		_, _, err = downloader.GetIssues(page, per_page)
 	}
+
+	// for page := 1; page <= 99; page++ {
+	// 	_, _, err = downloader.GetPullRequests(page, per_page)
+	// }
 	require.NoError(t, err)
 }
