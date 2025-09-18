@@ -27,13 +27,13 @@ details.dropdown > summary {
   gap: 0.75rem;
   align-items: center;
   justify-content: center;
-  /* Cancel some of default styling */
-  user-select: none;
-  list-style-type: none;
   /* Main visual properties */
   border: 1px solid var(--color-light-border);
   border-radius: var(--border-radius);
   padding: 0.5rem;
+  /* Unset unwanted default properties */
+  user-select: none;
+  list-style-type: none;
 }
 
 details.dropdown > summary:hover,
