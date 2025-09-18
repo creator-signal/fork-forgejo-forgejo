@@ -751,7 +751,7 @@ func (g *GithubDownloaderV3) GetPullRequests(page, perPage int) ([]*base.PullReq
 				reactionOpts := &github.ListReactionOptions{
 					ListOptions: github.ListOptions{
 						Page:    i,
-						PerPage: g.maxPerPage,
+						PerPage: perPage,
 					},
 				}
 				res, resp, err := g.getClient().Reactions.ListIssueReactions(g.ctx, g.repoOwner, g.repoName, pr.GetNumber(), reactionOpts)
