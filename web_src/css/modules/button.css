@@ -1,3 +1,23 @@
+.button {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding-inline: 1.5rem;
+  border-radius: var(--border-radius);
+}
+
+.button.secondary {
+  color: var(--color-text-light);
+  background: var(--color-button);
+  border: 1px solid var(--color-light-border);
+}
+
+/* Elements placed in button-sequence will have consistent height */
+.button-sequence .button,
+.button-sequence details.dropdown summary {
+  min-height: 38px;
+}
+
 /* button-row is a simple helper made to improve consistency of fomantic buttons
 placed in a row. It provides gap and cancels out fomantic's margins */
 .button-row {
