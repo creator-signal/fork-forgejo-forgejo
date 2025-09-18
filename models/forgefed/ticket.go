@@ -1,103 +1,70 @@
-// Copyright 2024, 2025 The Forgejo Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package forgefed
 
 import (
 	"fmt"
+	"time"
 
+	ap "github.com/go-ap/activitypub"
 	"github.com/valyala/fastjson"
 )
 
 // Ticket represents an item that requires work or attention.
 type Ticket struct {
-	_context []string `json:"@context"`
-	// Type represent the Object type, i.e. "Ticket".
-	Type Type `json:"type"`
-	// Id is the unique identifier for the Ticket.
-	Id Id `json:"id"`
-	// Context refers to the repo containing the relevant object.
-	Context Context `json:"context"`
-	// AttributedTo refers to the target of the Ticket.
-	AttributedTo AttributedTo `json:"attributedTo"`
-	// Summary is the header summary of the Ticket.
-	Summary Summary `json:"summary"`
-	// Content is the rendered body of the Ticket.
-	Content Content `json:"content"`
-	// MediaType is the HTTP media type for the rendered content, e.g. "text/html".
-	MediaType MediaType `json:"mediaType"`
-	// Source is the source content for the Ticket.
-	Source TicketSource `json:"source"`
-	// Published is the time that ticket submission was accepted.
-	Published Published `json:"published"`
+	ap.Object
 	// Followers is a collection of the followers of the Ticket.
-	Followers []Follower `json:"followers"`
+	Followers []Follower `json:"followers,omitempty"`
 	// Team is a collection of the project team members.
-	Team []ProjectMember `json:"team"`
-	// Replies is a collection of direct comments on the Ticket.
-	Replies []Reply `json:"replies"`
+	Team []ProjectMember `json:"team,omitempty"`
 	// Dependants is a collection of Tickets that depend on this Ticket.
-	Dependants []Dependant `json:"dependants"`
+	Dependants []Dependant `json:"dependants,omitempty"`
 	// Dependants is a collection of Tickets on which this Ticket depends.
-	Dependencies []Dependency `json:"dependencies"`
+	Dependencies []Dependency `json:"dependencies,omitempty"`
 	// IsResolved indicates whether work on this Ticket is done.
-	IsResolved bool `json:"isResolved"`
+	IsResolved bool `json:"isResolved,omitempty"`
 	// ResolvedBy represents who user or activity marked the Ticket resolved.
-	ResolvedBy ResolvedBy `json:"resolvedBy"`
+	ResolvedBy Resolver `json:"resolvedBy,omitempty"`
 	// Resolved represents when the Ticket was marked as resolved.
-	Resolved Resolved `json:"resolved"`
+	Resolved time.Time `json:"resolved,omitempty"`
 	// Assignments represents the link to list of assigned actors.
-	Assignments Assignments `json:"assignments"`
+	Assignments Assignments `json:"assignments,omitempty"`
 }
 
 type (
-	Id = string
-	// TODO: create an enum of valid `Type`s
-	Type    = string
-	Context = string
-	// TODO: convert to a `User`/`Actor` type
-	AttributedTo = string
-	Summary      = string
-	Content      = string
-	// TODO: create an enum of valid media-type, maybe pull from net/http
-	MediaType = string
-	// TODO: change to a date-time type
-	Published = string
-	// TODO: convert to a proper `Follower` type
-	Follower = string
-	// TODO: convert to a proper `ProjectMember` type
-	ProjectMember = string
-	// TODO: convert to a proper `Reply` type
-	Reply      = string
-	Dependant  = Ticket
-	Dependency = Ticket
-	// TODO: convert to a `User`/`Actor` type
-	ResolvedBy = string
-	// TODO: change to a date-time type
-	Resolved    = string
-	Assignments = string
+	Follower      = ap.Actor
+	ProjectMember = ap.Actor
+	Dependant     = Ticket
+	Dependency    = Ticket
+	Assignments   = ap.Item
 )
 
+type Activity struct {
+	ap.Activity
+}
+
+type Actor struct {
+	ap.Actor
+}
+
 // NewTicket creates a minimally compliant `Ticket` instance.
-func NewTicket(attributedTo AttributedTo, summary Summary, content Content) Ticket {
+func NewTicket(obj ap.Object) Ticket {
 	return Ticket{
-		_context: []string{
-			"https://www.w3.org/ns/activitystreams",
-			"https://forgefed.org/ns",
-		},
-		Type:         "Ticket",
-		AttributedTo: attributedTo,
-		Summary:      summary,
-		Content:      content,
+		Object: obj,
+	}
+}
+
+func forgeFedContext() []string {
+	return []string{
+		"https://www.w3.org/ns/activitystreams",
+		"https://forgefed.org/ns",
 	}
 }
 
 // Context gets the canonical context strings for a Ticket.
 func (t Ticket) ForgeFedContext() []string {
-	return []string{
-		"https://www.w3.org/ns/activitystreams",
-		"https://forgefed.org/ns",
-	}
+	return forgeFedContext()
 }
 
 // TODO: add parsing/validation of a valid Ticket
@@ -108,46 +75,41 @@ func TicketUnmarshalJSON(data []byte) (Ticket, error) {
 		return Ticket{}, err
 	}
 
-	attributedTo := AttributedTo(string(val.GetStringBytes("attributedTo")))
-	summary := Summary(string(val.GetStringBytes("summary")))
-	content := Content(string(val.GetStringBytes("content")))
+	obj := ap.Object{}
+	if err := obj.UnmarshalJSON(data); err != nil {
+		return Ticket{}, err
+	}
 
-	ticket := NewTicket(attributedTo, summary, content)
+	ticket := NewTicket(obj)
 
-	ticket.Id = Id(string(val.GetStringBytes("id")))
-	ticket.Context = Context(string(val.GetStringBytes("context")))
-	ticket.MediaType = MediaType(string(val.GetStringBytes("mediaType")))
-
-	ticket.Source.Content = Content(string(val.GetStringBytes("source", "content")))
-	ticket.Source.MediaType = MediaType(string(val.GetStringBytes("source", "mediaType")))
-
-	ticket.Published = Published(string(val.GetStringBytes("published")))
+	ticket.ID = ap.ID(ap.IRI(string(val.GetStringBytes("id"))))
 
 	i := 0
-	follower := string(val.GetStringBytes("followers", fmt.Sprintf("%d", i)))
+	follower := val.GetStringBytes("followers", fmt.Sprintf("%d", i))
 	for len(follower) != 0 {
-		ticket.Followers = append(ticket.Followers, Follower(follower))
+		f := Follower{}
+		if err := f.UnmarshalJSON(follower); err != nil {
+			return Ticket{}, err
+		}
+
+		ticket.Followers = append(ticket.Followers, f)
 
 		i += 1
-		follower = string(val.GetStringBytes("followers", fmt.Sprintf("%d", i)))
+		follower = val.GetStringBytes("followers", fmt.Sprintf("%d", i))
 	}
 
 	i = 0
-	member := string(val.GetStringBytes("team", fmt.Sprintf("%d", i)))
+	member := val.GetStringBytes("team", fmt.Sprintf("%d", i))
 	for len(member) != 0 {
-		ticket.Team = append(ticket.Team, ProjectMember(member))
+		m := ProjectMember{}
+		if err := m.UnmarshalJSON(member); err != nil {
+			return Ticket{}, err
+		}
+
+		ticket.Team = append(ticket.Team, m)
 
 		i += 1
-		member = string(val.GetStringBytes("team", fmt.Sprintf("%d", i)))
-	}
-
-	i = 0
-	reply := string(val.GetStringBytes("replies", fmt.Sprintf("%d", i)))
-	for len(reply) != 0 {
-		ticket.Replies = append(ticket.Replies, Reply(reply))
-
-		i += 1
-		reply = string(val.GetStringBytes("replies", fmt.Sprintf("%d", i)))
+		member = val.GetStringBytes("team", fmt.Sprintf("%d", i))
 	}
 
 	i = 0
@@ -179,17 +141,31 @@ func TicketUnmarshalJSON(data []byte) (Ticket, error) {
 	}
 
 	ticket.IsResolved = val.GetBool("isResolved")
-	ticket.ResolvedBy = ResolvedBy(string(val.GetStringBytes("resolvedBy")))
-	ticket.Resolved = Resolved(string(val.GetStringBytes("resolved")))
-	ticket.Assignments = Assignments(string(val.GetStringBytes("assignments")))
+
+	resolvedBy := val.GetStringBytes("resolvedBy")
+	if len(resolvedBy) > 0 {
+		resActivity := Activity{}
+		resActor := Actor{}
+		if err := resActivity.UnmarshalJSON(resolvedBy); err == nil {
+			ticket.ResolvedBy = resActivity
+		} else if err = resActor.UnmarshalJSON(resolvedBy); err == nil {
+			ticket.ResolvedBy = resActor
+		} else {
+			return Ticket{}, err
+		}
+	}
+
+	resolvedJSON := val.GetStringBytes("resolved")
+	if len(resolvedJSON) > 0 {
+		resolved := time.Time{}
+		if err := resolved.UnmarshalJSON(resolvedJSON); err != nil {
+			return Ticket{}, err
+		}
+
+		ticket.Resolved = resolved
+	}
+
+	ticket.Assignments = ap.IRI(string(val.GetStringBytes("assignments")))
 
 	return ticket, nil
-}
-
-// TicketSource represents the source content text for a Ticket.
-type TicketSource struct {
-	// Content is the source text for the TicketSource.
-	Content Content `json:"content"`
-	// MediaType is the HTTP media type for the TicketSource, e.g. "text/markdown; variant=CommonMark"
-	MediaType MediaType `json:"mediaType"`
 }

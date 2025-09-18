@@ -6,8 +6,13 @@ package forgefed
 import (
 	"testing"
 
+	ap "github.com/go-ap/activitypub"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	TicketType ap.ActivityVocabularyType = "Ticket"
 )
 
 func Test_TicketUnmarshalJSON(t *testing.T) {
@@ -40,22 +45,20 @@ func Test_TicketUnmarshalJSON(t *testing.T) {
 				"isResolved": false
 			}`),
 			want: Ticket{
-				_context: []string{
-					"https://www.w3.org/ns/activitystreams",
-					"https://forgefed.org/ns",
+				Object: ap.Object{
+					ID:           ap.ID(ap.IRI("https://example.dev/alice/myrepo/issues/42")),
+					Type:         TicketType,
+					Context:      ap.IRI("https://example.dev/alice/myrepo"),
+					AttributedTo: ap.IRI("https://dev.community/bob"),
+					Summary:      ap.DefaultNaturalLanguageValue("Nothing works!"),
+					Content:      ap.DefaultNaturalLanguageValue("<p>Please fix. <i>Everything</i> is broken!</p>"),
+					MediaType:    ap.MimeType("text/html"),
+					Source: ap.Source{
+						Content:   ap.DefaultNaturalLanguageValue("Please fix. *Everything* is broken!"),
+						MediaType: ap.MimeType("text/markdown; variant=CommonMark"),
+					},
 				},
-				Type:         Type("Ticket"),
-				Id:           Id("https://example.dev/alice/myrepo/issues/42"),
-				Context:      Context("https://example.dev/alice/myrepo"),
-				AttributedTo: AttributedTo("https://dev.community/bob"),
-				Summary:      Summary("Nothing works!"),
-				Content:      Content("<p>Please fix. <i>Everything</i> is broken!</p>"),
-				MediaType:    MediaType("text/html"),
-				Source: TicketSource{
-					Content:   Content("Please fix. *Everything* is broken!"),
-					MediaType: MediaType("text/markdown; variant=CommonMark"),
-				},
-				Assignments: Assignments("https://example.dev/alice/myrepo/issues/42/assignments"),
+				Assignments: ap.IRI("https://example.dev/alice/myrepo/issues/42/assignments"),
 				IsResolved:  false,
 			},
 		},
