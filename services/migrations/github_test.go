@@ -463,9 +463,6 @@ func TestGithubIssuePagination(t *testing.T) {
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
 	token := os.Getenv("GITHUB_READ_TOKEN")
-	fixturePath := "./testdata/github/galaxyproject"
-	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, token != "")
-	defer server.Close()
 
 	downloader := NewGithubDownloaderV3(t.Context(), "https://api.github.com", true, true, "", "", token, "galaxyproject", "galaxy")
 	downloader.SkipReactions = true
