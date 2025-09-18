@@ -5,10 +5,17 @@
   --button-min-height: 38px;
 }
 
+:root .button.small,
+:root .button-row.small,
+:root .button-sequence.small {
+  --button-min-height: 36px;
+}
+
+/* ToDo: use inline-flex or set min-width to fit? */
 .button {
   display: flex;
   align-items: center;
-  min-height: 36px;
+  min-height: var(--button-min-height);
   padding-inline: 1.5rem;
   justify-content: center;
   gap: 0.25rem;
