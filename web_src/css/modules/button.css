@@ -26,10 +26,14 @@
 
 /* Elements placed in button-row/sequence will have consistent height */
 .button-row .button,
-.button-sequence .button,
+.button-sequence .button {
+  min-height: 38px;
+}
+/* Dropdown openers should be at least as wide as they are tall */
 .button-row details.dropdown summary,
 .button-sequence details.dropdown summary {
   min-height: 38px;
+  min-width: 38px;
 }
 
 /* button-row is a simple helper made to improve consistency of fomantic buttons
