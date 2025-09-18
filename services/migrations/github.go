@@ -459,7 +459,8 @@ func (g *GithubDownloaderV3) GetIssues(page, perPage int) ([]*base.Issue, bool, 
 			ListCursorOptions: github.ListCursorOptions{
 				PerPage: perPage,
 				After:   g.githubPagingInfo.After,
-			}})
+			},
+		})
 		g.githubPagingInfo.After = resp.After
 	}
 

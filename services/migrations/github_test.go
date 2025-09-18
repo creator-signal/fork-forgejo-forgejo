@@ -482,9 +482,9 @@ func TestGithubIssuePagination(t *testing.T) {
 		Website:       "https://galaxyproject.org",
 	}, repo)
 
-	per_page := 45
+	perPage := 45
 	for page := 1; page <= 250; page++ {
-		_, _, err = downloader.GetIssues(page, per_page)
+		_, _, err = downloader.GetIssues(page, perPage)
 		require.NoError(t, err)
 	}
 }
