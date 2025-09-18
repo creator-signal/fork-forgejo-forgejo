@@ -1082,9 +1082,6 @@ func servePartialLogs(ctx *context.APIContext, task *actions_model.ActionTask, t
 	} else if offset > 0 {
 		// Offset only: read all lines from offset
 		lines, timestamps, err = readHeadLines(ctx, task, -1, offset)
-	} else if format == "json" {
-		// JSON format with no filters: read all lines
-		lines, timestamps, err = readHeadLines(ctx, task, -1, 0)
 	} else {
 		// Default: read all lines
 		lines, timestamps, err = readHeadLines(ctx, task, -1, 0)

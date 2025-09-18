@@ -104,9 +104,9 @@ type ActionRunJobResponse struct {
 	Started time.Time `json:"started,omitzero"`
 	Stopped time.Time `json:"stopped,omitzero"`
 	// job id in workflow, not job's database ID
-	JobID   string    `json:"job_id"`
-	Needs   []string  `json:"needs"`
-	TaskID  int64     `json:"task_id"`
+	JobID  string   `json:"job_id"`
+	Needs  []string `json:"needs"`
+	TaskID int64    `json:"task_id"`
 	// Steps are only included if the job has started
 	Steps []*ActionRunJobStep `json:"steps,omitempty"`
 	// Run information
