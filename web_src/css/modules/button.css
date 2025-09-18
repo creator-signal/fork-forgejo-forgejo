@@ -11,9 +11,8 @@
   --button-min-height: 36px;
 }
 
-/* ToDo: use inline-flex or set min-width to fit? */
 .button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   min-height: var(--button-min-height);
   padding-inline: 1.5rem;
