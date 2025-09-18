@@ -5,9 +5,9 @@
   --button-min-height: 38px;
 }
 
-:root .small.button,
-:root .small.button-row,
-:root .small.button-sequence {
+:root .h-small.button,
+:root .h-small.button-row,
+:root .h-small.button-sequence {
   --button-min-height: 36px;
 }
 
