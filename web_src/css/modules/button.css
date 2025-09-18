@@ -3,6 +3,8 @@
   align-items: center;
   min-height: 36px;
   padding-inline: 1.5rem;
+  justify-content: center;
+  gap: 0.25rem;
   border-radius: var(--border-radius);
 }
 
@@ -22,8 +24,10 @@
   color: var(--color-text);
 }
 
-/* Elements placed in button-sequence will have consistent height */
+/* Elements placed in button-row/sequence will have consistent height */
+.button-row .button,
 .button-sequence .button,
+.button-row details.dropdown summary,
 .button-sequence details.dropdown summary {
   min-height: 38px;
 }
