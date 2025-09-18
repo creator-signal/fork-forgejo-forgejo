@@ -12,7 +12,7 @@ import (
 	"forgejo.org/models/unittest"
 	base "forgejo.org/modules/migration"
 
-	"github.com/google/go-github/v64/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

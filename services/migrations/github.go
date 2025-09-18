@@ -20,7 +20,7 @@ import (
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/structs"
 
-	"github.com/google/go-github/v64/github"
+	"github.com/google/go-github/v74/github"
 	"golang.org/x/oauth2"
 )
 
