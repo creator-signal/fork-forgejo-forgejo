@@ -33,7 +33,7 @@
 		<div class="actions">
 			<div class="primary-action" hx-target="#profile-avatar-card" hx-indicator="#profile-avatar-card">
 				{{if .IsFollowing}}
-					<button hx-post="{{.ContextUser.HomeLink}}?action=unfollow" class="ui basic red button tw-flex tw-gap-1">
+					<button hx-post="{{.ContextUser.HomeLink}}?action=unfollow" class="ui basic button tw-flex tw-gap-1">
 						{{svg "octicon-person"}} {{ctx.Locale.Tr "user.unfollow"}}
 					</button>
 				{{else}}
