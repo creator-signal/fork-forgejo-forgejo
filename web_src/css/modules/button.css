@@ -1,5 +1,5 @@
 /* Copyright 2025 0ko, The Forgejo Authors. All rights reserved.
-SPDX-License-Identifier: GPL-3.0-or-later */
+ * SPDX-License-Identifier: GPL-3.0-or-later */
 
 :root {
   --button-min-height: 38px;
@@ -50,7 +50,7 @@ SPDX-License-Identifier: GPL-3.0-or-later */
 }
 
 /* button-row is a simple helper made to improve consistency of fomantic buttons
-placed in a row. It provides gap and cancels out fomantic's margins */
+ * placed in a row. It provides gap and cancels out fomantic's margins */
 .button-row {
   gap: var(--button-spacing);
 }
@@ -60,8 +60,7 @@ placed in a row. It provides gap and cancels out fomantic's margins */
 }
 
 /* button-sequence is a more complex helper that has wrap. Using it is preferred
-but also requires deeper consideration */
-
+ * but also requires deeper consideration */
 .button-sequence {
   display: flex;
   flex-flow: wrap;
