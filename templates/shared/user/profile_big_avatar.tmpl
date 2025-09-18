@@ -37,7 +37,7 @@
 						{{svg "octicon-person"}} {{ctx.Locale.Tr "user.unfollow"}}
 					</button>
 				{{else}}
-					<button hx-post="{{.ContextUser.HomeLink}}?action=follow" class="ui basic primary button tw-flex tw-gap-1">
+					<button hx-post="{{.ContextUser.HomeLink}}?action=follow" class="button primary tw-w-full">
 						{{svg "octicon-person"}} {{ctx.Locale.Tr "user.follow"}}
 					</button>
 				{{end}}
