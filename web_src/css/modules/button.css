@@ -1,6 +1,10 @@
 /* Copyright 2025 0ko, The Forgejo Authors. All rights reserved.
 SPDX-License-Identifier: GPL-3.0-or-later */
 
+:root {
+  --button-min-height: 38px;
+}
+
 .button {
   display: flex;
   align-items: center;
@@ -37,16 +41,12 @@ SPDX-License-Identifier: GPL-3.0-or-later */
   color: var(--color-text);
 }
 
-/* Elements placed in button-row/sequence will have consistent height */
-.button-row .button,
-.button-sequence .button {
-  min-height: 38px;
-}
-/* Dropdown openers should be at least as wide as they are tall */
+/* Dropdown openers should be at least tall as buttons they are in line with, and
+ * as wide as they are tall */
 .button-row details.dropdown summary,
 .button-sequence details.dropdown summary {
-  min-height: 38px;
-  min-width: 38px;
+  min-height: var(--button-min-height);
+  min-width: var(--button-min-height);
 }
 
 /* button-row is a simple helper made to improve consistency of fomantic buttons
@@ -75,4 +75,3 @@ but also requires deeper consideration */
 .button-sequence .ui.button {
   margin: 0 !important;
 }
-
