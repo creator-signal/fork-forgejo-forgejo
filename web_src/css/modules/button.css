@@ -3,6 +3,8 @@
 
 :root {
   --button-min-height: 38px;
+  /* Different button sizes can be improved via this variable */
+  --button-padding-inline: 1.5rem;
 }
 
 :root .h-small.button,
@@ -15,7 +17,7 @@
   display: inline-flex;
   align-items: center;
   min-height: var(--button-min-height);
-  padding-inline: 1.5rem;
+  padding-inline: var(--button-padding-inline);
   justify-content: center;
   gap: 0.25rem;
   border-radius: var(--border-radius);
