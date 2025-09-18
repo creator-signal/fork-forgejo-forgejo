@@ -1,6 +1,15 @@
+/* button-row is a simple helper made to improve consistency of fomantic buttons
+placed in a row. It provides gap and cancels out fomantic's margins */
 .button-row {
   gap: var(--button-spacing);
 }
+
+.button-row .ui.button {
+  margin-right: 0;
+}
+
+/* button-sequence is a more complex helper that has wrap. Using it is preferred
+but also requires deeper consideration */
 
 .button-sequence {
   display: flex;
@@ -14,10 +23,6 @@
 
 .button-sequence .ui.button {
   margin: 0 !important;
-}
-
-.button-row .ui.button {
-  margin-right: 0;
 }
 
 /* this contains override styles for buttons and related elements */
