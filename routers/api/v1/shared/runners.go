@@ -60,6 +60,7 @@ func fromRunJobModelToResponse(job []*actions_model.ActionRunJob, labels []strin
 				RepoID:  job[i].RepoID,
 				OwnerID: job[i].OwnerID,
 				Name:    job[i].Name,
+				JobID:   job[i].JobID,
 				Needs:   job[i].Needs,
 				RunsOn:  job[i].RunsOn,
 				TaskID:  job[i].TaskID,

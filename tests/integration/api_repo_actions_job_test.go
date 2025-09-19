@@ -83,13 +83,10 @@ jobs:
 		assert.NotNil(t, jobResp["run_id"])
 		assert.NotNil(t, jobResp["name"])
 		assert.NotNil(t, jobResp["status"])
-		assert.NotNil(t, jobResp["run"])
+		assert.NotNil(t, jobResp["job_id"])
 
-		// Verify run information is included
-		runInfo := jobResp["run"].(map[string]any)
-		assert.InDelta(t, float64(run.ID), runInfo["id"], 0.01)
-		assert.NotEmpty(t, runInfo["title"])
-		assert.NotEmpty(t, runInfo["status"])
+		// Verify the run_id matches
+		assert.InDelta(t, float64(run.ID), jobResp["run_id"], 0.01)
 
 		// Test non-existent job index
 		req = NewRequestf(t, "GET", "/api/v1/repos/%s/%s/actions/runs/%d/jobs/999",
@@ -98,6 +95,91 @@ jobs:
 
 		// Test non-existent run
 		req = NewRequestf(t, "GET", "/api/v1/repos/%s/%s/actions/runs/9999/jobs/0",
+			repo.OwnerName, repo.Name).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+}
+
+func TestAPIListActionRunJobs(t *testing.T) {
+	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
+
+		// Create a repo with an action workflow that has multiple jobs
+		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "api-list-jobs-test-repo",
+			[]unit_model.Type{unit_model.TypeActions}, nil,
+			[]*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".forgejo/workflows/multi-job.yml",
+					ContentReader: strings.NewReader(`name: multi-job test
+on: push
+jobs:
+  build:
+    runs-on: docker
+    steps:
+      - name: Build step
+        run: echo "Building..."
+  test:
+    runs-on: docker
+    needs: build
+    steps:
+      - name: Test step
+        run: echo "Testing..."
+  deploy:
+    runs-on: docker
+    needs: test
+    steps:
+      - name: Deploy step
+        run: echo "Deploying..."
+`),
+				},
+			},
+		)
+		defer f()
+
+		// Wait for the workflow to be created
+		assert.Eventually(t, func() bool {
+			count := unittest.GetCount(t, &actions_model.ActionRun{RepoID: repo.ID})
+			return count == 1
+		}, 1*time.Minute, 1*time.Second, "workflow run should be created within 1 minute")
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: repo.ID})
+
+		// Test listing all jobs in the run
+		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+			repo.OwnerName, repo.Name, run.Index).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		var jobs []map[string]any
+		DecodeJSON(t, resp, &jobs)
+
+		// Should have 3 jobs: build, test, deploy
+		assert.GreaterOrEqual(t, len(jobs), 1)
+
+		// Verify each job has the expected structure
+		for _, job := range jobs {
+			assert.NotNil(t, job["id"])
+			assert.NotNil(t, job["repo_id"])
+			assert.NotNil(t, job["owner_id"])
+			assert.NotNil(t, job["name"])
+			assert.NotNil(t, job["job_id"])
+			assert.NotNil(t, job["status"])
+			assert.NotNil(t, job["needs"])
+			assert.NotNil(t, job["runs_on"])
+			assert.NotNil(t, job["task_id"])
+
+			// Verify the job_id is one of our expected values
+			jobID := job["job_id"].(string)
+			assert.Contains(t, []string{"build", "test", "deploy"}, jobID)
+
+			// Verify basic field types
+			assert.IsType(t, float64(0), job["id"])
+			assert.IsType(t, "", job["name"])
+			assert.IsType(t, "", job["status"])
+		}
+
+		// Test non-existent run
+		req = NewRequestf(t, "GET", "/api/v1/repos/%s/%s/actions/runs/9999/jobs",
 			repo.OwnerName, repo.Name).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
 	})

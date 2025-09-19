@@ -10,6 +10,7 @@ import (
 	access_model "forgejo.org/models/perm/access"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/actions"
+	"forgejo.org/modules/log"
 	api "forgejo.org/modules/structs"
 	service_context "forgejo.org/services/context"
 )
@@ -51,7 +52,7 @@ func ToActionRun(ctx context.Context, run *actions_model.ActionRun, doer *user_m
 }
 
 // ToActionRunJobResponse converts an ActionRunJob to an API response with steps
-func ToActionRunJobResponse(ctx *service_context.APIContext, job *actions_model.ActionRunJob, jobs []*actions_model.ActionRunJob) (*api.ActionRunJobResponse, error) {
+func ToActionRunJobResponse(ctx *service_context.APIContext, job *actions_model.ActionRunJob) (*api.ActionRunJobResponse, error) {
 	resp := &api.ActionRunJobResponse{
 		ID:     job.ID,
 		RunID:  job.RunID,
@@ -86,19 +87,32 @@ func ToActionRunJobResponse(ctx *service_context.APIContext, job *actions_model.
 						Stopped: step.Stopped.AsTime(),
 					})
 				}
+			} else {
+				log.Warn("Failed to load steps for task %d: %v", job.TaskID, err)
 			}
-		}
-	}
-
-	// Add run information
-	if job.Run != nil {
-		resp.Run = &api.ActionRunSummary{
-			ID:        job.Run.ID,
-			Title:     job.Run.Title,
-			Status:    job.Run.Status.String(),
-			JobsCount: len(jobs),
+		} else {
+			log.Warn("Failed to get task %d for job %d: %v", job.TaskID, job.ID, err)
 		}
 	}
 
 	return resp, nil
+}
+
+// ToActionRunJobs converts ActionRunJob models to API format
+func ToActionRunJobs(jobs []*actions_model.ActionRunJob) []*api.ActionRunJob {
+	result := make([]*api.ActionRunJob, len(jobs))
+	for i, job := range jobs {
+		result[i] = &api.ActionRunJob{
+			ID:      job.ID,
+			RepoID:  job.RepoID,
+			OwnerID: job.OwnerID,
+			Name:    job.Name,
+			JobID:   job.JobID,
+			Status:  job.Status.String(),
+			Needs:   job.Needs,
+			RunsOn:  job.RunsOn,
+			TaskID:  job.TaskID,
+		}
+	}
+	return result
 }

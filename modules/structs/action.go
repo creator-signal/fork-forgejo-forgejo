@@ -18,6 +18,8 @@ type ActionRunJob struct {
 	OwnerID int64 `json:"owner_id"`
 	// the action run job name
 	Name string `json:"name"`
+	// the job id in the workflow file (e.g., "build", "test")
+	JobID string `json:"job_id"`
 	// the action run job needed ids
 	Needs []string `json:"needs"`
 	// the action run job labels to run on
@@ -109,15 +111,4 @@ type ActionRunJobResponse struct {
 	TaskID int64    `json:"task_id"`
 	// Steps are only included if the job has started
 	Steps []*ActionRunJobStep `json:"steps,omitempty"`
-	// Run information
-	Run *ActionRunSummary `json:"run,omitempty"`
-}
-
-// ActionRunSummary represents a summary of an action run
-// swagger:model
-type ActionRunSummary struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	Status    string `json:"status"`
-	JobsCount int    `json:"jobs_count"`
 }

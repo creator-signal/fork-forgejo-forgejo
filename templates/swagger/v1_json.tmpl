@@ -5196,6 +5196,52 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/runs/{run_index}/jobs": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "List jobs of an action run",
+        "operationId": "repoListActionRunJobs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "index of the action run",
+            "name": "run_index",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/RunJobList"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/runs/{run_index}/jobs/{job_index}": {
       "get": {
         "produces": [
@@ -21679,6 +21725,11 @@
           "format": "int64",
           "x-go-name": "ID"
         },
+        "job_id": {
+          "description": "the job id in the workflow file (e.g., \"build\", \"test\")",
+          "type": "string",
+          "x-go-name": "JobID"
+        },
         "name": {
           "description": "the action run job name",
           "type": "string",
@@ -21751,9 +21802,6 @@
           },
           "x-go-name": "Needs"
         },
-        "run": {
-          "$ref": "#/definitions/ActionRunSummary"
-        },
         "run_id": {
           "type": "integer",
           "format": "int64",
@@ -21810,31 +21858,6 @@
           "type": "string",
           "format": "date-time",
           "x-go-name": "Stopped"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
-    "ActionRunSummary": {
-      "description": "ActionRunSummary represents a summary of an action run",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "ID"
-        },
-        "jobs_count": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "JobsCount"
-        },
-        "status": {
-          "type": "string",
-          "x-go-name": "Status"
-        },
-        "title": {
-          "type": "string",
-          "x-go-name": "Title"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"

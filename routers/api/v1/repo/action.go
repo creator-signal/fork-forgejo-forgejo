@@ -896,19 +896,71 @@ func GetActionRunJob(ctx *context.APIContext) {
 	runIndex := ctx.ParamsInt64(":run_index")
 	jobIndex := ctx.ParamsInt64(":job_index")
 
-	job, jobs := getRunJobsForAPI(ctx, runIndex, jobIndex)
+	job := getRunJobsForAPI(ctx, runIndex, jobIndex)
 	if ctx.Written() {
 		return
 	}
 
 	// Convert job to API response
-	resp, err := convert.ToActionRunJobResponse(ctx, job, jobs)
+	resp, err := convert.ToActionRunJobResponse(ctx, job)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "ToActionRunJobResponse", err)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, resp)
+}
+
+// ListActionRunJobs list jobs of a specific run
+func ListActionRunJobs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_index}/jobs repository repoListActionRunJobs
+	// ---
+	// summary: List jobs of an action run
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: run_index
+	//   in: path
+	//   description: index of the action run
+	//   type: integer
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/RunJobList"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	runIndex := ctx.ParamsInt64(":run_index")
+
+	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.NotFound("Run not found", err)
+			return
+		}
+		ctx.Error(http.StatusInternalServerError, "GetRunByIndex", err)
+		return
+	}
+
+	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetRunJobsByRunID", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToActionRunJobs(jobs))
 }
 
 // GetActionRunJobLogs get logs of a specific job
@@ -972,7 +1024,7 @@ func GetActionRunJobLogs(ctx *context.APIContext) {
 	runIndex := ctx.ParamsInt64(":run_index")
 	jobIndex := ctx.ParamsInt64(":job_index")
 
-	job, _ := getRunJobsForAPI(ctx, runIndex, jobIndex)
+	job := getRunJobsForAPI(ctx, runIndex, jobIndex)
 	if ctx.Written() {
 		return
 	}
@@ -1345,27 +1397,27 @@ func countTotalLines(reader io.ReadSeekCloser) (int64, error) {
 }
 
 // Helper function to get run jobs for API endpoints
-func getRunJobsForAPI(ctx *context.APIContext, runIndex, jobIndex int64) (*actions_model.ActionRunJob, []*actions_model.ActionRunJob) {
+func getRunJobsForAPI(ctx *context.APIContext, runIndex, jobIndex int64) *actions_model.ActionRunJob {
 	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.NotFound("Run not found", err)
-			return nil, nil
+			return nil
 		}
 		ctx.Error(http.StatusInternalServerError, "GetRunByIndex", err)
-		return nil, nil
+		return nil
 	}
 	run.Repo = ctx.Repo.Repository
 
 	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetRunJobsByRunID", err)
-		return nil, nil
+		return nil
 	}
 
 	if len(jobs) == 0 {
 		ctx.NotFound("No jobs found", nil)
-		return nil, nil
+		return nil
 	}
 
 	for _, v := range jobs {
@@ -1373,10 +1425,10 @@ func getRunJobsForAPI(ctx *context.APIContext, runIndex, jobIndex int64) (*actio
 	}
 
 	if jobIndex >= 0 && jobIndex < int64(len(jobs)) {
-		return jobs[jobIndex], jobs
+		return jobs[jobIndex]
 	}
 
 	// If jobIndex is out of range, return 404
 	ctx.NotFound("Job not found", nil)
-	return nil, nil
+	return nil
 }
