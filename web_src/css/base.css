@@ -28,7 +28,6 @@
   --checkbox-size: 15px; /* height and width of checkbox and radio inputs */
   --page-spacing: 16px; /* space between page elements */
   --page-margin-x: 32px; /* minimum space on left and right side of page */
-  --button-spacing: 0.33rem;
 }
 
 @media (min-width: 768px) and (max-width: 1200px) {
@@ -40,12 +39,6 @@
 @media (max-width: 767.98px) {
   :root {
     --page-margin-x: 8px;
-  }
-}
-
-@media (pointer: coarse) {
-  :root {
-    --button-spacing: 0.5rem;
   }
 }
 

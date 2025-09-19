@@ -4,6 +4,8 @@
 :root {
   --button-min-height: 36px;
   --button-padding-inline: 1.35rem;
+
+  --button-spacing: 0.33rem;
 }
 
 :root .small.button,
@@ -11,6 +13,12 @@
 :root .small.button-sequence {
   --button-min-height: 34px;
   --button-padding-inline: 1.25rem;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --button-spacing: 0.5rem;
+  }
 }
 
 .button {
