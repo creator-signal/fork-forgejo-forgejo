@@ -4,7 +4,6 @@
 :root {
   --button-min-height: 36px;
   --button-padding-inline: 1.35rem;
-  --button-spacing: 0.33rem;
 }
 
 :root .small.button,
@@ -17,7 +16,6 @@
 @media (pointer: coarse) {
   :root {
     --button-min-height: 40px;
-    --button-spacing: 0.5rem;
   }
 
   :root .small.button,
@@ -49,7 +47,7 @@
 
 .button.primary:hover,
 .button.primary:focus {
-  background: var(--color-primary-hover);;
+  background: var(--color-primary-hover);
 }
 
 .button.secondary {
