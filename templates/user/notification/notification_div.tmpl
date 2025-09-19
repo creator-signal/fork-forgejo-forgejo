@@ -11,15 +11,15 @@
 					{{ctx.Locale.Tr "notification.read"}}
 				</a>
 			</div>
-			<div class="tw-flex button-row">
-				<a class="ui tiny button" href="{{AppSubUrl}}/notifications/subscriptions">
+			<div class="button-row small tw-flex">
+				<a class="secondary button" href="{{AppSubUrl}}/notifications/subscriptions">
 					{{ctx.Locale.Tr "notification.subscriptions"}}
 				</a>
 				{{if and (eq .Status 1)}}
 					<form class="{{if not $notificationUnreadCount}}tw-hidden{{end}}" action="{{AppSubUrl}}/notifications/purge" method="post">
 						{{$.CsrfTokenHtml}}
 						<div>
-							<button class="ui mini button primary tw-mr-0" title="{{ctx.Locale.Tr "notification.mark_all_as_read"}}">
+							<button class="primary button" title="{{ctx.Locale.Tr "notification.mark_all_as_read"}}">
 								{{svg "octicon-checklist"}}
 							</button>
 						</div>
