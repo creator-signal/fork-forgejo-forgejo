@@ -800,7 +800,7 @@ func ListActionRuns(ctx *context.APIContext) {
 
 // GetActionRun get one action instance
 func GetActionRun(ctx *context.APIContext) {
-	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_id} repository ActionRun
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_index} repository ActionRun
 	// ---
 	// summary: Get an action run
 	// produces:
@@ -816,9 +816,9 @@ func GetActionRun(ctx *context.APIContext) {
 	//   description: name of the repo
 	//   type: string
 	//   required: true
-	// - name: run_id
+	// - name: run_index
 	//   in: path
-	//   description: id of the action run
+	//   description: index of the action run
 	//   type: integer
 	//   format: int64
 	//   required: true
@@ -832,20 +832,13 @@ func GetActionRun(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	run, err := actions_model.GetRunByID(ctx, ctx.ParamsInt64(":run_id"))
+	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":run_index"))
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
-			ctx.Error(http.StatusNotFound, "GetRunById", err)
+			ctx.Error(http.StatusNotFound, "GetRunByIndex", err)
 		} else {
-			ctx.Error(http.StatusInternalServerError, "GetRunByID", err)
+			ctx.Error(http.StatusInternalServerError, "GetRunByIndex", err)
 		}
-		return
-	}
-
-	// Action runs lives in its own table, therefore we check that the
-	// run with the requested ID is owned by the repository
-	if ctx.Repo.Repository.ID != run.RepoID {
-		ctx.Error(http.StatusNotFound, "GetRunById", util.ErrNotExist)
 		return
 	}
 

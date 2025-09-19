@@ -1225,7 +1225,7 @@ func Routes() *web.Route {
 					m.Get("/tasks", repo.ListActionTasks)
 					m.Group("/runs", func() {
 						m.Get("", repo.ListActionRuns)
-						m.Get("/{run_id}", repo.GetActionRun)
+						m.Get("/{run_index}", repo.GetActionRun)
 						m.Group("/{run_index}/jobs", func() {
 							m.Get("", repo.ListActionRunJobs)
 							m.Get("/{job_index}", repo.GetActionRunJob)

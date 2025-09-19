@@ -5146,7 +5146,7 @@
         }
       }
     },
-    "/repos/{owner}/{repo}/actions/runs/{run_id}": {
+    "/repos/{owner}/{repo}/actions/runs/{run_index}": {
       "get": {
         "produces": [
           "application/json"
@@ -5174,8 +5174,8 @@
           {
             "type": "integer",
             "format": "int64",
-            "description": "id of the action run",
-            "name": "run_id",
+            "description": "index of the action run",
+            "name": "run_index",
             "in": "path",
             "required": true
           }

@@ -194,22 +194,22 @@ func TestActionsAPIGetActionRun(t *testing.T) {
 
 	testqueries := []struct {
 		name           string
-		runID          int64
+		runIndex       int64
 		expectedStatus int
 	}{
 		{
 			name:           "existing return ok",
-			runID:          892,
+			runIndex:       1, // corresponds to run ID 892 in repo 63
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "non existing run",
-			runID:          9876543210, // I hope this run will not exists, else just change it to another.
+			runIndex:       9999999, // non-existing run index
 			expectedStatus: http.StatusNotFound,
 		},
 		{
-			name:           "existing run but wrong repo should not be found",
-			runID:          891,
+			name:           "run index doesn't exist in this repo",
+			runIndex:       187, // this index doesn't exist in repo 63
 			expectedStatus: http.StatusNotFound,
 		},
 	}
@@ -218,7 +218,7 @@ func TestActionsAPIGetActionRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := NewRequest(t, http.MethodGet,
 				fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d",
-					repo.OwnerName, repo.Name, tt.runID,
+					repo.OwnerName, repo.Name, tt.runIndex,
 				),
 			)
 			req.AddTokenAuth(token)
@@ -230,7 +230,7 @@ func TestActionsAPIGetActionRun(t *testing.T) {
 				return
 			}
 
-			dbRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: tt.runID})
+			dbRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: repo.ID, Index: tt.runIndex})
 			apiRun := new(api.ActionRun)
 			DecodeJSON(t, res, apiRun)
 
