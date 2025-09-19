@@ -2,15 +2,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 :root {
-  --button-min-height: 38px;
-  --button-padding-inline: 1.5rem;
+  --button-min-height: 36px;
+  --button-padding-inline: 1.35rem;
 }
 
 :root .small.button,
 :root .small.button-row,
 :root .small.button-sequence {
-  --button-min-height: 36px;
-  --button-padding-inline: 1.35rem;
+  --button-min-height: 34px;
+  --button-padding-inline: 1.25rem;
 }
 
 .button {
