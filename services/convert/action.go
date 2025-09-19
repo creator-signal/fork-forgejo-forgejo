@@ -99,18 +99,18 @@ func ToActionRunJobResponse(ctx *service_context.APIContext, job *actions_model.
 }
 
 // ToActionRunJobs converts ActionRunJob models to API format
-func ToActionRunJobs(jobs []*actions_model.ActionRunJob) []*api.ActionRunJob {
-	result := make([]*api.ActionRunJob, len(jobs))
+func ToActionRunJobs(jobs []*actions_model.ActionRunJob) []*api.ActionRunJobResponse {
+	result := make([]*api.ActionRunJobResponse, len(jobs))
 	for i, job := range jobs {
-		result[i] = &api.ActionRunJob{
+		result[i] = &api.ActionRunJobResponse{
 			ID:      job.ID,
-			RepoID:  job.RepoID,
-			OwnerID: job.OwnerID,
+			RunID:   job.RunID,
 			Name:    job.Name,
-			JobID:   job.JobID,
 			Status:  job.Status.String(),
+			Started: job.Started.AsTime(),
+			Stopped: job.Stopped.AsTime(),
+			JobID:   job.JobID,
 			Needs:   job.Needs,
-			RunsOn:  job.RunsOn,
 			TaskID:  job.TaskID,
 		}
 	}

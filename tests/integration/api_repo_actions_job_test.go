@@ -156,17 +156,16 @@ jobs:
 		// Should have 3 jobs: build, test, deploy
 		assert.GreaterOrEqual(t, len(jobs), 1)
 
-		// Verify each job has the expected structure
+		// Verify each job has the expected ActionRunJobResponse structure
 		for _, job := range jobs {
 			assert.NotNil(t, job["id"])
-			assert.NotNil(t, job["repo_id"])
-			assert.NotNil(t, job["owner_id"])
+			assert.NotNil(t, job["run_id"])
 			assert.NotNil(t, job["name"])
 			assert.NotNil(t, job["job_id"])
 			assert.NotNil(t, job["status"])
 			assert.NotNil(t, job["needs"])
-			assert.NotNil(t, job["runs_on"])
 			assert.NotNil(t, job["task_id"])
+			// started and stopped may be zero values for pending jobs
 
 			// Verify the job_id is one of our expected values
 			jobID := job["job_id"].(string)
@@ -174,8 +173,10 @@ jobs:
 
 			// Verify basic field types
 			assert.IsType(t, float64(0), job["id"])
+			assert.IsType(t, float64(0), job["run_id"])
 			assert.IsType(t, "", job["name"])
 			assert.IsType(t, "", job["status"])
+			assert.IsType(t, "", job["job_id"])
 		}
 
 		// Test non-existent run

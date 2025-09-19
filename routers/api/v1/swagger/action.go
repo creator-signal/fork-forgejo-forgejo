@@ -40,7 +40,7 @@ type swaggerResponseVariableList struct {
 // swagger:response RunJobList
 type swaggerRunJobList struct {
 	// in:body
-	Body []*api.ActionRunJob `json:"body"`
+	Body []*api.ActionRunJobResponse `json:"body"`
 }
 
 // DispatchWorkflowRun is a Workflow Run after dispatching
