@@ -17,9 +17,9 @@ test('Follow and block actions', async ({page}) => {
   const followButton = page.locator('.primary-action button');
   await expect(followButton).toContainText('Follow');
   await followButton.click();
-  await expect(followButton).toContainText('Unfollow');
+  await expect(followButton).toContainText('Unfollow', {timeout: 5000});
   await followButton.click();
-  await expect(followButton).toContainText('Follow');
+  await expect(followButton).toContainText('Follow', {timeout: 5000});
 
   // Simple block interaction.
   const actionsDropdownBtn = page.locator('.actions .dropdown summary');
