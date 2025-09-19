@@ -3,7 +3,6 @@
 
 :root {
   --button-min-height: 38px;
-  /* Different button sizes can be implemented via this variable */
   --button-padding-inline: 1.5rem;
 }
 
@@ -11,7 +10,7 @@
 :root .small.button-row,
 :root .small.button-sequence {
   --button-min-height: 36px;
-  /* .small uses same inline padding */
+  --button-padding-inline: 1.35rem;
 }
 
 .button {
