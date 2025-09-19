@@ -72,10 +72,6 @@
   gap: var(--button-spacing);
 }
 
-.button-sequence.right {
-  justify-content: end;
-}
-
 /* Fomantic buttons have annoying margins to set distance between elements. In
  * the button-row/sequence helpers this is set by flex+gap */
 .button-row .ui.button {
