@@ -56,7 +56,7 @@
 					<div class="flex-item-body">{{$description}}</div>
 				{{end}}
 				{{if .Topics}}
-					<div class="label-list">
+					<div class="topic-list">
 					{{range .Topics}}
 						{{if ne . ""}}<a class="ui label" href="{{AppSubUrl}}/explore/repos?q={{.}}&topic=1">{{.}}</a>{{end}}
 					{{end}}
