@@ -2337,6 +2337,10 @@ tbody.commit-list {
   margin: 0;
 }
 
+.repo-topics .repo-topic:last-of-type {
+  margin-right: 0.5rem;
+}
+
 #new-dependency-drop-list.ui.selection.dropdown {
   min-width: 0;
   width: 100%;
