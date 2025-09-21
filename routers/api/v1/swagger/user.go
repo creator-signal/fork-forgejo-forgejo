@@ -20,6 +20,10 @@ type swaggerResponseUser struct {
 type swaggerResponseUserList struct {
 	// in:body
 	Body []api.User `json:"body"`
+
+	// The total number of users
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // EmailList

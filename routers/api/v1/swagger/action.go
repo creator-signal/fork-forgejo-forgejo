@@ -13,6 +13,10 @@ import (
 type swaggerResponseSecretList struct {
 	// in:body
 	Body []api.Secret `json:"body"`
+
+	// The total number of secrets
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // Secret
@@ -34,6 +38,10 @@ type swaggerResponseActionVariable struct {
 type swaggerResponseVariableList struct {
 	// in:body
 	Body []api.ActionVariable `json:"body"`
+
+	// The total number of variables
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // RunJobList is a list of action run jobs
@@ -55,6 +63,7 @@ type swaggerDispatchWorkflowRun struct {
 type swaggerRegistrationToken struct {
 	// in: body
 	Body shared.RegistrationToken `json:"body"`
+
 }
 
 // ActionRunner represents a runner

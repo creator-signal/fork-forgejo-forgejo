@@ -19,6 +19,10 @@ type swaggerResponseQuotaInfo struct {
 type swaggerResponseQuotaRuleInfoList struct {
 	// in:body
 	Body []api.QuotaRuleInfo `json:"body"`
+
+	// The total number of quota rules
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // QuotaRuleInfo
@@ -33,6 +37,10 @@ type swaggerResponseQuotaRuleInfo struct {
 type swaggerQuotaUsedAttachmentList struct {
 	// in:body
 	Body api.QuotaUsedAttachmentList `json:"body"`
+
+	// The total number of quota used attachments
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // QuotaUsedPackageList
@@ -40,6 +48,10 @@ type swaggerQuotaUsedAttachmentList struct {
 type swaggerQuotaUsedPackageList struct {
 	// in:body
 	Body api.QuotaUsedPackageList `json:"body"`
+
+	// The total number of quota used packages
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // QuotaUsedArtifactList
@@ -47,6 +59,10 @@ type swaggerQuotaUsedPackageList struct {
 type swaggerQuotaUsedArtifactList struct {
 	// in:body
 	Body api.QuotaUsedArtifactList `json:"body"`
+
+	// The total number of quota used artifacts
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // QuotaGroup
@@ -61,4 +77,8 @@ type swaggerResponseQuotaGroup struct {
 type swaggerResponseQuotaGroupList struct {
 	// in:body
 	Body api.QuotaGroupList `json:"body"`
+
+	// The total number of quota groups
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
 }

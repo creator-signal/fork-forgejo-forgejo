@@ -1444,7 +1444,7 @@ func GetPullRequestCommits(ctx *context.APIContext) {
 	//   type: boolean
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/CommitList"
+	//     "$ref": "#/responses/CommitListWithPagination"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
@@ -1567,7 +1567,7 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/ChangedFileList"
+	//     "$ref": "#/responses/ChangedFileListWithPagination"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

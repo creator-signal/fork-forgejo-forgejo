@@ -143,7 +143,7 @@ func GetAllCommits(ctx *context.APIContext) {
 	//   type: string
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/CommitList"
+	//     "$ref": "#/responses/CommitListWithLegacyPagination"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	//   "409":
