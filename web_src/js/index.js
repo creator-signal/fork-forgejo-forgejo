@@ -71,7 +71,7 @@ import {initRepoWikiForm} from './features/repo-wiki.js';
 import {initRepoCommentForm, initRepository} from './features/repo-legacy.js';
 import {initCopyContent} from './features/copycontent.js';
 import {initCaptcha} from './features/captcha.js';
-import {initRepositoryActionView} from './components/RepoActionView.vue';
+import {initRepositoryActionView} from './features/repo-action-view.ts';
 import {initGlobalTooltips} from './modules/tippy.js';
 import {initDropdowns} from './modules/dropdown.ts';
 import {initGiteaFomantic} from './modules/fomantic.js';
