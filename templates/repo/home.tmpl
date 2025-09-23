@@ -12,7 +12,7 @@
 			</div>
 		</div>
 		<div class="repo-topics tw-my-2" id="repo-topics">
-			{{range $i, $v := .Topics}}
+			{{range .Topics}}
 				<a class="repo-topic ui large label" href="{{AppSubUrl}}/explore/repos?q={{.Name}}&topic=1">{{.Name}}</a>
 			{{end}}
 			{{if and .Permission.IsAdmin (not .Repository.IsArchived)}}
