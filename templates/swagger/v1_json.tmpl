@@ -10185,7 +10185,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/CommentReactionList"
+            "$ref": "#/responses/ReactionListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -10337,7 +10337,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/SimpleIssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -10829,7 +10829,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/SimpleIssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11286,7 +11286,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/SimpleIssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11434,7 +11434,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueLabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11486,7 +11486,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueLabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -11541,7 +11541,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueLabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -14439,7 +14439,7 @@
         ],
         "responses": {
           "201": {
-            "$ref": "#/responses/ReviewRequestList"
+            "$ref": "#/responses/PullReviewListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -17438,7 +17438,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/UserTrackedTimeList"
+            "$ref": "#/responses/TrackedTimeListWithoutPagination"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -30167,15 +30167,6 @@
         }
       }
     },
-    "CommentReactionList": {
-      "description": "CommentReactionList - Reactions for a specific comment (no pagination headers)",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/Reaction"
-        }
-      }
-    },
     "Commit": {
       "description": "Commit",
       "schema": {
@@ -30531,15 +30522,6 @@
         "$ref": "#/definitions/IssueDeadline"
       }
     },
-    "IssueLabelList": {
-      "description": "IssueLabelList - Labels for a specific issue (no pagination headers)",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/Label"
-        }
-      }
-    },
     "IssueList": {
       "description": "IssueList",
       "schema": {
@@ -30553,6 +30535,15 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of issues\nin:header"
+        }
+      }
+    },
+    "IssueListWithoutPagination": {
+      "description": "IssueListWithoutPagination - Issues without pagination headers (used for pinned issues, dependencies, etc.)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Issue"
         }
       }
     },
@@ -30584,6 +30575,15 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of labels\nin:header"
+        }
+      }
+    },
+    "LabelListWithoutPagination": {
+      "description": "LabelListWithoutPagination - Labels for a specific issue (no pagination headers)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Label"
         }
       }
     },
@@ -30879,6 +30879,15 @@
         }
       }
     },
+    "PullReviewListWithoutPagination": {
+      "description": "PullReviewListWithoutPagination - Review requests without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/PullReview"
+        }
+      }
+    },
     "PushMirror": {
       "description": "PushMirror",
       "schema": {
@@ -31002,6 +31011,15 @@
         }
       }
     },
+    "ReactionListWithoutPagination": {
+      "description": "ReactionListWithoutPagination - Reactions for a specific comment (no pagination headers)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Reaction"
+        }
+      }
+    },
     "Reference": {
       "description": "Reference",
       "schema": {
@@ -31091,15 +31109,6 @@
         }
       }
     },
-    "ReviewRequestList": {
-      "description": "ReviewRequestList - Review requests without pagination headers",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/PullReview"
-        }
-      }
-    },
     "RunJobList": {
       "description": "RunJobList is a list of action run jobs",
       "schema": {
@@ -31141,15 +31150,6 @@
       "description": "ServerVersion",
       "schema": {
         "$ref": "#/definitions/ServerVersion"
-      }
-    },
-    "SimpleIssueList": {
-      "description": "SimpleIssueList - Issues without pagination headers (used for pinned issues, dependencies, etc.)",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/Issue"
-        }
       }
     },
     "StopWatch": {
@@ -31323,6 +31323,15 @@
         }
       }
     },
+    "TrackedTimeListWithoutPagination": {
+      "description": "TrackedTimeListWithoutPagination - Tracked times for a specific user (no pagination headers)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/TrackedTime"
+        }
+      }
+    },
     "User": {
       "description": "User",
       "schema": {
@@ -31358,15 +31367,6 @@
       "description": "UserSettings",
       "schema": {
         "$ref": "#/definitions/UserSettings"
-      }
-    },
-    "UserTrackedTimeList": {
-      "description": "UserTrackedTimeList - Tracked times for a specific user (no pagination headers)",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/TrackedTime"
-        }
       }
     },
     "VariableList": {

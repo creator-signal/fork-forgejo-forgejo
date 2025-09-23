@@ -25,9 +25,9 @@ type swaggerResponseIssueList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
-// SimpleIssueList - Issues without pagination headers (used for pinned issues, dependencies, etc.)
-// swagger:response SimpleIssueList
-type swaggerSimpleIssueList struct {
+// IssueListWithoutPagination - Issues without pagination headers (used for pinned issues, dependencies, etc.)
+// swagger:response IssueListWithoutPagination
+type swaggerIssueListWithoutPagination struct {
 	// in:body
 	Body []api.Issue `json:"body"`
 }
@@ -79,9 +79,9 @@ type swaggerResponseLabelList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
-// IssueLabelList - Labels for a specific issue (no pagination headers)
-// swagger:response IssueLabelList
-type swaggerResponseIssueLabelList struct {
+// LabelListWithoutPagination - Labels for a specific issue (no pagination headers)
+// swagger:response LabelListWithoutPagination
+type swaggerLabelListWithoutPagination struct {
 	// in:body
 	Body []api.Label `json:"body"`
 }
@@ -122,9 +122,9 @@ type swaggerResponseTrackedTimeList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
-// UserTrackedTimeList - Tracked times for a specific user (no pagination headers)
-// swagger:response UserTrackedTimeList
-type swaggerUserTrackedTimeList struct {
+// TrackedTimeListWithoutPagination - Tracked times for a specific user (no pagination headers)
+// swagger:response TrackedTimeListWithoutPagination
+type swaggerTrackedTimeListWithoutPagination struct {
 	// in:body
 	Body []api.TrackedTime `json:"body"`
 }
@@ -179,9 +179,9 @@ type swaggerReactionList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
-// CommentReactionList - Reactions for a specific comment (no pagination headers)
-// swagger:response CommentReactionList
-type swaggerCommentReactionList struct {
+// ReactionListWithoutPagination - Reactions for a specific comment (no pagination headers)
+// swagger:response ReactionListWithoutPagination
+type swaggerReactionListWithoutPagination struct {
 	// in:body
 	Body []api.Reaction `json:"body"`
 }

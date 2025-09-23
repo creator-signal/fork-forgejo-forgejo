@@ -196,9 +196,9 @@ type swaggerResponsePullReviewList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
-// ReviewRequestList - Review requests without pagination headers
-// swagger:response ReviewRequestList
-type swaggerReviewRequestList struct {
+// PullReviewListWithoutPagination - Review requests without pagination headers
+// swagger:response PullReviewListWithoutPagination
+type swaggerPullReviewListWithoutPagination struct {
 	// in:body
 	Body []api.PullReview `json:"body"`
 }
