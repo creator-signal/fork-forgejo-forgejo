@@ -77,8 +77,4 @@ type swaggerResponseQuotaGroup struct {
 type swaggerResponseQuotaGroupList struct {
 	// in:body
 	Body api.QuotaGroupList `json:"body"`
-
-	// The total number of quota groups
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }

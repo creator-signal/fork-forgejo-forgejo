@@ -25,6 +25,13 @@ type swaggerResponseIssueList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// SimpleIssueList - Issues without pagination headers (used for pinned issues, dependencies, etc.)
+// swagger:response SimpleIssueList
+type swaggerSimpleIssueList struct {
+	// in:body
+	Body []api.Issue `json:"body"`
+}
+
 // Comment
 // swagger:response Comment
 type swaggerResponseComment struct {
@@ -72,6 +79,13 @@ type swaggerResponseLabelList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// IssueLabelList - Labels for a specific issue (no pagination headers)
+// swagger:response IssueLabelList
+type swaggerResponseIssueLabelList struct {
+	// in:body
+	Body []api.Label `json:"body"`
+}
+
 // Milestone
 // swagger:response Milestone
 type swaggerResponseMilestone struct {
@@ -106,6 +120,13 @@ type swaggerResponseTrackedTimeList struct {
 	// The total number of tracked times
 	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// UserTrackedTimeList - Tracked times for a specific user (no pagination headers)
+// swagger:response UserTrackedTimeList
+type swaggerUserTrackedTimeList struct {
+	// in:body
+	Body []api.TrackedTime `json:"body"`
 }
 
 // IssueDeadline
@@ -156,4 +177,11 @@ type swaggerReactionList struct {
 	// The total number of reactions
 	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// CommentReactionList - Reactions for a specific comment (no pagination headers)
+// swagger:response CommentReactionList
+type swaggerCommentReactionList struct {
+	// in:body
+	Body []api.Reaction `json:"body"`
 }

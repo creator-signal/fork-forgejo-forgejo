@@ -140,10 +140,6 @@ type swaggerResponseGitHook struct {
 type swaggerResponseGitHookList struct {
 	// in:body
 	Body []api.GitHook `json:"body"`
-
-	// The total number of git hooks
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // Release
@@ -198,6 +194,13 @@ type swaggerResponsePullReviewList struct {
 	// The total number of pull reviews
 	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// ReviewRequestList - Review requests without pagination headers
+// swagger:response ReviewRequestList
+type swaggerReviewRequestList struct {
+	// in:body
+	Body []api.PullReview `json:"body"`
 }
 
 // PullComment
