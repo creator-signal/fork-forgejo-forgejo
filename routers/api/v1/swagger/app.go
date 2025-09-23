@@ -20,3 +20,25 @@ type swaggerResponseAccessToken struct {
 	// in:body
 	Body api.AccessToken `json:"body"`
 }
+
+// AccessTokenList
+// swagger:response AccessTokenList
+type swaggerResponseAccessTokenList struct {
+	// in:body
+	Body []api.AccessToken `json:"body"`
+
+	// The total number of access tokens
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// OAuth2ApplicationList
+// swagger:response OAuth2ApplicationList
+type swaggerResponseOAuth2ApplicationList struct {
+	// in:body
+	Body []api.OAuth2Application `json:"body"`
+
+	// The total number of OAuth2 applications
+	// in:header
+	TotalCount int64 `json:"X-Total-Count"`
+}

@@ -10185,7 +10185,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ReactionList"
+            "$ref": "#/responses/CommentReactionList"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -10337,7 +10337,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/SimpleIssueList"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -10829,7 +10829,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/SimpleIssueList"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11286,7 +11286,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/SimpleIssueList"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11434,7 +11434,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/IssueLabelList"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11486,7 +11486,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/IssueLabelList"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -11541,7 +11541,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/IssueLabelList"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -14439,7 +14439,7 @@
         ],
         "responses": {
           "201": {
-            "$ref": "#/responses/PullReviewList"
+            "$ref": "#/responses/ReviewRequestList"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -17438,7 +17438,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/TrackedTimeList"
+            "$ref": "#/responses/UserTrackedTimeList"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -29917,11 +29917,18 @@
       }
     },
     "AccessTokenList": {
-      "description": "AccessTokenList represents a list of API access token.",
+      "description": "AccessTokenList",
       "schema": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/AccessToken"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of access tokens\nin:header"
         }
       }
     },
@@ -29982,6 +29989,22 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of activity feeds\nin:header"
+        }
+      }
+    },
+    "ActivityList": {
+      "description": "ActivityList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Activity"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of activities\nin:header"
         }
       }
     },
@@ -30141,6 +30164,15 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of comments\nin:header"
+        }
+      }
+    },
+    "CommentReactionList": {
+      "description": "CommentReactionList - Reactions for a specific comment (no pagination headers)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Reaction"
         }
       }
     },
@@ -30335,6 +30367,13 @@
         "items": {
           "$ref": "#/definitions/Email"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of emails\nin:header"
+        }
       }
     },
     "EmptyRepository": {
@@ -30435,13 +30474,6 @@
         "items": {
           "$ref": "#/definitions/GitHook"
         }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of git hooks\nin:header"
-        }
       }
     },
     "GitTreeResponse": {
@@ -30497,6 +30529,15 @@
       "description": "IssueDeadline",
       "schema": {
         "$ref": "#/definitions/IssueDeadline"
+      }
+    },
+    "IssueLabelList": {
+      "description": "IssueLabelList - Labels for a specific issue (no pagination headers)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Label"
+        }
       }
     },
     "IssueList": {
@@ -30670,11 +30711,18 @@
       }
     },
     "OAuth2ApplicationList": {
-      "description": "OAuth2ApplicationList represents a list of OAuth2 applications.",
+      "description": "OAuth2ApplicationList",
       "schema": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/OAuth2Application"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of OAuth2 applications\nin:header"
         }
       }
     },
@@ -30863,13 +30911,6 @@
       "description": "QuotaGroupList",
       "schema": {
         "$ref": "#/definitions/QuotaGroupList"
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of quota groups\nin:header"
-        }
       }
     },
     "QuotaInfo": {
@@ -31050,6 +31091,15 @@
         }
       }
     },
+    "ReviewRequestList": {
+      "description": "ReviewRequestList - Review requests without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/PullReview"
+        }
+      }
+    },
     "RunJobList": {
       "description": "RunJobList is a list of action run jobs",
       "schema": {
@@ -31093,6 +31143,15 @@
         "$ref": "#/definitions/ServerVersion"
       }
     },
+    "SimpleIssueList": {
+      "description": "SimpleIssueList - Issues without pagination headers (used for pinned issues, dependencies, etc.)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Issue"
+        }
+      }
+    },
     "StopWatch": {
       "description": "StopWatch",
       "schema": {
@@ -31112,6 +31171,22 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of stop watches\nin:header"
+        }
+      }
+    },
+    "StopWatchesList": {
+      "description": "StopWatchesList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/StopWatch"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of stopwatches\nin:header"
         }
       }
     },
@@ -31283,6 +31358,15 @@
       "description": "UserSettings",
       "schema": {
         "$ref": "#/definitions/UserSettings"
+      }
+    },
+    "UserTrackedTimeList": {
+      "description": "UserTrackedTimeList - Tracked times for a specific user (no pagination headers)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/TrackedTime"
+        }
       }
     },
     "VariableList": {
