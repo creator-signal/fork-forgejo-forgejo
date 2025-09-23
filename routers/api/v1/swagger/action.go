@@ -63,7 +63,6 @@ type swaggerDispatchWorkflowRun struct {
 type swaggerRegistrationToken struct {
 	// in: body
 	Body shared.RegistrationToken `json:"body"`
-
 }
 
 // ActionRunner represents a runner
