@@ -3,6 +3,7 @@
 
 // @watch start
 // web_src/css/modules/switch.css
+// web_src/css/modules/button.css
 // web_src/css/themes
 // @watch end
 
