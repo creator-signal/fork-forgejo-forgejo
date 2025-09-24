@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	gitea_sdk "code.gitea.io/sdk/gitea"
 	"forgejo.org/models/unittest"
 	base "forgejo.org/modules/migration"
 
@@ -23,7 +24,15 @@ func TestGiteaDownloadRepo(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://gitea.com", fixturePath, giteaToken != "")
 	defer server.Close()
 
-	downloader, err := NewGiteaDownloader(t.Context(), server.URL, "gitea/test_repo", "", "", giteaToken)
+	giteaClient, err := gitea_sdk.NewClient(
+		server.URL,
+		gitea_sdk.SetToken(giteaToken),
+		gitea_sdk.SetBasicAuth("", ""),
+		gitea_sdk.SetContext(t.Context()),
+		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
+	)
+
+	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, server.URL, "gitea/test_repo")
 	if downloader == nil {
 		t.Fatal("NewGitlabDownloader is nil")
 	}
@@ -315,7 +324,16 @@ func TestForgejoDownloadRepo(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://code.forgejo.org", fixturePath, token != "")
 	defer server.Close()
 
-	downloader, err := NewGiteaDownloader(t.Context(), server.URL, "Gusted/agit-test", "", "", token)
+	giteaClient, err := gitea_sdk.NewClient(
+		server.URL,
+		gitea_sdk.SetToken(token),
+		gitea_sdk.SetBasicAuth("", ""),
+		gitea_sdk.SetContext(t.Context()),
+		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
+	)
+
+	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, server.URL, "Gusted/agit-test")
+
 	require.NoError(t, err)
 	require.NotNil(t, downloader)
 

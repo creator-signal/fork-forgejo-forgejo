@@ -56,7 +56,19 @@ func (f *GiteaDownloaderFactory) New(ctx context.Context, opts base.MigrateOptio
 
 	log.Trace("Create gitea downloader. BaseURL: %s RepoName: %s", baseURL, repoNameSpace)
 
-	return NewGiteaDownloader(ctx, baseURL, repoPath, opts.AuthUsername, opts.AuthPassword, opts.AuthToken)
+	giteaClient, err := gitea_sdk.NewClient(
+		baseURL,
+		gitea_sdk.SetToken(opts.AuthToken),
+		gitea_sdk.SetBasicAuth(opts.AuthUsername, opts.AuthPassword),
+		gitea_sdk.SetContext(ctx),
+		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
+	)
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to create NewGiteaDownloader for: %s. Error: %v", baseURL, err))
+		return nil, err
+	}
+
+	return NewGiteaDownloader(ctx, giteaClient, baseURL, repoPath)
 }
 
 // GitServiceType returns the type of git service
@@ -80,23 +92,12 @@ type GiteaDownloader struct {
 //
 //	Use either a username/password or personal token. token is preferred
 //	Note: Public access only allows very basic access
-func NewGiteaDownloader(ctx context.Context, baseURL, repoPath, username, password, token string) (*GiteaDownloader, error) {
-	giteaClient, err := gitea_sdk.NewClient(
-		baseURL,
-		gitea_sdk.SetToken(token),
-		gitea_sdk.SetBasicAuth(username, password),
-		gitea_sdk.SetContext(ctx),
-		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
-	)
-	if err != nil {
-		log.Error(fmt.Sprintf("Failed to create NewGiteaDownloader for: %s. Error: %v", baseURL, err))
-		return nil, err
-	}
+func NewGiteaDownloader(ctx context.Context, giteaClient *gitea_sdk.Client, baseURL, repoPath string) (*GiteaDownloader, error) {
 
 	path := strings.Split(repoPath, "/")
 
 	paginationSupport := true
-	if err = giteaClient.CheckServerVersionConstraint(">=1.12"); err != nil {
+	if err := giteaClient.CheckServerVersionConstraint(">=1.12"); err != nil {
 		paginationSupport = false
 	}
 
