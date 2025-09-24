@@ -458,54 +458,85 @@ func (g *GiteaDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, err
 	return allIssues, isEnd, nil
 }
 
+func (g *GiteaDownloader) makeCommentsList(comments []*gitea_sdk.Comment, issueIndex, foreignIndex int64) []*base.Comment {
+	allComments := make([]*base.Comment, 0, g.maxPerPage)
+	for _, comment := range comments {
+		reactions, err := g.getCommentReactions(comment.ID)
+		if err != nil {
+			WarnAndNotice("Unable to load comment reactions during migrating issue #%d for comment %d in %s. Error: %v", foreignIndex, comment.ID, g, err)
+		}
+
+		allComments = append(allComments, &base.Comment{
+			IssueIndex:  issueIndex, // commentable.GetLocalIndex()
+			Index:       comment.ID,
+			PosterID:    comment.Poster.ID,
+			PosterName:  comment.Poster.UserName,
+			PosterEmail: comment.Poster.Email,
+			Content:     comment.Body,
+			Created:     comment.Created,
+			Updated:     comment.Updated,
+			Reactions:   reactions,
+		})
+	}
+	return allComments
+}
+
+func (g *GiteaDownloader) identicalComment(ourComment *base.Comment, foreignComment *gitea_sdk.Comment) bool {
+	createdIdentical := ourComment.Created == foreignComment.Created
+	personIdentical := ourComment.PosterName == foreignComment.Poster.UserName
+	contentIdentical := ourComment.Content == foreignComment.Body
+	if createdIdentical && personIdentical && contentIdentical {
+		return true
+	}
+	return false
+}
+
 // GetComments returns comments according issueNumber
 func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Comment, bool, error) {
 	allComments := make([]*base.Comment, 0, g.maxPerPage)
-	done := false
-	for i := 1; ; i++ {
-		// make sure gitea can shutdown gracefully
-		select {
-		case <-g.ctx.Done():
-			return nil, false, nil
-		default:
-		}
 
-		comments, _, err := g.client.ListIssueComments(g.repoOwner, g.repoName, commentable.GetForeignIndex(), gitea_sdk.ListIssueCommentOptions{ListOptions: gitea_sdk.ListOptions{
-			PageSize: g.maxPerPage,
-			Page:     i,
-		}})
-		if err != nil {
-			return nil, false, fmt.Errorf("error while listing comments for issue #%d. Error: %w", commentable.GetForeignIndex(), err)
-		}
-
-		for idx, comment := range comments {
-			reactions, err := g.getCommentReactions(comment.ID)
-			if err != nil {
-				WarnAndNotice("Unable to load comment reactions during migrating issue #%d for comment %d in %s. Error: %v", commentable.GetForeignIndex(), comment.ID, g, err)
-			}
-
-			allComments = append(allComments, &base.Comment{
-				IssueIndex:  commentable.GetLocalIndex(),
-				Index:       comment.ID,
-				PosterID:    comment.Poster.ID,
-				PosterName:  comment.Poster.UserName,
-				PosterEmail: comment.Poster.Email,
-				Content:     comment.Body,
-				Created:     comment.Created,
-				Updated:     comment.Updated,
-				Reactions:   reactions,
-			})
-
-			if idx == len(comments)-1 {
-				done = true
-			}
-		}
-
-		if !g.pagination || len(comments) < g.maxPerPage || done {
-			break
-		}
+	// Initially get comments of page 1
+	comments, _, err := g.client.ListIssueComments(g.repoOwner, g.repoName, commentable.GetForeignIndex(), gitea_sdk.ListIssueCommentOptions{ListOptions: gitea_sdk.ListOptions{
+		PageSize: g.maxPerPage,
+		Page:     1,
+	}})
+	if err != nil {
+		return nil, false, fmt.Errorf("error while listing comments for issue #%d. Error: %w", commentable.GetForeignIndex(), err)
 	}
-	return allComments, true, nil
+
+	// We either get all comments at once (gitea pagination bug) or all comments fit in one page or pagination is off
+	if len(comments) > g.maxPerPage || len(comments) < g.maxPerPage || !g.pagination {
+		allComments = g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())
+		return allComments, true, nil
+	} else { // Only if the amount of comments == g.maxPerPage we assume there might be a next page
+		for i := 2; ; i++ {
+			// make sure forgejo can shutdown gracefully
+			select {
+			case <-g.ctx.Done():
+				return nil, false, nil
+			default:
+			}
+
+			allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
+			comments, _, err = g.client.ListIssueComments(g.repoOwner, g.repoName, commentable.GetForeignIndex(), gitea_sdk.ListIssueCommentOptions{ListOptions: gitea_sdk.ListOptions{
+				PageSize: g.maxPerPage,
+				Page:     i,
+			}})
+
+			if err != nil {
+				return nil, false, fmt.Errorf("error while listing comments for issue #%d. Error: %w", commentable.GetForeignIndex(), err)
+			}
+
+			if len(comments) < g.maxPerPage {
+				allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
+				break
+			} else if g.identicalComment(allComments[0], comments[0]) && g.identicalComment(allComments[len(allComments)-1], comments[len(comments)-1]) {
+				break // We actually got all comments at one go, but
+			}
+		}
+		return allComments, true, nil
+	}
+
 }
 
 type ForgejoPullRequest struct {
