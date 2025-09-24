@@ -87,6 +87,8 @@ func TestCreateScheduleTask(t *testing.T) {
 		assert.Equal(t, cron.EventPayload, run.EventPayload)
 		assert.Equal(t, cron.ID, run.ScheduleID)
 		assert.Equal(t, actions_model.StatusWaiting, run.Status)
+		assert.Equal(t, "branch_some.yml_schedule__auto", run.ConcurrencyGroup)
+		assert.Equal(t, actions_model.UnlimitedConcurrency, run.ConcurrencyType)
 	}
 
 	assertMutable := func(t *testing.T, expected, run *actions_model.ActionRun) {
