@@ -13,16 +13,46 @@ export default {
     ActionRunStatus,
   },
   props: {
-    initialJobData: Object,
-    initialArtifactData: Object,
-    runIndex: String,
-    runID: String,
-    jobIndex: String,
-    attemptNumber: String,
-    actionsURL: String,
-    workflowName: String,
-    workflowURL: String,
-    locale: Object,
+    initialJobData: {
+      type: Object,
+      required: true,
+    },
+    initialArtifactData: {
+      type: Object,
+      required: true,
+    },
+    runIndex: {
+      type: String,
+      required: true,
+    },
+    runID: {
+      type: String,
+      required: true,
+    },
+    jobIndex: {
+      type: String,
+      required: true,
+    },
+    attemptNumber: {
+      type: String,
+      required: true,
+    },
+    actionsURL: {
+      type: String,
+      required: true,
+    },
+    workflowName: {
+      type: String,
+      required: true,
+    },
+    workflowURL: {
+      type: String,
+      required: true,
+    },
+    locale: {
+      type: Object,
+      required: true,
+    },
   },
 
   data() {
