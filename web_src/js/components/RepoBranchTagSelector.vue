@@ -1,12 +1,12 @@
 <script>
-import {createApp, nextTick} from 'vue';
+import {nextTick} from 'vue';
 import $ from 'jquery';
 import {SvgIcon} from '../svg.js';
 import {pathEscapeSegments} from '../utils/url.js';
 import {showErrorToast} from '../modules/toast.js';
 import {GET} from '../modules/fetch.js';
 
-const sfc = {
+export default {
   components: {SvgIcon},
 
   // no `data()`, at the moment, the `data()` is provided by the init code, which is not ideal and should be fixed in the future
@@ -213,37 +213,6 @@ const sfc = {
     },
   },
 };
-
-export function initRepoBranchTagSelector(selector) {
-  for (const [elIndex, elRoot] of document.querySelectorAll(selector).entries()) {
-    const data = {
-      csrfToken: window.config.csrfToken,
-      items: [],
-      searchTerm: '',
-      refNameText: '',
-      menuVisible: false,
-      release: null,
-
-      isViewTag: false,
-      isViewBranch: false,
-      isViewTree: false,
-
-      active: 0,
-      isLoading: false,
-      // This means whether branch list/tag list has initialized
-      hasListInitialized: {
-        'branches': false,
-        'tags': false,
-      },
-      ...window.config.pageData.branchDropdownDataList[elIndex],
-    };
-
-    const comp = {...sfc, data() { return data }};
-    createApp(comp).mount(elRoot);
-  }
-}
-
-export default sfc; // activate IDE's Vue plugin
 </script>
 <template>
   <div class="ui dropdown custom">
