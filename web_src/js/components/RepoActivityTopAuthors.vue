@@ -8,7 +8,6 @@ import {
   LinearScale,
 } from 'chart.js';
 import {chartJsColors} from '../utils/color.js';
-import {createApp} from 'vue';
 
 Chart.defaults.color = chartJsColors.text;
 Chart.defaults.borderColor = chartJsColors.border;
@@ -20,7 +19,7 @@ Chart.register(
   Tooltip,
 );
 
-const sfc = {
+export default {
   components: {Bar},
   props: {
     locale: {
@@ -142,19 +141,6 @@ const sfc = {
     });
   },
 };
-
-export function initRepoActivityTopAuthorsChart() {
-  const el = document.getElementById('repo-activity-top-authors-chart');
-  if (el) {
-    createApp(sfc, {
-      locale: {
-        commitActivity: el.getAttribute('data-locale-commit-activity'),
-      },
-    }).mount(el);
-  }
-}
-
-export default sfc; // activate the IDE's Vue plugin
 </script>
 <template>
   <div>

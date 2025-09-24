@@ -1,7 +1,7 @@
 // bootstrap module must be the first one to be imported, it handles webpack lazy-loading and global errors
 import './bootstrap.js';
 
-import {initRepoActivityTopAuthorsChart} from './components/RepoActivityTopAuthors.vue';
+import {initRepoActivityTopAuthorsChart} from './features/repo-activity-top-authors.ts';
 import {initScopedAccessTokenCategories} from './features/scoped-access-token-selector.ts';
 import {initDashboardRepoList} from './features/dashboard-repo-list.ts';
 
