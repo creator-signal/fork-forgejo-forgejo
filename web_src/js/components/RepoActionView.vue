@@ -126,30 +126,6 @@ export default {
     };
   },
 
-  async mounted() {
-    // Need to await first loadJob so this.currentJobStepsStates is initialized and can be used in hashChangeListener,
-    // but with the initializing data being passed in this should end up as a synchronous invocation.  loadJob is
-    // responsible for setting up its refresh interval during this first invocation.
-    await this.loadJob({initialJobData: this.initialJobData, initialArtifactData: this.initialArtifactData});
-    document.body.addEventListener('click', this.closeDropdown);
-    this.hashChangeListener();
-    window.addEventListener('hashchange', this.hashChangeListener);
-  },
-
-  beforeUnmount() {
-    document.body.removeEventListener('click', this.closeDropdown);
-    window.removeEventListener('hashchange', this.hashChangeListener);
-  },
-
-  unmounted() {
-    // clear the interval timer when the component is unmounted
-    // even our page is rendered once, not spa style
-    if (this.intervalID) {
-      clearInterval(this.intervalID);
-      this.intervalID = null;
-    }
-  },
-
   computed: {
     shouldShowAttemptDropdown() {
       return this.initialLoadComplete && this.currentJob.allAttempts && this.currentJob.allAttempts.length > 1;
@@ -203,6 +179,30 @@ export default {
       return this.locale.viewingOutOfDateRun
         .replace('%[1]s', this.viewingAttempt.time_since_started_html);
     },
+  },
+
+  async mounted() {
+    // Need to await first loadJob so this.currentJobStepsStates is initialized and can be used in hashChangeListener,
+    // but with the initializing data being passed in this should end up as a synchronous invocation.  loadJob is
+    // responsible for setting up its refresh interval during this first invocation.
+    await this.loadJob({initialJobData: this.initialJobData, initialArtifactData: this.initialArtifactData});
+    document.body.addEventListener('click', this.closeDropdown);
+    this.hashChangeListener();
+    window.addEventListener('hashchange', this.hashChangeListener);
+  },
+
+  beforeUnmount() {
+    document.body.removeEventListener('click', this.closeDropdown);
+    window.removeEventListener('hashchange', this.hashChangeListener);
+  },
+
+  unmounted() {
+    // clear the interval timer when the component is unmounted
+    // even our page is rendered once, not spa style
+    if (this.intervalID) {
+      clearInterval(this.intervalID);
+      this.intervalID = null;
+    }
   },
 
   methods: {
