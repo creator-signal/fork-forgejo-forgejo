@@ -12,15 +12,14 @@ export default {
   // no `data()`, at the moment, the `data()` is provided by the init code, which is not ideal and should be fixed in the future
 
   computed: {
+    active() {
+      return !this.filteredItems.length && this.showCreateNewBranch ? 0 : -1;
+    },
     filteredItems() {
-      const items = this.items.filter((item) => {
+      return this.items.filter((item) => {
         return ((this.mode === 'branches' && item.branch) || (this.mode === 'tags' && item.tag)) &&
           (!this.searchTerm || item.name.toLowerCase().includes(this.searchTerm.toLowerCase()));
       });
-
-      // TODO: fix this anti-pattern: side-effects-in-computed-properties
-      this.active = !items.length && this.showCreateNewBranch ? 0 : -1;
-      return items;
     },
     showNoResults() {
       return !this.filteredItems.length && !this.showCreateNewBranch;
