@@ -69,6 +69,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	}
 
 	inputs := make(map[string]string)
+	inputsAny := make(map[string]any)
 	if workflowDispatch := wf.WorkflowDispatchConfig(); workflowDispatch != nil {
 		for key, input := range workflowDispatch.Inputs {
 			val := inputGetter(key)
@@ -89,6 +90,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 				val = strconv.FormatBool(val == "on")
 			}
 			inputs[key] = val
+			inputsAny[key] = val
 		}
 	}
 
@@ -136,6 +138,21 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	vars, err := actions_model.GetVariablesOfRun(ctx, run)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	err = ConfigureActionRunConcurrency(wf, run, vars, inputsAny)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if run.ConcurrencyType == actions_model.CancelInProgress {
+		if err := CancelPreviousWithConcurrencyGroup(
+			ctx,
+			run.RepoID,
+			run.ConcurrencyGroup,
+		); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	jobs, err := jobParser(content, jobparser.WithVars(vars))
