@@ -2,7 +2,7 @@
 import './bootstrap.js';
 
 import {initRepoActivityTopAuthorsChart} from './components/RepoActivityTopAuthors.vue';
-import {initScopedAccessTokenCategories} from './components/ScopedAccessTokenSelector.vue';
+import {initScopedAccessTokenCategories} from './features/scoped-access-token-selector.ts';
 import {initDashboardRepoList} from './features/dashboard-repo-list.ts';
 
 import {initGlobalCopyToClipboardListener} from './features/clipboard.js';
