@@ -5,11 +5,13 @@ package integration
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/unittest"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -57,11 +59,12 @@ func testEditableLabelShown(t *testing.T, expectLabel bool) {
 	resp := session.MakeRequest(t, req, http.StatusOK)
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	htmlDoc.AssertElement(t, "#editable-label", expectLabel)
+	locale := translation.NewLocale("en-US")
 	if expectLabel {
 		sidebarText := htmlDoc.Find(".issue-content-right span.maintainers-can-edit-status").First().Text()
-		assert.Equal(t, " Maintainers can edit this pull request.", sidebarText)
+		assert.Equal(t, locale.TrString("repo.pulls.maintainers_can_edit"), strings.TrimSpace(sidebarText))
 	} else {
 		sidebarText := htmlDoc.Find(".issue-content-right span.maintainers-can-edit-status").First().Text()
-		assert.Equal(t, " Maintainers cannot edit this pull request.", sidebarText)
+		assert.Equal(t, locale.TrString("repo.pulls.maintainers_cannot_edit"), strings.TrimSpace(sidebarText))
 	}
 }
