@@ -235,9 +235,3 @@ func LoadSettingsForInstall() {
 	loadServiceFrom(CfgProvider)
 	loadMailerFrom(CfgProvider)
 }
-
-func PanicInDevOrTesting(msg string, a ...any) {
-	if !IsProd || IsInTesting {
-		panic(fmt.Sprintf(msg, a...))
-	}
-}

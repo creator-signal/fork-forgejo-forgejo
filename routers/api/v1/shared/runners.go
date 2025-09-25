@@ -5,6 +5,7 @@ package shared
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -14,7 +15,6 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/services/context"
 
-	"forgejo.org/modules/setting"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/convert"
 )
@@ -82,7 +82,8 @@ func fromRunJobModelToResponse(job []*actions_model.ActionRunJob, labels []strin
 // Access rights are checked at the API route level
 func ListRunners(ctx *context.APIContext, ownerID, repoID int64) {
 	if ownerID != 0 && repoID != 0 {
-		setting.PanicInDevOrTesting("ownerID and repoID should not be both set")
+		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
+		return
 	}
 	runners, total, err := db.FindAndCount[actions_model.ActionRunner](ctx, &actions_model.FindRunnerOptions{
 		OwnerID:     ownerID,
@@ -113,7 +114,8 @@ func ListRunners(ctx *context.APIContext, ownerID, repoID int64) {
 // Access rights are checked at the API route level
 func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 	if ownerID != 0 && repoID != 0 {
-		setting.PanicInDevOrTesting("ownerID and repoID should not be both set")
+		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
+		return
 	}
 	runner, err := actions_model.GetRunnerByID(ctx, runnerID)
 	if err != nil {
@@ -135,7 +137,8 @@ func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 // Access rights are checked at the API route level
 func DeleteRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 	if ownerID != 0 && repoID != 0 {
-		setting.PanicInDevOrTesting("ownerID and repoID should not be both set")
+		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
+		return
 	}
 	runner, err := actions_model.GetRunnerByID(ctx, runnerID)
 	if err != nil {
