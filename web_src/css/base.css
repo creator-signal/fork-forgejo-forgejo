@@ -374,6 +374,8 @@ a.label,
   padding: 2px 4px;
   border-radius: .24em;
   background-color: var(--color-label-bg);
+  white-space: nowrap;
+  overflow-x: auto;
 }
 
 .ui.menu {
