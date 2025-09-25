@@ -76,11 +76,29 @@ func (f *GiteaDownloaderFactory) GitServiceType() structs.GitServiceType {
 	return structs.GiteaService
 }
 
+type GiteaClient interface {
+	CheckServerVersionConstraint(constraint string) error
+	GetGlobalAPISettings() (*gitea_sdk.GlobalAPISettings, *gitea_sdk.Response, error)
+	GetRepo(owner string, reponame string) (*gitea_sdk.Repository, *gitea_sdk.Response, error)
+	GetIssueReactions(owner string, repo string, index int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error)
+	GetIssueCommentReactions(owner string, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error)
+	GetRepoRefs(user string, repo string, ref string) ([]*gitea_sdk.Reference, *gitea_sdk.Response, error)
+	GetReleaseAttachment(user string, repo string, release int64, id int64) (*gitea_sdk.Attachment, *gitea_sdk.Response, error)
+	ListPullReviewComments(owner string, repo string, index int64, id int64) ([]*gitea_sdk.PullReviewComment, *gitea_sdk.Response, error)
+	ListPullReviews(owner string, repo string, index int64, opt gitea_sdk.ListPullReviewsOptions) ([]*gitea_sdk.PullReview, *gitea_sdk.Response, error)
+	ListRepoTopics(user string, repo string, opt gitea_sdk.ListRepoTopicsOptions) ([]string, *gitea_sdk.Response, error)
+	ListRepoMilestones(owner string, repo string, opt gitea_sdk.ListMilestoneOption) ([]*gitea_sdk.Milestone, *gitea_sdk.Response, error)
+	ListReleases(owner string, repo string, opt gitea_sdk.ListReleasesOptions) ([]*gitea_sdk.Release, *gitea_sdk.Response, error)
+	ListRepoIssues(owner string, repo string, opt gitea_sdk.ListIssueOption) ([]*gitea_sdk.Issue, *gitea_sdk.Response, error)
+	ListIssueComments(owner string, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error)
+	ListRepoLabels(owner string, repo string, opt gitea_sdk.ListLabelsOptions) ([]*gitea_sdk.Label, *gitea_sdk.Response, error)
+}
+
 // GiteaDownloader implements a Downloader interface to get repository information's
 type GiteaDownloader struct {
 	base.NullDownloader
 	ctx        context.Context
-	client     *gitea_sdk.Client
+	client     GiteaClient
 	baseURL    string
 	repoOwner  string
 	repoName   string
@@ -92,7 +110,7 @@ type GiteaDownloader struct {
 //
 //	Use either a username/password or personal token. token is preferred
 //	Note: Public access only allows very basic access
-func NewGiteaDownloader(ctx context.Context, giteaClient *gitea_sdk.Client, baseURL, repoPath string) (*GiteaDownloader, error) {
+func NewGiteaDownloader(ctx context.Context, giteaClient GiteaClient, baseURL, repoPath string) (*GiteaDownloader, error) {
 
 	path := strings.Split(repoPath, "/")
 
