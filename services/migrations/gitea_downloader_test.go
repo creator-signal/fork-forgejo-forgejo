@@ -6,6 +6,7 @@ package migrations
 import (
 	"os"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -16,6 +17,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type MockGiteaIssueComments struct {
+	*gitea_sdk.Client
+}
 
 func TestGiteaDownloadRepo(t *testing.T) {
 	giteaToken := os.Getenv("GITEA_TOKEN")
@@ -331,9 +336,7 @@ func TestForgejoDownloadRepo(t *testing.T) {
 		gitea_sdk.SetContext(t.Context()),
 		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
 	)
-
 	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, server.URL, "Gusted/agit-test")
-
 	require.NoError(t, err)
 	require.NotNil(t, downloader)
 
@@ -367,4 +370,71 @@ func TestForgejoDownloadRepo(t *testing.T) {
 		PatchURL: server.URL + "/Gusted/agit-test/pulls/1.patch",
 		Flow:     1,
 	}, prs[0])
+}
+
+func (m MockGiteaIssueComments) ListIssueComments(owner string, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error) {
+	allComments := make([]*gitea_sdk.Comment, 0, opt.PageSize)
+	giteaUser := &gitea_sdk.User{
+		ID:       1,
+		UserName: "rando"}
+
+	for i := 1; i <= 30; i++ {
+		giteaComment := gitea_sdk.Comment{
+			ID:      1,
+			Poster:  giteaUser,
+			Created: time.Date(2025, time.August, 7, 13, i, 25, 0, time.UTC),
+			Updated: time.Date(2025, time.August, 7, 13, i+2, 25, 0, time.UTC),
+			Body:    strconv.Itoa(i),
+		}
+		allComments = append(allComments, &giteaComment)
+
+	}
+	return allComments, nil, nil
+}
+
+func (m MockGiteaIssueComments) GetIssueCommentReactions(owner string, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error) {
+	return []*gitea_sdk.Reaction{}, nil, nil
+}
+
+func TestGetComments(t *testing.T) {
+	giteaClient, err := gitea_sdk.NewClient(
+		"https://gitea.com",
+		gitea_sdk.SetToken(""),
+		gitea_sdk.SetBasicAuth("", ""),
+		gitea_sdk.SetContext(t.Context()),
+		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
+	)
+	client := MockGiteaIssueComments{giteaClient}
+	downloader, err := NewGiteaDownloader(t.Context(), client, "https://gitea.com", "gitea/test_repo")
+	if downloader == nil {
+		t.Fatal("NewGiteaDownloader is nil")
+	}
+	require.NoError(t, err, "NewGiteaDownloader error occured")
+
+	issue := &base.Issue{
+		Number:       1,
+		ForeignIndex: 1,
+		Title:        "First issue",
+		Content:      "This is an issue.",
+		PosterID:     37243484,
+		PosterName:   "PatDyn",
+		State:        "open",
+		Created:      time.Date(2025, time.August, 7, 12, 44, 7, 0, time.UTC),
+		Updated:      time.Date(2025, time.August, 7, 12, 44, 47, 0, time.UTC),
+	}
+	pageSizes := [3]int{20, 30, 40}
+
+	for size := range pageSizes {
+		downloader.maxPerPage = size
+		comments, _, err := downloader.GetComments(issue)
+		require.NoError(t, err, "Error while getting comments")
+		assertCommentEqual(t, &base.Comment{
+			IssueIndex: 1,
+			PosterID:   1,
+			PosterName: "rando",
+			Created:    time.Date(2025, time.August, 7, 13, 1, 25, 0, time.UTC),
+			Updated:    time.Date(2025, time.August, 7, 13, 1+2, 25, 0, time.UTC),
+			Content:    strconv.Itoa(1),
+		}, comments[0])
+	}
 }
