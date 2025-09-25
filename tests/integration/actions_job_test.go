@@ -174,7 +174,7 @@ jobs:
 	})
 }
 
-func TestRunnerRegistrationWithGet(t *testing.T) {
+func TestRunnerLifecycleGithubEndpoints(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		// registering a mock runner when using a database other than SQLite leaves leftovers
 		t.Skip()
@@ -192,6 +192,12 @@ func TestRunnerRegistrationWithGet(t *testing.T) {
 		assert.NotNil(t, runnersList)
 		assert.Len(t, runnersList.Entries, 1)
 		assert.Equal(t, "mock-runner", runnersList.Entries[0].Name)
+
+		runnerDetails := runner.getRunner(t, user2.Name, apiRepo.Name, runnersList.Entries[0].ID)
+		assert.Equal(t, "mock-runner", runnerDetails.Name)
+		assert.Equal(t, runnersList.Entries[0].ID, runnerDetails.ID)
+
+		runner.deleteRunner(t, user2.Name, apiRepo.Name, runnersList.Entries[0].ID)
 
 		httpContext := NewAPITestContext(t, user2.Name, apiRepo.Name, auth_model.AccessTokenScopeWriteRepository)
 		doAPIDeleteRepository(httpContext)(t)

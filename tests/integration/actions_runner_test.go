@@ -127,6 +127,31 @@ func (r *mockRunner) listRunners(t *testing.T, ownerName, repoName string) struc
 	return runnersList
 }
 
+func (r *mockRunner) getRunner(t *testing.T, ownerName, repoName string, runnerId int64) structs.ActionRunner {
+	if !setting.Database.Type.IsSQLite3() {
+		// registering a mock runner when using a database other than SQLite leaves leftovers
+		t.FailNow()
+	}
+	session := loginUser(t, ownerName)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+	req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners/%d", ownerName, repoName, runnerId)).AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+	var runner structs.ActionRunner
+	DecodeJSON(t, resp, &runner)
+	return runner
+}
+
+func (r *mockRunner) deleteRunner(t *testing.T, ownerName, repoName string, runnerId int64) {
+	if !setting.Database.Type.IsSQLite3() {
+		// registering a mock runner when using a database other than SQLite leaves leftovers
+		t.FailNow()
+	}
+	session := loginUser(t, ownerName)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+	req := NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners/%d", ownerName, repoName, runnerId)).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNoContent)
+}
+
 func (r *mockRunner) fetchTask(t *testing.T, timeout ...time.Duration) *runnerv1.Task {
 	fetchTimeout := 10 * time.Second
 	if len(timeout) > 0 {
