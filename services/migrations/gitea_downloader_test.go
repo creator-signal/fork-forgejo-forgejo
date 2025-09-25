@@ -4,6 +4,7 @@
 package migrations
 
 import (
+	"math/rand/v2"
 	"os"
 	"sort"
 	"strconv"
@@ -17,6 +18,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type MockGiteaIssueCommentsBug struct {
+	*gitea_sdk.Client
+}
 
 type MockGiteaIssueComments struct {
 	*gitea_sdk.Client
@@ -372,7 +377,7 @@ func TestForgejoDownloadRepo(t *testing.T) {
 	}, prs[0])
 }
 
-func (m MockGiteaIssueComments) ListIssueComments(owner string, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error) {
+func (m MockGiteaIssueCommentsBug) ListIssueComments(owner string, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error) {
 	allComments := make([]*gitea_sdk.Comment, 0, opt.PageSize)
 	giteaUser := &gitea_sdk.User{
 		ID:       1,
@@ -392,11 +397,11 @@ func (m MockGiteaIssueComments) ListIssueComments(owner string, repo string, ind
 	return allComments, nil, nil
 }
 
-func (m MockGiteaIssueComments) GetIssueCommentReactions(owner string, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error) {
+func (m MockGiteaIssueCommentsBug) GetIssueCommentReactions(owner string, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error) {
 	return []*gitea_sdk.Reaction{}, nil, nil
 }
 
-func TestGetComments(t *testing.T) {
+func TestGetCommentsWithBug(t *testing.T) {
 	giteaClient, err := gitea_sdk.NewClient(
 		"https://gitea.com",
 		gitea_sdk.SetToken(""),
@@ -404,7 +409,7 @@ func TestGetComments(t *testing.T) {
 		gitea_sdk.SetContext(t.Context()),
 		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
 	)
-	client := MockGiteaIssueComments{giteaClient}
+	client := MockGiteaIssueCommentsBug{giteaClient}
 	downloader, err := NewGiteaDownloader(t.Context(), client, giteaClient, "https://gitea.com", "gitea/test_repo")
 	if downloader == nil {
 		t.Fatal("NewGiteaDownloader is nil")
@@ -437,4 +442,67 @@ func TestGetComments(t *testing.T) {
 			Content:    strconv.Itoa(1),
 		}, comments[0])
 	}
+}
+
+// Generate 110 different comments, mocking behavior that respects page size etc
+func (m MockGiteaIssueComments) ListIssueComments(owner string, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error) {
+	allComments := make([]*gitea_sdk.Comment, 0, opt.PageSize)
+	giteaUser := &gitea_sdk.User{
+		ID:       1,
+		UserName: "rando",
+	}
+
+	pgs := opt.PageSize
+	if opt.Page == 3 {
+		pgs = 10
+	}
+
+	for i := 1; i <= pgs; i++ {
+		giteaComment := gitea_sdk.Comment{
+			ID:      1,
+			Poster:  giteaUser,
+			Created: time.Date(2025, time.August, 7, 13, rand.IntN(60), 25, 0, time.UTC),
+			Updated: time.Date(2025, time.August, 7, 14, rand.IntN(60), 25, 0, time.UTC),
+			Body:    strconv.Itoa(rand.IntN(100)),
+		}
+		allComments = append(allComments, &giteaComment)
+	}
+	return allComments, nil, nil
+}
+
+func (m MockGiteaIssueComments) GetIssueCommentReactions(owner string, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error) {
+	return []*gitea_sdk.Reaction{}, nil, nil
+}
+
+func TestGetCommentsWithoutBug(t *testing.T) {
+	giteaClient, err := gitea_sdk.NewClient(
+		"https://gitea.com",
+		gitea_sdk.SetToken(""),
+		gitea_sdk.SetBasicAuth("", ""),
+		gitea_sdk.SetContext(t.Context()),
+		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
+	)
+	client := MockGiteaIssueComments{giteaClient}
+	downloader, err := NewGiteaDownloader(t.Context(), client, giteaClient, "https://gitea.com", "gitea/test_repo")
+	if downloader == nil {
+		t.Fatal("NewGiteaDownloader is nil")
+	}
+	require.NoError(t, err, "NewGiteaDownloader error occured")
+
+	issue := &base.Issue{
+		Number:       1,
+		ForeignIndex: 1,
+		Title:        "First issue",
+		Content:      "This is an issue.",
+		PosterID:     37243484,
+		PosterName:   "PatDyn",
+		State:        "open",
+		Created:      time.Date(2025, time.August, 7, 12, 44, 7, 0, time.UTC),
+		Updated:      time.Date(2025, time.August, 7, 12, 44, 47, 0, time.UTC),
+	}
+
+	downloader.maxPerPage = 50
+	comments, _, err := downloader.GetComments(issue)
+	require.NoError(t, err, "Error while getting comments")
+	assert.Len(t, comments, 110)
 }
