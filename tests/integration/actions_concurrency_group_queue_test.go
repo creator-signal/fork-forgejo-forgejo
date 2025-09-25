@@ -4,13 +4,21 @@
 package integration
 
 import (
+	"net/url"
+	"strings"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
+	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	actions_service "forgejo.org/services/actions"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -199,4 +207,75 @@ func TestActionConcurrencyGroupQueue(t *testing.T) {
 			assert.ElementsMatch(t, tc.expectedRunIDs, ids)
 		})
 	}
+}
+
+func TestActionConcurrencyGroupQueueFetchNext(t *testing.T) {
+	if !setting.Database.Type.IsSQLite3() {
+		// mock repo runner only supported on SQLite testing
+		t.Skip()
+	}
+
+	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
+			[]unit_model.Type{unit_model.TypeActions}, nil,
+			[]*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".forgejo/workflows/dispatch.yml",
+					ContentReader: strings.NewReader(
+						"name: concurrency group workflow\n" +
+							"on:\n" +
+							"  workflow_dispatch:\n" +
+							"    inputs:\n" +
+							"      ident:\n" +
+							"        type: string\n" +
+							"concurrency:\n" +
+							"  group: abc\n" +
+							"  cancel-in-progress: false\n" +
+							"jobs:\n" +
+							"  test:\n" +
+							"    runs-on: ubuntu-latest\n" +
+							"    steps:\n" +
+							"      - run: echo deployment goes here\n"),
+				},
+			},
+		)
+		defer f()
+
+		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+		require.NoError(t, err)
+		defer gitRepo.Close()
+
+		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yml")
+		require.NoError(t, err)
+		assert.Equal(t, "refs/heads/main", workflow.Ref)
+		assert.Equal(t, sha, workflow.Commit.ID.String())
+
+		runner := newMockRunner()
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
+
+		// first run within the concurrency group
+		_, _, err = workflow.Dispatch(db.DefaultContext, func(key string) string { return "task1" }, repo, user2)
+		require.NoError(t, err)
+		task1 := runner.fetchTask(t)
+
+		// dispatch a second run within the same concurrency group
+		_, _, err = workflow.Dispatch(db.DefaultContext, func(key string) string { return "task2" }, repo, user2)
+		require.NoError(t, err)
+
+		// assert that we can't fetch and start that second task -- it's blocked behind the first
+		task2 := runner.maybeFetchTask(t)
+		assert.Nil(t, task2)
+
+		// finish the first task
+		runner.succeedAtTask(t, task1)
+
+		// now task2 should be accessible since task1 has completed
+		task2 = runner.fetchTask(t)
+		assert.NotNil(t, task2)
+		runner.succeedAtTask(t, task2)
+	})
 }
