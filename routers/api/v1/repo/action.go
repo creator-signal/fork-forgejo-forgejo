@@ -557,11 +557,11 @@ func (Action) ListRunners(ctx *context.APIContext) {
 	shared.ListRunners(ctx, 0, ctx.Repo.Repository.ID)
 }
 
-// GetRunner get an repo-level runner
+// GetRunner get a repo-level runner
 func (Action) GetRunner(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/runners/{runner_id} repository getRepoRunner
 	// ---
-	// summary: Get an repo-level runner
+	// summary: Get a repo-level runner
 	// produces:
 	// - application/json
 	// parameters:
@@ -590,11 +590,11 @@ func (Action) GetRunner(ctx *context.APIContext) {
 	shared.GetRunner(ctx, 0, ctx.Repo.Repository.ID, ctx.ParamsInt64("runner_id"))
 }
 
-// DeleteRunner delete an repo-level runner
+// DeleteRunner delete a repo-level runner
 func (Action) DeleteRunner(ctx *context.APIContext) {
 	// swagger:operation DELETE /repos/{owner}/{repo}/actions/runners/{runner_id} repository deleteRepoRunner
 	// ---
-	// summary: Delete an repo-level runner
+	// summary: Delete a repo-level runner
 	// produces:
 	// - application/json
 	// parameters:
