@@ -13,4 +13,4 @@ import (
 )
 
 //go:linkname getParsedResponse code.gitea.io/sdk/gitea.(*Client).getParsedResponse
-func getParsedResponse(client GiteaClient, method, path string, header http.Header, body io.Reader, obj any) (*gitea_sdk.Response, error)
+func getParsedResponse(client *gitea_sdk.Client, method, path string, header http.Header, body io.Reader, obj any) (*gitea_sdk.Response, error)

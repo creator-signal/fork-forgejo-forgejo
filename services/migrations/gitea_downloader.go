@@ -68,7 +68,7 @@ func (f *GiteaDownloaderFactory) New(ctx context.Context, opts base.MigrateOptio
 		return nil, err
 	}
 
-	return NewGiteaDownloader(ctx, giteaClient, baseURL, repoPath)
+	return NewGiteaDownloader(ctx, giteaClient, giteaClient, baseURL, repoPath)
 }
 
 // GitServiceType returns the type of git service
@@ -99,6 +99,7 @@ type GiteaDownloader struct {
 	base.NullDownloader
 	ctx        context.Context
 	client     GiteaClient
+	prClient   *gitea_sdk.Client
 	baseURL    string
 	repoOwner  string
 	repoName   string
@@ -110,7 +111,7 @@ type GiteaDownloader struct {
 //
 //	Use either a username/password or personal token. token is preferred
 //	Note: Public access only allows very basic access
-func NewGiteaDownloader(ctx context.Context, giteaClient GiteaClient, baseURL, repoPath string) (*GiteaDownloader, error) {
+func NewGiteaDownloader(ctx context.Context, giteaClient GiteaClient, giteaPRClient *gitea_sdk.Client, baseURL, repoPath string) (*GiteaDownloader, error) {
 
 	path := strings.Split(repoPath, "/")
 
@@ -135,6 +136,7 @@ func NewGiteaDownloader(ctx context.Context, giteaClient GiteaClient, baseURL, r
 	return &GiteaDownloader{
 		ctx:        ctx,
 		client:     giteaClient,
+		prClient:   giteaPRClient,
 		baseURL:    baseURL,
 		repoOwner:  path[0],
 		repoName:   path[1],
@@ -606,7 +608,7 @@ func (g *GiteaDownloader) GetPullRequests(page, perPage int) ([]*base.PullReques
 
 	link, _ := url.Parse(fmt.Sprintf("/repos/%s/%s/pulls", url.PathEscape(g.repoOwner), url.PathEscape(g.repoName)))
 	link.RawQuery = opt.QueryEncode()
-	_, err := getParsedResponse(g.client, "GET", link.String(), http.Header{"content-type": []string{"application/json"}}, nil, &prs)
+	_, err := getParsedResponse(g.prClient, "GET", link.String(), http.Header{"content-type": []string{"application/json"}}, nil, &prs)
 	if err != nil {
 		return nil, false, fmt.Errorf("error while listing pull requests (page: %d, pagesize: %d). Error: %w", page, perPage, err)
 	}

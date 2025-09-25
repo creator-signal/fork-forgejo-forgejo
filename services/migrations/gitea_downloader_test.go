@@ -37,7 +37,7 @@ func TestGiteaDownloadRepo(t *testing.T) {
 		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
 	)
 
-	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, server.URL, "gitea/test_repo")
+	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, giteaClient, server.URL, "gitea/test_repo")
 	if downloader == nil {
 		t.Fatal("NewGitlabDownloader is nil")
 	}
@@ -336,7 +336,7 @@ func TestForgejoDownloadRepo(t *testing.T) {
 		gitea_sdk.SetContext(t.Context()),
 		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
 	)
-	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, server.URL, "Gusted/agit-test")
+	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, giteaClient, server.URL, "Gusted/agit-test")
 	require.NoError(t, err)
 	require.NotNil(t, downloader)
 
@@ -405,7 +405,7 @@ func TestGetComments(t *testing.T) {
 		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
 	)
 	client := MockGiteaIssueComments{giteaClient}
-	downloader, err := NewGiteaDownloader(t.Context(), client, "https://gitea.com", "gitea/test_repo")
+	downloader, err := NewGiteaDownloader(t.Context(), client, giteaClient, "https://gitea.com", "gitea/test_repo")
 	if downloader == nil {
 		t.Fatal("NewGiteaDownloader is nil")
 	}
