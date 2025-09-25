@@ -459,14 +459,9 @@ func (g *GiteaDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, err
 	return allIssues, isEnd, nil
 }
 
-func (g *GiteaDownloader) makeCommentsList(comments []*gitea_sdk.Comment, issueIndex, foreignIndex int64) []*base.Comment {
+func (g *GiteaDownloader) makeCommentsList(comments []*gitea_sdk.Comment, reactions []*base.Reaction, issueIndex, foreignIndex int64) []*base.Comment {
 	allComments := make([]*base.Comment, 0, g.maxPerPage)
 	for _, comment := range comments {
-		reactions, err := g.getCommentReactions(comment.ID)
-		if err != nil {
-			WarnAndNotice("Unable to load comment reactions during migrating issue #%d for comment %d in %s. Error: %v", foreignIndex, comment.ID, g, err)
-		}
-
 		allComments = append(allComments, &base.Comment{
 			IssueIndex:  issueIndex, // commentable.GetLocalIndex()
 			Index:       comment.ID,
@@ -490,6 +485,14 @@ func (g *GiteaDownloader) identicalComment(ourComment *base.Comment, foreignComm
 		return true
 	}
 	return false
+}
+
+func (g *GiteaDownloader) getIssueCommentReactions(commentID, foreignIndex int64) ([]*base.Reaction, error) {
+	reactions, err := g.getCommentReactions(commentID)
+	if err != nil {
+		WarnAndNotice("Unable to load comment reactions during migrating issue #%d for comment %d in %s. Error: %v", foreignIndex, commentID, g, err)
+	}
+	return reactions, nil
 }
 
 func (g *GiteaDownloader) getIssueComments(foreignIndex int64, page int) ([]*gitea_sdk.Comment, bool, error) {
@@ -517,10 +520,11 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 	if err != nil {
 		return nil, false, err
 	}
+	reactions, _ := g.getIssueCommentReactions(commentable.GetLocalIndex(), commentable.GetForeignIndex())
 
 	// We either get all comments at once (gitea pagination bug) or all comments fit in one page or pagination is off
 	if len(comments) > g.maxPerPage || len(comments) < g.maxPerPage || !g.pagination {
-		allComments = g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())
+		allComments = g.makeCommentsList(comments, reactions, commentable.GetLocalIndex(), commentable.GetForeignIndex())
 		return allComments, true, nil
 	} else { // Only if the amount of comments == g.maxPerPage we assume there might be a next page
 		for i := 2; ; i++ {
@@ -531,17 +535,18 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 			default:
 			}
 
-			allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
+			allComments = append(allComments, g.makeCommentsList(comments, reactions, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
 			comments, _, err = g.getIssueComments(commentable.GetForeignIndex(), i)
+			reactions, _ = g.getIssueCommentReactions(commentable.GetLocalIndex(), commentable.GetForeignIndex())
 			if err != nil {
 				return nil, false, err
 			}
 
 			if len(comments) < g.maxPerPage {
-				allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
+				allComments = append(allComments, g.makeCommentsList(comments, reactions, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
 				break
 			} else if g.identicalComment(allComments[0], comments[0]) && g.identicalComment(allComments[len(allComments)-1], comments[len(comments)-1]) {
-				break // We actually got all comments at one go, but
+				break // We actually got all comments at one go, but pagesize was equal to number of comments
 			}
 		}
 		return allComments, true, nil
