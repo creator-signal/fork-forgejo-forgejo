@@ -79,19 +79,19 @@ func (f *GiteaDownloaderFactory) GitServiceType() structs.GitServiceType {
 type GiteaClient interface {
 	CheckServerVersionConstraint(constraint string) error
 	GetGlobalAPISettings() (*gitea_sdk.GlobalAPISettings, *gitea_sdk.Response, error)
-	GetRepo(owner string, reponame string) (*gitea_sdk.Repository, *gitea_sdk.Response, error)
-	GetIssueReactions(owner string, repo string, index int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error)
-	GetIssueCommentReactions(owner string, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error)
-	GetRepoRefs(user string, repo string, ref string) ([]*gitea_sdk.Reference, *gitea_sdk.Response, error)
-	GetReleaseAttachment(user string, repo string, release int64, id int64) (*gitea_sdk.Attachment, *gitea_sdk.Response, error)
-	ListPullReviewComments(owner string, repo string, index int64, id int64) ([]*gitea_sdk.PullReviewComment, *gitea_sdk.Response, error)
-	ListPullReviews(owner string, repo string, index int64, opt gitea_sdk.ListPullReviewsOptions) ([]*gitea_sdk.PullReview, *gitea_sdk.Response, error)
-	ListRepoTopics(user string, repo string, opt gitea_sdk.ListRepoTopicsOptions) ([]string, *gitea_sdk.Response, error)
-	ListRepoMilestones(owner string, repo string, opt gitea_sdk.ListMilestoneOption) ([]*gitea_sdk.Milestone, *gitea_sdk.Response, error)
-	ListReleases(owner string, repo string, opt gitea_sdk.ListReleasesOptions) ([]*gitea_sdk.Release, *gitea_sdk.Response, error)
-	ListRepoIssues(owner string, repo string, opt gitea_sdk.ListIssueOption) ([]*gitea_sdk.Issue, *gitea_sdk.Response, error)
-	ListIssueComments(owner string, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error)
-	ListRepoLabels(owner string, repo string, opt gitea_sdk.ListLabelsOptions) ([]*gitea_sdk.Label, *gitea_sdk.Response, error)
+	GetRepo(owner, reponame string) (*gitea_sdk.Repository, *gitea_sdk.Response, error)
+	GetIssueReactions(owner, repo string, index int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error)
+	GetIssueCommentReactions(owner, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error)
+	GetRepoRefs(user, repo, ref string) ([]*gitea_sdk.Reference, *gitea_sdk.Response, error)
+	GetReleaseAttachment(user, repo string, release, id int64) (*gitea_sdk.Attachment, *gitea_sdk.Response, error)
+	ListPullReviewComments(owner, repo string, index, id int64) ([]*gitea_sdk.PullReviewComment, *gitea_sdk.Response, error)
+	ListPullReviews(owner, repo string, index int64, opt gitea_sdk.ListPullReviewsOptions) ([]*gitea_sdk.PullReview, *gitea_sdk.Response, error)
+	ListRepoTopics(user, repo string, opt gitea_sdk.ListRepoTopicsOptions) ([]string, *gitea_sdk.Response, error)
+	ListRepoMilestones(owner, repo string, opt gitea_sdk.ListMilestoneOption) ([]*gitea_sdk.Milestone, *gitea_sdk.Response, error)
+	ListReleases(owner, repo string, opt gitea_sdk.ListReleasesOptions) ([]*gitea_sdk.Release, *gitea_sdk.Response, error)
+	ListRepoIssues(owner, repo string, opt gitea_sdk.ListIssueOption) ([]*gitea_sdk.Issue, *gitea_sdk.Response, error)
+	ListIssueComments(owner, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error)
+	ListRepoLabels(owner, repo string, opt gitea_sdk.ListLabelsOptions) ([]*gitea_sdk.Label, *gitea_sdk.Response, error)
 }
 
 // GiteaDownloader implements a Downloader interface to get repository information's
@@ -112,7 +112,6 @@ type GiteaDownloader struct {
 //	Use either a username/password or personal token. token is preferred
 //	Note: Public access only allows very basic access
 func NewGiteaDownloader(ctx context.Context, giteaClient GiteaClient, giteaPRClient *gitea_sdk.Client, baseURL, repoPath string) (*GiteaDownloader, error) {
-
 	path := strings.Split(repoPath, "/")
 
 	paginationSupport := true
@@ -512,7 +511,7 @@ func (g *GiteaDownloader) identicalComment(ourComment *base.Comment, foreignComm
 	return false
 }
 
-func (g *GiteaDownloader) getIssueComments(foreignIndex int64, page int) ([]*gitea_sdk.Comment, bool, error) {
+func (g *GiteaDownloader) getIssueComments(foreignIndex int64, page int) ([]*gitea_sdk.Comment, error) {
 	comments, _, err := g.client.ListIssueComments(
 		g.repoOwner,
 		g.repoName,
@@ -521,11 +520,12 @@ func (g *GiteaDownloader) getIssueComments(foreignIndex int64, page int) ([]*git
 			ListOptions: gitea_sdk.ListOptions{
 				PageSize: g.maxPerPage,
 				Page:     page,
-			}})
+			},
+		})
 	if err != nil {
-		return nil, false, fmt.Errorf("error while listing comments for issue #%d. Error: %w", foreignIndex, err)
+		return nil, fmt.Errorf("error while listing comments for issue #%d. Error: %w", foreignIndex, err)
 	}
-	return comments, true, nil
+	return comments, nil
 }
 
 // GetComments returns comments according issueNumber
@@ -533,7 +533,7 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 	allComments := make([]*base.Comment, 0, g.maxPerPage)
 
 	// Initially get comments of page 1
-	comments, _, err := g.getIssueComments(commentable.GetForeignIndex(), 1)
+	comments, err := g.getIssueComments(commentable.GetForeignIndex(), 1)
 	if err != nil {
 		return nil, false, err
 	}
@@ -542,30 +542,29 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 	if len(comments) > g.maxPerPage || len(comments) < g.maxPerPage || !g.pagination {
 		allComments = g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())
 		return allComments, true, nil
-	} else { // Only if the amount of comments == g.maxPerPage we assume there might be a next page
-		for i := 2; ; i++ {
-			// make sure forgejo can shutdown gracefully
-			select {
-			case <-g.ctx.Done():
-				return nil, false, nil
-			default:
-			}
-
-			allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
-			comments, _, err = g.getIssueComments(commentable.GetForeignIndex(), i)
-			if err != nil {
-				return nil, false, err
-			}
-
-			if len(comments) < g.maxPerPage {
-				allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
-				break
-			} else if g.identicalComment(allComments[0], comments[0]) && g.identicalComment(allComments[len(allComments)-1], comments[len(comments)-1]) {
-				break // We actually got all comments at one go, but pagesize was equal to number of comments
-			}
+	} // Only if the amount of comments == g.maxPerPage we assume there might be a next page
+	for i := 2; ; i++ {
+		// make sure forgejo can shutdown gracefully
+		select {
+		case <-g.ctx.Done():
+			return nil, false, nil
+		default:
 		}
-		return allComments, true, nil
+
+		allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
+		comments, err = g.getIssueComments(commentable.GetForeignIndex(), i)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if len(comments) < g.maxPerPage {
+			allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
+			break
+		} else if g.identicalComment(allComments[0], comments[0]) && g.identicalComment(allComments[len(allComments)-1], comments[len(comments)-1]) {
+			break // We actually got all comments at one go, but pagesize was equal to number of comments
+		}
 	}
+	return allComments, true, nil
 }
 
 type ForgejoPullRequest struct {
