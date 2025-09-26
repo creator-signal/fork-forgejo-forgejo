@@ -8,6 +8,16 @@
   }
 }
 
+.stats-bar summary {
+  display: flex;
+  height: var(--stats-bar-height);
+  width: 100%;
+}
+
+.stats-bar summary .bar {
+  display: inline-block;
+}
+
 .repository .repository-summary #language-stats-bar {
   display: flex;
   gap: 2px;
@@ -19,9 +29,8 @@
   overflow: hidden;
 }
 
-.size-overview .segment:has(> .bar) {
+.size-overview .segment:has(> summary .bar) {
   display: flex;
-  height: var(--stats-bar-height);
   padding: 0;
   border-radius: 3px;
   overflow: hidden;
