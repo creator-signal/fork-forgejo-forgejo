@@ -6,6 +6,7 @@ package markup
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"html/template"
 	"io"
 	"net/url"
@@ -22,10 +23,69 @@ import (
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+
+	lexer "github.com/alecthomas/participle/v2/lexer"
+	participle "github.com/alecthomas/participle/v2"
 )
 
 // filePreviewPattern matches "http://domain/org/repo/src/commit/COMMIT/filepath#L1-L2"
 var filePreviewPattern = regexp.MustCompile(`https?://((?:\S+/){3})src/commit/([0-9a-f]{4,64})/(\S+)#(L\d+(?:-L?\d+)?)`)
+
+// FilePreviewPath is a parser struct used for parsing the components of a file preview URL path.
+type FilePreviewPath struct {
+	Org string `PathSep @Path`
+	Repo string `PathSep @Path`
+	Src string `PathSep "src" PathSep "commit"`
+	CommitHash string `PathSep @CommitHash`
+	FilePath string `PathSep @Path` 
+	LineNumber LineNumbers `@@?`
+}
+
+// URLPath represents a parser struct for parsing valid URL path strings.
+type URLPath struct {
+	Path string `@Path`
+}
+
+// CommitHash represents a parser struct for parsing a valid forge commit hash.
+type CommitHash struct {
+	Hash string `@CommitHash`
+}
+
+// LineNumbers represents a parser struct for parsing file preview path line numbers.
+type LineNumbers struct {
+	Begin string `"#" @LineNumber`
+	End string `("-" @LineNumber)?`
+}
+
+// GetBegin attempts to parse valid beginning line number.
+func (l LineNumbers) GetBegin() (uint64, error) {
+	return strconv.ParseUint(l.Begin[1:], 10, 64)
+}
+
+// GetEnd attempts to parse valid ending line number.
+//
+// Returns an error for single line `LineNumbers`.
+func (l LineNumbers) GetEnd() (uint64, error) {
+	if len(l.End) > 1 {
+		return strconv.ParseUint(l.End[1:], 10, 64)
+	}
+
+	return 0, fmt.Errorf("LineNumbers has no valid end line")
+}
+
+// filePreviewPathLexer is a Participle lexer struct defining valid lexing grammar for a file preview path. 
+var filePreviewPathLexer = lexer.MustSimple([]lexer.SimpleRule{
+	{"CommitHash", `[0-9a-fA-F]{4,64}`},
+	{"LineSep", `[#-]`},
+	{"LineNumber", `L[0-9]`},
+	{"PathSep", `/`},
+	{"Path", `[a-zA-Z\w_\.-]+`},
+})
+
+// FilePreviewPathLexer is a Participle parser struct for parsing a valid file preview path. 
+var FilePreviewPathParser = participle.MustBuild[FilePreviewPath](
+	participle.Lexer(filePreviewPathLexer),
+)
 
 type FilePreview struct {
 	fileContent []template.HTML
