@@ -1890,25 +1890,6 @@ details.repo-search-result summary::marker {
   font-weight: var(--font-weight-medium);
 }
 
-.repository .repository-summary #language-stats-bar {
-  display: flex;
-  gap: 2px;
-  padding: 0;
-  height: 10px;
-  white-space: nowrap;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  overflow: hidden;
-}
-
-.size-overview .segment:has(> .bar) {
-  display: flex;
-  height: 10px;
-  padding: 0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
 #cite-repo-modal #citation-panel {
   display: flex;
   width: 100%;
