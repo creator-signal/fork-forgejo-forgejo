@@ -118,11 +118,15 @@ func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 	}
 	runner, err := actions_model.GetRunnerByID(ctx, runnerID)
 	if err != nil {
-		ctx.Error(404, "GetRunnerByID", err)
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetRunnerNotFound", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetRunnerFailed", err)
+		}
 		return
 	}
 	if !runner.Editable(ownerID, repoID) {
-		ctx.Error(404, "RunnerEdit", "No permission to get this runner")
+		ctx.Error(http.StatusNotFound, "RunnerEdit", "No permission to get this runner")
 		return
 	}
 	ctx.JSON(http.StatusOK, convert.ToActionRunner(ctx, runner))
@@ -141,11 +145,15 @@ func DeleteRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 	}
 	runner, err := actions_model.GetRunnerByID(ctx, runnerID)
 	if err != nil {
-		ctx.InternalServerError(err)
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "DeleteRunnerNotFound", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "DeleteRunnerFailed", err)
+		}
 		return
 	}
 	if !runner.Editable(ownerID, repoID) {
-		ctx.Error(404, "EditRunner", "No permission to delete this runner")
+		ctx.Error(http.StatusNotFound, "EditRunner", "No permission to delete this runner")
 		return
 	}
 
