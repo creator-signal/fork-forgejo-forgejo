@@ -28,6 +28,9 @@
       &:last-child {
         border-radius: 0 var(--border-radius) var(--border-radius) 0;
       }
+      &:only-child {
+        border-radius: var(--border-radius);
+      }
     }
   }
 }
