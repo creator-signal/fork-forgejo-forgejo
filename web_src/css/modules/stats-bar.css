@@ -2,6 +2,12 @@
   --stats-bar-height: 0.75rem;
 }
 
+@media (pointer: coarse) {
+  :root .stats-bar {
+    --stats-bar-height: 1rem;
+  }
+}
+
 .repository .repository-summary #language-stats-bar {
   display: flex;
   gap: 2px;
