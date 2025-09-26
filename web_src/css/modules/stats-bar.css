@@ -18,10 +18,16 @@
     height: var(--stats-bar-height);
     width: 100%;
     border-radius: var(--border-radius);
-    overflow: hidden;
 
     .slice {
       display: inline-block;
+
+      &:first-child {
+        border-radius: var(--border-radius) 0 0 var(--border-radius);
+      }
+      &:last-child {
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+      }
     }
   }
 }
