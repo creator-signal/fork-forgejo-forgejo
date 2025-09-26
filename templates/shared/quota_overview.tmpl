@@ -8,7 +8,7 @@
 		<div class="tw-flex tw-flex-col tw-gap-4 tw-ml-4">
 		{{range $rule := .Rules}}
 			<div class="tw-flex tw-justify-between">
-				<span class="tw-flex tw-items-center tw-gap-2{{if eq $rule.Limit -1}} tw-mb-5{{end}}">
+				<span class="tw-flex tw-items-center tw-gap-2">
 					{{if $rule.Acceptable ($.SizeUsed)}}
 						{{svg "octicon-check-circle-fill" 16 "text green"}}
 						{{$rule.Name}}
