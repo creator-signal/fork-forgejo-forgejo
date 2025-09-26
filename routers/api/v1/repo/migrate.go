@@ -196,9 +196,12 @@ func Migrate(ctx *context.APIContext) {
 	defer func() {
 		if e := recover(); e != nil {
 			var buf bytes.Buffer
-			fmt.Fprintf(&buf, "Handler crashed with error: %v", log.Stack(2))
 
-			err = errors.New(buf.String())
+			bufError, err := fmt.Fprintf(&buf, "Handler crashed with error: %#v", log.Stack(2))
+			if err != nil {
+				ctx.Error(http.StatusInternalServerError, "", fmt.Sprintf("Migration failed: %#v.", err))
+			}
+			ctx.Error(http.StatusInternalServerError, "", fmt.Sprintf("Migration failed: %#v.", bufError))
 		}
 
 		if err == nil {
@@ -217,6 +220,9 @@ func Migrate(ctx *context.APIContext) {
 		handleMigrateError(ctx, repoOwner, err)
 		return
 	}
+
+	// TODO: Remove this comment and the line below once satisfied with implmentation
+	panic("")
 
 	if opts.Releases || opts.Wiki {
 		repoOpt := api.EditRepoOption{

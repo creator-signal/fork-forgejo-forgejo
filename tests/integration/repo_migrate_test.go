@@ -98,4 +98,21 @@ func TestRepoMigrateCredentials(t *testing.T) {
 
 		assert.Equal(t, "The URL contains credentials.", respBody["message"])
 	})
+
+	t.Run("API route panic response", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+		resp := MakeRequest(t, NewRequestWithJSON(t, "POST", "/api/v1/repos/migrate", &structs.MigrateRepoOptions{
+			CloneAddr:   "https://code.forgejo.org/actions/setup-forgejo",
+			RepoOwnerID: 2,
+			RepoName:    "setup-forgejo",
+			LFS:         true,
+			Mirror:      true,
+			Service:     "forgejo",
+		}).AddTokenAuth(token), http.StatusInternalServerError)
+
+		var respBody map[string]any
+		DecodeJSON(t, resp, &respBody)
+	})
 }
