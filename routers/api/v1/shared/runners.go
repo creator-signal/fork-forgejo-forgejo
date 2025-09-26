@@ -13,9 +13,8 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
-	"forgejo.org/services/context"
-
 	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 )
 

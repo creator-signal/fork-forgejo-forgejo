@@ -75,7 +75,7 @@ func ListRunners(ctx *context.APIContext) {
 	// - application/json
 	// responses:
 	//   "200":
-	//     "$ref": "#/definitions/ActionRunnersResponse"
+	//     "$ref": "#/responses/ActionRunnersResponse"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "404":
@@ -98,7 +98,7 @@ func GetRunner(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/definitions/ActionRunner"
+	//     "$ref": "#/responses/ActionRunner"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "404":

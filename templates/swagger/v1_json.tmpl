@@ -18700,7 +18700,7 @@
         "operationId": "getUserRunners",
         "responses": {
           "200": {
-            "$ref": "#/definitions/ActionRunnersResponse"
+            "$ref": "#/responses/ActionRunnersResponse"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -18801,7 +18801,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/definitions/ActionRunner"
+            "$ref": "#/responses/ActionRunner"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -22075,6 +22075,81 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "TaskID"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionRunner": {
+      "description": "ActionRunner represents a Runner",
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "boolean",
+          "x-go-name": "Busy"
+        },
+        "ephemeral": {
+          "description": "currently unused as forgejo does not support ephemeral runners, but they are defined in gh api spec",
+          "type": "boolean",
+          "x-go-name": "Ephemeral"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionRunnerLabel"
+          },
+          "x-go-name": "Labels"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionRunnerLabel": {
+      "description": "ActionRunnerLabel represents a Runner Label",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "type": {
+          "type": "string",
+          "x-go-name": "Type"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionRunnersResponse": {
+      "description": "ActionRunnersResponse returns Runners",
+      "type": "object",
+      "properties": {
+        "runners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionRunner"
+          },
+          "x-go-name": "Entries"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalCount"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -29751,6 +29826,18 @@
       "description": "ActionRunList",
       "schema": {
         "$ref": "#/definitions/ListActionRunResponse"
+      }
+    },
+    "ActionRunner": {
+      "description": "ActionRunner represents a Runner",
+      "schema": {
+        "$ref": "#/definitions/ActionRunner"
+      }
+    },
+    "ActionRunnersResponse": {
+      "description": "ActionRunnersResponse returns Runners",
+      "schema": {
+        "$ref": "#/definitions/ActionRunnersResponse"
       }
     },
     "ActionVariable": {

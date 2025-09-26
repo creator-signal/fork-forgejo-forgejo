@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
 	actions_model "forgejo.org/models/actions"
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/auth"
@@ -30,6 +29,8 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/services/gitdiff"
+
+	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
 )
 
 // ToEmail convert models.EmailAddress to api.Email
