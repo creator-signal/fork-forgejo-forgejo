@@ -22,32 +22,30 @@
   display: flex;
   flex-direction: column;
   margin-bottom: 0.5rem;
-}
+  &[open] {
+    gap: 1rem;
+    background: var(--color-active);
+    border-radius: var(--border-radius);
+  }
 
-.size-overview .stats-bar[open] {
-  gap: 1rem;
-  background: var(--color-active);
-  border-radius: var(--border-radius);
-}
+  summary {
+    background-color: var(--color-input-background);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
 
-.size-overview .stats-bar summary {
-  background-color: var(--color-input-background);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-}
-
-.size-overview .stats-bar ul {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0.5rem;
-}
-
-.size-overview .stats-bar ul li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.5rem;
+    li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
 }
 
 .repository .repository-summary #language-stats-bar {
