@@ -20,7 +20,7 @@
 
 .size-overview .stats-bar summary {
   border: 1px solid var(--color-secondary);
-  border-radius: 3px;
+  border-radius: var(--border-radius);
   overflow: hidden;
 }
 
