@@ -13,7 +13,7 @@ import (
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/queue"
 
-	"github.com/nektos/act/pkg/jobparser"
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
 	"xorm.io/builder"
 )
 
@@ -142,7 +142,7 @@ func (r *jobStatusResolver) resolve() map[int64]actions_model.Status {
 			} else {
 				// Check if the job has an "if" condition
 				hasIf := false
-				if wfJobs, _ := jobparser.Parse(r.jobMap[id].WorkflowPayload); len(wfJobs) == 1 {
+				if wfJobs, _ := jobparser.Parse(r.jobMap[id].WorkflowPayload, false); len(wfJobs) == 1 {
 					_, wfJob := wfJobs[0].Job()
 					hasIf = len(wfJob.If.Value) > 0
 				}

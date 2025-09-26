@@ -10,6 +10,7 @@ import {easyMDEToolbarActions} from './EasyMDEToolbarActions.js';
 import {initTextExpander} from './TextExpander.js';
 import {showErrorToast, showHintToast} from '../../modules/toast.js';
 import {POST} from '../../modules/fetch.js';
+import {initTab} from '../../modules/tab.ts';
 
 /**
  * validate if the given textarea is non-empty.
@@ -98,6 +99,12 @@ class ComboMarkdownEditor {
     this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-table"]')?.setAttribute('data-modal', `div[data-markdown-table-modal-id="${this.elementIdSuffix}"]`);
     this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-link"]')?.setAttribute('data-modal', `div[data-markdown-link-modal-id="${this.elementIdSuffix}"]`);
 
+    // Find all data-md-ctrl-shortcut elements in the markdown toolbar.
+    const shortcutKeys = new Map();
+    for (const el of this.textareaMarkdownToolbar.querySelectorAll('[data-md-ctrl-shortcut]')) {
+      shortcutKeys.set(el.getAttribute('data-md-ctrl-shortcut'), el);
+    }
+
     // Track whether any actual input or pointer action was made after focusing, and only intercept Tab presses after that.
     this.tabEnabled = false;
     // This tracks whether last Tab action was ignored, and if it immediately happens *again*, lose focus.
@@ -144,6 +151,17 @@ class ComboMarkdownEditor {
         if (!this.breakLine()) return; // Nothing changed, let the default handler work.
         this.options?.onContentChanged?.(this, e);
         e.preventDefault();
+      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        const normalizedShortcutKey = e.key.charCodeAt(0) <= 127 ?
+          // if ascii, e.key is preferred as it is agnostic to keyboard layouts (QWERTY/Dvorak)...
+          e.key.toLowerCase() :
+          // if not ascii, e.code is used to support keyboards w/ other writing systems (eg. и or ბ); "KeyB" transformed to "b" to compare against the shortcut character.
+          e.code.replace('Key', '').toLowerCase();
+        const shortcutElement = shortcutKeys.get(normalizedShortcutKey);
+        if (shortcutElement) {
+          shortcutElement.click();
+          e.preventDefault();
+        }
       } else if (noModifiers) {
         this.activateTabHandling();
       }
@@ -200,7 +218,8 @@ class ComboMarkdownEditor {
 
   setupTab() {
     const $container = $(this.container);
-    const tabs = $container[0].querySelectorAll('.switch > .item');
+    const switchEl = $container[0].querySelector('.switch');
+    const tabs = switchEl.querySelectorAll('.item');
 
     // Fomantic Tab requires the "data-tab" to be globally unique.
     // So here it uses our defined "data-tab-for" and "data-tab-panel" to generate the "data-tab" attribute for Fomantic.
@@ -221,7 +240,7 @@ class ComboMarkdownEditor {
       });
     });
 
-    $(tabs).tab();
+    initTab(switchEl);
 
     this.previewUrl = tabPreviewer.getAttribute('data-preview-url');
     this.previewContext = tabPreviewer.getAttribute('data-preview-context');

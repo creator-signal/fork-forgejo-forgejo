@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"slices"
+	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/log"
@@ -47,14 +48,22 @@ const (
 	AbuseCategoryTypeIllegalContent                              // 4
 )
 
+// llu:TrKeys
+var AbuseCategoriesTranslationKeys = map[AbuseCategoryType]string{
+	AbuseCategoryTypeSpam:           "moderation.abuse_category.spam",
+	AbuseCategoryTypeMalware:        "moderation.abuse_category.malware",
+	AbuseCategoryTypeIllegalContent: "moderation.abuse_category.illegal_content",
+	AbuseCategoryTypeOther:          "moderation.abuse_category.other_violations",
+}
+
 // GetAbuseCategoriesList returns a list of pairs with the available abuse category types
 // and their corresponding translation keys
 func GetAbuseCategoriesList() []AbuseCategoryItem {
 	return []AbuseCategoryItem{
-		{AbuseCategoryTypeSpam, "moderation.abuse_category.spam"},
-		{AbuseCategoryTypeMalware, "moderation.abuse_category.malware"},
-		{AbuseCategoryTypeIllegalContent, "moderation.abuse_category.illegal_content"},
-		{AbuseCategoryTypeOther, "moderation.abuse_category.other_violations"},
+		{AbuseCategoryTypeSpam, AbuseCategoriesTranslationKeys[AbuseCategoryTypeSpam]},
+		{AbuseCategoryTypeMalware, AbuseCategoriesTranslationKeys[AbuseCategoryTypeMalware]},
+		{AbuseCategoryTypeIllegalContent, AbuseCategoriesTranslationKeys[AbuseCategoryTypeIllegalContent]},
+		{AbuseCategoryTypeOther, AbuseCategoriesTranslationKeys[AbuseCategoryTypeOther]},
 	}
 }
 
@@ -104,6 +113,7 @@ type AbuseReport struct {
 	// The ID of the corresponding shadow-copied content when exists; otherwise null.
 	ShadowCopyID sql.NullInt64      `xorm:"DEFAULT NULL"`
 	CreatedUnix  timeutil.TimeStamp `xorm:"created NOT NULL"`
+	ResolvedUnix timeutil.TimeStamp `xorm:"DEFAULT NULL"`
 }
 
 var ErrSelfReporting = errors.New("reporting yourself is not allowed")
@@ -152,6 +162,25 @@ func ReportAbuse(ctx context.Context, report *AbuseReport) error {
 	_, err := db.GetEngine(ctx).Insert(report)
 
 	return err
+}
+
+// GetResolvedReports gets all resolved reports
+func GetResolvedReports(ctx context.Context, keepReportsFor time.Duration) ([]*AbuseReport, error) {
+	cond := builder.And(
+		builder.Or(
+			builder.Eq{"`status`": ReportStatusTypeHandled},
+			builder.Eq{"`status`": ReportStatusTypeIgnored},
+		),
+	)
+
+	if keepReportsFor > 0 {
+		cond = cond.And(builder.Lt{"resolved_unix": time.Now().Add(-keepReportsFor).Unix()})
+	}
+
+	abuseReports := make([]*AbuseReport, 0, 30)
+	return abuseReports, db.GetEngine(ctx).
+		Where(cond).
+		Find(&abuseReports)
 }
 
 /*

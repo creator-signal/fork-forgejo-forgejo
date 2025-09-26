@@ -47,7 +47,7 @@ test('PR: Create review from commit', async ({page}) => {
   if (await start_button.isVisible({timeout: 100})) {
     await start_button.click();
   } else {
-    await page.locator('.comment-code-cloud form button.btn-add-comment').click();
+    await page.locator('.comment-code-cloud form button[name="pending_review"]').click();
   }
 
   await expect(page.locator('.comment-list .comment-container')).toBeVisible();
@@ -111,4 +111,24 @@ test('PR: Navigate by single commit', async ({page}) => {
   await expect(prevButton).not.toHaveClass(/disabled/);
   await expect(nextButton).toHaveClass(/disabled/);
   await expect(prevButton).toHaveAttribute('href', '/user2/repo1/pulls/3/commits/4a357436d925b5c974181ff12a994538ddc5a269');
+});
+
+test('PR: Test mentions values', async ({page}) => {
+  const response = await page.goto('/user2/repo1/pulls/5/files');
+  expect(response?.status()).toBe(200);
+
+  await page.locator('#review-box .js-btn-review').click();
+  await expect(page.locator('.tippy-box .review-box-panel')).toBeVisible();
+
+  await page.locator('.review-box-panel textarea#_combo_markdown_editor_0')
+    .fill('@');
+  await save_visual(page);
+
+  await expect(page.locator('ul.suggestions li span:first-of-type')).toContainText([
+    'user1',
+    'user2',
+  ]);
+
+  await page.locator("ul.suggestions li[data-value='@user1']").click();
+  await expect(page.locator('.review-box-panel textarea#_combo_markdown_editor_0')).toHaveValue('@user1 ');
 });

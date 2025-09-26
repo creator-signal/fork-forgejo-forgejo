@@ -1,5 +1,6 @@
 import {matchEmoji, matchMention, matchIssue} from '../../utils/match.js';
-import {emojiString} from '../emoji.js';
+import {emojiHTML, emojiString} from '../emoji.js';
+const {customEmojis} = window.config;
 import {getIssueIcon, getIssueColor, isIssueSuggestionsLoaded, fetchIssueSuggestions} from '../issue.js';
 import {svg} from '../../svg.js';
 import {createElementFromHTML} from '../../utils/dom.js';
@@ -37,6 +38,7 @@ async function issueSuggestions(text) {
   return {matched: true, fragment: ul};
 }
 
+
 export function initTextExpander(expander) {
   if (!expander) return;
 
@@ -48,11 +50,16 @@ export function initTextExpander(expander) {
       const ul = document.createElement('ul');
       ul.classList.add('suggestions');
       for (const name of matches) {
-        const emoji = emojiString(name);
         const li = document.createElement('li');
         li.setAttribute('role', 'option');
-        li.setAttribute('data-value', emoji);
-        li.textContent = `${emoji} ${name}`;
+        li.setAttribute('data-value', emojiString(name));
+        if (customEmojis.has(name)) {
+          li.style.gap = '0.25rem';
+          li.innerHTML = emojiHTML(name);
+          li.append(name);
+        } else {
+          li.textContent = `${emojiString(name)} ${name}`;
+        }
         ul.append(li);
       }
 

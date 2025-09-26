@@ -17,8 +17,8 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/nektos/act/pkg/jobparser"
 	"xorm.io/builder"
 )
 
@@ -148,6 +148,21 @@ func (task *ActionTask) GenerateToken() (err error) {
 	return err
 }
 
+// Retrieve all the attempts from the same job as the target `ActionTask`.  Limited fields are queried to avoid loading
+// the LogIndexes blob when not needed.
+func (task *ActionTask) GetAllAttempts(ctx context.Context) ([]*ActionTask, error) {
+	var attempts []*ActionTask
+	err := db.GetEngine(ctx).
+		Cols("id", "attempt", "status", "started").
+		Where("job_id=?", task.JobID).
+		Desc("attempt").
+		Find(&attempts)
+	if err != nil {
+		return nil, err
+	}
+	return attempts, nil
+}
+
 func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
 	var task ActionTask
 	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&task)
@@ -155,6 +170,18 @@ func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
 		return nil, err
 	} else if !has {
 		return nil, fmt.Errorf("task with id %d: %w", id, util.ErrNotExist)
+	}
+
+	return &task, nil
+}
+
+func GetTaskByJobAttempt(ctx context.Context, jobID, attempt int64) (*ActionTask, error) {
+	var task ActionTask
+	has, err := db.GetEngine(ctx).Where("job_id=?", jobID).Where("attempt=?", attempt).Get(&task)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf("task with job_id %d and attempt %d: %w", jobID, attempt, util.ErrNotExist)
 	}
 
 	return &task, nil
@@ -275,7 +302,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 	}
 
 	var workflowJob *jobparser.Job
-	if gots, err := jobparser.Parse(job.WorkflowPayload); err != nil {
+	if gots, err := jobparser.Parse(job.WorkflowPayload, false); err != nil {
 		return nil, false, fmt.Errorf("parse workflow of job %d: %w", job.ID, err)
 	} else if len(gots) != 1 {
 		return nil, false, fmt.Errorf("workflow of job %d: not single workflow", job.ID)

@@ -10,16 +10,13 @@ import (
 
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/require"
 )
 
 func initLoggersByConfig(t *testing.T, config string) (*log.LoggerManager, func()) {
-	oldLogConfig := Log
-	Log = LogGlobalConfig{}
-	defer func() {
-		Log = oldLogConfig
-	}()
+	defer test.MockVariableValue(&Log, LogGlobalConfig{})()
 
 	cfg, err := NewConfigProviderFromData(config)
 	require.NoError(t, err)
@@ -27,6 +24,17 @@ func initLoggersByConfig(t *testing.T, config string) (*log.LoggerManager, func(
 	manager := log.NewManager()
 	initManagedLoggers(manager, cfg)
 	return manager, manager.Close
+}
+
+func initLoggerConfig(t *testing.T, config string) ConfigProvider {
+	defer test.MockVariableValue(&Log, LogGlobalConfig{})()
+
+	cfg, err := NewConfigProviderFromData(config)
+	require.NoError(t, err)
+
+	prepareLoggerConfig(cfg)
+
+	return cfg
 }
 
 func toJSON(v any) string {
@@ -243,8 +251,8 @@ ENABLE_ACCESS_LOG = false
 func TestLogConfigNewConfig(t *testing.T) {
 	manager, managerClose := initLoggersByConfig(t, `
 [log]
-logger.access.MODE = console
-logger.xorm.MODE = console, console-1
+LOGGER_ACCESS_MODE = console
+LOGGER_XORM_MODE = console, console-1
 
 [log.console]
 LEVEL = warn
@@ -394,4 +402,217 @@ COMPRESSION_LEVEL = 4
 	expected = strings.ReplaceAll(expected, "$FILENAME-0", tempPath("gitea.log"))
 	expected = strings.ReplaceAll(expected, "$FILENAME-1", tempPath("file-xxx.log"))
 	require.JSONEq(t, expected, toJSON(dump))
+}
+
+func TestLegacyLoggerMigrations(t *testing.T) {
+	type Cases = []struct {
+		name string
+		cfg  string
+		exp  string
+	}
+
+	runCases := func(t *testing.T, key string, cases Cases) {
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				cfg := initLoggerConfig(t, c.cfg)
+				require.Equal(t, c.exp, cfg.Section("log").Key(key).String())
+			})
+		}
+	}
+
+	t.Run("default", func(t *testing.T) {
+		runCases(t, "LOGGER_DEFAULT_MODE", Cases{
+			{
+				"uses default value for default logger",
+				"",
+				",",
+			},
+			{
+				"uses logger.default.MODE for default logger",
+				`[log]
+logger.default.MODE = file
+`,
+				"file",
+			},
+		})
+	})
+
+	t.Run("access", func(t *testing.T) {
+		runCases(t, "LOGGER_ACCESS_MODE", Cases{
+			{
+				"uses default value for access logger",
+				"",
+				"",
+			},
+			{
+				"uses ACCESS for access logger",
+				`[log]
+ACCESS = file
+`,
+				"file",
+			},
+			{
+				"ENABLE_ACCESS_LOG=true doesn't change access logger",
+				`[log]
+ENABLE_ACCESS_LOG = true
+logger.access.MODE = console
+`,
+				"console",
+			},
+			{
+				"ENABLE_ACCESS_LOG=false disables access logger",
+				`[log]
+ENABLE_ACCESS_LOG = false
+logger.access.MODE = console
+`,
+				"",
+			},
+			{
+				"logger.access.MODE has precedence over ACCESS for access logger",
+				`[log]
+ACCESS = file
+logger.access.MODE = console
+`,
+				"console",
+			},
+			{
+				"LOGGER_ACCESS_MODE has precedence over logger.access.MODE for access logger",
+				`[log]
+LOGGER_ACCESS_MODE = file
+logger.access.MODE = console
+`,
+				"file",
+			},
+			{
+				"ENABLE_ACCESS_LOG doesn't enable access logger",
+				`[log]
+ENABLE_ACCESS_LOG = true
+`,
+				"", // should be `,`
+			},
+		})
+	})
+
+	t.Run("router", func(t *testing.T) {
+		runCases(t, "LOGGER_ROUTER_MODE", Cases{
+			{
+				"uses default value for router logger",
+				"",
+				",",
+			},
+			{
+				"uses ROUTER for router logger",
+				`[log]
+ROUTER = file
+`,
+				"file",
+			},
+			{
+				"DISABLE_ROUTER_LOG=false doesn't change router logger",
+				`[log]
+ROUTER = file
+DISABLE_ROUTER_LOG = false
+`,
+				"file",
+			},
+			{
+				"DISABLE_ROUTER_LOG=true disables router logger",
+				`[log]
+DISABLE_ROUTER_LOG = true
+logger.router.MODE = console
+`,
+				"",
+			},
+			{
+				"logger.router.MODE as precedence over ROUTER for router logger",
+				`[log]
+ROUTER = file
+logger.router.MODE = console
+`,
+				"console",
+			},
+			{
+				"LOGGER_ROUTER_MODE has precedence over logger.router.MODE for router logger",
+				`[log]
+LOGGER_ROUTER_MODE = file
+logger.router.MODE = console
+`,
+				"file",
+			},
+		})
+	})
+
+	t.Run("xorm", func(t *testing.T) {
+		runCases(t, "LOGGER_XORM_MODE", Cases{
+			{
+				"uses default value for xorm logger",
+				"",
+				",",
+			},
+			{
+				"uses XORM for xorm logger",
+				`[log]
+XORM = file
+`,
+				"file",
+			},
+			{
+				"ENABLE_XORM_LOG=true doesn't change xorm logger",
+				`[log]
+ENABLE_XORM_LOG = true
+logger.xorm.MODE = console
+`,
+				"console",
+			},
+			{
+				"ENABLE_XORM_LOG=false disables xorm logger",
+				`[log]
+ENABLE_XORM_LOG = false
+logger.xorm.MODE = console
+`,
+				"",
+			},
+			{
+				"logger.xorm.MODE has precedence over XORM for xorm logger",
+				`[log]
+XORM = file
+logger.xorm.MODE = console
+`,
+				"console",
+			},
+			{
+				"LOGGER_XORM_MODE has precedence over logger.xorm.MODE for xorm logger",
+				`[log]
+LOGGER_XORM_MODE = file
+logger.xorm.MODE = console
+`,
+				"file",
+			},
+		})
+	})
+
+	t.Run("ssh", func(t *testing.T) {
+		runCases(t, "LOGGER_SSH_MODE", Cases{
+			{
+				"uses default value for ssh logger",
+				"",
+				"",
+			},
+			{
+				"deprecated config can enable logger",
+				`[log]
+ENABLE_SSH_LOG = true
+`,
+				",",
+			},
+			{
+				"check priority",
+				`[log]
+LOGGER_SSH_MODE = file
+ENABLE_SSH_LOG = true
+`,
+				"file",
+			},
+		})
+	})
 }

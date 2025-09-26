@@ -91,6 +91,9 @@ func TestRender_Commits(t *testing.T) {
 	test(sha[:14]+".", `<p>`+expected14+`.</p>`)
 	test(sha[:14]+",", `<p>`+expected14+`,</p>`)
 	test("["+sha[:14]+"]", `<p>[`+expected14+`]</p>`)
+
+	fileStrangeChars := util.URLJoin(repo, "src", "commit", "eeb243c3395e1921c5d90e73bd739827251fc99d", "path", "to", "file%20%23.txt")
+	test(fileStrangeChars, `<p><a href="`+fileStrangeChars+`" rel="nofollow"><code>eeb243c339/path/to/file #.txt</code></a></p>`)
 }
 
 func TestRender_CrossReferences(t *testing.T) {
@@ -358,7 +361,7 @@ func TestRender_emoji(t *testing.T) {
 	test(
 		":custom-emoji:",
 		`<p>:custom-emoji:</p>`)
-	setting.UI.CustomEmojisMap["custom-emoji"] = ":custom-emoji:"
+	setting.UI.CustomEmojisLookup.Add("custom-emoji")
 	test(
 		":custom-emoji:",
 		`<p><span class="emoji" aria-label="custom-emoji" data-alias="custom-emoji"><img alt=":custom-emoji:" src="`+setting.StaticURLPrefix+`/assets/img/emoji/custom-emoji.png"/></span></p>`)
@@ -743,11 +746,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -777,11 +780,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -856,11 +859,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -887,11 +890,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -920,11 +923,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -945,11 +948,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -976,11 +979,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1001,11 +1004,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1026,11 +1029,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1109,6 +1112,39 @@ func TestRender_FilePreview(t *testing.T) {
 		)
 	})
 
+	t.Run("rendered file with lines L1-2 instead of L1-L2", func(t *testing.T) {
+		testRender(
+			commitFileURL+"#L1-2",
+			`<p></p>`+
+				`<div class="file-preview-box">`+
+				`<div class="header">`+
+				`<div>`+
+				`<a href="http://localhost:3000/gogits/gogs/src/commit/c9913120ed2c1e27c1d7752ecdb7a504dc7cf6be/path/to/file.md?display=source#L1-2" class="muted" rel="nofollow">path/to/file.md</a>`+
+				`</div>`+
+				`<span class="text grey">`+
+				`Lines 1 to 2 in <a href="http://localhost:3000/gogits/gogs/src/commit/c9913120ed2c1e27c1d7752ecdb7a504dc7cf6be" class="text black" rel="nofollow">c991312</a>`+
+				`</span>`+
+				`</div>`+
+				`<div class="ui table">`+
+				`<table class="file-preview">`+
+				`<tbody>`+
+				`<tr>`+
+				`<td class="lines-num"><span data-line-number="1"></span></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="gh"># A`+"\n"+`</span></code></td>`+
+				`</tr>`+
+				`<tr>`+
+				`<td class="lines-num"><span data-line-number="2"></span></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="gh"></span>B`+"\n"+`</code></td>`+
+				`</tr>`+
+				`</tbody>`+
+				`</table>`+
+				`</div>`+
+				`</div>`+
+				`<p></p>`,
+			localMetas,
+		)
+	})
+
 	commitFileURL = util.URLJoin(markup.TestRepoURL, "src", "commit", "190d9492934af498c3f669d6a2431dc5459e5b20", "path", "to", "file.go")
 
 	t.Run("normal file with ?display=source", func(t *testing.T) {
@@ -1129,11 +1165,11 @@ func TestRender_FilePreview(t *testing.T) {
 				`<tbody>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">B</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1145,32 +1181,75 @@ func TestRender_FilePreview(t *testing.T) {
 	})
 
 	commitFileURL = util.URLJoin(markup.TestRepoURL, "src", "commit", "eeb243c3395e1921c5d90e73bd739827251fc99d", "path", "to", "file%20%23.txt")
+	commitFileURLFirstLine := commitFileURL + "#L1"
+	filePreviewBox := `<div class="file-preview-box">` +
+		`<div class="header">` +
+		`<div>` +
+		`<a href="http://localhost:3000/gogits/gogs/src/commit/eeb243c3395e1921c5d90e73bd739827251fc99d/path/to/file%20%23.txt#L1" class="muted" rel="nofollow">path/to/file #.txt</a>` +
+		`</div>` +
+		`<span class="text grey">` +
+		`Line 1 in <a href="http://localhost:3000/gogits/gogs/src/commit/eeb243c3395e1921c5d90e73bd739827251fc99d" class="text black" rel="nofollow">eeb243c</a>` +
+		`</span>` +
+		`</div>` +
+		`<div class="ui table">` +
+		`<table class="file-preview">` +
+		`<tbody>` +
+		`<tr>` +
+		`<td class="lines-num"><span data-line-number="1"></span></td>` +
+		`<td class="lines-code chroma"><code class="code-inner">A` + "\n" + `</code></td>` +
+		`</tr>` +
+		`</tbody>` +
+		`</table>` +
+		`</div>` +
+		`</div>`
+	linkRendered := `<a href="` + commitFileURLFirstLine + `" rel="nofollow"><code>eeb243c339/path/to/file #.txt (L1)</code></a>`
 
 	t.Run("file with strange characters in name", func(t *testing.T) {
 		testRender(
-			commitFileURL+"#L1",
-			`<p></p>`+
-				`<div class="file-preview-box">`+
-				`<div class="header">`+
-				`<div>`+
-				`<a href="http://localhost:3000/gogits/gogs/src/commit/eeb243c3395e1921c5d90e73bd739827251fc99d/path/to/file%20%23.txt#L1" class="muted" rel="nofollow">path/to/file #.txt</a>`+
-				`</div>`+
-				`<span class="text grey">`+
-				`Line 1 in <a href="http://localhost:3000/gogits/gogs/src/commit/eeb243c3395e1921c5d90e73bd739827251fc99d" class="text black" rel="nofollow">eeb243c</a>`+
-				`</span>`+
-				`</div>`+
-				`<div class="ui table">`+
-				`<table class="file-preview">`+
-				`<tbody>`+
-				`<tr>`+
-				`<td class="lines-num"><span data-line-number="1"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner">A`+"\n"+`</code></td>`+
-				`</tr>`+
-				`</tbody>`+
-				`</table>`+
-				`</div>`+
-				`</div>`+
-				`<p></p>`,
+			commitFileURLFirstLine,
+			`<p></p>`+filePreviewBox+`<p></p>`,
+			localMetas,
+		)
+	})
+
+	t.Run("file preview with stuff before and after", func(t *testing.T) {
+		testRender(
+			":frog: before"+commitFileURLFirstLine+" :frog: after",
+			`<p><span class="emoji" aria-label="frog" data-alias="frog">🐸</span> before</p>`+
+				filePreviewBox+
+				`<p> <span class="emoji" aria-label="frog" data-alias="frog">🐸</span> after</p>`,
+			localMetas,
+		)
+	})
+
+	t.Run("file preview in <div>, <li>, <details> (not in <summary>) environments", func(t *testing.T) {
+		testRender(
+			"<div>"+commitFileURLFirstLine+"</div>\n"+
+				"<ul><li>"+commitFileURLFirstLine+"</li></ul>\n"+
+				"<details><summary>"+commitFileURLFirstLine+"</summary>"+commitFileURLFirstLine+"</details>",
+			`<div>`+filePreviewBox+`</div>`+"\n"+
+				`<ul><li>`+filePreviewBox+`</li></ul>`+"\n"+
+				`<details><summary>`+linkRendered+`</summary>`+filePreviewBox+`</details>`,
+			localMetas,
+		)
+	})
+
+	t.Run("file preview in <span>, <em> and <strong> environments", func(t *testing.T) {
+		testRender(
+			"<div><span>"+commitFileURLFirstLine+"</span> <em>"+commitFileURLFirstLine+"</em> <strong>"+commitFileURLFirstLine+"</strong></div>",
+			`<div><span></span>`+filePreviewBox+`<span></span> `+
+				`<em></em>`+filePreviewBox+`<em></em> `+
+				`<strong></strong>`+filePreviewBox+`<strong></strong></div>`,
+			localMetas,
+		)
+	})
+
+	t.Run("no file preview in heading, striked out, code environments", func(t *testing.T) {
+		testRender(
+			"<h1>"+commitFileURLFirstLine+"</h1>\n<del>"+commitFileURLFirstLine+"</del>\n<code>"+commitFileURLFirstLine+"</code>",
+			`<h1>`+linkRendered+`</h1>`+"\n"+
+				`<del>`+linkRendered+`</del>`+"\n"+
+				`<code>`+commitFileURLFirstLine+`</code>`,
 			localMetas,
 		)
 	})

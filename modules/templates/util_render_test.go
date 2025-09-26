@@ -10,6 +10,7 @@ import (
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
@@ -222,23 +223,26 @@ func TestRenderLabels(t *testing.T) {
 	labelMalicious := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 11})
 	labelArchived := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 12})
 
-	rendered := RenderLabels(db.DefaultContext, tr, []*issues_model.Label{label}, "user2/repo1", false)
+	ctx := NewContext(t.Context())
+	ctx.Locale = tr
+
+	rendered := RenderLabels(ctx, []*issues_model.Label{label}, "user2/repo1", false)
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=1")
 	assert.Contains(t, rendered, ">label1<")
 	assert.Contains(t, rendered, "title='First label'")
-	rendered = RenderLabels(db.DefaultContext, tr, []*issues_model.Label{label}, "user2/repo1", true)
+	rendered = RenderLabels(ctx, []*issues_model.Label{label}, "user2/repo1", true)
 	assert.Contains(t, rendered, "user2/repo1/pulls?labels=1")
 	assert.Contains(t, rendered, ">label1<")
-	rendered = RenderLabels(db.DefaultContext, tr, []*issues_model.Label{labelScoped}, "user2/repo1", false)
+	rendered = RenderLabels(ctx, []*issues_model.Label{labelScoped}, "user2/repo1", false)
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=7")
 	assert.Contains(t, rendered, ">scope<")
 	assert.Contains(t, rendered, ">label1<")
-	rendered = RenderLabels(db.DefaultContext, tr, []*issues_model.Label{labelMalicious}, "user2/repo1", false)
+	rendered = RenderLabels(ctx, []*issues_model.Label{labelMalicious}, "user2/repo1", false)
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=11")
 	assert.Contains(t, rendered, ">  &lt;script&gt;malicious&lt;/script&gt; <")
 	assert.Contains(t, rendered, ">&#39;?&amp;<")
 	assert.Contains(t, rendered, "title='Malicious label &#39; &lt;script&gt;malicious&lt;/script&gt;'")
-	rendered = RenderLabels(db.DefaultContext, tr, []*issues_model.Label{labelArchived}, "user2/repo1", false)
+	rendered = RenderLabels(ctx, []*issues_model.Label{labelArchived}, "user2/repo1", false)
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=12")
 	assert.Contains(t, rendered, ">archived label&lt;&gt;<")
 	assert.Contains(t, rendered, "title='repo.issues.archived_label_description'")
@@ -265,4 +269,20 @@ func TestRenderUser(t *testing.T) {
 		"<a href='/org3' rel='nofollow'><strong>&lt;&lt;&lt;&lt; &gt;&gt; &gt;&gt; &gt; &gt;&gt; &gt; &gt;&gt;&gt; &gt;&gt;</strong></a>")
 	assert.Contains(t, RenderUser(db.DefaultContext, *ghost),
 		"<strong>Ghost</strong>")
+}
+
+func TestRenderReviewRequest(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	target1 := issues_model.RequestReviewTarget{User: &user_model.User{ID: 1, Name: "user1", FullName: "User <One>"}}
+	target2 := issues_model.RequestReviewTarget{Team: &org_model.Team{ID: 2, Name: "Team2", OrgID: 3}}
+	target3 := issues_model.RequestReviewTarget{Team: org_model.NewGhostTeam()}
+	assert.Contains(t, RenderReviewRequest(db.DefaultContext, []issues_model.RequestReviewTarget{target1, target2, target3}),
+		"<a href='/user1' rel='nofollow'><strong>user1</strong></a>, "+
+			"<a href='/org/org3/teams/Team2' rel='nofollow'><strong>Team2</strong></a>, "+
+			"<strong>Ghost team</strong>")
+
+	defer test.MockVariableValue(&setting.UI.DefaultShowFullName, true)()
+	assert.Contains(t, RenderReviewRequest(db.DefaultContext, []issues_model.RequestReviewTarget{target1}),
+		"<a href='/user1' rel='nofollow'><strong>User &lt;One&gt;</strong></a>")
 }

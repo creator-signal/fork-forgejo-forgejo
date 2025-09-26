@@ -19,7 +19,7 @@ import (
 	webhook_module "forgejo.org/modules/webhook"
 	commitstatus_service "forgejo.org/services/repository/commitstatus"
 
-	"github.com/nektos/act/pkg/jobparser"
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
 )
 
 // CreateCommitStatus creates a commit status for the given job.
@@ -80,7 +80,7 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 	repo := run.Repo
 	// TODO: store workflow name as a field in ActionRun to avoid parsing
 	runName := path.Base(run.WorkflowID)
-	if wfs, err := jobparser.Parse(job.WorkflowPayload); err == nil && len(wfs) > 0 {
+	if wfs, err := jobparser.Parse(job.WorkflowPayload, false); err == nil && len(wfs) > 0 {
 		runName = wfs[0].Name
 	}
 	ctxname := fmt.Sprintf("%s / %s (%s)", runName, job.Name, event)

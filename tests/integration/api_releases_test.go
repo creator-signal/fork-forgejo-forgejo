@@ -6,8 +6,6 @@ package integration
 import (
 	"bytes"
 	"fmt"
-	"io"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -319,18 +317,11 @@ func TestAPIUploadAssetRelease(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		body := &bytes.Buffer{}
-
-		writer := multipart.NewWriter(body)
-		part, err := writer.CreateFormFile("attachment", filename)
-		require.NoError(t, err)
-		_, err = io.Copy(part, bytes.NewReader(buff.Bytes()))
-		require.NoError(t, err)
-		err = writer.Close()
-		require.NoError(t, err)
+		contentType := tests.WriteImageBody(t, buff, filename, body)
 
 		req := NewRequestWithBody(t, http.MethodPost, assetURL, bytes.NewReader(body.Bytes())).
 			AddTokenAuth(token).
-			SetHeader("Content-Type", writer.FormDataContentType())
+			SetHeader("Content-Type", contentType)
 		resp := MakeRequest(t, req, http.StatusCreated)
 
 		var attachment *api.Attachment
@@ -341,7 +332,7 @@ func TestAPIUploadAssetRelease(t *testing.T) {
 
 		req = NewRequestWithBody(t, http.MethodPost, assetURL+"?name=test-asset", bytes.NewReader(body.Bytes())).
 			AddTokenAuth(token).
-			SetHeader("Content-Type", writer.FormDataContentType())
+			SetHeader("Content-Type", contentType)
 		resp = MakeRequest(t, req, http.StatusCreated)
 
 		var attachment2 *api.Attachment
@@ -467,18 +458,11 @@ func TestAPIDuplicateAssetRelease(t *testing.T) {
 	filename := "image.png"
 	buff := generateImg()
 	body := &bytes.Buffer{}
-
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("attachment", filename)
-	require.NoError(t, err)
-	_, err = io.Copy(part, &buff)
-	require.NoError(t, err)
-	err = writer.Close()
-	require.NoError(t, err)
+	contentType := tests.WriteImageBody(t, buff, filename, body)
 
 	req := NewRequestWithBody(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/%s/releases/%d/assets?name=test-asset&external_url=https%%3A%%2F%%2Fforgejo.org%%2F", owner.Name, repo.Name, r.ID), body).
 		AddTokenAuth(token)
-	req.Header.Add("Content-Type", writer.FormDataContentType())
+	req.Header.Add("Content-Type", contentType)
 	MakeRequest(t, req, http.StatusBadRequest)
 }
 
@@ -495,4 +479,21 @@ func TestAPIMissingAssetRelease(t *testing.T) {
 	req := NewRequest(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/%s/releases/%d/assets?name=test-asset", owner.Name, repo.Name, r.ID)).
 		AddTokenAuth(token)
 	MakeRequest(t, req, http.StatusBadRequest)
+}
+
+func TestAPIReleaseGithubFormat(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeReadRepository)
+
+	req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/releases/1", user2.Name, repo.Name)).AddTokenAuth(token)
+	req.Header.Add("Accept", "application/vnd.github+json")
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	var apiRelease *api.Release
+	DecodeJSON(t, resp, &apiRelease)
+
+	assert.True(t, strings.HasSuffix(apiRelease.UploadURL, "/api/v1/repos/user2/repo1/releases/1/assets{?name,label}"), apiRelease.UploadURL)
 }

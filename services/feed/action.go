@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
+	federation_service "forgejo.org/services/federation"
 	notify_service "forgejo.org/services/notify"
 )
 
@@ -40,21 +41,19 @@ func NewNotifier() notify_service.Notifier {
 }
 
 func notifyAll(ctx context.Context, action *activities_model.Action) error {
-	_, err := activities_model.NotifyWatchers(ctx, action)
+	out, err := activities_model.NotifyWatchers(ctx, action)
 	if err != nil {
 		return err
 	}
-	return err
-	// return federation_service.NotifyActivityPubFollowers(ctx, out)
+	return federation_service.NotifyActivityPubFollowers(ctx, out)
 }
 
 func notifyAllActions(ctx context.Context, acts []*activities_model.Action) error {
-	_, err := activities_model.NotifyWatchersActions(ctx, acts)
+	out, err := activities_model.NotifyWatchersActions(ctx, acts)
 	if err != nil {
 		return err
 	}
-	return nil
-	// return federation_service.NotifyActivityPubFollowers(ctx, out)
+	return federation_service.NotifyActivityPubFollowers(ctx, out)
 }
 
 func (a *actionNotifier) NewIssue(ctx context.Context, issue *issues_model.Issue, mentions []*user_model.User) {
@@ -72,7 +71,7 @@ func (a *actionNotifier) NewIssue(ctx context.Context, issue *issues_model.Issue
 		ActUserID: issue.Poster.ID,
 		ActUser:   issue.Poster,
 		OpType:    activities_model.ActionCreateIssue,
-		Content:   fmt.Sprintf("%d|%s", issue.Index, issue.Title),
+		Content:   encodeContent(fmt.Sprintf("%d", issue.Index), issue.Title),
 		RepoID:    repo.ID,
 		Repo:      repo,
 		IsPrivate: repo.IsPrivate,
@@ -88,7 +87,7 @@ func (a *actionNotifier) IssueChangeStatus(ctx context.Context, doer *user_model
 	act := &activities_model.Action{
 		ActUserID: doer.ID,
 		ActUser:   doer,
-		Content:   fmt.Sprintf("%d|%s", issue.Index, ""),
+		Content:   encodeContent(fmt.Sprintf("%d", issue.Index), ""),
 		RepoID:    issue.Repo.ID,
 		Repo:      issue.Repo,
 		Comment:   actionComment,
@@ -126,17 +125,8 @@ func (a *actionNotifier) CreateIssueComment(ctx context.Context, doer *user_mode
 		Comment:   comment,
 		CommentID: comment.ID,
 		IsPrivate: issue.Repo.IsPrivate,
+		Content:   encodeContent(fmt.Sprintf("%d", issue.Index), abbreviatedComment(comment.Content)),
 	}
-
-	truncatedContent, truncatedRight := util.SplitStringAtByteN(comment.Content, 200)
-	if truncatedRight != "" {
-		// in case the content is in a Latin family language, we remove the last broken word.
-		lastSpaceIdx := strings.LastIndex(truncatedContent, " ")
-		if lastSpaceIdx != -1 && (len(truncatedContent)-lastSpaceIdx < 15) {
-			truncatedContent = truncatedContent[:lastSpaceIdx] + "…"
-		}
-	}
-	act.Content = fmt.Sprintf("%d|%s", issue.Index, truncatedContent)
 
 	if issue.IsPull {
 		act.OpType = activities_model.ActionCommentPull
@@ -168,7 +158,7 @@ func (a *actionNotifier) NewPullRequest(ctx context.Context, pull *issues_model.
 		ActUserID: pull.Issue.Poster.ID,
 		ActUser:   pull.Issue.Poster,
 		OpType:    activities_model.ActionCreatePullRequest,
-		Content:   fmt.Sprintf("%d|%s", pull.Issue.Index, pull.Issue.Title),
+		Content:   encodeContent(fmt.Sprintf("%d", pull.Issue.Index), pull.Issue.Title),
 		RepoID:    pull.Issue.Repo.ID,
 		Repo:      pull.Issue.Repo,
 		IsPrivate: pull.Issue.Repo.IsPrivate,
@@ -248,7 +238,7 @@ func (a *actionNotifier) PullRequestReview(ctx context.Context, pr *issues_model
 				actions = append(actions, &activities_model.Action{
 					ActUserID: review.Reviewer.ID,
 					ActUser:   review.Reviewer,
-					Content:   fmt.Sprintf("%d|%s", review.Issue.Index, strings.Split(comm.Content, "\n")[0]),
+					Content:   encodeContent(fmt.Sprintf("%d", review.Issue.Index), abbreviatedComment(comm.Content)),
 					OpType:    activities_model.ActionCommentPull,
 					RepoID:    review.Issue.RepoID,
 					Repo:      review.Issue.Repo,
@@ -264,7 +254,7 @@ func (a *actionNotifier) PullRequestReview(ctx context.Context, pr *issues_model
 		action := &activities_model.Action{
 			ActUserID: review.Reviewer.ID,
 			ActUser:   review.Reviewer,
-			Content:   fmt.Sprintf("%d|%s", review.Issue.Index, strings.Split(comment.Content, "\n")[0]),
+			Content:   encodeContent(fmt.Sprintf("%d", review.Issue.Index), abbreviatedComment(comment.Content)),
 			RepoID:    review.Issue.RepoID,
 			Repo:      review.Issue.Repo,
 			IsPrivate: review.Issue.Repo.IsPrivate,
@@ -294,7 +284,7 @@ func (*actionNotifier) MergePullRequest(ctx context.Context, doer *user_model.Us
 		ActUserID: doer.ID,
 		ActUser:   doer,
 		OpType:    activities_model.ActionMergePullRequest,
-		Content:   fmt.Sprintf("%d|%s", pr.Issue.Index, pr.Issue.Title),
+		Content:   encodeContent(fmt.Sprintf("%d", pr.Issue.Index), pr.Issue.Title),
 		RepoID:    pr.Issue.Repo.ID,
 		Repo:      pr.Issue.Repo,
 		IsPrivate: pr.Issue.Repo.IsPrivate,
@@ -308,7 +298,7 @@ func (*actionNotifier) AutoMergePullRequest(ctx context.Context, doer *user_mode
 		ActUserID: doer.ID,
 		ActUser:   doer,
 		OpType:    activities_model.ActionAutoMergePullRequest,
-		Content:   fmt.Sprintf("%d|%s", pr.Issue.Index, pr.Issue.Title),
+		Content:   encodeContent(fmt.Sprintf("%d", pr.Issue.Index), pr.Issue.Title),
 		RepoID:    pr.Issue.Repo.ID,
 		Repo:      pr.Issue.Repo,
 		IsPrivate: pr.Issue.Repo.IsPrivate,
@@ -317,7 +307,7 @@ func (*actionNotifier) AutoMergePullRequest(ctx context.Context, doer *user_mode
 	}
 }
 
-func (*actionNotifier) NotifyPullRevieweDismiss(ctx context.Context, doer *user_model.User, review *issues_model.Review, comment *issues_model.Comment) {
+func (*actionNotifier) PullReviewDismiss(ctx context.Context, doer *user_model.User, review *issues_model.Review, comment *issues_model.Comment) {
 	reviewerName := review.Reviewer.Name
 	if len(review.OriginalAuthor) > 0 {
 		reviewerName = review.OriginalAuthor
@@ -326,7 +316,7 @@ func (*actionNotifier) NotifyPullRevieweDismiss(ctx context.Context, doer *user_
 		ActUserID: doer.ID,
 		ActUser:   doer,
 		OpType:    activities_model.ActionPullReviewDismissed,
-		Content:   fmt.Sprintf("%d|%s|%s", review.Issue.Index, reviewerName, comment.Content),
+		Content:   encodeContent(fmt.Sprintf("%d", review.Issue.Index), reviewerName, abbreviatedComment(comment.Content)),
 		RepoID:    review.Issue.Repo.ID,
 		Repo:      review.Issue.Repo,
 		IsPrivate: review.Issue.Repo.IsPrivate,
@@ -338,9 +328,7 @@ func (*actionNotifier) NotifyPullRevieweDismiss(ctx context.Context, doer *user_
 }
 
 func (a *actionNotifier) PushCommits(ctx context.Context, pusher *user_model.User, repo *repo_model.Repository, opts *repository.PushUpdateOptions, commits *repository.PushCommits) {
-	if len(commits.Commits) > setting.UI.FeedMaxCommitNum {
-		commits.Commits = commits.Commits[:setting.UI.FeedMaxCommitNum]
-	}
+	commits = prepareCommitsForFeed(commits)
 
 	data, err := json.Marshal(commits)
 	if err != nil {
@@ -413,9 +401,7 @@ func (a *actionNotifier) DeleteRef(ctx context.Context, doer *user_model.User, r
 }
 
 func (a *actionNotifier) SyncPushCommits(ctx context.Context, pusher *user_model.User, repo *repo_model.Repository, opts *repository.PushUpdateOptions, commits *repository.PushCommits) {
-	if len(commits.Commits) > setting.UI.FeedMaxCommitNum {
-		commits.Commits = commits.Commits[:setting.UI.FeedMaxCommitNum]
-	}
+	commits = prepareCommitsForFeed(commits)
 
 	data, err := json.Marshal(commits)
 	if err != nil {
@@ -481,5 +467,75 @@ func (a *actionNotifier) NewRelease(ctx context.Context, rel *repo_model.Release
 		RefName:   rel.TagName, // FIXME: use a full ref name?
 	}); err != nil {
 		log.Error("NotifyWatchers: %v", err)
+	}
+}
+
+// ... later decoded in models/activities/action.go:GetIssueInfos
+func encodeContent(params ...string) string {
+	contentEncoded, err := json.Marshal(params)
+	if err != nil {
+		log.Error("encodeContent: Unexpected json encoding error: %v", err)
+	}
+	return string(contentEncoded)
+}
+
+// Given a comment of arbitrary-length Markdown text, create an abbreviated Markdown text appropriate for the
+// activity feed.
+func abbreviatedComment(comment string) string {
+	firstLine := strings.Split(comment, "\n")[0]
+
+	if strings.HasPrefix(firstLine, "```") {
+		// First line is is a fenced code block... with no special abbreviate we would display a blank block, or in the
+		// worst-case a ```mermaid would display an error. Better to omit the comment.
+		return ""
+	}
+
+	truncatedContent, truncatedRight := util.SplitStringAtByteN(firstLine, 200)
+	if truncatedRight != "" {
+		// in case the content is in a Latin family language, we remove the last broken word.
+		lastSpaceIdx := strings.LastIndex(truncatedContent, " ")
+		if lastSpaceIdx != -1 && (len(truncatedContent)-lastSpaceIdx < 15) {
+			truncatedContent = truncatedContent[:lastSpaceIdx] + "…"
+		}
+	}
+
+	return truncatedContent
+}
+
+// Return a clone of the incoming repository.PushCommits that is appropriately tweaked for the activity feed. The struct
+// is cloned rather than modified in-place because the same data will be sent to multiple notifiers. Transformations
+// applied are: # of commits are limited to FeedMaxCommitNum, commit messages are trimmed to just the content displayed
+// in the activity feed.
+func prepareCommitsForFeed(commits *repository.PushCommits) *repository.PushCommits {
+	numCommits := min(len(commits.Commits), setting.UI.FeedMaxCommitNum)
+	retval := repository.PushCommits{
+		Commits:    make([]*repository.PushCommit, 0, numCommits),
+		HeadCommit: nil,
+		CompareURL: commits.CompareURL,
+		Len:        commits.Len,
+	}
+	if commits.HeadCommit != nil {
+		retval.HeadCommit = prepareCommitForFeed(commits.HeadCommit)
+	}
+	for i, commit := range commits.Commits {
+		if i == numCommits {
+			break
+		}
+		retval.Commits = append(retval.Commits, prepareCommitForFeed(commit))
+	}
+	return &retval
+}
+
+func prepareCommitForFeed(commit *repository.PushCommit) *repository.PushCommit {
+	return &repository.PushCommit{
+		Sha1:           commit.Sha1,
+		Message:        abbreviatedComment(commit.Message),
+		AuthorEmail:    commit.AuthorEmail,
+		AuthorName:     commit.AuthorName,
+		CommitterEmail: commit.CommitterEmail,
+		CommitterName:  commit.CommitterName,
+		Signature:      commit.Signature,
+		Verification:   commit.Verification,
+		Timestamp:      commit.Timestamp,
 	}
 }

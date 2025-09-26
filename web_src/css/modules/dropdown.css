@@ -30,6 +30,7 @@ details.dropdown > summary {
   user-select: none;
   list-style-type: none;
   /* Main visual properties */
+  border: 1px solid var(--color-light-border);
   border-radius: var(--border-radius);
   padding: 0.5rem;
 }
@@ -99,7 +100,13 @@ details.dropdown > summary + ul > li:last-child {
 /* Note: https://css-tricks.com/css-anchor-positioning-guide/
 *  looks like a great thing but FF still doesn't support it. */
 
-/* Note: dropdown.dir-rtl can be implemented when needed, e.g. for navbar profile dropdown on desktop layout. */
+details.dropdown.dir-rtl > summary + ul {
+  inset-inline: 0 auto;
+  direction: rtl;
+}
+details.dropdown.dir-rtl > summary + ul > li {
+  direction: ltr;
+}
 
 details.dropdown > summary + ul > li > .item {
   padding: var(--dropdown-item-padding);

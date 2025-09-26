@@ -27,7 +27,7 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 
-	"github.com/nektos/act/pkg/model"
+	"code.forgejo.org/forgejo/runner/v11/act/model"
 )
 
 const (
@@ -111,7 +111,7 @@ func List(ctx *context.Context) {
 				ctx.ServerError("GetContentFromEntry", err)
 				return
 			}
-			wf, err := model.ReadWorkflow(bytes.NewReader(content))
+			wf, err := model.ReadWorkflow(bytes.NewReader(content), true)
 			if err != nil {
 				workflow.ErrMsg = ctx.Locale.TrString("actions.runs.invalid_workflow_helper", err.Error())
 				workflows = append(workflows, workflow)

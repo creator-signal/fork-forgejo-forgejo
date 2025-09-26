@@ -24,8 +24,8 @@ import (
 	"forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
 
-	"github.com/nektos/act/pkg/jobparser"
-	act_model "github.com/nektos/act/pkg/model"
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v11/act/model"
 )
 
 type InputRequiredErr struct {
@@ -56,7 +56,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		return nil, nil, err
 	}
 
-	wf, err := act_model.ReadWorkflow(bytes.NewReader(content))
+	wf, err := act_model.ReadWorkflow(bytes.NewReader(content), false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -138,7 +138,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		return nil, nil, err
 	}
 
-	jobs, err := jobparser.Parse(content, jobparser.WithVars(vars))
+	jobs, err := jobParser(content, jobparser.WithVars(vars))
 	if err != nil {
 		return nil, nil, err
 	}

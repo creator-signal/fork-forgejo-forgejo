@@ -28,7 +28,7 @@ jobs:
 
     runs-on: docker
     container:
-      image: data.forgejo.org/renovate/renovate:41.32.1
+      image: data.forgejo.org/renovate/renovate:41.122.3
 
     steps:
       - name: Load renovate repo cache
@@ -49,7 +49,7 @@ jobs:
           LOG_LEVEL: debug
           RENOVATE_BASE_DIR: ${{ github.workspace }}/.tmp
           RENOVATE_ENDPOINT: ${{ github.server_url }}
-          RENOVATE_PLATFORM: gitea
+          RENOVATE_PLATFORM: forgejo
           RENOVATE_REPOSITORY_CACHE: 'enabled'
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_GIT_AUTHOR: 'Renovate Bot <forgejo-renovate-action@forgejo.org>'
@@ -62,6 +62,10 @@ jobs:
           GIT_COMMITTER_EMAIL: 'forgejo-renovate-action@forgejo.org'
 
           OSV_OFFLINE_ROOT_DIR: ${{ github.workspace }}/.tmp/osv
+
+          # use direct connection for these domains for renovate go datasource instead of the go proxy
+          # allows faster lookups
+          GONOPROXY: code.forgejo.org
 
       - name: Save renovate repo cache
         if: always() && env.RENOVATE_DRY_RUN != 'full'
