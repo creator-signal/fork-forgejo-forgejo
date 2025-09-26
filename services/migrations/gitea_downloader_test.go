@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	gitea_sdk "code.gitea.io/sdk/gitea"
 	"forgejo.org/models/unittest"
 	base "forgejo.org/modules/migration"
 
+	gitea_sdk "code.gitea.io/sdk/gitea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
