@@ -18,6 +18,12 @@
   display: inline-block;
 }
 
+.size-overview .stats-bar summary {
+  border: 1px solid var(--color-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
 .repository .repository-summary #language-stats-bar {
   display: flex;
   gap: 2px;
@@ -26,12 +32,5 @@
   white-space: nowrap;
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
-  overflow: hidden;
-}
-
-.size-overview .segment:has(> summary .bar) {
-  display: flex;
-  padding: 0;
-  border-radius: 3px;
   overflow: hidden;
 }

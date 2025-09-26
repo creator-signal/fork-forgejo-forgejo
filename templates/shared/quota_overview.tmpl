@@ -5,7 +5,7 @@
 	<p>{{if .ContextUser.IsOrganization}}{{ctx.Locale.Tr "settings.quota.applies_to_org"}}{{else}}{{ctx.Locale.Tr "settings.quota.applies_to_user"}}{{end}}:</p>
 	{{range $group := .QuotaGroups}}
 		<p class="tw-my-4"><strong>{{$group.Name}}</strong></p>
-		<div class="tw-ml-4">
+		<div class="tw-flex tw-flex-col tw-gap-4 tw-ml-4">
 		{{range $rule := .Rules}}
 			<div class="tw-flex tw-justify-between">
 				<span class="tw-flex tw-items-center tw-gap-2{{if eq $rule.Limit -1}} tw-mb-5{{end}}">
@@ -21,7 +21,7 @@
 				</span>
 				<span>{{ctx.Locale.TrSize ($rule.Sum $.SizeUsed)}} / {{if eq $rule.Limit -1 -}}{{ctx.Locale.Tr "settings.quota.rule.no_limit"}}{{else}}{{ctx.Locale.TrSize $rule.Limit}}{{end}}</span>
 			</div>
-			<details class="ui segment stats-bar">
+			<details class="stats-bar">
 				<summary>
 					{{range $idx, $subject := .Subjects}}
 						<div class="bar" style="width: calc(max(1%, {{Eval 100.0 "*" ($.SizeUsed.CalculateFor $subject) "/" $rule.Limit}}%)); background-color: oklch(80% 30% {{call $.Color $subject}}deg)" data-tooltip-placement="top" data-tooltip-content="{{call $.PrettySubject $subject}} – {{ctx.Locale.TrSize ($.SizeUsed.CalculateFor $subject)}}" data-tooltip-follow-cursor="horizontal"></div>
