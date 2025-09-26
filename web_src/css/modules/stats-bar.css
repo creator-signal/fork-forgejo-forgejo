@@ -43,8 +43,12 @@
 
   &[open] {
     gap: 1rem;
-    background: var(--color-active);
+    background: var(--color-input-background);
     border-radius: var(--border-radius);
+
+    summary {
+      background: var(--color-hover);
+    }
   }
 
   summary {
