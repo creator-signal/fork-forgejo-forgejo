@@ -7,32 +7,40 @@
 		<p class="tw-my-4"><strong>{{$group.Name}}</strong></p>
 		<div class="tw-flex tw-flex-col tw-gap-4 tw-ml-4">
 		{{range $rule := .Rules}}
-			<div class="tw-flex tw-justify-between">
-				<span class="tw-flex tw-items-center tw-gap-2">
-					{{if $rule.Acceptable ($.SizeUsed)}}
-						{{svg "octicon-check-circle-fill" 16 "text green"}}
-						{{$rule.Name}}
-					{{else}}
-						{{svg "octicon-alert-fill" 16 "text red"}}
-						<span data-tooltip-content="{{ctx.Locale.Tr "settings.quota.rule.exceeded.helper"}}" data-tooltip-placement="top">
-							{{$rule.Name}} – {{ctx.Locale.Tr "settings.quota.rule.exceeded"}}
-						</span>
-					{{end}}
-				</span>
-				<span>{{ctx.Locale.TrSize ($rule.Sum $.SizeUsed)}} / {{if eq $rule.Limit -1 -}}{{ctx.Locale.Tr "settings.quota.rule.no_limit"}}{{else}}{{ctx.Locale.TrSize $rule.Limit}}{{end}}</span>
+			<div class="tw-flex tw-flex-col tw-gap-3">
+				<div class="tw-flex tw-justify-between">
+					<span class="tw-flex tw-items-center tw-gap-2">
+						{{if $rule.Acceptable ($.SizeUsed)}}
+							{{svg "octicon-check-circle-fill" 16 "text green"}}
+							{{$rule.Name}}
+						{{else}}
+							{{svg "octicon-alert-fill" 16 "text red"}}
+							<span data-tooltip-content="{{ctx.Locale.Tr "settings.quota.rule.exceeded.helper"}}" data-tooltip-placement="top">
+								{{$rule.Name}} – {{ctx.Locale.Tr "settings.quota.rule.exceeded"}}
+							</span>
+						{{end}}
+					</span>
+					<span>{{ctx.Locale.TrSize ($rule.Sum $.SizeUsed)}} / {{if eq $rule.Limit -1 -}}{{ctx.Locale.Tr "settings.quota.rule.no_limit"}}{{else}}{{ctx.Locale.TrSize $rule.Limit}}{{end}}</span>
+				</div>
+				<details class="stats-bar">
+					<summary>
+						{{range $idx, $subject := .Subjects}}
+							<div class="bar" style="width: calc(max(1%, {{Eval 100.0 "*" ($.SizeUsed.CalculateFor $subject) "/" $rule.Limit}}%)); background-color: oklch(80% 30% {{call $.Color $subject}}deg)" data-tooltip-placement="top" data-tooltip-content="{{call $.PrettySubject $subject}} – {{ctx.Locale.TrSize ($.SizeUsed.CalculateFor $subject)}}" data-tooltip-follow-cursor="horizontal"></div>
+						{{end}}
+					</summary>
+					<ul>
+						{{range $idx, $subject := .Subjects}}
+							<li>
+								<div class="color-icon" style="background-color: oklch(80% 30% {{call $.Color $subject}}deg)"></div>
+								<div class="tw-flex tw-justify-between tw-gap-1 tw-w-full">
+									<span>{{call $.PrettySubject $subject}}</span>
+									<span>{{ctx.Locale.TrSize ($.SizeUsed.CalculateFor $subject)}}</span>
+								</div>
+							</li>
+						{{end}}
+					</ul>
+				</details>
 			</div>
-			<details class="stats-bar">
-				<summary>
-					{{range $idx, $subject := .Subjects}}
-						<div class="bar" style="width: calc(max(1%, {{Eval 100.0 "*" ($.SizeUsed.CalculateFor $subject) "/" $rule.Limit}}%)); background-color: oklch(80% 30% {{call $.Color $subject}}deg)" data-tooltip-placement="top" data-tooltip-content="{{call $.PrettySubject $subject}} – {{ctx.Locale.TrSize ($.SizeUsed.CalculateFor $subject)}}" data-tooltip-follow-cursor="horizontal"></div>
-					{{end}}
-				</summary>
-				<ul>
-					<li>ad</li>
-					<li>ad</li>
-					<li>ad</li>
-				</ul>
-			</details>
 		{{end}}
 		</div>
 	{{end}}
