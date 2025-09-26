@@ -21,7 +21,7 @@
 				</span>
 				<span>{{ctx.Locale.TrSize ($rule.Sum $.SizeUsed)}} / {{if eq $rule.Limit -1 -}}{{ctx.Locale.Tr "settings.quota.rule.no_limit"}}{{else}}{{ctx.Locale.TrSize $rule.Limit}}{{end}}</span>
 			</div>
-			<div class="ui segment">
+			<div class="ui segment stats-bar">
 				{{range $idx, $subject := .Subjects}}
 					<div class="bar" style="width: calc(max(1%, {{Eval 100.0 "*" ($.SizeUsed.CalculateFor $subject) "/" $rule.Limit}}%)); background-color: oklch(80% 30% {{call $.Color $subject}}deg)" data-tooltip-placement="top" data-tooltip-content="{{call $.PrettySubject $subject}} – {{ctx.Locale.TrSize ($.SizeUsed.CalculateFor $subject)}}" data-tooltip-follow-cursor="horizontal"></div>
 				{{end}}

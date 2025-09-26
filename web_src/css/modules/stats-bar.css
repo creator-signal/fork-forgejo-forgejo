@@ -1,8 +1,12 @@
+:root .stats-bar {
+  --stats-bar-height: 0.75rem;
+}
+
 .repository .repository-summary #language-stats-bar {
   display: flex;
   gap: 2px;
   padding: 0;
-  height: 10px;
+  height: var(--stats-bar-height);
   white-space: nowrap;
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
@@ -11,7 +15,7 @@
 
 .size-overview .segment:has(> .bar) {
   display: flex;
-  height: 10px;
+  height: var(--stats-bar-height);
   padding: 0;
   border-radius: 3px;
   overflow: hidden;
