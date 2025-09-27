@@ -72,7 +72,7 @@
 								{{svg "octicon-x"}}
 							</button>
 							{{if .ContentReference}} {{/* the reference is missing when the content was already deleted */}}
-							<details class="item dropdown dir-auto">
+							<details class="item dropdown dir-rtl">
 								<summary class="tw-p-1" data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">{{svg "octicon-kebab-horizontal"}}</summary>
 								<ul
 										hx-target="{{$reportDivSelector}}" hx-indicator="{{$reportDivSelector}}"
