@@ -43,16 +43,17 @@
 
   &[open] {
     gap: 0.5rem;
-    background: var(--color-input-background);
+    background: var(--color-box-body-highlight);
     border-radius: var(--border-radius);
 
     summary {
-      background: var(--color-hover);
+      background: var(--color-secondary-dark-3);
     }
   }
 
   summary {
-    background-color: var(--color-input-background);
+    /* Same as default background of `progress` */
+    background-color: var(--color-secondary-dark-1);
   }
 
   ul {
