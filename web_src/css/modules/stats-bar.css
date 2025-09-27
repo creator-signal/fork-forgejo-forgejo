@@ -42,7 +42,7 @@
   margin-bottom: 0.5rem;
 
   &[open] {
-    gap: 1rem;
+    gap: 0.5rem;
     background: var(--color-input-background);
     border-radius: var(--border-radius);
 
