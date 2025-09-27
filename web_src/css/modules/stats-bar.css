@@ -39,17 +39,17 @@ stats-bar {
   flex-direction: column;
   border-radius: var(--border-radius);
 
-  &:hover {
+  &:hover,
+  &[open] {
     background-color: var(--color-box-body-highlight);
+    stats-bar {
+      background-color: var(--color-secondary-dark-3);
+    }
   }
 
   &[open] {
     gap: 0.25rem;
     background-color: var(--color-box-body-highlight);
-
-    stats-bar {
-      background-color: var(--color-secondary-dark-3);
-    }
   }
 
   summary {
