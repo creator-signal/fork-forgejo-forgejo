@@ -142,7 +142,8 @@
 
 @media (max-width: 390px) {
   .repository .clone-panel #repo-clone-url {
-    width: unset;
+    width: 0;
+    flex-grow: 1;
   }
 }
 
