@@ -48,7 +48,7 @@ import {initRepoTopicBar} from './features/repo-home.js';
 import {initAdminEmails} from './features/admin/emails.js';
 import {initAdminCommon} from './features/admin/common.js';
 import {initRepoTemplateSearch} from './features/repo-template.js';
-import {initRepoCodeView} from './features/repo-code.js';
+import {initRepoCodeView} from './features/repo-code.ts';
 import {initSshKeyFormParser} from './features/sshkey-helper.js';
 import {initRepoArchiveLinks} from './features/repo-common.js';
 import {initRepoMigrationStatusChecker} from './features/repo-migrate.js';
@@ -86,6 +86,7 @@ import {initDirAuto} from './modules/dirauto.js';
 import {initRepositorySearch} from './features/repo-search.js';
 import {initColorPickers} from './features/colorpicker.js';
 import {initRepoMilestoneEditor} from './features/repo-milestone.js';
+import {initModalClose} from './modules/modal.ts';
 
 // Init Gitea's Fomantic settings
 initGiteaFomantic();
@@ -189,6 +190,7 @@ onDomReady(() => {
   initRepoDiffView();
   initScopedAccessTokenCategories();
   initColorPickers();
+  initModalClose();
 
   // Deactivate CSS-only noJS usability supplements
   document.body.classList.remove('no-js');

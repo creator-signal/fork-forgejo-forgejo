@@ -1,13 +1,13 @@
 {
     "repo.pulls.merged_title_desc": {
         "one": "mesclou %[1]d commit de <code>%[2]s</code> em <code>%[3]s</code> %[4]s",
-        "many": "mesclou %[1]d commits de <code>%[2]s</code> em <code>%[3]s</code> %[4]s",
-        "other": ""
+        "many": "mesclou %[1]d de commits de <code>%[2]s</code> em <code>%[3]s</code> %[4]s",
+        "other": "mesclou %[1]d commits from <code>%[2]s</code> into <code>%[3]s</code> %[4]s"
     },
     "repo.pulls.title_desc": {
         "one": "quer mesclar %[1]d commit de <code>%[2]s</code> em <code id=\"%[4]s\">%[3]s</code>",
         "many": "quer mesclar %[1]d commits de <code>%[2]s</code> em <code id=\"%[4]s\">%[3]s</code>",
-        "other": ""
+        "other": "quer mesclar %[1]d commits de <code>%[2]s</code> em <code id=\"%[4]s\">%[3]s</code>"
     },
     "search.milestone_kind": "Pesquisar marcos…",
     "home.welcome.no_activity": "Sem atividade",
@@ -119,5 +119,42 @@
     "admin.moderation.moderation_reports": "Denúncias para moderação",
     "admin.moderation.reports": "Denúncias",
     "admin.moderation.no_open_reports": "Não há denúncias abertas atualmente.",
-    "admin.dashboard.remove_resolved_reports": "Remover denúncias resolvidas"
+    "admin.dashboard.remove_resolved_reports": "Remover denúncias resolvidas",
+    "compare.branches.title": "Comparar branches",
+    "admin.auths.allow_username_change": "Permitir mudança de nome de usuário",
+    "admin.auths.allow_username_change.description": "Permitir que usuários alterem seus nomes de usuário nas configurações do perfil",
+    "repo.commit.load_tags_failed": "Carregamento de etiquetas falhou devido a um erro interno",
+    "migrate.pagure.description": "Migre dados do pagure.io ou outras instâncias do Pagure.",
+    "migrate.pagure.token_body_a": "Forneça um token da API Pagure com acesso aos issues privados para criar um repositório com apenas os issues privados nele",
+    "migrate.github.description": "Migre dados do servidor github.com ou GitHub Enterprise.",
+    "migrate.git.description": "Migrar um repositório somente de qualquer serviço Git.",
+    "migrate.gitea.description": "Migrar dados de gitea.com ou de outras instâncias do Gitea.",
+    "migrate.gitlab.description": "Migrar dados de gitlab.com ou de outras instâncias do GitLab.",
+    "migrate.gogs.description": "Migrar dados de notabug.org ou de outras instâncias do Gogs.",
+    "migrate.onedev.description": "Migrar dados de code.onedev.io ou de outras instâncias do OneDev.",
+    "migrate.gitbucket.description": "Migrar dados de instâncias do GitBucket.",
+    "migrate.codebase.description": "Migrar dados de codebasehq.com.",
+    "migrate.forgejo.description": "Migrar dados do codeberg.org ou outras servidores Forgejo.",
+    "warning.repository.out_of_sync": "A representação deste repositório no banco de dados está fora de sincronia. Se este aviso ainda aparecer após fazer push de um commit para este repositório, contate o administrador.",
+    "repo.pulls.already_merged": "Mescla falhou: Este pull request já foi mesclado.",
+    "migrate.pagure.incorrect_url": "Uma URL incorreta do repositório fonte foi fornecida",
+    "migrate.pagure.project_example": "URL do projeto Pagure, por exemplo: https://pagure.io/pagure",
+    "migrate.pagure.project_url": "URL do projeto Pagure",
+    "migrate.pagure.token_label": "Token",
+    "migrate.pagure.token_body_b": "Certifique-se de definir o sinalizador de repositório privado acima se você deseja que este repositório seja privado",
+    "admin.config.global_2fa_requirement.title": "Exigência global de segundo fator",
+    "admin.config.global_2fa_requirement.none": "Não",
+    "admin.config.global_2fa_requirement.all": "Todos os usuários",
+    "settings.twofa_unroll_unavailable": "A autenticação de dois fatores é exigida para a sua conta e não pode ser desativada.",
+    "settings.twofa_reenroll": "Recadastrar autenticação de dois fatores",
+    "settings.must_enable_2fa": "Este servidor do Forgejo exige que usuários habilitem a autenticação de dois fatores antes que possam acessar suas contas.",
+    "admin.config.security": "Configuração de segurança",
+    "admin.config.global_2fa_requirement.admin": "Administradores",
+    "settings.twofa_reenroll.description": "Recadastrar sua autenticação de dois fatores",
+    "error.must_enable_2fa": "Este servidor do Forgejo exige que usuários habilitem a autenticação de dois fatores antes que possam acessar suas contas. Habilitar em: %s",
+    "user.ghost.tooltip": "Este usuário foi excluído, ou não pode ser encontrado.",
+    "migrate.form.error.url_credentials": "A URL contém credenciais, coloque-as nos campos de usuário e senha respectivamente",
+    "actions.runs.viewing_out_of_date_run": "Você está visualizando uma execução desatualizada deste trabalho que foi executada %[1]s.",
+    "actions.runs.view_most_recent_run": "Ver execução mais recente",
+    "actions.runs.run_attempt_label": "Tentativa de execução #%[1]s (%[2]s)"
 }

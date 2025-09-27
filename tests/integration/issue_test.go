@@ -86,6 +86,21 @@ func TestViewIssues(t *testing.T) {
 	assert.Equal(t, "Search issues…", placeholder)
 }
 
+func TestViewIssuesType(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	session := loginUser(t, user.Name)
+	req := NewRequest(t, "GET", repo.Link()+"/issues")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	issuesType := htmlDoc.doc.Find(".list-header-type > .menu .item[href*=\"type=all\"]").First()
+	assert.Equal(t, "All issues", issuesType.Text())
+}
+
 func TestViewIssuesSortByType(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -1535,4 +1550,36 @@ func TestIssueTimelineLabels(t *testing.T) {
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	filterLinks := htmlDoc.Find(".timeline .labels-list a")
 	assert.Equal(t, 9, filterLinks.Length())
+}
+
+func TestIssueAndPullRedirect(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "/user2/repo1/issues/1")
+	MakeRequest(t, req, http.StatusOK)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/2")
+	MakeRequest(t, req, http.StatusOK)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1")
+	resp := MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1/commits")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1/files")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/issues/2")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/pulls/2", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/issues/9999999")
+	MakeRequest(t, req, http.StatusNotFound)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/9999999")
+	MakeRequest(t, req, http.StatusNotFound)
 }

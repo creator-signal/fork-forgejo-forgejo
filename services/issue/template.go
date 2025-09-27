@@ -16,7 +16,7 @@ import (
 	"forgejo.org/modules/log"
 	api "forgejo.org/modules/structs"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // templateDirCandidates issue templates directory
@@ -31,6 +31,8 @@ var templateDirCandidates = []string{
 	".github/issue_template",
 	".gitlab/ISSUE_TEMPLATE",
 	".gitlab/issue_template",
+	"docs/ISSUE_TEMPLATE",
+	"docs/issue_template",
 }
 
 var templateConfigCandidates = []string{
@@ -40,6 +42,8 @@ var templateConfigCandidates = []string{
 	".gitea/issue_template/config",
 	".github/ISSUE_TEMPLATE/config",
 	".github/issue_template/config",
+	"docs/ISSUE_TEMPLATE/config",
+	"docs/issue_template/config",
 }
 
 func GetDefaultTemplateConfig() api.IssueConfig {

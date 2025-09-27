@@ -138,6 +138,8 @@ func handleMigrateRemoteAddrError(ctx *context.Context, err error, tpl base.TplN
 			}
 		case addrErr.IsInvalidPath:
 			ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_local_path"), tpl, form)
+		case addrErr.HasCredentials:
+			ctx.RenderWithErr(ctx.Tr("migrate.form.error.url_credentials"), tpl, form)
 		default:
 			log.Error("Error whilst updating url: %v", err)
 			ctx.RenderWithErr(ctx.Tr("form.url_error", "unknown"), tpl, form)
@@ -237,7 +239,7 @@ func MigratePost(ctx *context.Context) {
 		opts.Releases = false
 	}
 
-	err = repo_model.CheckCreateRepository(ctx, ctx.Doer, ctxUser, opts.RepoName, false)
+	err = repo_model.CheckCreateRepository(ctx, ctx.Doer, ctxUser, opts.RepoName)
 	if err != nil {
 		handleMigrateError(ctx, ctxUser, err, "MigratePost", tpl, form)
 		return
