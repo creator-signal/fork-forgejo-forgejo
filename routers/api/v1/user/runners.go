@@ -62,6 +62,8 @@ func CreateRegistrationToken(ctx *context.APIContext) {
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/RegistrationToken"
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
 
 	shared.GetRegistrationToken(ctx, ctx.Doer.ID, 0)
 }
@@ -78,6 +80,8 @@ func ListRunners(ctx *context.APIContext) {
 	//     "$ref": "#/responses/ActionRunnersResponse"
 	//   "400":
 	//     "$ref": "#/responses/error"
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	shared.ListRunners(ctx, ctx.Doer.ID, 0)
@@ -101,6 +105,8 @@ func GetRunner(ctx *context.APIContext) {
 	//     "$ref": "#/responses/ActionRunner"
 	//   "400":
 	//     "$ref": "#/responses/error"
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	shared.GetRunner(ctx, ctx.Doer.ID, 0, ctx.ParamsInt64("runner_id"))
@@ -124,6 +130,8 @@ func DeleteRunner(ctx *context.APIContext) {
 	//     description: runner has been deleted
 	//   "400":
 	//     "$ref": "#/responses/error"
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	shared.DeleteRunner(ctx, ctx.Doer.ID, 0, ctx.ParamsInt64("runner_id"))
