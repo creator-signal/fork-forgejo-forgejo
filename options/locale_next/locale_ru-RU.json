@@ -158,5 +158,13 @@
     "actions.runs.viewing_out_of_date_run": "Это устаревший результат. Задание было выполнено %[1]s.",
     "actions.runs.view_most_recent_run": "Перейти к актуальному",
     "repo.pulls.maintainers_can_edit": "Сопровождающие могут вносить правки.",
-    "repo.pulls.maintainers_cannot_edit": "Сопровождающие не могут вносить правки."
+    "repo.pulls.maintainers_cannot_edit": "Сопровождающие не могут вносить правки.",
+    "pulse.n_active_issues": {
+        "one": "<strong>%d</strong> активная задача",
+        "many": "<strong>%d</strong> активных задач"
+    },
+    "pulse.n_active_prs": {
+        "one": "<strong>%d</strong> активный запрос слияния",
+        "many": "<strong>%d</strong> активных запросов слияния"
+    }
 }

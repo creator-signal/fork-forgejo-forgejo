@@ -158,5 +158,13 @@
     "actions.runs.run_attempt_label": "Palaišanas mēģinājums #%[1]s (%[2]s)",
     "actions.runs.viewing_out_of_date_run": "Tu skati novecojušu šī darba palaišanu, kas tika izpildīta %[1]s.",
     "repo.pulls.maintainers_can_edit": "Uzturētāji var labot šo izmaiņu pieprasījumu.",
-    "repo.pulls.maintainers_cannot_edit": "Uzturētāji nevar labot šo izmaiņu pieprasījumu."
+    "repo.pulls.maintainers_cannot_edit": "Uzturētāji nevar labot šo izmaiņu pieprasījumu.",
+    "pulse.n_active_issues": {
+        "one": "<strong>%d</strong> atvērts pieteikums",
+        "other": "<strong>%d</strong> atvērti pieteikumi"
+    },
+    "pulse.n_active_prs": {
+        "one": "<strong>%d</strong> atvērts izmaiņu pieprasījums",
+        "other": "<strong>%d</strong> atvērti izmaiņu pieprasījumi"
+    }
 }

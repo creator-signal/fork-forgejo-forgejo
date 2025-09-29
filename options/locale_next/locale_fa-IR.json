@@ -19,5 +19,13 @@
     "migrate.gogs.description": "مهاجرت داده از notabug.com یا پیاده‌سازی‌های دیگر Gogs.",
     "migrate.onedev.description": "مهاجرت داده از code.onedev.io یا پیاده‌سازی‌های دیگر OneDev.",
     "migrate.gitbucket.description": "مهاجرت داده از نمونه های GitBucket",
-    "migrate.codebase.description": "مهاجر داده ها از codebasehq.com."
+    "migrate.codebase.description": "مهاجر داده ها از codebasehq.com.",
+    "pulse.n_active_issues": {
+        "one": "<strong>%d</strong> مسئله فعال",
+        "other": "<strong>%d</strong> مسئله فعال"
+    },
+    "pulse.n_active_prs": {
+        "one": "<strong>%d</strong> تقاضای واکشی فعال",
+        "other": "<strong>%d</strong> تقاضاهای واکشی فعال"
+    }
 }
