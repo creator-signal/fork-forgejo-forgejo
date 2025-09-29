@@ -11,8 +11,8 @@ import (
 
 func Test_FilePreviewPathParser(t *testing.T) {
 	type testPair struct {
-		item	string
-		want	FilePreviewPath
+		item    string
+		want    FilePreviewPath
 		wantErr error
 	}
 
@@ -20,32 +20,32 @@ func Test_FilePreviewPathParser(t *testing.T) {
 		"file path no lines": {
 			item: "/test-org/test-repo/src/commit/a0b1c2/test-file.md",
 			want: FilePreviewPath{
-				Org: "test-org",
-				Repo: "test-repo",
-				CommitHash: "a0b1c2" ,
-				FilePath: "test-file.md",
+				Org:        "test-org",
+				Repo:       "test-repo",
+				CommitHash: "a0b1c2",
+				FilePath:   []string{"test-file.md"},
 			},
 			wantErr: nil,
 		},
 		"file path w/ single line": {
 			item: "/test-org/test-repo/src/commit/a0b1c2/test-file.md#L1",
 			want: FilePreviewPath{
-				Org: "test-org",
-				Repo: "test-repo",
-				CommitHash: "a0b1c2" ,
-				FilePath: "test-file.md",
-				LineNumber: LineNumbers { Begin: "L1" },
+				Org:        "test-org",
+				Repo:       "test-repo",
+				CommitHash: "a0b1c2",
+				FilePath:   []string{"test-file.md"},
+				LineNumber: &LineNumbers{Begin: "L1"},
 			},
 			wantErr: nil,
 		},
 		"file path w/ multiple lines": {
 			item: "/test-org/test-repo/src/commit/a0b1c2/test-file.md#L1-L3",
 			want: FilePreviewPath{
-				Org: "test-org",
-				Repo: "test-repo",
-				CommitHash: "a0b1c2" ,
-				FilePath: "test-file.md",
-				LineNumber: LineNumbers { Begin: "L1", End: "L3" },
+				Org:        "test-org",
+				Repo:       "test-repo",
+				CommitHash: "a0b1c2",
+				FilePath:   []string{"test-file.md"},
+				LineNumber: &LineNumbers{Begin: "L1", End: String("L3")},
 			},
 			wantErr: nil,
 		},
@@ -58,7 +58,7 @@ func Test_FilePreviewPathParser(t *testing.T) {
 				t.Fatalf("error parsing FilePreviewPathParser: %v", err)
 			}
 
-			assert.Equal(t, *got, tt.want, "error parsing, got: %v, want: %v", *got, tt.want)
+			assert.Equal(t, tt.want, *got, "error parsing, want: %v, got: %v", tt.want, *got)
 		})
 	}
 }

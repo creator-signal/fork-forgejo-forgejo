@@ -134,6 +134,7 @@ forgejo.org/modules/log
 	NewEventWriterBuffer
 
 forgejo.org/modules/markup
+	String
 	GetRendererByType
 	RenderString
 	IsMarkupFile
