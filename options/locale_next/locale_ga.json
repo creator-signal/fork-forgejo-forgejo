@@ -7,11 +7,11 @@
     "migrate.gitbucket.description": "Aistrigh sonraí ó chásanna GitBucket.",
     "migrate.codebase.description": "Aistrigh sonraí ó codebasehq.com.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> Eagrán Gníomhach",
-        "other": "<strong>%d</strong> Ceisteanna Gníomhacha"
+        "one": "%s Eagrán Gníomhach",
+        "other": "%s Ceisteanna Gníomhacha"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> Iarratas Tarraingthe Gníomhach",
-        "other": "<strong>%d</strong> Iarratais Tharraing Ghníomhach"
+        "one": "%s Iarratas Tarraingthe Gníomhach",
+        "other": "%s Iarratais Tharraing Ghníomhach"
     }
 }

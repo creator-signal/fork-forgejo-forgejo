@@ -3,11 +3,11 @@
     "repo.pulls.title_desc": "ingin menggabungkan komit %[1]d dari <code>%[2]s</code> menuju <code id=\"%[4]s\">%[3]s</code>",
     "moderation.abuse_category.malware": "Perangkat pembahaya",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> Masalah Aktif",
-        "other": "<strong>%d</strong> Masalah aktif"
+        "one": "%s Masalah Aktif",
+        "other": "%s Masalah aktif"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> Tarik permintaan aktif",
-        "other": "<strong>%d</strong> Tarik permintaan aktif"
+        "one": "%s Tarik permintaan aktif",
+        "other": "%s Tarik permintaan aktif"
     }
 }

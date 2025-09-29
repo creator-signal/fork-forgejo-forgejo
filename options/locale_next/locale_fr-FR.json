@@ -158,11 +158,11 @@
     "migrate.pagure.token_body_a": "Veuillez fournir un jeton API Pagure avec l'accès aux problèmes privés pour créer un dépôt contenant seulement les problèmes privés",
     "migrate.pagure.token_body_b": "Assurez-vous de définir le drapeau dépôt privé ci-dessus si vous souhaitez que ce dépôt soit privé",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> ticket actif",
-        "other": "<strong>%d</strong> tickets actifs"
+        "one": "%s ticket actif",
+        "other": "%s tickets actifs"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> demande d'ajout active",
-        "other": "<strong>%d</strong> demandes d'ajout actives"
+        "one": "%s demande d'ajout active",
+        "other": "%s demandes d'ajout actives"
     }
 }

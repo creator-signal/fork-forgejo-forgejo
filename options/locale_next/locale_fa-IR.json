@@ -21,11 +21,11 @@
     "migrate.gitbucket.description": "مهاجرت داده از نمونه های GitBucket",
     "migrate.codebase.description": "مهاجر داده ها از codebasehq.com.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> مسئله فعال",
-        "other": "<strong>%d</strong> مسئله فعال"
+        "one": "%s مسئله فعال",
+        "other": "%s مسئله فعال"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> تقاضای واکشی فعال",
-        "other": "<strong>%d</strong> تقاضاهای واکشی فعال"
+        "one": "%s تقاضای واکشی فعال",
+        "other": "%s تقاضاهای واکشی فعال"
     }
 }

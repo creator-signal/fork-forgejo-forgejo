@@ -160,11 +160,11 @@
     "repo.pulls.maintainers_can_edit": "Uzturētāji var labot šo izmaiņu pieprasījumu.",
     "repo.pulls.maintainers_cannot_edit": "Uzturētāji nevar labot šo izmaiņu pieprasījumu.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> atvērts pieteikums",
-        "other": "<strong>%d</strong> atvērti pieteikumi"
+        "one": "%s atvērts pieteikums",
+        "other": "%s atvērti pieteikumi"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> atvērts izmaiņu pieprasījums",
-        "other": "<strong>%d</strong> atvērti izmaiņu pieprasījumi"
+        "one": "%s atvērts izmaiņu pieprasījums",
+        "other": "%s atvērti izmaiņu pieprasījumi"
     }
 }

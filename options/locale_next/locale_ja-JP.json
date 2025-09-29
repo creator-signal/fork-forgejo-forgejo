@@ -13,11 +13,11 @@
     "migrate.codebase.description": "codebasehq.com からデータを移行します。",
     "migrate.forgejo.description": "codeberg.orgまたは他のインスタンスからデータを移行する。",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong>件のアクティブなイシュー",
-        "other": "<strong>%d</strong>件のアクティブなイシュー"
+        "one": "%s件のアクティブなイシュー",
+        "other": "%s件のアクティブなイシュー"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong>件のアクティブなプルリクエスト",
-        "other": "<strong>%d</strong>件のアクティブなプルリクエスト"
+        "one": "%s件のアクティブなプルリクエスト",
+        "other": "%s件のアクティブなプルリクエスト"
     }
 }

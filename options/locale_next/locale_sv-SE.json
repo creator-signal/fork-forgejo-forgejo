@@ -106,11 +106,11 @@
     "repo.pulls.already_merged": "Sammanfogning misslyckades: Denna pulka förfrågning har redan blivit sammanfogad.",
     "feed.atom.link": "Atom-flöde",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> aktivt ärende",
-        "other": "<strong>%d</strong> aktiva ärenden"
+        "one": "%s aktivt ärende",
+        "other": "%s aktiva ärenden"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> aktiv pull-förfrågan",
-        "other": "<strong>%d</strong> aktiva pull-förfrågningar"
+        "one": "%s aktiv pull-förfrågan",
+        "other": "%s aktiva pull-förfrågningar"
     }
 }

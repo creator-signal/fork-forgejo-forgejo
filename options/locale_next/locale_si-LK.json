@@ -12,11 +12,11 @@
     "migrate.onedev.description": "code.onedev.io හෝ වෙනත් OnedeV අවස්ථා වලින් දත්ත සංක්රමණය කරන්න.",
     "migrate.gitbucket.description": "GitBucket අවස්ථා වලින් දත්ත සංක්රමණය කරන්න.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> ක්රියාකාරී නිකුතුව",
-        "other": "<strong>%d</strong> ක්රියාකාරී ගැටළු"
+        "one": "%s ක්රියාකාරී නිකුතුව",
+        "other": "%s ක්රියාකාරී ගැටළු"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> ක්රියාකාරී අදින්න ඉල්ලීම",
-        "other": "<strong>%d</strong> ක්රියාකාරී අදින්න ඉල්ලීම්"
+        "one": "%s ක්රියාකාරී අදින්න ඉල්ලීම",
+        "other": "%s ක්රියාකාරී අදින්න ඉල්ලීම්"
     }
 }

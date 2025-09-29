@@ -158,11 +158,11 @@
     "mail.actions.not_successful_run": "Flusso di lavoro %[1]s non riuscito nel repositorio %[2]s",
     "settings.twofa_reenroll.description": "Reinserisci la verifica in due passaggi",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> segnalazione attiva",
-        "other": "<strong>%d</strong> segnalazioni attive"
+        "one": "%s segnalazione attiva",
+        "other": "%s segnalazioni attive"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> richiesta di modifica attiva",
-        "other": "<strong>%d</strong> richieste di modifiche attive"
+        "one": "%s richiesta di modifica attiva",
+        "other": "%s richieste di modifiche attive"
     }
 }

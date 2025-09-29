@@ -134,11 +134,11 @@
     "actions.runs.run_attempt_label": "Suoritusyritys #%[1]s (%[2]s)",
     "migrate.pagure.description": "Tee migraatio pagure.io:sta tai muista Pagure-instansseista.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> aktiivinen ongelma",
-        "other": "<strong>%d</strong> aktiivista ongelmaa"
+        "one": "%s aktiivinen ongelma",
+        "other": "%s aktiivista ongelmaa"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> aktiivinen vetopyyntö",
-        "other": "<strong>%d</strong> aktiivista vetopyyntöä"
+        "one": "%s aktiivinen vetopyyntö",
+        "other": "%s aktiivista vetopyyntöä"
     }
 }

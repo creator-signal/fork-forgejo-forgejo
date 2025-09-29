@@ -158,11 +158,11 @@
     "actions.runs.viewing_out_of_date_run": "Está a visualizar uma execução desatualizada deste trabalho que foi executado %[1]s.",
     "actions.runs.view_most_recent_run": "Ver execução mais recente",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> questão vigente",
-        "other": "<strong>%d</strong> questões vigentes"
+        "one": "%s questão vigente",
+        "other": "%s questões vigentes"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> pedido de integração vigente",
-        "other": "<strong>%d</strong> pedidos de integração vigentes"
+        "one": "%s pedido de integração vigente",
+        "other": "%s pedidos de integração vigentes"
     }
 }

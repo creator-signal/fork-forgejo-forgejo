@@ -160,11 +160,11 @@
     "repo.pulls.maintainers_can_edit": "Супроводжувачі можуть редагувати цей запит на злиття.",
     "repo.pulls.maintainers_cannot_edit": "Супроводжувачі не можуть редагувати цей запит на злиття.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> активна задача",
-        "many": "<strong>%d</strong> активних задач"
+        "one": "%s активна задача",
+        "many": "%s активних задач"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> активний запит на злиття",
-        "many": "<strong>%d</strong> активних запитів на злиття"
+        "one": "%s активний запит на злиття",
+        "many": "%s активних запитів на злиття"
     }
 }

@@ -150,11 +150,11 @@
     "actions.runs.view_most_recent_run": "Tignan ang pinakabagong pagtakbo",
     "actions.runs.run_attempt_label": "Tangka sa pagtakbo #%[1]s (%[2]s)",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> aktibong isyu",
-        "other": "<strong>%d</strong> mga aktibong isyu"
+        "one": "%s aktibong isyu",
+        "other": "%s mga aktibong isyu"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> aktibong hiling sa paghila",
-        "other": "<strong>%d</strong> aktibong mga hiling sa paghila"
+        "one": "%s aktibong hiling sa paghila",
+        "other": "%s aktibong mga hiling sa paghila"
     }
 }

@@ -152,11 +152,11 @@
     "repo.pulls.maintainers_can_edit": "Maintainer können diesen Pull-Request bearbeiten.",
     "repo.pulls.maintainers_cannot_edit": "Maintainer können diesen Pull-Request nicht bearbeiten.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> aktives Issue",
-        "other": "<strong>%d</strong> aktive Issues"
+        "one": "%s aktives Issue",
+        "other": "%s aktive Issues"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> aktiver Pull-Request",
-        "other": "<strong>%d</strong> aktive Pull-Requests"
+        "one": "%s aktiver Pull-Request",
+        "other": "%s aktive Pull-Requests"
     }
 }

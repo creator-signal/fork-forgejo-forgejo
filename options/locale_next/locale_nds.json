@@ -152,11 +152,11 @@
     "repo.pulls.maintainers_can_edit": "Liddmaten könen deesen Haalvörslag bewarken.",
     "repo.pulls.maintainers_cannot_edit": "Liddmaten könen deesen Haalvörslag nich bewarken.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> aktiiv Gefall",
-        "other": "<strong>%d</strong> aktiiv Gefallens"
+        "one": "%s aktiiv Gefall",
+        "other": "%s aktiiv Gefallens"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> aktiiv Haalvörslag",
-        "other": "<strong>%d</strong> aktiiv Haalvörslagen"
+        "one": "%s aktiiv Haalvörslag",
+        "other": "%s aktiiv Haalvörslagen"
     }
 }

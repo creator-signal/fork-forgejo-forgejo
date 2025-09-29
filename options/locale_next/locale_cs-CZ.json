@@ -158,11 +158,11 @@
     "actions.runs.run_attempt_label": "Pokus o běh #%[1]s (%[2]s)",
     "actions.runs.view_most_recent_run": "Zobrazit nejnovější běh",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> aktivní problém",
-        "other": "<strong>%d</strong> aktivních problémů"
+        "one": "%s aktivní problém",
+        "other": "%s aktivních problémů"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> aktivní žádost o sloučení",
-        "other": "<strong>%d</strong> aktivních žádostí o sloučení"
+        "one": "%s aktivní žádost o sloučení",
+        "other": "%s aktivních žádostí o sloučení"
     }
 }

@@ -12,11 +12,11 @@
     "migrate.gitbucket.description": "GitBucket sunucularından veri aktar.",
     "migrate.codebase.description": "Codebasehq.com sitesinden veri aktar.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> Aktif Konu",
-        "other": "<strong>%d</strong> Aktif Konu"
+        "one": "%s Aktif Konu",
+        "other": "%s Aktif Konu"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> Aktif Değişiklik İsteği",
-        "other": "<strong>%d</strong> Aktif Değişiklik İsteği"
+        "one": "%s Aktif Değişiklik İsteği",
+        "other": "%s Aktif Değişiklik İsteği"
     }
 }

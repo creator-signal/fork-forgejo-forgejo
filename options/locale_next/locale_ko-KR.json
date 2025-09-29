@@ -4,7 +4,7 @@
     "home.welcome.no_activity": "활동 없음",
     "moderation.abuse_category.malware": "악성 소프트웨어",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> 개의 활성화된 이슈",
-        "other": "<strong>%d</strong> 개의 활성화된 이슈"
+        "one": "%s 개의 활성화된 이슈",
+        "other": "%s 개의 활성화된 이슈"
     }
 }

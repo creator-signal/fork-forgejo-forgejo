@@ -160,11 +160,11 @@
     "repo.pulls.maintainers_can_edit": "Сопровождающие могут вносить правки.",
     "repo.pulls.maintainers_cannot_edit": "Сопровождающие не могут вносить правки.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> активная задача",
-        "many": "<strong>%d</strong> активных задач"
+        "one": "%s активная задача",
+        "many": "%s активных задач"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> активный запрос слияния",
-        "many": "<strong>%d</strong> активных запросов слияния"
+        "one": "%s активный запрос слияния",
+        "many": "%s активных запросов слияния"
     }
 }

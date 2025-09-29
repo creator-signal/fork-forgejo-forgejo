@@ -83,11 +83,11 @@
     "migrate.codebase.description": "從 codebasehq.com 遷移資料。",
     "migrate.forgejo.description": "從 codeberg.org 或其他 Forgejo 站點遷移資料。",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> 個問題",
-        "other": "<strong>%d</strong> 個問題"
+        "one": "%s 個問題",
+        "other": "%s 個問題"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> 個合併請求",
-        "other": "<strong>%d</strong> 個合併請求"
+        "one": "%s 個合併請求",
+        "other": "%s 個合併請求"
     }
 }

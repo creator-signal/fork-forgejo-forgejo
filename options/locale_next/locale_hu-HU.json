@@ -4,11 +4,11 @@
     "search.milestone_kind": "Mérföldkövek keresése...",
     "moderation.abuse_category.malware": "Malware",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> Aktív hibajegy",
-        "other": "<strong>%d</strong> Aktív hibajegy"
+        "one": "%s Aktív hibajegy",
+        "other": "%s Aktív hibajegy"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> Aktív Egyesítési Kérés",
-        "other": "<strong>%d</strong> Aktív Egyesítési Kérések"
+        "one": "%s Aktív Egyesítési Kérés",
+        "other": "%s Aktív Egyesítési Kérések"
     }
 }

@@ -100,11 +100,11 @@
     "profile.edit.link": "Редактиране на профила",
     "profile.actions.tooltip": "Още действия",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> активна задача",
-        "other": "<strong>%d</strong> активни задачи"
+        "one": "%s активна задача",
+        "other": "%s активни задачи"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> активна заявка за сливане",
-        "other": "<strong>%d</strong> активни заявки за сливане"
+        "one": "%s активна заявка за сливане",
+        "other": "%s активни заявки за сливане"
     }
 }

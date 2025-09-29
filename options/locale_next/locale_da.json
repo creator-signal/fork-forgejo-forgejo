@@ -112,11 +112,11 @@
     "migrate.codebase.description": "Migrer data fra codebasehq.com.",
     "migrate.forgejo.description": "Migrer data fra codeberg.org eller andre Forgejo-instanser.",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> aktivt problem",
-        "other": "<strong>%d</strong> aktive problemer"
+        "one": "%s aktivt problem",
+        "other": "%s aktive problemer"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> aktiv pull-anmodning",
-        "other": "<strong>%d</strong> aktive pull-anmodninger"
+        "one": "%s aktiv pull-anmodning",
+        "other": "%s aktive pull-anmodninger"
     }
 }

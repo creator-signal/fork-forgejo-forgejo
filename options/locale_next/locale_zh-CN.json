@@ -126,11 +126,11 @@
     "actions.runs.run_attempt_label": "运行尝试 #%[1]s（%[2]s）",
     "actions.runs.viewing_out_of_date_run": "您正在查看于 %[1]s 执行的过期运行。",
     "pulse.n_active_issues": {
-        "one": "<strong>%d</strong> 项活动的议题",
-        "other": "<strong>%d</strong> 项活动的议题"
+        "one": "%s 项活动的议题",
+        "other": "%s 项活动的议题"
     },
     "pulse.n_active_prs": {
-        "one": "<strong>%d</strong> 个活跃合并请求",
-        "other": "<strong>%d</strong> 个活跃合并请求"
+        "one": "%s 个活跃合并请求",
+        "other": "%s 个活跃合并请求"
     }
 }
