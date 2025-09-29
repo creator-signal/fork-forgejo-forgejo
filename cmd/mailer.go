@@ -19,6 +19,10 @@ func runSendMail(ctx context.Context, c *cli.Command) error {
 
 	setting.MustInstalled()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	if err := argsSet(c, "title"); err != nil {
 		return err
 	}

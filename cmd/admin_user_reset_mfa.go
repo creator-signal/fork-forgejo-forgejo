@@ -30,6 +30,9 @@ func microcmdUserResetMFA() *cli.Command {
 }
 
 func runResetMFA(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if err := argsSet(c, "username"); err != nil {
 		return err
 	}

@@ -45,6 +45,9 @@ func microcmdUserGenerateAccessToken() *cli.Command {
 }
 
 func runGenerateAccessToken(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if !c.IsSet("username") {
 		return errors.New("you must provide a username to generate a token for")
 	}

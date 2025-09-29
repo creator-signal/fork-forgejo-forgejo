@@ -188,6 +188,10 @@ func (a *authService) addOauth(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	if err := a.initDB(ctx); err != nil {
 		return err
 	}
@@ -209,6 +213,9 @@ func (a *authService) addOauth(ctx context.Context, c *cli.Command) error {
 }
 
 func (a *authService) updateOauth(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if !c.IsSet("id") {
 		return errors.New("--id flag is missing")
 	}

@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -36,6 +37,19 @@ func argsSet(c *cli.Command, args ...string) error {
 				return errors.New(a + " is required")
 			}
 		}
+	}
+	return nil
+}
+
+// When a CLI command is intended to be used only with flags and no other arbitrary args, noDanglingArgs will validate
+// the end-user's usage.
+func noDanglingArgs(c *cli.Command) error {
+	if c.Args().Len() != 0 {
+		args := c.Args().Slice()
+		if slices.Contains(args, "false") {
+			println("Hint: boolean false must be specified as a single arg, eg. '--restricted=false', not '--restricted false'")
+		}
+		return fmt.Errorf("unexpected arguments: %s", strings.Join(c.Args().Slice(), ", "))
 	}
 	return nil
 }

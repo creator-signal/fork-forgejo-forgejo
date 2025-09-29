@@ -27,20 +27,26 @@ var (
 	}
 )
 
-func runRegenerateHooks(ctx context.Context, _ *cli.Command) error {
+func runRegenerateHooks(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if err := initDB(ctx); err != nil {
 		return err
 	}
 	return repo_service.SyncRepositoryHooks(graceful.GetManager().ShutdownContext())
 }
 
-func runRegenerateKeys(ctx context.Context, _ *cli.Command) error {
+func runRegenerateKeys(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if err := initDB(ctx); err != nil {
 		return err
 	}

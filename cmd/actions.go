@@ -47,6 +47,10 @@ func runGenerateActionsRunnerToken(ctx context.Context, c *cli.Command) error {
 
 	setting.MustInstalled()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	scope := c.String("scope")
 
 	respText, extra := private.GenerateActionsRunnerToken(ctx, scope)

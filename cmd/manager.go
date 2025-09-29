@@ -125,6 +125,10 @@ func subCmdProcesses() *cli.Command {
 }
 
 func runShutdown(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -134,6 +138,10 @@ func runShutdown(ctx context.Context, c *cli.Command) error {
 }
 
 func runRestart(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -143,6 +151,10 @@ func runRestart(ctx context.Context, c *cli.Command) error {
 }
 
 func runReloadTemplates(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -152,6 +164,10 @@ func runReloadTemplates(ctx context.Context, c *cli.Command) error {
 }
 
 func runFlushQueues(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -161,6 +177,10 @@ func runFlushQueues(ctx context.Context, c *cli.Command) error {
 }
 
 func runProcesses(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 

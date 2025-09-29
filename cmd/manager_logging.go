@@ -219,6 +219,10 @@ func runRemoveLogger(ctx context.Context, c *cli.Command) error {
 }
 
 func runAddConnLogger(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -249,6 +253,10 @@ func runAddConnLogger(ctx context.Context, c *cli.Command) error {
 }
 
 func runAddFileLogger(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -282,6 +290,10 @@ func runAddFileLogger(ctx context.Context, c *cli.Command) error {
 }
 
 func commonAddLogger(ctx context.Context, c *cli.Command, mode string, vals map[string]any) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	if len(c.String("level")) > 0 {
 		vals["level"] = log.LevelFromString(c.String("level")).String()
 	}
@@ -319,6 +331,10 @@ func commonAddLogger(ctx context.Context, c *cli.Command, mode string, vals map[
 }
 
 func runPauseLogging(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -329,6 +345,10 @@ func runPauseLogging(ctx context.Context, c *cli.Command) error {
 }
 
 func runResumeLogging(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -339,6 +359,10 @@ func runResumeLogging(ctx context.Context, c *cli.Command) error {
 }
 
 func runReleaseReopenLogging(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -349,6 +373,10 @@ func runReleaseReopenLogging(ctx context.Context, c *cli.Command) error {
 }
 
 func runSetLogSQL(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 	setup(ctx, c.Bool("debug"), false)

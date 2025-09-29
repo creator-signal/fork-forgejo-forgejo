@@ -236,6 +236,10 @@ func servePprof() {
 }
 
 func runWeb(ctx context.Context, cli *cli.Command) error {
+	if err := noDanglingArgs(cli); err != nil {
+		return err
+	}
+
 	defer func() {
 		if panicked := recover(); panicked != nil {
 			log.Fatal("PANIC: %v\n%s", panicked, log.Stack(2))

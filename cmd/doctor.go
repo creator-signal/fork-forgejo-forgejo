@@ -176,6 +176,10 @@ func runDoctorCheck(stdCtx context.Context, ctx *cli.Command) error {
 	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
 
+	if err := noDanglingArgs(ctx); err != nil {
+		return err
+	}
+
 	colorize := log.CanColorStdout
 	if ctx.IsSet("color") {
 		colorize = ctx.Bool("color")

@@ -93,6 +93,9 @@ func pemBlockForKey(priv any) *pem.Block {
 }
 
 func runCert(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if err := argsSet(c, "host"); err != nil {
 		return err
 	}

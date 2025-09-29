@@ -55,6 +55,10 @@ func runRestoreRepository(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	setting.MustInstalled()
 	var units []string
 	if s := c.String("units"); s != "" {

@@ -53,6 +53,9 @@ func cmdKeys() *cli.Command {
 }
 
 func runKeys(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if !c.IsSet("username") {
 		return errors.New("No username provided")
 	}

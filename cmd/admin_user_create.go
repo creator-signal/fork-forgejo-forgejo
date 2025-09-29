@@ -90,6 +90,9 @@ func runCreateUser(ctx context.Context, c *cli.Command) error {
 	// duplicate setting loading should be safe at the moment, but it should be refactored & improved in the future.
 	setting.LoadSettings()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if err := argsSet(c, "email"); err != nil {
 		return err
 	}

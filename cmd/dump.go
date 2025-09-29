@@ -258,6 +258,10 @@ func runDump(stdCtx context.Context, ctx *cli.Command) error {
 	}
 	setting.MustInstalled()
 
+	if err := noDanglingArgs(ctx); err != nil {
+		return err
+	}
+
 	// make sure we are logging to the console no matter what the configuration tells us do to
 	// FIXME: don't use CfgProvider directly
 	if _, err := setting.CfgProvider.Section("log").NewKey("MODE", "console"); err != nil {

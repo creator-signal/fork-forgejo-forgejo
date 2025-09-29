@@ -308,6 +308,10 @@ func (a *authService) addLdapBindDn(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	if err := a.initDB(ctx); err != nil {
 		return err
 	}
@@ -332,6 +336,10 @@ func (a *authService) addLdapBindDn(ctx context.Context, c *cli.Command) error {
 func (a *authService) updateLdapBindDn(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
+
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 
 	if err := a.initDB(ctx); err != nil {
 		return err
@@ -359,6 +367,10 @@ func (a *authService) addLdapSimpleAuth(ctx context.Context, c *cli.Command) err
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
+
 	if err := a.initDB(ctx); err != nil {
 		return err
 	}
@@ -383,6 +395,10 @@ func (a *authService) addLdapSimpleAuth(ctx context.Context, c *cli.Command) err
 func (a *authService) updateLdapSimpleAuth(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
+
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 
 	if err := a.initDB(ctx); err != nil {
 		return err

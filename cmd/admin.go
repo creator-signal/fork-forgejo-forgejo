@@ -103,9 +103,13 @@ func idFlag() *cli.Int64Flag {
 	}
 }
 
-func runRepoSyncReleases(ctx context.Context, _ *cli.Command) error {
+func runRepoSyncReleases(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
+
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 
 	if err := initDB(ctx); err != nil {
 		return err

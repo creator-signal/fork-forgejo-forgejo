@@ -45,6 +45,9 @@ func microcmdUserChangePassword() *cli.Command {
 }
 
 func runChangePassword(ctx context.Context, c *cli.Command) error {
+	if err := noDanglingArgs(c); err != nil {
+		return err
+	}
 	if err := argsSet(c, "username", "password"); err != nil {
 		return err
 	}
