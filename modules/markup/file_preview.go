@@ -6,7 +6,6 @@ package markup
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"html/template"
 	"io"
 	"net/url"
@@ -29,8 +28,8 @@ import (
 )
 
 // String is a convenience function to return a `string` pointer.
-func String(s string) *string {
-	return &s
+func Pointer[P any](p P) *P {
+	return &p
 }
 
 // filePreviewPattern matches "http://domain/org/repo/src/commit/COMMIT/filepath#L1-L2"
@@ -38,52 +37,41 @@ var filePreviewPattern = regexp.MustCompile(`https?://((?:\S+/){3})src/commit/([
 
 // FilePreviewPath is a parser struct used for parsing the components of a file preview URL path.
 type FilePreviewPath struct {
-	Org        string       `parser:"PathSep @Path"`
-	Repo       string       `parser:"PathSep @Path"`
-	CommitHash string       `parser:"PathSep 'src' PathSep 'commit' PathSep @CommitHash"`
-	FilePath   []string     `parser:"(PathSep @Path)+"`
-	LineNumber *LineNumbers `parser:"@@?"`
-}
-
-// CommitHash represents a parser struct for parsing a valid forge commit hash.
-type CommitHash struct {
-	Hash string `parser:"@CommitHash"`
+	Org        string   `parser:"PathSep @Path"`
+	Repo       string   `parser:"PathSep @Path"`
+	CommitHash string   `parser:"PathSep 'src' PathSep 'commit' PathSep @CommitHash"`
+	FilePath   []string `parser:"(PathSep @Path)+"`
 }
 
 // LineNumbers represents a parser struct for parsing file preview path line numbers.
 type LineNumbers struct {
-	Begin string  `parser:"'#' @LineNumber"`
-	End   *string `parser:"('-' @LineNumber)?"`
-}
-
-// GetBegin attempts to parse valid beginning line number.
-func (l LineNumbers) GetBegin() (uint64, error) {
-	return strconv.ParseUint(l.Begin[1:], 10, 64)
-}
-
-// GetEnd attempts to parse valid ending line number.
-//
-// Returns an error for single line `LineNumbers`.
-func (l LineNumbers) GetEnd() (uint64, error) {
-	if l.End != nil && len(*l.End) > 1 {
-		return strconv.ParseUint((*l.End)[1:], 10, 64)
-	}
-
-	return 0, fmt.Errorf("LineNumbers has no valid end line")
+	Begin int  `parser:"LinePre @LineNumber+"`
+	End   *int `parser:"(LineSep LinePre @LineNumber+)?"`
 }
 
 // filePreviewPathLexer is a Participle lexer struct defining valid lexing grammar for a file preview path.
 var filePreviewPathLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "CommitHash", Pattern: `[0-9a-fA-F]{4,64}`},
-	{Name: "LineSep", Pattern: `[#-]`},
-	{Name: "LineNumber", Pattern: `L[0-9]`},
 	{Name: "PathSep", Pattern: `/`},
-	{Name: "Path", Pattern: `[a-zA-Z\w_\.-]+`},
+	{Name: "Path", Pattern: `[a-zA-Z\w_\.\-:]+`},
+	{Name: "QuerySep", Pattern: `&`},
+	{Name: "Query", Pattern: `[a-zA-Z\w_\.\-]+(=[\"\'a-zA-Z\w_\.\-:]+)?`},
 })
 
-// FilePreviewPathLexer is a Participle parser struct for parsing a valid file preview path.
+var lineNumbersLexer = lexer.MustSimple([]lexer.SimpleRule{
+	{Name: "LinePre", Pattern: `L`},
+	{Name: "LineSep", Pattern: `-`},
+	{Name: "LineNumber", Pattern: `[0-9]`},
+})
+
+// FilePreviewPathParser is a Participle parser struct for parsing a valid file preview path.
 var FilePreviewPathParser = participle.MustBuild[FilePreviewPath](
 	participle.Lexer(filePreviewPathLexer),
+)
+
+// LineNumbersParser is a Participle parser struct for parsing valid file preview line numbers.
+var LineNumbersParser = participle.MustBuild[LineNumbers](
+	participle.Lexer(lineNumbersLexer),
 )
 
 type FilePreview struct {
