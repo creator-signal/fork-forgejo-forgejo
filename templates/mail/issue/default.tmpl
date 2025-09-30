@@ -19,11 +19,13 @@
 	{{if eq .ActionName "push"}}
 		<p>
 			{{if .Comment.IsForcePush}}
-				{{$oldCommitUrl := printf "%s/commit/%s" .Comment.Issue.PullRequest.BaseRepo.HTMLURL .Comment.OldCommit}}
+				{{$queryParam := ""}}
+				{{if DefaultFileOnlyCommitView}}{{$queryParam = "?file-only=true"}}{{end}}
+				{{$oldCommitUrl := printf "%s/commit/%s%s" .Comment.Issue.PullRequest.BaseRepo.HTMLURL .Comment.OldCommit $queryParam}}
 				{{$oldShortSha := ShortSha .Comment.OldCommit}}
 				{{$oldCommitLink := HTMLFormat "<a href='%[1]s'><b>%[2]s</b></a>" $oldCommitUrl $oldShortSha}}
 
-				{{$newCommitUrl := printf "%s/commit/%s" .Comment.Issue.PullRequest.BaseRepo.HTMLURL .Comment.NewCommit}}
+				{{$newCommitUrl := printf "%s/commit/%s%s" .Comment.Issue.PullRequest.BaseRepo.HTMLURL .Comment.NewCommit $queryParam}}
 				{{$newShortSha := ShortSha .Comment.NewCommit}}
 				{{$newCommitLink := HTMLFormat "<a href='%[1]s'><b>%[2]s</b></a>" $newCommitUrl $newShortSha}}
 

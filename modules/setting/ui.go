@@ -26,6 +26,7 @@ var UI = struct {
 	MaxDisplayFileSize      int64
 	ShowUserEmail           bool
 	DefaultShowFullName     bool
+	DefaultFileOnlyCommitView bool
 	DefaultTheme            string
 	Themes                  []string
 	Reactions               []string
@@ -148,6 +149,7 @@ func loadUIFrom(rootCfg ConfigProvider) {
 	sec := rootCfg.Section("ui")
 	UI.ShowUserEmail = sec.Key("SHOW_USER_EMAIL").MustBool(true)
 	UI.DefaultShowFullName = sec.Key("DEFAULT_SHOW_FULL_NAME").MustBool(false)
+	UI.DefaultFileOnlyCommitView = sec.Key("DEFAULT_FILE_ONLY_COMMIT_VIEW").MustBool(false)
 	UI.SearchRepoDescription = sec.Key("SEARCH_REPO_DESCRIPTION").MustBool(true)
 
 	if UI.PreferredTimestampTense != "mixed" && UI.PreferredTimestampTense != "absolute" {

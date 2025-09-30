@@ -14,14 +14,16 @@
 			<span class="author-wrapper" title="{{.LatestCommit.Author.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></span>
 		{{end}}
 	{{end}}
+	{{$queryParam := ""}}
+	{{if DefaultFileOnlyCommitView}}{{$queryParam = "?file-only=true"}}{{end}}
 	{{template "repo/shabox" (dict
 		"sha1" .LatestCommit.ID.String
-		"commitLink" (printf "%s/commit/%s" .RepoLink (.LatestCommit.ID.String|PathEscape))
+		"commitLink" (printf "%s/commit/%s%s" .RepoLink (.LatestCommit.ID.String|PathEscape) $queryParam)
 		"signature" .LatestCommit.Signature
 		"verification" .LatestCommitVerification
 	)}}
 	{{template "repo/commit_statuses" dict "Status" .LatestCommitStatus "Statuses" .LatestCommitStatuses}}
-	{{$commitLink:= printf "%s/commit/%s" .RepoLink (PathEscape .LatestCommit.ID.String)}}
+	{{$commitLink:= printf "%s/commit/%s%s" .RepoLink (PathEscape .LatestCommit.ID.String) $queryParam}}
 	<span class="grey commit-summary" title="{{.LatestCommit.Summary}}"><span class="message-wrapper">{{RenderCommitMessageLinkSubject $.Context .LatestCommit.Message $commitLink ($.Repository.ComposeMetas ctx)}}</span>
 		{{if IsMultilineCommitMessage .LatestCommit.Message}}
 			<button class="ui button js-toggle-commit-body ellipsis-button" aria-expanded="false">...</button>

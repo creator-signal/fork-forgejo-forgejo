@@ -138,6 +138,9 @@ func NewFuncMap() template.FuncMap {
 		"DefaultShowFullName": func() bool {
 			return setting.UI.DefaultShowFullName
 		},
+		"DefaultFileOnlyCommitView": func() bool {
+			return setting.UI.DefaultFileOnlyCommitView
+		},
 		"ShowFooterTemplateLoadTime": func() bool {
 			return setting.Other.ShowFooterTemplateLoadTime
 		},

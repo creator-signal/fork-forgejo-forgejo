@@ -91,9 +91,11 @@
 						{{range $push.Commits}}
 							<div class="flex-text-block">
 								<img class="ui avatar" src="{{$push.AvatarLink $.Context .AuthorEmail}}" alt="" title="{{.AuthorName}}" width="16" height="16" loading="lazy">
+								{{$queryParam := ""}}
+								{{if DefaultFileOnlyCommitView}}{{$queryParam = "?file-only=true"}}{{end}}
 								{{template "repo/shabox" (dict
 									"sha1" .Sha1
-									"commitLink" (printf "%s/commit/%s" $repoLink .Sha1)
+									"commitLink" (printf "%s/commit/%s%s" $repoLink .Sha1 $queryParam)
 									"signature" .Signature
 									"verification" .Verification
 								)}}

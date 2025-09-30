@@ -10,8 +10,9 @@
 		{{else}}
 			{{ctx.AvatarUtils.AvatarByEmail .Author.Email .Author.Name 20}}
 		{{end}}
-
-		{{$commitLink := printf "%s/commit/%s" $.comment.Issue.PullRequest.BaseRepo.Link (PathEscape .ID.String)}}
+		{{$queryParam := ""}}
+		{{if DefaultFileOnlyCommitView}}{{$queryParam = "?file-only=true"}}{{end}}
+		{{$commitLink := printf "%s/commit/%s%s" $.comment.Issue.PullRequest.BaseRepo.Link (PathEscape .ID.String) $queryParam}}
 
 		{{/* Only link those commits in the file diff view that can actually be reviewed there.
 					A force push or other rewriting of history will cause a commit to not be

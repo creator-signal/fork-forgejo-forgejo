@@ -11,6 +11,7 @@
 			</thead>
 			<tbody class="commit-list">
 				{{$commitRepoLink := $.RepoLink}}{{if $.CommitRepoLink}}{{$commitRepoLink = $.CommitRepoLink}}{{end}}
+				{{$queryParam := ""}}{{if DefaultFileOnlyCommitView}}{{$queryParam = "?file-only=true"}}{{end}}
 				{{range .Commits}}
 					<tr>
 						<td class="author">
@@ -34,7 +35,7 @@
 							{{else if $.PageIsPullCommits}}
 								{{$commitShaLink = (printf "%s/pulls/%d/commits/%s" $commitRepoLink $.Issue.Index (PathEscape .ID.String))}}
 							{{else if $.Reponame}}
-								{{$commitShaLink = (printf "%s/commit/%s" $commitRepoLink (PathEscape .ID.String))}}
+								{{$commitShaLink = (printf "%s/commit/%s%s" $commitRepoLink (PathEscape .ID.String) $queryParam)}}
 							{{end}}
 							{{template "repo/shabox" (dict
 								"sha1" .ID.String
@@ -48,7 +49,7 @@
 							{{if $.PageIsWiki}}
 								<span class="commit-summary {{if gt .ParentCount 1}} grey text{{end}}" title="{{.Summary}}">{{.Summary | RenderEmoji $.Context}}</span>
 							{{else}}
-								{{$commitLink:= printf "%s/commit/%s" $commitRepoLink (PathEscape .ID.String)}}
+								{{$commitLink:= printf "%s/commit/%s%s" $commitRepoLink (PathEscape .ID.String) $queryParam}}
 								{{if $.PageIsPullCommits}}
 									{{$commitLink = (printf "%s/pulls/%d/commits/%s" $commitRepoLink $.Issue.Index (PathEscape .ID.String))}}
 								{{end}}

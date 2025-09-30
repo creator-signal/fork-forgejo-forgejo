@@ -6,9 +6,11 @@
 					<span></span>
 				{{else}}
 					<span class="sha" id="{{$commit.ShortRev}}">
+						{{$queryParam := ""}}
+						{{if DefaultFileOnlyCommitView}}{{$queryParam = "?file-only=true"}}{{end}}
 						{{template "repo/shabox" (dict
 							"sha1" $commit.Commit.ID.String
-							"commitLink" (printf "%s/commit/%s" $.RepoLink ($commit.Rev|PathEscape))
+							"commitLink" (printf "%s/commit/%s%s" $.RepoLink ($commit.Rev|PathEscape) $queryParam)
 							"signature" $commit.Commit.Signature
 							"verification" $commit.Verification
 						)}}

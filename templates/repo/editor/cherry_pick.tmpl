@@ -10,7 +10,9 @@
 			<input type="hidden" name="revert" value="{{if eq .CherryPickType "revert"}}true{{else}}false{{end}}">
 			<div class="repo-editor-header">
 				<div class="ui breadcrumb field {{if .Err_TreePath}}error{{end}}">
-					{{$shaurl := printf "%s/commit/%s" $.RepoLink (PathEscape .SHA)}}
+					{{$queryParam := ""}}
+					{{if DefaultFileOnlyCommitView}}{{$queryParam = "?file-only=true"}}{{end}}
+					{{$shaurl := printf "%s/commit/%s%s" $.RepoLink (PathEscape .SHA) $queryParam}}
 					{{$shalink := HTMLFormat `<a class="primary sha label" href="%s"><span class="shortsha">%s</span></a>` $shaurl (ShortSha .SHA)}}
 					{{if eq .CherryPickType "revert"}}
 						{{ctx.Locale.Tr "repo.editor.revert" $shalink}}
