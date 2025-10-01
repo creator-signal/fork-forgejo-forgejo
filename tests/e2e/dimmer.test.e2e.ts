@@ -24,7 +24,7 @@ test('Dimmed modal', async ({page}) => {
   // Modal and dimmer should be visible.
   await expect(page.locator('#block-user')).toBeVisible();
   await expect(page.locator('.ui.dimmer')).toBeVisible();
-  await screenshot(page);
+  await screenshot(page, page.locator('.ui.g-modal-confirm.delete.modal'), 50);
 
   // After canceling, modal and dimmer should be hidden.
   await page.locator('#block-user .cancel').click();
@@ -38,7 +38,7 @@ test('Dimmed modal', async ({page}) => {
   await expect(page.locator('#block-user')).toBeVisible();
   await expect(page.locator('.ui.dimmer')).toBeVisible();
   await expect(page.locator('.ui.dimmer')).toHaveCount(1);
-  await screenshot(page);
+  await screenshot(page, page.locator('.ui.g-modal-confirm.delete.modal'), 50);
 });
 
 test('Dimmed overflow', async ({page}, workerInfo) => {

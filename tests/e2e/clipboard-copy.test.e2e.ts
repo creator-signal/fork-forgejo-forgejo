@@ -21,7 +21,7 @@ test('copy src file path to clipboard', async ({page}, workerInfo) => {
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipboardText).toContain('README.md');
   await expect(page.getByText('Copied')).toBeVisible();
-  await screenshot(page);
+  await screenshot(page, page.getByText('Copied'), 50);
 });
 
 test('copy diff file path to clipboard', async ({page}, workerInfo) => {
@@ -34,5 +34,5 @@ test('copy diff file path to clipboard', async ({page}, workerInfo) => {
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipboardText).toContain('README.md');
   await expect(page.getByText('Copied')).toBeVisible();
-  await screenshot(page);
+  await screenshot(page, page.getByText('Copied'), 50);
 });

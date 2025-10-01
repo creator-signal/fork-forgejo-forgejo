@@ -68,7 +68,7 @@ test('Paste image in new comment', async ({page}, workerInfo) => {
   await expect(preview.locator('.octicon-copy')).toBeVisible();
   await assertCopy(page, workerInfo, '![foo](');
 
-  await screenshot(page);
+  await screenshot(page, page.locator('.issue-content-left'));
 });
 
 test('Re-add images to dropzone on edit', async ({page}, workerInfo) => {
@@ -91,5 +91,5 @@ test('Re-add images to dropzone on edit', async ({page}, workerInfo) => {
   await expect(preview.locator('.octicon-copy')).toBeVisible();
   await assertCopy(page, workerInfo, '![foo](');
 
-  await screenshot(page);
+  await screenshot(page, page.locator('.issue-content-left'));
 });
