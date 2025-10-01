@@ -140,6 +140,13 @@
   }
 }
 
+@media (max-width: 390px) {
+  .repository .clone-panel #repo-clone-url {
+    width: 0;
+    flex-grow: 1;
+  }
+}
+
 .repository .ui.action.input.clone-panel > button + button,
 .repository .ui.action.input.clone-panel > button + input {
   margin-left: -1px; /* make the borders overlap to avoid double borders */
@@ -1901,14 +1908,6 @@ details.repo-search-result summary::marker {
   overflow: hidden;
 }
 
-.size-overview .segment:has(> .bar) {
-  display: flex;
-  height: 10px;
-  padding: 0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
 #cite-repo-modal #citation-panel {
   display: flex;
   width: 100%;
@@ -2130,6 +2129,10 @@ details.repo-search-result summary::marker {
 .comment-header-left,
 .comment-header-right {
   gap: 4px;
+}
+
+.comment-header-left > .content-history-menu.active s {
+  text-decoration-thickness: 10%;
 }
 
 .comment-body {

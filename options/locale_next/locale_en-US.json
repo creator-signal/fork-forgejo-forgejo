@@ -53,6 +53,8 @@
         "one": "wants to merge %[1]d commit from <code>%[2]s</code> into <code id=\"%[4]s\">%[3]s</code>",
         "other": "wants to merge %[1]d commits from <code>%[2]s</code> into <code id=\"%[4]s\">%[3]s</code>"
     },
+    "repo.pulls.maintainers_can_edit": "Maintainers can edit this pull request.",
+    "repo.pulls.maintainers_cannot_edit": "Maintainers cannot edit this pull request.",
     "repo.form.cannot_create": "All spaces in which you can create repositories have reached the limit of repositories.",
     "migrate.form.error.url_credentials": "The URL contains credentials, put them in the username and password fields respectively",
     "migrate.github.description": "Migrate data from github.com or GitHub Enterprise server.",
@@ -148,5 +150,13 @@
     "actions.runs.run_attempt_label": "Run attempt #%[1]s (%[2]s)",
     "actions.runs.viewing_out_of_date_run": "You are viewing an out-of-date run of this job that was executed %[1]s.",
     "actions.runs.view_most_recent_run": "View most recent run",
+    "pulse.n_active_issues": {
+        "one": "%s active issue",
+        "other": "%s active issues"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s active pull request",
+        "other": "%s active pull requests"
+    },
     "meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
