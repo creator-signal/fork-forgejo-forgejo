@@ -7,7 +7,8 @@
 /* eslint playwright/expect-expect: ["error", { "assertFunctionNames": ["check_wip"] }] */
 
 import {expect, type Page} from '@playwright/test';
-import {save_visual, test} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
 test.use({user: 'user2'});
 
@@ -194,7 +195,7 @@ test('New Issue: Assignees', async ({page}, workerInfo) => {
   await page.locator('.select-assignees .menu .item').filter({hasText: 'user4'}).click();
   await page.locator('.select-assignees.dropdown').click();
   await expect(assigneesList.filter({hasText: 'user4'})).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 
   // remove user4
   await page.locator('.select-assignees.dropdown').click();
@@ -212,7 +213,7 @@ test('New Issue: Assignees', async ({page}, workerInfo) => {
   await page.fill('.select-assignees .menu .search input', '');
   await page.locator('.select-assignees.dropdown .no-select.item').click();
   await expect(page.locator('.select-assign-me')).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('Issue: Milestone', async ({page}, workerInfo) => {
@@ -247,19 +248,19 @@ test('New Issue: Milestone', async ({page}, workerInfo) => {
   const selectedMilestone = page.locator('.issue-content-right .select-milestone.list');
   const milestoneDropdown = page.locator('.issue-content-right .select-milestone.dropdown');
   await expect(selectedMilestone).toContainText('No milestone');
-  await save_visual(page);
+  await screenshot(page);
 
   // Add milestone.
   await milestoneDropdown.click();
   await page.getByRole('option', {name: 'milestone1'}).click();
   await expect(selectedMilestone).toContainText('milestone1');
-  await save_visual(page);
+  await screenshot(page);
 
   // Clear milestone.
   await milestoneDropdown.click();
   await page.getByText('Clear milestone', {exact: true}).click();
   await expect(selectedMilestone).toContainText('No milestone');
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test.describe('Dependency dropdown', () => {
