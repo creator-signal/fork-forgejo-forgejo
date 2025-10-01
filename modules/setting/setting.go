@@ -182,8 +182,7 @@ func loadRunModeFrom(rootCfg ConfigProvider) {
 	// check if we run as root
 	if os.Getuid() == 0 {
 		if !unsafeAllowRunAsRoot {
-			// Special thanks to VLC which inspired the wording of this messaging.
-			log.Fatal("Forgejo is not supposed to be run as root. Sorry. If you need to use privileged TCP ports please instead use setcap and the `cap_net_bind_service` permission")
+			log.Fatal("Forgejo cannot be run as root due to security concerns. Please run as the user you specified during the configuration. It is usually named `git`")
 		}
 		log.Critical("You are running Forgejo using the root user, and have purposely chosen to skip built-in protections around this. You have been warned against this.")
 	}
