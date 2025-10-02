@@ -15,7 +15,7 @@ import {validate_form} from './shared/forms.ts';
 
 test.use({user: 'user2'});
 
-test.describe('repo branch protection settings', () => {
+test.describe('Releases', () => {
   test('External Release Attachments', async ({page, isMobile}, workerInfo) => {
     test.skip(isMobile || workerInfo.project.name === 'webkit');
 
