@@ -267,8 +267,13 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 			"updated_unix"))
 	}
 
+	var indexerQuery query.Query = q
+	if q.Must == nil && q.MustNot == nil && q.Should == nil {
+		indexerQuery = bleve.NewMatchAllQuery()
+	}
+
 	skip, limit := indexer_internal.ParsePaginator(options.Paginator)
-	search := bleve.NewSearchRequestOptions(q, limit, skip, false)
+	search := bleve.NewSearchRequestOptions(indexerQuery, limit, skip, false)
 
 	if options.SortBy == "" {
 		options.SortBy = internal.SortByCreatedAsc

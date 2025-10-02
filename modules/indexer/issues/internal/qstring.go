@@ -113,13 +113,13 @@ nextEnd:
 	return tk, err
 }
 
-type UserFilter int
+type userFilter int
 
 const (
-	UserFilterAuthor UserFilter = iota
-	UserFilterAssign
-	UserFilterMention
-	UserFilterReview
+	userFilterAuthor userFilter = iota
+	userFilterAssign
+	userFilterMention
+	userFilterReview
 )
 
 // Parses the keyword and sets the
@@ -134,7 +134,7 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 	var (
 		tokens     []Token
 		userNames  []string
-		userFilter []UserFilter
+		userFilter []userFilter
 	)
 
 	for token, err := it.next(); err == nil; token, err = it.next() {
@@ -183,23 +183,23 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 			default:
 				t := toUnix(token.Term[9:])
 				o.UpdatedAfterUnix = t
-				o.UpdatedAfterUnix = t
+				o.UpdatedBeforeUnix = t
 			}
 
 		// for user filter's
 		// append the names and roles
 		case token.IsOf("author:"):
 			userNames = append(userNames, token.Term[7:])
-			userFilter = append(userFilter, UserFilterAuthor)
+			userFilter = append(userFilter, userFilterAuthor)
 		case token.IsOf("assign:"):
 			userNames = append(userNames, token.Term[7:])
-			userFilter = append(userFilter, UserFilterAssign)
+			userFilter = append(userFilter, userFilterAssign)
 		case token.IsOf("review:"):
 			userNames = append(userNames, token.Term[7:])
-			userFilter = append(userFilter, UserFilterReview)
+			userFilter = append(userFilter, userFilterReview)
 		case token.IsOf("mention:"):
 			userNames = append(userNames, token.Term[8:])
-			userFilter = append(userFilter, UserFilterMention)
+			userFilter = append(userFilter, userFilterMention)
 
 		default:
 			tokens = append(tokens, token)
@@ -224,13 +224,13 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		}
 		val := optional.Some(id)
 		switch userFilter[i] {
-		case UserFilterAuthor:
+		case userFilterAuthor:
 			o.PosterID = val
-		case UserFilterAssign:
+		case userFilterAssign:
 			o.AssigneeID = val
-		case UserFilterReview:
+		case userFilterReview:
 			o.ReviewedID = val
-		case UserFilterMention:
+		case userFilterMention:
 			o.MentionID = val
 		}
 	}

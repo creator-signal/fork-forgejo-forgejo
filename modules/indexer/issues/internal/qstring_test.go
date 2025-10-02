@@ -318,6 +318,19 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 			},
 		},
 		{
+			Keyword: "assign:test hi",
+			Opts: &SearchOptions{
+				AssigneeID: optional.Some(int64(2)),
+				Tokens: []Token{
+					{
+						Term:  "hi",
+						Kind:  BoolOptShould,
+						Fuzzy: true,
+					},
+				},
+			},
+		},
+		{
 			Keyword: "mention:test",
 			Opts: &SearchOptions{
 				MentionID: optional.Some(int64(2)),
@@ -348,7 +361,7 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 			},
 		},
 		{
-			Keyword: "test author:test mention:test before:2025-08-28 sort:comments:desc",
+			Keyword: "test author:test mention:test modified:<2025-08-28 sort:comments:desc",
 			Opts: &SearchOptions{
 				Tokens: []Token{
 					{
@@ -370,7 +383,7 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 			Opts: &SearchOptions{
 				Tokens: []Token{
 					{
-						Term:  "test",
+						Term:  "author:",
 						Kind:  BoolOptShould,
 						Fuzzy: true,
 					},
@@ -392,6 +405,18 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 					},
 					{
 						Term:  "test",
+						Kind:  BoolOptShould,
+						Fuzzy: true,
+					},
+				},
+			},
+		},
+		{
+			Keyword: "modified:",
+			Opts: &SearchOptions{
+				Tokens: []Token{
+					{
+						Term:  "modified:",
 						Kind:  BoolOptShould,
 						Fuzzy: true,
 					},

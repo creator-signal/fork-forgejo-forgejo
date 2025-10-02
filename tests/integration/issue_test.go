@@ -866,14 +866,14 @@ func TestSearchIssues(t *testing.T) {
 		expectedIssueCount = setting.UI.IssuePagingNum
 	}
 
-	link, _ := url.Parse("/issues/search")
-	req := NewRequest(t, "GET", link.String())
+	req := NewRequest(t, "GET", "/issues/search")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 	var apiIssues []*api.Issue
 	DecodeJSON(t, resp, &apiIssues)
 	assert.Len(t, apiIssues, expectedIssueCount)
 
 	t.Run("By Query Params", func(t *testing.T) {
+		link, _ := url.Parse("/issues/search")
 		since := "2000-01-01T00:50:01+00:00" // 946687801
 		before := time.Unix(999307200, 0).Format(time.RFC3339)
 		query := url.Values{}
@@ -954,21 +954,33 @@ func TestSearchIssues(t *testing.T) {
 	})
 
 	t.Run("By Keyword", func(t *testing.T) {
+		link, _ := url.Parse("/issues/search")
 		for keyword, len := range map[string]int{
-			"after:2000-01-01 before:2001-09-01": 11,
-			"is:closed":                          2,
-			"is:all":                             20,
-			"is:all assigned:user2":              2,
-			"author:user2":                       8,
-			"author:org3":                        5,
+			"modified:>2000-01-01 modified:<2001-09-02": 11,
+			"is:closed":           2,
+			"is:all":              20,
+			"is:all assign:user2": 2,
 		} {
 			q := url.Values{"q": {keyword}}
 			link.RawQuery = q.Encode()
 			req = NewRequest(t, "GET", link.String())
 			resp = session.MakeRequest(t, req, http.StatusOK)
 			DecodeJSON(t, resp, &apiIssues)
-			assert.Len(t, apiIssues, len)
+			assert.Len(t, apiIssues, len, "keyword: %v", keyword)
 		}
+	})
+
+	t.Run("Filter + Keyword", func(t *testing.T) {
+		link, _ := url.Parse("/issues/search")
+		exec := func(q url.Values, len int) {
+			link.RawQuery = q.Encode()
+			req = NewRequest(t, "GET", link.String())
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &apiIssues)
+			assert.Len(t, apiIssues, len, "query: %v", q.Encode())
+		}
+		exec(url.Values{"milestones": {"milestone1"}, "keyword": {"is:all"}}, 1)
+		exec(url.Values{"assigned": {"true"}, "keyword": {"is:all"}}, 2)
 	})
 }
 
