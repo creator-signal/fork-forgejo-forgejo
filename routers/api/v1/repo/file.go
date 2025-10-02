@@ -241,7 +241,7 @@ func getBlobForEntry(ctx *context.APIContext) (blob *git.Blob, entry *git.TreeEn
 		return nil, nil, nil
 	}
 
-	if entry.IsDir() || entry.IsSubModule() {
+	if entry.IsDir() || entry.IsSubmodule() {
 		ctx.NotFound("getBlobForEntry", nil)
 		return nil, nil, nil
 	}
@@ -405,7 +405,11 @@ func GetEditorconfig(ctx *context.APIContext) {
 	//   required: false
 	// responses:
 	//   200:
-	//     description: success
+	//     description: definitions
+	//     schema:
+	//       type: object
+	//       additionalProperties:
+	//         type: string
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

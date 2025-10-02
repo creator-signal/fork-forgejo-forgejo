@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
@@ -17,6 +18,7 @@ import (
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
 
@@ -70,7 +72,7 @@ func checkLatestReleaseAndCount(t *testing.T, session *TestSession, repoURL, ver
 	// Check release count in the counter on the Release/Tag switch, as well as that the tab is highlighted
 	if count < 10 { // Only check values less than 10, should be enough attempts before this test cracks
 		// 10 is the pagination limit, but the counter can have more than that
-		releaseTab := htmlDoc.doc.Find(".repository.releases .ui.compact.menu a.active.item[href$='/releases']")
+		releaseTab := htmlDoc.doc.Find(".repository.releases .switch a.active.item[href$='/releases']")
 		assert.Contains(t, releaseTab.Text(), strconv.Itoa(count)+" release") // Could be "1 release" or "4 releases"
 	}
 
@@ -327,6 +329,23 @@ func TestViewTagsList(t *testing.T) {
 	})
 
 	assert.Equal(t, []string{"v1.0", "delete-tag", "v1.1"}, tagNames)
+}
+
+func TestAttachmentTimestamp(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "user2/repo1/releases")
+	resp := MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+
+	var timeStamp int64 = 946684800
+	unittest.AssertExistsAndLoadBean(t, &repo_model.Attachment{
+		UUID:        "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a20",
+		CreatedUnix: timeutil.TimeStamp(timeStamp),
+	})
+
+	formattedTime := time.Unix(timeStamp, 0).Format(time.RFC3339)
+	htmlDoc.AssertElement(t, fmt.Sprintf("details.download relative-time[datetime='%s']", formattedTime), true)
 }
 
 func TestDownloadReleaseAttachment(t *testing.T) {

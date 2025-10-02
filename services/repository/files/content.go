@@ -5,6 +5,7 @@ package files
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
@@ -107,7 +108,7 @@ func GetObjectTypeFromTreeEntry(entry *git.TreeEntry) ContentType {
 	switch {
 	case entry.IsDir():
 		return ContentTypeDir
-	case entry.IsSubModule():
+	case entry.IsSubmodule():
 		return ContentTypeSubmodule
 	case entry.IsExecutable(), entry.IsRegular():
 		return ContentTypeRegular
@@ -205,19 +206,19 @@ func GetContents(ctx context.Context, repo *repo_model.Repository, treePath, ref
 	} else if entry.IsLink() {
 		contentsResponse.Type = string(ContentTypeLink)
 		// The target of a symlink file is the content of the file
-		targetFromContent, err := entry.Blob().GetBlobContent(1024)
+		targetFromContent, err := entry.LinkTarget()
 		if err != nil {
 			return nil, err
 		}
 		contentsResponse.Target = &targetFromContent
-	} else if entry.IsSubModule() {
+	} else if entry.IsSubmodule() {
 		contentsResponse.Type = string(ContentTypeSubmodule)
-		submoduleURL, err := commit.GetSubModule(treePath)
+		submodule, err := commit.GetSubmodule(treePath, entry)
 		if err != nil {
 			return nil, err
 		}
-		if submoduleURL != "" {
-			contentsResponse.SubmoduleGitURL = &submoduleURL
+		if submodule.URL != "" {
+			contentsResponse.SubmoduleGitURL = &submodule.URL
 		}
 	}
 	// Handle links
@@ -229,7 +230,7 @@ func GetContents(ctx context.Context, repo *repo_model.Repository, treePath, ref
 		downloadURLString := downloadURL.String()
 		contentsResponse.DownloadURL = &downloadURLString
 	}
-	if !entry.IsSubModule() {
+	if !entry.IsSubmodule() {
 		htmlURL, err := url.Parse(repo.HTMLURL() + "/src/" + url.PathEscape(string(refType)) + "/" + util.PathEscapeSegments(ref) + "/" + util.PathEscapeSegments(treePath))
 		if err != nil {
 			return nil, err
@@ -273,13 +274,11 @@ func GetBlobBySHA(ctx context.Context, repo *repo_model.Repository, gitRepo *git
 	if err != nil {
 		return nil, err
 	}
-	content := ""
-	if gitBlob.Size() <= setting.API.DefaultMaxBlobSize {
-		content, err = gitBlob.GetBlobContentBase64()
-		if err != nil {
-			return nil, err
-		}
+	content, err := gitBlob.GetContentBase64(setting.API.DefaultMaxBlobSize)
+	if err != nil && !errors.As(err, &git.BlobTooLargeError{}) {
+		return nil, err
 	}
+
 	return &api.GitBlob{
 		SHA:      gitBlob.ID.String(),
 		URL:      repo.APIURL() + "/git/blobs/" + url.PathEscape(gitBlob.ID.String()),

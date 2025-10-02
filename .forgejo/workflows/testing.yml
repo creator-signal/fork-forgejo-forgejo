@@ -37,7 +37,11 @@ jobs:
       - run: make deps-frontend
       - run: make lint-frontend
       - run: make checks-frontend
-      - run: make test-frontend-coverage
+      - run: |
+          # Usage of `dayjs` can be impacted by local system timezone and can be sensitive to DST differences; since
+          # frontend tests are very short they're run twice with varying DST rules to reduce regression risk.
+          TZ=Europe/Berlin make test-frontend-coverage
+          TZ=America/Edmonton make test-frontend-coverage
       - run: make frontend
       - name: Install zstd for cache saving
         # works around https://github.com/actions/cache/issues/1169, because the
@@ -228,7 +232,7 @@ jobs:
           MINIO_ROOT_PASSWORD: 12345678
         options: --tmpfs /bitnami/minio/data
       ldap:
-        image: data.forgejo.org/oci/test-openldap:latest
+        image: data.forgejo.org/oci/forgejo-test-openldap:1
       pgsql:
         image: data.forgejo.org/oci/bitnami/postgresql:16
         env:

@@ -795,16 +795,15 @@ func (c *Comment) LoadPushCommits(ctx context.Context) (err error) {
 		}
 		c.OldCommit = data.CommitIDs[0]
 		c.NewCommit = data.CommitIDs[1]
-	} else {
-		gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, c.Issue.Repo)
-		if err != nil {
-			return err
-		}
-		defer closer.Close()
-
-		c.Commits = git_model.ParseCommitsWithStatus(ctx, gitRepo.GetCommitsFromIDs(data.CommitIDs), c.Issue.Repo)
-		c.CommitsNum = int64(len(c.Commits))
 	}
+
+	gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, c.Issue.Repo)
+	if err != nil {
+		return err
+	}
+	defer closer.Close()
+	c.Commits = git_model.ParseCommitsWithStatus(ctx, gitRepo.GetCommitsFromIDs(data.CommitIDs, c.IsForcePush), c.Issue.Repo)
+	c.CommitsNum = int64(len(c.Commits))
 
 	return err
 }
@@ -1156,7 +1155,7 @@ func UpdateComment(ctx context.Context, c *Comment, contentVersion int, doer *us
 	defer committer.Close()
 
 	// If the comment was reported as abusive, a shadow copy should be created before first update.
-	if err := IfNeededCreateShadowCopyForComment(ctx, c); err != nil {
+	if err := IfNeededCreateShadowCopyForComment(ctx, c, true); err != nil {
 		return err
 	}
 
@@ -1197,7 +1196,7 @@ func DeleteComment(ctx context.Context, comment *Comment) error {
 	e := db.GetEngine(ctx)
 
 	// If the comment was reported as abusive, a shadow copy should be created before deletion.
-	if err := IfNeededCreateShadowCopyForComment(ctx, comment); err != nil {
+	if err := IfNeededCreateShadowCopyForComment(ctx, comment, false); err != nil {
 		return err
 	}
 

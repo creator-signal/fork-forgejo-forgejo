@@ -1,7 +1,7 @@
 // Copyright 2023 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package forgejo_migrations //nolint:revive
+package forgejo_migrations
 
 import (
 	"context"
@@ -108,7 +108,19 @@ var migrations = []*Migration{
 	// v33 -> v34
 	NewMigration("Add `notify-email` column to `action_run` table", AddNotifyEmailToActionRun),
 	// v34 -> v35
-	NewMigration("Add index to `stopped` column in `action_run` table", AddIndexToActionRunStopped),
+	NewMigration("Noop because of https://codeberg.org/forgejo/forgejo/issues/8373", NoopAddIndexToActionRunStopped),
+	// v35 -> v36
+	NewMigration("Fix wiki unit default permission", FixWikiUnitDefaultPermission),
+	// v36 -> v37
+	NewMigration("Add `branch_filter` to `push_mirror` table", AddPushMirrorBranchFilter),
+	// v37 -> v38
+	NewMigration("Add `resolved_unix` column to `abuse_report` table", AddResolvedUnixToAbuseReport),
+	// v38 -> v39
+	NewMigration("Migrate `data` column of `secret` table to store keying material", MigrateActionSecretsToKeying),
+	// v39 -> v40
+	NewMigration("Add index for release sha1", AddIndexForReleaseSha1),
+	// v40 -> v41
+	NewMigration("Add foreign keys to stopwatch & tracked_time", AddForeignKeysStopwatchTrackedTime),
 }
 
 // GetCurrentDBVersion returns the current Forgejo database version.

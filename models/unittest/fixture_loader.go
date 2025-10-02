@@ -10,9 +10,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/container"
+
+	"go.yaml.in/yaml/v3"
 )
 
 type insertSQL struct {
@@ -32,12 +36,14 @@ type loader struct {
 	fixtureFiles []*fixtureFile
 }
 
-func newFixtureLoader(db *sql.DB, dialect string, fixturePaths []string) (*loader, error) {
+func newFixtureLoader(db *sql.DB, dialect string, fixturePaths []string, allTableNames container.Set[string]) (*loader, error) {
 	l := &loader{
 		db:           db,
 		dialect:      dialect,
 		fixtureFiles: []*fixtureFile{},
 	}
+
+	tablesWithoutFixture := allTableNames.Clone()
 
 	// Load fixtures
 	for _, fixturePath := range fixturePaths {
@@ -59,7 +65,10 @@ func newFixtureLoader(db *sql.DB, dialect string, fixturePaths []string) (*loade
 					if err != nil {
 						return nil, err
 					}
-					l.fixtureFiles = append(l.fixtureFiles, fixtureFile)
+					if allTableNames.Contains(fixtureFile.name) {
+						l.fixtureFiles = append(l.fixtureFiles, fixtureFile)
+						tablesWithoutFixture.Remove(fixtureFile.name)
+					}
 				}
 			}
 		} else {
@@ -67,9 +76,22 @@ func newFixtureLoader(db *sql.DB, dialect string, fixturePaths []string) (*loade
 			if err != nil {
 				return nil, err
 			}
-			l.fixtureFiles = append(l.fixtureFiles, fixtureFile)
+			if allTableNames.Contains(fixtureFile.name) {
+				l.fixtureFiles = append(l.fixtureFiles, fixtureFile)
+				tablesWithoutFixture.Remove(fixtureFile.name)
+			}
 		}
 	}
+
+	// Even though these tables have no fixtures, they can still be used and ensure
+	// they are cleaned.
+	for table := range tablesWithoutFixture.Seq() {
+		l.fixtureFiles = append(l.fixtureFiles, &fixtureFile{
+			name: table,
+		})
+	}
+
+	l.orderFixtures()
 
 	return l, nil
 }
@@ -166,6 +188,14 @@ func (l *loader) buildFixtureFile(fixturePath string) (*fixtureFile, error) {
 	return fixture, nil
 }
 
+// Reorganize `fixtureFiles` based upon the order that they'll need to be inserted into the database to satisfy foreign
+// key constraints.
+func (l *loader) orderFixtures() {
+	slices.SortFunc(l.fixtureFiles, func(v1, v2 *fixtureFile) int {
+		return db.TableNameInsertionOrderSortFunc(v1.name, v2.name)
+	})
+}
+
 func (l *loader) Load() error {
 	// Start transaction.
 	tx, err := l.db.Begin()
@@ -178,15 +208,19 @@ func (l *loader) Load() error {
 	}()
 
 	// Clean the table and re-insert the fixtures.
-	tableDeleted := map[string]struct{}{}
-	for _, fixture := range l.fixtureFiles {
-		if _, ok := tableDeleted[fixture.name]; !ok {
+	tableDeleted := make(container.Set[string])
+
+	// Issue deletes first, in reverse of insertion order, to maintain foreign key constraints.
+	for i := len(l.fixtureFiles) - 1; i >= 0; i-- {
+		fixture := l.fixtureFiles[i]
+		if !tableDeleted.Contains(fixture.name) {
 			if _, err := tx.Exec(fmt.Sprintf("DELETE FROM %s", l.quoteKeyword(fixture.name))); err != nil {
 				return fmt.Errorf("cannot delete table %s: %w", fixture.name, err)
 			}
-			tableDeleted[fixture.name] = struct{}{}
+			tableDeleted.Add(fixture.name)
 		}
-
+	}
+	for _, fixture := range l.fixtureFiles {
 		for _, insertSQL := range fixture.insertSQLs {
 			if _, err := tx.Exec(insertSQL.statement, insertSQL.values...); err != nil {
 				return fmt.Errorf("cannot insert %q with values %q: %w", insertSQL.statement, insertSQL.values, err)

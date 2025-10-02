@@ -7,10 +7,12 @@ package unittest
 import (
 	"fmt"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/auth/password/hash"
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/setting"
 
 	"xorm.io/xorm"
@@ -44,6 +46,8 @@ func OverrideFixtures(dir string) func() {
 	}
 }
 
+var allTableNames = sync.OnceValue(db.GetTableNames)
+
 // InitFixtures initialize test fixtures for a test database
 func InitFixtures(opts FixturesOptions, engine ...*xorm.Engine) (err error) {
 	e, err := GetXORMEngine(engine...)
@@ -75,7 +79,17 @@ func InitFixtures(opts FixturesOptions, engine ...*xorm.Engine) (err error) {
 		panic("Unsupported RDBMS for test")
 	}
 
-	fixturesLoader, err = newFixtureLoader(e.DB().DB, dialect, fixturePaths)
+	var allTables container.Set[string]
+	if opts.OnlyAffectModels == nil {
+		allTables = allTableNames().Clone()
+	} else {
+		allTables = make(container.Set[string])
+		for _, bean := range opts.OnlyAffectModels {
+			allTables.Add(e.TableName(bean))
+		}
+	}
+
+	fixturesLoader, err = newFixtureLoader(e.DB().DB, dialect, fixturePaths, allTables)
 	if err != nil {
 		return err
 	}

@@ -102,6 +102,12 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 		return fmt.Errorf("deleteBeans: %w", err)
 	}
 
+	// Retain the fact that time was tracked, but set DB's `user_id` to NULL.
+	_, err = e.Table(&issues_model.TrackedTime{}).Where("user_id = ?", u.ID).Update(map[string]any{"user_id": nil})
+	if err != nil {
+		return fmt.Errorf("update tracked_time user_id: %w", err)
+	}
+
 	if err := auth_model.DeleteOAuth2RelictsByUserID(ctx, u.ID); err != nil {
 		return err
 	}
@@ -218,7 +224,7 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 	// ***** END: ExternalLoginUser *****
 
 	// If the user was reported as abusive, a shadow copy should be created before deletion.
-	if err = user_model.IfNeededCreateShadowCopyForUser(ctx, u); err != nil {
+	if err = user_model.IfNeededCreateShadowCopyForUser(ctx, u.ID, u); err != nil {
 		return err
 	}
 

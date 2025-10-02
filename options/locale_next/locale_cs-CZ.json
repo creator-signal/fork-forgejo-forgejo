@@ -28,16 +28,15 @@
     "mail.actions.not_successful_run": "Workflow %[1]s selhal v repozitáři %[2]s",
     "mail.actions.run_info_cur_status": "Stav tohoto procesu: %[1]s (právě aktualizováno z %[2]s)",
     "mail.actions.run_info_previous_status": "Stav předchozího procesu: %[1]s",
-    "mail.actions.run_info_ref": "Větev: %[1]s (%[2]s)",
     "mail.actions.run_info_trigger": "Spuštěno z důvodu: %[1]s od: %[2]s",
     "mail.actions.successful_run_after_failure_subject": "Workflow %[1]s obnoven v repozitáři %[2]s",
     "mail.actions.successful_run_after_failure": "Workflow %[1]s obnoven v repozitáři %[2]s",
     "discussion.locked": "Tato diskuze byla uzamčena. Komentování je omezené na přispěvatele.",
     "relativetime.future": "v budoucnu",
     "relativetime.years": {
-        "one": "Před %d rokem",
-        "few": "Před %d lety",
-        "other": "Před %d lety"
+        "one": "před %d rokem",
+        "few": "před %d lety",
+        "other": "před %d lety"
     },
     "relativetime.1day": "včera",
     "relativetime.2days": "před dvěma dny",
@@ -48,30 +47,30 @@
     "relativetime.1year": "minulý rok",
     "relativetime.2years": "před dvěma lety",
     "relativetime.weeks": {
-        "one": "Před %d týdnem",
-        "few": "Před %d týdny",
-        "other": "Před %d týdny"
+        "one": "před %d týdnem",
+        "few": "před %d týdny",
+        "other": "před %d týdny"
     },
     "relativetime.days": {
-        "one": "Před %d dnem",
-        "few": "Před %d dny",
-        "other": "Před %d dny"
+        "one": "před %d dnem",
+        "few": "před %d dny",
+        "other": "před %d dny"
     },
     "relativetime.mins": {
-        "one": "Před %d minutou",
-        "few": "Před %d minutami",
-        "other": "Před %d minutami"
+        "one": "před %d minutou",
+        "few": "před %d minutami",
+        "other": "před %d minutami"
     },
     "relativetime.hours": {
-        "one": "Před %d hodinou",
-        "few": "Před %d hodinami",
-        "other": "Před %d hodinami"
+        "one": "před %d hodinou",
+        "few": "před %d hodinami",
+        "other": "před %d hodinami"
     },
     "relativetime.now": "nyní",
     "relativetime.months": {
-        "one": "Před %d měsícem",
-        "few": "Před %d měsíci",
-        "other": "Před %d měsíci"
+        "one": "před %d měsícem",
+        "few": "před %d měsíci",
+        "other": "před %d měsíci"
     },
     "moderation.report_content": "Nahlásit obsah",
     "moderation.report_abuse_form.details": "Tento formulář je určen k nahlašování uživatelů, kteří si vytvářejí spamové profily, repozitáře, problémy, komentáře nebo se chovají nevhodně.",
@@ -102,8 +101,68 @@
     "editor.textarea.tab_hint": "Řádek je již odsazen. Pro opuštění editoru stiskněte znovu <kbd>Tab</kbd> nebo <kbd>Escape</kbd>.",
     "editor.textarea.shift_tab_hint": "Na tomto řádku není žádné odsazení. Pro opuštění editoru stiskněte znovu <kbd>Shift</kbd> + <kbd>Tab</kbd> nebo <kbd>Escape</kbd>.",
     "admin.dashboard.cleanup_offline_runners": "Vymazat offline runnery",
-    "settings.visibility.description": "Viditelnost profilu ovlivňuje možnost ostatních přistupovat k vašim veřejným repozitářům. <a href=\"%s\" target=\"_blank\">Zjistit více</a>",
+    "settings.visibility.description": "Viditelnost profilu ovlivňuje možnost ostatních přistupovat k vašim veřejným repozitářům. <a href=\"%s\" target=\"_blank\">Zjistit více</a>.",
     "avatar.constraints_hint": "Velikost vlastního avataru nesmí překročit %[1]s nebo být větší než %[2]dx%[3]d pixelů",
     "repo.diff.commit.next-short": "Další",
-    "repo.diff.commit.previous-short": "Předchozí"
+    "repo.diff.commit.previous-short": "Předchozí",
+    "profile.actions.tooltip": "Další akce",
+    "keys.gpg.link": "Klíče GPG",
+    "profile.edit.link": "Upravit profil",
+    "feed.atom.link": "Zdroj Atom",
+    "keys.ssh.link": "Klíče SSH",
+    "og.repo.summary_card.alt_description": "Karta se souhrnem repozitáře %[1]s, popsaným jako: %[2]s",
+    "mail.actions.run_info_sha": "Revize: %[1]s",
+    "repo.settings.push_mirror.branch_filter.label": "Filtr větve (nepovinný)",
+    "repo.settings.push_mirror.branch_filter.description": "Větve, které mají být zrcadleny. Ponechte prázdné pro zrcadlení všech větví. Syntaxi naleznete v <a href=\"%[1]s\">dokumentaci %[2]s</a>. Příklady: <code>main, release/*</code>",
+    "discussion.sidebar.reference": "Reference",
+    "admin.moderation.moderation_reports": "Hlášení moderace",
+    "admin.moderation.reports": "Hlášení",
+    "admin.moderation.deleted_content_ref": "Nahlášený obsah s typem %[1]v a ID %[2]d již neexistuje",
+    "admin.moderation.no_open_reports": "Momentálně nejsou otevřena žádná hlášení.",
+    "admin.dashboard.remove_resolved_reports": "Odstranit vyřešená hlášení",
+    "compare.branches.title": "Porovnat větve",
+    "repo.commit.load_tags_failed": "Načtení značek selhalo z důvodu interní chyby",
+    "admin.auths.allow_username_change": "Povolit změnu uživatelského jména",
+    "admin.auths.allow_username_change.description": "Povolit uživatelům změnit své uživatelské jméno v nastavení profilu",
+    "warning.repository.out_of_sync": "Databázová reprezentace tohoto repozitáře není synchronizovaná. Pokud se toto varování zobrazuje i po odeslání revize do repozitáře, kontaktujte administrátora.",
+    "repo.pulls.already_merged": "Sloučení selhalo: tato žádost již byla sloučena.",
+    "migrate.pagure.description": "Migrovat data z pagure.io nebo jiných instancí Pagure.",
+    "migrate.pagure.incorrect_url": "Byla zadána nesprávná adresa URL zdrojového repozitáře",
+    "migrate.pagure.project_url": "Adresa projektu Pagure",
+    "migrate.pagure.project_example": "Adresa URL projektu Pagure, např. https://pagure.io/pagure",
+    "migrate.pagure.token_label": "Token",
+    "migrate.pagure.token_body_a": "Zadejte token API Pagure s přístupem k soukromým problémům pro vytvoření repozitáře obsahujícího pouze soukromé problémy",
+    "migrate.pagure.token_body_b": "Nezapomeňte nastavit repozitář jako soukromý výše, pokud chcete, aby byl repozitář soukromý",
+    "migrate.github.description": "Migrovat data z github.com nebo serveru GitHub Enterprise.",
+    "migrate.git.description": "Migrovat pouze repozitář z libovolné služby Git.",
+    "migrate.gitea.description": "Migrovat data z gitea.com nebo jiných instancí Gitea.",
+    "migrate.gitlab.description": "Migrovat data z gitlab.com nebo jiných instancí GitLab.",
+    "migrate.gogs.description": "Migrovat data z notabug.com nebo jiných instancí Gogs.",
+    "migrate.onedev.description": "Migrovat data z code.onedev.io nebo jiných instancí OneDev.",
+    "migrate.gitbucket.description": "Migrovat data z instancí GitBucket.",
+    "migrate.codebase.description": "Migrovat data z codebasehq.com.",
+    "migrate.forgejo.description": "Migrovat data z codeberg.org nebo jiných instancí Forgejo.",
+    "admin.config.security": "Nastavení zabezpečení",
+    "admin.config.global_2fa_requirement.title": "Globální požadavek dvoufázového ověření",
+    "error.must_enable_2fa": "Tato instance Forgejo vyžaduje, aby si všichni uživatelé zapnuli dvoufázové ověření, než začnou používat svůj účet. Povolíte jej zde: %s",
+    "settings.twofa_reenroll.description": "Znovu použít vaše dvoufázové ověření",
+    "admin.config.global_2fa_requirement.none": "Ne",
+    "admin.config.global_2fa_requirement.all": "Všichni uživatelé",
+    "admin.config.global_2fa_requirement.admin": "Administrátoři",
+    "settings.twofa_unroll_unavailable": "U vašeho účtu je vyžadováno dvoufázové ověření a nelze jej zakázat.",
+    "settings.twofa_reenroll": "Znovu použít dvoufázové ověření",
+    "settings.must_enable_2fa": "Tato instance Forgejo vyžaduje, aby si všichni uživatelé zapnuli dvoufázové ověření, než začnou používat svůj účet.",
+    "user.ghost.tooltip": "Tento uživatel byl odstraněn, nebo ho nelze dohledat.",
+    "migrate.form.error.url_credentials": "Adresa obsahuje údaje, zadejte je do odpovídajících polí uživatelského jména a hesla",
+    "actions.runs.viewing_out_of_date_run": "Prohlížíte si zastaralý běh této úlohy, který byl spuštěn %[1]s.",
+    "actions.runs.run_attempt_label": "Pokus o běh #%[1]s (%[2]s)",
+    "actions.runs.view_most_recent_run": "Zobrazit nejnovější běh",
+    "pulse.n_active_issues": {
+        "one": "%s aktivní problém",
+        "other": "%s aktivních problémů"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s aktivní žádost o sloučení",
+        "other": "%s aktivních žádostí o sloučení"
+    }
 }

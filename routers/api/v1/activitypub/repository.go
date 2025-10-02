@@ -30,6 +30,7 @@ func Repository(ctx *context.APIContext) {
 	//   in: path
 	//   description: repository ID of the repo
 	//   type: integer
+	//   format: int64
 	//   required: true
 	// responses:
 	//   "200":
@@ -59,6 +60,7 @@ func RepositoryInbox(ctx *context.APIContext) {
 	//   in: path
 	//   description: repository ID of the repo
 	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: body
 	//   in: body
@@ -71,10 +73,11 @@ func RepositoryInbox(ctx *context.APIContext) {
 	repository := ctx.Repo.Repository
 	log.Info("RepositoryInbox: repo: %v", repository)
 	form := web.GetForm(ctx)
-	// TODO: Decide between like/undo{like} activity
-	httpStatus, title, err := federation.ProcessLikeActivity(ctx, form, repository.ID)
+	activity := form.(*ap.Activity)
+	result, err := federation.ProcessRepositoryInbox(ctx, activity, repository.ID)
 	if err != nil {
-		ctx.Error(httpStatus, title, err)
+		ctx.Error(federation.HTTPStatus(err), "Processing Repository Inbox failed", result)
+		return
 	}
-	ctx.Status(http.StatusNoContent)
+	responseServiceResult(ctx, result)
 }

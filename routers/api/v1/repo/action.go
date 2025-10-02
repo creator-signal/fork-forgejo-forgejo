@@ -268,10 +268,6 @@ func (Action) DeleteVariable(ctx *context.APIContext) {
 	//   type: string
 	//   required: true
 	// responses:
-	//   "200":
-	//			"$ref": "#/responses/ActionVariable"
-	//   "201":
-	//     description: response when deleting a variable
 	//   "204":
 	//     description: response when deleting a variable
 	//   "400":
@@ -508,6 +504,125 @@ func (Action) GetRegistrationToken(ctx *context.APIContext) {
 	shared.GetRegistrationToken(ctx, 0, ctx.Repo.Repository.ID)
 }
 
+// CreateRegistrationToken returns the token to register repo runners
+func (Action) CreateRegistrationToken(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/actions/runners/registration-token repository repoCreateRunnerRegistrationToken
+	// ---
+	// summary: Get a repository's actions runner registration token
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/RegistrationToken"
+
+	shared.GetRegistrationToken(ctx, 0, ctx.Repo.Repository.ID)
+}
+
+// ListRunners get repo-level runners
+func (Action) ListRunners(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runners repository getRepoRunners
+	// ---
+	// summary: Get repo-level runners
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/definitions/ActionRunnersResponse"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	shared.ListRunners(ctx, 0, ctx.Repo.Repository.ID)
+}
+
+// GetRunner get a repo-level runner
+func (Action) GetRunner(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runners/{runner_id} repository getRepoRunner
+	// ---
+	// summary: Get a repo-level runner
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: runner_id
+	//   in: path
+	//   description: id of the runner
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/definitions/ActionRunner"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	shared.GetRunner(ctx, 0, ctx.Repo.Repository.ID, ctx.ParamsInt64("runner_id"))
+}
+
+// DeleteRunner delete a repo-level runner
+func (Action) DeleteRunner(ctx *context.APIContext) {
+	// swagger:operation DELETE /repos/{owner}/{repo}/actions/runners/{runner_id} repository deleteRepoRunner
+	// ---
+	// summary: Delete a repo-level runner
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: runner_id
+	//   in: path
+	//   description: id of the runner
+	//   type: string
+	//   required: true
+	// responses:
+	//   "204":
+	//     description: runner has been deleted
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	shared.DeleteRunner(ctx, 0, ctx.Repo.Repository.ID, ctx.ParamsInt64("runner_id"))
+}
+
 // SearchActionRunJobs return a list of actions jobs filtered by the provided parameters
 func (Action) SearchActionRunJobs(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/runners/jobs repository repoSearchRunJobs
@@ -615,7 +730,7 @@ func ListActionTasks(ctx *context.APIContext) {
 
 // DispatchWorkflow dispatches a workflow
 func DispatchWorkflow(ctx *context.APIContext) {
-	// swagger:operation POST /repos/{owner}/{repo}/actions/workflows/{workflowname}/dispatches repository DispatchWorkflow
+	// swagger:operation POST /repos/{owner}/{repo}/actions/workflows/{workflowfilename}/dispatches repository DispatchWorkflow
 	// ---
 	// summary: Dispatches a workflow
 	// consumes:
@@ -631,7 +746,7 @@ func DispatchWorkflow(ctx *context.APIContext) {
 	//   description: name of the repo
 	//   type: string
 	//   required: true
-	// - name: workflowname
+	// - name: workflowfilename
 	//   in: path
 	//   description: name of the workflow
 	//   type: string
@@ -649,13 +764,13 @@ func DispatchWorkflow(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	opt := web.GetForm(ctx).(*api.DispatchWorkflowOption)
-	name := ctx.Params("workflowname")
+	name := ctx.Params("workflowfilename")
 
 	if len(opt.Ref) == 0 {
 		ctx.Error(http.StatusBadRequest, "ref", "ref is empty")
 		return
 	} else if len(name) == 0 {
-		ctx.Error(http.StatusBadRequest, "workflowname", "workflow name is empty")
+		ctx.Error(http.StatusBadRequest, "workflowfilename", "workflow file name is empty")
 		return
 	}
 

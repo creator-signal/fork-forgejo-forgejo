@@ -110,11 +110,13 @@ func Search(ctx *context.APIContext) {
 	//                "alpha", "created", "updated", "size", "git_size", "lfs_size", "stars", "forks" and "id".
 	//                Default is "alpha"
 	//   type: string
+	//   enum: [alpha, created, updated, size, git_size, lfs_size, id, stars, forks]
 	// - name: order
 	//   in: query
 	//   description: sort order, either "asc" (ascending) or "desc" (descending).
 	//                Default is "asc", ignored if "sort" is not specified.
 	//   type: string
+	//   enum: [asc, desc]
 	// - name: page
 	//   in: query
 	//   description: page number of results to return (1-based)
@@ -672,6 +674,47 @@ func Edit(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, convert.ToRepo(ctx, repo, ctx.Repo.Permission))
 }
 
+// Convert converts a mirror to a normal repo
+func Convert(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/convert repository repoConvert
+	// ---
+	// summary: Convert a mirror repo to a normal repo.
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo to convert
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo to convert
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/Repository"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
+
+	if err := convertMirrorToNormalRepo(ctx); err != nil {
+		return
+	}
+
+	repo, err := repo_model.GetRepositoryByID(ctx, ctx.Repo.Repository.ID)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToRepo(ctx, repo, ctx.Repo.Permission))
+}
+
 // updateBasicProperties updates the basic properties of a repo: Name, Description, Website and Visibility
 func updateBasicProperties(ctx *context.APIContext, opts api.EditRepoOption) error {
 	owner := ctx.Repo.Owner
@@ -861,7 +904,7 @@ func updateRepoUnits(ctx *context.APIContext, owner string, repo *repo_model.Rep
 			if *opts.GloballyEditableWiki {
 				wikiPermissions = repo_model.UnitAccessModeWrite
 			} else {
-				wikiPermissions = repo_model.UnitAccessModeRead
+				wikiPermissions = repo_model.UnitAccessModeUnset
 			}
 		}
 
@@ -1134,6 +1177,25 @@ func updateMirror(ctx *context.APIContext, opts api.EditRepoOption) error {
 	if err := repo_model.UpdateMirror(ctx, mirror); err != nil {
 		log.Error("Failed to Set Mirror Interval: %s", err)
 		ctx.Error(http.StatusUnprocessableEntity, "MirrorInterval", err)
+		return err
+	}
+
+	return nil
+}
+
+// convertMirrorToNormalRepository converts a mirror to a normal repo
+func convertMirrorToNormalRepo(ctx *context.APIContext) error {
+	repo := ctx.Repo.Repository
+
+	if !repo.IsMirror {
+		err := errors.New("Repository is not a mirror")
+		ctx.Error(http.StatusUnprocessableEntity, "ConvertMirror", err)
+		return nil
+	}
+
+	if err := repo_service.ConvertMirrorToNormalRepo(ctx, repo); err != nil {
+		log.Error("Failed to Disable Mirror: %s", err)
+		ctx.Error(http.StatusUnprocessableEntity, "ConvertMirror", err)
 		return err
 	}
 

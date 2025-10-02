@@ -57,7 +57,7 @@ export function initRepoIssueTimeTracking() {
     $(sel).modal({
       duration: 200,
       onApprove() {
-        document.getElementById(`${sel} form`).requestSubmit();
+        document.querySelector(`${sel} form`).requestSubmit();
       },
     }).modal('show');
   });
@@ -125,16 +125,21 @@ function excludeLabel(item) {
 export function initRepoIssueSidebarList() {
   const repolink = $('#repolink').val();
   const repoId = $('#repoId').val();
-  const crossRepoSearch = $('#crossRepoSearch').val();
+  const crossRepoSearch = $('#crossRepoSearch').val() === 'true';
   const tp = $('#type').val();
-  let issueSearchUrl = `${appSubUrl}/${repolink}/issues/search?q={query}&type=${tp}`;
-  if (crossRepoSearch === 'true') {
-    issueSearchUrl = `${appSubUrl}/issues/search?q={query}&priority_repo_id=${repoId}&type=${tp}`;
-  }
   $('#new-dependency-drop-list')
     .dropdown({
       apiSettings: {
-        url: issueSearchUrl,
+        beforeSend(settings) {
+          if (!settings.urlData.query.trim()) {
+            settings.url = `${appSubUrl}/${repolink}/issues/search?q={query}&type=${tp}&sort=updated`;
+          } else if (crossRepoSearch) {
+            settings.url = `${appSubUrl}/issues/search?q={query}&priority_repo_id=${repoId}&type=${tp}&sort=relevance`;
+          } else {
+            settings.url = `${appSubUrl}/${repolink}/issues/search?q={query}&type=${tp}&sort=relevance`;
+          }
+          return settings;
+        },
         onResponse(response) {
           const filteredResponse = {success: true, results: []};
           const currIssueId = $('#new-dependency-drop-list').data('issue-id');
@@ -142,7 +147,7 @@ export function initRepoIssueSidebarList() {
           for (const [_, issue] of Object.entries(response)) {
             // Don't list current issue in the dependency list.
             if (issue.id === currIssueId) {
-              return;
+              continue;
             }
             filteredResponse.results.push({
               name: `#${issue.number} ${issueTitleHTML(htmlEscape(issue.title))
@@ -440,7 +445,7 @@ export async function handleReply($el) {
     // When the page is loaded, the dropzone is initialized by initGlobalDropzone, but the editor is not initialized.
     // When the form is submitted and partially reload, none of them is initialized.
     const dropzone = $form.find('.dropzone')[0];
-    if (!dropzone.dropzone) initDropzone(dropzone);
+    if (!dropzone.dropzone) await initDropzone(dropzone);
     editor = await initComboMarkdownEditor($form.find('.combo-markdown-editor'));
   }
   editor.focus();
@@ -575,7 +580,7 @@ export function initRepoPullRequestReview() {
         $td.find("input[name='side']").val(side === 'left' ? 'previous' : 'proposed');
         $td.find("input[name='path']").val(path);
 
-        initDropzone($td.find('.dropzone')[0]);
+        await initDropzone($td.find('.dropzone')[0]);
         const editor = await initComboMarkdownEditor($td.find('.combo-markdown-editor'));
         editor.focus();
       } catch (error) {

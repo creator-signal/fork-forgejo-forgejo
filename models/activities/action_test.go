@@ -227,6 +227,24 @@ func TestNotifyWatchers(t *testing.T) {
 	})
 }
 
+func TestGetFeedsCorrupted(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	unittest.AssertExistsAndLoadBean(t, &activities_model.Action{
+		ID:     8,
+		RepoID: 1700,
+	})
+
+	actions, count, err := activities_model.GetFeeds(db.DefaultContext, activities_model.GetFeedsOptions{
+		RequestedUser:  user,
+		Actor:          user,
+		IncludePrivate: true,
+	})
+	require.NoError(t, err)
+	assert.Empty(t, actions)
+	assert.Equal(t, int64(0), count)
+}
+
 func TestConsistencyUpdateAction(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		t.Skip("Test is only for SQLite database.")
@@ -290,14 +308,69 @@ func TestDeleteIssueActions(t *testing.T) {
 	})
 	require.NoError(t, err)
 	err = db.Insert(db.DefaultContext, &activities_model.Action{
-		OpType:  activities_model.ActionCreateIssue,
-		RepoID:  issue.RepoID,
+		OpType: activities_model.ActionCreateIssue,
+		RepoID: issue.RepoID,
+		// Older Content format...
 		Content: fmt.Sprintf("%d|content...", issue.Index),
+	})
+	require.NoError(t, err)
+	err = db.Insert(db.DefaultContext, &activities_model.Action{
+		OpType: activities_model.ActionCreateIssue,
+		RepoID: issue.RepoID,
+		// JSON-encoded Content format...
+		Content: fmt.Sprintf("[\"%d\",\"content...\"]", issue.Index),
 	})
 	require.NoError(t, err)
 
 	// assert that the actions exist, then delete them
-	unittest.AssertCount(t, &activities_model.Action{}, 2)
+	unittest.AssertCount(t, &activities_model.Action{}, 3)
 	require.NoError(t, activities_model.DeleteIssueActions(db.DefaultContext, issue.RepoID, issue.ID, issue.Index))
 	unittest.AssertCount(t, &activities_model.Action{}, 0)
+}
+
+func TestGetIssueInfos(t *testing.T) {
+	tt := []struct {
+		content string
+		field1  string
+		field2  string
+		field3  string
+	}{
+		{
+			content: "4|",
+			field1:  "4",
+		},
+		{
+			content: "2|docs: Add README w/ template sections",
+			field1:  "2",
+			field2:  "docs: Add README w/ template sections",
+		},
+		{
+			content: "2|docs: Add README w/ template sections|Some comment...",
+			field1:  "2",
+			field2:  "docs: Add README w/ template sections",
+			field3:  "Some comment...",
+		},
+		{
+			content: "[\"4\"]",
+			field1:  "4",
+		},
+		{
+			content: "[\"2\", \"docs: Add README w/ | template sections\"]",
+			field1:  "2",
+			field2:  "docs: Add README w/ | template sections",
+		},
+		{
+			content: "[\"2\", \"docs: Add README w/ | template sections\", \"Some | comment...\"]",
+			field1:  "2",
+			field2:  "docs: Add README w/ | template sections",
+			field3:  "Some | comment...",
+		},
+	}
+	for _, test := range tt {
+		action := &activities_model.Action{Content: test.content}
+		issueInfos := action.GetIssueInfos()
+		assert.Equal(t, test.field1, issueInfos[0])
+		assert.Equal(t, test.field2, issueInfos[1])
+		assert.Equal(t, test.field3, issueInfos[2])
+	}
 }

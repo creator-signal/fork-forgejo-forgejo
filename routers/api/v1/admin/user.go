@@ -51,11 +51,11 @@ func parseAuthSource(ctx *context.APIContext, u *user_model.User, sourceID int64
 	u.LoginSource = source.ID
 }
 
-// CreateUser create a user
+// CreateUser create a user account
 func CreateUser(ctx *context.APIContext) {
 	// swagger:operation POST /admin/users admin adminCreateUser
 	// ---
-	// summary: Create a user
+	// summary: Create a user account
 	// consumes:
 	// - application/json
 	// produces:
@@ -149,7 +149,7 @@ func CreateUser(ctx *context.APIContext) {
 		return
 	}
 
-	if !validation.IsEmailDomainAllowed(u.Email) {
+	if _, ok := validation.IsEmailDomainAllowed(u.Email); !ok {
 		ctx.Resp.Header().Add("X-Gitea-Warning", fmt.Sprintf("the domain of user email %s conflicts with EMAIL_DOMAIN_ALLOWLIST or EMAIL_DOMAIN_BLOCKLIST", u.Email))
 	}
 
@@ -235,7 +235,7 @@ func EditUser(ctx *context.APIContext) {
 			return
 		}
 
-		if !validation.IsEmailDomainAllowed(*form.Email) {
+		if _, ok := validation.IsEmailDomainAllowed(*form.Email); !ok {
 			ctx.Resp.Header().Add("X-Gitea-Warning", fmt.Sprintf("the domain of user email %s conflicts with EMAIL_DOMAIN_ALLOWLIST or EMAIL_DOMAIN_BLOCKLIST", *form.Email))
 		}
 	}
@@ -274,7 +274,7 @@ func EditUser(ctx *context.APIContext) {
 func DeleteUser(ctx *context.APIContext) {
 	// swagger:operation DELETE /admin/users/{username} admin adminDeleteUser
 	// ---
-	// summary: Delete a user
+	// summary: Delete user account
 	// produces:
 	// - application/json
 	// parameters:
@@ -324,11 +324,11 @@ func DeleteUser(ctx *context.APIContext) {
 	ctx.Status(http.StatusNoContent)
 }
 
-// CreatePublicKey api for creating a public key to a user
+// CreatePublicKey adds an SSH public key to user's account
 func CreatePublicKey(ctx *context.APIContext) {
 	// swagger:operation POST /admin/users/{username}/keys admin adminCreatePublicKey
 	// ---
-	// summary: Add a public key on behalf of a user
+	// summary: Add an SSH public key to user's account
 	// consumes:
 	// - application/json
 	// produces:
@@ -356,11 +356,11 @@ func CreatePublicKey(ctx *context.APIContext) {
 	user.CreateUserPublicKey(ctx, *form, ctx.ContextUser.ID)
 }
 
-// DeleteUserPublicKey api for deleting a user's public key
+// DeleteUserPublicKey removes an SSH public key from user's account
 func DeleteUserPublicKey(ctx *context.APIContext) {
 	// swagger:operation DELETE /admin/users/{username}/keys/{id} admin adminDeleteUserPublicKey
 	// ---
-	// summary: Delete a user's public key
+	// summary: Remove a public key from user's account
 	// produces:
 	// - application/json
 	// parameters:
@@ -436,26 +436,6 @@ func SearchUsers(ctx *context.APIContext) {
 
 	listOptions := utils.GetListOptions(ctx)
 
-	sort := ctx.FormString("sort")
-	var orderBy db.SearchOrderBy
-
-	switch sort {
-	case "oldest":
-		orderBy = db.SearchOrderByOldest
-	case "newest":
-		orderBy = db.SearchOrderByNewest
-	case "alphabetically":
-		orderBy = db.SearchOrderByAlphabetically
-	case "reversealphabetically":
-		orderBy = db.SearchOrderByAlphabeticallyReverse
-	case "recentupdate":
-		orderBy = db.SearchOrderByRecentUpdated
-	case "leastupdate":
-		orderBy = db.SearchOrderByLeastUpdated
-	default:
-		orderBy = db.SearchOrderByAlphabetically
-	}
-
 	intSource, err := strconv.ParseInt(ctx.FormString("source_id"), 10, 64)
 	var sourceID optional.Option[int64]
 	if ctx.FormString("source_id") == "" || err != nil {
@@ -469,7 +449,7 @@ func SearchUsers(ctx *context.APIContext) {
 		Type:        user_model.UserTypeIndividual,
 		LoginName:   ctx.FormTrim("login_name"),
 		SourceID:    sourceID,
-		OrderBy:     orderBy,
+		OrderBy:     utils.GetDbSearchOrder(ctx),
 		ListOptions: listOptions,
 	})
 	if err != nil {

@@ -6,9 +6,11 @@ package web
 
 import (
 	gocontext "context"
+	"fmt"
 	"net/http"
 	"strings"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/perm"
 	quota_model "forgejo.org/models/quota"
 	"forgejo.org/models/unit"
@@ -51,6 +53,7 @@ import (
 
 	_ "forgejo.org/modules/session" // to registers all internal adapters
 
+	"code.forgejo.org/go-chi/binding"
 	"code.forgejo.org/go-chi/captcha"
 	chi_middleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -117,7 +120,7 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 	return func(ctx *context.Context) {
 		ar, err := common.AuthShared(ctx.Base, ctx.Session, authMethod)
 		if err != nil {
-			log.Error("Failed to verify user: %v", err)
+			log.Info("Failed to verify user: %v", err)
 			ctx.Error(http.StatusUnauthorized, ctx.Locale.TrString("auth.unauthorized_credentials", "https://codeberg.org/forgejo/forgejo/issues/2809"))
 			return
 		}
@@ -169,6 +172,19 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 				ctx.Redirect(setting.AppSubURL + "/")
 				return
 			}
+
+			if ctx.Doer.MustHaveTwoFactor() && !strings.HasPrefix(ctx.Req.URL.Path, "/user/settings/security") {
+				hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
+				if err != nil {
+					log.Error("Error getting 2fa: %s", err)
+					ctx.Error(http.StatusInternalServerError, "HasTwoFactorByUID", err.Error())
+					return
+				}
+				if !hasTwoFactor {
+					ctx.Redirect(setting.AppSubURL + "/user/settings/security")
+					return
+				}
+			}
 		}
 
 		// Redirect to dashboard (or alternate location) if user tries to visit any non-login page.
@@ -177,7 +193,8 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 			return
 		}
 
-		if !options.SignOutRequired && !options.DisableCSRF && ctx.Req.Method == "POST" {
+		safeMethod := ctx.Req.Method == "GET" || ctx.Req.Method == "HEAD" || ctx.Req.Method == "OPTIONS"
+		if !options.SignOutRequired && !options.DisableCSRF && !safeMethod {
 			ctx.Csrf.Validate(ctx)
 			if ctx.Written() {
 				return
@@ -307,6 +324,20 @@ func registerRoutes(m *web.Route) {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
+	}
+
+	requiredTwoFactor := func(ctx *context.Context) {
+		if !ctx.Doer.MustHaveTwoFactor() {
+			return
+		}
+
+		hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Error getting 2fa: %s", err))
+			return
+		}
+		ctx.Data["MustEnableTwoFactor"] = !hasTwoFactor
+		ctx.Data["HideNavbarLinks"] = !hasTwoFactor
 	}
 
 	openIDSignInEnabled := func(ctx *context.Context) {
@@ -564,6 +595,8 @@ func registerRoutes(m *web.Route) {
 				m.Post("/disable", security.DisableTwoFactor)
 				m.Get("/enroll", security.EnrollTwoFactor)
 				m.Post("/enroll", web.Bind(forms.TwoFactorAuthForm{}), security.EnrollTwoFactorPost)
+				m.Get("/reenroll", security.ReenrollTwoFactor)
+				m.Post("/reenroll", web.Bind(forms.TwoFactorAuthForm{}), security.ReenrollTwoFactorPost)
 			})
 			m.Group("/webauthn", func() {
 				m.Post("/request_register", web.Bind(forms.WebauthnRegistrationForm{}), security.WebAuthnRegister)
@@ -576,7 +609,7 @@ func registerRoutes(m *web.Route) {
 				m.Post("/toggle_visibility", security.ToggleOpenIDVisibility)
 			}, openIDSignInEnabled)
 			m.Post("/account_link", linkAccountEnabled, security.DeleteAccountLink)
-		})
+		}, requiredTwoFactor)
 
 		m.Group("/applications", func() {
 			// oauth2 applications
@@ -781,7 +814,14 @@ func registerRoutes(m *web.Route) {
 			addSettingsRunnersRoutes()
 			addSettingsVariablesRoutes()
 		})
-	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled))
+
+		if setting.Moderation.Enabled {
+			m.Group("/moderation/reports", func() {
+				m.Get("", admin.AbuseReports)
+				m.Get("/type/{type:1|2|3|4}/id/{id}", admin.AbuseReportDetails)
+			})
+		}
+	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 
 	m.Group("", func() {
@@ -1261,7 +1301,7 @@ func registerRoutes(m *web.Route) {
 					Post(web.Bind(forms.DeleteRepoFileForm{}), repo.DeleteFilePost)
 				m.Combo("/_upload/*", repo.MustBeAbleToUpload).
 					Get(repo.UploadFile).
-					Post(web.Bind(forms.UploadRepoFileForm{}), repo.UploadFilePost)
+					Post(BindUpload(), repo.UploadFilePost)
 				m.Combo("/_diffpatch/*").Get(repo.NewDiffPatch).
 					Post(web.Bind(forms.EditRepoFileForm{}), repo.NewDiffPatchPost)
 				m.Combo("/_cherrypick/{sha:([a-f0-9]{4,64})}/*").Get(repo.CherryPick).
@@ -1407,19 +1447,22 @@ func registerRoutes(m *web.Route) {
 				m.Get("/latest", actions.ViewLatest)
 				m.Group("/{run}", func() {
 					m.Combo("").
-						Get(actions.View).
+						Get(actions.RedirectToLatestAttempt).
 						Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 					m.Group("/jobs/{job}", func() {
 						m.Combo("").
-							Get(actions.View).
+							Get(actions.RedirectToLatestAttempt).
 							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 						m.Post("/rerun", reqRepoActionsWriter, actions.Rerun)
 						m.Get("/logs", actions.Logs)
+						m.Combo("/attempt/{attempt}").
+							Get(actions.View).
+							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 					})
 					m.Post("/cancel", reqRepoActionsWriter, actions.Cancel)
 					m.Post("/approve", reqRepoActionsWriter, actions.Approve)
 					m.Get("/artifacts", actions.ArtifactsView)
-					m.Get("/artifacts/{artifact_name}", actions.ArtifactsDownloadView)
+					m.Get("/artifacts/{artifact_name_or_id}", actions.ArtifactsDownloadView)
 					m.Delete("/artifacts/{artifact_name}", reqRepoActionsWriter, actions.ArtifactsDeleteView)
 					m.Post("/rerun", reqRepoActionsWriter, actions.Rerun)
 				})
@@ -1682,4 +1725,21 @@ func registerRoutes(m *web.Route) {
 		ctx := context.GetWebContext(req)
 		ctx.NotFound("", nil)
 	})
+}
+
+func BindUpload() http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request) {
+		theObj := new(forms.UploadRepoFileForm) // create a new form obj for every request but not use obj directly
+		data := middleware.GetContextData(req.Context())
+		binding.Bind(req, theObj)
+		files := theObj.Files
+		var fullpaths []string
+		for _, fileID := range files {
+			fullPath := req.Form.Get("files_fullpath[" + fileID + "]")
+			fullpaths = append(fullpaths, fullPath)
+		}
+		theObj.FullPaths = fullpaths
+		data.GetData()["__form"] = theObj
+		middleware.AssignForm(theObj, data)
+	}
 }

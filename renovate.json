@@ -6,15 +6,19 @@
     "docker:pinDigests",
     "helpers:pinGitHubActionDigests"
   ],
-  "baseBranches": [
+  "baseBranchPatterns": [
     "$default",
-    "/^v11\\.\\d+/forgejo$/"
+    "/^v11\\.\\d+/forgejo$/",
+    "/^v12\\.\\d+/forgejo$/"
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths", "npmDedupe"],
   "prConcurrentLimit": 10,
   "osvVulnerabilityAlerts": true,
   "automergeStrategy": "squash",
   "labels": ["dependency-upgrade", "test/not-needed"],
+  "constraints": {
+    "npm": "10"
+  },
   "packageRules": [
     {
       "description": "Require approval for python minor version",
@@ -26,9 +30,7 @@
       "description": "Require dashboard approval for some deps",
       "matchPackageNames": [
         "docker.io/bitnami/minio",
-        "github.com/go-ap/activitypub",
-        "github.com/nektos/act",
-        "gitea.com/gitea/act"
+        "github.com/go-ap/activitypub"
       ],
       "dependencyDashboardApproval": true
     },

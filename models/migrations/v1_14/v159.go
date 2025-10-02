@@ -1,7 +1,7 @@
 // Copyright 2020 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package v1_14 //nolint
+package v1_14
 
 import (
 	"forgejo.org/models/migrations/base"
@@ -30,7 +30,7 @@ func UpdateReactionConstraint(x *xorm.Engine) error {
 		return err
 	}
 
-	if err := base.RecreateTable(sess, &Reaction{}); err != nil {
+	if err := base.LegacyRecreateTable(sess, &Reaction{}); err != nil { //nolint:staticcheck
 		return err
 	}
 

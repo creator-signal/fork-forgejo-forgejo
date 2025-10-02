@@ -156,11 +156,12 @@ func (b *Indexer) Delete(_ context.Context, ids ...int64) error {
 func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (*internal.SearchResult, error) {
 	var queries []query.Query
 
-	if options.Keyword != "" {
-		tokens, err := options.Tokens()
-		if err != nil {
-			return nil, err
-		}
+	tokens, err := options.Tokens()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tokens) > 0 {
 		q := bleve.NewBooleanQuery()
 		for _, token := range tokens {
 			innerQ := bleve.NewDisjunctionQuery(
@@ -170,7 +171,7 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 
 			if issueID, err := token.ParseIssueReference(); err == nil {
 				idQuery := inner_bleve.NumericEqualityQuery(issueID, "index")
-				idQuery.SetBoost(5.0)
+				idQuery.SetBoost(20.0)
 				innerQ.AddQuery(idQuery)
 			}
 
@@ -195,6 +196,15 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 			repoQueries = append(repoQueries, inner_bleve.BoolFieldQuery(true, "is_public"))
 		}
 		queries = append(queries, bleve.NewDisjunctionQuery(repoQueries...))
+	}
+
+	if options.PriorityRepoID.Has() {
+		eq := inner_bleve.NumericEqualityQuery(options.PriorityRepoID.Value(), "repo_id")
+		eq.SetBoost(10.0)
+		meh := bleve.NewMatchAllQuery()
+		meh.SetBoost(0)
+		should := bleve.NewDisjunctionQuery(eq, meh)
+		queries = append(queries, should)
 	}
 
 	if options.IsPull.Has() {

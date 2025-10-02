@@ -1,7 +1,7 @@
 // Copyright 2020 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package v1_14 //nolint
+package v1_14
 
 import (
 	"forgejo.org/models/migrations/base"
@@ -27,7 +27,7 @@ func ConvertTopicNameFrom25To50(x *xorm.Engine) error {
 	if err := sess.Begin(); err != nil {
 		return err
 	}
-	if err := base.RecreateTable(sess, new(Topic)); err != nil {
+	if err := base.LegacyRecreateTable(sess, new(Topic)); err != nil { //nolint:staticcheck
 		return err
 	}
 

@@ -86,6 +86,21 @@ func TestViewIssues(t *testing.T) {
 	assert.Equal(t, "Search issues…", placeholder)
 }
 
+func TestViewIssuesType(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	session := loginUser(t, user.Name)
+	req := NewRequest(t, "GET", repo.Link()+"/issues")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	issuesType := htmlDoc.doc.Find(".list-header-type > .menu .item[href*=\"type=all\"]").First()
+	assert.Equal(t, "All issues", issuesType.Text())
+}
+
 func TestViewIssuesSortByType(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -629,7 +644,12 @@ func TestIssueCommentAttachment(t *testing.T) {
 	assert.NotEqual(t, 0, id)
 
 	req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/comments/%d/attachments", "user2", "repo1", id))
-	session.MakeRequest(t, req, http.StatusOK)
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	var attachments []*api.WebAttachment
+	DecodeJSON(t, resp, &attachments)
+	assert.Len(t, attachments, 1)
+	assert.Equal(t, attachments[0].UUID, uuid)
+	assert.Equal(t, "image/png", attachments[0].MimeType)
 
 	// Using the ID of a comment that does not belong to the repository must fail
 	req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/comments/%d/attachments", "user5", "repo4", id))
@@ -1350,8 +1370,6 @@ body:
 
 func TestIssueUnsubscription(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
-		defer tests.PrepareTestEnv(t)()
-
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
 			AutoInit: optional.Some(false),
@@ -1520,4 +1538,48 @@ func TestIssuePostersSearch(t *testing.T) {
 		assert.Equal(t, "user1", data.Results[0].UserName)
 		assert.EqualValues(t, 1, data.Results[0].UserID)
 	})
+}
+
+func TestIssueTimelineLabels(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "/user2/repo1/issues/1")
+	resp := MakeRequest(t, req, http.StatusOK)
+	assert.NotContains(t, resp.Body.String(), `status-page-500`)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	filterLinks := htmlDoc.Find(".timeline .labels-list a")
+	assert.Equal(t, 9, filterLinks.Length())
+}
+
+func TestIssueAndPullRedirect(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "/user2/repo1/issues/1")
+	MakeRequest(t, req, http.StatusOK)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/2")
+	MakeRequest(t, req, http.StatusOK)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1")
+	resp := MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1/commits")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/1/files")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/issues/1", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/issues/2")
+	resp = MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, "/user2/repo1/pulls/2", resp.Header().Get("Location"))
+
+	req = NewRequest(t, "GET", "/user2/repo1/issues/9999999")
+	MakeRequest(t, req, http.StatusNotFound)
+
+	req = NewRequest(t, "GET", "/user2/repo1/pulls/9999999")
+	MakeRequest(t, req, http.StatusNotFound)
 }

@@ -76,33 +76,26 @@ const (
 	issueTemplateTitleKey = "IssueTemplateTitle"
 )
 
-// IssueTemplateCandidates issue templates
-var IssueTemplateCandidates = []string{
-	"ISSUE_TEMPLATE.md",
-	"ISSUE_TEMPLATE.yaml",
-	"ISSUE_TEMPLATE.yml",
-	"issue_template.md",
-	"issue_template.yaml",
-	"issue_template.yml",
-	".forgejo/ISSUE_TEMPLATE.md",
-	".forgejo/ISSUE_TEMPLATE.yaml",
-	".forgejo/ISSUE_TEMPLATE.yml",
-	".forgejo/issue_template.md",
-	".forgejo/issue_template.yaml",
-	".forgejo/issue_template.yml",
-	".gitea/ISSUE_TEMPLATE.md",
-	".gitea/ISSUE_TEMPLATE.yaml",
-	".gitea/ISSUE_TEMPLATE.yml",
-	".gitea/issue_template.md",
-	".gitea/issue_template.yaml",
-	".gitea/issue_template.yml",
-	".github/ISSUE_TEMPLATE.md",
-	".github/ISSUE_TEMPLATE.yaml",
-	".github/ISSUE_TEMPLATE.yml",
-	".github/issue_template.md",
-	".github/issue_template.yaml",
-	".github/issue_template.yml",
+// generateIssueTemplateLocations generates all the file paths where we
+// look for an issue template, e.g. ".forgejo/ISSUE_TEMPLATE.md".
+func generateIssueTemplateLocations() []string {
+	var result []string
+	prefixes := []string{"", ".forgejo/", ".gitea/", ".github/", "docs/"}
+	filenames := []string{"ISSUE_TEMPLATE", "issue_template"}
+	extensions := []string{".md", ".yaml", ".yml"}
+
+	for _, prefix := range prefixes {
+		for _, filename := range filenames {
+			for _, extension := range extensions {
+				result = append(result, prefix+filename+extension)
+			}
+		}
+	}
+
+	return result
 }
+
+var issueTemplateCandidates = generateIssueTemplateLocations()
 
 // MustAllowUserComment checks to make sure if an issue is locked.
 // If locked and user has permissions to write to the repository,
@@ -1005,7 +998,7 @@ func NewIssue(ctx *context.Context) {
 	ctx.Data["Tags"] = tags
 
 	_, templateErrs := issue_service.GetTemplatesFromDefaultBranch(ctx.Repo.Repository, ctx.Repo.GitRepo)
-	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, IssueTemplateCandidates)
+	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, issueTemplateCandidates)
 	for k, v := range errs {
 		templateErrs[k] = v
 	}
@@ -1597,6 +1590,7 @@ func ViewIssue(ctx *context.Context) {
 		ok                   bool
 		marked               = make(map[int64]issues_model.RoleDescriptor)
 		comment              *issues_model.Comment
+		commentIdx           int
 		participants         = make([]*user_model.User, 1, 10)
 		latestCloseCommentID int64
 	)
@@ -1652,15 +1646,17 @@ func ViewIssue(ctx *context.Context) {
 		return
 	}
 
-	for _, comment = range issue.Comments {
+	for commentIdx, comment = range issue.Comments {
 		comment.Issue = issue
+		metas := ctx.Repo.Repository.ComposeMetas(ctx)
+		metas["scope"] = fmt.Sprintf("comment-%d", commentIdx)
 
 		if comment.Type == issues_model.CommentTypeComment || comment.Type == issues_model.CommentTypeReview {
 			comment.RenderedContent, err = markdown.RenderString(&markup.RenderContext{
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
 				},
-				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				Metas:   metas,
 				GitRepo: ctx.Repo.GitRepo,
 				Ctx:     ctx,
 			}, comment.Content)
@@ -1737,7 +1733,7 @@ func ViewIssue(ctx *context.Context) {
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
 				},
-				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				Metas:   metas,
 				GitRepo: ctx.Repo.GitRepo,
 				Ctx:     ctx,
 			}, comment.Content)
@@ -2401,10 +2397,6 @@ func UpdateIssueMilestone(ctx *context.Context) {
 	}
 
 	if ctx.FormBool("htmx") {
-		renderMilestones(ctx)
-		if ctx.Written() {
-			return
-		}
 		prepareHiddenCommentType(ctx)
 		if ctx.Written() {
 			return
@@ -2418,6 +2410,7 @@ func UpdateIssueMilestone(ctx *context.Context) {
 				ctx.ServerError("GetMilestoneByRepoID", err)
 				return
 			}
+			ctx.Data["OpenMilestones"] = true
 		} else {
 			issue.Milestone = nil
 		}
@@ -2775,7 +2768,7 @@ func SearchIssues(ctx *context.Context) {
 		IncludedAnyLabelIDs: includedAnyLabels,
 		MilestoneIDs:        includedMilestones,
 		ProjectID:           projectID,
-		SortBy:              issue_indexer.SortByCreatedDesc,
+		SortBy:              issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
 	}
 
 	if since != 0 {
@@ -2804,9 +2797,10 @@ func SearchIssues(ctx *context.Context) {
 		}
 	}
 
-	// FIXME: It's unsupported to sort by priority repo when searching by indexer,
-	//        it's indeed an regression, but I think it is worth to support filtering by indexer first.
-	_ = ctx.FormInt64("priority_repo_id")
+	priorityRepoID := ctx.FormInt64("priority_repo_id")
+	if priorityRepoID > 0 {
+		searchOpt.PriorityRepoID = optional.Some(priorityRepoID)
+	}
 
 	ids, total, err := issue_indexer.SearchIssues(ctx, searchOpt)
 	if err != nil {
@@ -2944,7 +2938,7 @@ func ListIssues(ctx *context.Context) {
 		IsPull:    isPull,
 		IsClosed:  isClosed,
 		ProjectID: projectID,
-		SortBy:    issue_indexer.SortByCreatedDesc,
+		SortBy:    issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
 	}
 	if since != 0 {
 		searchOpt.UpdatedAfterUnix = optional.Some(since)
@@ -3592,9 +3586,9 @@ func GetIssueAttachments(ctx *context.Context) {
 	if ctx.Written() {
 		return
 	}
-	attachments := make([]*api.Attachment, len(issue.Attachments))
+	attachments := make([]*api.WebAttachment, len(issue.Attachments))
 	for i := 0; i < len(issue.Attachments); i++ {
-		attachments[i] = convert.ToAttachment(ctx.Repo.Repository, issue.Attachments[i])
+		attachments[i] = convert.ToWebAttachment(ctx.Repo.Repository, issue.Attachments[i])
 	}
 	ctx.JSON(http.StatusOK, attachments)
 }
@@ -3627,13 +3621,13 @@ func GetCommentAttachments(ctx *context.Context) {
 		return
 	}
 
-	attachments := make([]*api.Attachment, 0)
 	if err := comment.LoadAttachments(ctx); err != nil {
 		ctx.ServerError("LoadAttachments", err)
 		return
 	}
+	attachments := make([]*api.WebAttachment, len(comment.Attachments))
 	for i := 0; i < len(comment.Attachments); i++ {
-		attachments = append(attachments, convert.ToAttachment(ctx.Repo.Repository, comment.Attachments[i]))
+		attachments[i] = convert.ToWebAttachment(ctx.Repo.Repository, comment.Attachments[i])
 	}
 	ctx.JSON(http.StatusOK, attachments)
 }
@@ -3782,4 +3776,50 @@ func issuePosters(ctx *context.Context, isPullList bool) {
 		}
 	}
 	ctx.JSON(http.StatusOK, resp)
+}
+
+func getIssueParticipants(ctx *context.Context, issue *issues_model.Issue) []*user_model.User {
+	var (
+		participants = make([]*user_model.User, 1, 10)
+		comment      *issues_model.Comment
+	)
+
+	participants[0] = issue.Poster
+
+	if err := issue.LoadComments(ctx); err != nil {
+		ctx.ServerError("loadComments", err)
+		return nil
+	}
+
+	if err := issue.Comments.LoadPosters(ctx); err != nil {
+		ctx.ServerError("LoadPosters", err)
+		return nil
+	}
+
+	for _, comment = range issue.Comments {
+		if comment.Type == issues_model.CommentTypeComment ||
+			comment.Type == issues_model.CommentTypeReview ||
+			comment.Type == issues_model.CommentTypePullRequestPush {
+			participants = addParticipant(comment.Poster, participants)
+		} else if comment.Type.HasContentSupport() {
+			participants = addParticipant(comment.Poster, participants)
+
+			if comment.Review == nil {
+				continue
+			}
+			if err := comment.Review.LoadCodeComments(ctx); err != nil {
+				ctx.ServerError("Review.LoadCodeComments", err)
+				return nil
+			}
+			for _, codeComments := range comment.Review.CodeComments {
+				for _, lineComments := range codeComments {
+					for _, c := range lineComments {
+						participants = addParticipant(c.Poster, participants)
+					}
+				}
+			}
+		}
+	}
+
+	return participants
 }

@@ -21,7 +21,7 @@ import (
 	"forgejo.org/modules/util"
 	webhook_module "forgejo.org/modules/webhook"
 
-	"github.com/nektos/act/pkg/jobparser"
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
 	"xorm.io/builder"
 )
 
@@ -284,16 +284,10 @@ func GetLatestRun(ctx context.Context, repoID int64) (*ActionRun, error) {
 	return &run, nil
 }
 
-// GetRunBefore returns the last run that completed a given timestamp (not inclusive).
-func GetRunBefore(ctx context.Context, repoID int64, timestamp timeutil.TimeStamp) (*ActionRun, error) {
-	var run ActionRun
-	has, err := db.GetEngine(ctx).Where("repo_id=? AND stopped IS NOT NULL AND stopped<?", repoID, timestamp).OrderBy("stopped DESC").Limit(1).Get(&run)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, fmt.Errorf("run before: %w", util.ErrNotExist)
-	}
-	return &run, nil
+func GetRunBefore(ctx context.Context, _ *ActionRun) (*ActionRun, error) {
+	// TODO return the most recent run related to the run given in argument
+	// see https://codeberg.org/forgejo/user-research/issues/63 for context
+	return nil, nil
 }
 
 func GetLatestRunForBranchAndWorkflow(ctx context.Context, repoID int64, branch, workflowFile, event string) (*ActionRun, error) {
@@ -315,15 +309,26 @@ func GetLatestRunForBranchAndWorkflow(ctx context.Context, repoID int64, branch,
 }
 
 func GetRunByID(ctx context.Context, id int64) (*ActionRun, error) {
-	var run ActionRun
-	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&run)
+	run, has, err := GetRunByIDWithHas(ctx, id)
 	if err != nil {
 		return nil, err
 	} else if !has {
 		return nil, fmt.Errorf("run with id %d: %w", id, util.ErrNotExist)
 	}
 
-	return &run, nil
+	return run, nil
+}
+
+func GetRunByIDWithHas(ctx context.Context, id int64) (*ActionRun, bool, error) {
+	var run ActionRun
+	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&run)
+	if err != nil {
+		return nil, false, err
+	} else if !has {
+		return nil, false, nil
+	}
+
+	return &run, true, nil
 }
 
 func GetRunByIndex(ctx context.Context, repoID, index int64) (*ActionRun, error) {

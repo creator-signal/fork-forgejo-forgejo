@@ -7,7 +7,6 @@
         "one": "иска да слее %[1]d подаване от <code>%[2]s</code> в <code id=\"%[4]s\">%[3]s</code>",
         "other": "иска да слее %[1]d подавания от <code>%[2]s</code> в <code id=\"%[4]s\">%[3]s</code>"
     },
-    "mail.actions.run_info_ref": "Клон: %[1]s (%[2]s)",
     "mail.actions.run_info_trigger": "Задействано поради: %[1]s от: %[2]s",
     "meta.last_line": "В България расте най-старото дърво в страната, Байкушевата мура, на възраст над 1300 години.",
     "relativetime.1day": "вчера",
@@ -85,5 +84,27 @@
         "other": "преди %d години"
     },
     "editor.textarea.tab_hint": "Редът вече е с отстъп. Натиснете отново <kbd>Tab</kbd> или <kbd>Escape</kbd>, за да излезете от редактора.",
-    "editor.textarea.shift_tab_hint": "Няма отстъп на този ред. Натиснете отново <kbd>Shift</kbd> + <kbd>Tab</kbd> или <kbd>Escape</kbd>, за да излезете от редактора."
+    "editor.textarea.shift_tab_hint": "Няма отстъп на този ред. Натиснете отново <kbd>Shift</kbd> + <kbd>Tab</kbd> или <kbd>Escape</kbd>, за да излезете от редактора.",
+    "migrate.github.description": "Мигриране на данни от github.com или GitHub Enterprise сървър.",
+    "migrate.git.description": "Мигриране само на хранилище от всяка Git услуга.",
+    "migrate.gitea.description": "Мигриране на данни от gitea.com или други Gitea инстанции.",
+    "migrate.gitlab.description": "Мигриране на данни от gitlab.com или други GitLab инстанции.",
+    "migrate.gogs.description": "Мигриране на данни от notabug.org или други Gogs инстанции.",
+    "migrate.onedev.description": "Мигриране на данни от code.onedev.io или други OneDev инстанции.",
+    "migrate.gitbucket.description": "Мигриране на данни от GitBucket инстанции.",
+    "migrate.codebase.description": "Мигриране на данни от codebasehq.com.",
+    "migrate.forgejo.description": "Мигриране на данни от codeberg.org или други Forgejo инстанции.",
+    "keys.ssh.link": "SSH ключове",
+    "feed.atom.link": "Atom емисия",
+    "keys.gpg.link": "GPG ключове",
+    "profile.edit.link": "Редактиране на профила",
+    "profile.actions.tooltip": "Още действия",
+    "pulse.n_active_issues": {
+        "one": "%s активна задача",
+        "other": "%s активни задачи"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s активна заявка за сливане",
+        "other": "%s активни заявки за сливане"
+    }
 }

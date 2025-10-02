@@ -1,7 +1,7 @@
 // Copyright 2020 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package v1_13 //nolint
+package v1_13
 
 import (
 	"forgejo.org/models/migrations/base"
@@ -32,8 +32,8 @@ func AddPrimaryKeyToRepoTopic(x *xorm.Engine) error {
 		return err
 	}
 
-	base.RecreateTable(sess, &Topic{})
-	base.RecreateTable(sess, &RepoTopic{})
+	base.LegacyRecreateTable(sess, &Topic{})     //nolint:staticcheck
+	base.LegacyRecreateTable(sess, &RepoTopic{}) //nolint:staticcheck
 
 	return sess.Commit()
 }

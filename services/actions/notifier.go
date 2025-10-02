@@ -227,7 +227,7 @@ func notifyIssueChange(ctx context.Context, doer *user_model.User, issue *issues
 
 	var apiLabel *api.Label
 	if action == api.HookIssueLabelUpdated || action == api.HookIssueLabelCleared {
-		apiLabel = convert.ToLabel(label, issue.Repo, nil)
+		apiLabel = convert.ToLabel(label, issue.Repo, issue.Repo.Owner)
 	}
 
 	if issue.IsPull {
@@ -343,7 +343,7 @@ func notifyIssueCommentChange(ctx context.Context, doer *user_model.User, commen
 		newNotifyInputFromIssue(comment.Issue, event).
 			WithDoer(doer).
 			WithPayload(payload).
-			WithPullRequest(comment.Issue.PullRequest).
+			WithPullRequestData(comment.Issue.PullRequest).
 			Notify(ctx)
 		return
 	}
@@ -788,7 +788,7 @@ func (n *actionsNotifier) MigrateRepository(ctx context.Context, doer, u *user_m
 // the ActionRun of the same workflow that finished before priorRun/updatedRun.
 func sendActionRunNowDoneNotificationIfNeeded(ctx context.Context, priorRun, updatedRun *actions_model.ActionRun) error {
 	if !priorRun.Status.IsDone() && updatedRun.Status.IsDone() {
-		lastRun, err := actions_model.GetRunBefore(ctx, updatedRun.RepoID, updatedRun.Stopped)
+		lastRun, err := actions_model.GetRunBefore(ctx, updatedRun)
 		if err != nil && !errors.Is(err, util.ErrNotExist) {
 			return err
 		}

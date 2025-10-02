@@ -3,7 +3,10 @@
 
 package swagger
 
-import api "forgejo.org/modules/structs"
+import (
+	api "forgejo.org/modules/structs"
+	shared "forgejo.org/routers/api/v1/shared"
+)
 
 // SecretList
 // swagger:response SecretList
@@ -45,4 +48,25 @@ type swaggerRunJobList struct {
 type swaggerDispatchWorkflowRun struct {
 	// in:body
 	Body *api.DispatchWorkflowRun `json:"body"`
+}
+
+// RegistrationToken is a string used to register a runner with a server
+// swagger:response RegistrationToken
+type swaggerRegistrationToken struct {
+	// in: body
+	Body shared.RegistrationToken `json:"body"`
+}
+
+// ActionRunner represents a Runner
+// swagger:response ActionRunner
+type swaggerActionRunner struct {
+	// in: body
+	Body api.ActionRunner `json:"body"`
+}
+
+// ActionRunnersResponse returns Runners
+// swagger:response ActionRunnersResponse
+type swaggerActionRunnerResponse struct {
+	// in: body
+	Body api.ActionRunnersResponse `json:"body"`
 }

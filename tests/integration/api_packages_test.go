@@ -19,13 +19,17 @@ import (
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
 	"forgejo.org/modules/util"
 	packages_service "forgejo.org/services/packages"
 	packages_cleanup_service "forgejo.org/services/packages/cleanup"
 	"forgejo.org/tests"
 
+	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -533,6 +537,9 @@ func TestPackageCleanup(t *testing.T) {
 	t.Run("CleanupRules", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
+		locale := translation.NewLocale("en-US")
+		session := loginUser(t, user.Name)
+
 		type version struct {
 			Version     string
 			ShouldExist bool
@@ -564,6 +571,19 @@ func TestPackageCleanup(t *testing.T) {
 				Rule: &packages_model.PackageCleanupRule{
 					Enabled:   true,
 					KeepCount: 2,
+				},
+			},
+			{
+				Name: "KeepCountGreaterThanTotal",
+				Versions: []version{
+					{Version: "keep", ShouldExist: true},
+					{Version: "v1.0", ShouldExist: true},
+					{Version: "test-3", ShouldExist: true},
+					{Version: "test-4", ShouldExist: true},
+				},
+				Rule: &packages_model.PackageCleanupRule{
+					Enabled:   true,
+					KeepCount: 2000,
 				},
 			},
 			{
@@ -654,22 +674,133 @@ func TestPackageCleanup(t *testing.T) {
 				pcr, err := packages_model.InsertCleanupRule(db.DefaultContext, c.Rule)
 				require.NoError(t, err)
 
+				req := NewRequest(t, "GET", fmt.Sprintf("/user/settings/packages/rules/%d/preview", pcr.ID))
+				resp := session.MakeRequest(t, req, http.StatusOK)
+				htmlDoc := NewHTMLParser(t, resp.Body)
+
+				toDelete := container.FilterSlice(c.Versions, func(v version) (version, bool) {
+					return v, !v.ShouldExist
+				})
+				deletedCount := len(toDelete)
+
+				// disabled rule would delete everything
+				if !pcr.Enabled {
+					deletedCount = 1
+					htmlDoc.AssertSelection(t, htmlDoc.FindByText(fmt.Sprintf("a[href='/%s/-/packages/generic/package/keep']", user.Name), "keep"), true)
+				}
+
+				htmlDoc.AssertSelection(t, htmlDoc.FindByText("p", locale.TrString("packages.owner.settings.cleanuprules.preview.overview", deletedCount)), true)
+
 				err = packages_cleanup_service.CleanupTask(db.DefaultContext, duration)
 				require.NoError(t, err)
 
 				for _, v := range c.Versions {
 					pv, err := packages_model.GetVersionByNameAndVersion(db.DefaultContext, user.ID, packages_model.TypeGeneric, "package", v.Version)
 					if v.ShouldExist {
-						require.NoError(t, err)
+						require.NoError(t, err, `version "%s" should exist`, v.Version)
 						err = packages_service.DeletePackageVersionAndReferences(db.DefaultContext, pv)
 						require.NoError(t, err)
 					} else {
-						require.ErrorIs(t, err, packages_model.ErrPackageNotExist)
+						require.ErrorIs(t, err, packages_model.ErrPackageNotExist, `version "%s" should not exist`, v.Version)
 					}
 				}
 
 				require.NoError(t, packages_model.DeleteCleanupRuleByID(db.DefaultContext, pcr.ID))
 			})
 		}
+	})
+}
+
+func TestPackageWithTwoFactor(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+
+	runTest := func(t *testing.T, doer *user_model.User, useTOTP bool, expectedStatus int) {
+		t.Helper()
+		if doer != nil {
+			defer unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: doer.ID})
+		}
+
+		passcode := func() string {
+			if !useTOTP {
+				return ""
+			}
+
+			otpKey, err := totp.Generate(totp.GenerateOpts{
+				SecretSize:  40,
+				Issuer:      "forgejo-test",
+				AccountName: doer.Name,
+			})
+			require.NoError(t, err)
+
+			require.NoError(t, auth_model.NewTwoFactor(t.Context(), &auth_model.TwoFactor{UID: doer.ID}, otpKey.Secret()))
+
+			passcode, err := totp.GenerateCode(otpKey.Secret(), time.Now())
+			require.NoError(t, err)
+			return passcode
+		}()
+
+		url := fmt.Sprintf("/api/v1/packages/%s", normalUser.Name) // a public packge to test
+		req := NewRequest(t, "GET", url)
+		if doer != nil {
+			req.AddBasicAuth(doer.Name)
+		}
+
+		if useTOTP {
+			MakeRequest(t, req, http.StatusUnauthorized)
+
+			req = NewRequest(t, "GET", url).
+				AddBasicAuth(doer.Name)
+			req.Header.Set("X-Forgejo-OTP", passcode)
+		}
+
+		MakeRequest(t, req, expectedStatus)
+	}
+
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
+		// this should be the default, so don't have to set the variable
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusOK)
+			runTest(t, normalUser, false, http.StatusOK)
+			runTest(t, nil, false, http.StatusOK) // anonymous
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK)
+			runTest(t, normalUser, true, http.StatusOK)
+		})
+	})
+
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusForbidden)
+			runTest(t, normalUser, false, http.StatusForbidden)
+			runTest(t, nil, false, http.StatusOK) // anonymous
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK)
+			runTest(t, normalUser, true, http.StatusOK)
+		})
+	})
+
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusForbidden)
+			runTest(t, normalUser, false, http.StatusOK)
+			runTest(t, nil, false, http.StatusOK) // anonymous
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK)
+			runTest(t, normalUser, true, http.StatusOK)
+		})
 	})
 }

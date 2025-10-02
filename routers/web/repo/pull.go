@@ -66,32 +66,26 @@ const (
 	pullRequestTemplateKey = "PullRequestTemplate"
 )
 
-var pullRequestTemplateCandidates = []string{
-	"PULL_REQUEST_TEMPLATE.md",
-	"PULL_REQUEST_TEMPLATE.yaml",
-	"PULL_REQUEST_TEMPLATE.yml",
-	"pull_request_template.md",
-	"pull_request_template.yaml",
-	"pull_request_template.yml",
-	".forgejo/PULL_REQUEST_TEMPLATE.md",
-	".forgejo/PULL_REQUEST_TEMPLATE.yaml",
-	".forgejo/PULL_REQUEST_TEMPLATE.yml",
-	".forgejo/pull_request_template.md",
-	".forgejo/pull_request_template.yaml",
-	".forgejo/pull_request_template.yml",
-	".gitea/PULL_REQUEST_TEMPLATE.md",
-	".gitea/PULL_REQUEST_TEMPLATE.yaml",
-	".gitea/PULL_REQUEST_TEMPLATE.yml",
-	".gitea/pull_request_template.md",
-	".gitea/pull_request_template.yaml",
-	".gitea/pull_request_template.yml",
-	".github/PULL_REQUEST_TEMPLATE.md",
-	".github/PULL_REQUEST_TEMPLATE.yaml",
-	".github/PULL_REQUEST_TEMPLATE.yml",
-	".github/pull_request_template.md",
-	".github/pull_request_template.yaml",
-	".github/pull_request_template.yml",
+// generatePullRequestTemplateLocations generates all the file paths where we
+// look for a pull request template, e.g. ".forgejo/PULL_REQUEST_TEMPLATE.md".
+func generatePullRequestTemplateLocations() []string {
+	var result []string
+	prefixes := []string{"", ".forgejo/", ".gitea/", ".github/", "docs/"}
+	filenames := []string{"PULL_REQUEST_TEMPLATE", "pull_request_template"}
+	extensions := []string{".md", ".yaml", ".yml"}
+
+	for _, prefix := range prefixes {
+		for _, filename := range filenames {
+			for _, extension := range extensions {
+				result = append(result, prefix+filename+extension)
+			}
+		}
+	}
+
+	return result
 }
+
+var pullRequestTemplateCandidates = generatePullRequestTemplateLocations()
 
 func getRepository(ctx *context.Context, repoID int64) *repo_model.Repository {
 	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
@@ -360,7 +354,7 @@ func getPullInfo(ctx *context.Context) (issue *issues_model.Issue, ok bool) {
 	ctx.Data["Issue"] = issue
 
 	if !issue.IsPull {
-		ctx.NotFound("ViewPullCommits", nil)
+		ctx.Redirect(issue.Link())
 		return nil, false
 	}
 
@@ -638,7 +632,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 		if pull.Flow == issues_model.PullRequestFlowGithub {
 			headBranchExist = headGitRepo.IsBranchExist(pull.HeadBranch)
 		} else {
-			headBranchExist = git.IsReferenceExist(ctx, baseGitRepo.Path, pull.GetGitRefName())
+			headBranchExist = baseGitRepo.IsReferenceExist(pull.GetGitRefName())
 		}
 
 		if headBranchExist {
@@ -996,6 +990,13 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		ctx.Data["Verification"] = verification
 		ctx.Data["Author"] = user_model.ValidateCommitWithEmail(ctx, curCommit)
 
+		if err := asymkey_model.CalculateTrustStatus(verification, ctx.Repo.Repository.GetTrustModel(), func(user *user_model.User) (bool, error) {
+			return repo_model.IsOwnerMemberCollaborator(ctx, ctx.Repo.Repository, user.ID)
+		}, nil); err != nil {
+			ctx.ServerError("CalculateTrustStatus", err)
+			return
+		}
+
 		note := &git.Note{}
 		err = git.GetNote(ctx, ctx.Repo.GitRepo, specifiedEndCommit, note)
 		if err == nil {
@@ -1145,7 +1146,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 			ctx.ServerError("GetUserRepoPermission", err)
 			return
 		}
-		ctx.Data["HeadBranchIsEditable"] = pull.HeadRepo.CanEnableEditor() && issues_model.CanMaintainerWriteToBranch(ctx, headRepoPerm, pull.HeadBranch, ctx.Doer)
+		ctx.Data["HeadBranchIsEditable"] = pull.HeadRepo.CanEnableEditor() && issues_model.CanMaintainerWriteToBranch(ctx, headRepoPerm, pull.HeadBranch, ctx.Doer) && pull.Flow != issues_model.PullRequestFlowAGit
 		ctx.Data["SourceRepoLink"] = pull.HeadRepo.Link()
 		ctx.Data["HeadBranch"] = pull.HeadBranch
 	}
@@ -1165,6 +1166,13 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		return
 	}
 	ctx.Data["Assignees"] = MakeSelfOnTop(ctx.Doer, assigneeUsers)
+
+	participants := getIssueParticipants(ctx, issue)
+	if ctx.Written() {
+		return
+	}
+	ctx.Data["Participants"] = participants
+	ctx.Data["NumParticipants"] = len(participants)
 
 	handleTeamMentions(ctx)
 	if ctx.Written() {
@@ -1437,6 +1445,10 @@ func MergePullRequest(ctx *context.Context) {
 		} else if models.IsErrMergeUnrelatedHistories(err) {
 			log.Debug("MergeUnrelatedHistories error: %v", err)
 			ctx.Flash.Error(ctx.Tr("repo.pulls.unrelated_histories"))
+			ctx.JSONRedirect(issue.Link())
+		} else if models.IsErrPullRequestHasMerged(err) {
+			log.Debug("MergePullRequestHasMerged error: %v", err)
+			ctx.Flash.Error(ctx.Tr("repo.pulls.already_merged"))
 			ctx.JSONRedirect(issue.Link())
 		} else if git.IsErrPushOutOfDate(err) {
 			log.Debug("MergePushOutOfDate error: %v", err)

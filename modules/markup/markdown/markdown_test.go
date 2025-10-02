@@ -561,6 +561,14 @@ func TestMathBlock(t *testing.T) {
 			"test $$a$$",
 			`<p>test <code class="language-math display is-loading">a</code></p>` + nl,
 		},
+		{
+			`\[
+[\triangle ABC] = \sqrt{s(s-a)(s-b)(s-c)}
+\]`,
+			`<p>[<br/>
+[\triangle ABC] = \sqrt{s(s-a)(s-b)(s-c)}<br/>
+]</p>` + nl,
+		},
 	}
 
 	for _, test := range testcases {
@@ -568,6 +576,32 @@ func TestMathBlock(t *testing.T) {
 		require.NoError(t, err, "Unexpected error in testcase: %q", test.testcase)
 		assert.Equal(t, template.HTML(test.expected), res, "Unexpected result in testcase %q", test.testcase)
 	}
+
+	t.Run("Wiki context", func(t *testing.T) {
+		testcases := []struct {
+			testcase string
+			expected string
+		}{
+			{
+				"$a$",
+				`<p><code class="language-math is-loading">a</code></p>` + nl,
+			},
+			{
+				`\[
+[\triangle ABC] = \sqrt{s(s-a)(s-b)(s-c)}
+\]`,
+				`<pre class="code-block is-loading"><code class="chroma language-math display">
+[\triangle ABC] = \sqrt{s(s-a)(s-b)(s-c)}
+</code></pre>` + nl,
+			},
+		}
+
+		for _, test := range testcases {
+			res, err := markdown.RenderString(&markup.RenderContext{Ctx: git.DefaultContext, IsWiki: true}, test.testcase)
+			require.NoError(t, err, "Unexpected error in testcase: %q", test.testcase)
+			assert.Equal(t, template.HTML(test.expected), res, "Unexpected result in testcase %q", test.testcase)
+		}
+	})
 }
 
 func TestFootnote(t *testing.T) {
@@ -768,6 +802,49 @@ Citation needed[^0].`,
 	}
 }
 
+func TestFootnoteWithScope(t *testing.T) {
+	testcases := []struct {
+		testcase string
+		expected string
+	}{
+		{
+			`Citation needed[^0].
+[^0]: Source`,
+			`<p>Citation needed<sup id="fnref:user-content-0-comment-999"><a href="#fn:user-content-0-comment-999" rel="nofollow">1</a></sup>.</p>
+<div>
+<hr/>
+<ol>
+<li id="fn:user-content-0-comment-999">
+<p>Source <a href="#fnref:user-content-0-comment-999" rel="nofollow">↩︎</a></p>
+</li>
+</ol>
+</div>
+`,
+		}, {
+			`[^0]: Source
+
+Citation needed[^0].`,
+			`<p>Citation needed<sup id="fnref:user-content-0-comment-999"><a href="#fn:user-content-0-comment-999" rel="nofollow">1</a></sup>.</p>
+<div>
+<hr/>
+<ol>
+<li id="fn:user-content-0-comment-999">
+<p>Source <a href="#fnref:user-content-0-comment-999" rel="nofollow">↩︎</a></p>
+</li>
+</ol>
+</div>
+`,
+		},
+	}
+
+	for _, test := range testcases {
+		metas := map[string]string{"scope": "comment-999"}
+		res, err := markdown.RenderString(&markup.RenderContext{Ctx: git.DefaultContext, Metas: metas}, test.testcase)
+		require.NoError(t, err, "Unexpected error in testcase: %q", test.testcase)
+		assert.Equal(t, test.expected, string(res), "Unexpected result in testcase %q", test.testcase)
+	}
+}
+
 func TestTaskList(t *testing.T) {
 	testcases := []struct {
 		testcase string
@@ -803,6 +880,27 @@ foo: bar
 		require.NoError(t, err, "Unexpected error in testcase: %q", test.testcase)
 		assert.Equal(t, template.HTML(test.expected), res, "Unexpected result in testcase %q", test.testcase)
 	}
+}
+
+func TestRenderCheckList(t *testing.T) {
+	input := `- [ ] a
+- [x] b
+1. [x] a
+2. [ ] b
+5. [ ] e`
+	expected := `<ul>
+<li class="task-list-item"><input type="checkbox" disabled="" data-source-position="2"/>a</li>
+<li class="task-list-item"><input type="checkbox" disabled="" data-source-position="10" checked=""/>b</li>
+</ul>
+<ol>
+<li class="task-list-item"><input type="checkbox" disabled="" data-source-position="19" checked=""/>a</li>
+<li class="task-list-item"><input type="checkbox" disabled="" data-source-position="28"/>b</li>
+<li class="task-list-item"><input type="checkbox" disabled="" data-source-position="37"/>e</li>
+</ol>
+`
+	res, err := markdown.RenderString(&markup.RenderContext{Ctx: git.DefaultContext}, input)
+	require.NoError(t, err)
+	assert.Equal(t, template.HTML(expected), res)
 }
 
 func TestRenderLinks(t *testing.T) {

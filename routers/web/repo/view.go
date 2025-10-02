@@ -56,7 +56,7 @@ import (
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 
-	"github.com/nektos/act/pkg/model"
+	"code.forgejo.org/forgejo/runner/v11/act/model"
 
 	_ "golang.org/x/image/bmp"  // for processing bmp images
 	_ "golang.org/x/image/webp" // for processing webp images
@@ -228,7 +228,7 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 	n, _ := util.ReadAtMost(dataRc, buf)
 	buf = buf[:n]
 
-	st := typesniffer.DetectContentType(buf)
+	st := typesniffer.DetectContentType(buf, blob.Name())
 	isTextFile := st.IsText()
 
 	// FIXME: what happens when README file is an image?
@@ -262,7 +262,7 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 	}
 	buf = buf[:n]
 
-	st = typesniffer.DetectContentType(buf)
+	st = typesniffer.DetectContentType(buf, blob.Name())
 
 	return buf, dataRc, &fileInfo{st.IsText(), true, meta.Size, &meta.Pointer, st}, nil
 }
@@ -434,11 +434,11 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		if err != nil {
 			log.Error("actions.GetContentFromEntry: %v", err)
 		}
-		_, workFlowErr := model.ReadWorkflow(bytes.NewReader(content))
+		_, workFlowErr := model.ReadWorkflow(bytes.NewReader(content), true)
 		if workFlowErr != nil {
 			ctx.Data["FileError"] = ctx.Locale.Tr("actions.runs.invalid_workflow_helper", workFlowErr.Error())
 		}
-	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS"}, ctx.Repo.TreePath) {
+	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS", ".forgejo/CODEOWNERS"}, ctx.Repo.TreePath) {
 		if rc, size, err := blob.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err == nil {
 			_, warnings := issue_model.GetCodeOwnersFromReader(ctx, rc, size > setting.UI.MaxDisplayFileSize)
 			if len(warnings) > 0 {
@@ -1057,14 +1057,13 @@ func renderHomeCode(ctx *context.Context) {
 		return
 	}
 
-	if entry.IsSubModule() {
-		subModuleURL, err := ctx.Repo.Commit.GetSubModule(entry.Name())
+	if entry.IsSubmodule() {
+		submodule, err := ctx.Repo.Commit.GetSubmodule(ctx.Repo.TreePath, entry)
 		if err != nil {
-			HandleGitError(ctx, "Repo.Commit.GetSubModule", err)
+			HandleGitError(ctx, "Repo.Commit.GetSubmodule", err)
 			return
 		}
-		subModuleFile := git.NewSubModuleFile(ctx.Repo.Commit, subModuleURL, entry.ID.String())
-		ctx.Redirect(subModuleFile.RefURL(setting.AppURL, ctx.Repo.Repository.FullName(), setting.SSH.Domain))
+		ctx.Redirect(submodule.ResolveUpstreamURL(ctx.Repo.Repository.HTMLURL()))
 	} else if entry.IsDir() {
 		renderDirectory(ctx)
 	} else {
@@ -1243,7 +1242,7 @@ func checkOutdatedBranch(ctx *context.Context) {
 	}
 
 	if dbBranch.CommitID != commit.ID.String() {
-		ctx.Flash.Warning(ctx.Tr("repo.error.broken_git_hook", "https://docs.gitea.com/help/faq#push-hook--webhook--actions-arent-running"), true)
+		ctx.Flash.Warning(ctx.Tr("warning.repository.out_of_sync"), true)
 	}
 }
 

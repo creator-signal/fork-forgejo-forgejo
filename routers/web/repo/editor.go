@@ -189,7 +189,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 		buf = buf[:n]
 
 		// Only some file types are editable online as text.
-		if !typesniffer.DetectContentType(buf).IsRepresentableAsText() {
+		if !typesniffer.DetectContentType(buf, blob.Name()).IsRepresentableAsText() {
 			ctx.NotFound("typesniffer.IsRepresentableAsText", nil)
 			return
 		}
@@ -774,6 +774,7 @@ func UploadFilePost(ctx *context.Context) {
 		TreePath:     form.TreePath,
 		Message:      message,
 		Files:        form.Files,
+		FullPaths:    form.FullPaths,
 		Signoff:      form.Signoff,
 		Author:       gitIdentity,
 		Committer:    gitIdentity,

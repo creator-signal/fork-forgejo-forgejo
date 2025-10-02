@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
@@ -171,6 +172,11 @@ func ReplaceInactivePrimaryEmail(ctx context.Context, oldEmail string, email *us
 		return err
 	}
 
+	// Delete previous activation token.
+	if err := auth_model.DeleteAuthTokenByUser(ctx, user.ID); err != nil {
+		return err
+	}
+
 	return DeleteEmailAddresses(ctx, user, []string{oldEmail})
 }
 
@@ -205,7 +211,7 @@ func MakeEmailAddressPrimary(ctx context.Context, u *user_model.User, newPrimary
 	oldPrimaryEmail := u.Email
 
 	// If the user was reported as abusive, a shadow copy should be created before first update (of certain columns).
-	if err = user_model.IfNeededCreateShadowCopyForUser(ctx, u, "email"); err != nil {
+	if err = user_model.IfNeededCreateShadowCopyForUser(ctx, u.ID, u, "email"); err != nil {
 		return err
 	}
 

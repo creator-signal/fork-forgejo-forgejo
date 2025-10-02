@@ -30,6 +30,21 @@ func TestViewPulls(t *testing.T) {
 	assert.Equal(t, "Search pulls…", placeholder)
 }
 
+func TestViewPullsType(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	session := loginUser(t, user.Name)
+	req := NewRequest(t, "GET", repo.Link()+"/pulls")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	pullsType := htmlDoc.doc.Find(".list-header-type > .menu .item[href*=\"type=all\"]").First()
+	assert.Equal(t, "All pull requests", pullsType.Text())
+}
+
 func TestPullViewConversation(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -135,4 +150,25 @@ func TestPullCombinedReviewRequest(t *testing.T) {
 	helper(t, "detach", "11", "requested reviews from user9 and removed review requests for user11")
 	helper(t, "detach", "9", "removed review request for user11")
 	helper(t, "detach", "2", "removed review requests for user11, user2")
+}
+
+func TestShowMergeForManualMerge(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Only allow manual merge strategy for this repository.
+	pullRepoUnit := unittest.AssertExistsAndLoadBean(t, &repo_model.RepoUnit{ID: 5, RepoID: 1, Type: unit.TypePullRequests})
+	pullRepoUnit.Config = &repo_model.PullRequestsConfig{
+		AllowManualMerge:  true,
+		DefaultMergeStyle: repo_model.MergeStyleManuallyMerged,
+	}
+	repo_model.UpdateRepoUnit(t.Context(), pullRepoUnit)
+
+	session := loginUser(t, "user2")
+
+	req := NewRequest(t, "GET", "/user2/repo1/pulls/5")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+
+	// Assert that the mergebox is shown.
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertElement(t, "#pull-request-merge-form", true)
 }

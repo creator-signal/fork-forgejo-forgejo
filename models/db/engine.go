@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 
@@ -385,6 +386,15 @@ func (TracingHook) BeforeProcess(c *contexts.ContextHook) (context.Context, erro
 }
 
 func (TracingHook) AfterProcess(c *contexts.ContextHook) error {
+	if c.Result != nil {
+		if rowsAffected, err := c.Result.RowsAffected(); err == nil {
+			trace.Logf(c.Ctx, "rows affected", "%d", rowsAffected)
+		}
+		if lastID, err := c.Result.LastInsertId(); err == nil {
+			trace.Logf(c.Ctx, "last insert id", "%d", lastID)
+		}
+	}
+
 	c.Ctx.Value(sqlTask{}).(*trace.Task).End()
 	return nil
 }
@@ -437,4 +447,13 @@ func GetMasterEngine(x Engine) (*xorm.Engine, error) {
 	}
 
 	return engine, nil
+}
+
+// GetTableNames returns the table name of all registered models.
+func GetTableNames() container.Set[string] {
+	names := make(container.Set[string])
+	for _, table := range tables {
+		names.Add(x.TableName(table))
+	}
+	return names
 }

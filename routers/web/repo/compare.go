@@ -312,22 +312,16 @@ func ParseCompareInfo(ctx *context.Context) *common.CompareInfo {
 	baseIsTag := ctx.Repo.GitRepo.IsTagExist(ci.BaseBranch)
 
 	if !baseIsCommit && !baseIsBranch && !baseIsTag {
-		// Check if baseBranch is short sha commit hash
-		if baseCommit, _ := ctx.Repo.GitRepo.GetCommit(ci.BaseBranch); baseCommit != nil {
-			ci.BaseBranch = baseCommit.ID.String()
-			ctx.Data["BaseBranch"] = ci.BaseBranch
-			baseIsCommit = true
-		} else if ci.BaseBranch == ctx.Repo.GetObjectFormat().EmptyObjectID().String() {
+		if ci.BaseBranch == ctx.Repo.GetObjectFormat().EmptyObjectID().String() {
 			if isSameRepo {
 				ctx.Redirect(ctx.Repo.RepoLink + "/compare/" + util.PathEscapeSegments(ci.HeadBranch))
 			} else {
 				ctx.Redirect(ctx.Repo.RepoLink + "/compare/" + util.PathEscapeSegments(ci.HeadRepo.FullName()) + ":" + util.PathEscapeSegments(ci.HeadBranch))
 			}
-			return nil
 		} else {
 			ctx.NotFound("IsRefExist", nil)
-			return nil
 		}
+		return nil
 	}
 	ctx.Data["BaseIsCommit"] = baseIsCommit
 	ctx.Data["BaseIsBranch"] = baseIsBranch
@@ -364,7 +358,7 @@ func ParseCompareInfo(ctx *context.Context) *common.CompareInfo {
 	// "OwnForkRepo"
 	var ownForkRepo *repo_model.Repository
 	if ctx.Doer != nil && baseRepo.OwnerID != ctx.Doer.ID {
-		repo := repo_model.GetForkedRepo(ctx, ctx.Doer.ID, baseRepo.ID)
+		repo, _ := repo_model.GetUserForkLax(ctx, baseRepo, ctx.Doer.ID)
 		if repo != nil {
 			ownForkRepo = repo
 			ctx.Data["OwnForkRepo"] = ownForkRepo
@@ -392,18 +386,12 @@ func ParseCompareInfo(ctx *context.Context) *common.CompareInfo {
 		has = ci.HeadRepo != nil
 	}
 
-	// 6. If the baseRepo is a fork and the headUser has a fork of that use that
-	if !has && baseRepo.IsFork {
-		ci.HeadRepo = repo_model.GetForkedRepo(ctx, ci.HeadUser.ID, baseRepo.ForkID)
-		has = ci.HeadRepo != nil
-	}
-
-	// 7. Otherwise if we're not the same repo and haven't found a repo give up
+	// 6. Otherwise if we're not the same repo and haven't found a repo give up
 	if !isSameRepo && !has {
 		ctx.Data["PageIsComparePull"] = false
 	}
 
-	// 8. Finally open the git repo
+	// 7. Finally open the git repo
 	if isSameRepo {
 		ci.HeadRepo = ctx.Repo.Repository
 		ci.HeadGitRepo = ctx.Repo.GitRepo
@@ -514,15 +502,8 @@ func ParseCompareInfo(ctx *context.Context) *common.CompareInfo {
 	headIsBranch := ci.HeadGitRepo.IsBranchExist(ci.HeadBranch)
 	headIsTag := ci.HeadGitRepo.IsTagExist(ci.HeadBranch)
 	if !headIsCommit && !headIsBranch && !headIsTag {
-		// Check if headBranch is short sha commit hash
-		if headCommit, _ := ci.HeadGitRepo.GetCommit(ci.HeadBranch); headCommit != nil {
-			ci.HeadBranch = headCommit.ID.String()
-			ctx.Data["HeadBranch"] = ci.HeadBranch
-			headIsCommit = true
-		} else {
-			ctx.NotFound("IsRefExist", nil)
-			return nil
-		}
+		ctx.NotFound("IsRefExist", nil)
+		return nil
 	}
 	ctx.Data["HeadIsCommit"] = headIsCommit
 	ctx.Data["HeadIsBranch"] = headIsBranch
@@ -531,17 +512,6 @@ func ParseCompareInfo(ctx *context.Context) *common.CompareInfo {
 	// Treat as pull request if both references are branches
 	if ctx.Data["PageIsComparePull"] == nil {
 		ctx.Data["PageIsComparePull"] = headIsBranch && baseIsBranch
-	}
-
-	if ctx.Data["PageIsComparePull"] == true && !permBase.CanReadIssuesOrPulls(true) {
-		if log.IsTrace() {
-			log.Trace("Permission Denied: User: %-v cannot create/read pull requests in Repo: %-v\nUser in baseRepo has Permissions: %-+v",
-				ctx.Doer,
-				baseRepo,
-				permBase)
-		}
-		ctx.NotFound("ParseCompareInfo", nil)
-		return nil
 	}
 
 	baseBranchRef := ci.BaseBranch
@@ -933,25 +903,29 @@ func ExcerptBlob(ctx *context.Context) {
 		ctx.Error(http.StatusInternalServerError, "getExcerptLines")
 		return
 	}
-	if idxRight > lastRight {
+
+	// After the "up" or "down" expansion, check if there's any remaining content in the diff and add a line that will
+	// be rendered into a new expander at either the top, or bottom.
+	lineSection := &gitdiff.DiffLine{
+		Type: gitdiff.DiffLineSection,
+		SectionInfo: &gitdiff.DiffLineSectionInfo{
+			Path:          filePath,
+			LastLeftIdx:   lastLeft,
+			LastRightIdx:  lastRight,
+			LeftIdx:       idxLeft,
+			RightIdx:      idxRight,
+			LeftHunkSize:  leftHunkSize,
+			RightHunkSize: rightHunkSize,
+		},
+	}
+	if lineSection.GetExpandDirection() != gitdiff.DiffLineExpandNone {
 		lineText := " "
 		if rightHunkSize > 0 || leftHunkSize > 0 {
 			lineText = fmt.Sprintf("@@ -%d,%d +%d,%d @@\n", idxLeft, leftHunkSize, idxRight, rightHunkSize)
 		}
 		lineText = html.EscapeString(lineText)
-		lineSection := &gitdiff.DiffLine{
-			Type:    gitdiff.DiffLineSection,
-			Content: lineText,
-			SectionInfo: &gitdiff.DiffLineSectionInfo{
-				Path:          filePath,
-				LastLeftIdx:   lastLeft,
-				LastRightIdx:  lastRight,
-				LeftIdx:       idxLeft,
-				RightIdx:      idxRight,
-				LeftHunkSize:  leftHunkSize,
-				RightHunkSize: rightHunkSize,
-			},
-		}
+		lineSection.Content = lineText
+
 		switch direction {
 		case "up":
 			section.Lines = append([]*gitdiff.DiffLine{lineSection}, section.Lines...)

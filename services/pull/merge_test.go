@@ -4,9 +4,22 @@
 package pull
 
 import (
+	"os"
+	"path"
+	"strings"
 	"testing"
 
+	"forgejo.org/models"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_expandDefaultMergeMessage(t *testing.T) {
@@ -89,4 +102,78 @@ func TestAddCommitMessageTailer(t *testing.T) {
 	// add tailer for message with existing tailer and different value (will append)
 	assert.Equal(t, "title\n\nTest-tailer: v1\nTest-tailer: v2", AddCommitMessageTrailer("title\n\nTest-tailer: v1", "Test-tailer", "v2"))
 	assert.Equal(t, "title\n\nTest-tailer: v1\nTest-tailer: v2", AddCommitMessageTrailer("title\n\nTest-tailer: v1\n", "Test-tailer", "v2"))
+}
+
+func prepareLoadMergeMessageTemplates(targetDir string) error {
+	for _, template := range []string{"MERGE", "REBASE", "REBASE-MERGE", "SQUASH", "MANUALLY-MERGED", "REBASE-UPDATE-ONLY"} {
+		file, err := os.Create(path.Join(targetDir, template+"_TEMPLATE.md"))
+		defer file.Close()
+
+		if err == nil {
+			_, err = file.WriteString("Contents for " + template)
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func TestLoadMergeMessageTemplates(t *testing.T) {
+	defer test.MockVariableValue(&setting.CustomPath, t.TempDir())()
+	templateTemp := path.Join(setting.CustomPath, "default_merge_message")
+
+	require.NoError(t, os.MkdirAll(templateTemp, 0o755))
+	require.NoError(t, prepareLoadMergeMessageTemplates(templateTemp))
+
+	testStyles := []repo_model.MergeStyle{
+		repo_model.MergeStyleMerge,
+		repo_model.MergeStyleRebase,
+		repo_model.MergeStyleRebaseMerge,
+		repo_model.MergeStyleSquash,
+		repo_model.MergeStyleManuallyMerged,
+		repo_model.MergeStyleRebaseUpdate,
+	}
+
+	// Load all templates
+	require.NoError(t, LoadMergeMessageTemplates())
+
+	// Check their correctness
+	assert.Len(t, mergeMessageTemplates, len(testStyles))
+	for _, mergeStyle := range testStyles {
+		assert.Equal(t, "Contents for "+strings.ToUpper(string(mergeStyle)), mergeMessageTemplates[mergeStyle])
+	}
+
+	// Unload all templates
+	require.NoError(t, os.RemoveAll(templateTemp))
+	require.NoError(t, LoadMergeMessageTemplates())
+	assert.Empty(t, mergeMessageTemplates)
+}
+
+func TestMergeMergedPR(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
+	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	require.NoError(t, pr.LoadBaseRepo(t.Context()))
+
+	gitRepo, err := gitrepo.OpenRepository(t.Context(), pr.BaseRepo)
+	require.NoError(t, err)
+	defer gitRepo.Close()
+
+	assert.True(t, pr.HasMerged)
+	pr.HasMerged = false
+
+	err = Merge(t.Context(), pr, doer, gitRepo, repo_model.MergeStyleRebase, "", "I should not exist", false)
+	require.Error(t, err)
+	assert.True(t, models.IsErrPullRequestHasMerged(err))
+
+	if mergeErr, ok := err.(models.ErrPullRequestHasMerged); ok {
+		assert.Equal(t, pr.ID, mergeErr.ID)
+		assert.Equal(t, pr.IssueID, mergeErr.IssueID)
+		assert.Equal(t, pr.HeadBranch, mergeErr.HeadBranch)
+		assert.Equal(t, pr.BaseBranch, mergeErr.BaseBranch)
+	}
 }

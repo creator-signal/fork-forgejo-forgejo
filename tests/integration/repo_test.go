@@ -5,15 +5,19 @@
 package integration
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
@@ -22,6 +26,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	repo_service "forgejo.org/services/repository"
@@ -193,9 +198,9 @@ func TestViewRepoWithSymlinks(t *testing.T) {
 
 // TestViewAsRepoAdmin tests PR #2167
 func TestViewAsRepoAdmin(t *testing.T) {
-	for _, user := range []string{"user2", "user4"} {
-		defer tests.PrepareTestEnv(t)()
+	defer tests.PrepareTestEnv(t)()
 
+	for _, user := range []string{"user2", "user4"} {
 		session := loginUser(t, user)
 
 		req := NewRequest(t, "GET", "/user2/repo1.git")
@@ -582,6 +587,26 @@ func TestRenamedFileHistory(t *testing.T) {
 		assert.Equal(t, "/user2/repo59/commits/commit/80b83c5c8220c3aa3906e081f202a2a7563ec879/licnse", oldFileHistoryLink)
 	})
 
+	t.Run("Renamed file, pagination", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Git.CommitsRangeSize, 1)() // Limit commits displayed on the page to one
+
+		resp := MakeRequest(t, NewRequest(t, "GET", "/user2/repo59/commits/branch/master/license"), http.StatusOK)
+		page1 := NewHTMLParser(t, resp.Body)
+
+		resp = MakeRequest(t, NewRequest(t, "GET", "/user2/repo59/commits/branch/master/license?page=2"), http.StatusOK)
+		page2 := NewHTMLParser(t, resp.Body)
+
+		// Browse further is only shown on 2nd page
+		browseFurtherSel := ".ui.bottom.attached.header a[href='/user2/repo59/commits/commit/80b83c5c8220c3aa3906e081f202a2a7563ec879/licnse']"
+		page1.AssertElement(t, browseFurtherSel, false)
+		page2.AssertElement(t, browseFurtherSel, true)
+
+		// Pagination goes after Browser further
+		afterBrowseFurther := page2.Find(browseFurtherSel).Parent().Parent().NextAll()
+		assert.Equal(t, 1, afterBrowseFurther.Find(".pagination.menu").Length())
+	})
+
 	t.Run("Non renamed file", func(t *testing.T) {
 		req := NewRequest(t, "GET", "/user2/repo59/commits/branch/master/README.md")
 		resp := MakeRequest(t, req, http.StatusOK)
@@ -680,6 +705,79 @@ func TestViewCommit(t *testing.T) {
 	req.Header.Add("Accept", "text/html")
 	resp := MakeRequest(t, req, http.StatusNotFound)
 	assert.True(t, test.IsNormalPageCompleted(resp.Body.String()), "non-existing commit should render 404 page")
+}
+
+func TestViewCommitSignature(t *testing.T) {
+	t.Cleanup(func() {
+		// Cannot use t.Context(), it is in the done state.
+		require.NoError(t, git.InitFull(context.Background()))
+	})
+
+	defer test.MockVariableValue(&setting.Repository.Signing.SigningName, "UwU")()
+	defer test.MockVariableValue(&setting.Repository.Signing.SigningEmail, "fox@example.com")()
+	defer test.MockVariableValue(&setting.Repository.Signing.CRUDActions, []string{"always"})()
+	defer test.MockVariableValue(&setting.Repository.Signing.InitialCommit, []string{"always"})()
+
+	filePath := "signed.txt"
+	fromBranch := "master"
+	toBranch := "branch-signed"
+
+	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+		// Use a new GNUPGPHOME to avoid messing with the existing GPG keyring.
+		tmpDir := t.TempDir()
+		require.NoError(t, os.Chmod(tmpDir, 0o700))
+		t.Setenv("GNUPGHOME", tmpDir)
+
+		rootKeyPair, err := importTestingKey()
+		require.NoError(t, err)
+		defer test.MockVariableValue(&setting.Repository.Signing.SigningKey, rootKeyPair.PrimaryKey.KeyIdShortString())()
+		defer test.MockVariableValue(&setting.Repository.Signing.Format, "openpgp")()
+
+		// Ensure the git config is updated with the new signing format.
+		require.NoError(t, git.InitFull(t.Context()))
+
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		testCtx := NewAPITestContext(t, user.Name, "commit-header-signed", auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+		u.Path = testCtx.GitPath()
+
+		t.Run("Create repository", doAPICreateRepository(testCtx, nil, git.Sha1ObjectFormat))
+
+		t.Run("Create commit", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			options := &api.CreateFileOptions{
+				FileOptions: api.FileOptions{
+					BranchName:    fromBranch,
+					NewBranchName: toBranch,
+					Message:       fmt.Sprintf("from:%s to:%s path:%s", fromBranch, toBranch, filePath),
+					Author: api.Identity{
+						Name:  user.FullName,
+						Email: user.Email,
+					},
+					Committer: api.Identity{
+						Name:  user.FullName,
+						Email: user.Email,
+					},
+				},
+				ContentBase64: base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "This is new text for %s", filePath)),
+			}
+
+			req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", testCtx.Username, testCtx.Reponame, filePath), &options).
+				AddTokenAuth(testCtx.Token)
+			resp := testCtx.Session.MakeRequest(t, req, http.StatusCreated)
+
+			var contents api.FileResponse
+			DecodeJSON(t, resp, &contents)
+
+			assert.True(t, contents.Verification.Verified)
+
+			req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/commit/%s", testCtx.Username, testCtx.Reponame, contents.Commit.SHA))
+			resp = testCtx.Session.MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			htmlDoc.AssertElement(t, ".signature-row.message.isSigned.isVerified", true)
+		})
+	})
 }
 
 func TestCommitView(t *testing.T) {
