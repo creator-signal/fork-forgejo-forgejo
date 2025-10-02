@@ -1194,7 +1194,9 @@ func ValidateCommitsWithEmails(ctx context.Context, oldCommits []*git.Commit) []
 	return newCommits
 }
 
-// GetUserByEmail returns the user object by given e-mail if exists.
+// GetUserByEmail returns the user associated with the email, if it exists
+// and is activated. If the email is a no-reply address, then the user
+// associated with that no-reply address is returned.
 func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	if len(email) == 0 {
 		return nil, ErrUserNotExist{Name: email}
