@@ -20,11 +20,10 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
 
-	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
-
 	participle "github.com/alecthomas/participle/v2"
 	lexer "github.com/alecthomas/participle/v2/lexer"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 // String is a convenience function to return a `string` pointer.
@@ -37,25 +36,65 @@ var filePreviewPattern = regexp.MustCompile(`https?://((?:\S+/){3})src/commit/([
 
 // FilePreviewPath is a parser struct used for parsing the components of a file preview URL path.
 type FilePreviewPath struct {
-	Org        string   `parser:"PathSep @Path"`
-	Repo       string   `parser:"PathSep @Path"`
+	OrgRepo    OrgRepo  `parser:"@@"`
 	CommitHash string   `parser:"PathSep 'src' PathSep 'commit' PathSep @CommitHash"`
 	FilePath   []string `parser:"(PathSep @Path)+"`
+}
+
+func (f FilePreviewPath) File() string {
+	return strings.Join(f.FilePath, "/")
+}
+
+// OrgRepo represents the organization and repository.
+type OrgRepo struct {
+	Parts []string `parser:"((?! PathSep 'src' PathSep 'commit') PathSep @Path)+"`
+}
+
+// IsExternal gets whether the repository is for an external organization.
+func (p OrgRepo) IsExternal() bool {
+	return len(p.Parts) > 2
+}
+
+// External gets the optional external portion of the `OrgRepo`.
+//
+// Returns a `nil` pointer for local organization repositories.
+func (p OrgRepo) External() *string {
+	var ret *string
+
+	if p.IsExternal() {
+		ret = Pointer(strings.Join(p.Parts[:len(p.Parts)-2], "/"))
+	}
+
+	return ret
+}
+
+// Org gets the organization.
+func (p OrgRepo) Org() string {
+	return p.Parts[len(p.Parts)-2]
+}
+
+// Repo gets the repository.
+func (p OrgRepo) Repo() string {
+	return p.Parts[len(p.Parts)-1]
+}
+
+// Path gets the full `OrgRepo` path.
+func (p OrgRepo) Path() string {
+	return strings.Join(p.Parts, "/")
 }
 
 // LineNumbers represents a parser struct for parsing file preview path line numbers.
 type LineNumbers struct {
 	Begin int  `parser:"LinePre @LineNumber+"`
-	End   *int `parser:"(LineSep LinePre @LineNumber+)?"`
+	End   *int `parser:"(LineSep LinePre? @LineNumber+)?"`
 }
 
 // filePreviewPathLexer is a Participle lexer struct defining valid lexing grammar for a file preview path.
 var filePreviewPathLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "CommitHash", Pattern: `[0-9a-fA-F]{4,64}`},
 	{Name: "PathSep", Pattern: `/`},
-	{Name: "Path", Pattern: `[a-zA-Z\w_\.\-:]+`},
-	{Name: "QuerySep", Pattern: `&`},
-	{Name: "Query", Pattern: `[a-zA-Z\w_\.\-]+(=[\"\'a-zA-Z\w_\.\-:]+)?`},
+	// inexact match for ASCII alphanumeric chars, special characters, and \p{L} + \p{N} for international alphanumeric codepoints
+	{Name: "Path", Pattern: `[a-zA-Z\w\p{L}\p{N}_\.\-\%:]+`},
 })
 
 var lineNumbersLexer = lexer.MustSimple([]lexer.SimpleRule{
@@ -116,37 +155,63 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 
 	urlFull := node.Data[m[0]:m[1]]
 
+	pURL, err := url.Parse(urlFull)
+	// Invalid URL
+	if err != nil {
+		log.Error("invalid URL: %v", err)
+		return nil
+	}
+
+	if pURL.Path == "" {
+		return nil
+	}
+
+	path, err := FilePreviewPathParser.ParseString("", pURL.EscapedPath())
+	// Invalid file preview path
+	if err != nil {
+		log.Error("invalid URL file preview path: %v", err)
+		return nil
+	}
+
 	// Ensure that we only use links to local repositories
 	if !strings.HasPrefix(urlFull, setting.AppURL) {
 		return nil
 	}
 
-	projPath := strings.TrimPrefix(strings.TrimSuffix(node.Data[m[0]:m[3]], "/"), setting.AppURL)
+	ownerName := path.OrgRepo.Org()
+	repoName := path.OrgRepo.Repo()
 
-	commitSha := node.Data[m[4]:m[5]]
-	filePath := node.Data[m[6]:m[7]]
-	hash := node.Data[m[8]:m[9]]
-	urlFullSource := urlFull
-	if strings.HasSuffix(filePath, "?display=source") {
-		filePath = strings.TrimSuffix(filePath, "?display=source")
-	} else if Type(filePath) != "" {
-		urlFullSource = node.Data[m[0]:m[6]] + filePath + "?display=source#" + hash
+	appURL, err := url.Parse(setting.AppURL)
+	if err != nil {
+		log.Error("Invalid App URL: %v", err)
+		return nil
 	}
-	filePath, err := url.QueryUnescape(filePath)
+
+	appPath := strings.TrimPrefix(appURL.Path, "/")
+	projPath := strings.TrimPrefix(path.OrgRepo.Path(), appPath)
+	if len(strings.Split(projPath, "/")) != 2 {
+		return nil
+	}
+
+	commitSha := path.CommitHash
+	filePath := path.File()
+	urlFullSource := urlFull
+	displaySrc := "display=source"
+
+	if Type(filePath) != "" && !strings.Contains(pURL.RawQuery, displaySrc) {
+		if pURL.RawQuery != "" {
+			displaySrc = "&" + displaySrc
+		}
+		pURL.RawQuery += displaySrc
+		urlFullSource = pURL.String()
+	}
+	filePath, err = url.QueryUnescape(filePath)
 	if err != nil {
 		return nil
 	}
 
 	preview.start = m[0]
 	preview.end = m[1]
-
-	projPathSegments := strings.Split(projPath, "/")
-	if len(projPathSegments) != 2 {
-		return nil
-	}
-
-	ownerName := projPathSegments[len(projPathSegments)-2]
-	repoName := projPathSegments[len(projPathSegments)-1]
 
 	var language string
 	fileBlob, err := DefaultProcessorHelper.GetRepoFileBlob(
@@ -164,7 +229,10 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 
 	isExternRef := ownerName != ctx.Metas["user"] || repoName != ctx.Metas["repo"]
 	if isExternRef {
-		err = html.Render(titleBuffer, createLink(node.Data[m[0]:m[3]], ownerName+"/"+repoName, ""))
+		link := ownerName + "/" + repoName
+		exURL := pURL.Scheme + "://" + pURL.Host + "/" + link + "/"
+
+		err = html.Render(titleBuffer, createLink(exURL, link, ""))
 		if err != nil {
 			log.Error("failed to render repoLink: %v", err)
 		}
@@ -178,39 +246,49 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 
 	preview.title = template.HTML(titleBuffer.String())
 
-	lineSpecs := strings.Split(hash, "-")
-
 	commitLinkBuffer := new(bytes.Buffer)
 	commitLinkText := commitSha[0:7]
+
+	commitPath := ownerName + "/" + repoName + "/src/commit/" + path.CommitHash
+	if external := path.OrgRepo.External(); external != nil {
+		commitPath = *external + "/" + commitPath
+	}
+	commitURL := pURL.Scheme + "://" + pURL.Host + "/" + commitPath
+
 	if isExternRef {
 		commitLinkText = ownerName + "/" + repoName + "@" + commitLinkText
 	}
 
-	err = html.Render(commitLinkBuffer, createLink(node.Data[m[0]:m[5]], commitLinkText, "text black"))
+	err = html.Render(commitLinkBuffer, createLink(commitURL, commitLinkText, "text black"))
 	if err != nil {
 		log.Error("failed to render commitLink: %v", err)
 	}
 
 	var startLine, endLine int
 
-	if len(lineSpecs) == 1 {
-		startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
+	if len(pURL.Fragment) > 0 {
+		lines, err := LineNumbersParser.ParseString("", pURL.Fragment)
+		if err != nil {
+			log.Error("failed to parse line numbers: %v", err)
+		}
+		startLine = lines.Begin
 		endLine = startLine
-		preview.subTitle = locale.Tr(
-			"markup.filepreview.line", startLine,
-			template.HTML(commitLinkBuffer.String()),
-		)
+		if lines.End == nil {
+			preview.subTitle = locale.Tr(
+				"markup.filepreview.line", startLine,
+				template.HTML(commitLinkBuffer.String()),
+			)
 
-		preview.lineOffset = startLine - 1
-	} else {
-		startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
-		endLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[1], "L"))
-		preview.subTitle = locale.Tr(
-			"markup.filepreview.lines", startLine, endLine,
-			template.HTML(commitLinkBuffer.String()),
-		)
+			preview.lineOffset = startLine - 1
+		} else {
+			endLine = *lines.End
+			preview.subTitle = locale.Tr(
+				"markup.filepreview.lines", startLine, endLine,
+				template.HTML(commitLinkBuffer.String()),
+			)
 
-		preview.lineOffset = startLine - 1
+			preview.lineOffset = startLine - 1
+		}
 	}
 
 	lineCount := endLine - (startLine - 1)

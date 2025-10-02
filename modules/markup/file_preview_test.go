@@ -10,49 +10,82 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_FilePreviewPathParser(t *testing.T) {
+func Test_FilePreviewPath(t *testing.T) {
 	type testPair struct {
-		item    string
-		want    FilePreviewPath
-		wantErr error
+		item         string
+		want         FilePreviewPath
+		wantExternal *string
+		wantOrg      string
+		wantRepo     string
+		wantErr      error
 	}
 
 	tests := map[string]testPair{
 		"file path no lines": {
 			item: "https://example.repo/test-org/test-repo/src/commit/a0b1c2/test-file.md",
 			want: FilePreviewPath{
-				Org:        "test-org",
-				Repo:       "test-repo",
+				OrgRepo:    OrgRepo{Parts: []string{"test-org", "test-repo"}},
 				CommitHash: "a0b1c2",
 				FilePath:   []string{"test-file.md"},
 			},
-			wantErr: nil,
+			wantExternal: nil,
+			wantOrg:      "test-org",
+			wantRepo:     "test-repo",
+			wantErr:      nil,
 		},
 		"file path w/ single line": {
 			item: "https://example.repo/test-org/test-repo/src/commit/a0b1c2/test-file.md#L1",
 			want: FilePreviewPath{
-				Org:        "test-org",
-				Repo:       "test-repo",
+				OrgRepo:    OrgRepo{Parts: []string{"test-org", "test-repo"}},
 				CommitHash: "a0b1c2",
 				FilePath:   []string{"test-file.md"},
 			},
-			wantErr: nil,
+			wantExternal: nil,
+			wantOrg:      "test-org",
+			wantRepo:     "test-repo",
+			wantErr:      nil,
 		},
 		"file path w/ multiple lines": {
 			item: "https://example.repo/test-org/test-repo/src/commit/a0b1c2/test-file.md#L1-L3",
 			want: FilePreviewPath{
-				Org:        "test-org",
-				Repo:       "test-repo",
+				OrgRepo:    OrgRepo{Parts: []string{"test-org", "test-repo"}},
 				CommitHash: "a0b1c2",
 				FilePath:   []string{"test-file.md"},
 			},
-			wantErr: nil,
+			wantExternal: nil,
+			wantOrg:      "test-org",
+			wantRepo:     "test-repo",
+			wantErr:      nil,
+		},
+		"file path external w/ single sub-directory": {
+			item: "https://example.repo/test-sub/test-org/test-repo/src/commit/a0b1c2/test-file.md#L1-L3",
+			want: FilePreviewPath{
+				OrgRepo:    OrgRepo{Parts: []string{"test-sub", "test-org", "test-repo"}},
+				CommitHash: "a0b1c2",
+				FilePath:   []string{"test-file.md"},
+			},
+			wantExternal: Pointer(string("test-sub")),
+			wantOrg:      "test-org",
+			wantRepo:     "test-repo",
+			wantErr:      nil,
+		},
+		"file path external w/ multiple sub-directory": {
+			item: "https://example.repo/test-sub/sub2/test-org/test-repo/src/commit/a0b1c2/test-file.md#L1-L3",
+			want: FilePreviewPath{
+				OrgRepo:    OrgRepo{Parts: []string{"test-sub", "sub2", "test-org", "test-repo"}},
+				CommitHash: "a0b1c2",
+				FilePath:   []string{"test-file.md"},
+			},
+			wantExternal: Pointer(string("test-sub/sub2")),
+			wantOrg:      "test-org",
+			wantRepo:     "test-repo",
+			wantErr:      nil,
 		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			tURL, err := Pointer(url.URL{}).Parse(tt.item)
+			tURL, err := url.Parse(tt.item)
 			if err != nil {
 				t.Fatalf("error parsing URL: %v", err)
 			}
@@ -62,6 +95,11 @@ func Test_FilePreviewPathParser(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.want, *got, "error parsing, want: %v, got: %v", tt.want, *got)
+			assert.Equal(t, tt.wantOrg, got.OrgRepo.Org(), "error getting org, want: %v, got: %v", tt.wantOrg, got.OrgRepo.Org())
+			assert.Equal(t, tt.wantRepo, got.OrgRepo.Repo(), "error getting org, want: %v, got: %v", tt.wantRepo, got.OrgRepo.Repo())
+			if tt.wantExternal != nil {
+				assert.Equal(t, tt.wantExternal, got.OrgRepo.External(), "error getting external, want: %v, got: %v", tt.wantExternal, got.OrgRepo.External())
+			}
 		})
 	}
 }
@@ -93,7 +131,7 @@ func Test_LineNumbersParser(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			tURL, err := Pointer(url.URL{}).Parse(tt.item)
+			tURL, err := url.Parse(tt.item)
 			if err != nil {
 				t.Fatalf("error parsing URL: %v", err)
 			}
