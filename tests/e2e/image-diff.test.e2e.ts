@@ -45,7 +45,7 @@ test('Repository image diff', async ({page}) => {
   await expect(page.locator('.tab[data-tab="diff-side-by-side-1"]')).toBeVisible();
   await expect(page.locator('.tab[data-tab="diff-swipe-1"]')).toBeHidden();
   await expect(page.locator('.tab[data-tab="diff-overlay-1"]')).toBeHidden();
-  await screenshot(page);
+  await screenshot(page, page.locator('#diff-container'));
 
   await page.getByText('Swipe').click();
   await expect(page.locator('.item[data-tab="diff-side-by-side-1"]')).not.toContainClass('active');
@@ -54,7 +54,7 @@ test('Repository image diff', async ({page}) => {
   await expect(page.locator('.tab[data-tab="diff-side-by-side-1"]')).toBeHidden();
   await expect(page.locator('.tab[data-tab="diff-swipe-1"]')).toBeVisible();
   await expect(page.locator('.tab[data-tab="diff-overlay-1"]')).toBeHidden();
-  await screenshot(page);
+  await screenshot(page, page.locator('#diff-container'));
 
   await page.getByText('Overlay').click();
   await expect(page.locator('.item[data-tab="diff-side-by-side-1"]')).not.toContainClass('active');
@@ -63,5 +63,5 @@ test('Repository image diff', async ({page}) => {
   await expect(page.locator('.tab[data-tab="diff-side-by-side-1"]')).toBeHidden();
   await expect(page.locator('.tab[data-tab="diff-swipe-1"]')).toBeHidden();
   await expect(page.locator('.tab[data-tab="diff-overlay-1"]')).toBeVisible();
-  await screenshot(page);
+  await screenshot(page, page.locator('#diff-container'));
 });

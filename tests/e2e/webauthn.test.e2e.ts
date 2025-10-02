@@ -35,7 +35,7 @@ test('WebAuthn register & login flow', async ({browser, request}, workerInfo) =>
   });
 
   await page.locator('input#nickname').fill('Testing Security Key');
-  await screenshot(page);
+  await screenshot(page, page.locator('.user-setting-content'));
   await page.getByText('Add security key').click();
 
   // Logout.
@@ -58,7 +58,7 @@ test('WebAuthn register & login flow', async ({browser, request}, workerInfo) =>
   response = await page.goto('/user/settings/security');
   expect(response?.status()).toBe(200);
   await page.getByRole('button', {name: 'Remove'}).click();
-  await screenshot(page);
+  await screenshot(page, page.locator('.ui.g-modal-confirm.delete.modal'), 50);
   await page.getByRole('button', {name: 'Yes'}).click();
   await page.waitForLoadState();
 
