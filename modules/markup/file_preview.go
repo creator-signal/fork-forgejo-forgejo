@@ -129,7 +129,7 @@ func NewFilePreviews(ctx *RenderContext, node *html.Node, locale translation.Loc
 		return nil
 	}
 
-	mAll := filePreviewPattern.FindAllStringSubmatchIndex(node.Data, -1)
+	mAll := filePreviewPattern.FindAllStringIndex(node.Data, -1)
 	if mAll == nil {
 		return nil
 	}
@@ -140,8 +140,9 @@ func NewFilePreviews(ctx *RenderContext, node *html.Node, locale translation.Loc
 		if slices.Contains(m, -1) {
 			continue
 		}
+		start, end := m[0], m[1]
 
-		preview := newFilePreview(ctx, node, locale, m)
+		preview := newFilePreview(ctx, locale, node.Data[start:end], start)
 		if preview != nil {
 			result = append(result, preview)
 		}
@@ -150,10 +151,8 @@ func NewFilePreviews(ctx *RenderContext, node *html.Node, locale translation.Loc
 	return result
 }
 
-func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Locale, m []int) *FilePreview {
+func newFilePreview(ctx *RenderContext, locale translation.Locale, urlFull string, start int) *FilePreview {
 	preview := &FilePreview{}
-
-	urlFull := node.Data[m[0]:m[1]]
 
 	pURL, err := url.Parse(urlFull)
 	// Invalid URL
@@ -210,8 +209,8 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 		return nil
 	}
 
-	preview.start = m[0]
-	preview.end = m[1]
+	preview.start = start
+	preview.end = start + len(urlFull)
 
 	var language string
 	fileBlob, err := DefaultProcessorHelper.GetRepoFileBlob(
