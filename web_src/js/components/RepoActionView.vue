@@ -1036,6 +1036,7 @@ export default {
   white-space: break-spaces;
   margin-left: 10px;
   overflow-wrap: anywhere;
+  color: var(--color-console-fg);
 }
 
 /* selectors here are intentionally exact to only match fullscreen */
