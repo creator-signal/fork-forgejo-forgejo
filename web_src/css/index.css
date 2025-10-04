@@ -18,6 +18,7 @@
 @import "./modules/checkbox.css";
 @import "./modules/modal.css";
 @import "./modules/dimmer.css";
+@import "./modules/dialog.css";
 
 @import "./modules/switch.css";
 @import "./modules/dropdown.css";
@@ -31,6 +32,7 @@
 @import "./modules/flexcontainer.css";
 @import "./modules/user-cards.css";
 @import "./modules/hashbox.css";
+@import "./modules/stats-bar.css";
 
 @import "./shared/flex-list.css";
 @import "./shared/milestone.css";

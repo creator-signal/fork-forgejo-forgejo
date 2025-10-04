@@ -105,6 +105,9 @@ func ParseRemoteAddr(remoteAddr, authUsername, authPassword string) (string, err
 		if err != nil {
 			return "", &models.ErrInvalidCloneAddr{IsURLError: true, Host: remoteAddr}
 		}
+		if u.User != nil {
+			return "", &models.ErrInvalidCloneAddr{Host: remoteAddr, HasCredentials: true}
+		}
 		if len(authUsername)+len(authPassword) > 0 {
 			u.User = url.UserPassword(authUsername, authPassword)
 		}
@@ -675,6 +678,7 @@ type UploadRepoFileForm struct {
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
 	NewBranchName string `binding:"GitRefName;MaxSize(100)"`
 	Files         []string
+	FullPaths     []string
 	CommitMailID  int64 `binding:"Required"`
 	Signoff       bool
 }

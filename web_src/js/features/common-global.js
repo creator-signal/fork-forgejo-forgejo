@@ -5,7 +5,7 @@ import {createDropzone} from './dropzone.js';
 import {showGlobalErrorMessage} from '../bootstrap.js';
 import {handleGlobalEnterQuickSubmit} from './comp/QuickSubmit.js';
 import {svg} from '../svg.js';
-import {hideElem, showElem, toggleElem, initSubmitEventPolyfill, submitEventSubmitter} from '../utils/dom.js';
+import {hideElem, showElem, toggleElem, resetForms, initSubmitEventPolyfill, submitEventSubmitter} from '../utils/dom.js';
 import {htmlEscape} from 'escape-goat';
 import {showTemporaryTooltip} from '../modules/tippy.js';
 import {confirmModal} from './comp/ConfirmModal.js';
@@ -225,7 +225,11 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
     input.name = 'files';
     input.type = 'hidden';
     input.value = data.uuid;
-    dropzoneEl.querySelector('.files').append(input);
+    const inputPath = document.createElement('input');
+    inputPath.name = `files_fullpath[${data.uuid}]`;
+    inputPath.type = 'hidden';
+    inputPath.value = htmlEscape(file.fullPath || file.name);
+    dropzoneEl.querySelector('.files').append(input, inputPath);
 
     // Create a "Copy Link" element, to conveniently copy the image
     // or file link as Markdown to the clipboard
@@ -248,11 +252,7 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
     file.previewTemplate.append(copyLinkElement);
   };
   const updateDropzoneState = () => {
-    if (dropzoneEl.querySelector('.dz-preview')) {
-      dropzoneEl.classList.add('dz-started');
-    } else {
-      dropzoneEl.classList.remove('dz-started');
-    }
+    dropzoneEl.classList.toggle('dz-started', dropzoneEl.querySelector('.dz-preview'));
   };
 
   const dz = await createDropzone(dropzoneEl, {
@@ -274,6 +274,7 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
       this.on('success', initFilePreview);
       this.on('removedfile', async (file) => {
         document.getElementById(file.uuid)?.remove();
+        document.querySelector(`input[name="files_fullpath[${file.uuid}]"]`)?.remove();
         if (disableRemovedfileEvent) return;
         if (dropzoneEl.getAttribute('data-remove-url') && !fileUuidDict[file.uuid].submitted) {
           try {
@@ -481,38 +482,48 @@ export function initGlobalButtons() {
   // There are many "cancel button" elements in modal dialogs, Fomantic UI expects they are button-like elements but never submit a form.
   // However, Gitea misuses the modal dialog and put the cancel buttons inside forms, so we must prevent the form submission.
   // There are a few cancel buttons in non-modal forms, and there are some dynamically created forms (eg: the "Edit Issue Content")
-  $(document).on('click', 'form button.ui.cancel.button', (e) => {
-    e.preventDefault();
-  });
-
-  $('.show-panel').on('click', function (e) {
-    // a '.show-panel' element can show a panel, by `data-panel="selector"`
-    // if it has "toggle" class, it toggles the panel
-    e.preventDefault();
-    const sel = this.getAttribute('data-panel');
-    if (this.classList.contains('toggle')) {
-      toggleElem(sel);
-    } else {
-      showElem(sel);
+  document.addEventListener('click', (e) => {
+    if (e.target.matches('form button.ui.cancel.button')) {
+      e.preventDefault();
     }
   });
 
-  $('.hide-panel').on('click', function (e) {
-    // a `.hide-panel` element can hide a panel, by `data-panel="selector"` or `data-panel-closest="selector"`
-    e.preventDefault();
-    let sel = this.getAttribute('data-panel');
-    if (sel) {
-      hideElem($(sel));
-      return;
-    }
-    sel = this.getAttribute('data-panel-closest');
-    if (sel) {
-      hideElem($(this).closest(sel));
-      return;
-    }
-    // should never happen, otherwise there is a bug in code
-    showErrorToast('Nothing to hide');
-  });
+  for (const showPanelButton of document.querySelectorAll('.show-panel')) {
+    showPanelButton.addEventListener('click', (e) => {
+      // a '.show-panel' element can show a panel, by `data-panel="selector"`
+      // if it has "toggle" class, it toggles the panel
+      e.preventDefault();
+      const sel = e.currentTarget.getAttribute('data-panel');
+      if (e.currentTarget.classList.contains('toggle')) {
+        toggleElem(sel);
+      } else {
+        showElem(sel);
+      }
+    });
+  }
+
+  for (const hidePanelButton of document.querySelectorAll('.hide-panel')) {
+    hidePanelButton.addEventListener('click', (e) => {
+      // a `.hide-panel` element can hide a panel, by `data-panel="selector"` or `data-panel-closest="selector"`
+      e.preventDefault();
+      let sel = e.currentTarget.getAttribute('data-panel');
+      if (sel) {
+        const element = document.querySelector(sel);
+        hideElem(element);
+        resetForms(element);
+        return;
+      }
+      sel = e.currentTarget.getAttribute('data-panel-closest');
+      if (sel) {
+        const element = e.currentTarget.closest(sel);
+        hideElem(element);
+        resetForms(element);
+        return;
+      }
+      // should never happen, otherwise there is a bug in code
+      showErrorToast('Nothing to hide');
+    });
+  }
 
   initGlobalShowModal();
 }

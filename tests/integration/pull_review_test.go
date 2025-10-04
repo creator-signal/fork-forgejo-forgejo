@@ -194,7 +194,7 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		// even on template error, the page returns HTTP 200
 		// count the comments to ensure success.
 		doc = NewHTMLParser(t, resp.Body)
-		assert.Len(t, doc.Find(`.comments > .comment`).Nodes, 1)
+		assert.Len(t, doc.Find(`.comment-code-cloud > .comment`).Nodes, 1)
 	})
 
 	t.Run("outdated and newer review (line 2)", func(t *testing.T) {
@@ -311,7 +311,7 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		// even on template error, the page returns HTTP 200
 		// count the comments to ensure success.
 		doc = NewHTMLParser(t, resp.Body)
-		comments := doc.Find(`.comments > .comment`)
+		comments := doc.Find(`.comment-code-cloud > .comment`)
 		assert.Len(t, comments.Nodes, 1) // the outdated comment belongs to another review and should not be shown
 	})
 
@@ -343,7 +343,7 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		resp := session.MakeRequest(t, req, http.StatusOK)
 
 		doc := NewHTMLParser(t, resp.Body)
-		comments := doc.Find(`.comments > .comment`)
+		comments := doc.Find(`.comment-code-cloud > .comment`)
 		assert.Len(t, comments.Nodes, 3) // 1 comment on line 1 + 2 comments on line 3
 	})
 }
@@ -525,6 +525,60 @@ func TestPullView_GivenApproveOrRejectReviewOnClosedPR(t *testing.T) {
 			testSubmitReview(t, user2Session, htmlDoc.GetCSRF(), "user2", "repo1", elem[4], sha, "reject", http.StatusOK)
 		})
 	})
+}
+
+func TestPullReview_OldLatestCommitId(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	session := loginUser(t, "user1")
+
+	baseRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerName: "user2", Name: "repo1"})
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{BaseRepoID: baseRepo.ID, Index: 3})
+
+	baseGitRepo, err := gitrepo.OpenRepository(db.DefaultContext, baseRepo)
+	require.NoError(t, err)
+	defer baseGitRepo.Close()
+
+	headCommitSHA, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
+	require.NoError(t, err)
+
+	headCommit, err := baseGitRepo.GetCommit(headCommitSHA)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, headCommit.ParentCount(), 1)
+
+	parentCommit, err := headCommit.Parent(0)
+	require.NoError(t, err)
+	oldCommitSHA := parentCommit.ID.String()
+	require.NotEqual(t, headCommitSHA, oldCommitSHA)
+
+	req := NewRequest(t, "GET", "/user2/repo1/pulls/3/files/reviews/new_comment")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	doc := NewHTMLParser(t, resp.Body)
+
+	const content = "TestPullReview_OldLatestCommitId"
+	req = NewRequestWithValues(t, "POST", "/user2/repo1/pulls/3/files/reviews/comments", map[string]string{
+		"_csrf":            doc.GetInputValueByName("_csrf"),
+		"origin":           doc.GetInputValueByName("origin"),
+		"latest_commit_id": oldCommitSHA,
+		"side":             "proposed",
+		"line":             "2",
+		"path":             "iso-8859-1.txt",
+		"diff_start_cid":   doc.GetInputValueByName("diff_start_cid"),
+		"diff_end_cid":     doc.GetInputValueByName("diff_end_cid"),
+		"diff_base_cid":    doc.GetInputValueByName("diff_base_cid"),
+		"content":          content,
+		"single_review":    "true",
+	})
+	session.MakeRequest(t, req, http.StatusOK)
+
+	comment := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{IssueID: pr.IssueID, Content: content})
+	require.NotZero(t, comment.ReviewID)
+	assert.Equal(t, oldCommitSHA, comment.CommitSHA)
+	assert.NotEqual(t, headCommitSHA, comment.CommitSHA)
+
+	review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{ID: comment.ReviewID})
+	assert.Equal(t, issues_model.ReviewTypeComment, review.Type)
+	assert.Equal(t, oldCommitSHA, review.CommitID)
+	assert.NotEqual(t, headCommitSHA, review.CommitID)
 }
 
 func TestPullReviewInArchivedRepo(t *testing.T) {
@@ -791,6 +845,7 @@ func TestPullRequestStaleReview(t *testing.T) {
 			cloneURL, _ := url.Parse(clone)
 			cloneURL.User = url.UserPassword("user2", userPassword)
 			require.NoError(t, git.CloneWithArgs(t.Context(), nil, cloneURL.String(), dstPath, git.CloneRepoOptions{}))
+			doGitSetRemoteURL(dstPath, "origin", cloneURL)(t)
 
 			return dstPath
 		}

@@ -1194,7 +1194,9 @@ func ValidateCommitsWithEmails(ctx context.Context, oldCommits []*git.Commit) []
 	return newCommits
 }
 
-// GetUserByEmail returns the user object by given e-mail if exists.
+// GetUserByEmail returns the user associated with the email, if it exists
+// and is activated. If the email is a no-reply address, then the user
+// associated with that no-reply address is returned.
 func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	if len(email) == 0 {
 		return nil, ErrUserNotExist{Name: email}
@@ -1202,8 +1204,8 @@ func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 
 	email = strings.ToLower(email)
 	// Otherwise, check in alternative list for activated email addresses
-	emailAddress := &EmailAddress{LowerEmail: email, IsActivated: true}
-	has, err := db.GetEngine(ctx).Get(emailAddress)
+	emailAddress := &EmailAddress{}
+	has, err := db.GetEngine(ctx).Where("lower_email = ? AND is_activated = ?", email, true).Get(emailAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -1225,6 +1227,26 @@ func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	}
 
 	return nil, ErrUserNotExist{Name: email}
+}
+
+// GetUserByEmailSimple returns the user associated with the email, if it exists.
+//
+// NOTE: You likely should use `GetUserByEmail`, which handles the no-reply
+// address and only uses activated emails to get the user.
+func GetUserByEmailSimple(ctx context.Context, email string) (*User, error) {
+	if len(email) == 0 {
+		return nil, ErrUserNotExist{Name: email}
+	}
+
+	emailAddress := &EmailAddress{}
+	has, err := db.GetEngine(ctx).Where("lower_email = ?", strings.ToLower(email)).Get(emailAddress)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrUserNotExist{Name: email}
+	}
+
+	return GetUserByID(ctx, emailAddress.UID)
 }
 
 // GetUser checks if a user already exists

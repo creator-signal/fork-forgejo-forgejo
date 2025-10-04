@@ -219,10 +219,10 @@ func TestSearchUsers(t *testing.T) {
 	}
 
 	testUserSuccess(&user_model.SearchUserOptions{OrderBy: "id ASC", ListOptions: db.ListOptions{Page: 1}},
-		[]int64{1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 1041})
+		[]int64{1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 42, 1041})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsActive: optional.Some(false)},
-		[]int64{9})
+		[]int64{42, 9})
 
 	testUserSuccess(&user_model.SearchUserOptions{OrderBy: "id ASC", ListOptions: db.ListOptions{Page: 1}, IsActive: optional.Some(true)},
 		[]int64{1, 2, 4, 5, 8, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 1041})
@@ -994,5 +994,57 @@ func TestPronounsPrivacy(t *testing.T) {
 		user.KeepPronounsPrivate = true
 
 		assert.Equal(t, "any", user.GetPronouns(true))
+	})
+}
+
+func TestGetUserByEmail(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.Service.NoReplyAddress, "noreply.example.org")()
+
+	t.Run("Normal", func(t *testing.T) {
+		u, err := user_model.GetUserByEmail(t.Context(), "user2@example.com")
+		require.NoError(t, err)
+		assert.EqualValues(t, 2, u.ID)
+	})
+
+	t.Run("Not activated", func(t *testing.T) {
+		u, err := user_model.GetUserByEmail(t.Context(), "user11@example.com")
+		require.ErrorIs(t, err, user_model.ErrUserNotExist{Name: "user11@example.com"})
+		assert.Nil(t, u)
+	})
+
+	t.Run("Not primary", func(t *testing.T) {
+		u, err := user_model.GetUserByEmail(t.Context(), "user1-3@example.com")
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, u.ID)
+	})
+
+	t.Run("No-reply", func(t *testing.T) {
+		u, err := user_model.GetUserByEmail(t.Context(), "user1@noreply.example.org")
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, u.ID)
+	})
+}
+
+func TestGetUserByEmailSimple(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.Service.NoReplyAddress, "noreply.example.org")()
+
+	t.Run("Normal", func(t *testing.T) {
+		u, err := user_model.GetUserByEmailSimple(t.Context(), "user2@example.com")
+		require.NoError(t, err)
+		assert.EqualValues(t, 2, u.ID)
+	})
+
+	t.Run("Not activated", func(t *testing.T) {
+		u, err := user_model.GetUserByEmailSimple(t.Context(), "user11@example.com")
+		require.NoError(t, err)
+		assert.EqualValues(t, 11, u.ID)
+	})
+
+	t.Run("No-reply", func(t *testing.T) {
+		u, err := user_model.GetUserByEmailSimple(t.Context(), "user1@noreply.example.org")
+		require.ErrorIs(t, err, user_model.ErrUserNotExist{Name: "user1@noreply.example.org"})
+		assert.Nil(t, u)
 	})
 }

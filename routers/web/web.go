@@ -53,6 +53,7 @@ import (
 
 	_ "forgejo.org/modules/session" // to registers all internal adapters
 
+	"code.forgejo.org/go-chi/binding"
 	"code.forgejo.org/go-chi/captcha"
 	chi_middleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -192,7 +193,8 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 			return
 		}
 
-		if !options.SignOutRequired && !options.DisableCSRF && ctx.Req.Method == "POST" {
+		safeMethod := ctx.Req.Method == "GET" || ctx.Req.Method == "HEAD" || ctx.Req.Method == "OPTIONS"
+		if !options.SignOutRequired && !options.DisableCSRF && !safeMethod {
 			ctx.Csrf.Validate(ctx)
 			if ctx.Written() {
 				return
@@ -1297,7 +1299,7 @@ func registerRoutes(m *web.Route) {
 					Post(web.Bind(forms.DeleteRepoFileForm{}), repo.DeleteFilePost)
 				m.Combo("/_upload/*", repo.MustBeAbleToUpload).
 					Get(repo.UploadFile).
-					Post(web.Bind(forms.UploadRepoFileForm{}), repo.UploadFilePost)
+					Post(BindUpload(), repo.UploadFilePost)
 				m.Combo("/_diffpatch/*").Get(repo.NewDiffPatch).
 					Post(web.Bind(forms.EditRepoFileForm{}), repo.NewDiffPatchPost)
 				m.Combo("/_cherrypick/{sha:([a-f0-9]{4,64})}/*").Get(repo.CherryPick).
@@ -1443,19 +1445,22 @@ func registerRoutes(m *web.Route) {
 				m.Get("/latest", actions.ViewLatest)
 				m.Group("/{run}", func() {
 					m.Combo("").
-						Get(actions.View).
+						Get(actions.RedirectToLatestAttempt).
 						Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 					m.Group("/jobs/{job}", func() {
 						m.Combo("").
-							Get(actions.View).
+							Get(actions.RedirectToLatestAttempt).
 							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 						m.Post("/rerun", reqRepoActionsWriter, actions.Rerun)
 						m.Get("/logs", actions.Logs)
+						m.Combo("/attempt/{attempt}").
+							Get(actions.View).
+							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 					})
 					m.Post("/cancel", reqRepoActionsWriter, actions.Cancel)
 					m.Post("/approve", reqRepoActionsWriter, actions.Approve)
 					m.Get("/artifacts", actions.ArtifactsView)
-					m.Get("/artifacts/{artifact_name}", actions.ArtifactsDownloadView)
+					m.Get("/artifacts/{artifact_name_or_id}", actions.ArtifactsDownloadView)
 					m.Delete("/artifacts/{artifact_name}", reqRepoActionsWriter, actions.ArtifactsDeleteView)
 					m.Post("/rerun", reqRepoActionsWriter, actions.Rerun)
 				})
@@ -1718,4 +1723,21 @@ func registerRoutes(m *web.Route) {
 		ctx := context.GetWebContext(req)
 		ctx.NotFound("", nil)
 	})
+}
+
+func BindUpload() http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request) {
+		theObj := new(forms.UploadRepoFileForm) // create a new form obj for every request but not use obj directly
+		data := middleware.GetContextData(req.Context())
+		binding.Bind(req, theObj)
+		files := theObj.Files
+		var fullpaths []string
+		for _, fileID := range files {
+			fullPath := req.Form.Get("files_fullpath[" + fileID + "]")
+			fullpaths = append(fullpaths, fullPath)
+		}
+		theObj.FullPaths = fullpaths
+		data.GetData()["__form"] = theObj
+		middleware.AssignForm(theObj, data)
+	}
 }

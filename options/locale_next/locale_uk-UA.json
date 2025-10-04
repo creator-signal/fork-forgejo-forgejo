@@ -133,8 +133,17 @@
     "migrate.pagure.token_body_b": "Якщо хочете зробити цей репозиторій приватним, обов'язково встановіть прапорець «Приватний репозиторій» вище",
     "migrate.pagure.incorrect_url": "Вказано неправильну URL-адресу репозиторію-джерела",
     "migrate.pagure.token_body_a": "Уведіть токен API Pagure з доступом до приватних задач, щоб створити репозиторій, який міститиме лише приватні задачі",
-    "settings.must_enable_2fa": "Цей екземпляр Forgejo вимагає від користувачів увімкнути двофакторну автентифікацію, перш ніж вони зможуть отримати доступ до своїх облікових записів.",
-    "error.must_enable_2fa": "Цей екземпляр Forgejo вимагає від користувачів увімкнути двофакторну автентифікацію, перш ніж вони зможуть отримати доступ до своїх облікових записів. Увімкніть її тут: %s",
+    "migrate.github.description": "Перенести дані з github.com або сервера GitHub Enterprise.",
+    "migrate.git.description": "Перенести репозиторій з будь-якої служби Git.",
+    "migrate.gitea.description": "Перенести дані з gitea.com та інших екземплярів Gitea.",
+    "migrate.gitlab.description": "Перенести дані з gitlab.com та інших екземплярів GitLab.",
+    "migrate.gogs.description": "Перенести дані з notabug.org та інших екземплярів Gogs.",
+    "migrate.onedev.description": "Перенести дані з code.onedev.io та інших екземплярів OneDev.",
+    "migrate.gitbucket.description": "Перенести дані з екземплярів GitBucket.",
+    "migrate.codebase.description": "Перенести дані з codebasehq.com.",
+    "migrate.forgejo.description": "Перенести дані з codeberg.org або інших екземплярів Forgejo.",
+    "settings.must_enable_2fa": "На цьому екземплярі Forgejo для доступу до облікового запису вам необхідно захистити його двофакторною автентифікацією.",
+    "error.must_enable_2fa": "На цьому екземплярі Forgejo для доступу до облікового запису вам необхідно захистити його двофакторною автентифікацією. Увімкніть її тут: %s",
     "admin.config.global_2fa_requirement.none": "Немає",
     "admin.config.global_2fa_requirement.all": "Усі користувачі",
     "admin.config.global_2fa_requirement.admin": "Адміністратори",
@@ -142,5 +151,20 @@
     "admin.config.global_2fa_requirement.title": "Глобальна вимога двофакторної автентифікації",
     "settings.twofa_unroll_unavailable": "Для вашого облікового запису необхідна двофакторна автентифікація; це неможливо вимкнути.",
     "settings.twofa_reenroll": "Увімкнути двофакторну автентифікацію",
-    "settings.twofa_reenroll.description": "Повторно зареєструйте свою двофакторну автентифікацію"
+    "settings.twofa_reenroll.description": "Повторно зареєструйте свою двофакторну автентифікацію",
+    "user.ghost.tooltip": "Користувача не знайдено; ймовірно, його було видалено.",
+    "migrate.form.error.url_credentials": "URL-адреса містить дані для входу, введіть їх у поля «Ім'я користувача» і «Пароль» відповідно",
+    "actions.runs.run_attempt_label": "Спроба запуску №%[1]s (%[2]s)",
+    "actions.runs.view_most_recent_run": "Переглянути останній запуск",
+    "actions.runs.viewing_out_of_date_run": "Ви переглядаєте застарілий запуск цього завдання, який було виконано %[1]s.",
+    "repo.pulls.maintainers_can_edit": "Супроводжувачі можуть редагувати цей запит на злиття.",
+    "repo.pulls.maintainers_cannot_edit": "Супроводжувачі не можуть редагувати цей запит на злиття.",
+    "pulse.n_active_issues": {
+        "one": "%s активна задача",
+        "many": "%s активних задач"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s активний запит на злиття",
+        "many": "%s активних запитів на злиття"
+    }
 }

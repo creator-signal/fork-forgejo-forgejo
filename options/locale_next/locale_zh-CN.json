@@ -93,6 +93,15 @@
     "repo.commit.load_tags_failed": "由于内部错误，无法加载标签",
     "admin.auths.allow_username_change": "允许更改用户名",
     "migrate.pagure.description": "从 pagure.io 或其他 Pagure 实例迁移数据。",
+    "migrate.github.description": "从 github.com 或 GitHub Enterprise 服务器迁移数据。",
+    "migrate.git.description": "从任意 Git 服务迁移仓库。",
+    "migrate.gitea.description": "从 gitea.com 或其他 Gitea 实例迁移数据。",
+    "migrate.gitlab.description": "从 gitlab.com 或其他 GitLab 实例迁移数据。",
+    "migrate.gogs.description": "从 notabug.org 或其他 Gogs 实例迁移数据。",
+    "migrate.onedev.description": "从 code.onedev.io 或其他 OneDev 实例迁移数据。",
+    "migrate.gitbucket.description": "从 GitBucket 实例迁移数据。",
+    "migrate.codebase.description": "从 codebasehq.com 迁移数据。",
+    "migrate.forgejo.description": "从 codeberg.org 或其他 Forgejo 实例迁移数据。",
     "warning.repository.out_of_sync": "此仓库的数据库表示已脱同步。如果在向此仓库推送提交后仍出现此警告，请联系管理员。",
     "admin.config.security": "安全设置",
     "settings.twofa_unroll_unavailable": "你的账户必须启用双因子认证，无法禁用。",
@@ -106,9 +115,22 @@
     "settings.must_enable_2fa": "此 Forgejo 实例要求用户启用双因子认证。",
     "migrate.pagure.incorrect_url": "提供了错误的源仓库URL",
     "migrate.pagure.project_url": "Pagure 项目 URL",
-    "migrate.pagure.project_example": "Pagure 项目的 URL，例如：https://pagure.io/pagure",
+    "migrate.pagure.project_example": "Pagure 项目 URL，例如：https://pagure.io/pagure",
     "migrate.pagure.token_label": "令牌",
     "migrate.pagure.token_body_a": "提供可访问私有议题的 Pagure API 令牌以创建一个只有私有议题的仓库",
     "migrate.pagure.token_body_b": "如果你希望此仓库为私有，记得选择上面的私有仓库选项！",
-    "repo.pulls.already_merged": "合并失败：此合并请求已被合并。"
+    "repo.pulls.already_merged": "合并失败：此合并请求已被合并。",
+    "user.ghost.tooltip": "该用户已被删除或无法找到。",
+    "migrate.form.error.url_credentials": "URL 包含凭据，请分别将凭据填入用户名和密码字段",
+    "actions.runs.view_most_recent_run": "查看最新运行",
+    "actions.runs.run_attempt_label": "运行尝试 #%[1]s（%[2]s）",
+    "actions.runs.viewing_out_of_date_run": "您正在查看于 %[1]s 执行的过期运行。",
+    "pulse.n_active_issues": {
+        "one": "%s 项活动的议题",
+        "other": "%s 项活动的议题"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s 个活跃合并请求",
+        "other": "%s 个活跃合并请求"
+    }
 }
