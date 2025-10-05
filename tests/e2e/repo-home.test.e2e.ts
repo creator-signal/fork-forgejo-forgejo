@@ -1,3 +1,6 @@
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
 // web_src/js/components/RepoBranchTagSelector.vue
 // web_src/js/features/common-global.js
