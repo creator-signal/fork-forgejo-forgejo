@@ -32,7 +32,7 @@
 				{{range .LanguageStats}}
 					<li class="item">
 						<i class="color-icon" style="background-color: {{.Color}}"></i>
-						<span class="tw-font-semibold">
+						<span>
 							{{if eq .Language "other"}}
 								{{ctx.Locale.Tr "repo.language_other"}}
 							{{else}}

@@ -110,6 +110,7 @@ details.stats ul {
     flex-wrap: wrap;
 
     li span {
+      font-weight: var(--font-weight-semibold);
       text-wrap: nowrap;
     }
   }
