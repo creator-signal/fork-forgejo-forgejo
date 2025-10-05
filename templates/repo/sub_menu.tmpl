@@ -20,7 +20,7 @@
 		{{end}}
 	</div>
 	{{if and (.Permission.CanRead $.UnitTypeCode) (not .IsEmptyRepo) .LanguageStats}}
-		<details class="stats" id="language-stats-bar">
+		<details class="stats" id="language-stats">
 			<summary>
 				<stats-bar>
 					{{range .LanguageStats}}
