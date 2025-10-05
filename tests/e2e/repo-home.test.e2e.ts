@@ -14,11 +14,11 @@ test('Language stats bar', async ({page}) => {
 
   await expect(page.locator('#language-stats ul')).toBeHidden();
 
-  await page.click('#language-stats');
+  await page.click('#language-stats summary');
   await expect(page.locator('#language-stats ul')).toBeVisible();
   await screenshot(page);
 
-  await page.click('#language-stats');
+  await page.click('#language-stats summary');
   await expect(page.locator('#language-stats ul')).toBeHidden();
   await screenshot(page);
 });
