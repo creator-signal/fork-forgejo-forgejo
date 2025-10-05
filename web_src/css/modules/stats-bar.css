@@ -105,19 +105,23 @@ details.stats ul {
   }
 
   ul {
-    padding: 0.25rem 0.5rem;
+    padding: 0 0.5rem;
     gap: 0 1rem;
     flex-wrap: wrap;
+    min-height: 2rem;
 
-    li span {
-      font-weight: var(--font-weight-semibold);
-      text-wrap: nowrap;
+    li {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.25rem 0;
+      gap: 0.25em;
+
+      span {
+        font-weight: var(--font-weight-semibold);
+        text-wrap: nowrap;
+      }
     }
-  }
-}
-
-@media (min-width: 767.98px) {
-  #language-stats ul {
-    padding: 0 0.5rem;
   }
 }
