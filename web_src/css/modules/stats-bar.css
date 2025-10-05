@@ -97,10 +97,14 @@ details.stats {
 #language-stats {
   stats-bar {
     gap: 2px;
-
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    overflow: hidden;
     .slice {
       border-radius: 0;
     }
+  }
+  &[open] stats-bar {
+    border-radius: 0;
   }
 
   ul {
