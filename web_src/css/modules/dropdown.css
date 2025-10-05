@@ -112,7 +112,7 @@ details.dropdown.dir-rtl > summary + ul > li {
   direction: ltr;
 }
 
-details.dropdown > summary + ul > li > .item {
+details.dropdown > summary + ul > li > :is(a, button) {
   padding: var(--dropdown-item-padding);
   width: 100%;
   display: flex;
