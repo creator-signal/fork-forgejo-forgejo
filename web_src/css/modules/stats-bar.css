@@ -95,15 +95,9 @@ details.stats ul {
 }
 
 /* Properties specific to the lang stats in repo overview */
-#language-stats {
-  padding: 0;
-  white-space: nowrap;
-}
-
 #language-stats stats-bar {
   gap: 2px;
-}
-
-#language-stats stats-bar .slice {
-  border-radius: 0;
+  .slice {
+    border-radius: 0;
+  }
 }
