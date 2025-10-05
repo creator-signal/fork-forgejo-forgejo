@@ -41,6 +41,11 @@ details.stats {
   flex-direction: column;
 }
 
+/* Prevent opener marker from showing up */
+details.stats summary {
+  display: flex;
+}
+
 /* Properties specific to the UI in storage overview */
 .size-overview .stats {
   border-radius: var(--border-radius);
@@ -59,7 +64,6 @@ details.stats {
   }
 
   summary {
-    display: flex;
     flex-direction: column;
     padding: 0.75rem;
     gap: 1rem;
@@ -90,10 +94,6 @@ details.stats {
 #language-stats-bar {
   padding: 0;
   white-space: nowrap;
-}
-
-#language-stats-bar summary {
-  display: flex;
 }
 
 #language-stats-bar ul {
