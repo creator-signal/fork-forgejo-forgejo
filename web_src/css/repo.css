@@ -1897,29 +1897,6 @@ details.repo-search-result summary::marker {
   font-weight: var(--font-weight-medium);
 }
 
-#language-stats-bar {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  white-space: nowrap;
-}
-
-#language-stats-bar summary {
-  display: flex;
-}
-
-#language-stats-bar ul {
-  display: flex;
-  margin: 0;
-}
-
-#language-stats-bar stats-bar {
-  gap: 2px;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  overflow: hidden;
-}
-
 #cite-repo-modal #citation-panel {
   display: flex;
   width: 100%;
