@@ -302,63 +302,6 @@ type swaggerCommitList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
-// CommitListWithPagination
-// swagger:response CommitListWithPagination
-type swaggerCommitListWithPagination struct {
-	// The current page
-	// in:header
-	Page int `json:"X-Page"`
-
-	// Commits per page
-	// in:header
-	PerPage int `json:"X-PerPage"`
-
-	// Total number of pages
-	// in:header
-	PageCount int `json:"X-PageCount"`
-
-	// True if there is another page
-	// in:header
-	HasMore bool `json:"X-HasMore"`
-
-	// in: body
-	Body []api.Commit `json:"body"`
-
-	// The total number of commits
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
-}
-
-// CommitListWithLegacyPagination
-// swagger:response CommitListWithLegacyPagination
-type swaggerCommitListWithLegacyPagination struct {
-	// The current page
-	// in:header
-	Page int `json:"X-Page"`
-
-	// Commits per page
-	// in:header
-	PerPage int `json:"X-PerPage"`
-
-	// Total number of pages
-	// in:header
-	PageCount int `json:"X-PageCount"`
-
-	// True if there is another page
-	// in:header
-	HasMore bool `json:"X-HasMore"`
-
-	// Total number of commits (deprecated, use X-Total-Count)
-	// in:header
-	Total int64 `json:"X-Total"`
-
-	// in: body
-	Body []api.Commit `json:"body"`
-
-	// The total number of commits
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
-}
 
 // ChangedFileList
 // swagger:response ChangedFileList

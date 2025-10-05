@@ -20,10 +20,6 @@ type swaggerResponseUser struct {
 type swaggerResponseUserList struct {
 	// in:body
 	Body []api.User `json:"body"`
-
-	// The total number of users
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // EmailList
@@ -31,10 +27,6 @@ type swaggerResponseUserList struct {
 type swaggerResponseEmailList struct {
 	// in:body
 	Body []api.Email `json:"body"`
-
-	// The total number of emails
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // swagger:model EditUserOption
@@ -55,26 +47,4 @@ type swaggerResponseUserHeatmapData struct {
 type swaggerResponseUserSettings struct {
 	// in:body
 	Body api.UserSettings `json:"body"`
-}
-
-// StopWatchesList
-// swagger:response StopWatchesList
-type swaggerResponseStopWatchesList struct {
-	// in:body
-	Body []api.StopWatch `json:"body"`
-
-	// The total number of stopwatches
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
-}
-
-// ActivityList
-// swagger:response ActivityList
-type swaggerResponseActivityList struct {
-	// in:body
-	Body []api.Activity `json:"body"`
-
-	// The total number of activities
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }

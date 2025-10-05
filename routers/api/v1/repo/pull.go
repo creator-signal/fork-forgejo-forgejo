@@ -1444,7 +1444,7 @@ func GetPullRequestCommits(ctx *context.APIContext) {
 	//   type: boolean
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/CommitListWithPagination"
+	//     "$ref": "#/responses/CommitList"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
