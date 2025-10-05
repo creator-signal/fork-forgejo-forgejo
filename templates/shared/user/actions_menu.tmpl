@@ -1,5 +1,7 @@
 <details class="dropdown dir-auto">
-	<summary data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">{{svg "octicon-kebab-horizontal"}}</summary>
+	<summary class="border" data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">
+		{{svg "octicon-kebab-horizontal"}}
+	</summary>
 	<ul>
 		{{if eq .SignedUserID .ContextUser.ID}}
 			<li>

@@ -19,7 +19,9 @@
 				{{$moderationEntryNeeded := and .IsModerationEnabled .IsSigned (not .IsOrganizationOwner)}}
 				{{if or .EnableFeed $moderationEntryNeeded}}
 					<details class="dropdown dir-rtl">
-						<summary data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">{{svg "octicon-kebab-horizontal" 20}}</summary>
+						<summary class="border" data-tooltip-content="{{ctx.Locale.Tr "profile.actions.tooltip"}}">
+							{{svg "octicon-kebab-horizontal" 20}}
+						</summary>
 						<ul>
 							{{if .EnableFeed}}
 								<li>
