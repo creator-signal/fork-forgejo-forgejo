@@ -80,14 +80,13 @@ details.dropdown > summary + ul {
 details.dropdown > summary + ul > li {
   width: 100%;
   background: none;
-}
 
-details.dropdown > summary + ul > li:first-child {
-  border-radius: var(--border-radius) var(--border-radius) 0 0;
-}
-
-details.dropdown > summary + ul > li:last-child {
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  &:first-child {
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+  }
+  &:last-child {
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+  }
 }
 
 /* dir-auto option - switch the direction at a width point where most of layout changes occur. */
@@ -96,9 +95,9 @@ details.dropdown > summary + ul > li:last-child {
   details.dropdown.dir-auto > summary + ul {
     inset-inline: 0 auto;
     direction: rtl;
-  }
-  details.dropdown.dir-auto > summary + ul > li {
-    direction: ltr;
+    > li {
+      direction: ltr;
+    }
   }
 }
 /* Note: https://css-tricks.com/css-anchor-positioning-guide/
@@ -107,23 +106,24 @@ details.dropdown > summary + ul > li:last-child {
 details.dropdown.dir-rtl > summary + ul {
   inset-inline: 0 auto;
   direction: rtl;
-}
-details.dropdown.dir-rtl > summary + ul > li {
-  direction: ltr;
-}
-
-details.dropdown > summary + ul > li > :is(a, button) {
-  padding: var(--dropdown-item-padding);
-  width: 100%;
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  color: var(--color-text);
-  /* Suppress underline - hover is indicated by background color */
-  text-decoration: none;
+  > li {
+    direction: ltr;
+  }
 }
 
-/* Cancel default styling of button elements */
-details.dropdown > summary + ul > li button {
-  background: none;
+details.dropdown > summary + ul > li {
+  > :is(a, button) {
+    padding: var(--dropdown-item-padding);
+    width: 100%;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    color: var(--color-text);
+    /* Suppress underline - hover is indicated by background color */
+    text-decoration: none;
+  }
+  /* Cancel default styling of button elements */
+  > button {
+    background: none;
+  }
 }
