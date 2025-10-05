@@ -1899,8 +1899,18 @@ details.repo-search-result summary::marker {
 
 #language-stats-bar {
   display: flex;
+  flex-direction: column;
   padding: 0;
   white-space: nowrap;
+}
+
+#language-stats-bar summary {
+  display: flex;
+}
+
+#language-stats-bar ul {
+  display: flex;
+  margin: 0;
 }
 
 #language-stats-bar stats-bar {

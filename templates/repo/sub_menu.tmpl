@@ -20,16 +20,17 @@
 		{{end}}
 	</div>
 	{{if and (.Permission.CanRead $.UnitTypeCode) (not .IsEmptyRepo) .LanguageStats}}
-	<a class="ui segment show-panel toggle" id="language-stats-bar" data-panel="#language-stats-legend">
+<details class="stats" id="language-stats-bar">
+	<summary>
 		<stats-bar>
 			{{range .LanguageStats}}
 				<div class="slice" style="width: {{.Percentage}}%; background-color: {{.Color}}" data-tooltip-placement="top" data-tooltip-content={{.Language}} data-tooltip-follow-cursor="horizontal"></div>
 			{{end}}
 		</stats-bar>
-	</a>
-	<div class="ui segment sub-menu tw-hidden" id="language-stats-legend">
+	</summary>
+	<ul class="ui segment sub-menu" id="language-stats-legend">
 		{{range .LanguageStats}}
-		<div class="item">
+		<li class="item">
 			<i class="color-icon" style="background-color: {{.Color}}"></i>
 			<span class="tw-font-semibold">
 				{{if eq .Language "other"}}
@@ -39,9 +40,10 @@
 				{{end}}
 			</span>
 			{{.Percentage}}%
-		</div>
+		</li>
 		{{end}}
-	</div>
+	</ul>
+</details>
 	{{end}}
 </div>
 {{end}}
