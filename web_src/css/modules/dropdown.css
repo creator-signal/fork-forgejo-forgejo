@@ -40,6 +40,9 @@ details.dropdown > summary {
   &.border {
     border: 1px solid var(--color-light-border);
   }
+  &.options {
+    padding-inline: 0.75rem;
+  }
 }
 
 details.dropdown > summary:hover,
@@ -124,6 +127,11 @@ details.dropdown > summary + ul > li {
     color: var(--color-text);
     /* Suppress underline - hover is indicated by background color */
     text-decoration: none;
+
+    &.active {
+      background: var(--color-active);
+      font-weight: 500;
+    }
   }
   /* Cancel default styling of button elements */
   > button {
