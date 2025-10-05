@@ -33,10 +33,16 @@ stats-bar {
   }
 }
 
-/* Properties specific to the UI in storage overview */
-.size-overview .stats {
+/* Properties for stats bars with legend included via <details> */
+
+/* Summary and legend should be stacked vertically */
+details.stats {
   display: flex;
   flex-direction: column;
+}
+
+/* Properties specific to the UI in storage overview */
+.size-overview .stats {
   border-radius: var(--border-radius);
 
   &:hover,
@@ -82,8 +88,6 @@ stats-bar {
 
 /* Properties specific to the lang stats in repo overview */
 #language-stats-bar {
-  display: flex;
-  flex-direction: column;
   padding: 0;
   white-space: nowrap;
 }
