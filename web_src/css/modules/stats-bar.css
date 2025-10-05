@@ -34,22 +34,21 @@ stats-bar {
 }
 
 /* Properties for stats bars with legend included via <details> */
-
-/* Summary and legend should be stacked vertically */
 details.stats {
+  /* Summary and legend should be stacked vertically */
   display: flex;
   flex-direction: column;
-}
 
-/* Prevent opener marker from showing up */
-details.stats summary {
-  display: flex;
-}
+  /* Prevent opener marker from showing up */
+  summary {
+    display: flex;
+  }
 
-/* Cancel unwanted <ul> properties of legend */
-details.stats ul {
-  display: flex;
-  margin: 0;
+  /* Cancel unwanted <ul> properties of legend */
+  ul {
+    display: flex;
+    margin: 0;
+  }
 }
 
 /* Properties specific to the UI in storage overview */
