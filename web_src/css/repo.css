@@ -1897,12 +1897,14 @@ details.repo-search-result summary::marker {
   font-weight: var(--font-weight-medium);
 }
 
-.repository .repository-summary #language-stats-bar {
+#language-stats-bar {
   display: flex;
-  gap: 2px;
   padding: 0;
-  height: 10px;
   white-space: nowrap;
+}
+
+#language-stats-bar stats-bar {
+  gap: 2px;
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
   overflow: hidden;
