@@ -5,6 +5,7 @@
 // web_src/js/components/RepoBranchTagSelector.vue
 // web_src/js/features/common-global.js
 // web_src/css/repo.css
+// web_src/css/modules/stats-bar.css
 // @watch end
 
 import {expect} from '@playwright/test';
