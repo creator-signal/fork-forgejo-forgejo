@@ -31,6 +31,7 @@ func cmdCert() *cli.Command {
 		Usage: "Generate self-signed certificate",
 		Description: `Generate a self-signed X.509 certificate for a TLS server.
 Outputs to 'cert.pem' and 'key.pem' and will overwrite existing files.`,
+		Before: noDanglingArgs,
 		Action: runCert,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -93,9 +94,6 @@ func pemBlockForKey(priv any) *pem.Block {
 }
 
 func runCert(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if err := argsSet(c, "host"); err != nil {
 		return err
 	}

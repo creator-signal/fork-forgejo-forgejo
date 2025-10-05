@@ -20,6 +20,7 @@ func cmdMigrate() *cli.Command {
 		Name:        "migrate",
 		Usage:       "Migrate the database",
 		Description: "This is a command for migrating the database, so that you can run 'forgejo admin user create' before starting the server.",
+		Before:      noDanglingArgs,
 		Action:      runMigrate,
 	}
 }
@@ -28,9 +29,6 @@ func runMigrate(stdCtx context.Context, ctx *cli.Command) error {
 	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
 
-	if err := noDanglingArgs(ctx); err != nil {
-		return err
-	}
 	if err := initDB(stdCtx); err != nil {
 		return err
 	}

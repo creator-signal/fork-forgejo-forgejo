@@ -77,6 +77,7 @@ func subcmdLogging() *cli.Command {
 						Name: "debug",
 					},
 				},
+				Before: noDanglingArgs,
 				Action: runPauseLogging,
 			}, {
 				Name:  "resume",
@@ -86,6 +87,7 @@ func subcmdLogging() *cli.Command {
 						Name: "debug",
 					},
 				},
+				Before: noDanglingArgs,
 				Action: runResumeLogging,
 			}, {
 				Name:  "release-and-reopen",
@@ -95,6 +97,7 @@ func subcmdLogging() *cli.Command {
 						Name: "debug",
 					},
 				},
+				Before: noDanglingArgs,
 				Action: runReleaseReopenLogging,
 			}, {
 				Name:      "remove",
@@ -156,6 +159,7 @@ func subcmdLogging() *cli.Command {
 								Usage:   "Compression level to use",
 							},
 						}...),
+						Before: noDanglingArgs,
 						Action: runAddFileLogger,
 					}, {
 						Name:  "conn",
@@ -182,6 +186,7 @@ func subcmdLogging() *cli.Command {
 								Usage:   "Host address and port to connect to (defaults to :7020)",
 							},
 						}...),
+						Before: noDanglingArgs,
 						Action: runAddConnLogger,
 					},
 				},
@@ -197,6 +202,7 @@ func subcmdLogging() *cli.Command {
 						Usage: "Switch off SQL logging",
 					},
 				},
+				Before: noDanglingArgs,
 				Action: runSetLogSQL,
 			},
 		},
@@ -219,10 +225,6 @@ func runRemoveLogger(ctx context.Context, c *cli.Command) error {
 }
 
 func runAddConnLogger(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -253,10 +255,6 @@ func runAddConnLogger(ctx context.Context, c *cli.Command) error {
 }
 
 func runAddFileLogger(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -290,10 +288,6 @@ func runAddFileLogger(ctx context.Context, c *cli.Command) error {
 }
 
 func commonAddLogger(ctx context.Context, c *cli.Command, mode string, vals map[string]any) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	if len(c.String("level")) > 0 {
 		vals["level"] = log.LevelFromString(c.String("level")).String()
 	}
@@ -331,10 +325,6 @@ func commonAddLogger(ctx context.Context, c *cli.Command, mode string, vals map[
 }
 
 func runPauseLogging(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -345,10 +335,6 @@ func runPauseLogging(ctx context.Context, c *cli.Command) error {
 }
 
 func runResumeLogging(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -359,10 +345,6 @@ func runResumeLogging(ctx context.Context, c *cli.Command) error {
 }
 
 func runReleaseReopenLogging(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -373,10 +355,6 @@ func runReleaseReopenLogging(ctx context.Context, c *cli.Command) error {
 }
 
 func runSetLogSQL(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 	setup(ctx, c.Bool("debug"), false)

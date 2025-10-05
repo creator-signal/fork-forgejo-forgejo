@@ -17,6 +17,7 @@ func microcmdUserResetMFA() *cli.Command {
 	return &cli.Command{
 		Name:   "reset-mfa",
 		Usage:  "Remove all two-factor authentication configurations for a user",
+		Before: noDanglingArgs,
 		Action: runResetMFA,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -30,9 +31,6 @@ func microcmdUserResetMFA() *cli.Command {
 }
 
 func runResetMFA(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if err := argsSet(c, "username"); err != nil {
 		return err
 	}

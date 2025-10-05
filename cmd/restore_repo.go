@@ -19,6 +19,7 @@ func cmdRestoreRepository() *cli.Command {
 		Name:        "restore-repo",
 		Usage:       "Restore the repository from disk",
 		Description: "This is a command for restoring the repository data.",
+		Before:      noDanglingArgs,
 		Action:      runRestoreRepository,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -54,10 +55,6 @@ wiki, issues, labels, releases, release_assets, milestones, pull_requests, comme
 func runRestoreRepository(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
-
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 
 	setting.MustInstalled()
 	var units []string

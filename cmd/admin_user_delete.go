@@ -40,14 +40,12 @@ func microcmdUserDelete() *cli.Command {
 				Usage: "Purge user, all their repositories, organizations and comments",
 			},
 		},
+		Before: noDanglingArgs,
 		Action: runDeleteUser,
 	}
 }
 
 func runDeleteUser(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if !c.IsSet("id") && !c.IsSet("username") && !c.IsSet("email") {
 		return errors.New("You must provide the id, username or email of a user to delete")
 	}

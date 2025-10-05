@@ -20,6 +20,7 @@ func cmdDoctorConvert() *cli.Command {
 		Name:        "convert",
 		Usage:       "Convert the database",
 		Description: "A command to convert an existing MySQL database from utf8 to utf8mb4",
+		Before:      noDanglingArgs,
 		Action:      runDoctorConvert,
 	}
 }
@@ -28,9 +29,6 @@ func runDoctorConvert(stdCtx context.Context, ctx *cli.Command) error {
 	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
 
-	if err := noDanglingArgs(ctx); err != nil {
-		return err
-	}
 	if err := initDB(stdCtx); err != nil {
 		return err
 	}

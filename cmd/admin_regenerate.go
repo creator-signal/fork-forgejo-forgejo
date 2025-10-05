@@ -17,12 +17,14 @@ var (
 	microcmdRegenHooks = &cli.Command{
 		Name:   "hooks",
 		Usage:  "Regenerate git-hooks",
+		Before: noDanglingArgs,
 		Action: runRegenerateHooks,
 	}
 
 	microcmdRegenKeys = &cli.Command{
 		Name:   "keys",
 		Usage:  "Regenerate authorized_keys file",
+		Before: noDanglingArgs,
 		Action: runRegenerateKeys,
 	}
 )
@@ -31,9 +33,6 @@ func runRegenerateHooks(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if err := initDB(ctx); err != nil {
 		return err
 	}
@@ -44,9 +43,6 @@ func runRegenerateKeys(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if err := initDB(ctx); err != nil {
 		return err
 	}

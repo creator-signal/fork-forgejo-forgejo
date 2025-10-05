@@ -42,6 +42,7 @@ func microcmdGenerateInternalToken() *cli.Command {
 	return &cli.Command{
 		Name:   "INTERNAL_TOKEN",
 		Usage:  "Generate a new INTERNAL_TOKEN",
+		Before: noDanglingArgs,
 		Action: runGenerateInternalToken,
 	}
 }
@@ -51,6 +52,7 @@ func microcmdGenerateLfsJwtSecret() *cli.Command {
 		Name:    "JWT_SECRET",
 		Aliases: []string{"LFS_JWT_SECRET"},
 		Usage:   "Generate a new JWT_SECRET",
+		Before:  noDanglingArgs,
 		Action:  runGenerateLfsJwtSecret,
 	}
 }
@@ -59,15 +61,12 @@ func microcmdGenerateSecretKey() *cli.Command {
 	return &cli.Command{
 		Name:   "SECRET_KEY",
 		Usage:  "Generate a new SECRET_KEY",
+		Before: noDanglingArgs,
 		Action: runGenerateSecretKey,
 	}
 }
 
 func runGenerateInternalToken(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	internalToken, err := generate.NewInternalToken()
 	if err != nil {
 		return err
@@ -83,10 +82,6 @@ func runGenerateInternalToken(ctx context.Context, c *cli.Command) error {
 }
 
 func runGenerateLfsJwtSecret(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	_, jwtSecretBase64 := generate.NewJwtSecret()
 
 	fmt.Printf("%s", jwtSecretBase64)
@@ -99,10 +94,6 @@ func runGenerateLfsJwtSecret(ctx context.Context, c *cli.Command) error {
 }
 
 func runGenerateSecretKey(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	secretKey, err := generate.NewSecretKey()
 	if err != nil {
 		return err

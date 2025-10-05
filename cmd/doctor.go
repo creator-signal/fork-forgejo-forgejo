@@ -43,6 +43,7 @@ func cmdDoctorCheck() *cli.Command {
 		Name:        "check",
 		Usage:       "Diagnose and optionally fix problems",
 		Description: "A command to diagnose problems with the current Forgejo instance according to the given configuration. Some problems can optionally be fixed by modifying the database or data storage.",
+		Before:      noDanglingArgs,
 		Action:      runDoctorCheck,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
@@ -175,10 +176,6 @@ func setupDoctorDefaultLogger(ctx *cli.Command, colorize bool) {
 func runDoctorCheck(stdCtx context.Context, ctx *cli.Command) error {
 	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
-
-	if err := noDanglingArgs(ctx); err != nil {
-		return err
-	}
 
 	colorize := log.CanColorStdout
 	if ctx.IsSet("color") {

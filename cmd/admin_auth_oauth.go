@@ -136,6 +136,7 @@ func microcmdAuthAddOauth() *cli.Command {
 	return &cli.Command{
 		Name:   "add-oauth",
 		Usage:  "Add new Oauth authentication source",
+		Before: noDanglingArgs,
 		Action: newAuthService().addOauth,
 		Flags:  oauthCLIFlags(),
 	}
@@ -145,6 +146,7 @@ func microcmdAuthUpdateOauth() *cli.Command {
 	return &cli.Command{
 		Name:   "update-oauth",
 		Usage:  "Update existing Oauth authentication source",
+		Before: noDanglingArgs,
 		Action: newAuthService().updateOauth,
 		Flags:  append(oauthCLIFlags()[:1], append([]cli.Flag{idFlag()}, oauthCLIFlags()[1:]...)...),
 	}
@@ -188,10 +190,6 @@ func (a *authService) addOauth(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	if err := a.initDB(ctx); err != nil {
 		return err
 	}
@@ -213,9 +211,6 @@ func (a *authService) addOauth(ctx context.Context, c *cli.Command) error {
 }
 
 func (a *authService) updateOauth(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if !c.IsSet("id") {
 		return errors.New("--id flag is missing")
 	}

@@ -18,6 +18,7 @@ func microcmdUserList() *cli.Command {
 	return &cli.Command{
 		Name:   "list",
 		Usage:  "List users",
+		Before: noDanglingArgs,
 		Action: runListUsers,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
@@ -32,9 +33,6 @@ func runListUsers(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if err := initDB(ctx); err != nil {
 		return err
 	}

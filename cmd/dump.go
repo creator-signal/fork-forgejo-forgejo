@@ -164,6 +164,7 @@ func cmdDump() *cli.Command {
 		Usage: "Dump Forgejo files and database",
 		Description: `Dump compresses all related files and database into zip file.
 It can be used for backup and capture Forgejo server image to send to maintainer`,
+		Before: noDanglingArgs,
 		Action: runDump,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -257,10 +258,6 @@ func runDump(stdCtx context.Context, ctx *cli.Command) error {
 		fileName += "." + outType
 	}
 	setting.MustInstalled()
-
-	if err := noDanglingArgs(ctx); err != nil {
-		return err
-	}
 
 	// make sure we are logging to the console no matter what the configuration tells us do to
 	// FIXME: don't use CfgProvider directly

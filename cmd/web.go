@@ -39,7 +39,7 @@ func cmdWeb() *cli.Command {
 		Usage: "Start the Forgejo web server",
 		Description: `The Forgejo web server is the only thing you need to run,
 and it takes care of all the other things for you`,
-		Before: PrepareConsoleLoggerLevel(log.INFO),
+		Before: multipleBefore(noDanglingArgs, PrepareConsoleLoggerLevel(log.INFO)),
 		Action: runWeb,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -236,10 +236,6 @@ func servePprof() {
 }
 
 func runWeb(ctx context.Context, cli *cli.Command) error {
-	if err := noDanglingArgs(cli); err != nil {
-		return err
-	}
-
 	defer func() {
 		if panicked := recover(); panicked != nil {
 			log.Fatal("PANIC: %v\n%s", panicked, log.Stack(2))

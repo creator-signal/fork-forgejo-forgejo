@@ -78,6 +78,7 @@ func microcmdAuthAddSMTP() *cli.Command {
 	return &cli.Command{
 		Name:   "add-smtp",
 		Usage:  "Add new SMTP authentication source",
+		Before: noDanglingArgs,
 		Action: runAddSMTP,
 		Flags:  smtpCLIFlags(),
 	}
@@ -87,6 +88,7 @@ func microcmdAuthUpdateSMTP() *cli.Command {
 	return &cli.Command{
 		Name:   "update-smtp",
 		Usage:  "Update existing SMTP authentication source",
+		Before: noDanglingArgs,
 		Action: runUpdateSMTP,
 		Flags:  append(smtpCLIFlags()[:1], append([]cli.Flag{idFlag()}, smtpCLIFlags()[1:]...)...),
 	}
@@ -132,9 +134,6 @@ func runAddSMTP(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if err := initDB(ctx); err != nil {
 		return err
 	}
@@ -172,9 +171,6 @@ func runAddSMTP(ctx context.Context, c *cli.Command) error {
 }
 
 func runUpdateSMTP(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if !c.IsSet("id") {
 		return errors.New("--id flag is missing")
 	}

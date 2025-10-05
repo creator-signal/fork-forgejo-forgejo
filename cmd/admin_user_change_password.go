@@ -21,6 +21,7 @@ func microcmdUserChangePassword() *cli.Command {
 	return &cli.Command{
 		Name:   "change-password",
 		Usage:  "Change a user's password",
+		Before: noDanglingArgs,
 		Action: runChangePassword,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -45,9 +46,6 @@ func microcmdUserChangePassword() *cli.Command {
 }
 
 func runChangePassword(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 	if err := argsSet(c, "username", "password"); err != nil {
 		return err
 	}

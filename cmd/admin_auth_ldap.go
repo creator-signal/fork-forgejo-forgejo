@@ -133,8 +133,9 @@ func ldapSimpleAuthCLIFlags() []cli.Flag {
 
 func microcmdAuthAddLdapBindDn() *cli.Command {
 	return &cli.Command{
-		Name:  "add-ldap",
-		Usage: "Add new LDAP (via Bind DN) authentication source",
+		Name:   "add-ldap",
+		Usage:  "Add new LDAP (via Bind DN) authentication source",
+		Before: noDanglingArgs,
 		Action: func(ctx context.Context, cli *cli.Command) error {
 			return newAuthService().addLdapBindDn(ctx, cli)
 		},
@@ -144,8 +145,9 @@ func microcmdAuthAddLdapBindDn() *cli.Command {
 
 func microcmdAuthUpdateLdapBindDn() *cli.Command {
 	return &cli.Command{
-		Name:  "update-ldap",
-		Usage: "Update existing LDAP (via Bind DN) authentication source",
+		Name:   "update-ldap",
+		Usage:  "Update existing LDAP (via Bind DN) authentication source",
+		Before: noDanglingArgs,
 		Action: func(ctx context.Context, cli *cli.Command) error {
 			return newAuthService().updateLdapBindDn(ctx, cli)
 		},
@@ -155,8 +157,9 @@ func microcmdAuthUpdateLdapBindDn() *cli.Command {
 
 func microcmdAuthAddLdapSimpleAuth() *cli.Command {
 	return &cli.Command{
-		Name:  "add-ldap-simple",
-		Usage: "Add new LDAP (simple auth) authentication source",
+		Name:   "add-ldap-simple",
+		Usage:  "Add new LDAP (simple auth) authentication source",
+		Before: noDanglingArgs,
 		Action: func(ctx context.Context, cli *cli.Command) error {
 			return newAuthService().addLdapSimpleAuth(ctx, cli)
 		},
@@ -166,8 +169,9 @@ func microcmdAuthAddLdapSimpleAuth() *cli.Command {
 
 func microcmdAuthUpdateLdapSimpleAuth() *cli.Command {
 	return &cli.Command{
-		Name:  "update-ldap-simple",
-		Usage: "Update existing LDAP (simple auth) authentication source",
+		Name:   "update-ldap-simple",
+		Usage:  "Update existing LDAP (simple auth) authentication source",
+		Before: noDanglingArgs,
 		Action: func(ctx context.Context, cli *cli.Command) error {
 			return newAuthService().updateLdapSimpleAuth(ctx, cli)
 		},
@@ -308,10 +312,6 @@ func (a *authService) addLdapBindDn(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	if err := a.initDB(ctx); err != nil {
 		return err
 	}
@@ -336,10 +336,6 @@ func (a *authService) addLdapBindDn(ctx context.Context, c *cli.Command) error {
 func (a *authService) updateLdapBindDn(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
-
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 
 	if err := a.initDB(ctx); err != nil {
 		return err
@@ -367,10 +363,6 @@ func (a *authService) addLdapSimpleAuth(ctx context.Context, c *cli.Command) err
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	if err := a.initDB(ctx); err != nil {
 		return err
 	}
@@ -395,10 +387,6 @@ func (a *authService) addLdapSimpleAuth(ctx context.Context, c *cli.Command) err
 func (a *authService) updateLdapSimpleAuth(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
-
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
 
 	if err := a.initDB(ctx); err != nil {
 		return err

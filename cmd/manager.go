@@ -39,6 +39,7 @@ func subcmdShutdown() *cli.Command {
 				Name: "debug",
 			},
 		},
+		Before: noDanglingArgs,
 		Action: runShutdown,
 	}
 }
@@ -52,6 +53,7 @@ func subcmdRestart() *cli.Command {
 				Name: "debug",
 			},
 		},
+		Before: noDanglingArgs,
 		Action: runRestart,
 	}
 }
@@ -65,6 +67,7 @@ func subcmdReloadTemplates() *cli.Command {
 				Name: "debug",
 			},
 		},
+		Before: noDanglingArgs,
 		Action: runReloadTemplates,
 	}
 }
@@ -73,6 +76,7 @@ func subcmdFlushQueues() *cli.Command {
 	return &cli.Command{
 		Name:   "flush-queues",
 		Usage:  "Flush queues in the running process",
+		Before: noDanglingArgs,
 		Action: runFlushQueues,
 		Flags: []cli.Flag{
 			&cli.DurationFlag{
@@ -95,6 +99,7 @@ func subCmdProcesses() *cli.Command {
 	return &cli.Command{
 		Name:   "processes",
 		Usage:  "Display running processes within the current process",
+		Before: noDanglingArgs,
 		Action: runProcesses,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
@@ -125,10 +130,6 @@ func subCmdProcesses() *cli.Command {
 }
 
 func runShutdown(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -138,10 +139,6 @@ func runShutdown(ctx context.Context, c *cli.Command) error {
 }
 
 func runRestart(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -151,10 +148,6 @@ func runRestart(ctx context.Context, c *cli.Command) error {
 }
 
 func runReloadTemplates(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -164,10 +157,6 @@ func runReloadTemplates(ctx context.Context, c *cli.Command) error {
 }
 
 func runFlushQueues(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -177,10 +166,6 @@ func runFlushQueues(ctx context.Context, c *cli.Command) error {
 }
 
 func runProcesses(ctx context.Context, c *cli.Command) error {
-	if err := noDanglingArgs(c); err != nil {
-		return err
-	}
-
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 

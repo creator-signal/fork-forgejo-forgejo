@@ -32,6 +32,7 @@ func cmdMigrateStorage() *cli.Command {
 		Name:        "migrate-storage",
 		Usage:       "Migrate the storage",
 		Description: "Copies stored files from storage configured in app.ini to parameter-configured storage",
+		Before:      noDanglingArgs,
 		Action:      runMigrateStorage,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -188,9 +189,6 @@ func runMigrateStorage(stdCtx context.Context, ctx *cli.Command) error {
 	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
 
-	if err := noDanglingArgs(ctx); err != nil {
-		return err
-	}
 	if err := initDB(stdCtx); err != nil {
 		return err
 	}
