@@ -15,8 +15,8 @@
   display: flex;
   height: 30px;
 }
-.markdown-toolbar-switch .switch .item {
-  padding: 0.25em 1em;
+:root .markdown-toolbar-switch .switch {
+  --switch-item-min-height: 2rem;
 }
 
 .markdown-toolbar-hidden .markdown-toolbar-button {
