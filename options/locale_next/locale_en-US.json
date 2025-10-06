@@ -114,6 +114,7 @@
     "mail.actions.run_info_previous_status": "Previous Run's Status: %[1]s",
     "mail.actions.run_info_sha": "Commit: %[1]s",
     "mail.actions.run_info_trigger": "Triggered because: %[1]s by: %[2]s",
+    "mail.issue.action.close_by_commit": "%[1]s closed %[2]s in commit %[3]s.",
     "repo.diff.commit.next-short": "Next",
     "repo.diff.commit.previous-short": "Prev",
     "discussion.locked": "This discussion has been locked. Commenting is limited to contributors.",
@@ -152,6 +153,9 @@
     "actions.runs.run_attempt_label": "Run attempt #%[1]s (%[2]s)",
     "actions.runs.viewing_out_of_date_run": "You are viewing an out-of-date run of this job that was executed %[1]s.",
     "actions.runs.view_most_recent_run": "View most recent run",
+    "actions.workflow.job_parsing_error": "Unable to parse jobs in workflow: %v",
+    "actions.workflow.event_detection_error": "Unable to parse supported events in workflow: %v",
+    "actions.workflow.pre_execution_error": "Workflow was not executed due to an error that blocked the execution attempt.",
     "pulse.n_active_issues": {
         "one": "%s active issue",
         "other": "%s active issues"
