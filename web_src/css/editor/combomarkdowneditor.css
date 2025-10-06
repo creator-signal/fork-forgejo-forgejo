@@ -11,11 +11,7 @@
   flex-wrap: wrap;
 }
 
-.markdown-toolbar-switch {
-  display: flex;
-  height: 30px;
-}
-:root .markdown-toolbar-switch .switch {
+:root markdown-toolbar .switch {
   --switch-item-min-height: 2rem;
 }
 
