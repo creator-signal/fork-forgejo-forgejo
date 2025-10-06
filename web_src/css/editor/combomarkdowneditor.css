@@ -29,6 +29,8 @@
 }
 
 .combo-markdown-editor .markdown-toolbar-button {
+  display: flex;
+  align-items: center;
   border: none;
   background: none;
   user-select: none;
