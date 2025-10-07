@@ -81,6 +81,7 @@ export default {
         canApprove: false,
         canRerun: false,
         done: false,
+        preExecutionError: '',
         jobs: [
           // {
           //   id: 0,
@@ -556,6 +557,12 @@ export default {
       <div class="action-summary">
         {{ run.commit.localeWorkflow }}
         <a class="muted" :href="workflowURL">{{ workflowName }}</a>
+      </div>
+      <div class="ui error message pre-execution-error" v-if="run.preExecutionError">
+        <div class="header">
+          {{ locale.preExecutionError }}
+        </div>
+        {{ run.preExecutionError }}
       </div>
     </div>
     <div class="action-view-body">
@@ -1036,6 +1043,7 @@ export default {
   white-space: break-spaces;
   margin-left: 10px;
   overflow-wrap: anywhere;
+  color: var(--color-console-fg);
 }
 
 /* selectors here are intentionally exact to only match fullscreen */
