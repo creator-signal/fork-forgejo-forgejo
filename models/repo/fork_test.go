@@ -109,3 +109,19 @@ func TestGetUserForkLaxWithTwoChoices(t *testing.T) {
 	assert.Equal(t, int64(65), repo65.ID)
 	assert.Equal(t, int64(11), repo65.ForkID)
 }
+
+func TestGetOrgUserHasForkedRepo(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// orgUser3 has repo 65 forked from repo63
+	repo63, err := repo_model.GetRepositoryByID(db.DefaultContext, 63)
+	require.NoError(t, err)
+	assert.NotNil(t, repo63)
+
+	require.True(t, repo_model.HasForkedRepo(db.DefaultContext, 3, repo63.ID))
+	repo65, err := repo_model.GetUserFork(db.DefaultContext, repo63.ID, 3)
+	require.NoError(t, err)
+	assert.NotNil(t, repo65)
+	assert.Equal(t, int64(64), repo65.ID)
+	assert.Equal(t, int64(63), repo65.ForkID)
+}
