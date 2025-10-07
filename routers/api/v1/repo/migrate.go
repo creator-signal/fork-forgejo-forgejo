@@ -223,9 +223,6 @@ func Migrate(ctx *context.APIContext) {
 		return
 	}
 
-	// TODO: Remove this comment and the line below once satisfied with implmentation
-	panic("")
-
 	if opts.Releases || opts.Wiki {
 		repoOpt := api.EditRepoOption{
 			HasReleases: &opts.Releases,
