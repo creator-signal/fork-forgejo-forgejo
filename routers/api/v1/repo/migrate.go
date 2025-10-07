@@ -195,15 +195,8 @@ func Migrate(ctx *context.APIContext) {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Error("PANIC recovered: %v\nStacktrace: %s", e, log.Stack(2))
-			migrateError, ok := e.(error)
-
-			if ok {
-				err = fmt.Errorf("PANIC recover with error %w", migrateError)
-				ctx.Error(http.StatusInternalServerError, "Recovered PANIC with error", err)
-			} else {
-				err = fmt.Errorf("PANIC recover with error %v", e)
-				ctx.Error(http.StatusInternalServerError, "Recovered PANIC with error", err)
-			}
+			err = fmt.Errorf("PANIC recover with error %v", e)
+			ctx.Error(http.StatusInternalServerError, "Recovered PANIC with error", err)
 		}
 
 		if err == nil {
