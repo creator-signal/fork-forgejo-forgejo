@@ -348,7 +348,7 @@ func TestRecursiveDeleteRootColab(t *testing.T) {
 		}
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		user3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})       // owner of the repo3
+		user3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})       // owner of the repo3
 		repo3 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3}) // public repo of user3
 
 		// Get user2's token
