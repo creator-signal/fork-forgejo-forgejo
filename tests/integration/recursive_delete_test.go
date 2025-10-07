@@ -62,12 +62,12 @@ func createFileWithAssertions(t *testing.T, token string, user *user_model.User,
 }
 
 func verifiyFileExitence(t *testing.T, token string, user *user_model.User, repo *repo_model.Repository, treePath string) {
-	getReq := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user.Name, repo.Name, treePath))
+	getReq := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user.Name, repo.Name, treePath)).AddTokenAuth(token)
 	MakeRequest(t, getReq, http.StatusOK)
 }
 
 func verifiyFileNoneExitence(t *testing.T, token string, user *user_model.User, repo *repo_model.Repository, treePath string) {
-	getReq := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user.Name, repo.Name, treePath))
+	getReq := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user.Name, repo.Name, treePath)).AddTokenAuth(token)
 	MakeRequest(t, getReq, http.StatusNotFound)
 }
 
@@ -348,31 +348,28 @@ func TestRecursiveDeleteRootColab(t *testing.T) {
 		}
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		user3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})       // owner of the repo3
+		user3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})       // owner of the repo3
 		repo3 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3}) // public repo of user3
 
 		// Get user2's token
-		session2 := loginUser(t, user2.Name)
-
-		// Get user3's token
-		session3 := loginUser(t, user3.Name)
-		token3 := getTokenForLoggedInUser(t, session3, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+		session := loginUser(t, user2.Name)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
 
 		// Create test files by user3
 		for i := range treePaths {
-			createFileWithAssertions(t, token3, user3, repo3, treePaths[i], "This is test text for: "+treePaths[i])
-			verifiyFileExitence(t, token3, user3, repo3, treePaths[i])
+			createFileWithAssertions(t, token, user3, repo3, treePaths[i], "This is test text for: "+treePaths[i])
+			verifiyFileExitence(t, token, user3, repo3, treePaths[i])
 		}
 
 		// Execute delete path command by user2
-		deletePathViaUI(t, session2, user2, repo3, treePathDirDel)
+		deletePathViaUI(t, session, user3, repo3, treePathDirDel)
 
 		// Check result of the delete command by user3
 		for i := range treePaths {
 			if shouldExist[i] {
-				verifiyFileExitence(t, token3, user3, repo3, treePaths[i])
+				verifiyFileExitence(t, token, user3, repo3, treePaths[i])
 			} else {
-				verifiyFileNoneExitence(t, token3, user3, repo3, treePaths[i])
+				verifiyFileNoneExitence(t, token, user3, repo3, treePaths[i])
 			}
 		}
 	})
