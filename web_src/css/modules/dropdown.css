@@ -87,6 +87,26 @@ details.dropdown > summary + ul > li {
   width: 100%;
   background: none;
 
+  > :is(a, button) {
+    padding: var(--dropdown-item-padding);
+    width: 100%;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    color: var(--color-text);
+    /* Suppress underline - hover is indicated by background color */
+    text-decoration: none;
+
+    &.active {
+      background: var(--color-active);
+      font-weight: var(--font-weight-medium);
+    }
+  }
+  /* Cancel default styling of button elements */
+  > button {
+    background: none;
+  }
+
   &:first-child {
     border-radius: var(--border-radius) var(--border-radius) 0 0;
   }
@@ -114,27 +134,5 @@ details.dropdown.dir-rtl > summary + ul {
   direction: rtl;
   > li {
     direction: ltr;
-  }
-}
-
-details.dropdown > summary + ul > li {
-  > :is(a, button) {
-    padding: var(--dropdown-item-padding);
-    width: 100%;
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-    color: var(--color-text);
-    /* Suppress underline - hover is indicated by background color */
-    text-decoration: none;
-
-    &.active {
-      background: var(--color-active);
-      font-weight: 500;
-    }
-  }
-  /* Cancel default styling of button elements */
-  > button {
-    background: none;
   }
 }
