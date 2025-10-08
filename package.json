@@ -9,7 +9,7 @@
     "@citation-js/plugin-bibtex": "0.7.16",
     "@citation-js/plugin-software-formats": "0.6.1",
     "@github/markdown-toolbar-element": "2.2.3",
-    "@github/quote-selection": "2.1.0",
+    "@github/quote-selection": "2.2.0",
     "@github/text-expander-element": "2.8.0",
     "@google/model-viewer": "4.1.0",
     "@mcaptcha/vanilla-glue": "0.1.0-alpha-3",
