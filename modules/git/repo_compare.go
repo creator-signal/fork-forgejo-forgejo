@@ -174,6 +174,35 @@ func (repo *Repository) GetDiffNumChangedFiles(base, head string, directComparis
 	return w.numLines, nil
 }
 
+var (
+	ErrNoMergebaseFound        = errors.New("no merge base found")
+	ErrMultipleMergebasesFound = errors.New("multiple merge bases found")
+)
+
+// GetShortStat returns the number of changed files, additions and deletions. If
+// `useMergebase` is specified then the merge base between `base` and `head` is
+// used to compare against `head`.
+func (repo *Repository) GetShortStat(base, head string, useMergebase bool) (numFiles, totalAdditions, totalDeletions int, err error) {
+	cmd := NewCommand(repo.Ctx, "diff-tree", "--shortstat")
+	if useMergebase {
+		cmd = cmd.AddArguments("--merge-base")
+	}
+	cmd.AddDynamicArguments(base, head)
+
+	stdout, stderr, err := cmd.RunStdString(&RunOpts{Dir: repo.Path})
+	if err != nil {
+		switch stderr {
+		case "fatal: no merge base found\n":
+			return 0, 0, 0, ErrNoMergebaseFound
+		case "fatal: multiple merge bases found\n":
+			return 0, 0, 0, ErrMultipleMergebasesFound
+		}
+		return 0, 0, 0, err
+	}
+
+	return parseDiffStat(stdout)
+}
+
 // GetDiffShortStat counts number of changed files, number of additions and deletions
 func (repo *Repository) GetDiffShortStat(base, head string) (numFiles, totalAdditions, totalDeletions int, err error) {
 	numFiles, totalAdditions, totalDeletions, err = GetDiffShortStat(repo.Ctx, repo.Path, nil, base+"..."+head)
