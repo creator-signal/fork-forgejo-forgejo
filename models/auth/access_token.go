@@ -259,5 +259,6 @@ func RegenerateAccessTokenByID(ctx context.Context, id, userID int64) (*AccessTo
 	// Reset the creation time, token is unused
 	t.UpdatedUnix = timeutil.TimeStampNow()
 
-	return t, UpdateAccessToken(ctx, t)
+	_, err = db.GetEngine(ctx).ID(t.ID).Cols("token_salt", "token", "token_hash", "token_last_eight", "updated_unix").NoAutoTime().Update(t)
+	return t, err
 }
