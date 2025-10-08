@@ -131,8 +131,7 @@ test('Visual properties', async ({browser, isMobile}) => {
     expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
     // `@media (pointer: coarse)` makes items taller
     expect(await firstItem.evaluate((el) => getComputedStyle(el).height)).toBe('41px');
-  }
-  else {
+  } else {
     // Both use default
     expect(await content.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
     expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
