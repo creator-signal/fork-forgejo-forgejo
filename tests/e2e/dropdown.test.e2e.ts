@@ -9,7 +9,7 @@
 import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 
-test('JS enhanced', async ({page}) => {
+test('JS enhanced interaction', async ({page}) => {
   await page.goto('/user1');
 
   await expect(page.locator('body')).not.toContainClass('no-js');
@@ -60,7 +60,7 @@ test('JS enhanced', async ({page}) => {
   await expect(languageMenu).toBeVisible();
 });
 
-test('No JS', async ({browser}) => {
+test('No JS interaction', async ({browser}) => {
   const context = await browser.newContext({javaScriptEnabled: false});
   const nojsPage = await context.newPage();
   await nojsPage.goto('/user1');
@@ -103,4 +103,33 @@ test('No JS', async ({browser}) => {
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Escape`);
   await expect(dropdownContent).toBeVisible();
+});
+
+test('Visual properties: .border, .dir-auto, opener background', async ({browser, isMobile}) => {
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+  await page.goto('/user1');
+
+  // Border (has .border)
+  const dropdownSummary = page.locator('details.dropdown summary');
+  expect(await dropdownSummary.evaluate((el) => getComputedStyle(el).border)).toBe('1px solid rgba(0, 0, 0, 0.114)');
+
+  // Background
+  expect(await dropdownSummary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  await dropdownSummary.click();
+  expect(await dropdownSummary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
+
+  // Direction
+  const dropdownContent = page.locator('details.dropdown ul');
+  const dropdownFirstItem = page.locator('details.dropdown ul li:first-child');
+  if (isMobile) {
+    // <ul> container is reversed
+    expect(await dropdownContent.evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
+    expect(await dropdownFirstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+  }
+  else {
+    // Both use default
+    expect(await dropdownContent.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+    expect(await dropdownFirstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+  }
 });
