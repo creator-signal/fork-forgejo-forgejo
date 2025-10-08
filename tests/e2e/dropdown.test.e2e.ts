@@ -105,14 +105,22 @@ test('No JS interaction', async ({browser}) => {
   await expect(dropdownContent).toBeVisible();
 });
 
-test('Visual properties: .border, .dir-auto, opener background', async ({browser, isMobile}) => {
+test('Visual properties', async ({browser, isMobile}) => {
   const context = await browser.newContext({javaScriptEnabled: false});
   const page = await context.newPage();
+
+  // User profile was the first page to receive this as an ellipsis menu.
+  // Properties to test on it:
+  // - the `.border` class
+  // - opener's default `inline-padding: `
+  // - background change when `[open]`
+  // - `<ul>`'s `direction:` changing with `@media` via the `dir-auto` class
   await page.goto('/user1');
 
-  // Border (has .border)
+  // Has `.border` and pretty small default `inline-padding:`
   const summary = page.locator('details.dropdown summary');
   expect(await summary.evaluate((el) => getComputedStyle(el).border)).toBe('1px solid rgba(0, 0, 0, 0.114)');
+  expect(await summary.evaluate((el) => getComputedStyle(el).paddingInline)).toBe('7px');
 
   // Background
   expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
@@ -123,13 +131,37 @@ test('Visual properties: .border, .dir-auto, opener background', async ({browser
   const content = page.locator('details.dropdown > ul');
   const firstItem = page.locator('details.dropdown > ul > li:first-child');
   if (isMobile) {
-    // <ul> container is reversed
+    // `<ul>`'s direction is reversed
     expect(await content.evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
     expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+    expect(await firstItem.evaluate((el) => getComputedStyle(el).height)).toBe('ltr');
   }
   else {
     // Both use default
     expect(await content.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
     expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+    expect(await firstItem.evaluate((el) => getComputedStyle(el).height)).toBe('ltr');
   }
+
+  // `/explore/users` was the first page to receive this as a sort options
+  // menu with text in the opener. Properties to test on it:
+  // - lack of the `.border` class
+  // - wider opener `inline-padding:` from `.options` class
+  // - `<ul>`'s fixed `direction: rtl` via the `.dir-rtl` class
+  // - support for the `.active` class by items
+  await page.goto('/explore/users');
+
+  // No `.border` and increased `inline-padding:` from `.options`
+  expect(await summary.evaluate((el) => getComputedStyle(el).borderWidth)).toBe('0px');
+  expect(await summary.evaluate((el) => getComputedStyle(el).paddingInline)).toBe('10.5px');
+
+  // `<ul>`'s direction is reversed
+  expect(await content.evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
+  expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+
+  // Background of inactive and `.active` items
+  const activeItem = page.locator('details.dropdown > ul > li:first-child > a');
+  const inactiveItem = page.locator('details.dropdown > ul > li:last-child > a');
+  expect(await activeItem.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
+  expect(await inactiveItem.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
 });
