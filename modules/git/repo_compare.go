@@ -214,13 +214,13 @@ func (repo *Repository) GetCommitShortStat(commitID string) (numFiles, totalAddi
 	return parseDiffStat(stdout)
 }
 
-// GetDiffShortStat counts number of changed files, number of additions and deletions
-func GetDiffShortStat(ctx context.Context, repoPath string, trustedArgs TrustedCmdArgs, dynamicArgs ...string) (numFiles, totalAdditions, totalDeletions int, err error) {
-	// Now if we call:
-	// $ git diff --shortstat 1ebb35b98889ff77299f24d82da426b434b0cca0...788b8b1440462d477f45b0088875
-	// we get:
-	// " 9902 files changed, 2034198 insertions(+), 298800 deletions(-)\n"
-	cmd := NewCommand(ctx, "diff", "--shortstat").AddArguments(trustedArgs...).AddDynamicArguments(dynamicArgs...)
+// GetIndexShortStat returns the number of files, total additions and total
+// deletions the commit has.
+//
+// NOTE: It uses `git-diff-index`, should only be used when working with
+// temporary repository. When working on bare repositories use `GetCommitShortStat`.
+func GetIndexShortStat(ctx context.Context, repoPath, commitID string) (numFiles, totalAdditions, totalDeletions int, err error) {
+	cmd := NewCommand(ctx, "diff-index", "--cached", "--shortstat").AddDynamicArguments(commitID)
 	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath})
 	if err != nil {
 		return 0, 0, 0, err
