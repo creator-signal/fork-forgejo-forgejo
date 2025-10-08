@@ -2,15 +2,15 @@ module forgejo.org
 
 go 1.24.0
 
-toolchain go1.24.7
+toolchain go1.25.2
 
 require (
-	code.forgejo.org/f3/gof3/v3 v3.11.0
+	code.forgejo.org/f3/gof3/v3 v3.11.1
 	code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20191008002943-06d1c002b251
 	code.forgejo.org/forgejo/go-rpmutils v1.0.0
 	code.forgejo.org/forgejo/levelqueue v1.0.0
 	code.forgejo.org/forgejo/reply v1.0.2
-	code.forgejo.org/forgejo/runner/v11 v11.1.1
+	code.forgejo.org/forgejo/runner/v11 v11.1.2
 	code.forgejo.org/go-chi/binding v1.0.1
 	code.forgejo.org/go-chi/cache v1.0.1
 	code.forgejo.org/go-chi/captcha v1.0.2
@@ -56,7 +56,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/google/go-github/v64 v64.0.0
-	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5
+	github.com/google/pprof v0.0.0-20250923004556-9e5a51aed1e8
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/feeds v1.2.0
 	github.com/gorilla/sessions v1.4.0
@@ -96,7 +96,7 @@ require (
 	github.com/yohcop/openid-go v1.0.1
 	github.com/yuin/goldmark v1.7.13
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
-	gitlab.com/gitlab-org/api/client-go v0.130.1
+	gitlab.com/gitlab-org/api/client-go v0.143.2
 	go.uber.org/mock v0.6.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.42.0
@@ -106,7 +106,7 @@ require (
 	golang.org/x/sync v0.17.0
 	golang.org/x/sys v0.36.0
 	golang.org/x/text v0.29.0
-	google.golang.org/protobuf v1.36.9
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.67.0
 	mvdan.cc/xurls/v2 v2.5.0
@@ -189,7 +189,7 @@ require (
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
@@ -260,4 +260,4 @@ replace github.com/gliderlabs/ssh => code.forgejo.org/forgejo/ssh v0.0.0-2024121
 
 replace git.sr.ht/~mariusor/go-xsd-duration => code.forgejo.org/forgejo/go-xsd-duration v0.0.0-20220703122237-02e73435a078
 
-replace xorm.io/xorm v1.3.9 => code.forgejo.org/xorm/xorm v1.3.9-forgejo.1
+replace xorm.io/xorm v1.3.9 => code.forgejo.org/xorm/xorm v1.3.9-forgejo.2
