@@ -9,7 +9,8 @@ export const ONE_MINUTE = 60 * 1000;
 export const ONE_HOUR = 60 * ONE_MINUTE;
 export const ONE_DAY = 24 * ONE_HOUR;
 
-const ABSOLUTE_DATETIME_FORMAT = new Intl.DateTimeFormat(navigator.language, {
+const lang = document.documentElement.getAttribute('lang');
+const ABSOLUTE_DATETIME_FORMAT = new Intl.DateTimeFormat(lang, {
   year: 'numeric',
   month: 'short',
   day: 'numeric',
@@ -17,7 +18,7 @@ const ABSOLUTE_DATETIME_FORMAT = new Intl.DateTimeFormat(navigator.language, {
   minute: '2-digit',
   timeZoneName: 'short',
 });
-const FALLBACK_DATETIME_FORMAT = new Intl.RelativeTimeFormat(navigator.language, {style: 'long'});
+const FALLBACK_DATETIME_FORMAT = new Intl.RelativeTimeFormat(lang, {style: 'long'});
 
 /**
  * A list of plural rules for all languages.
