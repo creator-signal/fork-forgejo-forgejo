@@ -203,7 +203,7 @@ func (repo *Repository) GetShortStat(base, head string, useMergebase bool) (numF
 	return parseDiffStat(stdout)
 }
 
-// GetCommitStat returns the number of files, total additions and total deletions the commit has.
+// GetCommitShortStat returns the number of files, total additions and total deletions the commit has.
 func (repo *Repository) GetCommitShortStat(commitID string) (numFiles, totalAdditions, totalDeletions int, err error) {
 	cmd := NewCommand(repo.Ctx, "diff-tree", "--shortstat", "--no-commit-id", "--root").AddDynamicArguments(commitID)
 	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repo.Path})
