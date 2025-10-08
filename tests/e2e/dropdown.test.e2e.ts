@@ -109,12 +109,7 @@ test('Visual properties', async ({browser, isMobile}) => {
   const context = await browser.newContext({javaScriptEnabled: false});
   const page = await context.newPage();
 
-  // User profile was the first page to receive this as an ellipsis menu.
-  // Properties to test on it:
-  // - the `.border` class
-  // - opener's default `inline-padding: `
-  // - background change when `[open]`
-  // - `<ul>`'s `direction:` changing with `@media` via the `dir-auto` class
+  // User profile has dropdown used as an ellipsis menu
   await page.goto('/user1');
 
   // Has `.border` and pretty small default `inline-padding:`
@@ -127,28 +122,25 @@ test('Visual properties', async ({browser, isMobile}) => {
   await summary.click();
   expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
 
-  // Direction
+  // Direction and item height
   const content = page.locator('details.dropdown > ul');
   const firstItem = page.locator('details.dropdown > ul > li:first-child');
   if (isMobile) {
     // `<ul>`'s direction is reversed
     expect(await content.evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
     expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
-    expect(await firstItem.evaluate((el) => getComputedStyle(el).height)).toBe('ltr');
+    // `@media (pointer: coarse)` makes items taller
+    expect(await firstItem.evaluate((el) => getComputedStyle(el).height)).toBe('41px');
   }
   else {
     // Both use default
     expect(await content.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
     expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
-    expect(await firstItem.evaluate((el) => getComputedStyle(el).height)).toBe('ltr');
+    // Regular item height
+    expect(await firstItem.evaluate((el) => getComputedStyle(el).height)).toBe('34px');
   }
 
-  // `/explore/users` was the first page to receive this as a sort options
-  // menu with text in the opener. Properties to test on it:
-  // - lack of the `.border` class
-  // - wider opener `inline-padding:` from `.options` class
-  // - `<ul>`'s fixed `direction: rtl` via the `.dir-rtl` class
-  // - support for the `.active` class by items
+  // `/explore/users` has dropdown used as a sort options menu with text in the opener
   await page.goto('/explore/users');
 
   // No `.border` and increased `inline-padding:` from `.options`
