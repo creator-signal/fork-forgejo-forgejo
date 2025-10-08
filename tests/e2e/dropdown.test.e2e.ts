@@ -111,25 +111,25 @@ test('Visual properties: .border, .dir-auto, opener background', async ({browser
   await page.goto('/user1');
 
   // Border (has .border)
-  const dropdownSummary = page.locator('details.dropdown summary');
-  expect(await dropdownSummary.evaluate((el) => getComputedStyle(el).border)).toBe('1px solid rgba(0, 0, 0, 0.114)');
+  const summary = page.locator('details.dropdown summary');
+  expect(await summary.evaluate((el) => getComputedStyle(el).border)).toBe('1px solid rgba(0, 0, 0, 0.114)');
 
   // Background
-  expect(await dropdownSummary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
-  await dropdownSummary.click();
-  expect(await dropdownSummary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
+  expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  await summary.click();
+  expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
 
   // Direction
-  const dropdownContent = page.locator('details.dropdown ul');
-  const dropdownFirstItem = page.locator('details.dropdown ul li:first-child');
+  const content = page.locator('details.dropdown > ul');
+  const firstItem = page.locator('details.dropdown > ul > li:first-child');
   if (isMobile) {
     // <ul> container is reversed
-    expect(await dropdownContent.evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
-    expect(await dropdownFirstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+    expect(await content.evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
+    expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
   }
   else {
     // Both use default
-    expect(await dropdownContent.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
-    expect(await dropdownFirstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+    expect(await content.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+    expect(await firstItem.evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
   }
 });
