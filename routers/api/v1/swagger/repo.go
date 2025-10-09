@@ -302,7 +302,6 @@ type swaggerCommitList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
-
 // ChangedFileList
 // swagger:response ChangedFileList
 type swaggerChangedFileList struct {
