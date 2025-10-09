@@ -17,6 +17,7 @@ import (
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/structs"
 
+	"code.gitea.io/sdk/gitea"
 	gitea_sdk "code.gitea.io/sdk/gitea"
 )
 
@@ -557,14 +558,23 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 			return nil, false, err
 		}
 
-		if len(comments) < g.maxPerPage {
-			allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
+		attachedAllComments, shouldBreak := appendLastCommentsPage(allComments, commentable, comments, g)
+		allComments = attachedAllComments
+		if shouldBreak {
 			break
-		} else if g.identicalComment(allComments[0], comments[0]) && g.identicalComment(allComments[len(allComments)-1], comments[len(comments)-1]) {
-			break // We actually got all comments at one go, but pagesize was equal to number of comments
 		}
 	}
 	return allComments, true, nil
+}
+
+func appendLastCommentsPage(allComments []*base.Comment, commentable base.Commentable, giteaComments []*gitea.Comment, g *GiteaDownloader) ([]*base.Comment, bool) {
+	if len(giteaComments) < g.maxPerPage {
+		allComments = append(allComments, g.makeCommentsList(giteaComments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
+		return allComments, true
+	} else if g.identicalComment(allComments[0], giteaComments[0]) && g.identicalComment(allComments[len(allComments)-1], giteaComments[len(giteaComments)-1]) {
+		return allComments, true
+	}
+	return allComments, false
 }
 
 type ForgejoPullRequest struct {
