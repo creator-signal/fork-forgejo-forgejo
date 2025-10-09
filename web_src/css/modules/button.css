@@ -32,7 +32,7 @@
   padding-block: 0;
   padding-inline: var(--button-padding-inline);
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
   border-radius: var(--border-radius);
 }
 
