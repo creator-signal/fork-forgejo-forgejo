@@ -4,7 +4,6 @@
 package migrations
 
 import (
-	"math/rand/v2"
 	"os"
 	"sort"
 	"strconv"
@@ -18,14 +17,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type MockGiteaIssueCommentsBug struct {
-	*gitea_sdk.Client
-}
-
-type MockGiteaIssueComments struct {
-	*gitea_sdk.Client
-}
 
 func TestGiteaDownloadRepo(t *testing.T) {
 	giteaToken := os.Getenv("GITEA_TOKEN")
@@ -42,7 +33,7 @@ func TestGiteaDownloadRepo(t *testing.T) {
 		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
 	)
 	require.NoError(t, err, "Clould not create Client")
-	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, giteaClient, server.URL, "gitea/test_repo")
+	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, server.URL, "gitea/test_repo")
 	if downloader == nil {
 		t.Fatal("NewGitlabDownloader is nil")
 	}
@@ -342,7 +333,7 @@ func TestForgejoDownloadRepo(t *testing.T) {
 		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
 	)
 	require.NoError(t, err, "Clould not create Client")
-	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, giteaClient, server.URL, "Gusted/agit-test")
+	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, server.URL, "Gusted/agit-test")
 	require.NoError(t, err)
 	require.NotNil(t, downloader)
 
@@ -378,13 +369,13 @@ func TestForgejoDownloadRepo(t *testing.T) {
 	}, prs[0])
 }
 
-func (m MockGiteaIssueCommentsBug) ListIssueComments(owner, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error) {
-	allComments := make([]*gitea_sdk.Comment, 0, opt.PageSize)
+func createGiteaIssueComments(number int) []*gitea_sdk.Comment {
+	giteaComments := make([]*gitea_sdk.Comment, 0, number)
 	giteaUser := &gitea_sdk.User{
 		ID:       1,
 		UserName: "rando",
 	}
-	for i := 1; i <= 30; i++ {
+	for i := 1; i <= number; i++ {
 		giteaComment := gitea_sdk.Comment{
 			ID:      1,
 			Poster:  giteaUser,
@@ -392,16 +383,31 @@ func (m MockGiteaIssueCommentsBug) ListIssueComments(owner, repo string, index i
 			Updated: time.Date(2025, time.August, 7, 13, i+2, 25, 0, time.UTC),
 			Body:    strconv.Itoa(i),
 		}
-		allComments = append(allComments, &giteaComment)
+		giteaComments = append(giteaComments, &giteaComment)
 	}
-	return allComments, nil, nil
+	return giteaComments
 }
 
-func (m MockGiteaIssueCommentsBug) GetIssueCommentReactions(owner, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error) {
-	return []*gitea_sdk.Reaction{}, nil, nil
+func createForgejoIssueComments(comments []*gitea_sdk.Comment) []*base.Comment {
+	forgejoComments := make([]*base.Comment, 0, len(comments))
+	for _, comment := range comments {
+		forgejoComments = append(forgejoComments, &base.Comment{
+			IssueIndex:  1, // commentable.GetLocalIndex()
+			Index:       comment.ID,
+			PosterID:    comment.Poster.ID,
+			PosterName:  comment.Poster.UserName,
+			PosterEmail: comment.Poster.Email,
+			Content:     comment.Body,
+			Created:     comment.Created,
+			Updated:     comment.Updated,
+			Reactions:   []*base.Reaction{},
+		})
+	}
+	return forgejoComments
 }
 
-func TestGetCommentsWithBug(t *testing.T) {
+func TestBreakConditions(t *testing.T) {
+	// Client
 	giteaClient, err := gitea_sdk.NewClient(
 		"https://gitea.com",
 		gitea_sdk.SetToken(""),
@@ -410,101 +416,27 @@ func TestGetCommentsWithBug(t *testing.T) {
 		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
 	)
 	require.NoError(t, err, "Clould not create Client")
-	client := MockGiteaIssueCommentsBug{giteaClient}
-	downloader, err := NewGiteaDownloader(t.Context(), client, giteaClient, "https://gitea.com", "gitea/test_repo")
+
+	// Downloader
+	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, "https://gitea.com", "gitea/test_repo")
 	if downloader == nil {
 		t.Fatal("NewGiteaDownloader is nil")
 	}
-	require.NoError(t, err, "NewGiteaDownloader error occured")
+	require.NoError(t, err, "Could not create Gitea Downloader")
 
-	issue := &base.Issue{
-		Number:       1,
-		ForeignIndex: 1,
-		Title:        "First issue",
-		Content:      "This is an issue.",
-		PosterID:     37243484,
-		PosterName:   "PatDyn",
-		State:        "open",
-		Created:      time.Date(2025, time.August, 7, 12, 44, 7, 0, time.UTC),
-		Updated:      time.Date(2025, time.August, 7, 12, 44, 47, 0, time.UTC),
-	}
-	pageSizes := [3]int{20, 30, 40}
+	pageSize := 20
+	buggyPageSize := 25
+	smallerPageSize := 15
+	downloader.maxPerPage = pageSize
 
-	for size := range pageSizes {
-		downloader.maxPerPage = size
-		comments, _, err := downloader.GetComments(issue)
-		require.NoError(t, err, "Error while getting comments")
-		assertCommentEqual(t, &base.Comment{
-			IssueIndex: 1,
-			PosterID:   1,
-			PosterName: "rando",
-			Created:    time.Date(2025, time.August, 7, 13, 1, 25, 0, time.UTC),
-			Updated:    time.Date(2025, time.August, 7, 13, 1+2, 25, 0, time.UTC),
-			Content:    strconv.Itoa(1),
-		}, comments[0])
-	}
-}
+	bugResponse := createGiteaIssueComments(buggyPageSize)
+	commentsWithBug := createForgejoIssueComments(bugResponse)
 
-// Generate 110 different comments, mocking behavior that respects page size etc
-func (m MockGiteaIssueComments) ListIssueComments(owner, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error) {
-	allComments := make([]*gitea_sdk.Comment, 0, opt.PageSize)
-	giteaUser := &gitea_sdk.User{
-		ID:       1,
-		UserName: "rando",
-	}
+	shorterListResponse := createGiteaIssueComments(smallerPageSize)
+	commentsShortList := createForgejoIssueComments(shorterListResponse)
 
-	pgs := opt.PageSize
-	if opt.Page == 3 {
-		pgs = 10
-	}
-
-	for i := 1; i <= pgs; i++ {
-		giteaComment := gitea_sdk.Comment{
-			ID:      1,
-			Poster:  giteaUser,
-			Created: time.Date(2025, time.August, 7, 13, rand.IntN(60), 25, 0, time.UTC),
-			Updated: time.Date(2025, time.August, 7, 14, rand.IntN(60), 25, 0, time.UTC),
-			Body:    strconv.Itoa(rand.IntN(100)),
-		}
-		allComments = append(allComments, &giteaComment)
-	}
-	return allComments, nil, nil
-}
-
-func (m MockGiteaIssueComments) GetIssueCommentReactions(owner, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error) {
-	return []*gitea_sdk.Reaction{}, nil, nil
-}
-
-func TestGetCommentsWithoutBug(t *testing.T) {
-	giteaClient, err := gitea_sdk.NewClient(
-		"https://gitea.com",
-		gitea_sdk.SetToken(""),
-		gitea_sdk.SetBasicAuth("", ""),
-		gitea_sdk.SetContext(t.Context()),
-		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
-	)
-	require.NoError(t, err, "Clould not create Client")
-	client := MockGiteaIssueComments{giteaClient}
-	downloader, err := NewGiteaDownloader(t.Context(), client, giteaClient, "https://gitea.com", "gitea/test_repo")
-	if downloader == nil {
-		t.Fatal("NewGiteaDownloader is nil")
-	}
-	require.NoError(t, err, "NewGiteaDownloader error occured")
-
-	issue := &base.Issue{
-		Number:       1,
-		ForeignIndex: 1,
-		Title:        "First issue",
-		Content:      "This is an issue.",
-		PosterID:     37243484,
-		PosterName:   "PatDyn",
-		State:        "open",
-		Created:      time.Date(2025, time.August, 7, 12, 44, 7, 0, time.UTC),
-		Updated:      time.Date(2025, time.August, 7, 12, 44, 47, 0, time.UTC),
-	}
-
-	downloader.maxPerPage = 50
-	comments, _, err := downloader.GetComments(issue)
-	require.NoError(t, err, "Error while getting comments")
-	assert.Len(t, comments, 110)
+	assert.True(t, downloader.isSinglePage(&commentsWithBug))
+	assert.True(t, downloader.isSinglePage(&commentsShortList))
+	assert.True(t, downloader.isLastPage(&commentsShortList, &shorterListResponse))
+	assert.True(t, downloader.isLastPage(&commentsWithBug, &bugResponse))
 }

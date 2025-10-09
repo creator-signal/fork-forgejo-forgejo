@@ -69,7 +69,7 @@ func (f *GiteaDownloaderFactory) New(ctx context.Context, opts base.MigrateOptio
 		return nil, err
 	}
 
-	return NewGiteaDownloader(ctx, giteaClient, giteaClient, baseURL, repoPath)
+	return NewGiteaDownloader(ctx, giteaClient, baseURL, repoPath)
 }
 
 // GitServiceType returns the type of git service
@@ -77,30 +77,11 @@ func (f *GiteaDownloaderFactory) GitServiceType() structs.GitServiceType {
 	return structs.GiteaService
 }
 
-type GiteaClient interface {
-	CheckServerVersionConstraint(constraint string) error
-	GetGlobalAPISettings() (*gitea_sdk.GlobalAPISettings, *gitea_sdk.Response, error)
-	GetRepo(owner, reponame string) (*gitea_sdk.Repository, *gitea_sdk.Response, error)
-	GetIssueReactions(owner, repo string, index int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error)
-	GetIssueCommentReactions(owner, repo string, commentID int64) ([]*gitea_sdk.Reaction, *gitea_sdk.Response, error)
-	GetRepoRefs(user, repo, ref string) ([]*gitea_sdk.Reference, *gitea_sdk.Response, error)
-	GetReleaseAttachment(user, repo string, release, id int64) (*gitea_sdk.Attachment, *gitea_sdk.Response, error)
-	ListPullReviewComments(owner, repo string, index, id int64) ([]*gitea_sdk.PullReviewComment, *gitea_sdk.Response, error)
-	ListPullReviews(owner, repo string, index int64, opt gitea_sdk.ListPullReviewsOptions) ([]*gitea_sdk.PullReview, *gitea_sdk.Response, error)
-	ListRepoTopics(user, repo string, opt gitea_sdk.ListRepoTopicsOptions) ([]string, *gitea_sdk.Response, error)
-	ListRepoMilestones(owner, repo string, opt gitea_sdk.ListMilestoneOption) ([]*gitea_sdk.Milestone, *gitea_sdk.Response, error)
-	ListReleases(owner, repo string, opt gitea_sdk.ListReleasesOptions) ([]*gitea_sdk.Release, *gitea_sdk.Response, error)
-	ListRepoIssues(owner, repo string, opt gitea_sdk.ListIssueOption) ([]*gitea_sdk.Issue, *gitea_sdk.Response, error)
-	ListIssueComments(owner, repo string, index int64, opt gitea_sdk.ListIssueCommentOptions) ([]*gitea_sdk.Comment, *gitea_sdk.Response, error)
-	ListRepoLabels(owner, repo string, opt gitea_sdk.ListLabelsOptions) ([]*gitea_sdk.Label, *gitea_sdk.Response, error)
-}
-
 // GiteaDownloader implements a Downloader interface to get repository information's
 type GiteaDownloader struct {
 	base.NullDownloader
 	ctx        context.Context
-	client     GiteaClient
-	prClient   *gitea_sdk.Client
+	client     *gitea_sdk.Client
 	baseURL    string
 	repoOwner  string
 	repoName   string
@@ -112,7 +93,7 @@ type GiteaDownloader struct {
 //
 //	Use either a username/password or personal token. token is preferred
 //	Note: Public access only allows very basic access
-func NewGiteaDownloader(ctx context.Context, giteaClient GiteaClient, giteaPRClient *gitea_sdk.Client, baseURL, repoPath string) (*GiteaDownloader, error) {
+func NewGiteaDownloader(ctx context.Context, giteaClient *gitea_sdk.Client, baseURL, repoPath string) (*GiteaDownloader, error) {
 	path := strings.Split(repoPath, "/")
 
 	paginationSupport := true
@@ -136,7 +117,6 @@ func NewGiteaDownloader(ctx context.Context, giteaClient GiteaClient, giteaPRCli
 	return &GiteaDownloader{
 		ctx:        ctx,
 		client:     giteaClient,
-		prClient:   giteaPRClient,
 		baseURL:    baseURL,
 		repoOwner:  path[0],
 		repoName:   path[1],
@@ -624,7 +604,7 @@ func (g *GiteaDownloader) GetPullRequests(page, perPage int) ([]*base.PullReques
 
 	link, _ := url.Parse(fmt.Sprintf("/repos/%s/%s/pulls", url.PathEscape(g.repoOwner), url.PathEscape(g.repoName)))
 	link.RawQuery = opt.QueryEncode()
-	_, err := getParsedResponse(g.prClient, "GET", link.String(), http.Header{"content-type": []string{"application/json"}}, nil, &prs)
+	_, err := getParsedResponse(g.client, "GET", link.String(), http.Header{"content-type": []string{"application/json"}}, nil, &prs)
 	if err != nil {
 		return nil, false, fmt.Errorf("error while listing pull requests (page: %d, pagesize: %d). Error: %w", page, perPage, err)
 	}
