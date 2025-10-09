@@ -479,7 +479,7 @@ func (g *GiteaDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, err
 	return allIssues, isEnd, nil
 }
 
-func (g *GiteaDownloader) makeCommentsList(comments []*gitea_sdk.Comment, issueIndex, foreignIndex int64) []*base.Comment {
+func (g *GiteaDownloader) makeCommentsList(comments []*gitea.Comment, issueIndex, foreignIndex int64) []*base.Comment {
 	allComments := make([]*base.Comment, 0, g.maxPerPage)
 	for _, comment := range comments {
 		reactions, err := g.getCommentReactions(comment.ID)
@@ -531,19 +531,21 @@ func (g *GiteaDownloader) getIssueComments(foreignIndex int64, page int) ([]*git
 
 // GetComments returns comments according issueNumber
 func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Comment, bool, error) {
-	allComments := make([]*base.Comment, 0, g.maxPerPage)
+	forgejoComments := make([]*base.Comment, 0, g.maxPerPage)
 
-	// Initially get comments of page 1
-	comments, err := g.getIssueComments(commentable.GetForeignIndex(), 1)
+	// Initially get and append giteaComments of page 1
+	giteaComments, err := g.getIssueComments(commentable.GetForeignIndex(), 1)
 	if err != nil {
 		return nil, false, err
 	}
+	forgejoComments = append(forgejoComments, g.makeCommentsList(giteaComments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
 
 	// We either get all comments at once (gitea pagination bug) or all comments fit in one page or pagination is off
-	if len(comments) > g.maxPerPage || len(comments) < g.maxPerPage || !g.pagination {
-		allComments = g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())
-		return allComments, true, nil
-	} // Only if the amount of comments == g.maxPerPage we assume there might be a next page
+	shouldReturn := g.isSinglePage(&forgejoComments)
+	if shouldReturn {
+		return forgejoComments, true, nil
+	}
+	// Only if the amount of comments == g.maxPerPage we assume there might be a next page
 	for i := 2; ; i++ {
 		// make sure forgejo can shutdown gracefully
 		select {
@@ -552,29 +554,34 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 		default:
 		}
 
-		allComments = append(allComments, g.makeCommentsList(comments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
-		comments, err = g.getIssueComments(commentable.GetForeignIndex(), i)
+		giteaComments, err = g.getIssueComments(commentable.GetForeignIndex(), i)
 		if err != nil {
 			return nil, false, err
 		}
+		forgejoComments = append(forgejoComments, g.makeCommentsList(giteaComments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
 
-		attachedAllComments, shouldBreak := appendLastCommentsPage(allComments, commentable, comments, g)
-		allComments = attachedAllComments
+		shouldBreak := g.isLastPage(&forgejoComments, &giteaComments)
 		if shouldBreak {
 			break
 		}
 	}
-	return allComments, true, nil
+	return forgejoComments, true, nil
 }
 
-func appendLastCommentsPage(allComments []*base.Comment, commentable base.Commentable, giteaComments []*gitea.Comment, g *GiteaDownloader) ([]*base.Comment, bool) {
-	if len(giteaComments) < g.maxPerPage {
-		allComments = append(allComments, g.makeCommentsList(giteaComments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
-		return allComments, true
-	} else if g.identicalComment(allComments[0], giteaComments[0]) && g.identicalComment(allComments[len(allComments)-1], giteaComments[len(giteaComments)-1]) {
-		return allComments, true
+func (g *GiteaDownloader) isSinglePage(forgejoComments *[]*base.Comment) bool {
+	if len(*forgejoComments) > g.maxPerPage || len(*forgejoComments) < g.maxPerPage || !g.pagination {
+		return true
 	}
-	return allComments, false
+	return false
+}
+
+func (g *GiteaDownloader) isLastPage(forgejoComments *[]*base.Comment, giteaComments *[]*gitea.Comment) bool {
+	if len(*giteaComments) < g.maxPerPage {
+		return true
+	} else if g.identicalComment((*forgejoComments)[0], (*giteaComments)[0]) && g.identicalComment((*forgejoComments)[len(*forgejoComments)-1], (*giteaComments)[len(*giteaComments)-1]) {
+		return true
+	}
+	return false
 }
 
 type ForgejoPullRequest struct {
