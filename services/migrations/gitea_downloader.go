@@ -17,7 +17,6 @@ import (
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/structs"
 
-	"code.gitea.io/sdk/gitea"
 	gitea_sdk "code.gitea.io/sdk/gitea"
 )
 
@@ -459,7 +458,7 @@ func (g *GiteaDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, err
 	return allIssues, isEnd, nil
 }
 
-func (g *GiteaDownloader) makeCommentsList(comments []*gitea.Comment, issueIndex, foreignIndex int64) []*base.Comment {
+func (g *GiteaDownloader) makeCommentsList(comments []*gitea_sdk.Comment, issueIndex, foreignIndex int64) []*base.Comment {
 	allComments := make([]*base.Comment, 0, g.maxPerPage)
 	for _, comment := range comments {
 		reactions, err := g.getCommentReactions(comment.ID)
@@ -555,7 +554,7 @@ func (g *GiteaDownloader) isSinglePage(forgejoComments *[]*base.Comment) bool {
 	return false
 }
 
-func (g *GiteaDownloader) isLastPage(forgejoComments *[]*base.Comment, giteaComments *[]*gitea.Comment) bool {
+func (g *GiteaDownloader) isLastPage(forgejoComments *[]*base.Comment, giteaComments *[]*gitea_sdk.Comment) bool {
 	if len(*giteaComments) < g.maxPerPage {
 		return true
 	} else if g.identicalComment((*forgejoComments)[0], (*giteaComments)[0]) && g.identicalComment((*forgejoComments)[len(*forgejoComments)-1], (*giteaComments)[len(*giteaComments)-1]) {
