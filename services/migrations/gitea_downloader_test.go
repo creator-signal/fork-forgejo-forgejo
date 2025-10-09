@@ -435,8 +435,16 @@ func TestBreakConditions(t *testing.T) {
 	shorterListResponse := createGiteaIssueComments(smallerPageSize)
 	commentsShortList := createForgejoIssueComments(shorterListResponse)
 
+	fullListResponse := createGiteaIssueComments(pageSize)
+	differentFullListResponse := createGiteaIssueComments(pageSize)
+	differentFullListResponse[0].Body = "Different String"
+	differentFullListResponse[len(differentFullListResponse)-1].Body = "Different String"
+	commentsFullList := createForgejoIssueComments(fullListResponse)
+
 	assert.True(t, downloader.isSinglePage(&commentsWithBug))
 	assert.True(t, downloader.isSinglePage(&commentsShortList))
 	assert.True(t, downloader.isLastPage(&commentsShortList, &shorterListResponse))
 	assert.True(t, downloader.isLastPage(&commentsWithBug, &bugResponse))
+	assert.False(t, downloader.isSinglePage(&commentsFullList))
+	assert.False(t, downloader.isLastPage(&commentsFullList, &differentFullListResponse))
 }
