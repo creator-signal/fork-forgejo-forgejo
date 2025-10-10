@@ -18,6 +18,10 @@ for (const run of [
   test.describe(`Create issue & comment`, () => {
     // playwright/valid-title says: [error] Title must be a string
     test(`${run.title}`, async ({browser}, workerInfo) => {
+      const issueTitle = dynamic_id();
+      const issueContent = dynamic_id();
+      const commentContent = dynamic_id();
+
       const context = await login_user(browser, workerInfo, 'user2', {javaScriptEnabled: run.js});
       const page = await context.newPage();
 
@@ -25,30 +29,37 @@ for (const run of [
       expect(response?.status()).toBe(200);
 
       // Create a new issue
-      await page.getByPlaceholder('Title').fill('Some title');
-      await page.getByPlaceholder('Leave a comment').fill('Some content');
+      await page.getByPlaceholder('Title').fill(issueTitle);
+      await page.getByPlaceholder('Leave a comment').fill(issueContent);
       await page.getByRole('button', {name: 'Create issue'}).click();
 
       if (run.js) {
         await expect(page).toHaveURL(/\/user2\/repo1\/issues\/\d+$/);
       } else {
         // NoJS clients end up on a .../comments JSON file and browsers surround it with some HTML
-        const redirectUrl = JSON.parse(await page.locator('body').innerText())['redirect'];
+        const redirectUrl = await JSON.parse(await page.locator('body').innerText())['redirect'];
+        console.log(issueTitle);
+        console.log(issueContent);
+        console.log(commentContent);
+        console.log(redirectUrl);
         response = await page.goto(redirectUrl);
         expect(response?.status()).toBe(200);
       }
 
       // Leave a comment
-      await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Comment content');
-      await page.locator('#comment-form').getByRole('button', {name: 'Comment'}).click();
+      await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill(commentContent);
+      await page.locator('#comment-form button.primary').filter({hasText: 'Comment'}).click();
 
-      // Go to it again because of non-working redirect
-      response = await page.goto('/user2/repo1/issues/1');
-      expect(response?.status()).toBe(200);
+      if (!run.js) {
+        const redirectUrl = await JSON.parse(await page.locator('body').innerText())['redirect'];
+        response = await page.goto(redirectUrl);
+        expect(response?.status()).toBe(200);
+      }
 
       // Validate the page contents that actions above made a difference
-      await expect(page.locator('h1')).toHaveText('Some title');
-      await expect(page.locator('.comment').filter({hasText: 'Some title'})).toHaveCount(1);
+      await expect(page.locator('h1')).toContainText(issueTitle);
+      await expect(page.locator('.comment').filter({hasText: issueContent})).toHaveCount(1);
+      await expect(page.locator('.comment').filter({hasText: commentContent})).toHaveCount(1);
     });
   });
 }
