@@ -373,26 +373,26 @@ func TestReleaseAttachmentDownloadCounter(t *testing.T) {
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	session := loginUser(t, "user2")
-	zipAttachmentUrl := fmt.Sprintf("%s/archive/v1.1.zip", repo.Link())
-	gzAttachmentUrl := fmt.Sprintf("%s/archive/v1.1.tar.gz", repo.Link())
+	zipAttachmentLink := fmt.Sprintf("%s/archive/v1.1.zip", repo.Link())
+	gzAttachmentLink := fmt.Sprintf("%s/archive/v1.1.tar.gz", repo.Link())
 	counterSelector := "details.download > ul > li:has(a[href='%s']) span"
 
 	// Assert zero downloads initially
 	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("%s/releases", repo.Link())), http.StatusOK).Body)
-	zipDownloads := doc.Find(fmt.Sprintf(counterSelector, zipAttachmentUrl)).Text()
-	gzDownloads := doc.Find(fmt.Sprintf(counterSelector, gzAttachmentUrl)).Text()
+	zipDownloads := doc.Find(fmt.Sprintf(counterSelector, zipAttachmentLink)).Text()
+	gzDownloads := doc.Find(fmt.Sprintf(counterSelector, gzAttachmentLink)).Text()
 	assert.Contains(t, zipDownloads, "0 downloads")
 	assert.Contains(t, gzDownloads, "0 downloads")
 
 	// Generate downloads
-	session.MakeRequest(t, NewRequest(t, "GET", zipAttachmentUrl), http.StatusOK)
-	session.MakeRequest(t, NewRequest(t, "GET", gzAttachmentUrl), http.StatusOK)
-	session.MakeRequest(t, NewRequest(t, "GET", gzAttachmentUrl), http.StatusOK)
+	session.MakeRequest(t, NewRequest(t, "GET", zipAttachmentLink), http.StatusOK)
+	session.MakeRequest(t, NewRequest(t, "GET", gzAttachmentLink), http.StatusOK)
+	session.MakeRequest(t, NewRequest(t, "GET", gzAttachmentLink), http.StatusOK)
 
 	// Check the new numbers
 	doc = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("%s/releases", repo.Link())), http.StatusOK).Body)
-	zipDownloads = doc.Find(fmt.Sprintf(counterSelector, zipAttachmentUrl)).Text()
-	gzDownloads = doc.Find(fmt.Sprintf(counterSelector, gzAttachmentUrl)).Text()
+	zipDownloads = doc.Find(fmt.Sprintf(counterSelector, zipAttachmentLink)).Text()
+	gzDownloads = doc.Find(fmt.Sprintf(counterSelector, gzAttachmentLink)).Text()
 	assert.Contains(t, zipDownloads, "1 download")
 	assert.Contains(t, gzDownloads, "2 downloads")
 }
