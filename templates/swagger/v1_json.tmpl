@@ -7236,7 +7236,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/CommitListWithLegacyPagination"
+            "$ref": "#/responses/CommitList"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -14160,7 +14160,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/CommitListWithPagination"
+            "$ref": "#/responses/CommitList"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -29992,22 +29992,6 @@
         }
       }
     },
-    "ActivityList": {
-      "description": "ActivityList",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/Activity"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of activities\nin:header"
-        }
-      }
-    },
     "ActivityPub": {
       "description": "ActivityPub",
       "schema": {
@@ -30189,81 +30173,6 @@
         }
       }
     },
-    "CommitListWithLegacyPagination": {
-      "description": "CommitListWithLegacyPagination",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/Commit"
-        }
-      },
-      "headers": {
-        "X-HasMore": {
-          "type": "boolean",
-          "description": "True if there is another page\nin:header"
-        },
-        "X-Page": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The current page\nin:header"
-        },
-        "X-PageCount": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total number of pages\nin:header"
-        },
-        "X-PerPage": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Commits per page\nin:header"
-        },
-        "X-Total": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total number of commits (deprecated, use X-Total-Count)\nin:header"
-        },
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of commits\nin:header"
-        }
-      }
-    },
-    "CommitListWithPagination": {
-      "description": "CommitListWithPagination",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/Commit"
-        }
-      },
-      "headers": {
-        "X-HasMore": {
-          "type": "boolean",
-          "description": "True if there is another page\nin:header"
-        },
-        "X-Page": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The current page\nin:header"
-        },
-        "X-PageCount": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total number of pages\nin:header"
-        },
-        "X-PerPage": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Commits per page\nin:header"
-        },
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of commits\nin:header"
-        }
-      }
-    },
     "CommitStatus": {
       "description": "CommitStatus",
       "schema": {
@@ -30357,13 +30266,6 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Email"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of emails\nin:header"
         }
       }
     },
@@ -31174,22 +31076,6 @@
         }
       }
     },
-    "StopWatchesList": {
-      "description": "StopWatchesList",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/StopWatch"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of stopwatches\nin:header"
-        }
-      }
-    },
     "StringSlice": {
       "description": "StringSlice",
       "schema": {
@@ -31353,13 +31239,6 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/User"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of users\nin:header"
         }
       }
     },
