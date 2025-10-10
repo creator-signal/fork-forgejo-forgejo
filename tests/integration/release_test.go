@@ -357,12 +357,34 @@ func TestDownloadReleaseAttachment(t *testing.T) {
 
 	url := repo.Link() + "/releases/download/v1.1/README.md"
 
+	// user2/repo2 is private and can't be accessed anonymously
 	req := NewRequest(t, "GET", url)
 	MakeRequest(t, req, http.StatusNotFound)
 
+	// But the owner can access it
 	req = NewRequest(t, "GET", url)
 	session := loginUser(t, "user2")
 	session.MakeRequest(t, req, http.StatusOK)
+}
+
+func TestReleaseAttachmentDownloadCounter(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	tests.PrepareAttachmentsStorage(t)
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
+	session := loginUser(t, "user2")
+	attachmentUrl := fmt.Sprintf("%s/archive/v1.1.zip", repo.Link())
+
+	// Assert zero downloads initially
+	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("%s/releases", repo.Link())), http.StatusOK).Body)
+	downloads := doc.Find(fmt.Sprintf("details.download > ul > li:has(a[href='%s']) span", attachmentUrl)).Text()
+	assert.Contains(t, downloads, "0 downloads")
+
+	// Download once and assert the change in the counter
+	session.MakeRequest(t, NewRequest(t, "GET", attachmentUrl), http.StatusOK)
+	doc = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("%s/releases", repo.Link())), http.StatusOK).Body)
+	downloads = doc.Find(fmt.Sprintf("details.download > ul > li:has(a[href='%s']) span", attachmentUrl)).Text()
+	assert.Contains(t, downloads, "1 download")
 }
 
 func TestReleaseHideArchiveLinksUI(t *testing.T) {
