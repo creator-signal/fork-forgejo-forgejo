@@ -6,10 +6,39 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test, dynamic_id} from './utils_e2e.ts';
+import {test, dynamic_id, login_user} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
 
 test.use({user: 'user2'});
+
+test('Create issue & comment', async ({browser}, workerInfo) => {
+  const context = await login_user(browser, workerInfo, 'user2', {javaScriptEnabled: false});
+  const page = await context.newPage();
+
+  let response = await page.goto('/user2/repo1/issues/new');
+  expect(response?.status()).toBe(200);
+
+  // Create a new issue
+  await page.getByPlaceholder('Title').fill('Some title');
+  await page.getByPlaceholder('Leave a comment').fill('Some content');
+  await page.getByRole('button', {name: 'Create issue'}).click();
+
+  // Go to some issue. As of adding this, noJS clients can't redirect to the issue created above
+  response = await page.goto('/user2/repo1/issues/1');
+  expect(response?.status()).toBe(200);
+
+  // Leave a comment
+  await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Comment content');
+  await page.locator('#comment-form').getByRole('button', {name: 'Comment'}).click();
+
+  // Go to it again because of non-working redirect
+  response = await page.goto('/user2/repo1/issues/1');
+  expect(response?.status()).toBe(200);
+
+  // Validate the page contents that actions above made a difference
+  await expect(page.locator('h1')).toHaveText('Some title');
+  await expect(page.locator('.comment').filter({hasText: 'Some title'})).toHaveCount(1);
+});
 
 test('Menu accessibility', async ({page}) => {
   await page.goto('/user2/repo1/issues/1');
