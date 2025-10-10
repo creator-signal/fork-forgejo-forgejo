@@ -18,7 +18,7 @@ for (const run of [
   test.describe(`Create issue & comment`, () => {
     // playwright/valid-title says: [error] Title must be a string
     test(`${run.title}`, async ({browser}, workerInfo) => {
-      test.skip(workerInfo.project.name === 'Mobile Chrome', 'Mobile Chrome has trouble clicking Comment button in JSon mode');
+      test.skip(workerInfo.project.name === 'Mobile Chrome', 'Mobile Chrome has trouble clicking Comment button with JS enabled');
 
       const issueTitle = dynamic_id();
       const issueContent = dynamic_id();
