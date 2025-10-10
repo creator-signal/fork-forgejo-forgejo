@@ -373,18 +373,28 @@ func TestReleaseAttachmentDownloadCounter(t *testing.T) {
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	session := loginUser(t, "user2")
-	attachmentUrl := fmt.Sprintf("%s/archive/v1.1.zip", repo.Link())
+	zipAttachmentUrl := fmt.Sprintf("%s/archive/v1.1.zip", repo.Link())
+	gzAttachmentUrl := fmt.Sprintf("%s/archive/v1.1.tar.gz", repo.Link())
+	counterSelector := "details.download > ul > li:has(a[href='%s']) span"
 
 	// Assert zero downloads initially
 	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("%s/releases", repo.Link())), http.StatusOK).Body)
-	downloads := doc.Find(fmt.Sprintf("details.download > ul > li:has(a[href='%s']) span", attachmentUrl)).Text()
-	assert.Contains(t, downloads, "0 downloads")
+	zipDownloads := doc.Find(fmt.Sprintf(counterSelector, zipAttachmentUrl)).Text()
+	gzDownloads := doc.Find(fmt.Sprintf(counterSelector, gzAttachmentUrl)).Text()
+	assert.Contains(t, zipDownloads, "0 downloads")
+	assert.Contains(t, gzDownloads, "0 downloads")
 
-	// Download once and assert the change in the counter
-	session.MakeRequest(t, NewRequest(t, "GET", attachmentUrl), http.StatusOK)
+	// Generate downloads
+	session.MakeRequest(t, NewRequest(t, "GET", zipAttachmentUrl), http.StatusOK)
+	session.MakeRequest(t, NewRequest(t, "GET", gzAttachmentUrl), http.StatusOK)
+	session.MakeRequest(t, NewRequest(t, "GET", gzAttachmentUrl), http.StatusOK)
+
+	// Check the new numbers
 	doc = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("%s/releases", repo.Link())), http.StatusOK).Body)
-	downloads = doc.Find(fmt.Sprintf("details.download > ul > li:has(a[href='%s']) span", attachmentUrl)).Text()
-	assert.Contains(t, downloads, "1 download")
+	zipDownloads = doc.Find(fmt.Sprintf(counterSelector, zipAttachmentUrl)).Text()
+	gzDownloads = doc.Find(fmt.Sprintf(counterSelector, gzAttachmentUrl)).Text()
+	assert.Contains(t, zipDownloads, "1 download")
+	assert.Contains(t, gzDownloads, "2 downloads")
 }
 
 func TestReleaseHideArchiveLinksUI(t *testing.T) {
