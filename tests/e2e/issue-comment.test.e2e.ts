@@ -47,7 +47,7 @@ for (const run of [
       await page.locator('#comment-form button.primary').filter({hasText: 'Comment'}).click();
 
       if (!run.js) {
-        const redirectUrl = await JSON.parse(await page.locator('body').innerText())['redirect'];
+        const redirectUrl = await JSON.parse(await page.locator('body').textContent())['redirect'];
         response = await page.goto(redirectUrl);
         expect(response?.status()).toBe(200);
       }
