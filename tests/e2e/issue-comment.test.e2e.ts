@@ -18,6 +18,8 @@ for (const run of [
   test.describe(`Create issue & comment`, () => {
     // playwright/valid-title says: [error] Title must be a string
     test(`${run.title}`, async ({browser}, workerInfo) => {
+      test.skip(workerInfo.project.name === 'Mobile Chrome', 'Mobile Chrome has trouble clicking Comment button in JSon mode');
+
       const issueTitle = dynamic_id();
       const issueContent = dynamic_id();
       const commentContent = dynamic_id();
@@ -38,10 +40,6 @@ for (const run of [
       } else {
         // NoJS clients end up on a .../comments JSON file and browsers surround it with some HTML
         const redirectUrl = await JSON.parse(await page.locator('body').innerText())['redirect'];
-        console.log(issueTitle);
-        console.log(issueContent);
-        console.log(commentContent);
-        console.log(redirectUrl);
         response = await page.goto(redirectUrl);
         expect(response?.status()).toBe(200);
       }
