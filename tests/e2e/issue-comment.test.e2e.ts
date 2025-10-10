@@ -29,9 +29,14 @@ for (const run of [
       await page.getByPlaceholder('Leave a comment').fill('Some content');
       await page.getByRole('button', {name: 'Create issue'}).click();
 
-      // Go to some issue. As of adding this, noJS clients can't redirect to the issue created above
-      response = await page.goto('/user2/repo1/issues/1');
-      expect(response?.status()).toBe(200);
+      if (run.js) {
+        await expect(page).toHaveURL(/\/user2\/repo1\/issues\/\d+$/);
+      } else {
+        // NoJS clients end up on a .../comments JSON file and browsers surround it with some HTML
+        const redirectUrl = JSON.parse(await page.locator('body').innerText())['redirect'];
+        response = await page.goto(redirectUrl);
+        expect(response?.status()).toBe(200);
+      }
 
       // Leave a comment
       await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Comment content');
