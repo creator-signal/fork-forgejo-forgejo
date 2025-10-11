@@ -179,13 +179,6 @@
   --color-orange-badge: #f2711c;
   --color-orange-badge-bg: #f2711c1a;
   --color-orange-badge-hover-bg: #f2711c4d;
-
-  /* Colors for thin elements: octicons, text, borders */
-  --color-thin-green: var(--color-green);
-  --color-thin-red: var(--color-red);
-  --color-thin-purple: var(--color-purple);
-  --color-thin-orange: var(--color-orange);
-
   /* target-based colors */
   --color-body: #ffffff;
   --color-box-header: #f1f3f5;
