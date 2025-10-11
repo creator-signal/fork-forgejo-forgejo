@@ -141,7 +141,7 @@ index 6dfe48a..bc7068d 100644
 +++ b/README.md
 @@ -1,3 +1,3 @@
  # Releases test repo
-
+ 
 -With a v1.0
 +With a v1.0 and a v2.0
 `
@@ -161,7 +161,7 @@ index 6dfe48a..bc7068d 100644
 +++ b/README.md
 @@ -1,3 +1,3 @@
  # Releases test repo
-
+ 
 -With a v1.0
 +With a v1.0 and a v2.0
 diff --git a/bugfix b/bugfix
