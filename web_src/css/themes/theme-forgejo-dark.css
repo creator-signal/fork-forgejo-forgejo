@@ -203,6 +203,7 @@
   --color-thin-green: oklch(var(--color-thin-lightness) var(--color-chroma) 145deg);
   --color-thin-red: oklch(var(--color-thin-lightness) var(--color-chroma) 27deg);
   --color-thin-purple: oklch(var(--color-thin-lightness) var(--color-chroma) 298deg);
+  --color-thin-orange: oklch(var(--color-thin-lightness) var(--color-chroma) 41deg);
 
   /* target-based colors */
   --color-body: var(--steel-800);

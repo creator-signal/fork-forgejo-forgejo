@@ -653,7 +653,7 @@ img.ui.avatar,
 }
 
 .text.orange {
-  color: var(--color-orange) !important;
+  color: var(--color-thin-orange) !important;
 }
 
 .text.yellow {
