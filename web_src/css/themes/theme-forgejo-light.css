@@ -217,6 +217,7 @@
   --color-thin-green: var(--color-green-light);
   --color-thin-red: var(--color-red-light);
   --color-thin-purple: var(--color-purple-light);
+  --color-thin-orange: var(--color-orange);
 
   /* target-based colors */
   --color-body: #fff;
