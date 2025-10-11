@@ -673,7 +673,7 @@ img.ui.avatar,
 }
 
 .text.purple {
-  color: var(--color-purple) !important;
+  color: var(--color-thin-purple) !important;
 }
 
 .text.brown {
@@ -710,12 +710,6 @@ img.ui.avatar,
 
 .text.small {
   font-size: 0.75em;
-}
-
-/* colors of colorful icons */
-svg.text.purple,
-.text.purple svg {
-  color: var(--color-icon-purple) !important;
 }
 
 .ui.form .ui.button {

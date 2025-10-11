@@ -200,7 +200,7 @@
   /* Colors for thin elements: octicons, text */
   --color-thin-green: #3fb950;
   --color-thin-red: #f85149;
-  --color-icon-purple: #aa76ff;
+  --color-thin-purple: #aa76ff;
 
   /* target-based colors */
   --color-body: var(--steel-800);
