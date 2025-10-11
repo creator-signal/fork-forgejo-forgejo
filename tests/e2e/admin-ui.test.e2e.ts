@@ -34,3 +34,25 @@ test('Admin notices modal', async ({page}) => {
   await page.getByText('Cancel').click();
   await expect(page.locator('#change-email-modal')).toBeHidden();
 });
+
+test('Admin email list', async ({page}) => {
+  const response = await page.goto('/admin/emails');
+  expect(response?.status()).toBe(200);
+
+  await page.locator('[data-uid="21"]').click();
+  await expect(page.locator('#change-email-modal .content')).toHaveText('Are you sure you want to update this email address?');
+  await screenshot(page, page.locator('#change-email-modal .content'));
+  await page.locator('#email-action-form').getByText('No').click();
+  await expect(page.locator('#change-email-modal')).toBeHidden();
+
+  const activated = await page.locator('[data-uid="9"] .svg').evaluate((node) => node.classList.contains('octicon-check'));
+  await page.locator('[data-uid="9"]').click();
+  await page.getByRole('button', {name: 'Yes'}).click();
+
+  // Retry-proof
+  if (activated) {
+    await expect(page.locator('[data-uid="9"] .svg')).toHaveClass(/octicon-x/);
+  } else {
+    await expect(page.locator('[data-uid="9"] svg')).toHaveClass(/octicon-check/);
+  }
+});
