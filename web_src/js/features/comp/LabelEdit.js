@@ -28,16 +28,14 @@ export function initCompLabelEdit(selector) {
   // Create label
   $('.new-label.button').on('click', () => {
     updateExclusiveLabelEdit('.new-label');
-    $('.new-label.modal').modal({
-      onApprove() {
-        const form = document.querySelector('.new-label.form');
-        if (!form.checkValidity()) {
-          form.reportValidity();
-          return false;
-        }
-        document.querySelector('.new-label.form').requestSubmit();
-      },
-    }).modal('show');
+    showModal('new-label-modal', () => {
+      const form = document.querySelector('.new-label.form');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return false;
+      }
+      document.querySelector('.new-label.form').requestSubmit();
+    });
     return false;
   });
 

@@ -2133,15 +2133,6 @@ details.repo-search-result summary::marker {
   padding: 1em;
 }
 
-.new-label.modal .form .column {
-  padding-right: 0;
-}
-
-.new-label.modal .form .buttons {
-  margin-left: auto;
-  padding-top: 15px;
-}
-
 .stats-table {
   display: table;
   width: 100%;
