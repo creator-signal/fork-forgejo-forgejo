@@ -712,6 +712,20 @@ img.ui.avatar,
   font-size: 0.75em;
 }
 
+/* colors of colorful icons */
+svg.text.green,
+.text.green svg {
+  color: var(--color-icon-green) !important;
+}
+svg.text.red,
+.text.red svg {
+  color: var(--color-icon-red) !important;
+}
+svg.text.purple,
+.text.purple svg {
+  color: var(--color-icon-purple) !important;
+}
+
 .ui.form .ui.button {
   font-weight: var(--font-weight-normal);
 }
@@ -999,20 +1013,6 @@ overflow-menu .ui.label {
 
 .archived-icon {
   color: var(--color-secondary-dark-2) !important;
-}
-
-/* colors of colorful icons */
-svg.text.green,
-.text.green svg {
-  color: var(--color-icon-green) !important;
-}
-svg.text.red,
-.text.red svg {
-  color: var(--color-icon-red) !important;
-}
-svg.text.purple,
-.text.purple svg {
-  color: var(--color-icon-purple) !important;
 }
 
 .oauth2-authorize-application-box {
