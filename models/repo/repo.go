@@ -795,8 +795,13 @@ func GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*Repo
 
 // getRepositoryURLPathSegments returns segments (owner, reponame) extracted from a url
 func getRepositoryURLPathSegments(repoURL string) []string {
-	if strings.HasPrefix(repoURL, setting.AppURL) {
-		return strings.Split(strings.TrimPrefix(repoURL, setting.AppURL), "/")
+	unescapedURL, err := url.PathUnescape(repoURL)
+	if err != nil {
+		log.Error(`getRepositoryURLPathSegments: Failed unescaping %s`, unescapedURL)
+		return nil
+	}
+	if strings.HasPrefix(unescapedURL, setting.AppURL) {
+		return strings.Split(strings.TrimPrefix(unescapedURL, setting.AppURL), "/")
 	}
 
 	sshURLVariants := [4]string{
@@ -807,8 +812,8 @@ func getRepositoryURLPathSegments(repoURL string) []string {
 	}
 
 	for _, sshURL := range sshURLVariants {
-		if strings.HasPrefix(repoURL, sshURL) {
-			return strings.Split(strings.TrimPrefix(repoURL, sshURL), "/")
+		if strings.HasPrefix(unescapedURL, sshURL) {
+			return strings.Split(strings.TrimPrefix(unescapedURL, sshURL), "/")
 		}
 	}
 
