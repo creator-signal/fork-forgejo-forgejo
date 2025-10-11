@@ -171,8 +171,8 @@ func getTestCases() []struct {
 		},
 		{
 			name:  "OwnerSlashRepoSearch",
-			opts:  &repo_model.SearchRepoOptions{Keyword: "user/repo2", ListOptions: db.ListOptions{Page: 1, PageSize: 10}, Private: true, OwnerID: 0},
-			count: 2,
+			opts:  &repo_model.SearchRepoOptions{Keyword: "user2/rep", ListOptions: db.ListOptions{Page: 1, PageSize: 10}, Private: true, OwnerID: 0},
+			count: 8,
 		},
 		{
 			name:  "OwnerSlashSearch",
