@@ -198,9 +198,11 @@
   --color-orange-badge-hover-bg: #ea580c44;
 
   /* Colors for thin elements: octicons, text */
-  --color-thin-green: #3fb950;
-  --color-thin-red: #f85149;
-  --color-thin-purple: #aa76ff;
+  --color-chroma: 0.19;
+  --color-thin-lightness: 0.68;
+  --color-thin-green: oklch(var(--color-thin-lightness) var(--color-chroma) 145deg);
+  --color-thin-red: oklch(var(--color-thin-lightness) var(--color-chroma) 27deg);
+  --color-thin-purple: oklch(var(--color-thin-lightness) var(--color-chroma) 298deg);
 
   /* target-based colors */
   --color-body: var(--steel-800);
