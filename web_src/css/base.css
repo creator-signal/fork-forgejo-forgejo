@@ -661,7 +661,7 @@ img.ui.avatar,
 }
 
 .text.green {
-  color: var(--color-green) !important;
+  color: var(--color-thin-green) !important;
 }
 
 .text.teal {
@@ -713,10 +713,6 @@ img.ui.avatar,
 }
 
 /* colors of colorful icons */
-svg.text.green,
-.text.green svg {
-  color: var(--color-icon-green) !important;
-}
 svg.text.purple,
 .text.purple svg {
   color: var(--color-icon-purple) !important;
