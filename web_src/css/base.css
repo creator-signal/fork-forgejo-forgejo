@@ -649,7 +649,7 @@ img.ui.avatar,
 }
 
 .text.red {
-  color: var(--color-red) !important;
+  color: var(--color-thin-red) !important;
 }
 
 .text.orange {
@@ -716,10 +716,6 @@ img.ui.avatar,
 svg.text.green,
 .text.green svg {
   color: var(--color-icon-green) !important;
-}
-svg.text.red,
-.text.red svg {
-  color: var(--color-icon-red) !important;
 }
 svg.text.purple,
 .text.purple svg {
