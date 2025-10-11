@@ -50,7 +50,7 @@ func TestCheckUnadoptedRepositories(t *testing.T) {
 	// Existing (adopted) repository is not returned
 	//
 	userName := "user2"
-	repoName := "repo2"
+	repoName := "repò2"
 	unadoptedRepoName := "unadopted"
 	unadopted = &unadoptedRepositories{start: 0, end: 100}
 	err = checkUnadoptedRepositories(db.DefaultContext, userName, []string{repoName, unadoptedRepoName}, unadopted)

@@ -50,7 +50,7 @@ func TestTelegramPayload(t *testing.T) {
 		pl, err := tc.Fork(p)
 		require.NoError(t, err)
 
-		assert.Equal(t, `test/repo2 is forked to <a href="http://localhost:3000/test/repo" rel="nofollow">test/repo</a>`, pl.Message)
+		assert.Equal(t, `test/repò2 is forked to <a href="http://localhost:3000/test/repo" rel="nofollow">test/repo</a>`, pl.Message)
 	})
 
 	t.Run("Push", func(t *testing.T) {

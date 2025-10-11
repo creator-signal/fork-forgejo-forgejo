@@ -150,8 +150,8 @@ func TestGetRepositoryByURL(t *testing.T) {
 			assert.Equal(t, int64(2), repo.OwnerID)
 		}
 
-		test(t, "https://try.gitea.io/user2/repo2")
-		test(t, "https://try.gitea.io/user2/repo2.git")
+		test(t, "https://try.gitea.io/user2/rep%C3%B22")
+		test(t, "https://try.gitea.io/user2/rep%C3%B22.git")
 	})
 
 	t.Run("ValidGitSshURL", func(t *testing.T) {
@@ -165,11 +165,11 @@ func TestGetRepositoryByURL(t *testing.T) {
 			assert.Equal(t, int64(2), repo.OwnerID)
 		}
 
-		test(t, "git+ssh://sshuser@try.gitea.io/user2/repo2")
-		test(t, "git+ssh://sshuser@try.gitea.io/user2/repo2.git")
+		test(t, "git+ssh://sshuser@try.gitea.io/user2/rep%C3%B22")
+		test(t, "git+ssh://sshuser@try.gitea.io/user2/rep%C3%B22.git")
 
-		test(t, "git+ssh://try.gitea.io/user2/repo2")
-		test(t, "git+ssh://try.gitea.io/user2/repo2.git")
+		test(t, "git+ssh://try.gitea.io/user2/rep%C3%B22")
+		test(t, "git+ssh://try.gitea.io/user2/rep%C3%B22.git")
 	})
 
 	t.Run("ValidImplicitSshURL", func(t *testing.T) {
@@ -183,11 +183,11 @@ func TestGetRepositoryByURL(t *testing.T) {
 			assert.Equal(t, int64(2), repo.OwnerID)
 		}
 
-		test(t, "sshuser@try.gitea.io:user2/repo2")
-		test(t, "sshuser@try.gitea.io:user2/repo2.git")
+		test(t, "sshuser@try.gitea.io:user2/rep%C3%B22")
+		test(t, "sshuser@try.gitea.io:user2/rep%C3%B22.git")
 
-		test(t, "try.gitea.io:user2/repo2")
-		test(t, "try.gitea.io:user2/repo2.git")
+		test(t, "try.gitea.io:user2/rep%C3%B22")
+		test(t, "try.gitea.io:user2/rep%C3%B22.git")
 	})
 }
 

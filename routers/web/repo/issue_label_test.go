@@ -45,7 +45,7 @@ func TestInitializeLabels(t *testing.T) {
 		Name:   "enhancement",
 		Color:  "#84b6eb",
 	})
-	assert.Equal(t, "/user2/repo2/labels", test.RedirectURL(ctx.Resp))
+	assert.Equal(t, "/user2/rep%C3%B22/labels", test.RedirectURL(ctx.Resp))
 }
 
 func TestRetrieveLabels(t *testing.T) {

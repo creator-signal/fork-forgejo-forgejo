@@ -3,7 +3,7 @@
   status: 1
   reporter_id: 2  # @user2
   content_type: 4 # Comment
-  content_id: 18  # user2/repo2/issues/2#issuecomment-18
+  content_id: 18  # user2/repò2/issues/2#issuecomment-18
   category: 2     # Spam
   remarks: The comment I'm reporting is pure SPAM.
   shadow_copy_id: null

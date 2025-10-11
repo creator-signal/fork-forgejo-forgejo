@@ -57,7 +57,7 @@ func TestTopicSearchPaging(t *testing.T) {
 		TopicNames []*api.TopicResponse `json:"topics"`
 	}
 
-	// Add 20 unique topics to user2/repo2, and 20 unique ones to user2/repo3
+	// Add 20 unique topics to user2/repò2, and 20 unique ones to user2/repo3
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	token2 := getUserToken(t, user2.Name, auth_model.AccessTokenScopeWriteRepository)
 	repo2 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})

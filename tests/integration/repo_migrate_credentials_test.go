@@ -31,7 +31,7 @@ func TestRepoMigrateWithCredentials(t *testing.T) {
 		t.Run("Incorrect credentials", func(t *testing.T) {
 			session.MakeRequest(t, NewRequestWithValues(t, "POST", "/repo/migrate", map[string]string{
 				"_csrf":         GetCSRF(t, session, "/repo/migrate?service_type=1"),
-				"clone_addr":    u.JoinPath("/user2/repo2").String(),
+				"clone_addr":    u.JoinPath("/user2/rep%C3%B22").String(),
 				"auth_username": "user2",
 				"auth_password": userPassword + "1",
 				"uid":           "2",
@@ -50,7 +50,7 @@ func TestRepoMigrateWithCredentials(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
 			session.MakeRequest(t, NewRequestWithValues(t, "POST", "/repo/migrate", map[string]string{
 				"_csrf":         GetCSRF(t, session, "/repo/migrate?service_type=1"),
-				"clone_addr":    u.JoinPath("/user2/repo2").String(),
+				"clone_addr":    u.JoinPath("/user2/rep%C3%B22").String(),
 				"auth_username": "user2",
 				"auth_password": userPassword,
 				"uid":           "2",
@@ -76,7 +76,7 @@ func TestRepoMigrateWithCredentials(t *testing.T) {
 
 			session.MakeRequest(t, NewRequestWithValues(t, "POST", "/repo/migrate", map[string]string{
 				"_csrf":         GetCSRF(t, session, "/repo/migrate?service_type=1"),
-				"clone_addr":    u.JoinPath("/user2/repo2").String(),
+				"clone_addr":    u.JoinPath("/user2/rep%C3%B22").String(),
 				"auth_username": "user2",
 				"auth_password": dangerousPassword,
 				"uid":           "2",

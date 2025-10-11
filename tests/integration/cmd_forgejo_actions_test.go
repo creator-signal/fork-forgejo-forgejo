@@ -134,7 +134,7 @@ func TestActions_CmdForgejo_Actions(t *testing.T) {
 			},
 			{
 				testName: "user and repo",
-				scope:    "user2/repo2",
+				scope:    "user2/repò2",
 				secret:   "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
 				uuid:     "42424242-4242-4242-4242-424242424242",
 			},

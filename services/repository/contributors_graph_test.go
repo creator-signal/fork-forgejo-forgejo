@@ -31,7 +31,7 @@ func TestRepository_ContributorsGraph(t *testing.T) {
 	require.NoError(t, err)
 
 	lc, cleanup := test.NewLogChecker(log.DEFAULT, log.INFO)
-	lc.StopMark(`getExtendedCommitStats[repo="user2/repo2" revision="404ref"]: object does not exist [id: 404ref, rel_path: ]`)
+	lc.StopMark(`getExtendedCommitStats[repo="user2/repò2" revision="404ref"]: object does not exist [id: 404ref, rel_path: ]`)
 	defer cleanup()
 
 	generateContributorStats(nil, mockCache, "key", repo, "404ref")

@@ -48,9 +48,9 @@ func deleteTestPayload() *api.DeletePayload {
 func forkTestPayload() *api.ForkPayload {
 	return &api.ForkPayload{
 		Forkee: &api.Repository{
-			HTMLURL:  "http://localhost:3000/test/repo2",
-			Name:     "repo2",
-			FullName: "test/repo2",
+			HTMLURL:  "http://localhost:3000/test/repò2",
+			Name:     "repò2",
+			FullName: "test/repò2",
 		},
 		Repo: &api.Repository{
 			HTMLURL:  "http://localhost:3000/test/repo",

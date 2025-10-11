@@ -62,7 +62,7 @@ func TestRepoCommitHeader(t *testing.T) {
 		commit, err := gitRepo.GetCommit("205ac761f3326a7ebe416e8673760016450b5cec")
 		require.NoError(t, err)
 
-		req := NewRequest(t, "GET", "/user2/repo2/commit/205ac761f3326a7ebe416e8673760016450b5cec")
+		req := NewRequest(t, "GET", "/user2/rep%C3%B22/commit/205ac761f3326a7ebe416e8673760016450b5cec")
 		resp := session.MakeRequest(t, req, http.StatusOK)
 
 		htmlDoc := NewHTMLParser(t, resp.Body)
@@ -72,7 +72,7 @@ func TestRepoCommitHeader(t *testing.T) {
 
 		parentSha := shas.First()
 		parentHref, _ := parentSha.Attr("href")
-		assert.Equal(t, "/user2/repo2/commit/2c54faec6c45d31c1abfaecdab471eac6633738a", parentHref)
+		assert.Equal(t, "/user2/rep%C3%B22/commit/2c54faec6c45d31c1abfaecdab471eac6633738a", parentHref)
 
 		parentID, err := commit.ParentID(0)
 		require.NoError(t, err)

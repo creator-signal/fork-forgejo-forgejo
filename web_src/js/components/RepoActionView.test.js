@@ -290,7 +290,7 @@ function configureForMultipleAttemptTests({viewHistorical}) {
       ...defaultTestProps,
       runIndex: '123',
       attemptNumber: viewHistorical ? '1' : '2',
-      actionsURL: toAbsoluteUrl('/user1/repo2/actions'),
+      actionsURL: toAbsoluteUrl('/user1/rep%C3%B22/actions'),
       initialJobData: {...minimalInitialJobData, state: myJobState},
     },
   });
@@ -325,7 +325,7 @@ test('display reconfigured for historical attempt', async () => {
   expect(wrapper.findAll('.job-out-of-date-warning').length).toEqual(1);
   expect(wrapper.get('.job-out-of-date-warning').text()).toEqual('oh no, out of date since two days ago give or take or so');
   await wrapper.get('.job-out-of-date-warning button').trigger('click');
-  expect(window.location.href).toEqual(toAbsoluteUrl('/user1/repo2/actions/runs/123/jobs/1'));
+  expect(window.location.href).toEqual(toAbsoluteUrl('/user1/rep%C3%B22/actions/runs/123/jobs/1'));
   // eslint-disable-next-line no-restricted-globals
   history.back();
   await flushPromises();
@@ -394,7 +394,7 @@ test('historical attempt dropdown interactions', async () => {
 
   // Click on the other option in the dropdown to verify it navigates to the target attempt
   wrapper.findAll('.job-attempt-dropdown .action-job-menu a').find((a) => a.text() === 'Run attempt 2 yesterday').trigger('click');
-  expect(window.location.href).toEqual(toAbsoluteUrl('/user1/repo2/actions/runs/123/jobs/1/attempt/2'));
+  expect(window.location.href).toEqual(toAbsoluteUrl('/user1/rep%C3%B22/actions/runs/123/jobs/1/attempt/2'));
 });
 
 test('artifacts download links', async () => {

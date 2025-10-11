@@ -31,7 +31,7 @@ func TestDownloadByIDForSVGUsesSecureHeaders(t *testing.T) {
 	session := loginUser(t, "user2")
 
 	// Request raw blob
-	req := NewRequest(t, "GET", "/user2/repo2/raw/blob/6395b68e1feebb1e4c657b4f9f6ba2676a283c0b")
+	req := NewRequest(t, "GET", "/user2/repò2/raw/blob/6395b68e1feebb1e4c657b4f9f6ba2676a283c0b")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	assert.Equal(t, "default-src 'none'; style-src 'unsafe-inline'; sandbox", resp.Header().Get("Content-Security-Policy"))
@@ -57,7 +57,7 @@ func TestDownloadByIDMediaForSVGUsesSecureHeaders(t *testing.T) {
 	session := loginUser(t, "user2")
 
 	// Request raw blob
-	req := NewRequest(t, "GET", "/user2/repo2/media/blob/6395b68e1feebb1e4c657b4f9f6ba2676a283c0b")
+	req := NewRequest(t, "GET", "/user2/rep%C3%B22/media/blob/6395b68e1feebb1e4c657b4f9f6ba2676a283c0b")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	assert.Equal(t, "default-src 'none'; style-src 'unsafe-inline'; sandbox", resp.Header().Get("Content-Security-Policy"))
@@ -70,7 +70,7 @@ func TestDownloadRawTextFileWithoutMimeTypeMapping(t *testing.T) {
 
 	session := loginUser(t, "user2")
 
-	req := NewRequest(t, "GET", "/user2/repo2/raw/branch/master/test.xml")
+	req := NewRequest(t, "GET", "/user2/rep%C3%B22/raw/branch/master/test.xml")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	assert.Equal(t, "text/plain; charset=utf-8", resp.Header().Get("Content-Type"))
@@ -83,7 +83,7 @@ func TestDownloadRawTextFileWithMimeTypeMapping(t *testing.T) {
 
 	session := loginUser(t, "user2")
 
-	req := NewRequest(t, "GET", "/user2/repo2/raw/branch/master/test.xml")
+	req := NewRequest(t, "GET", "/user2/rep%C3%B22/raw/branch/master/test.xml")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	assert.Equal(t, "text/xml; charset=utf-8", resp.Header().Get("Content-Type"))

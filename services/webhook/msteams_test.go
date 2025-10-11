@@ -75,8 +75,8 @@ func TestMSTeamsPayload(t *testing.T) {
 		pl, err := mc.Fork(p)
 		require.NoError(t, err)
 
-		assert.Equal(t, "test/repo2 is forked to test/repo", pl.Title)
-		assert.Equal(t, "test/repo2 is forked to test/repo", pl.Summary)
+		assert.Equal(t, "test/repò2 is forked to test/repo", pl.Title)
+		assert.Equal(t, "test/repò2 is forked to test/repo", pl.Summary)
 		assert.Len(t, pl.Sections, 1)
 		assert.Equal(t, "user1", pl.Sections[0].ActivitySubtitle)
 		assert.Empty(t, pl.Sections[0].Text)

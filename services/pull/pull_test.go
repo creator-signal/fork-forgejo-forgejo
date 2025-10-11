@@ -90,7 +90,7 @@ func TestPullRequest_GetDefaultMergeMessage_ExternalTracker(t *testing.T) {
 	mergeMessage, _, err = GetDefaultMergeMessage(db.DefaultContext, gitRepo, pr, "")
 	require.NoError(t, err)
 
-	assert.Equal(t, "Merge pull request 'issue3' (#3) from user2/repo2:branch2 into master", mergeMessage)
+	assert.Equal(t, "Merge pull request 'issue3' (#3) from user2/repò2:branch2 into master", mergeMessage)
 }
 
 func TestPullRequest_GetDefaultMergeMessage_GlobalTemplate(t *testing.T) {

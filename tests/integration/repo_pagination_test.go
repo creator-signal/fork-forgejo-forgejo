@@ -48,14 +48,14 @@ func TestRepoPaginations(t *testing.T) {
 		testRepoPagination(t, session, "user2/repo1", "stars", &setting.MaxUserCardsPerPage)
 	})
 	t.Run("Watcher", func(t *testing.T) {
-		// user2/repo2 is watched by its creator user2. Watch it by user1 to make it watched by 2 users.
+		// user2/repò2 is watched by its creator user2. Watch it by user1 to make it watched by 2 users.
 		session := loginUser(t, "user1")
-		req := NewRequestWithValues(t, "POST", "/user2/repo2/action/watch", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user2/repo2"),
+		req := NewRequestWithValues(t, "POST", "/user2/rep%C3%B22/action/watch", map[string]string{
+			"_csrf": GetCSRF(t, session, "/user2/rep%C3%B22"),
 		})
 		session.MakeRequest(t, req, http.StatusOK)
 
-		testRepoPagination(t, session, "user2/repo2", "watchers", &setting.MaxUserCardsPerPage)
+		testRepoPagination(t, session, "user2/rep%C3%B22", "watchers", &setting.MaxUserCardsPerPage)
 	})
 }
 

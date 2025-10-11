@@ -49,8 +49,8 @@ func TestMatrixPayload(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, pl)
 
-		assert.Equal(t, "[test/repo2](http://localhost:3000/test/repo2) is forked to [test/repo](http://localhost:3000/test/repo)", pl.Body)
-		assert.Equal(t, `<a href="http://localhost:3000/test/repo2">test/repo2</a> is forked to <a href="http://localhost:3000/test/repo">test/repo</a>`, pl.FormattedBody)
+		assert.Equal(t, "[test/repò2](http://localhost:3000/test/repò2) is forked to [test/repo](http://localhost:3000/test/repo)", pl.Body)
+		assert.Equal(t, `<a href="http://localhost:3000/test/repò2">test/repò2</a> is forked to <a href="http://localhost:3000/test/repo">test/repo</a>`, pl.FormattedBody)
 	})
 
 	t.Run("Push", func(t *testing.T) {

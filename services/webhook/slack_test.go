@@ -42,7 +42,7 @@ func TestSlackPayload(t *testing.T) {
 		pl, err := sc.Fork(p)
 		require.NoError(t, err)
 
-		assert.Equal(t, "<http://localhost:3000/test/repo2|test/repo2> is forked to <http://localhost:3000/test/repo|test/repo>", pl.Text)
+		assert.Equal(t, "<http://localhost:3000/test/repò2|test/repò2> is forked to <http://localhost:3000/test/repo|test/repo>", pl.Text)
 	})
 
 	t.Run("Push", func(t *testing.T) {

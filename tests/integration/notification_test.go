@@ -25,8 +25,8 @@ func TestNotification(t *testing.T) {
 	// Unread and pinned notification.
 	htmlDoc.AssertElement(t, ".notifications-link[href='/user2/repo1/pulls/3']", true)
 	htmlDoc.AssertElement(t, ".notifications-link[href='/user2/repo1/issues/4']", true)
-	htmlDoc.AssertElement(t, ".notifications-link[href='/user2/repo2/issues/1']", true)
+	htmlDoc.AssertElement(t, ".notifications-link[href='/user2/rep%C3%B22/issues/1']", true)
 
 	// Read notification.
-	htmlDoc.AssertElement(t, ".notifications-link[href='/user2/repo2/pulls/2']", false)
+	htmlDoc.AssertElement(t, ".notifications-link[href='/user2/rep%C3%B22/pulls/2']", false)
 }

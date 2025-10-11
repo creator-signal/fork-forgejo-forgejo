@@ -41,7 +41,7 @@ func TestFeishuPayload(t *testing.T) {
 		pl, err := fc.Fork(p)
 		require.NoError(t, err)
 
-		assert.Equal(t, `test/repo2 is forked to test/repo`, pl.Content.Text)
+		assert.Equal(t, `test/repò2 is forked to test/repo`, pl.Content.Text)
 	})
 
 	t.Run("Push", func(t *testing.T) {

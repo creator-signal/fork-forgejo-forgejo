@@ -375,7 +375,7 @@ func TestAPIDeniesPermissionBasedOnTokenScope(t *testing.T) {
 		},
 		// Private repo
 		{
-			"/api/v1/repos/user2/repo2",
+			"/api/v1/repos/user2/rep%C3%B22",
 			"GET",
 			[]permission{
 				{
@@ -386,7 +386,7 @@ func TestAPIDeniesPermissionBasedOnTokenScope(t *testing.T) {
 		},
 		// Private repo
 		{
-			"/api/v1/repos/user2/repo2",
+			"/api/v1/repos/user2/rep%C3%B22",
 			"GET",
 			[]permission{
 				{

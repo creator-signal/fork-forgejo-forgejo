@@ -357,7 +357,7 @@ func TestDownloadReleaseAttachment(t *testing.T) {
 
 	url := repo.Link() + "/releases/download/v1.1/README.md"
 
-	// user2/repo2 is private and can't be accessed anonymously
+	// user2/repò2 is private and can't be accessed anonymously
 	req := NewRequest(t, "GET", url)
 	MakeRequest(t, req, http.StatusNotFound)
 

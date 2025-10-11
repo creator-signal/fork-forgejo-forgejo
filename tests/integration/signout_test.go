@@ -19,6 +19,6 @@ func TestSignOut(t *testing.T) {
 	session.MakeRequest(t, req, http.StatusOK)
 
 	// try to view a private repo, should fail
-	req = NewRequest(t, "GET", "/user2/repo2")
+	req = NewRequest(t, "GET", "/user2/rep%C3%B22")
 	session.MakeRequest(t, req, http.StatusNotFound)
 }

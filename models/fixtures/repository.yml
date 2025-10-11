@@ -37,8 +37,8 @@
   id: 2
   owner_id: 2
   owner_name: user2
-  lower_name: repo2
-  name: repo2
+  lower_name: repò2
+  name: repò2
   default_branch: master
   num_watches: 1
   num_stars: 1

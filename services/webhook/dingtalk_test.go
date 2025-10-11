@@ -58,8 +58,8 @@ func TestDingTalkPayload(t *testing.T) {
 		pl, err := dc.Fork(p)
 		require.NoError(t, err)
 
-		assert.Equal(t, "test/repo2 is forked to test/repo", pl.ActionCard.Text)
-		assert.Equal(t, "test/repo2 is forked to test/repo", pl.ActionCard.Title)
+		assert.Equal(t, "test/repò2 is forked to test/repo", pl.ActionCard.Text)
+		assert.Equal(t, "test/repò2 is forked to test/repo", pl.ActionCard.Title)
 		assert.Equal(t, "view forked repo test/repo", pl.ActionCard.SingleTitle)
 		assert.Equal(t, "http://localhost:3000/test/repo", parseRealSingleURL(pl.ActionCard.SingleURL))
 	})
