@@ -101,7 +101,7 @@ func deletePathViaUI(t *testing.T, session *TestSession, user *user_model.User, 
 }
 
 func TestRecursiveDeleteSubSub(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
 			"dir2/file2.txt",
@@ -146,7 +146,7 @@ func TestRecursiveDeleteSubSub(t *testing.T) {
 }
 
 func TestRecursiveDeleteSub(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
 			"dir2/file2.txt",
@@ -191,7 +191,7 @@ func TestRecursiveDeleteSub(t *testing.T) {
 }
 
 func TestRecursiveDeleteRoot(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
 			"dir2/file2.txt",
@@ -236,7 +236,7 @@ func TestRecursiveDeleteRoot(t *testing.T) {
 }
 
 func TestRecursiveDeleteAnonymous(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
 			"dir2/file2.txt",
@@ -282,7 +282,7 @@ func TestRecursiveDeleteAnonymous(t *testing.T) {
 }
 
 func TestRecursiveDeleteOther(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
 			"dir2/file2.txt",
@@ -330,7 +330,7 @@ func TestRecursiveDeleteOther(t *testing.T) {
 }
 
 func TestRecursiveDeleteRootColab(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
 			"dir2/file2.txt",
