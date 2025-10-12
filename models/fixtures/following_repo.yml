@@ -1,0 +1,6 @@
+-
+  id: 1
+  repo_id: 1
+  external_id: 1
+  federation_host_id: 1
+  uri: "https://forge.example.com/api/v1/activitypub/repository-id/1"

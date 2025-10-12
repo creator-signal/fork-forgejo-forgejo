@@ -4,6 +4,9 @@
 package repo
 
 import (
+	"context"
+
+	"forgejo.org/models/db"
 	"forgejo.org/modules/validation"
 )
 
@@ -27,6 +30,22 @@ func NewFollowingRepo(repoID int64, externalID string, federationHostID int64, u
 		return FollowingRepo{}, err
 	}
 	return result, nil
+}
+
+// GetFollowingRepoByID returns a FollowingRepo by given id, if exists.
+func GetFollowingRepoByID(ctx context.Context, id int64) (*FollowingRepo, error) {
+	followingRepo := new(FollowingRepo)
+	followingRepo.RepoID = id
+
+	has, err := db.GetEngine(ctx).Get(followingRepo)
+
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrRepoNotExist{id, 0, "", ""}
+	}
+
+	return followingRepo, nil
 }
 
 func (user FollowingRepo) Validate() []string {
