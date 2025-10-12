@@ -94,14 +94,20 @@ func GetFederatedUser(ctx context.Context, externalID string, federationHostID i
 
 func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *FederatedUser, error) {
 	federatedUser := new(FederatedUser)
-	user := new(User)
-	has, err := db.GetEngine(ctx).Where("user_id=?", userID).Get(federatedUser)
+	federatedUser.UserID = userID
+
+	has, err := db.GetEngine(ctx).Get(federatedUser)
+
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
-		return nil, nil, fmt.Errorf("FederatedUser table does not contain entry for user ID: %v", federatedUser.UserID)
+		return nil, nil, ErrUserNotExist{UID: userID}
 	}
-	has, err = db.GetEngine(ctx).ID(federatedUser.UserID).Get(user)
+
+	user := new(User)
+	user.ID = userID
+
+	has, err = db.GetEngine(ctx).Get(user)
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
@@ -111,9 +117,11 @@ func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *Federa
 	if res, err := validation.IsValid(*user); !res {
 		return nil, nil, err
 	}
+
 	if res, err := validation.IsValid(*federatedUser); !res {
 		return nil, nil, err
 	}
+
 	return user, federatedUser, nil
 }
 

@@ -1,0 +1,17 @@
+# only map to federated users (use type 5) in user.yml and make sure that the
+# federation_host exists as well
+
+-
+  id: 1
+  user_id: 42
+  external_id: "https://example.net/api/v1/activitypub/user-id/2"
+  federation_host_id: 2
+  inbox_path: "https://example.net/api/v1/activitypub/user-id/2/inbox"
+  normalized_original_url: "https://example.net/api/v1/activitypub/user-id/2"
+- id: 2
+  # This user exclipitly does NOT map to a user, failure case testing
+  user_id: 1337
+  external_id: "https://example.net/api/v1/activitypub/user-id/1337"
+  federation_host_id: 2
+  inbox_path: "https://example.net/api/v1/activitypub/user-id/1337/inbox"
+  normalized_original_url: "https://example.net/api/v1/activitypub/user-id/1337"
