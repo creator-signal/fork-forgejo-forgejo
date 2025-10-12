@@ -19,7 +19,7 @@
 							<select class="ui selection dropdown" id="abuse_category" name="abuse_category" required autofocus>
 								<option value="">{{ctx.Locale.Tr "moderation.abuse_category.placeholder"}}</option>
 								{{range $cat := .AbuseCategories}}
-								<option value="{{$cat.Value}}"{{if eq $.abuse_category $cat.Value}} selected{{end}}>{{ctx.Locale.Tr $cat.TranslationKey}}</option>
+								<option value="{{$cat.Value | printf "%#v"}}"{{if eq $.abuse_category $cat.Value}} selected{{end}}>{{ctx.Locale.Tr $cat.TranslationKey}}</option>
 								{{end}}
 							</select>
 						</label>

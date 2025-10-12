@@ -48,6 +48,21 @@ const (
 	AbuseCategoryTypeIllegalContent                              // 4
 )
 
+func (c AbuseCategoryType) String() string {
+	switch c {
+	case AbuseCategoryTypeOther:
+		return "Other"
+	case AbuseCategoryTypeSpam:
+		return "Spam"
+	case AbuseCategoryTypeMalware:
+		return "Malware"
+	case AbuseCategoryTypeIllegalContent:
+		return "Illegal content"
+	default:
+		return "Unknown category"
+	}
+}
+
 // llu:TrKeys
 var AbuseCategoriesTranslationKeys = map[AbuseCategoryType]string{
 	AbuseCategoryTypeSpam:           "moderation.abuse_category.spam",
