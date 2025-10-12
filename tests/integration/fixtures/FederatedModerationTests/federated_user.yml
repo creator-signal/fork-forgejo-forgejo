@@ -1,0 +1,7 @@
+-
+  id: 1001
+  user_id: 1001
+  external_id: "http://localhost/_federation_mock/user/1"
+  federation_host_id: 1001
+  inbox_path: "/_federation_mock/user/1/inbox"
+  normalized_original_url: "http://localhost/_federation_mock/user/1"

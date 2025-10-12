@@ -129,6 +129,17 @@ type AbuseReport struct {
 	ShadowCopyID sql.NullInt64      `xorm:"DEFAULT NULL"`
 	CreatedUnix  timeutil.TimeStamp `xorm:"created NOT NULL"`
 	ResolvedUnix timeutil.TimeStamp `xorm:"DEFAULT NULL"`
+	// Federation UUID of the report when forwarded to remote instances over ActivityPub
+	FederationUUID sql.NullString `xorm:"INDEX DEFAULT NULL REFERENCES(forwarded_abuse_report, uuid)"`
+}
+
+// ForwardedAbuseReport holds additional information for reports which concern
+// reports of objects which originate on remote instances.
+type ForwardedAbuseReport struct {
+	UUID             string         `xorm:"pk"`
+	FederationHostID int64          `xorm:"NOT NULL"`
+	ActorID          string         `xorm:"NOT NULL"`
+	ActivityPubIDs   sql.NullString `xorm:"DEFAULT NULL"`
 }
 
 var ErrSelfReporting = errors.New("reporting yourself is not allowed")
@@ -138,6 +149,7 @@ func init() {
 	// or any missing columns if the table was previously created.
 	// It will not drop or rename existing columns (when struct has changed).
 	db.RegisterModel(new(AbuseReport))
+	db.RegisterModel(new(ForwardedAbuseReport))
 }
 
 // IsShadowCopyNeeded reports whether one or more reports were already submitted

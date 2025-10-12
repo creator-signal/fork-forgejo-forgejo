@@ -4,14 +4,22 @@
 package moderation
 
 import (
+	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 
+	"forgejo.org/models/forgefed"
 	"forgejo.org/models/moderation"
+	"forgejo.org/models/repo"
+	"forgejo.org/models/system"
+	"forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
+	"forgejo.org/services/federation"
 	"forgejo.org/services/forms"
 	moderation_service "forgejo.org/services/moderation"
 )
@@ -63,12 +71,76 @@ func setMinimalContextData(ctx *context.Context) {
 	ctx.Data["CancelLink"] = ctx.Doer.DashboardLink()
 }
 
+func fillApContextData(ctx *context.Context, contentType moderation.ReportedContentType, contentID int64) error {
+	ctx.Data["FederatedContent"] = false
+
+	federationHostID := int64(-1)
+	activityPubID := ""
+
+	switch contentType {
+	case moderation.ReportedContentTypeRepository:
+		federatedRepo, err := repo.GetFollowingRepoByID(ctx, contentID)
+		if err != nil {
+			if repo.IsErrRepoNotExist(err) {
+				log.Error("Missing following repo %d", contentID)
+				return nil
+			}
+
+			return err
+		}
+
+		federationHostID = federatedRepo.FederationHostID
+		activityPubID = federatedRepo.URI
+
+	case moderation.ReportedContentTypeUser:
+		_, federatedUser, err := user.GetFederatedUserByUserID(ctx, contentID)
+		if err != nil {
+			if user.IsErrUserNotExist(err) {
+				return nil
+			}
+
+			return err
+		}
+
+		federationHostID = federatedUser.FederationHostID
+		activityPubID = federatedUser.NormalizedOriginalURL
+
+	case moderation.ReportedContentTypeComment, moderation.ReportedContentTypeIssue:
+		// TODO: these are not federated yet. When federation for issues pull requests is eventually implemented, handle these cases
+		return nil
+	}
+
+	federationHost, err := forgefed.GetFederationHost(ctx, federationHostID)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("ActivityPub ID of remote content: %s", activityPubID)
+
+	ctx.Data["FederatedContent"] = true
+	ctx.Data["FederationHost"] = federationHost.HostFqdn
+	ctx.Data["FederationHostID"] = federationHostID
+	ctx.Data["ActivityPubID"] = activityPubID
+
+	return nil
+}
+
 // setContextDataAndRender adds some values into context data and renders the new abuse report page.
 func setContextDataAndRender(ctx *context.Context, contentType moderation.ReportedContentType, contentID int64) {
 	setMinimalContextData(ctx)
 	ctx.Data["ContentID"] = contentID
 	ctx.Data["ContentType"] = contentType
 	ctx.Data["AbuseCategories"] = moderation.GetAbuseCategoriesList()
+
+	if setting.Federation.Enabled {
+		err := fillApContextData(ctx, contentType, contentID)
+		if err != nil {
+			log.Error("moderation.fillApContextData: %s", err)
+			ctx.Error(http.StatusInternalServerError, "moderation.fillApContextData", err.Error())
+			return
+		}
+	}
+
 	ctx.HTML(http.StatusOK, tplSubmitAbuseReport)
 }
 
@@ -108,6 +180,20 @@ func CreatePost(ctx *context.Context) {
 		ContentID:   form.ContentID,
 		Category:    form.AbuseCategory,
 		Remarks:     form.Remarks,
+	}
+
+	if setting.Federation.Enabled {
+		if form.FederationHostID > 0 && form.ForwardRemote && form.ActivityPubID != "" {
+			reportUUID, err := federation.ReportContent(ctx, report, form.ActivityPubID)
+			if err != nil {
+				_ = system.CreateNotice(ctx, system.NoticeTask, fmt.Sprintf("Failed to forward moderation report: %s", err))
+			} else {
+				report.FederationUUID = sql.NullString{
+					String: reportUUID.String(),
+					Valid:  true,
+				}
+			}
+		}
 	}
 
 	if err := moderation.ReportAbuse(ctx, &report); err != nil {

@@ -49,10 +49,10 @@ func GetFollowingRepoByID(ctx context.Context, id int64) (*FollowingRepo, error)
 }
 
 // UpdateFollowingRepo updates a FollowingRepo in the database if the ID matches.
-func UpdateFollowingRepo(ctx context.Context, followingRepo FollowingRepo) (error) {
+func UpdateFollowingRepo(ctx context.Context, followingRepo FollowingRepo) error {
 	valid, err := validation.IsValid(followingRepo)
 	if !valid {
-		return err;
+		return err
 	}
 
 	_, err = db.GetEngine(ctx).ID(followingRepo.ID).Update(followingRepo)

@@ -13,6 +13,14 @@
 					<input type="hidden" name="content_id" value="{{.ContentID}}" />
 					<input type="hidden" name="content_type" value="{{.ContentType}}" />
 
+					{{if .FederatedContent}}
+						<input type="hidden" name="federation_host_id" value="{{.FederationHostID}}" />
+						<input type="hidden" name="activity_pub_id" value="{{.ActivityPubID}}" />
+					{{else}}
+						<input type="hidden" name="federation_host_id" value="-1" />
+						<input type="hidden" name="activity_pub_id" value="" />
+					{{end}}
+
 					<fieldset{{if not .ContentID}} disabled{{end}}>
 						<label{{if .Err_AbuseCategory}} class="field error"{{end}}>
 							{{ctx.Locale.Tr "moderation.abuse_category"}}
@@ -27,6 +35,15 @@
 							{{ctx.Locale.Tr "moderation.report_remarks"}}
 							<textarea id="remarks" name="remarks" required minlength="20" maxlength="500" placeholder="{{ctx.Locale.Tr "moderation.report_remarks.placeholder"}}">{{.remarks}}</textarea>
 						</label>
+						{{if .FederatedContent}}
+							{{ctx.Locale.Tr "moderation.federation.notice"}}<br>
+							<label>
+								{{ctx.Locale.Tr "moderation.federation.forward_remote" .FederationHost}}
+								<input id="forward_remote" name="forward_remote" type="checkbox"/>
+							</label>
+							<br>
+							{{ctx.Locale.Tr "moderation.federation.disclaimer" .FederationHost}}
+						{{end}}
 					</fieldset>
 
 					<div class="divider"></div>

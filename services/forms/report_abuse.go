@@ -15,10 +15,13 @@ import (
 
 // ReportAbuseForm is used to interact with the UI of the form that submits new abuse reports.
 type ReportAbuseForm struct {
-	ContentID     int64
-	ContentType   moderation.ReportedContentType
-	AbuseCategory moderation.AbuseCategoryType `binding:"Required" locale:"moderation.abuse_category"`
-	Remarks       string                       `binding:"Required;MinSize(20);MaxSize(500)" preprocess:"TrimSpace" locale:"moderation.report_remarks"`
+	ContentID        int64
+	ContentType      moderation.ReportedContentType
+	FederationHostID int64
+	ActivityPubID    string
+	AbuseCategory    moderation.AbuseCategoryType `binding:"Required" locale:"moderation.abuse_category"`
+	Remarks          string                       `binding:"Required;MinSize(20);MaxSize(500)" preprocess:"TrimSpace" locale:"moderation.report_remarks"`
+	ForwardRemote    bool
 }
 
 // Validate validates the fields of ReportAbuseForm.
