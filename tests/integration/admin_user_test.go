@@ -104,6 +104,12 @@ func TestAdminEditUserHideEmail(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
 	assert.False(t, user.KeepEmailPrivate)
 
+	// Verify the form now loads with hide_email not checked
+	req = NewRequest(t, "GET", fmt.Sprintf("/admin/users/%d/edit", userID))
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertElement(t, `input[name="hide_email"]:not([checked])`, true)
+
 	// Test setting hide_email to true
 	csrf = GetCSRF(t, session, fmt.Sprintf("/admin/users/%d/edit", userID))
 	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/admin/users/%d/edit", userID), map[string]string{
@@ -118,6 +124,12 @@ func TestAdminEditUserHideEmail(t *testing.T) {
 
 	user = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
 	assert.True(t, user.KeepEmailPrivate)
+
+	// Verify the form loads with hide_email checked
+	req = NewRequest(t, "GET", fmt.Sprintf("/admin/users/%d/edit", userID))
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertElement(t, `input[name="hide_email"][checked]`, true)
 }
 
 func testSuccessfullEdit(t *testing.T, formData user_model.User) {
