@@ -544,6 +544,11 @@ func ListUserEmails(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
+	if ctx.ContextUser.IsOrganization() {
+		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("%s is an organization not a user", ctx.ContextUser.Name))
+		return
+	}
+
 	emails, err := user_model.GetEmailAddresses(ctx, ctx.ContextUser.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetEmailAddresses", err)
@@ -585,6 +590,11 @@ func DeleteUserEmails(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 	//   "422":
 	//     "$ref": "#/responses/validationError"
+
+	if ctx.ContextUser.IsOrganization() {
+		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("%s is an organization not a user", ctx.ContextUser.Name))
+		return
+	}
 
 	form := web.GetForm(ctx).(*api.DeleteEmailOption)
 	if len(form.Emails) == 0 {
