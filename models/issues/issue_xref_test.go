@@ -91,57 +91,59 @@ func TestXRef_NeuterCrossReferences(t *testing.T) {
 	assert.Equal(t, references.XRefActionNeutered, ref.RefAction)
 }
 
-/* TODO: Turn this into real testing code
+// TODO: Finish turning this into real testing code
 func TestXRef_GetIssueByCrossReference(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
+	// Users
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
 	// Issues to test against
 	itarget1 := testCreateIssue(t, 1, 2, "title1", "content1", false)
-	itarget2 := testCreateIssue(t, 1, 2, "title1", "content1", false)
+	// itarget2 := testCreateIssue(t, 1, 2, "title1", "content1", false)
 
 	// Issue to test from
 	sameRepoIssue := testCreateIssue(t, 1, 2, "title3", "content3", false)
-	xRepoIssue := testCreateIssue(t, 3, 3, "title4", "content4", false)
+	// xRepoIssue := testCreateIssue(t, 3, 3, "title4", "content4", false)
 
 	// Possible lookup strings
 	shortRef1 := fmt.Sprintf("#%d", itarget1.Index)
-	fullRef1 := "org1/repo2" + shortRef1
-	shortRef2 := fmt.Sprintf("#%d", itarget2.Index)
-	fullRef2 := "org1/repo2" + shortRef2
+	// fullRef1 := "org1/repo2" + shortRef1
+	// shortRef2 := fmt.Sprintf("#%d", itarget2.Index)
+	// fullRef2 := "org1/repo2" + shortRef2
 
 	// Lookup using short reference in same repo
-  result, err := sameRepoIssue.GetIssueByCrossReference(??, ??, shortRef1);
-	assert(err == nil)
-	assert(result == itarget1)
+	result, err := sameRepoIssue.GetIssueByCrossReference(db.DefaultContext, user, shortRef1)
+	require.NoError(t, err)
+	assert.Equal(t, result.ID, itarget1.ID)
 
 	// Lookup using full reference in same repo
-  result, err := sameRepoIssue.GetIssueByCrossReference(??, ??, fullRef1);
-	assert(err == nil)
-	assert(result == itarget1)
+	// result2, err2 := sameRepoIssue.GetIssueByCrossReference(db.DefaultContext, user, fullRef1);
+	// require.NoError(t, err2)
+	// assert.Equal(t, result2.ID, itarget1.ID)
 
 	// Fails if text contains multiple references
-	multiRef := shortRef1 + " " + fullRef2
-  result, err := sameRepoIssue.GetIssueByCrossReference(??, ??, multiRef);
-	assert(err != nil)
-	assert(result == nil)
+	// multiRef := shortRef1 + " " + fullRef2
+	// result, err := sameRepoIssue.GetIssueByCrossReference(??, ??, multiRef);
+	// assert(err != nil)
+	// assert(result == nil)
 
 	// Fails if text contains action keywords
-	closesRef = "closes " + shortRef1
-  result, err := sameRepoIssue.GetIssueByCrossReference(??, ??, closesRef);
-	assert(err != nil)
-	assert(result == nil)
+	// closesRef = "closes " + shortRef1
+	// result, err := sameRepoIssue.GetIssueByCrossReference(??, ??, closesRef);
+	// assert(err != nil)
+	// assert(result == nil)
 
 	// Cross-reference lookup by admin
-  result, err := xRepoIssue.GetIssueByCrossReference(??, ??, fullRef1);
-	assert(err == nil)
-	assert(result == itarget1)
+	// result, err := xRepoIssue.GetIssueByCrossReference(??, ??, fullRef1);
+	// require.NoError(t, err)
+	// assert(result == itarget1)
 
 	// Cross-reference lookup with no permission
-  result, err := xRepoIssue.GetIssueByCrossReference(??, ??, fullRef1);
-	assert(err != nil)
-	assert(result == nil)
+	// result, err := xRepoIssue.GetIssueByCrossReference(??, ??, fullRef1);
+	// assert(err != nil)
+	// assert(result == nil)
 }
-*/
 
 func TestXRef_ResolveCrossReferences(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
