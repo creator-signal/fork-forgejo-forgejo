@@ -74,6 +74,7 @@
 						<label>{{ctx.Locale.Tr "settings.keep_email_private"}}</label>
 						<input name="hide_email" type="checkbox" {{if .User.KeepEmailPrivate}}checked{{end}}>
 					</div>
+				</div>
 				<div class="local field {{if .Err_Password}}error{{end}} {{if not (or (.User.IsLocal) (.User.IsOAuth2))}}tw-hidden{{end}}">
 					<label for="password">{{ctx.Locale.Tr "password"}}</label>
 					<input id="password" name="password" type="password" autocomplete="new-password">
