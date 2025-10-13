@@ -160,6 +160,8 @@ export function initRepoIssueSidebarList() {
         cache: false,
       },
 
+      forceSelection: false,
+      allowAdditions: true,
       fullTextSearch: true,
     });
 
