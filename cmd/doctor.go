@@ -109,7 +109,6 @@ func cmdAvatarStripExif() *cli.Command {
 	return &cli.Command{
 		Name:   "avatar-strip-exif",
 		Usage:  "Strip EXIF metadata from all images in the avatar storage",
-		Before: noDanglingArgs,
 		Action: runAvatarStripExif,
 	}
 }
