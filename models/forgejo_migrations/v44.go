@@ -10,23 +10,19 @@ import (
 	"xorm.io/xorm"
 )
 
-type Action struct {
-	UserID      int64 // Receiver user id.
-	ActUserID   int64 // Action user id.
-	RepoID      int64
-	IsDeleted   bool               `xorm:"NOT NULL DEFAULT false"`
-	IsPrivate   bool               `xorm:"NOT NULL DEFAULT false"`
-	CreatedUnix timeutil.TimeStamp `xorm:"created"`
-}
-
 // TableName sets the name of this table
 func (a *Action) TableName() string {
 	return "action"
 }
 
 func RemoveIsDeletedColumnFromActivityActionTable(x *xorm.Engine) error {
-	if err := x.Sync(&Action{}); err != nil {
-		return err
+	type Action struct {
+		UserID      int64 // Receiver user id.
+		ActUserID   int64 // Action user id.
+		RepoID      int64
+		IsDeleted   bool               `xorm:"NOT NULL DEFAULT false"`
+		IsPrivate   bool               `xorm:"NOT NULL DEFAULT false"`
+		CreatedUnix timeutil.TimeStamp `xorm:"created"`
 	}
 
 	sess := x.NewSession()
