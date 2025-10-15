@@ -557,9 +557,6 @@ func ListUserEmails(ctx *context.APIContext) {
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
 		apiEmails[i] = convert.ToEmail(emails[i])
-		// Populate UserID and UserName for admin API
-		apiEmails[i].UserID = ctx.ContextUser.ID
-		apiEmails[i].UserName = ctx.ContextUser.Name
 	}
 	ctx.JSON(http.StatusOK, &apiEmails)
 }
