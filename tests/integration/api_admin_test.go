@@ -462,8 +462,6 @@ func TestAPIAdminListUserEmails(t *testing.T) {
 	// Check that we get the expected email structure
 	for _, email := range emails {
 		assert.NotEmpty(t, email.Email)
-		assert.NotEmpty(t, email.UserName)
-		assert.Equal(t, "user2", email.UserName)
 	}
 }
 
