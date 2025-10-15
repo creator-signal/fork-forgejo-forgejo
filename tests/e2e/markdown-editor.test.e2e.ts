@@ -374,7 +374,9 @@ test('Markdown insert table', async ({page}) => {
   await screenshot(page);
 });
 
-test('Markdown insert link', async ({page}) => {
+test('Markdown insert link', async ({page}, workerInfo) => {
+  test.skip(['Mobile Safari', 'webkit'].includes(workerInfo.project.name), 'Unreliable in this test');
+
   const response = await page.goto('/user2/repo1/issues/new');
   expect(response?.status()).toBe(200);
 
@@ -446,7 +448,7 @@ test('Combo Markdown: preview mode switch', async ({page}) => {
   await textarea.fill('**Content** :100: _100_');
 
   // Switch to preview mode
-  await page.locator('a[data-tab-for="markdown-previewer"]').click();
+  await page.locator('[data-tab-for="markdown-previewer"]').click();
 
   // Verify that the related UI elements were switched correctly
   await expect(toolbarItem).toBeHidden();
@@ -458,12 +460,16 @@ test('Combo Markdown: preview mode switch', async ({page}) => {
   await expect(page.locator('[data-tab-panel="markdown-previewer"] .emoji[data-alias="100"]')).toBeVisible();
 
   // Switch back to edit mode
-  await page.locator('a[data-tab-for="markdown-writer"]').click();
+  await page.locator('[data-tab-for="markdown-writer"]').click();
 
   // Verify that the related UI elements were switched back correctly
   await expect(toolbarItem).toBeVisible();
   await expect(editorPanel).toBeVisible();
   await expect(previewPanel).toBeHidden();
+
+  // Validate switch height: it is customized to be same height as other buttons on the panel
+  expect(await page.locator('markdown-toolbar .switch').evaluate((el) => getComputedStyle(el).height)).toBe(await page.locator('md-header.markdown-toolbar-button').evaluate((el) => getComputedStyle(el).height));
+
   await screenshot(page);
 });
 

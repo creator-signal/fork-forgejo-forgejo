@@ -37,11 +37,13 @@ test('WebAuthn register & login flow', async ({browser, request}, workerInfo) =>
   await page.locator('input#nickname').fill('Testing Security Key');
   await screenshot(page, page.locator('.user-setting-content'));
   await page.getByText('Add security key').click();
+  await expect(page.getByRole('button', {name: 'Remove'})).toBeVisible(); // "Remove" button is visible, indicating that the security key was added
 
   // Logout.
+  await page.locator('div[aria-label="Profile and settings…"]').click();
+  await page.getByText('Sign out').click();
   await expect(async () => {
-    await page.locator('div[aria-label="Profile and settings…"]').click();
-    await page.getByText('Sign out').click();
+    await page.waitForURL(`${workerInfo.project.use.baseURL}/`);
   }).toPass();
 
   // Login.
@@ -60,6 +62,7 @@ test('WebAuthn register & login flow', async ({browser, request}, workerInfo) =>
   await page.getByRole('button', {name: 'Remove'}).click();
   await screenshot(page, page.locator('.ui.g-modal-confirm.delete.modal'), 50);
   await page.getByRole('button', {name: 'Yes'}).click();
+  await expect(page.getByRole('button', {name: 'Remove'})).toBeHidden();
   await page.waitForLoadState();
 
   // verify the user can login without a key
