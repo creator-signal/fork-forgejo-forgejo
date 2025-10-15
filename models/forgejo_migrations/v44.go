@@ -10,11 +10,6 @@ import (
 	"xorm.io/xorm"
 )
 
-// TableName sets the name of this table
-func (a *Action) TableName() string {
-	return "action"
-}
-
 func RemoveIsDeletedColumnFromActivityActionTable(x *xorm.Engine) error {
 	type Action struct {
 		UserID      int64 // Receiver user id.

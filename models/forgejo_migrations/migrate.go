@@ -125,6 +125,8 @@ var migrations = []*Migration{
 	NewMigration("Add action_run concurrency fields", AddActionRunConcurrency),
 	// v42 -> v43
 	NewMigration("Add action_run pre_execution_error field", AddActionRunPreExecutionError),
+	// v43 -> v44
+	NewMigration("Remove activity_action is_deleted field", RemoveIsDeletedColumnFromActivityActionTable),
 }
 
 // GetCurrentDBVersion returns the current Forgejo database version.
