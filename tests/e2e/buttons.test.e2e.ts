@@ -32,3 +32,24 @@ test('Buttons and other controls have consistent height', async ({page}) => {
   const purgeButtonHeight = (await page.locator('form[action="/notifications/purge"]').boundingBox()).height;
   expect(buttonHeight).toBe(purgeButtonHeight);
 });
+
+test('Button colors', async ({page}) => {
+  //const context = await browser.newContext({javaScriptEnabled: false});
+  //const page = await context.newPage();
+  let response = await page.goto('/devtest/buttons');
+  expect(response?.status()).toBe(200);
+
+  const transparent = "rgba(0, 0, 0, 0)";
+  const primaryBg = await page.locator('button.primary').evaluate((el) => getComputedStyle(el).backgroundColor);
+  const secondaryBg = await page.locator('button.secondary').evaluate((el) => getComputedStyle(el).backgroundColor);
+  const dangerBg = await page.locator('button.danger').evaluate((el) => getComputedStyle(el).backgroundColor);
+
+  // Evaluate that all buttons have background-color specified
+  expect(primaryBg).not.toBe(transparent);
+  expect(secondaryBg).not.toBe(transparent);
+  expect(dangerBg).not.toBe(transparent);
+
+  // Evaluate that their background-colors are different
+  expect(primaryBg).not.toBe(secondaryBg);
+  expect(primaryBg).not.toBe(dangerBg);
+});
