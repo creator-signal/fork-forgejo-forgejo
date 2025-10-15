@@ -586,8 +586,6 @@ func DeleteUserEmails(ctx *context.APIContext) {
 	//     "$ref": "#/responses/empty"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
-	//   "404":
-	//     "$ref": "#/responses/notFound"
 	//   "422":
 	//     "$ref": "#/responses/validationError"
 
@@ -603,9 +601,7 @@ func DeleteUserEmails(ctx *context.APIContext) {
 	}
 
 	if err := user_service.DeleteEmailAddresses(ctx, ctx.ContextUser, form.Emails); err != nil {
-		if user_model.IsErrEmailAddressNotExist(err) {
-			ctx.Error(http.StatusNotFound, "DeleteEmailAddresses", err)
-		} else if user_model.IsErrPrimaryEmailCannotDelete(err) {
+		if user_model.IsErrPrimaryEmailCannotDelete(err) {
 			ctx.Error(http.StatusUnprocessableEntity, "DeleteEmailAddresses", err)
 		} else {
 			ctx.Error(http.StatusInternalServerError, "DeleteEmailAddresses", err)

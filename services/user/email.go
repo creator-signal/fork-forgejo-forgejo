@@ -186,6 +186,9 @@ func DeleteEmailAddresses(ctx context.Context, u *user_model.User, emails []stri
 			// Check if address exists
 			email, err := user_model.GetEmailAddressOfUser(ctx, emailStr, u.ID)
 			if err != nil {
+				if user_model.IsErrEmailAddressNotExist(err) {
+					continue
+				}
 				return err
 			}
 			if email.IsPrimary {
