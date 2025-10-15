@@ -34,12 +34,12 @@ test('Buttons and other controls have consistent height', async ({page}) => {
 });
 
 test('Button colors', async ({page}) => {
-  //const context = await browser.newContext({javaScriptEnabled: false});
-  //const page = await context.newPage();
-  let response = await page.goto('/devtest/buttons');
+  // const context = await browser.newContext({javaScriptEnabled: false});
+  // const page = await context.newPage();
+  const response = await page.goto('/devtest/buttons');
   expect(response?.status()).toBe(200);
 
-  const transparent = "rgba(0, 0, 0, 0)";
+  const transparent = 'rgba(0, 0, 0, 0)';
   const primaryBg = await page.locator('button.primary').evaluate((el) => getComputedStyle(el).backgroundColor);
   const secondaryBg = await page.locator('button.secondary').evaluate((el) => getComputedStyle(el).backgroundColor);
   const dangerBg = await page.locator('button.danger').evaluate((el) => getComputedStyle(el).backgroundColor);
