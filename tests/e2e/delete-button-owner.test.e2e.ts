@@ -10,8 +10,8 @@ test.describe('Test delete button availability -- user2', () => {
   test(`Delete button should be visible for user2`, async ({page}) => {
     await page.goto(`/user2/file-uploads`);
 
-    await expect(page.locator('[data-tooltip-content="Delete file"] svg.octicon-trash')).toBeVisible();
-    await expect(page.locator('[data-tooltip-content="Delete file"]')).toBeVisible();
-    await expect(page.locator('[data-tooltip-content="Delete file"]')).toHaveAttribute('aria-label', 'Delete file');
+    await expect(page.locator('[data-tooltip-content="Delete path"] svg.octicon-trash')).toBeVisible();
+    await expect(page.locator('[data-tooltip-content="Delete path"]')).toBeVisible();
+    await expect(page.locator('[data-tooltip-content="Delete path"]')).toHaveAttribute('aria-label', 'Delete path');
   });
 });

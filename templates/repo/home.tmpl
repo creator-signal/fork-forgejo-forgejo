@@ -102,6 +102,11 @@
 						{{ctx.Locale.Tr "repo.use_template"}}
 					</a>
 				{{end}}
+				{{if (not .IsViewFile)}}
+					{{if and .CanDeleteFile (not .IsBlame)}}
+						<a href="{{.RepoLink}}/_delete_path/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"><span class="btn-octicon btn-octicon-danger" data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_this_path"}}">{{svg "octicon-trash"}}</span></a>
+					{{end}}
+				{{end}}
 				{{if (not $isHomepage)}}
 					<span class="breadcrumb repo-path tw-ml-1">
 						<a class="section" href="{{.RepoLink}}/src/{{.BranchNameSubURL}}" title="{{.Repository.Name}}">{{StringUtils.EllipsisString .Repository.Name 30}}</a>
@@ -115,12 +120,6 @@
 							{{- end -}}
 						{{- end -}}
 					</span>
-				{{end}}
-
-				{{if (not .IsViewFile)}}
-					{{if and .CanDeleteFile (not .IsBlame)}}
-						<a href="{{.RepoLink}}/_delete_path/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"><span class="btn-octicon btn-octicon-danger"  data-tooltip-content="{{.DeleteFileTooltip}}">{{svg "octicon-trash"}}</span></a>
-					{{end}}
 				{{end}}
 			</div>
 			<div class="tw-flex tw-items-center max-[390px]:tw-w-full">
