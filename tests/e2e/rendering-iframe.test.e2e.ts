@@ -14,9 +14,9 @@ test('iframe renderer shrinks to shorter page', async ({page}, _workerInfo) => {
   const response = await page.goto(previewPath, {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
-  let preview = page.locator('iframe.external-render');
+  const preview = page.locator('iframe.external-render');
   await expect.poll(async () => {
-    let boundingBox = await preview.boundingBox();
+    const boundingBox = await preview.boundingBox();
     return boundingBox.height;
   }).toBeLessThan(300);
 });
@@ -27,9 +27,9 @@ test('iframe renderer expands to taller page', async ({page}, _workerInfo) => {
   const response = await page.goto(previewPath, {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
-  let preview = page.locator('iframe.external-render');
+  const preview = page.locator('iframe.external-render');
   await expect.poll(async () => {
-    let boundingBox = await preview.boundingBox();
+    const boundingBox = await preview.boundingBox();
     return boundingBox.height;
   }).toBeGreaterThan(300);
 });
@@ -40,9 +40,9 @@ test('iframe renderer expands to taller page with absolutely-positioned body', a
   const response = await page.goto(previewPath, {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
-  let preview = page.locator('iframe.external-render');
+  const preview = page.locator('iframe.external-render');
   await expect.poll(async () => {
-    let boundingBox = await preview.boundingBox();
+    const boundingBox = await preview.boundingBox();
     return boundingBox.height;
   }).toBeGreaterThan(300);
 });
@@ -53,9 +53,9 @@ test('iframe renderer remains at default height if script breaks', async ({page}
   const response = await page.goto(previewPath, {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
-  let preview = page.locator('iframe.external-render');
+  const preview = page.locator('iframe.external-render');
   await expect.poll(async () => {
-    let boundingBox = await preview.boundingBox();
+    const boundingBox = await preview.boundingBox();
     return boundingBox.height;
   }).toBe(300);
 });
