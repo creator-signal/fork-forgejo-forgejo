@@ -374,3 +374,127 @@ func TestRecursiveDeleteRootColab(t *testing.T) {
 		}
 	})
 }
+
+func TestIfDeleteButtonIsThereUser(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		treePaths := []string{
+			"file1.txt",
+			"dir2/file2.txt",
+			"dir2/dir3/file3.txt",
+			"dir2/dir4/file4.txt",
+		}
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1}) // public repo of user3
+
+		// Get user2's token
+		session := loginUser(t, user2.Name)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+
+		// Create test files by user3
+		for i := range treePaths {
+			createFileWithAssertions(t, token, user2, repo1, treePaths[i], "This is test text for: "+treePaths[i])
+			verifiyFileExitence(t, token, user2, repo1, treePaths[i])
+		}
+
+		// Fetch the page (/dir1)
+		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/dir2", user2.Name, repo1.Name))
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		// Parse HTML response
+		doc := NewHTMLParser(t, resp.Body)
+
+		// Test 1: Check if delete button with data-tooltip-content="Delete path" exists -> should exist
+		deleteButton := doc.Find("[data-tooltip-content=\"Delete path\"]").First()
+		if deleteButton.Length() == 0 {
+			t.Error("Delete path button not found")
+		}
+
+		// Test 2: Check if trash icon SVG exists within the delete button -> should exist
+		trashIcon := deleteButton.Find("svg.octicon-trash")
+		if trashIcon.Length() == 0 {
+			t.Error("Delete path trash icon SVG not found")
+		}
+
+		// Fetch the page ()
+		req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master", user2.Name, repo1.Name))
+		resp = session.MakeRequest(t, req, http.StatusOK)
+
+		// Parse HTML response
+		doc = NewHTMLParser(t, resp.Body)
+
+		// Test 1: Check if delete button with data-tooltip-content="Delete path" exists -> should NOT exist
+		deleteButton = doc.Find("[data-tooltip-content=\"Delete path\"]").First()
+		if deleteButton.Length() != 0 {
+			t.Error("Delete path button found")
+		}
+
+		// Test 2: Check if trash icon SVG exists within the delete button -> should NOT exist
+		trashIcon = deleteButton.Find("svg.octicon-trash")
+		if trashIcon.Length() != 0 {
+			t.Error("Delete path trash icon SVG found")
+		}
+	})
+}
+
+func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		treePaths := []string{
+			"file1.txt",
+			"dir2/file2.txt",
+			"dir2/dir3/file3.txt",
+			"dir2/dir4/file4.txt",
+		}
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1}) // public repo of user3
+
+		// Get user2's token
+		session := loginUser(t, user2.Name)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+
+		// Create test files by user3
+		for i := range treePaths {
+			createFileWithAssertions(t, token, user2, repo1, treePaths[i], "This is test text for: "+treePaths[i])
+			verifiyFileExitence(t, token, user2, repo1, treePaths[i])
+		}
+
+		// Fetch the page (/dir1)
+		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/dir2", user2.Name, repo1.Name))
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		// Parse HTML response
+		doc := NewHTMLParser(t, resp.Body)
+
+		// Test 1: Check if delete button with data-tooltip-content="Delete path" exists -> should NOT exist
+		deleteButton := doc.Find("[data-tooltip-content=\"Delete path\"]").First()
+		if deleteButton.Length() != 0 {
+			t.Error("Delete path button found")
+		}
+
+		// Test 2: Check if trash icon SVG exists within the delete button -> should NOT exist
+		trashIcon := deleteButton.Find("svg.octicon-trash")
+		if trashIcon.Length() != 0 {
+			t.Error("Delete path trash icon SVG found")
+		}
+
+		// Fetch the page ()
+		req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master", user2.Name, repo1.Name))
+		resp = MakeRequest(t, req, http.StatusOK)
+
+		// Parse HTML response
+		doc = NewHTMLParser(t, resp.Body)
+
+		// Test 1: Check if delete button with data-tooltip-content="Delete path" exists -> should NOT exist
+		deleteButton = doc.Find("[data-tooltip-content=\"Delete path\"]").First()
+		if deleteButton.Length() != 0 {
+			t.Error("Delete path button found")
+		}
+
+		// Test 2: Check if trash icon SVG exists within the delete button -> should NOT exist
+		trashIcon = deleteButton.Find("svg.octicon-trash")
+		if trashIcon.Length() != 0 {
+			t.Error("Delete path trash icon SVG found")
+		}
+	})
+}
