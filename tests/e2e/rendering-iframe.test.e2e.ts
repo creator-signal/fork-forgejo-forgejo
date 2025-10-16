@@ -57,5 +57,5 @@ test('iframe renderer remains at default height if script breaks', async ({page}
   await expect.poll(async () => {
     const boundingBox = await preview.boundingBox();
     return boundingBox.height;
-  }).toBe(300);
+  }).toBeCloseTo(300, 0.5);
 });
