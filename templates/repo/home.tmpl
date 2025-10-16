@@ -105,12 +105,12 @@
 				{{if (not $isHomepage)}}
 					{{if (not .IsViewFile)}}
 						{{if and .CanDeleteFile (not .IsBlame)}}
-							<a id="delete-path" role="button" class="ui compact basic button" 
+							<a id="delete-path" role="button" class="ui compact basic button"
 							href="{{.RepoLink}}/_delete_path/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
 							data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_this_path"}}">
 							{{svg "octicon-trash"}}</a>
 						{{end}}
-					{{end}}				
+					{{end}}
 					<span class="breadcrumb repo-path tw-ml-1">
 						<a class="section" href="{{.RepoLink}}/src/{{.BranchNameSubURL}}" title="{{.Repository.Name}}">{{StringUtils.EllipsisString .Repository.Name 30}}</a>
 						{{- range $i, $v := .TreeNames -}}
