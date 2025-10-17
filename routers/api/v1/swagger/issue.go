@@ -19,10 +19,6 @@ type swaggerResponseIssue struct {
 type swaggerResponseIssueList struct {
 	// in:body
 	Body []api.Issue `json:"body"`
-
-	// The total number of issues
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // IssueListWithoutPagination - Issues without pagination headers (used for pinned issues, dependencies, etc.)
@@ -48,6 +44,13 @@ type swaggerResponseCommentList struct {
 	// The total number of comments
 	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// CommentListWithoutPagination - Comments without pagination headers
+// swagger:response CommentListWithoutPagination
+type swaggerCommentListWithoutPagination struct {
+	// in:body
+	Body []api.Comment `json:"body"`
 }
 
 // TimelineList

@@ -25,6 +25,13 @@ type swaggerResponseRepositoryList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// RepositoryListWithoutPagination - Repositories without pagination headers
+// swagger:response RepositoryListWithoutPagination
+type swaggerRepositoryListWithoutPagination struct {
+	// in:body
+	Body []api.Repository `json:"body"`
+}
+
 // Branch
 // swagger:response Branch
 type swaggerResponseBranch struct {
@@ -128,6 +135,13 @@ type swaggerResponseHookList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// HookListWithoutPagination - Hooks without pagination headers
+// swagger:response HookListWithoutPagination
+type swaggerHookListWithoutPagination struct {
+	// in:body
+	Body []api.Hook `json:"body"`
+}
+
 // GitHook
 // swagger:response GitHook
 type swaggerResponseGitHook struct {
@@ -172,10 +186,6 @@ type swaggerResponsePullRequest struct {
 type swaggerResponsePullRequestList struct {
 	// in:body
 	Body []api.PullRequest `json:"body"`
-
-	// The total number of pull requests
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // PullReview
@@ -233,6 +243,13 @@ type swaggerResponseCommitStatusList struct {
 	// The total number of commit statuses
 	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// CommitStatusListWithoutPagination - Commit statuses without pagination headers
+// swagger:response CommitStatusListWithoutPagination
+type swaggerCommitStatusListWithoutPagination struct {
+	// in:body
+	Body []api.CommitStatus `json:"body"`
 }
 
 // WatchInfo
@@ -296,10 +313,6 @@ type swaggerCommit struct {
 type swaggerCommitList struct {
 	// in: body
 	Body []api.Commit `json:"body"`
-
-	// The total number of commits
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // ChangedFileList
@@ -334,10 +347,6 @@ type swaggerChangedFileListWithPagination struct {
 
 	// in: body
 	Body []api.ChangedFile `json:"body"`
-
-	// The total number of changed files
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // Note
@@ -497,10 +506,6 @@ type swaggerRepoNewIssuePinsAllowed struct {
 type swaggerBlockedUserList struct {
 	// in:body
 	Body []api.BlockedUser `json:"body"`
-
-	// The total number of blocked users
-	// in:header
-	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // TasksList

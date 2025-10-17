@@ -618,7 +618,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           }
         }
       },
@@ -2369,7 +2369,7 @@
         ],
         "responses": {
           "205": {
-            "$ref": "#/responses/NotificationThreadList"
+            "$ref": "#/responses/NotificationThreadListWithoutPagination"
           }
         }
       }
@@ -3390,7 +3390,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -13679,7 +13679,7 @@
         ],
         "responses": {
           "205": {
-            "$ref": "#/responses/NotificationThreadList"
+            "$ref": "#/responses/NotificationThreadListWithoutPagination"
           }
         }
       }
@@ -17180,7 +17180,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/TeamList"
+            "$ref": "#/responses/TeamListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -20052,7 +20052,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           },
           "401": {
             "$ref": "#/responses/unauthorized"
@@ -20414,7 +20414,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OrganizationList"
+            "$ref": "#/responses/OrganizationListWithoutPagination"
           },
           "401": {
             "$ref": "#/responses/unauthorized"
@@ -21539,7 +21539,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OrganizationList"
+            "$ref": "#/responses/OrganizationListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -30026,13 +30026,6 @@
         "items": {
           "$ref": "#/definitions/BlockedUser"
         }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of blocked users\nin:header"
-        }
       }
     },
     "Branch": {
@@ -30115,11 +30108,6 @@
           "type": "integer",
           "format": "int64",
           "description": "Commits per page\nin:header"
-        },
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of changed files\nin:header"
         }
       }
     },
@@ -30151,6 +30139,15 @@
         }
       }
     },
+    "CommentListWithoutPagination": {
+      "description": "CommentListWithoutPagination - Comments without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Comment"
+        }
+      }
+    },
     "Commit": {
       "description": "Commit",
       "schema": {
@@ -30163,13 +30160,6 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Commit"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of commits\nin:header"
         }
       }
     },
@@ -30192,6 +30182,15 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of commit statuses\nin:header"
+        }
+      }
+    },
+    "CommitStatusListWithoutPagination": {
+      "description": "CommitStatusListWithoutPagination - Commit statuses without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/CommitStatus"
         }
       }
     },
@@ -30306,13 +30305,6 @@
         "items": {
           "$ref": "#/definitions/GPGKey"
         }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of GPG keys\nin:header"
-        }
       }
     },
     "GeneralAPISettings": {
@@ -30412,6 +30404,15 @@
         }
       }
     },
+    "HookListWithoutPagination": {
+      "description": "HookListWithoutPagination - Hooks without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Hook"
+        }
+      }
+    },
     "Issue": {
       "description": "Issue",
       "schema": {
@@ -30430,13 +30431,6 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Issue"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of issues\nin:header"
         }
       }
     },
@@ -30606,6 +30600,15 @@
         }
       }
     },
+    "NotificationThreadListWithoutPagination": {
+      "description": "NotificationThreadListWithoutPagination - Notification threads without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/NotificationThread"
+        }
+      }
+    },
     "OAuth2Application": {
       "description": "OAuth2Application",
       "schema": {
@@ -30650,6 +30653,15 @@
         }
       }
     },
+    "OrganizationListWithoutPagination": {
+      "description": "OrganizationListWithoutPagination - Organizations without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Organization"
+        }
+      }
+    },
     "OrganizationPermissions": {
       "description": "OrganizationPermissions",
       "schema": {
@@ -30674,13 +30686,6 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/PackageFile"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of package files\nin:header"
         }
       }
     },
@@ -30713,13 +30718,6 @@
         "items": {
           "$ref": "#/definitions/PublicKey"
         }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of public keys\nin:header"
-        }
       }
     },
     "PullRequest": {
@@ -30734,13 +30732,6 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/PullRequest"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of pull requests\nin:header"
         }
       }
     },
@@ -30843,52 +30834,24 @@
         "items": {
           "$ref": "#/definitions/QuotaRuleInfo"
         }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of quota rules\nin:header"
-        }
       }
     },
     "QuotaUsedArtifactList": {
       "description": "QuotaUsedArtifactList",
       "schema": {
         "$ref": "#/definitions/QuotaUsedArtifactList"
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of quota used artifacts\nin:header"
-        }
       }
     },
     "QuotaUsedAttachmentList": {
       "description": "QuotaUsedAttachmentList",
       "schema": {
         "$ref": "#/definitions/QuotaUsedAttachmentList"
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of quota used attachments\nin:header"
-        }
       }
     },
     "QuotaUsedPackageList": {
       "description": "QuotaUsedPackageList",
       "schema": {
         "$ref": "#/definitions/QuotaUsedPackageList"
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of quota used packages\nin:header"
-        }
       }
     },
     "Reaction": {
@@ -31008,6 +30971,15 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of repositories\nin:header"
+        }
+      }
+    },
+    "RepositoryListWithoutPagination": {
+      "description": "RepositoryListWithoutPagination - Repositories without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Repository"
         }
       }
     },
@@ -31153,6 +31125,15 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of teams\nin:header"
+        }
+      }
+    },
+    "TeamListWithoutPagination": {
+      "description": "TeamListWithoutPagination - Teams without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Team"
         }
       }
     },

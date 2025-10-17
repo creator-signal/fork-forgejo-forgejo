@@ -25,6 +25,13 @@ type swaggerResponseOrganizationList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// OrganizationListWithoutPagination - Organizations without pagination headers
+// swagger:response OrganizationListWithoutPagination
+type swaggerOrganizationListWithoutPagination struct {
+	// in:body
+	Body []api.Organization `json:"body"`
+}
+
 // Team
 // swagger:response Team
 type swaggerResponseTeam struct {
@@ -41,6 +48,13 @@ type swaggerResponseTeamList struct {
 	// The total number of teams
 	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// TeamListWithoutPagination - Teams without pagination headers
+// swagger:response TeamListWithoutPagination
+type swaggerTeamListWithoutPagination struct {
+	// in:body
+	Body []api.Team `json:"body"`
 }
 
 // OrganizationPermissions
