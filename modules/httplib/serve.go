@@ -148,7 +148,7 @@ func setServeHeadersByFile(r *http.Request, w http.ResponseWriter, filePath stri
 	ServeSetHeaders(w, opts)
 }
 
-const mimeDetectionBufferLen = 1024
+const mimeDetectionBufferLen = 8192
 
 func ServeContentByReader(r *http.Request, w http.ResponseWriter, filePath string, size int64, reader io.Reader) {
 	buf := make([]byte, mimeDetectionBufferLen)
