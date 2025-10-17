@@ -1,5 +1,5 @@
-// Copyright 2019 The Gitea Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
 package integration
 
 import (
@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
 	api "forgejo.org/modules/structs"
 
 	"github.com/stretchr/testify/assert"
@@ -384,6 +387,27 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 			"dir2/dir4/file4.txt",
 		}
 
+		// Read and parse the locale file
+		localeFile, err := os.ReadFile(filepath.Join("options", "locale_next", "locale_en-US.json"))
+		if err != nil {
+			t.Fatalf("Failed to read locale file: %v", err)
+		}
+
+		var localeData map[string]interface{}
+		if err := json.Unmarshal(localeFile, &localeData); err != nil {
+			t.Fatalf("Failed to parse locale file: %v", err)
+		}
+
+		string_delete_folder, ok := localeData["repo.editor.delete_folder"].(string)
+		if !ok {
+			t.Fatal("Key not found in locale file or not a string")
+		}
+
+		string_repo_content, ok := localeData["repo.editor.delete_repo_content"].(string)
+		if !ok {
+			t.Fatal("Key not found in locale file or not a string")
+		}
+
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1}) // public repo of user3
 
@@ -404,16 +428,10 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 		// Parse HTML response
 		doc := NewHTMLParser(t, resp.Body)
 
-		// Test 1: Check if delete button with data-tooltip-content="Delete path" exists -> should exist
-		deleteButton := doc.Find("[data-tooltip-content=\"Delete path\"]").First()
+		// Check if delete button exists -> should exist
+		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, string_delete_folder)).First()
 		if deleteButton.Length() == 0 {
-			t.Error("Delete path button not found")
-		}
-
-		// Test 2: Check if trash icon SVG exists within the delete button -> should exist
-		trashIcon := deleteButton.Find("svg.octicon-trash")
-		if trashIcon.Length() == 0 {
-			t.Error("Delete path trash icon SVG not found")
+			t.Error("Delete folder button not found")
 		}
 
 		// Fetch the page ()
@@ -423,16 +441,10 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 		// Parse HTML response
 		doc = NewHTMLParser(t, resp.Body)
 
-		// Test 1: Check if delete button with data-tooltip-content="Delete path" exists -> should NOT exist
-		deleteButton = doc.Find("[data-tooltip-content=\"Delete path\"]").First()
-		if deleteButton.Length() != 0 {
-			t.Error("Delete path button found")
-		}
-
-		// Test 2: Check if trash icon SVG exists within the delete button -> should NOT exist
-		trashIcon = deleteButton.Find("svg.octicon-trash")
-		if trashIcon.Length() != 0 {
-			t.Error("Delete path trash icon SVG found")
+		// Check if delete button exists -> should exist
+		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, string_repo_content)).First()
+		if deleteButton.Length() == 0 {
+			t.Error("Delete path button not found")
 		}
 	})
 }
@@ -444,6 +456,27 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 			"dir2/file2.txt",
 			"dir2/dir3/file3.txt",
 			"dir2/dir4/file4.txt",
+		}
+
+		// Read and parse the locale file
+		localeFile, err := os.ReadFile(filepath.Join("options", "locale_next", "locale_en-US.json"))
+		if err != nil {
+			t.Fatalf("Failed to read locale file: %v", err)
+		}
+
+		var localeData map[string]interface{}
+		if err := json.Unmarshal(localeFile, &localeData); err != nil {
+			t.Fatalf("Failed to parse locale file: %v", err)
+		}
+
+		string_delete_folder, ok := localeData["repo.editor.delete_folder"].(string)
+		if !ok {
+			t.Fatal("Key not found in locale file or not a string")
+		}
+
+		string_repo_content, ok := localeData["repo.editor.delete_repo_content"].(string)
+		if !ok {
+			t.Fatal("Key not found in locale file or not a string")
 		}
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -466,16 +499,10 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 		// Parse HTML response
 		doc := NewHTMLParser(t, resp.Body)
 
-		// Test 1: Check if delete button with data-tooltip-content="Delete path" exists -> should NOT exist
-		deleteButton := doc.Find("[data-tooltip-content=\"Delete path\"]").First()
+		// Check if delete button exists -> should NOT exist
+		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, string_delete_folder)).First()
 		if deleteButton.Length() != 0 {
 			t.Error("Delete path button found")
-		}
-
-		// Test 2: Check if trash icon SVG exists within the delete button -> should NOT exist
-		trashIcon := deleteButton.Find("svg.octicon-trash")
-		if trashIcon.Length() != 0 {
-			t.Error("Delete path trash icon SVG found")
 		}
 
 		// Fetch the page ()
@@ -485,16 +512,10 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 		// Parse HTML response
 		doc = NewHTMLParser(t, resp.Body)
 
-		// Test 1: Check if delete button with data-tooltip-content="Delete path" exists -> should NOT exist
-		deleteButton = doc.Find("[data-tooltip-content=\"Delete path\"]").First()
+		// Check if delete button xists -> should NOT exist
+		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, string_repo_content)).First()
 		if deleteButton.Length() != 0 {
 			t.Error("Delete path button found")
-		}
-
-		// Test 2: Check if trash icon SVG exists within the delete button -> should NOT exist
-		trashIcon = deleteButton.Find("svg.octicon-trash")
-		if trashIcon.Length() != 0 {
-			t.Error("Delete path trash icon SVG found")
 		}
 	})
 }

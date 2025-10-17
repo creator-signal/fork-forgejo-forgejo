@@ -79,7 +79,7 @@
 
 				{{if and .CanWriteCode .IsViewBranch (not .Repository.IsMirror) (not .Repository.IsArchived) (not .IsViewFile)}}
 					<button class="ui dropdown basic compact jump button tw-mr-1"{{if not .Repository.CanEnableEditor}} disabled{{end}}>
-						{{ctx.Locale.Tr "repo.editor.add_file"}}
+						{{ctx.Locale.Tr "repo.editor.edit_menu"}}
 						{{svg "octicon-triangle-down" 14 "dropdown icon"}}
 						<div class="menu">
 							<a class="item" href="{{.RepoLink}}/_new/{{.BranchName | PathEscapeSegments}}/{{.TreePath | PathEscapeSegments}}">
@@ -89,6 +89,25 @@
 							<a class="item" href="{{.RepoLink}}/_upload/{{.BranchName | PathEscapeSegments}}/{{.TreePath | PathEscapeSegments}}">
 								{{ctx.Locale.Tr "repo.editor.upload_file"}}
 							</a>
+							{{end}}
+							{{if $isHomepage}}
+								{{if (not .IsViewFile)}}
+									{{if and .CanDeleteFile (not .IsBlame)}}
+										<a class="item"
+										href="{{.RepoLink}}/_delete_path/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
+										data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_repo_content"}}">
+										{{ctx.Locale.Tr "repo.editor.delete_repo_content"}}</a>
+									{{end}}
+								{{end}}
+							{{else}}
+								{{if (not .IsViewFile)}}
+									{{if and .CanDeleteFile (not .IsBlame)}}
+										<a class="item"
+										href="{{.RepoLink}}/_delete_path/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
+										data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_folder"}}">
+										{{ctx.Locale.Tr "repo.editor.delete_folder"}}</a>
+									{{end}}
+								{{end}}
 							{{end}}
 							<a class="item" href="{{.RepoLink}}/_diffpatch/{{.BranchName | PathEscapeSegments}}/{{.TreePath | PathEscapeSegments}}">
 								{{ctx.Locale.Tr "repo.editor.patch"}}
@@ -103,14 +122,6 @@
 					</a>
 				{{end}}
 				{{if (not $isHomepage)}}
-					{{if (not .IsViewFile)}}
-						{{if and .CanDeleteFile (not .IsBlame)}}
-							<a id="delete-path" role="button" class="ui compact basic button"
-							href="{{.RepoLink}}/_delete_path/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
-							data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_this_path"}}">
-							{{svg "octicon-trash"}}</a>
-						{{end}}
-					{{end}}
 					<span class="breadcrumb repo-path tw-ml-1">
 						<a class="section" href="{{.RepoLink}}/src/{{.BranchNameSubURL}}" title="{{.Repository.Name}}">{{StringUtils.EllipsisString .Repository.Name 30}}</a>
 						{{- range $i, $v := .TreeNames -}}
