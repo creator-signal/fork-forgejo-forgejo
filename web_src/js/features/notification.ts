@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {GET} from '../modules/fetch.js';
 import {toggleElem} from '../utils/dom.js';
 
@@ -46,9 +45,9 @@ async function receiveUpdateCount(event) {
 }
 
 export function initNotificationCount() {
-  const $notificationCount = $('.notification_count');
+  const notificationCount = document.querySelector('.notification_count');
 
-  if (!$notificationCount.length) {
+  if (!notificationCount) {
     return;
   }
 
@@ -56,7 +55,7 @@ export function initNotificationCount() {
   const startPeriodicPoller = (timeout, lastCount = null) => {
     if (timeout <= 0 || !Number.isFinite(timeout)) return;
     usingPeriodicPoller = true;
-    lastCount = lastCount ?? $notificationCount.text();
+    lastCount = lastCount ?? notificationCount.textContent;
     setTimeout(async () => {
       await updateNotificationCountWithCallback(startPeriodicPoller, timeout, lastCount);
     }, timeout);
@@ -121,7 +120,7 @@ export function initNotificationCount() {
 }
 
 async function updateNotificationCountWithCallback(callback, timeout, lastCount) {
-  const currentCount = $('.notification_count').text();
+  const currentCount = document.querySelector('.notification_count').textContent;
   if (lastCount !== currentCount) {
     callback(notificationSettings.MinTimeout, currentCount);
     return;
@@ -158,7 +157,8 @@ async function updateNotificationTable() {
       }
 
       const data = await response.text();
-      if ($(data).data('sequence-number') === notificationSequenceNumber) {
+      const dataDocument = new DOMParser().parseFromString(data, 'text/html');
+      if (dataDocument.getElementById('notification_div').dataset.sequenceNumber === notificationSequenceNumber.toString()) {
         notificationDiv.outerHTML = data;
         initNotificationsTable();
       }
