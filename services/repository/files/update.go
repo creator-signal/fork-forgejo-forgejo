@@ -151,10 +151,6 @@ func ChangeRepoFiles(ctx context.Context, repo *repo_model.Repository, doer *use
 			return nil, err
 		}
 
-		if err := t.PruneLFSFiles(); err != nil {
-			return nil, err
-		}
-
 		return nil, nil
 	}
 
