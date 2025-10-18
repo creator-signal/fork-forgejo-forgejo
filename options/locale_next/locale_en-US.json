@@ -121,6 +121,8 @@
     "discussion.sidebar.reference": "Reference",
     "repo.editor.delete_folder": "Delete folder recursively",
     "repo.editor.delete_repo_content": "Delete repository content",
+    "repo.editor.file_delete_success": "File \"%[1]s\" has been deleted.",
+    "repo.editor.folder_delete_success": "Folder \"%[1]s\" has been deleted.",
     "repo.editor.edit_menu": "Edit files",
     "editor.textarea.tab_hint": "Line already indented. Press <kbd>Tab</kbd> again or <kbd>Escape</kbd> to leave the editor.",
     "editor.textarea.shift_tab_hint": "No indentation on this line. Press <kbd>Shift</kbd> + <kbd>Tab</kbd> again or <kbd>Escape</kbd> to leave the editor.",

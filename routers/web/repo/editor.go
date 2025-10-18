@@ -630,7 +630,11 @@ func DeleteFilePost(ctx *context.Context) {
 		return
 	}
 
-	ctx.Flash.Success(ctx.Tr("repo.editor.file_delete_success", ctx.Repo.TreePath))
+	if isdir {
+		ctx.Flash.Success(ctx.Tr("repo.editor.folder_delete_success", ctx.Repo.TreePath))
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.editor.file_delete_success", ctx.Repo.TreePath))
+	}
 	treePath := path.Dir(ctx.Repo.TreePath)
 	if treePath == "." {
 		treePath = "" // the file deleted was in the root, so we return the user to the root directory
