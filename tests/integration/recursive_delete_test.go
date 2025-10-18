@@ -398,12 +398,12 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 			t.Fatalf("Failed to parse locale file: %v", err)
 		}
 
-		string_delete_folder, ok := localeData["repo.editor.delete_folder"].(string)
+		stringDeleteFolder, ok := localeData["repo.editor.delete_folder"].(string)
 		if !ok {
 			t.Fatal("Key not found in locale file or not a string")
 		}
 
-		string_repo_content, ok := localeData["repo.editor.delete_repo_content"].(string)
+		stringRepoContent, ok := localeData["repo.editor.delete_repo_content"].(string)
 		if !ok {
 			t.Fatal("Key not found in locale file or not a string")
 		}
@@ -429,7 +429,7 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 		doc := NewHTMLParser(t, resp.Body)
 
 		// Check if delete button exists -> should exist
-		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, string_delete_folder)).First()
+		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringDeleteFolder)).First()
 		if deleteButton.Length() == 0 {
 			t.Error("Delete folder button not found")
 		}
@@ -442,7 +442,7 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 		doc = NewHTMLParser(t, resp.Body)
 
 		// Check if delete button exists -> should exist
-		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, string_repo_content)).First()
+		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringRepoContent)).First()
 		if deleteButton.Length() == 0 {
 			t.Error("Delete path button not found")
 		}
@@ -469,12 +469,12 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 			t.Fatalf("Failed to parse locale file: %v", err)
 		}
 
-		string_delete_folder, ok := localeData["repo.editor.delete_folder"].(string)
+		stringDeleteFolder, ok := localeData["repo.editor.delete_folder"].(string)
 		if !ok {
 			t.Fatal("Key not found in locale file or not a string")
 		}
 
-		string_repo_content, ok := localeData["repo.editor.delete_repo_content"].(string)
+		stringRepoContent, ok := localeData["repo.editor.delete_repo_content"].(string)
 		if !ok {
 			t.Fatal("Key not found in locale file or not a string")
 		}
@@ -500,7 +500,7 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 		doc := NewHTMLParser(t, resp.Body)
 
 		// Check if delete button exists -> should NOT exist
-		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, string_delete_folder)).First()
+		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringDeleteFolder)).First()
 		if deleteButton.Length() != 0 {
 			t.Error("Delete path button found")
 		}
@@ -513,7 +513,7 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 		doc = NewHTMLParser(t, resp.Body)
 
 		// Check if delete button xists -> should NOT exist
-		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, string_repo_content)).First()
+		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringRepoContent)).First()
 		if deleteButton.Length() != 0 {
 			t.Error("Delete path button found")
 		}
