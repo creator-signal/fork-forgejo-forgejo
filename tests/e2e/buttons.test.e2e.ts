@@ -52,9 +52,9 @@ test('Button visuals', async ({page}) => {
 
   const transparent = 'rgba(0, 0, 0, 0)';
 
-  const primary = await getButtonProperties(page, 'button.primary')
-  const secondary = await getButtonProperties(page, 'button.secondary')
-  const danger = await getButtonProperties(page, 'button.danger')
+  const primary = await getButtonProperties(page, 'button.primary');
+  const secondary = await getButtonProperties(page, 'button.secondary');
+  const danger = await getButtonProperties(page, 'button.danger');
 
   // Evaluate that all buttons have background-color specified
   expect(primary.backgroundColor).not.toBe(transparent);
@@ -66,7 +66,7 @@ test('Button visuals', async ({page}) => {
   expect(primary.backgroundColor).not.toBe(danger.backgroundColor);
 
   // Evaluate font weights
-  expect(primary.fontWeight).toBe("400");
-  expect(secondary.fontWeight).toBe("400");
-  expect(danger.fontWeight).toBe("500");
+  expect(primary.fontWeight).toBe('400');
+  expect(secondary.fontWeight).toBe('400');
+  expect(danger.fontWeight).toBe('500');
 });
