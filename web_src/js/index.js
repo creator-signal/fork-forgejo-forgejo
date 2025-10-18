@@ -17,7 +17,7 @@ import {initAutoFocusEnd} from './features/autofocus-end.js';
 import {initAdminUserListSearchForm} from './features/admin/users.js';
 import {initAdminConfigs} from './features/admin/config.js';
 import {initMarkupAnchors} from './markup/anchors.js';
-import {initNotificationCount, initNotificationsTable} from './features/notification.js';
+import {initNotificationCount, initNotificationsTable} from './features/notification.ts';
 import {initRepoIssueContentHistory} from './features/repo-issue-content.js';
 import {initStopwatch} from './features/stopwatch.js';
 import {initFindFileInRepo} from './features/repo-findfile.js';

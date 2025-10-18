@@ -19,14 +19,14 @@ export function initNotificationsTable() {
         item.remove();
         unreadCount -= 1;
       }
-      unreadCountEl.textContent = unreadCount;
+      unreadCountEl.textContent = `${unreadCount}`;
     }
   });
 
   // mark clicked unread links for deletion on bfcache restore
   for (const link of table.querySelectorAll('.notifications-item[data-status="1"] .notifications-link')) {
     link.addEventListener('click', (e) => {
-      e.target.closest('.notifications-item').setAttribute('data-remove', 'true');
+      (e.target as HTMLElement).closest('.notifications-item').setAttribute('data-remove', 'true');
     });
   }
 }
@@ -53,7 +53,7 @@ export function initNotificationCount() {
   }
 
   let usingPeriodicPoller = false;
-  const startPeriodicPoller = (timeout, lastCount) => {
+  const startPeriodicPoller = (timeout, lastCount = null) => {
     if (timeout <= 0 || !Number.isFinite(timeout)) return;
     usingPeriodicPoller = true;
     lastCount = lastCount ?? $notificationCount.text();
@@ -148,8 +148,8 @@ async function updateNotificationTable() {
   if (notificationDiv) {
     try {
       const params = new URLSearchParams(window.location.search);
-      params.set('div-only', true);
-      params.set('sequence-number', ++notificationSequenceNumber);
+      params.set('div-only', 'true');
+      params.set('sequence-number', `${++notificationSequenceNumber}`);
       const url = `${appSubUrl}/notifications?${params.toString()}`;
       const response = await GET(url);
 
