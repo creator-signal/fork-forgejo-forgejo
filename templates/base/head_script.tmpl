@@ -45,7 +45,5 @@ If you introduce mistakes in it, Gitea JavaScript code wouldn't run correctly.
 			incorrect_root_url: {{ctx.Locale.Tr "incorrect_root_url" AppUrl}},
 		},
 	};
-	{{/* in case some pages don't render the pageData, we make sure it is an object to prevent null access */}}
-	window.config.pageData = window.config.pageData || {};
 </script>
 <script src="{{AssetUrlPrefix}}/js/webcomponents.js?v={{AssetVersion}}"></script>
