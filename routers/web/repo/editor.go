@@ -548,7 +548,7 @@ func DeleteFilePost(ctx *context.Context) {
 		return
 	}
 
-	isdir, err := tempRepo.IsDirectory("HEAD", ctx.Repo.TreePath)
+	isdir, err := tempRepo.IsDirectory(ctx.Repo.BranchName, ctx.Repo.TreePath)
 	if err != nil {
 		ctx.ServerError("tempRepo.IsDirectory", err)
 		return

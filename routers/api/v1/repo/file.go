@@ -923,6 +923,29 @@ func DeleteFile(ctx *context.APIContext) {
 		opts.Message = changeFilesCommitMessage(ctx, opts.Files)
 	}
 
+	// Create temporary repository to check if path is a directory
+	tempRepo, err := files_service.NewTemporaryUploadRepository(ctx, ctx.Repo.Repository)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "NewTemporaryUploadRepository", err)
+		return
+	}
+	defer tempRepo.Close()
+
+	// Clone the branch
+	err = tempRepo.Clone(apiOpts.BranchName, false)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "tempRepo.Clone", err)
+		return
+	}
+
+	// Check if the path is a directory
+	isdir, err := tempRepo.IsDirectory(apiOpts.BranchName, ctx.Params("*"))
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "tempRepo.IsDirectory", err)
+		return
+	}
+	opts.IsDir = isdir
+
 	if filesResponse, err := files_service.ChangeRepoFiles(ctx, ctx.Repo.Repository, ctx.Doer, opts); err != nil {
 		if git.IsErrBranchNotExist(err) || models.IsErrRepoFileDoesNotExist(err) || git.IsErrNotExist(err) {
 			ctx.Error(http.StatusNotFound, "DeleteFile", err)
