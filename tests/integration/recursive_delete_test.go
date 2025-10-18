@@ -393,7 +393,7 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 			t.Fatalf("Failed to read locale file: %v", err)
 		}
 
-		var localeData map[string]interface{}
+		var localeData map[string]any
 		if err := json.Unmarshal(localeFile, &localeData); err != nil {
 			t.Fatalf("Failed to parse locale file: %v", err)
 		}
@@ -464,7 +464,7 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 			t.Fatalf("Failed to read locale file: %v", err)
 		}
 
-		var localeData map[string]interface{}
+		var localeData map[string]any
 		if err := json.Unmarshal(localeFile, &localeData); err != nil {
 			t.Fatalf("Failed to parse locale file: %v", err)
 		}
