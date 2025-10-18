@@ -51,23 +51,23 @@ func TestIsFileOrFolder(t *testing.T) {
 
 			result, err := tempRepo.GetTreeEntryType("HEAD", "testdir")
 			require.NoError(t, err)
-			require.Equal(t, files_service.TreeEntryTypeTree, result, "testdir should be a tree (directory)")
+			require.Equal(t, "tree", result, "testdir should be a tree (directory)")
 
 			result, err = tempRepo.GetTreeEntryType("HEAD", "testdir/file.txt")
 			require.NoError(t, err)
-			require.Equal(t, files_service.TreeEntryTypeBlob, result, "file.txt should be a blob (file)")
+			require.Equal(t, "blob", result, "file.txt should be a blob (file)")
 
 			result, err = tempRepo.GetTreeEntryType("HEAD", "not_existing")
 			require.NoError(t, err)
-			require.Equal(t, files_service.TreeEntryTypeUnknown, result, "not_existing should be unknown")
+			require.Equal(t, "", result, "not_existing should be unknown")
 
 			result, err = tempRepo.GetTreeEntryType("HEAD", "not_existing/path")
 			require.NoError(t, err)
-			require.Equal(t, files_service.TreeEntryTypeUnknown, result, "not_existing/path should be unknown")
+			require.Equal(t, "", result, "not_existing/path should be unknown")
 
 			result, err = tempRepo.GetTreeEntryType("HEAD", "")
 			require.NoError(t, err)
-			require.Equal(t, files_service.TreeEntryTypeTree, result, "\"\" should be a tree (directory)")
+			require.Equal(t, "tree", result, "\"\" should be a tree (directory)")
 		})
 		t.Run("IsDirectory", func(t *testing.T) {
 			// Create a test file in a directory

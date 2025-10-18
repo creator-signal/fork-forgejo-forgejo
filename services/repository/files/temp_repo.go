@@ -418,18 +418,9 @@ func (t *TemporaryUploadRepository) RemoveDirectoryRecursively(directory string)
 	return nil
 }
 
-// TreeEntryType represents the type of a tree entry
-type TreeEntryType string
-
-const (
-	TreeEntryTypeBlob    TreeEntryType = "blob" // file
-	TreeEntryTypeTree    TreeEntryType = "tree" // directory
-	TreeEntryTypeUnknown TreeEntryType = ""
-)
-
 // GetTreeEntryType checks if the given path in a tree is a file (blob) or directory (tree)
 // Returns TreeEntryTypeBlob for files, TreeEntryTypeTree for directories, or TreeEntryTypeUnknown if not found
-func (t *TemporaryUploadRepository) GetTreeEntryType(treeish, path string) (TreeEntryType, error) {
+func (t *TemporaryUploadRepository) GetTreeEntryType(treeish, path string) (string, error) {
 	stdOut := new(bytes.Buffer)
 	stdErr := new(bytes.Buffer)
 
@@ -444,22 +435,22 @@ func (t *TemporaryUploadRepository) GetTreeEntryType(treeish, path string) (Tree
 		// Check if it's a "not found" error vs a real error
 		if strings.Contains(stdErr.String(), "not a valid object name") ||
 			strings.Contains(stdErr.String(), "does not exist") {
-			return TreeEntryTypeUnknown, nil
+			return "", nil
 		}
 		log.Error("Unable to run git cat-file for temporary repo: %s (%s) Error: %v\nstdout: %s\nstderr: %s",
 			t.repo.FullName(), t.basePath, err, stdOut.String(), stdErr.String())
-		return TreeEntryTypeUnknown, fmt.Errorf("Unable to run git cat-file for temporary repo of: %s Error: %w\nstdout: %s\nstderr: %s",
+		return "", fmt.Errorf("Unable to run git cat-file for temporary repo of: %s Error: %w\nstdout: %s\nstderr: %s",
 			t.repo.FullName(), err, stdOut.String(), stdErr.String())
 	}
 
 	objectType := strings.TrimSpace(stdOut.String())
 	switch objectType {
 	case "blob":
-		return TreeEntryTypeBlob, nil
+		return "blob", nil
 	case "tree":
-		return TreeEntryTypeTree, nil
+		return "tree", nil
 	default:
-		return TreeEntryTypeUnknown, nil
+		return "", nil
 	}
 }
 
@@ -469,7 +460,7 @@ func (t *TemporaryUploadRepository) IsDirectory(treeish, path string) (bool, err
 	if err != nil {
 		return false, err
 	}
-	return entryType == TreeEntryTypeTree, nil
+	return entryType == "tree", nil
 }
 
 // IsFile checks if the given path in a tree is a file
@@ -478,5 +469,5 @@ func (t *TemporaryUploadRepository) IsFile(treeish, path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return entryType == TreeEntryTypeBlob, nil
+	return entryType == "blob", nil
 }
