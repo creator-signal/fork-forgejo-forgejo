@@ -80,7 +80,7 @@ export function initNotificationCount() {
         return;
       }
       if (event.data.type === 'notification-count') {
-        const _promise = receiveUpdateCount(event.data);
+        receiveUpdateCount(event.data);
       } else if (event.data.type === 'no-event-source') {
         // browser doesn't support EventSource, falling back to periodic poller
         if (!usingPeriodicPoller) startPeriodicPoller(notificationSettings.MinTimeout);
