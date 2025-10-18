@@ -75,7 +75,7 @@ func verifiyFileNoneExitence(t *testing.T, token string, user *user_model.User, 
 }
 
 func deletePathViaUI(t *testing.T, session *TestSession, user *user_model.User, repo *repo_model.Repository, treePath string) {
-	deletePath := fmt.Sprintf("/%s/%s/_delete_path/master/%s", user.Name, repo.Name, treePath)
+	deletePath := fmt.Sprintf("/%s/%s/_delete/master/%s", user.Name, repo.Name, treePath)
 
 	// Get the delete page to obtain CSRF token
 	req := NewRequest(t, "GET", deletePath)
@@ -270,7 +270,7 @@ func TestRecursiveDeleteAnonymous(t *testing.T) {
 		}
 
 		// trying to delete the files without permission
-		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/_delete_path/master/%s", user2.Name, repo1.Name, treePathDirDel))
+		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/_delete/master/%s", user2.Name, repo1.Name, treePathDirDel))
 		MakeRequest(t, req, http.StatusSeeOther)
 
 		// Check result of the delete command
@@ -318,7 +318,7 @@ func TestRecursiveDeleteOther(t *testing.T) {
 
 		// user4
 		session = loginUser(t, user4.Name)
-		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/_delete_path/master/%s", user2.Name, repo1.Name, treePathDirDel))
+		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/_delete/master/%s", user2.Name, repo1.Name, treePathDirDel))
 		session.MakeRequest(t, req, http.StatusNotFound)
 
 		// Check result of the delete command

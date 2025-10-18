@@ -94,7 +94,7 @@
 								{{if (not .IsViewFile)}}
 									{{if and .CanDeleteFile (not .IsBlame)}}
 										<a class="item"
-										href="{{.RepoLink}}/_delete_path/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
+										href="{{.RepoLink}}/_delete/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
 										data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_repo_content"}}">
 										{{ctx.Locale.Tr "repo.editor.delete_repo_content"}}</a>
 									{{end}}
@@ -103,7 +103,7 @@
 								{{if (not .IsViewFile)}}
 									{{if and .CanDeleteFile (not .IsBlame)}}
 										<a class="item"
-										href="{{.RepoLink}}/_delete_path/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
+										href="{{.RepoLink}}/_delete/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
 										data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_folder"}}">
 										{{ctx.Locale.Tr "repo.editor.delete_folder"}}</a>
 									{{end}}

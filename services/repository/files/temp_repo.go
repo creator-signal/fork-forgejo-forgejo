@@ -463,11 +463,13 @@ func (t *TemporaryUploadRepository) IsDirectory(treeish, path string) (bool, err
 	return entryType == "tree", nil
 }
 
-// IsFile checks if the given path in a tree is a file
-func (t *TemporaryUploadRepository) IsFile(treeish, path string) (bool, error) {
-	entryType, err := t.GetTreeEntryType(treeish, path)
-	if err != nil {
-		return false, err
-	}
-	return entryType == "blob", nil
-}
+// I will leave this in. It is working and under tests/integration/temp_repo_file_or_folder_test.go
+// is a test that can be activated.
+// // IsFile checks if the given path in a tree is a file
+// func (t *TemporaryUploadRepository) IsFile(treeish, path string) (bool, error) {
+// 	entryType, err := t.GetTreeEntryType(treeish, path)
+// 	if err != nil {
+// 		return false, err
+// 	}
+// 	return entryType == "blob", nil
+// }

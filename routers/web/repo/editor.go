@@ -489,23 +489,8 @@ func DeleteFile(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, tplDeleteFile)
 }
 
-// DeletePath render delete file page
-func DeletePath(ctx *context.Context) {
-	DeleteFile(ctx)
-}
-
 // DeleteFilePost response for deleting file
 func DeleteFilePost(ctx *context.Context) {
-	DeletePathOrFilePost(ctx, false)
-}
-
-// DeletePathPost response for deleting path
-func DeletePathPost(ctx *context.Context) {
-	DeletePathOrFilePost(ctx, true)
-}
-
-// DeletePathOrFilePost response for deleting path or file
-func DeletePathOrFilePost(ctx *context.Context, isdir bool) {
 	form := web.GetForm(ctx).(*forms.DeleteRepoFileForm)
 	canCommit := renderCommitRights(ctx)
 	branchName := ctx.Repo.BranchName
@@ -545,6 +530,27 @@ func DeletePathOrFilePost(ctx *context.Context, isdir bool) {
 
 	gitIdentity := getGitIdentity(ctx, form.CommitMailID, tplDeleteFile, &form)
 	if ctx.Written() {
+		return
+	}
+
+	// Create temporary repository to check if path is a directory
+	tempRepo, err := files_service.NewTemporaryUploadRepository(ctx, ctx.Repo.Repository)
+	if err != nil {
+		ctx.ServerError("NewTemporaryUploadRepository", err)
+		return
+	}
+	defer tempRepo.Close()
+
+	// Clone the branch
+	err = tempRepo.Clone(ctx.Repo.BranchName, false)
+	if err != nil {
+		ctx.ServerError("tempRepo.Clone", err)
+		return
+	}
+
+	isdir, err := tempRepo.IsDirectory("HEAD", ctx.Repo.TreePath)
+	if err != nil {
+		ctx.ServerError("tempRepo.IsDirectory", err)
 		return
 	}
 
