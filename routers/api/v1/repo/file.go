@@ -970,7 +970,7 @@ func DeleteFile(ctx *context.APIContext) {
 		} else {
 			// For directory deletes, return a minimal success response
 			// The delete was successful, but there's no file content to return
-			ctx.JSON(http.StatusOK, map[string]interface{}{
+			ctx.JSON(http.StatusOK, map[string]any{
 				"message": "Directory deleted successfully",
 			})
 		}
