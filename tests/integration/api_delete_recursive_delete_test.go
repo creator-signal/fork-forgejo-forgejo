@@ -3,107 +3,34 @@
 package integration
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
 	auth_model "forgejo.org/models/auth"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/json"
 	api "forgejo.org/modules/structs"
-
-	"github.com/stretchr/testify/assert"
 )
 
-func getCreateOptionsFile(content, message string) api.CreateFileOptions {
-	contentEncoded := base64.StdEncoding.EncodeToString([]byte(content))
-	return api.CreateFileOptions{
-		FileOptions: api.FileOptions{
-			BranchName:    "master",
-			NewBranchName: "master",
-			Message:       message,
-			Author: api.Identity{
-				Name:  "Anne Doe",
-				Email: "annedoe@example.com",
-			},
-			Committer: api.Identity{
-				Name:  "John Doe",
-				Email: "johndoe@example.com",
-			},
-			Dates: api.CommitDateOptions{
-				Author:    time.Unix(946684810, 0),
-				Committer: time.Unix(978307190, 0),
-			},
-		},
-		ContentBase64: contentEncoded,
-	}
-}
+func deletePathViaAPI(t *testing.T, token string, user *user_model.User, repo *repo_model.Repository, treePath string) {
+	// Get the SHA for the file/directory
+	deleteFileOptions := getDeleteFileOptions()
+	deleteFileOptions.BranchName = "master"
+	deleteFileOptions.SHA = "0000000000000000000000000000000000000000" // Fake SHA
 
-func createFileWithAssertions(t *testing.T, token string, user *user_model.User, repo *repo_model.Repository, treePath, data string) api.FileResponse {
-	createFileOptions := getCreateOptionsFile(data, treePath)
-
-	req := NewRequestWithJSON(t, "POST",
+	req := NewRequestWithJSON(t, "DELETE",
 		fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user.Name, repo.Name, treePath),
-		&createFileOptions).AddTokenAuth(token)
+		&deleteFileOptions).AddTokenAuth(token)
 
-	resp := MakeRequest(t, req, http.StatusCreated)
-
+	resp := MakeRequest(t, req, http.StatusOK)
 	var fileResponse api.FileResponse
 	DecodeJSON(t, resp, &fileResponse)
-
-	assert.Equal(t, fileResponse.Content.Path, treePath)
-	assert.EqualValues(t, len(data), fileResponse.Content.Size)
-
-	return fileResponse
 }
 
-func verifiyFileExitence(t *testing.T, token string, user *user_model.User, repo *repo_model.Repository, treePath string) {
-	getReq := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user.Name, repo.Name, treePath)).AddTokenAuth(token)
-	MakeRequest(t, getReq, http.StatusOK)
-}
-
-func verifiyFileNoneExitence(t *testing.T, token string, user *user_model.User, repo *repo_model.Repository, treePath string) {
-	getReq := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user.Name, repo.Name, treePath)).AddTokenAuth(token)
-	MakeRequest(t, getReq, http.StatusNotFound)
-}
-
-func deletePathViaUI(t *testing.T, session *TestSession, user *user_model.User, repo *repo_model.Repository, treePath string) {
-	deletePath := fmt.Sprintf("/%s/%s/_delete/master/%s", user.Name, repo.Name, treePath)
-
-	// Get the delete page to obtain CSRF token
-	req := NewRequest(t, "GET", deletePath)
-	session.MakeRequest(t, req, http.StatusOK)
-
-	csrf := GetCSRF(t, session, deletePath)
-
-	// Prepare commit form
-	commitForm := map[string]string{
-		"_csrf":          csrf,
-		"commit_summary": "Delete",
-		"commit_message": "",
-		"commit_choice":  "direct",
-		"commit_mail_id": "-1",
-	}
-
-	// POST to delete the path
-	postReq := NewRequestWithValues(t, "POST", deletePath, commitForm)
-	postResp := session.MakeRequest(t, postReq, http.StatusSeeOther)
-
-	// Follow redirect if present
-	if redirectLocation := postResp.Header().Get("Location"); redirectLocation != "" {
-		verifyReq := NewRequest(t, "GET", redirectLocation)
-		session.MakeRequest(t, verifyReq, http.StatusOK)
-	}
-}
-
-func TestRecursiveDeleteSubSub(t *testing.T) {
+func TestAPIRecursiveDeleteSubSub(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
@@ -135,7 +62,7 @@ func TestRecursiveDeleteSubSub(t *testing.T) {
 		}
 
 		// Execute delete path command
-		deletePathViaUI(t, session, user2, repo1, treePathDirDel)
+		deletePathViaAPI(t, token2, user2, repo1, treePathDirDel)
 
 		// Check result of the delete command
 		for i := range treePaths {
@@ -148,7 +75,7 @@ func TestRecursiveDeleteSubSub(t *testing.T) {
 	})
 }
 
-func TestRecursiveDeleteSub(t *testing.T) {
+func TestAPIRecursiveDeleteSub(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
@@ -180,7 +107,7 @@ func TestRecursiveDeleteSub(t *testing.T) {
 		}
 
 		// Execute delete path command
-		deletePathViaUI(t, session, user2, repo1, treePathDirDel)
+		deletePathViaAPI(t, token2, user2, repo1, treePathDirDel)
 
 		// Check result of the delete command
 		for i := range treePaths {
@@ -193,7 +120,8 @@ func TestRecursiveDeleteSub(t *testing.T) {
 	})
 }
 
-func TestRecursiveDeleteRoot(t *testing.T) {
+// Deleting root is not supported via API
+func TestAPIRecursiveDeleteRoot(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
@@ -205,10 +133,10 @@ func TestRecursiveDeleteRoot(t *testing.T) {
 		treePathDirDel := ""
 
 		shouldExist := []bool{
-			false,
-			false,
-			false,
-			false,
+			true,
+			true,
+			true,
+			true,
 		}
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})       // owner of the repo1
@@ -225,7 +153,15 @@ func TestRecursiveDeleteRoot(t *testing.T) {
 		}
 
 		// Execute delete path command
-		deletePathViaUI(t, session, user2, repo1, treePathDirDel)
+		deleteFileOptions := getDeleteFileOptions()
+		deleteFileOptions.BranchName = "master"
+		deleteFileOptions.SHA = "0000000000000000000000000000000000000000" // Fake SHA
+
+		req := NewRequestWithJSON(t, "DELETE",
+			fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user2.Name, repo1.Name, treePathDirDel),
+			&deleteFileOptions).AddTokenAuth(token2)
+
+		MakeRequest(t, req, http.StatusMethodNotAllowed)
 
 		// Check result of the delete command
 		for i := range treePaths {
@@ -238,7 +174,7 @@ func TestRecursiveDeleteRoot(t *testing.T) {
 	})
 }
 
-func TestRecursiveDeleteAnonymous(t *testing.T) {
+func TestAPIRecursiveDeleteAnonymous(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
@@ -270,8 +206,15 @@ func TestRecursiveDeleteAnonymous(t *testing.T) {
 		}
 
 		// trying to delete the files without permission
-		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/_delete/master/%s", user2.Name, repo1.Name, treePathDirDel))
-		MakeRequest(t, req, http.StatusSeeOther)
+		deleteFileOptions := getDeleteFileOptions()
+		deleteFileOptions.BranchName = "master"
+		deleteFileOptions.SHA = "0000000000000000000000000000000000000000" // Fake SHA
+
+		req := NewRequestWithJSON(t, "DELETE",
+			fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user2.Name, repo1.Name, treePathDirDel),
+			&deleteFileOptions).AddTokenAuth(token2)
+
+		MakeRequest(t, req, http.StatusMethodNotAllowed)
 
 		// Check result of the delete command
 		for i := range treePaths {
@@ -284,7 +227,7 @@ func TestRecursiveDeleteAnonymous(t *testing.T) {
 	})
 }
 
-func TestRecursiveDeleteOther(t *testing.T) {
+func TestAPIRecursiveDeleteOther(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
@@ -317,9 +260,18 @@ func TestRecursiveDeleteOther(t *testing.T) {
 		}
 
 		// user4
-		session = loginUser(t, user4.Name)
-		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/_delete/master/%s", user2.Name, repo1.Name, treePathDirDel))
-		session.MakeRequest(t, req, http.StatusNotFound)
+		session4 := loginUser(t, user4.Name)
+		token4 := getTokenForLoggedInUser(t, session4, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+
+		deleteFileOptions := getDeleteFileOptions()
+		deleteFileOptions.BranchName = "master"
+		deleteFileOptions.SHA = "0000000000000000000000000000000000000000" // Fake SHA
+
+		req := NewRequestWithJSON(t, "DELETE",
+			fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user2.Name, repo1.Name, treePathDirDel),
+			&deleteFileOptions).AddTokenAuth(token4)
+
+		MakeRequest(t, req, http.StatusMethodNotAllowed)
 
 		// Check result of the delete command
 		for i := range treePaths {
@@ -332,7 +284,7 @@ func TestRecursiveDeleteOther(t *testing.T) {
 	})
 }
 
-func TestRecursiveDeleteRootColab(t *testing.T) {
+func TestAPIRecursiveDeleteDirColab(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
@@ -341,10 +293,10 @@ func TestRecursiveDeleteRootColab(t *testing.T) {
 			"dir2/dir4/file4.txt",
 		}
 
-		treePathDirDel := ""
+		treePathDirDel := "dir2"
 
 		shouldExist := []bool{
-			false,
+			true,
 			false,
 			false,
 			false,
@@ -365,7 +317,7 @@ func TestRecursiveDeleteRootColab(t *testing.T) {
 		}
 
 		// Execute delete path command by user2
-		deletePathViaUI(t, session, user3, repo3, treePathDirDel)
+		deletePathViaAPI(t, token, user3, repo3, treePathDirDel)
 
 		// Check result of the delete command by user3
 		for i := range treePaths {
@@ -378,148 +330,7 @@ func TestRecursiveDeleteRootColab(t *testing.T) {
 	})
 }
 
-func TestIfDeleteButtonIsThereUser(t *testing.T) {
-	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		treePaths := []string{
-			"file1.txt",
-			"dir2/file2.txt",
-			"dir2/dir3/file3.txt",
-			"dir2/dir4/file4.txt",
-		}
-
-		// Read and parse the locale file
-		localeFile, err := os.ReadFile(filepath.Join("options", "locale_next", "locale_en-US.json"))
-		if err != nil {
-			t.Fatalf("Failed to read locale file: %v", err)
-		}
-
-		var localeData map[string]any
-		if err := json.Unmarshal(localeFile, &localeData); err != nil {
-			t.Fatalf("Failed to parse locale file: %v", err)
-		}
-
-		stringDeleteFolder, ok := localeData["repo.editor.delete_folder"].(string)
-		if !ok {
-			t.Fatal("Key not found in locale file or not a string")
-		}
-
-		stringRepoContent, ok := localeData["repo.editor.delete_repo_content"].(string)
-		if !ok {
-			t.Fatal("Key not found in locale file or not a string")
-		}
-
-		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1}) // public repo of user3
-
-		// Get user2's token
-		session := loginUser(t, user2.Name)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-
-		// Create test files by user3
-		for i := range treePaths {
-			createFileWithAssertions(t, token, user2, repo1, treePaths[i], "This is test text for: "+treePaths[i])
-			verifiyFileExitence(t, token, user2, repo1, treePaths[i])
-		}
-
-		// Fetch the page (/dir1)
-		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/dir2", user2.Name, repo1.Name))
-		resp := session.MakeRequest(t, req, http.StatusOK)
-
-		// Parse HTML response
-		doc := NewHTMLParser(t, resp.Body)
-
-		// Check if delete button exists -> should exist
-		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringDeleteFolder)).First()
-		if deleteButton.Length() == 0 {
-			t.Error("Delete folder button not found")
-		}
-
-		// Fetch the page ()
-		req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master", user2.Name, repo1.Name))
-		resp = session.MakeRequest(t, req, http.StatusOK)
-
-		// Parse HTML response
-		doc = NewHTMLParser(t, resp.Body)
-
-		// Check if delete button exists -> should exist
-		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringRepoContent)).First()
-		if deleteButton.Length() == 0 {
-			t.Error("Delete path button not found")
-		}
-	})
-}
-
-func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
-	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		treePaths := []string{
-			"file1.txt",
-			"dir2/file2.txt",
-			"dir2/dir3/file3.txt",
-			"dir2/dir4/file4.txt",
-		}
-
-		// Read and parse the locale file
-		localeFile, err := os.ReadFile(filepath.Join("options", "locale_next", "locale_en-US.json"))
-		if err != nil {
-			t.Fatalf("Failed to read locale file: %v", err)
-		}
-
-		var localeData map[string]any
-		if err := json.Unmarshal(localeFile, &localeData); err != nil {
-			t.Fatalf("Failed to parse locale file: %v", err)
-		}
-
-		stringDeleteFolder, ok := localeData["repo.editor.delete_folder"].(string)
-		if !ok {
-			t.Fatal("Key not found in locale file or not a string")
-		}
-
-		stringRepoContent, ok := localeData["repo.editor.delete_repo_content"].(string)
-		if !ok {
-			t.Fatal("Key not found in locale file or not a string")
-		}
-
-		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1}) // public repo of user3
-
-		// Get user2's token
-		session := loginUser(t, user2.Name)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-
-		// Create test files by user3
-		for i := range treePaths {
-			createFileWithAssertions(t, token, user2, repo1, treePaths[i], "This is test text for: "+treePaths[i])
-			verifiyFileExitence(t, token, user2, repo1, treePaths[i])
-		}
-
-		// Fetch the page (/dir1)
-		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/dir2", user2.Name, repo1.Name))
-		resp := MakeRequest(t, req, http.StatusOK)
-
-		// Parse HTML response
-		doc := NewHTMLParser(t, resp.Body)
-
-		// Check if delete button exists -> should NOT exist
-		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringDeleteFolder)).First()
-		if deleteButton.Length() != 0 {
-			t.Error("Delete path button found")
-		}
-
-		// Fetch the page ()
-		req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master", user2.Name, repo1.Name))
-		resp = MakeRequest(t, req, http.StatusOK)
-
-		// Parse HTML response
-		doc = NewHTMLParser(t, resp.Body)
-
-		// Check if delete button xists -> should NOT exist
-		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringRepoContent)).First()
-		if deleteButton.Length() != 0 {
-			t.Error("Delete path button found")
-		}
-	})
-}
-func TestRecursiveDeleteNoneExist(t *testing.T) {
+func TestAPIRecursiveDeleteNoneExist(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"file1.txt",
@@ -550,30 +361,15 @@ func TestRecursiveDeleteNoneExist(t *testing.T) {
 			verifiyFileExitence(t, token2, user2, repo1, treePaths[i])
 		}
 
-		deletePath := fmt.Sprintf("/%s/%s/_delete/master/%s", user2.Name, repo1.Name, treePathDirDel)
+		deleteFileOptions := getDeleteFileOptions()
+		deleteFileOptions.BranchName = "master"
+		deleteFileOptions.SHA = "0000000000000000000000000000000000000000" // Fake SHA
 
-		// Get the delete page to obtain CSRF token
-		req := NewRequest(t, "GET", deletePath)
-		session.MakeRequest(t, req, http.StatusOK)
+		req := NewRequestWithJSON(t, "DELETE",
+			fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", user2.Name, repo1.Name, treePathDirDel),
+			&deleteFileOptions).AddTokenAuth(token2)
 
-		csrf := GetCSRF(t, session, deletePath)
-
-		// Prepare commit form
-		commitForm := map[string]string{
-			"_csrf":          csrf,
-			"commit_summary": "Delete",
-			"commit_message": "",
-			"commit_choice":  "direct",
-			"commit_mail_id": "-1",
-		}
-
-		// POST to delete the non-existent path - should return 200 with error message
-		postReq := NewRequestWithValues(t, "POST", deletePath, commitForm)
-		postResp := session.MakeRequest(t, postReq, http.StatusOK)
-
-		// Verify that an error message is shown
-		respBody := postResp.Body.String()
-		assert.Contains(t, respBody, "no longer exists in this repository")
+		MakeRequest(t, req, http.StatusNotFound)
 
 		// Check result of the delete command
 		for i := range treePaths {
@@ -586,7 +382,7 @@ func TestRecursiveDeleteNoneExist(t *testing.T) {
 	})
 }
 
-func TestRecursiveDeleteSpecialChars(t *testing.T) {
+func TestAPIRecursiveDeleteSpecialChars(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
 			"there is a space in the folder name/file1.txt",
@@ -614,7 +410,7 @@ func TestRecursiveDeleteSpecialChars(t *testing.T) {
 		}
 
 		// Execute delete path command
-		deletePathViaUI(t, session, user2, repo1, treePathDirDel)
+		deletePathViaAPI(t, token2, user2, repo1, treePathDirDel)
 
 		// Check result of the delete command
 		for i := range treePaths {

@@ -963,8 +963,17 @@ func DeleteFile(ctx *context.APIContext) {
 		}
 		ctx.Error(http.StatusInternalServerError, "DeleteFile", err)
 	} else {
-		fileResponse := files_service.GetFileResponseFromFilesResponse(filesResponse, 0)
-		ctx.JSON(http.StatusOK, fileResponse) // FIXME on APIv2: return http.StatusNoContent
+		// When deleting directories, filesResponse may be nil or have empty Files
+		if filesResponse != nil && len(filesResponse.Files) > 0 {
+			fileResponse := files_service.GetFileResponseFromFilesResponse(filesResponse, 0)
+			ctx.JSON(http.StatusOK, fileResponse) // FIXME on APIv2: return http.StatusNoContent
+		} else {
+			// For directory deletes, return a minimal success response
+			// The delete was successful, but there's no file content to return
+			ctx.JSON(http.StatusOK, map[string]interface{}{
+				"message": "Directory deleted successfully",
+			})
+		}
 	}
 }
 
