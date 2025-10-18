@@ -59,11 +59,11 @@ func TestIsFileOrFolder(t *testing.T) {
 
 			result, err = tempRepo.GetTreeEntryType("HEAD", "not_existing")
 			require.NoError(t, err)
-			require.Equal(t, "", result, "not_existing should be unknown")
+			require.Empty(t, result, "not_existing should be unknown")
 
 			result, err = tempRepo.GetTreeEntryType("HEAD", "not_existing/path")
 			require.NoError(t, err)
-			require.Equal(t, "", result, "not_existing/path should be unknown")
+			require.Empty(t, result, "not_existing/path should be unknown")
 
 			result, err = tempRepo.GetTreeEntryType("HEAD", "")
 			require.NoError(t, err)
