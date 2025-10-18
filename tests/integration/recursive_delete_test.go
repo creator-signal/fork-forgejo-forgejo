@@ -519,6 +519,7 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 		}
 	})
 }
+
 func TestRecursiveDeleteNoneExist(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		treePaths := []string{
