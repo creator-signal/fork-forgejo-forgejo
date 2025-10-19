@@ -134,7 +134,7 @@ func TestRepoFork(t *testing.T) {
 			resp := MakeRequest(t, req, http.StatusOK)
 			htmlDoc := NewHTMLParser(t, resp.Body)
 
-			forksLink := htmlDoc.Find("a[href*='/forks']")
+			forksLink := htmlDoc.Find("a[href$='/forks']")
 			assert.Equal(t, 1, forksLink.Length())
 
 			href, _ := forksLink.Attr("href")
