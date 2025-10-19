@@ -174,16 +174,14 @@ func drawRepoSummaryCard(ctx *context.Context, repo *repo_model.Repository) (*ca
 		return nil, err
 	}
 
-	starsText := ctx.Locale.TrN(
+	starsText := ctx.Locale.TrPluralString(
 		repo.NumStars,
-		"explore.stars_one",
-		"explore.stars_few",
+		"stars.n_stars",
 		strconv.Itoa(repo.NumStars),
 	)
-	forksText := ctx.Locale.TrN(
+	forksText := ctx.Locale.TrPluralString(
 		repo.NumForks,
-		"explore.forks_one",
-		"explore.forks_few",
+		"fork.n_forks",
 		strconv.Itoa(repo.NumForks),
 	)
 	releasesText := ctx.Locale.TrN(
