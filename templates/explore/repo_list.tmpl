@@ -38,20 +38,18 @@
 							</a>
 						{{end}}
 						{{if not $.DisableStars}}
-							{{$n_stars := ctx.Locale.TrPluralString .NumStars "stars.n_stars" (printf "%d" .NumStars)}}
 							<a class="flex-text-inline" href="{{.Link}}/stars"
-								aria-label="{{$n_stars}}"
-								{{if ge .NumStars 1000}}data-tooltip-content="{{$n_stars}}"{{end}}
+								aria-label="{{ctx.Locale.TrPluralString .NumStars "stars.n_stars" (printf "%d" .NumStars)}}"
+								{{if ge .NumStars 1000}}data-tooltip-content="{{ctx.Locale.TrPluralString .NumStars "stars.n_stars" (ctx.Locale.PrettyNumber .NumStars)}}"{{end}}
 								>
 								{{svg "octicon-star" 16}}
 								{{CountFmt .NumStars}}
 							</a>
 						{{end}}
 						{{if not $.DisableForks}}
-							{{$n_forks := ctx.Locale.TrPluralString .NumForks "fork.n_forks" (printf "%d" .NumForks)}}
 							<a class="flex-text-inline" href="{{.Link}}/forks"
-								aria-label="{{$n_forks}}"
-								{{if ge .NumForks 1000}}data-tooltip-content="{{$n_forks}}"{{end}}
+								aria-label="{{ctx.Locale.TrPluralString .NumForks "fork.n_forks" (printf "%d" .NumForks)}}"
+								{{if ge .NumForks 1000}}data-tooltip-content="{{ctx.Locale.TrPluralString .NumForks "fork.n_forks" (ctx.Locale.PrettyNumber .NumForks)}}"{{end}}
 								>
 								{{svg "octicon-git-branch" 16}}
 								{{CountFmt .NumForks}}
