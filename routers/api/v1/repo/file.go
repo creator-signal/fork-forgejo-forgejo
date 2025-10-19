@@ -923,7 +923,7 @@ func DeleteFile(ctx *context.APIContext) {
 	if opts.Message == "" {
 		opts.Message = changeFilesCommitMessage(ctx, opts.Files)
 	}
-	if isdir, err := files_service.DeleteFromRepo(ctx, ctx.Repo.Repository, ctx.Doer, opts); err != nil {
+	if filesResponse, isdir, err := files_service.DeleteFromRepo(ctx, ctx.Repo.Repository, ctx.Doer, opts); err != nil {
 		if git.IsErrBranchNotExist(err) || models.IsErrRepoFileDoesNotExist(err) || git.IsErrNotExist(err) || git.IsErrorExitCode(err, 128) {
 			ctx.Error(http.StatusNotFound, "DeleteFile", err)
 			return
@@ -940,16 +940,22 @@ func DeleteFile(ctx *context.APIContext) {
 		}
 		ctx.Error(http.StatusInternalServerError, "DeleteFile", err)
 	} else {
-		// For directory / file deletes, return a minimal success response
-		// The delete was successful, but there's no file content to return
-		if isdir {
-			ctx.JSON(http.StatusOK, map[string]any{
-				"message": "Directory deleted successfully",
-			})
+		// When deleting directories, filesResponse may be nil or have empty Files
+		if filesResponse != nil && len(filesResponse.Files) > 0 {
+			fileResponse := files_service.GetFileResponseFromFilesResponse(filesResponse, 0)
+			ctx.JSON(http.StatusOK, fileResponse) // FIXME on APIv2: return http.StatusNoContent
 		} else {
-			ctx.JSON(http.StatusOK, map[string]any{
-				"message": "File deleted successfully",
-			})
+			// For directory / file deletes, return a minimal success response
+			// The delete was successful, but there's no file content to return
+			if isdir {
+				ctx.JSON(http.StatusOK, map[string]any{
+					"message": "Directory deleted successfully",
+				})
+			} else {
+				ctx.JSON(http.StatusOK, map[string]any{
+					"message": "File deleted successfully",
+				})
+			}
 		}
 	}
 }

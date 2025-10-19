@@ -65,10 +65,10 @@ type RepoFileOptions struct {
 }
 
 // DeleteFromRepo removes a file or a folder from the given repository
-func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user_model.User, opts *ChangeRepoFilesOptions) (bool, error) {
+func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user_model.User, opts *ChangeRepoFilesOptions) (*structs.FilesResponse, bool, error) {
 	err := repo.MustNotBeArchived()
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	// If no branch name is set, assume default branch
@@ -81,20 +81,20 @@ func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user
 
 	gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, repo)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 	defer closer.Close()
 
 	// oldBranch must exist for this operation
 	if _, err := gitRepo.GetBranch(opts.OldBranch); err != nil && !repo.IsEmpty {
-		return false, err
+		return nil, false, err
 	}
 
 	// This is how routers/web/web.go and routers/api/v1/repo/file.go delivers the data.
 	// So far, there is no other way to produce (e.g. the API)
 	// a command to initiate a path deletion.
 	if len(opts.Files) != 1 {
-		return false, err
+		return nil, false, err
 	}
 	treePathOriginal := CleanUploadFileName(opts.Files[0].TreePath)
 
@@ -114,30 +114,68 @@ func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user
 	defer t.Close()
 
 	if err := t.Clone(opts.OldBranch, false); err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	// Check if the path is a directory
 	isdir, err := t.IsDirectory(opts.OldBranch, treePathOriginal)
 	if err != nil {
-		return false, err
+		return nil, false, err
+	}
+
+	// SHA check for files (not directories) - similar to ChangeRepoFiles
+	if !isdir && opts.Files[0].SHA != "" {
+		// Set up the file options (required by handleCheckErrors)
+		if opts.Files[0].Options == nil {
+			opts.Files[0].Options = &RepoFileOptions{
+				treePath:     treePathOriginal,
+				fromTreePath: treePathOriginal,
+				executable:   false,
+			}
+		}
+
+		// Get the current commit of the branch
+		actualBaseCommit, err := t.GetBranchCommit(opts.OldBranch)
+		if err != nil {
+			return nil, isdir, err
+		}
+
+		// Determine the last known commit for comparison
+		var lastKnownCommit git.ObjectID
+		if opts.OldBranch != opts.NewBranch {
+			// When creating a new branch, use the actual base commit
+			lastKnownCommit = actualBaseCommit.ID
+		} else if opts.LastCommitID != "" {
+			lastKnownCommit, err = t.gitRepo.ConvertToGitID(opts.LastCommitID)
+			if err != nil {
+				return nil, isdir, fmt.Errorf("ConvertToSHA1: Invalid last commit ID: %w", err)
+			}
+		}
+
+		// Set the operation to "delete" so handleCheckErrors knows what to check
+		opts.Files[0].Operation = "delete"
+
+		// Check for errors (including SHA mismatch)
+		if err := handleCheckErrors(opts.Files[0], actualBaseCommit, lastKnownCommit); err != nil {
+			return nil, isdir, err
+		}
 	}
 
 	if err := t.SetDefaultIndex(); err != nil {
-		return isdir, err
+		return nil, isdir, err
 	}
 
 	if err := t.RefreshIndex(); err != nil {
-		return isdir, err
+		return nil, isdir, err
 	}
 
 	if err := t.RemoveDirectoryRecursively(treePath); err != nil {
-		return isdir, err
+		return nil, isdir, err
 	}
 
 	treeHash, err := t.WriteTree()
 	if err != nil {
-		return isdir, err
+		return nil, isdir, err
 	}
 
 	// Now commit the tree
@@ -148,16 +186,49 @@ func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user
 		commitHash, err = t.CommitTree("HEAD", author, committer, treeHash, message, opts.Signoff)
 	}
 	if err != nil {
-		return isdir, err
+		return nil, isdir, err
+	}
+
+	// A NewBranch can be specified for the file to be created/updated in a new branch.
+	// Check to make sure the branch does not already exist, otherwise we can't proceed.
+	// If we aren't branching to a new branch, make sure user can commit to the given branch
+	if opts.NewBranch != opts.OldBranch {
+		existingBranch, err := gitRepo.GetBranch(opts.NewBranch)
+		if existingBranch != nil {
+			return nil, isdir, git_model.ErrBranchAlreadyExists{
+				BranchName: opts.NewBranch,
+			}
+		}
+		if err != nil && !git.IsErrBranchNotExist(err) {
+			return nil, isdir, err
+		}
+	} else if err := VerifyBranchProtection(ctx, repo, doer, opts.OldBranch, []string{treePath}); err != nil {
+		return nil, isdir, err
 	}
 
 	// Then push this tree to NewBranch
 	if err := t.Push(doer, commitHash, opts.NewBranch); err != nil {
 		log.Error("%T %v", err, err)
-		return isdir, err
+		return nil, isdir, err
 	}
 
-	return isdir, err
+	commit, err := t.GetCommit(commitHash)
+	if err != nil {
+		return nil, isdir, err
+	}
+
+	filesResponse, err := GetFilesResponseFromCommit(ctx, repo, commit, opts.NewBranch, []string{treePath})
+	if err != nil {
+		return nil, isdir, err
+	}
+
+	if repo.IsEmpty {
+		if isEmpty, err := gitRepo.IsEmpty(); err == nil && !isEmpty {
+			_ = repo_model.UpdateRepositoryCols(ctx, &repo_model.Repository{ID: repo.ID, IsEmpty: false, DefaultBranch: opts.NewBranch}, "is_empty", "default_branch")
+		}
+	}
+
+	return filesResponse, isdir, err
 }
 
 // ChangeRepoFiles adds, updates or removes multiple files in the given repository

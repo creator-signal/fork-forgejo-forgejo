@@ -533,7 +533,7 @@ func DeleteFilePost(ctx *context.Context) {
 		return
 	}
 
-	isdir, err := files_service.DeleteFromRepo(ctx, ctx.Repo.Repository, ctx.Doer, &files_service.ChangeRepoFilesOptions{
+	_, isdir, err := files_service.DeleteFromRepo(ctx, ctx.Repo.Repository, ctx.Doer, &files_service.ChangeRepoFilesOptions{
 		LastCommitID: form.LastCommit,
 		OldBranch:    ctx.Repo.BranchName,
 		NewBranch:    branchName,
