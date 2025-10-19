@@ -141,6 +141,9 @@ func TestRepoFork(t *testing.T) {
 			assert.Equal(t, "/user2/repo1/forks", href)
 			assert.Equal(t, "0", strings.TrimSpace(forkButton.Text()))
 
+			ariaLabel, _ := forkButton.Attr("aria-label")
+			assert.Equal(t, "0 forks", ariaLabel)
+
 			t.Run("no fork button on empty repo", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
