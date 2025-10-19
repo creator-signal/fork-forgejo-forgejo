@@ -56,13 +56,108 @@ type ChangeRepoFilesOptions struct {
 	Committer    *IdentityOptions
 	Dates        *CommitDateOptions
 	Signoff      bool
-	IsDir        bool `default:"false"`
 }
 
 type RepoFileOptions struct {
 	treePath     string
 	fromTreePath string
 	executable   bool
+}
+
+// DeleteFromRepo removes a file or a folder from the given repository
+func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user_model.User, opts *ChangeRepoFilesOptions) (bool, error) {
+	err := repo.MustNotBeArchived()
+	if err != nil {
+		return false, err
+	}
+
+	// If no branch name is set, assume default branch
+	if opts.OldBranch == "" {
+		opts.OldBranch = repo.DefaultBranch
+	}
+	if opts.NewBranch == "" {
+		opts.NewBranch = opts.OldBranch
+	}
+
+	gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, repo)
+	if err != nil {
+		return false, err
+	}
+	defer closer.Close()
+
+	// oldBranch must exist for this operation
+	if _, err := gitRepo.GetBranch(opts.OldBranch); err != nil && !repo.IsEmpty {
+		return false, err
+	}
+
+	// This is how routers/web/web.go and routers/api/v1/repo/file.go delivers the data.
+	// So far, there is no other way to produce (e.g. the API)
+	// a command to initiate a path deletion.
+	if len(opts.Files) != 1 {
+		return false, err
+	}
+	treePathOriginal := CleanUploadFileName(opts.Files[0].TreePath)
+
+	// if we mean the root then we need to replace it with a "."
+	treePath := treePathOriginal
+	if treePathOriginal == "" {
+		treePath = "."
+	}
+
+	message := strings.TrimSpace(opts.Message)
+	author, committer := GetAuthorAndCommitterUsers(opts.Author, opts.Committer, doer)
+
+	t, err := NewTemporaryUploadRepository(ctx, repo)
+	if err != nil {
+		log.Error("NewTemporaryUploadRepository failed: %v", err)
+	}
+	defer t.Close()
+
+	if err := t.Clone(opts.OldBranch, false); err != nil {
+		return false, err
+	}
+
+	// Check if the path is a directory
+	isdir, err := t.IsDirectory(opts.OldBranch, treePathOriginal)
+	if err != nil {
+		return false, err
+	}
+
+	if err := t.SetDefaultIndex(); err != nil {
+		return isdir, err
+	}
+
+	if err := t.RefreshIndex(); err != nil {
+		return isdir, err
+	}
+
+	if err := t.RemoveDirectoryRecursively(treePath); err != nil {
+		return isdir, err
+	}
+
+	treeHash, err := t.WriteTree()
+	if err != nil {
+		return isdir, err
+	}
+
+	// Now commit the tree
+	var commitHash string
+	if opts.Dates != nil {
+		commitHash, err = t.CommitTreeWithDate("HEAD", author, committer, treeHash, message, opts.Signoff, opts.Dates.Author, opts.Dates.Committer)
+	} else {
+		commitHash, err = t.CommitTree("HEAD", author, committer, treeHash, message, opts.Signoff)
+	}
+	if err != nil {
+		return isdir, err
+	}
+
+	// Then push this tree to NewBranch
+	if err := t.Push(doer, commitHash, opts.NewBranch); err != nil {
+		log.Error("%T %v", err, err)
+		return isdir, err
+	}
+
+	return isdir, err
 }
 
 // ChangeRepoFiles adds, updates or removes multiple files in the given repository
@@ -89,69 +184,6 @@ func ChangeRepoFiles(ctx context.Context, repo *repo_model.Repository, doer *use
 	// oldBranch must exist for this operation
 	if _, err := gitRepo.GetBranch(opts.OldBranch); err != nil && !repo.IsEmpty {
 		return nil, err
-	}
-
-	if opts.IsDir {
-		// If opts.IsDir is true, then len(opts.Files) == 1
-		// and opts.Files[0].Operation == "delete" by design.
-		// This is how routers/web/web.go delivers the opts data.
-		// So far, there is no other way to produce (e.g. the API)
-		// a command to initiate a path deletion.
-		treePath := CleanUploadFileName(opts.Files[0].TreePath)
-
-		// if we mean the root then we need to replace it with a "."
-		if treePath == "" {
-			treePath = "."
-		}
-
-		message := strings.TrimSpace(opts.Message)
-		author, committer := GetAuthorAndCommitterUsers(opts.Author, opts.Committer, doer)
-
-		t, err := NewTemporaryUploadRepository(ctx, repo)
-		if err != nil {
-			log.Error("NewTemporaryUploadRepository failed: %v", err)
-		}
-		defer t.Close()
-
-		if err := t.Clone(opts.OldBranch, false); err != nil {
-			return nil, err
-		}
-
-		if err := t.SetDefaultIndex(); err != nil {
-			return nil, err
-		}
-
-		if err := t.RefreshIndex(); err != nil {
-			return nil, err
-		}
-
-		if err := t.RemoveDirectoryRecursively(treePath); err != nil {
-			return nil, err
-		}
-
-		treeHash, err := t.WriteTree()
-		if err != nil {
-			return nil, err
-		}
-
-		// Now commit the tree
-		var commitHash string
-		if opts.Dates != nil {
-			commitHash, err = t.CommitTreeWithDate("HEAD", author, committer, treeHash, message, opts.Signoff, opts.Dates.Author, opts.Dates.Committer)
-		} else {
-			commitHash, err = t.CommitTree("HEAD", author, committer, treeHash, message, opts.Signoff)
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		// Then push this tree to NewBranch
-		if err := t.Push(doer, commitHash, opts.NewBranch); err != nil {
-			log.Error("%T %v", err, err)
-			return nil, err
-		}
-
-		return nil, nil
 	}
 
 	var treePaths []string

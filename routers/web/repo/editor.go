@@ -533,28 +533,7 @@ func DeleteFilePost(ctx *context.Context) {
 		return
 	}
 
-	// Create temporary repository to check if path is a directory
-	tempRepo, err := files_service.NewTemporaryUploadRepository(ctx, ctx.Repo.Repository)
-	if err != nil {
-		ctx.ServerError("NewTemporaryUploadRepository", err)
-		return
-	}
-	defer tempRepo.Close()
-
-	// Clone the branch
-	err = tempRepo.Clone(ctx.Repo.BranchName, false)
-	if err != nil {
-		ctx.ServerError("tempRepo.Clone", err)
-		return
-	}
-
-	isdir, err := tempRepo.IsDirectory(ctx.Repo.BranchName, ctx.Repo.TreePath)
-	if err != nil {
-		ctx.ServerError("tempRepo.IsDirectory", err)
-		return
-	}
-
-	if _, err := files_service.ChangeRepoFiles(ctx, ctx.Repo.Repository, ctx.Doer, &files_service.ChangeRepoFilesOptions{
+	isdir, err := files_service.DeleteFromRepo(ctx, ctx.Repo.Repository, ctx.Doer, &files_service.ChangeRepoFilesOptions{
 		LastCommitID: form.LastCommit,
 		OldBranch:    ctx.Repo.BranchName,
 		NewBranch:    branchName,
@@ -564,14 +543,14 @@ func DeleteFilePost(ctx *context.Context) {
 				TreePath:  ctx.Repo.TreePath,
 			},
 		},
-		IsDir:     isdir, // Add this flag to indicate directory deletion
 		Message:   message,
 		Signoff:   form.Signoff,
 		Author:    gitIdentity,
 		Committer: gitIdentity,
-	}); err != nil {
+	})
+	if err != nil {
 		// This is where we handle all the errors thrown by repofiles.DeleteRepoFile
-		if git.IsErrNotExist(err) || models.IsErrRepoFileDoesNotExist(err) {
+		if git.IsErrNotExist(err) || models.IsErrRepoFileDoesNotExist(err) || git.IsErrorExitCode(err, 128) {
 			ctx.RenderWithErr(ctx.Tr("repo.editor.file_deleting_no_longer_exists", ctx.Repo.TreePath), tplDeleteFile, &form)
 		} else if models.IsErrFilenameInvalid(err) {
 			ctx.Data["Err_TreePath"] = true
