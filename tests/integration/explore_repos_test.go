@@ -7,6 +7,7 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"forgejo.org/tests"
@@ -15,7 +16,7 @@ import (
 )
 
 func testExploreStarForkCounters(t *testing.T, repoQuery, expectedStars, expectedForks string) {
-	resp := MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/explore/repos?search=%s", repoQuery)), http.StatusOK)
+	resp := MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/explore/repos?search=%s", url.QueryEscape(repoQuery))), http.StatusOK)
 
 	repoListEntry := NewHTMLParser(t, resp.Body).Find(fmt.Sprintf(".flex-list > .flex-item:has(a[href='/%s'])", repoQuery))
 	starsAriaLabel, _ := repoListEntry.Find("a[href$='/stars']").Attr("aria-label")
