@@ -887,12 +887,13 @@ func DeleteFile(ctx *context.APIContext) {
 		apiOpts.BranchName = ctx.Repo.Repository.DefaultBranch
 	}
 
+	treePath := ctx.Params("*")
 	opts := &files_service.ChangeRepoFilesOptions{
 		Files: []*files_service.ChangeRepoFile{
 			{
 				Operation: "delete",
 				SHA:       apiOpts.SHA,
-				TreePath:  ctx.Params("*"),
+				TreePath:  treePath,
 			},
 		},
 		Message:   apiOpts.Message,
@@ -939,7 +940,7 @@ func DeleteFile(ctx *context.APIContext) {
 	}
 
 	// Check if the path is a directory
-	isdir, err := tempRepo.IsDirectory(apiOpts.BranchName, ctx.Params("*"))
+	isdir, err := tempRepo.IsDirectory(apiOpts.BranchName, treePath)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "tempRepo.IsDirectory", err)
 		return
