@@ -17,7 +17,7 @@ import (
 func testExploreStarForkCounters(t *testing.T, repoQuery, expectedStars, expectedForks string) {
 	resp := MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/explore/repos?search=%s", repoQuery)), http.StatusOK)
 
-	repoListEntry := NewHTMLParser(t, resp.Body).Find(".flex-list > .flex-item:first-child")
+	repoListEntry := NewHTMLParser(t, resp.Body).Find(fmt.Sprintf(".flex-list > .flex-item:has(a[href='/%s'])", repoQuery))
 	starsAriaLabel, _ := repoListEntry.Find("a[href$='/stars']").Attr("aria-label")
 	forksAriaLabel, _ := repoListEntry.Find("a[href$='/forks']").Attr("aria-label")
 
