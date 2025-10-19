@@ -7,7 +7,6 @@ package integration
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"testing"
 
 	"forgejo.org/tests"
@@ -15,10 +14,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testExploreStarForkCounters(t *testing.T, repoQuery, expectedStars, expectedForks string) {
-	resp := MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/explore/repos?search=%s", url.QueryEscape(repoQuery))), http.StatusOK)
+func testExploreStarForkCounters(t *testing.T, query, inspectedRepo, expectedStars, expectedForks string) {
+	resp := MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/explore/repos?search=%s", query)), http.StatusOK)
 
-	repoListEntry := NewHTMLParser(t, resp.Body).Find(fmt.Sprintf(".flex-list > .flex-item:has(a[href='/%s'])", repoQuery))
+	repoListEntry := NewHTMLParser(t, resp.Body).Find(fmt.Sprintf(".flex-list > .flex-item:has(a[href='/%s'])", inspectedRepo))
 	starsAriaLabel, _ := repoListEntry.Find("a[href$='/stars']").Attr("aria-label")
 	forksAriaLabel, _ := repoListEntry.Find("a[href$='/forks']").Attr("aria-label")
 
@@ -35,7 +34,7 @@ func TestExploreRepos(t *testing.T) {
 	t.Run("Counters", func(t *testing.T) {
 		repo := "user2/repo1"
 		// Initial state: zeroes in the counters
-		testExploreStarForkCounters(t, repo, "0 stars", "0 forks")
+		testExploreStarForkCounters(t, "repo1", repo, "0 stars", "0 forks")
 
 		// Star the repo
 		session := loginUser(t, "user5")
@@ -44,7 +43,7 @@ func TestExploreRepos(t *testing.T) {
 		}), http.StatusOK)
 
 		// Stars counter should have incremented
-		testExploreStarForkCounters(t, repo, "1 star", "0 forks")
+		testExploreStarForkCounters(t, "repo1", repo, "1 star", "0 forks")
 	})
 
 	t.Run("Persistent parameters", func(t *testing.T) {
