@@ -461,7 +461,7 @@ func (u *User) IsUser() bool {
 	return u.Type == UserTypeIndividual || u.Type == UserTypeBot
 }
 
-func IsUserById(ctx context.Context, uid int64) (bool, error) {
+func IsUserByID(ctx context.Context, uid int64) (bool, error) {
 	return db.GetEngine(ctx).
 		Where("id=?", uid).
 		In("type", UserTypeIndividual, UserTypeBot).
