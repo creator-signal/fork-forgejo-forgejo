@@ -1,5 +1,6 @@
 // Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
+// AI was used: see https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md for AI Agreement
 package integration
 
 import (
@@ -7,8 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/json"
 	api "forgejo.org/modules/structs"
 
 	"github.com/stretchr/testify/assert"
@@ -387,27 +385,6 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 			"dir2/dir4/file4.txt",
 		}
 
-		// Read and parse the locale file
-		localeFile, err := os.ReadFile(filepath.Join("options", "locale_next", "locale_en-US.json"))
-		if err != nil {
-			t.Fatalf("Failed to read locale file: %v", err)
-		}
-
-		var localeData map[string]any
-		if err := json.Unmarshal(localeFile, &localeData); err != nil {
-			t.Fatalf("Failed to parse locale file: %v", err)
-		}
-
-		stringDeleteFolder, ok := localeData["repo.editor.delete_folder"].(string)
-		if !ok {
-			t.Fatal("Key not found in locale file or not a string")
-		}
-
-		stringRepoContent, ok := localeData["repo.editor.delete_repo_content"].(string)
-		if !ok {
-			t.Fatal("Key not found in locale file or not a string")
-		}
-
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1}) // public repo of user3
 
@@ -429,7 +406,7 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 		doc := NewHTMLParser(t, resp.Body)
 
 		// Check if delete button exists -> should exist
-		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringDeleteFolder)).First()
+		deleteButton := doc.Find("a[href*='/_delete/']").First()
 		if deleteButton.Length() == 0 {
 			t.Error("Delete folder button not found")
 		}
@@ -442,7 +419,7 @@ func TestIfDeleteButtonIsThereUser(t *testing.T) {
 		doc = NewHTMLParser(t, resp.Body)
 
 		// Check if delete button exists -> should exist
-		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringRepoContent)).First()
+		deleteButton = doc.Find("a[href*='/_delete/']").First()
 		if deleteButton.Length() == 0 {
 			t.Error("Delete path button not found")
 		}
@@ -456,27 +433,6 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 			"dir2/file2.txt",
 			"dir2/dir3/file3.txt",
 			"dir2/dir4/file4.txt",
-		}
-
-		// Read and parse the locale file
-		localeFile, err := os.ReadFile(filepath.Join("options", "locale_next", "locale_en-US.json"))
-		if err != nil {
-			t.Fatalf("Failed to read locale file: %v", err)
-		}
-
-		var localeData map[string]any
-		if err := json.Unmarshal(localeFile, &localeData); err != nil {
-			t.Fatalf("Failed to parse locale file: %v", err)
-		}
-
-		stringDeleteFolder, ok := localeData["repo.editor.delete_folder"].(string)
-		if !ok {
-			t.Fatal("Key not found in locale file or not a string")
-		}
-
-		stringRepoContent, ok := localeData["repo.editor.delete_repo_content"].(string)
-		if !ok {
-			t.Fatal("Key not found in locale file or not a string")
 		}
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -500,7 +456,7 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 		doc := NewHTMLParser(t, resp.Body)
 
 		// Check if delete button exists -> should NOT exist
-		deleteButton := doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringDeleteFolder)).First()
+		deleteButton := doc.Find("a[href*='/_delete/']").First()
 		if deleteButton.Length() != 0 {
 			t.Error("Delete path button found")
 		}
@@ -513,7 +469,7 @@ func TestIfDeleteButtonIsThereAnonymous(t *testing.T) {
 		doc = NewHTMLParser(t, resp.Body)
 
 		// Check if delete button xists -> should NOT exist
-		deleteButton = doc.Find(fmt.Sprintf(`[data-tooltip-content="%s"]`, stringRepoContent)).First()
+		deleteButton = doc.Find("a[href*='/_delete/']").First()
 		if deleteButton.Length() != 0 {
 			t.Error("Delete path button found")
 		}

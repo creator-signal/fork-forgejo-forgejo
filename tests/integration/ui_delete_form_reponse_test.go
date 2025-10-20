@@ -1,5 +1,6 @@
 // Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
+// AI was used: see https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md for AI Agreement
 package integration
 
 import (

@@ -90,25 +90,14 @@
 								{{ctx.Locale.Tr "repo.editor.upload_file"}}
 							</a>
 							{{end}}
+							<a class="item"
+							href="{{.RepoLink}}/_delete/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}">
 							{{if $isHomepage}}
-								{{if (not .IsViewFile)}}
-									{{if and .CanDeleteFile (not .IsBlame)}}
-										<a class="item"
-										href="{{.RepoLink}}/_delete/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
-										data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_repo_content"}}">
-										{{ctx.Locale.Tr "repo.editor.delete_repo_content"}}</a>
-									{{end}}
-								{{end}}
+								{{ctx.Locale.Tr "repo.editor.delete_repo_content"}}
 							{{else}}
-								{{if (not .IsViewFile)}}
-									{{if and .CanDeleteFile (not .IsBlame)}}
-										<a class="item"
-										href="{{.RepoLink}}/_delete/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}"
-										data-tooltip-content="{{ctx.Locale.Tr "repo.editor.delete_folder"}}">
-										{{ctx.Locale.Tr "repo.editor.delete_folder"}}</a>
-									{{end}}
-								{{end}}
+								{{ctx.Locale.Tr "repo.editor.delete_folder"}}
 							{{end}}
+							</a>
 							<a class="item" href="{{.RepoLink}}/_diffpatch/{{.BranchName | PathEscapeSegments}}/{{.TreePath | PathEscapeSegments}}">
 								{{ctx.Locale.Tr "repo.editor.patch"}}
 							</a>

@@ -66,6 +66,7 @@ type RepoFileOptions struct {
 
 // DeleteFromRepo removes a file or a folder from the given repository
 func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user_model.User, opts *ChangeRepoFilesOptions) (*structs.FilesResponse, bool, error) {
+	// AI was used: see https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md for AI Agreement
 	err := repo.MustNotBeArchived()
 	if err != nil {
 		return nil, false, err
@@ -110,6 +111,7 @@ func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user
 	t, err := NewTemporaryUploadRepository(ctx, repo)
 	if err != nil {
 		log.Error("NewTemporaryUploadRepository failed: %v", err)
+		return nil, false, err
 	}
 	defer t.Close()
 

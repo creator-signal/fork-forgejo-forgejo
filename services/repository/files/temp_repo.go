@@ -415,8 +415,9 @@ func (t *TemporaryUploadRepository) GetTreeEntryType(treeish, path string) (stri
 			Stderr: stdErr,
 		}); err != nil {
 		// Check if it's a "not found" error vs a real error
-		if strings.Contains(stdErr.String(), "not a valid object name") ||
-			strings.Contains(stdErr.String(), "does not exist") {
+		lowerErr := strings.ToLower(stdErr.String())
+		if strings.Contains(lowerErr, "not a valid object name") ||
+			strings.Contains(lowerErr, "does not exist") {
 			return "", nil
 		}
 		log.Error("Unable to run git cat-file for temporary repo: %s (%s) Error: %v\nstdout: %s\nstderr: %s",
