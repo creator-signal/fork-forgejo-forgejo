@@ -12,7 +12,7 @@ import {screenshot} from './shared/screenshots.ts';
 test.use({user: 'user2'});
 
 test('Create branch from commit', async ({page}) => {
-  let response = await page.goto('/user2/mentions-highlighted/commit/2ad332c2bf9ff2bb26f3c6e3c53502679a183915');
+  let response = await page.goto('/user2/repo1/commit/65f1bf27bc3bf70f64657658635e66094edbcb4d');
   expect(response?.status()).toBe(200);
 
   // Open create branch modal.
@@ -35,12 +35,12 @@ test('Create branch from commit', async ({page}) => {
   await page.getByRole('button', {name: 'Create branch'}).click();
 
   // Verify branch exists.
-  response = await page.goto(`/user2/mentions-highlighted/src/branch/${branchName}`);
+  response = await page.goto(`/user2/repo1/src/branch/${branchName}`);
   expect(response?.status()).toBe(200);
 });
 
 test('Create tag from commit', async ({page}) => {
-  let response = await page.goto('/user2/mentions-highlighted/commit/2ad332c2bf9ff2bb26f3c6e3c53502679a183915');
+  let response = await page.goto('/user2/repo1/commit/65f1bf27bc3bf70f64657658635e66094edbcb4d');
   expect(response?.status()).toBe(200);
 
   // Open create tag modal.
@@ -63,6 +63,6 @@ test('Create tag from commit', async ({page}) => {
   await page.getByRole('button', {name: 'Create tag'}).click();
 
   // Verify tag exists.
-  response = await page.goto(`/user2/mentions-highlighted/releases/tag/${tagName}`);
+  response = await page.goto(`/user2/repo1/releases/tag/${tagName}`);
   expect(response?.status()).toBe(200);
 });
