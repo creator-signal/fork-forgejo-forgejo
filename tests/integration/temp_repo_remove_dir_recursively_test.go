@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRemoveDirectoryRecursively(t *testing.T) {
+func TestRemoveRecursively(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -67,7 +67,7 @@ func TestRemoveDirectoryRecursively(t *testing.T) {
 			require.NoError(t, err)
 
 			// Remove the directory recursively
-			err = tempRepo.RemoveDirectoryRecursively(treePathDirDel)
+			err = tempRepo.RemoveRecursively(treePathDirDel)
 			require.NoError(t, err)
 
 			// Write the tree
@@ -131,7 +131,7 @@ func TestRemoveDirectoryRecursively(t *testing.T) {
 			require.NoError(t, err)
 
 			// Remove the directory recursively
-			err = tempRepo.RemoveDirectoryRecursively(treePathDirDel)
+			err = tempRepo.RemoveRecursively(treePathDirDel)
 			require.NoError(t, err)
 
 			// Write the tree
@@ -189,7 +189,7 @@ func TestRemoveDirectoryRecursively(t *testing.T) {
 			require.NoError(t, err)
 
 			// Remove the directory recursively
-			err = tempRepo.RemoveDirectoryRecursively(treePathDirDel)
+			err = tempRepo.RemoveRecursively(treePathDirDel)
 			require.Error(t, err, "Should fail when removing non-existent directory")
 			require.Contains(t, err.Error(), "Unable to remove directory")
 		})
@@ -233,7 +233,7 @@ func TestRemoveDirectoryRecursively(t *testing.T) {
 			require.NoError(t, err)
 
 			// Remove the directory recursively
-			err = tempRepo.RemoveDirectoryRecursively(treePathDirDel)
+			err = tempRepo.RemoveRecursively(treePathDirDel)
 			require.NoError(t, err)
 
 			// Write the tree
@@ -297,7 +297,7 @@ func TestRemoveDirectoryRecursively(t *testing.T) {
 			require.NoError(t, err)
 
 			// Remove the directory recursively
-			err = tempRepo.RemoveDirectoryRecursively(treePathDirDel)
+			err = tempRepo.RemoveRecursively(treePathDirDel)
 			require.NoError(t, err)
 
 			// Write the tree
@@ -368,7 +368,7 @@ func TestRemoveDirectoryRecursively(t *testing.T) {
 			require.NoError(t, err)
 
 			// Remove the directory recursively
-			err = tempRepo.RemoveDirectoryRecursively(treePathDirDel)
+			err = tempRepo.RemoveRecursively(treePathDirDel)
 			require.NoError(t, err)
 
 			// Write the tree
@@ -438,7 +438,7 @@ func TestRemoveDirectoryRecursively(t *testing.T) {
 			require.NoError(t, err)
 
 			// Remove the directory recursively
-			err = tempRepo.RemoveDirectoryRecursively(treePathDirDel)
+			err = tempRepo.RemoveRecursively(treePathDirDel)
 			require.NoError(t, err)
 
 			// Write the tree
@@ -514,7 +514,7 @@ func TestRemoveDirectoryRecursively(t *testing.T) {
 			require.NoError(t, err)
 
 			// Remove the directory recursively
-			err = tempRepo.RemoveDirectoryRecursively(treePathDirDel)
+			err = tempRepo.RemoveRecursively(treePathDirDel)
 			require.NoError(t, err)
 
 			// Write the tree

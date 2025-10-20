@@ -171,7 +171,7 @@ func DeleteFromRepo(ctx context.Context, repo *repo_model.Repository, doer *user
 		return nil, isdir, err
 	}
 
-	if err := t.RemoveDirectoryRecursively(treePath); err != nil {
+	if err := t.RemoveRecursively(treePath); err != nil {
 		return nil, isdir, err
 	}
 

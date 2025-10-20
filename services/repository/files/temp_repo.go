@@ -383,7 +383,7 @@ func (t *TemporaryUploadRepository) GetCommit(commitID string) (*git.Commit, err
 }
 
 // Remove the directory recursively
-func (t *TemporaryUploadRepository) RemoveDirectoryRecursively(directory string) error {
+func (t *TemporaryUploadRepository) RemoveRecursively(directory string) error {
 	stdOut := new(bytes.Buffer)
 	stdErr := new(bytes.Buffer)
 	stdIn := new(bytes.Buffer)

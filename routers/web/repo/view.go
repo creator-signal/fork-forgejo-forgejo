@@ -1197,7 +1197,6 @@ PostRecentBranchCheck:
 	} else {
 		ctx.Data["CodeSearchOptions"] = git.GrepSearchOptions
 	}
-
 	ctx.HTML(http.StatusOK, tplRepoHome)
 }
 
