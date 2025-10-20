@@ -123,19 +123,19 @@ test('Visual properties', async ({browser, isMobile}) => {
   expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
 
   async function evaluateDropdownItems(page, selector, direction, height) {
-    const computedStyles = await page.locator(selector).evaluateAll(items =>
-      items.map(item => {
+    const computedStyles = await page.locator(selector).evaluateAll((items) =>
+      items.map((item) => {
         const s = getComputedStyle(item);
         return {
           direction: s.direction,
           height: s.height,
         };
-      })
+      }),
     );
-    computedStyles.forEach(cs => {
+    for (const cs of computedStyles) {
       expect(cs.direction).toBe(direction);
       expect(cs.height).toBe(height);
-    });
+    }
   }
 
   // Direction and item height
