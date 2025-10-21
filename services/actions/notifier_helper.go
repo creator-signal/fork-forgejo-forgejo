@@ -408,7 +408,7 @@ func handleWorkflows(
 				run.RepoID,
 				run.Ref,
 				run.WorkflowID,
-				run.Event,
+				webhook_module.HookEventType(run.TriggerEvent),
 			); err != nil {
 				log.Error("CancelPreviousJobs: %v", err)
 			}
