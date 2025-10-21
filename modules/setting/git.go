@@ -27,7 +27,6 @@ var Git = struct {
 	GCArgs                    []string `ini:"GC_ARGS" delim:" "`
 	EnableAutoGitWireProtocol bool
 	PullRequestPushMessage    bool
-	LargeObjectThreshold      int64
 	DisablePartialClone       bool
 	Timeout                   struct {
 		Default int
@@ -50,7 +49,6 @@ var Git = struct {
 	GCArgs:                    []string{},
 	EnableAutoGitWireProtocol: true,
 	PullRequestPushMessage:    true,
-	LargeObjectThreshold:      1024 * 1024,
 	DisablePartialClone:       false,
 	Timeout: struct {
 		Default int
