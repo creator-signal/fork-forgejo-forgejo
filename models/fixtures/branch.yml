@@ -6,6 +6,7 @@
   commit_message: 'first commit'
   commit_time: 978307100
   pusher_id: 1
+  is_deleted: true
   deleted_by_id: 1
   deleted_unix: 978307200
 
@@ -17,6 +18,7 @@
   commit_message: 'second commit'
   commit_time: 978307100
   pusher_id: 1
+  is_deleted: true
   deleted_by_id: 99
   deleted_unix: 978307200
 
@@ -28,6 +30,7 @@
   commit_message: 'make pull5 outdated'
   commit_time: 1579166279
   pusher_id: 1
+  is_deleted: false
   deleted_by_id: 0
   deleted_unix: 0
 
@@ -39,6 +42,7 @@
   commit_message: 'Initial commit'
   commit_time: 1489927679
   pusher_id: 1
+  is_deleted: true
   deleted_by_id: 0
   deleted_unix: 0
 
@@ -50,6 +54,7 @@
   commit_message: 'add Readme'
   commit_time: 1588147171
   pusher_id: 13
+  is_deleted: false
   deleted_by_id: 0
   deleted_unix: 0
 
@@ -61,5 +66,6 @@
   commit_message: 'Add workflow test-dispatch.yml'
   commit_time: 1717317522
   pusher_id: 1
+  is_deleted: false
   deleted_by_id: 0
   deleted_unix: 0
