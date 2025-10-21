@@ -28,7 +28,6 @@ var Git = struct {
 	EnableAutoGitWireProtocol bool
 	PullRequestPushMessage    bool
 	LargeObjectThreshold      int64
-	DisableCoreProtectNTFS    bool
 	DisablePartialClone       bool
 	Timeout                   struct {
 		Default int
