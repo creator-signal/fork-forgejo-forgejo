@@ -153,18 +153,37 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 			"markup.filepreview.line", startLine,
 			template.HTML(commitLinkBuffer.String()),
 		)
-
-		preview.lineOffset = startLine - 1
 	} else {
 		startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
 		endLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[1], "L"))
+
+		dataRc, err := fileBlob.DataAsync()
+		if err != nil {
+			return nil
+		}
+		defer dataRc.Close()
+
+		scanner := bufio.NewScanner(dataRc)
+		rawFileLineCount := 0
+
+		for scanner.Scan() {
+        	rawFileLineCount++
+    	}
+		if scanner.Err() != nil {
+			return nil
+		}
+
+		if endLine > rawFileLineCount {
+			endLine = rawFileLineCount
+		}
+
 		preview.subTitle = locale.Tr(
 			"markup.filepreview.lines", startLine, endLine,
 			template.HTML(commitLinkBuffer.String()),
 		)
-
-		preview.lineOffset = startLine - 1
 	}
+	
+	preview.lineOffset = startLine - 1
 
 	lineCount := endLine - (startLine - 1)
 	if startLine < 1 || endLine < 1 || lineCount < 1 {
