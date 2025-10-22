@@ -1048,3 +1048,20 @@ func TestGetUserByEmailSimple(t *testing.T) {
 		assert.Nil(t, u)
 	})
 }
+
+func TestIsUserConsistency(t *testing.T) {
+	defer unittest.OverrideFixtures("models/user/fixtures/")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	test := func(userID int64) {
+		user, err := user_model.GetUserByID(t.Context(), userID)
+		require.NoError(t, err)
+		is_user, err := user_model.IsUserByID(t.Context(), userID)
+		require.NoError(t, err)
+		assert.Equal(t, user.IsUser(), is_user)
+	}
+
+	test(1)
+	test(1041)
+	test(1042)
+}
