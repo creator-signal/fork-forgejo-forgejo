@@ -55,7 +55,7 @@ require (
 	github.com/gogs/go-gogs-client v0.0.0-20210131175652-1d7215cd8d85
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
-	github.com/google/go-github/v64 v64.0.0
+	github.com/google/go-github/v74 v74.0.0
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/feeds v1.2.0
@@ -183,7 +183,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-github/v74 v74.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/go-tpm v0.9.5 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
