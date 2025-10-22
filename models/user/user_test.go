@@ -1056,9 +1056,9 @@ func TestIsUserConsistency(t *testing.T) {
 	test := func(userID int64) {
 		user, err := user_model.GetUserByID(t.Context(), userID)
 		require.NoError(t, err)
-		is_user, err := user_model.IsUserByID(t.Context(), userID)
+		isUser, err := user_model.IsUserByID(t.Context(), userID)
 		require.NoError(t, err)
-		assert.Equal(t, user.IsUser(), is_user)
+		assert.Equal(t, user.IsUser(), isUser)
 	}
 
 	test(1)
