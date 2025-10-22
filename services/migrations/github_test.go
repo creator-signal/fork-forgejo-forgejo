@@ -463,6 +463,9 @@ func TestGithubIssuePagination(t *testing.T) {
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
 	token := os.Getenv("GITHUB_READ_TOKEN")
+	if token == "" {
+		t.Skip()
+	}
 
 	downloader := NewGithubDownloaderV3(t.Context(), "https://api.github.com", true, true, "", "", token, "galaxyproject", "galaxy")
 	downloader.SkipReactions = true
