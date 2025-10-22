@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"html/template"
 	"io"
 	"net/url"
@@ -164,9 +163,6 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 		endLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[1], "L"))
 	}
 
-	fmt.Printf("startLine: %v\n", startLine)
-	fmt.Printf("endLine: %v\n", endLine)
-
 	// simple inspection
 	if startLine < 1 || endLine < 1 || startLine > endLine {
 		return nil
@@ -213,9 +209,6 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 		startLine = 1
 		endLine = rawFileLine
 	}
-
-	fmt.Printf("startLine: %v\n", startLine)
-	fmt.Printf("endLine: %v\n", endLine)
 
 	if startLine == endLine {
 		preview.subTitle = locale.Tr(

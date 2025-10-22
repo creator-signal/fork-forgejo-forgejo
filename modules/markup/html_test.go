@@ -875,6 +875,39 @@ func TestRender_FilePreview(t *testing.T) {
 		)
 	})
 
+	t.Run("single-line-and-endline-grather-file-lines", func(t *testing.T) {
+		testRender(
+			util.URLJoin(markup.TestRepoURL, "src", "commit", "4c1aaf56bcb9f39dcf65f3f250726850aed13cd6", "single-line.txt")+"#L1-L99",
+			`<p></p>`+
+				`<div class="file-preview-box">`+
+				`<div class="header">`+
+				`<div>`+
+				`<a href="http://localhost:3000/gogits/gogs/" rel="nofollow">gogits/gogs</a> – `+
+				`<a href="http://localhost:3000/gogits/gogs/src/commit/4c1aaf56bcb9f39dcf65f3f250726850aed13cd6/single-line.txt#L1-L99" class="muted" rel="nofollow">single-line.txt</a>`+
+				`</div>`+
+				`<span class="text grey">`+
+				`Line 1 in <a href="http://localhost:3000/gogits/gogs/src/commit/4c1aaf56bcb9f39dcf65f3f250726850aed13cd6" class="text black" rel="nofollow">gogits/gogs@4c1aaf5</a>`+
+				`</span>`+
+				`</div>`+
+				`<div class="ui table">`+
+				`<table class="file-preview">`+
+				`<tbody>`+
+				`<tr>`+
+				`<td class="lines-num"><span data-line-number="1"></span></td>`+
+				`<td class="lines-code chroma"><code class="code-inner">A`+`</code></td>`+
+				`</tr>`+
+				`</tbody>`+
+				`</table>`+
+				`</div>`+
+				`</div>`+
+				`<p></p>`,
+			map[string]string{
+				"user": "gogits",
+				"repo": "gogs2",
+			},
+		)
+	})
+
 	t.Run("AppSubURL", func(t *testing.T) {
 		urlWithSub := util.URLJoin(markup.TestAppURL, "sub", markup.TestOrgRepo, "src", "commit", sha, "path", "to", "file.go") + "#L2-L3"
 
