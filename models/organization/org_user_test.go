@@ -145,7 +145,7 @@ func TestAddOrgUser(t *testing.T) {
 	testFailure := func(orgID, userID int64, isPublic bool) {
 		org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: orgID})
 		expectedNumMembers := org.NumMembers
-		require.Error(t, user_model.ErrUserWrongType{UID: userID}, organization.AddOrgUser(db.DefaultContext, orgID, userID))
+		require.ErrorIs(t, organization.AddOrgUser(db.DefaultContext, orgID, userID), user_model.ErrUserWrongType{UID: userID})
 		ou := &organization.OrgUser{OrgID: orgID, UID: userID}
 		unittest.AssertNotExistsBean(t, ou)
 		org = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: orgID})
