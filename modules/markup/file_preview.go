@@ -6,6 +6,8 @@ package markup
 import (
 	"bufio"
 	"bytes"
+	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"net/url"
@@ -131,8 +133,6 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 
 	preview.title = template.HTML(titleBuffer.String())
 
-	lineSpecs := strings.Split(hash, "-")
-
 	commitLinkBuffer := new(bytes.Buffer)
 	commitLinkText := commitSha[0:7]
 	if isExternRef {
@@ -144,56 +144,7 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 		log.Error("failed to render commitLink: %v", err)
 	}
 
-	var startLine, endLine int
-
-	if len(lineSpecs) == 1 {
-		startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
-		endLine = startLine
-		preview.subTitle = locale.Tr(
-			"markup.filepreview.line", startLine,
-			template.HTML(commitLinkBuffer.String()),
-		)
-	} else {
-		startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
-		endLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[1], "L"))
-
-		dataRc, err := fileBlob.DataAsync()
-		if err != nil {
-			return nil
-		}
-		defer dataRc.Close()
-
-		scanner := bufio.NewScanner(dataRc)
-		rawFileLineCount := 0
-
-		for scanner.Scan() {
-        	rawFileLineCount++
-    	}
-		if scanner.Err() != nil {
-			return nil
-		}
-
-		if endLine > rawFileLineCount {
-			endLine = rawFileLineCount
-		}
-
-		preview.subTitle = locale.Tr(
-			"markup.filepreview.lines", startLine, endLine,
-			template.HTML(commitLinkBuffer.String()),
-		)
-	}
-	
-	preview.lineOffset = startLine - 1
-
-	lineCount := endLine - (startLine - 1)
-	if startLine < 1 || endLine < 1 || lineCount < 1 {
-		return nil
-	}
-
-	if setting.FilePreviewMaxLines > 0 && lineCount > setting.FilePreviewMaxLines {
-		preview.isTruncated = true
-		lineCount = setting.FilePreviewMaxLines
-	}
+	lineSpecs := strings.Split(hash, "-")
 
 	dataRc, err := fileBlob.DataAsync()
 	if err != nil {
@@ -202,26 +153,112 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 	defer dataRc.Close()
 
 	reader := bufio.NewReader(dataRc)
+	lineBuffer := new(bytes.Buffer)
 
-	// skip all lines until we find our startLine
-	for i := 1; i < startLine; i++ {
-		_, err := reader.ReadBytes('\n')
-		if err != nil {
-			return nil
-		}
+	var startLine, endLine int
+	startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
+
+	if len(lineSpecs) != 1 {
+		endLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[1], "L"))
+	}
+	fmt.Printf("startLine: %v\n", startLine)
+	fmt.Printf("endLine: %v\n", endLine)
+
+	// simple inspection
+	if startLine < 1 || endLine < 1 || startLine > endLine {
+		return nil
 	}
 
-	// capture the lines we're interested in
-	lineBuffer := new(bytes.Buffer)
-	for i := 0; i < lineCount; i++ {
+	rawFileLine := 0
+	// for {
+	// 	buf, err := reader.ReadBytes('\n')
+
+	// 	if errors.Is(err, io.EOF) {
+	// 		lineBuffer.Write(buf)
+	// 		// If startLine is greater than the number of lines in the file, preview all line
+	// 		if startLine > rawFileLine {
+	// 			startLine = 1
+	// 			endLine = rawFileLine
+	// 			break
+	// 		}
+	// 		// If there is endLine and it is greater than the number of lines in the file,
+	// 		// set endLine to the number of lines in the file
+	// 		if len(lineSpecs) != 1 && endLine > rawFileLine {
+	// 			endLine = rawFileLine
+	// 		}
+
+	// 		break
+	// 	}
+
+	// 	if err != nil {
+	// 		fmt.Println("break3")
+	// 		return nil
+	// 	}
+
+	// 	// If setting.FilePreviewMaxLines is set and the read line is greater than setting.FilePreviewMaxLines
+	// 	if setting.FilePreviewMaxLines > 0 && rawFileLine - startLine > setting.FilePreviewMaxLines {
+	// 		fmt.Println("break4")
+	// 		preview.isTruncated = true
+	// 		break
+	// 	}
+
+	// 	if startLine >= rawFileLine {
+	// 		lineBuffer.Write(buf)
+	// 	}
+
+	// 	rawFileLine++
+	// }
+	for {
 		buf, err := reader.ReadBytes('\n')
-		if err == nil || err == io.EOF {
+		
+		if err != nil && !errors.Is(err, io.EOF) {
+			return nil
+		}
+		
+		if errors.Is(err, io.EOF) {
+			if len(buf) > 0 {
+				lineBuffer.Write(buf)
+				rawFileLine++
+			}
+			break
+		}
+		
+		currentLine := rawFileLine + 1
+		if currentLine >= startLine && currentLine <= endLine {
 			lineBuffer.Write(buf)
 		}
-		if err != nil {
+		
+		rawFileLine++
+		
+		// Row limit check
+		if setting.FilePreviewMaxLines > 0 && (currentLine - startLine) >= setting.FilePreviewMaxLines {
+			preview.isTruncated = true
 			break
 		}
 	}
+
+	// After the cycle is completed, the boundary conditions are uniformly processed
+	if endLine > rawFileLine {
+		endLine = rawFileLine
+	}
+	if startLine > rawFileLine {
+		startLine = 1
+		endLine = rawFileLine
+	}
+
+	if len(lineSpecs) == 1 || startLine == endLine {
+		preview.subTitle = locale.Tr(
+			"markup.filepreview.line", startLine,
+			template.HTML(commitLinkBuffer.String()),
+		)
+	} else {
+		preview.subTitle = locale.Tr(
+			"markup.filepreview.lines", startLine, endLine,
+			template.HTML(commitLinkBuffer.String()),
+		)
+	}
+	
+	preview.lineOffset = startLine - 1	
 
 	// highlight the file...
 	fileContent, _, err := highlight.File(fileBlob.Name(), language, lineBuffer.Bytes())
