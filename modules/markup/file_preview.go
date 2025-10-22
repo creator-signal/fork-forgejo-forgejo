@@ -158,9 +158,12 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 	var startLine, endLine int
 	startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
 
-	if len(lineSpecs) != 1 {
+	if len(lineSpecs) == 1 {
+		endLine = startLine
+	} else {
 		endLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[1], "L"))
 	}
+
 	fmt.Printf("startLine: %v\n", startLine)
 	fmt.Printf("endLine: %v\n", endLine)
 
@@ -168,71 +171,36 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 	if startLine < 1 || endLine < 1 || startLine > endLine {
 		return nil
 	}
-
+	
 	rawFileLine := 0
-	// for {
-	// 	buf, err := reader.ReadBytes('\n')
-
-	// 	if errors.Is(err, io.EOF) {
-	// 		lineBuffer.Write(buf)
-	// 		// If startLine is greater than the number of lines in the file, preview all line
-	// 		if startLine > rawFileLine {
-	// 			startLine = 1
-	// 			endLine = rawFileLine
-	// 			break
-	// 		}
-	// 		// If there is endLine and it is greater than the number of lines in the file,
-	// 		// set endLine to the number of lines in the file
-	// 		if len(lineSpecs) != 1 && endLine > rawFileLine {
-	// 			endLine = rawFileLine
-	// 		}
-
-	// 		break
-	// 	}
-
-	// 	if err != nil {
-	// 		fmt.Println("break3")
-	// 		return nil
-	// 	}
-
-	// 	// If setting.FilePreviewMaxLines is set and the read line is greater than setting.FilePreviewMaxLines
-	// 	if setting.FilePreviewMaxLines > 0 && rawFileLine - startLine > setting.FilePreviewMaxLines {
-	// 		fmt.Println("break4")
-	// 		preview.isTruncated = true
-	// 		break
-	// 	}
-
-	// 	if startLine >= rawFileLine {
-	// 		lineBuffer.Write(buf)
-	// 	}
-
-	// 	rawFileLine++
-	// }
+	linesRead := 0
 	for {
 		buf, err := reader.ReadBytes('\n')
 		
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil
 		}
+
+		rawFileLine++
+
+		if rawFileLine >= startLine && rawFileLine <= endLine {
+			lineBuffer.Write(buf)
+			linesRead++
+		}
 		
 		if errors.Is(err, io.EOF) {
-			if len(buf) > 0 {
-				lineBuffer.Write(buf)
-				rawFileLine++
-			}
 			break
 		}
 		
-		currentLine := rawFileLine + 1
-		if currentLine >= startLine && currentLine <= endLine {
-			lineBuffer.Write(buf)
-		}
-		
-		rawFileLine++
-		
 		// Row limit check
-		if setting.FilePreviewMaxLines > 0 && (currentLine - startLine) >= setting.FilePreviewMaxLines {
-			preview.isTruncated = true
+		if setting.FilePreviewMaxLines > 0 && linesRead >= setting.FilePreviewMaxLines {
+			if rawFileLine < endLine {
+				preview.isTruncated = true
+			}
+			break
+		}
+
+		if rawFileLine >= endLine {
 			break
 		}
 	}
@@ -246,7 +214,10 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 		endLine = rawFileLine
 	}
 
-	if len(lineSpecs) == 1 || startLine == endLine {
+	fmt.Printf("startLine: %v\n", startLine)
+	fmt.Printf("endLine: %v\n", endLine)
+
+	if startLine == endLine {
 		preview.subTitle = locale.Tr(
 			"markup.filepreview.line", startLine,
 			template.HTML(commitLinkBuffer.String()),
