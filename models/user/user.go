@@ -461,6 +461,7 @@ func (u *User) IsUser() bool {
 	return u.Type == UserTypeIndividual || u.Type == UserTypeBot
 }
 
+// Returns true if the given user ID belongs to an actual user, not an organization
 func IsUserByID(ctx context.Context, uid int64) (bool, error) {
 	return db.GetEngine(ctx).
 		Where("id=?", uid).
