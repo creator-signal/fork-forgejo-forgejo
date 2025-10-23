@@ -2,12 +2,11 @@
 import {SvgIcon} from '../svg.js';
 import {toggleElem} from '../utils/dom.js';
 
-const {csrfToken, pageData} = window.config;
+const {pageData} = window.config;
 
 export default {
   components: {SvgIcon},
   data: () => ({
-    csrfToken,
     mergeForm: pageData.pullRequestMergeForm,
 
     mergeTitleFieldValue: '',
