@@ -472,37 +472,16 @@ func TestAPIAdminDeleteUserEmails(t *testing.T) {
 	token := getUserToken(t, adminUsername, auth_model.AccessTokenScopeWriteAdmin)
 	urlStr := fmt.Sprintf("/api/v1/admin/users/%s/emails", "user2")
 
-	// First, get the user's emails to find a non-primary one to delete
-	req := NewRequest(t, "GET", urlStr).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
-
-	var emails []*api.Email
-	DecodeJSON(t, resp, &emails)
-
-	// Find a non-primary email to delete
-	var emailToDelete string
-	for _, email := range emails {
-		if !email.Primary {
-			emailToDelete = email.Email
-			break
-		}
-	}
-
-	// If no non-primary email exists, we can't test deletion
-	if emailToDelete == "" {
-		t.Skip("No non-primary email found for user2, skipping deletion test")
-		return
-	}
-
-	// Test deleting the non-primary email
+	// Test deleting a non-primary email
+	emailToDelete := "user2-2@example.com"
 	deleteReq := NewRequestWithJSON(t, "DELETE", urlStr, api.DeleteEmailOption{
 		Emails: []string{emailToDelete},
 	}).AddTokenAuth(token)
 	MakeRequest(t, deleteReq, http.StatusNoContent)
 
 	// Verify the email was deleted by listing emails again
-	req = NewRequest(t, "GET", urlStr).AddTokenAuth(token)
-	resp = MakeRequest(t, req, http.StatusOK)
+	req := NewRequest(t, "GET", urlStr).AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
 
 	var remainingEmails []*api.Email
 	DecodeJSON(t, resp, &remainingEmails)
@@ -520,29 +499,11 @@ func TestAPIAdminDeleteUserEmailsPrimary(t *testing.T) {
 	token := getUserToken(t, adminUsername, auth_model.AccessTokenScopeWriteAdmin)
 	urlStr := fmt.Sprintf("/api/v1/admin/users/%s/emails", "user2")
 
-	// First, get the user's emails to find the primary one
-	req := NewRequest(t, "GET", urlStr).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
-
-	var emails []*api.Email
-	DecodeJSON(t, resp, &emails)
-
-	// Find the primary email
-	var primaryEmail string
-	for _, email := range emails {
-		if email.Primary {
-			primaryEmail = email.Email
-			break
-		}
-	}
-
-	assert.NotEmpty(t, primaryEmail, "Primary email should exist")
-
 	// Test deleting the primary email - this should fail
 	deleteReq := NewRequestWithJSON(t, "DELETE", urlStr, api.DeleteEmailOption{
-		Emails: []string{primaryEmail},
+		Emails: []string{"user2@example.com"},
 	}).AddTokenAuth(token)
-	resp = MakeRequest(t, deleteReq, http.StatusUnprocessableEntity)
+	resp := MakeRequest(t, deleteReq, http.StatusUnprocessableEntity)
 
 	// Verify we get an error response
 	var errorResp map[string]any
