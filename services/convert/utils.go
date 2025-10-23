@@ -21,6 +21,14 @@ func ToCorrectPageSize(size int) int {
 	return size
 }
 
+// ToCorrectFirstPage guarantee page respects 1-based rule if <= 0.
+func ToCorrectFirstPage(size int) int {
+	if size <= 0 {
+		return 1
+	}
+	return size
+}
+
 // ToGitServiceType return GitServiceType based on string
 func ToGitServiceType(value string) structs.GitServiceType {
 	switch strings.ToLower(value) {

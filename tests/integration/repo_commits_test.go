@@ -203,4 +203,12 @@ func TestRepoCommitsStatusMultiple(t *testing.T) {
 	// Check that the data-tippy="commit-statuses" (for trigger) and commit-status (svg) are present
 	sel := doc.doc.Find("#commits-table tbody tr td.message [data-tippy=\"commit-statuses\"] .commit-status")
 	assert.Equal(t, 1, sel.Length())
+
+	// By Ref with limit, but page not set
+	reqStatuses := NewRequest(t, "GET", "/api/v1/repos/user2/repo1/statuses/65f1bf27bc3bf70f64657658635e66094edbcb4d?limit=1")
+	respStatuses := session.MakeRequest(t, reqStatuses, http.StatusOK)
+	var statuses []*api.CommitStatus
+	require.NoError(t, json.Unmarshal(respStatuses.Body.Bytes(), &statuses))
+
+	assert.Len(t, statuses, 1)
 }
