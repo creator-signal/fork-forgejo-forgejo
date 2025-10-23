@@ -1,8 +1,8 @@
 module forgejo.org
 
-go 1.24
+go 1.25
 
-toolchain go1.24.6
+toolchain go1.25.3
 
 require (
 	code.forgejo.org/f3/gof3/v3 v3.10.6
