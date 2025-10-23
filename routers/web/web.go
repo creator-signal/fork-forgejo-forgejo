@@ -131,8 +131,6 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 			// ensure the session uid is deleted
 			_ = ctx.Session.Delete("uid")
 		}
-
-		ctx.Csrf.PrepareForSessionUser(ctx)
 	}
 }
 
@@ -191,14 +189,6 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 		if options.SignOutRequired && ctx.IsSigned && ctx.Req.URL.RequestURI() != "/" {
 			ctx.RedirectToFirst(ctx.FormString("redirect_to"))
 			return
-		}
-
-		safeMethod := ctx.Req.Method == "GET" || ctx.Req.Method == "HEAD" || ctx.Req.Method == "OPTIONS"
-		if !options.SignOutRequired && !options.DisableCSRF && !safeMethod {
-			ctx.Csrf.Validate(ctx)
-			if ctx.Written() {
-				return
-			}
 		}
 
 		if options.SignInRequired {
