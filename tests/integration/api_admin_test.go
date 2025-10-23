@@ -549,3 +549,34 @@ func TestAPIAdminDeleteUserEmailsPrimary(t *testing.T) {
 	DecodeJSON(t, resp, &errorResp)
 	assert.Contains(t, errorResp, "message")
 }
+
+func TestAPIAdminDeleteUserEmailsMultiple(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	adminUsername := "user1"
+	token := getUserToken(t, adminUsername, auth_model.AccessTokenScopeWriteAdmin)
+	urlStr := fmt.Sprintf("/api/v1/admin/users/%s/emails", "user1")
+
+	// Verify initial state: user1 should have 3 emails
+	req := NewRequest(t, "GET", urlStr).AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+	var initialEmails []*api.Email
+	DecodeJSON(t, resp, &initialEmails)
+	assert.Len(t, initialEmails, 3)
+
+	// Test deleting multiple emails in one API call
+	emailsToDelete := []string{"user1-2@example.com", "user1-3@example.com"}
+	deleteReq := NewRequestWithJSON(t, "DELETE", urlStr, api.DeleteEmailOption{
+		Emails: emailsToDelete,
+	}).AddTokenAuth(token)
+	MakeRequest(t, deleteReq, http.StatusNoContent)
+
+	// Verify final state: only primary email should remain
+	req = NewRequest(t, "GET", urlStr).AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	var remainingEmails []*api.Email
+	DecodeJSON(t, resp, &remainingEmails)
+	assert.Len(t, remainingEmails, 1, "Only 1 email should remain after deletion")
+	assert.Equal(t, "user1@example.com", remainingEmails[0].Email, "Only primary email should remain")
+	assert.True(t, remainingEmails[0].Primary, "Remaining email should be primary")
+}
