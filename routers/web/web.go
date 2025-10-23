@@ -136,6 +136,7 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 
 // verifyAuthWithOptions checks authentication according to options
 func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Context) {
+	crossOrginProtection := http.NewCrossOriginProtection()
 	return func(ctx *context.Context) {
 		// Check prohibit login users.
 		if ctx.IsSigned {
@@ -189,6 +190,13 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 		if options.SignOutRequired && ctx.IsSigned && ctx.Req.URL.RequestURI() != "/" {
 			ctx.RedirectToFirst(ctx.FormString("redirect_to"))
 			return
+		}
+
+		if !options.SignOutRequired && !options.DisableCSRF {
+			if err := crossOrginProtection.Check(ctx.Req); err != nil {
+				http.Error(ctx.Resp, err.Error(), http.StatusForbidden)
+				return
+			}
 		}
 
 		if options.SignInRequired {
