@@ -48,7 +48,7 @@ func AvatarHTML2(avatar user_model.AvatarDisplayProperties, size int, class, nam
 	println(avatar.SvgContent)
 
 	if avatar.SvgContent != "" {
-		return template.HTML(`<svg class="svg" viewBox="0 0 48 48" width="` + sizeStr + `" height="` + sizeStr + `">` + avatar.SvgContent + `</svg>`)
+		return template.HTML(`<svg class="svg identicon" viewBox="0 0 36 36" width="` + sizeStr + `" height="` + sizeStr + `">` + avatar.SvgContent + `</svg>`)
 	}
 
 	// RasterLink is guaranteed to be non-empty by SolveAvatar, which falls it back to default avatar link

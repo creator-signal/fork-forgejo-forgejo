@@ -21,7 +21,7 @@ const minImageSize = 16
 
 // IdenticonOptions is used to generate pseudo-random avatars
 type IdenticonOptions struct {
-	foreColors []color.Color
+	foreColors []uint32
 	backColor  color.Color
 	size       int
 	rect       image.Rectangle
@@ -37,7 +37,7 @@ type Identicon struct {
 // size image size
 // back background color
 // fore all possible foreground colors. only one foreground color will be picked randomly for one image
-func New(size int, back color.Color, fore ...color.Color) (*IdenticonOptions, error) {
+func New(size int, back color.Color, fore ...uint32) (*IdenticonOptions, error) {
 	if len(fore) == 0 {
 		return nil, errors.New("foreground is not set")
 	}
@@ -65,18 +65,23 @@ func (options *IdenticonOptions) Make(data []byte) *Identicon {
 	c := int(sum[6]+sum[7]+sum[8]) % len(centerBlocks)
 	b1Angle := int(sum[9]+sum[10]) % 4
 	b2Angle := int(sum[11]+sum[12]) % 4
-	foreColor := int(sum[11]+sum[12]+sum[15]) % len(options.foreColors)
+	foreColorIndex := int(sum[11]+sum[12]+sum[15]) % len(options.foreColors)
+	foreColor := options.foreColors[foreColorIndex]
 
 	return options.render(c, b1, b2, b1Angle, b2Angle, foreColor)
 }
 
-func (options *IdenticonOptions) render(c, b1, b2, b1Angle, b2Angle, foreColor int) *Identicon {
-	raster := image.NewPaletted(options.rect, []color.Color{options.backColor, options.foreColors[foreColor]})
+func (options *IdenticonOptions) render(c, b1, b2, b1Angle, b2Angle int, foreColor uint32) *Identicon {
+	raster := image.NewPaletted(options.rect, []color.Color{options.backColor, uint32RGBA(foreColor)})
 	vectorParts := [9]string{}
 
 	drawBlocks(raster, &vectorParts, options.size, centerBlocks[c], blocks[b1], blocks[b2],
 		svgCenterBlocks[c], svgBlocks[b1], svgBlocks[b2], b1Angle, b2Angle)
 	vector := strings.Join(vectorParts[:], "")
+	vector = `<g color="#` + uint32HEX(foreColor) + `">
+	<g>` + vector + `</g>
+	<g>` + vector + `</g>
+</g>`
 	println("render: " + vector)
 
 	return &Identicon{
@@ -115,8 +120,6 @@ func drawBlocks(image *image.Paletted, vectorParts *[9]string, size int, c, b1, 
 	nextAngle := func(a int) int {
 		return (a + 1) % 4
 	}
-
-	// todo: clip-path: rect(0 50% 100% 0)
 
 	padding := (size % 3) / 2 // in cased the size can not be aligned by 3 blocks.
 

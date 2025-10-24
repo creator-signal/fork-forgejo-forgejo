@@ -43,3 +43,21 @@
 .svg[width="56"] { min-width: 56px; }
 .svg[width="100"] { min-width: 100px; }
 .svg[width="256"] { min-width: 256px; }
+
+:root {
+  --svg-avatar-size: 36px;
+}
+
+svg.identicon {
+  background-color: #ffffff;
+  border-radius: var(--border-radius);
+}
+
+svg.identicon g g:first-child {
+  clip-path: rect(0 calc(var(--svg-avatar-size) / 2) var(--svg-avatar-size) 0);
+}
+
+svg.identicon g g:last-child {
+  clip-path: rect(0 calc(var(--svg-avatar-size) / 2) var(--svg-avatar-size) 0);
+  transform: scaleX(-1) translateX(calc(-1 * var(--svg-avatar-size)));
+}
