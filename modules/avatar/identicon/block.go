@@ -1,7 +1,9 @@
+// Copyright 2015 caixw. All rights reserved.
 // Copyright 2021 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-// Copied and modified from https://github.com/issue9/identicon/ (MIT License)
+// Derived from https://github.com/issue9/identicon/
 
 package identicon
 
@@ -21,8 +23,10 @@ var (
 
 type blockFunc func(img *image.Paletted, vector *string, x, y, size, angle int)
 
-// draw a polygon by points, and the polygon is rotated by angle.
+// drawBlock draws a polygon by given points. The polygon can be rotated optionally
 func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
+	// The last point should be same as the first to end the shape
+	points = append(points, points[0], points[1])
 	if angle != 0 {
 		m := size / 2
 		rotate(points, m, m, angle)
@@ -39,9 +43,6 @@ func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
 
 // pointsToAttr converts points into svg polygon points attribute
 func pointsToAttr(pts []int) string {
-	n := len(pts)
-	// "The last point is connected to the first point."
-	pts = pts[:n-2]
 	var b strings.Builder
 	for i := 0; i+1 < len(pts); i += 2 {
 		if i > 0 {
@@ -115,7 +116,6 @@ func b3(img *image.Paletted, vector *string, x, y, size, angle int) {
 		size, m,
 		m, size,
 		0, m,
-		m, 0,
 	}
 	drawBlock(img, x, y, size, 0, polygon)
 	*vector = fmt.Sprintf(`<polygon points="%s"/>`, pointsToAttr(polygon))
@@ -136,7 +136,6 @@ func b4(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		size, 0,
 		0, size,
-		0, 0,
 	})
 }
 
@@ -153,7 +152,6 @@ func b5(img *image.Paletted, vector *string, x, y, size, angle int) {
 		m, 0,
 		size, size,
 		0, size,
-		m, 0,
 	})
 }
 
@@ -171,7 +169,6 @@ func b6(img *image.Paletted, vector *string, x, y, size, angle int) {
 		m, 0,
 		m, size,
 		0, size,
-		0, 0,
 	})
 }
 
@@ -190,7 +187,6 @@ func b7(img *image.Paletted, vector *string, x, y, size, angle int) {
 		size, m,
 		size, size,
 		m, size,
-		0, 0,
 	})
 }
 
@@ -213,7 +209,6 @@ func b8(img *image.Paletted, vector *string, x, y, size, angle int) {
 		m, 0,
 		3 * mm, m,
 		mm, m,
-		m, 0,
 	})
 
 	// bottom left
@@ -221,7 +216,6 @@ func b8(img *image.Paletted, vector *string, x, y, size, angle int) {
 		mm, m,
 		m, size,
 		0, size,
-		mm, m,
 	})
 
 	// bottom right
@@ -229,7 +223,6 @@ func b8(img *image.Paletted, vector *string, x, y, size, angle int) {
 		3 * mm, m,
 		size, size,
 		m, size,
-		3 * mm, m,
 	})
 }
 
@@ -248,7 +241,6 @@ func b9(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		size, m,
 		m, size,
-		0, 0,
 	})
 }
 
@@ -270,14 +262,12 @@ func b10(img *image.Paletted, vector *string, x, y, size, angle int) {
 		m, 0,
 		size, 0,
 		m, m,
-		m, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		0, m,
 		m, m,
 		0, size,
-		0, m,
 	})
 }
 
@@ -297,7 +287,6 @@ func b11(img *image.Paletted, vector *string, x, y, size, angle int) {
 		m, 0,
 		m, m,
 		0, m,
-		0, 0,
 	})
 }
 
@@ -316,7 +305,6 @@ func b12(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, m,
 		size, m,
 		m, size,
-		0, m,
 	})
 }
 
@@ -335,7 +323,6 @@ func b13(img *image.Paletted, vector *string, x, y, size, angle int) {
 		m, m,
 		size, size,
 		0, size,
-		m, m,
 	})
 }
 
@@ -354,7 +341,6 @@ func b14(img *image.Paletted, vector *string, x, y, size, angle int) {
 		m, 0,
 		m, m,
 		0, m,
-		m, 0,
 	})
 }
 
@@ -373,7 +359,6 @@ func b15(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		m, 0,
 		0, m,
-		0, 0,
 	})
 }
 
@@ -393,14 +378,12 @@ func b16(img *image.Paletted, vector *string, x, y, size, angle int) {
 		m, 0,
 		size, m,
 		0, m,
-		m, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		m, m,
 		size, size,
 		0, size,
-		m, m,
 	})
 }
 
@@ -420,7 +403,6 @@ func b17(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		m, 0,
 		0, m,
-		0, 0,
 	})
 
 	quarter := size / 4
@@ -429,7 +411,6 @@ func b17(img *image.Paletted, vector *string, x, y, size, angle int) {
 		size, size - quarter,
 		size, size,
 		size - quarter, size,
-		size - quarter, size - quarter,
 	})
 }
 
@@ -449,7 +430,6 @@ func b18(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		m, 0,
 		0, size,
-		0, 0,
 	})
 }
 
@@ -469,28 +449,24 @@ func b19(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		m, 0,
 		0, m,
-		0, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		m, 0,
 		size, 0,
 		size, m,
-		m, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		size, m,
 		size, size,
 		m, size,
-		size, m,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		0, m,
 		m, size,
 		0, size,
-		0, m,
 	})
 }
 
@@ -511,7 +487,6 @@ func b20(img *image.Paletted, vector *string, x, y, size, angle int) {
 		q, 0,
 		0, size,
 		0, m,
-		q, 0,
 	})
 }
 
@@ -532,14 +507,12 @@ func b21(img *image.Paletted, vector *string, x, y, size, angle int) {
 		q, 0,
 		0, size,
 		0, m,
-		q, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		q, 0,
 		size, q,
 		size, m,
-		q, 0,
 	})
 }
 
@@ -560,14 +533,12 @@ func b22(img *image.Paletted, vector *string, x, y, size, angle int) {
 		q, 0,
 		0, size,
 		0, m,
-		q, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		q, 0,
 		size, q,
 		size, size,
-		q, 0,
 	})
 }
 
@@ -588,14 +559,12 @@ func b23(img *image.Paletted, vector *string, x, y, size, angle int) {
 		q, 0,
 		0, size,
 		0, m,
-		q, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		q, 0,
 		size, 0,
 		size, q,
-		q, 0,
 	})
 }
 
@@ -616,14 +585,12 @@ func b24(img *image.Paletted, vector *string, x, y, size, angle int) {
 		q, 0,
 		0, size,
 		0, m,
-		q, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		m, 0,
 		size, 0,
 		m, size,
-		m, 0,
 	})
 }
 
@@ -644,14 +611,12 @@ func b25(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		0, size,
 		q, size,
-		0, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		0, m,
 		size, 0,
 		q, size,
-		0, m,
 	})
 }
 
@@ -672,28 +637,24 @@ func b26(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		m, q,
 		q, m,
-		0, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		size, 0,
 		m + q, m,
 		m, q,
-		size, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		size, size,
 		m, m + q,
 		q + m, m,
-		size, size,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		0, size,
 		q, m,
 		m, q + m,
-		0, size,
 	})
 }
 
@@ -714,27 +675,23 @@ func b27(img *image.Paletted, vector *string, x, y, size, angle int) {
 		0, 0,
 		size, 0,
 		0, q,
-		0, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		q + m, 0,
 		size, 0,
 		size, size,
-		q + m, 0,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		size, q + m,
 		size, size,
 		0, size,
-		size, q + m,
 	})
 
 	drawBlock(img, x, y, size, angle, []int{
 		0, size,
 		0, 0,
 		q, size,
-		0, size,
 	})
 }
