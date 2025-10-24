@@ -25,21 +25,21 @@ type blockFunc func(img *image.Paletted, vector *string, x, y, size, angle int)
 
 // drawBlock draws a polygon by given points. The polygon can be rotated optionally
 func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
+	adjPoints := append(points, points[0], points[1])
 	// Points are stored as 1/4, 2/4, 3/4, 4/4 fractions
-	for i := range points {
-		points[i] = points[i] * size / 4
+	for i := range adjPoints {
+		adjPoints[i] = adjPoints[i] * size / 4
 	}
 	// The last point should be same as the first to end the shape
-	points = append(points, points[0], points[1])
 
 	if angle != 0 {
 		m := size / 2
-		rotate(points, m, m, angle)
+		rotate(adjPoints, m, m, angle)
 	}
 
 	for i := 0; i < size; i++ {
 		for j := 0; j < size; j++ {
-			if pointInPolygon(i, j, points) {
+			if pointInPolygon(i, j, adjPoints) {
 				img.SetColorIndex(x+i, y+j, 1)
 			}
 		}
