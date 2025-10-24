@@ -252,6 +252,14 @@ func block13poly1(size int) []int {
 //	|       |
 //	|       |
 //	---------
+func blockb14poly1(size int) []int {
+	m := size / 2
+	return []int{
+		m, 0,
+		m, m,
+		0, m,
+	}
+}
 
 // b15
 //
@@ -262,6 +270,14 @@ func block13poly1(size int) []int {
 //	|        |
 //	|        |
 //	----------
+func blockb15poly1(size int) []int {
+	m := size / 2
+	return []int{
+		0, 0,
+		m, 0,
+		0, m,
+	}
+}
 
 // b16
 //
@@ -273,6 +289,23 @@ func block13poly1(size int) []int {
 //	| ##### |
 //	|#######|
 //	---------
+func blockb16poly1(size int) []int {
+	m := size / 2
+	return []int{
+		m, 0,
+		size, m,
+		0, m,
+	}
+}
+
+func blockb16poly2(size int) []int {
+	m := size / 2
+	return []int{
+		m, m,
+		size, size,
+		0, size,
+	}
+}
 
 // b17
 //
@@ -283,6 +316,23 @@ func block13poly1(size int) []int {
 //	|      ##|
 //	|      ##|
 //	----------
+func blockb17poly1(size int) []int {
+	m := size / 2
+	return []int{
+		0, 0,
+		m, 0,
+		0, m,
+	}
+}
+func blockb17poly2(size int) []int {
+	quarter := size / 4
+	return []int{
+		size - quarter, size - quarter,
+		size, size - quarter,
+		size, size,
+		size - quarter, size,
+	}
+}
 
 // b18
 //
@@ -293,6 +343,14 @@ func block13poly1(size int) []int {
 //	|##      |
 //	|#       |
 //	----------
+func blockb18poly1(size int) []int {
+	m := size / 2
+	return []int{
+		0, 0,
+		m, 0,
+		0, size,
+	}
+}
 
 // b19
 //
@@ -303,6 +361,38 @@ func block13poly1(size int) []int {
 //	|###  ###|
 //	|########|
 //	----------
+func blockb19poly1(size int) []int {
+	m := size / 2
+	return []int{
+		0, 0,
+		m, 0,
+		0, m,
+	}
+}
+func blockb19poly2(size int) []int {
+	m := size / 2
+	return []int{
+		m, 0,
+		size, 0,
+		size, m,
+	}
+}
+func blockb19poly3(size int) []int {
+	m := size / 2
+	return []int{
+		size, m,
+		size, size,
+		m, size,
+	}
+}
+func blockb19poly4(size int) []int {
+	m := size / 2
+	return []int{
+		0, m,
+		m, size,
+		0, size,
+	}
+}
 
 // b20
 //
@@ -313,6 +403,15 @@ func block13poly1(size int) []int {
 //	|##       |
 //	|#        |
 //	----------
+func blockb20poly1(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		q, 0,
+		0, size,
+		0, m,
+	}
+}
 
 // b21
 //
