@@ -890,3 +890,21 @@ func updateSession(ctx *context.Context, deletes []string, updates map[string]an
 	}
 	return nil
 }
+
+// Stop impersonating by restoring admin's uid
+func StopImpersonating(ctx *context.Context) {
+	adminUID := ctx.Session.Get("impersonator_uid")
+	if adminUID == nil {
+		ctx.JSONError(ctx.Tr("admin.users.impersonate.not_impersonating"))
+		return
+	}
+	// Remove impersonator_uid from session and change uid to adminUID
+	err := updateSession(ctx, []string{"impersonator_uid"}, map[string]any{
+		"uid": adminUID,
+	})
+	if err != nil {
+		ctx.ServerError("StopImpersonating", err)
+		return
+	}
+	ctx.JSONRedirect(setting.AppSubURL + "/admin/users/")
+}

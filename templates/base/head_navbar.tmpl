@@ -183,6 +183,12 @@
 					{{end}}
 
 					<div class="divider"></div>
+					{{if .IsImpersonating}}
+						<a class="item link-action" href data-url="{{AppSubUrl}}/user/stop_impersonating">
+							{{svg "octicon-eye-closed"}}
+							{{ctx.Locale.Tr "admin.users.impersonate.stop"}}
+						</a>
+					{{end}}
 					<a class="item link-action" href data-url="{{AppSubUrl}}/user/logout">
 						{{svg "octicon-sign-out"}}
 						{{ctx.Locale.Tr "sign_out"}}

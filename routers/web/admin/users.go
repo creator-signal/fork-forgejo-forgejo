@@ -21,6 +21,7 @@ import (
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
+	"forgejo.org/modules/session"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/validation"
 	"forgejo.org/modules/web"
@@ -565,4 +566,50 @@ func DeleteAvatar(ctx *context.Context) {
 	}
 
 	ctx.JSONRedirect(setting.AppSubURL + "/admin/users/" + strconv.FormatInt(u.ID, 10))
+}
+
+// ImpersonateUser changes the uid of the current session
+func ImpersonateUser(ctx *context.Context) {
+	// check if we are already impersonating a user
+	if ctx.Session.Get("impersonator_uid") != nil {
+		ctx.JSONError(ctx.Tr("admin.users.impersonate.already_impersonating"))
+		return
+	}
+	userID := ctx.ParamsInt64(":userid")
+	targetUser, err := user_model.GetUserByID(ctx, userID)
+	if err != nil {
+		ctx.JSONError(ctx.Tr("form.user_not_exist"))
+		return
+	}
+	if targetUser.ProhibitLogin {
+		ctx.JSONError(ctx.Tr("admin.users.impersonate.login_prohibited"))
+		return
+	}
+	// Avoid impersonating non-users such as organizations,
+	// ghost users, reserved users and remote users
+	if !targetUser.IsUser() {
+		ctx.JSONError(ctx.Tr("admin.users.impersonate.not_individual"))
+		return
+	}
+	impersonatorUID := ctx.Doer.ID
+	if impersonatorUID == userID {
+		ctx.JSONError(ctx.Tr("admin.users.impersonate.not_yourself"))
+		return
+	}
+	if _, err = session.RegenerateSession(ctx.Resp, ctx.Req); err != nil {
+		ctx.ServerError("failed to regenerate session", err)
+		return
+	}
+	if err = ctx.Session.Set("uid", targetUser.ID); err != nil {
+		ctx.ServerError("ImpersonateUser", err)
+	}
+	if err = ctx.Session.Set("impersonator_uid", impersonatorUID); err != nil {
+		ctx.ServerError("ImpersonateUser", err)
+		return
+	}
+	if err = ctx.Session.Release(); err != nil {
+		ctx.ServerError("ImpersonateUser", err)
+		return
+	}
+	ctx.JSONRedirect(setting.AppSubURL + "/" + targetUser.LoginName)
 }

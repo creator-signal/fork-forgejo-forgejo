@@ -126,6 +126,8 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 		}
 		ctx.Doer = ar.Doer
 		ctx.IsSigned = ar.Doer != nil
+		_, impersonating := ctx.Session.Get("impersonator_uid").(int64)
+		ctx.Data["IsImpersonating"] = impersonating
 		ctx.IsBasicAuth = ar.IsBasicAuth
 		if ctx.Doer == nil {
 			// ensure the session uid is deleted
@@ -695,6 +697,7 @@ func registerRoutes(m *web.Route) {
 		m.Get("/task/{task}", reqSignIn, user.TaskStatus)
 		m.Get("/stopwatches", reqSignIn, user.GetStopwatches)
 		m.Get("/search_candidates", ignExploreSignIn, user.SearchCandidates)
+		m.Post("/stop_impersonating", auth.StopImpersonating)
 		m.Group("/oauth2", func() {
 			m.Get("/{provider}", auth.SignInOAuth)
 			m.Get("/{provider}/callback", auth.SignInOAuthCallback)
@@ -746,6 +749,7 @@ func registerRoutes(m *web.Route) {
 			m.Post("/{userid}/delete", admin.DeleteUser)
 			m.Post("/{userid}/avatar", web.Bind(forms.AvatarForm{}), admin.AvatarPost)
 			m.Post("/{userid}/avatar/delete", admin.DeleteAvatar)
+			m.Post("/{userid}/impersonate", admin.ImpersonateUser)
 		})
 
 		m.Group("/emails", func() {
