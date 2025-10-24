@@ -98,88 +98,25 @@ func b2(img *image.Paletted, vector *string, x, y, size, angle int) {
 	}
 }
 
-// diamond
-//
-//	---------
-//	|   #   |
-//	|  ###  |
-//	| ##### |
-//	|#######|
-//	| ##### |
-//	|  ###  |
-//	|   #   |
-//	---------
 func b3(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	polygon := []int{
-		m, 0,
-		size, m,
-		m, size,
-		0, m,
-	}
+	polygon := b3p1(size)
 	drawBlock(img, x, y, size, 0, polygon)
 	*vector = fmt.Sprintf(`<polygon points="%s"/>`, pointsToAttr(polygon))
 	println("b3: " + *vector)
 }
 
-// b4
-//
-//	-------
-//	|#####|
-//	|#### |
-//	|###  |
-//	|##   |
-//	|#    |
-//	|------
 func b4(img *image.Paletted, vector *string, x, y, size, angle int) {
-	drawBlock(img, x, y, size, angle, []int{
-		0, 0,
-		size, 0,
-		0, size,
-	})
+	drawBlock(img, x, y, size, angle, block4poly1(size))
 }
 
-// b5
-//
-//	---------
-//	|   #   |
-//	|  ###  |
-//	| ##### |
-//	|#######|
 func b5(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	drawBlock(img, x, y, size, angle, []int{
-		m, 0,
-		size, size,
-		0, size,
-	})
+	drawBlock(img, x, y, size, angle, block5poly1(size))
 }
 
-// b6
-//
-//	--------
-//	|###   |
-//	|###   |
-//	|###   |
-//	--------
 func b6(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	drawBlock(img, x, y, size, angle, []int{
-		0, 0,
-		m, 0,
-		m, size,
-		0, size,
-	})
+	drawBlock(img, x, y, size, angle, block6poly1(size))
 }
 
-// b7 italic cone
-//
-//	---------
-//	| #     |
-//	|  ##   |
-//	|  #####|
-//	|   ####|
-//	|--------
 func b7(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -190,16 +127,6 @@ func b7(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b8 three small triangles
-//
-//	-----------
-//	|    #    |
-//	|   ###   |
-//	|  #####  |
-//	|  #   #  |
-//	| ### ### |
-//	|#########|
-//	-----------
 func b8(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	mm := m / 2
@@ -226,15 +153,6 @@ func b8(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b9 italic triangle
-//
-//	---------
-//	|#      |
-//	| ####  |
-//	|  #####|
-//	|  #### |
-//	|   #   |
-//	---------
 func b9(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -244,18 +162,6 @@ func b9(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b10
-//
-//	----------
-//	|    ####|
-//	|    ### |
-//	|    ##  |
-//	|    #   |
-//	|####    |
-//	|###     |
-//	|##      |
-//	|#       |
-//	----------
 func b10(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -271,15 +177,6 @@ func b10(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b11
-//
-//	----------
-//	|####    |
-//	|####    |
-//	|####    |
-//	|        |
-//	|        |
-//	----------
 func b11(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -290,15 +187,6 @@ func b11(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b12
-//
-//	-----------
-//	|         |
-//	|         |
-//	|#########|
-//	|  #####  |
-//	|    #    |
-//	-----------
 func b12(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -308,15 +196,6 @@ func b12(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b13
-//
-//	-----------
-//	|         |
-//	|         |
-//	|    #    |
-//	|  #####  |
-//	|#########|
-//	-----------
 func b13(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -326,15 +205,6 @@ func b13(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b14
-//
-//	---------
-//	|   #   |
-//	| ###   |
-//	|####   |
-//	|       |
-//	|       |
-//	---------
 func b14(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -344,15 +214,6 @@ func b14(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b15
-//
-//	----------
-//	|#####   |
-//	|###     |
-//	|#       |
-//	|        |
-//	|        |
-//	----------
 func b15(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -362,16 +223,6 @@ func b15(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b16
-//
-//	---------
-//	|   #   |
-//	| ##### |
-//	|#######|
-//	|   #   |
-//	| ##### |
-//	|#######|
-//	---------
 func b16(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	drawBlock(img, x, y, size, angle, []int{
@@ -387,15 +238,6 @@ func b16(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b17
-//
-//	----------
-//	|#####   |
-//	|###     |
-//	|#       |
-//	|      ##|
-//	|      ##|
-//	----------
 func b17(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 
@@ -414,15 +256,6 @@ func b17(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b18
-//
-//	----------
-//	|#####   |
-//	|####    |
-//	|###     |
-//	|##      |
-//	|#       |
-//	----------
 func b18(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 
@@ -433,15 +266,6 @@ func b18(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b19
-//
-//	----------
-//	|########|
-//	|###  ###|
-//	|#      #|
-//	|###  ###|
-//	|########|
-//	----------
 func b19(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 
@@ -470,15 +294,6 @@ func b19(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b20
-//
-//	----------
-//	|  ##     |
-//	|###      |
-//	|##       |
-//	|##       |
-//	|#        |
-//	----------
 func b20(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	q := size / 4
@@ -490,15 +305,6 @@ func b20(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b21
-//
-//	----------
-//	| ####   |
-//	|## #####|
-//	|##    ##|
-//	|##      |
-//	|#       |
-//	----------
 func b21(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	q := size / 4
@@ -516,15 +322,6 @@ func b21(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b22
-//
-//	----------
-//	| ####   |
-//	|##  ### |
-//	|##    ##|
-//	|##    ##|
-//	|#      #|
-//	----------
 func b22(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	q := size / 4
@@ -542,15 +339,6 @@ func b22(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b23
-//
-//	----------
-//	| #######|
-//	|###    #|
-//	|##      |
-//	|##      |
-//	|#       |
-//	----------
 func b23(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	q := size / 4
@@ -568,15 +356,6 @@ func b23(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b24
-//
-//	----------
-//	| ##  ###|
-//	|###  ###|
-//	|##  ##  |
-//	|##  ##  |
-//	|#   #   |
-//	----------
 func b24(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	q := size / 4
@@ -594,15 +373,6 @@ func b24(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b25
-//
-//	----------
-//	|#      #|
-//	|##   ###|
-//	|##  ##  |
-//	|######  |
-//	|####    |
-//	----------
 func b25(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	q := size / 4
@@ -620,15 +390,6 @@ func b25(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b26
-//
-//	----------
-//	|#      #|
-//	|###  ###|
-//	|  ####  |
-//	|###  ###|
-//	|#      #|
-//	----------
 func b26(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	q := size / 4
@@ -658,15 +419,6 @@ func b26(img *image.Paletted, vector *string, x, y, size, angle int) {
 	})
 }
 
-// b27
-//
-//	----------
-//	|########|
-//	|##   ###|
-//	|#      #|
-//	|###   ##|
-//	|########|
-//	----------
 func b27(img *image.Paletted, vector *string, x, y, size, angle int) {
 	m := size / 2
 	q := size / 4
