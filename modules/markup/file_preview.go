@@ -167,12 +167,12 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 	if startLine < 1 || endLine < 1 || startLine > endLine {
 		return nil
 	}
-	
+
 	rawFileLine := 0
 	linesRead := 0
 	for {
 		buf, err := reader.ReadBytes('\n')
-		
+
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil
 		}
@@ -183,11 +183,11 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 			lineBuffer.Write(buf)
 			linesRead++
 		}
-		
+
 		if errors.Is(err, io.EOF) {
 			break
 		}
-		
+
 		// Row limit check
 		if setting.FilePreviewMaxLines > 0 && linesRead >= setting.FilePreviewMaxLines {
 			if rawFileLine < endLine {
@@ -221,8 +221,8 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 			template.HTML(commitLinkBuffer.String()),
 		)
 	}
-	
-	preview.lineOffset = startLine - 1	
+
+	preview.lineOffset = startLine - 1
 
 	// highlight the file...
 	fileContent, _, err := highlight.File(fileBlob.Name(), language, lineBuffer.Bytes())
