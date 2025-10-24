@@ -80,7 +80,6 @@ func (u *User) ChooseAvatarToUse(ctx context.Context) (bool, bool) {
 
 // trySVGAvatar checks that for a user with identicon avatar there's also an SVG version available
 func (u *User) trySVGAvatar() (bool, string) {
-	println("trysvgavatar: " + u.AvatarSVG)
 	if u.AvatarSVG == "" {
 		return false, ""
 	}

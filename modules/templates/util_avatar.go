@@ -45,8 +45,6 @@ func AvatarHTML2(avatar user_model.AvatarDisplayProperties, size int, class, nam
 		name = "avatar"
 	}
 
-	println(avatar.SvgContent)
-
 	if avatar.SvgContent != "" {
 		return template.HTML(`<svg class="svg identicon" viewBox="0 0 36 36" width="` + sizeStr + `" height="` + sizeStr + `">` + avatar.SvgContent + `</svg>`)
 	}

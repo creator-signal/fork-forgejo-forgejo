@@ -82,7 +82,6 @@ func (options *IdenticonOptions) render(c, b1, b2, b1Angle, b2Angle int, foreCol
 	<g>` + vector + `</g>
 	<g>` + vector + `</g>
 </g>`
-	println("render: " + vector)
 
 	return &Identicon{
 		Raster: *raster,
@@ -131,7 +130,6 @@ func drawBlocks(image *image.Paletted, vectorParts *[9]string, size int, c, b1, 
 	// center
 	c(image, blockSize+padding, blockSize+padding, blockSize, 0)
 	vectorParts[0] = svgC(1, 1, svgSize, 0)
-	fmt.Println("ceter: " + vectorParts[0])
 
 	// left top (1)
 	b1(image, 0+padding, 0+padding, blockSize, b1Angle)
