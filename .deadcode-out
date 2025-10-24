@@ -51,6 +51,7 @@ forgejo.org/models/perm/access
 	GetRepoWriters
 
 forgejo.org/models/repo
+	UpdateFollowingRepo
 	WatchRepoMode
 
 forgejo.org/models/user
