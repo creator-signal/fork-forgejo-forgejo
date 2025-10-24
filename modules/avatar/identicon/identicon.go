@@ -121,41 +121,40 @@ func drawBlocks(image *image.Paletted, vectorParts *[9]string, size int, c, b1, 
 	blockSize := size / 3
 	twoBlockSize := 2 * blockSize
 
+	svgSize := 36
+
 	// center
 	c(image, blockSize+padding, blockSize+padding, blockSize, 0)
-	svgC(&vectorParts[0], blockSize+padding, blockSize+padding, blockSize)
+	svgC(&vectorParts[0], 1, 1, svgSize)
 	fmt.Println("ceter: " + vectorParts[0])
 
 	// left top (1)
 	b1(image, 0+padding, 0+padding, blockSize, b1Angle)
-	svgShape1(&vectorParts[1], 0+padding, 0+padding, blockSize)
+	svgShape1(&vectorParts[1], 0, 0, svgSize)
 	// center top (2)
 	b2(image, blockSize+padding, 0+padding, blockSize, b2Angle)
-	svgShape2(&vectorParts[2], blockSize+padding, 0+padding, blockSize)
+	svgShape2(&vectorParts[2], 1, 0, svgSize)
 
 	b1Angle = nextAngle(b1Angle)
 	b2Angle = nextAngle(b2Angle)
-	// right top (3)
-	// b1(p, twoBlockSize+padding, 0+padding, blockSize, b1Angle)
-	// right middle (6)
-	// b2(p, twoBlockSize+padding, blockSize+padding, blockSize, b2Angle)
 
 	b1Angle = nextAngle(b1Angle)
 	b2Angle = nextAngle(b2Angle)
-	// right bottom (9)
-	// b1(p, twoBlockSize+padding, twoBlockSize+padding, blockSize, b1Angle)
+
 	// center bottom (8)
 	b2(image, blockSize+padding, twoBlockSize+padding, blockSize, b2Angle)
-	svgShape2(&vectorParts[8], blockSize+padding, twoBlockSize+padding, blockSize)
+	svgShape2(&vectorParts[8], 1, 2, svgSize)
 
 	b1Angle = nextAngle(b1Angle)
 	b2Angle = nextAngle(b2Angle)
+
 	// lef bottom (7)
 	b1(image, 0+padding, twoBlockSize+padding, blockSize, b1Angle)
-	svgShape1(&vectorParts[7], 0+padding, twoBlockSize+padding, blockSize)
+	svgShape1(&vectorParts[7], 0, 2, svgSize)
+
 	// left middle (4)
 	b2(image, 0+padding, blockSize+padding, blockSize, b2Angle)
-	svgShape2(&vectorParts[4], 0+padding, blockSize+padding, blockSize)
+	svgShape2(&vectorParts[4], 0, 1, svgSize)
 
 	// then we make it left-right mirror, so we didn't draw 3/6/9 before
 	for x := 0; x < size/2; x++ {

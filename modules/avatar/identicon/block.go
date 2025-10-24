@@ -57,8 +57,7 @@ func formatPolygon(points []int, x, y, size int) string {
 		if i > 0 {
 			b.WriteByte(' ')
 		}
-		// fixme: x and y are currently pre-multiplied by size of the raster image
-		fmt.Fprintf(&b, "%d,%d", x+points[i]*size/4, y+points[i+1]*size/4)
+		fmt.Fprintf(&b, "%d,%d", (size/3*x + size*points[i]/4/3), (size/3*y + size*points[i+1]/4/3))
 	}
 	return fmt.Sprintf(`<polygon points="%s"/>`, b.String())
 }
