@@ -3,16 +3,31 @@
 
 package identicon
 
+// b0 - empty tile
 func svgB0(x, y, size, angle int) string {
 	return ""
 }
 
+// b1 and b2 could be formatted as a rect but it will not be a measurable improvement
+
+// b1 - full rectangle tile
 func svgB1(x, y, size, angle int) string {
-	return ""
+	return formatPolygon([]int{
+		0, 0,
+		4, 0,
+		4, 4,
+		0, 4,
+	}, x, y, size, angle)
 }
 
+// b2 - small rectangle tile
 func svgB2(x, y, size, angle int) string {
-	return ""
+	return formatPolygon([]int{
+		1, 1,
+		3, 1,
+		3, 3,
+		1, 3,
+	}, x, y, size, angle)
 }
 
 func svgB3(x, y, size, angle int) string {
