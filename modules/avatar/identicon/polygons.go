@@ -422,6 +422,25 @@ func blockb20poly1(size int) []int {
 //	|##      |
 //	|#       |
 //	----------
+func blockb21poly1(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		q, 0,
+		0, size,
+		0, m,
+	}
+}
+
+func blockb21poly2(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		q, 0,
+		size, q,
+		size, m,
+	}
+}
 
 // b22
 //
@@ -432,6 +451,24 @@ func blockb20poly1(size int) []int {
 //	|##    ##|
 //	|#      #|
 //	----------
+func blockb22poly1(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		q, 0,
+		0, size,
+		0, m,
+	}
+}
+
+func blockb22poly2(size int) []int {
+	q := size / 4
+	return []int{
+		q, 0,
+		size, q,
+		size, size,
+	}
+}
 
 // b23
 //
@@ -442,6 +479,24 @@ func blockb20poly1(size int) []int {
 //	|##      |
 //	|#       |
 //	----------
+func blockb23poly1(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		q, 0,
+		0, size,
+		0, m,
+	}
+}
+
+func blockb23poly2(size int) []int {
+	q := size / 4
+	return []int{
+		q, 0,
+		size, 0,
+		size, q,
+	}
+}
 
 // b24
 //
@@ -452,6 +507,24 @@ func blockb20poly1(size int) []int {
 //	|##  ##  |
 //	|#   #   |
 //	----------
+func blockb24poly1(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		q, 0,
+		0, size,
+		0, m,
+	}
+}
+
+func blockb24poly2(size int) []int {
+	m := size / 2
+	return []int{
+		m, 0,
+		size, 0,
+		m, size,
+	}
+}
 
 // b25
 //
@@ -462,6 +535,24 @@ func blockb20poly1(size int) []int {
 //	|######  |
 //	|####    |
 //	----------
+func blockb25poly1(size int) []int {
+	q := size / 4
+	return []int{
+		0, 0,
+		0, size,
+		q, size,
+	}
+}
+
+func blockb25poly2(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		0, m,
+		size, 0,
+		q, size,
+	}
+}
 
 // b26
 //
@@ -472,6 +563,45 @@ func blockb20poly1(size int) []int {
 //	|###  ###|
 //	|#      #|
 //	----------
+func blockb26poly1(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		0, 0,
+		m, q,
+		q, m,
+	}
+}
+
+func blockb26poly2(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		size, 0,
+		m + q, m,
+		m, q,
+	}
+}
+
+func blockb26poly3(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		size, size,
+		m, m + q,
+		q + m, m,
+	}
+}
+
+func blockb26poly4(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		0, size,
+		q, m,
+		m, q + m,
+	}
+}
 
 // b27
 //
@@ -482,3 +612,40 @@ func blockb20poly1(size int) []int {
 //	|###   ##|
 //	|########|
 //	----------
+func blockb27poly1(size int) []int {
+	q := size / 4
+	return []int{
+		0, 0,
+		size, 0,
+		0, q,
+	}
+}
+
+func blockb27poly2(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		q + m, 0,
+		size, 0,
+		size, size,
+	}
+}
+
+func blockb27poly3(size int) []int {
+	m := size / 2
+	q := size / 4
+	return []int{
+		size, q + m,
+		size, size,
+		0, size,
+	}
+}
+
+func blockb27poly4(size int) []int {
+	q := size / 4
+	return []int{
+		0, size,
+		0, 0,
+		q, size,
+	}
+}
