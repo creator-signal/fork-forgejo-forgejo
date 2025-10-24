@@ -32,7 +32,7 @@ const DefaultAvatarSize = 256
 
 // RandomImageSize generates and returns a random avatar image unique to input data
 // in custom size (height and width).
-func RandomImageSize(size int, data []byte) (image.Image, error) {
+func RandomImageSize(size int, data []byte) (*identicon.Identicon, error) {
 	// we use white as background, and use dark colors to draw blocks
 	imgMaker, err := identicon.New(size, color.White, identicon.DarkColors...)
 	if err != nil {
@@ -43,7 +43,7 @@ func RandomImageSize(size int, data []byte) (image.Image, error) {
 
 // RandomImage generates and returns a random avatar image unique to input data
 // in default size (height and width).
-func RandomImage(data []byte) (image.Image, error) {
+func RandomImage(data []byte) (*identicon.Identicon, error) {
 	return RandomImageSize(DefaultAvatarSize*setting.Avatar.RenderedSizeFactor, data)
 }
 

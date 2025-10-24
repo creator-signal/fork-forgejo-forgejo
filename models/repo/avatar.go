@@ -40,7 +40,7 @@ func generateRandomAvatar(ctx context.Context, repo *Repository) error {
 	idToString := fmt.Sprintf("%d", repo.ID)
 
 	seed := idToString
-	img, err := avatar.RandomImage([]byte(seed))
+	identicon, err := avatar.RandomImage([]byte(seed))
 	if err != nil {
 		return fmt.Errorf("RandomImage: %w", err)
 	}
@@ -48,7 +48,7 @@ func generateRandomAvatar(ctx context.Context, repo *Repository) error {
 	repo.Avatar = idToString
 
 	if err := storage.SaveFrom(storage.RepoAvatars, repo.CustomAvatarRelativePath(), func(w io.Writer) error {
-		if err := png.Encode(w, img); err != nil {
+		if err := png.Encode(w, &identicon.Raster); err != nil {
 			log.Error("Encode: %v", err)
 		}
 		return err

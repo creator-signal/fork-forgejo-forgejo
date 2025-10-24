@@ -31,20 +31,20 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 		seed = u.Name
 	}
 
-	img, err := avatar.RandomImage([]byte(seed))
+	identicon, err := avatar.RandomImage([]byte(seed))
 	if err != nil {
 		return fmt.Errorf("RandomImage: %w", err)
 	}
 
 	u.Avatar = avatars.HashEmail(seed)
-	u.AvatarSVG = `<path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.75 1.75 0 0 1 1 7.775m1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>`
+	u.AvatarSVG = identicon.Vector
 
 	_, err = storage.Avatars.Stat(u.CustomAvatarRelativePath())
 	if err != nil {
 		// If unable to Stat the avatar file (usually it means non-existing), then try to save a new one
 		// Don't share the images so that we can delete them easily
 		if err := storage.SaveFrom(storage.Avatars, u.CustomAvatarRelativePath(), func(w io.Writer) error {
-			if err := png.Encode(w, img); err != nil {
+			if err := png.Encode(w, &identicon.Raster); err != nil {
 				log.Error("Encode: %v", err)
 			}
 			return nil

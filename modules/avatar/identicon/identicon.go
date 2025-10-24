@@ -1,7 +1,9 @@
+// Copyright 2015 caixw. All rights reserved.
 // Copyright 2021 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-// Copied and modified from https://github.com/issue9/identicon/ (MIT License)
+// Dereved from https://github.com/issue9/identicon/
 // Generate pseudo-random avatars by IP, E-mail, etc.
 
 package identicon
@@ -16,19 +18,25 @@ import (
 
 const minImageSize = 16
 
-// Identicon is used to generate pseudo-random avatars
-type Identicon struct {
+// IdenticonOptions is used to generate pseudo-random avatars
+type IdenticonOptions struct {
 	foreColors []color.Color
 	backColor  color.Color
 	size       int
 	rect       image.Rectangle
 }
 
-// New returns an Identicon struct with the correct settings
+// Identicon stores the generated identicon
+type Identicon struct {
+	Raster image.Paletted
+	Vector string
+}
+
+// New returns an IdenticonOptions struct with the correct settings
 // size image size
 // back background color
 // fore all possible foreground colors. only one foreground color will be picked randomly for one image
-func New(size int, back color.Color, fore ...color.Color) (*Identicon, error) {
+func New(size int, back color.Color, fore ...color.Color) (*IdenticonOptions, error) {
 	if len(fore) == 0 {
 		return nil, errors.New("foreground is not set")
 	}
@@ -37,7 +45,7 @@ func New(size int, back color.Color, fore ...color.Color) (*Identicon, error) {
 		return nil, fmt.Errorf("size %d is smaller than min size %d", size, minImageSize)
 	}
 
-	return &Identicon{
+	return &IdenticonOptions{
 		foreColors: fore,
 		backColor:  back,
 		size:       size,
@@ -46,7 +54,7 @@ func New(size int, back color.Color, fore ...color.Color) (*Identicon, error) {
 }
 
 // Make generates an avatar by data
-func (i *Identicon) Make(data []byte) image.Image {
+func (options *IdenticonOptions) Make(data []byte) *Identicon {
 	h := sha256.New()
 	h.Write(data)
 	sum := h.Sum(nil)
@@ -56,15 +64,18 @@ func (i *Identicon) Make(data []byte) image.Image {
 	c := int(sum[6]+sum[7]+sum[8]) % len(centerBlocks)
 	b1Angle := int(sum[9]+sum[10]) % 4
 	b2Angle := int(sum[11]+sum[12]) % 4
-	foreColor := int(sum[11]+sum[12]+sum[15]) % len(i.foreColors)
+	foreColor := int(sum[11]+sum[12]+sum[15]) % len(options.foreColors)
 
-	return i.render(c, b1, b2, b1Angle, b2Angle, foreColor)
+	return &Identicon{
+		Raster: options.render(c, b1, b2, b1Angle, b2Angle, foreColor),
+		Vector: `<path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.75 1.75 0 0 1 1 7.775m1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>`,
+	}
 }
 
-func (i *Identicon) render(c, b1, b2, b1Angle, b2Angle, foreColor int) image.Image {
-	p := image.NewPaletted(i.rect, []color.Color{i.backColor, i.foreColors[foreColor]})
-	drawBlocks(p, i.size, centerBlocks[c], blocks[b1], blocks[b2], b1Angle, b2Angle)
-	return p
+func (options *IdenticonOptions) render(c, b1, b2, b1Angle, b2Angle, foreColor int) image.Paletted {
+	image := image.NewPaletted(options.rect, []color.Color{options.backColor, options.foreColors[foreColor]})
+	drawBlocks(image, options.size, centerBlocks[c], blocks[b1], blocks[b2], b1Angle, b2Angle)
+	return *image
 }
 
 /*
