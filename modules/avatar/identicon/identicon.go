@@ -116,6 +116,8 @@ func drawBlocks(image *image.Paletted, vectorParts *[9]string, size int, c, b1, 
 		return (a + 1) % 4
 	}
 
+	// todo: clip-path: rect(0 50% 100% 0)
+
 	padding := (size % 3) / 2 // in cased the size can not be aligned by 3 blocks.
 
 	blockSize := size / 3
@@ -125,15 +127,15 @@ func drawBlocks(image *image.Paletted, vectorParts *[9]string, size int, c, b1, 
 
 	// center
 	c(image, blockSize+padding, blockSize+padding, blockSize, 0)
-	svgC(&vectorParts[0], 1, 1, svgSize, 0)
+	vectorParts[0] = svgC(1, 1, svgSize, 0)
 	fmt.Println("ceter: " + vectorParts[0])
 
 	// left top (1)
 	b1(image, 0+padding, 0+padding, blockSize, b1Angle)
-	svgShape1(&vectorParts[1], 0, 0, svgSize, b1Angle)
+	vectorParts[1] = svgShape1(0, 0, svgSize, b1Angle)
 	// center top (2)
 	b2(image, blockSize+padding, 0+padding, blockSize, b2Angle)
-	svgShape2(&vectorParts[2], 1, 0, svgSize, b2Angle)
+	vectorParts[2] = svgShape2(1, 0, svgSize, b2Angle)
 
 	b1Angle = nextAngle(b1Angle)
 	b2Angle = nextAngle(b2Angle)
@@ -143,18 +145,18 @@ func drawBlocks(image *image.Paletted, vectorParts *[9]string, size int, c, b1, 
 
 	// center bottom (8)
 	b2(image, blockSize+padding, twoBlockSize+padding, blockSize, b2Angle)
-	svgShape2(&vectorParts[8], 1, 2, svgSize, b2Angle)
+	vectorParts[8] = svgShape2(1, 2, svgSize, b2Angle)
 
 	b1Angle = nextAngle(b1Angle)
 	b2Angle = nextAngle(b2Angle)
 
 	// lef bottom (7)
 	b1(image, 0+padding, twoBlockSize+padding, blockSize, b1Angle)
-	svgShape1(&vectorParts[7], 0, 2, svgSize, b1Angle)
+	vectorParts[7] = svgShape1(0, 2, svgSize, b1Angle)
 
 	// left middle (4)
 	b2(image, 0+padding, blockSize+padding, blockSize, b2Angle)
-	svgShape2(&vectorParts[4], 0, 1, svgSize, b2Angle)
+	vectorParts[4] = svgShape2(0, 1, svgSize, b2Angle)
 
 	// then we make it left-right mirror, so we didn't draw 3/6/9 before
 	for x := 0; x < size/2; x++ {

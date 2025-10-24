@@ -24,7 +24,7 @@ var (
 )
 
 type blockFunc func(img *image.Paletted, x, y, size, angle int)
-type svgBlockFunc func(vector *string, x, y, size, angle int)
+type svgBlockFunc func(x, y, size, angle int) string
 
 // drawBlock draws a polygon by given points. The polygon can be rotated optionally
 func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
