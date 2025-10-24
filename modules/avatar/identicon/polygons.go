@@ -19,13 +19,12 @@ package identicon
 //	|   #   |
 //	---------
 
-func b3p1(size int) []int {
-	m := size / 2
+func b3p1() []int {
 	return []int{
-		m, 0,
-		size, m,
-		m, size,
-		0, m,
+		2, 0,
+		4, 2,
+		2, 4,
+		0, 2,
 	}
 }
 
@@ -38,11 +37,11 @@ func b3p1(size int) []int {
 //	|##   |
 //	|#    |
 //	|------
-func block4poly1(size int) []int {
+func block4poly1() []int {
 	return []int{
 		0, 0,
-		size, 0,
-		0, size,
+		4, 0,
+		0, 4,
 	}
 }
 
@@ -53,12 +52,11 @@ func block4poly1(size int) []int {
 //	|  ###  |
 //	| ##### |
 //	|#######|
-func block5poly1(size int) []int {
-	m := size / 2
+func block5poly1() []int {
 	return []int{
-		m, 0,
-		size, size,
-		0, size,
+		2, 0,
+		4, 4,
+		0, 4,
 	}
 }
 
@@ -69,13 +67,12 @@ func block5poly1(size int) []int {
 //	|###   |
 //	|###   |
 //	--------
-func block6poly1(size int) []int {
-	m := size / 2
+func block6poly1() []int {
 	return []int{
 		0, 0,
-		m, 0,
-		m, size,
-		0, size,
+		2, 0,
+		2, 4,
+		0, 4,
 	}
 }
 
@@ -87,13 +84,12 @@ func block6poly1(size int) []int {
 //	|  #####|
 //	|   ####|
 //	|--------
-func block7poly1(size int) []int {
-	m := size / 2
+func block7poly1() []int {
 	return []int{
 		0, 0,
-		size, m,
-		size, size,
-		m, size,
+		4, 2,
+		4, 4,
+		2, 4,
 	}
 }
 
@@ -109,35 +105,29 @@ func block7poly1(size int) []int {
 //	-----------
 //
 // Top
-func block8poly1(size int) []int {
-	m := size / 2
-	mm := m / 2
+func block8poly1() []int {
 	return []int{
-		m, 0,
-		3 * mm, m,
-		mm, m,
+		2, 0,
+		3, 2,
+		1, 2,
 	}
 }
 
 // Bottom left
-func block8poly2(size int) []int {
-	m := size / 2
-	mm := m / 2
+func block8poly2() []int {
 	return []int{
-		mm, m,
-		m, size,
-		0, size,
+		1, 2,
+		2, 4,
+		0, 4,
 	}
 }
 
 // Bottom right
-func block8poly3(size int) []int {
-	m := size / 2
-	mm := m / 2
+func block8poly3() []int {
 	return []int{
-		3 * mm, m,
-		size, size,
-		m, size,
+		3, 2,
+		4, 4,
+		2, 4,
 	}
 }
 
@@ -150,12 +140,12 @@ func block8poly3(size int) []int {
 //	|  #### |
 //	|   #   |
 //	---------
-func block9poly1(size int) []int {
-	m := size / 2
+func block9poly1() []int {
+
 	return []int{
 		0, 0,
-		size, m,
-		m, size,
+		4, 2,
+		2, 4,
 	}
 }
 
@@ -171,20 +161,20 @@ func block9poly1(size int) []int {
 //	|##      |
 //	|#       |
 //	----------
-func block10poly1(size int) []int {
-	m := size / 2
+func block10poly1() []int {
+
 	return []int{
-		m, 0,
-		size, 0,
-		m, m,
+		2, 0,
+		4, 0,
+		2, 2,
 	}
 }
-func block10poly2(size int) []int {
-	m := size / 2
+func block10poly2() []int {
+
 	return []int{
-		0, m,
-		m, m,
-		0, size,
+		0, 2,
+		2, 2,
+		0, 4,
 	}
 }
 
@@ -197,13 +187,13 @@ func block10poly2(size int) []int {
 //	|        |
 //	|        |
 //	----------
-func block11poly1(size int) []int {
-	m := size / 2
+func block11poly1() []int {
+
 	return []int{
 		0, 0,
-		m, 0,
-		m, m,
-		0, m,
+		2, 0,
+		2, 2,
+		0, 2,
 	}
 }
 
@@ -216,12 +206,12 @@ func block11poly1(size int) []int {
 //	|  #####  |
 //	|    #    |
 //	-----------
-func block12poly1(size int) []int {
-	m := size / 2
+func block12poly1() []int {
+
 	return []int{
-		0, m,
-		size, m,
-		m, size,
+		0, 2,
+		4, 2,
+		2, 4,
 	}
 }
 
@@ -234,12 +224,12 @@ func block12poly1(size int) []int {
 //	|  #####  |
 //	|#########|
 //	-----------
-func block13poly1(size int) []int {
-	m := size / 2
+func block13poly1() []int {
+
 	return []int{
-		m, m,
-		size, size,
-		0, size,
+		2, 2,
+		4, 4,
+		0, 4,
 	}
 }
 
@@ -252,12 +242,12 @@ func block13poly1(size int) []int {
 //	|       |
 //	|       |
 //	---------
-func blockb14poly1(size int) []int {
-	m := size / 2
+func blockb14poly1() []int {
+
 	return []int{
-		m, 0,
-		m, m,
-		0, m,
+		2, 0,
+		2, 2,
+		0, 2,
 	}
 }
 
@@ -270,12 +260,12 @@ func blockb14poly1(size int) []int {
 //	|        |
 //	|        |
 //	----------
-func blockb15poly1(size int) []int {
-	m := size / 2
+func blockb15poly1() []int {
+
 	return []int{
 		0, 0,
-		m, 0,
-		0, m,
+		2, 0,
+		0, 2,
 	}
 }
 
@@ -289,21 +279,19 @@ func blockb15poly1(size int) []int {
 //	| ##### |
 //	|#######|
 //	---------
-func blockb16poly1(size int) []int {
-	m := size / 2
+func blockb16poly1() []int {
 	return []int{
-		m, 0,
-		size, m,
-		0, m,
+		2, 0,
+		4, 2,
+		0, 2,
 	}
 }
 
-func blockb16poly2(size int) []int {
-	m := size / 2
+func blockb16poly2() []int {
 	return []int{
-		m, m,
-		size, size,
-		0, size,
+		2, 2,
+		4, 4,
+		0, 4,
 	}
 }
 
@@ -316,21 +304,19 @@ func blockb16poly2(size int) []int {
 //	|      ##|
 //	|      ##|
 //	----------
-func blockb17poly1(size int) []int {
-	m := size / 2
+func blockb17poly1() []int {
 	return []int{
 		0, 0,
-		m, 0,
-		0, m,
+		2, 0,
+		0, 2,
 	}
 }
-func blockb17poly2(size int) []int {
-	quarter := size / 4
+func blockb17poly2() []int {
 	return []int{
-		size - quarter, size - quarter,
-		size, size - quarter,
-		size, size,
-		size - quarter, size,
+		3, 3,
+		4, 3,
+		4, 4,
+		3, 4,
 	}
 }
 
@@ -343,12 +329,12 @@ func blockb17poly2(size int) []int {
 //	|##      |
 //	|#       |
 //	----------
-func blockb18poly1(size int) []int {
-	m := size / 2
+func blockb18poly1() []int {
+
 	return []int{
 		0, 0,
-		m, 0,
-		0, size,
+		2, 0,
+		0, 4,
 	}
 }
 
@@ -361,36 +347,36 @@ func blockb18poly1(size int) []int {
 //	|###  ###|
 //	|########|
 //	----------
-func blockb19poly1(size int) []int {
-	m := size / 2
+func blockb19poly1() []int {
+
 	return []int{
 		0, 0,
-		m, 0,
-		0, m,
+		2, 0,
+		0, 2,
 	}
 }
-func blockb19poly2(size int) []int {
-	m := size / 2
+func blockb19poly2() []int {
+
 	return []int{
-		m, 0,
-		size, 0,
-		size, m,
+		2, 0,
+		4, 0,
+		4, 2,
 	}
 }
-func blockb19poly3(size int) []int {
-	m := size / 2
+func blockb19poly3() []int {
+
 	return []int{
-		size, m,
-		size, size,
-		m, size,
+		4, 2,
+		4, 4,
+		2, 4,
 	}
 }
-func blockb19poly4(size int) []int {
-	m := size / 2
+func blockb19poly4() []int {
+
 	return []int{
-		0, m,
-		m, size,
-		0, size,
+		0, 2,
+		2, 4,
+		0, 4,
 	}
 }
 
@@ -403,13 +389,12 @@ func blockb19poly4(size int) []int {
 //	|##       |
 //	|#        |
 //	----------
-func blockb20poly1(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb20poly1() []int {
+
 	return []int{
-		q, 0,
-		0, size,
-		0, m,
+		1, 0,
+		0, 4,
+		0, 2,
 	}
 }
 
@@ -422,23 +407,21 @@ func blockb20poly1(size int) []int {
 //	|##      |
 //	|#       |
 //	----------
-func blockb21poly1(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb21poly1() []int {
+
 	return []int{
-		q, 0,
-		0, size,
-		0, m,
+		1, 0,
+		0, 4,
+		0, 2,
 	}
 }
 
-func blockb21poly2(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb21poly2() []int {
+
 	return []int{
-		q, 0,
-		size, q,
-		size, m,
+		1, 0,
+		4, 1,
+		4, 2,
 	}
 }
 
@@ -451,22 +434,21 @@ func blockb21poly2(size int) []int {
 //	|##    ##|
 //	|#      #|
 //	----------
-func blockb22poly1(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb22poly1() []int {
+
 	return []int{
-		q, 0,
-		0, size,
-		0, m,
+		1, 0,
+		0, 4,
+		0, 2,
 	}
 }
 
-func blockb22poly2(size int) []int {
-	q := size / 4
+func blockb22poly2() []int {
+
 	return []int{
-		q, 0,
-		size, q,
-		size, size,
+		1, 0,
+		4, 1,
+		4, 4,
 	}
 }
 
@@ -479,22 +461,21 @@ func blockb22poly2(size int) []int {
 //	|##      |
 //	|#       |
 //	----------
-func blockb23poly1(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb23poly1() []int {
+
 	return []int{
-		q, 0,
-		0, size,
-		0, m,
+		1, 0,
+		0, 4,
+		0, 2,
 	}
 }
 
-func blockb23poly2(size int) []int {
-	q := size / 4
+func blockb23poly2() []int {
+
 	return []int{
-		q, 0,
-		size, 0,
-		size, q,
+		1, 0,
+		4, 0,
+		4, 1,
 	}
 }
 
@@ -507,22 +488,21 @@ func blockb23poly2(size int) []int {
 //	|##  ##  |
 //	|#   #   |
 //	----------
-func blockb24poly1(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb24poly1() []int {
+
 	return []int{
-		q, 0,
-		0, size,
-		0, m,
+		1, 0,
+		0, 4,
+		0, 2,
 	}
 }
 
-func blockb24poly2(size int) []int {
-	m := size / 2
+func blockb24poly2() []int {
+
 	return []int{
-		m, 0,
-		size, 0,
-		m, size,
+		2, 0,
+		4, 0,
+		2, 4,
 	}
 }
 
@@ -535,22 +515,19 @@ func blockb24poly2(size int) []int {
 //	|######  |
 //	|####    |
 //	----------
-func blockb25poly1(size int) []int {
-	q := size / 4
+func blockb25poly1() []int {
 	return []int{
 		0, 0,
-		0, size,
-		q, size,
+		0, 4,
+		1, 4,
 	}
 }
 
-func blockb25poly2(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb25poly2() []int {
 	return []int{
-		0, m,
-		size, 0,
-		q, size,
+		0, 2,
+		4, 0,
+		1, 4,
 	}
 }
 
@@ -563,43 +540,35 @@ func blockb25poly2(size int) []int {
 //	|###  ###|
 //	|#      #|
 //	----------
-func blockb26poly1(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb26poly1() []int {
 	return []int{
 		0, 0,
-		m, q,
-		q, m,
+		2, 1,
+		1, 2,
 	}
 }
 
-func blockb26poly2(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb26poly2() []int {
 	return []int{
-		size, 0,
-		m + q, m,
-		m, q,
+		4, 0,
+		3, 2,
+		2, 1,
 	}
 }
 
-func blockb26poly3(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb26poly3() []int {
 	return []int{
-		size, size,
-		m, m + q,
-		q + m, m,
+		4, 4,
+		2, 3,
+		3, 2,
 	}
 }
 
-func blockb26poly4(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb26poly4() []int {
 	return []int{
-		0, size,
-		q, m,
-		m, q + m,
+		0, 4,
+		1, 2,
+		2, 3,
 	}
 }
 
@@ -612,40 +581,34 @@ func blockb26poly4(size int) []int {
 //	|###   ##|
 //	|########|
 //	----------
-func blockb27poly1(size int) []int {
-	q := size / 4
+func blockb27poly1() []int {
 	return []int{
 		0, 0,
-		size, 0,
-		0, q,
+		4, 0,
+		0, 1,
 	}
 }
 
-func blockb27poly2(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb27poly2() []int {
 	return []int{
-		q + m, 0,
-		size, 0,
-		size, size,
+		3, 0,
+		4, 0,
+		4, 4,
 	}
 }
 
-func blockb27poly3(size int) []int {
-	m := size / 2
-	q := size / 4
+func blockb27poly3() []int {
 	return []int{
-		size, q + m,
-		size, size,
-		0, size,
+		4, 3,
+		4, 4,
+		0, 4,
 	}
 }
 
-func blockb27poly4(size int) []int {
-	q := size / 4
+func blockb27poly4() []int {
 	return []int{
-		0, size,
+		0, 4,
 		0, 0,
-		q, size,
+		1, 4,
 	}
 }
