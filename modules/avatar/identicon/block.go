@@ -46,16 +46,17 @@ func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
 	}
 }
 
-// pointsToAttr converts points into svg polygon points attribute
-func pointsToAttr(pts []int) string {
+// formatPolygon converts points into svg polygon
+func formatPolygon(points []int, x, y, size int) string {
 	var b strings.Builder
-	for i := 0; i+1 < len(pts); i += 2 {
+	for i := 0; i+1 < len(points); i += 2 {
 		if i > 0 {
 			b.WriteByte(' ')
 		}
-		fmt.Fprintf(&b, "%d,%d", pts[i], pts[i+1])
+		// fixme: x and y are currently pre-multiplied by size of the raster image
+		fmt.Fprintf(&b, "%d,%d", x+points[i]*size/4, y+points[i+1]*size/4)
 	}
-	return b.String()
+	return fmt.Sprintf(`<polygon points="%s"/>`, b.String())
 }
 
 // blank
@@ -106,7 +107,7 @@ func b2(img *image.Paletted, vector *string, x, y, size, angle int) {
 func b3(img *image.Paletted, vector *string, x, y, size, angle int) {
 	polygon := b3p1
 	drawBlock(img, x, y, size, 0, polygon)
-	*vector = fmt.Sprintf(`<polygon points="%s"/>`, pointsToAttr(polygon))
+	*vector = formatPolygon(polygon, x, y, 48)
 	println("b3: " + *vector)
 }
 
