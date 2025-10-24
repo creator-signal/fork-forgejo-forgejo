@@ -26,6 +26,8 @@
 .svg[height="36"] { min-height: 36px; }
 .svg[height="48"] { min-height: 48px; }
 .svg[height="56"] { min-height: 56px; }
+.svg[height="100"] { min-height: 100px; }
+.svg[height="256"] { min-height: 256px; }
 
 .svg[width="12"] { min-width: 12px; }
 .svg[width="13"] { min-width: 13px; }
@@ -39,3 +41,5 @@
 .svg[width="36"] { min-width: 36px; }
 .svg[width="48"] { min-width: 48px; }
 .svg[width="56"] { min-width: 56px; }
+.svg[width="100"] { min-width: 100px; }
+.svg[width="256"] { min-width: 256px; }
