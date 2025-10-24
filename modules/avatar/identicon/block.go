@@ -24,18 +24,17 @@ var (
 )
 
 type blockFunc func(img *image.Paletted, x, y, size, angle int)
-type svgBlockFunc func(vector *string, x, y, size int)
+type svgBlockFunc func(vector *string, x, y, size, angle int)
 
 // drawBlock draws a polygon by given points. The polygon can be rotated optionally
 func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
+	// The last point should be same as the first to end the shape
 	adjPoints := append(points, points[0], points[1])
 	// Points are stored as 1/4, 2/4, 3/4, 4/4 fractions
 	for i := range adjPoints {
 		adjPoints[i] = adjPoints[i] * size / 4
 	}
-	// The last point should be same as the first to end the shape
 
-	// Todo: this might be also needed for svg
 	if angle != 0 {
 		m := size / 2
 		rotate(adjPoints, m, m, angle)
@@ -51,13 +50,19 @@ func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
 }
 
 // formatPolygon converts points into svg polygon
-func formatPolygon(points []int, x, y, size int) string {
+func formatPolygon(points []int, x, y, size, angle int) string {
+	adjPoints := make([]int, len(points))
+	copy(adjPoints, points)
+	if angle != 0 {
+		sixteenth := size / 16
+		rotate(adjPoints, sixteenth, sixteenth, angle)
+	}
 	var b strings.Builder
-	for i := 0; i+1 < len(points); i += 2 {
+	for i := 0; i+1 < len(adjPoints); i += 2 {
 		if i > 0 {
 			b.WriteByte(' ')
 		}
-		fmt.Fprintf(&b, "%d,%d", (size/3*x + size*points[i]/4/3), (size/3*y + size*points[i+1]/4/3))
+		fmt.Fprintf(&b, "%d,%d", (size/3*x + size*adjPoints[i]/4/3), (size/3*y + size*adjPoints[i+1]/4/3))
 	}
 	return fmt.Sprintf(`<polygon points="%s"/>`, b.String())
 }
