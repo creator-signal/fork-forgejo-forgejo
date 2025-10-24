@@ -305,7 +305,7 @@ func Routes() *web.Route {
 	return routes
 }
 
-var ignSignInAndCsrf = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
+var ignoreCSRF = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
 
 // registerRoutes register routes
 func registerRoutes(m *web.Route) {
@@ -558,12 +558,14 @@ func registerRoutes(m *web.Route) {
 			m.Post("/grant", web.Bind(forms.GrantApplicationForm{}), auth.GrantApplicationOAuth)
 			// TODO manage redirection
 			m.Post("/authorize", web.Bind(forms.AuthorizationForm{}), auth.AuthorizeOAuth)
-		}, ignSignInAndCsrf, reqSignIn)
+		}, reqSignIn)
 
-		m.Methods("GET, POST, OPTIONS", "/userinfo", optionsCorsHandler(), ignSignInAndCsrf, auth.InfoOAuth)
-		m.Methods("POST, OPTIONS", "/access_token", optionsCorsHandler(), web.Bind(forms.AccessTokenForm{}), ignSignInAndCsrf, auth.AccessTokenOAuth)
-		m.Methods("GET, OPTIONS", "/keys", optionsCorsHandler(), ignSignInAndCsrf, auth.OIDCKeys)
-		m.Methods("POST, OPTIONS", "/introspect", optionsCorsHandler(), web.Bind(forms.IntrospectTokenForm{}), ignSignInAndCsrf, auth.IntrospectOAuth)
+		m.Group("", func() {
+			m.Methods("GET, POST, OPTIONS", "/userinfo", auth.InfoOAuth)
+			m.Methods("POST, OPTIONS", "/access_token", web.Bind(forms.AccessTokenForm{}), auth.AccessTokenOAuth)
+			m.Methods("GET, OPTIONS", "/keys", auth.OIDCKeys)
+			m.Methods("POST, OPTIONS", "/introspect", web.Bind(forms.IntrospectTokenForm{}), auth.IntrospectOAuth)
+		}, optionsCorsHandler(), ignoreCSRF)
 	}, oauth2Enabled)
 
 	m.Group("/user/settings", func() {
@@ -1646,7 +1648,7 @@ func registerRoutes(m *web.Route) {
 		m.Post("/sync_fork", context.RepoMustNotBeArchived(), repo.MustBeNotEmpty, reqRepoCodeWriter, repo.SyncFork)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
-	m.Post("/{username}/{reponame}/lastcommit/*", ignSignInAndCsrf, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
+	m.Post("/{username}/{reponame}/lastcommit/*", reqSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
 
 	m.Group("/{username}/{reponame}", func() {
 		if !setting.Repository.DisableStars {
@@ -1683,7 +1685,7 @@ func registerRoutes(m *web.Route) {
 				m.Any("/*", func(ctx *context.Context) {
 					ctx.NotFound("", nil)
 				})
-			}, ignSignInAndCsrf, lfsServerEnabled)
+			}, ignoreCSRF, lfsServerEnabled)
 
 			gitHTTPRouters(m)
 		})
