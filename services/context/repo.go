@@ -48,6 +48,14 @@ type PullRequest struct {
 	HeadInfoSubURL string // [<user>:]<branch> url segment
 }
 
+// Issue contains information to make an issue
+type Issue struct {
+	BaseRepo       *repo_model.Repository
+	Allowed        bool
+	SameRepo       bool
+	HeadInfoSubURL string // [<user>:]<branch> url segment
+}
+
 // Repository contains information to operate a repository
 type Repository struct {
 	access_model.Permission
@@ -70,6 +78,7 @@ type Repository struct {
 	CommitsCount int64
 
 	PullRequest *PullRequest
+	Issue       *Issue
 }
 
 // CanWriteToBranch checks if the branch is writable by the user

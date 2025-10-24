@@ -124,3 +124,11 @@ func RepositoryUnmarshalJSON(data []byte) (Repository, error) {
 
 	return repository, nil
 }
+
+// RepositoryActivity is used to store federated inbox/outbox activities.
+type RepositoryActivity struct {
+	ID int64 `xorm:"pk"`
+	RepoID int64 `xorm:"repo_id"`
+	ActivityID string `xorm:"TEXT 'activity_id'"`
+	Activity string `xorm:"TEXT 'activity'"`
+}

@@ -48,7 +48,7 @@ func Repository(ctx *context.APIContext) {
 	response(ctx, repo)
 }
 
-// PersonInbox function handles the incoming data for a repository inbox
+// RepositoryInbox function handles the incoming data for a repository inbox
 func RepositoryInbox(ctx *context.APIContext) {
 	// swagger:operation POST /activitypub/repository-id/{repository-id}/inbox activitypub activitypubRepositoryInbox
 	// ---
@@ -79,5 +79,44 @@ func RepositoryInbox(ctx *context.APIContext) {
 		ctx.Error(federation.HTTPStatus(err), "Processing Repository Inbox failed", result)
 		return
 	}
+	responseServiceResult(ctx, result)
+}
+
+// RepositoryOutbox function handles the outgoing data for a repository outbox
+func RepositoryOutbox(ctx *context.APIContext) {
+	// swagger:operation GET /activitypub/repository-id/{repository-id}/outbox/{activity-id} activitypub activitypubRepositoryOutbox
+	// ---
+	// summary: Send to the inbox
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: repository-id
+	//   in: path
+	//   description: repository ID of the repo
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: activity-id
+	//   in: path
+	//   description: repository outbox activity ID
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/ActivityPub"
+
+	repository := ctx.Repo.Repository
+	log.Info("RepositoryOutbox: repo: %v", repository)
+
+	activityID := fmt.Sprintf("%s/api/v1/activitypub/repository-id/%d/outbox/%s", strings.TrimSuffix(setting.AppURL, "/"), ctx.Repo.Repository.ID, ctx.Params(":activity-id"))
+
+	activity := ap.Activity { ID: ap.IRI(activityID) }
+
+	result, err := federation.ProcessRepositoryOutbox(ctx, &activity, repository.ID)
+	if err != nil {
+		ctx.Error(federation.HTTPStatus(err), "Processing Repository Inbox failed", result)
+		return
+	}
+
 	responseServiceResult(ctx, result)
 }
