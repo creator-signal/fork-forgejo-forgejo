@@ -63,20 +63,20 @@ func (options *Options) Make(data []byte) *Identicon {
 	b1 := int(sum[0]+sum[1]+sum[2]) % len(blocks)
 	b2 := int(sum[3]+sum[4]+sum[5]) % len(blocks)
 	c := int(sum[6]+sum[7]+sum[8]) % len(centerBlocks)
-	b1Angle := int(sum[9]+sum[10]) % 4
-	b2Angle := int(sum[11]+sum[12]) % 4
+	tileOneAngle := int(sum[9]+sum[10]) % 4
+	tileTwoAngle := int(sum[11]+sum[12]) % 4
 	foreColorIndex := int(sum[11]+sum[12]+sum[15]) % len(options.foreColors)
 	foreColor := options.foreColors[foreColorIndex]
 
-	return options.render(c, b1, b2, b1Angle, b2Angle, foreColor)
+	return options.render(c, b1, b2, tileOneAngle, tileTwoAngle, foreColor)
 }
 
-func (options *Options) render(c, b1, b2, b1Angle, b2Angle int, foreColor uint32) *Identicon {
+func (options *Options) render(c, b1, b2, tileOneAngle, tileTwoAngle int, foreColor uint32) *Identicon {
 	raster := image.NewPaletted(options.rect, []color.Color{options.backColor, uint32RGBA(foreColor)})
 	vectorParts := [9]string{}
 
-	drawBlocks(raster, &vectorParts, options.size, centerBlocks[c], blocks[b1], blocks[b2],
-		svgCenterBlocks[c], svgBlocks[b1], svgBlocks[b2], b1Angle, b2Angle)
+	drawTiles(raster, &vectorParts, options.size, centerBlocks[c], blocks[b1], blocks[b2],
+		svgCenterBlocks[c], svgBlocks[b1], svgBlocks[b2], tileOneAngle, tileTwoAngle)
 	vector := strings.Join(vectorParts[:], "")
 	vector = `<g color="#` + uint32HEX(foreColor) + `">
 	<g>` + vector + `</g>
@@ -111,53 +111,50 @@ Area 5 uses a random pattern.
 The Patched Fix: make the image left-right mirrored to get rid of something like "swastika"
 */
 
-// draw blocks to the paletted
-// c: the block drawer for the center block
-// b1,b2: the block drawers for other blocks (around the center block)
-// b1Angle,b2Angle: the angle for the rotation of b1/b2
-func drawBlocks(image *image.Paletted, vectorParts *[9]string, size int, c, b1, b2 blockFunc, svgC, svgShape1, svgShape2 svgBlockFunc, b1Angle, b2Angle int) {
+// Draw both vector and raster tiles for the identicon
+func drawTiles(image *image.Paletted, vectorParts *[9]string, size int, rasterMid, rasterOne, rasterTwo rasterTileFunc, vectorMid, vectorOne, vectorTwo vectorTileFunc, tileOneAngle, tileTwoAngle int) {
 	nextAngle := func(a int) int {
 		return (a + 1) % 4
 	}
 
-	padding := (size % 3) / 2 // in cased the size can not be aligned by 3 blocks.
+	padding := (size % 3) / 2 // in case the size can not be aligned by 3 blocks.
 
 	blockSize := size / 3
 	twoBlockSize := 2 * blockSize
 
 	svgSize := 36
 
-	// center
-	c(image, blockSize+padding, blockSize+padding, blockSize, 0)
-	vectorParts[0] = svgC(1, 1, svgSize, 0)
+	// Middle
+	rasterMid(image, blockSize+padding, blockSize+padding, blockSize, 0)
+	vectorParts[0] = vectorMid(1, 1, svgSize, 0)
 
-	// left top (1)
-	b1(image, 0+padding, 0+padding, blockSize, b1Angle)
-	vectorParts[1] = svgShape1(0, 0, svgSize, b1Angle)
-	// center top (2)
-	b2(image, blockSize+padding, 0+padding, blockSize, b2Angle)
-	vectorParts[2] = svgShape2(1, 0, svgSize, b2Angle)
+	// Top left (1)
+	rasterOne(image, 0+padding, 0+padding, blockSize, tileOneAngle)
+	vectorParts[1] = vectorOne(0, 0, svgSize, tileOneAngle)
+	// Top middle (2)
+	rasterTwo(image, blockSize+padding, 0+padding, blockSize, tileTwoAngle)
+	vectorParts[2] = vectorTwo(1, 0, svgSize, tileTwoAngle)
 
-	b1Angle = nextAngle(b1Angle)
-	b2Angle = nextAngle(b2Angle)
+	tileOneAngle = nextAngle(tileOneAngle)
+	tileTwoAngle = nextAngle(tileTwoAngle)
 
-	b1Angle = nextAngle(b1Angle)
-	b2Angle = nextAngle(b2Angle)
+	tileOneAngle = nextAngle(tileOneAngle)
+	tileTwoAngle = nextAngle(tileTwoAngle)
 
-	// center bottom (8)
-	b2(image, blockSize+padding, twoBlockSize+padding, blockSize, b2Angle)
-	vectorParts[8] = svgShape2(1, 2, svgSize, b2Angle)
+	// Bottom middle (8)
+	rasterTwo(image, blockSize+padding, twoBlockSize+padding, blockSize, tileTwoAngle)
+	vectorParts[8] = vectorTwo(1, 2, svgSize, tileTwoAngle)
 
-	b1Angle = nextAngle(b1Angle)
-	b2Angle = nextAngle(b2Angle)
+	tileOneAngle = nextAngle(tileOneAngle)
+	tileTwoAngle = nextAngle(tileTwoAngle)
 
-	// lef bottom (7)
-	b1(image, 0+padding, twoBlockSize+padding, blockSize, b1Angle)
-	vectorParts[7] = svgShape1(0, 2, svgSize, b1Angle)
+	// Bottom left (7)
+	rasterOne(image, 0+padding, twoBlockSize+padding, blockSize, tileOneAngle)
+	vectorParts[7] = vectorOne(0, 2, svgSize, tileOneAngle)
 
-	// left middle (4)
-	b2(image, 0+padding, blockSize+padding, blockSize, b2Angle)
-	vectorParts[4] = svgShape2(0, 1, svgSize, b2Angle)
+	// Middle left (4)
+	rasterTwo(image, 0+padding, blockSize+padding, blockSize, tileTwoAngle)
+	vectorParts[4] = vectorTwo(0, 1, svgSize, tileTwoAngle)
 
 	// then we make it left-right mirror, so we didn't draw 3/6/9 before
 	for x := 0; x < size/2; x++ {
