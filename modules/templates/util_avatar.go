@@ -37,26 +37,40 @@ func AvatarHTML(src string, size int, class, name string) template.HTML {
 	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + src + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
 }
 
+// AvatarHTML2 creates the HTML for an avatar and also support SVG avatars
+func AvatarHTML2(avatar user_model.AvatarDisplayProperties, size int, class, name string) template.HTML {
+	sizeStr := fmt.Sprintf(`%d`, size)
+
+	if name == "" {
+		name = "avatar"
+	}
+
+	println(avatar.SvgContent)
+
+	if avatar.SvgContent != "" {
+		return template.HTML(`<svg class="svg" viewBox="0 0 48 48" width="48" height="48">` + avatar.SvgContent + `</svg>`)
+	}
+
+	// RasterLink is guaranteed to be non-empty by SolveAvatar, which falls it back to default avatar link
+	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + avatar.RasterLink + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
+}
+
 // Avatar renders user avatars. args: user, size (int), class (string)
 func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 	size, class := gitea_html.ParseSizeAndClass(avatars.DefaultAvatarPixelSize, avatars.DefaultAvatarClass, others...)
 
 	switch t := item.(type) {
 	case *user_model.User:
-		src := t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
-		if src != "" {
-			return AvatarHTML(src, size, class, t.DisplayName())
-		}
+		avatar := t.SolveAvatar(au.ctx, size*setting.Avatar.RenderedSizeFactor)
+		return AvatarHTML2(avatar, size, class, t.DisplayName())
 	case *repo_model.Collaborator:
 		src := t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		if src != "" {
 			return AvatarHTML(src, size, class, t.DisplayName())
 		}
 	case *organization.Organization:
-		src := t.AsUser().AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
-		if src != "" {
-			return AvatarHTML(src, size, class, t.AsUser().DisplayName())
-		}
+		avatar := t.AsUser().SolveAvatar(au.ctx, size*setting.Avatar.RenderedSizeFactor)
+		return AvatarHTML2(avatar, size, class, t.DisplayName())
 	}
 
 	return AvatarHTML(avatars.DefaultAvatarLink(), size, class, "")
