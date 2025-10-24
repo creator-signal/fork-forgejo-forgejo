@@ -23,13 +23,16 @@ var (
 	svgBlocks = []svgBlockFunc{svgB0, svgB1, svgB2, svgB3, svgB4, svgB5, svgB6, svgB7, svgB8, svgB9, svgB10, svgB11, svgB12, svgB13, svgB14, svgB15, svgB16, svgB17, svgB18, svgB19, svgB20, svgB21, svgB22, svgB23, svgB24, svgB25, svgB26, svgB27}
 )
 
-type blockFunc func(img *image.Paletted, x, y, size, angle int)
-type svgBlockFunc func(x, y, size, angle int) string
+type (
+	blockFunc    func(img *image.Paletted, x, y, size, angle int)
+	svgBlockFunc func(x, y, size, angle int) string
+)
 
 // drawBlock draws a polygon by given points. The polygon can be rotated optionally
 func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
 	// The last point should be same as the first to end the shape
-	adjPoints := append(points, points[0], points[1])
+	adjPoints := make([]int, 0, len(points)+2)
+	adjPoints = append(adjPoints, points[0], points[1])
 	// Points are stored as 1/4, 2/4, 3/4, 4/4 fractions
 	for i := range adjPoints {
 		adjPoints[i] = adjPoints[i] * size / 4

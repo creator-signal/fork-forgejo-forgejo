@@ -53,7 +53,7 @@ func TestUserAvatar(t *testing.T) {
 		return
 	}
 
-	if err := png.Encode(imgData, img); err != nil {
+	if err := png.Encode(imgData, &img.Raster); err != nil {
 		require.NoError(t, err)
 		return
 	}

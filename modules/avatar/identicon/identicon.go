@@ -19,8 +19,8 @@ import (
 
 const minImageSize = 16
 
-// IdenticonOptions is used to generate pseudo-random avatars
-type IdenticonOptions struct {
+// Options is used to generate pseudo-random avatars
+type Options struct {
 	foreColors []uint32
 	backColor  color.Color
 	size       int
@@ -33,11 +33,11 @@ type Identicon struct {
 	Vector string
 }
 
-// New returns an IdenticonOptions struct with the correct settings
+// New returns an Options struct with the correct settings
 // size image size
 // back background color
 // fore all possible foreground colors. only one foreground color will be picked randomly for one image
-func New(size int, back color.Color, fore ...uint32) (*IdenticonOptions, error) {
+func New(size int, back color.Color, fore ...uint32) (*Options, error) {
 	if len(fore) == 0 {
 		return nil, errors.New("foreground is not set")
 	}
@@ -46,7 +46,7 @@ func New(size int, back color.Color, fore ...uint32) (*IdenticonOptions, error) 
 		return nil, fmt.Errorf("size %d is smaller than min size %d", size, minImageSize)
 	}
 
-	return &IdenticonOptions{
+	return &Options{
 		foreColors: fore,
 		backColor:  back,
 		size:       size,
@@ -55,7 +55,7 @@ func New(size int, back color.Color, fore ...uint32) (*IdenticonOptions, error) 
 }
 
 // Make generates an avatar by data
-func (options *IdenticonOptions) Make(data []byte) *Identicon {
+func (options *Options) Make(data []byte) *Identicon {
 	h := sha256.New()
 	h.Write(data)
 	sum := h.Sum(nil)
@@ -71,7 +71,7 @@ func (options *IdenticonOptions) Make(data []byte) *Identicon {
 	return options.render(c, b1, b2, b1Angle, b2Angle, foreColor)
 }
 
-func (options *IdenticonOptions) render(c, b1, b2, b1Angle, b2Angle int, foreColor uint32) *Identicon {
+func (options *Options) render(c, b1, b2, b1Angle, b2Angle int, foreColor uint32) *Identicon {
 	raster := image.NewPaletted(options.rect, []color.Color{options.backColor, uint32RGBA(foreColor)})
 	vectorParts := [9]string{}
 

@@ -45,11 +45,12 @@
 .svg[width="256"] { min-width: 256px; }
 
 :root {
+  --svg-avatar-background: #ffffff;
   --svg-avatar-size: 36px;
 }
 
 svg.identicon {
-  background-color: #ffffff;
+  background-color: var( --svg-avatar-background);
   border-radius: var(--border-radius);
 }
 
