@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"strings"
 )
 
 const minImageSize = 16
@@ -66,16 +67,21 @@ func (options *IdenticonOptions) Make(data []byte) *Identicon {
 	b2Angle := int(sum[11]+sum[12]) % 4
 	foreColor := int(sum[11]+sum[12]+sum[15]) % len(options.foreColors)
 
-	return &Identicon{
-		Raster: options.render(c, b1, b2, b1Angle, b2Angle, foreColor),
-		Vector: `<path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.75 1.75 0 0 1 1 7.775m1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>`,
-	}
+	return options.render(c, b1, b2, b1Angle, b2Angle, foreColor)
 }
 
-func (options *IdenticonOptions) render(c, b1, b2, b1Angle, b2Angle, foreColor int) image.Paletted {
-	image := image.NewPaletted(options.rect, []color.Color{options.backColor, options.foreColors[foreColor]})
-	drawBlocks(image, options.size, centerBlocks[c], blocks[b1], blocks[b2], b1Angle, b2Angle)
-	return *image
+func (options *IdenticonOptions) render(c, b1, b2, b1Angle, b2Angle, foreColor int) *Identicon {
+	raster := image.NewPaletted(options.rect, []color.Color{options.backColor, options.foreColors[foreColor]})
+	vectorParts := [9]string{}
+
+	drawBlocks(raster, &vectorParts, options.size, centerBlocks[c], blocks[b1], blocks[b2], b1Angle, b2Angle)
+	vector := strings.Join(vectorParts[:], "")
+	println("render: " + vector)
+
+	return &Identicon{
+		Raster: *raster,
+		Vector: vector,
+	}
 }
 
 /*
@@ -104,7 +110,7 @@ The Patched Fix: make the image left-right mirrored to get rid of something like
 // c: the block drawer for the center block
 // b1,b2: the block drawers for other blocks (around the center block)
 // b1Angle,b2Angle: the angle for the rotation of b1/b2
-func drawBlocks(p *image.Paletted, size int, c, b1, b2 blockFunc, b1Angle, b2Angle int) {
+func drawBlocks(image *image.Paletted, vectorParts *[9]string, size int, c, b1, b2 blockFunc, b1Angle, b2Angle int) {
 	nextAngle := func(a int) int {
 		return (a + 1) % 4
 	}
@@ -115,12 +121,13 @@ func drawBlocks(p *image.Paletted, size int, c, b1, b2 blockFunc, b1Angle, b2Ang
 	twoBlockSize := 2 * blockSize
 
 	// center
-	c(p, blockSize+padding, blockSize+padding, blockSize, 0)
+	c(image, &vectorParts[0], blockSize+padding, blockSize+padding, blockSize, 0)
+	fmt.Println("ceter: " + vectorParts[0])
 
 	// left top (1)
-	b1(p, 0+padding, 0+padding, blockSize, b1Angle)
+	b1(image, &vectorParts[1], 0+padding, 0+padding, blockSize, b1Angle)
 	// center top (2)
-	b2(p, blockSize+padding, 0+padding, blockSize, b2Angle)
+	b2(image, &vectorParts[2], blockSize+padding, 0+padding, blockSize, b2Angle)
 
 	b1Angle = nextAngle(b1Angle)
 	b2Angle = nextAngle(b2Angle)
@@ -134,19 +141,19 @@ func drawBlocks(p *image.Paletted, size int, c, b1, b2 blockFunc, b1Angle, b2Ang
 	// right bottom (9)
 	// b1(p, twoBlockSize+padding, twoBlockSize+padding, blockSize, b1Angle)
 	// center bottom (8)
-	b2(p, blockSize+padding, twoBlockSize+padding, blockSize, b2Angle)
+	b2(image, &vectorParts[8], blockSize+padding, twoBlockSize+padding, blockSize, b2Angle)
 
 	b1Angle = nextAngle(b1Angle)
 	b2Angle = nextAngle(b2Angle)
 	// lef bottom (7)
-	b1(p, 0+padding, twoBlockSize+padding, blockSize, b1Angle)
+	b1(image, &vectorParts[7], 0+padding, twoBlockSize+padding, blockSize, b1Angle)
 	// left middle (4)
-	b2(p, 0+padding, blockSize+padding, blockSize, b2Angle)
+	b2(image, &vectorParts[4], 0+padding, blockSize+padding, blockSize, b2Angle)
 
 	// then we make it left-right mirror, so we didn't draw 3/6/9 before
 	for x := 0; x < size/2; x++ {
 		for y := 0; y < size; y++ {
-			p.SetColorIndex(size-x, y, p.ColorIndexAt(x, y))
+			image.SetColorIndex(size-x, y, image.ColorIndexAt(x, y))
 		}
 	}
 }
