@@ -87,6 +87,15 @@ func block6poly1(size int) []int {
 //	|  #####|
 //	|   ####|
 //	|--------
+func block7poly1(size int) []int {
+	m := size / 2
+	return []int{
+		0, 0,
+		size, m,
+		size, size,
+		m, size,
+	}
+}
 
 // b8 three small triangles
 //
@@ -98,6 +107,39 @@ func block6poly1(size int) []int {
 //	| ### ### |
 //	|#########|
 //	-----------
+//
+// Top
+func block8poly1(size int) []int {
+	m := size / 2
+	mm := m / 2
+	return []int{
+		m, 0,
+		3 * mm, m,
+		mm, m,
+	}
+}
+
+// Bottom left
+func block8poly2(size int) []int {
+	m := size / 2
+	mm := m / 2
+	return []int{
+		mm, m,
+		m, size,
+		0, size,
+	}
+}
+
+// Bottom right
+func block8poly3(size int) []int {
+	m := size / 2
+	mm := m / 2
+	return []int{
+		3 * mm, m,
+		size, size,
+		m, size,
+	}
+}
 
 // b9 italic triangle
 //
@@ -108,6 +150,14 @@ func block6poly1(size int) []int {
 //	|  #### |
 //	|   #   |
 //	---------
+func block9poly1(size int) []int {
+	m := size / 2
+	return []int{
+		0, 0,
+		size, m,
+		m, size,
+	}
+}
 
 // b10
 //
@@ -121,6 +171,22 @@ func block6poly1(size int) []int {
 //	|##      |
 //	|#       |
 //	----------
+func block10poly1(size int) []int {
+	m := size / 2
+	return []int{
+		m, 0,
+		size, 0,
+		m, m,
+	}
+}
+func block10poly2(size int) []int {
+	m := size / 2
+	return []int{
+		0, m,
+		m, m,
+		0, size,
+	}
+}
 
 // b11
 //
@@ -131,6 +197,15 @@ func block6poly1(size int) []int {
 //	|        |
 //	|        |
 //	----------
+func block11poly1(size int) []int {
+	m := size / 2
+	return []int{
+		0, 0,
+		m, 0,
+		m, m,
+		0, m,
+	}
+}
 
 // b12
 //
@@ -141,6 +216,14 @@ func block6poly1(size int) []int {
 //	|  #####  |
 //	|    #    |
 //	-----------
+func block12poly1(size int) []int {
+	m := size / 2
+	return []int{
+		0, m,
+		size, m,
+		m, size,
+	}
+}
 
 // b13
 //
@@ -151,6 +234,14 @@ func block6poly1(size int) []int {
 //	|  #####  |
 //	|#########|
 //	-----------
+func block13poly1(size int) []int {
+	m := size / 2
+	return []int{
+		m, m,
+		size, size,
+		0, size,
+	}
+}
 
 // b14
 //

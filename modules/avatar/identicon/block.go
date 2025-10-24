@@ -118,91 +118,34 @@ func b6(img *image.Paletted, vector *string, x, y, size, angle int) {
 }
 
 func b7(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	drawBlock(img, x, y, size, angle, []int{
-		0, 0,
-		size, m,
-		size, size,
-		m, size,
-	})
+	drawBlock(img, x, y, size, angle, block7poly1(size))
 }
 
 func b8(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	mm := m / 2
-
-	// top
-	drawBlock(img, x, y, size, angle, []int{
-		m, 0,
-		3 * mm, m,
-		mm, m,
-	})
-
-	// bottom left
-	drawBlock(img, x, y, size, angle, []int{
-		mm, m,
-		m, size,
-		0, size,
-	})
-
-	// bottom right
-	drawBlock(img, x, y, size, angle, []int{
-		3 * mm, m,
-		size, size,
-		m, size,
-	})
+	drawBlock(img, x, y, size, angle, block8poly1(size))
+	drawBlock(img, x, y, size, angle, block8poly2(size))
+	drawBlock(img, x, y, size, angle, block8poly3(size))
 }
 
 func b9(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	drawBlock(img, x, y, size, angle, []int{
-		0, 0,
-		size, m,
-		m, size,
-	})
+	drawBlock(img, x, y, size, angle, block9poly1(size))
 }
 
 func b10(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	drawBlock(img, x, y, size, angle, []int{
-		m, 0,
-		size, 0,
-		m, m,
-	})
-
-	drawBlock(img, x, y, size, angle, []int{
-		0, m,
-		m, m,
-		0, size,
-	})
+	drawBlock(img, x, y, size, angle, block10poly1(size))
+	drawBlock(img, x, y, size, angle, block10poly2(size))
 }
 
 func b11(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	drawBlock(img, x, y, size, angle, []int{
-		0, 0,
-		m, 0,
-		m, m,
-		0, m,
-	})
+	drawBlock(img, x, y, size, angle, block11poly1(size))
 }
 
 func b12(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	drawBlock(img, x, y, size, angle, []int{
-		0, m,
-		size, m,
-		m, size,
-	})
+	drawBlock(img, x, y, size, angle, block12poly1(size))
 }
 
 func b13(img *image.Paletted, vector *string, x, y, size, angle int) {
-	m := size / 2
-	drawBlock(img, x, y, size, angle, []int{
-		m, m,
-		size, size,
-		0, size,
-	})
+	drawBlock(img, x, y, size, angle, block13poly1(size))
 }
 
 func b14(img *image.Paletted, vector *string, x, y, size, angle int) {
