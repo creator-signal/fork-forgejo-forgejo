@@ -18,6 +18,6 @@ func addAvatarSvgToUser(x *xorm.Engine) error {
 	type User struct {
 		AvatarSVG string `xorm:"TEXT"`
 	}
-	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(User))
+	err := x.Sync(new(User))
 	return err
 }
