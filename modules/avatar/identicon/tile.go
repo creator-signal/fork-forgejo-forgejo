@@ -47,10 +47,10 @@ func drawPolygon(img *image.Paletted, x, y, size, angle int, points []int) {
 }
 
 // renderVectorTile renders a shape for a tile into a string. The shape consists of 0..4 polygons
-func renderVectorTile(x, y, size, angle int, shape [][]int) string {
+func renderVectorTile(x, y, angle int, shape [][]int) string {
 	rendered := ""
 	for i := range shape {
-		rendered += formatPolygon(shape[i], x, y, size, angle)
+		rendered += formatPolygon(shape[i], x, y, svgIdenticonSize, angle)
 	}
 	return rendered
 }
@@ -60,8 +60,7 @@ func formatPolygon(points []int, x, y, size, angle int) string {
 	adjPoints := make([]int, len(points))
 	copy(adjPoints, points)
 	if angle != 0 {
-		sixteenth := size / 16
-		rotate(adjPoints, sixteenth, sixteenth, angle)
+		rotate(adjPoints, 2, 2, angle)
 	}
 	var b strings.Builder
 	for i := 0; i+1 < len(adjPoints); i += 2 {

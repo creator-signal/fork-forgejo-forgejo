@@ -17,7 +17,17 @@ import (
 	"strings"
 )
 
-const minImageSize = 16
+const (
+	minImageSize = 16
+	// 72px is a good size for generated SVG avatars:
+	// - not too large to affect the length of the generated text
+	// - divides by 3 tiles into 24px parts
+	//  - 24px divides by 4. By default tile is a 4x4 grid for polygon points
+	//  - it also leaves the room for increase in fidelity of polygons: the grid can
+	//    become 6x6, 8x8 and 12x12 while keeping the compatibility with older images
+	// This number is duplicated in AvatarHTML and svg.css
+	svgIdenticonSize = 72
+)
 
 // Options is used to generate pseudo-random avatars
 type Options struct {
@@ -96,18 +106,16 @@ func drawTiles(image *image.Paletted, vectorParts *[9]string, size int, shapeMid
 	blockSize := size / 3
 	twoBlockSize := 2 * blockSize
 
-	svgSize := 36
-
 	// Middle
 	drawRasterTile(image, blockSize+padding, blockSize+padding, blockSize, 0, shapeMid)
-	vectorParts[0] = renderVectorTile(1, 1, svgSize, 0, shapeMid)
+	vectorParts[0] = renderVectorTile(1, 1, 0, shapeMid)
 
 	// Top left (1)
 	drawRasterTile(image, 0+padding, 0+padding, blockSize, tileOneAngle, shapeOne)
-	vectorParts[1] = renderVectorTile(0, 0, svgSize, tileOneAngle, shapeOne)
+	vectorParts[1] = renderVectorTile(0, 0, tileOneAngle, shapeOne)
 	// Top middle (2)
 	drawRasterTile(image, blockSize+padding, 0+padding, blockSize, tileTwoAngle, shapeTwo)
-	vectorParts[2] = renderVectorTile(1, 0, svgSize, tileTwoAngle, shapeTwo)
+	vectorParts[2] = renderVectorTile(1, 0, tileTwoAngle, shapeTwo)
 
 	tileOneAngle = nextAngle(tileOneAngle)
 	tileTwoAngle = nextAngle(tileTwoAngle)
@@ -117,18 +125,18 @@ func drawTiles(image *image.Paletted, vectorParts *[9]string, size int, shapeMid
 
 	// Bottom middle (8)
 	drawRasterTile(image, blockSize+padding, twoBlockSize+padding, blockSize, tileTwoAngle, shapeTwo)
-	vectorParts[8] = renderVectorTile(1, 2, svgSize, tileTwoAngle, shapeTwo)
+	vectorParts[8] = renderVectorTile(1, 2, tileTwoAngle, shapeTwo)
 
 	tileOneAngle = nextAngle(tileOneAngle)
 	tileTwoAngle = nextAngle(tileTwoAngle)
 
 	// Bottom left (7)
 	drawRasterTile(image, 0+padding, twoBlockSize+padding, blockSize, tileOneAngle, shapeOne)
-	vectorParts[7] = renderVectorTile(0, 2, svgSize, tileOneAngle, shapeOne)
+	vectorParts[7] = renderVectorTile(0, 2, tileOneAngle, shapeOne)
 
 	// Middle left (4)
 	drawRasterTile(image, 0+padding, blockSize+padding, blockSize, tileTwoAngle, shapeTwo)
-	vectorParts[4] = renderVectorTile(0, 1, svgSize, tileTwoAngle, shapeTwo)
+	vectorParts[4] = renderVectorTile(0, 1, tileTwoAngle, shapeTwo)
 
 	/*
 		Original algorithm:

@@ -46,7 +46,7 @@
 
 :root {
   --svg-avatar-background: #ffffff;
-  --svg-avatar-size: 36px;
+  --svg-avatar-size: 72px;
 }
 
 svg.identicon {
