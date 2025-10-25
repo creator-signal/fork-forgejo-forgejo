@@ -1,15 +1,21 @@
 // Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package forgejo_migrations_legacy
+package forgejo_migrations
 
 import (
 	"forgejo.org/models/gitea_migrations/base"
-
 	"xorm.io/xorm"
 )
 
-func RemoveIsDeletedColumnFromActivityActionTable(x *xorm.Engine) error {
+func init() {
+	registerMigration(&Migration{
+		Description: "remove is_deleted column from activity action table",
+		Upgrade:     removeIsDeletedColumnFromActivityActionTable,
+	})
+}
+
+func removeIsDeletedColumnFromActivityActionTable(x *xorm.Engine) error {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err := sess.Begin(); err != nil {
