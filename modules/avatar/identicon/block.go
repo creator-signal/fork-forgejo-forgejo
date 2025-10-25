@@ -21,10 +21,9 @@ var (
 
 // drawBlock draws a polygon by given points. The polygon can be rotated optionally
 func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
-	println("Drawblock called")
 	// The last point should be same as the first to end the shape
-	adjPoints := make([]int, 0, len(points)+2)
-	adjPoints = append(adjPoints, points[0], points[1])
+	adjPoints := make([]int, len(points)+2)
+	adjPoints = append(points, points[0], points[1])
 	// Points are stored as 1/4, 2/4, 3/4, 4/4 fractions
 	for i := range adjPoints {
 		adjPoints[i] = adjPoints[i] * size / 4
