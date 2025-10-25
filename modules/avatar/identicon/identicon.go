@@ -77,10 +77,7 @@ func (options *Options) render(c, b1, b2, tileOneAngle, tileTwoAngle int, foreCo
 
 	drawTiles(raster, &vectorParts, options.size, middleShapes[c], allShapes[b1], allShapes[b2], tileOneAngle, tileTwoAngle)
 	vector := strings.Join(vectorParts[:], "")
-	vector = `<g color="#` + uint32HEX(foreColor) + `">
-	<g>` + vector + `</g>
-	<g>` + vector + `</g>
-</g>`
+	vector = `<g color="#` + uint32HEX(foreColor) + `"><g>` + vector + `</g><g>` + vector + `</g></g>`
 
 	return &Identicon{
 		Raster: *raster,

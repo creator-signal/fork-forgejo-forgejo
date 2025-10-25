@@ -35,7 +35,7 @@ func AvatarHTML(src string, size int, svgContent, class, name string) template.H
 	}
 
 	if svgContent != "" {
-		return template.HTML(`<svg class="svg identicon" viewBox="0 0 36 36" width="` + sizeStr + `" height="` + sizeStr + `">` + svgContent + `</svg>`)
+		return template.HTML(`<svg class="svg identicon ` + class + `" viewBox="0 0 36 36" width="` + sizeStr + `" height="` + sizeStr + `">` + svgContent + `</svg>`)
 	}
 
 	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + src + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
