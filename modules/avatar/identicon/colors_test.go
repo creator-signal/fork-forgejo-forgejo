@@ -8,7 +8,7 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/zeebo/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUint32RGBA(t *testing.T) {
@@ -26,7 +26,7 @@ func TestUint32RGBA(t *testing.T) {
 		t.Run(fmt.Sprintf("0x%08x", tt.in), func(t *testing.T) {
 			gotColor := uint32RGBA(tt.in)
 			gotR, gotG, gotB, gotA := gotColor.RGBA()
-			assert.Equal(t, tt.want, color.RGBA{R: uint8(gotR), G: uint8(gotG), B: uint8(gotB), A: uint8(gotA)})
+			require.Equal(t, tt.want, color.RGBA{R: uint8(gotR), G: uint8(gotG), B: uint8(gotB), A: uint8(gotA)})
 		})
 	}
 }
@@ -44,7 +44,7 @@ func TestUint32HEX(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("0x%08x", tt.in), func(t *testing.T) {
-			assert.Equal(t, tt.want, uint32HEX(tt.in))
+			require.Equal(t, tt.want, uint32HEX(tt.in))
 		})
 	}
 }
