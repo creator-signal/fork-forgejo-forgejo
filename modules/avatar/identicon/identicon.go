@@ -3,7 +3,7 @@
 // Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Rewrite of Dereved from https://github.com/issue9/identicon/
+// Rewrite of https://github.com/issue9/identicon/
 // Generate pseudo-random avatars by IP, E-mail, etc.
 
 package identicon

@@ -13,12 +13,6 @@ import (
 	"strings"
 )
 
-var (
-	allShapes = [][][]int{shape0, shape1, shape2, shape3, shape4, shape5, shape6, shape7, shape8, shape9, shape10, shape11, shape12, shape13, shape14, shape15, shape16, shape17, shape18, shape19, shape20, shape21, shape22, shape23, shape24, shape25, shape26, shape27}
-	// These tiles can appear in the middle to make identicons prettier
-	middleShapes = [][][]int{shape0, shape1, shape2, shape3, shape19, shape26, shape27}
-)
-
 // renderVectorTile draws a shape for a tile. The shape consists of 0..4 polygons
 func drawRasterTile(image *image.Paletted, x, y, size, angle int, shape [][]int) {
 	for i := range shape {
