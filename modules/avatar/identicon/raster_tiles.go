@@ -9,48 +9,14 @@ package identicon
 
 import "image"
 
-// blank
-//
-//	--------
-//	|      |
-//	|      |
-//	|      |
-//	--------
 func b0(img *image.Paletted, x, y, size, angle int) {}
 
-// full-filled
-//
-//	--------
-//	|######|
-//	|######|
-//	|######|
-//	--------
 func b1(img *image.Paletted, x, y, size, angle int) {
-	for i := x; i < x+size; i++ {
-		for j := y; j < y+size; j++ {
-			img.SetColorIndex(i, j, 1)
-		}
-	}
+	drawBlock(img, x, y, size, 0, b1p1)
 }
 
-// a small block
-//
-//	----------
-//	|        |
-//	|  ####  |
-//	|  ####  |
-//	|        |
-//	----------
 func b2(img *image.Paletted, x, y, size, angle int) {
-	l := size / 4
-	x += l
-	y += l
-
-	for i := x; i < x+2*l; i++ {
-		for j := y; j < y+2*l; j++ {
-			img.SetColorIndex(i, j, 1)
-		}
-	}
+	drawBlock(img, x, y, size, 0, b2p1)
 }
 
 func b3(img *image.Paletted, x, y, size, angle int) {
