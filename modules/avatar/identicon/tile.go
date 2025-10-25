@@ -52,7 +52,7 @@ func renderVectorTile(x, y, angle int, shape [][]int) string {
 	for i := range shape {
 		rendered[i] = formatPolygon(shape[i], x, y, svgIdenticonSize, angle)
 	}
-	return strings.Join(rendered[:], "")
+	return strings.Join(rendered, "")
 }
 
 // formatPolygon converts points into a string usable as part of an SVG path
