@@ -1,9 +1,9 @@
 // Copyright 2015 caixw. All rights reserved.
 // Copyright 2021 The Gitea Authors. All rights reserved.
 // Copyright 2024 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
-// Dereved from https://github.com/issue9/identicon/
+// Rewrite of Dereved from https://github.com/issue9/identicon/
 // Generate pseudo-random avatars by IP, E-mail, etc.
 
 package identicon

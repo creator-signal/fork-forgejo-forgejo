@@ -1,9 +1,9 @@
 // Copyright 2015 caixw. All rights reserved.
 // Copyright 2021 The Gitea Authors. All rights reserved.
 // Copyright 2025 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
-// Derived from https://github.com/issue9/identicon/
+// Derived from https://github.com/issue9/identicon/, with SVG additions
 
 package identicon
 
