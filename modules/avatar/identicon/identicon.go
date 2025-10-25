@@ -119,7 +119,7 @@ func drawRasterTile(image *image.Paletted, x, y, size, angle int, shape [][]int)
 
 // renderVectorTile renders a shape for a tile. The shape consists of 0..4 polygons
 func renderVectorTile(x, y, size, angle int, shape [][]int) string {
-	var rendered = ""
+	rendered := ""
 	for i := range shape {
 		rendered += formatPolygon(shape[i], x, y, size, angle)
 	}
