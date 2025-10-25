@@ -10,113 +10,113 @@ func svgB0(x, y, size, angle int) string {
 // b1 and b2 could be formatted as a rect but it will not be a measurable improvement
 
 func svgB1(x, y, size, angle int) string {
-	return formatPolygon(b1p1, x, y, size, angle)
+	return formatPolygon(shape1[0], x, y, size, angle)
 }
 
 func svgB2(x, y, size, angle int) string {
-	return formatPolygon(b2p1, x, y, size, angle)
+	return formatPolygon(shape2[0], x, y, size, angle)
 }
 
 func svgB3(x, y, size, angle int) string {
-	return formatPolygon(b3p1, x, y, size, angle)
+	return formatPolygon(shape3[0], x, y, size, angle)
 }
 
 func svgB4(x, y, size, angle int) string {
-	return formatPolygon(block4poly1, x, y, size, angle)
+	return formatPolygon(shape4[0], x, y, size, angle)
 }
 
 func svgB5(x, y, size, angle int) string {
-	return formatPolygon(block5poly1, x, y, size, angle)
+	return formatPolygon(shape5[0], x, y, size, angle)
 }
 
 func svgB6(x, y, size, angle int) string {
-	return formatPolygon(block6poly1, x, y, size, angle)
+	return formatPolygon(shape6[0], x, y, size, angle)
 }
 
 func svgB7(x, y, size, angle int) string {
-	return formatPolygon(block7poly1, x, y, size, angle)
+	return formatPolygon(shape7[0], x, y, size, angle)
 }
 
 func svgB8(x, y, size, angle int) string {
-	return formatPolygon(block8poly1, x, y, size, angle) + formatPolygon(block8poly2, x, y, size, angle) +
-		formatPolygon(block8poly3, x, y, size, angle)
+	return formatPolygon(shape8[0], x, y, size, angle) + formatPolygon(shape8[1], x, y, size, angle) +
+		formatPolygon(shape8[2], x, y, size, angle)
 }
 
 func svgB9(x, y, size, angle int) string {
-	return formatPolygon(block9poly1, x, y, size, angle)
+	return formatPolygon(shape9[0], x, y, size, angle)
 }
 
 func svgB10(x, y, size, angle int) string {
-	return formatPolygon(block10poly1, x, y, size, angle) + formatPolygon(block10poly2, x, y, size, angle)
+	return formatPolygon(shape10[0], x, y, size, angle) + formatPolygon(shape10[1], x, y, size, angle)
 }
 
 func svgB11(x, y, size, angle int) string {
-	return formatPolygon(block11poly1, x, y, size, angle)
+	return formatPolygon(shape11[0], x, y, size, angle)
 }
 
 func svgB12(x, y, size, angle int) string {
-	return formatPolygon(block12poly1, x, y, size, angle)
+	return formatPolygon(shape12[0], x, y, size, angle)
 }
 
 func svgB13(x, y, size, angle int) string {
-	return formatPolygon(block13poly1, x, y, size, angle)
+	return formatPolygon(shape13[0], x, y, size, angle)
 }
 
 func svgB14(x, y, size, angle int) string {
-	return formatPolygon(block14poly1, x, y, size, angle)
+	return formatPolygon(shape14[0], x, y, size, angle)
 }
 
 func svgB15(x, y, size, angle int) string {
-	return formatPolygon(block15poly1, x, y, size, angle)
+	return formatPolygon(shape15[0], x, y, size, angle)
 }
 
 func svgB16(x, y, size, angle int) string {
-	return formatPolygon(block16poly1, x, y, size, angle) + formatPolygon(block16poly2, x, y, size, angle)
+	return formatPolygon(shape16[0], x, y, size, angle) + formatPolygon(shape16[1], x, y, size, angle)
 }
 
 func svgB17(x, y, size, angle int) string {
-	return formatPolygon(block17poly1, x, y, size, angle) + formatPolygon(block17poly2, x, y, size, angle)
+	return formatPolygon(shape17[0], x, y, size, angle) + formatPolygon(shape17[1], x, y, size, angle)
 }
 
 func svgB18(x, y, size, angle int) string {
-	return formatPolygon(block18poly1, x, y, size, angle)
+	return formatPolygon(shape18[0], x, y, size, angle)
 }
 
 func svgB19(x, y, size, angle int) string {
-	return formatPolygon(block19poly1, x, y, size, angle) + formatPolygon(block19poly2, x, y, size, angle) +
-		formatPolygon(block19poly3, x, y, size, angle) + formatPolygon(block19poly4, x, y, size, angle)
+	return formatPolygon(shape19[0], x, y, size, angle) + formatPolygon(shape19[1], x, y, size, angle) +
+		formatPolygon(shape19[2], x, y, size, angle) + formatPolygon(shape19[3], x, y, size, angle)
 }
 
 func svgB20(x, y, size, angle int) string {
-	return formatPolygon(block20poly1, x, y, size, angle)
+	return formatPolygon(shape20[0], x, y, size, angle)
 }
 
 func svgB21(x, y, size, angle int) string {
-	return formatPolygon(block21poly1, x, y, size, angle) + formatPolygon(block21poly2, x, y, size, angle)
+	return formatPolygon(shape21[0], x, y, size, angle) + formatPolygon(shape21[1], x, y, size, angle)
 }
 
 func svgB22(x, y, size, angle int) string {
-	return formatPolygon(block22poly1, x, y, size, angle) + formatPolygon(block22poly2, x, y, size, angle)
+	return formatPolygon(shape22[0], x, y, size, angle) + formatPolygon(shape22[1], x, y, size, angle)
 }
 
 func svgB23(x, y, size, angle int) string {
-	return formatPolygon(block23poly1, x, y, size, angle) + formatPolygon(block23poly2, x, y, size, angle)
+	return formatPolygon(shape23[0], x, y, size, angle) + formatPolygon(shape23[1], x, y, size, angle)
 }
 
 func svgB24(x, y, size, angle int) string {
-	return formatPolygon(block24poly1, x, y, size, angle) + formatPolygon(block24poly2, x, y, size, angle)
+	return formatPolygon(shape24[0], x, y, size, angle) + formatPolygon(shape24[1], x, y, size, angle)
 }
 
 func svgB25(x, y, size, angle int) string {
-	return formatPolygon(block25poly1, x, y, size, angle) + formatPolygon(block25poly2, x, y, size, angle)
+	return formatPolygon(shape25[0], x, y, size, angle) + formatPolygon(shape25[1], x, y, size, angle)
 }
 
 func svgB26(x, y, size, angle int) string {
-	return formatPolygon(block26poly1, x, y, size, angle) + formatPolygon(block26poly2, x, y, size, angle) +
-		formatPolygon(block26poly3, x, y, size, angle) + formatPolygon(block26poly4, x, y, size, angle)
+	return formatPolygon(shape26[0], x, y, size, angle) + formatPolygon(shape26[1], x, y, size, angle) +
+		formatPolygon(shape26[2], x, y, size, angle) + formatPolygon(shape26[3], x, y, size, angle)
 }
 
 func svgB27(x, y, size, angle int) string {
-	return formatPolygon(block27poly1, x, y, size, angle) + formatPolygon(block27poly2, x, y, size, angle) +
-		formatPolygon(block27poly3, x, y, size, angle) + formatPolygon(block27poly4, x, y, size, angle)
+	return formatPolygon(shape27[0], x, y, size, angle) + formatPolygon(shape27[1], x, y, size, angle) +
+		formatPolygon(shape27[2], x, y, size, angle) + formatPolygon(shape27[3], x, y, size, angle)
 }
