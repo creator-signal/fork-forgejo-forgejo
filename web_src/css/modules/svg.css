@@ -54,11 +54,11 @@ svg.identicon {
   border-radius: var(--border-radius);
 }
 
-svg.identicon g g:first-child {
+svg.identicon > g > path:first-child {
   clip-path: rect(0 calc(var(--svg-avatar-size) / 2) var(--svg-avatar-size) 0);
 }
 
-svg.identicon g g:last-child {
+svg.identicon > g > path:last-child {
   clip-path: rect(0 calc(var(--svg-avatar-size) / 2) var(--svg-avatar-size) 0);
   transform: scaleX(-1) translateX(calc(-1 * var(--svg-avatar-size)));
 }

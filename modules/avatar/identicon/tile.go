@@ -52,10 +52,10 @@ func renderVectorTile(x, y, angle int, shape [][]int) string {
 	for i := range shape {
 		rendered[i] = formatPolygon(shape[i], x, y, svgIdenticonSize, angle)
 	}
-	return `<path d="` + strings.Join(rendered[:], " ") + `"></path>`
+	return strings.Join(rendered[:], "")
 }
 
-// formatPolygon converts points into svg polygon
+// formatPolygon converts points into a string usable as part of an SVG path
 func formatPolygon(points []int, x, y, size, angle int) string {
 	adjPoints := make([]int, len(points))
 	copy(adjPoints, points)
@@ -63,11 +63,13 @@ func formatPolygon(points []int, x, y, size, angle int) string {
 		rotate(adjPoints, 2, 2, angle)
 	}
 	var b strings.Builder
+	b.WriteByte('M')
 	for i := 0; i+1 < len(adjPoints); i += 2 {
 		if i > 0 {
-			b.WriteByte(' ')
+			b.WriteByte('L')
 		}
-		fmt.Fprintf(&b, "L%d %d", (size/3*x + size*adjPoints[i]/4/3), (size/3*y + size*adjPoints[i+1]/4/3))
+		fmt.Fprintf(&b, "%d %d", (size/3*x + size*adjPoints[i]/4/3), (size/3*y + size*adjPoints[i+1]/4/3))
 	}
-	return fmt.Sprintf(`M%s Z`, b.String()[1:])
+	b.WriteByte('Z')
+	return b.String()
 }

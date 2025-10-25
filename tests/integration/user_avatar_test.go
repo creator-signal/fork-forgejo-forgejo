@@ -134,7 +134,7 @@ func TestIdenticons(t *testing.T) {
 		// ^ specificality of this selector also verifies attributes set by AvatarHTML
 
 		// This is assumed to be a correctly rendered identicon
-		org3identicon := `<g color="#660000ff"><g><path d="M24 24 L36 30 L30 36 Z M48 24 L42 36 L36 30 Z M48 48 L36 42 L42 36 Z M24 48 L30 36 L36 42 Z"></path><path d="M0 18 L24 24 L12 24 Z M0 18 L6 0 L12 0 Z"></path><path d="M48 6 L24 0 L36 0 Z M48 12 L48 24 L24 12 Z"></path><path d="M6 24 L0 48 L0 36 Z M12 24 L24 24 L12 48 Z"></path><path d="M18 72 L24 48 L24 60 Z M18 72 L0 66 L0 60 Z"></path><path d="M24 66 L48 72 L36 72 Z M24 60 L24 48 L48 60 Z"></path></g><g><path d="M24 24 L36 30 L30 36 Z M48 24 L42 36 L36 30 Z M48 48 L36 42 L42 36 Z M24 48 L30 36 L36 42 Z"></path><path d="M0 18 L24 24 L12 24 Z M0 18 L6 0 L12 0 Z"></path><path d="M48 6 L24 0 L36 0 Z M48 12 L48 24 L24 12 Z"></path><path d="M6 24 L0 48 L0 36 Z M12 24 L24 24 L12 48 Z"></path><path d="M18 72 L24 48 L24 60 Z M18 72 L0 66 L0 60 Z"></path><path d="M24 66 L48 72 L36 72 Z M24 60 L24 48 L48 60 Z"></path></g></g>`
+		org3identicon := `<g color="#660000ff"><path d="M24 24L36 30L30 36ZM48 24L42 36L36 30ZM48 48L36 42L42 36ZM24 48L30 36L36 42ZM0 18L24 24L12 24ZM0 18L6 0L12 0ZM48 6L24 0L36 0ZM48 12L48 24L24 12ZM6 24L0 48L0 36ZM12 24L24 24L12 48ZM18 72L24 48L24 60ZM18 72L0 66L0 60ZM24 66L48 72L36 72ZM24 60L24 48L48 60Z"></path><path d="M24 24L36 30L30 36ZM48 24L42 36L36 30ZM48 48L36 42L42 36ZM24 48L30 36L36 42ZM0 18L24 24L12 24ZM0 18L6 0L12 0ZM48 6L24 0L36 0ZM48 12L48 24L24 12ZM6 24L0 48L0 36ZM12 24L24 24L12 48ZM18 72L24 48L24 60ZM18 72L0 66L0 60ZM24 66L48 72L36 72ZM24 60L24 48L48 60Z"></path></g>`
 
 		// When going to /user20 for the first time it is expected that the org will have the default avatar
 		page := NewHTMLParser(t, user20.MakeRequest(t, NewRequest(t, "GET", "/user20"), http.StatusOK).Body)
@@ -163,7 +163,7 @@ func TestIdenticons(t *testing.T) {
 		// ^ specificality of this selector also verifies attributes set by AvatarHTML
 
 		// This is assumed to be a correctly rendered identicon
-		org3identicon := `<g color="#993366ff"><g><path d="M36 24 L48 36 L36 48 L24 36 Z"></path><path d="M24 24 L12 24 L12 12 L24 12 Z"></path><path d="M48 0 L48 12 L36 0 Z M30 18 L30 24 L24 24 L24 18 Z"></path><path d="M0 24 L12 24 L0 36 Z M18 42 L24 42 L24 48 L18 48 Z"></path><path d="M24 48 L24 60 L12 60 L12 48 Z"></path><path d="M24 72 L24 60 L36 72 Z M42 54 L42 48 L48 48 L48 54 Z"></path></g><g><path d="M36 24 L48 36 L36 48 L24 36 Z"></path><path d="M24 24 L12 24 L12 12 L24 12 Z"></path><path d="M48 0 L48 12 L36 0 Z M30 18 L30 24 L24 24 L24 18 Z"></path><path d="M0 24 L12 24 L0 36 Z M18 42 L24 42 L24 48 L18 48 Z"></path><path d="M24 48 L24 60 L12 60 L12 48 Z"></path><path d="M24 72 L24 60 L36 72 Z M42 54 L42 48 L48 48 L48 54 Z"></path></g></g>`
+		org3identicon := `<g color="#993366ff"><path d="M36 24L48 36L36 48L24 36ZM24 24L12 24L12 12L24 12ZM48 0L48 12L36 0ZM30 18L30 24L24 24L24 18ZM0 24L12 24L0 36ZM18 42L24 42L24 48L18 48ZM24 48L24 60L12 60L12 48ZM24 72L24 60L36 72ZM42 54L42 48L48 48L48 54Z"></path><path d="M36 24L48 36L36 48L24 36ZM24 24L12 24L12 12L24 12ZM48 0L48 12L36 0ZM30 18L30 24L24 24L24 18ZM0 24L12 24L0 36ZM18 42L24 42L24 48L18 48ZM24 48L24 60L12 60L12 48ZM24 72L24 60L36 72ZM42 54L42 48L48 48L48 54Z"></path></g>`
 
 		// When going to /org3 for the first time it is expected that the org will have the default avatar
 		page := NewHTMLParser(t, user2.MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)

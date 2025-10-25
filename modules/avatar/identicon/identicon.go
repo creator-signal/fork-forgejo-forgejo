@@ -86,8 +86,8 @@ func (options *Options) render(c, b1, b2, tileOneAngle, tileTwoAngle int, foreCo
 	vectorParts := [9]string{}
 
 	drawTiles(raster, &vectorParts, options.size, middleShapes[c], allShapes[b1], allShapes[b2], tileOneAngle, tileTwoAngle)
-	vector := strings.Join(vectorParts[:], "")
-	vector = `<g color="#` + uint32HEX(foreColor) + `"><g>` + vector + `</g><g>` + vector + `</g></g>`
+	path := `<path d="` + strings.Join(vectorParts[:], "") + `"/>`
+	vector := `<g color="#` + uint32HEX(foreColor) + `">` + path + path + `</g>`
 
 	return &Identicon{
 		Raster: *raster,
