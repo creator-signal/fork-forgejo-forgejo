@@ -88,44 +88,6 @@ func (options *Options) render(c, b1, b2, tileOneAngle, tileTwoAngle int, foreCo
 	}
 }
 
-/*
-# Algorithm
-
-Origin: An image is split into 9 areas
-
-```
-  -------------
-  | 1 | 2 | 3 |
-  -------------
-  | 4 | 5 | 6 |
-  -------------
-  | 7 | 8 | 9 |
-  -------------
-```
-
-Area 1/3/9/7 use a 90-degree rotating pattern.
-Area 1/3/9/7 use another 90-degree rotating pattern.
-Area 5 uses a random pattern.
-
-The Patched Fix: make the image left-right mirrored to get rid of something like "swastika"
-*/
-
-// renderVectorTile draws a shape for a tile. The shape consists of 0..4 polygons
-func drawRasterTile(image *image.Paletted, x, y, size, angle int, shape [][]int) {
-	for i := range shape {
-		drawBlock(image, x, y, size, angle, shape[i])
-	}
-}
-
-// renderVectorTile renders a shape for a tile. The shape consists of 0..4 polygons
-func renderVectorTile(x, y, size, angle int, shape [][]int) string {
-	rendered := ""
-	for i := range shape {
-		rendered += formatPolygon(shape[i], x, y, size, angle)
-	}
-	return rendered
-}
-
 // Draw both vector and raster tiles for the identicon
 func drawTiles(image *image.Paletted, vectorParts *[9]string, size int, shapeMid, shapeOne, shapeTwo [][]int, tileOneAngle, tileTwoAngle int) {
 	nextAngle := func(a int) int {
@@ -171,7 +133,19 @@ func drawTiles(image *image.Paletted, vectorParts *[9]string, size int, shapeMid
 	drawRasterTile(image, 0+padding, blockSize+padding, blockSize, tileTwoAngle, shapeTwo)
 	vectorParts[4] = renderVectorTile(0, 1, svgSize, tileTwoAngle, shapeTwo)
 
-	// then we make it left-right mirror, so we didn't draw 3/6/9 before
+	/*
+		Original algorithm:
+		-------------
+		| 1 | 2 | 3 |
+		-------------
+		| 4 | 5 | 6 |
+		-------------
+		| 7 | 8 | 9 |
+		-------------
+	*/
+
+	// Instead of drawing separate 3/6/9, mirror the image horizontally to avoid
+	// rotational symmetry and identicons depicting swasticas
 	for x := 0; x < size/2; x++ {
 		for y := 0; y < size; y++ {
 			image.SetColorIndex(size-x, y, image.ColorIndexAt(x, y))

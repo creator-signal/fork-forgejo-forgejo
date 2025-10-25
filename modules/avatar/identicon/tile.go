@@ -19,8 +19,15 @@ var (
 	middleShapes = [][][]int{shape0, shape1, shape2, shape3, shape19, shape26, shape27}
 )
 
-// drawBlock draws a polygon by given points. The polygon can be rotated optionally
-func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
+// renderVectorTile draws a shape for a tile. The shape consists of 0..4 polygons
+func drawRasterTile(image *image.Paletted, x, y, size, angle int, shape [][]int) {
+	for i := range shape {
+		drawPolygon(image, x, y, size, angle, shape[i])
+	}
+}
+
+// drawPolygon draws a polygon by given points. The polygon can be rotated optionally
+func drawPolygon(img *image.Paletted, x, y, size, angle int, points []int) {
 	// The last point should be same as the first to end the shape
 	adjPoints := make([]int, len(points)+2)
 	copy(adjPoints, points)
@@ -43,6 +50,15 @@ func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
 			}
 		}
 	}
+}
+
+// renderVectorTile renders a shape for a tile into a string. The shape consists of 0..4 polygons
+func renderVectorTile(x, y, size, angle int, shape [][]int) string {
+	rendered := ""
+	for i := range shape {
+		rendered += formatPolygon(shape[i], x, y, size, angle)
+	}
+	return rendered
 }
 
 // formatPolygon converts points into svg polygon
