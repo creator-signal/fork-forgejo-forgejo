@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-// renderVectorTile draws a shape for a tile. The shape consists of 0..4 polygons
+// drawRasterTile draws a shape for a tile. The shape consists of 0..4 polygons
 func drawRasterTile(image *image.Paletted, x, y, size, angle int, shape [][]int) {
 	for i := range shape {
 		drawPolygon(image, x, y, size, angle, shape[i])
@@ -48,11 +48,11 @@ func drawPolygon(img *image.Paletted, x, y, size, angle int, points []int) {
 
 // renderVectorTile renders a shape for a tile into a string. The shape consists of 0..4 polygons
 func renderVectorTile(x, y, angle int, shape [][]int) string {
-	rendered := ""
+	rendered := make([]string, len(shape))
 	for i := range shape {
-		rendered += formatPolygon(shape[i], x, y, svgIdenticonSize, angle)
+		rendered[i] = formatPolygon(shape[i], x, y, svgIdenticonSize, angle)
 	}
-	return rendered
+	return `<path d="` + strings.Join(rendered[:], " ") + `"></path>`
 }
 
 // formatPolygon converts points into svg polygon
@@ -69,5 +69,5 @@ func formatPolygon(points []int, x, y, size, angle int) string {
 		}
 		fmt.Fprintf(&b, "L%d %d", (size/3*x + size*adjPoints[i]/4/3), (size/3*y + size*adjPoints[i+1]/4/3))
 	}
-	return fmt.Sprintf(`<path d="M%s Z"/>`, b.String()[1:])
+	return fmt.Sprintf(`M%s Z`, b.String()[1:])
 }
