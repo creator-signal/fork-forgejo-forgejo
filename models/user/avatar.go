@@ -78,31 +78,18 @@ func (u *User) ChooseAvatarToUse(ctx context.Context) (bool, bool) {
 	return useLocalAvatar, autoGenerateAvatar
 }
 
-// trySVGAvatar checks that for a user with identicon avatar there's also an SVG version available
-func (u *User) trySVGAvatar() (bool, string) {
-	if u.AvatarSVG == "" {
-		return false, ""
-	}
-
-	return true, u.AvatarSVG
-}
-
 type AvatarDisplayProperties struct {
-	UseDefault   bool
-	SvgAvailable bool
-	RasterLink   string
-	RasterSize   int
-	SvgContent   string
+	RasterLink string
+	RasterSize int
+	SvgContent string
 }
 
 // todo dsc
 func (u *User) SolveAvatar(ctx context.Context, size int) AvatarDisplayProperties {
 	properties := AvatarDisplayProperties{
-		UseDefault:   false,
-		SvgAvailable: false,
-		RasterLink:   "",
-		RasterSize:   0,
-		SvgContent:   "",
+		RasterLink: "",
+		RasterSize: 0,
+		SvgContent: "",
 	}
 
 	useLocalAvatar, autoGenerateAvatar := u.ChooseAvatarToUse(ctx)
@@ -126,8 +113,8 @@ func (u *User) SolveAvatar(ctx context.Context, size int) AvatarDisplayPropertie
 	}
 
 	// Some raster avatar is available. If there's also a vector version available
-	// longside of it, this is an identicon and we'll use both versions
-	properties.SvgAvailable, properties.SvgContent = u.trySVGAvatar()
+	// (not "") alongside of it, this is an identicon and we'll use both versions
+	properties.SvgContent = u.AvatarSVG
 	properties.RasterLink = avatars.GenerateUserAvatarImageLink(u.Avatar)
 	return properties
 }
