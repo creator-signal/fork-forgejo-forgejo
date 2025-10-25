@@ -27,30 +27,18 @@ func NewAvatarUtils(ctx context.Context) *AvatarUtils {
 }
 
 // AvatarHTML creates the HTML for an avatar
-func AvatarHTML(src string, size int, class, name string) template.HTML {
+func AvatarHTML(src string, size int, svgContent, class, name string) template.HTML {
 	sizeStr := fmt.Sprintf(`%d`, size)
 
 	if name == "" {
 		name = "avatar"
+	}
+
+	if svgContent != "" {
+		return template.HTML(`<svg class="svg identicon" viewBox="0 0 36 36" width="` + sizeStr + `" height="` + sizeStr + `">` + svgContent + `</svg>`)
 	}
 
 	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + src + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
-}
-
-// AvatarHTML2 creates the HTML for an avatar and also support SVG avatars
-func AvatarHTML2(avatar user_model.AvatarDisplayProperties, size int, class, name string) template.HTML {
-	sizeStr := fmt.Sprintf(`%d`, size)
-
-	if name == "" {
-		name = "avatar"
-	}
-
-	if avatar.SvgContent != "" {
-		return template.HTML(`<svg class="svg identicon" viewBox="0 0 36 36" width="` + sizeStr + `" height="` + sizeStr + `">` + avatar.SvgContent + `</svg>`)
-	}
-
-	// RasterLink is guaranteed to be non-empty by SolveAvatar, which falls it back to default avatar link
-	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + avatar.RasterLink + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
 }
 
 // Avatar renders user avatars. args: user, size (int), class (string)
@@ -59,19 +47,23 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 
 	switch t := item.(type) {
 	case *user_model.User:
-		avatar := t.SolveAvatar(au.ctx, size*setting.Avatar.RenderedSizeFactor)
-		return AvatarHTML2(avatar, size, class, t.DisplayName())
+		src := t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
+		if src != "" {
+			return AvatarHTML(src, size, t.AvatarSVG, class, t.DisplayName())
+		}
 	case *repo_model.Collaborator:
 		src := t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		if src != "" {
-			return AvatarHTML(src, size, class, t.DisplayName())
+			return AvatarHTML(src, size, "", class, t.DisplayName())
 		}
 	case *organization.Organization:
-		avatar := t.AsUser().SolveAvatar(au.ctx, size*setting.Avatar.RenderedSizeFactor)
-		return AvatarHTML2(avatar, size, class, t.DisplayName())
+		src := t.AsUser().AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
+		if src != "" {
+			return AvatarHTML(src, size, t.AsUser().AvatarSVG, class, t.DisplayName())
+		}
 	}
 
-	return AvatarHTML(avatars.DefaultAvatarLink(), size, class, "")
+	return AvatarHTML(avatars.DefaultAvatarLink(), size, "", class, "")
 }
 
 // AvatarByAction renders user avatars from action. args: action, size (int), class (string)
@@ -86,7 +78,7 @@ func (au *AvatarUtils) AvatarByEmail(email, name string, others ...any) template
 	src := avatars.GenerateEmailAvatarFastLink(au.ctx, email, size*setting.Avatar.RenderedSizeFactor)
 
 	if src != "" {
-		return AvatarHTML(src, size, class, name)
+		return AvatarHTML(src, size, "", class, name)
 	}
 
 	return ""
