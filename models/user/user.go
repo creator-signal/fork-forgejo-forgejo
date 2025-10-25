@@ -137,7 +137,7 @@ type User struct {
 	// Avatar hash
 	Avatar string `xorm:"VARCHAR(2048) NOT NULL"`
 	// Avatar SVG includes all parts of the avatar as SVG elements, but without the <svg> tags
-	AvatarSVG       string
+	AvatarSVG       string `xorm:"TEXT"`
 	AvatarEmail     string `xorm:"NOT NULL"`
 	UseCustomAvatar bool
 
