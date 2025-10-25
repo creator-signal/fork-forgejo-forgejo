@@ -67,7 +67,7 @@ func formatPolygon(points []int, x, y, size, angle int) string {
 		if i > 0 {
 			b.WriteByte(' ')
 		}
-		fmt.Fprintf(&b, "%d,%d", (size/3*x + size*adjPoints[i]/4/3), (size/3*y + size*adjPoints[i+1]/4/3))
+		fmt.Fprintf(&b, "L%d %d", (size/3*x + size*adjPoints[i]/4/3), (size/3*y + size*adjPoints[i+1]/4/3))
 	}
-	return fmt.Sprintf(`<polygon points="%s"/>`, b.String())
+	return fmt.Sprintf(`<path d="M%s Z"/>`, b.String()[1:])
 }
