@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 
 // Derived from https://github.com/issue9/identicon/
-// Polygons for shapes in block.go
+// Polygon shapes for identicons
 
 package identicon
 
@@ -16,6 +16,7 @@ var (
 	//	|      |
 	//	|      |
 	//	--------
+	shape0 = [][]int{}
 
 	// b1 - full filled rectangle
 	//

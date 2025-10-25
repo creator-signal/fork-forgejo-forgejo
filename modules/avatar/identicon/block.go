@@ -14,22 +14,14 @@ import (
 )
 
 var (
-	// the blocks can appear in center, these blocks can be more beautiful
-	centerBlocks    = []rasterTileFunc{b0, b1, b2, b3, b19, b26, b27}
-	svgCenterBlocks = []vectorTileFunc{svgB0, svgB1, svgB2, svgB3, svgB19, svgB26, svgB27}
-
-	// all blocks
-	blocks    = []rasterTileFunc{b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27}
-	svgBlocks = []vectorTileFunc{svgB0, svgB1, svgB2, svgB3, svgB4, svgB5, svgB6, svgB7, svgB8, svgB9, svgB10, svgB11, svgB12, svgB13, svgB14, svgB15, svgB16, svgB17, svgB18, svgB19, svgB20, svgB21, svgB22, svgB23, svgB24, svgB25, svgB26, svgB27}
-)
-
-type (
-	rasterTileFunc func(img *image.Paletted, x, y, size, angle int)
-	vectorTileFunc func(x, y, size, angle int) string
+	allShapes = [][][]int{shape0, shape1, shape2, shape3, shape4, shape5, shape6, shape7, shape8, shape9, shape10, shape11, shape12, shape13, shape14, shape15, shape16, shape17, shape18, shape19, shape20, shape21, shape22, shape23, shape24, shape25, shape26, shape27}
+	// These tiles can appear in the middle to make identicons prettier
+	middleShapes = [][][]int{shape0, shape1, shape2, shape3, shape19, shape26, shape27}
 )
 
 // drawBlock draws a polygon by given points. The polygon can be rotated optionally
 func drawBlock(img *image.Paletted, x, y, size, angle int, points []int) {
+	println("Drawblock called")
 	// The last point should be same as the first to end the shape
 	adjPoints := make([]int, 0, len(points)+2)
 	adjPoints = append(adjPoints, points[0], points[1])
