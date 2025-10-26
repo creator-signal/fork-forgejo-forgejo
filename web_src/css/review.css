@@ -111,9 +111,6 @@
   .comment-code-cloud .comments .comment .avatar ~ .content {
     margin-left: 1em;
   }
-  .comment-code-cloud .comments .comment img.avatar {
-    margin: 0 !important;
-  }
   .comment-code-cloud .comments .comment .comment-content {
     margin-left: 0 !important;
   }

@@ -52,14 +52,16 @@
   justify-content: center;
 }
 
-.user.profile .ui.card #profile-avatar img {
+.user.profile .ui.card #profile-avatar .ui.avatar {
   max-width: 100%;
   height: auto;
 }
 
 @media (max-width: 767.98px) {
-  .user.profile .ui.card #profile-avatar img {
+  .user.profile .ui.card #profile-avatar .ui.avatar {
     width: 30vw;
+    min-width: unset;
+    min-height: unset;
   }
 }
 
