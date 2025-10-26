@@ -84,6 +84,11 @@ func TestUserAvatar(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("/avatars/%s", user2.Avatar), resp.Header().Get("location"))
 
 	// Can't test if the response matches because the image is re-generated on upload but checking that this at least doesn't give a 404 should be enough.
+
+	// After an avatar is uploaded, it should be used instead of the SVG identicon
+	page := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", "/user2"), http.StatusOK).Body)
+	page.AssertElement(t, "#profile-avatar img[src]", true)
+	page.AssertElement(t, "#profile-avatar svg", false)
 }
 
 func TestAvatarAnchorDestination(t *testing.T) {

@@ -31,8 +31,9 @@ func UploadAvatar(ctx context.Context, u *user_model.User, data []byte) error {
 	defer committer.Close()
 
 	u.UseCustomAvatar = true
+	u.AvatarSVG = ""
 	u.Avatar = avatar.HashAvatar(u.ID, data)
-	if err = user_model.UpdateUserCols(ctx, u, "use_custom_avatar", "avatar"); err != nil {
+	if err = user_model.UpdateUserCols(ctx, u, "use_custom_avatar", "avatar", "avatar_svg"); err != nil {
 		return fmt.Errorf("updateUser: %w", err)
 	}
 
