@@ -25,7 +25,7 @@ test('Register Form', async ({page}, workerInfo) => {
   await page.click('form button.ui.primary.button:visible');
   // Make sure we routed to the home page. Else login failed.
   expect(page.url()).toBe(`${workerInfo.project.use.baseURL}/`);
-  await expect(page.locator('.secondary-nav span>img.ui.avatar')).toBeVisible();
+  await expect(page.locator('.secondary-nav span > .ui.avatar')).toBeVisible();
   await expect(page.locator('.ui.positive.message.flash-success')).toHaveText('Account was successfully created. Welcome!');
   await screenshot(page);
 });

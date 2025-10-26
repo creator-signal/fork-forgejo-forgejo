@@ -128,7 +128,7 @@
   height: 23px;
 }
 
-#git-graph-container #rev-list .author img.ui.avatar {
+#git-graph-container #rev-list .author .ui.avatar {
   width: auto;
   height: 18px;
   max-width: none;
