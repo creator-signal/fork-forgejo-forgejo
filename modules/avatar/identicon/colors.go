@@ -9,20 +9,22 @@ import (
 	"image/color"
 )
 
+// Convert color stored as simple uint32 into Go's color
 func uint32RGBA(input uint32) color.Color {
 	var r, g, b, a uint8
-	r = uint8((input >> 24) & 0xff)
-	g = uint8((input >> 16) & 0xff)
-	b = uint8((input >> 8) & 0xff)
-	a = uint8(input & 0xff)
+	r = uint8(input >> 24)
+	g = uint8(input >> 16)
+	b = uint8(input >> 8)
+	a = uint8(input)
 	return color.RGBA{R: r, G: g, B: b, A: a}
 }
 
+// Format color stored as simple uint32 as a hexadecimal string
 func uint32HEX(input uint32) string {
-	r := uint8((input >> 24) & 0xFF)
-	g := uint8((input >> 16) & 0xFF)
-	b := uint8((input >> 8) & 0xFF)
-	a := uint8(input & 0xFF)
+	r := uint8(input >> 24)
+	g := uint8(input >> 16)
+	b := uint8(input >> 8)
+	a := uint8(input)
 	return fmt.Sprintf("%02x%02x%02x%02x", r, g, b, a)
 }
 
