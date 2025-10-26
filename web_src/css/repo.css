@@ -568,7 +568,7 @@ citation-information .tab:not(.active) {
   min-width: 100px;
 }
 
-.repository.new.issue .comment.form .comment .avatar {
+.repository.new.issue .comment.form .comment a.avatar {
   width: 3em;
 }
 

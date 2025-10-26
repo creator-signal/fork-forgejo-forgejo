@@ -618,9 +618,7 @@ a.label,
   color: var(--color-primary);
 }
 
-img.ui.avatar,
-.ui.avatar img,
-.ui.avatar svg {
+.ui.avatar {
   border-radius: var(--border-radius);
   object-fit: contain;
   aspect-ratio: 1;

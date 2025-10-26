@@ -27,7 +27,7 @@ func testIssueCommentChangeEvent(t *testing.T, htmlDoc *HTMLDoc, commentID, badg
 	assert.Equal(t, 1, badge.Length())
 
 	// Check avatar title
-	avatarImg := htmlDoc.Find("#issuecomment-" + commentID + " img.avatar")
+	avatarImg := htmlDoc.Find("#issuecomment-" + commentID + " .ui.avatar")
 	if len(avatarTitle) == 0 {
 		assert.Zero(t, avatarImg.Length())
 	} else {

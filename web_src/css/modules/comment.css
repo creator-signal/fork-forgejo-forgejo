@@ -45,9 +45,11 @@
   background: none;
 }
 
-.ui.comments .comment .avatar {
+.ui.comments .comment a.avatar,
+#new-issue .issue-content-left .avatar {
   float: left;
   width: 2.5em;
+  height: 2.5em;
 }
 
 .ui.comments .comment > .content {
