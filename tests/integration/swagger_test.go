@@ -98,3 +98,57 @@ func TestSwaggerUsersRoute(t *testing.T) {
 
 	checkSwaggerRouteResponse(t, swagger.Paths.Paths, "/users/{username}", http.StatusNotFound, "#/responses/notFound")
 }
+
+func TestSwaggerPagination(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	swagger := getSwagger(t)
+
+	for _, pathData := range swagger.Paths.Paths {
+		if pathData.Get == nil {
+			continue
+		}
+
+		var hasPageParam bool
+		var hasLimitParam bool
+		for i := range pathData.Get.Parameters {
+			parameter := pathData.Get.Parameters[i]
+			if parameter.Name == "page" {
+				hasPageParam = true;
+			} else if parameter.Name == "limit" {
+				hasLimitParam = true;
+			}
+		}
+
+		var hasTotalCountHeader bool
+		var hasLinkHeader bool
+		for responseCode, responseMaybe := range pathData.Get.Responses.StatusCodeResponses {
+			var response swagger_spec.Response
+			if len(responseMaybe.Ref.String()) > 0 {
+				res, err := swagger_spec.ResolveResponse(swagger, responseMaybe.Ref)
+				if err != nil {
+					t.Errorf("failed to resolve response reference [%s]", err.Error())
+				}
+				response = *res
+			} else {
+				response = responseMaybe
+			}
+			if responseCode < 200 || responseCode >= 300 {
+				continue
+			}
+			for headerName, _ := range response.Headers {
+				if headerName == "X-Total-Count" {
+					hasTotalCountHeader = true;
+				} else if headerName == "Link" {
+					hasLinkHeader = true;
+				}
+			}
+		}
+
+		hasAny := hasPageParam || hasLimitParam || hasLinkHeader || hasTotalCountHeader
+		hasAll := hasPageParam && hasLimitParam && hasLinkHeader && hasTotalCountHeader
+		if hasAny && !hasAll {
+			t.Errorf("%s\t has some pagination fields but not all: page (%t) limit (%t) Link (%t) X-Total-Count (%t)", pathData.Get.ID, hasPageParam, hasLimitParam, hasLinkHeader, hasTotalCountHeader)
+		}
+	}
+}
