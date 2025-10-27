@@ -285,6 +285,12 @@ func TopicSearch(ctx *context.APIContext) {
 	//           type: array
 	//           items:
 	//             "$ref": "#/definitions/TopicResponse"
+	//     headers:
+	//       "Link":
+	//         type: string
+	//       "X-Total-Count":
+	//         type: integer
+	//         format: int64
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 	//   "404":

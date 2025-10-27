@@ -19,6 +19,8 @@ type swaggerResponsePackage struct {
 type swaggerResponsePackageList struct {
 	// in:body
 	Body []api.Package `json:"body"`
+	Link string `json:"Link"`
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // PackageFileList

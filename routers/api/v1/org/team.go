@@ -799,6 +799,12 @@ func SearchTeam(ctx *context.APIContext) {
 	//           type: array
 	//           items:
 	//             "$ref": "#/definitions/Team"
+	//     headers:
+	//       "Link":
+	//         type: string
+	//       "X-Total-Count":
+	//         type: integer
+	//         format: int64
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

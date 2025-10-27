@@ -47,6 +47,8 @@ type swaggerResponseLicenseTemplateInfo struct {
 type swaggerResponseStringSlice struct {
 	// in:body
 	Body []string `json:"body"`
+	Link string `json:"Link"`
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // LabelTemplateList

@@ -123,7 +123,7 @@ func ListIssueComments(ctx *context.APIContext) {
 		apiComments[i] = convert.ToAPIComment(ctx, ctx.Repo.Repository, comments[i])
 	}
 
-	utils.SetPaginationHeaders(ctx, totalCount)
+	ctx.SetTotalCountHeader(totalCount)
 	ctx.JSON(http.StatusOK, &apiComments)
 }
 

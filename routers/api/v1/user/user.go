@@ -59,6 +59,12 @@ func Search(ctx *context.APIContext) {
 	//           type: array
 	//           items:
 	//             "$ref": "#/definitions/User"
+	//     headers:
+	//       "X-Total-Count":
+	//         type: integer
+	//         format: int64
+	//       "Link":
+	//         type: string
 
 	listOptions := utils.GetListOptions(ctx)
 

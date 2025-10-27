@@ -12,4 +12,6 @@ import (
 type swaggerResponseCronList struct {
 	// in:body
 	Body []api.Cron `json:"body"`
+	Link string `json:"Link"`
+	TotalCount int64 `json:"X-Total-Count"`
 }

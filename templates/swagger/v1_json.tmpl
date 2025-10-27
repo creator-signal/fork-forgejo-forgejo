@@ -4456,6 +4456,15 @@
                   "type": "boolean"
                 }
               }
+            },
+            "headers": {
+              "Link": {
+                "type": "string"
+              },
+              "X-Total-Count": {
+                "type": "integer",
+                "format": "int64"
+              }
             }
           },
           "404": {
@@ -18723,6 +18732,15 @@
                   }
                 }
               }
+            },
+            "headers": {
+              "Link": {
+                "type": "string"
+              },
+              "X-Total-Count": {
+                "type": "integer",
+                "format": "int64"
+              }
             }
           },
           "403": {
@@ -21132,6 +21150,15 @@
                 "ok": {
                   "type": "boolean"
                 }
+              }
+            },
+            "headers": {
+              "Link": {
+                "type": "string"
+              },
+              "X-Total-Count": {
+                "type": "integer",
+                "format": "int64"
               }
             }
           }
@@ -29899,6 +29926,15 @@
         "items": {
           "$ref": "#/definitions/AccessToken"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "ActionRun": {
@@ -29911,6 +29947,15 @@
       "description": "ActionRunList",
       "schema": {
         "$ref": "#/definitions/ListActionRunResponse"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "ActionRunner": {
@@ -29937,6 +29982,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Activity"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -29974,6 +30028,15 @@
         "items": {
           "$ref": "#/definitions/BlockedUser"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "Branch": {
@@ -29988,6 +30051,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Branch"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30015,6 +30087,9 @@
         }
       },
       "headers": {
+        "Link": {
+          "type": "string"
+        },
         "X-HasMore": {
           "type": "boolean",
           "description": "True if there is another page"
@@ -30036,8 +30111,7 @@
         },
         "X-Total-Count": {
           "type": "integer",
-          "format": "int64",
-          "description": "Total commit count"
+          "format": "int64"
         }
       }
     },
@@ -30045,6 +30119,15 @@
       "description": "CombinedStatus",
       "schema": {
         "$ref": "#/definitions/CombinedStatus"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "Comment": {
@@ -30059,6 +30142,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Comment"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30077,6 +30169,9 @@
         }
       },
       "headers": {
+        "Link": {
+          "type": "string"
+        },
         "X-HasMore": {
           "type": "boolean",
           "description": "True if there is another page"
@@ -30100,6 +30195,10 @@
           "type": "integer",
           "format": "int64",
           "description": "Total commit count"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30115,6 +30214,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/CommitStatus"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30146,6 +30254,15 @@
         "items": {
           "$ref": "#/definitions/Cron"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "DeployKey": {
@@ -30161,6 +30278,15 @@
         "items": {
           "$ref": "#/definitions/DeployKey"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "DispatchWorkflowRun": {
@@ -30175,6 +30301,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Email"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30214,6 +30349,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/GPGKey"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30275,6 +30419,15 @@
       "description": "GitTreeResponse",
       "schema": {
         "$ref": "#/definitions/GitTreeResponse"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "GitignoreTemplateInfo": {
@@ -30305,6 +30458,15 @@
         "items": {
           "$ref": "#/definitions/Hook"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "Issue": {
@@ -30325,6 +30487,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Issue"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30349,6 +30520,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Label"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30420,6 +30600,15 @@
         "items": {
           "$ref": "#/definitions/Milestone"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "NodeInfo": {
@@ -30453,6 +30642,15 @@
         "items": {
           "$ref": "#/definitions/NotificationThread"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "OAuth2Application": {
@@ -30468,6 +30666,15 @@
         "items": {
           "$ref": "#/definitions/OAuth2Application"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "Organization": {
@@ -30482,6 +30689,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Organization"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30513,6 +30729,15 @@
         "items": {
           "$ref": "#/definitions/Package"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "PersonFeed": {
@@ -30537,6 +30762,15 @@
         "items": {
           "$ref": "#/definitions/PublicKey"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "PullRequest": {
@@ -30551,6 +30785,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/PullRequest"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30582,6 +30825,15 @@
         "items": {
           "$ref": "#/definitions/PullReview"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "PushMirror": {
@@ -30596,6 +30848,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/PushMirror"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30636,18 +30897,45 @@
       "description": "QuotaUsedArtifactList",
       "schema": {
         "$ref": "#/definitions/QuotaUsedArtifactList"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "QuotaUsedAttachmentList": {
       "description": "QuotaUsedAttachmentList",
       "schema": {
         "$ref": "#/definitions/QuotaUsedAttachmentList"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "QuotaUsedPackageList": {
       "description": "QuotaUsedPackageList",
       "schema": {
         "$ref": "#/definitions/QuotaUsedPackageList"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "Reaction": {
@@ -30662,6 +30950,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Reaction"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30698,6 +30995,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Release"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30738,6 +31044,15 @@
         "items": {
           "$ref": "#/definitions/Repository"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "RunJobList": {
@@ -30753,6 +31068,15 @@
       "description": "SearchResults",
       "schema": {
         "$ref": "#/definitions/SearchResults"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "Secret": {
@@ -30767,6 +31091,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Secret"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30789,6 +31122,15 @@
         "items": {
           "$ref": "#/definitions/StopWatch"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "StringSlice": {
@@ -30797,6 +31139,15 @@
         "type": "array",
         "items": {
           "type": "string"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30819,6 +31170,15 @@
         "items": {
           "$ref": "#/definitions/Tag"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "TagProtection": {
@@ -30840,6 +31200,15 @@
       "description": "TasksList",
       "schema": {
         "$ref": "#/definitions/ActionTaskResponse"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "Team": {
@@ -30855,6 +31224,15 @@
         "items": {
           "$ref": "#/definitions/Team"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "TimelineList": {
@@ -30863,6 +31241,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/TimelineComment"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30879,6 +31266,15 @@
       "description": "TopicNames",
       "schema": {
         "$ref": "#/definitions/TopicName"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "TrackedTime": {
@@ -30893,6 +31289,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/TrackedTime"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -30918,6 +31323,15 @@
         "items": {
           "$ref": "#/definitions/User"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "UserSettings": {
@@ -30933,6 +31347,15 @@
         "items": {
           "$ref": "#/definitions/ActionVariable"
         }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "WatchInfo": {
@@ -30945,6 +31368,15 @@
       "description": "WikiCommitList",
       "schema": {
         "$ref": "#/definitions/WikiCommitList"
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
+        }
       }
     },
     "WikiPage": {
@@ -30959,6 +31391,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/WikiPageMetaData"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },

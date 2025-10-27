@@ -20,7 +20,12 @@ type AccessToken struct {
 
 // AccessTokenList represents a list of API access token.
 // swagger:response AccessTokenList
-type AccessTokenList []*AccessToken
+type AccessTokenList struct {
+	// in:body
+	Body []*AccessToken `json:"body"`
+	Link string `json:"Link"`
+	TotalCount int64 `json:"X-Total-Count"`
+}
 
 // CreateAccessTokenOption options when create access token
 // swagger:model CreateAccessTokenOption
@@ -52,4 +57,9 @@ type OAuth2Application struct {
 
 // OAuth2ApplicationList represents a list of OAuth2 applications.
 // swagger:response OAuth2ApplicationList
-type OAuth2ApplicationList []*OAuth2Application
+type OAuth2ApplicationList struct {
+	// in:body
+	Body []*OAuth2Application `json:"body"`
+	Link string `json:"Link"`
+	TotalCount int64 `json:"X-Total-Count"`
+}

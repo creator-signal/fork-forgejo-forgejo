@@ -19,6 +19,8 @@ type swaggerResponsePublicKey struct {
 type swaggerResponsePublicKeyList struct {
 	// in:body
 	Body []api.PublicKey `json:"body"`
+	Link string `json:"Link"`
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // GPGKey
@@ -33,6 +35,8 @@ type swaggerResponseGPGKey struct {
 type swaggerResponseGPGKeyList struct {
 	// in:body
 	Body []api.GPGKey `json:"body"`
+	Link string `json:"Link"`
+	TotalCount int64 `json:"X-Total-Count"`
 }
 
 // DeployKey
@@ -47,4 +51,6 @@ type swaggerResponseDeployKey struct {
 type swaggerResponseDeployKeyList struct {
 	// in:body
 	Body []api.DeployKey `json:"body"`
+	Link string `json:"Link"`
+	TotalCount int64 `json:"X-Total-Count"`
 }

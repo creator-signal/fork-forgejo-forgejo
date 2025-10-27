@@ -70,7 +70,7 @@ func testAPIListOAuth2Applications(t *testing.T) {
 		AddTokenAuth(token)
 	resp := MakeRequest(t, req, http.StatusOK)
 
-	var appList api.OAuth2ApplicationList
+	var appList []*api.OAuth2Application
 	DecodeJSON(t, resp, &appList)
 	expectedApp := appList[0]
 
