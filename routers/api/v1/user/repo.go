@@ -47,8 +47,7 @@ func listUserRepos(ctx *context.APIContext, u *user_model.User, private bool) {
 		}
 	}
 
-	ctx.SetLinkHeader(int(count), opts.PageSize)
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, &apiRepos)
 }
 
@@ -155,8 +154,7 @@ func ListMyRepos(ctx *context.APIContext) {
 		results[i] = convert.ToRepo(ctx, repo, permission)
 	}
 
-	ctx.SetLinkHeader(int(count), opts.PageSize)
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, &results)
 }
 

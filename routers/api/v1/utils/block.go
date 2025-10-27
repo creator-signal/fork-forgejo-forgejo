@@ -38,7 +38,7 @@ func ListUserBlockedUsers(ctx *context.APIContext, doer *user_model.User) {
 		}
 	}
 
-	ctx.SetTotalCountHeader(count)
+	SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, apiBlockedUsers)
 }
 

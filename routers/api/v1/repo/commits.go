@@ -264,8 +264,7 @@ func GetAllCommits(ctx *context.APIContext) {
 		}
 	}
 
-	ctx.SetLinkHeader(int(commitsCountTotal), listOptions.PageSize)
-	ctx.SetTotalCountHeader(commitsCountTotal)
+	utils.SetPaginationHeaders(ctx, commitsCountTotal)
 
 	// kept for backwards compatibility
 	ctx.RespHeader().Set("X-Page", strconv.Itoa(listOptions.Page))

@@ -61,7 +61,7 @@ func ListLabels(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, convert.ToLabelList(labels, nil, ctx.Org.Organization.AsUser()))
 }
 

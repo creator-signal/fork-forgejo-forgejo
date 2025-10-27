@@ -60,8 +60,7 @@ func ListQuotaAttachments(ctx *context.APIContext, userID int64) {
 		ctx.Error(http.StatusInternalServerError, "convert.ToQuotaUsedAttachmentList", err)
 	}
 
-	ctx.SetLinkHeader(int(count), opts.PageSize)
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, result)
 }
 
@@ -78,8 +77,7 @@ func ListQuotaPackages(ctx *context.APIContext, userID int64) {
 		ctx.Error(http.StatusInternalServerError, "convert.ToQuotaUsedPackageList", err)
 	}
 
-	ctx.SetLinkHeader(int(count), opts.PageSize)
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, result)
 }
 
@@ -96,7 +94,6 @@ func ListQuotaArtifacts(ctx *context.APIContext, userID int64) {
 		ctx.Error(http.StatusInternalServerError, "convert.ToQuotaUsedArtifactList", err)
 	}
 
-	ctx.SetLinkHeader(int(count), opts.PageSize)
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, result)
 }

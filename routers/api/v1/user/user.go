@@ -98,8 +98,7 @@ func Search(ctx *context.APIContext) {
 		}
 	}
 
-	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
-	ctx.SetTotalCountHeader(maxResults)
+	utils.SetPaginationHeaders(ctx, maxResults)
 
 	ctx.JSON(http.StatusOK, map[string]any{
 		"ok":   true,
@@ -231,7 +230,7 @@ func ListUserActivityFeeds(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "GetFeeds", err)
 		return
 	}
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 
 	ctx.JSON(http.StatusOK, convert.ToActivities(ctx, feeds, ctx.Doer))
 }

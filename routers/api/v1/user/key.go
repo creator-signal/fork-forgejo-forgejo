@@ -95,7 +95,7 @@ func listPublicKeys(ctx *context.APIContext, user *user_model.User) {
 		}
 	}
 
-	ctx.SetTotalCountHeader(int64(count))
+	utils.SetPaginationHeaders(ctx, int64(count))
 	ctx.JSON(http.StatusOK, &apiKeys)
 }
 

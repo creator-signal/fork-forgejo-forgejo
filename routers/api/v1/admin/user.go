@@ -463,8 +463,7 @@ func SearchUsers(ctx *context.APIContext) {
 		results[i] = convert.ToUser(ctx, users[i], ctx.Doer)
 	}
 
-	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
-	ctx.SetTotalCountHeader(maxResults)
+	utils.SetPaginationHeaders(ctx, maxResults)
 	ctx.JSON(http.StatusOK, &results)
 }
 

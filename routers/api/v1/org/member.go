@@ -43,7 +43,7 @@ func listMembers(ctx *context.APIContext, isMember bool) {
 		apiMembers[i] = convert.ToUser(ctx, member, ctx.Doer)
 	}
 
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, apiMembers)
 }
 

@@ -64,7 +64,7 @@ func ListTopics(ctx *context.APIContext) {
 		topicNames[i] = topic.Name
 	}
 
-	ctx.SetTotalCountHeader(total)
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, map[string]any{
 		"topics": topicNames,
 	})
@@ -306,7 +306,7 @@ func TopicSearch(ctx *context.APIContext) {
 		topicResponses[i] = convert.ToTopicResponse(topic)
 	}
 
-	ctx.SetTotalCountHeader(total)
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, map[string]any{
 		"topics": topicResponses,
 	})

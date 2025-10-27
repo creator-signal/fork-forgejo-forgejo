@@ -123,7 +123,7 @@ func ListIssueComments(ctx *context.APIContext) {
 		apiComments[i] = convert.ToAPIComment(ctx, ctx.Repo.Repository, comments[i])
 	}
 
-	ctx.SetTotalCountHeader(totalCount)
+	utils.SetPaginationHeaders(ctx, totalCount)
 	ctx.JSON(http.StatusOK, &apiComments)
 }
 
@@ -222,7 +222,7 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 		}
 	}
 
-	ctx.SetTotalCountHeader(int64(len(apiComments)))
+	utils.SetPaginationHeaders(ctx, int64(len(apiComments)))
 	ctx.JSON(http.StatusOK, &apiComments)
 }
 
@@ -355,7 +355,7 @@ func ListRepoIssueComments(ctx *context.APIContext) {
 		apiComments[i] = convert.ToAPIComment(ctx, ctx.Repo.Repository, comments[i])
 	}
 
-	ctx.SetTotalCountHeader(totalCount)
+	utils.SetPaginationHeaders(ctx, totalCount)
 	ctx.JSON(http.StatusOK, &apiComments)
 }
 

@@ -117,7 +117,6 @@ func GetAllOrgs(ctx *context.APIContext) {
 		orgs[i] = convert.ToOrganization(ctx, organization.OrgFromUser(users[i]))
 	}
 
-	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
-	ctx.SetTotalCountHeader(maxResults)
+	utils.SetPaginationHeaders(ctx, maxResults)
 	ctx.JSON(http.StatusOK, &orgs)
 }

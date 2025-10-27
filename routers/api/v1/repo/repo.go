@@ -231,8 +231,7 @@ func Search(ctx *context.APIContext) {
 		}
 		results[i] = convert.ToRepo(ctx, repo, permission)
 	}
-	ctx.SetLinkHeader(int(count), opts.PageSize)
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, api.SearchResults{
 		OK:   true,
 		Data: results,
@@ -1391,7 +1390,7 @@ func ListRepoActivityFeeds(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "GetFeeds", err)
 		return
 	}
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 
 	ctx.JSON(http.StatusOK, convert.ToActivities(ctx, feeds, ctx.Doer))
 }

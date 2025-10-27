@@ -50,7 +50,7 @@ func ListUnadoptedRepositories(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetTotalCountHeader(int64(count))
+	utils.SetPaginationHeaders(ctx, int64(count))
 
 	ctx.JSON(http.StatusOK, repoNames)
 }

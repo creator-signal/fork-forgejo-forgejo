@@ -40,7 +40,7 @@ func listGPGKeys(ctx *context.APIContext, uid int64, listOptions db.ListOptions)
 		apiKeys[i] = convert.ToGPGKey(keys[i])
 	}
 
-	ctx.SetTotalCountHeader(total)
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, &apiKeys)
 }
 

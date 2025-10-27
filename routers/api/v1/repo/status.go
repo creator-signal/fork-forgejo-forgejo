@@ -212,8 +212,7 @@ func getCommitStatuses(ctx *context.APIContext, sha string) {
 		apiStatuses = append(apiStatuses, convert.ToCommitStatus(ctx, status))
 	}
 
-	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
-	ctx.SetTotalCountHeader(maxResults)
+	utils.SetPaginationHeaders(ctx, maxResults)
 
 	ctx.JSON(http.StatusOK, apiStatuses)
 }
@@ -277,6 +276,6 @@ func GetCombinedCommitStatusByRef(ctx *context.APIContext) {
 
 	combiStatus := convert.ToCombinedStatus(ctx, statuses, convert.ToRepo(ctx, repo, ctx.Repo.Permission))
 
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, combiStatus)
 }

@@ -73,7 +73,7 @@ func ListCollaborators(ctx *context.APIContext) {
 		users[i] = convert.ToUser(ctx, collaborator.User, ctx.Doer)
 	}
 
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, users)
 }
 

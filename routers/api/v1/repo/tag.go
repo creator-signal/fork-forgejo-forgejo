@@ -73,8 +73,7 @@ func ListTags(ctx *context.APIContext) {
 
 		apiTags[i] = convert.ToTag(ctx.Repo.Repository, tags[i])
 	}
-	ctx.SetLinkHeader(total, listOpts.PageSize)
-	ctx.SetTotalCountHeader(int64(total))
+	utils.SetPaginationHeaders(ctx, int64(total))
 	ctx.JSON(http.StatusOK, &apiTags)
 }
 

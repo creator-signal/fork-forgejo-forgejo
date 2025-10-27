@@ -17,6 +17,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	notify_service "forgejo.org/services/notify"
@@ -341,7 +342,7 @@ func ListWikiPages(ctx *context.APIContext) {
 		pages = append(pages, wiki_service.ToWikiPageMetaData(wikiName, c, ctx.Repo.Repository))
 	}
 
-	ctx.SetTotalCountHeader(int64(len(entries)))
+	utils.SetPaginationHeaders(ctx, int64(len(entries)))
 	ctx.JSON(http.StatusOK, pages)
 }
 
@@ -456,7 +457,7 @@ func ListPageRevisions(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetTotalCountHeader(commitsCount)
+	utils.SetPaginationHeaders(ctx, commitsCount)
 	ctx.JSON(http.StatusOK, convert.ToWikiCommitList(commitsHistory, commitsCount))
 }
 

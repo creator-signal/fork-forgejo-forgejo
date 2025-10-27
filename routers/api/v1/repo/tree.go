@@ -6,6 +6,7 @@ package repo
 import (
 	"net/http"
 
+	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	files_service "forgejo.org/services/repository/files"
 )
@@ -64,7 +65,7 @@ func GetTree(ctx *context.APIContext) {
 	if tree, err := files_service.GetTreeBySHA(ctx, ctx.Repo.Repository, ctx.Repo.GitRepo, sha, ctx.FormInt("page"), ctx.FormInt("per_page"), ctx.FormBool("recursive")); err != nil {
 		ctx.Error(http.StatusBadRequest, "", err.Error())
 	} else {
-		ctx.SetTotalCountHeader(int64(tree.TotalCount))
+		utils.SetPaginationHeaders(ctx, int64(tree.TotalCount))
 		ctx.JSON(http.StatusOK, tree)
 	}
 }

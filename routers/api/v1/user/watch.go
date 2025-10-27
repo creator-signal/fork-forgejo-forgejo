@@ -68,7 +68,7 @@ func GetWatchedRepos(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "getWatchedRepos", err)
 	}
 
-	ctx.SetTotalCountHeader(total)
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, &repos)
 }
 
@@ -101,7 +101,7 @@ func GetMyWatchedRepos(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "getWatchedRepos", err)
 	}
 
-	ctx.SetTotalCountHeader(total)
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, &repos)
 }
 

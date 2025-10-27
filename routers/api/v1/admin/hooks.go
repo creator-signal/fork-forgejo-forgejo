@@ -51,7 +51,7 @@ func ListHooks(ctx *context.APIContext) {
 		}
 		hooks[i] = h
 	}
-	ctx.SetTotalCountHeader(total)
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, hooks)
 }
 

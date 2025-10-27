@@ -112,7 +112,7 @@ func PersonFeed(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "GetFollowingFeeds", err)
 		return
 	}
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 
 	feed := ap.OrderedCollectionNew(ap.IRI(ctx.ContextUser.APActorID() + "/outbox"))
 	feed.AttributedTo = ap.IRI(ctx.ContextUser.APActorID())

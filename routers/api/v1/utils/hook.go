@@ -44,7 +44,7 @@ func ListOwnerHooks(ctx *context.APIContext, owner *user_model.User) {
 		}
 	}
 
-	ctx.SetTotalCountHeader(count)
+	SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, apiHooks)
 }
 

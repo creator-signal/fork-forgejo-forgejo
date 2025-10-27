@@ -186,8 +186,7 @@ func ListReleases(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetLinkHeader(int(filteredCount), listOptions.PageSize)
-	ctx.SetTotalCountHeader(filteredCount)
+	utils.SetPaginationHeaders(ctx, filteredCount)
 	ctx.JSON(http.StatusOK, rels)
 }
 

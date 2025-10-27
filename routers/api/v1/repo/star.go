@@ -55,6 +55,6 @@ func ListStargazers(ctx *context.APIContext) {
 		users[i] = convert.ToUser(ctx, stargazer, ctx.Doer)
 	}
 
-	ctx.SetTotalCountHeader(int64(ctx.Repo.Repository.NumStars))
+	utils.SetPaginationHeaders(ctx, int64(ctx.Repo.Repository.NumStars))
 	ctx.JSON(http.StatusOK, users)
 }

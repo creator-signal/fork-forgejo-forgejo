@@ -71,7 +71,7 @@ func ListForks(ctx *context.APIContext) {
 		apiForks[i] = convert.ToRepo(ctx, fork, permission)
 	}
 
-	ctx.SetTotalCountHeader(total)
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, apiForks)
 }
 

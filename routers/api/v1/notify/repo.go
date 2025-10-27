@@ -11,6 +11,7 @@ import (
 	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
 	"forgejo.org/modules/structs"
+	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 )
@@ -125,7 +126,7 @@ func ListRepoNotifications(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetTotalCountHeader(totalCount)
+	utils.SetPaginationHeaders(ctx, totalCount)
 
 	ctx.JSON(http.StatusOK, convert.ToNotifications(ctx, nl))
 }

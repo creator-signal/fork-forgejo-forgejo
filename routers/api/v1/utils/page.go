@@ -16,3 +16,9 @@ func GetListOptions(ctx *context.APIContext) db.ListOptions {
 		PageSize: convert.ToCorrectPageSize(ctx.FormInt("limit")),
 	}
 }
+
+// Sets the `Link` and `X-Total-Count` headers together
+func SetPaginationHeaders(ctx *context.APIContext, total int64) {
+	ctx.SetLinkHeader(int(total), GetListOptions(ctx).PageSize)
+	ctx.SetTotalCountHeader(total)
+}

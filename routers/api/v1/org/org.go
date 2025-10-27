@@ -45,8 +45,7 @@ func listUserOrgs(ctx *context.APIContext, u *user_model.User) {
 		apiOrgs[i] = convert.ToOrganization(ctx, orgs[i])
 	}
 
-	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
-	ctx.SetTotalCountHeader(maxResults)
+	utils.SetPaginationHeaders(ctx, maxResults)
 	ctx.JSON(http.StatusOK, &apiOrgs)
 }
 
@@ -222,8 +221,7 @@ func GetAll(ctx *context.APIContext) {
 		orgs[i] = convert.ToOrganization(ctx, organization.OrgFromUser(publicOrgs[i]))
 	}
 
-	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
-	ctx.SetTotalCountHeader(maxResults)
+	utils.SetPaginationHeaders(ctx, maxResults)
 	ctx.JSON(http.StatusOK, &orgs)
 }
 
@@ -511,7 +509,7 @@ func ListOrgActivityFeeds(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "GetFeeds", err)
 		return
 	}
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 
 	ctx.JSON(http.StatusOK, convert.ToActivities(ctx, feeds, ctx.Doer))
 }

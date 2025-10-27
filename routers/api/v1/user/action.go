@@ -376,6 +376,6 @@ func ListVariables(ctx *context.APIContext) {
 		}
 	}
 
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, variables)
 }

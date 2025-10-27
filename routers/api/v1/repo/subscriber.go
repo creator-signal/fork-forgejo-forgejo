@@ -55,6 +55,6 @@ func ListSubscribers(ctx *context.APIContext) {
 		users[i] = convert.ToUser(ctx, subscriber, ctx.Doer)
 	}
 
-	ctx.SetTotalCountHeader(int64(ctx.Repo.Repository.NumWatches))
+	utils.SetPaginationHeaders(ctx, int64(ctx.Repo.Repository.NumWatches))
 	ctx.JSON(http.StatusOK, users)
 }

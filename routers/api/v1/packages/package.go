@@ -87,8 +87,7 @@ func ListPackages(ctx *context.APIContext) {
 		apiPackages = append(apiPackages, apiPackage)
 	}
 
-	ctx.SetLinkHeader(int(count), listOptions.PageSize)
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, apiPackages)
 }
 

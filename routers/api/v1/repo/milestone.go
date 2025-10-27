@@ -83,7 +83,7 @@ func ListMilestones(ctx *context.APIContext) {
 		apiMilestones[i] = convert.ToAPIMilestone(milestones[i])
 	}
 
-	ctx.SetTotalCountHeader(total)
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, &apiMilestones)
 }
 

@@ -73,7 +73,7 @@ func GetStarredRepos(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetTotalCountHeader(int64(ctx.ContextUser.NumStars))
+	utils.SetPaginationHeaders(ctx, int64(ctx.ContextUser.NumStars))
 	ctx.JSON(http.StatusOK, &repos)
 }
 
@@ -106,7 +106,7 @@ func GetMyStarredRepos(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "getStarredRepos", err)
 	}
 
-	ctx.SetTotalCountHeader(int64(ctx.Doer.NumStars))
+	utils.SetPaginationHeaders(ctx, int64(ctx.Doer.NumStars))
 	ctx.JSON(http.StatusOK, &repos)
 }
 

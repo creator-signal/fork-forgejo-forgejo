@@ -68,7 +68,7 @@ func ListTeams(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, apiTeams)
 }
 
@@ -111,7 +111,7 @@ func ListUserTeams(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 	ctx.JSON(http.StatusOK, apiTeams)
 }
 
@@ -424,7 +424,7 @@ func GetTeamMembers(ctx *context.APIContext) {
 		members[i] = convert.ToUser(ctx, member, ctx.Doer)
 	}
 
-	ctx.SetTotalCountHeader(int64(ctx.Org.Team.NumMembers))
+	utils.SetPaginationHeaders(ctx, int64(ctx.Org.Team.NumMembers))
 	ctx.JSON(http.StatusOK, members)
 }
 
@@ -588,7 +588,7 @@ func GetTeamRepos(ctx *context.APIContext) {
 		}
 		repos[i] = convert.ToRepo(ctx, repo, permission)
 	}
-	ctx.SetTotalCountHeader(int64(team.NumRepos))
+	utils.SetPaginationHeaders(ctx, int64(team.NumRepos))
 	ctx.JSON(http.StatusOK, repos)
 }
 
@@ -832,8 +832,7 @@ func SearchTeam(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
-	ctx.SetTotalCountHeader(maxResults)
+	utils.SetPaginationHeaders(ctx, maxResults)
 	ctx.JSON(http.StatusOK, map[string]any{
 		"ok":   true,
 		"data": apiTeams,
@@ -887,7 +886,7 @@ func ListTeamActivityFeeds(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "GetFeeds", err)
 		return
 	}
-	ctx.SetTotalCountHeader(count)
+	utils.SetPaginationHeaders(ctx, count)
 
 	ctx.JSON(http.StatusOK, convert.ToActivities(ctx, feeds, ctx.Doer))
 }

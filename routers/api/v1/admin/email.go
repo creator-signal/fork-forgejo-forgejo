@@ -51,8 +51,7 @@ func GetAllEmails(ctx *context.APIContext) {
 		results[i] = convert.ToEmailSearch(emails[i])
 	}
 
-	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
-	ctx.SetTotalCountHeader(maxResults)
+	utils.SetPaginationHeaders(ctx, maxResults)
 	ctx.JSON(http.StatusOK, &results)
 }
 

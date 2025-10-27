@@ -8,6 +8,7 @@ import (
 
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 )
 
@@ -47,7 +48,7 @@ func ListFlags(ctx *context.APIContext) {
 		flags[i] = repoFlags[i].Name
 	}
 
-	ctx.SetTotalCountHeader(int64(len(repoFlags)))
+	utils.SetPaginationHeaders(ctx, int64(len(repoFlags)))
 	ctx.JSON(http.StatusOK, flags)
 }
 

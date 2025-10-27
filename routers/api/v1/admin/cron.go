@@ -52,7 +52,7 @@ func ListCronTasks(ctx *context.APIContext) {
 		}
 	}
 
-	ctx.SetTotalCountHeader(int64(count))
+	utils.SetPaginationHeaders(ctx, int64(count))
 	ctx.JSON(http.StatusOK, res)
 }
 
