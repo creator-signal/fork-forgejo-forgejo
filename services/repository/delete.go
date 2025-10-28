@@ -95,16 +95,6 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		return err
 	}
 
-	if cnt, err := sess.ID(repoID).Delete(&repo_model.Repository{}); err != nil {
-		return err
-	} else if cnt != 1 {
-		return repo_model.ErrRepoNotExist{
-			ID:        repoID,
-			OwnerName: "",
-			Name:      "",
-		}
-	}
-
 	if org != nil && org.IsOrganization() {
 		teams, err := organization.FindOrgTeams(ctx, org.ID)
 		if err != nil {
@@ -193,13 +183,23 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		return fmt.Errorf("deleteBeans: %w", err)
 	}
 
-	// Delete Labels and related objects
-	if err := issues_model.DeleteLabelsByRepoID(ctx, repoID); err != nil {
+	// Delete Pulls and related objects
+	if err := issues_model.DeletePullsByBaseRepoID(ctx, repoID); err != nil {
 		return err
 	}
 
-	// Delete Pulls and related objects
-	if err := issues_model.DeletePullsByBaseRepoID(ctx, repoID); err != nil {
+	if cnt, err := sess.ID(repoID).Delete(&repo_model.Repository{}); err != nil {
+		return err
+	} else if cnt != 1 {
+		return repo_model.ErrRepoNotExist{
+			ID:        repoID,
+			OwnerName: "",
+			Name:      "",
+		}
+	}
+
+	// Delete Labels and related objects
+	if err := issues_model.DeleteLabelsByRepoID(ctx, repoID); err != nil {
 		return err
 	}
 

@@ -12,13 +12,13 @@ import (
 	git_model "forgejo.org/models/git"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
-	gitea_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBranchActions(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 		branch3 := unittest.AssertExistsAndLoadBean(t, &git_model.Branch{ID: 3, RepoID: repo1.ID})
@@ -35,7 +35,7 @@ func TestBranchActions(t *testing.T) {
 				"_csrf": GetCSRF(t, session, branchesLink),
 			})
 			session.MakeRequest(t, req, http.StatusOK)
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Contains(t, flashCookie.Value, "success%3DBranch%2B%2522branch2%2522%2Bhas%2Bbeen%2Bdeleted.")
 
@@ -48,7 +48,7 @@ func TestBranchActions(t *testing.T) {
 				"_csrf": GetCSRF(t, session, branchesLink),
 			})
 			session.MakeRequest(t, req, http.StatusOK)
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Contains(t, flashCookie.Value, "success%3DBranch%2B%2522branch2%2522%2Bhas%2Bbeen%2Brestored")
 

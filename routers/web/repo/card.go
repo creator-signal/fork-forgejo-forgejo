@@ -174,17 +174,15 @@ func drawRepoSummaryCard(ctx *context.Context, repo *repo_model.Repository) (*ca
 		return nil, err
 	}
 
-	starsText := ctx.Locale.TrN(
+	starsText := ctx.Locale.TrPluralString(
 		repo.NumStars,
-		"explore.stars_one",
-		"explore.stars_few",
-		repo.NumStars,
+		"stars.n_stars",
+		strconv.Itoa(repo.NumStars),
 	)
-	forksText := ctx.Locale.TrN(
+	forksText := ctx.Locale.TrPluralString(
 		repo.NumForks,
-		"explore.forks_one",
-		"explore.forks_few",
-		repo.NumForks,
+		"fork.n_forks",
+		strconv.Itoa(repo.NumForks),
 	)
 	releasesText := ctx.Locale.TrN(
 		releaseCount,
@@ -330,7 +328,7 @@ func drawIssueSummaryCard(ctx *context.Context, issue *issue_model.Issue) (*card
 		fmt.Sprintf(
 			"%s - %s",
 			issue.Poster.Name,
-			issue.Created.AsTime().Format(time.DateOnly),
+			issue.CreatedUnix.AsTime().Format(time.DateOnly),
 		),
 		color.Gray{128}, 36, card.Middle, card.Left)
 	if err != nil {
@@ -381,12 +379,8 @@ func drawReleaseSummaryCard(ctx *context.Context, release *repo_model.Release) (
 		return nil, err
 	}
 
-	downloadCountText := ctx.Locale.TrN(
-		strconv.FormatInt(downloadCount, 10),
-		"repo.release.download_count_one",
-		"repo.release.download_count_few",
-		strconv.FormatInt(downloadCount, 10),
-	)
+	downloadCountText := ctx.Locale.TrPluralString(downloadCount,
+		"release.n_downloads", strconv.FormatInt(downloadCount, 10))
 
 	_, err = downloadCountCard.DrawText(string(downloadCountText), color.Gray{128}, 36, card.Bottom, card.Left)
 	if err != nil {

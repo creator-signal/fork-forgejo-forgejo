@@ -161,9 +161,14 @@ func (w engineGroupWrapper) AddHook(hook contexts.Hook) bool {
 
 // SyncAllTables sync the schemas of all tables
 func SyncAllTables() error {
-	_, err := x.StoreEngine("InnoDB").SyncWithOptions(xorm.SyncOptions{
+	sortedTables, err := sortBeans(tables, foreignKeySortInsert)
+	if err != nil {
+		return err
+	}
+	_, err = x.StoreEngine("InnoDB").SyncWithOptions(xorm.SyncOptions{
 		WarnIfDatabaseColumnMissed: true,
-	}, tables...)
+		IgnoreDropIndices:          true,
+	}, sortedTables...)
 	return err
 }
 

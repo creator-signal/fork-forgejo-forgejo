@@ -1,4 +1,4 @@
-// Copyright 2024 The Forgejo Authors c/o Codeberg e.V.. All rights reserved.
+// Copyright 2025 The Forgejo Authors c/o Codeberg e.V.. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
@@ -20,7 +20,7 @@ import (
 )
 
 func TestOrgProfile(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		checkReadme := func(t *testing.T, title, readmeFilename string, expectedCount int) {
 			t.Run(title, func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
