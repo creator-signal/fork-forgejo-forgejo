@@ -1,4 +1,5 @@
 // Copyright 2022 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
@@ -17,11 +18,42 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestOrgTeamInviteUI(t *testing.T) {
+	t.Run("Mailer available", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.MailService, &setting.Mailer{})()
+
+		user2 := loginUser(t, "user2")
+		locale := translation.NewLocale("en-US")
+
+		doc := NewHTMLParser(t, user2.MakeRequest(t, NewRequest(t, "GET", "/org/org3/teams/owners"), http.StatusOK).Body)
+		searchbar := doc.Find("#search-user-box input")
+
+		placeholder, exists := searchbar.Attr("placeholder")
+		require.True(t, exists)
+		require.Equal(t, locale.TrString("teams.username_or_email.placeholder"), placeholder)
+	})
+
+	t.Run("Mailer unavailable", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.MailService, nil)()
+
+		user2 := loginUser(t, "user2")
+		locale := translation.NewLocale("en-US")
+
+		doc := NewHTMLParser(t, user2.MakeRequest(t, NewRequest(t, "GET", "/org/org3/teams/owners"), http.StatusOK).Body)
+		searchbar := doc.Find("#search-user-box input")
+
+		placeholder, exists := searchbar.Attr("placeholder")
+		require.True(t, exists)
+		require.Equal(t, locale.TrString("search.user_kind"), placeholder)
+	})
+}
 
 func TestOrgTeamEmailInvite(t *testing.T) {
 	if setting.MailService == nil {
