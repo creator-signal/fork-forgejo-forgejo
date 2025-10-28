@@ -43,7 +43,7 @@ window.customElements.define(
         elHeader.textContent = `Could not parse citation-information (format ${inputType})`; // ideally this message should be localized, however the error below will likely be in english
         elContainer.append(elHeader);
 
-        const elParagraph = document.createElement('p');
+        const elParagraph = document.createElement('pre');
         elParagraph.textContent = err;
         elContainer.append(elParagraph);
         this.prepend(elContainer);
