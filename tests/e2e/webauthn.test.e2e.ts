@@ -8,7 +8,8 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test, save_visual, create_temp_user, login_user} from './utils_e2e.ts';
+import {test, create_temp_user, login_user} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
 test('WebAuthn register & login flow', async ({browser, request}, workerInfo) => {
   test.skip(workerInfo.project.name !== 'chromium', 'Uses Chrome protocol');
@@ -34,13 +35,15 @@ test('WebAuthn register & login flow', async ({browser, request}, workerInfo) =>
   });
 
   await page.locator('input#nickname').fill('Testing Security Key');
-  await save_visual(page);
+  await screenshot(page, page.locator('.user-setting-content'));
   await page.getByText('Add security key').click();
+  await expect(page.getByRole('button', {name: 'Remove'})).toBeVisible(); // "Remove" button is visible, indicating that the security key was added
 
   // Logout.
+  await page.locator('div[aria-label="Profile and settings…"]').click();
+  await page.getByText('Sign out').click();
   await expect(async () => {
-    await page.locator('div[aria-label="Profile and settings…"]').click();
-    await page.getByText('Sign out').click();
+    await page.waitForURL(`${workerInfo.project.use.baseURL}/`);
   }).toPass();
 
   // Login.
@@ -57,8 +60,9 @@ test('WebAuthn register & login flow', async ({browser, request}, workerInfo) =>
   response = await page.goto('/user/settings/security');
   expect(response?.status()).toBe(200);
   await page.getByRole('button', {name: 'Remove'}).click();
-  await save_visual(page);
+  await screenshot(page, page.locator('.ui.g-modal-confirm.delete.modal'), 50);
   await page.getByRole('button', {name: 'Yes'}).click();
+  await expect(page.getByRole('button', {name: 'Remove'})).toBeHidden();
   await page.waitForLoadState();
 
   // verify the user can login without a key

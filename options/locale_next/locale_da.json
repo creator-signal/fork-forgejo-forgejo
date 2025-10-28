@@ -1,4 +1,16 @@
 {
+    "fork.n_forks": {
+        "one": "%s fork",
+        "other": "%s forks"
+    },
+    "stars.n_stars": {
+        "one": "%s stjerne",
+        "other": "%s stjerner"
+    },
+    "release.n_downloads": {
+        "one": "%s download",
+        "other": "%s downloads"
+    },
     "search.milestone_kind": "Søg milepæle…",
     "repo.pulls.title_desc": {
         "one": "ønsker at flette %[1]d commit fra <code>%[2]s</code> til <code id=\"%[4]s\">%[3]s</code>",
@@ -110,5 +122,13 @@
     "migrate.onedev.description": "Migrer data fra code.onedev.io eller andre OneDev-instanser.",
     "migrate.gitbucket.description": "Migrer data fra GitBucket-instanser.",
     "migrate.codebase.description": "Migrer data fra codebasehq.com.",
-    "migrate.forgejo.description": "Migrer data fra codeberg.org eller andre Forgejo-instanser."
+    "migrate.forgejo.description": "Migrer data fra codeberg.org eller andre Forgejo-instanser.",
+    "pulse.n_active_issues": {
+        "one": "%s aktivt problem",
+        "other": "%s aktive problemer"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s aktiv pull-anmodning",
+        "other": "%s aktive pull-anmodninger"
+    }
 }

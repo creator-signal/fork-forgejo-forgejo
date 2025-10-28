@@ -34,7 +34,7 @@ import (
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
-	gitea_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 
@@ -49,11 +49,11 @@ const (
 )
 
 func TestGit(t *testing.T) {
-	onGiteaRun(t, testGit)
+	onApplicationRun(t, testGit)
 }
 
 func TestActionsTokenAuth(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
 		task.GenerateToken()
 		actions_model.UpdateTask(db.DefaultContext, task)
@@ -495,7 +495,7 @@ func doProtectBranch(ctx APITestContext, branch string, addParameter ...paramete
 		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings/branches/edit", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)), parameter)
 		ctx.Session.MakeRequest(t, req, http.StatusSeeOther)
 		// Check if master branch has been locked successfully
-		flashCookie := ctx.Session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie := ctx.Session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "success%3DBranch%2Bprotection%2Bfor%2Brule%2B%2522"+url.QueryEscape(branch)+"%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 	}
@@ -1098,7 +1098,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 }
 
 func TestDataAsync_Issue29101(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 

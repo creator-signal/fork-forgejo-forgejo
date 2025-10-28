@@ -4,8 +4,20 @@
     "home.explore_repos": "Explore repositories",
     "home.explore_users": "Explore users",
     "home.explore_orgs": "Explore organizations",
+    "fork.n_forks": {
+        "one": "%s fork",
+        "other": "%s forks"
+    },
     "stars.list.none": "No one starred this repo.",
+    "stars.n_stars": {
+        "one": "%s star",
+        "other": "%s stars"
+    },
     "watch.list.none": "No one is watching this repo.",
+    "watch.n_watchers": {
+        "one": "%s watcher",
+        "other": "%s watchers"
+    },
     "followers.incoming.list.self.none": "No one is following your profile.",
     "followers.incoming.list.none": "No one is following this user.",
     "followers.outgoing.list.self.none": "You are not following anyone.",
@@ -53,6 +65,8 @@
         "one": "wants to merge %[1]d commit from <code>%[2]s</code> into <code id=\"%[4]s\">%[3]s</code>",
         "other": "wants to merge %[1]d commits from <code>%[2]s</code> into <code id=\"%[4]s\">%[3]s</code>"
     },
+    "repo.pulls.maintainers_can_edit": "Maintainers can edit this pull request.",
+    "repo.pulls.maintainers_cannot_edit": "Maintainers cannot edit this pull request.",
     "repo.form.cannot_create": "All spaces in which you can create repositories have reached the limit of repositories.",
     "migrate.form.error.url_credentials": "The URL contains credentials, put them in the username and password fields respectively",
     "migrate.github.description": "Migrate data from github.com or GitHub Enterprise server.",
@@ -112,6 +126,7 @@
     "mail.actions.run_info_previous_status": "Previous Run's Status: %[1]s",
     "mail.actions.run_info_sha": "Commit: %[1]s",
     "mail.actions.run_info_trigger": "Triggered because: %[1]s by: %[2]s",
+    "mail.issue.action.close_by_commit": "%[1]s closed %[2]s in commit %[3]s.",
     "repo.diff.commit.next-short": "Next",
     "repo.diff.commit.previous-short": "Prev",
     "discussion.locked": "This discussion has been locked. Commenting is limited to contributors.",
@@ -142,11 +157,28 @@
     "migrate.pagure.incorrect_url": "Incorrect source repository URL has been provided",
     "migrate.pagure.project_url": "Pagure project URL",
     "migrate.pagure.project_example": "The Pagure project URL, e.g. https://pagure.io/pagure",
-    "migrate.pagure.token_label": "Token",
-    "migrate.pagure.token_body_a": "Provide a Pagure API token with access to the private issues to create a repository with just the private issues in it",
-    "migrate.pagure.token_body_b": "Be sure to set the private repo flag above if you want this repo to be private",
+    "migrate.pagure.token_label": "Pagure API Token",
+    "migrate.pagure.private_issues.summary": "Private Issues (Optional)",
+    "migrate.pagure.private_issues.description": "This feature is designed to create a second repository containing only private issues from your Pagure project for archive purposes. First, perform a normal migration (without a token) to import all public content. Then, if you have private issues to preserve, create a separate repository using this token option to archive those private issues.",
+    "migrate.pagure.private_issues.warning": "Be sure to set the repository visibility above to Private if you are using the API key to import private issues. This prevents accidentally exposing private content in a public repository.",
+    "migrate.pagure.token.placeholder": "Only for creating private issues archive",
+    "release.n_downloads": {
+        "one": "%s download",
+        "other": "%s downloads"
+    },
     "actions.runs.run_attempt_label": "Run attempt #%[1]s (%[2]s)",
     "actions.runs.viewing_out_of_date_run": "You are viewing an out-of-date run of this job that was executed %[1]s.",
     "actions.runs.view_most_recent_run": "View most recent run",
+    "actions.workflow.job_parsing_error": "Unable to parse jobs in workflow: %v",
+    "actions.workflow.event_detection_error": "Unable to parse supported events in workflow: %v",
+    "actions.workflow.pre_execution_error": "Workflow was not executed due to an error that blocked the execution attempt.",
+    "pulse.n_active_issues": {
+        "one": "%s active issue",
+        "other": "%s active issues"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s active pull request",
+        "other": "%s active pull requests"
+    },
     "meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }

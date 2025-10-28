@@ -205,6 +205,15 @@ export function initGlobalCommon() {
   document.addEventListener('click', linkAction);
 }
 
+// Sometimes unrelated inputs are stored in forms for convenience, for example,
+// modal inputs. To prevent them from breaking the forms they are in they are
+// disabled by default
+export function initDisabledInputs() {
+  for (const el of document.querySelectorAll('input.js-enable[disabled]')) {
+    el.removeAttribute('disabled');
+  }
+}
+
 export function initGlobalDropzone() {
   for (const el of document.querySelectorAll('.dropzone')) {
     initDropzone(el);
@@ -225,7 +234,11 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
     input.name = 'files';
     input.type = 'hidden';
     input.value = data.uuid;
-    dropzoneEl.querySelector('.files').append(input);
+    const inputPath = document.createElement('input');
+    inputPath.name = `files_fullpath[${data.uuid}]`;
+    inputPath.type = 'hidden';
+    inputPath.value = htmlEscape(file.fullPath || file.name);
+    dropzoneEl.querySelector('.files').append(input, inputPath);
 
     // Create a "Copy Link" element, to conveniently copy the image
     // or file link as Markdown to the clipboard
@@ -270,6 +283,7 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
       this.on('success', initFilePreview);
       this.on('removedfile', async (file) => {
         document.getElementById(file.uuid)?.remove();
+        document.querySelector(`input[name="files_fullpath[${file.uuid}]"]`)?.remove();
         if (disableRemovedfileEvent) return;
         if (dropzoneEl.getAttribute('data-remove-url') && !fileUuidDict[file.uuid].submitted) {
           try {

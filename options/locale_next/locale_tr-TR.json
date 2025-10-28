@@ -1,4 +1,12 @@
 {
+    "fork.n_forks": {
+        "one": "%s çatal",
+        "other": "%s çatal"
+    },
+    "stars.n_stars": {
+        "one": "%s yıldız",
+        "other": "%s yıldız"
+    },
     "repo.pulls.merged_title_desc": "%[4]s <code>%[2]s</code> içindeki %[1]d işlemeyi <code>%[3]s</code> ile birleştirdi",
     "repo.pulls.title_desc": "<code>%[2]s</code> içindeki %[1]d işlemeyi <code id=\"%[4]s\">%[3]s</code> ile birleştirmek istiyor",
     "search.milestone_kind": "Kilometre taşlarını ara...",
@@ -10,5 +18,13 @@
     "migrate.gogs.description": "Notabug.org veya diğer Gogs sunucularından veri aktar.",
     "migrate.onedev.description": "Code.onedev.io ve diğer OneDev sunucularından veri aktar.",
     "migrate.gitbucket.description": "GitBucket sunucularından veri aktar.",
-    "migrate.codebase.description": "Codebasehq.com sitesinden veri aktar."
+    "migrate.codebase.description": "Codebasehq.com sitesinden veri aktar.",
+    "pulse.n_active_issues": {
+        "one": "%s Aktif Konu",
+        "other": "%s Aktif Konu"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s Aktif Değişiklik İsteği",
+        "other": "%s Aktif Değişiklik İsteği"
+    }
 }

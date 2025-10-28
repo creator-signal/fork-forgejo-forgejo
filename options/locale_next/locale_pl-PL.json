@@ -1,4 +1,16 @@
 {
+    "fork.n_forks": {
+        "one": "%s fork",
+        "many": "%s forki"
+    },
+    "stars.n_stars": {
+        "one": "%s gwiazdka",
+        "many": "%s gwiazdek"
+    },
+    "release.n_downloads": {
+        "one": "%s pobranie",
+        "many": "%s pobrania"
+    },
     "repo.pulls.merged_title_desc": {
         "one": "scala %[1]d commit z <code>%[2]s</code> do <code>%[3]s</code> %[4]s",
         "few": "scala %[1]d commity z <code>%[2]s</code> do <code>%[3]s</code> %[4]s",
@@ -108,5 +120,17 @@
     "moderation.report_abuse_form.invalid": "Niepoprawne parametry",
     "moderation.submit_report": "Wyślij zgłoszenie",
     "repo.diff.commit.next-short": "Następny",
-    "repo.diff.commit.previous-short": "Poprzedni"
+    "repo.diff.commit.previous-short": "Poprzedni",
+    "pulse.n_active_issues": {
+        "one": "%s aktywne zgłoszenie",
+        "few": "%s aktywne zgłoszenia",
+        "many": ""
+    },
+    "pulse.n_active_prs": {
+        "one": "%s aktywny pull request",
+        "few": "%s aktywne pull requesty",
+        "many": ""
+    },
+    "repo.pulls.maintainers_can_edit": "Opiekunowie mogą edytować ten pull request.",
+    "repo.pulls.maintainers_cannot_edit": "Opiekunowie nie mogą edytować tego pull requestu."
 }

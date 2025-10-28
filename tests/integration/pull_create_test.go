@@ -11,10 +11,12 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
@@ -97,7 +99,7 @@ func testPullCreateDirectly(t *testing.T, session *TestSession, baseRepoOwner, b
 }
 
 func TestPullCreate(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testEditFile(t, session, "user1", "repo1", "master", "README.md", "Hello, World (Edited)\n")
@@ -121,11 +123,17 @@ func TestPullCreate(t *testing.T) {
 		assert.Regexp(t, "diff", resp.Body)
 		assert.Regexp(t, `Subject: \[PATCH\] Update README.md`, resp.Body)
 		assert.NotRegexp(t, "diff.*diff", resp.Body) // not two diffs, just one
+
+		// Check that mergebase is set.
+		index, err := strconv.ParseInt(url[strings.LastIndexByte(url, '/')+1:], 10, 64)
+		require.NoError(t, err)
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{BaseRepoID: 1, HeadBranch: "master", BaseBranch: "master", Index: index})
+		assert.NotEmpty(t, pr.MergeBase)
 	})
 }
 
 func TestPullCreateWithPullTemplate(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		baseUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 		forkUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -226,7 +234,7 @@ func TestPullCreateWithPullTemplate(t *testing.T) {
 }
 
 func TestPullCreate_TitleEscape(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testEditFile(t, session, "user1", "repo1", "master", "README.md", "Hello, World (Edited)\n")
@@ -288,7 +296,7 @@ func testDeleteRepository(t *testing.T, session *TestSession, ownerName, repoNam
 }
 
 func TestPullBranchDelete(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testCreateBranch(t, session, "user1", "repo1", "branch/master", "master1", http.StatusSeeOther)
@@ -314,7 +322,7 @@ func TestPullBranchDelete(t *testing.T) {
 }
 
 func TestRecentlyPushed(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 
@@ -576,7 +584,7 @@ Test checks:
 Check if pull request can be created from base to the fork repository.
 */
 func TestPullCreatePrFromBaseToFork(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		sessionFork := loginUser(t, "user1")
 		testRepoFork(t, sessionFork, "user2", "repo1", "user1", "repo1")
 
@@ -586,6 +594,46 @@ func TestPullCreatePrFromBaseToFork(t *testing.T) {
 
 		// Create a PR
 		resp := testPullCreateDirectly(t, sessionFork, "user1", "repo1", "master", "user2", "repo1", "master", "This is a pull title")
+		// check the redirected URL
+		url := test.RedirectURL(resp)
+		assert.Regexp(t, "^/user1/repo1/pulls/[0-9]*$", url)
+	})
+}
+
+func TestPullCreatePrFromForkToFork(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		sessionFork1 := loginUser(t, "user1")
+		testRepoFork(t, sessionFork1, "user2", "repo1", "user1", "repo1")
+		sessionFork3 := loginUser(t, "user30")
+		testRepoFork(t, sessionFork3, "user2", "repo1", "user30", "repo1")
+
+		// Edit fork of user30
+		testEditFileToNewBranch(t, sessionFork3, "user30", "repo1", "master", "my-patch", "README.md", "Hello, World (Edited)\n")
+
+		// As user30, go to the PR page of the first fork, belonging to user1
+		req := NewRequest(t, "GET", path.Join("user1", "repo1", "pulls"))
+		resp := sessionFork3.MakeRequest(t, req, http.StatusOK)
+
+		// Check that the button to create PRs is enabled
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		defaultCompareLink, exists := htmlDoc.doc.Find(".new-pr-button").Attr("href")
+		assert.True(t, exists, "The template has changed")
+		assert.Regexp(t, "^/user1/repo1/compare/.*$", defaultCompareLink)
+
+		// The default compare page for the user1 fork should let us select a branch from our user30 fork
+		req = NewRequest(t, "GET", defaultCompareLink)
+		resp = sessionFork3.MakeRequest(t, req, http.StatusOK)
+		htmlDoc = NewHTMLParser(t, resp.Body)
+		ourCompareLink, exists := htmlDoc.doc.Find(".head-branch-list .item:contains('user30:my-patch')").Attr("data-url")
+		assert.True(t, exists, "The branch from our fork is not proposed in the /compare page of their fork")
+		assert.Equal(t, "/user1/repo1/compare/master...user30/repo1:my-patch", ourCompareLink)
+
+		// Go to the compare page for the branch we created, which should load fine
+		req = NewRequest(t, "GET", ourCompareLink)
+		sessionFork3.MakeRequest(t, req, http.StatusOK)
+
+		// Create a PR
+		resp = testPullCreateDirectly(t, sessionFork3, "user1", "repo1", "master", "user30", "repo1", "my-patch", "This is a pull title")
 		// check the redirected URL
 		url := test.RedirectURL(resp)
 		assert.Regexp(t, "^/user1/repo1/pulls/[0-9]*$", url)

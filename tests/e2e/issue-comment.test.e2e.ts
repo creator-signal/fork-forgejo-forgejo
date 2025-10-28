@@ -2,12 +2,65 @@
 // web_src/js/features/comp/**
 // web_src/js/features/repo-**
 // templates/repo/issue/view_content/*
+// routers/web/repo/issue_content_history.go
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test, save_visual} from './utils_e2e.ts';
+import {test, dynamic_id, login_user} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
 test.use({user: 'user2'});
+
+for (const run of [
+  {title: 'JS off', js: true},
+  {title: 'JS on', js: false},
+]) {
+  test.describe(`Create issue & comment`, () => {
+    // playwright/valid-title says: [error] Title must be a string
+    test(`${run.title}`, async ({browser}, workerInfo) => {
+      test.skip(['Mobile Chrome', 'Mobile Safari'].includes(workerInfo.project.name), 'Mobile Chrome has trouble clicking Comment button with JS enabled, Mobile Safari is flaky and only passes on retry');
+
+      const issueTitle = dynamic_id();
+      const issueContent = dynamic_id();
+      const commentContent = dynamic_id();
+
+      const context = await login_user(browser, workerInfo, 'user2', {javaScriptEnabled: run.js});
+      const page = await context.newPage();
+
+      let response = await page.goto('/user2/repo1/issues/new');
+      expect(response?.status()).toBe(200);
+
+      // Create a new issue
+      await page.getByPlaceholder('Title').fill(issueTitle);
+      await page.getByPlaceholder('Leave a comment').fill(issueContent);
+      await page.getByRole('button', {name: 'Create issue'}).click();
+
+      if (run.js) {
+        await expect(page).toHaveURL(/\/user2\/repo1\/issues\/\d+$/);
+      } else {
+        // NoJS clients end up on a .../comments JSON file and browsers surround it with some HTML
+        const redirectUrl = await JSON.parse(await page.locator('body').textContent())['redirect'];
+        response = await page.goto(redirectUrl);
+        expect(response?.status()).toBe(200);
+      }
+
+      // Leave a comment
+      await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill(commentContent);
+      await page.locator('#comment-form button.primary').filter({hasText: 'Comment'}).click();
+
+      if (!run.js) {
+        const redirectUrl = await JSON.parse(await page.locator('body').textContent())['redirect'];
+        response = await page.goto(redirectUrl);
+        expect(response?.status()).toBe(200);
+      }
+
+      // Validate the page contents that actions above made a difference
+      await expect(page.locator('h1')).toContainText(issueTitle);
+      await expect(page.locator('.comment').filter({hasText: issueContent})).toHaveCount(1);
+      await expect(page.locator('.comment').filter({hasText: commentContent})).toHaveCount(1);
+    });
+  });
+}
 
 test('Menu accessibility', async ({page}) => {
   await page.goto('/user2/repo1/issues/1');
@@ -61,7 +114,7 @@ test('Always focus edit tab first on edit', async ({page}) => {
   // Switch to preview tab and save
   await page.click('#issue-1 .comment-container .context-menu');
   await page.click('#issue-1 .comment-container .menu>.edit-content');
-  await page.locator('#issue-1 .comment-container a[data-tab-for=markdown-previewer]').click();
+  await page.locator('#issue-1 .comment-container [data-tab-for=markdown-previewer]').click();
   await page.click('#issue-1 .comment-container .save');
 
   await page.waitForLoadState();
@@ -69,12 +122,12 @@ test('Always focus edit tab first on edit', async ({page}) => {
   // Edit again and assert that edit tab should be active (and not preview tab)
   await page.click('#issue-1 .comment-container .context-menu');
   await page.click('#issue-1 .comment-container .menu>.edit-content');
-  const editTab = page.locator('#issue-1 .comment-container a[data-tab-for=markdown-writer]');
-  const previewTab = page.locator('#issue-1 .comment-container a[data-tab-for=markdown-previewer]');
+  const editTab = page.locator('#issue-1 .comment-container [data-tab-for=markdown-writer]');
+  const previewTab = page.locator('#issue-1 .comment-container [data-tab-for=markdown-previewer]');
 
   await expect(editTab).toHaveClass(/active/);
   await expect(previewTab).not.toHaveClass(/active/);
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-left'));
 });
 
 test('Reset content of comment edit field on cancel', async ({page}) => {
@@ -95,7 +148,7 @@ test('Reset content of comment edit field on cancel', async ({page}) => {
   await page.click('#issue-1 .comment-container .context-menu');
   await page.click('#issue-1 .comment-container .menu>.edit-content');
   await expect(editorTextarea).toHaveValue('content for the first issue');
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-left'));
 });
 
 test('Quote reply', async ({page}, workerInfo) => {
@@ -235,4 +288,35 @@ test('Emoji suggestions', async ({page}) => {
 
   const item = suggestionList.locator(`li:has-text("forgejo")`);
   await expect(item.locator('img')).toHaveAttribute('src', '/assets/img/emoji/forgejo.png');
+});
+
+test('Comment history', async ({page}) => {
+  const response = await page.goto('/user2/repo1/issues/new');
+  expect(response?.status()).toBe(200);
+
+  // Create a new issue.
+  await page.getByPlaceholder('Title').fill('Just a title');
+  await page.getByPlaceholder('Leave a comment').fill('Hi, have you considered using a rotating fish as logo?');
+  await page.getByRole('button', {name: 'Create issue'}).click();
+  await expect(page).toHaveURL(/\/user2\/repo1\/issues\/\d+$/);
+
+  page.on('dialog', (dialog) => dialog.accept());
+
+  // Make a change.
+  const editorTextarea = page.locator('[id="_combo_markdown_editor_1"]');
+  await page.click('.comment-container .context-menu');
+  await page.click('.comment-container .menu>.edit-content');
+  await editorTextarea.fill(dynamic_id());
+  await page.click('.comment-container .edit .save');
+
+  // Reload the page so the edited bit is rendered.
+  await page.reload();
+
+  await page.getByText('• edited').click();
+  await page.click('.content-history-menu .item:nth-child(1)');
+  await page.getByText('Options').click();
+  await page.getByText('Delete from history').click();
+
+  await page.getByText('• edited').click();
+  await expect(page.locator(".content-history-menu .item s span[data-history-is-deleted='1']")).toBeVisible();
 });

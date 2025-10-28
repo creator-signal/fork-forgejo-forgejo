@@ -126,7 +126,9 @@ func TestAPIListUsers(t *testing.T) {
 		}
 	}
 	assert.True(t, found)
-	numberOfUsers := unittest.GetCount(t, &user_model.User{}, "type = 0")
+	numberOfUsers := unittest.GetCount(t, &user_model.User{}, "type = 0") +
+		unittest.GetCount(t, &user_model.User{}, "type = 5")
+
 	assert.Len(t, users, numberOfUsers)
 }
 
@@ -222,6 +224,28 @@ func TestAPIEditUser(t *testing.T) {
 	MakeRequest(t, req, http.StatusOK)
 	user2 = unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: "user2"})
 	assert.True(t, user2.IsRestricted)
+
+	// Test hide_email functionality
+	user2 = unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: "user2"})
+	assert.True(t, user2.KeepEmailPrivate) // user2 starts with keep_email_private: true in fixtures
+
+	// Test setting hide_email to false
+	bFalse := false
+	req = NewRequestWithJSON(t, "PATCH", urlStr, api.EditUserOption{
+		HideEmail: &bFalse,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusOK)
+	user2 = unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: "user2"})
+	assert.False(t, user2.KeepEmailPrivate)
+
+	// Test setting hide_email back to true
+	bTrue = true
+	req = NewRequestWithJSON(t, "PATCH", urlStr, api.EditUserOption{
+		HideEmail: &bTrue,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusOK)
+	user2 = unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: "user2"})
+	assert.True(t, user2.KeepEmailPrivate)
 }
 
 func TestAPIEditUserWithLoginName(t *testing.T) {

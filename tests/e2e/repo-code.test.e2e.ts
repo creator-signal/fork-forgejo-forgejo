@@ -11,7 +11,8 @@
 // @watch end
 
 import {expect, type Page} from '@playwright/test';
-import {save_visual, test} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 import {accessibilityCheck} from './shared/accessibility.ts';
 
 async function assertSelectedLines(page: Page, nums: string[]) {
@@ -36,7 +37,9 @@ async function assertSelectedLines(page: Page, nums: string[]) {
   return pageAssertions();
 }
 
-test('Line Range Selection', async ({page}) => {
+test('Line Range Selection', async ({page}, workerInfo) => {
+  test.skip(['Mobile Safari', 'webkit'].includes(workerInfo.project.name), 'Unreliable in this test');
+
   const filePath = '/user2/repo1/src/branch/master/README.md?display=source';
 
   const response = await page.goto(filePath);
@@ -55,7 +58,7 @@ test('Line Range Selection', async ({page}) => {
   // out-of-bounds end line
   await page.goto(`${filePath}#L1-L100`);
   await assertSelectedLines(page, ['1', '2', '3']);
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('Readable diff', async ({page}, workerInfo) => {
@@ -82,7 +85,7 @@ test('Readable diff', async ({page}, workerInfo) => {
       await expect(page.getByText(thisDiff.added, {exact: true})).toHaveCSS('background-color', 'rgb(134, 239, 172)');
     }
   }
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test.describe('As authenticated user', () => {
@@ -95,14 +98,14 @@ test.describe('As authenticated user', () => {
     await expect(page.getByRole('link', {name: '@user2'})).toHaveCSS('background-color', /(.*)/);
     await expect(page.getByRole('link', {name: '@user1'})).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await accessibilityCheck({page}, ['.commit-header'], [], []);
-    await save_visual(page);
+    await screenshot(page);
     // check second commit
     await page.goto('/user2/mentions-highlighted/commits/branch/main');
     await page.locator('tbody').getByRole('link', {name: 'Another commit which mentions'}).click();
     await expect(page.getByRole('link', {name: '@user2'})).toHaveCSS('background-color', /(.*)/);
     await expect(page.getByRole('link', {name: '@user1'})).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await accessibilityCheck({page}, ['.commit-header'], [], []);
-    await save_visual(page);
+    await screenshot(page);
   });
 });
 
@@ -126,4 +129,31 @@ test('Unicode escape highlight', async ({page}) => {
   await page.locator('.code-line-button').click();
   await expect(page.locator('.tippy-box .view_git_blame[href$="/a-file#L1"]')).toBeVisible();
   await expect(page.locator('.tippy-box .copy-line-permalink[data-url$="/a-file#L1"]')).toBeVisible();
+});
+
+test('File folding', async ({page}) => {
+  const filePath = '/user2/repo1/commit/65f1bf27bc3bf70f64657658635e66094edbcb4d';
+
+  const response = await page.goto(filePath);
+  expect(response?.status()).toBe(200);
+
+  const foldFileButton = page.locator('.fold-file');
+  const diffFileBody = page.locator('.diff-file-body');
+  await foldFileButton.click();
+  await expect(diffFileBody).toBeHidden();
+  await foldFileButton.click();
+  await expect(diffFileBody).toBeVisible();
+});
+
+test('Copy line permalink', async ({page}, workerInfo) => {
+  test.skip(['Mobile Safari', 'webkit'].includes(workerInfo.project.name), 'Apple clipboard API addon - starting at just $499!');
+
+  const response = await page.goto('/user2/repo1/src/branch/master/README.md?display=source#L1');
+  expect(response?.status()).toBe(200);
+
+  await page.locator('.code-line-button').click();
+  // eslint-disable-next-line playwright/no-force-option
+  await page.locator('.tippy-box .copy-line-permalink').click({force: true});
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboardText).toContain('README.md?display=source#L1');
 });

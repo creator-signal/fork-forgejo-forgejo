@@ -140,6 +140,13 @@
   }
 }
 
+@media (max-width: 390px) {
+  .repository .clone-panel #repo-clone-url {
+    width: 0;
+    flex-grow: 1;
+  }
+}
+
 .repository .ui.action.input.clone-panel > button + button,
 .repository .ui.action.input.clone-panel > button + input {
   margin-left: -1px; /* make the borders overlap to avoid double borders */
@@ -1890,25 +1897,6 @@ details.repo-search-result summary::marker {
   font-weight: var(--font-weight-medium);
 }
 
-.repository .repository-summary #language-stats-bar {
-  display: flex;
-  gap: 2px;
-  padding: 0;
-  height: 10px;
-  white-space: nowrap;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  overflow: hidden;
-}
-
-.size-overview .segment:has(> .bar) {
-  display: flex;
-  height: 10px;
-  padding: 0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
 #cite-repo-modal #citation-panel {
   display: flex;
   width: 100%;
@@ -1982,6 +1970,11 @@ details.repo-search-result summary::marker {
   padding: 0.75rem 1rem !important;
   gap: 0.5rem 1rem;
   justify-content: space-between;
+}
+
+.signature-row > div {
+  display: flex;
+  align-items: center;
 }
 
 .commit-header-buttons {
@@ -2127,6 +2120,10 @@ details.repo-search-result summary::marker {
   gap: 4px;
 }
 
+.comment-header-left > .content-history-menu.active s {
+  text-decoration-thickness: 10%;
+}
+
 .comment-body {
   background: var(--color-box-body);
   border: none !important;
@@ -2134,17 +2131,6 @@ details.repo-search-result summary::marker {
   max-width: 100% !important;
   margin: 0 !important;
   padding: 1em;
-}
-
-.edit-label.modal .form .column,
-.new-label.modal .form .column {
-  padding-right: 0;
-}
-
-.edit-label.modal .form .buttons,
-.new-label.modal .form .buttons {
-  margin-left: auto;
-  padding-top: 15px;
 }
 
 .stats-table {
@@ -2324,10 +2310,21 @@ tbody.commit-list {
   top: -2px;
 }
 
-#repo-topics .repo-topic {
+.repo-topics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.repo-topics .repo-topic {
   font-weight: var(--font-weight-normal);
   cursor: pointer;
   margin: 0;
+}
+
+.repo-topics .repo-topic:last-of-type {
+  margin-right: 0.5rem;
 }
 
 #new-dependency-drop-list.ui.selection.dropdown {
