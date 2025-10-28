@@ -44,7 +44,7 @@ func (err ErrDismissRequestOnClosedPR) Unwrap() error {
 // If the line got changed the comment is going to be invalidated.
 func checkInvalidation(ctx context.Context, c *issues_model.Comment, repo *git.Repository, branch string) error {
 	// FIXME differentiate between previous and proposed line
-	commit, err := repo.LineBlame(branch, c.TreePath, c.UnsignedLine())
+	commit, _, err := repo.LineBlame(branch, c.TreePath, c.UnsignedLine())
 	if err != nil && (errors.Is(err, git.ErrBlameFileDoesNotExist) || errors.Is(err, git.ErrBlameFileNotEnoughLines)) {
 		c.Invalidated = true
 		return issues_model.UpdateCommentInvalidate(ctx, c)
@@ -226,7 +226,7 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 			// FIXME validate treePath
 			// Get latest commit referencing the commented line
 			// No need for get commit for base branch changes
-			commit, err := gitRepo.LineBlame(head, treePath, uint64(line))
+			commit, _, err := gitRepo.LineBlame(head, treePath, uint64(line))
 			if err == nil {
 				commitID = commit.ID.String()
 			} else if !errors.Is(err, git.ErrBlameFileDoesNotExist) && !errors.Is(err, git.ErrBlameFileNotEnoughLines) {
