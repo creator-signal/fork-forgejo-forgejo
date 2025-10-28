@@ -14,11 +14,10 @@ window.customElements.define(
     connectedCallback() {
       const children = this.children; // eslint-disable-line wc/no-child-traversal-in-connectedcallback
       if (children.length !== 1) {
-        console.warn(
-          '<citation-information> expected one child, got',
-          children.length,
+        // developer error
+        throw new Error(
+          `<citation-information> expected one child, got ${children.length}`,
         );
-        return;
       }
 
       const lang = getCurrentLocale() || 'en-US';
