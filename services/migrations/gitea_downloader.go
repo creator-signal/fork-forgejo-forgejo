@@ -539,7 +539,7 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 		}
 		forgejoComments = append(forgejoComments, g.makeCommentsList(giteaComments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
 
-		shouldBreak := g.isLastPage(&forgejoComments, &giteaComments)
+		shouldBreak := g.isLastPage(forgejoComments, giteaComments)
 		if shouldBreak {
 			break
 		}
@@ -554,10 +554,10 @@ func (g *GiteaDownloader) isSinglePage(forgejoComments *[]*base.Comment) bool {
 	return false
 }
 
-func (g *GiteaDownloader) isLastPage(forgejoComments *[]*base.Comment, giteaComments *[]*gitea_sdk.Comment) bool {
-	if len(*giteaComments) < g.maxPerPage {
+func (g *GiteaDownloader) isLastPage(forgejoComments []*base.Comment, giteaComments []*gitea_sdk.Comment) bool {
+	if len(giteaComments) < g.maxPerPage {
 		return true
-	} else if g.identicalComment((*forgejoComments)[0], (*giteaComments)[0]) && g.identicalComment((*forgejoComments)[len(*forgejoComments)-1], (*giteaComments)[len(*giteaComments)-1]) {
+	} else if g.identicalComment((forgejoComments)[0], (giteaComments)[0]) && g.identicalComment((forgejoComments)[len(forgejoComments)-1], (giteaComments)[len(giteaComments)-1]) {
 		return true
 	}
 	return false
