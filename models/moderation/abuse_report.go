@@ -14,6 +14,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 
+	"github.com/google/uuid"
 	"xorm.io/builder"
 )
 
@@ -208,6 +209,35 @@ func GetResolvedReports(ctx context.Context, keepReportsFor time.Duration) ([]*A
 	return abuseReports, db.GetEngine(ctx).
 		Where(cond).
 		Find(&abuseReports)
+}
+
+func GetReportByUUID(ctx context.Context, uuid uuid.UUID) (*AbuseReport, *ForwardedAbuseReport, error) {
+	uuidString := sql.NullString{
+		String: uuid.String(),
+		Valid:  true,
+	}
+
+	abuseReport := new(AbuseReport)
+	abuseReport.FederationUUID = uuidString
+
+	has, err := db.GetEngine(ctx).Get(abuseReport)
+	if err != nil {
+		return nil, nil, err
+	} else if !has {
+		return nil, nil, ErrReportNotExist{id: uuid.String()}
+	}
+
+	forwardedAbuseReport := new(ForwardedAbuseReport)
+	forwardedAbuseReport.UUID = uuid.String()
+
+	has, err = db.GetEngine(ctx).Get(forwardedAbuseReport)
+	if err != nil {
+		return nil, nil, err
+	} else if !has {
+		return nil, nil, ErrForwardedReportNotExist{uuid: uuid}
+	}
+
+	return abuseReport, forwardedAbuseReport, nil
 }
 
 /*

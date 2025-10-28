@@ -900,6 +900,7 @@ func Routes() *web.Route {
 						activitypub.ReqHTTPUserSignature(),
 						activitypub.RepositoryInbox)
 				}, context.RepositoryIDAssignmentAPI())
+				m.Get("/reports/{report-uuid}", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.Reports)
 			}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryActivityPub))
 		}
 

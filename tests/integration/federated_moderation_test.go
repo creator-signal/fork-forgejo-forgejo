@@ -14,12 +14,15 @@ import (
 	"testing"
 
 	"forgejo.org/models/forgefed"
+	"forgejo.org/models/moderation"
 	"forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
+	"forgejo.org/modules/activitypub"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
+	"forgejo.org/modules/util"
 	"forgejo.org/routers"
 	"forgejo.org/services/federation"
 	"forgejo.org/tests"
@@ -37,9 +40,38 @@ func TestFederatedModeration(t *testing.T) {
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	federation.Init()
 
+	ctx := t.Context()
 	locale := translation.NewLocale("en-US")
 
+	privateKey, publicKey, err := util.GenerateKeyPair(3072)
+	require.NoError(t, err)
+
+	clientFactory, err := activitypub.NewClientFactory()
+	require.NoError(t, err)
+
+	var localServerURL *string
+
 	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/_federation/user/1/main-key" {
+			require.NotNil(t, localServerURL)
+
+			apKeyID := ap.ID(fmt.Sprintf("%s/_federation/user/1/main-key", *localServerURL))
+			keyStub := ap.ActorNew(apKeyID, ap.ApplicationType)
+			keyStub.PublicKey = ap.PublicKey{
+				ID:           apKeyID,
+				Owner:        apKeyID,
+				PublicKeyPem: publicKey,
+			}
+
+			resp, err := keyStub.MarshalJSON()
+			require.NoError(t, err)
+
+			w.Header().Add("Content-Type", activitypub.ActivityStreamsContentType)
+			_, err = w.Write(resp)
+			require.NoError(t, err)
+			return
+		}
+
 		assert.Contains(t, r.Header["Content-Type"][0], "application/ld+json")
 		assert.Contains(t, r.Header["Signature"][0], "/api/v1/activitypub/actor#main-key")
 		assert.Contains(t, r.Header["Signature"][0], "algorithm=\"hs2019\"")
@@ -72,7 +104,12 @@ func TestFederatedModeration(t *testing.T) {
 		require.NoError(t, err)
 	}))
 
+	localServerURL = &localServer.URL
+
 	defer localServer.Close()
+
+	apClient, err := clientFactory.WithKeysDirect(ctx, privateKey, fmt.Sprintf("%s/_federation/user/1/main-key", *localServerURL))
+	require.NoError(t, err)
 
 	t.Run("Basic_Variables_User", func(t *testing.T) {
 		defer tests.PrepareTestEnv(t)()
@@ -146,12 +183,11 @@ func TestFederatedModeration(t *testing.T) {
 		assert.Empty(t, activityPubID)
 	})
 
-	onApplicationRun(t, func(t *testing.T, url *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 
 		// Update FederationHost, FederatedUser AND FollowingRepo to match the test
 		// HTTP server inbox
-		ctx := t.Context()
 		federatedUserAPID := "/_federation/user/1"
 		federatedUser := user.FederatedUser{
 			ID:                    1001,
@@ -205,7 +241,7 @@ func TestFederatedModeration(t *testing.T) {
 		require.NoError(t, repo.UpdateFollowingRepo(ctx, followingRepo))
 
 		// Send an abuse report to a user
-		reportURL := fmt.Sprintf("%sreport_abuse", url)
+		reportURL := fmt.Sprintf("%sreport_abuse", u)
 		req := NewRequestWithValues(t, "POST", reportURL, map[string]string{
 			"content_id":         "1001",
 			"content_type":       "1",
@@ -219,6 +255,10 @@ func TestFederatedModeration(t *testing.T) {
 		session.MakeRequest(t, req, http.StatusSeeOther)
 
 		// Send an abuse report to a repository
+		//
+		// Technically, the activity_pub_id is wrong here (should be on
+		// forge.example.org:443, is 127.0.0.1:<whatever random port>) but useful
+		// for some further tests regarding access control.
 		req = NewRequestWithValues(t, "POST", reportURL, map[string]string{
 			"content_id":         "1",
 			"content_type":       "2",
@@ -230,5 +270,46 @@ func TestFederatedModeration(t *testing.T) {
 		})
 
 		session.MakeRequest(t, req, http.StatusSeeOther)
+
+		openReports, err := moderation.GetOpenReports(ctx)
+		require.NoError(t, err)
+		assert.Len(t, openReports, 2)
+
+		// Report one (right request origin)
+		reportOneUUID := openReports[0].FederationUUID
+		assert.True(t, reportOneUUID.Valid)
+
+		resp, err := apClient.Get(fmt.Sprintf("%sapi/v1/activitypub/reports/%s", u, reportOneUUID.String))
+		require.NoError(t, err)
+
+		respBody, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+
+		jsonVal, err := fastjson.ParseBytes(respBody)
+		require.NoError(t, err)
+
+		activity := ap.JSONUnmarshalToItem(jsonVal)
+
+		assert.Equal(t, ap.FlagType, activity.GetType())
+		flag, ok := activity.(*ap.Flag)
+		require.True(t, ok)
+
+		assert.Contains(t, flag.ID, "/api/v1/activitypub/reports/")
+
+		assert.Equal(t, "Other: User is suspected to have stolen the forgejo fish.", flag.Content.First().String())
+		assert.Contains(t, flag.Object, "/_federation/user/1")
+
+		// Report two (wrong requset origin)
+		reportTwoUUID := openReports[1].FederationUUID
+		assert.True(t, reportOneUUID.Valid)
+
+		resp, err = apClient.Get(fmt.Sprintf("%sapi/v1/activitypub/reports/%s", u, reportTwoUUID.String))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+
+		respBody, err = io.ReadAll(resp.Body)
+		require.NoError(t, err)
+
+		assert.Contains(t, string(respBody), "Invalid request origin")
 	})
 }
