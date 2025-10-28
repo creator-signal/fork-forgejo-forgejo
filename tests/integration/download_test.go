@@ -23,6 +23,7 @@ func TestDownloadByID(t *testing.T) {
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	assert.Equal(t, "# repo1\n\nDescription for repo1", resp.Body.String())
+	assert.Equal(t, "text/plain", resp.Header().Get("Content-Type")) // https://codeberg.org/forgejo/forgejo/issues/9695
 }
 
 func TestDownloadByIDForSVGUsesSecureHeaders(t *testing.T) {
