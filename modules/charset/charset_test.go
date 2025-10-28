@@ -197,7 +197,7 @@ func TestToUTF8DropErrors(t *testing.T) {
 func TestDetectEncoding(t *testing.T) {
 	resetDefaultCharsetsOrder()
 	testSuccess := func(b []byte, expected string) {
-		encoding, err := DetectEncoding(b)
+		encoding, err := DetectEncoding(b, false)
 		require.NoError(t, err)
 		assert.Equal(t, expected, encoding)
 	}
@@ -215,7 +215,7 @@ func TestDetectEncoding(t *testing.T) {
 
 	// iso-8859-1: d<accented e>cor<newline>
 	b = []byte{0x44, 0xe9, 0x63, 0x6f, 0x72, 0x0a}
-	encoding, err := DetectEncoding(b)
+	encoding, err := DetectEncoding(b, false)
 	require.NoError(t, err)
 	assert.Contains(t, encoding, "ISO-8859-1")
 
@@ -228,8 +228,13 @@ func TestDetectEncoding(t *testing.T) {
 
 	// invalid bytes
 	b = []byte{0xfa}
-	_, err = DetectEncoding(b)
+	_, err = DetectEncoding(b, false)
 	require.Error(t, err)
+
+	// skipASCII
+	encoding, err = DetectEncoding([]byte("test"), true)
+	require.NoError(t, err)
+	assert.Contains(t, encoding, "")
 }
 
 func stringMustStartWith(t *testing.T, expected, value string) {
@@ -257,14 +262,14 @@ func TestToUTF8WithFallbackReader(t *testing.T) {
 	}
 
 	truncatedOneByteExtension := failFastBytes
-	encoding, _ := DetectEncoding(truncatedOneByteExtension)
+	encoding, _ := DetectEncoding(truncatedOneByteExtension, false)
 	assert.Equal(t, "UTF-8", encoding)
 
 	truncatedTwoByteExtension := failFastBytes
 	truncatedTwoByteExtension[len(failFastBytes)-1] = 0x9b
 	truncatedTwoByteExtension[len(failFastBytes)-2] = 0xe2
 
-	encoding, _ = DetectEncoding(truncatedTwoByteExtension)
+	encoding, _ = DetectEncoding(truncatedTwoByteExtension, false)
 	assert.Equal(t, "UTF-8", encoding)
 
 	truncatedThreeByteExtension := failFastBytes
@@ -272,7 +277,7 @@ func TestToUTF8WithFallbackReader(t *testing.T) {
 	truncatedThreeByteExtension[len(failFastBytes)-2] = 0x9f
 	truncatedThreeByteExtension[len(failFastBytes)-3] = 0xf0
 
-	encoding, _ = DetectEncoding(truncatedThreeByteExtension)
+	encoding, _ = DetectEncoding(truncatedThreeByteExtension, false)
 	assert.Equal(t, "UTF-8", encoding)
 }
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"forgejo.org/modules/log"
@@ -34,7 +35,7 @@ func ToUTF8WithFallbackReader(rd io.Reader, opts ConvertOpts) io.Reader {
 		return io.MultiReader(bytes.NewReader(MaybeRemoveBOM(buf[:n], opts)), rd)
 	}
 
-	charsetLabel, err := DetectEncoding(buf[:n])
+	charsetLabel, err := DetectEncoding(buf[:n], false)
 	if err != nil || charsetLabel == "UTF-8" {
 		return io.MultiReader(bytes.NewReader(MaybeRemoveBOM(buf[:n], opts)), rd)
 	}
@@ -55,7 +56,7 @@ func ToUTF8WithFallbackReader(rd io.Reader, opts ConvertOpts) io.Reader {
 
 // ToUTF8 converts content to UTF8 encoding
 func ToUTF8(content []byte, opts ConvertOpts) (string, error) {
-	charsetLabel, err := DetectEncoding(content)
+	charsetLabel, err := DetectEncoding(content, false)
 	if err != nil {
 		return "", err
 	} else if charsetLabel == "UTF-8" {
@@ -87,7 +88,7 @@ func ToUTF8WithFallback(content []byte, opts ConvertOpts) []byte {
 
 // ToUTF8DropErrors makes sure the return string is valid utf-8; attempts conversion if possible
 func ToUTF8DropErrors(content []byte, opts ConvertOpts) []byte {
-	charsetLabel, err := DetectEncoding(content)
+	charsetLabel, err := DetectEncoding(content, false)
 	if err != nil || charsetLabel == "UTF-8" {
 		return MaybeRemoveBOM(content, opts)
 	}
@@ -129,8 +130,21 @@ func MaybeRemoveBOM(content []byte, opts ConvertOpts) []byte {
 	return content
 }
 
-// DetectEncoding detect the encoding of content
-func DetectEncoding(content []byte) (string, error) {
+func onlyASCII(content []byte) bool {
+	for _, b := range content {
+		if b > unicode.MaxASCII {
+			return false
+		}
+	}
+	return true
+}
+
+// DetectEncoding detect the encoding of content.
+// If skipASCII is set, it returns the empty string for valid ASCII strings
+func DetectEncoding(content []byte, skipASCII bool) (string, error) {
+	if skipASCII && onlyASCII(content) {
+		return "", nil
+	}
 	// First we check if the content represents valid utf8 content excepting a truncated character at the end.
 
 	// Now we could decode all the runes in turn but this is not necessarily the cheapest thing to do

@@ -777,7 +777,7 @@ parsingLoop:
 			if buffer.Len() == 0 {
 				continue
 			}
-			charsetLabel, err := charset.DetectEncoding(buffer.Bytes())
+			charsetLabel, err := charset.DetectEncoding(buffer.Bytes(), false)
 			if charsetLabel != "UTF-8" && err == nil {
 				encoding, _ := stdcharset.Lookup(charsetLabel)
 				if encoding != nil {

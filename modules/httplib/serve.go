@@ -120,7 +120,9 @@ func setServeHeadersByFile(r *http.Request, w http.ResponseWriter, filePath stri
 	}
 
 	if isPlain {
-		charset, err := charsetModule.DetectEncoding(mineBuf)
+		// since there might be invalid utf-8 chars after the mineBuf, don't set a charset for ascii-only prefix
+		// https://codeberg.org/forgejo/forgejo/issues/9695
+		charset, err := charsetModule.DetectEncoding(mineBuf, true)
 		if err != nil {
 			log.Error("Detect raw file %s charset failed: %v, using by default utf-8", filePath, err)
 			charset = "utf-8"
