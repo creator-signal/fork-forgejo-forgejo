@@ -1,6 +1,10 @@
 // Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+// @watch start
+// web_src/js/webcomponents/citation-information.js
+// @watch end
+
 import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 
