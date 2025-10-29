@@ -6,6 +6,7 @@ package markup
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"html/template"
 	"io"
 	"net/url"
@@ -131,8 +132,6 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 
 	preview.title = template.HTML(titleBuffer.String())
 
-	lineSpecs := strings.Split(hash, "-")
-
 	commitLinkBuffer := new(bytes.Buffer)
 	commitLinkText := commitSha[0:7]
 	if isExternRef {
@@ -144,37 +143,7 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 		log.Error("failed to render commitLink: %v", err)
 	}
 
-	var startLine, endLine int
-
-	if len(lineSpecs) == 1 {
-		startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
-		endLine = startLine
-		preview.subTitle = locale.Tr(
-			"markup.filepreview.line", startLine,
-			template.HTML(commitLinkBuffer.String()),
-		)
-
-		preview.lineOffset = startLine - 1
-	} else {
-		startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
-		endLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[1], "L"))
-		preview.subTitle = locale.Tr(
-			"markup.filepreview.lines", startLine, endLine,
-			template.HTML(commitLinkBuffer.String()),
-		)
-
-		preview.lineOffset = startLine - 1
-	}
-
-	lineCount := endLine - (startLine - 1)
-	if startLine < 1 || endLine < 1 || lineCount < 1 {
-		return nil
-	}
-
-	if setting.FilePreviewMaxLines > 0 && lineCount > setting.FilePreviewMaxLines {
-		preview.isTruncated = true
-		lineCount = setting.FilePreviewMaxLines
-	}
+	lineSpecs := strings.Split(hash, "-")
 
 	dataRc, err := fileBlob.DataAsync()
 	if err != nil {
@@ -183,26 +152,77 @@ func newFilePreview(ctx *RenderContext, node *html.Node, locale translation.Loca
 	defer dataRc.Close()
 
 	reader := bufio.NewReader(dataRc)
+	lineBuffer := new(bytes.Buffer)
 
-	// skip all lines until we find our startLine
-	for i := 1; i < startLine; i++ {
-		_, err := reader.ReadBytes('\n')
-		if err != nil {
-			return nil
-		}
+	var startLine, endLine int
+	startLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[0], "L"))
+
+	if len(lineSpecs) == 1 {
+		endLine = startLine
+	} else {
+		endLine, _ = strconv.Atoi(strings.TrimPrefix(lineSpecs[1], "L"))
 	}
 
-	// capture the lines we're interested in
-	lineBuffer := new(bytes.Buffer)
-	for i := 0; i < lineCount; i++ {
+	// simple inspection
+	if startLine < 1 || endLine < 1 || startLine > endLine {
+		return nil
+	}
+
+	rawFileLine := 0
+	linesRead := 0
+	for {
 		buf, err := reader.ReadBytes('\n')
-		if err == nil || err == io.EOF {
-			lineBuffer.Write(buf)
+
+		if err != nil && !errors.Is(err, io.EOF) {
+			return nil
 		}
-		if err != nil {
+
+		rawFileLine++
+
+		if rawFileLine >= startLine && rawFileLine <= endLine {
+			lineBuffer.Write(buf)
+			linesRead++
+		}
+
+		if errors.Is(err, io.EOF) {
+			break
+		}
+
+		// Row limit check
+		if setting.FilePreviewMaxLines > 0 && linesRead >= setting.FilePreviewMaxLines {
+			if rawFileLine < endLine {
+				preview.isTruncated = true
+			}
+			break
+		}
+
+		if rawFileLine >= endLine {
 			break
 		}
 	}
+
+	// After the cycle is completed, the boundary conditions are uniformly processed
+	if endLine > rawFileLine {
+		endLine = rawFileLine
+	}
+	if startLine > rawFileLine {
+		startLine = 1
+		endLine = rawFileLine
+	}
+
+	if startLine == endLine {
+		preview.subTitle = locale.Tr(
+			"markup.filepreview.line", startLine,
+			template.HTML(commitLinkBuffer.String()),
+		)
+	} else {
+		preview.subTitle = locale.Tr(
+			"markup.filepreview.lines", startLine, endLine,
+			template.HTML(commitLinkBuffer.String()),
+		)
+	}
+
+	preview.lineOffset = startLine - 1
 
 	// highlight the file...
 	fileContent, _, err := highlight.File(fileBlob.Name(), language, lineBuffer.Bytes())
