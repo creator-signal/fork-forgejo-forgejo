@@ -21,7 +21,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/translation"
-	gitea_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -29,7 +29,7 @@ import (
 )
 
 func TestCreateFileOnProtectedBranch(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 
 		csrf := GetCSRF(t, session, "/user2/repo1/settings/branches")
@@ -41,7 +41,7 @@ func TestCreateFileOnProtectedBranch(t *testing.T) {
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 		// Check if master branch has been locked successfully
-		flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "success%3DBranch%2Bprotection%2Bfor%2Brule%2B%2522master%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 
@@ -82,7 +82,7 @@ func TestCreateFileOnProtectedBranch(t *testing.T) {
 		assert.Equal(t, "/user2/repo1/settings/branches", res["redirect"])
 
 		// Check if master branch has been locked successfully
-		flashCookie = session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "error%3DRemoving%2Bbranch%2Bprotection%2Brule%2B%25221%2522%2Bfailed.", flashCookie.Value)
 	})
@@ -150,14 +150,14 @@ func testEditFileToNewBranch(t *testing.T, session *TestSession, user, repo, bra
 }
 
 func TestEditFile(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 		testEditFile(t, session, "user2", "repo1", "master", "README.md", "Hello, World (Edited)\n")
 	})
 }
 
 func TestEditFileToNewBranch(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 		testEditFileToNewBranch(t, session, "user2", "repo1", "master", "feature/test", "README.md", "Hello, World (Edited)\n")
 	})
@@ -177,7 +177,7 @@ func TestEditorAddTranslation(t *testing.T) {
 }
 
 func TestCommitMail(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, _ *url.URL) {
+	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		// Require that the user has KeepEmailPrivate enabled, because it needs
 		// to be tested that even with this setting enabled, it will use the

@@ -18,9 +18,11 @@ forgejo.org/models/auth
 
 forgejo.org/models/db
 	TruncateBeans
+	TruncateBeansCascade
 	InTransaction
 	DumpTables
 	GetTableNames
+	extendBeansForCascade
 
 forgejo.org/models/dbfs
 	file.renameTo
@@ -31,6 +33,9 @@ forgejo.org/models/forgejo/semver
 	GetVersion
 	SetVersionString
 	SetVersion
+
+forgejo.org/models/forgejo_migrations
+	resetMigrations
 
 forgejo.org/models/git
 	RemoveDeletedBranchByID

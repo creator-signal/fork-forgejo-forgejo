@@ -20,7 +20,7 @@ import (
 )
 
 func Test_Cmd_AdminUser(t *testing.T) {
-	onGiteaRun(t, func(*testing.T, *url.URL) {
+	onApplicationRun(t, func(*testing.T, *url.URL) {
 		for i, testCase := range []struct {
 			name               string
 			options            []string
@@ -76,7 +76,7 @@ func Test_Cmd_AdminUser(t *testing.T) {
 }
 
 func Test_Cmd_AdminFirstUser(t *testing.T) {
-	onGiteaRun(t, func(*testing.T, *url.URL) {
+	onApplicationRun(t, func(*testing.T, *url.URL) {
 		for _, testCase := range []struct {
 			name               string
 			options            []string
@@ -133,9 +133,7 @@ func Test_Cmd_AdminFirstUser(t *testing.T) {
 			},
 		} {
 			t.Run(testCase.name, func(t *testing.T) {
-				db.GetEngine(db.DefaultContext).Exec("DELETE FROM `stopwatch`")
-				db.GetEngine(db.DefaultContext).Exec("DELETE FROM `tracked_time`")
-				db.GetEngine(db.DefaultContext).Exec("DELETE FROM `user`")
+				db.TruncateBeansCascade(db.DefaultContext, user_model.User{})
 				db.GetEngine(db.DefaultContext).Exec("DELETE FROM `email_address`")
 				assert.Equal(t, int64(0), user_model.CountUsers(db.DefaultContext, nil))
 				name := "testuser"
@@ -154,7 +152,7 @@ func Test_Cmd_AdminFirstUser(t *testing.T) {
 }
 
 func Test_Cmd_AdminUserResetMFA(t *testing.T) {
-	onGiteaRun(t, func(*testing.T, *url.URL) {
+	onApplicationRun(t, func(*testing.T, *url.URL) {
 		name := "testuser"
 
 		options := []string{"user", "create", "--username", name, "--password", "password", "--email", name + "@example.com"}

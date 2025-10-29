@@ -11,10 +11,12 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
@@ -97,7 +99,7 @@ func testPullCreateDirectly(t *testing.T, session *TestSession, baseRepoOwner, b
 }
 
 func TestPullCreate(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testEditFile(t, session, "user1", "repo1", "master", "README.md", "Hello, World (Edited)\n")
@@ -121,11 +123,17 @@ func TestPullCreate(t *testing.T) {
 		assert.Regexp(t, "diff", resp.Body)
 		assert.Regexp(t, `Subject: \[PATCH\] Update README.md`, resp.Body)
 		assert.NotRegexp(t, "diff.*diff", resp.Body) // not two diffs, just one
+
+		// Check that mergebase is set.
+		index, err := strconv.ParseInt(url[strings.LastIndexByte(url, '/')+1:], 10, 64)
+		require.NoError(t, err)
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{BaseRepoID: 1, HeadBranch: "master", BaseBranch: "master", Index: index})
+		assert.NotEmpty(t, pr.MergeBase)
 	})
 }
 
 func TestPullCreateWithPullTemplate(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		baseUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 		forkUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -226,7 +234,7 @@ func TestPullCreateWithPullTemplate(t *testing.T) {
 }
 
 func TestPullCreate_TitleEscape(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testEditFile(t, session, "user1", "repo1", "master", "README.md", "Hello, World (Edited)\n")
@@ -288,7 +296,7 @@ func testDeleteRepository(t *testing.T, session *TestSession, ownerName, repoNam
 }
 
 func TestPullBranchDelete(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testCreateBranch(t, session, "user1", "repo1", "branch/master", "master1", http.StatusSeeOther)
@@ -314,7 +322,7 @@ func TestPullBranchDelete(t *testing.T) {
 }
 
 func TestRecentlyPushed(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 
@@ -576,7 +584,7 @@ Test checks:
 Check if pull request can be created from base to the fork repository.
 */
 func TestPullCreatePrFromBaseToFork(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		sessionFork := loginUser(t, "user1")
 		testRepoFork(t, sessionFork, "user2", "repo1", "user1", "repo1")
 
@@ -593,7 +601,7 @@ func TestPullCreatePrFromBaseToFork(t *testing.T) {
 }
 
 func TestPullCreatePrFromForkToFork(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		sessionFork1 := loginUser(t, "user1")
 		testRepoFork(t, sessionFork1, "user2", "repo1", "user1", "repo1")
 		sessionFork3 := loginUser(t, "user30")
