@@ -441,10 +441,10 @@ func TestBreakConditions(t *testing.T) {
 	differentFullListResponse[len(differentFullListResponse)-1].Body = "Different String"
 	commentsFullList := createForgejoIssueComments(fullListResponse)
 
-	assert.True(t, downloader.isSinglePage(&commentsWithBug))
-	assert.True(t, downloader.isSinglePage(&commentsShortList))
-	assert.True(t, downloader.isLastPage(&commentsShortList, &shorterListResponse))
-	assert.True(t, downloader.isLastPage(&commentsWithBug, &bugResponse))
-	assert.False(t, downloader.isSinglePage(&commentsFullList))
-	assert.False(t, downloader.isLastPage(&commentsFullList, &differentFullListResponse))
+	assert.True(t, downloader.isSinglePage(commentsWithBug))
+	assert.True(t, downloader.isSinglePage(commentsShortList))
+	assert.True(t, downloader.isLastPage(commentsShortList, shorterListResponse))
+	assert.True(t, downloader.isLastPage(commentsWithBug, bugResponse))
+	assert.False(t, downloader.isSinglePage(commentsFullList))
+	assert.False(t, downloader.isLastPage(commentsFullList, differentFullListResponse))
 }

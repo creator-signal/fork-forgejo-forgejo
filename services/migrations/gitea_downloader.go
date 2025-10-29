@@ -547,8 +547,8 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 	return forgejoComments, true, nil
 }
 
-func (g *GiteaDownloader) isSinglePage(forgejoComments *[]*base.Comment) bool {
-	if len(*forgejoComments) > g.maxPerPage || len(*forgejoComments) < g.maxPerPage || !g.pagination {
+func (g *GiteaDownloader) isSinglePage(forgejoComments []*base.Comment) bool {
+	if len(forgejoComments) > g.maxPerPage || len(forgejoComments) < g.maxPerPage || !g.pagination {
 		return true
 	}
 	return false
