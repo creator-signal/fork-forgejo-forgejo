@@ -116,7 +116,7 @@ func TestMigrate(t *testing.T) {
 }
 
 func TestMigrateWithIssueComments(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
 		maxResponseItems := 10
