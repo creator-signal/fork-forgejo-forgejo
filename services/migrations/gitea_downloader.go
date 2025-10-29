@@ -520,7 +520,7 @@ func (g *GiteaDownloader) GetComments(commentable base.Commentable) ([]*base.Com
 	forgejoComments = append(forgejoComments, g.makeCommentsList(giteaComments, commentable.GetLocalIndex(), commentable.GetForeignIndex())...)
 
 	// We either get all comments at once (gitea pagination bug) or all comments fit in one page or pagination is off
-	shouldReturn := g.isSinglePage(&forgejoComments)
+	shouldReturn := g.isSinglePage(forgejoComments)
 	if shouldReturn {
 		return forgejoComments, true, nil
 	}
