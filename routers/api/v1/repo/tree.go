@@ -44,11 +44,16 @@ func GetTree(ctx *context.APIContext) {
 	//   description: page number; the 'truncated' field in the response will be true if there are still more items after this page, false if the last page
 	//   required: false
 	//   type: integer
+	// - name: limit
+	//   in: query
+	//   description: page size of results (ignored if used with 'path')
+	//   type: integer
 	// - name: per_page
 	//   in: query
 	//   description: number of items per page
 	//   required: false
 	//   type: integer
+	//   deprecated: true
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/GitTreeResponse"
@@ -62,7 +67,13 @@ func GetTree(ctx *context.APIContext) {
 		ctx.Error(http.StatusBadRequest, "", "sha not provided")
 		return
 	}
-	if tree, err := files_service.GetTreeBySHA(ctx, ctx.Repo.Repository, ctx.Repo.GitRepo, sha, ctx.FormInt("page"), ctx.FormInt("per_page"), ctx.FormBool("recursive")); err != nil {
+	var pageSize int
+	if len(ctx.Req.FormValue("per_page")) > 0 {
+		pageSize = ctx.FormInt("per_page")
+	} else {
+		pageSize = ctx.FormInt("limit")
+	}
+	if tree, err := files_service.GetTreeBySHA(ctx, ctx.Repo.Repository, ctx.Repo.GitRepo, sha, ctx.FormInt("page"), pageSize, ctx.FormBool("recursive")); err != nil {
 		ctx.Error(http.StatusBadRequest, "", err.Error())
 	} else {
 		utils.SetPaginationHeaders(ctx, int64(tree.TotalCount))
