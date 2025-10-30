@@ -330,7 +330,7 @@ func GetReviewers(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/UserList"
+	//     "$ref": "#/responses/UserListFull"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
@@ -362,7 +362,7 @@ func GetAssignees(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/UserList"
+	//     "$ref": "#/responses/UserListFull"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

@@ -166,6 +166,13 @@ type swaggerResponsePullRequestList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// PullRequestListFull
+// swagger:response PullRequestListFull
+type swaggerResponsePullRequestListFull struct {
+	// in:body
+	Body []api.PullRequest `json:"body"`
+}
+
 // PullReview
 // swagger:response PullReview
 type swaggerResponsePullReview struct {

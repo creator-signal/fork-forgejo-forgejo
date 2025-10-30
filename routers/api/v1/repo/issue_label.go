@@ -44,7 +44,7 @@ func ListIssueLabels(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/LabelList"
+	//     "$ref": "#/responses/LabelListFull"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

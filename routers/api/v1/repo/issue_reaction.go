@@ -45,7 +45,7 @@ func GetIssueCommentReactions(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/ReactionList"
+	//     "$ref": "#/responses/ReactionListFull"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 	//   "404":

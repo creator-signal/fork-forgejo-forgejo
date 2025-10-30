@@ -31,7 +31,7 @@ func ListFlags(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/StringSlice"
+	//     "$ref": "#/responses/StringSliceFull"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 	//   "404":

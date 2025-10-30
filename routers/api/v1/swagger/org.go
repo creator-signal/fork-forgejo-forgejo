@@ -39,6 +39,13 @@ type swaggerResponseTeamList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// TeamListFull
+// swagger:response TeamListFull
+type swaggerResponseTeamListFull struct {
+	// in:body
+	Body []api.Team `json:"body"`
+}
+
 // OrganizationPermissions
 // swagger:response OrganizationPermissions
 type swaggerResponseOrganizationPermissions struct {

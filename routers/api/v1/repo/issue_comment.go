@@ -59,7 +59,7 @@ func ListIssueComments(ctx *context.APIContext) {
 	//   format: date-time
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/CommentList"
+	//     "$ref": "#/responses/CommentListFull"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	//   "422":

@@ -145,7 +145,7 @@ func ListUsersInQuotaGroup(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/UserList"
+	//     "$ref": "#/responses/UserListFull"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "403":

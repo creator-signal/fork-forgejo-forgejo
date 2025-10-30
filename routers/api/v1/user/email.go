@@ -26,7 +26,7 @@ func ListEmails(ctx *context.APIContext) {
 	// - application/json
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/EmailList"
+	//     "$ref": "#/responses/EmailListFull"
 	//   "401":
 	//     "$ref": "#/responses/unauthorized"
 	//   "403":

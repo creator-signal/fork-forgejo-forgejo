@@ -34,7 +34,7 @@ func ListTeams(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/TeamList"
+	//     "$ref": "#/responses/TeamListFull"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

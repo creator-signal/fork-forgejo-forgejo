@@ -51,6 +51,13 @@ type swaggerResponseStringSlice struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// StringSliceFull
+// swagger:response StringSliceFull
+type swaggerResponseStringSliceFull struct {
+	// in:body
+	Body []string `json:"body"`
+}
+
 // LabelTemplateList
 // swagger:response LabelTemplateList
 type swaggerResponseLabelTemplateList struct {

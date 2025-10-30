@@ -24,6 +24,13 @@ type swaggerResponseUserList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// UserListFull
+// swagger:response UserListFull
+type swaggerResponseUserListFull struct {
+	// in:body
+	Body []api.User `json:"body"`
+}
+
 // EmailList
 // swagger:response EmailList
 type swaggerResponseEmailList struct {
@@ -31,6 +38,13 @@ type swaggerResponseEmailList struct {
 	Body []api.Email `json:"body"`
 	Link string `json:"Link"`
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// EmailListFull
+// swagger:response EmailListFull
+type swaggerResponseEmailListFull struct {
+	// in:body
+	Body []api.Email `json:"body"`
 }
 
 // swagger:model EditUserOption

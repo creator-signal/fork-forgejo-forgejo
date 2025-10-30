@@ -921,7 +921,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/UserList"
+            "$ref": "#/responses/UserListFull"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -6312,7 +6312,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/UserList"
+            "$ref": "#/responses/UserListFull"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -7953,7 +7953,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/StringSlice"
+            "$ref": "#/responses/StringSliceFull"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -10136,7 +10136,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ReactionList"
+            "$ref": "#/responses/ReactionListFull"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -10288,7 +10288,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/IssueListFull"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -10936,7 +10936,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/CommentList"
+            "$ref": "#/responses/CommentListFull"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11385,7 +11385,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/LabelListFull"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -13825,7 +13825,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/PullRequestList"
+            "$ref": "#/responses/PullRequestListFull"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -16138,7 +16138,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/UserList"
+            "$ref": "#/responses/UserListFull"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -17132,7 +17132,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/TeamList"
+            "$ref": "#/responses/TeamListFull"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -17390,7 +17390,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/TrackedTimeList"
+            "$ref": "#/responses/TrackedTimeListFull"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -19535,7 +19535,7 @@
         "operationId": "userListEmails",
         "responses": {
           "200": {
-            "$ref": "#/responses/EmailList"
+            "$ref": "#/responses/EmailListFull"
           },
           "401": {
             "$ref": "#/responses/unauthorized"
@@ -30154,6 +30154,15 @@
         }
       }
     },
+    "CommentListFull": {
+      "description": "CommentListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Comment"
+        }
+      }
+    },
     "Commit": {
       "description": "Commit",
       "schema": {
@@ -30310,6 +30319,15 @@
         "X-Total-Count": {
           "type": "integer",
           "format": "int64"
+        }
+      }
+    },
+    "EmailListFull": {
+      "description": "EmailListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Email"
         }
       }
     },
@@ -30499,6 +30517,15 @@
         }
       }
     },
+    "IssueListFull": {
+      "description": "IssueListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Issue"
+        }
+      }
+    },
     "IssueTemplates": {
       "description": "IssueTemplates",
       "schema": {
@@ -30529,6 +30556,15 @@
         "X-Total-Count": {
           "type": "integer",
           "format": "int64"
+        }
+      }
+    },
+    "LabelListFull": {
+      "description": "LabelListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Label"
         }
       }
     },
@@ -30797,6 +30833,15 @@
         }
       }
     },
+    "PullRequestListFull": {
+      "description": "PullRequestListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/PullRequest"
+        }
+      }
+    },
     "PullReview": {
       "description": "PullReview",
       "schema": {
@@ -30959,6 +31004,15 @@
         "X-Total-Count": {
           "type": "integer",
           "format": "int64"
+        }
+      }
+    },
+    "ReactionListFull": {
+      "description": "ReactionListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Reaction"
         }
       }
     },
@@ -31151,6 +31205,15 @@
         }
       }
     },
+    "StringSliceFull": {
+      "description": "StringSliceFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
     "SyncForkInfo": {
       "description": "SyncForkInfo",
       "schema": {
@@ -31235,6 +31298,15 @@
         }
       }
     },
+    "TeamListFull": {
+      "description": "TeamListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Team"
+        }
+      }
+    },
     "TimelineList": {
       "description": "TimelineList",
       "schema": {
@@ -31301,6 +31373,15 @@
         }
       }
     },
+    "TrackedTimeListFull": {
+      "description": "TrackedTimeListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/TrackedTime"
+        }
+      }
+    },
     "User": {
       "description": "User",
       "schema": {
@@ -31331,6 +31412,15 @@
         "X-Total-Count": {
           "type": "integer",
           "format": "int64"
+        }
+      }
+    },
+    "UserListFull": {
+      "description": "UserListFull",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/User"
         }
       }
     },

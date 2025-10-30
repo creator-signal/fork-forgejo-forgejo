@@ -23,6 +23,13 @@ type swaggerResponseIssueList struct {
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
+// IssueListFull
+// swagger:response IssueListFull
+type swaggerResponseIssueListFull struct {
+	// in:body
+	Body []api.Issue `json:"body"`
+}
+
 // Comment
 // swagger:response Comment
 type swaggerResponseComment struct {
@@ -37,6 +44,13 @@ type swaggerResponseCommentList struct {
 	Body []api.Comment `json:"body"`
 	Link string `json:"Link"`
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// CommentListFull
+// swagger:response CommentListFull
+type swaggerResponseCommentListFull struct {
+	// in:body
+	Body []api.Comment `json:"body"`
 }
 
 // TimelineList
@@ -62,6 +76,13 @@ type swaggerResponseLabelList struct {
 	Body []api.Label `json:"body"`
 	Link string `json:"Link"`
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// LabelListFull
+// swagger:response LabelListFull
+type swaggerResponseLabelListFull struct {
+	// in:body
+	Body []api.Label `json:"body"`
 }
 
 // Milestone
@@ -94,6 +115,13 @@ type swaggerResponseTrackedTimeList struct {
 	Body []api.TrackedTime `json:"body"`
 	Link string `json:"Link"`
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// TrackedTimeListFull
+// swagger:response TrackedTimeListFull
+type swaggerResponseTrackedTimeListFull struct {
+	// in:body
+	Body []api.TrackedTime `json:"body"`
 }
 
 // IssueDeadline
@@ -140,4 +168,11 @@ type swaggerReactionList struct {
 	Body []api.Reaction `json:"body"`
 	Link string `json:"Link"`
 	TotalCount int64 `json:"X-Total-Count"`
+}
+
+// ReactionListFull
+// swagger:response ReactionListFull
+type swaggerReactionListFull struct {
+	// in:body
+	Body []api.Reaction `json:"body"`
 }
