@@ -53,6 +53,7 @@ import (
 
 	_ "forgejo.org/modules/session" // to registers all internal adapters
 
+	"code.forgejo.org/go-chi/binding"
 	"code.forgejo.org/go-chi/captcha"
 	chi_middleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -130,13 +131,12 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 			// ensure the session uid is deleted
 			_ = ctx.Session.Delete("uid")
 		}
-
-		ctx.Csrf.PrepareForSessionUser(ctx)
 	}
 }
 
 // verifyAuthWithOptions checks authentication according to options
 func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Context) {
+	crossOrginProtection := http.NewCrossOriginProtection()
 	return func(ctx *context.Context) {
 		// Check prohibit login users.
 		if ctx.IsSigned {
@@ -192,10 +192,9 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 			return
 		}
 
-		safeMethod := ctx.Req.Method == "GET" || ctx.Req.Method == "HEAD" || ctx.Req.Method == "OPTIONS"
-		if !options.SignOutRequired && !options.DisableCSRF && !safeMethod {
-			ctx.Csrf.Validate(ctx)
-			if ctx.Written() {
+		if !options.SignOutRequired && !options.DisableCSRF {
+			if err := crossOrginProtection.Check(ctx.Req); err != nil {
+				http.Error(ctx.Resp, err.Error(), http.StatusForbidden)
 				return
 			}
 		}
@@ -306,7 +305,7 @@ func Routes() *web.Route {
 	return routes
 }
 
-var ignSignInAndCsrf = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
+var ignoreCSRF = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
 
 // registerRoutes register routes
 func registerRoutes(m *web.Route) {
@@ -559,12 +558,14 @@ func registerRoutes(m *web.Route) {
 			m.Post("/grant", web.Bind(forms.GrantApplicationForm{}), auth.GrantApplicationOAuth)
 			// TODO manage redirection
 			m.Post("/authorize", web.Bind(forms.AuthorizationForm{}), auth.AuthorizeOAuth)
-		}, ignSignInAndCsrf, reqSignIn)
+		}, reqSignIn)
 
-		m.Methods("GET, POST, OPTIONS", "/userinfo", optionsCorsHandler(), ignSignInAndCsrf, auth.InfoOAuth)
-		m.Methods("POST, OPTIONS", "/access_token", optionsCorsHandler(), web.Bind(forms.AccessTokenForm{}), ignSignInAndCsrf, auth.AccessTokenOAuth)
-		m.Methods("GET, OPTIONS", "/keys", optionsCorsHandler(), ignSignInAndCsrf, auth.OIDCKeys)
-		m.Methods("POST, OPTIONS", "/introspect", optionsCorsHandler(), web.Bind(forms.IntrospectTokenForm{}), ignSignInAndCsrf, auth.IntrospectOAuth)
+		m.Group("", func() {
+			m.Methods("GET, POST, OPTIONS", "/userinfo", auth.InfoOAuth)
+			m.Methods("POST, OPTIONS", "/access_token", web.Bind(forms.AccessTokenForm{}), auth.AccessTokenOAuth)
+			m.Methods("GET, OPTIONS", "/keys", auth.OIDCKeys)
+			m.Methods("POST, OPTIONS", "/introspect", web.Bind(forms.IntrospectTokenForm{}), auth.IntrospectOAuth)
+		}, optionsCorsHandler(), ignoreCSRF)
 	}, oauth2Enabled)
 
 	m.Group("/user/settings", func() {
@@ -1298,7 +1299,7 @@ func registerRoutes(m *web.Route) {
 					Post(web.Bind(forms.DeleteRepoFileForm{}), repo.DeleteFilePost)
 				m.Combo("/_upload/*", repo.MustBeAbleToUpload).
 					Get(repo.UploadFile).
-					Post(web.Bind(forms.UploadRepoFileForm{}), repo.UploadFilePost)
+					Post(BindUpload(), repo.UploadFilePost)
 				m.Combo("/_diffpatch/*").Get(repo.NewDiffPatch).
 					Post(web.Bind(forms.EditRepoFileForm{}), repo.NewDiffPatchPost)
 				m.Combo("/_cherrypick/{sha:([a-f0-9]{4,64})}/*").Get(repo.CherryPick).
@@ -1647,7 +1648,7 @@ func registerRoutes(m *web.Route) {
 		m.Post("/sync_fork", context.RepoMustNotBeArchived(), repo.MustBeNotEmpty, reqRepoCodeWriter, repo.SyncFork)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
-	m.Post("/{username}/{reponame}/lastcommit/*", ignSignInAndCsrf, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
+	m.Post("/{username}/{reponame}/lastcommit/*", reqSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
 
 	m.Group("/{username}/{reponame}", func() {
 		if !setting.Repository.DisableStars {
@@ -1684,7 +1685,7 @@ func registerRoutes(m *web.Route) {
 				m.Any("/*", func(ctx *context.Context) {
 					ctx.NotFound("", nil)
 				})
-			}, ignSignInAndCsrf, lfsServerEnabled)
+			}, ignoreCSRF, lfsServerEnabled)
 
 			gitHTTPRouters(m)
 		})
@@ -1722,4 +1723,21 @@ func registerRoutes(m *web.Route) {
 		ctx := context.GetWebContext(req)
 		ctx.NotFound("", nil)
 	})
+}
+
+func BindUpload() http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request) {
+		theObj := new(forms.UploadRepoFileForm) // create a new form obj for every request but not use obj directly
+		data := middleware.GetContextData(req.Context())
+		binding.Bind(req, theObj)
+		files := theObj.Files
+		var fullpaths []string
+		for _, fileID := range files {
+			fullPath := req.Form.Get("files_fullpath[" + fileID + "]")
+			fullpaths = append(fullpaths, fullPath)
+		}
+		theObj.FullPaths = fullpaths
+		data.GetData()["__form"] = theObj
+		middleware.AssignForm(theObj, data)
+	}
 }

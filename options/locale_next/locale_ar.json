@@ -1,4 +1,12 @@
 {
+    "fork.n_forks": {
+        "one": "%s نسخة",
+        "other": "%s نُسَخ"
+    },
+    "stars.n_stars": {
+        "one": "%s نجمة",
+        "other": "%s نجوم"
+    },
     "home.welcome.activity_hint": "لا يوجد شيء في موجزك حتى الآن. ستظهر هنا أفعالك ونشاطاتك من المستودعات التي تتابعها.",
     "home.welcome.no_activity": "لا يوجد نشاط",
     "home.explore_repos": "اكتشف المستودعات",
@@ -153,5 +161,13 @@
     "migrate.codebase.description": "ترحيل البيانات من codebasehq.com.",
     "migrate.forgejo.description": "ترحيل المعلومات من كودبيرج أو خوادم فورجيو الأخرى.",
     "user.ghost.tooltip": "تم حذف هذا المستخدم أو لا يمكن مطابقته.",
-    "migrate.form.error.url_credentials": "يحتوي عنوان الرابط على بيانات اعتماد، ضعها في حقلي اسم المستخدم وكلمة المرور على التوالي"
+    "migrate.form.error.url_credentials": "يحتوي عنوان الرابط على بيانات اعتماد، ضعها في حقلي اسم المستخدم وكلمة المرور على التوالي",
+    "pulse.n_active_issues": {
+        "one": "%s مسألة حالية",
+        "other": "%s مسألة حالية"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s طلب دمج حالي",
+        "other": "%s طلب دمج حالي"
+    }
 }

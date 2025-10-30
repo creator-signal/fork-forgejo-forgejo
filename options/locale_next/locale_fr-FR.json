@@ -1,4 +1,16 @@
 {
+    "fork.n_forks": {
+        "one": "%s bifurcation",
+        "other": "%s bifurcations"
+    },
+    "stars.n_stars": {
+        "one": "%s étoiles",
+        "other": "%s étoiles"
+    },
+    "release.n_downloads": {
+        "one": "%s téléchargement",
+        "other": "%s téléchargements"
+    },
     "repo.pulls.merged_title_desc": {
         "one": "a fusionné %[1]d commit depuis <code>%[2]s</code> vers <code>%[3]s</code> %[4]s",
         "many": "fusionné %[1]d de commits depuis <code>%[2]s</code> vers <code>%[3]s</code> %[4]s",
@@ -94,11 +106,11 @@
     "followers.outgoing.list.self.none": "Vous ne suivez personne.",
     "followers.outgoing.list.none": "%s ne vous suit plus.",
     "repo.issue_indexer.title": "Indexeur de problèmes",
-    "stars.list.none": "Personne n'a mis d'étoiles sur ce dépôt.",
-    "watch.list.none": "Personne ne consulte ce dépôt.",
-    "repo.form.cannot_create": "Tous les espaces dans lesquels vous pouvez créer des dépôts ont atteint la limite de dépôts.",
+    "stars.list.none": "Personne n'a mis en favori ce dépôt.",
+    "watch.list.none": "Personne ne suit ce dépôt.",
+    "repo.form.cannot_create": "Tous les espaces où vous pouvez créer des dépôts a atteint la limite de dépôts.",
     "admin.dashboard.cleanup_offline_runners": "Nettoyer les exécuteurs hors ligne",
-    "mail.actions.run_info_trigger": "Déclenché parce que : %[1]s par : %[2]s",
+    "mail.actions.run_info_trigger": "Activé parce que : %[1]s par : %[2]s",
     "settings.visibility.description": "La visibilité du profil affecte la capacité des autres à accéder à vos dépôts non-privés. <a href=\"%s\" target=\"_blank\">Voir plus</a>.",
     "editor.textarea.shift_tab_hint": "Pas d'indentation sur cette ligne. Appuyez sur <kbd>Maj</kbd> + <kbd>Tab</kbd> une nouvelle fois ou sur <kbd>Échap</kbd> pour quitter l'éditeur.",
     "avatar.constraints_hint": "L'avatar personnalisé ne doit pas dépasser une taille de %[1]s ou être plus grand que %[2]dx%[3]d pixels",
@@ -112,7 +124,7 @@
     "keys.ssh.link": "Clé SSH",
     "keys.gpg.link": "Clés GPG",
     "compare.branches.title": "Comparer les branches",
-    "repo.settings.push_mirror.branch_filter.description": "Branches a répliquer. Laisser vide pour répliquer toutes les branches. Voir la documentation <a href=\"%[1]s\">%[2]</a> pour la syntaxe. Exemples: <code>main, release/*</code>",
+    "repo.settings.push_mirror.branch_filter.description": "Branches a répliquer. Laisser vide pour répliquer toutes les branches. Voir la documentation <a href=\"%[1]s\">%[2]</a> pour la syntaxe. Exemples : <code>main, release/*</code>",
     "mail.actions.run_info_sha": "Commit: %[1]s",
     "admin.moderation.deleted_content_ref": "Le signalement avec le type %[1]v et l'identifiant %[2]d n'existe plus",
     "error.must_enable_2fa": "Cette instance Forgejo exige que les utilisateurs activent l'authentification à deux facteurs avant qu'ils puissent accéder a leurs comptes. Activez-la sur  : %s",
@@ -135,7 +147,7 @@
     "admin.dashboard.remove_resolved_reports": "Supprimer les signalements résolus",
     "admin.auths.allow_username_change": "Autoriser le changement de nom d'utilisateur",
     "admin.auths.allow_username_change.description": "Autoriser les utilisateurs à changer leur nom d'utilisateur dans les paramètres du profil",
-    "feed.atom.link": "Flux atom",
+    "feed.atom.link": "Flux Atom",
     "admin.moderation.moderation_reports": "Signalements de modération",
     "admin.moderation.reports": "Signalements",
     "admin.moderation.no_open_reports": "Il n'y a actuellement aucun signalement ouvert.",
@@ -155,6 +167,22 @@
     "migrate.pagure.project_url": "URL du projet Pagure",
     "migrate.pagure.project_example": "L'URL du projet Pagure, ex. https://pagure.io/pagure",
     "migrate.pagure.token_label": "Jeton",
-    "migrate.pagure.token_body_a": "Veuillez fournir un jeton API Pagure avec l'accès aux problèmes privés pour créer un dépôt contenant seulement les problèmes privés",
-    "migrate.pagure.token_body_b": "Assurez-vous de définir le drapeau dépôt privé ci-dessus si vous souhaitez que ce dépôt soit privé"
+    "pulse.n_active_issues": {
+        "one": "%s ticket actif",
+        "many": "%s tickets actifs",
+        "other": ""
+    },
+    "pulse.n_active_prs": {
+        "one": "%s demande d'ajout active",
+        "many": "%s demandes d'ajout actives",
+        "other": ""
+    },
+    "repo.pulls.maintainers_can_edit": "Les mainteneurs peuvent modifier cette pull request.",
+    "repo.pulls.maintainers_cannot_edit": "Les mainteneurs ne peuvent pas éditer cette pull request.",
+    "mail.issue.action.close_by_commit": "%[1]s a fermé %[2]s dans le commit %[3]s.",
+    "migrate.pagure.private_issues.summary": "Tickets privés (Optionnel)",
+    "migrate.pagure.private_issues.description": "Cette fonctionnalité est conçue pour créer un deuxième dépôt contenant uniquement des tickets privés de votre projet Pagure à des fins d'archive. Premièrement, effectuer une migration normale (sans jeton) pour importer tout le contenu public. Ensuite, si vous avez des tickets privés à préserver, créez un dépôt séparé en utilisant cette option de jeton pour archiver ces tickets privés.",
+    "migrate.pagure.private_issues.warning": "Assurez-vous de définir la visibilité du dépôt ci-dessus à Privé si vous utilisez la clé API pour importer des tickets privés. Cela empêche d'exposer accidentellement du contenu privé dans un dépôt public.",
+    "migrate.pagure.token.placeholder": "Seulement pour créer des archives de tickets privés",
+    "actions.workflow.pre_execution_error": "Workflow n'a pas été exécuté en raison d'une erreur qui a bloqué la tentative d'exécution."
 }

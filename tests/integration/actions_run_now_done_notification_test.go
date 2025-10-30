@@ -72,9 +72,10 @@ func TestActionNowDoneNotification(t *testing.T) {
 		t.Skip()
 	}
 
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		notifier := mockNotifier{t: t, testIdx: 0, lastRunID: -1, runID: -1}
 		notify_service.RegisterNotifier(&notifier)
+		defer notify_service.UnregisterNotifier(&notifier)
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 

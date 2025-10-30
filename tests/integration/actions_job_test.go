@@ -129,7 +129,7 @@ jobs:
 			},
 		},
 	}
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
 		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
@@ -168,6 +168,36 @@ jobs:
 				}
 			})
 		}
+
+		httpContext := NewAPITestContext(t, user2.Name, apiRepo.Name, auth_model.AccessTokenScopeWriteRepository)
+		doAPIDeleteRepository(httpContext)(t)
+	})
+}
+
+func TestRunnerLifecycleGithubEndpoints(t *testing.T) {
+	if !setting.Database.Type.IsSQLite3() {
+		// registering a mock runner when using a database other than SQLite leaves leftovers
+		t.Skip()
+	}
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		session := loginUser(t, user2.Name)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+
+		apiRepo := createActionsTestRepo(t, token, "actions-runner-registration-with-get", false)
+		runner := newMockRunner()
+		runner.registerAsRepoRunnerWithPost(t, user2.Name, apiRepo.Name, "mock-runner", []string{"ubuntu-latest"})
+		runnersList := runner.listRunners(t, user2.Name, apiRepo.Name)
+
+		assert.NotNil(t, runnersList)
+		assert.Len(t, runnersList.Entries, 1)
+		assert.Equal(t, "mock-runner", runnersList.Entries[0].Name)
+
+		runnerDetails := runner.getRunner(t, user2.Name, apiRepo.Name, runnersList.Entries[0].ID)
+		assert.Equal(t, "mock-runner", runnerDetails.Name)
+		assert.Equal(t, runnersList.Entries[0].ID, runnerDetails.ID)
+
+		runner.deleteRunner(t, user2.Name, apiRepo.Name, runnersList.Entries[0].ID)
 
 		httpContext := NewAPITestContext(t, user2.Name, apiRepo.Name, auth_model.AccessTokenScopeWriteRepository)
 		doAPIDeleteRepository(httpContext)(t)
@@ -318,7 +348,7 @@ jobs:
 			},
 		},
 	}
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
 		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
@@ -364,7 +394,7 @@ func TestActionsGiteaContext(t *testing.T) {
 		t.Skip()
 	}
 
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		user2Session := loginUser(t, user2.Name)
 		user2Token := getTokenForLoggedInUser(t, user2Session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)

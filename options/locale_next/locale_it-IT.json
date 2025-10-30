@@ -1,4 +1,19 @@
 {
+    "fork.n_forks": {
+        "one": "%s biforcazioni",
+        "many": "%s biforcazioni",
+        "other": ""
+    },
+    "stars.n_stars": {
+        "one": "%s stella",
+        "many": "%s stelle",
+        "other": ""
+    },
+    "release.n_downloads": {
+        "one": "%s download",
+        "many": "%s downloads",
+        "other": ""
+    },
     "repo.pulls.merged_title_desc": {
         "one": "ha fuso %[1]d commit da <code>%[2]s</code> in <code>%[3]s</code> %[4]s",
         "many": "ha unito %[1]d commit da <code>%[2]s</code> a <code>%[3]s</code> %[4]s",
@@ -136,15 +151,13 @@
     "avatar.constraints_hint": "L'avatar personalizzato non può superare %[1]s di dimensione o essere più grande di %[2]dx%[3]d pixels",
     "user.ghost.tooltip": "Questo utente è stato eliminato, o non può essere trovato.",
     "og.repo.summary_card.alt_description": "Scheda di riepilogo del repositorio %[1]s, descritta come: %[2]s",
-    "repo.commit.load_tags_failed": "Caricamento delle etichette fallito a causa di un errore interno",
-    "migrate.pagure.token_body_a": "Fornisci un token API di Pagure con accesso alle segnalazioni private per creare un repositorio che contenga solo le segnalazioni private",
+    "repo.commit.load_tags_failed": "Caricamento dei tag fallito a causa di un errore interno",
     "actions.runs.run_attempt_label": "Esegui tentativo #%[1]s (%[2]s)",
     "actions.runs.viewing_out_of_date_run": "Stai visualizzando un'esecuzione obsoleta di questo lavoro che è stata eseguita il %[1]s.",
     "actions.runs.view_most_recent_run": "Visualizza l'esecuzione più recente",
     "settings.visibility.description": "La visibilità del profilo influisce sulla capacità degli altri di accedere ai tuoi repository non privati. <a href=\"%s\" target=\"_blank\">Scopri di più</a>.",
     "error.must_enable_2fa": "Questa istanza Forgejo richiede che gli utenti attivino la verifica in due passaggi prima di poter accedere ai propri account. Attivala su: %s",
-    "migrate.pagure.token_label": "Token",
-    "migrate.pagure.token_body_b": "Assicurati di impostare sopra l'attributo del repositorio privato se desideri che questo repositorio sia privato",
+    "migrate.pagure.token_label": "Token API Pagure",
     "admin.config.security": "Configurazione della sicurezza",
     "admin.config.global_2fa_requirement.title": "Requisito globale di autenticazione a due fattori",
     "admin.config.global_2fa_requirement.none": "No",
@@ -156,5 +169,30 @@
     "migrate.pagure.project_url": "URL del progetto Pagure",
     "migrate.pagure.project_example": "L'URL del progetto Pagure, ad esempio https://pagure.io/pagure",
     "mail.actions.not_successful_run": "Flusso di lavoro %[1]s non riuscito nel repositorio %[2]s",
-    "settings.twofa_reenroll.description": "Reinserisci la verifica in due passaggi"
+    "settings.twofa_reenroll.description": "Reinserisci la verifica in due passaggi",
+    "pulse.n_active_issues": {
+        "one": "%s segnalazione attiva",
+        "many": "%s segnalazioni attive",
+        "other": ""
+    },
+    "pulse.n_active_prs": {
+        "one": "%s richiesta di modifica attiva",
+        "many": "%s richieste di modifiche attive",
+        "other": ""
+    },
+    "repo.pulls.maintainers_can_edit": "I gestori possono modificare questa richiesta di modifica.",
+    "repo.pulls.maintainers_cannot_edit": "I gestori non possono modificare questa richiesta di modifica.",
+    "migrate.pagure.private_issues.summary": "Segnalazioni Private (opzionale)",
+    "watch.n_watchers": {
+        "one": "%s osservatore",
+        "many": "%s osservatori",
+        "other": "%s osservatori"
+    },
+    "mail.issue.action.close_by_commit": "%[1]s ha chiuso %[2]s nel commit %[3]s.",
+    "migrate.pagure.private_issues.description": "Questa funzionalità è progettata per creare un secondo repositorio contenente solo le segnalazioni private del tuo progetto Pagure a scopo di archiviazione. Innanzitutto, esegui una migrazione normale (senza token) per importare tutti i contenuti pubblici. Quindi, se hai segnalazioni private da conservare, crea un repositorio separato utilizzando questa opzione con token per archiviare tali segnalazioni private.",
+    "migrate.pagure.private_issues.warning": "Assicurasi di impostare la visibilità del repositorio su Privato se utilizzi una chiave API per importare segnalazioni private. Questo impedisce l'esposizione accidentalmente di contenuti privati in un repositorio pubblico.",
+    "migrate.pagure.token.placeholder": "Solo per creare un archivio di segnalazioni private",
+    "actions.workflow.job_parsing_error": "Impossibile analizzare i processi nel flusso di lavoro: %v",
+    "actions.workflow.event_detection_error": "Impossibile analizzare gli eventi previsti nel flusso di lavoro: %v",
+    "actions.workflow.pre_execution_error": "Il flusso di lavoro non è stato completato a causa di un errore che ha bloccato il tentativo di esecuzione."
 }

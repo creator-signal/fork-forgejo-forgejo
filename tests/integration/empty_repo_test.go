@@ -6,6 +6,7 @@ package integration
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -51,7 +52,6 @@ func TestEmptyRepoAddFile(t *testing.T) {
 	doc := NewHTMLParser(t, resp.Body).Find(`input[name="commit_choice"]`)
 	assert.Empty(t, doc.AttrOr("checked", "_no_"))
 	req = NewRequestWithValues(t, "POST", "/user30/empty/_new/"+setting.Repository.DefaultBranch, map[string]string{
-		"_csrf":          GetCSRF(t, session, "/user/settings"),
 		"commit_choice":  "direct",
 		"tree_path":      "test-file.md",
 		"content":        "newly-added-test-file",
@@ -78,7 +78,6 @@ func TestEmptyRepoUploadFile(t *testing.T) {
 
 	body := &bytes.Buffer{}
 	mpForm := multipart.NewWriter(body)
-	_ = mpForm.WriteField("_csrf", GetCSRF(t, session, "/user/settings"))
 	file, _ := mpForm.CreateFormFile("file", "uploaded-file.txt")
 	_, _ = io.Copy(file, bytes.NewBufferString("newly-uploaded-test-file"))
 	_ = mpForm.Close()
@@ -88,11 +87,11 @@ func TestEmptyRepoUploadFile(t *testing.T) {
 	resp = session.MakeRequest(t, req, http.StatusOK)
 	respMap := map[string]string{}
 	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &respMap))
-
+	filesFullpathKey := fmt.Sprintf("files_fullpath[%s]", respMap["uuid"])
 	req = NewRequestWithValues(t, "POST", "/user30/empty/_upload/"+setting.Repository.DefaultBranch, map[string]string{
-		"_csrf":          GetCSRF(t, session, "/user/settings"),
 		"commit_choice":  "direct",
 		"files":          respMap["uuid"],
+		filesFullpathKey: "uploaded-file.txt",
 		"tree_path":      "",
 		"commit_mail_id": "-1",
 	})

@@ -7,6 +7,7 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
@@ -53,7 +54,7 @@ func assertRepoCreateForm(t *testing.T, htmlDoc *HTMLDoc, owner *user_model.User
 	}
 }
 
-func testRepoGenerate(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) {
+func testRepoGenerateCommon(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) *RequestWrapper {
 	// Step0: check the existence of the generated repo
 	req := NewRequestf(t, "GET", "/%s/%s", generateOwner.Name, generateRepoName)
 	session.MakeRequest(t, req, http.StatusNotFound)
@@ -73,12 +74,16 @@ func testRepoGenerate(t *testing.T, session *TestSession, templateID, templateOw
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	assertRepoCreateForm(t, htmlDoc, user, templateID)
 	req = NewRequestWithValues(t, "POST", link, map[string]string{
-		"_csrf":         htmlDoc.GetCSRF(),
 		"uid":           fmt.Sprintf("%d", generateOwner.ID),
 		"repo_name":     generateRepoName,
 		"repo_template": templateID,
 		"git_content":   "true",
 	})
+	return req
+}
+
+func testRepoGenerateSuccess(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) {
+	req := testRepoGenerateCommon(t, session, templateID, templateOwnerName, templateRepoName, user, generateOwner, generateRepoName)
 	session.MakeRequest(t, req, http.StatusSeeOther)
 
 	// Step4: check the existence of the generated repo
@@ -86,8 +91,14 @@ func testRepoGenerate(t *testing.T, session *TestSession, templateID, templateOw
 	session.MakeRequest(t, req, http.StatusOK)
 }
 
+func testRepoGenerateFailure(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) *httptest.ResponseRecorder {
+	req := testRepoGenerateCommon(t, session, templateID, templateOwnerName, templateRepoName, user, generateOwner, generateRepoName)
+	resp := session.MakeRequest(t, req, http.StatusInternalServerError)
+	return resp
+}
+
 func testRepoGenerateWithFixture(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) {
-	testRepoGenerate(t, session, templateID, templateOwnerName, templateRepoName, user, generateOwner, generateRepoName)
+	testRepoGenerateSuccess(t, session, templateID, templateOwnerName, templateRepoName, user, generateOwner, generateRepoName)
 
 	// check substituted values in Readme
 	req := NewRequestf(t, "GET", "/%s/%s/raw/branch/master/README.md", generateOwner.Name, generateRepoName)
@@ -123,9 +134,7 @@ func TestRepoCreateForm(t *testing.T) {
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	assertRepoCreateForm(t, htmlDoc, user, "")
 
-	req = NewRequestWithValues(t, "POST", "/repo/create", map[string]string{
-		"_csrf": htmlDoc.GetCSRF(),
-	})
+	req = NewRequestWithValues(t, "POST", "/repo/create", map[string]string{})
 	resp = session.MakeRequest(t, req, http.StatusOK)
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	assertRepoCreateForm(t, htmlDoc, user, "")
@@ -213,7 +222,6 @@ func TestRepoCreateFormTrimSpace(t *testing.T) {
 	session := loginUser(t, user.Name)
 
 	req := NewRequestWithValues(t, "POST", "/repo/create", map[string]string{
-		"_csrf":     GetCSRF(t, session, "/repo/create"),
 		"uid":       "2",
 		"repo_name": " spaced-name ",
 	})
@@ -224,7 +232,7 @@ func TestRepoCreateFormTrimSpace(t *testing.T) {
 }
 
 func TestRepoGenerateTemplating(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		input := `# $REPO_NAME
 	This is a Repo By $REPO_OWNER
 	ThisIsThe${REPO_NAME}InAnInlineWay`
@@ -245,11 +253,11 @@ func TestRepoGenerateTemplating(t *testing.T) {
 				{
 					Operation:     "create",
 					TreePath:      ".forgejo/template",
-					ContentReader: strings.NewReader("Readme.md"),
+					ContentReader: strings.NewReader("**/Readme.md"),
 				},
 				{
 					Operation:     "create",
-					TreePath:      "Readme.md",
+					TreePath:      "dira-${REPO_NAME}/dirb-${REPO_NAME}/Readme.md",
 					ContentReader: strings.NewReader(input),
 				},
 			}),
@@ -259,7 +267,7 @@ func TestRepoGenerateTemplating(t *testing.T) {
 		// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
 		templateID := strconv.FormatInt(template.ID, 10)
 
-		testRepoGenerate(
+		testRepoGenerateSuccess(
 			t,
 			session,
 			templateID,
@@ -272,7 +280,7 @@ func TestRepoGenerateTemplating(t *testing.T) {
 
 		req := NewRequestf(
 			t,
-			"GET", "/%s/%s/raw/branch/%s/Readme.md",
+			"GET", "/%s/%[2]s/raw/branch/%s/dira-%[2]s/dirb-%[2]s/Readme.md",
 			user.Name,
 			generatedName,
 			template.DefaultBranch,
@@ -283,5 +291,154 @@ func TestRepoGenerateTemplating(t *testing.T) {
 			user.Name,
 			generatedName)
 		assert.Equal(t, body, resp.Body.String())
+	})
+}
+
+func TestRepoGenerateTemplatingSymlink(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		userName := "user1"
+		session := loginUser(t, userName)
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: userName})
+
+		testCases := []struct {
+			name          string
+			symlinkTarget string
+			expectedError string
+		}{
+			{
+				name:          "abs out-of-tree symlink",
+				symlinkTarget: "/etc/passwd",
+				expectedError: "openat problem/Readme.md: path escapes from parent",
+			},
+			{
+				name:          "rel out-of-tree symlink",
+				symlinkTarget: "../../../../../../../../../../../../../../etc/passwd",
+				expectedError: "openat problem/Readme.md: path escapes from parent",
+			},
+			{
+				name:          "rel in-tree symlink",
+				symlinkTarget: "../actual-contents.txt",
+			},
+		}
+
+		for i, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				templateName := fmt.Sprintf("my_template-%d", i)
+				generatedName := fmt.Sprintf("my_generated-%d", i)
+				template, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
+					Name:       optional.Some(templateName),
+					IsTemplate: optional.Some(true),
+					Files: optional.Some([]*files_service.ChangeRepoFile{
+						{
+							Operation:     "create",
+							TreePath:      ".forgejo/template",
+							ContentReader: strings.NewReader("**/Readme.md"),
+						},
+						{
+							Operation:     "create",
+							TreePath:      "actual-contents.txt",
+							ContentReader: strings.NewReader("Here are some contents. $REPO_NAME"),
+						},
+						{
+							Operation:     "create",
+							TreePath:      "problem/Readme.md",
+							ContentReader: strings.NewReader(tc.symlinkTarget),
+							Symlink:       true,
+						},
+					}),
+				})
+				defer f()
+
+				// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
+				templateID := strconv.FormatInt(template.ID, 10)
+
+				if tc.expectedError != "" {
+					resp := testRepoGenerateFailure(
+						t,
+						session,
+						templateID,
+						user.Name,
+						templateName,
+						user,
+						user,
+						generatedName,
+					)
+					assert.Contains(t, resp.Body.String(), "openat problem/Readme.md: path escapes from parent")
+				} else {
+					testRepoGenerateSuccess(
+						t,
+						session,
+						templateID,
+						user.Name,
+						templateName,
+						user,
+						user,
+						generatedName,
+					)
+
+					// Write gets redirected to the in-repo symlink
+					req := NewRequestf(
+						t,
+						"GET", "/%s/%[2]s/raw/branch/%s/actual-contents.txt",
+						user.Name,
+						generatedName,
+						template.DefaultBranch,
+					)
+					resp := session.MakeRequest(t, req, http.StatusOK)
+					assert.Equal(t, fmt.Sprintf("Here are some contents. %s", generatedName), resp.Body.String())
+
+					// Symlink file still exists and contents are a symlink; no API available to verify it has correct symlink mode though
+					req = NewRequestf(
+						t,
+						"GET", "/%s/%[2]s/raw/branch/%s/problem/Readme.md",
+						user.Name,
+						generatedName,
+						template.DefaultBranch,
+					)
+					resp = session.MakeRequest(t, req, http.StatusOK)
+					assert.Equal(t, tc.symlinkTarget, resp.Body.String())
+				}
+			})
+		}
+	})
+}
+
+func TestRepoGenerateTemplatingSymlinkGlobFile(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		templateName := "my_template"
+		generatedName := "my_generated"
+
+		userName := "user1"
+		session := loginUser(t, userName)
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: userName})
+
+		template, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
+			Name:       optional.Some(templateName),
+			IsTemplate: optional.Some(true),
+			Files: optional.Some([]*files_service.ChangeRepoFile{
+				{
+					Operation:     "create",
+					TreePath:      ".forgejo/template",
+					ContentReader: strings.NewReader("/etc/passwd"),
+					Symlink:       true,
+				},
+			}),
+		})
+		defer f()
+
+		// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
+		templateID := strconv.FormatInt(template.ID, 10)
+
+		resp := testRepoGenerateFailure(
+			t,
+			session,
+			templateID,
+			user.Name,
+			templateName,
+			user,
+			user,
+			generatedName,
+		)
+		assert.Contains(t, resp.Body.String(), "statat .forgejo/template: path escapes from parent")
 	})
 }

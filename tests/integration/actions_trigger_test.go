@@ -40,7 +40,7 @@ import (
 )
 
 func TestActionsPullRequestCommitStatus(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // owner of the base repo
 		session := loginUser(t, "user2")
 		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
@@ -351,7 +351,7 @@ jobs:
 }
 
 func TestActionsPullRequestWithInvalidWorkflow(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // owner of the base repo
 		session := loginUser(t, "user2")
 
@@ -432,7 +432,7 @@ runs-on: docker
 }
 
 func TestActionsPullRequestTargetEvent(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // owner of the base repo
 		org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})  // owner of the forked repo
 
@@ -589,7 +589,7 @@ func TestActionsPullRequestTargetEvent(t *testing.T) {
 }
 
 func TestActionsSkipCI(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -680,7 +680,7 @@ func TestActionsSkipCI(t *testing.T) {
 }
 
 func TestActionsCreateDeleteRefEvent(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 		// create the repo
@@ -796,7 +796,7 @@ func TestActionsCreateDeleteRefEvent(t *testing.T) {
 }
 
 func TestActionsWorkflowDispatchEvent(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 		// create the repo
@@ -846,5 +846,63 @@ func TestActionsWorkflowDispatchEvent(t *testing.T) {
 		assert.Equal(t, actions_module.GithubEventWorkflowDispatch, r.TriggerEvent)
 		assert.Len(t, j, 1)
 		assert.Equal(t, "test", j[0])
+	})
+}
+
+func TestActionsWorkflowDispatchConcurrencyGroup(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
+			[]unit_model.Type{unit_model.TypeActions}, nil,
+			[]*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".gitea/workflows/dispatch.yml",
+					ContentReader: strings.NewReader(
+						"name: test\n" +
+							"on: [workflow_dispatch]\n" +
+							"jobs:\n" +
+							"  test:\n" +
+							"    runs-on: ubuntu-latest\n" +
+							"    steps:\n" +
+							"      - run: echo helloworld\n" +
+							"concurrency:\n" +
+							"  group: workflow-magic-group\n" +
+							"  cancel-in-progress: true\n",
+					),
+				},
+			},
+		)
+		defer f()
+
+		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+		require.NoError(t, err)
+		defer gitRepo.Close()
+
+		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yml")
+		require.NoError(t, err)
+		assert.Equal(t, "refs/heads/main", workflow.Ref)
+		assert.Equal(t, sha, workflow.Commit.ID.String())
+
+		inputGetter := func(key string) string {
+			return ""
+		}
+
+		firstRun, _, err := workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+		require.NoError(t, err)
+		assert.Equal(t, 1, unittest.GetCount(t, &actions_model.ActionRun{RepoID: repo.ID}))
+		assert.Equal(t, "workflow-magic-group", firstRun.ConcurrencyGroup)
+		assert.Equal(t, actions_model.CancelInProgress, firstRun.ConcurrencyType)
+
+		// Dispatch again and verify previous run was cancelled:
+		secondRun, _, err := workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+		require.NoError(t, err)
+		assert.Equal(t, 2, unittest.GetCount(t, &actions_model.ActionRun{RepoID: repo.ID}))
+		assert.Equal(t, "workflow-magic-group", secondRun.ConcurrencyGroup)
+		assert.Equal(t, actions_model.CancelInProgress, secondRun.ConcurrencyType)
+		firstRunReload := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: firstRun.ID})
+		assert.Equal(t, actions_model.StatusCancelled, firstRunReload.Status)
 	})
 }

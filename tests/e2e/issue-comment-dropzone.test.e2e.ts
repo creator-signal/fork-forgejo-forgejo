@@ -9,7 +9,8 @@
 // @watch end
 
 import {expect, type Locator, type Page, type TestInfo} from '@playwright/test';
-import {test, save_visual, dynamic_id} from './utils_e2e.ts';
+import {test, dynamic_id} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
 test.use({user: 'user2'});
 
@@ -57,7 +58,11 @@ async function assertCopy(page: Page, workerInfo: TestInfo, startWith: string) {
 test('Paste image in new comment', async ({page}, workerInfo) => {
   await page.goto('/user2/repo1/issues/new');
 
+  const waitForAttachmentUpload = page.waitForResponse((response) => {
+    return response.request().method() === 'POST' && response.url().endsWith('/attachments');
+  });
   await pasteImage(page.locator('.markdown-text-editor'));
+  await waitForAttachmentUpload;
 
   const dropzone = page.locator('.dropzone');
   await expect(dropzone.locator('.files')).toHaveCount(1);
@@ -67,7 +72,7 @@ test('Paste image in new comment', async ({page}, workerInfo) => {
   await expect(preview.locator('.octicon-copy')).toBeVisible();
   await assertCopy(page, workerInfo, '![foo](');
 
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-left'));
 });
 
 test('Re-add images to dropzone on edit', async ({page}, workerInfo) => {
@@ -75,12 +80,20 @@ test('Re-add images to dropzone on edit', async ({page}, workerInfo) => {
 
   const issueTitle = dynamic_id();
   await page.locator('#issue_title').fill(issueTitle);
+  const waitForAttachmentUpload = page.waitForResponse((response) => {
+    return response.request().method() === 'POST' && response.url().endsWith('/attachments');
+  });
   await pasteImage(page.locator('.markdown-text-editor'));
+  await waitForAttachmentUpload;
   await page.getByRole('button', {name: 'Create issue'}).click();
 
   await expect(page).toHaveURL(/\/user2\/repo1\/issues\/\d+$/);
   await page.click('.comment-container .context-menu');
+  const waitForAttachmentsLoad = page.waitForResponse((response) => {
+    return response.request().method() === 'GET' && response.url().endsWith('/attachments');
+  });
   await page.click('.comment-container .menu > .edit-content');
+  await waitForAttachmentsLoad;
 
   const dropzone = page.locator('.dropzone');
   await expect(dropzone.locator('.files').first()).toHaveCount(1);
@@ -90,5 +103,5 @@ test('Re-add images to dropzone on edit', async ({page}, workerInfo) => {
   await expect(preview.locator('.octicon-copy')).toBeVisible();
   await assertCopy(page, workerInfo, '![foo](');
 
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-left'));
 });

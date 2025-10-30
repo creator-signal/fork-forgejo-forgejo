@@ -21,7 +21,7 @@ import (
 )
 
 func TestRepoMigrateWithCredentials(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		require.NoError(t, migrations.Init())
 
@@ -30,7 +30,6 @@ func TestRepoMigrateWithCredentials(t *testing.T) {
 
 		t.Run("Incorrect credentials", func(t *testing.T) {
 			session.MakeRequest(t, NewRequestWithValues(t, "POST", "/repo/migrate", map[string]string{
-				"_csrf":         GetCSRF(t, session, "/repo/migrate?service_type=1"),
 				"clone_addr":    u.JoinPath("/user2/repo2").String(),
 				"auth_username": "user2",
 				"auth_password": userPassword + "1",
@@ -49,7 +48,6 @@ func TestRepoMigrateWithCredentials(t *testing.T) {
 
 		t.Run("Normal", func(t *testing.T) {
 			session.MakeRequest(t, NewRequestWithValues(t, "POST", "/repo/migrate", map[string]string{
-				"_csrf":         GetCSRF(t, session, "/repo/migrate?service_type=1"),
 				"clone_addr":    u.JoinPath("/user2/repo2").String(),
 				"auth_username": "user2",
 				"auth_password": userPassword,
@@ -75,7 +73,6 @@ func TestRepoMigrateWithCredentials(t *testing.T) {
 			session = loginUserWithPassword(t, "user2", dangerousPassword)
 
 			session.MakeRequest(t, NewRequestWithValues(t, "POST", "/repo/migrate", map[string]string{
-				"_csrf":         GetCSRF(t, session, "/repo/migrate?service_type=1"),
 				"clone_addr":    u.JoinPath("/user2/repo2").String(),
 				"auth_username": "user2",
 				"auth_password": dangerousPassword,
