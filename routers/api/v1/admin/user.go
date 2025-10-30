@@ -537,7 +537,7 @@ func ListUserEmails(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/EmailList"
+	//     "$ref": "#/responses/EmailListFull"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 	//   "404":
