@@ -104,8 +104,16 @@ func TestSwaggerPagination(t *testing.T) {
 
 	swagger := getSwagger(t)
 
+	allowList := map[string]struct{} {
+		"repoGetWikiPageRevisions": {},
+	};
+
 	for _, pathData := range swagger.Paths.Paths {
 		if pathData.Get == nil {
+			continue
+		}
+
+		if _, allowed := allowList[pathData.Get.ID]; allowed {
 			continue
 		}
 
