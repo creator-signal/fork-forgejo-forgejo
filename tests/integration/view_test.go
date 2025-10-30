@@ -36,7 +36,7 @@ func TestRenderFileSVGIsInImgTag(t *testing.T) {
 }
 
 func TestAmbiguousCharacterDetection(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
 
@@ -54,7 +54,6 @@ func TestAmbiguousCharacterDetection(t *testing.T) {
 		defer f()
 
 		req := NewRequestWithValues(t, "POST", repo.Link()+"/wiki?action=new", map[string]string{
-			"_csrf":   GetCSRF(t, session, repo.Link()+"/wiki?action=new"),
 			"title":   "Normal",
 			"content": "Hello – Hello",
 		})
@@ -132,7 +131,7 @@ func TestAmbiguousCharacterDetection(t *testing.T) {
 }
 
 func TestCommitListActions(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
 		repo, commitID, f := tests.CreateDeclarativeRepo(t, user2, "",
@@ -148,7 +147,6 @@ func TestCommitListActions(t *testing.T) {
 		defer f()
 
 		req := NewRequestWithValues(t, "POST", repo.Link()+"/wiki?action=new", map[string]string{
-			"_csrf":   GetCSRF(t, session, repo.Link()+"/wiki?action=new"),
 			"title":   "Normal",
 			"content": "Hello world!",
 		})

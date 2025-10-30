@@ -32,7 +32,7 @@ import (
 )
 
 func TestPatchStatus(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
 
@@ -269,7 +269,6 @@ func TestPatchStatus(t *testing.T) {
 			// Add protected branch.
 			link := fmt.Sprintf("/%s/settings/branches/edit", repo.FullName())
 			session.MakeRequest(t, NewRequestWithValues(t, "POST", link, map[string]string{
-				"_csrf":                   GetCSRF(t, session, link),
 				"rule_name":               "main",
 				"protected_file_patterns": "LICENSE",
 			}), http.StatusSeeOther)

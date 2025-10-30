@@ -26,9 +26,7 @@ func testRepoStarringOrWatching(t *testing.T, action, listURI string, expectEmpt
 	session := loginUser(t, "user5")
 
 	// Star/Watch the repo as user5
-	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/user2/repo1/action/%s", action), map[string]string{
-		"_csrf": GetCSRF(t, session, "/user2/repo1"),
-	})
+	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/user2/repo1/action/%s", action), map[string]string{})
 	session.MakeRequest(t, req, http.StatusOK)
 
 	// Load the repo home as user5
@@ -41,6 +39,14 @@ func testRepoStarringOrWatching(t *testing.T, action, listURI string, expectEmpt
 	assert.Equal(t, 1, actionButton.Length())
 	text := strings.ToLower(actionButton.Find("button span.text").Text())
 	assert.Equal(t, oppositeAction, text)
+
+	listLink := htmlDoc.Find(fmt.Sprintf("a[href$='/%s']", listURI))
+	ariaLabel, _ := listLink.Attr("aria-label")
+	if listURI == "stars" {
+		assert.Equal(t, "1 star", ariaLabel)
+	} else {
+		assert.Equal(t, "5 watchers", ariaLabel)
+	}
 
 	// Load stargazers/watchers as user5
 	req = NewRequestf(t, "GET", "/user2/repo1/%s", listURI)
@@ -57,9 +63,7 @@ func testRepoStarringOrWatching(t *testing.T, action, listURI string, expectEmpt
 	}
 
 	// Unstar/unwatch the repo as user5
-	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/user2/repo1/action/%s", oppositeAction), map[string]string{
-		"_csrf": GetCSRF(t, session, "/user2/repo1"),
-	})
+	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/user2/repo1/action/%s", oppositeAction), map[string]string{})
 	session.MakeRequest(t, req, http.StatusOK)
 
 	// Load the repo home as user5

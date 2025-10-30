@@ -21,7 +21,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/translation"
-	gitea_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -29,19 +29,17 @@ import (
 )
 
 func TestCreateFileOnProtectedBranch(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 
-		csrf := GetCSRF(t, session, "/user2/repo1/settings/branches")
 		// Change master branch to protected
 		req := NewRequestWithValues(t, "POST", "/user2/repo1/settings/branches/edit", map[string]string{
-			"_csrf":       csrf,
 			"rule_name":   "master",
 			"enable_push": "true",
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 		// Check if master branch has been locked successfully
-		flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "success%3DBranch%2Bprotection%2Bfor%2Brule%2B%2522master%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 
@@ -55,7 +53,6 @@ func TestCreateFileOnProtectedBranch(t *testing.T) {
 
 		// Save new file to master branch
 		req = NewRequestWithValues(t, "POST", "/user2/repo1/_new/master/", map[string]string{
-			"_csrf":          doc.GetCSRF(),
 			"last_commit":    lastCommit,
 			"tree_path":      "test.txt",
 			"content":        "Content",
@@ -68,12 +65,9 @@ func TestCreateFileOnProtectedBranch(t *testing.T) {
 		assert.Contains(t, resp.Body.String(), "Cannot commit to protected branch &#34;master&#34;.")
 
 		// remove the protected branch
-		csrf = GetCSRF(t, session, "/user2/repo1/settings/branches")
 
 		// Change master branch to protected
-		req = NewRequestWithValues(t, "POST", "/user2/repo1/settings/branches/1/delete", map[string]string{
-			"_csrf": csrf,
-		})
+		req = NewRequestWithValues(t, "POST", "/user2/repo1/settings/branches/1/delete", map[string]string{})
 
 		resp = session.MakeRequest(t, req, http.StatusOK)
 
@@ -82,7 +76,7 @@ func TestCreateFileOnProtectedBranch(t *testing.T) {
 		assert.Equal(t, "/user2/repo1/settings/branches", res["redirect"])
 
 		// Check if master branch has been locked successfully
-		flashCookie = session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "error%3DRemoving%2Bbranch%2Bprotection%2Brule%2B%25221%2522%2Bfailed.", flashCookie.Value)
 	})
@@ -100,7 +94,6 @@ func testEditFile(t *testing.T, session *TestSession, user, repo, branch, filePa
 	// Submit the edits
 	req = NewRequestWithValues(t, "POST", path.Join(user, repo, "_edit", branch, filePath),
 		map[string]string{
-			"_csrf":          htmlDoc.GetCSRF(),
 			"last_commit":    lastCommit,
 			"tree_path":      filePath,
 			"content":        newContent,
@@ -130,7 +123,6 @@ func testEditFileToNewBranch(t *testing.T, session *TestSession, user, repo, bra
 	// Submit the edits
 	req = NewRequestWithValues(t, "POST", path.Join(user, repo, "_edit", branch, filePath),
 		map[string]string{
-			"_csrf":           htmlDoc.GetCSRF(),
 			"last_commit":     lastCommit,
 			"tree_path":       filePath,
 			"content":         newContent,
@@ -150,14 +142,14 @@ func testEditFileToNewBranch(t *testing.T, session *TestSession, user, repo, bra
 }
 
 func TestEditFile(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 		testEditFile(t, session, "user2", "repo1", "master", "README.md", "Hello, World (Edited)\n")
 	})
 }
 
 func TestEditFileToNewBranch(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 		testEditFileToNewBranch(t, session, "user2", "repo1", "master", "feature/test", "README.md", "Hello, World (Edited)\n")
 	})
@@ -177,7 +169,7 @@ func TestEditorAddTranslation(t *testing.T) {
 }
 
 func TestCommitMail(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, _ *url.URL) {
+	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		// Require that the user has KeepEmailPrivate enabled, because it needs
 		// to be tested that even with this setting enabled, it will use the
@@ -198,7 +190,7 @@ func TestCommitMail(t *testing.T) {
 
 		session := loginUser(t, user.Name)
 
-		lastCommitAndCSRF := func(t *testing.T, link string, skipLastCommit bool) (string, string) {
+		getLastCommit := func(t *testing.T, link string, skipLastCommit bool) string {
 			t.Helper()
 
 			req := NewRequest(t, "GET", link)
@@ -210,7 +202,7 @@ func TestCommitMail(t *testing.T) {
 				assert.NotEmpty(t, lastCommit)
 			}
 
-			return lastCommit, htmlDoc.GetCSRF()
+			return lastCommit
 		}
 
 		type caseOpts struct {
@@ -229,9 +221,8 @@ func TestCommitMail(t *testing.T) {
 			t.Run("Not activated", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				lastCommit, csrf := lastCommitAndCSRF(t, case1.link, case1.skipLastCommit)
+				lastCommit := getLastCommit(t, case1.link, case1.skipLastCommit)
 				baseCopy := case1.base
-				baseCopy["_csrf"] = csrf
 				baseCopy["last_commit"] = lastCommit
 				baseCopy["commit_mail_id"] = fmt.Sprintf("%d", inactivatedMail.ID)
 
@@ -248,9 +239,8 @@ func TestCommitMail(t *testing.T) {
 			t.Run("Not belong to user", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				lastCommit, csrf := lastCommitAndCSRF(t, case1.link, case1.skipLastCommit)
+				lastCommit := getLastCommit(t, case1.link, case1.skipLastCommit)
 				baseCopy := case1.base
-				baseCopy["_csrf"] = csrf
 				baseCopy["last_commit"] = lastCommit
 				baseCopy["commit_mail_id"] = fmt.Sprintf("%d", otherEmail.ID)
 
@@ -267,16 +257,15 @@ func TestCommitMail(t *testing.T) {
 			t.Run("Placeholder mail", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				lastCommit, csrf := lastCommitAndCSRF(t, case1.link, case1.skipLastCommit)
+				lastCommit := getLastCommit(t, case1.link, case1.skipLastCommit)
 				baseCopy := case1.base
-				baseCopy["_csrf"] = csrf
 				baseCopy["last_commit"] = lastCommit
 				baseCopy["commit_mail_id"] = "-1"
 
 				req := NewRequestWithValues(t, "POST", case1.link, baseCopy)
 				session.MakeRequest(t, req, http.StatusSeeOther)
 				if !case2.skipLastCommit {
-					newlastCommit, _ := lastCommitAndCSRF(t, case1.link, false)
+					newlastCommit := getLastCommit(t, case1.link, false)
 					assert.NotEqual(t, newlastCommit, lastCommit)
 				}
 
@@ -292,16 +281,15 @@ func TestCommitMail(t *testing.T) {
 			t.Run("Normal", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				lastCommit, csrf := lastCommitAndCSRF(t, case2.link, case2.skipLastCommit)
+				lastCommit := getLastCommit(t, case2.link, case2.skipLastCommit)
 				baseCopy := case2.base
-				baseCopy["_csrf"] = csrf
 				baseCopy["last_commit"] = lastCommit
 				baseCopy["commit_mail_id"] = fmt.Sprintf("%d", primaryEmail.ID)
 
 				req := NewRequestWithValues(t, "POST", case2.link, baseCopy)
 				session.MakeRequest(t, req, http.StatusSeeOther)
 				if !case2.skipLastCommit {
-					newlastCommit, _ := lastCommitAndCSRF(t, case2.link, false)
+					newlastCommit := getLastCommit(t, case2.link, false)
 					assert.NotEqual(t, newlastCommit, lastCommit)
 				}
 
@@ -387,8 +375,6 @@ func TestCommitMail(t *testing.T) {
 
 				body := &bytes.Buffer{}
 				mpForm := multipart.NewWriter(body)
-				err := mpForm.WriteField("_csrf", GetCSRF(t, session, "/user2/repo1/_upload/master"))
-				require.NoError(t, err)
 
 				file, err := mpForm.CreateFormFile("file", name)
 				require.NoError(t, err)
