@@ -2019,7 +2019,7 @@ func ViewIssue(ctx *context.Context) {
 	}
 
 	// Get Dependencies
-	blockedBy, err := issue.BlockedByDependencies(ctx, db.ListOptions{})
+	blockedBy, _, err := issue.BlockedByDependencies(ctx, db.ListOptions{})
 	if err != nil {
 		ctx.ServerError("BlockedByDependencies", err)
 		return

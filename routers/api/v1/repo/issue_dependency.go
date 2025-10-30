@@ -14,6 +14,7 @@ import (
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 )
@@ -94,7 +95,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 	blockerIssues := make([]*issues_model.Issue, 0, limit)
 
 	// 2. Get the issues this issue depends on, i.e. the `<#b>`: `<issue> <- <#b>`
-	blockersInfo, err := issue.BlockedByDependencies(ctx, db.ListOptions{
+	blockersInfo, total, err := issue.BlockedByDependencies(ctx, db.ListOptions{
 		Page:     page,
 		PageSize: limit,
 	})
@@ -154,6 +155,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 		blockerIssues = append(blockerIssues, &blocker.Issue)
 	}
 
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, convert.ToAPIIssueList(ctx, ctx.Doer, blockerIssues))
 }
 
@@ -385,6 +387,7 @@ func GetIssueBlocks(ctx *context.APIContext) {
 		issues = append(issues, &depMeta.Issue)
 	}
 
+	utils.SetPaginationHeaders(ctx, int64(len(deps)))
 	ctx.JSON(http.StatusOK, convert.ToAPIIssueList(ctx, ctx.Doer, issues))
 }
 

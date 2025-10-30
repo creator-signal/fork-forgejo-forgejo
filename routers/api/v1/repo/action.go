@@ -725,6 +725,7 @@ func ListActionTasks(ctx *context.APIContext) {
 		res.Entries[i] = convertedTask
 	}
 
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, &res)
 }
 
@@ -907,6 +908,7 @@ func ListActionRuns(ctx *context.APIContext) {
 		res.Entries[i] = cr
 	}
 
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, &res)
 }
 
