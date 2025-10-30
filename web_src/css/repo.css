@@ -2343,12 +2343,12 @@ tbody.commit-list {
   overflow-x: auto;
   padding: 6px 12px !important;
   font-size: 13px !important;
+  min-height: 46px;
 }
 
 .file-info {
   display: flex;
   align-items: center;
-  min-height: 30px;
 }
 
 .file-info-entry {
