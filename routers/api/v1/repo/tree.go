@@ -50,10 +50,9 @@ func GetTree(ctx *context.APIContext) {
 	//   type: integer
 	// - name: per_page
 	//   in: query
-	//   description: number of items per page
+	//   description: (deprecated, use `limit` instead) number of items per page
 	//   required: false
 	//   type: integer
-	//   deprecated: true
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/GitTreeResponse"
