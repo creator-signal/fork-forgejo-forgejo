@@ -170,7 +170,6 @@ func TestMigrateWithIssueComments(t *testing.T) {
 				// Step 4: submit the migration to only migrate issues
 				migratedRepoName := "otherrepo-" + s.svc.Name()
 				req = NewRequestWithValues(t, "POST", link, map[string]string{
-					"_csrf":       htmlDoc.GetCSRF(),
 					"service":     fmt.Sprintf("%d", s.svc),
 					"clone_addr":  fmt.Sprintf("%s%s/%s", u, ownerName, repoName),
 					"auth_token":  token,
