@@ -19,8 +19,7 @@ type swaggerResponseOrganization struct {
 type swaggerResponseOrganizationList struct {
 	// in:body
 	Body []api.Organization `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // Team
@@ -35,8 +34,7 @@ type swaggerResponseTeam struct {
 type swaggerResponseTeamList struct {
 	// in:body
 	Body []api.Team `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // TeamListFull

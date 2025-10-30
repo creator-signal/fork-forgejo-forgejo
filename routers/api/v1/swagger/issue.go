@@ -19,8 +19,7 @@ type swaggerResponseIssue struct {
 type swaggerResponseIssueList struct {
 	// in:body
 	Body []api.Issue `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // IssueListFull
@@ -42,8 +41,7 @@ type swaggerResponseComment struct {
 type swaggerResponseCommentList struct {
 	// in:body
 	Body []api.Comment `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // CommentListFull
@@ -58,8 +56,7 @@ type swaggerResponseCommentListFull struct {
 type swaggerResponseTimelineList struct {
 	// in:body
 	Body []api.TimelineComment `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // Label
@@ -74,8 +71,7 @@ type swaggerResponseLabel struct {
 type swaggerResponseLabelList struct {
 	// in:body
 	Body []api.Label `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // LabelListFull
@@ -97,8 +93,7 @@ type swaggerResponseMilestone struct {
 type swaggerResponseMilestoneList struct {
 	// in:body
 	Body []api.Milestone `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // TrackedTime
@@ -113,8 +108,7 @@ type swaggerResponseTrackedTime struct {
 type swaggerResponseTrackedTimeList struct {
 	// in:body
 	Body []api.TrackedTime `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // TrackedTimeListFull
@@ -150,8 +144,7 @@ type swaggerResponseStopWatch struct {
 type swaggerResponseStopWatchList struct {
 	// in:body
 	Body []api.StopWatch `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // Reaction
@@ -166,8 +159,7 @@ type swaggerReaction struct {
 type swaggerReactionList struct {
 	// in:body
 	Body []api.Reaction `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // ReactionListFull

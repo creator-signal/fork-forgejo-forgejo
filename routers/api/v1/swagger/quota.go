@@ -33,8 +33,7 @@ type swaggerResponseQuotaRuleInfo struct {
 type swaggerQuotaUsedAttachmentList struct {
 	// in:body
 	Body api.QuotaUsedAttachmentList `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // QuotaUsedPackageList
@@ -42,8 +41,7 @@ type swaggerQuotaUsedAttachmentList struct {
 type swaggerQuotaUsedPackageList struct {
 	// in:body
 	Body api.QuotaUsedPackageList `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // QuotaUsedArtifactList
@@ -51,8 +49,7 @@ type swaggerQuotaUsedPackageList struct {
 type swaggerQuotaUsedArtifactList struct {
 	// in:body
 	Body api.QuotaUsedArtifactList `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // QuotaGroup

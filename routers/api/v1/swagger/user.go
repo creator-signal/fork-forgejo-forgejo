@@ -20,8 +20,7 @@ type swaggerResponseUser struct {
 type swaggerResponseUserList struct {
 	// in:body
 	Body []api.User `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // UserListFull
@@ -36,8 +35,7 @@ type swaggerResponseUserListFull struct {
 type swaggerResponseEmailList struct {
 	// in:body
 	Body []api.Email `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // EmailListFull

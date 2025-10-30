@@ -23,8 +23,7 @@ type AccessToken struct {
 type AccessTokenList struct {
 	// in:body
 	Body []*AccessToken `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	Paginated
 }
 
 // CreateAccessTokenOption options when create access token
@@ -60,6 +59,5 @@ type OAuth2Application struct {
 type OAuth2ApplicationList struct {
 	// in:body
 	Body []*OAuth2Application `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	Paginated
 }

@@ -19,8 +19,7 @@ type swaggerResponseRepository struct {
 type swaggerResponseRepositoryList struct {
 	// in:body
 	Body []api.Repository `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // Branch
@@ -35,8 +34,7 @@ type swaggerResponseBranch struct {
 type swaggerResponseBranchList struct {
 	// in:body
 	Body []api.Branch `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // BranchProtection
@@ -58,8 +56,7 @@ type swaggerResponseBranchProtectionList struct {
 type swaggerResponseTagList struct {
 	// in:body
 	Body []api.Tag `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // Tag
@@ -116,8 +113,7 @@ type swaggerResponseHook struct {
 type swaggerResponseHookList struct {
 	// in:body
 	Body []api.Hook `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // GitHook
@@ -146,8 +142,7 @@ type swaggerResponseRelease struct {
 type swaggerResponseReleaseList struct {
 	// in:body
 	Body []api.Release `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // PullRequest
@@ -162,8 +157,7 @@ type swaggerResponsePullRequest struct {
 type swaggerResponsePullRequestList struct {
 	// in:body
 	Body []api.PullRequest `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // PullRequestListFull
@@ -185,8 +179,7 @@ type swaggerResponsePullReview struct {
 type swaggerResponsePullReviewList struct {
 	// in:body
 	Body []api.PullReview `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // PullComment
@@ -215,8 +208,7 @@ type swaggerResponseStatus struct {
 type swaggerResponseCommitStatusList struct {
 	// in:body
 	Body []api.CommitStatus `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // WatchInfo
@@ -231,8 +223,7 @@ type swaggerResponseWatchInfo struct {
 type swaggerResponseSearchResults struct {
 	// in:body
 	Body api.SearchResults `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // AttachmentList
@@ -254,8 +245,7 @@ type swaggerResponseAttachment struct {
 type swaggerGitTreeResponse struct {
 	// in: body
 	Body api.GitTreeResponse `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // GitBlob
@@ -299,8 +289,7 @@ type swaggerCommitList struct {
 
 	// in: body
 	Body []api.Commit `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // ChangedFileList
@@ -320,8 +309,7 @@ type swaggerChangedFileList struct {
 
 	// in: body
 	Body []api.ChangedFile `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // Note
@@ -385,8 +373,7 @@ type swaggerTopicListResponse struct {
 type swaggerTopicNames struct {
 	// in: body
 	Body api.TopicName `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // LanguageStatistics
@@ -401,8 +388,7 @@ type swaggerLanguageStatistics struct {
 type swaggerCombinedStatus struct {
 	// in: body
 	Body api.CombinedStatus `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // WikiPageList
@@ -410,8 +396,7 @@ type swaggerCombinedStatus struct {
 type swaggerWikiPageList struct {
 	// in:body
 	Body []api.WikiPageMetaData `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // WikiPage
@@ -426,8 +411,7 @@ type swaggerWikiPage struct {
 type swaggerWikiCommitList struct {
 	// in:body
 	Body api.WikiCommitList `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // PushMirror
@@ -442,8 +426,7 @@ type swaggerPushMirror struct {
 type swaggerPushMirrorList struct {
 	// in:body
 	Body []api.PushMirror `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // RepoCollaboratorPermission
@@ -479,8 +462,7 @@ type swaggerRepoNewIssuePinsAllowed struct {
 type swaggerBlockedUserList struct {
 	// in:body
 	Body []api.BlockedUser `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // TasksList
@@ -488,8 +470,7 @@ type swaggerBlockedUserList struct {
 type swaggerRepoTasksList struct {
 	// in:body
 	Body api.ActionTaskResponse `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // swagger:response Compare
@@ -510,8 +491,7 @@ type swaggerSyncForkInfo struct {
 type swaggerActionRunList struct {
 	// in:body
 	Body api.ListActionRunResponse `json:"body"`
-	Link string `json:"Link"`
-	TotalCount int64 `json:"X-Total-Count"`
+	api.Paginated
 }
 
 // ActionRun
