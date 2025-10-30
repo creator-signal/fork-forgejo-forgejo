@@ -104,9 +104,9 @@ func TestSwaggerPagination(t *testing.T) {
 
 	swagger := getSwagger(t)
 
-	allowList := map[string]struct{} {
+	allowList := map[string]struct{}{
 		"repoGetWikiPageRevisions": {},
-	};
+	}
 
 	for _, pathData := range swagger.Paths.Paths {
 		if pathData.Get == nil {
@@ -122,9 +122,9 @@ func TestSwaggerPagination(t *testing.T) {
 		for i := range pathData.Get.Parameters {
 			parameter := pathData.Get.Parameters[i]
 			if parameter.Name == "page" {
-				hasPageParam = true;
+				hasPageParam = true
 			} else if parameter.Name == "limit" {
-				hasLimitParam = true;
+				hasLimitParam = true
 			}
 		}
 
@@ -144,11 +144,11 @@ func TestSwaggerPagination(t *testing.T) {
 			if responseCode < 200 || responseCode >= 300 {
 				continue
 			}
-			for headerName, _ := range response.Headers {
+			for headerName := range response.Headers {
 				if headerName == "X-Total-Count" {
-					hasTotalCountHeader = true;
+					hasTotalCountHeader = true
 				} else if headerName == "Link" {
-					hasLinkHeader = true;
+					hasLinkHeader = true
 				}
 			}
 		}
