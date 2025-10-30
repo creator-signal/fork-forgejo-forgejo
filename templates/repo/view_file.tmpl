@@ -26,9 +26,9 @@
 	{{end}}
 
 	<h4 class="file-header ui top attached header tw-flex tw-items-center tw-justify-between tw-flex-wrap">
-		<div class="file-header-left tw-flex tw-items-center tw-pr-4 tw-flex-wrap tw-gap-4">
+		<div class="file-header-left tw-flex tw-items-center tw-pr-4 tw-flex-wrap {{if .IsCitationFile}}tw-gap-4{{else}}tw-gap-2{{end}}">
 			{{if .ReadmeInList}}
-				{{svg "octicon-book" 16 "tw-mr-2"}}
+				{{svg "octicon-book"}}
 				<strong><a class="default-link muted" href="#readme">{{.FileName}}</a></strong>
 			{{else}}
 				{{template "repo/file_info" .}}
