@@ -37,7 +37,7 @@ func CancelRun(ctx context.Context, run *actions_model.ActionRun) error {
 		}
 
 		if run.NeedApproval {
-			if err := actions_model.UpdateRunApprovalByID(ctx, run.ID, false, 0); err != nil {
+			if err := actions_model.UpdateRunApprovalByID(ctx, run.ID, actions_model.NeedApproval, 0); err != nil {
 				return err
 			}
 		}

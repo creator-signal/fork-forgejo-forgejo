@@ -260,7 +260,7 @@ func PullRequestApprove(ctx context.Context, doerID int64, pr *issues_model.Pull
 			}
 			CreateCommitStatus(ctx, jobs...)
 
-			return actions_model.UpdateRunApprovalByID(ctx, run.ID, false, doerID)
+			return actions_model.UpdateRunApprovalByID(ctx, run.ID, actions_model.DoesNotNeedApproval, doerID)
 		}); err != nil {
 			return err
 		}

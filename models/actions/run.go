@@ -252,8 +252,15 @@ func HasRunThatNeedApproval(ctx context.Context, repoID, pullRequestID int64) (b
 	return count > 0, nil
 }
 
-func UpdateRunApprovalByID(ctx context.Context, id int64, approval bool, approvedBy int64) error {
-	_, err := db.GetEngine(ctx).Exec("UPDATE action_run SET need_approval=?, approved_by=? WHERE id=?", approval, approvedBy, id)
+type ApprovalType bool
+
+const (
+	NeedApproval        = ApprovalType(true)
+	DoesNotNeedApproval = ApprovalType(false)
+)
+
+func UpdateRunApprovalByID(ctx context.Context, id int64, approval ApprovalType, approvedBy int64) error {
+	_, err := db.GetEngine(ctx).Exec("UPDATE action_run SET need_approval=?, approved_by=? WHERE id=?", bool(approval), approvedBy, id)
 	return err
 }
 
