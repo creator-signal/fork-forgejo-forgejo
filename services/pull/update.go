@@ -136,7 +136,7 @@ func IsUserAllowedToUpdate(ctx context.Context, pull *issues_model.PullRequest, 
 
 	// Update function need push permission
 	if pb != nil {
-		pb.Repo = pull.BaseRepo
+		pb.Repo = pr.BaseRepo
 		if !pb.CanUserPush(ctx, user) {
 			return false, false, nil
 		}
