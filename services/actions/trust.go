@@ -123,13 +123,15 @@ func ifNeedApproval(ctx context.Context, run *actions_model.ActionRun, pr *issue
 	return trusted == PosterIsNotTrustedWithActions, nil
 }
 
+type PosterTrust string
+
 const (
-	PosterIsNotTrustedWithActions        = "no"
-	PosterIsExplicitlyTrustedWithActions = "explicitly"
-	PosterIsImplicitlyTrustedWithActions = "implicitly"
+	PosterIsNotTrustedWithActions        = PosterTrust("no")
+	PosterIsExplicitlyTrustedWithActions = PosterTrust("explicitly")
+	PosterIsImplicitlyTrustedWithActions = PosterTrust("implicitly")
 )
 
-func LoadPullRequestPosterIsTrustedWithActions(ctx context.Context, pr *issues_model.PullRequest) (string, error) {
+func LoadPullRequestPosterIsTrustedWithActions(ctx context.Context, pr *issues_model.PullRequest) (PosterTrust, error) {
 	if err := loadPullRequestAttributes(ctx, pr); err != nil {
 		return "", err
 	}
@@ -137,7 +139,7 @@ func LoadPullRequestPosterIsTrustedWithActions(ctx context.Context, pr *issues_m
 	return posterIsTrustedWithPullRequest(ctx, pr)
 }
 
-func posterIsTrustedWithPullRequest(ctx context.Context, pr *issues_model.PullRequest) (string, error) {
+func posterIsTrustedWithPullRequest(ctx context.Context, pr *issues_model.PullRequest) (PosterTrust, error) {
 	implicitlyTrusted, err := posterIsImplicitlyTrustedWithPullRequest(ctx, pr)
 	if err != nil {
 		return "", err
