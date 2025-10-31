@@ -30,7 +30,7 @@ func testGetAdminWebhooks(t *testing.T, systemHooks bool) {
 	unittest.AssertCountByCond(t, "webhook", hookCond, 5)
 
 	t.Run("All hooks (Implicit)", func(t *testing.T) {
-		hooks, count, err := getAdminWebhooks(db.DefaultContext, systemHooks, db.ListOptionsAll)
+		hooks, count, err := getAdminWebhooks(t.Context(), systemHooks, db.ListOptionsAll)
 		require.NoError(t, err)
 		unittest.AssertCountByCond(t, "webhook", hookCond, int(count))
 		require.Len(t, hooks, int(count))
@@ -41,7 +41,7 @@ func testGetAdminWebhooks(t *testing.T, systemHooks bool) {
 	})
 
 	t.Run("All hooks (Explicit)", func(t *testing.T) {
-		hooks, count, err := getAdminWebhooks(db.DefaultContext, systemHooks, db.ListOptionsAll, false)
+		hooks, count, err := getAdminWebhooks(t.Context(), systemHooks, db.ListOptionsAll, false)
 		require.NoError(t, err)
 		unittest.AssertCountByCond(t, "webhook", hookCond, int(count))
 		require.Len(t, hooks, int(count))
@@ -52,9 +52,9 @@ func testGetAdminWebhooks(t *testing.T, systemHooks bool) {
 	})
 
 	t.Run("Active hooks", func(t *testing.T) {
-		hooks, count, err := getAdminWebhooks(db.DefaultContext, systemHooks, db.ListOptionsAll, true)
+		hooks, count, err := getAdminWebhooks(t.Context(), systemHooks, db.ListOptionsAll, true)
 		require.NoError(t, err)
-		unittest.AssertCountByCond(t, "webhook", hookCond.And(builder.Eq{"is_active": false}), int(count))
+		unittest.AssertCountByCond(t, "webhook", hookCond.And(builder.Eq{"is_active": true}), int(count))
 		require.Len(t, hooks, int(count))
 		require.Equal(t, 3, int(count))
 		for i := range hooks {
