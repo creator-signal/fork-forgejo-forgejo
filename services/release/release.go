@@ -62,7 +62,7 @@ func createTag(ctx context.Context, gitRepo *git.Repository, rel *repo_model.Rel
 
 			// Trim '--' prefix to prevent command line argument vulnerability.
 			rel.TagName = strings.TrimPrefix(rel.TagName, "--")
-			isAllowed, err := git_model.IsUserAllowedToControlTag(ctx, protectedTags, rel.TagName, rel.PublisherID)
+			isAllowed, err := git_model.IsUserAllowedToControlTag(ctx, protectedTags, rel.TagName, doer.ID)
 			if err != nil {
 				return false, err
 			}
