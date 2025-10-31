@@ -41,6 +41,7 @@ func loadPullRequestAttributes(ctx context.Context, pr *issues_model.PullRequest
 	return pr.Issue.LoadPoster(ctx)
 }
 
+// cancels or approves runs and keep track of posters that are to always be trusted
 func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_model.PullRequest, trusted UserTrust) error {
 	if err := updateTrusted(ctx, pr, trusted); err != nil {
 		return err
