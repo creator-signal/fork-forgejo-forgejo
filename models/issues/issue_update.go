@@ -24,6 +24,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
+	"forgejo.org/services/stats"
 
 	"xorm.io/builder"
 )
@@ -101,8 +102,8 @@ func doChangeIssueStatus(ctx context.Context, issue *Issue, doer *user_model.Use
 	if err := issue.LoadLabels(ctx); err != nil {
 		return nil, err
 	}
-	for idx := range issue.Labels {
-		if err := updateLabelCols(ctx, issue.Labels[idx], "num_issues", "num_closed_issue"); err != nil {
+	for _, label := range issue.Labels {
+		if err := stats.QueueRecalcLabelByID(label.ID); err != nil {
 			return nil, err
 		}
 	}
@@ -110,11 +111,11 @@ func doChangeIssueStatus(ctx context.Context, issue *Issue, doer *user_model.Use
 	// Update issue count of milestone
 	if issue.MilestoneID > 0 {
 		if issue.NoAutoTime {
-			if err := UpdateMilestoneCountersWithDate(ctx, issue.MilestoneID, issue.UpdatedUnix); err != nil {
+			if err := stats.QueueRecalcMilestoneByIDWithDate(issue.MilestoneID, issue.UpdatedUnix); err != nil {
 				return nil, err
 			}
 		} else {
-			if err := UpdateMilestoneCounters(ctx, issue.MilestoneID); err != nil {
+			if err := stats.QueueRecalcMilestoneByID(issue.MilestoneID); err != nil {
 				return nil, err
 			}
 		}
@@ -352,7 +353,7 @@ func NewIssueWithIndex(ctx context.Context, doer *user_model.User, opts NewIssue
 	}
 
 	if opts.Issue.MilestoneID > 0 {
-		if err := UpdateMilestoneCounters(ctx, opts.Issue.MilestoneID); err != nil {
+		if err := stats.QueueRecalcMilestoneByID(opts.Issue.MilestoneID); err != nil {
 			return err
 		}
 
