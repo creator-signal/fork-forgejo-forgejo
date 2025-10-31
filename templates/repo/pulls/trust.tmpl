@@ -6,7 +6,6 @@ Template Attributes:
 * PullRequestPosterIsNotTrustedWithActions: true if the poster of the pull request needs to be approved to run actions
 * PullRequestPosterIsExplicitlyTrustedWithActions: true if the poster of the pull request is trusted to run actions (once or always)
 * PullRequestPosterIsImplicitlyTrustedWithActions: true if the poster of the pull request is trusted to run actions because of elevated permissions
-* CsrfTokenHtml: CSRF to be used in forms
 * Link: URL to the pull request
 */}}
 
@@ -20,7 +19,6 @@ Template Attributes:
 				</div>
 				<div class="item-section-right">
 					<form id="pull-request-trust-panel-revoke" class="ui form" method="post" action="{{.Link}}/action-user-trust">
-						{{.CsrfTokenHtml}}
 						<input type="hidden" name="trust" value="revoke">
 						<button class="ui primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke"}}</button>
 					</form>
@@ -39,21 +37,18 @@ Template Attributes:
 					<div class="item-section-right">
 						<div class="tw-inline-block">
 							<form id="pull-request-trust-panel-deny" class="ui form" method="post" action="{{.Link}}/action-user-trust">
-								{{.CsrfTokenHtml}}
 								<input type="hidden" name="trust" value="deny">
 								<button class="ui primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_deny.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_deny"}}</button>
 							</form>
 						</div>
 						<div class="tw-inline-block">
 							<form id="pull-request-trust-panel-once" class="ui form" method="post" action="{{.Link}}/action-user-trust">
-								{{.CsrfTokenHtml}}
 								<input type="hidden" name="trust" value="once">
 								<button class="ui primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_once.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_once"}}</button>
 							</form>
 						</div>
 						<div class="tw-inline-block">
 							<form id="pull-request-trust-panel-always" class="ui form" method="post" action="{{.Link}}/action-user-trust">
-								{{.CsrfTokenHtml}}
 								<input type="hidden" name="trust" value="always">
 								<button class="ui primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_always.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_always"}}</button>
 							</form>
