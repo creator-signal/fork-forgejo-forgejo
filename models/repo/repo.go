@@ -143,12 +143,6 @@ type Repository struct {
 	NumWatches          int
 	NumStars            int
 	NumForks            int
-	NumIssues           int
-	NumClosedIssues     int
-	NumOpenIssues       int `xorm:"-"`
-	NumPulls            int
-	NumClosedPulls      int
-	NumOpenPulls        int `xorm:"-"`
 	NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
 	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
 	NumOpenMilestones   int `xorm:"-"`
@@ -294,8 +288,6 @@ func (repo *Repository) MarkAsBrokenEmpty() {
 
 // AfterLoad is invoked from XORM after setting the values of all fields of this object.
 func (repo *Repository) AfterLoad() {
-	repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
-	repo.NumOpenPulls = repo.NumPulls - repo.NumClosedPulls
 	repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 	repo.NumOpenProjects = repo.NumProjects - repo.NumClosedProjects
 	repo.NumOpenActionRuns = repo.NumActionRuns - repo.NumClosedActionRuns
@@ -919,28 +911,8 @@ func CountRepositories(ctx context.Context, opts CountRepositoryOptions) (int64,
 
 // UpdateRepoIssueNumbers updates one of a repositories amount of (open|closed) (issues|PRs) with the current count
 func UpdateRepoIssueNumbers(ctx context.Context, repoID int64, isPull, isClosed bool) error {
-	field := "num_"
-	if isClosed {
-		field += "closed_"
-	}
-	if isPull {
-		field += "pulls"
-	} else {
-		field += "issues"
-	}
-
-	subQuery := builder.Select("count(*)").
-		From("issue").Where(builder.Eq{
-		"repo_id": repoID,
-		"is_pull": isPull,
-	}.And(builder.If(isClosed, builder.Eq{"is_closed": isClosed})))
-
-	// builder.Update(cond) will generate SQL like UPDATE ... SET cond
-	query := builder.Update(builder.Eq{field: subQuery}).
-		From("repository").
-		Where(builder.Eq{"id": repoID})
-	_, err := db.Exec(ctx, query)
-	return err
+	// FIXME: invalidate the caches
+	return nil
 }
 
 // CountNullArchivedRepository counts the number of repositories with is_archived is null
@@ -961,4 +933,34 @@ func UpdateRepositoryOwnerName(ctx context.Context, oldUserName, newUserName str
 		return fmt.Errorf("change repo owner name: %w", err)
 	}
 	return nil
+}
+
+func (repo *Repository) NumIssues(ctx context.Context) int {
+	// FIXME: implement the count
+	return 0
+}
+
+func (repo *Repository) NumClosedIssues(ctx context.Context) int {
+	// FIXME: implement the count
+	return 0
+}
+
+func (repo *Repository) NumOpenIssues(ctx context.Context) int {
+	// FIXME: implement the count
+	return 0
+}
+
+func (repo *Repository) NumPulls(ctx context.Context) int {
+	// FIXME: implement the count
+	return 0
+}
+
+func (repo *Repository) NumClosedPulls(ctx context.Context) int {
+	// FIXME: implement the count
+	return 0
+}
+
+func (repo *Repository) NumOpenPulls(ctx context.Context) int {
+	// FIXME: implement the count
+	return 0
 }
