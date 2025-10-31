@@ -18,6 +18,7 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/cache"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
@@ -909,12 +910,6 @@ func CountRepositories(ctx context.Context, opts CountRepositoryOptions) (int64,
 	return count, nil
 }
 
-// UpdateRepoIssueNumbers updates one of a repositories amount of (open|closed) (issues|PRs) with the current count
-func UpdateRepoIssueNumbers(ctx context.Context, repoID int64, isPull, isClosed bool) error {
-	// FIXME: invalidate the caches
-	return nil
-}
-
 // CountNullArchivedRepository counts the number of repositories with is_archived is null
 func CountNullArchivedRepository(ctx context.Context) (int64, error) {
 	return db.GetEngine(ctx).Where(builder.IsNull{"is_archived"}).Count(new(Repository))
@@ -935,32 +930,76 @@ func UpdateRepositoryOwnerName(ctx context.Context, oldUserName, newUserName str
 	return nil
 }
 
+type repoCacheKeyBase string
+
+const (
+	countIssues       = repoCacheKeyBase("CountIssues")
+	countIssuesClosed = repoCacheKeyBase("CountIssuesClosed")
+	countPulls        = repoCacheKeyBase("CountPulls")
+	countPullsClosed  = repoCacheKeyBase("CountPullsClosed")
+)
+
+func repoCacheKey(cacheKeyBase repoCacheKeyBase, repoID int64) string {
+	return fmt.Sprintf("Repo:%s:%d", cacheKeyBase, repoID)
+}
+
+func (repo *Repository) cacheIssueCount(ctx context.Context, cacheKeyBase repoCacheKeyBase, cond builder.Cond) int {
+	num, err := cache.GetInt(repoCacheKey(cacheKeyBase, repo.ID), func() (int, error) {
+		cond = builder.Eq{"repo_id": repo.ID}.And(cond)
+		count, err := db.GetEngine(ctx).Table("issue").Where(cond).Count() // can't use &issues.Issue{}; cyclical import
+		if err != nil {
+			return 0, fmt.Errorf("query error: %v", err)
+		}
+		return int(count), nil
+	})
+	if err != nil {
+		log.Error("failed to retrieve NumIssues: %v", err)
+		return 0
+	}
+	return num
+}
+
 func (repo *Repository) NumIssues(ctx context.Context) int {
-	// FIXME: implement the count
-	return 0
+	return repo.cacheIssueCount(ctx, countIssues, builder.Eq{"is_pull": false})
 }
 
 func (repo *Repository) NumClosedIssues(ctx context.Context) int {
-	// FIXME: implement the count
-	return 0
+	return repo.cacheIssueCount(ctx, countIssuesClosed, builder.Eq{"is_pull": false, "is_closed": true})
 }
 
 func (repo *Repository) NumOpenIssues(ctx context.Context) int {
-	// FIXME: implement the count
-	return 0
+	return repo.NumIssues(ctx) - repo.NumClosedIssues(ctx)
 }
 
 func (repo *Repository) NumPulls(ctx context.Context) int {
-	// FIXME: implement the count
-	return 0
+	return repo.cacheIssueCount(ctx, countPulls, builder.Eq{"is_pull": true})
 }
 
 func (repo *Repository) NumClosedPulls(ctx context.Context) int {
-	// FIXME: implement the count
-	return 0
+	return repo.cacheIssueCount(ctx, countPullsClosed, builder.Eq{"is_pull": true, "is_closed": true})
 }
 
 func (repo *Repository) NumOpenPulls(ctx context.Context) int {
-	// FIXME: implement the count
-	return 0
+	return repo.NumPulls(ctx) - repo.NumClosedPulls(ctx)
+}
+
+// UpdateRepoIssueNumbers triggers a recalculation of the number of (open|closed) (issues|PRs) on a repo.  It
+// invalidates a cache which will cause this value to be calculated when accessed.
+func UpdateRepoIssueNumbers(ctx context.Context, repoID int64, isPull, isClosed bool) error {
+	var cacheKeyBase repoCacheKeyBase
+	if isPull {
+		if isClosed {
+			cacheKeyBase = countPullsClosed
+		} else {
+			cacheKeyBase = countPulls
+		}
+	} else {
+		if isClosed {
+			cacheKeyBase = countIssuesClosed
+		} else {
+			cacheKeyBase = countIssues
+		}
+	}
+	cache.Remove(repoCacheKey(cacheKeyBase, repoID))
+	return nil
 }
