@@ -77,8 +77,9 @@ func updateTrusted(ctx context.Context, pr *issues_model.PullRequest, trusted Us
 			return err
 		}
 		return actions_model.DeleteActionUserByUserIDAndRepoID(ctx, pr.Issue.Poster.ID, pr.Issue.Repo.ID)
+	default:
+		return fmt.Errorf("updateTrusted: unknown trust %v", trusted)
 	}
-	return nil
 }
 
 func SetRunTrustForPullRequest(ctx context.Context, run *actions_model.ActionRun, pr *issues_model.PullRequest) error {
