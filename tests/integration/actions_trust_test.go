@@ -30,20 +30,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func actionsTrustTestClickTrustPanel(t *testing.T, session *TestSession, url, trust string) {
+func actionsTrustTestClickTrustPanel(t *testing.T, session *TestSession, url string, trust actions_service.UserTrust) {
 	// an admin approves the run once
 	req := NewRequest(t, "GET", url)
 	resp := session.MakeRequest(t, req, http.StatusOK)
 	htmlDoc := NewHTMLParser(t, resp.Body)
 
 	htmlDoc.AssertElement(t, "#pull-request-trust-panel", true)
-	link, exists := htmlDoc.doc.Find("#pull-request-trust-panel-" + trust).Attr("action")
+	link, exists := htmlDoc.doc.Find("#pull-request-trust-panel-" + string(trust)).Attr("action")
 	require.True(t, exists)
 	actualTrust, exists := htmlDoc.doc.Find(fmt.Sprintf("#pull-request-trust-panel-%s input[name='trust']", trust)).Attr("value")
 	require.True(t, exists)
 	require.Equal(t, trust, actualTrust)
 	req = NewRequestWithValues(t, "POST", link, map[string]string{
-		"trust": trust,
+		"trust": string(trust),
 		"_csrf": htmlDoc.GetCSRF(),
 	})
 	session.MakeRequest(t, req, http.StatusSeeOther)

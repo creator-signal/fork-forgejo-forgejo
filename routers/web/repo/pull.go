@@ -1997,7 +1997,7 @@ func UpdateTrustWithPullRequestActions(ctx *context.Context) {
 
 	trust := ctx.FormString("trust")
 
-	if err := actions_service.UpdateTrustedWithPullRequest(ctx, ctx.Doer.ID, pr, trust); err != nil {
+	if err := actions_service.UpdateTrustedWithPullRequest(ctx, ctx.Doer.ID, pr, actions_service.UserTrust(trust)); err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
 	}

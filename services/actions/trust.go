@@ -16,11 +16,13 @@ import (
 	"forgejo.org/modules/log"
 )
 
+type UserTrust string
+
 const (
-	UserTrustDenied   = "deny"
-	UserAlwaysTrusted = "always"
-	UserTrustedOnce   = "once"
-	UserTrustRevoked  = "revoke"
+	UserTrustDenied   = UserTrust("deny")
+	UserAlwaysTrusted = UserTrust("always")
+	UserTrustedOnce   = UserTrust("once")
+	UserTrustRevoked  = UserTrust("revoke")
 )
 
 func CleanupActionUser(ctx context.Context) error {
@@ -39,7 +41,7 @@ func loadPullRequestAttributes(ctx context.Context, pr *issues_model.PullRequest
 	return pr.Issue.LoadPoster(ctx)
 }
 
-func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_model.PullRequest, trusted string) error {
+func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_model.PullRequest, trusted UserTrust) error {
 	if err := updateTrusted(ctx, pr, trusted); err != nil {
 		return err
 	}
@@ -54,7 +56,7 @@ func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_
 	}
 }
 
-func updateTrusted(ctx context.Context, pr *issues_model.PullRequest, trusted string) error {
+func updateTrusted(ctx context.Context, pr *issues_model.PullRequest, trusted UserTrust) error {
 	switch trusted {
 	case UserTrustedOnce:
 		return nil
