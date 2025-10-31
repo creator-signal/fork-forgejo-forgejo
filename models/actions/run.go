@@ -227,21 +227,29 @@ func updateRepoRunsNumbers(ctx context.Context, repo *repo_model.Repository) err
 	return err
 }
 
+func condRunsThatNeedApproval(repoID, pullRequestID int64) builder.Cond {
+	// performance relies indexes on repo_id and pull_request_id
+	cond := builder.NewCond()
+	cond = cond.And(builder.Eq{"repo_id": repoID})
+	cond = cond.And(builder.Eq{"pull_request_id": pullRequestID})
+	cond = cond.And(builder.Eq{"need_approval": true})
+	return cond
+}
+
 func GetRunsThatNeedApproval(ctx context.Context, repoID, pullRequestID int64) ([]*ActionRun, error) {
 	var runs []*ActionRun
-	// performance relies indexes on repo_id and pull_request_id
-	if err := db.GetEngine(ctx).Where("repo_id=? AND pull_request_id=? AND need_approval=?", repoID, pullRequestID, true).Find(&runs); err != nil {
+	if err := db.GetEngine(ctx).Where(condRunsThatNeedApproval(repoID, pullRequestID)).Find(&runs); err != nil {
 		return nil, err
 	}
 	return runs, nil
 }
 
 func HasRunThatNeedApproval(ctx context.Context, repoID, pullRequestID int64) (bool, error) {
-	runs, err := GetRunsThatNeedApproval(ctx, repoID, pullRequestID)
+	count, err := db.GetEngine(ctx).Where(condRunsThatNeedApproval(repoID, pullRequestID)).Count(&ActionRun{})
 	if err != nil {
 		return false, err
 	}
-	return len(runs) > 0, nil
+	return count > 0, nil
 }
 
 func UpdateRunApprovalByID(ctx context.Context, id int64, approval bool, approvedBy int64) error {
