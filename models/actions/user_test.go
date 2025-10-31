@@ -80,7 +80,7 @@ func TestActionUser_RevokeInactiveActionUser(t *testing.T) {
 
 	t.Run("used not updated too frequently", func(t *testing.T) {
 		time.Sleep(2 * time.Second)
-		usedActionUser, err := GetActionUserByUserIDAndRepoID(t.Context(), user.ID, repo.ID)
+		usedActionUser, err := GetActionUserByUserIDAndRepoIDAndUpdateAccess(t.Context(), user.ID, repo.ID)
 		require.NoError(t, err)
 		require.Equal(t, actionUser.ID, usedActionUser.ID)
 		assert.Equal(t, usedActionUser.LastAccess, actionUser.LastAccess)
@@ -90,7 +90,7 @@ func TestActionUser_RevokeInactiveActionUser(t *testing.T) {
 
 	t.Run("not revoked because it was recently used", func(t *testing.T) {
 		time.Sleep(2 * time.Second)
-		usedActionUser, err := GetActionUserByUserIDAndRepoID(t.Context(), user.ID, repo.ID)
+		usedActionUser, err := GetActionUserByUserIDAndRepoIDAndUpdateAccess(t.Context(), user.ID, repo.ID)
 		require.NoError(t, err)
 		require.Equal(t, actionUser.ID, usedActionUser.ID)
 		assert.Greater(t, usedActionUser.LastAccess, actionUser.LastAccess)

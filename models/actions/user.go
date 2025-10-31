@@ -54,6 +54,20 @@ func DeleteActionUserByUserIDAndRepoID(ctx context.Context, userID, repoID int64
 
 var updateFrequency = 24 * time.Hour
 
+func MaybeUpdateAccess(ctx context.Context, user *ActionUser) error {
+	// Keep track of the last time the record was accessed to identify which one
+	// are never accessed so they can be removed eventually. But only every updateFrequency
+	// to not stress the underlying database.
+	if timeutil.TimeStampNow() > user.LastAccess.AddDuration(updateFrequency) {
+		user.LastAccess = timeutil.TimeStampNow()
+		if _, err := db.GetEngine(ctx).ID(user.ID).Cols("last_access").Update(user); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func GetActionUserByUserIDAndRepoID(ctx context.Context, userID, repoID int64) (*ActionUser, error) {
 	user := new(ActionUser)
 	has, err := db.GetEngine(ctx).Where("user_id=? AND repo_id=?", userID, repoID).Get(user)
@@ -62,18 +76,15 @@ func GetActionUserByUserIDAndRepoID(ctx context.Context, userID, repoID int64) (
 	} else if !has {
 		return nil, ErrUserNotExist{userID, repoID}
 	}
-
-	// Keep track of the last time the record was accessed to identify which one
-	// are never accessed so they can be removed eventually. But only every updateFrequency
-	// to not stress the underlying database.
-	if timeutil.TimeStampNow() > user.LastAccess.AddDuration(updateFrequency) {
-		user.LastAccess = timeutil.TimeStampNow()
-		if _, err := db.GetEngine(ctx).ID(user.ID).Cols("last_access").Update(user); err != nil {
-			return nil, err
-		}
-	}
-
 	return user, nil
+}
+
+func GetActionUserByUserIDAndRepoIDAndUpdateAccess(ctx context.Context, userID, repoID int64) (*ActionUser, error) {
+	user, err := GetActionUserByUserIDAndRepoID(ctx, userID, repoID)
+	if err != nil {
+		return nil, err
+	}
+	return user, MaybeUpdateAccess(ctx, user)
 }
 
 var expire = 3 * 30 * 24 * time.Hour

@@ -186,7 +186,7 @@ func posterIsExplicitlyTrustedWithPullRequest(ctx context.Context, pr *issues_mo
 		return false, nil
 	}
 
-	user, err := actions_model.GetActionUserByUserIDAndRepoID(ctx, pr.Issue.Poster.ID, pr.Issue.Repo.ID)
+	user, err := actions_model.GetActionUserByUserIDAndRepoIDAndUpdateAccess(ctx, pr.Issue.Poster.ID, pr.Issue.Repo.ID)
 	if err != nil {
 		log.Trace("%v is not expliclty trusted with pull requests on repository %v", pr.Issue.Poster, pr.Issue.Repo)
 		if actions_model.IsErrUserNotExist(err) {
