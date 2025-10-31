@@ -56,7 +56,7 @@
     "relativetime.2months": "two months ago",
     "relativetime.1year": "last year",
     "relativetime.2years": "two years ago",
-    "repo.pulls.poster_manage_approval": "Manage approval for this pull request",
+    "repo.pulls.poster_manage_approval": "Manage approval",
     "repo.pulls.poster_requires_approval": "Some workflows <a href=\"%[1]s\">need to be approved</a>.",
     "repo.pulls.poster_requires_approval.tooltip": "The author of this pull request is not trusted to run workflows triggered by a pull request created from a forked repository or with AGit. The workflows triggered by a `pull_request` event will not run until they are approved.",
     "repo.pulls.poster_is_trusted": "The author of this pull request is <a href=\"%[1]s\">always trusted to run workflows</a>.",
