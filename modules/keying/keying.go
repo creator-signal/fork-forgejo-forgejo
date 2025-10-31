@@ -60,6 +60,8 @@ var (
 	ContextTOTP Context = "totp"
 	// Used for the `secret` table.
 	ContextActionSecret Context = "action_secret"
+	// Used for the `task` table where type == TaskTypeMigrateRepo.
+	ContextMigrateTask Context = "migrate_repo_task"
 )
 
 // Derive *the* key for a given context, this is a deterministic function.
