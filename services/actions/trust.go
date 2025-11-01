@@ -115,7 +115,7 @@ func ifNeedApproval(ctx context.Context, run *actions_model.ActionRun, pr *issue
 		return false, nil
 	}
 
-	trusted, err := LoadPullRequestPosterIsTrustedWithActions(ctx, pr)
+	trusted, err := GetPullRequestPosterIsTrustedWithActions(ctx, pr)
 	if err != nil {
 		return false, err
 	}
@@ -131,7 +131,7 @@ const (
 	PosterIsImplicitlyTrustedWithActions = PosterTrust("implicitly")
 )
 
-func LoadPullRequestPosterIsTrustedWithActions(ctx context.Context, pr *issues_model.PullRequest) (PosterTrust, error) {
+func GetPullRequestPosterIsTrustedWithActions(ctx context.Context, pr *issues_model.PullRequest) (PosterTrust, error) {
 	if err := loadPullRequestAttributes(ctx, pr); err != nil {
 		return "", err
 	}

@@ -191,7 +191,7 @@ func TestActionsTrust_LoadPullRequest(t *testing.T) {
 
 	t.Run("implicitly trusted because the pull request is not from a fork", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 2000})
-		trust, err := LoadPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
 		pr.LoadAttributes(t.Context())
 		require.False(t, pr.IsForkPullRequest())
@@ -200,7 +200,7 @@ func TestActionsTrust_LoadPullRequest(t *testing.T) {
 
 	t.Run("implicitly trusted because the poster of a forked pull request is admin", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3000})
-		trust, err := LoadPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
 		pr.LoadAttributes(t.Context())
 		require.True(t, pr.IsForkPullRequest())
@@ -210,7 +210,7 @@ func TestActionsTrust_LoadPullRequest(t *testing.T) {
 
 	t.Run("explicitly trusted because the poster of a forked pull request is trusted", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1000})
-		trust, err := LoadPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
 		pr.LoadAttributes(t.Context())
 		require.True(t, pr.IsForkPullRequest())
@@ -221,7 +221,7 @@ func TestActionsTrust_LoadPullRequest(t *testing.T) {
 
 	t.Run("explicitly trusted because the poster of a forked pull request was permanently approved", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1000})
-		trust, err := LoadPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
 		pr.LoadAttributes(t.Context())
 		require.True(t, pr.IsForkPullRequest())
@@ -232,7 +232,7 @@ func TestActionsTrust_LoadPullRequest(t *testing.T) {
 
 	t.Run("not trusted because the poster of a forked pull request has no privileges", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 4000})
-		trust, err := LoadPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
 		pr.LoadAttributes(t.Context())
 		require.True(t, pr.IsForkPullRequest())
@@ -241,7 +241,7 @@ func TestActionsTrust_LoadPullRequest(t *testing.T) {
 
 	t.Run("not trusted because the poster of a forked pull request is restricted", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 5000})
-		trust, err := LoadPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
 		pr.LoadAttributes(t.Context())
 		require.True(t, pr.IsForkPullRequest())

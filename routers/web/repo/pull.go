@@ -1966,7 +1966,7 @@ func PrepareViewPullInfoActions(ctx *context.Context, pull *issues_model.PullReq
 }
 
 func PrepareViewPullInfoActionsTrust(ctx *context.Context, pull *issues_model.PullRequest) {
-	trusted, err := actions_service.LoadPullRequestPosterIsTrustedWithActions(ctx, pull)
+	trusted, err := actions_service.GetPullRequestPosterIsTrustedWithActions(ctx, pull)
 	if err != nil {
 		ctx.ServerError("LoadPullRquestPosterIsTrustedWithActions", err)
 		return
