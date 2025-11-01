@@ -167,8 +167,7 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		case token.Term == "is:all":
 			o.IsClosed = optional.None[bool]()
 
-		// [-]sort:<by>,
-		// for example, sort:created / -sort:comments
+		// sort:<by>:[ asc | desc ],
 		case token.IsOf("sort:"):
 			o.SortBy = parseSortBy(token.Term[5:])
 

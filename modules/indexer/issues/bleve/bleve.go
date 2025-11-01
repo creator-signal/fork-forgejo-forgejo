@@ -157,32 +157,30 @@ func (b *Indexer) Delete(_ context.Context, ids ...int64) error {
 func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (*internal.SearchResult, error) {
 	q := bleve.NewBooleanQuery()
 
-	if len(options.Tokens) != 0 {
-		for _, token := range options.Tokens {
-			innerQ := bleve.NewDisjunctionQuery(
-				inner_bleve.MatchPhraseQuery(token.Term, "title", issueIndexerAnalyzer, token.Fuzzy, 2.0),
-				inner_bleve.MatchPhraseQuery(token.Term, "content", issueIndexerAnalyzer, token.Fuzzy, 1.0),
-				inner_bleve.MatchPhraseQuery(token.Term, "comments", issueIndexerAnalyzer, token.Fuzzy, 1.0))
+	for _, token := range options.Tokens {
+		innerQ := bleve.NewDisjunctionQuery(
+			inner_bleve.MatchPhraseQuery(token.Term, "title", issueIndexerAnalyzer, token.Fuzzy, 2.0),
+			inner_bleve.MatchPhraseQuery(token.Term, "content", issueIndexerAnalyzer, token.Fuzzy, 1.0),
+			inner_bleve.MatchPhraseQuery(token.Term, "comments", issueIndexerAnalyzer, token.Fuzzy, 1.0))
 
-			if issueID, err := token.ParseIssueReference(); err == nil {
-				idQuery := inner_bleve.NumericEqualityQuery(issueID, "index")
-				idQuery.SetBoost(20.0)
-				innerQ.AddQuery(idQuery)
-			}
+		if issueID, err := token.ParseIssueReference(); err == nil {
+			idQuery := inner_bleve.NumericEqualityQuery(issueID, "index")
+			idQuery.SetBoost(20.0)
+			innerQ.AddQuery(idQuery)
+		}
 
-			if len(options.Tokens) == 1 {
-				q.AddMust(innerQ)
-				break
-			}
+		if len(options.Tokens) == 1 {
+			q.AddMust(innerQ)
+			break
+		}
 
-			switch token.Kind {
-			case internal.BoolOptMust:
-				q.AddMust(innerQ)
-			case internal.BoolOptShould:
-				q.AddShould(innerQ)
-			case internal.BoolOptNot:
-				q.AddMustNot(innerQ)
-			}
+		switch token.Kind {
+		case internal.BoolOptMust:
+			q.AddMust(innerQ)
+		case internal.BoolOptShould:
+			q.AddShould(innerQ)
+		case internal.BoolOptNot:
+			q.AddMustNot(innerQ)
 		}
 	}
 	// TODO: replace with following with filters

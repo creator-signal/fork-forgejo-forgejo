@@ -62,8 +62,8 @@ func (i *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 
 		for _, token := range options.Tokens {
 			cond = builder.Or(
-				db.BuildCaseInsensitiveLike("issue.name", options.Tokens[0].Term),
-				db.BuildCaseInsensitiveLike("issue.content", options.Tokens[0].Term),
+				db.BuildCaseInsensitiveLike("issue.name", token.Term),
+				db.BuildCaseInsensitiveLike("issue.content", token.Term),
 				builder.In("issue.id", builder.Select("issue_id").
 					From("comment").
 					Where(builder.And(
