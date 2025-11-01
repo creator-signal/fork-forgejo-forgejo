@@ -183,9 +183,8 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 			q.AddMustNot(innerQ)
 		}
 	}
-	// TODO: replace with following with filters
-	// https://github.com/blevesearch/bleve/pull/2220
 
+	var filters []query.Query
 	if len(options.RepoIDs) > 0 || options.AllPublic {
 		var repoQueries []query.Query
 		for _, repoID := range options.RepoIDs {
@@ -194,7 +193,7 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		if options.AllPublic {
 			repoQueries = append(repoQueries, inner_bleve.BoolFieldQuery(true, "is_public"))
 		}
-		q.AddMust(bleve.NewDisjunctionQuery(repoQueries...))
+		filters = append(filters, bleve.NewDisjunctionQuery(repoQueries...))
 	}
 
 	if options.PriorityRepoID.Has() {
@@ -206,27 +205,27 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 	}
 
 	if options.IsPull.Has() {
-		q.AddMust(inner_bleve.BoolFieldQuery(options.IsPull.Value(), "is_pull"))
+		filters = append(filters, inner_bleve.BoolFieldQuery(options.IsPull.Value(), "is_pull"))
 	}
 	if options.IsClosed.Has() {
-		q.AddMust(inner_bleve.BoolFieldQuery(options.IsClosed.Value(), "is_closed"))
+		filters = append(filters, inner_bleve.BoolFieldQuery(options.IsClosed.Value(), "is_closed"))
 	}
 
 	if options.NoLabelOnly {
-		q.AddMust(inner_bleve.BoolFieldQuery(true, "no_label"))
+		filters = append(filters, inner_bleve.BoolFieldQuery(true, "no_label"))
 	} else {
 		if len(options.IncludedLabelIDs) > 0 {
 			var includeQueries []query.Query
 			for _, labelID := range options.IncludedLabelIDs {
 				includeQueries = append(includeQueries, inner_bleve.NumericEqualityQuery(labelID, "label_ids"))
 			}
-			q.AddMust(includeQueries...)
+			filters = append(filters, includeQueries...)
 		} else if len(options.IncludedAnyLabelIDs) > 0 {
 			var includeQueries []query.Query
 			for _, labelID := range options.IncludedAnyLabelIDs {
 				includeQueries = append(includeQueries, inner_bleve.NumericEqualityQuery(labelID, "label_ids"))
 			}
-			q.AddMust(bleve.NewDisjunctionQuery(includeQueries...))
+			filters = append(filters, bleve.NewDisjunctionQuery(includeQueries...))
 		}
 		if len(options.ExcludedLabelIDs) > 0 {
 			for _, labelID := range options.ExcludedLabelIDs {
@@ -240,7 +239,7 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		for _, milestoneID := range options.MilestoneIDs {
 			milestoneQueries = append(milestoneQueries, inner_bleve.NumericEqualityQuery(milestoneID, "milestone_id"))
 		}
-		q.AddMust(bleve.NewDisjunctionQuery(milestoneQueries...))
+		filters = append(filters, bleve.NewDisjunctionQuery(milestoneQueries...))
 	}
 
 	for key, val := range map[string]optional.Option[int64]{
@@ -254,19 +253,27 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		"subscriber_ids":       options.SubscriberID,
 	} {
 		if val.Has() {
-			q.AddMust(inner_bleve.NumericEqualityQuery(val.Value(), key))
+			filters = append(filters, inner_bleve.NumericEqualityQuery(val.Value(), key))
 		}
 	}
 
 	if options.UpdatedAfterUnix.Has() || options.UpdatedBeforeUnix.Has() {
-		q.AddMust(inner_bleve.NumericRangeInclusiveQuery(
+		filters = append(filters, inner_bleve.NumericRangeInclusiveQuery(
 			options.UpdatedAfterUnix,
 			options.UpdatedBeforeUnix,
 			"updated_unix"))
 	}
 
+	switch len(filters) {
+	case 0:
+		break
+	case 1:
+		q.Filter = filters[0]
+	default:
+		q.Filter = bleve.NewConjunctionQuery(filters...)
+	}
 	var indexerQuery query.Query = q
-	if q.Must == nil && q.MustNot == nil && q.Should == nil {
+	if q.Must == nil && q.MustNot == nil && q.Should == nil && len(filters) == 0 {
 		indexerQuery = bleve.NewMatchAllQuery()
 	}
 
