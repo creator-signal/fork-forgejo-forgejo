@@ -6,7 +6,6 @@ package activities
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strconv"
 
 	"forgejo.org/models/db"
@@ -57,8 +56,7 @@ type Notification struct {
 	Status NotificationStatus `xorm:"SMALLINT INDEX NOT NULL"`
 	Source NotificationSource `xorm:"SMALLINT INDEX NOT NULL"`
 
-	IssueID   int64  `xorm:"INDEX NOT NULL"`
-	CommitID  string `xorm:"INDEX"`
+	IssueID   int64 `xorm:"INDEX NOT NULL"`
 	CommentID int64
 
 	UpdatedBy int64 `xorm:"INDEX NOT NULL"`
@@ -242,8 +240,6 @@ func (n *Notification) HTMLURL(ctx context.Context) string {
 			return n.Comment.HTMLURL(ctx)
 		}
 		return n.Issue.HTMLURL()
-	case NotificationSourceCommit:
-		return n.Repository.HTMLURL() + "/commit/" + url.PathEscape(n.CommitID)
 	case NotificationSourceRepository:
 		return n.Repository.HTMLURL()
 	}
@@ -258,8 +254,6 @@ func (n *Notification) Link(ctx context.Context) string {
 			return n.Comment.Link(ctx)
 		}
 		return n.Issue.Link()
-	case NotificationSourceCommit:
-		return n.Repository.Link() + "/commit/" + url.PathEscape(n.CommitID)
 	case NotificationSourceRepository:
 		return n.Repository.Link()
 	}
