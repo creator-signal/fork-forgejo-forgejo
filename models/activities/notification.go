@@ -64,7 +64,7 @@ type Notification struct {
 	Comment    *issues_model.Comment  `xorm:"-"`
 	User       *user_model.User       `xorm:"-"`
 
-	CreatedUnix timeutil.TimeStamp `xorm:"created INDEX NOT NULL"`
+	CreatedUnix timeutil.TimeStamp `xorm:"created NOT NULL"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"updated INDEX NOT NULL"`
 }
 
