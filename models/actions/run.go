@@ -236,7 +236,7 @@ func condRunsThatNeedApproval(repoID, pullRequestID int64) builder.Cond {
 	return cond
 }
 
-func GetRunsThatNeedApproval(ctx context.Context, repoID, pullRequestID int64) ([]*ActionRun, error) {
+func GetRunsThatNeedApprovalByRepoIDAndPullRequestID(ctx context.Context, repoID, pullRequestID int64) ([]*ActionRun, error) {
 	var runs []*ActionRun
 	if err := db.GetEngine(ctx).Where(condRunsThatNeedApproval(repoID, pullRequestID)).Find(&runs); err != nil {
 		return nil, err

@@ -93,7 +93,7 @@ func BlockUser(ctx context.Context, userID, blockID int64) error {
 	}
 
 	err = db.Iterate(ctx, builder.Eq{"owner_id": userID}, func(ctx context.Context, repo *repo_model.Repository) error {
-		return actions_service.RevokeTrustByRepoIDAndPosterID(ctx, repo.ID, blockID)
+		return actions_service.RevokeTrust(ctx, repo.ID, blockID)
 	})
 	if err != nil {
 		return err

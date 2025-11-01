@@ -199,7 +199,7 @@ func TestActionRun_NeedApproval(t *testing.T) {
 	}
 
 	t.Run("GetRunsThatNeedApproval", func(t *testing.T) {
-		runs, err := GetRunsThatNeedApproval(t.Context(), repoID, pullRequestID)
+		runs, err := GetRunsThatNeedApprovalByRepoIDAndPullRequestID(t.Context(), repoID, pullRequestID)
 		require.NoError(t, err)
 		require.Len(t, runs, 1)
 		assertApprovalEqual(t, runNeedApproval, runs[0])

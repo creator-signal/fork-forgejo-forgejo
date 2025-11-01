@@ -42,7 +42,7 @@ func TestActionsTrust_ChangeStatus(t *testing.T) {
 	}
 	require.NoError(t, actions_model.InsertRun(t.Context(), runNotInTheSameRepository, nil))
 
-	t.Run("RevokeTrustByRepoIDAndPosterID", func(t *testing.T) {
+	t.Run("RevokeTrust", func(t *testing.T) {
 		singleWorkflows, err := actions_module.JobParser([]byte(`
 jobs:
   job:
@@ -69,7 +69,7 @@ jobs:
 		_, err = actions_model.GetActionUserByUserIDAndRepoIDAndUpdateAccess(t.Context(), pullRequestPosterID, repoID)
 		require.NoError(t, err)
 
-		require.NoError(t, RevokeTrustByRepoIDAndPosterID(t.Context(), repoID, pullRequestPosterID))
+		require.NoError(t, RevokeTrust(t.Context(), repoID, pullRequestPosterID))
 
 		_, err = actions_model.GetActionUserByUserIDAndRepoIDAndUpdateAccess(t.Context(), pullRequestPosterID, repoID)
 		assert.True(t, actions_model.IsErrUserNotExist(err))
@@ -108,12 +108,7 @@ jobs:
 
 		previousCancelledCount := unittest.GetCount(t, &actions_model.ActionRun{Status: actions_model.StatusCancelled})
 
-		require.NoError(t, PullRequestCancel(t.Context(), &issues_model.PullRequest{
-			ID: pullRequestID,
-			Issue: &issues_model.Issue{
-				RepoID: repoID,
-			},
-		}))
+		require.NoError(t, PullRequestCancel(t.Context(), repoID, pullRequestID))
 
 		currentCancelledCount := unittest.GetCount(t, &actions_model.ActionRun{Status: actions_model.StatusCancelled})
 		assert.Equal(t, previousCancelledCount+1, currentCancelledCount)
@@ -121,7 +116,7 @@ jobs:
 		assert.Equal(t, actions_model.StatusCancelled.String(), run.Status.String())
 	})
 
-	t.Run("UpdateTrustedWithPullRequest not trusted", func(t *testing.T) {
+	t.Run("UpdateTrustedWithPullRequest deny", func(t *testing.T) {
 		pullRequestID := int64(485)
 		runNotApproved := createPullRequestRun(t, pullRequestID, repoID)
 
@@ -147,12 +142,7 @@ jobs:
 		previousWaitingCount := unittest.GetCount(t, &actions_model.ActionRunJob{Status: actions_model.StatusWaiting})
 
 		doerID := int64(84322)
-		require.NoError(t, PullRequestApprove(t.Context(), doerID, &issues_model.PullRequest{
-			ID: pullRequestID,
-			Issue: &issues_model.Issue{
-				RepoID: repoID,
-			},
-		}))
+		require.NoError(t, PullRequestApprove(t.Context(), doerID, repoID, pullRequestID))
 
 		currentWaitingCount := unittest.GetCount(t, &actions_model.ActionRunJob{Status: actions_model.StatusWaiting})
 		assert.Equal(t, previousWaitingCount+1, currentWaitingCount)
@@ -162,7 +152,7 @@ jobs:
 		assert.False(t, run.NeedApproval)
 	})
 
-	t.Run("UpdateTrustedWithPullRequest trusted", func(t *testing.T) {
+	t.Run("UpdateTrustedWithPullRequest once", func(t *testing.T) {
 		pullRequestID := int64(534)
 		runNotApproved := createPullRequestRun(t, pullRequestID, repoID)
 
@@ -182,6 +172,58 @@ jobs:
 		assert.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
 		assert.Equal(t, doerID, run.ApprovedBy)
 		assert.False(t, run.NeedApproval)
+	})
+
+	t.Run("UpdateTrustedWithPullRequest always", func(t *testing.T) {
+		pullRequestIDs := []int64{534, 645}
+		var runsNotApproved []*actions_model.ActionRun
+		for _, pullRequestID := range pullRequestIDs {
+			runsNotApproved = append(runsNotApproved, createPullRequestRun(t, pullRequestID, repoID))
+		}
+
+		previousWaitingCount := unittest.GetCount(t, &actions_model.ActionRunJob{Status: actions_model.StatusWaiting})
+
+		doerID := int64(84322)
+		require.NoError(t, UpdateTrustedWithPullRequest(t.Context(), doerID, &issues_model.PullRequest{
+			ID: pullRequestIDs[0],
+			Issue: &issues_model.Issue{
+				RepoID:   repoID,
+				PosterID: pullRequestPosterID,
+			},
+		}, UserAlwaysTrusted))
+
+		currentWaitingCount := unittest.GetCount(t, &actions_model.ActionRunJob{Status: actions_model.StatusWaiting})
+		assert.Equal(t, previousWaitingCount+len(pullRequestIDs), currentWaitingCount)
+
+		for _, run := range runsNotApproved {
+			run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})
+			assert.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
+			assert.Equal(t, doerID, run.ApprovedBy)
+			assert.False(t, run.NeedApproval)
+		}
+	})
+
+	t.Run("UpdateTrustedWithPullRequest revoke", func(t *testing.T) {
+		pullRequestIDs := []int64{748, 953}
+		var runsNotApproved []*actions_model.ActionRun
+		for _, pullRequestID := range pullRequestIDs {
+			runsNotApproved = append(runsNotApproved, createPullRequestRun(t, pullRequestID, repoID))
+		}
+
+		doerID := int64(84322)
+		require.NoError(t, UpdateTrustedWithPullRequest(t.Context(), doerID, &issues_model.PullRequest{
+			ID: pullRequestIDs[0],
+			Issue: &issues_model.Issue{
+				RepoID:   repoID,
+				PosterID: pullRequestPosterID,
+			},
+		}, UserTrustRevoked))
+
+		for _, run := range runsNotApproved {
+			run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})
+			assert.Equal(t, actions_model.StatusCancelled.String(), run.Status.String())
+			assert.False(t, run.NeedApproval)
+		}
 	})
 }
 
@@ -293,36 +335,5 @@ func TestActionsTrust_LoadPullRequest(t *testing.T) {
 		assert.True(t, run.IsForkPullRequest)
 		assert.Equal(t, pr.Issue.PosterID, run.PullRequestPosterID)
 		assert.Equal(t, pr.ID, run.PullRequestID)
-	})
-}
-
-func TestActionsTrust_updateTrusted(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
-	require.NoError(t, loadPullRequestAttributes(t.Context(), pr))
-
-	t.Run("UserTrustedOnce", func(t *testing.T) {
-		require.Zero(t, unittest.GetCount(t, &actions_model.ActionUser{UserID: pr.Issue.Poster.ID}))
-		require.NoError(t, updateTrusted(t.Context(), pr, UserTrustedOnce))
-		require.Zero(t, unittest.GetCount(t, &actions_model.ActionUser{UserID: pr.Issue.Poster.ID}))
-	})
-
-	t.Run("UserAlwaysTrusted", func(t *testing.T) {
-		require.Zero(t, unittest.GetCount(t, &actions_model.ActionUser{UserID: pr.Issue.Poster.ID}))
-		require.NoError(t, updateTrusted(t.Context(), pr, UserAlwaysTrusted))
-		require.Equal(t, 1, unittest.GetCount(t, &actions_model.ActionUser{UserID: pr.Issue.Poster.ID}))
-	})
-
-	t.Run("UserTrustRevoked", func(t *testing.T) {
-		require.Equal(t, 1, unittest.GetCount(t, &actions_model.ActionUser{UserID: pr.Issue.Poster.ID}))
-		require.NoError(t, updateTrusted(t.Context(), pr, UserTrustRevoked))
-		require.Zero(t, unittest.GetCount(t, &actions_model.ActionUser{UserID: pr.Issue.Poster.ID}))
-	})
-
-	t.Run("UserTrustDenied", func(t *testing.T) {
-		require.Zero(t, unittest.GetCount(t, &actions_model.ActionUser{UserID: pr.Issue.Poster.ID}))
-		require.NoError(t, updateTrusted(t.Context(), pr, UserTrustDenied))
-		require.Zero(t, unittest.GetCount(t, &actions_model.ActionUser{UserID: pr.Issue.Poster.ID}))
 	})
 }

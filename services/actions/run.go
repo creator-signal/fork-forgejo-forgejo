@@ -47,3 +47,24 @@ func CancelRun(ctx context.Context, run *actions_model.ActionRun) error {
 		return nil
 	})
 }
+
+func ApproveRun(ctx context.Context, run *actions_model.ActionRun, doerID int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
+		if err != nil {
+			return err
+		}
+		for _, job := range jobs {
+			if len(job.Needs) == 0 && job.Status.IsBlocked() {
+				job.Status = actions_model.StatusWaiting
+				_, err := UpdateRunJob(ctx, job, nil, "status")
+				if err != nil {
+					return err
+				}
+			}
+		}
+		CreateCommitStatus(ctx, jobs...)
+
+		return actions_model.UpdateRunApprovalByID(ctx, run.ID, actions_model.DoesNotNeedApproval, doerID)
+	})
+}

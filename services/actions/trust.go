@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	actions_model "forgejo.org/models/actions"
-	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	access_model "forgejo.org/models/perm/access"
 	unit_model "forgejo.org/models/unit"
@@ -43,42 +42,21 @@ func loadPullRequestAttributes(ctx context.Context, pr *issues_model.PullRequest
 
 // cancels or approves runs and keep track of posters that are to always be trusted
 func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_model.PullRequest, trusted UserTrust) error {
-	if err := updateTrusted(ctx, pr, trusted); err != nil {
+	if err := loadPullRequestAttributes(ctx, pr); err != nil {
 		return err
 	}
 
 	switch trusted {
-	case UserAlwaysTrusted, UserTrustedOnce:
-		return PullRequestApprove(ctx, doerID, pr)
-	case UserTrustRevoked, UserTrustDenied:
-		return PullRequestCancel(ctx, pr)
+	case UserAlwaysTrusted:
+		return AlwaysTrust(ctx, doerID, pr.Issue.RepoID, pr.Issue.Poster.ID)
+	case UserTrustedOnce:
+		return PullRequestApprove(ctx, doerID, pr.Issue.RepoID, pr.ID)
+	case UserTrustRevoked:
+		return RevokeTrust(ctx, pr.Issue.RepoID, pr.Issue.Poster.ID)
+	case UserTrustDenied:
+		return PullRequestCancel(ctx, pr.Issue.RepoID, pr.ID)
 	default:
 		return fmt.Errorf("UpdateTrustedWithPullRequest: unknown trust %v", trusted)
-	}
-}
-
-func updateTrusted(ctx context.Context, pr *issues_model.PullRequest, trusted UserTrust) error {
-	switch trusted {
-	case UserTrustedOnce:
-		return nil
-	case UserAlwaysTrusted:
-		if err := loadPullRequestAttributes(ctx, pr); err != nil {
-			return err
-		}
-		return actions_model.InsertActionUser(ctx, &actions_model.ActionUser{
-			UserID:                  pr.Issue.Poster.ID,
-			RepoID:                  pr.Issue.Repo.ID,
-			TrustedWithPullRequests: true,
-		})
-	case UserTrustDenied:
-		return nil
-	case UserTrustRevoked:
-		if err := loadPullRequestAttributes(ctx, pr); err != nil {
-			return err
-		}
-		return actions_model.DeleteActionUserByUserIDAndRepoID(ctx, pr.Issue.Poster.ID, pr.Issue.Repo.ID)
-	default:
-		return fmt.Errorf("updateTrusted: unknown trust %v", trusted)
 	}
 }
 
@@ -205,7 +183,7 @@ func posterIsExplicitlyTrustedWithPullRequest(ctx context.Context, pr *issues_mo
 	return user.TrustedWithPullRequests, nil
 }
 
-func RevokeTrustByRepoIDAndPosterID(ctx context.Context, repoID, posterID int64) error {
+func RevokeTrust(ctx context.Context, repoID, posterID int64) error {
 	if err := actions_model.DeleteActionUserByUserIDAndRepoID(ctx, posterID, repoID); err != nil {
 		return err
 	}
@@ -223,8 +201,30 @@ func RevokeTrustByRepoIDAndPosterID(ctx context.Context, repoID, posterID int64)
 	return nil
 }
 
-func PullRequestCancel(ctx context.Context, pr *issues_model.PullRequest) error {
-	runs, err := actions_model.GetRunsNotDoneByRepoIDAndPullRequestID(ctx, pr.Issue.RepoID, pr.ID)
+func AlwaysTrust(ctx context.Context, doerID, repoID, posterID int64) error {
+	if err := actions_model.InsertActionUser(ctx, &actions_model.ActionUser{
+		UserID:                  posterID,
+		RepoID:                  repoID,
+		TrustedWithPullRequests: true,
+	}); err != nil {
+		return err
+	}
+
+	runs, err := actions_model.GetRunsNotDoneByRepoIDAndPullRequestPosterID(ctx, repoID, posterID)
+	if err != nil {
+		return err
+	}
+
+	for _, run := range runs {
+		if err := ApproveRun(ctx, run, doerID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func PullRequestCancel(ctx context.Context, repoID, pullRequestID int64) error {
+	runs, err := actions_model.GetRunsNotDoneByRepoIDAndPullRequestID(ctx, repoID, pullRequestID)
 	if err != nil {
 		return err
 	}
@@ -237,31 +237,14 @@ func PullRequestCancel(ctx context.Context, pr *issues_model.PullRequest) error 
 	return nil
 }
 
-func PullRequestApprove(ctx context.Context, doerID int64, pr *issues_model.PullRequest) error {
-	runs, err := actions_model.GetRunsThatNeedApproval(ctx, pr.Issue.RepoID, pr.ID)
+func PullRequestApprove(ctx context.Context, doerID, repoID, pullRequestID int64) error {
+	runs, err := actions_model.GetRunsThatNeedApprovalByRepoIDAndPullRequestID(ctx, repoID, pullRequestID)
 	if err != nil {
 		return err
 	}
 
 	for _, run := range runs {
-		if err := db.WithTx(ctx, func(ctx context.Context) error {
-			jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
-			if err != nil {
-				return err
-			}
-			for _, job := range jobs {
-				if len(job.Needs) == 0 && job.Status.IsBlocked() {
-					job.Status = actions_model.StatusWaiting
-					_, err := UpdateRunJob(ctx, job, nil, "status")
-					if err != nil {
-						return err
-					}
-				}
-			}
-			CreateCommitStatus(ctx, jobs...)
-
-			return actions_model.UpdateRunApprovalByID(ctx, run.ID, actions_model.DoesNotNeedApproval, doerID)
-		}); err != nil {
+		if err := ApproveRun(ctx, run, doerID); err != nil {
 			return err
 		}
 	}

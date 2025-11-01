@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestActions_CancelRun(t *testing.T) {
+func TestActions_CancelOrApproveRun(t *testing.T) {
 	t.Run("run, job and task Running changes to run, job and task Cancelled", func(t *testing.T) {
-		defer unittest.OverrideFixtures("services/actions/TestActions_CancelRun")()
+		defer unittest.OverrideFixtures("services/actions/TestActions_CancelOrApproveRun")()
 		require.NoError(t, unittest.PrepareTestDatabase())
 
 		taskID := int64(711900)
@@ -39,7 +39,7 @@ func TestActions_CancelRun(t *testing.T) {
 	})
 
 	t.Run("run Running, job and task Success changes to run Cancelled", func(t *testing.T) {
-		defer unittest.OverrideFixtures("services/actions/TestActions_CancelRun")()
+		defer unittest.OverrideFixtures("services/actions/TestActions_CancelOrApproveRun")()
 		require.NoError(t, unittest.PrepareTestDatabase())
 
 		taskID := int64(710900)
@@ -61,7 +61,7 @@ func TestActions_CancelRun(t *testing.T) {
 	})
 
 	t.Run("run Waiting and job Blocked for Approval changes to run and job Cancelled", func(t *testing.T) {
-		defer unittest.OverrideFixtures("services/actions/TestActions_CancelRun")()
+		defer unittest.OverrideFixtures("services/actions/TestActions_CancelOrApproveRun")()
 		require.NoError(t, unittest.PrepareTestDatabase())
 
 		jobID := int64(10800)
@@ -78,5 +78,27 @@ func TestActions_CancelRun(t *testing.T) {
 		assert.False(t, run.NeedApproval)
 		job = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: jobID})
 		assert.Equal(t, actions_model.StatusCancelled, job.Status)
+	})
+
+	t.Run("run Waiting and job Blocked for Approval changes to job Waiting", func(t *testing.T) {
+		defer unittest.OverrideFixtures("services/actions/TestActions_CancelOrApproveRun")()
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		jobID := int64(10800)
+		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: jobID})
+		require.Equal(t, actions_model.StatusBlocked.String(), job.Status.String())
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: job.RunID})
+		require.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
+		require.True(t, run.NeedApproval)
+
+		doerID := int64(30)
+		require.NoError(t, ApproveRun(t.Context(), run, doerID))
+
+		run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: job.RunID})
+		assert.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
+		assert.False(t, run.NeedApproval)
+		assert.Equal(t, doerID, run.ApprovedBy)
+		job = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: jobID})
+		assert.Equal(t, actions_model.StatusWaiting, job.Status)
 	})
 }
