@@ -241,11 +241,7 @@ func GetRunsThatNeedApprovalByRepoIDAndPullRequestID(ctx context.Context, repoID
 }
 
 func HasRunThatNeedApproval(ctx context.Context, repoID, pullRequestID int64) (bool, error) {
-	count, err := db.GetEngine(ctx).Where(condRunsThatNeedApproval(repoID, pullRequestID)).Count(&ActionRun{})
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
+	return db.GetEngine(ctx).Where(condRunsThatNeedApproval(repoID, pullRequestID)).Exist(&ActionRun{})
 }
 
 type ApprovalType bool
