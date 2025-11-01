@@ -147,8 +147,9 @@ func ifNeedApproval(ctx context.Context, run *actions_model.ActionRun, pr *issue
 		if err != nil {
 			return false, err
 		}
+		// the poster may have been deleted and no longer exist
 		if poster == nil {
-			return false, err
+			return false, nil
 		}
 		trusted, err = GetPullRequestUserIsTrustedWithActions(ctx, pr, poster)
 		if err != nil {
