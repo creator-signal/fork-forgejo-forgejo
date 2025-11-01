@@ -50,10 +50,10 @@ const (
 // Notification represents a notification
 type Notification struct {
 	ID     int64 `xorm:"pk autoincr"`
-	UserID int64 `xorm:"INDEX NOT NULL"`
+	UserID int64 `xorm:"INDEX NOT NULL INDEX(s)"`
 	RepoID int64 `xorm:"INDEX NOT NULL"`
 
-	Status NotificationStatus `xorm:"SMALLINT INDEX NOT NULL"`
+	Status NotificationStatus `xorm:"SMALLINT NOT NULL INDEX(s)"`
 	Source NotificationSource `xorm:"SMALLINT INDEX NOT NULL"`
 
 	IssueID   int64 `xorm:"INDEX NOT NULL"`
