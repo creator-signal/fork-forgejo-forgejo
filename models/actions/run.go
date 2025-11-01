@@ -229,11 +229,7 @@ func updateRepoRunsNumbers(ctx context.Context, repo *repo_model.Repository) err
 
 func condRunsThatNeedApproval(repoID, pullRequestID int64) builder.Cond {
 	// performance relies indexes on repo_id and pull_request_id
-	cond := builder.NewCond()
-	cond = cond.And(builder.Eq{"repo_id": repoID})
-	cond = cond.And(builder.Eq{"pull_request_id": pullRequestID})
-	cond = cond.And(builder.Eq{"need_approval": true})
-	return cond
+	return builder.Eq{"repo_id": repoID, "pull_request_id": pullRequestID, "need_approval": true}
 }
 
 func GetRunsThatNeedApprovalByRepoIDAndPullRequestID(ctx context.Context, repoID, pullRequestID int64) ([]*ActionRun, error) {
