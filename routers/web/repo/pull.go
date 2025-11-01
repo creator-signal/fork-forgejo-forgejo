@@ -1968,12 +1968,12 @@ func PrepareViewPullInfoActions(ctx *context.Context, pull *issues_model.PullReq
 func PrepareViewPullInfoActionsTrust(ctx *context.Context, pull *issues_model.PullRequest) {
 	trusted, err := actions_service.GetPullRequestPosterIsTrustedWithActions(ctx, pull)
 	if err != nil {
-		ctx.ServerError("LoadPullRquestPosterIsTrustedWithActions", err)
+		ctx.ServerError("GetPullRequestUserIsTrustedWithActions", err)
 		return
 	}
-	ctx.Data["PullRequestPosterIsNotTrustedWithActions"] = trusted == actions_service.PosterIsNotTrustedWithActions
-	ctx.Data["PullRequestPosterIsExplicitlyTrustedWithActions"] = trusted == actions_service.PosterIsExplicitlyTrustedWithActions
-	ctx.Data["PullRequestPosterIsImplicitlyTrustedWithActions"] = trusted == actions_service.PosterIsImplicitlyTrustedWithActions
+	ctx.Data["PullRequestPosterIsNotTrustedWithActions"] = trusted == actions_service.UserIsNotTrustedWithActions
+	ctx.Data["PullRequestPosterIsExplicitlyTrustedWithActions"] = trusted == actions_service.UserIsExplicitlyTrustedWithActions
+	ctx.Data["PullRequestPosterIsImplicitlyTrustedWithActions"] = trusted == actions_service.UserIsImplicitlyTrustedWithActions
 
 	someRunsNeedApproval, err := actions_model.HasRunThatNeedApproval(ctx, pull.Issue.RepoID, pull.ID)
 	if err != nil {
@@ -1997,7 +1997,7 @@ func UpdateTrustWithPullRequestActions(ctx *context.Context) {
 
 	trust := ctx.FormString("trust")
 
-	if err := actions_service.UpdateTrustedWithPullRequest(ctx, ctx.Doer.ID, pr, actions_service.UserTrust(trust)); err != nil {
+	if err := actions_service.UpdateTrustedWithPullRequest(ctx, ctx.Doer.ID, pr, actions_service.TrustUpdate(trust)); err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
 	}

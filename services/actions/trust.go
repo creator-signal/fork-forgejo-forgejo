@@ -10,18 +10,20 @@ import (
 	actions_model "forgejo.org/models/actions"
 	issues_model "forgejo.org/models/issues"
 	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
 	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/log"
 )
 
-type UserTrust string
+type TrustUpdate string
 
 const (
-	UserTrustDenied   = UserTrust("deny")
-	UserAlwaysTrusted = UserTrust("always")
-	UserTrustedOnce   = UserTrust("once")
-	UserTrustRevoked  = UserTrust("revoke")
+	UserTrustDenied   = TrustUpdate("deny")
+	UserAlwaysTrusted = TrustUpdate("always")
+	UserTrustedOnce   = TrustUpdate("once")
+	UserTrustRevoked  = TrustUpdate("revoke")
 )
 
 func CleanupActionUser(ctx context.Context) error {
@@ -33,26 +35,59 @@ func loadPullRequestAttributes(ctx context.Context, pr *issues_model.PullRequest
 		return err
 	}
 
-	if err := pr.Issue.LoadRepo(ctx); err != nil {
-		return err
+	return pr.Issue.LoadRepo(ctx)
+}
+
+func getIssuePoster(ctx context.Context, issue *issues_model.Issue) (*user_model.User, error) {
+	if issue.Poster != nil {
+		return issue.Poster, nil
+	}
+	if issue.PosterID == 0 {
+		return nil, nil
 	}
 
-	return pr.Issue.LoadPoster(ctx)
+	poster, err := user_model.GetPossibleUserByID(ctx, issue.PosterID)
+	if err != nil {
+		if user_model.IsErrUserNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("getIssuePoster [%d]: %w", issue.PosterID, err)
+	}
+	return poster, nil
+}
+
+func mustGetIssuePoster(ctx context.Context, issue *issues_model.Issue) (*user_model.User, error) {
+	poster, err := getIssuePoster(ctx, issue)
+	if err != nil {
+		return nil, err
+	}
+	if poster == nil {
+		return nil, user_model.ErrUserNotExist{UID: issue.PosterID}
+	}
+	return poster, nil
 }
 
 // cancels or approves runs and keep track of posters that are to always be trusted
-func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_model.PullRequest, trusted UserTrust) error {
+func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_model.PullRequest, trusted TrustUpdate) error {
 	if err := loadPullRequestAttributes(ctx, pr); err != nil {
 		return err
 	}
 
 	switch trusted {
 	case UserAlwaysTrusted:
-		return AlwaysTrust(ctx, doerID, pr.Issue.RepoID, pr.Issue.Poster.ID)
+		poster, err := mustGetIssuePoster(ctx, pr.Issue)
+		if err != nil {
+			return err
+		}
+		return AlwaysTrust(ctx, doerID, pr.Issue.RepoID, poster.ID)
 	case UserTrustedOnce:
 		return PullRequestApprove(ctx, doerID, pr.Issue.RepoID, pr.ID)
 	case UserTrustRevoked:
-		return RevokeTrust(ctx, pr.Issue.RepoID, pr.Issue.Poster.ID)
+		poster, err := mustGetIssuePoster(ctx, pr.Issue)
+		if err != nil {
+			return err
+		}
+		return RevokeTrust(ctx, pr.Issue.RepoID, poster.ID)
 	case UserTrustDenied:
 		return PullRequestCancel(ctx, pr.Issue.RepoID, pr.ID)
 	default:
@@ -60,12 +95,12 @@ func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_
 	}
 }
 
-func SetRunTrustForPullRequest(ctx context.Context, run *actions_model.ActionRun, pr *issues_model.PullRequest) error {
+func SetRunTrustForPullRequest(ctx context.Context, run *actions_model.ActionRun, pr *issues_model.PullRequest, doer *user_model.User) error {
 	if pr == nil {
 		return nil
 	}
 
-	if err := pr.LoadIssue(ctx); err != nil {
+	if err := loadPullRequestAttributes(ctx, pr); err != nil {
 		return err
 	}
 
@@ -73,7 +108,7 @@ func SetRunTrustForPullRequest(ctx context.Context, run *actions_model.ActionRun
 	run.PullRequestPosterID = pr.Issue.PosterID
 	run.PullRequestID = pr.ID
 
-	needApproval, err := ifNeedApproval(ctx, run, pr)
+	needApproval, err := ifNeedApproval(ctx, run, pr, doer)
 	if err != nil {
 		return err
 	}
@@ -85,7 +120,7 @@ func SetRunTrustForPullRequest(ctx context.Context, run *actions_model.ActionRun
 	return nil
 }
 
-func ifNeedApproval(ctx context.Context, run *actions_model.ActionRun, pr *issues_model.PullRequest) (bool, error) {
+func ifNeedApproval(ctx context.Context, run *actions_model.ActionRun, pr *issues_model.PullRequest, doer *user_model.User) (bool, error) {
 	// 1. don't need approval if it's not a fork PR
 	// 2. don't need approval if the event is `pull_request_target` since the workflow will run in the context of base branch
 	// 		see https://docs.github.com/en/actions/managing-workflow-runs/approving-workflow-runs-from-public-forks#about-workflow-runs-from-public-forks
@@ -93,54 +128,89 @@ func ifNeedApproval(ctx context.Context, run *actions_model.ActionRun, pr *issue
 		return false, nil
 	}
 
-	trusted, err := GetPullRequestPosterIsTrustedWithActions(ctx, pr)
+	var trusted UserTrust
+	var err error
+
+	trusted, err = GetPullRequestUserIsTrustedWithActions(ctx, pr, doer)
 	if err != nil {
 		return false, err
 	}
 
-	return trusted == PosterIsNotTrustedWithActions, nil
+	// If the doer is not trusted, elevate the trust to the poster of the pull request.
+	// For example a workflow is trusted to run:
+	// - if an untrusted user sets a label on a pull request authored by
+	//   a trusted user.
+	// - if an untrusted user pushes a commit to the branch used by a
+	//   trusted user to create a pull request from a fork.
+	if trusted == UserIsNotTrustedWithActions && doer.ID != pr.Issue.PosterID {
+		poster, err := getIssuePoster(ctx, pr.Issue)
+		if err != nil {
+			return false, err
+		}
+		if poster == nil {
+			return false, err
+		}
+		trusted, err = GetPullRequestUserIsTrustedWithActions(ctx, pr, poster)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return trusted == UserIsNotTrustedWithActions, nil
 }
 
-type PosterTrust string
+type UserTrust string
 
 const (
-	PosterIsNotTrustedWithActions        = PosterTrust("no")
-	PosterIsExplicitlyTrustedWithActions = PosterTrust("explicitly")
-	PosterIsImplicitlyTrustedWithActions = PosterTrust("implicitly")
+	UserIsNotTrustedWithActions        = UserTrust("no")
+	UserIsExplicitlyTrustedWithActions = UserTrust("explicitly")
+	UserIsImplicitlyTrustedWithActions = UserTrust("implicitly")
 )
 
-func GetPullRequestPosterIsTrustedWithActions(ctx context.Context, pr *issues_model.PullRequest) (PosterTrust, error) {
+func GetPullRequestPosterIsTrustedWithActions(ctx context.Context, pr *issues_model.PullRequest) (UserTrust, error) {
+	if err := loadPullRequestAttributes(ctx, pr); err != nil {
+		return "", err
+	}
+	poster, err := mustGetIssuePoster(ctx, pr.Issue)
+	if err != nil {
+		return UserIsNotTrustedWithActions, err
+	}
+
+	return GetPullRequestUserIsTrustedWithActions(ctx, pr, poster)
+}
+
+func GetPullRequestUserIsTrustedWithActions(ctx context.Context, pr *issues_model.PullRequest, user *user_model.User) (UserTrust, error) {
 	if err := loadPullRequestAttributes(ctx, pr); err != nil {
 		return "", err
 	}
 
-	return posterIsTrustedWithPullRequest(ctx, pr)
+	return userIsTrustedWithPullRequest(ctx, pr, user)
 }
 
-func posterIsTrustedWithPullRequest(ctx context.Context, pr *issues_model.PullRequest) (PosterTrust, error) {
-	implicitlyTrusted, err := posterIsImplicitlyTrustedWithPullRequest(ctx, pr)
+func userIsTrustedWithPullRequest(ctx context.Context, pr *issues_model.PullRequest, user *user_model.User) (UserTrust, error) {
+	implicitlyTrusted, err := userIsImplicitlyTrustedWithPullRequest(ctx, pr, user)
 	if err != nil {
 		return "", err
 	}
 	if implicitlyTrusted {
-		log.Trace("%s is implicitly trusted to run actions in repository %s", pr.Issue.Poster, pr.Issue.Repo)
-		return PosterIsImplicitlyTrustedWithActions, nil
+		log.Trace("%s is implicitly trusted to run actions in repository %s", user, pr.Issue.Repo)
+		return UserIsImplicitlyTrustedWithActions, nil
 	}
 
-	explicitlyTrusted, err := posterIsExplicitlyTrustedWithPullRequest(ctx, pr)
+	explicitlyTrusted, err := userIsExplicitlyTrustedWithPullRequest(ctx, pr, user)
 	if err != nil {
 		return "", err
 	}
 	if explicitlyTrusted {
-		log.Trace("%s is explicitly trusted to run actions in repository %s", pr.Issue.Poster, pr.Issue.Repo)
-		return PosterIsExplicitlyTrustedWithActions, nil
+		log.Trace("%s is explicitly trusted to run actions in repository %s", user, pr.Issue.Repo)
+		return UserIsExplicitlyTrustedWithActions, nil
 	}
 
-	log.Trace("%s is not trusted to run actions in repository %s", pr.Issue.Poster, pr.Issue.Repo)
-	return PosterIsNotTrustedWithActions, nil
+	log.Trace("%s is not trusted to run actions in repository %s", user, pr.Issue.Repo)
+	return UserIsNotTrustedWithActions, nil
 }
 
-func posterIsImplicitlyTrustedWithPullRequest(ctx context.Context, pr *issues_model.PullRequest) (bool, error) {
+func userIsImplicitlyTrustedWithPullRequest(ctx context.Context, pr *issues_model.PullRequest, user *user_model.User) (bool, error) {
 	// users that are trusted to create a pull request that is not from a fork
 	// are also implicitly trusted to run workflows
 	if !pr.IsForkPullRequest() {
@@ -148,39 +218,43 @@ func posterIsImplicitlyTrustedWithPullRequest(ctx context.Context, pr *issues_mo
 		return true, nil
 	}
 
+	return userCanWriteActionsOnRepo(ctx, pr.Issue.Repo, user)
+}
+
+func userCanWriteActionsOnRepo(ctx context.Context, repo *repo_model.Repository, user *user_model.User) (bool, error) {
 	// users with write permission to the actions unit are trusted to
 	// run actions
-	permission, err := access_model.GetUserRepoPermission(ctx, pr.Issue.Repo, pr.Issue.Poster)
+	permission, err := access_model.GetUserRepoPermission(ctx, repo, user)
 	if err != nil {
 		return false, err
 	}
 	if permission.CanWrite(unit_model.TypeActions) {
-		log.Trace("%s is a member of a team with write permissions to the Action unit on %s", pr.Issue.Poster, pr.Issue.Repo)
+		log.Trace("%s has write permissions to the Action unit on %s", user, repo)
 		return true, nil
 	}
 
 	return false, nil
 }
 
-func posterIsExplicitlyTrustedWithPullRequest(ctx context.Context, pr *issues_model.PullRequest) (bool, error) {
+func userIsExplicitlyTrustedWithPullRequest(ctx context.Context, pr *issues_model.PullRequest, user *user_model.User) (bool, error) {
 	// there is no need to check if the user is blocked because it is not
 	// allowed to create a pull request
-	if pr.Issue.Poster.IsRestricted {
-		log.Trace("%v is restricted and cannot be trusted with pull requests", pr.Issue.Poster)
+	if user.IsRestricted {
+		log.Trace("%v is restricted and cannot be trusted with pull requests", user)
 		return false, nil
 	}
 
-	user, err := actions_model.GetActionUserByUserIDAndRepoIDAndUpdateAccess(ctx, pr.Issue.Poster.ID, pr.Issue.Repo.ID)
+	actionUser, err := actions_model.GetActionUserByUserIDAndRepoIDAndUpdateAccess(ctx, user.ID, pr.Issue.Repo.ID)
 	if err != nil {
-		log.Trace("%v is not explicitly trusted with pull requests on repository %v", pr.Issue.Poster, pr.Issue.Repo)
+		log.Trace("%v is not explicitly trusted with pull requests on repository %v", user, pr.Issue.Repo)
 		if actions_model.IsErrUserNotExist(err) {
 			return false, nil
 		}
 		return false, err
 	}
 
-	log.Trace("%v is explicitly trusted with pull requests on repository %v", pr.Issue.Poster, pr.Issue.Repo)
-	return user.TrustedWithPullRequests, nil
+	log.Trace("%v is explicitly trusted with pull requests on repository %v", user, pr.Issue.Repo)
+	return actionUser.TrustedWithPullRequests, nil
 }
 
 func RevokeTrust(ctx context.Context, repoID, posterID int64) error {

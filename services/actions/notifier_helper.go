@@ -337,7 +337,7 @@ func handleWorkflows(
 		}
 
 		if !actions_module.IsDefaultBranchWorkflow(input.Event) {
-			if err := SetRunTrustForPullRequest(ctx, run, input.PullRequest); err != nil {
+			if err := SetRunTrustForPullRequest(ctx, run, input.PullRequest, input.Doer); err != nil {
 				return fmt.Errorf("SetTrustForPullRequest: %w", err)
 			}
 		}
