@@ -46,6 +46,18 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 			wantBody: "",
 		},
 		{
+			name: "simple message and description",
+			args: args{
+				template: "Merge ${PullRequestTitle}\nDescription: ${PullRequestDescription}",
+				vars: map[string]string{
+					"PullRequestTitle":       "PullRequestTitle",
+					"PullRequestDescription": "Pull\nRequest\nDescription\n",
+				},
+			},
+			want:     "Merge PullRequestTitle",
+			wantBody: "Description: Pull\nRequest\nDescription\n",
+		},
+		{
 			name: "multiple lines",
 			args: args{
 				template: "Merge ${PullRequestTitle}\nDescription:\n\n${PullRequestDescription}\n",
@@ -58,6 +70,18 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 			wantBody: "Description:\n\nPull\nRequest\nDescription\n",
 		},
 		{
+			name: "description only",
+			args: args{
+				template: "\nDescription:\n\n${PullRequestDescription}\n",
+				vars: map[string]string{
+					"PullRequestTitle":       "PullRequestTitle",
+					"PullRequestDescription": "Pull\nRequest\nDescription\n",
+				},
+			},
+			want:     "",
+			wantBody: "Description:\n\nPull\nRequest\nDescription\n",
+		},
+		{
 			name: "leading newlines",
 			args: args{
 				template: "\n\n\nMerge ${PullRequestTitle}\n\n\nDescription:\n\n${PullRequestDescription}\n",
@@ -66,8 +90,8 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 					"PullRequestDescription": "Pull\nRequest\nDescription\n",
 				},
 			},
-			want:     "Merge PullRequestTitle",
-			wantBody: "Description:\n\nPull\nRequest\nDescription\n",
+			want:     "",
+			wantBody: "Merge PullRequestTitle\n\n\nDescription:\n\nPull\nRequest\nDescription\n",
 		},
 	}
 	for _, tt := range tests {

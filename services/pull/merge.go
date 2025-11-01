@@ -184,10 +184,12 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 }
 
 func expandDefaultMergeMessage(template string, vars map[string]string) (message, body string) {
-	message = strings.TrimSpace(template)
-	if splits := strings.SplitN(message, "\n", 2); len(splits) == 2 {
+	if splits := strings.SplitN(template, "\n", 2); len(splits) == 2 {
 		message = splits[0]
 		body = strings.TrimSpace(splits[1])
+	} else {
+		message = template
+		body = ""
 	}
 	mapping := func(s string) string { return vars[s] }
 	return os.Expand(message, mapping), os.Expand(body, mapping)
