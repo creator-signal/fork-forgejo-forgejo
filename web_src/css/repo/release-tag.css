@@ -107,9 +107,6 @@
 }
 
 @media (max-width: 767.98px) {
-  .repository.new.release .field button {
-    margin-bottom: 1em;
-  }
   .release-list-search {
     order: 2 !important;
   }
