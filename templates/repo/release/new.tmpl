@@ -131,27 +131,31 @@
 						{{end}}
 					</fieldset>
 					<div class="divider tw-mt-0"></div>
-					<div class="button-sequence tw-justify-end">
-						{{if .PageIsEditRelease}}
+					{{if .PageIsEditRelease}}
+						<div class="button-sequence tw-justify-between">
 							<a class="danger button delete-button" data-url="{{$.RepoLink}}/releases/delete" data-id="{{.ID}}" data-modal-id="delete-release">
 								{{ctx.Locale.Tr "repo.release.delete_release"}}1
 							</a>
-							<a class="secondary button" href="{{.RepoLink}}/releases">
-								{{ctx.Locale.Tr "repo.release.cancel"}}2
-							</a>
-							{{if .IsDraft}}
-								<button class="secondary button" type="submit" name="draft" value="{{ctx.Locale.Tr "repo.release.save_draft"}}">
-									{{ctx.Locale.Tr "repo.release.save_draft"}}3
-								</button>
-								<button class="primary button">
-									{{ctx.Locale.Tr "repo.release.publish"}}4
-								</button>
-							{{else}}
-								<button class="primary button">
-									{{ctx.Locale.Tr "repo.release.edit_release"}}5
-								</button>
-							{{end}}
-						{{else}}
+							<div class="button-sequence">
+								<a class="secondary button" href="{{.RepoLink}}/releases">
+									{{ctx.Locale.Tr "repo.release.cancel"}}2
+								</a>
+								{{if .IsDraft}}
+									<button class="secondary button" type="submit" name="draft" value="{{ctx.Locale.Tr "repo.release.save_draft"}}">
+										{{ctx.Locale.Tr "repo.release.save_draft"}}3
+									</button>
+									<button class="primary button">
+										{{ctx.Locale.Tr "repo.release.publish"}}4
+									</button>
+								{{else}}
+									<button class="primary button">
+										{{ctx.Locale.Tr "repo.release.edit_release"}}5
+									</button>
+								{{end}}
+							</div>
+						</div>
+					{{else}}
+						<div class="button-sequence tw-justify-end">
 							{{if not .tag_name}}
 								<button class="secondary button" name="tag_only" value="1">
 									{{ctx.Locale.Tr "repo.release.add_tag"}}6
@@ -163,8 +167,8 @@
 							<button class="primary button">
 								{{ctx.Locale.Tr "repo.release.publish"}}8
 							</button>
-						{{end}}
-					</div>
+						</div>
+					{{end}}
 				</div>
 			</div>
 		</form>
