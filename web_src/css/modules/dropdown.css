@@ -93,11 +93,20 @@ details.dropdown > .content {
   }
 }
 
-/* Suppress default styling of <ul> */
 details.dropdown > .content > ul {
+  /* Suppress default styling of <ul> */
   margin: 0;
   padding: 0;
   list-style-type: none;
+
+  /* Round first item of first list and last item of last list. Each of these
+   * selectors should only resolve to one element in any .content */
+  &:first-of-type > li:first-child {
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+  }
+  &:last-of-type > li:last-child {
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+  }
 }
 
 /* General styling of list items */
@@ -127,17 +136,6 @@ details.dropdown > .content > ul > li {
   /* Suppress default styling of <button> */
   > button {
     background: none;
-  }
-}
-
-/* Round first item of first list and last item of last list. Each of these
- * selectors should only resolve to one element in any .content */
-details.dropdown > .content > ul {
-  &:first-of-type > li:first-child {
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
-  }
-  &:last-of-type > li:last-child {
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
   }
 }
 
