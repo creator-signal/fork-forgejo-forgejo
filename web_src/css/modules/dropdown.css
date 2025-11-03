@@ -127,8 +127,7 @@ details.dropdown > summary + .content > ul {
   }
 }
 
-/* dir-auto option - switch the direction at a width point where most of layout changes occur. */
-/* There's no way to check with CSS if LTR dropdown will fit on screen without JS. */
+/* dir-auto option - switch the direction at a width point where most of layout changes occur */
 @media (max-width: 767.98px) {
   details.dropdown.dir-auto > summary + .content > ul {
     inset-inline: 0 auto;
@@ -138,9 +137,8 @@ details.dropdown > summary + .content > ul {
     }
   }
 }
-/* Note: https://css-tricks.com/css-anchor-positioning-guide/
-*  looks like a great thing but FF still doesn't support it. */
 
+/* dir-rtl option - force right-to-left box direction */
 details.dropdown.dir-rtl > summary + .content > ul {
   inset-inline: 0 auto;
   direction: rtl;
@@ -148,3 +146,11 @@ details.dropdown.dir-rtl > summary + .content > ul {
     direction: ltr;
   }
 }
+
+/* Note: CSS anchor positioning will be a huge help in content positioning w/o JS
+ * - https://css-tricks.com/css-anchor-positioning-guide/
+ * - https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_anchor_positioning/
+ * - https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_anchor_positioning/Using
+ * It can already be implemented if the implementation won't interfere with the
+ * normal behavior on unsupported browsers. Or it can wait until Firefox gets
+ * starts supporting it. FF145 got this feature behind a feature flag. */
