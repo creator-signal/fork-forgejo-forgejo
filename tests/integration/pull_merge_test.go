@@ -5,15 +5,19 @@ package integration
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
+	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,6 +34,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/hostmatcher"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/queue"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
@@ -62,21 +67,15 @@ func testPullMerge(t *testing.T, session *TestSession, user, repo, pullnum strin
 }
 
 func testPullMergeForm(t *testing.T, session *TestSession, expectedCode int, user, repo, pullnum string, addOptions optionsPullMerge) *httptest.ResponseRecorder {
-	req := NewRequest(t, "GET", path.Join(user, repo, "pulls", pullnum))
-	resp := session.MakeRequest(t, req, http.StatusOK)
-
-	htmlDoc := NewHTMLParser(t, resp.Body)
 	link := path.Join(user, repo, "pulls", pullnum, "merge")
 
-	options := map[string]string{
-		"_csrf": htmlDoc.GetCSRF(),
-	}
+	options := map[string]string{}
 	for k, v := range addOptions {
 		options[k] = v
 	}
 
-	req = NewRequestWithValues(t, "POST", link, options)
-	resp = session.MakeRequest(t, req, expectedCode)
+	req := NewRequestWithValues(t, "POST", link, options)
+	resp := session.MakeRequest(t, req, expectedCode)
 
 	if expectedCode == http.StatusOK {
 		respJSON := struct {
@@ -98,9 +97,7 @@ func testPullCleanUp(t *testing.T, session *TestSession, user, repo, pullnum str
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	link, exists := htmlDoc.doc.Find(".timeline-item .delete-button").Attr("data-url")
 	assert.True(t, exists, "The template has changed, can not find delete button url")
-	req = NewRequestWithValues(t, "POST", link, map[string]string{
-		"_csrf": htmlDoc.GetCSRF(),
-	})
+	req = NewRequestWithValues(t, "POST", link, map[string]string{})
 	resp = session.MakeRequest(t, req, http.StatusOK)
 
 	return resp
@@ -900,10 +897,7 @@ func testPullAutoMergeAfterCommitStatusSucceed(t *testing.T, ctx APITestContext,
 
 		// approve the PR from non-author
 		approveSession := loginUser(t, "user2")
-		req := NewRequest(t, "GET", fmt.Sprintf("/user2/repo1/pulls/%d", pr.Index))
-		resp := approveSession.MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-		testSubmitReview(t, approveSession, htmlDoc.GetCSRF(), "user2", "repo1", strconv.Itoa(int(pr.Index)), sha, "approve", http.StatusOK)
+		testSubmitReview(t, approveSession, "user2", "repo1", strconv.Itoa(int(pr.Index)), sha, "approve", http.StatusOK)
 	}
 
 	// reload PR again
@@ -1036,11 +1030,8 @@ func TestPullAutoMergeAfterCommitStatusSucceedAndApprovalForAgitFlow(t *testing.
 		})
 
 		session := loginUser(t, "user1")
-		// add protected branch for commit status
-		csrf := GetCSRF(t, session, "/user2/repo1/settings/branches")
 		// Change master branch to protected
 		req := NewRequestWithValues(t, "POST", "/user2/repo1/settings/branches/edit", map[string]string{
-			"_csrf":                 csrf,
 			"rule_name":             "master",
 			"enable_push":           "true",
 			"enable_status_check":   "true",
@@ -1091,10 +1082,7 @@ func TestPullAutoMergeAfterCommitStatusSucceedAndApprovalForAgitFlow(t *testing.
 
 		// approve the PR from non-author
 		approveSession := loginUser(t, "user1")
-		req = NewRequest(t, "GET", fmt.Sprintf("/user2/repo1/pulls/%d", pr.Index))
-		resp := approveSession.MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-		testSubmitReview(t, approveSession, htmlDoc.GetCSRF(), "user2", "repo1", strconv.Itoa(int(pr.Index)), sha, "approve", http.StatusOK)
+		testSubmitReview(t, approveSession, "user2", "repo1", strconv.Itoa(int(pr.Index)), sha, "approve", http.StatusOK)
 
 		// realod pr again
 		pr = unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pr.ID})
@@ -1113,14 +1101,12 @@ func TestPullDeleteBranchPerms(t *testing.T) {
 		testEditFileToNewBranch(t, user2Session, "user2", "repo1", "master", "base-pr", "README.md", "Hello, World\n(Edited - base PR)\n")
 
 		req := NewRequestWithValues(t, "POST", "/user4/repo1/compare/master...user2/repo1:base-pr", map[string]string{
-			"_csrf": GetCSRF(t, user4Session, "/user4/repo1/compare/master...user2/repo1:base-pr"),
 			"title": "Testing PR",
 		})
 		resp := user4Session.MakeRequest(t, req, http.StatusOK)
 		elem := strings.Split(test.RedirectURL(resp), "/")
 
 		req = NewRequestWithValues(t, "POST", "/user4/repo1/pulls/"+elem[4]+"/merge", map[string]string{
-			"_csrf":                     GetCSRF(t, user4Session, "/user4/repo1/pulls/"+elem[4]),
 			"do":                        "merge",
 			"delete_branch_after_merge": "on",
 		})
@@ -1176,7 +1162,6 @@ func TestRebaseWhenNecessary(t *testing.T) {
 
 			// To avoid conflicts, create a new file on /user/repo1.
 			session.MakeRequest(t, NewRequestWithValues(t, "POST", "/user1/repo1/_new/master", map[string]string{
-				"_csrf":          GetCSRF(t, session, "/user/settings"),
 				"commit_choice":  "direct",
 				"tree_path":      "test-file.md",
 				"content":        "newly-added-test-file",
@@ -1203,5 +1188,192 @@ func TestRebaseWhenNecessary(t *testing.T) {
 
 			assert.NotEqual(t, commitBefore, commitAfter)
 		})
+	})
+}
+
+func shuffleSlice(slice []int64) {
+	rand.Shuffle(len(slice), func(i, j int) {
+		slice[i], slice[j] = slice[j], slice[i]
+	})
+}
+
+func TestMergeConcurrency(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		token := getUserToken(t, "user2", auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteIssue)
+
+		// How many PRs will be created and attempted to be merge concurrently?  5 was enough to reproduce deadlock
+		// errors from label and repo stat updates ~80% of the time, and it keeps the test reasonably fast. Test has
+		// been run up to 50 without errors.
+		concurrentCount := 5
+
+		repo, _, deferrer := tests.CreateDeclarativeRepo(t, user2, "concurrency-test", nil, nil, nil)
+		defer deferrer()
+
+		// Create labels for the PRs...
+		labelNames := []string{"bug", "super-important", "tricky", "deadlock"}
+		labelIDs := make([]int64, 0, len(labelNames))
+		for _, label := range labelNames {
+			req := NewRequestWithJSON(t,
+				"POST",
+				fmt.Sprintf("/api/v1/repos/%s/%s/labels", repo.OwnerName, repo.Name),
+				&api.CreateLabelOption{
+					Color: "#000000",
+					Name:  label,
+				}).AddTokenAuth(token)
+			resp := MakeRequest(t, req, http.StatusCreated)
+
+			var apiLabel api.Label
+			DecodeJSON(t, resp, &apiLabel)
+			labelIDs = append(labelIDs, apiLabel.ID)
+		}
+
+		// Create a milestone that all PRs will be associated to...
+		req := NewRequestWithJSON(t,
+			"POST",
+			fmt.Sprintf("/api/v1/repos/%s/%s/milestones", repo.OwnerName, repo.Name),
+			&api.CreateMilestoneOption{
+				Title:       "Test Milestone",
+				Description: "This is the test milestone.",
+				State:       "open",
+			}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		var apiMilestone api.Milestone
+		DecodeJSON(t, resp, &apiMilestone)
+
+		{
+			var createAllPRs sync.WaitGroup
+			var errorListMutex sync.Mutex
+			var errorList []any
+			for i := range concurrentCount {
+				createAllPRs.Add(1)
+				go func(i int) {
+					defer createAllPRs.Done()
+					defer func() {
+						if r := recover(); r != nil {
+							errorListMutex.Lock()
+							defer errorListMutex.Unlock()
+							errorList = append(errorList, r)
+						}
+					}()
+
+					// We're going to create two branches; a new target branch where the PR will merge *into*, and a new
+					// head branch where the PR will merge *from*.  This test is about finding internal concurrency
+					// conflicts within Forgejo that prevent merges, and, merging simultaneously into the *same branch*
+					// would have natural conflicts that aren't what we're attempting to test.
+					targetBranchName := fmt.Sprintf("target-branch-%d", i)
+					req := NewRequestWithJSON(t,
+						"POST",
+						fmt.Sprintf("/api/v1/repos/%s/%s/branches", repo.OwnerName, repo.Name),
+						&api.CreateBranchRepoOption{
+							OldRefName: "main",
+							BranchName: targetBranchName,
+						}).AddTokenAuth(token)
+					MakeRequest(t, req, http.StatusCreated)
+
+					// Create the head branch that we'll be trying to merge from, with a file change:
+					headBranchName := fmt.Sprintf("update-%d", i)
+					req = NewRequestWithJSON(t,
+						"POST",
+						fmt.Sprintf("/api/v1/repos/%s/%s/contents/README-%d.md", repo.OwnerName, repo.Name, i),
+						&api.CreateFileOptions{
+							FileOptions: api.FileOptions{
+								NewBranchName: headBranchName,
+							},
+							ContentBase64: base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "Hello, world %d!\n", i)),
+						}).AddTokenAuth(token)
+					MakeRequest(t, req, http.StatusCreated)
+
+					// Create a PR for the branch
+					myLabelIDs := slices.Clone(labelIDs)
+					shuffleSlice(myLabelIDs) // use a random ordering for labels as it may cause deadlocks when their count of assigned issues is updated
+					req = NewRequestWithJSON(t, http.MethodPost,
+						fmt.Sprintf("/api/v1/repos/%s/%s/pulls", repo.OwnerName, repo.Name),
+						&api.CreatePullRequestOption{
+							Head:      headBranchName,
+							Base:      targetBranchName,
+							Title:     fmt.Sprintf("create PR from branch %s", headBranchName),
+							Labels:    myLabelIDs,
+							Milestone: apiMilestone.ID,
+						}).AddTokenAuth(token)
+					MakeRequest(t, req, http.StatusCreated)
+				}(i)
+			}
+			createAllPRs.Wait()
+			assert.Empty(t, errorList)
+		}
+
+		// All our PRs are created; now let's try to merge them concurrently.
+
+		lc, logCleanup := test.NewLogChecker(log.DEFAULT, log.ERROR)
+		lc.Filter(
+			// Typical error when the test fails:
+			"Failed to update PR to merged",
+
+			// MySQL & PostgreSQL will both report 40001 for deadlocks
+			"40001",
+		)
+		lc.StopMark("===End Test: TestMergeConcurrency===")
+		defer logCleanup()
+
+		{
+			var mergeAllPRs sync.WaitGroup
+			var errorListMutex sync.Mutex
+			var errorList []any
+			for i := range concurrentCount {
+				mergeAllPRs.Add(1)
+				go func(i int) {
+					defer mergeAllPRs.Done()
+					defer func() {
+						if r := recover(); r != nil {
+							errorListMutex.Lock()
+							defer errorListMutex.Unlock()
+							errorList = append(errorList, r)
+						}
+					}()
+
+					targetBranchName := fmt.Sprintf("target-branch-%d", i)
+					headBranchName := fmt.Sprintf("update-%d", i)
+					pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{
+						HeadRepoID: repo.ID,
+						BaseRepoID: repo.ID,
+						HeadBranch: headBranchName,
+						BaseBranch: targetBranchName,
+					})
+
+					req := NewRequestWithJSON(t,
+						"POST",
+						fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/merge", repo.OwnerName, repo.Name, pr.Index),
+						&forms.MergePullRequestForm{
+							Do:                "merge",
+							MergeMessageField: fmt.Sprintf("Merge %s", targetBranchName),
+						}).AddTokenAuth(token)
+					resp := MakeRequest(t, req, http.StatusOK)
+					assert.Empty(t, resp.Body.String())
+				}(i)
+			}
+			mergeAllPRs.Wait()
+			assert.Empty(t, errorList)
+		}
+
+		// Verify that: Logs had no errors
+		log.Error("===End Test: TestMergeConcurrency===")
+		filtered, stopped := lc.Check(100 * time.Millisecond)
+		assert.False(t, filtered[0], "received 'Failed to update PR to merged' error log messages")
+		assert.False(t, filtered[1], "40001 deadlock errors were logged during test")
+		assert.True(t, stopped)
+
+		// Verify that: All PRs are merged on the repo
+		for i := range concurrentCount {
+			targetBranchName := fmt.Sprintf("target-branch-%d", i)
+			headBranchName := fmt.Sprintf("update-%d", i)
+			pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{
+				HeadRepoID: repo.ID,
+				BaseRepoID: repo.ID,
+				HeadBranch: headBranchName,
+				BaseBranch: targetBranchName,
+			})
+			assert.True(t, pr.HasMerged, "pr %s merged", headBranchName)
+		}
 	})
 }

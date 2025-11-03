@@ -14,7 +14,6 @@
 		<header>{{ctx.Locale.Tr "repo.issues.label_modify"}}</header>
 		<div class="content">
 			<form class="ui edit-label form ignore-dirty" action="{{$.Link}}/edit" method="post">
-				{{.CsrfTokenHtml}}
 				<input id="label-modal-id" name="id" type="hidden">
 				<div class="required field">
 					<label for="name">{{ctx.Locale.Tr "repo.issues.label_title"}}</label>
@@ -59,11 +58,11 @@
 			</form>
 		</div>
 		<div class="actions">
-			<button class="ui small basic cancel button">
+			<button class="ui cancel button">
 				{{svg "octicon-x"}}
 				{{ctx.Locale.Tr "cancel"}}
 			</button>
-			<button class="ui primary small approve button">
+			<button class="ui primary ok button">
 				{{svg "fontawesome-save"}}
 				{{ctx.Locale.Tr "save"}}
 			</button>
