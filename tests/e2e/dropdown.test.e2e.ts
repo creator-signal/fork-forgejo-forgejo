@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // @watch start
-// templates/shared/user/**
+// templates/shared/user/actions_menu.tmpl
+// templates/org/header.tmpl
+// templates/explore/search.tmpl
 // web_src/js/modules/dropdown.ts
 // @watch end
 
