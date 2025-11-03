@@ -209,6 +209,12 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 		return
 	}
 
+	total, err := issues_model.CountComments(ctx, opts)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
 	if err := comments.LoadPosters(ctx); err != nil {
 		ctx.Error(http.StatusInternalServerError, "LoadPosters", err)
 		return
@@ -222,7 +228,7 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 		}
 	}
 
-	utils.SetPaginationHeaders(ctx, int64(len(apiComments)))
+	utils.SetPaginationHeaders(ctx, total)
 	ctx.JSON(http.StatusOK, &apiComments)
 }
 
