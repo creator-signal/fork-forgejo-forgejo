@@ -266,11 +266,28 @@ func TestAPIReleaseGetByTag(t *testing.T) {
 
 	req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/releases/tags/%s", owner.Name, repo.Name, nonexistingtag))
 	resp = MakeRequest(t, req, http.StatusNotFound)
-
 	var err *api.APIError
 	DecodeJSON(t, resp, &err)
 	assert.NotEmpty(t, err.Message)
 }
+
+func TestAPIReleaseGetDraftByTag(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	rel := unittest.AssertExistsAndLoadBean(t, &repo_model.Release{
+		RepoID:  repo.ID,
+		TagName: "draft-release",
+	})
+	assert.True(t, rel.IsDraft)
+
+	req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/releases/tags/%s", repo.OwnerName, repo.Name, rel.TagName))
+	resp := MakeRequest(t, req, http.StatusNotFound)
+	var err *api.APIError
+	DecodeJSON(t, resp, &err)
+	assert.NotEmpty(t, err.Message)
+}
+
 func TestAPIReleaseDeleteByTagName(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
