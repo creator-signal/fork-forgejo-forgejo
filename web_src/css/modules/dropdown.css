@@ -116,11 +116,13 @@ details.dropdown > summary + .content > ul > li {
   > button {
     background: none;
   }
+}
 
-  &:first-child {
+details.dropdown > summary + .content > ul {
+  &:first-of-type > li:first-child {
     border-radius: var(--border-radius) var(--border-radius) 0 0;
   }
-  &:last-child {
+  &:last-of-type > li:last-child {
     border-radius: 0 0 var(--border-radius) var(--border-radius);
   }
 }
