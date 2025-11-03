@@ -42,9 +42,11 @@ details.dropdown > summary {
   user-select: none;
   list-style-type: none;
 
+  /* Display a border around opener */
   &.border {
     border: 1px solid var(--color-light-border);
   }
+  /* Increase inline padding - for openers with text, like filter menus */
   &.options {
     padding-inline: 0.75rem;
   }
@@ -83,8 +85,8 @@ details.dropdown > summary + .content {
   margin-top: 0.5rem;
 }
 
+/* Suppress default styling of <ul> */
 details.dropdown > summary + .content > ul {
-  /* Suppress default styling of <ul> */
   margin: 0;
   padding: 0;
   list-style-type: none;
