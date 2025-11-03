@@ -81,16 +81,19 @@ details.dropdown > summary + .content {
   box-shadow: var(--dropdown-box-shadow);
   border: 1px solid var(--color-secondary);
   margin-top: 0.5rem;
-  > ul {
-    display: flex;
-    flex-direction: column;
-    /* Suppress default styling of <ul> */
-    margin: 0;
-    padding: 0;
-    list-style-type: none;
-  }
 }
 
+details.dropdown > summary + .content > ul {
+  display: flex;
+  flex-direction: column;
+
+  /* Suppress default styling of <ul> */
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+/* General styling of list items */
 details.dropdown > summary + .content > ul > li {
   width: 100%;
   background: none;
@@ -107,17 +110,21 @@ details.dropdown > summary + .content > ul > li {
     /* Suppress underline - hover is indicated by background color */
     text-decoration: none;
 
+    /* Items that are pre-selected in template or by JS */
     &.active {
       background: var(--color-active);
       font-weight: var(--font-weight-medium);
     }
   }
+
   /* Suppress default styling of <button> */
   > button {
     background: none;
   }
 }
 
+/* Round first item of first list and last item of last list. Each of these
+ * selectors should only resolve to one element in any .content */
 details.dropdown > summary + .content > ul {
   &:first-of-type > li:first-child {
     border-radius: var(--border-radius) var(--border-radius) 0 0;
