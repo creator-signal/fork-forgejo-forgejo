@@ -28,7 +28,9 @@
 			<li>
 				<a href="{{.ContextUser.HomeLink}}.gpg">{{svg "octicon-key"}}{{ctx.Locale.Tr "keys.gpg.link"}}</a>
 			</li>
-			{{if and .IsSigned (ne .SignedUserID .ContextUser.ID)}}
+		</ul>
+		{{if and .IsSigned (ne .SignedUserID .ContextUser.ID)}}
+			<ul>
 				<li hx-target="#profile-avatar-card" hx-indicator="#profile-avatar-card" id="action-block">
 					{{if .IsBlocked}}
 						<button class="orange text" hx-post="{{.ContextUser.HomeLink}}?action=unblock">
@@ -40,12 +42,12 @@
 						</button>
 					{{end}}
 				</li>
-			{{end}}
-			{{if and .IsModerationEnabled .IsSigned (ne .SignedUserID .ContextUser.ID)}}
-				<li>
-					<a href="{{AppSubUrl}}/report_abuse?type=user&id={{.ContextUser.ID}}" class="orange text">{{svg "octicon-stop"}}{{ctx.Locale.Tr "moderation.report_abuse"}}</a>
-				</li>
-			{{end}}
-		</ul>
+				{{if .IsModerationEnabled}}
+					<li>
+						<a href="{{AppSubUrl}}/report_abuse?type=user&id={{.ContextUser.ID}}" class="orange text">{{svg "octicon-stop"}}{{ctx.Locale.Tr "moderation.report_abuse"}}</a>
+					</li>
+				{{end}}
+			</ul>
+		{{end}}
 	</div>
 </details>
