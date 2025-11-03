@@ -48,12 +48,12 @@ details.dropdown > summary {
 }
 
 details.dropdown > summary:hover,
-details.dropdown > summary + ul > li:hover {
+details.dropdown > summary + .content > ul > li:hover {
   background: var(--color-hover);
 }
 
 details.dropdown[open] > summary,
-details.dropdown > summary + ul > li:focus-within {
+details.dropdown > summary + .content > ul > li:focus-within {
   background: var(--color-active);
 }
 
@@ -69,23 +69,26 @@ details.dropdown > summary + ul > li:focus-within {
   cursor: default;
 }
 
-details.dropdown > summary + ul {
+details.dropdown > summary + .content {
   z-index: 99;
   position: absolute;
   min-width: max-content;
-  margin: 0;
-  margin-top: 0.5rem;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  list-style-type: none;
   border-radius: var(--border-radius);
   background: var(--color-body);
   box-shadow: var(--dropdown-box-shadow);
   border: 1px solid var(--color-secondary);
+  margin-top: 0.5rem;
+  > ul {
+    display: flex;
+    flex-direction: column;
+    /* Suppress default styling of <ul> */
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+  }
 }
 
-details.dropdown > summary + ul > li {
+details.dropdown > summary + .content > ul > li {
   width: 100%;
   background: none;
 
@@ -122,7 +125,7 @@ details.dropdown > summary + ul > li {
 /* dir-auto option - switch the direction at a width point where most of layout changes occur. */
 /* There's no way to check with CSS if LTR dropdown will fit on screen without JS. */
 @media (max-width: 767.98px) {
-  details.dropdown.dir-auto > summary + ul {
+  details.dropdown.dir-auto > summary + .content > ul {
     inset-inline: 0 auto;
     direction: rtl;
     > li {
@@ -133,7 +136,7 @@ details.dropdown > summary + ul > li {
 /* Note: https://css-tricks.com/css-anchor-positioning-guide/
 *  looks like a great thing but FF still doesn't support it. */
 
-details.dropdown.dir-rtl > summary + ul {
+details.dropdown.dir-rtl > summary + .content > ul {
   inset-inline: 0 auto;
   direction: rtl;
   > li {
