@@ -813,3 +813,16 @@ func TestAPIInternalAndExternalIssueTracker(t *testing.T) {
 	runTest(t, externalIssueRepo, false)
 	runTest(t, disabledIssueRepo, false)
 }
+
+func TestAPIIssueTimelineCount(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	token := getUserToken(t, "user1", auth_model.AccessTokenScopeAll)
+	resp := MakeRequest(t, NewRequest(t, "GET", "/api/v1/repos/user2/repo1/issues/1/timeline?page=1&limit=5").AddTokenAuth(token), http.StatusOK)
+	var list []*api.TimelineComment
+	DecodeJSON(t, resp, &list)
+	assert.Len(t, list, 5)
+	totalCount, err := strconv.ParseInt(resp.Header().Get("X-Total-Count"), 10, 64)
+	require.NoErrorf(t, err, "failed to parse X-Total-Count header: %s", err)
+	unittest.AssertCount(t, issues_model.Comment{IssueID: 1}, totalCount)
+}
