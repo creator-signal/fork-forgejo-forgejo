@@ -84,9 +84,6 @@ details.dropdown > summary + .content {
 }
 
 details.dropdown > summary + .content > ul {
-  display: flex;
-  flex-direction: column;
-
   /* Suppress default styling of <ul> */
   margin: 0;
   padding: 0;
