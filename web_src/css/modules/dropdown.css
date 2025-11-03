@@ -133,20 +133,20 @@ details.dropdown > summary + .content > ul {
 
 /* dir-auto option - switch the direction at a width point where most of layout changes occur */
 @media (max-width: 767.98px) {
-  details.dropdown.dir-auto > summary + .content > ul {
+  details.dropdown.dir-auto > summary + .content {
     inset-inline: 0 auto;
     direction: rtl;
-    > li {
+    > ul > li {
       direction: ltr;
     }
   }
 }
 
 /* dir-rtl option - force right-to-left box direction */
-details.dropdown.dir-rtl > summary + .content > ul {
+details.dropdown.dir-rtl > summary + .content {
   inset-inline: 0 auto;
   direction: rtl;
-  > li {
+  > ul > li {
     direction: ltr;
   }
 }
