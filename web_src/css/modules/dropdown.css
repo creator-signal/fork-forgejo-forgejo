@@ -7,6 +7,9 @@
  * NoJS mode could be improved by forcing the same [name] onto all dropdowns, so
  * that the browser will automatically close all but the one that was just opened
  * using keyboard. But the code doing that will not be as clean.
+ *
+ * Note: when implementing this dropdown, please use `dropdown` as the 1st class,
+ * so it is possible to search for all dropdowns with `details class="dropdown`
 */
 
 :root details.dropdown {
@@ -109,7 +112,7 @@ details.dropdown > summary + .content > ul > li {
       font-weight: var(--font-weight-medium);
     }
   }
-  /* Cancel default styling of button elements */
+  /* Suppress default styling of <button> */
   > button {
     background: none;
   }
