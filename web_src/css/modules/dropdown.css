@@ -84,6 +84,13 @@ details.dropdown > .content {
   box-shadow: var(--dropdown-box-shadow);
   border: 1px solid var(--color-secondary);
   margin-top: 0.5rem;
+
+  /* ToDo: upstream to base.css, remove from normalize.css */
+  > hr {
+    height: 1px;
+    margin-block: 0.25rem;
+    background-color: var(--color-secondary);
+  }
 }
 
 /* Suppress default styling of <ul> */

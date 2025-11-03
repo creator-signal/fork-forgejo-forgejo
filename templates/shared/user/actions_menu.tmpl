@@ -30,6 +30,7 @@
 			</li>
 		</ul>
 		{{if and .IsSigned (ne .SignedUserID .ContextUser.ID)}}
+			<hr>
 			<ul>
 				<li hx-target="#profile-avatar-card" hx-indicator="#profile-avatar-card" id="action-block">
 					{{if .IsBlocked}}
