@@ -53,12 +53,12 @@ details.dropdown > summary {
 }
 
 details.dropdown > summary:hover,
-details.dropdown > summary + .content > ul > li:hover {
+details.dropdown > .content > ul > li:hover {
   background: var(--color-hover);
 }
 
 details.dropdown[open] > summary,
-details.dropdown > summary + .content > ul > li:focus-within {
+details.dropdown > .content > ul > li:focus-within {
   background: var(--color-active);
 }
 
@@ -74,7 +74,7 @@ details.dropdown > summary + .content > ul > li:focus-within {
   cursor: default;
 }
 
-details.dropdown > summary + .content {
+details.dropdown > .content {
   z-index: 99;
   position: absolute;
   min-width: max-content;
@@ -86,14 +86,14 @@ details.dropdown > summary + .content {
 }
 
 /* Suppress default styling of <ul> */
-details.dropdown > summary + .content > ul {
+details.dropdown > .content > ul {
   margin: 0;
   padding: 0;
   list-style-type: none;
 }
 
 /* General styling of list items */
-details.dropdown > summary + .content > ul > li {
+details.dropdown > .content > ul > li {
   width: 100%;
   background: none;
 
@@ -124,7 +124,7 @@ details.dropdown > summary + .content > ul > li {
 
 /* Round first item of first list and last item of last list. Each of these
  * selectors should only resolve to one element in any .content */
-details.dropdown > summary + .content > ul {
+details.dropdown > .content > ul {
   &:first-of-type > li:first-child {
     border-radius: var(--border-radius) var(--border-radius) 0 0;
   }
@@ -135,7 +135,7 @@ details.dropdown > summary + .content > ul {
 
 /* dir-auto option - switch the direction at a width point where most of layout changes occur */
 @media (max-width: 767.98px) {
-  details.dropdown.dir-auto > summary + .content {
+  details.dropdown.dir-auto > .content {
     inset-inline: 0 auto;
     direction: rtl;
     > ul > li {
@@ -145,7 +145,7 @@ details.dropdown > summary + .content > ul {
 }
 
 /* dir-rtl option - force right-to-left box direction */
-details.dropdown.dir-rtl > summary + .content {
+details.dropdown.dir-rtl > .content {
   inset-inline: 0 auto;
   direction: rtl;
   > ul > li {
