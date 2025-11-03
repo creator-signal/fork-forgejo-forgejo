@@ -33,7 +33,6 @@ import (
 	"forgejo.org/modules/timeutil"
 
 	"xorm.io/builder"
-	"xorm.io/xorm/schemas"
 )
 
 // ActionType represents the type of an action.
@@ -145,11 +144,11 @@ func (at ActionType) InActions(actions ...string) bool {
 // used in template render.
 type Action struct {
 	ID          int64 `xorm:"pk autoincr"`
-	UserID      int64 `xorm:"INDEX"` // Receiver user id.
+	UserID      int64 `xorm:"index(created_unix_user_id) index(repo_user_ids) index(created_unix_act_user_id_user_repo_ids)"` // Receiver user id.
 	OpType      ActionType
-	ActUserID   int64            // Action user id.
-	ActUser     *user_model.User `xorm:"-"`
-	RepoID      int64
+	ActUserID   int64                  `xorm:"index(created_unix_act_user_id_user_repo_ids)"` // Action user id.
+	ActUser     *user_model.User       `xorm:"-"`
+	RepoID      int64                  `xorm:"index(repo_user_ids) index(created_unix_act_user_id_user_repo_ids)"`
 	Repo        *repo_model.Repository `xorm:"-"`
 	CommentID   int64                  `xorm:"INDEX"`
 	Comment     *issues_model.Comment  `xorm:"-"`
@@ -157,27 +156,11 @@ type Action struct {
 	RefName     string
 	IsPrivate   bool               `xorm:"NOT NULL DEFAULT false"`
 	Content     string             `xorm:"TEXT"`
-	CreatedUnix timeutil.TimeStamp `xorm:"created"`
+	CreatedUnix timeutil.TimeStamp `xorm:"created index(created_unix_user_id) index(created_unix_act_user_id_user_repo_ids)"`
 }
 
 func init() {
 	db.RegisterModel(new(Action))
-}
-
-// TableIndices implements xorm's TableIndices interface
-func (a *Action) TableIndices() []*schemas.Index {
-	repoIndex := schemas.NewIndex("r_u_d", schemas.IndexType)
-	repoIndex.AddColumn("repo_id", "user_id")
-
-	actUserIndex := schemas.NewIndex("au_r_c_u_d", schemas.IndexType)
-	actUserIndex.AddColumn("act_user_id", "repo_id", "created_unix", "user_id")
-
-	cudIndex := schemas.NewIndex("c_u_d", schemas.IndexType)
-	cudIndex.AddColumn("created_unix", "user_id")
-
-	indices := []*schemas.Index{actUserIndex, repoIndex, cudIndex}
-
-	return indices
 }
 
 // GetOpType gets the ActionType of this action.

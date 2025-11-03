@@ -1216,6 +1216,11 @@ func DeleteComment(ctx context.Context, comment *Comment) error {
 		}
 	}
 
+	if _, err := e.Table("action").
+		Where("comment_id = ?", comment.ID).Delete(); err != nil {
+		return err
+	}
+
 	if err := comment.neuterCrossReferences(ctx); err != nil {
 		return err
 	}
