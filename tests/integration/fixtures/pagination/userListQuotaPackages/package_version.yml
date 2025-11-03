@@ -1,0 +1,18 @@
+-
+  id: 1
+  package_id: 1
+  creator_id: 2
+  version: v1
+  lower_version: v1
+  created_unix: 0
+  is_internal: false
+  download_count: 0
+-
+  id: 2
+  package_id: 1
+  creator_id: 2
+  version: v2
+  lower_version: v2
+  created_unix: 0
+  is_internal: false
+  download_count: 0

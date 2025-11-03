@@ -1,0 +1,22 @@
+-
+  id: 2
+  owner_id: 2
+  name: user2@localhost
+  fingerprint: "Woah lookie a fingerprint"
+  content: "Pretty sure this content doesn't matter for this test"
+  mode: 2
+  type: 1
+  created_unix: 1559593109
+  updated_unix: 1565224552
+  login_source_id: 0
+-
+  id: 3
+  owner_id: 2
+  name: user2@localhost
+  fingerprint: "another fingerprint!"
+  content: "I definitely just copied this from the other public key fixture, I just needed more than the 1 it has."
+  mode: 2
+  type: 1
+  created_unix: 1559593109
+  updated_unix: 1565224552
+  login_source_id: 0

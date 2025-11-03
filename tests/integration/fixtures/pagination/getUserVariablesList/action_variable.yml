@@ -1,0 +1,17 @@
+-
+  id: 1
+  owner_id: 1
+  repo_id: 0
+  name: "variable1"
+  data: "data1"
+  created_unix: 0
+  updated_unix: 0
+-
+  id: 2
+  owner_id: 1
+  repo_id: 0
+  name: "variable2"
+  data: "data2"
+  created_unix: 0
+  updated_unix: 0
+

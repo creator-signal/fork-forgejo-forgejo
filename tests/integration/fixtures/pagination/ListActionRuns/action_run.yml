@@ -1,0 +1,41 @@
+# The default action run fixtures weren't working, since their `owner_id`
+# differs from the associated repo's `owner_id`
+-
+  id: 1000
+  title: "job output"
+  repo_id: 4
+  owner_id: 5
+  workflow_id: "test.yaml"
+  index: 1
+  trigger_user_id: 1
+  ref: "refs/heads/test"
+  commit_sha: "c2d72f548424103f01ee1dc02889c1e2bff816b0"
+  event: "push"
+  is_fork_pull_request: 0
+  status: 1
+  started: 1683636528
+  stopped: 1683636626
+  created: 1683636108
+  updated: 1683636626
+  need_approval: 0
+  approved_by: 0
+-
+  id: 1001
+  title: "job output"
+  repo_id: 4
+  owner_id: 5
+  workflow_id: "test.yaml"
+  index: 2
+  trigger_user_id: 1
+  ref: "refs/heads/test"
+  commit_sha: "c2d72f548424103f01ee1dc02889c1e2bff816b0"
+  event: "push"
+  is_fork_pull_request: 0
+  status: 1
+  started: 1683636528
+  stopped: 1683636626
+  created: 1683636108
+  updated: 1683636626
+  need_approval: 0
+  approved_by: 0
+

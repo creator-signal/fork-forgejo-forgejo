@@ -1,0 +1,85 @@
+
+-
+  id: 65
+  owner_id: 2
+  owner_name: user2
+  lower_name: repo65
+  name: repo65
+  default_branch: main
+  num_watches: 0
+  num_stars: 0
+  num_forks: 2
+  num_milestones: 0
+  num_closed_milestones: 0
+  num_projects: 0
+  num_closed_projects: 0
+  is_private: false
+  is_empty: false
+  is_archived: false
+  is_mirror: false
+  status: 0
+  is_fork: false
+  fork_id: 0
+  is_template: false
+  template_id: 0
+  size: 0
+  is_fsck_enabled: true
+  close_issues_via_commit_in_any_branch: true
+  topics: '[]'
+
+-
+  id: 66
+  owner_id: 4
+  owner_name: user2
+  lower_name: repo66
+  name: repo66
+  default_branch: main
+  num_watches: 0
+  num_stars: 0
+  num_forks: 2
+  num_milestones: 0
+  num_closed_milestones: 0
+  num_projects: 0
+  num_closed_projects: 0
+  is_private: false
+  is_empty: false
+  is_archived: false
+  is_mirror: false
+  status: 0
+  is_fork: true
+  fork_id: 65
+  is_template: false
+  template_id: 0
+  size: 0
+  is_fsck_enabled: true
+  close_issues_via_commit_in_any_branch: true
+  topics: '[]'
+
+-
+  id: 67
+  owner_id: 5
+  owner_name: user2
+  lower_name: repo67
+  name: repo67
+  default_branch: main
+  num_watches: 0
+  num_stars: 0
+  num_forks: 2
+  num_milestones: 0
+  num_closed_milestones: 0
+  num_projects: 0
+  num_closed_projects: 0
+  is_private: false
+  is_empty: false
+  is_archived: false
+  is_mirror: false
+  status: 0
+  is_fork: true
+  fork_id: 65
+  is_template: false
+  template_id: 0
+  size: 0
+  is_fsck_enabled: true
+  close_issues_via_commit_in_any_branch: true
+  topics: '[]'
+

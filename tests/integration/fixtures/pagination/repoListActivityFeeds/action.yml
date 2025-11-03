@@ -1,0 +1,9 @@
+ -
+  id: 11
+  user_id: 11
+  op_type: 2 # rename repo
+  act_user_id: 11
+  repo_id: 9 # public
+  is_private: false
+  content: oldRepoName
+

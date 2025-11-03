@@ -1,0 +1,17 @@
+-
+  id: 1
+  version_id: 1
+  blob_id: 1
+  name: file1
+  lower_name: file1
+  is_lead: false
+  created_unix: 0
+-
+  id: 2
+  version_id: 2
+  blob_id: 2
+  name: file2
+  lower_name: file2
+  is_lead: false
+  created_unix: 0
+

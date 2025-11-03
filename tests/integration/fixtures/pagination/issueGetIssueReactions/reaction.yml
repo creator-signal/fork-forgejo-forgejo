@@ -1,0 +1,17 @@
+-
+  id: 6
+  type: eyes
+  issue_id: 1
+  comment_id: 0
+  user_id: 1
+  created_unix: 0
+
+-
+  id: 7 # issue reaction
+  type: eyes
+  issue_id: 1
+  comment_id: 0
+  user_id: 2
+  created_unix: 0
+
+

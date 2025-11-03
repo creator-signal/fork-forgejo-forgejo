@@ -1,0 +1,23 @@
+-
+  id: 1
+  repo_id: 1
+  remote_name: pushmirror1
+  remote_address: https://example.com/pushmirror1.git
+  branch_filter: "*"
+  sync_on_commit: true
+  interval: 86_400_000_000_000 # one day, in nanoseconds
+  created_unix: 0
+  last_update: 0
+  last_error: ""
+-
+  id: 2
+  repo_id: 1
+  remote_name: pushmirror2
+  remote_address: https://example.com/pushmirror2.git
+  branch_filter: "*"
+  sync_on_commit: true
+  interval: 86_400_000_000_000 # one day, in nanoseconds
+  created_unix: 0
+  last_update: 0
+  last_error: ""
+

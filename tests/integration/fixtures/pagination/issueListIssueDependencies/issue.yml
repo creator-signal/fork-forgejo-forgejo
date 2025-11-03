@@ -1,0 +1,49 @@
+-
+  id: 23
+  repo_id: 6
+  index: 1
+  poster_id: 1
+  original_author_id: 0
+  name: issue1
+  content: issue number 1 on repo 6
+  milestone_id: 0
+  priority: 0
+  is_closed: false
+  is_pull: false
+  num_comments: 0
+  created_unix: 0
+  updated_unix: 0
+  is_locked: false
+-
+  id: 24
+  repo_id: 6
+  index: 2
+  poster_id: 1
+  original_author_id: 0
+  name: issue1
+  content: issue number 2 on repo 6
+  milestone_id: 0
+  priority: 0
+  is_closed: false
+  is_pull: false
+  num_comments: 0
+  created_unix: 0
+  updated_unix: 0
+  is_locked: false
+-
+  id: 25
+  repo_id: 6
+  index: 3
+  poster_id: 1
+  original_author_id: 0
+  name: issue1
+  content: issue number 3 on repo 6
+  milestone_id: 0
+  priority: 0
+  is_closed: false
+  is_pull: false
+  num_comments: 0
+  created_unix: 0
+  updated_unix: 0
+  is_locked: false
+

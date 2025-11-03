@@ -1,0 +1,17 @@
+-
+  id: 1
+  owner_id: 1
+  type: generic
+  name: Package1
+  lower_name: package1
+  semver_compatible: false
+  is_internal: false
+-
+  id: 2
+  owner_id: 1
+  type: generic
+  name: Package2
+  lower_name: package2
+  semver_compatible: false
+  is_internal: false
+
