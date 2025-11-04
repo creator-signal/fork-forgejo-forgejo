@@ -8,6 +8,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/translation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,6 +68,77 @@ func TestActionRunJob_HTMLURL(t *testing.T) {
 			url, err := job.HTMLURL(t.Context())
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, url)
+		})
+	}
+}
+
+func TestActionRunJob_StatusDiagnostics(t *testing.T) {
+	translation.InitLocales(t.Context())
+	english := translation.NewLocale("en-US")
+
+	tests := []struct {
+		name     string
+		job      ActionRunJob
+		expected []string
+	}{
+		{
+			name:     "Unknown status",
+			job:      ActionRunJob{RunsOn: []string{"windows"}, Status: StatusUnknown, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Unknown"},
+		},
+		{
+			name:     "Waiting without labels",
+			job:      ActionRunJob{RunsOn: []string{}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Waiting for a runner with the following labels: "},
+		},
+		{
+			name:     "Waiting with labels, no approval",
+			job:      ActionRunJob{RunsOn: []string{"docker", "ubuntu"}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Waiting for a runner with the following labels: docker, ubuntu"},
+		},
+		{
+			name: "Waiting with labels, approval",
+			job:  ActionRunJob{RunsOn: []string{"docker", "ubuntu"}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: true}},
+			expected: []string{
+				"Waiting for a runner with the following labels: docker, ubuntu",
+				"Need approval to run workflows for fork pull request.",
+			},
+		},
+		{
+			name:     "Running",
+			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusRunning, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Running"},
+		},
+		{
+			name:     "Success",
+			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusSuccess, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Success"},
+		},
+		{
+			name:     "Failure",
+			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusFailure, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Failure"},
+		},
+		{
+			name:     "Cancelled",
+			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusCancelled, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Canceled"},
+		},
+		{
+			name:     "Skipped",
+			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusSkipped, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Skipped"},
+		},
+		{
+			name:     "Blocked",
+			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusBlocked, Run: &ActionRun{NeedApproval: false}},
+			expected: []string{"Blocked"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.job.StatusDiagnostics(english))
 		})
 	}
 }
