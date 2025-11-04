@@ -80,11 +80,10 @@ test.describe('Button text replaced by JS', () => {
 
     const statusButton = page.locator('#status-button');
     const statusButtonIcon = page.locator('#status-button svg');
-    const commentField = page.locator('#comment-form').getByPlaceholder('Leave a comment')
+    const commentField = page.locator('#comment-form').getByPlaceholder('Leave a comment');
 
     // Reset issue status before running the test
-    if (await statusButton.getByText('Reopen').isVisible())
-      await statusButton.click();
+    if (await statusButton.getByText('Reopen').isVisible()) await statusButton.click();
 
     // Assert that normal Close button text is present
     await expect(statusButton.getByText(closeLabel)).toBeVisible();
@@ -104,17 +103,19 @@ test.describe('Button text replaced by JS', () => {
     await commentField.fill('Blah blah');
     await expect(statusButton.getByText('Reopen with comment')).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
+
+    return true;
   }
 
-  test('Issue', async ({ page }) => {
-    await testPage(page, '/user2/repo1/issues/1', 'Close issue');
+  test('Issue', async ({page}) => {
+    // All actual expect() are happening in the helper
+    expect(await testPage(page, '/user2/repo1/issues/1', 'Close issue')).toBeTruthy();
   });
 
-  test('PR', async ({ page }) => {
-    await testPage(page, '/user2/repo1/pulls/3', 'Close pull request');
+  test('PR', async ({page}) => {
+    expect(await testPage(page, '/user2/repo1/pulls/3', 'Close pull request')).toBeTruthy();
   });
 });
-
 
 test('Hyperlink paste behaviour', async ({page}, workerInfo) => {
   test.skip(['Mobile Safari', 'Mobile Chrome', 'webkit'].includes(workerInfo.project.name), 'Mobile clients seem to have very weird behaviour with this test, which I cannot confirm with real usage');
