@@ -74,6 +74,67 @@ test('Menu accessibility', async ({page}) => {
   await expect(page.getByLabel('user1, user2 reacted laugh. Remove laugh')).toBeVisible();
 });
 
+test.describe('Button text replaced by JS', () => {
+  test('Issue', async ({page}) => {
+    await page.goto('/user2/repo1/issues/1');
+
+    const closeReopenButtonIcon = page.locator('#status-button svg')
+    const closeReopenButton = page.locator('#status-button')
+
+    // Reset issue status before running the test
+    if (closeReopenButton.getByText('Reopen').isVisible())
+      closeReopenButton.click()
+
+    await expect(closeReopenButton.getByText('Close issue')).toBeVisible()
+    await expect(closeReopenButtonIcon).toBeVisible()
+
+    // Type in some text to make button text change
+    await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Blah blah');
+    await expect(closeReopenButton.getByText('Close with comment')).toBeVisible()
+    await expect(closeReopenButtonIcon).toBeVisible()
+
+    // Close issue
+    await closeReopenButton.click()
+    await expect(closeReopenButton.getByText('Reopen')).toBeVisible()
+    await expect(closeReopenButtonIcon).toBeVisible()
+
+    // Type in some text to make button text change
+    await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Blah blah');
+    await expect(closeReopenButton.getByText('Reopen with comment')).toBeVisible()
+    await expect(closeReopenButtonIcon).toBeVisible()
+  });
+
+
+  test('PR', async ({page}) => {
+    await page.goto('/user2/repo1/pulls/3');
+
+    const closeReopenButtonIcon = page.locator('#status-button svg')
+    const closeReopenButton = page.locator('#status-button')
+
+    // Reset PR status before running the test
+    if (closeReopenButton.getByText('Reopen').isVisible())
+      closeReopenButton.click()
+
+    await expect(closeReopenButton.getByText('Close pull request')).toBeVisible()
+    await expect(closeReopenButtonIcon).toBeVisible()
+
+    // Type in some text to make button text change
+    await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Blah blah');
+    await expect(closeReopenButton.getByText('Close with comment')).toBeVisible()
+    await expect(closeReopenButtonIcon).toBeVisible()
+
+    // Close PR
+    await closeReopenButton.click()
+    await expect(closeReopenButton.getByText('Reopen')).toBeVisible()
+    await expect(closeReopenButtonIcon).toBeVisible()
+
+    // Type in some text to make button text change
+    await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Blah blah');
+    await expect(closeReopenButton.getByText('Reopen with comment')).toBeVisible()
+    await expect(closeReopenButtonIcon).toBeVisible()
+  });
+});
+
 test('Hyperlink paste behaviour', async ({page}, workerInfo) => {
   test.skip(['Mobile Safari', 'Mobile Chrome', 'webkit'].includes(workerInfo.project.name), 'Mobile clients seem to have very weird behaviour with this test, which I cannot confirm with real usage');
   await page.goto('/user2/repo1/issues/new');
