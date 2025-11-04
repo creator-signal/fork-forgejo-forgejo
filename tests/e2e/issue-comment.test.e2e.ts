@@ -78,30 +78,32 @@ test.describe('Button text replaced by JS', () => {
   async function testPage(page, path, closeLabel) {
     await page.goto(path);
 
-    const closeReopenButton = page.locator('#status-button');
-    const closeReopenButtonIcon = page.locator('#status-button svg');
+    const statusButton = page.locator('#status-button');
+    const statusButtonIcon = page.locator('#status-button svg');
+    const commentField = page.locator('#comment-form').getByPlaceholder('Leave a comment')
 
     // Reset issue status before running the test
-    if (await closeReopenButton.getByText('Reopen').isVisible())
-      await closeReopenButton.click();
+    if (await statusButton.getByText('Reopen').isVisible())
+      await statusButton.click();
 
-    await expect(closeReopenButton.getByText(closeLabel)).toBeVisible();
-    await expect(closeReopenButtonIcon).toBeVisible();
-
-    // Type in some text to make button text change
-    await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Blah blah');
-    await expect(closeReopenButton.getByText('Close with comment')).toBeVisible();
-    await expect(closeReopenButtonIcon).toBeVisible();
-
-    // Close issue/PR
-    await closeReopenButton.click();
-    await expect(closeReopenButton.getByText('Reopen')).toBeVisible();
-    await expect(closeReopenButtonIcon).toBeVisible();
+    // Assert that normal Close button text is present
+    await expect(statusButton.getByText(closeLabel)).toBeVisible();
+    await expect(statusButtonIcon).toBeVisible();
 
     // Type in some text to make button text change
-    await page.locator('#comment-form').getByPlaceholder('Leave a comment').fill('Blah blah');
-    await expect(closeReopenButton.getByText('Reopen with comment')).toBeVisible();
-    await expect(closeReopenButtonIcon).toBeVisible();
+    await commentField.fill('Blah blah');
+    await expect(statusButton.getByText('Close with comment')).toBeVisible();
+    await expect(statusButtonIcon).toBeVisible();
+
+    // Close issue/PR and assert that normal Reopen button text is present
+    await statusButton.click();
+    await expect(statusButton.getByText('Reopen')).toBeVisible();
+    await expect(statusButtonIcon).toBeVisible();
+
+    // Type in some text to make button text change
+    await commentField.fill('Blah blah');
+    await expect(statusButton.getByText('Reopen with comment')).toBeVisible();
+    await expect(statusButtonIcon).toBeVisible();
   }
 
   test('Issue', async ({ page }) => {
