@@ -744,8 +744,6 @@ export function initSingleCommentEditor($commentForm) {
   const opts = {};
   const statusButton = document.getElementById('status-button');
   const statusButtonText = statusButton.querySelector('span');
-  console.log(statusButton);
-  console.log(statusButtonText);
   if (statusButton) {
     opts.onContentChanged = (editor) => {
       const newText = statusButton.getAttribute(editor.value().trim() ? 'data-status-and-comment' : 'data-status');
