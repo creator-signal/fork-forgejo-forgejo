@@ -301,11 +301,12 @@ export default {
 }
 
 .menu .item .rss-icon {
-  display: none; /* only show RSS icon on hover */
+  display: inline-block;
+  visibility: hidden; /* only show RSS icon on hover */
 }
 
 .menu .item:hover .rss-icon {
-  display: inline-block;
+  visibility: visible;
 }
 
 .scrolling.menu .loading-indicator {
