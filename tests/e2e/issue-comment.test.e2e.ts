@@ -91,7 +91,7 @@ test.describe('Button text replaced by JS', () => {
 
     // Type in some text to make button text change
     await commentField.fill('Blah blah');
-    await expect(statusButton.getByText('Close comment')).toBeVisible();
+    await expect(statusButton.getByText('Close with comment')).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
     // Close issue/PR and assert that normal Reopen button text is present
