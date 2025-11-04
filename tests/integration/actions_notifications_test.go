@@ -70,7 +70,7 @@ jobs:
 
 				apiRepo := createActionsTestRepo(t, token, testCase.name, false)
 				runner := newMockRunner()
-				runner.registerAsRepoRunner(t, user2.Name, apiRepo.Name, "mock-runner", []string{"ubuntu-latest"})
+				runner.registerAsRepoRunner(t, user2.Name, apiRepo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
 				opts := getWorkflowCreateFileOptions(user2, apiRepo.DefaultBranch, fmt.Sprintf("create %s", testCase.treePath), testCase.fileContent)
 				createWorkflowFile(t, token, user2.Name, apiRepo.Name, testCase.treePath, opts)
 

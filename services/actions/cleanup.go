@@ -11,23 +11,31 @@ import (
 	"time"
 
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
 	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	"forgejo.org/modules/timeutil"
+
+	"xorm.io/builder"
 )
 
-// Cleanup removes expired actions logs, data and artifacts
+// Cleanup removes expired actions logs, data, artifacts and used ephemeral runners
 func Cleanup(ctx context.Context) error {
 	// clean up expired artifacts
 	if err := CleanupArtifacts(ctx); err != nil {
-		return fmt.Errorf("cleanup artifacts: %w", err)
+		return fmt.Errorf("failed to clean up artifacts: %w", err)
 	}
 
 	// clean up old logs
 	if err := CleanupLogs(ctx); err != nil {
-		return fmt.Errorf("cleanup logs: %w", err)
+		return fmt.Errorf("failed to clean up logs: %w", err)
+	}
+
+	// clean up old ephemeral runners
+	if err := CleanupEphemeralRunners(ctx); err != nil {
+		return fmt.Errorf("failed to clean up old ephemeral runners: %w", err)
 	}
 
 	return nil
@@ -124,6 +132,46 @@ func CleanupLogs(ctx context.Context) error {
 	}
 
 	log.Info("Removed %d logs", count)
+	return nil
+}
+
+// CleanupEphemeralRunners removes used ephemeral runners which are no longer able to process jobs
+func CleanupEphemeralRunners(ctx context.Context) error {
+	var runners []actions_model.ActionRunner
+	err := db.GetEngine(ctx).
+		Table("`action_runner`").
+		Select("DISTINCT `action_runner`.id").
+		Join("INNER", "`action_task`", "`action_task`.`runner_id` = `action_runner`.`id`").
+		Where(builder.Eq{"`action_runner`.`ephemeral`": true}).
+		And(builder.In("`action_task`.`status`",
+			actions_model.StatusSuccess, // End states
+			actions_model.StatusFailure,
+			actions_model.StatusCancelled,
+			actions_model.StatusSkipped,
+		)).
+		Find(&runners)
+	if err != nil {
+		return fmt.Errorf("failed to find ephemeral runners: %w", err)
+	}
+
+	if len(runners) == 0 {
+		log.Info("No ephemeral runners to remove")
+		return nil
+	}
+
+	ids := make([]int64, len(runners))
+	for i, r := range runners {
+		ids[i] = r.ID
+	}
+
+	res, err := db.GetEngine(ctx).
+		In("id", ids).
+		Delete(&actions_model.ActionRunner{})
+	if err != nil {
+		return fmt.Errorf("failed to delete ephemeral runners: %w", err)
+	}
+
+	log.Info("Removed %d ephemeral runners", res)
 	return nil
 }
 

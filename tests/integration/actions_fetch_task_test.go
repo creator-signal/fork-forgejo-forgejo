@@ -57,7 +57,7 @@ jobs:
 		defer f()
 
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
 
 		// Fetch with TaskCapacity undefined, set to nil, should return a single pending task
 		task := runner.fetchTask(t)

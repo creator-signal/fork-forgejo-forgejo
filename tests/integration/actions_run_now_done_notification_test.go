@@ -115,7 +115,7 @@ func TestActionNowDoneNotification(t *testing.T) {
 		}
 
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
 
 		// 0: first successful run
 		_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)

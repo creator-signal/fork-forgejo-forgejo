@@ -69,19 +69,20 @@ func (r *mockRunner) doPing(t *testing.T) {
 	require.Equal(t, "Hello, mock-runner!", resp.Msg.Data)
 }
 
-func (r *mockRunner) doRegister(t *testing.T, name, token string, labels []string) {
+func (r *mockRunner) doRegister(t *testing.T, name, token string, labels []string, ephemeral bool) {
 	r.doPing(t)
 	resp, err := r.client.runnerServiceClient.Register(t.Context(), connect.NewRequest(&runnerv1.RegisterRequest{
-		Name:    name,
-		Token:   token,
-		Version: "mock-runner-version",
-		Labels:  labels,
+		Name:      name,
+		Token:     token,
+		Version:   "mock-runner-version",
+		Labels:    labels,
+		Ephemeral: ephemeral,
 	}))
 	require.NoError(t, err)
 	r.client = newMockRunnerClient(resp.Msg.Runner.Uuid, resp.Msg.Runner.Token)
 }
 
-func (r *mockRunner) registerAsRepoRunner(t *testing.T, ownerName, repoName, runnerName string, labels []string) {
+func (r *mockRunner) registerAsRepoRunner(t *testing.T, ownerName, repoName, runnerName string, labels []string, ephemeral bool) {
 	if !setting.Database.Type.IsSQLite3() {
 		assert.FailNow(t, "registering a mock runner when using a database other than SQLite leaves leftovers")
 	}
@@ -93,7 +94,7 @@ func (r *mockRunner) registerAsRepoRunner(t *testing.T, ownerName, repoName, run
 		Token string `json:"token"`
 	}
 	DecodeJSON(t, resp, &registrationToken)
-	r.doRegister(t, runnerName, registrationToken.Token, labels)
+	r.doRegister(t, runnerName, registrationToken.Token, labels, ephemeral)
 }
 
 func (r *mockRunner) maybeFetchTask(t *testing.T) *runnerv1.Task {
