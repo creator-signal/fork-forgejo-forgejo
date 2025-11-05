@@ -15,6 +15,7 @@ import (
 	user_model "forgejo.org/models/user"
 	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/log"
+	webhook_module "forgejo.org/modules/webhook"
 )
 
 type TrustUpdate string
@@ -53,6 +54,7 @@ func getIssuePoster(ctx context.Context, issue *issues_model.Issue) (*user_model
 		}
 		return nil, fmt.Errorf("getIssuePoster [%d]: %w", issue.PosterID, err)
 	}
+	issue.Poster = poster
 	return poster, nil
 }
 
@@ -65,6 +67,46 @@ func mustGetIssuePoster(ctx context.Context, issue *issues_model.Issue) (*user_m
 		return nil, user_model.ErrUserNotExist{UID: issue.PosterID}
 	}
 	return poster, nil
+}
+
+type useHeadOrBaseCommit int
+
+const (
+	useHeadCommit = 1 << iota
+	useBaseCommit
+)
+
+func getPullRequestCommitAndApproval(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.User, event webhook_module.HookEventType) (useHeadOrBaseCommit, actions_model.ApprovalType, error) {
+	if pr == nil || actions_module.IsDefaultBranchWorkflow(event) || !pr.IsForkPullRequest() {
+		return useHeadCommit, actions_model.DoesNotNeedApproval, nil
+	}
+
+	posterTrust, err := GetPullRequestPosterIsTrustedWithActions(ctx, pr)
+	if err != nil {
+		return useHeadCommit, actions_model.UndefinedApproval, err
+	}
+
+	if posterTrust.IsTrusted() {
+		return useHeadCommit, actions_model.DoesNotNeedApproval, nil
+	}
+
+	doerTrust, err := GetPullRequestUserIsTrustedWithActions(ctx, pr, doer)
+	if err != nil {
+		return useHeadCommit, actions_model.UndefinedApproval, err
+	}
+
+	if doerTrust.IsTrusted() {
+		if event == webhook_module.HookEventPullRequestSync {
+			// a synchronized event action (i.e. the doer pushed a commit to the pull request)
+			// can run from the head
+			return useHeadCommit, actions_model.DoesNotNeedApproval, nil
+		}
+		// other events run from workflows found in the base, not
+		// from possibly modified workflows found in the head
+		return useBaseCommit, actions_model.DoesNotNeedApproval, nil
+	}
+	// the poster and the doer are not trusted, approval is needed
+	return useHeadCommit, actions_model.NeedApproval, nil
 }
 
 // cancels or approves runs and keep track of posters that are to always be trusted
@@ -95,7 +137,7 @@ func UpdateTrustedWithPullRequest(ctx context.Context, doerID int64, pr *issues_
 	}
 }
 
-func SetRunTrustForPullRequest(ctx context.Context, run *actions_model.ActionRun, pr *issues_model.PullRequest, doer *user_model.User) error {
+func SetRunTrustForPullRequest(ctx context.Context, run *actions_model.ActionRun, pr *issues_model.PullRequest, needApproval actions_model.ApprovalType) error {
 	if pr == nil {
 		return nil
 	}
@@ -107,66 +149,23 @@ func SetRunTrustForPullRequest(ctx context.Context, run *actions_model.ActionRun
 	run.IsForkPullRequest = pr.IsForkPullRequest()
 	run.PullRequestPosterID = pr.Issue.PosterID
 	run.PullRequestID = pr.ID
-
-	needApproval, err := ifNeedApproval(ctx, run, pr, doer)
-	if err != nil {
-		return err
-	}
-
-	if needApproval {
-		run.NeedApproval = needApproval
-	}
+	run.NeedApproval = bool(needApproval)
 
 	return nil
-}
-
-func ifNeedApproval(ctx context.Context, run *actions_model.ActionRun, pr *issues_model.PullRequest, doer *user_model.User) (bool, error) {
-	// 1. don't need approval if it's not a fork PR
-	// 2. don't need approval if the event is `pull_request_target` since the workflow will run in the context of base branch
-	// 		see https://docs.github.com/en/actions/managing-workflow-runs/approving-workflow-runs-from-public-forks#about-workflow-runs-from-public-forks
-	if !run.IsForkPullRequest || run.TriggerEvent == actions_module.GithubEventPullRequestTarget {
-		return false, nil
-	}
-
-	var trusted UserTrust
-	var err error
-
-	trusted, err = GetPullRequestUserIsTrustedWithActions(ctx, pr, doer)
-	if err != nil {
-		return false, err
-	}
-
-	// If the doer is not trusted, elevate the trust to the poster of the pull request.
-	// For example a workflow is trusted to run:
-	// - if an untrusted user sets a label on a pull request authored by
-	//   a trusted user.
-	// - if an untrusted user pushes a commit to the branch used by a
-	//   trusted user to create a pull request from a fork.
-	if trusted == UserIsNotTrustedWithActions && doer.ID != pr.Issue.PosterID {
-		poster, err := getIssuePoster(ctx, pr.Issue)
-		if err != nil {
-			return false, err
-		}
-		// the poster may have been deleted and no longer exist
-		if poster == nil {
-			return false, nil
-		}
-		trusted, err = GetPullRequestUserIsTrustedWithActions(ctx, pr, poster)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	return trusted == UserIsNotTrustedWithActions, nil
 }
 
 type UserTrust string
 
 const (
+	UserTrustIsNotRelevant             = UserTrust("irrelevant")
 	UserIsNotTrustedWithActions        = UserTrust("no")
 	UserIsExplicitlyTrustedWithActions = UserTrust("explicitly")
 	UserIsImplicitlyTrustedWithActions = UserTrust("implicitly")
 )
+
+func (t UserTrust) IsTrusted() bool {
+	return t != UserIsNotTrustedWithActions
+}
 
 func GetPullRequestPosterIsTrustedWithActions(ctx context.Context, pr *issues_model.PullRequest) (UserTrust, error) {
 	if err := loadPullRequestAttributes(ctx, pr); err != nil {

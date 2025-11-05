@@ -240,17 +240,6 @@ func detectWorkflows(ctx context.Context, input *notifyInput, gitRepo *git.Repos
 		len(schedules),
 	)
 
-	for _, wf := range workflows {
-		if actionsConfig.IsWorkflowDisabled(wf.EntryName) {
-			log.Trace("repo %s has disable workflows %s", input.Repo.RepoPath(), wf.EntryName)
-			continue
-		}
-
-		if wf.TriggerEvent.Name != actions_module.GithubEventPullRequestTarget {
-			detectedWorkflows = append(detectedWorkflows, wf)
-		}
-	}
-
 	if input.PullRequest != nil && !actions_module.IsDefaultBranchWorkflow(input.Event) {
 		// detect pull_request_target workflows
 		baseRef := git.BranchPrefix + input.PullRequest.BaseBranch
@@ -277,7 +266,32 @@ func detectWorkflows(ctx context.Context, input *notifyInput, gitRepo *git.Repos
 				}
 			}
 		}
+
+		useHeadOrBaseCommit, pullRequestNeedApproval, err := getPullRequestCommitAndApproval(ctx, input.PullRequest, input.Doer, input.Event)
+		if err != nil {
+			return nil, nil, fmt.Errorf("getPullRequestTrust: %w", err)
+		}
+
+		if useHeadOrBaseCommit == useBaseCommit {
+			workflows = baseWorkflows
+		} else if pullRequestNeedApproval {
+			for _, wf := range workflows {
+				wf.NeedApproval = pullRequestNeedApproval
+			}
+		}
 	}
+
+	for _, wf := range workflows {
+		if actionsConfig.IsWorkflowDisabled(wf.EntryName) {
+			log.Trace("repo %s has disable workflows %s", input.Repo.RepoPath(), wf.EntryName)
+			continue
+		}
+
+		if wf.TriggerEvent.Name != actions_module.GithubEventPullRequestTarget {
+			detectedWorkflows = append(detectedWorkflows, wf)
+		}
+	}
+
 	return detectedWorkflows, schedules, nil
 }
 
@@ -355,7 +369,7 @@ func handleWorkflows(
 		}
 
 		if !actions_module.IsDefaultBranchWorkflow(input.Event) {
-			if err := SetRunTrustForPullRequest(ctx, run, input.PullRequest, input.Doer); err != nil {
+			if err := SetRunTrustForPullRequest(ctx, run, input.PullRequest, dwf.NeedApproval); err != nil {
 				return fmt.Errorf("SetTrustForPullRequest: %w", err)
 			}
 		}

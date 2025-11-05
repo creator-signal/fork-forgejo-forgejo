@@ -254,6 +254,7 @@ type ApprovalType bool
 const (
 	NeedApproval        = ApprovalType(true)
 	DoesNotNeedApproval = ApprovalType(false)
+	UndefinedApproval   = ApprovalType(false)
 )
 
 func UpdateRunApprovalByID(ctx context.Context, id int64, approval ApprovalType, approvedBy int64) error {

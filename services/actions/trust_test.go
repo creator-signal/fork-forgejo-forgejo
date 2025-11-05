@@ -11,6 +11,7 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	actions_module "forgejo.org/modules/actions"
+	webhook_module "forgejo.org/modules/webhook"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -234,31 +235,26 @@ func TestActionsTrust_GetPullRequestUserIsTrustedWithActions(t *testing.T) {
 
 	t.Run("implicitly trusted because the pull request is not from a fork", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 2000})
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // regular user
-		trust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, user)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
-		pr.LoadAttributes(t.Context())
 		require.False(t, pr.IsForkPullRequest())
 		assert.Equal(t, UserIsImplicitlyTrustedWithActions, trust)
 	})
 
-	t.Run("implicitly trusted on a forked pull request when the user admin", func(t *testing.T) {
+	t.Run("implicitly trusted on a forked pull request when the poster is admin", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3000})
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1}) // admin
-		trust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, user)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
-		pr.LoadAttributes(t.Context())
 		require.True(t, pr.IsForkPullRequest())
-		require.True(t, user.IsAdmin)
+		require.True(t, pr.Issue.Poster.IsAdmin)
 		assert.Equal(t, UserIsImplicitlyTrustedWithActions, trust)
 	})
 
-	t.Run("explicitly trusted on a forked pull request when the user was permanently approved", func(t *testing.T) {
+	t.Run("explicitly trusted on a forked pull request when the poster was permanently approved", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1000})
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4}) // regular user
-		trust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, user)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
-		pr.LoadAttributes(t.Context())
 		require.True(t, pr.IsForkPullRequest())
 		_, err = actions_model.GetActionUserByUserIDAndRepoIDAndUpdateAccess(t.Context(), user.ID, pr.Issue.RepoID)
 		require.NoError(t, err)
@@ -268,9 +264,9 @@ func TestActionsTrust_GetPullRequestUserIsTrustedWithActions(t *testing.T) {
 	t.Run("not trusted because on a forked pull request when the user has has no privileges", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 4000})
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5}) // regular user
-		trust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, user)
+		trust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
-		pr.LoadAttributes(t.Context())
+		assert.Equal(t, user.ID, pr.Issue.PosterID)
 		require.True(t, pr.IsForkPullRequest())
 		assert.Equal(t, UserIsNotTrustedWithActions, trust)
 	})
@@ -280,7 +276,7 @@ func TestActionsTrust_GetPullRequestUserIsTrustedWithActions(t *testing.T) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29}) // restricted user
 		trust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, user)
 		require.NoError(t, err)
-		pr.LoadAttributes(t.Context())
+		assert.Equal(t, user.ID, pr.Issue.PosterID)
 		require.True(t, pr.IsForkPullRequest())
 		_, err = actions_model.GetActionUserByUserIDAndRepoIDAndUpdateAccess(t.Context(), user.ID, pr.Issue.RepoID)
 		require.NoError(t, err)
@@ -288,53 +284,81 @@ func TestActionsTrust_GetPullRequestUserIsTrustedWithActions(t *testing.T) {
 		assert.Equal(t, UserIsNotTrustedWithActions, trust)
 	})
 
-	t.Run("approval not needed because the run is not from a fork", func(t *testing.T) {
-		run := &actions_model.ActionRun{
-			IsForkPullRequest: false,
-		}
-		needApproval, err := ifNeedApproval(t.Context(), run, nil, nil)
+	t.Run("approval not needed because the pr is not from a fork", func(t *testing.T) {
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 2000})
+		useCommit, approval, err := getPullRequestCommitAndApproval(t.Context(), pr, nil, webhook_module.HookEventPullRequest)
 		require.NoError(t, err)
-		assert.False(t, needApproval)
+		assert.Equal(t, actions_model.DoesNotNeedApproval, approval)
+		assert.EqualValues(t, useHeadCommit, useCommit)
 	})
 
-	t.Run("approval not needed because the run is a pull_request_target event", func(t *testing.T) {
-		run := &actions_model.ActionRun{
-			IsForkPullRequest: true,
-			TriggerEvent:      actions_module.GithubEventPullRequestTarget,
-		}
-		needApproval, err := ifNeedApproval(t.Context(), run, nil, nil)
+	t.Run("approval not needed because the event is known to run out of the default branch", func(t *testing.T) {
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3000})
+		useCommit, approval, err := getPullRequestCommitAndApproval(t.Context(), pr, nil, webhook_module.HookEventPullRequestComment)
 		require.NoError(t, err)
-		assert.False(t, needApproval)
+		assert.Equal(t, actions_model.DoesNotNeedApproval, approval)
+		assert.EqualValues(t, useHeadCommit, useCommit)
 	})
 
-	t.Run("approval needed because the run is from a forked pull request and the user is not trusted", func(t *testing.T) {
-		run := &actions_model.ActionRun{
-			IsForkPullRequest: true,
-		}
-		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 5000})
-		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29}) // restricted user
-		needApproval, err := ifNeedApproval(t.Context(), run, pr, doer)
+	t.Run("approval not needed because it is not a pr", func(t *testing.T) {
+		useCommit, approval, err := getPullRequestCommitAndApproval(t.Context(), nil, nil, webhook_module.HookEventPullRequestComment)
 		require.NoError(t, err)
-		require.True(t, doer.IsRestricted)
-		assert.True(t, needApproval)
+		assert.Equal(t, actions_model.DoesNotNeedApproval, approval)
+		assert.EqualValues(t, useHeadCommit, useCommit)
 	})
 
-	t.Run("approval needed because the run is triggered by an untrusted user from a forked pull request authored by a trusted user", func(t *testing.T) {
-		run := &actions_model.ActionRun{
-			IsForkPullRequest: true,
-		}
-		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1000})
-		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29}) // restricted user
-		needApproval, err := ifNeedApproval(t.Context(), run, pr, doer)
+	t.Run("approval not needed for a forked pr because the poster is trusted", func(t *testing.T) {
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3000})
+		useCommit, approval, err := getPullRequestCommitAndApproval(t.Context(), pr, nil, webhook_module.HookEventPullRequestSync)
 		require.NoError(t, err)
-		require.True(t, doer.IsRestricted)
-		assert.False(t, needApproval)
-		require.NoError(t, pr.LoadAttributes(t.Context()))
-		poster, err := mustGetIssuePoster(t.Context(), pr.Issue)
+		require.True(t, pr.Issue.Poster.IsAdmin)
+		assert.Equal(t, actions_model.DoesNotNeedApproval, approval)
+		assert.EqualValues(t, useHeadCommit, useCommit)
+	})
+
+	t.Run("approval needed for a forked pr because the poster and the doer are not trusted", func(t *testing.T) {
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 4000})
+		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5}) // regular user
+		useCommit, approval, err := getPullRequestCommitAndApproval(t.Context(), pr, doer, webhook_module.HookEventPullRequestSync)
 		require.NoError(t, err)
-		trust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, poster)
+		posterTrust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
 		require.NoError(t, err)
-		assert.Equal(t, UserIsExplicitlyTrustedWithActions, trust)
+		require.Equal(t, UserIsNotTrustedWithActions, posterTrust)
+		doerTrust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, doer)
+		require.NoError(t, err)
+		require.Equal(t, UserIsNotTrustedWithActions, doerTrust)
+		assert.Equal(t, actions_model.NeedApproval, approval)
+		assert.EqualValues(t, useHeadCommit, useCommit)
+	})
+
+	t.Run("approval not needed for a forked pr because the doer is trusted and runs from the base", func(t *testing.T) {
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 4000})
+		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1}) // admin
+		useCommit, approval, err := getPullRequestCommitAndApproval(t.Context(), pr, doer, webhook_module.HookEventPullRequestLabel)
+		require.NoError(t, err)
+		posterTrust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		require.NoError(t, err)
+		require.Equal(t, UserIsNotTrustedWithActions, posterTrust)
+		doerTrust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, doer)
+		require.NoError(t, err)
+		require.Equal(t, UserIsImplicitlyTrustedWithActions, doerTrust)
+		assert.Equal(t, actions_model.DoesNotNeedApproval, approval)
+		assert.EqualValues(t, useBaseCommit, useCommit)
+	})
+
+	t.Run("approval not needed for a forked pr because the doer is trusted and pushed new commits", func(t *testing.T) {
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 4000})
+		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1}) // admin
+		useCommit, approval, err := getPullRequestCommitAndApproval(t.Context(), pr, doer, webhook_module.HookEventPullRequestSync)
+		require.NoError(t, err)
+		posterTrust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		require.NoError(t, err)
+		require.Equal(t, UserIsNotTrustedWithActions, posterTrust)
+		doerTrust, err := GetPullRequestUserIsTrustedWithActions(t.Context(), pr, doer)
+		require.NoError(t, err)
+		require.Equal(t, UserIsImplicitlyTrustedWithActions, doerTrust)
+		assert.Equal(t, actions_model.DoesNotNeedApproval, approval)
+		assert.EqualValues(t, useHeadCommit, useCommit)
 	})
 
 	t.Run("run for a pull request is set with info related to trust", func(t *testing.T) {
@@ -342,10 +366,9 @@ func TestActionsTrust_GetPullRequestUserIsTrustedWithActions(t *testing.T) {
 			IsForkPullRequest: true,
 		}
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 5000})
-		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29}) // restricted user
-		require.NoError(t, SetRunTrustForPullRequest(t.Context(), run, nil, doer))
-		require.NoError(t, SetRunTrustForPullRequest(t.Context(), run, pr, doer))
-		require.True(t, doer.IsRestricted)
+		needApproval := actions_model.NeedApproval
+		require.NoError(t, SetRunTrustForPullRequest(t.Context(), run, nil, needApproval))
+		require.NoError(t, SetRunTrustForPullRequest(t.Context(), run, pr, needApproval))
 		assert.True(t, run.NeedApproval)
 		assert.True(t, run.IsForkPullRequest)
 		assert.Equal(t, pr.Issue.PosterID, run.PullRequestPosterID)
