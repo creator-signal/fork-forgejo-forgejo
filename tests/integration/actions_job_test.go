@@ -525,12 +525,13 @@ jobs:
 		})
 		session.MakeRequest(t, request, http.StatusSeeOther)
 
+		assert.Nil(t, ubuntuRunner.maybeFetchTask(t))
+
 		task := windowsRunner.fetchTask(t)
 		actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
 		actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: actionTask.JobID})
 		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: actionRunJob.RunID})
 
-		assert.Nil(t, ubuntuRunner.maybeFetchTask(t))
 		assert.Equal(t, "Test runs-on with inputs", run.Title)
 	})
 }
