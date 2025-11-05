@@ -159,6 +159,8 @@ func TestAPICreateIssue(t *testing.T) {
 
 	repoBefore := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repoBefore.OwnerID})
+	beforeNumIssues := repoBefore.NumIssues(t.Context())
+	beforeNumClosedIssues := repoBefore.NumClosedIssues(t.Context())
 
 	session := loginUser(t, owner.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
@@ -182,8 +184,8 @@ func TestAPICreateIssue(t *testing.T) {
 	})
 
 	repoAfter := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
-	assert.Equal(t, repoBefore.NumIssues+1, repoAfter.NumIssues)
-	assert.Equal(t, repoBefore.NumClosedIssues, repoAfter.NumClosedIssues)
+	assert.Equal(t, beforeNumIssues+1, repoAfter.NumIssues(t.Context()))
+	assert.Equal(t, beforeNumClosedIssues, repoAfter.NumClosedIssues(t.Context()))
 }
 
 func TestAPICreateIssueParallel(t *testing.T) {
@@ -238,6 +240,7 @@ func TestAPIEditIssue(t *testing.T) {
 	require.NoError(t, issueBefore.LoadAttributes(db.DefaultContext))
 	assert.Equal(t, int64(1019307200), int64(issueBefore.DeadlineUnix))
 	assert.Equal(t, api.StateOpen, issueBefore.State())
+	beforeNumClosedIssues := repoBefore.NumClosedIssues(t.Context())
 
 	session := loginUser(t, owner.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
@@ -278,7 +281,7 @@ func TestAPIEditIssue(t *testing.T) {
 	assert.Equal(t, int64(-1), apiIssue.Poster.ID)
 
 	// check repo change
-	assert.Equal(t, repoBefore.NumClosedIssues+1, repoAfter.NumClosedIssues)
+	assert.Equal(t, beforeNumClosedIssues+1, repoAfter.NumClosedIssues(t.Context()))
 
 	// API response
 	assert.Equal(t, api.StateClosed, apiIssue.State)
@@ -412,6 +415,7 @@ func TestAPIEditIssueMilestoneAutoDate(t *testing.T) {
 			Milestone: &milestone,
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusCreated)
+		unittest.FlushAsyncCalcs(t)
 
 		// the execution of the API call supposedly lasted less than one minute
 		milestoneAfter := unittest.AssertExistsAndLoadBean(t, &issues_model.Milestone{ID: milestone})
@@ -431,6 +435,7 @@ func TestAPIEditIssueMilestoneAutoDate(t *testing.T) {
 			Updated:   &updatedAt,
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusCreated)
+		unittest.FlushAsyncCalcs(t)
 
 		// the milestone date should be set to 'updatedAt'
 		// dates are converted into the same tz, in order to compare them
@@ -452,6 +457,7 @@ func TestAPIEditIssueMilestoneAutoDate(t *testing.T) {
 			Updated:   &updatedAt,
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusCreated)
+		unittest.FlushAsyncCalcs(t)
 
 		// the milestone date should not change
 		// dates are converted into the same tz, in order to compare them
