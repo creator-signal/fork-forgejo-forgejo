@@ -616,7 +616,7 @@ export default {
               {{ currentJob.title }}
             </h3>
             <ul class="job-info-header-detail">
-              <li v-for="detail in currentJob.details">
+              <li v-for="detail in currentJob.details" :key="detail">
                 {{ detail }}
               </li>
             </ul>
