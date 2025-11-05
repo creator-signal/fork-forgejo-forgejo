@@ -36,14 +36,23 @@ func ConvertDatabaseTable() error {
 	if err != nil {
 		return err
 	}
+
+	if _, err := x.Exec("SET FOREIGN_KEY_CHECKS=0"); err != nil {
+		return fmt.Errorf("not able to disable foreign key checks: %w", err)
+	}
+
 	for _, table := range tables {
-		if _, err := x.Exec(fmt.Sprintf("ALTER TABLE `%s` ROW_FORMAT=dynamic", table.Name)); err != nil {
+		if _, err := x.Exec(fmt.Sprintf("SET FOREIGN_KEY_CHECKS=0; ALTER TABLE `%s` ROW_FORMAT=dynamic", table.Name)); err != nil {
 			return err
 		}
 
-		if _, err := x.Exec(fmt.Sprintf("ALTER TABLE `%s` CONVERT TO CHARACTER SET utf8mb4 COLLATE %s", table.Name, r.ExpectedCollation)); err != nil {
+		if _, err := x.Exec(fmt.Sprintf("SET FOREIGN_KEY_CHECKS=0; ALTER TABLE `%s` CONVERT TO CHARACTER SET utf8mb4 COLLATE %s", table.Name, r.ExpectedCollation)); err != nil {
 			return err
 		}
+	}
+
+	if _, err := x.Exec("SET FOREIGN_KEY_CHECKS=1"); err != nil {
+		return fmt.Errorf("not able to enable foreign key checks: %w", err)
 	}
 
 	return nil
