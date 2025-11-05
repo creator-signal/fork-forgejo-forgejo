@@ -6,7 +6,7 @@ package federation
 import (
 	"context"
 
-	forgefed "forgejo.org/models/forgefed"
+	forgefed "forgejo.org/modules/forgefed"
 	ap "github.com/go-ap/activitypub"
 )
 

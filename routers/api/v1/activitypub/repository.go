@@ -110,7 +110,7 @@ func RepositoryOutbox(ctx *context.APIContext) {
 
 	activityID := fmt.Sprintf("%s/api/v1/activitypub/repository-id/%d/outbox/%s", strings.TrimSuffix(setting.AppURL, "/"), ctx.Repo.Repository.ID, ctx.Params(":activity-id"))
 
-	activity := ap.Activity { ID: ap.IRI(activityID) }
+	activity := ap.Activity{ID: ap.IRI(activityID)}
 
 	result, err := federation.ProcessRepositoryOutbox(ctx, &activity, repository.ID)
 	if err != nil {
