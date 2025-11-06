@@ -186,7 +186,7 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 
 	if mergeStyle == repo_model.MergeStyleRebase {
 		// for fast-forward rebase, do not amend the last commit if there is no template
-		return "", "", err
+		return "", "", nil
 	}
 
 	return message, body, nil
