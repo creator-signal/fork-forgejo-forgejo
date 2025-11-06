@@ -32,6 +32,11 @@ import (
 	notify_service "forgejo.org/services/notify"
 )
 
+type mergeMessage struct {
+	title *string
+	body  *string
+}
+
 var mergeMessageTemplates = make(map[repo_model.MergeStyle]string, len(repo_model.MergeStyles))
 
 func LoadMergeMessageTemplates() error {
@@ -87,6 +92,19 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 	reviewedOn := fmt.Sprintf("Reviewed-on: %s", issueURL)
 	reviewedBy := pr.GetApprovers(ctx)
 
+	body = fmt.Sprintf("%s\n%s", reviewedOn, reviewedBy)
+
+	// Squash merge has a different from other styles.
+	if mergeStyle == repo_model.MergeStyleSquash {
+		message = fmt.Sprintf("%s (%s%d)", pr.Issue.Title, issueReference, pr.Issue.Index)
+	} else if pr.BaseRepoID == pr.HeadRepoID {
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from %s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
+	} else if pr.HeadRepo == nil {
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from <deleted>:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
+	} else {
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from %s:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadRepo.FullName(), pr.HeadBranch, pr.BaseBranch)
+	}
+
 	if mergeStyle != "" {
 		commit, err := baseGitRepo.GetBranchCommit(pr.BaseRepo.DefaultBranch)
 		if err != nil {
@@ -101,8 +119,8 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 			templateContent, err = commit.GetFileContent(templateFilepathGitea, setting.Repository.PullRequest.DefaultMergeMessageSize)
 		}
 
-		if _, ok := err.(git.ErrNotExist); ok {
-			if preloadedContent, ok := mergeMessageTemplates[mergeStyle]; ok {
+		if preloadedContent, ok := mergeMessageTemplates[mergeStyle]; ok {
+			if _, ok := err.(git.ErrNotExist); ok {
 				templateContent, err = preloadedContent, nil
 			}
 		}
@@ -155,43 +173,44 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 					vars["ClosingIssues"] = ""
 				}
 			}
-			message, body = expandDefaultMergeMessage(templateContent, vars)
+			mergeMessage := expandDefaultMergeMessage(templateContent, vars)
+			if mergeMessage.title != nil {
+				message = *mergeMessage.title
+			}
+			if mergeMessage.body != nil {
+				body = *mergeMessage.body
+			}
 			return message, body, nil
 		}
 	}
 
 	if mergeStyle == repo_model.MergeStyleRebase {
 		// for fast-forward rebase, do not amend the last commit if there is no template
-		return "", "", nil
+		return "", "", err
 	}
 
-	body = fmt.Sprintf("%s\n%s", reviewedOn, reviewedBy)
-
-	// Squash merge has a different from other styles.
-	if mergeStyle == repo_model.MergeStyleSquash {
-		return fmt.Sprintf("%s (%s%d)", pr.Issue.Title, issueReference, pr.Issue.Index), body, nil
-	}
-
-	if pr.BaseRepoID == pr.HeadRepoID {
-		return fmt.Sprintf("Merge pull request '%s' (%s%d) from %s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch), body, nil
-	}
-
-	if pr.HeadRepo == nil {
-		return fmt.Sprintf("Merge pull request '%s' (%s%d) from <deleted>:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch), body, nil
-	}
-
-	return fmt.Sprintf("Merge pull request '%s' (%s%d) from %s:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadRepo.FullName(), pr.HeadBranch, pr.BaseBranch), body, nil
+	return message, body, nil
 }
 
-func expandDefaultMergeMessage(template string, vars map[string]string) (message, body string) {
-	if splits := strings.SplitN(template, "\n", 2); len(splits) == 2 {
-		message = splits[0]
-		body = strings.TrimSpace(splits[1])
-	} else {
-		message = template
+func expandDefaultMergeMessage(template string, vars map[string]string) (message mergeMessage) {
+	if template == "" {
+		return mergeMessage{nil, nil}
 	}
 	mapping := func(s string) string { return vars[s] }
-	return os.Expand(message, mapping), os.Expand(body, mapping)
+	if splits := strings.SplitN(template, "\n", 2); len(splits) == 2 {
+		title := os.Expand(splits[0], mapping)
+		body := os.Expand(strings.TrimRightFunc(splits[1], unicode.IsSpace), mapping)
+		if len(splits[1]) == 0 {
+			title := os.Expand(splits[0], mapping)
+			return mergeMessage{&title, nil}
+		}
+		if len(splits[0]) == 0 {
+			return mergeMessage{nil, &body}
+		}
+		return mergeMessage{&title, &body}
+	}
+	title := os.Expand(strings.TrimSpace(template), mapping)
+	return mergeMessage{&title, nil}
 }
 
 // GetDefaultMergeMessage returns default message used when merging pull request
