@@ -12,7 +12,7 @@
 					{{DateUtils.AbsoluteLong .Issue.DeadlineUnix}}
 				</div>
 				<div>
-					{{if and .HasIssuesOrPullsWritePermission (not .Repository.IsArchived)}}
+					{{if and .AllowEditDueDate (not .Repository.IsArchived)}}
 						<a class="issue-due-edit muted" data-tooltip-content="{{ctx.Locale.Tr "repo.issues.due_date_form_edit"}}">{{svg "octicon-pencil" 16 "tw-mr-1"}}</a>
 						<a class="issue-due-remove muted" data-tooltip-content="{{ctx.Locale.Tr "repo.issues.due_date_form_remove"}}">{{svg "octicon-trash"}}</a>
 					{{end}}
