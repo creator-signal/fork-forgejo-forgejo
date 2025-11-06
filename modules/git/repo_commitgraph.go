@@ -11,7 +11,7 @@ import (
 // WriteCommitGraph write commit graph to speed up repo access
 // this requires git v2.18 to be installed
 func WriteCommitGraph(ctx context.Context, repoPath string) error {
-	if _, _, err := NewCommand(ctx, "commit-graph", "write").RunStdString(&RunOpts{Dir: repoPath}); err != nil {
+	if _, _, err := NewCommand(ctx, "commit-graph", "write", "--changed-paths").RunStdString(&RunOpts{Dir: repoPath}); err != nil {
 		return fmt.Errorf("unable to write commit-graph for '%s' : %w", repoPath, err)
 	}
 	return nil
