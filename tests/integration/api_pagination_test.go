@@ -80,6 +80,7 @@ func TestAPIPaginatedResponses(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	swagger := getSwagger(t)
+	rootURL := strings.TrimSuffix(setting.AppURL, "/")
 
 	params := map[string]map[string]string{
 		"getOrgVariablesList":          {"org": "org3"},
@@ -289,7 +290,7 @@ func TestAPIPaginatedResponses(t *testing.T) {
 			linkHeader := resp.Header().Get("Link")
 			assert.NotEmpty(t, linkHeader, "no Link header in response")
 			links := strings.Split(linkHeader, ",")
-			assert.Containsf(t, links, "<http://localhost:3003"+urlPath+"?limit=1&page=1>; rel=\"first\"", "Link header does not contain `first` link")
+			assert.Containsf(t, links, "<"+rootURL+urlPath+"?limit=1&page=1>; rel=\"first\"", "Link header does not contain `first` link")
 		})
 	}
 }
