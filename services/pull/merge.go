@@ -119,8 +119,8 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 			templateContent, err = commit.GetFileContent(templateFilepathGitea, setting.Repository.PullRequest.DefaultMergeMessageSize)
 		}
 
-		if preloadedContent, ok := mergeMessageTemplates[mergeStyle]; ok {
-			if _, ok := err.(git.ErrNotExist); ok {
+		if _, ok := err.(git.ErrNotExist); ok {
+			if preloadedContent, ok := mergeMessageTemplates[mergeStyle]; ok {
 				templateContent, err = preloadedContent, nil
 			}
 		}
