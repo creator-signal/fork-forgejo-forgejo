@@ -164,6 +164,9 @@ func RemoveLogs(ctx context.Context, inStorage bool, filename string) error {
 		name := DBFSPrefix + filename
 		err := dbfs.Remove(ctx, name)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
 			return fmt.Errorf("dbfs remove %q: %w", name, err)
 		}
 		return nil
