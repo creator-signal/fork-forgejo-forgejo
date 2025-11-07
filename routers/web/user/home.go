@@ -788,6 +788,11 @@ func UsernameSubRoute(ctx *context.Context) {
 		if reloadParam(".png") {
 			AvatarByUserName(ctx)
 		}
+	case strings.HasSuffix(username, ".svg"):
+		// VectorIdenticons: ToDo: tell downstream about .svg
+		if reloadParam(".svg") {
+			AvatarByUserName(ctx)
+		}
 	case strings.HasSuffix(username, ".keys"):
 		if reloadParam(".keys") {
 			ShowSSHKeys(ctx)

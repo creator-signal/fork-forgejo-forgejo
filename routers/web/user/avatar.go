@@ -4,6 +4,7 @@
 package user
 
 import (
+	"net/http"
 	"strings"
 	"time"
 
@@ -54,4 +55,9 @@ func AvatarByEmailHash(ctx *context.Context) {
 	}
 	size := ctx.FormInt("size")
 	cacheableRedirect(ctx, avatars.GenerateEmailAvatarFinalLink(ctx, email, size))
+}
+
+// GetSvgAvatar makes this code not compile
+func GetSvgAvatar() http.HandlerFunc {
+	// no idea what to put there without causing a panic
 }
