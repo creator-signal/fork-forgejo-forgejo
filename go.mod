@@ -159,7 +159,7 @@ require (
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
-	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -279,3 +279,5 @@ replace github.com/gliderlabs/ssh => code.forgejo.org/forgejo/ssh v0.0.0-2024121
 replace git.sr.ht/~mariusor/go-xsd-duration => code.forgejo.org/forgejo/go-xsd-duration v0.0.0-20220703122237-02e73435a078
 
 replace xorm.io/xorm v1.3.9 => code.forgejo.org/xorm/xorm v1.3.9-forgejo.4
+
+replace code.forgejo.org/forgejo/runner/v11 => code.forgejo.org/forgejo/runner/v11 v11.3.1
