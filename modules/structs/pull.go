@@ -118,3 +118,9 @@ type ChangedFile struct {
 	ContentsURL      string `json:"contents_url,omitempty"`
 	RawURL           string `json:"raw_url,omitempty"`
 }
+
+// PullRequestMergeMessage represents the merge commit message for a pull request
+type PullRequestMergeMessage struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}

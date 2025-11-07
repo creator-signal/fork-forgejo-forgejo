@@ -27759,6 +27759,21 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "PullRequestMergeMessage": {
+      "description": "PullRequestMergeMessage represents the merge commit message for a pull request",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string",
+          "x-go-name": "Body"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "PullReview": {
       "description": "PullReview represents a pull request review",
       "type": "object",
@@ -30552,6 +30567,12 @@
         "items": {
           "$ref": "#/definitions/PullRequest"
         }
+      }
+    },
+    "PullRequestMergeMessage": {
+      "description": "PullRequestMergeMessage",
+      "schema": {
+        "$ref": "#/definitions/PullRequestMergeMessage"
       }
     },
     "PullReview": {

@@ -77,6 +77,35 @@
 					<li>{{.}}</li>
 					{{end}}
 				</ul>
+				<div class="item">
+					<div class="item-section-left flex-text-inline tw-flex-1">
+						{{svg "octicon-info"}}
+						{{ctx.Locale.Tr "repo.pulls.manual_merge_helper"}}
+					</div>
+					<div class="item-section-right">
+						<button class="ui compact button" id="get-merge-message-btn" data-link="{{.Issue.Link}}">
+							{{ctx.Locale.Tr "repo.pulls.get_merge_message"}}
+						</button>
+					</div>
+				</div>
+				<div id="merge-message-display" style="display: none;" class="ui segment">
+					<div class="ui header">{{ctx.Locale.Tr "repo.pulls.merge_message_preview"}}</div>
+					<div class="ui form">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "repo.pulls.merge_commit_title"}}</label>
+							<textarea id="merge-message-title" readonly rows="1"></textarea>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "repo.pulls.merge_commit_body"}}</label>
+							<textarea id="merge-message-body" readonly rows="5"></textarea>
+						</div>
+						<div class="field">
+							<button class="ui button" onclick="copyMergeMessageToClipboard()">
+								{{ctx.Locale.Tr "copy"}}
+							</button>
+						</div>
+					</div>
+				</div>
 			{{else if .IsPullRequestBroken}}
 				<div class="item">
 					{{svg "octicon-x"}}
@@ -392,4 +421,67 @@
 		</div>
 	</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	const getMergeMessageBtn = document.getElementById('get-merge-message-btn');
+	const mergeMessageDisplay = document.getElementById('merge-message-display');
+	const mergeMessageTitle = document.getElementById('merge-message-title');
+	const mergeMessageBody = document.getElementById('merge-message-body');
+
+	if (getMergeMessageBtn) {
+		getMergeMessageBtn.addEventListener('click', function() {
+			const link = this.dataset.link;
+			getMergeMessageBtn.disabled = true;
+			getMergeMessageBtn.textContent = '{{ctx.Locale.Tr "loading"}}';
+
+			// Fetch merge message from API
+			const apiURL = '/api/v1/repos/' + '{{.Repository.OwnerName}}' + '/' + '{{.Repository.Name}}' + '/pulls/' + link.split('/').pop() + '/merge-message?style=merge';
+			fetch(apiURL, {
+				method: 'GET',
+				headers: {
+					'Accept': 'application/json'
+				}
+			})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('Network response was not ok');
+				}
+				return response.json();
+			})
+			.then(data => {
+				mergeMessageTitle.value = data.title;
+				mergeMessageBody.value = data.body;
+				mergeMessageDisplay.style.display = 'block';
+			})
+			.catch(error => {
+				console.error('Error fetching merge message:', error);
+				alert('{{ctx.Locale.Tr "error.occurred"}}');
+			})
+			.finally(() => {
+				getMergeMessageBtn.disabled = false;
+				getMergeMessageBtn.textContent = '{{ctx.Locale.Tr "repo.pulls.get_merge_message"}}';
+			});
+		});
+	}
+});
+
+function copyMergeMessageToClipboard() {
+	const title = document.getElementById('merge-message-title').value;
+	const body = document.getElementById('merge-message-body').value;
+	const fullMessage = title + (body ? '\n\n' + body : '');
+	
+	navigator.clipboard.writeText(fullMessage).then(function() {
+		// Show a temporary success message
+		const copyBtn = event.target;
+		const originalText = copyBtn.textContent;
+		copyBtn.textContent = '{{ctx.Locale.Tr "copy_success"}}';
+		setTimeout(() => {
+			copyBtn.textContent = originalText;
+		}, 2000);
+	}, function(err) {
+		console.error('Could not copy text: ', err);
+	});
+}
+</script>
 {{end}}

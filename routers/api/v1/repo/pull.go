@@ -1654,3 +1654,109 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 
 	ctx.JSON(http.StatusOK, &apiFiles)
 }
+
+// GetPullRequestMergeMessage generates the default merge commit message for a pull request
+func GetPullRequestMergeMessage(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/pulls/{index}/merge-message repository repoGetPullRequestMergeMessage
+	// ---
+	// summary: Get the merge commit message for a pull request
+	// description: |
+	//   Returns the default merge commit message that would be used when merging the pull request.
+	//   This works even if the pull request has conflicts with the target branch.
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: index
+	//   in: path
+	//   description: index of the pull request to get
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: style
+	//   in: query
+	//   description: merge style (merge, rebase, rebase-merge, squash, fast-forward-only)
+	//   type: string
+	//   default: merge
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/PullRequestMergeMessage"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	if err != nil {
+		if issues_model.IsErrPullRequestNotExist(err) {
+			ctx.NotFound()
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetPullRequestByIndex", err)
+		}
+		return
+	}
+
+	if err := pr.LoadBaseRepo(ctx); err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	if !ctx.Repo.CanRead(unit.TypePullRequests) {
+		ctx.NotFound()
+		return
+	}
+
+	mergeStyle := repo_model.MergeStyleMerge // default
+	if style := ctx.FormString("style"); style != "" {
+		mergeStyle = repo_model.MergeStyle(style)
+	}
+
+	// Validate merge style is valid
+	validStyle := false
+	for _, validMergeStyle := range repo_model.MergeStyles {
+		if mergeStyle == validMergeStyle {
+			validStyle = true
+			break
+		}
+	}
+	if !validStyle {
+		ctx.Error(http.StatusBadRequest, "Invalid merge style", "The specified merge style is not valid")
+		return
+	}
+
+	// Check if the merge style is allowed for this repository
+	prUnit, err := pr.BaseRepo.GetUnit(ctx, unit.TypePullRequests)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetUnit", err)
+		return
+	}
+	prConfig := prUnit.PullRequestsConfig()
+
+	if !prConfig.IsMergeStyleAllowed(mergeStyle) {
+		ctx.Error(http.StatusMethodNotAllowed, "Merge style not allowed", fmt.Sprintf("Merge style '%s' is not allowed for this repository", mergeStyle))
+		return
+	}
+
+	// Generate merge message - this works even with conflicts
+	message, body, err := pull_service.GetDefaultMergeMessage(ctx, ctx.Repo.GitRepo, pr, mergeStyle)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetDefaultMergeMessage", err)
+		return
+	}
+
+	response := &api.PullRequestMergeMessage{
+		Title: message,
+		Body:  body,
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
