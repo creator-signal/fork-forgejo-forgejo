@@ -66,12 +66,12 @@ details.dropdown > summary {
 }
 
 details.dropdown > summary:hover,
-details.dropdown > .content > ul > li:hover {
+details.dropdown > .content > ul > li > :is(a, button):hover {
   background: var(--color-hover);
 }
 
 details.dropdown[open] > summary,
-details.dropdown > .content > ul > li:focus-within {
+details.dropdown > .content > ul > li:focus-within > :is(a, button) {
   background: var(--color-active);
 }
 
@@ -112,13 +112,13 @@ details.dropdown > .content > ul {
 /* General styling of list items */
 details.dropdown > .content > ul > li {
   width: 100%;
-  background: none;
 
   > :is(a, button) {
     padding-block: 0;
     padding-inline: var(--dropdown-padding-inline);
     min-height: var(--dropdown-item-min-height);
     width: 100%;
+    border-radius: inherit;
     display: flex;
     gap: 0.75rem;
     align-items: center;
