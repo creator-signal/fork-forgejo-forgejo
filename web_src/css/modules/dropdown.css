@@ -86,7 +86,7 @@ details.dropdown > .content {
   margin-top: 0.5rem;
 
   /* ToDo: upstream to base.css, remove from normalize.css */
-  > hr {
+  hr {
     height: 1px;
     margin-block: 0.25rem;
     background-color: var(--color-secondary);
