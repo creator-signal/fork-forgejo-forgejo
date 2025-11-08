@@ -67,7 +67,6 @@ func TestNavbarItems(t *testing.T) {
 
 	t.Run(`User dropdown - default conditions`, func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.Repository.DisableStars, true)()
 
 		assertions := []struct {
 			selector string
