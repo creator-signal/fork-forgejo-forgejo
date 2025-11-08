@@ -107,9 +107,6 @@
     }
     > .content {
       width: 100%;
-      > span {
-        display: flex;
-      }
     }
   }
 
