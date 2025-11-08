@@ -192,17 +192,19 @@
 								</a>
 							</li>
 						{{end}}
+						<li>
+							<hr>
+							<a class="item link-action" href data-url="{{AppSubUrl}}/user/logout">
+								{{svg "octicon-sign-out"}}
+								{{ctx.Locale.Tr "sign_out"}}
+							</a>
+						</li>
 					</ul>
 				</div>
 			</details>
 
 			<div class="ui dropdown jump item tw-mx-0 tw-pr-2" data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
 				<div class="menu user-menu">
-					<div class="divider"></div>
-					<a class="item link-action" href data-url="{{AppSubUrl}}/user/logout">
-						{{svg "octicon-sign-out"}}
-						{{ctx.Locale.Tr "sign_out"}}
-					</a>
 				</div><!-- end content avatar menu -->
 			</div><!-- end dropdown avatar menu -->
 		{{else}}
