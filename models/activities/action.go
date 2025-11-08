@@ -166,14 +166,14 @@ func init() {
 
 // TableIndices implements xorm's TableIndices interface
 func (a *Action) TableIndices() []*schemas.Index {
-	repoIndex := schemas.NewIndex("r_u_d", schemas.IndexType)
-	repoIndex.AddColumn("repo_id", "user_id", "is_deleted")
+	repoIndex := schemas.NewIndex("r_u", schemas.IndexType)
+	repoIndex.AddColumn("repo_id", "user_id")
 
-	actUserIndex := schemas.NewIndex("au_r_c_u_d", schemas.IndexType)
-	actUserIndex.AddColumn("act_user_id", "repo_id", "created_unix", "user_id", "is_deleted")
+	actUserIndex := schemas.NewIndex("au_r_c_u", schemas.IndexType)
+	actUserIndex.AddColumn("act_user_id", "repo_id", "created_unix", "user_id")
 
-	cudIndex := schemas.NewIndex("c_u_d", schemas.IndexType)
-	cudIndex.AddColumn("created_unix", "user_id", "is_deleted")
+	cudIndex := schemas.NewIndex("c_u", schemas.IndexType)
+	cudIndex.AddColumn("created_unix", "user_id")
 
 	indices := []*schemas.Index{actUserIndex, repoIndex, cudIndex}
 
