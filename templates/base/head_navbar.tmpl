@@ -152,33 +152,33 @@
 					<hr>
 					<ul>
 						<li>
-							<a class="item" href="{{.SignedUser.HomeLink}}">
+							<a href="{{.SignedUser.HomeLink}}">
 								{{svg "octicon-person"}}
 								{{ctx.Locale.Tr "your_profile"}}
 							</a>
 						</li>
 						{{if not .DisableStars}}
 							<li>
-								<a class="item" href="{{.SignedUser.HomeLink}}?tab=stars">
+								<a href="{{.SignedUser.HomeLink}}?tab=stars">
 									{{svg "octicon-star"}}
 									{{ctx.Locale.Tr "your_starred"}}
 								</a>
 							</li>
 						{{end}}
 						<li>
-							<a class="item" href="{{AppSubUrl}}/notifications/subscriptions">
+							<a href="{{AppSubUrl}}/notifications/subscriptions">
 								{{svg "octicon-bell"}}
 								{{ctx.Locale.Tr "notification.subscriptions"}}
 							</a>
 						</li>
 						<li>
-							<a class="{{if .PageIsUserSettings}}active {{end}}item" href="{{AppSubUrl}}/user/settings">
+							<a class="{{if .PageIsUserSettings}}active{{end}}" href="{{AppSubUrl}}/user/settings">
 								{{svg "octicon-tools"}}
 								{{ctx.Locale.Tr "your_settings"}}
 							</a>
 						</li>
 						<li>
-							<a class="item" target="_blank" rel="noopener noreferrer" href="https://forgejo.org/docs/latest/">
+							<a target="_blank" rel="noopener noreferrer" href="https://forgejo.org/docs/latest/">
 								{{svg "octicon-question"}}
 								{{ctx.Locale.Tr "help"}}
 							</a>
@@ -186,7 +186,7 @@
 						{{if .IsAdmin}}
 							<hr>
 							<li>
-								<a class="{{if .PageIsAdmin}}active {{end}}item" href="{{AppSubUrl}}/admin">
+								<a class="{{if .PageIsAdmin}}active{{end}}" href="{{AppSubUrl}}/admin">
 									{{svg "octicon-server"}}
 									{{ctx.Locale.Tr "admin_panel"}}
 								</a>
@@ -194,7 +194,7 @@
 						{{end}}
 						<li>
 							<hr>
-							<a class="item link-action" href data-url="{{AppSubUrl}}/user/logout">
+							<a class="link-action" href data-url="{{AppSubUrl}}/user/logout">
 								{{svg "octicon-sign-out"}}
 								{{ctx.Locale.Tr "sign_out"}}
 							</a>
