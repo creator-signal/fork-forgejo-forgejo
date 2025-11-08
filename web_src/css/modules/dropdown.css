@@ -114,15 +114,22 @@ details.dropdown > .content > ul > li {
   width: 100%;
 
   > :is(a, button) {
-    padding-block: 0;
-    padding-inline: var(--dropdown-padding-inline);
     min-height: var(--dropdown-item-min-height);
+    padding-block: 0;
+
     width: 100%;
-    border-radius: inherit;
+    padding-inline: var(--dropdown-padding-inline);
     display: flex;
     gap: 0.75rem;
     align-items: center;
     color: var(--color-text);
+
+    /* Interactable items should be transparent by default. <button> can also have a default background set by the browser */
+    background: none;
+
+    /* Same rounding should apply to both <li> and it's items with paintable backgrounds */
+    border-radius: inherit;
+
     /* Suppress underline - hover is indicated by background color */
     text-decoration: none;
 
@@ -131,11 +138,6 @@ details.dropdown > .content > ul > li {
       background: var(--color-active);
       font-weight: var(--font-weight-medium);
     }
-  }
-
-  /* Suppress default styling of <button> */
-  > button {
-    background: none;
   }
 }
 
@@ -147,7 +149,7 @@ details.dropdown > .content > .header {
   padding-inline: var(--dropdown-padding-inline);
   font-weight: 500;
   text-transform: uppercase;
-  font-size: 0.8em;
+  font-size: 0.8rem;
 }
 
 /* Decrease bottom padding if an <hr> follows, which adds it's own vertical padding */
