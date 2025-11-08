@@ -5,11 +5,14 @@ package integration
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
+	"github.com/stretchr/testify/assert"
 )
 
 /* TestNavbarItems asserts go tmpl logic of navbar */
@@ -18,6 +21,7 @@ func TestNavbarItems(t *testing.T) {
 
 	// The navbar can be tested on any page, but preferably a lightweight one
 	testPage := "/explore/organizations"
+	locale := translation.NewLocale("en-US")
 
 	adminUser := loginUser(t, "user1")
 	regularUser := loginUser(t, "user2")
@@ -46,15 +50,16 @@ func TestNavbarItems(t *testing.T) {
 	t.Run(`"Create..." dropdown - default conditions`, func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		page := NewHTMLParser(t, regularUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
-		page.AssertElement(t, `details.dropdown a[href="/repo/migrate"]`, true)
-		page.AssertElement(t, `details.dropdown a[href="/org/create"]`, true)
-		page.AssertElement(t, `details.dropdown a[href="/repo/create"]`, true)
-
-		page = NewHTMLParser(t, adminUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
-		page.AssertElement(t, `details.dropdown a[href="/repo/migrate"]`, true)
-		page.AssertElement(t, `details.dropdown a[href="/org/create"]`, true)
-		page.AssertElement(t, `details.dropdown a[href="/repo/create"]`, true)
+		// Assert that items are present and their contents
+		assertItems := func(t *testing.T, session *TestSession) {
+			page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+			links := page.Find(`#navbar .dropdown:has(summary[data-tooltip-content="Create…"]) .content`)
+			assert.Equal(t, locale.TrString("new_repo.link"), strings.TrimSpace(links.Find(`a[href="/repo/create"]`).Text()))
+			assert.Equal(t, locale.TrString("new_migrate.link"), strings.TrimSpace(links.Find(`a[href="/repo/migrate"]`).Text()))
+			assert.Equal(t, locale.TrString("new_org.link"), strings.TrimSpace(links.Find(`a[href="/org/create"]`).Text()))
+		}
+		assertItems(t, regularUser)
+		assertItems(t, adminUser)
 	})
 
 	t.Run(`User dropdown - stars are disabled`, func(t *testing.T) {
