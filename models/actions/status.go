@@ -39,6 +39,11 @@ func (s Status) String() string {
 	return statusNames[s]
 }
 
+// Statuses where the result is final and won't change
+func DoneStatuses() []Status {
+	return []Status{StatusSuccess, StatusFailure, StatusCancelled, StatusSkipped}
+}
+
 // LocaleString returns the locale string name of the Status
 func (s Status) LocaleString(lang translation.Locale) string {
 	return lang.TrString("actions.status." + s.String())
