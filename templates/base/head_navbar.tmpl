@@ -136,17 +136,19 @@
 								</a>
 							</li>
 						{{end}}
+						{{if .SignedUser.CanCreateOrganization}}
+							<li>
+								<a href="{{AppSubUrl}}/org/create">
+									{{svg "octicon-organization"}} {{ctx.Locale.Tr "new_org.link"}}
+								</a>
+							</li>
+						{{end}}
 					</ul>
 				</div>
 			</details>
 
 			<div class="ui dropdown jump item tw-mx-0 tw-pr-2" data-tooltip-content="{{ctx.Locale.Tr "create_new"}}">
 				<div class="menu">
-					{{if .SignedUser.CanCreateOrganization}}
-					<a class="item" href="{{AppSubUrl}}/org/create">
-						{{svg "octicon-organization"}} {{ctx.Locale.Tr "new_org.link"}}
-					</a>
-					{{end}}
 				</div><!-- end content create new menu -->
 			</div><!-- end dropdown menu create new -->
 
