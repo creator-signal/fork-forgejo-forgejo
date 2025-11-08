@@ -56,7 +56,7 @@
 	<div class="navbar-right ui secondary menu">
 		{{if and .IsSigned .HideNavbarLinks}}
 			<details class="dropdown dir-rtl">
-				<summary>
+				<summary data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
 					{{ctx.AvatarUtils.Avatar .SignedUser 24}}
 					<span class="only-mobile tw-ml-2">{{.SignedUser.Name}}</span>
 					<span class="not-mobile">{{svg "octicon-triangle-down"}}</span>
@@ -76,9 +76,6 @@
 					</ul>
 				</div>
 			</details>
-
-			<div class="ui dropdown jump item" data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
-			</div><!-- end dropdown avatar menu -->
 		{{else if .IsSigned}}
 			{{if EnableTimetracking}}
 			<a class="active-stopwatch-trigger item tw-mx-0{{if not .ActiveStopwatch}} tw-hidden{{end}}" href="{{.ActiveStopwatch.IssueLink}}" title="{{ctx.Locale.Tr "active_stopwatch"}}">
