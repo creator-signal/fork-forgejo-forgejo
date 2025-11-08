@@ -66,16 +66,18 @@
 						{{ctx.Locale.Tr "signed_in_as"}} <strong>{{.SignedUser.Name}}</strong>
 					</span>
 					<hr>
+					<ul>
+						<li>
+							<a class="link-action" href data-url="{{AppSubUrl}}/user/logout">
+								{{svg "octicon-sign-out"}}
+								{{ctx.Locale.Tr "sign_out"}}
+							</a>
+						</li>
+					</ul>
 				</div>
 			</details>
 
 			<div class="ui dropdown jump item" data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
-				<div class="menu user-menu">
-					<a class="item link-action" href data-url="{{AppSubUrl}}/user/logout">
-						{{svg "octicon-sign-out"}}
-						{{ctx.Locale.Tr "sign_out"}}
-					</a>
-				</div><!-- end content avatar menu -->
 			</div><!-- end dropdown avatar menu -->
 		{{else if .IsSigned}}
 			{{if EnableTimetracking}}
