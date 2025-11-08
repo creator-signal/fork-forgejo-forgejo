@@ -150,16 +150,19 @@
 						{{ctx.Locale.Tr "signed_in_as"}} <strong>{{.SignedUser.Name}}</strong>
 					</span>
 					<hr>
+					<ul>
+						<li>
+							<a class="item" href="{{.SignedUser.HomeLink}}">
+								{{svg "octicon-person"}}
+								{{ctx.Locale.Tr "your_profile"}}
+							</a>
+						</li>
+					</ul>
 				</div>
 			</details>
 
 			<div class="ui dropdown jump item tw-mx-0 tw-pr-2" data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
 				<div class="menu user-menu">
-
-					<a class="item" href="{{.SignedUser.HomeLink}}">
-						{{svg "octicon-person"}}
-						{{ctx.Locale.Tr "your_profile"}}
-					</a>
 					{{if not .DisableStars}}
 						<a class="item" href="{{.SignedUser.HomeLink}}?tab=stars">
 							{{svg "octicon-star"}}
