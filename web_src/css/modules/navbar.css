@@ -124,6 +124,12 @@
   }
 }
 
+#navbar details.dropdown summary {
+  padding-inline-start: 0.75rem;
+  /* The min height is dictated by the largest dropdown, which is the one that has an avatar in the opener */
+  min-height: 38px;
+}
+
 #navbar a.item .notification_count {
   color: var(--color-nav-bg);
   padding: 0 3.75px;
