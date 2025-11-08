@@ -129,17 +129,19 @@
 								{{svg "octicon-plus"}} {{ctx.Locale.Tr "new_repo.link"}}
 							</a>
 						</li>
+						{{if not .DisableMigrations}}
+							<li>
+								<a href="{{AppSubUrl}}/repo/migrate">
+									{{svg "octicon-repo-push"}} {{ctx.Locale.Tr "new_migrate.link"}}
+								</a>
+							</li>
+						{{end}}
 					</ul>
 				</div>
 			</details>
 
 			<div class="ui dropdown jump item tw-mx-0 tw-pr-2" data-tooltip-content="{{ctx.Locale.Tr "create_new"}}">
 				<div class="menu">
-					{{if not .DisableMigrations}}
-						<a class="item" href="{{AppSubUrl}}/repo/migrate">
-							{{svg "octicon-repo-push"}} {{ctx.Locale.Tr "new_migrate.link"}}
-						</a>
-					{{end}}
 					{{if .SignedUser.CanCreateOrganization}}
 					<a class="item" href="{{AppSubUrl}}/org/create">
 						{{svg "octicon-organization"}} {{ctx.Locale.Tr "new_org.link"}}
