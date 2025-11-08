@@ -1,0 +1,106 @@
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+package integration
+
+import (
+	"net/http"
+	"testing"
+
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/tests"
+)
+
+/* TestNavbarItems asserts go tmpl logic of navbar */
+func TestNavbarItems(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// The navbar can be tested on any page, but preferably a lightweight one
+	testPage := "/explore/organizations"
+
+	adminUser := loginUser(t, "user1")
+	regularUser := loginUser(t, "user2")
+
+	t.Run(`"Create..." dropdown - migrations disallowed`, func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Repository.DisableMigrations, true)()
+
+		page := NewHTMLParser(t, regularUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		page.AssertElement(t, `details.dropdown a[href="/repo/migrate"]`, false)
+	})
+
+	t.Run(`"Create..." dropdown - creating orgs disallowed`, func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Admin.DisableRegularOrgCreation, true)()
+
+		// The restriction applies to a regular user
+		page := NewHTMLParser(t, regularUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		page.AssertElement(t, `details.dropdown a[href="/org/create"]`, false)
+
+		// The restriction does not apply to an admin
+		page = NewHTMLParser(t, adminUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		page.AssertElement(t, `details.dropdown a[href="/org/create"]`, true)
+	})
+
+	t.Run(`"Create..." dropdown - default conditions`, func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		page := NewHTMLParser(t, regularUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		page.AssertElement(t, `details.dropdown a[href="/repo/migrate"]`, true)
+		page.AssertElement(t, `details.dropdown a[href="/org/create"]`, true)
+		page.AssertElement(t, `details.dropdown a[href="/repo/create"]`, true)
+
+		page = NewHTMLParser(t, adminUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		page.AssertElement(t, `details.dropdown a[href="/repo/migrate"]`, true)
+		page.AssertElement(t, `details.dropdown a[href="/org/create"]`, true)
+		page.AssertElement(t, `details.dropdown a[href="/repo/create"]`, true)
+	})
+
+	t.Run(`User dropdown - stars are disabled`, func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Repository.DisableStars, true)()
+
+		page := NewHTMLParser(t, regularUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		page.AssertElement(t, `details.dropdown a[href$="?tab=stars"]`, false)
+	})
+
+	t.Run(`User dropdown - default conditions`, func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Repository.DisableStars, true)()
+
+		assertions := []struct {
+			selector string
+			exists   bool
+		}{
+			{`details.dropdown a[href="/user2"]`, true},
+			{`details.dropdown a[href="/user2?tab=stars"]`, true},
+			{`details.dropdown a[href="/notifications/subscriptions"]`, true},
+			{`details.dropdown a[href="/user/settings"]`, true},
+			{`details.dropdown a[href="/admin"]`, false},
+			{`details.dropdown a[href="https://forgejo.org/docs/latest/"]`, true},
+			{`details.dropdown a[data-url="/user/logout"]`, true},
+		}
+		page := NewHTMLParser(t, regularUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		for _, assertion := range assertions {
+			page.AssertElement(t, assertion.selector, assertion.exists)
+		}
+
+		assertions = []struct {
+			selector string
+			exists   bool
+		}{
+			{`details.dropdown a[href="/user1"]`, true},
+			{`details.dropdown a[href="/user1?tab=stars"]`, true},
+			{`details.dropdown a[href="/notifications/subscriptions"]`, true},
+			{`details.dropdown a[href="/user/settings"]`, true},
+			{`details.dropdown a[href="/admin"]`, true},
+			{`details.dropdown a[href="https://forgejo.org/docs/latest/"]`, true},
+			{`details.dropdown a[data-url="/user/logout"]`, true},
+		}
+		page = NewHTMLParser(t, adminUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		for _, assertion := range assertions {
+			page.AssertElement(t, assertion.selector, assertion.exists)
+		}
+	})
+}
