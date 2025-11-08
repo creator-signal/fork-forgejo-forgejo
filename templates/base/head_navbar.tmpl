@@ -157,18 +157,21 @@
 								{{ctx.Locale.Tr "your_profile"}}
 							</a>
 						</li>
+						{{if not .DisableStars}}
+							<li>
+								<a class="item" href="{{.SignedUser.HomeLink}}?tab=stars">
+									{{svg "octicon-star"}}
+									{{ctx.Locale.Tr "your_starred"}}
+								</a>
+							</li>
+						{{end}}
 					</ul>
 				</div>
 			</details>
 
 			<div class="ui dropdown jump item tw-mx-0 tw-pr-2" data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
 				<div class="menu user-menu">
-					{{if not .DisableStars}}
-						<a class="item" href="{{.SignedUser.HomeLink}}?tab=stars">
-							{{svg "octicon-star"}}
-							{{ctx.Locale.Tr "your_starred"}}
-						</a>
-					{{end}}
+
 					<a class="item" href="{{AppSubUrl}}/notifications/subscriptions">
 						{{svg "octicon-bell"}}
 						{{ctx.Locale.Tr "notification.subscriptions"}}
