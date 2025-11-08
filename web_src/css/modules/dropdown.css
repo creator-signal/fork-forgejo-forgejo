@@ -15,13 +15,13 @@
 :root details.dropdown {
   --dropdown-box-shadow: 0 6px 18px var(--color-shadow);
   --dropdown-item-min-height: 34px;
-  --switch-padding-inline: 0.75rem;
+  --dropdown-padding-inline: 0.75rem;
 }
 
 @media (pointer: coarse) {
   :root details.dropdown {
     --dropdown-item-min-height: 40px;
-    --switch-padding-inline: 1rem;
+    --dropdown-padding-inline: 1rem;
   }
 }
 
@@ -116,7 +116,7 @@ details.dropdown > .content > ul > li {
 
   > :is(a, button) {
     padding-block: 0;
-    padding-inline: var(--switch-padding-inline);
+    padding-inline: var(--dropdown-padding-inline);
     min-height: var(--dropdown-item-min-height);
     width: 100%;
     display: flex;
