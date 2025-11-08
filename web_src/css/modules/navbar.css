@@ -95,6 +95,24 @@
     width: 100%;
     margin: 0;
   }
+  #navbar details.dropdown {
+    display: none;
+  }
+  #navbar.navbar-menu-open details.dropdown {
+    display: block;
+    width: 100%;
+    > summary {
+      width: 100%;
+      justify-content: start;
+    }
+    > .content {
+      width: 100%;
+      > span {
+        display: flex;
+      }
+    }
+  }
+
   #navbar.navbar-menu-open .navbar-left #navbar-logo {
     justify-content: flex-start;
     width: auto;

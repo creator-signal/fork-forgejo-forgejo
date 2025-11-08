@@ -153,7 +153,7 @@ details.dropdown > .content > .header {
   details.dropdown.dir-auto > .content {
     inset-inline: 0 auto;
     direction: rtl;
-    > ul {
+    > :is(span, ul) {
       direction: ltr;
     }
   }
@@ -163,7 +163,7 @@ details.dropdown > .content > .header {
 details.dropdown.dir-rtl > .content {
   inset-inline: 0 auto;
   direction: rtl;
-  > ul {
+  > :is(span, ul) {
     direction: ltr;
   }
 }
