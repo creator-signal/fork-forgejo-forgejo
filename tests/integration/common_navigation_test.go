@@ -28,7 +28,7 @@ func TestCommonNavigationElements(t *testing.T) {
 	page := NewHTMLParser(t, response.Body)
 
 	// Navbar
-	links := page.Find("#navbar .dropdown[data-tooltip-content='Create…'] .menu")
+	links := page.Find("#navbar .dropdown:has(summary[data-tooltip-content='Create…']) .content")
 	assert.Equal(t, locale.TrString("new_repo.link"), strings.TrimSpace(links.Find("a[href='/repo/create']").Text()))
 	assert.Equal(t, locale.TrString("new_migrate.link"), strings.TrimSpace(links.Find("a[href='/repo/migrate']").Text()))
 	assert.Equal(t, locale.TrString("new_org.link"), strings.TrimSpace(links.Find("a[href='/org/create']").Text()))
