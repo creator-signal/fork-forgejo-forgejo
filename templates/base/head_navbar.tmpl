@@ -165,25 +165,30 @@
 								</a>
 							</li>
 						{{end}}
+						<li>
+							<a class="item" href="{{AppSubUrl}}/notifications/subscriptions">
+								{{svg "octicon-bell"}}
+								{{ctx.Locale.Tr "notification.subscriptions"}}
+							</a>
+						</li>
+						<li>
+							<a class="{{if .PageIsUserSettings}}active {{end}}item" href="{{AppSubUrl}}/user/settings">
+								{{svg "octicon-tools"}}
+								{{ctx.Locale.Tr "your_settings"}}
+							</a>
+						</li>
+						<li>
+							<a class="item" target="_blank" rel="noopener noreferrer" href="https://forgejo.org/docs/latest/">
+								{{svg "octicon-question"}}
+								{{ctx.Locale.Tr "help"}}
+							</a>
+						</li>
 					</ul>
 				</div>
 			</details>
 
 			<div class="ui dropdown jump item tw-mx-0 tw-pr-2" data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
 				<div class="menu user-menu">
-
-					<a class="item" href="{{AppSubUrl}}/notifications/subscriptions">
-						{{svg "octicon-bell"}}
-						{{ctx.Locale.Tr "notification.subscriptions"}}
-					</a>
-					<a class="{{if .PageIsUserSettings}}active {{end}}item" href="{{AppSubUrl}}/user/settings">
-						{{svg "octicon-tools"}}
-						{{ctx.Locale.Tr "your_settings"}}
-					</a>
-					<a class="item" target="_blank" rel="noopener noreferrer" href="https://forgejo.org/docs/latest/">
-						{{svg "octicon-question"}}
-						{{ctx.Locale.Tr "help"}}
-					</a>
 					{{if .IsAdmin}}
 						<div class="divider"></div>
 
