@@ -172,7 +172,7 @@
 							</a>
 						</li>
 						<li>
-							<a class="{{if .PageIsUserSettings}}active{{end}}" href="{{AppSubUrl}}/user/settings">
+							<a {{if .PageIsUserSettings}}class="active"{{end}} href="{{AppSubUrl}}/user/settings">
 								{{svg "octicon-tools"}}
 								{{ctx.Locale.Tr "your_settings"}}
 							</a>
@@ -186,7 +186,7 @@
 						{{if .IsAdmin}}
 							<hr>
 							<li>
-								<a class="{{if .PageIsAdmin}}active{{end}}" href="{{AppSubUrl}}/admin">
+								<a {{if .PageIsAdmin}}class="active"{{end}} href="{{AppSubUrl}}/admin">
 									{{svg "octicon-server"}}
 									{{ctx.Locale.Tr "admin_panel"}}
 								</a>
