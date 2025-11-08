@@ -142,6 +142,7 @@ details.dropdown > .content > ul > li {
 /* Special styling for "headers" */
 /* A few dropdowns contain such headers, however, they are not semantically considered as headers */
 details.dropdown > .content > .header {
+  padding-inline: var(--dropdown-padding-inline);
   font-weight: 500;
   text-transform: uppercase;
   font-size: 0.8em;
