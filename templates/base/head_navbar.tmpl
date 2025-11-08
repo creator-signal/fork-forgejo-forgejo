@@ -140,7 +140,7 @@
 			</div><!-- end dropdown menu create new -->
 
 			<details class="dropdown dir-rtl">
-				<summary>
+				<summary class="tw-pl-3" data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
 					{{ctx.AvatarUtils.Avatar .SignedUser 24 "tw-mr-1"}}
 					<span class="only-mobile tw-ml-2">{{.SignedUser.Name}}</span>
 					<span class="not-mobile">{{svg "octicon-triangle-down"}}</span>
@@ -202,11 +202,6 @@
 					</ul>
 				</div>
 			</details>
-
-			<div class="ui dropdown jump item tw-mx-0 tw-pr-2" data-tooltip-content="{{ctx.Locale.Tr "user_profile_and_more"}}">
-				<div class="menu user-menu">
-				</div><!-- end content avatar menu -->
-			</div><!-- end dropdown avatar menu -->
 		{{else}}
 			{{if .ShowRegistrationButton}}
 				<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubUrl}}/user/sign_up">
