@@ -68,6 +68,7 @@ export function initDropdowns() {
       return;
 
     if (event.key === 'ArrowUp') {
+      event.preventDefault();
       if (activeLiIndex === 0) {
         // Last child is already selected, but we can navigate back to the opener and close the dropdown
         dropdown.querySelector('summary').focus();
@@ -75,15 +76,14 @@ export function initDropdowns() {
         return;
       }
       dropdownItems[activeLiIndex - 1].querySelector<HTMLElement>(':is(a, button)').focus();
-      event.preventDefault();
     }
 
     if (event.key === 'ArrowDown') {
+      event.preventDefault();
       if (activeLiIndex === dropdownItems.length - 1)
         // First child is already selected
         return;
       dropdownItems[activeLiIndex + 1].querySelector<HTMLElement>(':is(a, button)').focus();
-      event.preventDefault();
     }
   });
 }
