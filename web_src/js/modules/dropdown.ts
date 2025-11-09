@@ -59,10 +59,12 @@ export function initDropdowns() {
       return;
 
     if (event.key === 'ArrowUp') {
-      if (activeLiIndex === 0)
-        // Last child is already selected
+      if (activeLiIndex === 0) {
+        // Last child is already selected, but we can navigate back to the opener and close the dropdown
+        dropdown.querySelector('summary').focus();
+        dropdown.removeAttribute('open');
         return;
-      console.log("Refucos up")
+      }
       dropdownItems[activeLiIndex - 1].querySelector<HTMLElement>(':is(a, button)').focus();
     }
 
