@@ -7,23 +7,24 @@
 // click iteration with anything on the page and pressing Escape.
 
 export function initDropdowns() {
-  document.addEventListener('click', (event) => {
+  document.addEventListener('focusout', (event: FocusEvent) => {
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
     if (dropdown === null)
       // No open dropdowns on page, nothing to do
       return;
 
     const target = event.target as HTMLElement;
-    if (dropdown.contains(target))
-      // User clicked something in the open dropdown, don't interfere
-      return;
+    const newTarget = event.relatedTarget as HTMLElement;
 
-    // User clicked something that wasn't the open dropdown, so we'll close it
-    dropdown.removeAttribute('open');
+    // An open dropdown used to contain a focused element, but since that is no
+    // longer the case we'll close it
+    if (dropdown.contains(target) && !dropdown.contains(newTarget))
+      dropdown.removeAttribute('open');
   });
 
+
   // Keyboard interaction with dropdowns
-  document.addEventListener('keydown', (event) => {
+  document.addEventListener('keydown', (event: KeyboardEvent) => {
     if (!['Escape', 'ArrowUp', 'ArrowDown'].includes(event.key))
       // This eventListener is only concerned about a few keys
       return;
