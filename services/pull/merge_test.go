@@ -90,6 +90,18 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 			wantBody: &emptyString,
 		},
 		{
+			name:     "empty title and description (spaces)",
+			args:     args{template: " \n ", vars: vars},
+			want:     &emptyString,
+			wantBody: &emptyString,
+		},
+		{
+			name:     "empty title and description (space and newline)",
+			args:     args{template: " \n\n", vars: vars},
+			want:     &emptyString,
+			wantBody: &emptyString,
+		},
+		{
 			name:     "simple message and description",
 			args:     args{template: "Merge ${PullRequestTitle}\nDescription: ${PullRequestDescription}", vars: vars},
 			want:     &expectedTitle,
