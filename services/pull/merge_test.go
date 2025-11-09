@@ -48,16 +48,46 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 		wantBody *string
 	}{
 		{
+			name:     "empty template",
+			args:     args{template: "", vars: vars},
+			want:     nil,
+			wantBody: nil,
+		},
+		{
 			name:     "single line",
 			args:     args{template: "Merge ${PullRequestTitle}", vars: vars},
 			want:     &expectedTitle,
 			wantBody: nil,
 		},
 		{
-			name:     "empty message",
-			args:     args{template: "\n", vars: vars},
+			name:     "empty message (space)",
+			args:     args{template: " ", vars: vars},
 			want:     &emptyString,
 			wantBody: nil,
+		},
+		{
+			name:     "single newline",
+			args:     args{template: "\n", vars: vars},
+			want:     nil,
+			wantBody: nil,
+		},
+		{
+			name:     "empty message and description",
+			args:     args{template: " \n", vars: vars},
+			want:     &emptyString,
+			wantBody: nil,
+		},
+		{
+			name:     "empty description (newline)",
+			args:     args{template: "\n\n", vars: vars},
+			want:     nil,
+			wantBody: &emptyString,
+		},
+		{
+			name:     "empty description (space)",
+			args:     args{template: "\n ", vars: vars},
+			want:     nil,
+			wantBody: &emptyString,
 		},
 		{
 			name:     "simple message and description",
@@ -88,14 +118,14 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := expandDefaultMergeMessage(tt.args.template, tt.args.vars)
 			if tt.want != nil && got.title != nil {
-				assert.Equalf(t, *tt.want, *got.title, "expandDefaultMergeMessage(%v, %v)", tt.args.template, tt.args.vars)
+				assert.Equalf(t, *tt.want, *got.title, "Wrong title -> expandDefaultMergeMessage(%q, %q)", tt.args.template, tt.args.vars)
 			} else {
-				assert.Equalf(t, tt.want, got.title, "expandDefaultMergeMessage(%v, %v)", tt.args.template, tt.args.vars)
+				assert.Equalf(t, tt.want, got.title, "Wrong title -> expandDefaultMergeMessage(%q, %q)", tt.args.template, tt.args.vars)
 			}
 			if tt.wantBody != nil && got.body != nil {
-				assert.Equalf(t, *tt.wantBody, *got.body, "expandDefaultMergeMessage(%v, %v)", tt.args.template, tt.args.vars)
+				assert.Equalf(t, *tt.wantBody, *got.body, "Wrong body -> expandDefaultMergeMessage(%q, %q)", tt.args.template, tt.args.vars)
 			} else {
-				assert.Equalf(t, tt.wantBody, got.body, "expandDefaultMergeMessage(%v, %v)", tt.args.template, tt.args.vars)
+				assert.Equalf(t, tt.wantBody, got.body, "Wrong body -> expandDefaultMergeMessage(%q, %q)", tt.args.template, tt.args.vars)
 			}
 		})
 	}

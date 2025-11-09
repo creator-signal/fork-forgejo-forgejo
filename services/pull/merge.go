@@ -198,16 +198,16 @@ func expandDefaultMergeMessage(template string, vars map[string]string) (message
 	}
 	mapping := func(s string) string { return vars[s] }
 	if splits := strings.SplitN(template, "\n", 2); len(splits) == 2 {
-		title := os.Expand(splits[0], mapping)
+		title := os.Expand(strings.TrimSpace(splits[0]), mapping)
 		body := os.Expand(strings.TrimRightFunc(splits[1], unicode.IsSpace), mapping)
-		if len(splits[1]) == 0 {
-			title := os.Expand(splits[0], mapping)
-			return mergeMessage{&title, nil}
-		}
+		message := mergeMessage{&title, &body}
 		if len(splits[0]) == 0 {
-			return mergeMessage{nil, &body}
+			message.title = nil
 		}
-		return mergeMessage{&title, &body}
+		if len(splits[1]) == 0 {
+			message.body = nil
+		}
+		return message
 	}
 	title := os.Expand(strings.TrimSpace(template), mapping)
 	return mergeMessage{&title, nil}
