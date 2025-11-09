@@ -66,15 +66,15 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 			wantBody: nil,
 		},
 		{
-			name:     "single newline",
-			args:     args{template: "\n", vars: vars},
-			want:     nil,
+			name:     "empty message (with newline)",
+			args:     args{template: " \n", vars: vars},
+			want:     &emptyString,
 			wantBody: nil,
 		},
 		{
-			name:     "empty message and description",
-			args:     args{template: " \n", vars: vars},
-			want:     &emptyString,
+			name:     "single newline",
+			args:     args{template: "\n", vars: vars},
+			want:     nil,
 			wantBody: nil,
 		},
 		{
