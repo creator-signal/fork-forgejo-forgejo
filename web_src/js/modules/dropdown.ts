@@ -16,9 +16,9 @@ export function initDropdowns() {
     const target = event.target as HTMLElement;
     const newTarget = event.relatedTarget as HTMLElement;
 
-    // An open dropdown used to contain a focused element, but since that is no
-    // longer the case we'll close it
-    if (dropdown.contains(target) && !dropdown.contains(newTarget))
+    // An open dropdown used to contain a focused element, but something else was
+    // focused, so we'll close the dropdown
+    if (newTarget !== null && dropdown.contains(target) && !dropdown.contains(newTarget))
       dropdown.removeAttribute('open');
   });
 
