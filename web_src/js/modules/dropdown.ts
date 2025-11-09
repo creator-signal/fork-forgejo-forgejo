@@ -35,7 +35,7 @@ export function initDropdowns() {
         // We'll open the dropdown and focus it's first item
         parentDropdown.setAttribute('open', 'true');
         parentDropdown.querySelector<HTMLElement>('.content > ul > li > :is(a, button)').focus();
-        console.log("dfdff");
+        event.preventDefault();
         return;
       }
     }
@@ -51,10 +51,6 @@ export function initDropdowns() {
       dropdown.removeAttribute('open');
       return;
     }
-
-    // todo: double check if this is needed
-    event.preventDefault();
-    event.stopPropagation();
 
     // Knowing document.activeElement, find the <li> that contains it
     const dropdownItems = dropdown.querySelectorAll<HTMLLIElement>('.content > ul > li');
@@ -78,6 +74,7 @@ export function initDropdowns() {
         return;
       }
       dropdownItems[activeLiIndex - 1].querySelector<HTMLElement>(':is(a, button)').focus();
+      event.preventDefault();
     }
 
     if (event.key === 'ArrowDown') {
@@ -85,6 +82,7 @@ export function initDropdowns() {
         // First child is already selected
         return;
       dropdownItems[activeLiIndex + 1].querySelector<HTMLElement>(':is(a, button)').focus();
+      event.preventDefault();
     }
   });
 }
