@@ -9,25 +9,27 @@
 export function initDropdowns() {
   document.addEventListener('focusout', (event: FocusEvent) => {
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
-    if (dropdown === null)
+    if (dropdown === null) {
       // No open dropdowns on page, nothing to do
       return;
+    }
 
     const target = event.target as HTMLElement;
     const newTarget = event.relatedTarget as HTMLElement;
 
-    // An open dropdown used to contain a focused element, but something else was
-    // focused, so we'll close the dropdown
-    if (newTarget !== null && dropdown.contains(target) && !dropdown.contains(newTarget))
+    if (newTarget !== null && dropdown.contains(target) && !dropdown.contains(newTarget)) {
+      // An open dropdown used to contain a focused element, but something else was
+      // focused, so we'll close the dropdown
       dropdown.removeAttribute('open');
+    }
   });
-
 
   // Keyboard interaction with dropdowns
   document.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (!['Escape', 'ArrowUp', 'ArrowDown'].includes(event.key))
+    if (!['Escape', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
       // This eventListener is only concerned about a few keys
       return;
+    }
 
     if (document.activeElement.localName === 'summary' && event.key === 'ArrowDown') {
       const parentDropdown = document.activeElement.parentElement as HTMLDetailsElement;
@@ -43,9 +45,10 @@ export function initDropdowns() {
 
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
     // This part of the code only knows how to work with open dropdown
-    if (dropdown === null)
+    if (dropdown === null) {
       // No open dropdowns on page, nothing to do
       return;
+    }
 
     if (event.key === 'Escape') {
       // User pressed Escape while having an open dropdown, we'll close it
@@ -63,9 +66,10 @@ export function initDropdowns() {
       activeLiIndex = i;
       break;
     }
-    if (activeLi === undefined)
+    if (activeLi === undefined) {
       // The focused element is not a list item or it's contents, but something else in the dropdown
       return;
+    }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault();
@@ -80,9 +84,10 @@ export function initDropdowns() {
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      if (activeLiIndex === dropdownItems.length - 1)
+      if (activeLiIndex === dropdownItems.length - 1) {
         // First child is already selected
         return;
+      }
       dropdownItems[activeLiIndex + 1].querySelector<HTMLElement>(':is(a, button)').focus();
     }
   });
