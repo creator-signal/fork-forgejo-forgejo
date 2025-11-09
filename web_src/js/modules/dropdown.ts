@@ -10,19 +10,19 @@ export function initDropdowns() {
   document.addEventListener('click', (event) => {
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
     if (dropdown === null)
-      // No open dropdowns on page, nothing to do.
+      // No open dropdowns on page, nothing to do
       return;
 
     const target = event.target as HTMLElement;
     if (dropdown.contains(target))
-      // User clicked something in the open dropdown, don't interfere.
+      // User clicked something in the open dropdown, don't interfere
       return;
 
-    // User clicked something that isn't the open dropdown, so close it.
+    // User clicked something that wasn't the open dropdown, so we'll close it
     dropdown.removeAttribute('open');
   });
 
-  // Close open dropdowns on Escape press
+  // Keyboard interaction with dropdowns
   document.addEventListener('keydown', (event) => {
     if (!['Escape', 'ArrowUp', 'ArrowDown'].includes(event.key))
       // This eventListener is only concerned about a few keys
@@ -30,20 +30,26 @@ export function initDropdowns() {
 
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
     if (dropdown === null)
-      // No open dropdowns on page, nothing to do.
+      // No open dropdowns on page, nothing to do
       return;
 
     if (event.key === 'Escape') {
-      // User pressed Escape while having an open dropdown, probably wants it be closed.
+      // User pressed Escape while having an open dropdown, we'll close it
       dropdown.removeAttribute('open');
       return;
+    }
+
+    const dropdownItems = dropdown.querySelectorAll<HTMLLIElement>('.content > ul > li');
+    const dropdownOpener = dropdown.querySelector<HTMLElement>('summary');
+    if (dropdownOpener === document.activeElement && event.key === 'ArrowDown') {
+      // User pressed ArrowDown while having the opener focused. Select the first item.
+      dropdownItems[0].querySelector<HTMLElement>(':is(a, button)').focus();
+      return
     }
 
     // todo: double check if this is needed
     event.preventDefault();
     event.stopPropagation();
-
-    const dropdownItems = dropdown.querySelectorAll<HTMLLIElement>('details.dropdown[open] > .content > ul > li');
 
     // Knowing document.activeElement, find the <li> that contains it
     let activeLi: HTMLLIElement, activeLiIndex: number;
@@ -72,7 +78,6 @@ export function initDropdowns() {
       if (activeLiIndex === dropdownItems.length - 1)
         // First child is already selected
         return;
-      console.log("Refucos down")
       dropdownItems[activeLiIndex + 1].querySelector<HTMLElement>(':is(a, button)').focus();
     }
   });
