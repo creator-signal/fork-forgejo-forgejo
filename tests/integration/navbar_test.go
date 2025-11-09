@@ -12,6 +12,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
+
 	"github.com/stretchr/testify/assert"
 )
 
