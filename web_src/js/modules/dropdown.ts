@@ -28,7 +28,20 @@ export function initDropdowns() {
       // This eventListener is only concerned about a few keys
       return;
 
+    if (document.activeElement.localName === 'summary' && event.key === 'ArrowDown') {
+      const parentDropdown = document.activeElement.parentElement as HTMLDetailsElement;
+      if (parentDropdown.classList.contains('dropdown')) {
+        // User pressed ArrowDown on a focused summary of a closed dropdown.
+        // We'll open the dropdown and focus it's first item
+        parentDropdown.setAttribute('open', 'true');
+        parentDropdown.querySelector<HTMLElement>('.content > ul > li > :is(a, button)').focus();
+        console.log("dfdff");
+        return;
+      }
+    }
+
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
+    // This part of the code only knows how to work with open dropdown
     if (dropdown === null)
       // No open dropdowns on page, nothing to do
       return;
@@ -39,19 +52,12 @@ export function initDropdowns() {
       return;
     }
 
-    const dropdownItems = dropdown.querySelectorAll<HTMLLIElement>('.content > ul > li');
-    const dropdownOpener = dropdown.querySelector<HTMLElement>('summary');
-    if (dropdownOpener === document.activeElement && event.key === 'ArrowDown') {
-      // User pressed ArrowDown while having the opener focused. Select the first item.
-      dropdownItems[0].querySelector<HTMLElement>(':is(a, button)').focus();
-      return
-    }
-
     // todo: double check if this is needed
     event.preventDefault();
     event.stopPropagation();
 
     // Knowing document.activeElement, find the <li> that contains it
+    const dropdownItems = dropdown.querySelectorAll<HTMLLIElement>('.content > ul > li');
     let activeLi: HTMLLIElement, activeLiIndex: number;
     for (let i = 0; i < dropdownItems.length; i++) {
       const li = dropdownItems[i] as HTMLLIElement;
