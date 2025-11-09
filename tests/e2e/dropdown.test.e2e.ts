@@ -19,6 +19,7 @@ test('JS enhanced interaction', async ({page}) => {
   await expect(nojsNotice).toBeHidden();
 
   // Open and close by clicking summary
+  const dropdown = page.locator('details.dropdown');
   const dropdownSummary = page.locator('details.dropdown > summary');
   const dropdownContent = page.locator('details.dropdown > .content');
   await expect(dropdownContent).toBeHidden();
@@ -50,6 +51,47 @@ test('JS enhanced interaction', async ({page}) => {
   await dropdownSummary.press(`Enter`);
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Escape`);
+
+  // Open and navigate with ArrowDown, close with Tab
+  await dropdownSummary.focus();
+  await dropdown.press(`ArrowDown`);
+  await expect(page.locator(`a[href$=".rss"]`)).toBeFocused();
+  await dropdown.press(`ArrowDown`);
+  await expect(page.locator(`a[href$=".atom"]`)).toBeFocused();
+  await dropdown.press(`ArrowDown`);
+  await expect(page.locator(`a[href$=".keys"]`)).toBeFocused();
+  await dropdown.press(`ArrowDown`);
+  await expect(page.locator(`a[href$=".gpg"]`)).toBeFocused();
+  // ArrowDown won't move us farther than the last dropdown item
+  await dropdown.press(`ArrowDown`);
+  await expect(page.locator(`a[href$=".gpg"]`)).toBeFocused();
+  // Pressing Tab on last item will move us away from the dropdown and close the dropdown
+  await dropdown.press(`Tab`);
+  await expect(dropdownContent).toBeHidden();
+
+  // Navigate and close with Shift+Tab
+  await dropdownSummary.focus();
+  await dropdown.press(`Enter`);
+  await expect(dropdownSummary).toBeFocused();
+  await dropdown.press(`ArrowDown`);
+  await expect(page.locator(`a[href$=".rss"]`)).toBeFocused();
+  await dropdown.press('Shift+Tab');
+  await expect(dropdownSummary).toBeFocused();
+  await dropdown.press('Shift+Tab');
+  await expect(dropdownContent).toBeHidden();
+
+  // Navigate with ArrowUp
+  await dropdownSummary.focus();
+  await dropdown.press(`ArrowDown`);
+  await expect(page.locator(`a[href$=".rss"]`)).toBeFocused();
+  await dropdown.press(`ArrowDown`);
+  await expect(page.locator(`a[href$=".atom"]`)).toBeFocused();
+  await dropdown.press(`ArrowUp`);
+  await expect(page.locator(`a[href$=".rss"]`)).toBeFocused();
+  // Pressing ArrowUp on first item will move us to summary, but no farther from here
+  await dropdown.press(`ArrowUp`);
+  await expect(dropdownSummary).toBeFocused();
+  await dropdown.press(`Escape`);
   await expect(dropdownContent).toBeHidden();
 
   // Open and then close by opening a different dropdown
