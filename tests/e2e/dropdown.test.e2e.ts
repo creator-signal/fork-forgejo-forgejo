@@ -51,6 +51,7 @@ test('JS enhanced interaction', async ({page}) => {
   await dropdownSummary.press(`Enter`);
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Escape`);
+  await expect(dropdownContent).toBeHidden();
 
   // Open and navigate with ArrowDown, close with Tab
   await dropdownSummary.focus();
