@@ -72,6 +72,7 @@ RUN apk --no-cache add \
     curl \
     gettext \
     git \
+    git-lfs \
     linux-pam \
     openssh \
     s6 \
