@@ -38,16 +38,17 @@ test('JS enhanced interaction', async ({page}) => {
 
   // Open and close with keypressing
   await dropdownSummary.focus();
+  // Open with Enter, close with Space
   await dropdownSummary.press(`Enter`);
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Space`);
   await expect(dropdownContent).toBeHidden();
-
+  // Open with Space, close with Enter
   await dropdownSummary.press(`Space`);
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Enter`);
   await expect(dropdownContent).toBeHidden();
-
+  // Open with Enter, close with Enter
   await dropdownSummary.press(`Enter`);
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Escape`);
@@ -133,17 +134,17 @@ test('No JS interaction', async ({browser}) => {
   await expect(dropdownContent).toBeHidden();
 
   // Open and close with keypressing
+  // Open with Enter, close with Space
   await dropdownSummary.press(`Enter`);
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Space`);
   await expect(dropdownContent).toBeHidden();
-
+  // Open with Space, close with Enter
   await dropdownSummary.press(`Space`);
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Enter`);
   await expect(dropdownContent).toBeHidden();
-
-  // Escape is not usable w/o JS enhancements
+  // Closing by Escape is not possible w/o JS enhancements
   await dropdownSummary.press(`Enter`);
   await expect(dropdownContent).toBeVisible();
   await dropdownSummary.press(`Escape`);

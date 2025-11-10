@@ -7,19 +7,26 @@
 // click iteration with anything on the page and pressing Escape.
 
 export function initDropdowns() {
-  document.addEventListener('click', (event) => {
+  // Close open dropdown by clicking elsewhere on the page
+  document.addEventListener('click', (event: MouseEvent) => {
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
-    // No open dropdowns on page, nothing to do.
-    if (dropdown === null) return;
+    if (dropdown === null) {
+      // No open dropdowns on page, nothing to do
+      return;
+    }
 
     const target = event.target as HTMLElement;
-    // User clicked something in the open dropdown, don't interfere.
-    if (dropdown.contains(target)) return;
+    if (dropdown.contains(target)) {
+      // User clicked something in the open dropdown, don't interfere
+      return;
+    }
 
-    // User clicked something that isn't the open dropdown, so close it.
+    // User clicked something elsewhere, close the open dropdown
     dropdown.removeAttribute('open');
   });
 
+  // Close open dropdown when it is unfocused (e.g. when user pressed Tab or Shift+Tab),
+  // but not when user lost focus completely (e.g. browser window became unfocused)
   document.addEventListener('focusout', (event: FocusEvent) => {
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
     if (dropdown === null) {
@@ -31,8 +38,8 @@ export function initDropdowns() {
     const newTarget = event.relatedTarget as HTMLElement;
 
     if (newTarget !== null && dropdown.contains(target) && !dropdown.contains(newTarget)) {
-      // An open dropdown used to contain a focused element, but something else was
-      // focused, so we'll close the dropdown
+      // The previously focused element was within the open dropdown, but something
+      // else is now focused, so the dropdown should be closed
       dropdown.removeAttribute('open');
     }
   });
