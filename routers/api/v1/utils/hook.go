@@ -220,11 +220,7 @@ func addHook(ctx *context.APIContext, form *api.CreateHookOption, ownerID, repoI
 		IsActive: form.Active,
 		Type:     form.Type,
 	}
-	err := w.SetHeaderAuthorization(form.AuthorizationHeader)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "SetHeaderAuthorization", err)
-		return nil, false
-	}
+	w.SetHeaderAuthorization(form.AuthorizationHeader)
 	if w.Type == webhook_module.SLACK {
 		channel, ok := form.Config["channel"]
 		if !ok {
@@ -379,11 +375,7 @@ func editHook(ctx *context.APIContext, form *api.EditHookOption, w *webhook.Webh
 	w.Release = util.SliceContainsString(form.Events, string(webhook_module.HookEventRelease), true)
 	w.BranchFilter = form.BranchFilter
 
-	err := w.SetHeaderAuthorization(form.AuthorizationHeader)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "SetHeaderAuthorization", err)
-		return false
-	}
+	w.SetHeaderAuthorization(form.AuthorizationHeader)
 
 	// Issues
 	w.Issues = issuesHook(form.Events, "issues_only")

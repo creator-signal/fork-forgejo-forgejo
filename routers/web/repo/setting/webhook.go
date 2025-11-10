@@ -221,11 +221,7 @@ func WebhookCreate(ctx *context.Context) {
 		w.HookEvent = ParseHookEvent(fields.WebhookCoreForm)
 		w.IsActive = fields.Active
 		w.HTTPMethod = fields.HTTPMethod
-		err := w.SetHeaderAuthorization(fields.AuthorizationHeader)
-		if err != nil {
-			ctx.ServerError("SetHeaderAuthorization", err)
-			return
-		}
+		w.SetHeaderAuthorization(fields.AuthorizationHeader)
 		ctx.Data["Webhook"] = w
 		ctx.Data["HookMetadata"] = fields.Metadata
 
@@ -255,11 +251,7 @@ func WebhookCreate(ctx *context.Context) {
 		OwnerID:         orCtx.OwnerID,
 		IsSystemWebhook: orCtx.IsSystemWebhook,
 	}
-	err = w.SetHeaderAuthorization(fields.AuthorizationHeader)
-	if err != nil {
-		ctx.ServerError("SetHeaderAuthorization", err)
-		return
-	}
+	w.SetHeaderAuthorization(fields.AuthorizationHeader)
 	if err := w.UpdateEvent(); err != nil {
 		ctx.ServerError("UpdateEvent", err)
 		return
@@ -302,11 +294,7 @@ func WebhookUpdate(ctx *context.Context) {
 	w.IsActive = fields.Active
 	w.HTTPMethod = fields.HTTPMethod
 
-	err := w.SetHeaderAuthorization(fields.AuthorizationHeader)
-	if err != nil {
-		ctx.ServerError("SetHeaderAuthorization", err)
-		return
-	}
+	w.SetHeaderAuthorization(fields.AuthorizationHeader)
 
 	if ctx.HasError() {
 		ctx.Data["HookMetadata"] = fields.Metadata
@@ -314,6 +302,7 @@ func WebhookUpdate(ctx *context.Context) {
 		return
 	}
 
+	var err error
 	var meta []byte
 	if fields.Metadata != nil {
 		meta, err = json.Marshal(fields.Metadata)

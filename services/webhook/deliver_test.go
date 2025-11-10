@@ -102,8 +102,7 @@ func TestWebhookDeliverAuthorizationHeader(t *testing.T) {
 		IsActive:    true,
 		Type:        webhook_module.GITEA,
 	}
-	err := hook.SetHeaderAuthorization("Bearer s3cr3t-t0ken")
-	require.NoError(t, err)
+	hook.SetHeaderAuthorization("Bearer s3cr3t-t0ken")
 	require.NoError(t, webhook_model.CreateWebhook(db.DefaultContext, hook))
 
 	hookTask := &webhook_model.HookTask{
@@ -112,7 +111,7 @@ func TestWebhookDeliverAuthorizationHeader(t *testing.T) {
 		PayloadVersion: 2,
 	}
 
-	hookTask, err = webhook_model.CreateHookTask(db.DefaultContext, hookTask)
+	hookTask, err := webhook_model.CreateHookTask(db.DefaultContext, hookTask)
 	require.NoError(t, err)
 	assert.NotNil(t, hookTask)
 
