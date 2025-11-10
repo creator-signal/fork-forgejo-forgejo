@@ -7,6 +7,19 @@
 // click iteration with anything on the page and pressing Escape.
 
 export function initDropdowns() {
+  document.addEventListener('click', (event) => {
+    const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
+    // No open dropdowns on page, nothing to do.
+    if (dropdown === null) return;
+
+    const target = event.target as HTMLElement;
+    // User clicked something in the open dropdown, don't interfere.
+    if (dropdown.contains(target)) return;
+
+    // User clicked something that isn't the open dropdown, so close it.
+    dropdown.removeAttribute('open');
+  });
+
   document.addEventListener('focusout', (event: FocusEvent) => {
     const dropdown = document.querySelector<HTMLDetailsElement>('details.dropdown[open]');
     if (dropdown === null) {
