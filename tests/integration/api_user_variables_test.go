@@ -200,7 +200,7 @@ func TestAPIUserVariablesGetAllUserVariables(t *testing.T) {
 	session := loginUser(t, user1.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
 
-	variables := map[string]string{"first": "Lorem ipsum", "second": "Dolor sit amet"}
+	variables := map[string]string{"second": "Dolor sit amet", "first": "Lorem ipsum"}
 	for name, value := range variables {
 		createURL := fmt.Sprintf("/api/v1/user/actions/variables/%s", name)
 

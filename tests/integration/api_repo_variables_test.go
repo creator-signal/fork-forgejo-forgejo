@@ -203,7 +203,7 @@ func TestAPIRepoVariablesGetAllRepositoryVariables(t *testing.T) {
 	session := loginUser(t, user.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 
-	variables := map[string]string{"first": "Lorem ipsum", "second": "Dolor sit amet"}
+	variables := map[string]string{"second": "Dolor sit amet", "first": "Lorem ipsum"}
 	for name, value := range variables {
 		createURL := fmt.Sprintf("/api/v1/repos/%s/actions/variables/%s", repo.FullName(), name)
 

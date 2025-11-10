@@ -198,7 +198,7 @@ func TestAPIOrgVariablesGetAllOrganizationVariables(t *testing.T) {
 	session := loginUser(t, "user2")
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteOrganization)
 
-	variables := map[string]string{"first": "Lorem ipsum", "second": "Dolor sit amet"}
+	variables := map[string]string{"second": "Dolor sit amet", "first": "Lorem ipsum"}
 	for name, value := range variables {
 		createURL := fmt.Sprintf("/api/v1/orgs/%s/actions/variables/%s", org.Name, name)
 
