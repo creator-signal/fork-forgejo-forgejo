@@ -4,6 +4,7 @@ package actions
 
 import (
 	"fmt"
+	"html/template"
 	"testing"
 
 	"forgejo.org/models/db"
@@ -79,27 +80,32 @@ func TestActionRunJob_StatusDiagnostics(t *testing.T) {
 	tests := []struct {
 		name     string
 		job      ActionRunJob
-		expected []string
+		expected []template.HTML
 	}{
 		{
 			name:     "Unknown status",
 			job:      ActionRunJob{RunsOn: []string{"windows"}, Status: StatusUnknown, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Unknown"},
+			expected: []template.HTML{"Unknown"},
 		},
 		{
 			name:     "Waiting without labels",
 			job:      ActionRunJob{RunsOn: []string{}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Waiting for a runner with the following labels: "},
+			expected: []template.HTML{"Waiting for a runner with the following labels: "},
+		},
+		{
+			name:     "Waiting with one label",
+			job:      ActionRunJob{RunsOn: []string{"freebsd"}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: false}},
+			expected: []template.HTML{"Waiting for a runner with the following label: freebsd"},
 		},
 		{
 			name:     "Waiting with labels, no approval",
 			job:      ActionRunJob{RunsOn: []string{"docker", "ubuntu"}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Waiting for a runner with the following labels: docker, ubuntu"},
+			expected: []template.HTML{"Waiting for a runner with the following labels: docker, ubuntu"},
 		},
 		{
 			name: "Waiting with labels, approval",
 			job:  ActionRunJob{RunsOn: []string{"docker", "ubuntu"}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: true}},
-			expected: []string{
+			expected: []template.HTML{
 				"Waiting for a runner with the following labels: docker, ubuntu",
 				"Need approval to run workflows for fork pull request.",
 			},
@@ -107,32 +113,32 @@ func TestActionRunJob_StatusDiagnostics(t *testing.T) {
 		{
 			name:     "Running",
 			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusRunning, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Running"},
+			expected: []template.HTML{"Running"},
 		},
 		{
 			name:     "Success",
 			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusSuccess, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Success"},
+			expected: []template.HTML{"Success"},
 		},
 		{
 			name:     "Failure",
 			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusFailure, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Failure"},
+			expected: []template.HTML{"Failure"},
 		},
 		{
 			name:     "Cancelled",
 			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusCancelled, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Canceled"},
+			expected: []template.HTML{"Canceled"},
 		},
 		{
 			name:     "Skipped",
 			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusSkipped, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Skipped"},
+			expected: []template.HTML{"Skipped"},
 		},
 		{
 			name:     "Blocked",
 			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusBlocked, Run: &ActionRun{NeedApproval: false}},
-			expected: []string{"Blocked"},
+			expected: []template.HTML{"Blocked"},
 		},
 	}
 

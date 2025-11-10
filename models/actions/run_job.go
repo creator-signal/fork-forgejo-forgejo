@@ -6,6 +6,7 @@ package actions
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"slices"
 	"strings"
 	"time"
@@ -235,18 +236,19 @@ func AggregateJobStatus(jobs []*ActionRunJob) Status {
 // StatusDiagnostics returns optional diagnostic information to display to the user derived from
 // ActionRunJob's current status. It should help the user understand in which state the
 // ActionRunJob is and why.
-func (job *ActionRunJob) StatusDiagnostics(lang translation.Locale) []string {
-	diagnostics := []string{}
+func (job *ActionRunJob) StatusDiagnostics(lang translation.Locale) []template.HTML {
+	diagnostics := []template.HTML{}
 
 	switch job.Status {
 	case StatusWaiting:
-		diagnostics = append(diagnostics, lang.TrString("actions.status.diagnostics.waiting", strings.Join(job.RunsOn, ", ")))
+		joinedLabels := strings.Join(job.RunsOn, ", ")
+		diagnostics = append(diagnostics, lang.TrPluralString(len(job.RunsOn), "actions.status.diagnostics.waiting", joinedLabels))
 	default:
-		diagnostics = append(diagnostics, job.Status.LocaleString(lang))
+		diagnostics = append(diagnostics, template.HTML(job.Status.LocaleString(lang)))
 	}
 
 	if job.Run.NeedApproval {
-		diagnostics = append(diagnostics, lang.TrString("actions.need_approval_desc"))
+		diagnostics = append(diagnostics, template.HTML(lang.TrString("actions.need_approval_desc")))
 	}
 
 	return diagnostics
