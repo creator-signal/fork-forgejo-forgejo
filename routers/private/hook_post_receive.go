@@ -231,10 +231,11 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 			}
 
 			results = append(results, private.HookPostReceiveBranchResult{
-				Message: setting.Git.PullRequestPushMessage && repo.AllowsPulls(ctx),
-				Create:  false,
-				Branch:  "",
-				URL:     fmt.Sprintf("%s/pulls/%d", repo.HTMLURL(), pr.Index),
+				Message:   setting.Git.PullRequestPushMessage && repo.AllowsPulls(ctx),
+				Create:    false,
+				Branch:    "",
+				CreateURL: "",
+				PullURLS:  []string{fmt.Sprintf("%s/pulls/%d", repo.HTMLURL(), pr.Index)},
 			})
 			continue
 		}
@@ -281,7 +282,8 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 				continue
 			}
 
-			pr, err := issues_model.GetUnmergedPullRequest(ctx, repo.ID, baseRepo.ID, branch, baseRepo.DefaultBranch, issues_model.PullRequestFlowGithub)
+			// Check if there is an existing pull request for this branch.
+			prList, err := issues_model.GetUnmergedPullRequestsAnyTarget(ctx, repo.ID, baseRepo.ID, branch, issues_model.PullRequestFlowGithub)
 			if err != nil && !issues_model.IsErrPullRequestNotExist(err) {
 				log.Error("Failed to get active PR in: %-v Branch: %s to: %-v Branch: %s Error: %v", repo, branch, baseRepo, baseRepo.DefaultBranch, err)
 				ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
@@ -292,22 +294,36 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 				return
 			}
 
-			if pr == nil {
+			createURL := fmt.Sprintf("%s/compare/%s...%s", baseRepo.HTMLURL(), util.PathEscapeSegments(baseRepo.DefaultBranch), util.PathEscapeSegments(branch))
+			if len(prList) == 0 {
 				if repo.IsFork {
 					branch = fmt.Sprintf("%s:%s", repo.OwnerName, branch)
 				}
 				results = append(results, private.HookPostReceiveBranchResult{
-					Message: setting.Git.PullRequestPushMessage && baseRepo.AllowsPulls(ctx),
-					Create:  true,
-					Branch:  branch,
-					URL:     fmt.Sprintf("%s/compare/%s...%s", baseRepo.HTMLURL(), util.PathEscapeSegments(baseRepo.DefaultBranch), util.PathEscapeSegments(branch)),
+					Message:   setting.Git.PullRequestPushMessage && baseRepo.AllowsPulls(ctx),
+					Create:    true,
+					Branch:    branch,
+					CreateURL: createURL,
+					PullURLS:  nil,
 				})
 			} else {
+				var urls []string
+				foundDefaultBranch := false
+				for _, pr := range prList {
+					urls = append(urls, fmt.Sprintf("%s/pulls/%d", baseRepo.HTMLURL(), pr.Index))
+					if pr.BaseBranch == baseRepo.DefaultBranch {
+						foundDefaultBranch = true
+					}
+				}
+				if foundDefaultBranch {
+					createURL = ""
+				}
 				results = append(results, private.HookPostReceiveBranchResult{
-					Message: setting.Git.PullRequestPushMessage && baseRepo.AllowsPulls(ctx),
-					Create:  false,
-					Branch:  branch,
-					URL:     fmt.Sprintf("%s/pulls/%d", baseRepo.HTMLURL(), pr.Index),
+					Message:   setting.Git.PullRequestPushMessage && baseRepo.AllowsPulls(ctx),
+					Create:    !foundDefaultBranch,
+					Branch:    branch,
+					CreateURL: createURL,
+					PullURLS:  urls,
 				})
 			}
 		}
