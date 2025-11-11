@@ -90,6 +90,7 @@ test.describe('Button text replaced by JS', () => {
     await expect(statusButtonIcon).toBeVisible();
 
     // Some browsers do actions above too fast and init the script part of the textarea/button too slow
+    // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(100);
     // Type in some text to make button text change
     await commentField.fill('Blah blah');
@@ -101,6 +102,8 @@ test.describe('Button text replaced by JS', () => {
     await expect(statusButton.getByText('Reopen')).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
+    // Some browsers do actions above too fast and init the script part of the textarea/button too slow
+    // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(100);
     // Type in some text to make button text change
     await commentField.fill('Blah blah');
