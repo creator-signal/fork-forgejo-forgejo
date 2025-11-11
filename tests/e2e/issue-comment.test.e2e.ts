@@ -89,9 +89,6 @@ test.describe('Button text replaced by JS', () => {
     await expect(statusButton.getByText(closeLabel)).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
-    // Some browsers do actions above too fast and init the script part of the textarea/button too slow
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(100);
     // Type in some text to make button text change
     await commentField.fill('Blah blah');
     await expect(statusButton.getByText('Close with comment')).toBeVisible();
@@ -102,9 +99,6 @@ test.describe('Button text replaced by JS', () => {
     await expect(statusButton.getByText('Reopen')).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
-    // Some browsers do actions above too fast and init the script part of the textarea/button too slow
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(100);
     // Type in some text to make button text change
     await commentField.fill('Blah blah');
     await expect(statusButton.getByText('Reopen with comment')).toBeVisible();
@@ -115,11 +109,11 @@ test.describe('Button text replaced by JS', () => {
 
   test('Issue', async ({page}) => {
     // All actual expect() are happening in the helper
-    expect(await testPage(page, '/user2/repo1/issues/1', 'Close issue')).toBeTruthy();
+    expect(await testPage(page, '/user2/repo2/issues/2', 'Close issue')).toBeTruthy();
   });
 
   test('PR', async ({page}) => {
-    expect(await testPage(page, '/user2/repo1/pulls/3', 'Close pull request')).toBeTruthy();
+    expect(await testPage(page, '/user2/repo1/pulls/5', 'Close pull request')).toBeTruthy();
   });
 });
 
