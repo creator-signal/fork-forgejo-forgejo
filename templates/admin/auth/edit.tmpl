@@ -279,9 +279,9 @@
 						<label for="oauth2_key">{{ctx.Locale.Tr "admin.auths.oauth2_clientID"}}</label>
 						<input id="oauth2_key" name="oauth2_key" value="{{$cfg.ClientID}}" required>
 					</div>
-					<div class="required field">
+					<div class="optional field">
 						<label for="oauth2_secret">{{ctx.Locale.Tr "admin.auths.oauth2_clientSecret"}}</label>
-						<input id="oauth2_secret" name="oauth2_secret" value="{{$cfg.ClientSecret}}" required>
+						<input id="oauth2_secret" name="oauth2_secret" value="{{$cfg.ClientSecret}}">
 					</div>
 					<div class="optional field">
 						<label for="oauth2_icon_url">{{ctx.Locale.Tr "admin.auths.oauth2_icon_url"}}</label>
