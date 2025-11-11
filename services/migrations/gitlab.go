@@ -797,7 +797,6 @@ func (g *GitlabDownloader) awardsToReactions(awards []*gitlab.AwardEmoji) []*bas
 
 // Build on the assumption, that PR IDs will resolve after Issue IDs
 func (g *GitlabDownloader) convertCommentReference(body string) string {
-
 	var referenes []int
 	re := regexp.MustCompile(`!(\d+)`)
 	matches := re.FindAllStringSubmatch(body, -1)
