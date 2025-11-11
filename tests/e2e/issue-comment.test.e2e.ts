@@ -89,6 +89,8 @@ test.describe('Button text replaced by JS', () => {
     await expect(statusButton.getByText(closeLabel)).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
+    // Some browsers do actions above too fast and init the script part of the textarea/button too slow
+    await page.waitForTimeout(100);
     // Type in some text to make button text change
     await commentField.fill('Blah blah');
     await expect(statusButton.getByText('Close with comment')).toBeVisible();
@@ -99,6 +101,7 @@ test.describe('Button text replaced by JS', () => {
     await expect(statusButton.getByText('Reopen')).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
+    await page.waitForTimeout(100);
     // Type in some text to make button text change
     await commentField.fill('Blah blah');
     await expect(statusButton.getByText('Reopen with comment')).toBeVisible();
