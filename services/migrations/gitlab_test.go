@@ -545,8 +545,7 @@ func TestAwardsToReactions(t *testing.T) {
 	}, reactions)
 }
 
-func makeTestNote(id int, body string, system bool) gitlab.Note {
-	now := time.Now()
+func makeTestNote(id int, body string, system bool, t time.Time) gitlab.Note {
 	return gitlab.Note{
 		ID: id,
 		Author: struct {
@@ -563,7 +562,7 @@ func makeTestNote(id int, body string, system bool) gitlab.Note {
 			Username: "test",
 		},
 		Body:      body,
-		CreatedAt: &now,
+		CreatedAt: &t,
 		System:    system,
 	}
 }
@@ -573,10 +572,10 @@ func TestNoteToComment(t *testing.T) {
 
 	now := time.Now()
 	notes := []gitlab.Note{
-		makeTestNote(1, "This is a regular comment", false),
-		makeTestNote(2, "enabled an automatic merge for abcd1234", true),
-		makeTestNote(3, "changed target branch from `master` to `main`", true),
-		makeTestNote(4, "canceled the automatic merge", true),
+		makeTestNote(1, "This is a regular comment", false, now),
+		makeTestNote(2, "enabled an automatic merge for abcd1234", true, now),
+		makeTestNote(3, "changed target branch from `master` to `main`", true, now),
+		makeTestNote(4, "canceled the automatic merge", true, now),
 	}
 	comments := []base.Comment{{
 		IssueIndex:  17,
@@ -649,10 +648,11 @@ func TestGitlabIIDResolver(t *testing.T) {
 func TestCommentBodyParser(t *testing.T) {
 	downloader := GitlabDownloader{}
 	downloader.iidResolver.maxIssueIID = int64(10)
+	now := time.Now()
 
 	// Gitlab note references issue with #N and PR with !M, with N and M being arbitrary integers, so N == M is possible
-	testNote1 := makeTestNote(1, "Simillar to #9, may be solved in !4", false)
-	testNote2 := makeTestNote(2, "Should actually be discussed in !5 or !6 and not in #2 (here)", false)
+	testNote1 := makeTestNote(1, "Simillar to #9, may be solved in !4", false, now)
+	testNote2 := makeTestNote(2, "Should actually be discussed in !5 or !6 and not in #2 (here)", false, now)
 
 	parsedBody1 := downloader.convertCommentReference(testNote1.Body)
 	parsedBody2 := downloader.convertCommentReference(testNote2.Body)
