@@ -647,7 +647,6 @@ func TestGitlabIIDResolver(t *testing.T) {
 }
 
 func TestCommentBodyParser(t *testing.T) {
-
 	downloader := GitlabDownloader{}
 	downloader.iidResolver.maxIssueIID = int64(10)
 
