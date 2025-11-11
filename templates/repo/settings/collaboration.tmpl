@@ -1,5 +1,6 @@
 {{template "repo/settings/layout_head" (dict "ctxData" . "pageClass" "repository settings collaboration")}}
 	<div class="repo-setting-content">
+		{{if or (not .RepoOwnerIsOrganization) (not .DisableCollaboratorsForOrganizations)}}
 		<h4 class="ui top attached header">
 			{{ctx.Locale.Tr "repo.settings.collaboration"}}
 		</h4>
@@ -46,6 +47,7 @@
 				<button class="ui primary button">{{ctx.Locale.Tr "repo.settings.add_collaborator"}}</button>
 			</form>
 		</div>
+		{{end}}
 
 		{{if .RepoOwnerIsOrganization}}
 		<h4 class="ui top attached header">

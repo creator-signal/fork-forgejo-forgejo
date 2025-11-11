@@ -27,6 +27,7 @@ import (
 func Collaboration(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.collaboration")
 	ctx.Data["PageIsSettingsCollaboration"] = true
+	ctx.Data["DisableCollaboratorsForOrganizations"] = setting.Repository.DisableCollaboratorsForOrganizations
 
 	users, err := repo_model.GetCollaborators(ctx, ctx.Repo.Repository.ID, db.ListOptions{})
 	if err != nil {
@@ -52,6 +53,13 @@ func Collaboration(ctx *context.Context) {
 
 // CollaborationPost response for actions for a collaboration of a repository
 func CollaborationPost(ctx *context.Context) {
+	// Individual collaborators are not allowed for organization repositories if setting is enabled
+	if setting.Repository.DisableCollaboratorsForOrganizations && ctx.Repo.Repository.Owner.IsOrganization() {
+		ctx.Flash.Error(ctx.Tr("repo.settings.collaboration_not_allowed_for_orgs"))
+		ctx.Redirect(setting.AppSubURL + ctx.Req.URL.EscapedPath())
+		return
+	}
+
 	name := strings.ToLower(ctx.FormString("collaborator"))
 	if len(name) == 0 || ctx.Repo.Owner.LowerName == name {
 		ctx.Redirect(setting.AppSubURL + ctx.Req.URL.EscapedPath())
@@ -127,6 +135,12 @@ func CollaborationPost(ctx *context.Context) {
 
 // ChangeCollaborationAccessMode response for changing access of a collaboration
 func ChangeCollaborationAccessMode(ctx *context.Context) {
+	// Individual collaborators are not allowed for organization repositories if setting is enabled
+	if setting.Repository.DisableCollaboratorsForOrganizations && ctx.Repo.Repository.Owner.IsOrganization() {
+		log.Error("ChangeCollaborationAccessMode: collaborators not allowed for organization repositories")
+		return
+	}
+
 	if err := repo_model.ChangeCollaborationAccessMode(
 		ctx,
 		ctx.Repo.Repository,
@@ -138,6 +152,13 @@ func ChangeCollaborationAccessMode(ctx *context.Context) {
 
 // DeleteCollaboration delete a collaboration for a repository
 func DeleteCollaboration(ctx *context.Context) {
+	// Individual collaborators are not allowed for organization repositories if setting is enabled
+	if setting.Repository.DisableCollaboratorsForOrganizations && ctx.Repo.Repository.Owner.IsOrganization() {
+		ctx.Flash.Error(ctx.Tr("repo.settings.collaboration_not_allowed_for_orgs"))
+		ctx.JSONRedirect(ctx.Repo.RepoLink + "/settings/collaboration")
+		return
+	}
+
 	if err := repo_service.DeleteCollaboration(ctx, ctx.Repo.Repository, ctx.FormInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteCollaboration: " + err.Error())
 	} else {

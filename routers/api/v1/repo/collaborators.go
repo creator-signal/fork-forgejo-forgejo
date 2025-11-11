@@ -14,6 +14,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
@@ -167,6 +168,12 @@ func AddCollaborator(ctx *context.APIContext) {
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 
+	// Individual collaborators are not allowed for organization repositories if setting is enabled
+	if setting.Repository.DisableCollaboratorsForOrganizations && ctx.Repo.Repository.Owner.IsOrganization() {
+		ctx.Error(http.StatusForbidden, "AddCollaborator", errors.New("individual collaborators are not allowed for organization repositories, please use teams instead"))
+		return
+	}
+
 	form := web.GetForm(ctx).(*api.AddCollaboratorOption)
 
 	collaborator, err := user_model.GetUserByName(ctx, ctx.Params(":collaborator"))
@@ -233,6 +240,12 @@ func DeleteCollaborator(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 	//   "422":
 	//     "$ref": "#/responses/validationError"
+
+	// Individual collaborators are not allowed for organization repositories if setting is enabled
+	if setting.Repository.DisableCollaboratorsForOrganizations && ctx.Repo.Repository.Owner.IsOrganization() {
+		ctx.Error(http.StatusForbidden, "DeleteCollaborator", errors.New("individual collaborators are not allowed for organization repositories, please use teams instead"))
+		return
+	}
 
 	collaborator, err := user_model.GetUserByName(ctx, ctx.Params(":collaborator"))
 	if err != nil {

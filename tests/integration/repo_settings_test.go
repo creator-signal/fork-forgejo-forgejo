@@ -16,6 +16,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	app_context "forgejo.org/services/context"
 	repo_service "forgejo.org/services/repository"
 	user_service "forgejo.org/services/user"
@@ -302,5 +303,91 @@ func TestProtectedBranch(t *testing.T) {
 
 		// Verify it wasn't added.
 		unittest.AssertCount(t, &git_model.ProtectedBranch{RuleName: "master", RepoID: repo.ID}, 1)
+	})
+}
+
+func TestRepoCollaborationOrgRepoWithSettingEnabled(t *testing.T) {
+	// Test that the collaborator UI section is hidden on organization repositories
+	// when the DISABLE_COLLABORATORS_FOR_ORGANIZATIONS setting is true.
+	// This verifies that the web UI prevents adding collaborators to org repos and shows an error message.
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.Repository.DisableCollaboratorsForOrganizations, true)()
+
+	repo3 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
+	assert.Equal(t, int64(3), repo3.OwnerID) // org3
+	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
+	assert.True(t, org3.IsOrganization())
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // org3 owner
+	user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+
+	session := loginUser(t, user2.Name)
+
+	t.Run("CollaborationPageHidesCollaboratorSection", func(t *testing.T) {
+		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/settings/collaboration", org3.Name, repo3.Name))
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		html := NewHTMLParser(t, resp.Body)
+
+		// Verify collaborator form is hidden
+		html.AssertElement(t, "form#repo-collab-form", false)
+
+		// Verify page still loads successfully (org repos still have teams section)
+		html.AssertElement(t, ".repo-setting-content", true)
+	})
+
+	t.Run("AddCollaboratorToOrgRepoShouldFail", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings/collaboration", org3.Name, repo3.Name), map[string]string{
+			"collaborator": user4.Name,
+		})
+		session.MakeRequest(t, req, http.StatusSeeOther)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Contains(t, flashCookie.Value, "error%3DIndividual%2Bcollaborators%2Bare%2Bnot%2Ballowed")
+	})
+}
+
+func TestRepoCollaborationUserRepoNotAffected(t *testing.T) {
+	// Test that the collaborator UI section remains visible and functional on user-owned repositories
+	// even when DISABLE_COLLABORATORS_FOR_ORGANIZATIONS is true.
+	// This verifies that the setting only affects organization-owned repos, not user-owned repos.
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.Repository.DisableCollaboratorsForOrganizations, true)()
+
+	// Use user2's repo (repo1)
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user2.ID, Name: "repo1"})
+	assert.False(t, user2.IsOrganization()) // Ensure it's a user repo
+
+	user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+
+	session := loginUser(t, user2.Name)
+
+	t.Run("CollaborationPageShowsCollaboratorSection", func(t *testing.T) {
+		// Collaboration page should show collaborator section for user repos
+		req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/settings/collaboration", user2.Name, repo1.Name))
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		html := NewHTMLParser(t, resp.Body)
+
+		// Check that the collaborator form exists
+		html.AssertElement(t, "form#repo-collab-form", true)
+	})
+
+	t.Run("AddCollaboratorToUserRepoShouldSucceed", func(t *testing.T) {
+		// Should succeed even when setting is enabled for org repos
+		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings/collaboration", user2.Name, repo1.Name), map[string]string{
+			"collaborator": user4.Name,
+		})
+		session.MakeRequest(t, req, http.StatusSeeOther)
+
+		// Verify collaborator was added by checking if they appear on the page
+		req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/settings/collaboration", user2.Name, repo1.Name))
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		html := NewHTMLParser(t, resp.Body)
+
+		// Check that user4 appears in the collaborators list
+		doc := html.doc
+		collaboratorLink := doc.Find(fmt.Sprintf("a[href='/%s']", user4.Name))
+		assert.NotEmpty(t, collaboratorLink.Nodes, "Collaborator should appear in the list for user repos")
 	})
 }
