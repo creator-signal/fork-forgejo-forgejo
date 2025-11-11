@@ -4,6 +4,7 @@
 package utils
 
 import (
+	stdCtx "context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -220,7 +221,6 @@ func addHook(ctx *context.APIContext, form *api.CreateHookOption, ownerID, repoI
 		IsActive: form.Active,
 		Type:     form.Type,
 	}
-	w.SetHeaderAuthorization(form.AuthorizationHeader)
 	if w.Type == webhook_module.SLACK {
 		channel, ok := form.Config["channel"]
 		if !ok {
@@ -250,7 +250,17 @@ func addHook(ctx *context.APIContext, form *api.CreateHookOption, ownerID, repoI
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Error(http.StatusInternalServerError, "UpdateEvent", err)
 		return nil, false
-	} else if err := webhook.CreateWebhook(ctx, w); err != nil {
+	}
+
+	if err := db.WithTx(ctx, func(ctx stdCtx.Context) error {
+		if err := webhook.CreateWebhook(ctx, w); err != nil {
+			return err
+		}
+
+		w.SetHeaderAuthorization(form.AuthorizationHeader)
+		_, err := db.GetEngine(ctx).Cols("header_authorization_encrypted").ID(w.ID).Update(w)
+		return err
+	}); err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateWebhook", err)
 		return nil, false
 	}

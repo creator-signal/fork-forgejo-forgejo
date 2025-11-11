@@ -5,6 +5,7 @@
 package setting
 
 import (
+	stdCtx "context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -215,6 +216,7 @@ func WebhookCreate(ctx *context.Context) {
 	if ctx.HasError() {
 		// pre-fill the form with the submitted data
 		var w webhook.Webhook
+		w.ID = -1 // We are going to encrypt it using this ID, bind the encrypted value to a ID that will never exist in the database. Safety precaution.
 		w.URL = fields.URL
 		w.ContentType = fields.ContentType
 		w.Secret = fields.Secret
@@ -251,11 +253,20 @@ func WebhookCreate(ctx *context.Context) {
 		OwnerID:         orCtx.OwnerID,
 		IsSystemWebhook: orCtx.IsSystemWebhook,
 	}
-	w.SetHeaderAuthorization(fields.AuthorizationHeader)
 	if err := w.UpdateEvent(); err != nil {
 		ctx.ServerError("UpdateEvent", err)
 		return
-	} else if err := webhook.CreateWebhook(ctx, w); err != nil {
+	}
+
+	if err := db.WithTx(ctx, func(ctx stdCtx.Context) error {
+		if err := webhook.CreateWebhook(ctx, w); err != nil {
+			return err
+		}
+
+		w.SetHeaderAuthorization(fields.AuthorizationHeader)
+		_, err := db.GetEngine(ctx).Cols("header_authorization_encrypted").ID(w.ID).Update(w)
+		return err
+	}); err != nil {
 		ctx.ServerError("CreateWebhook", err)
 		return
 	}
