@@ -655,8 +655,8 @@ func TestCommentBodyParser(t *testing.T) {
 	testNote1 := makeTestNote(1, "Simillar to #9, may be solved in !4", false)
 	testNote2 := makeTestNote(2, "Should actually be discussed in !5 and not in #2 (here)", false)
 
-	parsedBody1, _ := downloader.convertCommentReference(testNote1.Body)
-	parsedBody2, _ := downloader.convertCommentReference(testNote2.Body)
+	parsedBody1 := downloader.convertCommentReference(testNote1.Body)
+	parsedBody2 := downloader.convertCommentReference(testNote2.Body)
 
 	// Assuming a total of 20 comments + PRs
 	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody1)

@@ -594,7 +594,7 @@ func (g *GitlabDownloader) convertNoteToComment(localIndex int64, note *gitlab.N
 		PosterID:    int64(note.Author.ID),
 		PosterName:  note.Author.Username,
 		PosterEmail: note.Author.Email,
-		Content:     note.Body,
+		Content:     g.convertCommentReference(note.Body),
 		Created:     *note.CreatedAt,
 		Meta:        map[string]any{},
 	}
@@ -796,7 +796,7 @@ func (g *GitlabDownloader) awardsToReactions(awards []*gitlab.AwardEmoji) []*bas
 }
 
 // Build on the assumption, that PR IDs will resolve after Issue IDs
-func (g *GitlabDownloader) convertCommentReference(body string) (string, error) {
+func (g *GitlabDownloader) convertCommentReference(body string) string {
 
 	var result string
 	var referenes []int
@@ -806,10 +806,7 @@ func (g *GitlabDownloader) convertCommentReference(body string) (string, error) 
 	// Build list of matches
 	for _, match := range matches {
 		if len(match) > 1 {
-			n, err := strconv.Atoi(match[1])
-			if err != nil {
-				return "", err
-			}
+			n, _ := strconv.Atoi(match[1])
 			referenes = append(referenes, n)
 		}
 	}
@@ -821,5 +818,5 @@ func (g *GitlabDownloader) convertCommentReference(body string) (string, error) 
 		result = strings.ReplaceAll(body, old, new)
 	}
 
-	return result, nil
+	return result
 }
