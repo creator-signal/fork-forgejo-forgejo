@@ -641,13 +641,9 @@ func GetUnmergedPullRequestsAnyTarget(ctx context.Context, headRepoID, baseRepoI
 			headRepoID, headBranch, baseRepoID, false, flow, false).
 		Join("INNER", "issue", "issue.id=pull_request.issue_id").
 		Find(&pr)
-	has := len(pr) > 0
 	if err != nil {
 		return nil, err
-	} else if !has {
-		return nil, ErrPullRequestNotExist{0, 0, headRepoID, baseRepoID, headBranch, ""}
 	}
-
 	return pr, nil
 }
 
