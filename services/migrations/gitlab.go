@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -792,4 +793,33 @@ func (g *GitlabDownloader) awardsToReactions(awards []*gitlab.AwardEmoji) []*bas
 		}
 	}
 	return result
+}
+
+// Build on the assumption, that PR IDs will resolve after Issue IDs
+func (g *GitlabDownloader) convertCommentReference(body string) (string, error) {
+
+	var result string
+	var referenes []int
+	re := regexp.MustCompile(`!(\d+)`)
+	matches := re.FindAllStringSubmatch(body, -1)
+
+	// Build list of matches
+	for _, match := range matches {
+		if len(match) > 1 {
+			n, err := strconv.Atoi(match[1])
+			if err != nil {
+				return "", err
+			}
+			referenes = append(referenes, n)
+		}
+	}
+
+	for _, ref := range referenes {
+		newRef := ref + int(g.iidResolver.maxIssueIID)
+		old := "!" + strconv.Itoa(ref)
+		new := "!" + strconv.Itoa(newRef)
+		result = strings.ReplaceAll(body, old, new)
+	}
+
+	return result, nil
 }
