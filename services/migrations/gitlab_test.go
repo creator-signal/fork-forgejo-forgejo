@@ -545,31 +545,33 @@ func TestAwardsToReactions(t *testing.T) {
 	}, reactions)
 }
 
+func makeTestNote(id int, body string, system bool) gitlab.Note {
+	now := time.Now()
+	return gitlab.Note{
+		ID: id,
+		Author: struct {
+			ID        int    `json:"id"`
+			Username  string `json:"username"`
+			Email     string `json:"email"`
+			Name      string `json:"name"`
+			State     string `json:"state"`
+			AvatarURL string `json:"avatar_url"`
+			WebURL    string `json:"web_url"`
+		}{
+			ID:       72,
+			Email:    "test@example.com",
+			Username: "test",
+		},
+		Body:      body,
+		CreatedAt: &now,
+		System:    system,
+	}
+}
+
 func TestNoteToComment(t *testing.T) {
 	downloader := &GitlabDownloader{}
 
 	now := time.Now()
-	makeTestNote := func(id int, body string, system bool) gitlab.Note {
-		return gitlab.Note{
-			ID: id,
-			Author: struct {
-				ID        int    `json:"id"`
-				Username  string `json:"username"`
-				Email     string `json:"email"`
-				Name      string `json:"name"`
-				State     string `json:"state"`
-				AvatarURL string `json:"avatar_url"`
-				WebURL    string `json:"web_url"`
-			}{
-				ID:       72,
-				Email:    "test@example.com",
-				Username: "test",
-			},
-			Body:      body,
-			CreatedAt: &now,
-			System:    system,
-		}
-	}
 	notes := []gitlab.Note{
 		makeTestNote(1, "This is a regular comment", false),
 		makeTestNote(2, "enabled an automatic merge for abcd1234", true),
@@ -642,4 +644,21 @@ func TestGitlabIIDResolver(t *testing.T) {
 		assert.EqualValues(t, 2, r.generatePullRequestNumber(1))
 		r.recordIssueIID(3) // the generation procedure has been started, it shouldn't accept any new issue IID, so it panics
 	})
+}
+
+func TestCommentBodyParser(t *testing.T) {
+
+	downloader := GitlabDownloader{}
+	downloader.iidResolver.maxIssueIID = int64(10)
+
+	// Gitlab note references issue with #N and PR with !M, with N and M being arbitrary integers, so N == M is possible
+	testNote1 := makeTestNote(1, "Simillar to #9, may be solved in !4", false)
+	testNote2 := makeTestNote(2, "Should actually be discussed in !5 and not in #2 (here)", false)
+
+	parsedBody1, _ := downloader.convertCommentReference(testNote1.Body)
+	parsedBody2, _ := downloader.convertCommentReference(testNote2.Body)
+
+	// Assuming a total of 20 comments + PRs
+	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody1)
+	assert.Equal(t, "Should actually be discussed in !15 and not in #2 (here)", parsedBody2)
 }
