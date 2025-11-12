@@ -813,7 +813,7 @@ func (g *GitlabDownloader) convertCommentReference(body string) string {
 		newRef := ref + int(g.iidResolver.maxIssueIID)
 		old := "!" + strconv.Itoa(ref)
 		new := "!" + strconv.Itoa(newRef)
-		body = strings.ReplaceAll(body, old, new)
+		body = strings.Replace(body, old, new, 1)
 	}
 
 	return body

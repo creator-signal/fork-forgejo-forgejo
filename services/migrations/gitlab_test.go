@@ -653,11 +653,14 @@ func TestCommentBodyParser(t *testing.T) {
 	// Gitlab note references issue with #N and PR with !M, with N and M being arbitrary integers, so N == M is possible
 	testNote1 := makeTestNote(1, "Simillar to #9, may be solved in !4", false, now)
 	testNote2 := makeTestNote(2, "Should actually be discussed in !5 or !6 and not in #2 (here)", false, now)
+	testNote3 := makeTestNote(2, "Closed by !1 and !14", false, now)
 
 	parsedBody1 := downloader.convertCommentReference(testNote1.Body)
 	parsedBody2 := downloader.convertCommentReference(testNote2.Body)
+	parsedBody3 := downloader.convertCommentReference(testNote3.Body)
 
 	// Assuming a total of 20 comments + PRs
 	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody1)
 	assert.Equal(t, "Should actually be discussed in !15 or !16 and not in #2 (here)", parsedBody2)
+	assert.Equal(t, "Closed by !11 and !24", parsedBody3)
 }
