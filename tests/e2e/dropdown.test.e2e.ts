@@ -153,24 +153,7 @@ test('No JS interaction', async ({browser}) => {
   await expect(dropdownContent).toBeVisible();
 });
 
-test('Visual properties', async ({browser, isMobile}) => {
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
-  // User profile has dropdown used as an ellipsis menu
-  await page.goto('/user1');
-
-  // Has `.border` and pretty small default `inline-padding:`
-  let selectorPrefix = '#profile-avatar-card details.dropdown';
-  let summary = page.locator(`${selectorPrefix} > summary`);
-  expect(await summary.evaluate((el) => getComputedStyle(el).border)).toBe('1px solid rgba(0, 0, 0, 0.114)');
-  expect(await summary.evaluate((el) => getComputedStyle(el).paddingInline)).toBe('7px');
-
-  // Background
-  expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
-  await summary.click();
-  expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
-
+test('Visual properties', async () => {
   async function evaluateDropdownItems(page, selector, direction, height) {
     const computedStyles = await page.locator(selector).evaluateAll((items) =>
       items.map((item) => {
@@ -187,36 +170,60 @@ test('Visual properties', async ({browser, isMobile}) => {
     }
   }
 
-  // Direction and item height
-  if (isMobile) {
+  test('User profile', async ({browser, isMobile}) => {
+    const context = await browser.newContext({javaScriptEnabled: false});
+    const page = await context.newPage();
+
+    // User profile has dropdown used as an ellipsis menu
+    await page.goto('/user1');
+
+    // Has `.border` and pretty small default `inline-padding:`
+    const selectorPrefix = '#profile-avatar-card details.dropdown';
+    const summary = page.locator(`${selectorPrefix} > summary`);
+    expect(await summary.evaluate((el) => getComputedStyle(el).border)).toBe('1px solid rgba(0, 0, 0, 0.114)');
+    expect(await summary.evaluate((el) => getComputedStyle(el).paddingInline)).toBe('7px');
+
+    // Background
+    expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    await summary.click();
+    expect(await summary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
+
+    // Direction and item height
+    if (isMobile) {
+      // `<ul>`'s direction is reversed
+      expect(await page.locator(`${selectorPrefix} > .content`).evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
+      // `@media (pointer: coarse)` makes items taller
+      await evaluateDropdownItems(page, `${selectorPrefix} > .content > ul > li`, 'ltr', '40px');
+    } else {
+      // Both use default direction
+      expect(await page.locator(`${selectorPrefix} > .content`).evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+      // Regular item height
+      await evaluateDropdownItems(page, `${selectorPrefix} > .content > ul > li`, 'ltr', '34px');
+    }
+  });
+
+  test('User profile', async ({browser, isMobile}) => {
+    const context = await browser.newContext({javaScriptEnabled: false});
+    const page = await context.newPage();
+
+    // `/explore/users` has dropdown used as a sort options menu with text in the opener
+    await page.goto('/explore/users');
+    const selectorPrefix = '.list-header details.dropdown';
+    const summary = page.locator(`${selectorPrefix} > summary`);
+    await summary.click();
+
+    // No `.border` and increased `inline-padding:` from `.options`
+    expect(await summary.evaluate((el) => getComputedStyle(el).borderWidth)).toBe('0px');
+    expect(await summary.evaluate((el) => getComputedStyle(el).paddingInline)).toBe('10.5px');
+
     // `<ul>`'s direction is reversed
     expect(await page.locator(`${selectorPrefix} > .content`).evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
-    // `@media (pointer: coarse)` makes items taller
-    await evaluateDropdownItems(page, `${selectorPrefix} > .content > ul > li`, 'ltr', '40px');
-  } else {
-    // Both use default direction
-    expect(await page.locator(`${selectorPrefix} > .content`).evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
-    // Regular item height
-    await evaluateDropdownItems(page, `${selectorPrefix} > .content > ul > li`, 'ltr', '34px');
-  }
+    await evaluateDropdownItems(page, `${selectorPrefix} > .content > ul > li`, 'ltr', isMobile ? '40px' : '34px');
 
-  // `/explore/users` has dropdown used as a sort options menu with text in the opener
-  await page.goto('/explore/users');
-  selectorPrefix = '.list-header details.dropdown';
-  summary = page.locator(`${selectorPrefix} > summary`);
-  await summary.click();
-
-  // No `.border` and increased `inline-padding:` from `.options`
-  expect(await summary.evaluate((el) => getComputedStyle(el).borderWidth)).toBe('0px');
-  expect(await summary.evaluate((el) => getComputedStyle(el).paddingInline)).toBe('10.5px');
-
-  // `<ul>`'s direction is reversed
-  expect(await page.locator(`${selectorPrefix} > .content`).evaluate((el) => getComputedStyle(el).direction)).toBe('rtl');
-  await evaluateDropdownItems(page, `${selectorPrefix} > .content > ul > li`, 'ltr', isMobile ? '40px' : '34px');
-
-  // Background of inactive and `.active` items
-  const activeItem = page.locator(`${selectorPrefix}> .content > ul > li:first-child > a`);
-  const inactiveItem = page.locator(`${selectorPrefix}> .content > ul > li:last-child > a`);
-  expect(await activeItem.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
-  expect(await inactiveItem.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    // Background of inactive and `.active` items
+    const activeItem = page.locator(`${selectorPrefix}> .content > ul > li:first-child > a`);
+    const inactiveItem = page.locator(`${selectorPrefix}> .content > ul > li:last-child > a`);
+    expect(await activeItem.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(226, 226, 229)');
+    expect(await inactiveItem.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  });
 });
