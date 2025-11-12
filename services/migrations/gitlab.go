@@ -831,7 +831,7 @@ func sliceAppendToFirstJoin(str, newVal string, endFirst, startSecond int) strin
 	firstPart = firstPart + newVal
 	var secondPart string
 	if startSecond < len(str)-1 {
-		secondPart = str[startSecond:len(str)]
+		secondPart = str[startSecond:]
 	}
 	str = firstPart + secondPart
 	return str
