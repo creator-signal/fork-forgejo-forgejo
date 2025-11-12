@@ -806,7 +806,7 @@ func (g *GitlabDownloader) convertMRReference(body string) string {
 			for k := i + 1; k < maxLength; k++ { // for each rune after ! check if next rune is integer
 				intRune := string(body[k])
 				if _, err := strconv.Atoi(intRune); err == nil {
-					collected = collected + intRune
+					collected += intRune
 					if k == maxLength-1 { // The last rune in the string was an integer
 						oldVal, _ = strconv.Atoi(collected)
 						newVal = oldVal + int(g.iidResolver.maxIssueIID)
@@ -828,7 +828,7 @@ func (g *GitlabDownloader) convertMRReference(body string) string {
 
 func sliceAppendToFirstJoin(str, newVal string, endFirst, startSecond int) string {
 	firstPart := str[0:endFirst]
-	firstPart = firstPart + newVal
+	firstPart += newVal
 	var secondPart string
 	if startSecond < len(str)-1 {
 		secondPart = str[startSecond:]
