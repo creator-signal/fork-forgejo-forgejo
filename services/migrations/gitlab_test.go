@@ -652,15 +652,24 @@ func TestCommentBodyParser(t *testing.T) {
 
 	// Gitlab note references issue with #N and PR with !M, with N and M being arbitrary integers, so N == M is possible
 	testNote1 := makeTestNote(1, "Simillar to #9, may be solved in !4", false, now)
-	testNote2 := makeTestNote(2, "Should actually be discussed in !5 or !6 and not in #2 (here)", false, now)
-	testNote3 := makeTestNote(2, "Closed by !1 and !14", false, now)
+	testNote2 := makeTestNote(1, "Simillar to #21, may be solved in !144", false, now)
+	testNote3 := makeTestNote(2, "Should actually be discussed in !5 or !6 and not in #2 (here)", false, now)
+	testNote4 := makeTestNote(2, "Closed by !1 and !14", false, now)
+	testNote5 := makeTestNote(2, "Actually !1 and !1 are the same but !100 and !214 are not", false, now)
+	testNote6 := makeTestNote(2, "!11 and !1 are simillar but !201 and !100 are not!", false, now)
 
 	parsedBody1 := downloader.convertMRReference(testNote1.Body)
 	parsedBody2 := downloader.convertMRReference(testNote2.Body)
 	parsedBody3 := downloader.convertMRReference(testNote3.Body)
+	parsedBody4 := downloader.convertMRReference(testNote4.Body)
+	parsedBody5 := downloader.convertMRReference(testNote5.Body)
+	parsedBody6 := downloader.convertMRReference(testNote6.Body)
 
 	// Assuming a total of 20 comments + PRs
 	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody1)
-	assert.Equal(t, "Should actually be discussed in !15 or !16 and not in #2 (here)", parsedBody2)
-	assert.Equal(t, "Closed by !11 and !24", parsedBody3)
+	assert.Equal(t, "Simillar to #21, may be solved in !154", parsedBody2)
+	assert.Equal(t, "Should actually be discussed in !15 or !16 and not in #2 (here)", parsedBody3)
+	assert.Equal(t, "Closed by !11 and !24", parsedBody4)
+	assert.Equal(t, "Actually !11 and !11 are the same but !110 and !224 are not", parsedBody5)
+	assert.Equal(t, "!21 and !11 are simillar but !211 and !110 are not!", parsedBody6)
 }
