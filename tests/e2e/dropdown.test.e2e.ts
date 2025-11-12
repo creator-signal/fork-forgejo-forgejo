@@ -153,7 +153,7 @@ test('No JS interaction', async ({browser}) => {
   await expect(dropdownContent).toBeVisible();
 });
 
-test('Visual properties', async () => {
+test.describe(`Visual properties`, () => {
   async function evaluateDropdownItems(page, selector, direction, height) {
     const computedStyles = await page.locator(selector).evaluateAll((items) =>
       items.map((item) => {
@@ -176,10 +176,10 @@ test('Visual properties', async () => {
 
     // User profile has dropdown used as an ellipsis menu
     await page.goto('/user1');
-
-    // Has `.border` and pretty small default `inline-padding:`
     const selectorPrefix = '#profile-avatar-card details.dropdown';
     const summary = page.locator(`${selectorPrefix} > summary`);
+
+    // Has `.border` and pretty small default `inline-padding:`
     expect(await summary.evaluate((el) => getComputedStyle(el).border)).toBe('1px solid rgba(0, 0, 0, 0.114)');
     expect(await summary.evaluate((el) => getComputedStyle(el).paddingInline)).toBe('7px');
 
@@ -202,7 +202,7 @@ test('Visual properties', async () => {
     }
   });
 
-  test('User profile', async ({browser, isMobile}) => {
+  test('Explore sort', async ({browser, isMobile}) => {
     const context = await browser.newContext({javaScriptEnabled: false});
     const page = await context.newPage();
 
