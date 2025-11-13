@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
+	"forgejo.org/modules/test"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -33,4 +35,17 @@ func TestVerifySSHkeyPage(t *testing.T) {
 
 	// The hint contains a link to the same page the user is at now to get it reloaded if followed
 	page.AssertElement(t, fmt.Sprintf("#keys-ssh form[action='/user/settings/keys'] .help a[href='%s']", link), true)
+
+	// The token changes every minute, we can avoid this sleep via timeutil and mocking.
+	test.SleepTillNextMinute()
+
+	// Verify that if you refresh it via the link another token is shown.
+	token, exists := page.Find("#keys-ssh form input[readonly]").Attr("value")
+	assert.True(t, exists)
+
+	link = url.QueryEscape(strings.TrimPrefix(link, "?verify_ssh="))
+	page = NewHTMLParser(t, session.MakeRequest(t, NewRequestf(t, "GET", "/user/settings/keys?verify_ssh=%s", link), http.StatusOK).Body)
+	otherToken, exists := page.Find("#keys-ssh form .field input[readonly]").Attr("value")
+	assert.True(t, exists)
+	assert.NotEqual(t, token, otherToken)
 }
