@@ -652,11 +652,11 @@ func TestCommentBodyParser(t *testing.T) {
 
 	// Gitlab note references issue with #N and PR with !M, with N and M being arbitrary integers, so N == M is possible
 	testNote1 := makeTestNote(1, "Simillar to #9, may be solved in !4", false, now)
-	testNote2 := makeTestNote(1, "Simillar to #21, may be solved in !144", false, now)
-	testNote3 := makeTestNote(2, "Should actually be discussed in !5 or !6 and not in #2 (here)", false, now)
-	testNote4 := makeTestNote(2, "Closed by !1 and !14", false, now)
-	testNote5 := makeTestNote(2, "Actually !1 and !1 are the same but !100 and !214 are not", false, now)
-	testNote6 := makeTestNote(2, "!11 and !1 are simillar but !201 and !100 are not!", false, now)
+	testNote2 := makeTestNote(2, "Simillar to #21, may be solved in !144", false, now)
+	testNote3 := makeTestNote(3, "Should actually be discussed in !5 or !6 and not in #2 (here)", false, now)
+	testNote4 := makeTestNote(4, "Closed by !1 and !14", false, now)
+	testNote5 := makeTestNote(5, "Actually !1 and !1 are the same but !100 and !214 are not", false, now)
+	testNote6 := makeTestNote(6, "!11 and !1 are simillar but !201 and !100 are not!", false, now)
 
 	parsedBody1 := downloader.convertMRReference(testNote1.Body)
 	parsedBody2 := downloader.convertMRReference(testNote2.Body)
