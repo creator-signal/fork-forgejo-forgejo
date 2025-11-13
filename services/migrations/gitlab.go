@@ -800,22 +800,16 @@ func (g *GitlabDownloader) convertMRReference(body string) string {
 	maxLength := len(body)
 	for i := 0; i < maxLength; i++ {
 		if body[i] == '!' {
-			var oldVal int
-			var newVal int
 			var collected string
 			for k := i + 1; k < maxLength; k++ { // for each rune after ! check if next rune is integer
-				intRune := string(body[k])
-				if _, err := strconv.Atoi(intRune); err == nil {
-					collected += intRune
+				intStr := string(body[k])
+				if _, err := strconv.Atoi(intStr); err == nil {
+					collected += intStr
 					if k == maxLength-1 { // The last rune in the string was an integer
-						oldVal, _ = strconv.Atoi(collected)
-						newVal = oldVal + int(g.iidResolver.maxIssueIID)
-						body = sliceAppendToFirstJoin(body, strconv.Itoa(newVal), i+1, k)
+						body = g.updateAndInsert(body, collected, i+1, k)
 					}
 				} else if len(collected) > 0 { // Integers have been collected, update value
-					oldVal, _ = strconv.Atoi(collected)
-					newVal = oldVal + int(g.iidResolver.maxIssueIID)
-					body = sliceAppendToFirstJoin(body, strconv.Itoa(newVal), i+1, k)
+					body = g.updateAndInsert(body, collected, i+1, k)
 					maxLength = len(body)
 					i = k
 					break // We're done, continue after our replacement
@@ -826,13 +820,15 @@ func (g *GitlabDownloader) convertMRReference(body string) string {
 	return body
 }
 
-func sliceAppendToFirstJoin(str, newVal string, endFirst, startSecond int) string {
-	firstPart := str[0:endFirst]
-	firstPart += newVal
+func (g *GitlabDownloader) updateAndInsert(description, oldReference string, endFirst, startSecond int) string {
+	oldVal, _ := strconv.Atoi(oldReference)
+	newVal := oldVal + int(g.iidResolver.maxIssueIID)
+	firstPart := description[0:endFirst]
+	firstPart += strconv.Itoa(newVal)
 	var secondPart string
-	if startSecond < len(str)-1 {
-		secondPart = str[startSecond:]
+	if startSecond < len(description)-1 {
+		secondPart = description[startSecond:]
 	}
-	str = firstPart + secondPart
-	return str
+	description = firstPart + secondPart
+	return description
 }
