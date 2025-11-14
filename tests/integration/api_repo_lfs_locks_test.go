@@ -134,7 +134,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 			assert.Equal(t, lock.LockedAt.Format(time.RFC3339), lock.LockedAt.Format(time.RFC3339Nano)) // locked at should be rounded to second
 		}
 
-		req = NewRequest(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/verify", test.repo.FullName()))
+		req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/verify", test.repo.FullName()), map[string]string{})
 		req.Header.Set("Accept", lfs.AcceptHeader)
 		req.Header.Set("Content-Type", lfs.MediaType)
 		resp = session.MakeRequest(t, req, http.StatusOK)
@@ -158,7 +158,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 	// remove all locks
 	for _, test := range deleteTests {
 		session := loginUser(t, test.user.Name)
-		req := NewRequest(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/%s/unlock", test.repo.FullName(), test.lockID))
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/%s/unlock", test.repo.FullName(), test.lockID), map[string]string{})
 		req.Header.Set("Accept", lfs.AcceptHeader)
 		req.Header.Set("Content-Type", lfs.MediaType)
 		resp := session.MakeRequest(t, req, http.StatusOK)

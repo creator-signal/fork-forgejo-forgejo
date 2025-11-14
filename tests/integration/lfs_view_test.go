@@ -147,7 +147,7 @@ func TestLFSLockView(t *testing.T) {
 	}
 	defer func() {
 		// release the lock
-		req := NewRequest(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/%s/unlock", repo3.FullName(), lockID))
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/%s/unlock", repo3.FullName(), lockID), map[string]string{})
 		req.Header.Set("Accept", lfs.AcceptHeader)
 		req.Header.Set("Content-Type", lfs.MediaType)
 		session.MakeRequest(t, req, http.StatusOK)
