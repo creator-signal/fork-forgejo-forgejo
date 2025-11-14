@@ -451,4 +451,3 @@ func TestAPIPullDeleteBranchPerms(t *testing.T) {
 		user4Session.MakeRequest(t, req, http.StatusOK)
 	})
 }
-
