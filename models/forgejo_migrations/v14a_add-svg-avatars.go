@@ -9,14 +9,15 @@ import (
 
 func init() {
 	registerMigration(&Migration{
-		Description: "add avatar_svg field to user table",
+		Description: "add fields avatar_svg and avatar_svg_hash to user table",
 		Upgrade:     addAvatarSvgToUser,
 	})
 }
 
 func addAvatarSvgToUser(x *xorm.Engine) error {
 	type User struct {
-		AvatarSVG string `xorm:"TEXT"`
+		AvatarSVG     string `xorm:"TEXT"`
+		AvatarSVGHash string `xorm:"VARCHAR(2048) NOT NULL"`
 	}
 	err := x.Sync(new(User))
 	return err

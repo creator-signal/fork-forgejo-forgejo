@@ -134,10 +134,13 @@ type User struct {
 	// true: the user is not allowed to log in Web UI. Git/SSH access could still be allowed (please refer to Git/SSH access related code/documents)
 	ProhibitLogin bool `xorm:"NOT NULL DEFAULT false"`
 
-	// Avatar hash
+	// Hash of raster avatar
 	Avatar string `xorm:"VARCHAR(2048) NOT NULL"`
-	// Avatar SVG includes all parts of the avatar as SVG elements, but without the <svg> tags
-	AvatarSVG       string `xorm:"TEXT"`
+	// Raw SVG avatar as text
+	AvatarSVG string `xorm:"TEXT"`
+	// Hash of SVG avatar
+	AvatarSVGHash string `xorm:"VARCHAR(2048) NOT NULL"`
+	//
 	AvatarEmail     string `xorm:"NOT NULL"`
 	UseCustomAvatar bool
 
