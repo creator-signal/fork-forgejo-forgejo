@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -108,4 +110,28 @@ func TestGetUserForkLaxWithTwoChoices(t *testing.T) {
 	assert.NotNil(t, repo65)
 	assert.Equal(t, int64(65), repo65.ID)
 	assert.Equal(t, int64(11), repo65.ForkID)
+}
+
+func TestGetOrgUserHasForkedRepo(t *testing.T) {
+	defer unittest.OverrideFixtures("models/repo/TestGetOrgUserHasForkedRepo")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// orgUser3 has repo 65 forked from repo63
+	repo63, err := repo_model.GetRepositoryByID(db.DefaultContext, 63)
+	require.NoError(t, err)
+	require.NotNil(t, repo63)
+
+	// check that user 2 who belongs to org 3
+	user, err := user_model.GetUserByID(db.DefaultContext, 2)
+	is, err := organization.IsOrganizationMember(db.DefaultContext, 3, user.ID)
+	require.NoError(t, err)
+	require.True(t, is)
+
+	// check that we can get repo 65 via user 2 who belongs to org 3
+	require.True(t, repo_model.HasForkedRepo(db.DefaultContext, 2, repo63.ID))
+	repo65, err := repo_model.GetUserFork(db.DefaultContext, repo63.ID, 2)
+	require.NoError(t, err)
+	require.NotNil(t, repo65)
+	assert.EqualValues(t, 65, repo65.ID)
+	assert.EqualValues(t, 63, repo65.ForkID)
 }

@@ -35,12 +35,27 @@ func GetForkedRepo(ctx context.Context, ownerID, repoID int64) *Repository {
 }
 
 // HasForkedRepo checks if given user has already forked a repository with given ID.
-func HasForkedRepo(ctx context.Context, ownerID, repoID int64) bool {
-	has, _ := db.GetEngine(ctx).
+func HasForkedRepo(ctx context.Context, repoOwnerID, repoID int64) bool {
+	userRepo, _ := db.GetEngine(ctx).
 		Table("repository").
-		Where("owner_id=? AND fork_id=?", ownerID, repoID).
+		Where("owner_id=? AND fork_id=?", repoOwnerID, repoID).
 		Exist()
-	return has
+	if !userRepo {
+		repo := new(Repository)
+		repoExists, _ := db.GetEngine(ctx).
+			Where("fork_id=?", repoID, 1).
+			Get(repo)
+
+		if repoExists {
+			orgRepoOwnerID := repo.OwnerID
+			orgRepo, _ := db.GetEngine(ctx).
+				Table("org_user").Where("uid=? AND org_id=?", repoOwnerID, orgRepoOwnerID).Exist()
+			if orgRepo {
+				return repoExists
+			}
+		}
+	}
+	return userRepo
 }
 
 // HasForkedRepoLax checks if given user has already forked a repository with given ID,
