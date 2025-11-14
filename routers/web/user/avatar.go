@@ -4,7 +4,6 @@
 package user
 
 import (
-	"net/http"
 	"strings"
 	"time"
 
@@ -58,6 +57,6 @@ func AvatarByEmailHash(ctx *context.Context) {
 }
 
 // GetSvgAvatar makes this code not compile
-func GetSvgAvatar() http.HandlerFunc {
-	// no idea what to put there without causing a panic
-}
+//func GetSvgAvatar() http.HandlerFunc {
+//	// no idea what to put there without causing a panic
+//}
