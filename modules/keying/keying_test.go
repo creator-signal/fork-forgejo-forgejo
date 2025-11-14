@@ -4,6 +4,7 @@
 package keying_test
 
 import (
+	"encoding/base64"
 	"math"
 	"testing"
 
@@ -58,6 +59,15 @@ func TestKeying(t *testing.T) {
 
 		t.Run("Successful", func(t *testing.T) {
 			convertedPlainText, err := key.Decrypt(cipherText, []byte{0x05, 0x06})
+			require.NoError(t, err)
+			assert.Equal(t, plainText, convertedPlainText)
+		})
+
+		t.Run("Old secret", func(t *testing.T) {
+			// ensure that new code can still decode old secrets
+			known, err := base64.RawStdEncoding.DecodeString("LABcdFTke+FAESOAUkaQvdFO/tLFdugvXHqUYQaESy9eCedUsorjpe1N350NN+AU7gv6xyK3DHuugD+wjnVcNvt+9hA")
+			require.NoError(t, err)
+			convertedPlainText, err := key.Decrypt(known, []byte{0x05, 0x06})
 			require.NoError(t, err)
 			assert.Equal(t, plainText, convertedPlainText)
 		})
