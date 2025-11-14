@@ -67,7 +67,7 @@ func TestCreateFileOnProtectedBranch(t *testing.T) {
 		// remove the protected branch
 
 		// Change master branch to protected
-		req = NewRequestWithValues(t, "POST", "/user2/repo1/settings/branches/1/delete", map[string]string{})
+		req = NewRequest(t, "POST", "/user2/repo1/settings/branches/1/delete")
 
 		resp = session.MakeRequest(t, req, http.StatusOK)
 
