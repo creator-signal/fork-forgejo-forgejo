@@ -122,7 +122,7 @@ func TestGetOrgUserHasForkedRepo(t *testing.T) {
 	require.NotNil(t, repo63)
 
 	// check that user 2 who belongs to org 3
-	user, err := user_model.GetUserByID(db.DefaultContext, 2)
+	user, _ := user_model.GetUserByID(db.DefaultContext, 2)
 	is, err := organization.IsOrganizationMember(db.DefaultContext, 3, user.ID)
 	require.NoError(t, err)
 	require.True(t, is)
