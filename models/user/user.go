@@ -139,7 +139,7 @@ type User struct {
 	// Raw SVG avatar as text
 	AvatarSVG string `xorm:"TEXT"`
 	// Hash of SVG avatar
-	AvatarSVGHash string `xorm:"VARCHAR(2048) NOT NULL"`
+	AvatarSVGHash string `xorm:"VARBINARY(32)"`
 	//
 	AvatarEmail     string `xorm:"NOT NULL"`
 	UseCustomAvatar bool
