@@ -134,7 +134,7 @@ func TestRepoCreateForm(t *testing.T) {
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	assertRepoCreateForm(t, htmlDoc, user, "")
 
-	req = NewRequest(t, "POST", "/repo/create")
+	req = NewRequestWithValues(t, "POST", "/repo/create", map[string]string{})
 	resp = session.MakeRequest(t, req, http.StatusOK)
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	assertRepoCreateForm(t, htmlDoc, user, "")
