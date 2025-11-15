@@ -108,7 +108,7 @@
 			<i class="icon">{{svg "octicon-search" 16}}</i>
 			<input type="text" placeholder="{{ctx.Locale.Tr "repo.issues.filter_assignee"}}">
 		</div>
-		{{$keyword := StringUtils.RemoveAllPrefix $.Keyword "assign:"}}
+		{{$keyword := StringUtils.RemoveAllPrefix $.Keyword "assignee:"}}
 		<a rel="nofollow" class="{{if not .AssigneeID}}active selected {{end}}item" href="?q={{$keyword}}&type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&project={{$.ProjectID}}&assignee=&poster={{$.PosterID}}{{if $.ShowArchivedLabels}}&archived=true{{end}}">{{ctx.Locale.Tr "repo.issues.filter_assginee_no_select"}}</a>
 		<a rel="nofollow" class="{{if eq .AssigneeID -1}}active selected {{end}}item" href="?q={{$keyword}}&type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&project={{$.ProjectID}}&assignee=-1&poster={{$.PosterID}}{{if $.ShowArchivedLabels}}&archived=true{{end}}">{{ctx.Locale.Tr "repo.issues.filter_assginee_no_assignee"}}</a>
 		<div class="divider"></div>

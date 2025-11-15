@@ -312,13 +312,13 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 			},
 		},
 		{
-			Keyword: "assign:test",
+			Keyword: "assignee:test",
 			Opts: &SearchOptions{
 				AssigneeID: optional.Some(int64(2)),
 			},
 		},
 		{
-			Keyword: "assign:test hi",
+			Keyword: "assignee:test hi",
 			Opts: &SearchOptions{
 				AssigneeID: optional.Some(int64(2)),
 				Tokens: []Token{
@@ -331,7 +331,7 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 			},
 		},
 		{
-			Keyword: "mention:test",
+			Keyword: "mentions:test",
 			Opts: &SearchOptions{
 				MentionID: optional.Some(int64(2)),
 			},
@@ -361,7 +361,7 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 			},
 		},
 		{
-			Keyword: "test author:test mention:test modified:<2025-08-28 sort:comments:desc",
+			Keyword: "test author:test mentions:test modified:<2025-08-28 sort:comments:desc",
 			Opts: &SearchOptions{
 				Tokens: []Token{
 					{

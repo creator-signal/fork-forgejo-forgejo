@@ -957,9 +957,9 @@ func TestSearchIssues(t *testing.T) {
 		link, _ := url.Parse("/issues/search")
 		for keyword, len := range map[string]int{
 			"modified:>2000-01-01 modified:<2001-09-02": 11,
-			"is:closed":           2,
-			"is:all":              20,
-			"is:all assign:user2": 2,
+			"is:closed":             2,
+			"is:all":                20,
+			"is:all assignee:user2": 2,
 		} {
 			q := url.Values{"q": {keyword}}
 			link.RawQuery = q.Encode()

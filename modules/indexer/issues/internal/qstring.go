@@ -190,14 +190,14 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		case token.IsOf("author:"):
 			userNames = append(userNames, token.Term[7:])
 			userFilter = append(userFilter, userFilterAuthor)
-		case token.IsOf("assign:"):
-			userNames = append(userNames, token.Term[7:])
+		case token.IsOf("assignee:"):
+			userNames = append(userNames, token.Term[9:])
 			userFilter = append(userFilter, userFilterAssign)
 		case token.IsOf("review:"):
 			userNames = append(userNames, token.Term[7:])
 			userFilter = append(userFilter, userFilterReview)
-		case token.IsOf("mention:"):
-			userNames = append(userNames, token.Term[8:])
+		case token.IsOf("mentions:"):
+			userNames = append(userNames, token.Term[9:])
 			userFilter = append(userFilter, userFilterMention)
 
 		default:
