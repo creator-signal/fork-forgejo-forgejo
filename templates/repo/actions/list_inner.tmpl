@@ -69,7 +69,7 @@
 					<div class="content">
 						<ul>
 							<li>
-								<a class="link-action" data-url="{{$.Link}}/{{if .CurWorkflowDisabled}}enable{{else}}disable{{end}}?workflow={{$.CurWorkflow}}&actor={{.CurActor}}&status={{$.CurStatus}}">
+								<a class="link-action" data-url="{{$.Link}}/{{if .CurWorkflowDisabled}}enable{{else}}disable{{end}}?workflow={{$.CurWorkflow}}&actor={{.CurActor}}&status={{$.CurStatus}}" href="#noscroll">
 									{{if .CurWorkflowDisabled}}
 										{{ctx.Locale.Tr "actions.workflow.enable"}}
 									{{else}}

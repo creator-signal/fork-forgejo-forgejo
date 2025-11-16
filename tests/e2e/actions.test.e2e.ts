@@ -95,7 +95,8 @@ test.describe('Workflow Authenticated user2', () => {
       // Flip the state
       await disableButton.click();
       await flashBanner.waitFor();
-      await menuOpener.click();
+      await menuOpener.focus();
+      await menuOpener.press('ArrowDown');
 
       // Assert elemeents on page
       await expect(enableButton).toBeVisible();
@@ -109,7 +110,8 @@ test.describe('Workflow Authenticated user2', () => {
       // Flip the state
       await enableButton.click();
       await flashBanner.waitFor();
-      await menuOpener.click();
+      await menuOpener.focus();
+      await page.keyboard.press('ArrowDown');
 
       // Assert elemeents on page
       await expect(enableButton).toBeHidden();
