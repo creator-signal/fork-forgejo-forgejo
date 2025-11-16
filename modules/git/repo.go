@@ -180,7 +180,7 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 				parsedFromURL.User = url.User(parsedFromURL.User.Username())
 				fromURL = parsedFromURL.String()
 
-				credentialsFile, err := os.CreateTemp(os.TempDir(), "forgejo-clone-credentials")
+				credentialsFile, err := os.CreateTemp(setting.Git.CredentialHelperPath, "forgejo-clone-credentials")
 				if err != nil {
 					return err
 				}
@@ -203,7 +203,7 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 					return err
 				}
 
-				askpassFile, err := os.CreateTemp(os.TempDir(), "forgejo-askpass")
+				askpassFile, err := os.CreateTemp(setting.Git.CredentialHelperPath, "forgejo-askpass")
 				if err != nil {
 					return err
 				}

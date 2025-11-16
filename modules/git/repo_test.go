@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,6 +56,7 @@ func TestRepoGetDivergingCommits(t *testing.T) {
 }
 
 func TestCloneCredentials(t *testing.T) {
+	defer test.MockVariableValue(&setting.Git.CredentialHelperPath, os.TempDir())()
 	calledWithoutPassword := false
 	askpassFile := ""
 	credentialsFile := ""
@@ -91,7 +94,7 @@ func TestCloneCredentials(t *testing.T) {
 		assert.EqualValues(t, "oauth2", user)
 		assert.EqualValues(t, "some_token", password)
 
-		tmpDir := os.TempDir()
+		tmpDir := setting.Git.CredentialHelperPath
 
 		// Verify that the askpass implementation was used.
 		files, err := fs.Glob(os.DirFS(tmpDir), "forgejo-askpass*")
