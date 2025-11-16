@@ -42,7 +42,8 @@
 }
 
 #navbar a.item:hover, #navbar a.item:focus,
-#navbar details.dropdown > summary:hover,
+#navbar details.dropdown > summary:is(:hover, :focus),
+#navbar details.dropdown[open] > summary,
 #navbar button.item:hover, #navbar button.item:focus {
   background: var(--color-nav-hover-bg);
 }
