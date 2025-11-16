@@ -107,7 +107,7 @@ details.dropdown > .content > ul {
   &:last-of-type > li:last-child {
     border-radius: 0 0 var(--border-radius) var(--border-radius);
   }
-  &:first-of-type:last-of-type > li:first-child:last-child {
+  &:only-of-type > li:only-child {
     border-radius: var(--border-radius);
   }
 }

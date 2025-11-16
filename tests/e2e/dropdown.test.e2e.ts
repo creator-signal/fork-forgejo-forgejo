@@ -5,6 +5,7 @@
 // templates/shared/user/actions_menu.tmpl
 // templates/org/header.tmpl
 // templates/explore/search.tmpl
+// templates/devtest/dropdown.tmpl
 // web_src/js/modules/dropdown.ts
 // @watch end
 
