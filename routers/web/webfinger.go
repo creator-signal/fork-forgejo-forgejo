@@ -9,10 +9,28 @@ import (
 	"net/url"
 	"strings"
 
+	org_model "forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
+)
+
+// forge-feed.org link extension types, see https://forge-feed.org for more details.
+const (
+	FORGE_FEED_REL_AVATAR         = "http://forge-feed.org/rel/avatar"
+	FORGE_FEED_REL_TICKETING      = "http://forge-feed.org/rel/ticketing-system"
+	FORGE_FEED_REL_REPOSITORY     = "http://forge-feed.org/rel/repository"
+	FORGE_FEED_REL_REPOSITORY_URI = "http://forge-feed.org/rel/repository-uri"
+	FORGE_FEED_REL_PROJECT        = "http://forge-feed.org/rel/project"
+	FORGE_FEED_REL_HOMEPAGE       = "http://forge-feed.org/rel/homepage"
+	FORGE_FEED_REL_DESCRIPTION    = "http://forge-feed.org/rel/description"
+	FORGE_FEED_REL_LICENSE        = "http://forge-feed.org/rel/license"
+	FORGE_FEED_REL_VCS_CLONE_LINK = "http://forge-feed.org/rel/clone"
+	FORGE_FEED_REL_LABEL          = "http://forge-feed.org/rel/label"
+	FORGE_FEED_NS_LABEL           = "http://forge-feed.org/ns/label"
+	FORGE_FEED_NS_VCS_TYPE        = "http://forge-feed.org/ns/vcs-type"
 )
 
 // https://datatracker.ietf.org/doc/html/draft-ietf-appsawg-webfinger-14#section-4.4
@@ -135,6 +153,166 @@ func WebfingerQuery(ctx *context.Context) {
 			return
 		}
 
+	case "project", "repository":
+		parts := strings.Split(resource.Opaque, "/")
+		var jrdSubject string
+		links := []*webfingerLink{}
+		if resource.Scheme == "project" && len(parts) == 1 {
+			jrdSubject = fmt.Sprintf("project:%s", parts[0])
+			org_name := parts[0]
+			org, err := org_model.GetOrgByName(ctx, org_name)
+			if err != nil {
+				if org_model.IsErrOrgNotExist(err) {
+					ctx.Error(http.StatusNotFound)
+				} else {
+					log.Warn("Failed to look up organization: %s", err)
+					ctx.Error(http.StatusInternalServerError)
+				}
+				return
+			}
+
+			// TODO: Need to verify this is correct
+			if !org.Visibility.IsPublic() {
+				ctx.Error(http.StatusNotFound)
+				return
+			}
+
+			if org.Description != "" {
+				links = append(links, &webfingerLink{
+					Rel: FORGE_FEED_REL_DESCRIPTION,
+					Titles: map[string]string{
+						"en-us": org.Description, // FIXME: Localization ?
+					},
+				})
+			}
+
+			if org.Website != "" {
+				links = append(links, &webfingerLink{
+					Rel:  FORGE_FEED_REL_HOMEPAGE,
+					Href: org.Website,
+				})
+			}
+
+			if avatar_link := org.AvatarLink(ctx); avatar_link != "" {
+				links = append(links, &webfingerLink{
+					Rel:  FORGE_FEED_REL_AVATAR,
+					Href: avatar_link,
+				})
+			}
+
+			repos, err := org_model.GetOrgRepositories(ctx, org.ID)
+			if err != nil {
+				log.Warn("Failed to lookup org/user repositories: %s", err)
+				ctx.Error(http.StatusInternalServerError)
+				return
+			}
+
+			for _, repo := range repos {
+				titles := map[string]string{}
+				if repo.Description != "" {
+					titles["en-us"] = repo.Description
+				}
+				links = append(links, &webfingerLink{
+					Rel:    FORGE_FEED_REL_REPOSITORY,
+					Href:   repo.HTMLURL(),
+					Titles: titles,
+					Properties: map[string]any{
+						FORGE_FEED_REL_REPOSITORY_URI: fmt.Sprintf("repository:%s/%s", parts[0], repo.Name),
+					},
+				})
+			}
+
+		} else if resource.Scheme == "repository" && len(parts) == 2 {
+			jrdSubject = fmt.Sprintf("repository:%s/%s", parts[0], parts[1])
+			repo, err := repo_model.GetRepositoryByOwnerAndName(ctx, parts[0], parts[1])
+			if err != nil {
+				if repo_model.IsErrRepoNotExist(err) {
+					ctx.Error(http.StatusNotFound)
+				} else {
+					log.Warn("Failed to lookup repository %s", err)
+					ctx.Error(http.StatusInternalServerError)
+				}
+				return
+			}
+
+			if repo.IsPrivate {
+				// TODO: You can determine presence of a repository by response time
+				// here but I think all of Forgejo's repositories are subject to this?
+				ctx.Error(http.StatusNotFound)
+				return
+			}
+
+			links = append(links, &webfingerLink{
+				Rel:  FORGE_FEED_REL_TICKETING,
+				Href: fmt.Sprintf("%s", appURL.JoinPath(parts[0], parts[1], "issues")),
+			})
+			if repo.Description != "" {
+				links = append(links, &webfingerLink{
+					Rel: FORGE_FEED_REL_DESCRIPTION,
+					Titles: map[string]string{
+						"en-us": repo.Description, // FIXME: Localization ?
+					},
+				})
+			}
+
+			if repo.Website != "" {
+				links = append(links, &webfingerLink{
+					Rel:  FORGE_FEED_REL_HOMEPAGE,
+					Href: repo.Website,
+				})
+			}
+
+			if avatar_link := repo.AvatarLink(ctx); avatar_link != "" {
+				links = append(links, &webfingerLink{
+					Rel:  FORGE_FEED_REL_AVATAR,
+					Href: avatar_link,
+				})
+			}
+
+			clone_link := repo.CloneLink()
+			if https_link := clone_link.HTTPS; https_link != "" {
+				links = append(links, &webfingerLink{
+					Rel:  FORGE_FEED_REL_VCS_CLONE_LINK,
+					Href: https_link,
+					Properties: map[string]any{
+						FORGE_FEED_NS_VCS_TYPE: "https",
+					},
+				})
+			}
+
+			if git_link := clone_link.HTTPS; git_link != "" {
+				links = append(links, &webfingerLink{
+					Rel:  FORGE_FEED_REL_VCS_CLONE_LINK,
+					Href: git_link,
+					Properties: map[string]any{
+						FORGE_FEED_NS_VCS_TYPE: "git",
+					},
+				})
+			}
+
+			for _, topic := range repo.Topics {
+				links = append(links, &webfingerLink{
+					Rel: FORGE_FEED_REL_LABEL,
+					Properties: map[string]any{
+						FORGE_FEED_NS_LABEL: topic,
+					},
+				})
+			}
+
+		} else {
+			log.Warn("Webfinger resource query invalid %s", resource.Opaque)
+			ctx.Error(http.StatusBadRequest)
+			return
+		}
+
+		ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
+		ctx.JSON(http.StatusOK, &webfingerJRD{
+			Subject: jrdSubject,
+			Links:   links,
+		})
+		ctx.Resp.Header().Set("Content-Type", "application/jrd+json")
+		return
+
 	default:
 		ctx.Error(http.StatusBadRequest)
 		return
@@ -146,6 +324,7 @@ func WebfingerQuery(ctx *context.Context) {
 			log.Error("Error getting user: %s Error: %v", resource.Opaque, err)
 			ctx.Error(http.StatusInternalServerError)
 		}
+
 		return
 	}
 

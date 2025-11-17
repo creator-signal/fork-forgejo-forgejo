@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	// repo_model "forgejo.org/models/repo"
+	// unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
@@ -19,6 +21,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type webfingerLink struct {
+	Rel        string            `json:"rel,omitempty"`
+	Type       string            `json:"type,omitempty"`
+	Href       string            `json:"href,omitempty"`
+	Titles     map[string]string `json:"titles,omitempty"`
+	Properties map[string]any    `json:"properties,omitempty"`
+}
+
+type webfingerJRD struct {
+	Subject    string           `json:"subject,omitempty"`
+	Aliases    []string         `json:"aliases,omitempty"`
+	Properties map[string]any   `json:"properties,omitempty"`
+	Links      []*webfingerLink `json:"links,omitempty"`
+}
+
 func TestWebfinger(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
@@ -26,21 +43,6 @@ func TestWebfinger(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	appURL, _ := url.Parse(setting.AppURL)
-
-	type webfingerLink struct {
-		Rel        string            `json:"rel,omitempty"`
-		Type       string            `json:"type,omitempty"`
-		Href       string            `json:"href,omitempty"`
-		Titles     map[string]string `json:"titles,omitempty"`
-		Properties map[string]any    `json:"properties,omitempty"`
-	}
-
-	type webfingerJRD struct {
-		Subject    string           `json:"subject,omitempty"`
-		Aliases    []string         `json:"aliases,omitempty"`
-		Properties map[string]any   `json:"properties,omitempty"`
-		Links      []*webfingerLink `json:"links,omitempty"`
-	}
 
 	session := loginUser(t, "user1")
 
@@ -110,4 +112,45 @@ func TestWebfinger(t *testing.T) {
 
 	req = NewRequest(t, "GET", fmt.Sprintf("/.well-known/webfinger?resource=http://%s/%s/foo", "example.com", user.Name))
 	MakeRequest(t, req, http.StatusBadRequest)
+}
+
+func TestForgeFeedWebFingerQuery(t *testing.T) {
+
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+
+	req := NewRequest(t, "GET", "/.well-known/webfinger?resource=project:org3")
+	resp := MakeRequest(t, req, http.StatusOK)
+	assert.Equal(t, "application/jrd+json", resp.Header().Get("Content-Type"))
+
+	var jrd webfingerJRD
+	DecodeJSON(t, resp, &jrd)
+
+	assert.Equal(t, jrd.Subject, "http://forge-feed.org/rel/project")
+	assert.Contains(t, jrd.Links, webfingerLink{
+		Rel: "http://forge-feed.org/rel/repository",
+		Properties: map[string]any{
+			"http://forge-feed.org/rel/repository-uri": "repository:org3/repo3",
+		},
+	})
+	assert.Contains(t, jrd.Links, webfingerLink{
+		Rel: "http://forge-feed.org/rel/repository",
+		Properties: map[string]any{
+			"http://forge-feed.org/rel/repository-uri": "repository:org3/repo5",
+		},
+	})
+	assert.Contains(t, jrd.Links, webfingerLink{
+		Rel: "http://forge-feed.org/rel/repository",
+		Properties: map[string]any{
+			"http://forge-feed.org/rel/repository-uri": "repository:org3/repo21",
+		},
+	})
+
+	req = NewRequest(t, "GET", "/.well-known/webfinger?resource=repository:org3/repo3")
+	resp = MakeRequest(t, req, http.StatusOK)
+	assert.Equal(t, "application/jrd+json", resp.Header().Get("Content-Type"))
+
+	DecodeJSON(t, resp, &jrd)
+	assert.Equal(t, jrd.Subject, "http://forge-feed.org/rel/repository")
+
 }
