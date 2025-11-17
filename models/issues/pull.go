@@ -634,8 +634,8 @@ func GetUnmergedPullRequest(ctx context.Context, headRepoID, baseRepoID int64, h
 
 // GetUnmergedPullRequestsAnyTarget returns a pull request that is open and has not been merged
 // by given head repo and branch and targeting any other branch on the baseRepo
-func GetUnmergedPullRequestsAnyTarget(ctx context.Context, headRepoID, baseRepoID int64, headBranch string, flow PullRequestFlow) ([]PullRequest, error) {
-	var pr []PullRequest
+func GetUnmergedPullRequestsAnyTarget(ctx context.Context, headRepoID, baseRepoID int64, headBranch string, flow PullRequestFlow) (PullRequestList, error) {
+	var pr PullRequestList
 	err := db.GetEngine(ctx).
 		Where("head_repo_id=? AND head_branch=? AND base_repo_id=? AND has_merged=? AND flow = ? AND issue.is_closed=?",
 			headRepoID, headBranch, baseRepoID, false, flow, false).

@@ -293,6 +293,15 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 				})
 				return
 			}
+			err = prList.LoadRepositories(ctx)
+			if err != nil {
+				log.Error("Failed to load repositories for PullRequestList: %s", err)
+				ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
+					Err:          fmt.Sprintf("Failed to load repositories for PullRequestList: %s", err),
+					RepoWasEmpty: wasEmpty,
+				})
+				return
+			}
 
 			if repo.IsFork {
 				branch = fmt.Sprintf("%s:%s", repo.OwnerName, branch)
@@ -301,24 +310,6 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 			var urls []string
 			foundDefaultBranch := false
 			for _, pr := range prList {
-				err := pr.LoadBaseRepo(ctx)
-				if err != nil {
-					log.Error("Error loading BaseRepo of PR id %d: %s", pr.ID, err)
-					ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
-						Err:          fmt.Sprintf("Error loading BaseRepo of PR id %d: %s", pr.ID, err),
-						RepoWasEmpty: wasEmpty,
-					})
-					return
-				}
-				err = pr.LoadHeadRepo(ctx)
-				if err != nil {
-					log.Error("Error loading HeadRepo of PR id %d: %s", pr.ID, err)
-					ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
-						Err:          fmt.Sprintf("Error loading HeadRepo of PR id %d: %s", pr.ID, err),
-						RepoWasEmpty: wasEmpty,
-					})
-					return
-				}
 				var baseBranchDisplay string
 				if pr.HeadRepoID == pr.BaseRepoID {
 					// Inside the same repository: just show base branch name
