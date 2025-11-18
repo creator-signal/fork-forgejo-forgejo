@@ -41,6 +41,7 @@ func TestActivityPubActor(t *testing.T) {
 	keyID := actor.GetID().String()
 	assert.Regexp(t, "activitypub/actor$", keyID)
 	assert.Regexp(t, "activitypub/actor/inbox$", actor.Inbox.GetID().String())
+	assert.Regexp(t, "activitypub/actor/outbox$", actor.Outbox.GetID().String())
 
 	pubKey := actor.PublicKey
 	assert.NotNil(t, pubKey)
