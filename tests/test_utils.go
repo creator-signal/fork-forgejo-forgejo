@@ -5,7 +5,9 @@
 package tests
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"database/sql"
 	"fmt"
@@ -52,6 +54,30 @@ import (
 func exitf(format string, args ...any) {
 	fmt.Printf(format+"\n", args...)
 	os.Exit(1)
+}
+
+func FileNamesFromTarGzip(gzippedTar []byte) ([]string, error) {
+	archive, err := gzip.NewReader(bytes.NewReader(gzippedTar))
+	if err != nil {
+		return []string{}, err
+	}
+
+	files := []string{}
+	reader := tar.NewReader(archive)
+	for {
+		header, err := reader.Next()
+		if err == io.EOF {
+			return files, nil
+		}
+		if err != nil {
+			return []string{}, err
+		}
+
+		// list of type flags can be found at https://www.gnu.org/software/tar/manual/html_node/Standard.html
+		if byte('0') <= header.Typeflag && header.Typeflag <= byte('7') {
+			files = append(files, header.Name)
+		}
+	}
 }
 
 var preparedDir string

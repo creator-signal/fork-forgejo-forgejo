@@ -40,7 +40,9 @@ func TestAPIDownloadArchive(t *testing.T) {
 	resp = MakeRequest(t, NewRequest(t, "GET", link.String()).AddTokenAuth(token), http.StatusOK)
 	bs, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	assert.Len(t, bs, 266)
+	fileNames, err := tests.FileNamesFromTarGzip(bs)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, fileNames, []string{"repo1/", "repo1/README.md"})
 	assert.Equal(t, "application/gzip", resp.Header().Get("Content-Type"))
 
 	// Must return a link to a commit ID as the "immutable" archive link
@@ -82,7 +84,9 @@ func TestAPIDownloadArchive2(t *testing.T) {
 	resp = MakeRequest(t, NewRequest(t, "GET", link.String()).AddTokenAuth(token), http.StatusOK)
 	bs, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	assert.Len(t, bs, 266)
+	fileNames, err := tests.FileNamesFromTarGzip(bs)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, fileNames, []string{"repo1/", "repo1/README.md"})
 
 	// Must return a link to a commit ID as the "immutable" archive link
 	linkHeaderRe := regexp.MustCompile(`^<(https?://.*/api/v1/repos/user2/repo1/archive/[a-f0-9]+\.tar\.gz.*)>; rel="immutable"$`)
