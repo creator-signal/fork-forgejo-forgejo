@@ -95,7 +95,7 @@ func RepositoryOutbox(ctx *context.APIContext) {
 	// - application/ld+json
 	// responses:
 	//   "200":
-	//     description: "The outbox"
+	//     "$ref": "#/responses/Outbox"
 
 	repository := ctx.Repo.Repository
 	outbox := ap.OrderedCollectionNew(ap.IRI(repository.APActorID() + "/outbox"))

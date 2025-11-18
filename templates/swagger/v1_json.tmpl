@@ -69,7 +69,7 @@
         "operationId": "activitypubInstanceActorOutbox",
         "responses": {
           "200": {
-            "description": "The empty outbox"
+            "$ref": "#/responses/Outbox"
           }
         }
       }
@@ -147,7 +147,7 @@
         "operationId": "activitypubRepositoryOutbox",
         "responses": {
           "200": {
-            "description": "The outbox"
+            "$ref": "#/responses/Outbox"
           }
         }
       }
@@ -293,7 +293,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/PersonFeed"
+            "$ref": "#/responses/Outbox"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -21993,28 +21993,6 @@
       },
       "x-go-package": "forgejo.org/services/context"
     },
-    "APPersonFollowItem": {
-      "type": "object",
-      "properties": {
-        "actor_id": {
-          "type": "string",
-          "x-go-name": "ActorID"
-        },
-        "note": {
-          "type": "string",
-          "x-go-name": "Note"
-        },
-        "original_item": {
-          "type": "string",
-          "x-go-name": "OriginalItem"
-        },
-        "original_url": {
-          "type": "string",
-          "x-go-name": "OriginalURL"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
     "APRemoteFollowOption": {
       "type": "object",
       "properties": {
@@ -25782,6 +25760,11 @@
     },
     "ForgeLike": {
       "description": "ForgeLike activity data type",
+      "type": "object",
+      "x-go-package": "forgejo.org/modules/forgefed"
+    },
+    "ForgeOutbox": {
+      "description": "ForgeFollow activity data type",
       "type": "object",
       "x-go-package": "forgejo.org/modules/forgefed"
     },
@@ -30567,6 +30550,12 @@
         "$ref": "#/definitions/OrganizationPermissions"
       }
     },
+    "Outbox": {
+      "description": "Outbox",
+      "schema": {
+        "$ref": "#/definitions/ForgeOutbox"
+      }
+    },
     "Package": {
       "description": "Package",
       "schema": {
@@ -30588,15 +30577,6 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Package"
-        }
-      }
-    },
-    "PersonFeed": {
-      "description": "Personfeed",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/APPersonFollowItem"
         }
       }
     },

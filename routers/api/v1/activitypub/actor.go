@@ -89,7 +89,7 @@ func ActorOutbox(ctx *context.APIContext) {
 	// - application/ld+json
 	// responses:
 	//   "200":
-	//     description: "The empty outbox"
+	//     "$ref": "#/responses/Outbox"
 
 	link := user_model.APServerActorID()
 	outbox := ap.OrderedCollectionNew(ap.IRI(link + "/outbox"))
