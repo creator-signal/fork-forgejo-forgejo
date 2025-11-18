@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"forgejo.org/models/db"
+	federation_key_model "forgejo.org/models/federation_key"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/validation"
@@ -60,13 +61,18 @@ func CreateFederatedUser(ctx context.Context, user *User, federatedUser *Federat
 func FindFederatedUser(ctx context.Context, externalID string, federationHostID int64) (*User, *FederatedUser, error) {
 	federatedUser := new(FederatedUser)
 	user := new(User)
-	has, err := db.GetEngine(ctx).Where("external_id=? and federation_host_id=?", externalID, federationHostID).Get(federatedUser)
+
+	var has bool
+
+	eng := db.GetEngine(ctx)
+
+	has, err := eng.Where("external_id=? and federation_host_id=?", externalID, federationHostID).Get(federatedUser)
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
 		return nil, nil, nil
 	}
-	has, err = db.GetEngine(ctx).ID(federatedUser.UserID).Get(user)
+	has, err = eng.ID(federatedUser.UserID).Get(user)
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
@@ -117,17 +123,40 @@ func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *Federa
 	return user, federatedUser, nil
 }
 
-func FindFederatedUserByKeyID(ctx context.Context, keyID string) (*User, *FederatedUser, error) {
-	log.Trace("FindFederatedUserByKeyID: %v", keyID)
+// FindFederatedUserByPublicKey finds a [FederatedUser] database entry by ActivityPub key ID.
+//
+// Returns:
+//
+// - (User, FederatedUser, nil): success, a record was found
+// - (nil, nil, nil): failure, no record found
+// - (nil, nil, error): failure, a database error occured
+func FindFederatedUserByKeyID(ctx context.Context, rawKeyID string) (*User, *FederatedUser, error) {
+	log.Trace("FindFederatedUserByKeyID: %v", rawKeyID)
+
+	keyID, err := federation_key_model.NewKeyID(rawKeyID)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	federatedUser := new(FederatedUser)
 	user := new(User)
-	has, err := db.GetEngine(ctx).Where("key_id=?", keyID).Get(federatedUser)
+
+	eng := db.GetEngine(ctx)
+	publicKey, err := federation_key_model.FindFederationPublicKey(ctx, keyID.String())
+	if err != nil {
+		return nil, nil, err
+	} else if publicKey == nil {
+		return nil, nil, nil
+	}
+
+	has, err := eng.Where("public_key_id=?", publicKey.ID).Get(federatedUser)
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
 		return nil, nil, nil
 	}
-	has, err = db.GetEngine(ctx).ID(federatedUser.UserID).Get(user)
+
+	has, err = eng.ID(federatedUser.UserID).Get(user)
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
@@ -142,6 +171,7 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID string) (*User, *Federa
 	}
 
 	log.Trace("FindFederatedUserByKeyID: %v found user.ID %v, federated_user %v", keyID, user.ID, federatedUser)
+
 	return user, federatedUser, nil
 }
 

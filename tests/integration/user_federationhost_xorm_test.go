@@ -8,22 +8,25 @@ import (
 	"testing"
 
 	"forgejo.org/models/db"
+	"forgejo.org/models/federation_key"
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/user"
+	"forgejo.org/modules/util"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+const keyID = "https://forgejo.org/api/v1/activitypub/actor#meow"
+
 func TestStoreFederationHost(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	t.Run("ExplicitNull", func(t *testing.T) {
 		federationHost := forgefed.FederationHost{
 			HostFqdn: "ExplicitNull",
-			// Explicit null on KeyID and PublicKey
-			KeyID:     sql.NullString{Valid: false},
-			PublicKey: sql.Null[sql.RawBytes]{Valid: false},
+			// Explicit null on PublicKeyID
+			PublicKeyID: sql.NullInt64{Valid: false},
 		}
 
 		_, err := db.GetEngine(db.DefaultContext).Insert(&federationHost)
@@ -34,18 +37,30 @@ func TestStoreFederationHost(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, has)
 
-		assert.False(t, dbFederationHost.KeyID.Valid)
-		assert.False(t, dbFederationHost.PublicKey.Valid)
+		assert.False(t, dbFederationHost.PublicKeyID.Valid)
 	})
 
 	t.Run("NotNull", func(t *testing.T) {
+		key, err := util.RandomPKIXPublicKey(3072)
+		require.NoError(t, err)
+
 		federationHost := forgefed.FederationHost{
-			HostFqdn:  "ImplicitNull",
-			KeyID:     sql.NullString{Valid: true, String: "meow"},
-			PublicKey: sql.Null[sql.RawBytes]{Valid: true, V: sql.RawBytes{0x23, 0x42}},
+			HostFqdn: "ImplicitNull",
 		}
 
-		_, err := db.GetEngine(db.DefaultContext).Insert(&federationHost)
+		federationPublicKey, err := federation_key.NewFederationPublicKey(
+			0,
+			keyID,
+			key,
+		)
+		require.NoError(t, err)
+
+		dbFederationPublicKey, err := federation_key.FindOrCreateFederationPublicKey(db.DefaultContext, federationPublicKey)
+		require.NoError(t, err)
+
+		federationHost.PublicKeyID = sql.NullInt64{Valid: true, Int64: dbFederationPublicKey.ID}
+
+		_, err = db.GetEngine(db.DefaultContext).Insert(&federationHost)
 		require.NoError(t, err)
 
 		dbFederationHost := new(forgefed.FederationHost)
@@ -53,11 +68,12 @@ func TestStoreFederationHost(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, has)
 
-		assert.True(t, dbFederationHost.KeyID.Valid)
-		assert.Equal(t, "meow", dbFederationHost.KeyID.String)
+		assert.True(t, dbFederationHost.PublicKeyID.Valid)
+		assert.Equal(t, dbFederationPublicKey.ID, dbFederationHost.PublicKeyID.Int64)
 
-		assert.True(t, dbFederationHost.PublicKey.Valid)
-		assert.Equal(t, sql.RawBytes{0x23, 0x42}, dbFederationHost.PublicKey.V)
+		assert.Nil(t, dbFederationPublicKey.Validate())
+		assert.Equal(t, keyID, dbFederationPublicKey.KeyID.String())
+		assert.Equal(t, key, dbFederationPublicKey.Key)
 	})
 }
 
@@ -68,8 +84,7 @@ func TestStoreFederatedUser(t *testing.T) {
 			UserID:           0,
 			ExternalID:       "ExplicitNull",
 			FederationHostID: 0,
-			KeyID:            sql.NullString{Valid: false},
-			PublicKey:        sql.Null[sql.RawBytes]{Valid: false},
+			PublicKeyID:      sql.NullInt64{Valid: false},
 		}
 
 		_, err := db.GetEngine(db.DefaultContext).Insert(&federatedUser)
@@ -80,20 +95,30 @@ func TestStoreFederatedUser(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, has)
 
-		assert.False(t, dbFederatedUser.KeyID.Valid)
-		assert.False(t, dbFederatedUser.PublicKey.Valid)
+		assert.False(t, dbFederatedUser.PublicKeyID.Valid)
 	})
 
 	t.Run("NotNull", func(t *testing.T) {
+		key, err := util.RandomPKIXPublicKey(3072)
+		require.NoError(t, err)
+
 		federatedUser := user.FederatedUser{
 			UserID:           1,
 			ExternalID:       "ImplicitNull",
 			FederationHostID: 1,
-			KeyID:            sql.NullString{Valid: true, String: "woem"},
-			PublicKey:        sql.Null[sql.RawBytes]{Valid: true, V: sql.RawBytes{0x42, 0x23}},
 		}
 
-		_, err := db.GetEngine(db.DefaultContext).Insert(&federatedUser)
+		federationPublicKey := federation_key.FederationPublicKey{
+			KeyID: keyID,
+			Key:   key,
+		}
+
+		dbFederationPublicKey, err := federation_key.FindOrCreateFederationPublicKey(db.DefaultContext, &federationPublicKey)
+		require.NoError(t, err)
+
+		federatedUser.PublicKeyID = sql.NullInt64{Valid: true, Int64: dbFederationPublicKey.ID}
+
+		_, err = db.GetEngine(db.DefaultContext).Insert(&federatedUser)
 		require.NoError(t, err)
 
 		dbFederatedUser := new(user.FederatedUser)
@@ -101,9 +126,11 @@ func TestStoreFederatedUser(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, has)
 
-		assert.True(t, dbFederatedUser.KeyID.Valid)
-		assert.Equal(t, "woem", dbFederatedUser.KeyID.String)
-		assert.True(t, dbFederatedUser.PublicKey.Valid)
-		assert.Equal(t, sql.RawBytes{0x42, 0x23}, dbFederatedUser.PublicKey.V)
+		assert.True(t, dbFederatedUser.PublicKeyID.Valid)
+		assert.Equal(t, dbFederationPublicKey.ID, dbFederatedUser.PublicKeyID.Int64)
+
+		assert.Nil(t, dbFederationPublicKey.Validate())
+		assert.Equal(t, keyID, dbFederationPublicKey.KeyID.String())
+		assert.Equal(t, key, dbFederationPublicKey.Key)
 	})
 }

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	"forgejo.org/models/federation_key"
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
@@ -209,17 +210,23 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 		IsAdmin:                      false,
 	}
 
+	federatedPublicKey, err := federation_key.NewFederationPublicKey(0, person.PublicKey.ID.String(), pubKeyBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dbPublicKey, err := federation_key.FindOrCreateFederationPublicKey(ctx, federatedPublicKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	federatedUser := user.FederatedUser{
 		ExternalID:            personID.ID,
 		FederationHostID:      federationHostID,
 		InboxPath:             inbox.Path,
 		NormalizedOriginalURL: personID.AsURI(),
-		KeyID: sql.NullString{
-			String: person.PublicKey.ID.String(),
-			Valid:  true,
-		},
-		PublicKey: sql.Null[sql.RawBytes]{
-			V:     pubKeyBytes,
+		PublicKeyID: sql.NullInt64{
+			Int64: dbPublicKey.ID,
 			Valid: true,
 		},
 	}

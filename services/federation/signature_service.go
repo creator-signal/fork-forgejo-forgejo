@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"forgejo.org/models/federation_key"
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
@@ -89,12 +90,19 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 		}
 	}
 
-	if federatedUser.PublicKey.Valid {
-		pubKey, err := x509.ParsePKIXPublicKey(federatedUser.PublicKey.V)
+	if federatedUser.PublicKeyID.Valid {
+		federatedPublicKey, err := federation_key.GetFederationPublicKey(ctx, federatedUser.PublicKeyID.Int64)
 		if err != nil {
 			return nil, err
 		}
+
 		log.Trace("For KeyID %v found pubKey %v", keyID, pubKey)
+
+		pubKey, err := x509.ParsePKIXPublicKey(federatedPublicKey.Key)
+		if err != nil {
+			return nil, err
+		}
+
 		return pubKey, nil
 	}
 
@@ -103,25 +111,37 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 	if err != nil {
 		return nil, err
 	}
+
 	if apPerson.Type == ap.ActivityVocabularyType("Person") {
 		// Check federatedUser.id = person.id
 		if federatedUser.ExternalID != apPerson.ID.String() {
 			return nil, fmt.Errorf("federated user fetched (%v) does not match the stored one %v", apPerson, federatedUser)
 		}
-		// update federated user
-		federatedUser.KeyID = sql.NullString{
-			String: apPerson.PublicKey.ID.String(),
-			Valid:  true,
+
+		// find or create federated public key
+		federatedPublicKey, err := federation_key.NewFederationPublicKey(0, apPerson.PublicKey.ID.String(), pubKeyBytes)
+		if err != nil {
+			return nil, err
 		}
-		federatedUser.PublicKey = sql.Null[sql.RawBytes]{
-			V:     pubKeyBytes,
+
+		dbPublicKey, err := federation_key.FindOrCreateFederationPublicKey(ctx, federatedPublicKey)
+		if err != nil {
+			return nil, err
+		}
+
+		// update federated user
+		federatedUser.PublicKeyID = sql.NullInt64{
+			Int64: dbPublicKey.ID,
 			Valid: true,
 		}
+
 		err = user.UpdateFederatedUser(ctx, federatedUser)
 		if err != nil {
 			return nil, err
 		}
+
 		log.Trace("For %v found pubKey %v", keyID, pubKey)
+
 		return pubKey, nil
 	}
 	log.Trace("For %v found no pubKey", keyID)
@@ -153,12 +173,19 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 	}
 
 	// Is there an already an key?
-	if federationHost.PublicKey.Valid {
-		pubKey, err := x509.ParsePKIXPublicKey(federationHost.PublicKey.V)
+	if federationHost.PublicKeyID.Valid {
+		federationPublicKey, err := federation_key.GetFederationPublicKey(ctx, federationHost.PublicKeyID.Int64)
 		if err != nil {
 			return nil, err
 		}
+
 		log.Trace("For %v found pubKey: %v", keyID, pubKey)
+
+		pubKey, err := x509.ParsePKIXPublicKey(federationPublicKey.Key)
+		if err != nil {
+			return nil, err
+		}
+
 		return pubKey, nil
 	}
 
@@ -174,19 +201,28 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 			return nil, fmt.Errorf("federation host fetched (%v) does not match the stored one %v", apPerson, federationHost)
 		}
 		// update federation host
-		federationHost.KeyID = sql.NullString{
-			String: apPerson.PublicKey.ID.String(),
-			Valid:  true,
+		federationPublicKey, err := federation_key.NewFederationPublicKey(0, apPerson.PublicKey.ID.String(), pubKeyBytes)
+		if err != nil {
+			return nil, err
 		}
-		federationHost.PublicKey = sql.Null[sql.RawBytes]{
-			V:     pubKeyBytes,
+
+		dbPublicKey, err := federation_key.FindOrCreateFederationPublicKey(ctx, federationPublicKey)
+		if err != nil {
+			return nil, err
+		}
+
+		federationHost.PublicKeyID = sql.NullInt64{
+			Int64: dbPublicKey.ID,
 			Valid: true,
 		}
+
 		err = forgefed.UpdateFederationHost(ctx, federationHost)
 		if err != nil {
 			return nil, err
 		}
+
 		log.Trace("For %v found pubKey: %v", keyID, pubKey)
+
 		return pubKey, nil
 	}
 	log.Trace("For %v found no pubKey.", keyID)

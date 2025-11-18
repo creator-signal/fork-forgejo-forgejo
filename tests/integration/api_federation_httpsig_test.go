@@ -66,12 +66,12 @@ func TestFederationHttpSigValidation(t *testing.T) {
 			host, err := forgefed.FindFederationHostByKeyID(db.DefaultContext, applicationKeyID)
 			require.NoError(t, err)
 			assert.NotNil(t, host)
-			assert.True(t, host.PublicKey.Valid)
+			assert.True(t, host.PublicKeyID.Valid)
 
 			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
 			assert.NotNil(t, user)
-			assert.True(t, user.PublicKey.Valid)
+			assert.True(t, user.PublicKeyID.Valid)
 		})
 
 		t.Run("ValidateActorFromKeyID", func(t *testing.T) {

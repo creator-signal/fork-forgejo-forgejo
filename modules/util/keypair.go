@@ -43,6 +43,19 @@ func pemBlockForPub(pub *rsa.PublicKey) (string, error) {
 	return string(pubBytes), nil
 }
 
+// RandomPKIXPublicKeyx509 generates a random RSA keypair.
+//
+// `bits` is the desired bit-length for the keypair.
+//
+// Returns the x509 asn1 DER-encoded public key bytes.
+func RandomPKIXPublicKey(bits int) ([]byte, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, bits)
+	if err != nil {
+		return nil, err
+	}
+	return x509.MarshalPKIXPublicKey(priv.Public())
+}
+
 // CreatePublicKeyFingerprint creates a fingerprint of the given key.
 // The fingerprint is the sha256 sum of the PKIX structure of the key.
 func CreatePublicKeyFingerprint(key crypto.PublicKey) ([]byte, error) {

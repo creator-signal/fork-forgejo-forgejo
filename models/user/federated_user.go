@@ -10,12 +10,11 @@ import (
 )
 
 type FederatedUser struct {
-	ID                    int64                  `xorm:"pk autoincr"`
-	UserID                int64                  `xorm:"NOT NULL INDEX user_id"`
-	ExternalID            string                 `xorm:"UNIQUE(federation_user_mapping) NOT NULL"`
-	FederationHostID      int64                  `xorm:"UNIQUE(federation_user_mapping) NOT NULL"`
-	KeyID                 sql.NullString         `xorm:"key_id UNIQUE"`
-	PublicKey             sql.Null[sql.RawBytes] `xorm:"BLOB"`
+	ID                    int64         `xorm:"pk autoincr"`
+	UserID                int64         `xorm:"NOT NULL INDEX user_id"`
+	ExternalID            string        `xorm:"UNIQUE(federation_user_mapping) NOT NULL"`
+	FederationHostID      int64         `xorm:"UNIQUE(federation_user_mapping) NOT NULL"`
+	PublicKeyID           sql.NullInt64 `xorm:"INDEX UNIQUE REFERENCES(federation_public_key, id)"`
 	InboxPath             string
 	NormalizedOriginalURL string // This field is just to keep original information. Pls. do not use for search or as ID!
 }
