@@ -7,13 +7,11 @@ package util_test
 import (
 	"bytes"
 	"crypto/rand"
-	"regexp"
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/util"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -126,72 +124,52 @@ func Test_NormalizeEOL(t *testing.T) {
 	assert.Equal(t, []byte("mix\nand\nmatch\n."), util.NormalizeEOL([]byte("mix\r\nand\rmatch\n.")))
 }
 
-func Test_RandomInt(t *testing.T) {
-	randInt, err := util.CryptoRandomInt(255)
-	assert.GreaterOrEqual(t, randInt, int64(0))
-	assert.LessOrEqual(t, randInt, int64(255))
-	require.NoError(t, err)
-}
-
 func Test_RandomString(t *testing.T) {
-	str1, err := util.CryptoRandomString(32)
-	require.NoError(t, err)
-	matches, err := regexp.MatchString(`^[a-zA-Z0-9]{32}$`, str1)
-	require.NoError(t, err)
-	assert.True(t, matches)
+	t.Run("Low", func(t *testing.T) {
+		str1 := util.CryptoRandomString(util.RandomStringLow)
+		assert.Regexp(t, "^[a-zA-Z0-9_-]{11}$", str1)
 
-	str2, err := util.CryptoRandomString(32)
-	require.NoError(t, err)
-	matches, err = regexp.MatchString(`^[a-zA-Z0-9]{32}$`, str1)
-	require.NoError(t, err)
-	assert.True(t, matches)
+		str2 := util.CryptoRandomString(util.RandomStringLow)
+		assert.Regexp(t, "^[a-zA-Z0-9_-]{11}$", str2)
 
-	assert.NotEqual(t, str1, str2)
+		assert.NotEqual(t, str1, str2)
+	})
 
-	str3, err := util.CryptoRandomString(256)
-	require.NoError(t, err)
-	matches, err = regexp.MatchString(`^[a-zA-Z0-9]{256}$`, str3)
-	require.NoError(t, err)
-	assert.True(t, matches)
+	t.Run("Medium", func(t *testing.T) {
+		str1 := util.CryptoRandomString(util.RandomStringMedium)
+		assert.Regexp(t, "^[a-zA-Z0-9_-]{22}$", str1)
 
-	str4, err := util.CryptoRandomString(256)
-	require.NoError(t, err)
-	matches, err = regexp.MatchString(`^[a-zA-Z0-9]{256}$`, str4)
-	require.NoError(t, err)
-	assert.True(t, matches)
+		str2 := util.CryptoRandomString(util.RandomStringMedium)
+		assert.Regexp(t, "^[a-zA-Z0-9_-]{22}$", str2)
 
-	assert.NotEqual(t, str3, str4)
+		assert.NotEqual(t, str1, str2)
+	})
+
+	t.Run("High", func(t *testing.T) {
+		str1 := util.CryptoRandomString(util.RandomStringHigh)
+		assert.Regexp(t, "^[a-zA-Z0-9_-]{43}$", str1)
+
+		str2 := util.CryptoRandomString(util.RandomStringHigh)
+		assert.Regexp(t, "^[a-zA-Z0-9_-]{43}$", str2)
+
+		assert.NotEqual(t, str1, str2)
+	})
 }
 
 func Test_RandomBytes(t *testing.T) {
-	bytes1, err := util.CryptoRandomBytes(32)
-	require.NoError(t, err)
+	bytes1 := util.CryptoRandomBytes(32)
+	bytes2 := util.CryptoRandomBytes(32)
 
-	bytes2, err := util.CryptoRandomBytes(32)
-	require.NoError(t, err)
-
+	assert.Len(t, bytes1, 32)
+	assert.Len(t, bytes2, 32)
 	assert.NotEqual(t, bytes1, bytes2)
 
-	bytes3, err := util.CryptoRandomBytes(256)
-	require.NoError(t, err)
+	bytes3 := util.CryptoRandomBytes(256)
+	bytes4 := util.CryptoRandomBytes(256)
 
-	bytes4, err := util.CryptoRandomBytes(256)
-	require.NoError(t, err)
-
+	assert.Len(t, bytes3, 256)
+	assert.Len(t, bytes4, 256)
 	assert.NotEqual(t, bytes3, bytes4)
-}
-
-func TestOptionalBoolParse(t *testing.T) {
-	assert.Equal(t, optional.None[bool](), util.OptionalBoolParse(""))
-	assert.Equal(t, optional.None[bool](), util.OptionalBoolParse("x"))
-
-	assert.Equal(t, optional.Some(false), util.OptionalBoolParse("0"))
-	assert.Equal(t, optional.Some(false), util.OptionalBoolParse("f"))
-	assert.Equal(t, optional.Some(false), util.OptionalBoolParse("False"))
-
-	assert.Equal(t, optional.Some(true), util.OptionalBoolParse("1"))
-	assert.Equal(t, optional.Some(true), util.OptionalBoolParse("t"))
-	assert.Equal(t, optional.Some(true), util.OptionalBoolParse("True"))
 }
 
 // Test case for any function which accepts and returns a single string.
@@ -272,8 +250,8 @@ func TestGeneratingEd25519Keypair(t *testing.T) {
 
 	publicKey, privateKey, err := util.GenerateSSHKeypair()
 	require.NoError(t, err)
-	assert.EqualValues(t, testPublicKey, string(publicKey))
-	assert.EqualValues(t, testPrivateKey, string(privateKey))
+	assert.Equal(t, testPublicKey, string(publicKey))
+	assert.Equal(t, testPrivateKey, string(privateKey))
 }
 
 func TestOptionalArg(t *testing.T) {

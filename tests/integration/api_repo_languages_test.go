@@ -7,13 +7,12 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRepoLanguages(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 
 		// Request editor page
@@ -26,7 +25,6 @@ func TestRepoLanguages(t *testing.T) {
 
 		// Save new file to master branch
 		req = NewRequestWithValues(t, "POST", "/user2/repo1/_new/master/", map[string]string{
-			"_csrf":          doc.GetCSRF(),
 			"last_commit":    lastCommit,
 			"tree_path":      "test.go",
 			"content":        "package main",
@@ -34,9 +32,6 @@ func TestRepoLanguages(t *testing.T) {
 			"commit_mail_id": "3",
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
-
-		// let gitea calculate language stats
-		time.Sleep(time.Second)
 
 		// Save new file to master branch
 		req = NewRequest(t, "GET", "/api/v1/repos/user2/repo1/languages")

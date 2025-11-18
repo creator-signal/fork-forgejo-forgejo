@@ -1,30 +1,48 @@
 // Copyright 2017 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package organization_test
 
 import (
-	"path/filepath"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	"forgejo.org/models/unittest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestTeam_IsOwnerTeam(t *testing.T) {
+func TestTeam(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
-	assert.True(t, team.IsOwnerTeam())
+	owners := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
+	assert.Equal(t, int64(3), owners.GetOrg(db.DefaultContext).ID)
+	assert.Equal(t, "/org/org3/teams/Owners", owners.Link(db.DefaultContext))
+	assert.False(t, owners.IsGhost())
+	assert.True(t, owners.IsOwnerTeam())
 
-	team = unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
-	assert.False(t, team.IsOwnerTeam())
+	team1 := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	assert.Equal(t, int64(3), team1.GetOrg(db.DefaultContext).ID)
+	assert.Equal(t, "/org/org3/teams/team1", team1.Link(db.DefaultContext))
+	assert.False(t, team1.IsGhost())
+	assert.False(t, team1.IsOwnerTeam())
+
+	ghost := organization.NewGhostTeam()
+	assert.Equal(t, int64(-1), ghost.ID)
+	assert.Equal(t, int64(-1), ghost.GetOrg(db.DefaultContext).ID)
+	assert.Empty(t, ghost.Link(db.DefaultContext))
+	assert.True(t, ghost.IsGhost())
+	assert.False(t, ghost.IsOwnerTeam())
+
+	ghosted := organization.Team{ID: 10, Name: "Ghosted"}
+	assert.Equal(t, int64(-1), ghosted.GetOrg(db.DefaultContext).ID)
+	assert.Empty(t, ghosted.Link(db.DefaultContext))
+	assert.False(t, ghosted.IsGhost())
+	assert.False(t, ghosted.IsOwnerTeam())
 }
 
 func TestTeam_IsMember(t *testing.T) {
@@ -77,7 +95,7 @@ func TestGetTeam(t *testing.T) {
 	testSuccess := func(orgID int64, name string) {
 		team, err := organization.GetTeam(db.DefaultContext, orgID, name)
 		require.NoError(t, err)
-		assert.EqualValues(t, orgID, team.OrgID)
+		assert.Equal(t, orgID, team.OrgID)
 		assert.Equal(t, name, team.Name)
 	}
 	testSuccess(3, "Owners")
@@ -95,7 +113,7 @@ func TestGetTeamByID(t *testing.T) {
 	testSuccess := func(teamID int64) {
 		team, err := organization.GetTeamByID(db.DefaultContext, teamID)
 		require.NoError(t, err)
-		assert.EqualValues(t, teamID, team.ID)
+		assert.Equal(t, teamID, team.ID)
 	}
 	testSuccess(1)
 	testSuccess(2)
@@ -163,7 +181,7 @@ func TestGetUserOrgTeams(t *testing.T) {
 		teams, err := organization.GetUserOrgTeams(db.DefaultContext, orgID, userID)
 		require.NoError(t, err)
 		for _, team := range teams {
-			assert.EqualValues(t, orgID, team.OrgID)
+			assert.Equal(t, orgID, team.OrgID)
 			unittest.AssertExistsAndLoadBean(t, &organization.TeamUser{TeamID: team.ID, UID: userID})
 		}
 	}
@@ -188,28 +206,8 @@ func TestHasTeamRepo(t *testing.T) {
 	test(2, 5, false)
 }
 
-func TestUsersInTeamsCount(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	test := func(teamIDs, userIDs []int64, expected int64) {
-		count, err := organization.UsersInTeamsCount(db.DefaultContext, teamIDs, userIDs)
-		require.NoError(t, err)
-		assert.Equal(t, expected, count)
-	}
-
-	test([]int64{2}, []int64{1, 2, 3, 4}, 1)          // only userid 2
-	test([]int64{1, 2, 3, 4, 5}, []int64{2, 5}, 2)    // userid 2,4
-	test([]int64{1, 2, 3, 4, 5}, []int64{2, 3, 5}, 3) // userid 2,4,5
-}
-
 func TestInconsistentOwnerTeam(t *testing.T) {
-	defer unittest.OverrideFixtures(
-		unittest.FixturesOptions{
-			Dir:  filepath.Join(setting.AppWorkPath, "models/fixtures/"),
-			Base: setting.AppWorkPath,
-			Dirs: []string{"models/organization/TestInconsistentOwnerTeam/"},
-		},
-	)()
+	defer unittest.OverrideFixtures("models/organization/TestInconsistentOwnerTeam")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{ID: 1000, TeamID: 1000, AccessMode: perm.AccessModeNone})

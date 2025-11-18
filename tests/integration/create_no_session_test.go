@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/routers"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/routers"
+	"forgejo.org/tests"
 
 	"code.forgejo.org/go-chi/session"
 	"github.com/stretchr/testify/assert"
@@ -53,16 +54,11 @@ func sessionFileExist(t *testing.T, tmpDir, sessionID string) bool {
 
 func TestSessionFileCreation(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-
-	oldSessionConfig := setting.SessionConfig.ProviderConfig
-	defer func() {
-		setting.SessionConfig.ProviderConfig = oldSessionConfig
-		testWebRoutes = routers.NormalRoutes()
-	}()
+	defer test.MockProtect(&setting.SessionConfig.ProviderConfig)()
+	defer test.MockProtect(&testWebRoutes)()
 
 	var config session.Options
-
-	err := json.Unmarshal([]byte(oldSessionConfig), &config)
+	err := json.Unmarshal([]byte(setting.SessionConfig.ProviderConfig), &config)
 	require.NoError(t, err)
 
 	config.Provider = "file"
@@ -98,9 +94,7 @@ func TestSessionFileCreation(t *testing.T) {
 		// We're not logged in so there should be no session
 		assert.False(t, sessionFileExist(t, tmpDir, sessionID))
 
-		doc := NewHTMLParser(t, resp.Body)
 		req = NewRequestWithValues(t, "POST", "/user/login", map[string]string{
-			"_csrf":     doc.GetCSRF(),
 			"user_name": "user2",
 			"password":  userPassword,
 		})

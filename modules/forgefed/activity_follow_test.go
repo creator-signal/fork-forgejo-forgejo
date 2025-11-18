@@ -1,0 +1,30 @@
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: MIT
+
+package forgefed
+
+import (
+	"testing"
+
+	"forgejo.org/modules/validation"
+
+	ap "github.com/go-ap/activitypub"
+	"github.com/stretchr/testify/assert"
+)
+
+func Test_NewForgeFollowValidation(t *testing.T) {
+	sut := ForgeFollow{}
+	sut.Type = "Follow"
+	sut.Actor = ap.IRI("example.org/alice")
+	sut.Object = ap.IRI("example.org/bob")
+
+	valid, err := validation.IsValid(sut)
+	assert.True(t, valid, "sut is invalid: %v\n", err)
+
+	sut = ForgeFollow{}
+	sut.Actor = ap.IRI("example.org/alice")
+	sut.Object = ap.IRI("example.org/bob")
+
+	valid, err = validation.IsValid(sut)
+	assert.False(t, valid, "sut is valid: %v\n", err)
+}

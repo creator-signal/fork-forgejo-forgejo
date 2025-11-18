@@ -6,9 +6,9 @@ package actions
 import (
 	"testing"
 
-	"code.gitea.io/gitea/modules/git"
-	api "code.gitea.io/gitea/modules/structs"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
+	"forgejo.org/modules/git"
+	api "forgejo.org/modules/structs"
+	webhook_module "forgejo.org/modules/webhook"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -149,6 +149,24 @@ func TestDetectMatched(t *testing.T) {
 			payload:        nil,
 			yamlOn:         "on: workflow_dispatch",
 			expected:       true,
+		},
+		{
+			desc:           "push to tag matches workflow with paths condition (should skip paths check)",
+			triggeredEvent: webhook_module.HookEventPush,
+			payload: &api.PushPayload{
+				Ref:    "refs/tags/v1.0.0",
+				Before: "0000000",
+				Commits: []*api.PayloadCommit{
+					{
+						ID:      "abcdef123456",
+						Added:   []string{"src/main.go"},
+						Message: "Release v1.0.0",
+					},
+				},
+			},
+			commit:   nil,
+			yamlOn:   "on:\n  push:\n    paths:\n      - src/**",
+			expected: true,
 		},
 	}
 

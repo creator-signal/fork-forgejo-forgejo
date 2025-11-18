@@ -5,7 +5,6 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -15,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/modules/test"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,7 +100,7 @@ func TestGitAttributeBareNonBare(t *testing.T) {
 		cloneStats, err := gitRepo.GitAttributes(commitID, "i-am-a-python.p", LinguistAttributes...)
 		require.NoError(t, err)
 
-		assert.EqualValues(t, cloneStats, bareStats)
+		assert.Equal(t, cloneStats, bareStats)
 		refStats := cloneStats
 
 		t.Run("GitAttributeChecker/"+commitID+"/SupportBare", func(t *testing.T) {
@@ -111,7 +110,7 @@ func TestGitAttributeBareNonBare(t *testing.T) {
 
 			bareStats, err := bareChecker.CheckPath("i-am-a-python.p")
 			require.NoError(t, err)
-			assert.EqualValues(t, refStats, bareStats)
+			assert.Equal(t, refStats, bareStats)
 		})
 		t.Run("GitAttributeChecker/"+commitID+"/NoBareSupport", func(t *testing.T) {
 			defer test.MockVariableValue(&SupportCheckAttrOnBare, false)()
@@ -122,7 +121,7 @@ func TestGitAttributeBareNonBare(t *testing.T) {
 			cloneStats, err := cloneChecker.CheckPath("i-am-a-python.p")
 			require.NoError(t, err)
 
-			assert.EqualValues(t, refStats, cloneStats)
+			assert.Equal(t, refStats, cloneStats)
 		})
 	}
 }
@@ -135,7 +134,7 @@ func TestGitAttributes(t *testing.T) {
 
 	attr, err := gitRepo.GitAttributes("8fee858da5796dfb37704761701bb8e800ad9ef3", "i-am-a-python.p", LinguistAttributes...)
 	require.NoError(t, err)
-	assert.EqualValues(t, map[string]GitAttribute{
+	assert.Equal(t, map[string]GitAttribute{
 		"gitlab-language":        "unspecified",
 		"linguist-detectable":    "unspecified",
 		"linguist-documentation": "unspecified",
@@ -146,7 +145,7 @@ func TestGitAttributes(t *testing.T) {
 
 	attr, err = gitRepo.GitAttributes("341fca5b5ea3de596dc483e54c2db28633cd2f97", "i-am-a-python.p", LinguistAttributes...)
 	require.NoError(t, err)
-	assert.EqualValues(t, map[string]GitAttribute{
+	assert.Equal(t, map[string]GitAttribute{
 		"gitlab-language":        "unspecified",
 		"linguist-detectable":    "unspecified",
 		"linguist-documentation": "unspecified",
@@ -177,13 +176,13 @@ func TestGitAttributeFirst(t *testing.T) {
 	t.Run("none is specified", func(t *testing.T) {
 		language, err := gitRepo.GitAttributeFirst("8fee858da5796dfb37704761701bb8e800ad9ef3", "i-am-a-python.p", "linguist-detectable", "gitlab-language", "non-existing")
 		require.NoError(t, err)
-		assert.Equal(t, "", language.String())
+		assert.Empty(t, language.String())
 	})
 }
 
 func TestGitAttributeStruct(t *testing.T) {
-	assert.Equal(t, "", GitAttribute("").String())
-	assert.Equal(t, "", GitAttribute("unspecified").String())
+	assert.Empty(t, GitAttribute("").String())
+	assert.Empty(t, GitAttribute("unspecified").String())
 
 	assert.Equal(t, "python", GitAttribute("python").String())
 
@@ -197,7 +196,7 @@ func TestGitAttributeCheckerError(t *testing.T) {
 		path := t.TempDir()
 
 		// we can't use unittest.CopyDir because of an import cycle (git.Init in unittest)
-		require.NoError(t, CopyFS(path, os.DirFS(filepath.Join(testReposDir, "language_stats_repo"))))
+		require.NoError(t, os.CopyFS(path, os.DirFS(filepath.Join(testReposDir, "language_stats_repo"))))
 
 		gitRepo, err := openRepositoryWithDefaultContext(path)
 		require.NoError(t, err)
@@ -251,10 +250,14 @@ func TestGitAttributeCheckerError(t *testing.T) {
 		cancel()
 
 		ac, err := gitRepo.GitAttributeChecker("8fee858da5796dfb37704761701bb8e800ad9ef3", "linguist-language")
-		require.NoError(t, err)
+		if SupportCheckAttrOnBare {
+			require.NoError(t, err)
 
-		_, err = ac.CheckPath("i-am-a-python.p")
-		require.Error(t, err)
+			_, err = ac.CheckPath("i-am-a-python.p")
+			require.Error(t, err)
+		} else {
+			require.Error(t, err)
+		}
 	})
 
 	t.Run("Cancelled/DuringRun", func(t *testing.T) {
@@ -318,34 +321,5 @@ func TestGitAttributeCheckerError(t *testing.T) {
 
 		_, err = ac.CheckPath("i-am-a-python.p")
 		require.ErrorIs(t, err, fs.ErrClosed)
-	})
-}
-
-// CopyFS is adapted from https://github.com/golang/go/issues/62484
-// which should be available with go1.23
-func CopyFS(dir string, fsys fs.FS) error {
-	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, _ error) error {
-		targ := filepath.Join(dir, filepath.FromSlash(path))
-		if d.IsDir() {
-			return os.MkdirAll(targ, 0o777)
-		}
-		r, err := fsys.Open(path)
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-		info, err := r.Stat()
-		if err != nil {
-			return err
-		}
-		w, err := os.OpenFile(targ, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666|info.Mode()&0o777)
-		if err != nil {
-			return err
-		}
-		if _, err := io.Copy(w, r); err != nil {
-			w.Close()
-			return fmt.Errorf("copying %s: %v", path, err)
-		}
-		return w.Close()
 	})
 }

@@ -4,7 +4,7 @@
 package swagger
 
 import (
-	api "code.gitea.io/gitea/modules/structs"
+	api "forgejo.org/modules/structs"
 )
 
 // ActivityPub
@@ -12,4 +12,11 @@ import (
 type swaggerResponseActivityPub struct {
 	// in:body
 	Body api.ActivityPub `json:"body"`
+}
+
+// Personfeed
+// swagger:response PersonFeed
+type swaggerResponsePersonFeed struct {
+	// in:body
+	Body []api.APPersonFollowItem `json:"body"`
 }

@@ -11,17 +11,17 @@ import (
 	"strings"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	api "code.gitea.io/gitea/modules/structs"
+	auth_model "forgejo.org/models/auth"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	api "forgejo.org/modules/structs"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPullCreate_CommitStatus(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testEditFileToNewBranch(t, session, "user1", "repo1", "master", "status1", "README.md", "status1")
@@ -29,7 +29,6 @@ func TestPullCreate_CommitStatus(t *testing.T) {
 		url := path.Join("user1", "repo1", "compare", "master...status1")
 		req := NewRequestWithValues(t, "POST", url,
 			map[string]string{
-				"_csrf": GetCSRF(t, session, url),
 				"title": "pull request from status1",
 			},
 		)
@@ -86,7 +85,7 @@ func TestPullCreate_CommitStatus(t *testing.T) {
 			commitURL, exists = doc.doc.Find("#commits-table tbody tr td.sha a").Last().Attr("href")
 			assert.True(t, exists)
 			assert.NotEmpty(t, commitURL)
-			assert.EqualValues(t, commitID, path.Base(commitURL))
+			assert.Equal(t, commitID, path.Base(commitURL))
 
 			cls, ok := doc.doc.Find("#commits-table tbody tr td.message .commit-status").Last().Attr("class")
 			assert.True(t, ok)
@@ -95,7 +94,7 @@ func TestPullCreate_CommitStatus(t *testing.T) {
 
 		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerName: "user1", Name: "repo1"})
 		css := unittest.AssertExistsAndLoadBean(t, &git_model.CommitStatusSummary{RepoID: repo1.ID, SHA: commitID})
-		assert.EqualValues(t, api.CommitStatusWarning, css.State)
+		assert.Equal(t, api.CommitStatusWarning, css.State)
 	})
 }
 
@@ -120,7 +119,7 @@ func TestPullCreate_EmptyChangesWithDifferentCommits(t *testing.T) {
 	// Reason: gitflow and merging master back into develop, where is high possibility, there are no changes
 	// but just commit saying "Merge branch". And this meta commit can be also tagged,
 	// so we need to have this meta commit also in develop branch.
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testEditFileToNewBranch(t, session, "user1", "repo1", "master", "status1", "README.md", "status1")
@@ -129,7 +128,6 @@ func TestPullCreate_EmptyChangesWithDifferentCommits(t *testing.T) {
 		url := path.Join("user1", "repo1", "compare", "master...status1")
 		req := NewRequestWithValues(t, "POST", url,
 			map[string]string{
-				"_csrf": GetCSRF(t, session, url),
 				"title": "pull request from status1",
 			},
 		)
@@ -145,14 +143,13 @@ func TestPullCreate_EmptyChangesWithDifferentCommits(t *testing.T) {
 }
 
 func TestPullCreate_EmptyChangesWithSameCommits(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testCreateBranch(t, session, "user1", "repo1", "branch/master", "status1", http.StatusSeeOther)
 		url := path.Join("user1", "repo1", "compare", "master...status1")
 		req := NewRequestWithValues(t, "POST", url,
 			map[string]string{
-				"_csrf": GetCSRF(t, session, url),
 				"title": "pull request from status1",
 			},
 		)

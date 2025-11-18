@@ -7,8 +7,8 @@ package convert
 import (
 	"strings"
 
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
 )
 
 // ToCorrectPageSize makes sure page size is in allowed range.
@@ -38,6 +38,8 @@ func ToGitServiceType(value string) structs.GitServiceType {
 		return structs.GitBucketService
 	case "forgejo":
 		return structs.ForgejoService
+	case "pagure":
+		return structs.PagureService
 	default:
 		return structs.PlainGitService
 	}

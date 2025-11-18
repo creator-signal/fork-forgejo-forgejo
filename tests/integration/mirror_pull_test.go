@@ -1,23 +1,25 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
 
 import (
-	"context"
+	"net/http"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/migration"
-	mirror_service "code.gitea.io/gitea/services/mirror"
-	release_service "code.gitea.io/gitea/services/release"
-	repo_service "code.gitea.io/gitea/services/repository"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/migration"
+	forgejo_context "forgejo.org/services/context"
+	mirror_service "forgejo.org/services/mirror"
+	release_service "forgejo.org/services/release"
+	repo_service "forgejo.org/services/repository"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,7 +52,7 @@ func TestMirrorPull(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, mirrorRepo.IsMirror, "expected pull-mirror repo to be marked as a mirror immediately after its creation")
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	mirror, err := repo_service.MigrateRepositoryGitData(ctx, user, mirrorRepo, opts, nil)
 	require.NoError(t, err)
@@ -89,7 +91,7 @@ func TestMirrorPull(t *testing.T) {
 
 	count, err := db.Count[repo_model.Release](db.DefaultContext, findOptions)
 	require.NoError(t, err)
-	assert.EqualValues(t, initCount+1, count)
+	assert.Equal(t, initCount+1, count)
 
 	release, err := repo_model.GetRelease(db.DefaultContext, repo.ID, "v0.2")
 	require.NoError(t, err)
@@ -100,5 +102,19 @@ func TestMirrorPull(t *testing.T) {
 
 	count, err = db.Count[repo_model.Release](db.DefaultContext, findOptions)
 	require.NoError(t, err)
-	assert.EqualValues(t, initCount, count)
+	assert.Equal(t, initCount, count)
+}
+
+func TestPullMirrorRedactCredentials(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestPullMirrorRedactCredentials")()
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user2")
+	session.MakeRequest(t, NewRequestWithValues(t, "POST", "/user2/repo1001/settings", map[string]string{
+		"action": "mirror-sync",
+	}), http.StatusSeeOther)
+
+	flashCookie := session.GetCookie(forgejo_context.CookieNameFlash)
+	assert.NotNil(t, flashCookie)
+	assert.Equal(t, "info%3DPulling%2Bchanges%2Bfrom%2Bthe%2Bremote%2Bhttps%253A%252F%252Fexample.com%252Fexample%252Fexample.git%2Bat%2Bthe%2Bmoment.", flashCookie.Value)
 }

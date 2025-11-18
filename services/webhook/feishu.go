@@ -10,12 +10,12 @@ import (
 	"net/http"
 	"strings"
 
-	webhook_model "code.gitea.io/gitea/models/webhook"
-	"code.gitea.io/gitea/modules/git"
-	api "code.gitea.io/gitea/modules/structs"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/webhook/shared"
+	webhook_model "forgejo.org/models/webhook"
+	"forgejo.org/modules/git"
+	api "forgejo.org/modules/structs"
+	webhook_module "forgejo.org/modules/webhook"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/webhook/shared"
 )
 
 type feishuHandler struct{}
@@ -187,6 +187,12 @@ func (fc feishuConvertor) Release(p *api.ReleasePayload) (FeishuPayload, error) 
 
 func (fc feishuConvertor) Package(p *api.PackagePayload) (FeishuPayload, error) {
 	text, _ := getPackagePayloadInfo(p, noneLinkFormatter, true)
+
+	return newFeishuTextPayload(text), nil
+}
+
+func (fc feishuConvertor) Action(p *api.ActionPayload) (FeishuPayload, error) {
+	text, _ := getActionPayloadInfo(p, noneLinkFormatter)
 
 	return newFeishuTextPayload(text), nil
 }

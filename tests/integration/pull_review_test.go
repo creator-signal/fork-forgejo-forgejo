@@ -1,31 +1,38 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
 
 import (
-	"context"
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/gitrepo"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/test"
-	issue_service "code.gitea.io/gitea/services/issue"
-	repo_service "code.gitea.io/gitea/services/repository"
-	files_service "code.gitea.io/gitea/services/repository/files"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/test"
+	issue_service "forgejo.org/services/issue"
+	"forgejo.org/services/mailer"
+	repo_service "forgejo.org/services/repository"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -65,15 +72,13 @@ func loadComment(t *testing.T, commentID string) *issues_model.Comment {
 }
 
 func TestPullView_SelfReviewNotification(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		user1Session := loginUser(t, "user1")
 		user2Session := loginUser(t, "user2")
 
-		user1csrf := GetCSRF(t, user1Session, "/")
-		oldUser1NotificationCount := getUserNotificationCount(t, user1Session, user1csrf)
+		oldUser1NotificationCount := getUserNotificationCount(t, user1Session)
 
-		user2csrf := GetCSRF(t, user2Session, "/")
-		oldUser2NotificationCount := getUserNotificationCount(t, user2Session, user2csrf)
+		oldUser2NotificationCount := getUserNotificationCount(t, user2Session)
 
 		user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -92,23 +97,16 @@ func TestPullView_SelfReviewNotification(t *testing.T) {
 		require.NoError(t, err)
 
 		// create a new branch to prepare for pull request
-		_, err = files_service.ChangeRepoFiles(db.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
-			NewBranch: "codeowner-basebranch",
-			Files: []*files_service.ChangeRepoFile{
-				{
-					Operation:     "update",
-					TreePath:      "README.md",
-					ContentReader: strings.NewReader("# This is a new project\n"),
-				},
-			},
-		})
+		err = updateFileInBranch(user2, repo, "README.md", "codeowner-basebranch",
+			strings.NewReader("# This is a new project\n"),
+		)
 		require.NoError(t, err)
 
 		// Create a pull request.
 		resp := testPullCreate(t, user2Session, "user2", "test_reviewer", false, repo.DefaultBranch, "codeowner-basebranch", "Test Pull Request")
 		prURL := test.RedirectURL(resp)
 		elem := strings.Split(prURL, "/")
-		assert.EqualValues(t, "pulls", elem[3])
+		assert.Equal(t, "pulls", elem[3])
 
 		req := NewRequest(t, http.MethodGet, prURL)
 		resp = MakeRequest(t, req, http.StatusOK)
@@ -117,17 +115,14 @@ func TestPullView_SelfReviewNotification(t *testing.T) {
 		issueID, ok := doc.Find(attributeFilter).Attr("data-issue-id")
 		assert.True(t, ok, "doc must contain data-issue-id")
 
-		user1csrf = GetCSRF(t, user1Session, "/")
-		testAssignReviewer(t, user1Session, user1csrf, user2.Name, repo.Name, issueID, "1", http.StatusOK)
+		testAssignReviewer(t, user1Session, user2.Name, repo.Name, issueID, "1", http.StatusOK)
 
 		// both user notification should keep the same notification count since
 		// user2 added itself as reviewer.
-		user1csrf = GetCSRF(t, user1Session, "/")
-		notificationCount := getUserNotificationCount(t, user1Session, user1csrf)
+		notificationCount := getUserNotificationCount(t, user1Session)
 		assert.Equal(t, oldUser1NotificationCount, notificationCount)
 
-		user2csrf = GetCSRF(t, user2Session, "/")
-		notificationCount = getUserNotificationCount(t, user2Session, user2csrf)
+		notificationCount = getUserNotificationCount(t, user2Session)
 		assert.Equal(t, oldUser2NotificationCount, notificationCount)
 	})
 }
@@ -145,7 +140,6 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		resp := session.MakeRequest(t, req, http.StatusOK)
 		doc := NewHTMLParser(t, resp.Body)
 		req = NewRequestWithValues(t, "POST", "/user2/repo1/pulls/3/files/reviews/comments", map[string]string{
-			"_csrf":            doc.GetInputValueByName("_csrf"),
 			"origin":           doc.GetInputValueByName("origin"),
 			"latest_commit_id": doc.GetInputValueByName("latest_commit_id"),
 			"side":             "proposed",
@@ -160,7 +154,6 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		session.MakeRequest(t, req, http.StatusOK)
 
 		req = NewRequestWithValues(t, "POST", "/user2/repo1/pulls/3/files/reviews/submit", map[string]string{
-			"_csrf":     doc.GetInputValueByName("_csrf"),
 			"commit_id": doc.GetInputValueByName("latest_commit_id"),
 			"content":   "looks good",
 			"type":      "comment",
@@ -178,13 +171,12 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		// (to invalidate it properly, one should push a commit which should trigger this logic,
 		// in the meantime, use this quick-and-dirty trick)
 		comment := loadComment(t, commentID)
-		require.NoError(t, issues_model.UpdateCommentInvalidate(context.Background(), &issues_model.Comment{
+		require.NoError(t, issues_model.UpdateCommentInvalidate(t.Context(), &issues_model.Comment{
 			ID:          comment.ID,
 			Invalidated: true,
 		}))
 
 		req = NewRequestWithValues(t, "POST", "/user2/repo1/issues/resolve_conversation", map[string]string{
-			"_csrf":      doc.GetInputValueByName("_csrf"),
 			"origin":     "timeline",
 			"action":     "Resolve",
 			"comment_id": commentID,
@@ -194,7 +186,7 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		// even on template error, the page returns HTTP 200
 		// count the comments to ensure success.
 		doc = NewHTMLParser(t, resp.Body)
-		assert.Len(t, doc.Find(`.comments > .comment`).Nodes, 1)
+		assert.Len(t, doc.Find(`.comment-code-cloud > .comment`).Nodes, 1)
 	})
 
 	t.Run("outdated and newer review (line 2)", func(t *testing.T) {
@@ -207,7 +199,6 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		{
 			// first (outdated) review
 			req = NewRequestWithValues(t, "POST", "/user2/repo1/pulls/3/files/reviews/comments", map[string]string{
-				"_csrf":            doc.GetInputValueByName("_csrf"),
 				"origin":           doc.GetInputValueByName("origin"),
 				"latest_commit_id": doc.GetInputValueByName("latest_commit_id"),
 				"side":             "proposed",
@@ -222,7 +213,6 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 			session.MakeRequest(t, req, http.StatusOK)
 
 			req = NewRequestWithValues(t, "POST", "/user2/repo1/pulls/3/files/reviews/submit", map[string]string{
-				"_csrf":     doc.GetInputValueByName("_csrf"),
 				"commit_id": doc.GetInputValueByName("latest_commit_id"),
 				"content":   "looks good",
 				"type":      "comment",
@@ -240,7 +230,7 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 			// (to invalidate it properly, one should push a commit which should trigger this logic,
 			// in the meantime, use this quick-and-dirty trick)
 			comment := loadComment(t, commentID)
-			require.NoError(t, issues_model.UpdateCommentInvalidate(context.Background(), &issues_model.Comment{
+			require.NoError(t, issues_model.UpdateCommentInvalidate(t.Context(), &issues_model.Comment{
 				ID:          comment.ID,
 				Invalidated: true,
 			}))
@@ -255,7 +245,6 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 			// second (up-to-date) review on the same line
 			// make a second review
 			req = NewRequestWithValues(t, "POST", "/user2/repo1/pulls/3/files/reviews/comments", map[string]string{
-				"_csrf":            doc.GetInputValueByName("_csrf"),
 				"origin":           doc.GetInputValueByName("origin"),
 				"latest_commit_id": doc.GetInputValueByName("latest_commit_id"),
 				"side":             "proposed",
@@ -270,7 +259,6 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 			session.MakeRequest(t, req, http.StatusOK)
 
 			req = NewRequestWithValues(t, "POST", "/user2/repo1/pulls/3/files/reviews/submit", map[string]string{
-				"_csrf":     doc.GetInputValueByName("_csrf"),
 				"commit_id": doc.GetInputValueByName("latest_commit_id"),
 				"content":   "looks better",
 				"type":      "comment",
@@ -301,7 +289,6 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		}
 
 		req = NewRequestWithValues(t, "POST", "/user2/repo1/issues/resolve_conversation", map[string]string{
-			"_csrf":      doc.GetInputValueByName("_csrf"),
 			"origin":     "timeline",
 			"action":     "Resolve",
 			"comment_id": commentID,
@@ -311,7 +298,7 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		// even on template error, the page returns HTTP 200
 		// count the comments to ensure success.
 		doc = NewHTMLParser(t, resp.Body)
-		comments := doc.Find(`.comments > .comment`)
+		comments := doc.Find(`.comment-code-cloud > .comment`)
 		assert.Len(t, comments.Nodes, 1) // the outdated comment belongs to another review and should not be shown
 	})
 
@@ -343,13 +330,13 @@ func TestPullView_ResolveInvalidatedReviewComment(t *testing.T) {
 		resp := session.MakeRequest(t, req, http.StatusOK)
 
 		doc := NewHTMLParser(t, resp.Body)
-		comments := doc.Find(`.comments > .comment`)
+		comments := doc.Find(`.comment-code-cloud > .comment`)
 		assert.Len(t, comments.Nodes, 3) // 1 comment on line 1 + 2 comments on line 3
 	})
 }
 
 func TestPullView_CodeOwner(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "test_codeowner", nil, nil, []*files_service.ChangeRepoFile{
@@ -362,17 +349,12 @@ func TestPullView_CodeOwner(t *testing.T) {
 		defer f()
 
 		t.Run("First Pull Request", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
 			// create a new branch to prepare for pull request
-			_, err := files_service.ChangeRepoFiles(db.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
-				NewBranch: "codeowner-basebranch",
-				Files: []*files_service.ChangeRepoFile{
-					{
-						Operation:     "update",
-						TreePath:      "README.md",
-						ContentReader: strings.NewReader("# This is a new project\n"),
-					},
-				},
-			})
+			err := updateFileInBranch(user2, repo, "README.md", "codeowner-basebranch",
+				strings.NewReader("# This is a new project\n"),
+			)
 			require.NoError(t, err)
 
 			// Create a pull request.
@@ -387,39 +369,28 @@ func TestPullView_CodeOwner(t *testing.T) {
 			require.NoError(t, err)
 			prUpdated1 := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pr.ID})
 			require.NoError(t, prUpdated1.LoadIssue(db.DefaultContext))
-			assert.EqualValues(t, "[WIP] Test Pull Request", prUpdated1.Issue.Title)
+			assert.Equal(t, "[WIP] Test Pull Request", prUpdated1.Issue.Title)
 
 			err = issue_service.ChangeTitle(db.DefaultContext, prUpdated1.Issue, user2, "Test Pull Request2")
 			require.NoError(t, err)
 			prUpdated2 := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pr.ID})
 			require.NoError(t, prUpdated2.LoadIssue(db.DefaultContext))
-			assert.EqualValues(t, "Test Pull Request2", prUpdated2.Issue.Title)
+			assert.Equal(t, "Test Pull Request2", prUpdated2.Issue.Title)
 		})
 
 		// change the default branch CODEOWNERS file to change README.md's codeowner
-		_, err := files_service.ChangeRepoFiles(db.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
-			Files: []*files_service.ChangeRepoFile{
-				{
-					Operation:     "update",
-					TreePath:      "CODEOWNERS",
-					ContentReader: strings.NewReader("README.md @user8\n"),
-				},
-			},
-		})
+		err := updateFileInBranch(user2, repo, "CODEOWNERS", "",
+			strings.NewReader("README.md @user8\n"),
+		)
 		require.NoError(t, err)
 
 		t.Run("Second Pull Request", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
 			// create a new branch to prepare for pull request
-			_, err = files_service.ChangeRepoFiles(db.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
-				NewBranch: "codeowner-basebranch2",
-				Files: []*files_service.ChangeRepoFile{
-					{
-						Operation:     "update",
-						TreePath:      "README.md",
-						ContentReader: strings.NewReader("# This is a new project2\n"),
-					},
-				},
-			})
+			err := updateFileInBranch(user2, repo, "README.md", "codeowner-basebranch2",
+				strings.NewReader("# This is a new project2\n"),
+			)
 			require.NoError(t, err)
 
 			// Create a pull request.
@@ -431,6 +402,8 @@ func TestPullView_CodeOwner(t *testing.T) {
 		})
 
 		t.Run("Forked Repo Pull Request", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
 			user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
 			forkedRepo, err := repo_service.ForkRepositoryAndUpdates(db.DefaultContext, user2, user5, repo_service.ForkRepoOptions{
 				BaseRepo: repo,
@@ -439,16 +412,9 @@ func TestPullView_CodeOwner(t *testing.T) {
 			require.NoError(t, err)
 
 			// create a new branch to prepare for pull request
-			_, err = files_service.ChangeRepoFiles(db.DefaultContext, forkedRepo, user5, &files_service.ChangeRepoFilesOptions{
-				NewBranch: "codeowner-basebranch-forked",
-				Files: []*files_service.ChangeRepoFile{
-					{
-						Operation:     "update",
-						TreePath:      "README.md",
-						ContentReader: strings.NewReader("# This is a new forked project\n"),
-					},
-				},
-			})
+			err = updateFileInBranch(user5, forkedRepo, "README.md", "codeowner-basebranch-forked",
+				strings.NewReader("# This is a new forked project\n"),
+			)
 			require.NoError(t, err)
 
 			session := loginUser(t, "user5")
@@ -469,7 +435,7 @@ func TestPullView_CodeOwner(t *testing.T) {
 }
 
 func TestPullView_GivenApproveOrRejectReviewOnClosedPR(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		user1Session := loginUser(t, "user1")
 		user2Session := loginUser(t, "user2")
 
@@ -483,11 +449,13 @@ func TestPullView_GivenApproveOrRejectReviewOnClosedPR(t *testing.T) {
 		defer baseGitRepo.Close()
 
 		t.Run("Submit approve/reject review on merged PR", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
 			// Create a merged PR (made by user1) in the upstream repo1.
 			testEditFile(t, user1Session, "user1", "repo1", "master", "README.md", "Hello, World (Edited)\n")
 			resp := testPullCreate(t, user1Session, "user1", "repo1", false, "master", "master", "This is a pull title")
 			elem := strings.Split(test.RedirectURL(resp), "/")
-			assert.EqualValues(t, "pulls", elem[3])
+			assert.Equal(t, "pulls", elem[3])
 			testPullMerge(t, user1Session, elem[1], elem[2], elem[4], repo_model.MergeStyleMerge, false)
 
 			// Get the commit SHA
@@ -500,25 +468,22 @@ func TestPullView_GivenApproveOrRejectReviewOnClosedPR(t *testing.T) {
 			sha, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
 			require.NoError(t, err)
 
-			// Grab the CSRF token.
-			req := NewRequest(t, "GET", path.Join(elem[1], elem[2], "pulls", elem[4]))
-			resp = user2Session.MakeRequest(t, req, http.StatusOK)
-			htmlDoc := NewHTMLParser(t, resp.Body)
-
 			// Submit an approve review on the PR.
-			testSubmitReview(t, user2Session, htmlDoc.GetCSRF(), "user2", "repo1", elem[4], sha, "approve", http.StatusOK)
+			testSubmitReview(t, user2Session, "user2", "repo1", elem[4], sha, "approve", http.StatusOK)
 
 			// Submit a reject review on the PR.
-			testSubmitReview(t, user2Session, htmlDoc.GetCSRF(), "user2", "repo1", elem[4], sha, "reject", http.StatusOK)
+			testSubmitReview(t, user2Session, "user2", "repo1", elem[4], sha, "reject", http.StatusOK)
 		})
 
 		t.Run("Submit approve/reject review on closed PR", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
 			// Created a closed PR (made by user1) in the upstream repo1.
 			testEditFileToNewBranch(t, user1Session, "user1", "repo1", "master", "a-test-branch", "README.md", "Hello, World (Edited...again)\n")
 			resp := testPullCreate(t, user1Session, "user1", "repo1", false, "master", "a-test-branch", "This is a pull title")
 			elem := strings.Split(test.RedirectURL(resp), "/")
-			assert.EqualValues(t, "pulls", elem[3])
-			testIssueClose(t, user1Session, elem[1], elem[2], elem[4])
+			assert.Equal(t, "pulls", elem[3])
+			testIssueClose(t, user1Session, elem[1], elem[2], elem[4], true)
 
 			// Get the commit SHA
 			pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{
@@ -530,32 +495,111 @@ func TestPullView_GivenApproveOrRejectReviewOnClosedPR(t *testing.T) {
 			sha, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
 			require.NoError(t, err)
 
-			// Grab the CSRF token.
-			req := NewRequest(t, "GET", path.Join(elem[1], elem[2], "pulls", elem[4]))
-			resp = user2Session.MakeRequest(t, req, http.StatusOK)
-			htmlDoc := NewHTMLParser(t, resp.Body)
-
 			// Submit an approve review on the PR.
-			testSubmitReview(t, user2Session, htmlDoc.GetCSRF(), "user2", "repo1", elem[4], sha, "approve", http.StatusOK)
+			testSubmitReview(t, user2Session, "user2", "repo1", elem[4], sha, "approve", http.StatusOK)
 
 			// Submit a reject review on the PR.
-			testSubmitReview(t, user2Session, htmlDoc.GetCSRF(), "user2", "repo1", elem[4], sha, "reject", http.StatusOK)
+			testSubmitReview(t, user2Session, "user2", "repo1", elem[4], sha, "reject", http.StatusOK)
 		})
 	})
 }
 
-func testNofiticationCount(t *testing.T, session *TestSession, csrf string, expectedSubmitStatus int) *httptest.ResponseRecorder {
-	options := map[string]string{
-		"_csrf": csrf,
-	}
+func TestPullReview_OldLatestCommitId(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	session := loginUser(t, "user1")
+
+	baseRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerName: "user2", Name: "repo1"})
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{BaseRepoID: baseRepo.ID, Index: 3})
+
+	baseGitRepo, err := gitrepo.OpenRepository(db.DefaultContext, baseRepo)
+	require.NoError(t, err)
+	defer baseGitRepo.Close()
+
+	headCommitSHA, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
+	require.NoError(t, err)
+
+	headCommit, err := baseGitRepo.GetCommit(headCommitSHA)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, headCommit.ParentCount(), 1)
+
+	parentCommit, err := headCommit.Parent(0)
+	require.NoError(t, err)
+	oldCommitSHA := parentCommit.ID.String()
+	require.NotEqual(t, headCommitSHA, oldCommitSHA)
+
+	req := NewRequest(t, "GET", "/user2/repo1/pulls/3/files/reviews/new_comment")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	doc := NewHTMLParser(t, resp.Body)
+
+	const content = "TestPullReview_OldLatestCommitId"
+	req = NewRequestWithValues(t, "POST", "/user2/repo1/pulls/3/files/reviews/comments", map[string]string{
+		"origin":           doc.GetInputValueByName("origin"),
+		"latest_commit_id": oldCommitSHA,
+		"side":             "proposed",
+		"line":             "2",
+		"path":             "iso-8859-1.txt",
+		"diff_start_cid":   doc.GetInputValueByName("diff_start_cid"),
+		"diff_end_cid":     doc.GetInputValueByName("diff_end_cid"),
+		"diff_base_cid":    doc.GetInputValueByName("diff_base_cid"),
+		"content":          content,
+		"single_review":    "true",
+	})
+	session.MakeRequest(t, req, http.StatusOK)
+
+	comment := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{IssueID: pr.IssueID, Content: content})
+	require.NotZero(t, comment.ReviewID)
+	assert.Equal(t, oldCommitSHA, comment.CommitSHA)
+	assert.NotEqual(t, headCommitSHA, comment.CommitSHA)
+
+	review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{ID: comment.ReviewID})
+	assert.Equal(t, issues_model.ReviewTypeComment, review.Type)
+	assert.Equal(t, oldCommitSHA, review.CommitID)
+	assert.NotEqual(t, headCommitSHA, review.CommitID)
+}
+
+func TestPullReviewInArchivedRepo(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
+		session := loginUser(t, "user2")
+
+		// Open a PR
+		testEditFileToNewBranch(t, session, "user2", "repo1", "master", "for-pr", "README.md", "Hi!\n")
+		resp := testPullCreate(t, session, "user2", "repo1", true, "master", "for-pr", "PR title")
+		elem := strings.Split(test.RedirectURL(resp), "/")
+
+		t.Run("Review box normally", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			// The "Finish review button" must be available
+			resp = session.MakeRequest(t, NewRequest(t, "GET", path.Join(elem[1], elem[2], "pulls", elem[4], "files")), http.StatusOK)
+			button := NewHTMLParser(t, resp.Body).Find("#review-box button")
+			assert.False(t, button.HasClass("disabled"))
+		})
+
+		t.Run("Review box in archived repo", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			// Archive the repo
+			resp = session.MakeRequest(t, NewRequestWithValues(t, "POST", path.Join(elem[1], elem[2], "settings"), map[string]string{
+				"action": "archive",
+			}), http.StatusSeeOther)
+
+			// The "Finish review button" must be disabled
+			resp = session.MakeRequest(t, NewRequest(t, "GET", path.Join(elem[1], elem[2], "pulls", elem[4], "files")), http.StatusOK)
+			button := NewHTMLParser(t, resp.Body).Find("#review-box button")
+			assert.True(t, button.HasClass("disabled"))
+		})
+	})
+}
+
+func testNotificationCount(t *testing.T, session *TestSession, expectedSubmitStatus int) *httptest.ResponseRecorder {
+	options := map[string]string{}
 
 	req := NewRequestWithValues(t, "GET", "/", options)
 	return session.MakeRequest(t, req, expectedSubmitStatus)
 }
 
-func testAssignReviewer(t *testing.T, session *TestSession, csrf, owner, repo, pullID, reviewer string, expectedSubmitStatus int) *httptest.ResponseRecorder {
+func testAssignReviewer(t *testing.T, session *TestSession, owner, repo, pullID, reviewer string, expectedSubmitStatus int) *httptest.ResponseRecorder {
 	options := map[string]string{
-		"_csrf":     csrf,
 		"action":    "attach",
 		"issue_ids": pullID,
 		"id":        reviewer,
@@ -566,9 +610,8 @@ func testAssignReviewer(t *testing.T, session *TestSession, csrf, owner, repo, p
 	return session.MakeRequest(t, req, expectedSubmitStatus)
 }
 
-func testSubmitReview(t *testing.T, session *TestSession, csrf, owner, repo, pullNumber, commitID, reviewType string, expectedSubmitStatus int) *httptest.ResponseRecorder {
+func testSubmitReview(t *testing.T, session *TestSession, owner, repo, pullNumber, commitID, reviewType string, expectedSubmitStatus int) *httptest.ResponseRecorder {
 	options := map[string]string{
-		"_csrf":     csrf,
 		"commit_id": commitID,
 		"content":   "test",
 		"type":      reviewType,
@@ -579,24 +622,415 @@ func testSubmitReview(t *testing.T, session *TestSession, csrf, owner, repo, pul
 	return session.MakeRequest(t, req, expectedSubmitStatus)
 }
 
-func testIssueClose(t *testing.T, session *TestSession, owner, repo, issueNumber string) *httptest.ResponseRecorder {
-	req := NewRequest(t, "GET", path.Join(owner, repo, "pulls", issueNumber))
-	resp := session.MakeRequest(t, req, http.StatusOK)
-
-	htmlDoc := NewHTMLParser(t, resp.Body)
+func testIssueClose(t *testing.T, session *TestSession, owner, repo, issueNumber string, isPull bool) *httptest.ResponseRecorder {
 	closeURL := path.Join(owner, repo, "issues", issueNumber, "comments")
-
-	options := map[string]string{
-		"_csrf":  htmlDoc.GetCSRF(),
+	req := NewRequestWithValues(t, "POST", closeURL, map[string]string{
 		"status": "close",
-	}
-
-	req = NewRequestWithValues(t, "POST", closeURL, options)
+	})
 	return session.MakeRequest(t, req, http.StatusOK)
 }
 
-func getUserNotificationCount(t *testing.T, session *TestSession, csrf string) string {
-	resp := testNofiticationCount(t, session, csrf, http.StatusOK)
+func getUserNotificationCount(t *testing.T, session *TestSession) string {
+	resp := testNotificationCount(t, session, http.StatusOK)
 	doc := NewHTMLParser(t, resp.Body)
 	return doc.Find(`.notification_count`).Text()
+}
+
+func TestPullRequestReplyMail(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestPullRequestReplyMail")()
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	session := loginUser(t, user.Name)
+
+	t.Run("Reply to pending review comment", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		called := false
+		defer test.MockVariableValue(&mailer.SendAsync, func(...*mailer.Message) {
+			called = true
+		})()
+
+		review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{ID: 1002}, "type = 0")
+
+		req := NewRequestWithValues(t, "POST", "/user2/repo1/pulls/2/files/reviews/comments", map[string]string{
+			"origin":  "diff",
+			"content": "Just a comment!",
+			"side":    "proposed",
+			"line":    "4",
+			"path":    "README.md",
+			"reply":   strconv.FormatInt(review.ID, 10),
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		assert.False(t, called)
+		unittest.AssertExistsIf(t, true, &issues_model.Comment{Content: "Just a comment!", ReviewID: review.ID, IssueID: 2})
+	})
+
+	t.Run("Start a review", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		called := false
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+			called = true
+		})()
+
+		req := NewRequestWithValues(t, "POST", "/user2/repo1/pulls/2/files/reviews/comments", map[string]string{
+			"origin":  "diff",
+			"content": "Notification time 2!",
+			"side":    "proposed",
+			"line":    "2",
+			"path":    "README.md",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		assert.False(t, called)
+		unittest.AssertExistsIf(t, true, &issues_model.Comment{Content: "Notification time 2!", IssueID: 2})
+	})
+
+	t.Run("Create a single comment", func(t *testing.T) {
+		t.Run("As a reply", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			called := false
+			defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+				assert.Len(t, msgs, 2)
+				SortMailerMessages(msgs)
+				assert.Equal(t, "user1@example.com", msgs[0].To)
+				assert.Equal(t, "Re: [user2/repo1] issue2 (PR #2)", msgs[0].Subject)
+				assert.Contains(t, msgs[0].Body, "Notification time!")
+				called = true
+			})()
+
+			review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{ID: 1001, Type: issues_model.ReviewTypeComment})
+
+			req := NewRequestWithValues(t, "POST", "/user2/repo1/pulls/2/files/reviews/comments", map[string]string{
+				"origin":  "diff",
+				"content": "Notification time!",
+				"side":    "proposed",
+				"line":    "3",
+				"path":    "README.md",
+				"reply":   strconv.FormatInt(review.ID, 10),
+			})
+			session.MakeRequest(t, req, http.StatusOK)
+
+			assert.True(t, called)
+			unittest.AssertExistsIf(t, true, &issues_model.Comment{Content: "Notification time!", ReviewID: review.ID, IssueID: 2})
+		})
+		t.Run("On a new line", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			called := false
+			defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+				assert.Len(t, msgs, 2)
+				SortMailerMessages(msgs)
+				assert.Equal(t, "user1@example.com", msgs[0].To)
+				assert.Equal(t, "Re: [user2/repo1] issue2 (PR #2)", msgs[0].Subject)
+				assert.Contains(t, msgs[0].Body, "Notification time 2!")
+				called = true
+			})()
+
+			req := NewRequestWithValues(t, "POST", "/user2/repo1/pulls/2/files/reviews/comments", map[string]string{
+				"origin":        "diff",
+				"content":       "Notification time 2!",
+				"side":          "proposed",
+				"line":          "5",
+				"path":          "README.md",
+				"single_review": "true",
+			})
+			session.MakeRequest(t, req, http.StatusOK)
+
+			assert.True(t, called)
+			unittest.AssertExistsIf(t, true, &issues_model.Comment{Content: "Notification time 2!", IssueID: 2})
+		})
+	})
+}
+
+func updateFileInBranch(user *user_model.User, repo *repo_model.Repository, treePath, newBranch string, content io.ReadSeeker) error {
+	oldBranch, err := gitrepo.GetDefaultBranch(git.DefaultContext, repo)
+	if err != nil {
+		return err
+	}
+
+	commitID, err := gitrepo.GetBranchCommitID(git.DefaultContext, repo, oldBranch)
+	if err != nil {
+		return err
+	}
+
+	opts := &files_service.ChangeRepoFilesOptions{
+		Files: []*files_service.ChangeRepoFile{
+			{
+				Operation:     "update",
+				TreePath:      treePath,
+				ContentReader: content,
+			},
+		},
+		OldBranch:    oldBranch,
+		NewBranch:    newBranch,
+		Author:       nil,
+		Committer:    nil,
+		LastCommitID: commitID,
+	}
+	_, err = files_service.ChangeRepoFiles(git.DefaultContext, repo, user, opts)
+	return err
+}
+
+func TestPullRequestStaleReview(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		session := loginUser(t, user2.Name)
+
+		// Create temporary repository.
+		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "",
+			[]unit_model.Type{unit_model.TypePullRequests}, nil,
+			[]*files_service.ChangeRepoFile{
+				{
+					Operation:     "create",
+					TreePath:      "FUNFACT",
+					ContentReader: strings.NewReader("Smithy was the runner up to be Forgejo's name"),
+				},
+			},
+		)
+		defer f()
+
+		clone := func(t *testing.T, clone string) string {
+			t.Helper()
+
+			dstPath := t.TempDir()
+			cloneURL, _ := url.Parse(clone)
+			cloneURL.User = url.UserPassword("user2", userPassword)
+			require.NoError(t, git.CloneWithArgs(t.Context(), nil, cloneURL.String(), dstPath, git.CloneRepoOptions{}))
+			doGitSetRemoteURL(dstPath, "origin", cloneURL)(t)
+
+			return dstPath
+		}
+
+		firstCommit := func(t *testing.T, dstPath string) string {
+			t.Helper()
+
+			require.NoError(t, os.WriteFile(path.Join(dstPath, "README.md"), []byte("## test content"), 0o600))
+			require.NoError(t, git.AddChanges(dstPath, true))
+			require.NoError(t, git.CommitChanges(dstPath, git.CommitChangesOptions{
+				Committer: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Author: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Message: "Add README.",
+			}))
+			stdout := &bytes.Buffer{}
+			require.NoError(t, git.NewCommand(t.Context(), "rev-parse", "HEAD").Run(&git.RunOpts{Dir: dstPath, Stdout: stdout}))
+
+			return strings.TrimSpace(stdout.String())
+		}
+
+		secondCommit := func(t *testing.T, dstPath string) {
+			require.NoError(t, os.WriteFile(path.Join(dstPath, "README.md"), []byte("## I prefer this heading"), 0o600))
+			require.NoError(t, git.AddChanges(dstPath, true))
+			require.NoError(t, git.CommitChanges(dstPath, git.CommitChangesOptions{
+				Committer: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Author: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Message: "Add README.",
+			}))
+		}
+
+		firstReview := func(t *testing.T, firstCommitID string, index int64) {
+			t.Helper()
+
+			resp := session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/%s/pulls/%d/files/reviews/new_comment", repo.FullName(), index)), http.StatusOK)
+			doc := NewHTMLParser(t, resp.Body)
+
+			req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/pulls/%d/files/reviews/comments", repo.FullName(), index), map[string]string{
+				"origin":           doc.GetInputValueByName("origin"),
+				"latest_commit_id": firstCommitID,
+				"side":             "proposed",
+				"line":             "1",
+				"path":             "FUNFACT",
+				"diff_start_cid":   doc.GetInputValueByName("diff_start_cid"),
+				"diff_end_cid":     doc.GetInputValueByName("diff_end_cid"),
+				"diff_base_cid":    doc.GetInputValueByName("diff_base_cid"),
+				"content":          "nitpicking comment",
+				"pending_review":   "",
+			})
+			session.MakeRequest(t, req, http.StatusOK)
+
+			req = NewRequestWithValues(t, "POST", "/"+repo.FullName()+"/pulls/1/files/reviews/submit", map[string]string{
+				"commit_id": firstCommitID,
+				"content":   "looks good",
+				"type":      "comment",
+			})
+			session.MakeRequest(t, req, http.StatusOK)
+		}
+
+		staleReview := func(t *testing.T, firstCommitID string, index int64) {
+			// Review based on the first commit, which is a stale review because the
+			// PR's head is at the seconnd commit.
+			req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/pulls/%d/files/reviews/submit", repo.FullName(), index), map[string]string{
+				"commit_id": firstCommitID,
+				"content":   "looks good",
+				"type":      "approve",
+			})
+			session.MakeRequest(t, req, http.StatusOK)
+		}
+
+		t.Run("Across repositories", func(t *testing.T) {
+			testRepoFork(t, session, "user2", repo.Name, "org3", "forked-repo")
+
+			// Clone it.
+			dstPath := clone(t, fmt.Sprintf("%sorg3/forked-repo.git", u.String()))
+
+			// Create first commit.
+			firstCommitID := firstCommit(t, dstPath)
+
+			// Create PR across repositories.
+			require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "main").Run(&git.RunOpts{Dir: dstPath}))
+			session.MakeRequest(t, NewRequestWithValues(t, "POST", repo.FullName()+"/compare/main...org3/forked-repo:main", map[string]string{
+				"title": "pull request",
+			}), http.StatusOK)
+			pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{Index: 1, BaseRepoID: repo.ID})
+
+			t.Run("Mark review as stale", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Create first review
+				firstReview(t, firstCommitID, pr.Index)
+
+				// Review is not stale.
+				review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID})
+				assert.False(t, review.Stale)
+
+				// Create second commit
+				secondCommit(t, dstPath)
+
+				// Push to PR.
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "main").Run(&git.RunOpts{Dir: dstPath}))
+
+				// Review is stale.
+				assert.Eventually(t, func() bool {
+					return unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID}).Stale == true
+				}, time.Second*10, time.Microsecond*100)
+			})
+
+			t.Run("Create stale review", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Review based on the first commit, which is a stale review because the
+				// PR's head is at the seconnd commit.
+				staleReview(t, firstCommitID, pr.Index)
+
+				// There does not exist a review that is not stale, because all reviews
+				// are based on the first commit and the PR's head is at the second commit.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = false")
+			})
+
+			t.Run("Mark unstale", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Force push the PR to the first commit.
+				require.NoError(t, git.NewCommand(t.Context(), "reset", "--hard", "HEAD~1").Run(&git.RunOpts{Dir: dstPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "--force-with-lease", "origin", "main").Run(&git.RunOpts{Dir: dstPath}))
+
+				// There does not exist a review that is stale, because all reviews
+				// are based on the first commit and thus all reviews are no longer marked
+				// as stale.
+				assert.Eventually(t, func() bool {
+					return !unittest.BeanExists(t, &issues_model.Review{IssueID: pr.IssueID}, "stale = true")
+				}, time.Second*10, time.Microsecond*100)
+			})
+
+			t.Run("Diff did not change", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Create a empty commit and push it to the PR.
+				require.NoError(t, git.NewCommand(t.Context(), "commit", "--allow-empty", "-m", "Empty commit").Run(&git.RunOpts{Dir: dstPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "main").Run(&git.RunOpts{Dir: dstPath}))
+
+				// There does not exist a review that is stale, because the diff did not
+				// change.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = true")
+			})
+		})
+
+		t.Run("AGit", func(t *testing.T) {
+			dstPath := clone(t, fmt.Sprintf("%suser2/%s.git", u.String(), repo.Name))
+
+			// Create first commit.
+			firstCommitID := firstCommit(t, dstPath)
+
+			// Create agit PR.
+			require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr").Run(&git.RunOpts{Dir: dstPath}))
+
+			pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{Index: 2, BaseRepoID: repo.ID})
+
+			t.Run("Mark review as stale", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				firstReview(t, firstCommitID, pr.Index)
+
+				// Review is not stale.
+				review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID})
+				assert.False(t, review.Stale)
+
+				// Create second commit
+				secondCommit(t, dstPath)
+
+				// Push to agit PR.
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr").Run(&git.RunOpts{Dir: dstPath}))
+
+				// Review is stale.
+				review = unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID})
+				assert.True(t, review.Stale)
+			})
+
+			t.Run("Create stale review", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Review based on the first commit, which is a stale review because the
+				// PR's head is at the seconnd commit.
+				staleReview(t, firstCommitID, pr.Index)
+
+				// There does not exist a review that is not stale, because all reviews
+				// are based on the first commit and the PR's head is at the second commit.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = false")
+			})
+
+			t.Run("Mark unstale", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Force push the PR to the first commit.
+				require.NoError(t, git.NewCommand(t.Context(), "reset", "--hard", "HEAD~1").Run(&git.RunOpts{Dir: dstPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr", "-o", "force-push").Run(&git.RunOpts{Dir: dstPath}))
+
+				// There does not exist a review that is stale, because all reviews
+				// are based on the first commit and thus all reviews are no longer marked
+				// as stale.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = true")
+			})
+
+			t.Run("Diff did not change", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// Create a empty commit and push it to the PR.
+				require.NoError(t, git.NewCommand(t.Context(), "commit", "--allow-empty", "-m", "Empty commit").Run(&git.RunOpts{Dir: dstPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "HEAD:refs/for/main", "-o", "topic=agit-pr").Run(&git.RunOpts{Dir: dstPath}))
+
+				// There does not exist a review that is stale, because the diff did not
+				// change.
+				unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID}, "stale = true")
+			})
+		})
+	})
 }

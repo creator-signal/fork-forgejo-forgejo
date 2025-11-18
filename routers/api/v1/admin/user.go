@@ -10,26 +10,26 @@ import (
 	"net/http"
 	"strconv"
 
-	"code.gitea.io/gitea/models"
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/auth/password"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/validation"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/user"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	asymkey_service "code.gitea.io/gitea/services/asymkey"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	"code.gitea.io/gitea/services/mailer"
-	user_service "code.gitea.io/gitea/services/user"
+	"forgejo.org/models"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/auth/password"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/validation"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/user"
+	"forgejo.org/routers/api/v1/utils"
+	asymkey_service "forgejo.org/services/asymkey"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	"forgejo.org/services/mailer"
+	user_service "forgejo.org/services/user"
 )
 
 func parseAuthSource(ctx *context.APIContext, u *user_model.User, sourceID int64) {
@@ -51,11 +51,11 @@ func parseAuthSource(ctx *context.APIContext, u *user_model.User, sourceID int64
 	u.LoginSource = source.ID
 }
 
-// CreateUser create a user
+// CreateUser create a user account
 func CreateUser(ctx *context.APIContext) {
 	// swagger:operation POST /admin/users admin adminCreateUser
 	// ---
-	// summary: Create a user
+	// summary: Create a user account
 	// consumes:
 	// - application/json
 	// produces:
@@ -140,7 +140,6 @@ func CreateUser(ctx *context.APIContext) {
 			user_model.IsErrEmailAlreadyUsed(err) ||
 			db.IsErrNameReserved(err) ||
 			db.IsErrNameCharsNotAllowed(err) ||
-			validation.IsErrEmailCharIsNotSupported(err) ||
 			validation.IsErrEmailInvalid(err) ||
 			db.IsErrNamePatternNotAllowed(err) {
 			ctx.Error(http.StatusUnprocessableEntity, "", err)
@@ -150,7 +149,7 @@ func CreateUser(ctx *context.APIContext) {
 		return
 	}
 
-	if !validation.IsEmailDomainAllowed(u.Email) {
+	if _, ok := validation.IsEmailDomainAllowed(u.Email); !ok {
 		ctx.Resp.Header().Add("X-Gitea-Warning", fmt.Sprintf("the domain of user email %s conflicts with EMAIL_DOMAIN_ALLOWLIST or EMAIL_DOMAIN_BLOCKLIST", u.Email))
 	}
 
@@ -197,7 +196,7 @@ func EditUser(ctx *context.APIContext) {
 	// If either LoginSource or LoginName is given, the other must be present too.
 	if form.SourceID != nil || form.LoginName != nil {
 		if form.SourceID == nil || form.LoginName == nil {
-			ctx.Error(http.StatusUnprocessableEntity, "LoginSourceAndLoginName", fmt.Errorf("source_id and login_name must be specified together"))
+			ctx.Error(http.StatusUnprocessableEntity, "LoginSourceAndLoginName", errors.New("source_id and login_name must be specified together"))
 			return
 		}
 	}
@@ -226,7 +225,7 @@ func EditUser(ctx *context.APIContext) {
 	if form.Email != nil {
 		if err := user_service.AdminAddOrSetPrimaryEmailAddress(ctx, ctx.ContextUser, *form.Email); err != nil {
 			switch {
-			case validation.IsErrEmailCharIsNotSupported(err), validation.IsErrEmailInvalid(err):
+			case validation.IsErrEmailInvalid(err):
 				ctx.Error(http.StatusBadRequest, "EmailInvalid", err)
 			case user_model.IsErrEmailAlreadyUsed(err):
 				ctx.Error(http.StatusBadRequest, "EmailUsed", err)
@@ -236,7 +235,7 @@ func EditUser(ctx *context.APIContext) {
 			return
 		}
 
-		if !validation.IsEmailDomainAllowed(*form.Email) {
+		if _, ok := validation.IsEmailDomainAllowed(*form.Email); !ok {
 			ctx.Resp.Header().Add("X-Gitea-Warning", fmt.Sprintf("the domain of user email %s conflicts with EMAIL_DOMAIN_ALLOWLIST or EMAIL_DOMAIN_BLOCKLIST", *form.Email))
 		}
 	}
@@ -255,6 +254,7 @@ func EditUser(ctx *context.APIContext) {
 		MaxRepoCreation:         optional.FromPtr(form.MaxRepoCreation),
 		AllowCreateOrganization: optional.FromPtr(form.AllowCreateOrganization),
 		IsRestricted:            optional.FromPtr(form.Restricted),
+		KeepEmailPrivate:        optional.FromPtr(form.HideEmail),
 	}
 
 	if err := user_service.UpdateUser(ctx, ctx.ContextUser, opts); err != nil {
@@ -275,7 +275,7 @@ func EditUser(ctx *context.APIContext) {
 func DeleteUser(ctx *context.APIContext) {
 	// swagger:operation DELETE /admin/users/{username} admin adminDeleteUser
 	// ---
-	// summary: Delete a user
+	// summary: Delete user account
 	// produces:
 	// - application/json
 	// parameters:
@@ -305,7 +305,7 @@ func DeleteUser(ctx *context.APIContext) {
 
 	// admin should not delete themself
 	if ctx.ContextUser.ID == ctx.Doer.ID {
-		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("you cannot delete yourself"))
+		ctx.Error(http.StatusUnprocessableEntity, "", errors.New("you cannot delete yourself"))
 		return
 	}
 
@@ -325,11 +325,11 @@ func DeleteUser(ctx *context.APIContext) {
 	ctx.Status(http.StatusNoContent)
 }
 
-// CreatePublicKey api for creating a public key to a user
+// CreatePublicKey adds an SSH public key to user's account
 func CreatePublicKey(ctx *context.APIContext) {
 	// swagger:operation POST /admin/users/{username}/keys admin adminCreatePublicKey
 	// ---
-	// summary: Add a public key on behalf of a user
+	// summary: Add an SSH public key to user's account
 	// consumes:
 	// - application/json
 	// produces:
@@ -357,11 +357,11 @@ func CreatePublicKey(ctx *context.APIContext) {
 	user.CreateUserPublicKey(ctx, *form, ctx.ContextUser.ID)
 }
 
-// DeleteUserPublicKey api for deleting a user's public key
+// DeleteUserPublicKey removes an SSH public key from user's account
 func DeleteUserPublicKey(ctx *context.APIContext) {
 	// swagger:operation DELETE /admin/users/{username}/keys/{id} admin adminDeleteUserPublicKey
 	// ---
-	// summary: Delete a user's public key
+	// summary: Remove a public key from user's account
 	// produces:
 	// - application/json
 	// parameters:
@@ -437,26 +437,6 @@ func SearchUsers(ctx *context.APIContext) {
 
 	listOptions := utils.GetListOptions(ctx)
 
-	sort := ctx.FormString("sort")
-	var orderBy db.SearchOrderBy
-
-	switch sort {
-	case "oldest":
-		orderBy = db.SearchOrderByOldest
-	case "newest":
-		orderBy = db.SearchOrderByNewest
-	case "alphabetically":
-		orderBy = db.SearchOrderByAlphabetically
-	case "reversealphabetically":
-		orderBy = db.SearchOrderByAlphabeticallyReverse
-	case "recentupdate":
-		orderBy = db.SearchOrderByRecentUpdated
-	case "leastupdate":
-		orderBy = db.SearchOrderByLeastUpdated
-	default:
-		orderBy = db.SearchOrderByAlphabetically
-	}
-
 	intSource, err := strconv.ParseInt(ctx.FormString("source_id"), 10, 64)
 	var sourceID optional.Option[int64]
 	if ctx.FormString("source_id") == "" || err != nil {
@@ -470,7 +450,7 @@ func SearchUsers(ctx *context.APIContext) {
 		Type:        user_model.UserTypeIndividual,
 		LoginName:   ctx.FormTrim("login_name"),
 		SourceID:    sourceID,
-		OrderBy:     orderBy,
+		OrderBy:     utils.GetDbSearchOrder(ctx),
 		ListOptions: listOptions,
 	})
 	if err != nil {
@@ -523,7 +503,7 @@ func RenameUser(ctx *context.APIContext) {
 	newName := web.GetForm(ctx).(*api.RenameUserOption).NewName
 
 	// Check if user name has been changed
-	if err := user_service.RenameUser(ctx, ctx.ContextUser, newName); err != nil {
+	if err := user_service.AdminRenameUser(ctx, ctx.ContextUser, newName); err != nil {
 		switch {
 		case user_model.IsErrUserAlreadyExist(err):
 			ctx.Error(http.StatusUnprocessableEntity, "", ctx.Tr("form.username_been_taken"))
@@ -540,5 +520,90 @@ func RenameUser(ctx *context.APIContext) {
 	}
 
 	log.Trace("User name changed: %s -> %s", oldName, newName)
+	ctx.Status(http.StatusNoContent)
+}
+
+// ListUserEmails lists all email addresses for a user
+func ListUserEmails(ctx *context.APIContext) {
+	// swagger:operation GET /admin/users/{username}/emails admin adminListUserEmails
+	// ---
+	// summary: List all email addresses for a user
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: username
+	//   in: path
+	//   description: username of user to get email addresses of
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/EmailList"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	if ctx.ContextUser.IsOrganization() {
+		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("%s is an organization not a user", ctx.ContextUser.Name))
+		return
+	}
+
+	emails, err := user_model.GetEmailAddresses(ctx, ctx.ContextUser.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetEmailAddresses", err)
+		return
+	}
+	apiEmails := make([]*api.Email, len(emails))
+	for i := range emails {
+		apiEmails[i] = convert.ToEmail(emails[i])
+	}
+	ctx.JSON(http.StatusOK, &apiEmails)
+}
+
+// DeleteUserEmails deletes email addresses from a user's account
+func DeleteUserEmails(ctx *context.APIContext) {
+	// swagger:operation DELETE /admin/users/{username}/emails admin adminDeleteUserEmails
+	// ---
+	// summary: Delete email addresses from a user's account
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: username
+	//   in: path
+	//   description: username of user to delete email addresses from
+	//   type: string
+	//   required: true
+	// - name: body
+	//   in: body
+	//   schema:
+	//     "$ref": "#/definitions/DeleteEmailOption"
+	// responses:
+	//   "204":
+	//     "$ref": "#/responses/empty"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
+
+	if ctx.ContextUser.IsOrganization() {
+		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("%s is an organization not a user", ctx.ContextUser.Name))
+		return
+	}
+
+	form := web.GetForm(ctx).(*api.DeleteEmailOption)
+	if len(form.Emails) == 0 {
+		ctx.Status(http.StatusNoContent)
+		return
+	}
+
+	if err := user_service.DeleteEmailAddresses(ctx, ctx.ContextUser, form.Emails); err != nil {
+		if user_model.IsErrPrimaryEmailCannotDelete(err) {
+			ctx.Error(http.StatusUnprocessableEntity, "DeleteEmailAddresses", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "DeleteEmailAddresses", err)
+		}
+		return
+	}
 	ctx.Status(http.StatusNoContent)
 }

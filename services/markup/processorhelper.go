@@ -5,18 +5,18 @@ package markup
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	"code.gitea.io/gitea/models/perm/access"
-	"code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	gitea_context "code.gitea.io/gitea/services/context"
-	file_service "code.gitea.io/gitea/services/repository/files"
+	"forgejo.org/models/perm/access"
+	"forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	"forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	app_context "forgejo.org/services/context"
+	file_service "forgejo.org/services/repository/files"
 )
 
 func ProcessorHelper() *markup.ProcessorHelper {
@@ -28,7 +28,7 @@ func ProcessorHelper() *markup.ProcessorHelper {
 				return false
 			}
 
-			giteaCtx, ok := ctx.(*gitea_context.Context)
+			giteaCtx, ok := ctx.(*app_context.Context)
 			if !ok {
 				// when using general context, use user's visibility to check
 				return mentionedUser.Visibility.IsPublic()
@@ -45,7 +45,7 @@ func ProcessorHelper() *markup.ProcessorHelper {
 
 			var user *user.User
 
-			giteaCtx, ok := ctx.(*gitea_context.Context)
+			giteaCtx, ok := ctx.(*app_context.Context)
 			if ok {
 				user = giteaCtx.Doer
 			}
@@ -55,7 +55,7 @@ func ProcessorHelper() *markup.ProcessorHelper {
 				return nil, err
 			}
 			if !perms.CanRead(unit.TypeCode) {
-				return nil, fmt.Errorf("cannot access repository code")
+				return nil, errors.New("cannot access repository code")
 			}
 
 			gitRepo, err := gitrepo.OpenRepository(ctx, repo)

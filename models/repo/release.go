@@ -13,13 +13,13 @@ import (
 	"strconv"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
@@ -77,7 +77,7 @@ type Release struct {
 	Target               string
 	TargetBehind         string `xorm:"-"` // to handle non-existing or empty target
 	Title                string
-	Sha1                 string `xorm:"VARCHAR(64)"`
+	Sha1                 string `xorm:"INDEX VARCHAR(64)"`
 	HideArchiveLinks     bool   `xorm:"NOT NULL DEFAULT false"`
 	NumCommits           int64
 	NumCommitsBehind     int64                            `xorm:"-"`
@@ -140,7 +140,7 @@ func (r *Release) LoadArchiveDownloadCount(ctx context.Context) error {
 	return err
 }
 
-// GetTotalDownloadCount returns the summary of all dowload count of files attached to the release
+// GetTotalDownloadCount returns the summary of all download count of files attached to the release
 func (r *Release) GetTotalDownloadCount(ctx context.Context) (int64, error) {
 	var archiveCount int64
 	if !r.HideArchiveLinks {
@@ -180,7 +180,11 @@ func (r *Release) HTMLURL() string {
 }
 
 // APIUploadURL the api url to upload assets to a release. release must have attributes loaded
-func (r *Release) APIUploadURL() string {
+// If `githubFormat` is true, then `{?name,label}` is added to match the Github API.
+func (r *Release) APIUploadURL(githubFormat bool) string {
+	if githubFormat {
+		return r.APIURL() + "/assets{?name,label}"
+	}
 	return r.APIURL() + "/assets"
 }
 
@@ -194,7 +198,7 @@ func (r *Release) SummaryCardURL() string {
 	return fmt.Sprintf("%s/releases/summary-card/%s", r.Repo.HTMLURL(), util.PathEscapeSegments(r.TagName))
 }
 
-// DisplayName retruns the name of the release
+// DisplayName returns the name of the release
 func (r *Release) DisplayName() string {
 	if r.IsTag && r.Title == "" {
 		return r.TagName
@@ -617,4 +621,18 @@ func InsertReleases(ctx context.Context, rels ...*Release) error {
 	}
 
 	return committer.Commit()
+}
+
+func FindTagsByCommitIDs(ctx context.Context, repoID int64, commitIDs ...string) (map[string][]*Release, error) {
+	releases := make([]*Release, 0, len(commitIDs))
+	if err := db.GetEngine(ctx).Where("repo_id=?", repoID).
+		In("sha1", commitIDs).
+		Find(&releases); err != nil {
+		return nil, err
+	}
+	res := make(map[string][]*Release, len(releases))
+	for _, r := range releases {
+		res[r.Sha1] = append(res[r.Sha1], r)
+	}
+	return res, nil
 }

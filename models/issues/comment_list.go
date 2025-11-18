@@ -6,11 +6,11 @@ package issues
 import (
 	"context"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/log"
 )
 
 // CommentList defines a list of comments
@@ -101,7 +101,7 @@ func (comments CommentList) loadMilestones(ctx context.Context) error {
 		return nil
 	}
 
-	milestoneMaps := make(map[int64]*Milestone, len(milestoneIDs))
+	milestones := make(map[int64]*Milestone, len(milestoneIDs))
 	left := len(milestoneIDs)
 	for left > 0 {
 		limit := db.DefaultMaxInSize
@@ -110,7 +110,7 @@ func (comments CommentList) loadMilestones(ctx context.Context) error {
 		}
 		err := db.GetEngine(ctx).
 			In("id", milestoneIDs[:limit]).
-			Find(&milestoneMaps)
+			Find(&milestones)
 		if err != nil {
 			return err
 		}
@@ -118,8 +118,8 @@ func (comments CommentList) loadMilestones(ctx context.Context) error {
 		milestoneIDs = milestoneIDs[limit:]
 	}
 
-	for _, issue := range comments {
-		issue.Milestone = milestoneMaps[issue.MilestoneID]
+	for _, comment := range comments {
+		comment.Milestone = milestones[comment.MilestoneID]
 	}
 	return nil
 }
@@ -140,7 +140,7 @@ func (comments CommentList) loadOldMilestones(ctx context.Context) error {
 		return nil
 	}
 
-	milestoneMaps := make(map[int64]*Milestone, len(milestoneIDs))
+	milestones := make(map[int64]*Milestone, len(milestoneIDs))
 	left := len(milestoneIDs)
 	for left > 0 {
 		limit := db.DefaultMaxInSize
@@ -149,7 +149,7 @@ func (comments CommentList) loadOldMilestones(ctx context.Context) error {
 		}
 		err := db.GetEngine(ctx).
 			In("id", milestoneIDs[:limit]).
-			Find(&milestoneMaps)
+			Find(&milestones)
 		if err != nil {
 			return err
 		}
@@ -157,8 +157,8 @@ func (comments CommentList) loadOldMilestones(ctx context.Context) error {
 		milestoneIDs = milestoneIDs[limit:]
 	}
 
-	for _, issue := range comments {
-		issue.OldMilestone = milestoneMaps[issue.MilestoneID]
+	for _, comment := range comments {
+		comment.OldMilestone = milestones[comment.OldMilestoneID]
 	}
 	return nil
 }

@@ -11,15 +11,16 @@ import (
 	"testing"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/modules/translation"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/translation"
+	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,6 @@ func createNewReleaseTarget(t *testing.T, session *TestSession, repoURL, tag, ti
 	assert.True(t, exists, "The template has changed")
 
 	postData := map[string]string{
-		"_csrf":      htmlDoc.GetCSRF(),
 		"tag_name":   tag,
 		"tag_target": target,
 		"title":      title,
@@ -64,19 +64,19 @@ func checkLatestReleaseAndCount(t *testing.T, session *TestSession, repoURL, ver
 
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	labelText := htmlDoc.doc.Find("#release-list > li .detail .label").First().Text()
-	assert.EqualValues(t, label, labelText)
+	assert.Equal(t, label, labelText)
 	titleText := htmlDoc.doc.Find("#release-list > li .detail h4 a").First().Text()
-	assert.EqualValues(t, version, titleText)
+	assert.Equal(t, version, titleText)
 
 	// Check release count in the counter on the Release/Tag switch, as well as that the tab is highlighted
 	if count < 10 { // Only check values less than 10, should be enough attempts before this test cracks
 		// 10 is the pagination limit, but the counter can have more than that
-		releaseTab := htmlDoc.doc.Find(".repository.releases .ui.compact.menu a.active.item[href$='/releases']")
+		releaseTab := htmlDoc.doc.Find(".repository.releases .switch a.active.item[href$='/releases']")
 		assert.Contains(t, releaseTab.Text(), strconv.Itoa(count)+" release") // Could be "1 release" or "4 releases"
 	}
 
 	releaseList := htmlDoc.doc.Find("#release-list > li")
-	assert.EqualValues(t, count, releaseList.Length())
+	assert.Equal(t, count, releaseList.Length())
 }
 
 func TestViewReleases(t *testing.T) {
@@ -85,9 +85,6 @@ func TestViewReleases(t *testing.T) {
 	session := loginUser(t, "user2")
 	req := NewRequest(t, "GET", "/user2/repo1/releases")
 	session.MakeRequest(t, req, http.StatusOK)
-
-	// if CI is too slow this test fail, so lets wait a bit
-	time.Sleep(time.Millisecond * 100)
 }
 
 func TestViewReleasesNoLogin(t *testing.T) {
@@ -117,27 +114,19 @@ func TestDeleteRelease(t *testing.T) {
 	session5 := loginUser(t, "user5")
 	otherRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerName: "user5", LowerName: "repo4"})
 
-	req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/releases/delete?id=%d", otherRepo.Link(), release.ID), map[string]string{
-		"_csrf": GetCSRF(t, session5, otherRepo.Link()),
-	})
+	req := NewRequest(t, "POST", fmt.Sprintf("%s/releases/delete?id=%d", otherRepo.Link(), release.ID))
 	session5.MakeRequest(t, req, http.StatusNotFound)
 
 	session := loginUser(t, "user2")
-	req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/releases/delete?id=%d", repo.Link(), release.ID), map[string]string{
-		"_csrf": GetCSRF(t, session, repo.Link()),
-	})
+	req = NewRequest(t, "POST", fmt.Sprintf("%s/releases/delete?id=%d", repo.Link(), release.ID))
 	session.MakeRequest(t, req, http.StatusOK)
 	release = unittest.AssertExistsAndLoadBean(t, &repo_model.Release{ID: release.ID})
 
 	if assert.True(t, release.IsTag) {
-		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/tags/delete?id=%d", otherRepo.Link(), release.ID), map[string]string{
-			"_csrf": GetCSRF(t, session5, otherRepo.Link()),
-		})
+		req = NewRequest(t, "POST", fmt.Sprintf("%s/tags/delete?id=%d", otherRepo.Link(), release.ID))
 		session5.MakeRequest(t, req, http.StatusNotFound)
 
-		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/tags/delete?id=%d", repo.Link(), release.ID), map[string]string{
-			"_csrf": GetCSRF(t, session, repo.Link()),
-		})
+		req = NewRequest(t, "POST", fmt.Sprintf("%s/tags/delete?id=%d", repo.Link(), release.ID))
 		session.MakeRequest(t, req, http.StatusOK)
 
 		unittest.AssertNotExistsBean(t, &repo_model.Release{ID: release.ID})
@@ -212,14 +201,14 @@ func TestViewReleaseListNoLogin(t *testing.T) {
 		commitsToMain = append(commitsToMain, s.Find(".ahead > a").Text())
 	})
 
-	assert.EqualValues(t, []string{
+	assert.Equal(t, []string{
 		"/user2/repo-release/releases/tag/empty-target-branch",
 		"/user2/repo-release/releases/tag/non-existing-target-branch",
 		"/user2/repo-release/releases/tag/v2.0",
 		"/user2/repo-release/releases/tag/v1.1",
 		"/user2/repo-release/releases/tag/v1.0",
 	}, links)
-	assert.EqualValues(t, []string{
+	assert.Equal(t, []string{
 		"1 commits", // like v1.1
 		"1 commits", // like v1.1
 		"0 commits",
@@ -237,8 +226,8 @@ func TestViewSingleReleaseNoLogin(t *testing.T) {
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	// check the "number of commits to main since this release"
 	releaseList := htmlDoc.doc.Find("#release-list .ahead > a")
-	assert.EqualValues(t, 1, releaseList.Length())
-	assert.EqualValues(t, "3 commits", releaseList.First().Text())
+	assert.Equal(t, 1, releaseList.Length())
+	assert.Equal(t, "3 commits", releaseList.First().Text())
 }
 
 func TestViewReleaseListLogin(t *testing.T) {
@@ -265,7 +254,7 @@ func TestViewReleaseListLogin(t *testing.T) {
 		links = append(links, link)
 	})
 
-	assert.EqualValues(t, []string{
+	assert.Equal(t, []string{
 		"/user2/repo1/releases/tag/draft-release",
 		"/user2/repo1/releases/tag/v1.0",
 		"/user2/repo1/releases/tag/v1.1",
@@ -296,7 +285,7 @@ func TestViewReleaseListKeyword(t *testing.T) {
 		links = append(links, link)
 	})
 
-	assert.EqualValues(t, []string{
+	assert.Equal(t, []string{
 		"/user2/repo1/releases/tag/v1.1",
 	}, links)
 }
@@ -330,7 +319,24 @@ func TestViewTagsList(t *testing.T) {
 		tagNames = append(tagNames, s.Find(".tag a.tw-flex.tw-items-center").Text())
 	})
 
-	assert.EqualValues(t, []string{"v1.0", "delete-tag", "v1.1"}, tagNames)
+	assert.Equal(t, []string{"v1.0", "delete-tag", "v1.1"}, tagNames)
+}
+
+func TestAttachmentTimestamp(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "user2/repo1/releases")
+	resp := MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+
+	var timeStamp int64 = 946684800
+	unittest.AssertExistsAndLoadBean(t, &repo_model.Attachment{
+		UUID:        "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a20",
+		CreatedUnix: timeutil.TimeStamp(timeStamp),
+	})
+
+	formattedTime := time.Unix(timeStamp, 0).Format(time.RFC3339)
+	htmlDoc.AssertElement(t, fmt.Sprintf("details.download relative-time[datetime='%s']", formattedTime), true)
 }
 
 func TestDownloadReleaseAttachment(t *testing.T) {
@@ -342,12 +348,44 @@ func TestDownloadReleaseAttachment(t *testing.T) {
 
 	url := repo.Link() + "/releases/download/v1.1/README.md"
 
+	// user2/repo2 is private and can't be accessed anonymously
 	req := NewRequest(t, "GET", url)
 	MakeRequest(t, req, http.StatusNotFound)
 
+	// But the owner can access it
 	req = NewRequest(t, "GET", url)
 	session := loginUser(t, "user2")
 	session.MakeRequest(t, req, http.StatusOK)
+}
+
+func TestReleaseAttachmentDownloadCounter(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	tests.PrepareAttachmentsStorage(t)
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
+	session := loginUser(t, "user2")
+	zipAttachmentLink := fmt.Sprintf("%s/archive/v1.1.zip", repo.Link())
+	gzAttachmentLink := fmt.Sprintf("%s/archive/v1.1.tar.gz", repo.Link())
+	counterSelector := "details.download > ul > li:has(a[href='%s']) span"
+
+	// Assert zero downloads initially
+	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("%s/releases", repo.Link())), http.StatusOK).Body)
+	zipDownloads := doc.Find(fmt.Sprintf(counterSelector, zipAttachmentLink)).Text()
+	gzDownloads := doc.Find(fmt.Sprintf(counterSelector, gzAttachmentLink)).Text()
+	assert.Contains(t, zipDownloads, "0 downloads")
+	assert.Contains(t, gzDownloads, "0 downloads")
+
+	// Generate downloads
+	session.MakeRequest(t, NewRequest(t, "GET", zipAttachmentLink), http.StatusOK)
+	session.MakeRequest(t, NewRequest(t, "GET", gzAttachmentLink), http.StatusOK)
+	session.MakeRequest(t, NewRequest(t, "GET", gzAttachmentLink), http.StatusOK)
+
+	// Check the new numbers
+	doc = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("%s/releases", repo.Link())), http.StatusOK).Body)
+	zipDownloads = doc.Find(fmt.Sprintf(counterSelector, zipAttachmentLink)).Text()
+	gzDownloads = doc.Find(fmt.Sprintf(counterSelector, gzAttachmentLink)).Text()
+	assert.Contains(t, zipDownloads, "1 download")
+	assert.Contains(t, gzDownloads, "2 downloads")
 }
 
 func TestReleaseHideArchiveLinksUI(t *testing.T) {

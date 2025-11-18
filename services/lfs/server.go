@@ -18,21 +18,21 @@ import (
 	"strconv"
 	"strings"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	auth_model "code.gitea.io/gitea/models/auth"
-	git_model "code.gitea.io/gitea/models/git"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	quota_model "code.gitea.io/gitea/models/quota"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/json"
-	lfs_module "code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/services/context"
+	actions_model "forgejo.org/models/actions"
+	auth_model "forgejo.org/models/auth"
+	git_model "forgejo.org/models/git"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	lfs_module "forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
+	"forgejo.org/services/context"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -163,11 +163,12 @@ func BatchHandler(ctx *context.Context) {
 	}
 
 	var isUpload bool
-	if br.Operation == "upload" {
+	switch br.Operation {
+	case "upload":
 		isUpload = true
-	} else if br.Operation == "download" {
+	case "download":
 		isUpload = false
-	} else {
+	default:
 		log.Trace("Attempt to BATCH with invalid operation: %s", br.Operation)
 		writeStatus(ctx, http.StatusBadRequest)
 		return
@@ -579,9 +580,6 @@ func authenticate(ctx *context.Context, repository *repo_model.Repository, autho
 }
 
 func handleLFSToken(ctx stdCtx.Context, tokenSHA string, target *repo_model.Repository, mode perm.AccessMode) (*user_model.User, error) {
-	if !strings.Contains(tokenSHA, ".") {
-		return nil, nil
-	}
 	token, err := jwt.ParseWithClaims(tokenSHA, &Claims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -589,20 +587,20 @@ func handleLFSToken(ctx stdCtx.Context, tokenSHA string, target *repo_model.Repo
 		return setting.LFS.JWTSecretBytes, nil
 	})
 	if err != nil {
-		return nil, nil
+		return nil, errors.New("invalid token")
 	}
 
 	claims, claimsOk := token.Claims.(*Claims)
 	if !token.Valid || !claimsOk {
-		return nil, fmt.Errorf("invalid token claim")
+		return nil, errors.New("invalid token claim")
 	}
 
 	if claims.RepoID != target.ID {
-		return nil, fmt.Errorf("invalid token claim")
+		return nil, errors.New("invalid token claim")
 	}
 
 	if mode == perm.AccessModeWrite && claims.Op != "upload" {
-		return nil, fmt.Errorf("invalid token claim")
+		return nil, errors.New("invalid token claim")
 	}
 
 	u, err := user_model.GetUserByID(ctx, claims.UserID)
@@ -615,12 +613,12 @@ func handleLFSToken(ctx stdCtx.Context, tokenSHA string, target *repo_model.Repo
 
 func parseToken(ctx stdCtx.Context, authorization string, target *repo_model.Repository, mode perm.AccessMode) (*user_model.User, error) {
 	if authorization == "" {
-		return nil, fmt.Errorf("no token")
+		return nil, errors.New("no token")
 	}
 
 	parts := strings.SplitN(authorization, " ", 2)
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("no token")
+		return nil, errors.New("no token")
 	}
 	tokenSHA := parts[1]
 	switch strings.ToLower(parts[0]) {
@@ -629,7 +627,7 @@ func parseToken(ctx stdCtx.Context, authorization string, target *repo_model.Rep
 	case "token":
 		return handleLFSToken(ctx, tokenSHA, target, mode)
 	}
-	return nil, fmt.Errorf("token not found")
+	return nil, errors.New("token not found")
 }
 
 func requireAuth(ctx *context.Context) {

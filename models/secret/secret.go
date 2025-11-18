@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"strings"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	actions_module "code.gitea.io/gitea/modules/actions"
-	"code.gitea.io/gitea/modules/log"
-	secret_module "code.gitea.io/gitea/modules/secret"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	actions_module "forgejo.org/modules/actions"
+	"forgejo.org/modules/keying"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
@@ -39,7 +38,7 @@ type Secret struct {
 	OwnerID     int64              `xorm:"INDEX UNIQUE(owner_repo_name) NOT NULL"`
 	RepoID      int64              `xorm:"INDEX UNIQUE(owner_repo_name) NOT NULL DEFAULT 0"`
 	Name        string             `xorm:"UNIQUE(owner_repo_name) NOT NULL"`
-	Data        string             `xorm:"LONGTEXT"` // encrypted data
+	Data        []byte             `xorm:"BLOB"` // encrypted data
 	CreatedUnix timeutil.TimeStamp `xorm:"created NOT NULL"`
 }
 
@@ -67,17 +66,21 @@ func InsertEncryptedSecret(ctx context.Context, ownerID, repoID int64, name, dat
 		return nil, fmt.Errorf("%w: ownerID and repoID cannot be both zero, global secrets are not supported", util.ErrInvalidArgument)
 	}
 
-	encrypted, err := secret_module.EncryptSecret(setting.SecretKey, data)
-	if err != nil {
-		return nil, err
-	}
 	secret := &Secret{
 		OwnerID: ownerID,
 		RepoID:  repoID,
 		Name:    strings.ToUpper(name),
-		Data:    encrypted,
 	}
-	return secret, db.Insert(ctx, secret)
+
+	return secret, db.WithTx(ctx, func(ctx context.Context) error {
+		if err := db.Insert(ctx, secret); err != nil {
+			return err
+		}
+
+		secret.SetSecret(data)
+		_, err := db.GetEngine(ctx).ID(secret.ID).Cols("data").Update(secret)
+		return err
+	})
 }
 
 func init() {
@@ -113,21 +116,8 @@ func (opts FindSecretsOptions) ToConds() builder.Cond {
 	return cond
 }
 
-// UpdateSecret changes org or user reop secret.
-func UpdateSecret(ctx context.Context, secretID int64, data string) error {
-	encrypted, err := secret_module.EncryptSecret(setting.SecretKey, data)
-	if err != nil {
-		return err
-	}
-
-	s := &Secret{
-		Data: encrypted,
-	}
-	affected, err := db.GetEngine(ctx).ID(secretID).Cols("data").Update(s)
-	if affected != 1 {
-		return ErrSecretNotFound{}
-	}
-	return err
+func (s *Secret) SetSecret(data string) {
+	s.Data = keying.ActionSecret.Encrypt([]byte(data), keying.ColumnAndID("data", s.ID))
 }
 
 func GetSecretsOfTask(ctx context.Context, task *actions_model.ActionTask) (map[string]string, error) {
@@ -155,13 +145,14 @@ func GetSecretsOfTask(ctx context.Context, task *actions_model.ActionTask) (map[
 		return nil, err
 	}
 
+	key := keying.ActionSecret
 	for _, secret := range append(ownerSecrets, repoSecrets...) {
-		v, err := secret_module.DecryptSecret(setting.SecretKey, secret.Data)
+		v, err := key.Decrypt(secret.Data, keying.ColumnAndID("data", secret.ID))
 		if err != nil {
-			log.Error("decrypt secret %v %q: %v", secret.ID, secret.Name, err)
+			log.Error("unable to decrypt secret[id=%d,name=%q]: %v", secret.ID, secret.Name, err)
 			return nil, err
 		}
-		secrets[secret.Name] = v
+		secrets[secret.Name] = string(v)
 	}
 
 	return secrets, nil

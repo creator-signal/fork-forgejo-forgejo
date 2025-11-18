@@ -5,12 +5,14 @@ package actions
 
 import (
 	"context"
+	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/container"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/translation"
+	webhook_module "forgejo.org/modules/webhook"
 
 	"xorm.io/builder"
 )
@@ -63,14 +65,15 @@ func (runs RunList) LoadRepos(ctx context.Context) error {
 
 type FindRunOptions struct {
 	db.ListOptions
-	RepoID        int64
-	OwnerID       int64
-	WorkflowID    string
-	Ref           string // the commit/tag/… that caused this workflow
-	TriggerUserID int64
-	TriggerEvent  webhook_module.HookEventType
-	Approved      bool // not util.OptionalBool, it works only when it's true
-	Status        []Status
+	RepoID           int64
+	OwnerID          int64
+	WorkflowID       string
+	Ref              string // the commit/tag/… that caused this workflow
+	TriggerUserID    int64
+	TriggerEvent     webhook_module.HookEventType
+	Approved         bool // not util.OptionalBool, it works only when it's true
+	Status           []Status
+	ConcurrencyGroup string
 }
 
 func (opts FindRunOptions) ToConds() builder.Cond {
@@ -99,6 +102,9 @@ func (opts FindRunOptions) ToConds() builder.Cond {
 	if opts.TriggerEvent != "" {
 		cond = cond.And(builder.Eq{"trigger_event": opts.TriggerEvent})
 	}
+	if opts.ConcurrencyGroup != "" {
+		cond = cond.And(builder.Eq{"concurrency_group": strings.ToLower(opts.ConcurrencyGroup)})
+	}
 	return cond
 }
 
@@ -112,14 +118,14 @@ type StatusInfo struct {
 }
 
 // GetStatusInfoList returns a slice of StatusInfo
-func GetStatusInfoList(ctx context.Context) []StatusInfo {
+func GetStatusInfoList(ctx context.Context, lang translation.Locale) []StatusInfo {
 	// same as those in aggregateJobStatus
 	allStatus := []Status{StatusSuccess, StatusFailure, StatusWaiting, StatusRunning}
 	statusInfoList := make([]StatusInfo, 0, 4)
 	for _, s := range allStatus {
 		statusInfoList = append(statusInfoList, StatusInfo{
 			Status:          int(s),
-			DisplayedStatus: s.String(),
+			DisplayedStatus: s.LocaleString(lang),
 		})
 	}
 	return statusInfoList

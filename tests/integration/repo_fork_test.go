@@ -12,16 +12,16 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/routers"
-	repo_service "code.gitea.io/gitea/services/repository"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/routers"
+	repo_service "forgejo.org/services/repository"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,7 +48,6 @@ func testRepoFork(t *testing.T, session *TestSession, ownerName, repoName, forkO
 	_, exists = htmlDoc.doc.Find(fmt.Sprintf(".owner.dropdown .item[data-value=\"%d\"]", forkOwner.ID)).Attr("data-value")
 	assert.True(t, exists, "Fork owner %q is not present in select box", forkOwnerName)
 	req = NewRequestWithValues(t, "POST", link, map[string]string{
-		"_csrf":     htmlDoc.GetCSRF(),
 		"uid":       fmt.Sprintf("%d", forkOwner.ID),
 		"repo_name": forkRepoName,
 	})
@@ -75,7 +74,7 @@ func testRepoForkLegacyRedirect(t *testing.T, session *TestSession, ownerName, r
 }
 
 func TestRepoFork(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user5"})
 		session := loginUser(t, user5.Name)
 
@@ -134,12 +133,15 @@ func TestRepoFork(t *testing.T) {
 			resp := MakeRequest(t, req, http.StatusOK)
 			htmlDoc := NewHTMLParser(t, resp.Body)
 
-			forkButton := htmlDoc.Find("a[href*='/forks']")
-			assert.EqualValues(t, 1, forkButton.Length())
+			forksLink := htmlDoc.Find("a[href$='/forks']")
+			assert.Equal(t, 1, forksLink.Length())
 
-			href, _ := forkButton.Attr("href")
+			href, _ := forksLink.Attr("href")
 			assert.Equal(t, "/user2/repo1/forks", href)
-			assert.Equal(t, "0", strings.TrimSpace(forkButton.Text()))
+			assert.Equal(t, "0", strings.TrimSpace(forksLink.Text()))
+
+			ariaLabel, _ := forksLink.Attr("aria-label")
+			assert.Equal(t, "0 forks", ariaLabel)
 
 			t.Run("no fork button on empty repo", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -210,7 +212,7 @@ func TestRepoFork(t *testing.T) {
 }
 
 func TestRepoForkToOrg(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user2")
 		org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "org3"})
 
@@ -243,13 +245,13 @@ func TestRepoForkToOrg(t *testing.T) {
 func TestForkListPrivateRepo(t *testing.T) {
 	forkItemSelector := ".tw-flex.tw-items-center.tw-py-2"
 
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user5")
 		org23 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 23, Visibility: structs.VisibleTypePrivate})
 
 		testRepoFork(t, session, "user2", "repo1", org23.Name, "repo1")
 
-		t.Run("Anomynous", func(t *testing.T) {
+		t.Run("Anonymous", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequest(t, "GET", "/user2/repo1/forks")

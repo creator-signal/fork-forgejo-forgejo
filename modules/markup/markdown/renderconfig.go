@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"strings"
 
-	"code.gitea.io/gitea/modules/markup"
+	"forgejo.org/modules/markup"
 
 	"github.com/yuin/goldmark/ast"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // RenderConfig represents rendering configuration for this file

@@ -12,27 +12,27 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	unit_model "code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/translation"
-	gitea_context "code.gitea.io/gitea/services/context"
-	issue_service "code.gitea.io/gitea/services/issue"
-	pull_service "code.gitea.io/gitea/services/pull"
-	repo_service "code.gitea.io/gitea/services/repository"
-	files_service "code.gitea.io/gitea/services/repository/files"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	unit_model "forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/translation"
+	app_context "forgejo.org/services/context"
+	issue_service "forgejo.org/services/issue"
+	pull_service "forgejo.org/services/pull"
+	repo_service "forgejo.org/services/repository"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPullrequestReopen(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		org26 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 26})
 
@@ -137,7 +137,6 @@ func TestPullrequestReopen(t *testing.T) {
 
 			link := fmt.Sprintf("%s/pulls/%d/comments", baseRepo.FullName(), issue.Index)
 			req := NewRequestWithValues(t, "POST", link, map[string]string{
-				"_csrf":  GetCSRF(t, session, fmt.Sprintf("%s/pulls/%d", baseRepo.FullName(), issue.Index)),
 				"status": "reopen",
 			})
 			return session.MakeRequest(t, req, expectedStatus)
@@ -147,12 +146,10 @@ func TestPullrequestReopen(t *testing.T) {
 			t.Helper()
 
 			link := fmt.Sprintf("/%s/branches", repoName)
-			req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/restore?branch_id=%d&name=%s", link, branchID, branchName), map[string]string{
-				"_csrf": GetCSRF(t, session, link),
-			})
+			req := NewRequest(t, "POST", fmt.Sprintf("%s/restore?branch_id=%d&name=%s", link, branchID, branchName))
 			session.MakeRequest(t, req, http.StatusOK)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Contains(t, flashCookie.Value, "success%3DBranch%2B%2522"+branchName+"%2522%2Bhas%2Bbeen%2Brestored.")
 		}
@@ -161,12 +158,10 @@ func TestPullrequestReopen(t *testing.T) {
 			t.Helper()
 
 			link := fmt.Sprintf("/%s/branches", repoName)
-			req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/delete?name=%s", link, branchName), map[string]string{
-				"_csrf": GetCSRF(t, session, link),
-			})
+			req := NewRequest(t, "POST", fmt.Sprintf("%s/delete?name=%s", link, branchName))
 			session.MakeRequest(t, req, http.StatusOK)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Contains(t, flashCookie.Value, "success%3DBranch%2B%2522"+branchName+"%2522%2Bhas%2Bbeen%2Bdeleted.")
 		}

@@ -11,17 +11,18 @@ import (
 	"strings"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/shared/types"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/translation"
-	"code.gitea.io/gitea/modules/util"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/shared/types"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/translation"
+	"forgejo.org/modules/util"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
 	"xorm.io/builder"
 )
 
@@ -87,9 +88,10 @@ func (r *ActionRunner) BelongsToOwnerType() types.OwnerType {
 		return types.OwnerTypeRepository
 	}
 	if r.OwnerID != 0 {
-		if r.Owner.Type == user_model.UserTypeOrganization {
+		switch r.Owner.Type {
+		case user_model.UserTypeOrganization:
 			return types.OwnerTypeOrganization
-		} else if r.Owner.Type == user_model.UserTypeIndividual {
+		case user_model.UserTypeIndividual:
 			return types.OwnerTypeIndividual
 		}
 	}
@@ -159,20 +161,14 @@ func (r *ActionRunner) LoadAttributes(ctx context.Context) error {
 	return nil
 }
 
-func (r *ActionRunner) GenerateToken() (err error) {
-	r.Token, r.TokenSalt, r.TokenHash, _, err = generateSaltedToken()
-	return err
+func (r *ActionRunner) GenerateToken() {
+	r.Token, r.TokenSalt, r.TokenHash, _ = generateSaltedToken()
 }
 
 // UpdateSecret updates the hash based on the specified token. It does not
 // ensure that the runner's UUID matches the first 16 bytes of the token.
 func (r *ActionRunner) UpdateSecret(token string) error {
-	saltBytes, err := util.CryptoRandomBytes(16)
-	if err != nil {
-		return fmt.Errorf("CryptoRandomBytes %v", err)
-	}
-
-	salt := hex.EncodeToString(saltBytes)
+	salt := hex.EncodeToString(util.CryptoRandomBytes(16))
 
 	r.Token = token
 	r.TokenSalt = salt
@@ -282,27 +278,22 @@ func UpdateRunner(ctx context.Context, r *ActionRunner, cols ...string) error {
 }
 
 // DeleteRunner deletes a runner by given ID.
-func DeleteRunner(ctx context.Context, id int64) error {
-	runner, err := GetRunnerByID(ctx, id)
-	if err != nil {
-		return err
-	}
-
+func DeleteRunner(ctx context.Context, r *ActionRunner) error {
 	// Replace the UUID, which was either based on the secret's first 16 bytes or an UUIDv4,
 	// with a sequence of 8 0xff bytes followed by the little-endian version of the record's
 	// identifier. This will prevent the deleted record's identifier from colliding with any
 	// new record.
 	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(id))
-	runner.UUID = fmt.Sprintf("ffffffff-ffff-ffff-%.2x%.2x-%.2x%.2x%.2x%.2x%.2x%.2x",
+	binary.LittleEndian.PutUint64(b, uint64(r.ID))
+	r.UUID = fmt.Sprintf("ffffffff-ffff-ffff-%.2x%.2x-%.2x%.2x%.2x%.2x%.2x%.2x",
 		b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7])
 
-	err = UpdateRunner(ctx, runner, "UUID")
+	err := UpdateRunner(ctx, r, "UUID")
 	if err != nil {
 		return err
 	}
 
-	_, err = db.DeleteByID[ActionRunner](ctx, id)
+	_, err = db.DeleteByID[ActionRunner](ctx, r.ID)
 	return err
 }
 
@@ -361,4 +352,54 @@ func FixRunnersWithoutBelongingRepo(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+func DeleteOfflineRunners(ctx context.Context, olderThan timeutil.TimeStamp, globalOnly bool) error {
+	log.Info("Doing: DeleteOfflineRunners")
+
+	if olderThan.AsTime().After(timeutil.TimeStampNow().AddDuration(-RunnerOfflineTime).AsTime()) {
+		return fmt.Errorf("invalid `cron.cleanup_offline_runners.older_than`value: must be at least %q", RunnerOfflineTime)
+	}
+
+	cond := builder.Or(
+		// never online
+		builder.And(builder.Eq{"last_online": 0}, builder.Lt{"created": olderThan}),
+		// was online but offline
+		builder.And(builder.Gt{"last_online": 0}, builder.Lt{"last_online": olderThan}),
+	)
+
+	if globalOnly {
+		cond = builder.And(cond, builder.Eq{"owner_id": 0}, builder.Eq{"repo_id": 0})
+	}
+
+	if err := db.Iterate(
+		ctx,
+		cond,
+		func(ctx context.Context, r *ActionRunner) error {
+			if err := DeleteRunner(ctx, r); err != nil {
+				return fmt.Errorf("DeleteOfflineRunners: %w", err)
+			}
+			lastOnline := r.LastOnline.AsTime()
+			olderThanTime := olderThan.AsTime()
+			if !lastOnline.IsZero() && lastOnline.Before(olderThanTime) {
+				log.Info(
+					"Deleted runner [ID: %d, Name: %s], last online %s ago",
+					r.ID, r.Name, olderThanTime.Sub(lastOnline).String(),
+				)
+			} else {
+				log.Info(
+					"Deleted runner [ID: %d, Name: %s], unused since %s ago",
+					r.ID, r.Name, olderThanTime.Sub(r.Created.AsTime()).String(),
+				)
+			}
+
+			return nil
+		},
+	); err != nil {
+		return err
+	}
+
+	log.Info("Finished: DeleteOfflineRunners")
+
+	return nil
 }

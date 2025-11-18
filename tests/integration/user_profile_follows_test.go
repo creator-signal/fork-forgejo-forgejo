@@ -1,5 +1,5 @@
 // Copyright 2024 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package integration
 
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -32,6 +32,7 @@ func TestUserProfileFollows(t *testing.T) {
 	followingLink := "#profile-avatar-card a[href='/user1?tab=following']"
 	listHeader := ".user-cards h2"
 	listItems := ".user-cards .list"
+	listMsg := ".user-cards > div"
 
 	// = No follows =
 
@@ -44,7 +45,8 @@ func TestUserProfileFollows(t *testing.T) {
 	// Verify that user1 has no followers
 	testSelectorEquals(t, page, followersLink, "0 followers")
 	testSelectorEquals(t, page, listHeader, "Followers")
-	testListCount(t, page, listItems, followCount)
+	page.AssertElement(t, listItems, false)
+	page.AssertElement(t, listMsg, true)
 
 	// Request the profile of user1, the Following tab
 	response = user1.MakeRequest(t, NewRequest(t, "GET", "/user1?tab=following"), http.StatusOK)
@@ -53,7 +55,8 @@ func TestUserProfileFollows(t *testing.T) {
 	// Verify that user1 does not follow anyone
 	testSelectorEquals(t, page, followingLink, "0 following")
 	testSelectorEquals(t, page, listHeader, "Following")
-	testListCount(t, page, listItems, followCount)
+	page.AssertElement(t, listItems, false)
+	page.AssertElement(t, listMsg, true)
 
 	// Make user1 and user2 follow each other
 	testUserFollowUser(t, user1, "user2")
@@ -71,6 +74,7 @@ func TestUserProfileFollows(t *testing.T) {
 	testSelectorEquals(t, page, followersLink, "1 follower")
 	testSelectorEquals(t, page, listHeader, "Follower")
 	testListCount(t, page, listItems, followCount)
+	page.AssertElement(t, listMsg, false)
 
 	// Request the profile of user1, the Following tab
 	response = user1.MakeRequest(t, NewRequest(t, "GET", "/user1?tab=following"), http.StatusOK)
@@ -80,6 +84,7 @@ func TestUserProfileFollows(t *testing.T) {
 	testSelectorEquals(t, page, followingLink, "1 following")
 	testSelectorEquals(t, page, listHeader, "Following")
 	testListCount(t, page, listItems, followCount)
+	page.AssertElement(t, listMsg, false)
 
 	// Make user1 and user3 follow each other
 	testUserFollowUser(t, user1, "user5")
@@ -97,6 +102,7 @@ func TestUserProfileFollows(t *testing.T) {
 	testSelectorEquals(t, page, followersLink, "2 followers")
 	testSelectorEquals(t, page, listHeader, "Followers")
 	testListCount(t, page, listItems, followCount)
+	page.AssertElement(t, listMsg, false)
 
 	// Request the profile of user1, the Following tab
 	response = user1.MakeRequest(t, NewRequest(t, "GET", "/user1?tab=following"), http.StatusOK)
@@ -106,15 +112,13 @@ func TestUserProfileFollows(t *testing.T) {
 	testSelectorEquals(t, page, followingLink, "2 following")
 	testSelectorEquals(t, page, listHeader, "Following")
 	testListCount(t, page, listItems, followCount)
+	page.AssertElement(t, listMsg, false)
 }
 
 // testUserFollowUser simply follows a user `following` by session of user `follower`
 func testUserFollowUser(t *testing.T, follower *TestSession, following string) {
 	t.Helper()
-	follower.MakeRequest(t, NewRequestWithValues(t, "POST", fmt.Sprintf("/%s?action=follow", following),
-		map[string]string{
-			"_csrf": GetCSRF(t, follower, fmt.Sprintf("/%s", following)),
-		}), http.StatusOK)
+	follower.MakeRequest(t, NewRequest(t, "POST", fmt.Sprintf("/%s?action=follow", following)), http.StatusOK)
 }
 
 // testSelectorEquals prevents duplication of a lot of code for tests with many checks

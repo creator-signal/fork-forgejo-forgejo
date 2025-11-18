@@ -9,10 +9,11 @@
 # Files related to frontend development.
 
 # Javascript and CSS code.
-web_src/.* @caesar @crystal @gusted
+web_src/.* @beowulf @gusted
+web_src/css/.* @0ko
 
 # HTML templates used by the backend.
-templates/.* @caesar @crystal @gusted
+templates/.* @beowulf @gusted
 ## the issue sidebar was touched by fnetx
 templates/repo/issue/view_content/sidebar.* @fnetx
 
@@ -33,8 +34,14 @@ models/.* @gusted
 # for code that lives in here.
 routers/.* @gusted
 
-# Let new strings be checked by the translation team.
-options/locale/locale_en-US.ini @0ko
+# Let locale changes be checked by the translation team.
+options/locale/.* @0ko
+options/locale_next/.* @0ko
+
+# lint-locale-usage
+build/lint-locale-usage/.* @fogti
+models/unit/.* @fogti
+services/migrations/lint-locale-usage/.* @fogti
 
 # Personal interest
 .*/webhook.* @oliverpool

@@ -8,13 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,6 +76,47 @@ func TestPullRequestsNewest(t *testing.T) {
 		assert.EqualValues(t, 5, prs[0].ID)
 		assert.EqualValues(t, 2, prs[1].ID)
 		assert.EqualValues(t, 1, prs[2].ID)
+	}
+}
+
+func TestPullRequests_Closed_RecentSortType(t *testing.T) {
+	// Issue ID | Closed At.  | Updated At
+	//    2     | 1707270001  | 1707270001
+	//    3     | 1707271000  | 1707279999
+	//    11    | 1707279999  | 1707275555
+	tests := []struct {
+		sortType             string
+		expectedIssueIDOrder []int64
+	}{
+		{"recentupdate", []int64{3, 11, 2}},
+		{"recentclose", []int64{11, 3, 2}},
+	}
+
+	require.NoError(t, unittest.PrepareTestDatabase())
+	_, err := db.Exec(db.DefaultContext, "UPDATE issue SET closed_unix = 1707270001, updated_unix = 1707270001, is_closed = true WHERE id = 2")
+	require.NoError(t, err)
+	_, err = db.Exec(db.DefaultContext, "UPDATE issue SET closed_unix = 1707271000, updated_unix = 1707279999, is_closed = true WHERE id = 3")
+	require.NoError(t, err)
+	_, err = db.Exec(db.DefaultContext, "UPDATE issue SET closed_unix = 1707279999, updated_unix = 1707275555, is_closed = true WHERE id = 11")
+	require.NoError(t, err)
+
+	for _, test := range tests {
+		t.Run(test.sortType, func(t *testing.T) {
+			prs, _, err := issues_model.PullRequests(db.DefaultContext, 1, &issues_model.PullRequestsOptions{
+				ListOptions: db.ListOptions{
+					Page: 1,
+				},
+				State:    "closed",
+				SortType: test.sortType,
+			})
+			require.NoError(t, err)
+
+			if assert.Len(t, prs, len(test.expectedIssueIDOrder)) {
+				for i := range test.expectedIssueIDOrder {
+					assert.Equal(t, test.expectedIssueIDOrder[i], prs[i].IssueID)
+				}
+			}
+		})
 	}
 }
 
@@ -161,7 +201,7 @@ func TestGetUnmergedPullRequestsByHeadInfo(t *testing.T) {
 }
 
 func TestGetUnmergedPullRequestsByHeadInfoMax(t *testing.T) {
-	defer tests.AddFixtures("models/fixtures/TestGetUnmergedPullRequestsByHeadInfoMax/")()
+	defer unittest.OverrideFixtures("models/fixtures/TestGetUnmergedPullRequestsByHeadInfoMax")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	repoID := int64(1)
@@ -381,27 +421,6 @@ func TestPullRequest_GetWorkInProgressPrefixWorkInProgress(t *testing.T) {
 	assert.Equal(t, "[wip]", pr.GetWorkInProgressPrefix(db.DefaultContext))
 }
 
-func TestDeleteOrphanedObjects(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	countBefore, err := db.GetEngine(db.DefaultContext).Count(&issues_model.PullRequest{})
-	require.NoError(t, err)
-
-	_, err = db.GetEngine(db.DefaultContext).Insert(&issues_model.PullRequest{IssueID: 1000}, &issues_model.PullRequest{IssueID: 1001}, &issues_model.PullRequest{IssueID: 1003})
-	require.NoError(t, err)
-
-	orphaned, err := db.CountOrphanedObjects(db.DefaultContext, "pull_request", "issue", "pull_request.issue_id=issue.id")
-	require.NoError(t, err)
-	assert.EqualValues(t, 3, orphaned)
-
-	err = db.DeleteOrphanedObjects(db.DefaultContext, "pull_request", "issue", "pull_request.issue_id=issue.id")
-	require.NoError(t, err)
-
-	countAfter, err := db.GetEngine(db.DefaultContext).Count(&issues_model.PullRequest{})
-	require.NoError(t, err)
-	assert.EqualValues(t, countBefore, countAfter)
-}
-
 func TestParseCodeOwnersLine(t *testing.T) {
 	type CodeOwnerTest struct {
 		Line   string
@@ -432,7 +451,7 @@ func TestGetApprovers(t *testing.T) {
 	setting.Repository.PullRequest.DefaultMergeMessageOfficialApproversOnly = false
 	approvers := pr.GetApprovers(db.DefaultContext)
 	expected := "Reviewed-by: User Five <user5@example.com>\nReviewed-by: Org Six <org6@example.com>\n"
-	assert.EqualValues(t, expected, approvers)
+	assert.Equal(t, expected, approvers)
 }
 
 func TestGetPullRequestByMergedCommit(t *testing.T) {
@@ -445,6 +464,43 @@ func TestGetPullRequestByMergedCommit(t *testing.T) {
 	require.ErrorAs(t, err, &issues_model.ErrPullRequestNotExist{})
 	_, err = issues_model.GetPullRequestByMergedCommit(db.DefaultContext, 1, "")
 	require.ErrorAs(t, err, &issues_model.ErrPullRequestNotExist{})
+}
+
+func TestPullRequest_IsForkPullRequest(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("FlowGithub from a fork", func(t *testing.T) {
+		pr := &issues_model.PullRequest{
+			Flow:       issues_model.PullRequestFlowGithub,
+			HeadRepoID: 111,
+			BaseRepoID: 222,
+		}
+		assert.True(t, pr.IsForkPullRequest())
+	})
+
+	t.Run("FlowGithub from the same repository", func(t *testing.T) {
+		pr := &issues_model.PullRequest{
+			Flow:       issues_model.PullRequestFlowGithub,
+			HeadRepoID: 111,
+			BaseRepoID: 111,
+		}
+		assert.False(t, pr.IsForkPullRequest())
+	})
+
+	t.Run("PullRequestFlowAGit", func(t *testing.T) {
+		pr := &issues_model.PullRequest{
+			Flow: issues_model.PullRequestFlowAGit,
+		}
+		assert.True(t, pr.IsForkPullRequest())
+	})
+
+	t.Run("Other", func(t *testing.T) {
+		unknown := issues_model.PullRequestFlow(4854)
+		pr := &issues_model.PullRequest{
+			Flow: unknown,
+		}
+		assert.True(t, pr.IsForkPullRequest())
+	})
 }
 
 func TestMigrate_InsertPullRequests(t *testing.T) {
@@ -464,7 +520,8 @@ func TestMigrate_InsertPullRequests(t *testing.T) {
 	}
 
 	p := &issues_model.PullRequest{
-		Issue: i,
+		Issue:      i,
+		BaseRepoID: repo.ID,
 	}
 
 	err := issues_model.InsertPullRequests(db.DefaultContext, p)

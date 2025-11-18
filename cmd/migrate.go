@@ -6,24 +6,27 @@ package cmd
 import (
 	"context"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/migrations"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/models/db"
+	"forgejo.org/models/gitea_migrations"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 // CmdMigrate represents the available migrate sub-command.
-var CmdMigrate = &cli.Command{
-	Name:        "migrate",
-	Usage:       "Migrate the database",
-	Description: "This is a command for migrating the database, so that you can run 'forgejo admin user create' before starting the server.",
-	Action:      runMigrate,
+func cmdMigrate() *cli.Command {
+	return &cli.Command{
+		Name:        "migrate",
+		Usage:       "Migrate the database",
+		Description: "This is a command for migrating the database, so that you can run 'forgejo admin user create' before starting the server.",
+		Before:      noDanglingArgs,
+		Action:      runMigrate,
+	}
 }
 
-func runMigrate(ctx *cli.Context) error {
-	stdCtx, cancel := installSignals()
+func runMigrate(stdCtx context.Context, ctx *cli.Command) error {
+	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
 
 	if err := initDB(stdCtx); err != nil {
@@ -36,7 +39,13 @@ func runMigrate(ctx *cli.Context) error {
 	log.Info("Log path: %s", setting.Log.RootPath)
 	log.Info("Configuration file: %s", setting.CustomConf)
 
-	if err := db.InitEngineWithMigration(context.Background(), migrations.Migrate); err != nil {
+	if err := db.InitEngineWithMigration(context.Background(), func(dbEngine db.Engine) error {
+		masterEngine, err := db.GetMasterEngine(dbEngine)
+		if err != nil {
+			return err
+		}
+		return gitea_migrations.Migrate(masterEngine)
+	}); err != nil {
 		log.Fatal("Failed to initialize ORM engine: %v", err)
 		return err
 	}

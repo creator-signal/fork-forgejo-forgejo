@@ -18,9 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/proxy"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/proxy"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 )
 
 // GPGSettings represents the default GPG settings for this repository
@@ -174,22 +175,87 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 	if len(opts.Branch) > 0 {
 		cmd.AddArguments("-b").AddDynamicArguments(opts.Branch)
 	}
-	cmd.AddDashesAndList(from, to)
 
-	if strings.Contains(from, "://") && strings.Contains(from, "@") {
-		cmd.SetDescription(fmt.Sprintf("clone branch %s from %s to %s (shared: %t, mirror: %t, depth: %d)", opts.Branch, util.SanitizeCredentialURLs(from), to, opts.Shared, opts.Mirror, opts.Depth))
-	} else {
-		cmd.SetDescription(fmt.Sprintf("clone branch %s from %s to %s (shared: %t, mirror: %t, depth: %d)", opts.Branch, from, to, opts.Shared, opts.Mirror, opts.Depth))
+	envs := os.Environ()
+	parsedFromURL, err := url.Parse(from)
+	if err == nil {
+		envs = proxy.EnvWithProxy(parsedFromURL)
 	}
+
+	fromURL := from
+	sanitizedFrom := from
+
+	// If the clone URL has credentials, sanitize it and store the credentials in
+	// a temporary file that git will access.
+	if strings.Contains(from, "://") && strings.Contains(from, "@") {
+		sanitizedFrom = util.SanitizeCredentialURLs(from)
+		if parsedFromURL != nil {
+			if pwd, has := parsedFromURL.User.Password(); has {
+				parsedFromURL.User = url.User(parsedFromURL.User.Username())
+				fromURL = parsedFromURL.String()
+
+				credentialsFile, err := os.CreateTemp(os.TempDir(), "forgejo-clone-credentials")
+				if err != nil {
+					return err
+				}
+				credentialsPath := credentialsFile.Name()
+
+				defer func() {
+					_ = credentialsFile.Close()
+					if err := util.Remove(credentialsPath); err != nil {
+						log.Warn("Unable to remove temporary file %q: %v", credentialsPath, err)
+					}
+				}()
+
+				// Make it read-write.
+				if err := credentialsFile.Chmod(0o600); err != nil {
+					return err
+				}
+
+				// Write the password.
+				if _, err := fmt.Fprint(credentialsFile, pwd); err != nil {
+					return err
+				}
+
+				askpassFile, err := os.CreateTemp(os.TempDir(), "forgejo-askpass")
+				if err != nil {
+					return err
+				}
+				askpassPath := askpassFile.Name()
+
+				defer func() {
+					_ = askpassFile.Close()
+					if err := util.Remove(askpassPath); err != nil {
+						log.Warn("Unable to remove temporary file %q: %v", askpassPath, err)
+					}
+				}()
+
+				// Make it executable.
+				if err := askpassFile.Chmod(0o700); err != nil {
+					return err
+				}
+
+				// Write the password script.
+				if _, err := fmt.Fprintf(askpassFile, "exec cat %s", credentialsPath); err != nil {
+					return err
+				}
+
+				// Close it, so that Git can use it and no busy errors arise.
+				_ = askpassFile.Close()
+				_ = credentialsFile.Close()
+
+				// Use environments to specify that git should ask for credentials, this
+				// takes precedences over anything else https://git-scm.com/docs/gitcredentials#_requesting_credentials.
+				envs = append(envs, "GIT_ASKPASS="+askpassPath)
+			}
+		}
+	}
+
+	cmd.SetDescription(fmt.Sprintf("clone branch %s from %s to %s (shared: %t, mirror: %t, depth: %d)", opts.Branch, sanitizedFrom, to, opts.Shared, opts.Mirror, opts.Depth))
+	cmd.AddDashesAndList(fromURL, to)
 
 	if opts.Timeout <= 0 {
 		opts.Timeout = -1
-	}
-
-	envs := os.Environ()
-	u, err := url.Parse(from)
-	if err == nil {
-		envs = proxy.EnvWithProxy(u)
 	}
 
 	stderr := new(bytes.Buffer)
@@ -274,17 +340,6 @@ func Push(ctx context.Context, repoPath string, opts PushOptions) error {
 	return nil
 }
 
-// GetLatestCommitTime returns time for latest commit in repository (across all branches)
-func GetLatestCommitTime(ctx context.Context, repoPath string) (time.Time, error) {
-	cmd := NewCommand(ctx, "for-each-ref", "--sort=-committerdate", BranchPrefix, "--count", "1", "--format=%(committerdate)")
-	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath})
-	if err != nil {
-		return time.Time{}, err
-	}
-	commitTime := strings.TrimSpace(stdout)
-	return time.Parse("Mon Jan _2 15:04:05 2006 -0700", commitTime)
-}
-
 // DivergeObject represents commit count diverging commits
 type DivergeObject struct {
 	Ahead  int
@@ -292,10 +347,10 @@ type DivergeObject struct {
 }
 
 // GetDivergingCommits returns the number of commits a targetBranch is ahead or behind a baseBranch
-func GetDivergingCommits(ctx context.Context, repoPath, baseBranch, targetBranch string) (do DivergeObject, err error) {
+func GetDivergingCommits(ctx context.Context, repoPath, baseBranch, targetBranch string, env []string) (do DivergeObject, err error) {
 	cmd := NewCommand(ctx, "rev-list", "--count", "--left-right").
 		AddDynamicArguments(baseBranch + "..." + targetBranch).AddArguments("--")
-	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath})
+	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath, Env: env})
 	if err != nil {
 		return do, err
 	}

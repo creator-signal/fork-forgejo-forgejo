@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"code.gitea.io/gitea/modules/auth/password/hash"
-	"code.gitea.io/gitea/modules/generate"
-	"code.gitea.io/gitea/modules/keying"
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/modules/auth/password/hash"
+	"forgejo.org/modules/generate"
+	"forgejo.org/modules/keying"
+	"forgejo.org/modules/log"
 )
 
 var (
@@ -20,6 +20,7 @@ var (
 	SecretKey                          string
 	InternalToken                      string // internal access token
 	LogInRememberDays                  int
+	GlobalTwoFactorRequirement         TwoFactorRequirementType
 	CookieRememberName                 string
 	ReverseProxyAuthUser               string
 	ReverseProxyAuthEmail              string
@@ -36,8 +37,6 @@ var (
 	PasswordCheckPwn                   bool
 	SuccessfulTokensCacheSize          int
 	DisableQueryAuthToken              bool
-	CSRFCookieName                     = "_csrf"
-	CSRFCookieHTTPOnly                 = true
 )
 
 // loadSecret load the secret from ini by uriKey or verbatimKey, only one of them could be set
@@ -113,6 +112,8 @@ func loadSecurityFrom(rootCfg ConfigProvider) {
 	}
 	keying.Init([]byte(SecretKey))
 
+	GlobalTwoFactorRequirement = NewTwoFactorRequirementType(sec.Key("GLOBAL_TWO_FACTOR_REQUIREMENT").String())
+
 	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").MustString("gitea_incredible")
 
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
@@ -138,7 +139,6 @@ func loadSecurityFrom(rootCfg ConfigProvider) {
 		log.Fatal("The provided password hash algorithm was invalid: %s", sec.Key("PASSWORD_HASH_ALGO").MustString(""))
 	}
 
-	CSRFCookieHTTPOnly = sec.Key("CSRF_COOKIE_HTTP_ONLY").MustBool(true)
 	PasswordCheckPwn = sec.Key("PASSWORD_CHECK_PWN").MustBool(false)
 	SuccessfulTokensCacheSize = sec.Key("SUCCESSFUL_TOKENS_CACHE_SIZE").MustInt(20)
 
@@ -168,6 +168,42 @@ func loadSecurityFrom(rootCfg ConfigProvider) {
 
 	// warn if the setting is set to false explicitly
 	if sectionHasDisableQueryAuthToken && !DisableQueryAuthToken {
-		log.Warn("Enabling Query API Auth tokens is not recommended. DISABLE_QUERY_AUTH_TOKEN will default to true in gitea 1.23 and will be removed in gitea 1.24.")
+		log.Warn("Enabling Query API Auth tokens is not recommended. DISABLE_QUERY_AUTH_TOKEN will be removed in Forgejo v13.0.0.")
 	}
+}
+
+type TwoFactorRequirementType string
+
+// llu:TrKeysSuffix admin.config.global_2fa_requirement.
+const (
+	NoneTwoFactorRequirement  TwoFactorRequirementType = "none"
+	AllTwoFactorRequirement   TwoFactorRequirementType = "all"
+	AdminTwoFactorRequirement TwoFactorRequirementType = "admin"
+)
+
+func NewTwoFactorRequirementType(twoFactorRequirement string) TwoFactorRequirementType {
+	switch twoFactorRequirement {
+	case AllTwoFactorRequirement.String():
+		return AllTwoFactorRequirement
+	case AdminTwoFactorRequirement.String():
+		return AdminTwoFactorRequirement
+	default:
+		return NoneTwoFactorRequirement
+	}
+}
+
+func (r TwoFactorRequirementType) String() string {
+	return string(r)
+}
+
+func (r TwoFactorRequirementType) IsNone() bool {
+	return r == NoneTwoFactorRequirement
+}
+
+func (r TwoFactorRequirementType) IsAll() bool {
+	return r == AllTwoFactorRequirement
+}
+
+func (r TwoFactorRequirementType) IsAdmin() bool {
+	return r == AdminTwoFactorRequirement
 }

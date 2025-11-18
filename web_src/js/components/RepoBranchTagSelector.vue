@@ -1,26 +1,25 @@
 <script>
-import {createApp, nextTick} from 'vue';
+import {nextTick} from 'vue';
 import $ from 'jquery';
 import {SvgIcon} from '../svg.js';
 import {pathEscapeSegments} from '../utils/url.js';
 import {showErrorToast} from '../modules/toast.js';
 import {GET} from '../modules/fetch.js';
 
-const sfc = {
+export default {
   components: {SvgIcon},
 
   // no `data()`, at the moment, the `data()` is provided by the init code, which is not ideal and should be fixed in the future
 
   computed: {
+    active() {
+      return !this.filteredItems.length && this.showCreateNewBranch ? 0 : -1;
+    },
     filteredItems() {
-      const items = this.items.filter((item) => {
+      return this.items.filter((item) => {
         return ((this.mode === 'branches' && item.branch) || (this.mode === 'tags' && item.tag)) &&
           (!this.searchTerm || item.name.toLowerCase().includes(this.searchTerm.toLowerCase()));
       });
-
-      // TODO: fix this anti-pattern: side-effects-in-computed-properties
-      this.active = !items.length && this.showCreateNewBranch ? 0 : -1;
-      return items;
     },
     showNoResults() {
       return !this.filteredItems.length && !this.showCreateNewBranch;
@@ -54,12 +53,12 @@ const sfc = {
     if (this.viewType === 'tree') {
       this.isViewTree = true;
       this.refNameText = this.commitIdShort;
-    } else if (this.viewType === 'tag') {
-      this.isViewTag = true;
-      this.refNameText = this.tagName;
-    } else {
+    } else if (this.viewType === 'branch') {
       this.isViewBranch = true;
       this.refNameText = this.branchName;
+    } else {
+      this.isViewTag = true;
+      this.refNameText = this.tagName;
     }
 
     document.body.addEventListener('click', (event) => {
@@ -98,14 +97,14 @@ const sfc = {
           $(`#${this.branchForm} input[name="refType"]`).val('branch');
         }
         if (this.submitForm) {
-          $(`#${this.branchForm}`).trigger('submit');
+          document.getElementById(this.branchForm).requestSubmit();
         }
         this.menuVisible = false;
       }
     },
     createNewBranch() {
       if (!this.showCreateNewBranch) return;
-      $(this.$refs.newBranchForm).trigger('submit');
+      this.$refs.newBranchForm.requestSubmit();
     },
     focusSearchField() {
       nextTick(() => {
@@ -213,37 +212,6 @@ const sfc = {
     },
   },
 };
-
-export function initRepoBranchTagSelector(selector) {
-  for (const [elIndex, elRoot] of document.querySelectorAll(selector).entries()) {
-    const data = {
-      csrfToken: window.config.csrfToken,
-      items: [],
-      searchTerm: '',
-      refNameText: '',
-      menuVisible: false,
-      release: null,
-
-      isViewTag: false,
-      isViewBranch: false,
-      isViewTree: false,
-
-      active: 0,
-      isLoading: false,
-      // This means whether branch list/tag list has initialized
-      hasListInitialized: {
-        'branches': false,
-        'tags': false,
-      },
-      ...window.config.pageData.branchDropdownDataList[elIndex],
-    };
-
-    const comp = {...sfc, data() { return data }};
-    createApp(comp).mount(elRoot);
-  }
-}
-
-export default sfc; // activate IDE's Vue plugin
 </script>
 <template>
   <div class="ui dropdown custom">
@@ -252,11 +220,12 @@ export default sfc; // activate IDE's Vue plugin
         <template v-if="release">{{ textReleaseCompare }}</template>
         <template v-else>
           <svg-icon v-if="isViewTag" name="octicon-tag"/>
-          <svg-icon v-else name="octicon-git-branch"/>
+          <svg-icon v-else-if="isViewBranch" name="octicon-git-branch"/>
+          <svg-icon v-else name="octicon-git-commit"/>
           <strong ref="dropdownRefName" class="tw-ml-2 tw-inline-block gt-ellipsis">{{ refNameText }}</strong>
         </template>
       </span>
-      <svg-icon name="octicon-triangle-down" :size="14" class-name="dropdown icon"/>
+      <svg-icon name="octicon-triangle-down" :size="14" class="dropdown icon"/>
     </button>
     <div class="menu transition" :class="{visible: menuVisible}" v-show="menuVisible" v-cloak>
       <div class="ui icon search input">
@@ -265,10 +234,10 @@ export default sfc; // activate IDE's Vue plugin
       </div>
       <div v-if="showBranchesInDropdown" class="branch-tag-tab">
         <a class="branch-tag-item muted" :class="{active: mode === 'branches'}" href="#" @click="handleTabSwitch('branches')">
-          <svg-icon name="octicon-git-branch" :size="16" class-name="tw-mr-1"/>{{ textBranches }}
+          <svg-icon name="octicon-git-branch" :size="16"/>{{ textBranches }}
         </a>
         <a v-if="!noTag" class="branch-tag-item muted" :class="{active: mode === 'tags'}" href="#" @click="handleTabSwitch('tags')">
-          <svg-icon name="octicon-tag" :size="16" class-name="tw-mr-1"/>{{ textTags }}
+          <svg-icon name="octicon-tag" :size="16"/>{{ textTags }}
         </a>
       </div>
       <div class="branch-tag-divider"/>
@@ -302,7 +271,6 @@ export default sfc; // activate IDE's Vue plugin
             </div>
           </a>
           <form ref="newBranchForm" :action="formActionUrl" method="post">
-            <input type="hidden" name="_csrf" :value="csrfToken">
             <input type="hidden" name="new_branch_name" v-model="searchTerm">
             <input type="hidden" name="create_tag" v-model="shouldCreateTag">
             <input type="hidden" name="current_path" v-model="treePath" v-if="treePath">
@@ -316,17 +284,6 @@ export default sfc; // activate IDE's Vue plugin
   </div>
 </template>
 <style scoped>
-.branch-tag-tab {
-  padding: 0 10px;
-}
-
-.branch-tag-item {
-  display: inline-block;
-  padding: 10px;
-  border: 1px solid transparent;
-  border-bottom: none;
-}
-
 .branch-tag-item.active {
   border-color: var(--color-secondary);
   background: var(--color-menu);

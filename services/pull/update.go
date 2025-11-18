@@ -5,24 +5,25 @@ package pull
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/repository"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/repository"
 )
 
 // Update updates pull request with base branch.
 func Update(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.User, message string, rebase bool) error {
 	if pr.Flow == issues_model.PullRequestFlowAGit {
 		// TODO: update of agit flow pull request's head branch is unsupported
-		return fmt.Errorf("update of agit flow pull request's head branch is unsupported")
+		return errors.New("update of agit flow pull request's head branch is unsupported")
 	}
 
 	pullWorkingPool.CheckIn(fmt.Sprint(pr.ID))
@@ -175,6 +176,6 @@ func GetDiverging(ctx context.Context, pr *issues_model.PullRequest) (*git.Diver
 	}
 	defer cancel()
 
-	diff, err := git.GetDivergingCommits(ctx, prCtx.tmpBasePath, baseBranch, trackingBranch)
+	diff, err := git.GetDivergingCommits(ctx, prCtx.tmpBasePath, baseBranch, trackingBranch, nil)
 	return &diff, err
 }

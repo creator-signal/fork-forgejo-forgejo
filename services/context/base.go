@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/httplib"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/translation"
-	"code.gitea.io/gitea/modules/web/middleware"
+	"forgejo.org/modules/httplib"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/translation"
+	"forgejo.org/modules/web/middleware"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -250,7 +250,7 @@ func (b *Base) PlainText(status int, text string) {
 // Redirect redirects the request
 func (b *Base) Redirect(location string, status ...int) {
 	code := http.StatusSeeOther
-	if len(status) == 1 {
+	if len(status) == 1 && status[0] > 0 {
 		code = status[0]
 	}
 

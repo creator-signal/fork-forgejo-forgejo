@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"testing"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/tests"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/tests"
 )
 
 func assertUserDeleted(t *testing.T, userID int64, purged bool) {
@@ -36,11 +36,8 @@ func TestUserDeleteAccount(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	session := loginUser(t, "user8")
-	csrf := GetCSRF(t, session, "/user/settings/account")
 	urlStr := fmt.Sprintf("/user/settings/account/delete?password=%s", userPassword)
-	req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-		"_csrf": csrf,
-	})
+	req := NewRequest(t, "POST", urlStr)
 	session.MakeRequest(t, req, http.StatusSeeOther)
 
 	assertUserDeleted(t, 8, false)
@@ -51,11 +48,8 @@ func TestUserDeleteAccountStillOwnRepos(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	session := loginUser(t, "user2")
-	csrf := GetCSRF(t, session, "/user/settings/account")
 	urlStr := fmt.Sprintf("/user/settings/account/delete?password=%s", userPassword)
-	req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-		"_csrf": csrf,
-	})
+	req := NewRequest(t, "POST", urlStr)
 	session.MakeRequest(t, req, http.StatusSeeOther)
 
 	// user should not have been deleted, because the user still owns repos

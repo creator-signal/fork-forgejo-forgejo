@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	logger "code.gitea.io/gitea/modules/log"
+	logger "forgejo.org/modules/log"
 )
 
 // CompareInfo represents needed information for comparing references.
@@ -28,6 +28,12 @@ type CompareInfo struct {
 	HeadCommitID string
 	Commits      []*Commit
 	NumFiles     int
+}
+
+// GetMergeBaseSimple returns the merge base of base and head.
+func (repo *Repository) GetMergeBaseSimple(base, head string) (string, error) {
+	stdout, _, err := NewCommand(repo.Ctx, "merge-base").AddDashesAndList(base, head).RunStdString(&RunOpts{Dir: repo.Path})
+	return strings.TrimSpace(stdout), err
 }
 
 // GetMergeBase checks and returns merge base of two branches and the reference used as base.
@@ -174,22 +180,53 @@ func (repo *Repository) GetDiffNumChangedFiles(base, head string, directComparis
 	return w.numLines, nil
 }
 
-// GetDiffShortStat counts number of changed files, number of additions and deletions
-func (repo *Repository) GetDiffShortStat(base, head string) (numFiles, totalAdditions, totalDeletions int, err error) {
-	numFiles, totalAdditions, totalDeletions, err = GetDiffShortStat(repo.Ctx, repo.Path, nil, base+"..."+head)
-	if err != nil && strings.Contains(err.Error(), "no merge base") {
-		return GetDiffShortStat(repo.Ctx, repo.Path, nil, base, head)
+var (
+	ErrNoMergebaseFound        = errors.New("no merge base found")
+	ErrMultipleMergebasesFound = errors.New("multiple merge bases found")
+)
+
+// GetShortStat returns the number of changed files, additions and deletions. If
+// `useMergebase` is specified then the merge base between `base` and `head` is
+// used to compare against `head`.
+func (repo *Repository) GetShortStat(base, head string, useMergebase bool) (numFiles, totalAdditions, totalDeletions int, err error) {
+	cmd := NewCommand(repo.Ctx, "diff-tree", "--shortstat")
+	if useMergebase {
+		cmd = cmd.AddArguments("--merge-base")
 	}
-	return numFiles, totalAdditions, totalDeletions, err
+	cmd.AddDynamicArguments(base, head)
+
+	stdout, stderr, err := cmd.RunStdString(&RunOpts{Dir: repo.Path})
+	if err != nil {
+		switch stderr {
+		case "fatal: no merge base found\n":
+			return 0, 0, 0, ErrNoMergebaseFound
+		case "fatal: multiple merge bases found\n":
+			return 0, 0, 0, ErrMultipleMergebasesFound
+		}
+		return 0, 0, 0, err
+	}
+
+	return parseDiffStat(stdout)
 }
 
-// GetDiffShortStat counts number of changed files, number of additions and deletions
-func GetDiffShortStat(ctx context.Context, repoPath string, trustedArgs TrustedCmdArgs, dynamicArgs ...string) (numFiles, totalAdditions, totalDeletions int, err error) {
-	// Now if we call:
-	// $ git diff --shortstat 1ebb35b98889ff77299f24d82da426b434b0cca0...788b8b1440462d477f45b0088875
-	// we get:
-	// " 9902 files changed, 2034198 insertions(+), 298800 deletions(-)\n"
-	cmd := NewCommand(ctx, "diff", "--shortstat").AddArguments(trustedArgs...).AddDynamicArguments(dynamicArgs...)
+// GetCommitShortStat returns the number of files, total additions and total deletions the commit has.
+func (repo *Repository) GetCommitShortStat(commitID string) (numFiles, totalAdditions, totalDeletions int, err error) {
+	cmd := NewCommand(repo.Ctx, "diff-tree", "--shortstat", "--no-commit-id", "--root").AddDynamicArguments(commitID)
+	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repo.Path})
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	return parseDiffStat(stdout)
+}
+
+// GetIndexShortStat returns the number of files, total additions and total
+// deletions the commit has.
+//
+// NOTE: It uses `git-diff-index`, should only be used when working with
+// temporary repository. When working on bare repositories use `GetCommitShortStat`.
+func GetIndexShortStat(ctx context.Context, repoPath, commitID string) (numFiles, totalAdditions, totalDeletions int, err error) {
+	cmd := NewCommand(ctx, "diff-index", "--cached", "--shortstat").AddDynamicArguments(commitID)
 	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath})
 	if err != nil {
 		return 0, 0, 0, err

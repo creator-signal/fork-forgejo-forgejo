@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"testing"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	api "code.gitea.io/gitea/modules/structs"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	api "forgejo.org/modules/structs"
 )
 
 // StringWithCharset random string (from https://www.calhoun.io/creating-random-strings-in-go/)
@@ -24,7 +24,7 @@ func StringWithCharset(length int, charset string) string {
 }
 
 func BenchmarkRepoBranchCommit(b *testing.B) {
-	onGiteaRun(b, func(b *testing.B, u *url.URL) {
+	onApplicationRun(b, func(b *testing.B, u *url.URL) {
 		samples := []int64{1, 2, 3}
 		b.ResetTimer()
 

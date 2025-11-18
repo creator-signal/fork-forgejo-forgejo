@@ -5,23 +5,25 @@ package task
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 	"fmt"
 
-	admin_model "code.gitea.io/gitea/models/admin"
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	base "code.gitea.io/gitea/modules/migration"
-	"code.gitea.io/gitea/modules/queue"
-	"code.gitea.io/gitea/modules/secret"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	repo_service "code.gitea.io/gitea/services/repository"
+	admin_model "forgejo.org/models/admin"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/keying"
+	"forgejo.org/modules/log"
+	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/queue"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	repo_service "forgejo.org/services/repository"
 )
 
 // taskQueue is a global queue of tasks
@@ -41,7 +43,7 @@ func Run(ctx context.Context, t *admin_model.Task) error {
 func Init() error {
 	taskQueue = queue.CreateSimpleQueue(graceful.GetManager().ShutdownContext(), "task", handler)
 	if taskQueue == nil {
-		return fmt.Errorf("unable to create task queue")
+		return errors.New("unable to create task queue")
 	}
 	go graceful.GetManager().RunWithCancel(taskQueue)
 	return nil
@@ -69,36 +71,38 @@ func MigrateRepository(ctx context.Context, doer, u *user_model.User, opts base.
 // CreateMigrateTask creates a migrate task
 func CreateMigrateTask(ctx context.Context, doer, u *user_model.User, opts base.MigrateOptions) (*admin_model.Task, error) {
 	// encrypt credentials for persistence
-	var err error
-	opts.CloneAddrEncrypted, err = secret.EncryptSecret(setting.SecretKey, opts.CloneAddr)
-	if err != nil {
-		return nil, err
-	}
-	opts.CloneAddr = util.SanitizeCredentialURLs(opts.CloneAddr)
-	opts.AuthPasswordEncrypted, err = secret.EncryptSecret(setting.SecretKey, opts.AuthPassword)
-	if err != nil {
-		return nil, err
-	}
-	opts.AuthPassword = ""
-	opts.AuthTokenEncrypted, err = secret.EncryptSecret(setting.SecretKey, opts.AuthToken)
-	if err != nil {
-		return nil, err
-	}
-	opts.AuthToken = ""
-	bs, err := json.Marshal(&opts)
-	if err != nil {
-		return nil, err
-	}
 
 	task := &admin_model.Task{
-		DoerID:         doer.ID,
-		OwnerID:        u.ID,
-		Type:           structs.TaskTypeMigrateRepo,
-		Status:         structs.TaskStatusQueued,
-		PayloadContent: string(bs),
+		DoerID:  doer.ID,
+		OwnerID: u.ID,
+		Type:    structs.TaskTypeMigrateRepo,
+		Status:  structs.TaskStatusQueued,
 	}
 
-	if err := admin_model.CreateTask(ctx, task); err != nil {
+	if err := db.WithTx(ctx, func(ctx context.Context) error {
+		if err := admin_model.CreateTask(ctx, task); err != nil {
+			return err
+		}
+
+		key := keying.MigrateTask
+
+		opts.CloneAddrEncrypted = base64.RawStdEncoding.EncodeToString(key.Encrypt([]byte(opts.CloneAddr), keying.ColumnAndJSONSelectorAndID("payload_content", "clone_addr_encrypted", task.ID)))
+		opts.CloneAddr = util.SanitizeCredentialURLs(opts.CloneAddr)
+
+		opts.AuthPasswordEncrypted = base64.RawStdEncoding.EncodeToString(key.Encrypt([]byte(opts.AuthPassword), keying.ColumnAndJSONSelectorAndID("payload_content", "auth_password_encrypted", task.ID)))
+		opts.AuthPassword = ""
+
+		opts.AuthTokenEncrypted = base64.RawStdEncoding.EncodeToString(key.Encrypt([]byte(opts.AuthToken), keying.ColumnAndJSONSelectorAndID("payload_content", "auth_token_encrypted", task.ID)))
+		opts.AuthToken = ""
+
+		bs, err := json.Marshal(&opts)
+		if err != nil {
+			return err
+		}
+		task.PayloadContent = string(bs)
+
+		return task.UpdateCols(ctx, "payload_content")
+	}); err != nil {
 		return nil, err
 	}
 

@@ -6,27 +6,25 @@ package context
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	gist_model "code.gitea.io/gitea/models/gist"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	mc "code.gitea.io/gitea/modules/cache"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/httpcache"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/templates"
-	"code.gitea.io/gitea/modules/translation"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/modules/web/middleware"
-	web_types "code.gitea.io/gitea/modules/web/types"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	mc "forgejo.org/modules/cache"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/httpcache"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/templates"
+	"forgejo.org/modules/translation"
+	"forgejo.org/modules/web"
+	"forgejo.org/modules/web/middleware"
+	web_types "forgejo.org/modules/web/types"
 
 	"code.forgejo.org/go-chi/cache"
 	"code.forgejo.org/go-chi/session"
@@ -42,13 +40,12 @@ type Render interface {
 type Context struct {
 	*Base
 
-	TemplateContext TemplateContext
+	TemplateContext *templates.Context
 
 	Render   Render
 	PageData map[string]any // data used by JavaScript modules in one page, it's `window.config.pageData`
 
 	Cache   cache.Cache
-	Csrf    CSRFProtector
 	Flash   *middleware.Flash
 	Session session.Store
 
@@ -65,8 +62,6 @@ type Context struct {
 	Package *Package
 	Gist    *gist_model.Gist
 }
-
-type TemplateContext map[string]any
 
 func init() {
 	web.RegisterResponseStatusProvider[*Context](func(req *http.Request) web_types.ResponseStatusProvider {
@@ -100,10 +95,11 @@ func GetValidateContext(req *http.Request) (ctx *ValidateContext) {
 	return ctx
 }
 
-func NewTemplateContextForWeb(ctx *Context) TemplateContext {
-	tmplCtx := NewTemplateContext(ctx)
-	tmplCtx["Locale"] = ctx.Base.Locale
-	tmplCtx["AvatarUtils"] = templates.NewAvatarUtils(ctx)
+func NewTemplateContextForWeb(ctx *Context) *templates.Context {
+	tmplCtx := templates.NewContext(ctx)
+	tmplCtx.Locale = ctx.Locale
+	tmplCtx.AvatarUtils = templates.NewAvatarUtils(ctx)
+	tmplCtx.Data = ctx.Data
 	return tmplCtx
 }
 
@@ -123,21 +119,21 @@ func NewWebContext(base *Base, render Render, session session.Store) *Context {
 	return ctx
 }
 
+func (ctx *Context) AddPluralStringsToPageData(keys []string) {
+	for _, key := range keys {
+		array, fallback := ctx.Locale.TrPluralStringAllForms(key)
+
+		ctx.PageData["PLURALSTRINGS_LANG"].(map[string][]string)[key] = array
+
+		if fallback != nil {
+			ctx.PageData["PLURALSTRINGS_FALLBACK"].(map[string][]string)[key] = fallback
+		}
+	}
+}
+
 // Contexter initializes a classic context for a request.
 func Contexter() func(next http.Handler) http.Handler {
 	rnd := templates.HTMLRenderer()
-	csrfOpts := CsrfOptions{
-		Secret:         hex.EncodeToString(setting.GetGeneralTokenSigningSecret()),
-		Cookie:         setting.CSRFCookieName,
-		Secure:         setting.SessionConfig.Secure,
-		CookieHTTPOnly: setting.CSRFCookieHTTPOnly,
-		CookieDomain:   setting.SessionConfig.Domain,
-		CookiePath:     setting.SessionConfig.CookiePath,
-		SameSite:       setting.SessionConfig.SameSite,
-	}
-	if !setting.IsProd {
-		CsrfTokenRegenerationInterval = 5 * time.Second // in dev, re-generate the tokens more aggressively for debug purpose
-	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 			base, baseCleanUp := NewBaseContext(resp, req)
@@ -153,10 +149,8 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.PageData = map[string]any{}
 			ctx.Data["PageData"] = ctx.PageData
 
-			ctx.Base.AppendContextValue(WebContextKey, ctx)
-			ctx.Base.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })
-
-			ctx.Csrf = NewCSRFProtector(csrfOpts)
+			ctx.AppendContextValue(WebContextKey, ctx)
+			ctx.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })
 
 			// Get the last flash message from cookie
 			lastFlashCookie := middleware.GetSiteCookie(ctx.Req, CookieNameFlash)
@@ -210,6 +204,25 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.Data["UnitActionsGlobalDisabled"] = unit.TypeActions.UnitGlobalDisabled()
 
 			ctx.Data["AllLangs"] = translation.AllLangs()
+
+			ctx.PageData["PLURAL_RULE_LANG"] = translation.GetPluralRule(ctx.Locale)
+			ctx.PageData["PLURAL_RULE_FALLBACK"] = translation.GetDefaultPluralRule()
+			ctx.PageData["PLURALSTRINGS_LANG"] = map[string][]string{}
+			ctx.PageData["PLURALSTRINGS_FALLBACK"] = map[string][]string{}
+
+			ctx.AddPluralStringsToPageData([]string{"relativetime.mins", "relativetime.hours", "relativetime.days", "relativetime.weeks", "relativetime.months", "relativetime.years"})
+
+			ctx.PageData["DATETIMESTRINGS"] = map[string]string{
+				"FUTURE": ctx.Locale.TrString("relativetime.future"),
+				"NOW":    ctx.Locale.TrString("relativetime.now"),
+			}
+			for _, key := range []string{"relativetime.1day", "relativetime.1week", "relativetime.1month", "relativetime.1year", "relativetime.2days", "relativetime.2weeks", "relativetime.2months", "relativetime.2years"} {
+				// These keys are used for special-casing some time words. We only add keys that are actually translated, so that we
+				// can fall back to the generic pluralized time word in the correct language if the special case is untranslated.
+				if ctx.Locale.HasKey(key) {
+					ctx.PageData["DATETIMESTRINGS"].(map[string]string)[key] = ctx.Locale.TrString(key)
+				}
+			}
 
 			next.ServeHTTP(ctx.Resp, ctx.Req)
 		})

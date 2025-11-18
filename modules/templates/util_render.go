@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"html"
 	"html/template"
 	"math"
 	"net/url"
@@ -14,19 +15,19 @@ import (
 	"strings"
 	"unicode"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/modules/emoji"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	"code.gitea.io/gitea/modules/markup/markdown"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/translation"
-	"code.gitea.io/gitea/modules/util"
+	issues_model "forgejo.org/models/issues"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/emoji"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 )
 
 // RenderCommitMessage renders commit message with XSS-safe and special links.
 func RenderCommitMessage(ctx context.Context, msg string, metas map[string]string) template.HTML {
-	cleanMsg := template.HTMLEscapeString(msg)
+	cleanMsg := html.EscapeString(msg)
 	// we can safely assume that it will not return any error, since there
 	// shouldn't be any special HTML.
 	fullMessage, err := markup.RenderCommitMessage(&markup.RenderContext{
@@ -63,7 +64,7 @@ func RenderCommitMessageLinkSubject(ctx context.Context, msg, urlDefault string,
 		Ctx:         ctx,
 		DefaultLink: urlDefault,
 		Metas:       metas,
-	}, template.HTMLEscapeString(msgLine))
+	}, html.EscapeString(msgLine))
 	if err != nil {
 		log.Error("RenderCommitMessageSubject: %v", err)
 		return template.HTML("")
@@ -88,7 +89,7 @@ func RenderCommitBody(ctx context.Context, msg string, metas map[string]string) 
 	renderedMessage, err := markup.RenderCommitMessage(&markup.RenderContext{
 		Ctx:   ctx,
 		Metas: metas,
-	}, template.HTMLEscapeString(msgLine))
+	}, html.EscapeString(msgLine))
 	if err != nil {
 		log.Error("RenderCommitMessage: %v", err)
 		return ""
@@ -122,7 +123,7 @@ func RenderIssueTitle(ctx context.Context, text string, metas map[string]string)
 	renderedText, err := markup.RenderIssueTitle(&markup.RenderContext{
 		Ctx:   ctx,
 		Metas: metas,
-	}, template.HTMLEscapeString(text))
+	}, html.EscapeString(text))
 	if err != nil {
 		log.Error("RenderIssueTitle: %v", err)
 		return template.HTML("")
@@ -132,7 +133,7 @@ func RenderIssueTitle(ctx context.Context, text string, metas map[string]string)
 
 // RenderRefIssueTitle renders referenced issue/pull title with defined post processors
 func RenderRefIssueTitle(ctx context.Context, text string) template.HTML {
-	renderedText, err := markup.RenderRefIssueTitle(&markup.RenderContext{Ctx: ctx}, template.HTMLEscapeString(text))
+	renderedText, err := markup.RenderRefIssueTitle(&markup.RenderContext{Ctx: ctx}, html.EscapeString(text))
 	if err != nil {
 		log.Error("RenderRefIssueTitle: %v", err)
 		return ""
@@ -143,18 +144,18 @@ func RenderRefIssueTitle(ctx context.Context, text string) template.HTML {
 
 // RenderLabel renders a label
 // locale is needed due to an import cycle with our context providing the `Tr` function
-func RenderLabel(ctx context.Context, locale translation.Locale, label *issues_model.Label) template.HTML {
+func RenderLabel(ctx *Context, label *issues_model.Label) template.HTML {
 	var (
 		archivedCSSClass string
 		textColor        = util.ContrastColor(label.Color)
 		labelScope       = label.ExclusiveScope()
 	)
 
-	description := emoji.ReplaceAliases(template.HTMLEscapeString(label.Description))
+	description := emoji.ReplaceAliases(html.EscapeString(label.Description))
 
 	if label.IsArchived() {
 		archivedCSSClass = "archived-label"
-		description = locale.TrString("repo.issues.archived_label_description", description)
+		description = ctx.Locale.TrString("repo.issues.archived_label_description", description)
 	}
 
 	if labelScope == "" {
@@ -212,7 +213,7 @@ func RenderLabel(ctx context.Context, locale translation.Locale, label *issues_m
 // RenderEmoji renders html text with emoji post processors
 func RenderEmoji(ctx context.Context, text string) template.HTML {
 	renderedText, err := markup.RenderEmoji(&markup.RenderContext{Ctx: ctx},
-		template.HTMLEscapeString(text))
+		html.EscapeString(text))
 	if err != nil {
 		log.Error("RenderEmoji: %v", err)
 		return template.HTML("")
@@ -244,7 +245,7 @@ func RenderMarkdownToHtml(ctx context.Context, input string) template.HTML { //n
 	return output
 }
 
-func RenderLabels(ctx context.Context, locale translation.Locale, labels []*issues_model.Label, repoLink string, isPull bool) template.HTML {
+func RenderLabels(ctx *Context, labels []*issues_model.Label, repoLink string, isPull bool) template.HTML {
 	htmlCode := `<span class="labels-list">`
 	for _, label := range labels {
 		// Protect against nil value in labels - shouldn't happen but would cause a panic if so
@@ -257,16 +258,34 @@ func RenderLabels(ctx context.Context, locale translation.Locale, labels []*issu
 			issuesOrPull = "pulls"
 		}
 		htmlCode += fmt.Sprintf("<a href='%s/%s?labels=%d' rel='nofollow'>%s</a> ",
-			repoLink, issuesOrPull, label.ID, RenderLabel(ctx, locale, label))
+			repoLink, issuesOrPull, label.ID, RenderLabel(ctx, label))
 	}
 	htmlCode += "</span>"
 	return template.HTML(htmlCode)
 }
 
-func RenderReviewRequest(users []issues_model.RequestReviewTarget) template.HTML {
+func RenderUser(ctx context.Context, user user_model.User) template.HTML {
+	if user.ID > 0 {
+		return template.HTML(fmt.Sprintf(
+			"<a href='%s' rel='nofollow'><strong>%s</strong></a>",
+			user.HomeLink(), html.EscapeString(user.GetDisplayName())))
+	}
+	return template.HTML(fmt.Sprintf("<strong>%s</strong>",
+		html.EscapeString(user.GetDisplayName())))
+}
+
+func RenderReviewRequest(ctx context.Context, users []issues_model.RequestReviewTarget) template.HTML {
 	usernames := make([]string, 0, len(users))
 	for _, user := range users {
-		usernames = append(usernames, template.HTMLEscapeString(user.Name()))
+		if user.ID() > 0 {
+			usernames = append(usernames, fmt.Sprintf(
+				"<a href='%s' rel='nofollow'><strong>%s</strong></a>",
+				user.Link(ctx), html.EscapeString(user.Name())))
+		} else {
+			usernames = append(usernames, fmt.Sprintf(
+				"<strong>%s</strong>",
+				html.EscapeString(user.Name())))
+		}
 	}
 
 	htmlCode := `<span class="review-request-list">`

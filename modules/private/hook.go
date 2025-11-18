@@ -9,10 +9,11 @@ import (
 	"net/url"
 	"time"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/git/pushoptions"
-	"code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/git/pushoptions"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
 )
 
 // Git environment variables
@@ -46,7 +47,7 @@ func (o *HookOptions) GetGitPushOptions() pushoptions.Interface {
 
 // SSHLogOption ssh log options
 type SSHLogOption struct {
-	IsError bool
+	Level   log.Level
 	Message string
 }
 
@@ -121,9 +122,9 @@ func SetDefaultBranch(ctx context.Context, ownerName, repoName, branch string) R
 }
 
 // SSHLog sends ssh error log response
-func SSHLog(ctx context.Context, isErr bool, msg string) error {
+func SSHLog(ctx context.Context, level log.Level, msg string) error {
 	reqURL := setting.LocalURL + "api/internal/ssh/log"
-	req := newInternalRequest(ctx, reqURL, "POST", &SSHLogOption{IsError: isErr, Message: msg})
+	req := newInternalRequest(ctx, reqURL, "POST", &SSHLogOption{Level: level, Message: msg})
 	_, extra := requestJSONResp(req, &ResponseText{})
 	return extra.Error
 }

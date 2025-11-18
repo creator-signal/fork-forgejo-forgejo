@@ -6,9 +6,9 @@ package quota
 import (
 	"context"
 
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
 
 	"xorm.io/builder"
 )
@@ -178,66 +178,36 @@ func (g *Group) RemoveRuleByName(ctx context.Context, ruleName string) error {
 	return committer.Commit()
 }
 
-var affectsMap = map[LimitSubject]LimitSubjects{
-	LimitSubjectSizeAll: {
-		LimitSubjectSizeReposAll,
-		LimitSubjectSizeGitLFS,
-		LimitSubjectSizeAssetsAll,
-	},
-	LimitSubjectSizeReposAll: {
-		LimitSubjectSizeReposPublic,
-		LimitSubjectSizeReposPrivate,
-	},
-	LimitSubjectSizeAssetsAll: {
-		LimitSubjectSizeAssetsAttachmentsAll,
-		LimitSubjectSizeAssetsArtifacts,
-		LimitSubjectSizeAssetsPackagesAll,
-	},
-	LimitSubjectSizeAssetsAttachmentsAll: {
-		LimitSubjectSizeAssetsAttachmentsIssues,
-		LimitSubjectSizeAssetsAttachmentsReleases,
-	},
-}
-
-func (g *Group) Evaluate(used Used, forSubject LimitSubject) (bool, bool) {
-	var found bool
+// Group.Evaluate returns whether the group contains a matching rule for the subject
+// and if so, whether the group allows the action given the size used
+func (g *Group) Evaluate(used Used, forSubject LimitSubject) (match, allow bool) {
 	for _, rule := range g.Rules {
-		ok, has := rule.Evaluate(used, forSubject)
-		if has {
-			found = true
-			if !ok {
-				return false, true
+		ruleMatch, ruleAllow := rule.Evaluate(used, forSubject)
+		if ruleMatch {
+			// evaluation stops as soon as we find a matching rule that denies the action
+			if !ruleAllow {
+				return true, false
 			}
+
+			match = true
+			allow = true
 		}
 	}
 
-	if !found {
-		// If Evaluation for forSubject did not succeed, try evaluating against
-		// subjects below
-
-		for _, subject := range affectsMap[forSubject] {
-			ok, has := g.Evaluate(used, subject)
-			if has {
-				found = true
-				if !ok {
-					return false, true
-				}
-			}
-		}
-	}
-
-	return true, found
+	return match, allow
 }
 
-func (gl *GroupList) Evaluate(used Used, forSubject LimitSubject) bool {
+// GroupList.Evaluate returns whether the grouplist allows the action given the size used
+func (gl *GroupList) Evaluate(used Used, forSubject LimitSubject) (pass bool) {
 	// If there are no groups, use the configured defaults:
 	if gl == nil || len(*gl) == 0 {
 		return EvaluateDefault(used, forSubject)
 	}
 
 	for _, group := range *gl {
-		ok, has := group.Evaluate(used, forSubject)
-		if has && ok {
+		groupMatch, groupAllow := group.Evaluate(used, forSubject)
+		if groupMatch && groupAllow {
+			// evaluation stops as soon as we find a matching group that allows the action
 			return true
 		}
 	}

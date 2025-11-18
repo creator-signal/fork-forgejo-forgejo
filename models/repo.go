@@ -11,14 +11,17 @@ import (
 
 	_ "image/jpeg" // Needed for jpeg support
 
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/services/stats"
+
+	"xorm.io/builder"
 )
 
 // Init initialize model
@@ -27,7 +30,7 @@ func Init(ctx context.Context) error {
 }
 
 type repoChecker struct {
-	querySQL   func(ctx context.Context) ([]map[string][]byte, error)
+	querySQL   func(ctx context.Context) ([]int64, error)
 	correctSQL func(ctx context.Context, id int64) error
 	desc       string
 }
@@ -38,8 +41,7 @@ func repoStatsCheck(ctx context.Context, checker *repoChecker) {
 		log.Error("Select %s: %v", checker.desc, err)
 		return
 	}
-	for _, result := range results {
-		id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
+	for _, id := range results {
 		select {
 		case <-ctx.Done():
 			log.Warn("CheckRepoStats: Cancelled before checking %s for with id=%d", checker.desc, id)
@@ -54,21 +56,23 @@ func repoStatsCheck(ctx context.Context, checker *repoChecker) {
 	}
 }
 
-func StatsCorrectSQL(ctx context.Context, sql string, id int64) error {
-	_, err := db.GetEngine(ctx).Exec(sql, id, id)
+func StatsCorrectSQL(ctx context.Context, sql any, ids ...any) error {
+	args := []any{sql}
+	args = append(args, ids...)
+	_, err := db.GetEngine(ctx).Exec(args...)
 	return err
 }
 
 func repoStatsCorrectNumWatches(ctx context.Context, id int64) error {
-	return StatsCorrectSQL(ctx, "UPDATE `repository` SET num_watches=(SELECT COUNT(*) FROM `watch` WHERE repo_id=? AND mode<>2) WHERE id=?", id)
+	return StatsCorrectSQL(ctx, "UPDATE `repository` SET num_watches=(SELECT COUNT(*) FROM `watch` WHERE repo_id=? AND mode<>2) WHERE id=?", id, id)
 }
 
 func repoStatsCorrectNumStars(ctx context.Context, id int64) error {
-	return StatsCorrectSQL(ctx, "UPDATE `repository` SET num_stars=(SELECT COUNT(*) FROM `star` WHERE repo_id=?) WHERE id=?", id)
+	return StatsCorrectSQL(ctx, "UPDATE `repository` SET num_stars=(SELECT COUNT(*) FROM `star` WHERE repo_id=?) WHERE id=?", id, id)
 }
 
 func labelStatsCorrectNumIssues(ctx context.Context, id int64) error {
-	return StatsCorrectSQL(ctx, "UPDATE `label` SET num_issues=(SELECT COUNT(*) FROM `issue_label` WHERE label_id=?) WHERE id=?", id)
+	return StatsCorrectSQL(ctx, "UPDATE `label` SET num_issues=(SELECT COUNT(*) FROM `issue_label` WHERE label_id=?) WHERE id=?", id, id)
 }
 
 func labelStatsCorrectNumIssuesRepo(ctx context.Context, id int64) error {
@@ -77,13 +81,13 @@ func labelStatsCorrectNumIssuesRepo(ctx context.Context, id int64) error {
 }
 
 func labelStatsCorrectNumClosedIssues(ctx context.Context, id int64) error {
-	_, err := db.GetEngine(ctx).Exec("UPDATE `label` SET num_closed_issues=(SELECT COUNT(*) FROM `issue_label`,`issue` WHERE `issue_label`.label_id=`label`.id AND `issue_label`.issue_id=`issue`.id AND `issue`.is_closed=?) WHERE `label`.id=?", true, id)
-	return err
+	stats.QueueRecalcLabelByID(ctx, id)
+	return nil
 }
 
 func labelStatsCorrectNumClosedIssuesRepo(ctx context.Context, id int64) error {
-	_, err := db.GetEngine(ctx).Exec("UPDATE `label` SET num_closed_issues=(SELECT COUNT(*) FROM `issue_label`,`issue` WHERE `issue_label`.label_id=`label`.id AND `issue_label`.issue_id=`issue`.id AND `issue`.is_closed=?) WHERE `label`.repo_id=?", true, id)
-	return err
+	stats.QueueRecalcLabelByRepoID(ctx, id)
+	return nil
 }
 
 var milestoneStatsQueryNumIssues = "SELECT `milestone`.id FROM `milestone` WHERE `milestone`.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE `issue`.milestone_id=`milestone`.id AND `issue`.is_closed=?) OR `milestone`.num_issues!=(SELECT COUNT(*) FROM `issue` WHERE `issue`.milestone_id=`milestone`.id)"
@@ -96,20 +100,17 @@ func milestoneStatsCorrectNumIssuesRepo(ctx context.Context, id int64) error {
 	}
 	for _, result := range results {
 		id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
-		err = issues_model.UpdateMilestoneCounters(ctx, id)
-		if err != nil {
-			return err
-		}
+		stats.QueueRecalcMilestoneByID(ctx, id)
 	}
 	return nil
 }
 
 func userStatsCorrectNumRepos(ctx context.Context, id int64) error {
-	return StatsCorrectSQL(ctx, "UPDATE `user` SET num_repos=(SELECT COUNT(*) FROM `repository` WHERE owner_id=?) WHERE id=?", id)
+	return StatsCorrectSQL(ctx, "UPDATE `user` SET num_repos=(SELECT COUNT(*) FROM `repository` WHERE owner_id=?) WHERE id=?", id, id)
 }
 
 func repoStatsCorrectIssueNumComments(ctx context.Context, id int64) error {
-	return StatsCorrectSQL(ctx, "UPDATE `issue` SET num_comments=(SELECT COUNT(*) FROM `comment` WHERE issue_id=? AND type=0) WHERE id=?", id)
+	return StatsCorrectSQL(ctx, issues_model.UpdateIssueNumCommentsBuilder(id))
 }
 
 func repoStatsCorrectNumIssues(ctx context.Context, id int64) error {
@@ -128,9 +129,12 @@ func repoStatsCorrectNumClosedPulls(ctx context.Context, id int64) error {
 	return repo_model.UpdateRepoIssueNumbers(ctx, id, true, true)
 }
 
-func statsQuery(args ...any) func(context.Context) ([]map[string][]byte, error) {
-	return func(ctx context.Context) ([]map[string][]byte, error) {
-		return db.GetEngine(ctx).Query(args...)
+// statsQuery returns a function that queries the database for a list of IDs
+// sql could be a string or a *builder.Builder
+func statsQuery(sql any, args ...any) func(context.Context) ([]int64, error) {
+	return func(ctx context.Context) ([]int64, error) {
+		var ids []int64
+		return ids, db.GetEngine(ctx).SQL(sql, args...).Find(&ids)
 	}
 }
 
@@ -151,30 +155,6 @@ func CheckRepoStats(ctx context.Context) error {
 			repoStatsCorrectNumStars,
 			"repository count 'num_stars'",
 		},
-		// Repository.NumIssues
-		{
-			statsQuery("SELECT repo.id FROM `repository` repo WHERE repo.num_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_pull=?)", false),
-			repoStatsCorrectNumIssues,
-			"repository count 'num_issues'",
-		},
-		// Repository.NumClosedIssues
-		{
-			statsQuery("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=? AND is_pull=?)", true, false),
-			repoStatsCorrectNumClosedIssues,
-			"repository count 'num_closed_issues'",
-		},
-		// Repository.NumPulls
-		{
-			statsQuery("SELECT repo.id FROM `repository` repo WHERE repo.num_pulls!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_pull=?)", true),
-			repoStatsCorrectNumPulls,
-			"repository count 'num_pulls'",
-		},
-		// Repository.NumClosedPulls
-		{
-			statsQuery("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_pulls!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=? AND is_pull=?)", true, true),
-			repoStatsCorrectNumClosedPulls,
-			"repository count 'num_closed_pulls'",
-		},
 		// Label.NumIssues
 		{
 			statsQuery("SELECT label.id FROM `label` WHERE label.num_issues!=(SELECT COUNT(*) FROM `issue_label` WHERE label_id=label.id)"),
@@ -190,7 +170,10 @@ func CheckRepoStats(ctx context.Context) error {
 		// Milestone.Num{,Closed}Issues
 		{
 			statsQuery(milestoneStatsQueryNumIssues, true),
-			issues_model.UpdateMilestoneCounters,
+			func(ctx context.Context, milestoneID int64) error {
+				stats.QueueRecalcMilestoneByID(ctx, milestoneID)
+				return nil
+			},
 			"milestone count 'num_closed_issues' and 'num_issues'",
 		},
 		// User.NumRepos
@@ -201,7 +184,16 @@ func CheckRepoStats(ctx context.Context) error {
 		},
 		// Issue.NumComments
 		{
-			statsQuery("SELECT `issue`.id FROM `issue` WHERE `issue`.num_comments!=(SELECT COUNT(*) FROM `comment` WHERE issue_id=`issue`.id AND type=0)"),
+			statsQuery(builder.Select("`issue`.id").From("`issue`").Where(
+				builder.Neq{
+					"`issue`.num_comments": builder.Select("COUNT(*)").From("`comment`").Where(
+						builder.Expr("issue_id = `issue`.id").And(
+							builder.In("type", issues_model.ConversationCountedCommentType()),
+						),
+					),
+				},
+			),
+			),
 			repoStatsCorrectIssueNumComments,
 			"issue count 'num_comments'",
 		},
@@ -277,42 +269,10 @@ func UpdateRepoStats(ctx context.Context, id int64) error {
 	return nil
 }
 
-func updateUserStarNumbers(ctx context.Context, users []user_model.User) error {
-	ctx, committer, err := db.TxContext(ctx)
-	if err != nil {
-		return err
-	}
-	defer committer.Close()
-
-	for _, user := range users {
-		if _, err = db.Exec(ctx, "UPDATE `user` SET num_stars=(SELECT COUNT(*) FROM `star` WHERE uid=?) WHERE id=?", user.ID, user.ID); err != nil {
-			return err
-		}
-	}
-
-	return committer.Commit()
-}
-
 // DoctorUserStarNum recalculate Stars number for all user
 func DoctorUserStarNum(ctx context.Context) (err error) {
-	const batchSize = 100
-
-	for start := 0; ; start += batchSize {
-		users := make([]user_model.User, 0, batchSize)
-		if err = db.GetEngine(ctx).Limit(batchSize, start).Where("type = ?", 0).Cols("id").Find(&users); err != nil {
-			return err
-		}
-		if len(users) == 0 {
-			break
-		}
-
-		if err = updateUserStarNumbers(ctx, users); err != nil {
-			return err
-		}
-	}
-
+	_, err = db.Exec(ctx, "UPDATE `user` SET num_stars=(SELECT COUNT(*) FROM `star` WHERE uid=`user`.id) WHERE type = 0")
 	log.Debug("recalculate Stars number for all user finished")
-
 	return err
 }
 

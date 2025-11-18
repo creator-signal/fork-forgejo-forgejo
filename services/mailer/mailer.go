@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -18,17 +19,17 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/process"
-	"code.gitea.io/gitea/modules/queue"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/templates"
-	notify_service "code.gitea.io/gitea/services/notify"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/process"
+	"forgejo.org/modules/queue"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/templates"
+	notify_service "forgejo.org/services/notify"
 
 	ntlmssp "github.com/Azure/go-ntlmssp"
-	"github.com/jaytaylor/html2text"
+	"github.com/inbucket/html2text"
 	"gopkg.in/gomail.v2"
 )
 
@@ -176,7 +177,7 @@ func (a *ntlmAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
 func (a *ntlmAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	if more {
 		if len(fromServer) == 0 {
-			return nil, fmt.Errorf("ntlm ChallengeMessage is empty")
+			return nil, errors.New("ntlm ChallengeMessage is empty")
 		}
 		authenticateMessage, err := ntlmssp.ProcessChallenge(fromServer, a.username, a.password, a.domainNeeded)
 		return authenticateMessage, err
@@ -264,7 +265,7 @@ func (s *smtpSender) Send(from string, to []string, msg io.WriterTo) error {
 	canAuth, options := client.Extension("AUTH")
 	if len(opts.User) > 0 {
 		if !canAuth {
-			return fmt.Errorf("SMTP server does not support AUTH, but credentials provided")
+			return errors.New("SMTP server does not support AUTH, but credentials provided")
 		}
 
 		var auth smtp.Auth

@@ -16,15 +16,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/testlogger"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/testlogger"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers"
+	"forgejo.org/tests"
 )
 
 var testE2eWebRoutes *web.Route
@@ -39,13 +40,6 @@ func TestMain(m *testing.M) {
 	tests.InitTest(true)
 	initChangedFiles()
 	testE2eWebRoutes = routers.NormalRoutes()
-
-	os.Unsetenv("GIT_AUTHOR_NAME")
-	os.Unsetenv("GIT_AUTHOR_EMAIL")
-	os.Unsetenv("GIT_AUTHOR_DATE")
-	os.Unsetenv("GIT_COMMITTER_NAME")
-	os.Unsetenv("GIT_COMMITTER_EMAIL")
-	os.Unsetenv("GIT_COMMITTER_DATE")
 
 	err := unittest.InitFixtures(
 		unittest.FixturesOptions{
@@ -76,7 +70,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
-// TestE2e should be the only test e2e necessary. It will collect all "*.test.e2e.js" files in this directory and build a test for each.
+// TestE2e should be the only test e2e necessary. It will collect all "*.test.e2e.ts" files in this directory and build a test for each.
 func TestE2e(t *testing.T) {
 	// Find the paths of all e2e test files in test directory.
 	searchGlob := filepath.Join(filepath.Dir(setting.AppPath), "tests", "e2e", "*.test.e2e.ts")
@@ -89,6 +83,7 @@ func TestE2e(t *testing.T) {
 
 	runArgs := []string{"npx", "playwright", "test"}
 
+	_, testVisual := os.LookupEnv("VISUAL_TEST")
 	// To update snapshot outputs
 	if _, set := os.LookupEnv("ACCEPT_VISUAL"); set {
 		runArgs = append(runArgs, "--update-snapshots")
@@ -108,10 +103,23 @@ func TestE2e(t *testing.T) {
 		}
 
 		t.Run(testname, func(t *testing.T) {
+			if testname == "user-settings.test.e2e" {
+				defer test.MockVariableValue(&setting.Quota.Enabled, true)()
+				defer test.MockVariableValue(&testE2eWebRoutes, routers.NormalRoutes())()
+			}
+			if testname == "buttons.test.e2e" {
+				defer test.MockVariableValue(&setting.IsProd, false)()
+				defer test.MockVariableValue(&testE2eWebRoutes, routers.NormalRoutes())()
+			}
+
 			// Default 2 minute timeout
 			onForgejoRun(t, func(*testing.T, *url.URL) {
 				defer DeclareGitRepos(t)()
 				thisTest := runArgs
+				// when all tests are run, use unique artifacts directories per test to preserve artifacts from other tests
+				if testVisual {
+					thisTest = append(thisTest, "--output=tests/e2e/test-artifacts/"+testname)
+				}
 				thisTest = append(thisTest, path)
 				cmd := exec.Command(runArgs[0], thisTest...)
 				cmd.Env = os.Environ()
@@ -121,7 +129,7 @@ func TestE2e(t *testing.T) {
 				cmd.Stderr = os.Stderr
 
 				err := cmd.Run()
-				if err != nil {
+				if err != nil && !testVisual {
 					log.Fatal("Playwright Failed: %s", err)
 				}
 			})

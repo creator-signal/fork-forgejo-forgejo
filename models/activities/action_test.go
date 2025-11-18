@@ -8,13 +8,13 @@ import (
 	"path"
 	"testing"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	issue_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	issue_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,12 +51,11 @@ func TestGetFeeds(t *testing.T) {
 		Actor:           user,
 		IncludePrivate:  true,
 		OnlyPerformedBy: false,
-		IncludeDeleted:  true,
 	})
 	require.NoError(t, err)
 	if assert.Len(t, actions, 1) {
 		assert.EqualValues(t, 1, actions[0].ID)
-		assert.EqualValues(t, user.ID, actions[0].UserID)
+		assert.Equal(t, user.ID, actions[0].UserID)
 	}
 	assert.Equal(t, int64(1), count)
 
@@ -127,13 +126,12 @@ func TestGetFeeds2(t *testing.T) {
 		Actor:           user,
 		IncludePrivate:  true,
 		OnlyPerformedBy: false,
-		IncludeDeleted:  true,
 	})
 	require.NoError(t, err)
 	assert.Len(t, actions, 1)
 	if assert.Len(t, actions, 1) {
 		assert.EqualValues(t, 2, actions[0].ID)
-		assert.EqualValues(t, org.ID, actions[0].UserID)
+		assert.Equal(t, org.ID, actions[0].UserID)
 	}
 	assert.Equal(t, int64(1), count)
 
@@ -142,7 +140,6 @@ func TestGetFeeds2(t *testing.T) {
 		Actor:           user,
 		IncludePrivate:  false,
 		OnlyPerformedBy: false,
-		IncludeDeleted:  true,
 	})
 	require.NoError(t, err)
 	assert.Empty(t, actions)
@@ -197,7 +194,8 @@ func TestNotifyWatchers(t *testing.T) {
 		RepoID:    1,
 		OpType:    activities_model.ActionStarRepo,
 	}
-	require.NoError(t, activities_model.NotifyWatchers(db.DefaultContext, action))
+	_, err := activities_model.NotifyWatchers(db.DefaultContext, action)
+	require.NoError(t, err)
 
 	// One watchers are inactive, thus action is only created for user 8, 1, 4, 11
 	unittest.AssertExistsAndLoadBean(t, &activities_model.Action{
@@ -291,7 +289,7 @@ func TestDeleteIssueActions(t *testing.T) {
 
 	// load an issue
 	issue := unittest.AssertExistsAndLoadBean(t, &issue_model.Issue{ID: 4})
-	assert.NotEqualValues(t, issue.ID, issue.Index) // it needs to use different ID/Index to test the DeleteIssueActions to delete some actions by IssueIndex
+	assert.NotEqual(t, issue.ID, issue.Index) // it needs to use different ID/Index to test the DeleteIssueActions to delete some actions by IssueIndex
 
 	// insert a comment
 	err := db.Insert(db.DefaultContext, &issue_model.Comment{Type: issue_model.CommentTypeComment, IssueID: issue.ID})
@@ -307,14 +305,69 @@ func TestDeleteIssueActions(t *testing.T) {
 	})
 	require.NoError(t, err)
 	err = db.Insert(db.DefaultContext, &activities_model.Action{
-		OpType:  activities_model.ActionCreateIssue,
-		RepoID:  issue.RepoID,
+		OpType: activities_model.ActionCreateIssue,
+		RepoID: issue.RepoID,
+		// Older Content format...
 		Content: fmt.Sprintf("%d|content...", issue.Index),
+	})
+	require.NoError(t, err)
+	err = db.Insert(db.DefaultContext, &activities_model.Action{
+		OpType: activities_model.ActionCreateIssue,
+		RepoID: issue.RepoID,
+		// JSON-encoded Content format...
+		Content: fmt.Sprintf("[\"%d\",\"content...\"]", issue.Index),
 	})
 	require.NoError(t, err)
 
 	// assert that the actions exist, then delete them
-	unittest.AssertCount(t, &activities_model.Action{}, 2)
+	unittest.AssertCount(t, &activities_model.Action{}, 3)
 	require.NoError(t, activities_model.DeleteIssueActions(db.DefaultContext, issue.RepoID, issue.ID, issue.Index))
 	unittest.AssertCount(t, &activities_model.Action{}, 0)
+}
+
+func TestGetIssueInfos(t *testing.T) {
+	tt := []struct {
+		content string
+		field1  string
+		field2  string
+		field3  string
+	}{
+		{
+			content: "4|",
+			field1:  "4",
+		},
+		{
+			content: "2|docs: Add README w/ template sections",
+			field1:  "2",
+			field2:  "docs: Add README w/ template sections",
+		},
+		{
+			content: "2|docs: Add README w/ template sections|Some comment...",
+			field1:  "2",
+			field2:  "docs: Add README w/ template sections",
+			field3:  "Some comment...",
+		},
+		{
+			content: "[\"4\"]",
+			field1:  "4",
+		},
+		{
+			content: "[\"2\", \"docs: Add README w/ | template sections\"]",
+			field1:  "2",
+			field2:  "docs: Add README w/ | template sections",
+		},
+		{
+			content: "[\"2\", \"docs: Add README w/ | template sections\", \"Some | comment...\"]",
+			field1:  "2",
+			field2:  "docs: Add README w/ | template sections",
+			field3:  "Some | comment...",
+		},
+	}
+	for _, test := range tt {
+		action := &activities_model.Action{Content: test.content}
+		issueInfos := action.GetIssueInfos()
+		assert.Equal(t, test.field1, issueInfos[0])
+		assert.Equal(t, test.field2, issueInfos[1])
+		assert.Equal(t, test.field3, issueInfos[2])
+	}
 }

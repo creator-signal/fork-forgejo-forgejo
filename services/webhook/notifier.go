@@ -6,20 +6,21 @@ package webhook
 import (
 	"context"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	packages_model "code.gitea.io/gitea/models/packages"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
-	"code.gitea.io/gitea/services/convert"
-	notify_service "code.gitea.io/gitea/services/notify"
+	actions_model "forgejo.org/models/actions"
+	issues_model "forgejo.org/models/issues"
+	packages_model "forgejo.org/models/packages"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	webhook_module "forgejo.org/modules/webhook"
+	"forgejo.org/services/convert"
+	notify_service "forgejo.org/services/notify"
 )
 
 func init() {
@@ -599,6 +600,10 @@ func (m *webhookNotifier) IssueChangeMilestone(ctx context.Context, doer *user_m
 }
 
 func (m *webhookNotifier) PushCommits(ctx context.Context, pusher *user_model.User, repo *repo_model.Repository, opts *repository.PushUpdateOptions, commits *repository.PushCommits) {
+	if len(commits.Commits) > setting.Webhook.PayloadCommitLimit {
+		commits.Commits = commits.Commits[:setting.Webhook.PayloadCommitLimit]
+	}
+
 	apiPusher := convert.ToUser(ctx, pusher, nil)
 	apiCommits, apiHeadCommit, err := commits.ToAPIPayloadCommits(ctx, repo.RepoPath(), repo.HTMLURL())
 	if err != nil {
@@ -819,7 +824,7 @@ func sendReleaseHook(ctx context.Context, doer *user_model.User, rel *repo_model
 	permission, _ := access_model.GetUserRepoPermission(ctx, rel.Repo, doer)
 	if err := PrepareWebhooks(ctx, EventSource{Repository: rel.Repo}, webhook_module.HookEventRelease, &api.ReleasePayload{
 		Action:     action,
-		Release:    convert.ToAPIRelease(ctx, rel.Repo, rel),
+		Release:    convert.ToAPIRelease(ctx, rel.Repo, rel, false),
 		Repository: convert.ToRepo(ctx, rel.Repo, permission),
 		Sender:     convert.ToUser(ctx, doer, nil),
 	}); err != nil {
@@ -840,6 +845,10 @@ func (m *webhookNotifier) DeleteRelease(ctx context.Context, doer *user_model.Us
 }
 
 func (m *webhookNotifier) SyncPushCommits(ctx context.Context, pusher *user_model.User, repo *repo_model.Repository, opts *repository.PushUpdateOptions, commits *repository.PushCommits) {
+	if len(commits.Commits) > setting.Webhook.PayloadCommitLimit {
+		commits.Commits = commits.Commits[:setting.Webhook.PayloadCommitLimit]
+	}
+
 	apiPusher := convert.ToUser(ctx, pusher, nil)
 	apiCommits, apiHeadCommit, err := commits.ToAPIPayloadCommits(ctx, repo.RepoPath(), repo.HTMLURL())
 	if err != nil {
@@ -877,6 +886,45 @@ func (m *webhookNotifier) PackageCreate(ctx context.Context, doer *user_model.Us
 
 func (m *webhookNotifier) PackageDelete(ctx context.Context, doer *user_model.User, pd *packages_model.PackageDescriptor) {
 	notifyPackage(ctx, doer, pd, api.HookPackageDeleted)
+}
+
+func (m *webhookNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun) {
+	source := EventSource{
+		Repository: run.Repo,
+		Owner:      run.TriggerUser,
+	}
+
+	// The doer is the one whose perspective is used to view this ActionRun.
+	// In the best case we use the user that created the webhook.
+	// Unfortunately we don't know who that was.
+	// So instead we use the repo owner, who is able to create webhooks and allow others to do so by making them repo admins.
+	// This is pretty close to perfect.
+	doer := run.Repo.Owner
+
+	payload := &api.ActionPayload{
+		Run:         convert.ToActionRun(ctx, run, doer),
+		LastRun:     convert.ToActionRun(ctx, lastRun, doer),
+		PriorStatus: priorStatus.String(),
+	}
+
+	if run.Status.IsSuccess() {
+		payload.Action = api.HookActionSuccess
+		if err := PrepareWebhooks(ctx, source, webhook_module.HookEventActionRunSuccess, payload); err != nil {
+			log.Error("PrepareWebhooks: %v", err)
+		}
+		// send another event when this is a recover
+		if lastRun != nil && !lastRun.Status.IsSuccess() {
+			payload.Action = api.HookActionRecover
+			if err := PrepareWebhooks(ctx, source, webhook_module.HookEventActionRunRecover, payload); err != nil {
+				log.Error("PrepareWebhooks: %v", err)
+			}
+		}
+	} else {
+		payload.Action = api.HookActionFailure
+		if err := PrepareWebhooks(ctx, source, webhook_module.HookEventActionRunFailure, payload); err != nil {
+			log.Error("PrepareWebhooks: %v", err)
+		}
+	}
 }
 
 func notifyPackage(ctx context.Context, sender *user_model.User, pd *packages_model.PackageDescriptor, action api.HookPackageAction) {

@@ -14,24 +14,24 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/git/pushoptions"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/private"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/git/pushoptions"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/private"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 const (
 	hookBatchSize = 30
 )
 
-var (
-	// CmdHook represents the available hooks sub-command.
-	CmdHook = &cli.Command{
+// CmdHook represents the available hooks sub-command.
+func cmdHook() *cli.Command {
+	return &cli.Command{
 		Name:        "hook",
 		Usage:       "(internal) Should only be called by Git",
 		Description: "Delegate commands to corresponding Git hooks",
@@ -44,8 +44,10 @@ var (
 			subcmdHookGistPreReceive,
 		},
 	}
+}
 
-	subcmdHookPreReceive = &cli.Command{
+func subcmdHookPreReceive() *cli.Command {
+	return &cli.Command{
 		Name:        "pre-receive",
 		Usage:       "Delegate pre-receive Git hook",
 		Description: "This command should only be called by Git",
@@ -56,7 +58,10 @@ var (
 			},
 		},
 	}
-	subcmdHookUpdate = &cli.Command{
+}
+
+func subcmdHookUpdate() *cli.Command {
+	return &cli.Command{
 		Name:        "update",
 		Usage:       "Delegate update Git hook",
 		Description: "This command should only be called by Git",
@@ -67,7 +72,10 @@ var (
 			},
 		},
 	}
-	subcmdHookPostReceive = &cli.Command{
+}
+
+func subcmdHookPostReceive() *cli.Command {
+	return &cli.Command{
 		Name:        "post-receive",
 		Usage:       "Delegate post-receive Git hook",
 		Description: "This command should only be called by Git",
@@ -78,8 +86,11 @@ var (
 			},
 		},
 	}
-	// Note: new hook since git 2.29
-	subcmdHookProcReceive = &cli.Command{
+}
+
+// Note: new hook since git 2.29
+func subcmdHookProcReceive() *cli.Command {
+	return &cli.Command{
 		Name:        "proc-receive",
 		Usage:       "Delegate proc-receive Git hook",
 		Description: "This command should only be called by Git",
@@ -101,7 +112,7 @@ var (
 			},
 		},
 	}
-)
+}
 
 type delayWriter struct {
 	internal io.Writer
@@ -174,14 +185,14 @@ func (n *nilWriter) WriteString(s string) (int, error) {
 	return len(s), nil
 }
 
-func runHookPreReceive(c *cli.Context) error {
+func runHookPreReceive(ctx context.Context, c *cli.Command) error {
 	if isInternal, _ := strconv.ParseBool(os.Getenv(repo_module.EnvIsInternal)); isInternal {
 		return nil
 	}
-	ctx, cancel := installSignals()
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), true)
 
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		if setting.OnlyAllowPushIfGiteaEnvironmentSet {
@@ -233,11 +244,6 @@ Forgejo or set your environment appropriately.`, "")
 		}
 	}
 
-	supportProcReceive := false
-	if git.CheckGitVersionAtLeast("2.29") == nil {
-		supportProcReceive = true
-	}
-
 	for scanner.Scan() {
 		// TODO: support news feeds for wiki
 		if isWiki {
@@ -255,34 +261,28 @@ Forgejo or set your environment appropriately.`, "")
 		total++
 		lastline++
 
-		// If the ref is a branch or tag, check if it's protected
-		// if supportProcReceive all ref should be checked because
-		// permission check was delayed
-		if supportProcReceive || refFullName.IsBranch() || refFullName.IsTag() {
-			oldCommitIDs[count] = oldCommitID
-			newCommitIDs[count] = newCommitID
-			refFullNames[count] = refFullName
-			count++
-			fmt.Fprintf(out, "*")
+		// All references should be checked because permission check was delayed.
+		oldCommitIDs[count] = oldCommitID
+		newCommitIDs[count] = newCommitID
+		refFullNames[count] = refFullName
+		count++
+		fmt.Fprint(out, "*")
 
-			if count >= hookBatchSize {
-				fmt.Fprintf(out, " Checking %d references\n", count)
+		if count >= hookBatchSize {
+			fmt.Fprintf(out, " Checking %d references\n", count)
 
-				hookOptions.OldCommitIDs = oldCommitIDs
-				hookOptions.NewCommitIDs = newCommitIDs
-				hookOptions.RefFullNames = refFullNames
-				extra := private.HookPreReceive(ctx, username, reponame, hookOptions)
-				if extra.HasError() {
-					return fail(ctx, extra.UserMsg, "HookPreReceive(batch) failed: %v", extra.Error)
-				}
-				count = 0
-				lastline = 0
+			hookOptions.OldCommitIDs = oldCommitIDs
+			hookOptions.NewCommitIDs = newCommitIDs
+			hookOptions.RefFullNames = refFullNames
+			extra := private.HookPreReceive(ctx, username, reponame, hookOptions)
+			if extra.HasError() {
+				return fail(ctx, extra.UserMsg, "HookPreReceive(batch) failed: %v", extra.Error)
 			}
-		} else {
-			fmt.Fprintf(out, ".")
+			count = 0
+			lastline = 0
 		}
 		if lastline >= hookBatchSize {
-			fmt.Fprintf(out, "\n")
+			fmt.Fprint(out, "\n")
 			lastline = 0
 		}
 	}
@@ -299,7 +299,7 @@ Forgejo or set your environment appropriately.`, "")
 			return fail(ctx, extra.UserMsg, "HookPreReceive(last) failed: %v", extra.Error)
 		}
 	} else if lastline > 0 {
-		fmt.Fprintf(out, "\n")
+		fmt.Fprint(out, "\n")
 	}
 
 	fmt.Fprintf(out, "Checked %d references in total\n", total)
@@ -307,43 +307,15 @@ Forgejo or set your environment appropriately.`, "")
 }
 
 // runHookUpdate process the update hook: https://git-scm.com/docs/githooks#update
-func runHookUpdate(c *cli.Context) error {
-	// Now if we're an internal don't do anything else
-	if isInternal, _ := strconv.ParseBool(os.Getenv(repo_module.EnvIsInternal)); isInternal {
-		return nil
-	}
-
-	ctx, cancel := installSignals()
-	defer cancel()
-
-	if c.NArg() != 3 {
-		return nil
-	}
-	args := c.Args().Slice()
-
-	// The arguments given to the hook are in order: reference name, old commit ID and new commit ID.
-	refFullName := git.RefName(args[0])
-	newCommitID := args[2]
-
-	// Only process pull references.
-	if !refFullName.IsPull() {
-		return nil
-	}
-
-	// Empty new commit ID means deletion.
-	if git.IsEmptyCommitID(newCommitID, nil) {
-		return fail(ctx, fmt.Sprintf("The deletion of %s is skipped as it's an internal reference.", refFullName), "")
-	}
-
-	// If the new comment isn't empty it means modification.
-	return fail(ctx, fmt.Sprintf("The modification of %s is skipped as it's an internal reference.", refFullName), "")
+func runHookUpdate(ctx context.Context, c *cli.Command) error {
+	return nil
 }
 
-func runHookPostReceive(c *cli.Context) error {
-	ctx, cancel := installSignals()
+func runHookPostReceive(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), true)
 
 	// First of all run update-server-info no matter what
 	if _, _, err := git.NewCommand(ctx, "update-server-info").RunStdString(nil); err != nil {
@@ -415,7 +387,7 @@ Forgejo or set your environment appropriately.`, "")
 			continue
 		}
 
-		fmt.Fprintf(out, ".")
+		fmt.Fprint(out, ".")
 		oldCommitIDs[count] = string(fields[0])
 		newCommitIDs[count] = string(fields[1])
 		refFullNames[count] = git.RefName(fields[2])
@@ -503,11 +475,11 @@ func hookPrintResults(results []private.HookPostReceiveBranchResult) {
 	}
 }
 
-func runHookProcReceive(c *cli.Context) error {
-	ctx, cancel := installSignals()
+func runHookProcReceive(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), true)
 
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		if setting.OnlyAllowPushIfGiteaEnvironmentSet {
@@ -516,10 +488,6 @@ If you are pushing over SSH you must push with a key managed by
 Forgejo or set your environment appropriately.`, "")
 		}
 		return nil
-	}
-
-	if git.CheckGitVersionAtLeast("2.29") != nil {
-		return fail(ctx, "No proc-receive support", "current git version doesn't support proc-receive.")
 	}
 
 	reader := bufio.NewReader(os.Stdin)

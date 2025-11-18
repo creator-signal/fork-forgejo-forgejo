@@ -12,19 +12,24 @@ import (
 	"testing"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	packages_model "code.gitea.io/gitea/models/packages"
-	container_model "code.gitea.io/gitea/models/packages/container"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	packages_service "code.gitea.io/gitea/services/packages"
-	packages_cleanup_service "code.gitea.io/gitea/services/packages/cleanup"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	packages_model "forgejo.org/models/packages"
+	container_model "forgejo.org/models/packages/container"
+	unit_model "forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
+	"forgejo.org/modules/util"
+	packages_service "forgejo.org/services/packages"
+	packages_cleanup_service "forgejo.org/services/packages/cleanup"
+	"forgejo.org/tests"
 
+	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +40,7 @@ func TestPackageAPI(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
 	session := loginUser(t, user.Name)
 	tokenReadPackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadPackage)
-	tokenDeletePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
+	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
 	packageName := "test-package"
 	packageVersion := "1.0.3"
@@ -49,8 +54,7 @@ func TestPackageAPI(t *testing.T) {
 	t.Run("ListPackages", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s", user.Name)).
-			AddTokenAuth(tokenReadPackage)
+		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s", user.Name))
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		var apiPackages []*api.Package
@@ -67,12 +71,10 @@ func TestPackageAPI(t *testing.T) {
 	t.Run("GetPackage", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/dummy/%s/%s", user.Name, packageName, packageVersion)).
-			AddTokenAuth(tokenReadPackage)
+		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/dummy/%s/%s", user.Name, packageName, packageVersion))
 		MakeRequest(t, req, http.StatusNotFound)
 
-		req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/generic/%s/%s", user.Name, packageName, packageVersion)).
-			AddTokenAuth(tokenReadPackage)
+		req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/generic/%s/%s", user.Name, packageName, packageVersion))
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		var p *api.Package
@@ -99,8 +101,16 @@ func TestPackageAPI(t *testing.T) {
 			DecodeJSON(t, resp, &ap1)
 			assert.Nil(t, ap1.Repository)
 
+			// create a repository
+			repo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit_model.Type{unit_model.TypeCode}, nil, nil)
+			defer f()
+
 			// link to public repository
-			require.NoError(t, packages_model.SetRepositoryLink(db.DefaultContext, p.ID, 1))
+			req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/packages/%s/generic/%s/-/link/%s", user.Name, packageName, repo.Name)).AddTokenAuth(tokenWritePackage)
+			MakeRequest(t, req, http.StatusCreated)
+
+			req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/packages/%s/generic/%s/-/link/%s", user.Name, packageName, repo.Name))
+			MakeRequest(t, req, http.StatusUnauthorized)
 
 			req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/generic/%s/%s", user.Name, packageName, packageVersion)).
 				AddTokenAuth(tokenReadPackage)
@@ -109,10 +119,18 @@ func TestPackageAPI(t *testing.T) {
 			var ap2 *api.Package
 			DecodeJSON(t, resp, &ap2)
 			assert.NotNil(t, ap2.Repository)
-			assert.EqualValues(t, 1, ap2.Repository.ID)
+			assert.Equal(t, repo.ID, ap2.Repository.ID)
 
-			// link to private repository
-			require.NoError(t, packages_model.SetRepositoryLink(db.DefaultContext, p.ID, 2))
+			// link to repository without write access, should fail
+			req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/packages/%s/generic/%s/-/link/%s", user.Name, packageName, "repo3")).AddTokenAuth(tokenWritePackage)
+			MakeRequest(t, req, http.StatusNotFound)
+
+			// remove link
+			req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/packages/%s/generic/%s/-/unlink", user.Name, packageName)).AddTokenAuth(tokenWritePackage)
+			MakeRequest(t, req, http.StatusNoContent)
+
+			req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/packages/%s/generic/%s/-/unlink", user.Name, packageName))
+			MakeRequest(t, req, http.StatusUnauthorized)
 
 			req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/generic/%s/%s", user.Name, packageName, packageVersion)).
 				AddTokenAuth(tokenReadPackage)
@@ -122,7 +140,18 @@ func TestPackageAPI(t *testing.T) {
 			DecodeJSON(t, resp, &ap3)
 			assert.Nil(t, ap3.Repository)
 
-			require.NoError(t, packages_model.UnlinkRepositoryFromAllPackages(db.DefaultContext, 2))
+			// force link to a repository the currently logged-in user doesn't have access to
+			privateRepoID := int64(6)
+			require.NoError(t, packages_model.SetRepositoryLink(db.DefaultContext, p.ID, privateRepoID))
+
+			req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/generic/%s/%s", user.Name, packageName, packageVersion))
+			resp = MakeRequest(t, req, http.StatusOK)
+
+			var ap4 *api.Package
+			DecodeJSON(t, resp, &ap4)
+			assert.Nil(t, ap4.Repository)
+
+			require.NoError(t, packages_model.UnlinkRepositoryFromAllPackages(db.DefaultContext, privateRepoID))
 		})
 	})
 
@@ -153,11 +182,14 @@ func TestPackageAPI(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/packages/%s/dummy/%s/%s", user.Name, packageName, packageVersion)).
-			AddTokenAuth(tokenDeletePackage)
+			AddTokenAuth(tokenWritePackage)
 		MakeRequest(t, req, http.StatusNotFound)
 
+		req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/packages/%s/generic/%s/%s", user.Name, packageName, packageVersion))
+		MakeRequest(t, req, http.StatusUnauthorized)
+
 		req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/packages/%s/generic/%s/%s", user.Name, packageName, packageVersion)).
-			AddTokenAuth(tokenDeletePackage)
+			AddTokenAuth(tokenWritePackage)
 		MakeRequest(t, req, http.StatusNoContent)
 	})
 }
@@ -464,7 +496,7 @@ func TestPackageCleanup(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		// Upload and delete a generic package and upload a container blob
-		data, _ := util.CryptoRandomBytes(5)
+		data := util.CryptoRandomBytes(5)
 		url := fmt.Sprintf("/api/packages/%s/generic/cleanup-test/1.1.1/file.bin", user.Name)
 		req := NewRequestWithBody(t, "PUT", url, bytes.NewReader(data)).
 			AddBasicAuth(user.Name)
@@ -474,7 +506,7 @@ func TestPackageCleanup(t *testing.T) {
 			AddBasicAuth(user.Name)
 		MakeRequest(t, req, http.StatusNoContent)
 
-		data, _ = util.CryptoRandomBytes(5)
+		data = util.CryptoRandomBytes(5)
 		url = fmt.Sprintf("/v2/%s/cleanup-test/blobs/uploads?digest=sha256:%x", user.Name, sha256.Sum256(data))
 		req = NewRequestWithBody(t, "POST", url, bytes.NewReader(data)).
 			AddBasicAuth(user.Name)
@@ -504,6 +536,9 @@ func TestPackageCleanup(t *testing.T) {
 
 	t.Run("CleanupRules", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
+
+		locale := translation.NewLocale("en-US")
+		session := loginUser(t, user.Name)
 
 		type version struct {
 			Version     string
@@ -536,6 +571,19 @@ func TestPackageCleanup(t *testing.T) {
 				Rule: &packages_model.PackageCleanupRule{
 					Enabled:   true,
 					KeepCount: 2,
+				},
+			},
+			{
+				Name: "KeepCountGreaterThanTotal",
+				Versions: []version{
+					{Version: "keep", ShouldExist: true},
+					{Version: "v1.0", ShouldExist: true},
+					{Version: "test-3", ShouldExist: true},
+					{Version: "test-4", ShouldExist: true},
+				},
+				Rule: &packages_model.PackageCleanupRule{
+					Enabled:   true,
+					KeepCount: 2000,
 				},
 			},
 			{
@@ -626,22 +674,133 @@ func TestPackageCleanup(t *testing.T) {
 				pcr, err := packages_model.InsertCleanupRule(db.DefaultContext, c.Rule)
 				require.NoError(t, err)
 
+				req := NewRequest(t, "GET", fmt.Sprintf("/user/settings/packages/rules/%d/preview", pcr.ID))
+				resp := session.MakeRequest(t, req, http.StatusOK)
+				htmlDoc := NewHTMLParser(t, resp.Body)
+
+				toDelete := container.FilterSlice(c.Versions, func(v version) (version, bool) {
+					return v, !v.ShouldExist
+				})
+				deletedCount := len(toDelete)
+
+				// disabled rule would delete everything
+				if !pcr.Enabled {
+					deletedCount = 1
+					htmlDoc.AssertSelection(t, htmlDoc.FindByText(fmt.Sprintf("a[href='/%s/-/packages/generic/package/keep']", user.Name), "keep"), true)
+				}
+
+				htmlDoc.AssertSelection(t, htmlDoc.FindByText("p", locale.TrString("packages.owner.settings.cleanuprules.preview.overview", deletedCount)), true)
+
 				err = packages_cleanup_service.CleanupTask(db.DefaultContext, duration)
 				require.NoError(t, err)
 
 				for _, v := range c.Versions {
 					pv, err := packages_model.GetVersionByNameAndVersion(db.DefaultContext, user.ID, packages_model.TypeGeneric, "package", v.Version)
 					if v.ShouldExist {
-						require.NoError(t, err)
+						require.NoError(t, err, `version "%s" should exist`, v.Version)
 						err = packages_service.DeletePackageVersionAndReferences(db.DefaultContext, pv)
 						require.NoError(t, err)
 					} else {
-						require.ErrorIs(t, err, packages_model.ErrPackageNotExist)
+						require.ErrorIs(t, err, packages_model.ErrPackageNotExist, `version "%s" should not exist`, v.Version)
 					}
 				}
 
 				require.NoError(t, packages_model.DeleteCleanupRuleByID(db.DefaultContext, pcr.ID))
 			})
 		}
+	})
+}
+
+func TestPackageWithTwoFactor(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+
+	runTest := func(t *testing.T, doer *user_model.User, useTOTP bool, expectedStatus int) {
+		t.Helper()
+		if doer != nil {
+			defer unittest.AssertSuccessfulDelete(t, &auth_model.TwoFactor{UID: doer.ID})
+		}
+
+		passcode := func() string {
+			if !useTOTP {
+				return ""
+			}
+
+			otpKey, err := totp.Generate(totp.GenerateOpts{
+				SecretSize:  40,
+				Issuer:      "forgejo-test",
+				AccountName: doer.Name,
+			})
+			require.NoError(t, err)
+
+			require.NoError(t, auth_model.NewTwoFactor(t.Context(), &auth_model.TwoFactor{UID: doer.ID}, otpKey.Secret()))
+
+			passcode, err := totp.GenerateCode(otpKey.Secret(), time.Now())
+			require.NoError(t, err)
+			return passcode
+		}()
+
+		url := fmt.Sprintf("/api/v1/packages/%s", normalUser.Name) // a public packge to test
+		req := NewRequest(t, "GET", url)
+		if doer != nil {
+			req.AddBasicAuth(doer.Name)
+		}
+
+		if useTOTP {
+			MakeRequest(t, req, http.StatusUnauthorized)
+
+			req = NewRequest(t, "GET", url).
+				AddBasicAuth(doer.Name)
+			req.Header.Set("X-Forgejo-OTP", passcode)
+		}
+
+		MakeRequest(t, req, expectedStatus)
+	}
+
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
+		// this should be the default, so don't have to set the variable
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusOK)
+			runTest(t, normalUser, false, http.StatusOK)
+			runTest(t, nil, false, http.StatusOK) // anonymous
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK)
+			runTest(t, normalUser, true, http.StatusOK)
+		})
+	})
+
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusForbidden)
+			runTest(t, normalUser, false, http.StatusForbidden)
+			runTest(t, nil, false, http.StatusOK) // anonymous
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK)
+			runTest(t, normalUser, true, http.StatusOK)
+		})
+	})
+
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, http.StatusForbidden)
+			runTest(t, normalUser, false, http.StatusOK)
+			runTest(t, nil, false, http.StatusOK) // anonymous
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, adminUser, true, http.StatusOK)
+			runTest(t, normalUser, true, http.StatusOK)
+		})
 	})
 }

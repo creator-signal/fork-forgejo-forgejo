@@ -7,9 +7,9 @@ package models
 import (
 	"fmt"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/util"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/util"
 )
 
 // ErrUserOwnRepos represents a "UserOwnRepos" kind of error.
@@ -136,6 +136,7 @@ type ErrInvalidCloneAddr struct {
 	IsInvalidPath      bool
 	IsProtocolInvalid  bool
 	IsPermissionDenied bool
+	HasCredentials     bool
 	LocalPath          bool
 }
 
@@ -158,31 +159,15 @@ func (err *ErrInvalidCloneAddr) Error() string {
 	if err.IsURLError {
 		return fmt.Sprintf("migration/cloning from '%s' is not allowed: the provided url is invalid", err.Host)
 	}
+	if err.HasCredentials {
+		return fmt.Sprintf("migration/cloning from '%s' is not allowed: the provided url contains credentials", err.Host)
+	}
 
 	return fmt.Sprintf("migration/cloning from '%s' is not allowed", err.Host)
 }
 
 func (err *ErrInvalidCloneAddr) Unwrap() error {
 	return util.ErrInvalidArgument
-}
-
-// ErrUpdateTaskNotExist represents a "UpdateTaskNotExist" kind of error.
-type ErrUpdateTaskNotExist struct {
-	UUID string
-}
-
-// IsErrUpdateTaskNotExist checks if an error is a ErrUpdateTaskNotExist.
-func IsErrUpdateTaskNotExist(err error) bool {
-	_, ok := err.(ErrUpdateTaskNotExist)
-	return ok
-}
-
-func (err ErrUpdateTaskNotExist) Error() string {
-	return fmt.Sprintf("update task does not exist [uuid: %s]", err.UUID)
-}
-
-func (err ErrUpdateTaskNotExist) Unwrap() error {
-	return util.ErrNotExist
 }
 
 // ErrInvalidTagName represents a "InvalidTagName" kind of error.
@@ -448,7 +433,7 @@ func IsErrSHAOrCommitIDNotProvided(err error) bool {
 }
 
 func (err ErrSHAOrCommitIDNotProvided) Error() string {
-	return "a SHA or commit ID must be proved when updating a file"
+	return "a SHA or commit ID must be provided when updating a file"
 }
 
 // ErrInvalidMergeStyle represents an error if merging with disabled merge strategy

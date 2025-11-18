@@ -4,13 +4,13 @@
 package auth
 
 import (
-	"context"
+	"net/http"
 	"testing"
 
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/web/middleware"
-	"code.gitea.io/gitea/services/actions"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/web/middleware"
+	"forgejo.org/services/actions"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +27,7 @@ func TestUserIDFromToken(t *testing.T) {
 		ds := make(middleware.ContextData)
 
 		o := OAuth2{}
-		uid := o.userIDFromToken(context.Background(), token, ds)
+		uid := o.userIDFromToken(t.Context(), token, ds)
 		assert.Equal(t, int64(user_model.ActionsUserID), uid)
 		assert.Equal(t, true, ds["IsActionsToken"])
 		assert.Equal(t, ds["ActionsTaskID"], int64(RunningTaskID))
@@ -48,8 +48,35 @@ func TestCheckTaskIsRunning(t *testing.T) {
 	for name := range cases {
 		c := cases[name]
 		t.Run(name, func(t *testing.T) {
-			actual := CheckTaskIsRunning(context.Background(), c.TaskID)
+			actual := CheckTaskIsRunning(t.Context(), c.TaskID)
 			assert.Equal(t, c.Expected, actual)
+		})
+	}
+}
+
+func TestParseToken(t *testing.T) {
+	cases := map[string]struct {
+		Header        string
+		ExpectedToken string
+		Expected      bool
+	}{
+		"Token Uppercase":  {Header: "Token 1234567890123456789012345687901325467890", ExpectedToken: "1234567890123456789012345687901325467890", Expected: true},
+		"Token Lowercase":  {Header: "token 1234567890123456789012345687901325467890", ExpectedToken: "1234567890123456789012345687901325467890", Expected: true},
+		"Token Unicode":    {Header: "to\u212Aen 1234567890123456789012345687901325467890", ExpectedToken: "", Expected: false},
+		"Bearer Uppercase": {Header: "Bearer 1234567890123456789012345687901325467890", ExpectedToken: "1234567890123456789012345687901325467890", Expected: true},
+		"Bearer Lowercase": {Header: "bearer 1234567890123456789012345687901325467890", ExpectedToken: "1234567890123456789012345687901325467890", Expected: true},
+		"Missing type":     {Header: "1234567890123456789012345687901325467890", ExpectedToken: "", Expected: false},
+		"Three Parts":      {Header: "abc 1234567890 test", ExpectedToken: "", Expected: false},
+	}
+
+	for name := range cases {
+		c := cases[name]
+		t.Run(name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", "/", nil)
+			req.Header.Add("Authorization", c.Header)
+			ActualToken, ActualSuccess := parseToken(req)
+			assert.Equal(t, c.ExpectedToken, ActualToken)
+			assert.Equal(t, c.Expected, ActualSuccess)
 		})
 	}
 }

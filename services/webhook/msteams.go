@@ -11,13 +11,13 @@ import (
 	"net/url"
 	"strings"
 
-	webhook_model "code.gitea.io/gitea/models/webhook"
-	"code.gitea.io/gitea/modules/git"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/webhook/shared"
+	webhook_model "forgejo.org/models/webhook"
+	"forgejo.org/modules/git"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	webhook_module "forgejo.org/modules/webhook"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/webhook/shared"
 )
 
 type msteamsHandler struct{}
@@ -326,6 +326,23 @@ func (m msteamsConvertor) Package(p *api.PackagePayload) (MSTeamsPayload, error)
 	), nil
 }
 
+func (m msteamsConvertor) Action(p *api.ActionPayload) (MSTeamsPayload, error) {
+	title, color := getActionPayloadInfo(p, noneLinkFormatter)
+
+	// TODO: is TriggerUser correct here?
+	// if you'd like to test these proprietary services, see the discussion on: https://codeberg.org/forgejo/forgejo/pulls/7508
+	return createMSTeamsPayload(
+		p.Run.Repo,
+		p.Run.TriggerUser,
+		title,
+		"",
+		p.Run.HTMLURL,
+		color,
+		// TODO: does this make any sense?
+		&MSTeamsFact{"Action:", p.Run.Title},
+	), nil
+}
+
 func createMSTeamsPayload(r *api.Repository, s *api.User, title, text, actionTarget string, color int, fact *MSTeamsFact) MSTeamsPayload {
 	facts := make([]MSTeamsFact, 0, 2)
 	if r != nil {
@@ -356,7 +373,7 @@ func createMSTeamsPayload(r *api.Repository, s *api.User, title, text, actionTar
 		PotentialAction: []MSTeamsAction{
 			{
 				Type: "OpenUri",
-				Name: "View in Gitea",
+				Name: "View in Forgejo",
 				Targets: []MSTeamsActionTarget{
 					{
 						Os:  "default",

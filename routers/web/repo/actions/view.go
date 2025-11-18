@@ -18,32 +18,54 @@ import (
 	"strings"
 	"time"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/modules/actions"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/modules/templates"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/common"
-	actions_service "code.gitea.io/gitea/services/actions"
-	context_module "code.gitea.io/gitea/services/context"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	"forgejo.org/modules/actions"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
+	"forgejo.org/modules/templates"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/common"
+	actions_service "forgejo.org/services/actions"
+	context_module "forgejo.org/services/context"
 
 	"xorm.io/builder"
 )
+
+func RedirectToLatestAttempt(ctx *context_module.Context) {
+	runIndex := ctx.ParamsInt64("run")
+	jobIndex := ctx.ParamsInt64("job")
+
+	job, _ := getRunJobs(ctx, runIndex, jobIndex)
+	if ctx.Written() {
+		return
+	}
+
+	jobURL, err := job.HTMLURL(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ctx.Redirect(jobURL, http.StatusTemporaryRedirect)
+}
 
 func View(ctx *context_module.Context) {
 	ctx.Data["PageIsActions"] = true
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
+	// note: this is `attemptNumber` not `attemptIndex` since this value has to matches the ActionTask's Attempt field
+	// which uses 1-based numbering... would be confusing as "Index" if it later can't be used to index an slice/array.
+	attemptNumber := ctx.ParamsInt64("attempt")
 
 	job, _ := getRunJobs(ctx, runIndex, jobIndex)
 	if ctx.Written() {
@@ -53,10 +75,34 @@ func View(ctx *context_module.Context) {
 	workflowName := job.Run.WorkflowID
 
 	ctx.Data["RunIndex"] = runIndex
+	ctx.Data["RunID"] = job.Run.ID
 	ctx.Data["JobIndex"] = jobIndex
 	ctx.Data["ActionsURL"] = ctx.Repo.RepoLink + "/actions"
+	ctx.Data["AttemptNumber"] = attemptNumber
 	ctx.Data["WorkflowName"] = workflowName
 	ctx.Data["WorkflowURL"] = ctx.Repo.RepoLink + "/actions?workflow=" + workflowName
+
+	viewResponse := getViewResponse(ctx, &ViewRequest{}, runIndex, jobIndex, attemptNumber)
+	if ctx.Written() {
+		return
+	}
+	artifactsViewResponse := getArtifactsViewResponse(ctx, runIndex)
+	if ctx.Written() {
+		return
+	}
+
+	var buf1, buf2 strings.Builder
+	if err := json.NewEncoder(&buf1).Encode(viewResponse); err != nil {
+		ctx.ServerError("EncodingError", err)
+		return
+	}
+	ctx.Data["InitialData"] = buf1.String()
+
+	if err := json.NewEncoder(&buf2).Encode(artifactsViewResponse); err != nil {
+		ctx.ServerError("EncodingError", err)
+		return
+	}
+	ctx.Data["InitialArtifactsData"] = buf2.String()
 
 	ctx.HTML(http.StatusOK, tplViewActions)
 }
@@ -111,29 +157,39 @@ type ViewRequest struct {
 }
 
 type ViewResponse struct {
-	State struct {
-		Run struct {
-			Link              string        `json:"link"`
-			Title             string        `json:"title"`
-			TitleHTML         template.HTML `json:"titleHTML"`
-			Status            string        `json:"status"`
-			CanCancel         bool          `json:"canCancel"`
-			CanApprove        bool          `json:"canApprove"` // the run needs an approval and the doer has permission to approve
-			CanRerun          bool          `json:"canRerun"`
-			CanDeleteArtifact bool          `json:"canDeleteArtifact"`
-			Done              bool          `json:"done"`
-			Jobs              []*ViewJob    `json:"jobs"`
-			Commit            ViewCommit    `json:"commit"`
-		} `json:"run"`
-		CurrentJob struct {
-			Title  string         `json:"title"`
-			Detail string         `json:"detail"`
-			Steps  []*ViewJobStep `json:"steps"`
-		} `json:"currentJob"`
-	} `json:"state"`
-	Logs struct {
-		StepsLog []*ViewStepLog `json:"stepsLog"`
-	} `json:"logs"`
+	State ViewState `json:"state"`
+	Logs  ViewLogs  `json:"logs"`
+}
+
+type ViewState struct {
+	Run        ViewRunInfo    `json:"run"`
+	CurrentJob ViewCurrentJob `json:"currentJob"`
+}
+
+type ViewRunInfo struct {
+	Link              string        `json:"link"`
+	Title             string        `json:"title"`
+	TitleHTML         template.HTML `json:"titleHTML"`
+	Status            string        `json:"status"`
+	CanCancel         bool          `json:"canCancel"`
+	CanApprove        bool          `json:"canApprove"` // the run needs an approval and the doer has permission to approve
+	CanRerun          bool          `json:"canRerun"`
+	CanDeleteArtifact bool          `json:"canDeleteArtifact"`
+	Done              bool          `json:"done"`
+	Jobs              []*ViewJob    `json:"jobs"`
+	Commit            ViewCommit    `json:"commit"`
+	PreExecutionError string        `json:"preExecutionError"`
+}
+
+type ViewCurrentJob struct {
+	Title       string          `json:"title"`
+	Details     []template.HTML `json:"details"`
+	Steps       []*ViewJobStep  `json:"steps"`
+	AllAttempts []*TaskAttempt  `json:"allAttempts"`
+}
+
+type ViewLogs struct {
+	StepsLog []*ViewStepLog `json:"stepsLog"`
 }
 
 type ViewJob struct {
@@ -184,19 +240,37 @@ type ViewStepLogLine struct {
 	Timestamp float64 `json:"timestamp"`
 }
 
+type TaskAttempt struct {
+	Number  int64         `json:"number"`
+	Started template.HTML `json:"time_since_started_html"`
+	Status  string        `json:"status"`
+}
+
 func ViewPost(ctx *context_module.Context) {
 	req := web.GetForm(ctx).(*ViewRequest)
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
+	// note: this is `attemptNumber` not `attemptIndex` since this value has to matches the ActionTask's Attempt field
+	// which uses 1-based numbering... would be confusing as "Index" if it later can't be used to index an slice/array.
+	attemptNumber := ctx.ParamsInt64("attempt")
 
-	current, jobs := getRunJobs(ctx, runIndex, jobIndex)
+	resp := getViewResponse(ctx, req, runIndex, jobIndex, attemptNumber)
 	if ctx.Written() {
 		return
+	}
+
+	ctx.JSON(http.StatusOK, resp)
+}
+
+func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jobIndex, attemptNumber int64) *ViewResponse {
+	current, jobs := getRunJobs(ctx, runIndex, jobIndex)
+	if ctx.Written() {
+		return nil
 	}
 	run := current.Run
 	if err := run.LoadAttributes(ctx); err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+		return nil
 	}
 
 	resp := &ViewResponse{}
@@ -210,10 +284,21 @@ func ViewPost(ctx *context_module.Context) {
 	resp.State.Run.CanApprove = run.NeedApproval && ctx.Repo.CanWrite(unit.TypeActions)
 	resp.State.Run.CanRerun = run.Status.IsDone() && ctx.Repo.CanWrite(unit.TypeActions)
 	resp.State.Run.CanDeleteArtifact = run.Status.IsDone() && ctx.Repo.CanWrite(unit.TypeActions)
-	resp.State.Run.Done = run.Status.IsDone()
 	resp.State.Run.Jobs = make([]*ViewJob, 0, len(jobs)) // marshal to '[]' instead of 'null' in json
 	resp.State.Run.Status = run.Status.String()
+	resp.State.Run.PreExecutionError = run.PreExecutionError
+
+	// It's possible for the run to be marked with a finalized status (eg. failure) because of a  single job within the
+	// run; eg. one job fails, the run fails. But other jobs can still be running. The frontend RepoActionView uses the
+	// `done` flag to indicate whether to stop querying the run's status -- so even though the run has reached a final
+	// state, it may not be time to stop polling for updates.
+	done := run.Status.IsDone()
+
 	for _, v := range jobs {
+		if !v.Status.IsDone() {
+			// Ah, another job is still running. Keep the frontend polling enabled then.
+			done = false
+		}
 		resp.State.Run.Jobs = append(resp.State.Run.Jobs, &ViewJob{
 			ID:       v.ID,
 			Name:     v.Name,
@@ -222,6 +307,7 @@ func ViewPost(ctx *context_module.Context) {
 			Duration: v.Duration().String(),
 		})
 	}
+	resp.State.Run.Done = done
 
 	pusher := ViewUser{
 		DisplayName: run.TriggerUser.GetDisplayName(),
@@ -252,30 +338,48 @@ func ViewPost(ctx *context_module.Context) {
 	}
 
 	var task *actions_model.ActionTask
+	// TaskID will be set only when the ActionRunJob has been picked by a runner, resulting in an ActionTask being
+	// created representing the specific task.  If current.TaskID is not set, then the user is attempting to view a job
+	// that hasn't been picked up by a runner... in this case we're not going to try to fetch the specific attempt.
+	// This helps to support the UI displaying a useful and error-free page when viewing a job that is queued but not
+	// picked, or an attempt that is queued for rerun but not yet picked.
 	if current.TaskID > 0 {
 		var err error
-		task, err = actions_model.GetTaskByID(ctx, current.TaskID)
+		task, err = actions_model.GetTaskByJobAttempt(ctx, current.ID, attemptNumber)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
+			return nil
 		}
 		task.Job = current
 		if err := task.LoadAttributes(ctx); err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
+			return nil
 		}
 	}
 
 	resp.State.CurrentJob.Title = current.Name
-	resp.State.CurrentJob.Detail = current.Status.LocaleString(ctx.Locale)
-	if run.NeedApproval {
-		resp.State.CurrentJob.Detail = ctx.Locale.TrString("actions.need_approval_desc")
-	}
+	resp.State.CurrentJob.Details = current.StatusDiagnostics(ctx.Locale)
+
 	resp.State.CurrentJob.Steps = make([]*ViewJobStep, 0) // marshal to '[]' instead of 'null' in json
 	resp.Logs.StepsLog = make([]*ViewStepLog, 0)          // marshal to '[]' instead of 'null' in json
+	// As noted above with TaskID; task will be nil when the job hasn't be picked yet...
 	if task != nil {
-		steps := actions.FullSteps(task)
+		taskAttempts, err := task.GetAllAttempts(ctx)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, err.Error())
+			return nil
+		}
+		allAttempts := make([]*TaskAttempt, len(taskAttempts))
+		for i, actionTask := range taskAttempts {
+			allAttempts[i] = &TaskAttempt{
+				Number:  actionTask.Attempt,
+				Started: templates.TimeSince(actionTask.Started),
+				Status:  actionTask.Status.String(),
+			}
+		}
+		resp.State.CurrentJob.AllAttempts = allAttempts
 
+		steps := actions.FullSteps(task)
 		for _, v := range steps {
 			resp.State.CurrentJob.Steps = append(resp.State.CurrentJob.Steps, &ViewJobStep{
 				Summary:  v.Name,
@@ -330,7 +434,7 @@ func ViewPost(ctx *context_module.Context) {
 				logRows, err := actions.ReadLogs(ctx, task.LogInStorage, task.LogFilename, offset, length)
 				if err != nil {
 					ctx.Error(http.StatusInternalServerError, err.Error())
-					return
+					return nil
 				}
 
 				for i, row := range logRows {
@@ -351,7 +455,13 @@ func ViewPost(ctx *context_module.Context) {
 		}
 	}
 
-	ctx.JSON(http.StatusOK, resp)
+	return resp
+}
+
+// When used with the JS `linkAction` handler (typically a <button> with class="link-action" and a data-url), will cause
+// the browser to redirect to the target page.
+type redirectObject struct {
+	Redirect string `json:"redirect"`
 }
 
 // Rerun will rerun jobs in the given run
@@ -383,7 +493,7 @@ func Rerun(ctx *context_module.Context) {
 		run.PreviousDuration = run.Duration()
 		run.Started = 0
 		run.Stopped = 0
-		if err := actions_model.UpdateRun(ctx, run, "started", "stopped", "previous_duration"); err != nil {
+		if err := actions_service.UpdateRun(ctx, run, "started", "stopped", "previous_duration"); err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -395,6 +505,7 @@ func Rerun(ctx *context_module.Context) {
 	}
 
 	if jobIndexStr == "" { // rerun all jobs
+		var redirectURL string
 		for _, j := range jobs {
 			// if the job has needs, it should be set to "blocked" status to wait for other jobs
 			shouldBlock := len(j.Needs) > 0
@@ -402,13 +513,31 @@ func Rerun(ctx *context_module.Context) {
 				ctx.Error(http.StatusInternalServerError, err.Error())
 				return
 			}
+			if redirectURL == "" {
+				// ActionRunJob's `Attempt` field won't be updated to reflect the rerun until the job is picked by a
+				// runner. But we need to redirect the user somewhere; if they stay on the current attempt then the
+				// rerun's logs won't appear. So, we redirect to the upcoming new attempt and then we'll handle the
+				// weirdness in the UI if the attempt doesn't exist yet.
+				j.Attempt++ // note: this is intentionally not persisted
+				redirectURL, err = j.HTMLURL(ctx)
+				if err != nil {
+					ctx.Error(http.StatusInternalServerError, err.Error())
+					return
+				}
+			}
 		}
-		ctx.JSON(http.StatusOK, struct{}{})
+
+		if redirectURL != "" {
+			ctx.JSON(http.StatusOK, &redirectObject{Redirect: redirectURL})
+		} else {
+			ctx.Error(http.StatusInternalServerError, "unable to determine redirectURL for job rerun")
+		}
 		return
 	}
 
 	rerunJobs := actions_service.GetAllRerunJobs(job, jobs)
 
+	var redirectURL string
 	for _, j := range rerunJobs {
 		// jobs other than the specified one should be set to "blocked" status
 		shouldBlock := j.JobID != job.JobID
@@ -416,9 +545,22 @@ func Rerun(ctx *context_module.Context) {
 			ctx.Error(http.StatusInternalServerError, err.Error())
 			return
 		}
+		if j.JobID == job.JobID {
+			// see earlier comment about redirectURL, applicable here as well
+			j.Attempt++ // note: this is intentionally not persisted
+			redirectURL, err = j.HTMLURL(ctx)
+			if err != nil {
+				ctx.Error(http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
 	}
 
-	ctx.JSON(http.StatusOK, struct{}{})
+	if redirectURL != "" {
+		ctx.JSON(http.StatusOK, &redirectObject{Redirect: redirectURL})
+	} else {
+		ctx.Error(http.StatusInternalServerError, "unable to determine redirectURL for job rerun")
+	}
 }
 
 func rerunJob(ctx *context_module.Context, job *actions_model.ActionRunJob, shouldBlock bool) error {
@@ -436,7 +578,7 @@ func rerunJob(ctx *context_module.Context, job *actions_model.ActionRunJob, shou
 	job.Stopped = 0
 
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		_, err := actions_model.UpdateRunJob(ctx, job, builder.Eq{"status": status}, "task_id", "status", "started", "stopped")
+		_, err := actions_service.UpdateRunJob(ctx, job, builder.Eq{"status": status}, "task_id", "status", "started", "stopped")
 		return err
 	}); err != nil {
 		return err
@@ -512,53 +654,17 @@ func Cancel(ctx *context_module.Context) {
 			if job.TaskID == 0 {
 				job.Status = actions_model.StatusCancelled
 				job.Stopped = timeutil.TimeStampNow()
-				n, err := actions_model.UpdateRunJob(ctx, job, builder.Eq{"task_id": 0}, "status", "stopped")
+				n, err := actions_service.UpdateRunJob(ctx, job, builder.Eq{"task_id": 0}, "status", "stopped")
 				if err != nil {
 					return err
 				}
 				if n == 0 {
-					return fmt.Errorf("job has changed, try again")
+					return errors.New("job has changed, try again")
 				}
 				continue
 			}
-			if err := actions_model.StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
+			if err := actions_service.StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
 				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	actions_service.CreateCommitStatus(ctx, jobs...)
-
-	ctx.JSON(http.StatusOK, struct{}{})
-}
-
-func Approve(ctx *context_module.Context) {
-	runIndex := ctx.ParamsInt64("run")
-
-	current, jobs := getRunJobs(ctx, runIndex, -1)
-	if ctx.Written() {
-		return
-	}
-	run := current.Run
-	doer := ctx.Doer
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		run.NeedApproval = false
-		run.ApprovedBy = doer.ID
-		if err := actions_model.UpdateRun(ctx, run, "need_approval", "approved_by"); err != nil {
-			return err
-		}
-		for _, job := range jobs {
-			if len(job.Needs) == 0 && job.Status.IsBlocked() {
-				job.Status = actions_model.StatusWaiting
-				_, err := actions_model.UpdateRunJob(ctx, job, nil, "status")
-				if err != nil {
-					return err
-				}
 			}
 		}
 		return nil
@@ -619,19 +725,27 @@ type ArtifactsViewItem struct {
 
 func ArtifactsView(ctx *context_module.Context) {
 	runIndex := ctx.ParamsInt64("run")
+	artifactsResponse := getArtifactsViewResponse(ctx, runIndex)
+	if ctx.Written() {
+		return
+	}
+	ctx.JSON(http.StatusOK, artifactsResponse)
+}
+
+func getArtifactsViewResponse(ctx *context_module.Context, runIndex int64) *ArtifactsViewResponse {
 	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, err.Error())
-			return
+			return nil
 		}
 		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+		return nil
 	}
 	artifacts, err := actions_model.ListUploadedArtifactsMeta(ctx, run.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+		return nil
 	}
 	artifactsResponse := ArtifactsViewResponse{
 		Artifacts: make([]*ArtifactsViewItem, 0, len(artifacts)),
@@ -647,7 +761,7 @@ func ArtifactsView(ctx *context_module.Context) {
 			Status: status,
 		})
 	}
-	ctx.JSON(http.StatusOK, artifactsResponse)
+	return &artifactsResponse
 }
 
 func ArtifactsDeleteView(ctx *context_module.Context) {
@@ -668,30 +782,82 @@ func ArtifactsDeleteView(ctx *context_module.Context) {
 	ctx.JSON(http.StatusOK, struct{}{})
 }
 
-func ArtifactsDownloadView(ctx *context_module.Context) {
-	runIndex := ctx.ParamsInt64("run")
-	artifactName := ctx.Params("artifact_name")
-
-	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
-	if err != nil {
-		if errors.Is(err, util.ErrNotExist) {
-			ctx.Error(http.StatusNotFound, err.Error())
-			return
-		}
-		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+func getRunByID(ctx *context_module.Context, runID int64) *actions_model.ActionRun {
+	if runID == 0 {
+		log.Debug("Requested runID is zero.")
+		ctx.Error(http.StatusNotFound, "zero is not a valid run ID")
+		return nil
 	}
 
-	artifacts, err := db.Find[actions_model.ActionArtifact](ctx, actions_model.FindArtifactsOptions{
-		RunID:        run.ID,
-		ArtifactName: artifactName,
-	})
+	run, has, err := actions_model.GetRunByIDWithHas(ctx, runID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+		return nil
+	}
+	if !has {
+		log.Debug("Requested runID[%d] not found.", runID)
+		ctx.Error(http.StatusNotFound, fmt.Sprintf("no such run %d", runID))
+		return nil
+	}
+	if run.RepoID != ctx.Repo.Repository.ID {
+		log.Debug("Requested runID[%d] does not belong to repo[%-v].", runID, ctx.Repo.Repository)
+		ctx.Error(http.StatusNotFound, "no such run")
+		return nil
+	}
+	return run
+}
+
+func artifactsFind(ctx *context_module.Context, opts actions_model.FindArtifactsOptions) []*actions_model.ActionArtifact {
+	artifacts, err := db.Find[actions_model.ActionArtifact](ctx, opts)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return nil
 	}
 	if len(artifacts) == 0 {
-		ctx.Error(http.StatusNotFound, "artifact not found")
+		return nil
+	}
+	return artifacts
+}
+
+func artifactsFindByNameOrID(ctx *context_module.Context, runID int64, nameOrID string) []*actions_model.ActionArtifact {
+	artifacts := artifactsFind(ctx, actions_model.FindArtifactsOptions{
+		RunID:        runID,
+		ArtifactName: nameOrID,
+	})
+	if ctx.Written() {
+		return nil
+	}
+	// if lookup by name found nothing, maybe it is an ID
+	if len(artifacts) == 0 {
+		id, err := strconv.ParseInt(nameOrID, 10, 64)
+		if err != nil || id == 0 {
+			ctx.Error(http.StatusNotFound, fmt.Sprintf("runID %d: artifact name not found: %v", runID, nameOrID))
+			return nil
+		}
+		artifacts = artifactsFind(ctx, actions_model.FindArtifactsOptions{
+			RunID: runID,
+			ID:    id,
+		})
+		if ctx.Written() {
+			return nil
+		}
+		if len(artifacts) == 0 {
+			ctx.Error(http.StatusNotFound, fmt.Sprintf("runID %d: artifact ID not found: %v", runID, nameOrID))
+			return nil
+		}
+	}
+	return artifacts
+}
+
+func ArtifactsDownloadView(ctx *context_module.Context) {
+	run := getRunByID(ctx, ctx.ParamsInt64("run"))
+	if ctx.Written() {
+		return
+	}
+	artifactNameOrID := ctx.Params("artifact_name_or_id")
+
+	artifacts := artifactsFindByNameOrID(ctx, run.ID, artifactNameOrID)
+	if ctx.Written() {
 		return
 	}
 
@@ -720,12 +886,14 @@ func ArtifactsDownloadView(ctx *context_module.Context) {
 			ctx.Error(http.StatusInternalServerError, err.Error())
 			return
 		}
-		common.ServeContentByReadSeeker(ctx.Base, artifactName, util.ToPointer(art.UpdatedUnix.AsTime()), f)
+		common.ServeContentByReadSeeker(ctx.Base, artifacts[0].ArtifactName+".zip", util.ToPointer(art.UpdatedUnix.AsTime()), f)
 		return
 	}
 
 	// Artifacts using the v1-v3 backend are stored as multiple individual files per artifact on the backend
 	// Those need to be zipped for download
+	artifactName := artifacts[0].ArtifactName
+
 	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.zip; filename*=UTF-8''%s.zip", url.PathEscape(artifactName), artifactName))
 	writer := zip.NewWriter(ctx.Resp)
 	defer writer.Close()

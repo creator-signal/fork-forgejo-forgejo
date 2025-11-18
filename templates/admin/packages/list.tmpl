@@ -6,7 +6,6 @@
 			{{ctx.Locale.Tr "admin.packages.unreferenced_size" (ctx.Locale.TrSize .TotalUnreferencedBlobSize)}})
 			<div class="ui right">
 				<form method="post" action="{{AppSubUrl}}/admin/packages/cleanup">
-					{{.CsrfTokenHtml}}
 					<button class="ui primary tiny button">{{ctx.Locale.Tr "admin.packages.cleanup"}}</button>
 				</form>
 			</div>
@@ -72,8 +71,10 @@
 							</td>
 							<td>{{ctx.Locale.TrSize .CalculateBlobSize}}</td>
 							<td>{{DateUtils.AbsoluteShort .Version.CreatedUnix}}</td>
-							<td><a class="delete-button" href="" data-url="{{$.Link}}/delete?page={{$.Page.Paginater.Current}}&sort={{$.SortType}}" data-id="{{.Version.ID}}" data-name="{{.Package.Name}}" data-data-version="{{.Version.Version}}">{{svg "octicon-trash"}}</a></td>
+							<td><a class="delete-button" href="" data-url="{{$.Link}}/delete?page={{$.Page.Paginater.Current}}&sort={{$.SortType}}" data-id="{{.Version.ID}}" data-name="{{.Package.Name}}" data-data-version="{{.Version.Version}}" data-modal-id="delete-package">{{svg "octicon-trash"}}</a></td>
 						</tr>
+					{{else}}
+						<tr><td class="tw-text-center" colspan="10">{{ctx.Locale.Tr "repo.pulls.no_results"}}</td></tr>
 					{{end}}
 				</tbody>
 			</table>
@@ -82,7 +83,7 @@
 		{{template "base/paginate" .}}
 	</div>
 
-<div class="ui g-modal-confirm delete modal">
+<div class="ui g-modal-confirm delete modal" id="delete-package">
 	<div class="header">
 		{{svg "octicon-trash"}}
 		{{ctx.Locale.Tr "packages.settings.delete"}}

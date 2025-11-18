@@ -10,12 +10,12 @@ import (
 	"strings"
 	"unicode"
 
-	packages_model "code.gitea.io/gitea/models/packages"
-	"code.gitea.io/gitea/modules/log"
-	packages_module "code.gitea.io/gitea/modules/packages"
-	"code.gitea.io/gitea/routers/api/packages/helper"
-	"code.gitea.io/gitea/services/context"
-	packages_service "code.gitea.io/gitea/services/packages"
+	packages_model "forgejo.org/models/packages"
+	"forgejo.org/modules/log"
+	packages_module "forgejo.org/modules/packages"
+	"forgejo.org/routers/api/packages/helper"
+	"forgejo.org/services/context"
+	packages_service "forgejo.org/services/packages"
 )
 
 var (
@@ -155,7 +155,7 @@ func DeletePackage(ctx *context.Context) {
 		},
 	)
 	if err != nil {
-		if err == packages_model.ErrPackageNotExist {
+		if errors.Is(err, packages_model.ErrPackageNotExist) {
 			apiError(ctx, http.StatusNotFound, err)
 			return
 		}
@@ -182,7 +182,7 @@ func DeletePackageFile(ctx *context.Context) {
 		return pv, pf, nil
 	}()
 	if err != nil {
-		if err == packages_model.ErrPackageNotExist || err == packages_model.ErrPackageFileNotExist {
+		if errors.Is(err, packages_model.ErrPackageNotExist) || errors.Is(err, packages_model.ErrPackageFileNotExist) {
 			apiError(ctx, http.StatusNotFound, err)
 			return
 		}

@@ -4,6 +4,7 @@
 package container
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,8 +30,28 @@ func TestSet(t *testing.T) {
 	assert.True(t, s.Contains("key4"))
 	assert.True(t, s.Contains("key5"))
 
+	values := s.Values()
+	called := 0
+	for value := range s.Seq() {
+		called++
+		assert.True(t, slices.Contains(values, value))
+	}
+	assert.Equal(t, len(values), called)
+
 	s = SetOf("key6", "key7")
 	assert.False(t, s.Contains("key1"))
 	assert.True(t, s.Contains("key6"))
 	assert.True(t, s.Contains("key7"))
+
+	assert.True(t, s.IsSubset([]string{"key6", "key7"}))
+	assert.False(t, s.IsSubset([]string{"key1"}))
+
+	assert.True(t, s.IsSubset([]string{}))
+
+	t.Run("Clone", func(t *testing.T) {
+		clonedSet := s.Clone()
+		clonedSet.Remove("key6")
+		assert.False(t, clonedSet.Contains("key6"))
+		assert.True(t, s.Contains("key6"))
+	})
 }

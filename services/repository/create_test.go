@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"testing"
 
-	"code.gitea.io/gitea/models"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/structs"
+	"forgejo.org/models"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/structs"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -146,4 +146,14 @@ func TestIncludesAllRepositoriesTeams(t *testing.T) {
 		}
 	}
 	require.NoError(t, organization.DeleteOrganization(db.DefaultContext, org), "DeleteOrganization")
+}
+
+func TestCreateRepository(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	r, err := CreateRepositoryDirectly(db.DefaultContext, user, user, CreateRepoOptions{Name: "repo-last"})
+	require.NoError(t, err)
+	require.NotNil(t, r.Topics)
+	require.Empty(t, r.Topics)
 }

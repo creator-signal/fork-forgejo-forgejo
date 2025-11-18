@@ -63,17 +63,17 @@ key = 123
 
 	// test default behavior
 	assert.Equal(t, "123", ConfigSectionKeyString(sec, "key"))
-	assert.Equal(t, "", ConfigSectionKeyString(secSub, "key"))
+	assert.Empty(t, ConfigSectionKeyString(secSub, "key"))
 	assert.Equal(t, "def", ConfigSectionKeyString(secSub, "key", "def"))
 
 	assert.Equal(t, "123", ConfigInheritedKeyString(secSub, "key"))
 
 	// Workaround for ini package's BuggyKeyOverwritten behavior
-	assert.Equal(t, "", ConfigSectionKeyString(sec, "empty"))
-	assert.Equal(t, "", ConfigSectionKeyString(secSub, "empty"))
+	assert.Empty(t, ConfigSectionKeyString(sec, "empty"))
+	assert.Empty(t, ConfigSectionKeyString(secSub, "empty"))
 	assert.Equal(t, "def", ConfigInheritedKey(secSub, "empty").MustString("def"))
 	assert.Equal(t, "def", ConfigInheritedKey(secSub, "empty").MustString("xyz"))
-	assert.Equal(t, "", ConfigSectionKeyString(sec, "empty"))
+	assert.Empty(t, ConfigSectionKeyString(sec, "empty"))
 	assert.Equal(t, "def", ConfigSectionKeyString(secSub, "empty"))
 }
 
@@ -154,4 +154,25 @@ func TestDisableSaving(t *testing.T) {
 	bs, err := os.ReadFile(testFile)
 	require.NoError(t, err)
 	assert.Equal(t, "k1 = a\nk2 = y\nk3 = z\n", string(bs))
+}
+
+func TestMustBytes(t *testing.T) {
+	test := func(value string) int64 {
+		cfg, err := NewConfigProviderFromData("[test]")
+		require.NoError(t, err)
+		sec := cfg.Section("test")
+		sec.NewKey("VALUE", value)
+
+		return mustBytes(sec, "VALUE")
+	}
+
+	assert.EqualValues(t, -1, test(""))
+	assert.EqualValues(t, -1, test("-1"))
+	assert.EqualValues(t, 0, test("0"))
+	assert.EqualValues(t, 1, test("1"))
+	assert.EqualValues(t, 10000, test("10000"))
+	assert.EqualValues(t, 1000000, test("1 mb"))
+	assert.EqualValues(t, 1048576, test("1mib"))
+	assert.EqualValues(t, 1782579, test("1.7mib"))
+	assert.EqualValues(t, -1, test("1 yib")) // too large
 }

@@ -6,36 +6,34 @@ package setting
 import (
 	"time"
 
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/modules/container"
 )
 
 // UI settings
 var UI = struct {
-	ExplorePagingNum        int
-	SitemapPagingNum        int
-	IssuePagingNum          int
-	RepoSearchPagingNum     int
-	MembersPagingNum        int
-	FeedMaxCommitNum        int
-	FeedPagingNum           int
-	PackagesPagingNum       int
-	GraphMaxCommitNum       int
-	CodeCommentLines        int
-	ReactionMaxUserNum      int
-	MaxDisplayFileSize      int64
-	ShowUserEmail           bool
-	DefaultShowFullName     bool
-	DefaultTheme            string
-	Themes                  []string
-	Reactions               []string
-	ReactionsLookup         container.Set[string] `ini:"-"`
-	CustomEmojis            []string
-	CustomEmojisMap         map[string]string `ini:"-"`
-	SearchRepoDescription   bool
-	OnlyShowRelevantRepos   bool
-	ExploreDefaultSort      string `ini:"EXPLORE_PAGING_DEFAULT_SORT"`
-	PreferredTimestampTense string
+	ExplorePagingNum      int
+	SitemapPagingNum      int
+	IssuePagingNum        int
+	RepoSearchPagingNum   int
+	MembersPagingNum      int
+	FeedMaxCommitNum      int
+	FeedPagingNum         int
+	PackagesPagingNum     int
+	GraphMaxCommitNum     int
+	CodeCommentLines      int
+	ReactionMaxUserNum    int
+	MaxDisplayFileSize    int64
+	ShowUserEmail         bool
+	DefaultShowFullName   bool
+	DefaultTheme          string
+	Themes                []string
+	Reactions             []string
+	ReactionsLookup       container.Set[string] `ini:"-"`
+	CustomEmojis          []string
+	CustomEmojisLookup    container.Set[string] `ini:"-"`
+	SearchRepoDescription bool
+	OnlyShowRelevantRepos bool
+	ExploreDefaultSort    string `ini:"EXPLORE_PAGING_DEFAULT_SORT"`
 
 	AmbiguousUnicodeDetection bool
 	SkipEscapeContexts        []string
@@ -71,25 +69,23 @@ var UI = struct {
 		Keywords    string
 	} `ini:"ui.meta"`
 }{
-	ExplorePagingNum:        20,
-	SitemapPagingNum:        20,
-	IssuePagingNum:          20,
-	RepoSearchPagingNum:     20,
-	MembersPagingNum:        20,
-	FeedMaxCommitNum:        5,
-	FeedPagingNum:           20,
-	PackagesPagingNum:       20,
-	GraphMaxCommitNum:       100,
-	CodeCommentLines:        4,
-	ReactionMaxUserNum:      10,
-	MaxDisplayFileSize:      8388608,
-	DefaultTheme:            `forgejo-auto`,
-	Themes:                  []string{`forgejo-auto`, `forgejo-light`, `forgejo-dark`, `gitea-auto`, `gitea-light`, `gitea-dark`, `forgejo-auto-deuteranopia-protanopia`, `forgejo-light-deuteranopia-protanopia`, `forgejo-dark-deuteranopia-protanopia`, `forgejo-auto-tritanopia`, `forgejo-light-tritanopia`, `forgejo-dark-tritanopia`},
-	Reactions:               []string{`+1`, `-1`, `laugh`, `hooray`, `confused`, `heart`, `rocket`, `eyes`},
-	CustomEmojis:            []string{`git`, `gitea`, `codeberg`, `gitlab`, `github`, `gogs`, `forgejo`},
-	CustomEmojisMap:         map[string]string{"git": ":git:", "gitea": ":gitea:", "codeberg": ":codeberg:", "gitlab": ":gitlab:", "github": ":github:", "gogs": ":gogs:", "forgejo": ":forgejo:"},
-	ExploreDefaultSort:      "recentupdate",
-	PreferredTimestampTense: "mixed",
+	ExplorePagingNum:    20,
+	SitemapPagingNum:    20,
+	IssuePagingNum:      20,
+	RepoSearchPagingNum: 20,
+	MembersPagingNum:    20,
+	FeedMaxCommitNum:    5,
+	FeedPagingNum:       20,
+	PackagesPagingNum:   20,
+	GraphMaxCommitNum:   100,
+	CodeCommentLines:    4,
+	ReactionMaxUserNum:  10,
+	MaxDisplayFileSize:  8388608,
+	DefaultTheme:        `forgejo-auto`,
+	Themes:              []string{`forgejo-auto`, `forgejo-light`, `forgejo-dark`, `gitea-auto`, `gitea-light`, `gitea-dark`, `forgejo-auto-deuteranopia-protanopia`, `forgejo-light-deuteranopia-protanopia`, `forgejo-dark-deuteranopia-protanopia`, `forgejo-auto-tritanopia`, `forgejo-light-tritanopia`, `forgejo-dark-tritanopia`},
+	Reactions:           []string{`+1`, `-1`, `laugh`, `hooray`, `confused`, `heart`, `rocket`, `eyes`},
+	CustomEmojis:        []string{`git`, `gitea`, `codeberg`, `gitlab`, `github`, `gogs`, `forgejo`},
+	ExploreDefaultSort:  "recentupdate",
 
 	AmbiguousUnicodeDetection: true,
 	SkipEscapeContexts:        []string{},
@@ -151,10 +147,6 @@ func loadUIFrom(rootCfg ConfigProvider) {
 	UI.DefaultShowFullName = sec.Key("DEFAULT_SHOW_FULL_NAME").MustBool(false)
 	UI.SearchRepoDescription = sec.Key("SEARCH_REPO_DESCRIPTION").MustBool(true)
 
-	if UI.PreferredTimestampTense != "mixed" && UI.PreferredTimestampTense != "absolute" {
-		log.Fatal("ui.PREFERRED_TIMESTAMP_TENSE must be either 'mixed' or 'absolute'")
-	}
-
 	// OnlyShowRelevantRepos=false is important for many private/enterprise instances,
 	// because many private repositories do not have "description/topic", users just want to search by their names.
 	UI.OnlyShowRelevantRepos = sec.Key("ONLY_SHOW_RELEVANT_REPOS").MustBool(false)
@@ -163,8 +155,6 @@ func loadUIFrom(rootCfg ConfigProvider) {
 	for _, reaction := range UI.Reactions {
 		UI.ReactionsLookup.Add(reaction)
 	}
-	UI.CustomEmojisMap = make(map[string]string)
-	for _, emoji := range UI.CustomEmojis {
-		UI.CustomEmojisMap[emoji] = ":" + emoji + ":"
-	}
+	UI.CustomEmojisLookup = make(container.Set[string])
+	UI.CustomEmojisLookup.AddMultiple(UI.CustomEmojis...)
 }

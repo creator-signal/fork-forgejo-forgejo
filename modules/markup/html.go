@@ -1,4 +1,5 @@
 // Copyright 2017 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors.
 // SPDX-License-Identifier: MIT
 
 package markup
@@ -13,17 +14,17 @@ import (
 	"strings"
 	"sync"
 
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/emoji"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup/common"
-	"code.gitea.io/gitea/modules/references"
-	"code.gitea.io/gitea/modules/regexplru"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/templates/vars"
-	"code.gitea.io/gitea/modules/translation"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/emoji"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup/common"
+	"forgejo.org/modules/references"
+	"forgejo.org/modules/regexplru"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/templates/vars"
+	"forgejo.org/modules/translation"
+	"forgejo.org/modules/util"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -48,16 +49,19 @@ var (
 	// hashCurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	// Although SHA1 hashes are 40 chars long, SHA256 are 64, the regex matches the hash from 7 to 64 chars in length
 	// so that abbreviated hash links can be used as well. This matches git and GitHub usability.
-	hashCurrentPattern = regexp.MustCompile(`(?:\s|^|\(|\[)([0-9a-f]{7,64})(?:\s|$|\)|\]|[.,:](\s|$))`)
+	hashCurrentPattern = regexp.MustCompile(`(?:^|\s)[^\w\d]{0,2}([0-9a-f]{7,64})[^\w\d]{0,2}(?:\s|$)`)
 
 	// shortLinkPattern matches short but difficult to parse [[name|link|arg=test]] syntax
 	shortLinkPattern = regexp.MustCompile(`\[\[(.*?)\]\](\w*)`)
 
-	// anySHA1Pattern splits url containing SHA into parts
-	anyHashPattern = regexp.MustCompile(`https?://(?:\S+/){4,5}([0-9a-f]{40,64})(/[-+~_%.a-zA-Z0-9/]+)?(\?[-+~_%\.a-zA-Z0-9=&]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
+	// anyHashPattern splits url containing SHA into parts
+	anyHashPattern = regexp.MustCompile(`https?://[^\s/]+/(\S+/(?:commit|tree|blob))/([0-9a-f]{7,64})(/[-+~_%.a-zA-Z0-9/]+)?(\?[-+~_%\.a-zA-Z0-9=&]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	// comparePattern matches "http://domain/org/repo/compare/COMMIT1...COMMIT2#hash"
-	comparePattern = regexp.MustCompile(`https?://(?:\S+/){4,5}([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(#[-+~_%.a-zA-Z0-9]+)?`)
+	comparePattern = regexp.MustCompile(`https?://[^\s/]+/(?:\S+/)?([^\s/]+/[^\s/]+)/compare/([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(\?[-+~_%\.a-zA-Z0-9=&/]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
+
+	// pullReviewCommitPattern matches "https://domain.tld/<subpath...>/<owner>/<repo>/pulls/<id>/commits/<sha>"
+	pullReviewCommitPattern = regexp.MustCompile(`https?://[^\s/]+/(?:\S+/)?([^\s/]+/[^\s/]+)/pulls/(\d+)/commits/([0-9a-f]{7,64})(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://`)
 
@@ -67,6 +71,10 @@ var (
 	//   http://spec.commonmark.org/0.28/#email-address
 	//   https://html.spec.whatwg.org/multipage/input.html#e-mail-state-(type%3Demail)
 	emailRegex = regexp.MustCompile("(?:\\s|^|\\(|\\[)([a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9]{2,}(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)(?:\\s|$|\\)|\\]|;|,|\\?|!|\\.(\\s|$))")
+
+	// Fediverse handle regex (same as emailRegex but with additonal @ or !
+	// at start)
+	fediRegex = regexp.MustCompile("(?:\\s|^|\\(|\\[)([@!]([a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+)@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9]{2,}(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+))(?:\\s|$|\\)|\\]|;|,|\\?|!|\\.(\\s|$))")
 
 	// blackfriday extensions create IDs like fn:user-content-footnote
 	blackfridayExtRegex = regexp.MustCompile(`[^:]*:user-content-`)
@@ -142,6 +150,7 @@ func (p *postProcessError) Error() string {
 type processor func(ctx *RenderContext, node *html.Node)
 
 var defaultProcessors = []processor{
+	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
 	filePreviewPatternProcessor,
@@ -152,6 +161,7 @@ var defaultProcessors = []processor{
 	issueIndexPatternProcessor,
 	commitCrossReferencePatternProcessor,
 	hashCurrentPatternProcessor,
+	fediAddressProcessor,
 	emailAddressProcessor,
 	emojiProcessor,
 	emojiShortCodeProcessor,
@@ -171,6 +181,7 @@ func PostProcess(
 }
 
 var commitMessageProcessors = []processor{
+	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
 	fullHashPatternProcessor,
@@ -203,6 +214,7 @@ func RenderCommitMessage(
 }
 
 var commitMessageSubjectProcessors = []processor{
+	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
 	fullHashPatternProcessor,
@@ -362,7 +374,7 @@ func visitNode(ctx *RenderContext, procs []processor, node *html.Node) {
 	// Add user-content- to IDs and "#" links if they don't already have them
 	for idx, attr := range node.Attr {
 		val := strings.TrimPrefix(attr.Val, "#")
-		notHasPrefix := !(strings.HasPrefix(val, "user-content-") || blackfridayExtRegex.MatchString(val))
+		notHasPrefix := !strings.HasPrefix(val, "user-content-") && !blackfridayExtRegex.MatchString(val)
 
 		if attr.Key == "id" && notHasPrefix {
 			node.Attr[idx].Val = "user-content-" + attr.Val
@@ -551,9 +563,13 @@ func createCodeLink(href, content, class string) *html.Node {
 		a.Attr = append(a.Attr, html.Attribute{Key: "class", Val: class})
 	}
 
+	unescaped, err := url.QueryUnescape(content)
+	if err != nil {
+		unescaped = content
+	}
 	text := &html.Node{
 		Type: html.TextNode,
-		Data: content,
+		Data: unescaped,
 	}
 
 	code := &html.Node{
@@ -759,9 +775,6 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 				title = path.Base(name)
 			}
 			alt := props["alt"]
-			if alt == "" {
-				alt = name
-			}
 
 			// make the childNode an image - if we can, we also place the alt
 			childNode.Type = html.ElementNode
@@ -771,9 +784,6 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 				{Key: "src", Val: link},
 				{Key: "title", Val: title},
 				{Key: "alt", Val: alt},
-			}
-			if alt == "" {
-				childNode.Attr = childNode.Attr[:2]
 			}
 		} else {
 			if !absoluteLink {
@@ -788,6 +798,64 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 		}
 		linkNode.Attr = []html.Attribute{{Key: "href", Val: link}}
 		replaceContent(node, m[0], m[1], linkNode)
+		node = node.NextSibling.NextSibling
+	}
+}
+
+// pullReviewCommitPatternProcessor creates links to pull review commits.
+func pullReviewCommitPatternProcessor(ctx *RenderContext, node *html.Node) {
+	next := node.NextSibling
+	for node != nil && node != next {
+		m := pullReviewCommitPattern.FindStringSubmatchIndex(node.Data)
+		if m == nil {
+			return
+		}
+
+		urlFull := node.Data[m[0]:m[1]]
+		repoSlug := node.Data[m[2]:m[3]]
+		id := node.Data[m[4]:m[5]]
+		sha := base.ShortSha(node.Data[m[6]:m[7]])
+
+		// Create an `<a>` node with a text of
+		// `!123 (commit <code>abcdef1234</code>)`
+		aNode := &html.Node{
+			Type: html.ElementNode,
+			Data: atom.A.String(),
+			Attr: []html.Attribute{{Key: "href", Val: urlFull}, {Key: "class", Val: "commit"}},
+		}
+
+		text := "!" + id + " (commit "
+
+		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
+		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
+			text = repoSlug + "@" + text
+		}
+
+		aNode.AppendChild(&html.Node{
+			Type: html.TextNode,
+			Data: text,
+		})
+
+		textNode := &html.Node{
+			Type: html.TextNode,
+			Data: sha,
+		}
+
+		codeNode := &html.Node{
+			Type: html.ElementNode,
+			Data: atom.Code.String(),
+			Attr: []html.Attribute{{Key: "class", Val: "nohighlight"}},
+		}
+
+		codeNode.AppendChild(textNode)
+		aNode.AppendChild(codeNode)
+
+		aNode.AppendChild(&html.Node{
+			Type: html.TextNode,
+			Data: ")",
+		})
+
+		replaceContent(node, m[0], m[1], aNode)
 		node = node.NextSibling.NextSibling
 	}
 }
@@ -948,7 +1016,7 @@ func commitCrossReferencePatternProcessor(ctx *RenderContext, node *html.Node) {
 	}
 }
 
-// fullHashPatternProcessor renders SHA containing URLs
+// fullHashPatternProcessor renders URLs that contain a SHA
 func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 	if ctx.Metas == nil {
 		return
@@ -962,37 +1030,103 @@ func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 		}
 
 		urlFull := node.Data[m[0]:m[1]]
-		text := base.ShortSha(node.Data[m[2]:m[3]])
 
-		// 3rd capture group matches a optional path
-		subpath := ""
-		if m[5] > 0 {
-			subpath = node.Data[m[4]:m[5]]
+		// In most cases, the URL will look like this:
+		// `https://domain.tld/<owner>/<repo>/<path>/<sha>`.
+		// The amount of components in `<path>` is variable, but that alone is doable with regexp.
+		//
+		// However, Forgejo also allows being hosted on a sub path, i.e.
+		// `https://domain.tld/<sub>/<owner>/<repo>/<path>/<sha>`.
+		// And this sub path can also have any amount of components. But fishing out a section
+		// between two variable length matches is not something regular grammars are capable of.
+		//
+		// Instead, the regexp extracts the entire path section before the SHA
+		// (i.e. `<sub>/<owner>/<repo>/<path>`), and we find the components we need by counting.
+		// `<sub>` is unknown, but the possible values for `<path>` are defined by us
+		// (see `router/web/web.go`). So we count from the back.
+		subPath := node.Data[m[2]:m[3]]
+
+		components := strings.Split(subPath, "/")
+		componentCount := len(components)
+
+		// In most cases, the `<owner>` component is right at the start of the path.
+		ownerIndex := 0
+
+		// But if there are more than three components, this could be `<sub>` or an app route
+		// with two components. Or both.
+		if componentCount > 3 {
+			// As mentioned, we count from the back. We decrement for the `<repo>` component, and the one
+			// component from the app route that's guaranteed to be there.
+			// We also adjust this to be an array index, so we subtract one more.
+			ownerIndex = componentCount - 3
+
+			// We then check for known app routes that use two components.
+			// Currently, this checks for:
+			// - `src/commit`
+			// - `commits/commit`
+			//
+			// This does have one scenario where we cannot figure things out reliably:
+			// If there is a sub path, and the repository is named like one of the known app routes
+			// (e.g. `src`), we cannot distinguish between the repo and the app route.
+			// We assume that naming a repository like that is uncommon, and prioritize the case where its
+			// part of the app route.
+			if components[componentCount-1] == "commit" &&
+				(components[componentCount-2] == "src" || components[componentCount-2] == "commits") {
+				ownerIndex--
+			}
+		}
+
+		repoSlug := components[ownerIndex] + "/" + components[ownerIndex+1]
+
+		text := base.ShortSha(node.Data[m[4]:m[5]])
+
+		// We need to figure out the base of the provided URL, which is up to and including the
+		// `<owner>/<repo>` slug.
+		// With that we can determine if it matches the current repo, or if the slug should be shown.
+		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
+		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
+			text = repoSlug + "@" + text
+		}
+
+		// 3rd capture group matches an optional file path after the SHA
+		filePath := ""
+		if m[7] > 0 {
+			filePath = node.Data[m[6]:m[7]]
 		}
 
 		// 5th capture group matches a optional url hash
 		hash := ""
-		if m[9] > 0 {
-			hash = node.Data[m[8]:m[9]][1:]
+		if m[11] > 0 {
+			hash = node.Data[m[10]:m[11]][1:]
+
+			// Truncate long diff IDs
+			if len(hash) > 15 && strings.HasPrefix(hash, "diff-") {
+				hash = hash[:15]
+			}
 		}
 
 		start := m[0]
 		end := m[1]
 
-		// If url ends in '.', it's very likely that it is not part of the
-		// actual url but used to finish a sentence.
+		// If the URL ends in '.', it's very likely that it is not part of the
+		// actual URL but used to finish a sentence.
 		if strings.HasSuffix(urlFull, ".") {
 			end--
 			urlFull = urlFull[:len(urlFull)-1]
 			if hash != "" {
 				hash = hash[:len(hash)-1]
-			} else if subpath != "" {
-				subpath = subpath[:len(subpath)-1]
+			} else if filePath != "" {
+				filePath = filePath[:len(filePath)-1]
 			}
 		}
 
-		if subpath != "" {
-			text += subpath
+		if filePath != "" {
+			decoded, err := url.QueryUnescape(filePath)
+			if err != nil {
+				text += decoded
+			} else {
+				text += filePath
+			}
 		}
 
 		if hash != "" {
@@ -1015,41 +1149,71 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 			return
 		}
 
-		// Ensure that every group (m[0]...m[7]) has a match
-		for i := 0; i < 8; i++ {
+		// Ensure that every group (m[0]...m[9]) has a match
+		for i := 0; i < 10; i++ {
 			if m[i] == -1 {
 				return
 			}
 		}
 
 		urlFull := node.Data[m[0]:m[1]]
-		text1 := base.ShortSha(node.Data[m[2]:m[3]])
-		textDots := base.ShortSha(node.Data[m[4]:m[5]])
-		text2 := base.ShortSha(node.Data[m[6]:m[7]])
+		repoSlug := node.Data[m[2]:m[3]]
+		text1 := base.ShortSha(node.Data[m[4]:m[5]])
+		textDots := base.ShortSha(node.Data[m[6]:m[7]])
+		text2 := base.ShortSha(node.Data[m[8]:m[9]])
+
+		query := ""
+		if m[11] > 0 {
+			query = node.Data[m[10]:m[11]][1:]
+		}
 
 		hash := ""
-		if m[9] > 0 {
-			hash = node.Data[m[8]:m[9]][1:]
+		if m[13] > 0 {
+			hash = node.Data[m[12]:m[13]][1:]
 		}
 
 		start := m[0]
 		end := m[1]
 
-		// If url ends in '.', it's very likely that it is not part of the
-		// actual url but used to finish a sentence.
+		// If the URL ends in '.', it's very likely that it is not part of the
+		// actual URL but used to finish a sentence.
 		if strings.HasSuffix(urlFull, ".") {
 			end--
 			urlFull = urlFull[:len(urlFull)-1]
 			if hash != "" {
 				hash = hash[:len(hash)-1]
+			} else if query != "" {
+				query = query[:len(query)-1]
 			} else if text2 != "" {
 				text2 = text2[:len(text2)-1]
 			}
 		}
 
 		text := text1 + textDots + text2
+
+		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
+		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
+			text = repoSlug + "@" + text
+		}
+
+		extra := ""
+		if query != "" {
+			query, err := url.ParseQuery(query)
+			if err == nil && query.Has("files") {
+				extra = query.Get("files")
+			}
+		}
+
 		if hash != "" {
-			text += " (" + hash + ")"
+			if extra != "" {
+				extra += "#"
+			}
+
+			extra += hash
+		}
+
+		if extra != "" {
+			text += " (" + extra + ")"
 		}
 		replaceContent(node, start, end, createCodeLink(urlFull, text, "compare"))
 		node = node.NextSibling.NextSibling
@@ -1074,12 +1238,15 @@ func filePreviewPatternProcessor(ctx *RenderContext, node *html.Node) {
 
 	next := node.NextSibling
 	for node != nil && node != next {
+		if node.Parent == nil || node.Parent.Type != html.ElementNode {
+			node = node.NextSibling
+			continue
+		}
 		previews := NewFilePreviews(ctx, node, locale)
 		if previews == nil {
 			node = node.NextSibling
 			continue
 		}
-
 		offset := 0
 		for _, preview := range previews {
 			previewNode := preview.CreateHTML(locale)
@@ -1087,23 +1254,39 @@ func filePreviewPatternProcessor(ctx *RenderContext, node *html.Node) {
 			// Specialized version of replaceContent, so the parent paragraph element is not destroyed from our div
 			before := node.Data[:(preview.start - offset)]
 			after := node.Data[(preview.end - offset):]
-			afterPrefix := "<p>"
-			offset = preview.end - len(afterPrefix)
-			node.Data = before
-			nextSibling := node.NextSibling
-			node.Parent.InsertBefore(&html.Node{
-				Type: html.RawNode,
-				Data: "</p>",
-			}, nextSibling)
-			node.Parent.InsertBefore(previewNode, nextSibling)
-			afterNode := &html.Node{
-				Type: html.RawNode,
-				Data: afterPrefix + after,
+			afterTextNode := &html.Node{
+				Type: html.TextNode,
+				Data: after,
 			}
-			node.Parent.InsertBefore(afterNode, nextSibling)
-			node = afterNode
+			matched := true
+			switch node.Parent.Data {
+			case "div", "li", "td", "th", "details":
+				nextSibling := node.NextSibling
+				node.Parent.InsertBefore(previewNode, nextSibling)
+				node.Parent.InsertBefore(afterTextNode, nextSibling)
+			case "p", "span", "em", "strong":
+				nextParentSibling := node.Parent.NextSibling
+				node.Parent.Parent.InsertBefore(previewNode, nextParentSibling)
+				afterNode := &html.Node{
+					Type: html.ElementNode,
+					Data: node.Parent.Data,
+					Attr: node.Parent.Attr,
+				}
+				afterNode.AppendChild(afterTextNode)
+				node.Parent.Parent.InsertBefore(afterNode, nextParentSibling)
+				for sibling := node.NextSibling; sibling != nil; sibling = node.NextSibling {
+					sibling.Parent.RemoveChild(sibling)
+					afterNode.AppendChild(sibling)
+				}
+			default:
+				matched = false
+			}
+			if matched {
+				offset = preview.end
+				node.Data = before
+				node = afterTextNode
+			}
 		}
-
 		node = node.NextSibling
 	}
 }
@@ -1142,7 +1325,7 @@ func emojiShortCodeProcessor(ctx *RenderContext, node *html.Node) {
 		converted := emoji.FromAlias(alias)
 		if converted == nil {
 			// check if this is a custom reaction
-			if _, exist := setting.UI.CustomEmojisMap[alias]; exist {
+			if setting.UI.CustomEmojisLookup.Contains(alias) {
 				replaceContent(node, m[0], m[1], createCustomEmoji(alias))
 				node = node.NextSibling.NextSibling
 				start = 0
@@ -1180,7 +1363,7 @@ func emojiProcessor(ctx *RenderContext, node *html.Node) {
 	}
 }
 
-// hashCurrentPatternProcessor renders SHA1 strings to corresponding links that
+// hashCurrentPatternProcessor renders SHA1/SHA256 strings to corresponding links that
 // are assumed to be in the same repository.
 func hashCurrentPatternProcessor(ctx *RenderContext, node *html.Node) {
 	if ctx.Metas == nil || ctx.Metas["user"] == "" || ctx.Metas["repo"] == "" || ctx.Metas["repoPath"] == "" {
@@ -1238,6 +1421,21 @@ func hashCurrentPatternProcessor(ctx *RenderContext, node *html.Node) {
 		link := util.URLJoin(ctx.Links.Prefix(), ctx.Metas["user"], ctx.Metas["repo"], "commit", hash)
 		replaceContent(node, m[2], m[3], createCodeLink(link, base.ShortSha(hash), "commit"))
 		start = 0
+		node = node.NextSibling.NextSibling
+	}
+}
+
+// fediAddressProcessor replaces raw fediverse handles with toolforge links
+func fediAddressProcessor(ctx *RenderContext, node *html.Node) {
+	next := node.NextSibling
+	for node != nil && node != next {
+		m := fediRegex.FindStringSubmatchIndex(node.Data)
+		if m == nil {
+			return
+		}
+
+		fedihandle := node.Data[m[2]:m[3]]
+		replaceContent(node, m[2], m[3], createLink("https://fedirect.toolforge.org/?id="+url.QueryEscape(fedihandle), fedihandle, "fedihandle"))
 		node = node.NextSibling.NextSibling
 	}
 }

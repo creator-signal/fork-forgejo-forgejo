@@ -10,16 +10,16 @@ import (
 	"os/exec"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/graceful"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/graceful"
+	repo_module "forgejo.org/modules/repository"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/require"
 )
@@ -68,8 +68,8 @@ func TestRepoSSHSignedTags(t *testing.T) {
 		resp := MakeRequest(t, req, http.StatusOK)
 		doc := NewHTMLParser(t, resp.Body)
 
-		doc.AssertElement(t, ".tag-signature-row .gitea-unlock", !isSigned)
-		doc.AssertElement(t, ".tag-signature-row .gitea-lock", isSigned)
+		doc.AssertElement(t, ".signature-row .gitea-unlock", !isSigned)
+		doc.AssertElement(t, ".signature-row .gitea-lock", isSigned)
 	}
 
 	t.Run("unverified", func(t *testing.T) {

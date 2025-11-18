@@ -9,14 +9,16 @@ import (
 	"strings"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	"forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +47,7 @@ func TestOrgRepos(t *testing.T) {
 				sel := htmlDoc.doc.Find("a.name")
 				assert.Len(t, repos, len(sel.Nodes))
 				for i := 0; i < len(repos); i++ {
-					assert.EqualValues(t, repos[i], strings.TrimSpace(sel.Eq(i).Text()))
+					assert.Equal(t, repos[i], strings.TrimSpace(sel.Eq(i).Text()))
 				}
 			}
 		})
@@ -258,11 +260,72 @@ func TestOwnerTeamUnit(t *testing.T) {
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{TeamID: 1, Type: unit.TypeIssues, AccessMode: perm.AccessModeOwner})
 
 	req := NewRequestWithValues(t, "GET", fmt.Sprintf("/org/%s/teams/owners/edit", org.Name), map[string]string{
-		"_csrf":       GetCSRF(t, session, fmt.Sprintf("/org/%s/teams/owners/edit", org.Name)),
 		"team_name":   "Owners",
 		"Description": "Just a description",
 	})
 	session.MakeRequest(t, req, http.StatusOK)
 
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{TeamID: 1, Type: unit.TypeIssues, AccessMode: perm.AccessModeOwner})
+}
+
+func TestOrgNewMigrationButton(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	migrateSelector := `a[href^="/repo/migrate?org="]`
+
+	session := loginUser(t, "user2")
+	t.Run("Migration disabled", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Repository.DisableMigrations, true)()
+
+		req := NewRequest(t, "GET", "/org3")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		htmlDoc.AssertElement(t, migrateSelector, false)
+	})
+
+	t.Run("Migration enabled", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Repository.DisableMigrations, false)()
+
+		req := NewRequest(t, "GET", "/org3")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		htmlDoc.AssertElement(t, migrateSelector, true)
+	})
+}
+
+func TestTeamWithoutPermissionToShowTable(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3, Type: user_model.UserTypeOrganization})
+	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	session := loginUser(t, user.Name)
+
+	// set all units to "No access"
+	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/org/%s/teams/%s/edit", org.Name, team.Name), map[string]string{
+		"team_name":   team.Name,
+		"description": "",
+		"repo_access": "all",
+		"permission":  "read",
+		"unit_1":      "0",
+		"unit_2":      "0",
+		"unit_3":      "0",
+		"unit_4":      "0",
+		"unit_5":      "0",
+		"unit_8":      "0",
+		"unit_9":      "0",
+		"unit_10":     "0",
+	})
+	session.MakeRequest(t, req, http.StatusSeeOther)
+
+	req = NewRequest(t, "GET", fmt.Sprintf("/org/%s/teams/%s/edit", org.Name, team.Name))
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+
+	_, checked := htmlDoc.Find(`input[name="permission"][value="read"]`).Attr("checked")
+	assert.True(t, checked)
 }

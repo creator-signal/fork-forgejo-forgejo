@@ -6,11 +6,12 @@ package user
 import (
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	organization_model "code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	organization_model "forgejo.org/models/organization"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
 
 	"github.com/gobwas/glob"
 	"github.com/stretchr/testify/assert"
@@ -123,25 +124,34 @@ func TestAddEmailAddresses(t *testing.T) {
 }
 
 func TestReplaceInactivePrimaryEmail(t *testing.T) {
+	defer unittest.OverrideFixtures("services/user/TestReplaceInactivePrimaryEmail/")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	email := &user_model.EmailAddress{
-		Email: "user9999999@example.com",
-		UID:   9999999,
-	}
-	err := ReplaceInactivePrimaryEmail(db.DefaultContext, "user10@example.com", email)
-	require.Error(t, err)
-	assert.True(t, user_model.IsErrUserNotExist(err))
+	t.Run("User doesn't exist", func(t *testing.T) {
+		email := &user_model.EmailAddress{
+			Email: "user9999999@example.com",
+			UID:   9999999,
+		}
+		err := ReplaceInactivePrimaryEmail(db.DefaultContext, "user10@example.com", email)
+		require.Error(t, err)
+		assert.True(t, user_model.IsErrUserNotExist(err))
+	})
 
-	email = &user_model.EmailAddress{
-		Email: "user201@example.com",
-		UID:   10,
-	}
-	err = ReplaceInactivePrimaryEmail(db.DefaultContext, "user10@example.com", email)
-	require.NoError(t, err)
+	t.Run("Normal", func(t *testing.T) {
+		unittest.AssertExistsIf(t, true, &auth_model.AuthorizationToken{UID: 10})
 
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})
-	assert.Equal(t, "user201@example.com", user.Email)
+		email := &user_model.EmailAddress{
+			Email: "user201@example.com",
+			UID:   10,
+		}
+		err := ReplaceInactivePrimaryEmail(db.DefaultContext, "user10@example.com", email)
+		require.NoError(t, err)
+
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})
+		assert.Equal(t, "user201@example.com", user.Email)
+
+		unittest.AssertExistsIf(t, false, &auth_model.AuthorizationToken{UID: 10})
+	})
 }
 
 func TestDeleteEmailAddresses(t *testing.T) {
@@ -155,8 +165,7 @@ func TestDeleteEmailAddresses(t *testing.T) {
 	require.NoError(t, err)
 
 	err = DeleteEmailAddresses(db.DefaultContext, user, emails)
-	require.Error(t, err)
-	assert.True(t, user_model.IsErrEmailAddressNotExist(err))
+	require.NoError(t, err)
 
 	emails = []string{"user2@example.com"}
 

@@ -7,21 +7,21 @@ import (
 	"fmt"
 	"net/http"
 
-	user_model "code.gitea.io/gitea/models/user"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/validation"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	user_service "code.gitea.io/gitea/services/user"
+	user_model "forgejo.org/models/user"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/validation"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	user_service "forgejo.org/services/user"
 )
 
-// ListEmails list all of the authenticated user's email addresses
+// ListEmails lists doer's all email addresses
 // see https://github.com/gogits/go-gogs-client/wiki/Users-Emails#list-email-addresses-for-a-user
 func ListEmails(ctx *context.APIContext) {
 	// swagger:operation GET /user/emails user userListEmails
 	// ---
-	// summary: List the authenticated user's email addresses
+	// summary: List all email addresses of the current user
 	// produces:
 	// - application/json
 	// responses:
@@ -44,11 +44,11 @@ func ListEmails(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, &apiEmails)
 }
 
-// AddEmail add an email address
+// AddEmail adds an email address to doer's account
 func AddEmail(ctx *context.APIContext) {
 	// swagger:operation POST /user/emails user userAddEmail
 	// ---
-	// summary: Add email addresses
+	// summary: Add an email addresses to the current user's account
 	// produces:
 	// - application/json
 	// parameters:
@@ -75,12 +75,9 @@ func AddEmail(ctx *context.APIContext) {
 	if err := user_service.AddEmailAddresses(ctx, ctx.Doer, form.Emails); err != nil {
 		if user_model.IsErrEmailAlreadyUsed(err) {
 			ctx.Error(http.StatusUnprocessableEntity, "", "Email address has been used: "+err.(user_model.ErrEmailAlreadyUsed).Email)
-		} else if validation.IsErrEmailCharIsNotSupported(err) || validation.IsErrEmailInvalid(err) {
+		} else if validation.IsErrEmailInvalid(err) {
 			email := ""
 			if typedError, ok := err.(validation.ErrEmailInvalid); ok {
-				email = typedError.Email
-			}
-			if typedError, ok := err.(validation.ErrEmailCharIsNotSupported); ok {
 				email = typedError.Email
 			}
 
@@ -105,11 +102,11 @@ func AddEmail(ctx *context.APIContext) {
 	ctx.JSON(http.StatusCreated, apiEmails)
 }
 
-// DeleteEmail delete email
+// DeleteEmail deletes an email address from doer's account
 func DeleteEmail(ctx *context.APIContext) {
 	// swagger:operation DELETE /user/emails user userDeleteEmail
 	// ---
-	// summary: Delete email addresses
+	// summary: Delete email addresses from the current user's account
 	// produces:
 	// - application/json
 	// parameters:

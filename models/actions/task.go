@@ -9,26 +9,23 @@ import (
 	"fmt"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unit"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/nektos/act/pkg/jobparser"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"xorm.io/builder"
 )
 
 // ActionTask represents a distribution of job
 type ActionTask struct {
 	ID       int64
-	JobID    int64
+	JobID    int64             `xorm:"index"`
 	Job      *ActionRunJob     `xorm:"-"`
 	Steps    []*ActionTaskStep `xorm:"-"`
 	Attempt  int64
@@ -146,9 +143,23 @@ func (task *ActionTask) LoadAttributes(ctx context.Context) error {
 	return nil
 }
 
-func (task *ActionTask) GenerateToken() (err error) {
-	task.Token, task.TokenSalt, task.TokenHash, task.TokenLastEight, err = generateSaltedToken()
-	return err
+func (task *ActionTask) GenerateToken() {
+	task.Token, task.TokenSalt, task.TokenHash, task.TokenLastEight = generateSaltedToken()
+}
+
+// Retrieve all the attempts from the same job as the target `ActionTask`.  Limited fields are queried to avoid loading
+// the LogIndexes blob when not needed.
+func (task *ActionTask) GetAllAttempts(ctx context.Context) ([]*ActionTask, error) {
+	var attempts []*ActionTask
+	err := db.GetEngine(ctx).
+		Cols("id", "attempt", "status", "started").
+		Where("job_id=?", task.JobID).
+		Desc("attempt").
+		Find(&attempts)
+	if err != nil {
+		return nil, err
+	}
+	return attempts, nil
 }
 
 func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
@@ -158,6 +169,18 @@ func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
 		return nil, err
 	} else if !has {
 		return nil, fmt.Errorf("task with id %d: %w", id, util.ErrNotExist)
+	}
+
+	return &task, nil
+}
+
+func GetTaskByJobAttempt(ctx context.Context, jobID, attempt int64) (*ActionTask, error) {
+	var task ActionTask
+	has, err := db.GetEngine(ctx).Where("job_id=?", jobID).Where("attempt=?", attempt).Get(&task)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf("task with job_id %d and attempt %d: %w", jobID, attempt, util.ErrNotExist)
 	}
 
 	return &task, nil
@@ -215,6 +238,88 @@ func GetRunningTaskByToken(ctx context.Context, token string) (*ActionTask, erro
 	return nil, errNotExist
 }
 
+func getConcurrencyCondition() builder.Cond {
+	concurrencyCond := builder.NewCond()
+
+	// OK to pick if there's no concurrency_group on the run
+	concurrencyCond = concurrencyCond.Or(builder.Eq{"concurrency_group": ""})
+	concurrencyCond = concurrencyCond.Or(builder.IsNull{"concurrency_group"})
+
+	// OK to pick if it's not a "QueueBehind" concurrency type
+	concurrencyCond = concurrencyCond.Or(builder.Neq{"concurrency_type": QueueBehind})
+
+	// subQuery ends up representing all the runs that would block a run from executing:
+	subQuery := builder.Select("id").From("action_run", "inner_run").
+		// A run can't block itself, so exclude it from this search
+		Where(builder.Neq{"inner_run.id": builder.Expr("outer_run.id")}).
+		// Blocking runs must be from the same repo & concurrency group
+		And(builder.Eq{"inner_run.repo_id": builder.Expr("outer_run.repo_id")}).
+		And(builder.Eq{"inner_run.concurrency_group": builder.Expr("outer_run.concurrency_group")}).
+		And(
+			// Ideally the logic here would be that a blocking run is "not done", and "younger", which allows each run
+			// to be blocked on the previous runs in the concurrency group and therefore execute in order from oldest to
+			// newest.
+			//
+			// But it's possible for runs to be required to run out-of-order -- for example, if a younger run has
+			// already completed but then it is re-run.  If we only used "not done" and "younger" as logic, then the
+			// re-run would not be blocked, and therefore would violate the concurrency group's single-run goal.
+			//
+			// So we use two conditions to meet both needs:
+			//
+			// Blocking runs have a running status...
+			builder.Eq{"inner_run.status": StatusRunning}.Or(
+				// Blocking runs are pending execution, & are younger than the outer_run
+				builder.In("inner_run.status", PendingStatuses()).
+					And(builder.Lt{"inner_run.`index`": builder.Expr("outer_run.`index`")})))
+
+	// OK to pick if there are no blocking runs
+	concurrencyCond = concurrencyCond.Or(builder.NotExists(subQuery))
+
+	return concurrencyCond
+}
+
+// Returns all the available jobs that could be executed on `runner`, before label filtering is applied.  Note that
+// only a single job can actually be run from this result for any given invocation, as multiple runs (in order) from any
+// single concurrency group could be returned.
+func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJob, error) {
+	jobCond := builder.NewCond()
+	if runner.RepoID != 0 {
+		jobCond = builder.Eq{"repo_id": runner.RepoID}
+	} else if runner.OwnerID != 0 {
+		jobCond = builder.In("repo_id", builder.Select("`repository`.id").From("repository").
+			Join("INNER", "repo_unit", "`repository`.id = `repo_unit`.repo_id").
+			Where(builder.Eq{"`repository`.owner_id": runner.OwnerID, "`repo_unit`.type": unit.TypeActions}))
+	}
+	// Concurrency group checks for queuing one run behind the last run in the concurrency group are more
+	// computationally expensive on the database. To manage the risk that this might have on large-scale deployments
+	// When this feature is initially released, it can be disabled in the ini file by setting
+	// `CONCURRENCY_GROUP_QUEUE_ENABLED = false` in the `[actions]` section.  If disabled, then actions with a
+	// concurrency group and `cancel-in-progress: false` will run simultaneously rather than being queued.
+	if setting.Actions.ConcurrencyGroupQueueEnabled {
+		jobCond = jobCond.And(getConcurrencyCondition())
+	}
+	if jobCond.IsValid() {
+		// It is *likely* more efficient to use an EXISTS query here rather than an IN clause, as that allows the
+		// database's query optimizer to perform partial computation of the subquery rather than complete computation.
+		// However, database engines can be fickle and difficult to predict. We'll retain the original IN clause
+		// implementation when ConcurrencyGroupQueueEnabled is disabled, which should maintain the same performance
+		// characteristics. When ConcurrencyGroupQueueEnabled is enabled, it will switch to the EXISTS clause.
+		if setting.Actions.ConcurrencyGroupQueueEnabled {
+			jobCond = builder.Exists(builder.Select("id").From("action_run", "outer_run").
+				Where(builder.Eq{"outer_run.id": builder.Expr("action_run_job.run_id")}).
+				And(jobCond))
+		} else {
+			jobCond = builder.In("run_id", builder.Select("id").From("action_run", "outer_run").Where(jobCond))
+		}
+	}
+
+	var jobs []*ActionRunJob
+	if err := e.Where("task_id=? AND status=?", 0, StatusWaiting).And(jobCond).Asc("updated", "id").Find(&jobs); err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
 func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask, bool, error) {
 	ctx, commiter, err := db.TxContext(ctx)
 	if err != nil {
@@ -224,20 +329,8 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 
 	e := db.GetEngine(ctx)
 
-	jobCond := builder.NewCond()
-	if runner.RepoID != 0 {
-		jobCond = builder.Eq{"repo_id": runner.RepoID}
-	} else if runner.OwnerID != 0 {
-		jobCond = builder.In("repo_id", builder.Select("`repository`.id").From("repository").
-			Join("INNER", "repo_unit", "`repository`.id = `repo_unit`.repo_id").
-			Where(builder.Eq{"`repository`.owner_id": runner.OwnerID, "`repo_unit`.type": unit.TypeActions}))
-	}
-	if jobCond.IsValid() {
-		jobCond = builder.In("run_id", builder.Select("id").From("action_run").Where(jobCond))
-	}
-
-	var jobs []*ActionRunJob
-	if err := e.Where("task_id=? AND status=?", 0, StatusWaiting).And(jobCond).Asc("updated", "id").Find(&jobs); err != nil {
+	jobs, err := GetAvailableJobsForRunner(e, runner)
+	if err != nil {
 		return nil, false, err
 	}
 
@@ -245,7 +338,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 	var job *ActionRunJob
 	log.Trace("runner labels: %v", runner.AgentLabels)
 	for _, v := range jobs {
-		if isSubset(runner.AgentLabels, v.RunsOn) {
+		if v.ItRunsOn(runner.AgentLabels) {
 			job = v
 			break
 		}
@@ -273,12 +366,10 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 		CommitSHA:         job.CommitSHA,
 		IsForkPullRequest: job.IsForkPullRequest,
 	}
-	if err := task.GenerateToken(); err != nil {
-		return nil, false, err
-	}
+	task.GenerateToken()
 
 	var workflowJob *jobparser.Job
-	if gots, err := jobparser.Parse(job.WorkflowPayload); err != nil {
+	if gots, err := jobparser.Parse(job.WorkflowPayload, false); err != nil {
 		return nil, false, fmt.Errorf("parse workflow of job %d: %w", job.ID, err)
 	} else if len(gots) != 1 {
 		return nil, false, fmt.Errorf("workflow of job %d: not single workflow", job.ID)
@@ -314,7 +405,8 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 	}
 
 	job.TaskID = task.ID
-	if n, err := UpdateRunJob(ctx, job, builder.Eq{"task_id": 0}); err != nil {
+	// We never have to send a notification here because the job is started with a not done status.
+	if n, err := UpdateRunJobWithoutNotification(ctx, job, builder.Eq{"task_id": 0}); err != nil {
 		return nil, false, err
 	} else if n != 1 {
 		return nil, false, nil
@@ -338,140 +430,6 @@ func UpdateTask(ctx context.Context, task *ActionTask, cols ...string) error {
 	return err
 }
 
-// UpdateTaskByState updates the task by the state.
-// It will always update the task if the state is not final, even there is no change.
-// So it will update ActionTask.Updated to avoid the task being judged as a zombie task.
-func UpdateTaskByState(ctx context.Context, runnerID int64, state *runnerv1.TaskState) (*ActionTask, error) {
-	stepStates := map[int64]*runnerv1.StepState{}
-	for _, v := range state.Steps {
-		stepStates[v.Id] = v
-	}
-
-	ctx, commiter, err := db.TxContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer commiter.Close()
-
-	e := db.GetEngine(ctx)
-
-	task := &ActionTask{}
-	if has, err := e.ID(state.Id).Get(task); err != nil {
-		return nil, err
-	} else if !has {
-		return nil, util.ErrNotExist
-	} else if runnerID != task.RunnerID {
-		return nil, fmt.Errorf("invalid runner for task")
-	}
-
-	if task.Status.IsDone() {
-		// the state is final, do nothing
-		return task, nil
-	}
-
-	// state.Result is not unspecified means the task is finished
-	if state.Result != runnerv1.Result_RESULT_UNSPECIFIED {
-		task.Status = Status(state.Result)
-		task.Stopped = timeutil.TimeStamp(state.StoppedAt.AsTime().Unix())
-		if err := UpdateTask(ctx, task, "status", "stopped"); err != nil {
-			return nil, err
-		}
-		if _, err := UpdateRunJob(ctx, &ActionRunJob{
-			ID:      task.JobID,
-			Status:  task.Status,
-			Stopped: task.Stopped,
-		}, nil); err != nil {
-			return nil, err
-		}
-	} else {
-		// Force update ActionTask.Updated to avoid the task being judged as a zombie task
-		task.Updated = timeutil.TimeStampNow()
-		if err := UpdateTask(ctx, task, "updated"); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := task.LoadAttributes(ctx); err != nil {
-		return nil, err
-	}
-
-	for _, step := range task.Steps {
-		var result runnerv1.Result
-		if v, ok := stepStates[step.Index]; ok {
-			result = v.Result
-			step.LogIndex = v.LogIndex
-			step.LogLength = v.LogLength
-			step.Started = convertTimestamp(v.StartedAt)
-			step.Stopped = convertTimestamp(v.StoppedAt)
-		}
-		if result != runnerv1.Result_RESULT_UNSPECIFIED {
-			step.Status = Status(result)
-		} else if step.Started != 0 {
-			step.Status = StatusRunning
-		}
-		if _, err := e.ID(step.ID).Update(step); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := commiter.Commit(); err != nil {
-		return nil, err
-	}
-
-	return task, nil
-}
-
-func StopTask(ctx context.Context, taskID int64, status Status) error {
-	if !status.IsDone() {
-		return fmt.Errorf("cannot stop task with status %v", status)
-	}
-	e := db.GetEngine(ctx)
-
-	task := &ActionTask{}
-	if has, err := e.ID(taskID).Get(task); err != nil {
-		return err
-	} else if !has {
-		return util.ErrNotExist
-	}
-	if task.Status.IsDone() {
-		return nil
-	}
-
-	now := timeutil.TimeStampNow()
-	task.Status = status
-	task.Stopped = now
-	if _, err := UpdateRunJob(ctx, &ActionRunJob{
-		ID:      task.JobID,
-		Status:  task.Status,
-		Stopped: task.Stopped,
-	}, nil); err != nil {
-		return err
-	}
-
-	if err := UpdateTask(ctx, task, "status", "stopped"); err != nil {
-		return err
-	}
-
-	if err := task.LoadAttributes(ctx); err != nil {
-		return err
-	}
-
-	for _, step := range task.Steps {
-		if !step.Status.IsDone() {
-			step.Status = status
-			if step.Started == 0 {
-				step.Started = now
-			}
-			step.Stopped = now
-		}
-		if _, err := e.ID(step.ID).Update(step); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func FindOldTasksToExpire(ctx context.Context, olderThan timeutil.TimeStamp, limit int) ([]*ActionTask, error) {
 	e := db.GetEngine(ctx)
 
@@ -480,27 +438,6 @@ func FindOldTasksToExpire(ctx context.Context, olderThan timeutil.TimeStamp, lim
 	return tasks, e.Where("stopped > 0 AND stopped < ? AND log_expired = ?", olderThan, false).
 		Limit(limit).
 		Find(&tasks)
-}
-
-func isSubset(set, subset []string) bool {
-	m := make(container.Set[string], len(set))
-	for _, v := range set {
-		m.Add(v)
-	}
-
-	for _, v := range subset {
-		if !m.Contains(v) {
-			return false
-		}
-	}
-	return true
-}
-
-func convertTimestamp(timestamp *timestamppb.Timestamp) timeutil.TimeStamp {
-	if timestamp.GetSeconds() == 0 && timestamp.GetNanos() == 0 {
-		return timeutil.TimeStamp(0)
-	}
-	return timeutil.TimeStamp(timestamp.AsTime().Unix())
 }
 
 func logFileName(repoFullName string, taskID int64) string {

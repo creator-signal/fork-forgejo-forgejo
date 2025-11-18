@@ -11,11 +11,12 @@ import (
 	"strconv"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/label"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/label"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/stats"
 
 	"xorm.io/builder"
 )
@@ -240,7 +241,14 @@ func UpdateLabel(ctx context.Context, l *Label) error {
 	}
 	l.Color = color
 
-	return updateLabelCols(ctx, l, "name", "description", "color", "exclusive", "archived_unix")
+	_, err = db.GetEngine(ctx).Cols("name", "description", "color", "exclusive", "archived_unix").ID(l.ID).Update(l)
+	if err != nil {
+		return err
+	}
+
+	stats.QueueRecalcLabelByID(ctx, l.ID)
+
+	return nil
 }
 
 // DeleteLabel delete a label
@@ -303,6 +311,9 @@ func GetLabelByID(ctx context.Context, labelID int64) (*Label, error) {
 // GetLabelsByIDs returns a list of labels by IDs
 func GetLabelsByIDs(ctx context.Context, labelIDs []int64, cols ...string) ([]*Label, error) {
 	labels := make([]*Label, 0, len(labelIDs))
+	if len(labelIDs) == 0 {
+		return labels, nil
+	}
 	return labels, db.GetEngine(ctx).Table("label").
 		In("id", labelIDs).
 		Asc("name").
@@ -379,6 +390,9 @@ func BuildLabelNamesIssueIDsCondition(labelNames []string) *builder.Builder {
 // it silently ignores label IDs that do not belong to the repository.
 func GetLabelsInRepoByIDs(ctx context.Context, repoID int64, labelIDs []int64) ([]*Label, error) {
 	labels := make([]*Label, 0, len(labelIDs))
+	if len(labelIDs) == 0 {
+		return labels, nil
+	}
 	return labels, db.GetEngine(ctx).
 		Where("repo_id = ?", repoID).
 		In("id", labelIDs).
@@ -451,6 +465,9 @@ func GetLabelInOrgByID(ctx context.Context, orgID, labelID int64) (*Label, error
 // it silently ignores label IDs that do not belong to the organization.
 func GetLabelsInOrgByIDs(ctx context.Context, orgID int64, labelIDs []int64) ([]*Label, error) {
 	labels := make([]*Label, 0, len(labelIDs))
+	if len(labelIDs) == 0 {
+		return labels, nil
+	}
 	return labels, db.GetEngine(ctx).
 		Where("org_id = ?", orgID).
 		In("id", labelIDs).
@@ -501,20 +518,34 @@ func CountLabelsByOrgID(ctx context.Context, orgID int64) (int64, error) {
 	return db.GetEngine(ctx).Where("org_id = ?", orgID).Count(&Label{})
 }
 
-func updateLabelCols(ctx context.Context, l *Label, cols ...string) error {
-	_, err := db.GetEngine(ctx).ID(l.ID).
+func init() {
+	stats.RegisterRecalc(stats.LabelByLabelID, doRecalcLabelByID)
+	stats.RegisterRecalc(stats.LabelByRepoID, doRecalcLabelByRepoID)
+}
+
+func doRecalcLabelByID(ctx context.Context, labelID int64, _ optional.Option[timeutil.TimeStamp]) error {
+	return doRecalcLabel(ctx, builder.Eq{"id": labelID})
+}
+
+func doRecalcLabelByRepoID(ctx context.Context, repoID int64, _ optional.Option[timeutil.TimeStamp]) error {
+	return doRecalcLabel(ctx, builder.Eq{"repo_id": repoID})
+}
+
+func doRecalcLabel(ctx context.Context, cond builder.Cond) error {
+	_, err := db.GetEngine(ctx).
 		SetExpr("num_issues",
 			builder.Select("count(*)").From("issue_label").
-				Where(builder.Eq{"label_id": l.ID}),
+				Where(builder.Eq{"label_id": builder.Expr("label.id")}),
 		).
 		SetExpr("num_closed_issues",
 			builder.Select("count(*)").From("issue_label").
 				InnerJoin("issue", "issue_label.issue_id = issue.id").
 				Where(builder.Eq{
-					"issue_label.label_id": l.ID,
+					"issue_label.label_id": builder.Expr("label.id"),
 					"issue.is_closed":      true,
 				}),
 		).
-		Cols(cols...).Update(l)
+		Where(cond).
+		Update(&Label{})
 	return err
 }

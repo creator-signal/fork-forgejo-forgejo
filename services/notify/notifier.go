@@ -6,12 +6,13 @@ package notify
 import (
 	"context"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	packages_model "code.gitea.io/gitea/models/packages"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/repository"
+	actions_model "forgejo.org/models/actions"
+	issues_model "forgejo.org/models/issues"
+	packages_model "forgejo.org/models/packages"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/repository"
 )
 
 // Notifier defines an interface to notify receiver
@@ -29,7 +30,6 @@ type Notifier interface {
 
 	NewIssue(ctx context.Context, issue *issues_model.Issue, mentions []*user_model.User)
 	IssueChangeStatus(ctx context.Context, doer *user_model.User, commitID string, issue *issues_model.Issue, actionComment *issues_model.Comment, closeOrReopen bool)
-	DeleteIssue(ctx context.Context, doer *user_model.User, issue *issues_model.Issue)
 	IssueChangeMilestone(ctx context.Context, doer *user_model.User, issue *issues_model.Issue, oldMilestoneID int64)
 	IssueChangeAssignee(ctx context.Context, doer *user_model.User, issue *issues_model.Issue, assignee *user_model.User, removed bool, comment *issues_model.Comment)
 	PullRequestReviewRequest(ctx context.Context, doer *user_model.User, issue *issues_model.Issue, reviewer *user_model.User, isRequest bool, comment *issues_model.Comment)
@@ -76,4 +76,6 @@ type Notifier interface {
 	PackageDelete(ctx context.Context, doer *user_model.User, pd *packages_model.PackageDescriptor)
 
 	ChangeDefaultBranch(ctx context.Context, repo *repo_model.Repository)
+
+	ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun)
 }

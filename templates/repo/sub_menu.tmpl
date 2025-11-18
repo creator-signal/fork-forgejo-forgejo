@@ -3,14 +3,14 @@
 	<div class="ui segment repository-menu">
 		{{if and (.Permission.CanRead $.UnitTypeCode) (not .IsEmptyRepo)}}
 			<a class="item muted {{if .PageIsCommits}}active{{end}}" href="{{.RepoLink}}/commits/{{.BranchNameSubURL}}">
-				{{svg "octicon-history"}} {{ctx.Locale.TrN .CommitsCount "repo.n_commit_one" "repo.n_commit_few" (printf "<b>%d</b>" .CommitsCount | SafeHTML)}}
+				{{svg "octicon-history"}} {{ctx.Locale.TrN .CommitsCount "repo.n_commit_one" "repo.n_commit_few" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .CommitsCount) | SafeHTML)}}
 			</a>
 			<a class="item muted {{if .PageIsBranches}}active{{end}}" href="{{.RepoLink}}/branches">
-				{{svg "octicon-git-branch"}} {{ctx.Locale.TrN .BranchesCount "repo.n_branch_one" "repo.n_branch_few" (printf "<b>%d</b>" .BranchesCount | SafeHTML)}}
+				{{svg "octicon-git-branch"}} {{ctx.Locale.TrN .BranchesCount "repo.n_branch_one" "repo.n_branch_few" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .BranchesCount) | SafeHTML)}}
 			</a>
 			{{if $.Permission.CanRead $.UnitTypeCode}}
 				<a class="item muted {{if .PageIsTagList}}active{{end}}" href="{{.RepoLink}}/tags">
-					{{svg "octicon-tag"}} {{ctx.Locale.TrN .NumTags "repo.n_tag_one" "repo.n_tag_few" (printf "<b>%d</b>" .NumTags | SafeHTML)}}
+					{{svg "octicon-tag"}} {{ctx.Locale.TrN .NumTags "repo.n_tag_one" "repo.n_tag_few" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .NumTags) | SafeHTML)}}
 				</a>
 			{{end}}
 			<span class="item" {{if not (eq .Repository.Size 0)}}data-tooltip-content="{{.Repository.SizeDetailsString ctx.Locale}}"{{end}}>
@@ -20,26 +20,30 @@
 		{{end}}
 	</div>
 	{{if and (.Permission.CanRead $.UnitTypeCode) (not .IsEmptyRepo) .LanguageStats}}
-	<div class="ui segment sub-menu language-stats-details tw-hidden">
-		{{range .LanguageStats}}
-		<div class="item">
-			<i class="color-icon" style="background-color: {{.Color}}"></i>
-			<span class="tw-font-semibold">
-				{{if eq .Language "other"}}
-					{{ctx.Locale.Tr "repo.language_other"}}
-				{{else}}
-					{{.Language}}
+		<details class="stats" id="language-stats">
+			<summary>
+				<stats-bar>
+					{{range .LanguageStats}}
+						<div class="slice" style="width: {{.Percentage}}%; background-color: {{.Color}}" data-tooltip-placement="top" data-tooltip-content={{.Language}} data-tooltip-follow-cursor="horizontal"></div>
+					{{end}}
+				</stats-bar>
+			</summary>
+			<ul>
+				{{range .LanguageStats}}
+					<li>
+						<i class="color-icon" style="background-color: {{.Color}}"></i>
+						<span>
+							{{if eq .Language "other"}}
+								{{ctx.Locale.Tr "repo.language_other"}}
+							{{else}}
+								{{.Language}}
+							{{end}}
+						</span>
+						{{.Percentage}}%
+					</li>
 				{{end}}
-			</span>
-			{{.Percentage}}%
-		</div>
-		{{end}}
-	</div>
-	<a class="ui segment language-stats show-panel toggle" data-panel=".repository-summary > .sub-menu">
-		{{range .LanguageStats}}
-		<div class="bar" style="width: {{.Percentage}}%; background-color: {{.Color}}" data-tooltip-placement="top" data-tooltip-content={{.Language}} data-tooltip-follow-cursor="horizontal"></div>
-		{{end}}
-	</a>
+			</ul>
+		</details>
 	{{end}}
 </div>
 {{end}}

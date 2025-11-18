@@ -14,22 +14,22 @@ import (
 	"strings"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	quota_model "code.gitea.io/gitea/models/quota"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/migration"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/routers"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/forms"
-	repo_service "code.gitea.io/gitea/services/repository"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/migration"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/routers"
+	"forgejo.org/services/context"
+	"forgejo.org/services/forms"
+	repo_service "forgejo.org/services/repository"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -187,16 +187,6 @@ func (e *quotaEnv) SetupWithMultipleQuotaRules(t *testing.T) {
 	cleaner = createQuotaGroup(t, "default")
 	e.cleanups = append(e.cleanups, cleaner)
 
-	// Create three rules: all, repo-size, and asset-size
-	zero := int64(0)
-	ruleAll := api.CreateQuotaRuleOptions{
-		Name:     "all",
-		Limit:    &zero,
-		Subjects: []string{"size:all"},
-	}
-	cleaner = createQuotaRule(t, ruleAll)
-	e.cleanups = append(e.cleanups, cleaner)
-
 	fifteenMb := int64(1024 * 1024 * 15)
 	ruleRepoSize := api.CreateQuotaRuleOptions{
 		Name:     "repo-size",
@@ -215,8 +205,6 @@ func (e *quotaEnv) SetupWithMultipleQuotaRules(t *testing.T) {
 	e.cleanups = append(e.cleanups, cleaner)
 
 	// Add these rules to the group
-	cleaner = e.AddRuleToGroup(t, "default", "all")
-	e.cleanups = append(e.cleanups, cleaner)
 	cleaner = e.AddRuleToGroup(t, "default", "repo-size")
 	e.cleanups = append(e.cleanups, cleaner)
 	cleaner = e.AddRuleToGroup(t, "default", "asset-size")
@@ -300,7 +288,7 @@ func prepareQuotaEnv(t *testing.T, username string) *quotaEnv {
 }
 
 func TestAPIQuotaUserCleanSlate(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Quota.Enabled, true)()
 		defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
@@ -320,13 +308,13 @@ func TestAPIQuotaUserCleanSlate(t *testing.T) {
 }
 
 func TestAPIQuotaEnforcement(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		testAPIQuotaEnforcement(t)
 	})
 }
 
 func TestAPIQuotaCountsTowardsCorrectUser(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := prepareQuotaEnv(t, "quota-correct-user-test")
 		defer env.Cleanup()
 		env.SetupWithSingleQuotaRule(t)
@@ -362,7 +350,7 @@ func TestAPIQuotaCountsTowardsCorrectUser(t *testing.T) {
 }
 
 func TestAPIQuotaError(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := prepareQuotaEnv(t, "quota-enforcement")
 		defer env.Cleanup()
 		env.SetupWithSingleQuotaRule(t)
@@ -377,7 +365,7 @@ func TestAPIQuotaError(t *testing.T) {
 		var msg context.APIQuotaExceeded
 		DecodeJSON(t, resp, &msg)
 
-		assert.EqualValues(t, env.Orgs.Limited.ID, msg.UserID)
+		assert.Equal(t, env.Orgs.Limited.ID, msg.UserID)
 		assert.Equal(t, env.Orgs.Limited.UserName, msg.UserName)
 	})
 }
@@ -1300,7 +1288,7 @@ func testAPIQuotaEnforcement(t *testing.T) {
 }
 
 func TestAPIQuotaOrgQuotaQuery(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := prepareQuotaEnv(t, "quota-enforcement")
 		defer env.Cleanup()
 
@@ -1327,7 +1315,7 @@ func TestAPIQuotaOrgQuotaQuery(t *testing.T) {
 }
 
 func TestAPIQuotaUserBasics(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := prepareQuotaEnv(t, "quota-enforcement")
 		defer env.Cleanup()
 
@@ -1414,7 +1402,6 @@ func TestAPIQuotaUserBasics(t *testing.T) {
 
 				// Temporarily disable quota checking
 				defer env.SetRuleLimit(t, "repo-size", -1)()
-				defer env.SetRuleLimit(t, "all", -1)()
 
 				// Create a branch
 				req := NewRequestWithJSON(t, "POST", env.APIPathForRepo("/branches"), api.CreateBranchRepoOption{
@@ -1424,7 +1411,6 @@ func TestAPIQuotaUserBasics(t *testing.T) {
 
 				// Set the limit back. No need to defer, the first one will set it
 				// back to the correct value.
-				env.SetRuleLimit(t, "all", 0)
 				env.SetRuleLimit(t, "repo-size", 0)
 
 				// Deleting a branch does not incur quota enforcement

@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/util"
 )
 
 type LogGlobalConfig struct {
@@ -22,8 +22,6 @@ type LogGlobalConfig struct {
 	Level              log.Level
 	StacktraceLogLevel log.Level
 	BufferLen          int
-
-	EnableSSHLog bool
 
 	AccessLogTemplate string
 	RequestIDHeaders  []string
@@ -47,8 +45,6 @@ func loadLogGlobalFrom(rootCfg ConfigProvider) {
 	}
 	Log.RootPath = util.FilePathJoinAbs(Log.RootPath)
 
-	Log.EnableSSHLog = sec.Key("ENABLE_SSH_LOG").MustBool(false)
-
 	Log.AccessLogTemplate = sec.Key("ACCESS_LOG_TEMPLATE").MustString(accessLogTemplateDefault)
 	Log.RequestIDHeaders = sec.Key("REQUEST_ID_HEADERS").Strings(",")
 }
@@ -56,41 +52,83 @@ func loadLogGlobalFrom(rootCfg ConfigProvider) {
 func prepareLoggerConfig(rootCfg ConfigProvider) {
 	sec := rootCfg.Section("log")
 
-	if !sec.HasKey("logger.default.MODE") {
-		sec.Key("logger.default.MODE").MustString(",")
+	// Priority: `LOGGER_DEFAULT_MODE` -> `logger.default.MODE`
+	deprecatedSettingWarning(rootCfg, "log", "logger.default.MODE", "log", "LOGGER_DEFAULT_MODE")
+	hasNoValue := !sec.HasKey("LOGGER_DEFAULT_MODE")
+	if hasNoValue && sec.HasKey("logger.default.MODE") {
+		sec.Key("LOGGER_DEFAULT_MODE").SetValue(sec.Key("logger.default.MODE").String())
+		hasNoValue = false
+	}
+	if hasNoValue {
+		sec.Key("LOGGER_DEFAULT_MODE").SetValue(",") // use default logger
 	}
 
-	deprecatedSetting(rootCfg, "log", "ACCESS", "log", "logger.access.MODE", "1.21")
-	deprecatedSetting(rootCfg, "log", "ENABLE_ACCESS_LOG", "log", "logger.access.MODE", "1.21")
-	if val := sec.Key("ACCESS").String(); val != "" {
-		sec.Key("logger.access.MODE").MustString(val)
+	// Priority: `ENABLE_ACCESS_LOG` -> `LOGGER_ACCESS_MODE` -> `logger.access.MODE` -> `ACCESS`
+	deprecatedSettingWarning(rootCfg, "log", "ACCESS", "log", "LOGGER_ACCESS_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "ENABLE_ACCESS_LOG", "log", "LOGGER_ACCESS_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "logger.access.MODE", "log", "LOGGER_ACCESS_MODE")
+	hasNoValue = !sec.HasKey("LOGGER_ACCESS_MODE")
+	if hasNoValue && sec.HasKey("logger.access.MODE") {
+		sec.Key("LOGGER_ACCESS_MODE").SetValue(sec.Key("logger.access.MODE").String())
+		hasNoValue = false
+	}
+	if val := sec.Key("ACCESS").String(); hasNoValue && val != "" {
+		sec.Key("LOGGER_ACCESS_MODE").SetValue(val)
 	}
 	if sec.HasKey("ENABLE_ACCESS_LOG") && !sec.Key("ENABLE_ACCESS_LOG").MustBool() {
-		sec.Key("logger.access.MODE").SetValue("")
+		sec.Key("LOGGER_ACCESS_MODE").SetValue("")
 	}
 
-	deprecatedSetting(rootCfg, "log", "ROUTER", "log", "logger.router.MODE", "1.21")
-	deprecatedSetting(rootCfg, "log", "DISABLE_ROUTER_LOG", "log", "logger.router.MODE", "1.21")
-	if val := sec.Key("ROUTER").String(); val != "" {
-		sec.Key("logger.router.MODE").MustString(val)
+	// Priority: `DISABLE_ROUTER_LOG` -> `LOGGER_ROUTER_MODE` -> `logger.router.MODE` -> `ROUTER`
+	deprecatedSettingWarning(rootCfg, "log", "ROUTER", "log", "LOGGER_ROUTER_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "DISABLE_ROUTER_LOG", "log", "LOGGER_ROUTER_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "logger.router.MODE", "log", "LOGGER_ROUTER_MODE")
+	hasNoValue = !sec.HasKey("LOGGER_ROUTER_MODE")
+	if hasNoValue && sec.HasKey("logger.router.MODE") {
+		sec.Key("LOGGER_ROUTER_MODE").SetValue(sec.Key("logger.router.MODE").String())
+		hasNoValue = false
 	}
-	if !sec.HasKey("logger.router.MODE") {
-		sec.Key("logger.router.MODE").MustString(",") // use default logger
+	if val := sec.Key("ROUTER").String(); hasNoValue && val != "" {
+		sec.Key("LOGGER_ROUTER_MODE").SetValue(val)
+		hasNoValue = false
 	}
 	if sec.HasKey("DISABLE_ROUTER_LOG") && sec.Key("DISABLE_ROUTER_LOG").MustBool() {
-		sec.Key("logger.router.MODE").SetValue("")
+		sec.Key("LOGGER_ROUTER_MODE").SetValue("")
+		hasNoValue = false
+	}
+	if hasNoValue {
+		sec.Key("LOGGER_ROUTER_MODE").SetValue(",") // use default logger
 	}
 
-	deprecatedSetting(rootCfg, "log", "XORM", "log", "logger.xorm.MODE", "1.21")
-	deprecatedSetting(rootCfg, "log", "ENABLE_XORM_LOG", "log", "logger.xorm.MODE", "1.21")
-	if val := sec.Key("XORM").String(); val != "" {
-		sec.Key("logger.xorm.MODE").MustString(val)
+	// Priority: `ENABLE_XORM_LOG` -> `LOGGER_XORM_MODE` -> `logger.xorm.MODE` -> `XORM`
+	deprecatedSettingWarning(rootCfg, "log", "XORM", "log", "LOGGER_XORM_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "ENABLE_XORM_LOG", "log", "LOGGER_XORM_MODE")
+	deprecatedSettingWarning(rootCfg, "log", "logger.xorm.MODE", "log", "LOGGER_XORM_MODE")
+	hasNoValue = !sec.HasKey("LOGGER_XORM_MODE")
+	if hasNoValue && sec.HasKey("logger.xorm.MODE") {
+		sec.Key("LOGGER_XORM_MODE").SetValue(sec.Key("logger.xorm.MODE").String())
+		hasNoValue = false
 	}
-	if !sec.HasKey("logger.xorm.MODE") {
-		sec.Key("logger.xorm.MODE").MustString(",") // use default logger
+	if val := sec.Key("XORM").String(); hasNoValue && val != "" {
+		sec.Key("LOGGER_XORM_MODE").SetValue(val)
+		hasNoValue = false
 	}
 	if sec.HasKey("ENABLE_XORM_LOG") && !sec.Key("ENABLE_XORM_LOG").MustBool() {
-		sec.Key("logger.xorm.MODE").SetValue("")
+		sec.Key("LOGGER_XORM_MODE").SetValue("")
+		hasNoValue = false
+	}
+	if hasNoValue {
+		sec.Key("LOGGER_XORM_MODE").SetValue(",") // use default logger
+	}
+
+	// Priority: `LOGGER_SSH_MODE` -> `ENABLE_SSH_LOG`
+	deprecatedSettingWarning(rootCfg, "log", "ENABLE_SSH_LOG", "log", "LOGGER_SSH_MODE")
+	if !sec.HasKey("LOGGER_SSH_MODE") && sec.HasKey("ENABLE_SSH_LOG") {
+		if sec.Key("ENABLE_SSH_LOG").MustBool() {
+			sec.Key("LOGGER_SSH_MODE").SetValue(",") // use default logger
+		} else {
+			sec.Key("LOGGER_SSH_MODE").SetValue("") // disable ssh logger
+		}
 	}
 }
 
@@ -133,6 +171,7 @@ func loadLogModeByName(rootCfg ConfigProvider, loggerName, modeName string) (wri
 	writerMode.StacktraceLevel = log.LevelFromString(ConfigInheritedKeyString(sec, "STACKTRACE_LEVEL", Log.StacktraceLogLevel.String()))
 	writerMode.Prefix = ConfigInheritedKeyString(sec, "PREFIX")
 	writerMode.Expression = ConfigInheritedKeyString(sec, "EXPRESSION")
+	writerMode.Exclusion = ConfigInheritedKeyString(sec, "EXCLUSION")
 	// flags are updated and set below
 
 	switch writerType {
@@ -212,18 +251,19 @@ func initManagedLoggers(manager *log.LoggerManager, cfg ConfigProvider) {
 	initLoggerByName(manager, cfg, "access")
 	initLoggerByName(manager, cfg, "router")
 	initLoggerByName(manager, cfg, "xorm")
+	initLoggerByName(manager, cfg, "ssh")
 }
 
 func initLoggerByName(manager *log.LoggerManager, rootCfg ConfigProvider, loggerName string) {
 	sec := rootCfg.Section("log")
-	keyPrefix := "logger." + loggerName
+	key := "LOGGER_" + strings.ToUpper(loggerName) + "_MODE"
 
-	disabled := sec.HasKey(keyPrefix+".MODE") && sec.Key(keyPrefix+".MODE").String() == ""
+	disabled := sec.HasKey(key) && sec.Key(key).String() == ""
 	if disabled {
 		return
 	}
 
-	modeVal := sec.Key(keyPrefix + ".MODE").String()
+	modeVal := sec.Key(key).String()
 	if modeVal == "," {
 		modeVal = Log.Mode
 	}

@@ -5,7 +5,6 @@
 package user_test
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -13,20 +12,19 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/auth/password/hash"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/validation"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/auth/password/hash"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,6 +44,28 @@ func TestIsValidUserID(t *testing.T) {
 	assert.True(t, user_model.IsValidUserID(user_model.GhostUserID))
 	assert.True(t, user_model.IsValidUserID(user_model.ActionsUserID))
 	assert.True(t, user_model.IsValidUserID(200))
+}
+
+func TestUserLinks(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	assert.Equal(t, "/", user1.DashboardLink())
+	assert.Equal(t, "/user1", user1.HomeLink())
+	assert.Equal(t, "https://try.gitea.io/user1", user1.HTMLURL())
+	assert.Empty(t, user1.OrganisationLink())
+
+	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
+	assert.Equal(t, "/org/org3/dashboard", org3.DashboardLink())
+	assert.Equal(t, "/org3", org3.HomeLink())
+	assert.Equal(t, "https://try.gitea.io/org3", org3.HTMLURL())
+	assert.Equal(t, "/org/org3", org3.OrganisationLink())
+
+	ghost := user_model.NewGhostUser()
+	assert.Empty(t, ghost.DashboardLink())
+	assert.Empty(t, ghost.HomeLink())
+	assert.Empty(t, ghost.HTMLURL())
+	assert.Empty(t, ghost.OrganisationLink())
 }
 
 func TestGetUserFromMap(t *testing.T) {
@@ -74,7 +94,7 @@ func TestGetUserFromMap(t *testing.T) {
 }
 
 func TestGetUserByName(t *testing.T) {
-	defer tests.AddFixtures("models/user/fixtures/")()
+	defer unittest.OverrideFixtures("models/user/fixtures")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	{
@@ -102,16 +122,6 @@ func TestGetUserByName(t *testing.T) {
 	}
 }
 
-func TestGetUserEmailsByNames(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	// ignore none active user email
-	assert.ElementsMatch(t, []string{"user8@example.com"}, user_model.GetUserEmailsByNames(db.DefaultContext, []string{"user8", "user9"}))
-	assert.ElementsMatch(t, []string{"user8@example.com", "user5@example.com"}, user_model.GetUserEmailsByNames(db.DefaultContext, []string{"user8", "user5"}))
-
-	assert.ElementsMatch(t, []string{"user8@example.com"}, user_model.GetUserEmailsByNames(db.DefaultContext, []string{"user8", "org7"}))
-}
-
 func TestCanCreateOrganization(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
@@ -131,7 +141,7 @@ func TestCanCreateOrganization(t *testing.T) {
 }
 
 func TestGetAllUsers(t *testing.T) {
-	defer tests.AddFixtures("models/user/fixtures/")()
+	defer unittest.OverrideFixtures("models/user/fixtures")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	users, err := user_model.GetAllUsers(db.DefaultContext)
@@ -150,13 +160,25 @@ func TestAPActorID(t *testing.T) {
 	user := user_model.User{ID: 1}
 	url := user.APActorID()
 	expected := "https://try.gitea.io/api/v1/activitypub/user-id/1"
-	if url != expected {
-		t.Errorf("unexpected APActorID, expected: %q, actual: %q", expected, url)
-	}
+	assert.Equal(t, expected, url)
+}
+
+func TestAPActorID_APActorID(t *testing.T) {
+	user := user_model.User{ID: user_model.APServerActorUserID}
+	url := user.APActorID()
+	expected := "https://try.gitea.io/api/v1/activitypub/actor"
+	assert.Equal(t, expected, url)
+}
+
+func TestKeyID(t *testing.T) {
+	user := user_model.User{ID: 1}
+	url := user.KeyID()
+	expected := "https://try.gitea.io/api/v1/activitypub/user-id/1#main-key"
+	assert.Equal(t, expected, url)
 }
 
 func TestSearchUsers(t *testing.T) {
-	defer tests.AddFixtures("models/user/fixtures/")()
+	defer unittest.OverrideFixtures("models/user/fixtures")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 	testSuccess := func(opts *user_model.SearchUserOptions, expectedUserOrOrgIDs []int64) {
 		users, _, err := user_model.SearchUsers(db.DefaultContext, opts)
@@ -164,7 +186,7 @@ func TestSearchUsers(t *testing.T) {
 		cassText := fmt.Sprintf("ids: %v, opts: %v", expectedUserOrOrgIDs, opts)
 		if assert.Len(t, users, len(expectedUserOrOrgIDs), "case: %s", cassText) {
 			for i, expectedID := range expectedUserOrOrgIDs {
-				assert.EqualValues(t, expectedID, users[i].ID, "case: %s", cassText)
+				assert.Equal(t, expectedID, users[i].ID, "case: %s", cassText)
 			}
 		}
 	}
@@ -197,10 +219,10 @@ func TestSearchUsers(t *testing.T) {
 	}
 
 	testUserSuccess(&user_model.SearchUserOptions{OrderBy: "id ASC", ListOptions: db.ListOptions{Page: 1}},
-		[]int64{1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 1041})
+		[]int64{1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 42, 1041})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsActive: optional.Some(false)},
-		[]int64{9})
+		[]int64{42, 9})
 
 	testUserSuccess(&user_model.SearchUserOptions{OrderBy: "id ASC", ListOptions: db.ListOptions{Page: 1}, IsActive: optional.Some(true)},
 		[]int64{1, 2, 4, 5, 8, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 1041})
@@ -222,7 +244,7 @@ func TestSearchUsers(t *testing.T) {
 		[]int64{1041, 37})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsTwoFactorEnabled: optional.Some(true)},
-		[]int64{24})
+		[]int64{24, 32})
 }
 
 func TestEmailNotificationPreferences(t *testing.T) {
@@ -267,7 +289,7 @@ func TestHashPasswordDeterministic(t *testing.T) {
 			r2 := u.Passwd
 
 			assert.NotEqual(t, r1, r2)
-			assert.True(t, u.ValidatePassword(pass))
+			assert.True(t, u.ValidatePassword(t.Context(), pass))
 		}
 	}
 }
@@ -324,7 +346,7 @@ func TestCreateUserInvalidEmail(t *testing.T) {
 
 	err := user_model.CreateUser(db.DefaultContext, user)
 	require.Error(t, err)
-	assert.True(t, validation.IsErrEmailCharIsNotSupported(err))
+	assert.True(t, validation.IsErrEmailInvalid(err))
 }
 
 func TestCreateUserEmailAlreadyUsed(t *testing.T) {
@@ -356,7 +378,7 @@ func TestCreateUserCustomTimestamps(t *testing.T) {
 	err := user_model.CreateUser(db.DefaultContext, user)
 	require.NoError(t, err)
 
-	fetched, err := user_model.GetUserByID(context.Background(), user.ID)
+	fetched, err := user_model.GetUserByID(t.Context(), user.ID)
 	require.NoError(t, err)
 	assert.Equal(t, creationTimestamp, fetched.CreatedUnix)
 	assert.Equal(t, creationTimestamp, fetched.UpdatedUnix)
@@ -383,7 +405,7 @@ func TestCreateUserWithoutCustomTimestamps(t *testing.T) {
 
 	timestampEnd := time.Now().Unix()
 
-	fetched, err := user_model.GetUserByID(context.Background(), user.ID)
+	fetched, err := user_model.GetUserByID(t.Context(), user.ID)
 	require.NoError(t, err)
 
 	assert.LessOrEqual(t, timestampStart, fetched.CreatedUnix)
@@ -391,6 +413,31 @@ func TestCreateUserWithoutCustomTimestamps(t *testing.T) {
 
 	assert.LessOrEqual(t, timestampStart, fetched.UpdatedUnix)
 	assert.LessOrEqual(t, fetched.UpdatedUnix, timestampEnd)
+}
+
+func TestCreateUserClaimingUsername(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.Service.UsernameCooldownPeriod, 1)()
+
+	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(&user_model.Redirect{RedirectUserID: 1, LowerName: "redirecting", CreatedUnix: timeutil.TimeStampNow()})
+	require.NoError(t, err)
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	user.Name = "redirecting"
+	user.LowerName = strings.ToLower(user.Name)
+	user.ID = 0
+	user.Email = "unique@example.com"
+
+	t.Run("Normal creation", func(t *testing.T) {
+		err = user_model.CreateUser(db.DefaultContext, user)
+		assert.True(t, user_model.IsErrCooldownPeriod(err))
+	})
+
+	t.Run("Creation as admin", func(t *testing.T) {
+		err = user_model.AdminCreateUser(db.DefaultContext, user)
+		require.NoError(t, err)
+	})
 }
 
 func TestGetUserIDsByNames(t *testing.T) {
@@ -590,28 +637,169 @@ func TestGetAllAdmins(t *testing.T) {
 	assert.Equal(t, int64(1), admins[0].ID)
 }
 
+func TestMustHaveTwoFactor(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
+	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
+	ghostUser := user_model.NewGhostUser()
+	actionsUser := user_model.NewActionsUser()
+
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
+		// this should be the default, so don't have to set the variable
+		assert.False(t, adminUser.MustHaveTwoFactor())
+		assert.False(t, normalUser.MustHaveTwoFactor())
+		assert.False(t, restrictedUser.MustHaveTwoFactor())
+		assert.False(t, org.MustHaveTwoFactor())
+		assert.False(t, ghostUser.MustHaveTwoFactor())
+		assert.False(t, actionsUser.MustHaveTwoFactor())
+	})
+
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
+
+		assert.True(t, adminUser.MustHaveTwoFactor())
+		assert.True(t, normalUser.MustHaveTwoFactor())
+		assert.True(t, restrictedUser.MustHaveTwoFactor())
+		assert.False(t, org.MustHaveTwoFactor())
+		assert.True(t, ghostUser.MustHaveTwoFactor())
+		assert.False(t, actionsUser.MustHaveTwoFactor())
+	})
+
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
+
+		assert.True(t, adminUser.MustHaveTwoFactor())
+		assert.False(t, normalUser.MustHaveTwoFactor())
+		assert.False(t, restrictedUser.MustHaveTwoFactor())
+		assert.False(t, org.MustHaveTwoFactor())
+		assert.False(t, ghostUser.MustHaveTwoFactor())
+		assert.False(t, actionsUser.MustHaveTwoFactor())
+	})
+}
+
+func TestIsAccessAllowed(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	runTest := func(t *testing.T, user *user_model.User, useTOTP, accessAllowed bool) {
+		t.Helper()
+		if useTOTP {
+			unittest.AssertSuccessfulInsert(t, &auth.TwoFactor{UID: user.ID})
+			defer unittest.AssertSuccessfulDelete(t, &auth.TwoFactor{UID: user.ID})
+		}
+
+		assert.Equal(t, accessAllowed, user.IsAccessAllowed(t.Context()))
+	}
+
+	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	inactiveUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 9})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
+	restrictedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
+	prohibitLoginUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 37})
+	ghostUser := user_model.NewGhostUser()
+	actionsUser := user_model.NewActionsUser()
+
+	// users with enabled WebAuthn
+	normalWebAuthnUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 32})
+
+	t.Run("NoneTwoFactorRequirement", func(t *testing.T) {
+		// this should be the default, so don't have to set the variable
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, true)
+			runTest(t, normalUser, false, true)
+			runTest(t, inactiveUser, false, false)
+			runTest(t, org, false, true)
+			runTest(t, restrictedUser, false, true)
+			runTest(t, prohibitLoginUser, false, false)
+			runTest(t, ghostUser, false, false)
+			runTest(t, actionsUser, false, true)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, normalWebAuthnUser, false, true)
+
+			runTest(t, adminUser, true, true)
+			runTest(t, normalUser, true, true)
+			runTest(t, inactiveUser, true, false)
+			runTest(t, org, true, true)
+			runTest(t, restrictedUser, true, true)
+			runTest(t, prohibitLoginUser, true, false)
+		})
+	})
+
+	t.Run("AllTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, false)
+			runTest(t, normalUser, false, false)
+			runTest(t, inactiveUser, false, false)
+			runTest(t, org, false, true)
+			runTest(t, restrictedUser, false, false)
+			runTest(t, prohibitLoginUser, false, false)
+			runTest(t, ghostUser, false, false)
+			runTest(t, actionsUser, false, true)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, normalWebAuthnUser, false, true)
+
+			runTest(t, adminUser, true, true)
+			runTest(t, normalUser, true, true)
+			runTest(t, inactiveUser, true, false)
+			runTest(t, org, true, true)
+			runTest(t, restrictedUser, true, true)
+			runTest(t, prohibitLoginUser, true, false)
+		})
+	})
+
+	t.Run("AdminTwoFactorRequirement", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AdminTwoFactorRequirement)()
+
+		t.Run("no 2fa", func(t *testing.T) {
+			runTest(t, adminUser, false, false)
+			runTest(t, normalUser, false, true)
+			runTest(t, inactiveUser, false, false)
+			runTest(t, org, false, true)
+			runTest(t, restrictedUser, false, true)
+			runTest(t, prohibitLoginUser, false, false)
+			runTest(t, ghostUser, false, false)
+			runTest(t, actionsUser, false, true)
+		})
+
+		t.Run("enabled 2fa", func(t *testing.T) {
+			runTest(t, normalWebAuthnUser, false, true)
+
+			runTest(t, adminUser, true, true)
+			runTest(t, normalUser, true, true)
+			runTest(t, inactiveUser, true, false)
+			runTest(t, org, true, true)
+			runTest(t, restrictedUser, true, true)
+			runTest(t, prohibitLoginUser, true, false)
+		})
+	})
+}
+
 func Test_ValidateUser(t *testing.T) {
-	oldSetting := setting.Service.AllowedUserVisibilityModesSlice
-	defer func() {
-		setting.Service.AllowedUserVisibilityModesSlice = oldSetting
-	}()
-	setting.Service.AllowedUserVisibilityModesSlice = []bool{true, false, true}
+	defer test.MockVariableValue(&setting.Service.AllowedUserVisibilityModesSlice, []bool{true, false, true})()
+
 	kases := map[*user_model.User]bool{
 		{ID: 1, Visibility: structs.VisibleTypePublic}:  true,
 		{ID: 2, Visibility: structs.VisibleTypeLimited}: false,
 		{ID: 2, Visibility: structs.VisibleTypePrivate}: true,
 	}
 	for kase, expected := range kases {
-		assert.EqualValues(t, expected, nil == user_model.ValidateUser(kase))
+		assert.Equal(t, expected, nil == user_model.ValidateUser(kase))
 	}
 }
 
 func Test_NormalizeUserFromEmail(t *testing.T) {
-	oldSetting := setting.Service.AllowDotsInUsernames
-	defer func() {
-		setting.Service.AllowDotsInUsernames = oldSetting
-	}()
-	setting.Service.AllowDotsInUsernames = true
+	defer test.MockVariableValue(&setting.Service.AllowDotsInUsernames, true)()
+
 	testCases := []struct {
 		Input             string
 		Expected          string
@@ -620,6 +808,7 @@ func Test_NormalizeUserFromEmail(t *testing.T) {
 		{"test", "test", true},
 		{"Sinéad.O'Connor", "Sinead.OConnor", true},
 		{"Æsir", "AEsir", true},
+		{"Flußpferd", "Flusspferd", true},
 		// \u00e9\u0065\u0301
 		{"éé", "ee", true},
 		{"Awareness Hub", "Awareness-Hub", true},
@@ -630,7 +819,7 @@ func Test_NormalizeUserFromEmail(t *testing.T) {
 	for _, testCase := range testCases {
 		normalizedName, err := user_model.NormalizeUserName(testCase.Input)
 		require.NoError(t, err)
-		assert.EqualValues(t, testCase.Expected, normalizedName)
+		assert.Equal(t, testCase.Expected, normalizedName)
 		if testCase.IsNormalizedValid {
 			require.NoError(t, user_model.IsUsableUsername(normalizedName))
 		} else {
@@ -650,7 +839,7 @@ func TestEmailTo(t *testing.T) {
 		{"Hi Its <Mee>", "ee@mail.box", `"Hi Its Mee" <ee@mail.box>`},
 		{"Sinéad.O'Connor", "sinead.oconnor@gmail.com", "=?utf-8?b?U2luw6lhZC5PJ0Nvbm5vcg==?= <sinead.oconnor@gmail.com>"},
 		{"Æsir", "aesir@gmx.de", "=?utf-8?q?=C3=86sir?= <aesir@gmx.de>"},
-		{"new😀user", "new.user@alo.com", "=?utf-8?q?new=F0=9F=98=80user?= <new.user@alo.com>"}, // codespell-ignore
+		{"new😀user", "new.user@alo.com", "=?utf-8?q?new=F0=9F=98=80user?= <new.user@alo.com>"}, // codespell:ignore
 		{`"quoted"`, "quoted@test.com", `"quoted" <quoted@test.com>`},
 		{`gusted`, "gusted@test.com", `"gusted" <gusted@test.com>`},
 		{`Joe Q. Public`, "john.q.public@example.com", `"Joe Q. Public" <john.q.public@example.com>`},
@@ -660,13 +849,13 @@ func TestEmailTo(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.result, func(t *testing.T) {
 			testUser := &user_model.User{FullName: testCase.fullName, Email: testCase.mail}
-			assert.EqualValues(t, testCase.result, testUser.EmailTo())
+			assert.Equal(t, testCase.result, testUser.EmailTo())
 		})
 	}
 
 	t.Run("Override user's email", func(t *testing.T) {
 		testUser := &user_model.User{FullName: "Christine Jorgensen", Email: "christine@test.com"}
-		assert.EqualValues(t, `"Christine Jorgensen" <christine@example.org>`, testUser.EmailTo("christine@example.org"))
+		assert.Equal(t, `"Christine Jorgensen" <christine@example.org>`, testUser.EmailTo("christine@example.org"))
 	})
 }
 
@@ -676,12 +865,7 @@ func TestDisabledUserFeatures(t *testing.T) {
 	testValues := container.SetOf(setting.UserFeatureDeletion,
 		setting.UserFeatureManageSSHKeys,
 		setting.UserFeatureManageGPGKeys)
-
-	oldSetting := setting.Admin.ExternalUserDisableFeatures
-	defer func() {
-		setting.Admin.ExternalUserDisableFeatures = oldSetting
-	}()
-	setting.Admin.ExternalUserDisableFeatures = testValues
+	defer test.MockVariableValue(&setting.Admin.ExternalUserDisableFeatures, testValues)()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
@@ -690,7 +874,7 @@ func TestDisabledUserFeatures(t *testing.T) {
 	// no features should be disabled with a plain login type
 	assert.LessOrEqual(t, user.LoginType, auth.Plain)
 	assert.Empty(t, user_model.DisabledFeaturesWithLoginType(user).Values())
-	for _, f := range testValues.Values() {
+	for f := range testValues.Seq() {
 		assert.False(t, user_model.IsFeatureDisabledWithLoginType(user, f))
 	}
 
@@ -699,7 +883,7 @@ func TestDisabledUserFeatures(t *testing.T) {
 
 	// all features should be disabled
 	assert.NotEmpty(t, user_model.DisabledFeaturesWithLoginType(user).Values())
-	for _, f := range testValues.Values() {
+	for f := range testValues.Seq() {
 		assert.True(t, user_model.IsFeatureDisabledWithLoginType(user, f))
 	}
 }
@@ -722,7 +906,7 @@ func TestGenerateEmailAuthorizationCode(t *testing.T) {
 	authToken, err := auth.FindAuthToken(db.DefaultContext, lookupKey, auth.UserActivation)
 	require.NoError(t, err)
 	assert.False(t, authToken.IsExpired())
-	assert.EqualValues(t, authToken.HashedValidator, auth.HashValidator(rawValidator))
+	assert.Equal(t, authToken.HashedValidator, auth.HashValidator(rawValidator))
 
 	authToken.Expiry = authToken.Expiry.Add(-int64(setting.Service.ActiveCodeLives) * 60)
 	assert.True(t, authToken.IsExpired())
@@ -741,15 +925,15 @@ func TestVerifyUserAuthorizationToken(t *testing.T) {
 	assert.True(t, ok)
 
 	t.Run("Wrong purpose", func(t *testing.T) {
-		u, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.PasswordReset, false)
+		u, _, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.PasswordReset)
 		require.NoError(t, err)
 		assert.Nil(t, u)
 	})
 
 	t.Run("No delete", func(t *testing.T) {
-		u, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation, false)
+		u, _, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation)
 		require.NoError(t, err)
-		assert.EqualValues(t, user.ID, u.ID)
+		assert.Equal(t, user.ID, u.ID)
 
 		authToken, err := auth.FindAuthToken(db.DefaultContext, lookupKey, auth.UserActivation)
 		require.NoError(t, err)
@@ -757,9 +941,10 @@ func TestVerifyUserAuthorizationToken(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		u, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation, true)
+		u, deleteToken, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation)
 		require.NoError(t, err)
-		assert.EqualValues(t, user.ID, u.ID)
+		assert.Equal(t, user.ID, u.ID)
+		require.NoError(t, deleteToken())
 
 		authToken, err := auth.FindAuthToken(db.DefaultContext, lookupKey, auth.UserActivation)
 		require.ErrorIs(t, err, util.ErrNotExist)
@@ -779,4 +964,112 @@ func TestGetInactiveUsers(t *testing.T) {
 	users, err = user_model.GetInactiveUsers(db.DefaultContext, time.Duration(interval*int64(time.Second)))
 	require.NoError(t, err)
 	require.Empty(t, users)
+}
+
+func TestPronounsPrivacy(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	t.Run("EmptyPronounsIfNoneSet", func(t *testing.T) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		user.Pronouns = ""
+		user.KeepPronounsPrivate = false
+
+		assert.Empty(t, user.GetPronouns(false))
+	})
+	t.Run("EmptyPronounsIfSetButPrivateAndNotLoggedIn", func(t *testing.T) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		user.Pronouns = "any"
+		user.KeepPronounsPrivate = true
+
+		assert.Empty(t, user.GetPronouns(false))
+	})
+	t.Run("ReturnPronounsIfSetAndNotPrivateAndNotLoggedIn", func(t *testing.T) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		user.Pronouns = "any"
+		user.KeepPronounsPrivate = false
+
+		assert.Equal(t, "any", user.GetPronouns(false))
+	})
+	t.Run("ReturnPronounsIfSetAndPrivateAndLoggedIn", func(t *testing.T) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		user.Pronouns = "any"
+		user.KeepPronounsPrivate = false
+
+		assert.Equal(t, "any", user.GetPronouns(true))
+	})
+	t.Run("ReturnPronounsIfSetAndNotPrivateAndLoggedIn", func(t *testing.T) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		user.Pronouns = "any"
+		user.KeepPronounsPrivate = true
+
+		assert.Equal(t, "any", user.GetPronouns(true))
+	})
+}
+
+func TestGetUserByEmail(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.Service.NoReplyAddress, "noreply.example.org")()
+
+	t.Run("Normal", func(t *testing.T) {
+		u, err := user_model.GetUserByEmail(t.Context(), "user2@example.com")
+		require.NoError(t, err)
+		assert.EqualValues(t, 2, u.ID)
+	})
+
+	t.Run("Not activated", func(t *testing.T) {
+		u, err := user_model.GetUserByEmail(t.Context(), "user11@example.com")
+		require.ErrorIs(t, err, user_model.ErrUserNotExist{Name: "user11@example.com"})
+		assert.Nil(t, u)
+	})
+
+	t.Run("Not primary", func(t *testing.T) {
+		u, err := user_model.GetUserByEmail(t.Context(), "user1-3@example.com")
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, u.ID)
+	})
+
+	t.Run("No-reply", func(t *testing.T) {
+		u, err := user_model.GetUserByEmail(t.Context(), "user1@noreply.example.org")
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, u.ID)
+	})
+}
+
+func TestGetUserByEmailSimple(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.Service.NoReplyAddress, "noreply.example.org")()
+
+	t.Run("Normal", func(t *testing.T) {
+		u, err := user_model.GetUserByEmailSimple(t.Context(), "user2@example.com")
+		require.NoError(t, err)
+		assert.EqualValues(t, 2, u.ID)
+	})
+
+	t.Run("Not activated", func(t *testing.T) {
+		u, err := user_model.GetUserByEmailSimple(t.Context(), "user11@example.com")
+		require.NoError(t, err)
+		assert.EqualValues(t, 11, u.ID)
+	})
+
+	t.Run("No-reply", func(t *testing.T) {
+		u, err := user_model.GetUserByEmailSimple(t.Context(), "user1@noreply.example.org")
+		require.ErrorIs(t, err, user_model.ErrUserNotExist{Name: "user1@noreply.example.org"})
+		assert.Nil(t, u)
+	})
+}
+
+func TestIsUserConsistency(t *testing.T) {
+	defer unittest.OverrideFixtures("models/user/fixtures/")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	test := func(userID int64) {
+		user, err := user_model.GetUserByID(t.Context(), userID)
+		require.NoError(t, err)
+		isUser, err := user_model.IsUserByID(t.Context(), userID)
+		require.NoError(t, err)
+		assert.Equal(t, user.IsUser(), isUser)
+	}
+
+	test(1)
+	test(1041)
+	test(1042)
 }

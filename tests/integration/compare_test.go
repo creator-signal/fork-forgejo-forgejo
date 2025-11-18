@@ -11,17 +11,17 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	unit_model "code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/test"
-	repo_service "code.gitea.io/gitea/services/repository"
-	files_service "code.gitea.io/gitea/services/repository/files"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/test"
+	repo_service "forgejo.org/services/repository"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -242,7 +242,7 @@ func TestCompareBranches(t *testing.T) {
 }
 
 func TestCompareWithPRsDisabled(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testCreateBranch(t, session, "user1", "repo1", "branch/master", "recent-push", http.StatusSeeOther)
@@ -267,13 +267,14 @@ func TestCompareWithPRsDisabled(t *testing.T) {
 			[]unit_model.Type{unit_model.TypePullRequests})
 		require.NoError(t, err)
 
-		t.Run("branch view doesn't offer creating PRs", func(t *testing.T) {
+		t.Run("branch view offer comparing branches", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequest(t, "GET", "/user1/repo1/branches")
 			resp := session.MakeRequest(t, req, http.StatusOK)
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			htmlDoc.AssertElement(t, "a[href='/user1/repo1/compare/master...recent-push']", false)
+			compareLink := htmlDoc.Find("a[href='/user1/repo1/compare/master...recent-push']")
+			assert.Equal(t, "Compare branches", strings.TrimSpace(compareLink.Text()))
 		})
 
 		t.Run("compare doesn't offer local branches", func(t *testing.T) {
@@ -290,17 +291,19 @@ func TestCompareWithPRsDisabled(t *testing.T) {
 			}
 		})
 
-		t.Run("comparing against a disabled-PR repo is 404", func(t *testing.T) {
+		t.Run("comparing against a disabled-PR repo", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequest(t, "GET", "/user1/repo1/compare/master...recent-push")
-			session.MakeRequest(t, req, http.StatusNotFound)
+			resp := session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			assert.Equal(t, "Compare branches", strings.TrimSpace(htmlDoc.Find("h2.header").Text()))
 		})
 	})
 }
 
 func TestCompareCrossRepo(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1-copy")
 		testCreateBranch(t, session, "user1", "repo1-copy", "branch/master", "recent-push", http.StatusSeeOther)
@@ -329,7 +332,7 @@ func TestCompareCrossRepo(t *testing.T) {
 }
 
 func TestCompareCodeExpand(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 		// Create a new repository, with a file that has many lines
@@ -402,7 +405,7 @@ func TestCompareCodeExpand(t *testing.T) {
 }
 
 func TestCompareSignedIn(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		// Setup the test with a connected user
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")

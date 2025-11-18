@@ -1,5 +1,6 @@
 // Copyright 2015 The Gogs Authors. All rights reserved.
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2023 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package user
@@ -7,28 +8,29 @@ package user
 import (
 	"errors"
 	"fmt"
+	gotemplate "html/template"
+	"io"
 	"net/http"
 	"path"
 	"strings"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	gist_model "code.gitea.io/gitea/models/gist"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	"code.gitea.io/gitea/modules/markup/markdown"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/routers/web/feed"
-	"code.gitea.io/gitea/routers/web/org"
-	shared_user "code.gitea.io/gitea/routers/web/shared/user"
-	"code.gitea.io/gitea/services/context"
-	user_service "code.gitea.io/gitea/services/user"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
+	"forgejo.org/routers/web/feed"
+	"forgejo.org/routers/web/org"
+	shared_user "forgejo.org/routers/web/shared/user"
+	"forgejo.org/services/context"
+	user_service "forgejo.org/services/user"
 )
 
 const (
@@ -64,16 +66,11 @@ func userProfile(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.ContextUser.DisplayName()
 	ctx.Data["PageIsUserProfile"] = true
 
-	// prepare heatmap data
-	if setting.Service.EnableUserHeatmap {
-		data, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
-		if err != nil {
-			ctx.ServerError("GetUserHeatmapDataByUser", err)
-			return
-		}
-		ctx.Data["HeatmapData"] = data
-		ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
-	}
+	ctx.Data["OpenGraphTitle"] = ctx.ContextUser.DisplayName()
+	ctx.Data["OpenGraphType"] = "profile"
+	ctx.Data["OpenGraphImageURL"] = ctx.ContextUser.AvatarLink(ctx)
+	ctx.Data["OpenGraphURL"] = ctx.ContextUser.HTMLURL()
+	ctx.Data["OpenGraphDescription"] = ctx.ContextUser.Description
 
 	profileDbRepo, profileGitRepo, profileReadmeBlob, profileClose := shared_user.FindUserProfileReadme(ctx, ctx.Doer)
 	defer profileClose()
@@ -165,10 +162,20 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 		ctx.Data["Cards"] = followers
 		total = int(numFollowers)
 		ctx.Data["CardsTitle"] = ctx.TrN(total, "user.followers.title.one", "user.followers.title.few")
+		if ctx.IsSigned && ctx.ContextUser.ID == ctx.Doer.ID {
+			ctx.Data["CardsNoneMsg"] = ctx.Tr("followers.incoming.list.self.none")
+		} else {
+			ctx.Data["CardsNoneMsg"] = ctx.Tr("followers.incoming.list.none")
+		}
 	case "following":
 		ctx.Data["Cards"] = following
 		total = int(numFollowing)
 		ctx.Data["CardsTitle"] = ctx.TrN(total, "user.following.title.one", "user.following.title.few")
+		if ctx.IsSigned && ctx.ContextUser.ID == ctx.Doer.ID {
+			ctx.Data["CardsNoneMsg"] = ctx.Tr("followers.outgoing.list.self.none")
+		} else {
+			ctx.Data["CardsNoneMsg"] = ctx.Tr("followers.outgoing.list.none", ctx.ContextUser.Name)
+		}
 	case "gists":
 		gists, count, err := gist_model.SearchGist(ctx, &gist_model.SearchGistOptions{
 			ListOptions: db.ListOptions{
@@ -189,6 +196,17 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 
 		total = int(count)
 	case "activity":
+		// prepare heatmap data
+		if setting.Service.EnableUserHeatmap {
+			data, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
+			if err != nil {
+				ctx.ServerError("GetUserHeatmapDataByUser", err)
+				return
+			}
+			ctx.Data["HeatmapData"] = data
+			ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
+		}
+
 		date := ctx.FormString("date")
 		pagingNum = setting.UI.FeedPagingNum
 		items, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
@@ -196,7 +214,6 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 			Actor:           ctx.Doer,
 			IncludePrivate:  showPrivate,
 			OnlyPerformedBy: true,
-			IncludeDeleted:  false,
 			Date:            date,
 			ListOptions: db.ListOptions{
 				PageSize: pagingNum,
@@ -267,26 +284,38 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 
 		total = int(count)
 	case "overview":
-		if bytes, err := profileReadme.GetBlobContent(setting.UI.MaxDisplayFileSize); err != nil {
-			log.Error("failed to GetBlobContent: %v", err)
+		if rc, _, err := profileReadme.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err != nil {
+			log.Error("failed to NewTruncatedReader: %v", err)
 		} else {
-			if profileContent, err := markdown.RenderString(&markup.RenderContext{
-				Ctx:     ctx,
-				GitRepo: profileGitRepo,
-				Links: markup.Links{
-					// Give the repo link to the markdown render for the full link of media element.
-					// the media link usually be like /[user]/[repoName]/media/branch/[branchName],
-					// 	Eg. /Tom/.profile/media/branch/main
-					// The branch shown on the profile page is the default branch, this need to be in sync with doc, see:
-					//	https://docs.gitea.com/usage/profile-readme
-					Base:       profileDbRepo.Link(),
-					BranchPath: path.Join("branch", util.PathEscapeSegments(profileDbRepo.DefaultBranch)),
-				},
-				Metas: map[string]string{"mode": "document"},
-			}, bytes); err != nil {
-				log.Error("failed to RenderString: %v", err)
+			defer rc.Close()
+
+			if markupType := markup.Type(profileReadme.Name()); markupType != "" {
+				if profileContent, err := markdown.RenderReader(&markup.RenderContext{
+					Ctx:     ctx,
+					Type:    markupType,
+					GitRepo: profileGitRepo,
+					Links: markup.Links{
+						// Give the repo link to the markdown render for the full link of media element.
+						// the media link usually be like /[user]/[repoName]/media/branch/[branchName],
+						// 	Eg. /Tom/.profile/media/branch/main
+						// The branch shown on the profile page is the default branch, this need to be in sync with doc, see:
+						//	https://docs.gitea.com/usage/profile-readme
+						Base:       profileDbRepo.Link(),
+						BranchPath: path.Join("branch", util.PathEscapeSegments(profileDbRepo.DefaultBranch)),
+					},
+					Metas: map[string]string{"mode": "document"},
+				}, rc); err != nil {
+					log.Error("failed to RenderString: %v", err)
+				} else {
+					ctx.Data["ProfileReadme"] = profileContent
+				}
 			} else {
-				ctx.Data["ProfileReadme"] = profileContent
+				content, err := io.ReadAll(rc)
+				if err != nil {
+					log.Error("Read readme content failed: %v", err)
+				}
+				ctx.Data["ProfileReadme"] = gotemplate.HTMLEscapeString(util.UnsafeBytesToString(content))
+				ctx.Data["IsProfileReadmePlain"] = true
 			}
 		}
 	default: // default to "repositories"

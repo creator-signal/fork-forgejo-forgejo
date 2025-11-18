@@ -5,16 +5,17 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/validation"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
 )
 
 // Attachment represent a attachment of issue/comment/release.
@@ -219,16 +220,6 @@ func DeleteAttachments(ctx context.Context, attachments []*Attachment, remove bo
 	return int(cnt), nil
 }
 
-// DeleteAttachmentsByIssue deletes all attachments associated with the given issue.
-func DeleteAttachmentsByIssue(ctx context.Context, issueID int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByIssueID(ctx, issueID)
-	if err != nil {
-		return 0, err
-	}
-
-	return DeleteAttachments(ctx, attachments, remove)
-}
-
 // DeleteAttachmentsByComment deletes all attachments associated with the given comment.
 func DeleteAttachmentsByComment(ctx context.Context, commentID int64, remove bool) (int, error) {
 	attachments, err := GetAttachmentsByCommentID(ctx, commentID)
@@ -242,9 +233,9 @@ func DeleteAttachmentsByComment(ctx context.Context, commentID int64, remove boo
 // UpdateAttachmentByUUID Updates attachment via uuid
 func UpdateAttachmentByUUID(ctx context.Context, attach *Attachment, cols ...string) error {
 	if attach.UUID == "" {
-		return fmt.Errorf("attachment uuid should be not blank")
+		return errors.New("attachment uuid should be not blank")
 	}
-	if attach.ExternalURL != "" && !validation.IsValidExternalURL(attach.ExternalURL) {
+	if attach.ExternalURL != "" && !validation.IsValidReleaseAssetURL(attach.ExternalURL) {
 		return ErrInvalidExternalURL{ExternalURL: attach.ExternalURL}
 	}
 	_, err := db.GetEngine(ctx).Where("uuid=?", attach.UUID).Cols(cols...).Update(attach)
@@ -253,7 +244,7 @@ func UpdateAttachmentByUUID(ctx context.Context, attach *Attachment, cols ...str
 
 // UpdateAttachment updates the given attachment in database
 func UpdateAttachment(ctx context.Context, atta *Attachment) error {
-	if atta.ExternalURL != "" && !validation.IsValidExternalURL(atta.ExternalURL) {
+	if atta.ExternalURL != "" && !validation.IsValidReleaseAssetURL(atta.ExternalURL) {
 		return ErrInvalidExternalURL{ExternalURL: atta.ExternalURL}
 	}
 	sess := db.GetEngine(ctx).Cols("name", "issue_id", "release_id", "comment_id", "download_count")

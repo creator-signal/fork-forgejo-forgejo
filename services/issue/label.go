@@ -6,11 +6,10 @@ package issue
 import (
 	"context"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	user_model "code.gitea.io/gitea/models/user"
-	notify_service "code.gitea.io/gitea/services/notify"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	user_model "forgejo.org/models/user"
+	notify_service "forgejo.org/services/notify"
 )
 
 // ClearLabels clears all of an issue's labels
@@ -54,17 +53,6 @@ func RemoveLabel(ctx context.Context, issue *issues_model.Issue, doer *user_mode
 
 	if err := issue.LoadRepo(dbCtx); err != nil {
 		return err
-	}
-
-	perm, err := access_model.GetUserRepoPermission(dbCtx, issue.Repo, doer)
-	if err != nil {
-		return err
-	}
-	if !perm.CanWriteIssuesOrPulls(issue.IsPull) {
-		if label.OrgID > 0 {
-			return issues_model.ErrOrgLabelNotExist{}
-		}
-		return issues_model.ErrRepoLabelNotExist{}
 	}
 
 	if err := issues_model.DeleteIssueLabel(dbCtx, issue, label, doer); err != nil {

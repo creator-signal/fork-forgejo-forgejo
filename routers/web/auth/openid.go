@@ -4,20 +4,22 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/auth/openid"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/auth"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/forms"
+	auth_model "forgejo.org/models/auth"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/auth/openid"
+	"forgejo.org/modules/auth/password"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/auth"
+	"forgejo.org/services/context"
+	"forgejo.org/services/forms"
 )
 
 const (
@@ -55,13 +57,13 @@ func allowedOpenIDURI(uri string) (err error) {
 			}
 		}
 		// must match one of this or be refused
-		return fmt.Errorf("URI not allowed by whitelist")
+		return errors.New("URI not allowed by whitelist")
 	}
 
 	// A blacklist match expliclty forbids
 	for _, pat := range setting.Service.OpenIDBlacklist {
 		if pat.MatchString(uri) {
-			return fmt.Errorf("URI forbidden by blacklist")
+			return errors.New("URI forbidden by blacklist")
 		}
 	}
 
@@ -252,6 +254,7 @@ func ConnectOpenID(ctx *context.Context) {
 // ConnectOpenIDPost handles submission of a form to connect an OpenID URI to an existing account
 func ConnectOpenIDPost(ctx *context.Context) {
 	form := web.GetForm(ctx).(*forms.ConnectOpenIDForm)
+	remember, _ := ctx.Session.Get("openid_signin_remember").(bool)
 	oid, _ := ctx.Session.Get("openid_verified_uri").(string)
 	if oid == "" {
 		ctx.Redirect(setting.AppSubURL + "/user/login/openid")
@@ -263,28 +266,63 @@ func ConnectOpenIDPost(ctx *context.Context) {
 	ctx.Data["EnableOpenIDSignUp"] = setting.Service.EnableOpenIDSignUp
 	ctx.Data["OpenID"] = oid
 
-	u, _, err := auth.UserSignIn(ctx, form.UserName, form.Password)
+	u, source, err := auth.UserSignIn(ctx, form.UserName, form.Password)
 	if err != nil {
 		handleSignInError(ctx, form.UserName, &form, tplConnectOID, "ConnectOpenIDPost", err)
 		return
 	}
 
-	// add OpenID for the user
-	userOID := &user_model.UserOpenID{UID: u.ID, URI: oid}
-	if err = user_model.AddUserOpenID(ctx, userOID); err != nil {
-		if user_model.IsErrOpenIDAlreadyUsed(err) {
-			ctx.RenderWithErr(ctx.Tr("form.openid_been_used", oid), tplConnectOID, &form)
-			return
-		}
-		ctx.ServerError("AddUserOpenID", err)
+	// Check if OID is already in use.
+	if used, err := user_model.IsOpenIDUsed(ctx, oid); err != nil {
+		ctx.ServerError("IsOpenIDUsed", err)
+		return
+	} else if used {
+		ctx.RenderWithErr(ctx.Tr("form.openid_been_used", oid), tplConnectOID, &form)
 		return
 	}
 
-	ctx.Flash.Success(ctx.Tr("settings.add_openid_success"))
+	// Check if 2FA needs to be done.
+	has2FA, err := auth_model.HasTwoFactorByUID(ctx, u.ID)
+	if err != nil {
+		ctx.ServerError("HasTwoFactorByUID", err)
+		return
+	}
+	if skipper, ok := source.Cfg.(auth.LocalTwoFASkipper); !has2FA || (ok && skipper.IsSkipLocalTwoFA()) {
+		// Link this OID to the user.
+		if err := user_model.AddUserOpenID(ctx, &user_model.UserOpenID{UID: u.ID, URI: oid}); err != nil {
+			ctx.ServerError("AddUserOpenID", err)
+			return
+		}
 
-	remember, _ := ctx.Session.Get("openid_signin_remember").(bool)
-	log.Trace("Session stored openid-remember: %t", remember)
-	handleSignIn(ctx, u, remember)
+		ctx.Flash.Success(ctx.Tr("settings.add_openid_success"))
+		handleSignIn(ctx, u, remember)
+		return
+	}
+
+	// Check if the user has webauthn registration.
+	hasWebAuthnTwofa, err := auth_model.HasWebAuthnRegistrationsByUID(ctx, u.ID)
+	if err != nil {
+		ctx.ServerError("HasWebAuthnRegistrationsByUID", err)
+		return
+	}
+
+	if err := updateSession(ctx, nil, map[string]any{
+		"twofaUid":      u.ID,
+		"twofaRemember": remember,
+		"twofaOpenID":   oid,
+	}); err != nil {
+		ctx.ServerError("Unable to update session", err)
+		return
+	}
+
+	// If we have WebAuthn, redirect there first.
+	if hasWebAuthnTwofa {
+		ctx.Redirect(setting.AppSubURL + "/user/webauthn")
+		return
+	}
+
+	// Fallback to TOTP.
+	ctx.Redirect(setting.AppSubURL + "/user/two_factor")
 }
 
 // RegisterOpenID shows a form to create a new user authenticated via an OpenID URI
@@ -349,11 +387,7 @@ func RegisterOpenIDPost(ctx *context.Context) {
 		context.VerifyCaptcha(ctx, tplSignUpOID, form)
 	}
 
-	length := setting.MinPasswordLength
-	if length < 256 {
-		length = 256
-	}
-	password, err := util.CryptoRandomString(int64(length))
+	password, err := password.Generate(max(256, setting.MinPasswordLength))
 	if err != nil {
 		ctx.RenderWithErr(err.Error(), tplSignUpOID, form)
 		return
@@ -371,7 +405,7 @@ func RegisterOpenIDPost(ctx *context.Context) {
 
 	// add OpenID for the user
 	userOID := &user_model.UserOpenID{UID: u.ID, URI: oid}
-	if err = user_model.AddUserOpenID(ctx, userOID); err != nil {
+	if err := user_model.AddUserOpenID(ctx, userOID); err != nil {
 		if user_model.IsErrOpenIDAlreadyUsed(err) {
 			ctx.RenderWithErr(ctx.Tr("form.openid_been_used", oid), tplSignUpOID, &form)
 			return

@@ -12,42 +12,42 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models"
-	activities_model "code.gitea.io/gitea/models/activities"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	pull_model "code.gitea.io/gitea/models/pull"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	asymkey_service "code.gitea.io/gitea/services/asymkey"
-	"code.gitea.io/gitea/services/automerge"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/gitdiff"
-	issue_service "code.gitea.io/gitea/services/issue"
-	notify_service "code.gitea.io/gitea/services/notify"
-	pull_service "code.gitea.io/gitea/services/pull"
-	repo_service "code.gitea.io/gitea/services/repository"
+	"forgejo.org/models"
+	activities_model "forgejo.org/models/activities"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	access_model "forgejo.org/models/perm/access"
+	pull_model "forgejo.org/models/pull"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
+	asymkey_service "forgejo.org/services/asymkey"
+	"forgejo.org/services/automerge"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/gitdiff"
+	issue_service "forgejo.org/services/issue"
+	notify_service "forgejo.org/services/notify"
+	pull_service "forgejo.org/services/pull"
+	repo_service "forgejo.org/services/repository"
 )
 
 // ListPullRequests returns a list of all PRs
 func ListPullRequests(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/pulls repository repoListPullRequests
 	// ---
-	// summary: List a repo's pull requests
+	// summary: List a repo's pull requests. If a pull request is selected but fails to be retrieved for any reason, it will be a null value in the list of results.
 	// produces:
 	// - application/json
 	// parameters:
@@ -71,7 +71,7 @@ func ListPullRequests(ctx *context.APIContext) {
 	//   in: query
 	//   description: Type of sort
 	//   type: string
-	//   enum: [oldest, recentupdate, leastupdate, mostcomment, leastcomment, priority]
+	//   enum: [oldest, recentupdate, recentclose, leastupdate, mostcomment, leastcomment, priority]
 	// - name: milestone
 	//   in: query
 	//   description: ID of the milestone
@@ -433,7 +433,7 @@ func CreatePullRequest(ctx *context.APIContext) {
 	)
 
 	// Get repo/branch information
-	headRepo, headGitRepo, compareInfo, baseBranch, headBranch := parseCompareInfo(ctx, form)
+	headRepo, headGitRepo, _, baseBranch, headBranch := parseCompareInfo(ctx, form)
 	if ctx.Written() {
 		return
 	}
@@ -522,7 +522,6 @@ func CreatePullRequest(ctx *context.APIContext) {
 		BaseBranch: baseBranch,
 		HeadRepo:   headRepo,
 		BaseRepo:   repo,
-		MergeBase:  compareInfo.MergeBase,
 		Type:       issues_model.PullRequestGitea,
 	}
 
@@ -1016,6 +1015,9 @@ func MergePullRequest(ctx *context.APIContext) {
 		} else if models.IsErrMergeUnrelatedHistories(err) {
 			conflictError := err.(models.ErrMergeUnrelatedHistories)
 			ctx.JSON(http.StatusConflict, conflictError)
+		} else if models.IsErrPullRequestHasMerged(err) {
+			conflictError := err.(models.ErrPullRequestHasMerged)
+			ctx.JSON(http.StatusConflict, conflictError)
 		} else if git.IsErrPushOutOfDate(err) {
 			ctx.Error(http.StatusConflict, "Merge", "merge push out of date")
 		} else if models.IsErrSHADoesNotMatch(err) {
@@ -1050,11 +1052,11 @@ func MergePullRequest(ctx *context.APIContext) {
 		if err := repo_service.DeleteBranchAfterMerge(ctx, ctx.Doer, pr, headRepo); err != nil {
 			switch {
 			case errors.Is(err, repo_service.ErrBranchIsDefault):
-				ctx.Error(http.StatusForbidden, "DefaultBranch", fmt.Errorf("the head branch is the default branch"))
+				ctx.Error(http.StatusForbidden, "DefaultBranch", errors.New("the head branch is the default branch"))
 			case errors.Is(err, git_model.ErrBranchIsProtected):
-				ctx.Error(http.StatusForbidden, "IsProtectedBranch", fmt.Errorf("the head branch is protected"))
+				ctx.Error(http.StatusForbidden, "IsProtectedBranch", errors.New("the head branch is protected"))
 			case errors.Is(err, util.ErrPermissionDenied):
-				ctx.Error(http.StatusForbidden, "HeadBranch", fmt.Errorf("insufficient permission to delete head branch"))
+				ctx.Error(http.StatusForbidden, "HeadBranch", errors.New("insufficient permission to delete head branch"))
 			default:
 				ctx.Error(http.StatusInternalServerError, "DeleteBranchAfterMerge", err)
 			}
@@ -1084,7 +1086,6 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 		err        error
 	)
 
-	// If there is no head repository, it means pull request between same repository.
 	headInfos := strings.Split(form.Head, ":")
 	if len(headInfos) == 1 {
 		isSameRepo = true
@@ -1094,7 +1095,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 		headUser, err = user_model.GetUserByName(ctx, headInfos[0])
 		if err != nil {
 			if user_model.IsErrUserNotExist(err) {
-				ctx.NotFound("GetUserByName")
+				ctx.NotFound(fmt.Errorf("the owner %s does not exist", headInfos[0]))
 			} else {
 				ctx.Error(http.StatusInternalServerError, "GetUserByName", err)
 			}
@@ -1104,7 +1105,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 		// The head repository can also point to the same repo
 		isSameRepo = ctx.Repo.Owner.ID == headUser.ID
 	} else {
-		ctx.NotFound()
+		ctx.NotFound(fmt.Errorf("the head part of {basehead} %s must contain zero or one colon (:) but contains %d", form.Head, len(headInfos)-1))
 		return nil, nil, nil, "", ""
 	}
 
@@ -1116,16 +1117,10 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	baseIsBranch := ctx.Repo.GitRepo.IsBranchExist(baseBranch)
 	baseIsTag := ctx.Repo.GitRepo.IsTagExist(baseBranch)
 	if !baseIsCommit && !baseIsBranch && !baseIsTag {
-		// Check for short SHA usage
-		if baseCommit, _ := ctx.Repo.GitRepo.GetCommit(baseBranch); baseCommit != nil {
-			baseBranch = baseCommit.ID.String()
-		} else {
-			ctx.NotFound("BaseNotExist")
-			return nil, nil, nil, "", ""
-		}
+		ctx.NotFound(fmt.Errorf("could not find '%s' to be a commit, branch or tag in the base repository %s/%s", baseBranch, baseRepo.Owner.Name, baseRepo.Name))
+		return nil, nil, nil, "", ""
 	}
 
-	// Check if current user has fork of repository or in the same repository.
 	headRepo := repo_model.GetForkedRepo(ctx, headUser.ID, baseRepo.ID)
 	if headRepo == nil && !isSameRepo {
 		err := baseRepo.GetBaseRepo(ctx)
@@ -1134,13 +1129,11 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 			return nil, nil, nil, "", ""
 		}
 
-		// Check if baseRepo's base repository is the same as headUser's repository.
 		if baseRepo.BaseRepo == nil || baseRepo.BaseRepo.OwnerID != headUser.ID {
 			log.Trace("parseCompareInfo[%d]: does not have fork or in same repository", baseRepo.ID)
-			ctx.NotFound("GetBaseRepo")
+			ctx.NotFound(fmt.Errorf("%[1]s does not have a fork of %[2]s/%[3]s and %[2]s/%[3]s is not a fork of a repository from %[1]s", headUser.Name, baseRepo.Owner.Name, baseRepo.Name))
 			return nil, nil, nil, "", ""
 		}
-		// Assign headRepo so it can be used below.
 		headRepo = baseRepo.BaseRepo
 	}
 
@@ -1194,32 +1187,27 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 		return nil, nil, nil, "", ""
 	}
 
-	// Check if head branch is valid.
-	headIsCommit := headGitRepo.IsBranchExist(headBranch)
-	headIsBranch := headGitRepo.IsTagExist(headBranch)
-	headIsTag := headGitRepo.IsCommitExist(baseBranch)
-	if !headIsCommit && !headIsBranch && !headIsTag {
-		// Check if headBranch is short sha commit hash
-		if headCommit, _ := headGitRepo.GetCommit(headBranch); headCommit != nil {
-			headBranch = headCommit.ID.String()
-		} else {
-			headGitRepo.Close()
-			ctx.NotFound("IsRefExist", nil)
-			return nil, nil, nil, "", ""
-		}
-	}
-
 	baseBranchRef := baseBranch
 	if baseIsBranch {
 		baseBranchRef = git.BranchPrefix + baseBranch
 	} else if baseIsTag {
 		baseBranchRef = git.TagPrefix + baseBranch
 	}
+
+	// Check if head branch is valid.
+	headIsCommit := headGitRepo.IsCommitExist(headBranch)
+	headIsBranch := headGitRepo.IsBranchExist(headBranch)
+	headIsTag := headGitRepo.IsTagExist(headBranch)
+	if !headIsCommit && !headIsBranch && !headIsTag {
+		ctx.NotFound(fmt.Errorf("could not find '%s' to be a commit, branch or tag in the head repository %s/%s", headBranch, headRepo.Owner.Name, headRepo.Name))
+		return nil, nil, nil, "", ""
+	}
+
 	headBranchRef := headBranch
 	if headIsBranch {
-		headBranchRef = headBranch
+		headBranchRef = git.BranchPrefix + headBranch
 	} else if headIsTag {
-		headBranchRef = headBranch
+		headBranchRef = git.TagPrefix + headBranch
 	}
 
 	compareInfo, err := headGitRepo.GetCompareInfo(repo_model.RepoPath(baseRepo.Owner.Name, baseRepo.Name), baseBranchRef, headBranchRef, false, false)
@@ -1605,30 +1593,26 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 
 	baseGitRepo := ctx.Repo.GitRepo
 
-	var prInfo *git.CompareInfo
+	baseRef := pr.BaseBranch
 	if pr.HasMerged {
-		prInfo, err = baseGitRepo.GetCompareInfo(pr.BaseRepo.RepoPath(), pr.MergeBase, pr.GetGitRefName(), true, false)
-	} else {
-		prInfo, err = baseGitRepo.GetCompareInfo(pr.BaseRepo.RepoPath(), pr.BaseBranch, pr.GetGitRefName(), true, false)
+		baseRef = pr.MergeBase
 	}
+	startCommitID, err := baseGitRepo.GetMergeBaseSimple(baseRef, pr.GetGitRefName())
 	if err != nil {
-		ctx.ServerError("GetCompareInfo", err)
-		return
+		// No merge base exists, fallback to use base reference.
+		startCommitID = baseRef
 	}
 
-	headCommitID, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
+	endCommitID, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
 	if err != nil {
 		ctx.ServerError("GetRefCommitID", err)
 		return
 	}
 
-	startCommitID := prInfo.MergeBase
-	endCommitID := headCommitID
-
 	maxLines := setting.Git.MaxGitDiffLines
 
 	// FIXME: If there are too many files in the repo, may cause some unpredictable issues.
-	diff, err := gitdiff.GetDiff(ctx, baseGitRepo,
+	diff, _, err := gitdiff.GetDiffSimple(ctx, baseGitRepo,
 		&gitdiff.DiffOptions{
 			BeforeCommitID:     startCommitID,
 			AfterCommitID:      endCommitID,

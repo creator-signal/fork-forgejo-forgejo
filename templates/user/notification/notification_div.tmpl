@@ -1,8 +1,8 @@
 <div role="main" aria-label="{{.Title}}" class="page-content user notification" id="notification_div" data-sequence-number="{{.SequenceNumber}}">
 	<div class="ui container">
 		{{$notificationUnreadCount := call .NotificationUnreadCount}}
-		<div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
-			<div class="ui secondary partial menu">
+		<div class="tw-flex tw-items-center tw-justify-between tw-mb-4 tw-gap-2">
+			<div class="switch">
 				<a class="{{if eq .Status 1}}active {{end}}item" href="{{AppSubUrl}}/notifications?q=unread">
 					{{ctx.Locale.Tr "notification.unread"}}
 					<div class="notifications-unread-count ui label {{if not $notificationUnreadCount}}tw-hidden{{end}}">{{$notificationUnreadCount}}</div>
@@ -11,15 +11,14 @@
 					{{ctx.Locale.Tr "notification.read"}}
 				</a>
 			</div>
-			<div class="tw-flex button-row">
-				<a class="ui tiny button" href="{{AppSubUrl}}/notifications/subscriptions">
+			<div class="button-row tw-flex">
+				<a class="secondary button" href="{{AppSubUrl}}/notifications/subscriptions">
 					{{ctx.Locale.Tr "notification.subscriptions"}}
 				</a>
 				{{if and (eq .Status 1)}}
 					<form class="{{if not $notificationUnreadCount}}tw-hidden{{end}}" action="{{AppSubUrl}}/notifications/purge" method="post">
-						{{$.CsrfTokenHtml}}
 						<div>
-							<button class="ui mini button primary tw-mr-0" title="{{ctx.Locale.Tr "notification.mark_all_as_read"}}">
+							<button class="primary button" title="{{ctx.Locale.Tr "notification.mark_all_as_read"}}">
 								{{svg "octicon-checklist"}}
 							</button>
 						</div>
@@ -75,7 +74,6 @@
 							<div class="notifications-buttons tw-items-center tw-justify-end tw-gap-1 tw-px-1">
 								{{if ne .Status 3}}
 									<form action="{{AppSubUrl}}/notifications/status" method="post">
-										{{$.CsrfTokenHtml}}
 										<input type="hidden" name="notification_id" value="{{.ID}}">
 										<input type="hidden" name="status" value="pinned">
 										<button class="btn interact-bg tw-p-2" title="{{ctx.Locale.Tr "notification.pin"}}"
@@ -90,7 +88,6 @@
 								{{end}}
 								{{if or (eq .Status 1) (eq .Status 3)}}
 									<form action="{{AppSubUrl}}/notifications/status" method="post">
-										{{$.CsrfTokenHtml}}
 										<input type="hidden" name="notification_id" value="{{.ID}}">
 										<input type="hidden" name="status" value="read">
 										<input type="hidden" name="page" value="{{$.Page.Paginater.Current}}">
@@ -105,7 +102,6 @@
 									</form>
 								{{else if eq .Status 2}}
 									<form action="{{AppSubUrl}}/notifications/status" method="post">
-										{{$.CsrfTokenHtml}}
 										<input type="hidden" name="notification_id" value="{{.ID}}">
 										<input type="hidden" name="status" value="unread">
 										<input type="hidden" name="page" value="{{$.Page.Paginater.Current}}">

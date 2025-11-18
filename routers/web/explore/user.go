@@ -7,20 +7,20 @@ import (
 	"bytes"
 	"net/http"
 
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/sitemap"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/sitemap"
+	"forgejo.org/modules/structs"
+	"forgejo.org/services/context"
 )
 
 const (
-	// tplExploreUsers explore users page template
+	// `tplExploreUsers` explore users page template.
 	tplExploreUsers base.TplName = "explore/users"
 )
 
@@ -30,9 +30,9 @@ func isKeywordValid(keyword string) bool {
 	return !bytes.Contains([]byte(keyword), nullByte)
 }
 
-// RenderUserSearch render user search page
+// `RenderUserSearch` render user search page.
 func RenderUserSearch(ctx *context.Context, opts *user_model.SearchUserOptions, tplName base.TplName) {
-	// Sitemap index for sitemap paths
+	// Sitemap index for sitemap paths.
 	opts.Page = int(ctx.ParamsInt64("idx"))
 	isSitemap := ctx.Params("idx") != ""
 	if opts.Page <= 1 {
@@ -47,13 +47,10 @@ func RenderUserSearch(ctx *context.Context, opts *user_model.SearchUserOptions, 
 	}
 
 	var (
-		users   []*user_model.User
-		count   int64
-		err     error
-		orderBy db.SearchOrderBy
+		users []*user_model.User
+		count int64
+		err   error
 	)
-
-	// we can not set orderBy to `models.SearchOrderByXxx`, because there may be a JOIN in the statement, different tables may have the same name columns
 
 	sortOrder := ctx.FormString("sort")
 	if sortOrder == "" {
@@ -61,28 +58,13 @@ func RenderUserSearch(ctx *context.Context, opts *user_model.SearchUserOptions, 
 	}
 	ctx.Data["SortType"] = sortOrder
 
-	switch sortOrder {
-	case "newest":
-		orderBy = "`user`.id DESC"
-	case "oldest":
-		orderBy = "`user`.id ASC"
-	case "leastupdate":
-		orderBy = "`user`.updated_unix ASC"
-	case "reversealphabetically":
-		orderBy = "`user`.name DESC"
-	case "lastlogin":
-		orderBy = "`user`.last_login_unix ASC"
-	case "reverselastlogin":
-		orderBy = "`user`.last_login_unix DESC"
-	case "alphabetically":
-		orderBy = "`user`.name ASC"
-	case "recentupdate":
-		fallthrough
-	default:
-		// in case the sortType is not valid, we set it to recentupdate
+	orderBy := MapSortOrder(sortOrder)
+
+	if orderBy == "" {
+		// In case the `sortType` is not valid, we set it to `recentupdate`.
 		sortOrder = "recentupdate"
 		ctx.Data["SortType"] = "recentupdate"
-		orderBy = "`user`.updated_unix DESC"
+		orderBy = MapSortOrder(sortOrder)
 	}
 
 	if opts.SupportedSortOrders != nil && !opts.SupportedSortOrders.Contains(sortOrder) {
@@ -114,7 +96,9 @@ func RenderUserSearch(ctx *context.Context, opts *user_model.SearchUserOptions, 
 	ctx.Data["Keyword"] = opts.Keyword
 	ctx.Data["Total"] = count
 	ctx.Data["Users"] = users
-	ctx.Data["UsersTwoFaStatus"] = user_model.UserList(users).GetTwoFaStatus(ctx)
+	if opts.Load2FAStatus {
+		ctx.Data["UsersTwoFaStatus"] = user_model.UserList(users).GetTwoFaStatus(ctx)
+	}
 	ctx.Data["ShowUserEmail"] = setting.UI.ShowUserEmail
 	ctx.Data["IsRepoIndexerEnabled"] = setting.Indexer.RepoIndexerEnabled
 
@@ -128,7 +112,7 @@ func RenderUserSearch(ctx *context.Context, opts *user_model.SearchUserOptions, 
 	ctx.HTML(http.StatusOK, tplName)
 }
 
-// Users render explore users page
+// Users render explore users page.
 func Users(ctx *context.Context) {
 	if setting.Service.Explore.DisableUsersPage {
 		ctx.Redirect(setting.AppSubURL + "/explore")
@@ -149,7 +133,11 @@ func Users(ctx *context.Context) {
 	)
 	sortOrder := ctx.FormString("sort")
 	if sortOrder == "" {
-		sortOrder = "newest"
+		if supportedSortOrders.Contains(setting.UI.ExploreDefaultSort) {
+			sortOrder = setting.UI.ExploreDefaultSort
+		} else {
+			sortOrder = "newest"
+		}
 		ctx.SetFormString("sort", sortOrder)
 	}
 
@@ -162,4 +150,38 @@ func Users(ctx *context.Context) {
 
 		SupportedSortOrders: supportedSortOrders,
 	}, tplExploreUsers)
+}
+
+// Maps a sort query to a database search order.
+//
+// We cannot use `models.SearchOrderByXxx`, because there may be a JOIN in the statement, different tables may have the same name columns.
+func MapSortOrder(sortOrder string) db.SearchOrderBy {
+	switch sortOrder {
+	case "newest":
+		return "`user`.created_unix DESC"
+
+	case "oldest":
+		return "`user`.created_unix ASC"
+
+	case "leastupdate":
+		return "`user`.updated_unix ASC"
+
+	case "reversealphabetically":
+		return "`user`.name DESC"
+
+	case "lastlogin":
+		return "`user`.last_login_unix ASC"
+
+	case "reverselastlogin":
+		return "`user`.last_login_unix DESC"
+
+	case "alphabetically":
+		return "`user`.name ASC"
+
+	case "recentupdate":
+		return "`user`.updated_unix DESC"
+
+	default:
+		return ""
+	}
 }

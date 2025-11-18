@@ -1,29 +1,31 @@
-// Copyright 20124 The Forgejo Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
 
 import (
+	"net/http"
 	"net/url"
 	"testing"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/services/actions"
-	"code.gitea.io/gitea/services/automerge"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/actions"
+	"forgejo.org/services/automerge"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestActionsAutomerge(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Actions.Enabled, true)()
 
 		ctx := db.DefaultContext
@@ -47,4 +49,21 @@ func TestActionsAutomerge(t *testing.T) {
 		assert.True(t, pr.HasMerged, "PR should be merged")
 	},
 	)
+}
+
+func TestActionsForcePushCommitStatus(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestForcePushCommitStatus/")()
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "/user2/commitsonpr/pulls/1")
+	resp := MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+
+	htmlDoc.AssertElement(t, ".error-code", false)
+
+	htmlDoc.AssertElement(t, "#issuecomment-17 .forced-push [data-tippy='commit-statuses']:nth-of-type(3) svg.commit-status.octicon-dot-fill", true)
+	htmlDoc.AssertElement(t, "#issuecomment-17 .forced-push [data-tippy='commit-statuses']:nth-of-type(5) svg.commit-status.octicon-check", true)
+
+	htmlDoc.AssertElement(t, "#issuecomment-1001 .forced-push [data-tippy='commit-statuses']:nth-of-type(3) svg.commit-status.octicon-check", true)
+	htmlDoc.AssertElement(t, "#issuecomment-1001 .forced-push [data-tippy='commit-statuses']:nth-of-type(5) svg.commit-status.octicon-check", true)
 }

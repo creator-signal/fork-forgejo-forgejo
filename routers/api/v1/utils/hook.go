@@ -9,16 +9,17 @@ import (
 	"strconv"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/models/webhook"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
-	"code.gitea.io/gitea/services/context"
-	webhook_service "code.gitea.io/gitea/services/webhook"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/models/webhook"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
+	webhook_module "forgejo.org/modules/webhook"
+	"forgejo.org/services/context"
+	webhook_service "forgejo.org/services/webhook"
 )
 
 // ListOwnerHooks lists the webhooks of the provided owner
@@ -91,6 +92,10 @@ func checkCreateHookOption(ctx *context.APIContext, form *api.CreateHookOption) 
 	}
 	if !webhook.IsValidHookContentType(form.Config["content_type"]) {
 		ctx.Error(http.StatusUnprocessableEntity, "", "Invalid content type")
+		return false
+	}
+	if !validation.IsValidURL(form.Config["url"]) {
+		ctx.Error(http.StatusUnprocessableEntity, "", "Invalid url")
 		return false
 	}
 	return true
@@ -205,6 +210,10 @@ func addHook(ctx *context.APIContext, form *api.CreateHookOption, ownerID, repoI
 				Wiki:                     util.SliceContainsString(form.Events, string(webhook_module.HookEventWiki), true),
 				Repository:               util.SliceContainsString(form.Events, string(webhook_module.HookEventRepository), true),
 				Release:                  util.SliceContainsString(form.Events, string(webhook_module.HookEventRelease), true),
+				Package:                  util.SliceContainsString(form.Events, string(webhook_module.HookEventPackage), true),
+				ActionRunFailure:         util.SliceContainsString(form.Events, string(webhook_module.HookEventActionRunFailure), true),
+				ActionRunRecover:         util.SliceContainsString(form.Events, string(webhook_module.HookEventActionRunRecover), true),
+				ActionRunSuccess:         util.SliceContainsString(form.Events, string(webhook_module.HookEventActionRunSuccess), true),
 			},
 			BranchFilter: form.BranchFilter,
 		},
@@ -322,6 +331,10 @@ func EditRepoHook(ctx *context.APIContext, form *api.EditHookOption, hookID int6
 func editHook(ctx *context.APIContext, form *api.EditHookOption, w *webhook.Webhook) bool {
 	if form.Config != nil {
 		if url, ok := form.Config["url"]; ok {
+			if !validation.IsValidURL(url) {
+				ctx.Error(http.StatusUnprocessableEntity, "", "Invalid url")
+				return false
+			}
 			w.URL = url
 		}
 		if ct, ok := form.Config["content_type"]; ok {

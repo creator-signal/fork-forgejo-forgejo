@@ -4,30 +4,34 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"time"
 
-	"code.gitea.io/gitea/modules/private"
+	"forgejo.org/modules/private"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
-var (
-	// CmdManager represents the manager command
-	CmdManager = &cli.Command{
+// CmdManager represents the manager command
+func cmdManager() *cli.Command {
+	return &cli.Command{
 		Name:        "manager",
 		Usage:       "Manage the running forgejo process",
 		Description: "This is a command for managing the running forgejo process",
-		Subcommands: []*cli.Command{
-			subcmdShutdown,
-			subcmdRestart,
-			subcmdReloadTemplates,
-			subcmdFlushQueues,
-			subcmdLogging,
-			subCmdProcesses,
+		Commands: []*cli.Command{
+			subcmdShutdown(),
+			subcmdRestart(),
+			subcmdReloadTemplates(),
+			subcmdFlushQueues(),
+			subcmdLogging(),
+			subCmdProcesses(),
 		},
 	}
-	subcmdShutdown = &cli.Command{
+}
+
+func subcmdShutdown() *cli.Command {
+	return &cli.Command{
 		Name:  "shutdown",
 		Usage: "Gracefully shutdown the running process",
 		Flags: []cli.Flag{
@@ -35,9 +39,13 @@ var (
 				Name: "debug",
 			},
 		},
+		Before: noDanglingArgs,
 		Action: runShutdown,
 	}
-	subcmdRestart = &cli.Command{
+}
+
+func subcmdRestart() *cli.Command {
+	return &cli.Command{
 		Name:  "restart",
 		Usage: "Gracefully restart the running process - (not implemented for windows servers)",
 		Flags: []cli.Flag{
@@ -45,9 +53,13 @@ var (
 				Name: "debug",
 			},
 		},
+		Before: noDanglingArgs,
 		Action: runRestart,
 	}
-	subcmdReloadTemplates = &cli.Command{
+}
+
+func subcmdReloadTemplates() *cli.Command {
+	return &cli.Command{
 		Name:  "reload-templates",
 		Usage: "Reload template files in the running process",
 		Flags: []cli.Flag{
@@ -55,11 +67,16 @@ var (
 				Name: "debug",
 			},
 		},
+		Before: noDanglingArgs,
 		Action: runReloadTemplates,
 	}
-	subcmdFlushQueues = &cli.Command{
+}
+
+func subcmdFlushQueues() *cli.Command {
+	return &cli.Command{
 		Name:   "flush-queues",
 		Usage:  "Flush queues in the running process",
+		Before: noDanglingArgs,
 		Action: runFlushQueues,
 		Flags: []cli.Flag{
 			&cli.DurationFlag{
@@ -76,9 +93,13 @@ var (
 			},
 		},
 	}
-	subCmdProcesses = &cli.Command{
+}
+
+func subCmdProcesses() *cli.Command {
+	return &cli.Command{
 		Name:   "processes",
 		Usage:  "Display running processes within the current process",
+		Before: noDanglingArgs,
 		Action: runProcesses,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
@@ -106,49 +127,49 @@ var (
 			},
 		},
 	}
-)
+}
 
-func runShutdown(c *cli.Context) error {
-	ctx, cancel := installSignals()
+func runShutdown(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), false)
 	extra := private.Shutdown(ctx)
 	return handleCliResponseExtra(extra)
 }
 
-func runRestart(c *cli.Context) error {
-	ctx, cancel := installSignals()
+func runRestart(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), false)
 	extra := private.Restart(ctx)
 	return handleCliResponseExtra(extra)
 }
 
-func runReloadTemplates(c *cli.Context) error {
-	ctx, cancel := installSignals()
+func runReloadTemplates(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), false)
 	extra := private.ReloadTemplates(ctx)
 	return handleCliResponseExtra(extra)
 }
 
-func runFlushQueues(c *cli.Context) error {
-	ctx, cancel := installSignals()
+func runFlushQueues(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), false)
 	extra := private.FlushQueues(ctx, c.Duration("timeout"), c.Bool("non-blocking"))
 	return handleCliResponseExtra(extra)
 }
 
-func runProcesses(c *cli.Context) error {
-	ctx, cancel := installSignals()
+func runProcesses(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), false)
 	extra := private.Processes(ctx, os.Stdout, c.Bool("flat"), c.Bool("no-system"), c.Bool("stacktraces"), c.Bool("json"), c.String("cancel"))
 	return handleCliResponseExtra(extra)
 }

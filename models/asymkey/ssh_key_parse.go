@@ -10,16 +10,17 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
 	"strconv"
 	"strings"
 
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/process"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/process"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -93,7 +94,7 @@ func parseKeyString(content string) (string, error) {
 
 			block, _ := pem.Decode([]byte(content))
 			if block == nil {
-				return "", fmt.Errorf("failed to parse PEM block containing the public key")
+				return "", errors.New("failed to parse PEM block containing the public key")
 			}
 			if strings.Contains(block.Type, "PRIVATE") {
 				return "", ErrKeyIsPrivate
@@ -219,9 +220,14 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 		return "", 0, fmt.Errorf("ParsePublicKey: %w", err)
 	}
 
+	pkeyType := pkey.Type()
+	if certPkey, ok := pkey.(*ssh.Certificate); ok {
+		pkeyType = certPkey.Key.Type()
+	}
+
 	// The ssh library can parse the key, so next we find out what key exactly we have.
-	switch pkey.Type() {
-	case ssh.KeyAlgoDSA:
+	switch pkeyType {
+	case ssh.KeyAlgoDSA: //nolint:staticcheck
 		rawPub := struct {
 			Name       string
 			P, Q, G, Y *big.Int

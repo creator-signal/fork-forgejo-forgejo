@@ -1,5 +1,6 @@
-// Copyright 2017 The Gitea Authors. All rights reserved.
 // Copyright 2014 The Gogs Authors. All rights reserved.
+// Copyright 2017 The Gitea Authors. All rights reserved.
+// Copyright 2023 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -24,37 +25,38 @@ import (
 	_ "image/jpeg" // for processing jpeg images
 	_ "image/png"  // for processing png images
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	admin_model "code.gitea.io/gitea/models/admin"
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issue_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	unit_model "code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/actions"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/charset"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/highlight"
-	code_indexer "code.gitea.io/gitea/modules/indexer/code"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/svg"
-	"code.gitea.io/gitea/modules/typesniffer"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/routers/web/feed"
-	"code.gitea.io/gitea/services/context"
-	issue_service "code.gitea.io/gitea/services/issue"
-	files_service "code.gitea.io/gitea/services/repository/files"
+	activities_model "forgejo.org/models/activities"
+	admin_model "forgejo.org/models/admin"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issue_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/actions"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/charset"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/highlight"
+	code_indexer "forgejo.org/modules/indexer/code"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/svg"
+	"forgejo.org/modules/typesniffer"
+	"forgejo.org/modules/util"
+	"forgejo.org/routers/web/feed"
+	"forgejo.org/services/context"
+	issue_service "forgejo.org/services/issue"
+	repo_service "forgejo.org/services/repository"
+	files_service "forgejo.org/services/repository/files"
 
-	"github.com/nektos/act/pkg/model"
+	"code.forgejo.org/forgejo/runner/v11/act/model"
 
 	_ "golang.org/x/image/bmp"  // for processing bmp images
 	_ "golang.org/x/image/webp" // for processing webp images
@@ -226,7 +228,7 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 	n, _ := util.ReadAtMost(dataRc, buf)
 	buf = buf[:n]
 
-	st := typesniffer.DetectContentType(buf)
+	st := typesniffer.DetectContentType(buf, blob.Name())
 	isTextFile := st.IsText()
 
 	// FIXME: what happens when README file is an image?
@@ -260,7 +262,7 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 	}
 	buf = buf[:n]
 
-	st = typesniffer.DetectContentType(buf)
+	st = typesniffer.DetectContentType(buf, blob.Name())
 
 	return buf, dataRc, &fileInfo{st.IsText(), true, meta.Size, &meta.Pointer, st}, nil
 }
@@ -367,9 +369,6 @@ func loadLatestCommitData(ctx *context.Context, latestCommit *git.Commit) bool {
 		if err != nil {
 			log.Error("GetLatestCommitStatus: %v", err)
 		}
-		if !ctx.Repo.CanRead(unit_model.TypeActions) {
-			git_model.CommitStatusesHideActionsURL(ctx, statuses)
-		}
 
 		ctx.Data["LatestCommitStatus"] = git_model.CalcCommitStatus(statuses)
 		ctx.Data["LatestCommitStatuses"] = statuses
@@ -393,6 +392,10 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 	ctx.Data["FileIsSymlink"] = entry.IsLink()
 	ctx.Data["FileName"] = blob.Name()
 	ctx.Data["RawFileLink"] = ctx.Repo.RepoLink + "/raw/" + ctx.Repo.BranchNameSubURL() + "/" + util.PathEscapeSegments(ctx.Repo.TreePath)
+
+	ctx.Data["OpenGraphTitle"] = ctx.Data["Title"]
+	ctx.Data["OpenGraphURL"] = fmt.Sprintf("%s%s", setting.AppURL, ctx.Data["Link"])
+	ctx.Data["OpenGraphNoDescription"] = true
 
 	if entry.IsLink() {
 		_, link, err := entry.FollowLinks()
@@ -431,13 +434,13 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		if err != nil {
 			log.Error("actions.GetContentFromEntry: %v", err)
 		}
-		_, workFlowErr := model.ReadWorkflow(bytes.NewReader(content))
+		_, workFlowErr := model.ReadWorkflow(bytes.NewReader(content), true)
 		if workFlowErr != nil {
 			ctx.Data["FileError"] = ctx.Locale.Tr("actions.runs.invalid_workflow_helper", workFlowErr.Error())
 		}
-	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS"}, ctx.Repo.TreePath) {
-		if data, err := blob.GetBlobContent(setting.UI.MaxDisplayFileSize); err == nil {
-			_, warnings := issue_model.GetCodeOwnersFromContent(ctx, data)
+	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS", ".forgejo/CODEOWNERS"}, ctx.Repo.TreePath) {
+		if rc, size, err := blob.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err == nil {
+			_, warnings := issue_model.GetCodeOwnersFromReader(ctx, rc, size > setting.UI.MaxDisplayFileSize)
 			if len(warnings) > 0 {
 				ctx.Data["FileWarning"] = strings.Join(warnings, "\n")
 			}
@@ -598,6 +601,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["EscapeStatus"] = status
 			ctx.Data["FileContent"] = fileContent
 			ctx.Data["LineEscapeStatus"] = statuses
+			ctx.Data["IsCitationFile"] = isCitationFile(entry)
 		}
 		if !fInfo.isLFSFile {
 			if ctx.Repo.CanEnableEditor(ctx, ctx.Doer) {
@@ -621,6 +625,20 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		ctx.Data["IsVideoFile"] = true
 	case fInfo.st.IsAudio():
 		ctx.Data["IsAudioFile"] = true
+	case fInfo.st.Is3DModel():
+		ctx.Data["Is3DModelFile"] = true
+		switch {
+		case fInfo.st.IsGLB():
+			ctx.Data["IsGLBFile"] = true
+		case fInfo.st.IsSTL():
+			ctx.Data["IsSTLFile"] = true
+		case fInfo.st.IsGLTF():
+			ctx.Data["IsGLTFFile"] = true
+		case fInfo.st.IsOBJ():
+			ctx.Data["IsOBJFile"] = true
+		case fInfo.st.Is3MF():
+			ctx.Data["Is3MFFile"] = true
+		}
 	case fInfo.st.IsImage() && (setting.UI.SVG.Enabled || !fInfo.st.IsSvgImage()):
 		ctx.Data["IsImageFile"] = true
 		ctx.Data["CanCopyContent"] = true
@@ -761,6 +779,10 @@ func checkHomeCodeViewable(ctx *context.Context) {
 	ctx.NotFound("Home", errors.New(ctx.Locale.TrString("units.error.no_unit_allowed_repo")))
 }
 
+func isCitationFile(entry *git.TreeEntry) bool {
+	return entry.Name() == "CITATION.cff" || entry.Name() == "CITATION.bib"
+}
+
 func checkCitationFile(ctx *context.Context, entry *git.TreeEntry) {
 	if entry.Name() != "" {
 		return
@@ -776,16 +798,9 @@ func checkCitationFile(ctx *context.Context, entry *git.TreeEntry) {
 		return
 	}
 	for _, entry := range allEntries {
-		if entry.Name() == "CITATION.cff" || entry.Name() == "CITATION.bib" {
-			// Read Citation file contents
-			if content, err := entry.Blob().GetBlobContent(setting.UI.MaxDisplayFileSize); err != nil {
-				log.Error("checkCitationFile: GetBlobContent: %v", err)
-			} else {
-				ctx.Data["CitationExist"] = true
-				ctx.Data["CitationFile"] = entry.Name()
-				ctx.PageData["citationFileContent"] = content
-				break
-			}
+		if isCitationFile(entry) {
+			ctx.Data["CitationFile"] = entry.Name()
+			break
 		}
 	}
 }
@@ -1040,7 +1055,14 @@ func renderHomeCode(ctx *context.Context) {
 		return
 	}
 
-	if entry.IsDir() {
+	if entry.IsSubmodule() {
+		submodule, err := ctx.Repo.Commit.GetSubmodule(ctx.Repo.TreePath, entry)
+		if err != nil {
+			HandleGitError(ctx, "Repo.Commit.GetSubmodule", err)
+			return
+		}
+		ctx.Redirect(submodule.ResolveUpstreamURL(ctx.Repo.Repository.HTMLURL()))
+	} else if entry.IsDir() {
 		renderDirectory(ctx)
 	} else {
 		renderFile(ctx, entry)
@@ -1142,6 +1164,20 @@ PostRecentBranchCheck:
 		}
 	}
 
+	if ctx.Repo.Repository.IsFork && ctx.Repo.IsViewBranch && len(ctx.Repo.TreePath) == 0 && ctx.Repo.CanWriteToBranch(ctx, ctx.Doer, ctx.Repo.BranchName) {
+		syncForkInfo, err := repo_service.GetSyncForkInfo(ctx, ctx.Repo.Repository, ctx.Repo.BranchName)
+		if err != nil {
+			ctx.ServerError("CanSync", err)
+			return
+		}
+
+		if syncForkInfo.Allowed {
+			ctx.Data["CanSyncFork"] = true
+			ctx.Data["ForkCommitsBehind"] = syncForkInfo.CommitsBehind
+			ctx.Data["BaseBranchLink"] = fmt.Sprintf("%s/src/branch/%s", ctx.Repo.Repository.BaseRepo.HTMLURL(), util.PathEscapeSegments(ctx.Repo.BranchName))
+		}
+	}
+
 	ctx.Data["Paths"] = paths
 
 	branchLink := ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchNameSubURL()
@@ -1183,7 +1219,7 @@ func checkOutdatedBranch(ctx *context.Context) {
 	}
 
 	if dbBranch.CommitID != commit.ID.String() {
-		ctx.Flash.Warning(ctx.Tr("repo.error.broken_git_hook", "https://docs.gitea.com/help/faq#push-hook--webhook--actions-arent-running"), true)
+		ctx.Flash.Warning(ctx.Tr("warning.repository.out_of_sync"), true)
 	}
 }
 
@@ -1213,6 +1249,7 @@ func RenderUserCards(ctx *context.Context, total int, getter func(opts db.ListOp
 func Watchers(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.watchers")
 	ctx.Data["CardsTitle"] = ctx.Tr("repo.watchers")
+	ctx.Data["CardsNoneMsg"] = ctx.Tr("watch.list.none")
 	ctx.Data["PageIsWatchers"] = true
 
 	RenderUserCards(ctx, ctx.Repo.Repository.NumWatches, func(opts db.ListOptions) ([]*user_model.User, error) {
@@ -1224,6 +1261,7 @@ func Watchers(ctx *context.Context) {
 func Stars(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.stargazers")
 	ctx.Data["CardsTitle"] = ctx.Tr("repo.stargazers")
+	ctx.Data["CardsNoneMsg"] = ctx.Tr("stars.list.none")
 	ctx.Data["PageIsStargazers"] = true
 	RenderUserCards(ctx, ctx.Repo.Repository.NumStars, func(opts db.ListOptions) ([]*user_model.User, error) {
 		return repo_model.GetStargazers(ctx, ctx.Repo.Repository, opts)

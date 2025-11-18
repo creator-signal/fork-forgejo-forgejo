@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/modules/git"
-	api "code.gitea.io/gitea/modules/structs"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/modules/git"
+	api "forgejo.org/modules/structs"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +44,7 @@ func doAddChangesToCheckout(dstPath, filename string) func(*testing.T) {
 }
 
 func TestPushDeployKeyOnEmptyRepo(t *testing.T) {
-	onGiteaRun(t, testPushDeployKeyOnEmptyRepo)
+	onApplicationRun(t, testPushDeployKeyOnEmptyRepo)
 }
 
 func testPushDeployKeyOnEmptyRepo(t *testing.T, u *url.URL) {
@@ -55,7 +55,13 @@ func testPushDeployKeyOnEmptyRepo(t *testing.T, u *url.URL) {
 		keyname := fmt.Sprintf("%s-push", ctx.Reponame)
 		u.Path = ctx.GitPath()
 
-		t.Run("CreateEmptyRepository", doAPICreateRepository(ctx, true, objectFormat))
+		opts := &api.CreateRepoOption{
+			Description: "Temporary repo",
+			Name:        ctx.Reponame,
+			Private:     true,
+			Template:    true,
+		}
+		t.Run("CreateEmptyRepository", doAPICreateRepository(ctx, opts, objectFormat))
 
 		t.Run("CheckIsEmpty", doCheckRepositoryEmptyStatus(ctx, true))
 
@@ -82,7 +88,7 @@ func testPushDeployKeyOnEmptyRepo(t *testing.T, u *url.URL) {
 }
 
 func TestKeyOnlyOneType(t *testing.T) {
-	onGiteaRun(t, testKeyOnlyOneType)
+	onApplicationRun(t, testKeyOnlyOneType)
 }
 
 func testKeyOnlyOneType(t *testing.T, u *url.URL) {
@@ -105,8 +111,8 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 	failCtx := ctx
 	failCtx.ExpectedCode = http.StatusUnprocessableEntity
 
-	t.Run("CreateRepository", doAPICreateRepository(ctx, false, git.Sha1ObjectFormat))           // FIXME: use forEachObjectFormat
-	t.Run("CreateOtherRepository", doAPICreateRepository(otherCtx, false, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
+	t.Run("CreateRepository", doAPICreateRepository(ctx, nil, git.Sha1ObjectFormat))           // FIXME: use forEachObjectFormat
+	t.Run("CreateOtherRepository", doAPICreateRepository(otherCtx, nil, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
 
 	withKeyFile(t, keyname, func(keyFile string) {
 		var userKeyPublicKeyID int64
@@ -180,7 +186,7 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 
 			t.Run("DeleteOtherRepository", doAPIDeleteRepository(otherCtxWithDeleteRepo))
 
-			t.Run("RecreateRepository", doAPICreateRepository(ctxWithDeleteRepo, false, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
+			t.Run("RecreateRepository", doAPICreateRepository(ctxWithDeleteRepo, nil, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
 
 			t.Run("CreateUserKey", doAPICreateUserKey(ctx, keyname, keyFile, func(t *testing.T, publicKey api.PublicKey) {
 				userKeyPublicKeyID = publicKey.ID

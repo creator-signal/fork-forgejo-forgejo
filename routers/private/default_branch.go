@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"net/http"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/private"
-	gitea_context "code.gitea.io/gitea/services/context"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/private"
+	app_context "forgejo.org/services/context"
 )
 
 // SetDefaultBranch updates the default branch
-func SetDefaultBranch(ctx *gitea_context.PrivateContext) {
+func SetDefaultBranch(ctx *app_context.PrivateContext) {
 	ownerName := ctx.Params(":owner")
 	repoName := ctx.Params(":repo")
 	branch := ctx.Params(":branch")

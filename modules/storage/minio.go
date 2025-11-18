@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -76,8 +76,13 @@ var getBucketVersioning = func(ctx context.Context, minioClient *minio.Client, b
 	return err
 }
 
+var initializationTimeout = 30 * time.Second
+
 // NewMinioStorage returns a minio storage
 func NewMinioStorage(ctx context.Context, cfg *setting.Storage) (ObjectStorage, error) {
+	initCtx, cancel := context.WithTimeout(ctx, initializationTimeout)
+	defer cancel()
+
 	config := cfg.MinioConfig
 	if config.ChecksumAlgorithm != "" && config.ChecksumAlgorithm != "default" && config.ChecksumAlgorithm != "md5" {
 		return nil, fmt.Errorf("invalid minio checksum algorithm: %s", config.ChecksumAlgorithm)
@@ -112,7 +117,7 @@ func NewMinioStorage(ctx context.Context, cfg *setting.Storage) (ObjectStorage, 
 	// Otherwise even if the request itself fails (403, 404, etc), the code should still continue because the parameters seem "good" enough.
 	// Keep in mind that GetBucketVersioning requires "owner" to really succeed, so it can't be used to check the existence.
 	// Not using "BucketExists (HeadBucket)" because it doesn't include detailed failure reasons.
-	err = getBucketVersioning(ctx, minioClient, config.Bucket)
+	err = getBucketVersioning(initCtx, minioClient, config.Bucket)
 	if err != nil {
 		errResp, ok := err.(minio.ErrorResponse)
 		if !ok {
@@ -125,13 +130,13 @@ func NewMinioStorage(ctx context.Context, cfg *setting.Storage) (ObjectStorage, 
 	}
 
 	// Check to see if we already own this bucket
-	exists, err := minioClient.BucketExists(ctx, config.Bucket)
+	exists, err := minioClient.BucketExists(initCtx, config.Bucket)
 	if err != nil {
 		return nil, convertMinioErr(err)
 	}
 
 	if !exists {
-		if err := minioClient.MakeBucket(ctx, config.Bucket, minio.MakeBucketOptions{
+		if err := minioClient.MakeBucket(initCtx, config.Bucket, minio.MakeBucketOptions{
 			Region: config.Location,
 		}); err != nil {
 			return nil, convertMinioErr(err)
@@ -231,7 +236,7 @@ type minioFileInfo struct {
 }
 
 func (m minioFileInfo) Name() string {
-	return path.Base(m.ObjectInfo.Key)
+	return path.Base(m.Key)
 }
 
 func (m minioFileInfo) Size() int64 {
@@ -243,7 +248,7 @@ func (m minioFileInfo) ModTime() time.Time {
 }
 
 func (m minioFileInfo) IsDir() bool {
-	return strings.HasSuffix(m.ObjectInfo.Key, "/")
+	return strings.HasSuffix(m.Key, "/")
 }
 
 func (m minioFileInfo) Mode() os.FileMode {

@@ -20,14 +20,14 @@ import (
 	"io"
 	"strings"
 
-	packages_model "code.gitea.io/gitea/models/packages"
-	alpine_model "code.gitea.io/gitea/models/packages/alpine"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/json"
-	packages_module "code.gitea.io/gitea/modules/packages"
-	alpine_module "code.gitea.io/gitea/modules/packages/alpine"
-	"code.gitea.io/gitea/modules/util"
-	packages_service "code.gitea.io/gitea/services/packages"
+	packages_model "forgejo.org/models/packages"
+	alpine_model "forgejo.org/models/packages/alpine"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	packages_module "forgejo.org/modules/packages"
+	alpine_module "forgejo.org/modules/packages/alpine"
+	"forgejo.org/modules/util"
+	packages_service "forgejo.org/services/packages"
 )
 
 const (
@@ -258,7 +258,7 @@ func buildPackagesIndex(ctx context.Context, ownerID int64, repoVersion *package
 
 	privPem, _ := pem.Decode([]byte(priv))
 	if privPem == nil {
-		return fmt.Errorf("failed to decode private key pem")
+		return errors.New("failed to decode private key pem")
 	}
 
 	privKey, err := x509.ParsePKCS1PrivateKey(privPem.Bytes)

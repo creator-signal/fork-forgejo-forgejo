@@ -6,10 +6,10 @@ package repository
 import (
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/models/unittest"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,4 +40,17 @@ func TestLinkedRepository(t *testing.T) {
 			assert.Equal(t, tc.expectedUnitType, unitType)
 		})
 	}
+}
+
+func TestConvertMirrorToNormalRepo(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	repo.IsMirror = true
+	err := repo_model.UpdateRepositoryCols(db.DefaultContext, repo, "is_mirror")
+
+	require.NoError(t, err)
+
+	err = ConvertMirrorToNormalRepo(db.DefaultContext, repo)
+	require.NoError(t, err)
+	assert.False(t, repo.IsMirror)
 }

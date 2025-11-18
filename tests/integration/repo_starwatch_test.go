@@ -9,15 +9,15 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/routers"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/routers"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func testRepoStarringOrWatching(t *testing.T, action, listURI string) {
+func testRepoStarringOrWatching(t *testing.T, action, listURI string, expectEmpty bool) {
 	t.Helper()
 
 	defer tests.PrepareTestEnv(t)()
@@ -26,9 +26,7 @@ func testRepoStarringOrWatching(t *testing.T, action, listURI string) {
 	session := loginUser(t, "user5")
 
 	// Star/Watch the repo as user5
-	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/user2/repo1/action/%s", action), map[string]string{
-		"_csrf": GetCSRF(t, session, "/user2/repo1"),
-	})
+	req := NewRequest(t, "POST", fmt.Sprintf("/user2/repo1/action/%s", action))
 	session.MakeRequest(t, req, http.StatusOK)
 
 	// Load the repo home as user5
@@ -42,6 +40,14 @@ func testRepoStarringOrWatching(t *testing.T, action, listURI string) {
 	text := strings.ToLower(actionButton.Find("button span.text").Text())
 	assert.Equal(t, oppositeAction, text)
 
+	listLink := htmlDoc.Find(fmt.Sprintf("a[href$='/%s']", listURI))
+	ariaLabel, _ := listLink.Attr("aria-label")
+	if listURI == "stars" {
+		assert.Equal(t, "1 star", ariaLabel)
+	} else {
+		assert.Equal(t, "5 watchers", ariaLabel)
+	}
+
 	// Load stargazers/watchers as user5
 	req = NewRequestf(t, "GET", "/user2/repo1/%s", listURI)
 	resp = session.MakeRequest(t, req, http.StatusOK)
@@ -50,10 +56,14 @@ func testRepoStarringOrWatching(t *testing.T, action, listURI string) {
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	htmlDoc.AssertElement(t, ".user-cards .list .card > a[href='/user5']", true)
 
+	if expectEmpty {
+		// Verify which user-cards elements are present
+		htmlDoc.AssertElement(t, ".user-cards > .list", true)
+		htmlDoc.AssertElement(t, ".user-cards > div", false)
+	}
+
 	// Unstar/unwatch the repo as user5
-	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/user2/repo1/action/%s", oppositeAction), map[string]string{
-		"_csrf": GetCSRF(t, session, "/user2/repo1"),
-	})
+	req = NewRequest(t, "POST", fmt.Sprintf("/user2/repo1/action/%s", oppositeAction))
 	session.MakeRequest(t, req, http.StatusOK)
 
 	// Load the repo home as user5
@@ -73,15 +83,22 @@ func testRepoStarringOrWatching(t *testing.T, action, listURI string) {
 
 	// Verify that "user5" is not among the stargazers/watchers
 	htmlDoc = NewHTMLParser(t, resp.Body)
-	htmlDoc.AssertElement(t, ".user-cards .list .item.ui.segment > a[href='/user5']", false)
+	htmlDoc.AssertElement(t, ".user-cards .list .item.ui.segment > a[href='/user2']", false)
+
+	if expectEmpty {
+		// Verify which user-cards elements are present
+		htmlDoc.AssertElement(t, ".user-cards > .list", false)
+		htmlDoc.AssertElement(t, ".user-cards > div", true)
+	}
 }
 
 func TestRepoStarUnstarUI(t *testing.T) {
-	testRepoStarringOrWatching(t, "star", "stars")
+	testRepoStarringOrWatching(t, "star", "stars", true)
 }
 
 func TestRepoWatchUnwatchUI(t *testing.T) {
-	testRepoStarringOrWatching(t, "watch", "watchers")
+	testRepoStarringOrWatching(t, "watch", "watchers", false)
+	// Empty list state is not checked because repo is watched by many users
 }
 
 func TestDisabledStars(t *testing.T) {

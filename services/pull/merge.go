@@ -6,6 +6,7 @@ package pull
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -13,25 +14,50 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
-	"code.gitea.io/gitea/models"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/cache"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/references"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	issue_service "code.gitea.io/gitea/services/issue"
-	notify_service "code.gitea.io/gitea/services/notify"
+	"forgejo.org/models"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/cache"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/references"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
+	issue_service "forgejo.org/services/issue"
+	notify_service "forgejo.org/services/notify"
 )
+
+var mergeMessageTemplates = make(map[repo_model.MergeStyle]string, len(repo_model.MergeStyles))
+
+func LoadMergeMessageTemplates() error {
+	// Load templates for all known merge styles
+	for _, mergeStyle := range repo_model.MergeStyles {
+		templateFilename := filepath.Join(
+			setting.CustomPath,
+			"default_merge_message",
+			fmt.Sprintf("%s_TEMPLATE.md", strings.ToUpper(string(mergeStyle))),
+		)
+
+		content, err := os.ReadFile(templateFilename)
+		if err == nil {
+			mergeMessageTemplates[mergeStyle] = string(content)
+		} else if os.IsNotExist(err) {
+			// The file no longer exists, so delete any previous content
+			delete(mergeMessageTemplates, mergeStyle)
+		} else {
+			return err
+		}
+	}
+	return nil
+}
 
 // getMergeMessage composes the message used when merging a pull request.
 func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issues_model.PullRequest, mergeStyle repo_model.MergeStyle, extraVars map[string]string) (message, body string, err error) {
@@ -77,6 +103,13 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 		if _, ok := err.(git.ErrNotExist); ok {
 			templateContent, err = commit.GetFileContent(templateFilepathGitea, setting.Repository.PullRequest.DefaultMergeMessageSize)
 		}
+
+		if _, ok := err.(git.ErrNotExist); ok {
+			if preloadedContent, ok := mergeMessageTemplates[mergeStyle]; ok {
+				templateContent, err = preloadedContent, nil
+			}
+		}
+
 		if err != nil {
 			if !git.IsErrNotExist(err) {
 				return "", "", err
@@ -168,19 +201,74 @@ func GetDefaultMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr
 	return getMergeMessage(ctx, baseGitRepo, pr, mergeStyle, nil)
 }
 
+func AddCommitMessageTrailer(message, tailerKey, tailerValue string) string {
+	trailerLine := tailerKey + ": " + tailerValue
+	message = strings.ReplaceAll(message, "\r\n", "\n")
+	message = strings.ReplaceAll(message, "\r", "\n")
+	if strings.Contains(message, "\n"+trailerLine+"\n") || strings.HasSuffix(message, "\n"+trailerLine) {
+		return message
+	}
+
+	if !strings.HasSuffix(message, "\n") {
+		message += "\n"
+	}
+	lastNewLine := strings.LastIndexByte(message[:len(message)-1], '\n')
+	keyEnd := -1
+	if lastNewLine != -1 {
+		keyEnd = strings.IndexByte(message[lastNewLine:], ':')
+		if keyEnd != -1 {
+			keyEnd += lastNewLine
+		}
+	}
+	var lastLineKey string
+	if lastNewLine != -1 && keyEnd != -1 {
+		lastLineKey = message[lastNewLine+1 : keyEnd]
+	}
+
+	isLikelyTrailerLine := lastLineKey != "" && unicode.IsUpper(rune(lastLineKey[0])) && strings.Contains(message, "-")
+	for i := 0; isLikelyTrailerLine && i < len(lastLineKey); i++ {
+		r := rune(lastLineKey[i])
+		isLikelyTrailerLine = unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-'
+	}
+	if !strings.HasSuffix(message, "\n\n") && !isLikelyTrailerLine {
+		message += "\n"
+	}
+	return message + trailerLine
+}
+
 // Merge merges pull request to base repository.
 // Caller should check PR is ready to be merged (review and status checks)
 func Merge(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.User, baseGitRepo *git.Repository, mergeStyle repo_model.MergeStyle, expectedHeadCommitID, message string, wasAutoMerged bool) error {
-	if err := pr.LoadBaseRepo(ctx); err != nil {
+	pullWorkingPool.CheckIn(fmt.Sprint(pr.ID))
+	defer pullWorkingPool.CheckOut(fmt.Sprint(pr.ID))
+
+	pr, err := issues_model.GetPullRequestByID(ctx, pr.ID)
+	if err != nil {
+		log.Error("Unable to load pull request itself: %v", err)
+		return fmt.Errorf("unable to load pull request itself: %w", err)
+	}
+
+	if pr.HasMerged {
+		return models.ErrPullRequestHasMerged{
+			ID:         pr.ID,
+			IssueID:    pr.IssueID,
+			HeadRepoID: pr.HeadRepoID,
+			BaseRepoID: pr.BaseRepoID,
+			HeadBranch: pr.HeadBranch,
+			BaseBranch: pr.BaseBranch,
+		}
+	}
+
+	if err := pr.LoadIssue(ctx); err != nil {
+		log.Error("Unable to load issue: %v", err)
+		return fmt.Errorf("unable to load issue: %w", err)
+	} else if err := pr.LoadBaseRepo(ctx); err != nil {
 		log.Error("Unable to load base repo: %v", err)
 		return fmt.Errorf("unable to load base repo: %w", err)
 	} else if err := pr.LoadHeadRepo(ctx); err != nil {
 		log.Error("Unable to load head repo: %v", err)
 		return fmt.Errorf("unable to load head repo: %w", err)
 	}
-
-	pullWorkingPool.CheckIn(fmt.Sprint(pr.ID))
-	defer pullWorkingPool.CheckOut(fmt.Sprint(pr.ID))
 
 	prUnit, err := pr.BaseRepo.GetUnit(ctx, unit.TypePullRequests)
 	if err != nil {
@@ -518,13 +606,13 @@ func MergedManually(ctx context.Context, pr *issues_model.PullRequest, doer *use
 
 		objectFormat := git.ObjectFormatFromName(pr.BaseRepo.ObjectFormatName)
 		if len(commitID) != objectFormat.FullLength() {
-			return fmt.Errorf("Wrong commit ID")
+			return errors.New("Wrong commit ID")
 		}
 
 		commit, err := baseGitRepo.GetCommit(commitID)
 		if err != nil {
 			if git.IsErrNotExist(err) {
-				return fmt.Errorf("Wrong commit ID")
+				return errors.New("Wrong commit ID")
 			}
 			return err
 		}
@@ -535,7 +623,7 @@ func MergedManually(ctx context.Context, pr *issues_model.PullRequest, doer *use
 			return err
 		}
 		if !ok {
-			return fmt.Errorf("Wrong commit ID")
+			return errors.New("Wrong commit ID")
 		}
 
 		pr.MergedCommitID = commitID
@@ -548,7 +636,7 @@ func MergedManually(ctx context.Context, pr *issues_model.PullRequest, doer *use
 		if merged, err = pr.SetMerged(ctx); err != nil {
 			return err
 		} else if !merged {
-			return fmt.Errorf("SetMerged failed")
+			return errors.New("SetMerged failed")
 		}
 		return nil
 	}); err != nil {

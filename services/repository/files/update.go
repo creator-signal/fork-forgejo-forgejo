@@ -11,17 +11,17 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models"
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	asymkey_service "code.gitea.io/gitea/services/asymkey"
+	"forgejo.org/models"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	asymkey_service "forgejo.org/services/asymkey"
 )
 
 // IdentityOptions for a person's identity like an author or committer
@@ -43,6 +43,7 @@ type ChangeRepoFile struct {
 	ContentReader io.ReadSeeker
 	SHA           string
 	Options       *RepoFileOptions
+	Symlink       bool
 }
 
 // ChangeRepoFilesOptions holds the repository files update options
@@ -62,6 +63,7 @@ type RepoFileOptions struct {
 	treePath     string
 	fromTreePath string
 	executable   bool
+	symlink      bool
 }
 
 // ChangeRepoFiles adds, updates or removes multiple files in the given repository
@@ -116,6 +118,7 @@ func ChangeRepoFiles(ctx context.Context, repo *repo_model.Repository, doer *use
 			treePath:     treePath,
 			fromTreePath: fromTreePath,
 			executable:   false,
+			symlink:      file.Symlink,
 		}
 		treePaths = append(treePaths, treePath)
 	}
@@ -193,27 +196,33 @@ func ChangeRepoFiles(ctx context.Context, repo *repo_model.Repository, doer *use
 	}
 
 	if hasOldBranch {
-		// Get the commit of the original branch
-		commit, err := t.GetBranchCommit(opts.OldBranch)
+		// Get the current commit of the original branch
+		actualBaseCommit, err := t.GetBranchCommit(opts.OldBranch)
 		if err != nil {
 			return nil, err // Couldn't get a commit for the branch
 		}
 
-		// Assigned LastCommitID in opts if it hasn't been set
-		if opts.LastCommitID == "" {
-			opts.LastCommitID = commit.ID.String()
-		} else {
-			lastCommitID, err := t.gitRepo.ConvertToGitID(opts.LastCommitID)
+		var lastKnownCommit git.ObjectID // when nil, the sha provided in the opts.Files must match the current blob-sha
+		if opts.OldBranch != opts.NewBranch {
+			// when creating a new branch, ignore if a file has been changed in the meantime
+			// (such changes will visible when doing the merge)
+			lastKnownCommit = actualBaseCommit.ID
+		} else if opts.LastCommitID != "" {
+			lastKnownCommit, err = t.gitRepo.ConvertToGitID(opts.LastCommitID)
 			if err != nil {
 				return nil, fmt.Errorf("ConvertToSHA1: Invalid last commit ID: %w", err)
 			}
-			opts.LastCommitID = lastCommitID.String()
 		}
 
 		for _, file := range opts.Files {
-			if err := handleCheckErrors(file, commit, opts); err != nil {
+			if err := handleCheckErrors(file, actualBaseCommit, lastKnownCommit); err != nil {
 				return nil, err
 			}
+		}
+
+		if opts.LastCommitID == "" {
+			// needed for t.CommitTree
+			opts.LastCommitID = actualBaseCommit.ID.String()
 		}
 	}
 
@@ -277,9 +286,9 @@ func ChangeRepoFiles(ctx context.Context, repo *repo_model.Repository, doer *use
 }
 
 // handles the check for various issues for ChangeRepoFiles
-func handleCheckErrors(file *ChangeRepoFile, commit *git.Commit, opts *ChangeRepoFilesOptions) error {
+func handleCheckErrors(file *ChangeRepoFile, actualBaseCommit *git.Commit, lastKnownCommit git.ObjectID) error {
 	if file.Operation == "update" || file.Operation == "delete" {
-		fromEntry, err := commit.GetTreeEntryByPath(file.Options.fromTreePath)
+		fromEntry, err := actualBaseCommit.GetTreeEntryByPath(file.Options.fromTreePath)
 		if err != nil {
 			return err
 		}
@@ -292,22 +301,22 @@ func handleCheckErrors(file *ChangeRepoFile, commit *git.Commit, opts *ChangeRep
 					CurrentSHA: fromEntry.ID.String(),
 				}
 			}
-		} else if opts.LastCommitID != "" {
-			// If a lastCommitID was given and it doesn't match the commitID of the head of the branch throw
-			// an error, but only if we aren't creating a new branch.
-			if commit.ID.String() != opts.LastCommitID && opts.OldBranch == opts.NewBranch {
-				if changed, err := commit.FileChangedSinceCommit(file.Options.treePath, opts.LastCommitID); err != nil {
+		} else if lastKnownCommit != nil {
+			if actualBaseCommit.ID.String() != lastKnownCommit.String() {
+				// If a lastKnownCommit was given and it doesn't match the actualBaseCommit,
+				// check if the file has been changed in between
+				if changed, err := actualBaseCommit.FileChangedSinceCommit(file.Options.treePath, lastKnownCommit.String()); err != nil {
 					return err
 				} else if changed {
 					return models.ErrCommitIDDoesNotMatch{
-						GivenCommitID:   opts.LastCommitID,
-						CurrentCommitID: opts.LastCommitID,
+						GivenCommitID:   lastKnownCommit.String(),
+						CurrentCommitID: actualBaseCommit.ID.String(),
 					}
 				}
-				// The file wasn't modified, so we are good to delete it
+				// The file wasn't modified, so we are good to update it
 			}
 		} else {
-			// When updating a file, a lastCommitID or SHA needs to be given to make sure other commits
+			// When updating a file, a lastKnownCommit or SHA needs to be given to make sure other commits
 			// haven't been made. We throw an error if one wasn't provided.
 			return models.ErrSHAOrCommitIDNotProvided{}
 		}
@@ -322,7 +331,7 @@ func handleCheckErrors(file *ChangeRepoFile, commit *git.Commit, opts *ChangeRep
 		subTreePath := ""
 		for index, part := range treePathParts {
 			subTreePath = path.Join(subTreePath, part)
-			entry, err := commit.GetTreeEntryByPath(subTreePath)
+			entry, err := actualBaseCommit.GetTreeEntryByPath(subTreePath)
 			if err != nil {
 				if git.IsErrNotExist(err) {
 					// Means there is no item with that name, so we're good
@@ -421,14 +430,14 @@ func CreateOrUpdateFile(ctx context.Context, t *TemporaryUploadRepository, file 
 	}
 
 	// Add the object to the index
+	mode := "100644" // regular file
 	if file.Options.executable {
-		if err := t.AddObjectToIndex("100755", objectHash, file.Options.treePath); err != nil {
-			return err
-		}
-	} else {
-		if err := t.AddObjectToIndex("100644", objectHash, file.Options.treePath); err != nil {
-			return err
-		}
+		mode = "100755"
+	} else if file.Options.symlink {
+		mode = "120644"
+	}
+	if err := t.AddObjectToIndex(mode, objectHash, file.Options.treePath); err != nil {
+		return err
 	}
 
 	if lfsMetaObject != nil {

@@ -5,15 +5,15 @@ package common
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/migrations"
-	system_model "code.gitea.io/gitea/models/system"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/setting/config"
+	"forgejo.org/models/db"
+	"forgejo.org/models/gitea_migrations"
+	system_model "forgejo.org/models/system"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/setting/config"
 
 	"xorm.io/xorm"
 )
@@ -24,11 +24,11 @@ func InitDBEngine(ctx context.Context) (err error) {
 	for i := 0; i < setting.Database.DBConnectRetries; i++ {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("Aborted due to shutdown:\nin retry ORM engine initialization")
+			return errors.New("Aborted due to shutdown:\nin retry ORM engine initialization")
 		default:
 		}
 		log.Info("ORM engine initialization attempt #%d/%d...", i+1, setting.Database.DBConnectRetries)
-		if err = db.InitEngineWithMigration(ctx, migrateWithSetting); err == nil {
+		if err = db.InitEngineWithMigration(ctx, func(eng db.Engine) error { return migrateWithSetting(eng.(*xorm.Engine)) }); err == nil {
 			break
 		} else if i == setting.Database.DBConnectRetries-1 {
 			return err
@@ -43,15 +43,15 @@ func InitDBEngine(ctx context.Context) (err error) {
 
 func migrateWithSetting(x *xorm.Engine) error {
 	if setting.Database.AutoMigration {
-		return migrations.Migrate(x)
+		return gitea_migrations.Migrate(x)
 	}
 
-	if current, err := migrations.GetCurrentDBVersion(x); err != nil {
+	if current, err := gitea_migrations.GetCurrentDBVersion(x); err != nil {
 		return err
 	} else if current < 0 {
 		// execute migrations when the database isn't initialized even if AutoMigration is false
-		return migrations.Migrate(x)
-	} else if expected := migrations.ExpectedDBVersion(); current != expected {
+		return gitea_migrations.Migrate(x)
+	} else if expected := gitea_migrations.ExpectedDBVersion(); current != expected {
 		log.Fatal(`"database.AUTO_MIGRATION" is disabled, but current database version %d is not equal to the expected version %d.`+
 			`You can set "database.AUTO_MIGRATION" to true or migrate manually by running "forgejo [--config /path/to/app.ini] migrate"`, current, expected)
 	}

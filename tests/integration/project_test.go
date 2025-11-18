@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	project_model "code.gitea.io/gitea/models/project"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	project_model "forgejo.org/models/project"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,11 +60,7 @@ func TestMoveRepoProjectColumns(t *testing.T) {
 	assert.EqualValues(t, 2, columns[2].Sorting)
 
 	sess := loginUser(t, "user1")
-	req := NewRequest(t, "GET", fmt.Sprintf("/%s/projects/%d", repo2.FullName(), project1.ID))
-	resp := sess.MakeRequest(t, req, http.StatusOK)
-	htmlDoc := NewHTMLParser(t, resp.Body)
-
-	req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s/projects/%d/move?_csrf="+htmlDoc.GetCSRF(), repo2.FullName(), project1.ID), map[string]any{
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s/projects/%d/move", repo2.FullName(), project1.ID), map[string]any{
 		"columns": []map[string]any{
 			{"columnID": columns[1].ID, "sorting": 0},
 			{"columnID": columns[2].ID, "sorting": 1},
@@ -76,9 +72,9 @@ func TestMoveRepoProjectColumns(t *testing.T) {
 	columnsAfter, err := project1.GetColumns(db.DefaultContext)
 	require.NoError(t, err)
 	assert.Len(t, columns, 3)
-	assert.EqualValues(t, columns[1].ID, columnsAfter[0].ID)
-	assert.EqualValues(t, columns[2].ID, columnsAfter[1].ID)
-	assert.EqualValues(t, columns[0].ID, columnsAfter[2].ID)
+	assert.Equal(t, columns[1].ID, columnsAfter[0].ID)
+	assert.Equal(t, columns[2].ID, columnsAfter[1].ID)
+	assert.Equal(t, columns[0].ID, columnsAfter[2].ID)
 
 	require.NoError(t, project_model.DeleteProjectByID(db.DefaultContext, project1.ID))
 }

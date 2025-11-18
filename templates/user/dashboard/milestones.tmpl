@@ -35,13 +35,13 @@
 			</div>
 			<div class="flex-container-main content">
 				<div class="list-header">
-					<div class="small-menu-items ui compact tiny menu list-header-toggle">
+					<div class="switch list-header-toggle">
 						<a class="item{{if not .IsShowClosed}} active{{end}}" href="?repos=[{{range $.RepoIDs}}{{.}}%2C{{end}}]&sort={{$.SortType}}&state=open&q={{$.Keyword}}">
-							{{svg "octicon-milestone" 16 "tw-mr-2"}}
+							{{svg "octicon-milestone" 16}}
 							{{ctx.Locale.PrettyNumber .MilestoneStats.OpenCount}}&nbsp;{{ctx.Locale.Tr "repo.issues.open_title"}}
 						</a>
 						<a class="item{{if .IsShowClosed}} active{{end}}" href="?repos=[{{range $.RepoIDs}}{{.}}%2C{{end}}]&sort={{$.SortType}}&state=closed&q={{$.Keyword}}">
-							{{svg "octicon-check" 16 "tw-mr-2"}}
+							{{svg "octicon-check" 16}}
 							{{ctx.Locale.PrettyNumber .MilestoneStats.ClosedCount}}&nbsp;{{ctx.Locale.Tr "repo.issues.closed_title"}}
 						</a>
 					</div>
@@ -73,7 +73,7 @@
 					{{range .Milestones}}
 						<li class="milestone-card">
 							<div class="milestone-header">
-								<h3 class="flex-text-block tw-m-0">
+								<h3>
 									<span class="ui large label">
 										{{.Repo.FullName}}
 									</span>
@@ -114,7 +114,7 @@
 											{{ctx.Locale.Tr "repo.milestones.closed" $closedDate}}
 										{{else}}
 											{{if .DeadlineString}}
-												<span{{if .IsOverdue}} class="text red"{{end}}>
+												<span class="flex-text-inline {{if .IsOverdue}}text red{{end}}">
 													{{svg "octicon-calendar" 14}}
 													{{DateUtils.AbsoluteShort (.DeadlineString|DateUtils.ParseLegacy)}}
 												</span>
@@ -125,17 +125,6 @@
 										{{end}}
 									</div>
 								</div>
-								{{if and (or $.CanWriteIssues $.CanWritePulls) (not $.Repository.IsArchived)}}
-									<div class="group">
-										<a class="flex-text-inline" href="{{$.Link}}/{{.ID}}/edit">{{svg "octicon-pencil" 14}}{{ctx.Locale.Tr "repo.issues.label_edit"}}</a>
-										{{if .IsClosed}}
-											<a class="link-action flex-text-inline" href data-url="{{$.Link}}/{{.ID}}/open">{{svg "octicon-check" 14}}{{ctx.Locale.Tr "repo.milestones.open"}}</a>
-										{{else}}
-											<a class="link-action flex-text-inline" href data-url="{{$.Link}}/{{.ID}}/close">{{svg "octicon-x" 14}}{{ctx.Locale.Tr "repo.milestones.close"}}</a>
-										{{end}}
-										<a class="delete-button flex-text-inline" href="#" data-url="{{$.RepoLink}}/milestones/delete" data-id="{{.ID}}">{{svg "octicon-trash" 14}}{{ctx.Locale.Tr "repo.issues.label_delete"}}</a>
-									</div>
-								{{end}}
 							</div>
 							{{if .Content}}
 								<div class="markup content">

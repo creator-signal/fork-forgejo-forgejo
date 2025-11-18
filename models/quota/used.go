@@ -6,10 +6,10 @@ package quota
 import (
 	"context"
 
-	action_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	package_model "code.gitea.io/gitea/models/packages"
-	repo_model "code.gitea.io/gitea/models/repo"
+	action_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	package_model "forgejo.org/models/packages"
+	repo_model "forgejo.org/models/repo"
 
 	"xorm.io/builder"
 )
@@ -25,7 +25,7 @@ type UsedSize struct {
 }
 
 func (u UsedSize) All() int64 {
-	return u.Repos.All() + u.Git.All(u.Repos) + u.Assets.All()
+	return u.Git.All(u.Repos) + u.Assets.All()
 }
 
 type UsedSizeRepos struct {
@@ -131,7 +131,8 @@ func createQueryFor(ctx context.Context, userID int64, q string) db.Engine {
 	case "artifacts":
 		session = session.
 			Table("action_artifact").
-			Join("INNER", "`repository`", "`action_artifact`.repo_id = `repository`.id")
+			Join("INNER", "`repository`", "`action_artifact`.repo_id = `repository`.id").
+			Where("`action_artifact`.status != ?", action_model.ArtifactStatusExpired)
 	case "packages":
 		session = session.
 			Table("package_version").

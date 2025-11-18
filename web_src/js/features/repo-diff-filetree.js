@@ -1,19 +1,10 @@
 import {createApp} from 'vue';
-import DiffFileTree from '../components/DiffFileTree.vue';
-import DiffFileList from '../components/DiffFileList.vue';
 
-export function initDiffFileTree() {
+export async function initDiffFileTree() {
   const el = document.getElementById('diff-file-tree');
   if (!el) return;
 
+  const {default: DiffFileTree} = await import(/* webpackChunkName: "diff-file-tree" */'../components/DiffFileTree.vue');
   const fileTreeView = createApp(DiffFileTree);
   fileTreeView.mount(el);
-}
-
-export function initDiffFileList() {
-  const fileListElement = document.getElementById('diff-file-list');
-  if (!fileListElement) return;
-
-  const fileListView = createApp(DiffFileList);
-  fileListView.mount(fileListElement);
 }

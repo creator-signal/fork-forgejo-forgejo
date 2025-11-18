@@ -12,10 +12,10 @@ import (
 	"os"
 	"path"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 
 	gouuid "github.com/google/uuid"
 )
@@ -102,17 +102,6 @@ func GetUploadByUUID(ctx context.Context, uuid string) (*Upload, error) {
 		return nil, ErrUploadNotExist{0, uuid}
 	}
 	return upload, nil
-}
-
-// GetUploadsByUUIDs returns multiple uploads by UUIDS
-func GetUploadsByUUIDs(ctx context.Context, uuids []string) ([]*Upload, error) {
-	if len(uuids) == 0 {
-		return []*Upload{}, nil
-	}
-
-	// Silently drop invalid uuids.
-	uploads := make([]*Upload, 0, len(uuids))
-	return uploads, db.GetEngine(ctx).In("uuid", uuids).Find(&uploads)
 }
 
 // DeleteUploads deletes multiple uploads

@@ -5,56 +5,68 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	"code.gitea.io/gitea/modules/generate"
+	"forgejo.org/modules/generate"
 
 	"github.com/mattn/go-isatty"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
-var (
-	// CmdGenerate represents the available generate sub-command.
-	CmdGenerate = &cli.Command{
+// CmdGenerate represents the available generate sub-command.
+func cmdGenerate() *cli.Command {
+	return &cli.Command{
 		Name:  "generate",
-		Usage: "Generate Gitea's secrets/keys/tokens",
-		Subcommands: []*cli.Command{
-			subcmdSecret,
+		Usage: "Generate Forgejo's secrets/keys/tokens",
+		Commands: []*cli.Command{
+			subcmdSecret(),
 		},
 	}
+}
 
-	subcmdSecret = &cli.Command{
+func subcmdSecret() *cli.Command {
+	return &cli.Command{
 		Name:  "secret",
 		Usage: "Generate a secret token",
-		Subcommands: []*cli.Command{
-			microcmdGenerateInternalToken,
-			microcmdGenerateLfsJwtSecret,
-			microcmdGenerateSecretKey,
+		Commands: []*cli.Command{
+			microcmdGenerateInternalToken(),
+			microcmdGenerateLfsJwtSecret(),
+			microcmdGenerateSecretKey(),
 		},
 	}
+}
 
-	microcmdGenerateInternalToken = &cli.Command{
+func microcmdGenerateInternalToken() *cli.Command {
+	return &cli.Command{
 		Name:   "INTERNAL_TOKEN",
 		Usage:  "Generate a new INTERNAL_TOKEN",
+		Before: noDanglingArgs,
 		Action: runGenerateInternalToken,
 	}
+}
 
-	microcmdGenerateLfsJwtSecret = &cli.Command{
+func microcmdGenerateLfsJwtSecret() *cli.Command {
+	return &cli.Command{
 		Name:    "JWT_SECRET",
 		Aliases: []string{"LFS_JWT_SECRET"},
 		Usage:   "Generate a new JWT_SECRET",
+		Before:  noDanglingArgs,
 		Action:  runGenerateLfsJwtSecret,
 	}
+}
 
-	microcmdGenerateSecretKey = &cli.Command{
+func microcmdGenerateSecretKey() *cli.Command {
+	return &cli.Command{
 		Name:   "SECRET_KEY",
 		Usage:  "Generate a new SECRET_KEY",
+		Before: noDanglingArgs,
 		Action: runGenerateSecretKey,
 	}
-)
+}
 
-func runGenerateInternalToken(c *cli.Context) error {
+func runGenerateInternalToken(ctx context.Context, c *cli.Command) error {
 	internalToken, err := generate.NewInternalToken()
 	if err != nil {
 		return err
@@ -63,37 +75,31 @@ func runGenerateInternalToken(c *cli.Context) error {
 	fmt.Printf("%s", internalToken)
 
 	if isatty.IsTerminal(os.Stdout.Fd()) {
-		fmt.Printf("\n")
+		fmt.Println()
 	}
 
 	return nil
 }
 
-func runGenerateLfsJwtSecret(c *cli.Context) error {
-	_, jwtSecretBase64, err := generate.NewJwtSecret()
-	if err != nil {
-		return err
-	}
+func runGenerateLfsJwtSecret(ctx context.Context, c *cli.Command) error {
+	_, jwtSecretBase64 := generate.NewJwtSecret()
 
 	fmt.Printf("%s", jwtSecretBase64)
 
 	if isatty.IsTerminal(os.Stdout.Fd()) {
-		fmt.Printf("\n")
+		fmt.Print("\n")
 	}
 
 	return nil
 }
 
-func runGenerateSecretKey(c *cli.Context) error {
-	secretKey, err := generate.NewSecretKey()
-	if err != nil {
-		return err
-	}
+func runGenerateSecretKey(ctx context.Context, c *cli.Command) error {
+	secretKey := generate.NewSecretKey()
 
 	fmt.Printf("%s", secretKey)
 
 	if isatty.IsTerminal(os.Stdout.Fd()) {
-		fmt.Printf("\n")
+		fmt.Print("\n")
 	}
 
 	return nil

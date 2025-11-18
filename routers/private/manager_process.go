@@ -11,10 +11,10 @@ import (
 	"runtime"
 	"time"
 
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/private"
-	process_module "code.gitea.io/gitea/modules/process"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/private"
+	process_module "forgejo.org/modules/process"
+	"forgejo.org/services/context"
 )
 
 // Processes prints out the processes
@@ -122,7 +122,7 @@ func writeProcess(out io.Writer, process *process_module.Process, indent string,
 			if stack.Count > 1 {
 				_, _ = fmt.Fprintf(sb, "* %d", stack.Count)
 			}
-			_, _ = fmt.Fprintf(sb, "\n")
+			_, _ = fmt.Fprintln(sb)
 			indent += "| "
 			if len(stack.Labels) > 0 {
 				_, _ = fmt.Fprintf(sb, "%sLabels:      %q:%q", indent, stack.Labels[0].Name, stack.Labels[0].Value)
@@ -132,7 +132,7 @@ func writeProcess(out io.Writer, process *process_module.Process, indent string,
 						_, _ = fmt.Fprintf(sb, ", %q:%q", label.Name, label.Value)
 					}
 				}
-				_, _ = fmt.Fprintf(sb, "\n")
+				_, _ = fmt.Fprintln(sb)
 			}
 			_, _ = fmt.Fprintf(sb, "%sStack:\n", indent)
 			indent += "  "

@@ -1,4 +1,5 @@
 // Copyright 2023 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package user
@@ -10,20 +11,20 @@ import (
 
 	_ "image/jpeg" // Needed for jpeg support
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	activities_model "code.gitea.io/gitea/models/activities"
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	pull_model "code.gitea.io/gitea/models/pull"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	issue_service "code.gitea.io/gitea/services/issue"
+	actions_model "forgejo.org/models/actions"
+	activities_model "forgejo.org/models/activities"
+	asymkey_model "forgejo.org/models/asymkey"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
+	pull_model "forgejo.org/models/pull"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	issue_service "forgejo.org/services/issue"
 
 	"xorm.io/builder"
 )
@@ -93,12 +94,19 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 		&pull_model.ReviewState{UserID: u.ID},
 		&user_model.Redirect{RedirectUserID: u.ID},
 		&actions_model.ActionRunner{OwnerID: u.ID},
+		&actions_model.ActionUser{UserID: u.ID},
 		&user_model.BlockedUser{BlockID: u.ID},
 		&user_model.BlockedUser{UserID: u.ID},
 		&actions_model.ActionRunnerToken{OwnerID: u.ID},
 		&auth_model.AuthorizationToken{UID: u.ID},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %w", err)
+	}
+
+	// Retain the fact that time was tracked, but set DB's `user_id` to NULL.
+	_, err = e.Table(&issues_model.TrackedTime{}).Where("user_id = ?", u.ID).Update(map[string]any{"user_id": nil})
+	if err != nil {
+		return fmt.Errorf("update tracked_time user_id: %w", err)
 	}
 
 	if err := auth_model.DeleteOAuth2RelictsByUserID(ctx, u.ID); err != nil {
@@ -158,25 +166,16 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 
 	// ***** START: Branch Protections *****
 	{
-		const batchSize = 50
-		for start := 0; ; start += batchSize {
-			protections := make([]*git_model.ProtectedBranch, 0, batchSize)
-			// @perf: We can't filter on DB side by u.ID, as those IDs are serialized as JSON strings.
-			//   We could filter down with `WHERE repo_id IN (reposWithPushPermission(u))`,
-			//   though that query will be quite complex and tricky to maintain (compare `getRepoAssignees()`).
-			// Also, as we didn't update branch protections when removing entries from `access` table,
-			//   it's safer to iterate all protected branches.
-			if err = e.Limit(batchSize, start).Find(&protections); err != nil {
-				return fmt.Errorf("findProtectedBranches: %w", err)
-			}
-			if len(protections) == 0 {
-				break
-			}
-			for _, p := range protections {
-				if err := git_model.RemoveUserIDFromProtectedBranch(ctx, p, u.ID); err != nil {
-					return err
-				}
-			}
+		// @perf: We can't filter on DB side by u.ID, as those IDs are serialized as JSON strings.
+		//   We could filter down with `WHERE repo_id IN (reposWithPushPermission(u))`,
+		//   though that query will be quite complex and tricky to maintain (compare `getRepoAssignees()`).
+		// Also, as we didn't update branch protections when removing entries from `access` table,
+		//   it's safer to iterate all protected branches.
+		err := db.Iterate(ctx, nil, func(ctx context.Context, p *git_model.ProtectedBranch) error {
+			return git_model.RemoveUserIDFromProtectedBranch(ctx, p, u.ID)
+		})
+		if err != nil {
+			return fmt.Errorf("cleanup branch protection rules: %w", err)
 		}
 	}
 	// ***** END: Branch Protections *****
@@ -215,6 +214,11 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 		return fmt.Errorf("ExternalLoginUser: %w", err)
 	}
 	// ***** END: ExternalLoginUser *****
+
+	// If the user was reported as abusive, a shadow copy should be created before deletion.
+	if err = user_model.IfNeededCreateShadowCopyForUser(ctx, u.ID, u); err != nil {
+		return err
+	}
 
 	if _, err = db.DeleteByID[user_model.User](ctx, u.ID); err != nil {
 		return fmt.Errorf("delete: %w", err)

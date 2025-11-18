@@ -6,21 +6,20 @@ package integration
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"testing"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/services/convert"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/services/convert"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -110,17 +109,11 @@ func TestAPICreateCommentAttachment(t *testing.T) {
 	body := &bytes.Buffer{}
 
 	// Setup multi-part
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("attachment", filename)
-	require.NoError(t, err)
-	_, err = io.Copy(part, &buff)
-	require.NoError(t, err)
-	err = writer.Close()
-	require.NoError(t, err)
+	contentType := tests.WriteImageBody(t, buff, filename, body)
 
 	req := NewRequestWithBody(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/issues/comments/%d/assets", repoOwner.Name, repo.Name, comment.ID), body).
 		AddTokenAuth(token).
-		SetHeader("Content-Type", writer.FormDataContentType())
+		SetHeader("Content-Type", contentType)
 	resp := session.MakeRequest(t, req, http.StatusCreated)
 
 	apiAttachment := new(api.Attachment)
@@ -150,16 +143,10 @@ func TestAPICreateCommentAttachmentAutoDate(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		// Setup multi-part
-		writer := multipart.NewWriter(body)
-		part, err := writer.CreateFormFile("attachment", filename)
-		require.NoError(t, err)
-		_, err = io.Copy(part, &buff)
-		require.NoError(t, err)
-		err = writer.Close()
-		require.NoError(t, err)
+		contentType := tests.WriteImageBody(t, buff, filename, body)
 
 		req := NewRequestWithBody(t, "POST", urlStr, body).AddTokenAuth(token)
-		req.Header.Add("Content-Type", writer.FormDataContentType())
+		req.Header.Add("Content-Type", contentType)
 		resp := session.MakeRequest(t, req, http.StatusCreated)
 		apiAttachment := new(api.Attachment)
 		DecodeJSON(t, resp, &apiAttachment)
@@ -181,16 +168,10 @@ func TestAPICreateCommentAttachmentAutoDate(t *testing.T) {
 		urlStr += fmt.Sprintf("?updated_at=%s", updatedAt.UTC().Format(time.RFC3339))
 
 		// Setup multi-part
-		writer := multipart.NewWriter(body)
-		part, err := writer.CreateFormFile("attachment", filename)
-		require.NoError(t, err)
-		_, err = io.Copy(part, &buff)
-		require.NoError(t, err)
-		err = writer.Close()
-		require.NoError(t, err)
+		contentType := tests.WriteImageBody(t, buff, filename, body)
 
 		req := NewRequestWithBody(t, "POST", urlStr, body).AddTokenAuth(token)
-		req.Header.Add("Content-Type", writer.FormDataContentType())
+		req.Header.Add("Content-Type", contentType)
 		resp := session.MakeRequest(t, req, http.StatusCreated)
 		apiAttachment := new(api.Attachment)
 		DecodeJSON(t, resp, &apiAttachment)

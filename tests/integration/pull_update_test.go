@@ -11,26 +11,26 @@ import (
 	"testing"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	pull_service "code.gitea.io/gitea/services/pull"
-	repo_service "code.gitea.io/gitea/services/repository"
-	files_service "code.gitea.io/gitea/services/repository/files"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	pull_service "forgejo.org/services/pull"
+	repo_service "forgejo.org/services/repository"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAPIPullUpdate(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		// Create PR to test
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		org26 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 26})
@@ -39,8 +39,8 @@ func TestAPIPullUpdate(t *testing.T) {
 		// Test GetDiverging
 		diffCount, err := pull_service.GetDiverging(git.DefaultContext, pr)
 		require.NoError(t, err)
-		assert.EqualValues(t, 1, diffCount.Behind)
-		assert.EqualValues(t, 1, diffCount.Ahead)
+		assert.Equal(t, 1, diffCount.Behind)
+		assert.Equal(t, 1, diffCount.Ahead)
 		require.NoError(t, pr.LoadBaseRepo(db.DefaultContext))
 		require.NoError(t, pr.LoadIssue(db.DefaultContext))
 
@@ -53,13 +53,13 @@ func TestAPIPullUpdate(t *testing.T) {
 		// Test GetDiverging after update
 		diffCount, err = pull_service.GetDiverging(git.DefaultContext, pr)
 		require.NoError(t, err)
-		assert.EqualValues(t, 0, diffCount.Behind)
-		assert.EqualValues(t, 2, diffCount.Ahead)
+		assert.Equal(t, 0, diffCount.Behind)
+		assert.Equal(t, 2, diffCount.Ahead)
 	})
 }
 
 func TestAPIPullUpdateByRebase(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		// Create PR to test
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		org26 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 26})
@@ -68,8 +68,8 @@ func TestAPIPullUpdateByRebase(t *testing.T) {
 		// Test GetDiverging
 		diffCount, err := pull_service.GetDiverging(git.DefaultContext, pr)
 		require.NoError(t, err)
-		assert.EqualValues(t, 1, diffCount.Behind)
-		assert.EqualValues(t, 1, diffCount.Ahead)
+		assert.Equal(t, 1, diffCount.Behind)
+		assert.Equal(t, 1, diffCount.Ahead)
 		require.NoError(t, pr.LoadBaseRepo(db.DefaultContext))
 		require.NoError(t, pr.LoadIssue(db.DefaultContext))
 
@@ -82,14 +82,13 @@ func TestAPIPullUpdateByRebase(t *testing.T) {
 		// Test GetDiverging after update
 		diffCount, err = pull_service.GetDiverging(git.DefaultContext, pr)
 		require.NoError(t, err)
-		assert.EqualValues(t, 0, diffCount.Behind)
-		assert.EqualValues(t, 1, diffCount.Ahead)
+		assert.Equal(t, 0, diffCount.Behind)
+		assert.Equal(t, 1, diffCount.Ahead)
 	})
 }
 
 func TestAPIViewUpdateSettings(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
-		defer tests.PrepareTestEnv(t)()
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		// Create PR to test
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		org26 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 26})
@@ -98,8 +97,8 @@ func TestAPIViewUpdateSettings(t *testing.T) {
 		// Test GetDiverging
 		diffCount, err := pull_service.GetDiverging(git.DefaultContext, pr)
 		require.NoError(t, err)
-		assert.EqualValues(t, 1, diffCount.Behind)
-		assert.EqualValues(t, 1, diffCount.Ahead)
+		assert.Equal(t, 1, diffCount.Behind)
+		assert.Equal(t, 1, diffCount.Ahead)
 		require.NoError(t, pr.LoadBaseRepo(db.DefaultContext))
 		require.NoError(t, pr.LoadIssue(db.DefaultContext))
 
@@ -123,20 +122,19 @@ func TestAPIViewUpdateSettings(t *testing.T) {
 }
 
 func TestViewPullUpdateByMerge(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		testViewPullUpdate(t, "merge")
 	})
 }
 
 func TestViewPullUpdateByRebase(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		testViewPullUpdate(t, "rebase")
 	})
 }
 
 func testViewPullUpdate(t *testing.T, updateStyle string) {
 	defer test.MockVariableValue(&setting.Repository.PullRequest.DefaultUpdateStyle, updateStyle)()
-	defer tests.PrepareTestEnv(t)()
 	// Create PR to test
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	org26 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 26})
@@ -145,8 +143,8 @@ func testViewPullUpdate(t *testing.T, updateStyle string) {
 	// Test GetDiverging
 	diffCount, err := pull_service.GetDiverging(git.DefaultContext, pr)
 	require.NoError(t, err)
-	assert.EqualValues(t, 1, diffCount.Behind)
-	assert.EqualValues(t, 1, diffCount.Ahead)
+	assert.Equal(t, 1, diffCount.Behind)
+	assert.Equal(t, 1, diffCount.Ahead)
 	require.NoError(t, pr.LoadBaseRepo(db.DefaultContext))
 	require.NoError(t, pr.LoadIssue(db.DefaultContext))
 
@@ -272,4 +270,20 @@ func createOutdatedPR(t *testing.T, actor, forkOrg *user_model.User) *issues_mod
 	require.NoError(t, issue.LoadPullRequest(db.DefaultContext))
 
 	return issue.PullRequest
+}
+
+func TestStatusDuringUpdate(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		session := loginUser(t, "user2")
+
+		// Adjust this pull request to be in the conflict checker and having a head
+		// branch that is pointing to the an incorrect commit ID.
+		_, err := db.GetEngine(t.Context()).Cols("status", "head_branch").Update(&issues_model.PullRequest{ID: 5, Status: issues_model.PullRequestStatusChecking, HeadBranch: "master"})
+		require.NoError(t, err)
+
+		resp := session.MakeRequest(t, NewRequest(t, "GET", "/user2/repo1/pulls/5"), http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		assert.Contains(t, htmlDoc.Find(".merge-section .item").Text(), "Merge conflict checking is in progress. Try again in few moments.")
+	})
 }

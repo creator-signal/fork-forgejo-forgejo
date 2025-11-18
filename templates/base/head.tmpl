@@ -23,22 +23,18 @@
 	<link rel="icon" href="{{AssetUrlPrefix}}/img/favicon.svg" type="image/svg+xml">
 	<link rel="alternate icon" href="{{AssetUrlPrefix}}/img/favicon.png" type="image/png">
 	{{template "base/head_script" .}}
-	<noscript>
-		<style>
-			.dropdown:hover > .menu { display: block; }
-			.ui.secondary.menu .dropdown.item > .menu { margin-top: 0; }
-		</style>
-	</noscript>
 	{{template "shared/user/mention_highlight" .}}
 	{{template "base/head_opengraph" .}}
 	{{template "base/head_style" .}}
 	{{template "custom/header" .}}
 </head>
-<body hx-headers='{"x-csrf-token": "{{.CsrfToken}}"}' hx-swap="outerHTML" hx-ext="morph" hx-push-url="false">
+<body class="no-js" hx-swap="outerHTML" hx-ext="morph" hx-push-url="false">
 	{{template "custom/body_outer_pre" .}}
 
 	<div class="full height">
-		<noscript>{{ctx.Locale.Tr "enable_javascript"}}</noscript>
+		<noscript>
+			<div class="tw-ml-2 tw-mr-2 tw-text-center tw-text-text-light-2">{{ctx.Locale.Tr "enable_javascript"}}</div>
+		</noscript>
 
 		{{template "custom/body_inner_pre" .}}
 

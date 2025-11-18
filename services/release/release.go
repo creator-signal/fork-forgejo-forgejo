@@ -9,22 +9,22 @@ import (
 	"fmt"
 	"strings"
 
-	"code.gitea.io/gitea/models"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/services/attachment"
-	notify_service "code.gitea.io/gitea/services/notify"
+	"forgejo.org/models"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/repository"
+	"forgejo.org/modules/storage"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/attachment"
+	notify_service "forgejo.org/services/notify"
 )
 
 type AttachmentChange struct {
@@ -161,17 +161,17 @@ func CreateRelease(gitRepo *git.Repository, rel *repo_model.Release, msg string,
 
 	for _, attachmentChange := range attachmentChanges {
 		if attachmentChange.Action != "add" {
-			return fmt.Errorf("can only create new attachments when creating release")
+			return errors.New("can only create new attachments when creating release")
 		}
 		switch attachmentChange.Type {
 		case "attachment":
 			if attachmentChange.UUID == "" {
-				return fmt.Errorf("new attachment should have a uuid")
+				return errors.New("new attachment should have a uuid")
 			}
 			addAttachmentUUIDs.Add(attachmentChange.UUID)
 		case "external":
 			if attachmentChange.Name == "" || attachmentChange.ExternalURL == "" {
-				return fmt.Errorf("new external attachment should have a name and external url")
+				return errors.New("new external attachment should have a name and external url")
 			}
 
 			_, err = attachment.NewExternalAttachment(gitRepo.Ctx, &repo_model.Attachment{
@@ -186,7 +186,7 @@ func CreateRelease(gitRepo *git.Repository, rel *repo_model.Release, msg string,
 			}
 		default:
 			if attachmentChange.Type == "" {
-				return fmt.Errorf("missing attachment type")
+				return errors.New("missing attachment type")
 			}
 			return fmt.Errorf("unknown attachment type: '%q'", attachmentChange.Type)
 		}
@@ -280,7 +280,7 @@ func UpdateRelease(ctx context.Context, doer *user_model.User, gitRepo *git.Repo
 				addAttachmentUUIDs.Add(attachmentChange.UUID)
 			case "external":
 				if attachmentChange.Name == "" || attachmentChange.ExternalURL == "" {
-					return fmt.Errorf("new external attachment should have a name and external url")
+					return errors.New("new external attachment should have a name and external url")
 				}
 				_, err := attachment.NewExternalAttachment(ctx, &repo_model.Attachment{
 					Name:        attachmentChange.Name,
@@ -294,13 +294,13 @@ func UpdateRelease(ctx context.Context, doer *user_model.User, gitRepo *git.Repo
 				}
 			default:
 				if attachmentChange.Type == "" {
-					return fmt.Errorf("missing attachment type")
+					return errors.New("missing attachment type")
 				}
 				return fmt.Errorf("unknown attachment type: %q", attachmentChange.Type)
 			}
 		case "delete":
 			if attachmentChange.UUID == "" {
-				return fmt.Errorf("attachment deletion should have a uuid")
+				return errors.New("attachment deletion should have a uuid")
 			}
 			delAttachmentUUIDs.Add(attachmentChange.UUID)
 		case "update":
@@ -308,7 +308,7 @@ func UpdateRelease(ctx context.Context, doer *user_model.User, gitRepo *git.Repo
 			updateAttachments.Add(attachmentChange)
 		default:
 			if attachmentChange.Action == "" {
-				return fmt.Errorf("missing attachment action")
+				return errors.New("missing attachment action")
 			}
 			return fmt.Errorf("unknown attachment action: %q", attachmentChange.Action)
 		}
@@ -372,7 +372,7 @@ func UpdateRelease(ctx context.Context, doer *user_model.User, gitRepo *git.Repo
 		return err
 	}
 
-	for _, uuid := range delAttachmentUUIDs.Values() {
+	for uuid := range delAttachmentUUIDs.Seq() {
 		if err := storage.Attachments.Delete(repo_model.AttachmentRelativePath(uuid)); err != nil {
 			// Even delete files failed, but the attachments has been removed from database, so we
 			// should not return error but only record the error on logs.

@@ -7,23 +7,23 @@ package user
 import (
 	"net/url"
 
-	"code.gitea.io/gitea/models/db"
-	gist_model "code.gitea.io/gitea/models/gist"
-	"code.gitea.io/gitea/models/organization"
-	packages_model "code.gitea.io/gitea/models/packages"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	project_model "code.gitea.io/gitea/models/project"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	"code.gitea.io/gitea/modules/markup/markdown"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	packages_model "forgejo.org/models/packages"
+	access_model "forgejo.org/models/perm/access"
+	project_model "forgejo.org/models/project"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/routers/web/repo"
+	"forgejo.org/services/context"
 )
 
 // prepareContextForCommonProfile store some common data into context data for user's profile related pages (including the nav menu)
@@ -39,6 +39,7 @@ func prepareContextForCommonProfile(ctx *context.Context) {
 func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 	prepareContextForCommonProfile(ctx)
 
+	ctx.Data["IsModerationEnabled"] = setting.Moderation.Enabled
 	ctx.Data["IsBlocked"] = ctx.Doer != nil && user_model.IsBlocked(ctx, ctx.Doer.ID, ctx.ContextUser.ID)
 	ctx.Data["IsFollowing"] = ctx.Doer != nil && user_model.IsFollowing(ctx, ctx.Doer.ID, ctx.ContextUser.ID)
 	ctx.Data["ShowUserEmail"] = setting.UI.ShowUserEmail && ctx.ContextUser.Email != "" && ctx.IsSigned && !ctx.ContextUser.KeepEmailPrivate
@@ -67,6 +68,7 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 	showPrivate := ctx.IsSigned && (ctx.Doer.IsAdmin || ctx.Doer.ID == ctx.ContextUser.ID)
 	orgs, err := db.Find[organization.Organization](ctx, organization.FindOrgOptions{
 		UserID:         ctx.ContextUser.ID,
+		IncludeLimited: ctx.IsSigned,
 		IncludePrivate: showPrivate,
 	})
 	if err != nil {
@@ -95,6 +97,10 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, profileClose func()) {
 	profileDbRepo, err := repo_model.GetRepositoryByName(ctx, ctx.ContextUser.ID, ".profile")
 	if err == nil {
+		// Don't show profile content if .profile repository is a fork
+		if profileDbRepo.IsFork {
+			return nil, nil, nil, func() {}
+		}
 		perm, err := access_model.GetUserRepoPermission(ctx, profileDbRepo, doer)
 		if err == nil && !profileDbRepo.IsEmpty && perm.CanRead(unit.TypeCode) {
 			if profileGitRepo, err = gitrepo.OpenRepository(ctx, profileDbRepo); err != nil {
@@ -103,7 +109,22 @@ func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profile
 				if commit, err := profileGitRepo.GetBranchCommit(profileDbRepo.DefaultBranch); err != nil {
 					log.Error("FindUserProfileReadme failed to GetBranchCommit: %v", err)
 				} else {
-					profileReadmeBlob, _ = commit.GetBlobByFoldedPath("README.md")
+					tree, err := commit.SubTree("")
+					if err != nil {
+						log.Error("FindUserProfileReadme failed to get SubTree: %v", err)
+					} else {
+						entries, err := tree.ListEntries()
+						if err != nil {
+							log.Error("FindUserProfileReadme failed to list entries: %v", err)
+						} else {
+							_, readmeEntry, err := repo.FindReadmeFileInEntries(ctx, entries, true)
+							if err != nil {
+								log.Error("FindUserProfileReadme failed to find readme in entries: %v", err)
+							} else if readmeEntry != nil {
+								profileReadmeBlob = readmeEntry.Blob()
+							}
+						}
+					}
 				}
 			}
 		}

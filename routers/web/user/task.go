@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strconv"
 
-	admin_model "code.gitea.io/gitea/models/admin"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/services/context"
+	admin_model "forgejo.org/models/admin"
+	"forgejo.org/modules/json"
+	"forgejo.org/services/context"
 )
 
 // TaskStatus returns task's status
@@ -35,7 +35,7 @@ func TaskStatus(ctx *context.Context) {
 		var translatableMessage admin_model.TranslatableMessage
 		if err := json.Unmarshal([]byte(message), &translatableMessage); err != nil {
 			translatableMessage = admin_model.TranslatableMessage{
-				Format: "migrate.migrating_failed.error",
+				Format: "repo.migrate.migrating_failed.error",
 				Args:   []any{task.Message},
 			}
 		}

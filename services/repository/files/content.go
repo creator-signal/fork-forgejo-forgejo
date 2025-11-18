@@ -5,18 +5,19 @@ package files
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
 	"strings"
 
-	"code.gitea.io/gitea/models"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
 )
 
 // ContentType repo content type
@@ -107,7 +108,7 @@ func GetObjectTypeFromTreeEntry(entry *git.TreeEntry) ContentType {
 	switch {
 	case entry.IsDir():
 		return ContentTypeDir
-	case entry.IsSubModule():
+	case entry.IsSubmodule():
 		return ContentTypeSubmodule
 	case entry.IsExecutable(), entry.IsRegular():
 		return ContentTypeRegular
@@ -178,12 +179,13 @@ func GetContents(ctx context.Context, repo *repo_model.Repository, treePath, ref
 
 	// All content types have these fields in populated
 	contentsResponse := &api.ContentsResponse{
-		Name:          entry.Name(),
-		Path:          treePath,
-		SHA:           entry.ID.String(),
-		LastCommitSHA: lastCommit.ID.String(),
-		Size:          entry.Size(),
-		URL:           &selfURLString,
+		Name:           entry.Name(),
+		Path:           treePath,
+		SHA:            entry.ID.String(),
+		LastCommitSHA:  lastCommit.ID.String(),
+		LastCommitWhen: lastCommit.Committer.When,
+		Size:           entry.Size(),
+		URL:            &selfURLString,
 		Links: &api.FileLinksResponse{
 			Self: &selfURLString,
 		},
@@ -204,19 +206,19 @@ func GetContents(ctx context.Context, repo *repo_model.Repository, treePath, ref
 	} else if entry.IsLink() {
 		contentsResponse.Type = string(ContentTypeLink)
 		// The target of a symlink file is the content of the file
-		targetFromContent, err := entry.Blob().GetBlobContent(1024)
+		targetFromContent, err := entry.LinkTarget()
 		if err != nil {
 			return nil, err
 		}
 		contentsResponse.Target = &targetFromContent
-	} else if entry.IsSubModule() {
+	} else if entry.IsSubmodule() {
 		contentsResponse.Type = string(ContentTypeSubmodule)
-		submoduleURL, err := commit.GetSubModule(treePath)
+		submodule, err := commit.GetSubmodule(treePath, entry)
 		if err != nil {
 			return nil, err
 		}
-		if submoduleURL != "" {
-			contentsResponse.SubmoduleGitURL = &submoduleURL
+		if submodule.URL != "" {
+			contentsResponse.SubmoduleGitURL = &submodule.URL
 		}
 	}
 	// Handle links
@@ -228,7 +230,7 @@ func GetContents(ctx context.Context, repo *repo_model.Repository, treePath, ref
 		downloadURLString := downloadURL.String()
 		contentsResponse.DownloadURL = &downloadURLString
 	}
-	if !entry.IsSubModule() {
+	if !entry.IsSubmodule() {
 		htmlURL, err := url.Parse(repo.HTMLURL() + "/src/" + url.PathEscape(string(refType)) + "/" + util.PathEscapeSegments(ref) + "/" + util.PathEscapeSegments(treePath))
 		if err != nil {
 			return nil, err
@@ -249,20 +251,35 @@ func GetContents(ctx context.Context, repo *repo_model.Repository, treePath, ref
 	return contentsResponse, nil
 }
 
-// GetBlobBySHA get the GitBlobResponse of a repository using a sha hash.
-func GetBlobBySHA(ctx context.Context, repo *repo_model.Repository, gitRepo *git.Repository, sha string) (*api.GitBlobResponse, error) {
+// GetBlobsBySHA gets multiple GitBlobs of a repository by sha hash.
+func GetBlobsBySHA(ctx context.Context, repo *repo_model.Repository, gitRepo *git.Repository, shas []string) ([]*api.GitBlob, error) {
+	if len(shas) > setting.API.MaxResponseItems {
+		shas = shas[:setting.API.MaxResponseItems]
+	}
+
+	blobs := make([]*api.GitBlob, 0, len(shas))
+	for _, sha := range shas {
+		blob, err := GetBlobBySHA(ctx, repo, gitRepo, sha)
+		if err != nil {
+			return nil, err
+		}
+		blobs = append(blobs, blob)
+	}
+	return blobs, nil
+}
+
+// GetBlobBySHA get the GitBlob of a repository using a sha hash.
+func GetBlobBySHA(ctx context.Context, repo *repo_model.Repository, gitRepo *git.Repository, sha string) (*api.GitBlob, error) {
 	gitBlob, err := gitRepo.GetBlob(sha)
 	if err != nil {
 		return nil, err
 	}
-	content := ""
-	if gitBlob.Size() <= setting.API.DefaultMaxBlobSize {
-		content, err = gitBlob.GetBlobContentBase64()
-		if err != nil {
-			return nil, err
-		}
+	content, err := gitBlob.GetContentBase64(setting.API.DefaultMaxBlobSize)
+	if err != nil && !errors.As(err, &git.BlobTooLargeError{}) {
+		return nil, err
 	}
-	return &api.GitBlobResponse{
+
+	return &api.GitBlob{
 		SHA:      gitBlob.ID.String(),
 		URL:      repo.APIURL() + "/git/blobs/" + url.PathEscape(gitBlob.ID.String()),
 		Size:     gitBlob.Size(),

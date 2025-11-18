@@ -12,17 +12,17 @@ import (
 	"net/url"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	packages_model "code.gitea.io/gitea/models/packages"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	packages_module "code.gitea.io/gitea/modules/packages"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/storage"
-	notify_service "code.gitea.io/gitea/services/notify"
+	"forgejo.org/models/db"
+	packages_model "forgejo.org/models/packages"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	packages_module "forgejo.org/modules/packages"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
+	notify_service "forgejo.org/services/notify"
 )
 
 var (
@@ -127,12 +127,12 @@ func createPackageAndVersion(ctx context.Context, pvci *PackageCreationInfo, all
 		OwnerID:          pvci.Owner.ID,
 		Type:             pvci.PackageType,
 		Name:             pvci.Name,
-		LowerName:        strings.ToLower(pvci.Name),
+		LowerName:        packages_model.ResolvePackageName(pvci.Name, pvci.PackageType),
 		SemverCompatible: pvci.SemverCompatible,
 	}
 	var err error
 	if p, err = packages_model.TryInsertPackage(ctx, p); err != nil {
-		if err == packages_model.ErrDuplicatePackage {
+		if errors.Is(err, packages_model.ErrDuplicatePackage) {
 			packageCreated = false
 		} else {
 			log.Error("Error inserting package: %v", err)
@@ -208,7 +208,7 @@ func AddFileToExistingPackage(ctx context.Context, pvi *PackageInfo, pfci *Packa
 // This method skips quota checks and should only be used for system-managed packages.
 func AddFileToPackageVersionInternal(ctx context.Context, pv *packages_model.PackageVersion, pfci *PackageFileCreationInfo) (*packages_model.PackageFile, error) {
 	return addFileToPackageWrapper(ctx, func(ctx context.Context) (*packages_model.PackageFile, *packages_model.PackageBlob, bool, error) {
-		return addFileToPackageVersionUnchecked(ctx, pv, pfci)
+		return addFileToPackageVersionUnchecked(ctx, pv, pfci, "")
 	})
 }
 
@@ -244,14 +244,15 @@ func addFileToPackageWrapper(ctx context.Context, fn func(ctx context.Context) (
 
 // NewPackageBlob creates a package blob instance
 func NewPackageBlob(hsr packages_module.HashedSizeReader) *packages_model.PackageBlob {
-	hashMD5, hashSHA1, hashSHA256, hashSHA512 := hsr.Sums()
+	hashMD5, hashSHA1, hashSHA256, hashSHA512, hashBlake2b := hsr.Sums()
 
 	return &packages_model.PackageBlob{
-		Size:       hsr.Size(),
-		HashMD5:    hex.EncodeToString(hashMD5),
-		HashSHA1:   hex.EncodeToString(hashSHA1),
-		HashSHA256: hex.EncodeToString(hashSHA256),
-		HashSHA512: hex.EncodeToString(hashSHA512),
+		Size:        hsr.Size(),
+		HashMD5:     hex.EncodeToString(hashMD5),
+		HashSHA1:    hex.EncodeToString(hashSHA1),
+		HashSHA256:  hex.EncodeToString(hashSHA256),
+		HashSHA512:  hex.EncodeToString(hashSHA512),
+		HashBlake2b: hex.EncodeToString(hashBlake2b),
 	}
 }
 
@@ -260,10 +261,10 @@ func addFileToPackageVersion(ctx context.Context, pv *packages_model.PackageVers
 		return nil, nil, false, err
 	}
 
-	return addFileToPackageVersionUnchecked(ctx, pv, pfci)
+	return addFileToPackageVersionUnchecked(ctx, pv, pfci, pvi.PackageType)
 }
 
-func addFileToPackageVersionUnchecked(ctx context.Context, pv *packages_model.PackageVersion, pfci *PackageFileCreationInfo) (*packages_model.PackageFile, *packages_model.PackageBlob, bool, error) {
+func addFileToPackageVersionUnchecked(ctx context.Context, pv *packages_model.PackageVersion, pfci *PackageFileCreationInfo, packageType packages_model.Type) (*packages_model.PackageFile, *packages_model.PackageBlob, bool, error) {
 	log.Trace("Adding package file: %v, %s", pv.ID, pfci.Filename)
 
 	pb, exists, err := packages_model.GetOrInsertBlob(ctx, NewPackageBlob(pfci.Data))
@@ -303,7 +304,7 @@ func addFileToPackageVersionUnchecked(ctx context.Context, pv *packages_model.Pa
 		VersionID:    pv.ID,
 		BlobID:       pb.ID,
 		Name:         pfci.Filename,
-		LowerName:    strings.ToLower(pfci.Filename),
+		LowerName:    packages_model.ResolvePackageName(pfci.Filename, packageType),
 		CompositeKey: pfci.CompositeKey,
 		IsLead:       pfci.IsLead,
 	}
@@ -395,6 +396,8 @@ func CheckSizeQuotaExceeded(ctx context.Context, doer, owner *user_model.User, p
 		typeSpecificSize = setting.Packages.LimitSizePyPI
 	case packages_model.TypeRpm:
 		typeSpecificSize = setting.Packages.LimitSizeRpm
+	case packages_model.TypeAlt:
+		typeSpecificSize = setting.Packages.LimitSizeAlt
 	case packages_model.TypeRubyGems:
 		typeSpecificSize = setting.Packages.LimitSizeRubyGems
 	case packages_model.TypeSwift:

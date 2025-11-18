@@ -11,15 +11,15 @@ import (
 	"strconv"
 	"testing"
 
-	"code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	issue_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/translation"
-	forgejo_context "code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	issue_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/translation"
+	forgejo_context "forgejo.org/services/context"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +31,6 @@ func BlockUser(t *testing.T, doer, blockedUser *user_model.User) {
 
 	session := loginUser(t, doer.Name)
 	req := NewRequestWithValues(t, "POST", "/"+blockedUser.Name, map[string]string{
-		"_csrf":  GetCSRF(t, session, "/"+blockedUser.Name),
 		"action": "block",
 	})
 	session.MakeRequest(t, req, http.StatusOK)
@@ -57,7 +56,6 @@ func TestBlockUser(t *testing.T) {
 	t.Run("Unblock", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 		req := NewRequestWithValues(t, "POST", "/"+blockedUser.Name, map[string]string{
-			"_csrf":  GetCSRF(t, session, "/"+blockedUser.Name),
 			"action": "unblock",
 		})
 		session.MakeRequest(t, req, http.StatusOK)
@@ -71,7 +69,6 @@ func TestBlockUser(t *testing.T) {
 
 		t.Run("Block", func(t *testing.T) {
 			req := NewRequestWithValues(t, "POST", "/"+targetOrg.Name, map[string]string{
-				"_csrf":  GetCSRF(t, session, "/"+targetOrg.Name),
 				"action": "block",
 			})
 			resp := session.MakeRequest(t, req, http.StatusBadRequest)
@@ -81,7 +78,6 @@ func TestBlockUser(t *testing.T) {
 
 		t.Run("Unblock", func(t *testing.T) {
 			req := NewRequestWithValues(t, "POST", "/"+targetOrg.Name, map[string]string{
-				"_csrf":  GetCSRF(t, session, "/"+targetOrg.Name),
 				"action": "unblock",
 			})
 			resp := session.MakeRequest(t, req, http.StatusBadRequest)
@@ -105,7 +101,6 @@ func TestBlockUserFromOrganization(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequestWithValues(t, "POST", org.OrganisationLink()+"/settings/blocked_users/block", map[string]string{
-			"_csrf": GetCSRF(t, session, org.OrganisationLink()+"/settings/blocked_users"),
 			"uname": blockedUser.Name,
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
@@ -116,7 +111,6 @@ func TestBlockUserFromOrganization(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequestWithValues(t, "POST", org.OrganisationLink()+"/settings/blocked_users/unblock", map[string]string{
-			"_csrf":   GetCSRF(t, session, org.OrganisationLink()+"/settings/blocked_users"),
 			"user_id": strconv.FormatInt(blockedUser.ID, 10),
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
@@ -130,7 +124,6 @@ func TestBlockUserFromOrganization(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", org.OrganisationLink()+"/settings/blocked_users/block", map[string]string{
-				"_csrf": GetCSRF(t, session, org.OrganisationLink()+"/settings/blocked_users"),
 				"uname": targetOrg.Name,
 			})
 			session.MakeRequest(t, req, http.StatusInternalServerError)
@@ -141,7 +134,6 @@ func TestBlockUserFromOrganization(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", org.OrganisationLink()+"/settings/blocked_users/unblock", map[string]string{
-				"_csrf":   GetCSRF(t, session, org.OrganisationLink()+"/settings/blocked_users"),
 				"user_id": strconv.FormatInt(targetOrg.ID, 10),
 			})
 			session.MakeRequest(t, req, http.StatusInternalServerError)
@@ -152,14 +144,13 @@ func TestBlockUserFromOrganization(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequestWithValues(t, "POST", org.OrganisationLink()+"/settings/blocked_users/block", map[string]string{
-			"_csrf": GetCSRF(t, session, org.OrganisationLink()+"/settings/blocked_users"),
 			"uname": doer.Name,
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 		assert.False(t, unittest.BeanExists(t, &user_model.BlockedUser{BlockID: doer.ID, UserID: org.ID}))
 		flashCookie := session.GetCookie(forgejo_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
-		assert.EqualValues(t, "error%3DYou%2Bcannot%2Bblock%2Byourself.", flashCookie.Value)
+		assert.Equal(t, "error%3DYou%2Bcannot%2Bblock%2Byourself.", flashCookie.Value)
 	})
 }
 
@@ -167,7 +158,7 @@ func TestBlockUserFromOrganization(t *testing.T) {
 // and as a blocked user and are handled cleanly after the blocking has taken
 // place.
 func TestBlockActions(t *testing.T) {
-	defer tests.AddFixtures("tests/integration/fixtures/TestBlockActions/")()
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestBlockActions")()
 	defer tests.PrepareTestEnv(t)()
 
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -201,7 +192,6 @@ func TestBlockActions(t *testing.T) {
 		link := fmt.Sprintf("%s/issues/new", repo2.FullName())
 
 		req := NewRequestWithValues(t, "POST", link, map[string]string{
-			"_csrf":   GetCSRF(t, session, link),
 			"title":   "Title",
 			"content": "Hello!",
 		})
@@ -221,7 +211,6 @@ func TestBlockActions(t *testing.T) {
 		link := fmt.Sprintf("%s/compare/v1.1...master", repo1.FullName())
 
 		req := NewRequestWithValues(t, "POST", link, map[string]string{
-			"_csrf":   GetCSRF(t, session, link),
 			"title":   "Title",
 			"content": "Hello!",
 		})
@@ -236,7 +225,7 @@ func TestBlockActions(t *testing.T) {
 	// Ensures that comment creation on doer's owned repositories and doer's
 	// posted issues are blocked.
 	t.Run("Comment creation", func(t *testing.T) {
-		expectedMessage := locale.Tr("repo.issues.comment.blocked_by_user")
+		expectedMessage := locale.Tr("repo.comment.blocked_by_user")
 
 		t.Run("Blocked by repository owner", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -244,7 +233,6 @@ func TestBlockActions(t *testing.T) {
 			session := loginUser(t, blockedUser.Name)
 
 			req := NewRequestWithValues(t, "POST", path.Join(issue10URL, "/comments"), map[string]string{
-				"_csrf":   GetCSRF(t, session, issue10URL),
 				"content": "Not a kind comment",
 			})
 			resp := session.MakeRequest(t, req, http.StatusBadRequest)
@@ -253,6 +241,12 @@ func TestBlockActions(t *testing.T) {
 			DecodeJSON(t, resp, &errorResp)
 
 			assert.EqualValues(t, expectedMessage, errorResp.Error)
+
+			req = NewRequest(t, "GET", issue10URL)
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			msg := htmlDoc.doc.Find("div .warning").Text()
+			assert.Contains(t, msg, expectedMessage)
 		})
 
 		t.Run("Blocked by issue poster", func(t *testing.T) {
@@ -265,7 +259,6 @@ func TestBlockActions(t *testing.T) {
 			issueURL := fmt.Sprintf("/%s/%s/issues/%d", url.PathEscape(repo5.OwnerName), url.PathEscape(repo5.Name), issue15.Index)
 
 			req := NewRequestWithValues(t, "POST", path.Join(issueURL, "/comments"), map[string]string{
-				"_csrf":   GetCSRF(t, session, issueURL),
 				"content": "Not a kind comment",
 			})
 			resp := session.MakeRequest(t, req, http.StatusBadRequest)
@@ -274,6 +267,12 @@ func TestBlockActions(t *testing.T) {
 			DecodeJSON(t, resp, &errorResp)
 
 			assert.EqualValues(t, expectedMessage, errorResp.Error)
+
+			req = NewRequest(t, "GET", issue10URL)
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			msg := htmlDoc.doc.Find("div .warning").Text()
+			assert.Contains(t, msg, expectedMessage)
 		})
 	})
 
@@ -290,7 +289,6 @@ func TestBlockActions(t *testing.T) {
 			session := loginUser(t, blockedUser.Name)
 
 			req := NewRequestWithValues(t, "POST", path.Join(issue4URL, "/reactions/react"), map[string]string{
-				"_csrf":   GetCSRF(t, session, issue4URL),
 				"content": "eyes",
 			})
 			resp := session.MakeRequest(t, req, http.StatusOK)
@@ -309,7 +307,6 @@ func TestBlockActions(t *testing.T) {
 			session := loginUser(t, blockedUser.Name)
 
 			req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/comments/%d/reactions/react", repo2.FullName(), comment.ID), map[string]string{
-				"_csrf":   GetCSRF(t, session, issue4URL),
 				"content": "eyes",
 			})
 			resp := session.MakeRequest(t, req, http.StatusOK)
@@ -334,7 +331,6 @@ func TestBlockActions(t *testing.T) {
 			session := loginUser(t, doer.Name)
 
 			req := NewRequestWithValues(t, "POST", "/"+blockedUser.Name, map[string]string{
-				"_csrf":  GetCSRF(t, session, "/"+blockedUser.Name),
 				"action": "follow",
 			})
 			resp := session.MakeRequest(t, req, http.StatusOK)
@@ -353,7 +349,6 @@ func TestBlockActions(t *testing.T) {
 			session := loginUser(t, blockedUser.Name)
 
 			req := NewRequestWithValues(t, "POST", "/"+doer.Name, map[string]string{
-				"_csrf":  GetCSRF(t, session, "/"+doer.Name),
 				"action": "follow",
 			})
 			resp := session.MakeRequest(t, req, http.StatusOK)
@@ -374,14 +369,13 @@ func TestBlockActions(t *testing.T) {
 			link := fmt.Sprintf("/%s/settings/collaboration", repo2.FullName())
 
 			req := NewRequestWithValues(t, "POST", link, map[string]string{
-				"_csrf":        GetCSRF(t, session, link),
 				"collaborator": blockedUser2.Name,
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
 			flashCookie := session.GetCookie(forgejo_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "error%3DCannot%2Badd%2Bthe%2Bcollaborator%252C%2Bbecause%2Bthe%2Brepository%2Bowner%2Bhas%2Bblocked%2Bthem.", flashCookie.Value)
+			assert.Equal(t, "error%3DCannot%2Badd%2Bthe%2Bcollaborator%252C%2Bbecause%2Bthe%2Brepository%2Bowner%2Bhas%2Bblocked%2Bthem.", flashCookie.Value)
 		})
 
 		t.Run("BlockedUser Add doer", func(t *testing.T) {
@@ -391,14 +385,13 @@ func TestBlockActions(t *testing.T) {
 			link := fmt.Sprintf("/%s/settings/collaboration", repo7.FullName())
 
 			req := NewRequestWithValues(t, "POST", link, map[string]string{
-				"_csrf":        GetCSRF(t, session, link),
 				"collaborator": doer.Name,
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
 			flashCookie := session.GetCookie(forgejo_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "error%3DCannot%2Badd%2Bthe%2Bcollaborator%252C%2Bbecause%2Bthey%2Bhave%2Bblocked%2Bthe%2Brepository%2Bowner.", flashCookie.Value)
+			assert.Equal(t, "error%3DCannot%2Badd%2Bthe%2Bcollaborator%252C%2Bbecause%2Bthey%2Bhave%2Bblocked%2Bthe%2Brepository%2Bowner.", flashCookie.Value)
 		})
 	})
 
@@ -410,7 +403,6 @@ func TestBlockActions(t *testing.T) {
 		link := fmt.Sprintf("%s/settings", repo7.FullName())
 
 		req := NewRequestWithValues(t, "POST", link, map[string]string{
-			"_csrf":          GetCSRF(t, session, link),
 			"action":         "transfer",
 			"repo_name":      repo7.FullName(),
 			"new_owner_name": doer.Name,
@@ -426,7 +418,7 @@ func TestBlockActions(t *testing.T) {
 }
 
 func TestBlockedNotification(t *testing.T) {
-	defer tests.AddFixtures("tests/integration/fixtures/TestBlockedNotifications")()
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestBlockedNotifications")()
 	defer tests.PrepareTestEnv(t)()
 
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -444,7 +436,6 @@ func TestBlockedNotification(t *testing.T) {
 		t.Helper()
 
 		req := NewRequestWithValues(t, "POST", issueURL+"/comments", map[string]string{
-			"_csrf":   GetCSRF(t, session, issueURL),
 			"content": "I'm annoying. Pinging @" + doer.Name,
 		})
 		session.MakeRequest(t, req, http.StatusOK)

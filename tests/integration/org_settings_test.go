@@ -8,16 +8,15 @@ import (
 	"net/http"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func getOrgSettingsFormData(t *testing.T, session *TestSession, orgName string) map[string]string {
 	return map[string]string{
-		"_csrf":                         GetCSRF(t, session, fmt.Sprintf("/org/%s/settings", orgName)),
 		"name":                          orgName,
 		"full_name":                     "",
 		"email":                         "",
@@ -57,7 +56,9 @@ func TestOrgSettingsChangeEmail(t *testing.T) {
 		settings := getOrgSettingsFormData(t, session, orgName)
 
 		settings["email"] = "invalid"
-		session.MakeRequest(t, NewRequestWithValues(t, "POST", settingsURL, settings), http.StatusOK)
+		doc := NewHTMLParser(t, session.MakeRequest(t, NewRequestWithValues(t, "POST", settingsURL, settings), http.StatusOK).Body)
+		doc.AssertElement(t, ".status-page-500", false)
+		doc.AssertElement(t, ".flash-error", true)
 
 		org := getOrgSettings(t, token, orgName)
 		assert.Equal(t, "org3@example.com", org.Email)
@@ -69,7 +70,10 @@ func TestOrgSettingsChangeEmail(t *testing.T) {
 		settings := getOrgSettingsFormData(t, session, orgName)
 
 		settings["email"] = "example@example.com"
-		session.MakeRequest(t, NewRequestWithValues(t, "POST", settingsURL, settings), http.StatusSeeOther)
+		doc := NewHTMLParser(t, session.MakeRequest(t, NewRequestWithValues(t, "POST", settingsURL, settings), http.StatusSeeOther).Body)
+		doc.AssertElement(t, "body", true)
+		doc.AssertElement(t, ".status-page-500", false)
+		doc.AssertElement(t, ".flash-error", false)
 
 		org := getOrgSettings(t, token, orgName)
 		assert.Equal(t, "example@example.com", org.Email)
@@ -81,7 +85,10 @@ func TestOrgSettingsChangeEmail(t *testing.T) {
 		settings := getOrgSettingsFormData(t, session, orgName)
 
 		settings["email"] = ""
-		session.MakeRequest(t, NewRequestWithValues(t, "POST", settingsURL, settings), http.StatusSeeOther)
+		doc := NewHTMLParser(t, session.MakeRequest(t, NewRequestWithValues(t, "POST", settingsURL, settings), http.StatusSeeOther).Body)
+		doc.AssertElement(t, "body", true)
+		doc.AssertElement(t, ".status-page-500", false)
+		doc.AssertElement(t, ".flash-error", false)
 
 		org := getOrgSettings(t, token, orgName)
 		assert.Empty(t, org.Email)

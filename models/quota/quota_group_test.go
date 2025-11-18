@@ -6,12 +6,14 @@ package quota_test
 import (
 	"testing"
 
-	quota_model "code.gitea.io/gitea/models/quota"
+	quota_model "forgejo.org/models/quota"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestQuotaGroupAllRulesMustPass(t *testing.T) {
+func TestQuotaGroupAllRulesMustAllow(t *testing.T) {
 	unlimitedRule := quota_model.Rule{
 		Limit: -1,
 		Subjects: quota_model.LimitSubjects{
@@ -34,11 +36,11 @@ func TestQuotaGroupAllRulesMustPass(t *testing.T) {
 	used := quota_model.Used{}
 	used.Size.Repos.Public = 1024
 
-	// Within a group, *all* rules must pass. Thus, if we have a deny-all rule,
-	// and an unlimited rule, that will always fail.
-	ok, has := group.Evaluate(used, quota_model.LimitSubjectSizeAll)
-	assert.True(t, has)
-	assert.False(t, ok)
+	// Within a group, *all* matching rules must allow. Thus, if we have a deny-all rule,
+	// and an unlimited rule, the deny rule wins.
+	match, allow := group.Evaluate(used, quota_model.LimitSubjectSizeAll)
+	assert.True(t, match)
+	assert.False(t, allow)
 }
 
 func TestQuotaGroupRuleScenario1(t *testing.T) {
@@ -66,21 +68,21 @@ func TestQuotaGroupRuleScenario1(t *testing.T) {
 	used.Size.Assets.Packages.All = 256
 	used.Size.Git.LFS = 16
 
-	ok, has := group.Evaluate(used, quota_model.LimitSubjectSizeAssetsAttachmentsReleases)
-	assert.True(t, has, "size:assets:attachments:releases is covered")
-	assert.True(t, ok, "size:assets:attachments:releases passes")
+	match, allow := group.Evaluate(used, quota_model.LimitSubjectSizeAssetsAttachmentsReleases)
+	assert.True(t, match, "size:assets:attachments:releases is covered")
+	assert.True(t, allow, "size:assets:attachments:releases is allowed")
 
-	ok, has = group.Evaluate(used, quota_model.LimitSubjectSizeAssetsPackagesAll)
-	assert.True(t, has, "size:assets:packages:all is covered")
-	assert.True(t, ok, "size:assets:packages:all passes")
+	match, allow = group.Evaluate(used, quota_model.LimitSubjectSizeAssetsPackagesAll)
+	assert.True(t, match, "size:assets:packages:all is covered")
+	assert.True(t, allow, "size:assets:packages:all is allowed")
 
-	ok, has = group.Evaluate(used, quota_model.LimitSubjectSizeGitLFS)
-	assert.True(t, has, "size:git:lfs is covered")
-	assert.False(t, ok, "size:git:lfs fails")
+	match, allow = group.Evaluate(used, quota_model.LimitSubjectSizeGitLFS)
+	assert.True(t, match, "size:git:lfs is covered")
+	assert.False(t, allow, "size:git:lfs is denied")
 
-	ok, has = group.Evaluate(used, quota_model.LimitSubjectSizeAll)
-	assert.True(t, has, "size:all is covered")
-	assert.False(t, ok, "size:all fails")
+	match, allow = group.Evaluate(used, quota_model.LimitSubjectSizeAll)
+	assert.False(t, match, "size:all is not covered")
+	assert.False(t, allow, "size:all is not allowed (not covered)")
 }
 
 func TestQuotaGroupRuleCombination(t *testing.T) {
@@ -108,27 +110,23 @@ func TestQuotaGroupRuleCombination(t *testing.T) {
 		},
 	}
 
-	// Git LFS isn't covered by any rule
-	_, has := group.Evaluate(used, quota_model.LimitSubjectSizeGitLFS)
-	assert.False(t, has)
+	// Git LFS does not match any rule
+	match, allow := group.Evaluate(used, quota_model.LimitSubjectSizeGitLFS)
+	assert.False(t, match)
+	assert.False(t, allow)
 
-	// repos:all is covered, and is passing
-	ok, has := group.Evaluate(used, quota_model.LimitSubjectSizeReposAll)
-	assert.True(t, has)
-	assert.True(t, ok)
+	// repos:all has a matching rule and is allowed
+	match, allow = group.Evaluate(used, quota_model.LimitSubjectSizeReposAll)
+	assert.True(t, match)
+	assert.True(t, allow)
 
-	// packages:all is covered, and is failing
-	ok, has = group.Evaluate(used, quota_model.LimitSubjectSizeAssetsPackagesAll)
-	assert.True(t, has)
-	assert.False(t, ok)
-
-	// size:all is covered, and is failing (due to packages:all being over quota)
-	ok, has = group.Evaluate(used, quota_model.LimitSubjectSizeAll)
-	assert.True(t, has, "size:all should be covered")
-	assert.False(t, ok, "size:all should fail")
+	// packages:all has a matching rule and is denied
+	match, allow = group.Evaluate(used, quota_model.LimitSubjectSizeAssetsPackagesAll)
+	assert.True(t, match)
+	assert.False(t, allow)
 }
 
-func TestQuotaGroupListsRequireOnlyOnePassing(t *testing.T) {
+func TestQuotaGroupListsRequireOnlyOneAllow(t *testing.T) {
 	unlimitedRule := quota_model.Rule{
 		Limit: -1,
 		Subjects: quota_model.LimitSubjects{
@@ -158,12 +156,12 @@ func TestQuotaGroupListsRequireOnlyOnePassing(t *testing.T) {
 	used := quota_model.Used{}
 	used.Size.Repos.Public = 1024
 
-	// In a group list, if any group passes, the entire evaluation passes.
-	ok := groups.Evaluate(used, quota_model.LimitSubjectSizeAll)
-	assert.True(t, ok)
+	// In a group list, an action is allowed if any group matches and allows it.
+	allow := groups.Evaluate(used, quota_model.LimitSubjectSizeAll)
+	assert.True(t, allow)
 }
 
-func TestQuotaGroupListAllFailing(t *testing.T) {
+func TestQuotaGroupListAllDeny(t *testing.T) {
 	denyRule := quota_model.Rule{
 		Limit: 0,
 		Subjects: quota_model.LimitSubjects{
@@ -193,16 +191,38 @@ func TestQuotaGroupListAllFailing(t *testing.T) {
 	used := quota_model.Used{}
 	used.Size.Repos.Public = 2048
 
-	ok := groups.Evaluate(used, quota_model.LimitSubjectSizeAll)
-	assert.False(t, ok)
+	allow := groups.Evaluate(used, quota_model.LimitSubjectSizeAll)
+	assert.False(t, allow)
 }
 
-func TestQuotaGroupListEmpty(t *testing.T) {
+// An empty group list should result in the use of the built in Default
+// group: size:all defaulting to unlimited
+func TestQuotaDefaultGroup(t *testing.T) {
 	groups := quota_model.GroupList{}
 
 	used := quota_model.Used{}
 	used.Size.Repos.Public = 2048
 
-	ok := groups.Evaluate(used, quota_model.LimitSubjectSizeAll)
-	assert.True(t, ok)
+	testSets := []struct {
+		name        string
+		limit       int64
+		expectAllow bool
+	}{
+		{"unlimited", -1, true},
+		{"limit-allow", 1024 * 1024, true},
+		{"limit-deny", 1024, false},
+	}
+
+	for _, testSet := range testSets {
+		t.Run(testSet.name, func(t *testing.T) {
+			defer test.MockVariableValue(&setting.Quota.Default.Total, testSet.limit)()
+
+			for subject := quota_model.LimitSubjectFirst; subject <= quota_model.LimitSubjectLast; subject++ {
+				t.Run(subject.String(), func(t *testing.T) {
+					allow := groups.Evaluate(used, subject)
+					assert.Equal(t, testSet.expectAllow, allow)
+				})
+			}
+		})
+	}
 }

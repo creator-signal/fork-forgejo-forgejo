@@ -4,8 +4,8 @@
 package org
 
 import (
-	"code.gitea.io/gitea/routers/api/v1/shared"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/routers/api/v1/shared"
+	"forgejo.org/services/context"
 )
 
 // GetQuota returns the quota information for a given organization
@@ -45,9 +45,16 @@ func CheckQuota(ctx *context.APIContext) {
 	//   description: name of the organization
 	//   type: string
 	//   required: true
+	// - name: subject
+	//   in: query
+	//   description: subject of the quota
+	//   type: string
+	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/boolean"
+	//     description: Returns true if the action is accepted.
+	//     schema:
+	//       type: boolean
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 	//   "404":

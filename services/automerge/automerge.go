@@ -8,22 +8,22 @@ import (
 	"errors"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	pull_model "code.gitea.io/gitea/models/pull"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/process"
-	"code.gitea.io/gitea/modules/queue"
-	notify_service "code.gitea.io/gitea/services/notify"
-	pull_service "code.gitea.io/gitea/services/pull"
-	repo_service "code.gitea.io/gitea/services/repository"
-	shared_automerge "code.gitea.io/gitea/services/shared/automerge"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	access_model "forgejo.org/models/perm/access"
+	pull_model "forgejo.org/models/pull"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/process"
+	"forgejo.org/modules/queue"
+	notify_service "forgejo.org/services/notify"
+	pull_service "forgejo.org/services/pull"
+	repo_service "forgejo.org/services/repository"
+	shared_automerge "forgejo.org/services/shared/automerge"
 )
 
 // Init runs the task queue to that handles auto merges
@@ -32,7 +32,7 @@ func Init() error {
 
 	shared_automerge.PRAutoMergeQueue = queue.CreateUniqueQueue(graceful.GetManager().ShutdownContext(), "pr_auto_merge", handler)
 	if shared_automerge.PRAutoMergeQueue == nil {
-		return fmt.Errorf("unable to create pr_auto_merge queue")
+		return errors.New("unable to create pr_auto_merge queue")
 	}
 	go graceful.GetManager().RunWithCancel(shared_automerge.PRAutoMergeQueue)
 	return nil
@@ -107,6 +107,7 @@ func handlePullRequestAutoMerge(pullID int64, sha string) {
 		return
 	}
 	if !exists {
+		log.Trace("GetScheduledMergeByPullID found nothing for PR %d", pullID)
 		return
 	}
 
@@ -161,7 +162,7 @@ func handlePullRequestAutoMerge(pullID int64, sha string) {
 			return
 		}
 	case issues_model.PullRequestFlowAGit:
-		headBranchExist := git.IsReferenceExist(ctx, baseGitRepo.Path, pr.GetGitRefName())
+		headBranchExist := baseGitRepo.IsReferenceExist(pr.GetGitRefName())
 		if !headBranchExist {
 			log.Warn("Head branch of auto merge %-v does not exist [HeadRepoID: %d, Branch(Agit): %s]", pr, pr.HeadRepoID, pr.HeadBranch)
 			return
@@ -202,6 +203,10 @@ func handlePullRequestAutoMerge(pullID int64, sha string) {
 		}
 		log.Error("%-v CheckPullMergeable: %v", pr, err)
 		return
+	}
+
+	if err := pull_model.DeleteScheduledAutoMerge(ctx, pr.ID); err != nil && !db.IsErrNotExist(err) {
+		log.Error("DeleteScheduledAutoMerge[%d]: %v", pr.ID, err)
 	}
 
 	if err := pull_service.Merge(ctx, pr, doer, baseGitRepo, scheduledPRM.MergeStyle, "", scheduledPRM.Message, true); err != nil {

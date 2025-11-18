@@ -11,10 +11,10 @@ import (
 	"strings"
 	"sync"
 
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup/mdstripper"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup/mdstripper"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 )
 
 var (
@@ -460,15 +460,17 @@ func findAllIssueReferencesBytes(content []byte, links []string) []*rawReference
 			}
 			parts := strings.Split(u.EscapedPath(), "/")
 			// /user/repo/issues/3
-			if len(parts) != 5 || parts[0] != "" {
+			// /user/repo/pulls/7/files/...
+			if len(parts) < 5 || parts[0] != "" {
 				continue
 			}
 			var sep string
-			if parts[3] == "issues" {
+			switch parts[3] {
+			case "issues":
 				sep = "#"
-			} else if parts[3] == "pulls" {
+			case "pulls":
 				sep = "!"
-			} else {
+			default:
 				continue
 			}
 			// Note: closing/reopening keywords not supported with URLs

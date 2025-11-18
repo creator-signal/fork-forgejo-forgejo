@@ -1,27 +1,30 @@
 // Copyright 2023 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package issues
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	project_model "code.gitea.io/gitea/models/project"
-	repo_model "code.gitea.io/gitea/models/repo"
-	system_model "code.gitea.io/gitea/models/system"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/references"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	project_model "forgejo.org/models/project"
+	repo_model "forgejo.org/models/repo"
+	system_model "forgejo.org/models/system"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/references"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/stats"
 
 	"xorm.io/builder"
 )
@@ -64,6 +67,10 @@ func changeIssueStatus(ctx context.Context, issue *Issue, doer *user_model.User,
 }
 
 func doChangeIssueStatus(ctx context.Context, issue *Issue, doer *user_model.User, isMergePull bool) (*Comment, error) {
+	if user_model.IsBlockedMultiple(ctx, []int64{issue.Repo.OwnerID, issue.PosterID}, doer.ID) {
+		return nil, user_model.ErrBlockedByUser
+	}
+
 	// Check for open dependencies
 	if issue.IsClosed && issue.Repo.IsDependenciesEnabled(ctx) {
 		// only check if dependencies are enabled and we're about to close an issue, otherwise reopening an issue would fail when there are unsatisfied dependencies
@@ -95,22 +102,16 @@ func doChangeIssueStatus(ctx context.Context, issue *Issue, doer *user_model.Use
 	if err := issue.LoadLabels(ctx); err != nil {
 		return nil, err
 	}
-	for idx := range issue.Labels {
-		if err := updateLabelCols(ctx, issue.Labels[idx], "num_issues", "num_closed_issue"); err != nil {
-			return nil, err
-		}
+	for _, label := range issue.Labels {
+		stats.QueueRecalcLabelByID(ctx, label.ID)
 	}
 
 	// Update issue count of milestone
 	if issue.MilestoneID > 0 {
 		if issue.NoAutoTime {
-			if err := UpdateMilestoneCountersWithDate(ctx, issue.MilestoneID, issue.UpdatedUnix); err != nil {
-				return nil, err
-			}
+			stats.QueueRecalcMilestoneByIDWithDate(ctx, issue.MilestoneID, issue.UpdatedUnix)
 		} else {
-			if err := UpdateMilestoneCounters(ctx, issue.MilestoneID); err != nil {
-				return nil, err
-			}
+			stats.QueueRecalcMilestoneByID(ctx, issue.MilestoneID)
 		}
 	}
 
@@ -271,6 +272,11 @@ func ChangeIssueContent(ctx context.Context, issue *Issue, doer *user_model.User
 		}
 	}
 
+	// If the issue was reported as abusive, a shadow copy should be created before first update.
+	if err := IfNeededCreateShadowCopyForIssue(ctx, issue); err != nil {
+		return err
+	}
+
 	issue.Content = content
 	issue.ContentVersion = contentVersion + 1
 
@@ -328,10 +334,10 @@ func NewIssueWithIndex(ctx context.Context, doer *user_model.User, opts NewIssue
 	}
 
 	if opts.Issue.Index <= 0 {
-		return fmt.Errorf("no issue index provided")
+		return errors.New("no issue index provided")
 	}
 	if opts.Issue.ID > 0 {
-		return fmt.Errorf("issue exist")
+		return errors.New("issue exist")
 	}
 
 	opts.Issue.Created = timeutil.TimeStampNanoNow()
@@ -341,9 +347,7 @@ func NewIssueWithIndex(ctx context.Context, doer *user_model.User, opts NewIssue
 	}
 
 	if opts.Issue.MilestoneID > 0 {
-		if err := UpdateMilestoneCounters(ctx, opts.Issue.MilestoneID); err != nil {
-			return err
-		}
+		stats.QueueRecalcMilestoneByID(ctx, opts.Issue.MilestoneID)
 
 		opts := &CreateCommentOptions{
 			Type:           CommentTypeMilestone,
@@ -433,7 +437,7 @@ func NewIssue(ctx context.Context, repo *repo_model.Repository, issue *Issue, la
 		LabelIDs:    labelIDs,
 		Attachments: uuids,
 	}); err != nil {
-		if repo_model.IsErrUserDoesNotHaveAccessToRepo(err) || IsErrNewIssueInsert(err) {
+		if repo_model.IsErrUserDoesNotHaveAccessToRepo(err) {
 			return err
 		}
 		return fmt.Errorf("newIssue: %w", err)

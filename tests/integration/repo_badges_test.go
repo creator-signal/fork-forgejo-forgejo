@@ -12,32 +12,32 @@ import (
 	"strings"
 	"testing"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	auth_model "code.gitea.io/gitea/models/auth"
-	repo_model "code.gitea.io/gitea/models/repo"
-	unit_model "code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/routers"
-	"code.gitea.io/gitea/services/release"
-	files_service "code.gitea.io/gitea/services/repository/files"
-	"code.gitea.io/gitea/tests"
+	actions_model "forgejo.org/models/actions"
+	auth_model "forgejo.org/models/auth"
+	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/routers"
+	"forgejo.org/services/release"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBadges(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		prep := func(t *testing.T) (*repo_model.Repository, func()) {
 			owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 			repo, _, f := tests.CreateDeclarativeRepo(t, owner, "",
-				[]unit_model.Type{unit_model.TypeActions},
-				[]unit_model.Type{unit_model.TypeIssues, unit_model.TypePullRequests, unit_model.TypeReleases},
+				[]unit_model.Type{unit_model.TypeActions, unit_model.TypeReleases},
+				[]unit_model.Type{unit_model.TypeIssues, unit_model.TypePullRequests},
 				[]*files_service.ChangeRepoFile{
 					{
 						Operation:     "create",

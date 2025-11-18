@@ -37,27 +37,27 @@ export function initRepoIssueTimeTracking() {
     $('.issue-start-time-modal').modal({
       duration: 200,
       onApprove() {
-        $('#add_time_manual_form').trigger('submit');
+        document.getElementById('add_time_manual_form').requestSubmit();
       },
     }).modal('show');
     $('.issue-start-time-modal input').on('keydown', (e) => {
       if ((e.keyCode || e.key) === 13) {
-        $('#add_time_manual_form').trigger('submit');
+        document.getElementById('add_time_manual_form').requestSubmit();
       }
     });
   });
   $(document).on('click', '.issue-start-time, .issue-stop-time', () => {
-    $('#toggle_stopwatch_form').trigger('submit');
+    document.getElementById('toggle_stopwatch_form').requestSubmit();
   });
   $(document).on('click', '.issue-cancel-time', () => {
-    $('#cancel_stopwatch_form').trigger('submit');
+    document.getElementById('cancel_stopwatch_form').requestSubmit();
   });
   $(document).on('click', 'button.issue-delete-time', function () {
     const sel = `.issue-delete-time-modal[data-id="${$(this).data('id')}"]`;
     $(sel).modal({
       duration: 200,
       onApprove() {
-        $(`${sel} form`).trigger('submit');
+        document.querySelector(`${sel} form`).requestSubmit();
       },
     }).modal('show');
   });
@@ -125,31 +125,36 @@ function excludeLabel(item) {
 export function initRepoIssueSidebarList() {
   const repolink = $('#repolink').val();
   const repoId = $('#repoId').val();
-  const crossRepoSearch = $('#crossRepoSearch').val();
+  const crossRepoSearch = $('#crossRepoSearch').val() === 'true';
   const tp = $('#type').val();
-  let issueSearchUrl = `${appSubUrl}/${repolink}/issues/search?q={query}&type=${tp}`;
-  if (crossRepoSearch === 'true') {
-    issueSearchUrl = `${appSubUrl}/issues/search?q={query}&priority_repo_id=${repoId}&type=${tp}`;
-  }
   $('#new-dependency-drop-list')
     .dropdown({
       apiSettings: {
-        url: issueSearchUrl,
+        beforeSend(settings) {
+          if (!settings.urlData.query.trim()) {
+            settings.url = `${appSubUrl}/${repolink}/issues/search?q={query}&type=${tp}&sort=updated`;
+          } else if (crossRepoSearch) {
+            settings.url = `${appSubUrl}/issues/search?q={query}&priority_repo_id=${repoId}&type=${tp}&sort=relevance`;
+          } else {
+            settings.url = `${appSubUrl}/${repolink}/issues/search?q={query}&type=${tp}&sort=relevance`;
+          }
+          return settings;
+        },
         onResponse(response) {
           const filteredResponse = {success: true, results: []};
           const currIssueId = $('#new-dependency-drop-list').data('issue-id');
           // Parse the response from the api to work with our dropdown
-          $.each(response, (_i, issue) => {
+          for (const [_, issue] of Object.entries(response)) {
             // Don't list current issue in the dependency list.
             if (issue.id === currIssueId) {
-              return;
+              continue;
             }
             filteredResponse.results.push({
               name: `#${issue.number} ${issueTitleHTML(htmlEscape(issue.title))
               }<div class="text small tw-break-anywhere">${htmlEscape(issue.repository.full_name)}</div>`,
               value: issue.id,
             });
-          });
+          }
           return filteredResponse;
         },
         cache: false,
@@ -167,6 +172,7 @@ export function initRepoIssueSidebarList() {
     });
   });
 
+  // FIXME: this is broken, see discussion https://codeberg.org/forgejo/forgejo/pulls/8199
   $('.menu .ui.dropdown.label-filter').on('keydown', (e) => {
     if (e.altKey && e.keyCode === 13) {
       const selectedItem = document.querySelector('.menu .ui.dropdown.label-filter .menu .item.selected');
@@ -247,7 +253,7 @@ export function initRepoIssueDependencyDelete() {
       onApprove: () => {
         $('#removeDependencyID').val(id);
         $('#dependencyType').val(type);
-        $('#removeDependencyForm').trigger('submit');
+        document.getElementById('removeDependencyForm').requestSubmit();
       },
     }).modal('show');
   });
@@ -345,12 +351,12 @@ export function initRepoIssueReferenceRepositorySearch() {
         url: `${appSubUrl}/repo/search?q={query}&limit=20`,
         onResponse(response) {
           const filteredResponse = {success: true, results: []};
-          $.each(response.data, (_r, repo) => {
+          for (const repo of response.data) {
             filteredResponse.results.push({
               name: htmlEscape(repo.repository.full_name),
               value: repo.repository.full_name,
             });
-          });
+          }
           return filteredResponse;
         },
         cache: false,
@@ -369,9 +375,9 @@ export function initRepoIssueWipTitle() {
   $('.title_wip_desc > a').on('click', (e) => {
     e.preventDefault();
 
-    const $issueTitle = $('#issue_title');
-    $issueTitle.trigger('focus');
-    const value = $issueTitle.val().trim().toUpperCase();
+    const issueTitleEl = document.getElementById('issue_title');
+    issueTitleEl.focus();
+    const value = issueTitleEl.value.trim().toUpperCase();
 
     const wipPrefixes = $('.title_wip_desc').data('wip-prefixes');
     for (const prefix of wipPrefixes) {
@@ -380,7 +386,7 @@ export function initRepoIssueWipTitle() {
       }
     }
 
-    $issueTitle.val(`${wipPrefixes[0]} ${$issueTitle.val()}`);
+    issueTitleEl.value = `${wipPrefixes[0]} ${issueTitleEl.value}`;
   });
 }
 
@@ -439,7 +445,7 @@ export async function handleReply($el) {
     // When the page is loaded, the dropzone is initialized by initGlobalDropzone, but the editor is not initialized.
     // When the form is submitted and partially reload, none of them is initialized.
     const dropzone = $form.find('.dropzone')[0];
-    if (!dropzone.dropzone) initDropzone(dropzone);
+    if (!dropzone.dropzone) await initDropzone(dropzone);
     editor = await initComboMarkdownEditor($form.find('.combo-markdown-editor'));
   }
   editor.focus();
@@ -517,8 +523,8 @@ export function initRepoPullRequestReview() {
   // The following part is only for diff views
   if (!$('.repository.pull.diff').length) return;
 
-  const $reviewBtn = $('.js-btn-review');
-  const $panel = $reviewBtn.parent().find('.review-box-panel');
+  const $reviewBtn = $reviewBox.parent().find('.js-btn-review');
+  const $panel = $reviewBox.parent().find('.review-box-panel');
   const $closeBtn = $panel.find('.close');
 
   if ($reviewBtn.length && $panel.length) {
@@ -574,7 +580,7 @@ export function initRepoPullRequestReview() {
         $td.find("input[name='side']").val(side === 'left' ? 'previous' : 'proposed');
         $td.find("input[name='path']").val(path);
 
-        initDropzone($td.find('.dropzone')[0]);
+        await initDropzone($td.find('.dropzone')[0]);
         const editor = await initComboMarkdownEditor($td.find('.combo-markdown-editor'));
         editor.focus();
       } catch (error) {
@@ -631,9 +637,11 @@ export function initRepoIssueTitleEdit() {
 
   const issueTitleInput = issueTitleEditor.querySelector('input');
   const oldTitle = issueTitleInput.getAttribute('data-old-title');
+  const normalModeElements = [issueTitleDisplay, '#pull-desc-display', '#agit-label', '#editable-label'];
   issueTitleDisplay.querySelector('#issue-title-edit-show').addEventListener('click', () => {
-    hideElem(issueTitleDisplay);
-    hideElem('#pull-desc-display');
+    for (const element of normalModeElements) {
+      hideElem(element);
+    }
     showElem(issueTitleEditor);
     showElem('#pull-desc-editor');
     if (!issueTitleInput.value.trim()) {
@@ -644,8 +652,9 @@ export function initRepoIssueTitleEdit() {
   issueTitleEditor.querySelector('.ui.cancel.button').addEventListener('click', () => {
     hideElem(issueTitleEditor);
     hideElem('#pull-desc-editor');
-    showElem(issueTitleDisplay);
-    showElem('#pull-desc-display');
+    for (const element of normalModeElements) {
+      showElem(element);
+    }
   });
 
   const pullDescEditor = document.querySelector('#pull-desc-editor'); // it may not exist for a merged PR
@@ -736,8 +745,8 @@ export function initSingleCommentEditor($commentForm) {
   const statusButton = document.getElementById('status-button');
   if (statusButton) {
     opts.onContentChanged = (editor) => {
-      const statusText = statusButton.getAttribute(editor.value().trim() ? 'data-status-and-comment' : 'data-status');
-      statusButton.textContent = statusText;
+      const newText = statusButton.getAttribute(editor.value().trim() ? 'data-status-and-comment' : 'data-status');
+      statusButton.querySelector('span').textContent = newText;
     };
   }
   initComboMarkdownEditor($commentForm.find('.combo-markdown-editor'), opts);

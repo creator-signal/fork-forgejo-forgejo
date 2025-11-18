@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/modules/setting"
 )
 
 var externalTrackerRegex = regexp.MustCompile(`({?)(?:user|repo|index)+?(}?)`)
@@ -73,6 +73,11 @@ func IsValidExternalURL(uri string) bool {
 	//       only if allowed by special setting
 
 	return true
+}
+
+// IsValidReleaseAssetURL checks if the URL is valid for external release assets
+func IsValidReleaseAssetURL(uri string) bool {
+	return IsValidURL(uri)
 }
 
 // IsValidExternalTrackerURLFormat checks if URL matches required syntax for external trackers

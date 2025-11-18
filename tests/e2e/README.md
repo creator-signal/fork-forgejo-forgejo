@@ -233,7 +233,7 @@ The following environment variables control visual testing:
 `VISUAL_TEST=1` will create screenshots in tests/e2e/test-snapshots.
   The test will fail the first time,
   because the screenshots are not included with Forgejo.
-  Subsequent runs will comopare against your local copy of the screenshots.
+  Subsequent runs will compare against your local copy of the screenshots.
 
 `ACCEPT_VISUAL=1` will overwrite the snapshot images with new images.
 
@@ -250,15 +250,17 @@ test('For anyone', async ({page}) => {
 If you need a user account, you can use something like:
 
 ~~~js
-import {test, login_user, login} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
 
-test.beforeAll(async ({browser}, workerInfo) => {
-  await login_user(browser, workerInfo, 'user2'); // or another user
-});
+// reuse user2 token from scope `shared`
+test.use({user: 'user2', authScope: 'shared'})
 
-test('For signed users only', async ({browser}, workerInfo) => {
-  const page = await login({browser}, workerInfo);
+test('For signed users only', async ({page}) => {
+
+})
 ~~~
+
+users are created in [utils_e2e_test.go](utils_e2e_test.go)
 
 ### Run tests very selectively
 
@@ -266,17 +268,6 @@ Browser testing can take some time.
 If you want to iterate fast,
 save your time and only run very selected tests.
 Use only one browser.
-
-### Skip Safari if it doesn't work
-
-Many contributors have issues getting Safari (webkit)
-and especially Safari Mobile to work.
-
-At the top of your test function, you can use:
-
-~~~javascript
-test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile.');
-~~~
 
 ### Don't forget the formatting.
 
@@ -362,7 +353,7 @@ the click will succeed,
 but the depending interaction won't,
 although playwright repeatedly tries to find the content.
 
-You can [group statements using toPass]()https://playwright.dev/docs/test-assertions#expecttopass).
+You can [group statements using toPass](https://playwright.dev/docs/test-assertions#expecttopass).
 This code retries the dropdown click until the second item is found.
 
 ~~~js

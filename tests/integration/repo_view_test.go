@@ -10,14 +10,14 @@ import (
 	"strings"
 	"testing"
 
-	unit_model "code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/routers/web/repo"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/contexttest"
-	files_service "code.gitea.io/gitea/services/repository/files"
-	"code.gitea.io/gitea/tests"
+	unit_model "forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/routers/web/repo"
+	"forgejo.org/services/context"
+	"forgejo.org/services/contexttest"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -62,7 +62,7 @@ func createRepoAndGetContext(t *testing.T, files []string, deleteMdReadme bool) 
 }
 
 func TestRepoView_FindReadme(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		t.Run("PrioOneLocalizedMdReadme", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 			ctx, f := createRepoAndGetContext(t, []string{"README.en.md", "README.en.org", "README.org", "README.txt", "README.tex"}, false)
@@ -155,7 +155,7 @@ func TestRepoView_FindReadme(t *testing.T) {
 }
 
 func TestRepoViewFileLines(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, _ *url.URL) {
+	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo, _, f := tests.CreateDeclarativeRepo(t, user, "file-lines", []unit_model.Type{unit_model.TypeCode}, nil, []*files_service.ChangeRepoFile{
 			{

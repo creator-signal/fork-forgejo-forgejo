@@ -4,96 +4,119 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"image"
+	"io"
 	golog "log"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/migrations"
-	migrate_base "code.gitea.io/gitea/models/migrations/base"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/services/doctor"
+	"forgejo.org/models/db"
+	"forgejo.org/models/gitea_migrations"
+	migrate_base "forgejo.org/models/gitea_migrations/base"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
+	"forgejo.org/services/doctor"
 
-	"github.com/urfave/cli/v2"
-	"xorm.io/xorm"
+	exif_terminator "code.superseriousbusiness.org/exif-terminator"
+	"github.com/urfave/cli/v3"
 )
 
 // CmdDoctor represents the available doctor sub-command.
-var CmdDoctor = &cli.Command{
-	Name:        "doctor",
-	Usage:       "Diagnose and optionally fix problems, convert or re-create database tables",
-	Description: "A command to diagnose problems with the current Forgejo instance according to the given configuration. Some problems can optionally be fixed by modifying the database or data storage.",
+func cmdDoctor() *cli.Command {
+	return &cli.Command{
+		Name:        "doctor",
+		Usage:       "Diagnose and optionally fix problems, convert or re-create database tables",
+		Description: "A command to diagnose problems with the current Forgejo instance according to the given configuration. Some problems can optionally be fixed by modifying the database or data storage.",
 
-	Subcommands: []*cli.Command{
-		cmdDoctorCheck,
-		cmdRecreateTable,
-		cmdDoctorConvert,
-	},
+		Commands: []*cli.Command{
+			cmdDoctorCheck(),
+			cmdRecreateTable(),
+			cmdDoctorConvert(),
+			cmdAvatarStripExif(),
+		},
+	}
 }
 
-var cmdDoctorCheck = &cli.Command{
-	Name:        "check",
-	Usage:       "Diagnose and optionally fix problems",
-	Description: "A command to diagnose problems with the current Forgejo instance according to the given configuration. Some problems can optionally be fixed by modifying the database or data storage.",
-	Action:      runDoctorCheck,
-	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "list",
-			Usage: "List the available checks",
+func cmdDoctorCheck() *cli.Command {
+	return &cli.Command{
+		Name:        "check",
+		Usage:       "Diagnose and optionally fix problems",
+		Description: "A command to diagnose problems with the current Forgejo instance according to the given configuration. Some problems can optionally be fixed by modifying the database or data storage.",
+		Before:      noDanglingArgs,
+		Action:      runDoctorCheck,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "list",
+				Usage: "List the available checks",
+			},
+			&cli.BoolFlag{
+				Name:  "default",
+				Usage: "Run the default checks (if neither --run or --all is set, this is the default behaviour)",
+			},
+			&cli.StringSliceFlag{
+				Name:  "run",
+				Usage: "Run the provided checks - (if --default is set, the default checks will also run)",
+			},
+			&cli.BoolFlag{
+				Name:  "all",
+				Usage: "Run all the available checks",
+			},
+			&cli.BoolFlag{
+				Name:  "fix",
+				Usage: "Automatically fix what we can",
+			},
+			&cli.StringFlag{
+				Name:  "log-file",
+				Usage: `Name of the log file (no verbose log output by default). Set to "-" to output to stdout`,
+			},
+			&cli.BoolFlag{
+				Name:    "color",
+				Aliases: []string{"H"},
+				Usage:   "Use color for outputted information",
+			},
 		},
-		&cli.BoolFlag{
-			Name:  "default",
-			Usage: "Run the default checks (if neither --run or --all is set, this is the default behaviour)",
-		},
-		&cli.StringSliceFlag{
-			Name:  "run",
-			Usage: "Run the provided checks - (if --default is set, the default checks will also run)",
-		},
-		&cli.BoolFlag{
-			Name:  "all",
-			Usage: "Run all the available checks",
-		},
-		&cli.BoolFlag{
-			Name:  "fix",
-			Usage: "Automatically fix what we can",
-		},
-		&cli.StringFlag{
-			Name:  "log-file",
-			Usage: `Name of the log file (no verbose log output by default). Set to "-" to output to stdout`,
-		},
-		&cli.BoolFlag{
-			Name:    "color",
-			Aliases: []string{"H"},
-			Usage:   "Use color for outputted information",
-		},
-	},
+	}
 }
 
-var cmdRecreateTable = &cli.Command{
-	Name:      "recreate-table",
-	Usage:     "Recreate tables from XORM definitions and copy the data.",
-	ArgsUsage: "[TABLE]... : (TABLEs to recreate - leave blank for all)",
-	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "debug",
-			Usage: "Print SQL commands sent",
+func cmdRecreateTable() *cli.Command {
+	return &cli.Command{
+		Name:      "recreate-table",
+		Usage:     "Recreate tables from XORM definitions and copy the data.",
+		ArgsUsage: "[TABLE]... : (TABLEs to recreate - leave blank for all)",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "debug",
+				Usage: "Print SQL commands sent",
+			},
 		},
-	},
-	Description: `The database definitions Forgejo uses change across versions, sometimes changing default values and leaving old unused columns.
+		Description: `The database definitions Forgejo uses change across versions, sometimes changing default values and leaving old unused columns.
 
 This command will cause Xorm to recreate tables, copying over the data and deleting the old table.
 
 You should back-up your database before doing this and ensure that your database is up-to-date first.`,
-	Action: runRecreateTable,
+		Action: runRecreateTable,
+	}
 }
 
-func runRecreateTable(ctx *cli.Context) error {
-	stdCtx, cancel := installSignals()
+func cmdAvatarStripExif() *cli.Command {
+	return &cli.Command{
+		Name:   "avatar-strip-exif",
+		Usage:  "Strip EXIF metadata from all images in the avatar storage",
+		Before: noDanglingArgs,
+		Action: runAvatarStripExif,
+	}
+}
+
+func runRecreateTable(stdCtx context.Context, ctx *cli.Command) error {
+	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
 
 	// Redirect the default golog to here
@@ -120,7 +143,7 @@ func runRecreateTable(ctx *cli.Context) error {
 
 	args := ctx.Args()
 	names := make([]string, 0, ctx.NArg())
-	for i := 0; i < ctx.NArg(); i++ {
+	for i := range ctx.NArg() {
 		names = append(names, args.Get(i))
 	}
 
@@ -130,24 +153,31 @@ func runRecreateTable(ctx *cli.Context) error {
 	}
 	recreateTables := migrate_base.RecreateTables(beans...)
 
-	return db.InitEngineWithMigration(stdCtx, func(x *xorm.Engine) error {
-		if err := migrations.EnsureUpToDate(x); err != nil {
+	return db.InitEngineWithMigration(stdCtx, func(x db.Engine) error {
+		engine, err := db.GetMasterEngine(x)
+		if err != nil {
 			return err
 		}
-		return recreateTables(x)
+
+		if err := gitea_migrations.EnsureUpToDate(engine); err != nil {
+			return err
+		}
+
+		return recreateTables(engine)
 	})
 }
 
-func setupDoctorDefaultLogger(ctx *cli.Context, colorize bool) {
+func setupDoctorDefaultLogger(ctx *cli.Command, colorize bool) {
 	// Silence the default loggers
 	setupConsoleLogger(log.FATAL, log.CanColorStderr, os.Stderr)
 
 	logFile := ctx.String("log-file")
-	if logFile == "" {
+	switch logFile {
+	case "":
 		return // if no doctor log-file is set, do not show any log from default logger
-	} else if logFile == "-" {
+	case "-":
 		setupConsoleLogger(log.TRACE, colorize, os.Stdout)
-	} else {
+	default:
 		logFile, _ = filepath.Abs(logFile)
 		writeMode := log.WriterMode{Level: log.TRACE, WriterOption: log.WriterFileOption{FileName: logFile}}
 		writer, err := log.NewEventWriter("console-to-file", "file", writeMode)
@@ -159,8 +189,8 @@ func setupDoctorDefaultLogger(ctx *cli.Context, colorize bool) {
 	}
 }
 
-func runDoctorCheck(ctx *cli.Context) error {
-	stdCtx, cancel := installSignals()
+func runDoctorCheck(stdCtx context.Context, ctx *cli.Command) error {
+	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
 
 	colorize := log.CanColorStdout
@@ -216,4 +246,79 @@ func runDoctorCheck(ctx *cli.Context) error {
 		}
 	}
 	return doctor.RunChecks(stdCtx, colorize, ctx.Bool("fix"), checks)
+}
+
+func runAvatarStripExif(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
+	defer cancel()
+
+	if err := initDB(ctx); err != nil {
+		return err
+	}
+	if err := storage.Init(); err != nil {
+		return err
+	}
+
+	type HasCustomAvatarRelativePath interface {
+		CustomAvatarRelativePath() string
+	}
+
+	doExifStrip := func(obj HasCustomAvatarRelativePath, name string, target_storage storage.ObjectStorage) error {
+		if obj.CustomAvatarRelativePath() == "" {
+			return nil
+		}
+
+		log.Info("Stripping avatar for %s...", name)
+
+		avatarFile, err := target_storage.Open(obj.CustomAvatarRelativePath())
+		if err != nil {
+			return fmt.Errorf("storage.Avatars.Open: %w", err)
+		}
+		_, imgType, err := image.DecodeConfig(avatarFile)
+		if err != nil {
+			return fmt.Errorf("image.DecodeConfig: %w", err)
+		}
+
+		// reset io.Reader for exif termination scan
+		_, err = avatarFile.Seek(0, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("avatarFile.Seek: %w", err)
+		}
+
+		cleanedData, err := exif_terminator.Terminate(avatarFile, imgType)
+		if err != nil && strings.Contains(err.Error(), "cannot be processed") {
+			// expected error for an image type that isn't supported by exif_terminator
+			log.Info("... image type %s is not supported by exif_terminator, skipping.", imgType)
+			return nil
+		} else if err != nil {
+			return fmt.Errorf("error cleaning exif data: %w", err)
+		}
+
+		if err := storage.SaveFrom(target_storage, obj.CustomAvatarRelativePath(), func(w io.Writer) error {
+			_, err := io.Copy(w, cleanedData)
+			return err
+		}); err != nil {
+			return fmt.Errorf("Failed to create dir %s: %w", obj.CustomAvatarRelativePath(), err)
+		}
+
+		log.Info("... completed %s.", name)
+
+		return nil
+	}
+
+	err := db.Iterate(ctx, nil, func(ctx context.Context, user *user_model.User) error {
+		return doExifStrip(user, fmt.Sprintf("user %s", user.Name), storage.Avatars)
+	})
+	if err != nil {
+		return err
+	}
+
+	err = db.Iterate(ctx, nil, func(ctx context.Context, repo *repo_model.Repository) error {
+		return doExifStrip(repo, fmt.Sprintf("repo %s", repo.Name), storage.RepoAvatars)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

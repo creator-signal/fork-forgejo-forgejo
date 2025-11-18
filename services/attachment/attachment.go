@@ -9,12 +9,12 @@ import (
 	"fmt"
 	"io"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/validation"
-	"code.gitea.io/gitea/services/context/upload"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/storage"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
+	"forgejo.org/services/context/upload"
 
 	"github.com/google/uuid"
 )
@@ -51,7 +51,7 @@ func NewExternalAttachment(ctx context.Context, attach *repo_model.Attachment) (
 	if attach.ExternalURL == "" {
 		return nil, fmt.Errorf("attachment %s should have a external url", attach.Name)
 	}
-	if !validation.IsValidExternalURL(attach.ExternalURL) {
+	if !validation.IsValidReleaseAssetURL(attach.ExternalURL) {
 		return nil, repo_model.ErrInvalidExternalURL{ExternalURL: attach.ExternalURL}
 	}
 

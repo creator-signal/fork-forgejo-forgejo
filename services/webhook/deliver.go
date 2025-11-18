@@ -6,6 +6,7 @@ package webhook
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,16 +15,16 @@ import (
 	"sync"
 	"time"
 
-	webhook_model "code.gitea.io/gitea/models/webhook"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/hostmatcher"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/process"
-	"code.gitea.io/gitea/modules/proxy"
-	"code.gitea.io/gitea/modules/queue"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
+	webhook_model "forgejo.org/models/webhook"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/hostmatcher"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/process"
+	"forgejo.org/modules/proxy"
+	"forgejo.org/modules/queue"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
+	webhook_module "forgejo.org/modules/webhook"
 
 	"github.com/gobwas/glob"
 )
@@ -218,7 +219,7 @@ func Init() error {
 
 	hookQueue = queue.CreateUniqueQueue(graceful.GetManager().ShutdownContext(), "webhook_sender", handler)
 	if hookQueue == nil {
-		return fmt.Errorf("unable to create webhook_sender queue")
+		return errors.New("unable to create webhook_sender queue")
 	}
 	go graceful.GetManager().RunWithCancel(hookQueue)
 

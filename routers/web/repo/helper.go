@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"slices"
 
-	"code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/services/context"
 )
 
 func MakeSelfOnTop(doer *user.User, users []*user.User) []*user.User {
@@ -35,7 +35,7 @@ func HandleGitError(ctx *context.Context, msg string, err error) {
 		case ctx.Repo.IsViewCommit:
 			refType = "commit"
 		}
-		ctx.Data["NotFoundPrompt"] = ctx.Locale.Tr("repo.tree_path_not_found_"+refType, ctx.Repo.TreePath, url.PathEscape(ctx.Repo.RefName))
+		ctx.Data["NotFoundPrompt"] = ctx.Locale.Tr("repo.tree_path_not_found."+refType, ctx.Repo.TreePath, url.PathEscape(ctx.Repo.RefName))
 		ctx.Data["NotFoundGoBackURL"] = ctx.Repo.RepoLink + "/src/" + refType + "/" + url.PathEscape(ctx.Repo.RefName)
 		ctx.NotFound(msg, err)
 	} else {

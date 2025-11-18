@@ -4,19 +4,20 @@
 package user
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
 )
 
 func listGPGKeys(ctx *context.APIContext, uid int64, listOptions db.ListOptions) {
@@ -143,7 +144,7 @@ func GetGPGKey(ctx *context.APIContext) {
 // CreateUserGPGKey creates new GPG key to given user by ID.
 func CreateUserGPGKey(ctx *context.APIContext, form api.CreateGPGKeyOption, uid int64) {
 	if user_model.IsFeatureDisabledWithLoginType(ctx.Doer, setting.UserFeatureManageGPGKeys) {
-		ctx.NotFound("Not Found", fmt.Errorf("gpg keys setting is not allowed to be visited"))
+		ctx.NotFound("Not Found", errors.New("gpg keys setting is not allowed to be visited"))
 		return
 	}
 
@@ -183,6 +184,12 @@ func GetVerificationToken(ctx *context.APIContext) {
 	ctx.PlainText(http.StatusOK, token)
 }
 
+// swagger:parameters userVerifyGPGKey
+type swaggerUserVerifyGPGKey struct {
+	// in:body
+	Form api.VerifyGPGKeyOption
+}
+
 // VerifyUserGPGKey creates new GPG key to given user by ID.
 func VerifyUserGPGKey(ctx *context.APIContext) {
 	// swagger:operation POST /user/gpg_key_verify user userVerifyGPGKey
@@ -192,6 +199,11 @@ func VerifyUserGPGKey(ctx *context.APIContext) {
 	// - application/json
 	// produces:
 	// - application/json
+	// parameters:
+	// - name: body
+	//   in: body
+	//   schema:
+	//     "$ref": "#/definitions/VerifyGPGKeyOption"
 	// responses:
 	//   "201":
 	//     "$ref": "#/responses/GPGKey"
@@ -248,11 +260,11 @@ type swaggerUserCurrentPostGPGKey struct {
 	Form api.CreateGPGKeyOption
 }
 
-// CreateGPGKey create a GPG key belonging to the authenticated user
+// CreateGPGKey adds a GPG public key doer's account
 func CreateGPGKey(ctx *context.APIContext) {
 	// swagger:operation POST /user/gpg_keys user userCurrentPostGPGKey
 	// ---
-	// summary: Create a GPG key
+	// summary: Add a GPG public key to current user's account
 	// consumes:
 	// - application/json
 	// produces:
@@ -273,11 +285,11 @@ func CreateGPGKey(ctx *context.APIContext) {
 	CreateUserGPGKey(ctx, *form, ctx.Doer.ID)
 }
 
-// DeleteGPGKey remove a GPG key belonging to the authenticated user
+// DeleteGPGKey removes a GPG public key from doer's account
 func DeleteGPGKey(ctx *context.APIContext) {
 	// swagger:operation DELETE /user/gpg_keys/{id} user userCurrentDeleteGPGKey
 	// ---
-	// summary: Remove a GPG key
+	// summary: Remove a GPG public key from current user's account
 	// produces:
 	// - application/json
 	// parameters:
@@ -298,16 +310,12 @@ func DeleteGPGKey(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	if user_model.IsFeatureDisabledWithLoginType(ctx.Doer, setting.UserFeatureManageGPGKeys) {
-		ctx.NotFound("Not Found", fmt.Errorf("gpg keys setting is not allowed to be visited"))
+		ctx.NotFound("Not Found", errors.New("gpg keys setting is not allowed to be visited"))
 		return
 	}
 
 	if err := asymkey_model.DeleteGPGKey(ctx, ctx.Doer, ctx.ParamsInt64(":id")); err != nil {
-		if asymkey_model.IsErrGPGKeyAccessDenied(err) {
-			ctx.Error(http.StatusForbidden, "", "You do not have access to this key")
-		} else {
-			ctx.Error(http.StatusInternalServerError, "DeleteGPGKey", err)
-		}
+		ctx.Error(http.StatusInternalServerError, "DeleteGPGKey", err)
 		return
 	}
 
@@ -317,8 +325,6 @@ func DeleteGPGKey(ctx *context.APIContext) {
 // HandleAddGPGKeyError handle add GPGKey error
 func HandleAddGPGKeyError(ctx *context.APIContext, err error, token string) {
 	switch {
-	case asymkey_model.IsErrGPGKeyAccessDenied(err):
-		ctx.Error(http.StatusUnprocessableEntity, "GPGKeyAccessDenied", "You do not have access to this GPG key")
 	case asymkey_model.IsErrGPGKeyIDAlreadyUsed(err):
 		ctx.Error(http.StatusUnprocessableEntity, "GPGKeyIDAlreadyUsed", "A key with the same id already exists")
 	case asymkey_model.IsErrGPGKeyParsing(err):

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"code.gitea.io/gitea/models/perm"
+	"forgejo.org/models/perm"
 )
 
 // AccessTokenScopeCategory represents the scope category for an access token
@@ -294,6 +294,10 @@ func (s AccessTokenScope) Normalize() (AccessTokenScope, error) {
 	}
 
 	return bitmap.toScope(), nil
+}
+
+func (s AccessTokenScope) HasPermissionScope() bool {
+	return s != "" && s != AccessTokenScopePublicOnly
 }
 
 // PublicOnly checks if this token scope is limited to public resources

@@ -5,20 +5,21 @@ package issue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/timeutil"
-	notify_service "code.gitea.io/gitea/services/notify"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/timeutil"
+	notify_service "forgejo.org/services/notify"
 )
 
 // CreateRefComment creates a commit reference comment to issue.
 func CreateRefComment(ctx context.Context, doer *user_model.User, repo *repo_model.Repository, issue *issues_model.Issue, content, commitSHA string) error {
 	if len(commitSHA) == 0 {
-		return fmt.Errorf("cannot create reference with empty commit SHA")
+		return errors.New("cannot create reference with empty commit SHA")
 	}
 
 	// Check if same reference from same commit has already existed.
@@ -119,7 +120,28 @@ func UpdateComment(ctx context.Context, c *issues_model.Comment, contentVersion 
 // DeleteComment deletes the comment
 func DeleteComment(ctx context.Context, doer *user_model.User, comment *issues_model.Comment) error {
 	err := db.WithTx(ctx, func(ctx context.Context) error {
-		return issues_model.DeleteComment(ctx, comment)
+		reviewID := comment.ReviewID
+
+		err := issues_model.DeleteComment(ctx, comment)
+		if err != nil {
+			return err
+		}
+
+		if comment.Review != nil {
+			reviewType := comment.Review.Type
+			if reviewType == issues_model.ReviewTypePending {
+				found, err := db.GetEngine(ctx).Table("comment").Where("review_id = ?", reviewID).Exist()
+				if err != nil {
+					return err
+				} else if !found {
+					_, err := db.GetEngine(ctx).Table("review").Where("id = ?", reviewID).Delete()
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return err

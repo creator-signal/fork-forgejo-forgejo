@@ -8,10 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/util"
 )
 
 // UpdateRepositoryOwnerNames updates repository owner_names (this should only be used when the ownerName has changed case)
@@ -105,9 +104,9 @@ func (err ErrRepoFilesAlreadyExist) Unwrap() error {
 	return util.ErrAlreadyExist
 }
 
-// CheckCreateRepository check if could created a repository
-func CheckCreateRepository(ctx context.Context, doer, u *user_model.User, name string, overwriteOrAdopt bool) error {
-	if !doer.CanCreateRepo() {
+// CheckCreateRepository check if a repository can be created
+func CheckCreateRepository(ctx context.Context, doer, u *user_model.User, name string) error {
+	if !doer.IsAdmin && !u.CanCreateRepo() {
 		return ErrReachLimitOfRepo{u.MaxRepoCreation}
 	}
 
@@ -122,15 +121,6 @@ func CheckCreateRepository(ctx context.Context, doer, u *user_model.User, name s
 		return ErrRepoAlreadyExist{u.Name, name}
 	}
 
-	repoPath := RepoPath(u.Name, name)
-	isExist, err := util.IsExist(repoPath)
-	if err != nil {
-		log.Error("Unable to check if %s exists. Error: %v", repoPath, err)
-		return err
-	}
-	if !overwriteOrAdopt && isExist {
-		return ErrRepoFilesAlreadyExist{u.Name, name}
-	}
 	return nil
 }
 

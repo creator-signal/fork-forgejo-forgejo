@@ -4,7 +4,7 @@
 package swagger
 
 import (
-	api "code.gitea.io/gitea/modules/structs"
+	api "forgejo.org/modules/structs"
 )
 
 // Repository
@@ -231,11 +231,18 @@ type swaggerGitTreeResponse struct {
 	Body api.GitTreeResponse `json:"body"`
 }
 
-// GitBlobResponse
-// swagger:response GitBlobResponse
-type swaggerGitBlobResponse struct {
+// GitBlob
+// swagger:response GitBlob
+type swaggerGitBlob struct {
 	// in: body
-	Body api.GitBlobResponse `json:"body"`
+	Body api.GitBlob `json:"body"`
+}
+
+// GitBlobList
+// swagger:response GitBlobList
+type swaggerGitBlobList struct {
+	// in: body
+	Body []api.GitBlob `json:"body"`
 }
 
 // Commit
@@ -447,4 +454,25 @@ type swaggerRepoTasksList struct {
 type swaggerCompare struct {
 	// in:body
 	Body api.Compare `json:"body"`
+}
+
+// SyncForkInfo
+// swagger:response SyncForkInfo
+type swaggerSyncForkInfo struct {
+	// in:body
+	Body api.SyncForkInfo `json:"body"`
+}
+
+// ActionRunList
+// swagger:response ActionRunList
+type swaggerActionRunList struct {
+	// in:body
+	Body api.ListActionRunResponse `json:"body"`
+}
+
+// ActionRun
+// swagger:response ActionRun
+type swaggerActionRun struct {
+	// in:body
+	Body api.ActionRun `json:"body"`
 }

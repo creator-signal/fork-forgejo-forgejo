@@ -9,19 +9,18 @@ import (
 	"net/http"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	packages_model "code.gitea.io/gitea/models/packages"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/forms"
-	cargo_service "code.gitea.io/gitea/services/packages/cargo"
-	container_service "code.gitea.io/gitea/services/packages/container"
+	packages_model "forgejo.org/models/packages"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/forms"
+	cargo_service "forgejo.org/services/packages/cargo"
+	container_service "forgejo.org/services/packages/container"
 )
 
 func SetPackagesContext(ctx *context.Context, owner *user_model.User) {
@@ -168,13 +167,13 @@ func SetRulePreviewContext(ctx *context.Context, owner *user_model.User) {
 			PackageID:  p.ID,
 			IsInternal: optional.Some(false),
 			Sort:       packages_model.SortCreatedDesc,
-			Paginator:  db.NewAbsoluteListOptions(pcr.KeepCount, 200),
 		})
 		if err != nil {
 			ctx.ServerError("SearchVersions", err)
 			return
 		}
-		for _, pv := range pvs {
+		keep := min(len(pvs), pcr.KeepCount)
+		for _, pv := range pvs[keep:] {
 			if skip, err := container_service.ShouldBeSkipped(ctx, pcr, p, pv); err != nil {
 				ctx.ServerError("ShouldBeSkipped", err)
 				return

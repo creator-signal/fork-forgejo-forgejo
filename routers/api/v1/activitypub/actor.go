@@ -7,11 +7,11 @@ package activitypub
 import (
 	"net/http"
 
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/activitypub"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/services/context"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/activitypub"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/services/context"
 
 	ap "github.com/go-ap/activitypub"
 	"github.com/go-ap/jsonld"
@@ -28,11 +28,11 @@ func Actor(ctx *context.APIContext) {
 	//   "200":
 	//     "$ref": "#/responses/ActivityPub"
 
-	link := user_model.APActorUserAPActorID()
+	link := user_model.APServerActorID()
 	actor := ap.ActorNew(ap.IRI(link), ap.ApplicationType)
 
 	actor.PreferredUsername = ap.NaturalLanguageValuesNew()
-	err := actor.PreferredUsername.Set("en", ap.Content(setting.Domain))
+	err := actor.PreferredUsername.Set("en", ap.Content("ghost"))
 	if err != nil {
 		ctx.ServerError("PreferredUsername.Set", err)
 		return
@@ -41,12 +41,10 @@ func Actor(ctx *context.APIContext) {
 	actor.URL = ap.IRI(setting.AppURL)
 
 	actor.Inbox = ap.IRI(link + "/inbox")
-	actor.Outbox = ap.IRI(link + "/outbox")
-
 	actor.PublicKey.ID = ap.IRI(link + "#main-key")
 	actor.PublicKey.Owner = ap.IRI(link)
 
-	publicKeyPem, err := activitypub.GetPublicKey(ctx, user_model.NewAPActorUser())
+	publicKeyPem, err := activitypub.GetPublicKey(ctx, user_model.NewAPServerActor())
 	if err != nil {
 		ctx.ServerError("GetPublicKey", err)
 		return

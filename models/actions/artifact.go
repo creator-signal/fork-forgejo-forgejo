@@ -11,9 +11,9 @@ import (
 	"errors"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
@@ -108,6 +108,7 @@ func UpdateArtifactByID(ctx context.Context, id int64, art *ActionArtifact) erro
 
 type FindArtifactsOptions struct {
 	db.ListOptions
+	ID           int64
 	RepoID       int64
 	RunID        int64
 	ArtifactName string
@@ -116,6 +117,9 @@ type FindArtifactsOptions struct {
 
 func (opts FindArtifactsOptions) ToConds() builder.Cond {
 	cond := builder.NewCond()
+	if opts.ID > 0 {
+		cond = cond.And(builder.Eq{"id": opts.ID})
+	}
 	if opts.RepoID > 0 {
 		cond = cond.And(builder.Eq{"repo_id": opts.RepoID})
 	}
@@ -130,6 +134,13 @@ func (opts FindArtifactsOptions) ToConds() builder.Cond {
 	}
 
 	return cond
+}
+
+var _ db.FindOptionsOrder = FindArtifactsOptions{}
+
+// ToOrders implements db.FindOptionsOrder, to have a stable order
+func (opts FindArtifactsOptions) ToOrders() string {
+	return "id"
 }
 
 // ActionArtifactMeta is the meta data of an artifact

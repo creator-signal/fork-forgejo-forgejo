@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -56,7 +56,7 @@ func TestActionsArtifactUploadSingleFile(t *testing.T) {
 		SetHeader("x-actions-results-md5", "XVlf820rMInUi64wmMi6EA==") // base64(md5(body))
 	MakeRequest(t, req, http.StatusOK)
 
-	t.Logf("Create artifact confirm")
+	t.Log("Create artifact confirm")
 
 	// confirm artifact upload
 	req = NewRequest(t, "PATCH", "/api/actions_pipeline/_apis/pipelines/workflows/791/artifacts?artifactName=artifact-single").
@@ -206,7 +206,7 @@ func TestActionsArtifactUploadMultipleFile(t *testing.T) {
 		MakeRequest(t, req, http.StatusOK)
 	}
 
-	t.Logf("Create artifact confirm")
+	t.Log("Create artifact confirm")
 
 	// confirm artifact upload
 	req = NewRequest(t, "PATCH", "/api/actions_pipeline/_apis/pipelines/workflows/791/artifacts?artifactName="+testArtifactName).
@@ -297,7 +297,7 @@ func TestActionsArtifactUploadWithRetentionDays(t *testing.T) {
 		SetHeader("x-actions-results-md5", "1HsSe8LeLWh93ILaw1TEFQ==") // base64(md5(body))
 	MakeRequest(t, req, http.StatusOK)
 
-	t.Logf("Create artifact confirm")
+	t.Log("Create artifact confirm")
 
 	// confirm artifact upload
 	req = NewRequest(t, "PATCH", "/api/actions_pipeline/_apis/pipelines/workflows/791/artifacts?artifactName=artifact-retention-days").
@@ -316,8 +316,10 @@ func TestActionsArtifactOverwrite(t *testing.T) {
 		var listResp listArtifactsResponse
 		DecodeJSON(t, resp, &listResp)
 
+		const itemName = "artifact-download"
+		assert.Equal(t, itemName, listResp.Value[0].Name)
 		idx := strings.Index(listResp.Value[0].FileContainerResourceURL, "/api/actions_pipeline/_apis/pipelines/")
-		url := listResp.Value[0].FileContainerResourceURL[idx+1:] + "?itemPath=artifact-download"
+		url := listResp.Value[0].FileContainerResourceURL[idx+1:] + "?itemPath=" + itemName
 		req = NewRequest(t, "GET", url).
 			AddTokenAuth("8061e833a55f6fc0157c98b883e91fcfeeb1a71a")
 		resp = MakeRequest(t, req, http.StatusOK)

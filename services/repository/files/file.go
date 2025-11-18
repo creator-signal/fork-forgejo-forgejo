@@ -5,16 +5,16 @@ package files
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/url"
 	"strings"
 	"time"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
 )
 
 func GetFilesResponseFromCommit(ctx context.Context, repo *repo_model.Repository, commit *git.Commit, branch string, treeNames []string) (*api.FilesResponse, error) {
@@ -31,19 +31,6 @@ func GetFilesResponseFromCommit(ctx context.Context, repo *repo_model.Repository
 		Verification: verification,
 	}
 	return filesResponse, nil
-}
-
-// GetFileResponseFromCommit Constructs a FileResponse from a Commit object
-func GetFileResponseFromCommit(ctx context.Context, repo *repo_model.Repository, commit *git.Commit, branch, treeName string) (*api.FileResponse, error) {
-	fileContents, _ := GetContents(ctx, repo, treeName, branch, false) // ok if fails, then will be nil
-	fileCommitResponse, _ := GetFileCommitResponse(repo, commit)       // ok if fails, then will be nil
-	verification := GetPayloadCommitVerification(ctx, commit)
-	fileResponse := &api.FileResponse{
-		Content:      fileContents,
-		Commit:       fileCommitResponse,
-		Verification: verification,
-	}
-	return fileResponse, nil
 }
 
 // constructs a FileResponse with the file at the index from FilesResponse
@@ -63,10 +50,10 @@ func GetFileResponseFromFilesResponse(filesResponse *api.FilesResponse, index in
 // GetFileCommitResponse Constructs a FileCommitResponse from a Commit object
 func GetFileCommitResponse(repo *repo_model.Repository, commit *git.Commit) (*api.FileCommitResponse, error) {
 	if repo == nil {
-		return nil, fmt.Errorf("repo cannot be nil")
+		return nil, errors.New("repo cannot be nil")
 	}
 	if commit == nil {
-		return nil, fmt.Errorf("commit cannot be nil")
+		return nil, errors.New("commit cannot be nil")
 	}
 	commitURL, _ := url.Parse(repo.APIURL() + "/git/commits/" + url.PathEscape(commit.ID.String()))
 	commitTreeURL, _ := url.Parse(repo.APIURL() + "/git/trees/" + url.PathEscape(commit.Tree.ID.String()))
@@ -117,36 +104,35 @@ func GetAuthorAndCommitterUsers(author, committer *IdentityOptions, doer *user_m
 	// then we use bogus User objects for them to store their FullName and Email.
 	// If only one of the two are provided, we set both of them to it.
 	// If neither are provided, both are the doer.
-	if committer != nil && committer.Email != "" {
-		if doer != nil && strings.EqualFold(doer.Email, committer.Email) {
-			committerUser = doer // the committer is the doer, so will use their user object
-			if committer.Name != "" {
-				committerUser.FullName = committer.Name
+	getUser := func(identity *IdentityOptions) *user_model.User {
+		if identity == nil || identity.Email == "" {
+			return nil
+		}
+
+		if doer != nil && strings.EqualFold(doer.Email, identity.Email) {
+			user := doer // the committer is the doer, so will use their user object
+			if identity.Name != "" {
+				user.FullName = identity.Name
 			}
 			// Use the provided email and not revert to placeholder mail.
-			committerUser.KeepEmailPrivate = false
-		} else {
-			committerUser = &user_model.User{
-				FullName: committer.Name,
-				Email:    committer.Email,
-			}
+			user.KeepEmailPrivate = false
+			return user
+		}
+
+		var id int64
+		if doer != nil {
+			id = doer.ID
+		}
+		return &user_model.User{
+			ID:       id, // Needed to ensure the doer is checked to pass rules for instance signing of CRUD actions.
+			FullName: identity.Name,
+			Email:    identity.Email,
 		}
 	}
-	if author != nil && author.Email != "" {
-		if doer != nil && strings.EqualFold(doer.Email, author.Email) {
-			authorUser = doer // the author is the doer, so will use their user object
-			if authorUser.Name != "" {
-				authorUser.FullName = author.Name
-			}
-			// Use the provided email and not revert to placeholder mail.
-			authorUser.KeepEmailPrivate = false
-		} else {
-			authorUser = &user_model.User{
-				FullName: author.Name,
-				Email:    author.Email,
-			}
-		}
-	}
+
+	committerUser = getUser(committer)
+	authorUser = getUser(author)
+
 	if authorUser == nil {
 		if committerUser != nil {
 			authorUser = committerUser // No valid author was given so use the committer

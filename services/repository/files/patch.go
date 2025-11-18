@@ -8,15 +8,15 @@ import (
 	"fmt"
 	"strings"
 
-	"code.gitea.io/gitea/models"
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/structs"
-	asymkey_service "code.gitea.io/gitea/services/asymkey"
+	"forgejo.org/models"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/structs"
+	asymkey_service "forgejo.org/services/asymkey"
 )
 
 // ApplyDiffPatchOptions holds the repository diff patch update options
@@ -147,11 +147,7 @@ func ApplyDiffPatch(ctx context.Context, repo *repo_model.Repository, doer *user
 	stdout := &strings.Builder{}
 	stderr := &strings.Builder{}
 
-	cmdApply := git.NewCommand(ctx, "apply", "--index", "--recount", "--cached", "--ignore-whitespace", "--whitespace=fix", "--binary")
-	if git.CheckGitVersionAtLeast("2.32") == nil {
-		cmdApply.AddArguments("-3")
-	}
-
+	cmdApply := git.NewCommand(ctx, "apply", "--index", "--recount", "--cached", "--ignore-whitespace", "--whitespace=fix", "--binary", "-3")
 	if err := cmdApply.Run(&git.RunOpts{
 		Dir:    t.basePath,
 		Stdout: stdout,

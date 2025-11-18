@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"code.gitea.io/gitea/modules/translation"
-	gitea_context "code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/modules/translation"
+	app_context "forgejo.org/services/context"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -34,7 +34,6 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"_csrf":          GetCSRF(t, session, "/user2/repo1/settings"),
 				"action":         "transfer",
 				"repo_name":      "repo1",
 				"new_owner_name": "user1",
@@ -46,16 +45,15 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"_csrf":          GetCSRF(t, session, "/user2/repo1/settings"),
 				"action":         "transfer",
 				"repo_name":      "user2/repo1",
 				"new_owner_name": "user1",
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "success%3DThis%2Brepository%2Bhas%2Bbeen%2Bmarked%2Bfor%2Btransfer%2Band%2Bawaits%2Bconfirmation%2Bfrom%2B%2522User%2BOne%2522", flashCookie.Value)
+			assert.Equal(t, "success%3DThis%2Brepository%2Bhas%2Bbeen%2Bmarked%2Bfor%2Btransfer%2Band%2Bawaits%2Bconfirmation%2Bfrom%2B%2522User%2BOne%2522", flashCookie.Value)
 		})
 	})
 
@@ -66,7 +64,6 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user20/big_test_public_fork_7/settings", map[string]string{
-				"_csrf":     GetCSRF(t, session, "/user20/big_test_public_fork_7/settings"),
 				"action":    "convert_fork",
 				"repo_name": "big_test_public_fork_7",
 			})
@@ -77,15 +74,14 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user20/big_test_public_fork_7/settings", map[string]string{
-				"_csrf":     GetCSRF(t, session, "/user20/big_test_public_fork_7/settings"),
 				"action":    "convert_fork",
 				"repo_name": "user20/big_test_public_fork_7",
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "success%3DThe%2Bfork%2Bhas%2Bbeen%2Bconverted%2Binto%2Ba%2Bregular%2Brepository.", flashCookie.Value)
+			assert.Equal(t, "success%3DThe%2Bfork%2Bhas%2Bbeen%2Bconverted%2Binto%2Ba%2Bregular%2Brepository.", flashCookie.Value)
 		})
 	})
 
@@ -99,7 +95,6 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"_csrf":     GetCSRF(t, session, "/user2/repo1/settings"),
 				"action":    "rename-wiki-branch",
 				"repo_name": "repo1",
 			})
@@ -110,15 +105,14 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"_csrf":     GetCSRF(t, session, "/user2/repo1/settings"),
 				"action":    "rename-wiki-branch",
 				"repo_name": "user2/repo1",
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "success%3DThe%2Brepository%2Bwiki%2527s%2Bbranch%2Bname%2Bhas%2Bbeen%2Bsuccessfully%2Bnormalized.", flashCookie.Value)
+			assert.Equal(t, "success%3DThe%2Brepository%2Bwiki%2527s%2Bbranch%2Bname%2Bhas%2Bbeen%2Bsuccessfully%2Bnormalized.", flashCookie.Value)
 		})
 	})
 
@@ -129,7 +123,6 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"_csrf":     GetCSRF(t, session, "/user2/repo1/settings"),
 				"action":    "delete-wiki",
 				"repo_name": "repo1",
 			})
@@ -140,15 +133,14 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"_csrf":     GetCSRF(t, session, "/user2/repo1/settings"),
 				"action":    "delete-wiki",
 				"repo_name": "user2/repo1",
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "success%3DThe%2Brepository%2Bwiki%2Bdata%2Bhas%2Bbeen%2Bdeleted.", flashCookie.Value)
+			assert.Equal(t, "success%3DThe%2Brepository%2Bwiki%2Bdata%2Bhas%2Bbeen%2Bdeleted.", flashCookie.Value)
 		})
 	})
 
@@ -159,7 +151,6 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"_csrf":     GetCSRF(t, session, "/user2/repo1/settings"),
 				"action":    "delete",
 				"repo_name": "repo1",
 			})
@@ -170,15 +161,14 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"_csrf":     GetCSRF(t, session, "/user2/repo1/settings"),
 				"action":    "delete",
 				"repo_name": "user2/repo1",
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "success%3DThe%2Brepository%2Bhas%2Bbeen%2Bdeleted.", flashCookie.Value)
+			assert.Equal(t, "success%3DThe%2Brepository%2Bhas%2Bbeen%2Bdeleted.", flashCookie.Value)
 		})
 	})
 }

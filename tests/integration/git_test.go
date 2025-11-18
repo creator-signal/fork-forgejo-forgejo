@@ -12,29 +12,33 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/perm"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	gitea_context "code.gitea.io/gitea/services/context"
-	files_service "code.gitea.io/gitea/services/repository/files"
-	"code.gitea.io/gitea/tests"
+	actions_model "forgejo.org/models/actions"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/perm"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	app_context "forgejo.org/services/context"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
+	"github.com/kballard/go-shellquote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,7 +49,34 @@ const (
 )
 
 func TestGit(t *testing.T) {
-	onGiteaRun(t, testGit)
+	onApplicationRun(t, testGit)
+}
+
+func TestActionsTokenAuth(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
+		task.GenerateToken()
+		actions_model.UpdateTask(db.DefaultContext, task)
+		u.User = url.UserPassword("token", task.Token)
+
+		t.Run("clone task's own repo", func(t *testing.T) {
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: task.RepoID})
+			u.Path = fmt.Sprintf("/%s/%s.git", repo.OwnerName, repo.Name)
+			doGitClone(t.TempDir(), u)(t)
+		})
+
+		t.Run("clone public repo of limited owner", func(t *testing.T) {
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 38})
+			u.Path = fmt.Sprintf("/%s/%s.git", repo.OwnerName, repo.Name)
+			doGitClone(t.TempDir(), u)(t)
+		})
+
+		t.Run("cannot clone private repo", func(t *testing.T) {
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
+			u.Path = fmt.Sprintf("/%s/%s.git", repo.OwnerName, repo.Name)
+			doGitCloneFail(u)(t)
+		})
+	})
 }
 
 func testGit(t *testing.T, u *url.URL) {
@@ -66,7 +97,7 @@ func testGit(t *testing.T, u *url.URL) {
 
 			dstPath := t.TempDir()
 
-			t.Run("CreateRepoInDifferentUser", doAPICreateRepository(forkedUserCtx, false, objectFormat))
+			t.Run("CreateRepoInDifferentUser", doAPICreateRepository(forkedUserCtx, nil, objectFormat))
 			t.Run("AddUserAsCollaborator", doAPIAddCollaborator(forkedUserCtx, httpContext.Username, perm.AccessModeRead))
 
 			t.Run("ForkFromDifferentUser", doAPIForkRepository(httpContext, forkedUserCtx.Username))
@@ -107,13 +138,16 @@ func testGit(t *testing.T, u *url.URL) {
 			sshContext.Reponame = "repo-tmp-18-" + objectFormat.Name()
 			keyname := "my-testing-key"
 			forkedUserCtx.Reponame = sshContext.Reponame
-			t.Run("CreateRepoInDifferentUser", doAPICreateRepository(forkedUserCtx, false, objectFormat))
+			t.Run("CreateRepoInDifferentUser", doAPICreateRepository(forkedUserCtx, nil, objectFormat))
 			t.Run("AddUserAsCollaborator", doAPIAddCollaborator(forkedUserCtx, sshContext.Username, perm.AccessModeRead))
 			t.Run("ForkFromDifferentUser", doAPIForkRepository(sshContext, forkedUserCtx.Username))
 
 			// Setup key the user ssh key
 			withKeyFile(t, keyname, func(keyFile string) {
-				t.Run("CreateUserKey", doAPICreateUserKey(sshContext, "test-key-"+objectFormat.Name(), keyFile))
+				var publicKeyID int64
+				t.Run("CreateUserKey", doAPICreateUserKey(sshContext, "test-key-"+objectFormat.Name(), keyFile, func(t *testing.T, pk api.PublicKey) {
+					publicKeyID = pk.ID
+				}))
 
 				// Setup remote link
 				// TODO: get url from api
@@ -140,6 +174,7 @@ func testGit(t *testing.T, u *url.URL) {
 				})
 
 				t.Run("PushCreate", doPushCreate(sshContext, sshURL, objectFormat))
+				t.Run("LFS no access", doLFSNoAccess(sshContext, publicKeyID, objectFormat))
 			})
 		})
 	})
@@ -443,10 +478,7 @@ func doProtectBranch(ctx APITestContext, branch string, addParameter ...paramete
 		rule := &git_model.ProtectedBranch{RuleName: branch, RepoID: repo.ID}
 		unittest.LoadBeanIfExists(rule)
 
-		csrf := GetCSRF(t, ctx.Session, fmt.Sprintf("/%s/%s/settings/branches", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)))
-
 		parameter := parameterProtectBranch{
-			"_csrf":     csrf,
 			"rule_id":   strconv.FormatInt(rule.ID, 10),
 			"rule_name": branch,
 		}
@@ -460,9 +492,9 @@ func doProtectBranch(ctx APITestContext, branch string, addParameter ...paramete
 		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings/branches/edit", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)), parameter)
 		ctx.Session.MakeRequest(t, req, http.StatusSeeOther)
 		// Check if master branch has been locked successfully
-		flashCookie := ctx.Session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie := ctx.Session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
-		assert.EqualValues(t, "success%3DBranch%2Bprotection%2Bfor%2Brule%2B%2522"+url.QueryEscape(branch)+"%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
+		assert.Equal(t, "success%3DBranch%2Bprotection%2Bfor%2Brule%2B%2522"+url.QueryEscape(branch)+"%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 	}
 }
 
@@ -522,8 +554,7 @@ func doMergeFork(ctx, baseCtx APITestContext, baseBranch, headBranch string) fun
 		t.Run("EnsureCanSeePull", doEnsureCanSeePull(headCtx, pr, false))
 		t.Run("CheckPR", func(t *testing.T) {
 			oldMergeBase := pr.MergeBase
-			pr2, err := doAPIGetPullRequest(baseCtx, baseCtx.Username, baseCtx.Reponame, pr.Index)(t)
-			require.NoError(t, err)
+			pr2 := doAPIGetPullRequest(baseCtx, baseCtx.Username, baseCtx.Reponame, pr.Index)(t)
 			assert.Equal(t, oldMergeBase, pr2.MergeBase)
 		})
 		t.Run("EnsurDiffNoChange", doEnsureDiffNoChange(baseCtx, pr, diffHash, diffLength))
@@ -578,7 +609,7 @@ func doEnsureCanSeePull(ctx APITestContext, pr api.PullRequest, editable bool) f
 		doc := NewHTMLParser(t, resp.Body)
 		editButtonCount := doc.doc.Find("div.diff-file-header-actions a[href*='/_edit/']").Length()
 		if editable {
-			assert.Positive(t, editButtonCount, 0, "Expected to find a button to edit a file in the PR diff view but there were none")
+			assert.Positive(t, editButtonCount, "Expected to find a button to edit a file in the PR diff view but there were none")
 		} else {
 			assert.Equal(t, 0, editButtonCount, "Expected not to find any buttons to edit files in PR diff view but there were some")
 		}
@@ -649,11 +680,7 @@ func doPushCreate(ctx APITestContext, u *url.URL, objectFormat git.ObjectFormat)
 
 func doBranchDelete(ctx APITestContext, owner, repo, branch string) func(*testing.T) {
 	return func(t *testing.T) {
-		csrf := GetCSRF(t, ctx.Session, fmt.Sprintf("/%s/%s/branches", url.PathEscape(owner), url.PathEscape(repo)))
-
-		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/branches/delete?name=%s", url.PathEscape(owner), url.PathEscape(repo), url.QueryEscape(branch)), map[string]string{
-			"_csrf": csrf,
-		})
+		req := NewRequest(t, "POST", fmt.Sprintf("/%s/%s/branches/delete?name=%s", url.PathEscape(owner), url.PathEscape(repo), url.QueryEscape(branch)))
 		ctx.Session.MakeRequest(t, req, http.StatusOK)
 	}
 }
@@ -723,27 +750,21 @@ func doAutoPRMerge(baseCtx *APITestContext, dstPath string) func(t *testing.T) {
 
 		// Check pr status
 		ctx.ExpectedCode = 0
-		pr, err = doAPIGetPullRequest(ctx, baseCtx.Username, baseCtx.Reponame, pr.Index)(t)
-		require.NoError(t, err)
+		pr = doAPIGetPullRequest(ctx, baseCtx.Username, baseCtx.Reponame, pr.Index)(t)
 		assert.False(t, pr.HasMerged)
 
 		// Call API to add Failure status for commit
 		t.Run("CreateStatus", addCommitStatus(api.CommitStatusFailure))
 
 		// Check pr status
-		pr, err = doAPIGetPullRequest(ctx, baseCtx.Username, baseCtx.Reponame, pr.Index)(t)
-		require.NoError(t, err)
+		pr = doAPIGetPullRequest(ctx, baseCtx.Username, baseCtx.Reponame, pr.Index)(t)
 		assert.False(t, pr.HasMerged)
 
 		// Call API to add Success status for commit
 		t.Run("CreateStatus", addCommitStatus(api.CommitStatusSuccess))
 
-		// wait to let gitea merge stuff
-		time.Sleep(time.Second)
-
 		// test pr status
-		pr, err = doAPIGetPullRequest(ctx, baseCtx.Username, baseCtx.Reponame, pr.Index)(t)
-		require.NoError(t, err)
+		pr = doAPIGetPullRequest(ctx, baseCtx.Username, baseCtx.Reponame, pr.Index)(t)
 		assert.True(t, pr.HasMerged)
 	}
 }
@@ -757,24 +778,17 @@ func doInternalReferences(ctx *APITestContext, dstPath string) func(t *testing.T
 
 		_, stdErr, gitErr := git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments(fmt.Sprintf(":refs/pull/%d/head", pr1.Index)).RunStdString(&git.RunOpts{Dir: dstPath})
 		require.Error(t, gitErr)
-		assert.Contains(t, stdErr, fmt.Sprintf("remote: Forgejo: The deletion of refs/pull/%d/head is skipped as it's an internal reference.", pr1.Index))
-		assert.Contains(t, stdErr, fmt.Sprintf("[remote rejected] refs/pull/%d/head (hook declined)", pr1.Index))
+		assert.Contains(t, stdErr, fmt.Sprintf("[remote rejected] refs/pull/%d/head (deny deleting a hidden ref)", pr1.Index))
 
 		_, stdErr, gitErr = git.NewCommand(git.DefaultContext, "push", "origin", "--force").AddDynamicArguments(fmt.Sprintf("HEAD~1:refs/pull/%d/head", pr1.Index)).RunStdString(&git.RunOpts{Dir: dstPath})
 		require.Error(t, gitErr)
-		assert.Contains(t, stdErr, fmt.Sprintf("remote: Forgejo: The modification of refs/pull/%d/head is skipped as it's an internal reference.", pr1.Index))
-		assert.Contains(t, stdErr, fmt.Sprintf("[remote rejected] HEAD~1 -> refs/pull/%d/head (hook declined)", pr1.Index))
+		assert.Contains(t, stdErr, fmt.Sprintf("[remote rejected] HEAD~1 -> refs/pull/%d/head (deny updating a hidden ref)", pr1.Index))
 	}
 }
 
 func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string) func(t *testing.T) {
 	return func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-
-		// skip this test if git version is low
-		if git.CheckGitVersionAtLeast("2.29") != nil {
-			return
-		}
 
 		gitRepo, err := git.OpenRepository(git.DefaultContext, dstPath)
 		require.NoError(t, err)
@@ -832,8 +846,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			assert.Equal(t, 1, pr1.CommitsAhead)
 			assert.Equal(t, 0, pr1.CommitsBehind)
 
-			prMsg, err := doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr1.Index)(t)
-			require.NoError(t, err)
+			prMsg := doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr1.Index)(t)
 
 			assert.Equal(t, "user2/"+headBranch, pr1.HeadBranch)
 			assert.False(t, prMsg.HasMerged)
@@ -854,8 +867,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			}
 			assert.Equal(t, 1, pr2.CommitsAhead)
 			assert.Equal(t, 0, pr2.CommitsBehind)
-			prMsg, err = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr2.Index)(t)
-			require.NoError(t, err)
+			prMsg = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr2.Index)(t)
 
 			assert.Equal(t, "user2/test/"+headBranch, pr2.HeadBranch)
 			assert.False(t, prMsg.HasMerged)
@@ -906,8 +918,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			require.NoError(t, err)
 
 			unittest.AssertCount(t, &issues_model.PullRequest{}, pullNum+2)
-			prMsg, err := doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr1.Index)(t)
-			require.NoError(t, err)
+			prMsg := doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr1.Index)(t)
 
 			assert.False(t, prMsg.HasMerged)
 			assert.Equal(t, commit, prMsg.Head.Sha)
@@ -924,8 +935,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			require.NoError(t, err)
 
 			unittest.AssertCount(t, &issues_model.PullRequest{}, pullNum+2)
-			prMsg, err = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr2.Index)(t)
-			require.NoError(t, err)
+			prMsg = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr2.Index)(t)
 
 			assert.False(t, prMsg.HasMerged)
 			assert.Equal(t, commit, prMsg.Head.Sha)
@@ -949,8 +959,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 				err := pr3.LoadIssue(db.DefaultContext)
 				require.NoError(t, err)
 
-				_, err2 := doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr3.Index)(t)
-				require.NoError(t, err2)
+				doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr3.Index)(t)
 
 				assert.Equal(t, "Testing commit 2", pr3.Issue.Title)
 				assert.Contains(t, pr3.Issue.Content, "Longer description.")
@@ -971,8 +980,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 				err := pr.LoadIssue(db.DefaultContext)
 				require.NoError(t, err)
 
-				_, err = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr.Index)(t)
-				require.NoError(t, err)
+				doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr.Index)(t)
 
 				assert.Equal(t, "my-shiny-title", pr.Issue.Title)
 				assert.Contains(t, pr.Issue.Content, "Longer description.")
@@ -994,8 +1002,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 				err := pr.LoadIssue(db.DefaultContext)
 				require.NoError(t, err)
 
-				_, err = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr.Index)(t)
-				require.NoError(t, err)
+				doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr.Index)(t)
 
 				assert.Equal(t, "Testing commit 2", pr.Issue.Title)
 				assert.Contains(t, pr.Issue.Content, "custom")
@@ -1035,7 +1042,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 
 				currentHeadCommitID, err := upstreamGitRepo.GetRefCommitID(pr.GetGitRefName())
 				require.NoError(t, err)
-				assert.EqualValues(t, headCommitID, currentHeadCommitID)
+				assert.Equal(t, headCommitID, currentHeadCommitID)
 			})
 			t.Run("Succeeds", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -1045,7 +1052,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 
 				currentHeadCommitID, err := upstreamGitRepo.GetRefCommitID(pr.GetGitRefName())
 				require.NoError(t, err)
-				assert.NotEqualValues(t, headCommitID, currentHeadCommitID)
+				assert.NotEqual(t, headCommitID, currentHeadCommitID)
 			})
 		})
 
@@ -1082,7 +1089,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 }
 
 func TestDataAsync_Issue29101(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 
@@ -1121,4 +1128,31 @@ func TestDataAsync_Issue29101(t *testing.T) {
 		require.NoError(t, err)
 		defer r2.Close()
 	})
+}
+
+func doLFSNoAccess(ctx APITestContext, publicKeyID int64, objectFormat git.ObjectFormat) func(*testing.T) {
+	return func(t *testing.T) {
+		// This is set in withKeyFile
+		sshCommand := os.Getenv("GIT_SSH_COMMAND")
+
+		// Sanity check, because we are going to execute whatever is in here.
+		require.True(t, strings.HasPrefix(sshCommand, "ssh "))
+
+		// We really have to split on the arguments and pass them individually.
+		sshOptions, err := shellquote.Split(strings.TrimPrefix(sshCommand, "ssh "))
+		require.NoError(t, err)
+
+		sshOptions = append(sshOptions, "-p "+strconv.Itoa(setting.SSH.ListenPort), "git@"+setting.SSH.ListenHost)
+
+		cmd := exec.CommandContext(t.Context(), "ssh", append(sshOptions, "git-lfs-authenticate", "user40/repo60.git", "upload")...)
+		stderr := bytes.Buffer{}
+		cmd.Stderr = &stderr
+
+		require.ErrorContains(t, cmd.Run(), "exit status 1")
+		if objectFormat.Name() == "sha1" {
+			assert.Contains(t, stderr.String(), fmt.Sprintf("Forgejo: User: 2:user2 with Key: %d:test-key-sha1 is not authorized to write to user40/repo60.", publicKeyID))
+		} else {
+			assert.Contains(t, stderr.String(), fmt.Sprintf("Forgejo: User: 2:user2 with Key: %d:test-key-sha256 is not authorized to write to user40/repo60.", publicKeyID))
+		}
+	}
 }

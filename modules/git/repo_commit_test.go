@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -127,19 +127,19 @@ func TestGetTagCommit(t *testing.T) {
 
 	aTagID, err := bareRepo1.GetTagCommitID(aTagName)
 	require.NoError(t, err)
-	assert.NotEqualValues(t, aTagCommitID, aTagID)
+	assert.NotEqual(t, aTagCommitID, aTagID)
 
 	lTagID, err := bareRepo1.GetTagCommitID(lTagName)
 	require.NoError(t, err)
-	assert.EqualValues(t, lTagCommitID, lTagID)
+	assert.Equal(t, lTagCommitID, lTagID)
 
 	aTag, err := bareRepo1.GetTagCommit(aTagName)
 	require.NoError(t, err)
-	assert.EqualValues(t, aTagCommitID, aTag.ID.String())
+	assert.Equal(t, aTagCommitID, aTag.ID.String())
 
 	lTag, err := bareRepo1.GetTagCommit(lTagName)
 	require.NoError(t, err)
-	assert.EqualValues(t, lTagCommitID, lTag.ID.String())
+	assert.Equal(t, lTagCommitID, lTag.ID.String())
 }
 
 func TestCommitsByRange(t *testing.T) {
@@ -198,4 +198,79 @@ func TestCommitsByFileAndRange(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, commits, testCase.ExpectedCommitCount, "file: '%s', page: %d", testCase.File, testCase.Page)
 	}
+}
+
+func TestGetCommitsFromIDs(t *testing.T) {
+	bareRepo1, err := openRepositoryWithDefaultContext(filepath.Join(testReposDir, "repo1_bare"))
+	require.NoError(t, err)
+
+	commitIDs := []string{"2839944139e0de9737a044f78b0e4b40d989a9e3", "2839944139e0de9737a044f78b0e4b40d989a9e4"}
+
+	t.Run("Normal", func(t *testing.T) {
+		commits := bareRepo1.GetCommitsFromIDs(commitIDs, false)
+		if assert.Len(t, commits, 1) {
+			assert.Equal(t, "2839944139e0de9737a044f78b0e4b40d989a9e3", commits[0].ID.String())
+			assert.Equal(t, "Example User", commits[0].Author.Name)
+		}
+	})
+
+	t.Run("Ignore existence", func(t *testing.T) {
+		commits := bareRepo1.GetCommitsFromIDs(commitIDs, true)
+		if assert.Len(t, commits, 2) {
+			assert.Equal(t, "2839944139e0de9737a044f78b0e4b40d989a9e3", commits[0].ID.String())
+			assert.Equal(t, "Example User", commits[0].Author.Name)
+
+			assert.Equal(t, "2839944139e0de9737a044f78b0e4b40d989a9e4", commits[1].ID.String())
+			assert.Nil(t, commits[1].Author)
+		}
+	})
+
+	t.Run("Not full commit ID", func(t *testing.T) {
+		commits := bareRepo1.GetCommitsFromIDs(append(commitIDs, "abba"), true)
+		if assert.Len(t, commits, 2) {
+			assert.Equal(t, "2839944139e0de9737a044f78b0e4b40d989a9e3", commits[0].ID.String())
+			assert.Equal(t, "Example User", commits[0].Author.Name)
+
+			assert.Equal(t, "2839944139e0de9737a044f78b0e4b40d989a9e4", commits[1].ID.String())
+			assert.Nil(t, commits[1].Author)
+		}
+	})
+}
+
+func TestGetLatestCommitTime(t *testing.T) {
+	t.Run("repo1", func(t *testing.T) {
+		repo, err := openRepositoryWithDefaultContext(filepath.Join(testReposDir, "repo1_bare"))
+		require.NoError(t, err)
+		defer repo.Close()
+
+		lct, err := repo.GetLatestCommitTime()
+		require.NoError(t, err)
+		// Time is Sun Nov 13 16:40:14 2022 +0100
+		// which is the time of commit
+		// ce064814f4a0d337b333e646ece456cd39fab612 (refs/heads/master)
+		assert.EqualValues(t, 1668354014, lct.Unix())
+	})
+
+	t.Run("repo1_sha256", func(t *testing.T) {
+		skipIfSHA256NotSupported(t)
+
+		repo, err := openRepositoryWithDefaultContext(filepath.Join(testReposDir, "repo1_bare_sha256"))
+		require.NoError(t, err)
+		defer repo.Close()
+
+		lct, err := repo.GetLatestCommitTime()
+		require.NoError(t, err)
+		assert.EqualValues(t, 1698676906, lct.Unix())
+	})
+
+	t.Run("repo3_notes", func(t *testing.T) {
+		repo, err := openRepositoryWithDefaultContext(filepath.Join(testReposDir, "repo3_notes"))
+		require.NoError(t, err)
+		defer repo.Close()
+
+		lct, err := repo.GetLatestCommitTime()
+		require.NoError(t, err)
+		// Time is of refs/heads/master and not of refs/notes/commits
+		assert.EqualValues(t, 1567767909, lct.Unix())
+	})
 }

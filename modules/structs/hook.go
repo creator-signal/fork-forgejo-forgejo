@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/json"
+	"forgejo.org/modules/json"
 )
 
 // ErrInvalidReceiveHook FIXME
@@ -118,6 +118,7 @@ var (
 	_ Payloader = &RepositoryPayload{}
 	_ Payloader = &ReleasePayload{}
 	_ Payloader = &PackagePayload{}
+	_ Payloader = &ActionPayload{}
 )
 
 // _________                        __
@@ -139,26 +140,6 @@ type CreatePayload struct {
 // JSONPayload return payload information
 func (p *CreatePayload) JSONPayload() ([]byte, error) {
 	return json.MarshalIndent(p, "", "  ")
-}
-
-// ParseCreateHook parses create event hook content.
-func ParseCreateHook(raw []byte) (*CreatePayload, error) {
-	hook := new(CreatePayload)
-	if err := json.Unmarshal(raw, hook); err != nil {
-		return nil, err
-	}
-
-	// it is possible the JSON was parsed, however,
-	// was not from Gogs (maybe was from Bitbucket)
-	// So we'll check to be sure certain key fields
-	// were populated
-	switch {
-	case hook.Repo == nil:
-		return nil, ErrInvalidReceiveHook
-	case len(hook.Ref) == 0:
-		return nil, ErrInvalidReceiveHook
-	}
-	return hook, nil
 }
 
 // ________         .__          __
@@ -290,22 +271,6 @@ type PushPayload struct {
 // JSONPayload FIXME
 func (p *PushPayload) JSONPayload() ([]byte, error) {
 	return json.MarshalIndent(p, "", "  ")
-}
-
-// ParsePushHook parses push event hook content.
-func ParsePushHook(raw []byte) (*PushPayload, error) {
-	hook := new(PushPayload)
-	if err := json.Unmarshal(raw, hook); err != nil {
-		return nil, err
-	}
-
-	switch {
-	case hook.Repo == nil:
-		return nil, ErrInvalidReceiveHook
-	case len(hook.Ref) == 0:
-		return nil, ErrInvalidReceiveHook
-	}
-	return hook, nil
 }
 
 // Branch returns branch name from a payload
@@ -517,5 +482,38 @@ type PackagePayload struct {
 
 // JSONPayload implements Payload
 func (p *PackagePayload) JSONPayload() ([]byte, error) {
+	return json.MarshalIndent(p, "", "  ")
+}
+
+//     _        _   _
+//    / \   ___| |_(_) ___  _ __
+//   / _ \ / __| __| |/ _ \| '_ \
+//  / ___ \ (__| |_| | (_) | | | |
+// /_/   \_\___|\__|_|\___/|_| |_|
+
+// this name is ridiculous, yes
+// it's the sub-type of hook that has something to do with Forgejo Actions
+type HookActionAction string
+
+const (
+	HookActionFailure HookActionAction = "failure"
+	HookActionRecover HookActionAction = "recover"
+	HookActionSuccess HookActionAction = "success"
+)
+
+// ActionPayload payload for action webhooks
+type ActionPayload struct {
+	Action HookActionAction `json:"action"`
+	Run    *ActionRun       `json:"run"`
+	// the status of this run before it completed
+	// this must be a not done status
+	PriorStatus string `json:"prior_status"`
+	// the last run for the same workflow
+	// could be nil when Run is the first for it's workflow
+	LastRun *ActionRun `json:"last_run,omitempty"`
+}
+
+// JSONPayload return payload information
+func (p *ActionPayload) JSONPayload() ([]byte, error) {
 	return json.MarshalIndent(p, "", "  ")
 }

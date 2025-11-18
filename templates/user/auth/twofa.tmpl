@@ -3,7 +3,6 @@
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form tw-max-w-2xl tw-m-auto" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
 				<h3 class="ui top attached header">
 					{{ctx.Locale.Tr "twofa"}}
 				</h3>
@@ -11,7 +10,7 @@
 					{{template "base/alert" .}}
 					<div class="required field">
 						<label for="passcode">{{ctx.Locale.Tr "passcode"}}</label>
-						<input id="passcode" name="passcode" type="text" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]*" autofocus required>
+						<input id="passcode" name="passcode" type="text" autocomplete="one-time-code" spellcheck="false" inputmode="numeric" pattern="[0-9]*" autofocus required>
 					</div>
 
 					<div class="inline field">

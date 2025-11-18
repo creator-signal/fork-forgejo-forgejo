@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	base "code.gitea.io/gitea/modules/migration"
-	"code.gitea.io/gitea/modules/proxy"
-	"code.gitea.io/gitea/modules/structs"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/proxy"
+	"forgejo.org/modules/structs"
 
-	"github.com/google/go-github/v64/github"
+	"github.com/google/go-github/v74/github"
 	"golang.org/x/oauth2"
 )
 
@@ -57,7 +57,7 @@ func (f *GithubDownloaderV3Factory) New(ctx context.Context, opts base.MigrateOp
 
 	log.Trace("Create github downloader BaseURL: %s %s/%s", baseURL, oldOwner, oldName)
 
-	return NewGithubDownloaderV3(ctx, baseURL, opts.AuthUsername, opts.AuthPassword, opts.AuthToken, oldOwner, oldName), nil
+	return NewGithubDownloaderV3(ctx, baseURL, opts.PullRequests, opts.Issues, opts.AuthUsername, opts.AuthPassword, opts.AuthToken, oldOwner, oldName), nil
 }
 
 // GitServiceType returns the type of git service
@@ -69,30 +69,41 @@ func (f *GithubDownloaderV3Factory) GitServiceType() structs.GitServiceType {
 // from github via APIv3
 type GithubDownloaderV3 struct {
 	base.NullDownloader
-	ctx           context.Context
-	clients       []*github.Client
-	baseURL       string
-	repoOwner     string
-	repoName      string
-	userName      string
-	password      string
-	rates         []*github.Rate
-	curClientIdx  int
-	maxPerPage    int
-	SkipReactions bool
-	SkipReviews   bool
+	ctx              context.Context
+	clients          []*github.Client
+	baseURL          string
+	repoOwner        string
+	repoName         string
+	userName         string
+	password         string
+	getPullRequests  bool
+	getIssues        bool
+	rates            []*github.Rate
+	curClientIdx     int
+	maxPerPage       int
+	SkipReactions    bool
+	SkipReviews      bool
+	githubPagingInfo cursorPagingInfo
+}
+
+type cursorPagingInfo struct {
+	After  string
+	Before string
+	Cursor string
 }
 
 // NewGithubDownloaderV3 creates a github Downloader via github v3 API
-func NewGithubDownloaderV3(ctx context.Context, baseURL, userName, password, token, repoOwner, repoName string) *GithubDownloaderV3 {
+func NewGithubDownloaderV3(ctx context.Context, baseURL string, getPullRequests, getIssues bool, userName, password, token, repoOwner, repoName string) *GithubDownloaderV3 {
 	downloader := GithubDownloaderV3{
-		userName:   userName,
-		baseURL:    baseURL,
-		password:   password,
-		ctx:        ctx,
-		repoOwner:  repoOwner,
-		repoName:   repoName,
-		maxPerPage: 100,
+		userName:        userName,
+		baseURL:         baseURL,
+		password:        password,
+		ctx:             ctx,
+		repoOwner:       repoOwner,
+		repoName:        repoName,
+		maxPerPage:      100,
+		getPullRequests: getPullRequests,
+		getIssues:       getIssues,
 	}
 
 	if token != "" {
@@ -140,7 +151,7 @@ func (g *GithubDownloaderV3) LogString() string {
 func (g *GithubDownloaderV3) addClient(client *http.Client, baseURL string) {
 	githubClient := github.NewClient(client)
 	if baseURL != "https://github.com" {
-		githubClient, _ = github.NewClient(client).WithEnterpriseURLs(baseURL, baseURL)
+		githubClient, _ = githubClient.WithEnterpriseURLs(baseURL, baseURL)
 	}
 	g.clients = append(g.clients, githubClient)
 	g.rates = append(g.rates, nil)
@@ -220,6 +231,7 @@ func (g *GithubDownloaderV3) GetRepoInfo() (*base.Repository, error) {
 		OriginalURL:   gr.GetHTMLURL(),
 		CloneURL:      gr.GetCloneURL(),
 		DefaultBranch: gr.GetDefaultBranch(),
+		Website:       gr.GetHomepage(),
 	}, nil
 }
 
@@ -363,7 +375,8 @@ func (g *GithubDownloaderV3) convertGithubRelease(rel *github.RepositoryRelease)
 
 				// Prevent open redirect
 				if !hasBaseURL(redirectURL, g.baseURL) &&
-					!hasBaseURL(redirectURL, "https://objects.githubusercontent.com/") {
+					!hasBaseURL(redirectURL, "https://objects.githubusercontent.com/") &&
+					!hasBaseURL(redirectURL, "https://release-assets.githubusercontent.com/") {
 					WarnAndNotice("Unexpected AssetURL for assetID[%d] in %s: %s", asset.GetID(), g, redirectURL)
 
 					return io.NopCloser(strings.NewReader(redirectURL)), nil
@@ -417,22 +430,40 @@ func (g *GithubDownloaderV3) GetReleases() ([]*base.Release, error) {
 
 // GetIssues returns issues according start and limit
 func (g *GithubDownloaderV3) GetIssues(page, perPage int) ([]*base.Issue, bool, error) {
+	var issues []*github.Issue
+	var resp *github.Response
+	var err error
 	if perPage > g.maxPerPage {
 		perPage = g.maxPerPage
-	}
-	opt := &github.IssueListByRepoOptions{
-		Sort:      "created",
-		Direction: "asc",
-		State:     "all",
-		ListOptions: github.ListOptions{
-			PerPage: perPage,
-			Page:    page,
-		},
 	}
 
 	allIssues := make([]*base.Issue, 0, perPage)
 	g.waitAndPickClient()
-	issues, resp, err := g.getClient().Issues.ListByRepo(g.ctx, g.repoOwner, g.repoName, opt)
+
+	if page == 1 {
+		issues, resp, err = g.getClient().Issues.ListByRepo(g.ctx, g.repoOwner, g.repoName, &github.IssueListByRepoOptions{
+			Sort:      "created",
+			Direction: "asc",
+			State:     "all",
+			ListCursorOptions: github.ListCursorOptions{
+				PerPage: perPage,
+				Page:    strconv.Itoa(page),
+			},
+		})
+		g.githubPagingInfo.After = resp.After
+	} else {
+		issues, resp, err = g.getClient().Issues.ListByRepo(g.ctx, g.repoOwner, g.repoName, &github.IssueListByRepoOptions{
+			Sort:      "created",
+			Direction: "asc",
+			State:     "all",
+			ListCursorOptions: github.ListCursorOptions{
+				PerPage: perPage,
+				After:   g.githubPagingInfo.After,
+			},
+		})
+		g.githubPagingInfo.After = resp.After
+	}
+
 	if err != nil {
 		return nil, false, fmt.Errorf("error while listing repos: %w", err)
 	}
@@ -453,10 +484,13 @@ func (g *GithubDownloaderV3) GetIssues(page, perPage int) ([]*base.Issue, bool, 
 		if !g.SkipReactions {
 			for i := 1; ; i++ {
 				g.waitAndPickClient()
-				res, resp, err := g.getClient().Reactions.ListIssueReactions(g.ctx, g.repoOwner, g.repoName, issue.GetNumber(), &github.ListOptions{
-					Page:    i,
-					PerPage: perPage,
-				})
+				reactionOpts := &github.ListReactionOptions{
+					ListOptions: github.ListOptions{
+						Page:    i,
+						PerPage: perPage,
+					},
+				}
+				res, resp, err := g.getClient().Reactions.ListIssueReactions(g.ctx, g.repoOwner, g.repoName, issue.GetNumber(), reactionOpts)
 				if err != nil {
 					return nil, false, err
 				}
@@ -539,10 +573,13 @@ func (g *GithubDownloaderV3) getComments(commentable base.Commentable) ([]*base.
 			if !g.SkipReactions {
 				for i := 1; ; i++ {
 					g.waitAndPickClient()
-					res, resp, err := g.getClient().Reactions.ListIssueCommentReactions(g.ctx, g.repoOwner, g.repoName, comment.GetID(), &github.ListOptions{
-						Page:    i,
-						PerPage: g.maxPerPage,
-					})
+					reactionOpts := &github.ListReactionOptions{
+						ListOptions: github.ListOptions{
+							Page:    i,
+							PerPage: g.maxPerPage,
+						},
+					}
+					res, resp, err := g.getClient().Reactions.ListIssueCommentReactions(g.ctx, g.repoOwner, g.repoName, comment.GetID(), reactionOpts)
 					if err != nil {
 						return nil, err
 					}
@@ -580,6 +617,24 @@ func (g *GithubDownloaderV3) getComments(commentable base.Commentable) ([]*base.
 	return allComments, nil
 }
 
+func (g *GithubDownloaderV3) filterByHTMLURL(comments []*github.IssueComment, filterBy string) []*github.IssueComment {
+	var result []*github.IssueComment
+	for _, val := range comments {
+		if !strings.Contains(*val.HTMLURL, filterBy) {
+			result = append(result, val)
+		}
+	}
+	return result
+}
+
+func (g *GithubDownloaderV3) filterPRComments(comments []*github.IssueComment) []*github.IssueComment {
+	return g.filterByHTMLURL(comments, "/pull/")
+}
+
+func (g *GithubDownloaderV3) filterIssueComments(comments []*github.IssueComment) []*github.IssueComment {
+	return g.filterByHTMLURL(comments, "/issues/")
+}
+
 // GetAllComments returns repository comments according page and perPageSize
 func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment, bool, error) {
 	var (
@@ -606,6 +661,12 @@ func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment,
 	}
 	isEnd := resp.NextPage == 0
 
+	if g.getIssues && !g.getPullRequests {
+		comments = g.filterPRComments(comments)
+	} else if !g.getIssues && g.getPullRequests {
+		comments = g.filterIssueComments(comments)
+	}
+
 	log.Trace("Request get comments %d/%d, but in fact get %d, next page is %d", perPage, page, len(comments), resp.NextPage)
 	g.setRate(&resp.Rate)
 	for _, comment := range comments {
@@ -614,10 +675,13 @@ func (g *GithubDownloaderV3) GetAllComments(page, perPage int) ([]*base.Comment,
 		if !g.SkipReactions {
 			for i := 1; ; i++ {
 				g.waitAndPickClient()
-				res, resp, err := g.getClient().Reactions.ListIssueCommentReactions(g.ctx, g.repoOwner, g.repoName, comment.GetID(), &github.ListOptions{
-					Page:    i,
-					PerPage: g.maxPerPage,
-				})
+				reactionOpts := &github.ListReactionOptions{
+					ListOptions: github.ListOptions{
+						Page:    i,
+						PerPage: g.maxPerPage,
+					},
+				}
+				res, resp, err := g.getClient().Reactions.ListIssueCommentReactions(g.ctx, g.repoOwner, g.repoName, comment.GetID(), reactionOpts)
 				if err != nil {
 					return nil, false, err
 				}
@@ -685,10 +749,13 @@ func (g *GithubDownloaderV3) GetPullRequests(page, perPage int) ([]*base.PullReq
 		if !g.SkipReactions {
 			for i := 1; ; i++ {
 				g.waitAndPickClient()
-				res, resp, err := g.getClient().Reactions.ListIssueReactions(g.ctx, g.repoOwner, g.repoName, pr.GetNumber(), &github.ListOptions{
-					Page:    i,
-					PerPage: perPage,
-				})
+				reactionOpts := &github.ListReactionOptions{
+					ListOptions: github.ListOptions{
+						Page:    i,
+						PerPage: perPage,
+					},
+				}
+				res, resp, err := g.getClient().Reactions.ListIssueReactions(g.ctx, g.repoOwner, g.repoName, pr.GetNumber(), reactionOpts)
 				if err != nil {
 					return nil, false, err
 				}
@@ -772,10 +839,13 @@ func (g *GithubDownloaderV3) convertGithubReviewComments(cs []*github.PullReques
 		if !g.SkipReactions {
 			for i := 1; ; i++ {
 				g.waitAndPickClient()
-				res, resp, err := g.getClient().Reactions.ListPullRequestCommentReactions(g.ctx, g.repoOwner, g.repoName, c.GetID(), &github.ListOptions{
-					Page:    i,
-					PerPage: g.maxPerPage,
-				})
+				reactionOpts := &github.ListReactionOptions{
+					ListOptions: github.ListOptions{
+						Page:    i,
+						PerPage: g.maxPerPage,
+					},
+				}
+				res, resp, err := g.getClient().Reactions.ListPullRequestCommentReactions(g.ctx, g.repoOwner, g.repoName, c.GetID(), reactionOpts)
 				if err != nil {
 					return nil, err
 				}
@@ -883,4 +953,19 @@ func (g *GithubDownloaderV3) GetReviews(reviewable base.Reviewable) ([]*base.Rev
 		opt.Page = resp.NextPage
 	}
 	return allReviews, nil
+}
+
+// FormatCloneURL add authentication into remote URLs
+func (g *GithubDownloaderV3) FormatCloneURL(opts MigrateOptions, remoteAddr string) (string, error) {
+	u, err := url.Parse(remoteAddr)
+	if err != nil {
+		return "", err
+	}
+	if len(opts.AuthToken) > 0 {
+		// "multiple tokens" are used to benefit more "API rate limit quota"
+		// git clone doesn't count for rate limits, so only use the first token.
+		// source: https://github.com/orgs/community/discussions/44515
+		u.User = url.UserPassword("oauth2", strings.Split(opts.AuthToken, ",")[0])
+	}
+	return u.String(), nil
 }

@@ -7,11 +7,11 @@ import (
 	"context"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/perm"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/timeutil"
+	"forgejo.org/models/db"
+	"forgejo.org/models/perm"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/timeutil"
 
 	"xorm.io/builder"
 )
@@ -19,8 +19,8 @@ import (
 // Collaboration represent the relation between an individual and a repository.
 type Collaboration struct {
 	ID          int64              `xorm:"pk autoincr"`
-	RepoID      int64              `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	UserID      int64              `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	RepoID      int64              `xorm:"UNIQUE(s) INDEX NOT NULL REFERENCES(repository, id)"`
+	UserID      int64              `xorm:"UNIQUE(s) INDEX NOT NULL REFERENCES(user, id)"`
 	Mode        perm.AccessMode    `xorm:"DEFAULT 2 NOT NULL"`
 	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`

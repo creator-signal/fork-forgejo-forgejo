@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"strings"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/modules/label"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/modules/label"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
 )
 
 // ListLabels list all the labels of an organization
@@ -30,6 +30,11 @@ func ListLabels(ctx *context.APIContext) {
 	//   description: name of the organization
 	//   type: string
 	//   required: true
+	// - name: sort
+	//   in: query
+	//   description: "Specifies the sorting method: mostissues, leastissues, or reversealphabetically."
+	//   type: string
+	//   enum: [mostissues, leastissues, reversealphabetically]
 	// - name: page
 	//   in: query
 	//   description: page number of results to return (1-based)

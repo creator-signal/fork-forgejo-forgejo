@@ -18,22 +18,22 @@ import (
 	"time"
 	"unicode"
 
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	git_model "code.gitea.io/gitea/models/git"
-	"code.gitea.io/gitea/models/perm"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/pprof"
-	"code.gitea.io/gitea/modules/private"
-	"code.gitea.io/gitea/modules/process"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/services/lfs"
+	asymkey_model "forgejo.org/models/asymkey"
+	git_model "forgejo.org/models/git"
+	"forgejo.org/models/perm"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/pprof"
+	"forgejo.org/modules/private"
+	"forgejo.org/modules/process"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/services/lfs"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/kballard/go-shellquote"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -41,35 +41,40 @@ const (
 )
 
 // CmdServ represents the available serv sub-command.
-var CmdServ = &cli.Command{
-	Name:        "serv",
-	Usage:       "(internal) Should only be called by SSH shell",
-	Description: "Serv provides access auth for repositories",
-	Before:      PrepareConsoleLoggerLevel(log.FATAL),
-	Action:      runServ,
-	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name: "enable-pprof",
+func cmdServ() *cli.Command {
+	return &cli.Command{
+		Name:        "serv",
+		Usage:       "(internal) Should only be called by SSH shell",
+		Description: "Serv provides access auth for repositories",
+		Before:      PrepareConsoleLoggerLevel(log.FATAL),
+		Action:      runServ,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name: "enable-pprof",
+			},
+			&cli.BoolFlag{
+				Name: "debug",
+			},
 		},
-		&cli.BoolFlag{
-			Name: "debug",
-		},
-	},
+	}
 }
 
-func setup(ctx context.Context, debug bool) {
+func setup(ctx context.Context, debug, gitNeeded bool) {
 	if debug {
 		setupConsoleLogger(log.TRACE, false, os.Stderr)
 	} else {
 		setupConsoleLogger(log.FATAL, false, os.Stderr)
 	}
 	setting.MustInstalled()
+	// Sanity check to ensure path is not relative, see: https://github.com/go-gitea/gitea/pull/19317
 	if _, err := os.Stat(setting.RepoRootPath); err != nil {
 		_ = fail(ctx, "Unable to access repository path", "Unable to access repository path %q, err: %v", setting.RepoRootPath, err)
 		return
 	}
-	if err := git.InitSimple(context.Background()); err != nil {
-		_ = fail(ctx, "Failed to init git", "Failed to init git, err: %v", err)
+	if gitNeeded {
+		if err := git.InitSimple(context.Background()); err != nil {
+			_ = fail(ctx, "Failed to init git", "Failed to init git, err: %v", err)
+		}
 	}
 }
 
@@ -82,6 +87,14 @@ var (
 	}
 	alphaDashDotPattern = regexp.MustCompile(`[^\w-\.]`)
 )
+
+func sshLog(ctx context.Context, level log.Level, message string) error {
+	if testing.Testing() || setting.InternalToken == "" {
+		return nil
+	}
+
+	return private.SSHLog(ctx, level, message)
+}
 
 // fail prints message to stdout, it's mainly used for git serv and git hook commands.
 // The output will be passed to git client and shown to user.
@@ -107,10 +120,7 @@ func fail(ctx context.Context, userMessage, logMsgFmt string, args ...any) error
 				logMsg = userMessage + ". " + logMsg
 			}
 		}
-		// Don't send an log if this is done in a test and no InternalToken is set.
-		if !testing.Testing() || setting.InternalToken != "" {
-			_ = private.SSHLog(ctx, true, logMsg)
-		}
+		_ = sshLog(ctx, log.ERROR, logMsg)
 	}
 	return cli.Exit("", 1)
 }
@@ -128,12 +138,12 @@ func handleCliResponseExtra(extra private.ResponseExtra) error {
 	return nil
 }
 
-func runServ(c *cli.Context) error {
-	ctx, cancel := installSignals()
+func runServ(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
 	// FIXME: This needs to internationalised
-	setup(ctx, c.Bool("debug"))
+	setup(ctx, c.Bool("debug"), true)
 
 	if setting.SSH.Disabled {
 		fmt.Println("Forgejo: SSH has been disabled")
@@ -188,12 +198,10 @@ func runServ(c *cli.Context) error {
 	}
 
 	if len(words) < 2 {
-		if git.CheckGitVersionAtLeast("2.29") == nil {
-			// for AGit Flow
-			if cmd == "ssh_info" {
-				fmt.Print(`{"type":"gitea","version":1}`)
-				return nil
-			}
+		// for AGit Flow
+		if cmd == "ssh_info" {
+			fmt.Print(`{"type":"agit","version":1}`)
+			return nil
 		}
 		return fail(ctx, "Too few arguments", "Too few arguments in cmd: %s", cmd)
 	}
@@ -253,11 +261,12 @@ func runServ(c *cli.Context) error {
 	}
 
 	if verb == lfsAuthenticateVerb {
-		if lfsVerb == "upload" {
+		switch lfsVerb {
+		case "upload":
 			requestedMode = perm.AccessModeWrite
-		} else if lfsVerb == "download" {
+		case "download":
 			requestedMode = perm.AccessModeRead
-		} else {
+		default:
 			return fail(ctx, "Unknown LFS verb", "Unknown lfs verb %s", lfsVerb)
 		}
 	}

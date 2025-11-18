@@ -7,19 +7,18 @@ import (
 	"context"
 	"testing"
 
-	"code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/services/auth/source/ldap"
+	"forgejo.org/models/auth"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/auth/source/ldap"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 func TestAddLdapBindDn(t *testing.T) {
 	// Mock cli functions to do not exit on error
-	osExiter := cli.OsExiter
-	defer func() { cli.OsExiter = osExiter }()
-	cli.OsExiter = func(code int) {}
+	defer test.MockVariableValue(&cli.OsExiter, func(code int) {})()
 
 	// Test cases
 	cases := []struct {
@@ -216,22 +215,22 @@ func TestAddLdapBindDn(t *testing.T) {
 				return nil
 			},
 			updateAuthSource: func(ctx context.Context, authSource *auth.Source) error {
-				assert.FailNow(t, "case %d: should not call updateAuthSource", n)
+				assert.FailNow(t, "should not call updateAuthSource", "case: %d", n)
 				return nil
 			},
 			getAuthSourceByID: func(ctx context.Context, id int64) (*auth.Source, error) {
-				assert.FailNow(t, "case %d: should not call getAuthSourceByID", n)
+				assert.FailNow(t, "should not call getAuthSourceByID", "case: %d", n)
 				return nil, nil
 			},
 		}
 
 		// Create a copy of command to test
-		app := cli.NewApp()
-		app.Flags = microcmdAuthAddLdapBindDn.Flags
+		app := cli.Command{}
+		app.Flags = microcmdAuthAddLdapBindDn().Flags
 		app.Action = service.addLdapBindDn
 
 		// Run it
-		err := app.Run(c.args)
+		err := app.Run(t.Context(), c.args)
 		if c.errMsg != "" {
 			assert.EqualError(t, err, c.errMsg, "case %d: error should match", n)
 		} else {
@@ -243,9 +242,7 @@ func TestAddLdapBindDn(t *testing.T) {
 
 func TestAddLdapSimpleAuth(t *testing.T) {
 	// Mock cli functions to do not exit on error
-	osExiter := cli.OsExiter
-	defer func() { cli.OsExiter = osExiter }()
-	cli.OsExiter = func(code int) {}
+	defer test.MockVariableValue(&cli.OsExiter, func(code int) {})()
 
 	// Test cases
 	cases := []struct {
@@ -447,22 +444,22 @@ func TestAddLdapSimpleAuth(t *testing.T) {
 				return nil
 			},
 			updateAuthSource: func(ctx context.Context, authSource *auth.Source) error {
-				assert.FailNow(t, "case %d: should not call updateAuthSource", n)
+				assert.FailNow(t, "should not call updateAuthSource", "case: %d", n)
 				return nil
 			},
 			getAuthSourceByID: func(ctx context.Context, id int64) (*auth.Source, error) {
-				assert.FailNow(t, "case %d: should not call getAuthSourceByID", n)
+				assert.FailNow(t, "should not call getAuthSourceByID", "case: %d", n)
 				return nil, nil
 			},
 		}
 
 		// Create a copy of command to test
-		app := cli.NewApp()
-		app.Flags = microcmdAuthAddLdapSimpleAuth.Flags
+		app := cli.Command{}
+		app.Flags = microcmdAuthAddLdapSimpleAuth().Flags
 		app.Action = service.addLdapSimpleAuth
 
 		// Run it
-		err := app.Run(c.args)
+		err := app.Run(t.Context(), c.args)
 		if c.errMsg != "" {
 			assert.EqualError(t, err, c.errMsg, "case %d: error should match", n)
 		} else {
@@ -474,9 +471,7 @@ func TestAddLdapSimpleAuth(t *testing.T) {
 
 func TestUpdateLdapBindDn(t *testing.T) {
 	// Mock cli functions to do not exit on error
-	osExiter := cli.OsExiter
-	defer func() { cli.OsExiter = osExiter }()
-	cli.OsExiter = func(code int) {}
+	defer test.MockVariableValue(&cli.OsExiter, func(code int) {})()
 
 	// Test cases
 	cases := []struct {
@@ -898,7 +893,7 @@ func TestUpdateLdapBindDn(t *testing.T) {
 				return nil
 			},
 			createAuthSource: func(ctx context.Context, authSource *auth.Source) error {
-				assert.FailNow(t, "case %d: should not call createAuthSource", n)
+				assert.FailNow(t, "should not call createAuthSource", "case: %d", n)
 				return nil
 			},
 			updateAuthSource: func(ctx context.Context, authSource *auth.Source) error {
@@ -920,12 +915,12 @@ func TestUpdateLdapBindDn(t *testing.T) {
 		}
 
 		// Create a copy of command to test
-		app := cli.NewApp()
-		app.Flags = microcmdAuthUpdateLdapBindDn.Flags
+		app := cli.Command{}
+		app.Flags = microcmdAuthUpdateLdapBindDn().Flags
 		app.Action = service.updateLdapBindDn
 
 		// Run it
-		err := app.Run(c.args)
+		err := app.Run(t.Context(), c.args)
 		if c.errMsg != "" {
 			assert.EqualError(t, err, c.errMsg, "case %d: error should match", n)
 		} else {
@@ -937,9 +932,7 @@ func TestUpdateLdapBindDn(t *testing.T) {
 
 func TestUpdateLdapSimpleAuth(t *testing.T) {
 	// Mock cli functions to do not exit on error
-	osExiter := cli.OsExiter
-	defer func() { cli.OsExiter = osExiter }()
-	cli.OsExiter = func(code int) {}
+	defer test.MockVariableValue(&cli.OsExiter, func(code int) {})()
 
 	// Test cases
 	cases := []struct {
@@ -1288,7 +1281,7 @@ func TestUpdateLdapSimpleAuth(t *testing.T) {
 				return nil
 			},
 			createAuthSource: func(ctx context.Context, authSource *auth.Source) error {
-				assert.FailNow(t, "case %d: should not call createAuthSource", n)
+				assert.FailNow(t, "should not call createAuthSource", "case: %d", n)
 				return nil
 			},
 			updateAuthSource: func(ctx context.Context, authSource *auth.Source) error {
@@ -1310,12 +1303,12 @@ func TestUpdateLdapSimpleAuth(t *testing.T) {
 		}
 
 		// Create a copy of command to test
-		app := cli.NewApp()
-		app.Flags = microcmdAuthUpdateLdapSimpleAuth.Flags
+		app := cli.Command{}
+		app.Flags = microcmdAuthUpdateLdapSimpleAuth().Flags
 		app.Action = service.updateLdapSimpleAuth
 
 		// Run it
-		err := app.Run(c.args)
+		err := app.Run(t.Context(), c.args)
 		if c.errMsg != "" {
 			assert.EqualError(t, err, c.errMsg, "case %d: error should match", n)
 		} else {

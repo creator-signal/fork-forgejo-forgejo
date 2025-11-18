@@ -4,7 +4,7 @@ A minor or major Forgejo release is published every [three months](https://forge
 
 A [patch or minor release](https://semver.org/spec/v2.0.0.html) (e.g. upgrading from v7.0.0 to v7.0.1 or v7.1.0) does not require manual intervention. But [major releases](https://semver.org/spec/v2.0.0.html#spec-item-8) where the first version number changes (e.g. upgrading from v1.21 to v7.0) contain breaking changes and the release notes explain how to deal with them.
 
-The release notes of each release [are available in the release-notes-published directory of this repository](release-notes-published), starting with [Forgejo 7.0.7](release-notes-published/7.0.7.md) and [Forgejo 8.0.1](release-notes-published/8.0.1.md).
+The release notes of each release [are available in the release-notes-published directory of this repository](https://codeberg.org/forgejo/forgejo/src/branch/forgejo/release-notes-published), starting with [Forgejo 7.0.7](release-notes-published/7.0.7.md) and [Forgejo 8.0.1](release-notes-published/8.0.1.md).
 
 ## 9.0.2
 
@@ -130,6 +130,10 @@ A [companion blog post](https://forgejo.org/2024-07-release-v8-0/) provides addi
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/3334): <!--number 3334 --><!--number--><!--description Added support for the `workflow_dispatch` workflow trigger-->added support for the [`workflow_dispatch` trigger](https://forgejo.org/docs/v8.0/user/actions/#onworkflow_dispatch) in Forgejo Actions.<!--description-->
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/3307): <!--number 3307 --><!--number--><!--description Support [Proof Key for Code Exchange (PKCE - RFC7636)](https://www.rfc-editor.org/rfc/rfc7636) for external login using the OpenID Connect authentication source.-->support [Proof Key for Code Exchange (PKCE - RFC7636)](https://www.rfc-editor.org/rfc/rfc7636) for external login using the OpenID Connect authentication source.<!--description-->
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/3139): <!--number 3139 --><!--number--><!--description Allow hiding auto generated release archives-->allow hiding auto generated release archives.<!--description-->
+  - [PR](https://codeberg.org/forgejo/forgejo/pulls/3952): Update of Chroma from v2.13.0: to v2.14.0:
+    - [`1e983e7`](https://github.com/alecthomas/chroma/commit/1e983e7) lexers/cue: support CUE attributes ([#&#8203;961](https://github.com/alecthomas/chroma/issues/961))
+    - [`9347b55`](https://github.com/alecthomas/chroma/commit/9347b55) Add Gleam syntax highlighting ([#&#8203;959](https://github.com/alecthomas/chroma/issues/959))
+    - [`2580aaa`](https://github.com/alecthomas/chroma/commit/2580aaa) Add Bazel bzlmod support into Python lexer ([#&#8203;947](https://github.com/alecthomas/chroma/issues/947))
 - **Bug fixes**
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/4732) ([backported from](https://codeberg.org/forgejo/forgejo/pulls/4715)): <!--number 4732 --><!--number--><!--description -->Show the AGit label on merged pull requests.<!--description-->
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/4689) ([backported from](https://codeberg.org/forgejo/forgejo/pulls/4687)): <!--number 4689 --><!--number--><!--description -->Fixed: issue state change via the API is not idempotent.<!--description-->
@@ -146,6 +150,9 @@ A [companion blog post](https://forgejo.org/2024-07-release-v8-0/) provides addi
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/3442): <!--number 3442 --><!--number--><!--description Save updated empty comments instead of skipping the update silently, [which prevented the removal of attachments of such comments](https://codeberg.org/forgejo/forgejo/issues/3424).-->Fixed: it is not possible to remove attachments from an empty comment.<!--description-->
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/3430): <!--number 3430 --><!--number--><!--description Fixed a bug where the `/api/v1/repos/{owner}/{repo}/wiki` API endpoints were using a hardcoded "master" branch for the wiki, rather than the branch they really use.-->Fixed: the `/api/v1/repos/{owner}/{repo}/wiki` API endpoints is using a hardcoded "master" branch for the wiki, rather than the branch they really use.<!--description-->
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/3379): <!--number 3379 --><!--number--><!--description -->Fixed: using the API to search for users, the results are not paged by default an the default paging limits are not respected.<!--description-->
+  - [PR](https://codeberg.org/forgejo/forgejo/pulls/3952): Update of Chroma from v2.13.0: to v2.14.0:
+    - [`736c0ea`](https://github.com/alecthomas/chroma/commit/736c0ea) Typescript: Several fixes ([#&#8203;952](https://github.com/alecthomas/chroma/issues/952))
+    - [`e5c25d0`](https://github.com/alecthomas/chroma/commit/e5c25d0) Org: Keep all newlines ([#&#8203;951](https://github.com/alecthomas/chroma/issues/951))
 - **Localization**
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/4661) ([backported from](https://codeberg.org/forgejo/forgejo/pulls/4568)): <!--number 4661 --><!--number--><!--description -->24 July updates<!--description-->
   - [PR](https://codeberg.org/forgejo/forgejo/pulls/4565) ([backported from](https://codeberg.org/forgejo/forgejo/pulls/4451)): <!--number 4565 --><!--number--><!--description -->19 July updates<!--description-->
@@ -1590,7 +1597,7 @@ this situation, [follow the instructions in the companion blog post](https://for
 
   The most prominent ones are described here, others can be found in the list of commits included in the release as described above.
 
-  * [Fix links to pull request reviews sent via mail](https://codeberg.org/forgejo/forgejo/commit/88e179d5ef8ee41f71d068195685ff098b38ca31). The pull request link was correct but it did not go the the review and stayed at the beginning of the page
+  * [Fix links to pull request reviews sent via mail](https://codeberg.org/forgejo/forgejo/commit/88e179d5ef8ee41f71d068195685ff098b38ca31). The pull request link was correct but it did not go the review and stayed at the beginning of the page
   * [Recognize OGG as an audio format](https://codeberg.org/forgejo/forgejo/commit/622ec5c79f299c32ac2667a1aa7b4bf5d7c2d6cf)
   * [Consistently show the last time a cron job was run in the admin panel](https://codeberg.org/forgejo/forgejo/commit/5f769ef20)
   * [Fix NuGet registry v2 & v3 API search endpoints](https://codeberg.org/forgejo/forgejo/commit/471138829b0c24fe8c621dbb866ae8bb45ebc674)
@@ -1609,7 +1616,7 @@ this situation, [follow the instructions in the companion blog post](https://for
   * [Fix pull request check list when there are more than 30](https://codeberg.org/forgejo/forgejo/commit/e226b9646)
   * [Fix attachment clipboard copy on insecure origin](https://codeberg.org/forgejo/forgejo/commit/12ac84c26)
   * [Fix the profile README rendering](https://codeberg.org/forgejo/forgejo/commit/84c3b60a4) that [was inconsistent with other markdown files renderings](https://codeberg.org/forgejo/forgejo/issues/833)
-  * [Fix API leaking the user email when the caller is not authentified](https://codeberg.org/forgejo/forgejo/commit/d89003cc1)
+  * [Fix API leaking the user email when the caller is not authenticated](https://codeberg.org/forgejo/forgejo/commit/d89003cc1)
 
 ## 1.20.2-0
 
@@ -1667,7 +1674,7 @@ $ git -C forgejo log --oneline --no-merges origin/v1.19/forgejo..origin/v1.20/fo
   The semantic version was updated to `5.0.0+0-gitea-1.20.1` because it contains breaking changes.
 - **Breaking:**
   - [Scoped access tokens](https://codeberg.org/forgejo/forgejo/commit/18de83b2a3fc120922096b7348d6375094ae1532) or (Personal Access Tokens), were refactored and although existing tokens are still valid, they may have a different scope than before. To ensure that no tokens have a larger scope than expected they must be removed and recreated.
-  - If your `app.ini` has one of the the following `[indexer].ISSUE_INDEXER_QUEUE_TYPE`, `[indexer].ISSUE_INDEXER_QUEUE_BATCH_NUMBER`, `[indexer].`, `[indexer].ISSUE_INDEXER_QUEUE_DIR`, `[indexer].ISSUE_INDEXER_QUEUE_CONN_STR`, `[indexer].UPDATE_BUFFER_LEN`, `[mailer].SEND_BUFFER_LEN`, `[repository].PULL_REQUEST_QUEUE_LENGTH` or `[repository].MIRROR_QUEUE_LENGTH`, Forgejo will abort immediately. Unless you know exactly what you're doing, you must comment them out so the default values are used.
+  - If your `app.ini` has one of the following `[indexer].ISSUE_INDEXER_QUEUE_TYPE`, `[indexer].ISSUE_INDEXER_QUEUE_BATCH_NUMBER`, `[indexer].`, `[indexer].ISSUE_INDEXER_QUEUE_DIR`, `[indexer].ISSUE_INDEXER_QUEUE_CONN_STR`, `[indexer].UPDATE_BUFFER_LEN`, `[mailer].SEND_BUFFER_LEN`, `[repository].PULL_REQUEST_QUEUE_LENGTH` or `[repository].MIRROR_QUEUE_LENGTH`, Forgejo will abort immediately. Unless you know exactly what you're doing, you must comment them out so the default values are used.
   - The `-p` option of `environment-to-ini` is [no longer supported](https://codeberg.org/forgejo/forgejo/commit/fa0b5b14c2faa6a5f76bb2e7bc9241a5e4354189)
   - The ".png" suffix for [user and organizations is now reserved](https://codeberg.org/forgejo/forgejo/commit/2b91841cd3e1213ff3e4ed4209d6a4be89c2fa79)
   - The section `[git.reflog]` is [now obsolete and its keys have been moved](https://codeberg.org/forgejo/forgejo/commit/2f149c5c9db97f20fbbc65e32d1f3133048b11a2) to the following replacements:
@@ -1761,7 +1768,7 @@ $ git -C forgejo log --oneline --no-merges origin/v1.19/forgejo..origin/v1.20/fo
   - [The repository migration can be canceled](https://codeberg.org/forgejo/forgejo/commit/f6e029e6c7849d4361abf7f1d749b5d528364ac4)
   - [Add button on the diff header to copy the file name](https://codeberg.org/forgejo/forgejo/commit/c5ede35124c8d5280219c24049bb0ad7da9f02ed)
   - [Add --quiet option to the dump CLI](https://codeberg.org/forgejo/forgejo/commit/cb1536471bcef4d78a3fe5cbd738b9f60fabbcc2)
-  - [Support searching for an issue with its number in the the list of issues](https://codeberg.org/forgejo/forgejo/commit/1144b1d129de530b2c07dfdfaf55de383cd82212)
+  - [Support searching for an issue with its number in the list of issues](https://codeberg.org/forgejo/forgejo/commit/1144b1d129de530b2c07dfdfaf55de383cd82212)
   - [Improve the list of notifications](https://codeberg.org/forgejo/forgejo/commit/f7ede92f82f7f3ec7bb31a1249f9524e5b728f34)
   - [When editing a file in the web UI, allow for a preview whenever possible](https://codeberg.org/forgejo/forgejo/commit/ac64c8297444ade63a2a364c4afb7e6c1de5a75f)
   - [Make release download URLs human readable](https://codeberg.org/forgejo/forgejo/commit/42919ccb7cd32ab67d0878baf2bac6cd007899a8)
@@ -1798,7 +1805,7 @@ $ git -C forgejo log --oneline --no-merges origin/v1.19/forgejo..origin/v1.20/fo
   - [Add API for gitignore templates](https://codeberg.org/forgejo/forgejo/commit/36a5d4c2f3b5670e5e921034cd5d25817534a6d4)
   - [Add API to upuload a file to an empty repository](https://codeberg.org/forgejo/forgejo/commit/cf465b472166ccf6d3e001e3043e4bf43e16e6b3)
   - [Allow for --not when listing the commits of a repo](https://codeberg.org/forgejo/forgejo/commit/f766b002938b5c81e343c81fda3c0669fa09809f)
-  - [Add `files` and `verification` parameters to improve performances when listing the commits of a a repo](https://codeberg.org/forgejo/forgejo/commit/1dd83dbb917d55bd253001646d6743f247a4d98b)
+  - [Add `files` and `verification` parameters to improve performances when listing the commits of a repo](https://codeberg.org/forgejo/forgejo/commit/1dd83dbb917d55bd253001646d6743f247a4d98b)
   - [Allow for listing a single commit in a repository](https://codeberg.org/forgejo/forgejo/commit/5930ab5fdf7a970fcca3cd50b44cf1cacb615a54)
   - [Create a branch directly from commit on the create branch API](https://codeberg.org/forgejo/forgejo/commit/cd9a13ebb47d32f46b38439a524e3b2e0c619490)
   - [Add API for Label templates](https://codeberg.org/forgejo/forgejo/commit/25dc1556cd70b567a4920beb002a0addfbfd6ef2)

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 )
 
 // ErrPackageBlobUploadNotExist indicates a package blob upload not exist error
@@ -31,16 +31,11 @@ type PackageBlobUpload struct {
 
 // CreateBlobUpload inserts a blob upload
 func CreateBlobUpload(ctx context.Context) (*PackageBlobUpload, error) {
-	id, err := util.CryptoRandomString(25)
-	if err != nil {
-		return nil, err
-	}
-
 	pbu := &PackageBlobUpload{
-		ID: strings.ToLower(id),
+		ID: strings.ToLower(util.CryptoRandomString(util.RandomStringMedium)),
 	}
 
-	_, err = db.GetEngine(ctx).Insert(pbu)
+	_, err := db.GetEngine(ctx).Insert(pbu)
 	return pbu, err
 }
 

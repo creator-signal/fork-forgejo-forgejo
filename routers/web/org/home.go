@@ -5,22 +5,25 @@ package org
 
 import (
 	"fmt"
+	gotemplate "html/template"
+	"io"
 	"net/http"
 	"path"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	"code.gitea.io/gitea/modules/markup/markdown"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	shared_user "code.gitea.io/gitea/routers/web/shared/user"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
+	shared_user "forgejo.org/routers/web/shared/user"
+	"forgejo.org/services/context"
 )
 
 const (
@@ -46,6 +49,12 @@ func Home(ctx *context.Context) {
 
 	ctx.Data["PageIsUserProfile"] = true
 	ctx.Data["Title"] = org.DisplayName()
+
+	ctx.Data["OpenGraphTitle"] = ctx.ContextUser.DisplayName()
+	ctx.Data["OpenGraphType"] = "profile"
+	ctx.Data["OpenGraphImageURL"] = ctx.ContextUser.AvatarLink(ctx)
+	ctx.Data["OpenGraphURL"] = ctx.ContextUser.HTMLURL()
+	ctx.Data["OpenGraphDescription"] = ctx.ContextUser.Description
 
 	var orderBy db.SearchOrderBy
 	sortOrder := ctx.FormString("sort")
@@ -93,6 +102,7 @@ func Home(ctx *context.Context) {
 		},
 		Keyword:            keyword,
 		OwnerID:            org.ID,
+		Collaborate:        optional.Some(false), // A organisation doesn't collaborate to any repository, avoid doing expensive SQL query.
 		OrderBy:            orderBy,
 		Private:            ctx.IsSigned,
 		Actor:              ctx.Doer,
@@ -169,23 +179,35 @@ func prepareOrgProfileReadme(ctx *context.Context, profileGitRepo *git.Repositor
 		return
 	}
 
-	if bytes, err := profileReadme.GetBlobContent(setting.UI.MaxDisplayFileSize); err != nil {
-		log.Error("failed to GetBlobContent: %v", err)
+	if rc, _, err := profileReadme.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err != nil {
+		log.Error("failed to NewTruncatedReader: %v", err)
 	} else {
-		if profileContent, err := markdown.RenderString(&markup.RenderContext{
-			Ctx:     ctx,
-			GitRepo: profileGitRepo,
-			Links: markup.Links{
-				// Pass repo link to markdown render for the full link of media elements.
-				// The profile of default branch would be shown.
-				Base:       profileDbRepo.Link(),
-				BranchPath: path.Join("branch", util.PathEscapeSegments(profileDbRepo.DefaultBranch)),
-			},
-			Metas: map[string]string{"mode": "document"},
-		}, bytes); err != nil {
-			log.Error("failed to RenderString: %v", err)
+		defer rc.Close()
+
+		if markupType := markup.Type(profileReadme.Name()); markupType != "" {
+			if profileContent, err := markdown.RenderReader(&markup.RenderContext{
+				Ctx:     ctx,
+				Type:    markupType,
+				GitRepo: profileGitRepo,
+				Links: markup.Links{
+					// Pass repo link to markdown render for the full link of media elements.
+					// The profile of default branch would be shown.
+					Base:       profileDbRepo.Link(),
+					BranchPath: path.Join("branch", util.PathEscapeSegments(profileDbRepo.DefaultBranch)),
+				},
+				Metas: map[string]string{"mode": "document"},
+			}, rc); err != nil {
+				log.Error("failed to RenderString: %v", err)
+			} else {
+				ctx.Data["ProfileReadme"] = profileContent
+			}
 		} else {
-			ctx.Data["ProfileReadme"] = profileContent
+			content, err := io.ReadAll(rc)
+			if err != nil {
+				log.Error("Read readme content failed: %v", err)
+			}
+			ctx.Data["ProfileReadme"] = gotemplate.HTMLEscapeString(util.UnsafeBytesToString(content))
+			ctx.Data["IsProfileReadmePlain"] = true
 		}
 	}
 }

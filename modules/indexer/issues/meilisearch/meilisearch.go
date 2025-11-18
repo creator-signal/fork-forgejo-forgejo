@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	indexer_internal "code.gitea.io/gitea/modules/indexer/internal"
-	inner_meilisearch "code.gitea.io/gitea/modules/indexer/internal/meilisearch"
-	"code.gitea.io/gitea/modules/indexer/issues/internal"
+	indexer_internal "forgejo.org/modules/indexer/internal"
+	inner_meilisearch "forgejo.org/modules/indexer/internal/meilisearch"
+	"forgejo.org/modules/indexer/issues/internal"
 
 	"github.com/meilisearch/meilisearch-go"
 )
@@ -100,7 +100,7 @@ func (b *Indexer) Index(_ context.Context, issues ...*internal.IndexerData) erro
 		return nil
 	}
 	for _, issue := range issues {
-		_, err := b.inner.Client.Index(b.inner.VersionedIndexName()).AddDocuments(issue)
+		_, err := b.inner.Client.Index(b.inner.VersionedIndexName()).AddDocuments(issue, nil)
 		if err != nil {
 			return err
 		}
@@ -232,20 +232,36 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		limit = 1
 	}
 
-	keyword := options.Keyword
-	if !options.IsFuzzyKeyword {
-		// to make it non fuzzy ("typo tolerance" in meilisearch terms), we have to quote the keyword(s)
-		// https://www.meilisearch.com/docs/reference/api/search#phrase-search
-		keyword = doubleQuoteKeyword(keyword)
+	var keywords []string
+	if options.Keyword != "" {
+		tokens, err := options.Tokens()
+		if err != nil {
+			return nil, err
+		}
+		for _, token := range tokens {
+			if !token.Fuzzy {
+				// to make it a phrase search, we have to quote the keyword(s)
+				// https://www.meilisearch.com/docs/reference/api/search#phrase-search
+				token.Term = doubleQuoteKeyword(token.Term)
+			}
+
+			// internal.BoolOptShould (Default, requires no modifications)
+			// internal.BoolOptMust (Not supported by meilisearch)
+			if token.Kind == internal.BoolOptNot {
+				token.Term = "-" + token.Term
+			}
+			keywords = append(keywords, token.Term)
+		}
 	}
 
-	searchRes, err := b.inner.Client.Index(b.inner.VersionedIndexName()).Search(keyword, &meilisearch.SearchRequest{
-		Filter:           query.Statement(),
-		Limit:            int64(limit),
-		Offset:           int64(skip),
-		Sort:             sortBy,
-		MatchingStrategy: meilisearch.All,
-	})
+	searchRes, err := b.inner.Client.Index(b.inner.VersionedIndexName()).
+		Search(strings.Join(keywords, " "), &meilisearch.SearchRequest{
+			Filter:           query.Statement(),
+			Limit:            int64(limit),
+			Offset:           int64(skip),
+			Sort:             sortBy,
+			MatchingStrategy: meilisearch.All,
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -287,21 +303,9 @@ func doubleQuoteKeyword(k string) string {
 }
 
 func convertHits(searchRes *meilisearch.SearchResponse) ([]internal.Match, error) {
-	hits := make([]internal.Match, 0, len(searchRes.Hits))
-	for _, hit := range searchRes.Hits {
-		hit, ok := hit.(map[string]any)
-		if !ok {
-			return nil, ErrMalformedResponse
-		}
-
-		issueID, ok := hit["id"].(float64)
-		if !ok {
-			return nil, ErrMalformedResponse
-		}
-
-		hits = append(hits, internal.Match{
-			ID: int64(issueID),
-		})
+	hits := make([]internal.Match, 0)
+	if err := searchRes.Hits.DecodeInto(&hits); err != nil {
+		return nil, ErrMalformedResponse
 	}
 	return hits, nil
 }

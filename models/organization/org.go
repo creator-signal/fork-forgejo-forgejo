@@ -9,17 +9,17 @@ import (
 	"fmt"
 	"strings"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/perm"
-	repo_model "code.gitea.io/gitea/models/repo"
-	secret_model "code.gitea.io/gitea/models/secret"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	"forgejo.org/models/perm"
+	repo_model "forgejo.org/models/repo"
+	secret_model "forgejo.org/models/secret"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
@@ -186,6 +186,11 @@ func (org *Organization) CanCreateRepo() bool {
 	return org.AsUser().CanCreateRepo()
 }
 
+// IsGhost returns if the organization is a ghost
+func (org *Organization) IsGhost() bool {
+	return org.AsUser().IsGhost()
+}
+
 // FindOrgMembersOpts represensts find org members conditions
 type FindOrgMembersOpts struct {
 	db.ListOptions
@@ -195,7 +200,7 @@ type FindOrgMembersOpts struct {
 }
 
 func (opts FindOrgMembersOpts) PublicOnly() bool {
-	return opts.Doer == nil || !(opts.IsDoerMember || opts.Doer.IsAdmin)
+	return opts.Doer == nil || (!opts.IsDoerMember && !opts.Doer.IsAdmin)
 }
 
 // CountOrgMembers counts the organization's members
@@ -289,12 +294,8 @@ func CreateOrganization(ctx context.Context, org *Organization, owner *user_mode
 	}
 
 	org.LowerName = strings.ToLower(org.Name)
-	if org.Rands, err = user_model.GetUserSalt(); err != nil {
-		return err
-	}
-	if org.Salt, err = user_model.GetUserSalt(); err != nil {
-		return err
-	}
+	org.Rands = user_model.GetUserSalt()
+	org.Salt = user_model.GetUserSalt()
 	org.UseCustomAvatar = true
 	org.MaxRepoCreation = -1
 	org.NumTeams = 1
@@ -478,7 +479,7 @@ func GetOrgUsersByOrgID(ctx context.Context, opts *FindOrgMembersOpts) ([]*OrgUs
 		sess.And("is_public = ?", true)
 	}
 
-	if opts.ListOptions.PageSize > 0 {
+	if opts.PageSize > 0 {
 		sess = db.SetSessionPagination(sess, opts)
 
 		ous := make([]*OrgUser, 0, opts.PageSize)
@@ -509,6 +510,13 @@ func ChangeOrgUserStatus(ctx context.Context, orgID, uid int64, public bool) err
 
 // AddOrgUser adds new user to given organization.
 func AddOrgUser(ctx context.Context, orgID, uid int64) error {
+	isUser, err := user_model.IsUserByID(ctx, uid)
+	if err != nil {
+		return err
+	} else if !isUser {
+		return user_model.ErrUserWrongType{UID: uid}
+	}
+
 	isAlreadyMember, err := IsOrganizationMember(ctx, orgID, uid)
 	if err != nil || isAlreadyMember {
 		return err

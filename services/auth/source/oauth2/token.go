@@ -4,10 +4,11 @@
 package oauth2
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
-	"code.gitea.io/gitea/modules/timeutil"
+	"forgejo.org/modules/timeutil"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -51,12 +52,12 @@ func ParseToken(jwtToken string, signingKey JWTSigningKey) (*Token, error) {
 		return nil, err
 	}
 	if !parsedToken.Valid {
-		return nil, fmt.Errorf("invalid token")
+		return nil, errors.New("invalid token")
 	}
 	var token *Token
 	var ok bool
 	if token, ok = parsedToken.Claims.(*Token); !ok || !parsedToken.Valid {
-		return nil, fmt.Errorf("invalid token")
+		return nil, errors.New("invalid token")
 	}
 	return token, nil
 }

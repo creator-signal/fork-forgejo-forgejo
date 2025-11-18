@@ -10,29 +10,29 @@ import (
 	"strconv"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	pull_model "code.gitea.io/gitea/models/pull"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/cache"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/git/pushoptions"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/private"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	timeutil "code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	gitea_context "code.gitea.io/gitea/services/context"
-	repo_service "code.gitea.io/gitea/services/repository"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	pull_model "forgejo.org/models/pull"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/cache"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/git/pushoptions"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/private"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	timeutil "forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	app_context "forgejo.org/services/context"
+	repo_service "forgejo.org/services/repository"
 )
 
 // HookPostReceive updates services and users
-func HookPostReceive(ctx *gitea_context.PrivateContext) {
+func HookPostReceive(ctx *app_context.PrivateContext) {
 	opts := web.GetForm(ctx).(*private.HookOptions)
 
 	// We don't rely on RepoAssignment here because:
@@ -205,7 +205,7 @@ func HookPostReceive(ctx *gitea_context.PrivateContext) {
 
 		// post update for agit pull request
 		// FIXME: use pr.Flow to test whether it's an Agit PR or a GH PR
-		if git.SupportProcReceive && refFullName.IsPull() {
+		if refFullName.IsPull() {
 			if repo == nil {
 				repo = loadRepository(ctx, ownerName, repoName)
 				if ctx.Written() {
@@ -325,7 +325,7 @@ func loadContextCacheUser(ctx context.Context, id int64) (*user_model.User, erro
 }
 
 // handlePullRequestMerging handle pull request merging, a pull request action should push at least 1 commit
-func handlePullRequestMerging(ctx *gitea_context.PrivateContext, opts *private.HookOptions, ownerName, repoName string, updates []*repo_module.PushUpdateOptions) {
+func handlePullRequestMerging(ctx *app_context.PrivateContext, opts *private.HookOptions, ownerName, repoName string, updates []*repo_module.PushUpdateOptions) {
 	if len(updates) == 0 {
 		ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
 			Err: fmt.Sprintf("Pushing a merged PR (pr:%d) no commits pushed ", opts.PullRequestID),

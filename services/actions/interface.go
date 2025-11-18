@@ -3,7 +3,7 @@
 
 package actions
 
-import "code.gitea.io/gitea/services/context"
+import "forgejo.org/services/context"
 
 // API for actions of a repository or organization
 type API interface {
@@ -25,4 +25,14 @@ type API interface {
 	UpdateVariable(*context.APIContext)
 	// GetRegistrationToken get registration token
 	GetRegistrationToken(*context.APIContext)
+	// SearchActionRunJobs get pending Action run jobs
+	SearchActionRunJobs(*context.APIContext)
+	// CreateRegistrationToken get registration token
+	CreateRegistrationToken(*context.APIContext)
+	// ListRunners list runners
+	ListRunners(*context.APIContext)
+	// GetRunner get a runner
+	GetRunner(*context.APIContext)
+	// DeleteRunner delete runner
+	DeleteRunner(*context.APIContext)
 }

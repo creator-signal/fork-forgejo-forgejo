@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"strings"
 
-	"code.gitea.io/gitea/modules/forgefed"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/federation"
+	"forgejo.org/modules/forgefed"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/federation"
 
 	ap "github.com/go-ap/activitypub"
 )
@@ -30,6 +30,7 @@ func Repository(ctx *context.APIContext) {
 	//   in: path
 	//   description: repository ID of the repo
 	//   type: integer
+	//   format: int64
 	//   required: true
 	// responses:
 	//   "200":
@@ -59,6 +60,7 @@ func RepositoryInbox(ctx *context.APIContext) {
 	//   in: path
 	//   description: repository ID of the repo
 	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: body
 	//   in: body
@@ -70,11 +72,12 @@ func RepositoryInbox(ctx *context.APIContext) {
 
 	repository := ctx.Repo.Repository
 	log.Info("RepositoryInbox: repo: %v", repository)
-
 	form := web.GetForm(ctx)
-	httpStatus, title, err := federation.ProcessLikeActivity(ctx, form, repository.ID)
+	activity := form.(*ap.Activity)
+	result, err := federation.ProcessRepositoryInbox(ctx, activity, repository.ID)
 	if err != nil {
-		ctx.Error(httpStatus, title, err)
+		ctx.Error(federation.HTTPStatus(err), "Processing Repository Inbox failed", result)
+		return
 	}
-	ctx.Status(http.StatusNoContent)
+	responseServiceResult(ctx, result)
 }

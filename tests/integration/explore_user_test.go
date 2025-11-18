@@ -1,4 +1,5 @@
 // Copyright 2024 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
@@ -7,7 +8,9 @@ import (
 	"net/http"
 	"testing"
 
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -15,8 +18,11 @@ import (
 func TestExploreUser(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
+	// Set the default sort order
+	defer test.MockVariableValue(&setting.UI.ExploreDefaultSort, "reversealphabetically")()
+
 	cases := []struct{ sortOrder, expected string }{
-		{"", "?sort=newest&q="},
+		{"", "?sort=" + setting.UI.ExploreDefaultSort + "&q="},
 		{"newest", "?sort=newest&q="},
 		{"oldest", "?sort=oldest&q="},
 		{"alphabetically", "?sort=alphabetically&q="},
@@ -26,7 +32,7 @@ func TestExploreUser(t *testing.T) {
 		req := NewRequest(t, "GET", "/explore/users?sort="+c.sortOrder)
 		resp := MakeRequest(t, req, http.StatusOK)
 		h := NewHTMLParser(t, resp.Body)
-		href, _ := h.Find(`.ui.dropdown .menu a.active.item[href^="?sort="]`).Attr("href")
+		href, _ := h.Find(`.list-header details.dropdown > .content > ul > li > a.active[href^="?sort="]`).Attr("href")
 		assert.Equal(t, c.expected, href)
 	}
 

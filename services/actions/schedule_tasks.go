@@ -4,19 +4,25 @@
 package actions
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/timeutil"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	actions_module "forgejo.org/modules/actions"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/timeutil"
+	webhook_module "forgejo.org/modules/webhook"
 
-	"github.com/nektos/act/pkg/jobparser"
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v11/act/model"
+	"github.com/robfig/cron/v3"
+	"xorm.io/builder"
 )
 
 // StartScheduleTasks start the task
@@ -52,20 +58,6 @@ func startTasks(ctx context.Context) error {
 
 		// Loop through each spec and create a schedule task for it
 		for _, row := range specs {
-			// cancel running jobs if the event is push
-			if row.Schedule.Event == webhook_module.HookEventPush {
-				// cancel running jobs of the same workflow
-				if err := actions_model.CancelPreviousJobs(
-					ctx,
-					row.RepoID,
-					row.Schedule.Ref,
-					row.Schedule.WorkflowID,
-					webhook_module.HookEventSchedule,
-				); err != nil {
-					log.Error("CancelPreviousJobs: %v", err)
-				}
-			}
-
 			if row.Repo.IsArchived {
 				// Skip if the repo is archived
 				continue
@@ -79,20 +71,33 @@ func startTasks(ctx context.Context) error {
 				}
 				return fmt.Errorf("GetUnit: %w", err)
 			}
-			if cfg.ActionsConfig().IsWorkflowDisabled(row.Schedule.WorkflowID) {
+			actionConfig := cfg.ActionsConfig()
+			if actionConfig.IsWorkflowDisabled(row.Schedule.WorkflowID) {
 				continue
 			}
 
-			if err := CreateScheduleTask(ctx, row.Schedule); err != nil {
-				log.Error("CreateScheduleTask: %v", err)
-				return err
+			createAndSchedule := func(row *actions_model.ActionScheduleSpec) (cron.Schedule, error) {
+				if err := CreateScheduleTask(ctx, row.Schedule); err != nil {
+					return nil, fmt.Errorf("CreateScheduleTask: %v", err)
+				}
+
+				// Parse the spec
+				schedule, err := row.Parse()
+				if err != nil {
+					return nil, fmt.Errorf("Parse(Spec=%v): %v", row.Spec, err)
+				}
+				return schedule, nil
 			}
 
-			// Parse the spec
-			schedule, err := row.Parse()
+			schedule, err := createAndSchedule(row)
 			if err != nil {
-				log.Error("Parse: %v", err)
-				return err
+				log.Error("RepoID=%v WorkflowID=%v: %v", row.Schedule.RepoID, row.Schedule.WorkflowID, err)
+				actionConfig.DisableWorkflow(row.Schedule.WorkflowID)
+				if err := repo_model.UpdateRepoUnit(ctx, cfg); err != nil {
+					log.Error("RepoID=%v WorkflowID=%v: CreateScheduleTask: %v", row.Schedule.RepoID, row.Schedule.WorkflowID, err)
+					return err
+				}
+				continue
 			}
 
 			// Update the spec's next run time and previous run time
@@ -138,8 +143,33 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 		return err
 	}
 
+	workflow, err := act_model.ReadWorkflow(bytes.NewReader(cron.Content), false)
+	if err != nil {
+		return err
+	}
+	notifications, err := workflow.Notifications()
+	if err != nil {
+		return err
+	}
+	run.NotifyEmail = notifications
+
+	err = ConfigureActionRunConcurrency(workflow, run, vars, map[string]any{})
+	if err != nil {
+		return err
+	}
+
+	if run.ConcurrencyType == actions_model.CancelInProgress {
+		if err := CancelPreviousWithConcurrencyGroup(
+			ctx,
+			run.RepoID,
+			run.ConcurrencyGroup,
+		); err != nil {
+			return err
+		}
+	}
+
 	// Parse the workflow specification from the cron schedule
-	workflows, err := jobparser.Parse(cron.Content, jobparser.WithVars(vars))
+	workflows, err := actions_module.JobParser(cron.Content, jobparser.WithVars(vars))
 	if err != nil {
 		return err
 	}
@@ -150,5 +180,130 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 	}
 
 	// Return nil if no errors occurred
+	return nil
+}
+
+// CancelPreviousJobs cancels all previous jobs of the same repository, reference, workflow, and event.
+// It's useful when a new run is triggered, and all previous runs needn't be continued anymore.
+func CancelPreviousJobs(ctx context.Context, repoID int64, ref, workflowID string, event webhook_module.HookEventType) error {
+	// Find all runs in the specified repository, reference, and workflow with non-final status
+	runs, _, err := db.FindAndCount[actions_model.ActionRun](ctx, actions_model.FindRunOptions{
+		RepoID:       repoID,
+		Ref:          ref,
+		WorkflowID:   workflowID,
+		TriggerEvent: event,
+		Status:       []actions_model.Status{actions_model.StatusRunning, actions_model.StatusWaiting, actions_model.StatusBlocked},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Iterate over each found run and cancel its associated jobs.
+	errorSlice := []error{}
+	for _, run := range runs {
+		err := cancelJobsForRun(ctx, run)
+		errorSlice = append(errorSlice, err)
+	}
+	err = errors.Join(errorSlice...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Cancels all pending jobs in the same repository with the same concurrency group.
+func CancelPreviousWithConcurrencyGroup(ctx context.Context, repoID int64, concurrencyGroup string) error {
+	runs, _, err := db.FindAndCount[actions_model.ActionRun](ctx, actions_model.FindRunOptions{
+		RepoID:           repoID,
+		ConcurrencyGroup: concurrencyGroup,
+		Status:           []actions_model.Status{actions_model.StatusRunning, actions_model.StatusWaiting, actions_model.StatusBlocked},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Iterate over each found run and cancel its associated jobs.
+	errorSlice := []error{}
+	for _, run := range runs {
+		err := cancelJobsForRun(ctx, run)
+		errorSlice = append(errorSlice, err)
+	}
+	err = errors.Join(errorSlice...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func cancelJobsForRun(ctx context.Context, run *actions_model.ActionRun) error {
+	// Find all jobs associated with the current run.
+	jobs, err := db.Find[actions_model.ActionRunJob](ctx, actions_model.FindRunJobOptions{
+		RunID: run.ID,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Iterate over each job and attempt to cancel it.
+	errorSlice := []error{}
+	for _, job := range jobs {
+		// Skip jobs that are already in a terminal state (completed, cancelled, etc.).
+		status := job.Status
+		if status.IsDone() {
+			continue
+		}
+
+		// If the job has no associated task (probably an error), set its status to 'Cancelled' and stop it.
+		if job.TaskID == 0 {
+			job.Status = actions_model.StatusCancelled
+			job.Stopped = timeutil.TimeStampNow()
+
+			// Update the job's status and stopped time in the database.
+			n, err := UpdateRunJob(ctx, job, builder.Eq{"task_id": 0}, "status", "stopped")
+			if err != nil {
+				errorSlice = append(errorSlice, err)
+				continue
+			}
+
+			// If the update affected 0 rows, it means the job has changed in the meantime, so we need to try again.
+			if n == 0 {
+				errorSlice = append(errorSlice, errors.New("job has changed, try again"))
+				continue
+			}
+
+			// Continue with the next job.
+			continue
+		}
+
+		// If the job has an associated task, try to stop the task, effectively cancelling the job.
+		if err := StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
+			errorSlice = append(errorSlice, errors.New("job has changed, try again"))
+			continue
+		}
+	}
+
+	return errors.Join(errorSlice...)
+}
+
+func CleanRepoScheduleTasks(ctx context.Context, repo *repo_model.Repository, cancelPreviousJobs bool) error {
+	// If actions disabled when there is schedule task, this will remove the outdated schedule tasks
+	// There is no other place we can do this because the app.ini will be changed manually
+	if err := actions_model.DeleteScheduleTaskByRepo(ctx, repo.ID); err != nil {
+		return fmt.Errorf("DeleteCronTaskByRepo: %v", err)
+	}
+	if cancelPreviousJobs {
+		// cancel running cron jobs of this repository and delete old schedules
+		if err := CancelPreviousJobs(
+			ctx,
+			repo.ID,
+			repo.DefaultBranch,
+			"",
+			webhook_module.HookEventSchedule,
+		); err != nil {
+			return fmt.Errorf("CancelPreviousJobs: %v", err)
+		}
+	}
 	return nil
 }

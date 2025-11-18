@@ -5,21 +5,22 @@ package repo
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	notify_service "code.gitea.io/gitea/services/notify"
-	wiki_service "code.gitea.io/gitea/services/wiki"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	notify_service "forgejo.org/services/notify"
+	wiki_service "forgejo.org/services/wiki"
 )
 
 // NewWikiPage response for wiki create request
@@ -506,12 +507,9 @@ func findWikiRepoCommit(ctx *context.APIContext) (*git.Repository, *git.Commit) 
 // given tree entry, encoded with base64. Writes to ctx if an error occurs.
 func wikiContentsByEntry(ctx *context.APIContext, entry *git.TreeEntry) string {
 	blob := entry.Blob()
-	if blob.Size() > setting.API.DefaultMaxBlobSize {
-		return ""
-	}
-	content, err := blob.GetBlobContentBase64()
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetBlobContentBase64", err)
+	content, err := blob.GetContentBase64(setting.API.DefaultMaxBlobSize)
+	if err != nil && !errors.As(err, &git.BlobTooLargeError{}) {
+		ctx.Error(http.StatusInternalServerError, "GetContentBase64", err)
 		return ""
 	}
 	return content

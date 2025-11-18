@@ -7,33 +7,26 @@ import (
 	"strconv"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/modules/setting"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 
 	"github.com/gobwas/glob"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRegisterForm_IsDomainAllowed_Empty(t *testing.T) {
-	oldService := setting.Service
-	defer func() {
-		setting.Service = oldService
-	}()
-
-	setting.Service.EmailDomainAllowList = nil
+	defer test.MockVariableValue(&setting.Service.EmailDomainAllowList, nil)()
 
 	form := RegisterForm{}
 
-	assert.True(t, form.IsEmailDomainAllowed())
+	emailValid, ok := form.IsEmailDomainAllowed()
+	assert.False(t, emailValid)
+	assert.False(t, ok)
 }
 
 func TestRegisterForm_IsDomainAllowed_InvalidEmail(t *testing.T) {
-	oldService := setting.Service
-	defer func() {
-		setting.Service = oldService
-	}()
-
-	setting.Service.EmailDomainAllowList = []glob.Glob{glob.MustCompile("gitea.io")}
+	defer test.MockVariableValue(&setting.Service.EmailDomainAllowList, []glob.Glob{glob.MustCompile("gitea.io")})()
 
 	tt := []struct {
 		email string
@@ -45,17 +38,13 @@ func TestRegisterForm_IsDomainAllowed_InvalidEmail(t *testing.T) {
 	for _, v := range tt {
 		form := RegisterForm{Email: v.email}
 
-		assert.False(t, form.IsEmailDomainAllowed())
+		_, ok := form.IsEmailDomainAllowed()
+		assert.False(t, ok)
 	}
 }
 
 func TestRegisterForm_IsDomainAllowed_AllowedEmail(t *testing.T) {
-	oldService := setting.Service
-	defer func() {
-		setting.Service = oldService
-	}()
-
-	setting.Service.EmailDomainAllowList = []glob.Glob{glob.MustCompile("gitea.io"), glob.MustCompile("*.allow")}
+	defer test.MockVariableValue(&setting.Service.EmailDomainAllowList, []glob.Glob{glob.MustCompile("gitea.io"), glob.MustCompile("*.allow")})()
 
 	tt := []struct {
 		email string
@@ -73,18 +62,13 @@ func TestRegisterForm_IsDomainAllowed_AllowedEmail(t *testing.T) {
 	for _, v := range tt {
 		form := RegisterForm{Email: v.email}
 
-		assert.Equal(t, v.valid, form.IsEmailDomainAllowed())
+		_, ok := form.IsEmailDomainAllowed()
+		assert.Equal(t, v.valid, ok)
 	}
 }
 
 func TestRegisterForm_IsDomainAllowed_BlockedEmail(t *testing.T) {
-	oldService := setting.Service
-	defer func() {
-		setting.Service = oldService
-	}()
-
-	setting.Service.EmailDomainAllowList = nil
-	setting.Service.EmailDomainBlockList = []glob.Glob{glob.MustCompile("gitea.io"), glob.MustCompile("*.block")}
+	defer test.MockVariableValue(&setting.Service.EmailDomainBlockList, []glob.Glob{glob.MustCompile("gitea.io"), glob.MustCompile("*.block")})()
 
 	tt := []struct {
 		email string
@@ -92,7 +76,6 @@ func TestRegisterForm_IsDomainAllowed_BlockedEmail(t *testing.T) {
 	}{
 		{"security@gitea.io", false},
 		{"security@gitea.example", true},
-		{"invalid", true},
 
 		{"user@my.block", false},
 		{"user@my.block1", true},
@@ -101,7 +84,8 @@ func TestRegisterForm_IsDomainAllowed_BlockedEmail(t *testing.T) {
 	for _, v := range tt {
 		form := RegisterForm{Email: v.email}
 
-		assert.Equal(t, v.valid, form.IsEmailDomainAllowed())
+		_, ok := form.IsEmailDomainAllowed()
+		assert.Equal(t, v.valid, ok)
 	}
 }
 

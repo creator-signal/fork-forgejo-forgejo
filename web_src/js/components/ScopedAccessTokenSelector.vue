@@ -1,8 +1,7 @@
 <script>
-import {createApp} from 'vue';
 import {hideElem, showElem} from '../utils/dom.js';
 
-const sfc = {
+export default {
   props: {
     isAdmin: {
       type: Boolean,
@@ -53,6 +52,13 @@ const sfc = {
 
   methods: {
     onClickSubmit(e) {
+      const form = document.getElementById('scoped-access-form');
+      if (!form.checkValidity()) {
+        // some required inputs are not filled
+        return;
+      }
+
+      // prevent after validity-check to get native-required-popup
       e.preventDefault();
 
       const warningEl = document.getElementById('scoped-access-warning');
@@ -62,7 +68,7 @@ const sfc = {
           // Hide the error if it was visible from previous attempt.
           hideElem(warningEl);
           // Submit the form.
-          document.getElementById('scoped-access-form').submit();
+          form.submit();
           // Don't show the warning.
           return;
         }
@@ -72,23 +78,6 @@ const sfc = {
     },
   },
 };
-
-export default sfc;
-
-/**
- * Initialize category toggle sections
- */
-export function initScopedAccessTokenCategories() {
-  for (const el of document.getElementsByClassName('scoped-access-token')) {
-    createApp(sfc, {
-      isAdmin: el.getAttribute('data-is-admin') === 'true',
-      noAccessLabel: el.getAttribute('data-no-access-label'),
-      readLabel: el.getAttribute('data-read-label'),
-      writeLabel: el.getAttribute('data-write-label'),
-    }).mount(el);
-  }
-}
-
 </script>
 <template>
   <div v-for="category in categories" :key="category" class="field tw-pl-1 tw-pb-1 access-token-category">

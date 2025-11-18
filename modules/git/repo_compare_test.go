@@ -1,4 +1,5 @@
 // Copyright 2018 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package git
@@ -161,4 +162,168 @@ func TestGetCommitFilesChanged(t *testing.T) {
 		require.NoError(t, err)
 		assert.ElementsMatch(t, tc.files, changedFiles)
 	}
+}
+
+func TestGetCommitShortStat(t *testing.T) {
+	t.Run("repo1_bare", func(t *testing.T) {
+		repo, err := openRepositoryWithDefaultContext(filepath.Join(testReposDir, "repo1_bare"))
+		if err != nil {
+			require.NoError(t, err)
+			return
+		}
+		defer repo.Close()
+
+		numFiles, totalAddition, totalDeletions, err := repo.GetCommitShortStat("ce064814f4a0d337b333e646ece456cd39fab612")
+		require.NoError(t, err)
+		assert.Equal(t, 0, numFiles)
+		assert.Equal(t, 0, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+
+		numFiles, totalAddition, totalDeletions, err = repo.GetCommitShortStat("feaf4ba6bc635fec442f46ddd4512416ec43c2c2")
+		require.NoError(t, err)
+		assert.Equal(t, 0, numFiles)
+		assert.Equal(t, 0, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+
+		numFiles, totalAddition, totalDeletions, err = repo.GetCommitShortStat("37991dec2c8e592043f47155ce4808d4580f9123")
+		require.NoError(t, err)
+		assert.Equal(t, 1, numFiles)
+		assert.Equal(t, 1, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+
+		numFiles, totalAddition, totalDeletions, err = repo.GetCommitShortStat("6fbd69e9823458e6c4a2fc5c0f6bc022b2f2acd1")
+		require.NoError(t, err)
+		assert.Equal(t, 2, numFiles)
+		assert.Equal(t, 2, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+
+		numFiles, totalAddition, totalDeletions, err = repo.GetCommitShortStat("8006ff9adbf0cb94da7dad9e537e53817f9fa5c0")
+		require.NoError(t, err)
+		assert.Equal(t, 2, numFiles)
+		assert.Equal(t, 2, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+
+		numFiles, totalAddition, totalDeletions, err = repo.GetCommitShortStat("8d92fc957a4d7cfd98bc375f0b7bb189a0d6c9f2")
+		require.NoError(t, err)
+		assert.Equal(t, 1, numFiles)
+		assert.Equal(t, 1, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+
+		numFiles, totalAddition, totalDeletions, err = repo.GetCommitShortStat("95bb4d39648ee7e325106df01a621c530863a653")
+		require.NoError(t, err)
+		assert.Equal(t, 1, numFiles)
+		assert.Equal(t, 1, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+	})
+
+	t.Run("repo6_blame_sha256", func(t *testing.T) {
+		repo, err := openRepositoryWithDefaultContext(filepath.Join(testReposDir, "repo6_blame_sha256"))
+		if err != nil {
+			require.NoError(t, err)
+			return
+		}
+		defer repo.Close()
+
+		numFiles, totalAddition, totalDeletions, err := repo.GetCommitShortStat("e2f5660e15159082902960af0ed74fc144921d2b0c80e069361853b3ece29ba3")
+		require.NoError(t, err)
+		assert.Equal(t, 1, numFiles)
+		assert.Equal(t, 1, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+
+		numFiles, totalAddition, totalDeletions, err = repo.GetCommitShortStat("9347b0198cd1f25017579b79d0938fa89dba34ad2514f0dd92f6bc975ed1a2fe")
+		require.NoError(t, err)
+		assert.Equal(t, 1, numFiles)
+		assert.Equal(t, 1, totalAddition)
+		assert.Equal(t, 1, totalDeletions)
+
+		numFiles, totalAddition, totalDeletions, err = repo.GetCommitShortStat("ab2b57a4fa476fb2edb74dafa577caf918561abbaa8fba0c8dc63c412e17a7cc")
+		require.NoError(t, err)
+		assert.Equal(t, 1, numFiles)
+		assert.Equal(t, 6, totalAddition)
+		assert.Equal(t, 0, totalDeletions)
+	})
+}
+
+func TestGetShortStat(t *testing.T) {
+	// https://github.com/git/git/blob/60f3f52f17cceefa5299709b189ce6fe2d181e7b/t/t4068-diff-symmetric-merge-base.sh#L10-L23
+	repo, err := OpenRepository(t.Context(), filepath.Join(testReposDir, "symmetric_repo"))
+	require.NoError(t, err)
+	defer repo.Close()
+
+	t.Run("Normal", func(t *testing.T) {
+		t.Run("Via merge base", func(t *testing.T) {
+			numFiles, totalAdditions, totalDeletions, err := repo.GetShortStat("br2", "main", true)
+			require.NoError(t, err)
+			assert.Equal(t, 1, numFiles)
+			assert.Equal(t, 1, totalAdditions)
+			assert.Zero(t, totalDeletions)
+
+			numFiles, totalAdditions, totalDeletions, err = repo.GetShortStat("main", "br2", true)
+			require.NoError(t, err)
+			assert.Equal(t, 1, numFiles)
+			assert.Equal(t, 1, totalAdditions)
+			assert.Zero(t, totalDeletions)
+		})
+
+		t.Run("Direct compare", func(t *testing.T) {
+			numFiles, totalAdditions, totalDeletions, err := repo.GetShortStat("main", "br2", false)
+			require.NoError(t, err)
+			assert.Equal(t, 2, numFiles)
+			assert.Equal(t, 1, totalAdditions)
+			assert.Equal(t, 1, totalDeletions)
+
+			numFiles, totalAdditions, totalDeletions, err = repo.GetShortStat("main", "br3", false)
+			require.NoError(t, err)
+			assert.Equal(t, 1, numFiles)
+			assert.Equal(t, 1, totalAdditions)
+			assert.Zero(t, totalDeletions)
+
+			numFiles, totalAdditions, totalDeletions, err = repo.GetShortStat("br3", "main", false)
+			require.NoError(t, err)
+			assert.Equal(t, 1, numFiles)
+			assert.Zero(t, totalAdditions)
+			assert.Equal(t, 1, totalDeletions)
+		})
+	})
+
+	t.Run("No merge base", func(t *testing.T) {
+		numFiles, totalAdditions, totalDeletions, err := repo.GetShortStat("main", "br3", true)
+		require.ErrorIs(t, err, ErrNoMergebaseFound)
+		assert.Zero(t, numFiles)
+		assert.Zero(t, totalAdditions)
+		assert.Zero(t, totalDeletions)
+	})
+
+	t.Run("Multiple merge base", func(t *testing.T) {
+		numFiles, totalAdditions, totalDeletions, err := repo.GetShortStat("main", "br1", true)
+		require.ErrorIs(t, err, ErrMultipleMergebasesFound)
+		assert.Zero(t, numFiles)
+		assert.Zero(t, totalAdditions)
+		assert.Zero(t, totalDeletions)
+	})
+}
+
+func TestGetMergeBaseSimple(t *testing.T) {
+	repo, err := OpenRepository(t.Context(), filepath.Join(testReposDir, "symmetric_repo"))
+	require.NoError(t, err)
+
+	defer repo.Close()
+
+	t.Run("Normal", func(t *testing.T) {
+		mergebase, err := repo.GetMergeBaseSimple("main", "br2")
+		require.NoError(t, err)
+		assert.Equal(t, "9d36f18c8ca14ad28c4751afd14f3e3146a785dc", mergebase)
+	})
+
+	t.Run("No mergebase", func(t *testing.T) {
+		mergebase, err := repo.GetMergeBaseSimple("main", "br3")
+		require.ErrorContains(t, err, "exit status 1")
+		assert.Empty(t, mergebase)
+	})
+
+	t.Run("Multiple mergebase", func(t *testing.T) {
+		mergebase, err := repo.GetMergeBaseSimple("main", "br1")
+		require.NoError(t, err)
+		assert.Equal(t, "9d36f18c8ca14ad28c4751afd14f3e3146a785dc", mergebase)
+	})
 }

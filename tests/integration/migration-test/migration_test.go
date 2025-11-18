@@ -5,7 +5,6 @@ package migrations
 
 import (
 	"compress/gzip"
-	"context"
 	"database/sql"
 	"fmt"
 	"io"
@@ -17,18 +16,18 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/migrations"
-	migrate_base "code.gitea.io/gitea/models/migrations/base"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/charset"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/testlogger"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	"forgejo.org/models/gitea_migrations"
+	migrate_base "forgejo.org/models/gitea_migrations/base"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/charset"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/testlogger"
+	"forgejo.org/modules/util"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,16 +36,21 @@ import (
 
 var currentEngine *xorm.Engine
 
+func getRoot(t *testing.T) string {
+	t.Helper()
+	root := base.SetupGiteaRoot()
+	if root == "" {
+		t.Fatal("Environment variable $GITEA_ROOT not set")
+	}
+	return root
+}
+
 func initMigrationTest(t *testing.T) func() {
 	log.RegisterEventWriter("test", testlogger.NewTestLoggerWriter)
 
 	deferFn := tests.PrintCurrentTest(t, 2)
-	giteaRoot := base.SetupGiteaRoot()
-	if giteaRoot == "" {
-		tests.Printf("Environment variable $GITEA_ROOT not set\n")
-		os.Exit(1)
-	}
-	setting.AppPath = path.Join(giteaRoot, "gitea")
+	root := getRoot(t)
+	setting.AppPath = path.Join(root, "gitea")
 	if _, err := os.Stat(setting.AppPath); err != nil {
 		tests.Printf("Could not find gitea binary at %s\n", setting.AppPath)
 		os.Exit(1)
@@ -57,7 +61,7 @@ func initMigrationTest(t *testing.T) func() {
 		tests.Printf("Environment variable $GITEA_CONF not set\n")
 		os.Exit(1)
 	} else if !path.IsAbs(giteaConf) {
-		setting.CustomConf = path.Join(giteaRoot, giteaConf)
+		setting.CustomConf = path.Join(root, giteaConf)
 	} else {
 		setting.CustomConf = giteaConf
 	}
@@ -87,27 +91,23 @@ func initMigrationTest(t *testing.T) func() {
 		}
 	}
 
-	require.NoError(t, git.InitFull(context.Background()))
+	require.NoError(t, git.InitFull(t.Context()))
 	setting.LoadDBSetting()
 	setting.InitLoggersForTest()
 	return deferFn
 }
 
-func availableVersions() ([]string, error) {
-	migrationsDir, err := os.Open("tests/integration/migration-test")
-	if err != nil {
-		return nil, err
-	}
+func availableVersions(t *testing.T) []string {
+	t.Helper()
+	root := getRoot(t)
+	migrationsDir, err := os.Open(path.Join(root, "tests/integration/migration-test"))
+	require.NoError(t, err)
 	defer migrationsDir.Close()
 	versionRE, err := regexp.Compile(".*-v(?P<version>.+)\\." + regexp.QuoteMeta(setting.Database.Type.String()) + "\\.sql.gz")
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
 	filenames, err := migrationsDir.Readdirnames(-1)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 	versions := []string{}
 	for _, filename := range filenames {
 		if versionRE.MatchString(filename) {
@@ -116,41 +116,36 @@ func availableVersions() ([]string, error) {
 		}
 	}
 	sort.Strings(versions)
-	return versions, nil
+	return versions
 }
 
-func readSQLFromFile(version string) (string, error) {
-	filename := fmt.Sprintf("tests/integration/migration-test/gitea-v%s.%s.sql.gz", version, setting.Database.Type)
+func readSQLFromFile(t *testing.T, version string) string {
+	t.Helper()
+	root := getRoot(t)
+	filename := fmt.Sprintf(path.Join(root, "tests/integration/migration-test/gitea-v%s.%s.sql.gz"), version, setting.Database.Type)
 
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		filename = fmt.Sprintf("tests/integration/migration-test/forgejo-v%s.%s.sql.gz", version, setting.Database.Type)
+		filename = fmt.Sprintf(path.Join(root, "tests/integration/migration-test/forgejo-v%s.%s.sql.gz"), version, setting.Database.Type)
 		if _, err := os.Stat(filename); os.IsNotExist(err) {
-			return "", nil
+			require.NoError(t, err)
 		}
 	}
 
 	file, err := os.Open(filename)
-	if err != nil {
-		return "", err
-	}
+	require.NoError(t, err)
 	defer file.Close()
 
 	gr, err := gzip.NewReader(file)
-	if err != nil {
-		return "", err
-	}
+	require.NoError(t, err)
 	defer gr.Close()
 
 	bytes, err := io.ReadAll(gr)
-	if err != nil {
-		return "", err
-	}
-	return string(charset.MaybeRemoveBOM(bytes, charset.ConvertOpts{})), nil
+	require.NoError(t, err)
+	return string(charset.MaybeRemoveBOM(bytes, charset.ConvertOpts{}))
 }
 
 func restoreOldDB(t *testing.T, version string) bool {
-	data, err := readSQLFromFile(version)
-	require.NoError(t, err)
+	data := readSQLFromFile(t, version)
 	if len(data) == 0 {
 		tests.Printf("No db found to restore for %s version: %s\n", setting.Database.Type, version)
 		return false
@@ -267,7 +262,7 @@ func restoreOldDB(t *testing.T, version string) bool {
 
 func wrappedMigrate(x *xorm.Engine) error {
 	currentEngine = x
-	return migrations.Migrate(x)
+	return gitea_migrations.Migrate(x)
 }
 
 func doMigrationTest(t *testing.T, version string) {
@@ -279,23 +274,36 @@ func doMigrationTest(t *testing.T, version string) {
 
 	setting.InitSQLLoggersForCli(log.INFO)
 
-	err := db.InitEngineWithMigration(context.Background(), wrappedMigrate)
+	err := db.InitEngineWithMigration(t.Context(), func(e db.Engine) error {
+		engine, err := db.GetMasterEngine(e)
+		if err != nil {
+			return err
+		}
+		currentEngine = engine
+		return wrappedMigrate(engine)
+	})
 	require.NoError(t, err)
 	currentEngine.Close()
 
 	beans, _ := db.NamesToBean()
 
-	err = db.InitEngineWithMigration(context.Background(), func(x *xorm.Engine) error {
-		currentEngine = x
-		return migrate_base.RecreateTables(beans...)(x)
+	err = db.InitEngineWithMigration(t.Context(), func(e db.Engine) error {
+		currentEngine, err = db.GetMasterEngine(e)
+		if err != nil {
+			return err
+		}
+		return migrate_base.RecreateTables(beans...)(currentEngine)
 	})
 	require.NoError(t, err)
 	currentEngine.Close()
 
 	// We do this a second time to ensure that there is not a problem with retained indices
-	err = db.InitEngineWithMigration(context.Background(), func(x *xorm.Engine) error {
-		currentEngine = x
-		return migrate_base.RecreateTables(beans...)(x)
+	err = db.InitEngineWithMigration(t.Context(), func(e db.Engine) error {
+		currentEngine, err = db.GetMasterEngine(e)
+		if err != nil {
+			return err
+		}
+		return migrate_base.RecreateTables(beans...)(currentEngine)
 	})
 	require.NoError(t, err)
 
@@ -306,8 +314,7 @@ func TestMigrations(t *testing.T) {
 	defer initMigrationTest(t)()
 
 	dialect := setting.Database.Type
-	versions, err := availableVersions()
-	require.NoError(t, err)
+	versions := availableVersions(t)
 
 	if len(versions) == 0 {
 		tests.Printf("No old database versions available to migration test for %s\n", dialect)

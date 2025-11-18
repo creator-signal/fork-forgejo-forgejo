@@ -6,10 +6,10 @@ package web
 import (
 	"net/http"
 
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/web/git"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/web/git"
+	"forgejo.org/services/context"
 )
 
 func requireSignIn(ctx *context.Context) {

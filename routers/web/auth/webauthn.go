@@ -7,14 +7,14 @@ import (
 	"errors"
 	"net/http"
 
-	"code.gitea.io/gitea/models/auth"
-	user_model "code.gitea.io/gitea/models/user"
-	wa "code.gitea.io/gitea/modules/auth/webauthn"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/externalaccount"
+	"forgejo.org/models/auth"
+	user_model "forgejo.org/models/user"
+	wa "forgejo.org/modules/auth/webauthn"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/services/context"
+	"forgejo.org/services/externalaccount"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -36,7 +36,7 @@ func WebAuthn(ctx *context.Context) {
 		return
 	}
 
-	hasTwoFactor, err := auth.HasTwoFactorByUID(ctx, ctx.Session.Get("twofaUid").(int64))
+	hasTwoFactor, err := auth.HasTOTPByUID(ctx, ctx.Session.Get("twofaUid").(int64))
 	if err != nil {
 		ctx.ServerError("HasTwoFactorByUID", err)
 		return
@@ -162,6 +162,14 @@ func WebAuthnLoginAssertionPost(ctx *context.Context) {
 	if ctx.Session.Get("linkAccount") != nil {
 		if err := externalaccount.LinkAccountFromStore(ctx, ctx.Session, user); err != nil {
 			ctx.ServerError("LinkAccountFromStore", err)
+			return
+		}
+	}
+
+	// Handle OpenID linking to user.
+	if oid, ok := ctx.Session.Get("twofaOpenID").(string); ok {
+		if err := user_model.AddUserOpenID(ctx, &user_model.UserOpenID{UID: user.ID, URI: oid}); err != nil {
+			ctx.ServerError("AddUserOpenID", err)
 			return
 		}
 	}

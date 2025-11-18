@@ -11,8 +11,8 @@ import (
 	"io"
 	"os"
 
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/util"
 )
 
 // BlamePart represents block of blame - continuous lines with one sha
@@ -132,14 +132,14 @@ func (r *BlameReader) Close() error {
 // CreateBlameReader creates reader for given repository, commit and file
 func CreateBlameReader(ctx context.Context, objectFormat ObjectFormat, repoPath string, commit *Commit, file string, bypassBlameIgnore bool) (*BlameReader, error) {
 	var ignoreRevsFile *string
-	if CheckGitVersionAtLeast("2.23") == nil && !bypassBlameIgnore {
+	if !bypassBlameIgnore {
 		ignoreRevsFile = tryCreateBlameIgnoreRevsFile(commit)
 	}
 
 	cmd := NewCommandContextNoGlobals(ctx, "blame", "--porcelain")
 	if ignoreRevsFile != nil {
 		// Possible improvement: use --ignore-revs-file /dev/stdin on unix
-		// There is no equivalent on Windows. May be implemented if Gitea uses an external git backend.
+		// This was not done in Gitea because it would not have been compatible with Windows.
 		cmd.AddOptionValues("--ignore-revs-file", *ignoreRevsFile)
 	}
 	cmd.AddDynamicArguments(commit.ID.String()).

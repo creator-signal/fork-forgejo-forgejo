@@ -5,18 +5,18 @@ package admin
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/migration"
-	"code.gitea.io/gitea/modules/secret"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/keying"
+	"forgejo.org/modules/migration"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 )
 
 // Task represents a task
@@ -44,7 +44,7 @@ func init() {
 // TranslatableMessage represents JSON struct that can be translated with a Locale
 type TranslatableMessage struct {
 	Format string
-	Args   []any `json:"omitempty"`
+	Args   []any `json:",omitempty"`
 }
 
 // LoadRepo loads repository of the task
@@ -120,21 +120,47 @@ func (task *Task) MigrateConfig() (*migration.MigrateOptions, error) {
 			return nil, err
 		}
 
+		key := keying.MigrateTask
+
 		// decrypt credentials
 		if opts.CloneAddrEncrypted != "" {
-			if opts.CloneAddr, err = secret.DecryptSecret(setting.SecretKey, opts.CloneAddrEncrypted); err != nil {
+			encryptedCloneAddr, err := base64.RawStdEncoding.DecodeString(opts.CloneAddrEncrypted)
+			if err != nil {
 				return nil, err
 			}
+
+			cloneAddr, err := key.Decrypt(encryptedCloneAddr, keying.ColumnAndJSONSelectorAndID("payload_content", "clone_addr_encrypted", task.ID))
+			if err != nil {
+				return nil, err
+			}
+
+			opts.CloneAddr = string(cloneAddr)
 		}
 		if opts.AuthPasswordEncrypted != "" {
-			if opts.AuthPassword, err = secret.DecryptSecret(setting.SecretKey, opts.AuthPasswordEncrypted); err != nil {
+			encryptedAuthPassword, err := base64.RawStdEncoding.DecodeString(opts.AuthPasswordEncrypted)
+			if err != nil {
 				return nil, err
 			}
+
+			authPassword, err := key.Decrypt(encryptedAuthPassword, keying.ColumnAndJSONSelectorAndID("payload_content", "auth_password_encrypted", task.ID))
+			if err != nil {
+				return nil, err
+			}
+
+			opts.AuthPassword = string(authPassword)
 		}
 		if opts.AuthTokenEncrypted != "" {
-			if opts.AuthToken, err = secret.DecryptSecret(setting.SecretKey, opts.AuthTokenEncrypted); err != nil {
+			encryptedAuthToken, err := base64.RawStdEncoding.DecodeString(opts.AuthTokenEncrypted)
+			if err != nil {
 				return nil, err
 			}
+
+			authToken, err := key.Decrypt(encryptedAuthToken, keying.ColumnAndJSONSelectorAndID("payload_content", "auth_token_encrypted", task.ID))
+			if err != nil {
+				return nil, err
+			}
+
+			opts.AuthToken = string(authToken)
 		}
 
 		return &opts, nil

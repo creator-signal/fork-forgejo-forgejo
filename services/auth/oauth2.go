@@ -11,15 +11,15 @@ import (
 	"strings"
 	"time"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	auth_model "code.gitea.io/gitea/models/auth"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/web/middleware"
-	"code.gitea.io/gitea/services/actions"
-	"code.gitea.io/gitea/services/auth/source/oauth2"
+	actions_model "forgejo.org/models/actions"
+	auth_model "forgejo.org/models/auth"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web/middleware"
+	"forgejo.org/services/actions"
+	"forgejo.org/services/auth/source/oauth2"
 )
 
 // Ensure the struct implements the interface.
@@ -137,7 +137,7 @@ func parseToken(req *http.Request) (string, bool) {
 	// check header token
 	if auHead := req.Header.Get("Authorization"); auHead != "" {
 		auths := strings.Fields(auHead)
-		if len(auths) == 2 && (auths[0] == "token" || strings.ToLower(auths[0]) == "bearer") {
+		if len(auths) == 2 && (util.ASCIIEqualFold(auths[0], "token") || util.ASCIIEqualFold(auths[0], "bearer")) {
 			return auths[1], true
 		}
 	}
@@ -189,9 +189,8 @@ func (o *OAuth2) userIDFromToken(ctx context.Context, tokenSHA string, store Dat
 		}
 		return 0
 	}
-	t.UpdatedUnix = timeutil.TimeStampNow()
-	if err = auth_model.UpdateAccessToken(ctx, t); err != nil {
-		log.Error("UpdateAccessToken: %v", err)
+	if err := t.UpdateLastUsed(ctx); err != nil {
+		log.Error("UpdateLastUsed: %v", err)
 	}
 	store.GetData()["IsApiToken"] = true
 	store.GetData()["ApiTokenScope"] = t.Scope

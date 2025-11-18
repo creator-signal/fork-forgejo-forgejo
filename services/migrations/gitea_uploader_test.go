@@ -5,7 +5,6 @@
 package migrations
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,23 +12,146 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/log"
-	base "code.gitea.io/gitea/modules/migration"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCommentUpload(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	var (
+		opts = base.MigrateOptions{
+			Issues: true,
+		}
+		repoName = "test_repo"
+		uploader = NewGiteaLocalUploader(t.Context(), user, user.Name, repoName)
+	)
+	defer uploader.Close()
+
+	fixturePath := "./testdata/github/full_download"
+	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, false)
+	defer server.Close()
+
+	// Mock Data
+	repoMock := &base.Repository{
+		Name:          repoName,
+		Owner:         "forgejo",
+		Description:   "Some mock repo",
+		CloneURL:      server.URL + "/forgejo/test_repo.git",
+		OriginalURL:   server.URL + "/forgejo/test_repo",
+		DefaultBranch: "master",
+		Website:       "https://codeberg.org/forgejo/forgejo/",
+	}
+
+	// Create Repo
+	require.NoError(t, uploader.CreateRepo(repoMock, opts))
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: repoName})
+
+	// Create and Test Issues Uploading
+	issueA := &base.Issue{
+		Title:        "First issue",
+		Number:       0,
+		PosterID:     37243484,
+		PosterName:   "PatDyn",
+		PosterEmail:  "",
+		Content:      "Mock Content",
+		Milestone:    "Mock Milestone",
+		State:        "open",
+		Created:      time.Date(2025, 8, 7, 12, 44, 7, 0, time.UTC),
+		Updated:      time.Date(2025, 8, 7, 12, 44, 47, 0, time.UTC),
+		Labels:       nil,
+		Reactions:    nil,
+		Closed:       nil,
+		IsLocked:     false,
+		Assignees:    nil,
+		ForeignIndex: 0,
+	}
+
+	issueB := &base.Issue{
+		Title:        "Second Issue",
+		Number:       1,
+		PosterID:     37243484,
+		PosterName:   "PatDyn",
+		PosterEmail:  "",
+		Content:      "Mock Content",
+		Milestone:    "Mock Milestone",
+		State:        "open",
+		Created:      time.Date(2025, 8, 7, 12, 45, 44, 0, time.UTC),
+		Updated:      time.Date(2025, 8, 7, 13, 7, 25, 0, time.UTC),
+		Labels:       nil,
+		Reactions:    nil,
+		Closed:       nil,
+		IsLocked:     false,
+		Assignees:    nil,
+		ForeignIndex: 1,
+	}
+
+	err := uploader.CreateIssues(issueA, issueB)
+	require.NoError(t, err)
+
+	issues, err := issues_model.Issues(db.DefaultContext, &issues_model.IssuesOptions{
+		RepoIDs:  []int64{repo.ID},
+		IsPull:   optional.Some(false),
+		SortType: "newest",
+	})
+	require.NoError(t, err)
+	assert.Len(t, issues, 2)
+
+	// Create and Test Comment Uploading
+	issueAComment := &base.Comment{
+		IssueIndex:  0,
+		Index:       0,
+		CommentType: "comment",
+		PosterID:    37243484,
+		PosterName:  "PatDyn",
+		PosterEmail: "",
+		Created:     time.Date(2025, 8, 7, 12, 44, 24, 0, time.UTC),
+		Updated:     time.Date(2025, 8, 7, 12, 44, 24, 0, time.UTC),
+		Content:     "First Mock Comment",
+		Reactions:   nil,
+		Meta:        nil,
+	}
+	issueBComment := &base.Comment{
+		IssueIndex:  1,
+		Index:       1,
+		CommentType: "comment",
+		PosterID:    37243484,
+		PosterName:  "PatDyn",
+		PosterEmail: "",
+		Created:     time.Date(2025, 8, 7, 13, 7, 25, 0, time.UTC),
+		Updated:     time.Date(2025, 8, 7, 13, 7, 25, 0, time.UTC),
+		Content:     "Second Mock Comment",
+		Reactions:   nil,
+		Meta:        nil,
+	}
+	require.NoError(t, uploader.CreateComments(issueBComment, issueAComment))
+
+	issues, err = issues_model.Issues(db.DefaultContext, &issues_model.IssuesOptions{
+		RepoIDs:  []int64{repo.ID},
+		IsPull:   optional.Some(false),
+		SortType: "newest",
+	})
+	require.NoError(t, err)
+	assert.Len(t, issues, 2)
+	require.NoError(t, issues[0].LoadDiscussComments(db.DefaultContext))
+	require.NoError(t, issues[1].LoadDiscussComments(db.DefaultContext))
+	assert.Len(t, issues[0].Comments, 1)
+	assert.Len(t, issues[1].Comments, 1)
+}
 
 func TestGiteaUploadRepo(t *testing.T) {
 	// FIXME: Since no accesskey or user/password will trigger rate limit of github, just skip
@@ -40,10 +162,10 @@ func TestGiteaUploadRepo(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 	var (
-		ctx        = context.Background()
-		downloader = NewGithubDownloaderV3(ctx, "https://github.com", "", "", "", "go-xorm", "builder")
+		ctx        = t.Context()
+		downloader = NewGithubDownloaderV3(ctx, "https://github.com", true, true, "", "", "", "go-xorm", "builder")
 		repoName   = "builder-" + time.Now().Format("2006-01-02-15-04-05")
-		uploader   = NewGiteaLocalUploader(graceful.GetManager().HammerContext(), user, user.Name, repoName)
+		uploader   = NewGiteaLocalUploader(t.Context(), user, user.Name, repoName)
 	)
 
 	err := migrateRepository(db.DefaultContext, user, downloader, uploader, base.MigrateOptions{
@@ -65,7 +187,7 @@ func TestGiteaUploadRepo(t *testing.T) {
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: repoName})
 	assert.True(t, repo.HasWiki())
-	assert.EqualValues(t, repo_model.RepositoryReady, repo.Status)
+	assert.Equal(t, repo_model.RepositoryReady, repo.Status)
 
 	milestones, err := db.Find[issues_model.Milestone](db.DefaultContext, issues_model.FindMilestoneOptions{
 		RepoID:   repo.ID,
@@ -133,7 +255,7 @@ func TestGiteaUploadRemapLocalUser(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	repoName := "migrated"
-	uploader := NewGiteaLocalUploader(context.Background(), doer, doer.Name, repoName)
+	uploader := NewGiteaLocalUploader(t.Context(), doer, doer.Name, repoName)
 	// call remapLocalUser
 	uploader.sameApp = true
 
@@ -174,7 +296,7 @@ func TestGiteaUploadRemapLocalUser(t *testing.T) {
 	uploader.userMap = make(map[int64]int64)
 	err = uploader.remapUser(&source, &target)
 	require.NoError(t, err)
-	assert.EqualValues(t, user.ID, target.GetUserID())
+	assert.Equal(t, user.ID, target.GetUserID())
 }
 
 func TestGiteaUploadRemapExternalUser(t *testing.T) {
@@ -182,7 +304,7 @@ func TestGiteaUploadRemapExternalUser(t *testing.T) {
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 	repoName := "migrated"
-	uploader := NewGiteaLocalUploader(context.Background(), doer, doer.Name, repoName)
+	uploader := NewGiteaLocalUploader(t.Context(), doer, doer.Name, repoName)
 	uploader.gitServiceType = structs.GiteaService
 	// call remapExternalUser
 	uploader.sameApp = false
@@ -225,7 +347,7 @@ func TestGiteaUploadRemapExternalUser(t *testing.T) {
 	target = repo_model.Release{}
 	err = uploader.remapUser(&source, &target)
 	require.NoError(t, err)
-	assert.EqualValues(t, linkedUser.ID, target.GetUserID())
+	assert.Equal(t, linkedUser.ID, target.GetUserID())
 }
 
 func TestGiteaUploadUpdateGitForPullRequest(t *testing.T) {
@@ -301,7 +423,7 @@ func TestGiteaUploadUpdateGitForPullRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	toRepoName := "migrated"
-	uploader := NewGiteaLocalUploader(context.Background(), fromRepoOwner, fromRepoOwner.Name, toRepoName)
+	uploader := NewGiteaLocalUploader(t.Context(), fromRepoOwner, fromRepoOwner.Name, toRepoName)
 	uploader.gitServiceType = structs.GiteaService
 	require.NoError(t, uploader.CreateRepo(&base.Repository{
 		Description: "description",
@@ -505,14 +627,14 @@ func TestGiteaUploadUpdateGitForPullRequest(t *testing.T) {
 
 			head, err := uploader.updateGitForPullRequest(&testCase.pr)
 			require.NoError(t, err)
-			assert.EqualValues(t, testCase.head, head)
+			assert.Equal(t, testCase.head, head)
 
 			log.Info(stopMark)
 
 			logFiltered, logStopped := logChecker.Check(5 * time.Second)
 			assert.True(t, logStopped)
 			if len(testCase.logFilter) > 0 {
-				assert.EqualValues(t, testCase.logFiltered, logFiltered, "for log message filters: %v", testCase.logFilter)
+				assert.Equal(t, testCase.logFiltered, logFiltered, "for log message filters: %v", testCase.logFilter)
 			}
 		})
 	}

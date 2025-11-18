@@ -5,38 +5,38 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	quota_model "code.gitea.io/gitea/models/quota"
-	repo_model "code.gitea.io/gitea/models/repo"
-	unit_model "code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/label"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/validation"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	actions_service "code.gitea.io/gitea/services/actions"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	"code.gitea.io/gitea/services/issue"
-	repo_service "code.gitea.io/gitea/services/repository"
-	wiki_service "code.gitea.io/gitea/services/wiki"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/label"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/validation"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
+	actions_service "forgejo.org/services/actions"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	"forgejo.org/services/issue"
+	repo_service "forgejo.org/services/repository"
+	wiki_service "forgejo.org/services/wiki"
 )
 
 // Search repositories via options
@@ -85,7 +85,7 @@ func Search(ctx *context.APIContext) {
 	//   type: boolean
 	// - name: is_private
 	//   in: query
-	//   description: show only pubic, private or all repositories (defaults to all)
+	//   description: show only public, private or all repositories (defaults to all)
 	//   type: boolean
 	// - name: template
 	//   in: query
@@ -110,11 +110,13 @@ func Search(ctx *context.APIContext) {
 	//                "alpha", "created", "updated", "size", "git_size", "lfs_size", "stars", "forks" and "id".
 	//                Default is "alpha"
 	//   type: string
+	//   enum: [alpha, created, updated, size, git_size, lfs_size, id, stars, forks]
 	// - name: order
 	//   in: query
 	//   description: sort order, either "asc" (ascending) or "desc" (descending).
 	//                Default is "asc", ignored if "sort" is not specified.
 	//   type: string
+	//   enum: [asc, desc]
 	// - name: page
 	//   in: query
 	//   description: page number of results to return (1-based)
@@ -647,7 +649,7 @@ func Edit(ctx *context.APIContext) {
 		return
 	}
 
-	if err := updateRepoUnits(ctx, opts); err != nil {
+	if err := updateRepoUnits(ctx, ctx.Repo.Owner.Name, ctx.Repo.Repository, opts); err != nil {
 		return
 	}
 
@@ -661,6 +663,47 @@ func Edit(ctx *context.APIContext) {
 		if err := updateMirror(ctx, opts); err != nil {
 			return
 		}
+	}
+
+	repo, err := repo_model.GetRepositoryByID(ctx, ctx.Repo.Repository.ID)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToRepo(ctx, repo, ctx.Repo.Permission))
+}
+
+// Convert converts a mirror to a normal repo
+func Convert(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/convert repository repoConvert
+	// ---
+	// summary: Convert a mirror repo to a normal repo.
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo to convert
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo to convert
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/Repository"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
+
+	if err := convertMirrorToNormalRepo(ctx); err != nil {
+		return
 	}
 
 	repo, err := repo_model.GetRepositoryByID(ctx, ctx.Repo.Repository.ID)
@@ -724,7 +767,7 @@ func updateBasicProperties(ctx *context.APIContext, opts api.EditRepoOption) err
 		visibilityChanged = repo.IsPrivate != *opts.Private
 		// when ForcePrivate enabled, you could change public repo to private, but only admin users can change private to public
 		if visibilityChanged && setting.Repository.ForcePrivate && !*opts.Private && !ctx.Doer.IsAdmin {
-			err := fmt.Errorf("cannot change private repository to public")
+			err := errors.New("cannot change private repository to public")
 			ctx.Error(http.StatusUnprocessableEntity, "Force Private enabled", err)
 			return err
 		}
@@ -779,10 +822,7 @@ func updateBasicProperties(ctx *context.APIContext, opts api.EditRepoOption) err
 }
 
 // updateRepoUnits updates repo units: Issue settings, Wiki settings, PR settings
-func updateRepoUnits(ctx *context.APIContext, opts api.EditRepoOption) error {
-	owner := ctx.Repo.Owner
-	repo := ctx.Repo.Repository
-
+func updateRepoUnits(ctx *context.APIContext, owner string, repo *repo_model.Repository, opts api.EditRepoOption) error {
 	var units []repo_model.RepoUnit
 	var deleteUnitTypes []unit_model.Type
 
@@ -795,12 +835,12 @@ func updateRepoUnits(ctx *context.APIContext, opts api.EditRepoOption) error {
 		if newHasIssues && opts.ExternalTracker != nil && !unit_model.TypeExternalTracker.UnitGlobalDisabled() {
 			// Check that values are valid
 			if !validation.IsValidExternalURL(opts.ExternalTracker.ExternalTrackerURL) {
-				err := fmt.Errorf("External tracker URL not valid")
+				err := errors.New("External tracker URL not valid")
 				ctx.Error(http.StatusUnprocessableEntity, "Invalid external tracker URL", err)
 				return err
 			}
 			if len(opts.ExternalTracker.ExternalTrackerFormat) != 0 && !validation.IsValidExternalTrackerURLFormat(opts.ExternalTracker.ExternalTrackerFormat) {
-				err := fmt.Errorf("External tracker URL format not valid")
+				err := errors.New("External tracker URL format not valid")
 				ctx.Error(http.StatusUnprocessableEntity, "Invalid external tracker URL format", err)
 				return err
 			}
@@ -864,14 +904,14 @@ func updateRepoUnits(ctx *context.APIContext, opts api.EditRepoOption) error {
 			if *opts.GloballyEditableWiki {
 				wikiPermissions = repo_model.UnitAccessModeWrite
 			} else {
-				wikiPermissions = repo_model.UnitAccessModeRead
+				wikiPermissions = repo_model.UnitAccessModeUnset
 			}
 		}
 
 		if newHasWiki && opts.ExternalWiki != nil && !unit_model.TypeExternalWiki.UnitGlobalDisabled() {
 			// Check that values are valid
 			if !validation.IsValidExternalURL(opts.ExternalWiki.ExternalWikiURL) {
-				err := fmt.Errorf("External wiki URL not valid")
+				err := errors.New("External wiki URL not valid")
 				ctx.Error(http.StatusUnprocessableEntity, "", "Invalid external wiki URL")
 				return err
 			}
@@ -1045,7 +1085,7 @@ func updateRepoUnits(ctx *context.APIContext, opts api.EditRepoOption) error {
 		}
 	}
 
-	log.Trace("Repository advanced settings updated: %s/%s", owner.Name, repo.Name)
+	log.Trace("Repository advanced settings updated: %s/%s", owner, repo.Name)
 	return nil
 }
 
@@ -1055,7 +1095,7 @@ func updateRepoArchivedState(ctx *context.APIContext, opts api.EditRepoOption) e
 	// archive / un-archive
 	if opts.Archived != nil {
 		if repo.IsMirror {
-			err := fmt.Errorf("repo is a mirror, cannot archive/un-archive")
+			err := errors.New("repo is a mirror, cannot archive/un-archive")
 			ctx.Error(http.StatusUnprocessableEntity, err.Error(), err)
 			return err
 		}
@@ -1065,7 +1105,7 @@ func updateRepoArchivedState(ctx *context.APIContext, opts api.EditRepoOption) e
 				ctx.Error(http.StatusInternalServerError, "ArchiveRepoState", err)
 				return err
 			}
-			if err := actions_model.CleanRepoScheduleTasks(ctx, repo, true); err != nil {
+			if err := actions_service.CleanRepoScheduleTasks(ctx, repo, true); err != nil {
 				log.Error("CleanRepoScheduleTasks for archived repo %s/%s: %v", ctx.Repo.Owner.Name, repo.Name, err)
 			}
 			log.Trace("Repository was archived: %s/%s", ctx.Repo.Owner.Name, repo.Name)
@@ -1137,6 +1177,25 @@ func updateMirror(ctx *context.APIContext, opts api.EditRepoOption) error {
 	if err := repo_model.UpdateMirror(ctx, mirror); err != nil {
 		log.Error("Failed to Set Mirror Interval: %s", err)
 		ctx.Error(http.StatusUnprocessableEntity, "MirrorInterval", err)
+		return err
+	}
+
+	return nil
+}
+
+// convertMirrorToNormalRepository converts a mirror to a normal repo
+func convertMirrorToNormalRepo(ctx *context.APIContext) error {
+	repo := ctx.Repo.Repository
+
+	if !repo.IsMirror {
+		err := errors.New("Repository is not a mirror")
+		ctx.Error(http.StatusUnprocessableEntity, "ConvertMirror", err)
+		return nil
+	}
+
+	if err := repo_service.ConvertMirrorToNormalRepo(ctx, repo); err != nil {
+		log.Error("Failed to Disable Mirror: %s", err)
+		ctx.Error(http.StatusUnprocessableEntity, "ConvertMirror", err)
 		return err
 	}
 

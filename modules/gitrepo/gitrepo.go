@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
 )
 
 type Repository interface {
@@ -71,33 +71,5 @@ func RepositoryFromContextOrOpen(ctx context.Context, repo Repository) (*git.Rep
 	}
 
 	gitRepo, err := OpenRepository(ctx, repo)
-	return gitRepo, gitRepo, err
-}
-
-// repositoryFromContextPath attempts to get the repository from the context
-func repositoryFromContextPath(ctx context.Context, path string) *git.Repository {
-	value := ctx.Value(RepositoryContextKey)
-	if value == nil {
-		return nil
-	}
-
-	if repo, ok := value.(*git.Repository); ok && repo != nil {
-		if repo.Path == path {
-			return repo
-		}
-	}
-
-	return nil
-}
-
-// RepositoryFromContextOrOpenPath attempts to get the repository from the context or just opens it
-// Deprecated: Use RepositoryFromContextOrOpen instead
-func RepositoryFromContextOrOpenPath(ctx context.Context, path string) (*git.Repository, io.Closer, error) {
-	gitRepo := repositoryFromContextPath(ctx, path)
-	if gitRepo != nil {
-		return gitRepo, nopCloser(nil), nil
-	}
-
-	gitRepo, err := git.OpenRepository(ctx, path)
 	return gitRepo, gitRepo, err
 }

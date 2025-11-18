@@ -13,7 +13,6 @@
 		</h2>
 		{{template "base/alert" .}}
 		<form class="ui form" action="{{.Link}}" method="post">
-			{{.CsrfTokenHtml}}
 			<div class="ui seven wide target">
 				<div class="inline field {{if .Err_TagName}}error{{end}}">
 					{{if .PageIsEditRelease}}
@@ -46,7 +45,7 @@
 			</div>
 			<div class="eleven wide tw-pt-0">
 				<div class="field {{if .Err_Title}}error{{end}}">
-					<input name="title" aria-label="{{ctx.Locale.Tr "repo.release.title"}}" placeholder="{{ctx.Locale.Tr "repo.release.title"}}" value="{{.title}}" autofocus maxlength="255">
+					<input id="release-title" name="title" aria-label="{{ctx.Locale.Tr "repo.release.title"}}" placeholder="{{ctx.Locale.Tr "repo.release.title"}}" value="{{if .PageIsEditRelease}}{{.title}}{{else}}{{.tag_name}}{{end}}" autofocus maxlength="255">
 				</div>
 				<div class="field">
 					{{template "shared/combomarkdowneditor" (dict
@@ -76,10 +75,8 @@
 							{{if .ExternalURL}}
 								<input name="attachment-edit-exturl-{{.UUID}}" placeholder="{{ctx.Locale.Tr "repo.release.asset_external_url"}}" class="attachment_edit" required value="{{.ExternalURL}}">
 							{{else}}
-								<span class="ui text grey tw-whitespace-nowrap tw-ml-auto tw-pl-3">{{ctx.Locale.TrN
-								.DownloadCount "repo.release.download_count_one"
-								"repo.release.download_count_few" (ctx.Locale.PrettyNumber
-								.DownloadCount)}} · {{.Size | ctx.Locale.TrSize}}</span>
+								<span class="ui text grey tw-whitespace-nowrap tw-ml-auto tw-pl-3">{{ctx.Locale.TrPluralString
+								.DownloadCount "release.n_downloads" (ctx.Locale.PrettyNumber .DownloadCount)}} · {{.Size | ctx.Locale.TrSize}}</span>
 							{{end}}
 						</div>
 						<a class="ui mini red button remove-rel-attach tw-ml-3" data-id="{{.ID}}" data-uuid="{{.UUID}}">
@@ -139,7 +136,7 @@
 							<a class="ui small button" href="{{.RepoLink}}/releases">
 								{{ctx.Locale.Tr "repo.release.cancel"}}
 							</a>
-							<a class="ui small red button delete-button" data-url="{{$.RepoLink}}/releases/delete" data-id="{{.ID}}">
+							<a class="ui small red button delete-button" data-url="{{$.RepoLink}}/releases/delete" data-id="{{.ID}}" data-modal-id="delete-release">
 								{{ctx.Locale.Tr "repo.release.delete_release"}}
 							</a>
 							{{if .IsDraft}}
@@ -169,7 +166,7 @@
 </div>
 
 {{if .PageIsEditRelease}}
-	<div class="ui g-modal-confirm delete modal">
+	<div class="ui g-modal-confirm delete modal" id="delete-release">
 		<div class="header">
 			{{svg "octicon-trash"}}
 			{{ctx.Locale.Tr "repo.release.deletion"}}

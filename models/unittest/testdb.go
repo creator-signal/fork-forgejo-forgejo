@@ -12,15 +12,17 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/system"
-	"code.gitea.io/gitea/modules/auth/password/hash"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/setting/config"
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/models/system"
+	"forgejo.org/modules/auth/password/hash"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/setting/config"
+	"forgejo.org/modules/storage"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/stats"
 
 	"github.com/stretchr/testify/require"
 	"xorm.io/xorm"
@@ -59,6 +61,13 @@ func InitSettings() {
 	_ = hash.Register("dummy", hash.NewDummyHasher)
 
 	setting.PasswordHashAlgo, _ = hash.SetDefaultPasswordHashAlgorithm("dummy")
+	setting.InitGiteaEnvVars()
+
+	// Avoid loading the git's system config.
+	// On macOS, system config sets the osxkeychain credential helper, which will cause tests to freeze with a dialog.
+	// But we do not set it in production at the moment, because it might be a "breaking" change,
+	// more details are in "modules/git.commonBaseEnvs".
+	_ = os.Setenv("GIT_CONFIG_NOSYSTEM", "true")
 }
 
 // TestOptions represents test options
@@ -151,6 +160,7 @@ func MainTest(m *testing.M, testOpts ...*TestOptions) {
 	if err = storage.Init(); err != nil {
 		fatalTestError("storage.Init: %v\n", err)
 	}
+	initStats()
 	if err = util.RemoveAll(repoRootPath); err != nil {
 		fatalTestError("util.RemoveAll: %v\n", err)
 	}
@@ -204,12 +214,31 @@ func MainTest(m *testing.M, testOpts ...*TestOptions) {
 	os.Exit(exitStatus)
 }
 
+func initStats() {
+	// Use an in-memory queue for the `stats` module during testing.  This queue will collect requests for recalc during
+	// tests which can be performed by invoking `unittest.FlushAsyncCalcs(t)`.
+	cfg, err := setting.NewConfigProviderFromData(`
+[queue.stats_recalc]
+TYPE = channel
+`)
+	if err != nil {
+		fatalTestError("NewConfigProviderFromData: %v\n", err)
+	}
+	defer test.MockVariableValue(&setting.CfgProvider, cfg)()
+	if err := stats.Init(); err != nil {
+		fatalTestError("stats.Init: %v\n", err)
+	}
+}
+
 // FixturesOptions fixtures needs to be loaded options
 type FixturesOptions struct {
 	Dir   string
 	Files []string
 	Dirs  []string
 	Base  string
+	// By default all registered models are cleaned, even if they do not have fixture. When OnlyAffectModels is not-nil,
+	// cleaning registered models will be skipped and only these models with fixtures are considered.
+	OnlyAffectModels []any
 }
 
 // CreateTestEngine creates a memory database and loads the fixture data from fixturesDir
@@ -222,6 +251,7 @@ func CreateTestEngine(opts FixturesOptions) error {
 		return err
 	}
 	x.SetMapper(names.GonicMapper{})
+	x.AddHook(faultInjectorHook{})
 	db.SetDefaultEngine(context.Background(), x)
 
 	if err = db.SyncAllTables(); err != nil {

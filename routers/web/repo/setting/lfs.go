@@ -14,20 +14,20 @@ import (
 	"strconv"
 	"strings"
 
-	git_model "code.gitea.io/gitea/models/git"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/charset"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/git/pipeline"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/modules/typesniffer"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/services/context"
+	git_model "forgejo.org/models/git"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/charset"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/git/pipeline"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
+	"forgejo.org/modules/typesniffer"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/context"
 )
 
 const (
@@ -291,7 +291,7 @@ func LFSFileGet(ctx *context.Context) {
 	}
 	buf = buf[:n]
 
-	st := typesniffer.DetectContentType(buf)
+	st := typesniffer.DetectContentType(buf, "")
 	ctx.Data["IsTextFile"] = st.IsText()
 	isRepresentableAsText := st.IsRepresentableAsText()
 
@@ -342,6 +342,20 @@ func LFSFileGet(ctx *context.Context) {
 		ctx.Data["IsVideoFile"] = true
 	case st.IsAudio():
 		ctx.Data["IsAudioFile"] = true
+	case st.Is3DModel():
+		ctx.Data["Is3DModelFile"] = true
+		switch {
+		case st.IsGLB():
+			ctx.Data["IsGLBFile"] = true
+		case st.IsSTL():
+			ctx.Data["IsSTLFile"] = true
+		case st.IsGLTF():
+			ctx.Data["IsGLTFFile"] = true
+		case st.IsOBJ():
+			ctx.Data["IsOBJFile"] = true
+		case st.Is3MF():
+			ctx.Data["Is3MFFile"] = true
+		}
 	case st.IsImage() && (setting.UI.SVG.Enabled || !st.IsSvgImage()):
 		ctx.Data["IsImageFile"] = true
 	}

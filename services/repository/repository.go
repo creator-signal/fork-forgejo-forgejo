@@ -6,25 +6,24 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	packages_model "code.gitea.io/gitea/models/packages"
-	repo_model "code.gitea.io/gitea/models/repo"
-	system_model "code.gitea.io/gitea/models/system"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/log"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	federation_service "code.gitea.io/gitea/services/federation"
-	notify_service "code.gitea.io/gitea/services/notify"
-	pull_service "code.gitea.io/gitea/services/pull"
+	"forgejo.org/models/db"
+	"forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
+	system_model "forgejo.org/models/system"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/log"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	notify_service "forgejo.org/services/notify"
+	pull_service "forgejo.org/services/pull"
 )
 
 // WebSearchRepository represents a repository returned by web search
@@ -64,15 +63,7 @@ func DeleteRepository(ctx context.Context, doer *user_model.User, repo *repo_mod
 		notify_service.DeleteRepository(ctx, doer, repo)
 	}
 
-	if err := DeleteRepositoryDirectly(ctx, doer, repo.ID); err != nil {
-		return err
-	}
-
-	if err := federation_service.DeleteFollowingRepos(ctx, repo.ID); err != nil {
-		return err
-	}
-
-	return packages_model.UnlinkRepositoryFromAllPackages(ctx, repo.ID)
+	return DeleteRepositoryDirectly(ctx, doer, repo.ID)
 }
 
 // PushCreateRepo creates a repository when a new repository is pushed to an appropriate namespace
@@ -82,10 +73,10 @@ func PushCreateRepo(ctx context.Context, authUser, owner *user_model.User, repoN
 			if ok, err := organization.CanCreateOrgRepo(ctx, owner.ID, authUser.ID); err != nil {
 				return nil, err
 			} else if !ok {
-				return nil, fmt.Errorf("cannot push-create repository for org")
+				return nil, errors.New("cannot push-create repository for org")
 			}
 		} else if authUser.ID != owner.ID {
-			return nil, fmt.Errorf("cannot push-create repository for another user")
+			return nil, errors.New("cannot push-create repository for another user")
 		}
 	}
 
@@ -126,6 +117,17 @@ func UpdateRepository(ctx context.Context, repo *repo_model.Repository, visibili
 	}
 
 	return committer.Commit()
+}
+
+// ConvertMirrorToNormalRepo converts a mirror to a normal repo
+func ConvertMirrorToNormalRepo(ctx context.Context, repo *repo_model.Repository) (err error) {
+	repo.IsMirror = false
+
+	if _, err := CleanUpMigrateInfo(ctx, repo); err != nil {
+		return err
+	}
+
+	return repo_model.DeleteMirrorByRepoID(ctx, repo.ID)
 }
 
 // LinkedRepository returns the linked repo if any

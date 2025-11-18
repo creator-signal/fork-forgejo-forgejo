@@ -16,8 +16,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
 
 	"github.com/dustin/go-humanize"
 )
@@ -114,7 +114,7 @@ func EntryIcon(entry *git.TreeEntry) string {
 		return "file-symlink-file"
 	case entry.IsDir():
 		return "file-directory-fill"
-	case entry.IsSubModule():
+	case entry.IsSubmodule():
 		return "file-submodule"
 	}
 

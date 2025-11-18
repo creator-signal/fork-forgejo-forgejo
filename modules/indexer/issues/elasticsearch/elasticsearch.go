@@ -9,20 +9,24 @@ import (
 	"strconv"
 	"strings"
 
-	"code.gitea.io/gitea/modules/graceful"
-	indexer_internal "code.gitea.io/gitea/modules/indexer/internal"
-	inner_elasticsearch "code.gitea.io/gitea/modules/indexer/internal/elasticsearch"
-	"code.gitea.io/gitea/modules/indexer/issues/internal"
+	"forgejo.org/modules/graceful"
+	indexer_internal "forgejo.org/modules/indexer/internal"
+	inner_elasticsearch "forgejo.org/modules/indexer/internal/elasticsearch"
+	"forgejo.org/modules/indexer/issues/internal"
 
 	"github.com/olivere/elastic/v7"
 )
 
 const (
-	issueIndexerLatestVersion = 1
+	issueIndexerLatestVersion = 2
 	// multi-match-types, currently only 2 types are used
 	// Reference: https://www.elastic.co/guide/en/elasticsearch/reference/7.0/query-dsl-multi-match-query.html#multi-match-types
 	esMultiMatchTypeBestFields   = "best_fields"
 	esMultiMatchTypePhrasePrefix = "phrase_prefix"
+
+	// fuzziness options
+	// Reference: https://www.elastic.co/guide/en/elasticsearch/reference/7.0/common-options.html#fuzziness
+	esFuzzyAuto = "AUTO"
 )
 
 var _ internal.Indexer = &Indexer{}
@@ -52,7 +56,8 @@ const (
 			"repo_id": { "type": "long", "index": true },
 			"is_public": { "type": "boolean", "index": true },
 
-			"title": {  "type": "text", "index": true },
+			"index": { "type": "long", "index": true },
+			"title": { "type": "text", "index": true },
 			"content": { "type": "text", "index": true },
 			"comments": { "type" : "text", "index": true },
 
@@ -144,13 +149,36 @@ func (b *Indexer) Delete(ctx context.Context, ids ...int64) error {
 func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (*internal.SearchResult, error) {
 	query := elastic.NewBoolQuery()
 
-	if options.Keyword != "" {
-		searchType := esMultiMatchTypePhrasePrefix
-		if options.IsFuzzyKeyword {
-			searchType = esMultiMatchTypeBestFields
-		}
+	tokens, err := options.Tokens()
+	if err != nil {
+		return nil, err
+	}
 
-		query.Must(elastic.NewMultiMatchQuery(options.Keyword, "title", "content", "comments").Type(searchType))
+	if len(tokens) > 0 {
+		q := elastic.NewBoolQuery()
+		for _, token := range tokens {
+			innerQ := elastic.NewMultiMatchQuery(token.Term, "content", "comments").FieldWithBoost("title", 2.0).TieBreaker(0.5)
+			if token.Fuzzy {
+				// If the term is not a phrase use fuzziness set to AUTO
+				innerQ = innerQ.Type(esMultiMatchTypeBestFields).Fuzziness(esFuzzyAuto)
+			} else {
+				innerQ = innerQ.Type(esMultiMatchTypePhrasePrefix)
+			}
+			var eitherQ elastic.Query = innerQ
+			if issueID, err := token.ParseIssueReference(); err == nil {
+				indexQ := elastic.NewTermQuery("index", issueID).Boost(20)
+				eitherQ = elastic.NewDisMaxQuery().Query(indexQ).Query(innerQ).TieBreaker(0.5)
+			}
+			switch token.Kind {
+			case internal.BoolOptMust:
+				q.Must(eitherQ)
+			case internal.BoolOptShould:
+				q.Should(eitherQ)
+			case internal.BoolOptNot:
+				q.MustNot(eitherQ)
+			}
+		}
+		query.Must(q)
 	}
 
 	if len(options.RepoIDs) > 0 {
@@ -160,6 +188,10 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 			q.Should(elastic.NewTermQuery("is_public", true))
 		}
 		query.Must(q)
+	}
+	if options.PriorityRepoID.Has() {
+		q := elastic.NewTermQuery("repo_id", options.PriorityRepoID.Value()).Boost(10)
+		query.Should(q)
 	}
 
 	if options.IsPull.Has() {

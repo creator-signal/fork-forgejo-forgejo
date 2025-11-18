@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -48,10 +48,10 @@ func TestAPIRepoTags(t *testing.T) {
 	assert.Len(t, tags, 2)
 	for _, tag := range tags {
 		if tag.Name != "v1.1" {
-			assert.EqualValues(t, newTag.Name, tag.Name)
-			assert.EqualValues(t, newTag.Message, tag.Message)
-			assert.EqualValues(t, "nice!\nand some text", tag.Message)
-			assert.EqualValues(t, newTag.Commit.SHA, tag.Commit.SHA)
+			assert.Equal(t, newTag.Name, tag.Name)
+			assert.Equal(t, newTag.Message, tag.Message)
+			assert.Equal(t, "nice!\nand some text", tag.Message)
+			assert.Equal(t, newTag.Commit.SHA, tag.Commit.SHA)
 		}
 	}
 
@@ -61,7 +61,7 @@ func TestAPIRepoTags(t *testing.T) {
 	resp = MakeRequest(t, req, http.StatusOK)
 	var tag *api.Tag
 	DecodeJSON(t, resp, &tag)
-	assert.EqualValues(t, newTag, tag)
+	assert.Equal(t, newTag, tag)
 
 	// delete tag
 	delReq := NewRequestf(t, "DELETE", "/api/v1/repos/%s/%s/tags/%s", user.Name, repoName, newTag.Name).
@@ -120,4 +120,37 @@ func TestAPIGetTagArchiveDownloadCount(t *testing.T) {
 
 	assert.Equal(t, int64(1), tagInfo.ArchiveDownloadCount.TarGz)
 	assert.Equal(t, int64(0), tagInfo.ArchiveDownloadCount.Zip)
+}
+
+func TestAPIGetTagsPaginated(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	// Login as User2.
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+	repoName := "repo1"
+	expectedTagName := "TagDownloadCount"
+
+	for i := range 5 {
+		createNewTagUsingAPI(t, token, user.Name, repoName, expectedTagName+fmt.Sprintf("%d", i), "", "")
+	}
+
+	// List tags with pagination
+	req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/tags?limit=1", user.Name, repoName).
+		AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	var tags []*api.Tag
+	DecodeJSON(t, resp, &tags)
+
+	assert.Len(t, tags, 1)
+
+	assert.Equal(t, fmt.Sprintf("%s%d", expectedTagName, 0), tags[0].Name)
+
+	// Check if Link header is present for pagination
+	link := resp.Header().Get("Link")
+	assert.NotEmpty(t, link, "Link header should be set for paginated responses")
+	assert.Contains(t, link, "rel=\"next\"")
+	assert.Contains(t, link, "page=2")
 }

@@ -6,8 +6,9 @@ package user
 import (
 	"net/http"
 
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/services/context"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/services/context"
+	redirect_service "forgejo.org/services/redirect"
 )
 
 // GetUserByParamsName get user by name
@@ -16,7 +17,7 @@ func GetUserByParamsName(ctx *context.APIContext, name string) *user_model.User 
 	user, err := user_model.GetUserByName(ctx, username)
 	if err != nil {
 		if user_model.IsErrUserNotExist(err) {
-			if redirectUserID, err2 := user_model.LookupUserRedirect(ctx, username); err2 == nil {
+			if redirectUserID, err2 := redirect_service.LookupUserRedirect(ctx, ctx.Doer, username); err2 == nil {
 				context.RedirectToUser(ctx.Base, username, redirectUserID)
 			} else {
 				ctx.NotFound("GetUserByName", err)

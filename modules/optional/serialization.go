@@ -4,9 +4,9 @@
 package optional
 
 import (
-	"code.gitea.io/gitea/modules/json"
+	"forgejo.org/modules/json"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func (o *Option[T]) UnmarshalJSON(data []byte) error {

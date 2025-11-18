@@ -10,6 +10,9 @@ export async function validate_form({page}: {page: Page}, scope: 'form' | 'field
     // legacy dropdowns don't use semantic HTML yet,
     // avoid using these where possible
     '.ui.dropdown',
+    // for some reason we use h1 to h5 for form sections,
+    // and it usually makes no sense semantically
+    '.ui.top.attached.header',
   ];
   await accessibilityCheck({page}, [scope], excludedElements, []);
 
@@ -18,7 +21,6 @@ export async function validate_form({page}: {page: Page}, scope: 'form' | 'field
   for (const b of await boxes.all()) {
     await expect(b).toHaveCSS('margin-left', '0px');
     await expect(b).toHaveCSS('margin-top', '0px');
-    await expect(b).toHaveCSS('vertical-align', 'baseline');
   }
 
   // assert no (trailing) colon is used in labels

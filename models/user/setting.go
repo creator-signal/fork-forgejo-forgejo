@@ -5,13 +5,14 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/cache"
-	setting_module "code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/cache"
+	setting_module "forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
@@ -114,10 +115,10 @@ func GetUserAllSettings(ctx context.Context, uid int64) (map[string]*Setting, er
 
 func validateUserSettingKey(key string) error {
 	if len(key) == 0 {
-		return fmt.Errorf("setting key must be set")
+		return errors.New("setting key must be set")
 	}
 	if strings.ToLower(key) != key {
-		return fmt.Errorf("setting key should be lowercase")
+		return errors.New("setting key should be lowercase")
 	}
 	return nil
 }

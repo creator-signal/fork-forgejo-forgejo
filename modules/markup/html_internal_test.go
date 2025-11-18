@@ -1,4 +1,5 @@
 // Copyright 2018 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors.
 // SPDX-License-Identifier: MIT
 
 package markup
@@ -9,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -302,12 +303,12 @@ func testRenderIssueIndexPattern(t *testing.T, input, expected string, ctx *Rend
 func TestRender_AutoLink(t *testing.T) {
 	setting.AppURL = TestAppURL
 
-	test := func(input, expected string) {
+	test := func(input, expected, base string) {
 		var buffer strings.Builder
 		err := PostProcess(&RenderContext{
 			Ctx: git.DefaultContext,
 			Links: Links{
-				Base: TestRepoURL,
+				Base: base,
 			},
 			Metas: localMetas,
 		}, strings.NewReader(input), &buffer)
@@ -318,7 +319,7 @@ func TestRender_AutoLink(t *testing.T) {
 		err = PostProcess(&RenderContext{
 			Ctx: git.DefaultContext,
 			Links: Links{
-				Base: TestRepoURL,
+				Base: base,
 			},
 			Metas:  localMetas,
 			IsWiki: true,
@@ -327,19 +328,87 @@ func TestRender_AutoLink(t *testing.T) {
 		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(buffer.String()))
 	}
 
-	// render valid issue URLs
-	test(util.URLJoin(TestRepoURL, "issues", "3333"),
-		numericIssueLink(util.URLJoin(TestRepoURL, "issues"), "ref-issue", 3333, "#"))
+	t.Run("Issue", func(t *testing.T) {
+		// render valid issue URLs
+		test(util.URLJoin(TestRepoURL, "issues", "3333"),
+			numericIssueLink(util.URLJoin(TestRepoURL, "issues"), "ref-issue", 3333, "#"),
+			TestRepoURL)
+	})
 
-	// render valid commit URLs
-	tmp := util.URLJoin(TestRepoURL, "commit", "d8a994ef243349f321568f9e36d5c3f444b99cae")
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24</code></a>")
-	tmp += "#diff-2"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>")
+	t.Run("Commit", func(t *testing.T) {
+		// render valid commit URLs
+		tmp := util.URLJoin(TestRepoURL, "commit", "d8a994ef243349f321568f9e36d5c3f444b99cae")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24</code></a>", TestRepoURL)
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">"+TestOrgRepo+"@d8a994ef24</code></a>", "https://localhost/forgejo/forgejo")
+		test(
+			tmp+"#diff-2",
+			"<a href=\""+tmp+"#diff-2\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>",
+			TestRepoURL,
+		)
+		test(
+			tmp+"#diff-953bb4f01b7c77fa18f0cd54211255051e647dbc",
+			"<a href=\""+tmp+"#diff-953bb4f01b7c77fa18f0cd54211255051e647dbc\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-953bb4f01b)</code></a>",
+			TestRepoURL,
+		)
 
-	// render other commit URLs
-	tmp = "https://external-link.gitea.io/go-gitea/gitea/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2"
-	test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>")
+		// render other commit URLs
+		tmp = "https://external-link.gitea.io/go-gitea/gitea/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">d8a994ef24 (diff-2)</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">go-gitea/gitea@d8a994ef24 (diff-2)</code></a>", TestRepoURL)
+
+		tmp = "http://localhost:3000/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+
+		tmp = "http://localhost:3000/sub/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/sub/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "http://localhost:3000/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+
+		tmp = "http://localhost:3000/sub1/sub2/sub3/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">190d949293</code></a>", "http://localhost:3000/sub1/sub2/sub3/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "http://localhost:3000/sub1/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/gogs@190d949293</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+
+		// if the repository happens to be named like one of the known app routes (e.g. `src`),
+		// we can parse the URL correctly, if there is no sub path
+		tmp = "http://localhost:3000/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/src@190d949293</code></a>", TestRepoURL)
+		tmp = "http://localhost:3000/gogits/src/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">gogits/src@190d949293</code></a>", TestRepoURL)
+		// but if there is a sub path, we cannot reliably distinguish the repo name from the app route
+		tmp = "http://localhost:3000/sub/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\""+tmp+"\" class=\"commit\"><code class=\"nohighlight\">sub/gogits@190d949293</code></a>", TestRepoURL)
+	})
+
+	t.Run("Compare", func(t *testing.T) {
+		tmp := util.URLJoin(TestRepoURL, "compare", "d8a994ef243349f321568f9e36d5c3f444b99cae..190d9492934af498c3f669d6a2431dc5459e5b20")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">d8a994ef24..190d949293</code></a>", TestRepoURL)
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">"+TestOrgRepo+"@d8a994ef24..190d949293</code></a>", "https://localhost/forgejo/forgejo")
+
+		tmp = "http://localhost:3000/sub/gogits/gogs/compare/190d9492934af498c3f669d6a2431dc5459e5b20..d8a994ef243349f321568f9e36d5c3f444b99cae"
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">190d949293..d8a994ef24</code></a>", "http://localhost:3000/sub/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "http://localhost:3000/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+
+		tmp = "http://localhost:3000/sub1/sub2/sub3/gogits/gogs/compare/190d9492934af498c3f669d6a2431dc5459e5b20..d8a994ef243349f321568f9e36d5c3f444b99cae"
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">190d949293..d8a994ef24</code></a>", "http://localhost:3000/sub1/sub2/sub3/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "http://localhost:3000/sub1/gogits/gogs")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">gogits/gogs@190d949293..d8a994ef24</code></a>", "https://external-link.gitea.io/go-gitea/gitea")
+
+		tmp = "https://codeberg.org/forgejo/forgejo/compare/8bbac4c679bea930c74849c355a60ed3c52f8eb5...e2278e5a38187a1dc84dc41d583ec8b44e7257c1?files=options/locale/locale_fi-FI.ini"
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">8bbac4c679...e2278e5a38 (options/locale/locale_fi-FI.ini)</code></a>", "https://codeberg.org/forgejo/forgejo")
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">forgejo/forgejo@8bbac4c679...e2278e5a38 (options/locale/locale_fi-FI.ini)</code></a>", TestRepoURL)
+		test(tmp+".", "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">forgejo/forgejo@8bbac4c679...e2278e5a38 (options/locale/locale_fi-FI.ini)</code></a>.", TestRepoURL)
+
+		tmp = "https://codeberg.org/forgejo/forgejo/compare/8bbac4c679bea930c74849c355a60ed3c52f8eb5...e2278e5a38187a1dc84dc41d583ec8b44e7257c1?files=options/locale/locale_fi-FI.ini#L2"
+		test(tmp, "<a href=\""+tmp+"\" class=\"compare\"><code class=\"nohighlight\">8bbac4c679...e2278e5a38 (options/locale/locale_fi-FI.ini#L2)</code></a>", "https://codeberg.org/forgejo/forgejo")
+	})
+
+	t.Run("Invalid URLs", func(t *testing.T) {
+		tmp := "https://local host/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20"
+		test(tmp, "<a href=\"https://local\" class=\"link\">https://local</a> host/gogits/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20", TestRepoURL)
+	})
 }
 
 func TestRender_IssueIndexPatternRef(t *testing.T) {
@@ -391,7 +460,7 @@ func TestRender_FullIssueURLs(t *testing.T) {
 		`<a href="http://localhost:3000/testOrg/testOrgRepo/pulls/2/commits" class="ref-issue">testOrg/testOrgRepo#2/commits</a>`)
 }
 
-func TestRegExp_sha1CurrentPattern(t *testing.T) {
+func TestRegExp_hashCurrentPattern(t *testing.T) {
 	trueTestCases := []string{
 		"d8a994ef243349f321568f9e36d5c3f444b99cae",
 		"abcdefabcdefabcdefabcdefabcdefabcdefabcd",
@@ -399,6 +468,13 @@ func TestRegExp_sha1CurrentPattern(t *testing.T) {
 		"[abcdefabcdefabcdefabcdefabcdefabcdefabcd]",
 		"abcdefabcdefabcdefabcdefabcdefabcdefabcd.",
 		"abcdefabcdefabcdefabcdefabcdefabcdefabcd:",
+		"d8a994ef243349f321568f9e36d5c3f444b99cae12424fa123391042fbae2319",
+		"abcdefd?",
+		"abcdefd!",
+		"!abcd3ef",
+		":abcd3ef",
+		".abcd3ef",
+		" (abcd3ef). ",
 	}
 	falseTestCases := []string{
 		"test",
@@ -406,6 +482,8 @@ func TestRegExp_sha1CurrentPattern(t *testing.T) {
 		"e59ff077-2d03-4e6b-964d-63fbaea81f",
 		"abcdefghijklmnopqrstuvwxyzabcdefghijklmn",
 		"abcdefghijklmnopqrstuvwxyzabcdefghijklmO",
+		"commit/abcdefd",
+		"abcd3ef...defabcd",
 	}
 
 	for _, testCase := range trueTestCases {
@@ -419,45 +497,83 @@ func TestRegExp_sha1CurrentPattern(t *testing.T) {
 func TestRegExp_anySHA1Pattern(t *testing.T) {
 	testCases := map[string][]string{
 		"https://github.com/jquery/jquery/blob/a644101ed04d0beacea864ce805e0c4f86ba1cd1/test/unit/event.js#L2703": {
+			"jquery/jquery/blob",
 			"a644101ed04d0beacea864ce805e0c4f86ba1cd1",
 			"/test/unit/event.js",
 			"",
 			"#L2703",
 		},
 		"https://github.com/jquery/jquery/blob/a644101ed04d0beacea864ce805e0c4f86ba1cd1/test/unit/event.js": {
+			"jquery/jquery/blob",
 			"a644101ed04d0beacea864ce805e0c4f86ba1cd1",
 			"/test/unit/event.js",
 			"",
 			"",
 		},
 		"https://github.com/jquery/jquery/commit/0705be475092aede1eddae01319ec931fb9c65fc": {
+			"jquery/jquery/commit",
 			"0705be475092aede1eddae01319ec931fb9c65fc",
 			"",
 			"",
 			"",
 		},
 		"https://github.com/jquery/jquery/tree/0705be475092aede1eddae01319ec931fb9c65fc/src": {
+			"jquery/jquery/tree",
 			"0705be475092aede1eddae01319ec931fb9c65fc",
 			"/src",
 			"",
 			"",
 		},
 		"https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2": {
+			"gogs/gogs/commit",
 			"d8a994ef243349f321568f9e36d5c3f444b99cae",
 			"",
 			"",
 			"#diff-2",
 		},
 		"https://codeberg.org/forgejo/forgejo/src/commit/949ab9a5c4cac742f84ae5a9fa186f8d6eb2cdc0/RELEASE-NOTES.md?display=source&w=1#L7-L9": {
+			"forgejo/forgejo/src/commit",
 			"949ab9a5c4cac742f84ae5a9fa186f8d6eb2cdc0",
 			"/RELEASE-NOTES.md",
 			"?display=source&w=1",
 			"#L7-L9",
 		},
+		"http://localhost:3000/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3": {
+			"gogits/gogs/src/commit",
+			"190d9492934af498c3f669d6a2431dc5459e5b20",
+			"/path/to/file.go",
+			"",
+			"#L2-L3",
+		},
+		"http://localhost:3000/sub/gogits/gogs/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3": {
+			"sub/gogits/gogs/commit",
+			"190d9492934af498c3f669d6a2431dc5459e5b20",
+			"/path/to/file.go",
+			"",
+			"#L2-L3",
+		},
+		"http://localhost:3000/sub/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3": {
+			"sub/gogits/gogs/src/commit",
+			"190d9492934af498c3f669d6a2431dc5459e5b20",
+			"/path/to/file.go",
+			"",
+			"#L2-L3",
+		},
+		"http://localhost:3000/sub1/sub2/sub3/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3": {
+			"sub1/sub2/sub3/gogits/gogs/src/commit",
+			"190d9492934af498c3f669d6a2431dc5459e5b20",
+			"/path/to/file.go",
+			"",
+			"#L2-L3",
+		},
 	}
 
 	for k, v := range testCases {
-		assert.Equal(t, anyHashPattern.FindStringSubmatch(k)[1:], v)
+		assert.Equal(t, v, anyHashPattern.FindStringSubmatch(k)[1:])
+	}
+
+	for _, v := range []string{"https://codeberg.org/forgejo/forgejo/attachments/774421a1-b0ae-4501-8fba-983874b76811"} {
+		assert.False(t, anyHashPattern.MatchString(v))
 	}
 }
 

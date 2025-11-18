@@ -8,10 +8,14 @@ import (
 	"html/template"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/translation"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -46,13 +50,13 @@ var testMetas = map[string]string{
 }
 
 func TestApostrophesInMentions(t *testing.T) {
-	rendered := RenderMarkdownToHtml(context.Background(), "@mention-user's comment")
-	assert.EqualValues(t, template.HTML("<p><a href=\"/mention-user\" class=\"mention\" rel=\"nofollow\">@mention-user</a>&#39;s comment</p>\n"), rendered)
+	rendered := RenderMarkdownToHtml(t.Context(), "@mention-user's comment")
+	assert.Equal(t, template.HTML("<p><a href=\"/mention-user\" class=\"mention\" rel=\"nofollow\">@mention-user</a>&#39;s comment</p>\n"), rendered)
 }
 
 func TestNonExistantUserMention(t *testing.T) {
-	rendered := RenderMarkdownToHtml(context.Background(), "@ThisUserDoesNotExist @mention-user")
-	assert.EqualValues(t, template.HTML("<p>@ThisUserDoesNotExist <a href=\"/mention-user\" class=\"mention\" rel=\"nofollow\">@mention-user</a></p>\n"), rendered)
+	rendered := RenderMarkdownToHtml(t.Context(), "@ThisUserDoesNotExist @mention-user")
+	assert.Equal(t, template.HTML("<p>@ThisUserDoesNotExist <a href=\"/mention-user\" class=\"mention\" rel=\"nofollow\">@mention-user</a></p>\n"), rendered)
 }
 
 func TestRenderCommitBody(t *testing.T) {
@@ -69,7 +73,7 @@ func TestRenderCommitBody(t *testing.T) {
 		{
 			name: "multiple lines",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				msg: "first line\nsecond line",
 			},
 			want: "second line",
@@ -77,7 +81,7 @@ func TestRenderCommitBody(t *testing.T) {
 		{
 			name: "multiple lines with leading newlines",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				msg: "\n\n\n\nfirst line\nsecond line",
 			},
 			want: "second line",
@@ -85,7 +89,7 @@ func TestRenderCommitBody(t *testing.T) {
 		{
 			name: "multiple lines with trailing newlines",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				msg: "first line\nsecond line\n\n\n",
 			},
 			want: "second line",
@@ -117,19 +121,19 @@ com 88fc37a3c0a4dda553bdcfc80c178a58247f42fb mit
 <a href="/user13/repo11/issues/123" class="ref-issue">#123</a>
   space
 ` + "`code <span class=\"emoji\" aria-label=\"thumbs up\" data-alias=\"+1\">👍</span> <a href=\"/user13/repo11/issues/123\" class=\"ref-issue\">#123</a> code`"
-	assert.EqualValues(t, expected, RenderCommitBody(context.Background(), testInput, testMetas))
+	assert.EqualValues(t, expected, RenderCommitBody(t.Context(), testInput, testMetas))
 }
 
 func TestRenderCommitMessage(t *testing.T) {
 	expected := `space <a href="/mention-user" class="mention">@mention-user</a>  `
 
-	assert.EqualValues(t, expected, RenderCommitMessage(context.Background(), testInput, testMetas))
+	assert.EqualValues(t, expected, RenderCommitMessage(t.Context(), testInput, testMetas))
 }
 
 func TestRenderCommitMessageLinkSubject(t *testing.T) {
 	expected := `<a href="https://example.com/link" class="default-link muted">space </a><a href="/mention-user" class="mention">@mention-user</a>`
 
-	assert.EqualValues(t, expected, RenderCommitMessageLinkSubject(context.Background(), testInput, "https://example.com/link", testMetas))
+	assert.EqualValues(t, expected, RenderCommitMessageLinkSubject(t.Context(), testInput, "https://example.com/link", testMetas))
 }
 
 func TestRenderIssueTitle(t *testing.T) {
@@ -155,7 +159,7 @@ mail@domain.com
   space
 <code class="inline-code-block">code :+1: #123 code</code>
 `
-	assert.EqualValues(t, expected, RenderIssueTitle(context.Background(), testInput, testMetas))
+	assert.EqualValues(t, expected, RenderIssueTitle(t.Context(), testInput, testMetas))
 }
 
 func TestRenderRefIssueTitle(t *testing.T) {
@@ -181,7 +185,7 @@ mail@domain.com
   space
 <code class="inline-code-block">code :+1: #123 code</code>
 `
-	assert.EqualValues(t, expected, RenderRefIssueTitle(context.Background(), testInput))
+	assert.EqualValues(t, expected, RenderRefIssueTitle(t.Context(), testInput))
 }
 
 func TestRenderMarkdownToHtml(t *testing.T) {
@@ -192,10 +196,10 @@ func TestRenderMarkdownToHtml(t *testing.T) {
 <a href="https://example.com" rel="nofollow">remote link</a>
 <a href="/src/file.bin" rel="nofollow">local link</a>
 <a href="https://example.com" rel="nofollow">remote link</a>
-<a href="/image.jpg" target="_blank" rel="nofollow noopener"><img src="/image.jpg" alt="local image"/></a>
-<a href="https://example.com/image.jpg" target="_blank" rel="nofollow noopener"><img src="https://example.com/image.jpg" alt="remote image"/></a>
-<a href="/image.jpg" rel="nofollow"><img src="/image.jpg" title="local image" alt="local image"/></a>
-<a href="https://example.com/image.jpg" rel="nofollow"><img src="https://example.com/image.jpg" title="remote link" alt="remote link"/></a>
+<a href="/image.jpg" target="_blank" rel="nofollow noopener"><img src="/image.jpg" alt="local image" loading="lazy"/></a>
+<a href="https://example.com/image.jpg" target="_blank" rel="nofollow noopener"><img src="https://example.com/image.jpg" alt="remote image" loading="lazy"/></a>
+<a href="/image.jpg" rel="nofollow"><img src="/image.jpg" title="local image" alt=""/></a>
+<a href="https://example.com/image.jpg" rel="nofollow"><img src="https://example.com/image.jpg" title="remote link" alt=""/></a>
 <a href="https://example.com/user/repo/compare/88fc37a3c0a4dda553bdcfc80c178a58247f42fb...12fc37a3c0a4dda553bdcfc80c178a58247f42fb#hash" rel="nofollow"><code>88fc37a3c0...12fc37a3c0 (hash)</code></a>
 com 88fc37a3c0a4dda553bdcfc80c178a58247f42fb...12fc37a3c0a4dda553bdcfc80c178a58247f42fb pare
 <a href="https://example.com/user/repo/commit/88fc37a3c0a4dda553bdcfc80c178a58247f42fb" rel="nofollow"><code>88fc37a3c0</code></a>
@@ -207,7 +211,7 @@ com 88fc37a3c0a4dda553bdcfc80c178a58247f42fb mit
 space
 <code>code :+1: #123 code</code></p>
 `
-	assert.EqualValues(t, expected, RenderMarkdownToHtml(context.Background(), testInput))
+	assert.EqualValues(t, expected, RenderMarkdownToHtml(t.Context(), testInput))
 }
 
 func TestRenderLabels(t *testing.T) {
@@ -215,9 +219,70 @@ func TestRenderLabels(t *testing.T) {
 
 	tr := &translation.MockLocale{}
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
+	labelScoped := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 7})
+	labelMalicious := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 11})
+	labelArchived := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 12})
 
-	assert.Contains(t, RenderLabels(db.DefaultContext, tr, []*issues_model.Label{label}, "user2/repo1", false),
-		"user2/repo1/issues?labels=1")
-	assert.Contains(t, RenderLabels(db.DefaultContext, tr, []*issues_model.Label{label}, "user2/repo1", true),
-		"user2/repo1/pulls?labels=1")
+	ctx := NewContext(t.Context())
+	ctx.Locale = tr
+
+	rendered := RenderLabels(ctx, []*issues_model.Label{label}, "user2/repo1", false)
+	assert.Contains(t, rendered, "user2/repo1/issues?labels=1")
+	assert.Contains(t, rendered, ">label1<")
+	assert.Contains(t, rendered, "title='First label'")
+	rendered = RenderLabels(ctx, []*issues_model.Label{label}, "user2/repo1", true)
+	assert.Contains(t, rendered, "user2/repo1/pulls?labels=1")
+	assert.Contains(t, rendered, ">label1<")
+	rendered = RenderLabels(ctx, []*issues_model.Label{labelScoped}, "user2/repo1", false)
+	assert.Contains(t, rendered, "user2/repo1/issues?labels=7")
+	assert.Contains(t, rendered, ">scope<")
+	assert.Contains(t, rendered, ">label1<")
+	rendered = RenderLabels(ctx, []*issues_model.Label{labelMalicious}, "user2/repo1", false)
+	assert.Contains(t, rendered, "user2/repo1/issues?labels=11")
+	assert.Contains(t, rendered, ">  &lt;script&gt;malicious&lt;/script&gt; <")
+	assert.Contains(t, rendered, ">&#39;?&amp;<")
+	assert.Contains(t, rendered, "title='Malicious label &#39; &lt;script&gt;malicious&lt;/script&gt;'")
+	rendered = RenderLabels(ctx, []*issues_model.Label{labelArchived}, "user2/repo1", false)
+	assert.Contains(t, rendered, "user2/repo1/issues?labels=12")
+	assert.Contains(t, rendered, ">archived label&lt;&gt;<")
+	assert.Contains(t, rendered, "title='repo.issues.archived_label_description'")
+}
+
+func TestRenderUser(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
+	ghost := user_model.NewGhostUser()
+
+	assert.Contains(t, RenderUser(db.DefaultContext, *user),
+		"<a href='/user2' rel='nofollow'><strong>user2</strong></a>")
+	assert.Contains(t, RenderUser(db.DefaultContext, *org),
+		"<a href='/org3' rel='nofollow'><strong>org3</strong></a>")
+	assert.Contains(t, RenderUser(db.DefaultContext, *ghost),
+		"<strong>Ghost</strong>")
+
+	defer test.MockVariableValue(&setting.UI.DefaultShowFullName, true)()
+	assert.Contains(t, RenderUser(db.DefaultContext, *user),
+		"<a href='/user2' rel='nofollow'><strong>&lt; U&lt;se&gt;r Tw&lt;o &gt; &gt;&lt;</strong></a>")
+	assert.Contains(t, RenderUser(db.DefaultContext, *org),
+		"<a href='/org3' rel='nofollow'><strong>&lt;&lt;&lt;&lt; &gt;&gt; &gt;&gt; &gt; &gt;&gt; &gt; &gt;&gt;&gt; &gt;&gt;</strong></a>")
+	assert.Contains(t, RenderUser(db.DefaultContext, *ghost),
+		"<strong>Ghost</strong>")
+}
+
+func TestRenderReviewRequest(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	target1 := issues_model.RequestReviewTarget{User: &user_model.User{ID: 1, Name: "user1", FullName: "User <One>"}}
+	target2 := issues_model.RequestReviewTarget{Team: &org_model.Team{ID: 2, Name: "Team2", OrgID: 3}}
+	target3 := issues_model.RequestReviewTarget{Team: org_model.NewGhostTeam()}
+	assert.Contains(t, RenderReviewRequest(db.DefaultContext, []issues_model.RequestReviewTarget{target1, target2, target3}),
+		"<a href='/user1' rel='nofollow'><strong>user1</strong></a>, "+
+			"<a href='/org/org3/teams/Team2' rel='nofollow'><strong>Team2</strong></a>, "+
+			"<strong>Ghost team</strong>")
+
+	defer test.MockVariableValue(&setting.UI.DefaultShowFullName, true)()
+	assert.Contains(t, RenderReviewRequest(db.DefaultContext, []issues_model.RequestReviewTarget{target1}),
+		"<a href='/user1' rel='nofollow'><strong>User &lt;One&gt;</strong></a>")
 }

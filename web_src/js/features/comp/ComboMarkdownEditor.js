@@ -2,16 +2,15 @@ import '@github/markdown-toolbar-element';
 import '@github/text-expander-element';
 import $ from 'jquery';
 import {attachTribute} from '../tribute.js';
-import {hideElem, showElem, autosize, isElemVisible, replaceTextareaSelection} from '../../utils/dom.js';
+import {autosize, hideElem, isElemVisible, replaceTextareaSelection, showElem} from '../../utils/dom.js';
 import {initEasyMDEPaste, initTextareaPaste} from './Paste.js';
 import {handleGlobalEnterQuickSubmit} from './QuickSubmit.js';
 import {renderPreviewPanelContent} from '../repo-editor.js';
 import {easyMDEToolbarActions} from './EasyMDEToolbarActions.js';
 import {initTextExpander} from './TextExpander.js';
-import {showErrorToast} from '../../modules/toast.js';
+import {showErrorToast, showHintToast} from '../../modules/toast.js';
 import {POST} from '../../modules/fetch.js';
-
-let elementIdCounter = 0;
+import {initTab} from '../../modules/tab.ts';
 
 /**
  * validate if the given textarea is non-empty.
@@ -35,11 +34,17 @@ export function validateTextareaNonEmpty(textarea) {
   return true;
 }
 
+// Matches the beginning of a line containing leading whitespace and possibly valid list or block quote prefix
+const listPrefixRegex = /^\s*((\d+)[.)]\s|[-*+]\s{1,4}\[[ x]\]\s?|[-*+]\s|(>\s?)+)?/;
+
 class ComboMarkdownEditor {
+  static idSuffixCounter = 0;
+
   constructor(container, options = {}) {
     container._giteaComboMarkdownEditor = this;
     this.options = options;
     this.container = container;
+    this.elementIdSuffix = ComboMarkdownEditor.idSuffixCounter++;
   }
 
   async init() {
@@ -49,10 +54,9 @@ class ComboMarkdownEditor {
     this.setupDropzone();
     this.setupTextarea();
     this.setupTableInserter();
+    this.setupLinkInserter();
 
     await this.switchToUserPreference();
-
-    elementIdCounter++;
   }
 
   applyEditorHeights(el, heights) {
@@ -70,7 +74,7 @@ class ComboMarkdownEditor {
   setupTextarea() {
     this.textarea = this.container.querySelector('.markdown-text-editor');
     this.textarea._giteaComboMarkdownEditor = this;
-    this.textarea.id = `_combo_markdown_editor_${elementIdCounter}`;
+    this.textarea.id = `_combo_markdown_editor_${this.elementIdSuffix}`;
     this.textarea.addEventListener('input', (e) => this.options?.onContentChanged?.(this, e));
     this.applyEditorHeights(this.textarea, this.options.editorHeights);
 
@@ -87,21 +91,79 @@ class ComboMarkdownEditor {
       if (el.nodeName === 'BUTTON' && !el.getAttribute('type')) el.setAttribute('type', 'button');
     }
     this.textareaMarkdownToolbar.querySelector('button[data-md-action="indent"]')?.addEventListener('click', () => {
-      this.indentSelection(false);
+      this.indentSelection(false, false);
     });
     this.textareaMarkdownToolbar.querySelector('button[data-md-action="unindent"]')?.addEventListener('click', () => {
-      this.indentSelection(true);
+      this.indentSelection(true, false);
     });
-    this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-table"]')?.setAttribute('data-modal', `div[data-markdown-table-modal-id="${elementIdCounter}"]`);
+    this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-table"]')?.setAttribute('data-modal', `div[data-markdown-table-modal-id="${this.elementIdSuffix}"]`);
+    this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-link"]')?.setAttribute('data-modal', `div[data-markdown-link-modal-id="${this.elementIdSuffix}"]`);
 
+    // Find all data-md-ctrl-shortcut elements in the markdown toolbar.
+    const shortcutKeys = new Map();
+    for (const el of this.textareaMarkdownToolbar.querySelectorAll('[data-md-ctrl-shortcut]')) {
+      shortcutKeys.set(el.getAttribute('data-md-ctrl-shortcut'), el);
+    }
+
+    // Track whether any actual input or pointer action was made after focusing, and only intercept Tab presses after that.
+    this.tabEnabled = false;
+    // This tracks whether last Tab action was ignored, and if it immediately happens *again*, lose focus.
+    this.ignoredTabAction = false;
+    this.ignoredTabToast = null;
+
+    this.textarea.addEventListener('focus', () => {
+      this.tabEnabled = false;
+      this.ignoredTabAction = false;
+    });
+    this.textarea.addEventListener('pointerup', () => {
+      // Assume if a pointer is used then Tab handling is a bit less of an issue.
+      this.tabEnabled = true;
+    });
     this.textarea.addEventListener('keydown', (e) => {
       if (e.shiftKey) {
         e.target._shiftDown = true;
       }
-      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+
+      // Prevent special keyboard handling if currently a text expander popup is open
+      if (this.textarea.hasAttribute('aria-expanded')) return;
+
+      const noModifiers = !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey;
+      if (e.key === 'Escape') {
+        // Explicitly lose focus and reenable tab navigation.
+        e.target.blur();
+        this.tabEnabled = false;
+      } else if (e.key === 'Tab' && this.tabEnabled && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (this.indentSelection(e.shiftKey, true)) {
+          this.options?.onContentChanged?.(this, e);
+          e.preventDefault();
+          this.activateTabHandling();
+        } else if (!this.ignoredTabAction) {
+          e.preventDefault();
+          this.ignoredTabAction = true;
+          this.ignoredTabToast?.hideToast();
+          this.ignoredTabToast = showHintToast(
+            this.container.dataset[e.shiftKey ? 'shiftTabHint' : 'tabHint'],
+            {gravity: 'bottom', useHtmlBody: true},
+          );
+          this.ignoredTabToast.toastElement.role = 'alert';
+        }
+      } else if (e.key === 'Enter' && noModifiers) {
         if (!this.breakLine()) return; // Nothing changed, let the default handler work.
         this.options?.onContentChanged?.(this, e);
         e.preventDefault();
+      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        const normalizedShortcutKey = e.key.charCodeAt(0) <= 127 ?
+          // if ascii, e.key is preferred as it is agnostic to keyboard layouts (QWERTY/Dvorak)...
+          e.key.toLowerCase() :
+          // if not ascii, e.code is used to support keyboards w/ other writing systems (eg. и or ბ); "KeyB" transformed to "b" to compare against the shortcut character.
+          e.code.replace('Key', '').toLowerCase();
+        const shortcutElement = shortcutKeys.get(normalizedShortcutKey);
+        if (shortcutElement) {
+          shortcutElement.click();
+          e.preventDefault();
+        }
+      } else if (noModifiers) {
+        this.activateTabHandling();
       }
     });
     this.textarea.addEventListener('keyup', (e) => {
@@ -138,41 +200,54 @@ class ComboMarkdownEditor {
     }
   }
 
+  activateTabHandling() {
+    this.tabEnabled = true;
+    this.ignoredTabAction = false;
+    if (this.ignoredTabToast) {
+      this.ignoredTabToast.hideToast();
+      this.ignoredTabToast = null;
+    }
+  }
+
   setupDropzone() {
     const dropzoneParentContainer = this.container.getAttribute('data-dropzone-parent-container');
     if (dropzoneParentContainer) {
-      this.dropzone = this.container.closest(this.container.getAttribute('data-dropzone-parent-container'))?.querySelector('.dropzone');
+      this.dropzone = this.container.closest(dropzoneParentContainer)?.querySelector('.dropzone');
     }
   }
 
   setupTab() {
     const $container = $(this.container);
-    const tabs = $container[0].querySelectorAll('.tabular.menu > .item');
+    const switchEl = $container[0].querySelector('.switch');
+    const tabs = switchEl.querySelectorAll('.item');
 
     // Fomantic Tab requires the "data-tab" to be globally unique.
     // So here it uses our defined "data-tab-for" and "data-tab-panel" to generate the "data-tab" attribute for Fomantic.
     const tabEditor = Array.from(tabs).find((tab) => tab.getAttribute('data-tab-for') === 'markdown-writer');
     const tabPreviewer = Array.from(tabs).find((tab) => tab.getAttribute('data-tab-for') === 'markdown-previewer');
-    tabEditor.setAttribute('data-tab', `markdown-writer-${elementIdCounter}`);
-    tabPreviewer.setAttribute('data-tab', `markdown-previewer-${elementIdCounter}`);
+    tabEditor.setAttribute('data-tab', `markdown-writer-${this.elementIdSuffix}`);
+    tabPreviewer.setAttribute('data-tab', `markdown-previewer-${this.elementIdSuffix}`);
+    const toolbar = $container[0].querySelector('markdown-toolbar');
     const panelEditor = $container[0].querySelector('.ui.tab[data-tab-panel="markdown-writer"]');
     const panelPreviewer = $container[0].querySelector('.ui.tab[data-tab-panel="markdown-previewer"]');
-    panelEditor.setAttribute('data-tab', `markdown-writer-${elementIdCounter}`);
-    panelPreviewer.setAttribute('data-tab', `markdown-previewer-${elementIdCounter}`);
+    panelEditor.setAttribute('data-tab', `markdown-writer-${this.elementIdSuffix}`);
+    panelPreviewer.setAttribute('data-tab', `markdown-previewer-${this.elementIdSuffix}`);
 
     tabEditor.addEventListener('click', () => {
+      toolbar.classList.remove('markdown-toolbar-hidden');
       requestAnimationFrame(() => {
         this.focus();
       });
     });
 
-    $(tabs).tab();
+    initTab(switchEl);
 
     this.previewUrl = tabPreviewer.getAttribute('data-preview-url');
     this.previewContext = tabPreviewer.getAttribute('data-preview-context');
     this.previewMode = this.options.previewMode ?? 'comment';
     this.previewWiki = this.options.previewWiki ?? false;
     tabPreviewer.addEventListener('click', async () => {
+      toolbar.classList.add('markdown-toolbar-hidden');
       const formData = new FormData();
       formData.append('mode', this.previewMode);
       formData.append('context', this.previewContext);
@@ -219,11 +294,63 @@ class ComboMarkdownEditor {
 
   setupTableInserter() {
     const newTableModal = this.container.querySelector('div[data-modal-name="new-markdown-table"]');
-    newTableModal.setAttribute('data-markdown-table-modal-id', elementIdCounter);
+    newTableModal.setAttribute('data-markdown-table-modal-id', this.elementIdSuffix);
 
     const button = newTableModal.querySelector('button[data-selector-name="ok-button"]');
-    button.setAttribute('data-element-id', elementIdCounter);
+    button.setAttribute('data-element-id', this.elementIdSuffix);
     button.addEventListener('click', this.addNewTable);
+  }
+
+  addNewLink(event) {
+    const elementId = event.target.getAttribute('data-element-id');
+    const newLinkModal = document.querySelector(`div[data-markdown-link-modal-id="${elementId}"]`);
+    const form = newLinkModal.querySelector('div[data-selector-name="form"]');
+
+    // Validate input fields
+    for (const currentInput of form.querySelectorAll('input')) {
+      if (!currentInput.checkValidity()) {
+        currentInput.reportValidity();
+        return;
+      }
+    }
+
+    const url = form.querySelector('input[name="link-url"]').value;
+    const description = form.querySelector('input[name="link-description"]').value;
+
+    const code = `[${description}](${url})`;
+
+    replaceTextareaSelection(document.getElementById(`_combo_markdown_editor_${elementId}`), code);
+
+    // Close the modal then clear its fields in case the user wants to add another one.
+    newLinkModal.querySelector('button[data-selector-name="cancel-button"]').click();
+    form.querySelector('input[name="link-url"]').value = '';
+    form.querySelector('input[name="link-description"]').value = '';
+  }
+
+  setupLinkInserter() {
+    const newLinkModal = this.container.querySelector('div[data-modal-name="new-markdown-link"]');
+    newLinkModal.setAttribute('data-markdown-link-modal-id', this.elementIdSuffix);
+    const textarea = document.getElementById(`_combo_markdown_editor_${this.elementIdSuffix}`);
+
+    $(newLinkModal).modal({
+      // Pre-fill the description field from the selection to create behavior similar
+      // to pasting an URL over selected text.
+      onShow: () => {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        if (start !== end) {
+          const selection = textarea.value.slice(start ?? undefined, end ?? undefined);
+          newLinkModal.querySelector('input[name="link-description"]').value = selection;
+        } else {
+          newLinkModal.querySelector('input[name="link-description"]').value = '';
+        }
+      },
+    });
+
+    const button = newLinkModal.querySelector('button[data-selector-name="ok-button"]');
+    button.setAttribute('data-element-id', this.elementIdSuffix);
+    button.addEventListener('click', this.addNewLink);
   }
 
   prepareEasyMDEToolbarActions() {
@@ -344,13 +471,31 @@ class ComboMarkdownEditor {
     }
   }
 
-  indentSelection(unindent) {
+  // Indent all lines that are included in the selection, partially or whole, while preserving the original selection at the end.
+  indentSelection(unindent, validOnly) {
     // Indent with 4 spaces, unindent 4 spaces or fewer or a lost tab.
     const indentPrefix = '    ';
-    const unindentRegex = /^( {1,4}|\t)/;
+    const unindentRegex = /^( {1,4}|\t|> {0,4})/;
+    const indentTokens = ['    ', '\t', '> '];
 
-    // Indent all lines that are included in the selection, partially or whole, while preserving the original selection at the end.
-    const lines = this.textarea.value.split('\n');
+    const indentLevel = (line) => {
+      let indent = 0;
+      let matchingToken;
+
+      do {
+        matchingToken = indentTokens.find((token) => line.startsWith(token));
+
+        if (matchingToken) {
+          indent++;
+          line = line.substr(matchingToken.length);
+        }
+      } while (matchingToken);
+
+      return indent;
+    };
+
+    const value = this.textarea.value;
+    const lines = value.split('\n');
     const changedLines = [];
     // The current selection or cursor position.
     const [start, end] = [this.textarea.selectionStart, this.textarea.selectionEnd];
@@ -360,31 +505,66 @@ class ComboMarkdownEditor {
     let [newStart, newEnd] = [start, end];
     // The start and end position of the current line (where end points to the newline or EOF)
     let [lineStart, lineEnd] = [0, 0];
+    // Index of the first line included in the selection (or containing the cursor)
+    let firstLineIdx = 0;
 
-    for (const line of lines) {
+    // Find all the lines in selection beforehand so we know the full set before we start changing.
+    const linePositions = [];
+    for (const [i, line] of lines.entries()) {
       lineEnd = lineStart + line.length + 1;
       if (lineEnd <= start) {
         lineStart = lineEnd;
         continue;
       }
+      linePositions.push([lineStart, line]);
+      if (start >= lineStart && start < lineEnd) {
+        firstLineIdx = i;
+        editStart = lineStart;
+      }
+      editEnd = lineEnd - 1;
+      if (lineEnd >= end) break;
+      lineStart = lineEnd;
+    }
 
-      const updated = unindent ? line.replace(unindentRegex, '') : indentPrefix + line;
+    // Block quotes need to be nested/unnested instead of whitespace added/removed. However, only do this if the *whole* selection is in a quote.
+    const isQuote = linePositions.every(([_, line]) => line[0] === '>');
+
+    const line = lines[firstLineIdx];
+    // If there's no indent to remove, do nothing
+    if (unindent && start === end && !unindentRegex.test(line)) {
+      return false;
+    }
+
+    // If there is no selection and this is an ambiguous command (Tab handling), only (un)indent if already in a code/list.
+    if (!unindent && validOnly && start === end) {
+      // Check there's any indentation or prefix at all.
+      const match = line.match(listPrefixRegex);
+      if (!match || !match[0].length) return false;
+      // Check that the line isn't already indented in relation to parent.
+      const levels = indentLevel(line);
+      const parentLevels = firstLineIdx > 0 ? indentLevel(lines.at(firstLineIdx - 1)) : 0;
+      // Quotes can *begin* multiple levels in, so just allow whatever for now.
+      if (levels - parentLevels > 0 && !isQuote) return false;
+    }
+
+    // Apply indentation changes to lines.
+    for (const [i, [lineStart, line]] of linePositions.entries()) {
+      const updated = isQuote ?
+        (unindent ? line.replace(/^>\s{0,4}>/, '>') : `> ${line}`) :
+        (unindent ? line.replace(unindentRegex, '') : indentPrefix + line);
       changedLines.push(updated);
       const move = updated.length - line.length;
-
-      if (start >= lineStart && start < lineEnd) {
-        editStart = lineStart;
-        newStart = Math.max(start + move, lineStart);
-      }
-
+      if (i === 0) newStart = Math.max(start + move, lineStart);
       newEnd += move;
-      editEnd = lineEnd - 1;
-      lineStart = lineEnd;
-      if (lineStart > end) break;
     }
 
     // Update changed lines whole.
     const text = changedLines.join('\n');
+    if (text === value.slice(editStart, editEnd)) {
+      // Nothing changed, likely due to Shift+Tab when no indents are left.
+      return false;
+    }
+
     this.textarea.focus();
     this.textarea.setSelectionRange(editStart, editEnd);
     if (!document.execCommand('insertText', false, text)) {
@@ -395,6 +575,8 @@ class ComboMarkdownEditor {
 
     // Set selection to (effectively) be the same as before.
     this.textarea.setSelectionRange(newStart, Math.max(newStart, newEnd));
+
+    return true;
   }
 
   breakLine() {
@@ -407,23 +589,41 @@ class ComboMarkdownEditor {
     // Find the beginning of the current line.
     const lineStart = Math.max(0, value.lastIndexOf('\n', start - 1) + 1);
     // Find the end and extract the line.
-    const lineEnd = value.indexOf('\n', start);
-    const line = value.slice(lineStart, lineEnd === -1 ? value.length : lineEnd);
+    const nextLF = value.indexOf('\n', start);
+    const lineEnd = nextLF === -1 ? value.length : nextLF;
+    const line = value.slice(lineStart, lineEnd);
     // Match any whitespace at the start + any repeatable prefix + exactly one space after.
-    const prefix = line.match(/^\s*((\d+)[.)]\s|[-*+]\s+(\[[ x]\]\s?)?|(>\s+)+)?/);
+    const prefix = line.match(listPrefixRegex);
 
     // Defer to browser if we can't do anything more useful, or if the cursor is inside the prefix.
-    if (!prefix || !prefix[0].length || lineStart + prefix[0].length > start) return false;
+    if (!prefix) return false;
+    const prefixLength = prefix[0].length;
+    if (!prefixLength || lineStart + prefixLength > start) return false;
+    // If the prefix is just indentation (which should always be an even number of spaces or tabs), check if a single whitespace is added to the end of the line.
+    // If this is the case do not leave the indentation and continue with the prefix.
+    if ((prefixLength % 2 === 1 && /^ +$/.test(prefix[0])) || /^\t+ $/.test(prefix[0])) {
+      prefix[0] = prefix[0].slice(0, prefixLength - 1);
+    } else if (prefixLength === lineEnd - lineStart) {
+      this.textarea.setSelectionRange(lineStart, lineEnd);
+      if (!document.execCommand('insertText', false, '\n')) {
+        this.textarea.setRangeText('\n');
+      }
+      return true;
+    }
 
     // Insert newline + prefix.
-    let text = `\n${prefix[0]}`;
+    let text = `${prefix[0]}`;
     // Increment a number if present. (perhaps detecting repeating 1. and not doing that then would be a good idea)
     const num = text.match(/\d+/);
     if (num) text = text.replace(num[0], Number(num[0]) + 1);
     text = text.replace('[x]', '[ ]');
 
-    if (!document.execCommand('insertText', false, text)) {
-      this.textarea.setRangeText(text);
+    // Split the newline and prefix addition in two, so that it's two separate undo entries in Firefox
+    // Chrome seems to bundle everything together more aggressively, even with prior text input.
+    if (document.execCommand('insertText', false, '\n')) {
+      document.execCommand('insertText', false, text);
+    } else {
+      this.textarea.setRangeText(`\n${text}`);
     }
 
     return true;

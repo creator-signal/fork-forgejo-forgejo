@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/routers/api/actions"
-	actions_service "code.gitea.io/gitea/services/actions"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/modules/storage"
+	"forgejo.org/routers/api/actions"
+	actions_service "forgejo.org/services/actions"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,7 +59,7 @@ func uploadArtifact(t *testing.T, body string) string {
 	req = NewRequestWithBody(t, "PUT", url, strings.NewReader(body))
 	MakeRequest(t, req, http.StatusCreated)
 
-	t.Logf("Create artifact confirm")
+	t.Log("Create artifact confirm")
 
 	sha := sha256.Sum256([]byte(body))
 
@@ -113,7 +113,7 @@ func TestActionsArtifactV4UploadSingleFileWrongChecksum(t *testing.T) {
 	req = NewRequestWithBody(t, "PUT", url, strings.NewReader(body))
 	MakeRequest(t, req, http.StatusCreated)
 
-	t.Logf("Create artifact confirm")
+	t.Log("Create artifact confirm")
 
 	sha := sha256.Sum256([]byte(strings.Repeat("A", 1024)))
 
@@ -158,7 +158,7 @@ func TestActionsArtifactV4UploadSingleFileWithRetentionDays(t *testing.T) {
 	req = NewRequestWithBody(t, "PUT", url, strings.NewReader(body))
 	MakeRequest(t, req, http.StatusCreated)
 
-	t.Logf("Create artifact confirm")
+	t.Log("Create artifact confirm")
 
 	sha := sha256.Sum256([]byte(body))
 
@@ -221,7 +221,7 @@ func TestActionsArtifactV4UploadSingleFileWithPotentialHarmfulBlockID(t *testing
 	req = NewRequestWithBody(t, "PUT", blockListURL, bytes.NewReader(rawBlockList))
 	MakeRequest(t, req, http.StatusCreated)
 
-	t.Logf("Create artifact confirm")
+	t.Log("Create artifact confirm")
 
 	sha := sha256.Sum256([]byte(body))
 
@@ -286,7 +286,7 @@ func TestActionsArtifactV4UploadSingleFileWithChunksOutOfOrder(t *testing.T) {
 	req = NewRequestWithBody(t, "PUT", blockListURL, bytes.NewReader(rawBlockList))
 	MakeRequest(t, req, http.StatusCreated)
 
-	t.Logf("Create artifact confirm")
+	t.Log("Create artifact confirm")
 
 	sha := sha256.Sum256([]byte(bodya + bodyb))
 
@@ -339,19 +339,6 @@ func TestActionsArtifactV4DownloadSingle(t *testing.T) {
 	body := strings.Repeat("D", 1024)
 	assert.Equal(t, "bytes", resp.Header().Get("accept-ranges"))
 	assert.Equal(t, body, resp.Body.String())
-
-	// Download artifact via user-facing URL
-	req = NewRequest(t, "GET", "/user5/repo4/actions/runs/188/artifacts/artifact-v4-download")
-	resp = MakeRequest(t, req, http.StatusOK)
-	assert.Equal(t, "bytes", resp.Header().Get("accept-ranges"))
-	assert.Equal(t, body, resp.Body.String())
-
-	// Partial artifact download
-	req = NewRequest(t, "GET", "/user5/repo4/actions/runs/188/artifacts/artifact-v4-download").SetHeader("range", "bytes=0-99")
-	resp = MakeRequest(t, req, http.StatusPartialContent)
-	body = strings.Repeat("D", 100)
-	assert.Equal(t, "bytes 0-99/1024", resp.Header().Get("content-range"))
-	assert.Equal(t, body, resp.Body.String())
 }
 
 func TestActionsArtifactV4DownloadRange(t *testing.T) {
@@ -374,12 +361,6 @@ func TestActionsArtifactV4DownloadRange(t *testing.T) {
 	assert.NotEmpty(t, finalizeResp.SignedUrl)
 
 	req = NewRequest(t, "GET", finalizeResp.SignedUrl).SetHeader("range", "bytes=100-199")
-	resp = MakeRequest(t, req, http.StatusPartialContent)
-	assert.Equal(t, "bytes 100-199/1024", resp.Header().Get("content-range"))
-	assert.Equal(t, bstr, resp.Body.String())
-
-	// Download (user-facing API)
-	req = NewRequest(t, "GET", "/user5/repo4/actions/runs/188/artifacts/artifact-v4-download").SetHeader("range", "bytes=100-199")
 	resp = MakeRequest(t, req, http.StatusPartialContent)
 	assert.Equal(t, "bytes 100-199/1024", resp.Header().Get("content-range"))
 	assert.Equal(t, bstr, resp.Body.String())

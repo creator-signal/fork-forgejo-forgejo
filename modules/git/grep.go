@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 )
 
 type GrepResult struct {
@@ -28,14 +28,15 @@ type GrepResult struct {
 	HighlightedRanges [][3]int
 }
 
-type grepMode int
+type GrepMode int
 
 const (
-	FixedGrepMode grepMode = iota
+	FixedGrepMode GrepMode = iota
 	FixedAnyGrepMode
 	RegExpGrepMode
 )
 
+// llu:TrKeysSuffix search.
 var GrepSearchOptions = [3]string{"exact", "union", "regexp"}
 
 type GrepOptions struct {
@@ -43,7 +44,7 @@ type GrepOptions struct {
 	MaxResultLimit    int
 	MatchesPerFile    int // >= git 2.38
 	ContextLineNumber int
-	Mode              grepMode
+	Mode              GrepMode
 	Filename          string
 }
 
@@ -98,8 +99,7 @@ func GrepSearch(ctx context.Context, repo *Repository, search string, opts GrepO
 
 	cmd.AddOptionValues("--context", fmt.Sprint(opts.ContextLineNumber))
 
-	// --max-count requires at least git 2.38
-	if CheckGitVersionAtLeast("2.38.0") == nil {
+	if SupportGrepMaxCount {
 		cmd.AddOptionValues("--max-count", fmt.Sprint(opts.MatchesPerFile))
 	} else {
 		log.Warn("git-grep: --max-count requires at least git 2.38")
@@ -125,7 +125,7 @@ func GrepSearch(ctx context.Context, repo *Repository, search string, opts GrepO
 		// (eg, global pattern = "src/**" and path = "node_modules/")
 
 		// FIXME: this is a bit too restrictive, and fails to consider cases where the
-		// gloabally set include pattern refers to a file than a directory
+		// globally set include pattern refers to a file than a directory
 		// (eg, global pattern = "**.go" and path = "modules/git")
 		exprMatched := false
 		for _, expr := range setting.Indexer.IncludePatterns {

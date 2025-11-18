@@ -4,14 +4,14 @@
 package admin
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
-	quota_model "code.gitea.io/gitea/models/quota"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
+	quota_model "forgejo.org/models/quota"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
 )
 
 func toLimitSubjects(subjStrings []string) (*quota_model.LimitSubjects, error) {
@@ -83,7 +83,7 @@ func CreateQuotaRule(ctx *context.APIContext) {
 	form := web.GetForm(ctx).(*api.CreateQuotaRuleOptions)
 
 	if form.Limit == nil {
-		ctx.Error(http.StatusUnprocessableEntity, "quota_model.ParseLimitSubject", fmt.Errorf("[Limit]: Required"))
+		ctx.Error(http.StatusUnprocessableEntity, "quota_model.ParseLimitSubject", errors.New("[Limit]: Required"))
 		return
 	}
 

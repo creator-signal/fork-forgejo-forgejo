@@ -7,15 +7,15 @@ package repo
 import (
 	"net/http"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
 )
 
 // GetIssueDependencies list an issue's dependencies
@@ -39,7 +39,8 @@ func GetIssueDependencies(ctx *context.APIContext) {
 	// - name: index
 	//   in: path
 	//   description: index of the issue
-	//   type: string
+	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: page
 	//   in: query
@@ -72,7 +73,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 	}
 
 	// 1. We must be able to read this issue
-	if !ctx.Repo.Permission.CanReadIssuesOrPulls(issue.IsPull) {
+	if !ctx.Repo.CanReadIssuesOrPulls(issue.IsPull) {
 		ctx.NotFound()
 		return
 	}
@@ -88,7 +89,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 		limit = setting.API.MaxResponseItems
 	}
 
-	canWrite := ctx.Repo.Permission.CanWriteIssuesOrPulls(issue.IsPull)
+	canWrite := ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull)
 
 	blockerIssues := make([]*issues_model.Issue, 0, limit)
 
@@ -123,7 +124,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 		}
 
 		// check permission
-		if !perm.CanReadIssuesOrPulls(blocker.Issue.IsPull) {
+		if !perm.CanReadIssuesOrPulls(blocker.IsPull) {
 			if !canWrite {
 				hiddenBlocker := &issues_model.DependencyInfo{
 					Issue: issues_model.Issue{
@@ -134,19 +135,19 @@ func GetIssueDependencies(ctx *context.APIContext) {
 			} else {
 				confidentialBlocker := &issues_model.DependencyInfo{
 					Issue: issues_model.Issue{
-						RepoID:   blocker.Issue.RepoID,
+						RepoID:   blocker.RepoID,
 						Index:    blocker.Index,
 						Title:    blocker.Title,
 						IsClosed: blocker.IsClosed,
 						IsPull:   blocker.IsPull,
 					},
 					Repository: repo_model.Repository{
-						ID:        blocker.Issue.Repo.ID,
-						Name:      blocker.Issue.Repo.Name,
-						OwnerName: blocker.Issue.Repo.OwnerName,
+						ID:        blocker.Repo.ID,
+						Name:      blocker.Repo.Name,
+						OwnerName: blocker.Repo.OwnerName,
 					},
 				}
-				confidentialBlocker.Issue.Repo = &confidentialBlocker.Repository
+				confidentialBlocker.Repo = &confidentialBlocker.Repository
 				blocker = confidentialBlocker
 			}
 		}
@@ -177,7 +178,8 @@ func CreateIssueDependency(ctx *context.APIContext) {
 	// - name: index
 	//   in: path
 	//   description: index of the issue
-	//   type: string
+	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: body
 	//   in: body
@@ -238,7 +240,8 @@ func RemoveIssueDependency(ctx *context.APIContext) {
 	// - name: index
 	//   in: path
 	//   description: index of the issue
-	//   type: string
+	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: body
 	//   in: body
@@ -299,7 +302,8 @@ func GetIssueBlocks(ctx *context.APIContext) {
 	// - name: index
 	//   in: path
 	//   description: index of the issue
-	//   type: string
+	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: page
 	//   in: query
@@ -323,7 +327,7 @@ func GetIssueBlocks(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.Repo.Permission.CanReadIssuesOrPulls(issue.IsPull) {
+	if !ctx.Repo.CanReadIssuesOrPulls(issue.IsPull) {
 		ctx.NotFound()
 		return
 	}
@@ -373,11 +377,11 @@ func GetIssueBlocks(ctx *context.APIContext) {
 			repoPerms[depMeta.RepoID] = perm
 		}
 
-		if !perm.CanReadIssuesOrPulls(depMeta.Issue.IsPull) {
+		if !perm.CanReadIssuesOrPulls(depMeta.IsPull) {
 			continue
 		}
 
-		depMeta.Issue.Repo = &depMeta.Repository
+		depMeta.Repo = &depMeta.Repository
 		issues = append(issues, &depMeta.Issue)
 	}
 
@@ -405,7 +409,8 @@ func CreateIssueBlocking(ctx *context.APIContext) {
 	// - name: index
 	//   in: path
 	//   description: index of the issue
-	//   type: string
+	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: body
 	//   in: body
@@ -462,7 +467,8 @@ func RemoveIssueBlocking(ctx *context.APIContext) {
 	// - name: index
 	//   in: path
 	//   description: index of the issue
-	//   type: string
+	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: body
 	//   in: body

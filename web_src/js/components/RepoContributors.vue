@@ -125,7 +125,7 @@ export default {
           const data = await response.json();
           const {total, ...rest} = data;
           // below line might be deleted if we are sure go produces map always sorted by keys
-          total.weeks = Object.fromEntries(Object.entries(total.weeks).sort());
+          total.weeks = Object.fromEntries(Object.entries(total.weeks).map((x) => [parseInt(x[0]), x[1]]).sort((a, b) => a[0] - b[0]));
 
           const weekValues = Object.values(total.weeks);
           this.xAxisStart = weekValues[0].week;
@@ -391,7 +391,7 @@ export default {
         <div class="ui top attached header tw-flex tw-flex-1">
           <b class="ui right">#{{ index + 1 }}</b>
           <a :href="contributor.home_link">
-            <img class="ui avatar tw-align-middle" height="40" width="40" :src="contributor.avatar_link" alt="">
+            <img class="ui avatar tw-align-middle" height="40" width="40" :src="contributor.avatar_link" alt="" loading="lazy">
           </a>
           <div class="tw-ml-2">
             <a v-if="contributor.home_link !== ''" :href="contributor.home_link"><h4>{{ contributor.name }}</h4></a>

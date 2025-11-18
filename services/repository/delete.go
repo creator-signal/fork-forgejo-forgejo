@@ -1,4 +1,5 @@
 // Copyright 2023 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repository
@@ -7,27 +8,29 @@ import (
 	"context"
 	"fmt"
 
-	"code.gitea.io/gitea/models"
-	actions_model "code.gitea.io/gitea/models/actions"
-	activities_model "code.gitea.io/gitea/models/activities"
-	admin_model "code.gitea.io/gitea/models/admin"
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	project_model "code.gitea.io/gitea/models/project"
-	repo_model "code.gitea.io/gitea/models/repo"
-	secret_model "code.gitea.io/gitea/models/secret"
-	system_model "code.gitea.io/gitea/models/system"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/models/webhook"
-	actions_module "code.gitea.io/gitea/modules/actions"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/storage"
+	"forgejo.org/models"
+	actions_model "forgejo.org/models/actions"
+	activities_model "forgejo.org/models/activities"
+	admin_model "forgejo.org/models/admin"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	packages_model "forgejo.org/models/packages"
+	access_model "forgejo.org/models/perm/access"
+	project_model "forgejo.org/models/project"
+	repo_model "forgejo.org/models/repo"
+	secret_model "forgejo.org/models/secret"
+	system_model "forgejo.org/models/system"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/models/webhook"
+	actions_module "forgejo.org/modules/actions"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
+	federation_service "forgejo.org/services/federation"
 
 	"xorm.io/builder"
 )
@@ -87,14 +90,9 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		}
 	}
 
-	if cnt, err := sess.ID(repoID).Delete(&repo_model.Repository{}); err != nil {
+	// If the repository was reported as abusive, a shadow copy should be created before deletion.
+	if err := repo_model.IfNeededCreateShadowCopyForRepository(ctx, repo, false); err != nil {
 		return err
-	} else if cnt != 1 {
-		return repo_model.ErrRepoNotExist{
-			ID:        repoID,
-			OwnerName: "",
-			Name:      "",
-		}
 	}
 
 	if org != nil && org.IsOrganization() {
@@ -179,19 +177,30 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		&actions_model.ActionScheduleSpec{RepoID: repoID},
 		&actions_model.ActionSchedule{RepoID: repoID},
 		&actions_model.ActionArtifact{RepoID: repoID},
+		&actions_model.ActionUser{RepoID: repoID},
 		&repo_model.RepoArchiveDownloadCount{RepoID: repoID},
 		&actions_model.ActionRunnerToken{RepoID: repoID},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %w", err)
 	}
 
-	// Delete Labels and related objects
-	if err := issues_model.DeleteLabelsByRepoID(ctx, repoID); err != nil {
+	// Delete Pulls and related objects
+	if err := issues_model.DeletePullsByBaseRepoID(ctx, repoID); err != nil {
 		return err
 	}
 
-	// Delete Pulls and related objects
-	if err := issues_model.DeletePullsByBaseRepoID(ctx, repoID); err != nil {
+	if cnt, err := sess.ID(repoID).Delete(&repo_model.Repository{}); err != nil {
+		return err
+	} else if cnt != 1 {
+		return repo_model.ErrRepoNotExist{
+			ID:        repoID,
+			OwnerName: "",
+			Name:      "",
+		}
+	}
+
+	// Delete Labels and related objects
+	if err := issues_model.DeleteLabelsByRepoID(ctx, repoID); err != nil {
 		return err
 	}
 
@@ -286,6 +295,15 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 	}
 
 	if _, err := sess.Where("repo_id=?", repo.ID).Delete(new(repo_model.Attachment)); err != nil {
+		return err
+	}
+
+	if err := federation_service.DeleteFollowingRepos(ctx, repo.ID); err != nil {
+		return err
+	}
+
+	// unlink packages linked to this repository
+	if err = packages_model.UnlinkRepositoryFromAllPackages(ctx, repoID); err != nil {
 		return err
 	}
 

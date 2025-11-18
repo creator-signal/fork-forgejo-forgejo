@@ -8,11 +8,11 @@ import (
 	"path"
 	"testing"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/tests"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -34,15 +34,11 @@ func TestRepoPaginations(t *testing.T) {
 	t.Run("Stars", func(t *testing.T) {
 		// Add stars to user2/repo1.
 		session := loginUser(t, "user2")
-		req := NewRequestWithValues(t, "POST", "/user2/repo1/action/star", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user2/repo1"),
-		})
+		req := NewRequest(t, "POST", "/user2/repo1/action/star")
 		session.MakeRequest(t, req, http.StatusOK)
 
 		session = loginUser(t, "user1")
-		req = NewRequestWithValues(t, "POST", "/user2/repo1/action/star", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user2/repo1"),
-		})
+		req = NewRequest(t, "POST", "/user2/repo1/action/star")
 		session.MakeRequest(t, req, http.StatusOK)
 
 		testRepoPagination(t, session, "user2/repo1", "stars", &setting.MaxUserCardsPerPage)
@@ -50,9 +46,7 @@ func TestRepoPaginations(t *testing.T) {
 	t.Run("Watcher", func(t *testing.T) {
 		// user2/repo2 is watched by its creator user2. Watch it by user1 to make it watched by 2 users.
 		session := loginUser(t, "user1")
-		req := NewRequestWithValues(t, "POST", "/user2/repo2/action/watch", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user2/repo2"),
-		})
+		req := NewRequest(t, "POST", "/user2/repo2/action/watch")
 		session.MakeRequest(t, req, http.StatusOK)
 
 		testRepoPagination(t, session, "user2/repo2", "watchers", &setting.MaxUserCardsPerPage)

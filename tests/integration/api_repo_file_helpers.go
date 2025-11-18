@@ -6,12 +6,13 @@ package integration
 import (
 	"strings"
 
-	"code.gitea.io/gitea/models"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	api "code.gitea.io/gitea/modules/structs"
-	files_service "code.gitea.io/gitea/services/repository/files"
+	"forgejo.org/models"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	api "forgejo.org/modules/structs"
+	files_service "forgejo.org/services/repository/files"
 )
 
 func createFileInBranch(user *user_model.User, repo *repo_model.Repository, treePath, branchName, content string) (*api.FilesResponse, error) {
@@ -30,7 +31,12 @@ func createFileInBranch(user *user_model.User, repo *repo_model.Repository, tree
 	return files_service.ChangeRepoFiles(git.DefaultContext, repo, user, opts)
 }
 
-func deleteFileInBranch(user *user_model.User, repo *repo_model.Repository, treePath, branchName string) (*api.FilesResponse, error) {
+func deleteFileInBranch(user *user_model.User, repo *repo_model.Repository, treePath, branchName string) error {
+	commitID, err := gitrepo.GetBranchCommitID(git.DefaultContext, repo, branchName)
+	if err != nil {
+		return err
+	}
+
 	opts := &files_service.ChangeRepoFilesOptions{
 		Files: []*files_service.ChangeRepoFile{
 			{
@@ -38,16 +44,17 @@ func deleteFileInBranch(user *user_model.User, repo *repo_model.Repository, tree
 				TreePath:  treePath,
 			},
 		},
-		OldBranch: branchName,
-		Author:    nil,
-		Committer: nil,
+		OldBranch:    branchName,
+		Author:       nil,
+		Committer:    nil,
+		LastCommitID: commitID,
 	}
-	return files_service.ChangeRepoFiles(git.DefaultContext, repo, user, opts)
+	_, err = files_service.ChangeRepoFiles(git.DefaultContext, repo, user, opts)
+	return err
 }
 
 func createOrReplaceFileInBranch(user *user_model.User, repo *repo_model.Repository, treePath, branchName, content string) error {
-	_, err := deleteFileInBranch(user, repo, treePath, branchName)
-
+	err := deleteFileInBranch(user, repo, treePath, branchName)
 	if err != nil && !models.IsErrRepoFileDoesNotExist(err) {
 		return err
 	}

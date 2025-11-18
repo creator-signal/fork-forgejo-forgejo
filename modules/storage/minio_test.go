@@ -9,8 +9,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
@@ -18,13 +20,14 @@ import (
 )
 
 func TestMinioStorageIterator(t *testing.T) {
-	if os.Getenv("CI") == "" {
-		t.Skip("minioStorage not present outside of CI")
+	endpoint := os.Getenv("TEST_MINIO_ENDPOINT")
+	if endpoint == "" {
+		t.Skip("TEST_MINIO_ENDPOINT not set")
 		return
 	}
 	testStorageIterator(t, setting.MinioStorageType, &setting.Storage{
 		MinioConfig: setting.MinioStorageConfig{
-			Endpoint:        "minio:9000",
+			Endpoint:        endpoint,
 			AccessKeyID:     "123456",
 			SecretAccessKey: "12345678",
 			Bucket:          "gitea",
@@ -34,13 +37,14 @@ func TestMinioStorageIterator(t *testing.T) {
 }
 
 func TestVirtualHostMinioStorage(t *testing.T) {
-	if os.Getenv("CI") == "" {
-		t.Skip("minioStorage not present outside of CI")
+	endpoint := os.Getenv("TEST_MINIO_ENDPOINT")
+	if endpoint == "" {
+		t.Skip("TEST_MINIO_ENDPOINT not set")
 		return
 	}
 	testStorageIterator(t, setting.MinioStorageType, &setting.Storage{
 		MinioConfig: setting.MinioStorageConfig{
-			Endpoint:        "minio:9000",
+			Endpoint:        endpoint,
 			AccessKeyID:     "123456",
 			SecretAccessKey: "12345678",
 			Bucket:          "gitea",
@@ -52,19 +56,19 @@ func TestVirtualHostMinioStorage(t *testing.T) {
 
 func TestMinioStoragePath(t *testing.T) {
 	m := &MinioStorage{basePath: ""}
-	assert.Equal(t, "", m.buildMinioPath("/"))
-	assert.Equal(t, "", m.buildMinioPath("."))
+	assert.Empty(t, m.buildMinioPath("/"))
+	assert.Empty(t, m.buildMinioPath("."))
 	assert.Equal(t, "a", m.buildMinioPath("/a"))
 	assert.Equal(t, "a/b", m.buildMinioPath("/a/b/"))
-	assert.Equal(t, "", m.buildMinioDirPrefix(""))
+	assert.Empty(t, m.buildMinioDirPrefix(""))
 	assert.Equal(t, "a/", m.buildMinioDirPrefix("/a/"))
 
 	m = &MinioStorage{basePath: "/"}
-	assert.Equal(t, "", m.buildMinioPath("/"))
-	assert.Equal(t, "", m.buildMinioPath("."))
+	assert.Empty(t, m.buildMinioPath("/"))
+	assert.Empty(t, m.buildMinioPath("."))
 	assert.Equal(t, "a", m.buildMinioPath("/a"))
 	assert.Equal(t, "a/b", m.buildMinioPath("/a/b/"))
-	assert.Equal(t, "", m.buildMinioDirPrefix(""))
+	assert.Empty(t, m.buildMinioDirPrefix(""))
 	assert.Equal(t, "a/", m.buildMinioDirPrefix("/a/"))
 
 	m = &MinioStorage{basePath: "/base"}
@@ -85,13 +89,14 @@ func TestMinioStoragePath(t *testing.T) {
 }
 
 func TestS3StorageBadRequest(t *testing.T) {
-	if os.Getenv("CI") == "" {
-		t.Skip("S3Storage not present outside of CI")
+	endpoint := os.Getenv("TEST_MINIO_ENDPOINT")
+	if endpoint == "" {
+		t.Skip("TEST_MINIO_ENDPOINT not set")
 		return
 	}
 	cfg := &setting.Storage{
 		MinioConfig: setting.MinioStorageConfig{
-			Endpoint:        "minio:9000",
+			Endpoint:        endpoint,
 			AccessKeyID:     "123456",
 			SecretAccessKey: "12345678",
 			Bucket:          "bucket",
@@ -213,4 +218,42 @@ func TestMinioCredentials(t *testing.T) {
 			assert.Equal(t, ExpectedSecretAccessKey+"IAM", v.SecretAccessKey)
 		})
 	})
+}
+
+func TestNewMinioStorageInitializationTimeout(t *testing.T) {
+	defer test.MockVariableValue(&getBucketVersioning, func(ctx context.Context, minioClient *minio.Client, bucket string) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(1 * time.Millisecond):
+			return minio.ErrorResponse{
+				StatusCode: http.StatusBadRequest,
+				Code:       "TestError",
+				Message:    "Mocked error for testing",
+			}
+		}
+	})()
+
+	settings := &setting.Storage{
+		MinioConfig: setting.MinioStorageConfig{
+			Endpoint:        "localhost",
+			AccessKeyID:     "123456",
+			SecretAccessKey: "12345678",
+			Bucket:          "bucket",
+			Location:        "us-east-1",
+		},
+	}
+
+	// Verify that we reach `getBucketVersioning` and return the error from our mock.
+	storage, err := NewMinioStorage(t.Context(), settings)
+	require.ErrorContains(t, err, "Mocked error for testing")
+	assert.Nil(t, storage)
+
+	defer test.MockVariableValue(&initializationTimeout, 1*time.Nanosecond)()
+
+	// Now that the timeout is super low, verify that we get a context deadline exceeded error from our mock.
+	storage, err = NewMinioStorage(t.Context(), settings)
+	require.Error(t, err)
+	require.ErrorIs(t, err, context.DeadlineExceeded, "err must be a context deadline exceeded error, but was %v", err)
+	assert.Nil(t, storage)
 }

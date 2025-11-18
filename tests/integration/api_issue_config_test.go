@@ -9,15 +9,15 @@ import (
 	"net/http"
 	"testing"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/tests"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func createIssueConfigInDirectory(t *testing.T, user *user_model.User, repo *repo_model.Repository, dir string, issueConfig map[string]any) {
@@ -133,6 +133,7 @@ func TestAPIRepoIssueConfigPaths(t *testing.T) {
 		".gitea/issue_template/config",
 		".github/ISSUE_TEMPLATE/config",
 		".github/issue_template/config",
+		"docs/issue_template/config",
 	}
 
 	for _, candidate := range templateConfigCandidates {
@@ -155,7 +156,7 @@ func TestAPIRepoIssueConfigPaths(t *testing.T) {
 				assert.False(t, issueConfig.BlankIssuesEnabled)
 				assert.Empty(t, issueConfig.ContactLinks)
 
-				_, err = deleteFileInBranch(owner, repo, fullPath, repo.DefaultBranch)
+				err = deleteFileInBranch(owner, repo, fullPath, repo.DefaultBranch)
 				require.NoError(t, err)
 			})
 		}
@@ -184,7 +185,7 @@ func TestAPIRepoValidateIssueConfig(t *testing.T) {
 	})
 
 	t.Run("Invalid", func(t *testing.T) {
-		dirs := []string{".gitea", ".forgejo"}
+		dirs := []string{".gitea", ".forgejo", "docs"}
 		for _, dir := range dirs {
 			t.Run(dir, func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()

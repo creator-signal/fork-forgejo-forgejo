@@ -19,11 +19,21 @@ import (
 	"sync"
 	"time"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/services/context"
+	actions_model "forgejo.org/models/actions"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/context"
+	redirect_service "forgejo.org/services/redirect"
+	repo_service "forgejo.org/services/repository"
 
 	"github.com/go-chi/cors"
 )
@@ -62,7 +72,7 @@ func httpBase(ctx *context.Context) serviceHandlerBase {
 		strings.HasSuffix(ctx.Req.URL.Path, "git-upload-archive") {
 		isPull = true
 	} else {
-		isPull = ctx.Req.Method == "GET"
+		isPull = ctx.Req.Method == "GET" || ctx.Req.Method == "HEAD"
 	}
 
 	var handler serviceHandlerBase
@@ -77,7 +87,190 @@ func httpBase(ctx *context.Context) serviceHandlerBase {
 		return nil
 	}
 
-	return handler
+	repoExist := true
+	repo, err := repo_model.GetRepositoryByName(ctx, owner.ID, reponame)
+	if err != nil {
+		if !repo_model.IsErrRepoNotExist(err) {
+			ctx.ServerError("GetRepositoryByName", err)
+			return nil
+		}
+
+		if redirectRepoID, err := redirect_service.LookupRepoRedirect(ctx, ctx.Doer, owner.ID, reponame); err == nil {
+			context.RedirectToRepo(ctx.Base, redirectRepoID)
+			return nil
+		}
+		repoExist = false
+	}
+
+	// Don't allow pushing if the repo is archived
+	if repoExist && repo.IsArchived && !isPull {
+		ctx.PlainText(http.StatusForbidden, "This repo is archived. You can view files and clone it, but cannot push or open issues/pull-requests.")
+		return nil
+	}
+
+	// Only public pull don't need auth.
+	isPublicPull := repoExist && !repo.IsPrivate && isPull
+	var (
+		askAuth = !isPublicPull || setting.Service.RequireSignInView
+		environ []string
+	)
+
+	// don't allow anonymous pulls if organization is not public
+	if isPublicPull {
+		if err := repo.LoadOwner(ctx); err != nil {
+			ctx.ServerError("LoadOwner", err)
+			return nil
+		}
+
+		askAuth = askAuth || (repo.Owner.Visibility != structs.VisibleTypePublic)
+	}
+
+	// check access
+	if askAuth {
+		// rely on the results of Contexter
+		if !ctx.IsSigned {
+			// TODO: support digit auth - which would be Authorization header with digit
+			ctx.Resp.Header().Set("WWW-Authenticate", `Basic realm="Gitea"`)
+			ctx.Error(http.StatusUnauthorized)
+			return nil
+		}
+
+		context.CheckRepoScopedToken(ctx, repo, auth_model.GetScopeLevelFromAccessMode(accessMode))
+		if ctx.Written() {
+			return nil
+		}
+
+		if ctx.IsBasicAuth && ctx.Data["IsApiToken"] != true && ctx.Data["IsActionsToken"] != true {
+			_, err = auth_model.GetTwoFactorByUID(ctx, ctx.Doer.ID)
+			if err == nil {
+				// TODO: This response should be changed to "invalid credentials" for security reasons once the expectation behind it (creating an app token to authenticate) is properly documented
+				ctx.PlainText(http.StatusUnauthorized, "Users with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password. Please create and use a personal access token on the user settings page")
+				return nil
+			} else if !auth_model.IsErrTwoFactorNotEnrolled(err) {
+				ctx.ServerError("IsErrTwoFactorNotEnrolled", err)
+				return nil
+			}
+		}
+
+		if !ctx.Doer.IsActive || ctx.Doer.ProhibitLogin {
+			ctx.PlainText(http.StatusForbidden, "Your account is disabled.")
+			return nil
+		}
+
+		environ = []string{
+			repo_module.EnvRepoUsername + "=" + username,
+			repo_module.EnvRepoName + "=" + reponame,
+			repo_module.EnvPusherName + "=" + ctx.Doer.Name,
+			repo_module.EnvPusherID + fmt.Sprintf("=%d", ctx.Doer.ID),
+			repo_module.EnvAppURL + "=" + setting.AppURL,
+		}
+
+		if repoExist {
+			// Because of special ref "refs/for" .. , need delay write permission check
+			accessMode = perm.AccessModeRead
+
+			if ctx.Data["IsActionsToken"] == true {
+				taskID := ctx.Data["ActionsTaskID"].(int64)
+				task, err := actions_model.GetTaskByID(ctx, taskID)
+				if err != nil {
+					ctx.ServerError("GetTaskByID", err)
+					return nil
+				}
+
+				p, err := access_model.GetActionRepoPermission(ctx, repo, task)
+				if err != nil {
+					ctx.ServerError("GetActionRepoPermission", err)
+					return nil
+				}
+
+				if !p.CanAccess(accessMode, unitType) {
+					ctx.PlainText(http.StatusForbidden, "User permission denied")
+					return nil
+				}
+
+				environ = append(environ, fmt.Sprintf("%s=%d", repo_module.EnvActionPerm, p.AccessMode))
+			} else {
+				p, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+				if err != nil {
+					ctx.ServerError("GetUserRepoPermission", err)
+					return nil
+				}
+
+				if !p.CanAccess(accessMode, unitType) {
+					ctx.PlainText(http.StatusNotFound, "Repository not found")
+					return nil
+				}
+			}
+
+			if !isPull && repo.IsMirror {
+				ctx.PlainText(http.StatusForbidden, "mirror repository is read-only")
+				return nil
+			}
+		}
+
+		if !ctx.Doer.KeepEmailPrivate {
+			environ = append(environ, repo_module.EnvPusherEmail+"="+ctx.Doer.Email)
+		}
+
+		if isWiki {
+			environ = append(environ, repo_module.EnvRepoIsWiki+"=true")
+		} else {
+			environ = append(environ, repo_module.EnvRepoIsWiki+"=false")
+		}
+	}
+
+	if !repoExist {
+		if !receivePack {
+			ctx.PlainText(http.StatusNotFound, "Repository not found")
+			return nil
+		}
+
+		if isWiki { // you cannot send wiki operation before create the repository
+			ctx.PlainText(http.StatusNotFound, "Repository not found")
+			return nil
+		}
+
+		if owner.IsOrganization() && !setting.Repository.EnablePushCreateOrg {
+			ctx.PlainText(http.StatusForbidden, "Push to create is not enabled for organizations.")
+			return nil
+		}
+		if !owner.IsOrganization() && !setting.Repository.EnablePushCreateUser {
+			ctx.PlainText(http.StatusForbidden, "Push to create is not enabled for users.")
+			return nil
+		}
+
+		// Return dummy payload if GET receive-pack
+		if ctx.Req.Method == http.MethodGet {
+			dummyInfoRefs(ctx)
+			return nil
+		}
+
+		repo, err = repo_service.PushCreateRepo(ctx, ctx.Doer, owner, reponame)
+		if err != nil {
+			log.Error("pushCreateRepo: %v", err)
+			ctx.Status(http.StatusNotFound)
+			return nil
+		}
+	}
+
+	if isWiki {
+		// Ensure the wiki is enabled before we allow access to it
+		if _, err := repo.GetUnit(ctx, unit.TypeWiki); err != nil {
+			if repo_model.IsErrUnitTypeNotExist(err) {
+				ctx.PlainText(http.StatusForbidden, "repository wiki is disabled")
+				return nil
+			}
+			log.Error("Failed to get the wiki unit in %-v Error: %v", repo, err)
+			ctx.ServerError("GetUnit(UnitTypeWiki) for "+repo.FullName(), err)
+			return nil
+		}
+	}
+
+	environ = append(environ, repo_module.EnvRepoID+fmt.Sprintf("=%d", repo.ID))
+
+	ctx.Req.URL.Path = strings.ToLower(ctx.Req.URL.Path) // blue: In case some repo name has upper case name
+
+	return &serviceHandler{repo, isWiki, environ}
 }
 
 var (

@@ -13,13 +13,13 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/packages"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	debian_module "code.gitea.io/gitea/modules/packages/debian"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	"forgejo.org/models/packages"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	debian_module "forgejo.org/modules/packages/debian"
+	"forgejo.org/tests"
 
 	"github.com/blakesmith/ar"
 	"github.com/stretchr/testify/assert"
@@ -263,5 +263,34 @@ func TestPackageDebian(t *testing.T) {
 
 		assert.Contains(t, body, "Components: "+strings.Join(components, " ")+"\n")
 		assert.Contains(t, body, "Architectures: "+architectures[1]+"\n")
+	})
+
+	t.Run("Delete via UI", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Test precondition -- ensure that the packageVersion & packageVersion2 are listed in the index
+		indexURL := fmt.Sprintf("%s/dists/%s/%s/binary-%s/Packages", rootURL, distributions[1], components[0], architectures[0])
+		req := NewRequest(t, "GET", indexURL)
+		resp := MakeRequest(t, req, http.StatusOK)
+		body := resp.Body.String()
+		require.Contains(t, body, fmt.Sprintf("Version: %s", packageVersion))
+		require.Contains(t, body, fmt.Sprintf("Version: %s", packageVersion2))
+
+		// Perform backend request that simulates the "Delete package" UI option, which is a generic codepath without
+		// debian-specific package management awareness...
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		session := loginUser(t, user.Name)
+		settingsURL := fmt.Sprintf("/user2/-/packages/debian/%s/%s/settings", packageName, packageVersion)
+		req = NewRequestWithValues(t, "POST", settingsURL, map[string]string{
+			"action": "delete",
+		})
+		session.MakeRequest(t, req, http.StatusSeeOther)
+
+		// Ensure that the package index has been rebuilt without the deleted package, handled by debianPackageNotifier
+		req = NewRequest(t, "GET", indexURL)
+		resp = MakeRequest(t, req, http.StatusOK)
+		body = resp.Body.String()
+		assert.NotContains(t, body, fmt.Sprintf("Version: %s", packageVersion))
+		require.Contains(t, body, fmt.Sprintf("Version: %s", packageVersion2))
 	})
 }

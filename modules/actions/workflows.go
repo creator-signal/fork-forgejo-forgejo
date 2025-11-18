@@ -8,22 +8,25 @@ import (
 	"io"
 	"strings"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	api "code.gitea.io/gitea/modules/structs"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	api "forgejo.org/modules/structs"
+	webhook_module "forgejo.org/modules/webhook"
 
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v11/act/model"
+	"code.forgejo.org/forgejo/runner/v11/act/workflowpattern"
 	"github.com/gobwas/glob"
-	"github.com/nektos/act/pkg/jobparser"
-	"github.com/nektos/act/pkg/model"
-	"github.com/nektos/act/pkg/workflowpattern"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 type DetectedWorkflow struct {
-	EntryName    string
-	TriggerEvent *jobparser.Event
-	Content      []byte
+	EntryName           string
+	TriggerEvent        *jobparser.Event
+	Content             []byte
+	EventDetectionError error
+	NeedApproval        actions_model.ApprovalType
 }
 
 func init() {
@@ -86,7 +89,7 @@ func GetContentFromEntry(entry *git.TreeEntry) ([]byte, error) {
 }
 
 func GetEventsFromContent(content []byte) ([]*jobparser.Event, error) {
-	workflow, err := model.ReadWorkflow(bytes.NewReader(content))
+	workflow, err := model.ReadWorkflow(bytes.NewReader(content), false)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +125,15 @@ func DetectWorkflows(
 		events, err := GetEventsFromContent(content)
 		if err != nil {
 			log.Warn("ignore invalid workflow %q: %v", entry.Name(), err)
+			dwf := &DetectedWorkflow{
+				EntryName: entry.Name(),
+				TriggerEvent: &jobparser.Event{
+					Name: triggedEvent.Event(),
+				},
+				Content:             content,
+				EventDetectionError: err,
+			}
+			workflows = append(workflows, dwf)
 			continue
 		}
 		for _, evt := range events {
@@ -315,6 +327,10 @@ func matchPushEvent(commit *git.Commit, pushPayload *api.PushPayload, evt *jobpa
 				matchTimes++
 			}
 		case "paths":
+			if refName.IsTag() {
+				matchTimes++
+				break
+			}
 			filesChanged, err := commit.GetFilesChangedSinceCommit(pushPayload.Before)
 			if err != nil {
 				log.Error("GetFilesChangedSinceCommit [commit_sha1: %s]: %v", commit.ID.String(), err)
@@ -328,6 +344,10 @@ func matchPushEvent(commit *git.Commit, pushPayload *api.PushPayload, evt *jobpa
 				}
 			}
 		case "paths-ignore":
+			if refName.IsTag() {
+				matchTimes++
+				break
+			}
 			filesChanged, err := commit.GetFilesChangedSinceCommit(pushPayload.Before)
 			if err != nil {
 				log.Error("GetFilesChangedSinceCommit [commit_sha1: %s]: %v", commit.ID.String(), err)

@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,10 +24,11 @@ func TestLabel_ToLabel(t *testing.T) {
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: label.RepoID})
 	assert.Equal(t, &api.Label{
-		ID:    label.ID,
-		Name:  label.Name,
-		Color: "abcdef",
-		URL:   fmt.Sprintf("%sapi/v1/repos/user2/repo1/labels/%d", setting.AppURL, label.ID),
+		ID:          label.ID,
+		Name:        label.Name,
+		Color:       "abcdef",
+		Description: label.Description,
+		URL:         fmt.Sprintf("%sapi/v1/repos/user2/repo1/labels/%d", setting.AppURL, label.ID),
 	}, ToLabel(label, repo, nil))
 }
 

@@ -3,7 +3,10 @@
 
 package swagger
 
-import api "code.gitea.io/gitea/modules/structs"
+import (
+	api "forgejo.org/modules/structs"
+	shared "forgejo.org/routers/api/v1/shared"
+)
 
 // SecretList
 // swagger:response SecretList
@@ -31,4 +34,39 @@ type swaggerResponseActionVariable struct {
 type swaggerResponseVariableList struct {
 	// in:body
 	Body []api.ActionVariable `json:"body"`
+}
+
+// RunJobList is a list of action run jobs
+// swagger:response RunJobList
+type swaggerRunJobList struct {
+	// in:body
+	Body []*api.ActionRunJob `json:"body"`
+}
+
+// DispatchWorkflowRun is a Workflow Run after dispatching
+// swagger:response DispatchWorkflowRun
+type swaggerDispatchWorkflowRun struct {
+	// in:body
+	Body *api.DispatchWorkflowRun `json:"body"`
+}
+
+// RegistrationToken is a string used to register a runner with a server
+// swagger:response RegistrationToken
+type swaggerRegistrationToken struct {
+	// in: body
+	Body shared.RegistrationToken `json:"body"`
+}
+
+// ActionRunner represents a Runner
+// swagger:response ActionRunner
+type swaggerActionRunner struct {
+	// in: body
+	Body api.ActionRunner `json:"body"`
+}
+
+// ActionRunnersResponse returns Runners
+// swagger:response ActionRunnersResponse
+type swaggerActionRunnerResponse struct {
+	// in: body
+	Body api.ActionRunnersResponse `json:"body"`
 }

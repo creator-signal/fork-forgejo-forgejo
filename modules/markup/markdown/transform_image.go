@@ -6,8 +6,8 @@ package markdown
 import (
 	"strings"
 
-	"code.gitea.io/gitea/modules/markup"
-	giteautil "code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/markup"
+	giteautil "forgejo.org/modules/util"
 
 	"github.com/yuin/goldmark/ast"
 )
@@ -44,6 +44,7 @@ func (g *ASTTransformer) transformImage(ctx *markup.RenderContext, v *ast.Image)
 		for _, attr := range v.Attributes() {
 			image.SetAttribute(attr.Name, attr.Value)
 		}
+		image.SetAttributeString("loading", []byte("lazy"))
 		for child := v.FirstChild(); child != nil; {
 			next := child.NextSibling()
 			image.AppendChild(image, child)

@@ -14,20 +14,20 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	org_model "code.gitea.io/gitea/models/organization"
-	quota_model "code.gitea.io/gitea/models/quota"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/routers"
-	forgejo_context "code.gitea.io/gitea/services/context"
-	repo_service "code.gitea.io/gitea/services/repository"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	org_model "forgejo.org/models/organization"
+	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/routers"
+	forgejo_context "forgejo.org/services/context"
+	repo_service "forgejo.org/services/repository"
+	"forgejo.org/tests"
 
 	gouuid "github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +35,7 @@ import (
 )
 
 func TestWebQuotaEnforcementRepoMigrate(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -48,7 +48,7 @@ func TestWebQuotaEnforcementRepoMigrate(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementRepoCreate(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -57,7 +57,7 @@ func TestWebQuotaEnforcementRepoCreate(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementRepoFork(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -69,7 +69,7 @@ func TestWebQuotaEnforcementRepoFork(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementIssueAttachment(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -94,7 +94,7 @@ func TestWebQuotaEnforcementIssueAttachment(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementMirrorSync(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -115,7 +115,7 @@ func TestWebQuotaEnforcementMirrorSync(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementRepoContentEditing(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -164,7 +164,7 @@ func TestWebQuotaEnforcementRepoContentEditing(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementRepoBranches(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -227,7 +227,7 @@ func TestWebQuotaEnforcementRepoBranches(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementRepoReleases(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -262,7 +262,7 @@ func TestWebQuotaEnforcementRepoReleases(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementRepoPulls(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -300,7 +300,7 @@ func TestWebQuotaEnforcementRepoPulls(t *testing.T) {
 }
 
 func TestWebQuotaEnforcementRepoTransfer(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -366,7 +366,7 @@ func TestWebQuotaEnforcementRepoTransfer(t *testing.T) {
 }
 
 func TestGitQuotaEnforcement(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -549,7 +549,7 @@ func TestGitQuotaEnforcement(t *testing.T) {
 }
 
 func TestQuotaConfigDefault(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		env := createQuotaWebEnv(t)
 		defer env.Cleanup()
 
@@ -640,8 +640,6 @@ type quotaWebEnvAsContext struct {
 
 	Payload Payload
 
-	CSRFPath *string
-
 	gitPath string
 
 	request  *RequestWrapper
@@ -649,9 +647,8 @@ type quotaWebEnvAsContext struct {
 }
 
 type Context struct {
-	Repo     *repo_model.Repository
-	Payload  *Payload
-	CSRFPath *string
+	Repo    *repo_model.Repository
+	Payload *Payload
 }
 
 func (ctx *quotaWebEnvAsContext) With(opts Context) *quotaWebEnvAsContext {
@@ -662,9 +659,6 @@ func (ctx *quotaWebEnvAsContext) With(opts Context) *quotaWebEnvAsContext {
 		for key, value := range *opts.Payload {
 			ctx.Payload[key] = value
 		}
-	}
-	if opts.CSRFPath != nil {
-		ctx.CSRFPath = opts.CSRFPath
 	}
 	return ctx
 }
@@ -697,7 +691,7 @@ func (ctx *quotaWebEnvAsContext) ExpectFlashMessage(value string) {
 	htmlDoc := NewHTMLParser(ctx.t, ctx.response.Body)
 	flashMessage := strings.TrimSpace(htmlDoc.Find(`.flash-message`).Text())
 
-	assert.EqualValues(ctx.t, value, flashMessage)
+	assert.Equal(ctx.t, value, flashMessage)
 }
 
 func (ctx *quotaWebEnvAsContext) ExpectFlashMessageContains(parts ...string) {
@@ -756,12 +750,6 @@ func (ctx *quotaWebEnvAsContext) PostToPage(page string) *quotaWebEnvAsContext {
 	ctx.t.Helper()
 
 	payload := ctx.Payload
-	csrfPath := page
-	if ctx.CSRFPath != nil {
-		csrfPath = *ctx.CSRFPath
-	}
-
-	payload["_csrf"] = GetCSRF(ctx.t, ctx.Doer.Session, csrfPath)
 
 	ctx.request = NewRequestWithValues(ctx.t, "POST", page, payload)
 
@@ -771,8 +759,7 @@ func (ctx *quotaWebEnvAsContext) PostToPage(page string) *quotaWebEnvAsContext {
 func (ctx *quotaWebEnvAsContext) PostToRepoPage(page string) *quotaWebEnvAsContext {
 	ctx.t.Helper()
 
-	csrfPath := ctx.Repo.Link()
-	return ctx.With(Context{CSRFPath: &csrfPath}).PostToPage(ctx.Repo.Link() + page)
+	return ctx.PostToPage(ctx.Repo.Link() + page)
 }
 
 func (ctx *quotaWebEnvAsContext) CreateAttachment(filename, attachmentType string) *quotaWebEnvAsContext {
@@ -790,10 +777,7 @@ func (ctx *quotaWebEnvAsContext) CreateAttachment(filename, attachmentType strin
 	err = writer.Close()
 	require.NoError(ctx.t, err)
 
-	csrf := GetCSRF(ctx.t, ctx.Doer.Session, ctx.Repo.Link())
-
 	ctx.request = NewRequestWithBody(ctx.t, "POST", fmt.Sprintf("%s/%s/attachments", ctx.Repo.Link(), attachmentType), body)
-	ctx.request.Header.Add("X-Csrf-Token", csrf)
 	ctx.request.Header.Add("Content-Type", writer.FormDataContentType())
 
 	return ctx
@@ -949,12 +933,10 @@ func (env *quotaWebEnv) RunVisitAndPostToRepoPageTests(t *testing.T, page string
 
 	// Posting as the limited user, to the limited repo, fails due to being over
 	// quota.
-	csrfPath := env.Users.Limited.Repo.Link()
 	env.As(t, env.Users.Limited).
 		With(Context{
-			Payload:  payload,
-			CSRFPath: &csrfPath,
-			Repo:     env.Users.Limited.Repo,
+			Payload: payload,
+			Repo:    env.Users.Limited.Repo,
 		}).
 		PostToRepoPage(page).
 		ExpectStatus(http.StatusRequestEntityTooLarge)
@@ -967,12 +949,10 @@ func (env *quotaWebEnv) RunVisitAndPostToRepoPageTests(t *testing.T, page string
 
 	// Posting as the limited user, to a limited org's repo, fails for the same
 	// reason.
-	csrfPath = env.Orgs.Limited.Repo.Link()
 	env.As(t, env.Users.Limited).
 		With(Context{
-			Payload:  payload,
-			CSRFPath: &csrfPath,
-			Repo:     env.Orgs.Limited.Repo,
+			Payload: payload,
+			Repo:    env.Orgs.Limited.Repo,
 		}).
 		PostToRepoPage(page).
 		ExpectStatus(http.StatusRequestEntityTooLarge)
@@ -984,12 +964,10 @@ func (env *quotaWebEnv) RunVisitAndPostToRepoPageTests(t *testing.T, page string
 		ExpectStatus(http.StatusOK)
 
 	// Posting as the limited user, to an unlimited org's repo, succeeds.
-	csrfPath = env.Orgs.Unlimited.Repo.Link()
 	env.As(t, env.Users.Limited).
 		With(Context{
-			Payload:  payload,
-			CSRFPath: &csrfPath,
-			Repo:     env.Orgs.Unlimited.Repo,
+			Payload: payload,
+			Repo:    env.Orgs.Unlimited.Repo,
 		}).
 		PostToRepoPage(page).
 		ExpectStatus(successStatus)

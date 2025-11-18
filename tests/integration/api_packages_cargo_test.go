@@ -12,26 +12,26 @@ import (
 	neturl "net/url"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/packages"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/json"
-	cargo_module "code.gitea.io/gitea/modules/packages/cargo"
-	"code.gitea.io/gitea/modules/setting"
-	cargo_router "code.gitea.io/gitea/routers/api/packages/cargo"
-	gitea_context "code.gitea.io/gitea/services/context"
-	cargo_service "code.gitea.io/gitea/services/packages/cargo"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	"forgejo.org/models/packages"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/json"
+	cargo_module "forgejo.org/modules/packages/cargo"
+	"forgejo.org/modules/setting"
+	cargo_router "forgejo.org/routers/api/packages/cargo"
+	app_context "forgejo.org/services/context"
+	cargo_service "forgejo.org/services/packages/cargo"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPackageCargo(t *testing.T) {
-	onGiteaRun(t, testPackageCargo)
+	onApplicationRun(t, testPackageCargo)
 }
 
 func testPackageCargo(t *testing.T, _ *neturl.URL) {
@@ -89,10 +89,13 @@ func testPackageCargo(t *testing.T, _ *neturl.URL) {
 		blob, err := commit.GetBlobByPath(path)
 		require.NoError(t, err)
 
-		content, err := blob.GetBlobContent(1024)
+		rc, _, err := blob.NewTruncatedReader(1024)
 		require.NoError(t, err)
 
-		return content
+		content, err := io.ReadAll(rc)
+		require.NoError(t, err)
+
+		return string(content)
 	}
 
 	root := fmt.Sprintf("%sapi/packages/%s/cargo", setting.AppURL, user.Name)
@@ -388,7 +391,7 @@ func testPackageCargo(t *testing.T, _ *neturl.URL) {
 }
 
 func TestRebuildCargo(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *neturl.URL) {
+	onApplicationRun(t, func(t *testing.T, u *neturl.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user.Name)
 		unittest.AssertExistsIf(t, false, &repo_model.Repository{OwnerID: user.ID, Name: cargo_service.IndexRepositoryName})
@@ -396,14 +399,12 @@ func TestRebuildCargo(t *testing.T) {
 		t.Run("No index", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
-			req := NewRequestWithValues(t, "POST", "/user/settings/packages/cargo/rebuild", map[string]string{
-				"_csrf": GetCSRF(t, session, "/user/settings/packages"),
-			})
+			req := NewRequest(t, "POST", "/user/settings/packages/cargo/rebuild")
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "error%3DCannot%2Brebuild%252C%2Bno%2Bindex%2Bis%2Binitialized.", flashCookie.Value)
+			assert.Equal(t, "error%3DCannot%2Brebuild%252C%2Bno%2Bindex%2Bis%2Binitialized.", flashCookie.Value)
 			unittest.AssertExistsIf(t, false, &repo_model.Repository{OwnerID: user.ID, Name: cargo_service.IndexRepositoryName})
 		})
 
@@ -417,9 +418,7 @@ func TestRebuildCargo(t *testing.T) {
 			htmlDoc.AssertElement(t, `form[action="/user/settings/packages/cargo/rebuild"]`, false)
 			htmlDoc.AssertElement(t, `form[action="/user/settings/packages/cargo/initialize"]`, true)
 
-			req = NewRequestWithValues(t, "POST", "/user/settings/packages/cargo/initialize", map[string]string{
-				"_csrf": htmlDoc.GetCSRF(),
-			})
+			req = NewRequest(t, "POST", "/user/settings/packages/cargo/initialize")
 			session.MakeRequest(t, req, http.StatusSeeOther)
 			unittest.AssertExistsIf(t, true, &repo_model.Repository{OwnerID: user.ID, Name: cargo_service.IndexRepositoryName})
 
@@ -434,14 +433,12 @@ func TestRebuildCargo(t *testing.T) {
 		t.Run("With index", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
-			req := NewRequestWithValues(t, "POST", "/user/settings/packages/cargo/rebuild", map[string]string{
-				"_csrf": GetCSRF(t, session, "/user/settings/packages"),
-			})
+			req := NewRequest(t, "POST", "/user/settings/packages/cargo/rebuild")
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.EqualValues(t, "success%3DThe%2BCargo%2Bindex%2Bwas%2Bsuccessfully%2Brebuild.", flashCookie.Value)
+			assert.Equal(t, "success%3DThe%2BCargo%2Bindex%2Bwas%2Bsuccessfully%2Brebuilt.", flashCookie.Value)
 		})
 	})
 }

@@ -1,4 +1,5 @@
 // Copyright 2018 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package git
@@ -21,21 +22,21 @@ func TestRepository_GetBranches(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Len(t, branches, 2)
-	assert.EqualValues(t, 3, countAll)
+	assert.Equal(t, 3, countAll)
 	assert.ElementsMatch(t, []string{"master", "branch2"}, branches)
 
 	branches, countAll, err = bareRepo1.GetBranchNames(0, 0)
 
 	require.NoError(t, err)
 	assert.Len(t, branches, 3)
-	assert.EqualValues(t, 3, countAll)
+	assert.Equal(t, 3, countAll)
 	assert.ElementsMatch(t, []string{"master", "branch2", "branch1"}, branches)
 
 	branches, countAll, err = bareRepo1.GetBranchNames(5, 1)
 
 	require.NoError(t, err)
 	assert.Empty(t, branches)
-	assert.EqualValues(t, 3, countAll)
+	assert.Equal(t, 3, countAll)
 	assert.ElementsMatch(t, []string{}, branches)
 }
 
@@ -71,15 +72,15 @@ func TestGetRefsBySha(t *testing.T) {
 	// refs/pull/1/head
 	branches, err = bareRepo5.GetRefsBySha("c83380d7056593c51a699d12b9c00627bd5743e9", PullPrefix)
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{"refs/pull/1/head"}, branches)
+	assert.Equal(t, []string{"refs/pull/1/head"}, branches)
 
 	branches, err = bareRepo5.GetRefsBySha("d8e0bbb45f200e67d9a784ce55bd90821af45ebd", BranchPrefix)
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{"refs/heads/master", "refs/heads/master-clone"}, branches)
+	assert.Equal(t, []string{"refs/heads/master", "refs/heads/master-clone"}, branches)
 
 	branches, err = bareRepo5.GetRefsBySha("58a4bcc53ac13e7ff76127e0fb518b5262bf09af", BranchPrefix)
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{"refs/heads/test-patch-1"}, branches)
+	assert.Equal(t, []string{"refs/heads/test-patch-1"}, branches)
 }
 
 func BenchmarkGetRefsBySha(b *testing.B) {
@@ -194,4 +195,18 @@ func TestRepository_IsReferenceExist(t *testing.T) {
 			assert.Equal(t, tt.want, repo.IsReferenceExist(tt.arg))
 		})
 	}
+}
+
+func TestIsBranchExist(t *testing.T) {
+	repo1Path := filepath.Join(testReposDir, "repo1_bare")
+
+	assert.True(t, IsBranchExist(t.Context(), repo1Path, "branch1"))
+	assert.True(t, IsBranchExist(t.Context(), repo1Path, "branch2"))
+	assert.True(t, IsBranchExist(t.Context(), repo1Path, "master"))
+
+	assert.False(t, IsBranchExist(t.Context(), repo1Path, "HEAD"))
+	assert.False(t, IsBranchExist(t.Context(), repo1Path, "153f451b9ee7fa1da317ab17a127e9fd9d384310"))
+	assert.False(t, IsBranchExist(t.Context(), repo1Path, "153f451b9ee7fa1da317ab17a127e9fd9d384310"))
+	assert.False(t, IsBranchExist(t.Context(), repo1Path, "signed-tag"))
+	assert.False(t, IsBranchExist(t.Context(), repo1Path, "test"))
 }

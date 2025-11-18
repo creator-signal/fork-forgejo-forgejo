@@ -1,5 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Copyright 2018 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -19,44 +20,43 @@ import (
 	"strings"
 	"time"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	project_model "code.gitea.io/gitea/models/project"
-	pull_model "code.gitea.io/gitea/models/pull"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/emoji"
-	"code.gitea.io/gitea/modules/git"
-	issue_indexer "code.gitea.io/gitea/modules/indexer/issues"
-	issue_template "code.gitea.io/gitea/modules/issue/template"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	"code.gitea.io/gitea/modules/markup/markdown"
-	"code.gitea.io/gitea/modules/optional"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/templates"
-	"code.gitea.io/gitea/modules/templates/vars"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/utils"
-	asymkey_service "code.gitea.io/gitea/services/asymkey"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/context/upload"
-	"code.gitea.io/gitea/services/convert"
-	"code.gitea.io/gitea/services/forms"
-	issue_service "code.gitea.io/gitea/services/issue"
-	pull_service "code.gitea.io/gitea/services/pull"
-	repo_service "code.gitea.io/gitea/services/repository"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
+	project_model "forgejo.org/models/project"
+	pull_model "forgejo.org/models/pull"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/emoji"
+	"forgejo.org/modules/git"
+	issue_indexer "forgejo.org/modules/indexer/issues"
+	issue_template "forgejo.org/modules/issue/template"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/templates"
+	"forgejo.org/modules/templates/vars"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/utils"
+	asymkey_service "forgejo.org/services/asymkey"
+	"forgejo.org/services/context"
+	"forgejo.org/services/context/upload"
+	"forgejo.org/services/convert"
+	"forgejo.org/services/forms"
+	issue_service "forgejo.org/services/issue"
+	pull_service "forgejo.org/services/pull"
+	repo_service "forgejo.org/services/repository"
 
 	"code.forgejo.org/go-chi/binding"
 )
@@ -75,33 +75,26 @@ const (
 	issueTemplateTitleKey = "IssueTemplateTitle"
 )
 
-// IssueTemplateCandidates issue templates
-var IssueTemplateCandidates = []string{
-	"ISSUE_TEMPLATE.md",
-	"ISSUE_TEMPLATE.yaml",
-	"ISSUE_TEMPLATE.yml",
-	"issue_template.md",
-	"issue_template.yaml",
-	"issue_template.yml",
-	".forgejo/ISSUE_TEMPLATE.md",
-	".forgejo/ISSUE_TEMPLATE.yaml",
-	".forgejo/ISSUE_TEMPLATE.yml",
-	".forgejo/issue_template.md",
-	".forgejo/issue_template.yaml",
-	".forgejo/issue_template.yml",
-	".gitea/ISSUE_TEMPLATE.md",
-	".gitea/ISSUE_TEMPLATE.yaml",
-	".gitea/ISSUE_TEMPLATE.yml",
-	".gitea/issue_template.md",
-	".gitea/issue_template.yaml",
-	".gitea/issue_template.yml",
-	".github/ISSUE_TEMPLATE.md",
-	".github/ISSUE_TEMPLATE.yaml",
-	".github/ISSUE_TEMPLATE.yml",
-	".github/issue_template.md",
-	".github/issue_template.yaml",
-	".github/issue_template.yml",
+// generateIssueTemplateLocations generates all the file paths where we
+// look for an issue template, e.g. ".forgejo/ISSUE_TEMPLATE.md".
+func generateIssueTemplateLocations() []string {
+	var result []string
+	prefixes := []string{"", ".forgejo/", ".gitea/", ".github/", "docs/"}
+	filenames := []string{"ISSUE_TEMPLATE", "issue_template"}
+	extensions := []string{".md", ".yaml", ".yml"}
+
+	for _, prefix := range prefixes {
+		for _, filename := range filenames {
+			for _, extension := range extensions {
+				result = append(result, prefix+filename+extension)
+			}
+		}
+	}
+
+	return result
 }
+
+var issueTemplateCandidates = generateIssueTemplateLocations()
 
 // MustAllowUserComment checks to make sure if an issue is locked.
 // If locked and user has permissions to write to the repository,
@@ -186,9 +179,10 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	// 0 means issues with no label
 	// blank means labels will not be filtered for issues
 	selectLabels := ctx.FormString("labels")
-	if selectLabels == "" {
+	switch selectLabels {
+	case "":
 		ctx.Data["AllLabels"] = true
-	} else if selectLabels == "0" {
+	case "0":
 		ctx.Data["NoLabel"] = true
 	}
 	if len(selectLabels) > 0 {
@@ -202,8 +196,6 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	if bytes.Contains([]byte(keyword), []byte{0x00}) {
 		keyword = ""
 	}
-
-	isFuzzy := ctx.FormOptionalBool("fuzzy").ValueOrDefault(true)
 
 	var mileIDs []int64
 	if milestoneID > 0 || milestoneID == db.NoConditionID { // -1 to get those issues which have no any milestone assigned
@@ -225,7 +217,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		IssueIDs:          nil,
 	}
 	if keyword != "" {
-		allIssueIDs, err := issueIDsFromSearch(ctx, keyword, isFuzzy, statsOpts)
+		allIssueIDs, err := issueIDsFromSearch(ctx, keyword, statsOpts)
 		if err != nil {
 			if issue_indexer.IsAvailable(ctx) {
 				ctx.ServerError("issueIDsFromSearch", err)
@@ -293,7 +285,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 
 	var issues issues_model.IssueList
 	{
-		ids, err := issueIDsFromSearch(ctx, keyword, isFuzzy, &issues_model.IssuesOptions{
+		ids, err := issueIDsFromSearch(ctx, keyword, &issues_model.IssuesOptions{
 			Paginator: &db.ListOptions{
 				Page:     pager.Paginater.Current(),
 				PageSize: setting.UI.IssuePagingNum,
@@ -347,11 +339,6 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	if err != nil {
 		ctx.ServerError("GetIssuesAllCommitStatus", err)
 		return
-	}
-	if !ctx.Repo.CanRead(unit.TypeActions) {
-		for key := range commitStatuses {
-			git_model.CommitStatusesHideActionsURL(ctx, commitStatuses[key])
-		}
 	}
 
 	if err := issues.LoadAttributes(ctx); err != nil {
@@ -427,9 +414,10 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 			return 0
 		}
 		reviewTyp := issues_model.ReviewTypeApprove
-		if typ == "reject" {
+		switch typ {
+		case "reject":
 			reviewTyp = issues_model.ReviewTypeReject
-		} else if typ == "waiting" {
+		case "waiting":
 			reviewTyp = issues_model.ReviewTypeRequest
 		}
 		for _, count := range counts {
@@ -457,16 +445,16 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	ctx.Data["OpenCount"] = issueStats.OpenCount
 	ctx.Data["ClosedCount"] = issueStats.ClosedCount
 	ctx.Data["AllCount"] = issueStats.AllCount
-	linkStr := "?q=%s&type=%s&sort=%s&state=%s&labels=%s&milestone=%d&project=%d&assignee=%d&poster=%d&fuzzy=%t&archived=%t"
+	linkStr := "?q=%s&type=%s&sort=%s&state=%s&labels=%s&milestone=%d&project=%d&assignee=%d&poster=%d&archived=%t"
 	ctx.Data["AllStatesLink"] = fmt.Sprintf(linkStr,
 		url.QueryEscape(keyword), url.QueryEscape(viewType), url.QueryEscape(sortType), "all", url.QueryEscape(selectLabels),
-		milestoneID, projectID, assigneeID, posterID, isFuzzy, archived)
+		milestoneID, projectID, assigneeID, posterID, archived)
 	ctx.Data["OpenLink"] = fmt.Sprintf(linkStr,
 		url.QueryEscape(keyword), url.QueryEscape(viewType), url.QueryEscape(sortType), "open", url.QueryEscape(selectLabels),
-		milestoneID, projectID, assigneeID, posterID, isFuzzy, archived)
+		milestoneID, projectID, assigneeID, posterID, archived)
 	ctx.Data["ClosedLink"] = fmt.Sprintf(linkStr,
 		url.QueryEscape(keyword), url.QueryEscape(viewType), url.QueryEscape(sortType), "closed", url.QueryEscape(selectLabels),
-		milestoneID, projectID, assigneeID, posterID, isFuzzy, archived)
+		milestoneID, projectID, assigneeID, posterID, archived)
 	ctx.Data["SelLabelIDs"] = labelIDs
 	ctx.Data["SelectLabels"] = selectLabels
 	ctx.Data["ViewType"] = viewType
@@ -475,7 +463,6 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	ctx.Data["ProjectID"] = projectID
 	ctx.Data["AssigneeID"] = assigneeID
 	ctx.Data["PosterID"] = posterID
-	ctx.Data["IsFuzzy"] = isFuzzy
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["IsShowClosed"] = isShowClosed
 	switch {
@@ -498,17 +485,12 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	pager.AddParam(ctx, "assignee", "AssigneeID")
 	pager.AddParam(ctx, "poster", "PosterID")
 	pager.AddParam(ctx, "archived", "ShowArchivedLabels")
-	pager.AddParam(ctx, "fuzzy", "IsFuzzy")
 
 	ctx.Data["Page"] = pager
 }
 
-func issueIDsFromSearch(ctx *context.Context, keyword string, fuzzy bool, opts *issues_model.IssuesOptions) ([]int64, error) {
-	ids, _, err := issue_indexer.SearchIssues(ctx, issue_indexer.ToSearchOptions(keyword, opts).Copy(
-		func(o *issue_indexer.SearchOptions) {
-			o.IsFuzzyKeyword = fuzzy
-		},
-	))
+func issueIDsFromSearch(ctx *context.Context, keyword string, opts *issues_model.IssuesOptions) ([]int64, error) {
+	ids, _, err := issue_indexer.SearchIssues(ctx, issue_indexer.ToSearchOptions(keyword, opts))
 	if err != nil {
 		return nil, fmt.Errorf("SearchIssues: %w", err)
 	}
@@ -1015,7 +997,7 @@ func NewIssue(ctx *context.Context) {
 	ctx.Data["Tags"] = tags
 
 	_, templateErrs := issue_service.GetTemplatesFromDefaultBranch(ctx.Repo.Repository, ctx.Repo.GitRepo)
-	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, IssueTemplateCandidates)
+	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, issueTemplateCandidates)
 	for k, v := range errs {
 		templateErrs[k] = v
 	}
@@ -1267,7 +1249,11 @@ func NewIssuePost(ctx *context.Context) {
 
 	if err := issue_service.NewIssue(ctx, repo, issue, labelIDs, attachments, assigneeIDs); err != nil {
 		if errors.Is(err, user_model.ErrBlockedByUser) {
-			ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
+			if issue.IsPull {
+				ctx.JSONError(ctx.Tr("repo.pulls.blocked_by_user"))
+			} else {
+				ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
+			}
 			return
 		} else if repo_model.IsErrUserDoesNotHaveAccessToRepo(err) {
 			ctx.Error(http.StatusBadRequest, "UserDoesNotHaveAccessToRepo", err.Error())
@@ -1291,27 +1277,40 @@ func NewIssuePost(ctx *context.Context) {
 
 	log.Trace("Issue created: %d/%d", repo.ID, issue.ID)
 	if ctx.FormString("redirect_after_creation") == "project" && projectID > 0 {
-		ctx.JSONRedirect(ctx.Repo.RepoLink + "/projects/" + strconv.FormatInt(projectID, 10))
-	} else {
-		ctx.JSONRedirect(issue.Link())
+		project, err := project_model.GetProjectByID(ctx, projectID)
+		if err == nil {
+			if project.Type == project_model.TypeOrganization {
+				ctx.JSONRedirect(project_model.ProjectLinkForOrg(ctx.Repo.Owner, project.ID))
+			} else {
+				ctx.JSONRedirect(project_model.ProjectLinkForRepo(repo, project.ID))
+			}
+			return
+		}
 	}
+	ctx.JSONRedirect(issue.Link())
 }
 
 // roleDescriptor returns the role descriptor for a comment in/with the given repo, poster and issue
 func roleDescriptor(ctx stdCtx.Context, repo *repo_model.Repository, poster *user_model.User, issue *issues_model.Issue, hasOriginalAuthor bool) (issues_model.RoleDescriptor, error) {
 	roleDescriptor := issues_model.RoleDescriptor{}
 
+	// Migrated comment with no associated local user
 	if hasOriginalAuthor {
 		return roleDescriptor, nil
 	}
+
+	// Special user that can't have associated contributions and permissions in the repo.
+	if poster.IsSystem() || poster.IsAPServerActor() {
+		return roleDescriptor, nil
+	}
+
+	// If the poster is the actual poster of the issue, enable Poster role.
+	roleDescriptor.IsPoster = issue.IsPoster(poster.ID)
 
 	perm, err := access_model.GetUserRepoPermission(ctx, repo, poster)
 	if err != nil {
 		return roleDescriptor, err
 	}
-
-	// If the poster is the actual poster of the issue, enable Poster role.
-	roleDescriptor.IsPoster = issue.IsPoster(poster.ID)
 
 	// Check if the poster is owner of the repo.
 	if perm.IsOwner() {
@@ -1465,6 +1464,7 @@ func ViewIssue(ctx *context.Context) {
 		ctx.Data["IssueType"] = "all"
 	}
 
+	ctx.Data["IsModerationEnabled"] = setting.Moderation.Enabled
 	ctx.Data["IsProjectsEnabled"] = ctx.Repo.CanRead(unit.TypeProjects)
 	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
 	upload.AddUploadContext(ctx, "comment")
@@ -1589,6 +1589,7 @@ func ViewIssue(ctx *context.Context) {
 		ok                   bool
 		marked               = make(map[int64]issues_model.RoleDescriptor)
 		comment              *issues_model.Comment
+		commentIdx           int
 		participants         = make([]*user_model.User, 1, 10)
 		latestCloseCommentID int64
 	)
@@ -1644,15 +1645,17 @@ func ViewIssue(ctx *context.Context) {
 		return
 	}
 
-	for _, comment = range issue.Comments {
+	for commentIdx, comment = range issue.Comments {
 		comment.Issue = issue
+		metas := ctx.Repo.Repository.ComposeMetas(ctx)
+		metas["scope"] = fmt.Sprintf("comment-%d", commentIdx)
 
 		if comment.Type == issues_model.CommentTypeComment || comment.Type == issues_model.CommentTypeReview {
 			comment.RenderedContent, err = markdown.RenderString(&markup.RenderContext{
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
 				},
-				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				Metas:   metas,
 				GitRepo: ctx.Repo.GitRepo,
 				Ctx:     ctx,
 			}, comment.Content)
@@ -1685,7 +1688,7 @@ func ViewIssue(ctx *context.Context) {
 				return
 			}
 			ghostMilestone := &issues_model.Milestone{
-				ID:   -1,
+				ID:   issues_model.GhostMilestoneID,
 				Name: ctx.Locale.TrString("repo.issues.deleted_milestone"),
 			}
 			if comment.OldMilestoneID > 0 && comment.OldMilestone == nil {
@@ -1729,7 +1732,7 @@ func ViewIssue(ctx *context.Context) {
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
 				},
-				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				Metas:   metas,
 				GitRepo: ctx.Repo.GitRepo,
 				Ctx:     ctx,
 			}, comment.Content)
@@ -1786,15 +1789,6 @@ func ViewIssue(ctx *context.Context) {
 				ctx.ServerError("LoadPushCommits", err)
 				return
 			}
-			if !ctx.Repo.CanRead(unit.TypeActions) {
-				for _, commit := range comment.Commits {
-					if commit.Status == nil {
-						continue
-					}
-					commit.Status.HideActionsURL(ctx)
-					git_model.CommitStatusesHideActionsURL(ctx, commit.Statuses)
-				}
-			}
 		} else if comment.Type == issues_model.CommentTypeAddTimeManual ||
 			comment.Type == issues_model.CommentTypeStopTracking ||
 			comment.Type == issues_model.CommentTypeDeleteTimeManual {
@@ -1824,8 +1818,7 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["LatestCloseCommentID"] = latestCloseCommentID
 
 	// Combine multiple label assignments into a single comment
-	combineLabelComments(issue)
-	combineRequestReviewComments(issue)
+	issues_model.CombineCommentsHistory(issue, time.Now().Unix())
 
 	getBranchData(ctx, issue)
 	if issue.IsPull {
@@ -2070,8 +2063,12 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["RefEndName"] = git.RefName(issue.Ref).ShortName()
 	ctx.Data["NewPinAllowed"] = pinAllowed
 	ctx.Data["PinEnabled"] = setting.Repository.Issue.MaxPinned != 0
+	ctx.Data["OpenGraphTitle"] = issue.Title
+	ctx.Data["OpenGraphURL"] = issue.HTMLURL()
+	ctx.Data["OpenGraphDescription"] = issue.Content
 	ctx.Data["OpenGraphImageURL"] = issue.SummaryCardURL()
 	ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.issues.summary_card_alt", issue.Title, issue.Repo.FullName())
+	ctx.Data["IsBlocked"] = ctx.Doer != nil && user_model.IsBlockedMultiple(ctx, []int64{issue.PosterID, issue.Repo.OwnerID}, ctx.Doer.ID)
 
 	prepareHiddenCommentType(ctx)
 	if ctx.Written() {
@@ -2115,7 +2112,7 @@ func checkBlockedByIssues(ctx *context.Context, blockers []*issues_model.Depende
 			}
 			repoPerms[blocker.RepoID] = perm
 		}
-		if perm.CanReadIssuesOrPulls(blocker.Issue.IsPull) {
+		if perm.CanReadIssuesOrPulls(blocker.IsPull) {
 			canRead = append(canRead, blocker)
 		} else {
 			notPermitted = append(notPermitted, blocker)
@@ -2399,10 +2396,6 @@ func UpdateIssueMilestone(ctx *context.Context) {
 	}
 
 	if ctx.FormBool("htmx") {
-		renderMilestones(ctx)
-		if ctx.Written() {
-			return
-		}
 		prepareHiddenCommentType(ctx)
 		if ctx.Written() {
 			return
@@ -2416,6 +2409,7 @@ func UpdateIssueMilestone(ctx *context.Context) {
 				ctx.ServerError("GetMilestoneByRepoID", err)
 				return
 			}
+			ctx.Data["OpenMilestones"] = true
 		} else {
 			issue.Milestone = nil
 		}
@@ -2773,7 +2767,7 @@ func SearchIssues(ctx *context.Context) {
 		IncludedAnyLabelIDs: includedAnyLabels,
 		MilestoneIDs:        includedMilestones,
 		ProjectID:           projectID,
-		SortBy:              issue_indexer.SortByCreatedDesc,
+		SortBy:              issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
 	}
 
 	if since != 0 {
@@ -2802,9 +2796,10 @@ func SearchIssues(ctx *context.Context) {
 		}
 	}
 
-	// FIXME: It's unsupported to sort by priority repo when searching by indexer,
-	//        it's indeed an regression, but I think it is worth to support filtering by indexer first.
-	_ = ctx.FormInt64("priority_repo_id")
+	priorityRepoID := ctx.FormInt64("priority_repo_id")
+	if priorityRepoID > 0 {
+		searchOpt.PriorityRepoID = optional.Some(priorityRepoID)
+	}
 
 	ids, total, err := issue_indexer.SearchIssues(ctx, searchOpt)
 	if err != nil {
@@ -2942,7 +2937,7 @@ func ListIssues(ctx *context.Context) {
 		IsPull:    isPull,
 		IsClosed:  isClosed,
 		ProjectID: projectID,
-		SortBy:    issue_indexer.SortByCreatedDesc,
+		SortBy:    issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
 	}
 	if since != 0 {
 		searchOpt.UpdatedAfterUnix = optional.Some(since)
@@ -3104,7 +3099,7 @@ func NewComment(ctx *context.Context) {
 		// Check if issue admin/poster changes the status of issue.
 		if (ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) || (ctx.IsSigned && issue.IsPoster(ctx.Doer.ID))) &&
 			(form.Status == "reopen" || form.Status == "close") &&
-			!(issue.IsPull && issue.PullRequest.HasMerged) {
+			(!issue.IsPull || !issue.PullRequest.HasMerged) {
 			// Duplication and conflict check should apply to reopen pull request.
 			var pr *issues_model.PullRequest
 
@@ -3171,13 +3166,7 @@ func NewComment(ctx *context.Context) {
 
 					if prHeadCommitID != headBranchCommitID {
 						// force push to base repo
-						err := git.Push(ctx, pull.HeadRepo.RepoPath(), git.PushOptions{
-							Remote: pull.BaseRepo.RepoPath(),
-							Branch: pull.HeadBranch + ":" + prHeadRef,
-							Force:  true,
-							Env:    repo_module.InternalPushingEnvironment(pull.Issue.Poster, pull.BaseRepo),
-						})
-						if err != nil {
+						if err := pull_service.PushToBaseRepo(ctx, pull); err != nil {
 							ctx.ServerError("force push error", err)
 							return
 						}
@@ -3190,6 +3179,15 @@ func NewComment(ctx *context.Context) {
 			} else {
 				isClosed := form.Status == "close"
 				if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, "", isClosed); err != nil {
+					if errors.Is(err, user_model.ErrBlockedByUser) {
+						if issue.IsPull {
+							ctx.JSONError(ctx.Tr("repo.pulls.blocked_by_user"))
+						} else {
+							ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
+						}
+						return
+					}
+
 					log.Error("ChangeStatus: %v", err)
 
 					if issues_model.IsErrDependenciesLeft(err) {
@@ -3231,7 +3229,7 @@ func NewComment(ctx *context.Context) {
 	comment, err := issue_service.CreateIssueComment(ctx, ctx.Doer, ctx.Repo.Repository, issue, form.Content, attachments)
 	if err != nil {
 		if errors.Is(err, user_model.ErrBlockedByUser) {
-			ctx.JSONError(ctx.Tr("repo.issues.comment.blocked_by_user"))
+			ctx.JSONError(ctx.Tr("repo.comment.blocked_by_user"))
 		} else {
 			ctx.ServerError("CreateIssueComment", err)
 		}
@@ -3581,9 +3579,9 @@ func GetIssueAttachments(ctx *context.Context) {
 	if ctx.Written() {
 		return
 	}
-	attachments := make([]*api.Attachment, len(issue.Attachments))
+	attachments := make([]*api.WebAttachment, len(issue.Attachments))
 	for i := 0; i < len(issue.Attachments); i++ {
-		attachments[i] = convert.ToAttachment(ctx.Repo.Repository, issue.Attachments[i])
+		attachments[i] = convert.ToWebAttachment(ctx.Repo.Repository, issue.Attachments[i])
 	}
 	ctx.JSON(http.StatusOK, attachments)
 }
@@ -3606,7 +3604,7 @@ func GetCommentAttachments(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.Repo.Permission.CanReadIssuesOrPulls(comment.Issue.IsPull) {
+	if !ctx.Repo.CanReadIssuesOrPulls(comment.Issue.IsPull) {
 		ctx.NotFound("CanReadIssuesOrPulls", issues_model.ErrCommentNotExist{})
 		return
 	}
@@ -3616,13 +3614,13 @@ func GetCommentAttachments(ctx *context.Context) {
 		return
 	}
 
-	attachments := make([]*api.Attachment, 0)
 	if err := comment.LoadAttachments(ctx); err != nil {
 		ctx.ServerError("LoadAttachments", err)
 		return
 	}
+	attachments := make([]*api.WebAttachment, len(comment.Attachments))
 	for i := 0; i < len(comment.Attachments); i++ {
-		attachments = append(attachments, convert.ToAttachment(ctx.Repo.Repository, comment.Attachments[i]))
+		attachments[i] = convert.ToWebAttachment(ctx.Repo.Repository, comment.Attachments[i])
 	}
 	ctx.JSON(http.StatusOK, attachments)
 }
@@ -3681,194 +3679,6 @@ func attachmentsHTML(ctx *context.Context, attachments []*repo_model.Attachment,
 		return ""
 	}
 	return attachHTML
-}
-
-type RequestReviewTarget struct {
-	user *user_model.User
-	team *organization.Team
-}
-
-func (t *RequestReviewTarget) ID() int64 {
-	if t.user != nil {
-		return t.user.ID
-	}
-	return t.team.ID
-}
-
-func (t *RequestReviewTarget) Name() string {
-	if t.user != nil {
-		return t.user.GetDisplayName()
-	}
-	return t.team.Name
-}
-
-func (t *RequestReviewTarget) Type() string {
-	if t.user != nil {
-		return "user"
-	}
-	return "team"
-}
-
-// combineRequestReviewComments combine the nearby request review comments as one.
-func combineRequestReviewComments(issue *issues_model.Issue) {
-	var prev, cur *issues_model.Comment
-	for i := 0; i < len(issue.Comments); i++ {
-		cur = issue.Comments[i]
-		if i > 0 {
-			prev = issue.Comments[i-1]
-		}
-		if i == 0 || cur.Type != issues_model.CommentTypeReviewRequest ||
-			(prev != nil && prev.PosterID != cur.PosterID) ||
-			(prev != nil && cur.CreatedUnix-prev.CreatedUnix >= 60) {
-			if cur.Type == issues_model.CommentTypeReviewRequest && (cur.Assignee != nil || cur.AssigneeTeam != nil) {
-				if cur.RemovedAssignee {
-					if cur.AssigneeTeam != nil {
-						cur.RemovedRequestReview = append(cur.RemovedRequestReview, &RequestReviewTarget{team: cur.AssigneeTeam})
-					} else {
-						cur.RemovedRequestReview = append(cur.RemovedRequestReview, &RequestReviewTarget{user: cur.Assignee})
-					}
-				} else {
-					if cur.AssigneeTeam != nil {
-						cur.AddedRequestReview = append(cur.AddedRequestReview, &RequestReviewTarget{team: cur.AssigneeTeam})
-					} else {
-						cur.AddedRequestReview = append(cur.AddedRequestReview, &RequestReviewTarget{user: cur.Assignee})
-					}
-				}
-			}
-			continue
-		}
-
-		// Previous comment is not a review request, so cannot group. Start a new group.
-		if prev.Type != issues_model.CommentTypeReviewRequest {
-			if cur.RemovedAssignee {
-				if cur.AssigneeTeam != nil {
-					cur.RemovedRequestReview = append(cur.RemovedRequestReview, &RequestReviewTarget{team: cur.AssigneeTeam})
-				} else {
-					cur.RemovedRequestReview = append(cur.RemovedRequestReview, &RequestReviewTarget{user: cur.Assignee})
-				}
-			} else {
-				if cur.AssigneeTeam != nil {
-					cur.AddedRequestReview = append(cur.AddedRequestReview, &RequestReviewTarget{team: cur.AssigneeTeam})
-				} else {
-					cur.AddedRequestReview = append(cur.AddedRequestReview, &RequestReviewTarget{user: cur.Assignee})
-				}
-			}
-			continue
-		}
-
-		// Start grouping.
-		if cur.RemovedAssignee {
-			addedIndex := slices.IndexFunc(prev.AddedRequestReview, func(t issues_model.RequestReviewTarget) bool {
-				if cur.AssigneeTeam != nil {
-					return cur.AssigneeTeam.ID == t.ID() && t.Type() == "team"
-				}
-				return cur.Assignee.ID == t.ID() && t.Type() == "user"
-			})
-
-			// If for this target a AddedRequestReview, then we remove that entry. If it's not found, then add it to the RemovedRequestReview.
-			if addedIndex == -1 {
-				if cur.AssigneeTeam != nil {
-					prev.RemovedRequestReview = append(prev.RemovedRequestReview, &RequestReviewTarget{team: cur.AssigneeTeam})
-				} else {
-					prev.RemovedRequestReview = append(prev.RemovedRequestReview, &RequestReviewTarget{user: cur.Assignee})
-				}
-			} else {
-				prev.AddedRequestReview = slices.Delete(prev.AddedRequestReview, addedIndex, addedIndex+1)
-			}
-		} else {
-			removedIndex := slices.IndexFunc(prev.RemovedRequestReview, func(t issues_model.RequestReviewTarget) bool {
-				if cur.AssigneeTeam != nil {
-					return cur.AssigneeTeam.ID == t.ID() && t.Type() == "team"
-				}
-				return cur.Assignee.ID == t.ID() && t.Type() == "user"
-			})
-
-			// If for this target a RemovedRequestReview, then we remove that entry. If it's not found, then add it to the AddedRequestReview.
-			if removedIndex == -1 {
-				if cur.AssigneeTeam != nil {
-					prev.AddedRequestReview = append(prev.AddedRequestReview, &RequestReviewTarget{team: cur.AssigneeTeam})
-				} else {
-					prev.AddedRequestReview = append(prev.AddedRequestReview, &RequestReviewTarget{user: cur.Assignee})
-				}
-			} else {
-				prev.RemovedRequestReview = slices.Delete(prev.RemovedRequestReview, removedIndex, removedIndex+1)
-			}
-		}
-
-		// Propagate creation time.
-		prev.CreatedUnix = cur.CreatedUnix
-
-		// Remove the current comment since it has been combined to prev comment
-		issue.Comments = append(issue.Comments[:i], issue.Comments[i+1:]...)
-		i--
-	}
-}
-
-// combineLabelComments combine the nearby label comments as one.
-func combineLabelComments(issue *issues_model.Issue) {
-	var prev, cur *issues_model.Comment
-	for i := 0; i < len(issue.Comments); i++ {
-		cur = issue.Comments[i]
-		if i > 0 {
-			prev = issue.Comments[i-1]
-		}
-		if i == 0 || cur.Type != issues_model.CommentTypeLabel ||
-			(prev != nil && prev.PosterID != cur.PosterID) ||
-			(prev != nil && cur.CreatedUnix-prev.CreatedUnix >= 60) {
-			if cur.Type == issues_model.CommentTypeLabel && cur.Label != nil {
-				if cur.Content != "1" {
-					cur.RemovedLabels = append(cur.RemovedLabels, cur.Label)
-				} else {
-					cur.AddedLabels = append(cur.AddedLabels, cur.Label)
-				}
-			}
-			continue
-		}
-
-		if cur.Label != nil { // now cur MUST be label comment
-			if prev.Type == issues_model.CommentTypeLabel { // we can combine them only prev is a label comment
-				if cur.Content != "1" {
-					// remove labels from the AddedLabels list if the label that was removed is already
-					// in this list, and if it's not in this list, add the label to RemovedLabels
-					addedAndRemoved := false
-					for i, label := range prev.AddedLabels {
-						if cur.Label.ID == label.ID {
-							prev.AddedLabels = append(prev.AddedLabels[:i], prev.AddedLabels[i+1:]...)
-							addedAndRemoved = true
-							break
-						}
-					}
-					if !addedAndRemoved {
-						prev.RemovedLabels = append(prev.RemovedLabels, cur.Label)
-					}
-				} else {
-					// remove labels from the RemovedLabels list if the label that was added is already
-					// in this list, and if it's not in this list, add the label to AddedLabels
-					removedAndAdded := false
-					for i, label := range prev.RemovedLabels {
-						if cur.Label.ID == label.ID {
-							prev.RemovedLabels = append(prev.RemovedLabels[:i], prev.RemovedLabels[i+1:]...)
-							removedAndAdded = true
-							break
-						}
-					}
-					if !removedAndAdded {
-						prev.AddedLabels = append(prev.AddedLabels, cur.Label)
-					}
-				}
-				prev.CreatedUnix = cur.CreatedUnix
-				// remove the current comment since it has been combined to prev comment
-				issue.Comments = append(issue.Comments[:i], issue.Comments[i+1:]...)
-				i--
-			} else { // if prev is not a label comment, start a new group
-				if cur.Content != "1" {
-					cur.RemovedLabels = append(cur.RemovedLabels, cur.Label)
-				} else {
-					cur.AddedLabels = append(cur.AddedLabels, cur.Label)
-				}
-			}
-		}
-	}
 }
 
 // get all teams that current user can mention
@@ -3959,4 +3769,50 @@ func issuePosters(ctx *context.Context, isPullList bool) {
 		}
 	}
 	ctx.JSON(http.StatusOK, resp)
+}
+
+func getIssueParticipants(ctx *context.Context, issue *issues_model.Issue) []*user_model.User {
+	var (
+		participants = make([]*user_model.User, 1, 10)
+		comment      *issues_model.Comment
+	)
+
+	participants[0] = issue.Poster
+
+	if err := issue.LoadComments(ctx); err != nil {
+		ctx.ServerError("loadComments", err)
+		return nil
+	}
+
+	if err := issue.Comments.LoadPosters(ctx); err != nil {
+		ctx.ServerError("LoadPosters", err)
+		return nil
+	}
+
+	for _, comment = range issue.Comments {
+		if comment.Type == issues_model.CommentTypeComment ||
+			comment.Type == issues_model.CommentTypeReview ||
+			comment.Type == issues_model.CommentTypePullRequestPush {
+			participants = addParticipant(comment.Poster, participants)
+		} else if comment.Type.HasContentSupport() {
+			participants = addParticipant(comment.Poster, participants)
+
+			if comment.Review == nil {
+				continue
+			}
+			if err := comment.Review.LoadCodeComments(ctx); err != nil {
+				ctx.ServerError("Review.LoadCodeComments", err)
+				return nil
+			}
+			for _, codeComments := range comment.Review.CodeComments {
+				for _, lineComments := range codeComments {
+					for _, c := range lineComments {
+						participants = addParticipant(c.Poster, participants)
+					}
+				}
+			}
+		}
+	}
+
+	return participants
 }

@@ -1,5 +1,6 @@
 // Copyright 2015 The Gogs Authors. All rights reserved.
-// Copyright 2018 The Gitea Authors. All rights reserved.
+// Copyright 2018 The Gitea Authors. All rights
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package convert
@@ -11,24 +12,26 @@ import (
 	"strings"
 	"time"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/auth"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/services/gitdiff"
+	actions_model "forgejo.org/models/actions"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/auth"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/gitdiff"
+
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
 )
 
 // ToEmail convert models.EmailAddress to api.Email
@@ -185,7 +188,12 @@ func ToBranchProtection(ctx context.Context, bp *git_model.ProtectedBranch, repo
 }
 
 // ToTag convert a git.Tag to an api.Tag
-func ToTag(repo *repo_model.Repository, t *git.Tag) *api.Tag {
+func ToTag(ctx context.Context, repo *repo_model.Repository, t *git.Tag) (*api.Tag, error) {
+	archiveDownloadCount, err := repo_model.GetArchiveDownloadCountForTagName(ctx, repo.ID, t.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.Tag{
 		Name:                 t.Name,
 		Message:              strings.TrimSpace(t.Message),
@@ -193,8 +201,8 @@ func ToTag(repo *repo_model.Repository, t *git.Tag) *api.Tag {
 		Commit:               ToCommitMeta(repo, t),
 		ZipballURL:           util.URLJoin(repo.HTMLURL(), "archive", t.Name+".zip"),
 		TarballURL:           util.URLJoin(repo.HTMLURL(), "archive", t.Name+".tar.gz"),
-		ArchiveDownloadCount: t.ArchiveDownloadCount,
-	}
+		ArchiveDownloadCount: archiveDownloadCount,
+	}, nil
 }
 
 // ToActionTask convert a actions_model.ActionTask to an api.ActionTask
@@ -236,7 +244,7 @@ func ToVerification(ctx context.Context, c *git.Commit) *api.PayloadCommitVerifi
 	if verif.SigningUser != nil {
 		commitVerification.Signer = &api.PayloadUser{
 			Name:  verif.SigningUser.Name,
-			Email: verif.SigningUser.Email,
+			Email: verif.SigningEmail,
 		}
 	}
 	return commitVerification
@@ -389,7 +397,12 @@ func ToTeams(ctx context.Context, teams []*organization.Team, loadOrgs bool) ([]
 }
 
 // ToAnnotatedTag convert git.Tag to api.AnnotatedTag
-func ToAnnotatedTag(ctx context.Context, repo *repo_model.Repository, t *git.Tag, c *git.Commit) *api.AnnotatedTag {
+func ToAnnotatedTag(ctx context.Context, repo *repo_model.Repository, t *git.Tag, c *git.Commit) (*api.AnnotatedTag, error) {
+	archiveDownloadCount, err := repo_model.GetArchiveDownloadCountForTagName(ctx, repo.ID, t.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.AnnotatedTag{
 		Tag:                  t.Name,
 		SHA:                  t.ID.String(),
@@ -398,8 +411,8 @@ func ToAnnotatedTag(ctx context.Context, repo *repo_model.Repository, t *git.Tag
 		URL:                  util.URLJoin(repo.APIURL(), "git/tags", t.ID.String()),
 		Tagger:               ToCommitUser(t.Tagger),
 		Verification:         ToVerification(ctx, c),
-		ArchiveDownloadCount: t.ArchiveDownloadCount,
-	}
+		ArchiveDownloadCount: archiveDownloadCount,
+	}, nil
 }
 
 // ToAnnotatedTagObject convert a git.Commit to an api.AnnotatedTagObject
@@ -507,4 +520,28 @@ func ToChangedFile(f *gitdiff.DiffFile, repo *repo_model.Repository, commit stri
 	}
 
 	return file
+}
+
+func ToActionRunner(ctx context.Context, runner *actions_model.ActionRunner) *api.ActionRunner {
+	status := runner.Status()
+	apiStatus := "offline"
+	if runner.IsOnline() {
+		apiStatus = "online"
+	}
+	labels := make([]*api.ActionRunnerLabel, len(runner.AgentLabels))
+	for i, label := range runner.AgentLabels {
+		labels[i] = &api.ActionRunnerLabel{
+			ID:   int64(i),
+			Name: label,
+			Type: "custom",
+		}
+	}
+	return &api.ActionRunner{
+		ID:     runner.ID,
+		Name:   runner.Name,
+		Status: apiStatus,
+		Busy:   status == runnerv1.RunnerStatus_RUNNER_STATUS_ACTIVE,
+		// Ephemeral: runner.Ephemeral,
+		Labels: labels,
+	}
 }

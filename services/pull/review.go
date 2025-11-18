@@ -6,25 +6,22 @@ package pull
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"regexp"
-	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	notify_service "code.gitea.io/gitea/services/notify"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
+	notify_service "forgejo.org/services/notify"
 )
-
-var notEnoughLines = regexp.MustCompile(`fatal: file .* has only \d+ lines?`)
 
 // ErrDismissRequestOnClosedPR represents an error when an user tries to dismiss a review associated to a closed or merged PR.
 type ErrDismissRequestOnClosedPR struct{}
@@ -47,8 +44,8 @@ func (err ErrDismissRequestOnClosedPR) Unwrap() error {
 // If the line got changed the comment is going to be invalidated.
 func checkInvalidation(ctx context.Context, c *issues_model.Comment, repo *git.Repository, branch string) error {
 	// FIXME differentiate between previous and proposed line
-	commit, err := repo.LineBlame(branch, repo.Path, c.TreePath, uint(c.UnsignedLine()))
-	if err != nil && (strings.Contains(err.Error(), "fatal: no such path") || notEnoughLines.MatchString(err.Error())) {
+	commit, _, err := repo.LineBlame(branch, c.TreePath, c.UnsignedLine())
+	if err != nil && (errors.Is(err, git.ErrBlameFileDoesNotExist) || errors.Is(err, git.ErrBlameFileNotEnoughLines)) {
 		c.Invalidated = true
 		return issues_model.UpdateCommentInvalidate(ctx, c)
 	}
@@ -181,7 +178,8 @@ func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.
 
 // CreateCodeCommentKnownReviewID creates a plain code comment at the specified line / path
 func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, repo *repo_model.Repository, issue *issues_model.Issue, content, treePath string, line, reviewID int64, attachments []string) (*issues_model.Comment, error) {
-	var commitID, patch string
+	var commitID, blamedCommitID, patch string
+	blamedLine := line
 	if err := issue.LoadPullRequest(ctx); err != nil {
 		return nil, fmt.Errorf("LoadPullRequest: %w", err)
 	}
@@ -229,23 +227,28 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 			// FIXME validate treePath
 			// Get latest commit referencing the commented line
 			// No need for get commit for base branch changes
-			commit, err := gitRepo.LineBlame(head, gitRepo.Path, treePath, uint(line))
+			commit, lineres, err := gitRepo.LineBlame(head, treePath, uint64(line))
 			if err == nil {
-				commitID = commit.ID.String()
-			} else if !(strings.Contains(err.Error(), "exit status 128 - fatal: no such path") || notEnoughLines.MatchString(err.Error())) {
+				blamedCommitID = commit.ID.String()
+				blamedLine = int64(lineres)
+			} else if !errors.Is(err, git.ErrBlameFileDoesNotExist) && !errors.Is(err, git.ErrBlameFileNotEnoughLines) {
 				return nil, fmt.Errorf("LineBlame[%s, %s, %s, %d]: %w", pr.GetGitRefName(), gitRepo.Path, treePath, line, err)
 			}
+		} else {
+			blamedCommitID = commitID
 		}
 	}
 
 	// Only fetch diff if comment is review comment
 	if len(patch) == 0 && reviewID != 0 {
-		headCommitID, err := gitRepo.GetRefCommitID(pr.GetGitRefName())
-		if err != nil {
-			return nil, fmt.Errorf("GetRefCommitID[%s]: %w", pr.GetGitRefName(), err)
-		}
 		if len(commitID) == 0 {
-			commitID = headCommitID
+			commitID, err = gitRepo.GetRefCommitID(head)
+			if err != nil {
+				return nil, fmt.Errorf("GetRefCommitID[%s]: %w", head, err)
+			}
+		}
+		if len(blamedCommitID) == 0 {
+			blamedCommitID = commitID
 		}
 		reader, writer := io.Pipe()
 		defer func() {
@@ -253,8 +256,8 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 			_ = writer.Close()
 		}()
 		go func() {
-			if err := git.GetRepoRawDiffForFile(gitRepo, pr.MergeBase, headCommitID, git.RawDiffNormal, treePath, writer); err != nil {
-				_ = writer.CloseWithError(fmt.Errorf("GetRawDiffForLine[%s, %s, %s, %s]: %w", gitRepo.Path, pr.MergeBase, headCommitID, treePath, err))
+			if err := git.GetRepoRawDiffForFile(gitRepo, pr.MergeBase, commitID, git.RawDiffNormal, treePath, writer); err != nil {
+				_ = writer.CloseWithError(fmt.Errorf("GetRawDiffForLine[%s, %s, %s, %s]: %w", gitRepo.Path, pr.MergeBase, commitID, treePath, err))
 				return
 			}
 			_ = writer.Close()
@@ -272,9 +275,9 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 		Repo:        repo,
 		Issue:       issue,
 		Content:     content,
-		LineNum:     line,
+		LineNum:     blamedLine,
 		TreePath:    treePath,
-		CommitSHA:   commitID,
+		CommitSHA:   blamedCommitID,
 		ReviewID:    reviewID,
 		Patch:       patch,
 		Invalidated: invalidated,
@@ -301,9 +304,15 @@ func SubmitReview(ctx context.Context, doer *user_model.User, gitRepo *git.Repos
 		if headCommitID == commitID {
 			stale = false
 		} else {
-			stale, err = checkIfPRContentChanged(ctx, pr, commitID, headCommitID)
+			testPatchCtx, err := getTestPatchCtx(ctx, pr, true)
+			defer testPatchCtx.close()
 			if err != nil {
 				return nil, nil, err
+			}
+
+			stale, err = testPatchCtx.gitRepo.CheckIfDiffDiffers(testPatchCtx.baseRev, commitID, headCommitID, testPatchCtx.env)
+			if err != nil {
+				return nil, nil, fmt.Errorf("CheckIfDiffDiffers: %w", err)
 			}
 		}
 	}
@@ -387,7 +396,7 @@ func DismissReview(ctx context.Context, reviewID, repoID int64, message string, 
 	}
 
 	if review.Type != issues_model.ReviewTypeApprove && review.Type != issues_model.ReviewTypeReject {
-		return nil, fmt.Errorf("not need to dismiss this review because it's type is not Approve or change request")
+		return nil, errors.New("not need to dismiss this review because it's type is not Approve or change request")
 	}
 
 	// load data for notify
@@ -397,7 +406,7 @@ func DismissReview(ctx context.Context, reviewID, repoID int64, message string, 
 
 	// Check if the review's repoID is the one we're currently expecting.
 	if review.Issue.RepoID != repoID {
-		return nil, fmt.Errorf("reviews's repository is not the same as the one we expect")
+		return nil, errors.New("reviews's repository is not the same as the one we expect")
 	}
 
 	issue := review.Issue

@@ -9,18 +9,18 @@ import (
 	"net/url"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	unit_model "code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	repo_service "code.gitea.io/gitea/services/repository"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	repo_service "forgejo.org/services/repository"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,7 +39,7 @@ func TestAPIUserReposNotLogin(t *testing.T) {
 		unittest.Cond("is_private = ?", false))
 	assert.Len(t, apiRepos, expectedLen)
 	for _, repo := range apiRepos {
-		assert.EqualValues(t, user.ID, repo.Owner.ID)
+		assert.Equal(t, user.ID, repo.Owner.ID)
 		assert.False(t, repo.Private)
 	}
 }
@@ -268,25 +268,25 @@ func TestAPIViewRepo(t *testing.T) {
 	resp := MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &repo)
 	assert.EqualValues(t, 1, repo.ID)
-	assert.EqualValues(t, "repo1", repo.Name)
-	assert.EqualValues(t, 2, repo.Releases)
-	assert.EqualValues(t, 1, repo.OpenIssues)
-	assert.EqualValues(t, 3, repo.OpenPulls)
+	assert.Equal(t, "repo1", repo.Name)
+	assert.Equal(t, 2, repo.Releases)
+	assert.Equal(t, 1, repo.OpenIssues)
+	assert.Equal(t, 3, repo.OpenPulls)
 
 	req = NewRequest(t, "GET", "/api/v1/repos/user12/repo10")
 	resp = MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &repo)
 	assert.EqualValues(t, 10, repo.ID)
-	assert.EqualValues(t, "repo10", repo.Name)
-	assert.EqualValues(t, 1, repo.OpenPulls)
-	assert.EqualValues(t, 1, repo.Forks)
+	assert.Equal(t, "repo10", repo.Name)
+	assert.Equal(t, 1, repo.OpenPulls)
+	assert.Equal(t, 1, repo.Forks)
 
 	req = NewRequest(t, "GET", "/api/v1/repos/user5/repo4")
 	resp = MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &repo)
 	assert.EqualValues(t, 4, repo.ID)
-	assert.EqualValues(t, "repo4", repo.Name)
-	assert.EqualValues(t, 1, repo.Stars)
+	assert.Equal(t, "repo4", repo.Name)
+	assert.Equal(t, 1, repo.Stars)
 }
 
 func TestAPIOrgRepos(t *testing.T) {
@@ -339,9 +339,7 @@ func TestAPIOrgReposWithCodeUnitDisabled(t *testing.T) {
 	var units []unit_model.Type
 	units = append(units, unit_model.TypeCode)
 
-	if err := repo_service.UpdateRepositoryUnits(db.DefaultContext, repo21, nil, units); err != nil {
-		assert.Fail(t, "should have been able to delete code repository unit; failed to %v", err)
-	}
+	require.NoError(t, repo_service.UpdateRepositoryUnits(db.DefaultContext, repo21, nil, units))
 	assert.False(t, repo21.UnitEnabled(db.DefaultContext, unit_model.TypeCode))
 
 	session := loginUser(t, "user2")
@@ -378,11 +376,11 @@ func TestAPIRepoMigrate(t *testing.T) {
 		cloneURL, repoName string
 		expectedStatus     int
 	}{
-		{ctxUserID: 1, userID: 2, cloneURL: "https://github.com/go-gitea/test_repo.git", repoName: "git-admin", expectedStatus: http.StatusCreated},
-		{ctxUserID: 2, userID: 2, cloneURL: "https://github.com/go-gitea/test_repo.git", repoName: "git-own", expectedStatus: http.StatusCreated},
-		{ctxUserID: 2, userID: 1, cloneURL: "https://github.com/go-gitea/test_repo.git", repoName: "git-bad", expectedStatus: http.StatusForbidden},
-		{ctxUserID: 2, userID: 3, cloneURL: "https://github.com/go-gitea/test_repo.git", repoName: "git-org", expectedStatus: http.StatusCreated},
-		{ctxUserID: 2, userID: 6, cloneURL: "https://github.com/go-gitea/test_repo.git", repoName: "git-bad-org", expectedStatus: http.StatusForbidden},
+		{ctxUserID: 1, userID: 2, cloneURL: "https://code.forgejo.org/forgejo/migration-test.git", repoName: "git-admin", expectedStatus: http.StatusCreated},
+		{ctxUserID: 2, userID: 2, cloneURL: "https://code.forgejo.org/forgejo/migration-test.git", repoName: "git-own", expectedStatus: http.StatusCreated},
+		{ctxUserID: 2, userID: 1, cloneURL: "https://code.forgejo.org/forgejo/migration-test.git", repoName: "git-bad", expectedStatus: http.StatusForbidden},
+		{ctxUserID: 2, userID: 3, cloneURL: "https://code.forgejo.org/forgejo/migration-test.git", repoName: "git-org", expectedStatus: http.StatusCreated},
+		{ctxUserID: 2, userID: 6, cloneURL: "https://code.forgejo.org/forgejo/migration-test.git", repoName: "git-bad-org", expectedStatus: http.StatusForbidden},
 		{ctxUserID: 2, userID: 3, cloneURL: "https://localhost:3000/user/test_repo.git", repoName: "private-ip", expectedStatus: http.StatusUnprocessableEntity},
 		{ctxUserID: 2, userID: 3, cloneURL: "https://10.0.0.1/user/test_repo.git", repoName: "private-ip", expectedStatus: http.StatusUnprocessableEntity},
 	}
@@ -396,27 +394,15 @@ func TestAPIRepoMigrate(t *testing.T) {
 			CloneAddr:   testCase.cloneURL,
 			RepoOwnerID: testCase.userID,
 			RepoName:    testCase.repoName,
+			Wiki:        true,
 		}).AddTokenAuth(token)
 		resp := MakeRequest(t, req, NoExpectedStatus)
-		if resp.Code == http.StatusUnprocessableEntity {
-			respJSON := map[string]string{}
-			DecodeJSON(t, resp, &respJSON)
-			switch respJSON["message"] {
-			case "Remote visit addressed rate limitation.":
-				t.Log("test hit github rate limitation")
-			case "You can not import from disallowed hosts.":
-				assert.EqualValues(t, "private-ip", testCase.repoName)
-			default:
-				assert.FailNow(t, "unexpected error '%v' on url '%s'", respJSON["message"], testCase.cloneURL)
-			}
-		} else {
-			assert.EqualValues(t, testCase.expectedStatus, resp.Code)
-		}
+		require.Equalf(t, testCase.expectedStatus, resp.Code, "unexpected status (may be due to throttling): '%v' on url '%s'", resp.Body.String(), testCase.cloneURL)
 	}
 }
 
 func TestAPIRepoMigrateConflict(t *testing.T) {
-	onGiteaRun(t, testAPIRepoMigrateConflict)
+	onApplicationRun(t, testAPIRepoMigrateConflict)
 }
 
 func testAPIRepoMigrateConflict(t *testing.T, u *url.URL) {
@@ -429,13 +415,13 @@ func testAPIRepoMigrateConflict(t *testing.T, u *url.URL) {
 		httpContext := baseAPITestContext
 
 		httpContext.Reponame = "repo-tmp-17"
-		t.Run("CreateRepo", doAPICreateRepository(httpContext, false, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
+		t.Run("CreateRepo", doAPICreateRepository(httpContext, nil, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
 
 		user, err := user_model.GetUserByName(db.DefaultContext, httpContext.Username)
 		require.NoError(t, err)
 		userID := user.ID
 
-		cloneURL := "https://github.com/go-gitea/test_repo.git"
+		cloneURL := "https://code.forgejo.org/forgejo/migration-test.git"
 
 		req := NewRequestWithJSON(t, "POST", "/api/v1/repos/migrate",
 			&api.MigrateRepoOptions{
@@ -499,7 +485,7 @@ func TestAPIOrgRepoCreate(t *testing.T) {
 }
 
 func TestAPIRepoCreateConflict(t *testing.T) {
-	onGiteaRun(t, testAPIRepoCreateConflict)
+	onApplicationRun(t, testAPIRepoCreateConflict)
 }
 
 func testAPIRepoCreateConflict(t *testing.T, u *url.URL) {
@@ -512,7 +498,7 @@ func testAPIRepoCreateConflict(t *testing.T, u *url.URL) {
 		httpContext := baseAPITestContext
 
 		httpContext.Reponame = "repo-tmp-17"
-		t.Run("CreateRepo", doAPICreateRepository(httpContext, false, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
+		t.Run("CreateRepo", doAPICreateRepository(httpContext, nil, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
 
 		req := NewRequestWithJSON(t, "POST", "/api/v1/user/repos",
 			&api.CreateRepoOption{
@@ -748,7 +734,7 @@ func TestAPIViewRepoObjectFormat(t *testing.T) {
 	req := NewRequest(t, "GET", "/api/v1/repos/user2/repo1")
 	resp := MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &repo)
-	assert.EqualValues(t, "sha1", repo.ObjectFormatName)
+	assert.Equal(t, "sha1", repo.ObjectFormatName)
 }
 
 func TestAPIRepoCommitPull(t *testing.T) {
@@ -763,4 +749,59 @@ func TestAPIRepoCommitPull(t *testing.T) {
 
 	req = NewRequest(t, "GET", "/api/v1/repos/user2/repo1/commits/not-a-commit/pull")
 	MakeRequest(t, req, http.StatusNotFound)
+}
+
+func TestAPIListOwnRepoSorting(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository, auth_model.AccessTokenScopeReadUser)
+
+	t.Run("No sorting", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		MakeRequest(t, NewRequest(t, "GET", "/api/v1/user/repos").AddTokenAuth(token), http.StatusOK)
+	})
+
+	t.Run("ID sorting", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		var repos []api.Repository
+		resp := MakeRequest(t, NewRequest(t, "GET", "/api/v1/user/repos?limit=2&order_by=id").AddTokenAuth(token), http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+
+		assert.Len(t, repos, 2)
+		assert.EqualValues(t, 1, repos[0].ID)
+		assert.EqualValues(t, 2, repos[1].ID)
+	})
+
+	t.Run("Name sorting", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		var repos []api.Repository
+		resp := MakeRequest(t, NewRequest(t, "GET", "/api/v1/user/repos?limit=2&order_by=name").AddTokenAuth(token), http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+
+		assert.Len(t, repos, 2)
+		assert.Equal(t, "big_test_private_4", repos[0].Name)
+		// Postgres doesn't do ascii sorting.
+		if setting.Database.Type.IsPostgreSQL() {
+			assert.Equal(t, "commitsonpr", repos[1].Name)
+		} else {
+			assert.Equal(t, "commits_search_test", repos[1].Name)
+		}
+	})
+
+	t.Run("Reverse alphabetic sorting", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		var repos []api.Repository
+		resp := MakeRequest(t, NewRequest(t, "GET", "/api/v1/user/repos?limit=2&order_by=reversealphabetically").AddTokenAuth(token), http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+
+		assert.Len(t, repos, 2)
+		assert.Equal(t, "utf8", repos[0].Name)
+		assert.Equal(t, "test_workflows", repos[1].Name)
+	})
 }
