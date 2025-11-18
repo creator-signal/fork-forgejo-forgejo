@@ -233,8 +233,8 @@ func CreateTeam(ctx *context.APIContext) {
 	if team.AccessMode < perm.AccessModeAdmin {
 		if len(form.UnitsMap) > 0 {
 			attachTeamUnitsMap(team, form.UnitsMap)
-		} else if len(form.Units) > 0 {
-			attachTeamUnits(team, form.Units)
+		} else if len(form.Units) > 0 { //nolint:staticcheck
+			attachTeamUnits(team, form.Units) //nolint:staticcheck
 		} else {
 			ctx.Error(http.StatusInternalServerError, "getTeamUnits", errors.New("units permission should not be empty"))
 			return
@@ -274,6 +274,7 @@ func EditTeam(ctx *context.APIContext) {
 	//   in: path
 	//   description: id of the team to edit
 	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: body
 	//   in: body
@@ -327,8 +328,8 @@ func EditTeam(ctx *context.APIContext) {
 	if team.AccessMode < perm.AccessModeAdmin {
 		if len(form.UnitsMap) > 0 {
 			attachTeamUnitsMap(team, form.UnitsMap)
-		} else if len(form.Units) > 0 {
-			attachTeamUnits(team, form.Units)
+		} else if len(form.Units) > 0 { //nolint:staticcheck
+			attachTeamUnits(team, form.Units) //nolint:staticcheck
 		}
 	} else {
 		attachAdminTeamUnits(team)
@@ -790,6 +791,7 @@ func SearchTeam(ctx *context.APIContext) {
 	//     description: "SearchResults of a successful search"
 	//     schema:
 	//       type: object
+	//       title: "TeamSearchResults"
 	//       properties:
 	//         ok:
 	//           type: boolean

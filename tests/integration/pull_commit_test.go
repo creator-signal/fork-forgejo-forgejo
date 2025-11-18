@@ -77,7 +77,7 @@ func TestPullCommitSignature(t *testing.T) {
 	fromBranch := "master"
 	toBranch := "branch-signed"
 
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		// Use a new GNUPGPHOME to avoid messing with the existing GPG keyring.
 		tmpDir := t.TempDir()
 		require.NoError(t, os.Chmod(tmpDir, 0o700))
@@ -137,7 +137,7 @@ func TestPullCommitSignature(t *testing.T) {
 			resp := testCtx.Session.MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			htmlDoc.AssertElement(t, "#diff-commit-header .commit-header-row.message.isSigned.isVerified", true)
+			htmlDoc.AssertElement(t, "#diff-commit-header .signature-row.message.isSigned.isVerified", true)
 		})
 	})
 }

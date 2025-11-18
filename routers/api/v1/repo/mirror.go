@@ -370,11 +370,7 @@ func CreatePushMirror(ctx *context.APIContext, mirrorOption *api.CreatePushMirro
 		return
 	}
 
-	remoteSuffix, err := util.CryptoRandomString(10)
-	if err != nil {
-		ctx.ServerError("CryptoRandomString", err)
-		return
-	}
+	remoteSuffix := util.CryptoRandomString(util.RandomStringLow)
 
 	remoteAddress, err := util.SanitizeURL(address)
 	if err != nil {
@@ -442,6 +438,8 @@ func HandleRemoteAddressError(ctx *context.APIContext, err error) {
 			ctx.Error(http.StatusBadRequest, "CreatePushMirror", "Invalid Url ")
 		case addrErr.IsPermissionDenied:
 			ctx.Error(http.StatusUnauthorized, "CreatePushMirror", "Permission denied")
+		case addrErr.HasCredentials:
+			ctx.Error(http.StatusBadRequest, "CreatePushMirror", "The URL contains credentials")
 		default:
 			ctx.Error(http.StatusBadRequest, "CreatePushMirror", "Unknown error")
 		}

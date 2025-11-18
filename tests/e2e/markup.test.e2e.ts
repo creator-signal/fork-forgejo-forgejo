@@ -3,10 +3,10 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {save_visual, test} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
-test('markup with #xyz-mode-only', async ({page}, workerInfo) => {
-  test.skip(['webkit', 'Mobile Safari'].includes(workerInfo.project.name), 'Newest version contains a regression');
+test('markup with #xyz-mode-only', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
@@ -14,5 +14,5 @@ test('markup with #xyz-mode-only', async ({page}, workerInfo) => {
   await expect(comment).toBeVisible();
   await expect(comment.locator('[src$="#gh-light-mode-only"]')).toBeVisible();
   await expect(comment.locator('[src$="#gh-dark-mode-only"]')).toBeHidden();
-  await save_visual(page);
+  await screenshot(page);
 });

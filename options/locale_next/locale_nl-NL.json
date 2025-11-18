@@ -1,4 +1,16 @@
 {
+    "fork.n_forks": {
+        "one": "%s fork",
+        "other": "%s forks"
+    },
+    "stars.n_stars": {
+        "one": "%s ster",
+        "other": "%s sterren"
+    },
+    "release.n_downloads": {
+        "one": "%s download",
+        "other": "%s downloads"
+    },
     "repo.pulls.merged_title_desc": {
         "one": "heeft %[1]d commit van <code>%[2]s</code> samengevoegd in <code>%[3]s</code> %[4]s",
         "other": "heeft %[1]d commits van <code>%[2]s</code> samengevoegd in <code>%[3]s</code> %[4]s"
@@ -122,7 +134,71 @@
     "migrate.pagure.incorrect_url": "Er is een onjuiste URL voor de bronrepository opgegeven",
     "migrate.pagure.project_url": "Pagure-project URL",
     "migrate.pagure.project_example": "De url van het Pagure-project, bijvoorbeeld https://pagure.io/pagure",
-    "migrate.pagure.token_label": "Token",
-    "migrate.pagure.token_body_a": "Geef een Pagure API-token met toegang tot de privé-issues om een repository te maken met alleen de privé-issues erin",
-    "migrate.pagure.token_body_b": "Zorg ervoor dat u de vlag voor privé-repository hierboven instelt als u wilt dat deze repository privé is"
+    "migrate.pagure.token_label": "Pagure API-token",
+    "migrate.github.description": "Migreer gegevens van github.com of GitHub Enterprise server.",
+    "migrate.git.description": "Migreer een repositorie van elke Git service.",
+    "migrate.gitea.description": "Gegevens overzetten van gitea.com of andere Gitea instanties.",
+    "migrate.gitlab.description": "Gegevens migreren van gitlab.com of andere GitLab-instanties.",
+    "migrate.gogs.description": "Gegevens overzetten van notabug.org of andere Gogs instanties.",
+    "migrate.onedev.description": "Gegevens overzetten van code.onedev.io of andere OneDev instanties.",
+    "migrate.gitbucket.description": "Gegevens migreren van GitBucket instanties.",
+    "migrate.codebase.description": "Gegevens migreren van codebasehq.com.",
+    "migrate.forgejo.description": "Migreer data van codeberg.org of andere Forgejo instanties.",
+    "settings.twofa_unroll_unavailable": "Tweefactorauthenticatie is vereist voor uw account en kan niet worden uitgeschakeld.",
+    "admin.config.security": "Beveiligingsconfiguratie",
+    "admin.config.global_2fa_requirement.title": "Globale vereiste van tweefactorauthenticatie",
+    "admin.config.global_2fa_requirement.none": "Nee",
+    "admin.config.global_2fa_requirement.all": "Alle gebruikers",
+    "admin.config.global_2fa_requirement.admin": "Beheerders",
+    "settings.twofa_reenroll": "Herinschrijven voor tweefactorauthenticatie",
+    "settings.twofa_reenroll.description": "Herhaal uw tweefactorauthenticatie",
+    "settings.must_enable_2fa": "Deze Forgejo-instantie vereist dat gebruikers tweefactorauthenticatie inschakelen voordat ze toegang krijgen tot hun accounts.",
+    "user.ghost.tooltip": "Deze gebruiker is verwijderd of kan niet worden gevonden.",
+    "error.must_enable_2fa": "Deze Forgejo-instantie vereist dat gebruikers tweefactorauthenticatie inschakelen voordat ze toegang krijgen tot hun accounts. Schakel dit in op: %s",
+    "migrate.form.error.url_credentials": "De URL bevat inloggegevens. Vul deze in de velden voor gebruikersnaam en wachtwoord respectievelijk",
+    "actions.runs.view_most_recent_run": "Bekijk de meest recente run",
+    "actions.runs.run_attempt_label": "Uitvoerpoging #%[1]s (%[2]s)",
+    "actions.runs.viewing_out_of_date_run": "U bekijkt een verouderde uitvoer van deze opdracht die %[1]s is uitgevoerd.",
+    "repo.pulls.maintainers_can_edit": "Maintainers kan deze pull request bewerken.",
+    "repo.pulls.maintainers_cannot_edit": "Maintainers kunnen deze pull request niet bewerken.",
+    "pulse.n_active_issues": {
+        "one": "%s actieve issue",
+        "other": "%s actieve issues"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s actieve pull request",
+        "other": "%s actieve pull requests"
+    },
+    "watch.n_watchers": {
+        "one": "%s volger",
+        "other": "%s volgers"
+    },
+    "mail.issue.action.close_by_commit": "%[1]s sloot %[2]s in commit %[3]s.",
+    "migrate.pagure.private_issues.summary": "Privé-issues (optioneel)",
+    "migrate.pagure.private_issues.description": "Deze functie is ontworpen om een tweede repository aan te maken met alleen privé-issues van je Pagure project voor archiefdoeleinden. Voer eerst een normale migratie uit (zonder token) om alle publieke content te importeren. Als u vervolgens privé-issues wilt bewaren, maak dan een aparte repository aan met deze tokenoptie om die privé-issues te archiveren.",
+    "migrate.pagure.private_issues.warning": "Zorg ervoor dat je de repository zichtbaarheid hierboven op Privé zet als je de API sleutel gebruikt om privézaken te importeren. Dit voorkomt dat je per ongeluk privé-inhoud blootstelt in een openbare repository.",
+    "migrate.pagure.token.placeholder": "Alleen voor het aanmaken van een privé-archief met issues",
+    "actions.workflow.job_parsing_error": "Taken in workflow kunnen niet worden geparseerd: %v",
+    "actions.workflow.event_detection_error": "Ondersteunde gebeurtenissen in workflow kunnen niet worden geparseerd: %v",
+    "actions.workflow.pre_execution_error": "Workflow is niet uitgevoerd vanwege een fout die de uitvoeringspoging blokkeerde.",
+    "teams.add_all_repos.modal.header": "Alle repositories toevoegen",
+    "teams.remove_all_repos.modal.header": "Alle repositories verwijderen",
+    "repo.pulls.poster_manage_approval": "Goedkeuring beheren",
+    "repo.pulls.poster_requires_approval": "Sommige werkstromen zijn <a href=\"%[1]s\">wachtend om beoordeeld te worden.</a>",
+    "repo.pulls.poster_requires_approval.tooltip": "De auteur van dit pull request wordt niet vertrouwd om workflows uit te voeren die worden getriggerd door een pull request dat is aangemaakt vanuit een forked repository of met AGit. De werkstromen die worden geactiveerd door een `pull_request` evenement zullen niet worden uitgevoerd totdat ze zijn goedgekeurd.",
+    "repo.pulls.poster_is_trusted": "De auteur van dit pull request is <a href=\"%[1]s\">altijd vertrouwd om werkstromen uit te voeren.</a>",
+    "repo.pulls.poster_is_trusted.tooltip": "De auteur van dit pull request is expliciet vertrouwd om workflows uit te voeren die worden geactiveerd door een `pull_request` evenement.",
+    "repo.pulls.poster_trust_deny": "Weigeren",
+    "repo.pulls.poster_trust_deny.tooltip": "De workflows die op goedkeuring wachten, worden geannuleerd.",
+    "repo.pulls.poster_trust_once": "Eenmaal goedkeuren",
+    "repo.pulls.poster_trust_once.tooltip": "De workflows die getriggerd worden door een `pull_request` evenement zullen op deze commit draaien, maar zullen goedgekeurd moeten worden voor alle toekomstige commits die naar dit pull request gepushed worden.",
+    "repo.pulls.poster_trust_always": "Altijd goedkeuren",
+    "repo.pulls.poster_trust_always.tooltip": "De werkstromen die getriggerd worden door een `pull_request` evenement zullen op deze commit draaien en er zal geen noodzaak zijn om runs van dit pull request of toekomstige pull requests, gemaakt door dezelfde gebruiker, goed te keuren.",
+    "repo.pulls.poster_trust_revoke": "Intrekken",
+    "repo.pulls.poster_trust_revoke.tooltip": "De auteur van dit pull request zal niet langer worden vertrouwd om werkstromen uit te voeren die worden geactiveerd door een `pull_request` evenement, elke run zal handmatig moeten worden goedgekeurd.",
+    "admin.dashboard.actions_action_user": "Vertrouwen in acties van Forgejo intrekken voor inactieve gebruikers",
+    "actions.status.diagnostics.waiting": {
+        "one": "Wachten op een runner met het volgende label: %s",
+        "other": "Wachten op een runner met de volgende labels: %s"
+    }
 }

@@ -23,6 +23,7 @@ import (
 	"forgejo.org/modules/storage"
 	"forgejo.org/modules/timeutil"
 	notify_service "forgejo.org/services/notify"
+	"forgejo.org/services/stats"
 )
 
 // NewIssue creates new issue with labels for repository.
@@ -197,8 +198,6 @@ func DeleteIssue(ctx context.Context, doer *user_model.User, gitRepo *git.Reposi
 		}
 	}
 
-	notify_service.DeleteIssue(ctx, doer, issue)
-
 	return nil
 }
 
@@ -265,39 +264,6 @@ func deleteIssue(ctx context.Context, issue *issues_model.Issue) error {
 		return err
 	}
 
-	if _, err := e.ID(issue.ID).NoAutoCondition().Delete(issue); err != nil {
-		return err
-	}
-
-	// update the total issue numbers
-	if err := repo_model.UpdateRepoIssueNumbers(ctx, issue.RepoID, issue.IsPull, false); err != nil {
-		return err
-	}
-	// if the issue is closed, update the closed issue numbers
-	if issue.IsClosed {
-		if err := repo_model.UpdateRepoIssueNumbers(ctx, issue.RepoID, issue.IsPull, true); err != nil {
-			return err
-		}
-	}
-
-	if err := issues_model.UpdateMilestoneCounters(ctx, issue.MilestoneID); err != nil {
-		return fmt.Errorf("error updating counters for milestone id %d: %w",
-			issue.MilestoneID, err)
-	}
-
-	if err := activities_model.DeleteIssueActions(ctx, issue.RepoID, issue.ID, issue.Index); err != nil {
-		return err
-	}
-
-	// find attachments related to this issue and remove them
-	if err := issue.LoadAttributes(ctx); err != nil {
-		return err
-	}
-
-	for i := range issue.Attachments {
-		system_model.RemoveStorageWithNotice(ctx, storage.Attachments, "Delete issue attachment", issue.Attachments[i].RelativePath())
-	}
-
 	// delete all database data still assigned to this issue
 	if err := db.DeleteBeans(ctx,
 		&issues_model.ContentHistory{IssueID: issue.ID},
@@ -319,6 +285,36 @@ func deleteIssue(ctx context.Context, issue *issues_model.Issue) error {
 		&issues_model.Comment{DependentIssueID: issue.ID},
 	); err != nil {
 		return err
+	}
+
+	if _, err := e.ID(issue.ID).NoAutoCondition().Delete(issue); err != nil {
+		return err
+	}
+
+	// update the total issue numbers
+	if err := repo_model.UpdateRepoIssueNumbers(ctx, issue.RepoID, issue.IsPull, false); err != nil {
+		return err
+	}
+	// if the issue is closed, update the closed issue numbers
+	if issue.IsClosed {
+		if err := repo_model.UpdateRepoIssueNumbers(ctx, issue.RepoID, issue.IsPull, true); err != nil {
+			return err
+		}
+	}
+
+	stats.QueueRecalcMilestoneByID(ctx, issue.MilestoneID)
+
+	if err := activities_model.DeleteIssueActions(ctx, issue.RepoID, issue.ID, issue.Index); err != nil {
+		return err
+	}
+
+	// find attachments related to this issue and remove them
+	if err := issue.LoadAttributes(ctx); err != nil {
+		return err
+	}
+
+	for i := range issue.Attachments {
+		system_model.RemoveStorageWithNotice(ctx, storage.Attachments, "Delete issue attachment", issue.Attachments[i].RelativePath())
 	}
 
 	return committer.Commit()

@@ -9,7 +9,6 @@
 <div class="ui attached segment">
 	<div class="{{if not .HasSSHError}}tw-hidden{{end}} tw-mb-4" id="add-ssh-key-panel">
 		<form class="ui form" action="{{.Link}}" method="post">
-			{{.CsrfTokenHtml}}
 			<div class="field {{if .Err_Title}}error{{end}}">
 				<label for="ssh-key-title">{{ctx.Locale.Tr "settings.key_name"}}</label>
 				<input id="ssh-key-title" name="title" value="{{.title}}" autofocus required maxlength="50">
@@ -69,13 +68,13 @@
 				<div class="ui segment">
 					<h4>{{ctx.Locale.Tr "settings.ssh_token_required"}}</h4>
 					<form class="ui form{{if $.HasSSHVerifyError}} error{{end}}" action="{{$.Link}}" method="post">
-						{{$.CsrfTokenHtml}}
 						<input type="hidden" name="title" value="none">
 						<input type="hidden" name="content" value="{{.Content}}">
 						<input type="hidden" name="fingerprint" value="{{.Fingerprint}}">
 						<div class="field">
 							<label for="token">{{ctx.Locale.Tr "settings.ssh_token"}}</label>
 							<input readonly="" value="{{$.TokenToSign}}">
+							<span class="help">{{ctx.Locale.Tr "keys.verify.token.hint" (printf "?verify_ssh=%s" .Fingerprint)}}</span>
 							<div class="help">
 								<br>
 								<p>{{ctx.Locale.Tr "settings.ssh_token_help"}}</p>
@@ -91,7 +90,7 @@
 								<br>
 								<details>
 									<summary>Windows CMD</summary>
-									<div class="markup"><pre class="code-block"><code>set /p={{$.TokenToSign}}| ssh-keygen -Y sign -n gitea -f /path_to_PrivateKey_or_RelatedPublicKey</code></pre></div>
+									<div class="markup"><pre class="code-block"><code>&lt;NUL set /p="{{$.TokenToSign}}"| ssh-keygen -Y sign -n gitea -f /path_to_PrivateKey_or_RelatedPublicKey</code></pre></div>
 								</details>
 							</div>
 							<br>

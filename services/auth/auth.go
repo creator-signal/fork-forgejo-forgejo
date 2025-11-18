@@ -17,7 +17,6 @@ import (
 	"forgejo.org/modules/session"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web/middleware"
-	gitea_context "forgejo.org/services/context"
 	user_service "forgejo.org/services/user"
 )
 
@@ -77,6 +76,7 @@ func handleSignIn(resp http.ResponseWriter, req *http.Request, sess SessionStore
 	_ = sess.Delete("openid_determined_username")
 	_ = sess.Delete("twofaUid")
 	_ = sess.Delete("twofaRemember")
+	_ = sess.Delete("twofaOpenID")
 	_ = sess.Delete("webauthnAssertion")
 	_ = sess.Delete("linkAccount")
 	err = sess.Set("uid", user.ID)
@@ -98,9 +98,4 @@ func handleSignIn(resp http.ResponseWriter, req *http.Request, sess SessionStore
 	}
 
 	middleware.SetLocaleCookie(resp, user.Language, 0)
-
-	// Clear whatever CSRF has right now, force to generate a new one
-	if ctx := gitea_context.GetWebContext(req); ctx != nil {
-		ctx.Csrf.DeleteCookie(ctx)
-	}
 }

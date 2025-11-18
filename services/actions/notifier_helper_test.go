@@ -4,18 +4,27 @@
 package actions
 
 import (
+	"errors"
+	"slices"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	actions_module "forgejo.org/modules/actions"
+	"forgejo.org/modules/git"
+	api "forgejo.org/modules/structs"
 	webhook_module "forgejo.org/modules/webhook"
 
+	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_SkipPullRequestEvent(t *testing.T) {
+func TestActionsNotifier_SkipPullRequestEvent(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	repoID := int64(1)
@@ -48,4 +57,211 @@ func Test_SkipPullRequestEvent(t *testing.T) {
 	}
 	unittest.AssertSuccessfulInsert(t, run)
 	assert.True(t, SkipPullRequestEvent(db.DefaultContext, webhook_module.HookEventPullRequestSync, repoID, commitSHA))
+}
+
+func TestActionsNotifier_IssueCommentOnForkPullRequestEvent(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
+	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
+	require.NoError(t, pr.LoadIssue(db.DefaultContext))
+
+	require.True(t, pr.IsFromFork())
+
+	commit := &git.Commit{
+		ID:            git.MustIDFromString("0000000000000000000000000000000000000000"),
+		CommitMessage: "test",
+	}
+	detectedWorkflows := []*actions_module.DetectedWorkflow{
+		{
+			TriggerEvent: &jobparser.Event{
+				Name: "issue_comment",
+			},
+		},
+	}
+	input := &notifyInput{
+		Repo:        repo,
+		Doer:        doer,
+		Event:       webhook_module.HookEventIssueComment,
+		PullRequest: pr,
+		Payload:     &api.IssueCommentPayload{},
+	}
+
+	unittest.AssertSuccessfulDelete(t, &actions_model.ActionRun{RepoID: repo.ID})
+
+	err := handleWorkflows(db.DefaultContext, detectedWorkflows, commit, input, "")
+	require.NoError(t, err)
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		RepoID: repo.ID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+
+	assert.Equal(t, webhook_module.HookEventIssueComment, runs[0].Event)
+	assert.False(t, runs[0].IsForkPullRequest)
+}
+
+func testActionsNotifierPullRequest(t *testing.T, repo *repo_model.Repository, pr *issues_model.PullRequest, dw *actions_module.DetectedWorkflow, event webhook_module.HookEventType) {
+	t.Helper()
+
+	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	require.NoError(t, pr.LoadIssue(db.DefaultContext))
+
+	testActionsNotifierPullRequestWithDoer(t, repo, pr, doer, dw, event)
+}
+
+func testActionsNotifierPullRequestWithDoer(t *testing.T, repo *repo_model.Repository, pr *issues_model.PullRequest, doer *user_model.User, dw *actions_module.DetectedWorkflow, event webhook_module.HookEventType) {
+	t.Helper()
+
+	commit := &git.Commit{
+		ID:            git.MustIDFromString("0000000000000000000000000000000000000000"),
+		CommitMessage: "test",
+	}
+	dw.EntryName = "test.yml"
+	dw.TriggerEvent = &jobparser.Event{
+		Name: "pull_request",
+	}
+	detectedWorkflows := []*actions_module.DetectedWorkflow{dw}
+	input := &notifyInput{
+		Repo:        repo,
+		Doer:        doer,
+		Event:       event,
+		PullRequest: pr,
+		Payload:     &api.PullRequestPayload{},
+	}
+
+	err := handleWorkflows(db.DefaultContext, detectedWorkflows, commit, input, "refs/head/main")
+	require.NoError(t, err)
+}
+
+func TestActionsNotifier_OpenForkPullRequestEvent(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
+	require.True(t, pr.IsFromFork())
+
+	testActionsNotifierPullRequest(t, repo, pr, &actions_module.DetectedWorkflow{}, webhook_module.HookEventPullRequest)
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		RepoID: repo.ID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+
+	assert.Equal(t, webhook_module.HookEventPullRequest, runs[0].Event)
+	assert.True(t, runs[0].IsForkPullRequest)
+}
+
+func TestActionsNotifier_ConcurrencyGroup(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
+
+	dw := &actions_module.DetectedWorkflow{
+		Content: []byte("{ on: pull_request, jobs: { j1: {} }}"),
+	}
+	testActionsNotifierPullRequest(t, repo, pr, dw, webhook_module.HookEventPullRequestSync)
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		RepoID: repo.ID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	firstRun := runs[0]
+
+	assert.Equal(t, "refs/head/main_test.yml_pull_request__auto", firstRun.ConcurrencyGroup)
+	assert.Equal(t, actions_model.CancelInProgress, firstRun.ConcurrencyType)
+	assert.Equal(t, actions_model.StatusWaiting, firstRun.Status)
+
+	// Also... check if CancelPreviousWithConcurrencyGroup is invoked from handleWorkflows by firing off a second
+	// workflow and checking that the first one gets cancelled:
+
+	testActionsNotifierPullRequest(t, repo, pr, dw, webhook_module.HookEventPullRequestSync)
+
+	runs, err = db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		RepoID: repo.ID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 2)
+
+	firstRunIndex := slices.IndexFunc(runs, func(run *actions_model.ActionRun) bool { return run.ID == firstRun.ID })
+	require.NotEqual(t, -1, firstRunIndex)
+	firstRun = runs[firstRunIndex]
+
+	assert.Equal(t, "refs/head/main_test.yml_pull_request__auto", firstRun.ConcurrencyGroup)
+	assert.Equal(t, actions_model.CancelInProgress, firstRun.ConcurrencyType)
+	assert.Equal(t, actions_model.StatusCancelled, firstRun.Status)
+}
+
+func TestActionsNotifier_PreExecutionErrorInvalidJobs(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
+
+	dw := &actions_module.DetectedWorkflow{
+		Content: []byte("{ on: pull_request, jobs: 'hello, I am the jobs!' }"),
+	}
+	testActionsNotifierPullRequest(t, repo, pr, dw, webhook_module.HookEventPullRequestSync)
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		RepoID: repo.ID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	createdRun := runs[0]
+
+	assert.Equal(t, actions_model.StatusFailure, createdRun.Status)
+	assert.Contains(t, createdRun.PreExecutionError, "actions.workflow.job_parsing_error%!(EXTRA *fmt.wrapError=")
+}
+
+func TestActionsNotifier_PreExecutionEventDetectionError(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
+
+	dw := &actions_module.DetectedWorkflow{
+		Content:             []byte("{ on: nothing, jobs: { j1: {} }}"),
+		EventDetectionError: errors.New("nothing is not a valid event"),
+	}
+	testActionsNotifierPullRequest(t, repo, pr, dw, webhook_module.HookEventPullRequestSync)
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		RepoID: repo.ID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	createdRun := runs[0]
+
+	assert.Equal(t, actions_model.StatusFailure, createdRun.Status)
+	assert.Equal(t, "actions.workflow.event_detection_error%!(EXTRA *errors.errorString=nothing is not a valid event)", createdRun.PreExecutionError)
+}
+
+func TestActionsNotifier_handleWorkflows_setRunTrustForPullRequest(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
+	// poster is not trusted implicitly
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
+
+	testActionsNotifierPullRequest(t, repo, pr, &actions_module.DetectedWorkflow{
+		NeedApproval: true,
+	}, webhook_module.HookEventPullRequest)
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		RepoID: repo.ID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+
+	run := runs[0]
+	assert.True(t, run.IsForkPullRequest)
+	assert.Equal(t, pr.Issue.PosterID, run.PullRequestPosterID)
+	assert.Equal(t, pr.ID, run.PullRequestID)
+	assert.True(t, run.NeedApproval)
 }

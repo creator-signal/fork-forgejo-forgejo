@@ -26,7 +26,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
-	gitea_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/services/mailer"
 	"forgejo.org/tests"
 
@@ -48,7 +48,6 @@ func TestRenameUsername(t *testing.T) {
 
 	session := loginUser(t, "user2")
 	req := NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-		"_csrf":    GetCSRF(t, session, "/user/settings"),
 		"name":     "newUsername",
 		"email":    "user2@example.com",
 		"language": "en-US",
@@ -92,7 +91,6 @@ func TestRenameInvalidUsername(t *testing.T) {
 		t.Logf("Testing username %s", invalidUsername)
 
 		req := NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings"),
 			"name":  invalidUsername,
 			"email": "user2@example.com",
 		})
@@ -144,7 +142,6 @@ func TestRenameReservedUsername(t *testing.T) {
 	for _, reservedUsername := range reservedUsernames {
 		t.Logf("Testing username %s", reservedUsername)
 		req := NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-			"_csrf":    GetCSRF(t, session, "/user/settings"),
 			"name":     reservedUsername,
 			"email":    "user2@example.com",
 			"language": "en-US",
@@ -261,8 +258,7 @@ func TestAccessTokenRegenerate(t *testing.T) {
 	assert.Equal(t, "TestAccessToken", oldTokenName)
 
 	req := NewRequestWithValues(t, "POST", "/user/settings/applications/regenerate", map[string]string{
-		"_csrf": GetCSRF(t, session, "/user/settings/applications"),
-		"id":    strconv.Itoa(oldTokenID),
+		"id": strconv.Itoa(oldTokenID),
 	})
 	session.MakeRequest(t, req, http.StatusOK)
 
@@ -274,8 +270,7 @@ func TestAccessTokenRegenerate(t *testing.T) {
 	assert.Equal(t, "TestAccessToken", newTokenName)
 
 	req = NewRequestWithValues(t, "POST", "/user/settings/applications/delete", map[string]string{
-		"_csrf": GetCSRF(t, session, "/user/settings/applications"),
-		"id":    strconv.Itoa(newTokenID),
+		"id": strconv.Itoa(newTokenID),
 	})
 	session.MakeRequest(t, req, http.StatusOK)
 
@@ -362,7 +357,6 @@ func TestUserLocationMapLink(t *testing.T) {
 
 	session := loginUser(t, "user2")
 	req := NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-		"_csrf":    GetCSRF(t, session, "/user/settings"),
 		"name":     "user2",
 		"email":    "user@example.com",
 		"language": "en-US",
@@ -463,7 +457,6 @@ func TestUserHints(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user/settings/appearance/hints", map[string]string{
-				"_csrf":                  GetCSRF(t, session, "/user/settings/appearance"),
 				"enable_repo_unit_hints": "true",
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)
@@ -650,7 +643,6 @@ func TestUserPronouns(t *testing.T) {
 			// Check that updating the field works
 			newPronouns := "she/her"
 			req = NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-				"_csrf":    GetCSRF(t, firstUserSession, "/user/settings"),
 				"pronouns": newPronouns,
 			})
 			firstUserSession.MakeRequest(t, req, http.StatusSeeOther)
@@ -677,7 +669,6 @@ func TestUserPronouns(t *testing.T) {
 			newPronouns := "it/its"
 			editURI := fmt.Sprintf("/admin/users/%d/edit", user2.ID)
 			req = NewRequestWithValues(t, "POST", editURI, map[string]string{
-				"_csrf":      GetCSRF(t, adminSession, editURI),
 				"login_type": "0-0",
 				"login_name": user2.LoginName,
 				"email":      user2.Email,
@@ -729,9 +720,7 @@ func TestUserTOTPMail(t *testing.T) {
 		})()
 
 		unittest.AssertSuccessfulInsert(t, &auth_model.TwoFactor{UID: user.ID})
-		req := NewRequestWithValues(t, "POST", "/user/settings/security/two_factor/disable", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings/security"),
-		})
+		req := NewRequest(t, "POST", "/user/settings/security/two_factor/disable")
 		session.MakeRequest(t, req, http.StatusSeeOther)
 
 		assert.True(t, called)
@@ -752,9 +741,7 @@ func TestUserTOTPMail(t *testing.T) {
 
 		unittest.AssertSuccessfulInsert(t, &auth_model.TwoFactor{UID: user.ID})
 		unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: user.ID})
-		req := NewRequestWithValues(t, "POST", "/user/settings/security/two_factor/disable", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings/security"),
-		})
+		req := NewRequest(t, "POST", "/user/settings/security/two_factor/disable")
 		session.MakeRequest(t, req, http.StatusSeeOther)
 
 		assert.True(t, called)
@@ -784,8 +771,7 @@ func TestUserSecurityKeyMail(t *testing.T) {
 		unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: user.ID, Name: "Little Bobby Tables's primary key"})
 		id := unittest.AssertExistsAndLoadBean(t, &auth_model.WebAuthnCredential{UserID: user.ID}).ID
 		req := NewRequestWithValues(t, "POST", "/user/settings/security/webauthn/delete", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings/security"),
-			"id":    strconv.FormatInt(id, 10),
+			"id": strconv.FormatInt(id, 10),
 		})
 		session.MakeRequest(t, req, http.StatusOK)
 
@@ -810,8 +796,7 @@ func TestUserSecurityKeyMail(t *testing.T) {
 		id := unittest.AssertExistsAndLoadBean(t, &auth_model.WebAuthnCredential{UserID: user.ID}).ID
 		unittest.AssertSuccessfulInsert(t, &auth_model.TwoFactor{UID: user.ID})
 		req := NewRequestWithValues(t, "POST", "/user/settings/security/webauthn/delete", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings/security"),
-			"id":    strconv.FormatInt(id, 10),
+			"id": strconv.FormatInt(id, 10),
 		})
 		session.MakeRequest(t, req, http.StatusOK)
 
@@ -836,8 +821,7 @@ func TestUserSecurityKeyMail(t *testing.T) {
 		id := unittest.AssertExistsAndLoadBean(t, &auth_model.WebAuthnCredential{UserID: user.ID}).ID
 		unittest.AssertSuccessfulInsert(t, &auth_model.WebAuthnCredential{UserID: user.ID, Name: "Little Bobby Tables's evil key"})
 		req := NewRequestWithValues(t, "POST", "/user/settings/security/webauthn/delete", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings/security"),
-			"id":    strconv.FormatInt(id, 10),
+			"id": strconv.FormatInt(id, 10),
 		})
 		session.MakeRequest(t, req, http.StatusOK)
 
@@ -912,12 +896,11 @@ func TestUserTOTPReenroll(t *testing.T) {
 	require.NoError(t, err)
 
 	req := NewRequestWithValues(t, "POST", "/user/settings/security/two_factor/reenroll", map[string]string{
-		"_csrf":    htmlDoc.GetCSRF(),
 		"passcode": currentTOTP,
 	})
 	session.MakeRequest(t, req, http.StatusSeeOther)
 
-	flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+	flashCookie := session.GetCookie(app_context.CookieNameFlash)
 	assert.NotNil(t, flashCookie)
 	assert.Contains(t, flashCookie.Value, "success%3DYour%2Baccount%2Bhas%2Bbeen%2Bsuccessfully%2Benrolled.")
 }
@@ -935,9 +918,7 @@ func TestUserTOTPDisable(t *testing.T) {
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		htmlDoc.AssertElement(t, "#disable-form", disableAllowed)
 
-		req := NewRequestWithValues(t, "POST", "user/settings/security/two_factor/disable", map[string]string{
-			"_csrf": htmlDoc.GetCSRF(),
-		})
+		req := NewRequest(t, "POST", "user/settings/security/two_factor/disable")
 		if status == http.StatusSeeOther {
 			resp := session.MakeRequest(t, req, http.StatusSeeOther)
 			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
@@ -945,7 +926,7 @@ func TestUserTOTPDisable(t *testing.T) {
 			session.MakeRequest(t, req, status)
 		}
 		if flashMessage != "" {
-			flashCookie := session.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			if disableAllowed {
 				assert.Contains(t, flashCookie.Value, fmt.Sprintf("success%%3D%s", flashMessage))
@@ -1046,7 +1027,6 @@ func TestUserActivate(t *testing.T) {
 
 	session := emptyTestSession(t)
 	req := NewRequestWithValues(t, "POST", "/user/sign_up", map[string]string{
-		"_csrf":     GetCSRF(t, session, "/user/sign_up"),
 		"user_name": "doesnotexist",
 		"email":     "doesnotexist@example.com",
 		"password":  "examplePassword!1",
@@ -1092,22 +1072,21 @@ func TestUserActivate(t *testing.T) {
 	})
 }
 
-func TestUserPasswordReset(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-
-	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+func parseMailHelper(t *testing.T, expectedTo, expectedSubject string) (cleanup func(), codeRes *string, calledRes *bool) {
+	t.Helper()
 
 	called := false
 	code := ""
-	defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+
+	cleanup = test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
 		if called {
 			return
 		}
 		called = true
 
 		assert.Len(t, msgs, 1)
-		assert.Equal(t, user2.EmailTo(), msgs[0].To)
-		assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.reset_password"), msgs[0].Subject)
+		assert.Equal(t, expectedTo, msgs[0].To)
+		assert.Equal(t, expectedSubject, msgs[0].Subject)
 
 		messageDoc := NewHTMLParser(t, bytes.NewBuffer([]byte(msgs[0].Body)))
 		link, ok := messageDoc.Find("a").Attr("href")
@@ -1115,17 +1094,27 @@ func TestUserPasswordReset(t *testing.T) {
 		u, err := url.Parse(link)
 		require.NoError(t, err)
 		code = u.Query()["code"][0]
-	})()
+	})
+
+	return cleanup, &code, &called
+}
+
+func TestUserPasswordReset(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	cleanup, code, called := parseMailHelper(t, user2.EmailTo(), string(translation.NewLocale("en-US").Tr("mail.reset_password")))
+	defer cleanup()
 
 	session := emptyTestSession(t)
 	req := NewRequestWithValues(t, "POST", "/user/forgot_password", map[string]string{
-		"_csrf": GetCSRF(t, session, "/user/forgot_password"),
 		"email": user2.Email,
 	})
 	session.MakeRequest(t, req, http.StatusOK)
-	assert.True(t, called)
+	assert.True(t, *called)
 
-	queryCode, err := url.QueryUnescape(code)
+	queryCode, err := url.QueryUnescape(*code)
 	require.NoError(t, err)
 
 	lookupKey, validator, ok := strings.Cut(queryCode, ":")
@@ -1140,8 +1129,7 @@ func TestUserPasswordReset(t *testing.T) {
 	assert.Equal(t, authToken.HashedValidator, auth_model.HashValidator(rawValidator))
 
 	req = NewRequestWithValues(t, "POST", "/user/recover_account", map[string]string{
-		"_csrf":    GetCSRF(t, session, "/user/recover_account"),
-		"code":     code,
+		"code":     *code,
 		"password": "new_password",
 	})
 	session.MakeRequest(t, req, http.StatusSeeOther)
@@ -1150,41 +1138,84 @@ func TestUserPasswordReset(t *testing.T) {
 	assert.True(t, unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}).ValidatePassword(t.Context(), "new_password"))
 }
 
+func TestUserPasswordResetOAuth2(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestUserPasswordResetOAuth2")()
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("OAuth2 user without password", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1001})
+		assert.True(t, user.IsOAuth2())
+		assert.False(t, user.IsPasswordSet())
+		assert.False(t, user.IsLocal())
+
+		session := emptyTestSession(t)
+		req := NewRequestWithValues(t, "POST", "/user/forgot_password", map[string]string{
+			"email": user.Email,
+		})
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		assert.Contains(t,
+			htmlDoc.doc.Find(".ui.negative.message").Text(),
+			translation.NewLocale("en-US").TrString("auth.non_local_account"),
+		)
+	})
+
+	t.Run("OAuth2 user with password", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1000})
+		assert.True(t, user.IsOAuth2())
+		assert.True(t, user.IsPasswordSet())
+		assert.False(t, user.IsLocal())
+
+		cleanup, code, called := parseMailHelper(t, user.EmailTo(), string(translation.NewLocale("en-US").Tr("mail.reset_password")))
+		defer cleanup()
+
+		session := emptyTestSession(t)
+		req := NewRequestWithValues(t, "POST", "/user/forgot_password", map[string]string{
+			"email": user.Email,
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+		assert.True(t, *called)
+
+		user.Passwd = ""
+		err := user_model.UpdateUserCols(db.DefaultContext, user, "passwd")
+		require.NoError(t, err)
+
+		req = NewRequestWithValues(t, "POST", "/user/recover_account", map[string]string{
+			"code":     *code,
+			"password": "new_password",
+		})
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		assert.Contains(t,
+			htmlDoc.doc.Find(".ui.negative.message").Text(),
+			translation.NewLocale("en-US").TrString("auth.non_local_account"),
+		)
+	})
+}
+
 func TestActivateEmailAddress(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.Service.RegisterEmailConfirm, true)()
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
-	called := false
-	code := ""
-	defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
-		if called {
-			return
-		}
-		called = true
-
-		assert.Len(t, msgs, 1)
-		assert.Equal(t, "newemail@example.org", msgs[0].To)
-		assert.EqualValues(t, translation.NewLocale("en-US").Tr("mail.activate_email"), msgs[0].Subject)
-
-		messageDoc := NewHTMLParser(t, bytes.NewBuffer([]byte(msgs[0].Body)))
-		link, ok := messageDoc.Find("a").Attr("href")
-		assert.True(t, ok)
-		u, err := url.Parse(link)
-		require.NoError(t, err)
-		code = u.Query()["code"][0]
-	})()
+	cleanup, code, called := parseMailHelper(t, "newemail@example.org", string(translation.NewLocale("en-US").Tr("mail.activate_email")))
+	defer cleanup()
 
 	session := loginUser(t, user2.Name)
 	req := NewRequestWithValues(t, "POST", "/user/settings/account/email", map[string]string{
-		"_csrf": GetCSRF(t, session, "/user/settings"),
 		"email": "newemail@example.org",
 	})
 	session.MakeRequest(t, req, http.StatusSeeOther)
-	assert.True(t, called)
+	assert.True(t, *called)
 
-	queryCode, err := url.QueryUnescape(code)
+	queryCode, err := url.QueryUnescape(*code)
 	require.NoError(t, err)
 
 	lookupKey, validator, ok := strings.Cut(queryCode, ":")
@@ -1199,7 +1230,7 @@ func TestActivateEmailAddress(t *testing.T) {
 	assert.Equal(t, authToken.HashedValidator, auth_model.HashValidator(rawValidator))
 
 	req = NewRequestWithValues(t, "POST", "/user/activate_email", map[string]string{
-		"code":  code,
+		"code":  *code,
 		"email": "newemail@example.org",
 	})
 	session.MakeRequest(t, req, http.StatusSeeOther)

@@ -11,10 +11,13 @@
 				{{if .Repository.Website}}<a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>{{end}}
 			</div>
 		</div>
-		<div class="tw-flex tw-items-center tw-flex-wrap tw-gap-2 tw-my-2" id="repo-topics">
-			{{/* it should match the code in issue-home.js */}}
-			{{range .Topics}}<a class="repo-topic ui large label" href="{{AppSubUrl}}/explore/repos?q={{.Name}}&topic=1">{{.Name}}</a>{{end}}
-			{{if and .Permission.IsAdmin (not .Repository.IsArchived)}}<button id="manage_topic" class="btn interact-fg tw-text-12">{{ctx.Locale.Tr "repo.topic.manage_topics"}}</button>{{end}}
+		<div class="repo-topics tw-my-2" id="repo-topics">
+			{{range .Topics}}
+				<a class="repo-topic ui large label" href="{{AppSubUrl}}/explore/repos?q={{.Name}}&topic=1">{{.Name}}</a>
+			{{end}}
+			{{if and .Permission.IsAdmin (not .Repository.IsArchived)}}
+				<button id="manage_topic" class="btn interact-fg tw-text-12">{{ctx.Locale.Tr "repo.topic.manage_topics"}}</button>
+			{{end}}
 		</div>
 		{{end}}
 		{{if and .Permission.IsAdmin (not .Repository.IsArchived)}}
@@ -55,7 +58,7 @@
 		{{$l := Eval $n "-" 1}}
 		{{$isHomepage := (eq $n 0)}}
 		<div class="repo-button-row">
-			<div class="tw-gap-y-2 button-sequence">
+			<div class="button-sequence tw-gap-y-2">
 				{{template "repo/branch_dropdown" dict "root" .}}
 				{{if and .CanCompareOrPull .IsViewBranch (not .Repository.IsArchived)}}
 					{{$cmpBranch := ""}}
@@ -114,10 +117,10 @@
 					</span>
 				{{end}}
 			</div>
-			<div class="tw-flex tw-items-center">
+			<div class="tw-flex tw-items-center max-[390px]:tw-w-full">
 				<!-- Only show clone panel in repository home page -->
 				{{if $isHomepage}}
-					<div class="clone-panel ui action tiny input">
+					<div class="clone-panel ui action tiny input max-[390px]:tw-w-full">
 						{{template "repo/clone_buttons" .}}
 						<button class="ui small jump dropdown icon button" data-tooltip-content="{{ctx.Locale.Tr "repo.more_operations"}}">
 							{{svg "octicon-kebab-horizontal"}}
@@ -127,8 +130,8 @@
 									<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments $.RefName}}.tar.gz" rel="nofollow">{{svg "octicon-file-zip" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.download_tar"}}</a>
 									<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments $.RefName}}.bundle" rel="nofollow">{{svg "octicon-package" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.download_bundle"}}</a>
 								{{end}}
-								{{if .CitationExist}}
-									<a class="item" id="cite-repo-button">{{svg "octicon-cross-reference" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.cite_this_repo"}}</a>
+								{{if .CitationFile}}
+									<a class="item citation-link" href="{{$.RepoLink}}/src/branch/{{$.BranchName}}/{{$.CitationFile}}">{{svg "octicon-cross-reference" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.cite_this_repo"}}</a>
 								{{end}}
 								{{range .OpenWithEditorApps}}
 									<a class="item js-clone-url-editor" data-href-template="{{.OpenURL}}">{{.IconHTML}}{{ctx.Locale.Tr "repo.open_with_editor" .DisplayName}}</a>
@@ -137,7 +140,6 @@
 						</button>
 						{{template "repo/clone_script" .}}{{/* the script will update `.js-clone-url` and related elements */}}
 					</div>
-					{{template "repo/cite/cite_modal" .}}
 				{{end}}
 				{{if and (not $isHomepage) (not .IsViewFile) (not .IsBlame)}}{{/* IsViewDirectory (not home), TODO: split the templates, avoid using "if" tricks */}}
 					<div class="button-sequence folder-actions">

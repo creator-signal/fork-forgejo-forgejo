@@ -1,9 +1,9 @@
 // bootstrap module must be the first one to be imported, it handles webpack lazy-loading and global errors
 import './bootstrap.js';
 
-import {initRepoActivityTopAuthorsChart} from './components/RepoActivityTopAuthors.vue';
-import {initScopedAccessTokenCategories} from './components/ScopedAccessTokenSelector.vue';
-import {initDashboardRepoList} from './components/DashboardRepoList.vue';
+import {initRepoActivityTopAuthorsChart} from './features/repo-activity-top-authors.ts';
+import {initScopedAccessTokenCategories} from './features/scoped-access-token-selector.ts';
+import {initDashboardRepoList} from './features/dashboard-repo-list.ts';
 
 import {initGlobalCopyToClipboardListener} from './features/clipboard.js';
 import {initContextPopups} from './features/contextpopup.js';
@@ -38,6 +38,7 @@ import {
   initGlobalButtonClickOnEnter,
   initGlobalButtons,
   initGlobalCommon,
+  initDisabledInputs,
   initGlobalDropzone,
   initGlobalEnterQuickSubmit,
   initGlobalFormDirtyLeaveConfirm,
@@ -48,7 +49,7 @@ import {initRepoTopicBar} from './features/repo-home.js';
 import {initAdminEmails} from './features/admin/emails.js';
 import {initAdminCommon} from './features/admin/common.js';
 import {initRepoTemplateSearch} from './features/repo-template.js';
-import {initRepoCodeView} from './features/repo-code.js';
+import {initRepoCodeView} from './features/repo-code.ts';
 import {initSshKeyFormParser} from './features/sshkey-helper.js';
 import {initRepoArchiveLinks} from './features/repo-common.js';
 import {initRepoMigrationStatusChecker} from './features/repo-migrate.js';
@@ -65,13 +66,13 @@ import {initRepoEditor} from './features/repo-editor.js';
 import {initCompSearchUserBox} from './features/comp/SearchUserBox.js';
 import {initInstall} from './features/install.js';
 import {initCompWebHookEditor} from './features/comp/WebHookEditor.js';
-import {initRepoBranchButton} from './features/repo-branch.js';
+import {initRepoBranchButton} from './features/repo-branch.ts';
 import {initCommonOrganization} from './features/common-organization.js';
 import {initRepoWikiForm} from './features/repo-wiki.js';
 import {initRepoCommentForm, initRepository} from './features/repo-legacy.js';
 import {initCopyContent} from './features/copycontent.js';
 import {initCaptcha} from './features/captcha.js';
-import {initRepositoryActionView} from './components/RepoActionView.vue';
+import {initRepositoryActionView} from './features/repo-action-view.ts';
 import {initGlobalTooltips} from './modules/tippy.js';
 import {initDropdowns} from './modules/dropdown.ts';
 import {initGiteaFomantic} from './modules/fomantic.js';
@@ -86,6 +87,7 @@ import {initDirAuto} from './modules/dirauto.js';
 import {initRepositorySearch} from './features/repo-search.js';
 import {initColorPickers} from './features/colorpicker.js';
 import {initRepoMilestoneEditor} from './features/repo-milestone.js';
+import {initModalClose} from './modules/modal.ts';
 
 // Init Gitea's Fomantic settings
 initGiteaFomantic();
@@ -94,6 +96,7 @@ initDirAuto();
 onDomReady(() => {
   initGlobalCommon();
 
+  initDisabledInputs();
   initGlobalTooltips();
   initGlobalButtonClickOnEnter();
   initGlobalButtons();
@@ -189,6 +192,7 @@ onDomReady(() => {
   initRepoDiffView();
   initScopedAccessTokenCategories();
   initColorPickers();
+  initModalClose();
 
   // Deactivate CSS-only noJS usability supplements
   document.body.classList.remove('no-js');

@@ -802,7 +802,7 @@ func (c *Comment) LoadPushCommits(ctx context.Context) (err error) {
 		return err
 	}
 	defer closer.Close()
-	c.Commits = git_model.ParseCommitsWithStatus(ctx, gitRepo.GetCommitsFromIDs(data.CommitIDs), c.Issue.Repo)
+	c.Commits = git_model.ParseCommitsWithStatus(ctx, gitRepo.GetCommitsFromIDs(data.CommitIDs, c.IsForcePush), c.Issue.Repo)
 	c.CommitsNum = int64(len(c.Commits))
 
 	return err
@@ -1215,11 +1215,9 @@ func DeleteComment(ctx context.Context, comment *Comment) error {
 			return err
 		}
 	}
+
 	if _, err := e.Table("action").
-		Where("comment_id = ?", comment.ID).
-		Update(map[string]any{
-			"is_deleted": true,
-		}); err != nil {
+		Where("comment_id = ?", comment.ID).Delete(); err != nil {
 		return err
 	}
 

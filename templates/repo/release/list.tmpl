@@ -29,7 +29,7 @@
 								{{end}}
 							</h4>
 							<div>
-								{{if $.CanCreateRelease}}
+								{{if and $.CanCreateRelease (not $release.IsTag)}}
 									<a class="muted" data-tooltip-content="{{ctx.Locale.Tr "repo.release.edit"}}" href="{{$.RepoLink}}/releases/edit/{{$release.TagName | PathEscapeSegments}}" rel="nofollow">
 										{{svg "octicon-pencil"}}
 									</a>
@@ -42,9 +42,10 @@
 								{{svg (MigrationIcon $release.Repo.GetOriginalURLHostname) 20 "tw-mr-1"}}{{$release.OriginalAuthor}}
 							{{else if $release.Publisher}}
 								{{ctx.AvatarUtils.Avatar $release.Publisher 20 "tw-mr-1"}}
-								<a href="{{$release.Publisher.HomeLink}}">{{$release.Publisher.GetDisplayName}}</a>
+								{{template "shared/user/authorlink" $release.Publisher}}
 							{{else}}
-								Ghost
+								<!-- Fake the Ghost user -->
+								{{template "shared/user/authorlink" (dict "ID" -1)}}
 							{{end}}
 							</span>
 							<span class="released">
@@ -76,7 +77,7 @@
 												{{svg "octicon-file-zip" 16 "tw-mr-1"}}{{ctx.Locale.Tr "repo.release.source_code"}} (ZIP)
 											</a>
 											<div class="tw-mr-1">
-												<span class="text grey">{{ctx.Locale.TrN .Release.ArchiveDownloadCount.Zip "repo.release.download_count_one" "repo.release.download_count_few" (ctx.Locale.PrettyNumber .Release.ArchiveDownloadCount.Zip)}}</span>
+												<span class="text grey">{{ctx.Locale.TrPluralString .Release.ArchiveDownloadCount.Zip "release.n_downloads" (ctx.Locale.PrettyNumber .Release.ArchiveDownloadCount.Zip)}}</span>
 											</div>
 											<span data-tooltip-content="{{ctx.Locale.Tr "repo.release.system_generated"}}">
 												{{svg "octicon-info"}}
@@ -87,7 +88,7 @@
 												{{svg "octicon-file-zip" 16 "tw-mr-1"}}{{ctx.Locale.Tr "repo.release.source_code"}} (TAR.GZ)
 											</a>
 											<div class="tw-mr-1">
-												<span class="text grey">{{ctx.Locale.TrN .Release.ArchiveDownloadCount.TarGz "repo.release.download_count_one" "repo.release.download_count_few" (ctx.Locale.PrettyNumber .Release.ArchiveDownloadCount.TarGz)}}</span>
+												<span class="text grey">{{ctx.Locale.TrPluralString .Release.ArchiveDownloadCount.TarGz "release.n_downloads" (ctx.Locale.PrettyNumber .Release.ArchiveDownloadCount.TarGz)}}</span>
 											</div>
 											<span data-tooltip-content="{{ctx.Locale.Tr "repo.release.system_generated"}}">
 												{{svg "octicon-info"}}
@@ -108,7 +109,7 @@
 													{{svg "octicon-package" 16 "tw-mr-1"}}{{.Name}}
 												</a>
 												<div>
-													<span class="text grey">{{ctx.Locale.TrN .DownloadCount "repo.release.download_count_one" "repo.release.download_count_few" (ctx.Locale.PrettyNumber .DownloadCount)}} · {{DateUtils.TimeSince .CreatedUnix}} · {{.Size | ctx.Locale.TrSize}}</span>
+													<span class="text grey">{{ctx.Locale.TrPluralString .DownloadCount "release.n_downloads" (ctx.Locale.PrettyNumber .DownloadCount)}} · {{DateUtils.TimeSince .CreatedUnix}} · {{.Size | ctx.Locale.TrSize}}</span>
 												</div>
 											</li>
 										{{end}}

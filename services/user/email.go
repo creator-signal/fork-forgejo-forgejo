@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
@@ -171,27 +172,37 @@ func ReplaceInactivePrimaryEmail(ctx context.Context, oldEmail string, email *us
 		return err
 	}
 
+	// Delete previous activation token.
+	if err := auth_model.DeleteAuthTokenByUser(ctx, user.ID); err != nil {
+		return err
+	}
+
 	return DeleteEmailAddresses(ctx, user, []string{oldEmail})
 }
 
 func DeleteEmailAddresses(ctx context.Context, u *user_model.User, emails []string) error {
-	for _, emailStr := range emails {
-		// Check if address exists
-		email, err := user_model.GetEmailAddressOfUser(ctx, emailStr, u.ID)
-		if err != nil {
-			return err
-		}
-		if email.IsPrimary {
-			return user_model.ErrPrimaryEmailCannotDelete{Email: emailStr}
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		for _, emailStr := range emails {
+			// Check if address exists
+			email, err := user_model.GetEmailAddressOfUser(ctx, emailStr, u.ID)
+			if err != nil {
+				if user_model.IsErrEmailAddressNotExist(err) {
+					continue
+				}
+				return err
+			}
+			if email.IsPrimary {
+				return user_model.ErrPrimaryEmailCannotDelete{Email: emailStr}
+			}
+
+			// Remove address
+			if _, err := db.DeleteByID[user_model.EmailAddress](ctx, email.ID); err != nil {
+				return err
+			}
 		}
 
-		// Remove address
-		if _, err := db.DeleteByID[user_model.EmailAddress](ctx, email.ID); err != nil {
-			return err
-		}
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func MakeEmailAddressPrimary(ctx context.Context, u *user_model.User, newPrimaryEmail *user_model.EmailAddress, notify bool) error {

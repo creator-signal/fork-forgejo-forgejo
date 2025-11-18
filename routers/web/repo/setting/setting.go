@@ -543,7 +543,13 @@ func SettingsPost(ctx *context.Context) {
 
 		mirror_service.AddPullMirrorToQueue(repo.ID)
 
-		ctx.Flash.Info(ctx.Tr("repo.settings.pull_mirror_sync_in_progress", repo.OriginalURL))
+		sanitizedOriginalURL, err := util.SanitizeURL(repo.OriginalURL)
+		if err != nil {
+			ctx.ServerError("SanitizeURL", err)
+			return
+		}
+
+		ctx.Flash.Info(ctx.Tr("repo.settings.pull_mirror_sync_in_progress", sanitizedOriginalURL))
 		ctx.Redirect(repo.Link() + "/settings")
 
 	case "push-mirror-sync":
@@ -682,11 +688,7 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		remoteSuffix, err := util.CryptoRandomString(10)
-		if err != nil {
-			ctx.ServerError("RandomString", err)
-			return
-		}
+		remoteSuffix := util.CryptoRandomString(util.RandomStringLow)
 
 		remoteAddress, err := util.SanitizeURL(address)
 		if err != nil {
@@ -822,13 +824,9 @@ func SettingsPost(ctx *context.Context) {
 			ctx.Error(http.StatusNotFound)
 			return
 		}
-		repo.IsMirror = false
 
-		if _, err := repo_service.CleanUpMigrateInfo(ctx, repo); err != nil {
-			ctx.ServerError("CleanUpMigrateInfo", err)
-			return
-		} else if err = repo_model.DeleteMirrorByRepoID(ctx, ctx.Repo.Repository.ID); err != nil {
-			ctx.ServerError("DeleteMirrorByRepoID", err)
+		if err := repo_service.ConvertMirrorToNormalRepo(ctx, ctx.Repo.Repository); err != nil {
+			ctx.ServerError("ConvertMirror", err)
 			return
 		}
 		log.Trace("Repository converted from mirror to regular: %s", repo.FullName())
@@ -1110,6 +1108,8 @@ func handleSettingRemoteAddrError(ctx *context.Context, err error, form *forms.R
 			}
 		case addrErr.IsInvalidPath:
 			ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_local_path"), tplSettingsOptions, form)
+		case addrErr.HasCredentials:
+			ctx.RenderWithErr(ctx.Tr("migrate.form.error.url_credentials"), tplSettingsOptions, form)
 		default:
 			ctx.ServerError("Unknown error", err)
 		}

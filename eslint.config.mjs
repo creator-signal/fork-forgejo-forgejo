@@ -58,7 +58,14 @@ export default tseslint.config(
       sourceType: 'module',
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': 'off', // TODO: enable this rule again
+      '@typescript-eslint/no-unused-vars': [2, {
+        args: 'all',
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        ignoreRestSiblings: false,
+      }],
 
       '@eslint-community/eslint-comments/disable-enable-pair': [2],
       '@eslint-community/eslint-comments/no-aggregating-enable': [2],
@@ -539,14 +546,7 @@ export default tseslint.config(
       'no-unused-labels': [2],
       'no-unused-private-class-members': [2],
 
-      'no-unused-vars': [2, {
-        args: 'all',
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
-        destructuredArrayIgnorePattern: '^_',
-        ignoreRestSiblings: false,
-      }],
+      'no-unused-vars': [0],
 
       'no-use-before-define': [2, {
         functions: false,
@@ -703,7 +703,6 @@ export default tseslint.config(
       'sonarjs/no-inverted-boolean-check': [2],
       'sonarjs/no-nested-switch': [0],
       'sonarjs/no-nested-template-literals': [0],
-      'sonarjs/no-one-iteration-loop': [2],
       'sonarjs/no-redundant-boolean': [2],
       'sonarjs/no-redundant-jump': [2],
       'sonarjs/no-same-line-conditional': [2],
@@ -799,6 +798,7 @@ export default tseslint.config(
       'unicorn/prefer-array-some': [2],
       'unicorn/prefer-at': [0],
       'unicorn/prefer-blob-reading-methods': [2],
+      'unicorn/prefer-classlist-toggle': [2],
       'unicorn/prefer-code-point': [0],
       'unicorn/prefer-date-now': [2],
       'unicorn/prefer-default-parameters': [0],
@@ -1082,6 +1082,7 @@ export default tseslint.config(
       '@vitest/no-standalone-expect': [0],
       '@vitest/no-test-prefixes': [0],
       '@vitest/no-test-return-statement': [0],
+      '@vitest/prefer-called-exactly-once-with': [2],
       '@vitest/prefer-called-with': [0],
       '@vitest/prefer-comparison-matcher': [0],
       '@vitest/prefer-each': [0],
@@ -1089,6 +1090,7 @@ export default tseslint.config(
       '@vitest/prefer-expect-resolves': [0],
       '@vitest/prefer-hooks-in-order': [0],
       '@vitest/prefer-hooks-on-top': [2],
+      '@vitest/prefer-import-in-mock': [0],
       '@vitest/prefer-lowercase-title': [0],
       '@vitest/prefer-mock-promise-shorthand': [0],
       '@vitest/prefer-snapshot-hint': [0],

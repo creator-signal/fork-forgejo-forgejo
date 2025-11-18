@@ -26,6 +26,31 @@ func NewHTMLParser(t testing.TB, body *bytes.Buffer) *HTMLDoc {
 	return &HTMLDoc{doc: doc}
 }
 
+func (doc *HTMLDoc) AssertElementPredicate(t testing.TB, selector string, predicate func(element *goquery.Selection) bool) bool {
+	t.Helper()
+	selection := doc.doc.Find(selector)
+	require.NotEmpty(t, selection, selector)
+	return predicate(selection)
+}
+
+func (doc *HTMLDoc) AssertAttrPredicate(t testing.TB, selector, attr string, predicate func(attrValue string) bool) bool {
+	t.Helper()
+	selection := doc.doc.Find(selector)
+	require.NotEmpty(t, selection, selector)
+
+	actual, exists := selection.Attr(attr)
+	require.True(t, exists, "%s not found in %s", attr, selection.Text())
+
+	return predicate(actual)
+}
+
+func (doc *HTMLDoc) AssertAttrEqual(t testing.TB, selector, attr, expected string) bool {
+	t.Helper()
+	return doc.AssertAttrPredicate(t, selector, attr, func(actual string) bool {
+		return assert.Equal(t, expected, actual)
+	})
+}
+
 // GetInputValueByID for get input value by id
 func (doc *HTMLDoc) GetInputValueByID(id string) string {
 	text, _ := doc.doc.Find("#" + id).Attr("value")
@@ -81,11 +106,6 @@ func (doc *HTMLDoc) FindByText(selector, text string) *goquery.Selection {
 	return doc.doc.Find(selector).FilterFunction(func(i int, s *goquery.Selection) bool {
 		return s.Text() == text
 	})
-}
-
-// GetCSRF for getting CSRF token value from input
-func (doc *HTMLDoc) GetCSRF() string {
-	return doc.GetInputValueByName("_csrf")
 }
 
 // AssertSelection check if selection exists or does not exist depending on checkExists

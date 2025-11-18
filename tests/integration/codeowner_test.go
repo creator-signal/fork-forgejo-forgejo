@@ -47,6 +47,7 @@ func CodeOwnerTestCommon(t *testing.T, u *url.URL, codeownerTest CodeownerTest) 
 	cloneURL, _ := url.Parse(r)
 	cloneURL.User = url.UserPassword("user2", userPassword)
 	require.NoError(t, git.CloneWithArgs(t.Context(), nil, cloneURL.String(), dstPath, git.CloneRepoOptions{}))
+	doGitSetRemoteURL(dstPath, "origin", cloneURL)(t)
 
 	t.Run("Normal", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
@@ -150,7 +151,6 @@ func CodeOwnerTestCommon(t *testing.T, u *url.URL, codeownerTest CodeownerTest) 
 		require.NoError(t, err)
 
 		req := NewRequestWithValues(t, "POST", repo.FullName()+"/compare/main...user1/"+codeownerTest.Name+":branch", map[string]string{
-			"_csrf": GetCSRF(t, session, repo.FullName()+"/compare/main...user1/"+codeownerTest.Name+":branch"),
 			"title": "pull request",
 		})
 		session.MakeRequest(t, req, http.StatusOK)
@@ -203,7 +203,7 @@ type CodeownerTest struct {
 }
 
 func TestCodeOwner(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		tests := []CodeownerTest{
 			{Name: "root", Path: "CODEOWNERS"},
 			{Name: "docs", Path: "docs/CODEOWNERS"},

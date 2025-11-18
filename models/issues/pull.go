@@ -161,7 +161,7 @@ type PullRequest struct {
 
 	ChangedProtectedFiles []string `xorm:"TEXT JSON"`
 
-	IssueID                    int64  `xorm:"INDEX"`
+	IssueID                    int64  `xorm:"INDEX REFERENCES(issue, id)"`
 	Issue                      *Issue `xorm:"-"`
 	Index                      int64
 	RequestedReviewers         []*user_model.User `xorm:"-"`
@@ -170,7 +170,7 @@ type PullRequest struct {
 
 	HeadRepoID          int64                  `xorm:"INDEX"`
 	HeadRepo            *repo_model.Repository `xorm:"-"`
-	BaseRepoID          int64                  `xorm:"INDEX"`
+	BaseRepoID          int64                  `xorm:"INDEX REFERENCES(repository, id)"`
 	BaseRepo            *repo_model.Repository `xorm:"-"`
 	HeadBranch          string
 	HeadCommitID        string `xorm:"-"`
@@ -468,6 +468,23 @@ func (pr *PullRequest) GetReviewCommentsCount(ctx context.Context) int {
 		return 0
 	}
 	return int(count)
+}
+
+func (pr *PullRequest) IsForkPullRequest() bool {
+	var isForkPullRequest bool
+
+	switch pr.Flow {
+	case PullRequestFlowGithub:
+		isForkPullRequest = pr.IsFromFork()
+	case PullRequestFlowAGit:
+		// there is no fork concept in AGit flow, anyone with read permission can push refs/for/<target-branch>/<topic-branch> to the repo.
+		// So we must treat it as a fork pull request because it may be from an untrusted user
+		isForkPullRequest = true
+	default:
+		// unknown flow, treat it as it's a fork pull request
+		isForkPullRequest = true
+	}
+	return isForkPullRequest
 }
 
 // IsChecking returns true if this pull request is still checking conflict.

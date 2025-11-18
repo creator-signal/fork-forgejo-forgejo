@@ -7,7 +7,8 @@
 /* eslint playwright/expect-expect: ["error", { "assertFunctionNames": ["check_wip"] }] */
 
 import {expect, type Page} from '@playwright/test';
-import {save_visual, test} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
 test.use({user: 'user2'});
 
@@ -48,8 +49,7 @@ test.describe('Pull: Toggle WIP', () => {
     await check_wip({page}, false);
   });
 
-  test('simple toggle', async ({page}, workerInfo) => {
-    test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
+  test('simple toggle', async ({page}) => {
     // toggle to WIP
     await toggle_wip_to({page}, true);
     await check_wip({page}, true);
@@ -58,8 +58,7 @@ test.describe('Pull: Toggle WIP', () => {
     await check_wip({page}, false);
   });
 
-  test('manual edit', async ({page}, workerInfo) => {
-    test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
+  test('manual edit', async ({page}) => {
     await page.goto('/user2/repo1/pulls/5');
     // manually edit title to another prefix
     await page.locator('#issue-title-edit-show').click();
@@ -71,8 +70,7 @@ test.describe('Pull: Toggle WIP', () => {
     await check_wip({page}, false);
   });
 
-  test('maximum title length', async ({page}, workerInfo) => {
-    test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
+  test('maximum title length', async ({page}) => {
     await page.goto('/user2/repo1/pulls/5');
     // check maximum title length is handled gracefully
     const maxLenStr = prTitle + 'a'.repeat(240);
@@ -90,9 +88,7 @@ test.describe('Pull: Toggle WIP', () => {
   });
 });
 
-test('Issue: Labels', async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-
+test('Issue: Labels', async ({page}) => {
   async function submitLabels({page}: {page: Page}) {
     const submitted = page.waitForResponse('/user2/repo1/issues/labels');
     await page.locator('textarea').first().click(); // close via unrelated element
@@ -137,8 +133,7 @@ test('Issue: Labels', async ({page}, workerInfo) => {
   await expect(labelList.filter({hasText: 'label1'})).toBeVisible();
 });
 
-test('Issue: Assignees', async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
+test('Issue: Assignees', async ({page}) => {
   // select label list in sidebar only
   const assigneesList = page.locator('.issue-content-right .assignees.list .selected .item a');
 
@@ -174,8 +169,7 @@ test('Issue: Assignees', async ({page}, workerInfo) => {
   await expect(page.locator('.ui.assignees.list .item.no-select')).toBeHidden();
 });
 
-test('New Issue: Assignees', async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
+test('New Issue: Assignees', async ({page}) => {
   // select label list in sidebar only
   const assigneesList = page.locator('.issue-content-right .assignees.list .selected .item');
 
@@ -194,7 +188,7 @@ test('New Issue: Assignees', async ({page}, workerInfo) => {
   await page.locator('.select-assignees .menu .item').filter({hasText: 'user4'}).click();
   await page.locator('.select-assignees.dropdown').click();
   await expect(assigneesList.filter({hasText: 'user4'})).toBeVisible();
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-right'));
 
   // remove user4
   await page.locator('.select-assignees.dropdown').click();
@@ -212,12 +206,10 @@ test('New Issue: Assignees', async ({page}, workerInfo) => {
   await page.fill('.select-assignees .menu .search input', '');
   await page.locator('.select-assignees.dropdown .no-select.item').click();
   await expect(page.locator('.select-assign-me')).toBeVisible();
-  await save_visual(page);
+  await screenshot(page, page.locator('div.filter.menu[data-id="#assignee_ids"]'), 30);
 });
 
-test('Issue: Milestone', async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-
+test('Issue: Milestone', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
@@ -238,28 +230,27 @@ test('Issue: Milestone', async ({page}, workerInfo) => {
   await expect(page.locator('.timeline-item.event').last()).toContainText('user2 removed this from the milestone1 milestone');
 });
 
-test('New Issue: Milestone', async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-
+test('New Issue: Milestone', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/new');
   expect(response?.status()).toBe(200);
 
   const selectedMilestone = page.locator('.issue-content-right .select-milestone.list');
   const milestoneDropdown = page.locator('.issue-content-right .select-milestone.dropdown');
   await expect(selectedMilestone).toContainText('No milestone');
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-right'));
 
   // Add milestone.
   await milestoneDropdown.click();
+  await screenshot(page, page.locator('.menu.transition.visible'), 30);
   await page.getByRole('option', {name: 'milestone1'}).click();
   await expect(selectedMilestone).toContainText('milestone1');
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-right'));
 
   // Clear milestone.
   await milestoneDropdown.click();
   await page.getByText('Clear milestone', {exact: true}).click();
   await expect(selectedMilestone).toContainText('No milestone');
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-right'));
 });
 
 test.describe('Dependency dropdown', () => {

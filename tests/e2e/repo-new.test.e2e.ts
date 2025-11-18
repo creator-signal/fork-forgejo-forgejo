@@ -4,7 +4,8 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test, dynamic_id, save_visual} from './utils_e2e.ts';
+import {test, dynamic_id} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 import {validate_form} from './shared/forms.ts';
 
 test.use({user: 'user2'});
@@ -17,12 +18,12 @@ test('New repo: invalid', async ({page}) => {
   await expect(page.getByText('.gitignore Select .gitignore')).toBeHidden();
   await expect(page.getByText('Labels Select a label set')).toBeHidden();
   await validate_form({page}, 'fieldset');
-  await save_visual(page);
+  await screenshot(page);
 
   await page.getByLabel('Repository name').fill('*invalid');
   await page.getByRole('button', {name: 'Create repository'}).click();
   await expect(page.getByText('Repository name should contain only alphanumeric')).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('New repo: initialize', async ({page}, workerInfo) => {
@@ -46,7 +47,7 @@ test('New repo: initialize', async ({page}, workerInfo) => {
   await page.getByLabel('Make repository a template').check();
 
   await validate_form({page}, 'fieldset');
-  await save_visual(page);
+  await screenshot(page);
   const reponame = dynamic_id();
   await page.getByLabel('Repository name').fill(reponame);
   await page.getByRole('button', {name: 'Create repository'}).click();
@@ -55,7 +56,7 @@ test('New repo: initialize', async ({page}, workerInfo) => {
   if (!workerInfo.project.name.includes('Mobile')) {
     await expect(page.getByText('Template', {exact: true})).toBeVisible();
   }
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('New repo: initialize later', async ({page}) => {
@@ -69,10 +70,10 @@ test('New repo: initialize later', async ({page}) => {
   await page.getByPlaceholder('master').fill('devbranch');
   await validate_form({page}, 'fieldset');
   await page.getByRole('button', {name: 'Create repository'}).click();
-  expect(page.url()).toBe(`http://localhost:3003/user2/${reponame}`);
+  await page.waitForURL(new RegExp(`.*/user2/${reponame}$`));
   await expect(page.getByRole('link', {name: 'New file'})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Creating a new repository on'})).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 
   // add a README
   await page.getByRole('link', {name: 'New file'}).click();
@@ -89,11 +90,10 @@ test('New repo: initialize later', async ({page}) => {
   expect(page.url()).toBe(`http://localhost:3003/user2/${reponame}/src/branch/devbranch/README.md`);
   await expect(page.getByRole('link', {name: 'My first commit message'})).toBeVisible();
   await expect(page.getByText('Hello Forgejo!')).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 });
 
-test('New repo: from template', async ({page}, workerInfo) => {
-  test.skip(['Mobile Safari', 'webkit'].includes(workerInfo.project.name), 'WebKit browsers seem to have CORS issues with localhost here.');
+test('New repo: from template', async ({page}) => {
   const response = await page.goto('/repo/create');
   expect(response?.status()).toBe(200);
 
@@ -101,11 +101,11 @@ test('New repo: from template', async ({page}, workerInfo) => {
   await page.getByRole('group', {name: 'Use a template You can select'}).getByRole('combobox').click();
   await page.getByRole('option', {name: 'user27/template1'}).click();
   await page.getByText('Git content (Default branch)').click();
-  await save_visual(page);
+  await screenshot(page);
   await page.getByLabel('Repository name').fill(reponame);
   await page.getByRole('button', {name: 'Create repository'}).click();
   await expect(page.getByRole('link', {name: `${reponame}.log`})).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('New repo: label set', async ({page}) => {
@@ -117,13 +117,13 @@ test('New repo: label set', async ({page}) => {
   await page.getByRole('option', {name: 'Advanced (Kind/Bug, Kind/'}).click();
   // close dropdown via unrelated click
   await page.getByText('You can select an existing').click();
-  await save_visual(page);
+  await screenshot(page);
   await page.getByLabel('Repository name').fill(reponame);
   await page.getByRole('button', {name: 'Create repository'}).click();
   await page.goto(`/user2/${reponame}/issues`);
   await page.getByRole('link', {name: 'Labels'}).click();
   await expect(page.getByText('Kind/Bug Something is not')).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('New repo: gitignore', async ({page}) => {
@@ -140,7 +140,7 @@ test('New repo: gitignore', async ({page}) => {
   await page.getByRole('option', {name: 'NotesAndExtendedConfiguration'}).click();
   await page.getByRole('option', {name: 'MetaProgrammingSystem'}).click();
   await page.getByRole('option', {name: 'AppceleratorTitanium'}).click();
-  await save_visual(page);
+  await screenshot(page);
 
   const segmentWidth = (await page.locator('.segment').boundingBox()).width;
   const dropdownWidth = (await gitignoreDropdown.boundingBox()).width;

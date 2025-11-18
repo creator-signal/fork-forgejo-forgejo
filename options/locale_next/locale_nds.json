@@ -1,4 +1,16 @@
 {
+    "fork.n_forks": {
+        "one": "%s Gabel",
+        "other": "%s Gabels"
+    },
+    "stars.n_stars": {
+        "one": "%s Steern",
+        "other": "%s Steerns"
+    },
+    "release.n_downloads": {
+        "one": "%s maal runnerladen",
+        "other": "%s maal runnerladen"
+    },
     "repo.pulls.merged_title_desc": {
         "one": "hett %[4]s %[1]d Kommitteren vun <code>%[2]s</code> na <code>%[3]s</code> tosamenföhrt",
         "other": "hett %[4]s %[1]d Kommitterens vun <code>%[2]s</code> na <code>%[3]s</code> tosamenföhrt"
@@ -121,10 +133,17 @@
     "migrate.pagure.description": "Daten vun pagure.io of anner Pagure-Instanzen umtrecken.",
     "migrate.pagure.project_url": "Pagure-Projekt-URL",
     "migrate.pagure.project_example": "De URL vum Projekt up Pagure, to’n Bispööl https://pagure.io/pagure",
-    "migrate.pagure.token_label": "Teken",
-    "migrate.pagure.token_body_b": "Wees wiss, boven the Flagg för een privaates Repo to setten, wenn du willst, dat deeses Repo privaat wesen sall",
+    "migrate.pagure.token_label": "Pagure-API-Teken",
     "migrate.pagure.incorrect_url": "Ungültige Quell-Repositoriums-URL is angeven worden",
-    "migrate.pagure.token_body_a": "Giff een Pagure-API-Teken mit Togang to de privaaten Gefallens an, um een Repositorium mit blots the privaaten Gefallens daarin to maken",
+    "migrate.github.description": "Daten vun github.com of eenem GitHub-Enterprise-Server umtrecken.",
+    "migrate.git.description": "Een Repositorium blots vun elkeen Git-Deenst umtrecken.",
+    "migrate.gitea.description": "Daten vun gitea.com of anner Gitea-Instanzen umtrecken.",
+    "migrate.gitlab.description": "Daten vun gitlab.com of anner GitLab-Instanzen umtrecken.",
+    "migrate.gogs.description": "Daten vun notabug.org of anner Gogs-Instanzen umtrecken.",
+    "migrate.onedev.description": "Daten vun code.onedev.io of anner OneDev-Instanzen umtrecken.",
+    "migrate.gitbucket.description": "Daten vun GitBucket-Instanzen umtrecken.",
+    "migrate.codebase.description": "Daten vun codebasehq.com umtrecken.",
+    "migrate.forgejo.description": "Daten vun codeberg.org of anner Forgejo-Instanzen umtrecken.",
     "admin.config.security": "Sekerheids-Instellens",
     "admin.config.global_2fa_requirement.all": "All Brukers",
     "error.must_enable_2fa": "Deese Forgejo-Instanz verlangt, dat Brukers Twee-Faktooren-Anmellen anknipsen, ehr se up hör Konten togriepen könen. Knips dat hier an: %s",
@@ -134,5 +153,53 @@
     "admin.config.global_2fa_requirement.title": "Twee-Faktooren-Anmellen överall verlangen",
     "settings.twofa_reenroll": "Twee-Faktooren-Anmellen neei inrichten",
     "settings.twofa_reenroll.description": "Richt dien Twee-Faktooren-Anmellen neei in",
-    "settings.must_enable_2fa": "Deese Forgejo-Instanz verlangt, dat Brukers Twee-Faktooren-Anmellen anknipsen, ehr se up hör Konten togriepen könen."
+    "settings.must_enable_2fa": "Deese Forgejo-Instanz verlangt, dat Brukers Twee-Faktooren-Anmellen anknipsen, ehr se up hör Konten togriepen könen.",
+    "user.ghost.tooltip": "Deeser Bruker is lösket worden of kann nich funnen worden.",
+    "migrate.form.error.url_credentials": "De URL enthollt Anmell-Daten, legg se in de Felden för Brukernaam un Passwoord",
+    "actions.runs.viewing_out_of_date_run": "Du bekiekst eenen verollten Loop vun deeser Upgaav, wat %[1]s utföhrt worden is.",
+    "actions.runs.view_most_recent_run": "Neeisten Loop ankieken",
+    "actions.runs.run_attempt_label": "Loop-Versöök #%[1]s (%[2]s)",
+    "repo.pulls.maintainers_can_edit": "Liddmaten könen deesen Haalvörslag bewarken.",
+    "repo.pulls.maintainers_cannot_edit": "Liddmaten könen deesen Haalvörslag nich bewarken.",
+    "pulse.n_active_issues": {
+        "one": "%s aktiiv Gefall",
+        "other": "%s aktiiv Gefallens"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s aktiiv Haalvörslag",
+        "other": "%s aktiiv Haalvörslagen"
+    },
+    "migrate.pagure.private_issues.summary": "Privaate Gefallens (wenn du willst)",
+    "migrate.pagure.token.placeholder": "Blots, um een Archiv vun privaaten Gefallens to maken",
+    "migrate.pagure.private_issues.description": "Deese Funktioon lett di een twedes Repositorium maken, wat blots privaate Gefallens ut dienem Pagure-Projekt för Archivzwecken enthollt. Maak toeerst eenen normaalen Umtreck (sünner een Teken), um alle publiken Inhollen to importeren. Dann, wenn du privaate Gefallens hest, wat du behollen willst, maak noch een anner Repositorium mit deesem Teken, um deese privaaten Gefallens to archiveren.",
+    "migrate.pagure.private_issues.warning": "Wees wiss, de Sichtbaarkeid vun de Repositorium up Privaat to setten, wenn du de API-Slötel bruukst, um privaate Gefallens to importeren. Dat verhinnert, dat du privaaten Inholl ut Versehn in eenem publiken Repositorium blootmaakst.",
+    "mail.issue.action.close_by_commit": "%[1]s hett %[2]s in Kommitteren %[3]s dichtmaakt.",
+    "actions.workflow.job_parsing_error": "Kann de Upgaven in de Warkwies nich lesen: %v",
+    "actions.workflow.event_detection_error": "Kann de unnerstütt Vörfallen in de Warkwies nich lesen: %v",
+    "actions.workflow.pre_execution_error": "Warkwies is nich utföhrt worden, denn een Fehler is uptreden, wat de Utföhrens-Versöök blockeert hett.",
+    "watch.n_watchers": {
+        "one": "%s Belurer",
+        "other": "%s Belurers"
+    },
+    "teams.add_all_repos.modal.header": "All Repositoriums hentofögen",
+    "teams.remove_all_repos.modal.header": "All Repositoriums wegdoon",
+    "repo.pulls.poster_manage_approval": "Tostimmen verwalten",
+    "repo.pulls.poster_requires_approval": "Eenige Warkwiesen <a href=\"%[1]s\">wachten up een Nakieken.</a>",
+    "repo.pulls.poster_is_trusted": "De Schriever vun deesem Haalvörslag word <a href=\"%[1]s\">alltied vertroot, Warkwiesen uttoföhren.</a>",
+    "repo.pulls.poster_requires_approval.tooltip": "De Schriever vun deesem Haalvörslag word nich vertroot, Warkwiesen uttoföhren, wat vun eenem Haalvörslag ut eener Gavel of mit AGit utlööst worden. De Warkwiesen, wat vun eenem `pull_request`-Vörfall utlööst worden, lopen eerst dann, wenn se tostimmt worden.",
+    "repo.pulls.poster_is_trusted.tooltip": "De Schriever vun deesem Haalvörslag word utdrückelk vertroot, Warkwiesen uttoföhren, wat vun `pull_request`-Vörfallen utlööst worden.",
+    "repo.pulls.poster_trust_deny": "Verseggen",
+    "repo.pulls.poster_trust_deny.tooltip": "De Warkwiesen, wat up Tostimmen wachten, worden ofbroken.",
+    "repo.pulls.poster_trust_once": "Een Maal tostimmen",
+    "repo.pulls.poster_trust_once.tooltip": "De Warkwiesen, wat vun eenem `pull_request`-Vörfall utlööst worden, worden för deeses Kommitteren lopen, mutten aver för all tokünftig Kommitterens, wat to deesem Haalvörslag schuven worden, weer neei tostimmt worden.",
+    "repo.pulls.poster_trust_always": "Alltieden verlöven",
+    "repo.pulls.poster_trust_always.tooltip": "De Warkwiesen, wat vun eenem `pull_request`-Vörfall utlööst worden, worden för deeses Kommitteren lopen, un wiedere Utföhrens vun deesem Haalvörslag of vun tokünftig Haalvörslagen vun de sülven Schriever mutten nich mehr tostimmt worden.",
+    "repo.pulls.poster_trust_revoke": "Torüggnehmen",
+    "repo.pulls.poster_trust_revoke.tooltip": "De Schriever vun deesem Haalvörslag word nich mehr vertroot, Warkwiesen, wat vun eenem `pull_request`-Vörfall utlööst worden, uttoföhren. Elkeen Utföhren mutt neei tostimmt worden.",
+    "admin.dashboard.actions_action_user": "Forgejo-Aktioonen-Vertroen för inaktiiv Brukers torüggnehmen",
+    "actions.status.diagnostics.waiting": {
+        "one": "Wacht up eenen Loper mit deesem Vermark: %s",
+        "other": "Wacht up eenen Loper mit deesen Vermarkens: %s"
+    },
+    "keys.verify.token.hint": "Deeses Teken gellt blots 1 Menüüt. <a href=\"%[1]s\">Haal een nejes, wenn ’t avlopen is</a>."
 }

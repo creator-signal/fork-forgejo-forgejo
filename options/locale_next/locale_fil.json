@@ -1,4 +1,16 @@
 {
+    "fork.n_forks": {
+        "one": "%s fork",
+        "other": "%s mga fork"
+    },
+    "stars.n_stars": {
+        "one": "%s bituin",
+        "other": "%s mga bitwin"
+    },
+    "release.n_downloads": {
+        "one": "%s download",
+        "other": "%s mga download"
+    },
     "repo.pulls.merged_title_desc": {
         "one": "isinali ang %[1]d commit mula <code>%[2]s</code> patungong <code>%[3]s</code> %[4]s",
         "other": "isinali ang %[1]d mga commit mula sa <code>%[2]s</code> patungong <code>%[3]s</code> %[4]s"
@@ -120,11 +132,18 @@
     "repo.pulls.already_merged": "Nabigo ang pagsasama: Naisama na ang hiling sa paghila na ito.",
     "migrate.pagure.incorrect_url": "Maling pinagmulang URL ng repositoryo ang ibinigay",
     "migrate.pagure.project_url": "URL ng Pagure na proyekto",
-    "migrate.pagure.token_label": "Token",
-    "migrate.pagure.token_body_a": "Magbigay ng Pagure API token na may access sa mga pribadong isyu para gumawa ng repositoryo na may mga pribadong isyu lang",
+    "migrate.pagure.token_label": "Pagure API Token",
     "migrate.pagure.project_example": "Ang URL ng Pagure na proyekto, hal. https://pagure.io/pagure",
-    "migrate.pagure.token_body_b": "Siguraduhin na itakda ang pribadong repositoryo na flag sa itaas kung gusto mo na pribado ang repositoryong ito",
     "migrate.pagure.description": "Mag-migrate ng data mula sa pagure.io o sa ibang mga Pagure na instansya.",
+    "migrate.github.description": "Magmigrate ng data mula sa github.com o GitHub Enterprise server.",
+    "migrate.git.description": "Mag-migrate lang ng repositoryo mula sa anumang serbisyo ng Git.",
+    "migrate.gitea.description": "Mag-migrate ng data mula sa gitea.com o iba pang mga Gitea na instansya.",
+    "migrate.gitlab.description": "Mag-migrate ng data mula sa gitlab.com o iba pang mga GitLab na instansya.",
+    "migrate.gogs.description": "Mag-migrate ng data mula sa notabug.org o iba pang mga Gogs na instansya.",
+    "migrate.onedev.description": "Mag-migrate ng data mula sa code.onedev.io o iba pang mga OneDev na instansya.",
+    "migrate.gitbucket.description": "Mag-migrate ng data mula sa mga GitBucket na instansya.",
+    "migrate.codebase.description": "Mag-migrate ng data mula sa codebasehq.com.",
+    "migrate.forgejo.description": "Mag-migrate ng data mula sa codeberg.org o iba pang mga Forgejo na instansya.",
     "admin.config.security": "Pagsasaayos sa seguridad",
     "error.must_enable_2fa": "Kinakailangan ng instansyang ito na ang mga user ay paganahin ang authentikasyong two-factor bago nila i-access ang kani-kanilang account. Paganahin ito sa: %s",
     "admin.config.global_2fa_requirement.title": "Global na pangangailangan ng two-factor",
@@ -134,5 +153,36 @@
     "admin.config.global_2fa_requirement.all": "Lahat ng mga user",
     "admin.config.global_2fa_requirement.admin": "Mga tagapangasiwa",
     "settings.twofa_unroll_unavailable": "Kinakailangan ang authentikasyong two-factor para sa iyong account at hindi maaaring i-disable.",
-    "settings.twofa_reenroll": "I-enroll muli ang authentikasyong two-factor"
+    "settings.twofa_reenroll": "I-enroll muli ang authentikasyong two-factor",
+    "user.ghost.tooltip": "Binura ang user na ito, o hindi matugma.",
+    "migrate.form.error.url_credentials": "Naglalaman ng mga kredensyal ang URL, ilagay ang mga ito sa mga patlang ng username at password ayon sa pagkakabanggit",
+    "actions.runs.viewing_out_of_date_run": "Tumitingin ka sa isang hindi napapanahong paktabo ng trabahong ito na na-execute %[1]s.",
+    "actions.runs.view_most_recent_run": "Tignan ang pinakabagong pagtakbo",
+    "actions.runs.run_attempt_label": "Tangka sa pagtakbo #%[1]s (%[2]s)",
+    "pulse.n_active_issues": {
+        "one": "%s aktibong isyu",
+        "other": "%s mga aktibong isyu"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s aktibong hiling sa paghila",
+        "other": "%s aktibong mga hiling sa paghila"
+    },
+    "repo.pulls.maintainers_can_edit": "Maaaring i-edit ng mga tagapangaiswa ang hiling sa paghila na ito.",
+    "repo.pulls.maintainers_cannot_edit": "Hindi maaaring i-edit ng mga tagapangasiwa ang hiling sa paghila na ito.",
+    "migrate.pagure.private_issues.summary": "Mga Pribadong Isyu (Opsyonal)",
+    "migrate.pagure.private_issues.description": "Dinisenyo ang feature na ito na gumawa ng isa pang repositoryo na naglalaman lamang ng mga pribadong isyu mula sa iyong proyekto sa Pagure para sa layunin ng pag-archive. Una, magsagawa ng isang normal na pag-migrate (nang walang token) para i-import ang lahat ng mga nilalaman. At, kung may mga pribadong isyu na gusto mong panatilihin, gumawa ng isang hiwalay na repositoryo gamit ng opsyon ng token na ito para i-archive ang mga pribadong isyu.",
+    "migrate.pagure.private_issues.warning": "Siguraduhing itakda ang visibility ng repositoryo sa itaas sa Pribado kung ginagamit mo ang API key para i-import ang mga pribadong isyu. Pinipigilan nito ang paglalantag ng mga pribadong nilalaman sa isang pampublikong repositoryo.",
+    "migrate.pagure.token.placeholder": "Para lamang sa paggawa ng archive ng mga pribadong isyu",
+    "mail.issue.action.close_by_commit": "Isinara ni %[1]s ang %[2]s sa commit na %[3]s.",
+    "actions.workflow.job_parsing_error": "Hindi ma-parse ang mga trabaho sa workflow: %v",
+    "actions.workflow.event_detection_error": "Hindi ma-parse ang mga sinusuportahang event sa workflow: %v",
+    "actions.workflow.pre_execution_error": "Hindi na-execute ang workflow dahil sa isang error na hinarang ang pagtangka sa pag-execute.",
+    "watch.n_watchers": {
+        "one": "%s nanonood",
+        "other": "%s (mga) nanonood"
+    },
+    "repo.pulls.poster_manage_approval": "Ipamahala ang pagapruba",
+    "repo.pulls.poster_requires_approval": "Ang ilang mga workflow ay <a href=\"%[1]s\">naghihintay para suriin.</a>",
+    "repo.pulls.poster_requires_approval.tooltip": "Ang may-akda ng hiling sa paghilang ito ay hindi pinagkatiwalaan na tumakbo ng mga workflow na na-trigger ng isang hiling sa paghila na ginawa mula sa naka-fork na repositoryo o gamit ang AGit. Hindi tatakbo ang mga workflow na na-trigger ng `pull_request` event hanggang sa sila ay aprubahan.",
+    "repo.pulls.poster_is_trusted": "Ang may-akda ng hiling sa paghilang ito ay <a href=\"%[1]s\">palaging pinagkakatiwalaan na tumakbo ng mga workflow.</a>"
 }

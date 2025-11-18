@@ -61,7 +61,7 @@ func ForgotPasswdPost(ctx *context.Context) {
 	email := ctx.FormString("email")
 	ctx.Data["Email"] = email
 
-	u, err := user_model.GetUserByEmail(ctx, email)
+	u, err := user_model.GetUserByEmailSimple(ctx, email)
 	if err != nil {
 		if user_model.IsErrUserNotExist(err) {
 			ctx.Data["ResetPwdCodeLives"] = timeutil.MinutesToFriendly(setting.Service.ResetPwdCodeLives, ctx.Locale)
@@ -74,7 +74,7 @@ func ForgotPasswdPost(ctx *context.Context) {
 		return
 	}
 
-	if !u.IsLocal() && !u.IsOAuth2() {
+	if !u.IsLocal() && !(u.IsOAuth2() && u.IsPasswordSet()) {
 		ctx.Data["Err_Email"] = true
 		ctx.RenderWithErr(ctx.Tr("auth.non_local_account"), tplForgotPassword, nil)
 		return
@@ -132,6 +132,11 @@ func commonResetPassword(ctx *context.Context, shouldDeleteToken bool) (*user_mo
 			ctx.ServerError("deleteToken", err)
 			return nil, nil
 		}
+	}
+
+	if !u.IsLocal() && !(u.IsOAuth2() && u.IsPasswordSet()) {
+		ctx.Flash.Error(ctx.Tr("auth.non_local_account"), true)
+		return nil, nil
 	}
 
 	twofa, err := auth.GetTwoFactorByUID(ctx, u.ID)

@@ -22,7 +22,7 @@ import (
 	"forgejo.org/modules/translation"
 	"forgejo.org/modules/util"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
 	"xorm.io/builder"
 )
 
@@ -161,9 +161,8 @@ func (r *ActionRunner) LoadAttributes(ctx context.Context) error {
 	return nil
 }
 
-func (r *ActionRunner) GenerateToken() (err error) {
-	r.Token, r.TokenSalt, r.TokenHash, _, err = generateSaltedToken()
-	return err
+func (r *ActionRunner) GenerateToken() {
+	r.Token, r.TokenSalt, r.TokenHash, _ = generateSaltedToken()
 }
 
 // UpdateSecret updates the hash based on the specified token. It does not

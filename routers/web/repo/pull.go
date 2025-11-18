@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"forgejo.org/models"
+	actions_model "forgejo.org/models/actions"
 	activities_model "forgejo.org/models/activities"
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/db"
@@ -44,6 +45,7 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/utils"
+	actions_service "forgejo.org/services/actions"
 	asymkey_service "forgejo.org/services/asymkey"
 	"forgejo.org/services/automerge"
 	"forgejo.org/services/context"
@@ -66,32 +68,26 @@ const (
 	pullRequestTemplateKey = "PullRequestTemplate"
 )
 
-var pullRequestTemplateCandidates = []string{
-	"PULL_REQUEST_TEMPLATE.md",
-	"PULL_REQUEST_TEMPLATE.yaml",
-	"PULL_REQUEST_TEMPLATE.yml",
-	"pull_request_template.md",
-	"pull_request_template.yaml",
-	"pull_request_template.yml",
-	".forgejo/PULL_REQUEST_TEMPLATE.md",
-	".forgejo/PULL_REQUEST_TEMPLATE.yaml",
-	".forgejo/PULL_REQUEST_TEMPLATE.yml",
-	".forgejo/pull_request_template.md",
-	".forgejo/pull_request_template.yaml",
-	".forgejo/pull_request_template.yml",
-	".gitea/PULL_REQUEST_TEMPLATE.md",
-	".gitea/PULL_REQUEST_TEMPLATE.yaml",
-	".gitea/PULL_REQUEST_TEMPLATE.yml",
-	".gitea/pull_request_template.md",
-	".gitea/pull_request_template.yaml",
-	".gitea/pull_request_template.yml",
-	".github/PULL_REQUEST_TEMPLATE.md",
-	".github/PULL_REQUEST_TEMPLATE.yaml",
-	".github/PULL_REQUEST_TEMPLATE.yml",
-	".github/pull_request_template.md",
-	".github/pull_request_template.yaml",
-	".github/pull_request_template.yml",
+// generatePullRequestTemplateLocations generates all the file paths where we
+// look for a pull request template, e.g. ".forgejo/PULL_REQUEST_TEMPLATE.md".
+func generatePullRequestTemplateLocations() []string {
+	var result []string
+	prefixes := []string{"", ".forgejo/", ".gitea/", ".github/", "docs/"}
+	filenames := []string{"PULL_REQUEST_TEMPLATE", "pull_request_template"}
+	extensions := []string{".md", ".yaml", ".yml"}
+
+	for _, prefix := range prefixes {
+		for _, filename := range filenames {
+			for _, extension := range extensions {
+				result = append(result, prefix+filename+extension)
+			}
+		}
+	}
+
+	return result
 }
+
+var pullRequestTemplateCandidates = generatePullRequestTemplateLocations()
 
 func getRepository(ctx *context.Context, repoID int64) *repo_model.Repository {
 	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
@@ -770,6 +766,11 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 		ctx.Data["IsNothingToCompare"] = true
 	}
 
+	PrepareViewPullInfoActions(ctx, pull)
+	if ctx.Written() {
+		return nil
+	}
+
 	if pull.IsWorkInProgress(ctx) {
 		ctx.Data["IsPullWorkInProgress"] = true
 		ctx.Data["WorkInProgressPrefix"] = pull.GetWorkInProgressPrefix(ctx)
@@ -1003,8 +1004,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 			return
 		}
 
-		note := &git.Note{}
-		err = git.GetNote(ctx, ctx.Repo.GitRepo, specifiedEndCommit, note)
+		note, err := git.GetNote(ctx, ctx.Repo.GitRepo, specifiedEndCommit)
 		if err == nil {
 			ctx.Data["NoteCommit"] = note.Commit
 			ctx.Data["NoteAuthor"] = user_model.ValidateCommitWithEmail(ctx, note.Commit)
@@ -1172,6 +1172,13 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		return
 	}
 	ctx.Data["Assignees"] = MakeSelfOnTop(ctx.Doer, assigneeUsers)
+
+	participants := getIssueParticipants(ctx, issue)
+	if ctx.Written() {
+		return
+	}
+	ctx.Data["Participants"] = participants
+	ctx.Data["NumParticipants"] = len(participants)
 
 	handleTeamMentions(ctx)
 	if ctx.Written() {
@@ -1623,7 +1630,6 @@ func CompareAndPullRequestPost(ctx *context.Context) {
 		BaseBranch:          ci.BaseBranch,
 		HeadRepo:            ci.HeadRepo,
 		BaseRepo:            repo,
-		MergeBase:           ci.CompareInfo.MergeBase,
 		Type:                issues_model.PullRequestGitea,
 		AllowMaintainerEdit: form.AllowMaintainerEdit,
 	}
@@ -1942,4 +1948,68 @@ func SetAllowEdits(ctx *context.Context) {
 	ctx.JSON(http.StatusOK, map[string]any{
 		"allow_maintainer_edit": pr.AllowMaintainerEdit,
 	})
+}
+
+func PrepareViewPullInfoActions(ctx *context.Context, pull *issues_model.PullRequest) {
+	canReadUnitActions := ctx.Repo.CanRead(unit.TypeActions)
+	ctx.Data["CanReadUnitActions"] = canReadUnitActions
+
+	if !canReadUnitActions {
+		return
+	}
+
+	PrepareViewPullInfoActionsTrust(ctx, pull)
+	if ctx.Written() {
+		return
+	}
+}
+
+func PrepareViewPullInfoActionsTrust(ctx *context.Context, pull *issues_model.PullRequest) {
+	trusted, err := actions_service.GetPullRequestPosterIsTrustedWithActions(ctx, pull)
+	if err != nil {
+		ctx.ServerError("GetPullRequestUserIsTrustedWithActions", err)
+		return
+	}
+	ctx.Data["PullRequestPosterIsNotTrustedWithActions"] = trusted == actions_service.UserIsNotTrustedWithActions
+	ctx.Data["PullRequestPosterIsExplicitlyTrustedWithActions"] = trusted == actions_service.UserIsExplicitlyTrustedWithActions
+	ctx.Data["PullRequestPosterIsImplicitlyTrustedWithActions"] = trusted == actions_service.UserIsImplicitlyTrustedWithActions
+
+	someRunsNeedApproval, err := actions_model.HasRunThatNeedApproval(ctx, pull.Issue.RepoID, pull.ID)
+	if err != nil {
+		ctx.ServerError("HasRunThatNeedApproval", err)
+	}
+	ctx.Data["SomePullRequestRunsNeedApproval"] = someRunsNeedApproval
+
+	ctx.Data["UserCanDelegateTrustWithPullRequest"] = context.CheckRepoDelegateActionTrust(ctx)
+}
+
+func UpdateTrustWithPullRequestActions(ctx *context.Context) {
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	if err != nil {
+		if issues_model.IsErrPullRequestNotExist(err) {
+			ctx.NotFound("GetPullRequestByIndex", err)
+		} else {
+			ctx.ServerError("GetPullRequestByIndex", err)
+		}
+		return
+	}
+
+	trust := ctx.FormString("trust")
+
+	if err := actions_service.UpdateTrustedWithPullRequest(ctx, ctx.Doer.ID, pr, actions_service.TrustUpdate(trust)); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := pr.LoadIssue(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := pr.Issue.LoadRepo(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ctx.Redirect(fmt.Sprintf("%s#pull-request-trust-panel", pr.Issue.Link()))
 }

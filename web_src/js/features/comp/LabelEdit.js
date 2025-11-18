@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import {showModal} from '../../modules/modal.ts';
 
 function isExclusiveScopeName(name) {
   return /.*[^/]\/[^/].*/.test(name);
@@ -13,11 +14,7 @@ function updateExclusiveLabelEdit(form) {
   if (isExclusiveScopeName(nameInput.value)) {
     exclusiveField?.classList.remove('muted');
     exclusiveField?.removeAttribute('aria-disabled');
-    if (exclusiveCheckbox.checked && exclusiveCheckbox.getAttribute('data-exclusive-warn')) {
-      exclusiveWarning?.classList.remove('tw-hidden');
-    } else {
-      exclusiveWarning?.classList.add('tw-hidden');
-    }
+    exclusiveWarning?.classList.toggle('tw-hidden', !(exclusiveCheckbox.checked && exclusiveCheckbox.getAttribute('data-exclusive-warn')));
   } else {
     exclusiveField?.classList.add('muted');
     exclusiveField?.setAttribute('aria-disabled', 'true');
@@ -31,16 +28,14 @@ export function initCompLabelEdit(selector) {
   // Create label
   $('.new-label.button').on('click', () => {
     updateExclusiveLabelEdit('.new-label');
-    $('.new-label.modal').modal({
-      onApprove() {
-        const form = document.querySelector('.new-label.form');
-        if (!form.checkValidity()) {
-          form.reportValidity();
-          return false;
-        }
-        document.querySelector('.new-label.form').requestSubmit();
-      },
-    }).modal('show');
+    showModal('new-label-modal', () => {
+      const form = document.querySelector('.new-label.form');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return false;
+      }
+      document.querySelector('.new-label.form').requestSubmit();
+    });
     return false;
   });
 
@@ -68,16 +63,14 @@ export function initCompLabelEdit(selector) {
     colorInput.value = this.getAttribute('data-color');
     colorInput.dispatchEvent(new Event('input', {bubbles: true}));
 
-    $('.edit-label.modal').modal({
-      onApprove() {
-        const form = document.querySelector('.edit-label.form');
-        if (!form.checkValidity()) {
-          form.reportValidity();
-          return false;
-        }
-        document.querySelector('.edit-label.form').requestSubmit();
-      },
-    }).modal('show');
+    showModal('edit-label-modal', () => {
+      const form = document.querySelector('.edit-label.form');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return false;
+      }
+      document.querySelector('.edit-label.form').requestSubmit();
+    });
     return false;
   });
 

@@ -5,6 +5,7 @@ package integration
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -21,9 +22,10 @@ import (
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestAPISearchActionJobs_RepoRunner(t *testing.T) {
+func TestActionsAPISearchActionJobs_RepoRunner(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -47,8 +49,60 @@ func TestAPISearchActionJobs_RepoRunner(t *testing.T) {
 	assert.Equal(t, job.ID, jobs[0].ID)
 }
 
-func TestAPIWorkflowDispatchReturnInfo(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+func TestActionsAPISearchActionJobs_RepoRunnerAllPendingJobsWithoutLabels(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
+	job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 196})
+
+	req := NewRequestf(
+		t,
+		"GET",
+		"/api/v1/repos/%s/%s/actions/runners/jobs?labels=",
+		repo.OwnerName, repo.Name,
+	).AddTokenAuth(token)
+	res := MakeRequest(t, req, http.StatusOK)
+
+	var jobs []*api.ActionRunJob
+	DecodeJSON(t, res, &jobs)
+
+	assert.Len(t, jobs, 1)
+	assert.Equal(t, job.ID, jobs[0].ID)
+}
+
+func TestActionsAPISearchActionJobs_RepoRunnerAllPendingJobs(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
+	job393 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 393})
+	job394 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 394})
+	job395 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 395})
+	job397 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 397})
+
+	req := NewRequestf(
+		t,
+		"GET",
+		"/api/v1/repos/%s/%s/actions/runners/jobs",
+		repo.OwnerName, repo.Name,
+	).AddTokenAuth(token)
+	res := MakeRequest(t, req, http.StatusOK)
+
+	var jobs []*api.ActionRunJob
+	DecodeJSON(t, res, &jobs)
+
+	assert.Len(t, jobs, 4)
+	assert.Equal(t, job397.ID, jobs[0].ID)
+	assert.Equal(t, job395.ID, jobs[1].ID)
+	assert.Equal(t, job394.ID, jobs[2].ID)
+	assert.Equal(t, job393.ID, jobs[3].ID)
+}
+
+func TestActionsAPIWorkflowDispatchReturnInfo(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		workflowName := "dispatch.yml"
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
@@ -99,10 +153,28 @@ jobs:
 		assert.NotZero(t, run.ID)
 		assert.NotZero(t, run.RunNumber)
 		assert.Len(t, run.Jobs, 2)
+
+		req = NewRequestWithJSON(
+			t,
+			http.MethodPost,
+			fmt.Sprintf(
+				"/api/v1/repos/%s/%s/actions/workflows/%s/dispatches",
+				repo.OwnerName, repo.Name, workflowName,
+			),
+			&api.DispatchWorkflowOption{
+				Ref:           repo.DefaultBranch,
+				ReturnRunInfo: false,
+			},
+		)
+		req.AddTokenAuth(token)
+		res = MakeRequest(t, req, http.StatusNoContent)
+		body, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		assert.Empty(t, body) // 204 No Content doesn't support a body, so should be empty
 	})
 }
 
-func TestAPIGetListActionRun(t *testing.T) {
+func TestActionsAPIGetListActionRun(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	var (
 		runIDs = []int64{892, 893, 894}
@@ -185,7 +257,7 @@ func TestAPIGetListActionRun(t *testing.T) {
 	}
 }
 
-func TestAPIGetActionRun(t *testing.T) {
+func TestActionsAPIGetActionRun(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 63})

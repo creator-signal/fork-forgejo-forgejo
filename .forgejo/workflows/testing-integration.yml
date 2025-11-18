@@ -31,10 +31,10 @@ jobs:
     if: vars.ROLE == 'forgejo-integration'
     runs-on: docker
     container:
-      image: 'data.forgejo.org/oci/node:22-bookworm'
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     steps:
-      - uses: https://data.forgejo.org/actions/checkout@v4
+      - uses: https://data.forgejo.org/actions/checkout@v5
       - uses: ./.forgejo/workflows-composite/setup-env
       - name: install git 2.34.1 and git-lfs 3.0.2
         uses: ./.forgejo/workflows-composite/install-minimum-git-version
@@ -50,10 +50,10 @@ jobs:
     if: vars.ROLE == 'forgejo-integration'
     runs-on: docker
     container:
-      image: 'data.forgejo.org/oci/node:22-bookworm'
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     steps:
-      - uses: https://data.forgejo.org/actions/checkout@v4
+      - uses: https://data.forgejo.org/actions/checkout@v5
       - uses: ./.forgejo/workflows-composite/setup-env
       - name: install git 2.34.1 and git-lfs 3.0.2
         uses: ./.forgejo/workflows-composite/install-minimum-git-version
@@ -75,7 +75,7 @@ jobs:
       matrix:
         version: ['10.6', '11.8']
     container:
-      image: 'data.forgejo.org/oci/node:22-bookworm'
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     services:
       mysql:
@@ -85,7 +85,7 @@ jobs:
           MARIADB_DATABASE: testgitea
         options: --tmpfs /var/lib/mysql:noatime
     steps:
-      - uses: https://data.forgejo.org/actions/checkout@v4
+      - uses: https://data.forgejo.org/actions/checkout@v5
       - uses: ./.forgejo/workflows-composite/setup-env
       - name: install dependencies & git >= 2.42
         uses: ./.forgejo/workflows-composite/apt-install-from

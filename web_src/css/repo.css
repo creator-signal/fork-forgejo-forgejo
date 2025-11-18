@@ -140,6 +140,13 @@
   }
 }
 
+@media (max-width: 390px) {
+  .repository .clone-panel #repo-clone-url {
+    width: 0;
+    flex-grow: 1;
+  }
+}
+
 .repository .ui.action.input.clone-panel > button + button,
 .repository .ui.action.input.clone-panel > button + input {
   margin-left: -1px; /* make the borders overlap to avoid double borders */
@@ -429,6 +436,10 @@ pdf-object {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+citation-information .tab:not(.active) {
+  display: none;
 }
 
 .repository.file.list .non-diff-file-content .plain-text {
@@ -984,23 +995,57 @@ pdf-object {
 }
 
 .repository.view.issue .comment-list .code-comment {
-  border: 1px solid transparent;
   margin: 0;
+  /* top: around 5px of whitespace are added by reaction octicon. (0.5rem=7px)-5px=2px */
+  padding: 2px 0.5rem 1.5rem;
 }
 
-.repository.view.issue .comment-list .code-comment .comment-header {
-  background: transparent;
-  border-bottom: 0 !important;
-  padding: 0 !important;
+@media (max-width: 768px) {
+  .repository.view.issue .comment-list .code-comment {
+    padding: 0.33rem 0.33rem 1.33rem;
+  }
 }
 
-.repository.view.issue .comment-list .code-comment .comment-header::after,
-.repository.view.issue .comment-list .code-comment .comment-header::before {
-  display: none;
+.repository.view.issue .comment-list .code-comment:target {
+  outline: 1px solid var(--color-primary);
+}
+
+.repository.view.issue .comment-list .code-comment .header {
+  display: flex;
+  margin-bottom: 0.25rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.repository.view.issue .comment-list .code-comment .header .comment-header-left {
+  gap: 0.5rem;
+}
+
+.repository.view.issue .comment-list .code-comment .header .avatar {
+  margin: 0 !important;
 }
 
 .repository.view.issue .comment-list .code-comment .comment-content {
-  margin-left: 36px;
+  margin-left: calc(20px + 0.5rem);
+}
+
+.repository.view.issue .comment-list .code-comment .add-reaction {
+  padding: 0 0.5rem;
+}
+
+/* emulation of horizontal rule between comments originating from forgejo- themes, commit faab0c670e */
+
+.repository.view.issue .comment-list .code-comment + .code-comment {
+  margin-top: 1rem !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid var(--color-secondary) !important;
+}
+
+@media (max-width: 768px) {
+  .repository.view.issue .comment-list .code-comment + .code-comment {
+    margin-top: 0.5rem !important;
+    padding-top: 0.5rem !important;
+  }
 }
 
 .repository.view.issue .comment-list .comment > .avatar {
@@ -1012,15 +1057,19 @@ pdf-object {
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions {
-  margin-top: 16px !important;
-  margin-bottom: -8px !important;
+  gap: var(--button-spacing);
+  flex-wrap: wrap;
+  width: unset !important;
+  margin-left: calc(20px + 0.5rem) !important;
+  margin-top: 1rem !important;
+  margin-bottom: -1rem !important;
   border-top: none !important;
+  background: transparent !important;
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions .ui.label {
   border: 1px solid;
   padding: 5px 8px !important;
-  margin: 0 2px;
   border-radius: var(--border-radius);
   border-color: var(--color-secondary-dark-1) !important;
 }
@@ -1852,67 +1901,6 @@ details.repo-search-result summary::marker {
   font-weight: var(--font-weight-medium);
 }
 
-.repository .repository-summary #language-stats-bar {
-  display: flex;
-  gap: 2px;
-  padding: 0;
-  height: 10px;
-  white-space: nowrap;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  overflow: hidden;
-}
-
-.size-overview .segment:has(> .bar) {
-  display: flex;
-  height: 10px;
-  padding: 0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-#cite-repo-modal #citation-panel {
-  display: flex;
-  width: 100%;
-}
-
-#cite-repo-modal #citation-panel input {
-  border-radius: 0;
-  padding: 5px 10px;
-  width: 50%;
-  line-height: 1.4;
-}
-
-#cite-repo-modal #citation-panel #citation-copy-content {
-  border-radius: 0;
-  padding: 5px 10px;
-  font-size: 1.2em;
-  line-height: 1.4;
-  flex: 1;
-}
-
-#cite-repo-modal #citation-panel #citation-copy-bibtex {
-  font-size: 13px;
-  padding: 7.5px 5px;
-  border-right: none;
-}
-
-#cite-repo-modal #citation-panel #goto-citation-btn {
-  border-left: none;
-}
-
-#cite-repo-modal #citation-panel > :first-child {
-  border-radius: var(--border-radius) 0 0 var(--border-radius) !important;
-}
-
-#cite-repo-modal #citation-panel > :last-child {
-  border-radius: 0 var(--border-radius) var(--border-radius) 0 !important;
-}
-
-#cite-repo-modal #citation-panel .icon.button {
-  padding: 0 10px;
-}
-
 #search-user-box .results .result .image {
   order: 0;
   margin-right: 12px;
@@ -1934,21 +1922,21 @@ details.repo-search-result summary::marker {
   padding-top: 15px;
 }
 
-.commit-header-row,
-.tag-signature-row {
+.commit-header-row {
   min-height: 50px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
 }
 
-.ui.attached.message.tag-signature-row {
-  border-radius: var(--border-radius);
+.signature-row {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem !important;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
 }
 
-.tag-signature-row div {
-  margin-top: auto !important;
-  margin-bottom: auto !important;
-  display: inline-block !important;
+.signature-row > div {
+  display: flex;
+  align-items: center;
 }
 
 .commit-header-buttons {
@@ -2031,7 +2019,7 @@ details.repo-search-result summary::marker {
   margin: 0 !important;
   position: relative;
   color: var(--color-text);
-  min-height: var(--repo-header-issue-min-height);
+  min-height: 41px;
   background-color: var(--color-box-header);
   display: flex;
   justify-content: space-between;
@@ -2081,17 +2069,21 @@ details.repo-search-result summary::marker {
   left: 7px;
 }
 
-.comment-header .actions a:not(.label) {
-  padding: 0.5rem !important;
+.comment-header-right.actions a:not(.label) {
+  padding: 0.5rem;
 }
 
-.comment-header .actions .label {
+.comment-header-right.actions .label {
   margin: 0 !important;
 }
 
 .comment-header-left,
 .comment-header-right {
   gap: 4px;
+}
+
+.comment-header-left > .content-history-menu.active s {
+  text-decoration-thickness: 10%;
 }
 
 .comment-body {
@@ -2101,17 +2093,6 @@ details.repo-search-result summary::marker {
   max-width: 100% !important;
   margin: 0 !important;
   padding: 1em;
-}
-
-.edit-label.modal .form .column,
-.new-label.modal .form .column {
-  padding-right: 0;
-}
-
-.edit-label.modal .form .buttons,
-.new-label.modal .form .buttons {
-  margin-left: auto;
-  padding-top: 15px;
 }
 
 .stats-table {
@@ -2291,10 +2272,21 @@ tbody.commit-list {
   top: -2px;
 }
 
-#repo-topics .repo-topic {
+.repo-topics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.repo-topics .repo-topic {
   font-weight: var(--font-weight-normal);
   cursor: pointer;
   margin: 0;
+}
+
+.repo-topics .repo-topic:last-of-type {
+  margin-right: 0.5rem;
 }
 
 #new-dependency-drop-list.ui.selection.dropdown {
@@ -2351,6 +2343,7 @@ tbody.commit-list {
   overflow-x: auto;
   padding: 6px 12px !important;
   font-size: 13px !important;
+  min-height: 46px;
 }
 
 .file-info {

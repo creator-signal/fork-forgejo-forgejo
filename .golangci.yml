@@ -94,6 +94,7 @@ linters:
         - all
     testifylint:
       disable:
+        - error-is-as
         - go-require
   exclusions:
     generated: lax
@@ -119,7 +120,7 @@ linters:
           - errcheck
           - gocyclo
           - gosec
-        path: models/migrations/v
+        path: models/gitea_migrations/v
       - linters:
           - forbidigo
         path: cmd

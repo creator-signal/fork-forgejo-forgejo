@@ -9,7 +9,7 @@
   "baseBranchPatterns": [
     "$default",
     "/^v11\\.\\d+/forgejo$/",
-    "/^v12\\.\\d+/forgejo$/"
+    "/^v13\\.\\d+/forgejo$/"
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths", "npmDedupe"],
   "prConcurrentLimit": 10,
@@ -27,7 +27,7 @@
       "description": "Require dashboard approval for some deps",
       "matchPackageNames": [
         "docker.io/bitnami/minio",
-        "github.com/go-ap/activitypub",
+        "github.com/go-ap/activitypub"
       ],
       "dependencyDashboardApproval": true
     },

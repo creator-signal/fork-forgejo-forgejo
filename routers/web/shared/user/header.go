@@ -22,6 +22,7 @@ import (
 	"forgejo.org/modules/markup/markdown"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
+	"forgejo.org/routers/web/repo"
 	"forgejo.org/services/context"
 )
 
@@ -96,6 +97,10 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, profileClose func()) {
 	profileDbRepo, err := repo_model.GetRepositoryByName(ctx, ctx.ContextUser.ID, ".profile")
 	if err == nil {
+		// Don't show profile content if .profile repository is a fork
+		if profileDbRepo.IsFork {
+			return nil, nil, nil, func() {}
+		}
 		perm, err := access_model.GetUserRepoPermission(ctx, profileDbRepo, doer)
 		if err == nil && !profileDbRepo.IsEmpty && perm.CanRead(unit.TypeCode) {
 			if profileGitRepo, err = gitrepo.OpenRepository(ctx, profileDbRepo); err != nil {
@@ -104,7 +109,22 @@ func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profile
 				if commit, err := profileGitRepo.GetBranchCommit(profileDbRepo.DefaultBranch); err != nil {
 					log.Error("FindUserProfileReadme failed to GetBranchCommit: %v", err)
 				} else {
-					profileReadmeBlob, _ = commit.GetBlobByFoldedPath("README.md")
+					tree, err := commit.SubTree("")
+					if err != nil {
+						log.Error("FindUserProfileReadme failed to get SubTree: %v", err)
+					} else {
+						entries, err := tree.ListEntries()
+						if err != nil {
+							log.Error("FindUserProfileReadme failed to list entries: %v", err)
+						} else {
+							_, readmeEntry, err := repo.FindReadmeFileInEntries(ctx, entries, true)
+							if err != nil {
+								log.Error("FindUserProfileReadme failed to find readme in entries: %v", err)
+							} else if readmeEntry != nil {
+								profileReadmeBlob = readmeEntry.Blob()
+							}
+						}
+					}
 				}
 			}
 		}

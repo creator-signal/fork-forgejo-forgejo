@@ -34,7 +34,7 @@ import (
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
-	gitea_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 
@@ -49,11 +49,11 @@ const (
 )
 
 func TestGit(t *testing.T) {
-	onGiteaRun(t, testGit)
+	onApplicationRun(t, testGit)
 }
 
 func TestActionsTokenAuth(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
 		task.GenerateToken()
 		actions_model.UpdateTask(db.DefaultContext, task)
@@ -478,10 +478,7 @@ func doProtectBranch(ctx APITestContext, branch string, addParameter ...paramete
 		rule := &git_model.ProtectedBranch{RuleName: branch, RepoID: repo.ID}
 		unittest.LoadBeanIfExists(rule)
 
-		csrf := GetCSRF(t, ctx.Session, fmt.Sprintf("/%s/%s/settings/branches", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)))
-
 		parameter := parameterProtectBranch{
-			"_csrf":     csrf,
 			"rule_id":   strconv.FormatInt(rule.ID, 10),
 			"rule_name": branch,
 		}
@@ -495,7 +492,7 @@ func doProtectBranch(ctx APITestContext, branch string, addParameter ...paramete
 		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings/branches/edit", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)), parameter)
 		ctx.Session.MakeRequest(t, req, http.StatusSeeOther)
 		// Check if master branch has been locked successfully
-		flashCookie := ctx.Session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie := ctx.Session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "success%3DBranch%2Bprotection%2Bfor%2Brule%2B%2522"+url.QueryEscape(branch)+"%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 	}
@@ -683,11 +680,7 @@ func doPushCreate(ctx APITestContext, u *url.URL, objectFormat git.ObjectFormat)
 
 func doBranchDelete(ctx APITestContext, owner, repo, branch string) func(*testing.T) {
 	return func(t *testing.T) {
-		csrf := GetCSRF(t, ctx.Session, fmt.Sprintf("/%s/%s/branches", url.PathEscape(owner), url.PathEscape(repo)))
-
-		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/branches/delete?name=%s", url.PathEscape(owner), url.PathEscape(repo), url.QueryEscape(branch)), map[string]string{
-			"_csrf": csrf,
-		})
+		req := NewRequest(t, "POST", fmt.Sprintf("/%s/%s/branches/delete?name=%s", url.PathEscape(owner), url.PathEscape(repo), url.QueryEscape(branch)))
 		ctx.Session.MakeRequest(t, req, http.StatusOK)
 	}
 }
@@ -785,13 +778,11 @@ func doInternalReferences(ctx *APITestContext, dstPath string) func(t *testing.T
 
 		_, stdErr, gitErr := git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments(fmt.Sprintf(":refs/pull/%d/head", pr1.Index)).RunStdString(&git.RunOpts{Dir: dstPath})
 		require.Error(t, gitErr)
-		assert.Contains(t, stdErr, fmt.Sprintf("remote: Forgejo: The deletion of refs/pull/%d/head is skipped as it's an internal reference.", pr1.Index))
-		assert.Contains(t, stdErr, fmt.Sprintf("[remote rejected] refs/pull/%d/head (hook declined)", pr1.Index))
+		assert.Contains(t, stdErr, fmt.Sprintf("[remote rejected] refs/pull/%d/head (deny deleting a hidden ref)", pr1.Index))
 
 		_, stdErr, gitErr = git.NewCommand(git.DefaultContext, "push", "origin", "--force").AddDynamicArguments(fmt.Sprintf("HEAD~1:refs/pull/%d/head", pr1.Index)).RunStdString(&git.RunOpts{Dir: dstPath})
 		require.Error(t, gitErr)
-		assert.Contains(t, stdErr, fmt.Sprintf("remote: Forgejo: The modification of refs/pull/%d/head is skipped as it's an internal reference.", pr1.Index))
-		assert.Contains(t, stdErr, fmt.Sprintf("[remote rejected] HEAD~1 -> refs/pull/%d/head (hook declined)", pr1.Index))
+		assert.Contains(t, stdErr, fmt.Sprintf("[remote rejected] HEAD~1 -> refs/pull/%d/head (deny updating a hidden ref)", pr1.Index))
 	}
 }
 
@@ -1098,7 +1089,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 }
 
 func TestDataAsync_Issue29101(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 

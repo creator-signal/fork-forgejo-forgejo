@@ -1275,9 +1275,6 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 			return
 		}
 
-		// Clear whatever CSRF cookie has right now, force to generate a new one
-		ctx.Csrf.DeleteCookie(ctx)
-
 		opts := &user_service.UpdateOptions{
 			SetLastLogin: true,
 		}
@@ -1367,10 +1364,7 @@ func generateCodeChallenge(ctx *context.Context, provider string) (codeChallenge
 		// a code_challenge can be generated
 	}
 
-	codeVerifier, err := util.CryptoRandomString(43) // 256/log2(62) = 256 bits of entropy (each char having log2(62) of randomness)
-	if err != nil {
-		return "", err
-	}
+	codeVerifier := util.CryptoRandomString(util.RandomStringHigh)
 	if err = ctx.Session.Set("CodeVerifier", codeVerifier); err != nil {
 		return "", err
 	}

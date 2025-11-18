@@ -292,6 +292,11 @@ func composeIssueCommentMessages(ctx *mailCommentContext, lang string, recipient
 		"Language":        locale.Language(),
 		"CanReply":        setting.IncomingEmail.Enabled && commentType != issues_model.CommentTypePullRequestPush,
 	}
+	if closeIssueByCommit, ok := ctx.ActionAdditionalData.(ActionCloseIssueByCommit); ok {
+		mailMeta["CloseIssueByCommit"] = closeIssueByCommit.CommitID
+	} else {
+		mailMeta["CloseIssueByCommit"] = ""
+	}
 
 	var mailSubject bytes.Buffer
 	if err := subjectTemplates.ExecuteTemplate(&mailSubject, tplName, mailMeta); err == nil {
@@ -575,7 +580,7 @@ func fromDisplayName(u *user_model.User) string {
 	if setting.MailService.FromDisplayNameFormatTemplate != nil {
 		var ctx bytes.Buffer
 		err := setting.MailService.FromDisplayNameFormatTemplate.Execute(&ctx, map[string]any{
-			"DisplayName": u.DisplayName(),
+			"DisplayName": u.GetDisplayName(),
 			"AppName":     setting.AppName,
 			"Domain":      setting.Domain,
 		})

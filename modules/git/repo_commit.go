@@ -11,6 +11,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"forgejo.org/modules/cache"
 	"forgejo.org/modules/log"
@@ -458,14 +459,28 @@ func (repo *Repository) getBranches(commit *Commit, limit int) ([]string, error)
 	return branches, nil
 }
 
-// GetCommitsFromIDs get commits from commit IDs
-func (repo *Repository) GetCommitsFromIDs(commitIDs []string) []*Commit {
+// GetCommitsFromIDs get commits from commit IDs. If ignoreExistence is
+// specified, then commits that no longer exists are still returned but
+// without any information except the ID.
+func (repo *Repository) GetCommitsFromIDs(commitIDs []string, ignoreExistence bool) []*Commit {
 	commits := make([]*Commit, 0, len(commitIDs))
 
 	for _, commitID := range commitIDs {
 		commit, err := repo.GetCommit(commitID)
 		if err == nil && commit != nil {
 			commits = append(commits, commit)
+		} else if ignoreExistence && IsErrNotExist(err) {
+			// It's entirely possible the commit no longer exists, we only care
+			// about the status and verification. Verification is no longer possible,
+			// but getting the status is still possible with just the ID. We do have
+			// to assumme the commitID is not shortened, we cannot recover the full
+			// commitID.
+			id, err := NewIDFromString(commitID)
+			if err == nil {
+				commits = append(commits, &Commit{
+					ID: id,
+				})
+			}
 		}
 	}
 
@@ -655,4 +670,15 @@ func (repo *Repository) ConvertToGitID(commitID string) (ObjectID, error) {
 	}
 
 	return MustIDFromString(string(sha)), nil
+}
+
+// GetLatestCommitTime returns time for latest commit in repository (across all branches)
+func (repo *Repository) GetLatestCommitTime() (time.Time, error) {
+	cmd := NewCommand(repo.Ctx, "for-each-ref", "--sort=-committerdate", "--count=1", "--format=%(committerdate)", BranchPrefix)
+	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repo.Path})
+	if err != nil {
+		return time.Time{}, err
+	}
+	commitTime := strings.TrimSpace(stdout)
+	return time.Parse("Mon Jan _2 15:04:05 2006 -0700", commitTime)
 }

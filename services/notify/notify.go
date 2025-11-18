@@ -5,6 +5,7 @@ package notify
 
 import (
 	"context"
+	"slices"
 
 	actions_model "forgejo.org/models/actions"
 	issues_model "forgejo.org/models/issues"
@@ -22,6 +23,13 @@ var notifiers []Notifier
 func RegisterNotifier(notifier Notifier) {
 	go notifier.Run()
 	notifiers = append(notifiers, notifier)
+}
+
+// Intended for undoing RegisterNotifier in tests only, not for production usage
+func UnregisterNotifier(notifier Notifier) {
+	notifiers = slices.DeleteFunc(notifiers, func(maybeNotifier Notifier) bool {
+		return notifier == maybeNotifier
+	})
 }
 
 // NewWikiPage notifies creating new wiki pages to notifiers
@@ -65,13 +73,6 @@ func NewIssue(ctx context.Context, issue *issues_model.Issue, mentions []*user_m
 func IssueChangeStatus(ctx context.Context, doer *user_model.User, commitID string, issue *issues_model.Issue, actionComment *issues_model.Comment, closeOrReopen bool) {
 	for _, notifier := range notifiers {
 		notifier.IssueChangeStatus(ctx, doer, commitID, issue, actionComment, closeOrReopen)
-	}
-}
-
-// DeleteIssue notify when some issue deleted
-func DeleteIssue(ctx context.Context, doer *user_model.User, issue *issues_model.Issue) {
-	for _, notifier := range notifiers {
-		notifier.DeleteIssue(ctx, doer, issue)
 	}
 }
 

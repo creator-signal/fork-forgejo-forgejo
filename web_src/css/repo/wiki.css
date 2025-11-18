@@ -19,7 +19,12 @@
   min-height: 340px; /* This height matches the markdown editor's height */
 }
 
+.repository.wiki .ui.message.unicode-escape-prompt {
+  margin-bottom: 0.5em;
+}
+
 .repository.wiki .wiki-content-parts .markup {
+  background-color: var(--color-box-body);
   border: 1px solid var(--color-secondary);
   border-radius: var(--border-radius);
   padding: 1em;

@@ -421,27 +421,6 @@ func TestPullRequest_GetWorkInProgressPrefixWorkInProgress(t *testing.T) {
 	assert.Equal(t, "[wip]", pr.GetWorkInProgressPrefix(db.DefaultContext))
 }
 
-func TestDeleteOrphanedObjects(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	countBefore, err := db.GetEngine(db.DefaultContext).Count(&issues_model.PullRequest{})
-	require.NoError(t, err)
-
-	_, err = db.GetEngine(db.DefaultContext).Insert(&issues_model.PullRequest{IssueID: 1000}, &issues_model.PullRequest{IssueID: 1001}, &issues_model.PullRequest{IssueID: 1003})
-	require.NoError(t, err)
-
-	orphaned, err := db.CountOrphanedObjects(db.DefaultContext, "pull_request", "issue", "pull_request.issue_id=issue.id")
-	require.NoError(t, err)
-	assert.EqualValues(t, 3, orphaned)
-
-	err = db.DeleteOrphanedObjects(db.DefaultContext, "pull_request", "issue", "pull_request.issue_id=issue.id")
-	require.NoError(t, err)
-
-	countAfter, err := db.GetEngine(db.DefaultContext).Count(&issues_model.PullRequest{})
-	require.NoError(t, err)
-	assert.Equal(t, countBefore, countAfter)
-}
-
 func TestParseCodeOwnersLine(t *testing.T) {
 	type CodeOwnerTest struct {
 		Line   string
@@ -487,6 +466,43 @@ func TestGetPullRequestByMergedCommit(t *testing.T) {
 	require.ErrorAs(t, err, &issues_model.ErrPullRequestNotExist{})
 }
 
+func TestPullRequest_IsForkPullRequest(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("FlowGithub from a fork", func(t *testing.T) {
+		pr := &issues_model.PullRequest{
+			Flow:       issues_model.PullRequestFlowGithub,
+			HeadRepoID: 111,
+			BaseRepoID: 222,
+		}
+		assert.True(t, pr.IsForkPullRequest())
+	})
+
+	t.Run("FlowGithub from the same repository", func(t *testing.T) {
+		pr := &issues_model.PullRequest{
+			Flow:       issues_model.PullRequestFlowGithub,
+			HeadRepoID: 111,
+			BaseRepoID: 111,
+		}
+		assert.False(t, pr.IsForkPullRequest())
+	})
+
+	t.Run("PullRequestFlowAGit", func(t *testing.T) {
+		pr := &issues_model.PullRequest{
+			Flow: issues_model.PullRequestFlowAGit,
+		}
+		assert.True(t, pr.IsForkPullRequest())
+	})
+
+	t.Run("Other", func(t *testing.T) {
+		unknown := issues_model.PullRequestFlow(4854)
+		pr := &issues_model.PullRequest{
+			Flow: unknown,
+		}
+		assert.True(t, pr.IsForkPullRequest())
+	})
+}
+
 func TestMigrate_InsertPullRequests(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	reponame := "repo1"
@@ -504,7 +520,8 @@ func TestMigrate_InsertPullRequests(t *testing.T) {
 	}
 
 	p := &issues_model.PullRequest{
-		Issue: i,
+		Issue:      i,
+		BaseRepoID: repo.ID,
 	}
 
 	err := issues_model.InsertPullRequests(db.DefaultContext, p)

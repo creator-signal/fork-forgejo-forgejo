@@ -99,6 +99,12 @@ class ComboMarkdownEditor {
     this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-table"]')?.setAttribute('data-modal', `div[data-markdown-table-modal-id="${this.elementIdSuffix}"]`);
     this.textareaMarkdownToolbar.querySelector('button[data-md-action="new-link"]')?.setAttribute('data-modal', `div[data-markdown-link-modal-id="${this.elementIdSuffix}"]`);
 
+    // Find all data-md-ctrl-shortcut elements in the markdown toolbar.
+    const shortcutKeys = new Map();
+    for (const el of this.textareaMarkdownToolbar.querySelectorAll('[data-md-ctrl-shortcut]')) {
+      shortcutKeys.set(el.getAttribute('data-md-ctrl-shortcut'), el);
+    }
+
     // Track whether any actual input or pointer action was made after focusing, and only intercept Tab presses after that.
     this.tabEnabled = false;
     // This tracks whether last Tab action was ignored, and if it immediately happens *again*, lose focus.
@@ -145,6 +151,17 @@ class ComboMarkdownEditor {
         if (!this.breakLine()) return; // Nothing changed, let the default handler work.
         this.options?.onContentChanged?.(this, e);
         e.preventDefault();
+      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        const normalizedShortcutKey = e.key.charCodeAt(0) <= 127 ?
+          // if ascii, e.key is preferred as it is agnostic to keyboard layouts (QWERTY/Dvorak)...
+          e.key.toLowerCase() :
+          // if not ascii, e.code is used to support keyboards w/ other writing systems (eg. и or ბ); "KeyB" transformed to "b" to compare against the shortcut character.
+          e.code.replace('Key', '').toLowerCase();
+        const shortcutElement = shortcutKeys.get(normalizedShortcutKey);
+        if (shortcutElement) {
+          shortcutElement.click();
+          e.preventDefault();
+        }
       } else if (noModifiers) {
         this.activateTabHandling();
       }
@@ -459,7 +476,23 @@ class ComboMarkdownEditor {
     // Indent with 4 spaces, unindent 4 spaces or fewer or a lost tab.
     const indentPrefix = '    ';
     const unindentRegex = /^( {1,4}|\t|> {0,4})/;
-    const indentLevel = / {4}|\t|> /g;
+    const indentTokens = ['    ', '\t', '> '];
+
+    const indentLevel = (line) => {
+      let indent = 0;
+      let matchingToken;
+
+      do {
+        matchingToken = indentTokens.find((token) => line.startsWith(token));
+
+        if (matchingToken) {
+          indent++;
+          line = line.substr(matchingToken.length);
+        }
+      } while (matchingToken);
+
+      return indent;
+    };
 
     const value = this.textarea.value;
     const lines = value.split('\n');
@@ -508,8 +541,8 @@ class ComboMarkdownEditor {
       const match = line.match(listPrefixRegex);
       if (!match || !match[0].length) return false;
       // Check that the line isn't already indented in relation to parent.
-      const levels = line.match(indentLevel)?.length ?? 0;
-      const parentLevels = !firstLineIdx ? 0 : lines[firstLineIdx - 1].match(indentLevel)?.length ?? 0;
+      const levels = indentLevel(line);
+      const parentLevels = firstLineIdx > 0 ? indentLevel(lines.at(firstLineIdx - 1)) : 0;
       // Quotes can *begin* multiple levels in, so just allow whatever for now.
       if (levels - parentLevels > 0 && !isQuote) return false;
     }

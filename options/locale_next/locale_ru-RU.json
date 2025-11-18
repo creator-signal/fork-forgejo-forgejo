@@ -1,4 +1,19 @@
 {
+    "fork.n_forks": {
+        "one": "%s ответвление",
+        "few": "%s ответвления",
+        "many": "%s ответвлений"
+    },
+    "stars.n_stars": {
+        "one": "В избранном у %s",
+        "few": "В избранном у %s-х",
+        "many": "В избранном у %s-и"
+    },
+    "release.n_downloads": {
+        "one": "%s скачивание",
+        "few": "%s скачивания",
+        "many": "%s скачиваний"
+    },
     "repo.pulls.merged_title_desc": {
         "one": "слит %[1]d коммит из <code>%[2]s</code> в <code>%[3]s</code> %[4]s",
         "few": "слито %[1]d коммита из <code>%[2]s</code> в <code>%[3]s</code> %[4]s",
@@ -23,7 +38,7 @@
     "alert.asset_load_failed": "Не удалось получить ресурсы из {path}. Убедитесь, что файлы ресурсов доступны.",
     "install.invalid_lfs_path": "Не удалось расположить корень LFS по указанному пути: %[1]s",
     "alert.range_error": " - число должно быть в диапазоне от %[1]s-%[2]s.",
-    "meta.last_line": "...ъъ",
+    "meta.last_line": "This magic string will cause Codeberg Translate to create a new pull request in the Forgejo repository.",
     "mail.actions.not_successful_run_subject": "Провал раб. потока %[1]s в репозитории %[2]s",
     "mail.actions.successful_run_after_failure_subject": "Возобновление раб. потока %[1]s в репозитории %[2]s",
     "mail.actions.run_info_trigger": "Причина срабатывания: %[1]s by: %[2]s",
@@ -136,11 +151,69 @@
     "settings.twofa_reenroll": "Заменить 2ФА",
     "settings.twofa_reenroll.description": "Вы можете заменить двухфакторную аутентификацию",
     "repo.pulls.already_merged": "Слияние не удалось: слияние уже выполнено.",
-    "migrate.pagure.description": "Перенести данные с pagure.io или других серверов Pagure.",
+    "migrate.pagure.description": "Перенести данные с pagure.io или другого сервера Pagure.",
     "migrate.pagure.incorrect_url": "Введена неправильная ссылка на источник",
     "migrate.pagure.project_url": "Ссылка проекта на Pagure",
     "migrate.pagure.project_example": "Ссылка проекта. Например, https://pagure.io/pagure",
-    "migrate.pagure.token_label": "Токен",
-    "migrate.pagure.token_body_a": "Если предоставить токен API Pagure с доступом к секретным задачам проекта, будет создан отдельный репозиторий, в котором они будут размещены",
-    "migrate.pagure.token_body_b": "Поставьте флажок на пункте видимости репозитория выше, если хотите, чтобы этот репозиторий был частным"
+    "migrate.pagure.token_label": "Токен API Pagure",
+    "migrate.github.description": "Перенести данные с github.com или сервера GitHub Enterprise.",
+    "migrate.git.description": "Перенести Git-репозиторий из любого совместимого сервиса.",
+    "migrate.gitea.description": "Перенести данные с gitea.com или другого сервера Gitea.",
+    "migrate.gitlab.description": "Перенести данные с gitlab.com или другого сервера GitLab.",
+    "migrate.gogs.description": "Перенести данные с notabug.org или другого сервера Gogs.",
+    "migrate.onedev.description": "Перенести данные с code.onedev.io или другого сервера OneDev.",
+    "migrate.gitbucket.description": "Перенести данные с сервера GitBucket.",
+    "migrate.codebase.description": "Перенести данные с codebasehq.com.",
+    "migrate.forgejo.description": "Перенести данные с codeberg.org или другого сервера Forgejo.",
+    "user.ghost.tooltip": "Пользователь удалён или неизвестен.",
+    "migrate.form.error.url_credentials": "Ссылка содержит данные авторизации. Поместите их в соответствующие поля",
+    "actions.runs.run_attempt_label": "Попытка №%[1]s (%[2]s)",
+    "actions.runs.viewing_out_of_date_run": "Это устаревший результат. Задание было выполнено %[1]s.",
+    "actions.runs.view_most_recent_run": "Перейти к актуальному",
+    "repo.pulls.maintainers_can_edit": "Сопровождающие могут вносить правки.",
+    "repo.pulls.maintainers_cannot_edit": "Сопровождающие не могут вносить правки.",
+    "pulse.n_active_issues": {
+        "one": "%s активная задача",
+        "few": "%s активных задачи",
+        "many": "%s активных задач"
+    },
+    "pulse.n_active_prs": {
+        "one": "%s активный запрос слияния",
+        "few": "%s активных запроса слияния",
+        "many": "%s активных запросов слияния"
+    },
+    "migrate.pagure.private_issues.summary": "Скрытые задачи (необязательно)",
+    "migrate.pagure.private_issues.description": "Эта функция позволяет создать дополнительный репозиторий для архивации в нём скрытых задач из вашего проекта Pagure. Сперва выполните нормальный перенос репозитория без токена, чтобы скопировать всё публичное содержимое. Затем, если нужно, выполните ещё один перенос и укажите токен, чтобы разместить скрытые задачи в дополнительном репозитории.",
+    "migrate.pagure.private_issues.warning": "Не забудьте указать видимость репозитория как Частную при переносе скрытых задач, чтобы их никто не увидел.",
+    "migrate.pagure.token.placeholder": "Только для переноса скрытых задач",
+    "mail.issue.action.close_by_commit": "%[1]s закрыл %[2]s из коммита %[2]s.",
+    "actions.workflow.job_parsing_error": "Не удалось прочитать задачи в раб. потоке: %v",
+    "actions.workflow.event_detection_error": "Не удалось прочитать поддерживаемые события в раб. потоке: %v",
+    "actions.workflow.pre_execution_error": "Рабочий поток не был выполнен из-за ошибки, возникшей при попытке начать выполнение.",
+    "watch.n_watchers": {
+        "one": "%s наблюдатель",
+        "few": "%s наблюдателя",
+        "many": "%s наблюдателей"
+    },
+    "teams.add_all_repos.modal.header": "Добавить все репозитории",
+    "teams.remove_all_repos.modal.header": "Убрать все репозитории",
+    "repo.pulls.poster_requires_approval": "Раб. потоки, <a href=\"%[1]s\">ожидающие рецензии</a>.",
+    "repo.pulls.poster_requires_approval.tooltip": "Нет доверия к автору запроса на слияние. Раб. потоки, сработавшие по событию `pull_request`, не будут выполнятся на коде, предложенном из ответвления репозитория или через AGit, пока они не будут одобрены.",
+    "repo.pulls.poster_is_trusted": "Автор запроса на слияние <a href=\"%[1]s\">доверяется к запуску раб. потоков</a>.",
+    "repo.pulls.poster_is_trusted.tooltip": "Автор запроса на слияние доверяется для запуска раб. потоков, срабатывающих для событий `pull_request`.",
+    "repo.pulls.poster_trust_deny": "Отклонить",
+    "repo.pulls.poster_trust_deny.tooltip": "Раб. потоки, ожидающие одобрения, будут отменены.",
+    "repo.pulls.poster_trust_once": "Одобрить один раз",
+    "repo.pulls.poster_trust_once.tooltip": "Раб. потоки, сработавшие по событию `pull_request`, будут выполнены для последнего коммита, но все последующие коммиты будут снова потребуют одобрения.",
+    "repo.pulls.poster_trust_always": "Одобрить и начать доверять",
+    "repo.pulls.poster_trust_revoke": "Отозвать",
+    "keys.verify.token.hint": "Токен действителен в течение 1 минуты. <a href=\"%[1]s\">Получите новый, если этот истёк</a>.",
+    "admin.dashboard.actions_action_user": "Отозвать доверие Forgejo Действий у неактивных пользователей",
+    "actions.status.diagnostics.waiting": {
+        "one": "Ожидается исполнитель, имеющий метку: %s",
+        "few": "Ожидается исполнитель, имеющий одну из меток: %s",
+        "many": "Ожидается исполнитель, имеющий одну из меток: %s"
+    },
+    "repo.pulls.poster_manage_approval": "Управление одобрением",
+    "repo.pulls.poster_trust_revoke.tooltip": "Автор запроса на слияние больше не будет доверятся для запуска раб. потоков, срабатывающих для событий `pull_request`. Каждый запуск потребует одобрения."
 }

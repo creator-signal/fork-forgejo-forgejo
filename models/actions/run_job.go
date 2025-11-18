@@ -6,12 +6,15 @@ package actions
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"slices"
+	"strings"
 	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/translation"
 	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
@@ -42,6 +45,38 @@ type ActionRunJob struct {
 
 func init() {
 	db.RegisterModel(new(ActionRunJob))
+}
+
+func (job *ActionRunJob) HTMLURL(ctx context.Context) (string, error) {
+	if job.Run == nil || job.Run.Repo == nil {
+		return "", fmt.Errorf("action_run_job: load run and repo before accessing HTMLURL")
+	}
+
+	// Find the "index" of the currently selected job... kinda ugly that the URL uses the index rather than some other
+	// unique identifier of the job which could actually be stored upon it.  But hard to change that now.
+	allJobs, err := GetRunJobsByRunID(ctx, job.RunID)
+	if err != nil {
+		return "", err
+	}
+	jobIndex := -1
+	for i, otherJob := range allJobs {
+		if job.ID == otherJob.ID {
+			jobIndex = i
+			break
+		}
+	}
+	if jobIndex == -1 {
+		return "", fmt.Errorf("action_run_job: unable to find job on run: %d", job.ID)
+	}
+
+	attempt := job.Attempt
+	// If a job has never been fetched by a runner yet, it will have attempt 0 -- but this attempt will never have a
+	// valid UI since attempt is incremented to 1 if it is picked up by a runner.
+	if attempt == 0 {
+		attempt = 1
+	}
+
+	return fmt.Sprintf("%s/actions/runs/%d/jobs/%d/attempt/%d", job.Run.Repo.HTMLURL(), job.Run.Index, jobIndex, attempt), nil
 }
 
 func (job *ActionRunJob) Duration() time.Duration {
@@ -196,4 +231,25 @@ func AggregateJobStatus(jobs []*ActionRunJob) Status {
 	default:
 		return StatusUnknown // it shouldn't happen
 	}
+}
+
+// StatusDiagnostics returns optional diagnostic information to display to the user derived from
+// ActionRunJob's current status. It should help the user understand in which state the
+// ActionRunJob is and why.
+func (job *ActionRunJob) StatusDiagnostics(lang translation.Locale) []template.HTML {
+	diagnostics := []template.HTML{}
+
+	switch job.Status {
+	case StatusWaiting:
+		joinedLabels := strings.Join(job.RunsOn, ", ")
+		diagnostics = append(diagnostics, lang.TrPluralString(len(job.RunsOn), "actions.status.diagnostics.waiting", joinedLabels))
+	default:
+		diagnostics = append(diagnostics, template.HTML(job.Status.LocaleString(lang)))
+	}
+
+	if job.Run.NeedApproval {
+		diagnostics = append(diagnostics, template.HTML(lang.TrString("actions.need_approval_desc")))
+	}
+
+	return diagnostics
 }

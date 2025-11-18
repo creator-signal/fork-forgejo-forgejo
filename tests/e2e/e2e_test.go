@@ -20,6 +20,7 @@ import (
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/testlogger"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
@@ -37,7 +38,6 @@ func TestMain(m *testing.M) {
 	defer cancel()
 
 	tests.InitTest(true)
-	setting.Quota.Enabled = true
 	initChangedFiles()
 	testE2eWebRoutes = routers.NormalRoutes()
 
@@ -70,7 +70,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
-// TestE2e should be the only test e2e necessary. It will collect all "*.test.e2e.js" files in this directory and build a test for each.
+// TestE2e should be the only test e2e necessary. It will collect all "*.test.e2e.ts" files in this directory and build a test for each.
 func TestE2e(t *testing.T) {
 	// Find the paths of all e2e test files in test directory.
 	searchGlob := filepath.Join(filepath.Dir(setting.AppPath), "tests", "e2e", "*.test.e2e.ts")
@@ -103,6 +103,15 @@ func TestE2e(t *testing.T) {
 		}
 
 		t.Run(testname, func(t *testing.T) {
+			if testname == "user-settings.test.e2e" {
+				defer test.MockVariableValue(&setting.Quota.Enabled, true)()
+				defer test.MockVariableValue(&testE2eWebRoutes, routers.NormalRoutes())()
+			}
+			if testname == "buttons.test.e2e" {
+				defer test.MockVariableValue(&setting.IsProd, false)()
+				defer test.MockVariableValue(&testE2eWebRoutes, routers.NormalRoutes())()
+			}
+
 			// Default 2 minute timeout
 			onForgejoRun(t, func(*testing.T, *url.URL) {
 				defer DeclareGitRepos(t)()

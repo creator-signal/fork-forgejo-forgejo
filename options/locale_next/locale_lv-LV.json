@@ -1,4 +1,19 @@
 {
+    "fork.n_forks": {
+        "zero": "%s atzarojumu",
+        "one": "%s atzarojums",
+        "other": "%s atzarojumi"
+    },
+    "stars.n_stars": {
+        "zero": "%s zvaigžņu",
+        "one": "%s zvaignzne",
+        "other": "%s zvaigznes"
+    },
+    "release.n_downloads": {
+        "zero": "%s lejupielāžu",
+        "one": "%s lejupielāde",
+        "other": "%s lejupielādes"
+    },
     "repo.pulls.merged_title_desc": {
         "zero": "iekļāva %[1]d iesūtījumu no <code>%[2]s</code> <code>%[3]s</code> %[4]s",
         "one": "Iekļāva %[1]d iesūtījumu no <code>%[2]s</code> zarā <code>%[3]s</code> %[4]s",
@@ -129,8 +144,76 @@
     "migrate.pagure.incorrect_url": "Ir norādīts nepareizs avota glabātavas URL",
     "migrate.pagure.project_url": "Pagure projekta URL",
     "migrate.pagure.project_example": "Pagure projekta URL, piem., https://pagure.io/pagure",
-    "migrate.pagure.token_label": "Pilnvara",
-    "migrate.pagure.token_body_a": "Jānorāda Pagura API pilnvara ar piekļuvi privātajiem pieteikumiem, lai izveidotu glabātavu tikai ar privātiem pieteikumiem tajā",
-    "migrate.pagure.token_body_b": "Jāpārliecinās, ka augstāk ir iestatīts privātas glabātavas karogs, ja vēlies, lai šī glabātava būtu privāta",
-    "repo.pulls.already_merged": "Apvienošana neizdevās: šis izmaiņu pieprasījums jau ir iekļauts."
+    "migrate.pagure.token_label": "Pagure API ilnvara",
+    "migrate.github.description": "Pārcelt datus no github.com vai GitHub Enterprise servera.",
+    "migrate.git.description": "Pārcelt tikai glabātavu no jebkura Git pakalpojuma.",
+    "migrate.gitea.description": "Pārcelt datus no gitea.com vai citiem Gitea serveriem.",
+    "migrate.gitlab.description": "Pārcelt datus no gitlab.com vai citiem GitLab serveriem.",
+    "migrate.gogs.description": "Pārcelt datus no notabug.org vai citiem Gogs serveriem.",
+    "migrate.onedev.description": "Pārcelt datus no code.onedev.io vai citiem OneDev serveriem.",
+    "migrate.gitbucket.description": "Pārcelt datus no GitBucket serveriem.",
+    "migrate.codebase.description": "Pārcelt datus no codebasehq.com.",
+    "migrate.forgejo.description": "Pārcelt datus no codeberg.org vai citiem Fogejo serveriem.",
+    "repo.pulls.already_merged": "Apvienošana neizdevās: šis izmaiņu pieprasījums jau ir iekļauts.",
+    "admin.config.security": "Drošības kondigurācija",
+    "settings.twofa_reenroll.description": "Atkārtoti ieslēgt savu divpakāpju autentificēšanos",
+    "error.must_enable_2fa": "Šis Forgejo serveris pieprasa lietotājiem iespējot divpakāpju autentificēšanos, pirms viņi var piekļūt savam kontam. Iespējo to: %s",
+    "admin.config.global_2fa_requirement.title": "Visaptveroša divpakāpju prasība",
+    "admin.config.global_2fa_requirement.none": "Nē",
+    "admin.config.global_2fa_requirement.all": "Visi lietotāji",
+    "admin.config.global_2fa_requirement.admin": "Pārvaldītāji",
+    "settings.twofa_unroll_unavailable": "Tavam kontam ir nepieciešama divpakāpju autentificēšanās, un to nevar atspējot.",
+    "settings.twofa_reenroll": "Atkārtoti ieslēgt divpakāpju autentificēšanos",
+    "settings.must_enable_2fa": "Šis Forgejo serveris pieprasa lietotājiem iespējot divpakāpju autentificēšanos, pirms viņi var piekļūt savam kontam.",
+    "user.ghost.tooltip": "Šis lietotājs ir izdzēsts vai to nevar salāgot.",
+    "migrate.form.error.url_credentials": "URL satur pieteikšanās datus, tie ir attiecīgi jāievieto lietotājvārda un paroles laukā",
+    "actions.runs.view_most_recent_run": "Apskatīt visnesenāko palaišanu",
+    "actions.runs.run_attempt_label": "Palaišanas mēģinājums #%[1]s (%[2]s)",
+    "actions.runs.viewing_out_of_date_run": "Tu skati novecojušu šī darba palaišanu, kas tika izpildīta %[1]s.",
+    "repo.pulls.maintainers_can_edit": "Uzturētāji var labot šo izmaiņu pieprasījumu.",
+    "repo.pulls.maintainers_cannot_edit": "Uzturētāji nevar labot šo izmaiņu pieprasījumu.",
+    "pulse.n_active_issues": {
+        "zero": "%s atvērtu pieteikumu",
+        "one": "%s atvērts pieteikums",
+        "other": "%s atvērti pieteikumi"
+    },
+    "pulse.n_active_prs": {
+        "zero": "%s atvērtu izmaiņu pieprasījumu",
+        "one": "%s atvērts izmaiņu pieprasījums",
+        "other": "%s atvērti izmaiņu pieprasījumi"
+    },
+    "mail.issue.action.close_by_commit": "%[1] aizvēra %[2]s iesūtījumā %[3]s.",
+    "migrate.pagure.private_issues.summary": "Privātie pieteikumi (izvēles)",
+    "migrate.pagure.private_issues.description": "Šī iespēja ir izstrādāta, lai izveidotu otrēju glabātavu, kurā arhivēšanas nolūkā atrodas tikai privātie pieteikumi no Pagure projekta. Vispirms jāveic parasta pārcelšana (bez pilnvaras), lai ievietotu visu publisko saturu. Tad, ja ir saglabājami privāti pieteikumi, jāizveido atsevišķa glabātava, izmantojot šo pilnvaras iespēju, lai arhivētu privātos pieteikumus.",
+    "migrate.pagure.private_issues.warning": "Jāpārliecinās, ka glabātavas redzamība augstāk ir iestatīta kā privāta, ja izmanto API atslēgu, lai ievietotu privātos pieteikumus. Tas novērš nejaušu privāta satura atklāšanu publiskā glabātavā.",
+    "migrate.pagure.token.placeholder": "Tikai privātu pieteikumu arhīva izveidošanai",
+    "actions.workflow.job_parsing_error": "Nebija iespējams apstrādāt darbus darbplūsmā: %v",
+    "actions.workflow.event_detection_error": "Nebija iespējams apstrādāt atbalstītos notikumus darbplūsmā: %v",
+    "actions.workflow.pre_execution_error": "Darbplūsma netika izpildīta kļūdas, kura aizturēja izpildes mēģinājumu, dēļ.",
+    "watch.n_watchers": {
+        "zero": "%s vērotāju",
+        "one": "%s vērotājs",
+        "other": "%s vērotāji"
+    },
+    "teams.add_all_repos.modal.header": "Pievienot visas glabātavas",
+    "teams.remove_all_repos.modal.header": "Noņemt visas glabātavas",
+    "repo.pulls.poster_manage_approval": "Pārvaldīt apstiprinājumu",
+    "repo.pulls.poster_requires_approval": "Dažām darbplūsmām ir <a href=\"%[1]s\">nepieciešama izskatīšana</a>.",
+    "repo.pulls.poster_requires_approval.tooltip": "Šī izmaiņu pieprasījumu iesniedzējs nav uzticēta darbplūsmu, kuras izraisītas ar no atzarotas glabātavas izveidotu izmaiņu pieprasījumu vai ar AGit, izpildīšana. Darbplūsmas, kas ir izraisītas ar `pull_request` notikumu netiks izpildītas, kamēr tās nebūs apstiprinātas.",
+    "repo.pulls.poster_is_trusted": "Šī izmaiņu pieprasījumam <a href=\"%[1]s\">vienmēr ir uzticēts izpildīt darbplūsmas</a>.",
+    "repo.pulls.poster_is_trusted.tooltip": "Šī izmaiņu pieprasījuma izveidotājam ir noteikti uzticēts izpildīt darbplūsmas, kas izraisītas ar notikumu `pull_request`.",
+    "repo.pulls.poster_trust_deny": "Noraidīt",
+    "repo.pulls.poster_trust_deny.tooltip": "Darbplūsmas, kurām nepieciešama apstiprināšana, tiks atceltas.",
+    "repo.pulls.poster_trust_once": "Apstiprināt vienreiz",
+    "repo.pulls.poster_trust_once.tooltip": "Darbplūsmas, kas izraisītas ar notikumu `pull_request` tiks izpildītas šim iesūtījumam, bet būs nepieciešams apstiprinājums visiem pēc tam šajā izmaiņu pieprasījumā aizgādātajiem iesūtījumiem.",
+    "repo.pulls.poster_trust_always": "Vienmēr apstiprināt",
+    "repo.pulls.poster_trust_always.tooltip": "Notikuma `pull_request` izraisītas darbplūsmas tiks izpildītas šim iesūtījumam, un nebūs nepieciešamības apstiprināt izpildīšanu šajā izmaiņu pieprasījumā vai tā paša lietotāja pēc tam izveidotajiem izmaiņu pieprasījumiem.",
+    "repo.pulls.poster_trust_revoke": "Atsaukt",
+    "repo.pulls.poster_trust_revoke.tooltip": "Šī izmaiņu pieprasījuma izveidotājam vairs netiks uzticēts izpildīt notikuma `pull_request` notikuma izraisītas darbplūsmas, katra izpilde būs pašrocīgi jāapstiprina.",
+    "admin.dashboard.actions_action_user": "Atsaukt Forgejo darbību uzticamību neaktīviem lietotājiem",
+    "actions.status.diagnostics.waiting": {
+        "zero": "Gaida uz izpildītāju ar šādām iezīmēm: %s",
+        "one": "Gaida uz izpildītāju ar šādām iezīmēm: %s",
+        "other": "Gaida uz izpildītāju ar šādām iezīmēm: %s"
+    }
 }

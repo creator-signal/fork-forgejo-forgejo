@@ -8,13 +8,12 @@
 
 import {expect} from '@playwright/test';
 import {accessibilityCheck} from './shared/accessibility.ts';
-import {save_visual, test} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
 test.use({user: 'user2'});
 
-test('Markdown image preview behaviour', async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Flaky behaviour on mobile safari;');
-
+test('Markdown image preview behaviour', async ({page}) => {
   // Editing the root README.md file for image preview
   const editPath = '/user2/repo1/src/branch/master/README.md';
 
@@ -38,7 +37,7 @@ test('Markdown image preview behaviour', async ({page}, workerInfo) => {
   // Check for the image preview via the expected attribute
   const preview = page.locator('div[data-tab="preview"] p[dir="auto"] a');
   await expect(preview).toHaveAttribute('href', 'http://localhost:3003/user2/repo1/media/branch/master/assets/logo.svg');
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('Markdown indentation via toolbar', async ({page}) => {
@@ -196,6 +195,13 @@ test('markdown indentation with Tab', async ({page}) => {
   await textarea.pressSequentially('  ');
   await textarea.press('Shift+Tab');
   await expect(textarea).toHaveValue(initText);
+
+  // Check that indentation tokens not at the start of the string do not interrupt indentation
+  await textarea.focus();
+  await textarea.fill(initText);
+  await textarea.pressSequentially(tab);
+  await textarea.press('Tab');
+  await expect(textarea).toHaveValue(`* first\n* second\n* third\n    * last    `);
 });
 
 test('markdown block quote indentation', async ({page}) => {
@@ -352,7 +358,7 @@ test('Markdown insert table', async ({page}) => {
 
   const newTableModal = page.locator('div[data-markdown-table-modal-id="0"]');
   await expect(newTableModal).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 
   await newTableModal.locator('input[name="table-rows"]').fill('3');
   await newTableModal.locator('input[name="table-columns"]').fill('2');
@@ -363,7 +369,7 @@ test('Markdown insert table', async ({page}) => {
 
   const textarea = page.locator('textarea[name=content]');
   await expect(textarea).toHaveValue('| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n');
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('Markdown insert link', async ({page}) => {
@@ -376,7 +382,7 @@ test('Markdown insert link', async ({page}) => {
   const newLinkModal = page.locator('div[data-markdown-link-modal-id="0"]');
   await expect(newLinkModal).toBeVisible();
   await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], []);
-  await save_visual(page);
+  await screenshot(page);
 
   const url = 'https://example.com';
   const description = 'Where does this lead?';
@@ -390,7 +396,7 @@ test('Markdown insert link', async ({page}) => {
 
   const textarea = page.locator('textarea[name=content]');
   await expect(textarea).toHaveValue(`[${description}](${url})`);
-  await save_visual(page);
+  await screenshot(page);
 });
 
 test('text expander has higher prio then prefix continuation', async ({page}) => {
@@ -438,25 +444,29 @@ test('Combo Markdown: preview mode switch', async ({page}) => {
   await textarea.fill('**Content** :100: _100_');
 
   // Switch to preview mode
-  await page.locator('a[data-tab-for="markdown-previewer"]').click();
+  await page.locator('[data-tab-for="markdown-previewer"]').click();
 
   // Verify that the related UI elements were switched correctly
   await expect(toolbarItem).toBeHidden();
   await expect(editorPanel).toBeHidden();
   await expect(previewPanel).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
 
   // Verify that some content rendered
   await expect(page.locator('[data-tab-panel="markdown-previewer"] .emoji[data-alias="100"]')).toBeVisible();
 
   // Switch back to edit mode
-  await page.locator('a[data-tab-for="markdown-writer"]').click();
+  await page.locator('[data-tab-for="markdown-writer"]').click();
 
   // Verify that the related UI elements were switched back correctly
   await expect(toolbarItem).toBeVisible();
   await expect(editorPanel).toBeVisible();
   await expect(previewPanel).toBeHidden();
-  await save_visual(page);
+
+  // Validate switch height: it is customized to be same height as other buttons on the panel
+  expect(await page.locator('markdown-toolbar .switch').evaluate((el) => getComputedStyle(el).height)).toBe(await page.locator('md-header.markdown-toolbar-button').evaluate((el) => getComputedStyle(el).height));
+
+  await screenshot(page);
 });
 
 test('Multiple combo markdown: insert table', async ({page}) => {
@@ -493,7 +503,7 @@ test('Multiple combo markdown: insert table', async ({page}) => {
 
   await expect(comboboxOne).toHaveValue('| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n');
   await expect(comboboxTwo).toBeEmpty();
-  await save_visual(page);
+  await screenshot(page);
 
   // focus second one and add table to it
   await textareaTwo.click();
@@ -515,5 +525,38 @@ test('Multiple combo markdown: insert table', async ({page}) => {
 
   await expect(comboboxOne).toHaveValue('| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n');
   await expect(comboboxTwo).toHaveValue('| Header  | Header  | Header  |\n|---------|---------|---------|\n| Content | Content | Content |\n| Content | Content | Content |\n');
-  await save_visual(page);
+  await screenshot(page);
+});
+
+test('Markdown bold/italic toolbar and shortcut', async ({page}) => {
+  const initText = `line 1\nline 2\nline 3\nline 4`;
+
+  const response = await page.goto('/user2/repo1/issues/new');
+  expect(response?.status()).toBe(200);
+
+  const textarea = page.locator('textarea[name=content]');
+  await textarea.fill(initText);
+  await textarea.focus();
+  await textarea.evaluate((it:HTMLTextAreaElement) => it.setSelectionRange(it.value.indexOf('line 1'), it.value.indexOf('line 2')));
+
+  // Cases: bold via toolbar, bold via shortcut, repeat w/ italics
+  page.locator('md-bold').click();
+  await expect(textarea).toHaveValue(`**line 1**\nline 2\nline 3\nline 4`);
+  page.locator('md-bold').click();
+  await expect(textarea).toHaveValue(`line 1\nline 2\nline 3\nline 4`);
+
+  await textarea.press('ControlOrMeta+KeyB');
+  await expect(textarea).toHaveValue(`**line 1**\nline 2\nline 3\nline 4`);
+  await textarea.press('ControlOrMeta+KeyB');
+  await expect(textarea).toHaveValue(`line 1\nline 2\nline 3\nline 4`);
+
+  page.locator('md-italic').click();
+  await expect(textarea).toHaveValue(`_line 1_\nline 2\nline 3\nline 4`);
+  page.locator('md-italic').click();
+  await expect(textarea).toHaveValue(`line 1\nline 2\nline 3\nline 4`);
+
+  await textarea.press('ControlOrMeta+KeyI');
+  await expect(textarea).toHaveValue(`_line 1_\nline 2\nline 3\nline 4`);
+  await textarea.press('ControlOrMeta+KeyI');
+  await expect(textarea).toHaveValue(`line 1\nline 2\nline 3\nline 4`);
 });

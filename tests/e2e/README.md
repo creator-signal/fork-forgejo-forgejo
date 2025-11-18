@@ -233,7 +233,7 @@ The following environment variables control visual testing:
 `VISUAL_TEST=1` will create screenshots in tests/e2e/test-snapshots.
   The test will fail the first time,
   because the screenshots are not included with Forgejo.
-  Subsequent runs will comopare against your local copy of the screenshots.
+  Subsequent runs will compare against your local copy of the screenshots.
 
 `ACCEPT_VISUAL=1` will overwrite the snapshot images with new images.
 
@@ -268,17 +268,6 @@ Browser testing can take some time.
 If you want to iterate fast,
 save your time and only run very selected tests.
 Use only one browser.
-
-### Skip Safari if it doesn't work
-
-Many contributors have issues getting Safari (webkit)
-and especially Safari Mobile to work.
-
-At the top of your test function, you can use:
-
-~~~javascript
-test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile.');
-~~~
 
 ### Don't forget the formatting.
 

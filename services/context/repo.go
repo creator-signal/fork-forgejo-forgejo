@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"forgejo.org/models"
+	"forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
@@ -35,6 +36,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 	asymkey_service "forgejo.org/services/asymkey"
+	redirect_service "forgejo.org/services/redirect"
 
 	"github.com/editorconfig/editorconfig-core-go/v2"
 )
@@ -477,12 +479,12 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 					return nil
 				}
 
-				if redirectUserID, err := user_model.LookupUserRedirect(ctx, userName); err == nil {
+				if redirectUserID, err := redirect_service.LookupUserRedirect(ctx, ctx.Doer, userName); err == nil {
 					RedirectToUser(ctx.Base, userName, redirectUserID)
 				} else if user_model.IsErrUserRedirectNotExist(err) {
 					ctx.NotFound("GetUserByName", nil)
 				} else {
-					ctx.ServerError("LookupUserRedirect", err)
+					ctx.ServerError("LookupRedirect", err)
 				}
 			} else {
 				ctx.ServerError("GetUserByName", err)
@@ -519,7 +521,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	repo, err := repo_model.GetRepositoryByName(ctx, owner.ID, repoName)
 	if err != nil {
 		if repo_model.IsErrRepoNotExist(err) {
-			redirectRepoID, err := repo_model.LookupRedirect(ctx, owner.ID, repoName)
+			redirectRepoID, err := redirect_service.LookupRepoRedirect(ctx, ctx.Doer, owner.ID, repoName)
 			if err == nil {
 				RedirectToRepo(ctx.Base, redirectRepoID)
 			} else if repo_model.IsErrRedirectNotExist(err) {
@@ -581,6 +583,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 		ctx.ServerError("GetPackageCountByRepoID", err)
 		return nil
 	}
+	ctx.Data["NumOpenActionRuns"] = actions.RepoNumOpenActions(ctx, ctx.Repo.Repository.ID)
 
 	ctx.Data["Title"] = owner.Name + "/" + repo.Name
 	ctx.Data["Repository"] = repo
@@ -749,7 +752,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 
 	// People who have push access or have forked repository can propose a new pull request.
 	canPush := ctx.Repo.CanWrite(unit_model.TypeCode) ||
-		(ctx.IsSigned && repo_model.HasForkedRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID))
+		(ctx.IsSigned && repo_model.HasForkedRepoLax(ctx, ctx.Doer.ID, ctx.Repo.Repository))
 	canCompare := false
 
 	// Pull request is allowed if this is a fork repository

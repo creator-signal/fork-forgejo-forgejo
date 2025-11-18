@@ -18,9 +18,11 @@ forgejo.org/models/auth
 
 forgejo.org/models/db
 	TruncateBeans
+	TruncateBeansCascade
 	InTransaction
 	DumpTables
 	GetTableNames
+	extendBeansForCascade
 
 forgejo.org/models/dbfs
 	file.renameTo
@@ -31,6 +33,9 @@ forgejo.org/models/forgejo/semver
 	GetVersion
 	SetVersionString
 	SetVersion
+
+forgejo.org/models/forgejo_migrations
+	resetMigrations
 
 forgejo.org/models/git
 	RemoveDeletedBranchByID
@@ -49,6 +54,7 @@ forgejo.org/models/repo
 	WatchRepoMode
 
 forgejo.org/models/user
+	IsErrUserWrongType
 	IsErrExternalLoginUserAlreadyExist
 	IsErrExternalLoginUserNotExist
 	NewFederatedUser
@@ -75,7 +81,6 @@ forgejo.org/modules/base
 	SetupGiteaRoot
 
 forgejo.org/modules/cache
-	GetInt
 	WithNoCacheContext
 	RemoveContextData
 
@@ -102,6 +107,7 @@ forgejo.org/modules/git
 	AddChangesWithArgs
 	CommitChanges
 	CommitChangesWithArgs
+	IsErrMoreThanOne
 	SetUpdateHook
 	openRepositoryWithDefaultContext
 	ToEntryMode
@@ -220,6 +226,12 @@ forgejo.org/routers/web/org
 forgejo.org/services/context
 	GetPrivateContext
 
+forgejo.org/services/mailer
+	ActionCloseIssueByCommit.isActionAdditionalData
+
+forgejo.org/services/notify
+	UnregisterNotifier
+
 forgejo.org/services/repository
 	IsErrForkAlreadyExist
 
@@ -228,6 +240,9 @@ forgejo.org/services/repository/files
 
 forgejo.org/services/repository/gitgraph
 	Parser.Reset
+
+forgejo.org/services/stats
+	Flush
 
 forgejo.org/services/webhook
 	NewNotifier

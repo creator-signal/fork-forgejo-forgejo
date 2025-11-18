@@ -83,7 +83,6 @@ func autoSignIn(ctx *context.Context) (bool, error) {
 		return false, err
 	}
 
-	ctx.Csrf.DeleteCookie(ctx)
 	return true, nil
 }
 
@@ -310,6 +309,7 @@ func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRe
 		"openid_determined_username",
 		"twofaUid",
 		"twofaRemember",
+		"twofaOpenID",
 		"linkAccount",
 	}, map[string]any{
 		"uid": u.ID,
@@ -335,9 +335,6 @@ func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRe
 	if ctx.Locale.Language() != u.Language {
 		ctx.Locale = middleware.Locale(ctx.Resp, ctx.Req)
 	}
-
-	// Clear whatever CSRF cookie has right now, force to generate a new one
-	ctx.Csrf.DeleteCookie(ctx)
 
 	// Register last login
 	if err := user_service.UpdateUser(ctx, u, &user_service.UpdateOptions{SetLastLogin: true}); err != nil {
@@ -374,7 +371,6 @@ func HandleSignOut(ctx *context.Context) {
 	_ = ctx.Session.Flush()
 	_ = ctx.Session.Destroy(ctx.Resp, ctx.Req)
 	ctx.DeleteSiteCookie(setting.CookieRememberName)
-	ctx.Csrf.DeleteCookie(ctx)
 	middleware.DeleteRedirectToCookie(ctx.Resp)
 }
 
@@ -452,7 +448,10 @@ func SignUpPost(ctx *context.Context) {
 		return
 	}
 
-	if !form.IsEmailDomainAllowed() {
+	if emailValid, ok := form.IsEmailDomainAllowed(); !emailValid {
+		ctx.RenderWithErr(ctx.Tr("form.email_invalid"), tplSignUp, form)
+		return
+	} else if !ok {
 		ctx.RenderWithErr(ctx.Tr("auth.email_domain_blacklisted"), tplSignUp, &form)
 		return
 	}
@@ -515,7 +514,7 @@ func createUserInContext(ctx *context.Context, tpl base.TplName, form any, u *us
 			switch setting.OAuth2Client.AccountLinking {
 			case setting.OAuth2AccountLinkingAuto:
 				var user *user_model.User
-				user = &user_model.User{Name: u.Name}
+				user = &user_model.User{LowerName: strings.ToLower(u.Name)}
 				hasUser, err := user_model.GetUser(ctx, user)
 				if !hasUser || err != nil {
 					user = &user_model.User{Email: u.Email}

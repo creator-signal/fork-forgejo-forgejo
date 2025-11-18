@@ -6,6 +6,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"image"
+	"io"
 	golog "log"
 	"os"
 	"path/filepath"
@@ -13,13 +15,17 @@ import (
 	"text/tabwriter"
 
 	"forgejo.org/models/db"
-	"forgejo.org/models/migrations"
-	migrate_base "forgejo.org/models/migrations/base"
+	"forgejo.org/models/gitea_migrations"
+	migrate_base "forgejo.org/models/gitea_migrations/base"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
 	"forgejo.org/services/doctor"
 
+	exif_terminator "code.superseriousbusiness.org/exif-terminator"
 	"github.com/urfave/cli/v3"
 )
 
@@ -34,6 +40,7 @@ func cmdDoctor() *cli.Command {
 			cmdDoctorCheck(),
 			cmdRecreateTable(),
 			cmdDoctorConvert(),
+			cmdAvatarStripExif(),
 		},
 	}
 }
@@ -43,6 +50,7 @@ func cmdDoctorCheck() *cli.Command {
 		Name:        "check",
 		Usage:       "Diagnose and optionally fix problems",
 		Description: "A command to diagnose problems with the current Forgejo instance according to the given configuration. Some problems can optionally be fixed by modifying the database or data storage.",
+		Before:      noDanglingArgs,
 		Action:      runDoctorCheck,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
@@ -98,6 +106,15 @@ You should back-up your database before doing this and ensure that your database
 	}
 }
 
+func cmdAvatarStripExif() *cli.Command {
+	return &cli.Command{
+		Name:   "avatar-strip-exif",
+		Usage:  "Strip EXIF metadata from all images in the avatar storage",
+		Before: noDanglingArgs,
+		Action: runAvatarStripExif,
+	}
+}
+
 func runRecreateTable(stdCtx context.Context, ctx *cli.Command) error {
 	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
@@ -142,7 +159,7 @@ func runRecreateTable(stdCtx context.Context, ctx *cli.Command) error {
 			return err
 		}
 
-		if err := migrations.EnsureUpToDate(engine); err != nil {
+		if err := gitea_migrations.EnsureUpToDate(engine); err != nil {
 			return err
 		}
 
@@ -229,4 +246,79 @@ func runDoctorCheck(stdCtx context.Context, ctx *cli.Command) error {
 		}
 	}
 	return doctor.RunChecks(stdCtx, colorize, ctx.Bool("fix"), checks)
+}
+
+func runAvatarStripExif(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
+	defer cancel()
+
+	if err := initDB(ctx); err != nil {
+		return err
+	}
+	if err := storage.Init(); err != nil {
+		return err
+	}
+
+	type HasCustomAvatarRelativePath interface {
+		CustomAvatarRelativePath() string
+	}
+
+	doExifStrip := func(obj HasCustomAvatarRelativePath, name string, target_storage storage.ObjectStorage) error {
+		if obj.CustomAvatarRelativePath() == "" {
+			return nil
+		}
+
+		log.Info("Stripping avatar for %s...", name)
+
+		avatarFile, err := target_storage.Open(obj.CustomAvatarRelativePath())
+		if err != nil {
+			return fmt.Errorf("storage.Avatars.Open: %w", err)
+		}
+		_, imgType, err := image.DecodeConfig(avatarFile)
+		if err != nil {
+			return fmt.Errorf("image.DecodeConfig: %w", err)
+		}
+
+		// reset io.Reader for exif termination scan
+		_, err = avatarFile.Seek(0, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("avatarFile.Seek: %w", err)
+		}
+
+		cleanedData, err := exif_terminator.Terminate(avatarFile, imgType)
+		if err != nil && strings.Contains(err.Error(), "cannot be processed") {
+			// expected error for an image type that isn't supported by exif_terminator
+			log.Info("... image type %s is not supported by exif_terminator, skipping.", imgType)
+			return nil
+		} else if err != nil {
+			return fmt.Errorf("error cleaning exif data: %w", err)
+		}
+
+		if err := storage.SaveFrom(target_storage, obj.CustomAvatarRelativePath(), func(w io.Writer) error {
+			_, err := io.Copy(w, cleanedData)
+			return err
+		}); err != nil {
+			return fmt.Errorf("Failed to create dir %s: %w", obj.CustomAvatarRelativePath(), err)
+		}
+
+		log.Info("... completed %s.", name)
+
+		return nil
+	}
+
+	err := db.Iterate(ctx, nil, func(ctx context.Context, user *user_model.User) error {
+		return doExifStrip(user, fmt.Sprintf("user %s", user.Name), storage.Avatars)
+	})
+	if err != nil {
+		return err
+	}
+
+	err = db.Iterate(ctx, nil, func(ctx context.Context, repo *repo_model.Repository) error {
+		return doExifStrip(repo, fmt.Sprintf("repo %s", repo.Name), storage.RepoAvatars)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

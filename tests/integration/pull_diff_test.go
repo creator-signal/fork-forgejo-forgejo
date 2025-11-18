@@ -69,7 +69,7 @@ func doTestPRDiff(t *testing.T, prDiffURL string, expectedFilenames []string, ed
 }
 
 func TestPullDiff_AGitNotEditable(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
 
@@ -93,6 +93,7 @@ func TestPullDiff_AGitNotEditable(t *testing.T) {
 			cloneURL, _ := url.Parse(clone)
 			cloneURL.User = url.UserPassword("user2", userPassword)
 			require.NoError(t, git.CloneWithArgs(t.Context(), nil, cloneURL.String(), dstPath, git.CloneRepoOptions{}))
+			doGitSetRemoteURL(dstPath, "origin", cloneURL)(t)
 
 			return dstPath
 		}

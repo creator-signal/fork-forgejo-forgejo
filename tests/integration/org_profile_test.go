@@ -1,4 +1,4 @@
-// Copyright 2024 The Forgejo Authors c/o Codeberg e.V.. All rights reserved.
+// Copyright 2025 The Forgejo Authors c/o Codeberg e.V.. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
@@ -20,7 +20,7 @@ import (
 )
 
 func TestOrgProfile(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		checkReadme := func(t *testing.T, title, readmeFilename string, expectedCount int) {
 			t.Run(title, func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -64,7 +64,15 @@ func TestOrgProfile(t *testing.T) {
 		checkReadme(t, "README.md", "README.md", 1)
 		checkReadme(t, "readme.md", "readme.md", 1)
 		checkReadme(t, "ReadMe.mD", "ReadMe.mD", 1)
-		checkReadme(t, "readme.org does not render", "README.org", 0)
+		checkReadme(t, "readme.org", "README.org", 1)
+		checkReadme(t, "README.en-us.md", "README.en-us.md", 1)
+		checkReadme(t, "README.en.md", "README.en.md", 1)
+		checkReadme(t, "README.txt", "README.txt", 1)
+		checkReadme(t, "README", "README", 1)
+		checkReadme(t, "README.mdown", "README.mdown", 1)
+		checkReadme(t, "README.i18n.md", "README.i18n.md", 1)
+		checkReadme(t, "readmee", "readmee", 0)
+		checkReadme(t, "test.md", "test.md", 0)
 
 		t.Run("readme-size", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -112,12 +120,12 @@ quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequa
 
 			// Both guests and logged in users should see the feed option
 			doc := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
-			doc.AssertElement(t, "details.dropdown a[href='/org3.rss']", true)
-			doc.AssertElement(t, "details.dropdown a[href^='/report_abuse']", false)
+			doc.AssertElement(t, ".org-header details.dropdown a[href='/org3.rss']", true)
+			doc.AssertElement(t, ".org-header details.dropdown a[href^='/report_abuse']", false)
 
 			doc = NewHTMLParser(t, loginUser(t, "user10").MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
-			doc.AssertElement(t, "details.dropdown a[href='/org3.rss']", true)
-			doc.AssertElement(t, "details.dropdown a[href^='/report_abuse']", false)
+			doc.AssertElement(t, ".org-header details.dropdown a[href='/org3.rss']", true)
+			doc.AssertElement(t, ".org-header details.dropdown a[href^='/report_abuse']", false)
 		})
 
 		t.Run("More actions - none", func(t *testing.T) {
@@ -127,10 +135,10 @@ quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequa
 
 			// The dropdown won't appear if no entries are available, for both guests and logged in users
 			doc := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
-			doc.AssertElement(t, "details.dropdown", false)
+			doc.AssertElement(t, ".org-header details.dropdown", false)
 
 			doc = NewHTMLParser(t, loginUser(t, "user10").MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
-			doc.AssertElement(t, "details.dropdown", false)
+			doc.AssertElement(t, ".org-header details.dropdown", false)
 		})
 
 		t.Run("More actions - moderation", func(t *testing.T) {
@@ -140,15 +148,15 @@ quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequa
 
 			// The report option shouldn't be available to a guest
 			doc := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
-			doc.AssertElement(t, "details.dropdown", false)
+			doc.AssertElement(t, ".org-header details.dropdown", false)
 
 			// But should be available to a logged in user
 			doc = NewHTMLParser(t, loginUser(t, "user10").MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
-			doc.AssertElement(t, "details.dropdown a[href^='/report_abuse']", true)
+			doc.AssertElement(t, ".org-header details.dropdown a[href^='/report_abuse']", true)
 
 			// But the org owner shouldn't see the report option
 			doc = NewHTMLParser(t, loginUser(t, "user1").MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
-			doc.AssertElement(t, "details.dropdown", false)
+			doc.AssertElement(t, ".org-header details.dropdown", false)
 		})
 	})
 }
