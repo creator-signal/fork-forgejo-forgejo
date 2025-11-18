@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"forgejo.org/models/db"
+	gist_model "forgejo.org/models/gist"
 	"forgejo.org/models/organization"
 	packages_model "forgejo.org/models/packages"
 	access_model "forgejo.org/models/perm/access"

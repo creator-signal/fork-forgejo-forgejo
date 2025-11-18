@@ -74,6 +74,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
+	gist_model "forgejo.org/models/gist"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
 	"forgejo.org/models/perm"

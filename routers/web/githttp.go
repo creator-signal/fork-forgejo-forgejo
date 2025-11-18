@@ -38,5 +38,5 @@ func gitHTTPRouters(m *web.Route) {
 		m.Methods("GET,OPTIONS", "/objects/{head:[0-9a-f]{2}}/{hash:[0-9a-f]{38,62}}", git.GetLooseObject)
 		m.Methods("GET,OPTIONS", "/objects/pack/pack-{file:[0-9a-f]{40,64}}.pack", git.GetPackFile)
 		m.Methods("GET,OPTIONS", "/objects/pack/pack-{file:[0-9a-f]{40,64}}.idx", git.GetIdxFile)
-	}, ignSignInAndCsrf, requireSignIn, git.HTTPGitEnabledHandler, git.CorsHandler())
+	}, ignoreCSRF, requireSignIn, git.HTTPGitEnabledHandler, git.CorsHandler(), context.UserAssignmentWeb())
 }

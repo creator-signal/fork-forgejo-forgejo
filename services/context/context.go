@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"strings"
 
-	gist_model "code.gitea.io/gitea/models/gist"
+	gist_model "forgejo.org/models/gist"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	mc "forgejo.org/modules/cache"

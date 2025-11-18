@@ -10,6 +10,7 @@ import (
 
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/auth"
+	gist_model "forgejo.org/models/gist"
 	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"

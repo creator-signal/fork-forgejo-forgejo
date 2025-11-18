@@ -6,8 +6,8 @@ package gist_test
 import (
 	"testing"
 
-	api "code.gitea.io/gitea/modules/structs"
-	gist_service "code.gitea.io/gitea/services/gist"
+	api "forgejo.org/modules/structs"
+	gist_service "forgejo.org/services/gist"
 
 	"github.com/stretchr/testify/assert"
 )

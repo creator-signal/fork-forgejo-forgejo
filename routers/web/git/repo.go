@@ -10,19 +10,19 @@ import (
 	"net/http"
 	"strings"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/services/context"
-	repo_service "code.gitea.io/gitea/services/repository"
+	actions_model "forgejo.org/models/actions"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	"forgejo.org/modules/log"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/services/context"
+	redirect_service "forgejo.org/services/redirect"
+	repo_service "forgejo.org/services/repository"
 )
 
 type serviceHandlerRepo struct {
@@ -70,7 +70,7 @@ func (h *serviceHandlerRepo) Init(ctx *context.Context, isPull, receivePack bool
 			return false
 		}
 
-		if redirectRepoID, err := repo_model.LookupRedirect(ctx, owner.ID, reponame); err == nil {
+		if redirectRepoID, err := redirect_service.LookupRepoRedirect(ctx, ctx.Doer, owner.ID, reponame); err == nil {
 			context.RedirectToRepo(ctx.Base, redirectRepoID)
 			return false
 		}
@@ -142,9 +142,7 @@ func (h *serviceHandlerRepo) Init(ctx *context.Context, isPull, receivePack bool
 
 		if repoExist {
 			// Because of special ref "refs/for" .. , need delay write permission check
-			if git.SupportProcReceive {
-				accessMode = perm.AccessModeRead
-			}
+			accessMode = perm.AccessModeRead
 
 			if ctx.Data["IsActionsToken"] == true {
 				taskID := ctx.Data["ActionsTaskID"].(int64)

@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/git"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/git"
 
 	"github.com/stretchr/testify/require"
 )

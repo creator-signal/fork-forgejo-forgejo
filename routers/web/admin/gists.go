@@ -6,11 +6,11 @@ package admin
 import (
 	"net/http"
 
-	gist_model "code.gitea.io/gitea/models/gist"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/services/context"
-	gist_service "code.gitea.io/gitea/services/gist"
+	gist_model "forgejo.org/models/gist"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/setting"
+	"forgejo.org/services/context"
+	gist_service "forgejo.org/services/gist"
 )
 
 const (

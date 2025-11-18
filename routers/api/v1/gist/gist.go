@@ -6,14 +6,14 @@ package gist
 import (
 	"net/http"
 
-	gist_model "code.gitea.io/gitea/models/gist"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	gist_service "code.gitea.io/gitea/services/gist"
+	gist_model "forgejo.org/models/gist"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	gist_service "forgejo.org/services/gist"
 )
 
 // Search for Gists

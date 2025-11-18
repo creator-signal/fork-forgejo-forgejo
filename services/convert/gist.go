@@ -6,9 +6,9 @@ package convert
 import (
 	"context"
 
-	gist_model "code.gitea.io/gitea/models/gist"
-	user_model "code.gitea.io/gitea/models/user"
-	api "code.gitea.io/gitea/modules/structs"
+	gist_model "forgejo.org/models/gist"
+	user_model "forgejo.org/models/user"
+	api "forgejo.org/modules/structs"
 )
 
 // ToGistList convert a gist_model.Gist to an api.Gist

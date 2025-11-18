@@ -6,7 +6,7 @@ package context
 import (
 	"fmt"
 
-	gist_model "code.gitea.io/gitea/models/gist"
+	gist_model "forgejo.org/models/gist"
 )
 
 // GistAssignment handels Context.Gist assignment

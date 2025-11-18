@@ -10,14 +10,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.gitea.io/gitea/models/db"
-	gist_model "code.gitea.io/gitea/models/gist"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	gist_model "forgejo.org/models/gist"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
 )
 
 const (

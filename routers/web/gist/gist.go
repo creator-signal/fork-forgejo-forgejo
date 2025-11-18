@@ -8,15 +8,15 @@ import (
 	"net/http"
 	"strings"
 
-	gist_model "code.gitea.io/gitea/models/gist"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/sitemap"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/routers/common"
-	"code.gitea.io/gitea/services/context"
-	gist_service "code.gitea.io/gitea/services/gist"
+	gist_model "forgejo.org/models/gist"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/sitemap"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/routers/common"
+	"forgejo.org/services/context"
+	gist_service "forgejo.org/services/gist"
 )
 
 type gistForm struct {

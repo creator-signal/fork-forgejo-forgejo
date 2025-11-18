@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	gist_model "code.gitea.io/gitea/models/gist"
-	"code.gitea.io/gitea/services/context"
+	gist_model "forgejo.org/models/gist"
+	"forgejo.org/services/context"
 )
 
 type serviceHandlerGist struct {

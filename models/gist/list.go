@@ -6,7 +6,7 @@ package gist
 import (
 	"context"
 
-	user_model "code.gitea.io/gitea/models/user"
+	user_model "forgejo.org/models/user"
 )
 
 type GistList []*Gist //revive:disable-line:exported

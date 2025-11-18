@@ -6,8 +6,8 @@ package gist
 import (
 	"strings"
 
-	"code.gitea.io/gitea/modules/highlight"
-	api "code.gitea.io/gitea/modules/structs"
+	"forgejo.org/modules/highlight"
+	api "forgejo.org/modules/structs"
 )
 
 type GistFiles []*api.GistFile //revive:disable-line:exported

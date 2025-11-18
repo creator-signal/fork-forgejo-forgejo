@@ -4,7 +4,7 @@
 package git
 
 import (
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/services/context"
 )
 
 type serviceHandlerBase interface {

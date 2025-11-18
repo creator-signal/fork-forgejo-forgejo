@@ -36,12 +36,12 @@ func cmdHook() *cli.Command {
 		Usage:       "(internal) Should only be called by Git",
 		Description: "Delegate commands to corresponding Git hooks",
 		Before:      PrepareConsoleLoggerLevel(log.FATAL),
-		Subcommands: []*cli.Command{
-			subcmdHookPreReceive,
-			subcmdHookUpdate,
-			subcmdHookPostReceive,
-			subcmdHookProcReceive,
-			subcmdHookGistPreReceive,
+		Commands: []*cli.Command{
+			subcmdHookPreReceive(),
+			subcmdHookUpdate(),
+			subcmdHookPostReceive(),
+			subcmdHookProcReceive(),
+			subcmdHookGistPreReceive(),
 		},
 	}
 }
@@ -101,7 +101,10 @@ func subcmdHookProcReceive() *cli.Command {
 			},
 		},
 	}
-	subcmdHookGistPreReceive = &cli.Command{
+}
+
+func subcmdHookGistPreReceive() *cli.Command {
+	return &cli.Command{
 		Name:        "gist-pre-receive",
 		Usage:       "Delegate Gist pre-receive Git hook",
 		Description: "This command should only be called by Git",
@@ -800,7 +803,7 @@ func checkGistDiff(ctx context.Context, repoPath, oldCommitID, newCommitID strin
 	return nil
 }
 
-func runHookGistPreReceive(c *cli.Context) error {
+func runHookGistPreReceive(ctx context.Context, c *cli.Command) error {
 	repoPath, err := os.Getwd()
 	if err != nil {
 		return err
@@ -819,11 +822,11 @@ func runHookGistPreReceive(c *cli.Context) error {
 
 		if refFullName.IsBranch() {
 			if refFullName.BranchName() != "main" {
-				return fail(c.Context, "Gists can only have a main branch", "")
+				return fail(ctx, "Gists can only have a main branch", "")
 			}
 		}
 
-		err := checkGistDiff(c.Context, repoPath, oldCommitID, newCommitID)
+		err := checkGistDiff(ctx, repoPath, oldCommitID, newCommitID)
 		if err != nil {
 			return err
 		}

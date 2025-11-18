@@ -11,6 +11,7 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	gist_model "forgejo.org/models/gist"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"

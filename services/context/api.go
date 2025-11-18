@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"strings"
 
-	gist_model "code.gitea.io/gitea/models/gist"
+	gist_model "forgejo.org/models/gist"
 	issues_model "forgejo.org/models/issues"
 	quota_model "forgejo.org/models/quota"
 	"forgejo.org/models/unit"
