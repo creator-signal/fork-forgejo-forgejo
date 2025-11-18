@@ -6,12 +6,12 @@ package federation
 import (
 	"context"
 	"crypto/x509"
-	"database/sql"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/url"
 
+	"forgejo.org/models/federation_key"
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
@@ -22,8 +22,8 @@ import (
 )
 
 // Factory function for ActorID. Created struct is asserted to be valid
-func NewActorIDFromKeyID(ctx context.Context, uri string) (fm.ActorID, error) {
-	parsedURI, err := url.Parse(uri)
+func NewActorIDFromKeyID(ctx context.Context, keyID federation_key.KeyID) (fm.ActorID, error) {
+	parsedURI, err := keyID.IRI().URL()
 	if err != nil {
 		return fm.ActorID{}, err
 	}
@@ -56,18 +56,19 @@ func NewActorIDFromKeyID(ctx context.Context, uri string) (fm.ActorID, error) {
 	return result, err
 }
 
-func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any, err error) {
+func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyID) (pubKey any, err error) {
 	log.Trace("KeyID: %v", keyID)
+
 	var federatedUser *user.FederatedUser
 	var keyURL *url.URL
 
-	keyURL, err = url.Parse(keyID)
+	keyURL, err = keyID.IRI().URL()
 	if err != nil {
 		return nil, err
 	}
 
 	// Try if the signing actor is an already known federated user
-	_, federatedUser, err = user.FindFederatedUserByKeyID(ctx, keyURL.String())
+	_, federatedUser, err = user.FindFederatedUserByKeyID(ctx, keyID)
 	if err != nil {
 		return nil, err
 	}
@@ -89,12 +90,22 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 		}
 	}
 
-	if federatedUser.PublicKey.Valid {
-		pubKey, err := x509.ParsePKIXPublicKey(federatedUser.PublicKey.V)
+	federatedPublicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
+	if err != nil {
+		return nil, err
+	} else if federatedPublicKey != nil && federatedPublicKey.ActorID != federatedUser.ID {
+		return nil, fmt.Errorf("invalid federation public key %v found for user ID: %v", federatedPublicKey.KeyID, federatedUser.ID)
+	}
+
+	// Is there already a key?
+	if federatedPublicKey != nil {
+		pubKey, err := x509.ParsePKIXPublicKey(federatedPublicKey.Key)
 		if err != nil {
 			return nil, err
 		}
+
 		log.Trace("For KeyID %v found pubKey %v", keyID, pubKey)
+
 		return pubKey, nil
 	}
 
@@ -103,34 +114,35 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 	if err != nil {
 		return nil, err
 	}
+
 	if apPerson.Type == ap.ActivityVocabularyType("Person") {
 		// Check federatedUser.id = person.id
 		if federatedUser.ExternalID != apPerson.ID.String() {
 			return nil, fmt.Errorf("federated user fetched (%v) does not match the stored one %v", apPerson, federatedUser)
 		}
-		// update federated user
-		federatedUser.KeyID = sql.NullString{
-			String: apPerson.PublicKey.ID.String(),
-			Valid:  true,
-		}
-		federatedUser.PublicKey = sql.Null[sql.RawBytes]{
-			V:     pubKeyBytes,
-			Valid: true,
-		}
-		err = user.UpdateFederatedUser(ctx, federatedUser)
+
+		// find or create federated public key
+		federatedPublicKey, err := federation_key.NewFederationPublicKey(0, apPerson.PublicKey.ID.String(), pubKeyBytes, federatedUser.ID, federation_key.FederatedUserType, federation_key.RsaSha256Cavage)
 		if err != nil {
 			return nil, err
 		}
+
+		if _, err := federation_key.FindOrCreateFederationPublicKey(ctx, federatedPublicKey); err != nil {
+			return nil, err
+		}
+
 		log.Trace("For %v found pubKey %v", keyID, pubKey)
+
 		return pubKey, nil
 	}
 	log.Trace("For %v found no pubKey", keyID)
 	return nil, nil
 }
 
-func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey any, err error) {
+func FindOrCreateFederationHostKey(ctx context.Context, keyID federation_key.KeyID) (pubKey any, err error) {
 	log.Trace("KeyID: %v", keyID)
-	keyURL, err := url.Parse(keyID)
+
+	keyURL, err := keyID.IRI().URL()
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +152,7 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 	}
 
 	// Is there an already known federation host?
-	federationHost, err := forgefed.FindFederationHostByKeyID(ctx, keyURL.String())
+	federationHost, err := forgefed.FindFederationHostByKeyID(ctx, keyID)
 	if err != nil {
 		return nil, err
 	}
@@ -153,12 +165,21 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 	}
 
 	// Is there an already an key?
-	if federationHost.PublicKey.Valid {
-		pubKey, err := x509.ParsePKIXPublicKey(federationHost.PublicKey.V)
+	federationPublicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
+	if err != nil {
+		return nil, err
+	} else if federationPublicKey != nil && federationPublicKey.ActorID != federationHost.ID {
+		return nil, fmt.Errorf("invalid federation public key %v found for federation host ID: %v", federationPublicKey.KeyID, federationHost.ID)
+	}
+
+	if federationPublicKey != nil {
+		pubKey, err := x509.ParsePKIXPublicKey(federationPublicKey.Key)
 		if err != nil {
 			return nil, err
 		}
+
 		log.Trace("For %v found pubKey: %v", keyID, pubKey)
+
 		return pubKey, nil
 	}
 
@@ -174,19 +195,21 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 			return nil, fmt.Errorf("federation host fetched (%v) does not match the stored one %v", apPerson, federationHost)
 		}
 		// update federation host
-		federationHost.KeyID = sql.NullString{
-			String: apPerson.PublicKey.ID.String(),
-			Valid:  true,
-		}
-		federationHost.PublicKey = sql.Null[sql.RawBytes]{
-			V:     pubKeyBytes,
-			Valid: true,
-		}
-		err = forgefed.UpdateFederationHost(ctx, federationHost)
+		federationPublicKey, err := federation_key.NewFederationPublicKey(0, apPerson.PublicKey.ID.String(), pubKeyBytes, federationHost.ID, federation_key.FederationHostType, federation_key.RsaSha256Cavage)
 		if err != nil {
 			return nil, err
 		}
+
+		if err = federationHost.ValidateKeyID(federationPublicKey.KeyID); err != nil {
+			return nil, err
+		}
+
+		if _, err = federation_key.FindOrCreateFederationPublicKey(ctx, federationPublicKey); err != nil {
+			return nil, err
+		}
+
 		log.Trace("For %v found pubKey: %v", keyID, pubKey)
+
 		return pubKey, nil
 	}
 	log.Trace("For %v found no pubKey.", keyID)

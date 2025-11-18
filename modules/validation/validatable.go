@@ -69,6 +69,10 @@ func ValidateNotEmpty(value any, name string) []string {
 		if v == 0 {
 			isValid = false
 		}
+	case []byte:
+		if len(v) == 0 {
+			isValid = false
+		}
 	default:
 		isValid = false
 	}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"forgejo.org/models/db"
+	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/validation"
 )
@@ -32,7 +33,7 @@ func GetFederationHost(ctx context.Context, ID int64) (*FederationHost, error) {
 	return host, nil
 }
 
-func findFederationHostFromDB(ctx context.Context, searchKey, searchValue string) (*FederationHost, error) {
+func findFederationHostFromDB(ctx context.Context, searchKey string, searchValue int64) (*FederationHost, error) {
 	host := new(FederationHost)
 	has, err := db.GetEngine(ctx).Where(searchKey, searchValue).Get(host)
 	if err != nil {
@@ -43,6 +44,7 @@ func findFederationHostFromDB(ctx context.Context, searchKey, searchValue string
 	if res, err := validation.IsValid(host); !res {
 		return nil, err
 	}
+
 	return host, nil
 }
 
@@ -60,8 +62,22 @@ func FindFederationHostByFqdnAndPort(ctx context.Context, fqdn string, port uint
 	return host, nil
 }
 
-func FindFederationHostByKeyID(ctx context.Context, keyID string) (*FederationHost, error) {
-	return findFederationHostFromDB(ctx, "key_id=?", keyID)
+// FindFederationHostByPublicKey finds a [FederationHost] database entry by ActivityPub key ID.
+//
+// Returns:
+//
+// - (FederationHost, nil): success, a record was found
+// - (nil, nil): failure, no record found
+// - (nil, error): failure, a database error occured
+func FindFederationHostByKeyID(ctx context.Context, keyID federation_key.KeyID) (*FederationHost, error) {
+	publicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
+	if err != nil {
+		return nil, err
+	} else if publicKey == nil {
+		return nil, nil
+	}
+
+	return findFederationHostFromDB(ctx, "id=?", publicKey.ActorID)
 }
 
 func CreateFederationHost(ctx context.Context, host *FederationHost) error {

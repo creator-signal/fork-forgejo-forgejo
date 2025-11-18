@@ -4,12 +4,12 @@
 package forgefed
 
 import (
-	"database/sql"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
+	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/validation"
 )
@@ -17,16 +17,14 @@ import (
 // FederationHost data type
 // swagger:model
 type FederationHost struct {
-	ID             int64                  `xorm:"pk autoincr"`
-	HostFqdn       string                 `xorm:"host_fqdn UNIQUE(federation_host) INDEX VARCHAR(255) NOT NULL"`
-	HostPort       uint16                 `xorm:" UNIQUE(federation_host) INDEX NOT NULL DEFAULT 443"`
-	NodeInfo       NodeInfo               `xorm:"extends NOT NULL"`
-	HostSchema     string                 `xorm:"NOT NULL DEFAULT 'https'"`
-	LatestActivity time.Time              `xorm:"NOT NULL"`
-	KeyID          sql.NullString         `xorm:"key_id UNIQUE"`
-	PublicKey      sql.Null[sql.RawBytes] `xorm:"BLOB"`
-	Created        timeutil.TimeStamp     `xorm:"created"`
-	Updated        timeutil.TimeStamp     `xorm:"updated"`
+	ID             int64              `xorm:"pk autoincr"`
+	HostFqdn       string             `xorm:"host_fqdn UNIQUE(federation_host) INDEX VARCHAR(255) NOT NULL"`
+	HostPort       uint16             `xorm:" UNIQUE(federation_host) INDEX NOT NULL DEFAULT 443"`
+	NodeInfo       NodeInfo           `xorm:"extends NOT NULL"`
+	HostSchema     string             `xorm:"NOT NULL DEFAULT 'https'"`
+	LatestActivity time.Time          `xorm:"NOT NULL"`
+	Created        timeutil.TimeStamp `xorm:"created"`
+	Updated        timeutil.TimeStamp `xorm:"updated"`
 }
 
 // Factory function for FederationHost. Created struct is asserted to be valid.
@@ -66,4 +64,20 @@ func (host FederationHost) Validate() []string {
 	}
 
 	return result
+}
+
+// ValidateKeyID checks that the provided ActivityPub key ID matches the host.
+func (host FederationHost) ValidateKeyID(keyID federation_key.KeyID) error {
+	keyURL, err := keyID.IRI().URL()
+	if err != nil {
+		return err
+	}
+
+	hostURL := host.AsURL()
+
+	if keyURL.Scheme != hostURL.Scheme || keyURL.Host != hostURL.Host {
+		return fmt.Errorf("invalid key ID for host, key URL: %v, host URL: %v", keyURL, hostURL)
+	}
+
+	return nil
 }
