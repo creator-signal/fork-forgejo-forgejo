@@ -6,6 +6,7 @@ package auth_test
 import (
 	"slices"
 	"testing"
+	"time"
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
@@ -30,6 +31,17 @@ func BenchmarkOAuth2Application_GenerateClientSecret(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, _ = app.GenerateClientSecret(db.DefaultContext)
 	}
+}
+
+func TestOAuth2Application_GenerateNewDeviceAuthorization(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	app := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Application{ID: 1})
+	deviceAuth, err := app.GenerateDeviceAuthorization(db.DefaultContext, "scope", 5*time.Minute)
+	require.NoError(t, err)
+	assert.NotNil(t, deviceAuth)
+	assert.Greater(t, len(deviceAuth.DeviceCode), 32) // secret length > 32
+	assert.Equal(t, "gta_", deviceAuth.DeviceCode[:len("gta_")])
+	assert.Regexp(t, `^[A-Z]{4}-[A-Z]{4}-[A-Z]{4}$`, deviceAuth.UserCode.String)
 }
 
 func TestOAuth2Application_ContainsRedirectURI(t *testing.T) {

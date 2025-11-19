@@ -160,6 +160,32 @@ func (f *AuthorizationForm) Validate(req *http.Request, errs binding.Errors) bin
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+// DeviceAuthorizationForm form for authorizing oauth2 devices
+// https://www.rfc-editor.org/rfc/rfc8628#section-3.1
+type DeviceAuthorizationForm struct {
+	ClientID string `binding:"Required"`
+	Scope    string
+}
+
+// Validate validates the fields
+func (f *DeviceAuthorizationForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetValidateContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// DeviceGrantForm represents the user's decision whether to grant an oauth2
+// device access to their account
+type DeviceGrantForm struct {
+	UserCode string `binding:"Required"`
+	Granted  bool
+}
+
+// Validate validates the fields
+func (f *DeviceGrantForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetValidateContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // GrantApplicationForm form for authorizing oauth2 clients
 type GrantApplicationForm struct {
 	ClientID    string `binding:"Required"`

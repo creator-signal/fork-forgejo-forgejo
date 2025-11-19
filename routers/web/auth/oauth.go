@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/auth"
@@ -701,6 +702,54 @@ func OIDCKeys(ctx *context.Context) {
 	if err := enc.Encode(jwks); err != nil {
 		log.Error("Failed to encode representation as json. Error: %v", err)
 	}
+}
+
+type deviceAuthorizationResponse struct {
+	DeviceCode              string `json:"device_code"`
+	UserCode                string `json:"user_code"`
+	VerificationURI         string `json:"verification_uri"`
+	VerificationURIComplete string `json:"verification_uri_complete,omitempty"`
+	ExpiresIn               int    `json:"expires_in"`
+	Interval                int    `json:"interval,omitempty"`
+}
+
+func DeviceAuthorizationOAuth(ctx *context.Context) {
+	form := *web.GetForm(ctx).(*forms.DeviceAuthorizationForm)
+
+	app, err := auth.GetOAuth2ApplicationByClientID(ctx, form.ClientID)
+	if err != nil {
+		if auth.IsErrOauthClientIDInvalid(err) {
+			// https://www.rfc-editor.org/rfc/rfc8628#section-3.2
+			// In the event of an error (such as an invalidly configured client),
+			// the authorization server responds in the same way as the token
+			// endpoint specified in Section 5.2 of [RFC6749].
+			handleAccessTokenError(ctx, AccessTokenError{
+				ErrorCode:        AccessTokenErrorCodeInvalidClient,
+				ErrorDescription: fmt.Sprintf("cannot load client with client id: %q", form.ClientID),
+			})
+			return
+		}
+	}
+
+	var (
+		expiresIn          = 5 * time.Minute
+		verificationURI, _ = url.JoinPath(setting.AppURL, "/login/oauth/device")
+	)
+
+	deviceAuthz, err := app.GenerateDeviceAuthorization(ctx, form.Scope, expiresIn)
+	if err != nil {
+		ctx.ServerError("generating device authorization", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, deviceAuthorizationResponse{
+		DeviceCode:              deviceAuthz.DeviceCode,
+		UserCode:                deviceAuthz.UserCode.String,
+		VerificationURI:         verificationURI,
+		VerificationURIComplete: fmt.Sprintf("%s?code=%s", verificationURI, deviceAuthz.UserCode.String),
+		ExpiresIn:               int(expiresIn.Seconds()),
+		Interval:                5,
+	})
 }
 
 // AccessTokenOAuth manages all access token requests by the client

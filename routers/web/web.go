@@ -568,6 +568,7 @@ func registerRoutes(m *web.Route) {
 			m.Methods("POST, OPTIONS", "/access_token", web.Bind(forms.AccessTokenForm{}), auth.AccessTokenOAuth)
 			m.Methods("GET, OPTIONS", "/keys", auth.OIDCKeys)
 			m.Methods("POST, OPTIONS", "/introspect", web.Bind(forms.IntrospectTokenForm{}), auth.IntrospectOAuth)
+			m.Methods("POST, OPTIONS", "/device_authorization", web.Bind(forms.DeviceAuthorizationForm{}), auth.DeviceAuthorizationOAuth)
 		}, optionsCorsHandler(), ignoreCSRF)
 	}, oauth2Enabled)
 

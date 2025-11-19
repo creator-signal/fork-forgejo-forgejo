@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base32"
 	"encoding/base64"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/container"
@@ -47,6 +49,7 @@ func init() {
 	db.RegisterModel(new(OAuth2Application))
 	db.RegisterModel(new(OAuth2AuthorizationCode))
 	db.RegisterModel(new(OAuth2Grant))
+	db.RegisterModel(new(OAuth2DeviceAuthorization))
 }
 
 type BuiltinOAuth2Application struct {
@@ -229,6 +232,46 @@ func (app *OAuth2Application) CreateGrant(ctx context.Context, userID int64, sco
 	return grant, nil
 }
 
+func (app *OAuth2Application) GenerateDeviceAuthorization(ctx context.Context, scope string, expiresIn time.Duration) (*OAuth2DeviceAuthorization, error) {
+	var (
+		// Add a prefix to the base32, this is in order to make it easier
+		// for code scanners to grab sensitive tokens.
+		deviceCode = "gta_" + base32Lower.EncodeToString(util.CryptoRandomBytes(32))
+		userCode   = generateUserCode()
+	)
+	deviceAuthorization := &OAuth2DeviceAuthorization{
+		ApplicationID: app.ID,
+		Application:   app,
+		GrantID:       0,
+		UserCode: sql.NullString{
+			String: userCode,
+			Valid:  true,
+		},
+		DeviceCode: deviceCode,
+		ValidUntil: timeutil.TimeStampNow().AddDuration(expiresIn),
+	}
+	err := db.Insert(ctx, deviceAuthorization)
+	if err != nil {
+		return nil, err
+	}
+	return deviceAuthorization, nil
+}
+
+func generateUserCode() string {
+	// https://www.rfc-editor.org/rfc/rfc8628#section-6.1
+	const (
+		alphabet   = "BCDFGHJKLNQRSTWX"
+		codeLength = 12
+	)
+	buf := util.CryptoRandomBytes(codeLength + 2)
+	for i, b := range buf {
+		buf[i] = alphabet[b%16]
+	}
+	buf[4] = '-'
+	buf[9] = '-'
+	return string(buf)
+}
+
 // GetOAuth2ApplicationByClientID returns the oauth2 application with the given client_id. Returns an error if not found.
 func GetOAuth2ApplicationByClientID(ctx context.Context, clientID string) (app *OAuth2Application, err error) {
 	app = new(OAuth2Application)
@@ -372,6 +415,29 @@ func DeleteOAuth2Application(ctx context.Context, id, userid int64) error {
 		return err
 	}
 	return committer.Commit()
+}
+
+//////////////////////////////////////////////////////
+
+// OAuth2DeviceAuthorization is a code to obtain an access token in combination with the device and user codes once. It has a limited lifetime.
+// XXX: how to delete expired authorizations?`
+type OAuth2DeviceAuthorization struct {
+	ID            int64              `xorm:"pk autoincr"`
+	Application   *OAuth2Application `xorm:"-"`
+	ApplicationID int64
+	Grant         *OAuth2Grant `xorm:"-"`
+	// GrantID is set when user approves access request
+	GrantID    int64  `xorm:"null"`
+	DeviceCode string `xorm:"index unique"`
+	// UserCode is cleared when user denies access request
+	UserCode   sql.NullString `xorm:"index unique null"`
+	Scope      string
+	ValidUntil timeutil.TimeStamp `xorm:"index"`
+}
+
+// TableName sets the table name to `oauth2_authorization_code`
+func (da *OAuth2DeviceAuthorization) TableName() string {
+	return "oauth2_device_authorization"
 }
 
 //////////////////////////////////////////////////////
