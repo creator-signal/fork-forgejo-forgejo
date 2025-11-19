@@ -4,6 +4,7 @@
 package auth_test
 
 import (
+	"database/sql"
 	"slices"
 	"testing"
 	"time"
@@ -301,4 +302,78 @@ func TestOrphanedOAuth2Applications(t *testing.T) {
 	assert.EqualValues(t, 0, count)
 	unittest.AssertExistsIf(t, false, &auth_model.OAuth2Application{ID: 1002})
 	unittest.AssertExistsIf(t, true, &auth_model.OAuth2Application{ID: 1003})
+}
+
+///////////////////// DeviceAuthorization
+
+func TestGetDeviceAuthorizationByDeviceCode(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	deviceAuth, err := auth_model.GetDeviceAuthorizationByDeviceCode(db.DefaultContext, "devicecode")
+	require.NoError(t, err)
+	assert.NotNil(t, deviceAuth)
+	assert.NotNil(t, deviceAuth.Grant)
+	assert.Equal(t, "devicecode", deviceAuth.DeviceCode)
+	assert.Equal(t, int64(1), deviceAuth.ID)
+	require.True(t, deviceAuth.IsExpired())
+
+	deviceAuth, err = auth_model.GetDeviceAuthorizationByDeviceCode(db.DefaultContext, "does not exist")
+	require.NoError(t, err)
+	assert.Nil(t, deviceAuth)
+}
+
+func TestDeviceAuthorizationState(t *testing.T) {
+	ns := func(s string) sql.NullString {
+		return sql.NullString{
+			String: s,
+			Valid:  true,
+		}
+	}
+	for _, tc := range []struct {
+		name        string
+		da          auth_model.OAuth2DeviceAuthorization
+		wantDenied  bool
+		wantPending bool
+	}{
+		{
+			name: "pending",
+			da: auth_model.OAuth2DeviceAuthorization{
+				GrantID:  0,
+				UserCode: ns("asdf"),
+			},
+			wantDenied:  false,
+			wantPending: true,
+		},
+		{
+			name: "denied",
+			da: auth_model.OAuth2DeviceAuthorization{
+				GrantID:  0,
+				UserCode: sql.NullString{},
+			},
+			wantDenied:  true,
+			wantPending: false,
+		},
+		{
+			name: "accepted",
+			da: auth_model.OAuth2DeviceAuthorization{
+				GrantID:  1,
+				UserCode: sql.NullString{},
+			},
+			wantDenied:  false,
+			wantPending: false,
+		},
+		{
+			name: "invalid", // invalid state, shouldn't happen in practice
+			da: auth_model.OAuth2DeviceAuthorization{
+				GrantID:  1,
+				UserCode: ns("asdf"),
+			},
+			wantDenied:  false,
+			wantPending: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.wantDenied, tc.da.IsDenied(), "denied")
+			assert.Equal(t, tc.wantPending, tc.da.IsPending(), "pending")
+		})
+	}
 }

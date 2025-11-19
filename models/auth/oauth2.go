@@ -440,6 +440,46 @@ func (da *OAuth2DeviceAuthorization) TableName() string {
 	return "oauth2_device_authorization"
 }
 
+func (da *OAuth2DeviceAuthorization) IsPending() bool {
+	return da.GrantID == 0 && da.UserCode.Valid
+}
+
+func (da *OAuth2DeviceAuthorization) IsDenied() bool {
+	return da.GrantID == 0 && !da.UserCode.Valid
+}
+
+func (da *OAuth2DeviceAuthorization) IsExpired() bool {
+	return timeutil.TimeStampNow() > da.ValidUntil
+}
+
+// Invalidate deletes the auth code from the database to invalidate this code
+func (da *OAuth2DeviceAuthorization) Invalidate(ctx context.Context) error {
+	_, err := db.GetEngine(ctx).ID(da.ID).NoAutoCondition().Delete(da)
+	return err
+}
+
+// GetDeviceAuthorizationByDeviceCode returns a device authorization by its device code
+func GetDeviceAuthorizationByDeviceCode(ctx context.Context, deviceCode string) (auth *OAuth2DeviceAuthorization, err error) {
+	auth = new(OAuth2DeviceAuthorization)
+	if has, err := db.GetEngine(ctx).Where("device_code = ?", deviceCode).Get(auth); err != nil {
+		return nil, err
+	} else if !has {
+		return nil, nil
+	}
+	if auth.GrantID == 0 {
+		return auth, nil
+	}
+
+	auth.Grant, err = GetOAuth2GrantByID(ctx, auth.GrantID)
+	if err != nil {
+		return nil, err
+	}
+	if auth.Grant == nil {
+		return nil, fmt.Errorf("missing grant: %d", auth.GrantID)
+	}
+	return auth, nil
+}
+
 //////////////////////////////////////////////////////
 
 // OAuth2AuthorizationCode is a code to obtain an access token in combination with the client secret once. It has a limited lifetime.

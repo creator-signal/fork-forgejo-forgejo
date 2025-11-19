@@ -113,6 +113,18 @@ const (
 	AccessTokenErrorCodeInvalidScope = "invalid_scope"
 )
 
+// additional device grant error codes defined in https://www.rfc-editor.org/rfc/rfc8628#section-3.5
+const (
+	// AccessTokenErrorCodeAuthorizationPending represents an error code specified in RFC 8628
+	AccessTokenErrorCodeAuthorizationPending AccessTokenErrorCode = "authorization_pending"
+	// AccessTokenErrorCodeSlowDown  represents an error code specified in RFC 8628
+	AccessTokenErrorCodeSlowDown = "slow_down"
+	// AccessTokenErrorCodeAuthorizationPending represents an error code specified in RFC 8628
+	AccessTokenErrorCodeAccessDenied = "access_denied"
+	// AccessTokenErrorCodeAuthorizationPending represents an error code specified in RFC 8628
+	AccessTokenErrorCodeExpiredToken = "expired_token"
+)
+
 // AccessTokenError represents an error response specified in RFC 6749
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 type AccessTokenError struct {
@@ -806,12 +818,87 @@ func AccessTokenOAuth(ctx *context.Context) {
 		handleRefreshToken(ctx, form, serverKey, clientKey)
 	case "authorization_code":
 		handleAuthorizationCode(ctx, form, serverKey, clientKey)
+	case "urn:ietf:params:oauth:grant-type:device_code":
+		handleDeviceToken(ctx, form, serverKey, clientKey)
 	default:
 		handleAccessTokenError(ctx, AccessTokenError{
 			ErrorCode:        AccessTokenErrorCodeUnsupportedGrantType,
 			ErrorDescription: "Only refresh_token or authorization_code grant type is supported",
 		})
 	}
+}
+
+func handleDeviceToken(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey jwtx.SigningKey) {
+	if form.DeviceCode == "" {
+		handleAccessTokenError(ctx, AccessTokenError{
+			ErrorCode:        AccessTokenErrorCodeInvalidRequest,
+			ErrorDescription: "missing device code",
+		})
+		return
+	}
+
+	app, err := auth.GetOAuth2ApplicationByClientID(ctx, form.ClientID)
+	if err != nil {
+		handleAccessTokenError(ctx, AccessTokenError{
+			ErrorCode:        AccessTokenErrorCodeInvalidClient,
+			ErrorDescription: fmt.Sprintf("cannot load client with client id: %q", form.ClientID),
+		})
+		return
+	}
+
+	authorization, err := auth.GetDeviceAuthorizationByDeviceCode(ctx, form.DeviceCode)
+	if err != nil || authorization == nil {
+		handleAccessTokenError(ctx, AccessTokenError{
+			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
+			ErrorDescription: "client is not authorized",
+		})
+		return
+	}
+
+	// check if granted for this application
+	if authorization.ApplicationID != app.ID {
+		handleAccessTokenError(ctx, AccessTokenError{
+			ErrorCode:        AccessTokenErrorCodeInvalidGrant,
+			ErrorDescription: "invalid grant",
+		})
+		return
+	}
+
+	// TODO: rate-limiting
+
+	if authorization.IsExpired() {
+		handleAccessTokenError(ctx, AccessTokenError{
+			ErrorCode:        AccessTokenErrorCodeExpiredToken,
+			ErrorDescription: "device authorization expired",
+		})
+		_ = authorization.Invalidate(ctx)
+		return
+	}
+
+	if authorization.IsDenied() {
+		handleAccessTokenError(ctx, AccessTokenError{
+			ErrorCode:        AccessTokenErrorCodeAccessDenied,
+			ErrorDescription: "device authorization denied by user",
+		})
+		_ = authorization.Invalidate(ctx)
+		return
+	}
+
+	if authorization.IsPending() {
+		handleAccessTokenError(ctx, AccessTokenError{
+			ErrorCode:        AccessTokenErrorCodeAuthorizationPending,
+			ErrorDescription: "device authorization not approved yet",
+		})
+		return
+	}
+
+	resp, tokenErr := newAccessTokenResponse(ctx, authorization.Grant, serverKey, clientKey)
+	if tokenErr != nil {
+		handleAccessTokenError(ctx, *tokenErr)
+		return
+	}
+	// send successful response
+	ctx.JSON(http.StatusOK, resp)
 }
 
 func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey jwtx.SigningKey) {

@@ -213,6 +213,9 @@ type AccessTokenForm struct {
 
 	// PKCE support
 	CodeVerifier string `json:"code_verifier"`
+
+	// Device Token support
+	DeviceCode string
 }
 
 // Validate validates the fields
