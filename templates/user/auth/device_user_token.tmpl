@@ -1,0 +1,30 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content ui one column stackable center aligned page grid oauth2-authorize-application-box">
+	<div class="column seven wide">
+		<div class="ui middle centered raised segments">
+			<h3 class="ui top attached header">
+				{{ctx.Locale.Tr "auth.user_code_title"}}
+			</h3>
+			<div class="ui attached segment">
+				<p>{{ctx.Locale.Tr "auth.enter_user_code_prompt"}}</p>
+			</div>
+			<div class="ui attached segment">
+				<form method="get" class="ui form">
+					<fieldset>
+						<label>
+							{{ctx.Locale.Tr "auth.user_code_label"}}
+							<input
+							 type="text"
+							 name="user_code"
+							 pattern="[A-Z]{4}-[A-Z]{4}-[A-Z]{4}"
+							 placeholder="XXXX-XXXX-XXXX" />
+						</label>
+					</fieldset>
+					<button type="submit" id="authorize-app" name="code_entered" value="true" class="ui red inline button">{{ctx.Locale.Tr "auth.submit_user_code"}}</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

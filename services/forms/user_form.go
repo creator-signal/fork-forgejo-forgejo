@@ -160,6 +160,17 @@ func (f *AuthorizationForm) Validate(req *http.Request, errs binding.Errors) bin
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+type DeviceApprovalForm struct {
+	UserCode    string
+	CodeEntered bool
+}
+
+// Validate validates the fields
+func (f *DeviceApprovalForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetValidateContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // DeviceAuthorizationForm form for authorizing oauth2 devices
 // https://www.rfc-editor.org/rfc/rfc8628#section-3.1
 type DeviceAuthorizationForm struct {

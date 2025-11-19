@@ -257,5 +257,10 @@
 	"editor.toggle_case": "Toggle case sensitivity",
 	"editor.toggle_regex": "Toggle using regular expressions",
 	"editor.toggle_whole_word": "Toggle matching whole words",
+	"auth.user_code_title": "Authorize Device",
+	"auth.user_code_label": "Code displayed on your device",
+	"auth.enter_user_code_prompt": "Please enter the code shown on your device below. It should consist of three groups of four upper-case letters, separated by a dash. For example: ABCD-EFGH-IJKL",
+	"auth.submit_user_code": "Confirm code",
+	"auth.verify_user_code_notice": "Verify that the code shown below matches the one displayed on your device.",
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }

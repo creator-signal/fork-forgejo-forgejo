@@ -321,6 +321,27 @@ func TestGetDeviceAuthorizationByDeviceCode(t *testing.T) {
 	assert.Nil(t, deviceAuth)
 }
 
+func TestGetDeviceAuthorizationByUserCode(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	deviceAuth, err := auth_model.GetDeviceAuthorizationByUserCode(db.DefaultContext, "KQCK-SXQ-TLFDT")
+	require.NoError(t, err)
+	assert.NotNil(t, deviceAuth)
+	assert.NotNil(t, deviceAuth.Grant)
+	assert.Equal(t, "devicecode", deviceAuth.DeviceCode)
+	assert.Equal(t, int64(1), deviceAuth.ID)
+	require.True(t, deviceAuth.IsExpired())
+
+	// lenient retrieval
+	deviceAuth, err = auth_model.GetDeviceAuthorizationByUserCode(db.DefaultContext, " kqck-sxq-tlfdt ")
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), deviceAuth.ID)
+
+	deviceAuth, err = auth_model.GetDeviceAuthorizationByUserCode(db.DefaultContext, "does not exist")
+	require.NoError(t, err)
+	assert.Nil(t, deviceAuth)
+}
+
 func TestDeviceAuthorizationState(t *testing.T) {
 	ns := func(s string) sql.NullString {
 		return sql.NullString{

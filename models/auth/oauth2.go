@@ -440,8 +440,21 @@ func (da *OAuth2DeviceAuthorization) TableName() string {
 	return "oauth2_device_authorization"
 }
 
+func (da *OAuth2DeviceAuthorization) SetGrant(ctx context.Context, grant *OAuth2Grant) error {
+	da.Grant = grant
+	da.GrantID = grant.ID
+	_, err := db.GetEngine(ctx).ID(da.ID).Cols("grant_id").Update(da)
+	return err
+}
+
 func (da *OAuth2DeviceAuthorization) IsPending() bool {
 	return da.GrantID == 0 && da.UserCode.Valid
+}
+
+func (da *OAuth2DeviceAuthorization) Deny(ctx context.Context) error {
+	da.UserCode = sql.NullString{}
+	_, err := db.GetEngine(ctx).ID(da.ID).Cols("user_code").Update(da)
+	return err
 }
 
 func (da *OAuth2DeviceAuthorization) IsDenied() bool {
@@ -475,6 +488,32 @@ func GetDeviceAuthorizationByDeviceCode(ctx context.Context, deviceCode string) 
 		return nil, err
 	}
 	if auth.Grant == nil {
+		return nil, fmt.Errorf("missing grant: %d", auth.GrantID)
+	}
+	return auth, nil
+}
+
+func GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (auth *OAuth2DeviceAuthorization, err error) {
+	// trim whiltespace and be (ascii-)case-insensitive, as recommended in
+	// https://www.rfc-editor.org/rfc/rfc8628#section-6.1
+	userCode = util.ToUpperASCII(strings.TrimSpace(userCode))
+	var found bool
+	auth, found, err = db.Get[OAuth2DeviceAuthorization](ctx, builder.Eq{"user_code": userCode})
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil
+	}
+	if auth.GrantID == 0 {
+		return auth, nil
+	}
+
+	auth.Grant, found, err = db.GetByID[OAuth2Grant](ctx, auth.GrantID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
 		return nil, fmt.Errorf("missing grant: %d", auth.GrantID)
 	}
 	return auth, nil

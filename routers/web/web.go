@@ -559,6 +559,8 @@ func registerRoutes(m *web.Route) {
 		m.Group("", func() {
 			m.Get("/authorize", web.Bind(forms.AuthorizationForm{}), auth.AuthorizeOAuth)
 			m.Post("/grant", web.Bind(forms.GrantApplicationForm{}), auth.GrantApplicationOAuth)
+			m.Get("/device", web.Bind(forms.DeviceApprovalForm{}), auth.AuthorizeDevice)
+			m.Post("/grant_device", web.Bind(forms.DeviceGrantForm{}), auth.GrantDevice)
 			// TODO manage redirection
 			m.Post("/authorize", web.Bind(forms.AuthorizationForm{}), auth.AuthorizeOAuth)
 		}, reqSignIn)

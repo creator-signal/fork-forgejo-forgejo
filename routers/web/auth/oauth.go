@@ -680,6 +680,146 @@ func GrantApplicationOAuth(ctx *context.Context) {
 	ctx.Redirect(redirect.String(), http.StatusSeeOther)
 }
 
+func AuthorizeDevice(ctx *context.Context) {
+	form := web.GetForm(ctx).(*forms.DeviceApprovalForm)
+	errs := binding.Errors{}
+	errs = form.Validate(ctx.Req, errs)
+	if len(errs) > 0 {
+		errstring := ""
+		for _, e := range errs {
+			errstring += e.Error() + "\n"
+		}
+		ctx.ServerError("AuthorizeDevice: Validate: ", fmt.Errorf("errors occurred during validation: %s", errstring))
+		return
+	}
+
+	if form.UserCode == "" {
+		ctx.HTML(http.StatusOK, "user/auth/device_user_token")
+		return
+	}
+
+	deviceAuth, err := auth.GetDeviceAuthorizationByUserCode(ctx, form.UserCode)
+	if err != nil {
+		ctx.ServerError("GetDeviceAuthorizationByUserCode", err)
+		return
+	}
+	if deviceAuth == nil {
+		handleAuthorizeError(ctx, AuthorizeError{
+			ErrorCode:        ErrorCodeAccessDenied,
+			ErrorDescription: "invalid user code",
+		}, "")
+		return
+	}
+
+	app, err := auth.GetOAuth2ApplicationByID(ctx, deviceAuth.ApplicationID)
+	if err != nil {
+		ctx.ServerError("GetOAuth2ApplicationByID", err)
+		return
+	}
+	if app == nil {
+		ctx.ServerError(fmt.Sprintf("missing app: %d", deviceAuth.ApplicationID), nil)
+		return
+	}
+
+	var appCreator *user_model.User
+	if app.UID != 0 {
+		appCreator, err = user_model.GetUserByID(ctx, app.UID)
+		if err != nil {
+			ctx.ServerError("GetUserByID", err)
+			return
+		}
+	}
+
+	// show authorize page to grant access
+	ctx.Data["Application"] = app
+	ctx.Data["UserCode"] = form.UserCode
+	ctx.Data["CodeEntered"] = form.CodeEntered
+	ctx.Data["Scope"] = deviceAuth.Scope
+
+	if appCreator != nil {
+		ctx.Data["ApplicationCreatorLinkHTML"] = template.HTML(fmt.Sprintf(`<a href="%s">@%s</a>`, html.EscapeString(appCreator.HomeLink()), html.EscapeString(appCreator.Name)))
+	} else {
+		ctx.Data["ApplicationCreatorLinkHTML"] = template.HTML(fmt.Sprintf(`<a href="%s">%s</a>`, html.EscapeString(setting.AppSubURL+"/"), html.EscapeString(setting.AppName)))
+	}
+
+	ctx.HTML(http.StatusOK, "user/auth/device_approve")
+}
+
+func GrantDevice(ctx *context.Context) {
+	form := web.GetForm(ctx).(*forms.DeviceGrantForm)
+	errs := binding.Errors{}
+	errs = form.Validate(ctx.Req, errs)
+	if len(errs) > 0 {
+		errstring := ""
+		for _, e := range errs {
+			errstring += e.Error() + "\n"
+		}
+		ctx.ServerError("GrantDevice: Validate: ", fmt.Errorf("errors occurred during validation: %s", errstring))
+		return
+	}
+
+	deviceAuth, err := auth.GetDeviceAuthorizationByUserCode(ctx, form.UserCode)
+	if err != nil {
+		ctx.ServerError("GetDeviceAuthorizationByUserCode", err)
+		return
+	}
+	if deviceAuth == nil {
+		handleAuthorizeError(ctx, AuthorizeError{
+			ErrorCode:        ErrorCodeAccessDenied,
+			ErrorDescription: "invalid user code",
+		}, "")
+		return
+	}
+
+	if !form.Granted {
+		if err := deviceAuth.Deny(ctx); err != nil {
+			ctx.ServerError("deny device auth", err)
+			return
+		}
+		ctx.Flash.Info("device authorization declined")
+		ctx.Redirect(setting.AppURL)
+		return
+	}
+
+	if !deviceAuth.IsPending() || deviceAuth.IsExpired() {
+		handleAuthorizeError(ctx, AuthorizeError{
+			ErrorCode:        ErrorCodeAccessDenied,
+			ErrorDescription: "invalid device authorization, start over",
+		}, "")
+	}
+
+	app, err := auth.GetOAuth2ApplicationByID(ctx, deviceAuth.ApplicationID)
+	if err != nil || app == nil {
+		ctx.ServerError("GetOAuth2ApplicationByID", err)
+		return
+	}
+
+	grant, err := app.GetGrantByUserID(ctx, ctx.Doer.ID)
+	if err != nil {
+		ctx.ServerError("app.GetGrantByUserID", err)
+	}
+
+	if grant == nil {
+		grant, err = app.CreateGrant(ctx, ctx.Doer.ID, deviceAuth.Scope)
+	}
+
+	if deviceAuth.Scope != grant.Scope {
+		handleAuthorizeError(ctx, AuthorizeError{
+			ErrorCode:        ErrorCodeInvalidScope,
+			ErrorDescription: "scope mismatch",
+		}, "")
+		return
+	}
+
+	if err := deviceAuth.SetGrant(ctx, grant); err != nil {
+		ctx.ServerError("SetGrant", err)
+		return
+	}
+
+	ctx.Flash.Info("access granted")
+	ctx.Redirect(setting.AppURL)
+}
+
 // OIDCWellKnown generates JSON so OIDC clients know Gitea's capabilities
 func OIDCWellKnown(ctx *context.Context) {
 	if !setting.OAuth2.Enabled {
