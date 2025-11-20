@@ -81,7 +81,26 @@ func GetShadowCopyMap(ctx *context.Context, ard *moderation.AbuseReportDetailed)
 			log.Warn("Unmarshal failed for shadow copy #%d. %v", ard.ShadowCopyID.Int64, err)
 			return nil
 		}
+
+		if ard.ShouldGetAbuserFromShadowCopy {
+			setAbuserDetails(ctx, data.GetAbuserID())
+		}
+
 		return data.GetFieldsMap()
 	}
 	return nil
+}
+
+// setAbuserDetails tries to retrieve a user with the given ID (if it is not nil)
+// and in case a user is found it will set their name and profile URL into ctx.Data.
+func setAbuserDetails(ctx *context.Context, abuserID *int64) {
+	if abuserID == nil {
+		return
+	}
+
+	abuser, err := user.GetPossibleUserByID(ctx, *abuserID)
+	if err == nil {
+		ctx.Data["Abuser"] = abuser.Name
+		ctx.Data["AbuserURL"] = abuser.HomeLink()
+	}
 }

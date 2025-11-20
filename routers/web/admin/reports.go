@@ -93,6 +93,9 @@ func AbuseReportDetails(ctx *context.Context) {
 	if err = setReportedContentDetails(ctx, reports[0]); err != nil {
 		if user.IsErrUserNotExist(err) || issues.IsErrCommentNotExist(err) || issues.IsErrIssueNotExist(err) || repo_model.IsErrRepoNotExist(err) {
 			ctx.Data["ContentReference"] = ctx.Tr("admin.moderation.deleted_content_ref", reports[0].ContentType, reports[0].ContentID)
+			if contentType == moderation.ReportedContentTypeComment || contentType == moderation.ReportedContentTypeIssue {
+				reports[0].ShouldGetAbuserFromShadowCopy = true
+			}
 		} else {
 			ctx.ServerError("Failed to load reported content details", err)
 			return
