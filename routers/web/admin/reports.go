@@ -106,11 +106,12 @@ func AbuseReportDetails(ctx *context.Context) {
 }
 
 // setReportedContentDetails adds some values into context data for the given report
-// (icon name, a reference, the URL and in case of issues and comments also the poster name).
+// (icon name, a reference, the URL and in case of issues and comments also the poster name and URL).
 func setReportedContentDetails(ctx *context.Context, report *moderation.AbuseReportDetailed) error {
 	contentReference := ""
 	var contentURL string
 	var poster string
+	var posterURL string
 	contentType := report.ContentType
 	contentID := report.ContentID
 
@@ -146,6 +147,7 @@ func setReportedContentDetails(ctx *context.Context, report *moderation.AbuseRep
 		}
 		if issue.Poster != nil {
 			poster = issue.Poster.Name
+			posterURL = issue.Poster.HomeLink()
 		}
 
 		contentReference = fmt.Sprintf("%s#%d", issue.Repo.FullName(), issue.Index)
@@ -166,6 +168,7 @@ func setReportedContentDetails(ctx *context.Context, report *moderation.AbuseRep
 		}
 		if comment.Poster != nil {
 			poster = comment.Poster.Name
+			posterURL = comment.Poster.HomeLink()
 		}
 
 		contentURL = comment.Link(ctx)
@@ -175,6 +178,7 @@ func setReportedContentDetails(ctx *context.Context, report *moderation.AbuseRep
 	ctx.Data["ContentReference"] = contentReference
 	ctx.Data["ContentURL"] = contentURL
 	ctx.Data["Poster"] = poster
+	ctx.Data["PosterURL"] = posterURL
 	return nil
 }
 
