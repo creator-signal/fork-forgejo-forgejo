@@ -14,7 +14,7 @@ import (
 	"github.com/42wim/httpsig"
 )
 
-func verifyHTTPUserOrInstanceSignature(ctx services_context.APIContext) (authenticated bool, err error) {
+func verifyHTTPSignature(ctx services_context.APIContext) (authenticated bool, err error) {
 	if !setting.Federation.SignatureEnforced {
 		return true, nil
 	}
@@ -48,52 +48,11 @@ func verifyHTTPUserOrInstanceSignature(ctx services_context.APIContext) (authent
 	return true, nil
 }
 
-func verifyHTTPUserSignature(ctx services_context.APIContext) (authenticated bool, err error) {
-	if !setting.Federation.SignatureEnforced {
-		return true, nil
-	}
-
-	r := ctx.Req
-
-	// 1. Figure out what key we need to verify
-	v, err := httpsig.NewVerifier(r)
-	if err != nil {
-		log.Debug("For %q verification failed: %v", r.URL.Path, err)
-		return false, err
-	}
-
-	log.Debug("Verifyt %q, signed by KeyId: %v", r.URL.Path, v.KeyId())
-	signatureAlgorithm := httpsig.Algorithm(setting.Federation.SignatureAlgorithms[0])
-	pubKey, err := federation.FindOrCreateFederatedUserKey(ctx, v.KeyId())
-	if err != nil {
-		log.Debug("For %q verification failed: %v", r.URL.Path, err)
-		return false, err
-	}
-
-	err = v.Verify(pubKey, signatureAlgorithm)
-	if err != nil {
-		log.Debug("For %q verification failed: %v", r.URL.Path, err)
-		return false, err
-	}
-	log.Debug("For %q signature was valid.", r.URL.Path)
-	return true, nil
-}
-
 // ReqHTTPSignature function
-func ReqHTTPUserOrInstanceSignature() func(ctx *services_context.APIContext) {
+func ReqHTTPSignature() func(ctx *services_context.APIContext) {
 	return func(ctx *services_context.APIContext) {
-		if authenticated, err := verifyHTTPUserOrInstanceSignature(*ctx); err != nil {
-			ctx.Error(http.StatusBadRequest, "reqSignature", "request signature verification failed")
-		} else if !authenticated {
-			ctx.Error(http.StatusForbidden, "reqSignature", "request signature verification failed")
-		}
-	}
-}
-
-// ReqHTTPUserSignature function
-func ReqHTTPUserSignature() func(ctx *services_context.APIContext) {
-	return func(ctx *services_context.APIContext) {
-		if authenticated, err := verifyHTTPUserSignature(*ctx); err != nil {
+		if authenticated, err := verifyHTTPSignature(*ctx); err != nil {
+			log.Warn("verifyHttpSignatures failed: %v", err)
 			ctx.Error(http.StatusBadRequest, "reqSignature", "request signature verification failed")
 		} else if !authenticated {
 			ctx.Error(http.StatusForbidden, "reqSignature", "request signature verification failed")
