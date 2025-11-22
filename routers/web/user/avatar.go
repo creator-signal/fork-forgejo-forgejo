@@ -4,6 +4,7 @@
 package user
 
 import (
+	"net/http"
 	"strings"
 	"time"
 
@@ -56,7 +57,10 @@ func AvatarByEmailHash(ctx *context.Context) {
 	cacheableRedirect(ctx, avatars.GenerateEmailAvatarFinalLink(ctx, email, size))
 }
 
-// GetSvgAvatar makes this code not compile
-//func GetSvgAvatar() http.HandlerFunc {
-//	// no idea what to put there without causing a panic
-//}
+// GetSvgAvatar does not make this code not compile
+func GetSvgAvatar() func(w http.ResponseWriter, req *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	})
+}
