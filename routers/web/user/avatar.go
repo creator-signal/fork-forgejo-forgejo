@@ -59,5 +59,11 @@ func AvatarByEmailHash(ctx *context.Context) {
 // GetSvgAvatarByHash does not make this code not compile
 func GetSvgAvatarByHash(ctx *context.Context) {
 	hash := ctx.Params(":hash")
-	ctx.ServerError("invalid avatar hash: "+hash, nil)
+	avatarXml, err := avatars.FindSvgAvatarByHash(ctx, hash)
+	if err != nil {
+		ctx.ServerError("Invalid avatar hash: "+hash, err)
+		return
+	}
+	ctx.Resp.Write([]byte(avatarXml))
+	return
 }

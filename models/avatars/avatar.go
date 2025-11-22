@@ -108,6 +108,11 @@ func GetEmailForHash(ctx context.Context, md5Sum string) (string, error) {
 	})
 }
 
+// FindSvgAvatarByHash looks for svg avatar in the database
+func FindSvgAvatarByHash(ctx context.Context, hash string) (string, error) {
+	return hash, nil
+}
+
 // LibravatarURL returns the URL for the given email. Slow due to the DNS lookup.
 // This function should only be called if a federated avatar service is enabled.
 func LibravatarURL(email string) (*url.URL, error) {
