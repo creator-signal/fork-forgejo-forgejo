@@ -17,11 +17,20 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
+	"golang.org/x/crypto/blake2b"
 )
 
 // CustomAvatarRelativePath returns user custom avatar relative path.
 func (u *User) CustomAvatarRelativePath() string {
 	return u.Avatar
+}
+
+// HashSvgAvatar returns a 256 bit blake2b-hash of avatar text
+// Is it too generic? Anyway I just want avatar hashes to use a fast non-cryptographic hash
+func HashSvgAvatar(avatarXml string) []byte {
+	hasher, _ := blake2b.New256(nil)
+	hasher.Write([]byte(avatarXml))
+	return hasher.Sum(nil)
 }
 
 // GenerateRandomAvatar generates a random avatar for user.
@@ -38,6 +47,7 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 
 	u.Avatar = avatars.HashEmail(seed)
 	u.AvatarSVG = identicon.Vector
+	u.AvatarSVGHash = HashSvgAvatar(identicon.Vector)
 
 	_, err = storage.Avatars.Stat(u.CustomAvatarRelativePath())
 	if err != nil {
@@ -53,7 +63,7 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 		}
 	}
 
-	if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "avatar_svg").Update(u); err != nil {
+	if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "avatar_svg", "avatar_svg_hash").Update(u); err != nil {
 		return err
 	}
 
