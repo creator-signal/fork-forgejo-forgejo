@@ -4,7 +4,6 @@
 package user
 
 import (
-	"net/http"
 	"strings"
 	"time"
 
@@ -57,10 +56,8 @@ func AvatarByEmailHash(ctx *context.Context) {
 	cacheableRedirect(ctx, avatars.GenerateEmailAvatarFinalLink(ctx, email, size))
 }
 
-// GetSvgAvatar does not make this code not compile
-func GetSvgAvatar() func(w http.ResponseWriter, req *http.Request) {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		return
-	})
+// GetSvgAvatarByHash does not make this code not compile
+func GetSvgAvatarByHash(ctx *context.Context) {
+	hash := ctx.Params(":hash")
+	ctx.ServerError("invalid avatar hash: "+hash, nil)
 }
