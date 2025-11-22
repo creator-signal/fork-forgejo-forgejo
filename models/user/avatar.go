@@ -25,8 +25,8 @@ func (u *User) CustomAvatarRelativePath() string {
 	return u.Avatar
 }
 
-// HashSvgAvatar returns a 256 bit blake2b-hash of avatar text
-// Is it too generic? Anyway I just want avatar hashes to use a fast non-cryptographic hash
+// HashSvgAvatar returns a 256 bit blake2b-hash of avatar text Is it too generic?
+// The intention is to use a fast hash func for this
 func HashSvgAvatar(avatarXml string) []byte {
 	hasher, _ := blake2b.New256(nil)
 	hasher.Write([]byte(avatarXml))
