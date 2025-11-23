@@ -25,8 +25,9 @@ import (
 	"forgejo.org/modules/util"
 
 	"github.com/stretchr/testify/require"
-	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"xorm.io/xorm"
+
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 )
 
 // PrepareTestEnv prepares the test environment and reset the database. The skip parameter should usually be 0.

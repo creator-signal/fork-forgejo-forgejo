@@ -46,8 +46,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"xorm.io/xorm/convert"
+
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 )
 
 func exitf(format string, args ...any) {
