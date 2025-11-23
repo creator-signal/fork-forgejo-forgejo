@@ -6,25 +6,24 @@ package db
 import (
 	"database/sql"
 	"database/sql/driver"
-	"sync"
 
 	"forgejo.org/modules/setting"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/stdlib"
 	"xorm.io/xorm/dialects"
 )
 
-var registerOnce sync.Once
-
-func registerPostgresSchemaDriver() {
-	registerOnce.Do(func() {
-		sql.Register("postgresschema", &postgresSchemaDriver{})
-		dialects.RegisterDriver("postgresschema", dialects.QueryDriver("postgres"))
-	})
+func init() {
+	// Register pgx-based driver as "postgresschema" for PostgreSQL with schema support
+	// This wraps pgx/v5/stdlib and injects search_path configuration on connection
+	// For PostgreSQL without schema, engine.go uses "pgx" directly (registered by pgx/v5/stdlib)
+	driver := &postgresSchemaDriver{}
+	sql.Register("postgresschema", driver)
+	dialects.RegisterDriver("postgresschema", dialects.QueryDriver("postgres"))
 }
 
 type postgresSchemaDriver struct {
-	pq.Driver
+	stdlib.Driver
 }
 
 // Open opens a new connection to the database. name is a connection string.
