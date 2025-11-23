@@ -3,10 +3,10 @@
 	<div class="ui middle very relaxed page one column grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
-				<h3 class="ui top attached header">
+				<h2>
 					{{ctx.Locale.Tr "new_repo.title"}}
-				</h3>
-				<div class="ui attached segment">
+				</h2>
+				<div class="ui segment">
 					{{if or .CanCreateRepo .Orgs}}
 						{{template "base/alert" .}}
 						{{template "repo/create_helper" .}}
