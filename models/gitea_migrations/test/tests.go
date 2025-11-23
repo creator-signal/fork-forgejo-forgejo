@@ -25,6 +25,7 @@ import (
 	"forgejo.org/modules/util"
 
 	"github.com/stretchr/testify/require"
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"xorm.io/xorm"
 )
 
@@ -210,7 +211,7 @@ func deleteDB() error {
 		}
 		return nil
 	case setting.Database.Type.IsPostgreSQL():
-		db, err := sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/?sslmode=%s",
+		db, err := sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/?sslmode=%s",
 			setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.SSLMode))
 		if err != nil {
 			return err
@@ -228,7 +229,7 @@ func deleteDB() error {
 
 		// Check if we need to setup a specific schema
 		if len(setting.Database.Schema) != 0 {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 			if err != nil {
 				return err
