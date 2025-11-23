@@ -3,10 +3,10 @@
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
-				<h3 class="ui top attached header">
+				<h2>
 					{{ctx.Locale.Tr "new_org.title"}}
-				</h3>
-				<div class="ui attached segment">
+				</h2>
+				<div class="ui segment">
 					{{template "base/alert" .}}
 					<div class="inline required field {{if .Err_OrgName}}error{{end}}">
 						<label for="org_name">{{ctx.Locale.Tr "org.org_name_holder"}}</label>
