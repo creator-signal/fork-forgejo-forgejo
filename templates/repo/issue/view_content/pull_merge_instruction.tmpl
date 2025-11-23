@@ -10,22 +10,22 @@
 			{{$fullMessage = printf "%s\n\n%s" .DefaultMergeMessage .DefaultMergeBody}}
 		{{end}}
 		<div class="tw-mb-4">
-			<h3 class="tw-flex tw-items-center tw-gap-2">{{svg "octicon-info" 16}} {{ctx.Locale.Tr "repo.pulls.manual_merge_helper"}}</h3>
-			<p class="tw-mb-2">{{ctx.Locale.Tr "repo.pulls.manual_merge_helper_description"}}</p>
+			<h3 class="tw-flex tw-items-center tw-gap-2">{{svg "octicon-info" 16}} {{ctx.Locale.Tr "pulls.manual_merge.helper"}}</h3>
+			<p class="tw-mb-2">{{ctx.Locale.Tr "pulls.manual_merge.helpder.description"}}</p>
 			<div class="ui secondary segment tw-space-y-3">
 				<div class="ui form">
 					<div class="field">
-						<label for="{{$titleID}}">{{ctx.Locale.Tr "repo.pulls.merge_commit_title"}}</label>
+						<label for="{{$titleID}}">{{ctx.Locale.Tr "pulls.manual_merge.commit.title"}}</label>
 						<textarea id="{{$titleID}}" readonly rows="1">{{- .DefaultMergeMessage -}}</textarea>
 					</div>
 					{{if .DefaultMergeBody}}
 					<div class="field">
-						<label for="{{$bodyID}}">{{ctx.Locale.Tr "repo.pulls.merge_commit_body"}}</label>
+						<label for="{{$bodyID}}">{{ctx.Locale.Tr "pulls.manual_merge.commit.body"}}</label>
 						<textarea id="{{$bodyID}}" readonly rows="5">{{- .DefaultMergeBody -}}</textarea>
 					</div>
 					{{end}}
 					<textarea id="{{$copySourceID}}" class="tw-hidden" aria-hidden="true" readonly>{{- $fullMessage -}}</textarea>
-					<button class="ui button" type="button" data-clipboard-target="#{{$copySourceID}}">{{svg "octicon-copy" 16}} {{ctx.Locale.Tr "repo.pulls.copy_manual_merge_message"}}</button>
+					<button class="ui button" type="button" data-clipboard-target="#{{$copySourceID}}">{{svg "octicon-copy" 16}} {{ctx.Locale.Tr "pulls.manual_merge.copy.button"}}</button>
 				</div>
 			</div>
 		</div>
