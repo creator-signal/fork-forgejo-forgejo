@@ -12,8 +12,8 @@ import (
 	auth_model "forgejo.org/models/auth"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
-	user_model "forgejo.org/models/user"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
 	api "forgejo.org/modules/structs"
 
