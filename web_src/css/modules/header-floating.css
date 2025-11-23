@@ -5,3 +5,7 @@ h3.floating {
 .segment + h3.floating {
   margin-block-start: 1.25rem;
 }
+
+h3.floating + .table.segment {
+  margin-block-start: 0;
+}
