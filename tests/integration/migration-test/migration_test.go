@@ -29,9 +29,9 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/tests"
 
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"xorm.io/xorm"
 )
 
