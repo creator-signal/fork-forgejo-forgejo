@@ -254,6 +254,7 @@ func Routes() *web.Route {
 	routes.Methods("GET, HEAD", "/apple-touch-icon.png", misc.StaticRedirect("/assets/img/apple-touch-icon.png"))
 	routes.Methods("GET, HEAD", "/apple-touch-icon-precomposed.png", misc.StaticRedirect("/assets/img/apple-touch-icon.png"))
 	routes.Methods("GET, HEAD", "/favicon.ico", misc.StaticRedirect("/assets/img/favicon.png"))
+	routes.Methods("GET, HEAD", "/new", misc.StaticRedirect("/repo/create"))
 
 	_ = templates.HTMLRenderer()
 
