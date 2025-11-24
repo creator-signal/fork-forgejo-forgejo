@@ -13,10 +13,10 @@
   token_salt: eeeeeeee
   token_last_eight: eeeeeeee
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
 -
   id: 47
   job_id: 192
@@ -33,10 +33,10 @@
   token_salt: jVuKnSPGgy
   token_last_eight: eeb1a71a
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
 -
   id: 48
   job_id: 193
@@ -53,10 +53,10 @@
   token_salt: ffffffffff
   token_last_eight: ffffffff
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
 -
   id: 49
   job_id: 194
@@ -73,10 +73,10 @@
   token_salt: ffffffffff
   token_last_eight: ffffffff
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
 -
   id: 50
   job_id: 195
@@ -93,10 +93,10 @@
   token_salt: ffffffffff
   token_last_eight: ffffffff
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
 -
   id: 51
   job_id: 196
@@ -113,10 +113,10 @@
   token_salt: ffffffffff
   token_last_eight: ffffffff
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
 -
   id: 52
   job_id: 192
@@ -133,10 +133,10 @@
   token_salt: ffffffffff
   token_last_eight: ffffffff
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
 -
   id: 53
   job_id: 192
@@ -153,7 +153,7 @@
   token_salt: ffffffffff
   token_last_eight: ffffffff
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
