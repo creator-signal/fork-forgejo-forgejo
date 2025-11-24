@@ -1,44 +1,57 @@
 #!/bin/bash
 
+# Make sure all environment variables prefixed with FORGEJO_ are also exposed
+# with the same value under the GITEA_ prefix. (#10215)
+source <(printenv | grep '^FORGEJO_' | sed -e 's/FORGEJO/GITEA/')
+
 # Prepare git folder
 mkdir -p ${HOME} && chmod 0700 ${HOME}
-if [ ! -w ${HOME} ]; then echo "${HOME} is not writable"; exit 1; fi
+if [ ! -w ${HOME} ]; then
+  echo "${HOME} is not writable"
+  exit 1
+fi
 
 # Prepare custom folder
 mkdir -p ${GITEA_CUSTOM} && chmod 0700 ${GITEA_CUSTOM}
 
 # Prepare temp folder
 mkdir -p ${GITEA_TEMP} && chmod 0700 ${GITEA_TEMP}
-if [ ! -w ${GITEA_TEMP} ]; then echo "${GITEA_TEMP} is not writable"; exit 1; fi
+if [ ! -w ${GITEA_TEMP} ]; then
+  echo "${GITEA_TEMP} is not writable"
+  exit 1
+fi
 
 # TODO: remove on next major version release
 # Honour legacy config file if existing, but inform the user
 if [ -f ${GITEA_APP_INI_LEGACY} ] && [ ${GITEA_APP_INI} != ${GITEA_APP_INI_LEGACY} ]; then
-    GITEA_APP_INI_DEFAULT=/var/lib/gitea/custom/conf/app.ini
-    echo -e \
-      "\033[33mWARNING\033[0m: detected configuration file in deprecated default path ${GITEA_APP_INI_LEGACY}." \
-      "The new default is ${GITEA_APP_INI_DEFAULT}. To remove this warning, choose one of the options:\n" \
-      "* Move ${GITEA_APP_INI_LEGACY} to ${GITEA_APP_INI_DEFAULT} (or to \$GITEA_APP_INI if you want to override this variable)\n" \
-      "* Explicitly override GITEA_APP_INI=${GITEA_APP_INI_LEGACY} in the container environment"
-    GITEA_APP_INI=${GITEA_APP_INI_LEGACY}
+  GITEA_APP_INI_DEFAULT=/var/lib/gitea/custom/conf/app.ini
+  echo -e \
+    "\033[33mWARNING\033[0m: detected configuration file in deprecated default path ${GITEA_APP_INI_LEGACY}." \
+    "The new default is ${GITEA_APP_INI_DEFAULT}. To remove this warning, choose one of the options:\n" \
+    "* Move ${GITEA_APP_INI_LEGACY} to ${GITEA_APP_INI_DEFAULT} (or to \$GITEA_APP_INI if you want to override this variable)\n" \
+    "* Explicitly override GITEA_APP_INI=${GITEA_APP_INI_LEGACY} in the container environment"
+  GITEA_APP_INI=${GITEA_APP_INI_LEGACY}
 fi
 
 #Prepare config file
 if [ ! -f ${GITEA_APP_INI} ]; then
 
-    #Prepare config file folder
-    GITEA_APP_INI_DIR=$(dirname ${GITEA_APP_INI})
-    mkdir -p ${GITEA_APP_INI_DIR} && chmod 0700 ${GITEA_APP_INI_DIR}
-    if [ ! -w ${GITEA_APP_INI_DIR} ]; then echo "${GITEA_APP_INI_DIR} is not writable"; exit 1; fi
+  #Prepare config file folder
+  GITEA_APP_INI_DIR=$(dirname ${GITEA_APP_INI})
+  mkdir -p ${GITEA_APP_INI_DIR} && chmod 0700 ${GITEA_APP_INI_DIR}
+  if [ ! -w ${GITEA_APP_INI_DIR} ]; then
+    echo "${GITEA_APP_INI_DIR} is not writable"
+    exit 1
+  fi
 
-    # Set INSTALL_LOCK to true only if SECRET_KEY is not empty and
-    # INSTALL_LOCK is empty
-    if [ -n "$SECRET_KEY" ] && [ -z "$INSTALL_LOCK" ]; then
-        INSTALL_LOCK=true
-    fi
+  # Set INSTALL_LOCK to true only if SECRET_KEY is not empty and
+  # INSTALL_LOCK is empty
+  if [ -n "$SECRET_KEY" ] && [ -z "$INSTALL_LOCK" ]; then
+    INSTALL_LOCK=true
+  fi
 
-    # Substitute the environment variables in the template
-    APP_NAME=${APP_NAME:-"Forgejo: Beyond coding. We forge."} \
+  # Substitute the environment variables in the template
+  APP_NAME=${APP_NAME:-"Forgejo: Beyond coding. We forge."} \
     RUN_MODE=${RUN_MODE:-"prod"} \
     RUN_USER=${USER:-"git"} \
     SSH_DOMAIN=${SSH_DOMAIN:-"localhost"} \
@@ -56,7 +69,7 @@ if [ ! -f ${GITEA_APP_INI} ]; then
     DISABLE_REGISTRATION=${DISABLE_REGISTRATION:-"false"} \
     REQUIRE_SIGNIN_VIEW=${REQUIRE_SIGNIN_VIEW:-"false"} \
     SECRET_KEY=${SECRET_KEY:-""} \
-    envsubst < /etc/templates/app.ini > ${GITEA_APP_INI}
+    envsubst </etc/templates/app.ini >${GITEA_APP_INI}
 fi
 
 # Replace app.ini settings with env variables in the form GITEA__SECTION_NAME__KEY_NAME
