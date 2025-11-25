@@ -209,5 +209,8 @@
     },
     "teams.add_all_repos.modal.header": "Add all repositories",
     "teams.remove_all_repos.modal.header": "Remove all repositories",
+    "packages.flatpak.add_repo": "Add the repository",
+    "packages.flatpak.install": "Install",
+    "packages.flatpak.flatpak_link": "Or click here",
     "meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }

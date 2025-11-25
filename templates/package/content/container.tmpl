@@ -2,24 +2,42 @@
 	<h4 class="ui top attached header">{{ctx.Locale.Tr "packages.installation"}}</h4>
 	<div class="ui attached segment">
 		<div class="ui form">
-			<div class="field">
-				<label>{{svg "octicon-terminal"}} {{ctx.Locale.Tr "packages.container.pull"}}</label>
-				{{if eq .PackageDescriptor.Metadata.Type "helm"}}
-				<div class="markup"><pre class="code-block"><code>helm pull oci://{{.PackageRegistryHost}}/{{.PackageDescriptor.Owner.LowerName}}/{{.PackageDescriptor.Package.LowerName}} --version {{.PackageDescriptor.Version.LowerVersion}}</code></pre></div>
-				{{else}}
-					{{$separator := ":"}}
-					{{if not .PackageDescriptor.Metadata.IsTagged}}
-						{{$separator = "@"}}
+			{{if eq .PackageDescriptor.Metadata.Type "flatpak"}}
+				<div class="field">
+					<label>{{ctx.Locale.Tr "packages.flatpak.add_repo"}}</label>
+					<div class="markup"><pre class="code-block"><code>flatpak remote-add --if-not-exists {{.FlatpakRepoName}} {{.FlatpakRepoURL}}</code></pre></div>
+				</div>
+				<div class="field">
+					<label>{{ctx.Locale.Tr "packages.flatpak.install"}}</label>
+					<div class="markup"><pre class="code-block"><code>flatpak install {{.FlatpakRepoName}} {{.PackageDescriptor.Metadata.Flatpak.ID}}</code></pre></div>
+				</div>
+				<div class="field">
+					<a href="flatpak+{{AppUrl}}api/packages/{{.PackageDescriptor.Owner.LowerName}}/container/flatpak/{{.PackageDescriptor.Package.Name}}/{{.PackageDescriptor.Version.LowerVersion}}/ref.flatpakref">{{ctx.Locale.Tr "packages.flatpak.flatpak_link"}}</a>
+				</div>
+			{{else}}
+				<div class="field">
+					<label>{{svg "octicon-terminal"}} {{ctx.Locale.Tr "packages.container.pull"}}</label>
+					{{if eq .PackageDescriptor.Metadata.Type "helm"}}
+					<div class="markup"><pre class="code-block"><code>helm pull oci://{{.PackageRegistryHost}}/{{.PackageDescriptor.Owner.LowerName}}/{{.PackageDescriptor.Package.LowerName}} --version {{.PackageDescriptor.Version.LowerVersion}}</code></pre></div>
+					{{else}}
+						{{$separator := ":"}}
+						{{if not .PackageDescriptor.Metadata.IsTagged}}
+							{{$separator = "@"}}
+						{{end}}
+						<div class="markup"><pre class="code-block"><code>docker pull {{.PackageRegistryHost}}/{{.PackageDescriptor.Owner.LowerName}}/{{.PackageDescriptor.Package.LowerName}}{{$separator}}{{.PackageDescriptor.Version.LowerVersion}}</code></pre></div>
 					{{end}}
-					<div class="markup"><pre class="code-block"><code>docker pull {{.PackageRegistryHost}}/{{.PackageDescriptor.Owner.LowerName}}/{{.PackageDescriptor.Package.LowerName}}{{$separator}}{{.PackageDescriptor.Version.LowerVersion}}</code></pre></div>
+				</div>
+				<div class="field">
+					<label>{{svg "octicon-code"}} {{ctx.Locale.Tr "packages.container.digest"}}</label>
+					<div class="markup"><pre class="code-block"><code>{{range .PackageDescriptor.Files}}{{if eq .File.LowerName "manifest.json"}}{{.Properties.GetByName "container.digest"}}{{end}}{{end}}</code></pre></div>
+				</div>
+			{{end}}
+			<div class="field">
+				{{if eq .PackageDescriptor.Metadata.Type "flatpak"}}
+					<label>{{ctx.Locale.Tr "packages.registry.documentation" "Flatpak" "https://forgejo.org/docs/latest/user/packages/flatpak/"}}</label>
+				{{else}}
+					<label>{{ctx.Locale.Tr "packages.registry.documentation" "Container" "https://forgejo.org/docs/latest/user/packages/container/"}}</label>
 				{{end}}
-			</div>
-			<div class="field">
-				<label>{{svg "octicon-code"}} {{ctx.Locale.Tr "packages.container.digest"}}</label>
-				<div class="markup"><pre class="code-block"><code>{{range .PackageDescriptor.Files}}{{if eq .File.LowerName "manifest.json"}}{{.Properties.GetByName "container.digest"}}{{end}}{{end}}</code></pre></div>
-			</div>
-			<div class="field">
-				<label>{{ctx.Locale.Tr "packages.registry.documentation" "Container" "https://forgejo.org/docs/latest/user/packages/container/"}}</label>
 			</div>
 		</div>
 	</div>

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/packages/container/flatpak"
 	"forgejo.org/modules/packages/container/helm"
 	"forgejo.org/modules/validation"
 
@@ -35,8 +36,9 @@ const (
 type ImageType string
 
 const (
-	TypeOCI  ImageType = "oci"
-	TypeHelm ImageType = "helm"
+	TypeOCI     ImageType = "oci"
+	TypeHelm    ImageType = "helm"
+	TypeFlatpak ImageType = "flatpak"
 )
 
 // Name gets the name of the image type
@@ -44,6 +46,8 @@ func (it ImageType) Name() string {
 	switch it {
 	case TypeHelm:
 		return "Helm Chart"
+	case TypeFlatpak:
+		return "Flatpak"
 	default:
 		return "OCI / Docker"
 	}
@@ -63,6 +67,7 @@ type Metadata struct {
 	Labels           map[string]string `json:"labels,omitempty"`
 	ImageLayers      []string          `json:"layer_creation,omitempty"`
 	Manifests        []*Manifest       `json:"manifests,omitempty"`
+	Flatpak          *flatpak.Flatpak  `json:"flatpak,omitempty"`
 }
 
 type Manifest struct {
@@ -139,6 +144,19 @@ func parseOCIImageConfig(r io.Reader) (*Metadata, error) {
 		metadata.DocumentationURL = ""
 	}
 
+	_, ok := metadata.Labels["org.flatpak.ref"]
+	if !ok {
+		return metadata, nil
+	}
+
+	flatpakData, err := parseFlatpakMetadata(metadata.Labels)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata.Type = TypeFlatpak
+	metadata.Flatpak = flatpakData
+
 	return metadata, nil
 }
 
@@ -170,4 +188,24 @@ func parseHelmConfig(r io.Reader) (*Metadata, error) {
 	}
 
 	return metadata, nil
+}
+
+func parseFlatpakMetadata(labels map[string]string) (*flatpak.Flatpak, error) {
+	ref, ok := labels["org.flatpak.ref"]
+	if !ok {
+		return nil, fmt.Errorf("missing ref")
+	}
+
+	// ref is <kind>/<id>/<architecture>/<branch>
+	refParts := strings.Split(ref, "/")
+	if len(refParts) != 4 {
+		return nil, fmt.Errorf("invalid ref: %s", ref)
+	}
+
+	flatpakData := new(flatpak.Flatpak)
+	flatpakData.Kind = flatpak.FlatpakKind(refParts[0])
+	flatpakData.ID = refParts[1]
+	flatpakData.Branch = refParts[3]
+
+	return flatpakData, nil
 }

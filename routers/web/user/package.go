@@ -21,6 +21,7 @@ import (
 	"forgejo.org/modules/optional"
 	alpine_module "forgejo.org/modules/packages/alpine"
 	arch_model "forgejo.org/modules/packages/arch"
+	flatpak_module "forgejo.org/modules/packages/container/flatpak"
 	debian_module "forgejo.org/modules/packages/debian"
 	rpm_module "forgejo.org/modules/packages/rpm"
 	"forgejo.org/modules/setting"
@@ -266,6 +267,9 @@ func ViewPackageVersion(ctx *context.Context) {
 			PackageID: pd.Package.ID,
 			IsTagged:  true,
 		})
+
+		ctx.Data["FlatpakRepoName"] = flatpak_module.GetRepoName(ctx.ContextUser.Name)
+		ctx.Data["FlatpakRepoURL"] = fmt.Sprintf("%sapi/packages/%s/container/flatpak/repo.flatpakrepo", setting.AppURL, ctx.ContextUser.LowerName)
 	default:
 		pvs, total, err = packages_model.SearchVersions(ctx, &packages_model.PackageSearchOptions{
 			Paginator:  db.NewAbsoluteListOptions(0, 5),

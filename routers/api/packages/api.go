@@ -333,6 +333,17 @@ func CommonRoutes() *web.Route {
 				conda.UploadPackageFile(ctx)
 			})
 		}, reqPackageAccess(perm.AccessModeRead))
+		r.Group("/container", func() {
+			r.Get("/index/static", container.Index)
+			r.Get("/index/dynamic", container.Index)
+			r.Group("/flatpak", func() {
+				r.Get("/repo.flatpakrepo", container.FlatpakRepo)
+				r.Group("/{package}/{version}", func() {
+					r.Get("/ref.flatpakref", container.FlatpakRef)
+					r.Put("/runtime_repo", reqPackageAccess(perm.AccessModeWrite), container.SetFlatpakRuntimeRepo)
+				})
+			})
+		})
 		r.Group("/cran", func() {
 			r.Group("/src", func() {
 				r.Group("/contrib", func() {
