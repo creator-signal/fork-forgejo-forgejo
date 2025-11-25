@@ -802,9 +802,8 @@ func (g *GitlabDownloader) convertMRReference(body string) string {
 		if body[i] == '!' {
 			var collected string
 			for k := i + 1; k < maxLength; k++ { // for each rune after ! check if next rune is integer
-				intStr := string(body[k])
-				if _, err := strconv.Atoi(intStr); err == nil {
-					collected += intStr
+				if body[k]-'0' <= 9 {
+					collected += string(body[k])
 					if k == maxLength-1 { // The last rune in the string was an integer
 						body = g.updateAndInsert(body, collected, i+1, k)
 					}
