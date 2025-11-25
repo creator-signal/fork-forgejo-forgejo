@@ -454,12 +454,15 @@ func (g *GitlabDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, er
 			awardPage++
 		}
 
+		// record the issue IID, to be used in GetPullRequests()
+		g.iidResolver.recordIssueIID(issue.IID)
+
 		allIssues = append(allIssues, &base.Issue{
 			Title:        issue.Title,
 			Number:       int64(issue.IID),
 			PosterID:     int64(issue.Author.ID),
 			PosterName:   issue.Author.Username,
-			Content:      issue.Description,
+			Content:      g.convertMRReference(issue.Description),
 			Milestone:    milestone,
 			State:        issue.State,
 			Created:      *issue.CreatedAt,
@@ -471,9 +474,6 @@ func (g *GitlabDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, er
 			ForeignIndex: int64(issue.IID),
 			Context:      gitlabIssueContext{IsMergeRequest: false},
 		})
-
-		// record the issue IID, to be used in GetPullRequests()
-		g.iidResolver.recordIssueIID(issue.IID)
 	}
 
 	return allIssues, len(issues) < perPage, nil
@@ -707,7 +707,7 @@ func (g *GitlabDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 			Number:         newPRNumber,
 			PosterName:     pr.Author.Username,
 			PosterID:       int64(pr.Author.ID),
-			Content:        pr.Description,
+			Content:        g.convertMRReference(pr.Description),
 			Milestone:      milestone,
 			State:          pr.State,
 			Created:        *pr.CreatedAt,
