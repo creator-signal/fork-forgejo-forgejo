@@ -252,7 +252,10 @@ jobs:
 
 		// Trigger rerun
 		rerunURL := fmt.Sprintf("/%s/%s/actions/runs/%s/rerun", user2.Name, repo.Name, runIndex)
-		rerunRequest := NewRequest(t, "POST", rerunURL)
+		csrf := GetCSRF(t, session, "/")
+		rerunRequest := NewRequestWithValues(t, "POST", rerunURL, map[string]string{
+			"_csrf": csrf,
+		})
 		session.MakeRequest(t, rerunRequest, http.StatusOK)
 
 		// Execute rerun task
