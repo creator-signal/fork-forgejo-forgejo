@@ -1,9 +1,9 @@
 {{template "user/settings/layout_head" (dict "ctxData" . "pageClass" "user settings profile")}}
 	<div class="user-setting-content">
-		<h4 class="ui top attached header">
+		<h3 class="floating">
 			{{ctx.Locale.Tr "settings.public_profile"}}
-		</h4>
-		<div class="ui attached segment">
+		</h3>
+		<div class="ui segment">
 			<form class="ui form" action="{{.Link}}" method="post">
 				<fieldset>
 					<legend>{{ctx.Locale.Tr "settings.profile_desc"}}</legend>
@@ -108,10 +108,10 @@
 			</form>
 		</div>
 
-		<h4 id="avatar-settings" class="ui top attached header">
+		<h3 id="avatar-settings" class="floating">
 			{{ctx.Locale.Tr "settings.avatar"}}
-		</h4>
-		<div class="ui attached segment">
+		</h3>
+		<div class="ui segment">
 			<form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
 				{{if not .DisableGravatar}}
 				<div class="inline field">
