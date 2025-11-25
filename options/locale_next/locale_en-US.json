@@ -95,6 +95,7 @@
     "search.milestone_kind": "Search milestones…",
     "repo.settings.push_mirror.branch_filter.label": "Branch filter (optional)",
     "repo.settings.push_mirror.branch_filter.description": "Branches to be mirrored. Leave blank to mirror all branches. See <a href=\"%[1]s\">%[2]s documentation</a> for syntax. Examples: <code>main, release/*</code>",
+    "repo.settings.collaboration_not_allowed_for_orgs": "Individual collaborators are not allowed for organization repositories. Please use teams instead.",
     "incorrect_root_url": "This Forgejo instance is configured to be served on \"%s\". You are currently viewing Forgejo through a different URL, which may cause parts of the application to break. The canonical URL is controlled by Forgejo admins via the ROOT_URL setting in the app.ini.",
     "themes.names.forgejo-auto": "Forgejo (follow system theme)",
     "themes.names.forgejo-light": "Forgejo light",
@@ -200,6 +201,5 @@
     },
     "teams.add_all_repos.modal.header": "Add all repositories",
     "teams.remove_all_repos.modal.header": "Remove all repositories",
-    "repo.settings.collaboration_not_allowed_for_orgs": "Individual collaborators are not allowed for organization repositories. Please use teams instead.",
     "meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
