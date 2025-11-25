@@ -135,7 +135,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 		},
 	}, releases)
 
-	issues, isEnd, err := downloader.GetIssues(1, 2)
+	issues, isEnd, err := downloader.GetIssues(1, 3)
 	require.NoError(t, err)
 	assert.False(t, isEnd)
 	assertIssuesEqual(t, []*base.Issue{
@@ -220,6 +220,19 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			},
 			Closed: timePtr(time.Date(2024, 9, 3, 14, 43, 10, 906000000, time.UTC)),
 		},
+		{
+			Number:     3,
+			Title:      "Fix plz",
+			Content:    "Can we do something about it? !5 is maybe related to that.",
+			Milestone:  "",
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			State:      "opened",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 31, 991000000, time.UTC),
+			Updated:    time.Date(2025, time.November, 25, 9, 49, 31, 991000000, time.UTC),
+			Labels:     []*base.Label{},
+			Reactions:  []*base.Reaction{},
+		},
 	}, issues)
 
 	comments, _, err := downloader.GetComments(&base.Issue{
@@ -256,11 +269,85 @@ func TestGitlabDownloadRepo(t *testing.T) {
 		},
 	}, comments)
 
-	prs, _, err := downloader.GetPullRequests(1, 1)
+	comments, _, err = downloader.GetComments(&base.Issue{
+		Number:       3,
+		ForeignIndex: 3,
+		Context:      gitlabIssueContext{IsMergeRequest: false},
+	})
+	require.NoError(t, err)
+	assertCommentsEqual(t, []*base.Comment{
+		{
+			IssueIndex: 3,
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 50, 899000000, time.UTC),
+			Content:    "No actually its !4",
+			Reactions:  nil,
+		},
+	}, comments)
+
+	comments, _, err = downloader.GetComments(&base.Issue{
+		Number:       5,
+		ForeignIndex: 2,
+		Context:      gitlabIssueContext{IsMergeRequest: true},
+	})
+	require.NoError(t, err)
+	assertCommentsEqual(t, []*base.Comment{
+		{
+			IssueIndex: 5,
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 0, 750000000, time.UTC),
+			Content:    "Although we had some trouble with !4",
+			Reactions:  nil,
+		},
+		{
+			IssueIndex: 5,
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 32, 263000000, time.UTC),
+			Content:    "mentioned in issue #3",
+			Reactions:  nil,
+		},
+	}, comments)
+
+	prs, _, err := downloader.GetPullRequests(1, 2)
 	require.NoError(t, err)
 	assertPullRequestsEqual(t, []*base.PullRequest{
 		{
-			Number:     3,
+			Number:     5,
+			Title:      "Test/parsing",
+			Content:    "Simillar to !4 this solves an issue.",
+			Milestone:  "",
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			State:      "opened",
+			Created:    time.Date(2025, time.November, 25, 9, 48, 20, 259000000, time.UTC),
+			Labels:     []*base.Label{},
+			Reactions:  []*base.Reaction{},
+			PatchURL:   server.URL + "/forgejo/test_repo/-/merge_requests/2.patch",
+			Head: base.PullRequestBranch{
+				Ref:       "test/parsing",
+				CloneURL:  server.URL + "/forgejo/test_repo/-/merge_requests/2",
+				SHA:       "c59c9b451acca9d106cc19d61d87afe3fbbb8b83",
+				RepoName:  "test_repo",
+				OwnerName: "patdyn",
+			},
+			Base: base.PullRequestBranch{
+				Ref:       "master",
+				SHA:       "c59c9b451acca9d106cc19d61d87afe3fbbb8b83",
+				OwnerName: "patdyn",
+				RepoName:  "test_repo",
+			},
+			Closed:         nil,
+			Merged:         false,
+			MergedTime:     nil,
+			MergeCommitSHA: "",
+			ForeignIndex:   2,
+			Context:        gitlabIssueContext{IsMergeRequest: true},
+		},
+		{
+			Number:     4,
 			Title:      "Test branch",
 			Content:    "do not merge this PR",
 			Milestone:  "1.1.0",
@@ -303,7 +390,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Merged:         false,
 			MergedTime:     nil,
 			MergeCommitSHA: "",
-			ForeignIndex:   2,
+			ForeignIndex:   1,
 			Context:        gitlabIssueContext{IsMergeRequest: true},
 		},
 	}, prs)
