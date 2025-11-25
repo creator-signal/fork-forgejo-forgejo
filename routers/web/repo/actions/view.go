@@ -182,10 +182,10 @@ type ViewRunInfo struct {
 }
 
 type ViewCurrentJob struct {
-	Title       string         `json:"title"`
-	Detail      string         `json:"detail"`
-	Steps       []*ViewJobStep `json:"steps"`
-	AllAttempts []*TaskAttempt `json:"allAttempts"`
+	Title       string          `json:"title"`
+	Details     []template.HTML `json:"details"`
+	Steps       []*ViewJobStep  `json:"steps"`
+	AllAttempts []*TaskAttempt  `json:"allAttempts"`
 }
 
 type ViewLogs struct {
@@ -358,10 +358,8 @@ func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jo
 	}
 
 	resp.State.CurrentJob.Title = current.Name
-	resp.State.CurrentJob.Detail = current.Status.LocaleString(ctx.Locale)
-	if run.NeedApproval {
-		resp.State.CurrentJob.Detail = ctx.Locale.TrString("actions.need_approval_desc")
-	}
+	resp.State.CurrentJob.Details = current.StatusDiagnostics(ctx.Locale)
+
 	resp.State.CurrentJob.Steps = make([]*ViewJobStep, 0) // marshal to '[]' instead of 'null' in json
 	resp.Logs.StepsLog = make([]*ViewStepLog, 0)          // marshal to '[]' instead of 'null' in json
 	// As noted above with TaskID; task will be nil when the job hasn't be picked yet...
@@ -593,6 +591,7 @@ func rerunJob(ctx *context_module.Context, job *actions_model.ActionRunJob, shou
 func Logs(ctx *context_module.Context) {
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
+	attemptNumber := ctx.ParamsInt64("attempt")
 
 	job, _ := getRunJobs(ctx, runIndex, jobIndex)
 	if ctx.Written() {
@@ -609,7 +608,7 @@ func Logs(ctx *context_module.Context) {
 		return
 	}
 
-	task, err := actions_model.GetTaskByID(ctx, job.TaskID)
+	task, err := actions_model.GetTaskByJobAttempt(ctx, job.ID, attemptNumber)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
@@ -667,42 +666,6 @@ func Cancel(ctx *context_module.Context) {
 			}
 			if err := actions_service.StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
 				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	actions_service.CreateCommitStatus(ctx, jobs...)
-
-	ctx.JSON(http.StatusOK, struct{}{})
-}
-
-func Approve(ctx *context_module.Context) {
-	runIndex := ctx.ParamsInt64("run")
-
-	current, jobs := getRunJobs(ctx, runIndex, -1)
-	if ctx.Written() {
-		return
-	}
-	run := current.Run
-	doer := ctx.Doer
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		run.NeedApproval = false
-		run.ApprovedBy = doer.ID
-		if err := actions_service.UpdateRun(ctx, run, "need_approval", "approved_by"); err != nil {
-			return err
-		}
-		for _, job := range jobs {
-			if len(job.Needs) == 0 && job.Status.IsBlocked() {
-				job.Status = actions_model.StatusWaiting
-				_, err := actions_service.UpdateRunJob(ctx, job, nil, "status")
-				if err != nil {
-					return err
-				}
 			}
 		}
 		return nil

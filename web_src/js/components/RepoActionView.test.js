@@ -397,6 +397,44 @@ test('historical attempt dropdown interactions', async () => {
   expect(window.location.href).toEqual(toAbsoluteUrl('/user1/repo2/actions/runs/123/jobs/1/attempt/2'));
 });
 
+test('run approval interaction', async () => {
+  const pullRequestLink = '/example-org/example-repo/pulls/456';
+  const wrapper = mount(RepoActionView, {
+    props: {
+      ...defaultTestProps,
+      initialJobData: {
+        state: {
+          run: {
+            canApprove: true,
+            status: 'waiting',
+            commit: {
+              pusher: {},
+              branch: {
+                link: toAbsoluteUrl(pullRequestLink),
+              },
+            },
+          },
+          currentJob: {
+            steps: [
+              {
+                summary: 'Test Job',
+              },
+            ],
+          },
+        },
+        logs: {
+          stepsLog: [],
+        },
+      },
+    },
+  });
+  await flushPromises();
+  const approve = wrapper.findAll('button').filter((button) => button.text() === 'Locale Approve');
+  expect(approve.length).toEqual(1);
+  approve[0].trigger('click');
+  expect(window.location.href).toEqual(toAbsoluteUrl(`${pullRequestLink}#pull-request-trust-panel`));
+});
+
 test('artifacts download links', async () => {
   Object.defineProperty(document.documentElement, 'lang', {value: 'en'});
   vi.spyOn(global, 'fetch').mockImplementation((url, opts) => {
@@ -576,7 +614,7 @@ test('view non-picked action run job', async () => {
           },
           currentJob: {
             title: 'check-1',
-            detail: 'waiting (locale)', // locale-specific, not exact match to backend test
+            details: ['waiting (locale)'], // locale-specific, not exact match to backend test
             steps: [],
             allAttempts: null,
           },
@@ -586,7 +624,7 @@ test('view non-picked action run job', async () => {
   });
   await flushPromises();
 
-  expect(wrapper.get('.job-info-header-detail').text()).toEqual('waiting (locale)');
+  expect(wrapper.get('.job-info-header-detail li:first-child').text()).toEqual('waiting (locale)');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(1) .job-brief-name').text()).toEqual('check-1');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(2) .job-brief-name').text()).toEqual('check-2');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(3) .job-brief-name').text()).toEqual('check-3');

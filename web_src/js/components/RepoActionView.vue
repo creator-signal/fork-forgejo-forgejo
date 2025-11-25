@@ -110,7 +110,7 @@ export default {
       },
       currentJob: {
         title: '',
-        detail: '',
+        details: [],
         steps: [
           // {
           //   summary: '',
@@ -223,7 +223,8 @@ export default {
     },
     // approve a run
     approveRun() {
-      POST(`${this.run.link}/approve`);
+      const url = `${this.run.commit.branch.link}#pull-request-trust-panel`;
+      window.location.href = url;
     },
     // show/hide the step logs for a group
     toggleGroupLogs(event) {
@@ -614,9 +615,11 @@ export default {
             <h3 class="job-info-header-title gt-ellipsis">
               {{ currentJob.title }}
             </h3>
-            <p class="job-info-header-detail">
-              {{ currentJob.detail }}
-            </p>
+            <ul class="job-info-header-detail">
+              <li v-for="detail in currentJob.details" :key="detail">
+                {{ detail }}
+              </li>
+            </ul>
           </div>
           <div class="job-info-header-right job-attempt-dropdown tw-mr-8" v-if="shouldShowAttemptDropdown" v-cloak>
             <div class="ui dropdown selection" @click.stop="toggleAttemptDropdown()">
@@ -637,7 +640,7 @@ export default {
           </div>
           <div class="job-info-header-right">
             <div class="ui top right pointing dropdown dark-dropdown custom jump item job-gear-dropdown" @click.stop="toggleGearDropdown()">
-              <button class="btn gt-interact-bg tw-p-2">
+              <button class="btn interact-bg tw-p-2">
                 <SvgIcon name="octicon-gear" :size="18"/>
               </button>
               <div class="menu transition action-job-menu" :class="{visible: displayGearDropdown}" v-if="displayGearDropdown" v-cloak>
@@ -654,7 +657,7 @@ export default {
                   {{ locale.showFullScreen }}
                 </a>
                 <div class="divider"/>
-                <a :class="['item', !currentJob.steps.length ? 'disabled' : '']" :href="run.link+'/jobs/'+jobIndex+'/logs'" target="_blank">
+                <a :class="['item', !currentJob.steps.length ? 'disabled' : '']" :href="run.link+'/jobs/'+jobIndex+'/attempt/'+viewingAttemptNumber+'/logs'" target="_blank">
                   <i class="icon"><SvgIcon name="octicon-download"/></i>
                   {{ locale.downloadLogs }}
                 </a>
@@ -931,6 +934,9 @@ export default {
 .job-info-header .job-info-header-detail {
   color: var(--color-console-fg-subtle);
   font-size: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .job-info-header-left {

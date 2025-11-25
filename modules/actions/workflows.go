@@ -8,14 +8,15 @@ import (
 	"io"
 	"strings"
 
+	actions_model "forgejo.org/models/actions"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 	api "forgejo.org/modules/structs"
 	webhook_module "forgejo.org/modules/webhook"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
-	"code.forgejo.org/forgejo/runner/v11/act/model"
-	"code.forgejo.org/forgejo/runner/v11/act/workflowpattern"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v12/act/model"
+	"code.forgejo.org/forgejo/runner/v12/act/workflowpattern"
 	"github.com/gobwas/glob"
 	"go.yaml.in/yaml/v3"
 )
@@ -25,6 +26,7 @@ type DetectedWorkflow struct {
 	TriggerEvent        *jobparser.Event
 	Content             []byte
 	EventDetectionError error
+	NeedApproval        actions_model.ApprovalType
 }
 
 func init() {

@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/perm"
@@ -24,8 +23,8 @@ import (
 	"forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
-	act_model "code.forgejo.org/forgejo/runner/v11/act/model"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
 )
 
 type InputRequiredErr struct {
@@ -50,6 +49,31 @@ type Workflow struct {
 
 type InputValueGetter func(key string) string
 
+var ErrSkipDispatchInput = errors.New("skip dispatching of input")
+
+func resolveDispatchInput(key, value string, input act_model.WorkflowDispatchInput) (string, error) {
+	if len(value) == 0 {
+		value = input.Default
+		if len(value) == 0 {
+			if input.Required {
+				name := input.Description
+				if len(name) == 0 {
+					name = key
+				}
+				return "", InputRequiredErr{Name: name}
+			}
+			return "", ErrSkipDispatchInput
+		}
+	} else if input.Type == "boolean" {
+		// Temporary compatibility shim for people that upgrade to Forgejo 14. Can be removed with Forgejo 15.
+		if value == "on" {
+			value = "true"
+		}
+	}
+
+	return value, nil
+}
+
 func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGetter, repo *repo_model.Repository, doer *user.User) (r *actions_model.ActionRun, j []string, err error) {
 	content, err := actions.GetContentFromEntry(entry.GitEntry)
 	if err != nil {
@@ -72,25 +96,14 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	inputsAny := make(map[string]any)
 	if workflowDispatch := wf.WorkflowDispatchConfig(); workflowDispatch != nil {
 		for key, input := range workflowDispatch.Inputs {
-			val := inputGetter(key)
-			if len(val) == 0 {
-				val = input.Default
-				if len(val) == 0 {
-					if input.Required {
-						name := input.Description
-						if len(name) == 0 {
-							name = key
-						}
-						return nil, nil, InputRequiredErr{Name: name}
-					}
-					continue
-				}
-			} else if input.Type == "boolean" {
-				// Since "boolean" inputs are rendered as a checkbox in html, the value inside the form is "on"
-				val = strconv.FormatBool(val == "on")
+			value, err := resolveDispatchInput(key, inputGetter(key), input)
+			if err == ErrSkipDispatchInput {
+				continue
+			} else if err != nil {
+				return nil, nil, err
 			}
-			inputs[key] = val
-			inputsAny[key] = val
+			inputs[key] = value
+			inputsAny[key] = value
 		}
 	}
 
@@ -155,7 +168,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		}
 	}
 
-	jobs, err := jobParser(content, jobparser.WithVars(vars), jobparser.WithInputs(inputsAny))
+	jobs, err := actions.JobParser(content, jobparser.WithVars(vars), jobparser.WithInputs(inputsAny))
 	if err != nil {
 		return nil, nil, err
 	}

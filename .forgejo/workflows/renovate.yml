@@ -28,7 +28,7 @@ jobs:
 
     runs-on: docker
     container:
-      image: data.forgejo.org/renovate/renovate:41.169.1
+      image: data.forgejo.org/renovate/renovate:42.11.0
 
     steps:
       - name: Load renovate repo cache
@@ -53,6 +53,7 @@ jobs:
           RENOVATE_REPOSITORY_CACHE: 'enabled'
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_GIT_AUTHOR: 'Renovate Bot <forgejo-renovate-action@forgejo.org>'
+          RENOVATE_CONFIG_FILE_NAMES: '[".forgejo/renovate.json"]'
 
           RENOVATE_X_SQLITE_PACKAGE_CACHE: true
 

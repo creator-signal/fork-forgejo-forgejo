@@ -136,7 +136,7 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 
 // verifyAuthWithOptions checks authentication according to options
 func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Context) {
-	crossOrginProtection := http.NewCrossOriginProtection()
+	crossOriginProtection := http.NewCrossOriginProtection()
 	return func(ctx *context.Context) {
 		// Check prohibit login users.
 		if ctx.IsSigned {
@@ -167,12 +167,14 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 					return
 				}
 			} else if ctx.Req.URL.Path == "/user/settings/change_password" {
+				if ctx.Doer.MustHaveTwoFactor() {
+					ctx.Redirect(setting.AppSubURL + "/user/settings/security")
+					return
+				}
 				// make sure that the form cannot be accessed by users who don't need this
 				ctx.Redirect(setting.AppSubURL + "/")
 				return
-			}
-
-			if ctx.Doer.MustHaveTwoFactor() && !strings.HasPrefix(ctx.Req.URL.Path, "/user/settings/security") {
+			} else if ctx.Doer.MustHaveTwoFactor() && !strings.HasPrefix(ctx.Req.URL.Path, "/user/settings/security") {
 				hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
 				if err != nil {
 					log.Error("Error getting 2fa: %s", err)
@@ -193,7 +195,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 		}
 
 		if !options.SignOutRequired && !options.DisableCSRF {
-			if err := crossOrginProtection.Check(ctx.Req); err != nil {
+			if err := crossOriginProtection.Check(ctx.Req); err != nil {
 				http.Error(ctx.Resp, err.Error(), http.StatusForbidden)
 				return
 			}
@@ -846,6 +848,7 @@ func registerRoutes(m *web.Route) {
 	reqRepoProjectsWriter := context.RequireRepoWriter(unit.TypeProjects)
 	reqRepoActionsReader := context.RequireRepoReader(unit.TypeActions)
 	reqRepoActionsWriter := context.RequireRepoWriter(unit.TypeActions)
+	reqRepoDelegateActionTrust := context.RequireRepoDelegateActionTrust()
 
 	reqPackageAccess := func(accessMode perm.AccessMode) func(ctx *context.Context) {
 		return func(ctx *context.Context) {
@@ -1215,6 +1218,7 @@ func registerRoutes(m *web.Route) {
 		m.Group("/{type:issues|pulls}", func() {
 			m.Group("/{index}", func() {
 				m.Post("/title", repo.UpdateIssueTitle)
+				m.Post("/action-user-trust", reqRepoActionsReader, actions.MustEnableActions, reqRepoDelegateActionTrust, repo.UpdateTrustWithPullRequestActions)
 				m.Post("/content", repo.UpdateIssueContent)
 				m.Post("/deadline", web.Bind(structs.EditDeadlineOption{}), repo.UpdateIssueDeadline)
 				m.Post("/watch", repo.IssueWatch)
@@ -1331,8 +1335,8 @@ func registerRoutes(m *web.Route) {
 			m.Get(".atom", feedEnabled, repo.TagsListFeedAtom)
 		}, ctxDataSet("EnableFeed", setting.Other.EnableFeed),
 			repo.MustBeNotEmpty, reqRepoCodeReader, context.RepoRefByType(context.RepoRefTag, true))
-		m.Post("/tags/delete", repo.DeleteTag, reqSignIn,
-			repo.MustBeNotEmpty, context.RepoMustNotBeArchived(), reqRepoCodeWriter, context.RepoRef())
+		m.Post("/tags/delete", reqSignIn, repo.MustBeNotEmpty, context.RepoMustNotBeArchived(), reqRepoCodeWriter,
+			context.RepoRef(), repo.DeleteTag)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
 	// Releases
@@ -1452,13 +1456,14 @@ func registerRoutes(m *web.Route) {
 							Get(actions.RedirectToLatestAttempt).
 							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 						m.Post("/rerun", reqRepoActionsWriter, actions.Rerun)
-						m.Get("/logs", actions.Logs)
-						m.Combo("/attempt/{attempt}").
-							Get(actions.View).
-							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
+						m.Group("/attempt/{attempt}", func() {
+							m.Combo("").
+								Get(actions.View).
+								Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
+							m.Get("/logs", actions.Logs)
+						})
 					})
 					m.Post("/cancel", reqRepoActionsWriter, actions.Cancel)
-					m.Post("/approve", reqRepoActionsWriter, actions.Approve)
 					m.Get("/artifacts", actions.ArtifactsView)
 					m.Get("/artifacts/{artifact_name_or_id}", actions.ArtifactsDownloadView)
 					m.Delete("/artifacts/{artifact_name}", reqRepoActionsWriter, actions.ArtifactsDeleteView)

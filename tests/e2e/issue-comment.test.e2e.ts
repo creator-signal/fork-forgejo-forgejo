@@ -18,7 +18,7 @@ for (const run of [
   test.describe(`Create issue & comment`, () => {
     // playwright/valid-title says: [error] Title must be a string
     test(`${run.title}`, async ({browser}, workerInfo) => {
-      test.skip(['Mobile Chrome', 'Mobile Safari'].includes(workerInfo.project.name), 'Mobile Chrome has trouble clicking Comment button with JS enabled, Mobile Safari is flaky and only passes on retry');
+      test.skip(['Mobile Chrome'].includes(workerInfo.project.name), 'Mobile Chrome has trouble clicking Comment button with JS enabled');
 
       const issueTitle = dynamic_id();
       const issueContent = dynamic_id();
@@ -81,25 +81,30 @@ test.describe('Button text replaced by JS', () => {
     const statusButton = page.locator('#status-button');
     const statusButtonIcon = page.locator('#status-button svg');
     const commentField = page.locator('#comment-form').getByPlaceholder('Leave a comment');
+    const readyEditor = page.locator('#comment-form .tab[data-tab="markdown-writer-0"]');
 
     // Reset issue status before running the test
     if (await statusButton.getByText('Reopen').isVisible()) await statusButton.click();
 
     // Assert that normal Close button text is present
+    await readyEditor.waitFor();
     await expect(statusButton.getByText(closeLabel)).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
     // Type in some text to make button text change
+    await readyEditor.waitFor();
     await commentField.fill('Blah blah');
     await expect(statusButton.getByText('Close with comment')).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
     // Close issue/PR and assert that normal Reopen button text is present
     await statusButton.click();
+    await readyEditor.waitFor();
     await expect(statusButton.getByText('Reopen')).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
 
     // Type in some text to make button text change
+    await readyEditor.waitFor();
     await commentField.fill('Blah blah');
     await expect(statusButton.getByText('Reopen with comment')).toBeVisible();
     await expect(statusButtonIcon).toBeVisible();
@@ -109,16 +114,16 @@ test.describe('Button text replaced by JS', () => {
 
   test('Issue', async ({page}) => {
     // All actual expect() are happening in the helper
-    expect(await testPage(page, '/user2/repo1/issues/1', 'Close issue')).toBeTruthy();
+    expect(await testPage(page, '/user2/repo2/issues/2', 'Close issue')).toBeTruthy();
   });
 
   test('PR', async ({page}) => {
-    expect(await testPage(page, '/user2/repo1/pulls/3', 'Close pull request')).toBeTruthy();
+    expect(await testPage(page, '/user2/repo1/pulls/5', 'Close pull request')).toBeTruthy();
   });
 });
 
-test('Hyperlink paste behaviour', async ({page}, workerInfo) => {
-  test.skip(['Mobile Safari', 'Mobile Chrome', 'webkit'].includes(workerInfo.project.name), 'Mobile clients seem to have very weird behaviour with this test, which I cannot confirm with real usage');
+test('Hyperlink paste behaviour', async ({page, isMobile}) => {
+  test.skip(isMobile, 'Mobile clients seem to have very weird behaviour with this test, which I cannot confirm with real usage');
   await page.goto('/user2/repo1/issues/new');
   await page.locator('textarea').click();
   // same URL

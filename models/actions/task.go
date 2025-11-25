@@ -17,7 +17,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"xorm.io/builder"
 )
@@ -143,9 +143,8 @@ func (task *ActionTask) LoadAttributes(ctx context.Context) error {
 	return nil
 }
 
-func (task *ActionTask) GenerateToken() (err error) {
-	task.Token, task.TokenSalt, task.TokenHash, task.TokenLastEight, err = generateSaltedToken()
-	return err
+func (task *ActionTask) GenerateToken() {
+	task.Token, task.TokenSalt, task.TokenHash, task.TokenLastEight = generateSaltedToken()
 }
 
 // Retrieve all the attempts from the same job as the target `ActionTask`.  Limited fields are queried to avoid loading
@@ -367,9 +366,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 		CommitSHA:         job.CommitSHA,
 		IsForkPullRequest: job.IsForkPullRequest,
 	}
-	if err := task.GenerateToken(); err != nil {
-		return nil, false, err
-	}
+	task.GenerateToken()
 
 	var workflowJob *jobparser.Job
 	if gots, err := jobparser.Parse(job.WorkflowPayload, false); err != nil {
