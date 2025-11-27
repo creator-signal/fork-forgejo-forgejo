@@ -1,4 +1,8 @@
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
+// templates/devtest/modal.tmpl
 // templates/repo/editor/edit.tmpl
 // templates/repo/editor/patch.tmpl
 // web_src/js/features/repo-editor.js
