@@ -19,10 +19,11 @@ dialog {
   pointer-events: auto;
   touch-action: auto;
 
-  /* Limit max-width to either 800px for wide screens or 95% of viewport width for narrow screens */
-  max-width: min(800px, 95vw);
-  /* Very small modals don't look good. Set a min-width of 400px if it will fit on the screen */
-  min-width: min(400px, 95vw);
+  /* Modals shouldn't be wider than 800px ever. On narrow screens they shouldn't
+   * be wider than the screen, with a small margin */
+  max-width: min(800px, calc(100vw - var(--page-margin-x) * 2));
+  /* Modals also should't be tiny compared to the screen width */
+  min-width: min(400px, calc(100vw - var(--page-margin-x) * 2));
 
   /* Suppress default <dialog> padding */
   padding: 0;
