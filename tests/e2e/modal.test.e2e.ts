@@ -57,8 +57,27 @@ test('Dialog modal: width', async ({page, isMobile}) => {
   // Check it's width
   let width = Math.round((await shortModal.boundingBox()).width);
   if (isMobile) {
+    // Bound by viewport width
     expect(width).toBeLessThan(400);
   } else {
+    // Bound by min-width
     expect(width).toBe(400);
+  }
+
+  // Open modal with long content
+  await shortModal.locator('button.cancel').click();
+  const longModal = page.locator('#long-modal');
+  await expect(longModal).toBeHidden();
+  await page.locator('button[data-modal="#long-modal"]').click();
+  await expect(longModal).toBeVisible();
+
+  // Check it's width
+  width = Math.round((await longModal.boundingBox()).width);
+  if (isMobile) {
+    // Bound by viewport width
+    expect(width).toBeLessThan(400);
+  } else {
+    // Bound by max-width
+    expect(width).toBe(800);
   }
 });
