@@ -21,7 +21,8 @@ dialog {
 
   /* Limit max-width to either 800px for wide screens or 95% of viewport width for narrow screens */
   max-width: min(800px, 95vw);
-  width: fit-content;
+  /* Very small modals don't look good. Set a min-width of 400px if it will fit on the screen */
+  min-width: min(400px, 95vw);
 
   /* Suppress default <dialog> padding */
   padding: 0;
