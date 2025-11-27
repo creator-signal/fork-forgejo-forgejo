@@ -14,13 +14,15 @@ dialog {
     1px 3px 15px 2px var(--color-shadow);
   border-radius: 0.28571429rem;
   outline: none;
-  padding: 0;
   max-width: min(800px, 90vw);
   width: fit-content;
   z-index: 1001;
 
   pointer-events: auto;
   touch-action: auto;
+
+  /* Suppress default <dialog> padding */
+  padding: 0;
 }
 
 dialog[open],
