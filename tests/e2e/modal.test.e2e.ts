@@ -43,3 +43,26 @@ test('Dialog modal', async ({page}) => {
   await page.locator('#edit-empty-content-modal .ok').click();
   await expect(page).toHaveURL(`/user2/repo1/src/branch/master/${filename}`);
 });
+
+test('Dialog modal: width', async ({browser, isMobile}) => {
+  // This test doesn't need JS and runs a little faster without it
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
+  await page.goto('/devtest/modal');
+
+  // Open modal with short content
+  const shortModal = page.locator('#short-modal article');
+  await expect(shortModal).toBeHidden();
+  await page.locator('button[command="show-modal"][commandfor="short-modal"]').click();
+  await expect(shortModal).toBeVisible();
+
+
+  // Check it's width
+  let width = Math.round((await shortModal.boundingBox()).width);
+  if (isMobile) {
+    expect(width).toBeLessThan(400);
+  } else {
+    expect(width).toBe(400);
+  }
+});

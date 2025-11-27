@@ -1,0 +1,31 @@
+{{template "base/head" .}}
+
+<div class="page-content devtest ui container">
+	<h1>Modals</h1>
+
+	<div class="button-sequence">
+		<button class="secondary button" command="show-modal" commandfor="short-modal">Short</button>
+		<button class="secondary button" command="show-modal" commandfor="long-modal">Long</button>
+	</div>
+
+	<dialog id="short-modal">
+		<article>
+			<header>Short modal</header>
+			<div class="content">🐈</div>
+			<footer class="actions">
+					<button class="secondary button" command="request-close" commandfor="short-modal">{{ctx.Locale.Tr "settings.cancel"}}</button>
+			</footer>
+		</article>
+	</dialog>
+	<dialog id="long-modal">
+		<article>
+			<header>Long modal</header>
+			<div class="content">aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
+			<footer class="actions">
+					<button class="secondary button" command="request-close" commandfor="long-modal">{{ctx.Locale.Tr "settings.cancel"}}</button>
+			</footer>
+		</article>
+	</dialog>
+</div>
+
+{{template "base/footer" .}}
