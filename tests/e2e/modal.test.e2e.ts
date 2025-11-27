@@ -83,7 +83,7 @@ test('Dialog modal: width', async ({page, isMobile}) => {
   } else {
     // Not bound by min-width or max-width
     expect(width).toBe(435);
-    }
+  }
 
   // Open modal with long content
   await mediumModal.locator('button.cancel').click();
