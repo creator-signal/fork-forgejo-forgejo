@@ -4,8 +4,8 @@
 	<h1>Modals</h1>
 
 	<div class="button-sequence">
-		<button class="secondary button" command="show-modal" commandfor="short-modal">Short</button>
-		<button class="secondary button" command="show-modal" commandfor="long-modal">Long</button>
+		<button class="secondary button show-modal" data-modal="#short-modal">Short</button>
+		<button class="secondary button show-modal" data-modal="#long-modal">Long</button>
 	</div>
 
 	<dialog id="short-modal">
@@ -13,7 +13,7 @@
 			<header>Short modal</header>
 			<div class="content">🐈</div>
 			<footer class="actions">
-					<button class="secondary button" command="request-close" commandfor="short-modal">{{ctx.Locale.Tr "settings.cancel"}}</button>
+					<button class="secondary button cancel">{{ctx.Locale.Tr "settings.cancel"}}</button>
 			</footer>
 		</article>
 	</dialog>
@@ -22,7 +22,7 @@
 			<header>Long modal</header>
 			<div class="content">aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
 			<footer class="actions">
-					<button class="secondary button" command="request-close" commandfor="long-modal">{{ctx.Locale.Tr "settings.cancel"}}</button>
+					<button class="secondary button cancel">{{ctx.Locale.Tr "settings.cancel"}}</button>
 			</footer>
 		</article>
 	</dialog>
