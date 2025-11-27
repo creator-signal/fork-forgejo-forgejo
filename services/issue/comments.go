@@ -69,7 +69,19 @@ func CreateIssueComment(ctx context.Context, doer *user_model.User, repo *repo_m
 		return nil, err
 	}
 
-	notify_service.CreateIssueComment(ctx, doer, repo, issue, comment, mentions)
+	if err := comment.LoadPoster(ctx); err != nil {
+		return nil, err
+	}
+	if err := issue.LoadRepo(ctx); err != nil {
+		return nil, err
+	}
+	if err := issue.LoadPoster(ctx); err != nil {
+		return nil, err
+	}
+
+	notify_service.RunAsync(func() {
+		notify_service.CreateIssueComment(context.Background(), doer, repo, issue, comment, mentions)
+	})
 
 	return comment, nil
 }
@@ -111,7 +123,19 @@ func UpdateComment(ctx context.Context, c *issues_model.Comment, contentVersion 
 	}
 
 	if !isPartOfPendingReview {
-		notify_service.UpdateComment(ctx, doer, c, oldContent)
+		if err := c.LoadPoster(ctx); err != nil {
+			return err
+		}
+		if err := c.LoadIssue(ctx); err != nil {
+			return err
+		}
+		if err := c.Issue.LoadRepo(ctx); err != nil {
+			return err
+		}
+
+		notify_service.RunAsync(func() {
+			notify_service.UpdateComment(context.Background(), doer, c, oldContent)
+		})
 	}
 
 	return nil
@@ -151,7 +175,19 @@ func DeleteComment(ctx context.Context, doer *user_model.User, comment *issues_m
 		return err
 	}
 	if comment.Review == nil || comment.Review.Type != issues_model.ReviewTypePending {
-		notify_service.DeleteComment(ctx, doer, comment)
+		if err := comment.LoadPoster(ctx); err != nil {
+			return err
+		}
+		if err := comment.LoadIssue(ctx); err != nil {
+			return err
+		}
+		if err := comment.Issue.LoadRepo(ctx); err != nil {
+			return err
+		}
+
+		notify_service.RunAsync(func() {
+			notify_service.DeleteComment(context.Background(), doer, comment)
+		})
 	}
 
 	return nil

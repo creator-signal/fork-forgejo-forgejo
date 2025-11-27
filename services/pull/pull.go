@@ -137,28 +137,59 @@ func NewPullRequest(ctx context.Context, repo *repo_model.Repository, issue *iss
 		}
 		return err
 	}
-	baseGitRepo.Close() // close immediately to avoid notifications will open the repository again
+	baseGitRepo.Close()
 
-	issue_service.ReviewRequestNotify(ctx, issue, issue.Poster, reviewNotifers)
+	if err := pr.LoadIssue(ctx); err != nil {
+		return err
+	}
+	if err := pr.Issue.LoadRepo(ctx); err != nil {
+		return err
+	}
+	if err := pr.Issue.LoadPoster(ctx); err != nil {
+		return err
+	}
 
 	mentions, err := issues_model.FindAndUpdateIssueMentions(ctx, issue, issue.Poster, issue.Content)
 	if err != nil {
 		return err
 	}
-	notify_service.NewPullRequest(ctx, pr, mentions)
+
 	if len(issue.Labels) > 0 {
-		notify_service.IssueChangeLabels(ctx, issue.Poster, issue, issue.Labels, nil)
+		if err := issue.LoadLabels(ctx); err != nil {
+			return err
+		}
 	}
-	if issue.Milestone != nil {
-		notify_service.IssueChangeMilestone(ctx, issue.Poster, issue, 0)
+	if issue.MilestoneID > 0 {
+		if err := issue.LoadMilestone(ctx); err != nil {
+			return err
+		}
 	}
+
+	assignees := make([]*user_model.User, 0, len(assigneeIDs))
 	for _, assigneeID := range assigneeIDs {
 		assignee, err := user_model.GetUserByID(ctx, assigneeID)
 		if err != nil {
 			return ErrDependenciesLeft
 		}
-		notify_service.IssueChangeAssignee(ctx, issue.Poster, issue, assignee, false, assigneeCommentMap[assigneeID])
+		assignees = append(assignees, assignee)
 	}
+
+	notify_service.RunAsync(func() {
+		asyncCtx := context.Background()
+
+		issue_service.ReviewRequestNotify(asyncCtx, issue, issue.Poster, reviewNotifers)
+		notify_service.NewPullRequest(asyncCtx, pr, mentions)
+
+		if len(issue.Labels) > 0 {
+			notify_service.IssueChangeLabels(asyncCtx, issue.Poster, issue, issue.Labels, nil)
+		}
+		if issue.Milestone != nil {
+			notify_service.IssueChangeMilestone(asyncCtx, issue.Poster, issue, 0)
+		}
+		for i, assignee := range assignees {
+			notify_service.IssueChangeAssignee(asyncCtx, issue.Poster, issue, assignee, false, assigneeCommentMap[assigneeIDs[i]])
+		}
+	})
 
 	return nil
 }

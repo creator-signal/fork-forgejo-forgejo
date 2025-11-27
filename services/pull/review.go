@@ -327,7 +327,27 @@ func SubmitReview(ctx context.Context, doer *user_model.User, gitRepo *git.Repos
 		return nil, nil, err
 	}
 
-	notify_service.PullRequestReview(ctx, pr, review, comm, mentions)
+	if err := pr.LoadIssue(ctx); err != nil {
+		return nil, nil, err
+	}
+	if err := pr.Issue.LoadRepo(ctx); err != nil {
+		return nil, nil, err
+	}
+	if err := pr.Issue.LoadPoster(ctx); err != nil {
+		return nil, nil, err
+	}
+	if err := review.LoadReviewer(ctx); err != nil {
+		return nil, nil, err
+	}
+	if err := comm.LoadPoster(ctx); err != nil {
+		return nil, nil, err
+	}
+
+	type commentWithMentions struct {
+		comment  *issues_model.Comment
+		mentions []*user_model.User
+	}
+	var codeCommentsWithMentions []commentWithMentions
 
 	for _, lines := range review.CodeComments {
 		for _, comments := range lines {
@@ -336,10 +356,25 @@ func SubmitReview(ctx context.Context, doer *user_model.User, gitRepo *git.Repos
 				if err != nil {
 					return nil, nil, err
 				}
-				notify_service.PullRequestCodeComment(ctx, pr, codeComment, mentions)
+				if err := codeComment.LoadPoster(ctx); err != nil {
+					return nil, nil, err
+				}
+				codeCommentsWithMentions = append(codeCommentsWithMentions, commentWithMentions{
+					comment:  codeComment,
+					mentions: mentions,
+				})
 			}
 		}
 	}
+
+	go func() {
+		asyncCtx := context.Background()
+		notify_service.PullRequestReview(asyncCtx, pr, review, comm, mentions)
+
+		for _, ccm := range codeCommentsWithMentions {
+			notify_service.PullRequestCodeComment(asyncCtx, pr, ccm.comment, ccm.mentions)
+		}
+	}()
 
 	return review, comm, nil
 }
@@ -360,7 +395,20 @@ func DismissApprovalReviews(ctx context.Context, doer *user_model.User, pull *is
 		return err
 	}
 
-	return db.WithTx(ctx, func(ctx context.Context) error {
+	if err := pull.LoadIssue(ctx); err != nil {
+		return err
+	}
+	if err := pull.Issue.LoadRepo(ctx); err != nil {
+		return err
+	}
+
+	type reviewWithComment struct {
+		review  *issues_model.Review
+		comment *issues_model.Comment
+	}
+	var dismissedReviews []reviewWithComment
+
+	if err := db.WithTx(ctx, func(ctx context.Context) error {
 		for _, review := range reviews {
 			if err := issues_model.DismissReview(ctx, review, true); err != nil {
 				return err
@@ -382,10 +430,28 @@ func DismissApprovalReviews(ctx context.Context, doer *user_model.User, pull *is
 			comment.Poster = doer
 			comment.Issue = review.Issue
 
-			notify_service.PullReviewDismiss(ctx, doer, review, comment)
+			if err := review.LoadReviewer(ctx); err != nil {
+				return err
+			}
+
+			dismissedReviews = append(dismissedReviews, reviewWithComment{
+				review:  review,
+				comment: comment,
+			})
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	go func() {
+		asyncCtx := context.Background()
+		for _, dr := range dismissedReviews {
+			notify_service.PullReviewDismiss(asyncCtx, doer, dr.review, dr.comment)
+		}
+	}()
+
+	return nil
 }
 
 // DismissReview dismissing stale review by repo admin
@@ -468,7 +534,19 @@ func DismissReview(ctx context.Context, reviewID, repoID int64, message string, 
 	comment.Poster = doer
 	comment.Issue = review.Issue
 
-	notify_service.PullReviewDismiss(ctx, doer, review, comment)
+	if err := review.Issue.LoadRepo(ctx); err != nil {
+		return nil, err
+	}
+	if err := review.LoadReviewer(ctx); err != nil {
+		return nil, err
+	}
+	if err := comment.LoadPoster(ctx); err != nil {
+		return nil, err
+	}
+
+	notify_service.RunAsync(func() {
+		notify_service.PullReviewDismiss(context.Background(), doer, review, comment)
+	})
 
 	return comment, nil
 }

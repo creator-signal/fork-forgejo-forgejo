@@ -67,17 +67,19 @@ func (a *actionNotifier) NewIssue(ctx context.Context, issue *issues_model.Issue
 	}
 	repo := issue.Repo
 
-	if err := notifyAll(ctx, &activities_model.Action{
-		ActUserID: issue.Poster.ID,
-		ActUser:   issue.Poster,
-		OpType:    activities_model.ActionCreateIssue,
-		Content:   encodeContent(fmt.Sprintf("%d", issue.Index), issue.Title),
-		RepoID:    repo.ID,
-		Repo:      repo,
-		IsPrivate: repo.IsPrivate,
-	}); err != nil {
-		log.Error("NotifyWatchers: %v", err)
-	}
+	notify_service.RunAsync(func() {
+		if err := notifyAll(context.Background(), &activities_model.Action{
+			ActUserID: issue.Poster.ID,
+			ActUser:   issue.Poster,
+			OpType:    activities_model.ActionCreateIssue,
+			Content:   encodeContent(fmt.Sprintf("%d", issue.Index), issue.Title),
+			RepoID:    repo.ID,
+			Repo:      repo,
+			IsPrivate: repo.IsPrivate,
+		}); err != nil {
+			log.Error("NotifyWatchers: %v", err)
+		}
+	})
 }
 
 // IssueChangeStatus notifies close or reopen issue to notifiers

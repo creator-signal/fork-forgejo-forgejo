@@ -4,6 +4,7 @@
 package mailer_test
 
 import (
+	"sync"
 	"testing"
 
 	"forgejo.org/models/db"
@@ -12,6 +13,7 @@ import (
 	user_model "forgejo.org/models/user"
 	issue_service "forgejo.org/services/issue"
 	"forgejo.org/services/mailer"
+	notify_service "forgejo.org/services/notify"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,6 +21,10 @@ import (
 
 func TestCloseIssue(t *testing.T) {
 	defer require.NoError(t, unittest.PrepareTestDatabase())
+
+	var wg sync.WaitGroup
+	notify_service.SetTestNotificationWaitGroup(&wg)
+	defer notify_service.SetTestNotificationWaitGroup(nil)
 
 	called := false
 	defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
@@ -34,11 +40,16 @@ func TestCloseIssue(t *testing.T) {
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
 	err := issue_service.ChangeStatus(db.DefaultContext, issue, user, "", true)
 	require.NoError(t, err)
+	wg.Wait()
 	assert.True(t, called)
 }
 
 func TestCloseIssueByCommit(t *testing.T) {
 	defer require.NoError(t, unittest.PrepareTestDatabase())
+
+	var wg sync.WaitGroup
+	notify_service.SetTestNotificationWaitGroup(&wg)
+	defer notify_service.SetTestNotificationWaitGroup(nil)
 
 	called := false
 	defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
@@ -57,5 +68,6 @@ func TestCloseIssueByCommit(t *testing.T) {
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
 	err := issue_service.ChangeStatus(db.DefaultContext, issue, user, "abc123def", true)
 	require.NoError(t, err)
+	wg.Wait()
 	assert.True(t, called)
 }

@@ -4,6 +4,7 @@
 package issue_test
 
 import (
+	"sync"
 	"testing"
 
 	"forgejo.org/models/db"
@@ -16,6 +17,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	issue_service "forgejo.org/services/issue"
+	notify_service "forgejo.org/services/notify"
 	"forgejo.org/tests"
 
 	_ "forgejo.org/services/webhook"
@@ -28,6 +30,10 @@ func TestDeleteComment(t *testing.T) {
 	// Use the webhook notification to check if a notification is fired for an action.
 	defer test.MockVariableValue(&setting.DisableWebhooks, false)()
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	var wg sync.WaitGroup
+	notify_service.SetTestNotificationWaitGroup(&wg)
+	defer notify_service.SetTestNotificationWaitGroup(nil)
 
 	t.Run("Normal comment", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
@@ -44,6 +50,7 @@ func TestDeleteComment(t *testing.T) {
 		hookTaskCount := unittest.GetCount(t, &webhook_model.HookTask{})
 
 		require.NoError(t, issue_service.DeleteComment(db.DefaultContext, nil, comment))
+		wg.Wait()
 
 		// The comment doesn't exist anymore.
 		unittest.AssertNotExistsBean(t, &issues_model.Comment{ID: comment.ID})
@@ -73,6 +80,7 @@ func TestDeleteComment(t *testing.T) {
 
 		require.NoError(t, comment.LoadReview(t.Context()))
 		require.NoError(t, issue_service.DeleteComment(db.DefaultContext, nil, comment))
+		wg.Wait()
 
 		// The comment doesn't exist anymore.
 		unittest.AssertNotExistsBean(t, &issues_model.Comment{ID: comment.ID})
@@ -89,6 +97,10 @@ func TestUpdateComment(t *testing.T) {
 	// Use the webhook notification to check if a notification is fired for an action.
 	defer test.MockVariableValue(&setting.DisableWebhooks, false)()
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	var wg sync.WaitGroup
+	notify_service.SetTestNotificationWaitGroup(&wg)
+	defer notify_service.SetTestNotificationWaitGroup(nil)
 
 	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{IsAdmin: true})
 	t.Run("Normal comment", func(t *testing.T) {
@@ -107,6 +119,7 @@ func TestUpdateComment(t *testing.T) {
 		comment.Content = "Hello!"
 
 		require.NoError(t, issue_service.UpdateComment(db.DefaultContext, comment, 1, admin, oldContent))
+		wg.Wait()
 
 		newComment := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: 2})
 		// Content was updated.
@@ -138,6 +151,7 @@ func TestUpdateComment(t *testing.T) {
 		comment.Content = "Hello!"
 
 		require.NoError(t, issue_service.UpdateComment(db.DefaultContext, comment, 1, admin, oldContent))
+		wg.Wait()
 
 		newComment := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: 2})
 		// Content was updated.

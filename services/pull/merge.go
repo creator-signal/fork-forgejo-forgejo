@@ -308,13 +308,22 @@ func Merge(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.U
 		log.Error("LoadOwner for %-v: %v", pr, err)
 	}
 
-	if wasAutoMerged {
-		notify_service.AutoMergePullRequest(ctx, doer, pr)
-	} else {
-		notify_service.MergePullRequest(ctx, doer, pr)
+	if err := pr.LoadBaseRepo(ctx); err != nil {
+		log.Error("LoadBaseRepo for %-v: %v", pr, err)
+	}
+	if err := pr.LoadHeadRepo(ctx); err != nil {
+		log.Error("LoadHeadRepo for %-v: %v", pr, err)
 	}
 
-	// Reset cached commit count
+	localWasAutoMerged := wasAutoMerged
+	go func() {
+		if localWasAutoMerged {
+			notify_service.AutoMergePullRequest(context.Background(), doer, pr)
+		} else {
+			notify_service.MergePullRequest(context.Background(), doer, pr)
+		}
+	}()
+
 	cache.Remove(pr.Issue.Repo.GetCommitsCountCacheKey(pr.BaseBranch, true))
 
 	return handleCloseCrossReferences(ctx, pr, doer)
@@ -643,7 +652,20 @@ func MergedManually(ctx context.Context, pr *issues_model.PullRequest, doer *use
 		return err
 	}
 
-	notify_service.MergePullRequest(baseGitRepo.Ctx, doer, pr)
+	if err := pr.LoadIssue(baseGitRepo.Ctx); err != nil {
+		log.Error("LoadIssue for %-v: %v", pr, err)
+	}
+	if err := pr.Issue.LoadRepo(baseGitRepo.Ctx); err != nil {
+		log.Error("LoadRepo for %-v: %v", pr, err)
+	}
+	if err := pr.LoadBaseRepo(baseGitRepo.Ctx); err != nil {
+		log.Error("LoadBaseRepo for %-v: %v", pr, err)
+	}
+
+	notify_service.RunAsync(func() {
+		notify_service.MergePullRequest(context.Background(), doer, pr)
+	})
+
 	log.Info("manuallyMerged[%d]: Marked as manually merged into %s/%s by commit id: %s", pr.ID, pr.BaseRepo.Name, pr.BaseBranch, commitID)
 
 	return handleCloseCrossReferences(ctx, pr, doer)

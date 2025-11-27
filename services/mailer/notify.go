@@ -50,9 +50,24 @@ func (m *mailNotifier) CreateIssueComment(ctx context.Context, doer *user_model.
 }
 
 func (m *mailNotifier) NewIssue(ctx context.Context, issue *issues_model.Issue, mentions []*user_model.User) {
-	if err := MailParticipants(ctx, issue, issue.Poster, activities_model.ActionCreateIssue, mentions, nil); err != nil {
-		log.Error("MailParticipants: %v", err)
+	if err := issue.LoadRepo(ctx); err != nil {
+		log.Error("NewIssue: LoadRepo: %v", err)
+		return
 	}
+	if err := issue.LoadPoster(ctx); err != nil {
+		log.Error("NewIssue: LoadPoster: %v", err)
+		return
+	}
+	if err := issue.LoadPullRequest(ctx); err != nil {
+		log.Error("NewIssue: LoadPullRequest: %v", err)
+		return
+	}
+
+	notify_service.RunAsync(func() {
+		if err := MailParticipants(context.Background(), issue, issue.Poster, activities_model.ActionCreateIssue, mentions, nil); err != nil {
+			log.Error("MailParticipants: %v", err)
+		}
+	})
 }
 
 func (m *mailNotifier) IssueChangeStatus(ctx context.Context, doer *user_model.User, commitID string, issue *issues_model.Issue, actionComment *issues_model.Comment, isClosed bool) {

@@ -30,7 +30,21 @@ func ChangeStatus(ctx context.Context, issue *issues_model.Issue, doer *user_mod
 		}
 	}
 
-	notify_service.IssueChangeStatus(ctx, doer, commitID, issue, comment, closed)
+	if err := issue.LoadRepo(ctx); err != nil {
+		return err
+	}
+	if err := issue.LoadPoster(ctx); err != nil {
+		return err
+	}
+	if comment != nil {
+		if err := comment.LoadPoster(ctx); err != nil {
+			return err
+		}
+	}
+
+	notify_service.RunAsync(func() {
+		notify_service.IssueChangeStatus(context.Background(), doer, commitID, issue, comment, closed)
+	})
 
 	return nil
 }

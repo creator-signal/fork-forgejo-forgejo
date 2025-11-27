@@ -307,7 +307,19 @@ func manuallyMerged(ctx context.Context, pr *issues_model.PullRequest) bool {
 		return false
 	}
 
-	notify_service.MergePullRequest(ctx, merger, pr)
+	if err := pr.LoadIssue(ctx); err != nil {
+		log.Error("LoadIssue for %-v: %v", pr, err)
+	}
+	if err := pr.Issue.LoadRepo(ctx); err != nil {
+		log.Error("LoadRepo for %-v: %v", pr, err)
+	}
+	if err := pr.LoadBaseRepo(ctx); err != nil {
+		log.Error("LoadBaseRepo for %-v: %v", pr, err)
+	}
+
+	notify_service.RunAsync(func() {
+		notify_service.MergePullRequest(context.Background(), merger, pr)
+	})
 
 	log.Info("manuallyMerged[%-v]: Marked as manually merged into %s/%s by commit id: %s", pr, pr.BaseRepo.Name, pr.BaseBranch, commit.ID.String())
 	return true
