@@ -14,12 +14,14 @@ dialog {
     1px 3px 15px 2px var(--color-shadow);
   border-radius: 0.28571429rem;
   outline: none;
-  max-width: min(800px, 90vw);
-  width: fit-content;
   z-index: 1001;
 
   pointer-events: auto;
   touch-action: auto;
+
+  /* Limit max-width to either 800px for wide screens or 95% of viewport width for narrow screens */
+  max-width: min(800px, 95vw);
+  width: fit-content;
 
   /* Suppress default <dialog> padding */
   padding: 0;
