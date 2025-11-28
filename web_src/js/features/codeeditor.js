@@ -41,6 +41,9 @@ function initLanguages(monaco) {
 }
 
 function getLanguage(filename) {
+  if (window.config.pageData.DISABLE_SYNTAX_HIGHLIGHTING) {
+    return 'plaintext';
+  }
   return languagesByFilename[filename] || languagesByExt[extname(filename)] || 'plaintext';
 }
 

@@ -15,3 +15,7 @@ func GetHighlightMapping() map[string]string {
 	}
 	return highlightMapping
 }
+
+func IsHighlightDisabled() bool {
+	return ConfigSectionKeyBool(CfgProvider.Section("ui"), "DISABLE_SYNTAX_HIGHLIGHTING")
+}

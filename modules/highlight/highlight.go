@@ -34,6 +34,8 @@ var (
 	// For custom user mapping
 	highlightMapping = map[string]string{}
 
+	disableHighlight bool
+
 	once sync.Once
 
 	cache *lru.TwoQueueCache[string, any]
@@ -45,6 +47,7 @@ var (
 func NewContext() {
 	once.Do(func() {
 		highlightMapping = setting.GetHighlightMapping()
+		disableHighlight = setting.IsHighlightDisabled()
 
 		// The size 512 is simply a conservative rule of thumb
 		c, err := lru.New2Q[string, any](512)
@@ -63,6 +66,10 @@ func Code(fileName, language, code string) (output template.HTML, lexerName stri
 	// preserve literal newline in blame view
 	if code == "" || code == "\n" {
 		return "\n", ""
+	}
+
+	if disableHighlight {
+		return template.HTML(template.HTMLEscapeString(code)), ""
 	}
 
 	if len(code) > sizeLimit {
@@ -108,6 +115,10 @@ func Code(fileName, language, code string) (output template.HTML, lexerName stri
 
 // CodeFromLexer returns a HTML version of code string with chroma syntax highlighting classes
 func CodeFromLexer(lexer chroma.Lexer, code string) template.HTML {
+	if disableHighlight {
+		return template.HTML(template.HTMLEscapeString(code))
+	}
+
 	formatter := html.New(html.WithClasses(true),
 		html.WithLineNumbers(false),
 		html.PreventSurroundingPre(true),
@@ -144,6 +155,10 @@ var normalizeEnryToChroma = map[string]string{
 // File returns a slice of chroma syntax highlighted HTML lines of code and the matched lexer name
 func File(fileName, language string, code []byte) ([]template.HTML, string, error) {
 	NewContext()
+
+	if disableHighlight {
+		return PlainText(code), "", nil
+	}
 
 	if len(code) > sizeLimit {
 		return PlainText(code), "", nil

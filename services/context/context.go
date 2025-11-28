@@ -207,6 +207,8 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.PageData["PLURALSTRINGS_LANG"] = map[string][]string{}
 			ctx.PageData["PLURALSTRINGS_FALLBACK"] = map[string][]string{}
 
+			ctx.PageData["DISABLE_SYNTAX_HIGHLIGHTING"] = setting.IsHighlightDisabled()
+
 			ctx.AddPluralStringsToPageData([]string{"relativetime.mins", "relativetime.hours", "relativetime.days", "relativetime.weeks", "relativetime.months", "relativetime.years"})
 
 			ctx.PageData["DATETIMESTRINGS"] = map[string]string{
