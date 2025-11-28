@@ -11,7 +11,7 @@ import {test} from './utils_e2e.ts';
 
 test.use({user: 'user1'});
 
-test('Segments: floating headers', async ({page}) => {
+test('Segments: floating headers', async ({page, isMobile}) => {
   await page.goto('/admin');
 
   const pageContentBox = await page.locator('.page-content').boundingBox();
@@ -23,7 +23,8 @@ test('Segments: floating headers', async ({page}) => {
   const systemSegmentBox = await page.locator('.ui.table.segment[hx-get="/admin/system_status"]').boundingBox();
 
   // The first floating header should not have any top margin
-  expect(maintHeaderBox.y).toBe(pageContentBox.y);
+  if (!isMobile) // Sidebar is above first header on mobile
+    expect(maintHeaderBox.y).toBe(pageContentBox.y);
 
   // The distance between a segment and it's header
   expect(maintSegmentBox.y - (maintHeaderBox.y + maintHeaderBox.height)).toBeCloseTo(10.5);
