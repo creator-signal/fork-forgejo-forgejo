@@ -37,7 +37,7 @@ func assertRepoCreateForm(t *testing.T, htmlDoc *HTMLDoc, owner *user_model.User
 	assert.Contains(t, title, locale.TrString("new_repo.title"))
 
 	// Verify form header
-	header := strings.TrimSpace(htmlDoc.doc.Find(".form[action='/repo/create'] .header").Text())
+	header := strings.TrimSpace(htmlDoc.doc.Find(".form[action='/repo/create'] h2.floating").Text())
 	assert.Equal(t, locale.TrString("new_repo.title"), header)
 
 	htmlDoc.AssertDropdownHasSelectedOption(t, "uid", strconv.FormatInt(owner.ID, 10))

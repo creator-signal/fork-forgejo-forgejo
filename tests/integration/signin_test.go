@@ -218,7 +218,7 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 
 			assert.Equal(t, 0, htmlDoc.FindByText("a", locale.TrString("settings.twofa_reenroll")).Length())
 
-			headings := htmlDoc.Find(".user-setting-content h4.attached.header")
+			headings := htmlDoc.Find(".user-setting-content h3.floating")
 			assert.Equal(t, 2, headings.Length())
 			assert.Equal(t, locale.TrString("settings.twofa"), strings.TrimSpace(headings.First().Text()))
 			assert.Equal(t, locale.TrString("settings.webauthn"), strings.TrimSpace(headings.Last().Text()))
