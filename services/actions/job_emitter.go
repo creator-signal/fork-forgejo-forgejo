@@ -11,12 +11,14 @@ import (
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/queue"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"xorm.io/builder"
 )
 
+var logger = log.GetManager().GetLogger(log.DEFAULT)
 var jobEmitterQueue *queue.WorkerPoolQueue[*jobUpdate]
 
 type jobUpdate struct {
@@ -38,6 +40,7 @@ func jobEmitterQueueHandler(items ...*jobUpdate) []*jobUpdate {
 	var ret []*jobUpdate
 	for _, update := range items {
 		if err := checkJobsOfRun(ctx, update.RunID); err != nil {
+			logger.Error("checkJobsOfRun failed for RunID = %d: %v", update.RunID, err)
 			ret = append(ret, update)
 		}
 	}
