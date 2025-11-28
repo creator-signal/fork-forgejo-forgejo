@@ -23,8 +23,9 @@ test('Segments: floating headers', async ({page, isMobile}) => {
   const systemSegmentBox = await page.locator('.ui.table.segment[hx-get="/admin/system_status"]').boundingBox();
 
   // The first floating header should not have any top margin
-  if (!isMobile) // Sidebar is above first header on mobile
+  if (!isMobile) {// Sidebar is above first header on mobile
     expect(maintHeaderBox.y).toBe(pageContentBox.y);
+  }
 
   // The distance between a segment and it's header
   expect(maintSegmentBox.y - (maintHeaderBox.y + maintHeaderBox.height)).toBeCloseTo(10.5);
