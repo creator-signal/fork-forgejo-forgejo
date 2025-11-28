@@ -1,5 +1,5 @@
-// Copyright 2024 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// Copyright 2024-2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package integration
 
@@ -31,7 +31,7 @@ func TestNewOrganizationForm(t *testing.T) {
 		assert.True(t, exists)
 
 		// Verify page header
-		header := strings.TrimSpace(page.Find(".form[action='/org/create'] .header").Text())
+		header := strings.TrimSpace(page.Find(".form[action='/org/create'] h2.floating").Text())
 		assert.Equal(t, locale.TrString("new_org.title"), header)
 	})
 }
