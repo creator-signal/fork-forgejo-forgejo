@@ -15,11 +15,16 @@ test('Segments: floating headers', async ({page}) => {
 
   await page.goto('/admin');
 
+  const pageContentBox = await page.locator('.page-content').boundingBox();
+
   const maintHeaderBox = await page.getByText('Maintenance operations').boundingBox();
   const maintSegmentBox = await page.locator('.ui.table.segment:has(form[action="/admin"])').boundingBox();
 
   const systemHeaderBox = await page.getByText('System status').boundingBox();
   const systemSegmentBox = await page.locator('.ui.table.segment[hx-get="/admin/system_status"]').boundingBox();
+
+  // The first floating header should not have any top margin
+  expect(maintHeaderBox.y).toBe(pageContentBox.y);
 
   // The distance between a segment and it's header
   expect(maintSegmentBox.y - (maintHeaderBox.y + maintHeaderBox.height)).toBeCloseTo(10.5);
