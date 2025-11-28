@@ -12,7 +12,6 @@ import {test} from './utils_e2e.ts';
 test.use({user: 'user1'});
 
 test('Segments: floating headers', async ({page}) => {
-
   await page.goto('/admin');
 
   const pageContentBox = await page.locator('.page-content').boundingBox();
