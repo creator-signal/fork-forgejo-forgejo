@@ -280,4 +280,4 @@ replace git.sr.ht/~mariusor/go-xsd-duration => code.forgejo.org/forgejo/go-xsd-d
 
 replace xorm.io/xorm v1.3.9 => code.forgejo.org/xorm/xorm v1.3.9-forgejo.4
 
-replace code.forgejo.org/mfenniak/forgejo-runner/v12 => code.forgejo.org/mfenniak/forgejo-runner/v12 v12.0.0-20251128020828-b9c2906362d6
+replace code.forgejo.org/mfenniak/forgejo-runner/v12 => code.forgejo.org/mfenniak/forgejo-runner/v12 v12.0.0-20251128042642-70260427b377
