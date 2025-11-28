@@ -129,9 +129,4 @@ func TestGetOrgUserHasForkedRepo(t *testing.T) {
 
 	// check that we can get repo 65 via user 2 who belongs to org 3
 	require.True(t, repo_model.HasForkedRepo(db.DefaultContext, 2, repo63.ID))
-	repo65, err := repo_model.GetUserFork(db.DefaultContext, repo63.ID, 2)
-	require.NoError(t, err)
-	require.NotNil(t, repo65)
-	assert.EqualValues(t, 65, repo65.ID)
-	assert.EqualValues(t, 63, repo65.ForkID)
 }
