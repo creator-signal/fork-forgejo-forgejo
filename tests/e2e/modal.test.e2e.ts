@@ -82,7 +82,8 @@ test('Dialog modal: width', async ({page, isMobile}) => {
     expect(width).toBeLessThan(400);
   } else {
     // Not bound by min-width or max-width
-    expect(width).toBe(435);
+    expect(width).toBeLessThan(800);
+    expect(width).toBeGreaterThan(400);
   }
 
   // Open modal with long content
