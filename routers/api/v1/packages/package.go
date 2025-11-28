@@ -335,3 +335,48 @@ func UnlinkPackage(ctx *context.APIContext) {
 	}
 	ctx.Status(http.StatusNoContent)
 }
+
+// ConfigureRemoteRegistry configures a remote registry of a given type
+func ConfigureRemoteRegistry(ctx *context.APIContext) {
+	// swagger:operation POST /packages/{owner}/remote-registry/configure package configureRemoteRegistry
+	// ---
+	// summary: Allows configuration of a remote registry
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the packages
+	//   type: string
+	//   required: true
+	// - name: type
+	//   in: path
+	//   description: type of the remote registry
+	//   type: string
+	//   required: true
+	// - name: remote_url
+	//   in: path
+	//   description: url of the remote registry
+	//   type: string
+	//   required: true
+	// - name: remote_auth_token
+	//   in: path
+	//   description: optional: token of the remote registry
+	//   type: string
+	//   required: false
+	// - name: remote_user_name
+	//   in: path
+	//   description: optional: user name of the remote registry
+	//   type: string
+	//   required: false
+	// - name: remote_password
+	//   in: path
+	//   description: optional: password of the remote registry
+	//   type: string
+	//   required: false
+	// responses:
+	//   "201":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	ctx.JSON(http.StatusOK, "{}")
+}
