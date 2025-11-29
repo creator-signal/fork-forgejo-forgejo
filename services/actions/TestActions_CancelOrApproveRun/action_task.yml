@@ -14,10 +14,10 @@
   token_salt: jVuKnSPGgy
   token_last_eight: eeb1a71a
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
 -
   id: 711900
   job_id: 11900
@@ -34,7 +34,7 @@
   token_salt: jVuKnSPGgy
   token_last_eight: eeb1a71a
   log_filename: artifact-test2/2f/47.log
-  log_in_storage: 1
+  log_in_storage: true
   log_length: 707
   log_size: 90179
-  log_expired: 0
+  log_expired: false
