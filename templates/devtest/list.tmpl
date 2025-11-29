@@ -1,11 +1,18 @@
 {{template "base/head" .}}
 
 <div role="main" class="page-content ui container">
-	<ul>
-		{{range .SubNames}}
-		<li><a href="{{AppSubUrl}}/devtest/{{.}}">{{.}}</a></li>
-		{{end}}
-	</ul>
+	<h1>Development pages</h1>
+
+	<p>Various pages that may be helpful in development or testing</p>
+
+	<article>
+		<h2>Components</h2>
+		<ul>
+			{{range .SubNames}}
+			<li><a href="{{AppSubUrl}}/devtest/{{.}}">{{.}}</a></li>
+			{{end}}
+		</ul>
+	</article>
 
 	<article>
 		<h2>Error pages</h2>
