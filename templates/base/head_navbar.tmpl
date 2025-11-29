@@ -194,8 +194,11 @@
 								{{ctx.Locale.Tr "help"}}
 							</a>
 						</li>
-						{{if .IsAdmin}}
+						{{$showDevtest := not .RunModeIsProd}}
+						{{if or .IsAdmin $showDevtest}}
 							<hr>
+						{{end}}
+						{{if .IsAdmin}}
 							<li>
 								<a {{if .PageIsAdmin}}class="active"{{end}} href="{{AppSubUrl}}/admin">
 									{{svg "octicon-server"}}
@@ -203,7 +206,7 @@
 								</a>
 							</li>
 						{{end}}
-						{{if not .RunModeIsProd}}
+						{{if $showDevtest}}
 							<li>
 								<a {{if .PageIsAdmin}}class="active"{{end}} href="{{AppSubUrl}}/devtest">
 									{{svg "octicon-beaker"}}
