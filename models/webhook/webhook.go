@@ -379,8 +379,7 @@ func (w Webhook) HeaderAuthorization() (string, error) {
 		return "", nil
 	}
 
-	key := keying.DeriveKey(keying.ContextWebhook)
-	headerAuthorization, err := key.Decrypt(w.HeaderAuthorizationEncrypted, keying.ColumnAndID("header_authorization_encrypted", w.ID))
+	headerAuthorization, err := keying.Webhook.Decrypt(w.HeaderAuthorizationEncrypted, keying.ColumnAndID("header_authorization_encrypted", w.ID))
 	if err != nil {
 		return "", err
 	}
@@ -403,8 +402,7 @@ func (w *Webhook) SetHeaderAuthorization(cleartext string) {
 		return
 	}
 
-	key := keying.DeriveKey(keying.ContextWebhook)
-	w.HeaderAuthorizationEncrypted = key.Encrypt([]byte(cleartext), keying.ColumnAndID("header_authorization_encrypted", w.ID))
+	w.HeaderAuthorizationEncrypted = keying.Webhook.Encrypt([]byte(cleartext), keying.ColumnAndID("header_authorization_encrypted", w.ID))
 }
 
 // CreateWebhook creates a new web hook.

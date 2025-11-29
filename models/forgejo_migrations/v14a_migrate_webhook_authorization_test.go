@@ -76,7 +76,7 @@ func Test_MigrateWebhookSecrets(t *testing.T) {
 	require.NoError(t, err)
 	assert.EqualValues(t, 2, cnt)
 
-	key := keying.DeriveKey(keying.ContextWebhook)
+	key := keying.Webhook
 
 	t.Run("webhook 1", func(t *testing.T) {
 		var webhook NewWebhook

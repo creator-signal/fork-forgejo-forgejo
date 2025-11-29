@@ -53,7 +53,7 @@ func migrateWebhookSecrets(x *xorm.Engine) error {
 			}
 		}
 
-		key := keying.DeriveKey(keying.ContextWebhook)
+		key := keying.Webhook
 
 		oldEncryptionKey := setting.SecretKey
 		messages := make([]string, 0, 100)
