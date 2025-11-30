@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	packages_module "forgejo.org/modules/packages"
+	opentofu_lock_module "forgejo.org/modules/packages/opentofu/lock"
 	opentofu_state_module "forgejo.org/modules/packages/opentofu/state"
 	"forgejo.org/modules/setting"
 	"forgejo.org/routers/api/packages/helper"
@@ -263,10 +264,124 @@ func DeleteState(ctx *context.Context) {
 	ctx.Status(http.StatusOK)
 }
 
+// LockState locks a Forgejo package/state file.
 func LockState(ctx *context.Context) {
-	panic("Not yet implemented")
+	defer ctx.Req.Body.Close()
+
+	// Get the package name from the request.
+	packageName := ctx.Params("packagename")
+	log.Debug("Processing OpenTofu/Terraform HTTP backend package lock request: %s [OwnerID: %d]", packageName, ctx.Package.Owner.ID)
+
+	// Check the size of the lock request body.
+	contentLength := ctx.Req.ContentLength
+	log.Debug("Lock request's content length: %d", contentLength)
+	if contentLength == -1 {
+		apiError(ctx, http.StatusLengthRequired, "the content length is unknown")
+		return
+	} else if contentLength == 0 {
+		apiError(ctx, http.StatusBadRequest, "the body is empty")
+		return
+	} else if contentLength > opentofu_lock_module.LimitSizeLockInfo {
+		apiError(ctx, http.StatusRequestEntityTooLarge, "request body exceeds the request handler limit")
+		return
+	}
+
+	// Read the state lock payload from the request body.
+	//
+	// The amount of bytes to read is limited by the value of the request's content
+	// length to avoid denial of service attacks.
+	stateLockPayload, err := io.ReadAll(http.MaxBytesReader(ctx.Resp, ctx.Req.Body, contentLength))
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, fmt.Errorf("failed to read the state lock payload from the request body: %w", err))
+		return
+	}
+
+	// Parse the lock request payload to extract the lock information.
+	lockInfo, err := opentofu_lock_module.ParseLockInfo(&stateLockPayload)
+	if err != nil {
+		apiError(ctx, http.StatusBadRequest, fmt.Errorf("failed to parse the lock request payload: %w", err))
+		return
+	}
+
+	// Add the missing fields from the lock request payload.
+	lockInfo.PackageName = packageName
+	lockInfo.OwnerID = ctx.Package.Owner.ID
+
+	// Replace the username sent by the client with the caller's Forgejo username.
+	lockInfo.UserName = ctx.Doer.Name
+
+	// Lock the state file.
+	stateLock, err := opentofu_model.Lock(ctx, lockInfo)
+	if err != nil {
+		switch {
+		case opentofu_model.IsErrStateLockAlreadyExist(err):
+			log.Debug("The state file is already locked: %w", err)
+			ctx.JSON(http.StatusConflict, stateLock)
+		default:
+			apiError(ctx, http.StatusInternalServerError, fmt.Errorf("failed to lock the state file: %w", err))
+		}
+
+		return
+	}
+
+	log.Debug("Package %s is now locked [OwnerID: %d]", packageName, ctx.Package.Owner.ID)
+	ctx.JSON(http.StatusOK, stateLock)
 }
 
+// UnlockState unlocks a Forgejo package/state file.
 func UnlockState(ctx *context.Context) {
-	panic("Not yet implemented")
+	defer ctx.Req.Body.Close()
+
+	// Get the package name from the request.
+	packageName := ctx.Params("packagename")
+	log.Debug("Processing OpenTofu/Terraform HTTP backend package unlock request: %s [OwnerID: %d]", packageName, ctx.Package.Owner.ID)
+
+	// Check the size of the unlock request body.
+	contentLength := ctx.Req.ContentLength
+	log.Debug("Unlock request's content length: %d", contentLength)
+	if contentLength == -1 {
+		apiError(ctx, http.StatusLengthRequired, "the content length is unknown")
+		return
+	} else if contentLength == 0 {
+		apiError(ctx, http.StatusBadRequest, "the body is empty")
+		return
+	} else if contentLength > opentofu_lock_module.LimitSizeLockInfo {
+		apiError(ctx, http.StatusRequestEntityTooLarge, "request body exceeds the request handler limit")
+		return
+	}
+
+	// Read the state unlock payload from the request body.
+	//
+	// The amount of bytes to read is limited by the value of the request's content
+	// length to avoid denial of service attacks.
+	stateUnlockPayload, err := io.ReadAll(http.MaxBytesReader(ctx.Resp, ctx.Req.Body, contentLength))
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, fmt.Errorf("failed to read the state unlock payload from the request body: %w", err))
+		return
+	}
+
+	// Parse the unlock request payload to extract the lock information.
+	lockInfo, err := opentofu_lock_module.ParseLockInfo(&stateUnlockPayload)
+	if err != nil {
+		apiError(ctx, http.StatusBadRequest, fmt.Errorf("failed to parse the unlock request payload: %w", err))
+		return
+	}
+
+	// Unlock the state file.
+	err = opentofu_model.Unlock(ctx, packageName, ctx.Package.Owner.ID, lockInfo.LockID)
+	if err != nil {
+		switch {
+		case opentofu_model.IsErrStateLockNotExist(err):
+			apiError(ctx, http.StatusNotFound, fmt.Errorf("the state file is not locked: %w", err))
+		case opentofu_model.IsErrInvalidLockID(err):
+			apiError(ctx, http.StatusUnauthorized, fmt.Errorf("wrong lock ID: %w", err))
+		default:
+			apiError(ctx, http.StatusInternalServerError, fmt.Errorf("failed to unlock the state file: %w", err))
+		}
+
+		return
+	}
+
+	log.Debug("Package %s is now unlocked [OwnerID: %d]", packageName, ctx.Package.Owner.ID)
+	ctx.Status(http.StatusOK)
 }

@@ -11,6 +11,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/packages"
+	opentofu_model "forgejo.org/models/packages/opentofu"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	opentofu_state_module "forgejo.org/modules/packages/opentofu/state"
@@ -46,6 +47,57 @@ func TestPackageOpenTofuHttpBackend(t *testing.T) {
 		"encryption_version": "v0"
 	}`
 
+	lockRequestPayload := `{
+		"ID": "55769533-286a-96d9-eb47-935c08f675a9",
+		"Operation": "OperationTypeApply",
+		"Info": "",
+		"Who": "user@laptop",
+		"Version": "1.10.6",
+		"Created": "2025-12-01T16:37:39.015107776Z",
+		"Path": ""
+	}`
+
+	t.Run("Lock", func(t *testing.T) {
+		// Sends a lock request without being authenticated.
+		t.Run("UnauthenticatedLockRequest", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequestWithBody(t, http.MethodPost, rootURL+"/unauthenticated/lock", strings.NewReader(lockRequestPayload)).SetHeader("Content-Type", "application/json")
+			MakeRequest(t, req, http.StatusUnauthorized)
+		})
+
+		// Sends a lock request with an invalid JSON payload.
+		t.Run("InvalidJSON", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequestWithBody(t, http.MethodPost, rootURL+"/invalid-json/lock", strings.NewReader("This is not a valid JSON payload")).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusBadRequest)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
+		// Sends a valid lock request.
+		t.Run("ValidLockRequest", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			packageName := "v4-unencrypted"
+
+			lock, err := opentofu_model.GetLock(db.DefaultContext, packageName, user.ID)
+			assert.Nil(t, lock)
+			require.ErrorIs(t, err, opentofu_model.ErrStateLockNotExist{PackageName: packageName, OwnerID: user.ID})
+
+			req := NewRequestWithBody(t, http.MethodPost, rootURL+"/"+packageName+"/lock", strings.NewReader(lockRequestPayload)).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+
+			lock, err = opentofu_model.GetLock(db.DefaultContext, packageName, user.ID)
+			require.NoError(t, err)
+			assert.Equal(t, "55769533-286a-96d9-eb47-935c08f675a9", lock.LockID)
+			assert.Equal(t, "OperationTypeApply", lock.Operation)
+			assert.Equal(t, user.Name, lock.UserName)
+			assert.Equal(t, "1.10.6", lock.ClientVersion)
+		})
+	})
+
 	t.Run("Upload", func(t *testing.T) {
 		// Sends a state upload request without being authenticated.
 		t.Run("UnauthenticatedUploadRequest", func(t *testing.T) {
@@ -73,12 +125,43 @@ func TestPackageOpenTofuHttpBackend(t *testing.T) {
 			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
 		})
 
-		// Sends a valid unencrypted version 4 state file.
+		// Sends a valid unencrypted version 4 state file but without the lock ID while
+		// the state file is locked.
+		//
+		// The state file has been locked in a previous test.
+		t.Run("MissingLockID", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			packageName := "v4-unencrypted"
+
+			req := NewRequestWithBody(t, http.MethodPost, rootURL+"/"+packageName, strings.NewReader(unencryptedVersion4StateFile)).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusConflict)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
+		// Sends a valid unencrypted version 4 state file but with an invalid lock ID
+		// while the state file is locked.
+		//
+		// The state file has been locked in a previous test.
+		t.Run("InvalidLockID", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			packageName := "v4-unencrypted"
+			lockID := "wrong-lock-id"
+
+			req := NewRequestWithBody(t, http.MethodPost, fmt.Sprintf("%s/%s?ID=%s", rootURL, packageName, lockID), strings.NewReader(unencryptedVersion4StateFile)).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusUnauthorized)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
+		// Sends a valid unencrypted version 4 state file with the correct lock ID as
+		// the state file has been locked in a previous test.
 		t.Run("UploadValidUnencryptedVersion4StateFile", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			packageName := "v4-unencrypted"
 			packageVersion := "1"
+			lockID := "55769533-286a-96d9-eb47-935c08f675a9"
 
 			pvs, err := packages.GetVersionsByPackageName(db.DefaultContext, user.ID, packages.TypeOpenTofuState, packageName)
 			require.NoError(t, err)
@@ -87,7 +170,7 @@ func TestPackageOpenTofuHttpBackend(t *testing.T) {
 			md5Hash := md5.Sum([]byte(unencryptedVersion4StateFile))
 			md5Base64 := base64.StdEncoding.EncodeToString(md5Hash[:])
 
-			req := NewRequestWithBody(t, http.MethodPost, rootURL+"/"+packageName, strings.NewReader(unencryptedVersion4StateFile)).SetHeader("Content-Type", "application/json").SetHeader("Content-MD5", md5Base64).AddBasicAuth(user.Name)
+			req := NewRequestWithBody(t, http.MethodPost, fmt.Sprintf("%s/%s?ID=%s", rootURL, packageName, lockID), strings.NewReader(unencryptedVersion4StateFile)).SetHeader("Content-Type", "application/json").SetHeader("Content-MD5", md5Base64).AddBasicAuth(user.Name)
 			resp := MakeRequest(t, req, http.StatusCreated)
 
 			bodyBytes, err := io.ReadAll(resp.Body)
@@ -226,6 +309,86 @@ func TestPackageOpenTofuHttpBackend(t *testing.T) {
 			pvs, err := packages.GetVersionsByPackageName(db.DefaultContext, user.ID, packages.TypeOpenTofuState, packageName)
 			require.NoError(t, err)
 			assert.Empty(t, pvs)
+		})
+	})
+
+	t.Run("Unlock", func(t *testing.T) {
+		// Sends an unlock request without being authenticated.
+		t.Run("UnauthenticatedUnlockRequest", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequestWithBody(t, http.MethodDelete, rootURL+"/unauthenticated/lock", strings.NewReader(lockRequestPayload)).SetHeader("Content-Type", "application/json")
+			MakeRequest(t, req, http.StatusUnauthorized)
+		})
+
+		// Sends an unlock request with an invalid JSON payload.
+		t.Run("InvalidJSON", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequestWithBody(t, http.MethodDelete, rootURL+"/invalid-json/lock", strings.NewReader("This is not a valid JSON payload")).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusBadRequest)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
+		// Sends a valid unlock request for an unknown package/state file.
+		t.Run("UnknownPackage", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequestWithBody(t, http.MethodDelete, rootURL+"/unknown-package/lock", strings.NewReader(lockRequestPayload)).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusNotFound)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
+		// Sends a valid unlock request for an already unlocked package/state file.
+		t.Run("AlreadyUnlockedPackage", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			packageName := "v4-encrypted"
+
+			req := NewRequestWithBody(t, http.MethodDelete, rootURL+"/"+packageName+"/lock", strings.NewReader(lockRequestPayload)).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusNotFound)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
+		// Sends a valid unlock request but with an invalid lock ID.
+		//
+		// The state file has been locked in a previous test.
+		t.Run("InvalidLockID", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			packageName := "v4-unencrypted"
+			lockRequestPayload := `{
+				"ID": "invalid-lock-id",
+				"Operation": "OperationTypeApply",
+				"Info": "",
+				"Who": "user@laptop",
+				"Version": "1.10.6",
+				"Created": "2025-12-01T16:37:39.015107776Z",
+				"Path": ""
+			}`
+
+			req := NewRequestWithBody(t, http.MethodDelete, rootURL+"/"+packageName+"/lock", strings.NewReader(lockRequestPayload)).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusUnauthorized)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
+		// Sends a valid unlock request.
+		//
+		// The state file has been locked in a previous test.
+		t.Run("ValidUnlockRequest", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			packageName := "v4-unencrypted"
+
+			_, err := opentofu_model.GetLock(db.DefaultContext, packageName, user.ID)
+			require.NoError(t, err)
+
+			req := NewRequestWithBody(t, http.MethodDelete, rootURL+"/"+packageName+"/lock", strings.NewReader(lockRequestPayload)).SetHeader("Content-Type", "application/json").AddBasicAuth(user.Name)
+			MakeRequest(t, req, http.StatusOK)
+
+			lock, err := opentofu_model.GetLock(db.DefaultContext, packageName, user.ID)
+			assert.Nil(t, lock)
+			require.ErrorIs(t, err, opentofu_model.ErrStateLockNotExist{PackageName: packageName, OwnerID: user.ID})
 		})
 	})
 }
