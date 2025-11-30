@@ -136,7 +136,8 @@ func Dashboard(ctx *context.Context) {
 	updateSystemStatus()
 	ctx.Data["SysStatus"] = sysStatus
 
-	entries := []string{"delete_inactive_accounts",
+	entries := []string{
+		"delete_inactive_accounts",
 		"delete_repo_archives",
 		"delete_missing_repos",
 		"git_gc_repos",
