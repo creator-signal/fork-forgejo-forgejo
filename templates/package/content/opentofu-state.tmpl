@@ -7,7 +7,11 @@
 				<div class="markup">
 					<pre class="code-block"><code>terraform {
 	backend "http" {
-		address  = "{{AppUrl}}api/packages/{{.PackageDescriptor.Owner.Name}}/opentofu/http/state/{{.PackageDescriptor.Package.Name}}"
+		address = "{{AppUrl}}api/packages/{{.PackageDescriptor.Owner.Name}}/opentofu/http/state/{{.PackageDescriptor.Package.Name}}"
+		lock_address = "{{AppUrl}}api/packages/{{.PackageDescriptor.Owner.Name}}/opentofu/http/state/{{.PackageDescriptor.Package.Name}}/lock"
+		unlock_address = "{{AppUrl}}api/packages/{{.PackageDescriptor.Owner.Name}}/opentofu/http/state/{{.PackageDescriptor.Package.Name}}/lock"
+		lock_method = "POST"
+		unlock_method = "DELETE"
 	}
 }</code></pre>
 				</div>
