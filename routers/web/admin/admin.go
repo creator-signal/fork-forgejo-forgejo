@@ -144,7 +144,7 @@ func Dashboard(ctx *context.Context) {
 	if !setting.SSH.Disabled && !setting.SSH.StartBuiltinServer {
 		entries = append(entries, "resync_all_sshkeys", "resync_all_sshprincipals")
 	}
-	moreEntries := []string{
+	entries = append(entries, []string{
 		"resync_all_hooks",
 		"reinit_missing_repos",
 		"sync_external_users",
@@ -152,8 +152,7 @@ func Dashboard(ctx *context.Context) {
 		"delete_generated_repository_avatars",
 		"sync_repo_branches",
 		"sync_repo_tags",
-	}
-	entries = append(entries, moreEntries...)
+	}...)
 	ctx.Data["Entries"] = entries
 
 	prepareDeprecatedWarningsAlert(ctx)
