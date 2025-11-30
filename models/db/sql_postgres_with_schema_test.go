@@ -4,8 +4,8 @@
 package db
 
 import (
+	"slices"
 	"database/sql"
-	"database/sql/driver"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,13 +15,7 @@ import (
 func TestPostgresSchemaDriverRegistered(t *testing.T) {
 	// Verify the driver is registered (happens in init())
 	drivers := sql.Drivers()
-	found := false
-	for _, d := range drivers {
-		if d == "postgresschema" {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(drivers, "postgresschema")
 	assert.True(t, found, "postgresschema driver should be registered")
 }
 
