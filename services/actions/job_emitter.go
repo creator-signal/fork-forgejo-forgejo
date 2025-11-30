@@ -182,7 +182,7 @@ func (r *jobStatusResolver) resolve() map[int64]actions_model.Status {
 // Invoked once a job has all its `needs` parameters met and is ready to transition to waiting, this may expand the
 // job's `strategy.matrix` into multiple new jobs.
 func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.ActionRunJob, jobsInRun []*actions_model.ActionRunJob) (bool, error) {
-	if incompleteMatrix, err := blockedJob.IsIncompleteMatrix(); err != nil {
+	if incompleteMatrix, _, err := blockedJob.IsIncompleteMatrix(); err != nil {
 		return false, fmt.Errorf("job IsIncompleteMatrix: %w", err)
 	} else if !incompleteMatrix {
 		// Not relevant to attempt expansion if it wasn't marked IncompleteMatrix previously.
