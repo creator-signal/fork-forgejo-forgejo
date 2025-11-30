@@ -240,11 +240,34 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 			// slip this notification into PreExecutionError.
 
 			run := blockedJob.Run
-			run.PreExecutionErrorCode = actions_model.ErrorCodePersistentIncompleteMatrix
-			run.PreExecutionErrorDetails = []any{
-				blockedJob.JobID,
-				strings.Join(blockedJob.Needs, ", "),
+
+			// `IncompleteMatrixNeeds` tells us which output was accessed that was missing
+			if swf.IncompleteMatrixNeeds != nil {
+				jobRef := swf.IncompleteMatrixNeeds.Job       // always provided
+				outputRef := swf.IncompleteMatrixNeeds.Output // missing if the entire job wasn't present
+				if outputRef != "" {
+					run.PreExecutionErrorCode = actions_model.ErrorCodeIncompleteMatrixMissingOutput
+					run.PreExecutionErrorDetails = []any{
+						blockedJob.JobID,
+						jobRef,
+						outputRef,
+					}
+				} else {
+					run.PreExecutionErrorCode = actions_model.ErrorCodeIncompleteMatrixMissingJob
+					run.PreExecutionErrorDetails = []any{
+						blockedJob.JobID,
+						jobRef,
+						strings.Join(blockedJob.Needs, ", "),
+					}
+				}
+			} else {
+				run.PreExecutionErrorCode = actions_model.ErrorCodePersistentIncompleteMatrix
+				run.PreExecutionErrorDetails = []any{
+					blockedJob.JobID,
+					strings.Join(blockedJob.Needs, ", "),
+				}
 			}
+
 			run.Status = actions_model.StatusFailure
 			err = actions_model.UpdateRunWithoutNotification(ctx, run,
 				"pre_execution_error_code", "pre_execution_error_details", "status")
