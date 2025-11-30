@@ -4,8 +4,8 @@
 package db
 
 import (
-	"slices"
 	"database/sql"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
