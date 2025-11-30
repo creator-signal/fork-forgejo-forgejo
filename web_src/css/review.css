@@ -6,6 +6,9 @@
 
   display: flex;
   align-items: center;
+
+  padding: 0;
+  background: none;
 }
 
 .ui.button.add-code-comment {
