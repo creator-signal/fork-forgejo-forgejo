@@ -462,6 +462,11 @@ func handleWorkflows(
 			continue
 		}
 		CreateCommitStatus(ctx, alljobs...)
+
+		if err := consistencyCheckRun(ctx, run); err != nil {
+			log.Error("SanityCheckRun: %v", err)
+			continue
+		}
 	}
 	return nil
 }
