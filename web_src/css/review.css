@@ -3,6 +3,8 @@
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+
+  display: flex;
 }
 
 .ui.button.add-code-comment {
