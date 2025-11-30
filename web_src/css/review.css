@@ -9,6 +9,7 @@
 
   padding: 0;
   background: none;
+  font-weight: var(--font-weight-medium);
 }
 
 .ui.button.add-code-comment {
