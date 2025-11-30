@@ -5,6 +5,7 @@
   user-select: none;
 
   display: flex;
+  align-items: center;
 }
 
 .ui.button.add-code-comment {
