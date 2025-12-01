@@ -62,6 +62,8 @@ linters:
           alias: org_model
         - pkg: forgejo.org/models/packages
           alias: packages_model
+        - pkg: forgejo.org/models/dbfs
+          alias: dbfs_model
 
         - pkg: forgejo.org/services/actions
           alias: actions_service
@@ -77,8 +79,8 @@ linters:
         # Make sure that we follow a consistent naming for model and service aliases.
         # The \w+? syntax is the RE2 syntax for: one or more \w, prefer fewer
         #
-        # It's used to make sure that if the model has a plural name, e.g. "issues", it's imported with the singular
-        # name (e.g. "issue") nonetheless.
+        # It's used to make sure that if the model has a plural name, e.g. "avatars", it's imported with the singular
+        # name (e.g. "avatar") nonetheless.
         - pkg: 'forgejo.org/(model|service)s/(\w+?)s?'
           alias: '${2}_${1}'
 
