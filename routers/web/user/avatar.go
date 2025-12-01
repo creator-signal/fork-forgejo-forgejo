@@ -4,10 +4,12 @@
 package user
 
 import (
+	"encoding/base32"
 	"strings"
 	"time"
 
 	"forgejo.org/models/avatars"
+	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/httpcache"
 	"forgejo.org/services/context"
@@ -47,6 +49,7 @@ func AvatarByUserName(ctx *context.Context) {
 // AvatarByEmailHash redirects the browser to the email avatar link
 func AvatarByEmailHash(ctx *context.Context) {
 	hash := ctx.Params(":hash")
+
 	email, err := avatars.GetEmailForHash(ctx, hash)
 	if err != nil {
 		ctx.ServerError("invalid avatar hash: "+hash, err)
@@ -56,14 +59,37 @@ func AvatarByEmailHash(ctx *context.Context) {
 	cacheableRedirect(ctx, avatars.GenerateEmailAvatarFinalLink(ctx, email, size))
 }
 
+// FindSvgAvatarByHash looks for svg avatar in the database
+func FindSvgAvatarByHash(ctx *context.Context, hash []byte) (string, error) {
+	user := new(user_model.User)
+	db.GetEngine(ctx).Where("avatar_svg_hash=?", hash).Get(user)
+
+	if user.AvatarSVG != "" {
+		return user.AvatarSVG, nil
+	}
+	return "", nil
+}
+
 // GetSvgAvatarByHash does not make this code not compile
 func GetSvgAvatarByHash(ctx *context.Context) {
 	hash := ctx.Params(":hash")
-	avatarXml, err := avatars.FindSvgAvatarByHash(ctx, hash)
+
+	hashBytes, err := base32.StdEncoding.DecodeString(hash)
+	if err != nil {
+		ctx.ServerError("Invalid base32 avatar hash: "+hash, err)
+		return
+	}
+
+	avatarXml, err := FindSvgAvatarByHash(ctx, hashBytes)
+	println("FindSvgAvatarByHash returned: " + avatarXml)
 	if err != nil {
 		ctx.ServerError("Invalid avatar hash: "+hash, err)
 		return
 	}
-	ctx.Resp.Write([]byte(avatarXml))
-	return
+
+	if avatarXml != "" {
+		ctx.Resp.Write([]byte(avatarXml))
+		return
+	}
+	ctx.NotFound("Avatar was not found", nil)
 }

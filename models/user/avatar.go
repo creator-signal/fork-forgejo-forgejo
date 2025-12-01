@@ -6,6 +6,7 @@ package user
 import (
 	"context"
 	"crypto/md5"
+	"encoding/base32"
 	"fmt"
 	"image/png"
 	"io"
@@ -48,6 +49,9 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 	u.Avatar = avatars.HashEmail(seed)
 	u.AvatarSVG = identicon.Vector
 	u.AvatarSVGHash = HashSvgAvatar(identicon.Vector)
+
+	debug_b32 := base32.StdEncoding.EncodeToString(u.AvatarSVGHash)
+	println("New hash: " + debug_b32)
 
 	_, err = storage.Avatars.Stat(u.CustomAvatarRelativePath())
 	if err != nil {
