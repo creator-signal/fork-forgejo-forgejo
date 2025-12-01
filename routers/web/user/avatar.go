@@ -4,7 +4,7 @@
 package user
 
 import (
-	"encoding/base32"
+	"encoding/hex"
 	"strings"
 	"time"
 
@@ -74,9 +74,9 @@ func FindSvgAvatarByHash(ctx *context.Context, hash []byte) (string, error) {
 func GetSvgAvatarByHash(ctx *context.Context) {
 	hash := ctx.Params(":hash")
 
-	hashBytes, err := base32.StdEncoding.DecodeString(hash)
+	hashBytes, err := hex.DecodeString(hash)
 	if err != nil {
-		ctx.ServerError("Invalid base32 avatar hash: "+hash, err)
+		ctx.ServerError("Invalid hex of avatar hash: "+hash, err)
 		return
 	}
 

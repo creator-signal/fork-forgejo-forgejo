@@ -17,7 +17,7 @@ func init() {
 func addAvatarSvgToUser(x *xorm.Engine) error {
 	type User struct {
 		AvatarSVG     string `xorm:"TEXT"`
-		AvatarSVGHash string `xorm:"VARBINARY(32)"`
+		AvatarSVGHash string `xorm:"VARBINARY(16)"`
 	}
 	err := x.Sync(new(User))
 	return err

@@ -6,7 +6,7 @@ package user
 import (
 	"context"
 	"crypto/md5"
-	"encoding/base32"
+	"encoding/hex"
 	"fmt"
 	"image/png"
 	"io"
@@ -26,12 +26,15 @@ func (u *User) CustomAvatarRelativePath() string {
 	return u.Avatar
 }
 
-// HashSvgAvatar returns a 256 bit blake2b-hash of avatar text Is it too generic?
-// The intention is to use a fast hash func for this
+// HashSvgAvatar returns a half of 256 bit blake2b-hash of avatar code
+// Requiremenents:
+// - not too many characters when encoded as string
+// - not expensive to compute
 func HashSvgAvatar(avatarXml string) []byte {
 	hasher, _ := blake2b.New256(nil)
 	hasher.Write([]byte(avatarXml))
-	return hasher.Sum(nil)
+	sum := hasher.Sum(nil)
+	return sum[:16]
 }
 
 // GenerateRandomAvatar generates a random avatar for user.
@@ -50,8 +53,8 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 	u.AvatarSVG = identicon.Vector
 	u.AvatarSVGHash = HashSvgAvatar(identicon.Vector)
 
-	debug_b32 := base32.StdEncoding.EncodeToString(u.AvatarSVGHash)
-	println("New hash: " + debug_b32)
+	debug_hex := hex.EncodeToString(u.AvatarSVGHash)
+	println("New hash: " + debug_hex)
 
 	_, err = storage.Avatars.Stat(u.CustomAvatarRelativePath())
 	if err != nil {
