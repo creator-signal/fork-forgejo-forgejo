@@ -241,47 +241,38 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 
 			run := blockedJob.Run
 
+			var errorCode actions_model.PreExecutionError
+			var errorDetails []any
+
 			// `IncompleteMatrixNeeds` tells us which output was accessed that was missing
 			if swf.IncompleteMatrixNeeds != nil {
 				jobRef := swf.IncompleteMatrixNeeds.Job       // always provided
 				outputRef := swf.IncompleteMatrixNeeds.Output // missing if the entire job wasn't present
 				if outputRef != "" {
-					run.PreExecutionErrorCode = actions_model.ErrorCodeIncompleteMatrixMissingOutput
-					run.PreExecutionErrorDetails = []any{
+					errorCode = actions_model.ErrorCodeIncompleteMatrixMissingOutput
+					errorDetails = []any{
 						blockedJob.JobID,
 						jobRef,
 						outputRef,
 					}
 				} else {
-					run.PreExecutionErrorCode = actions_model.ErrorCodeIncompleteMatrixMissingJob
-					run.PreExecutionErrorDetails = []any{
+					errorCode = actions_model.ErrorCodeIncompleteMatrixMissingJob
+					errorDetails = []any{
 						blockedJob.JobID,
 						jobRef,
 						strings.Join(blockedJob.Needs, ", "),
 					}
 				}
 			} else {
-				run.PreExecutionErrorCode = actions_model.ErrorCodePersistentIncompleteMatrix
-				run.PreExecutionErrorDetails = []any{
+				errorCode = actions_model.ErrorCodePersistentIncompleteMatrix
+				errorDetails = []any{
 					blockedJob.JobID,
 					strings.Join(blockedJob.Needs, ", "),
 				}
 			}
 
-			run.Status = actions_model.StatusFailure
-			err = actions_model.UpdateRunWithoutNotification(ctx, run,
-				"pre_execution_error_code", "pre_execution_error_details", "status")
-			if err != nil {
-				return false, fmt.Errorf("failure updating PreExecutionError: %w", err)
-			}
-
-			// Mark the job as failed as well so that it doesn't remain sitting "blocked" in the UI
-			blockedJob.Status = actions_model.StatusFailure
-			affected, err := UpdateRunJob(ctx, blockedJob, nil, "status")
-			if err != nil {
-				return false, fmt.Errorf("failure updating blockedJob.Status=StatusFailure: %w", err)
-			} else if affected != 1 {
-				return false, fmt.Errorf("expected 1 row to be updated setting blockedJob.Status=StatusFailure, but was %d", affected)
+			if err := FailRunPreExecutionError(ctx, run, errorCode, errorDetails); err != nil {
+				return false, fmt.Errorf("failure when marking run with error: %w", err)
 			}
 
 			// Return `true` to skip running this job in this invalid state

@@ -11,19 +11,19 @@ import (
 	"forgejo.org/modules/timeutil"
 )
 
-func CancelRun(ctx context.Context, run *actions_model.ActionRun) error {
+func killRun(ctx context.Context, run *actions_model.ActionRun, newStatus actions_model.Status) error {
 	return db.WithTx(ctx, func(ctx context.Context) error {
 		jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
 		if err != nil {
 			return err
 		}
 		for _, job := range jobs {
-			status := job.Status
-			if status.IsDone() {
+			oldStatus := job.Status
+			if oldStatus.IsDone() {
 				continue
 			}
 			if job.TaskID == 0 {
-				job.Status = actions_model.StatusCancelled
+				job.Status = newStatus
 				job.Stopped = timeutil.TimeStampNow()
 				_, err := actions_model.UpdateRunJobWithoutNotification(ctx, job, nil, "status", "stopped")
 				if err != nil {
@@ -31,7 +31,7 @@ func CancelRun(ctx context.Context, run *actions_model.ActionRun) error {
 				}
 				continue
 			}
-			if err := StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
+			if err := StopTask(ctx, job.TaskID, newStatus); err != nil {
 				return err
 			}
 		}
@@ -46,6 +46,10 @@ func CancelRun(ctx context.Context, run *actions_model.ActionRun) error {
 
 		return nil
 	})
+}
+
+func CancelRun(ctx context.Context, run *actions_model.ActionRun) error {
+	return killRun(ctx, run, actions_model.StatusCancelled)
 }
 
 func ApproveRun(ctx context.Context, run *actions_model.ActionRun, doerID int64) error {
@@ -66,5 +70,25 @@ func ApproveRun(ctx context.Context, run *actions_model.ActionRun, doerID int64)
 		CreateCommitStatus(ctx, jobs...)
 
 		return actions_model.UpdateRunApprovalByID(ctx, run.ID, actions_model.DoesNotNeedApproval, doerID)
+	})
+}
+
+func FailRunPreExecutionError(ctx context.Context, run *actions_model.ActionRun, errorCode actions_model.PreExecutionError, details []any) error {
+	if run.PreExecutionErrorCode != 0 {
+		// Already have one error; keep it.
+		return nil
+	}
+
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		run.Status = actions_model.StatusFailure
+		run.PreExecutionErrorCode = errorCode
+		run.PreExecutionErrorDetails = details
+		if err := actions_model.UpdateRunWithoutNotification(ctx, run,
+			"pre_execution_error_code", "pre_execution_error_details", "status"); err != nil {
+			return err
+		}
+
+		// Also mark every pending job as Failed so nothing remains in a waiting/blocked state.
+		return killRun(ctx, run, actions_model.StatusFailure)
 	})
 }
