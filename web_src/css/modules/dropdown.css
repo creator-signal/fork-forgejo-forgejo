@@ -1,7 +1,10 @@
-/* Copyright 2025 The Forgejo Authors. All rights reserved.
- * SPDX-License-Identifier: GPL-3.0-or-later */
+/*
+ * Copyright 2025 The Forgejo Authors. All rights reserved.
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 
-/* This is an implementation of a dropdown menu based on details HTML tag.
+/*
+ * This is an implementation of a dropdown menu based on details HTML tag.
  * It is inspired by https://picocss.com/docs/dropdown.
  *
  * NoJS mode could be improved by forcing the same [name] onto all dropdowns, so
@@ -10,7 +13,7 @@
  *
  * Note: when implementing this dropdown, please use `dropdown` as the 1st class,
  * so it is possible to search for all dropdowns with `details class="dropdown`
-*/
+ */
 
 :root details.dropdown {
   --dropdown-box-shadow: 0 6px 18px var(--color-shadow);
