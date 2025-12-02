@@ -4579,6 +4579,64 @@
         }
       }
     },
+    "/packages/{owner}/remote-registry/configure": {
+      "post": {
+        "tags": [
+          "package"
+        ],
+        "summary": "Allows configuration of a remote registry",
+        "operationId": "configureRemoteRegistry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the packages",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "type of the remote registry",
+            "name": "type",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "url of the remote registry",
+            "name": "remote_url",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "optional token of the remote registry",
+            "name": "remote_auth_token",
+            "in": "path"
+          },
+          {
+            "type": "string",
+            "description": "optional user name of the remote registry",
+            "name": "remote_user_name",
+            "in": "path"
+          },
+          {
+            "type": "string",
+            "description": "optional password of the remote registry",
+            "name": "remote_password",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/packages/{owner}/{type}/{name}/-/link/{repo_name}": {
       "post": {
         "tags": [

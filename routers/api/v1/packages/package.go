@@ -359,17 +359,17 @@ func ConfigureRemoteRegistry(ctx *context.APIContext) {
 	//   required: true
 	// - name: remote_auth_token
 	//   in: path
-	//   description: optional: token of the remote registry
+	//   description: optional token of the remote registry
 	//   type: string
 	//   required: false
 	// - name: remote_user_name
 	//   in: path
-	//   description: optional: user name of the remote registry
+	//   description: optional user name of the remote registry
 	//   type: string
 	//   required: false
 	// - name: remote_password
 	//   in: path
-	//   description: optional: password of the remote registry
+	//   description: optional password of the remote registry
 	//   type: string
 	//   required: false
 	// responses:
