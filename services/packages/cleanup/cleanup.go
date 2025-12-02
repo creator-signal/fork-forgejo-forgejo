@@ -139,9 +139,7 @@ func GetCleanupTargets(ctx context.Context, pcr *packages_model.PackageCleanupRu
 		keep := min(len(pvs), pcr.KeepCount)
 		for _, pv := range pvs[keep:] {
 			if pcr.Type == packages_model.TypeContainer {
-				if skip, err := container_service.ShouldBeSkipped(ctx, pcr, p, pv); err != nil {
-					return nil, fmt.Errorf("failure invoking container_service.ShouldBeSkipped: %v", err)
-				} else if skip {
+				if skip := container_service.ShouldBeSkipped(pv); skip {
 					log.Debug("Rule[%d]: keep '%s/%s' (container)", pcr.ID, p.Name, pv.Version)
 					continue
 				}
