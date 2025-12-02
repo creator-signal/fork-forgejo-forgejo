@@ -5,7 +5,6 @@ package integration
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
@@ -27,7 +26,7 @@ func TestConfigureRemoteRegistry(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequest(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry/configure", user.Name)).AddTokenAuth(tokenWritePackage)
-		resp := MakeRequest(t, req, http.StatusOK)
+		resp := MakeRequest(t, req, 204)
 
 		assert.Equal(t, 204, resp.Code)
 	})
