@@ -103,6 +103,9 @@ PATH = tests/{{TEST_TYPE}}/gitea-{{TEST_TYPE}}-mysql/data/lfs
 [packages]
 ENABLED = true
 
+[packages.remote_repository]
+ENABLED = true
+
 [email.incoming]
 ; temporarily disabled because the incoming mail tests are flaky due to the IMAP server (during integration tests) couldn't be not ready in time sometimes.
 ENABLED = false
