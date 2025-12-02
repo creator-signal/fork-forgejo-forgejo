@@ -50,12 +50,6 @@ var (
 	}{
 		Enabled:              true,
 		LimitTotalOwnerCount: -1,
-
-		RemoteRegistry: struct {
-			Enabled bool `ini:"ENABLED"`
-		}{
-			Enabled: false,
-		},
 	}
 )
 
@@ -64,6 +58,13 @@ func loadPackagesFrom(rootCfg ConfigProvider) (err error) {
 	if sec == nil {
 		Packages.Storage, err = getStorage(rootCfg, "packages", "", nil)
 		return err
+	}
+
+	for _, child := range sec.ChildSections() {
+		cn := child.Name()
+		if cn == "packages.remote_repository" {
+			Packages.RemoteRegistry.Enabled = child.Key("ENABLED").MustBool(false)
+		}
 	}
 
 	if err = sec.MapTo(&Packages); err != nil {
