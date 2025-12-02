@@ -17,6 +17,9 @@ var (
 		Enabled           bool
 		ChunkedUploadPath string
 		RegistryHost      string
+		RemoteRegistry    struct {
+			Enabled bool `ini:"ENABLED"`
+		} `ini:"packages.remote_registry"`
 
 		LimitTotalOwnerCount  int64
 		LimitTotalOwnerSize   int64
@@ -47,6 +50,12 @@ var (
 	}{
 		Enabled:              true,
 		LimitTotalOwnerCount: -1,
+
+		RemoteRegistry: struct {
+			Enabled bool `ini:"ENABLED"`
+		}{
+			Enabled: false,
+		},
 	}
 )
 
