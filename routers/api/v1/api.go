@@ -899,7 +899,7 @@ func Routes() *web.Route {
 						bind(ap.Activity{}),
 						activitypub.ReqHTTPSignature(),
 						activitypub.RepositoryInbox)
-					m.Get("/outbox", activitypub.ReqHTTPUserSignature(), activitypub.RepositoryOutbox)
+					m.Get("/outbox", activitypub.ReqHTTPSignature(), activitypub.RepositoryOutbox)
 				}, context.RepositoryIDAssignmentAPI())
 			}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryActivityPub))
 		}
