@@ -26,9 +26,9 @@ func TestConfigureRemoteRegistry(t *testing.T) {
 	t.Run("ConfigureRemoteRegistry", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/remote-registry/configure", user.Name)).AddTokenAuth(tokenWritePackage)
+		req := NewRequest(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry/configure", user.Name)).AddTokenAuth(tokenWritePackage)
 		resp := MakeRequest(t, req, http.StatusOK)
 
-		assert.Equal(t, resp.Code, 201)
+		assert.Equal(t, 204, resp.Code)
 	})
 }

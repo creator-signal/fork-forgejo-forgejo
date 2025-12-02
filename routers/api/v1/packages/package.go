@@ -378,5 +378,5 @@ func ConfigureRemoteRegistry(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	ctx.JSON(http.StatusOK, "{}")
+	ctx.JSON(http.StatusNoContent, "{}")
 }
