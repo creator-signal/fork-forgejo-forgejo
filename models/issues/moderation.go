@@ -41,8 +41,8 @@ func (id IssueData) GetFieldsMap() []moderation.ShadowCopyField {
 }
 
 // Implements GetAbuserID() from ShadowCopyData interface, returning the value of PosterID field.
-func (id *IssueData) GetAbuserID() *int64 {
-	return &id.PosterID
+func (id *IssueData) GetAbuserID() (int64, bool) {
+	return id.PosterID, true
 }
 
 // newIssueData creates a trimmed down issue to be used just to create a JSON structure
@@ -85,8 +85,8 @@ func (cd CommentData) GetFieldsMap() []moderation.ShadowCopyField {
 }
 
 // Implements GetAbuserID() from ShadowCopyData interface, returning the value of PosterID field.
-func (cd *CommentData) GetAbuserID() *int64 {
-	return &cd.PosterID
+func (cd *CommentData) GetAbuserID() (int64, bool) {
+	return cd.PosterID, true
 }
 
 // newCommentData creates a trimmed down comment to be used just to create a JSON structure

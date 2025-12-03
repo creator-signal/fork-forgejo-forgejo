@@ -44,8 +44,8 @@ func (rd RepositoryData) GetFieldsMap() []moderation.ShadowCopyField {
 }
 
 // Implements GetAbuserID() from ShadowCopyData interface, returning the value of OwnerID field.
-func (rd *RepositoryData) GetAbuserID() *int64 {
-	return &rd.OwnerID
+func (rd *RepositoryData) GetAbuserID() (int64, bool) {
+	return rd.OwnerID, true
 }
 
 // newRepositoryData creates a trimmed down repository to be used just to create a JSON structure

@@ -42,11 +42,11 @@ type ShadowCopyData interface {
 	GetFieldsMap() []ShadowCopyField
 
 	// GetAbuserID returns the ID of the user who posted the reported content when this info in available within
-	// the shadow copy (i.e. the PosterID field for comments and issues/PRs or the OwnerID field for repositories);
-	// otherwise should return nil (i.e. for users).
+	// the shadow copy (i.e. the PosterID field for comments and issues/PRs or the OwnerID field for repositories),
+	// together with a boolean value indicating whether the ID is considered valid or not.
 	// This is used to retrieve the abuser/poster in case the reported content was deleted before an admin managed
 	// to review the report, allowing them to easily access the abuser profile (if this was not also deleted).
-	GetAbuserID() *int64
+	GetAbuserID() (int64, bool)
 }
 
 func init() {
