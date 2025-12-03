@@ -49,7 +49,6 @@ RUN chmod 755 /tmp/local/usr/bin/entrypoint \
               /tmp/local/etc/s6/.s6-svscan/* \
               /go/src/forgejo.org/gitea \
               /go/src/forgejo.org/environment-to-ini
-RUN chmod 644 /go/src/forgejo.org/contrib/autocompletion/bash_autocomplete
 
 FROM data.forgejo.org/oci/alpine:3.22
 ARG RELEASE_VERSION
@@ -105,4 +104,4 @@ RUN cd /usr/local/bin ; ln -s gitea forgejo
 COPY --from=build-env /go/src/forgejo.org/gitea /app/gitea/gitea
 RUN ln -s /app/gitea/gitea /app/gitea/forgejo-cli
 COPY --from=build-env /go/src/forgejo.org/environment-to-ini /usr/local/bin/environment-to-ini
-COPY --from=build-env /go/src/forgejo.org/contrib/autocompletion/bash_autocomplete /etc/profile.d/gitea_bash_autocomplete.sh
+RUN /app/gitea/gitea completion bash > /etc/profile.d/gitea_bash_autocomplete.sh
