@@ -70,7 +70,7 @@ func FindFederationHostByFqdnAndPort(ctx context.Context, fqdn string, port uint
 // - (nil, nil): failure, no record found
 // - (nil, error): failure, a database error occured
 func FindFederationHostByKeyID(ctx context.Context, rawKeyID string) (*FederationHost, error) {
-	keyID, err := federation_key_model.NewKeyID(rawKeyID)
+	keyID, err := fk.NewKeyID(rawKeyID)
 	if err != nil {
 		return nil, err
 	}

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	fk "forgejo.org/models/federation_key"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/validation"
 )
@@ -65,4 +66,20 @@ func (host FederationHost) Validate() []string {
 	}
 
 	return result
+}
+
+// ValidateKeyID checks that the provided ActivityPub key ID matches the host.
+func (host FederationHost) ValidateKeyID(keyID fk.KeyID) error {
+	keyURL, err := keyID.IRI().URL()
+	if err != nil {
+		return err
+	}
+
+	hostURL := host.AsURL()
+
+	if keyURL.Scheme != hostURL.Scheme || keyURL.Host != hostURL.Host {
+		return fmt.Errorf("invalid key ID for host, key URL: %v, host URL: %v", keyURL, hostURL)
+	}
+
+	return nil
 }

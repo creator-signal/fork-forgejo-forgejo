@@ -206,6 +206,10 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 			return nil, err
 		}
 
+		if err = federationHost.ValidateKeyID(federationPublicKey.KeyID); err != nil {
+			return nil, err
+		}
+
 		dbPublicKey, err := federation_key.FindOrCreateFederationPublicKey(ctx, federationPublicKey)
 		if err != nil {
 			return nil, err
