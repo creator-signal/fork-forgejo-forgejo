@@ -7,6 +7,7 @@
 			<div class="flex-item-main tw-gap-2">
 				<div>
 					{{if gt .ActUser.ID 0}}
+					    <img class="ui avatar" src="{{ctx.AvatarUtils.AvatarByAction .}}" alt="" width="16" height="16" loading="lazy">
 						<a href="{{AppSubUrl}}/{{(.GetActUserName ctx) | PathEscape}}" title="{{.GetActDisplayNameTitle ctx}}">{{.GetActDisplayName ctx}}</a>
 					{{else}}
 						{{.ShortActUserName ctx}}
