@@ -2,7 +2,7 @@
 	{{range .Feeds}}
 		<div class="flex-item">
 			<div class="flex-item-leading">
-				{{ctx.AvatarUtils.AvatarByAction .}}
+			    {{svg (printf "octicon-%s" (ActionIcon .GetOpType)) 32 "text grey tw-mr-1"}}
 			</div>
 			<div class="flex-item-main tw-gap-2">
 				<div>
@@ -124,9 +124,6 @@
 					<div class="flex-item-body text black">{{ctx.Locale.Tr "action.review_dismissed_reason"}}</div>
 					<div class="flex-item-body text black">{{index .GetIssueInfos 2 | RenderEmoji $.Context}}</div>
 				{{end}}
-			</div>
-			<div class="flex-item-trailing">
-				{{svg (printf "octicon-%s" (ActionIcon .GetOpType)) 32 "text grey tw-mr-1"}}
 			</div>
 		</div>
 	{{end}}
