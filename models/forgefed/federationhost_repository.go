@@ -9,7 +9,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/log"
-	federation_key_model "forgejo.org/models/federation_key"
+	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/validation"
 )
 
@@ -69,13 +69,8 @@ func FindFederationHostByFqdnAndPort(ctx context.Context, fqdn string, port uint
 // - (FederationHost, nil): success, a record was found
 // - (nil, nil): failure, no record found
 // - (nil, error): failure, a database error occured
-func FindFederationHostByKeyID(ctx context.Context, rawKeyID string) (*FederationHost, error) {
-	keyID, err := fk.NewKeyID(rawKeyID)
-	if err != nil {
-		return nil, err
-	}
-
-	publicKey, err := federation_key_model.FindFederationPublicKey(ctx, keyID.String())
+func FindFederationHostByKeyID(ctx context.Context, keyID federation_key.KeyID) (*FederationHost, error) {
+	publicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
 	if err != nil {
 		return nil, err
 	} else if publicKey == nil {

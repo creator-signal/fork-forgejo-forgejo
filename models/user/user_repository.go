@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"forgejo.org/models/db"
-	federation_key_model "forgejo.org/models/federation_key"
+	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/validation"
@@ -130,19 +130,14 @@ func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *Federa
 // - (User, FederatedUser, nil): success, a record was found
 // - (nil, nil, nil): failure, no record found
 // - (nil, nil, error): failure, a database error occured
-func FindFederatedUserByKeyID(ctx context.Context, rawKeyID string) (*User, *FederatedUser, error) {
-	log.Trace("FindFederatedUserByKeyID: %v", rawKeyID)
-
-	keyID, err := federation_key_model.NewKeyID(rawKeyID)
-	if err != nil {
-		return nil, nil, err
-	}
+func FindFederatedUserByKeyID(ctx context.Context, keyID federation_key.KeyID) (*User, *FederatedUser, error) {
+	log.Trace("FindFederatedUserByKeyID: %v", keyID)
 
 	federatedUser := new(FederatedUser)
 	user := new(User)
 
 	eng := db.GetEngine(ctx)
-	publicKey, err := federation_key_model.FindFederationPublicKey(ctx, keyID.String())
+	publicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
 	if err != nil {
 		return nil, nil, err
 	} else if publicKey == nil {
@@ -161,6 +156,10 @@ func FindFederatedUserByKeyID(ctx context.Context, rawKeyID string) (*User, *Fed
 		return nil, nil, err
 	} else if !has {
 		return nil, nil, fmt.Errorf("FederatedUser table contains entry for user ID %v, but no user with this ID exists", federatedUser.UserID)
+	} else if res, err := validation.IsValid(*user); !res {
+		return nil, nil, err
+	} else if res, err = validation.IsValid(*federatedUser); !res {
+		return nil, nil, err
 	}
 
 	if res, err := validation.IsValid(*user); !res {

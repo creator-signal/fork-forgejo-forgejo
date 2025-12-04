@@ -23,8 +23,8 @@ import (
 )
 
 // Factory function for ActorID. Created struct is asserted to be valid
-func NewActorIDFromKeyID(ctx context.Context, uri string) (fm.ActorID, error) {
-	parsedURI, err := url.Parse(uri)
+func NewActorIDFromKeyID(ctx context.Context, keyID federation_key.KeyID) (fm.ActorID, error) {
+	parsedURI, err := keyID.IRI().URL()
 	if err != nil {
 		return fm.ActorID{}, err
 	}
@@ -57,18 +57,19 @@ func NewActorIDFromKeyID(ctx context.Context, uri string) (fm.ActorID, error) {
 	return result, err
 }
 
-func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any, err error) {
+func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyID) (pubKey any, err error) {
 	log.Trace("KeyID: %v", keyID)
+
 	var federatedUser *user.FederatedUser
 	var keyURL *url.URL
 
-	keyURL, err = url.Parse(keyID)
+	keyURL, err = keyID.IRI().URL()
 	if err != nil {
 		return nil, err
 	}
 
 	// Try if the signing actor is an already known federated user
-	_, federatedUser, err = user.FindFederatedUserByKeyID(ctx, keyURL.String())
+	_, federatedUser, err = user.FindFederatedUserByKeyID(ctx, keyID)
 	if err != nil {
 		return nil, err
 	}
@@ -148,9 +149,10 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID string) (pubKey any
 	return nil, nil
 }
 
-func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey any, err error) {
+func FindOrCreateFederationHostKey(ctx context.Context, keyID federation_key.KeyID) (pubKey any, err error) {
 	log.Trace("KeyID: %v", keyID)
-	keyURL, err := url.Parse(keyID)
+
+	keyURL, err := keyID.IRI().URL()
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +162,7 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 	}
 
 	// Is there an already known federation host?
-	federationHost, err := forgefed.FindFederationHostByKeyID(ctx, keyURL.String())
+	federationHost, err := forgefed.FindFederationHostByKeyID(ctx, keyID)
 	if err != nil {
 		return nil, err
 	}

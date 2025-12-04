@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	fk "forgejo.org/models/federation_key"
+	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/validation"
 
 	"github.com/stretchr/testify/assert"
@@ -110,7 +110,7 @@ func Test_FederationHostKeyIDValidation(t *testing.T) {
 	require.NoError(t, err)
 
 	hostURL := sut.AsURL()
-	keyID, err := fk.NewKeyID(fmt.Sprintf("%v#main-key", hostURL.String()))
+	keyID, err := federation_key.NewKeyID(fmt.Sprintf("%v#main-key", hostURL.String()))
 	require.NoError(t, err)
 
 	keyURL, err := keyID.IRI().URL()
@@ -139,12 +139,12 @@ func Test_FederationHostInvalidKeyIDValidation(t *testing.T) {
 
 	hostURL := sut.AsURL()
 
-	badSchemeKeyID, err := fk.NewKeyID(fmt.Sprintf("http://%v#main-key", hostURL.Host))
+	badSchemeKeyID, err := federation_key.NewKeyID(fmt.Sprintf("http://%v#main-key", hostURL.Host))
 	require.NoError(t, err)
 
 	require.Error(t, sut.ValidateKeyID(badSchemeKeyID))
 
-	badHostKeyID, err := fk.NewKeyID(fmt.Sprintf("%v://bad.host#main-key", hostURL.Scheme))
+	badHostKeyID, err := federation_key.NewKeyID(fmt.Sprintf("%v://bad.host#main-key", hostURL.Scheme))
 	require.NoError(t, err)
 
 	require.Error(t, sut.ValidateKeyID(badHostKeyID))

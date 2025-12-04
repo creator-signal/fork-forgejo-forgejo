@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"testing"
 
+	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/forgefed"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
@@ -83,7 +84,9 @@ func TestActorNewFromKeyId(t *testing.T) {
 
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		ctx, _ := contexttest.MockAPIContext(t, "/api/v1/activitypub/actor")
-		sut, err := federation.NewActorIDFromKeyID(ctx.Base, fmt.Sprintf("%sapi/v1/activitypub/actor#main-key", u))
+		keyID, err := federation_key.NewKeyID(fmt.Sprintf("%sapi/v1/activitypub/actor#main-key", u))
+		require.NoError(t, err)
+		sut, err := federation.NewActorIDFromKeyID(ctx.Base, keyID)
 		require.NoError(t, err)
 
 		port, err := strconv.ParseUint(u.Port(), 10, 16)

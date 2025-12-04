@@ -51,10 +51,10 @@ func GetFederationPublicKey(ctx context.Context, ID int64) (*FederationPublicKey
 // - (FederationPublicKey, nil): success, a record was found
 // - (nil, nil): failure, no record found
 // - (nil, error): failure, a database error occured
-func FindFederationPublicKey(ctx context.Context, keyID string) (*FederationPublicKey, error) {
+func FindFederationPublicKey(ctx context.Context, keyID KeyID) (*FederationPublicKey, error) {
 	key := new(FederationPublicKey)
 
-	has, err := db.GetEngine(ctx).Where("key_id=?", keyID).Get(key)
+	has, err := db.GetEngine(ctx).Where("key_id=?", keyID.String()).Get(key)
 
 	if err != nil {
 		return nil, err
@@ -92,7 +92,6 @@ func FindOrCreateFederationPublicKey(ctx context.Context, key *FederationPublicK
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

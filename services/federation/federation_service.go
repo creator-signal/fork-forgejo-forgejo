@@ -231,6 +231,10 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 		},
 	}
 
+	if err = federatedUser.ValidateKeyID(ctx, federatedPublicKey.KeyID); err != nil {
+		return nil, nil, err
+	}
+
 	log.Info("Fetched person's %q federatedUser from distant server: %q", person, federatedUser)
 	return &newUser, &federatedUser, nil
 }
