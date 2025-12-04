@@ -5,6 +5,7 @@
 package migrations
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	repo_service "forgejo.org/services/repository"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

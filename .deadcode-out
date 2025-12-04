@@ -50,19 +50,8 @@ forgejo.org/models/organization
 forgejo.org/models/perm/access
 	GetRepoWriters
 
-code.gitea.io/gitea/models/project
-	UpdateColumnSorting
-	ChangeProjectStatus
-
-code.gitea.io/gitea/models/repo
-	DeleteAttachmentsByIssue
-	CleanRepoLicenses
-	FindReposMapByIDs
-	IsErrTopicNotExist
-	ErrTopicNotExist.Error
-	ErrTopicNotExist.Unwrap
-	GetTopicByName
 forgejo.org/models/repo
+	CleanRepoLicenses
 	WatchRepoMode
 
 forgejo.org/models/user

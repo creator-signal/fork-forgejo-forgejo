@@ -1666,7 +1666,7 @@ details.repo-search-result summary::marker {
 .repository .ui.attached.isSigned.isWarning.message {
   border-top: 1px solid var(--color-error-border);
 }
-grid
+
 .repository .ui.attached.isSigned.isWarning.message {
   box-shadow: none;
   background-color: var(--color-error-bg);
