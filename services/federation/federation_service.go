@@ -62,7 +62,7 @@ func FindOrCreateFederatedUser(ctx context.Context, actorURI string) (*user.User
 		log.Trace("Local ActivityPub user found (actorURI: %#v, user: %v)", actorURI, user.Name)
 	} else {
 		log.Trace("Attempting to create new user and federatedUser for actorURI: %#v", actorURI)
-		user, federatedUser, err = createUserFromAP(ctx, personID, federationHost.ID)
+		user, federatedUser, err = createUserFromAP(ctx, personID, federationHost)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -141,7 +141,7 @@ func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forge
 	return &result, nil
 }
 
-func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID int64) (*user.User, *user.FederatedUser, error) {
+func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHost *forgefed.FederationHost) (*user.User, *user.FederatedUser, error) {
 	actionsUser := user.NewAPServerActor()
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
@@ -175,9 +175,10 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 		return nil, nil, err
 	}
 
+	personIdFromActor, err := fm.NewPersonID(person.ID.GetLink().String(), string(federationHost.NodeInfo.SoftwareName))
 	email := fmt.Sprintf("f%v@%v", uuid.New().String(), localFqdn.Hostname())
-	loginName := personID.AsLoginName()
-	name := fmt.Sprintf("%v%v", person.PreferredUsername.String(), personID.HostSuffix())
+	loginName := personIdFromActor.AsLoginName()
+	name := fmt.Sprintf("%v%v", person.PreferredUsername.String(), personIdFromActor.HostSuffix())
 	fullName := person.Name.String()
 
 	if len(person.Name) == 0 {
@@ -213,10 +214,10 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 	}
 
 	federatedUser := user.FederatedUser{
-		ExternalID:            personID.ID,
-		FederationHostID:      federationHostID,
+		ExternalID:            personIdFromActor.ID,
+		FederationHostID:      federationHost.ID,
 		InboxPath:             inbox.Path,
-		NormalizedOriginalURL: personID.AsURI(),
+		NormalizedOriginalURL: personIdFromActor.AsURI(),
 		KeyID: sql.NullString{
 			String: person.PublicKey.ID.String(),
 			Valid:  true,
@@ -231,8 +232,8 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 	return &newUser, &federatedUser, nil
 }
 
-func createUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID int64) (*user.User, *user.FederatedUser, error) {
-	newUser, federatedUser, err := fetchUserFromAP(ctx, personID, federationHostID)
+func createUserFromAP(ctx context.Context, personID fm.PersonID, federationHost *forgefed.FederationHost) (*user.User, *user.FederatedUser, error) {
+	newUser, federatedUser, err := fetchUserFromAP(ctx, personID, federationHost)
 	if err != nil {
 		return nil, nil, err
 	}

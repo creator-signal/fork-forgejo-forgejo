@@ -40,6 +40,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 
 		distantURL := federatedSrv.URL
 		distantUser15URL := fmt.Sprintf("%s/api/v1/activitypub/user-id/15", distantURL)
+		distantUser15AliasURL := fmt.Sprintf("%s/api/v1/activitypub/user-id/alias15", distantURL)
 
 		localUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		localUser2URL := localUrl.JoinPath("/api/v1/activitypub/user-id/2").String()
@@ -52,7 +53,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 			`{"type":"Follow",`+
 				`"actor":"%s",`+
 				`"object":"%s"}`,
-			distantUser15URL,
+			distantUser15AliasURL,
 			localUser2URL,
 		))
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)

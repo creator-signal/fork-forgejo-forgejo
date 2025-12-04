@@ -122,6 +122,10 @@ func (mock *FederationServerMock) DistantServer(t *testing.T) *httptest.Server {
 		})
 
 	for _, person := range mock.Persons {
+		federatedRoutes.HandleFunc(fmt.Sprintf("/api/v1/activitypub/user-id/alias%v", person.ID),
+			func(res http.ResponseWriter, req *http.Request) {
+				fmt.Fprint(res, person.marshal(req.Host))
+			})
 		federatedRoutes.HandleFunc(fmt.Sprintf("/api/v1/activitypub/user-id/%v", person.ID),
 			func(res http.ResponseWriter, req *http.Request) {
 				// curl -H "Accept: application/json" https://federated-repo.prod.meissa.de/api/v1/activitypub/user-id/2
