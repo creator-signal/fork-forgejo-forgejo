@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/log"
 
 	"github.com/go-ldap/ldap/v3"
 )
@@ -117,12 +117,12 @@ func dial(source *Source) (*ldap.Conn, error) {
 	}
 
 	if source.SecurityProtocol == SecurityProtocolLDAPS {
-		return ldap.DialTLS("tcp", net.JoinHostPort(source.Host, strconv.Itoa(source.Port)), tlsConfig)
+		return ldap.DialURL("ldaps://"+net.JoinHostPort(source.Host, strconv.Itoa(source.Port)), ldap.DialWithTLSConfig(tlsConfig))
 	}
 
-	conn, err := ldap.Dial("tcp", net.JoinHostPort(source.Host, strconv.Itoa(source.Port)))
+	conn, err := ldap.DialURL("ldap://" + net.JoinHostPort(source.Host, strconv.Itoa(source.Port)))
 	if err != nil {
-		return nil, fmt.Errorf("error during Dial: %w", err)
+		return nil, fmt.Errorf("error during DialURL: %w", err)
 	}
 
 	if source.SecurityProtocol == SecurityProtocolStartTLS {
@@ -386,6 +386,7 @@ func (source *Source) SearchEntry(name, passwd string, directBind bool) *SearchR
 		usersLdapGroups = source.listLdapGroupMemberships(l, userAttributeListedInGroup, true)
 
 		if source.GroupFilter != "" && len(usersLdapGroups) == 0 {
+			log.Info("Rejecting LDAP login: group filter set but user is not in any group")
 			return nil
 		}
 	}

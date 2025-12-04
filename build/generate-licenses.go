@@ -20,9 +20,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.gitea.io/gitea/build/license"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/build/license"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/util"
 )
 
 func main() {

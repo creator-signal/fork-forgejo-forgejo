@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/modules/indexer/issues/internal"
-	"code.gitea.io/gitea/modules/indexer/issues/internal/tests"
+	"forgejo.org/modules/indexer/issues/internal"
+	"forgejo.org/modules/indexer/issues/internal/tests"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/stretchr/testify/assert"
@@ -34,20 +34,10 @@ func TestMeilisearchIndexer(t *testing.T) {
 		key = os.Getenv("TEST_MEILISEARCH_KEY")
 	}
 
-	ok := false
-	for i := 0; i < 60; i++ {
+	require.Eventually(t, func() bool {
 		resp, err := http.Get(url)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			ok = true
-			break
-		}
-		t.Logf("Waiting for meilisearch to be up: %v", err)
-		time.Sleep(time.Second)
-	}
-	if !ok {
-		t.Fatalf("Failed to wait for meilisearch to be up")
-		return
-	}
+		return err == nil && resp.StatusCode == http.StatusOK
+	}, time.Minute, time.Microsecond*100, "Failed to wait for meilisearch to be up")
 
 	indexer := NewIndexer(url, key, fmt.Sprintf("test_meilisearch_indexer_%d", time.Now().Unix()))
 	defer indexer.Close()
@@ -56,42 +46,46 @@ func TestMeilisearchIndexer(t *testing.T) {
 }
 
 func TestConvertHits(t *testing.T) {
-	_, err := convertHits(&meilisearch.SearchResponse{
-		Hits: []any{"aa", "bb", "cc", "dd"},
-	})
-	require.ErrorIs(t, err, ErrMalformedResponse)
+	for _, invalidID := range []string{"\"aa\"", "{\"aa\":\"123\"}", "[\"aa\"]"} {
+		_, err := convertHits(&meilisearch.SearchResponse{
+			Hits: meilisearch.Hits{
+				meilisearch.Hit{"id": []byte(invalidID)},
+			},
+		})
+		require.ErrorIs(t, err, ErrMalformedResponse)
+	}
 
 	validResponse := &meilisearch.SearchResponse{
-		Hits: []any{
-			map[string]any{
-				"id":       float64(11),
-				"title":    "a title",
-				"content":  "issue body with no match",
-				"comments": []any{"hey what's up?", "I'm currently bowling", "nice"},
+		Hits: meilisearch.Hits{
+			meilisearch.Hit{
+				"id":       []byte("11"),
+				"title":    []byte("\"a title\""),
+				"content":  []byte("\"issue body with no match\""),
+				"comments": []byte("[\"hey what's up?\", \"I'm currently bowling\", \"nice\"]"),
 			},
-			map[string]any{
-				"id":       float64(22),
-				"title":    "Bowling as title",
-				"content":  "",
-				"comments": []any{},
+			meilisearch.Hit{
+				"id":       []byte("22"),
+				"title":    []byte("\"Bowling as title\""),
+				"content":  []byte("\"\""),
+				"comments": []byte("[]"),
 			},
-			map[string]any{
-				"id":       float64(33),
-				"title":    "Bowl-ing as fuzzy match",
-				"content":  "",
-				"comments": []any{},
+			meilisearch.Hit{
+				"id":       []byte("33"),
+				"title":    []byte("\"Bowl-ing as fuzzy match\""),
+				"content":  []byte("\"\""),
+				"comments": []byte("[]"),
 			},
 		},
 	}
 	hits, err := convertHits(validResponse)
 	require.NoError(t, err)
-	assert.EqualValues(t, []internal.Match{{ID: 11}, {ID: 22}, {ID: 33}}, hits)
+	assert.Equal(t, []internal.Match{{ID: 11}, {ID: 22}, {ID: 33}}, hits)
 }
 
 func TestDoubleQuoteKeyword(t *testing.T) {
-	assert.EqualValues(t, "", doubleQuoteKeyword(""))
-	assert.EqualValues(t, `"a" "b" "c"`, doubleQuoteKeyword("a b c"))
-	assert.EqualValues(t, `"a" "d" "g"`, doubleQuoteKeyword("a  d g"))
-	assert.EqualValues(t, `"a" "d" "g"`, doubleQuoteKeyword("a  d g"))
-	assert.EqualValues(t, `"a" "d" "g"`, doubleQuoteKeyword(`a  "" "d" """g`))
+	assert.Empty(t, doubleQuoteKeyword(""))
+	assert.Equal(t, `"a" "b" "c"`, doubleQuoteKeyword("a b c"))
+	assert.Equal(t, `"a" "d" "g"`, doubleQuoteKeyword("a  d g"))
+	assert.Equal(t, `"a" "d" "g"`, doubleQuoteKeyword("a  d g"))
+	assert.Equal(t, `"a" "d" "g"`, doubleQuoteKeyword(`a  "" "d" """g`))
 }

@@ -5,10 +5,11 @@ package cron
 
 import (
 	"context"
+	"time"
 
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	actions_service "code.gitea.io/gitea/services/actions"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	actions_service "forgejo.org/services/actions"
 )
 
 func initActionsTasks() {
@@ -18,8 +19,11 @@ func initActionsTasks() {
 	registerStopZombieTasks()
 	registerStopEndlessTasks()
 	registerCancelAbandonedJobs()
+	registerTransferLingeringLogs()
 	registerScheduleTasks()
 	registerActionsCleanup()
+	registerOfflineRunnersCleanup()
+	registerCleanupActionUser()
 }
 
 func registerStopZombieTasks() {
@@ -52,6 +56,16 @@ func registerCancelAbandonedJobs() {
 	})
 }
 
+func registerTransferLingeringLogs() {
+	RegisterTaskFatal("transfer_lingering_logs", &BaseConfig{
+		Enabled:    true,
+		RunAtStart: true,
+		Schedule:   "@midnight",
+	}, func(ctx context.Context, _ *user_model.User, cfg Config) error {
+		return actions_service.TransferLingeringLogs(ctx)
+	})
+}
+
 // registerScheduleTasks registers a scheduled task that runs every minute to start any due schedule tasks.
 func registerScheduleTasks() {
 	// Register the task with a unique name, enabled status, and schedule for every minute.
@@ -72,5 +86,34 @@ func registerActionsCleanup() {
 		Schedule:   "@midnight",
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
 		return actions_service.Cleanup(ctx)
+	})
+}
+
+func registerOfflineRunnersCleanup() {
+	RegisterTaskFatal("cleanup_offline_runners", &CleanupOfflineRunnersConfig{
+		BaseConfig: BaseConfig{
+			Enabled:    false,
+			RunAtStart: false,
+			Schedule:   "@midnight",
+		},
+		GlobalScopeOnly: true,
+		OlderThan:       time.Hour * 24,
+	}, func(ctx context.Context, _ *user_model.User, cfg Config) error {
+		c := cfg.(*CleanupOfflineRunnersConfig)
+		return actions_service.CleanupOfflineRunners(
+			ctx,
+			c.OlderThan,
+			c.GlobalScopeOnly,
+		)
+	})
+}
+
+func registerCleanupActionUser() {
+	RegisterTaskFatal("actions_action_user", &BaseConfig{
+		Enabled:    true,
+		RunAtStart: true,
+		Schedule:   "@weekly",
+	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
+		return actions_service.CleanupActionUser(ctx)
 	})
 }

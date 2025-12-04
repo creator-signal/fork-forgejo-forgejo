@@ -9,10 +9,10 @@ import (
 	"net/url"
 	"strings"
 
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/services/context"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/services/context"
 )
 
 // https://datatracker.ietf.org/doc/html/draft-ietf-appsawg-webfinger-14#section-4.4
@@ -58,7 +58,33 @@ func WebfingerQuery(ctx *context.Context) {
 			return
 		}
 
+		// Instance actor
+		if parts[0] == "ghost" {
+			aliases := []string{
+				appURL.String() + "api/v1/activitypub/actor",
+			}
+
+			links := []*webfingerLink{
+				{
+					Rel:  "self",
+					Type: "application/activity+json",
+					Href: appURL.String() + "api/v1/activitypub/actor",
+				},
+			}
+
+			ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
+			ctx.JSON(http.StatusOK, &webfingerJRD{
+				Subject: fmt.Sprintf("acct:%s@%s", "ghost", appURL.Host),
+				Aliases: aliases,
+				Links:   links,
+			})
+			ctx.Resp.Header().Set("Content-Type", "application/jrd+json")
+
+			return
+		}
+
 		u, err = user_model.GetUserByName(ctx, parts[0])
+
 	case "mailto":
 		u, err = user_model.GetUserByEmail(ctx, resource.Opaque)
 		if u != nil && u.KeepEmailPrivate {
@@ -153,7 +179,7 @@ func WebfingerQuery(ctx *context.Context) {
 		},
 		{
 			Rel:  "http://openid.net/specs/connect/1.0/issuer",
-			Href: appURL.String(),
+			Href: strings.TrimSuffix(appURL.String(), "/"),
 		},
 	}
 

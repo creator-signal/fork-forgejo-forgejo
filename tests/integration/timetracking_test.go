@@ -7,10 +7,9 @@ import (
 	"net/http"
 	"path"
 	"testing"
-	"time"
 
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/modules/test"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -44,9 +43,7 @@ func testViewTimetrackingControls(t *testing.T, session *TestSession, user, repo
 	htmlDoc.AssertElement(t, ".timetrack .issue-start-time", canTrackTime)
 	htmlDoc.AssertElement(t, ".timetrack .issue-add-time", canTrackTime)
 
-	req = NewRequestWithValues(t, "POST", path.Join(user, repo, "issues", issue, "times", "stopwatch", "toggle"), map[string]string{
-		"_csrf": htmlDoc.GetCSRF(),
-	})
+	req = NewRequest(t, "POST", path.Join(user, repo, "issues", issue, "times", "stopwatch", "toggle"))
 	if canTrackTime {
 		resp = session.MakeRequest(t, req, http.StatusSeeOther)
 
@@ -60,12 +57,7 @@ func testViewTimetrackingControls(t *testing.T, session *TestSession, user, repo
 		htmlDoc.AssertElement(t, ".timetrack .issue-stop-time", true)
 		htmlDoc.AssertElement(t, ".timetrack .issue-cancel-time", true)
 
-		// Sleep for 1 second to not get wrong order for stopping timer
-		time.Sleep(time.Second)
-
-		req = NewRequestWithValues(t, "POST", path.Join(user, repo, "issues", issue, "times", "stopwatch", "toggle"), map[string]string{
-			"_csrf": htmlDoc.GetCSRF(),
-		})
+		req = NewRequest(t, "POST", path.Join(user, repo, "issues", issue, "times", "stopwatch", "toggle"))
 		resp = session.MakeRequest(t, req, http.StatusSeeOther)
 
 		req = NewRequest(t, "GET", test.RedirectURL(resp))

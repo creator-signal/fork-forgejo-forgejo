@@ -11,17 +11,24 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/models"
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/modules/timeutil"
+	"forgejo.org/models"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	"forgejo.org/models/git"
+	"forgejo.org/models/issues"
+	"forgejo.org/models/moderation"
+	"forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/services/auth/source/oauth2"
+	redirect_service "forgejo.org/services/redirect"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,48 +39,105 @@ func TestMain(m *testing.M) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	test := func(userID int64) {
-		require.NoError(t, unittest.PrepareTestDatabase())
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
+	// Note: an earlier revision of TestDeleteUser also tested for deleting user 2, but then failed to remove them from
+	// all organizations because ErrLastOrgOwner and considered a successful test -- since that didn't actually test
+	// DeleteUser in any way, that case has been removed from TestDeleteUser.
 
-		ownedRepos := make([]*repo_model.Repository, 0, 10)
-		require.NoError(t, db.GetEngine(db.DefaultContext).Find(&ownedRepos, &repo_model.Repository{OwnerID: userID}))
-		if len(ownedRepos) > 0 {
-			err := DeleteUser(db.DefaultContext, user, false)
-			require.Error(t, err)
-			assert.True(t, models.IsErrUserOwnRepos(err))
-			return
-		}
-
-		orgUsers := make([]*organization.OrgUser, 0, 10)
-		require.NoError(t, db.GetEngine(db.DefaultContext).Find(&orgUsers, &organization.OrgUser{UID: userID}))
-		for _, orgUser := range orgUsers {
-			if err := models.RemoveOrgUser(db.DefaultContext, orgUser.OrgID, orgUser.UID); err != nil {
-				assert.True(t, organization.IsErrLastOrgOwner(err))
-				return
-			}
-		}
-		require.NoError(t, DeleteUser(db.DefaultContext, user, false))
-		unittest.AssertNotExistsBean(t, &user_model.User{ID: userID})
-		unittest.CheckConsistencyFor(t, &user_model.User{}, &repo_model.Repository{})
+	testCases := []struct {
+		userID          int64
+		errUserOwnRepos bool
+		errContains     string
+	}{
+		{
+			userID:      3,
+			errContains: "is an organization not a user",
+		},
+		{
+			userID: 4,
+		},
+		{
+			userID: 8,
+		},
+		{
+			userID:          11,
+			errUserOwnRepos: true,
+		},
 	}
-	test(2)
-	test(4)
-	test(8)
-	test(11)
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("delete %d", tc.userID), func(t *testing.T) {
+			defer unittest.OverrideFixtures("services/user/TestDeleteUser")()
+			require.NoError(t, unittest.PrepareTestDatabase())
+			user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: tc.userID})
 
-	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
-	require.Error(t, DeleteUser(db.DefaultContext, org, false))
+			// Remove user from all organizations first
+			orgUsers := make([]*organization.OrgUser, 0, 10)
+			require.NoError(t, db.GetEngine(db.DefaultContext).Find(&orgUsers, &organization.OrgUser{UID: tc.userID}))
+			for _, orgUser := range orgUsers {
+				err := models.RemoveOrgUser(db.DefaultContext, orgUser.OrgID, orgUser.UID)
+				require.NoError(t, err)
+			}
+
+			err := DeleteUser(db.DefaultContext, user, false)
+			if tc.errUserOwnRepos {
+				require.Error(t, err)
+				assert.True(t, models.IsErrUserOwnRepos(err), "IsErrUserOwnRepos: %v", err)
+			} else if tc.errContains != "" {
+				assert.ErrorContains(t, err, tc.errContains)
+			} else {
+				require.NoError(t, err)
+				unittest.AssertNotExistsBean(t, &user_model.User{ID: tc.userID})
+				unittest.CheckConsistencyFor(t, &user_model.User{}, &repo_model.Repository{})
+			}
+		})
+	}
+}
+
+func TestDeleteUserRetainsTrackedTime(t *testing.T) {
+	defer unittest.OverrideFixtures("services/user/TestDeleteUser")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 8})
+
+	err := DeleteUser(db.DefaultContext, user, false)
+	require.NoError(t, err)
+
+	time := make([]*issues.TrackedTime, 0, 10)
+	err = db.GetEngine(db.DefaultContext).Find(&time, &issues.TrackedTime{IssueID: 22})
+	require.NoError(t, err)
+	require.Len(t, time, 1)
+	tt := time[0]
+	assert.EqualValues(t, 0, tt.UserID)
+	assert.EqualValues(t, 22, tt.IssueID)
+	assert.EqualValues(t, 401, tt.Time)
+
+	// Make sure other tracked time wasn't affected
+	time = make([]*issues.TrackedTime, 0, 10)
+	err = db.GetEngine(db.DefaultContext).Find(&time, &issues.TrackedTime{UserID: 2})
+	require.NoError(t, err)
+	assert.Len(t, time, 5)
+}
+
+func TestDeleteUserCleansUpBranchProtectionRules(t *testing.T) {
+	defer unittest.OverrideFixtures("services/user/TestDeleteUserCleansUpBranchProtectionRules")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 8})
+
+	err := DeleteUser(db.DefaultContext, user, false)
+	require.NoError(t, err)
+
+	protectedBranches := make([]*git.ProtectedBranch, 0, 10)
+	err = db.GetEngine(db.DefaultContext).Find(&protectedBranches, &git.ProtectedBranch{})
+	require.NoError(t, err)
+	require.Len(t, protectedBranches, 3)
+
+	for _, pb := range protectedBranches {
+		assert.Equal(t, []int64{1}, pb.ApprovalsWhitelistUserIDs)
+		assert.Equal(t, []int64{1}, pb.WhitelistUserIDs)
+		assert.Equal(t, []int64{1}, pb.MergeWhitelistUserIDs)
+	}
 }
 
 func TestPurgeUser(t *testing.T) {
-	defer unittest.OverrideFixtures(
-		unittest.FixturesOptions{
-			Dir:  filepath.Join(setting.AppWorkPath, "models/fixtures/"),
-			Base: setting.AppWorkPath,
-			Dirs: []string{"services/user/TestPurgeUser/"},
-		},
-	)()
+	defer unittest.OverrideFixtures("services/user/TestPurgeUser")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 	defer test.MockVariableValue(&setting.SSH.RootPath, t.TempDir())()
 	defer test.MockVariableValue(&setting.SSH.CreateAuthorizedKeysFile, true)()
@@ -143,16 +207,9 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestRenameUser(t *testing.T) {
+	defer unittest.OverrideFixtures("models/user/fixtures/")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 21})
-
-	t.Run("Non-Local", func(t *testing.T) {
-		u := &user_model.User{
-			Type:      user_model.UserTypeIndividual,
-			LoginType: auth.OAuth2,
-		}
-		require.ErrorIs(t, RenameUser(db.DefaultContext, u, "user_rename"), user_model.ErrUserIsNotLocal{})
-	})
 
 	t.Run("Same username", func(t *testing.T) {
 		require.NoError(t, RenameUser(db.DefaultContext, user, user.Name))
@@ -193,11 +250,58 @@ func TestRenameUser(t *testing.T) {
 		require.NoError(t, RenameUser(db.DefaultContext, user, newUsername))
 		unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: user.ID, Name: newUsername, LowerName: strings.ToLower(newUsername)})
 
-		redirectUID, err := user_model.LookupUserRedirect(db.DefaultContext, oldUsername)
+		redirectUID, err := redirect_service.LookupUserRedirect(db.DefaultContext, user, oldUsername)
 		require.NoError(t, err)
-		assert.EqualValues(t, user.ID, redirectUID)
+		assert.Equal(t, user.ID, redirectUID)
 
 		unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, OwnerName: user.Name})
+	})
+
+	t.Run("Keep N redirects", func(t *testing.T) {
+		defer test.MockProtect(&setting.Service.MaxUserRedirects)()
+		// Start clean
+		unittest.AssertSuccessfulDelete(t, &user_model.Redirect{RedirectUserID: user.ID})
+
+		setting.Service.MaxUserRedirects = 1
+
+		require.NoError(t, RenameUser(db.DefaultContext, user, "redirect-1"))
+		unittest.AssertExistsIf(t, true, &user_model.Redirect{LowerName: "user_rename"})
+
+		// The granularity of created_unix is a second.
+		test.SleepTillNextSecond()
+		require.NoError(t, RenameUser(db.DefaultContext, user, "redirect-2"))
+		unittest.AssertExistsIf(t, false, &user_model.Redirect{LowerName: "user_rename"})
+		unittest.AssertExistsIf(t, true, &user_model.Redirect{LowerName: "redirect-1"})
+
+		setting.Service.MaxUserRedirects = 2
+		test.SleepTillNextSecond()
+		require.NoError(t, RenameUser(db.DefaultContext, user, "redirect-3"))
+		unittest.AssertExistsIf(t, true, &user_model.Redirect{LowerName: "redirect-1"})
+		unittest.AssertExistsIf(t, true, &user_model.Redirect{LowerName: "redirect-2"})
+	})
+
+	t.Run("Non-local", func(t *testing.T) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1041, LoginSource: 1001})
+		authSource := unittest.AssertExistsAndLoadBean(t, &auth.Source{ID: user.LoginSource})
+		assert.False(t, user.IsLocal())
+		assert.True(t, user.IsOAuth2())
+
+		t.Run("Allowed", func(t *testing.T) {
+			require.NoError(t, RenameUser(t.Context(), user, "I-am-a-local-username"))
+		})
+
+		t.Run("Not allowed", func(t *testing.T) {
+			authSourceCfg := authSource.Cfg.(*oauth2.Source)
+			authSourceCfg.AllowUsernameChange = false
+			authSource.Cfg = authSourceCfg
+			_, err := db.GetEngine(t.Context()).Cols("cfg").ID(authSource.ID).Update(authSource)
+			require.NoError(t, err)
+
+			require.ErrorIs(t, RenameUser(t.Context(), user, "Another-username-change"), user_model.ErrUserIsNotLocal{UID: user.ID, Name: user.Name})
+			t.Run("Admin", func(t *testing.T) {
+				require.NoError(t, AdminRenameUser(t.Context(), user, "Another-username-change"))
+			})
+		})
 	})
 }
 
@@ -259,4 +363,57 @@ func TestDeleteInactiveUsers(t *testing.T) {
 	// User not older than a minute shouldn't be deleted and their emaill address should still exist.
 	unittest.AssertExistsIf(t, true, newUser)
 	unittest.AssertExistsIf(t, true, newEmail)
+}
+
+func TestCreateShadowCopyOnUserUpdate(t *testing.T) {
+	defer unittest.OverrideFixtures("models/fixtures/ModerationFeatures")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	userAlexSmithID := int64(1002)
+	abuseReportID := int64(2)     // submitted for @alexsmith
+	newDummyValue := "[REDACTED]" // used for updating profile text fields
+
+	// Retrieve the abusive user (@alexsmith) and the abuse report already created for this user.
+	abuser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userAlexSmithID})
+	report := unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReport{
+		ID:          abuseReportID,
+		ContentType: moderation.ReportedContentTypeUser,
+		ContentID:   abuser.ID,
+	})
+	// The report should not already have a shadow copy linked.
+	assert.False(t, report.ShadowCopyID.Valid)
+
+	// Keep a copy of old field values before updating them.
+	oldUserData := user_model.UserData{
+		FullName:    abuser.FullName,
+		Location:    abuser.Location,
+		Website:     abuser.Website,
+		Pronouns:    abuser.Pronouns,
+		Description: abuser.Description,
+	}
+
+	// The abusive user is updating their profile.
+	opts := &UpdateOptions{
+		FullName:    optional.Some(newDummyValue),
+		Location:    optional.Some(newDummyValue),
+		Website:     optional.Some(newDummyValue),
+		Pronouns:    optional.Some(newDummyValue),
+		Description: optional.Some(newDummyValue),
+	}
+	require.NoError(t, UpdateUser(t.Context(), abuser, opts))
+
+	// Reload the report.
+	report = unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReport{ID: report.ID})
+	// A shadow copy should have been created and linked to our report.
+	assert.True(t, report.ShadowCopyID.Valid)
+	// Retrieve the newly created shadow copy and unmarshal the stored JSON so that we can check the values.
+	shadowCopy := unittest.AssertExistsAndLoadBean(t, &moderation.AbuseReportShadowCopy{ID: report.ShadowCopyID.Int64})
+	shadowCopyUserData := new(user_model.UserData)
+	require.NoError(t, json.Unmarshal([]byte(shadowCopy.RawValue), &shadowCopyUserData))
+	// Check to see if the initial field values of the user were stored within the shadow copy.
+	assert.Equal(t, oldUserData.FullName, shadowCopyUserData.FullName)
+	assert.Equal(t, oldUserData.Location, shadowCopyUserData.Location)
+	assert.Equal(t, oldUserData.Website, shadowCopyUserData.Website)
+	assert.Equal(t, oldUserData.Pronouns, shadowCopyUserData.Pronouns)
+	assert.Equal(t, oldUserData.Description, shadowCopyUserData.Description)
 }

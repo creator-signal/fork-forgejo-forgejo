@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/util"
 )
 
 type LoggerImpl struct {
@@ -191,18 +191,13 @@ func (l *LoggerImpl) Log(skip int, level Level, format string, logArgs ...any) {
 	if ok {
 		fn := runtime.FuncForPC(pc)
 		if fn != nil {
-			event.Caller = fn.Name() + "()"
+			event.Caller = strings.TrimSuffix(fn.Name(), "[...]") + "()"
 		}
 	}
 	event.Filename, event.Line = strings.TrimPrefix(filename, projectPackagePrefix), line
 
 	if l.stacktraceLevel.Load() <= int32(level) {
 		event.Stacktrace = Stack(skip + 1)
-	}
-
-	labels := getGoroutineLabels()
-	if labels != nil {
-		event.GoroutinePid = labels["pid"]
 	}
 
 	// get a simple text message without color

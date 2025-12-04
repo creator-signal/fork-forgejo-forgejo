@@ -10,17 +10,17 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/translation"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/translation"
+	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestArchiveText(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		testUser := "user2"
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: testUser})
 		session := loginUser(t, testUser)
@@ -41,7 +41,6 @@ func TestArchiveText(t *testing.T) {
 		// Archive repo
 		req = NewRequestWithValues(t, "POST", link, map[string]string{
 			"action": "archive",
-			"_csrf":  GetCSRF(t, session, link),
 		})
 		_ = session.MakeRequest(t, req, http.StatusSeeOther)
 

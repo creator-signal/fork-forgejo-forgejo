@@ -10,90 +10,94 @@ import (
 	"io/fs"
 	"strings"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	"code.gitea.io/gitea/models/migrations"
-	packages_model "code.gitea.io/gitea/models/packages"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	packages_module "code.gitea.io/gitea/modules/packages"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/storage"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	"forgejo.org/models/gitea_migrations"
+	packages_model "forgejo.org/models/packages"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	packages_module "forgejo.org/modules/packages"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
+	"xorm.io/xorm"
 )
 
 // CmdMigrateStorage represents the available migrate storage sub-command.
-var CmdMigrateStorage = &cli.Command{
-	Name:        "migrate-storage",
-	Usage:       "Migrate the storage",
-	Description: "Copies stored files from storage configured in app.ini to parameter-configured storage",
-	Action:      runMigrateStorage,
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:    "type",
-			Aliases: []string{"t"},
-			Value:   "",
-			Usage:   "Type of stored files to copy.  Allowed types: 'attachments', 'lfs', 'avatars', 'repo-avatars', 'repo-archivers', 'packages', 'actions-log', 'actions-artifacts'",
+func cmdMigrateStorage() *cli.Command {
+	return &cli.Command{
+		Name:        "migrate-storage",
+		Usage:       "Migrate the storage",
+		Description: "Copies stored files from storage configured in app.ini to parameter-configured storage",
+		Before:      noDanglingArgs,
+		Action:      runMigrateStorage,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "type",
+				Aliases: []string{"t"},
+				Value:   "",
+				Usage:   "Type of stored files to copy.  Allowed types: 'attachments', 'lfs', 'avatars', 'repo-avatars', 'repo-archivers', 'packages', 'actions-log', 'actions-artifacts'",
+			},
+			&cli.StringFlag{
+				Name:    "storage",
+				Aliases: []string{"s"},
+				Value:   "",
+				Usage:   "New storage type: local (default) or minio",
+			},
+			&cli.StringFlag{
+				Name:    "path",
+				Aliases: []string{"p"},
+				Value:   "",
+				Usage:   "New storage placement if store is local (leave blank for default)",
+			},
+			&cli.StringFlag{
+				Name:  "minio-endpoint",
+				Value: "",
+				Usage: "Minio storage endpoint",
+			},
+			&cli.StringFlag{
+				Name:  "minio-access-key-id",
+				Value: "",
+				Usage: "Minio storage accessKeyID",
+			},
+			&cli.StringFlag{
+				Name:  "minio-secret-access-key",
+				Value: "",
+				Usage: "Minio storage secretAccessKey",
+			},
+			&cli.StringFlag{
+				Name:  "minio-bucket",
+				Value: "",
+				Usage: "Minio storage bucket",
+			},
+			&cli.StringFlag{
+				Name:  "minio-location",
+				Value: "",
+				Usage: "Minio storage location to create bucket",
+			},
+			&cli.StringFlag{
+				Name:  "minio-base-path",
+				Value: "",
+				Usage: "Minio storage base path on the bucket",
+			},
+			&cli.BoolFlag{
+				Name:  "minio-use-ssl",
+				Usage: "Enable SSL for minio",
+			},
+			&cli.BoolFlag{
+				Name:  "minio-insecure-skip-verify",
+				Usage: "Skip SSL verification",
+			},
+			&cli.StringFlag{
+				Name:  "minio-checksum-algorithm",
+				Value: "",
+				Usage: "Minio checksum algorithm (default/md5)",
+			},
 		},
-		&cli.StringFlag{
-			Name:    "storage",
-			Aliases: []string{"s"},
-			Value:   "",
-			Usage:   "New storage type: local (default) or minio",
-		},
-		&cli.StringFlag{
-			Name:    "path",
-			Aliases: []string{"p"},
-			Value:   "",
-			Usage:   "New storage placement if store is local (leave blank for default)",
-		},
-		&cli.StringFlag{
-			Name:  "minio-endpoint",
-			Value: "",
-			Usage: "Minio storage endpoint",
-		},
-		&cli.StringFlag{
-			Name:  "minio-access-key-id",
-			Value: "",
-			Usage: "Minio storage accessKeyID",
-		},
-		&cli.StringFlag{
-			Name:  "minio-secret-access-key",
-			Value: "",
-			Usage: "Minio storage secretAccessKey",
-		},
-		&cli.StringFlag{
-			Name:  "minio-bucket",
-			Value: "",
-			Usage: "Minio storage bucket",
-		},
-		&cli.StringFlag{
-			Name:  "minio-location",
-			Value: "",
-			Usage: "Minio storage location to create bucket",
-		},
-		&cli.StringFlag{
-			Name:  "minio-base-path",
-			Value: "",
-			Usage: "Minio storage base path on the bucket",
-		},
-		&cli.BoolFlag{
-			Name:  "minio-use-ssl",
-			Usage: "Enable SSL for minio",
-		},
-		&cli.BoolFlag{
-			Name:  "minio-insecure-skip-verify",
-			Usage: "Skip SSL verification",
-		},
-		&cli.StringFlag{
-			Name:  "minio-checksum-algorithm",
-			Value: "",
-			Usage: "Minio checksum algorithm (default/md5)",
-		},
-	},
+	}
 }
 
 func migrateAttachments(ctx context.Context, dstStorage storage.ObjectStorage) error {
@@ -181,8 +185,8 @@ func migrateActionsArtifacts(ctx context.Context, dstStorage storage.ObjectStora
 	})
 }
 
-func runMigrateStorage(ctx *cli.Context) error {
-	stdCtx, cancel := installSignals()
+func runMigrateStorage(stdCtx context.Context, ctx *cli.Command) error {
+	stdCtx, cancel := installSignals(stdCtx)
 	defer cancel()
 
 	if err := initDB(stdCtx); err != nil {
@@ -195,7 +199,9 @@ func runMigrateStorage(ctx *cli.Context) error {
 	log.Info("Log path: %s", setting.Log.RootPath)
 	log.Info("Configuration file: %s", setting.CustomConf)
 
-	if err := db.InitEngineWithMigration(context.Background(), migrations.Migrate); err != nil {
+	if err := db.InitEngineWithMigration(context.Background(), func(e db.Engine) error {
+		return gitea_migrations.Migrate(e.(*xorm.Engine))
+	}); err != nil {
 		log.Fatal("Failed to initialize ORM engine: %v", err)
 		return err
 	}

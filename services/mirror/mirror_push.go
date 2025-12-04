@@ -13,17 +13,17 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/process"
-	"code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/process"
+	"forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 )
 
 var stripExitStatus = regexp.MustCompile(`exit status \d+ - `)
@@ -33,19 +33,22 @@ var AddPushMirrorRemote = addPushMirrorRemote
 
 func addPushMirrorRemote(ctx context.Context, m *repo_model.PushMirror, addr string) error {
 	addRemoteAndConfig := func(addr, path string) error {
-		cmd := git.NewCommand(ctx, "remote", "add", "--mirror=push").AddDynamicArguments(m.RemoteName, addr)
-		if strings.Contains(addr, "://") && strings.Contains(addr, "@") {
-			cmd.SetDescription(fmt.Sprintf("remote add %s --mirror=push %s [repo_path: %s]", m.RemoteName, util.SanitizeCredentialURLs(addr), path))
+		var cmd *git.Command
+		if m.BranchFilter == "" {
+			cmd = git.NewCommand(ctx, "remote", "add", "--mirror").AddDynamicArguments(m.RemoteName, addr)
 		} else {
-			cmd.SetDescription(fmt.Sprintf("remote add %s --mirror=push %s [repo_path: %s]", m.RemoteName, addr, path))
+			cmd = git.NewCommand(ctx, "remote", "add").AddDynamicArguments(m.RemoteName, addr)
+		}
+		if strings.Contains(addr, "://") && strings.Contains(addr, "@") {
+			cmd.SetDescription(fmt.Sprintf("remote add %s %s [repo_path: %s]", m.RemoteName, util.SanitizeCredentialURLs(addr), path))
+		} else {
+			cmd.SetDescription(fmt.Sprintf("remote add %s %s [repo_path: %s]", m.RemoteName, addr, path))
 		}
 		if _, _, err := cmd.RunStdString(&git.RunOpts{Dir: path}); err != nil {
 			return err
 		}
-		if _, _, err := git.NewCommand(ctx, "config", "--add").AddDynamicArguments("remote."+m.RemoteName+".push", "+refs/heads/*:refs/heads/*").RunStdString(&git.RunOpts{Dir: path}); err != nil {
-			return err
-		}
-		if _, _, err := git.NewCommand(ctx, "config", "--add").AddDynamicArguments("remote."+m.RemoteName+".push", "+refs/tags/*:refs/tags/*").RunStdString(&git.RunOpts{Dir: path}); err != nil {
+		err := addRemotePushRefSpecs(ctx, path, m)
+		if err != nil {
 			return err
 		}
 		return nil
@@ -64,6 +67,49 @@ func addPushMirrorRemote(ctx context.Context, m *repo_model.PushMirror, addr str
 		}
 	}
 
+	return nil
+}
+
+func addRemotePushRefSpecs(ctx context.Context, path string, m *repo_model.PushMirror) error {
+	if m.BranchFilter == "" {
+		// If there is no branch filter, set the push refspecs to mirror all branches and tags.
+		if _, _, err := git.NewCommand(ctx, "config", "--add").AddDynamicArguments("remote."+m.RemoteName+".push", "+refs/heads/*:refs/heads/*").RunStdString(&git.RunOpts{Dir: path}); err != nil {
+			return err
+		}
+	} else {
+		branches := strings.SplitSeq(m.BranchFilter, ",")
+		for branch := range branches {
+			branch = strings.TrimSpace(branch)
+			if branch == "" {
+				continue
+			}
+			refspec := fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, branch)
+			if _, _, err := git.NewCommand(ctx, "config", "--add").AddDynamicArguments("remote."+m.RemoteName+".push", refspec).RunStdString(&git.RunOpts{Dir: path}); err != nil {
+				return err
+			}
+		}
+	}
+	if _, _, err := git.NewCommand(ctx, "config", "--add").AddDynamicArguments("remote."+m.RemoteName+".push", "+refs/tags/*:refs/tags/*").RunStdString(&git.RunOpts{Dir: path}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdatePushMirrorBranchFilter(ctx context.Context, m *repo_model.PushMirror) error {
+	path := m.Repo.RepoPath()
+
+	// First, remove all existing push refspecs for this remote
+	cmd := git.NewCommand(ctx, "config", "--unset-all").AddDynamicArguments("remote." + m.RemoteName + ".push")
+	if _, _, err := cmd.RunStdString(&git.RunOpts{Dir: path}); err != nil {
+		// Ignore error if the key doesn't exist
+		if !strings.Contains(err.Error(), "does not exist") {
+			return err
+		}
+	}
+	err := addRemotePushRefSpecs(ctx, path, m)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -172,7 +218,7 @@ func runPushSync(ctx context.Context, m *repo_model.PushMirror) error {
 
 		// OpenSSH isn't very intuitive when you want to specify a specific keypair.
 		// Therefore, we need to create a temporary file that stores the private key, so that OpenSSH can use it.
-		// We delete the the temporary file afterwards.
+		// We delete the temporary file afterwards.
 		privateKeyPath := ""
 		if m.PublicKey != "" {
 			f, err := os.CreateTemp(os.TempDir(), m.RemoteName)
@@ -212,7 +258,6 @@ func runPushSync(ctx context.Context, m *repo_model.PushMirror) error {
 
 			return util.SanitizeErrorCredentialURLs(err)
 		}
-
 		return nil
 	}
 

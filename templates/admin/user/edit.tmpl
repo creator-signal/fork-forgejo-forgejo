@@ -6,10 +6,9 @@
 		<div class="ui attached segment">
 			<form class="ui form" action="./edit" method="post">
 				{{template "base/disable_form_autofill"}}
-				{{.CsrfTokenHtml}}
 				<div class="field {{if .Err_UserName}}error{{end}}">
 					<label for="user_name">{{ctx.Locale.Tr "username"}}</label>
-					<input id="user_name" name="user_name" value="{{.User.Name}}" autofocus {{if not .User.IsLocal}}disabled{{end}} maxlength="40">
+					<input id="user_name" name="user_name" value="{{.User.Name}}" autofocus {{if not .User.IsLocal}}disabled{{end}} maxlength="40" autocorrect="off" autocapitalize="none">
 				</div>
 				<!-- Types and name -->
 				<div class="inline required field {{if .Err_LoginType}}error{{end}}">
@@ -68,6 +67,13 @@
 				<div class="required field {{if .Err_Email}}error{{end}}">
 					<label for="email">{{ctx.Locale.Tr "email"}}</label>
 					<input id="email" name="email" type="email" value="{{.User.Email}}" autofocus required>
+				</div>
+				<div class="inline field">
+					<div class="ui checkbox">
+						<label>{{ctx.Locale.Tr "settings.keep_email_private"}}</label>
+						<input name="hide_email" type="checkbox" {{if .User.KeepEmailPrivate}}checked{{end}}>
+					</div>
+					<span class="help">{{ctx.Locale.Tr "settings.keep_email_private_popup" .User.GetPlaceholderEmail}}</span>
 				</div>
 				<div class="local field {{if .Err_Password}}error{{end}} {{if not (or (.User.IsLocal) (.User.IsOAuth2))}}tw-hidden{{end}}">
 					<label for="password">{{ctx.Locale.Tr "password"}}</label>
@@ -184,7 +190,6 @@
 		</h4>
 		<div class="ui attached segment">
 			<form class="ui form" action="./avatar" method="post" enctype="multipart/form-data">
-				{{.CsrfTokenHtml}}
 				{{if not .DisableGravatar}}
 				<div class="inline field">
 					<div class="ui radio checkbox">
@@ -208,11 +213,12 @@
 				<div class="inline field tw-pl-4">
 					<label for="avatar">{{ctx.Locale.Tr "settings.choose_new_avatar"}}</label>
 					<input name="avatar" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+					<br/><span class=help>{{ctx.Locale.Tr "avatar.constraints_hint" (ctx.Locale.TrSize .MaxAvatarFileSize) .MaxAvatarWidth .MaxAvatarHeight}}</span>
 				</div>
 
-				<div class="field">
-					<button class="ui primary button">{{ctx.Locale.Tr "settings.update_avatar"}}</button>
-					<button class="ui red button link-action" data-url="./avatar/delete">{{ctx.Locale.Tr "settings.delete_current_avatar"}}</button>
+				<div class="field button-sequence">
+					<button class="primary button">{{ctx.Locale.Tr "settings.update_avatar"}}</button>
+					<button class="danger button link-action" data-url="./avatar/delete">{{ctx.Locale.Tr "settings.delete_current_avatar"}}</button>
 				</div>
 			</form>
 		</div>
@@ -226,7 +232,6 @@
 	<form class="ui form" method="post" action="./delete">
 		<div class="content">
 			<p>{{ctx.Locale.Tr "settings.delete_account_desc"}}</p>
-			{{$.CsrfTokenHtml}}
 			<div class="field">
 				<div class="ui checkbox">
 					<label for="purge">{{ctx.Locale.Tr "admin.users.purge"}}</label>

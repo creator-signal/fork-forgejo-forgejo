@@ -5,28 +5,29 @@ package user
 
 import (
 	std_ctx "context"
-	"fmt"
+	"errors"
 	"net/http"
 
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/perm"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/repo"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	asymkey_service "code.gitea.io/gitea/services/asymkey"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/db"
+	"forgejo.org/models/perm"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/repo"
+	"forgejo.org/routers/api/v1/utils"
+	asymkey_service "forgejo.org/services/asymkey"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
 )
 
 // appendPrivateInformation appends the owner and key type information to api.PublicKey
 func appendPrivateInformation(ctx std_ctx.Context, apiKey *api.PublicKey, key *asymkey_model.PublicKey, defaultUser *user_model.User) (*api.PublicKey, error) {
-	if key.Type == asymkey_model.KeyTypeDeploy {
+	switch key.Type {
+	case asymkey_model.KeyTypeDeploy:
 		apiKey.KeyType = "deploy"
-	} else if key.Type == asymkey_model.KeyTypeUser {
+	case asymkey_model.KeyTypeUser:
 		apiKey.KeyType = "user"
 
 		if defaultUser.ID == key.OwnerID {
@@ -38,7 +39,7 @@ func appendPrivateInformation(ctx std_ctx.Context, apiKey *api.PublicKey, key *a
 			}
 			apiKey.Owner = convert.ToUser(ctx, user, user)
 		}
-	} else {
+	default:
 		apiKey.KeyType = "unknown"
 	}
 	apiKey.ReadOnly = key.Mode == perm.AccessModeRead
@@ -208,7 +209,7 @@ func GetPublicKey(ctx *context.APIContext) {
 // CreateUserPublicKey creates new public key to given user by ID.
 func CreateUserPublicKey(ctx *context.APIContext, form api.CreateKeyOption, uid int64) {
 	if user_model.IsFeatureDisabledWithLoginType(ctx.Doer, setting.UserFeatureManageSSHKeys) {
-		ctx.NotFound("Not Found", fmt.Errorf("ssh keys setting is not allowed to be visited"))
+		ctx.NotFound("Not Found", errors.New("ssh keys setting is not allowed to be visited"))
 		return
 	}
 
@@ -284,7 +285,7 @@ func DeletePublicKey(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	if user_model.IsFeatureDisabledWithLoginType(ctx.Doer, setting.UserFeatureManageSSHKeys) {
-		ctx.NotFound("Not Found", fmt.Errorf("ssh keys setting is not allowed to be visited"))
+		ctx.NotFound("Not Found", errors.New("ssh keys setting is not allowed to be visited"))
 		return
 	}
 

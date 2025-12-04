@@ -7,14 +7,16 @@ package driver
 import (
 	"testing"
 
-	"code.gitea.io/gitea/models/unittest"
-	driver_options "code.gitea.io/gitea/services/f3/driver/options"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	driver_options "forgejo.org/services/f3/driver/options"
 
-	_ "code.gitea.io/gitea/models"
-	_ "code.gitea.io/gitea/models/actions"
-	_ "code.gitea.io/gitea/models/activities"
-	_ "code.gitea.io/gitea/models/perm/access"
-	_ "code.gitea.io/gitea/services/f3/driver/tests"
+	_ "forgejo.org/models"
+	_ "forgejo.org/models/actions"
+	_ "forgejo.org/models/activities"
+	_ "forgejo.org/models/perm/access"
+	_ "forgejo.org/services/f3/driver/tests"
 
 	tests_f3 "code.forgejo.org/f3/gof3/v3/tree/tests/f3"
 	"github.com/stretchr/testify/require"
@@ -22,6 +24,7 @@ import (
 
 func TestF3(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.SSH.RootPath, t.TempDir())()
 	tests_f3.ForgeCompliance(t, driver_options.Name)
 }
 

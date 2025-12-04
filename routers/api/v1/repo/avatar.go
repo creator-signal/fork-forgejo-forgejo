@@ -7,17 +7,17 @@ import (
 	"encoding/base64"
 	"net/http"
 
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	repo_service "code.gitea.io/gitea/services/repository"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	repo_service "forgejo.org/services/repository"
 )
 
-// UpdateVatar updates the Avatar of an Repo
+// UpdateVatar updates repo avatar
 func UpdateAvatar(ctx *context.APIContext) {
 	// swagger:operation POST /repos/{owner}/{repo}/avatar repository repoUpdateAvatar
 	// ---
-	// summary: Update avatar
+	// summary: Update a repository's avatar
 	// produces:
 	// - application/json
 	// parameters:
@@ -56,11 +56,11 @@ func UpdateAvatar(ctx *context.APIContext) {
 	ctx.Status(http.StatusNoContent)
 }
 
-// UpdateAvatar deletes the Avatar of an Repo
+// DeleteAvatar deletes repo avatar
 func DeleteAvatar(ctx *context.APIContext) {
 	// swagger:operation DELETE /repos/{owner}/{repo}/avatar repository repoDeleteAvatar
 	// ---
-	// summary: Delete avatar
+	// summary: Delete a repository's avatar
 	// produces:
 	// - application/json
 	// parameters:

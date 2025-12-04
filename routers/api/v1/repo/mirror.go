@@ -9,21 +9,21 @@ import (
 	"net/http"
 	"time"
 
-	"code.gitea.io/gitea/models"
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/migrations"
-	mirror_service "code.gitea.io/gitea/services/mirror"
+	"forgejo.org/models"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/migrations"
+	mirror_service "forgejo.org/services/mirror"
 )
 
 // MirrorSync adds a mirrored repository to the sync queue
@@ -251,11 +251,11 @@ func GetPushMirrorByName(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, m)
 }
 
-// AddPushMirror adds a push mirror to a repository
+// AddPushMirror sets up a new push mirror in a repository
 func AddPushMirror(ctx *context.APIContext) {
 	// swagger:operation POST /repos/{owner}/{repo}/push_mirrors repository repoAddPushMirror
 	// ---
-	// summary: add a push mirror to the repository
+	// summary: Set up a new push mirror in a repository
 	// consumes:
 	// - application/json
 	// produces:
@@ -296,11 +296,11 @@ func AddPushMirror(ctx *context.APIContext) {
 	CreatePushMirror(ctx, pushMirror)
 }
 
-// DeletePushMirrorByRemoteName deletes a push mirror from a repository by remoteName
+// DeletePushMirrorByRemoteName removes a push mirror from a repository by remoteName
 func DeletePushMirrorByRemoteName(ctx *context.APIContext) {
 	// swagger:operation DELETE /repos/{owner}/{repo}/push_mirrors/{name} repository repoDeletePushMirror
 	// ---
-	// summary: deletes a push mirror from a repository by remoteName
+	// summary: Remove a push mirror from a repository by remoteName
 	// produces:
 	// - application/json
 	// parameters:
@@ -363,18 +363,14 @@ func CreatePushMirror(ctx *context.APIContext, mirrorOption *api.CreatePushMirro
 
 	address, err := forms.ParseRemoteAddr(mirrorOption.RemoteAddress, mirrorOption.RemoteUsername, mirrorOption.RemotePassword)
 	if err == nil {
-		err = migrations.IsMigrateURLAllowed(address, ctx.ContextUser)
+		err = migrations.IsPushMirrorURLAllowed(address, ctx.ContextUser)
 	}
 	if err != nil {
 		HandleRemoteAddressError(ctx, err)
 		return
 	}
 
-	remoteSuffix, err := util.CryptoRandomString(10)
-	if err != nil {
-		ctx.ServerError("CryptoRandomString", err)
-		return
-	}
+	remoteSuffix := util.CryptoRandomString(util.RandomStringLow)
 
 	remoteAddress, err := util.SanitizeURL(address)
 	if err != nil {
@@ -389,6 +385,7 @@ func CreatePushMirror(ctx *context.APIContext, mirrorOption *api.CreatePushMirro
 		Interval:      interval,
 		SyncOnCommit:  mirrorOption.SyncOnCommit,
 		RemoteAddress: remoteAddress,
+		BranchFilter:  mirrorOption.BranchFilter,
 	}
 
 	var plainPrivateKey []byte
@@ -441,6 +438,8 @@ func HandleRemoteAddressError(ctx *context.APIContext, err error) {
 			ctx.Error(http.StatusBadRequest, "CreatePushMirror", "Invalid Url ")
 		case addrErr.IsPermissionDenied:
 			ctx.Error(http.StatusUnauthorized, "CreatePushMirror", "Permission denied")
+		case addrErr.HasCredentials:
+			ctx.Error(http.StatusBadRequest, "CreatePushMirror", "The URL contains credentials")
 		default:
 			ctx.Error(http.StatusBadRequest, "CreatePushMirror", "Unknown error")
 		}

@@ -6,12 +6,12 @@ package convert
 import (
 	"context"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	api "code.gitea.io/gitea/modules/structs"
+	repo_model "forgejo.org/models/repo"
+	api "forgejo.org/modules/structs"
 )
 
 // ToAPIRelease convert a repo_model.Release to api.Release
-func ToAPIRelease(ctx context.Context, repo *repo_model.Repository, r *repo_model.Release) *api.Release {
+func ToAPIRelease(ctx context.Context, repo *repo_model.Repository, r *repo_model.Release, githubFormat bool) *api.Release {
 	return &api.Release{
 		ID:                   r.ID,
 		TagName:              r.TagName,
@@ -23,7 +23,7 @@ func ToAPIRelease(ctx context.Context, repo *repo_model.Repository, r *repo_mode
 		TarURL:               r.TarURL(),
 		ZipURL:               r.ZipURL(),
 		HideArchiveLinks:     r.HideArchiveLinks,
-		UploadURL:            r.APIUploadURL(),
+		UploadURL:            r.APIUploadURL(githubFormat),
 		IsDraft:              r.IsDraft,
 		IsPrerelease:         r.IsPrerelease,
 		CreatedAt:            r.CreatedUnix.AsTime(),

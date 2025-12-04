@@ -1,4 +1,5 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repository
@@ -11,22 +12,22 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.gitea.io/gitea/models"
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/models/webhook"
-	issue_indexer "code.gitea.io/gitea/modules/indexer/issues"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/models/webhook"
+	issue_indexer "forgejo.org/modules/indexer/issues"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
 )
 
 // CreateRepositoryByExample creates a repository for the user/organization.
@@ -68,12 +69,16 @@ func CreateRepositoryByExample(ctx context.Context, doer, u *user_model.User, re
 
 	// insert units for repo
 	defaultUnits := unit.DefaultRepoUnits
-	if isFork {
+	switch {
+	case isFork:
 		defaultUnits = unit.DefaultForkRepoUnits
+	case repo.IsMirror:
+		defaultUnits = unit.DefaultMirrorRepoUnits
 	}
 	units := make([]repo_model.RepoUnit, 0, len(defaultUnits))
 	for _, tp := range defaultUnits {
-		if tp == unit.TypeIssues {
+		switch tp {
+		case unit.TypeIssues:
 			units = append(units, repo_model.RepoUnit{
 				RepoID: repo.ID,
 				Type:   tp,
@@ -83,7 +88,7 @@ func CreateRepositoryByExample(ctx context.Context, doer, u *user_model.User, re
 					EnableDependencies:               setting.Service.DefaultEnableDependencies,
 				},
 			})
-		} else if tp == unit.TypePullRequests {
+		case unit.TypePullRequests:
 			units = append(units, repo_model.RepoUnit{
 				RepoID: repo.ID,
 				Type:   tp,
@@ -94,7 +99,7 @@ func CreateRepositoryByExample(ctx context.Context, doer, u *user_model.User, re
 					AllowRebaseUpdate:  true,
 				},
 			})
-		} else {
+		default:
 			units = append(units, repo_model.RepoUnit{
 				RepoID: repo.ID,
 				Type:   tp,
@@ -239,6 +244,11 @@ func UpdateRepository(ctx context.Context, repo *repo_model.Repository, visibili
 	repo.LowerName = strings.ToLower(repo.Name)
 
 	e := db.GetEngine(ctx)
+
+	// If the repository was reported as abusive, a shadow copy should be created before first update.
+	if err := repo_model.IfNeededCreateShadowCopyForRepository(ctx, repo, true); err != nil {
+		return err
+	}
 
 	if _, err = e.ID(repo.ID).AllCols().Update(repo); err != nil {
 		return fmt.Errorf("update: %w", err)

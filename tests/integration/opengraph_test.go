@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"testing"
 
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/modules/setting"
+	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -98,7 +98,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:url":          setting.AppURL + "/user27/repo49/src/branch/master/test/test.txt",
 				"og:type":         "object",
 				"og:image":        setting.AppURL + "user27/repo49/-/summary-card",
-				"og:image:alt":    "Summary card of repository user27/repo49",
+				"og:image:alt":    "Summary card of repository user27/repo49, described as: A wonderful repository with more than just a README.md",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
 				"og:site_name":    siteName,
@@ -141,7 +141,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:description":  "A wonderful repository with more than just a README.md",
 				"og:type":         "object",
 				"og:image":        setting.AppURL + "user27/repo49/-/summary-card",
-				"og:image:alt":    "Summary card of repository user27/repo49",
+				"og:image:alt":    "Summary card of repository user27/repo49, described as: A wonderful repository with more than just a README.md",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
 				"og:site_name":    siteName,
@@ -180,7 +180,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				foundProps[prop] = content
 			})
 
-			assert.EqualValues(t, tc.expected, foundProps, "mismatching opengraph properties")
+			assert.Equal(t, tc.expected, foundProps, "mismatching opengraph properties")
 		})
 	}
 }

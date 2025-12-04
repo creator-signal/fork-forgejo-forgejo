@@ -8,24 +8,24 @@ import (
 	"net/url"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	webhook_model "code.gitea.io/gitea/models/webhook"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/json"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
-	"code.gitea.io/gitea/services/release"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	webhook_model "forgejo.org/models/webhook"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/json"
+	webhook_module "forgejo.org/modules/webhook"
+	"forgejo.org/services/release"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestWebhookPayloadRef(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		w := unittest.AssertExistsAndLoadBean(t, &webhook_model.Webhook{ID: 1})
 		w.HookEvent = &webhook_module.HookEvent{
 			SendEverything: true,
@@ -38,21 +38,15 @@ func TestWebhookPayloadRef(t *testing.T) {
 
 		session := loginUser(t, "user2")
 		// create new branch
-		csrf := GetCSRF(t, session, "user2/repo1")
-		req := NewRequestWithValues(t, "POST", "user2/repo1/branches/_new/branch/master",
-			map[string]string{
-				"_csrf":           csrf,
-				"new_branch_name": "arbre",
-				"create_tag":      "false",
-			},
-		)
+		req := NewRequestWithValues(t, "POST", "user2/repo1/branches/_new/branch/master", map[string]string{
+			"new_branch_name": "arbre",
+			"create_tag":      "false",
+		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 		// delete the created branch
-		req = NewRequestWithValues(t, "POST", "user2/repo1/branches/delete?name=arbre",
-			map[string]string{
-				"_csrf": csrf,
-			},
-		)
+		req = NewRequestWithValues(t, "POST", "user2/repo1/branches/delete", map[string]string{
+			"name": "arbre",
+		})
 		session.MakeRequest(t, req, http.StatusOK)
 
 		// check the newly created hooktasks

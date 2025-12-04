@@ -10,13 +10,13 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,7 +71,6 @@ func TestLTACookie(t *testing.T) {
 	sess := emptyTestSession(t)
 
 	req := NewRequestWithValues(t, "POST", "/user/login", map[string]string{
-		"_csrf":     GetCSRF(t, sess, "/user/login"),
 		"user_name": user.Name,
 		"password":  userPassword,
 		"remember":  "true",
@@ -106,7 +105,6 @@ func TestLTAPasswordChange(t *testing.T) {
 
 	// Make a simple password change.
 	req := NewRequestWithValues(t, "POST", "/user/settings/account", map[string]string{
-		"_csrf":        GetCSRF(t, sess, "/user/settings/account"),
 		"old_password": userPassword,
 		"password":     "password2",
 		"retype":       "password2",
@@ -116,7 +114,7 @@ func TestLTAPasswordChange(t *testing.T) {
 	assert.NotNil(t, rememberCookie)
 
 	// Check if the password really changed.
-	assert.NotEqualValues(t, unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1}).Passwd, user.Passwd)
+	assert.NotEqual(t, unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1}).Passwd, user.Passwd)
 
 	// /user/settings/account should provide with a new LTA cookie, so check for that.
 	// If LTA cookie provides authentication /user/login shouldn't return status 200.

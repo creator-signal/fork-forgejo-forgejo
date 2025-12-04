@@ -4,36 +4,32 @@
 package pull
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/process"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/sync"
-	"code.gitea.io/gitea/modules/util"
-	gitea_context "code.gitea.io/gitea/services/context"
-	issue_service "code.gitea.io/gitea/services/issue"
-	notify_service "code.gitea.io/gitea/services/notify"
+	"forgejo.org/models"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/process"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/sync"
+	app_context "forgejo.org/services/context"
+	issue_service "forgejo.org/services/issue"
+	notify_service "forgejo.org/services/notify"
 )
 
 // TODO: use clustered lock (unique queue? or *abuse* cache)
@@ -46,22 +42,15 @@ func NewPullRequest(ctx context.Context, repo *repo_model.Repository, issue *iss
 		return user_model.ErrBlockedByUser
 	}
 
-	prCtx, cancel, err := createTemporaryRepoForPR(ctx, pr)
+	testPatchCtx, err := testPatch(ctx, pr)
+	defer testPatchCtx.close()
 	if err != nil {
-		if !git_model.IsErrBranchNotExist(err) {
-			log.Error("CreateTemporaryRepoForPR %-v: %v", pr, err)
-		}
-		return err
-	}
-	defer cancel()
-
-	if err := testPatch(ctx, prCtx, pr); err != nil {
-		return err
+		return fmt.Errorf("testPatch: %w", err)
 	}
 
-	divergence, err := git.GetDivergingCommits(ctx, prCtx.tmpBasePath, baseBranch, trackingBranch)
+	divergence, err := git.GetDivergingCommits(ctx, testPatchCtx.gitRepo.Path, testPatchCtx.baseRev, testPatchCtx.headRev, testPatchCtx.env)
 	if err != nil {
-		return err
+		return fmt.Errorf("GetDivergingCommits: %w", err)
 	}
 	pr.CommitsAhead = divergence.Ahead
 	pr.CommitsBehind = divergence.Behind
@@ -391,106 +380,55 @@ func TestPullRequest(ctx context.Context, doer *user_model.User, repoID, olderTh
 // Update commit divergence.
 func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newCommitID, oldCommitID string, doer *user_model.User) {
 	objectFormat := git.ObjectFormatFromName(pr.BaseRepo.ObjectFormatName)
-	if newCommitID != "" && newCommitID != objectFormat.EmptyObjectID().String() {
-		changed, err := checkIfPRContentChanged(ctx, pr, oldCommitID, newCommitID)
+	if newCommitID == "" || newCommitID == objectFormat.EmptyObjectID().String() {
+		return
+	}
+
+	testPatchCtx, err := getTestPatchCtx(ctx, pr, true)
+	defer testPatchCtx.close()
+	if err != nil {
+		log.Error("testPatchCtx: %v", err)
+		return
+	}
+
+	changed, err := testPatchCtx.gitRepo.CheckIfDiffDiffers(testPatchCtx.baseRev, oldCommitID, newCommitID, testPatchCtx.env)
+	if err != nil {
+		log.Error("CheckIfDiffDiffers: %v", err)
+	}
+	if changed {
+		if err := issues_model.MarkReviewsAsStale(ctx, pr.IssueID); err != nil {
+			log.Error("MarkReviewsAsStale: %v", err)
+		}
+
+		pb, err := git_model.GetFirstMatchProtectedBranchRule(ctx, pr.BaseRepoID, pr.BaseBranch)
 		if err != nil {
-			log.Error("checkIfPRContentChanged: %v", err)
+			log.Error("GetFirstMatchProtectedBranchRule: %v", err)
 		}
-		if changed {
-			if err := issues_model.MarkReviewsAsStale(ctx, pr.IssueID); err != nil {
-				log.Error("MarkReviewsAsStale: %v", err)
+		if pb != nil && pb.DismissStaleApprovals {
+			if err := DismissApprovalReviews(ctx, doer, pr); err != nil {
+				log.Error("DismissApprovalReviews: %v", err)
 			}
+		}
+	}
+	if err := issues_model.MarkReviewsAsNotStale(ctx, pr.IssueID, newCommitID); err != nil {
+		log.Error("MarkReviewsAsNotStale: %v", err)
+	}
 
-			pb, err := git_model.GetFirstMatchProtectedBranchRule(ctx, pr.BaseRepoID, pr.BaseBranch)
-			if err != nil {
-				log.Error("GetFirstMatchProtectedBranchRule: %v", err)
-			}
-			if pb != nil && pb.DismissStaleApprovals {
-				if err := DismissApprovalReviews(ctx, doer, pr); err != nil {
-					log.Error("DismissApprovalReviews: %v", err)
-				}
-			}
-		}
-		if err := issues_model.MarkReviewsAsNotStale(ctx, pr.IssueID, newCommitID); err != nil {
-			log.Error("MarkReviewsAsNotStale: %v", err)
-		}
-		divergence, err := GetDiverging(ctx, pr)
+	divergence, err := git.GetDivergingCommits(ctx, testPatchCtx.gitRepo.Path, testPatchCtx.baseRev, testPatchCtx.headRev, testPatchCtx.env)
+	if err != nil {
+		log.Error("GetDivergingCommits: %v", err)
+	} else {
+		err = pr.UpdateCommitDivergence(ctx, divergence.Ahead, divergence.Behind)
 		if err != nil {
-			log.Error("GetDiverging: %v", err)
-		} else {
-			err = pr.UpdateCommitDivergence(ctx, divergence.Ahead, divergence.Behind)
-			if err != nil {
-				log.Error("UpdateCommitDivergence: %v", err)
-			}
+			log.Error("UpdateCommitDivergence: %v", err)
 		}
 	}
-}
-
-// checkIfPRContentChanged checks if diff to target branch has changed by push
-// A commit can be considered to leave the PR untouched if the patch/diff with its merge base is unchanged
-func checkIfPRContentChanged(ctx context.Context, pr *issues_model.PullRequest, oldCommitID, newCommitID string) (hasChanged bool, err error) {
-	prCtx, cancel, err := createTemporaryRepoForPR(ctx, pr)
-	if err != nil {
-		log.Error("CreateTemporaryRepoForPR %-v: %v", pr, err)
-		return false, err
-	}
-	defer cancel()
-
-	tmpRepo, err := git.OpenRepository(ctx, prCtx.tmpBasePath)
-	if err != nil {
-		return false, fmt.Errorf("OpenRepository: %w", err)
-	}
-	defer tmpRepo.Close()
-
-	// Find the merge-base
-	_, base, err := tmpRepo.GetMergeBase("", "base", "tracking")
-	if err != nil {
-		return false, fmt.Errorf("GetMergeBase: %w", err)
-	}
-
-	cmd := git.NewCommand(ctx, "diff", "--name-only", "-z").AddDynamicArguments(newCommitID, oldCommitID, base)
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return false, fmt.Errorf("unable to open pipe for to run diff: %w", err)
-	}
-
-	stderr := new(bytes.Buffer)
-	if err := cmd.Run(&git.RunOpts{
-		Dir:    prCtx.tmpBasePath,
-		Stdout: stdoutWriter,
-		Stderr: stderr,
-		PipelineFunc: func(ctx context.Context, cancel context.CancelFunc) error {
-			_ = stdoutWriter.Close()
-			defer func() {
-				_ = stdoutReader.Close()
-			}()
-			return util.IsEmptyReader(stdoutReader)
-		},
-	}); err != nil {
-		if err == util.ErrNotEmpty {
-			return true, nil
-		}
-		err = git.ConcatenateError(err, stderr.String())
-
-		log.Error("Unable to run diff on %s %s %s in tempRepo for PR[%d]%s/%s...%s/%s: Error: %v",
-			newCommitID, oldCommitID, base,
-			pr.ID, pr.BaseRepo.FullName(), pr.BaseBranch, pr.HeadRepo.FullName(), pr.HeadBranch,
-			err)
-
-		return false, fmt.Errorf("Unable to run git diff --name-only -z %s %s %s: %w", newCommitID, oldCommitID, base, err)
-	}
-
-	return false, nil
 }
 
 // PushToBaseRepo pushes commits from branches of head repository to
 // corresponding branches of base repository.
 // FIXME: Only push branches that are actually updates?
 func PushToBaseRepo(ctx context.Context, pr *issues_model.PullRequest) (err error) {
-	return pushToBaseRepoHelper(ctx, pr, "")
-}
-
-func pushToBaseRepoHelper(ctx context.Context, pr *issues_model.PullRequest, prefixHeadBranch string) (err error) {
 	log.Trace("PushToBaseRepo[%d]: pushing commits to base repo '%s'", pr.BaseRepoID, pr.GetGitRefName())
 
 	if err := pr.LoadHeadRepo(ctx); err != nil {
@@ -505,44 +443,18 @@ func pushToBaseRepoHelper(ctx context.Context, pr *issues_model.PullRequest, pre
 	}
 	baseRepoPath := pr.BaseRepo.RepoPath()
 
-	if err = pr.LoadIssue(ctx); err != nil {
-		return fmt.Errorf("unable to load issue %d for pr %d: %w", pr.IssueID, pr.ID, err)
+	baseRepo, err := git.OpenRepository(ctx, baseRepoPath)
+	if err != nil {
+		return err
 	}
-	if err = pr.Issue.LoadPoster(ctx); err != nil {
-		return fmt.Errorf("unable to load poster %d for pr %d: %w", pr.Issue.PosterID, pr.ID, err)
-	}
+	defer baseRepo.Close()
 
-	gitRefName := pr.GetGitRefName()
-
-	if err := git.Push(ctx, headRepoPath, git.PushOptions{
-		Remote: baseRepoPath,
-		Branch: prefixHeadBranch + pr.HeadBranch + ":" + gitRefName,
-		Force:  true,
-		// Use InternalPushingEnvironment here because we know that pre-receive and post-receive do not run on a refs/pulls/...
-		Env: repo_module.InternalPushingEnvironment(pr.Issue.Poster, pr.BaseRepo),
-	}); err != nil {
-		if git.IsErrPushOutOfDate(err) {
-			// This should not happen as we're using force!
-			log.Error("Unable to push PR head for %s#%d (%-v:%s) due to ErrPushOfDate: %v", pr.BaseRepo.FullName(), pr.Index, pr.BaseRepo, gitRefName, err)
-			return err
-		} else if git.IsErrPushRejected(err) {
-			rejectErr := err.(*git.ErrPushRejected)
-			log.Info("Unable to push PR head for %s#%d (%-v:%s) due to rejection:\nStdout: %s\nStderr: %s\nError: %v", pr.BaseRepo.FullName(), pr.Index, pr.BaseRepo, gitRefName, rejectErr.StdOut, rejectErr.StdErr, rejectErr.Err)
-			return err
-		} else if git.IsErrMoreThanOne(err) {
-			if prefixHeadBranch != "" {
-				log.Info("Can't push with %s%s", prefixHeadBranch, pr.HeadBranch)
-				return err
-			}
-			log.Info("Retrying to push with %s%s", git.BranchPrefix, pr.HeadBranch)
-			err = pushToBaseRepoHelper(ctx, pr, git.BranchPrefix)
-			return err
-		}
-		log.Error("Unable to push PR head for %s#%d (%-v:%s) due to Error: %v", pr.BaseRepo.FullName(), pr.Index, pr.BaseRepo, gitRefName, err)
-		return fmt.Errorf("Push: %s:%s %s:%s %w", pr.HeadRepo.FullName(), pr.HeadBranch, pr.BaseRepo.FullName(), gitRefName, err)
+	fetchedCommitID, err := baseRepo.Fetch("file://"+headRepoPath, git.BranchPrefix+pr.HeadBranch)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return baseRepo.SetReference(pr.GetGitRefName(), fetchedCommitID)
 }
 
 // UpdateRef update refs/pull/id/head directly for agit flow pull request
@@ -968,7 +880,7 @@ type CommitInfo struct {
 // GetPullCommits returns all commits on given pull request and the last review commit sha
 // Attention: The last review commit sha must be from the latest review whose commit id is not empty.
 // So the type of the latest review cannot be "ReviewTypeRequest".
-func GetPullCommits(ctx *gitea_context.Context, issue *issues_model.Issue) ([]CommitInfo, string, error) {
+func GetPullCommits(ctx *app_context.Context, issue *issues_model.Issue) ([]CommitInfo, string, error) {
 	pull := issue.PullRequest
 
 	baseGitRepo := ctx.Repo.GitRepo

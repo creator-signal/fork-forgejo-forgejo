@@ -10,29 +10,29 @@ import (
 	"strconv"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	pull_model "code.gitea.io/gitea/models/pull"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/cache"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/git/pushoptions"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/private"
-	repo_module "code.gitea.io/gitea/modules/repository"
-	"code.gitea.io/gitea/modules/setting"
-	timeutil "code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	gitea_context "code.gitea.io/gitea/services/context"
-	repo_service "code.gitea.io/gitea/services/repository"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	pull_model "forgejo.org/models/pull"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/cache"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/git/pushoptions"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/private"
+	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	timeutil "forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	app_context "forgejo.org/services/context"
+	repo_service "forgejo.org/services/repository"
 )
 
 // HookPostReceive updates services and users
-func HookPostReceive(ctx *gitea_context.PrivateContext) {
+func HookPostReceive(ctx *app_context.PrivateContext) {
 	opts := web.GetForm(ctx).(*private.HookOptions)
 
 	// We don't rely on RepoAssignment here because:
@@ -205,7 +205,7 @@ func HookPostReceive(ctx *gitea_context.PrivateContext) {
 
 		// post update for agit pull request
 		// FIXME: use pr.Flow to test whether it's an Agit PR or a GH PR
-		if git.SupportProcReceive && refFullName.IsPull() {
+		if refFullName.IsPull() {
 			if repo == nil {
 				repo = loadRepository(ctx, ownerName, repoName)
 				if ctx.Written() {
@@ -231,10 +231,11 @@ func HookPostReceive(ctx *gitea_context.PrivateContext) {
 			}
 
 			results = append(results, private.HookPostReceiveBranchResult{
-				Message: setting.Git.PullRequestPushMessage && repo.AllowsPulls(ctx),
-				Create:  false,
-				Branch:  "",
-				URL:     fmt.Sprintf("%s/pulls/%d", repo.HTMLURL(), pr.Index),
+				Message:   setting.Git.PullRequestPushMessage && repo.AllowsPulls(ctx),
+				Create:    false,
+				Branch:    "",
+				CreateURL: "",
+				PullURLS:  []string{fmt.Sprintf("%s/pulls/%d", repo.HTMLURL(), pr.Index)},
 			})
 			continue
 		}
@@ -290,35 +291,57 @@ func HookPostReceive(ctx *gitea_context.PrivateContext) {
 				}
 			}
 
-			pr, err := issues_model.GetUnmergedPullRequest(ctx, repo.ID, baseRepo.ID, branch, baseRepo.DefaultBranch, issues_model.PullRequestFlowGithub)
-			if err != nil && !issues_model.IsErrPullRequestNotExist(err) {
-				log.Error("Failed to get active PR in: %-v Branch: %s to: %-v Branch: %s Error: %v", repo, branch, baseRepo, baseRepo.DefaultBranch, err)
+			// Check if there is an existing pull request for this branch.
+			prList, err := issues_model.GetUnmergedPullRequestsAnyTarget(ctx, repo.ID, baseRepo.ID, branch, issues_model.PullRequestFlowGithub)
+			if err != nil {
+				log.Error("Failed to get active PR in: %-v Branch: %s to: %-v Error: %v", repo, branch, baseRepo, err)
 				ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
 					Err: fmt.Sprintf(
-						"Failed to get active PR in: %-v Branch: %s to: %-v Branch: %s Error: %v", repo, branch, baseRepo, baseRepo.DefaultBranch, err),
+						"Failed to get active PR in: %-v Branch: %s to: %-v Error: %v", repo, branch, baseRepo, err),
+					RepoWasEmpty: wasEmpty,
+				})
+				return
+			}
+			err = prList.LoadRepositories(ctx)
+			if err != nil {
+				log.Error("Failed to load repositories for PullRequestList: %s", err)
+				ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
+					Err:          fmt.Sprintf("Failed to load repositories for PullRequestList: %s", err),
 					RepoWasEmpty: wasEmpty,
 				})
 				return
 			}
 
-			if pr == nil {
-				if repo.IsFork {
-					branch = fmt.Sprintf("%s:%s", repo.OwnerName, branch)
-				}
-				results = append(results, private.HookPostReceiveBranchResult{
-					Message: setting.Git.PullRequestPushMessage && baseRepo.AllowsPulls(ctx),
-					Create:  true,
-					Branch:  branch,
-					URL:     fmt.Sprintf("%s/compare/%s...%s", baseRepo.HTMLURL(), util.PathEscapeSegments(baseRepo.DefaultBranch), util.PathEscapeSegments(branch)),
-				})
-			} else {
-				results = append(results, private.HookPostReceiveBranchResult{
-					Message: setting.Git.PullRequestPushMessage && baseRepo.AllowsPulls(ctx),
-					Create:  false,
-					Branch:  branch,
-					URL:     fmt.Sprintf("%s/pulls/%d", baseRepo.HTMLURL(), pr.Index),
-				})
+			if repo.IsFork {
+				branch = fmt.Sprintf("%s:%s", repo.OwnerName, branch)
 			}
+			createURL := fmt.Sprintf("%s/compare/%s...%s", baseRepo.HTMLURL(), util.PathEscapeSegments(baseRepo.DefaultBranch), util.PathEscapeSegments(branch))
+			var urls []string
+			foundDefaultBranch := false
+			for _, pr := range prList {
+				var baseBranchDisplay string
+				if pr.HeadRepoID == pr.BaseRepoID {
+					// Inside the same repository: just show base branch name
+					baseBranchDisplay = pr.BaseBranch
+				} else {
+					// We are merging this into another repo: display user/repo:branch
+					baseBranchDisplay = fmt.Sprintf("%s:%s", pr.BaseRepo.FullName(), pr.BaseBranch)
+				}
+				urls = append(urls, fmt.Sprintf("%s/pulls/%d merges into %s", baseRepo.HTMLURL(), pr.Index, baseBranchDisplay))
+				if pr.BaseBranch == baseRepo.DefaultBranch {
+					foundDefaultBranch = true
+				}
+			}
+			if foundDefaultBranch {
+				createURL = ""
+			}
+			results = append(results, private.HookPostReceiveBranchResult{
+				Message:   setting.Git.PullRequestPushMessage && baseRepo.AllowsPulls(ctx),
+				Create:    !foundDefaultBranch,
+				Branch:    branch,
+				CreateURL: createURL,
+				PullURLS:  urls,
+			})
 		}
 	}
 	ctx.JSON(http.StatusOK, private.HookPostReceiveResult{
@@ -334,7 +357,7 @@ func loadContextCacheUser(ctx context.Context, id int64) (*user_model.User, erro
 }
 
 // handlePullRequestMerging handle pull request merging, a pull request action should push at least 1 commit
-func handlePullRequestMerging(ctx *gitea_context.PrivateContext, opts *private.HookOptions, ownerName, repoName string, updates []*repo_module.PushUpdateOptions) {
+func handlePullRequestMerging(ctx *app_context.PrivateContext, opts *private.HookOptions, ownerName, repoName string, updates []*repo_module.PushUpdateOptions) {
 	if len(updates) == 0 {
 		ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
 			Err: fmt.Sprintf("Pushing a merged PR (pr:%d) no commits pushed ", opts.PullRequestID),

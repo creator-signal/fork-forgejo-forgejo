@@ -99,16 +99,12 @@
   padding-bottom: 10px;
 }
 
-@media (max-width: 438px) {
-  .repository.new.release .field button,
-  .repository.new.release .field input {
-    width: 100%;
-  }
-}
-
 @media (max-width: 767.98px) {
-  .repository.new.release .field button {
-    margin-bottom: 1em;
+  .release-list-search {
+    order: 2 !important;
+  }
+  .release-list-buttons {
+    margin-left: auto;
   }
 }
 
@@ -118,4 +114,17 @@
 
 .repository.new.release .markup {
   min-height: 240px;
+}
+
+.ui.ui.ui.tag-label {
+  margin-left: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  gap: 0.3rem;
+}
+
+.ui.ui.ui.tag-label.IsRelease {
+  border-color: var(--color-primary);
+}
+.ui.ui.ui.tag-label.IsRelease:hover {
+  border-color: var(--color-primary-dark-1);
 }

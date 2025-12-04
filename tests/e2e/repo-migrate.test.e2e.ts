@@ -3,38 +3,83 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test, save_visual, login_user, load_logged_in_context} from './utils_e2e.ts';
+import {test, test_context, dynamic_id} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
-test.beforeAll(({browser}, workerInfo) => login_user(browser, workerInfo, 'user2'));
+test.use({user: 'user2'});
 
-test('Migration Progress Page', async ({page: unauthedPage, browser}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Flaky actionability checks on Mobile Safari');
+test('Migration type seleciton screen', async ({page}) => {
+  await page.goto('/repo/migrate');
 
-  const page = await (await load_logged_in_context(browser, workerInfo, 'user2')).newPage();
+  // For branding purposes, it is desired that `gitea-` prefixes in SVGs are
+  // replaced with something like `productlogo-`.
+  await expect(page.locator('svg.gitea-git')).toBeVisible();
+  await expect(page.locator('svg.octicon-mark-github')).toBeVisible();
+  await expect(page.locator('svg.gitea-gitlab')).toBeVisible();
+  await expect(page.locator('svg.gitea-forgejo')).toBeVisible();
+  await expect(page.locator('svg.gitea-gitea')).toBeVisible();
+  await expect(page.locator('svg.gitea-gogs')).toBeVisible();
+  await expect(page.locator('svg.gitea-onedev')).toBeVisible();
+  await expect(page.locator('svg.gitea-gitbucket')).toBeVisible();
+  await expect(page.locator('svg.gitea-codebase')).toBeVisible();
 
-  expect((await page.goto('/user2/invalidrepo'))?.status(), 'repo should not exist yet').toBe(404);
+  await screenshot(page);
+});
+
+test('Migration Repo Name detection', async ({page}) => {
+  await page.goto('/repo/migrate?service_type=2');
+
+  const form = page.locator('form');
+
+  // Test trailing slashes are stripped
+  await form.getByRole('textbox', {name: 'Migrate / Clone from URL'}).fill('https://github.com/example/test/');
+  await form.getByRole('textbox', {name: 'Migrate / Clone from URL'}).blur();
+  await expect(form.getByRole('textbox', {name: 'Repository Name'})).toHaveValue('test');
+
+  // Test trailing .git is stripped
+  await page.reload();
+  await form.getByRole('textbox', {name: 'Migrate / Clone from URL'}).fill('https://github.com/example/test.git');
+  await form.getByRole('textbox', {name: 'Migrate / Clone from URL'}).blur();
+  await expect(form.getByRole('textbox', {name: 'Repository Name'})).toHaveValue('test');
+
+  // Test trailing .git and trailing / together is stripped
+  await page.reload();
+  await form.getByRole('textbox', {name: 'Migrate / Clone from URL'}).fill('https://github.com/example/test.git/');
+  await form.getByRole('textbox', {name: 'Migrate / Clone from URL'}).blur();
+  await expect(form.getByRole('textbox', {name: 'Repository Name'})).toHaveValue('test');
+
+  // Save screenshot only once
+  await screenshot(page);
+});
+
+test('Migration Progress Page', async ({page, browser}) => {
+  const repoName = dynamic_id();
+  expect((await page.goto(`/user2/${repoName}`))?.status(), 'repo should not exist yet').toBe(404);
 
   await page.goto('/repo/migrate?service_type=1');
 
   const form = page.locator('form');
-  await form.getByRole('textbox', {name: 'Repository Name'}).fill('invalidrepo');
-  await form.getByRole('textbox', {name: 'Migrate / Clone from URL'}).fill('https://codeberg.org/forgejo/invalidrepo');
-  await save_visual(page);
+  await form.getByRole('textbox', {name: 'Repository Name'}).fill(repoName);
+  await form.getByRole('textbox', {name: 'Migrate / Clone from URL'}).fill(`https://codeberg.org/forgejo/${repoName}`);
+  await screenshot(page);
   await form.locator('button.primary').click({timeout: 5000});
-  await expect(page).toHaveURL('user2/invalidrepo');
-  await save_visual(page);
-  // page screenshot of unauthedPage is checked automatically after the test
+  await expect(page).toHaveURL(`user2/${repoName}`);
+  await screenshot(page);
 
-  expect((await unauthedPage.goto('/user2/invalidrepo'))?.status(), 'public migration page should be accessible').toBe(200);
-  await expect(unauthedPage.locator('#repo_migrating_progress')).toBeVisible();
+  const ctx = await test_context(browser, {storageState: {cookies: [], origins: []}});
+  const unauthenticatedPage = await ctx.newPage();
+  expect((await unauthenticatedPage.goto(`/user2/${repoName}`))?.status(), 'public migration page should be accessible').toBe(200);
+  await expect(unauthenticatedPage.locator('#repo_migrating_progress')).toBeVisible();
 
   await page.reload();
   await expect(page.locator('#repo_migrating_failed')).toBeVisible();
-  await save_visual(page);
+  await screenshot(page);
   await page.getByRole('button', {name: 'Delete this repository'}).click();
   const deleteModal = page.locator('#delete-repo-modal');
-  await deleteModal.getByRole('textbox', {name: 'Confirmation string'}).fill('user2/invalidrepo');
-  await save_visual(page);
+  await deleteModal.getByRole('textbox', {name: 'Confirmation string'}).fill(`user2/${repoName}`);
+  await screenshot(page);
   await deleteModal.getByRole('button', {name: 'Delete repository'}).click();
   await expect(page).toHaveURL('/');
+  // checked last to preserve the order of screenshots from first run
+  await screenshot(unauthenticatedPage);
 });

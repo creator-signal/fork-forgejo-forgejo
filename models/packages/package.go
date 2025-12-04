@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 	"xorm.io/xorm"
@@ -51,6 +51,7 @@ const (
 	TypePub       Type = "pub"
 	TypePyPI      Type = "pypi"
 	TypeRpm       Type = "rpm"
+	TypeAlt       Type = "alt"
 	TypeRubyGems  Type = "rubygems"
 	TypeSwift     Type = "swift"
 	TypeVagrant   Type = "vagrant"
@@ -76,6 +77,7 @@ var TypeList = []Type{
 	TypePub,
 	TypePyPI,
 	TypeRpm,
+	TypeAlt,
 	TypeRubyGems,
 	TypeSwift,
 	TypeVagrant,
@@ -122,6 +124,8 @@ func (pt Type) Name() string {
 		return "PyPI"
 	case TypeRpm:
 		return "RPM"
+	case TypeAlt:
+		return "ALT"
 	case TypeRubyGems:
 		return "RubyGems"
 	case TypeSwift:
@@ -173,6 +177,8 @@ func (pt Type) SVGName() string {
 		return "gitea-python"
 	case TypeRpm:
 		return "gitea-rpm"
+	case TypeAlt:
+		return "gitea-alt"
 	case TypeRubyGems:
 		return "gitea-rubygems"
 	case TypeSwift:
@@ -193,6 +199,15 @@ type Package struct {
 	LowerName        string `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	SemverCompatible bool   `xorm:"NOT NULL DEFAULT false"`
 	IsInternal       bool   `xorm:"NOT NULL DEFAULT false"`
+}
+
+func ResolvePackageName(name string, t Type) string {
+	switch t {
+	case TypeMaven:
+		return name
+	default:
+		return strings.ToLower(name)
+	}
 }
 
 // TryInsertPackage inserts a package. If a package exists already, ErrDuplicatePackage is returned
@@ -236,6 +251,11 @@ func SetRepositoryLink(ctx context.Context, packageID, repoID int64) error {
 	return err
 }
 
+func UnlinkRepository(ctx context.Context, packageID int64) error {
+	_, err := db.GetEngine(ctx).ID(packageID).Cols("repo_id").Update(&Package{RepoID: 0})
+	return err
+}
+
 // UnlinkRepositoryFromAllPackages unlinks every package from the repository
 func UnlinkRepositoryFromAllPackages(ctx context.Context, repoID int64) error {
 	_, err := db.GetEngine(ctx).Where("repo_id = ?", repoID).Cols("repo_id").Update(&Package{})
@@ -261,7 +281,7 @@ func GetPackageByName(ctx context.Context, ownerID int64, packageType Type, name
 	var cond builder.Cond = builder.Eq{
 		"package.owner_id":    ownerID,
 		"package.type":        packageType,
-		"package.lower_name":  strings.ToLower(name),
+		"package.lower_name":  ResolvePackageName(name, packageType),
 		"package.is_internal": false,
 	}
 

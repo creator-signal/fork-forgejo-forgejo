@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"testing"
 
-	gitea_context "code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/webhook"
-	"code.gitea.io/gitea/tests"
+	app_context "forgejo.org/services/context"
+	"forgejo.org/services/webhook"
+	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +32,6 @@ func TestNewWebHookLink(t *testing.T) {
 		baseurl + "/1",
 	}
 
-	var csrfToken string
 	for _, url := range tests {
 		resp := session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK)
 		htmlDoc := NewHTMLParser(t, resp.Body)
@@ -40,19 +39,17 @@ func TestNewWebHookLink(t *testing.T) {
 			webhooksLen,
 			htmlDoc.Find(`a[href^="`+baseurl+`/"][href$="/new"]`).Length(),
 			"not all webhooks are listed in the 'new' dropdown")
-
-		csrfToken = htmlDoc.GetCSRF()
 	}
 
 	// ensure that the "failure" pages has the full dropdown as well
-	resp := session.MakeRequest(t, NewRequestWithValues(t, "POST", baseurl+"/gitea/new", map[string]string{"_csrf": csrfToken}), http.StatusUnprocessableEntity)
+	resp := session.MakeRequest(t, NewRequestWithValues(t, "POST", baseurl+"/gitea/new", map[string]string{}), http.StatusUnprocessableEntity)
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	assert.Equal(t,
 		webhooksLen,
 		htmlDoc.Find(`a[href^="`+baseurl+`/"][href$="/new"]`).Length(),
 		"not all webhooks are listed in the 'new' dropdown on failure")
 
-	resp = session.MakeRequest(t, NewRequestWithValues(t, "POST", baseurl+"/1", map[string]string{"_csrf": csrfToken}), http.StatusUnprocessableEntity)
+	resp = session.MakeRequest(t, NewRequestWithValues(t, "POST", baseurl+"/1", map[string]string{}), http.StatusUnprocessableEntity)
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	assert.Equal(t,
 		webhooksLen,
@@ -337,9 +334,10 @@ func testWebhookFormsShared(t *testing.T, endpoint, name string, session *TestSe
 	resp := session.MakeRequest(t, NewRequest(t, "GET", endpoint+"/"+name+"/new"), http.StatusOK)
 	htmlForm := NewHTMLParser(t, resp.Body).Find(`form[action^="` + endpoint + `/"]`)
 
+	testWebhookFormsSharedChooseEvents(t, htmlForm)
+
 	// fill the form
 	payload := map[string]string{
-		"_csrf":  htmlForm.Find(`input[name="_csrf"]`).AttrOr("value", ""),
 		"events": "send_everything",
 	}
 	for k, v := range validFields {
@@ -381,7 +379,6 @@ func testWebhookFormsShared(t *testing.T, endpoint, name string, session *TestSe
 
 	// fill the form
 	payload = map[string]string{
-		"_csrf":  htmlForm.Find(`input[name="_csrf"]`).AttrOr("value", ""),
 		"events": "push_only",
 	}
 	for k, v := range validFields {
@@ -409,7 +406,6 @@ func testWebhookFormsShared(t *testing.T, endpoint, name string, session *TestSe
 			t.Run("invalid", func(t *testing.T) {
 				// fill the form
 				payload := map[string]string{
-					"_csrf":  htmlForm.Find(`input[name="_csrf"]`).AttrOr("value", ""),
 					"events": "send_everything",
 				}
 				for k, v := range validFields {
@@ -427,7 +423,7 @@ func testWebhookFormsShared(t *testing.T, endpoint, name string, session *TestSe
 				// check that the invalid form is pre-filled
 				htmlForm = NewHTMLParser(t, resp.Body).Find(`form[action^="` + endpoint + `/"]`)
 				for k, v := range payload {
-					if k == "_csrf" || k == "events" || v == "" {
+					if k == "events" || v == "" {
 						// the 'events' is a radio input, which is buggy below
 						continue
 					}
@@ -445,7 +441,7 @@ func assertHasFlashMessages(t *testing.T, resp *httptest.ResponseRecorder, expec
 	seenKeys := make(map[string][]string, len(expectedKeys))
 
 	for _, cookie := range resp.Result().Cookies() {
-		if cookie.Name != gitea_context.CookieNameFlash {
+		if cookie.Name != app_context.CookieNameFlash {
 			continue
 		}
 		flash, _ := url.ParseQuery(cookie.Value)
@@ -470,5 +466,39 @@ func assertHasFlashMessages(t *testing.T, resp *httptest.ResponseRecorder, expec
 
 	for k, v := range seenKeys {
 		t.Errorf("unexpected flash message %q: %q", k, v)
+	}
+}
+
+func testWebhookFormsSharedChooseEvents(t *testing.T, htmlForm *goquery.Selection) {
+	webhookTypes := []string{
+		"create",
+		"delete",
+		"fork",
+		"push",
+		"repository",
+		"release",
+		"package",
+		"wiki",
+		"issues",
+		"issue_assign",
+		"issue_label",
+		"issue_milestone",
+		"issue_comment",
+		"pull_request",
+		"pull_request_assign",
+		"pull_request_label",
+		"pull_request_milestone",
+		"pull_request_comment",
+		"pull_request_review",
+		"pull_request_sync",
+		"pull_request_review_request",
+		"action_failure",
+		"action_recover",
+		"action_success",
+	}
+
+	// check all types of webhooks are present in the form
+	for _, webhookType := range webhookTypes {
+		assertInput(t, htmlForm, webhookType)
 	}
 }

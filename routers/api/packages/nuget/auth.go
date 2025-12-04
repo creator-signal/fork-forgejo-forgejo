@@ -6,11 +6,10 @@ package nuget
 import (
 	"net/http"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/services/auth"
+	auth_model "forgejo.org/models/auth"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/services/auth"
 )
 
 var _ auth.Method = &Auth{}
@@ -25,7 +24,7 @@ func (a *Auth) Name() string {
 func (a *Auth) Verify(req *http.Request, w http.ResponseWriter, store auth.DataStore, sess auth.SessionStore) (*user_model.User, error) {
 	token, err := auth_model.GetAccessTokenBySHA(req.Context(), req.Header.Get("X-NuGet-ApiKey"))
 	if err != nil {
-		if !(auth_model.IsErrAccessTokenNotExist(err) || auth_model.IsErrAccessTokenEmpty(err)) {
+		if !auth_model.IsErrAccessTokenNotExist(err) && !auth_model.IsErrAccessTokenEmpty(err) {
 			log.Error("GetAccessTokenBySHA: %v", err)
 			return nil, err
 		}
@@ -38,9 +37,8 @@ func (a *Auth) Verify(req *http.Request, w http.ResponseWriter, store auth.DataS
 		return nil, err
 	}
 
-	token.UpdatedUnix = timeutil.TimeStampNow()
-	if err := auth_model.UpdateAccessToken(req.Context(), token); err != nil {
-		log.Error("UpdateAccessToken:  %v", err)
+	if err := token.UpdateLastUsed(req.Context()); err != nil {
+		log.Error("UpdateLastUsed:  %v", err)
 	}
 
 	return u, nil

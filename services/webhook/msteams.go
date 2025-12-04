@@ -11,13 +11,13 @@ import (
 	"net/url"
 	"strings"
 
-	webhook_model "code.gitea.io/gitea/models/webhook"
-	"code.gitea.io/gitea/modules/git"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/webhook/shared"
+	webhook_model "forgejo.org/models/webhook"
+	"forgejo.org/modules/git"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	webhook_module "forgejo.org/modules/webhook"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/webhook/shared"
 )
 
 type msteamsHandler struct{}
@@ -178,7 +178,7 @@ func (m msteamsConvertor) Push(p *api.PushPayload) (MSTeamsPayload, error) {
 
 // Issue implements PayloadConvertor Issue method
 func (m msteamsConvertor) Issue(p *api.IssuePayload) (MSTeamsPayload, error) {
-	title, _, attachmentText, color := getIssuesPayloadInfo(p, noneLinkFormatter, false)
+	title, _, attachmentText, color := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return createMSTeamsPayload(
 		p.Repository,
@@ -193,7 +193,7 @@ func (m msteamsConvertor) Issue(p *api.IssuePayload) (MSTeamsPayload, error) {
 
 // IssueComment implements PayloadConvertor IssueComment method
 func (m msteamsConvertor) IssueComment(p *api.IssueCommentPayload) (MSTeamsPayload, error) {
-	title, _, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, false)
+	title, _, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return createMSTeamsPayload(
 		p.Repository,
@@ -208,7 +208,7 @@ func (m msteamsConvertor) IssueComment(p *api.IssueCommentPayload) (MSTeamsPaylo
 
 // PullRequest implements PayloadConvertor PullRequest method
 func (m msteamsConvertor) PullRequest(p *api.PullRequestPayload) (MSTeamsPayload, error) {
-	title, _, attachmentText, color := getPullRequestPayloadInfo(p, noneLinkFormatter, false)
+	title, _, attachmentText, color := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return createMSTeamsPayload(
 		p.Repository,
@@ -284,7 +284,7 @@ func (m msteamsConvertor) Repository(p *api.RepositoryPayload) (MSTeamsPayload, 
 
 // Wiki implements PayloadConvertor Wiki method
 func (m msteamsConvertor) Wiki(p *api.WikiPayload) (MSTeamsPayload, error) {
-	title, color, _ := getWikiPayloadInfo(p, noneLinkFormatter, false)
+	title, color, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return createMSTeamsPayload(
 		p.Repository,
@@ -299,7 +299,7 @@ func (m msteamsConvertor) Wiki(p *api.WikiPayload) (MSTeamsPayload, error) {
 
 // Release implements PayloadConvertor Release method
 func (m msteamsConvertor) Release(p *api.ReleasePayload) (MSTeamsPayload, error) {
-	title, color := getReleasePayloadInfo(p, noneLinkFormatter, false)
+	title, color := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return createMSTeamsPayload(
 		p.Repository,
@@ -313,7 +313,7 @@ func (m msteamsConvertor) Release(p *api.ReleasePayload) (MSTeamsPayload, error)
 }
 
 func (m msteamsConvertor) Package(p *api.PackagePayload) (MSTeamsPayload, error) {
-	title, color := getPackagePayloadInfo(p, noneLinkFormatter, false)
+	title, color := getPackagePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return createMSTeamsPayload(
 		p.Repository,
@@ -323,6 +323,23 @@ func (m msteamsConvertor) Package(p *api.PackagePayload) (MSTeamsPayload, error)
 		p.Package.HTMLURL,
 		color,
 		&MSTeamsFact{"Package:", p.Package.Name},
+	), nil
+}
+
+func (m msteamsConvertor) Action(p *api.ActionPayload) (MSTeamsPayload, error) {
+	title, color := getActionPayloadInfo(p, noneLinkFormatter)
+
+	// TODO: is TriggerUser correct here?
+	// if you'd like to test these proprietary services, see the discussion on: https://codeberg.org/forgejo/forgejo/pulls/7508
+	return createMSTeamsPayload(
+		p.Run.Repo,
+		p.Run.TriggerUser,
+		title,
+		"",
+		p.Run.HTMLURL,
+		color,
+		// TODO: does this make any sense?
+		&MSTeamsFact{"Action:", p.Run.Title},
 	), nil
 }
 
@@ -356,7 +373,7 @@ func createMSTeamsPayload(r *api.Repository, s *api.User, title, text, actionTar
 		PotentialAction: []MSTeamsAction{
 			{
 				Type: "OpenUri",
-				Name: "View in Gitea",
+				Name: "View in Forgejo",
 				Targets: []MSTeamsActionTarget{
 					{
 						Os:  "default",

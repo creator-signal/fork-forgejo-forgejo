@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"net/url"
 
-	packages_model "code.gitea.io/gitea/models/packages"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/services/context"
+	packages_model "forgejo.org/models/packages"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/services/context"
 )
 
 // LogAndProcessError logs an error and calls a custom callback with the processed error message.
@@ -25,7 +25,8 @@ func LogAndProcessError(ctx *context.Context, status int, obj any, cb func(strin
 		message = fmt.Sprintf("%s", obj)
 	}
 	if status == http.StatusInternalServerError {
-		log.ErrorWithSkip(1, message)
+		// LogAndProcessError is always wrapped in a `apiError` call, so we need to skip two frames
+		log.ErrorWithSkip(2, message)
 
 		if setting.IsProd && (ctx.Doer == nil || !ctx.Doer.IsAdmin) {
 			message = ""
@@ -39,16 +40,9 @@ func LogAndProcessError(ctx *context.Context, status int, obj any, cb func(strin
 	}
 }
 
-// Serves the content of the package file
+// ServePackageFile Serves the content of the package file
 // If the url is set it will redirect the request, otherwise the content is copied to the response.
 func ServePackageFile(ctx *context.Context, s io.ReadSeekCloser, u *url.URL, pf *packages_model.PackageFile, forceOpts ...*context.ServeHeaderOptions) {
-	if u != nil {
-		ctx.Redirect(u.String())
-		return
-	}
-
-	defer s.Close()
-
 	var opts *context.ServeHeaderOptions
 	if len(forceOpts) > 0 {
 		opts = forceOpts[0]
@@ -58,6 +52,13 @@ func ServePackageFile(ctx *context.Context, s io.ReadSeekCloser, u *url.URL, pf 
 			LastModified: pf.CreatedUnix.AsLocalTime(),
 		}
 	}
+
+	if u != nil {
+		ctx.Redirect(u.String(), opts.RedirectStatusCode)
+		return
+	}
+
+	defer s.Close()
 
 	ctx.ServeContent(s, opts)
 }

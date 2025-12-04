@@ -7,21 +7,21 @@ import (
 	"errors"
 	"net/http"
 
-	"code.gitea.io/gitea/models/webhook"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	"code.gitea.io/gitea/services/context"
-	webhook_service "code.gitea.io/gitea/services/webhook"
+	"forgejo.org/models/webhook"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
+	webhook_service "forgejo.org/services/webhook"
 )
 
-// ListHooks list system's webhooks
+// ListHooks list system webhooks
 func ListHooks(ctx *context.APIContext) {
 	// swagger:operation GET /admin/hooks admin adminListHooks
 	// ---
-	// summary: List system's webhooks
+	// summary: List global (system) webhooks
 	// produces:
 	// - application/json
 	// parameters:
@@ -37,7 +37,7 @@ func ListHooks(ctx *context.APIContext) {
 	//   "200":
 	//     "$ref": "#/responses/HookList"
 
-	sysHooks, err := webhook.GetSystemWebhooks(ctx, false)
+	sysHooks, total, err := webhook.GetSystemWebhooks(ctx, utils.GetListOptions(ctx), false)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetSystemWebhooks", err)
 		return
@@ -51,6 +51,7 @@ func ListHooks(ctx *context.APIContext) {
 		}
 		hooks[i] = h
 	}
+	ctx.SetTotalCountHeader(total)
 	ctx.JSON(http.StatusOK, hooks)
 }
 

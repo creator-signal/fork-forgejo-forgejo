@@ -8,22 +8,23 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"strings"
 	"sync/atomic"
 	"time"
 
-	db_model "code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/indexer/issues/bleve"
-	"code.gitea.io/gitea/modules/indexer/issues/db"
-	"code.gitea.io/gitea/modules/indexer/issues/elasticsearch"
-	"code.gitea.io/gitea/modules/indexer/issues/internal"
-	"code.gitea.io/gitea/modules/indexer/issues/meilisearch"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/process"
-	"code.gitea.io/gitea/modules/queue"
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/indexer/issues/bleve"
+	db_index "forgejo.org/modules/indexer/issues/db"
+	"forgejo.org/modules/indexer/issues/elasticsearch"
+	"forgejo.org/modules/indexer/issues/internal"
+	"forgejo.org/modules/indexer/issues/meilisearch"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/process"
+	"forgejo.org/modules/queue"
+	"forgejo.org/modules/setting"
 )
 
 // IndexerMetadata is used to send data to the queue, so it contains only the ids.
@@ -102,7 +103,7 @@ func InitIssueIndexer(syncReindex bool) {
 				log.Fatal("Unable to issueIndexer.Init with connection %s Error: %v", setting.Indexer.IssueConnStr, err)
 			}
 		case "db":
-			issueIndexer = db.NewIndexer()
+			issueIndexer = db_index.NewIndexer()
 		case "meilisearch":
 			issueIndexer = meilisearch.NewIndexer(setting.Indexer.IssueConnStr, setting.Indexer.IssueConnAuth, setting.Indexer.IssueIndexerName)
 			existed, err = issueIndexer.Init(ctx)
@@ -217,8 +218,8 @@ func PopulateIssueIndexer(ctx context.Context) error {
 		default:
 		}
 		repos, _, err := repo_model.SearchRepositoryByName(ctx, &repo_model.SearchRepoOptions{
-			ListOptions: db_model.ListOptions{Page: page, PageSize: repo_model.RepositoryListDefaultPageSize},
-			OrderBy:     db_model.SearchOrderByID,
+			ListOptions: db.ListOptions{Page: page, PageSize: repo_model.RepositoryListDefaultPageSize},
+			OrderBy:     db.SearchOrderByID,
 			Private:     true,
 			Collaborate: optional.Some(false),
 		})
@@ -280,18 +281,45 @@ const (
 	SortByDeadlineAsc  = internal.SortByDeadlineAsc
 )
 
+// ParseSortBy parses the `sortBy` string and returns the associated `SortBy`
+// value, if one exists. Otherwise return `defaultSortBy`.
+func ParseSortBy(sortBy string, defaultSortBy internal.SortBy) internal.SortBy {
+	switch strings.ToLower(sortBy) {
+	case "relevance":
+		return SortByScore
+	case "latest":
+		return SortByCreatedDesc
+	case "oldest":
+		return SortByCreatedAsc
+	case "recentupdate":
+		return SortByUpdatedDesc
+	case "leastupdate":
+		return SortByUpdatedAsc
+	case "mostcomment":
+		return SortByCommentsDesc
+	case "leastcomment":
+		return SortByCommentsAsc
+	case "nearduedate":
+		return SortByDeadlineAsc
+	case "farduedate":
+		return SortByDeadlineDesc
+	default:
+		return defaultSortBy
+	}
+}
+
 // SearchIssues search issues by options.
 func SearchIssues(ctx context.Context, opts *SearchOptions) ([]int64, int64, error) {
 	indexer := *globalIndexer.Load()
 
-	if opts.Keyword == "" {
+	if len(opts.Tokens) == 0 {
 		// This is a conservative shortcut.
 		// If the keyword is empty, db has better (at least not worse) performance to filter issues.
 		// When the keyword is empty, it tends to listing rather than searching issues.
 		// So if the user creates an issue and list issues immediately, the issue may not be listed because the indexer needs time to index the issue.
 		// Even worse, the external indexer like elastic search may not be available for a while,
 		// and the user may not be able to list issues completely until it is available again.
-		indexer = db.NewIndexer()
+		indexer = db_index.NewIndexer()
 	}
 
 	result, err := indexer.Search(ctx, opts)
@@ -309,7 +337,7 @@ func SearchIssues(ctx context.Context, opts *SearchOptions) ([]int64, int64, err
 
 // CountIssues counts issues by options. It is a shortcut of SearchIssues(ctx, opts) but only returns the total count.
 func CountIssues(ctx context.Context, opts *SearchOptions) (int64, error) {
-	opts = opts.Copy(func(options *SearchOptions) { options.Paginator = &db_model.ListOptions{PageSize: 0} })
+	opts = opts.Copy(func(options *SearchOptions) { options.Paginator = &db.ListOptions{PageSize: 0} })
 
 	_, total, err := SearchIssues(ctx, opts)
 	return total, err

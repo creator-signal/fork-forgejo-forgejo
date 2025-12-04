@@ -5,14 +5,14 @@ package mirror
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	quota_model "code.gitea.io/gitea/models/quota"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/queue"
-	"code.gitea.io/gitea/modules/setting"
+	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/queue"
+	"forgejo.org/modules/setting"
 )
 
 // doMirrorSync causes this request to mirror itself
@@ -31,7 +31,7 @@ func doMirrorSync(ctx context.Context, req *SyncRequest) {
 	}
 }
 
-var errLimit = fmt.Errorf("reached limit")
+var errLimit = errors.New("reached limit")
 
 // Update checks and updates mirror repositories.
 func Update(ctx context.Context, pullLimit, pushLimit int) error {
@@ -70,7 +70,7 @@ func Update(ctx context.Context, pullLimit, pushLimit int) error {
 		// Check we've not been cancelled
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("aborted")
+			return errors.New("aborted")
 		default:
 		}
 

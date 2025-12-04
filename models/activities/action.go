@@ -1,11 +1,13 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
@@ -14,20 +16,21 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
 
 	"xorm.io/builder"
 	"xorm.io/xorm/schemas"
@@ -142,38 +145,49 @@ func (at ActionType) InActions(actions ...string) bool {
 // used in template render.
 type Action struct {
 	ID          int64 `xorm:"pk autoincr"`
-	UserID      int64 `xorm:"INDEX"` // Receiver user id.
+	UserID      int64 // Receiver user id.
 	OpType      ActionType
 	ActUserID   int64            // Action user id.
 	ActUser     *user_model.User `xorm:"-"`
 	RepoID      int64
 	Repo        *repo_model.Repository `xorm:"-"`
-	CommentID   int64                  `xorm:"INDEX"`
+	CommentID   int64                  `xorm:"INDEX"` // indexed to support `DeleteIssueActions`
 	Comment     *issues_model.Comment  `xorm:"-"`
 	Issue       *issues_model.Issue    `xorm:"-"` // get the issue id from content
-	IsDeleted   bool                   `xorm:"NOT NULL DEFAULT false"`
 	RefName     string
 	IsPrivate   bool               `xorm:"NOT NULL DEFAULT false"`
 	Content     string             `xorm:"TEXT"`
-	CreatedUnix timeutil.TimeStamp `xorm:"created"`
+	CreatedUnix timeutil.TimeStamp `xorm:"created INDEX"` // indexed to support `DeleteOldActions`
 }
 
 func init() {
 	db.RegisterModel(new(Action))
 }
 
-// TableIndices implements xorm's TableIndices interface
+// TableIndices implements xorm's TableIndices interface.  It is used here to ensure indexes with specified column order
+// are created, which can't be created through xorm tags on the struct.
 func (a *Action) TableIndices() []*schemas.Index {
-	repoIndex := schemas.NewIndex("r_u_d", schemas.IndexType)
-	repoIndex.AddColumn("repo_id", "user_id", "is_deleted")
+	// Index to support getUserHeatmapData, which searches for data that is visible-to (user_id) and performed-by
+	// (act_user_id) a user, but only includes visible repos (repo_id).
+	actUserIndex := schemas.NewIndex("au_r_c_u", schemas.IndexType)
+	actUserIndex.AddColumn("act_user_id", "repo_id", "created_unix", "user_id")
 
-	actUserIndex := schemas.NewIndex("au_r_c_u_d", schemas.IndexType)
-	actUserIndex.AddColumn("act_user_id", "repo_id", "created_unix", "user_id", "is_deleted")
+	// GetFeeds is a common access point to Action and requires that all action feeds be queried based upon one of
+	// user_id (opts.RequestedUser), repo_id (opts.RequestedTeam... kinda), and/or repo_id (opts.RequestedRepo), and
+	// then the results are ordered by created_unix and paginated.  The most efficient indexes to support those queries
+	// are:
+	requestedUser := schemas.NewIndex("user_id_created_unix", schemas.IndexType)
+	requestedUser.AddColumn("user_id", "created_unix")
+	requestedRepo := schemas.NewIndex("repo_id_created_unix", schemas.IndexType)
+	requestedRepo.AddColumn("repo_id", "created_unix")
 
-	cudIndex := schemas.NewIndex("c_u_d", schemas.IndexType)
-	cudIndex.AddColumn("created_unix", "user_id", "is_deleted")
+	// To support `DeleteIssueActions` search for createissue / createpullrequest actions; this isn't a great search
+	// because `DeleteIssueActions` searches by `content` as well, but it should be sufficient performance-wise for
+	// infrequent deleting of issues.
+	repoOpType := schemas.NewIndex("repo_id_op_type", schemas.IndexType)
+	repoOpType.AddColumn("repo_id", "op_type")
 
-	indices := []*schemas.Index{actUserIndex, repoIndex, cudIndex}
+	indices := []*schemas.Index{actUserIndex, requestedUser, requestedRepo, repoOpType}
 
 	return indices
 }
@@ -245,6 +259,12 @@ func (a *Action) GetActDisplayNameTitle(ctx context.Context) string {
 		return a.ShortActUserName(ctx)
 	}
 	return a.GetActFullName(ctx)
+}
+
+// GetRepo returns the repository of the action.
+func (a *Action) GetRepo(ctx context.Context) *repo_model.Repository {
+	a.loadRepo(ctx)
+	return a.Repo
 }
 
 // GetRepoUserName returns the name of the action repository owner.
@@ -378,8 +398,21 @@ func (a *Action) IsIssueEvent() bool {
 
 // GetIssueInfos returns a list of associated information with the action.
 func (a *Action) GetIssueInfos() []string {
+	// Previously multiple pieces of data used to be encoded into a.Content by pipe-separating them, but this doesn't
+	// work well if some of the user-entered pieces of content (issue titles, comments, etc.) contain pipes.  The newer
+	// storage format is to json-encode a string array, which we check for and prefer... then fallback to assuming old.
+	var ret []string
+	if strings.HasPrefix(a.Content, "[") && strings.HasSuffix(a.Content, "]") {
+		ret = make([]string, 0, 3)
+		err := json.Unmarshal([]byte(a.Content), &ret)
+		if err != nil {
+			log.Error("GetIssueInfos json decoding error: %v", err)
+		}
+	} else {
+		ret = strings.SplitN(a.Content, "|", 3)
+	}
+
 	// make sure it always returns 3 elements, because there are some access to the a[1] and a[2] without checking the length
-	ret := strings.SplitN(a.Content, "|", 3)
 	for len(ret) < 3 {
 		ret = append(ret, "")
 	}
@@ -434,6 +467,12 @@ func (a *Action) GetIssueContent(ctx context.Context) string {
 	return a.Issue.Content
 }
 
+func GetActivityByID(ctx context.Context, id int64) (*Action, error) {
+	var act Action
+	_, err := db.GetEngine(ctx).ID(id).Get(&act)
+	return &act, err
+}
+
 // GetFeedsOptions options for retrieving feeds
 type GetFeedsOptions struct {
 	db.ListOptions
@@ -444,14 +483,13 @@ type GetFeedsOptions struct {
 	IncludePrivate       bool                   // include private actions
 	OnlyPerformedBy      bool                   // only actions performed by requested user
 	OnlyPerformedByActor bool                   // only actions performed by the original actor
-	IncludeDeleted       bool                   // include deleted actions
 	Date                 string                 // the day we want activity for: YYYY-MM-DD
 }
 
 // GetFeeds returns actions according to the provided options
 func GetFeeds(ctx context.Context, opts GetFeedsOptions) (ActionList, int64, error) {
 	if opts.RequestedUser == nil && opts.RequestedTeam == nil && opts.RequestedRepo == nil {
-		return nil, 0, fmt.Errorf("need at least one of these filters: RequestedUser, RequestedTeam, RequestedRepo")
+		return nil, 0, errors.New("need at least one of these filters: RequestedUser, RequestedTeam, RequestedRepo")
 	}
 
 	cond, err := activityQueryCondition(ctx, opts)
@@ -560,9 +598,6 @@ func activityQueryCondition(ctx context.Context, opts GetFeedsOptions) (builder.
 	if !opts.IncludePrivate {
 		cond = cond.And(builder.Eq{"`action`.is_private": false})
 	}
-	if !opts.IncludeDeleted {
-		cond = cond.And(builder.Eq{"is_deleted": false})
-	}
 
 	if opts.Date != "" {
 		dateLow, err := time.ParseInLocation("2006-01-02", opts.Date, setting.DefaultUILocation)
@@ -590,13 +625,14 @@ func DeleteOldActions(ctx context.Context, olderThan time.Duration) (err error) 
 }
 
 // NotifyWatchers creates batch of actions for every watcher.
-func NotifyWatchers(ctx context.Context, actions ...*Action) error {
+func NotifyWatchers(ctx context.Context, actions ...*Action) ([]Action, error) {
 	var watchers []*repo_model.Watch
 	var repo *repo_model.Repository
 	var err error
 	var permCode []bool
 	var permIssue []bool
 	var permPR []bool
+	var out []Action
 
 	e := db.GetEngine(ctx)
 
@@ -607,14 +643,14 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 			// Add feeds for user self and all watchers.
 			watchers, err = repo_model.GetWatchers(ctx, act.RepoID)
 			if err != nil {
-				return fmt.Errorf("get watchers: %w", err)
+				return nil, fmt.Errorf("get watchers: %w", err)
 			}
 
 			// Be aware that optimizing this correctly into the `GetWatchers` SQL
 			// query is for most cases less performant than doing this.
 			blockedDoerUserIDs, err := user_model.ListBlockedByUsersID(ctx, act.ActUserID)
 			if err != nil {
-				return fmt.Errorf("user_model.ListBlockedByUsersID: %w", err)
+				return nil, fmt.Errorf("user_model.ListBlockedByUsersID: %w", err)
 			}
 
 			if len(blockedDoerUserIDs) > 0 {
@@ -629,8 +665,9 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 		// Add feed for actioner.
 		act.UserID = act.ActUserID
 		if _, err = e.Insert(act); err != nil {
-			return fmt.Errorf("insert new actioner: %w", err)
+			return nil, fmt.Errorf("insert new actioner: %w", err)
 		}
+		out = append(out, *act)
 
 		if repoChanged {
 			act.loadRepo(ctx)
@@ -638,7 +675,7 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 
 			// check repo owner exist.
 			if err := act.Repo.LoadOwner(ctx); err != nil {
-				return fmt.Errorf("can't get repo owner: %w", err)
+				return nil, fmt.Errorf("can't get repo owner: %w", err)
 			}
 		} else if act.Repo == nil {
 			act.Repo = repo
@@ -649,7 +686,7 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 			act.ID = 0
 			act.UserID = act.Repo.Owner.ID
 			if err = db.Insert(ctx, act); err != nil {
-				return fmt.Errorf("insert new actioner: %w", err)
+				return nil, fmt.Errorf("insert new actioner: %w", err)
 			}
 		}
 
@@ -702,26 +739,29 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) error {
 			}
 
 			if err = db.Insert(ctx, act); err != nil {
-				return fmt.Errorf("insert new action: %w", err)
+				return nil, fmt.Errorf("insert new action: %w", err)
 			}
 		}
 	}
-	return nil
+	return out, nil
 }
 
 // NotifyWatchersActions creates batch of actions for every watcher.
-func NotifyWatchersActions(ctx context.Context, acts []*Action) error {
+func NotifyWatchersActions(ctx context.Context, acts []*Action) ([]Action, error) {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer committer.Close()
+	var out []Action
 	for _, act := range acts {
-		if err := NotifyWatchers(ctx, act); err != nil {
-			return err
+		as, err := NotifyWatchers(ctx, act)
+		if err != nil {
+			return nil, err
 		}
+		out = append(out, as...)
 	}
-	return committer.Commit()
+	return out, committer.Commit()
 }
 
 // DeleteIssueActions delete all actions related with issueID
@@ -751,7 +791,9 @@ func DeleteIssueActions(ctx context.Context, repoID, issueID, issueIndex int64) 
 
 	_, err := e.Where("repo_id = ?", repoID).
 		In("op_type", ActionCreateIssue, ActionCreatePullRequest).
-		Where("content LIKE ?", strconv.FormatInt(issueIndex, 10)+"|%"). // "IssueIndex|content..."
+		Where(builder.Or(
+			builder.Like{"content", strconv.FormatInt(issueIndex, 10) + "|%"},            // "IssueIndex|content..."
+			builder.Like{"content", "[\"" + strconv.FormatInt(issueIndex, 10) + "\"%"})). // JSON, ["IssueIndex"...
 		Delete(&Action{})
 	return err
 }

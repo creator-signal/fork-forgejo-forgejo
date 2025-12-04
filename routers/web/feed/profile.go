@@ -6,10 +6,10 @@ package feed
 import (
 	"time"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/modules/markup"
-	"code.gitea.io/gitea/modules/markup/markdown"
-	"code.gitea.io/gitea/services/context"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/services/context"
 
 	"github.com/gorilla/feeds"
 )
@@ -33,7 +33,6 @@ func showUserFeed(ctx *context.Context, formatType string) {
 		Actor:           ctx.Doer,
 		IncludePrivate:  includePrivate,
 		OnlyPerformedBy: !ctx.ContextUser.IsOrganization(),
-		IncludeDeleted:  false,
 		Date:            ctx.FormString("date"),
 	})
 	if err != nil {

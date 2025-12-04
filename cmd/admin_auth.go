@@ -4,28 +4,43 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"text/tabwriter"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	auth_service "code.gitea.io/gitea/services/auth"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	auth_service "forgejo.org/services/auth"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
-var (
-	microcmdAuthDelete = &cli.Command{
+type (
+	authService struct {
+		initDB            func(ctx context.Context) error
+		createAuthSource  func(context.Context, *auth_model.Source) error
+		updateAuthSource  func(context.Context, *auth_model.Source) error
+		getAuthSourceByID func(ctx context.Context, id int64) (*auth_model.Source, error)
+	}
+)
+
+func microcmdAuthDelete() *cli.Command {
+	return &cli.Command{
 		Name:   "delete",
 		Usage:  "Delete specific auth source",
-		Flags:  []cli.Flag{idFlag},
+		Flags:  []cli.Flag{idFlag()},
+		Before: noDanglingArgs,
 		Action: runDeleteAuth,
 	}
-	microcmdAuthList = &cli.Command{
+}
+
+func microcmdAuthList() *cli.Command {
+	return &cli.Command{
 		Name:   "list",
 		Usage:  "List auth sources",
+		Before: noDanglingArgs,
 		Action: runListAuth,
 		Flags: []cli.Flag{
 			&cli.IntFlag{
@@ -54,10 +69,20 @@ var (
 			},
 		},
 	}
-)
+}
 
-func runListAuth(c *cli.Context) error {
-	ctx, cancel := installSignals()
+// newAuthService creates a service with default functions.
+func newAuthService() *authService {
+	return &authService{
+		initDB:            initDB,
+		createAuthSource:  auth_model.CreateSource,
+		updateAuthSource:  auth_model.UpdateSource,
+		getAuthSourceByID: auth_model.GetSourceByID,
+	}
+}
+
+func runListAuth(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
 	if err := initDB(ctx); err != nil {
@@ -81,7 +106,7 @@ func runListAuth(c *cli.Context) error {
 
 	// loop through each source and print
 	w := tabwriter.NewWriter(os.Stdout, c.Int("min-width"), c.Int("tab-width"), c.Int("padding"), padChar, flags)
-	fmt.Fprintf(w, "ID\tName\tType\tEnabled\n")
+	fmt.Fprint(w, "ID\tName\tType\tEnabled\n")
 	for _, source := range authSources {
 		fmt.Fprintf(w, "%d\t%s\t%s\t%t\n", source.ID, source.Name, source.Type.String(), source.IsActive)
 	}
@@ -90,12 +115,12 @@ func runListAuth(c *cli.Context) error {
 	return nil
 }
 
-func runDeleteAuth(c *cli.Context) error {
+func runDeleteAuth(ctx context.Context, c *cli.Command) error {
 	if !c.IsSet("id") {
 		return errors.New("--id flag is missing")
 	}
 
-	ctx, cancel := installSignals()
+	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
 	if err := initDB(ctx); err != nil {

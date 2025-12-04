@@ -4,34 +4,33 @@
 package repo
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"code.gitea.io/gitea/models"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	quota_model "code.gitea.io/gitea/models/quota"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	base "code.gitea.io/gitea/modules/migration"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/migrations"
-	notify_service "code.gitea.io/gitea/services/notify"
-	repo_service "code.gitea.io/gitea/services/repository"
+	"forgejo.org/models"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/migrations"
+	notify_service "forgejo.org/services/notify"
+	repo_service "forgejo.org/services/repository"
 )
 
 // Migrate migrate remote git repository to gitea
@@ -123,12 +122,12 @@ func Migrate(ctx *context.APIContext) {
 	gitServiceType := convert.ToGitServiceType(form.Service)
 
 	if form.Mirror && setting.Mirror.DisableNewPull {
-		ctx.Error(http.StatusForbidden, "MirrorsGlobalDisabled", fmt.Errorf("the site administrator has disabled the creation of new pull mirrors"))
+		ctx.Error(http.StatusForbidden, "MirrorsGlobalDisabled", errors.New("the site administrator has disabled the creation of new pull mirrors"))
 		return
 	}
 
 	if setting.Repository.DisableMigrations {
-		ctx.Error(http.StatusForbidden, "MigrationsGlobalDisabled", fmt.Errorf("the site administrator has disabled migrations"))
+		ctx.Error(http.StatusForbidden, "MigrationsGlobalDisabled", errors.New("the site administrator has disabled migrations"))
 		return
 	}
 
@@ -195,10 +194,9 @@ func Migrate(ctx *context.APIContext) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			var buf bytes.Buffer
-			fmt.Fprintf(&buf, "Handler crashed with error: %v", log.Stack(2))
-
-			err = errors.New(buf.String())
+			log.Error("PANIC recovered: %v\nStacktrace: %s", e, log.Stack(2))
+			err = fmt.Errorf("PANIC recover with error %v", e)
+			ctx.Error(http.StatusInternalServerError, "Recovered PANIC with error", err)
 		}
 
 		if err == nil {
@@ -216,6 +214,17 @@ func Migrate(ctx *context.APIContext) {
 	if repo, err = migrations.MigrateRepository(graceful.GetManager().HammerContext(), ctx.Doer, repoOwner.Name, opts, nil); err != nil {
 		handleMigrateError(ctx, repoOwner, err)
 		return
+	}
+
+	if opts.Releases || opts.Wiki {
+		repoOpt := api.EditRepoOption{
+			HasReleases: &opts.Releases,
+			HasWiki:     &opts.Wiki,
+		}
+
+		if err = updateRepoUnits(ctx, repoOwner.Name, repo, repoOpt); err != nil {
+			log.Error("Failed to update units on %s/%s repo. %w", repoOwner.Name, form.RepoName, err)
+		}
 	}
 
 	log.Trace("Repository migrated: %s/%s", repoOwner.Name, form.RepoName)
@@ -272,6 +281,8 @@ func handleRemoteAddrError(ctx *context.APIContext, err error) {
 			}
 		case addrErr.IsInvalidPath:
 			ctx.Error(http.StatusUnprocessableEntity, "", "Invalid local path, it does not exist or not a directory.")
+		case addrErr.HasCredentials:
+			ctx.Error(http.StatusUnprocessableEntity, "", "The URL contains credentials.")
 		default:
 			ctx.Error(http.StatusInternalServerError, "ParseRemoteAddr", "Unknown error type (ErrInvalidCloneAddr): "+err.Error())
 		}

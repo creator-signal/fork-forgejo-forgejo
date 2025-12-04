@@ -19,35 +19,39 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/cmd"
-	"code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/testlogger"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers"
-	"code.gitea.io/gitea/services/auth/source/remote"
-	gitea_context "code.gitea.io/gitea/services/context"
-	user_service "code.gitea.io/gitea/services/user"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/cmd"
+	"forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/keying"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/testlogger"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers"
+	"forgejo.org/services/auth/source/remote"
+	app_context "forgejo.org/services/context"
+	"forgejo.org/services/mailer"
+	user_service "forgejo.org/services/user"
+	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	goth_github "github.com/markbates/goth/providers/github"
 	goth_gitlab "github.com/markbates/goth/providers/gitlab"
+	"github.com/pquerna/otp/totp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,6 +113,9 @@ func runMainAppWithStdin(stdin io.Reader, subcommand string, args ...string) (st
 		"GITEA_WORK_DIR="+setting.AppWorkPath)
 	cmd.Stdin = stdin
 	out, err := cmd.Output()
+	if ee, ok := err.(*exec.ExitError); ok {
+		log.Error("%s %v exit on error %s", os.Args[0], args, ee.Stderr)
+	}
 	return string(out), err
 }
 
@@ -158,18 +165,6 @@ func TestMain(m *testing.M) {
 			testlogger.SlowFlush = duration
 		}
 	}
-
-	os.Unsetenv("GIT_AUTHOR_NAME")
-	os.Unsetenv("GIT_AUTHOR_EMAIL")
-	os.Unsetenv("GIT_AUTHOR_DATE")
-	os.Unsetenv("GIT_COMMITTER_NAME")
-	os.Unsetenv("GIT_COMMITTER_EMAIL")
-	os.Unsetenv("GIT_COMMITTER_DATE")
-
-	// Avoid loading the default system config. On MacOS, this config
-	// sets the osxkeychain credential helper, which will cause tests
-	// to freeze with a dialog.
-	os.Setenv("GIT_CONFIG_NOSYSTEM", "true")
 
 	err := unittest.InitFixtures(
 		unittest.FixturesOptions{
@@ -283,6 +278,29 @@ func (s *TestSession) MakeRequestNilResponseHashSumRecorder(t testing.TB, rw *Re
 	return resp
 }
 
+func (s *TestSession) EnrollTOTP(t testing.TB) {
+	t.Helper()
+
+	req := NewRequest(t, "GET", "/user/settings/security/two_factor/enroll")
+	resp := s.MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	totpSecretKey, has := htmlDoc.Find(".twofa img[src^='data:image/png;base64']").Attr("alt")
+	assert.True(t, has)
+
+	currentTOTP, err := totp.GenerateCode(totpSecretKey, time.Now())
+	require.NoError(t, err)
+
+	req = NewRequestWithValues(t, "POST", "/user/settings/security/two_factor/enroll", map[string]string{
+		"passcode": currentTOTP,
+	})
+	s.MakeRequest(t, req, http.StatusSeeOther)
+
+	flashCookie := s.GetCookie(app_context.CookieNameFlash)
+	assert.NotNil(t, flashCookie)
+	assert.Contains(t, flashCookie.Value, "success%3DYour%2Baccount%2Bhas%2Bbeen%2Bsuccessfully%2Benrolled.")
+}
+
 const userPassword = "password"
 
 func emptyTestSession(t testing.TB) *TestSession {
@@ -307,12 +325,9 @@ func mockCompleteUserAuth(mock func(res http.ResponseWriter, req *http.Request) 
 
 func addAuthSource(t *testing.T, payload map[string]string) *auth.Source {
 	session := loginUser(t, "user1")
-	payload["_csrf"] = GetCSRF(t, session, "/admin/auths/new")
 	req := NewRequestWithValues(t, "POST", "/admin/auths/new", payload)
 	session.MakeRequest(t, req, http.StatusSeeOther)
-	source, err := auth.GetSourceByName(context.Background(), payload["name"])
-	require.NoError(t, err)
-	return source
+	return unittest.AssertExistsAndLoadBean(t, &auth.Source{Name: payload["name"]})
 }
 
 func authSourcePayloadOAuth2(name string) map[string]string {
@@ -361,7 +376,7 @@ func authSourcePayloadGitHubCustom(name string) map[string]string {
 }
 
 func createRemoteAuthSource(t *testing.T, name, url, matchingSource string) *auth.Source {
-	require.NoError(t, auth.CreateSource(context.Background(), &auth.Source{
+	require.NoError(t, auth.CreateSource(t.Context(), &auth.Source{
 		Type:     auth.Remote,
 		Name:     name,
 		IsActive: true,
@@ -370,9 +385,7 @@ func createRemoteAuthSource(t *testing.T, name, url, matchingSource string) *aut
 			MatchingSource: matchingSource,
 		},
 	}))
-	source, err := auth.GetSourceByName(context.Background(), name)
-	require.NoError(t, err)
-	return source
+	return unittest.AssertExistsAndLoadBean(t, &auth.Source{Name: name})
 }
 
 func createUser(ctx context.Context, t testing.TB, user *user_model.User) func() {
@@ -404,17 +417,12 @@ func loginUserWithPassword(t testing.TB, userName, password string) *TestSession
 
 func loginUserWithPasswordRemember(t testing.TB, userName, password string, rememberMe bool) *TestSession {
 	t.Helper()
-	req := NewRequest(t, "GET", "/user/login")
-	resp := MakeRequest(t, req, http.StatusOK)
-
-	doc := NewHTMLParser(t, resp.Body)
-	req = NewRequestWithValues(t, "POST", "/user/login", map[string]string{
-		"_csrf":     doc.GetCSRF(),
+	req := NewRequestWithValues(t, "POST", "/user/login", map[string]string{
 		"user_name": userName,
 		"password":  password,
 		"remember":  strconv.FormatBool(rememberMe),
 	})
-	resp = MakeRequest(t, req, http.StatusSeeOther)
+	resp := MakeRequest(t, req, http.StatusSeeOther)
 
 	ch := http.Header{}
 	ch.Add("Cookie", strings.Join(resp.Header()["Set-Cookie"], ";"))
@@ -429,6 +437,39 @@ func loginUserWithPasswordRemember(t testing.TB, userName, password string, reme
 	return session
 }
 
+func loginUserWithTOTP(t testing.TB, user *user_model.User) *TestSession {
+	t.Helper()
+	session := loginUser(t, user.Name)
+
+	twoFactor, err := auth.GetTwoFactorByUID(db.DefaultContext, user.ID)
+	require.NoError(t, err)
+
+	key := keying.TOTP
+	code, err := key.Decrypt(twoFactor.Secret, keying.ColumnAndID("secret", twoFactor.ID))
+	require.NoError(t, err)
+
+	passcode, err := totp.GenerateCode(string(code), time.Now())
+	require.NoError(t, err)
+
+	req := NewRequestWithValues(t, "POST", "/user/two_factor", map[string]string{
+		"passcode": passcode,
+	})
+	session.MakeRequest(t, req, http.StatusSeeOther)
+
+	return session
+}
+
+func loginUserMaybeTOTP(t testing.TB, user *user_model.User, useTOTP bool) *TestSession {
+	if useTOTP {
+		sess := loginUser(t, user.Name)
+		sess.EnrollTOTP(t)
+		sess.MakeRequest(t, NewRequest(t, "POST", "/user/logout"), http.StatusOK)
+
+		return loginUserWithTOTP(t, user)
+	}
+	return loginUser(t, user.Name)
+}
+
 // token has to be unique this counter take care of
 var tokenCounter int64
 
@@ -437,35 +478,27 @@ var tokenCounter int64
 // but without the "scope_" prefix.
 func getTokenForLoggedInUser(t testing.TB, session *TestSession, scopes ...auth.AccessTokenScope) string {
 	t.Helper()
-	var token string
-	req := NewRequest(t, "GET", "/user/settings/applications")
-	resp := session.MakeRequest(t, req, http.StatusOK)
-	var csrf string
-	for _, cookie := range resp.Result().Cookies() {
-		if cookie.Name != "_csrf" {
-			continue
-		}
-		csrf = cookie.Value
-		break
-	}
-	if csrf == "" {
-		doc := NewHTMLParser(t, resp.Body)
-		csrf = doc.GetCSRF()
-	}
-	assert.NotEmpty(t, csrf)
+	accessTokenName := fmt.Sprintf("api-testing-token-%d", atomic.AddInt64(&tokenCounter, 1))
+	createApplicationSettingsToken(t, session, accessTokenName, scopes...)
+	token := assertAccessToken(t, session)
+	return token
+}
+
+// createApplicationSettingsToken creates a token with given name and scopes for the currently logged in user.
+// It will redirect to the application settings page.
+func createApplicationSettingsToken(t testing.TB, session *TestSession, name string, scopes ...auth.AccessTokenScope) {
 	urlValues := url.Values{}
-	urlValues.Add("_csrf", csrf)
-	urlValues.Add("name", fmt.Sprintf("api-testing-token-%d", atomic.AddInt64(&tokenCounter, 1)))
+	urlValues.Add("name", name)
 	for _, scope := range scopes {
 		urlValues.Add("scope", string(scope))
 	}
-	req = NewRequestWithURLValues(t, "POST", "/user/settings/applications", urlValues)
-	resp = session.MakeRequest(t, req, http.StatusSeeOther)
+	req := NewRequestWithURLValues(t, "POST", "/user/settings/applications", urlValues)
+	resp := session.MakeRequest(t, req, http.StatusSeeOther)
 
 	// Log the flash values on failure
 	if !assert.Equal(t, []string{"/user/settings/applications"}, resp.Result().Header["Location"]) {
 		for _, cookie := range resp.Result().Cookies() {
-			if cookie.Name != gitea_context.CookieNameFlash {
+			if cookie.Name != app_context.CookieNameFlash {
 				continue
 			}
 			flash, _ := url.ParseQuery(cookie.Value)
@@ -474,11 +507,15 @@ func getTokenForLoggedInUser(t testing.TB, session *TestSession, scopes ...auth.
 			}
 		}
 	}
+}
 
-	req = NewRequest(t, "GET", "/user/settings/applications")
-	resp = session.MakeRequest(t, req, http.StatusOK)
+// assertAccessToken retrieves a token from "/user/settings/applications" and returns it.
+// It will also assert that the page contains a token.
+func assertAccessToken(t testing.TB, session *TestSession) string {
+	req := NewRequest(t, "GET", "/user/settings/applications")
+	resp := session.MakeRequest(t, req, http.StatusOK)
 	htmlDoc := NewHTMLParser(t, resp.Body)
-	token = htmlDoc.doc.Find(".ui.info p").Text()
+	token := htmlDoc.doc.Find(".ui.info p").Text()
 	assert.NotEmpty(t, token)
 	return token
 }
@@ -565,7 +602,7 @@ func MakeRequest(t testing.TB, rw *RequestWrapper, expectedStatus int) *httptest
 	}
 	testWebRoutes.ServeHTTP(recorder, req)
 	if expectedStatus != NoExpectedStatus {
-		if !assert.EqualValues(t, expectedStatus, recorder.Code, "Request: %s %s", req.Method, req.URL.String()) {
+		if !assert.Equal(t, expectedStatus, recorder.Code, "Request: %s %s", req.Method, req.URL.String()) {
 			logUnexpectedResponse(t, recorder)
 		}
 	}
@@ -578,7 +615,7 @@ func MakeRequestNilResponseRecorder(t testing.TB, rw *RequestWrapper, expectedSt
 	recorder := NewNilResponseRecorder()
 	testWebRoutes.ServeHTTP(recorder, req)
 	if expectedStatus != NoExpectedStatus {
-		if !assert.EqualValues(t, expectedStatus, recorder.Code,
+		if !assert.Equal(t, expectedStatus, recorder.Code,
 			"Request: %s %s", req.Method, req.URL.String()) {
 			logUnexpectedResponse(t, &recorder.ResponseRecorder)
 		}
@@ -592,7 +629,7 @@ func MakeRequestNilResponseHashSumRecorder(t testing.TB, rw *RequestWrapper, exp
 	recorder := NewNilResponseHashSumRecorder()
 	testWebRoutes.ServeHTTP(recorder, req)
 	if expectedStatus != NoExpectedStatus {
-		if !assert.EqualValues(t, expectedStatus, recorder.Code,
+		if !assert.Equal(t, expectedStatus, recorder.Code,
 			"Request: %s %s", req.Method, req.URL.String()) {
 			logUnexpectedResponse(t, &recorder.ResponseRecorder)
 		}
@@ -607,7 +644,7 @@ func logUnexpectedResponse(t testing.TB, recorder *httptest.ResponseRecorder) {
 	if len(respBytes) == 0 {
 		// log the content of the flash cookie
 		for _, cookie := range recorder.Result().Cookies() {
-			if cookie.Name != gitea_context.CookieNameFlash {
+			if cookie.Name != app_context.CookieNameFlash {
 				continue
 			}
 			flash, _ := url.ParseQuery(cookie.Value)
@@ -668,19 +705,6 @@ func VerifyJSONSchema(t testing.TB, resp *httptest.ResponseRecorder, schemaFile 
 	require.NoError(t, schemaValidation)
 }
 
-// GetCSRF returns CSRF token from body
-// If it fails, it means the CSRF token is not found in the response body returned by the url with the given session.
-// In this case, you should find a better url to get it.
-func GetCSRF(t testing.TB, session *TestSession, urlStr string) string {
-	t.Helper()
-	req := NewRequest(t, "GET", urlStr)
-	resp := session.MakeRequest(t, req, http.StatusOK)
-	doc := NewHTMLParser(t, resp.Body)
-	csrf := doc.GetCSRF()
-	require.NotEmpty(t, csrf)
-	return csrf
-}
-
 func GetHTMLTitle(t testing.TB, session *TestSession, urlStr string) string {
 	t.Helper()
 
@@ -694,4 +718,10 @@ func GetHTMLTitle(t testing.TB, session *TestSession, urlStr string) string {
 
 	doc := NewHTMLParser(t, resp.Body)
 	return doc.Find("head title").Text()
+}
+
+func SortMailerMessages(msgs []*mailer.Message) {
+	slices.SortFunc(msgs, func(a, b *mailer.Message) int {
+		return strings.Compare(b.To, a.To)
+	})
 }

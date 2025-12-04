@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/modules/log"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,6 +41,10 @@ func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveM
 		log.Info("Mock HTTP Server: got request for path %s", r.URL.Path)
 		// TODO check request method (support POST?)
 		fixturePath := fmt.Sprintf("%s/%s_%s", testDataDir, r.Method, url.PathEscape(path))
+		if strings.Contains(path, "test_repo.git") {
+			// We got a git clone request against our mock server
+			fixturePath = fmt.Sprintf("%s/%s", testDataDir, strings.TrimLeft(r.URL.Path, "/"))
+		}
 		if liveMode {
 			liveURL := fmt.Sprintf("%s%s", liveServerBaseURL, path)
 
@@ -67,7 +71,7 @@ func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveM
 			for headerName, headerValues := range response.Header {
 				for _, headerValue := range headerValues {
 					if !slices.Contains(ignoredHeaders, strings.ToLower(headerName)) {
-						_, err := fixtureWriter.WriteString(fmt.Sprintf("%s: %s\n", headerName, headerValue))
+						_, err := fmt.Fprintf(fixtureWriter, "%s: %s\n", headerName, headerValue)
 						require.NoError(t, err, "writing the header of the HTTP response to the fixture file failed")
 					}
 				}

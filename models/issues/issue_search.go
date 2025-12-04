@@ -9,13 +9,13 @@ import (
 	"strconv"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/optional"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/optional"
 
 	"xorm.io/builder"
 	"xorm.io/xorm"
@@ -48,20 +48,28 @@ type IssuesOptions struct { //nolint
 	UpdatedBeforeUnix  int64
 	// prioritize issues from this repo
 	PriorityRepoID int64
-	IsArchived     optional.Option[bool]
-	Org            *organization.Organization // issues permission scope
-	Team           *organization.Team         // issues permission scope
-	User           *user_model.User           // issues permission scope
+	// if this issue index (not ID) exists and matches the filters, *and* priorityrepo sort is used, show it first
+	PriorityIssueIndex int64
+	IsArchived         optional.Option[bool]
+
+	// If combined with AllPublic, then private as well as public issues
+	// that matches the criteria will be returned, if AllPublic is false
+	// only the private issues will be returned.
+	Org  *organization.Organization // issues permission scope
+	Team *organization.Team         // issues permission scope
+	User *user_model.User           // issues permission scope
 }
 
 // applySorts sort an issues-related session based on the provided
 // sortType string
-func applySorts(sess *xorm.Session, sortType string, priorityRepoID int64) {
+func applySorts(sess *xorm.Session, sortType string, priorityRepoID, priorityIssueIndex int64) {
 	switch sortType {
 	case "oldest":
 		sess.Asc("issue.created_unix").Asc("issue.id")
 	case "recentupdate":
 		sess.Desc("issue.updated_unix").Desc("issue.created_unix").Desc("issue.id")
+	case "recentclose":
+		sess.Desc("issue.closed_unix").Desc("issue.created_unix").Desc("issue.id")
 	case "leastupdate":
 		sess.Asc("issue.updated_unix").Asc("issue.created_unix").Asc("issue.id")
 	case "mostcomment":
@@ -91,8 +99,11 @@ func applySorts(sess *xorm.Session, sortType string, priorityRepoID int64) {
 	case "priorityrepo":
 		sess.OrderBy("CASE "+
 			"WHEN issue.repo_id = ? THEN 1 "+
-			"ELSE 2 END ASC", priorityRepoID).
-			Desc("issue.created_unix").
+			"ELSE 2 END ASC", priorityRepoID)
+		if priorityIssueIndex != 0 {
+			sess.OrderBy("issue.index = ? DESC", priorityIssueIndex)
+		}
+		sess.Desc("issue.created_unix").
 			Desc("issue.id")
 	case "project-column-sorting":
 		sess.Asc("project_issue.sorting").Desc("issue.created_unix").Desc("issue.id")
@@ -196,7 +207,8 @@ func applyRepoConditions(sess *xorm.Session, opts *IssuesOptions) {
 	} else if len(opts.RepoIDs) > 1 {
 		opts.RepoCond = builder.In("issue.repo_id", opts.RepoIDs)
 	}
-	if opts.AllPublic {
+	// If permission scoping is set, then we set this condition at a later stage.
+	if opts.AllPublic && opts.User == nil {
 		if opts.RepoCond == nil {
 			opts.RepoCond = builder.NewCond()
 		}
@@ -268,7 +280,14 @@ func applyConditions(sess *xorm.Session, opts *IssuesOptions) {
 	applyLabelsCondition(sess, opts)
 
 	if opts.User != nil {
-		sess.And(issuePullAccessibleRepoCond("issue.repo_id", opts.User.ID, opts.Org, opts.Team, opts.IsPull.Value()))
+		cond := issuePullAccessibleRepoCond("issue.repo_id", opts.User.ID, opts.Org, opts.Team, opts.IsPull.Value())
+		// If AllPublic was set, then also consider all issues in public
+		// repositories in addition to the private repositories the user has access
+		// to.
+		if opts.AllPublic {
+			cond = cond.Or(builder.In("issue.repo_id", builder.Select("id").From("repository").Where(builder.Eq{"is_private": false})))
+		}
+		sess.And(cond)
 	}
 }
 
@@ -329,6 +348,9 @@ func issuePullAccessibleRepoCond(repoIDstr string, userID int64, org *organizati
 				builder.Or(
 					repo_model.UserOrgUnitRepoCond(repoIDstr, userID, org.ID, unitType), // team member repos
 					repo_model.UserOrgPublicUnitRepoCond(userID, org.ID),                // user org public non-member repos, TODO: check repo has issues
+					builder.And(
+						builder.In("issue.repo_id", builder.Select("id").From("repository").Where(builder.Eq{"owner_id": org.ID})),
+						repo_model.UserAccessRepoCond(repoIDstr, userID)), // user can access org repo in a unit independent way
 				),
 			)
 		}
@@ -438,7 +460,7 @@ func applySubscribedCondition(sess *xorm.Session, subscriberID int64) {
 			),
 			builder.Eq{"issue.poster_id": subscriberID},
 			builder.In("issue.repo_id", builder.
-				Select("id").
+				Select("repo_id").
 				From("watch").
 				Where(builder.And(builder.Eq{"user_id": subscriberID},
 					builder.In("mode", repo_model.WatchModeNormal, repo_model.WatchModeAuto))),
@@ -453,7 +475,7 @@ func Issues(ctx context.Context, opts *IssuesOptions) (IssueList, error) {
 		Join("INNER", "repository", "`issue`.repo_id = `repository`.id")
 	applyLimit(sess, opts)
 	applyConditions(sess, opts)
-	applySorts(sess, opts.SortType, opts.PriorityRepoID)
+	applySorts(sess, opts.SortType, opts.PriorityRepoID, opts.PriorityIssueIndex)
 
 	issues := IssueList{}
 	if err := sess.Find(&issues); err != nil {
@@ -477,7 +499,7 @@ func IssueIDs(ctx context.Context, opts *IssuesOptions, otherConds ...builder.Co
 	}
 
 	applyLimit(sess, opts)
-	applySorts(sess, opts.SortType, opts.PriorityRepoID)
+	applySorts(sess, opts.SortType, opts.PriorityRepoID, opts.PriorityIssueIndex)
 
 	var res []int64
 	total, err := sess.Select("`issue`.id").Table(&Issue{}).FindAndCount(&res)

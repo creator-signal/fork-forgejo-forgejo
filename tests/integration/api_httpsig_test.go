@@ -9,13 +9,13 @@ import (
 	"net/url"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/tests"
 
-	"github.com/go-fed/httpsig"
+	"github.com/42wim/httpsig"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -95,9 +95,7 @@ func TestHTTPSigCert(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	session := loginUser(t, "user1")
 
-	csrf := GetCSRF(t, session, "/user/settings/keys")
 	req := NewRequestWithValues(t, "POST", "/user/settings/keys", map[string]string{
-		"_csrf":   csrf,
 		"content": "user1",
 		"title":   "principal",
 		"type":    "principal",

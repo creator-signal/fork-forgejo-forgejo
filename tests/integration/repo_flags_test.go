@@ -10,16 +10,16 @@ import (
 	"slices"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/routers"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/routers"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -361,9 +361,7 @@ func TestRepositoryFlagsUI(t *testing.T) {
 			flagged := flaggedRepo.IsFlagged(db.DefaultContext)
 			assert.True(t, flagged)
 
-			req := NewRequestWithValues(t, "POST", flaggedRepoManageURL, map[string]string{
-				"_csrf": GetCSRF(t, session, flaggedRepoManageURL),
-			})
+			req := NewRequest(t, "POST", flaggedRepoManageURL)
 			session.MakeRequest(t, req, http.StatusSeeOther)
 
 			flagged = flaggedRepo.IsFlagged(db.DefaultContext)
@@ -380,7 +378,6 @@ func TestRepositoryFlagsUI(t *testing.T) {
 			assert.False(t, flagged)
 
 			req := NewRequestWithValues(t, "POST", unflaggedRepoManageURL, map[string]string{
-				"_csrf": GetCSRF(t, session, unflaggedRepoManageURL),
 				"flags": "test-flag",
 			})
 			session.MakeRequest(t, req, http.StatusSeeOther)

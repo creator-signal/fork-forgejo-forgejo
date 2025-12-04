@@ -6,10 +6,10 @@ package context
 import (
 	"net/http"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/modules/log"
+	auth_model "forgejo.org/models/auth"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	"forgejo.org/modules/log"
 )
 
 // RequireRepoAdmin returns a middleware for requiring repository admin permission
@@ -109,6 +109,19 @@ func RequireRepoReaderOr(unitTypes ...unit.Type) func(ctx *Context) {
 		}
 		ctx.NotFound(ctx.Req.URL.RequestURI(), nil)
 	}
+}
+
+func RequireRepoDelegateActionTrust() func(ctx *Context) {
+	return func(ctx *Context) {
+		if CheckRepoDelegateActionTrust(ctx) {
+			return
+		}
+		ctx.NotFound(ctx.Req.URL.RequestURI(), nil)
+	}
+}
+
+func CheckRepoDelegateActionTrust(ctx *Context) bool {
+	return ctx.Repo.IsAdmin() || (ctx.IsSigned && ctx.Doer.IsAdmin) || ctx.Repo.CanWrite(unit.TypeActions)
 }
 
 // CheckRepoScopedToken check whether personal access token has repo scope

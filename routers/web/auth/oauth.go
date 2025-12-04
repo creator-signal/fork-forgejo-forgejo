@@ -17,29 +17,29 @@ import (
 	"sort"
 	"strings"
 
-	asymkey_model "code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/auth"
-	org_model "code.gitea.io/gitea/models/organization"
-	user_model "code.gitea.io/gitea/models/user"
-	auth_module "code.gitea.io/gitea/modules/auth"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/modules/web/middleware"
-	auth_service "code.gitea.io/gitea/services/auth"
-	source_service "code.gitea.io/gitea/services/auth/source"
-	"code.gitea.io/gitea/services/auth/source/oauth2"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/externalaccount"
-	"code.gitea.io/gitea/services/forms"
-	remote_service "code.gitea.io/gitea/services/remote"
-	user_service "code.gitea.io/gitea/services/user"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/auth"
+	org_model "forgejo.org/models/organization"
+	user_model "forgejo.org/models/user"
+	auth_module "forgejo.org/modules/auth"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/modules/web/middleware"
+	auth_service "forgejo.org/services/auth"
+	source_service "forgejo.org/services/auth/source"
+	"forgejo.org/services/auth/source/oauth2"
+	"forgejo.org/services/context"
+	"forgejo.org/services/externalaccount"
+	"forgejo.org/services/forms"
+	remote_service "forgejo.org/services/remote"
+	user_service "forgejo.org/services/user"
 
 	"code.forgejo.org/go-chi/binding"
 	"github.com/golang-jwt/jwt/v5"
@@ -225,7 +225,7 @@ func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, ser
 		idToken := &oauth2.OIDCToken{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(expirationDate.AsTime()),
-				Issuer:    setting.AppURL,
+				Issuer:    strings.TrimSuffix(setting.AppURL, "/"),
 				Audience:  []string{app.ClientID},
 				Subject:   fmt.Sprint(grant.UserID),
 			},
@@ -409,7 +409,7 @@ func IntrospectOAuth(ctx *context.Context) {
 			if err == nil && app != nil {
 				response.Active = true
 				response.Scope = grant.Scope
-				response.Issuer = setting.AppURL
+				response.Issuer = strings.TrimSuffix(setting.AppURL, "/")
 				response.Audience = []string{app.ClientID}
 				response.Subject = fmt.Sprint(grant.UserID)
 			}
@@ -489,7 +489,7 @@ func AuthorizeOAuth(ctx *context.Context) {
 			}, form.RedirectURI)
 			return
 		}
-		if err := ctx.Session.Set("CodeChallengeMethod", form.CodeChallenge); err != nil {
+		if err := ctx.Session.Set("CodeChallenge", form.CodeChallenge); err != nil {
 			handleAuthorizeError(ctx, AuthorizeError{
 				ErrorCode:        ErrorCodeServerError,
 				ErrorDescription: "cannot set code challenge",
@@ -668,7 +668,13 @@ func GrantApplicationOAuth(ctx *context.Context) {
 
 // OIDCWellKnown generates JSON so OIDC clients know Gitea's capabilities
 func OIDCWellKnown(ctx *context.Context) {
+	if !setting.OAuth2.Enabled {
+		ctx.Status(http.StatusNotFound)
+		return
+	}
+
 	ctx.Data["SigningKey"] = oauth2.DefaultSigningKey
+	ctx.Data["Issuer"] = strings.TrimSuffix(setting.AppURL, "/")
 	ctx.JSONTemplate("user/auth/oidc_wellknown")
 }
 
@@ -1079,7 +1085,7 @@ func SignInOAuthCallback(ctx *context.Context) {
 
 			isAdmin, isRestricted := getUserAdminAndRestrictedFromGroupClaims(source, &gothUser)
 			u.IsAdmin = isAdmin.ValueOrDefault(false)
-			u.IsRestricted = isRestricted.ValueOrDefault(false)
+			u.IsRestricted = isRestricted.ValueOrDefault(setting.Service.DefaultUserIsRestricted)
 
 			if !createAndHandleCreatedUser(ctx, base.TplName(""), nil, u, overwriteDefault, &gothUser, setting.OAuth2Client.AccountLinking != setting.OAuth2AccountLinkingDisabled) {
 				// error already handled
@@ -1088,6 +1094,11 @@ func SignInOAuthCallback(ctx *context.Context) {
 
 			if err := syncGroupsToTeams(ctx, source, &gothUser, u); err != nil {
 				ctx.ServerError("SyncGroupsToTeams", err)
+				return
+			}
+
+			if err := syncGroupsToQuotaGroups(ctx, source, &gothUser, u); err != nil {
+				ctx.ServerError("SyncGroupsToQuotaGroups", err)
 				return
 			}
 		} else {
@@ -1134,8 +1145,34 @@ func syncGroupsToTeams(ctx *context.Context, source *oauth2.Source, gothUser *go
 	return nil
 }
 
+func syncGroupsToQuotaGroups(ctx *context.Context, source *oauth2.Source, gothUser *goth.User, u *user_model.User) error {
+	if source.QuotaGroupMap != "" || source.QuotaGroupMapRemoval {
+		quotaGroupMapping, err := auth_module.UnmarshalQuotaGroupMapping(source.QuotaGroupMap)
+		if err != nil {
+			return err
+		}
+
+		groups := getClaimedQuotaGroups(source, gothUser)
+
+		if err := source_service.SyncGroupsToQuotaGroups(ctx, u, groups, quotaGroupMapping, source.QuotaGroupMapRemoval); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func getClaimedGroups(source *oauth2.Source, gothUser *goth.User) container.Set[string] {
 	groupClaims, has := gothUser.RawData[source.GroupClaimName]
+	if !has {
+		return nil
+	}
+
+	return claimValueToStringSet(groupClaims)
+}
+
+func getClaimedQuotaGroups(source *oauth2.Source, gothUser *goth.User) container.Set[string] {
+	groupClaims, has := gothUser.RawData[source.QuotaGroupClaimName]
 	if !has {
 		return nil
 	}
@@ -1243,12 +1280,11 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 
 	needs2FA := false
 	if !source.Cfg.(*oauth2.Source).SkipLocalTwoFA {
-		_, err := auth.GetTwoFactorByUID(ctx, u.ID)
-		if err != nil && !auth.IsErrTwoFactorNotEnrolled(err) {
+		needs2FA, err = auth.HasTwoFactorByUID(ctx, u.ID)
+		if err != nil {
 			ctx.ServerError("UserSignIn", err)
 			return
 		}
-		needs2FA = err == nil
 	}
 
 	oauth2Source := source.Cfg.(*oauth2.Source)
@@ -1257,8 +1293,14 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		ctx.ServerError("UnmarshalGroupTeamMapping", err)
 		return
 	}
+	quotaGroupMapping, err := auth_module.UnmarshalQuotaGroupMapping(oauth2Source.QuotaGroupMap)
+	if err != nil {
+		ctx.ServerError("UnmarshalQuotaGroupMapping", err)
+		return
+	}
 
 	groups := getClaimedGroups(oauth2Source, &gothUser)
+	quotaGroups := getClaimedQuotaGroups(oauth2Source, &gothUser)
 
 	// If this user is enrolled in 2FA and this source doesn't override it,
 	// we can't sign the user in just yet. Instead, redirect them to the 2FA authentication page.
@@ -1269,9 +1311,6 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 			ctx.ServerError("updateSession", err)
 			return
 		}
-
-		// Clear whatever CSRF cookie has right now, force to generate a new one
-		ctx.Csrf.DeleteCookie(ctx)
 
 		opts := &user_service.UpdateOptions{
 			SetLastLogin: true,
@@ -1285,6 +1324,13 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		if oauth2Source.GroupTeamMap != "" || oauth2Source.GroupTeamMapRemoval {
 			if err := source_service.SyncGroupsToTeams(ctx, u, groups, groupTeamMapping, oauth2Source.GroupTeamMapRemoval); err != nil {
 				ctx.ServerError("SyncGroupsToTeams", err)
+				return
+			}
+		}
+
+		if oauth2Source.QuotaGroupMap != "" || oauth2Source.QuotaGroupMapRemoval {
+			if err := source_service.SyncGroupsToQuotaGroups(ctx, u, quotaGroups, quotaGroupMapping, oauth2Source.QuotaGroupMapRemoval); err != nil {
+				ctx.ServerError("SyncGroupsToQuotaGroups", err)
 				return
 			}
 		}
@@ -1327,6 +1373,13 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		}
 	}
 
+	if oauth2Source.QuotaGroupMap != "" || oauth2Source.QuotaGroupMapRemoval {
+		if err := source_service.SyncGroupsToQuotaGroups(ctx, u, quotaGroups, quotaGroupMapping, oauth2Source.QuotaGroupMapRemoval); err != nil {
+			ctx.ServerError("SyncGroupsToQuotaGroups", err)
+			return
+		}
+	}
+
 	if err := updateSession(ctx, nil, map[string]any{
 		// User needs to use 2FA, save data and redirect to 2FA page.
 		"twofaUid":      u.ID,
@@ -1362,10 +1415,7 @@ func generateCodeChallenge(ctx *context.Context, provider string) (codeChallenge
 		// a code_challenge can be generated
 	}
 
-	codeVerifier, err := util.CryptoRandomString(43) // 256/log2(62) = 256 bits of entropy (each char having log2(62) of randomness)
-	if err != nil {
-		return "", err
-	}
+	codeVerifier := util.CryptoRandomString(util.RandomStringHigh)
 	if err = ctx.Session.Set("CodeVerifier", codeVerifier); err != nil {
 		return "", err
 	}

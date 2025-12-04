@@ -11,27 +11,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models"
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/httpcache"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/storage"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/common"
-	"code.gitea.io/gitea/services/context"
-	archiver_service "code.gitea.io/gitea/services/repository/archiver"
-	files_service "code.gitea.io/gitea/services/repository/files"
+	"forgejo.org/models"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/httpcache"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/storage"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/common"
+	"forgejo.org/services/context"
+	archiver_service "forgejo.org/services/repository/archiver"
+	files_service "forgejo.org/services/repository/files"
 )
 
 const (
@@ -242,24 +241,19 @@ func getBlobForEntry(ctx *context.APIContext) (blob *git.Blob, entry *git.TreeEn
 		return nil, nil, nil
 	}
 
-	if entry.IsDir() || entry.IsSubModule() {
+	if entry.IsDir() || entry.IsSubmodule() {
 		ctx.NotFound("getBlobForEntry", nil)
 		return nil, nil, nil
 	}
 
-	info, _, err := git.Entries([]*git.TreeEntry{entry}).GetCommitsInfo(ctx, ctx.Repo.Commit, path.Dir("/" + ctx.Repo.TreePath)[1:])
+	latestCommit, err := ctx.Repo.GitRepo.GetTreePathLatestCommit(ctx.Repo.Commit.ID.String(), ctx.Repo.TreePath)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetCommitsInfo", err)
+		ctx.Error(http.StatusInternalServerError, "GetTreePathLatestCommit", err)
 		return nil, nil, nil
 	}
+	when := &latestCommit.Committer.When
 
-	if len(info) == 1 {
-		// Not Modified
-		lastModified = &info[0].Commit.Committer.When
-	}
-	blob = entry.Blob()
-
-	return blob, entry, lastModified
+	return entry.Blob(), entry, when
 }
 
 // GetArchive get archive of a repository
@@ -411,7 +405,11 @@ func GetEditorconfig(ctx *context.APIContext) {
 	//   required: false
 	// responses:
 	//   200:
-	//     description: success
+	//     description: definitions
+	//     schema:
+	//       type: object
+	//       additionalProperties:
+	//         type: string
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
@@ -443,7 +441,7 @@ func canWriteFiles(ctx *context.APIContext, branch string) bool {
 
 // canReadFiles returns true if repository is readable and user has proper access level.
 func canReadFiles(r *context.Repository) bool {
-	return r.Permission.CanRead(unit.TypeCode)
+	return r.CanRead(unit.TypeCode)
 }
 
 func base64Reader(s string) (io.ReadSeeker, error) {
@@ -486,6 +484,8 @@ func ChangeFiles(ctx *context.APIContext) {
 	//     "$ref": "#/responses/error"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "409":
+	//     "$ref": "#/responses/conflict"
 	//   "413":
 	//     "$ref": "#/responses/quotaExceeded"
 	//   "422":
@@ -590,6 +590,8 @@ func CreateFile(ctx *context.APIContext) {
 	//     "$ref": "#/responses/error"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "409":
+	//     "$ref": "#/responses/conflict"
 	//   "413":
 	//     "$ref": "#/responses/quotaExceeded"
 	//   "422":
@@ -690,6 +692,8 @@ func UpdateFile(ctx *context.APIContext) {
 	//     "$ref": "#/responses/error"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "409":
+	//     "$ref": "#/responses/conflict"
 	//   "413":
 	//     "$ref": "#/responses/quotaExceeded"
 	//   "422":
@@ -698,7 +702,7 @@ func UpdateFile(ctx *context.APIContext) {
 	//     "$ref": "#/responses/repoArchivedError"
 	apiOpts := web.GetForm(ctx).(*api.UpdateFileOptions)
 	if ctx.Repo.Repository.IsEmpty {
-		ctx.Error(http.StatusUnprocessableEntity, "RepoIsEmpty", fmt.Errorf("repo is empty"))
+		ctx.Error(http.StatusUnprocessableEntity, "RepoIsEmpty", errors.New("repo is empty"))
 		return
 	}
 
@@ -763,9 +767,17 @@ func handleCreateOrUpdateFileError(ctx *context.APIContext, err error) {
 		ctx.Error(http.StatusForbidden, "Access", err)
 		return
 	}
-	if git_model.IsErrBranchAlreadyExists(err) || models.IsErrFilenameInvalid(err) || models.IsErrSHADoesNotMatch(err) ||
-		models.IsErrFilePathInvalid(err) || models.IsErrRepoFileAlreadyExists(err) {
+	if git_model.IsErrBranchAlreadyExists(err) ||
+		models.IsErrFilenameInvalid(err) ||
+		models.IsErrSHAOrCommitIDNotProvided(err) ||
+		models.IsErrFilePathInvalid(err) ||
+		models.IsErrRepoFileAlreadyExists(err) {
 		ctx.Error(http.StatusUnprocessableEntity, "Invalid", err)
+		return
+	}
+	if models.IsErrCommitIDDoesNotMatch(err) ||
+		models.IsErrSHADoesNotMatch(err) {
+		ctx.Error(http.StatusConflict, "Conflict", err)
 		return
 	}
 	if git_model.IsErrBranchNotExist(err) || git.IsErrBranchNotExist(err) {

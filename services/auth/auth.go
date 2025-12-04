@@ -10,15 +10,14 @@ import (
 	"regexp"
 	"strings"
 
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/auth/webauthn"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/session"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/web/middleware"
-	gitea_context "code.gitea.io/gitea/services/context"
-	user_service "code.gitea.io/gitea/services/user"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/auth/webauthn"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/session"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/web/middleware"
+	user_service "forgejo.org/services/user"
 )
 
 // Init should be called exactly once when the application starts to allow plugins
@@ -77,6 +76,7 @@ func handleSignIn(resp http.ResponseWriter, req *http.Request, sess SessionStore
 	_ = sess.Delete("openid_determined_username")
 	_ = sess.Delete("twofaUid")
 	_ = sess.Delete("twofaRemember")
+	_ = sess.Delete("twofaOpenID")
 	_ = sess.Delete("webauthnAssertion")
 	_ = sess.Delete("linkAccount")
 	err = sess.Set("uid", user.ID)
@@ -98,9 +98,4 @@ func handleSignIn(resp http.ResponseWriter, req *http.Request, sess SessionStore
 	}
 
 	middleware.SetLocaleCookie(resp, user.Language, 0)
-
-	// Clear whatever CSRF has right now, force to generate a new one
-	if ctx := gitea_context.GetWebContext(req); ctx != nil {
-		ctx.Csrf.DeleteCookie(ctx)
-	}
 }

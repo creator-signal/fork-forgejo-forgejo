@@ -7,8 +7,8 @@
 					{{template "repo/icon" .}}
 				</div>
 				<div class="flex-item-main">
-					<div class="flex-item-title gt-font-18">
-						<a class="muted gt-font-normal" href="{{.Owner.HomeLink}}">{{.Owner.Name}}</a>/<a class="muted" href="{{$.RepoLink}}">{{.Name}}</a>
+					<div class="flex-item-title tw-font-normal">
+						<a class="muted" href="{{.Owner.HomeLink}}">{{.Owner.Name}}</a>/<a class="muted tw-font-semibold" href="{{$.RepoLink}}">{{.Name}}</a>
 					</div>
 				</div>
 				<div class="flex-item-trailing">
@@ -38,7 +38,6 @@
 				<div class="repo-buttons button-row">
 					{{if $.RepoTransfer}}
 						<form method="post" action="{{$.RepoLink}}/action/accept_transfer?redirect_to={{$.RepoLink}}">
-							{{$.CsrfTokenHtml}}
 							<div data-tooltip-content="{{if $.CanUserAcceptTransfer}}{{ctx.Locale.Tr "repo.transfer.accept_desc" $.RepoTransfer.Recipient.DisplayName}}{{else}}{{ctx.Locale.Tr "repo.transfer.no_permission_to_accept"}}{{end}}">
 								<button type="submit" class="ui basic button {{if $.CanUserAcceptTransfer}}primary {{end}} ok small"{{if not $.CanUserAcceptTransfer}} disabled{{end}}>
 									{{ctx.Locale.Tr "repo.transfer.accept"}}
@@ -46,7 +45,6 @@
 							</div>
 						</form>
 						<form method="post" action="{{$.RepoLink}}/action/reject_transfer?redirect_to={{$.RepoLink}}">
-							{{$.CsrfTokenHtml}}
 							<div data-tooltip-content="{{if $.CanUserAcceptTransfer}}{{ctx.Locale.Tr "repo.transfer.reject_desc" $.RepoTransfer.Recipient.DisplayName}}{{else}}{{ctx.Locale.Tr "repo.transfer.no_permission_to_reject"}}{{end}}">
 								<button type="submit" class="ui basic button {{if $.CanUserAcceptTransfer}}red {{end}}ok small"{{if not $.CanUserAcceptTransfer}} disabled{{end}}>
 									{{ctx.Locale.Tr "repo.transfer.reject"}}
@@ -66,6 +64,14 @@
 					{{end}}
 					{{if not $.DisableForks}}
 					{{template "repo/header_fork" $}}
+					{{end}}
+					{{if and $.IsModerationEnabled $.IsSigned (not $.IsRepositoryAdmin)}}
+					<button class="ui small compact jump dropdown icon button" data-tooltip-content="{{ctx.Locale.Tr "repo.more_operations"}}" aria-label="{{ctx.Locale.Tr "toggle_menu"}}">
+						{{svg "octicon-kebab-horizontal"}}
+						<div class="menu top left">
+							<a class="item context" href="{{AppSubUrl}}/report_abuse?type=repo&id={{$.Repository.ID}}">{{ctx.Locale.Tr "moderation.report_content"}}</a>
+						</div>
+					</button>
 					{{end}}
 				</div>
 			{{end}}
@@ -93,8 +99,8 @@
 				{{if .Permission.CanRead $.UnitTypeIssues}}
 					<a class="{{if .PageIsIssueList}}active {{end}}item" href="{{.RepoLink}}/issues">
 						{{svg "octicon-issue-opened"}} {{ctx.Locale.Tr "repo.issues"}}
-						{{if .Repository.NumOpenIssues}}
-							<span class="ui small label">{{CountFmt .Repository.NumOpenIssues}}</span>
+						{{if (.Repository.NumOpenIssues ctx)}}
+							<span class="ui small label">{{CountFmt (.Repository.NumOpenIssues ctx)}}</span>
 						{{end}}
 					</a>
 				{{end}}
@@ -108,8 +114,8 @@
 				{{if and .Repository.CanEnablePulls (.Permission.CanRead $.UnitTypePullRequests)}}
 					<a class="{{if .PageIsPullList}}active {{end}}item" href="{{.RepoLink}}/pulls">
 						{{svg "octicon-git-pull-request"}} {{ctx.Locale.Tr "repo.pulls"}}
-						{{if .Repository.NumOpenPulls}}
-							<span class="ui small label">{{CountFmt .Repository.NumOpenPulls}}</span>
+						{{if (.Repository.NumOpenPulls ctx)}}
+							<span class="ui small label">{{CountFmt (.Repository.NumOpenPulls ctx)}}</span>
 						{{end}}
 					</a>
 				{{end}}
@@ -162,8 +168,8 @@
 				{{if and .EnableActions (not .UnitActionsGlobalDisabled) (.Permission.CanRead $.UnitTypeActions)}}
 					<a class="{{if .PageIsActions}}active {{end}}item" href="{{.RepoLink}}/actions">
 						{{svg "octicon-play"}} {{ctx.Locale.Tr "actions.actions"}}
-						{{if .Repository.NumOpenActionRuns}}
-							<span class="ui small label">{{CountFmt .Repository.NumOpenActionRuns}}</span>
+						{{if .NumOpenActionRuns}}
+							<span class="ui small label">{{CountFmt .NumOpenActionRuns}}</span>
 						{{end}}
 					</a>
 				{{end}}

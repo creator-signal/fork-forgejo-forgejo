@@ -10,27 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMustBytes(t *testing.T) {
-	test := func(value string) int64 {
-		cfg, err := NewConfigProviderFromData("[test]")
-		require.NoError(t, err)
-		sec := cfg.Section("test")
-		sec.NewKey("VALUE", value)
-
-		return mustBytes(sec, "VALUE")
-	}
-
-	assert.EqualValues(t, -1, test(""))
-	assert.EqualValues(t, -1, test("-1"))
-	assert.EqualValues(t, 0, test("0"))
-	assert.EqualValues(t, 1, test("1"))
-	assert.EqualValues(t, 10000, test("10000"))
-	assert.EqualValues(t, 1000000, test("1 mb"))
-	assert.EqualValues(t, 1048576, test("1mib"))
-	assert.EqualValues(t, 1782579, test("1.7mib"))
-	assert.EqualValues(t, -1, test("1 yib")) // too large
-}
-
 func Test_getStorageInheritNameSectionTypeForPackages(t *testing.T) {
 	// packages storage inherits from storage if nothing configured
 	iniStr := `
@@ -42,7 +21,7 @@ STORAGE_TYPE = minio
 	require.NoError(t, loadPackagesFrom(cfg))
 
 	assert.EqualValues(t, "minio", Packages.Storage.Type)
-	assert.EqualValues(t, "packages/", Packages.Storage.MinioConfig.BasePath)
+	assert.Equal(t, "packages/", Packages.Storage.MinioConfig.BasePath)
 
 	// we can also configure packages storage directly
 	iniStr = `
@@ -54,7 +33,7 @@ STORAGE_TYPE = minio
 	require.NoError(t, loadPackagesFrom(cfg))
 
 	assert.EqualValues(t, "minio", Packages.Storage.Type)
-	assert.EqualValues(t, "packages/", Packages.Storage.MinioConfig.BasePath)
+	assert.Equal(t, "packages/", Packages.Storage.MinioConfig.BasePath)
 
 	// or we can indicate the storage type in the packages section
 	iniStr = `
@@ -69,7 +48,7 @@ STORAGE_TYPE = minio
 	require.NoError(t, loadPackagesFrom(cfg))
 
 	assert.EqualValues(t, "minio", Packages.Storage.Type)
-	assert.EqualValues(t, "packages/", Packages.Storage.MinioConfig.BasePath)
+	assert.Equal(t, "packages/", Packages.Storage.MinioConfig.BasePath)
 
 	// or we can indicate the storage type  and minio base path in the packages section
 	iniStr = `
@@ -85,7 +64,7 @@ STORAGE_TYPE = minio
 	require.NoError(t, loadPackagesFrom(cfg))
 
 	assert.EqualValues(t, "minio", Packages.Storage.Type)
-	assert.EqualValues(t, "my_packages/", Packages.Storage.MinioConfig.BasePath)
+	assert.Equal(t, "my_packages/", Packages.Storage.MinioConfig.BasePath)
 }
 
 func Test_PackageStorage1(t *testing.T) {
@@ -110,8 +89,8 @@ MINIO_SECRET_ACCESS_KEY = correct_key
 	storage := Packages.Storage
 
 	assert.EqualValues(t, "minio", storage.Type)
-	assert.EqualValues(t, "gitea", storage.MinioConfig.Bucket)
-	assert.EqualValues(t, "packages/", storage.MinioConfig.BasePath)
+	assert.Equal(t, "gitea", storage.MinioConfig.Bucket)
+	assert.Equal(t, "packages/", storage.MinioConfig.BasePath)
 	assert.True(t, storage.MinioConfig.ServeDirect)
 }
 
@@ -137,8 +116,8 @@ MINIO_SECRET_ACCESS_KEY = correct_key
 	storage := Packages.Storage
 
 	assert.EqualValues(t, "minio", storage.Type)
-	assert.EqualValues(t, "gitea", storage.MinioConfig.Bucket)
-	assert.EqualValues(t, "packages/", storage.MinioConfig.BasePath)
+	assert.Equal(t, "gitea", storage.MinioConfig.Bucket)
+	assert.Equal(t, "packages/", storage.MinioConfig.BasePath)
 	assert.True(t, storage.MinioConfig.ServeDirect)
 }
 
@@ -165,8 +144,8 @@ MINIO_SECRET_ACCESS_KEY = correct_key
 	storage := Packages.Storage
 
 	assert.EqualValues(t, "minio", storage.Type)
-	assert.EqualValues(t, "gitea", storage.MinioConfig.Bucket)
-	assert.EqualValues(t, "my_packages/", storage.MinioConfig.BasePath)
+	assert.Equal(t, "gitea", storage.MinioConfig.Bucket)
+	assert.Equal(t, "my_packages/", storage.MinioConfig.BasePath)
 	assert.True(t, storage.MinioConfig.ServeDirect)
 }
 
@@ -193,7 +172,7 @@ MINIO_SECRET_ACCESS_KEY = correct_key
 	storage := Packages.Storage
 
 	assert.EqualValues(t, "minio", storage.Type)
-	assert.EqualValues(t, "gitea", storage.MinioConfig.Bucket)
-	assert.EqualValues(t, "my_packages/", storage.MinioConfig.BasePath)
+	assert.Equal(t, "gitea", storage.MinioConfig.Bucket)
+	assert.Equal(t, "my_packages/", storage.MinioConfig.BasePath)
 	assert.True(t, storage.MinioConfig.ServeDirect)
 }

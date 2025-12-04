@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,7 +62,7 @@ func createSSHUrl(gitPath string, u *url.URL) *url.URL {
 
 var rootPathRe = regexp.MustCompile("\\[repository\\]\nROOT\\s=\\s.*")
 
-func onGiteaRun[T testing.TB](t T, callback func(T, *url.URL)) {
+func onApplicationRun[T testing.TB](t T, callback func(T, *url.URL)) {
 	defer tests.PrepareTestEnv(t, 1)()
 	s := http.Server{
 		Handler: testWebRoutes,
@@ -101,22 +101,26 @@ func onGiteaRun[T testing.TB](t T, callback func(T, *url.URL)) {
 func doGitClone(dstLocalPath string, u *url.URL) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		require.NoError(t, git.CloneWithArgs(context.Background(), git.AllowLFSFiltersArgs(), u.String(), dstLocalPath, git.CloneRepoOptions{}))
+		require.NoError(t, git.CloneWithArgs(t.Context(), git.AllowLFSFiltersArgs(), u.String(), dstLocalPath, git.CloneRepoOptions{}))
 		exist, err := util.IsExist(filepath.Join(dstLocalPath, "README.md"))
 		require.NoError(t, err)
 		assert.True(t, exist)
+		// Set user:password
+		doGitSetRemoteURL(dstLocalPath, "origin", u)(t)
 	}
 }
 
 func doPartialGitClone(dstLocalPath string, u *url.URL) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		require.NoError(t, git.CloneWithArgs(context.Background(), git.AllowLFSFiltersArgs(), u.String(), dstLocalPath, git.CloneRepoOptions{
+		require.NoError(t, git.CloneWithArgs(t.Context(), git.AllowLFSFiltersArgs(), u.String(), dstLocalPath, git.CloneRepoOptions{
 			Filter: "blob:none",
 		}))
 		exist, err := util.IsExist(filepath.Join(dstLocalPath, "README.md"))
 		require.NoError(t, err)
 		assert.True(t, exist)
+		// Set user:password
+		doGitSetRemoteURL(dstLocalPath, "origin", u)(t)
 	}
 }
 
@@ -158,6 +162,14 @@ func doGitAddRemote(dstPath, remoteName string, u *url.URL) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 		_, _, err := git.NewCommand(git.DefaultContext, "remote", "add").AddDynamicArguments(remoteName, u.String()).RunStdString(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
+	}
+}
+
+func doGitSetRemoteURL(dstPath, remoteName string, u *url.URL) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		_, _, err := git.NewCommand(git.DefaultContext, "remote", "set-url").AddDynamicArguments(remoteName, u.String()).RunStdString(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
 	}
 }

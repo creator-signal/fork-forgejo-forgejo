@@ -13,7 +13,7 @@ import (
 )
 
 func TestIssueSubscribe(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		session := emptyTestSession(t)
 		testIssueSubscribe(t, *session, true)
 	})
@@ -29,16 +29,16 @@ func testIssueSubscribe(t *testing.T, session TestSession, unavailable bool) {
 	resp := session.MakeRequest(t, NewRequest(t, "GET", path.Join(testIssue)), http.StatusOK)
 	area := NewHTMLParser(t, resp.Body).Find(selector)
 	tooltip, exists := area.Attr("data-tooltip-content")
-	assert.EqualValues(t, unavailable, exists)
+	assert.Equal(t, unavailable, exists)
 	if unavailable {
-		assert.EqualValues(t, "Sign in to subscribe to this issue.", tooltip)
+		assert.Equal(t, "Sign in to subscribe to this issue.", tooltip)
 	}
 
 	resp = session.MakeRequest(t, NewRequest(t, "GET", path.Join(testPull)), http.StatusOK)
 	area = NewHTMLParser(t, resp.Body).Find(selector)
 	tooltip, exists = area.Attr("data-tooltip-content")
-	assert.EqualValues(t, unavailable, exists)
+	assert.Equal(t, unavailable, exists)
 	if unavailable {
-		assert.EqualValues(t, "Sign in to subscribe to this pull request.", tooltip)
+		assert.Equal(t, "Sign in to subscribe to this pull request.", tooltip)
 	}
 }

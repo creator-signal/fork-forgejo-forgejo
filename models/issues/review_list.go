@@ -6,11 +6,11 @@ package issues
 import (
 	"context"
 
-	"code.gitea.io/gitea/models/db"
-	organization_model "code.gitea.io/gitea/models/organization"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/optional"
+	"forgejo.org/models/db"
+	org_model "forgejo.org/models/organization"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/optional"
 
 	"xorm.io/builder"
 )
@@ -47,9 +47,9 @@ func (reviews ReviewList) LoadReviewersTeams(ctx context.Context) error {
 		}
 	}
 
-	teamsMap := make(map[int64]*organization_model.Team, 0)
+	teamsMap := make(map[int64]*org_model.Team, 0)
 	for _, teamID := range reviewersTeamsIDs {
-		team, err := organization_model.GetTeamByID(ctx, teamID)
+		team, err := org_model.GetTeamByID(ctx, teamID)
 		if err != nil {
 			return err
 		}

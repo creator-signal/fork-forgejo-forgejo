@@ -6,23 +6,24 @@ package context
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	quota_model "code.gitea.io/gitea/models/quota"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	mc "code.gitea.io/gitea/modules/cache"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/httpcache"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/web"
-	web_types "code.gitea.io/gitea/modules/web/types"
+	issues_model "forgejo.org/models/issues"
+	quota_model "forgejo.org/models/quota"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	mc "forgejo.org/modules/cache"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/httpcache"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/web"
+	web_types "forgejo.org/modules/web/types"
 
 	"code.forgejo.org/go-chi/cache"
 )
@@ -157,6 +158,17 @@ type swaggerAPIRepoArchivedError struct {
 	Body APIRepoArchivedError `json:"body"`
 }
 
+type APIInternalServerError struct {
+	APIError
+}
+
+// APIInternalServerError is an error that is raised when an internal server error occurs
+// swagger:response internalServerError
+type swaggerAPIInternalServerError struct {
+	// in:body
+	Body APIInternalServerError `json:"body"`
+}
+
 // ServerError responds with error message, status is 500
 func (ctx *APIContext) ServerError(title string, err error) {
 	ctx.Error(http.StatusInternalServerError, title, err)
@@ -175,7 +187,7 @@ func (ctx *APIContext) Error(status int, title string, obj any) {
 	if status == http.StatusInternalServerError {
 		log.ErrorWithSkip(1, "%s: %s", title, message)
 
-		if setting.IsProd && !(ctx.Doer != nil && ctx.Doer.IsAdmin) {
+		if setting.IsProd && (ctx.Doer == nil || !ctx.Doer.IsAdmin) {
 			message = ""
 		}
 	}
@@ -274,8 +286,8 @@ func APIContexter() func(http.Handler) http.Handler {
 			}
 			defer baseCleanUp()
 
-			ctx.Base.AppendContextValue(apiContextKey, ctx)
-			ctx.Base.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })
+			ctx.AppendContextValue(apiContextKey, ctx)
+			ctx.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })
 
 			// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
 			if ctx.Req.Method == "POST" && strings.Contains(ctx.Req.Header.Get("Content-Type"), "multipart/form-data") {
@@ -323,7 +335,7 @@ func (ctx *APIContext) NotFound(objs ...any) {
 func ReferencesGitRepo(allowEmpty ...bool) func(ctx *APIContext) (cancel context.CancelFunc) {
 	return func(ctx *APIContext) (cancel context.CancelFunc) {
 		// Empty repository does not have reference information.
-		if ctx.Repo.Repository.IsEmpty && !(len(allowEmpty) != 0 && allowEmpty[0]) {
+		if ctx.Repo.Repository.IsEmpty && (len(allowEmpty) == 0 || !allowEmpty[0]) {
 			return nil
 		}
 
@@ -353,8 +365,13 @@ func RepoRefForAPI(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := GetAPIContext(req)
 
+		if ctx.Repo.Repository.IsEmpty {
+			ctx.NotFound(errors.New("repository is empty"))
+			return
+		}
+
 		if ctx.Repo.GitRepo == nil {
-			ctx.InternalServerError(fmt.Errorf("no open git repo"))
+			ctx.InternalServerError(errors.New("no open git repo"))
 			return
 		}
 
@@ -456,4 +473,11 @@ func (ctx *APIContext) IsUserRepoWriter(unitTypes []unit.Type) bool {
 	}
 
 	return false
+}
+
+// Returns true when the requests indicates that it accepts a Github response.
+// This should be used to return information in the way that the Github API
+// specifies it. Avoids breaking compatability with non-Github API clients.
+func (ctx *APIContext) AcceptsGithubResponse() bool {
+	return ctx.Req.Header.Get("Accept") == "application/vnd.github+json"
 }

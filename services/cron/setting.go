@@ -6,7 +6,7 @@ package cron
 import (
 	"time"
 
-	"code.gitea.io/gitea/modules/translation"
+	"forgejo.org/modules/translation"
 )
 
 // Config represents a basic configuration interface that cron task
@@ -44,6 +44,13 @@ type CleanupHookTaskConfig struct {
 	CleanupType  string
 	OlderThan    time.Duration
 	NumberToKeep int
+}
+
+// CleanupOfflineRunnersConfig represents a cron task with settings to clean up offline-runner
+type CleanupOfflineRunnersConfig struct {
+	BaseConfig
+	OlderThan       time.Duration
+	GlobalScopeOnly bool
 }
 
 // GetSchedule returns the schedule for the base config

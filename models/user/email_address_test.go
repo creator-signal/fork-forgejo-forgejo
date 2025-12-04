@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/optional"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/optional"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -180,4 +180,21 @@ func TestDeletePrimaryEmailAddressOfUser(t *testing.T) {
 	email, err := user_model.GetPrimaryEmailAddressOfUser(db.DefaultContext, user.ID)
 	assert.True(t, user_model.IsErrEmailAddressNotExist(err))
 	assert.Nil(t, email)
+}
+
+func TestActivateUserEmail(t *testing.T) {
+	defer unittest.OverrideFixtures("models/fixtures/TestActivateUserEmail")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("Activate email", func(t *testing.T) {
+		require.NoError(t, user_model.ActivateUserEmail(t.Context(), 1001, "AnotherTestUserWithUpperCaseEmail@otto.splvs.net", true))
+
+		unittest.AssertExistsAndLoadBean(t, &user_model.EmailAddress{UID: 1001}, "is_activated = true")
+	})
+
+	t.Run("Deactivate email", func(t *testing.T) {
+		require.NoError(t, user_model.ActivateUserEmail(t.Context(), 1001, "AnotherTestUserWithUpperCaseEmail@otto.splvs.net", false))
+
+		unittest.AssertExistsAndLoadBean(t, &user_model.EmailAddress{UID: 1001}, "is_activated = false")
+	})
 }

@@ -45,7 +45,7 @@
 							</div>
 						</div>
 						<div class="item-section-right">
-							<button class="delete-button ui button" data-url="{{.DeleteBranchLink}}">{{ctx.Locale.Tr "repo.branch.delete_html"}}</button>
+							<button class="delete-button ui button" data-url="{{.DeleteBranchLink}}" data-modal-id="delete-branch">{{ctx.Locale.Tr "repo.branch.delete_html"}}</button>
 						</div>
 					</div>
 				{{end}}
@@ -63,7 +63,7 @@
 					</div>
 					{{if and .IsPullBranchDeletable (not .IsPullRequestBroken)}}
 						<div class="item-section-right">
-							<button class="delete-button ui button" data-url="{{.DeleteBranchLink}}">{{ctx.Locale.Tr "repo.branch.delete_html"}}</button>
+							<button class="delete-button ui button" data-url="{{.DeleteBranchLink}}" data-modal-id="delete-branch">{{ctx.Locale.Tr "repo.branch.delete_html"}}</button>
 						</div>
 					{{end}}
 				</div>
@@ -94,6 +94,7 @@
 						</button>
 					{{end}}
 				</div>
+				{{template "repo/pulls/trust" .}}
 				{{template "repo/issue/view_content/update_branch_by_merge" $}}
 			{{else if .Issue.PullRequest.IsChecking}}
 				<div class="item">
@@ -187,6 +188,7 @@
 						</div>
 					{{end}}
 				{{end}}
+				{{template "repo/pulls/trust" .}}
 				{{template "repo/issue/view_content/update_branch_by_merge" $}}
 				{{if .Issue.PullRequest.IsEmpty}}
 					<div class="divider"></div>
@@ -199,7 +201,7 @@
 
 				{{if .AllowMerge}} {{/* user is allowed to merge */}}
 					{{$prUnit := .Repository.MustGetUnit $.Context $.UnitTypePullRequests}}
-					{{if or $prUnit.PullRequestsConfig.AllowMerge $prUnit.PullRequestsConfig.AllowRebase $prUnit.PullRequestsConfig.AllowRebaseMerge $prUnit.PullRequestsConfig.AllowSquash $prUnit.PullRequestsConfig.AllowFastForwardOnly}}
+					{{if or $prUnit.PullRequestsConfig.AllowMerge $prUnit.PullRequestsConfig.AllowRebase $prUnit.PullRequestsConfig.AllowRebaseMerge $prUnit.PullRequestsConfig.AllowSquash $prUnit.PullRequestsConfig.AllowFastForwardOnly $prUnit.PullRequestsConfig.AllowManualMerge}}
 						{{$hasPendingPullRequestMergeTip := ""}}
 						{{if .HasPendingPullRequestMerge}}
 							{{$createdPRMergeStr := DateUtils.TimeSince .PendingPullRequestMerge.CreatedUnix}}
@@ -376,7 +378,6 @@
 				<div class="divider"></div>
 				<div class="ui form">
 					<form action="{{.Link}}/merge" method="post" class="form-fetch-action">
-						{{.CsrfTokenHtml}}
 						<div class="field">
 							<input type="text" name="merge_commit_id" placeholder="{{ctx.Locale.Tr "repo.pulls.merge_commit_id"}}">
 						</div>

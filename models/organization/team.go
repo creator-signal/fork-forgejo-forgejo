@@ -1,5 +1,6 @@
-// Copyright 2018 The Gitea Authors. All rights reserved.
 // Copyright 2016 The Gogs Authors. All rights reserved.
+// Copyright 2018 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package organization
@@ -7,25 +8,19 @@ package organization
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/perm"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/models/perm"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
-
-// ___________
-// \__    ___/___ _____    _____
-//   |    |_/ __ \\__  \  /     \
-//   |    |\  ___/ / __ \|  Y Y  \
-//   |____| \___  >____  /__|_|  /
-//              \/     \/      \/
 
 // ErrTeamAlreadyExist represents a "TeamAlreadyExist" kind of error.
 type ErrTeamAlreadyExist struct {
@@ -193,6 +188,27 @@ func (t *Team) UnitAccessMode(ctx context.Context, tp unit.Type) perm.AccessMode
 	return perm.AccessModeNone
 }
 
+// GetOrg returns the team's organization
+func (t *Team) GetOrg(ctx context.Context) *Organization {
+	org, err := GetOrgByID(ctx, t.OrgID)
+	if err != nil {
+		return OrgFromUser(user_model.NewGhostUser())
+	}
+	return org
+}
+
+// Link returns the team's page link
+func (t *Team) Link(ctx context.Context) string {
+	if t.IsGhost() {
+		return ""
+	}
+	org := t.GetOrg(ctx)
+	if org.IsGhost() {
+		return ""
+	}
+	return org.OrganisationLink() + "/teams/" + url.PathEscape(t.Name)
+}
+
 // IsUsableTeamName tests if a name could be as team name
 func IsUsableTeamName(name string) error {
 	switch name {
@@ -247,22 +263,6 @@ func GetTeamByID(ctx context.Context, teamID int64) (*Team, error) {
 	return t, nil
 }
 
-// GetTeamNamesByID returns team's lower name from a list of team ids.
-func GetTeamNamesByID(ctx context.Context, teamIDs []int64) ([]string, error) {
-	if len(teamIDs) == 0 {
-		return []string{}, nil
-	}
-
-	var teamNames []string
-	err := db.GetEngine(ctx).Table("team").
-		Select("lower_name").
-		In("id", teamIDs).
-		Asc("name").
-		Find(&teamNames)
-
-	return teamNames, err
-}
-
 // IncrTeamRepoNum increases the number of repos for the given team by 1
 func IncrTeamRepoNum(ctx context.Context, teamID int64) error {
 	_, err := db.GetEngine(ctx).Incr("num_repos").ID(teamID).Update(new(Team))
@@ -307,4 +307,24 @@ func FixInconsistentOwnerTeams(ctx context.Context) (int64, error) {
 	}
 
 	return int64(len(teamIDs)), nil
+}
+
+const (
+	GhostTeamID        = -1
+	GhostTeamName      = "Ghost team"
+	GhostTeamLowerName = "ghost team"
+)
+
+// NewGhostTeam creates ghost team (for deleted team)
+func NewGhostTeam() *Team {
+	return &Team{
+		ID:        GhostTeamID,
+		Name:      GhostTeamName,
+		LowerName: GhostTeamLowerName,
+	}
+}
+
+// IsGhost returns if a team is a ghost team
+func (t *Team) IsGhost() bool {
+	return t.ID == GhostTeamID
 }

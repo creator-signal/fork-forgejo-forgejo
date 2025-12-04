@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"time"
 
-	"code.gitea.io/gitea/modules/json"
+	"forgejo.org/modules/json"
 )
 
 // RedirectURL returns the redirect URL of a http response.
@@ -45,4 +46,15 @@ func MockVariableValue[T any](p *T, v T) (reset func()) {
 func MockProtect[T any](p *T) (reset func()) {
 	old := *p
 	return func() { *p = old }
+}
+
+// When this is called, sleep until the unix time was increased by one.
+func SleepTillNextSecond() {
+	time.Sleep(time.Second - time.Since(time.Now().Truncate(time.Second)))
+}
+
+// When this is called, sleep until the truncated unix time to a minute was
+// increased by one.
+func SleepTillNextMinute() {
+	time.Sleep(time.Minute - time.Since(time.Now().Truncate(time.Minute)))
 }

@@ -15,17 +15,18 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	webhook_model "code.gitea.io/gitea/models/webhook"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
-	gitea_context "code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/webhook/shared"
+	webhook_model "forgejo.org/models/webhook"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	webhook_module "forgejo.org/modules/webhook"
+	app_context "forgejo.org/services/context"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/webhook/shared"
 
 	"code.forgejo.org/go-chi/binding"
 )
@@ -46,7 +47,7 @@ var _ binding.Validator = &discordForm{}
 
 // Validate implements binding.Validator.
 func (d *discordForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
-	ctx := gitea_context.GetWebContext(req)
+	ctx := app_context.GetWebContext(req)
 	if len([]rune(d.IconURL)) > 2048 {
 		errs = append(errs, binding.Error{
 			FieldNames: []string{"IconURL"},
@@ -151,6 +152,18 @@ var (
 	redColor         = color("ff3232")
 )
 
+// https://discord.com/developers/docs/resources/message#embed-object-embed-limits
+// Discord has some limits in place for the embeds.
+// According to some tests, there is no consistent limit for different character sets.
+// For example: 4096 ASCII letters are allowed, but only 2490 emoji characters are allowed.
+// To keep it simple, we currently truncate at 2000.
+const discordDescriptionCharactersLimit = 2000
+
+type discordConvertor struct {
+	Username  string
+	AvatarURL string
+}
+
 // Create implements PayloadConvertor Create method
 func (d discordConvertor) Create(p *api.CreatePayload) (DiscordPayload, error) {
 	// created tag/branch
@@ -222,21 +235,21 @@ func (d discordConvertor) Push(p *api.PushPayload) (DiscordPayload, error) {
 
 // Issue implements PayloadConvertor Issue method
 func (d discordConvertor) Issue(p *api.IssuePayload) (DiscordPayload, error) {
-	title, _, text, color := getIssuesPayloadInfo(p, noneLinkFormatter, false)
+	title, _, text, color := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, title, text, p.Issue.HTMLURL, color), nil
 }
 
 // IssueComment implements PayloadConvertor IssueComment method
 func (d discordConvertor) IssueComment(p *api.IssueCommentPayload) (DiscordPayload, error) {
-	title, _, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, false)
+	title, _, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, title, p.Comment.Body, p.Comment.HTMLURL, color), nil
 }
 
 // PullRequest implements PayloadConvertor PullRequest method
 func (d discordConvertor) PullRequest(p *api.PullRequestPayload) (DiscordPayload, error) {
-	title, _, text, color := getPullRequestPayloadInfo(p, noneLinkFormatter, false)
+	title, _, text, color := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, title, text, p.PullRequest.HTMLURL, color), nil
 }
@@ -288,7 +301,7 @@ func (d discordConvertor) Repository(p *api.RepositoryPayload) (DiscordPayload, 
 
 // Wiki implements PayloadConvertor Wiki method
 func (d discordConvertor) Wiki(p *api.WikiPayload) (DiscordPayload, error) {
-	text, color, _ := getWikiPayloadInfo(p, noneLinkFormatter, false)
+	text, color, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 	htmlLink := p.Repository.HTMLURL + "/wiki/" + url.PathEscape(p.Page)
 
 	var description string
@@ -301,20 +314,21 @@ func (d discordConvertor) Wiki(p *api.WikiPayload) (DiscordPayload, error) {
 
 // Release implements PayloadConvertor Release method
 func (d discordConvertor) Release(p *api.ReleasePayload) (DiscordPayload, error) {
-	text, color := getReleasePayloadInfo(p, noneLinkFormatter, false)
+	text, color := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, text, p.Release.Note, p.Release.HTMLURL, color), nil
 }
 
 func (d discordConvertor) Package(p *api.PackagePayload) (DiscordPayload, error) {
-	text, color := getPackagePayloadInfo(p, noneLinkFormatter, false)
+	text, color := getPackagePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, text, "", p.Package.HTMLURL, color), nil
 }
 
-type discordConvertor struct {
-	Username  string
-	AvatarURL string
+func (d discordConvertor) Action(p *api.ActionPayload) (DiscordPayload, error) {
+	text, color := getActionPayloadInfo(p, noneLinkFormatter)
+
+	return d.createPayload(p.Run.TriggerUser, text, "", p.Run.HTMLURL, color), nil
 }
 
 var _ shared.PayloadConvertor[DiscordPayload] = discordConvertor{}
@@ -336,7 +350,7 @@ func parseHookPullRequestEventType(event webhook_module.HookEventType) (string, 
 	case webhook_module.HookEventPullRequestReviewApproved:
 		return "approved", nil
 	case webhook_module.HookEventPullRequestReviewRejected:
-		return "rejected", nil
+		return "requested changes", nil
 	case webhook_module.HookEventPullRequestReviewComment:
 		return "comment", nil
 	default:
@@ -357,7 +371,7 @@ func (d discordConvertor) createPayload(s *api.User, title, text, url string, co
 		Embeds: []DiscordEmbed{
 			{
 				Title:       title,
-				Description: text,
+				Description: base.TruncateString(text, discordDescriptionCharactersLimit),
 				URL:         url,
 				Color:       color,
 				Author: DiscordEmbedAuthor{

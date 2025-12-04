@@ -7,14 +7,14 @@
 /* eslint playwright/expect-expect: ["error", { "assertFunctionNames": ["check_wip"] }] */
 
 import {expect, type Page} from '@playwright/test';
-import {test, save_visual, login_user, login} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
-test.beforeAll(async ({browser}, workerInfo) => {
-  await login_user(browser, workerInfo, 'user2');
-});
+test.use({user: 'user2'});
 
 test.describe('Pull: Toggle WIP', () => {
   const prTitle = 'pull5';
+
   async function toggle_wip_to({page}, should: boolean) {
     await page.waitForLoadState('domcontentloaded');
     if (should) {
@@ -39,8 +39,7 @@ test.describe('Pull: Toggle WIP', () => {
     }
   }
 
-  test.beforeEach(async ({browser}, workerInfo) => {
-    const page = await login({browser}, workerInfo);
+  test.beforeEach(async ({page}) => {
     const response = await page.goto('/user2/repo1/pulls/5');
     expect(response?.status()).toBe(200); // Status OK
     // ensure original title
@@ -50,10 +49,7 @@ test.describe('Pull: Toggle WIP', () => {
     await check_wip({page}, false);
   });
 
-  test('simple toggle', async ({browser}, workerInfo) => {
-    test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-    const page = await login({browser}, workerInfo);
-    await page.goto('/user2/repo1/pulls/5');
+  test('simple toggle', async ({page}) => {
     // toggle to WIP
     await toggle_wip_to({page}, true);
     await check_wip({page}, true);
@@ -62,9 +58,7 @@ test.describe('Pull: Toggle WIP', () => {
     await check_wip({page}, false);
   });
 
-  test('manual edit', async ({browser}, workerInfo) => {
-    test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-    const page = await login({browser}, workerInfo);
+  test('manual edit', async ({page}) => {
     await page.goto('/user2/repo1/pulls/5');
     // manually edit title to another prefix
     await page.locator('#issue-title-edit-show').click();
@@ -76,9 +70,7 @@ test.describe('Pull: Toggle WIP', () => {
     await check_wip({page}, false);
   });
 
-  test('maximum title length', async ({browser}, workerInfo) => {
-    test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-    const page = await login({browser}, workerInfo);
+  test('maximum title length', async ({page}) => {
     await page.goto('/user2/repo1/pulls/5');
     // check maximum title length is handled gracefully
     const maxLenStr = prTitle + 'a'.repeat(240);
@@ -96,9 +88,7 @@ test.describe('Pull: Toggle WIP', () => {
   });
 });
 
-test('Issue: Labels', async ({browser}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-
+test('Issue: Labels', async ({page}) => {
   async function submitLabels({page}: {page: Page}) {
     const submitted = page.waitForResponse('/user2/repo1/issues/labels');
     await page.locator('textarea').first().click(); // close via unrelated element
@@ -106,7 +96,6 @@ test('Issue: Labels', async ({browser}, workerInfo) => {
     await page.waitForLoadState();
   }
 
-  const page = await login({browser}, workerInfo);
   // select label list in sidebar only
   const labelList = page.locator('.issue-content-right .labels-list a');
   const response = await page.goto('/user2/repo1/issues/1');
@@ -144,9 +133,7 @@ test('Issue: Labels', async ({browser}, workerInfo) => {
   await expect(labelList.filter({hasText: 'label1'})).toBeVisible();
 });
 
-test('Issue: Assignees', async ({browser}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-  const page = await login({browser}, workerInfo);
+test('Issue: Assignees', async ({page}) => {
   // select label list in sidebar only
   const assigneesList = page.locator('.issue-content-right .assignees.list .selected .item a');
 
@@ -182,9 +169,7 @@ test('Issue: Assignees', async ({browser}, workerInfo) => {
   await expect(page.locator('.ui.assignees.list .item.no-select')).toBeHidden();
 });
 
-test('New Issue: Assignees', async ({browser}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-  const page = await login({browser}, workerInfo);
+test('New Issue: Assignees', async ({page}) => {
   // select label list in sidebar only
   const assigneesList = page.locator('.issue-content-right .assignees.list .selected .item');
 
@@ -203,7 +188,7 @@ test('New Issue: Assignees', async ({browser}, workerInfo) => {
   await page.locator('.select-assignees .menu .item').filter({hasText: 'user4'}).click();
   await page.locator('.select-assignees.dropdown').click();
   await expect(assigneesList.filter({hasText: 'user4'})).toBeVisible();
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-right'));
 
   // remove user4
   await page.locator('.select-assignees.dropdown').click();
@@ -221,17 +206,14 @@ test('New Issue: Assignees', async ({browser}, workerInfo) => {
   await page.fill('.select-assignees .menu .search input', '');
   await page.locator('.select-assignees.dropdown .no-select.item').click();
   await expect(page.locator('.select-assign-me')).toBeVisible();
-  await save_visual(page);
+  await screenshot(page, page.locator('div.filter.menu[data-id="#assignee_ids"]'), 30);
 });
 
-test('Issue: Milestone', async ({browser}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-  const page = await login({browser}, workerInfo);
-
+test('Issue: Milestone', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  const selectedMilestone = page.locator('.issue-content-right .select-milestone.list');
+  const selectedMilestone = page.locator('.issue-content-right #selected-milestone');
   const milestoneDropdown = page.locator('.issue-content-right .select-milestone.dropdown');
   await expect(selectedMilestone).toContainText('No milestone');
 
@@ -248,27 +230,129 @@ test('Issue: Milestone', async ({browser}, workerInfo) => {
   await expect(page.locator('.timeline-item.event').last()).toContainText('user2 removed this from the milestone1 milestone');
 });
 
-test('New Issue: Milestone', async ({browser}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Unable to get tests working on Safari Mobile, see https://codeberg.org/forgejo/forgejo/pulls/3445#issuecomment-1789636');
-  const page = await login({browser}, workerInfo);
-
+test('New Issue: Milestone', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/new');
   expect(response?.status()).toBe(200);
 
   const selectedMilestone = page.locator('.issue-content-right .select-milestone.list');
   const milestoneDropdown = page.locator('.issue-content-right .select-milestone.dropdown');
   await expect(selectedMilestone).toContainText('No milestone');
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-right'));
 
   // Add milestone.
   await milestoneDropdown.click();
+  await screenshot(page, page.locator('.menu.transition.visible'), 30);
   await page.getByRole('option', {name: 'milestone1'}).click();
   await expect(selectedMilestone).toContainText('milestone1');
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-right'));
 
   // Clear milestone.
   await milestoneDropdown.click();
   await page.getByText('Clear milestone', {exact: true}).click();
   await expect(selectedMilestone).toContainText('No milestone');
-  await save_visual(page);
+  await screenshot(page, page.locator('.issue-content-right'));
+});
+
+test.describe('Dependency dropdown', () => {
+  test.use({user: 'user11'});
+  test('Issue: Dependencies', async ({page}) => {
+    const response = await page.goto('/user11/dependency-test/issues/3');
+    expect(response?.status()).toBe(200);
+
+    const depsBlock = page.locator('.issue-content-right .depending');
+    const deleteDepBtn = page.locator('.issue-content-right .depending .delete-dependency-button');
+
+    const input = page.locator('#new-dependency-drop-list .search');
+    const current = page.locator('#new-dependency-drop-list .text').first();
+    const menu = page.locator('#new-dependency-drop-list .menu');
+    const items = page.locator('#new-dependency-drop-list .menu .item');
+
+    const confirmDelete = async () => {
+      const modal = page.locator('.modal.remove-dependency');
+      await expect(modal).toBeVisible();
+      await expect(modal).toContainText('This will remove the dependency from this issue');
+      await modal.locator('button.ok').click();
+    };
+
+    // A kludge to set the dropdown to the *wrong* value so it lets us select the correct one next.
+    const resetDropdown = async () => {
+      if (await current.textContent().then((s) => s.includes('#4'))) return;
+      await input.click();
+      await input.fill('unrelated');
+      await expect(items.first()).toContainText('unrelated');
+      await items.first().click();
+      await expect(current).toContainText('#4');
+      await input.click();
+    };
+
+    await expect(depsBlock).toBeVisible();
+    while (await deleteDepBtn.first().isVisible()) {
+      await deleteDepBtn.first().click(); // wipe added dependencies from any previously failed tests
+      await confirmDelete();
+    }
+    await expect(depsBlock).toContainText('No dependencies set');
+
+    await input.scrollIntoViewIfNeeded();
+    await input.click();
+
+    const first = 'first issue here';
+    const second = 'second issue here';
+    const newest = 'newest issue';
+
+    // Without query, it should show issues in the same repo, sorted by date, except current one.
+    await expect(menu).toBeVisible();
+    await expect(items).toHaveCount(4); // 5 issues in this repo, minus current one
+    await expect(items.first()).toContainText(newest);
+    await expect(items.last()).toContainText(first);
+    await resetDropdown();
+
+    // With query, it should search all repos, but show current repo issues first.
+    await input.fill('right');
+    await expect(items.first()).toContainText(second);
+    await expect.poll(() => items.count()).toBeGreaterThan(1); // there is an issue in user11/dependency-test-2 containing the word "right"
+    await resetDropdown();
+
+    // When entering an issue number, it should always show that one first, then all text matches.
+    await input.fill('1');
+    await expect(items.first()).toContainText(first);
+    await expect(items.nth(1)).toBeVisible();
+    await resetDropdown();
+
+    // Should behave the same with a prefix
+    await input.fill('#1');
+    await expect(items.first()).toContainText(first);
+
+    // Selecting an issue
+    await items.first().click();
+    await expect(current).toContainText(first);
+
+    // Add dependency
+    const link = page.locator('.issue-content-right .depending .dependency a.title');
+    await page.locator('.issue-content-right .depending button').click();
+    await expect(link).toHaveAttribute('href', '/user11/dependency-test/issues/1');
+
+    // Remove dependency
+    await expect(deleteDepBtn).toBeVisible();
+    await deleteDepBtn.click();
+
+    await confirmDelete();
+
+    await expect(depsBlock).toContainText('No dependencies set');
+  });
+});
+
+test('Issue: Reference', async ({page}) => {
+  let response = await page.goto('/user2/repo1/pulls/5');
+  expect(response?.status()).toBe(200);
+
+  await expect(page.locator('.ui.reference .truncate')).toContainText(
+    'user2/repo1!5',
+  );
+
+  response = await page.goto('/user2/repo1/issues/1');
+  expect(response?.status()).toBe(200);
+
+  await expect(page.locator('.ui.reference .truncate')).toContainText(
+    'user2/repo1#1',
+  );
 });

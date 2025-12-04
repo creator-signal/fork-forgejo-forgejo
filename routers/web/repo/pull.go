@@ -10,45 +10,51 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"html/template"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
-	"time"
 
-	"code.gitea.io/gitea/models"
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	pull_model "code.gitea.io/gitea/models/pull"
-	quota_model "code.gitea.io/gitea/models/quota"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/emoji"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	issue_template "code.gitea.io/gitea/modules/issue/template"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/utils"
-	asymkey_service "code.gitea.io/gitea/services/asymkey"
-	"code.gitea.io/gitea/services/automerge"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/context/upload"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/gitdiff"
-	notify_service "code.gitea.io/gitea/services/notify"
-	pull_service "code.gitea.io/gitea/services/pull"
-	repo_service "code.gitea.io/gitea/services/repository"
+	"forgejo.org/models"
+	actions_model "forgejo.org/models/actions"
+	activities_model "forgejo.org/models/activities"
+	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
+	pull_model "forgejo.org/models/pull"
+	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/charset"
+	"forgejo.org/modules/emoji"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	issue_template "forgejo.org/modules/issue/template"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/utils"
+	actions_service "forgejo.org/services/actions"
+	asymkey_service "forgejo.org/services/asymkey"
+	"forgejo.org/services/automerge"
+	"forgejo.org/services/context"
+	"forgejo.org/services/context/upload"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/gitdiff"
+	notify_service "forgejo.org/services/notify"
+	pull_service "forgejo.org/services/pull"
+	repo_service "forgejo.org/services/repository"
 
 	"github.com/gobwas/glob"
 )
@@ -62,32 +68,26 @@ const (
 	pullRequestTemplateKey = "PullRequestTemplate"
 )
 
-var pullRequestTemplateCandidates = []string{
-	"PULL_REQUEST_TEMPLATE.md",
-	"PULL_REQUEST_TEMPLATE.yaml",
-	"PULL_REQUEST_TEMPLATE.yml",
-	"pull_request_template.md",
-	"pull_request_template.yaml",
-	"pull_request_template.yml",
-	".forgejo/PULL_REQUEST_TEMPLATE.md",
-	".forgejo/PULL_REQUEST_TEMPLATE.yaml",
-	".forgejo/PULL_REQUEST_TEMPLATE.yml",
-	".forgejo/pull_request_template.md",
-	".forgejo/pull_request_template.yaml",
-	".forgejo/pull_request_template.yml",
-	".gitea/PULL_REQUEST_TEMPLATE.md",
-	".gitea/PULL_REQUEST_TEMPLATE.yaml",
-	".gitea/PULL_REQUEST_TEMPLATE.yml",
-	".gitea/pull_request_template.md",
-	".gitea/pull_request_template.yaml",
-	".gitea/pull_request_template.yml",
-	".github/PULL_REQUEST_TEMPLATE.md",
-	".github/PULL_REQUEST_TEMPLATE.yaml",
-	".github/PULL_REQUEST_TEMPLATE.yml",
-	".github/pull_request_template.md",
-	".github/pull_request_template.yaml",
-	".github/pull_request_template.yml",
+// generatePullRequestTemplateLocations generates all the file paths where we
+// look for a pull request template, e.g. ".forgejo/PULL_REQUEST_TEMPLATE.md".
+func generatePullRequestTemplateLocations() []string {
+	var result []string
+	prefixes := []string{"", ".forgejo/", ".gitea/", ".github/", "docs/"}
+	filenames := []string{"PULL_REQUEST_TEMPLATE", "pull_request_template"}
+	extensions := []string{".md", ".yaml", ".yml"}
+
+	for _, prefix := range prefixes {
+		for _, filename := range filenames {
+			for _, extension := range extensions {
+				result = append(result, prefix+filename+extension)
+			}
+		}
+	}
+
+	return result
 }
+
+var pullRequestTemplateCandidates = generatePullRequestTemplateLocations()
 
 func getRepository(ctx *context.Context, repoID int64) *repo_model.Repository {
 	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
@@ -356,7 +356,7 @@ func getPullInfo(ctx *context.Context) (issue *issues_model.Issue, ok bool) {
 	ctx.Data["Issue"] = issue
 
 	if !issue.IsPull {
-		ctx.NotFound("ViewPullCommits", nil)
+		ctx.Redirect(issue.Link())
 		return nil, false
 	}
 
@@ -401,6 +401,7 @@ func setMergeTarget(ctx *context.Context, pull *issues_model.PullRequest) {
 
 // GetPullDiffStats get Pull Requests diff stats
 func GetPullDiffStats(ctx *context.Context) {
+	// FIXME: this getPullInfo seems to be a duplicate call with other route handlers
 	issue, ok := getPullInfo(ctx)
 	if !ok {
 		return
@@ -408,15 +409,15 @@ func GetPullDiffStats(ctx *context.Context) {
 	pull := issue.PullRequest
 
 	mergeBaseCommitID := GetMergedBaseCommitID(ctx, issue)
-
 	if mergeBaseCommitID == "" {
 		ctx.NotFound("PullFiles", nil)
 		return
 	}
 
+	// do not report 500 server error to end users if error occurs, otherwise a PR missing ref won't be able to view.
 	headCommitID, err := ctx.Repo.GitRepo.GetRefCommitID(pull.GetGitRefName())
 	if err != nil {
-		ctx.ServerError("GetRefCommitID", err)
+		log.Error("Failed to GetRefCommitID: %v, repo: %v", err, ctx.Repo.Repository.FullName())
 		return
 	}
 
@@ -498,6 +499,7 @@ func PrepareMergedViewPullInfo(ctx *context.Context, issue *issues_model.Issue) 
 			ctx.Data["IsPullRequestBroken"] = true
 			ctx.Data["BaseTarget"] = pull.BaseBranch
 			ctx.Data["NumCommits"] = 0
+			ctx.Data["CommitIDs"] = map[string]bool{}
 			ctx.Data["NumFiles"] = 0
 			return nil
 		}
@@ -508,15 +510,18 @@ func PrepareMergedViewPullInfo(ctx *context.Context, issue *issues_model.Issue) 
 	ctx.Data["NumCommits"] = len(compareInfo.Commits)
 	ctx.Data["NumFiles"] = compareInfo.NumFiles
 
+	commitIDs := map[string]bool{}
+	for _, commit := range compareInfo.Commits {
+		commitIDs[commit.ID.String()] = true
+	}
+	ctx.Data["CommitIDs"] = commitIDs
+
 	if len(compareInfo.Commits) != 0 {
 		sha := compareInfo.Commits[0].ID.String()
 		commitStatuses, _, err := git_model.GetLatestCommitStatus(ctx, ctx.Repo.Repository.ID, sha, db.ListOptionsAll)
 		if err != nil {
 			ctx.ServerError("GetLatestCommitStatus", err)
 			return nil
-		}
-		if !ctx.Repo.CanRead(unit.TypeActions) {
-			git_model.CommitStatusesHideActionsURL(ctx, commitStatuses)
 		}
 
 		if len(commitStatuses) != 0 {
@@ -581,9 +586,6 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 			ctx.ServerError("GetLatestCommitStatus", err)
 			return nil
 		}
-		if !ctx.Repo.CanRead(unit.TypeActions) {
-			git_model.CommitStatusesHideActionsURL(ctx, commitStatuses)
-		}
 
 		if len(commitStatuses) > 0 {
 			ctx.Data["LatestCommitStatuses"] = commitStatuses
@@ -597,6 +599,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 				ctx.Data["IsPullRequestBroken"] = true
 				ctx.Data["BaseTarget"] = pull.BaseBranch
 				ctx.Data["NumCommits"] = 0
+				ctx.Data["CommitIDs"] = map[string]bool{}
 				ctx.Data["NumFiles"] = 0
 				return nil
 			}
@@ -607,6 +610,13 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 
 		ctx.Data["NumCommits"] = len(compareInfo.Commits)
 		ctx.Data["NumFiles"] = compareInfo.NumFiles
+
+		commitIDs := map[string]bool{}
+		for _, commit := range compareInfo.Commits {
+			commitIDs[commit.ID.String()] = true
+		}
+		ctx.Data["CommitIDs"] = commitIDs
+
 		return compareInfo
 	}
 
@@ -624,7 +634,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 		if pull.Flow == issues_model.PullRequestFlowGithub {
 			headBranchExist = headGitRepo.IsBranchExist(pull.HeadBranch)
 		} else {
-			headBranchExist = git.IsReferenceExist(ctx, baseGitRepo.Path, pull.GetGitRefName())
+			headBranchExist = baseGitRepo.IsReferenceExist(pull.GetGitRefName())
 		}
 
 		if headBranchExist {
@@ -665,6 +675,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 			}
 			ctx.Data["BaseTarget"] = pull.BaseBranch
 			ctx.Data["NumCommits"] = 0
+			ctx.Data["CommitIDs"] = map[string]bool{}
 			ctx.Data["NumFiles"] = 0
 			return nil
 		}
@@ -676,9 +687,6 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 	if err != nil {
 		ctx.ServerError("GetLatestCommitStatus", err)
 		return nil
-	}
-	if !ctx.Repo.CanRead(unit.TypeActions) {
-		git_model.CommitStatusesHideActionsURL(ctx, commitStatuses)
 	}
 
 	if len(commitStatuses) > 0 {
@@ -727,7 +735,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 	ctx.Data["HeadBranchCommitID"] = headBranchSha
 	ctx.Data["PullHeadCommitID"] = sha
 
-	if pull.HeadRepo == nil || !headBranchExist || (!pull.Issue.IsClosed && (headBranchSha != sha)) {
+	if pull.HeadRepo == nil || !headBranchExist || (!pull.Issue.IsClosed && !pull.IsChecking() && (headBranchSha != sha)) {
 		ctx.Data["IsPullRequestBroken"] = true
 		if pull.IsSameRepo() {
 			ctx.Data["HeadTarget"] = pull.HeadBranch
@@ -745,6 +753,7 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 			ctx.Data["IsPullRequestBroken"] = true
 			ctx.Data["BaseTarget"] = pull.BaseBranch
 			ctx.Data["NumCommits"] = 0
+			ctx.Data["CommitIDs"] = map[string]bool{}
 			ctx.Data["NumFiles"] = 0
 			return nil
 		}
@@ -755,6 +764,11 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 
 	if compareInfo.HeadCommitID == compareInfo.MergeBase {
 		ctx.Data["IsNothingToCompare"] = true
+	}
+
+	PrepareViewPullInfoActions(ctx, pull)
+	if ctx.Written() {
+		return nil
 	}
 
 	if pull.IsWorkInProgress(ctx) {
@@ -769,6 +783,13 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 
 	ctx.Data["NumCommits"] = len(compareInfo.Commits)
 	ctx.Data["NumFiles"] = compareInfo.NumFiles
+
+	commitIDs := map[string]bool{}
+	for _, commit := range compareInfo.Commits {
+		commitIDs[commit.ID.String()] = true
+	}
+	ctx.Data["CommitIDs"] = commitIDs
+
 	return compareInfo
 }
 
@@ -847,7 +868,7 @@ func ViewPullCommits(ctx *context.Context) {
 	ctx.Data["Username"] = ctx.Repo.Owner.Name
 	ctx.Data["Reponame"] = ctx.Repo.Repository.Name
 
-	commits := processGitCommits(ctx, prInfo.Commits)
+	commits := git_model.ParseCommitsWithStatus(ctx, prInfo.Commits, ctx.Repo.Repository)
 	ctx.Data["Commits"] = commits
 	ctx.Data["CommitCount"] = len(commits)
 
@@ -892,7 +913,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		foundStartCommit := len(specifiedStartCommit) == 0
 		foundEndCommit := len(specifiedEndCommit) == 0
 
-		if !(foundStartCommit && foundEndCommit) {
+		if !foundStartCommit || !foundEndCommit {
 			for _, commit := range prInfo.Commits {
 				if commit.ID.String() == specifiedStartCommit {
 					foundStartCommit = true
@@ -907,7 +928,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 			}
 		}
 
-		if !(foundStartCommit && foundEndCommit) {
+		if !foundStartCommit || !foundEndCommit {
 			ctx.NotFound("Given SHA1 not found for this PR", nil)
 			return
 		}
@@ -928,7 +949,84 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 
 	ctx.Data["IsShowingOnlySingleCommit"] = willShowSpecifiedCommit
 
-	if willShowSpecifiedCommit || willShowSpecifiedCommitRange {
+	if willShowSpecifiedCommit {
+		commitID := specifiedEndCommit
+
+		ctx.Data["CommitID"] = commitID
+
+		var prevCommit, curCommit, nextCommit *git.Commit
+
+		// Iterate in reverse to properly map "previous" and "next" buttons
+		for i := len(prInfo.Commits) - 1; i >= 0; i-- {
+			commit := prInfo.Commits[i]
+
+			if curCommit != nil {
+				nextCommit = commit
+				break
+			}
+
+			if commit.ID.String() == commitID {
+				curCommit = commit
+			} else {
+				prevCommit = commit
+			}
+		}
+
+		if curCommit == nil {
+			ctx.ServerError("Repo.GitRepo.viewPullFiles", git.ErrNotExist{ID: commitID})
+			return
+		}
+
+		ctx.Data["Commit"] = curCommit
+		if prevCommit != nil {
+			ctx.Data["PrevCommitLink"] = path.Join(ctx.Repo.RepoLink, "pulls", strconv.FormatInt(issue.Index, 10), "commits", prevCommit.ID.String())
+		}
+		if nextCommit != nil {
+			ctx.Data["NextCommitLink"] = path.Join(ctx.Repo.RepoLink, "pulls", strconv.FormatInt(issue.Index, 10), "commits", nextCommit.ID.String())
+		}
+
+		statuses, _, err := git_model.GetLatestCommitStatus(ctx, ctx.Repo.Repository.ID, commitID, db.ListOptionsAll)
+		if err != nil {
+			log.Error("GetLatestCommitStatus: %v", err)
+		}
+
+		ctx.Data["CommitStatus"] = git_model.CalcCommitStatus(statuses)
+		ctx.Data["CommitStatuses"] = statuses
+
+		verification := asymkey_model.ParseCommitWithSignature(ctx, curCommit)
+		ctx.Data["Verification"] = verification
+		ctx.Data["Author"] = user_model.ValidateCommitWithEmail(ctx, curCommit)
+
+		if err := asymkey_model.CalculateTrustStatus(verification, ctx.Repo.Repository.GetTrustModel(), func(user *user_model.User) (bool, error) {
+			return repo_model.IsOwnerMemberCollaborator(ctx, ctx.Repo.Repository, user.ID)
+		}, nil); err != nil {
+			ctx.ServerError("CalculateTrustStatus", err)
+			return
+		}
+
+		note, err := git.GetNote(ctx, ctx.Repo.GitRepo, specifiedEndCommit)
+		if err == nil {
+			ctx.Data["NoteCommit"] = note.Commit
+			ctx.Data["NoteAuthor"] = user_model.ValidateCommitWithEmail(ctx, note.Commit)
+			ctx.Data["NoteRendered"], err = markup.RenderCommitMessage(&markup.RenderContext{
+				Links: markup.Links{
+					Base:       ctx.Repo.RepoLink,
+					BranchPath: path.Join("commit", util.PathEscapeSegments(commitID)),
+				},
+				Metas:   ctx.Repo.Repository.ComposeMetas(ctx),
+				GitRepo: ctx.Repo.GitRepo,
+				Ctx:     ctx,
+			}, template.HTMLEscapeString(string(charset.ToUTF8WithFallback(note.Message, charset.ConvertOpts{}))))
+			if err != nil {
+				ctx.ServerError("RenderCommitMessage", err)
+				return
+			}
+		}
+
+		endCommitID = commitID
+		startCommitID = prInfo.MergeBase
+		ctx.Data["IsShowingAllCommits"] = false
+	} else if willShowSpecifiedCommitRange {
 		if len(specifiedEndCommit) > 0 {
 			endCommitID = specifiedEndCommit
 		} else {
@@ -939,6 +1037,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		} else {
 			startCommitID = prInfo.MergeBase
 		}
+
 		ctx.Data["IsShowingAllCommits"] = false
 	} else {
 		endCommitID = headCommitID
@@ -946,10 +1045,10 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		ctx.Data["IsShowingAllCommits"] = true
 	}
 
-	ctx.Data["Username"] = ctx.Repo.Owner.Name
-	ctx.Data["Reponame"] = ctx.Repo.Repository.Name
 	ctx.Data["AfterCommitID"] = endCommitID
 	ctx.Data["BeforeCommitID"] = startCommitID
+	ctx.Data["Username"] = ctx.Repo.Owner.Name
+	ctx.Data["Reponame"] = ctx.Repo.Repository.Name
 
 	fileOnly := ctx.FormBool("file-only")
 
@@ -981,7 +1080,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 	// as the viewed information is designed to be loaded only on latest PR
 	// diff and if you're signed in.
 	if !ctx.IsSigned || willShowSpecifiedCommit || willShowSpecifiedCommitRange {
-		diff, err = gitdiff.GetDiff(ctx, gitRepo, diffOptions, files...)
+		diff, err = gitdiff.GetDiffFull(ctx, gitRepo, diffOptions, files...)
 		methodWithError = "GetDiff"
 	} else {
 		diff, err = gitdiff.SyncAndGetUserSpecificDiff(ctx, ctx.Doer.ID, pull, gitRepo, diffOptions, files...)
@@ -1053,7 +1152,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 			ctx.ServerError("GetUserRepoPermission", err)
 			return
 		}
-		ctx.Data["HeadBranchIsEditable"] = pull.HeadRepo.CanEnableEditor() && issues_model.CanMaintainerWriteToBranch(ctx, headRepoPerm, pull.HeadBranch, ctx.Doer)
+		ctx.Data["HeadBranchIsEditable"] = pull.HeadRepo.CanEnableEditor() && issues_model.CanMaintainerWriteToBranch(ctx, headRepoPerm, pull.HeadBranch, ctx.Doer) && pull.Flow != issues_model.PullRequestFlowAGit
 		ctx.Data["SourceRepoLink"] = pull.HeadRepo.Link()
 		ctx.Data["HeadBranch"] = pull.HeadBranch
 	}
@@ -1073,6 +1172,13 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		return
 	}
 	ctx.Data["Assignees"] = MakeSelfOnTop(ctx.Doer, assigneeUsers)
+
+	participants := getIssueParticipants(ctx, issue)
+	if ctx.Written() {
+		return
+	}
+	ctx.Data["Participants"] = participants
+	ctx.Data["NumParticipants"] = len(participants)
 
 	handleTeamMentions(ctx)
 	if ctx.Written() {
@@ -1207,8 +1313,6 @@ func UpdatePullRequest(ctx *context.Context) {
 		return
 	}
 
-	time.Sleep(1 * time.Second)
-
 	ctx.Flash.Success(ctx.Tr("repo.pulls.update_branch_success"))
 	ctx.Redirect(issue.Link())
 }
@@ -1321,8 +1425,8 @@ func MergePullRequest(ctx *context.Context) {
 		} else if models.IsErrMergeConflicts(err) {
 			conflictError := err.(models.ErrMergeConflicts)
 			flashError, err := ctx.RenderToHTML(tplAlertDetails, map[string]any{
-				"Message": ctx.Tr("repo.editor.merge_conflict"),
-				"Summary": ctx.Tr("repo.editor.merge_conflict_summary"),
+				"Message": ctx.Tr("repo.pulls.merge_conflict"),
+				"Summary": ctx.Tr("repo.pulls.merge_conflict_summary"),
 				"Details": utils.SanitizeFlashErrorString(conflictError.StdErr) + "<br>" + utils.SanitizeFlashErrorString(conflictError.StdOut),
 			})
 			if err != nil {
@@ -1347,6 +1451,10 @@ func MergePullRequest(ctx *context.Context) {
 		} else if models.IsErrMergeUnrelatedHistories(err) {
 			log.Debug("MergeUnrelatedHistories error: %v", err)
 			ctx.Flash.Error(ctx.Tr("repo.pulls.unrelated_histories"))
+			ctx.JSONRedirect(issue.Link())
+		} else if models.IsErrPullRequestHasMerged(err) {
+			log.Debug("MergePullRequestHasMerged error: %v", err)
+			ctx.Flash.Error(ctx.Tr("repo.pulls.already_merged"))
 			ctx.JSONRedirect(issue.Link())
 		} else if git.IsErrPushOutOfDate(err) {
 			log.Debug("MergePushOutOfDate error: %v", err)
@@ -1522,7 +1630,6 @@ func CompareAndPullRequestPost(ctx *context.Context) {
 		BaseBranch:          ci.BaseBranch,
 		HeadRepo:            ci.HeadRepo,
 		BaseRepo:            repo,
-		MergeBase:           ci.CompareInfo.MergeBase,
 		Type:                issues_model.PullRequestGitea,
 		AllowMaintainerEdit: form.AllowMaintainerEdit,
 	}
@@ -1841,4 +1948,68 @@ func SetAllowEdits(ctx *context.Context) {
 	ctx.JSON(http.StatusOK, map[string]any{
 		"allow_maintainer_edit": pr.AllowMaintainerEdit,
 	})
+}
+
+func PrepareViewPullInfoActions(ctx *context.Context, pull *issues_model.PullRequest) {
+	canReadUnitActions := ctx.Repo.CanRead(unit.TypeActions)
+	ctx.Data["CanReadUnitActions"] = canReadUnitActions
+
+	if !canReadUnitActions {
+		return
+	}
+
+	PrepareViewPullInfoActionsTrust(ctx, pull)
+	if ctx.Written() {
+		return
+	}
+}
+
+func PrepareViewPullInfoActionsTrust(ctx *context.Context, pull *issues_model.PullRequest) {
+	trusted, err := actions_service.GetPullRequestPosterIsTrustedWithActions(ctx, pull)
+	if err != nil {
+		ctx.ServerError("GetPullRequestUserIsTrustedWithActions", err)
+		return
+	}
+	ctx.Data["PullRequestPosterIsNotTrustedWithActions"] = trusted == actions_service.UserIsNotTrustedWithActions
+	ctx.Data["PullRequestPosterIsExplicitlyTrustedWithActions"] = trusted == actions_service.UserIsExplicitlyTrustedWithActions
+	ctx.Data["PullRequestPosterIsImplicitlyTrustedWithActions"] = trusted == actions_service.UserIsImplicitlyTrustedWithActions
+
+	someRunsNeedApproval, err := actions_model.HasRunThatNeedApproval(ctx, pull.Issue.RepoID, pull.ID)
+	if err != nil {
+		ctx.ServerError("HasRunThatNeedApproval", err)
+	}
+	ctx.Data["SomePullRequestRunsNeedApproval"] = someRunsNeedApproval
+
+	ctx.Data["UserCanDelegateTrustWithPullRequest"] = context.CheckRepoDelegateActionTrust(ctx)
+}
+
+func UpdateTrustWithPullRequestActions(ctx *context.Context) {
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	if err != nil {
+		if issues_model.IsErrPullRequestNotExist(err) {
+			ctx.NotFound("GetPullRequestByIndex", err)
+		} else {
+			ctx.ServerError("GetPullRequestByIndex", err)
+		}
+		return
+	}
+
+	trust := ctx.FormString("trust")
+
+	if err := actions_service.UpdateTrustedWithPullRequest(ctx, ctx.Doer.ID, pr, actions_service.TrustUpdate(trust)); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := pr.LoadIssue(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := pr.Issue.LoadRepo(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ctx.Redirect(fmt.Sprintf("%s#pull-request-trust-panel", pr.Issue.Link()))
 }

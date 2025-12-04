@@ -7,14 +7,14 @@ import (
 	"context"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	issue_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/indexer/issues/internal"
-	"code.gitea.io/gitea/modules/optional"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/indexer/issues/internal"
+	"forgejo.org/modules/optional"
 )
 
-func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_model.IssuesOptions, error) {
+func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issues_model.IssuesOptions, error) {
 	var sortType string
 	switch options.SortBy {
 	case internal.SortByCreatedAsc:
@@ -49,7 +49,7 @@ func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_m
 		return value
 	}
 
-	opts := &issue_model.IssuesOptions{
+	opts := &issues_model.IssuesOptions{
 		Paginator:          options.Paginator,
 		RepoIDs:            options.RepoIDs,
 		AllPublic:          options.AllPublic,
@@ -78,6 +78,11 @@ func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_m
 		User:               nil,
 	}
 
+	if options.PriorityRepoID.Has() {
+		opts.SortType = "priorityrepo"
+		opts.PriorityRepoID = options.PriorityRepoID.Value()
+	}
+
 	if len(options.MilestoneIDs) == 1 && options.MilestoneIDs[0] == 0 {
 		opts.MilestoneIDs = []int64{db.NoConditionID}
 	} else {
@@ -94,7 +99,7 @@ func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_m
 		}
 
 		if len(options.IncludedLabelIDs) == 0 && len(options.IncludedAnyLabelIDs) > 0 {
-			labels, err := issue_model.GetLabelsByIDs(ctx, options.IncludedAnyLabelIDs, "name")
+			labels, err := issues_model.GetLabelsByIDs(ctx, options.IncludedAnyLabelIDs, "name")
 			if err != nil {
 				return nil, fmt.Errorf("GetLabelsByIDs: %v", err)
 			}

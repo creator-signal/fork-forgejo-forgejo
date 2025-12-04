@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"net/url"
 
-	"code.gitea.io/gitea/models"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
+	"forgejo.org/models"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
 )
 
 // GetTreeBySHA get the GitTreeResponse of a repository using a sha hash.
@@ -87,7 +87,7 @@ func GetTreeBySHA(ctx context.Context, repo *repo_model.Repository, gitRepo *git
 		if entries[e].IsDir() {
 			copy(treeURL[copyPos:], entries[e].ID.String())
 			tree.Entries[i].URL = string(treeURL)
-		} else if entries[e].IsSubModule() {
+		} else if entries[e].IsSubmodule() {
 			// In Github Rest API Version=2022-11-28, if a tree entry is a submodule,
 			// its url will be returned as an empty string.
 			// So the URL will be set to "" here.

@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 )
 
 // ErrIssueStopwatchNotExist represents an error that stopwatch is not exist
@@ -32,8 +32,8 @@ func (err ErrIssueStopwatchNotExist) Unwrap() error {
 // Stopwatch represents a stopwatch for time tracking.
 type Stopwatch struct {
 	ID          int64              `xorm:"pk autoincr"`
-	IssueID     int64              `xorm:"INDEX"`
-	UserID      int64              `xorm:"INDEX"`
+	IssueID     int64              `xorm:"INDEX REFERENCES(issue, id)"`
+	UserID      int64              `xorm:"INDEX REFERENCES(user, id)"`
 	CreatedUnix timeutil.TimeStamp `xorm:"created"`
 }
 
@@ -63,7 +63,7 @@ func getStopwatch(ctx context.Context, userID, issueID int64) (sw *Stopwatch, ex
 // GetUIDsAndNotificationCounts between the two provided times
 func GetUIDsAndStopwatch(ctx context.Context) (map[int64][]*Stopwatch, error) {
 	sws := []*Stopwatch{}
-	if err := db.GetEngine(ctx).Where("issue_id != 0").Find(&sws); err != nil {
+	if err := db.GetEngine(ctx).Find(&sws); err != nil {
 		return nil, err
 	}
 	res := map[int64][]*Stopwatch{}

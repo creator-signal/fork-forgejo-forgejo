@@ -1,4 +1,5 @@
 // Copyright 2024 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package user
@@ -8,12 +9,13 @@ import (
 	"errors"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/validation"
-	"code.gitea.io/gitea/services/mailer"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
+	"forgejo.org/services/mailer"
 )
 
 // AdminAddOrSetPrimaryEmailAddress is used by admins to add or set a user's primary email address
@@ -170,27 +172,37 @@ func ReplaceInactivePrimaryEmail(ctx context.Context, oldEmail string, email *us
 		return err
 	}
 
+	// Delete previous activation token.
+	if err := auth_model.DeleteAuthTokenByUser(ctx, user.ID); err != nil {
+		return err
+	}
+
 	return DeleteEmailAddresses(ctx, user, []string{oldEmail})
 }
 
 func DeleteEmailAddresses(ctx context.Context, u *user_model.User, emails []string) error {
-	for _, emailStr := range emails {
-		// Check if address exists
-		email, err := user_model.GetEmailAddressOfUser(ctx, emailStr, u.ID)
-		if err != nil {
-			return err
-		}
-		if email.IsPrimary {
-			return user_model.ErrPrimaryEmailCannotDelete{Email: emailStr}
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		for _, emailStr := range emails {
+			// Check if address exists
+			email, err := user_model.GetEmailAddressOfUser(ctx, emailStr, u.ID)
+			if err != nil {
+				if user_model.IsErrEmailAddressNotExist(err) {
+					continue
+				}
+				return err
+			}
+			if email.IsPrimary {
+				return user_model.ErrPrimaryEmailCannotDelete{Email: emailStr}
+			}
+
+			// Remove address
+			if _, err := db.DeleteByID[user_model.EmailAddress](ctx, email.ID); err != nil {
+				return err
+			}
 		}
 
-		// Remove address
-		if _, err := db.DeleteByID[user_model.EmailAddress](ctx, email.ID); err != nil {
-			return err
-		}
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func MakeEmailAddressPrimary(ctx context.Context, u *user_model.User, newPrimaryEmail *user_model.EmailAddress, notify bool) error {
@@ -202,6 +214,11 @@ func MakeEmailAddressPrimary(ctx context.Context, u *user_model.User, newPrimary
 	sess := db.GetEngine(ctx)
 
 	oldPrimaryEmail := u.Email
+
+	// If the user was reported as abusive, a shadow copy should be created before first update (of certain columns).
+	if err = user_model.IfNeededCreateShadowCopyForUser(ctx, u.ID, u, "email"); err != nil {
+		return err
+	}
 
 	// 1. Update user table
 	u.Email = newPrimaryEmail.Email

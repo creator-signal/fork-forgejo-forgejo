@@ -7,9 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 )
 
 // ErrUserPasswordNotSet represents a "ErrUserPasswordNotSet" kind of error.
@@ -50,7 +50,7 @@ func Authenticate(ctx context.Context, user *user_model.User, login, password st
 
 	if !user.IsPasswordSet() {
 		return nil, ErrUserPasswordNotSet{UID: user.ID, Name: user.Name}
-	} else if !user.ValidatePassword(password) {
+	} else if !user.ValidatePassword(ctx, password) {
 		return nil, ErrUserPasswordInvalid{UID: user.ID, Name: user.Name}
 	}
 

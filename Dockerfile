@@ -1,9 +1,9 @@
-FROM --platform=$BUILDPLATFORM code.forgejo.org/oci/xx AS xx
+FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/xx AS xx
 
-FROM --platform=$BUILDPLATFORM code.forgejo.org/oci/golang:1.23-alpine3.21 as build-env
+FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/golang:1.25-alpine3.22 AS build-env
 
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY:-direct}
+ENV GOPROXY=${GOPROXY:-https://proxy.golang.org,direct}
 
 ARG RELEASE_VERSION
 ARG TAGS="sqlite sqlite_unlock_notify"
@@ -30,13 +30,13 @@ RUN cp /*-alpine-linux-musl*/lib/ld-musl-*.so.1 /lib || true
 
 RUN apk --no-cache add build-base git nodejs npm
 
-COPY . ${GOPATH}/src/code.gitea.io/gitea
-WORKDIR ${GOPATH}/src/code.gitea.io/gitea
+COPY . ${GOPATH}/src/forgejo.org
+WORKDIR ${GOPATH}/src/forgejo.org
 
-RUN make clean
+RUN make clean-no-bindata
 RUN make frontend
 RUN go build contrib/environment-to-ini/environment-to-ini.go && xx-verify environment-to-ini
-RUN LDFLAGS="-buildid=" make RELEASE_VERSION=$RELEASE_VERSION GOFLAGS="-trimpath" go-check generate-backend static-executable && xx-verify gitea
+RUN LDFLAGS="-buildid=" make FORGEJO_GENERATE_SKIP_HASH=true RELEASE_VERSION=$RELEASE_VERSION GOFLAGS="-trimpath" go-check generate-backend static-executable && xx-verify gitea
 
 # Copy local files
 COPY docker/root /tmp/local
@@ -47,11 +47,11 @@ RUN chmod 755 /tmp/local/usr/bin/entrypoint \
               /tmp/local/etc/s6/gitea/* \
               /tmp/local/etc/s6/openssh/* \
               /tmp/local/etc/s6/.s6-svscan/* \
-              /go/src/code.gitea.io/gitea/gitea \
-              /go/src/code.gitea.io/gitea/environment-to-ini
-RUN chmod 644 /go/src/code.gitea.io/gitea/contrib/autocompletion/bash_autocomplete
+              /go/src/forgejo.org/gitea \
+              /go/src/forgejo.org/environment-to-ini
+RUN chmod 644 /go/src/forgejo.org/contrib/autocompletion/bash_autocomplete
 
-FROM code.forgejo.org/oci/alpine:3.21
+FROM data.forgejo.org/oci/alpine:3.22
 ARG RELEASE_VERSION
 LABEL maintainer="contact@forgejo.org" \
       org.opencontainers.image.authors="Forgejo" \
@@ -102,7 +102,7 @@ CMD ["/usr/bin/s6-svscan", "/etc/s6"]
 
 COPY --from=build-env /tmp/local /
 RUN cd /usr/local/bin ; ln -s gitea forgejo
-COPY --from=build-env /go/src/code.gitea.io/gitea/gitea /app/gitea/gitea
+COPY --from=build-env /go/src/forgejo.org/gitea /app/gitea/gitea
 RUN ln -s /app/gitea/gitea /app/gitea/forgejo-cli
-COPY --from=build-env /go/src/code.gitea.io/gitea/environment-to-ini /usr/local/bin/environment-to-ini
-COPY --from=build-env /go/src/code.gitea.io/gitea/contrib/autocompletion/bash_autocomplete /etc/profile.d/gitea_bash_autocomplete.sh
+COPY --from=build-env /go/src/forgejo.org/environment-to-ini /usr/local/bin/environment-to-ini
+COPY --from=build-env /go/src/forgejo.org/contrib/autocompletion/bash_autocomplete /etc/profile.d/gitea_bash_autocomplete.sh

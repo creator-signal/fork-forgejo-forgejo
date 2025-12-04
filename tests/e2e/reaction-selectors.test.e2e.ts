@@ -4,11 +4,10 @@
 // @watch end
 
 import {expect, type Locator} from '@playwright/test';
-import {test, save_visual, login_user, load_logged_in_context} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
-test.beforeAll(async ({browser}, workerInfo) => {
-  await login_user(browser, workerInfo, 'user2');
-});
+test.use({user: 'user2'});
 
 const assertReactionCounts = (comment: Locator, counts: unknown) =>
   expect(async () => {
@@ -26,6 +25,7 @@ const assertReactionCounts = (comment: Locator, counts: unknown) =>
         ]),
       ),
     );
+    // eslint-disable-next-line playwright/no-standalone-expect
     return expect(reactions).toStrictEqual(counts);
   }).toPass();
 
@@ -35,10 +35,7 @@ async function toggleReaction(menu: Locator, reaction: string) {
   await menu.locator(`[role=menuitem][data-reaction-content="${reaction}"]`).click();
 }
 
-test('Reaction Selectors', async ({browser}, workerInfo) => {
-  const context = await load_logged_in_context(browser, workerInfo, 'user2');
-  const page = await context.newPage();
-
+test('Reaction Selectors', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
@@ -66,5 +63,5 @@ test('Reaction Selectors', async ({browser}, workerInfo) => {
 
   await toggleReaction(topPicker, 'laugh');
   await assertReactionCounts(comment, {'laugh': 2});
-  await save_visual(page);
+  await screenshot(page);
 });

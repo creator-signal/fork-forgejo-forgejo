@@ -5,7 +5,6 @@
 		</h4>
 		<div class="ui attached segment">
 			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
 				<fieldset>
 					<legend>{{ctx.Locale.Tr "settings.profile_desc"}}</legend>
 					<label {{if .Err_Name}}class="field error"{{end}}>
@@ -16,7 +15,11 @@
 						{{else}}
 							<span class="help">
 								{{ctx.Locale.Tr "settings.change_username_prompt"}}
+								{{if gt .CooldownPeriod 0}}
+								{{ctx.Locale.TrN .CooldownPeriod "settings.change_username_redirect_prompt.with_cooldown.one" "settings.change_username_redirect_prompt.with_cooldown.few" .CooldownPeriod}}</span>
+								{{else}}
 								{{ctx.Locale.Tr "settings.change_username_redirect_prompt"}}
+								{{end}}
 							</span>
 						{{end}}
 					</label>
@@ -26,38 +29,14 @@
 						<input name="full_name" value="{{.SignedUser.FullName}}" maxlength="100">
 					</label>
 
-					<label id="label-pronouns" class="tw-hidden">
+					<label id="label-pronouns">
 						{{ctx.Locale.Tr "settings.pronouns"}}
-						<div id="pronouns-dropdown" class="ui selection dropdown" aria-labelledby="label-pronouns">
-							<input type="hidden" value="{{.SignedUser.Pronouns}}">
-							<div class="text">
-								{{if .PronounsAreCustom}}
-									{{ctx.Locale.Tr "settings.pronouns_custom"}}
-								{{else if eq "" .SignedUser.Pronouns}}
-									{{ctx.Locale.Tr "settings.pronouns_unspecified"}}
-								{{else}}
-									{{.SignedUser.Pronouns}}
-								{{end}}
-							</div>
-							{{svg "octicon-triangle-down" 14 "dropdown icon"}}
-							<div class="menu">
-								<div class="item{{if eq "" .SignedUser.Pronouns}} active selected{{end}}" data-value=""><p>{{ctx.Locale.Tr "settings.pronouns_unspecified"}}</p></div>
-								<div class="item{{if eq "he/him" .SignedUser.Pronouns}} active selected{{end}}" data-value="he/him">he/him</div>
-								<div class="item{{if eq "she/her" .SignedUser.Pronouns}} active selected{{end}}" data-value="she/her">she/her</div>
-								<div class="item{{if eq "they/them" .SignedUser.Pronouns}} active selected{{end}}" data-value="they/them">they/them</div>
-								<div class="item{{if eq "it/its" .SignedUser.Pronouns}} active selected{{end}}" data-value="it/its">it/its</div>
-								<div class="item{{if eq "any pronouns" .SignedUser.Pronouns}} active selected{{end}}" data-value="any pronouns">any pronouns</div>
-								{{if .PronounsAreCustom}}
-									<div class="item active selected" data-value="{{.SignedUser.Pronouns}}">{{ctx.Locale.Tr "settings.pronouns_custom"}}</div>
-								{{else}}
-									<div class="item" data-value="!"><i>{{ctx.Locale.Tr "settings.pronouns_custom"}}</i></div>
-								{{end}}
-							</div>
-						</div>
-					</label>
-					<label id="label-pronouns-custom">
-						{{ctx.Locale.Tr "settings.pronouns_custom_label"}}
-						<input name="pronouns" value="{{.SignedUser.Pronouns}}" maxlength="50">
+						<input name="pronouns" list="pronouns" placeholder="{{ctx.Locale.Tr "settings.pronouns_unspecified"}}" value="{{.SignedUser.Pronouns}}" maxlength="50">
+						<datalist id="pronouns">
+							{{range .CommonPronouns}}
+								<option value="{{.}}"></option>
+							{{end}}
+						</datalist>
 					</label>
 
 					<label {{if .Err_Biography}}class="field error"{{end}}>
@@ -103,6 +82,7 @@
 								{{end}}
 							</div>
 						</div>
+						<span class="help">{{ctx.Locale.Tr "settings.visibility.description" "https://forgejo.org/docs/latest/user/repo-permissions/#profile-and-visibility"}}</span>
 					</label>
 
 					<label>
@@ -116,18 +96,23 @@
 						{{ctx.Locale.Tr "settings.keep_activity_private"}}
 						<span class="help">{{ctx.Locale.Tr "settings.keep_activity_private.description" (printf "/%s?tab=activity" .SignedUser.Name)}}</span>
 					</label>
+
+					<label>
+						<input name="keep_pronouns_private" type="checkbox" {{if .SignedUser.KeepPronounsPrivate}}checked{{end}}>
+						{{ctx.Locale.Tr "settings.keep_pronouns_private"}}
+						<span class="help">{{ctx.Locale.Tr "settings.keep_pronouns_private.description"}}</span>
+					</label>
 				</fieldset>
 
 				<button class="ui primary button">{{ctx.Locale.Tr "settings.update_profile"}}</button>
 			</form>
 		</div>
 
-		<h4 class="ui top attached header">
+		<h4 id="avatar-settings" class="ui top attached header">
 			{{ctx.Locale.Tr "settings.avatar"}}
 		</h4>
 		<div class="ui attached segment">
 			<form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
-				{{.CsrfTokenHtml}}
 				{{if not .DisableGravatar}}
 				<div class="inline field">
 					<div class="ui radio checkbox">
@@ -151,11 +136,12 @@
 				<div class="inline field tw-pl-4">
 					<label for="new-avatar">{{ctx.Locale.Tr "settings.choose_new_avatar"}}</label>
 					<input id="new-avatar" name="avatar" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+					<br/><span class=help>{{ctx.Locale.Tr "avatar.constraints_hint" (ctx.Locale.TrSize .MaxAvatarFileSize) .MaxAvatarWidth .MaxAvatarHeight}}</span>
 				</div>
 
-				<div class="field">
-					<button class="ui primary button">{{ctx.Locale.Tr "settings.update_avatar"}}</button>
-					<button class="ui red button link-action" data-url="{{.Link}}/avatar/delete">{{ctx.Locale.Tr "settings.delete_current_avatar"}}</button>
+				<div class="field button-sequence">
+					<button class="primary button">{{ctx.Locale.Tr "settings.update_avatar"}}</button>
+					<button class="danger button link-action" data-url="{{.Link}}/avatar/delete">{{ctx.Locale.Tr "settings.delete_current_avatar"}}</button>
 				</div>
 			</form>
 		</div>

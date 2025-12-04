@@ -1,15 +1,14 @@
 // Copyright 2015 The Gogs Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package git
 
 import (
 	"bytes"
-	"sort"
 	"strings"
 
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/util"
 )
 
 const (
@@ -21,14 +20,13 @@ const (
 
 // Tag represents a Git tag.
 type Tag struct {
-	Name                 string
-	ID                   ObjectID
-	Object               ObjectID // The id of this commit object
-	Type                 string
-	Tagger               *Signature
-	Message              string
-	Signature            *ObjectSignature
-	ArchiveDownloadCount *api.TagArchiveDownloadCount
+	Name      string
+	ID        ObjectID
+	Object    ObjectID // The id of this commit object
+	Type      string
+	Tagger    *Signature
+	Message   string
+	Signature *ObjectSignature
 }
 
 // Commit return the commit of the tag reference
@@ -106,24 +104,4 @@ l:
 	}
 
 	return tag, nil
-}
-
-type tagSorter []*Tag
-
-func (ts tagSorter) Len() int {
-	return len([]*Tag(ts))
-}
-
-func (ts tagSorter) Less(i, j int) bool {
-	return []*Tag(ts)[i].Tagger.When.After([]*Tag(ts)[j].Tagger.When)
-}
-
-func (ts tagSorter) Swap(i, j int) {
-	[]*Tag(ts)[i], []*Tag(ts)[j] = []*Tag(ts)[j], []*Tag(ts)[i]
-}
-
-// sortTagsByTime
-func sortTagsByTime(tags []*Tag) {
-	sorter := tagSorter(tags)
-	sort.Sort(sorter)
 }

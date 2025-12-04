@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"strings"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	"code.gitea.io/gitea/services/context"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
 )
 
 // NewAvailable check if unread notifications exist
@@ -67,8 +67,6 @@ func subjectToSource(value []string) (result []activities_model.NotificationSour
 			result = append(result, activities_model.NotificationSourceIssue)
 		case "pull":
 			result = append(result, activities_model.NotificationSourcePullRequest)
-		case "commit":
-			result = append(result, activities_model.NotificationSourceCommit)
 		case "repository":
 			result = append(result, activities_model.NotificationSourceRepository)
 		}

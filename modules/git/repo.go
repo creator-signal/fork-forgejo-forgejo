@@ -18,9 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/proxy"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/proxy"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 )
 
 // GPGSettings represents the default GPG settings for this repository
@@ -132,7 +133,55 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 		return err
 	}
 
-	cmd := NewCommandContextNoGlobals(ctx, args...).AddArguments("clone")
+	cmd := NewCommandContextNoGlobals(ctx, args...)
+
+	envs := os.Environ()
+	parsedFromURL, err := url.Parse(from)
+	if err == nil {
+		envs = proxy.EnvWithProxy(parsedFromURL)
+	}
+
+	fromURL := from
+	sanitizedFrom := from
+
+	// If the clone URL has credentials, build a credential file for usage by git-credential-store
+	// to prevent credential leak in the process list.
+	// https://git-scm.com/docs/git-credential-store#_storage_format
+	// credential.helper adjustment must be set before the git subcommand
+	if strings.Contains(from, "://") && strings.Contains(from, "@") {
+		sanitizedFrom = util.SanitizeCredentialURLs(from)
+		if parsedFromURL != nil {
+			credentialsFile, err := os.CreateTemp("", "forgejo-clone-credentials-")
+			if err != nil {
+				return err
+			}
+			credentialsPath := credentialsFile.Name()
+
+			defer func() {
+				_ = credentialsFile.Close()
+				if err := util.Remove(credentialsPath); err != nil {
+					log.Warn("Unable to remove temporary file %q: %v", credentialsPath, err)
+				}
+			}()
+			_, err = credentialsFile.Write([]byte(parsedFromURL.String()))
+			if err != nil {
+				return err
+			}
+			err = credentialsFile.Close()
+			if err != nil {
+				return err
+			}
+
+			cmd.AddArguments("-c").AddDynamicArguments("credential.helper=store --file=" + credentialsPath)
+
+			// remove the password from the URL argument
+			parsedFromURL.User = url.User(parsedFromURL.User.Username())
+			fromURL = parsedFromURL.String()
+		}
+	}
+
+	cmd.AddArguments("clone")
+
 	if opts.SkipTLSVerify {
 		cmd.AddArguments("-c", "http.sslVerify=false")
 	}
@@ -160,22 +209,12 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 	if len(opts.Branch) > 0 {
 		cmd.AddArguments("-b").AddDynamicArguments(opts.Branch)
 	}
-	cmd.AddDashesAndList(from, to)
 
-	if strings.Contains(from, "://") && strings.Contains(from, "@") {
-		cmd.SetDescription(fmt.Sprintf("clone branch %s from %s to %s (shared: %t, mirror: %t, depth: %d)", opts.Branch, util.SanitizeCredentialURLs(from), to, opts.Shared, opts.Mirror, opts.Depth))
-	} else {
-		cmd.SetDescription(fmt.Sprintf("clone branch %s from %s to %s (shared: %t, mirror: %t, depth: %d)", opts.Branch, from, to, opts.Shared, opts.Mirror, opts.Depth))
-	}
+	cmd.SetDescription(fmt.Sprintf("clone branch %s from %s to %s (shared: %t, mirror: %t, depth: %d)", opts.Branch, sanitizedFrom, to, opts.Shared, opts.Mirror, opts.Depth))
+	cmd.AddDashesAndList(fromURL, to)
 
 	if opts.Timeout <= 0 {
 		opts.Timeout = -1
-	}
-
-	envs := os.Environ()
-	u, err := url.Parse(from)
-	if err == nil {
-		envs = proxy.EnvWithProxy(u)
 	}
 
 	stderr := new(bytes.Buffer)
@@ -260,17 +299,6 @@ func Push(ctx context.Context, repoPath string, opts PushOptions) error {
 	return nil
 }
 
-// GetLatestCommitTime returns time for latest commit in repository (across all branches)
-func GetLatestCommitTime(ctx context.Context, repoPath string) (time.Time, error) {
-	cmd := NewCommand(ctx, "for-each-ref", "--sort=-committerdate", BranchPrefix, "--count", "1", "--format=%(committerdate)")
-	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath})
-	if err != nil {
-		return time.Time{}, err
-	}
-	commitTime := strings.TrimSpace(stdout)
-	return time.Parse("Mon Jan _2 15:04:05 2006 -0700", commitTime)
-}
-
 // DivergeObject represents commit count diverging commits
 type DivergeObject struct {
 	Ahead  int
@@ -278,10 +306,10 @@ type DivergeObject struct {
 }
 
 // GetDivergingCommits returns the number of commits a targetBranch is ahead or behind a baseBranch
-func GetDivergingCommits(ctx context.Context, repoPath, baseBranch, targetBranch string) (do DivergeObject, err error) {
+func GetDivergingCommits(ctx context.Context, repoPath, baseBranch, targetBranch string, env []string) (do DivergeObject, err error) {
 	cmd := NewCommand(ctx, "rev-list", "--count", "--left-right").
 		AddDynamicArguments(baseBranch + "..." + targetBranch).AddArguments("--")
-	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath})
+	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath, Env: env})
 	if err != nil {
 		return do, err
 	}

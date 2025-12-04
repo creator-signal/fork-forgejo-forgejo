@@ -26,7 +26,9 @@
 							{{else}}
 								<span class="text red">{{svg "octicon-alert"}}</span>
 							{{end}}
-							<a class="ui primary sha label toggle button show-panel" data-panel="#info-{{.ID}}">{{.UUID}}</a>
+							<a class="primary sha label toggle button show-panel" data-panel="#info-{{.ID}}">
+								<span class="shortsha">{{.UUID}}</span>
+							</a>
 						</div>
 						<span class="text grey">
 							{{DateUtils.TimeSince .Delivered}}
@@ -50,7 +52,6 @@
 							{{if or $.Permission.IsAdmin $.IsOrganizationOwner $.PageIsAdmin $.PageIsUserSettings}}
 							<div class="right menu">
 								<form class="item" action="{{$.Link}}/replay/{{.UUID}}" method="post">
-									{{$.CsrfTokenHtml}}
 									<span data-tooltip-content="{{if $.Webhook.IsActive}}{{ctx.Locale.Tr "repo.settings.webhook.replay.description"}}{{else}}{{ctx.Locale.Tr "repo.settings.webhook.replay.description_disabled"}}{{end}}">
 										<button class="ui tiny button{{if not $.Webhook.IsActive}} disabled{{end}}">{{svg "octicon-sync"}}</button>
 									</span>

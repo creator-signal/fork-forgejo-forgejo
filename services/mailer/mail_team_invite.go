@@ -6,15 +6,16 @@ package mailer
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
-	org_model "code.gitea.io/gitea/models/organization"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/translation"
+	org_model "forgejo.org/models/organization"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/translation"
 )
 
 const (
@@ -39,7 +40,7 @@ func MailTeamInvite(ctx context.Context, inviter *user_model.User, team *org_mod
 	if err != nil && !user_model.IsErrUserNotExist(err) {
 		return err
 	} else if user != nil && user.ProhibitLogin {
-		return fmt.Errorf("login is prohibited for the invited user")
+		return errors.New("login is prohibited for the invited user")
 	}
 
 	inviteRedirect := url.QueryEscape(fmt.Sprintf("/org/invite/%s", invite.Token))

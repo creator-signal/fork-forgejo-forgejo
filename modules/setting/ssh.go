@@ -11,8 +11,8 @@ import (
 	"text/template"
 	"time"
 
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/util"
 
 	gossh "golang.org/x/crypto/ssh"
 )
@@ -41,6 +41,7 @@ var SSH = struct {
 	MinimumKeySizeCheck                   bool               `ini:"-"`
 	MinimumKeySizes                       map[string]int     `ini:"-"`
 	CreateAuthorizedKeysFile              bool               `ini:"SSH_CREATE_AUTHORIZED_KEYS_FILE"`
+	AllowUnexpectedAuthorizedKeys         bool               `ini:"SSH_ALLOW_UNEXPECTED_AUTHORIZED_KEYS"`
 	CreateAuthorizedPrincipalsFile        bool               `ini:"SSH_CREATE_AUTHORIZED_PRINCIPALS_FILE"`
 	ExposeAnonymous                       bool               `ini:"SSH_EXPOSE_ANONYMOUS"`
 	AuthorizedPrincipalsAllow             []string           `ini:"SSH_AUTHORIZED_PRINCIPALS_ALLOW"`
@@ -56,7 +57,7 @@ var SSH = struct {
 	Domain:                        "",
 	Port:                          22,
 	ServerCiphers:                 []string{"chacha20-poly1305@openssh.com", "aes128-ctr", "aes192-ctr", "aes256-ctr", "aes128-gcm@openssh.com", "aes256-gcm@openssh.com"},
-	ServerKeyExchanges:            []string{"curve25519-sha256", "ecdh-sha2-nistp256", "ecdh-sha2-nistp384", "ecdh-sha2-nistp521", "diffie-hellman-group14-sha256", "diffie-hellman-group14-sha1"},
+	ServerKeyExchanges:            []string{"mlkem768x25519-sha256", "curve25519-sha256", "ecdh-sha2-nistp256", "ecdh-sha2-nistp384", "ecdh-sha2-nistp521", "diffie-hellman-group14-sha256", "diffie-hellman-group14-sha1"},
 	ServerMACs:                    []string{"hmac-sha2-256-etm@openssh.com", "hmac-sha2-256", "hmac-sha1"},
 	KeygenPath:                    "",
 	MinimumKeySizeCheck:           true,

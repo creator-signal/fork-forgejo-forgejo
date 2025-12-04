@@ -10,23 +10,22 @@ import (
 	"strings"
 	"testing"
 
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/tests"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestProtectedBranch_AdminEnforcement(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		session := loginUser(t, "user1")
 		testRepoFork(t, session, "user2", "repo1", "user1", "repo1")
 		testEditFileToNewBranch(t, session, "user1", "repo1", "master", "add-readme", "README.md", "WIP")
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: 1, Name: "repo1"})
 
 		req := NewRequestWithValues(t, "POST", "user1/repo1/compare/master...add-readme", map[string]string{
-			"_csrf": GetCSRF(t, session, "user1/repo1/compare/master...add-readme"),
 			"title": "pull request",
 		})
 		session.MakeRequest(t, req, http.StatusOK)
@@ -47,7 +46,6 @@ func TestProtectedBranch_AdminEnforcement(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", "/user1/repo1/settings/branches/edit", map[string]string{
-				"_csrf":              GetCSRF(t, session, "/user1/repo1/settings/branches/edit"),
 				"rule_name":          "master",
 				"required_approvals": "1",
 			})
@@ -67,7 +65,6 @@ func TestProtectedBranch_AdminEnforcement(t *testing.T) {
 
 			protectedBranch := unittest.AssertExistsAndLoadBean(t, &git_model.ProtectedBranch{RuleName: "master", RepoID: repo.ID})
 			req := NewRequestWithValues(t, "POST", "/user1/repo1/settings/branches/edit", map[string]string{
-				"_csrf":              GetCSRF(t, session, "/user1/repo1/settings/branches/edit"),
 				"rule_name":          "master",
 				"rule_id":            strconv.FormatInt(protectedBranch.ID, 10),
 				"required_approvals": "1",

@@ -11,20 +11,20 @@ import (
 	"runtime"
 	"time"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/cache"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/updatechecker"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/cron"
-	"code.gitea.io/gitea/services/forms"
-	release_service "code.gitea.io/gitea/services/release"
-	repo_service "code.gitea.io/gitea/services/repository"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/cache"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/updatechecker"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/cron"
+	"forgejo.org/services/forms"
+	release_service "forgejo.org/services/release"
+	repo_service "forgejo.org/services/repository"
 )
 
 const (
@@ -135,7 +135,27 @@ func Dashboard(ctx *context.Context) {
 	ctx.Data["RemoteVersion"] = updatechecker.GetRemoteVersion(ctx)
 	updateSystemStatus()
 	ctx.Data["SysStatus"] = sysStatus
-	ctx.Data["SSH"] = setting.SSH
+
+	entries := []string{
+		"delete_inactive_accounts",
+		"delete_repo_archives",
+		"delete_missing_repos",
+		"git_gc_repos",
+	}
+	if !setting.SSH.Disabled && !setting.SSH.StartBuiltinServer {
+		entries = append(entries, "resync_all_sshkeys", "resync_all_sshprincipals")
+	}
+	entries = append(entries, []string{
+		"resync_all_hooks",
+		"reinit_missing_repos",
+		"sync_external_users",
+		"repo_health_check",
+		"delete_generated_repository_avatars",
+		"sync_repo_branches",
+		"sync_repo_tags",
+	}...)
+	ctx.Data["Entries"] = entries
+
 	prepareDeprecatedWarningsAlert(ctx)
 	ctx.HTML(http.StatusOK, tplDashboard)
 }

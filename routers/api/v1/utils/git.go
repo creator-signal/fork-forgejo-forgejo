@@ -5,13 +5,14 @@ package utils
 
 import (
 	gocontext "context"
+	"errors"
 	"fmt"
 	"net/http"
 
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/services/context"
 )
 
 // ResolveRefOrSha resolve ref to sha if exist
@@ -50,7 +51,7 @@ func ResolveRefOrSha(ctx *context.APIContext, ref string) string {
 // GetGitRefs return git references based on filter
 func GetGitRefs(ctx *context.APIContext, filter string) ([]*git.Reference, string, error) {
 	if ctx.Repo.GitRepo == nil {
-		return nil, "", fmt.Errorf("no open git repo found in context")
+		return nil, "", errors.New("no open git repo found in context")
 	}
 	if len(filter) > 0 {
 		filter = "refs/" + filter

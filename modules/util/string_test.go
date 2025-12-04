@@ -45,3 +45,72 @@ func TestToSnakeCase(t *testing.T) {
 		assert.Equal(t, expected, ToSnakeCase(input))
 	}
 }
+
+func TestASCIIEqualFold(t *testing.T) {
+	cases := map[string]struct {
+		First    string
+		Second   string
+		Expected bool
+	}{
+		"Empty String":          {First: "", Second: "", Expected: true},
+		"Single Letter Ident":   {First: "h", Second: "h", Expected: true},
+		"Single Letter Equal":   {First: "h", Second: "H", Expected: true},
+		"Single Letter Unequal": {First: "h", Second: "g", Expected: false},
+		"Simple Match Ident":    {First: "someString", Second: "someString", Expected: true},
+		"Simple Match Equal":    {First: "someString", Second: "someSTRIng", Expected: true},
+		"Simple Match Unequal":  {First: "someString", Second: "sameString", Expected: false},
+		"Different Length":      {First: "abcdef", Second: "abcdefg", Expected: false},
+		"Unicode Kelvin":        {First: "ghijklm", Second: "GHIJ\u212ALM", Expected: false},
+	}
+
+	for name := range cases {
+		c := cases[name]
+		t.Run(name, func(t *testing.T) {
+			Actual := ASCIIEqualFold(c.First, c.Second)
+			assert.Equal(t, c.Expected, Actual)
+		})
+	}
+}
+
+func TestRemoveAllStr(t *testing.T) {
+	for name, c := range map[string]struct {
+		str, res string
+		prefix   bool
+		all      []string
+	}{
+		"Empty": {
+			str:    "",
+			res:    "",
+			all:    []string{"hello"},
+			prefix: false,
+		},
+		"Exact": {
+			str:    "hello",
+			res:    "",
+			all:    []string{"hello"},
+			prefix: false,
+		},
+		"One of Two": {
+			str:    "hello world",
+			res:    "world",
+			all:    []string{"hello"},
+			prefix: false,
+		},
+		"Prefix": {
+			str:    "is:open is:closed hello",
+			res:    "hello",
+			all:    []string{"is:"},
+			prefix: true,
+		},
+		"Prefix Multiple": {
+			str:    "is:open is:closed hello has:fun",
+			res:    "hello",
+			all:    []string{"is:", "has:"},
+			prefix: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, c.res, RemoveAllStr(c.str, c.prefix, c.all...))
+		})
+	}
+}

@@ -4,22 +4,23 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/organization"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/gitrepo"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	issue_service "code.gitea.io/gitea/services/issue"
-	pull_service "code.gitea.io/gitea/services/pull"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	issue_service "forgejo.org/services/issue"
+	pull_service "forgejo.org/services/pull"
 )
 
 // ListPullReviews lists all reviews of a pull request
@@ -581,7 +582,7 @@ func SubmitPullReview(ctx *context.APIContext) {
 	}
 
 	if review.Type != issues_model.ReviewTypePending {
-		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("only a pending review can be submitted"))
+		ctx.Error(http.StatusUnprocessableEntity, "", errors.New("only a pending review can be submitted"))
 		return
 	}
 
@@ -593,7 +594,7 @@ func SubmitPullReview(ctx *context.APIContext) {
 
 	// if review stay pending return
 	if reviewType == issues_model.ReviewTypePending {
-		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("review stay pending"))
+		ctx.Error(http.StatusUnprocessableEntity, "", errors.New("review stay pending"))
 		return
 	}
 
@@ -634,7 +635,7 @@ func preparePullReviewType(ctx *context.APIContext, pr *issues_model.PullRequest
 	case api.ReviewStateApproved:
 		// can not approve your own PR
 		if pr.Issue.IsPoster(ctx.Doer.ID) {
-			ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("approve your own pull is not allowed"))
+			ctx.Error(http.StatusUnprocessableEntity, "", errors.New("approve your own pull is not allowed"))
 			return -1, true
 		}
 		reviewType = issues_model.ReviewTypeApprove
@@ -643,7 +644,7 @@ func preparePullReviewType(ctx *context.APIContext, pr *issues_model.PullRequest
 	case api.ReviewStateRequestChanges:
 		// can not reject your own PR
 		if pr.Issue.IsPoster(ctx.Doer.ID) {
-			ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("reject your own pull is not allowed"))
+			ctx.Error(http.StatusUnprocessableEntity, "", errors.New("reject your own pull is not allowed"))
 			return -1, true
 		}
 		reviewType = issues_model.ReviewTypeReject
@@ -715,7 +716,7 @@ func prepareSingleReview(ctx *context.APIContext) (*issues_model.Review, *issues
 func CreateReviewRequests(ctx *context.APIContext) {
 	// swagger:operation POST /repos/{owner}/{repo}/pulls/{index}/requested_reviewers repository repoCreatePullReviewRequests
 	// ---
-	// summary: create review requests for a pull request
+	// summary: Create review requests for a pull request
 	// produces:
 	// - application/json
 	// parameters:
@@ -756,7 +757,7 @@ func CreateReviewRequests(ctx *context.APIContext) {
 func DeleteReviewRequests(ctx *context.APIContext) {
 	// swagger:operation DELETE /repos/{owner}/{repo}/pulls/{index}/requested_reviewers repository repoDeletePullReviewRequests
 	// ---
-	// summary: cancel review requests for a pull request
+	// summary: Cancel review requests for a pull request
 	// produces:
 	// - application/json
 	// parameters:

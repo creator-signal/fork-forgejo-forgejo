@@ -4,6 +4,7 @@
 package container
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -14,20 +15,20 @@ import (
 	"strconv"
 	"strings"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	packages_model "code.gitea.io/gitea/models/packages"
-	container_model "code.gitea.io/gitea/models/packages/container"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	packages_module "code.gitea.io/gitea/modules/packages"
-	container_module "code.gitea.io/gitea/modules/packages/container"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/routers/api/packages/helper"
-	"code.gitea.io/gitea/services/context"
-	packages_service "code.gitea.io/gitea/services/packages"
-	container_service "code.gitea.io/gitea/services/packages/container"
+	auth_model "forgejo.org/models/auth"
+	packages_model "forgejo.org/models/packages"
+	container_model "forgejo.org/models/packages/container"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	packages_module "forgejo.org/modules/packages"
+	container_module "forgejo.org/modules/packages/container"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
+	"forgejo.org/routers/api/packages/helper"
+	"forgejo.org/services/context"
+	packages_service "forgejo.org/services/packages"
+	container_service "forgejo.org/services/packages/container"
 
 	digest "github.com/opencontainers/go-digest"
 )
@@ -62,9 +63,6 @@ func setResponseHeaders(resp http.ResponseWriter, h *containerHeaders) {
 	if h.ContentType != "" {
 		resp.Header().Set("Content-Type", h.ContentType)
 	}
-	if h.ContentLength != 0 {
-		resp.Header().Set("Content-Length", strconv.FormatInt(h.ContentLength, 10))
-	}
 	if h.UploadUUID != "" {
 		resp.Header().Set("Docker-Upload-Uuid", h.UploadUUID)
 	}
@@ -72,17 +70,29 @@ func setResponseHeaders(resp http.ResponseWriter, h *containerHeaders) {
 		resp.Header().Set("Docker-Content-Digest", h.ContentDigest)
 		resp.Header().Set("ETag", fmt.Sprintf(`"%s"`, h.ContentDigest))
 	}
+	if h.ContentLength >= 0 {
+		resp.Header().Set("Content-Length", strconv.FormatInt(h.ContentLength, 10))
+	}
 	resp.Header().Set("Docker-Distribution-Api-Version", "registry/2.0")
 	resp.WriteHeader(h.Status)
 }
 
 func jsonResponse(ctx *context.Context, status int, obj any) {
-	setResponseHeaders(ctx.Resp, &containerHeaders{
-		Status:      status,
-		ContentType: "application/json",
-	})
-	if err := json.NewEncoder(ctx.Resp).Encode(obj); err != nil {
+	// Buffer the JSON content first to calculate correct Content-Length
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(obj); err != nil {
 		log.Error("JSON encode: %v", err)
+		return
+	}
+
+	setResponseHeaders(ctx.Resp, &containerHeaders{
+		Status:        status,
+		ContentType:   "application/json",
+		ContentLength: int64(buf.Len()),
+	})
+
+	if _, err := buf.WriteTo(ctx.Resp); err != nil {
+		log.Error("JSON write: %v", err)
 	}
 }
 
@@ -389,12 +399,7 @@ func EndUploadBlob(ctx *context.Context) {
 		}
 		return
 	}
-	doClose := true
-	defer func() {
-		if doClose {
-			uploader.Close()
-		}
-	}()
+	defer uploader.Close()
 
 	if ctx.Req.Body != nil {
 		if err := uploader.Append(ctx, ctx.Req.Body); err != nil {
@@ -426,12 +431,6 @@ func EndUploadBlob(ctx *context.Context) {
 		}
 		return
 	}
-
-	if err := uploader.Close(); err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-	doClose = false
 
 	if err := container_service.RemoveBlobUploadByID(ctx, uploader.ID); err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
@@ -691,33 +690,30 @@ func DeleteManifest(ctx *context.Context) {
 func serveBlob(ctx *context.Context, pfd *packages_model.PackageFileDescriptor) {
 	serveDirectReqParams := make(url.Values)
 	serveDirectReqParams.Set("response-content-type", pfd.Properties.GetByName(container_module.PropertyMediaType))
-	s, u, _, err := packages_service.GetPackageBlobStream(ctx, pfd.File, pfd.Blob, serveDirectReqParams)
+	s, u, pf, err := packages_service.GetPackageBlobStream(ctx, pfd.File, pfd.Blob, serveDirectReqParams)
 	if err != nil {
+		if errors.Is(err, packages_model.ErrPackageFileNotExist) {
+			apiError(ctx, http.StatusNotFound, err)
+			return
+		}
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	headers := &containerHeaders{
-		ContentDigest: pfd.Properties.GetByName(container_module.PropertyDigest),
-		ContentType:   pfd.Properties.GetByName(container_module.PropertyMediaType),
-		ContentLength: pfd.Blob.Size,
-		Status:        http.StatusOK,
+	opts := &context.ServeHeaderOptions{
+		ContentType:        pfd.Properties.GetByName(container_module.PropertyMediaType),
+		RedirectStatusCode: http.StatusTemporaryRedirect,
+		AdditionalHeaders: map[string][]string{
+			"Docker-Distribution-Api-Version": {"registry/2.0"},
+		},
 	}
 
-	if u != nil {
-		headers.Status = http.StatusTemporaryRedirect
-		headers.Location = u.String()
-
-		setResponseHeaders(ctx.Resp, headers)
-		return
+	if d := pfd.Properties.GetByName(container_module.PropertyDigest); d != "" {
+		opts.AdditionalHeaders["Docker-Content-Digest"] = []string{d}
+		opts.AdditionalHeaders["ETag"] = []string{fmt.Sprintf(`"%s"`, d)}
 	}
 
-	defer s.Close()
-
-	setResponseHeaders(ctx.Resp, headers)
-	if _, err := io.Copy(ctx.Resp, s); err != nil {
-		log.Error("Error whilst copying content to response: %v", err)
-	}
+	helper.ServePackageFile(ctx, s, u, pf, opts)
 }
 
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#content-discovery
@@ -725,7 +721,7 @@ func GetTagList(ctx *context.Context) {
 	image := ctx.Params("image")
 
 	if _, err := packages_model.GetPackageByName(ctx, ctx.Package.Owner.ID, packages_model.TypeContainer, image); err != nil {
-		if err == packages_model.ErrPackageNotExist {
+		if errors.Is(err, packages_model.ErrPackageNotExist) {
 			apiErrorDefined(ctx, errNameUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)

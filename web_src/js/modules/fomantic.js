@@ -6,13 +6,11 @@ import {initAriaDropdownPatch} from './fomantic/dropdown.js';
 import {initAriaModalPatch} from './fomantic/modal.js';
 import {initFomanticTransition} from './fomantic/transition.js';
 import {svg} from '../svg.js';
+import {initDimmer} from './dimmer.ts';
 
 export const fomanticMobileScreen = window.matchMedia('only screen and (max-width: 767.98px)');
 
 export function initGiteaFomantic() {
-  // Silence fomantic's error logging when tabs are used without a target content element
-  $.fn.tab.settings.silent = true;
-
   // By default, use "exact match" for full text search
   $.fn.dropdown.settings.fullTextSearch = 'exact';
   // Do not use "cursor: pointer" for dropdown labels
@@ -31,4 +29,5 @@ export function initGiteaFomantic() {
   initAriaFormFieldPatch();
   initAriaDropdownPatch();
   initAriaModalPatch();
+  initDimmer();
 }

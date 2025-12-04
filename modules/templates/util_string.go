@@ -8,7 +8,8 @@ import (
 	"html/template"
 	"strings"
 
-	"code.gitea.io/gitea/modules/base"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/util"
 )
 
 type StringUtils struct{}
@@ -69,4 +70,12 @@ func (su *StringUtils) EllipsisString(s string, max int) string {
 
 func (su *StringUtils) ToUpper(s string) string {
 	return strings.ToUpper(s)
+}
+
+func (su *StringUtils) RemoveAll(s string, all ...string) string {
+	return util.RemoveAllStr(s, false, all...)
+}
+
+func (su *StringUtils) RemoveAllPrefix(s string, all ...string) string {
+	return util.RemoveAllStr(s, true, all...)
 }

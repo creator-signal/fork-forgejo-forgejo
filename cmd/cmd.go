@@ -12,30 +12,46 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 // argsSet checks that all the required arguments are set. args is a list of
 // arguments that must be set in the passed Context.
-func argsSet(c *cli.Context, args ...string) error {
+func argsSet(c *cli.Command, args ...string) error {
 	for _, a := range args {
 		if !c.IsSet(a) {
 			return errors.New(a + " is not set")
 		}
 
-		if util.IsEmptyString(c.String(a)) {
-			return errors.New(a + " is required")
+		if s, ok := c.Value(a).(string); ok {
+			if util.IsEmptyString(s) {
+				return errors.New(a + " is required")
+			}
 		}
 	}
 	return nil
+}
+
+// When a CLI command is intended to be used only with flags and no other arbitrary args, noDanglingArgs will validate
+// the end-user's usage.
+func noDanglingArgs(ctx context.Context, c *cli.Command) (context.Context, error) {
+	if c.Args().Len() != 0 {
+		args := c.Args().Slice()
+		if slices.Contains(args, "false") {
+			println("Hint: boolean false must be specified as a single arg, eg. '--restricted=false', not '--restricted false'")
+		}
+		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(c.Args().Slice(), ", "))
+	}
+	return nil, nil
 }
 
 // confirm waits for user input which confirms an action
@@ -73,8 +89,8 @@ If this is the intended configuration file complete the [database] section.`, se
 	return nil
 }
 
-func installSignals() (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithCancel(context.Background())
+func installSignals(ctx context.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		// install notify
 		signalChannel := make(chan os.Signal, 1)
@@ -109,7 +125,7 @@ func setupConsoleLogger(level log.Level, colorize bool, out io.Writer) {
 	log.GetManager().GetLogger(log.DEFAULT).ReplaceAllWriters(writer)
 }
 
-func globalBool(c *cli.Context, name string) bool {
+func globalBool(c *cli.Command, name string) bool {
 	for _, ctx := range c.Lineage() {
 		if ctx.Bool(name) {
 			return true
@@ -120,16 +136,31 @@ func globalBool(c *cli.Context, name string) bool {
 
 // PrepareConsoleLoggerLevel by default, use INFO level for console logger, but some sub-commands (for git/ssh protocol) shouldn't output any log to stdout.
 // Any log appears in git stdout pipe will break the git protocol, eg: client can't push and hangs forever.
-func PrepareConsoleLoggerLevel(defaultLevel log.Level) func(*cli.Context) error {
-	return func(c *cli.Context) error {
+func PrepareConsoleLoggerLevel(defaultLevel log.Level) func(ctx context.Context, cli *cli.Command) (context.Context, error) {
+	return func(ctx context.Context, cli *cli.Command) (context.Context, error) {
 		level := defaultLevel
-		if globalBool(c, "quiet") {
+		if globalBool(cli, "quiet") {
 			level = log.FATAL
 		}
-		if globalBool(c, "debug") || globalBool(c, "verbose") {
+		if globalBool(cli, "debug") || globalBool(cli, "verbose") {
 			level = log.TRACE
 		}
 		log.SetConsoleLogger(log.DEFAULT, "console-default", level)
-		return nil
+		return ctx, nil
+	}
+}
+
+func multipleBefore(beforeFuncs ...cli.BeforeFunc) cli.BeforeFunc {
+	return func(ctx context.Context, cli *cli.Command) (context.Context, error) {
+		for _, beforeFunc := range beforeFuncs {
+			bctx, err := beforeFunc(ctx, cli)
+			if err != nil {
+				return bctx, err
+			}
+			if bctx != nil {
+				ctx = bctx
+			}
+		}
+		return ctx, nil
 	}
 }

@@ -1,4 +1,5 @@
 // Copyright 2023 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package assetfs
@@ -53,7 +54,7 @@ func TestLayered(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := io.ReadAll(f)
 	require.NoError(t, err)
-	assert.EqualValues(t, "f1", string(bs))
+	assert.Equal(t, "f1", string(bs))
 	_ = f.Close()
 
 	assertRead := func(expected string, expectedErr error, elems ...string) {
@@ -77,27 +78,27 @@ func TestLayered(t *testing.T) {
 
 	files, err := assets.ListFiles(".", true)
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{"f1", "f2", "fa"}, files)
+	assert.Equal(t, []string{"f1", "f2", "fa"}, files)
 
 	files, err = assets.ListFiles(".", false)
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{"d1", "d2", "da"}, files)
+	assert.Equal(t, []string{"d1", "d2", "da"}, files)
 
 	files, err = assets.ListFiles(".")
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{"d1", "d2", "da", "f1", "f2", "fa"}, files)
+	assert.Equal(t, []string{"d1", "d2", "da", "f1", "f2", "fa"}, files)
 
 	files, err = assets.ListAllFiles(".", true)
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{"d1/f", "d2/f", "da/f", "f1", "f2", "fa"}, files)
+	assert.Equal(t, []string{"d1/f", "d2/f", "da/f", "f1", "f2", "fa"}, files)
 
 	files, err = assets.ListAllFiles(".", false)
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{"d1", "d2", "da", "da/sub1", "da/sub2"}, files)
+	assert.Equal(t, []string{"d1", "d2", "da", "da/sub1", "da/sub2"}, files)
 
 	files, err = assets.ListAllFiles(".")
 	require.NoError(t, err)
-	assert.EqualValues(t, []string{
+	assert.Equal(t, []string{
 		"d1", "d1/f",
 		"d2", "d2/f",
 		"da", "da/f", "da/sub1", "da/sub2",
@@ -105,6 +106,33 @@ func TestLayered(t *testing.T) {
 	}, files)
 
 	assert.Empty(t, assets.GetFileLayerName("no-such"))
-	assert.EqualValues(t, "l1", assets.GetFileLayerName("f1"))
-	assert.EqualValues(t, "l2", assets.GetFileLayerName("f2"))
+	assert.Equal(t, "l1", assets.GetFileLayerName("f1"))
+	assert.Equal(t, "l2", assets.GetFileLayerName("f2"))
+}
+
+// Allow layers to read symlink outside the layer root.
+func TestLayeredSymlink(t *testing.T) {
+	dir := t.TempDir()
+	dirl1 := filepath.Join(dir, "l1")
+	require.NoError(t, os.MkdirAll(dirl1, 0o755))
+
+	// Open layer in dir/l1
+	layer := Local("l1", dirl1)
+
+	// Create a file in dir/outside
+	fileContents := []byte("I am outside the layer")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "outside"), fileContents, 0o600))
+	// Symlink dir/l1/outside to dir/outside
+	require.NoError(t, os.Symlink(filepath.Join(dir, "outside"), filepath.Join(dirl1, "outside")))
+
+	// Open dir/l1/outside.
+	f, err := layer.Open("outside")
+	require.NoError(t, err)
+	defer f.Close()
+
+	// Confirm it contains the output of dir/outside
+	contents, err := io.ReadAll(f)
+	require.NoError(t, err)
+
+	assert.Equal(t, fileContents, contents)
 }

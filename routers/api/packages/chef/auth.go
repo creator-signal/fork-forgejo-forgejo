@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"hash"
 	"math/big"
@@ -23,10 +24,10 @@ import (
 	"strings"
 	"time"
 
-	user_model "code.gitea.io/gitea/models/user"
-	chef_module "code.gitea.io/gitea/modules/packages/chef"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/services/auth"
+	user_model "forgejo.org/models/user"
+	chef_module "forgejo.org/modules/packages/chef"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/auth"
 )
 
 const (
@@ -121,7 +122,7 @@ func verifyTimestamp(req *http.Request) error {
 	}
 
 	if diff > maxTimeDifference {
-		return fmt.Errorf("time difference")
+		return errors.New("time difference")
 	}
 
 	return nil
@@ -147,7 +148,7 @@ func getSignVersion(req *http.Request) (string, error) {
 	version := m[1]
 
 	m = algorithmPattern.FindStringSubmatch(hdr)
-	if len(m) == 2 && m[1] != "sha1" && !(m[1] == "sha256" && version == "1.3") {
+	if len(m) == 2 && m[1] != "sha1" && (m[1] != "sha256" || version != "1.3") {
 		return "", util.NewInvalidArgumentErrorf("unsupported algorithm")
 	}
 
@@ -190,7 +191,7 @@ func getAuthorizationData(req *http.Request) ([]byte, error) {
 	tmp := make([]string, len(valueList))
 	for k, v := range valueList {
 		if k > len(tmp) {
-			return nil, fmt.Errorf("invalid X-Ops-Authorization headers")
+			return nil, errors.New("invalid X-Ops-Authorization headers")
 		}
 		tmp[k-1] = v
 	}
@@ -267,7 +268,7 @@ func verifyDataOld(signature, data []byte, pub *rsa.PublicKey) error {
 	}
 
 	if !slices.Equal(out[skip:], data) {
-		return fmt.Errorf("could not verify signature")
+		return errors.New("could not verify signature")
 	}
 
 	return nil

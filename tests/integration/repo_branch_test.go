@@ -12,30 +12,22 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/graceful"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/modules/translation"
-	repo_service "code.gitea.io/gitea/services/repository"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
+	repo_service "forgejo.org/services/repository"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func testCreateBranch(t testing.TB, session *TestSession, user, repo, oldRefSubURL, newBranchName string, expectedStatus int) string {
-	var csrf string
-	if expectedStatus == http.StatusNotFound {
-		csrf = GetCSRF(t, session, path.Join(user, repo, "src/branch/master"))
-	} else {
-		csrf = GetCSRF(t, session, path.Join(user, repo, "src", oldRefSubURL))
-	}
 	req := NewRequestWithValues(t, "POST", path.Join(user, repo, "branches/_new", oldRefSubURL), map[string]string{
-		"_csrf":           csrf,
 		"new_branch_name": newBranchName,
 	})
 	resp := session.MakeRequest(t, req, expectedStatus)
@@ -46,7 +38,7 @@ func testCreateBranch(t testing.TB, session *TestSession, user, repo, oldRefSubU
 }
 
 func TestCreateBranch(t *testing.T) {
-	onGiteaRun(t, testCreateBranches)
+	onApplicationRun(t, testCreateBranches)
 }
 
 func testCreateBranches(t *testing.T, giteaURL *url.URL) {
@@ -149,19 +141,8 @@ func testCreateBranches(t *testing.T, giteaURL *url.URL) {
 	}
 }
 
-func TestCreateBranchInvalidCSRF(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-	session := loginUser(t, "user2")
-	req := NewRequestWithValues(t, "POST", "user2/repo1/branches/_new/branch/master", map[string]string{
-		"_csrf":           "fake_csrf",
-		"new_branch_name": "test",
-	})
-	resp := session.MakeRequest(t, req, http.StatusBadRequest)
-	assert.Contains(t, resp.Body.String(), "Invalid CSRF token")
-}
-
 func TestDatabaseMissingABranch(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, URL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, URL *url.URL) {
 		session := loginUser(t, "user2")
 
 		// Create two branches
@@ -202,5 +183,30 @@ func TestDatabaseMissingABranch(t *testing.T) {
 		doc = NewHTMLParser(t, resp.Body)
 		secondBranchCount, _ := strconv.Atoi(doc.Find(".repository-menu a[href*='/branches'] b").Text())
 		assert.Equal(t, firstBranchCount-1, secondBranchCount)
+	})
+}
+
+func TestCreateBranchButtonVisibility(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		session := loginUser(t, "user1")
+
+		t.Run("Check create branch button", func(t *testing.T) {
+			t.Run("Normal repository", func(t *testing.T) {
+				repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+				// Check that the button is present
+				resp := session.MakeRequest(t, NewRequest(t, "GET", "/"+repo1.FullName()+"/branches"), http.StatusOK)
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				assert.Positive(t, htmlDoc.doc.Find(".show-create-branch-modal").Length())
+			})
+			t.Run("Mirrored repository", func(t *testing.T) {
+				repo5 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 5})
+
+				// Check that the button is NOT present
+				resp := session.MakeRequest(t, NewRequest(t, "GET", "/"+repo5.FullName()+"/branches"), http.StatusOK)
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				assert.Equal(t, 0, htmlDoc.doc.Find(".show-create-branch-modal").Length())
+			})
+		})
 	})
 }

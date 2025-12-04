@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
+	"forgejo.org/models/db"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +27,7 @@ var consistencyCheckMap = make(map[string]func(t *testing.T, bean any))
 
 // CheckConsistencyFor test that all matching database entries are consistent
 func CheckConsistencyFor(t *testing.T, beansToCheck ...any) {
+	FlushAsyncCalcs(t)
 	for _, bean := range beansToCheck {
 		sliceType := reflect.SliceOf(reflect.TypeOf(bean))
 		sliceValue := reflect.MakeSlice(sliceType, 0, 10)
@@ -49,7 +50,7 @@ func checkForConsistency(t *testing.T, bean any) {
 	require.NoError(t, err)
 	f := consistencyCheckMap[tb.Name]
 	if f == nil {
-		assert.FailNow(t, "unknown bean type: %#v", bean)
+		assert.FailNow(t, "unknown bean type", "%#v", bean)
 	}
 	f(t, bean)
 }
@@ -73,8 +74,8 @@ func init() {
 		AssertCountByCond(t, "follow", builder.Eq{"user_id": user.int("ID")}, user.int("NumFollowing"))
 		AssertCountByCond(t, "follow", builder.Eq{"follow_id": user.int("ID")}, user.int("NumFollowers"))
 		if user.int("Type") != modelsUserTypeOrganization {
-			assert.EqualValues(t, 0, user.int("NumMembers"), "Unexpected number of members for user id: %d", user.int("ID"))
-			assert.EqualValues(t, 0, user.int("NumTeams"), "Unexpected number of teams for user id: %d", user.int("ID"))
+			assert.Equal(t, 0, user.int("NumMembers"), "Unexpected number of members for user id: %d", user.int("ID"))
+			assert.Equal(t, 0, user.int("NumTeams"), "Unexpected number of teams for user id: %d", user.int("ID"))
 		}
 	}
 
@@ -93,22 +94,6 @@ func init() {
 		assert.EqualValues(t, repo.int("NumWatches"), actual,
 			"Unexpected number of watches for repo id: %d", repo.int("ID"))
 
-		actual = GetCountByCond(t, "issue", builder.Eq{"is_pull": false, "repo_id": repo.int("ID")})
-		assert.EqualValues(t, repo.int("NumIssues"), actual,
-			"Unexpected number of issues for repo id: %d", repo.int("ID"))
-
-		actual = GetCountByCond(t, "issue", builder.Eq{"is_pull": false, "is_closed": true, "repo_id": repo.int("ID")})
-		assert.EqualValues(t, repo.int("NumClosedIssues"), actual,
-			"Unexpected number of closed issues for repo id: %d", repo.int("ID"))
-
-		actual = GetCountByCond(t, "issue", builder.Eq{"is_pull": true, "repo_id": repo.int("ID")})
-		assert.EqualValues(t, repo.int("NumPulls"), actual,
-			"Unexpected number of pulls for repo id: %d", repo.int("ID"))
-
-		actual = GetCountByCond(t, "issue", builder.Eq{"is_pull": true, "is_closed": true, "repo_id": repo.int("ID")})
-		assert.EqualValues(t, repo.int("NumClosedPulls"), actual,
-			"Unexpected number of closed pulls for repo id: %d", repo.int("ID"))
-
 		actual = GetCountByCond(t, "milestone", builder.Eq{"is_closed": true, "repo_id": repo.int("ID")})
 		assert.EqualValues(t, repo.int("NumClosedMilestones"), actual,
 			"Unexpected number of closed milestones for repo id: %d", repo.int("ID"))
@@ -121,7 +106,7 @@ func init() {
 		assert.EqualValues(t, issue.int("NumComments"), actual, "Unexpected number of comments for issue id: %d", issue.int("ID"))
 		if issue.bool("IsPull") {
 			prRow := AssertExistsAndLoadMap(t, "pull_request", builder.Eq{"issue_id": issue.int("ID")})
-			assert.EqualValues(t, parseInt(prRow["index"]), issue.int("Index"), "Unexpected index for issue id: %d", issue.int("ID"))
+			assert.Equal(t, parseInt(prRow["index"]), issue.int("Index"), "Unexpected index for issue id: %d", issue.int("ID"))
 		}
 	}
 
@@ -129,7 +114,7 @@ func init() {
 		pr := reflectionWrap(bean)
 		issueRow := AssertExistsAndLoadMap(t, "issue", builder.Eq{"id": pr.int("IssueID")})
 		assert.True(t, parseBool(issueRow["is_pull"]))
-		assert.EqualValues(t, parseInt(issueRow["index"]), pr.int("Index"), "Unexpected index for pull request id: %d", pr.int("ID"))
+		assert.Equal(t, parseInt(issueRow["index"]), pr.int("Index"), "Unexpected index for pull request id: %d", pr.int("ID"))
 	}
 
 	checkForMilestoneConsistency := func(t *testing.T, bean any) {

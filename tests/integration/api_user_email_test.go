@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +28,7 @@ func TestAPIListEmails(t *testing.T) {
 	var emails []*api.Email
 	DecodeJSON(t, resp, &emails)
 
-	assert.EqualValues(t, []*api.Email{
+	assert.Equal(t, []*api.Email{
 		{
 			Email:    "user2@example.com",
 			Verified: true,
@@ -66,7 +66,7 @@ func TestAPIAddEmail(t *testing.T) {
 
 	var emails []*api.Email
 	DecodeJSON(t, resp, &emails)
-	assert.EqualValues(t, []*api.Email{
+	assert.Equal(t, []*api.Email{
 		{
 			Email:    "user2@example.com",
 			Verified: true,
@@ -104,7 +104,7 @@ func TestAPIDeleteEmail(t *testing.T) {
 	}
 	req := NewRequestWithJSON(t, "DELETE", "/api/v1/user/emails", &opts).
 		AddTokenAuth(token)
-	MakeRequest(t, req, http.StatusNotFound)
+	MakeRequest(t, req, http.StatusNoContent)
 
 	opts = api.DeleteEmailOption{
 		Emails: []string{"user2-2@example.com"},
@@ -119,7 +119,7 @@ func TestAPIDeleteEmail(t *testing.T) {
 
 	var emails []*api.Email
 	DecodeJSON(t, resp, &emails)
-	assert.EqualValues(t, []*api.Email{
+	assert.Equal(t, []*api.Email{
 		{
 			Email:    "user2@example.com",
 			Verified: true,

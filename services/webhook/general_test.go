@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	api "code.gitea.io/gitea/modules/structs"
+	api "forgejo.org/modules/structs"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -270,6 +270,22 @@ func pullReleaseTestPayload() *api.ReleasePayload {
 	}
 }
 
+func ActionTestPayload() *api.ActionPayload {
+	// this is not a complete action payload but enough for testing purposes
+	return &api.ActionPayload{
+		Run: &api.ActionRun{
+			Repo: &api.Repository{
+				HTMLURL:  "http://localhost:3000/test/repo",
+				Name:     "repo",
+				FullName: "test/repo",
+			},
+			PrettyRef: "main",
+			HTMLURL:   "http://localhost:3000/test/repo/actions/runs/69",
+			Title:     "Build release",
+		},
+	}
+}
+
 func pullRequestTestPayload() *api.PullRequestPayload {
 	return &api.PullRequestPayload{
 		Action: api.HookIssueOpened,
@@ -460,7 +476,7 @@ func TestGetIssuesPayloadInfo(t *testing.T) {
 
 	for i, c := range cases {
 		p.Action = c.action
-		text, issueTitle, attachmentText, color := getIssuesPayloadInfo(p, noneLinkFormatter, true)
+		text, issueTitle, attachmentText, color := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
 		assert.Equal(t, c.text, text, "case %d", i)
 		assert.Equal(t, c.issueTitle, issueTitle, "case %d", i)
 		assert.Equal(t, c.attachmentText, attachmentText, "case %d", i)
@@ -559,7 +575,7 @@ func TestGetPullRequestPayloadInfo(t *testing.T) {
 
 	for i, c := range cases {
 		p.Action = c.action
-		text, issueTitle, attachmentText, color := getPullRequestPayloadInfo(p, noneLinkFormatter, true)
+		text, issueTitle, attachmentText, color := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
 		assert.Equal(t, c.text, text, "case %d", i)
 		assert.Equal(t, c.issueTitle, issueTitle, "case %d", i)
 		assert.Equal(t, c.attachmentText, attachmentText, "case %d", i)
@@ -598,7 +614,7 @@ func TestGetWikiPayloadInfo(t *testing.T) {
 
 	for i, c := range cases {
 		p.Action = c.action
-		text, color, link := getWikiPayloadInfo(p, noneLinkFormatter, true)
+		text, color, link := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
 		assert.Equal(t, c.text, text, "case %d", i)
 		assert.Equal(t, c.color, color, "case %d", i)
 		assert.Equal(t, c.link, link, "case %d", i)
@@ -632,7 +648,7 @@ func TestGetReleasePayloadInfo(t *testing.T) {
 
 	for i, c := range cases {
 		p.Action = c.action
-		text, color := getReleasePayloadInfo(p, noneLinkFormatter, true)
+		text, color := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
 		assert.Equal(t, c.text, text, "case %d", i)
 		assert.Equal(t, c.color, color, "case %d", i)
 	}
@@ -669,9 +685,42 @@ func TestGetIssueCommentPayloadInfo(t *testing.T) {
 
 	for i, c := range cases {
 		p.Action = c.action
-		text, issueTitle, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, true)
+		text, issueTitle, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
 		assert.Equal(t, c.text, text, "case %d", i)
 		assert.Equal(t, c.issueTitle, issueTitle, "case %d", i)
+		assert.Equal(t, c.color, color, "case %d", i)
+	}
+}
+
+func TestGetActionPayloadInfo(t *testing.T) {
+	p := ActionTestPayload()
+
+	cases := []struct {
+		action api.HookActionAction
+		text   string
+		color  int
+	}{
+		{
+			api.HookActionFailure,
+			"Build release Action Failed in test/repo main",
+			redColor,
+		},
+		{
+			api.HookActionSuccess,
+			"Build release Action Succeeded in test/repo main",
+			greenColor,
+		},
+		{
+			api.HookActionRecover,
+			"Build release Action Recovered in test/repo main",
+			greenColor,
+		},
+	}
+
+	for i, c := range cases {
+		p.Action = c.action
+		text, color := getActionPayloadInfo(p, noneLinkFormatter)
+		assert.Equal(t, c.text, text, "case %d", i)
 		assert.Equal(t, c.color, color, "case %d", i)
 	}
 }

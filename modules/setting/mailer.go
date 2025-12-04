@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/modules/log"
 
 	shellquote "github.com/kballard/go-shellquote"
 )
@@ -147,6 +147,10 @@ func loadMailerFrom(rootCfg ConfigProvider) {
 	if sec.HasKey("PASSWORD") && !sec.HasKey("PASSWD") {
 		sec.Key("PASSWD").SetValue(sec.Key("PASSWORD").String())
 	}
+	if sec.HasKey("PASSWORD_URI") && !sec.HasKey("PASSWD_URI") {
+		sec.Key("PASSWD_URI").SetValue(sec.Key("PASSWORD_URI").String())
+	}
+	sec.Key("PASSWD").SetValue(loadSecret(sec, "PASSWD_URI", "PASSWD"))
 
 	// Set default values & validate
 	sec.Key("NAME").MustString(AppName)
@@ -215,6 +219,11 @@ func loadMailerFrom(rootCfg ConfigProvider) {
 		if err != nil {
 			log.Error("Failed to parse Sendmail args: '%s' with error %v", sec.Key("SENDMAIL_ARGS").String(), err)
 		}
+
+		if len(MailService.SendmailArgs) == 0 || MailService.SendmailArgs[len(MailService.SendmailArgs)-1] != "--" {
+			log.Warn("SENDMAIL_ARGS setting does not end in \"--\", appending it to prevent argument injection")
+			MailService.SendmailArgs = append(MailService.SendmailArgs, "--")
+		}
 	case "smtp", "smtps", "smtp+starttls", "smtp+unix":
 		ips := tryResolveAddr(MailService.SMTPAddr)
 		if MailService.Protocol == "smtp" {
@@ -263,8 +272,6 @@ func loadMailerFrom(rootCfg ConfigProvider) {
 		MailService.OverrideEnvelopeFrom = true
 		MailService.EnvelopeFrom = parsed.Address
 	}
-
-	log.Info("Mail Service Enabled")
 }
 
 func loadRegisterMailFrom(rootCfg ConfigProvider) {
@@ -275,7 +282,6 @@ func loadRegisterMailFrom(rootCfg ConfigProvider) {
 		return
 	}
 	Service.RegisterEmailConfirm = true
-	log.Info("Register Mail Service Enabled")
 }
 
 func loadNotifyMailFrom(rootCfg ConfigProvider) {
@@ -286,7 +292,6 @@ func loadNotifyMailFrom(rootCfg ConfigProvider) {
 		return
 	}
 	Service.EnableNotifyMail = true
-	log.Info("Notify Mail Service Enabled")
 }
 
 func tryResolveAddr(addr string) []net.IPAddr {

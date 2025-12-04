@@ -6,34 +6,17 @@ package issue
 import (
 	"context"
 	"fmt"
-	"time"
 
-	issues_model "code.gitea.io/gitea/models/issues"
-	org_model "code.gitea.io/gitea/models/organization"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
+	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 )
-
-func getMergeBase(repo *git.Repository, pr *issues_model.PullRequest, baseBranch, headBranch string) (string, error) {
-	// Add a temporary remote
-	tmpRemote := fmt.Sprintf("mergebase-%d-%d", pr.ID, time.Now().UnixNano())
-	if err := repo.AddRemote(tmpRemote, repo.Path, false); err != nil {
-		return "", fmt.Errorf("AddRemote: %w", err)
-	}
-	defer func() {
-		if err := repo.RemoveRemote(tmpRemote); err != nil {
-			log.Error("getMergeBase: RemoveRemote: %v", err)
-		}
-	}()
-
-	mergeBase, _, err := repo.GetMergeBase(tmpRemote, baseBranch, headBranch)
-	return mergeBase, err
-}
 
 type ReviewRequestNotifier struct {
 	Comment    *issues_model.Comment
@@ -43,8 +26,6 @@ type ReviewRequestNotifier struct {
 }
 
 func PullRequestCodeOwnersReview(ctx context.Context, issue *issues_model.Issue, pr *issues_model.PullRequest) ([]*ReviewRequestNotifier, error) {
-	files := []string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS"}
-
 	if pr.IsWorkInProgress(ctx) {
 		return nil, nil
 	}
@@ -72,20 +53,18 @@ func PullRequestCodeOwnersReview(ctx context.Context, issue *issues_model.Issue,
 		return nil, err
 	}
 
-	var data string
-	for _, file := range files {
+	var rules []*issues_model.CodeOwnerRule
+	for _, file := range []string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS", ".forgejo/CODEOWNERS"} {
 		if blob, err := commit.GetBlobByPath(file); err == nil {
-			data, err = blob.GetBlobContent(setting.UI.MaxDisplayFileSize)
+			rc, size, err := blob.NewTruncatedReader(setting.UI.MaxDisplayFileSize)
 			if err == nil {
+				rules, _ = issues_model.GetCodeOwnersFromReader(ctx, rc, size > setting.UI.MaxDisplayFileSize)
 				break
 			}
 		}
 	}
 
-	rules, _ := issues_model.GetCodeOwnersFromContent(ctx, data)
-
-	// get the mergebase
-	mergeBase, err := getMergeBase(repo, pr, git.BranchPrefix+pr.BaseBranch, pr.GetGitRefName())
+	mergeBase, err := repo.GetMergeBaseSimple(git.BranchPrefix+pr.BaseBranch, pr.GetGitRefName())
 	if err != nil {
 		return nil, err
 	}

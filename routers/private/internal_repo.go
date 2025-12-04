@@ -8,17 +8,17 @@ import (
 	"fmt"
 	"net/http"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/private"
-	gitea_context "code.gitea.io/gitea/services/context"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/private"
+	app_context "forgejo.org/services/context"
 )
 
 // This file contains common functions relating to setting the Repository for the internal routes
 
 // RepoAssignment assigns the repository and gitrepository to the private context
-func RepoAssignment(ctx *gitea_context.PrivateContext) context.CancelFunc {
+func RepoAssignment(ctx *app_context.PrivateContext) context.CancelFunc {
 	ownerName := ctx.Params(":owner")
 	repoName := ctx.Params(":repo")
 
@@ -37,7 +37,7 @@ func RepoAssignment(ctx *gitea_context.PrivateContext) context.CancelFunc {
 		return nil
 	}
 
-	ctx.Repo = &gitea_context.Repository{
+	ctx.Repo = &app_context.Repository{
 		Repository: repo,
 		GitRepo:    gitRepo,
 	}
@@ -53,7 +53,7 @@ func RepoAssignment(ctx *gitea_context.PrivateContext) context.CancelFunc {
 	return cancel
 }
 
-func loadRepository(ctx *gitea_context.PrivateContext, ownerName, repoName string) *repo_model.Repository {
+func loadRepository(ctx *app_context.PrivateContext, ownerName, repoName string) *repo_model.Repository {
 	repo, err := repo_model.GetRepositoryByOwnerAndName(ctx, ownerName, repoName)
 	if err != nil {
 		log.Error("Failed to get repository: %s/%s Error: %v", ownerName, repoName, err)

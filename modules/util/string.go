@@ -3,7 +3,11 @@
 
 package util
 
-import "unsafe"
+import (
+	"slices"
+	"strings"
+	"unsafe"
+)
 
 func isSnakeCaseUpper(c byte) bool {
 	return 'A' <= c && c <= 'Z'
@@ -94,4 +98,60 @@ func UnsafeBytesToString(b []byte) string {
 // UnsafeStringToBytes uses Go's unsafe package to convert a string to a byte slice.
 func UnsafeStringToBytes(s string) []byte {
 	return unsafe.Slice(unsafe.StringData(s), len(s))
+}
+
+// AsciiEqualFold is taken from Golang, but reimplemented here, since the original is not exposed to public
+// Taken from: https://cs.opensource.google/go/go/+/refs/tags/go1.24.4:src/net/http/internal/ascii/print.go
+func ASCIIEqualFold(s, t string) bool {
+	if len(s) != len(t) {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		if ASCIILower(s[i]) != ASCIILower(t[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// AsciiLower returns the ASCII lowercase version of b.
+func ASCIILower(b byte) byte {
+	if 'A' <= b && b <= 'Z' {
+		return b + ('a' - 'A')
+	}
+	return b
+}
+
+func RemoveAllStr(s string, prefix bool, all ...string) string {
+	if len(s) == 0 {
+		return ""
+	}
+
+	sb, first := strings.Builder{}, true
+	for field := range strings.FieldsSeq(s) {
+		if hasAny(field, prefix, all...) {
+			continue
+		}
+		if first {
+			first = false
+			goto write
+		}
+		sb.WriteRune(' ')
+	write:
+		sb.WriteString(field)
+	}
+	return sb.String()
+}
+
+func hasAny(s string, prefix bool, all ...string) bool {
+	if !prefix {
+		return slices.Contains(all, s)
+	}
+
+	for _, field := range all {
+		if strings.HasPrefix(s, field) {
+			return true
+		}
+	}
+	return false
 }

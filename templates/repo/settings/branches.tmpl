@@ -13,7 +13,6 @@
 					{{ctx.Locale.Tr "repo.settings.default_branch_desc"}}
 				</p>
 				<form class="tw-flex" action="{{.Link}}" method="post">
-					{{.CsrfTokenHtml}}
 					<input type="hidden" name="action" value="default_branch">
 					{{if not .Repository.IsEmpty}}
 						<div class="ui dropdown selection search tw-flex-1 tw-mr-2 tw-max-w-96">
@@ -49,7 +48,7 @@
 							</div>
 							<div class="flex-item-trailing">
 								<a class="rm ui tiny button" href="{{$.Repository.Link}}/settings/branches/edit?rule_name={{.RuleName}}">{{ctx.Locale.Tr "repo.settings.edit_protected_branch"}}</a>
-								<button class="ui red tiny button delete-button" data-url="{{$.Repository.Link}}/settings/branches/{{.ID}}/delete" data-id="{{.ID}}">
+								<button class="ui red tiny button delete-button" data-url="{{$.Repository.Link}}/settings/branches/{{.ID}}/delete" data-id="{{.ID}}" data-modal-id="delete-protected-branch">
 									{{ctx.Locale.Tr "repo.settings.protected_branch.delete_rule"}}
 								</button>
 							</div>
@@ -64,7 +63,7 @@
 		{{end}}
 	</div>
 
-<div class="ui g-modal-confirm delete modal">
+<div class="ui g-modal-confirm delete modal" id="delete-protected-branch">
 	<div class="header">
 		{{svg "octicon-trash"}}
 		{{ctx.Locale.Tr "repo.settings.protected_branch_deletion"}}

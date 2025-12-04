@@ -1,5 +1,6 @@
 // Copyright 2016 The Gogs Authors. All rights reserved.
 // Copyright 2020 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved
 // SPDX-License-Identifier: MIT
 
 package validation
@@ -7,32 +8,16 @@ package validation
 import (
 	"fmt"
 	"net/mail"
-	"regexp"
 	"strings"
 
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 
 	"github.com/gobwas/glob"
 )
 
 // ErrEmailNotActivated e-mail address has not been activated error
 var ErrEmailNotActivated = util.NewInvalidArgumentErrorf("e-mail address has not been activated")
-
-// ErrEmailCharIsNotSupported e-mail address contains unsupported character
-type ErrEmailCharIsNotSupported struct {
-	Email string
-}
-
-// IsErrEmailCharIsNotSupported checks if an error is an ErrEmailCharIsNotSupported
-func IsErrEmailCharIsNotSupported(err error) bool {
-	_, ok := err.(ErrEmailCharIsNotSupported)
-	return ok
-}
-
-func (err ErrEmailCharIsNotSupported) Error() string {
-	return fmt.Sprintf("e-mail address contains unsupported character [email: %s]", err.Email)
-}
 
 // ErrEmailInvalid represents an error where the email address does not comply with RFC 5322
 // or has a leading '-' character
@@ -54,8 +39,6 @@ func (err ErrEmailInvalid) Unwrap() error {
 	return util.ErrInvalidArgument
 }
 
-var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]*@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-
 // check if email is a valid address with allowed domain
 func ValidateEmail(email string) error {
 	if err := validateEmailBasic(email); err != nil {
@@ -76,15 +59,12 @@ func validateEmailBasic(email string) error {
 		return ErrEmailInvalid{email}
 	}
 
-	if !emailRegexp.MatchString(email) {
-		return ErrEmailCharIsNotSupported{email}
-	}
-
-	if email[0] == '-' {
+	parsedAddress, err := mail.ParseAddress(email)
+	if err != nil {
 		return ErrEmailInvalid{email}
 	}
 
-	if _, err := mail.ParseAddress(email); err != nil {
+	if parsedAddress.Name != "" {
 		return ErrEmailInvalid{email}
 	}
 
@@ -92,19 +72,40 @@ func validateEmailBasic(email string) error {
 }
 
 func validateEmailDomain(email string) error {
-	if !IsEmailDomainAllowed(email) {
+	if _, ok := IsEmailDomainAllowed(email); !ok {
 		return ErrEmailInvalid{email}
 	}
 
 	return nil
 }
 
-func IsEmailDomainAllowed(email string) bool {
-	if len(setting.Service.EmailDomainAllowList) == 0 {
-		return !isEmailDomainListed(setting.Service.EmailDomainBlockList, email)
+func IsEmailDomainAllowed(email string) (validEmail, ok bool) {
+	// Normalized the address. This strips for example comments which could be
+	// used to smuggle a different domain
+	parsedAddress, err := mail.ParseAddress(email)
+	if err != nil {
+		return false, false
 	}
 
-	return isEmailDomainListed(setting.Service.EmailDomainAllowList, email)
+	return true, isEmailDomainAllowedInternal(
+		parsedAddress.Address,
+		setting.Service.EmailDomainAllowList,
+		setting.Service.EmailDomainBlockList)
+}
+
+func isEmailDomainAllowedInternal(
+	email string,
+	emailDomainAllowList []glob.Glob,
+	emailDomainBlockList []glob.Glob,
+) bool {
+	var result bool
+
+	if len(emailDomainAllowList) == 0 {
+		result = !isEmailDomainListed(emailDomainBlockList, email)
+	} else {
+		result = isEmailDomainListed(emailDomainAllowList, email)
+	}
+	return result
 }
 
 // isEmailDomainListed checks whether the domain of an email address

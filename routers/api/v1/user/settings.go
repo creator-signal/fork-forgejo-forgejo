@@ -6,19 +6,19 @@ package user
 import (
 	"net/http"
 
-	"code.gitea.io/gitea/modules/optional"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	user_service "code.gitea.io/gitea/services/user"
+	"forgejo.org/modules/optional"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	user_service "forgejo.org/services/user"
 )
 
-// GetUserSettings returns user settings
+// GetUserSettings returns doer's account settings
 func GetUserSettings(ctx *context.APIContext) {
 	// swagger:operation GET /user/settings user getUserSettings
 	// ---
-	// summary: Get user settings
+	// summary: Get current user's account settings
 	// produces:
 	// - application/json
 	// responses:
@@ -31,11 +31,11 @@ func GetUserSettings(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, convert.User2UserSettings(ctx.Doer))
 }
 
-// UpdateUserSettings returns user settings
+// UpdateUserSettings updates settings in doer's account
 func UpdateUserSettings(ctx *context.APIContext) {
 	// swagger:operation PATCH /user/settings user updateUserSettings
 	// ---
-	// summary: Update user settings
+	// summary: Update settings in current user's account
 	// parameters:
 	// - name: body
 	//   in: body
@@ -63,6 +63,7 @@ func UpdateUserSettings(ctx *context.APIContext) {
 		Theme:               optional.FromPtr(form.Theme),
 		DiffViewStyle:       optional.FromPtr(form.DiffViewStyle),
 		KeepEmailPrivate:    optional.FromPtr(form.HideEmail),
+		KeepPronounsPrivate: optional.FromPtr(form.HidePronouns),
 		KeepActivityPrivate: optional.FromPtr(form.HideActivity),
 		EnableRepoUnitHints: optional.FromPtr(form.EnableRepoUnitHints),
 	}

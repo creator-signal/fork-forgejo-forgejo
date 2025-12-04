@@ -9,7 +9,7 @@ import (
 	"path"
 	"testing"
 
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -32,9 +32,7 @@ func testSrcRouteRedirect(t *testing.T, session *TestSession, user, repo, route,
 
 func setDefaultBranch(t *testing.T, session *TestSession, user, repo, branch string) {
 	location := path.Join("/", user, repo, "settings/branches")
-	csrf := GetCSRF(t, session, location)
 	req := NewRequestWithValues(t, "POST", location, map[string]string{
-		"_csrf":  csrf,
 		"action": "default_branch",
 		"branch": branch,
 	})

@@ -1,4 +1,4 @@
-import * as htmx from 'htmx.org';
+import htmx from 'htmx.org';
 import {showErrorToast} from './modules/toast.js';
 
 // https://github.com/bigskysoftware/idiomorph#htmx
@@ -16,6 +16,13 @@ document.body.addEventListener('htmx:sendError', (event) => {
 
 // https://htmx.org/events/#htmx:responseError
 document.body.addEventListener('htmx:responseError', (event) => {
+  // hide any previous flash message to avoid confusions (in case the
+  // error toast would have been shown over a success/info message)
+  const flashMsgDiv = document.getElementById('flash-message');
+  if (flashMsgDiv) {
+    flashMsgDiv.innerHTML = '';
+    flashMsgDiv.className = '';
+  }
   // TODO: add translations
-  showErrorToast(`Error ${event.detail.xhr.status} when calling ${event.detail.requestConfig.path}`);
+  showErrorToast(`Error ${event.detail.xhr.status} when calling ${event.detail.requestConfig.path}: ${event.detail.xhr.responseText}`);
 });

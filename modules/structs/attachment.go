@@ -1,7 +1,7 @@
 // Copyright 2017 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package structs // import "code.gitea.io/gitea/modules/structs"
+package structs // import "forgejo.org/modules/structs"
 
 import (
 	"time"
@@ -20,6 +20,12 @@ type Attachment struct {
 	DownloadURL string    `json:"browser_download_url"`
 	// enum: ["attachment", "external"]
 	Type string `json:"type"`
+}
+
+// WebAttachment the generic attachment with mime type
+type WebAttachment struct {
+	*Attachment
+	MimeType string `json:"mime_type"`
 }
 
 // EditAttachmentOptions options for editing attachments

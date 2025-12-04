@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"sync"
 
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/modules/setting"
 
 	"github.com/microcosm-cc/bluemonday"
 )
@@ -108,6 +108,9 @@ func createDefaultPolicy() *bluemonday.Policy {
 	// Allow classes for emojis
 	policy.AllowAttrs("class").Matching(regexp.MustCompile(`^emoji$`)).OnElements("img")
 
+	// Allow attributes for images
+	policy.AllowAttrs("loading").Matching(regexp.MustCompile(`^lazy$`)).OnElements("img")
+
 	// Allow icons, emojis, chroma syntax and keyword markup on span
 	policy.AllowAttrs("class").Matching(regexp.MustCompile(`^((icon(\s+[\p{L}\p{N}_-]+)+)|(emoji)|(language-math display)|(language-math inline))$|^([a-z][a-z0-9]{0,2})$|^` + keywordClass + `$`)).OnElements("span")
 	policy.AllowAttrs("data-alias").Matching(regexp.MustCompile(`^[a-zA-Z0-9-_+]+$`)).OnElements("span")
@@ -122,7 +125,7 @@ func createDefaultPolicy() *bluemonday.Policy {
 	policy.AllowAttrs("class").Matching(regexp.MustCompile("^ui table$")).OnElements("div")
 	policy.AllowAttrs("class").Matching(regexp.MustCompile("^header$")).OnElements("div")
 	policy.AllowAttrs("data-line-number").Matching(regexp.MustCompile("^[0-9]+$")).OnElements("span")
-	policy.AllowAttrs("class").Matching(regexp.MustCompile("^text small grey$")).OnElements("span")
+	policy.AllowAttrs("class").Matching(regexp.MustCompile("^text grey$")).OnElements("span")
 	policy.AllowAttrs("class").Matching(regexp.MustCompile("^file-preview$")).OnElements("table")
 	policy.AllowAttrs("class").Matching(regexp.MustCompile("^lines-escape$")).OnElements("td")
 	policy.AllowAttrs("class").Matching(regexp.MustCompile("^toggle-escape-button btn interact-bg$")).OnElements("button")

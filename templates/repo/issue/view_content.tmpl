@@ -79,8 +79,19 @@
 				{{template "repo/issue/view_content/pull".}}
 			{{end}}
 
-			{{if .IsSigned}}
-				{{if and (or .IsRepoAdmin .HasIssuesOrPullsWritePermission (not .Issue.IsLocked)) (not .Repository.IsArchived)}}
+			{{if .Repository.IsArchived}}
+				<div class="ui warning message tw-text-center">
+					{{ctx.Locale.Tr "repo.archive.nocomment"}}
+				</div>
+			{{else if .IsBlocked}}
+				<div class="ui warning message">
+					{{ctx.Locale.Tr "repo.comment.blocked_by_user"}}
+				</div>
+			{{else if and .Issue.IsLocked (not (or .IsRepoAdmin .HasIssuesOrPullsWritePermission))}}
+				<div class="ui warning message">
+					{{ctx.Locale.Tr "discussion.locked"}}
+				</div>
+			{{else if .IsSigned}}
 				<div class="timeline-item comment form">
 					<a class="timeline-avatar" href="{{.SignedUser.HomeLink}}">
 						{{ctx.AvatarUtils.Avatar .SignedUser 40}}
@@ -88,25 +99,30 @@
 					<div class="content">
 						<form class="ui segment form form-fetch-action" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">
 							{{template "repo/issue/comment_tab" .}}
-							{{.CsrfTokenHtml}}
 							<div class="field footer">
-								<div class="right button-sequence">
+								<div class="button-sequence tw-justify-end">
 									{{if and (or .HasIssuesOrPullsWritePermission .IsIssuePoster) (not .DisableStatusChange)}}
 										{{if .Issue.IsClosed}}
-											<button id="status-button" class="ui primary basic button" data-status="{{ctx.Locale.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{ctx.Locale.Tr "repo.issues.reopen_comment_issue"}}" name="status" value="reopen">
-												{{ctx.Locale.Tr "repo.issues.reopen_issue"}}
+											<button id="status-button" class="secondary button" data-status="{{ctx.Locale.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{ctx.Locale.Tr "repo.issues.reopen_comment_issue"}}" name="status" value="reopen">
+												{{svg "octicon-issue-reopened"}}
+												<span>
+													{{ctx.Locale.Tr "repo.issues.reopen_issue"}}
+												</span>
 											</button>
 										{{else}}
 											{{$closeTranslationKey := "repo.issues.close"}}
 											{{if .Issue.IsPull}}
 												{{$closeTranslationKey = "repo.pulls.close"}}
 											{{end}}
-											<button id="status-button" class="ui red basic button" data-status="{{ctx.Locale.Tr $closeTranslationKey}}" data-status-and-comment="{{ctx.Locale.Tr "repo.issues.close_comment_issue"}}" name="status" value="close">
-												{{ctx.Locale.Tr $closeTranslationKey}}
+											<button id="status-button" class="secondary button" data-status="{{ctx.Locale.Tr $closeTranslationKey}}" data-status-and-comment="{{ctx.Locale.Tr "repo.issues.close_comment_issue"}}" name="status" value="close">
+												{{svg "octicon-issue-closed"}}
+												<span>
+													{{ctx.Locale.Tr $closeTranslationKey}}
+												</span>
 											</button>
 										{{end}}
 									{{end}}
-									<button class="ui primary button">
+									<button class="primary button">
 										{{ctx.Locale.Tr "repo.issues.create_comment"}}
 									</button>
 								</div>
@@ -114,30 +130,11 @@
 						</form>
 					</div>
 				</div>
-				{{else if .Repository.IsArchived}}
-					<div class="ui warning message tw-text-center">
-						{{if .Issue.IsPull}}
-							{{ctx.Locale.Tr "repo.archive.pull.nocomment"}}
-						{{else}}
-							{{ctx.Locale.Tr "repo.archive.issue.nocomment"}}
-						{{end}}
-					</div>
-				{{end}}
 			{{else}} {{/* not .IsSigned */}}
-				{{if .Repository.IsArchived}}
-					<div class="ui warning message tw-text-center">
-						{{if .Issue.IsPull}}
-							{{ctx.Locale.Tr "repo.archive.pull.nocomment"}}
-						{{else}}
-							{{ctx.Locale.Tr "repo.archive.issue.nocomment"}}
-						{{end}}
-					</div>
-				{{else}}
-					<div class="ui warning message">
-						{{ctx.Locale.Tr "repo.issues.sign_in_require_desc" .SignInLink}}
-					</div>
-				{{end}}
-			{{end}}{{/* end if: .IsSigned */}}
+				<div class="ui warning message">
+					{{ctx.Locale.Tr "repo.issues.sign_in_require_desc" .SignInLink}}
+				</div>
+			{{end}}
 		</div>
 	</div>
 
@@ -176,7 +173,7 @@
 	<span class="no-content">{{ctx.Locale.Tr "repo.issues.no_content"}}</span>
 </div>
 
-<div class="ui g-modal-confirm delete modal">
+<div class="ui g-modal-confirm delete modal" id="delete-branch">
 	<div class="header">
 		{{svg "octicon-trash"}}
 		{{ctx.Locale.Tr "repo.branch.delete" .HeadTarget}}

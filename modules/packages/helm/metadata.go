@@ -9,11 +9,11 @@ import (
 	"io"
 	"strings"
 
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/validation"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
 
 	"github.com/hashicorp/go-version"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 var (

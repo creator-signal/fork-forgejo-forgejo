@@ -4,16 +4,15 @@
 package webhook
 
 import (
-	"context"
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/timeutil"
-	webhook_module "code.gitea.io/gitea/modules/webhook"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/timeutil"
+	webhook_module "forgejo.org/modules/webhook"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,7 +74,8 @@ func TestWebhook_EventsArray(t *testing.T) {
 		"pull_request", "pull_request_assign", "pull_request_label", "pull_request_milestone",
 		"pull_request_comment", "pull_request_review_approved", "pull_request_review_rejected",
 		"pull_request_review_comment", "pull_request_sync", "wiki", "repository", "release",
-		"package", "pull_request_review_request",
+		"package", "pull_request_review_request", "action_run_failure",
+		"action_run_recover", "action_run_success",
 	},
 		(&Webhook{
 			HookEvent: &webhook_module.HookEvent{SendEverything: true},
@@ -90,15 +90,78 @@ func TestWebhook_EventsArray(t *testing.T) {
 }
 
 func TestCreateWebhook(t *testing.T) {
-	hook := &Webhook{
-		RepoID:      3,
-		URL:         "www.example.com/unit_test",
-		ContentType: ContentTypeJSON,
-		Events:      `{"push_only":false,"send_everything":false,"choose_events":false,"events":{"create":false,"push":true,"pull_request":true}}`,
-	}
-	unittest.AssertNotExistsBean(t, hook)
-	require.NoError(t, CreateWebhook(db.DefaultContext, hook))
-	unittest.AssertExistsAndLoadBean(t, hook)
+	t.Run("Some chosen events 1", func(t *testing.T) {
+		hook := &Webhook{
+			RepoID:      3,
+			URL:         "https://www.example.com/unit_test",
+			ContentType: ContentTypeJSON,
+			Events:      `{"push_only":false,"send_everything":false,"choose_events":true,"events":{"create":false,"push":true,"pull_request":true}}`,
+		}
+		unittest.AssertNotExistsBean(t, hook)
+		require.NoError(t, CreateWebhook(db.DefaultContext, hook))
+		hookFromDb := unittest.AssertExistsAndLoadBean(t, hook)
+		assert.Equal(t, []string{
+			string(webhook_module.HookEventPush),
+			string(webhook_module.HookEventPullRequest),
+		}, hookFromDb.EventsArray())
+	})
+
+	t.Run("Some chosen events 2", func(t *testing.T) {
+		hook := &Webhook{
+			RepoID:      3,
+			URL:         "https://www.example.com/unit_test",
+			ContentType: ContentTypeJSON,
+			Events:      `{"push_only":false,"send_everything":false,"choose_events":true,"events":{"action_run_recover":false,"action_run_success":true}}`,
+		}
+		unittest.AssertNotExistsBean(t, hook)
+		require.NoError(t, CreateWebhook(db.DefaultContext, hook))
+		hookFromDb := unittest.AssertExistsAndLoadBean(t, hook)
+		assert.Equal(t, []string{string(webhook_module.HookEventActionRunSuccess)}, hookFromDb.EventsArray())
+	})
+
+	t.Run("All events", func(t *testing.T) {
+		hook := &Webhook{
+			RepoID:      3,
+			URL:         "https://www.example.com/unit_test",
+			ContentType: ContentTypeJSON,
+			Events:      `{"push_only":false,"send_everything":false,"choose_events":true,"events":{"create":true,"delete":true,"fork":true,"issues":true,"issue_assign":true,"issue_label":true,"issue_milestone":true,"issue_comment":true,"push":true,"pull_request":true,"pull_request_assign":true,"pull_request_label":true,"pull_request_milestone":true,"pull_request_comment":true,"pull_request_review":true,"pull_request_sync":true,"pull_request_review_request":true,"wiki":true,"repository":true,"release":true,"package":true,"action_run_failure":true,"action_run_recover":true,"action_run_success":true}}`,
+		}
+		unittest.AssertNotExistsBean(t, hook)
+		require.NoError(t, CreateWebhook(db.DefaultContext, hook))
+		hookFromDb := unittest.AssertExistsAndLoadBean(t, hook)
+		assert.Equal(t, []string{
+			string(webhook_module.HookEventCreate),
+			string(webhook_module.HookEventDelete),
+			string(webhook_module.HookEventFork),
+			string(webhook_module.HookEventPush),
+			string(webhook_module.HookEventIssues),
+			string(webhook_module.HookEventIssueAssign),
+			string(webhook_module.HookEventIssueLabel),
+			string(webhook_module.HookEventIssueMilestone),
+			string(webhook_module.HookEventIssueComment),
+			string(webhook_module.HookEventPullRequest),
+			string(webhook_module.HookEventPullRequestAssign),
+			string(webhook_module.HookEventPullRequestLabel),
+			string(webhook_module.HookEventPullRequestMilestone),
+			string(webhook_module.HookEventPullRequestComment),
+			string(webhook_module.HookEventPullRequestReviewApproved),
+			string(webhook_module.HookEventPullRequestReviewRejected),
+			string(webhook_module.HookEventPullRequestReviewComment),
+			string(webhook_module.HookEventPullRequestSync),
+			string(webhook_module.HookEventWiki),
+			string(webhook_module.HookEventRepository),
+			string(webhook_module.HookEventRelease),
+			string(webhook_module.HookEventPackage),
+			string(webhook_module.HookEventPullRequestReviewRequest),
+			// these aren't webhook event types
+			// string(webhook_module.HookEventSchedule),
+			// string(webhook_module.HookEventWorkflowDispatch),
+			string(webhook_module.HookEventActionRunFailure),
+			string(webhook_module.HookEventActionRunRecover),
+			string(webhook_module.HookEventActionRunSuccess),
+		},
+			hookFromDb.EventsArray())
+	})
 }
 
 func TestGetWebhookByRepoID(t *testing.T) {
@@ -262,7 +325,7 @@ func TestCleanupHookTaskTable_PerWebhook_DeletesDelivered(t *testing.T) {
 	require.NoError(t, err)
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 
-	require.NoError(t, CleanupHookTaskTable(context.Background(), PerWebhook, 168*time.Hour, 0))
+	require.NoError(t, CleanupHookTaskTable(t.Context(), PerWebhook, 168*time.Hour, 0))
 	unittest.AssertNotExistsBean(t, hookTask)
 }
 
@@ -278,7 +341,7 @@ func TestCleanupHookTaskTable_PerWebhook_LeavesUndelivered(t *testing.T) {
 	require.NoError(t, err)
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 
-	require.NoError(t, CleanupHookTaskTable(context.Background(), PerWebhook, 168*time.Hour, 0))
+	require.NoError(t, CleanupHookTaskTable(t.Context(), PerWebhook, 168*time.Hour, 0))
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 }
 
@@ -295,7 +358,7 @@ func TestCleanupHookTaskTable_PerWebhook_LeavesMostRecentTask(t *testing.T) {
 	require.NoError(t, err)
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 
-	require.NoError(t, CleanupHookTaskTable(context.Background(), PerWebhook, 168*time.Hour, 1))
+	require.NoError(t, CleanupHookTaskTable(t.Context(), PerWebhook, 168*time.Hour, 1))
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 }
 
@@ -312,7 +375,7 @@ func TestCleanupHookTaskTable_OlderThan_DeletesDelivered(t *testing.T) {
 	require.NoError(t, err)
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 
-	require.NoError(t, CleanupHookTaskTable(context.Background(), OlderThan, 168*time.Hour, 0))
+	require.NoError(t, CleanupHookTaskTable(t.Context(), OlderThan, 168*time.Hour, 0))
 	unittest.AssertNotExistsBean(t, hookTask)
 }
 
@@ -328,7 +391,7 @@ func TestCleanupHookTaskTable_OlderThan_LeavesUndelivered(t *testing.T) {
 	require.NoError(t, err)
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 
-	require.NoError(t, CleanupHookTaskTable(context.Background(), OlderThan, 168*time.Hour, 0))
+	require.NoError(t, CleanupHookTaskTable(t.Context(), OlderThan, 168*time.Hour, 0))
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 }
 
@@ -345,6 +408,6 @@ func TestCleanupHookTaskTable_OlderThan_LeavesTaskEarlierThanAgeToDelete(t *test
 	require.NoError(t, err)
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 
-	require.NoError(t, CleanupHookTaskTable(context.Background(), OlderThan, 168*time.Hour, 0))
+	require.NoError(t, CleanupHookTaskTable(t.Context(), OlderThan, 168*time.Hour, 0))
 	unittest.AssertExistsAndLoadBean(t, hookTask)
 }

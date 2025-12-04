@@ -6,8 +6,8 @@ package forms
 import (
 	"net/http"
 
-	"code.gitea.io/gitea/modules/web/middleware"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/modules/web/middleware"
+	"forgejo.org/services/context"
 
 	"code.forgejo.org/go-chi/binding"
 )
@@ -75,15 +75,14 @@ type AuthenticationForm struct {
 	Oauth2RestrictedGroup         string
 	Oauth2GroupTeamMap            string `binding:"ValidGroupTeamMap"`
 	Oauth2GroupTeamMapRemoval     bool
+	Oauth2QuotaGroupClaimName     string
+	Oauth2QuotaGroupMap           string `binding:"ValidQuotaGroupMap"`
+	Oauth2QuotaGroupMapRemoval    bool
 	Oauth2AttributeSSHPublicKey   string
 	SkipLocalTwoFA                bool
-	SSPIAutoCreateUsers           bool
-	SSPIAutoActivateUsers         bool
-	SSPIStripDomainNames          bool
-	SSPISeparatorReplacement      string `binding:"AlphaDashDot;MaxSize(5)"`
-	SSPIDefaultLanguage           string
 	GroupTeamMap                  string `binding:"ValidGroupTeamMap"`
 	GroupTeamMapRemoval           bool
+	AllowUsernameChange           bool
 }
 
 // Validate validates fields

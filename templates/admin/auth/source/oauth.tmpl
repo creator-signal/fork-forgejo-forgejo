@@ -35,6 +35,13 @@
 			<p class="help">{{ctx.Locale.Tr "admin.auths.skip_local_two_fa_helper"}}</p>
 		</div>
 	</div>
+	<div class="optional field">
+		<div class="ui checkbox">
+			<label for="allow_username_change"><strong>{{ctx.Locale.Tr "admin.auths.allow_username_change"}}</strong></label>
+			<input id="allow_username_change" name="allow_username_change" type="checkbox" {{if .allow_username_change}}checked{{end}}>
+			<p class="help">{{ctx.Locale.Tr "admin.auths.allow_username_change.description"}}</p>
+		</div>
+	</div>
 
 	<div class="oauth2_use_custom_url inline field">
 		<div class="ui checkbox">
@@ -113,5 +120,17 @@
 	<div class="ui checkbox">
 		<label>{{ctx.Locale.Tr "admin.auths.oauth2_map_group_to_team_removal"}}</label>
 		<input name="oauth2_group_team_map_removal" type="checkbox" {{if .oauth2_group_team_map_removal}}checked{{end}}>
+	</div>
+	<div class="field">
+		<label for="oauth2_quota_group_claim_name">{{ctx.Locale.Tr "admin.auths.oauth2_quota_group_claim_name"}}</label>
+		<input id="oauth2_quota_group_claim_name" name="oauth2_quota_group_claim_name" value="{{.oauth2_quota_group_claim_name}}">
+	</div>
+	<div class="field">
+		<label>{{ctx.Locale.Tr "admin.auths.oauth2_quota_group_map"}}</label>
+		<textarea name="oauth2_quota_group_map" rows="5" placeholder='{"Developer": ["MyQuotaGroup"]}'>{{.oauth2_quota_group_map}}</textarea>
+	</div>
+	<div class="ui checkbox">
+		<label>{{ctx.Locale.Tr "admin.auths.oauth2_quota_group_map_removal"}}</label>
+		<input name="oauth2_quota_group_map_removal" type="checkbox" {{if .oauth2_quota_group_map_removal}}checked{{end}}>
 	</div>
 </div>

@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/unittest"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 
-	_ "code.gitea.io/gitea/cmd" // for TestPrimaryKeys
+	_ "forgejo.org/cmd" // for TestPrimaryKeys
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,19 +44,25 @@ func TestDeleteOrphanedObjects(t *testing.T) {
 	countBefore, err := db.GetEngine(db.DefaultContext).Count(&issues_model.PullRequest{})
 	require.NoError(t, err)
 
-	_, err = db.GetEngine(db.DefaultContext).Insert(&issues_model.PullRequest{IssueID: 1000}, &issues_model.PullRequest{IssueID: 1001}, &issues_model.PullRequest{IssueID: 1003})
+	// As progress is made in adding foreign keys to Forgejo's schema, eventually this test will have to be removed or
+	// changed to something completely illogical... in the mean time, `head_repo_id` has no foreign key yet:
+	_, err = db.GetEngine(db.DefaultContext).Insert(
+		&issues_model.PullRequest{IssueID: 2, BaseRepoID: 1, HeadRepoID: 1000},
+		&issues_model.PullRequest{IssueID: 2, BaseRepoID: 1, HeadRepoID: 1001},
+		&issues_model.PullRequest{IssueID: 2, BaseRepoID: 1, HeadRepoID: 1003},
+	)
 	require.NoError(t, err)
 
-	orphaned, err := db.CountOrphanedObjects(db.DefaultContext, "pull_request", "issue", "pull_request.issue_id=issue.id")
+	orphaned, err := db.CountOrphanedObjects(db.DefaultContext, "pull_request", "repository", "pull_request.head_repo_id=repository.id")
 	require.NoError(t, err)
 	assert.EqualValues(t, 3, orphaned)
 
-	err = db.DeleteOrphanedObjects(db.DefaultContext, "pull_request", "issue", "pull_request.issue_id=issue.id")
+	err = db.DeleteOrphanedObjects(db.DefaultContext, "pull_request", "repository", "pull_request.head_repo_id=repository.id")
 	require.NoError(t, err)
 
 	countAfter, err := db.GetEngine(db.DefaultContext).Count(&issues_model.PullRequest{})
 	require.NoError(t, err)
-	assert.EqualValues(t, countBefore, countAfter)
+	assert.Equal(t, countBefore, countAfter)
 }
 
 func TestPrimaryKeys(t *testing.T) {
@@ -64,7 +70,7 @@ func TestPrimaryKeys(t *testing.T) {
 	//   https://github.com/go-gitea/gitea/issues/21086
 	//   https://github.com/go-gitea/gitea/issues/16802
 	// To avoid creating tables without primary key again, this test will check them.
-	// Import "code.gitea.io/gitea/cmd" to make sure each db.RegisterModel in init functions has been called.
+	// Import "forgejo.org/cmd" to make sure each db.RegisterModel in init functions has been called.
 
 	beans, err := db.NamesToBean()
 	if err != nil {
@@ -103,8 +109,8 @@ func TestSlowQuery(t *testing.T) {
 	// It's not possible to clean this up with XORM, but it's luckily not harmful
 	// to leave around.
 	engine.AddHook(&db.SlowQueryHook{
-		Treshold: time.Second * 10,
-		Logger:   log.GetLogger("slow-query"),
+		Threshold: time.Second * 10,
+		Logger:    log.GetLogger("slow-query"),
 	})
 
 	// NOOP query.
@@ -114,8 +120,8 @@ func TestSlowQuery(t *testing.T) {
 	assert.False(t, stopped)
 
 	engine.AddHook(&db.SlowQueryHook{
-		Treshold: 0, // Every query should be logged.
-		Logger:   log.GetLogger("slow-query"),
+		Threshold: 0, // Every query should be logged.
+		Logger:    log.GetLogger("slow-query"),
 	})
 
 	// NOOP query.

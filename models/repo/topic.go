@@ -5,14 +5,12 @@ package repo
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/timeutil"
 
 	"xorm.io/builder"
 )
@@ -37,26 +35,6 @@ type Topic struct {
 type RepoTopic struct { //revive:disable-line:exported
 	RepoID  int64 `xorm:"pk"`
 	TopicID int64 `xorm:"pk"`
-}
-
-// ErrTopicNotExist represents an error that a topic is not exist
-type ErrTopicNotExist struct {
-	Name string
-}
-
-// IsErrTopicNotExist checks if an error is an ErrTopicNotExist.
-func IsErrTopicNotExist(err error) bool {
-	_, ok := err.(ErrTopicNotExist)
-	return ok
-}
-
-// Error implements error interface
-func (err ErrTopicNotExist) Error() string {
-	return fmt.Sprintf("topic is not exist [name: %s]", err.Name)
-}
-
-func (err ErrTopicNotExist) Unwrap() error {
-	return util.ErrNotExist
 }
 
 // ValidateTopic checks a topic by length and match pattern rules
@@ -89,17 +67,6 @@ func SanitizeAndValidateTopics(topics []string) (validTopics, invalidTopics []st
 	}
 
 	return validTopics, invalidTopics
-}
-
-// GetTopicByName retrieves topic by name
-func GetTopicByName(ctx context.Context, name string) (*Topic, error) {
-	var topic Topic
-	if has, err := db.GetEngine(ctx).Where("name = ?", name).Get(&topic); err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrTopicNotExist{name}
-	}
-	return &topic, nil
 }
 
 // addTopicByNameToRepo adds a topic name to a repo and increments the topic count.
@@ -197,7 +164,7 @@ func FindTopics(ctx context.Context, opts *FindTopicOptions) ([]*Topic, int64, e
 	orderBy := "topic.repo_count DESC"
 	if opts.RepoID > 0 {
 		sess.Join("INNER", "repo_topic", "repo_topic.topic_id = topic.id")
-		orderBy = "topic.name" // when render topics for a repo, it's better to sort them by name, to get consistent result
+		orderBy = "topic.name" // When rendering topics for a repo, it's better to sort them by name to get consistent results
 	}
 	if opts.PageSize > 0 {
 		sess = db.SetSessionPagination(sess, opts)

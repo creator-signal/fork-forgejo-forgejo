@@ -6,18 +6,19 @@ package actions
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models/dbfs"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/storage"
-	"code.gitea.io/gitea/modules/zstd"
+	"forgejo.org/models/dbfs"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/storage"
+	"forgejo.org/modules/zstd"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -28,6 +29,19 @@ const (
 	timeFormat     = "2006-01-02T15:04:05.0000000Z07:00"
 	defaultBufSize = MaxLineSize
 )
+
+func ExistsLogs(ctx context.Context, filename string) (bool, error) {
+	name := DBFSPrefix + filename
+	f, err := dbfs.Open(ctx, name)
+	if err == nil {
+		f.Close()
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
+}
 
 // WriteLogs appends logs to DBFS file for temporary storage.
 // It doesn't respect the file format in the filename like ".zst", since it's difficult to reopen a closed compressed file and append new content.
@@ -164,6 +178,9 @@ func RemoveLogs(ctx context.Context, inStorage bool, filename string) error {
 		name := DBFSPrefix + filename
 		err := dbfs.Remove(ctx, name)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
 			return fmt.Errorf("dbfs remove %q: %w", name, err)
 		}
 		return nil

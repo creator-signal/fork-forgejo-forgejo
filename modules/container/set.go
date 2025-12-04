@@ -3,6 +3,11 @@
 
 package container
 
+import (
+	"iter"
+	"maps"
+)
+
 type Set[T comparable] map[T]struct{}
 
 // SetOf creates a set and adds the specified elements to it.
@@ -29,6 +34,15 @@ func (s Set[T]) AddMultiple(values ...T) {
 	}
 }
 
+func (s Set[T]) IsSubset(subset []T) bool {
+	for _, v := range subset {
+		if !s.Contains(v) {
+			return false
+		}
+	}
+	return true
+}
+
 // Contains determines whether a set contains the specified element.
 // Returns true if the set contains the specified element; otherwise, false.
 func (s Set[T]) Contains(value T) bool {
@@ -53,4 +67,34 @@ func (s Set[T]) Values() []T {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+// Seq returns a iterator over the elements in the set.
+// It returns a single-use iterator.
+func (s Set[T]) Seq() iter.Seq[T] {
+	return maps.Keys(s)
+}
+
+// Clone returns a identical shallow copy of this set.
+func (s Set[T]) Clone() Set[T] {
+	return maps.Clone(s)
+}
+
+// Computes the elements that are in this set, that aren't in the other set.
+func (s Set[T]) Difference(other Set[T]) Set[T] {
+	result := make(Set[T])
+	for key := range s {
+		if !other.Contains(key) {
+			result.Add(key)
+		}
+	}
+	return result
+}
+
+func (s Set[T]) Slice() []T {
+	retval := make([]T, 0, len(s))
+	for key := range s {
+		retval = append(retval, key)
+	}
+	return retval
 }

@@ -6,6 +6,7 @@
 package setting
 
 import (
+	go_context "context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,34 +14,34 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/models"
-	actions_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	quota_model "code.gitea.io/gitea/models/quota"
-	repo_model "code.gitea.io/gitea/models/repo"
-	unit_model "code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/indexer/code"
-	"code.gitea.io/gitea/modules/indexer/stats"
-	"code.gitea.io/gitea/modules/lfs"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/validation"
-	"code.gitea.io/gitea/modules/web"
-	actions_service "code.gitea.io/gitea/services/actions"
-	asymkey_service "code.gitea.io/gitea/services/asymkey"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/federation"
-	"code.gitea.io/gitea/services/forms"
-	"code.gitea.io/gitea/services/migrations"
-	mirror_service "code.gitea.io/gitea/services/mirror"
-	repo_service "code.gitea.io/gitea/services/repository"
-	wiki_service "code.gitea.io/gitea/services/wiki"
+	"forgejo.org/models"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/indexer/code"
+	"forgejo.org/modules/indexer/issues"
+	"forgejo.org/modules/indexer/stats"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
+	"forgejo.org/modules/web"
+	actions_service "forgejo.org/services/actions"
+	asymkey_service "forgejo.org/services/asymkey"
+	"forgejo.org/services/context"
+	"forgejo.org/services/federation"
+	"forgejo.org/services/forms"
+	"forgejo.org/services/migrations"
+	mirror_service "forgejo.org/services/mirror"
+	repo_service "forgejo.org/services/repository"
+	wiki_service "forgejo.org/services/wiki"
 )
 
 const (
@@ -64,6 +65,9 @@ func SettingsCtxData(ctx *context.Context) {
 	ctx.Data["DisableNewPushMirrors"] = setting.Mirror.DisableNewPush
 	ctx.Data["DefaultMirrorInterval"] = setting.Mirror.DefaultInterval
 	ctx.Data["MinimumMirrorInterval"] = setting.Mirror.MinInterval
+	ctx.Data["MaxAvatarFileSize"] = setting.Avatar.MaxFileSize
+	ctx.Data["MaxAvatarWidth"] = setting.Avatar.MaxWidth
+	ctx.Data["MaxAvatarHeight"] = setting.Avatar.MaxHeight
 
 	signing, _ := asymkey_service.SigningKey(ctx, ctx.Repo.Repository.RepoPath())
 	ctx.Data["SigningKeyAvailable"] = len(signing) > 0
@@ -105,6 +109,10 @@ func Units(ctx *context.Context) {
 
 func UnitsPost(ctx *context.Context) {
 	form := web.GetForm(ctx).(*forms.RepoUnitSettingForm)
+	if ctx.HasError() {
+		ctx.Redirect(ctx.Repo.Repository.Link() + "/settings/units")
+		return
+	}
 
 	repo := ctx.Repo.Repository
 
@@ -146,11 +154,9 @@ func UnitsPost(ctx *context.Context) {
 		})
 		deleteUnitTypes = append(deleteUnitTypes, unit_model.TypeWiki)
 	} else if form.EnableWiki && !form.EnableExternalWiki && !unit_model.TypeWiki.UnitGlobalDisabled() {
-		var wikiPermissions repo_model.UnitAccessMode
+		wikiPermissions := repo_model.UnitAccessModeUnset
 		if form.GloballyWriteableWiki {
 			wikiPermissions = repo_model.UnitAccessModeWrite
-		} else {
-			wikiPermissions = repo_model.UnitAccessModeRead
 		}
 		units = append(units, repo_model.RepoUnit{
 			RepoID:             repo.ID,
@@ -537,7 +543,13 @@ func SettingsPost(ctx *context.Context) {
 
 		mirror_service.AddPullMirrorToQueue(repo.ID)
 
-		ctx.Flash.Info(ctx.Tr("repo.settings.pull_mirror_sync_in_progress", repo.OriginalURL))
+		sanitizedOriginalURL, err := util.SanitizeURL(repo.OriginalURL)
+		if err != nil {
+			ctx.ServerError("SanitizeURL", err)
+			return
+		}
+
+		ctx.Flash.Info(ctx.Tr("repo.settings.pull_mirror_sync_in_progress", sanitizedOriginalURL))
 		ctx.Redirect(repo.Link() + "/settings")
 
 	case "push-mirror-sync":
@@ -584,6 +596,23 @@ func SettingsPost(ctx *context.Context) {
 			ctx.ServerError("UpdatePushMirrorInterval", err)
 			return
 		}
+
+		if m.BranchFilter != form.PushMirrorBranchFilter {
+			// replace `remote.<remote>.push` in config and db
+			m.BranchFilter = form.PushMirrorBranchFilter
+			if err := db.WithTx(ctx, func(ctx go_context.Context) error {
+				// Update the DB
+				if err = repo_model.UpdatePushMirrorBranchFilter(ctx, m); err != nil {
+					return err
+				}
+				// Update the repo config
+				return mirror_service.UpdatePushMirrorBranchFilter(ctx, m)
+			}); err != nil {
+				ctx.ServerError("UpdatePushMirrorBranchFilter", err)
+				return
+			}
+		}
+
 		// Background why we are adding it to Queue
 		// If we observed its implementation in the context of `push-mirror-sync` where it
 		// is evident that pushing to the queue is necessary for updates.
@@ -651,7 +680,7 @@ func SettingsPost(ctx *context.Context) {
 
 		address, err := forms.ParseRemoteAddr(form.PushMirrorAddress, form.PushMirrorUsername, form.PushMirrorPassword)
 		if err == nil {
-			err = migrations.IsMigrateURLAllowed(address, ctx.Doer)
+			err = migrations.IsPushMirrorURLAllowed(address, ctx.Doer)
 		}
 		if err != nil {
 			ctx.Data["Err_PushMirrorAddress"] = true
@@ -659,11 +688,7 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		remoteSuffix, err := util.CryptoRandomString(10)
-		if err != nil {
-			ctx.ServerError("RandomString", err)
-			return
-		}
+		remoteSuffix := util.CryptoRandomString(util.RandomStringLow)
 
 		remoteAddress, err := util.SanitizeURL(address)
 		if err != nil {
@@ -679,6 +704,7 @@ func SettingsPost(ctx *context.Context) {
 			SyncOnCommit:  form.PushMirrorSyncOnCommit,
 			Interval:      interval,
 			RemoteAddress: remoteAddress,
+			BranchFilter:  form.PushMirrorBranchFilter,
 		}
 
 		var plainPrivateKey []byte
@@ -772,6 +798,8 @@ func SettingsPost(ctx *context.Context) {
 				return
 			}
 			code.UpdateRepoIndexer(ctx.Repo.Repository)
+		case "issues":
+			issues.UpdateRepoIndexer(ctx, ctx.Repo.Repository.ID)
 		default:
 			ctx.NotFound("", nil)
 			return
@@ -796,13 +824,9 @@ func SettingsPost(ctx *context.Context) {
 			ctx.Error(http.StatusNotFound)
 			return
 		}
-		repo.IsMirror = false
 
-		if _, err := repo_service.CleanUpMigrateInfo(ctx, repo); err != nil {
-			ctx.ServerError("CleanUpMigrateInfo", err)
-			return
-		} else if err = repo_model.DeleteMirrorByRepoID(ctx, ctx.Repo.Repository.ID); err != nil {
-			ctx.ServerError("DeleteMirrorByRepoID", err)
+		if err := repo_service.ConvertMirrorToNormalRepo(ctx, ctx.Repo.Repository); err != nil {
+			ctx.ServerError("ConvertMirror", err)
 			return
 		}
 		log.Trace("Repository converted from mirror to regular: %s", repo.FullName())
@@ -1030,7 +1054,7 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		if err := actions_model.CleanRepoScheduleTasks(ctx, repo, true); err != nil {
+		if err := actions_service.CleanRepoScheduleTasks(ctx, repo, true); err != nil {
 			log.Error("CleanRepoScheduleTasks for archived repo %s/%s: %v", ctx.Repo.Owner.Name, repo.Name, err)
 		}
 
@@ -1084,6 +1108,8 @@ func handleSettingRemoteAddrError(ctx *context.Context, err error, form *forms.R
 			}
 		case addrErr.IsInvalidPath:
 			ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_local_path"), tplSettingsOptions, form)
+		case addrErr.HasCredentials:
+			ctx.RenderWithErr(ctx.Tr("migrate.form.error.url_credentials"), tplSettingsOptions, form)
 		default:
 			ctx.ServerError("Unknown error", err)
 		}

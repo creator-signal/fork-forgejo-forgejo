@@ -6,6 +6,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"html/template"
 	"net"
@@ -14,18 +15,19 @@ import (
 	"strconv"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/translation"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/cache"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/translation"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
@@ -142,21 +144,12 @@ type Repository struct {
 	NumWatches          int
 	NumStars            int
 	NumForks            int
-	NumIssues           int
-	NumClosedIssues     int
-	NumOpenIssues       int `xorm:"-"`
-	NumPulls            int
-	NumClosedPulls      int
-	NumOpenPulls        int `xorm:"-"`
 	NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
 	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
 	NumOpenMilestones   int `xorm:"-"`
 	NumProjects         int `xorm:"NOT NULL DEFAULT 0"`
 	NumClosedProjects   int `xorm:"NOT NULL DEFAULT 0"`
 	NumOpenProjects     int `xorm:"-"`
-	NumActionRuns       int `xorm:"NOT NULL DEFAULT 0"`
-	NumClosedActionRuns int `xorm:"NOT NULL DEFAULT 0"`
-	NumOpenActionRuns   int `xorm:"-"`
 
 	IsPrivate  bool `xorm:"INDEX"`
 	IsEmpty    bool `xorm:"INDEX"`
@@ -182,7 +175,7 @@ type Repository struct {
 	StatsIndexerStatus              *RepoIndexerStatus `xorm:"-"`
 	IsFsckEnabled                   bool               `xorm:"NOT NULL DEFAULT true"`
 	CloseIssuesViaCommitInAnyBranch bool               `xorm:"NOT NULL DEFAULT false"`
-	Topics                          []string           `xorm:"TEXT JSON"`
+	Topics                          []string           `xorm:"TEXT JSON NOT NULL"`
 	ObjectFormatName                string             `xorm:"VARCHAR(6) NOT NULL DEFAULT 'sha1'"`
 
 	TrustModel TrustModelType
@@ -193,6 +186,13 @@ type Repository struct {
 	CreatedUnix  timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix  timeutil.TimeStamp `xorm:"INDEX updated"`
 	ArchivedUnix timeutil.TimeStamp `xorm:"DEFAULT 0"`
+}
+
+// BeforeInsert will be invoked by XORM before updating a record
+func (repo *Repository) BeforeInsert() {
+	if repo.Topics == nil {
+		repo.Topics = []string{}
+	}
 }
 
 func init() {
@@ -286,11 +286,8 @@ func (repo *Repository) MarkAsBrokenEmpty() {
 
 // AfterLoad is invoked from XORM after setting the values of all fields of this object.
 func (repo *Repository) AfterLoad() {
-	repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
-	repo.NumOpenPulls = repo.NumPulls - repo.NumClosedPulls
 	repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 	repo.NumOpenProjects = repo.NumProjects - repo.NumClosedProjects
-	repo.NumOpenActionRuns = repo.NumActionRuns - repo.NumClosedActionRuns
 }
 
 // LoadAttributes loads attributes of the repository.
@@ -402,27 +399,28 @@ func (repo *Repository) MustGetUnit(ctx context.Context, tp unit.Type) *RepoUnit
 		return ru
 	}
 
-	if tp == unit.TypeExternalWiki {
+	switch tp {
+	case unit.TypeExternalWiki:
 		return &RepoUnit{
 			Type:   tp,
 			Config: new(ExternalWikiConfig),
 		}
-	} else if tp == unit.TypeExternalTracker {
+	case unit.TypeExternalTracker:
 		return &RepoUnit{
 			Type:   tp,
 			Config: new(ExternalTrackerConfig),
 		}
-	} else if tp == unit.TypePullRequests {
+	case unit.TypePullRequests:
 		return &RepoUnit{
 			Type:   tp,
 			Config: new(PullRequestsConfig),
 		}
-	} else if tp == unit.TypeIssues {
+	case unit.TypeIssues:
 		return &RepoUnit{
 			Type:   tp,
 			Config: new(IssuesConfig),
 		}
-	} else if tp == unit.TypeActions {
+	case unit.TypeActions:
 		return &RepoUnit{
 			Type:   tp,
 			Config: new(ActionsConfig),
@@ -529,7 +527,6 @@ func (repo *Repository) ComposeMetas(ctx context.Context) map[string]string {
 				Join("INNER", "team", "team.id = team_repo.team_id").
 				Where("team_repo.repo_id = ?", repo.ID).
 				Select("team.lower_name").
-				OrderBy("team.lower_name").
 				Find(&teams)
 			metas["teams"] = "," + strings.Join(teams, ",") + ","
 			metas["org"] = strings.ToLower(repo.OwnerName)
@@ -820,7 +817,7 @@ func GetRepositoryByURL(ctx context.Context, repoURL string) (*Repository, error
 	pathSegments := getRepositoryURLPathSegments(repoURL)
 
 	if len(pathSegments) != 2 {
-		return nil, fmt.Errorf("unknown or malformed repository URL")
+		return nil, errors.New("unknown or malformed repository URL")
 	}
 
 	ownerName := pathSegments[0]
@@ -909,32 +906,6 @@ func CountRepositories(ctx context.Context, opts CountRepositoryOptions) (int64,
 	return count, nil
 }
 
-// UpdateRepoIssueNumbers updates one of a repositories amount of (open|closed) (issues|PRs) with the current count
-func UpdateRepoIssueNumbers(ctx context.Context, repoID int64, isPull, isClosed bool) error {
-	field := "num_"
-	if isClosed {
-		field += "closed_"
-	}
-	if isPull {
-		field += "pulls"
-	} else {
-		field += "issues"
-	}
-
-	subQuery := builder.Select("count(*)").
-		From("issue").Where(builder.Eq{
-		"repo_id": repoID,
-		"is_pull": isPull,
-	}.And(builder.If(isClosed, builder.Eq{"is_closed": isClosed})))
-
-	// builder.Update(cond) will generate SQL like UPDATE ... SET cond
-	query := builder.Update(builder.Eq{field: subQuery}).
-		From("repository").
-		Where(builder.Eq{"id": repoID})
-	_, err := db.Exec(ctx, query)
-	return err
-}
-
 // CountNullArchivedRepository counts the number of repositories with is_archived is null
 func CountNullArchivedRepository(ctx context.Context) (int64, error) {
 	return db.GetEngine(ctx).Where(builder.IsNull{"is_archived"}).Count(new(Repository))
@@ -952,5 +923,81 @@ func UpdateRepositoryOwnerName(ctx context.Context, oldUserName, newUserName str
 	if _, err := db.GetEngine(ctx).Exec("UPDATE `repository` SET owner_name=? WHERE owner_name=?", newUserName, oldUserName); err != nil {
 		return fmt.Errorf("change repo owner name: %w", err)
 	}
+	return nil
+}
+
+type repoCacheKeyBase string
+
+const (
+	countIssues       = repoCacheKeyBase("CountIssues")
+	countIssuesClosed = repoCacheKeyBase("CountIssuesClosed")
+	countPulls        = repoCacheKeyBase("CountPulls")
+	countPullsClosed  = repoCacheKeyBase("CountPullsClosed")
+)
+
+func repoCacheKey(cacheKeyBase repoCacheKeyBase, repoID int64) string {
+	return fmt.Sprintf("Repo:%s:%d", cacheKeyBase, repoID)
+}
+
+func (repo *Repository) cacheIssueCount(ctx context.Context, cacheKeyBase repoCacheKeyBase, cond builder.Cond) int {
+	num, err := cache.GetInt(repoCacheKey(cacheKeyBase, repo.ID), func() (int, error) {
+		cond = builder.Eq{"repo_id": repo.ID}.And(cond)
+		count, err := db.GetEngine(ctx).Table("issue").Where(cond).Count() // can't use &issues.Issue{}; cyclical import
+		if err != nil {
+			return 0, fmt.Errorf("query error: %v", err)
+		}
+		return int(count), nil
+	})
+	if err != nil {
+		log.Error("failed to retrieve NumIssues: %v", err)
+		return 0
+	}
+	return num
+}
+
+func (repo *Repository) NumIssues(ctx context.Context) int {
+	return repo.cacheIssueCount(ctx, countIssues, builder.Eq{"is_pull": false})
+}
+
+func (repo *Repository) NumClosedIssues(ctx context.Context) int {
+	return repo.cacheIssueCount(ctx, countIssuesClosed, builder.Eq{"is_pull": false, "is_closed": true})
+}
+
+func (repo *Repository) NumOpenIssues(ctx context.Context) int {
+	return repo.NumIssues(ctx) - repo.NumClosedIssues(ctx)
+}
+
+func (repo *Repository) NumPulls(ctx context.Context) int {
+	return repo.cacheIssueCount(ctx, countPulls, builder.Eq{"is_pull": true})
+}
+
+func (repo *Repository) NumClosedPulls(ctx context.Context) int {
+	return repo.cacheIssueCount(ctx, countPullsClosed, builder.Eq{"is_pull": true, "is_closed": true})
+}
+
+func (repo *Repository) NumOpenPulls(ctx context.Context) int {
+	return repo.NumPulls(ctx) - repo.NumClosedPulls(ctx)
+}
+
+// UpdateRepoIssueNumbers triggers a recalculation of the number of (open|closed) (issues|PRs) on a repo.  It
+// invalidates a cache which will cause this value to be calculated when accessed.
+func UpdateRepoIssueNumbers(ctx context.Context, repoID int64, isPull, isClosed bool) error {
+	var cacheKeyBase repoCacheKeyBase
+	if isPull {
+		if isClosed {
+			cacheKeyBase = countPullsClosed
+		} else {
+			cacheKeyBase = countPulls
+		}
+	} else {
+		if isClosed {
+			cacheKeyBase = countIssuesClosed
+		} else {
+			cacheKeyBase = countIssues
+		}
+	}
+	db.AfterTx(ctx, func() {
+		cache.Remove(repoCacheKey(cacheKeyBase, repoID))
+	})
 	return nil
 }

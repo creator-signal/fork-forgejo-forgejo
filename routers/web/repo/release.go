@@ -1,5 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Copyright 2018 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -10,29 +11,29 @@ import (
 	"net/http"
 	"strings"
 
-	"code.gitea.io/gitea/models"
-	"code.gitea.io/gitea/models/asymkey"
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/container"
-	"code.gitea.io/gitea/modules/git"
-	"code.gitea.io/gitea/modules/gitrepo"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markup"
-	"code.gitea.io/gitea/modules/markup/markdown"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/util"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/web/feed"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/context/upload"
-	"code.gitea.io/gitea/services/forms"
-	releaseservice "code.gitea.io/gitea/services/release"
+	"forgejo.org/models"
+	"forgejo.org/models/asymkey"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/web/feed"
+	"forgejo.org/services/context"
+	"forgejo.org/services/context/upload"
+	"forgejo.org/services/forms"
+	release_service "forgejo.org/services/release"
 )
 
 const (
@@ -249,7 +250,7 @@ func addVerifyTagToContext(ctx *context.Context) {
 		if verification == nil {
 			return false
 		}
-		return verification.Reason != "gpg.error.not_signed_commit"
+		return verification.Reason != asymkey.NotSigned
 	}
 }
 
@@ -504,12 +505,12 @@ func NewReleasePost(ctx *context.Context) {
 		return
 	}
 
-	attachmentChanges := make(container.Set[*releaseservice.AttachmentChange])
-	attachmentChangesByID := make(map[string]*releaseservice.AttachmentChange)
+	attachmentChanges := make(container.Set[*release_service.AttachmentChange])
+	attachmentChangesByID := make(map[string]*release_service.AttachmentChange)
 
 	if setting.Attachment.Enabled {
 		for _, uuid := range form.Files {
-			attachmentChanges.Add(&releaseservice.AttachmentChange{
+			attachmentChanges.Add(&release_service.AttachmentChange{
 				Action: "add",
 				Type:   "attachment",
 				UUID:   uuid,
@@ -529,7 +530,7 @@ func NewReleasePost(ctx *context.Context) {
 					id = k[len(exturlPrefix):]
 				}
 				if _, ok := attachmentChangesByID[id]; !ok {
-					attachmentChangesByID[id] = &releaseservice.AttachmentChange{
+					attachmentChangesByID[id] = &release_service.AttachmentChange{
 						Action: "add",
 						Type:   "external",
 					}
@@ -557,7 +558,7 @@ func NewReleasePost(ctx *context.Context) {
 		}
 
 		if len(form.TagOnly) > 0 {
-			if err = releaseservice.CreateNewTag(ctx, ctx.Doer, ctx.Repo.Repository, form.Target, form.TagName, msg); err != nil {
+			if err = release_service.CreateNewTag(ctx, ctx.Doer, ctx.Repo.Repository, form.Target, form.TagName, msg); err != nil {
 				if models.IsErrTagAlreadyExists(err) {
 					e := err.(models.ErrTagAlreadyExists)
 					ctx.Flash.Error(ctx.Tr("repo.branch.tag_collision", e.TagName))
@@ -601,7 +602,7 @@ func NewReleasePost(ctx *context.Context) {
 			IsTag:            false,
 		}
 
-		if err = releaseservice.CreateRelease(ctx.Repo.GitRepo, rel, msg, attachmentChanges.Values()); err != nil {
+		if err = release_service.CreateRelease(ctx.Repo.GitRepo, rel, msg, attachmentChanges.Values()); err != nil {
 			ctx.Data["Err_TagName"] = true
 			switch {
 			case repo_model.IsErrReleaseAlreadyExist(err):
@@ -633,7 +634,7 @@ func NewReleasePost(ctx *context.Context) {
 		rel.HideArchiveLinks = form.HideArchiveLinks
 		rel.IsTag = false
 
-		if err = releaseservice.UpdateRelease(ctx, ctx.Doer, ctx.Repo.GitRepo, rel, true, attachmentChanges.Values()); err != nil {
+		if err = release_service.UpdateRelease(ctx, ctx.Doer, ctx.Repo.GitRepo, rel, true, attachmentChanges.Values()); err != nil {
 			ctx.Data["Err_TagName"] = true
 			switch {
 			case repo_model.IsErrInvalidExternalURL(err):
@@ -741,12 +742,12 @@ func EditReleasePost(ctx *context.Context) {
 	const newPrefix = "attachment-new-"
 	const namePrefix = "name-"
 	const exturlPrefix = "exturl-"
-	attachmentChanges := make(container.Set[*releaseservice.AttachmentChange])
-	attachmentChangesByID := make(map[string]*releaseservice.AttachmentChange)
+	attachmentChanges := make(container.Set[*release_service.AttachmentChange])
+	attachmentChangesByID := make(map[string]*release_service.AttachmentChange)
 
 	if setting.Attachment.Enabled {
 		for _, uuid := range form.Files {
-			attachmentChanges.Add(&releaseservice.AttachmentChange{
+			attachmentChanges.Add(&release_service.AttachmentChange{
 				Action: "add",
 				Type:   "attachment",
 				UUID:   uuid,
@@ -755,7 +756,7 @@ func EditReleasePost(ctx *context.Context) {
 
 		for k, v := range ctx.Req.Form {
 			if strings.HasPrefix(k, delPrefix) && v[0] == "true" {
-				attachmentChanges.Add(&releaseservice.AttachmentChange{
+				attachmentChanges.Add(&release_service.AttachmentChange{
 					Action: "delete",
 					UUID:   k[len(delPrefix):],
 				})
@@ -779,7 +780,7 @@ func EditReleasePost(ctx *context.Context) {
 					}
 
 					if _, ok := attachmentChangesByID[uuid]; !ok {
-						attachmentChangesByID[uuid] = &releaseservice.AttachmentChange{
+						attachmentChangesByID[uuid] = &release_service.AttachmentChange{
 							Type: "attachment",
 							UUID: uuid,
 						}
@@ -808,7 +809,7 @@ func EditReleasePost(ctx *context.Context) {
 	rel.IsDraft = len(form.Draft) > 0
 	rel.IsPrerelease = form.Prerelease
 	rel.HideArchiveLinks = form.HideArchiveLinks
-	if err = releaseservice.UpdateRelease(ctx, ctx.Doer, ctx.Repo.GitRepo, rel, false, attachmentChanges.Values()); err != nil {
+	if err = release_service.UpdateRelease(ctx, ctx.Doer, ctx.Repo.GitRepo, rel, false, attachmentChanges.Values()); err != nil {
 		switch {
 		case repo_model.IsErrInvalidExternalURL(err):
 			ctx.RenderWithErr(ctx.Tr("repo.release.invalid_external_url", err.(repo_model.ErrInvalidExternalURL).ExternalURL), tplReleaseNew, &form)
@@ -851,7 +852,7 @@ func deleteReleaseOrTag(ctx *context.Context, isDelTag bool) {
 		return
 	}
 
-	if err := releaseservice.DeleteReleaseByID(ctx, ctx.Repo.Repository, rel, ctx.Doer, isDelTag); err != nil {
+	if err := release_service.DeleteReleaseByID(ctx, ctx.Repo.Repository, rel, ctx.Doer, isDelTag); err != nil {
 		if models.IsErrProtectedTagName(err) {
 			ctx.Flash.Error(ctx.Tr("repo.release.tag_name_protected"))
 		} else {

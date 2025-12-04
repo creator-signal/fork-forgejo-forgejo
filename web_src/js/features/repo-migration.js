@@ -29,7 +29,7 @@ export function initRepoMigration() {
   cloneAddr?.addEventListener('change', () => {
     const repoName = document.getElementById('repo_name');
     if (cloneAddr.value && !repoName?.value) { // Only modify if repo_name input is blank
-      repoName.value = cloneAddr.value.match(/^(.*\/)?((.+?)(\.git)?)$/)[3];
+      repoName.value = cloneAddr.value.match(/^(.*\/)?((.+?)(\.git)?\/?)$/)[3];
     }
   });
 }
@@ -38,7 +38,10 @@ function checkAuth() {
   if (!service) return;
   const serviceType = Number(service.value);
 
-  checkItems(serviceType !== 1);
+  // hack for pagure importer.
+  if (serviceType !== 10) {
+    checkItems(serviceType !== 1);
+  }
 }
 
 function checkItems(tokenAuth) {

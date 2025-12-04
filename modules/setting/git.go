@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/modules/log"
 )
 
 // Git settings
@@ -27,8 +27,6 @@ var Git = struct {
 	GCArgs                    []string `ini:"GC_ARGS" delim:" "`
 	EnableAutoGitWireProtocol bool
 	PullRequestPushMessage    bool
-	LargeObjectThreshold      int64
-	DisableCoreProtectNTFS    bool
 	DisablePartialClone       bool
 	Timeout                   struct {
 		Default int
@@ -51,7 +49,6 @@ var Git = struct {
 	GCArgs:                    []string{},
 	EnableAutoGitWireProtocol: true,
 	PullRequestPushMessage:    true,
-	LargeObjectThreshold:      1024 * 1024,
 	DisablePartialClone:       false,
 	Timeout: struct {
 		Default int

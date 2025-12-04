@@ -8,22 +8,22 @@ import (
 	"errors"
 	"net/http"
 
-	"code.gitea.io/gitea/models"
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	repo_model "code.gitea.io/gitea/models/repo"
-	unit_model "code.gitea.io/gitea/models/unit"
-	"code.gitea.io/gitea/modules/log"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/routers/api/v1/user"
-	"code.gitea.io/gitea/routers/api/v1/utils"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
-	org_service "code.gitea.io/gitea/services/org"
-	repo_service "code.gitea.io/gitea/services/repository"
+	"forgejo.org/models"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
+	unit_model "forgejo.org/models/unit"
+	"forgejo.org/modules/log"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/user"
+	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
+	org_service "forgejo.org/services/org"
+	repo_service "forgejo.org/services/repository"
 )
 
 // ListTeams list all the teams of an organization
@@ -233,8 +233,8 @@ func CreateTeam(ctx *context.APIContext) {
 	if team.AccessMode < perm.AccessModeAdmin {
 		if len(form.UnitsMap) > 0 {
 			attachTeamUnitsMap(team, form.UnitsMap)
-		} else if len(form.Units) > 0 {
-			attachTeamUnits(team, form.Units)
+		} else if len(form.Units) > 0 { //nolint:staticcheck
+			attachTeamUnits(team, form.Units) //nolint:staticcheck
 		} else {
 			ctx.Error(http.StatusInternalServerError, "getTeamUnits", errors.New("units permission should not be empty"))
 			return
@@ -274,6 +274,7 @@ func EditTeam(ctx *context.APIContext) {
 	//   in: path
 	//   description: id of the team to edit
 	//   type: integer
+	//   format: int64
 	//   required: true
 	// - name: body
 	//   in: body
@@ -327,8 +328,8 @@ func EditTeam(ctx *context.APIContext) {
 	if team.AccessMode < perm.AccessModeAdmin {
 		if len(form.UnitsMap) > 0 {
 			attachTeamUnitsMap(team, form.UnitsMap)
-		} else if len(form.Units) > 0 {
-			attachTeamUnits(team, form.Units)
+		} else if len(form.Units) > 0 { //nolint:staticcheck
+			attachTeamUnits(team, form.Units) //nolint:staticcheck
 		}
 	} else {
 		attachAdminTeamUnits(team)
@@ -790,6 +791,7 @@ func SearchTeam(ctx *context.APIContext) {
 	//     description: "SearchResults of a successful search"
 	//     schema:
 	//       type: object
+	//       title: "TeamSearchResults"
 	//       properties:
 	//         ok:
 	//           type: boolean

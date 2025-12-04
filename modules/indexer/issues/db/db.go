@@ -6,11 +6,11 @@ package db
 import (
 	"context"
 
-	"code.gitea.io/gitea/models/db"
-	issue_model "code.gitea.io/gitea/models/issues"
-	indexer_internal "code.gitea.io/gitea/modules/indexer/internal"
-	inner_db "code.gitea.io/gitea/modules/indexer/internal/db"
-	"code.gitea.io/gitea/modules/indexer/issues/internal"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	indexer_internal "forgejo.org/modules/indexer/internal"
+	inner_db "forgejo.org/modules/indexer/internal/db"
+	"forgejo.org/modules/indexer/issues/internal"
 
 	"xorm.io/builder"
 )
@@ -52,35 +52,47 @@ func (i *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 
 	cond := builder.NewCond()
 
-	if options.Keyword != "" {
+	var priorityIssueIndex int64
+	if len(options.Tokens) != 0 {
 		repoCond := builder.In("repo_id", options.RepoIDs)
 		if len(options.RepoIDs) == 1 {
 			repoCond = builder.Eq{"repo_id": options.RepoIDs[0]}
 		}
 		subQuery := builder.Select("id").From("issue").Where(repoCond)
 
-		cond = builder.Or(
-			db.BuildCaseInsensitiveLike("issue.name", options.Keyword),
-			db.BuildCaseInsensitiveLike("issue.content", options.Keyword),
-			builder.In("issue.id", builder.Select("issue_id").
-				From("comment").
-				Where(builder.And(
-					builder.Eq{"type": issue_model.CommentTypeComment},
-					builder.In("issue_id", subQuery),
-					db.BuildCaseInsensitiveLike("content", options.Keyword),
-				)),
-			),
-		)
+		for _, token := range options.Tokens {
+			cond = builder.Or(
+				db.BuildCaseInsensitiveLike("issue.name", token.Term),
+				db.BuildCaseInsensitiveLike("issue.content", token.Term),
+				builder.In("issue.id", builder.Select("issue_id").
+					From("comment").
+					Where(builder.And(
+						builder.Eq{"type": issues_model.CommentTypeComment},
+						builder.In("issue_id", subQuery),
+						db.BuildCaseInsensitiveLike("content", token.Term),
+					)),
+				),
+			)
+
+			if ref, err := token.ParseIssueReference(); err != nil {
+				cond = builder.Or(
+					builder.Eq{"`index`": ref},
+					cond,
+				)
+				priorityIssueIndex = ref
+			}
+		}
 	}
 
 	opt, err := ToDBOptions(ctx, options)
 	if err != nil {
 		return nil, err
 	}
+	opt.PriorityIssueIndex = priorityIssueIndex
 
 	// If pagesize == 0, return total count only. It's a special case for search count.
 	if options.Paginator != nil && options.Paginator.PageSize == 0 {
-		total, err := issue_model.CountIssues(ctx, opt, cond)
+		total, err := issues_model.CountIssues(ctx, opt, cond)
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +101,7 @@ func (i *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		}, nil
 	}
 
-	ids, total, err := issue_model.IssueIDs(ctx, opt, cond)
+	ids, total, err := issues_model.IssueIDs(ctx, opt, cond)
 	if err != nil {
 		return nil, err
 	}

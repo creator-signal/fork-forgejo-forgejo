@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/translation"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/translation"
 )
 
 type DateUtils struct{}
@@ -144,8 +144,5 @@ func timeSinceTo(then any, now time.Time) template.HTML {
 
 // TimeSince renders relative time HTML given a time
 func TimeSince(then any) template.HTML {
-	if setting.UI.PreferredTimestampTense == "absolute" {
-		return dateTimeFormat("full", then)
-	}
 	return timeSinceTo(then, time.Now())
 }

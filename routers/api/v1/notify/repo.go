@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	"forgejo.org/modules/structs"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
 )
 
 func statusStringToNotificationStatus(status string) activities_model.NotificationStatus {
@@ -80,7 +80,7 @@ func ListRepoNotifications(ctx *context.APIContext) {
 	//   collectionFormat: multi
 	//   items:
 	//     type: string
-	//     enum: [issue,pull,commit,repository]
+	//     enum: [issue,pull,repository]
 	// - name: since
 	//   in: query
 	//   description: Only show notifications updated after the given time. This is a timestamp in RFC 3339 format
@@ -153,7 +153,7 @@ func ReadRepoNotifications(ctx *context.APIContext) {
 	// - name: all
 	//   in: query
 	//   description: If true, mark all notifications on this repo. Default value is false
-	//   type: string
+	//   type: boolean
 	//   required: false
 	// - name: status-types
 	//   in: query

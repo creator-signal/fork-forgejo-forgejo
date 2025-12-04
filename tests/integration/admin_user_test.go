@@ -4,21 +4,20 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
 	"testing"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -26,13 +25,44 @@ import (
 func TestAdminViewUsers(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	session := loginUser(t, "user1")
-	req := NewRequest(t, "GET", "/admin/users")
-	session.MakeRequest(t, req, http.StatusOK)
+	t.Run("Admin user", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
 
-	session = loginUser(t, "user2")
-	req = NewRequest(t, "GET", "/admin/users")
-	session.MakeRequest(t, req, http.StatusForbidden)
+		session := loginUser(t, "user1")
+		req := NewRequest(t, "GET", "/admin/users")
+		session.MakeRequest(t, req, http.StatusOK)
+
+		req = NewRequest(t, "GET", "/admin/users?status_filter[is_2fa_enabled]=1")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		// 6th column is the 2FA column.
+		// One user that has TOTP and another user that has WebAuthn.
+		assert.Equal(t, 2, htmlDoc.Find(".admin-setting-content table tbody tr td:nth-child(6) .octicon-check").Length())
+
+		// account type 5 is for remote users (eg. users from the federation)
+		req = NewRequest(t, "GET", "/admin/users?status_filter[account_type]=5")
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc = NewHTMLParser(t, resp.Body)
+
+		// Only one user (id 42) is a remote user
+		assert.Equal(t, 1, htmlDoc.Find("table tbody tr").Length())
+	})
+
+	t.Run("Normal user", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		session := loginUser(t, "user2")
+		req := NewRequest(t, "GET", "/admin/users")
+		session.MakeRequest(t, req, http.StatusForbidden)
+	})
+
+	t.Run("Anonymous user", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/admin/users")
+		MakeRequest(t, req, http.StatusSeeOther)
+	})
 }
 
 func TestAdminViewUser(t *testing.T) {
@@ -50,18 +80,61 @@ func TestAdminViewUser(t *testing.T) {
 func TestAdminEditUser(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	testSuccessfullEdit(t, user_model.User{ID: 2, Name: "newusername", LoginName: "otherlogin", Email: "new@e-mail.gitea"})
+	testSuccessfulEdit(t, user_model.User{ID: 2, Name: "newusername", LoginName: "otherlogin", Email: "new@e-mail.gitea"})
 }
 
-func testSuccessfullEdit(t *testing.T, formData user_model.User) {
+func TestAdminEditUserHideEmail(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user1")
+	userID := int64(2) // user2 from fixtures
+
+	// Test setting hide_email to false
+	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/admin/users/%d/edit", userID), map[string]string{
+		"user_name":  "user2",
+		"login_name": "user2",
+		"login_type": "0-0",
+		"email":      "user2@example.com",
+		"hide_email": "false",
+	})
+	session.MakeRequest(t, req, http.StatusSeeOther)
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
+	assert.False(t, user.KeepEmailPrivate)
+
+	// Verify the form now loads with hide_email not checked
+	req = NewRequest(t, "GET", fmt.Sprintf("/admin/users/%d/edit", userID))
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertElement(t, `input[name="hide_email"]:not([checked])`, true)
+
+	// Test setting hide_email to true
+	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/admin/users/%d/edit", userID), map[string]string{
+		"user_name":  "user2",
+		"login_name": "user2",
+		"login_type": "0-0",
+		"email":      "user2@example.com",
+		"hide_email": "true",
+	})
+	session.MakeRequest(t, req, http.StatusSeeOther)
+
+	user = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
+	assert.True(t, user.KeepEmailPrivate)
+
+	// Verify the form loads with hide_email checked
+	req = NewRequest(t, "GET", fmt.Sprintf("/admin/users/%d/edit", userID))
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertElement(t, `input[name="hide_email"][checked]`, true)
+}
+
+func testSuccessfulEdit(t *testing.T, formData user_model.User) {
 	makeRequest(t, formData, http.StatusSeeOther)
 }
 
 func makeRequest(t *testing.T, formData user_model.User, headerCode int) {
 	session := loginUser(t, "user1")
-	csrf := GetCSRF(t, session, "/admin/users/"+strconv.Itoa(int(formData.ID))+"/edit")
 	req := NewRequestWithValues(t, "POST", "/admin/users/"+strconv.Itoa(int(formData.ID))+"/edit", map[string]string{
-		"_csrf":      csrf,
 		"user_name":  formData.Name,
 		"login_name": formData.LoginName,
 		"login_type": "0-0",
@@ -76,7 +149,7 @@ func makeRequest(t *testing.T, formData user_model.User, headerCode int) {
 }
 
 func TestAdminDeleteUser(t *testing.T) {
-	defer tests.AddFixtures("tests/integration/fixtures/TestAdminDeleteUser/")()
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAdminDeleteUser")()
 	defer tests.PrepareTestEnv(t)()
 
 	session := loginUser(t, "user1")
@@ -85,9 +158,7 @@ func TestAdminDeleteUser(t *testing.T) {
 
 	unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{PosterID: userID})
 
-	csrf := GetCSRF(t, session, fmt.Sprintf("/admin/users/%d/edit", userID))
 	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/admin/users/%d/delete", userID), map[string]string{
-		"_csrf": csrf,
 		"purge": "true",
 	})
 	session.MakeRequest(t, req, http.StatusSeeOther)
@@ -108,7 +179,7 @@ func TestSourceId(t *testing.T) {
 		LoginType:   auth_model.Plain,
 		LoginSource: 23,
 	}
-	defer createUser(context.Background(), t, testUser23)()
+	defer createUser(t.Context(), t, testUser23)()
 
 	session := loginUser(t, "user1")
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadAdmin)
@@ -126,7 +197,7 @@ func TestSourceId(t *testing.T) {
 	resp = session.MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &users)
 	assert.Len(t, users, 1)
-	assert.Equal(t, "the_34-user.with.all.allowedChars", users[0].UserName)
+	assert.Equal(t, "federated-example.net", users[0].UserName)
 
 	// Now our new user should be in the list, because we filter by source_id 23
 	req = NewRequest(t, "GET", "/api/v1/admin/users?limit=1&source_id=23").AddTokenAuth(token)
@@ -140,7 +211,7 @@ func TestAdminViewUsersSorted(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	createTimestamp := time.Now().Unix() - 1000
 	updateTimestamp := time.Now().Unix() - 500
-	sess := db.GetEngine(context.Background())
+	sess := db.GetEngine(t.Context())
 
 	// Create 10 users with login source 44
 	for i := int64(1); i <= 10; i++ {
@@ -170,9 +241,9 @@ func TestAdminViewUsersSorted(t *testing.T) {
 		sortType      string
 		expectedUsers []string
 	}{
-		{0, "alphabetically", []string{"the_34-user.with.all.allowedChars", "user1", "user10", "user11"}},
+		{0, "alphabetically", []string{"federated-example.net", "the_34-user.with.all.allowedChars", "user1", "user10"}},
 		{0, "reversealphabetically", []string{"user9", "user8", "user5", "user40"}},
-		{0, "newest", []string{"user40", "user39", "user38", "user37"}},
+		{0, "newest", []string{"federated-example.net", "user40", "user39", "user38"}},
 		{0, "oldest", []string{"user1", "user2", "user4", "user5"}},
 		{44, "recentupdate", []string{"sorttest1", "sorttest2", "sorttest3", "sorttest4"}},
 		{44, "leastupdate", []string{"sorttest10", "sorttest9", "sorttest8", "sorttest7"}},

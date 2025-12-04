@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/timeutil"
+	activities_model "forgejo.org/models/activities"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/timeutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,6 +54,10 @@ func TestGetUserHeatmapDataByUser(t *testing.T) {
 			"multiple actions performed with two grouped together",
 			10, 10, 3, `[{"timestamp":1603009800,"contributions":1},{"timestamp":1603010700,"contributions":2}]`,
 		},
+		{
+			"test cutoff within",
+			40, 40, 1, `[{"timestamp":1577404800,"contributions":1}]`,
+		},
 	}
 	// Prepare
 	require.NoError(t, unittest.PrepareTestDatabase())
@@ -78,7 +82,6 @@ func TestGetUserHeatmapDataByUser(t *testing.T) {
 			Actor:           doer,
 			IncludePrivate:  true,
 			OnlyPerformedBy: true,
-			IncludeDeleted:  true,
 		})
 		require.NoError(t, err)
 

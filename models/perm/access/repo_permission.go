@@ -7,13 +7,14 @@ import (
 	"context"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/organization"
-	perm_model "code.gitea.io/gitea/models/perm"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
+	perm_model "forgejo.org/models/perm"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
 )
 
 // Permission contains all the permissions related variables to a repository for a user
@@ -134,6 +135,33 @@ func (p *Permission) LogString() string {
 	}
 	format += " ]>"
 	return fmt.Sprintf(format, args...)
+}
+
+func GetActionRepoPermission(ctx context.Context, repo *repo_model.Repository, task *actions_model.ActionTask) (Permission, error) {
+	// straight forward case: an actions task is attempting to access its own repo
+	if task.RepoID == repo.ID {
+		var mode perm_model.AccessMode
+
+		// determine default access mode for repo:
+		if task.IsForkPullRequest {
+			mode = perm_model.AccessModeRead
+		} else {
+			mode = perm_model.AccessModeWrite
+		}
+
+		if err := repo.LoadUnits(ctx); err != nil {
+			return Permission{}, err
+		}
+
+		perm := Permission{
+			AccessMode: mode,
+			Units:      repo.Units,
+		}
+
+		return perm, nil
+	}
+
+	return GetUserRepoPermission(ctx, repo, user_model.NewActionsUser())
 }
 
 // GetUserRepoPermission returns the user permissions to the repository

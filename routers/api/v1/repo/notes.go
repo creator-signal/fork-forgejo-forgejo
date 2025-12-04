@@ -4,14 +4,15 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
-	"code.gitea.io/gitea/modules/git"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/web"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
+	"forgejo.org/modules/git"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
 )
 
 // GetNote Get a note corresponding to a single commit from a repository
@@ -63,7 +64,7 @@ func GetNote(ctx *context.APIContext) {
 
 func getNote(ctx *context.APIContext, identifier string) {
 	if ctx.Repo.GitRepo == nil {
-		ctx.InternalServerError(fmt.Errorf("no open git repo"))
+		ctx.InternalServerError(errors.New("no open git repo"))
 		return
 	}
 
@@ -77,8 +78,8 @@ func getNote(ctx *context.APIContext, identifier string) {
 		return
 	}
 
-	var note git.Note
-	if err := git.GetNote(ctx, ctx.Repo.GitRepo, commitID.String(), &note); err != nil {
+	note, err := git.GetNote(ctx, ctx.Repo.GitRepo, commitID.String())
+	if err != nil {
 		if git.IsErrNotExist(err) {
 			ctx.NotFound(identifier)
 			return

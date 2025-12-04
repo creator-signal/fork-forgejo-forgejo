@@ -5,20 +5,21 @@ package issues
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	git_model "code.gitea.io/gitea/models/git"
-	"code.gitea.io/gitea/models/organization"
-	"code.gitea.io/gitea/models/perm"
-	access_model "code.gitea.io/gitea/models/perm/access"
-	"code.gitea.io/gitea/models/unit"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
+	"forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
@@ -349,7 +350,7 @@ func CreateReview(ctx context.Context, opts CreateReviewOptions) (*Review, error
 		review.Type = ReviewTypeRequest
 		review.ReviewerTeamID = opts.ReviewerTeam.ID
 	} else {
-		return nil, fmt.Errorf("provide either reviewer or reviewer team")
+		return nil, errors.New("provide either reviewer or reviewer team")
 	}
 
 	if _, err := sess.Insert(review); err != nil {
@@ -614,6 +615,10 @@ func InsertReviews(ctx context.Context, reviews []*Review) error {
 				return err
 			}
 		}
+
+		if err := UpdateIssueNumComments(ctx, review.IssueID); err != nil {
+			return err
+		}
 	}
 
 	return committer.Commit()
@@ -776,10 +781,6 @@ func AddTeamReviewRequest(ctx context.Context, issue *Issue, reviewer *organizat
 	official, err := IsOfficialReviewerTeam(ctx, issue, reviewer)
 	if err != nil {
 		return nil, fmt.Errorf("isOfficialReviewerTeam(): %w", err)
-	} else if !official {
-		if official, err = IsOfficialReviewer(ctx, issue, doer); err != nil {
-			return nil, fmt.Errorf("isOfficialReviewer(): %w", err)
-		}
 	}
 
 	if review, err = CreateReview(ctx, CreateReviewOptions{
@@ -790,12 +791,6 @@ func AddTeamReviewRequest(ctx context.Context, issue *Issue, reviewer *organizat
 		Stale:        false,
 	}); err != nil {
 		return nil, err
-	}
-
-	if official {
-		if _, err := db.Exec(ctx, "UPDATE `review` SET official=? WHERE issue_id=? AND reviewer_team_id=?", false, issue.ID, reviewer.ID); err != nil {
-			return nil, err
-		}
 	}
 
 	comment, err := CreateComment(ctx, &CreateCommentOptions{
@@ -904,7 +899,7 @@ func MarkConversation(ctx context.Context, comment *Comment, doer *user_model.Us
 // the PR writer , offfcial reviewer and poster can do it
 func CanMarkConversation(ctx context.Context, issue *Issue, doer *user_model.User) (permResult bool, err error) {
 	if doer == nil || issue == nil {
-		return false, fmt.Errorf("issue or doer is nil")
+		return false, errors.New("issue or doer is nil")
 	}
 
 	if doer.ID != issue.PosterID {
@@ -941,11 +936,11 @@ func DeleteReview(ctx context.Context, r *Review) error {
 	defer committer.Close()
 
 	if r.ID == 0 {
-		return fmt.Errorf("review is not allowed to be 0")
+		return errors.New("review is not allowed to be 0")
 	}
 
 	if r.Type == ReviewTypeRequest {
-		return fmt.Errorf("review request can not be deleted using this method")
+		return errors.New("review request can not be deleted using this method")
 	}
 
 	opts := FindCommentsOptions{

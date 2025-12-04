@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"code.gitea.io/gitea/models/db"
-	"code.gitea.io/gitea/models/perm"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/structs"
+	"forgejo.org/models/db"
+	"forgejo.org/models/perm"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/structs"
 
 	"xorm.io/builder"
 )
@@ -26,6 +26,7 @@ type SearchOrganizationsOptions struct {
 type FindOrgOptions struct {
 	db.ListOptions
 	UserID         int64
+	IncludeLimited bool
 	IncludePrivate bool
 }
 
@@ -43,7 +44,11 @@ func (opts FindOrgOptions) ToConds() builder.Cond {
 		cond = cond.And(builder.In("`user`.`id`", queryUserOrgIDs(opts.UserID, opts.IncludePrivate)))
 	}
 	if !opts.IncludePrivate {
-		cond = cond.And(builder.Eq{"`user`.visibility": structs.VisibleTypePublic})
+		if !opts.IncludeLimited {
+			cond = cond.And(builder.Eq{"`user`.visibility": structs.VisibleTypePublic})
+		} else {
+			cond = cond.And(builder.In("`user`.visibility", structs.VisibleTypePublic, structs.VisibleTypeLimited))
+		}
 	}
 	return cond
 }
@@ -66,11 +71,8 @@ func GetOrgsCanCreateRepoByUserID(ctx context.Context, userID int64) ([]*Organiz
 		Find(&orgs)
 }
 
-// MinimalOrg represents a simple organization with only the needed columns
-type MinimalOrg = Organization
-
 // GetUserOrgsList returns all organizations the given user has access to
-func GetUserOrgsList(ctx context.Context, user *user_model.User) ([]*MinimalOrg, error) {
+func GetUserOrgsList(ctx context.Context, user *user_model.User) ([]*Organization, error) {
 	schema, err := db.TableInfo(new(user_model.User))
 	if err != nil {
 		return nil, err
@@ -95,10 +97,11 @@ func GetUserOrgsList(ctx context.Context, user *user_model.User) ([]*MinimalOrg,
 	}
 	columnsStr := selectColumns.String()
 
-	var orgs []*MinimalOrg
+	var orgs []*Organization
 	if err := db.GetEngine(ctx).Select(columnsStr).
 		Table("user").
 		Where(builder.In("`user`.`id`", queryUserOrgIDs(user.ID, true))).
+		OrderBy("`user`.lower_name ASC").
 		Find(&orgs); err != nil {
 		return nil, err
 	}
@@ -132,6 +135,7 @@ func GetUserOrgsList(ctx context.Context, user *user_model.User) ([]*MinimalOrg,
 
 	for _, org := range orgs {
 		org.NumRepos = orgCountMap[org.ID]
+		org.Type = user_model.UserTypeOrganization
 	}
 
 	return orgs, nil

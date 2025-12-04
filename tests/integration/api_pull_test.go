@@ -1,28 +1,30 @@
 // Copyright 2017 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
 
 import (
+	"cmp"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/setting"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/services/forms"
-	issue_service "code.gitea.io/gitea/services/issue"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/forms"
+	issue_service "forgejo.org/services/issue"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,38 +33,149 @@ import (
 func TestAPIViewPulls(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
-	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
 
 	ctx := NewAPITestContext(t, "user2", repo.Name, auth_model.AccessTokenScopeReadRepository)
 
-	req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/pulls?state=all", owner.Name, repo.Name).
-		AddTokenAuth(ctx.Token)
+	req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/pulls?state=all", repo.OwnerName, repo.Name).AddTokenAuth(ctx.Token)
 	resp := ctx.Session.MakeRequest(t, req, http.StatusOK)
 
 	var pulls []*api.PullRequest
 	DecodeJSON(t, resp, &pulls)
-	expectedLen := unittest.GetCount(t, &issues_model.Issue{RepoID: repo.ID}, unittest.Cond("is_pull = ?", true))
-	assert.Len(t, pulls, expectedLen)
+	if assert.Len(t, pulls, 3) {
+		slices.SortFunc(pulls, func(a, b *api.PullRequest) int {
+			return cmp.Compare(a.ID, b.ID)
+		})
 
-	pull := pulls[0]
-	if assert.EqualValues(t, 5, pull.ID) {
-		resp = ctx.Session.MakeRequest(t, NewRequest(t, "GET", pull.DiffURL), http.StatusOK)
-		_, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		// TODO: use diff to generate stats to test against
+		assert.EqualValues(t, 1, pulls[0].ID)
+		assert.EqualValues(t, 2, pulls[0].Index)
 
-		t.Run(fmt.Sprintf("APIGetPullFiles_%d", pull.ID),
-			doAPIGetPullFiles(ctx, pull, func(t *testing.T, files []*api.ChangedFile) {
-				if assert.Len(t, files, 1) {
-					assert.Equal(t, "File-WoW", files[0].Filename)
-					assert.Empty(t, files[0].PreviousFilename)
-					assert.EqualValues(t, 1, files[0].Additions)
-					assert.EqualValues(t, 1, files[0].Changes)
-					assert.EqualValues(t, 0, files[0].Deletions)
-					assert.Equal(t, "added", files[0].Status)
-				}
-			}))
+		assert.EqualValues(t, 2, pulls[1].ID)
+		assert.EqualValues(t, 3, pulls[1].Index)
+
+		assert.EqualValues(t, 5, pulls[2].ID)
+		assert.EqualValues(t, 5, pulls[2].Index)
 	}
+}
+
+func TestAPIPullsFiles(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	ctx := NewAPITestContext(t, "user2", repo.Name, auth_model.AccessTokenScopeReadRepository)
+
+	t.Run("Pull 1", func(t *testing.T) {
+		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/pulls/2/files", repo.OwnerName, repo.Name).AddTokenAuth(ctx.Token)
+		resp := ctx.Session.MakeRequest(t, req, http.StatusOK)
+
+		var changedFiles []*api.ChangedFile
+		DecodeJSON(t, resp, &changedFiles)
+
+		assert.Empty(t, changedFiles)
+		assert.Equal(t, "0", resp.Header().Get("X-Total-Count"))
+		assert.Equal(t, "false", resp.Header().Get("X-HasMore"))
+	})
+
+	t.Run("Pull 2", func(t *testing.T) {
+		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/pulls/3/files", repo.OwnerName, repo.Name).AddTokenAuth(ctx.Token)
+		resp := ctx.Session.MakeRequest(t, req, http.StatusOK)
+
+		var changedFiles []*api.ChangedFile
+		DecodeJSON(t, resp, &changedFiles)
+
+		if assert.Len(t, changedFiles, 2) {
+			assert.Equal(t, "2", resp.Header().Get("X-Total-Count"))
+			assert.Equal(t, "false", resp.Header().Get("X-HasMore"))
+
+			assert.Equal(t, "3", changedFiles[0].Filename)
+			assert.Empty(t, changedFiles[0].PreviousFilename)
+			assert.Equal(t, "added", changedFiles[0].Status)
+			assert.Equal(t, 1, changedFiles[0].Changes)
+			assert.Equal(t, 1, changedFiles[0].Additions)
+			assert.Equal(t, 0, changedFiles[0].Deletions)
+			assert.Equal(t, setting.AppURL+"api/v1/repos/user2/repo1/contents/3?ref=5f22f7d0d95d614d25a5b68592adb345a4b5c7fd", changedFiles[0].ContentsURL)
+			assert.Equal(t, setting.AppURL+"user2/repo1/raw/commit/5f22f7d0d95d614d25a5b68592adb345a4b5c7fd/3", changedFiles[0].RawURL)
+			assert.Equal(t, setting.AppURL+"user2/repo1/src/commit/5f22f7d0d95d614d25a5b68592adb345a4b5c7fd/3", changedFiles[0].HTMLURL)
+
+			assert.Equal(t, "iso-8859-1.txt", changedFiles[1].Filename)
+			assert.Empty(t, changedFiles[1].PreviousFilename)
+			assert.Equal(t, "added", changedFiles[1].Status)
+			assert.Equal(t, 10, changedFiles[1].Changes)
+			assert.Equal(t, 10, changedFiles[1].Additions)
+			assert.Equal(t, 0, changedFiles[1].Deletions)
+			assert.Equal(t, setting.AppURL+"api/v1/repos/user2/repo1/contents/iso-8859-1.txt?ref=5f22f7d0d95d614d25a5b68592adb345a4b5c7fd", changedFiles[1].ContentsURL)
+			assert.Equal(t, setting.AppURL+"user2/repo1/raw/commit/5f22f7d0d95d614d25a5b68592adb345a4b5c7fd/iso-8859-1.txt", changedFiles[1].RawURL)
+			assert.Equal(t, setting.AppURL+"user2/repo1/src/commit/5f22f7d0d95d614d25a5b68592adb345a4b5c7fd/iso-8859-1.txt", changedFiles[1].HTMLURL)
+		}
+	})
+
+	t.Run("Pull 5", func(t *testing.T) {
+		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/pulls/5/files", repo.OwnerName, repo.Name).AddTokenAuth(ctx.Token)
+		resp := ctx.Session.MakeRequest(t, req, http.StatusOK)
+
+		var changedFiles []*api.ChangedFile
+		DecodeJSON(t, resp, &changedFiles)
+
+		if assert.Len(t, changedFiles, 1) {
+			assert.Equal(t, "1", resp.Header().Get("X-Total-Count"))
+			assert.Equal(t, "false", resp.Header().Get("X-HasMore"))
+
+			assert.Equal(t, "File-WoW", changedFiles[0].Filename)
+			assert.Empty(t, changedFiles[0].PreviousFilename)
+			assert.Equal(t, "added", changedFiles[0].Status)
+			assert.Equal(t, 1, changedFiles[0].Changes)
+			assert.Equal(t, 1, changedFiles[0].Additions)
+			assert.Equal(t, 0, changedFiles[0].Deletions)
+			assert.Equal(t, setting.AppURL+"api/v1/repos/user2/repo1/contents/File-WoW?ref=62fb502a7172d4453f0322a2cc85bddffa57f07a", changedFiles[0].ContentsURL)
+			assert.Equal(t, setting.AppURL+"user2/repo1/raw/commit/62fb502a7172d4453f0322a2cc85bddffa57f07a/File-WoW", changedFiles[0].RawURL)
+			assert.Equal(t, setting.AppURL+"user2/repo1/src/commit/62fb502a7172d4453f0322a2cc85bddffa57f07a/File-WoW", changedFiles[0].HTMLURL)
+		}
+	})
+
+	t.Run("Pull 7", func(t *testing.T) {
+		req := NewRequest(t, "GET", "/api/v1/repos/user2/commitsonpr/pulls/1/files?limit=3").AddTokenAuth(ctx.Token)
+		resp := ctx.Session.MakeRequest(t, req, http.StatusOK)
+
+		var changedFiles []*api.ChangedFile
+		DecodeJSON(t, resp, &changedFiles)
+
+		if assert.Len(t, changedFiles, 3) {
+			assert.Equal(t, "10", resp.Header().Get("X-Total-Count"))
+			assert.Equal(t, "true", resp.Header().Get("X-HasMore"))
+			assert.Equal(t, "1", resp.Header().Get("X-Page"))
+			assert.Equal(t, "3", resp.Header().Get("X-PerPage"))
+			assert.Equal(t, "4", resp.Header().Get("X-PageCount"))
+
+			assert.Equal(t, "test1.txt", changedFiles[0].Filename)
+			assert.Empty(t, changedFiles[0].PreviousFilename)
+			assert.Equal(t, "added", changedFiles[0].Status)
+			assert.Equal(t, 1, changedFiles[0].Changes)
+			assert.Equal(t, 1, changedFiles[0].Additions)
+			assert.Equal(t, 0, changedFiles[0].Deletions)
+			assert.Equal(t, setting.AppURL+"api/v1/repos/user2/commitsonpr/contents/test1.txt?ref=9b93963cf6de4dc33f915bb67f192d099c301f43", changedFiles[0].ContentsURL)
+			assert.Equal(t, setting.AppURL+"user2/commitsonpr/raw/commit/9b93963cf6de4dc33f915bb67f192d099c301f43/test1.txt", changedFiles[0].RawURL)
+			assert.Equal(t, setting.AppURL+"user2/commitsonpr/src/commit/9b93963cf6de4dc33f915bb67f192d099c301f43/test1.txt", changedFiles[0].HTMLURL)
+
+			assert.Equal(t, "test10.txt", changedFiles[1].Filename)
+			assert.Empty(t, changedFiles[1].PreviousFilename)
+			assert.Equal(t, "added", changedFiles[1].Status)
+			assert.Equal(t, 1, changedFiles[1].Changes)
+			assert.Equal(t, 1, changedFiles[1].Additions)
+			assert.Equal(t, 0, changedFiles[1].Deletions)
+			assert.Equal(t, setting.AppURL+"api/v1/repos/user2/commitsonpr/contents/test10.txt?ref=9b93963cf6de4dc33f915bb67f192d099c301f43", changedFiles[1].ContentsURL)
+			assert.Equal(t, setting.AppURL+"user2/commitsonpr/raw/commit/9b93963cf6de4dc33f915bb67f192d099c301f43/test10.txt", changedFiles[1].RawURL)
+			assert.Equal(t, setting.AppURL+"user2/commitsonpr/src/commit/9b93963cf6de4dc33f915bb67f192d099c301f43/test10.txt", changedFiles[1].HTMLURL)
+
+			assert.Equal(t, "test2.txt", changedFiles[2].Filename)
+			assert.Empty(t, changedFiles[2].PreviousFilename)
+			assert.Equal(t, "added", changedFiles[2].Status)
+			assert.Equal(t, 1, changedFiles[2].Changes)
+			assert.Equal(t, 1, changedFiles[2].Additions)
+			assert.Equal(t, 0, changedFiles[2].Deletions)
+			assert.Equal(t, setting.AppURL+"api/v1/repos/user2/commitsonpr/contents/test2.txt?ref=9b93963cf6de4dc33f915bb67f192d099c301f43", changedFiles[2].ContentsURL)
+			assert.Equal(t, setting.AppURL+"user2/commitsonpr/raw/commit/9b93963cf6de4dc33f915bb67f192d099c301f43/test2.txt", changedFiles[2].RawURL)
+			assert.Equal(t, setting.AppURL+"user2/commitsonpr/src/commit/9b93963cf6de4dc33f915bb67f192d099c301f43/test2.txt", changedFiles[2].HTMLURL)
+		}
+	})
 }
 
 func TestAPIViewPullsByBaseHead(t *testing.T) {
@@ -126,8 +239,13 @@ func TestAPICreatePullSuccess(t *testing.T) {
 		Base:  "master",
 		Title: "create a failure pr",
 	}).AddTokenAuth(token)
-	MakeRequest(t, req, http.StatusCreated)
+	res := MakeRequest(t, req, http.StatusCreated)
 	MakeRequest(t, req, http.StatusUnprocessableEntity) // second request should fail
+
+	pull := new(api.PullRequest)
+	DecodeJSON(t, res, pull)
+
+	assert.Equal(t, "65f1bf27bc3bf70f64657658635e66094edbcb4d", pull.MergeBase)
 }
 
 func TestAPICreatePullSameRepoSuccess(t *testing.T) {
@@ -143,8 +261,13 @@ func TestAPICreatePullSameRepoSuccess(t *testing.T) {
 		Base:  "master",
 		Title: "successfully create a PR between branches of the same repository",
 	}).AddTokenAuth(token)
-	MakeRequest(t, req, http.StatusCreated)
+	res := MakeRequest(t, req, http.StatusCreated)
 	MakeRequest(t, req, http.StatusUnprocessableEntity) // second request should fail
+
+	pull := new(api.PullRequest)
+	DecodeJSON(t, res, pull)
+
+	assert.Equal(t, "65f1bf27bc3bf70f64657658635e66094edbcb4d", pull.MergeBase)
 }
 
 func TestAPICreatePullWithFieldsSuccess(t *testing.T) {
@@ -177,12 +300,12 @@ func TestAPICreatePullWithFieldsSuccess(t *testing.T) {
 	DecodeJSON(t, res, pull)
 
 	assert.NotNil(t, pull.Milestone)
-	assert.EqualValues(t, opts.Milestone, pull.Milestone.ID)
+	assert.Equal(t, opts.Milestone, pull.Milestone.ID)
 	if assert.Len(t, pull.Assignees, 1) {
-		assert.EqualValues(t, opts.Assignees[0], owner10.Name)
+		assert.Equal(t, opts.Assignees[0], owner10.Name)
 	}
 	assert.NotNil(t, pull.Labels)
-	assert.EqualValues(t, opts.Labels[0], pull.Labels[0].ID)
+	assert.Equal(t, opts.Labels[0], pull.Labels[0].ID)
 }
 
 func TestAPICreatePullWithFieldsFailure(t *testing.T) {
@@ -236,7 +359,7 @@ func TestAPIEditPull(t *testing.T) {
 	apiPull := new(api.PullRequest)
 	resp := MakeRequest(t, req, http.StatusCreated)
 	DecodeJSON(t, resp, apiPull)
-	assert.EqualValues(t, "master", apiPull.Base.Name)
+	assert.Equal(t, "master", apiPull.Base.Name)
 
 	newTitle := "edit a this pr"
 	newBody := "edited body"
@@ -248,7 +371,7 @@ func TestAPIEditPull(t *testing.T) {
 	}).AddTokenAuth(token)
 	resp = MakeRequest(t, req, http.StatusCreated)
 	DecodeJSON(t, resp, apiPull)
-	assert.EqualValues(t, "feature/1", apiPull.Base.Name)
+	assert.Equal(t, "feature/1", apiPull.Base.Name)
 	// check comment history
 	pull := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: apiPull.ID})
 	err := pull.LoadIssue(db.DefaultContext)
@@ -264,7 +387,7 @@ func TestAPIEditPull(t *testing.T) {
 	apiPullIdempotent := new(api.PullRequest)
 	resp = MakeRequest(t, req, http.StatusCreated)
 	DecodeJSON(t, resp, apiPullIdempotent)
-	assert.EqualValues(t, apiPull.State, apiPullIdempotent.State)
+	assert.Equal(t, apiPull.State, apiPullIdempotent.State)
 
 	req = NewRequestWithJSON(t, http.MethodPatch, urlStr, &api.EditPullRequestOption{
 		Base: "not-exist",
@@ -295,33 +418,14 @@ func TestAPIForkDifferentName(t *testing.T) {
 	MakeRequest(t, req, http.StatusCreated)
 }
 
-func doAPIGetPullFiles(ctx APITestContext, pr *api.PullRequest, callback func(*testing.T, []*api.ChangedFile)) func(*testing.T) {
-	return func(t *testing.T) {
-		req := NewRequest(t, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/files", ctx.Username, ctx.Reponame, pr.Index)).
-			AddTokenAuth(ctx.Token)
-		if ctx.ExpectedCode == 0 {
-			ctx.ExpectedCode = http.StatusOK
-		}
-		resp := ctx.Session.MakeRequest(t, req, ctx.ExpectedCode)
-
-		files := make([]*api.ChangedFile, 0, 1)
-		DecodeJSON(t, resp, &files)
-
-		if callback != nil {
-			callback(t, files)
-		}
-	}
-}
-
 func TestAPIPullDeleteBranchPerms(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		user2Session := loginUser(t, "user2")
 		user4Session := loginUser(t, "user4")
 		testRepoFork(t, user4Session, "user2", "repo1", "user4", "repo1")
 		testEditFileToNewBranch(t, user2Session, "user2", "repo1", "master", "base-pr", "README.md", "Hello, World\n(Edited - base PR)\n")
 
 		req := NewRequestWithValues(t, "POST", "/user4/repo1/compare/master...user2/repo1:base-pr", map[string]string{
-			"_csrf": GetCSRF(t, user4Session, "/user4/repo1/compare/master...user2/repo1:base-pr"),
 			"title": "Testing PR",
 		})
 		resp := user4Session.MakeRequest(t, req, http.StatusOK)
@@ -340,7 +444,7 @@ func TestAPIPullDeleteBranchPerms(t *testing.T) {
 		var bodyResp userResponse
 		DecodeJSON(t, resp, &bodyResp)
 
-		assert.EqualValues(t, "insufficient permission to delete head branch", bodyResp.Message)
+		assert.Equal(t, "insufficient permission to delete head branch", bodyResp.Message)
 
 		// Check that the branch still exist.
 		req = NewRequest(t, "GET", "/api/v1/repos/user2/repo1/branches/base-pr").AddTokenAuth(token)

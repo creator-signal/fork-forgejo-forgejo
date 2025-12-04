@@ -6,16 +6,16 @@ package actions
 import (
 	"testing"
 
-	actions_model "code.gitea.io/gitea/models/actions"
-	"code.gitea.io/gitea/models/db"
-	unittest "code.gitea.io/gitea/models/unittest"
+	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	unittest_model "forgejo.org/models/unittest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_loadIsRefDeleted(t *testing.T) {
-	unittest.PrepareTestEnv(t)
+	unittest_model.PrepareTestEnv(t)
 
 	runs, total, err := db.FindAndCount[actions_model.ActionRun](db.DefaultContext,
 		actions_model.FindRunOptions{RepoID: 4, Ref: "refs/heads/test"})

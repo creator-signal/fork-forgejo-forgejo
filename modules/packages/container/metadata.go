@@ -8,9 +8,9 @@ import (
 	"io"
 	"strings"
 
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/packages/container/helm"
-	"code.gitea.io/gitea/modules/validation"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/packages/container/helm"
+	"forgejo.org/modules/validation"
 
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -84,6 +84,13 @@ func ParseImageConfig(mt string, r io.Reader) (*Metadata, error) {
 func parseOCIImageConfig(r io.Reader) (*Metadata, error) {
 	var image oci.Image
 	if err := json.NewDecoder(r).Decode(&image); err != nil {
+		// Handle empty config blobs (common in OCI artifacts)
+		if err == io.EOF {
+			return &Metadata{
+				Type:     TypeOCI,
+				Platform: DefaultPlatform,
+			}, nil
+		}
 		return nil, err
 	}
 

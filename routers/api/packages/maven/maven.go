@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -19,14 +20,15 @@ import (
 	"strconv"
 	"strings"
 
-	packages_model "code.gitea.io/gitea/models/packages"
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
-	packages_module "code.gitea.io/gitea/modules/packages"
-	maven_module "code.gitea.io/gitea/modules/packages/maven"
-	"code.gitea.io/gitea/routers/api/packages/helper"
-	"code.gitea.io/gitea/services/context"
-	packages_service "code.gitea.io/gitea/services/packages"
+	packages_model "forgejo.org/models/packages"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
+	packages_module "forgejo.org/modules/packages"
+	maven_module "forgejo.org/modules/packages/maven"
+	"forgejo.org/modules/sync"
+	"forgejo.org/routers/api/packages/helper"
+	"forgejo.org/services/context"
+	packages_service "forgejo.org/services/packages"
 )
 
 const (
@@ -60,6 +62,12 @@ func apiError(ctx *context.Context, status int, obj any) {
 	})
 }
 
+// buildPackageID creates a package ID from group and artifact ID
+// Refer to https://maven.apache.org/pom.html#Maven_Coordinates
+func buildPackageID(groupID, artifactID string) string {
+	return fmt.Sprintf("%s:%s", groupID, artifactID)
+}
+
 // DownloadPackageFile serves the content of a package
 func DownloadPackageFile(ctx *context.Context) {
 	handlePackageFile(ctx, true)
@@ -87,7 +95,7 @@ func handlePackageFile(ctx *context.Context, serveContent bool) {
 func serveMavenMetadata(ctx *context.Context, params parameters) {
 	// /com/foo/project/maven-metadata.xml[.md5/.sha1/.sha256/.sha512]
 
-	packageName := params.GroupID + "-" + params.ArtifactID
+	packageName := buildPackageID(params.GroupID, params.ArtifactID)
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypeMaven, packageName)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
@@ -118,8 +126,8 @@ func serveMavenMetadata(ctx *context.Context, params parameters) {
 
 	latest := pds[len(pds)-1]
 	// http.TimeFormat required a UTC time, refer to https://pkg.go.dev/net/http#TimeFormat
-	lastModifed := latest.Version.CreatedUnix.AsTime().UTC().Format(http.TimeFormat)
-	ctx.Resp.Header().Set("Last-Modified", lastModifed)
+	lastModified := latest.Version.CreatedUnix.AsTime().UTC().Format(http.TimeFormat)
+	ctx.Resp.Header().Set("Last-Modified", lastModified)
 
 	ext := strings.ToLower(filepath.Ext(params.Filename))
 	if isChecksumExtension(ext) {
@@ -149,7 +157,7 @@ func serveMavenMetadata(ctx *context.Context, params parameters) {
 }
 
 func servePackageFile(ctx *context.Context, params parameters, serveContent bool) {
-	packageName := params.GroupID + "-" + params.ArtifactID
+	packageName := buildPackageID(params.GroupID, params.ArtifactID)
 
 	pv, err := packages_model.GetVersionByNameAndVersion(ctx, ctx.Package.Owner.ID, packages_model.TypeMaven, packageName, params.Version)
 	if err != nil {
@@ -168,9 +176,9 @@ func servePackageFile(ctx *context.Context, params parameters, serveContent bool
 		filename = filename[:len(filename)-len(ext)]
 	}
 
-	pf, err := packages_model.GetFileForVersionByName(ctx, pv.ID, filename, packages_model.EmptyFileKey)
+	pf, err := packages_model.GetFileForVersionByNameMatchCase(ctx, pv.ID, filename, packages_model.EmptyFileKey)
 	if err != nil {
-		if err == packages_model.ErrPackageFileNotExist {
+		if errors.Is(err, packages_model.ErrPackageFileNotExist) {
 			apiError(ctx, http.StatusNotFound, err)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -228,6 +236,8 @@ func servePackageFile(ctx *context.Context, params parameters, serveContent bool
 	helper.ServePackageFile(ctx, s, u, pf, opts)
 }
 
+var mavenUploadLock = sync.NewExclusivePool()
+
 // UploadPackageFile adds a file to the package. If the package does not exist, it gets created.
 func UploadPackageFile(ctx *context.Context) {
 	params, err := extractPathParameters(ctx)
@@ -244,7 +254,10 @@ func UploadPackageFile(ctx *context.Context) {
 		return
 	}
 
-	packageName := params.GroupID + "-" + params.ArtifactID
+	packageName := buildPackageID(params.GroupID, params.ArtifactID)
+
+	mavenUploadLock.CheckIn(packageName)
+	defer mavenUploadLock.CheckOut(packageName)
 
 	buf, err := packages_module.CreateHashedBufferFromReader(ctx.Req.Body)
 	if err != nil {
@@ -277,9 +290,9 @@ func UploadPackageFile(ctx *context.Context) {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
 		}
-		pf, err := packages_model.GetFileForVersionByName(ctx, pv.ID, params.Filename[:len(params.Filename)-len(ext)], packages_model.EmptyFileKey)
+		pf, err := packages_model.GetFileForVersionByNameMatchCase(ctx, pv.ID, params.Filename[:len(params.Filename)-len(ext)], packages_model.EmptyFileKey)
 		if err != nil {
-			if err == packages_model.ErrPackageFileNotExist {
+			if errors.Is(err, packages_model.ErrPackageFileNotExist) {
 				apiError(ctx, http.StatusNotFound, err)
 				return
 			}
@@ -333,7 +346,7 @@ func UploadPackageFile(ctx *context.Context) {
 
 		if pvci.Metadata != nil {
 			pv, err := packages_model.GetVersionByNameAndVersion(ctx, pvci.Owner.ID, pvci.PackageType, pvci.Name, pvci.Version)
-			if err != nil && err != packages_model.ErrPackageNotExist {
+			if err != nil && !errors.Is(err, packages_model.ErrPackageNotExist) {
 				apiError(ctx, http.StatusInternalServerError, err)
 				return
 			}

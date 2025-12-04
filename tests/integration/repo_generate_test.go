@@ -7,20 +7,22 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
 	"testing"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/optional"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/modules/translation"
-	files_service "code.gitea.io/gitea/services/repository/files"
-	"code.gitea.io/gitea/tests"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -36,19 +38,23 @@ func assertRepoCreateForm(t *testing.T, htmlDoc *HTMLDoc, owner *user_model.User
 
 	// Verify form header
 	header := strings.TrimSpace(htmlDoc.doc.Find(".form[action='/repo/create'] .header").Text())
-	assert.EqualValues(t, locale.TrString("new_repo.title"), header)
+	assert.Equal(t, locale.TrString("new_repo.title"), header)
 
 	htmlDoc.AssertDropdownHasSelectedOption(t, "uid", strconv.FormatInt(owner.ID, 10))
 
 	// the template menu is loaded client-side, so don't assert the option exists
 	assert.Equal(t, templateID, htmlDoc.GetInputValueByName("repo_template"), "Unexpected repo_template selection")
 
-	for _, name := range []string{"issue_labels", "gitignores", "license", "object_format_name"} {
+	for _, name := range []string{"issue_labels", "gitignores", "license"} {
 		htmlDoc.AssertDropdownHasOptions(t, name)
+	}
+
+	if git.SupportHashSha256 {
+		htmlDoc.AssertDropdownHasOptions(t, "object_format_name")
 	}
 }
 
-func testRepoGenerate(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) {
+func testRepoGenerateCommon(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) *RequestWrapper {
 	// Step0: check the existence of the generated repo
 	req := NewRequestf(t, "GET", "/%s/%s", generateOwner.Name, generateRepoName)
 	session.MakeRequest(t, req, http.StatusNotFound)
@@ -68,12 +74,16 @@ func testRepoGenerate(t *testing.T, session *TestSession, templateID, templateOw
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	assertRepoCreateForm(t, htmlDoc, user, templateID)
 	req = NewRequestWithValues(t, "POST", link, map[string]string{
-		"_csrf":         htmlDoc.GetCSRF(),
 		"uid":           fmt.Sprintf("%d", generateOwner.ID),
 		"repo_name":     generateRepoName,
 		"repo_template": templateID,
 		"git_content":   "true",
 	})
+	return req
+}
+
+func testRepoGenerateSuccess(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) {
+	req := testRepoGenerateCommon(t, session, templateID, templateOwnerName, templateRepoName, user, generateOwner, generateRepoName)
 	session.MakeRequest(t, req, http.StatusSeeOther)
 
 	// Step4: check the existence of the generated repo
@@ -81,8 +91,14 @@ func testRepoGenerate(t *testing.T, session *TestSession, templateID, templateOw
 	session.MakeRequest(t, req, http.StatusOK)
 }
 
+func testRepoGenerateFailure(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) *httptest.ResponseRecorder {
+	req := testRepoGenerateCommon(t, session, templateID, templateOwnerName, templateRepoName, user, generateOwner, generateRepoName)
+	resp := session.MakeRequest(t, req, http.StatusInternalServerError)
+	return resp
+}
+
 func testRepoGenerateWithFixture(t *testing.T, session *TestSession, templateID, templateOwnerName, templateRepoName string, user, generateOwner *user_model.User, generateRepoName string) {
-	testRepoGenerate(t, session, templateID, templateOwnerName, templateRepoName, user, generateOwner, generateRepoName)
+	testRepoGenerateSuccess(t, session, templateID, templateOwnerName, templateRepoName, user, generateOwner, generateRepoName)
 
 	// check substituted values in Readme
 	req := NewRequestf(t, "GET", "/%s/%s/raw/branch/master/README.md", generateOwner.Name, generateRepoName)
@@ -118,12 +134,67 @@ func TestRepoCreateForm(t *testing.T) {
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	assertRepoCreateForm(t, htmlDoc, user, "")
 
-	req = NewRequestWithValues(t, "POST", "/repo/create", map[string]string{
-		"_csrf": htmlDoc.GetCSRF(),
-	})
+	req = NewRequestWithValues(t, "POST", "/repo/create", map[string]string{})
 	resp = session.MakeRequest(t, req, http.StatusOK)
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	assertRepoCreateForm(t, htmlDoc, user, "")
+}
+
+func TestRepoCreateFormRepoLimit(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "org3"})
+	userName := "user2"
+	session := loginUser(t, userName)
+	locale := translation.NewLocale("en-US")
+	cannotCreateTr := locale.Tr("repo.form.cannot_create")
+
+	// Test the case where a user has hit the global max creation limit, but can still create
+	// a repo in an organization. Because the limit is greater than 0 we also show an alert
+	// to tell the user they have hit the limit.
+	t.Run("Limit above zero", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		maxCreationLimit := 1
+		creationLimitTr := locale.TrN(maxCreationLimit, "repo.form.reach_limit_of_creation_1", "repo.form.reach_limit_of_creation_n", maxCreationLimit)
+		defer test.MockVariableValue(&setting.Repository.MaxCreationLimit, maxCreationLimit)()
+
+		resp := session.MakeRequest(t, NewRequest(t, "GET", "/repo/create"), http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		assertRepoCreateForm(t, htmlDoc, org, "")
+
+		alert := htmlDoc.doc.Find("div.ui.negative.message").Text()
+		assert.Contains(t, alert, creationLimitTr)
+	})
+
+	// Test the case where a user has hit the global max creation limit, but can still create
+	// a repo in an organization. Because the limit is 0 we DO NOT show the alert.
+	t.Run("Limit is zero", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		maxCreationLimit := 0
+		defer test.MockVariableValue(&setting.Repository.MaxCreationLimit, maxCreationLimit)()
+
+		resp := session.MakeRequest(t, NewRequest(t, "GET", "/repo/create"), http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		assertRepoCreateForm(t, htmlDoc, org, "")
+
+		htmlDoc.AssertElement(t, "div.ui.negative.message", false)
+	})
+
+	// Test the case where a user has hit the global max creation limit, and also cannot create
+	// a repo in any of their orgs. The form isnt shown, and we deisplay an alert telling the user
+	// they can't create a repo.
+	t.Run("Global limit", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		maxCreationLimit := 0
+		defer test.MockVariableValue(&setting.Repository.MaxCreationLimit, maxCreationLimit)()
+
+		session := loginUser(t, "user8")
+
+		resp := session.MakeRequest(t, NewRequest(t, "GET", "/repo/create"), http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		alert := htmlDoc.doc.Find("div.ui.negative.message").Text()
+		assert.Contains(t, alert, cannotCreateTr)
+	})
 }
 
 func TestRepoGenerate(t *testing.T) {
@@ -151,18 +222,17 @@ func TestRepoCreateFormTrimSpace(t *testing.T) {
 	session := loginUser(t, user.Name)
 
 	req := NewRequestWithValues(t, "POST", "/repo/create", map[string]string{
-		"_csrf":     GetCSRF(t, session, "/repo/create"),
 		"uid":       "2",
 		"repo_name": " spaced-name ",
 	})
 	resp := session.MakeRequest(t, req, http.StatusSeeOther)
 
-	assert.EqualValues(t, "/user2/spaced-name", test.RedirectURL(resp))
+	assert.Equal(t, "/user2/spaced-name", test.RedirectURL(resp))
 	unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: 2, Name: "spaced-name"})
 }
 
 func TestRepoGenerateTemplating(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		input := `# $REPO_NAME
 	This is a Repo By $REPO_OWNER
 	ThisIsThe${REPO_NAME}InAnInlineWay`
@@ -183,21 +253,21 @@ func TestRepoGenerateTemplating(t *testing.T) {
 				{
 					Operation:     "create",
 					TreePath:      ".forgejo/template",
-					ContentReader: strings.NewReader("Readme.md"),
+					ContentReader: strings.NewReader("**/Readme.md"),
 				},
 				{
 					Operation:     "create",
-					TreePath:      "Readme.md",
+					TreePath:      "dira-${REPO_NAME}/dirb-${REPO_NAME}/Readme.md",
 					ContentReader: strings.NewReader(input),
 				},
 			}),
 		})
 		defer f()
 
-		// The repo.TemplateID field is not initalized. Luckly the ID field holds the expected value
+		// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
 		templateID := strconv.FormatInt(template.ID, 10)
 
-		testRepoGenerate(
+		testRepoGenerateSuccess(
 			t,
 			session,
 			templateID,
@@ -210,7 +280,7 @@ func TestRepoGenerateTemplating(t *testing.T) {
 
 		req := NewRequestf(
 			t,
-			"GET", "/%s/%s/raw/branch/%s/Readme.md",
+			"GET", "/%s/%[2]s/raw/branch/%s/dira-%[2]s/dirb-%[2]s/Readme.md",
 			user.Name,
 			generatedName,
 			template.DefaultBranch,
@@ -221,5 +291,154 @@ func TestRepoGenerateTemplating(t *testing.T) {
 			user.Name,
 			generatedName)
 		assert.Equal(t, body, resp.Body.String())
+	})
+}
+
+func TestRepoGenerateTemplatingSymlink(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		userName := "user1"
+		session := loginUser(t, userName)
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: userName})
+
+		testCases := []struct {
+			name          string
+			symlinkTarget string
+			expectedError string
+		}{
+			{
+				name:          "abs out-of-tree symlink",
+				symlinkTarget: "/etc/passwd",
+				expectedError: "openat problem/Readme.md: path escapes from parent",
+			},
+			{
+				name:          "rel out-of-tree symlink",
+				symlinkTarget: "../../../../../../../../../../../../../../etc/passwd",
+				expectedError: "openat problem/Readme.md: path escapes from parent",
+			},
+			{
+				name:          "rel in-tree symlink",
+				symlinkTarget: "../actual-contents.txt",
+			},
+		}
+
+		for i, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				templateName := fmt.Sprintf("my_template-%d", i)
+				generatedName := fmt.Sprintf("my_generated-%d", i)
+				template, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
+					Name:       optional.Some(templateName),
+					IsTemplate: optional.Some(true),
+					Files: optional.Some([]*files_service.ChangeRepoFile{
+						{
+							Operation:     "create",
+							TreePath:      ".forgejo/template",
+							ContentReader: strings.NewReader("**/Readme.md"),
+						},
+						{
+							Operation:     "create",
+							TreePath:      "actual-contents.txt",
+							ContentReader: strings.NewReader("Here are some contents. $REPO_NAME"),
+						},
+						{
+							Operation:     "create",
+							TreePath:      "problem/Readme.md",
+							ContentReader: strings.NewReader(tc.symlinkTarget),
+							Symlink:       true,
+						},
+					}),
+				})
+				defer f()
+
+				// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
+				templateID := strconv.FormatInt(template.ID, 10)
+
+				if tc.expectedError != "" {
+					resp := testRepoGenerateFailure(
+						t,
+						session,
+						templateID,
+						user.Name,
+						templateName,
+						user,
+						user,
+						generatedName,
+					)
+					assert.Contains(t, resp.Body.String(), "openat problem/Readme.md: path escapes from parent")
+				} else {
+					testRepoGenerateSuccess(
+						t,
+						session,
+						templateID,
+						user.Name,
+						templateName,
+						user,
+						user,
+						generatedName,
+					)
+
+					// Write gets redirected to the in-repo symlink
+					req := NewRequestf(
+						t,
+						"GET", "/%s/%[2]s/raw/branch/%s/actual-contents.txt",
+						user.Name,
+						generatedName,
+						template.DefaultBranch,
+					)
+					resp := session.MakeRequest(t, req, http.StatusOK)
+					assert.Equal(t, fmt.Sprintf("Here are some contents. %s", generatedName), resp.Body.String())
+
+					// Symlink file still exists and contents are a symlink; no API available to verify it has correct symlink mode though
+					req = NewRequestf(
+						t,
+						"GET", "/%s/%[2]s/raw/branch/%s/problem/Readme.md",
+						user.Name,
+						generatedName,
+						template.DefaultBranch,
+					)
+					resp = session.MakeRequest(t, req, http.StatusOK)
+					assert.Equal(t, tc.symlinkTarget, resp.Body.String())
+				}
+			})
+		}
+	})
+}
+
+func TestRepoGenerateTemplatingSymlinkGlobFile(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		templateName := "my_template"
+		generatedName := "my_generated"
+
+		userName := "user1"
+		session := loginUser(t, userName)
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: userName})
+
+		template, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
+			Name:       optional.Some(templateName),
+			IsTemplate: optional.Some(true),
+			Files: optional.Some([]*files_service.ChangeRepoFile{
+				{
+					Operation:     "create",
+					TreePath:      ".forgejo/template",
+					ContentReader: strings.NewReader("/etc/passwd"),
+					Symlink:       true,
+				},
+			}),
+		})
+		defer f()
+
+		// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
+		templateID := strconv.FormatInt(template.ID, 10)
+
+		resp := testRepoGenerateFailure(
+			t,
+			session,
+			templateID,
+			user.Name,
+			templateName,
+			user,
+			user,
+			generatedName,
+		)
+		assert.Contains(t, resp.Body.String(), "statat .forgejo/template: path escapes from parent")
 	})
 }

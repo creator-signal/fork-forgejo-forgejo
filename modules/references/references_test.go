@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"testing"
 
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/modules/setting"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -46,7 +46,7 @@ owner/repo!123456789
 	contentBytes := []byte(test)
 	convertFullHTMLReferencesToShortRefs(re, &contentBytes)
 	result := string(contentBytes)
-	assert.EqualValues(t, expect, result)
+	assert.Equal(t, expect, result)
 }
 
 func TestFindAllIssueReferences(t *testing.T) {
@@ -130,6 +130,30 @@ func TestFindAllIssueReferences(t *testing.T) {
 			[]testResult{
 				{202, "user4", "repo5", "202", true, XRefActionNone, nil, nil, ""},
 				{203, "user4", "repo5", "203", true, XRefActionNone, nil, nil, ""},
+			},
+		},
+		{
+			"This http://gitea.com:3000/user4/repo5/pulls/202#x yes.",
+			[]testResult{
+				{202, "user4", "repo5", "202", true, XRefActionNone, nil, nil, ""},
+			},
+		},
+		{
+			"This http://gitea.com:3000/user4/repo5/pulls/202/commits yes.",
+			[]testResult{
+				{202, "user4", "repo5", "202", true, XRefActionNone, nil, nil, ""},
+			},
+		},
+		{
+			"This http://gitea.com:3000/user4/repo5/pulls/202/files yes.",
+			[]testResult{
+				{202, "user4", "repo5", "202", true, XRefActionNone, nil, nil, ""},
+			},
+		},
+		{
+			"This http://gitea.com:3000/user4/repo5/pulls/202/files#diff- yes.",
+			[]testResult{
+				{202, "user4", "repo5", "202", true, XRefActionNone, nil, nil, ""},
 			},
 		},
 		{
@@ -284,9 +308,9 @@ func testFixtures(t *testing.T, fixtures []testFixture, context string) {
 		}
 		expref := rawToIssueReferenceList(expraw)
 		refs := FindAllIssueReferencesMarkdown(fixture.input)
-		assert.EqualValues(t, expref, refs, "[%s] Failed to parse: {%s}", context, fixture.input)
+		assert.Equal(t, expref, refs, "[%s] Failed to parse: {%s}", context, fixture.input)
 		rawrefs := findAllIssueReferencesMarkdown(fixture.input)
-		assert.EqualValues(t, expraw, rawrefs, "[%s] Failed to parse: {%s}", context, fixture.input)
+		assert.Equal(t, expraw, rawrefs, "[%s] Failed to parse: {%s}", context, fixture.input)
 	}
 
 	// Restore for other tests that may rely on the original value
@@ -295,7 +319,7 @@ func testFixtures(t *testing.T, fixtures []testFixture, context string) {
 
 func TestFindAllMentions(t *testing.T) {
 	res := FindAllMentionsBytes([]byte("@tasha, @mike; @lucy: @john"))
-	assert.EqualValues(t, []RefSpan{
+	assert.Equal(t, []RefSpan{
 		{Start: 0, End: 6},
 		{Start: 8, End: 13},
 		{Start: 15, End: 20},
@@ -558,7 +582,7 @@ func TestParseCloseKeywords(t *testing.T) {
 			res := pat.FindAllStringSubmatch(test.match, -1)
 			assert.Len(t, res, 1)
 			assert.Len(t, res[0], 2)
-			assert.EqualValues(t, test.expected, res[0][1])
+			assert.Equal(t, test.expected, res[0][1])
 		}
 	}
 }

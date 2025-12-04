@@ -4,16 +4,18 @@
 package integration
 
 import (
+	"cmp"
 	"fmt"
 	"net/http"
+	"slices"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -46,6 +48,7 @@ func TestAPIUserBlock(t *testing.T) {
 		var blockedUsers []api.BlockedUser
 		DecodeJSON(t, resp, &blockedUsers)
 		assert.Len(t, blockedUsers, 2)
+		slices.SortFunc(blockedUsers, func(a, b api.BlockedUser) int { return cmp.Compare(a.BlockID, b.BlockID) })
 		assert.EqualValues(t, 1, blockedUsers[0].BlockID)
 		assert.EqualValues(t, 2, blockedUsers[1].BlockID)
 	})

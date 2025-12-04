@@ -4,18 +4,20 @@
 package context
 
 import (
+	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"testing"
 
-	"code.gitea.io/gitea/modules/setting"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGenAPILinks(t *testing.T) {
-	setting.AppURL = "http://localhost:3000/"
+	defer test.MockVariableValue(&setting.AppURL, "http://localhost:3000/")()
 	kases := map[string][]string{
 		"api/v1/repos/jerrykan/example-repo/issues?state=all": {
 			`<http://localhost:3000/api/v1/repos/jerrykan/example-repo/issues?page=2&state=all>; rel="next"`,
@@ -46,6 +48,29 @@ func TestGenAPILinks(t *testing.T) {
 
 		links := genAPILinks(u, 100, 20, curPage)
 
-		assert.EqualValues(t, links, response)
+		assert.Equal(t, links, response)
 	}
+}
+
+func TestAcceptsGithubResponse(t *testing.T) {
+	t.Run("Normal", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		resp := httptest.NewRecorder()
+		base, baseCleanUp := NewBaseContext(resp, req)
+		t.Cleanup(baseCleanUp)
+		ctx := &APIContext{Base: base}
+
+		assert.False(t, ctx.AcceptsGithubResponse())
+	})
+
+	t.Run("Accepts Github", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Add("Accept", "application/vnd.github+json")
+		resp := httptest.NewRecorder()
+		base, baseCleanUp := NewBaseContext(resp, req)
+		t.Cleanup(baseCleanUp)
+		ctx := &APIContext{Base: base}
+
+		assert.True(t, ctx.AcceptsGithubResponse())
+	})
 }

@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/util"
+	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
 )
@@ -116,10 +116,7 @@ func CreateTeamInvite(ctx context.Context, doer *user_model.User, team *Team, em
 		}
 	}
 
-	token, err := util.CryptoRandomString(25)
-	if err != nil {
-		return nil, err
-	}
+	token := util.CryptoRandomString(util.RandomStringMedium)
 
 	invite := &TeamInvite{
 		Token:     token,

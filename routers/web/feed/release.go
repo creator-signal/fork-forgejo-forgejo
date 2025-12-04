@@ -6,9 +6,9 @@ package feed
 import (
 	"time"
 
-	"code.gitea.io/gitea/models/db"
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/services/context"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/services/context"
 
 	"github.com/gorilla/feeds"
 )
@@ -29,7 +29,7 @@ func ShowReleaseFeed(ctx *context.Context, repo *repo_model.Repository, isReleas
 
 	if isReleasesOnly {
 		title = ctx.Locale.TrString("repo.release.releases_for", repo.FullName())
-		link = &feeds.Link{Href: repo.HTMLURL() + "/release"}
+		link = &feeds.Link{Href: repo.HTMLURL() + "/releases"}
 	} else {
 		title = ctx.Locale.TrString("repo.release.tags_for", repo.FullName())
 		link = &feeds.Link{Href: repo.HTMLURL() + "/tags"}

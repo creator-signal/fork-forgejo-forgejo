@@ -6,7 +6,7 @@ package repo
 import (
 	"context"
 
-	"code.gitea.io/gitea/models/db"
+	"forgejo.org/models/db"
 )
 
 // MergeStyle represents the approach to merge commits into base branch.
@@ -28,6 +28,8 @@ const (
 	// MergeStyleRebaseUpdate not a merge style, used to update pull head by rebase
 	MergeStyleRebaseUpdate MergeStyle = "rebase-update-only"
 )
+
+var MergeStyles = []MergeStyle{MergeStyleMerge, MergeStyleRebase, MergeStyleRebaseMerge, MergeStyleSquash, MergeStyleFastForwardOnly, MergeStyleManuallyMerged, MergeStyleRebaseUpdate}
 
 type UpdateStyle string
 

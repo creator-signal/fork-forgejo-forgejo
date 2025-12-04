@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"code.gitea.io/gitea/modules/validation"
+	"forgejo.org/modules/validation"
 )
 
 func Test_FederationHostValidation(t *testing.T) {
@@ -18,6 +18,8 @@ func Test_FederationHostValidation(t *testing.T) {
 			SoftwareName: "forgejo",
 		},
 		LatestActivity: time.Now(),
+		HostPort:       443,
+		HostSchema:     "https",
 	}
 	if res, err := validation.IsValid(sut); !res {
 		t.Errorf("sut should be valid but was %q", err)
@@ -29,9 +31,11 @@ func Test_FederationHostValidation(t *testing.T) {
 			SoftwareName: "forgejo",
 		},
 		LatestActivity: time.Now(),
+		HostPort:       443,
+		HostSchema:     "https",
 	}
 	if res, _ := validation.IsValid(sut); res {
-		t.Errorf("sut should be invalid: HostFqdn empty")
+		t.Error("sut should be invalid: HostFqdn empty")
 	}
 
 	sut = FederationHost{
@@ -40,18 +44,22 @@ func Test_FederationHostValidation(t *testing.T) {
 			SoftwareName: "forgejo",
 		},
 		LatestActivity: time.Now(),
+		HostPort:       443,
+		HostSchema:     "https",
 	}
 	if res, _ := validation.IsValid(sut); res {
-		t.Errorf("sut should be invalid: HostFqdn too long (len=256)")
+		t.Error("sut should be invalid: HostFqdn too long (len=256)")
 	}
 
 	sut = FederationHost{
 		HostFqdn:       "host.do.main",
 		NodeInfo:       NodeInfo{},
 		LatestActivity: time.Now(),
+		HostPort:       443,
+		HostSchema:     "https",
 	}
 	if res, _ := validation.IsValid(sut); res {
-		t.Errorf("sut should be invalid: NodeInfo invalid")
+		t.Error("sut should be invalid: NodeInfo invalid")
 	}
 
 	sut = FederationHost{
@@ -60,9 +68,11 @@ func Test_FederationHostValidation(t *testing.T) {
 			SoftwareName: "forgejo",
 		},
 		LatestActivity: time.Now().Add(1 * time.Hour),
+		HostPort:       443,
+		HostSchema:     "https",
 	}
 	if res, _ := validation.IsValid(sut); res {
-		t.Errorf("sut should be invalid: Future timestamp")
+		t.Error("sut should be invalid: Future timestamp")
 	}
 
 	sut = FederationHost{
@@ -71,8 +81,10 @@ func Test_FederationHostValidation(t *testing.T) {
 			SoftwareName: "forgejo",
 		},
 		LatestActivity: time.Now(),
+		HostPort:       443,
+		HostSchema:     "https",
 	}
 	if res, _ := validation.IsValid(sut); res {
-		t.Errorf("sut should be invalid: HostFqdn lower case")
+		t.Error("sut should be invalid: HostFqdn lower case")
 	}
 }

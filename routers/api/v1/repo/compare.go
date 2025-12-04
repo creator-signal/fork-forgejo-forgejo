@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"strings"
 
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/gitrepo"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/services/context"
-	"code.gitea.io/gitea/services/convert"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/services/context"
+	"forgejo.org/services/convert"
 )
 
 // CompareDiff compare two branches or commits
@@ -64,7 +64,7 @@ func CompareDiff(ctx *context.APIContext) {
 		}
 	}
 
-	_, headGitRepo, ci, _, _ := parseCompareInfo(ctx, api.CreatePullRequestOption{
+	headRepository, headGitRepo, ci, _, _ := parseCompareInfo(ctx, api.CreatePullRequestOption{
 		Base: infos[0],
 		Head: infos[1],
 	})
@@ -77,9 +77,10 @@ func CompareDiff(ctx *context.APIContext) {
 	files := ctx.FormString("files") == "" || ctx.FormBool("files")
 
 	apiCommits := make([]*api.Commit, 0, len(ci.Commits))
+	apiFiles := []*api.CommitAffectedFiles{}
 	userCache := make(map[string]*user_model.User)
 	for i := 0; i < len(ci.Commits); i++ {
-		apiCommit, err := convert.ToCommit(ctx, ctx.Repo.Repository, ctx.Repo.GitRepo, ci.Commits[i], userCache,
+		apiCommit, err := convert.ToCommit(ctx, headRepository, headGitRepo, ci.Commits[i], userCache,
 			convert.ToCommitOptions{
 				Stat:         true,
 				Verification: verification,
@@ -90,10 +91,12 @@ func CompareDiff(ctx *context.APIContext) {
 			return
 		}
 		apiCommits = append(apiCommits, apiCommit)
+		apiFiles = append(apiFiles, apiCommit.Files...)
 	}
 
 	ctx.JSON(http.StatusOK, &api.Compare{
 		TotalCommits: len(ci.Commits),
 		Commits:      apiCommits,
+		Files:        apiFiles,
 	})
 }

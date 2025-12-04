@@ -4,15 +4,16 @@
 package packages
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
+	auth_model "forgejo.org/models/auth"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -53,7 +54,7 @@ func ParseAuthorizationToken(req *http.Request) (int64, auth_model.AccessTokenSc
 	parts := strings.SplitN(h, " ", 2)
 	if len(parts) != 2 {
 		log.Error("split token failed: %s", h)
-		return 0, "", fmt.Errorf("split token failed")
+		return 0, "", errors.New("split token failed")
 	}
 
 	token, err := jwt.ParseWithClaims(parts[1], &packageClaims{}, func(t *jwt.Token) (any, error) {
@@ -68,7 +69,7 @@ func ParseAuthorizationToken(req *http.Request) (int64, auth_model.AccessTokenSc
 
 	c, ok := token.Claims.(*packageClaims)
 	if !token.Valid || !ok {
-		return 0, "", fmt.Errorf("invalid token claim")
+		return 0, "", errors.New("invalid token claim")
 	}
 
 	return c.UserID, c.Scope, nil

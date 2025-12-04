@@ -4,18 +4,22 @@
 package integration
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 
-	auth_model "code.gitea.io/gitea/models/auth"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/tests"
+	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
+	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestAPICreateAndDeleteToken tests that token that was just created can be deleted
@@ -27,6 +31,23 @@ func TestAPICreateAndDeleteToken(t *testing.T) {
 	deleteAPIAccessToken(t, newAccessToken, user)
 
 	newAccessToken = createAPIAccessTokenWithoutCleanUp(t, "test-key-2", user, []auth_model.AccessTokenScope{auth_model.AccessTokenScopeAll})
+	deleteAPIAccessToken(t, newAccessToken, user)
+}
+
+func TestAPIGetTokens(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	// with basic auth...
+	req := NewRequest(t, "GET", "/api/v1/users/user2/tokens").
+		AddBasicAuth(user.Name)
+	MakeRequest(t, req, http.StatusOK)
+
+	// ... or with a token.
+	newAccessToken := createAPIAccessTokenWithoutCleanUp(t, "test-key-1", user, []auth_model.AccessTokenScope{auth_model.AccessTokenScopeAll})
+	req = NewRequest(t, "GET", "/api/v1/users/user2/tokens").
+		AddTokenAuth(newAccessToken.Token)
+	MakeRequest(t, req, http.StatusOK)
 	deleteAPIAccessToken(t, newAccessToken, user)
 }
 
@@ -507,7 +528,7 @@ func runTestCase(t *testing.T, testCase *requiredScopeTestCase, user *user_model
 				} else if minRequiredLevel == auth_model.Write {
 					unauthorizedLevel = auth_model.Read
 				} else {
-					assert.FailNow(t, "Invalid test case: Unknown access token scope level: %v", minRequiredLevel)
+					assert.FailNow(t, "Invalid test case", "Unknown access token scope level: %v", minRequiredLevel)
 				}
 			}
 
@@ -562,4 +583,83 @@ func deleteAPIAccessToken(t *testing.T, accessToken api.AccessToken, user *user_
 	MakeRequest(t, req, http.StatusNoContent)
 
 	unittest.AssertNotExistsBean(t, &auth_model.AccessToken{ID: accessToken.ID})
+}
+
+func TestAPITokenCreation(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user4")
+	t.Run("Via API token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
+
+		req := NewRequestWithJSON(t, "POST", "/api/v1/users/user4/tokens", map[string]any{
+			"name":   "new-new-token",
+			"scopes": []auth_model.AccessTokenScope{auth_model.AccessTokenScopeWriteUser},
+		})
+		req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user4:"+token)))
+
+		resp := MakeRequest(t, req, http.StatusUnauthorized)
+
+		respMsg := map[string]any{}
+		DecodeJSON(t, resp, &respMsg)
+
+		assert.EqualValues(t, "auth method not allowed", respMsg["message"])
+	})
+
+	t.Run("Via OAuth2", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Make a call to `/login/oauth/authorize` to get some session data.
+		session.MakeRequest(t, NewRequest(t, "GET", "/login/oauth/authorize?client_id=ce5a1322-42a7-11ed-b878-0242ac120002&redirect_uri=b&response_type=code&code_challenge_method=plain&code_challenge=CODE&state=thestate"), http.StatusOK)
+
+		req := NewRequestWithValues(t, "POST", "/login/oauth/grant", map[string]string{
+			"client_id":    "ce5a1322-42a7-11ed-b878-0242ac120002",
+			"redirect_uri": "b",
+			"state":        "thestate",
+			"granted":      "true",
+		})
+		resp := session.MakeRequest(t, req, http.StatusSeeOther)
+
+		u, err := url.Parse(test.RedirectURL(resp))
+		require.NoError(t, err)
+
+		req = NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+			"client_id":     "ce5a1322-42a7-11ed-b878-0242ac120002",
+			"code":          u.Query().Get("code"),
+			"code_verifier": "CODE",
+			"grant_type":    "authorization_code",
+			"redirect_uri":  "b",
+		})
+		resp = MakeRequest(t, req, http.StatusOK)
+
+		var respBody map[string]any
+		DecodeJSON(t, resp, &respBody)
+
+		req = NewRequestWithJSON(t, "POST", "/api/v1/users/user4/tokens", map[string]any{
+			"name":   "new-new-token",
+			"scopes": []auth_model.AccessTokenScope{auth_model.AccessTokenScopeWriteUser},
+		})
+		req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user4:"+respBody["access_token"].(string))))
+
+		resp = MakeRequest(t, req, http.StatusUnauthorized)
+
+		respMsg := map[string]any{}
+		DecodeJSON(t, resp, &respMsg)
+
+		assert.EqualValues(t, "auth method not allowed", respMsg["message"])
+	})
+
+	t.Run("Via password", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequestWithJSON(t, "POST", "/api/v1/users/user4/tokens", map[string]any{
+			"name":   "new-new-token",
+			"scopes": []auth_model.AccessTokenScope{auth_model.AccessTokenScopeWriteUser},
+		})
+		req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user4:"+userPassword)))
+
+		MakeRequest(t, req, http.StatusCreated)
+	})
 }

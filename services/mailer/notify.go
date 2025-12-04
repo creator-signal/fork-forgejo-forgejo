@@ -7,12 +7,13 @@ import (
 	"context"
 	"fmt"
 
-	activities_model "code.gitea.io/gitea/models/activities"
-	issues_model "code.gitea.io/gitea/models/issues"
-	repo_model "code.gitea.io/gitea/models/repo"
-	user_model "code.gitea.io/gitea/models/user"
-	"code.gitea.io/gitea/modules/log"
-	notify_service "code.gitea.io/gitea/services/notify"
+	actions_model "forgejo.org/models/actions"
+	activities_model "forgejo.org/models/activities"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
+	notify_service "forgejo.org/services/notify"
 )
 
 type mailNotifier struct {
@@ -30,15 +31,16 @@ func (m *mailNotifier) CreateIssueComment(ctx context.Context, doer *user_model.
 	issue *issues_model.Issue, comment *issues_model.Comment, mentions []*user_model.User,
 ) {
 	var act activities_model.ActionType
-	if comment.Type == issues_model.CommentTypeClose {
+	switch comment.Type {
+	case issues_model.CommentTypeClose:
 		act = activities_model.ActionCloseIssue
-	} else if comment.Type == issues_model.CommentTypeReopen {
+	case issues_model.CommentTypeReopen:
 		act = activities_model.ActionReopenIssue
-	} else if comment.Type == issues_model.CommentTypeComment {
+	case issues_model.CommentTypeComment:
 		act = activities_model.ActionCommentIssue
-	} else if comment.Type == issues_model.CommentTypeCode {
+	case issues_model.CommentTypeCode:
 		act = activities_model.ActionCommentIssue
-	} else if comment.Type == issues_model.CommentTypePullRequestPush {
+	case issues_model.CommentTypePullRequestPush:
 		act = 0
 	}
 
@@ -48,13 +50,14 @@ func (m *mailNotifier) CreateIssueComment(ctx context.Context, doer *user_model.
 }
 
 func (m *mailNotifier) NewIssue(ctx context.Context, issue *issues_model.Issue, mentions []*user_model.User) {
-	if err := MailParticipants(ctx, issue, issue.Poster, activities_model.ActionCreateIssue, mentions); err != nil {
+	if err := MailParticipants(ctx, issue, issue.Poster, activities_model.ActionCreateIssue, mentions, nil); err != nil {
 		log.Error("MailParticipants: %v", err)
 	}
 }
 
 func (m *mailNotifier) IssueChangeStatus(ctx context.Context, doer *user_model.User, commitID string, issue *issues_model.Issue, actionComment *issues_model.Comment, isClosed bool) {
 	var actionType activities_model.ActionType
+	var actionAdditionalData ActionAdditionalData
 	if issue.IsPull {
 		if isClosed {
 			actionType = activities_model.ActionClosePullRequest
@@ -64,12 +67,17 @@ func (m *mailNotifier) IssueChangeStatus(ctx context.Context, doer *user_model.U
 	} else {
 		if isClosed {
 			actionType = activities_model.ActionCloseIssue
+			if commitID != "" {
+				// An issue being closed *and* a commitID being present means that the issue was closed by a PR or
+				// commit message that closed it by reference.
+				actionAdditionalData = ActionCloseIssueByCommit{CommitID: commitID}
+			}
 		} else {
 			actionType = activities_model.ActionReopenIssue
 		}
 	}
 
-	if err := MailParticipants(ctx, issue, doer, actionType, nil); err != nil {
+	if err := MailParticipants(ctx, issue, doer, actionType, nil, actionAdditionalData); err != nil {
 		log.Error("MailParticipants: %v", err)
 	}
 }
@@ -80,25 +88,26 @@ func (m *mailNotifier) IssueChangeTitle(ctx context.Context, doer *user_model.Us
 		return
 	}
 	if issue.IsPull && issues_model.HasWorkInProgressPrefix(oldTitle) && !issue.PullRequest.IsWorkInProgress(ctx) {
-		if err := MailParticipants(ctx, issue, doer, activities_model.ActionPullRequestReadyForReview, nil); err != nil {
+		if err := MailParticipants(ctx, issue, doer, activities_model.ActionPullRequestReadyForReview, nil, nil); err != nil {
 			log.Error("MailParticipants: %v", err)
 		}
 	}
 }
 
 func (m *mailNotifier) NewPullRequest(ctx context.Context, pr *issues_model.PullRequest, mentions []*user_model.User) {
-	if err := MailParticipants(ctx, pr.Issue, pr.Issue.Poster, activities_model.ActionCreatePullRequest, mentions); err != nil {
+	if err := MailParticipants(ctx, pr.Issue, pr.Issue.Poster, activities_model.ActionCreatePullRequest, mentions, nil); err != nil {
 		log.Error("MailParticipants: %v", err)
 	}
 }
 
 func (m *mailNotifier) PullRequestReview(ctx context.Context, pr *issues_model.PullRequest, r *issues_model.Review, comment *issues_model.Comment, mentions []*user_model.User) {
 	var act activities_model.ActionType
-	if comment.Type == issues_model.CommentTypeClose {
+	switch comment.Type {
+	case issues_model.CommentTypeClose:
 		act = activities_model.ActionCloseIssue
-	} else if comment.Type == issues_model.CommentTypeReopen {
+	case issues_model.CommentTypeReopen:
 		act = activities_model.ActionReopenIssue
-	} else if comment.Type == issues_model.CommentTypeComment {
+	case issues_model.CommentTypeComment:
 		act = activities_model.ActionCommentPull
 	}
 	if err := MailParticipantsComment(ctx, comment, act, pr.Issue, mentions); err != nil {
@@ -136,7 +145,7 @@ func (m *mailNotifier) MergePullRequest(ctx context.Context, doer *user_model.Us
 		log.Error("LoadIssue: %v", err)
 		return
 	}
-	if err := MailParticipants(ctx, pr.Issue, doer, activities_model.ActionMergePullRequest, nil); err != nil {
+	if err := MailParticipants(ctx, pr.Issue, doer, activities_model.ActionMergePullRequest, nil, nil); err != nil {
 		log.Error("MailParticipants: %v", err)
 	}
 }
@@ -146,7 +155,7 @@ func (m *mailNotifier) AutoMergePullRequest(ctx context.Context, doer *user_mode
 		log.Error("pr.LoadIssue: %v", err)
 		return
 	}
-	if err := MailParticipants(ctx, pr.Issue, doer, activities_model.ActionAutoMergePullRequest, nil); err != nil {
+	if err := MailParticipants(ctx, pr.Issue, doer, activities_model.ActionAutoMergePullRequest, nil, nil); err != nil {
 		log.Error("MailParticipants: %v", err)
 	}
 }
@@ -205,4 +214,14 @@ func (m *mailNotifier) RepoPendingTransfer(ctx context.Context, doer, newOwner *
 
 func (m *mailNotifier) NewUserSignUp(ctx context.Context, newUser *user_model.User) {
 	MailNewUser(ctx, newUser)
+}
+
+func (m *mailNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun) {
+	// Only send a mail on a successful run when the workflow recovered (i.e., the run before failed).
+	if !run.Status.IsFailure() && (lastRun == nil || !lastRun.Status.IsFailure()) {
+		return
+	}
+	if err := MailActionRun(run, priorStatus, lastRun); err != nil {
+		log.Error("MailActionRunNowDone: %v", err)
+	}
 }

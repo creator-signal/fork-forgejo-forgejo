@@ -4,9 +4,9 @@
 package actions
 
 import (
-	"code.gitea.io/gitea/modules/translation"
+	"forgejo.org/modules/translation"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
 )
 
 // Status represents the status of ActionRun, ActionRunJob, ActionTask, or ActionTaskStep
@@ -34,6 +34,25 @@ var statusNames = map[Status]string{
 	StatusBlocked:   "blocked",
 }
 
+var nameToStatus = make(map[string]Status, len(statusNames))
+
+func init() {
+	// Populate name to status lookup map
+	for status, name := range statusNames {
+		nameToStatus[name] = status
+	}
+}
+
+// Statuses where the result is final and won't change
+func DoneStatuses() []Status {
+	return []Status{StatusSuccess, StatusFailure, StatusCancelled, StatusSkipped}
+}
+
+// Statuses where the result is not yet final
+func PendingStatuses() []Status {
+	return []Status{StatusUnknown, StatusWaiting, StatusRunning, StatusBlocked}
+}
+
 // String returns the string name of the Status
 func (s Status) String() string {
 	return statusNames[s]
@@ -46,7 +65,7 @@ func (s Status) LocaleString(lang translation.Locale) string {
 
 // IsDone returns whether the Status is final
 func (s Status) IsDone() bool {
-	return s.In(StatusSuccess, StatusFailure, StatusCancelled, StatusSkipped)
+	return s.In(DoneStatuses()...)
 }
 
 // HasRun returns whether the Status is a result of running
@@ -101,4 +120,9 @@ func (s Status) AsResult() runnerv1.Result {
 		return runnerv1.Result(s)
 	}
 	return runnerv1.Result_RESULT_UNSPECIFIED
+}
+
+func StatusFromString(name string) (Status, bool) {
+	status, exists := nameToStatus[name]
+	return status, exists
 }

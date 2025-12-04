@@ -6,7 +6,7 @@ package forgefed
 import (
 	"net/url"
 
-	"code.gitea.io/gitea/modules/validation"
+	"forgejo.org/modules/validation"
 
 	"github.com/valyala/fastjson"
 )
@@ -17,12 +17,14 @@ type (
 )
 
 const (
-	ForgejoSourceType SoftwareNameType = "forgejo"
-	GiteaSourceType   SoftwareNameType = "gitea"
+	ForgejoSourceType    SoftwareNameType = "forgejo"
+	GiteaSourceType      SoftwareNameType = "gitea"
+	MastodonSourceType   SoftwareNameType = "mastodon"
+	GoToSocialSourceType SoftwareNameType = "gotosocial"
 )
 
 var KnownSourceTypes = []any{
-	ForgejoSourceType, GiteaSourceType,
+	ForgejoSourceType, GiteaSourceType, MastodonSourceType, GoToSocialSourceType,
 }
 
 // ------------------------------------------------ NodeInfoWellKnown ------------------------------------------------

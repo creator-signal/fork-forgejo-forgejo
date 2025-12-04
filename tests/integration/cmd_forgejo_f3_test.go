@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"testing"
 
-	"code.gitea.io/gitea/cmd/forgejo"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/test"
-	"code.gitea.io/gitea/services/f3/driver/options"
-	"code.gitea.io/gitea/tests"
+	"forgejo.org/cmd/forgejo"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/f3/driver/options"
+	"forgejo.org/tests"
 
-	_ "code.gitea.io/gitea/services/f3/driver"
-	_ "code.gitea.io/gitea/services/f3/driver/tests"
+	_ "forgejo.org/services/f3/driver"
+	_ "forgejo.org/services/f3/driver/tests"
 
 	f3_filesystem_options "code.forgejo.org/f3/gof3/v3/forges/filesystem/options"
 	f3_logger "code.forgejo.org/f3/gof3/v3/logger"
@@ -25,7 +25,7 @@ import (
 	f3_tests "code.forgejo.org/f3/gof3/v3/tree/tests/f3"
 	f3_tests_forge "code.forgejo.org/f3/gof3/v3/tree/tests/f3/forge"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 func runApp(ctx context.Context, args ...string) (string, error) {
@@ -33,10 +33,10 @@ func runApp(ctx context.Context, args ...string) (string, error) {
 	ctx = f3_logger.ContextSetLogger(ctx, l)
 	ctx = forgejo.ContextSetNoInit(ctx, true)
 
-	app := cli.NewApp()
+	app := cli.Command{}
 
-	app.Writer = l.GetBuffer()
-	app.ErrWriter = l.GetBuffer()
+	app.Root().Writer = l.GetBuffer()
+	app.Root().ErrWriter = l.GetBuffer()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -48,7 +48,7 @@ func runApp(ctx context.Context, args ...string) (string, error) {
 	app.Commands = []*cli.Command{
 		forgejo.SubcmdF3Mirror(ctx),
 	}
-	err := app.Run(args)
+	err := app.Run(ctx, args)
 
 	fmt.Println(l.String())
 
@@ -59,7 +59,7 @@ func TestF3_CmdMirror_LocalForgejo(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.F3.Enabled, true)()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	mirrorOptions := f3_tests_forge.GetFactory(options.Name)().NewOptions(t)
 	mirrorTree := f3_generic.GetFactory("f3")(ctx, mirrorOptions)
@@ -83,7 +83,7 @@ func TestF3_CmdMirror_LocalForgejo(t *testing.T) {
 		user := users.CreateChild(ctx)
 		user.FromFormat(userFormat)
 		user.Upsert(ctx)
-		require.EqualValues(t, user.GetID(), users.GetIDFromName(ctx, userFormat.UserName))
+		require.Equal(t, user.GetID(), users.GetIDFromName(ctx, userFormat.UserName))
 
 		projectFormat := creator.GenerateProject()
 		projectFormat.SetID(fixtureProjectID)
@@ -91,7 +91,7 @@ func TestF3_CmdMirror_LocalForgejo(t *testing.T) {
 		project := projects.CreateChild(ctx)
 		project.FromFormat(projectFormat)
 		project.Upsert(ctx)
-		require.EqualValues(t, project.GetID(), projects.GetIDFromName(ctx, projectFormat.Name))
+		require.Equal(t, project.GetID(), projects.GetIDFromName(ctx, projectFormat.Name))
 
 		fromPath = fmt.Sprintf("/forge/users/%s/projects/%s", userFormat.UserName, projectFormat.Name)
 	}
@@ -106,14 +106,14 @@ func TestF3_CmdMirror_LocalForgejo(t *testing.T) {
 		user := users.CreateChild(ctx)
 		user.FromFormat(userFormat)
 		user.Upsert(ctx)
-		require.EqualValues(t, user.GetID(), users.GetIDFromName(ctx, userFormat.UserName))
+		require.Equal(t, user.GetID(), users.GetIDFromName(ctx, userFormat.UserName))
 
 		projectFormat := creator.GenerateProject()
 		projects = user.MustFind(f3_generic.NewPathFromString("projects"))
 		project := projects.CreateChild(ctx)
 		project.FromFormat(projectFormat)
 		project.Upsert(ctx)
-		require.EqualValues(t, project.GetID(), projects.GetIDFromName(ctx, projectFormat.Name))
+		require.Equal(t, project.GetID(), projects.GetIDFromName(ctx, projectFormat.Name))
 
 		toPath = fmt.Sprintf("/forge/users/%s/projects/%s", userFormat.UserName, projectFormat.Name)
 	}

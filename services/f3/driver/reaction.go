@@ -8,11 +8,12 @@ import (
 	"context"
 	"fmt"
 
-	"code.gitea.io/gitea/models/db"
-	issues_model "code.gitea.io/gitea/models/issues"
-	user_model "code.gitea.io/gitea/models/user"
+	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	user_model "forgejo.org/models/user"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
+	f3_id "code.forgejo.org/f3/gof3/v3/id"
 	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
 	"code.forgejo.org/f3/gof3/v3/tree/generic"
 	f3_util "code.forgejo.org/f3/gof3/v3/util"
@@ -87,8 +88,8 @@ func (o *reaction) Patch(ctx context.Context) {
 	}
 }
 
-func (o *reaction) Put(ctx context.Context) generic.NodeID {
-	o.Error("%v", o.forgejoReaction.User)
+func (o *reaction) Put(ctx context.Context) f3_id.NodeID {
+	o.Trace("%v", o.forgejoReaction.User)
 
 	sess := db.GetEngine(ctx)
 
@@ -109,13 +110,13 @@ func (o *reaction) Put(ctx context.Context) generic.NodeID {
 		panic(fmt.Errorf("unexpected type %v", reactionable.GetKind()))
 	}
 
-	o.Error("%v", o.forgejoReaction)
+	o.Trace("%v", o.forgejoReaction)
 
 	if _, err := sess.Insert(o.forgejoReaction); err != nil {
 		panic(err)
 	}
 	o.Trace("reaction created %d", o.forgejoReaction.ID)
-	return generic.NewNodeID(o.forgejoReaction.ID)
+	return f3_id.NewNodeID(o.forgejoReaction.ID)
 }
 
 func (o *reaction) Delete(ctx context.Context) {

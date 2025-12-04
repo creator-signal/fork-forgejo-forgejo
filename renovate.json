@@ -6,17 +6,16 @@
     "docker:pinDigests",
     "helpers:pinGitHubActionDigests"
   ],
-  "baseBranches": [
+  "baseBranchPatterns": [
     "$default",
-    "/^v7\\.\\d+/forgejo$/",
-    "/^v10\\.\\d+/forgejo$/",
-    "/^v11\\.\\d+/forgejo$/"
+    "/^v11\\.\\d+/forgejo$/",
+    "/^v13\\.\\d+/forgejo$/"
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths", "npmDedupe"],
   "prConcurrentLimit": 10,
   "osvVulnerabilityAlerts": true,
   "automergeStrategy": "squash",
-  "labels": ["dependency-upgrade","test/not-needed"],
+  "labels": ["dependency-upgrade", "test/not-needed"],
   "packageRules": [
     {
       "description": "Require approval for python minor version",
@@ -28,18 +27,15 @@
       "description": "Require dashboard approval for some deps",
       "matchPackageNames": [
         "docker.io/bitnami/minio",
-        "github.com/go-ap/activitypub",
-        "github.com/nektos/act",
-        "gitea.com/gitea/act"
+        "github.com/go-ap/activitypub"
       ],
       "dependencyDashboardApproval": true
     },
     {
       "description": "Schedule some deps less frequently",
       "matchPackageNames": [
-        "code.forgejo.org/f3/gof3/v3",
-        "github.com/google/pprof",
-        "github.com/golangci/misspell/cmd/misspell"
+        "code.forgejo.org/f3/gof3/**",
+        "github.com/google/pprof"
       ],
       "extends": ["schedule:quarterly"]
     },
@@ -57,18 +53,6 @@
         "ghcr.io/devcontainers/features/**",
         "ghcr.io/devcontainers-contrib/features/**"
       ]
-    },
-    {
-      "description": "Group nodejs packages",
-      "matchPackageNames": [
-        "code.forgejo.org/oci/node",
-        "docker.io/library/node",
-        "docker.io/node",
-        "node"
-      ],
-      "groupName": "nodejs packages",
-      "versionCompatibility": "^(?<version>[^-]+)(?<compatibility>-.*)?$",
-      "versioning": "node"
     },
     {
       "description": "x/tools/* are used in the CI only and upgraded together",
@@ -93,7 +77,7 @@
       "description": "Split minor and patch updates",
       "matchPackageNames": [
         "containerbase/python-prebuild",
-        "github.com/urfave/cli/v2",
+        "github.com/urfave/cli/**",
         "python",
         "swagger-ui-dist",
         "vue"
@@ -104,40 +88,25 @@
       "description": "Automerge patch updates",
       "matchPackageNames": [
         "vue",
-        "github.com/urfave/cli/v2",
+        "github.com/urfave/cli/**",
         "swagger-ui-dist"
       ],
       "matchUpdateTypes": ["patch"],
       "automerge": true
     },
     {
-      "description": "Automerge renovate updates",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["code.forgejo.org/forgejo-contrib/renovate"],
-      "matchUpdateTypes": ["minor", "patch", "digest"],
-      "automerge": true
-    },
-    {
       "description": "Add reviewer and additional labels to renovate PRs",
       "matchDatasources": ["docker"],
-      "matchPackageNames": ["code.forgejo.org/forgejo-contrib/renovate"],
+      "matchPackageNames": ["data.forgejo.org/renovate/renovate"],
       "reviewers": ["viceice"],
-      "addLabels": ["forgejo/ci", "test/not-needed"]
-    },
-    {
-      "description": "Update renovate with higher prio to come through rate limit",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["code.forgejo.org/forgejo-contrib/renovate"],
-      "extends": ["schedule:weekly"],
-      "prPriority": 10,
-      "groupName": "renovate"
+      "addLabels": ["forgejo/ci"]
     },
     {
       "description": "Disable renovate self-updates for release branches",
       "matchBaseBranches": ["/^v\\d+\\.\\d+\\/forgejo$/"],
-      "matchDatasources": ["docker"],
       "matchPackageNames": [
         "code.forgejo.org/forgejo-contrib/renovate",
+        "data.forgejo.org/renovate/renovate",
         "ghcr.io/visualon/renovate"
       ],
       "enabled": false
@@ -151,9 +120,11 @@
         "@playwright/**",
         "@stoplight/spectral-cli",
         "@stylistic/**",
+        "@vitejs/plugin-vue",
+        "@vue/test-utils",
         "djlint",
-        "github.com/editorconfig-checker/editorconfig-checker/v2/cmd/editorconfig-checker",
-        "github.com/golangci/golangci-lint/cmd/golangci-lint",
+        "github.com/editorconfig-checker/editorconfig-checker/**",
+        "github.com/golangci/golangci-lint/**",
         "github.com/go-testfixtures/testfixtures",
         "github.com/PuerkitoBio/goquery",
         "happy-dom",
@@ -162,7 +133,7 @@
         "mvdan.cc/gofumpt",
         "updates",
         "vite-string-plugin",
-        "@vue/test-utils"
+        "yamllint"
       ],
       "automerge": true
     },
@@ -172,28 +143,18 @@
       "minimumReleaseAge": "30 days"
     },
     {
+      "description": "Disable indirect updates for stable branches",
+      "matchBaseBranches": ["/^v\\d+\\.\\d+\\/forgejo$/"],
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["major", "minor", "patch", "digest"],
+      "matchDepTypes": ["indirect"],
+      "enabled": false
+    },
+    {
       "description": "Require approval for stable branches (must be last rule to override all others)",
       "matchBaseBranches": ["/^v\\d+\\.\\d+\\/forgejo$/"],
       "dependencyDashboardApproval": true,
       "schedule": ["at any time"]
-    }
-  ],
-  "customManagers": [
-    {
-      "description": "Update node-version in forgejo workflows",
-      "customType": "regex",
-      "fileMatch": ["^.forgejo/workflows/.+\\.yml$"],
-      "matchStrings": ["\\s+node-version: ['\"]?(?<currentValue>.+?)['\"]?\\s"],
-      "depNameTemplate": "node",
-      "datasourceTemplate": "node-version"
-    },
-    {
-      "description": "Update deps inside Makefile",
-      "customType": "regex",
-      "fileMatch": ["^Makefile$"],
-      "matchStrings": [
-        " \\?= (?<depName>.+?)@(?<currentValue>.+?) # renovate: datasource=(?<datasource>.+?)(?: packageName=(?<packageName>.+?))?( versioning=(?<versioning>.+?))?\\s"
-      ]
     }
   ]
 }

@@ -1,5 +1,5 @@
 import eslintCommunityEslintPluginEslintComments from '@eslint-community/eslint-plugin-eslint-comments';
-import stylisticEslintPluginJs from '@stylistic/eslint-plugin-js';
+import stylisticEslintPlugin from '@stylistic/eslint-plugin';
 import vitest from '@vitest/eslint-plugin';
 import arrayFunc from 'eslint-plugin-array-func';
 import eslintPluginImportX from 'eslint-plugin-import-x';
@@ -14,6 +14,7 @@ import wc from 'eslint-plugin-wc';
 import globals from 'globals';
 import vue from 'eslint-plugin-vue';
 import vueScopedCss from 'eslint-plugin-vue-scoped-css';
+import toml from 'eslint-plugin-toml';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -25,16 +26,16 @@ export default tseslint.config(
   {
     plugins: {
       '@eslint-community/eslint-comments': eslintCommunityEslintPluginEslintComments,
-      '@stylistic/js': stylisticEslintPluginJs,
+      '@stylistic': stylisticEslintPlugin,
       '@vitest': vitest,
       'array-func': arrayFunc,
-      'import-x': eslintPluginImportX,
       'no-jquery': noJquery,
       'no-use-extend-native': noUseExtendNative,
       regexp,
       sonarjs,
       unicorn,
       playwright,
+      toml,
       'vitest-globals': vitestGlobals,
       vue,
       'vue-scoped-css': vueScopedCss,
@@ -57,7 +58,14 @@ export default tseslint.config(
       sourceType: 'module',
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': 'off', // TODO: enable this rule again
+      '@typescript-eslint/no-unused-vars': [2, {
+        args: 'all',
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        ignoreRestSiblings: false,
+      }],
 
       '@eslint-community/eslint-comments/disable-enable-pair': [2],
       '@eslint-community/eslint-comments/no-aggregating-enable': [2],
@@ -68,62 +76,62 @@ export default tseslint.config(
       '@eslint-community/eslint-comments/no-unused-enable': [2],
       '@eslint-community/eslint-comments/no-use': [0],
       '@eslint-community/eslint-comments/require-description': [0],
-      '@stylistic/js/array-bracket-newline': [0],
-      '@stylistic/js/array-bracket-spacing': [2, 'never'],
-      '@stylistic/js/array-element-newline': [0],
-      '@stylistic/js/arrow-parens': [2, 'always'],
+      '@stylistic/array-bracket-newline': [0],
+      '@stylistic/array-bracket-spacing': [2, 'never'],
+      '@stylistic/array-element-newline': [0],
+      '@stylistic/arrow-parens': [2, 'always'],
 
-      '@stylistic/js/arrow-spacing': [2, {
+      '@stylistic/arrow-spacing': [2, {
         before: true,
         after: true,
       }],
 
-      '@stylistic/js/block-spacing': [0],
+      '@stylistic/block-spacing': [0],
 
-      '@stylistic/js/brace-style': [2, '1tbs', {
+      '@stylistic/brace-style': [2, '1tbs', {
         allowSingleLine: true,
       }],
 
-      '@stylistic/js/comma-dangle': [2, 'always-multiline'],
+      '@stylistic/comma-dangle': [2, 'always-multiline'],
 
-      '@stylistic/js/comma-spacing': [2, {
+      '@stylistic/comma-spacing': [2, {
         before: false,
         after: true,
       }],
 
-      '@stylistic/js/comma-style': [2, 'last'],
-      '@stylistic/js/computed-property-spacing': [2, 'never'],
-      '@stylistic/js/dot-location': [2, 'property'],
-      '@stylistic/js/eol-last': [2],
-      '@stylistic/js/function-call-spacing': [2, 'never'],
-      '@stylistic/js/function-call-argument-newline': [0],
-      '@stylistic/js/function-paren-newline': [0],
-      '@stylistic/js/generator-star-spacing': [0],
-      '@stylistic/js/implicit-arrow-linebreak': [0],
+      '@stylistic/comma-style': [2, 'last'],
+      '@stylistic/computed-property-spacing': [2, 'never'],
+      '@stylistic/dot-location': [2, 'property'],
+      '@stylistic/eol-last': [2],
+      '@stylistic/function-call-spacing': [2, 'never'],
+      '@stylistic/function-call-argument-newline': [0],
+      '@stylistic/function-paren-newline': [0],
+      '@stylistic/generator-star-spacing': [0],
+      '@stylistic/implicit-arrow-linebreak': [0],
 
-      '@stylistic/js/indent': [2, 2, {
+      '@stylistic/indent': [2, 2, {
         ignoreComments: true,
         SwitchCase: 1,
       }],
 
-      '@stylistic/js/key-spacing': [2],
-      '@stylistic/js/keyword-spacing': [2],
-      '@stylistic/js/linebreak-style': [2, 'unix'],
-      '@stylistic/js/lines-around-comment': [0],
-      '@stylistic/js/lines-between-class-members': [0],
-      '@stylistic/js/max-len': [0],
-      '@stylistic/js/max-statements-per-line': [0],
-      '@stylistic/js/multiline-ternary': [0],
-      '@stylistic/js/new-parens': [2],
-      '@stylistic/js/newline-per-chained-call': [0],
-      '@stylistic/js/no-confusing-arrow': [0],
-      '@stylistic/js/no-extra-parens': [0],
-      '@stylistic/js/no-extra-semi': [2],
-      '@stylistic/js/no-floating-decimal': [0],
-      '@stylistic/js/no-mixed-operators': [0],
-      '@stylistic/js/no-mixed-spaces-and-tabs': [2],
+      '@stylistic/key-spacing': [2],
+      '@stylistic/keyword-spacing': [2],
+      '@stylistic/linebreak-style': [2, 'unix'],
+      '@stylistic/lines-around-comment': [0],
+      '@stylistic/lines-between-class-members': [0],
+      '@stylistic/max-len': [0],
+      '@stylistic/max-statements-per-line': [0],
+      '@stylistic/multiline-ternary': [0],
+      '@stylistic/new-parens': [2],
+      '@stylistic/newline-per-chained-call': [0],
+      '@stylistic/no-confusing-arrow': [0],
+      '@stylistic/no-extra-parens': [0],
+      '@stylistic/no-extra-semi': [2],
+      '@stylistic/no-floating-decimal': [0],
+      '@stylistic/no-mixed-operators': [0],
+      '@stylistic/no-mixed-spaces-and-tabs': [2],
 
-      '@stylistic/js/no-multi-spaces': [2, {
+      '@stylistic/no-multi-spaces': [2, {
         ignoreEOLComments: true,
 
         exceptions: {
@@ -131,60 +139,60 @@ export default tseslint.config(
         },
       }],
 
-      '@stylistic/js/no-multiple-empty-lines': [2, {
+      '@stylistic/no-multiple-empty-lines': [2, {
         max: 1,
         maxEOF: 0,
         maxBOF: 0,
       }],
 
-      '@stylistic/js/no-tabs': [2],
-      '@stylistic/js/no-trailing-spaces': [2],
-      '@stylistic/js/no-whitespace-before-property': [2],
-      '@stylistic/js/nonblock-statement-body-position': [2],
-      '@stylistic/js/object-curly-newline': [0],
-      '@stylistic/js/object-curly-spacing': [2, 'never'],
-      '@stylistic/js/object-property-newline': [0],
-      '@stylistic/js/one-var-declaration-per-line': [0],
-      '@stylistic/js/operator-linebreak': [2, 'after'],
-      '@stylistic/js/padded-blocks': [2, 'never'],
-      '@stylistic/js/padding-line-between-statements': [0],
-      '@stylistic/js/quote-props': [0],
+      '@stylistic/no-tabs': [2],
+      '@stylistic/no-trailing-spaces': [2],
+      '@stylistic/no-whitespace-before-property': [2],
+      '@stylistic/nonblock-statement-body-position': [2],
+      '@stylistic/object-curly-newline': [0],
+      '@stylistic/object-curly-spacing': [2, 'never'],
+      '@stylistic/object-property-newline': [0],
+      '@stylistic/one-var-declaration-per-line': [0],
+      '@stylistic/operator-linebreak': [2, 'after'],
+      '@stylistic/padded-blocks': [2, 'never'],
+      '@stylistic/padding-line-between-statements': [0],
+      '@stylistic/quote-props': [0],
 
-      '@stylistic/js/quotes': [2, 'single', {
+      '@stylistic/quotes': [2, 'single', {
         avoidEscape: true,
-        allowTemplateLiterals: true,
+        allowTemplateLiterals: 'always',
       }],
 
-      '@stylistic/js/rest-spread-spacing': [2, 'never'],
+      '@stylistic/rest-spread-spacing': [2, 'never'],
 
-      '@stylistic/js/semi': [2, 'always', {
+      '@stylistic/semi': [2, 'always', {
         omitLastInOneLineBlock: true,
       }],
 
-      '@stylistic/js/semi-spacing': [2, {
+      '@stylistic/semi-spacing': [2, {
         before: false,
         after: true,
       }],
 
-      '@stylistic/js/semi-style': [2, 'last'],
-      '@stylistic/js/space-before-blocks': [2, 'always'],
+      '@stylistic/semi-style': [2, 'last'],
+      '@stylistic/space-before-blocks': [2, 'always'],
 
-      '@stylistic/js/space-before-function-paren': [2, {
+      '@stylistic/space-before-function-paren': [2, {
         anonymous: 'ignore',
         named: 'never',
         asyncArrow: 'always',
       }],
 
-      '@stylistic/js/space-in-parens': [2, 'never'],
-      '@stylistic/js/space-infix-ops': [2],
-      '@stylistic/js/space-unary-ops': [2],
-      '@stylistic/js/spaced-comment': [2, 'always'],
-      '@stylistic/js/switch-colon-spacing': [2],
-      '@stylistic/js/template-curly-spacing': [2, 'never'],
-      '@stylistic/js/template-tag-spacing': [2, 'never'],
-      '@stylistic/js/wrap-iife': [2, 'inside'],
-      '@stylistic/js/wrap-regex': [0],
-      '@stylistic/js/yield-star-spacing': [2, 'after'],
+      '@stylistic/space-in-parens': [2, 'never'],
+      '@stylistic/space-infix-ops': [2],
+      '@stylistic/space-unary-ops': [2],
+      '@stylistic/spaced-comment': [2, 'always'],
+      '@stylistic/switch-colon-spacing': [2],
+      '@stylistic/template-curly-spacing': [2, 'never'],
+      '@stylistic/template-tag-spacing': [2, 'never'],
+      '@stylistic/wrap-iife': [2, 'inside'],
+      '@stylistic/wrap-regex': [0],
+      '@stylistic/yield-star-spacing': [2, 'after'],
       'accessor-pairs': [2],
 
       'array-callback-return': [2, {
@@ -317,8 +325,9 @@ export default tseslint.config(
       'no-jquery/no-data': [0],
       'no-jquery/no-deferred': [2],
       'no-jquery/no-delegate': [2],
+      'no-jquery/no-done-fail': [2],
       'no-jquery/no-each-collection': [0],
-      'no-jquery/no-each-util': [0],
+      'no-jquery/no-each-util': [2],
       'no-jquery/no-each': [0],
       'no-jquery/no-error-shorthand': [2],
       'no-jquery/no-error': [2],
@@ -330,6 +339,7 @@ export default tseslint.config(
       'no-jquery/no-find-collection': [0],
       'no-jquery/no-find-util': [2],
       'no-jquery/no-find': [0],
+      'no-jquery/no-fx': [2],
       'no-jquery/no-fx-interval': [2],
       'no-jquery/no-global-eval': [2],
       'no-jquery/no-global-selector': [0],
@@ -349,7 +359,7 @@ export default tseslint.config(
       'no-jquery/no-live': [2],
       'no-jquery/no-load-shorthand': [2],
       'no-jquery/no-load': [2],
-      'no-jquery/no-map-collection': [0],
+      'no-jquery/no-map-collection': [2],
       'no-jquery/no-map-util': [2],
       'no-jquery/no-map': [2],
       'no-jquery/no-merge': [2],
@@ -373,12 +383,12 @@ export default tseslint.config(
       'no-jquery/no-selector-prop': [2],
       'no-jquery/no-serialize': [2],
       'no-jquery/no-size': [2],
-      'no-jquery/no-sizzle': [0],
+      'no-jquery/no-sizzle': [2],
       'no-jquery/no-slide': [2],
       'no-jquery/no-sub': [2],
       'no-jquery/no-support': [2],
       'no-jquery/no-text': [0],
-      'no-jquery/no-trigger': [0],
+      'no-jquery/no-trigger': [2],
       'no-jquery/no-trim': [2],
       'no-jquery/no-type': [2],
       'no-jquery/no-unique': [2],
@@ -536,14 +546,7 @@ export default tseslint.config(
       'no-unused-labels': [2],
       'no-unused-private-class-members': [2],
 
-      'no-unused-vars': [2, {
-        args: 'all',
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
-        destructuredArrayIgnorePattern: '^_',
-        ignoreRestSiblings: false,
-      }],
+      'no-unused-vars': [0],
 
       'no-use-before-define': [2, {
         functions: false,
@@ -700,7 +703,6 @@ export default tseslint.config(
       'sonarjs/no-inverted-boolean-check': [2],
       'sonarjs/no-nested-switch': [0],
       'sonarjs/no-nested-template-literals': [0],
-      'sonarjs/no-one-iteration-loop': [2],
       'sonarjs/no-redundant-boolean': [2],
       'sonarjs/no-redundant-jump': [2],
       'sonarjs/no-same-line-conditional': [2],
@@ -721,6 +723,8 @@ export default tseslint.config(
       'unicode-bom': [2, 'never'],
       'unicorn/better-regex': [0],
       'unicorn/catch-error-name': [0],
+      'unicorn/consistent-assert': [0],
+      'unicorn/consistent-date-clone': [2],
       'unicorn/consistent-destructuring': [2],
       'unicorn/consistent-empty-array-spread': [2],
       'unicorn/consistent-existence-index-check': [2],
@@ -735,12 +739,12 @@ export default tseslint.config(
       'unicorn/import-index': [0],
       'unicorn/import-style': [0],
       'unicorn/new-for-builtins': [2],
+      'unicorn/no-accessor-recursion': [2],
       'unicorn/no-abusive-eslint-disable': [0],
       'unicorn/no-anonymous-default-export': [0],
       'unicorn/no-array-callback-reference': [0],
       'unicorn/no-array-for-each': [2],
       'unicorn/no-array-method-this-argument': [2],
-      'unicorn/no-array-push-push': [2],
       'unicorn/no-array-reduce': [2],
       'unicorn/no-await-expression-member': [0],
       'unicorn/no-await-in-promise-methods': [2],
@@ -749,13 +753,13 @@ export default tseslint.config(
       'unicorn/no-empty-file': [2],
       'unicorn/no-for-loop': [0],
       'unicorn/no-hex-escape': [0],
-      'unicorn/no-instanceof-array': [0],
+      'unicorn/no-instanceof-builtins': [0],
       'unicorn/no-invalid-fetch-options': [2],
       'unicorn/no-invalid-remove-event-listener': [2],
       'unicorn/no-keyword-prefix': [0],
-      'unicorn/no-length-as-slice-end': [2],
       'unicorn/no-lonely-if': [2],
       'unicorn/no-magic-array-flat-depth': [0],
+      'unicorn/no-named-default': [2],
       'unicorn/no-negated-condition': [0],
       'unicorn/no-negation-in-equality-check': [2],
       'unicorn/no-nested-ternary': [0],
@@ -769,8 +773,11 @@ export default tseslint.config(
       'unicorn/no-thenable': [2],
       'unicorn/no-this-assignment': [2],
       'unicorn/no-typeof-undefined': [2],
+      'unicorn/no-unnecessary-array-flat-depth': [2],
+      'unicorn/no-unnecessary-array-splice-count': [2],
       'unicorn/no-unnecessary-await': [2],
       'unicorn/no-unnecessary-polyfills': [2],
+      'unicorn/no-unnecessary-slice-end': [2],
       'unicorn/no-unreadable-array-destructuring': [0],
       'unicorn/no-unreadable-iife': [2],
       'unicorn/no-unused-properties': [2],
@@ -791,6 +798,7 @@ export default tseslint.config(
       'unicorn/prefer-array-some': [2],
       'unicorn/prefer-at': [0],
       'unicorn/prefer-blob-reading-methods': [2],
+      'unicorn/prefer-classlist-toggle': [2],
       'unicorn/prefer-code-point': [0],
       'unicorn/prefer-date-now': [2],
       'unicorn/prefer-default-parameters': [0],
@@ -801,6 +809,7 @@ export default tseslint.config(
       'unicorn/prefer-event-target': [2],
       'unicorn/prefer-export-from': [0],
       'unicorn/prefer-global-this': [0],
+      'unicorn/prefer-import-meta-properties': [2],
       'unicorn/prefer-includes': [2],
       'unicorn/prefer-json-parse-buffer': [0],
       'unicorn/prefer-keyboard-event-key': [2],
@@ -823,6 +832,7 @@ export default tseslint.config(
       'unicorn/prefer-regexp-test': [2],
       'unicorn/prefer-set-has': [0],
       'unicorn/prefer-set-size': [2],
+      'unicorn/prefer-single-call': [2],
       'unicorn/prefer-spread': [0],
       'unicorn/prefer-string-raw': [0],
       'unicorn/prefer-string-replace-all': [0],
@@ -832,7 +842,6 @@ export default tseslint.config(
       'unicorn/prefer-structured-clone': [2],
       'unicorn/prefer-switch': [0],
       'unicorn/prefer-ternary': [0],
-      'unicorn/prefer-text-content': [2],
       'unicorn/prefer-top-level-await': [0],
       'unicorn/prefer-type-error': [0],
       'unicorn/prevent-abbreviations': [0],
@@ -1073,6 +1082,7 @@ export default tseslint.config(
       '@vitest/no-standalone-expect': [0],
       '@vitest/no-test-prefixes': [0],
       '@vitest/no-test-return-statement': [0],
+      '@vitest/prefer-called-exactly-once-with': [2],
       '@vitest/prefer-called-with': [0],
       '@vitest/prefer-comparison-matcher': [0],
       '@vitest/prefer-each': [0],
@@ -1080,6 +1090,7 @@ export default tseslint.config(
       '@vitest/prefer-expect-resolves': [0],
       '@vitest/prefer-hooks-in-order': [0],
       '@vitest/prefer-hooks-on-top': [2],
+      '@vitest/prefer-import-in-mock': [0],
       '@vitest/prefer-lowercase-title': [0],
       '@vitest/prefer-mock-promise-shorthand': [0],
       '@vitest/prefer-snapshot-hint': [0],
@@ -1166,5 +1177,5 @@ export default tseslint.config(
       'vue-scoped-css/enforce-style-type': [0],
     },
   },
-
+  ...toml.configs['flat/recommended'],
 );

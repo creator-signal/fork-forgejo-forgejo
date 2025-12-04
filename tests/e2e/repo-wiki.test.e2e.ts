@@ -5,12 +5,11 @@
 
 import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
+import {screenshot} from './shared/screenshots.ts';
 
 for (const searchTerm of ['space', 'consectetur']) {
   for (const width of [null, 2560, 4000]) {
-    test(`Search for '${searchTerm}' and test for no overflow ${width && `on ${width}-wide viewport` || ''}`, async ({page, viewport}, workerInfo) => {
-      test.skip(workerInfo.project.name === 'Mobile Safari', 'Fails as always, see https://codeberg.org/forgejo/forgejo/pulls/5326#issuecomment-2313275');
-
+    test(`Search for '${searchTerm}' and test for no overflow ${width && `on ${width}-wide viewport` || ''}`, async ({page, viewport}) => {
       await page.setViewportSize({
         width: width ?? viewport.width,
         height: 1440, // We're testing that we fit horizontally - vertical scrolling is fine.
@@ -21,14 +20,16 @@ for (const searchTerm of ['space', 'consectetur']) {
       // workaround: HTMX listens on keyup events, playwright's fill only triggers the input event
       // so we manually "type" the last letter
       await page.getByPlaceholder('Search wiki').dispatchEvent('keyup');
-      // timeout is necessary because HTMX search could be slow
-      await expect(page.locator('#wiki-search a[href]')).toBeInViewport({ratio: 1});
+
+      await expect(page.locator('#wiki-search a[href]')).toBeInViewport({
+        ratio: 1,
+      });
+      await screenshot(page);
     });
   }
 }
 
-test(`Search results show titles (and not file names)`, async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Fails as always, see https://codeberg.org/forgejo/forgejo/pulls/5326#issuecomment-2313275');
+test(`Search results show titles (and not file names)`, async ({page}) => {
   await page.goto('/user2/repo1/wiki');
   await page.getByPlaceholder('Search wiki').fill('spaces');
   await page.getByPlaceholder('Search wiki').click();
@@ -36,4 +37,24 @@ test(`Search results show titles (and not file names)`, async ({page}, workerInf
   // so we manually "type" the last letter
   await page.getByPlaceholder('Search wiki').dispatchEvent('keyup');
   await expect(page.locator('#wiki-search a[href] b')).toHaveText('Page With Spaced Name');
+  await screenshot(page);
+});
+
+test('Wiki unicode-escape', async ({page}) => {
+  await page.goto('/user2/unicode-escaping/wiki');
+  await screenshot(page);
+
+  expect(await page.locator('.ui.message.unicode-escape-prompt').count()).toEqual(3);
+
+  const unescapedElements = page.locator('.ambiguous-code-point');
+  for (let i = 0; i < await unescapedElements.count(); i++) {
+    expect(await unescapedElements.nth(i).evaluate((el) => getComputedStyle(el).border)).toEqual('0px solid rgb(24, 24, 27)');
+  }
+
+  await page.locator('a.escape-button').click();
+
+  const escapedElements = page.locator('.ambiguous-code-point');
+  for (let i = 0; i < await escapedElements.count(); i++) {
+    expect(await escapedElements.nth(i).evaluate((el) => getComputedStyle(el).border)).toEqual('1px solid rgb(202, 138, 4)');
+  }
 });
