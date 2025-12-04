@@ -7,7 +7,7 @@ import (
 	ap "github.com/go-ap/activitypub"
 )
 
-// ForgeFollow activity data type
+// ActivityStream OrderedCollection of activities
 // swagger:model
 type ForgeOutbox struct {
 	// swagger:ignore

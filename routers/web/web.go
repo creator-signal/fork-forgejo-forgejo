@@ -822,6 +822,7 @@ func registerRoutes(m *web.Route) {
 				m.Get("", admin.AbuseReports)
 				m.Get("/type/{type:1|2|3|4}/id/{id}", admin.AbuseReportDetails)
 			})
+			m.Post("/abuse_reports/act", admin.PerformAction)
 		}
 	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
@@ -1335,8 +1336,8 @@ func registerRoutes(m *web.Route) {
 			m.Get(".atom", feedEnabled, repo.TagsListFeedAtom)
 		}, ctxDataSet("EnableFeed", setting.Other.EnableFeed),
 			repo.MustBeNotEmpty, reqRepoCodeReader, context.RepoRefByType(context.RepoRefTag, true))
-		m.Post("/tags/delete", repo.DeleteTag, reqSignIn,
-			repo.MustBeNotEmpty, context.RepoMustNotBeArchived(), reqRepoCodeWriter, context.RepoRef())
+		m.Post("/tags/delete", reqSignIn, repo.MustBeNotEmpty, context.RepoMustNotBeArchived(), reqRepoCodeWriter,
+			context.RepoRef(), repo.DeleteTag)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
 	// Releases
@@ -1456,10 +1457,12 @@ func registerRoutes(m *web.Route) {
 							Get(actions.RedirectToLatestAttempt).
 							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
 						m.Post("/rerun", reqRepoActionsWriter, actions.Rerun)
-						m.Get("/logs", actions.Logs)
-						m.Combo("/attempt/{attempt}").
-							Get(actions.View).
-							Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
+						m.Group("/attempt/{attempt}", func() {
+							m.Combo("").
+								Get(actions.View).
+								Post(web.Bind(actions.ViewRequest{}), actions.ViewPost)
+							m.Get("/logs", actions.Logs)
+						})
 					})
 					m.Post("/cancel", reqRepoActionsWriter, actions.Cancel)
 					m.Get("/artifacts", actions.ArtifactsView)

@@ -23,8 +23,8 @@ import (
 	"forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
-	act_model "code.forgejo.org/forgejo/runner/v11/act/model"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
 )
 
 type InputRequiredErr struct {
@@ -168,7 +168,13 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		}
 	}
 
-	jobs, err := actions.JobParser(content, jobparser.WithVars(vars), jobparser.WithInputs(inputsAny))
+	jobs, err := actions.JobParser(content,
+		jobparser.WithVars(vars),
+		jobparser.WithInputs(inputsAny),
+		// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
+		// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+	)
 	if err != nil {
 		return nil, nil, err
 	}

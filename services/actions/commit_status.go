@@ -19,7 +19,7 @@ import (
 	webhook_module "forgejo.org/modules/webhook"
 	commitstatus_service "forgejo.org/services/repository/commitstatus"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 )
 
 // CreateCommitStatus creates a commit status for the given job.
@@ -33,6 +33,13 @@ func CreateCommitStatus(ctx context.Context, jobs ...*actions_model.ActionRunJob
 }
 
 func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) error {
+	if incompleteMatrix, err := job.IsIncompleteMatrix(); err != nil {
+		return fmt.Errorf("job IsIncompleteMatrix: %w", err)
+	} else if incompleteMatrix {
+		// Don't create commit statuses for incomplete matrix jobs because they are never completed.
+		return nil
+	}
+
 	if err := job.LoadAttributes(ctx); err != nil {
 		return fmt.Errorf("load run: %w", err)
 	}

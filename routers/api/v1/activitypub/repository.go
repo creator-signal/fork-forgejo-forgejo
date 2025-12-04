@@ -93,6 +93,13 @@ func RepositoryOutbox(ctx *context.APIContext) {
 	// summary: Display the outbox
 	// produces:
 	// - application/ld+json
+	// parameters:
+	// - name: repository-id
+	//   in: path
+	//   description: repository ID of the repo
+	//   type: integer
+	//   format: int64
+	//   required: true
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/Outbox"

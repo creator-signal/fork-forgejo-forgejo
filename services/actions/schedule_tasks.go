@@ -19,8 +19,8 @@ import (
 	"forgejo.org/modules/timeutil"
 	webhook_module "forgejo.org/modules/webhook"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
-	act_model "code.forgejo.org/forgejo/runner/v11/act/model"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
 	"github.com/robfig/cron/v3"
 	"xorm.io/builder"
 )
@@ -169,7 +169,12 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 	}
 
 	// Parse the workflow specification from the cron schedule
-	workflows, err := actions_module.JobParser(cron.Content, jobparser.WithVars(vars))
+	workflows, err := actions_module.JobParser(cron.Content,
+		jobparser.WithVars(vars),
+		// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
+		// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+	)
 	if err != nil {
 		return err
 	}

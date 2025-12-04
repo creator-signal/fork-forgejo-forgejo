@@ -145,6 +145,16 @@
         ],
         "summary": "Display the outbox",
         "operationId": "activitypubRepositoryOutbox",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "repository ID of the repo",
+            "name": "repository-id",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/Outbox"
@@ -1157,7 +1167,7 @@
           "admin"
         ],
         "summary": "Deletes a quota rule",
-        "operationId": "adminDEleteQuotaRule",
+        "operationId": "adminDeleteQuotaRule",
         "parameters": [
           {
             "type": "string",
@@ -2226,7 +2236,6 @@
               "enum": [
                 "issue",
                 "pull",
-                "commit",
                 "repository"
               ],
               "type": "string"
@@ -13554,7 +13563,6 @@
               "enum": [
                 "issue",
                 "pull",
-                "commit",
                 "repository"
               ],
               "type": "string"
@@ -21993,16 +22001,6 @@
       },
       "x-go-package": "forgejo.org/services/context"
     },
-    "APRemoteFollowOption": {
-      "type": "object",
-      "properties": {
-        "target": {
-          "type": "string",
-          "x-go-name": "Target"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
     "AccessToken": {
       "type": "object",
       "title": "AccessToken represents an API access token.",
@@ -25764,7 +25762,7 @@
       "x-go-package": "forgejo.org/modules/forgefed"
     },
     "ForgeOutbox": {
-      "description": "ForgeFollow activity data type",
+      "description": "ActivityStream OrderedCollection of activities",
       "type": "object",
       "x-go-package": "forgejo.org/modules/forgefed"
     },

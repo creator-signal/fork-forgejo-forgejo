@@ -8,13 +8,13 @@ import (
 
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
-	services_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/services/federation"
 
 	"github.com/42wim/httpsig"
 )
 
-func verifyHTTPSignature(ctx services_context.APIContext) (authenticated bool, err error) {
+func verifyHTTPSignature(ctx app_context.APIContext) (authenticated bool, err error) {
 	if !setting.Federation.SignatureEnforced {
 		return true, nil
 	}
@@ -44,15 +44,14 @@ func verifyHTTPSignature(ctx services_context.APIContext) (authenticated bool, e
 		log.Debug("For %q verification failed: %v", r.URL.Path, err)
 		return false, err
 	}
-	log.Debug("For %q signature was valid.", r.URL.Path)
 	return true, nil
 }
 
 // ReqHTTPSignature function
-func ReqHTTPSignature() func(ctx *services_context.APIContext) {
-	return func(ctx *services_context.APIContext) {
+func ReqHTTPSignature() func(ctx *app_context.APIContext) {
+	return func(ctx *app_context.APIContext) {
 		if authenticated, err := verifyHTTPSignature(*ctx); err != nil {
-			log.Warn("verifyHttpSignatures failed: %v", err)
+			log.Warn("verifyHttpSignature failed: %v", err)
 			ctx.Error(http.StatusBadRequest, "reqSignature", "request signature verification failed")
 		} else if !authenticated {
 			ctx.Error(http.StatusForbidden, "reqSignature", "request signature verification failed")

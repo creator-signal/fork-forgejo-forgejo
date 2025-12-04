@@ -892,6 +892,7 @@ func Routes() *web.Route {
 				m.Group("/actor", func() {
 					m.Get("", activitypub.Actor)
 					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.ActorInbox)
+					m.Get("/outbox", activitypub.ActorOutbox)
 				})
 				m.Group("/repository-id/{repository-id}", func() {
 					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Repository)

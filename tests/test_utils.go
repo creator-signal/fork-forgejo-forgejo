@@ -47,6 +47,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"xorm.io/xorm/convert"
+
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 )
 
 func exitf(format string, args ...any) {
@@ -128,10 +130,10 @@ func InitTest(requireGitea bool) {
 		var db *sql.DB
 		var err error
 		if setting.Database.Host[0] == '/' {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Name, setting.Database.SSLMode, setting.Database.Host))
 		} else {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 		}
 
@@ -157,10 +159,10 @@ func InitTest(requireGitea bool) {
 		db.Close()
 
 		if setting.Database.Host[0] == '/' {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Name, setting.Database.SSLMode, setting.Database.Host))
 		} else {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 		}
 		// This is a different db object; requires a different Close()
@@ -370,6 +372,7 @@ type DeclarativeRepoOptions struct {
 	AutoInit      optional.Option[bool]
 	IsTemplate    optional.Option[bool]
 	ObjectFormat  optional.Option[string]
+	IsPrivate     optional.Option[bool]
 }
 
 func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts DeclarativeRepoOptions) (*repo_model.Repository, string, func()) {
@@ -402,6 +405,7 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 		DefaultBranch:    "main",
 		IsTemplate:       opts.IsTemplate.Value(),
 		ObjectFormatName: opts.ObjectFormat.Value(),
+		IsPrivate:        opts.IsPrivate.Value(),
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, repo)
