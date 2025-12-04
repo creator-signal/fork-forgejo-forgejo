@@ -6,9 +6,9 @@ package repo
 import (
 	"context"
 
-	"code.gitea.io/gitea/models/db"
-	api "code.gitea.io/gitea/modules/structs"
-	"code.gitea.io/gitea/modules/timeutil"
+	"forgejo.org/models/db"
+	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
 )
 
 func init() {

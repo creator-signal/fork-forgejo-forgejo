@@ -24,6 +24,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 	notify_service "forgejo.org/services/notify"
+	repo_service "forgejo.org/services/repository"
 )
 
 // gitShortEmptySha Git short empty SHA

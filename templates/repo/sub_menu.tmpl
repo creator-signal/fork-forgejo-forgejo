@@ -1,6 +1,6 @@
 {{if and (not .HideRepoInfo) (not .IsBlame)}}
 <div class="ui segments repository-summary tw-mt-1 tw-mb-0">
-	<div class="ui segment repository-menu">
+	<div class="ui segment repository-menu {{if .DetectedRepoLicenses}}repository-menu-licenses{{end}}">
 		{{if and (.Permission.CanRead $.UnitTypeCode) (not .IsEmptyRepo)}}
 			<a class="item muted {{if .PageIsCommits}}active{{end}}" href="{{.RepoLink}}/commits/{{.BranchNameSubURL}}">
 				{{svg "octicon-history"}} {{ctx.Locale.TrN .CommitsCount "repo.n_commit_one" "repo.n_commit_few" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .CommitsCount) | SafeHTML)}}
