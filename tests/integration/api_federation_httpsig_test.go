@@ -101,6 +101,50 @@ func TestFederationHttpSigValidation(t *testing.T) {
 			require.Error(t, user.ValidateKeyID(ctx, keyID))
 		})
 
+		// Valid key ID
+		t.Run("ValidKeyID", func(t *testing.T) {
+			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
+			require.NoError(t, err)
+
+			keyID, err := federation_key.NewKeyID(actorKeyID)
+			require.NoError(t, err)
+
+			require.NoError(t, user.ValidateKeyID(ctx, keyID))
+		})
+
+		// Invalid key ID
+		t.Run("InvalidKeyID", func(t *testing.T) {
+			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
+			require.NoError(t, err)
+
+			// bad actor user ID
+			badActorKeyID := fmt.Sprintf("%sapi/v1/activitypub/user-id/2#main-key", setting.AppURL)
+			keyID, err := federation_key.NewKeyID(badActorKeyID)
+			require.NoError(t, err)
+
+			require.Error(t, user.ValidateKeyID(ctx, keyID))
+
+			// bad host
+			badHostKeyID := "http://bad.host/api/v1/activitypub/user-id/2#main-key"
+			keyID, err = federation_key.NewKeyID(badHostKeyID)
+			require.NoError(t, err)
+
+			require.Error(t, user.ValidateKeyID(ctx, keyID))
+
+			// bad scheme
+			keyID, err = federation_key.NewKeyID(actorKeyID)
+			require.NoError(t, err)
+
+			keyURL, err := keyID.IRI().URL()
+			require.NoError(t, err)
+			keyURL.Scheme = "https"
+
+			keyID, err = federation_key.NewKeyID(keyURL.String())
+			require.NoError(t, err)
+
+			require.Error(t, user.ValidateKeyID(ctx, keyID))
+		})
+
 		// Check for cached public keys
 		t.Run("ValidateCaches", func(t *testing.T) {
 			host, err := forgefed.FindFederationHostByKeyID(db.DefaultContext, applicationKeyID)
