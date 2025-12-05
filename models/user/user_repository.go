@@ -139,11 +139,11 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID federation_key.KeyID) (
 	publicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
 	if err != nil {
 		return nil, nil, err
-	} else if publicKey == nil {
+	} else if !publicKey.Has() {
 		return optional.None[*User](), optional.None[*FederatedUser](), nil
 	}
 
-	has, err := eng.Where("id=?", publicKey.ActorID).Get(federatedUser)
+	has, err := eng.Where("id=?", publicKey.Value().ActorID).Get(federatedUser)
 	if err != nil {
 		return nil, nil, err
 	} else if !has {

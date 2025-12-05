@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"forgejo.org/models/db"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/validation"
 )
 
@@ -32,10 +33,10 @@ func CreateFederationPublicKey(ctx context.Context, key *FederationPublicKey) er
 //
 // Returns:
 //
-// - (FederationPublicKey, nil): success, a record was found
-// - (nil, nil): failure, no record found
+// - (optional.Some(FederationPublicKey), nil): success, a record was found
+// - (optional.None, nil): success, no record found
 // - (nil, error): failure, a database error occured
-func FindFederationPublicKey(ctx context.Context, keyID KeyID) (*FederationPublicKey, error) {
+func FindFederationPublicKey(ctx context.Context, keyID KeyID) (optional.Option[*FederationPublicKey], error) {
 	key := new(FederationPublicKey)
 
 	has, err := db.GetEngine(ctx).Where("key_id=?", keyID.String()).Get(key)
@@ -43,12 +44,12 @@ func FindFederationPublicKey(ctx context.Context, keyID KeyID) (*FederationPubli
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, nil
+		return optional.None[*FederationPublicKey](), nil
 	} else if res, err := validation.IsValid(key); !res {
 		return nil, err
 	}
 
-	return key, nil
+	return optional.Some(key), nil
 }
 
 // FindOrCreateFederationPublicKey gets a `FederationPublicKey` entry by its ActivityPub key ID, or creates a new entry.
