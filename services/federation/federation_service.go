@@ -194,10 +194,13 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHost *
 		return nil, nil, err
 	}
 
-	personIdFromActor, err := fm.NewPersonID(person.ID.GetLink().String(), string(federationHost.NodeInfo.SoftwareName))
+	personIDFromActor, err := fm.NewPersonID(person.ID.GetLink().String(), string(federationHost.NodeInfo.SoftwareName))
+	if err != nil {
+		return nil, nil, err
+	}
 	email := fmt.Sprintf("f%v@%v", uuid.New().String(), localFqdn.Hostname())
-	loginName := personIdFromActor.AsLoginName()
-	name := fmt.Sprintf("%v%v", person.PreferredUsername.String(), personIdFromActor.HostSuffix())
+	loginName := personIDFromActor.AsLoginName()
+	name := fmt.Sprintf("%v%v", person.PreferredUsername.String(), personIDFromActor.HostSuffix())
 	fullName := person.Name.String()
 
 	if len(person.Name) == 0 {
@@ -233,10 +236,10 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHost *
 	}
 
 	federatedUser := user_model.FederatedUser{
-		ExternalID:            personIdFromActor.ID,
+		ExternalID:            personIDFromActor.ID,
 		FederationHostID:      federationHost.ID,
 		InboxPath:             inbox.Path,
-		NormalizedOriginalURL: personIdFromActor.AsURI(),
+		NormalizedOriginalURL: personIDFromActor.AsURI(),
 		KeyID: sql.NullString{
 			String: person.PublicKey.ID.String(),
 			Valid:  true,
