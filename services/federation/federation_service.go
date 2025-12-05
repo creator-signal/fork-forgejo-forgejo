@@ -89,7 +89,7 @@ func findFederatedUser(ctx context.Context, actorURI string) (*user.User, *user.
 		return nil, nil, nil, err
 	}
 
-	return user, federatedUser, federationHost, nil
+	return user.Value(), federatedUser.Value(), federationHost, nil
 }
 
 func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forgefed.FederationHost, error) {

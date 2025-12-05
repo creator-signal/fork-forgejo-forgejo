@@ -58,7 +58,7 @@ func CreateFederatedUser(ctx context.Context, user *User, federatedUser *Federat
 	return committer.Commit()
 }
 
-func FindFederatedUser(ctx context.Context, externalID string, federationHostID int64) (*User, *FederatedUser, error) {
+func FindFederatedUser(ctx context.Context, externalID string, federationHostID int64) (optional.Option[*User], optional.Option[*FederatedUser], error) {
 	federatedUser := new(FederatedUser)
 	user := new(User)
 
@@ -70,7 +70,7 @@ func FindFederatedUser(ctx context.Context, externalID string, federationHostID 
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
-		return nil, nil, nil
+		return optional.None[*User](), optional.None[*FederatedUser](), nil
 	}
 	has, err = eng.ID(federatedUser.UserID).Get(user)
 	if err != nil {
@@ -85,17 +85,17 @@ func FindFederatedUser(ctx context.Context, externalID string, federationHostID 
 	if res, err := validation.IsValid(*federatedUser); !res {
 		return nil, nil, err
 	}
-	return user, federatedUser, nil
+	return optional.Some(user), optional.Some(federatedUser), nil
 }
 
 func GetFederatedUser(ctx context.Context, externalID string, federationHostID int64) (*User, *FederatedUser, error) {
 	user, federatedUser, err := FindFederatedUser(ctx, externalID, federationHostID)
 	if err != nil {
 		return nil, nil, err
-	} else if federatedUser == nil {
+	} else if !federatedUser.Has() {
 		return nil, nil, fmt.Errorf("FederatedUser not found (given externalId: %v, federationHostId: %v)", externalID, federationHostID)
 	}
-	return user, federatedUser, nil
+	return user.Value(), federatedUser.Value(), nil
 }
 
 func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *FederatedUser, error) {
@@ -127,12 +127,11 @@ func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *Federa
 //
 // Returns:
 //
-// - (User, FederatedUser, nil): success, a record was found
-// - (nil, nil, nil): failure, no record found
+// - (optional.Some(User), optional.Some(FederatedUser), nil): success, a record was found
+// - (optional.None, optional.None, nil): success, no record found
 // - (nil, nil, error): failure, a database error occured
-func FindFederatedUserByKeyID(ctx context.Context, keyID federation_key.KeyID) (*User, *FederatedUser, error) {
+func FindFederatedUserByKeyID(ctx context.Context, keyID federation_key.KeyID) (optional.Option[*User], optional.Option[*FederatedUser], error) {
 	log.Trace("FindFederatedUserByKeyID: %v", keyID)
-
 	federatedUser := new(FederatedUser)
 	user := new(User)
 
@@ -141,14 +140,14 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID federation_key.KeyID) (
 	if err != nil {
 		return nil, nil, err
 	} else if publicKey == nil {
-		return nil, nil, nil
+		return optional.None[*User](), optional.None[*FederatedUser](), nil
 	}
 
 	has, err := eng.Where("id=?", publicKey.ActorID).Get(federatedUser)
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
-		return nil, nil, nil
+		return optional.None[*User](), optional.None[*FederatedUser](), nil
 	}
 
 	has, err = eng.ID(federatedUser.UserID).Get(user)
@@ -171,7 +170,7 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID federation_key.KeyID) (
 
 	log.Trace("FindFederatedUserByKeyID: %v found user.ID %v, federated_user %v", keyID, user.ID, federatedUser)
 
-	return user, federatedUser, nil
+	return optional.Some(user), optional.Some(federatedUser), nil
 }
 
 func DeleteFederatedUser(ctx context.Context, userID int64) error {

@@ -66,15 +66,18 @@ func TestFederationHttpSigValidation(t *testing.T) {
 
 		// Valid key ID
 		t.Run("ValidKeyID", func(t *testing.T) {
-			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
+			_, optUser, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
-			require.NoError(t, user.ValidateKeyID(ctx, actorKeyID))
+			assert.True(t, optUser.Has())
+			require.NoError(t, optUser.Value().ValidateKeyID(ctx, actorKeyID))
 		})
 
 		// Invalid key ID
 		t.Run("InvalidKeyID", func(t *testing.T) {
-			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
+			_, optUser, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
+			assert.True(t, optUser.Has())
+			user := optUser.Value()
 
 			// bad actor user ID
 			badActorKeyID := fmt.Sprintf("%sapi/v1/activitypub/user-id/2#main-key", setting.AppURL)
@@ -103,19 +106,19 @@ func TestFederationHttpSigValidation(t *testing.T) {
 
 		// Valid key ID
 		t.Run("ValidKeyID", func(t *testing.T) {
-			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
+			_, optUser, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
+			assert.True(t, optUser.Has())
 
-			keyID, err := federation_key.NewKeyID(actorKeyID)
-			require.NoError(t, err)
-
-			require.NoError(t, user.ValidateKeyID(ctx, keyID))
+			require.NoError(t, optUser.Value().ValidateKeyID(ctx, actorKeyID))
 		})
 
 		// Invalid key ID
 		t.Run("InvalidKeyID", func(t *testing.T) {
-			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
+			_, optUser, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
+			assert.True(t, optUser.Has())
+			user := optUser.Value()
 
 			// bad actor user ID
 			badActorKeyID := fmt.Sprintf("%sapi/v1/activitypub/user-id/2#main-key", setting.AppURL)
@@ -132,10 +135,7 @@ func TestFederationHttpSigValidation(t *testing.T) {
 			require.Error(t, user.ValidateKeyID(ctx, keyID))
 
 			// bad scheme
-			keyID, err = federation_key.NewKeyID(actorKeyID)
-			require.NoError(t, err)
-
-			keyURL, err := keyID.IRI().URL()
+			keyURL, err := actorKeyID.IRI().URL()
 			require.NoError(t, err)
 			keyURL.Scheme = "https"
 
@@ -157,15 +157,15 @@ func TestFederationHttpSigValidation(t *testing.T) {
 			assert.Equal(t, hostKey.ActorID, host.Value().ID)
 			require.NoError(t, host.Value().ValidateKeyID(hostKey.KeyID))
 
-			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
+			_, optUser, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
-			assert.NotNil(t, user)
+			assert.True(t, optUser.Has())
 
 			userKey, err := federation_key.FindFederationPublicKey(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
 			assert.NotNil(t, userKey)
-			assert.Equal(t, userKey.ActorID, user.ID)
-			require.NoError(t, user.ValidateKeyID(ctx, userKey.KeyID))
+			assert.Equal(t, userKey.ActorID, optUser.Value().ID)
+			require.NoError(t, optUser.Value().ValidateKeyID(ctx, userKey.KeyID))
 		})
 
 		t.Run("ValidateActorFromKeyID", func(t *testing.T) {

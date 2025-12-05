@@ -68,12 +68,12 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyI
 	}
 
 	// Try if the signing actor is an already known federated user
-	_, federatedUser, err = user.FindFederatedUserByKeyID(ctx, keyID)
+	_, optFederatedUser, err := user.FindFederatedUserByKeyID(ctx, keyID)
 	if err != nil {
 		return nil, err
 	}
 
-	if federatedUser == nil {
+	if !optFederatedUser.Has() {
 		rawActorID, err := NewActorIDFromKeyID(ctx, keyID)
 		if err != nil {
 			return nil, err
@@ -84,6 +84,7 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyI
 			return nil, err
 		}
 	} else {
+		federatedUser = optFederatedUser.Value()
 		_, err = forgefed.GetFederationHost(ctx, federatedUser.FederationHostID)
 		if err != nil {
 			return nil, err
