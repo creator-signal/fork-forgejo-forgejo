@@ -4,14 +4,21 @@
 package test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
+	"forgejo.org/modules/activitypub"
+	"forgejo.org/modules/forgefed"
 	"forgejo.org/modules/util"
+
+	ap "github.com/go-ap/activitypub"
+	"github.com/go-ap/jsonld"
 )
 
 type FederationServerMockPerson struct {
@@ -101,6 +108,24 @@ func (mock *FederationServerMock) recordLastPost(t *testing.T, req *http.Request
 		t.Errorf("Error reading body: %q", err)
 	}
 	mock.LastPost = strings.ReplaceAll(buf.String(), req.Host, "DISTANT_FEDERATION_HOST")
+}
+
+func (mock *FederationServerMock) FollowActorUnsigned(host string, localID int64, uri url.URL, inboxUrl url.URL) error {
+	apID := fmt.Sprintf("%s/api/v1/activitypub/user-id/%d", host, localID)
+	followActivity, err := forgefed.NewForgeFollow(apID, uri.String())
+	if err != nil {
+		return err
+	}
+
+	payload, err := jsonld.WithContext(jsonld.IRI(ap.ActivityBaseURI)).Marshal(followActivity)
+	if err != nil {
+		return err
+	}
+
+	reader := bytes.NewReader(payload)
+	_, err = http.Post(inboxUrl.String(), activitypub.ActivityStreamsContentType, reader)
+
+	return err
 }
 
 func (mock *FederationServerMock) DistantServer(t *testing.T) *httptest.Server {
