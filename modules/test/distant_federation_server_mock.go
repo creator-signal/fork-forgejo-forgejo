@@ -110,7 +110,7 @@ func (mock *FederationServerMock) recordLastPost(t *testing.T, req *http.Request
 	mock.LastPost = strings.ReplaceAll(buf.String(), req.Host, "DISTANT_FEDERATION_HOST")
 }
 
-func (mock *FederationServerMock) FollowActorUnsigned(host string, localID int64, uri url.URL, inboxUrl url.URL) error {
+func (mock *FederationServerMock) FollowActorUnsigned(host string, localID int64, uri, inboxUrl url.URL) error {
 	apID := fmt.Sprintf("%s/api/v1/activitypub/user-id/%d", host, localID)
 	followActivity, err := forgefed.NewForgeFollow(apID, uri.String())
 	if err != nil {
