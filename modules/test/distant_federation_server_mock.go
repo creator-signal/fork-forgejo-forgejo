@@ -13,10 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"forgejo.org/modules/activitypub"
-	"forgejo.org/modules/forgefed"
 	"forgejo.org/modules/util"
-
 	ap "github.com/go-ap/activitypub"
 	"github.com/go-ap/jsonld"
 )
@@ -110,20 +107,22 @@ func (mock *FederationServerMock) recordLastPost(t *testing.T, req *http.Request
 	mock.LastPost = strings.ReplaceAll(buf.String(), req.Host, "DISTANT_FEDERATION_HOST")
 }
 
-func (mock *FederationServerMock) FollowActorUnsigned(host string, localID int64, uri, inboxUrl url.URL) error {
-	apID := fmt.Sprintf("%s/api/v1/activitypub/user-id/%d", host, localID)
-	followActivity, err := forgefed.NewForgeFollow(apID, uri.String())
-	if err != nil {
-		return err
-	}
+func (mock *FederationServerMock) FollowActorUnsigned(host string, localID int64, uri, inboxURL url.URL) error {
+	// apID := fmt.Sprintf("%s/api/v1/activitypub/user-id/%d", host, localID)
+	// followActivity, err := forgefed.NewForgeFollow(apID, uri.String())
+	// if err != nil {
+	// 	return err
+	// }
 
-	payload, err := jsonld.WithContext(jsonld.IRI(ap.ActivityBaseURI)).Marshal(followActivity)
+	payload, err := jsonld.WithContext(jsonld.IRI(ap.ActivityBaseURI)).Marshal("{}")
+	// TODO: Find a solution without forgfed usage to decycle
+	// payload, err := jsonld.WithContext(jsonld.IRI(ap.ActivityBaseURI)).Marshal(followActivity)
 	if err != nil {
 		return err
 	}
 
 	reader := bytes.NewReader(payload)
-	_, err = http.Post(inboxUrl.String(), activitypub.ActivityStreamsContentType, reader)
+	_, err = http.Post(inboxURL.String(), `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`, reader)
 
 	return err
 }
