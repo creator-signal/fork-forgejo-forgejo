@@ -10,6 +10,7 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/validation"
 )
 
@@ -33,48 +34,48 @@ func GetFederationHost(ctx context.Context, ID int64) (*FederationHost, error) {
 	return host, nil
 }
 
-func findFederationHostFromDB(ctx context.Context, searchKey string, searchValue int64) (*FederationHost, error) {
+func findFederationHostFromDB(ctx context.Context, searchKey string, searchValue int64) (optional.Option[*FederationHost], error) {
 	host := new(FederationHost)
 	has, err := db.GetEngine(ctx).Where(searchKey, searchValue).Get(host)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, nil
+		return optional.None[*FederationHost](), nil
 	}
 	if res, err := validation.IsValid(host); !res {
 		return nil, err
 	}
 
-	return host, nil
+	return optional.Some(host), nil
 }
 
-func FindFederationHostByFqdnAndPort(ctx context.Context, fqdn string, port uint16) (*FederationHost, error) {
+func FindFederationHostByFqdnAndPort(ctx context.Context, fqdn string, port uint16) (optional.Option[*FederationHost], error) {
 	host := new(FederationHost)
 	has, err := db.GetEngine(ctx).Where("host_fqdn=? AND host_port=?", fqdn, port).Get(host)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, nil
+		return optional.None[*FederationHost](), nil
 	}
 	if res, err := validation.IsValid(host); !res {
 		return nil, err
 	}
-	return host, nil
+	return optional.Some(host), nil
 }
 
 // FindFederationHostByPublicKey finds a [FederationHost] database entry by ActivityPub key ID.
 //
 // Returns:
 //
-// - (FederationHost, nil): success, a record was found
-// - (nil, nil): failure, no record found
+// - (Option.Some(FederationHost), nil): success, a record was found
+// - (Option.None, nil): success, no record found
 // - (nil, error): failure, a database error occured
-func FindFederationHostByKeyID(ctx context.Context, keyID federation_key.KeyID) (*FederationHost, error) {
+func FindFederationHostByKeyID(ctx context.Context, keyID federation_key.KeyID) (optional.Option[*FederationHost], error) {
 	publicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
 	if err != nil {
 		return nil, err
 	} else if publicKey == nil {
-		return nil, nil
+		return optional.None[*FederationHost](), nil
 	}
 
 	return findFederationHostFromDB(ctx, "id=?", publicKey.ActorID)

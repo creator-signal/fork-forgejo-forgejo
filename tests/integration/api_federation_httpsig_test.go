@@ -149,13 +149,13 @@ func TestFederationHttpSigValidation(t *testing.T) {
 		t.Run("ValidateCaches", func(t *testing.T) {
 			host, err := forgefed.FindFederationHostByKeyID(db.DefaultContext, applicationKeyID)
 			require.NoError(t, err)
-			assert.NotNil(t, host)
+			assert.True(t, host.Has())
 
 			hostKey, err := federation_key.FindFederationPublicKey(db.DefaultContext, applicationKeyID)
 			require.NoError(t, err)
 			assert.NotNil(t, hostKey)
-			assert.Equal(t, hostKey.ActorID, host.ID)
-			require.NoError(t, host.ValidateKeyID(hostKey.KeyID))
+			assert.Equal(t, hostKey.ActorID, host.Value().ID)
+			require.NoError(t, host.Value().ValidateKeyID(hostKey.KeyID))
 
 			_, user, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)

@@ -152,12 +152,16 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID federation_key.Key
 	}
 
 	// Is there an already known federation host?
-	federationHost, err := forgefed.FindFederationHostByKeyID(ctx, keyID)
+	optHost, err := forgefed.FindFederationHostByKeyID(ctx, keyID)
 	if err != nil {
 		return nil, err
 	}
 
-	if federationHost == nil {
+	var federationHost *forgefed.FederationHost
+
+	if optHost.Has() {
+		federationHost = optHost.Value()
+	} else {
 		federationHost, err = FindOrCreateFederationHost(ctx, rawActorID.AsURI())
 		if err != nil {
 			return nil, err

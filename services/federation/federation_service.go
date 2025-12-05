@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/auth/password"
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/validation"
 
@@ -38,14 +39,14 @@ func FindOrCreateFederationHost(ctx context.Context, actorURI string) (*forgefed
 	if err != nil {
 		return nil, err
 	}
-	if federationHost == nil {
+	if !federationHost.Has() {
 		result, err := createFederationHostFromAP(ctx, rawActorID)
 		if err != nil {
 			return nil, err
 		}
-		federationHost = result
+		federationHost = optional.Some(result)
 	}
-	return federationHost, nil
+	return federationHost.Value(), nil
 }
 
 func FindOrCreateFederatedUser(ctx context.Context, actorURI string) (*user.User, *user.FederatedUser, *forgefed.FederationHost, error) {
