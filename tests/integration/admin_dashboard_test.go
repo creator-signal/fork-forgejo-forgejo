@@ -12,6 +12,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
+	"github.com/stretchr/testify/assert"
 )
 
 var commonEntries = []string{
@@ -82,9 +83,10 @@ func TestAdminDashboard(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		// Check data units translations in the System status table
+		selector := ".table[hx-get='/admin/system_status'] > dl > dd"
 		// ...in English
 		page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
-		page.FindByText(".table[hx-get='/admin/system_status'] > dl > dd", "MiB")
+		assert.Contains(t, page.Find(selector).Text(), "MiB")
 
 		// ...in another language
 		lang := session.GetCookie("lang")
@@ -92,6 +94,6 @@ func TestAdminDashboard(t *testing.T) {
 		session.SetCookie(lang)
 
 		page = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
-		page.FindByText(".table[hx-get='/admin/system_status'] > dl > dd", "МиБ")
+		assert.Contains(t, page.Find(selector).Text(), "МиБ")
 	})
 }
