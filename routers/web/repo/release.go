@@ -208,7 +208,23 @@ func Releases(ctx *context.Context) {
 	ctx.Data["Releases"] = releases
 	addVerifyTagToContext(ctx)
 
-	numReleases := ctx.Data["NumReleases"].(int64)
+	var numReleases int64
+	if keyword != "" {
+		// When filtering by keyword, count only the filtered results
+		numReleases, err = db.Count[repo_model.Release](ctx, repo_model.FindReleasesOptions{
+			ListOptions:   db.ListOptions{},
+			IncludeDrafts: writeAccess,
+			RepoID:        ctx.Repo.Repository.ID,
+			Keyword:       keyword,
+		})
+		if err != nil {
+			ctx.ServerError("CountReleases", err)
+			return
+		}
+	} else {
+		// When not filtering, use the total release count
+		numReleases = ctx.Data["NumReleases"].(int64)
+	}
 	pager := context.NewPagination(int(numReleases), listOptions.PageSize, listOptions.Page, 5)
 	pager.SetDefaultParams(ctx)
 	ctx.Data["Page"] = pager
