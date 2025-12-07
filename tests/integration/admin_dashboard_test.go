@@ -76,4 +76,21 @@ func TestAdminDashboard(t *testing.T) {
 		page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
 		testAssertAdminDashboardEntries(t, page, locale, true)
 	})
+
+	t.Run("System status", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Check data units translations in the System status table
+		// ...in English
+		page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
+		page.FindByText(".table[hx-get='/admin/system_status'] > dl > dd", "MiB")
+
+		// ...in another language
+		lang := session.GetCookie("lang")
+		lang.Value = "ru-RU"
+		session.SetCookie(lang)
+
+		page = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
+		page.FindByText(".table[hx-get='/admin/system_status'] > dl > dd", "МиБ")
+	})
 }
