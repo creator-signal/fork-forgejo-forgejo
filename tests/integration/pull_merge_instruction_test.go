@@ -48,14 +48,15 @@ func TestPullMergeInstruction(t *testing.T) {
 			Name:    "repo1",
 		})
 
-		// Assert that the PR is marked as conflicted in the backend
-		_ = unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{
+		// Assert that the PR exists, is open, and is not mergeable (conflicted)
+		prLoaded := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{
 			ID:         pr.ID,
 			HeadRepoID: repo1.ID,
 			BaseRepoID: repo1.ID,
 			HeadBranch: "conflict",
 			BaseBranch: "base",
 		}, "status = 0")
+		assert.False(t, prLoaded.Mergeable(t.Context()), "PR should be marked as conflicted")
 
 		gitRepo, err := gitrepo.OpenRepository(t.Context(), repo1)
 		require.NoError(t, err)
