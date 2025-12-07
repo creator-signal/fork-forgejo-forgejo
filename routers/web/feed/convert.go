@@ -19,7 +19,6 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
 	"forgejo.org/modules/markup/markdown"
-	"forgejo.org/modules/setting"
 	"forgejo.org/modules/templates"
 	"forgejo.org/modules/util"
 	"forgejo.org/services/context"
@@ -224,7 +223,7 @@ func feedActionsToFeedItems(ctx *context.Context, actions activities_model.Actio
 				}
 
 				if push.Len > 1 {
-					link = &feeds.Link{Href: fmt.Sprintf("%s/%s", setting.AppSubURL, push.CompareURL)}
+					link = &feeds.Link{Href: fmt.Sprintf("%s/%s", act.GetRepoAbsoluteLink(ctx), push.CompareURL)}
 				} else if push.Len == 1 {
 					link = &feeds.Link{Href: fmt.Sprintf("%s/commit/%s", act.GetRepoAbsoluteLink(ctx), push.Commits[0].Sha1)}
 				}
