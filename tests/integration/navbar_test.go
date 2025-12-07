@@ -128,7 +128,7 @@ func TestNavbarItems(t *testing.T) {
 	})
 }
 
-// When visiting certran pages, the corresponding entry of user menu is highlighted
+// When visiting certain pages, the corresponding entry of user menu is highlighted
 func testNavbarUserMenuActiveItem(t *testing.T, session *TestSession, url string) {
 	page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
 	// AssertElement will only pass if there's just one such element
