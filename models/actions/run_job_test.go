@@ -9,6 +9,7 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,6 +77,7 @@ func TestActionRunJob_IsIncompleteMatrix(t *testing.T) {
 		name         string
 		job          ActionRunJob
 		isIncomplete bool
+		needs        *jobparser.IncompleteNeeds
 		errContains  string
 	}{
 		{
@@ -85,7 +87,8 @@ func TestActionRunJob_IsIncompleteMatrix(t *testing.T) {
 		},
 		{
 			name:         "incomplete_matrix workflow",
-			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_matrix: true")},
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_matrix: true\nincomplete_matrix_needs: { job: abc }")},
+			needs:        &jobparser.IncompleteNeeds{Job: "abc"},
 			isIncomplete: true,
 		},
 		{
@@ -97,12 +100,61 @@ func TestActionRunJob_IsIncompleteMatrix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isIncomplete, err := tt.job.IsIncompleteMatrix()
+			isIncomplete, needs, err := tt.job.IsIncompleteMatrix()
 			if tt.errContains != "" {
 				assert.ErrorContains(t, err, tt.errContains)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.isIncomplete, isIncomplete)
+				assert.Equal(t, tt.needs, needs)
+			}
+		})
+	}
+}
+
+func TestActionRunJob_IsIncompleteRunsOn(t *testing.T) {
+	tests := []struct {
+		name         string
+		job          ActionRunJob
+		isIncomplete bool
+		needs        *jobparser.IncompleteNeeds
+		matrix       *jobparser.IncompleteMatrix
+		errContains  string
+	}{
+		{
+			name:         "normal workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow")},
+			isIncomplete: false,
+		},
+		{
+			name:         "nincomplete_runs_on workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_runs_on: true\nincomplete_runs_on_needs: { job: abc }")},
+			needs:        &jobparser.IncompleteNeeds{Job: "abc"},
+			isIncomplete: true,
+		},
+		{
+			name:         "nincomplete_runs_on workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_runs_on: true\nincomplete_runs_on_matrix: { dimension: abc }")},
+			matrix:       &jobparser.IncompleteMatrix{Dimension: "abc"},
+			isIncomplete: true,
+		},
+		{
+			name:        "unparseable workflow",
+			job:         ActionRunJob{WorkflowPayload: []byte("name: []\nincomplete_runs_on: true")},
+			errContains: "failure unmarshaling WorkflowPayload to SingleWorkflow: yaml: unmarshal errors",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isIncomplete, needs, matrix, err := tt.job.IsIncompleteRunsOn()
+			if tt.errContains != "" {
+				assert.ErrorContains(t, err, tt.errContains)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.isIncomplete, isIncomplete)
+				assert.Equal(t, tt.needs, needs)
+				assert.Equal(t, tt.matrix, matrix)
 			}
 		})
 	}
