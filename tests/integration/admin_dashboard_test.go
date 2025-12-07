@@ -33,7 +33,8 @@ var sshEntries = []string{
 	"resync_all_sshprincipals",
 }
 
-func testAssertAdminDashboardEntries(t *testing.T, page *HTMLDoc, locale translation.Locale, expectSSH bool) {
+// Check cron options on /admin, including those that are available conditionally
+func testAssertAdminDashboardOptions(t *testing.T, page *HTMLDoc, locale translation.Locale, expectSSH bool) {
 	for _, entry := range commonEntries {
 		page.AssertSelection(t, page.FindByText("table tr td", locale.TrString(fmt.Sprintf("admin.dashboard.%s", entry))), true)
 		page.AssertSelection(t, page.Find(fmt.Sprintf("table tr td button[value='%s']", entry)), true)
@@ -56,7 +57,7 @@ func TestAdminDashboard(t *testing.T) {
 		defer test.MockVariableValue(&setting.SSH.Disabled, true)()
 
 		page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
-		testAssertAdminDashboardEntries(t, page, locale, false)
+		testAssertAdminDashboardOptions(t, page, locale, false)
 	})
 
 	t.Run("SSH enabled, but built-in", func(t *testing.T) {
@@ -65,7 +66,7 @@ func TestAdminDashboard(t *testing.T) {
 		defer test.MockVariableValue(&setting.SSH.StartBuiltinServer, true)()
 
 		page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
-		testAssertAdminDashboardEntries(t, page, locale, false)
+		testAssertAdminDashboardOptions(t, page, locale, false)
 	})
 
 	t.Run("SSH enabled and external", func(t *testing.T) {
@@ -74,7 +75,7 @@ func TestAdminDashboard(t *testing.T) {
 		defer test.MockVariableValue(&setting.SSH.StartBuiltinServer, false)()
 
 		page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
-		testAssertAdminDashboardEntries(t, page, locale, true)
+		testAssertAdminDashboardOptions(t, page, locale, true)
 	})
 
 	t.Run("System status", func(t *testing.T) {
