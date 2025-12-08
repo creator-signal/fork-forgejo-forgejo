@@ -6,15 +6,12 @@ package actions
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"slices"
-	"strings"
 	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/timeutil"
-	"forgejo.org/modules/translation"
 	"forgejo.org/modules/util"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
@@ -237,27 +234,6 @@ func AggregateJobStatus(jobs []*ActionRunJob) Status {
 	}
 }
 
-// StatusDiagnostics returns optional diagnostic information to display to the user derived from
-// ActionRunJob's current status. It should help the user understand in which state the
-// ActionRunJob is and why.
-func (job *ActionRunJob) StatusDiagnostics(lang translation.Locale) []template.HTML {
-	diagnostics := []template.HTML{}
-
-	switch job.Status {
-	case StatusWaiting:
-		joinedLabels := strings.Join(job.RunsOn, ", ")
-		diagnostics = append(diagnostics, lang.TrPluralString(len(job.RunsOn), "actions.status.diagnostics.waiting", joinedLabels))
-	default:
-		diagnostics = append(diagnostics, template.HTML(job.Status.LocaleString(lang)))
-	}
-
-	if job.Run.NeedApproval {
-		diagnostics = append(diagnostics, template.HTML(lang.TrString("actions.need_approval_desc")))
-	}
-
-	return diagnostics
-}
-
 func (job *ActionRunJob) decodeWorkflowPayload() (*jobparser.SingleWorkflow, error) {
 	if job.workflowPayloadDecoded != nil {
 		return job.workflowPayloadDecoded, nil
@@ -288,4 +264,14 @@ func (job *ActionRunJob) IsIncompleteMatrix() (bool, *jobparser.IncompleteNeeds,
 		return false, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
 	}
 	return jobWorkflow.IncompleteMatrix, jobWorkflow.IncompleteMatrixNeeds, nil
+}
+
+// Checks whether the target job has a `runs-on` field with an expression that requires an input from another job.  The
+// job will be blocked until the other job is complete, and then regenerated and deleted.
+func (job *ActionRunJob) IsIncompleteRunsOn() (bool, *jobparser.IncompleteNeeds, *jobparser.IncompleteMatrix, error) {
+	jobWorkflow, err := job.decodeWorkflowPayload()
+	if err != nil {
+		return false, nil, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.IncompleteRunsOn, jobWorkflow.IncompleteRunsOnNeeds, jobWorkflow.IncompleteRunsOnMatrix, nil
 }
