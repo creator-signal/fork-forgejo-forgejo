@@ -48,18 +48,6 @@ func TestStoreFederationHost(t *testing.T) {
 			HostFqdn: "ImplicitNull",
 		}
 
-		federationPublicKey, err := federation_key.NewFederationPublicKey(
-			0,
-			keyID,
-			key,
-		)
-		require.NoError(t, err)
-
-		dbFederationPublicKey, err := federation_key.FindOrCreateFederationPublicKey(db.DefaultContext, federationPublicKey)
-		require.NoError(t, err)
-
-		federationHost.PublicKeyID = sql.NullInt64{Valid: true, Int64: dbFederationPublicKey.ID}
-
 		_, err = db.GetEngine(db.DefaultContext).Insert(&federationHost)
 		require.NoError(t, err)
 
@@ -67,6 +55,21 @@ func TestStoreFederationHost(t *testing.T) {
 		has, err := db.GetEngine(db.DefaultContext).Where("host_fqdn=?", "ImplicitNull").Get(dbFederationHost)
 		require.NoError(t, err)
 		assert.True(t, has)
+
+		federationPublicKey, err := federation_key.NewFederationPublicKey(
+			0,
+			keyID,
+			key,
+			dbFederationHost.ID,
+			federation_key.FederationHostType,
+			federation_key.RsaSha256Cavage,
+		)
+		require.NoError(t, err)
+
+		dbFederationPublicKey, err := federation_key.FindOrCreateFederationPublicKey(db.DefaultContext, federationPublicKey)
+		require.NoError(t, err)
+
+		federationHost.PublicKeyID = sql.NullInt64{Valid: true, Int64: dbFederationPublicKey.ID}
 
 		assert.True(t, dbFederationHost.PublicKeyID.Valid)
 		assert.Equal(t, dbFederationPublicKey.ID, dbFederationHost.PublicKeyID.Int64)
@@ -108,16 +111,6 @@ func TestStoreFederatedUser(t *testing.T) {
 			FederationHostID: 1,
 		}
 
-		federationPublicKey := federation_key.FederationPublicKey{
-			KeyID: keyID,
-			Key:   key,
-		}
-
-		dbFederationPublicKey, err := federation_key.FindOrCreateFederationPublicKey(db.DefaultContext, &federationPublicKey)
-		require.NoError(t, err)
-
-		federatedUser.PublicKeyID = sql.NullInt64{Valid: true, Int64: dbFederationPublicKey.ID}
-
 		_, err = db.GetEngine(db.DefaultContext).Insert(&federatedUser)
 		require.NoError(t, err)
 
@@ -125,6 +118,21 @@ func TestStoreFederatedUser(t *testing.T) {
 		has, err := db.GetEngine(db.DefaultContext).Where("user_id=?", 1).Get(dbFederatedUser)
 		require.NoError(t, err)
 		assert.True(t, has)
+
+		federationPublicKey, err := federation_key.NewFederationPublicKey(
+			0,
+			keyID,
+			key,
+			dbFederatedUser.ID,
+			federation_key.FederatedUserType,
+			federation_key.RsaSha256Cavage,
+		)
+		require.NoError(t, err)
+
+		dbFederationPublicKey, err := federation_key.FindOrCreateFederationPublicKey(db.DefaultContext, federationPublicKey)
+		require.NoError(t, err)
+
+		federatedUser.PublicKeyID = sql.NullInt64{Valid: true, Int64: dbFederationPublicKey.ID}
 
 		assert.True(t, dbFederatedUser.PublicKeyID.Valid)
 		assert.Equal(t, dbFederationPublicKey.ID, dbFederatedUser.PublicKeyID.Int64)

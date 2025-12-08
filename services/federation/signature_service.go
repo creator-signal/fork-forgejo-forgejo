@@ -120,7 +120,7 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyI
 		}
 
 		// find or create federated public key
-		federatedPublicKey, err := federation_key.NewFederationPublicKey(0, apPerson.PublicKey.ID.String(), pubKeyBytes)
+		federatedPublicKey, err := federation_key.NewFederationPublicKey(0, apPerson.PublicKey.ID.String(), pubKeyBytes, federatedUser.ID, federation_key.FederatedUserType, federation_key.RsaSha256Cavage)
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +203,7 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID federation_key.Key
 			return nil, fmt.Errorf("federation host fetched (%v) does not match the stored one %v", apPerson, federationHost)
 		}
 		// update federation host
-		federationPublicKey, err := federation_key.NewFederationPublicKey(0, apPerson.PublicKey.ID.String(), pubKeyBytes)
+		federationPublicKey, err := federation_key.NewFederationPublicKey(0, apPerson.PublicKey.ID.String(), pubKeyBytes, federationHost.ID, federation_key.FederationHostType, federation_key.RsaSha256Cavage)
 		if err != nil {
 			return nil, err
 		}

@@ -19,6 +19,9 @@ type FederationPublicKey struct {
 	ID    int64  `xorm:"pk"`
 	KeyID string `xorm:"UNIQUE NOT NULL"`
 	Key   []byte `xorm:"BLOB NOT NULL"`
+	ActorID int64 `xorm:"NOT NULL"`
+	ActorType string `xorm:"NOT NULL"`
+	Algorithm string `xorm:"NOT NULL"`
 }
 
 type ActorKey struct {
@@ -36,6 +39,7 @@ type Keys interface {
 	GetID() int64
 	GetKeyID() string
 	GetPublicKey() []byte
+	GetType() string
 }
 
 func (f FederationHost) GetID() int64 {
@@ -50,6 +54,10 @@ func (f FederationHost) GetPublicKey() []byte {
 	return f.PublicKey.V
 }
 
+func (f FederationHost) GetType() string {
+	return "federation_host"
+}
+
 func (f FederatedUser) GetID() int64 {
 	return f.ID
 }
@@ -60,6 +68,10 @@ func (f FederatedUser) GetKeyID() string {
 
 func (f FederatedUser) GetPublicKey() []byte {
 	return f.PublicKey.V
+}
+
+func (f FederatedUser) GetType() string {
+	return "federated_user"
 }
 
 func init() {
@@ -98,16 +110,17 @@ func v14AddPublicKeyIDColumns(x *xorm.Engine) error {
 	return err
 }
 
-func v14CopyExistingFederationPublicKeys[Bean Keys](x *xorm.Engine, table string) error {
+func v14CopyExistingFederationPublicKeys[Bean Keys](x *xorm.Engine) error {
 	cond := xb.Neq{"key_id": "NULL"}.And(xb.Neq{"public_key": "NULL"})
 	if err := db.Iterate[Bean](context.Background(), cond, func(_ context.Context, bean *Bean) error {
 		if bean == nil {
 			return fmt.Errorf("null bean")
 		}
 		key := *bean
-		fk := FederationPublicKey{KeyID: key.GetKeyID(), Key: key.GetPublicKey()}
+		table := key.GetType()
 		var err error
 
+		fk := FederationPublicKey{KeyID: key.GetKeyID(), Key: key.GetPublicKey(), ActorID: key.GetID(), ActorType: table, Algorithm: "rsa-sha256"}
 		if _, err = x.Insert(&fk); err != nil {
 			return err
 		}
@@ -130,6 +143,9 @@ func v14CopyExistingFederationPublicKeys[Bean Keys](x *xorm.Engine, table string
 		return err
 	}
 
+	key := new(Bean)
+	table := (*key).GetType()
+
 	if err := base.DropTableColumns(sess, table, "key_id"); err != nil {
 		return err
 	}
@@ -151,11 +167,11 @@ func v14SeparateFederationPublicKeyTable(x *xorm.Engine) error {
 		return err
 	}
 
-	if err = v14CopyExistingFederationPublicKeys[FederatedUser](x, "federated_user"); err != nil {
+	if err = v14CopyExistingFederationPublicKeys[FederatedUser](x); err != nil {
 		return err
 	}
 
-	err = v14CopyExistingFederationPublicKeys[FederationHost](x, "federation_host")
+	err = v14CopyExistingFederationPublicKeys[FederationHost](x)
 
 	return err
 }
