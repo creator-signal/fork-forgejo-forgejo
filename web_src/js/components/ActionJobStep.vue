@@ -169,6 +169,14 @@ export default {
       const list = line.nextSibling;
       list.classList.toggle('hidden', event.newState !== 'open');
     },
+
+    scrollIntoView(lineID) {
+      const logLine = this.$refs.logsContainer.querySelector(lineID);
+      if (!logLine) {
+        return;
+      }
+      logLine.querySelector('.line-num').scrollIntoView();
+    },
   },
 };
 </script>
@@ -292,9 +300,5 @@ export default {
   margin-left: 10px;
   white-space: nowrap;
 }
-
-</style>
-<style>
-/* some elements are not managed by vue, so we need to use global style */
 
 </style>
