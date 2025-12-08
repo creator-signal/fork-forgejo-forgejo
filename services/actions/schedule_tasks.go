@@ -168,6 +168,11 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 		}
 	}
 
+	// In the event that local reusable workflows (eg. `uses: ./.forgejo/workflows/reusable.yml`) are present, we'll
+	// need to read the commit of the schedule to resolve that reference:
+	expandLocalReusableWorkflow, expandCleanup := lazyRepoExpandLocalReusableWorkflow(ctx, cron.RepoID, cron.CommitSHA)
+	defer expandCleanup()
+
 	// Parse the workflow specification from the cron schedule
 	workflows, err := actions_module.JobParser(cron.Content,
 		jobparser.WithVars(vars),
@@ -175,6 +180,8 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 		// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
 		jobparser.WithJobOutputs(map[string]map[string]string{}),
 		jobparser.SupportIncompleteRunsOn(),
+		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflow),
+		jobparser.ExpandRemoteReusableWorkflows(expandRemoteReusableWorkflows(ctx)),
 	)
 	if err != nil {
 		return err

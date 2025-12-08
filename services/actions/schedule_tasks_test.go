@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"context"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
@@ -11,9 +12,11 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
 	webhook_module "forgejo.org/modules/webhook"
 
+	"code.forgejo.org/forgejo/runner/v12/act/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -384,4 +387,99 @@ jobs:
 	// With a runs-on that contains ${{ needs ... }} references, the only requirement to work is that when the job is
 	// first inserted it is tagged w/ incomplete_runs_on
 	assert.Contains(t, string(job.WorkflowPayload), "incomplete_runs_on: true")
+}
+
+func TestServiceActions_ExpandReusableWorkflow(t *testing.T) {
+	defer unittest.OverrideFixtures("services/actions/TestServiceActions_startTask")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	type callArgs struct {
+		repoID    int64
+		commitSHA string
+		path      string
+	}
+	var localReusableCalled []*callArgs
+	var cleanupCallCount int
+	defer test.MockVariableValue(&lazyRepoExpandLocalReusableWorkflow,
+		func(ctx context.Context, repoID int64, commitSHA string) (LocalReusableWorkflowFetcher, CleanupFunc) {
+			fetcher := func(path string) ([]byte, error) {
+				localReusableCalled = append(localReusableCalled, &callArgs{repoID, commitSHA, path})
+				return []byte("{ on: pull_request, jobs: { j1: { runs-on: debian-latest } } }"), nil
+			}
+			cleanup := func() {
+				cleanupCallCount++
+			}
+			return fetcher, cleanup
+		})()
+	remoteReusableCalled := []*model.RemoteReusableWorkflowWithBaseURL{}
+	defer test.MockVariableValue(&expandRemoteReusableWorkflows,
+		func(ctx context.Context) RemoteReusableWorkflowFetcher {
+			return func(ref *model.RemoteReusableWorkflowWithBaseURL) ([]byte, error) {
+				remoteReusableCalled = append(remoteReusableCalled, ref)
+				return []byte("{ on: pull_request, jobs: { j1: { runs-on: debian-latest } } }"), nil
+			}
+		})()
+
+	// Load fixtures that are corrupted and create one valid scheduled workflow
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+
+	workflowID := "some.yml"
+	schedules := []*actions_model.ActionSchedule{
+		{
+			Title:         "scheduletitle1",
+			RepoID:        repo.ID,
+			OwnerID:       repo.OwnerID,
+			WorkflowID:    workflowID,
+			TriggerUserID: repo.OwnerID,
+			Ref:           "branch",
+			CommitSHA:     "fakeSHA",
+			Event:         webhook_module.HookEventSchedule,
+			EventPayload:  "fakepayload",
+			Specs:         []string{"* * * * *"},
+			Content: []byte(
+				`
+jobs:
+  job2:
+    uses: ./.forgejo/workflows/reusable.yml
+  job3:
+    uses: https://example.com/some-org/some-repo/.forgejo/workflows/reusable-path.yml@main
+`),
+		},
+	}
+
+	require.Equal(t, 2, unittest.GetCount(t, actions_model.ActionScheduleSpec{}))
+	require.NoError(t, actions_model.CreateScheduleTask(t.Context(), schedules))
+	require.Equal(t, 3, unittest.GetCount(t, actions_model.ActionScheduleSpec{}))
+	_, err := db.GetEngine(db.DefaultContext).Exec("UPDATE `action_schedule_spec` SET next = 1")
+	require.NoError(t, err)
+
+	// After running startTasks an ActionRun row is created for the valid scheduled workflow
+	require.Empty(t, unittest.GetCount(t, actions_model.ActionRun{WorkflowID: workflowID}))
+	require.NoError(t, startTasks(t.Context()))
+	require.NotEmpty(t, unittest.GetCount(t, actions_model.ActionRun{WorkflowID: workflowID}))
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		WorkflowID: workflowID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	run := runs[0]
+	assert.EqualValues(t, 0, run.PreExecutionErrorCode, "pre execution error details: %#v", run.PreExecutionErrorDetails)
+
+	require.Len(t, localReusableCalled, 1, "localReusableCalled")
+	require.Len(t, remoteReusableCalled, 1, "remoteReusableCalled")
+
+	assert.Equal(t, &callArgs{4, "fakeSHA", "./.forgejo/workflows/reusable.yml"}, localReusableCalled[0])
+	assert.Equal(t, 2, cleanupCallCount, "cleanupCallCount")
+	expectedBaseURL := "https://example.com"
+	assert.Equal(t, &model.RemoteReusableWorkflowWithBaseURL{
+		BaseURL: &expectedBaseURL,
+		RemoteReusableWorkflow: model.RemoteReusableWorkflow{
+			Org:         "some-org",
+			Repo:        "some-repo",
+			Filename:    "reusable-path.yml",
+			Ref:         "main",
+			GitPlatform: "forgejo",
+		},
+	}, remoteReusableCalled[0])
 }
