@@ -240,5 +240,4 @@ func TestPullUrlHandling(t *testing.T) {
 		req := NewRequest(t, "GET", "/user2/repo1/extra_text_pulls/5/content-history/overview")
 		MakeRequest(t, req, http.StatusNotFound)
 	})
-
 }

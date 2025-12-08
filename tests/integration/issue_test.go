@@ -1579,5 +1579,4 @@ func TestIssueUrlHandling(t *testing.T) {
 		req := NewRequest(t, "GET", "/user2/repo1/issues_extra_text/5")
 		MakeRequest(t, req, http.StatusNotFound)
 	})
-
 }
