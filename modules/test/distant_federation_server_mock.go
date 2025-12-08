@@ -14,8 +14,10 @@ import (
 	"testing"
 
 	"forgejo.org/modules/util"
+
 	ap "github.com/go-ap/activitypub"
 	"github.com/go-ap/jsonld"
+	"github.com/google/uuid"
 )
 
 type FederationServerMockPerson struct {
@@ -108,21 +110,21 @@ func (mock *FederationServerMock) recordLastPost(t *testing.T, req *http.Request
 }
 
 func (mock *FederationServerMock) FollowActorUnsigned(host string, localID int64, uri, inboxURL url.URL) error {
-	// apID := fmt.Sprintf("%s/api/v1/activitypub/user-id/%d", host, localID)
-	// followActivity, err := forgefed.NewForgeFollow(apID, uri.String())
-	// if err != nil {
-	// 	return err
-	// }
+	apID := fmt.Sprintf("%s/api/v1/activitypub/user-id/%d", host, localID)
 
-	payload, err := jsonld.WithContext(jsonld.IRI(ap.ActivityBaseURI)).Marshal("{}")
-	// TODO: Find a solution without forgfed usage to decycle
-	// payload, err := jsonld.WithContext(jsonld.IRI(ap.ActivityBaseURI)).Marshal(followActivity)
+	activity := ap.Follow{}
+	activity.Type = ap.FollowType
+	activity.ID = ap.IRI(apID + "/follows/" + uuid.New().String())
+	activity.Actor = ap.IRI(apID)
+	activity.Object = ap.IRI(uri.String())
+
+	payload, err := jsonld.WithContext(jsonld.IRI(ap.ActivityBaseURI)).Marshal(activity)
 	if err != nil {
 		return err
 	}
 
 	reader := bytes.NewReader(payload)
-	_, err = http.Post(inboxURL.String(), `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`, reader)
+	_, err = http.Post(inboxURL.String(), "application/activity+json", reader)
 
 	return err
 }
