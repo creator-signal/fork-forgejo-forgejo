@@ -132,7 +132,7 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 				ID,
 				keyID,
 				key,
-				0,
+				-1,
 				actorType,
 				alg,
 			)
@@ -142,7 +142,7 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 				ID:    ID,
 				KeyID: keyID,
 				Key:   key,
-				ActorID: 0,
+				ActorID: -1,
 				ActorType: actorType,
 				Algorithm: alg,
 			}

@@ -5,6 +5,7 @@ package federation_key
 
 import (
 	"fmt"
+	"strings"
 
 	"forgejo.org/modules/validation"
 
@@ -38,17 +39,20 @@ func (key KeyID) Validate() []string {
 
 	uri, err := key.IRI().URL()
 	if err != nil {
-		result = append(result, fmt.Sprintf("invaild KeyID URL: %v", err))
-	}
-
-	if len(uri.Fragment) == 0 {
-		result = append(result, "invalid KeyID fragment identifier")
-	}
-	if len(uri.Query()) > 0 {
-		result = append(result, "invalid KeyID includes a query part")
+		// return early, don't attempt to access an invalid URL
+		return append(result, fmt.Sprintf("invaild KeyID URL: %v", err))
 	}
 	if uri.Scheme != "http" && uri.Scheme != "https" {
 		result = append(result, fmt.Sprintf("invalid KeyID scheme: %v", uri.Scheme))
+	}
+	if uri.User != nil && len(uri.User.String()) > 0 {
+		result = append(result, "KeyID insecure user credentials, see `CWE-922: Insecure Storage of Sensitive Information`")
+	}
+	if strings.Contains(uri.Path, "..") {
+		result = append(result, "KeyID contains relative path, possible `CWE 35: Path Traversal`")
+	}
+	if len(uri.Fragment) == 0 && len(uri.Query()) == 0 {
+		result = append(result, "missing KeyID identifier")
 	}
 
 	return result
