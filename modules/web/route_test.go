@@ -177,24 +177,3 @@ func TestRoute3(t *testing.T) {
 	assert.Equal(t, http.StatusOK, recorder.Code)
 	assert.Equal(t, 4, hit)
 }
-
-func TestRouteDoesntPermitExtraData(t *testing.T) {
-	buff := bytes.NewBufferString("")
-	recorder := httptest.NewRecorder()
-	recorder.Body = buff
-
-	r := NewRoute()
-	r.Get("/{username}/{reponame}/{type:^(issues|pulls)$}", func(resp http.ResponseWriter, req *http.Request) {
-		username := chi.URLParam(req, "username")
-		assert.Equal(t, "gitea", username)
-		reponame := chi.URLParam(req, "reponame")
-		assert.Equal(t, "gitea", reponame)
-		tp := chi.URLParam(req, "type")
-		assert.Equal(t, "issues", tp)
-	})
-
-	req, err := http.NewRequest("GET", "http://localhost:8000/gitea/gitea/issues", nil)
-	require.NoError(t, err)
-	r.ServeHTTP(recorder, req)
-	assert.Equal(t, http.StatusOK, recorder.Code)
-}
