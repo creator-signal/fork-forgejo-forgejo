@@ -32,11 +32,6 @@ import (
 	notify_service "forgejo.org/services/notify"
 )
 
-type mergeMessage struct {
-	title *string
-	body  *string
-}
-
 var mergeMessageTemplates = make(map[repo_model.MergeStyle]string, len(repo_model.MergeStyles))
 
 func LoadMergeMessageTemplates() error {
@@ -173,14 +168,7 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 					vars["ClosingIssues"] = ""
 				}
 			}
-			mergeMessage := expandDefaultMergeMessage(templateContent, vars)
-			if mergeMessage.title != nil {
-				message = *mergeMessage.title
-			}
-			if mergeMessage.body != nil {
-				body = *mergeMessage.body
-			}
-			return message, body, nil
+			return expandDefaultMergeMessage(templateContent, vars, message, body)
 		}
 	}
 
@@ -192,25 +180,27 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 	return message, body, nil
 }
 
-func expandDefaultMergeMessage(template string, vars map[string]string) (message mergeMessage) {
+func expandDefaultMergeMessage(template string, vars map[string]string, message string, body string) (final_message, final_body string, err error) {
 	if template == "" {
-		return mergeMessage{nil, nil}
+		return message, body, nil;
 	}
 	mapping := func(s string) string { return vars[s] }
 	if splits := strings.SplitN(template, "\n", 2); len(splits) == 2 {
-		title := os.Expand(strings.TrimSpace(splits[0]), mapping)
-		body := os.Expand(strings.TrimRightFunc(splits[1], unicode.IsSpace), mapping)
-		message := mergeMessage{&title, &body}
+		var templateTitle string
+		var templateBody string
 		if len(splits[0]) == 0 {
-			message.title = nil
+			templateTitle = message
+		} else {
+			templateTitle = os.Expand(strings.TrimSpace(splits[0]), mapping)
 		}
 		if len(splits[1]) == 0 {
-			message.body = nil
+			templateBody = body
+		} else {
+			templateBody = os.Expand(strings.TrimRightFunc(splits[1], unicode.IsSpace), mapping)
 		}
-		return message
+		return templateTitle, templateBody, nil
 	}
-	title := os.Expand(strings.TrimSpace(template), mapping)
-	return mergeMessage{&title, nil}
+	return os.Expand(strings.TrimSpace(template), mapping), body, nil
 }
 
 // GetDefaultMergeMessage returns default message used when merging pull request
