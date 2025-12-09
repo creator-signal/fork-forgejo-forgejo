@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"database/sql"
 	"testing"
 
 	"forgejo.org/models/db"
@@ -25,8 +24,6 @@ func TestStoreFederationHost(t *testing.T) {
 	t.Run("ExplicitNull", func(t *testing.T) {
 		federationHost := forgefed.FederationHost{
 			HostFqdn: "ExplicitNull",
-			// Explicit null on PublicKeyID
-			PublicKeyID: sql.NullInt64{Valid: false},
 		}
 
 		_, err := db.GetEngine(db.DefaultContext).Insert(&federationHost)
@@ -36,8 +33,6 @@ func TestStoreFederationHost(t *testing.T) {
 		has, err := db.GetEngine(db.DefaultContext).Where("host_fqdn=?", "ExplicitNull").Get(dbFederationHost)
 		require.NoError(t, err)
 		assert.True(t, has)
-
-		assert.False(t, dbFederationHost.PublicKeyID.Valid)
 	})
 
 	t.Run("NotNull", func(t *testing.T) {
@@ -69,10 +64,7 @@ func TestStoreFederationHost(t *testing.T) {
 		dbFederationPublicKey, err := federation_key.FindOrCreateFederationPublicKey(db.DefaultContext, federationPublicKey)
 		require.NoError(t, err)
 
-		federationHost.PublicKeyID = sql.NullInt64{Valid: true, Int64: dbFederationPublicKey.ID}
-
-		assert.True(t, dbFederationHost.PublicKeyID.Valid)
-		assert.Equal(t, dbFederationPublicKey.ID, dbFederationHost.PublicKeyID.Int64)
+		assert.Equal(t, dbFederationPublicKey.ActorID, dbFederationHost.ID)
 
 		assert.Nil(t, dbFederationPublicKey.Validate())
 		assert.Equal(t, keyID, dbFederationPublicKey.KeyID.String())
@@ -87,7 +79,6 @@ func TestStoreFederatedUser(t *testing.T) {
 			UserID:           0,
 			ExternalID:       "ExplicitNull",
 			FederationHostID: 0,
-			PublicKeyID:      sql.NullInt64{Valid: false},
 		}
 
 		_, err := db.GetEngine(db.DefaultContext).Insert(&federatedUser)
@@ -97,8 +88,6 @@ func TestStoreFederatedUser(t *testing.T) {
 		has, err := db.GetEngine(db.DefaultContext).Where("user_id=?", 0).Get(dbFederatedUser)
 		require.NoError(t, err)
 		assert.True(t, has)
-
-		assert.False(t, dbFederatedUser.PublicKeyID.Valid)
 	})
 
 	t.Run("NotNull", func(t *testing.T) {
@@ -132,10 +121,7 @@ func TestStoreFederatedUser(t *testing.T) {
 		dbFederationPublicKey, err := federation_key.FindOrCreateFederationPublicKey(db.DefaultContext, federationPublicKey)
 		require.NoError(t, err)
 
-		federatedUser.PublicKeyID = sql.NullInt64{Valid: true, Int64: dbFederationPublicKey.ID}
-
-		assert.True(t, dbFederatedUser.PublicKeyID.Valid)
-		assert.Equal(t, dbFederationPublicKey.ID, dbFederatedUser.PublicKeyID.Int64)
+		assert.Equal(t, dbFederationPublicKey.ActorID, dbFederatedUser.ID)
 
 		assert.Nil(t, dbFederationPublicKey.Validate())
 		assert.Equal(t, keyID, dbFederationPublicKey.KeyID.String())

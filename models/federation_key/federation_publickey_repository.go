@@ -28,22 +28,6 @@ func CreateFederationPublicKey(ctx context.Context, key *FederationPublicKey) er
 	return err
 }
 
-// GetFederationPublicKey gets a `FederationPublicKey` entry by its database ID.
-func GetFederationPublicKey(ctx context.Context, ID int64) (*FederationPublicKey, error) {
-	key := new(FederationPublicKey)
-	has, err := db.GetEngine(ctx).Where("id=?", ID).Get(key)
-
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, fmt.Errorf("FederationPublicKey record %v does not exist", ID)
-	} else if res, err := validation.IsValid(key); !res {
-		return nil, err
-	}
-
-	return key, nil
-}
-
 // FindFederationPublicKey gets a `FederationPublicKey` entry by its ActivityPub key ID.
 //
 // Returns:

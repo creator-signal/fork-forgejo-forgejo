@@ -144,7 +144,7 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID federation_key.KeyID) (
 		return nil, nil, nil
 	}
 
-	has, err := eng.Where("public_key_id=?", publicKey.ID).Get(federatedUser)
+	has, err := eng.Where("id=?", publicKey.ActorID).Get(federatedUser)
 	if err != nil {
 		return nil, nil, err
 	} else if !has {
@@ -172,14 +172,6 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID federation_key.KeyID) (
 	log.Trace("FindFederatedUserByKeyID: %v found user.ID %v, federated_user %v", keyID, user.ID, federatedUser)
 
 	return user, federatedUser, nil
-}
-
-func UpdateFederatedUser(ctx context.Context, federatedUser *FederatedUser) error {
-	if res, err := validation.IsValid(federatedUser); !res {
-		return err
-	}
-	_, err := db.GetEngine(ctx).ID(federatedUser.ID).Update(federatedUser)
-	return err
 }
 
 func DeleteFederatedUser(ctx context.Context, userID int64) error {

@@ -12,10 +12,10 @@ import (
 
 // FederationPublicKey data type.
 type FederationPublicKey struct {
-	ID    int64  `xorm:"pk autoincr"`
-	KeyID KeyID  `xorm:"key_id UNIQUE NOT NULL"`
-	Key   []byte `xorm:"BLOB NOT NULL"`
-	ActorID int64 `xorm:"NOT NULL"`
+	ID        int64     `xorm:"pk autoincr"`
+	KeyID     KeyID     `xorm:"key_id UNIQUE NOT NULL"`
+	Key       []byte    `xorm:"BLOB NOT NULL"`
+	ActorID   int64     `xorm:"NOT NULL"`
 	ActorType ActorType `xorm:"NOT NULL"`
 	Algorithm Algorithm `xorm:"NOT NULL"`
 }

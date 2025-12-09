@@ -35,10 +35,10 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 			require.Equal(t, sut.KeyID.String(), keyID)
 
 			sut = &FederationPublicKey{
-				ID:    ID,
-				KeyID: keyID,
-				Key:   key,
-				ActorID: actorID,
+				ID:        ID,
+				KeyID:     keyID,
+				Key:       key,
+				ActorID:   actorID,
 				ActorType: actorType,
 				Algorithm: alg,
 			}
@@ -57,9 +57,9 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 			require.Error(t, err, "sut should be invalid because of NULL key ID, but was valid %v", sut)
 
 			sut = &FederationPublicKey{
-				ID:  ID,
-				Key: key,
-				ActorID: actorID,
+				ID:        ID,
+				Key:       key,
+				ActorID:   actorID,
 				ActorType: actorType,
 				Algorithm: alg,
 			}
@@ -77,9 +77,9 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 			require.Error(t, err, "sut should be invalid because of NULL key, but was valid %v", res)
 
 			sut = &FederationPublicKey{
-				ID:    ID,
-				KeyID: keyID,
-				ActorID: actorID,
+				ID:        ID,
+				KeyID:     keyID,
+				ActorID:   actorID,
 				ActorType: actorType,
 				Algorithm: alg,
 			}
@@ -97,10 +97,10 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 			require.Error(t, err, "sut should be invalid because of invalid key, but was valid %v", res)
 
 			sut = &FederationPublicKey{
-				ID:    ID,
-				KeyID: keyID,
-				Key:   []byte{0xb, 0xa, 0xd},
-				ActorID: actorID,
+				ID:        ID,
+				KeyID:     keyID,
+				Key:       []byte{0xb, 0xa, 0xd},
+				ActorID:   actorID,
 				ActorType: actorType,
 				Algorithm: alg,
 			}
@@ -118,10 +118,10 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 			require.Error(t, err, "sut should be invalid because of invalid key, but was valid %v", res)
 
 			sut = &FederationPublicKey{
-				ID:    ID,
-				KeyID: "invalid,KeyID,URL",
-				Key:   key,
-				ActorID: actorID,
+				ID:        ID,
+				KeyID:     "invalid,KeyID,URL",
+				Key:       key,
+				ActorID:   actorID,
 				ActorType: actorType,
 				Algorithm: alg,
 			}
@@ -139,10 +139,10 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 			require.Error(t, err, "sut should be invalid because of invalid actor ID, but was valid %v", res)
 
 			sut = &FederationPublicKey{
-				ID:    ID,
-				KeyID: keyID,
-				Key:   key,
-				ActorID: -1,
+				ID:        ID,
+				KeyID:     keyID,
+				Key:       key,
+				ActorID:   -1,
 				ActorType: actorType,
 				Algorithm: alg,
 			}
@@ -160,10 +160,10 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 			require.Error(t, err, "sut should be invalid because of invalid actor type, but was valid %v", res)
 
 			sut = &FederationPublicKey{
-				ID:    ID,
-				KeyID: keyID,
-				Key:   key,
-				ActorID: actorID,
+				ID:        ID,
+				KeyID:     keyID,
+				Key:       key,
+				ActorID:   actorID,
 				ActorType: ActorType("invalid_actor_type"),
 				Algorithm: alg,
 			}
@@ -181,10 +181,10 @@ func Test_FederationPublicKeyValidation(t *testing.T) {
 			require.Error(t, err, "sut should be invalid because of invalid signature algorithm, but was valid %v", res)
 
 			sut = &FederationPublicKey{
-				ID:    ID,
-				KeyID: keyID,
-				Key:   key,
-				ActorID: actorID,
+				ID:        ID,
+				KeyID:     keyID,
+				Key:       key,
+				ActorID:   actorID,
 				ActorType: actorType,
 				Algorithm: Algorithm("invalid-algorithm"),
 			}

@@ -5,7 +5,6 @@ package federation
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/url"
 	"strings"
@@ -250,17 +249,7 @@ func createUserFromAP(ctx context.Context, personID fm.PersonID, federationHostI
 
 	federationPublicKey.ActorID = federatedUser.ID
 
-	dbPublicKey, err := federation_key.FindOrCreateFederationPublicKey(ctx, federationPublicKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	federatedUser.PublicKeyID = sql.NullInt64{
-		Int64: dbPublicKey.ID,
-		Valid: true,
-	}
-
-	if err := user.UpdateFederatedUser(ctx, federatedUser); err != nil {
+	if _, err = federation_key.FindOrCreateFederationPublicKey(ctx, federationPublicKey); err != nil {
 		return nil, nil, err
 	}
 

@@ -4,7 +4,6 @@
 package forgefed
 
 import (
-	"database/sql"
 	"fmt"
 	"net/url"
 	"strings"
@@ -24,7 +23,6 @@ type FederationHost struct {
 	NodeInfo       NodeInfo           `xorm:"extends NOT NULL"`
 	HostSchema     string             `xorm:"NOT NULL DEFAULT 'https'"`
 	LatestActivity time.Time          `xorm:"NOT NULL"`
-	PublicKeyID    sql.NullInt64      `xorm:"INDEX UNIQUE REFERENCES(federation_public_key, id)"`
 	Created        timeutil.TimeStamp `xorm:"created"`
 	Updated        timeutil.TimeStamp `xorm:"updated"`
 }

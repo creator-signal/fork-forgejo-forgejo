@@ -6,7 +6,6 @@ package federation
 import (
 	"context"
 	"crypto/x509"
-	"database/sql"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -91,18 +90,22 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyI
 		}
 	}
 
-	if federatedUser.PublicKeyID.Valid {
-		federatedPublicKey, err := federation_key.GetFederationPublicKey(ctx, federatedUser.PublicKeyID.Int64)
+	federatedPublicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
+	if err != nil {
+		return nil, err
+	} else if federatedPublicKey != nil && federatedPublicKey.ActorID != federatedUser.ID {
+		return nil, fmt.Errorf("invalid federation public key %v found for user ID: %v", federatedPublicKey.KeyID, federatedUser.ID)
+	}
+
+
+	// Is there already a key?
+	if federatedPublicKey != nil {
+		pubKey, err := x509.ParsePKIXPublicKey(federatedPublicKey.Key)
 		if err != nil {
 			return nil, err
 		}
 
 		log.Trace("For KeyID %v found pubKey %v", keyID, pubKey)
-
-		pubKey, err := x509.ParsePKIXPublicKey(federatedPublicKey.Key)
-		if err != nil {
-			return nil, err
-		}
 
 		return pubKey, nil
 	}
@@ -125,19 +128,7 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyI
 			return nil, err
 		}
 
-		dbPublicKey, err := federation_key.FindOrCreateFederationPublicKey(ctx, federatedPublicKey)
-		if err != nil {
-			return nil, err
-		}
-
-		// update federated user
-		federatedUser.PublicKeyID = sql.NullInt64{
-			Int64: dbPublicKey.ID,
-			Valid: true,
-		}
-
-		err = user.UpdateFederatedUser(ctx, federatedUser)
-		if err != nil {
+		if _, err := federation_key.FindOrCreateFederationPublicKey(ctx, federatedPublicKey); err != nil {
 			return nil, err
 		}
 
@@ -175,18 +166,20 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID federation_key.Key
 	}
 
 	// Is there an already an key?
-	if federationHost.PublicKeyID.Valid {
-		federationPublicKey, err := federation_key.GetFederationPublicKey(ctx, federationHost.PublicKeyID.Int64)
+	federationPublicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
+	if err != nil {
+		return nil, err
+	} else if federationPublicKey != nil && federationPublicKey.ActorID != federationHost.ID {
+		return nil, fmt.Errorf("invalid federation public key %v found for federation host ID: %v", federationPublicKey.KeyID, federationHost.ID)
+	}
+
+	if federationPublicKey != nil {
+		pubKey, err := x509.ParsePKIXPublicKey(federationPublicKey.Key)
 		if err != nil {
 			return nil, err
 		}
 
 		log.Trace("For %v found pubKey: %v", keyID, pubKey)
-
-		pubKey, err := x509.ParsePKIXPublicKey(federationPublicKey.Key)
-		if err != nil {
-			return nil, err
-		}
 
 		return pubKey, nil
 	}
@@ -212,18 +205,7 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID federation_key.Key
 			return nil, err
 		}
 
-		dbPublicKey, err := federation_key.FindOrCreateFederationPublicKey(ctx, federationPublicKey)
-		if err != nil {
-			return nil, err
-		}
-
-		federationHost.PublicKeyID = sql.NullInt64{
-			Int64: dbPublicKey.ID,
-			Valid: true,
-		}
-
-		err = forgefed.UpdateFederationHost(ctx, federationHost)
-		if err != nil {
+		if _, err = federation_key.FindOrCreateFederationPublicKey(ctx, federationPublicKey); err != nil {
 			return nil, err
 		}
 

@@ -16,10 +16,10 @@ import (
 )
 
 type FederationPublicKey struct {
-	ID    int64  `xorm:"pk"`
-	KeyID string `xorm:"UNIQUE NOT NULL"`
-	Key   []byte `xorm:"BLOB NOT NULL"`
-	ActorID int64 `xorm:"NOT NULL"`
+	ID        int64  `xorm:"pk"`
+	KeyID     string `xorm:"UNIQUE NOT NULL"`
+	Key       []byte `xorm:"BLOB NOT NULL"`
+	ActorID   int64  `xorm:"NOT NULL"`
 	ActorType string `xorm:"NOT NULL"`
 	Algorithm string `xorm:"NOT NULL"`
 }
@@ -89,27 +89,6 @@ func v14AddFederationPublicKeyTable(x *xorm.Engine) error {
 	return err
 }
 
-func v14AddPublicKeyIDColumns(x *xorm.Engine) error {
-	type FederationHost struct {
-		PublicKeyID sql.NullInt64 `xorm:"INDEX UNIQUE"`
-	}
-
-	type FederatedUser struct {
-		PublicKeyID sql.NullInt64 `xorm:"INDEX UNIQUE"`
-	}
-
-	opts := xorm.SyncOptions{IgnoreDropIndices: true}
-
-	_, err := x.SyncWithOptions(opts, new(FederationHost))
-	if err != nil {
-		return err
-	}
-
-	_, err = x.SyncWithOptions(opts, new(FederatedUser))
-
-	return err
-}
-
 func v14CopyExistingFederationPublicKeys[Bean Keys](x *xorm.Engine) error {
 	cond := xb.Neq{"key_id": "NULL"}.And(xb.Neq{"public_key": "NULL"})
 	if err := db.Iterate[Bean](context.Background(), cond, func(_ context.Context, bean *Bean) error {
@@ -128,7 +107,7 @@ func v14CopyExistingFederationPublicKeys[Bean Keys](x *xorm.Engine) error {
 		if _, err = x.SQL(xb.Select("id").From(table).Where(xb.Eq{"key_id": fk.KeyID})).Get(&pkID); err != nil {
 			return err
 		}
-		if _, err = x.Exec("UPDATE "+table+" SET public_key_id=?,key_id=NULL,public_key=NULL WHERE id=?", pkID, key.GetID()); err != nil {
+		if _, err = x.Exec("UPDATE "+table+" SET key_id=NULL,public_key=NULL WHERE id=?", key.GetID()); err != nil {
 			return err
 		}
 
@@ -160,10 +139,6 @@ func v14CopyExistingFederationPublicKeys[Bean Keys](x *xorm.Engine) error {
 func v14SeparateFederationPublicKeyTable(x *xorm.Engine) error {
 	err := v14AddFederationPublicKeyTable(x)
 	if err != nil {
-		return err
-	}
-
-	if err = v14AddPublicKeyIDColumns(x); err != nil {
 		return err
 	}
 

@@ -77,7 +77,7 @@ func FindFederationHostByKeyID(ctx context.Context, keyID federation_key.KeyID) 
 		return nil, nil
 	}
 
-	return findFederationHostFromDB(ctx, "public_key_id=?", publicKey.ID)
+	return findFederationHostFromDB(ctx, "id=?", publicKey.ActorID)
 }
 
 func CreateFederationHost(ctx context.Context, host *FederationHost) error {
