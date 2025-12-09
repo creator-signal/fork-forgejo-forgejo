@@ -180,9 +180,9 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 	return message, body, nil
 }
 
-func expandDefaultMergeMessage(template string, vars map[string]string, message string, body string) (final_message, final_body string, err error) {
+func expandDefaultMergeMessage(template string, vars map[string]string, message, body string) (finalMessage, finalBody string, err error) {
 	if template == "" {
-		return message, body, nil;
+		return message, body, nil
 	}
 	mapping := func(s string) string { return vars[s] }
 	if splits := strings.SplitN(template, "\n", 2); len(splits) == 2 {

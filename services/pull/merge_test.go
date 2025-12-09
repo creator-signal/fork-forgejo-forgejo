@@ -35,8 +35,8 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 		"PullRequestTitle":       title,
 		"PullRequestDescription": description,
 	}
-	default_title := "default_title"
-	default_body := "default_body"
+	defaultTitle := "default_title"
+	defaultBody := "default_body"
 	expectedTitle := fmt.Sprintf("Merge %s", title)
 	expectedDescription := fmt.Sprintf("Description: %s", description)
 	expectedDescriptionMultiLine := fmt.Sprintf("Description:\n\n%s", description)
@@ -52,43 +52,43 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 		{
 			name:     "empty template",
 			args:     args{template: "", vars: vars},
-			want:     default_title,
-			wantBody: default_body,
+			want:     defaultTitle,
+			wantBody: defaultBody,
 		},
 		{
 			name:     "single line",
 			args:     args{template: "Merge ${PullRequestTitle}", vars: vars},
 			want:     expectedTitle,
-			wantBody: default_body,
+			wantBody: defaultBody,
 		},
 		{
 			name:     "empty message (space)",
 			args:     args{template: " ", vars: vars},
 			want:     emptyString,
-			wantBody: default_body,
+			wantBody: defaultBody,
 		},
 		{
 			name:     "empty message (with newline)",
 			args:     args{template: " \n", vars: vars},
 			want:     emptyString,
-			wantBody: default_body,
+			wantBody: defaultBody,
 		},
 		{
 			name:     "single newline",
 			args:     args{template: "\n", vars: vars},
-			want:     default_title,
-			wantBody: default_body,
+			want:     defaultTitle,
+			wantBody: defaultBody,
 		},
 		{
 			name:     "empty description (newline)",
 			args:     args{template: "\n\n", vars: vars},
-			want:     default_title,
+			want:     defaultTitle,
 			wantBody: emptyString,
 		},
 		{
 			name:     "empty description (space)",
 			args:     args{template: "\n ", vars: vars},
-			want:     default_title,
+			want:     defaultTitle,
 			wantBody: emptyString,
 		},
 		{
@@ -118,19 +118,19 @@ func Test_expandDefaultMergeMessage(t *testing.T) {
 		{
 			name:     "description only",
 			args:     args{template: "\nDescription: ${PullRequestDescription}\n", vars: vars},
-			want:     default_title,
+			want:     defaultTitle,
 			wantBody: expectedDescription,
 		},
 		{
 			name:     "leading newlines",
 			args:     args{template: "\n\n\nMerge ${PullRequestTitle}\n\nDescription:\n\n${PullRequestDescription}\n", vars: vars},
-			want:     default_title,
+			want:     defaultTitle,
 			wantBody: expectedDescriptionMerged,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resultTitle, resultBody, err := expandDefaultMergeMessage(tt.args.template, tt.args.vars, default_title, default_body)
+			resultTitle, resultBody, err := expandDefaultMergeMessage(tt.args.template, tt.args.vars, defaultTitle, defaultBody)
 			require.NoError(t, err)
 			assert.Equalf(t, tt.want, resultTitle, "Wrong title for test '%s' -> expandDefaultMergeMessage(%q, %q)", tt.name, tt.args.template, tt.args.vars)
 			assert.Equalf(t, tt.wantBody, resultBody, "Wrong body for test '%s' -> expandDefaultMergeMessage(%q, %q)", tt.name, tt.args.template, tt.args.vars)
