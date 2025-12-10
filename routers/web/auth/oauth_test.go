@@ -4,6 +4,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"testing"
 
 	"forgejo.org/models/auth"
@@ -11,8 +12,11 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/jwtx"
+	"forgejo.org/modules/templates"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/auth/source/oauth2"
+	"forgejo.org/services/contexttest"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
@@ -85,4 +89,30 @@ func TestEncodeCodeChallenge(t *testing.T) {
 	codeChallenge, err := encodeCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
 	require.NoError(t, err)
 	assert.Equal(t, "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", codeChallenge)
+}
+
+func TestOIDCWellKnown_DeviceAuth(t *testing.T) {
+	sk, err := oauth2.CreateJWTSigningKey("HS256", make([]byte, 32))
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer test.MockVariableValue(&oauth2.DefaultSigningKey, sk)()
+
+	ctx, resp := contexttest.MockContext(
+		t,
+		"/.well-known/openid-configuration",
+		contexttest.MockContextOption{Render: templates.HTMLRenderer()},
+	)
+
+	OIDCWellKnown(ctx)
+
+	var metadata struct {
+		DeviceAuthorizationEndpoint string   `json:"device_authorization_endpoint"`
+		GrantTypesSupported         []string `json:"grant_types_supported"`
+	}
+
+	if assert.NoError(t, json.Unmarshal(resp.Body.Bytes(), &metadata)) {
+		assert.Equal(t, "https://try.gitea.io/login/oauth/device_authorization", metadata.DeviceAuthorizationEndpoint)
+		assert.Contains(t, metadata.GrantTypesSupported, "urn:ietf:params:oauth:grant-type:device_code")
+	}
 }

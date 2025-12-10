@@ -1,6 +1,7 @@
 {
     "issuer": "{{.Issuer | JSEscape}}",
     "authorization_endpoint": "{{AppUrl | JSEscape}}login/oauth/authorize",
+    "device_authorization_endpoint": "{{AppUrl | JSEscape}}login/oauth/device_authorization",
     "token_endpoint": "{{AppUrl | JSEscape}}login/oauth/access_token",
     "jwks_uri": "{{AppUrl | JSEscape}}login/oauth/keys",
     "userinfo_endpoint": "{{AppUrl | JSEscape}}login/oauth/userinfo",
@@ -44,6 +45,7 @@
     ],
     "grant_types_supported": [
         "authorization_code",
+        "urn:ietf:params:oauth:grant-type:device_code",
         "refresh_token"
     ]
 }
