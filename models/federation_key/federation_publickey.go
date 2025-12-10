@@ -63,7 +63,7 @@ func (key FederationPublicKey) validateKeyID() []string {
 
 // validateKey validates that the public key is non-empty, and properly encoded
 func (key FederationPublicKey) validateKey() []string {
-	result := validation.ValidateNotEmpty(string(key.Key), "Key")
+	result := validation.ValidateNotEmpty(key.Key, "Key")
 	if _, err := x509.ParsePKIXPublicKey(key.Key); err != nil {
 		result = append(result, fmt.Sprintf("PublicKey is not valid: %s", err))
 	}

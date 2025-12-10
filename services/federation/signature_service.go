@@ -97,7 +97,6 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyI
 		return nil, fmt.Errorf("invalid federation public key %v found for user ID: %v", federatedPublicKey.KeyID, federatedUser.ID)
 	}
 
-
 	// Is there already a key?
 	if federatedPublicKey != nil {
 		pubKey, err := x509.ParsePKIXPublicKey(federatedPublicKey.Key)
