@@ -275,3 +275,12 @@ func (job *ActionRunJob) IsIncompleteRunsOn() (bool, *jobparser.IncompleteNeeds,
 	}
 	return jobWorkflow.IncompleteRunsOn, jobWorkflow.IncompleteRunsOnNeeds, jobWorkflow.IncompleteRunsOnMatrix, nil
 }
+
+// Check whether the target job was generated as a result of expanding a reusable workflow.
+func (job *ActionRunJob) IsWorkflowCallInnerJob() (bool, error) {
+	jobWorkflow, err := job.decodeWorkflowPayload()
+	if err != nil {
+		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.Metadata.WorkflowCallParent != "", nil
+}
