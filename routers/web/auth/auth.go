@@ -62,13 +62,13 @@ func autoSignIn(ctx *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	u, _, err := user_model.VerifyUserAuthorizationToken(ctx, authCookie, auth.LongTermAuthorization)
+	optUser, _, err := user_model.VerifyUserAuthorizationToken(ctx, authCookie, auth.LongTermAuthorization)
 	if err != nil {
 		return false, fmt.Errorf("VerifyUserAuthorizationToken: %w", err)
-	}
-	if u == nil {
+	} else if !optUser.Has() {
 		return false, nil
 	}
+	u := optUser.Value()
 
 	isSucceed = true
 
@@ -667,18 +667,17 @@ func Activate(ctx *context.Context) {
 		return
 	}
 
-	user, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.UserActivation)
+	optUser, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.UserActivation)
 	if err != nil {
 		ctx.ServerError("VerifyUserAuthorizationToken", err)
 		return
-	}
-
-	// if code is wrong
-	if user == nil {
+	} else if !optUser.Has() {
+		// if code is wrong
 		ctx.Data["IsCodeInvalid"] = true
 		ctx.HTML(http.StatusOK, TplActivate)
 		return
 	}
+	user := optUser.Value()
 
 	// if account is local account, verify password
 	if user.LoginSource == 0 {
@@ -741,18 +740,17 @@ func ActivatePost(ctx *context.Context) {
 		return
 	}
 
-	user, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.UserActivation)
+	optUser, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.UserActivation)
 	if err != nil {
 		ctx.ServerError("VerifyUserAuthorizationToken", err)
 		return
-	}
-
-	// if code is wrong
-	if user == nil {
+	} else if !optUser.Has() {
+		// if code is wrong
 		ctx.Data["IsCodeInvalid"] = true
 		ctx.HTML(http.StatusOK, TplActivate)
 		return
 	}
+	user := optUser.Value()
 
 	// if account is local account, verify password
 	if user.LoginSource == 0 {
@@ -831,15 +829,15 @@ func ActivateEmail(ctx *context.Context) {
 	code := ctx.FormString("code")
 	emailStr := ctx.FormString("email")
 
-	u, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.EmailActivation(emailStr))
+	optUser, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.EmailActivation(emailStr))
 	if err != nil {
 		ctx.ServerError("VerifyUserAuthorizationToken", err)
 		return
-	}
-	if u == nil {
+	} else if !optUser.Has() {
 		ctx.Redirect(setting.AppSubURL + "/user/settings/account")
 		return
 	}
+	u := optUser.Value()
 
 	if err := deleteToken(); err != nil {
 		ctx.ServerError("deleteToken", err)

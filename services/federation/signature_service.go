@@ -94,13 +94,13 @@ func FindOrCreateFederatedUserKey(ctx context.Context, keyID federation_key.KeyI
 	federatedPublicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
 	if err != nil {
 		return nil, err
-	} else if federatedPublicKey != nil && federatedPublicKey.ActorID != federatedUser.ID {
-		return nil, fmt.Errorf("invalid federation public key %v found for user ID: %v", federatedPublicKey.KeyID, federatedUser.ID)
+	} else if federatedPublicKey.Has() && federatedPublicKey.Value().ActorID != federatedUser.ID {
+		return nil, fmt.Errorf("invalid federation public key %v found for user ID: %v", federatedPublicKey.Value().KeyID, federatedUser.ID)
 	}
 
 	// Is there already a key?
-	if federatedPublicKey != nil {
-		pubKey, err := x509.ParsePKIXPublicKey(federatedPublicKey.Key)
+	if federatedPublicKey.Has() {
+		pubKey, err := x509.ParsePKIXPublicKey(federatedPublicKey.Value().Key)
 		if err != nil {
 			return nil, err
 		}
@@ -173,12 +173,12 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID federation_key.Key
 	federationPublicKey, err := federation_key.FindFederationPublicKey(ctx, keyID)
 	if err != nil {
 		return nil, err
-	} else if federationPublicKey != nil && federationPublicKey.ActorID != federationHost.ID {
-		return nil, fmt.Errorf("invalid federation public key %v found for federation host ID: %v", federationPublicKey.KeyID, federationHost.ID)
+	} else if federationPublicKey.Has() && federationPublicKey.Value().ActorID != federationHost.ID {
+		return nil, fmt.Errorf("invalid federation public key %v found for federation host ID: %v", federationPublicKey.Value().KeyID, federationHost.ID)
 	}
 
-	if federationPublicKey != nil {
-		pubKey, err := x509.ParsePKIXPublicKey(federationPublicKey.Key)
+	if federationPublicKey.Has() {
+		pubKey, err := x509.ParsePKIXPublicKey(federationPublicKey.Value().Key)
 		if err != nil {
 			return nil, err
 		}

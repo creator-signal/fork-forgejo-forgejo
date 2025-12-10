@@ -903,16 +903,16 @@ func countUsers(ctx context.Context, opts *CountUserFilter) int64 {
 
 // VerifyUserActiveCode verifies that the code is valid for the given purpose for this user.
 // If delete is specified, the token will be deleted.
-func VerifyUserAuthorizationToken(ctx context.Context, code string, purpose auth.AuthorizationPurpose) (user *User, deleteToken func() error, err error) {
+func VerifyUserAuthorizationToken(ctx context.Context, code string, purpose auth.AuthorizationPurpose) (user optional.Option[*User], deleteToken func() error, err error) {
 	lookupKey, validator, found := strings.Cut(code, ":")
 	if !found {
-		return nil, nil, nil
+		return optional.None[*User](), nil, nil
 	}
 
 	authToken, err := auth.FindAuthToken(ctx, lookupKey, purpose)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
-			return nil, nil, nil
+			return optional.None[*User](), nil, nil
 		}
 		return nil, nil, err
 	}
@@ -933,7 +933,7 @@ func VerifyUserAuthorizationToken(ctx context.Context, code string, purpose auth
 	u, err := GetUserByID(ctx, authToken.UID)
 	if err != nil {
 		if IsErrUserNotExist(err) {
-			return nil, nil, nil
+			return optional.None[*User](), nil, nil
 		}
 		return nil, nil, err
 	}
@@ -942,7 +942,7 @@ func VerifyUserAuthorizationToken(ctx context.Context, code string, purpose auth
 		return auth.DeleteAuthToken(ctx, authToken)
 	}
 
-	return u, deleteToken, nil
+	return optional.Some(u), deleteToken, nil
 }
 
 // ValidateUser check if user is valid to insert / update into database

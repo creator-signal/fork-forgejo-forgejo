@@ -927,13 +927,14 @@ func TestVerifyUserAuthorizationToken(t *testing.T) {
 	t.Run("Wrong purpose", func(t *testing.T) {
 		u, _, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.PasswordReset)
 		require.NoError(t, err)
-		assert.Nil(t, u)
+		assert.False(t, u.Has())
 	})
 
 	t.Run("No delete", func(t *testing.T) {
 		u, _, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation)
 		require.NoError(t, err)
-		assert.Equal(t, user.ID, u.ID)
+		assert.True(t, u.Has())
+		assert.Equal(t, user.ID, u.Value().ID)
 
 		authToken, err := auth.FindAuthToken(db.DefaultContext, lookupKey, auth.UserActivation)
 		require.NoError(t, err)
@@ -943,7 +944,8 @@ func TestVerifyUserAuthorizationToken(t *testing.T) {
 	t.Run("Delete", func(t *testing.T) {
 		u, deleteToken, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation)
 		require.NoError(t, err)
-		assert.Equal(t, user.ID, u.ID)
+		assert.True(t, u.Has())
+		assert.Equal(t, user.ID, u.Value().ID)
 		require.NoError(t, deleteToken())
 
 		authToken, err := auth.FindAuthToken(db.DefaultContext, lookupKey, auth.UserActivation)

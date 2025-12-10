@@ -246,7 +246,7 @@ func createUserFromAP(ctx context.Context, personID fm.PersonID, federationHostI
 	} else if optFederatedUser == nil {
 		return nil, nil, fmt.Errorf("missing federated user: %v", federatedUser.ExternalID)
 	}
-	federatedUser = optFederatedUser
+	federatedUser = optFederatedUser.Value()
 
 	federationPublicKey.ActorID = federatedUser.ID
 

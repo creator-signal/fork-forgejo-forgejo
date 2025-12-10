@@ -153,9 +153,9 @@ func TestFederationHttpSigValidation(t *testing.T) {
 
 			hostKey, err := federation_key.FindFederationPublicKey(db.DefaultContext, applicationKeyID)
 			require.NoError(t, err)
-			assert.NotNil(t, hostKey)
-			assert.Equal(t, hostKey.ActorID, host.Value().ID)
-			require.NoError(t, host.Value().ValidateKeyID(hostKey.KeyID))
+			assert.True(t, hostKey.Has())
+			assert.Equal(t, hostKey.Value().ActorID, host.Value().ID)
+			require.NoError(t, host.Value().ValidateKeyID(hostKey.Value().KeyID))
 
 			_, optUser, err := user.FindFederatedUserByKeyID(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
@@ -163,9 +163,9 @@ func TestFederationHttpSigValidation(t *testing.T) {
 
 			userKey, err := federation_key.FindFederationPublicKey(db.DefaultContext, actorKeyID)
 			require.NoError(t, err)
-			assert.NotNil(t, userKey)
-			assert.Equal(t, userKey.ActorID, optUser.Value().ID)
-			require.NoError(t, optUser.Value().ValidateKeyID(ctx, userKey.KeyID))
+			assert.True(t, userKey.Has())
+			assert.Equal(t, userKey.Value().ActorID, optUser.Value().ID)
+			require.NoError(t, optUser.Value().ValidateKeyID(ctx, userKey.Value().KeyID))
 		})
 
 		t.Run("ValidateActorFromKeyID", func(t *testing.T) {
