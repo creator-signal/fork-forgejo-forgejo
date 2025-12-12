@@ -33,7 +33,7 @@ test('Buttons and other controls have consistent height', async ({page}) => {
   expect(buttonHeight).toBe(purgeButtonHeight);
 });
 
-test('Button visuals', async ({page}) => {
+test('Button visuals', async ({browser}) => {
   async function getButtonProperties(page, selector) {
     return await page.locator(selector).evaluate((el) => {
       // In Firefox getComputedStyle is undefined if returned from evaluate
@@ -47,8 +47,8 @@ test('Button visuals', async ({page}) => {
     });
   }
 
-  // const context = await browser.newContext({javaScriptEnabled: false});
-  // const page = await context.newPage();
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
   const response = await page.goto('/devtest/buttons');
   expect(response?.status()).toBe(200);
 
