@@ -58,14 +58,14 @@ test('Button visuals', async ({browser}) => {
   const secondary = await getButtonProperties(page, 'button.secondary:not(.disabled)');
   const danger = await getButtonProperties(page, 'button.danger:not(.disabled)');
 
-  [primary, secondary, danger].forEach(item => {
+  for (const item of [primary, secondary, danger]) {
     // Evaluate that all buttons have background-color specified
     expect(item.backgroundColor).not.toBe(transparent);
     // Evaluate font weights
     expect(item.fontWeight).toBe('500');
     // Evaluate opacity
     expect(item.opacity).toBe('1');
-  });
+  }
 
   // Evaluate that background-colors are different
   expect(primary.backgroundColor).not.toBe(secondary.backgroundColor);
@@ -75,7 +75,7 @@ test('Button visuals', async ({browser}) => {
   const secondaryDisabled = await getButtonProperties(page, '.button.secondary.disabled');
   const dangerDisabled = await getButtonProperties(page, '.button.danger.disabled');
 
-  [primaryDisabled, secondaryDisabled, dangerDisabled].forEach(item => {
+  for (const item of [primaryDisabled, secondaryDisabled, dangerDisabled]) {
     // Evaluate opacity
     expect(item.opacity).toBe('0.55');
     // Evaluate pointer-events
@@ -84,5 +84,5 @@ test('Button visuals', async ({browser}) => {
     // Evaluate other properties of non-disabled buttons
     expect(item.backgroundColor).not.toBe(transparent);
     expect(item.fontWeight).toBe('500');
-  });
+  }
 });
