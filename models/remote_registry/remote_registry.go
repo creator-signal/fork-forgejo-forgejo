@@ -4,6 +4,7 @@
 package remoteregistry
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -48,8 +49,8 @@ type RemoteRegistry struct {
 	RemoteURL      string                  `xorm:"NOT NULL"`
 	RemoteType     packages.Type           `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	RemoteUser     string                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
-	RemotePassword string                  `xorm:"TEXT"`
-	RemoteToken    string                  `xorm:"TEXT"`
+	RemotePassword string                  `xorm:"TEXT"` // TODO: Password and Token encryption
+	RemoteToken    string                  `xorm:"TEXT"` // TODO Setter and Getter for credentials
 	CreatedUnix    timeutil.TimeStamp      `xorm:"created NOT NULL"`
 	UpdatedUnix    timeutil.TimeStamp      `xorm:"updated NOT NULL"`
 }
@@ -57,6 +58,22 @@ type RemoteRegistry struct {
 // TableName returns the table name for RemoteRegistry
 func (RemoteRegistry) TableName() string {
 	return "remote_registry"
+}
+
+type Credentials struct {
+	RemoteUser     string
+	RemotePassword string
+	RemoteToken    string
+}
+
+func CreateRemoteRegistry(ctx context.Context, name, remoteURL string, remoteType packages.Type, cred *Credentials) {
+
+	remoteRegistry = &RemoteRegistry{
+		Name:       name,
+		RemoteURL:  remoteURL,
+		RemoteType: remoteType,
+	}
+
 }
 
 func (rr RemoteRegistry) Validate() []string {
