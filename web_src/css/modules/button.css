@@ -39,6 +39,7 @@
 
   &.disabled {
     opacity: var(--opacity-disabled);
+    pointer-events: none;
   }
 }
 
