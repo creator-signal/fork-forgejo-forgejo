@@ -54,7 +54,7 @@
   }
 }
 
-.button {
+.button:is(.primary, .secondary, .danger) {
   display: inline-flex;
   align-items: center;
   min-height: var(--button-min-height);
