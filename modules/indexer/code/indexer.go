@@ -5,6 +5,7 @@ package code
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime/pprof"
 	"slices"
@@ -70,6 +71,11 @@ func index(ctx context.Context, indexer internal.Indexer, repoID int64) error {
 
 	// skip regular repos from being indexed if unit is not present
 	if !slices.Contains(repoTypes, "sources") && !repo.IsFork && !repo.IsMirror && !repo.IsTemplate {
+		return nil
+	}
+
+	// skip empty repos from being indexed
+	if repo.IsEmpty {
 		return nil
 	}
 
@@ -251,28 +257,39 @@ func IsAvailable(ctx context.Context) bool {
 	return (*globalIndexer.Load()).Ping(ctx) == nil
 }
 
-// populateRepoIndexer populate the repo indexer with pre-existing data. This
-// should only be run when the indexer is created for the first time.
+// populateRepoIndexer (re)populates the repo indexer
 func populateRepoIndexer(ctx context.Context) {
-	log.Info("Populating the repo indexer with existing repositories")
+	ctx, _, finished := process.GetManager().AddTypedContext(ctx, "Service: PopulateRepoIndexer", process.SystemProcessType, true)
+	defer finished()
+	if err := PopulateRepoIndexer(ctx); err != nil {
+		log.Error("Code (re)indexation failed: %v", err)
+	}
+}
+
+func PopulateRepoIndexer(ctx context.Context) error {
+	if !setting.Indexer.RepoIndexerEnabled {
+		return nil
+	}
+
+	log.Info("(Re)populating the repo indexer with existing repositories")
 
 	exist, err := db.IsTableNotEmpty("repository")
 	if err != nil {
-		log.Fatal("System error: %v", err)
+		return fmt.Errorf("System error: %w", err)
 	} else if !exist {
-		return
+		return nil
 	}
 
 	// if there is any existing repo indexer metadata in the DB, delete it
 	// since we are starting afresh. Also, xorm requires deletes to have a
 	// condition, and we want to delete everything, thus 1=1.
 	if err := db.DeleteAllRecords("repo_indexer_status"); err != nil {
-		log.Fatal("System error: %v", err)
+		return fmt.Errorf("System error: %w", err)
 	}
 
 	var maxRepoID int64
 	if maxRepoID, err = db.GetMaxID("repository"); err != nil {
-		log.Fatal("System error: %v", err)
+		return fmt.Errorf("System error: %w", err)
 	}
 
 	// start with the maximum existing repo ID and work backwards, so that we
@@ -281,30 +298,27 @@ func populateRepoIndexer(ctx context.Context) {
 	for maxRepoID > 0 {
 		select {
 		case <-ctx.Done():
-			log.Info("Repository Indexer population shutdown before completion")
-			return
+			return fmt.Errorf("Repository Indexer (re)population shutdown before completion: %w", ctx.Err())
 		default:
 		}
 		ids, err := repo_model.GetUnindexedRepos(ctx, repo_model.RepoIndexerTypeCode, maxRepoID, 0, 50)
 		if err != nil {
-			log.Error("populateRepoIndexer: %v", err)
-			return
+			return fmt.Errorf("populateRepoIndexer: %w", err)
 		} else if len(ids) == 0 {
 			break
 		}
 		for _, id := range ids {
 			select {
 			case <-ctx.Done():
-				log.Info("Repository Indexer population shutdown before completion")
-				return
+				return fmt.Errorf("Repository Indexer (re)population shutdown before completion: %w", ctx.Err())
 			default:
 			}
 			if err := indexerQueue.Push(&internal.IndexerData{RepoID: id}); err != nil {
-				log.Error("indexerQueue.Push: %v", err)
-				return
+				return fmt.Errorf("indexerQueue.Push: %w", err)
 			}
 			maxRepoID = id - 1
 		}
 	}
 	log.Info("Done (re)populating the repo indexer with existing repositories")
+	return nil
 }

@@ -153,6 +153,7 @@ func Dashboard(ctx *context.Context) {
 		"delete_generated_repository_avatars",
 		"sync_repo_branches",
 		"sync_repo_tags",
+		"rebuild_code_indexer",
 	}...)
 	ctx.Data["Entries"] = entries
 

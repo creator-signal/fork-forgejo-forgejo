@@ -12,6 +12,7 @@ import (
 	"forgejo.org/models/system"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	code_indexer "forgejo.org/modules/indexer/code"
 	issue_indexer "forgejo.org/modules/indexer/issues"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/updatechecker"
@@ -227,6 +228,16 @@ func registerRebuildIssueIndexer() {
 	})
 }
 
+func registerRebuildCodeIndexer() {
+	RegisterTaskFatal("rebuild_code_indexer", &BaseConfig{
+		Enabled:    false,
+		RunAtStart: false,
+		Schedule:   "@annually",
+	}, func(ctx context.Context, _ *user_model.User, config Config) error {
+		return code_indexer.PopulateRepoIndexer(ctx)
+	})
+}
+
 func registerRemoveResolvedReports() {
 	type ReportConfig struct {
 		BaseConfig
@@ -260,6 +271,7 @@ func initExtendedTasks() {
 	registerDeleteOldSystemNotices()
 	registerGCLFS()
 	registerRebuildIssueIndexer()
+	registerRebuildCodeIndexer()
 	if setting.Moderation.Enabled {
 		registerRemoveResolvedReports()
 	}
