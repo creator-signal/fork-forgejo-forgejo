@@ -24,34 +24,22 @@
 .button.primary {
   --button-background-color: var(--color-primary);
   --button-color: var(--color-primary-contrast);
-
-  &:hover,
-  &:focus {
-    --button-background-color: var(--color-primary-hover);
-  }
+  --button-background-color-hover: var(--color-primary-hover);
 }
 
 .button.secondary {
   --button-background-color: var(--color-button);
-  border: 1px solid var(--color-light-border);
   --button-color: var(--color-text-light);
-
-  &:hover,
-  &:focus {
-    --button-color: var(--color-text);
-  }
+  --button-color-hover: var(--color-text);
+  border: 1px solid var(--color-light-border);
 }
 
 .button.danger {
   /* Fallbacks are needed while -thin vars are not supplied by all themes */
   --button-background-color: var(--color-danger-bg, var(--color-error-bg));
-  border: 1px solid var(--color-thin-red, var(--color-red));
   --button-color: var(--color-thin-red, var(--color-red));
-
-  &:hover,
-  &:focus {
-    --button-color: var(--color-thin-red-highlight, var(--color-red));
-  }
+  --button-color-hover: var(--color-thin-red-highlight, var(--color-red));
+  border: 1px solid var(--color-thin-red, var(--color-red));
 }
 
 .button:is(.primary, .secondary, .danger) {
@@ -71,6 +59,10 @@
 
   &:hover,
   &:focus {
+    /* If a separate -hover variable is given, use it, otherwise fall back to a non-hover one */
+    background-color: var(--button-background-color-hover, var(--button-background-color));
+    color: var(--button-color-hover, var(--button-color));
+
     text-decoration: none;
   }
 
