@@ -41,6 +41,7 @@ test('Button visuals', async ({page}) => {
       return {
         backgroundColor: s.backgroundColor,
         fontWeight: s.fontWeight,
+        opacity: s.opacity,
       };
     });
   }
@@ -52,9 +53,9 @@ test('Button visuals', async ({page}) => {
 
   const transparent = 'rgba(0, 0, 0, 0)';
 
-  const primary = await getButtonProperties(page, 'button.primary');
-  const secondary = await getButtonProperties(page, 'button.secondary');
-  const danger = await getButtonProperties(page, 'button.danger');
+  const primary = await getButtonProperties(page, 'button.primary:not(.disabled)');
+  const secondary = await getButtonProperties(page, 'button.secondary:not(.disabled)');
+  const danger = await getButtonProperties(page, 'button.danger:not(.disabled)');
 
   // Evaluate that all buttons have background-color specified
   expect(primary.backgroundColor).not.toBe(transparent);
@@ -69,4 +70,9 @@ test('Button visuals', async ({page}) => {
   expect(primary.fontWeight).toBe('500');
   expect(secondary.fontWeight).toBe('500');
   expect(danger.fontWeight).toBe('500');
+
+  // Evaluate opacity
+  expect(primary.opacity).toBe('1');
+  expect(secondary.opacity).toBe('1');
+  expect(danger.opacity).toBe('1');
 });
