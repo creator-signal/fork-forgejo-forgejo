@@ -42,6 +42,7 @@ test('Button visuals', async ({page}) => {
         backgroundColor: s.backgroundColor,
         fontWeight: s.fontWeight,
         opacity: s.opacity,
+        pointerEvents: s.pointerEvents,
       };
     });
   }
@@ -69,4 +70,19 @@ test('Button visuals', async ({page}) => {
   // Evaluate that background-colors are different
   expect(primary.backgroundColor).not.toBe(secondary.backgroundColor);
   expect(primary.backgroundColor).not.toBe(danger.backgroundColor);
+
+  const primaryDisabled = await getButtonProperties(page, '.button.primary.disabled');
+  const secondaryDisabled = await getButtonProperties(page, '.button.secondary.disabled');
+  const dangerDisabled = await getButtonProperties(page, '.button.danger.disabled');
+
+  [primaryDisabled, secondaryDisabled, dangerDisabled].forEach(item => {
+    // Evaluate opacity
+    expect(item.opacity).toBe('0.55');
+    // Evaluate pointer-events
+    expect(item.pointerEvents).toBe('none');
+
+    // Evaluate other properties of non-disabled buttons
+    expect(item.backgroundColor).not.toBe(transparent);
+    expect(item.fontWeight).toBe('500');
+  });
 });
