@@ -4,9 +4,13 @@
 package remoteregistry
 
 import (
+	"fmt"
+	"net/url"
+
 	"forgejo.org/models/db"
 	"forgejo.org/models/packages"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/validation"
 )
 
 func init() {
@@ -18,28 +22,63 @@ type RemoteRegistryOwnerType string
 
 // List of supported remote registry scopes
 const (
-	User RemoteRegistryOwnerType = "user"
-	Org  RemoteRegistryOwnerType = "org"
-	Repo RemoteRegistryOwnerType = "repo"
+	RRUser RemoteRegistryOwnerType = "user"
+	RROrg  RemoteRegistryOwnerType = "org"
+	RRRepo RemoteRegistryOwnerType = "repo"
 )
+
+func (rrt RemoteRegistryOwnerType) Name() string {
+	switch rrt {
+	case RRUser:
+		return "user"
+	case RROrg:
+		return "org"
+	case RRRepo:
+		return "repo"
+	}
+	panic(fmt.Sprintf("unknown RemoteRegistryOwnerType: %s", string(rrt)))
+}
 
 // RemoteRegistry represents a remote OCI registry configuration
 type RemoteRegistry struct {
-	ID                   int64                   `xorm:"pk autoincr"`
-	Name                 string                  `xorm:"UNIQUE(scope_name) NOT NULL"`
-	URL                  string                  `xorm:"NOT NULL"`
-	Type                 packages.Type           `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	OwnerType            RemoteRegistryOwnerType `xorm:"UNIQUE(scope_name) NOT NULL"`
-	OwnerID              int64                   `xorm:"UNIQUE(scope_name) NOT NULL DEFAULT 0"`
-	RemoteUser           string                  `xorm:"NOT NULL"`
-	RemotePassword       string                  `xorm:"NOT NULL"`
-	RemoteToken          string                  `xorm:"NOT NULL"`
-	RemotePasswdHashAlgo string                  `xorm:"NOT NULL DEFAULT 'argon2'"`
-	CreatedUnix          timeutil.TimeStamp      `xorm:"created NOT NULL"`
-	UpdatedUnix          timeutil.TimeStamp      `xorm:"updated NOT NULL"`
+	ID             int64                   `xorm:"pk autoincr"`
+	Name           string                  `xorm:"UNIQUE(scope_name) NOT NULL"`
+	OwnerType      RemoteRegistryOwnerType `xorm:"UNIQUE(scope_name) NOT NULL"`
+	OwnerID        int64                   `xorm:"UNIQUE(scope_name) NOT NULL DEFAULT 0"`
+	RemoteURL      string                  `xorm:"NOT NULL"`
+	RemoteType     packages.Type           `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	RemoteUser     string                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
+	RemotePassword string                  `xorm:"TEXT"`
+	RemoteToken    string                  `xorm:"TEXT"`
+	CreatedUnix    timeutil.TimeStamp      `xorm:"created NOT NULL"`
+	UpdatedUnix    timeutil.TimeStamp      `xorm:"updated NOT NULL"`
 }
 
 // TableName returns the table name for RemoteRegistry
 func (RemoteRegistry) TableName() string {
 	return "remote_registry"
+}
+
+func (rr RemoteRegistry) Validate() []string {
+	var result []string
+	result = append(result, validation.ValidateNotEmpty(rr.Name, "Name")...)
+	result = append(result, validation.ValidateNotEmpty(rr.OwnerType.Name(), "OwnerType")...)
+	result = append(result, validation.ValidateNotEmpty(rr.OwnerID, "OwnderID")...)
+	result = append(result, validation.ValidateNotEmpty(rr.RemoteType.Name(), "RemoteType")...)
+	result = append(result, validation.ValidateNotEmpty(rr.CreatedUnix, "CreatedUnix")...)
+	result = append(result, validation.ValidateNotEmpty(rr.UpdatedUnix, "UpdatedUnix")...)
+
+	parsedURL, err := url.Parse(rr.RemoteURL)
+	if err != nil {
+		result = append(result, err.Error())
+		return result
+	}
+
+	if parsedURL.Host == "" {
+		result = append(result, "no host in Remote Registry URL given")
+	}
+
+	result = append(result, validation.ValidateOneOf(parsedURL.Scheme, []any{"http", "https"}, "parsedURL.Scheme")...)
+
+	return result
 }
