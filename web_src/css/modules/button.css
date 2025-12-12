@@ -67,6 +67,10 @@
   }
 
   &.disabled {
+    /* Override -hover variables for disabled buttons */
+    background-color: var(--button-background-color);
+    color: var(--button-color);
+
     opacity: var(--opacity-disabled);
   }
 }
