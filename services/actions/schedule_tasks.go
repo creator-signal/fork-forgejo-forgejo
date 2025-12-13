@@ -174,6 +174,7 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 		// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
 		// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
 		jobparser.WithJobOutputs(map[string]map[string]string{}),
+		jobparser.SupportIncompleteRunsOn(),
 	)
 	if err != nil {
 		return err
@@ -181,6 +182,10 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 
 	// Insert the action run and its associated jobs into the database
 	if err := actions_model.InsertRun(ctx, run, workflows); err != nil {
+		return err
+	}
+
+	if err := consistencyCheckRun(ctx, run); err != nil {
 		return err
 	}
 

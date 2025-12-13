@@ -11,7 +11,7 @@ require (
 	code.forgejo.org/forgejo/go-rpmutils v1.0.0
 	code.forgejo.org/forgejo/levelqueue v1.0.0
 	code.forgejo.org/forgejo/reply v1.0.2
-	code.forgejo.org/forgejo/runner/v12 v12.1.0
+	code.forgejo.org/forgejo/runner/v12 v12.1.2
 	code.forgejo.org/go-chi/binding v1.0.1
 	code.forgejo.org/go-chi/cache v1.0.1
 	code.forgejo.org/go-chi/captcha v1.0.2
@@ -29,7 +29,7 @@ require (
 	github.com/SaveTheRbtz/zstd-seekable-format-go/pkg v0.7.2
 	github.com/alecthomas/chroma/v2 v2.20.0
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
-	github.com/blevesearch/bleve/v2 v2.5.5
+	github.com/blevesearch/bleve/v2 v2.5.6
 	github.com/buildkite/terminal-to-html/v3 v3.16.8
 	github.com/caddyserver/certmagic v0.24.0
 	github.com/chi-middleware/proxy v1.1.1
@@ -102,13 +102,13 @@ require (
 	gitlab.com/gitlab-org/api/client-go v0.143.2
 	go.uber.org/mock v0.6.0
 	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/crypto v0.45.0
+	golang.org/x/crypto v0.46.0
 	golang.org/x/image v0.33.0
 	golang.org/x/net v0.47.0
-	golang.org/x/oauth2 v0.32.0
-	golang.org/x/sync v0.18.0
-	golang.org/x/sys v0.38.0
-	golang.org/x/text v0.31.0
+	golang.org/x/oauth2 v0.34.0
+	golang.org/x/sync v0.19.0
+	golang.org/x/sys v0.39.0
+	golang.org/x/text v0.32.0
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.67.0

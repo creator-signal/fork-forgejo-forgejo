@@ -4,13 +4,12 @@ package actions
 
 import (
 	"fmt"
-	"html/template"
 	"testing"
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
-	"forgejo.org/modules/translation"
 
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -73,87 +72,12 @@ func TestActionRunJob_HTMLURL(t *testing.T) {
 	}
 }
 
-func TestActionRunJob_StatusDiagnostics(t *testing.T) {
-	translation.InitLocales(t.Context())
-	english := translation.NewLocale("en-US")
-
-	tests := []struct {
-		name     string
-		job      ActionRunJob
-		expected []template.HTML
-	}{
-		{
-			name:     "Unknown status",
-			job:      ActionRunJob{RunsOn: []string{"windows"}, Status: StatusUnknown, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Unknown"},
-		},
-		{
-			name:     "Waiting without labels",
-			job:      ActionRunJob{RunsOn: []string{}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Waiting for a runner with the following labels: "},
-		},
-		{
-			name:     "Waiting with one label",
-			job:      ActionRunJob{RunsOn: []string{"freebsd"}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Waiting for a runner with the following label: freebsd"},
-		},
-		{
-			name:     "Waiting with labels, no approval",
-			job:      ActionRunJob{RunsOn: []string{"docker", "ubuntu"}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Waiting for a runner with the following labels: docker, ubuntu"},
-		},
-		{
-			name: "Waiting with labels, approval",
-			job:  ActionRunJob{RunsOn: []string{"docker", "ubuntu"}, Status: StatusWaiting, Run: &ActionRun{NeedApproval: true}},
-			expected: []template.HTML{
-				"Waiting for a runner with the following labels: docker, ubuntu",
-				"Need approval to run workflows for fork pull request.",
-			},
-		},
-		{
-			name:     "Running",
-			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusRunning, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Running"},
-		},
-		{
-			name:     "Success",
-			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusSuccess, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Success"},
-		},
-		{
-			name:     "Failure",
-			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusFailure, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Failure"},
-		},
-		{
-			name:     "Cancelled",
-			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusCancelled, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Canceled"},
-		},
-		{
-			name:     "Skipped",
-			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusSkipped, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Skipped"},
-		},
-		{
-			name:     "Blocked",
-			job:      ActionRunJob{RunsOn: []string{"debian"}, Status: StatusBlocked, Run: &ActionRun{NeedApproval: false}},
-			expected: []template.HTML{"Blocked"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.job.StatusDiagnostics(english))
-		})
-	}
-}
-
 func TestActionRunJob_IsIncompleteMatrix(t *testing.T) {
 	tests := []struct {
 		name         string
 		job          ActionRunJob
 		isIncomplete bool
+		needs        *jobparser.IncompleteNeeds
 		errContains  string
 	}{
 		{
@@ -163,7 +87,8 @@ func TestActionRunJob_IsIncompleteMatrix(t *testing.T) {
 		},
 		{
 			name:         "incomplete_matrix workflow",
-			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_matrix: true")},
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_matrix: true\nincomplete_matrix_needs: { job: abc }")},
+			needs:        &jobparser.IncompleteNeeds{Job: "abc"},
 			isIncomplete: true,
 		},
 		{
@@ -175,12 +100,61 @@ func TestActionRunJob_IsIncompleteMatrix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isIncomplete, err := tt.job.IsIncompleteMatrix()
+			isIncomplete, needs, err := tt.job.IsIncompleteMatrix()
 			if tt.errContains != "" {
 				assert.ErrorContains(t, err, tt.errContains)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.isIncomplete, isIncomplete)
+				assert.Equal(t, tt.needs, needs)
+			}
+		})
+	}
+}
+
+func TestActionRunJob_IsIncompleteRunsOn(t *testing.T) {
+	tests := []struct {
+		name         string
+		job          ActionRunJob
+		isIncomplete bool
+		needs        *jobparser.IncompleteNeeds
+		matrix       *jobparser.IncompleteMatrix
+		errContains  string
+	}{
+		{
+			name:         "normal workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow")},
+			isIncomplete: false,
+		},
+		{
+			name:         "nincomplete_runs_on workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_runs_on: true\nincomplete_runs_on_needs: { job: abc }")},
+			needs:        &jobparser.IncompleteNeeds{Job: "abc"},
+			isIncomplete: true,
+		},
+		{
+			name:         "nincomplete_runs_on workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_runs_on: true\nincomplete_runs_on_matrix: { dimension: abc }")},
+			matrix:       &jobparser.IncompleteMatrix{Dimension: "abc"},
+			isIncomplete: true,
+		},
+		{
+			name:        "unparseable workflow",
+			job:         ActionRunJob{WorkflowPayload: []byte("name: []\nincomplete_runs_on: true")},
+			errContains: "failure unmarshaling WorkflowPayload to SingleWorkflow: yaml: unmarshal errors",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isIncomplete, needs, matrix, err := tt.job.IsIncompleteRunsOn()
+			if tt.errContains != "" {
+				assert.ErrorContains(t, err, tt.errContains)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.isIncomplete, isIncomplete)
+				assert.Equal(t, tt.needs, needs)
+				assert.Equal(t, tt.matrix, matrix)
 			}
 		})
 	}
