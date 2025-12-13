@@ -48,8 +48,8 @@ func TestGitlabDownloadRepo(t *testing.T) {
 
 	topics, err := downloader.GetTopics()
 	require.NoError(t, err)
-	assert.Len(t, topics, 2)
-	assert.Equal(t, []string{"migration", "test"}, topics)
+	assert.Len(t, topics, 3)
+	assert.Equal(t, []string{"migration", "migration-test", "test"}, topics)
 
 	milestones, err := downloader.GetMilestones()
 	require.NoError(t, err)

@@ -1,0 +1,23 @@
+Content-Type: application/json
+Content-Security-Policy: default-src 'none'
+Ratelimit-Reset: 1766401200
+X-Content-Type-Options: nosniff
+Set-Cookie: __cf_bm=0kHiccUFFOG4DnkcyjNQReL2ih2_sZV_Nq0jqons7Wc-1766401195-1.0.1.1-VXrLxoT9ecAQEexcho88REFryGwp5YhQN5G8xcft.B01msM0u6cm_yVrR.orqqYhFyNBB_ApsjrHP9kwPPjoZm4We_.Ol_lcTOwAmfK26JU; path=/; expires=Mon, 22-Dec-25 11:29:55 GMT; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
+Set-Cookie: _cfuvid=fimrJEXcj_k7n6IeAbUygr8QxXruDX02GMGNZhkwzt8-1766401195726-0.0.1.1-604800000; path=/; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
+Cache-Control: no-cache
+Strict-Transport-Security: max-age=31536000
+Gitlab-Lb: haproxy-main-39-lb-gprd
+Ratelimit-Name: throttle_authenticated_api
+Ratelimit-Observed: 30
+Content-Length: 35
+Cf-Cache-Status: MISS
+X-Frame-Options: SAMEORIGIN
+X-Gitlab-Meta: {"correlation_id":"9b1f1ccf142e63f4-ATL","version":"1"}
+X-Runtime: 0.041488
+Vary: Origin, Accept-Encoding
+Gitlab-Sv: api-gke-us-east1-d
+Ratelimit-Limit: 2000
+Ratelimit-Remaining: 1970
+Referrer-Policy: strict-origin-when-cross-origin
+
+{"message":"404 Project Not Found"}

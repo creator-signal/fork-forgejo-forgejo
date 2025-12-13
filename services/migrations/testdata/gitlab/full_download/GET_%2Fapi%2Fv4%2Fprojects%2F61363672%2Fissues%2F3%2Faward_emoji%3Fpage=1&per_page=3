@@ -1,32 +1,32 @@
-Etag: W/"4f53cda18c2baa0c0354bb5f9a3ecbe5"
-Ratelimit-Remaining: 1987
-Referrer-Policy: strict-origin-when-cross-origin
-X-Frame-Options: SAMEORIGIN
+Content-Length: 2
 Vary: Origin, Accept-Encoding
-Set-Cookie: __cf_bm=_PiVkq.l17DijVAdAtfuSQ4GuCtCOOl4czL6yY_6g9E-1764067241-1.0.1.1-QlPR96ULIEw44gI9D5uugVOR0hpmBZeL5BOF.IuALd9NwlgztPD8sH2EjiaF8LhWXfarSxmi1I_02t4cRnqlZZJmgCD3nqaOY1DEr2Jd8J8; path=/; expires=Tue, 25-Nov-25 11:10:41 GMT; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
-Set-Cookie: _cfuvid=5Y9fvzgH44fmICzIWOGlsiNLueIloiAp7j_1MuyHfL0-1764067241958-0.0.1.1-604800000; path=/; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
+Gitlab-Sv: api-gke-us-east1-d
+Ratelimit-Observed: 13
+X-Next-Page: 
+X-Per-Page: 3
+X-Runtime: 0.080063
+Set-Cookie: __cf_bm=u_uUr7CL.qrhdAzALcIlc43BaNBamlYccnw_EPY8pMQ-1766401185-1.0.1.1-MZGyZ8DOb4UvAiDug9wwru9ROyMggyqsw8gd6EzYHcIFUbiDIyVy3341lMiNgomC788YL6MWlKBVfoINmOkRFtvbg4jyNmTgKZwcSCGhAZY; path=/; expires=Mon, 22-Dec-25 11:29:45 GMT; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
+Set-Cookie: _cfuvid=.noTHw18ZjQ7x5ANy.23qZTMBM1Gr9QEU8cwQAIVesY-1766401185569-0.0.1.1-604800000; path=/; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
+Cache-Control: max-age=0, private, must-revalidate
+Link: <https://gitlab.com/api/v4/projects/61363672/issues/3/award_emoji?id=61363672&issue_iid=3&page=1&per_page=3>; rel="first", <https://gitlab.com/api/v4/projects/61363672/issues/3/award_emoji?id=61363672&issue_iid=3&page=1&per_page=3>; rel="last"
+Gitlab-Lb: haproxy-main-33-lb-gprd
 X-Content-Type-Options: nosniff
-X-Prev-Page: 
+X-Gitlab-Meta: {"correlation_id":"9b1f1c9063c4385b-ATL","version":"1"}
+X-Total: 0
+Strict-Transport-Security: max-age=31536000
+Content-Security-Policy: default-src 'none'
+Ratelimit-Remaining: 1987
+Etag: W/"4f53cda18c2baa0c0354bb5f9a3ecbe5"
+Ratelimit-Limit: 2000
+Ratelimit-Reset: 1766401200
+Referrer-Policy: strict-origin-when-cross-origin
+X-Page: 1
 Content-Type: application/json
 Cf-Cache-Status: MISS
 Accept-Ranges: bytes
-Cache-Control: max-age=0, private, must-revalidate
 Ratelimit-Name: throttle_authenticated_api
-X-Page: 1
-X-Total: 0
-Content-Length: 2
-Gitlab-Sv: api-gke-us-east1-d
-Ratelimit-Reset: 1764067260
-X-Runtime: 0.069144
-Content-Security-Policy: default-src 'none'
-Gitlab-Lb: haproxy-main-39-lb-gprd
-Ratelimit-Limit: 2000
-X-Gitlab-Meta: {"correlation_id":"9a4087839220e0d9-ATL","version":"1"}
-X-Next-Page: 
-Ratelimit-Observed: 13
-X-Per-Page: 3
-Link: <https://gitlab.com/api/v4/projects/61363672/issues/3/award_emoji?id=61363672&issue_iid=3&page=1&per_page=3>; rel="first", <https://gitlab.com/api/v4/projects/61363672/issues/3/award_emoji?id=61363672&issue_iid=3&page=1&per_page=3>; rel="last"
-Strict-Transport-Security: max-age=31536000
+X-Frame-Options: SAMEORIGIN
 X-Total-Pages: 1
+X-Prev-Page: 
 
 []

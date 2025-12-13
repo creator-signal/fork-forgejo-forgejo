@@ -1,30 +1,30 @@
-Gitlab-Sv: api-gke-us-east1-c
-X-Page: 1
-X-Per-Page: 100
+Etag: W/"a42f286b703ec341ad7f117b273a51ad"
+Content-Security-Policy: default-src 'none'
+X-Total: 2
 Cf-Cache-Status: MISS
 Cache-Control: max-age=0, private, must-revalidate
+Ratelimit-Limit: 2000
+X-Content-Type-Options: nosniff
+Vary: Origin, Accept-Encoding
 X-Frame-Options: SAMEORIGIN
-X-Next-Page: 
-X-Prev-Page: 
-Set-Cookie: __cf_bm=_41Rh9aSyGsrVkscA.pV8yzJ4_ETNn9QF0Ag5uOwFqM-1764067238-1.0.1.1-bznJbf8viMS6FKcHE5lHz3uctOWh26FtF1avZuq328MUfmiD9DR0UYeWy900ArfK2i6mhadZCuvjqSl5V4hfYb3ndX30EH36gtJnzrDm11I; path=/; expires=Tue, 25-Nov-25 11:10:38 GMT; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
-Set-Cookie: _cfuvid=rCL0Wxxs.PKqgYyWaT19PeP_2uBvc11akIdy0Wt8f7A-1764067238959-0.0.1.1-604800000; path=/; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
+X-Gitlab-Meta: {"correlation_id":"9b1f1c6d955f385b-ATL","version":"1"}
 Content-Type: application/json
-Gitlab-Lb: haproxy-main-08-lb-gprd
 Ratelimit-Observed: 5
 Referrer-Policy: strict-origin-when-cross-origin
-Etag: W/"a42f286b703ec341ad7f117b273a51ad"
-Strict-Transport-Security: max-age=31536000
-Ratelimit-Limit: 2000
-X-Total: 2
-Ratelimit-Remaining: 1995
-Ratelimit-Reset: 1764067260
-X-Gitlab-Meta: {"correlation_id":"9a40876f5056e0d9-ATL","version":"1"}
-X-Content-Type-Options: nosniff
-X-Runtime: 0.490074
+X-Next-Page: 
 X-Total-Pages: 1
+Set-Cookie: __cf_bm=d5.SpTLpHMJIM0Z5SNqP.6WdESt_9aFr7GTtTOGzhB8-1766401179-1.0.1.1-X0AF5j_Rf7E_tbTVxfua7e7F0x8q.pW0F123.KC7mfJpmMLijaR.aejZw6sWnJHfvCfBzLAaOCSXBu0LRKkEiWcahOvXDTBEQVqqZDFh4FY; path=/; expires=Mon, 22-Dec-25 11:29:39 GMT; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
+Set-Cookie: _cfuvid=E7PPplK1gMnnb0E4FuQiCk9F2wC0quRvs.IfAodiIRI-1766401179972-0.0.1.1-604800000; path=/; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
 Link: <https://gitlab.com/api/v4/projects/61363672/milestones?id=61363672&include_ancestors=false&page=1&per_page=100&state=all>; rel="first", <https://gitlab.com/api/v4/projects/61363672/milestones?id=61363672&include_ancestors=false&page=1&per_page=100&state=all>; rel="last"
-Vary: Origin, Accept-Encoding
+X-Per-Page: 100
+Gitlab-Sv: api-gke-us-east1-b
 Ratelimit-Name: throttle_authenticated_api
-Content-Security-Policy: default-src 'none'
+Ratelimit-Reset: 1766401200
+X-Prev-Page: 
+X-Page: 1
+Strict-Transport-Security: max-age=31536000
+Gitlab-Lb: haproxy-main-55-lb-gprd
+Ratelimit-Remaining: 1995
+X-Runtime: 0.066982
 
 [{"id":4711993,"iid":2,"project_id":61363672,"title":"1.0.0","description":"","state":"closed","created_at":"2024-09-03T13:53:08.516Z","updated_at":"2024-09-03T20:03:57.786Z","due_date":null,"start_date":null,"expired":false,"web_url":"https://gitlab.com/forgejo/test_repo/-/milestones/2"},{"id":4711991,"iid":1,"project_id":61363672,"title":"1.1.0","description":"","state":"active","created_at":"2024-09-03T13:52:48.414Z","updated_at":"2024-09-03T14:52:14.093Z","due_date":null,"start_date":null,"expired":false,"web_url":"https://gitlab.com/forgejo/test_repo/-/milestones/1"}]

@@ -42,6 +42,27 @@ func ValidateTopic(topic string) bool {
 	return len(topic) <= 35 && topicPattern.MatchString(topic)
 }
 
+// AutofixTopic attempts to revalidate a topic by truncating and replacing invalid characters
+func AutofixTopic(topic string) (res string, ok bool) {
+	ok = true
+	if ValidateTopic(topic) {
+		return topic, ok
+	}
+	if !topicPattern.MatchString(topic[0:1]) {
+		res = "t" + topic
+	} else {
+		res = topic
+	}
+	if len(res) >= 35 {
+		res = res[0:35]
+	}
+	if !topicPattern.MatchString(res) {
+		replacePattern := regexp.MustCompile(`[^-.a-zA-Z0-9]+`)
+		res = replacePattern.ReplaceAllString(res, "-")
+	}
+	return res, ok
+}
+
 // SanitizeAndValidateTopics sanitizes and checks an array or topics
 func SanitizeAndValidateTopics(topics []string) (validTopics, invalidTopics []string) {
 	validTopics = make([]string, 0)
@@ -62,7 +83,12 @@ func SanitizeAndValidateTopics(topics []string) (validTopics, invalidTopics []st
 			validTopics = append(validTopics, topic)
 			mValidTopics.Add(topic)
 		} else {
-			invalidTopics = append(invalidTopics, topic)
+			topic, ok := AutofixTopic(topic)
+			if !ok {
+				invalidTopics = append(invalidTopics, topic)
+			} else {
+				validTopics = append(validTopics, topic)
+			}
 		}
 	}
 

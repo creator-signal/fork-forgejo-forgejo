@@ -17,6 +17,7 @@ import (
 	"time"
 
 	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/log"
@@ -215,7 +216,8 @@ func (g *GitlabDownloader) GetTopics() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gr.Topics, err
+	topics, _ := repo_model.SanitizeAndValidateTopics(gr.Topics)
+	return topics, err
 }
 
 // GetMilestones returns milestones
