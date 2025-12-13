@@ -63,6 +63,11 @@ func TestPullCommitLinks(t *testing.T) {
 }
 
 func TestPullCommitLinksSHA256(t *testing.T) {
+	if !git.SupportHashSha256 {
+		t.Skip("skipping because installed Git version doesn't support SHA256")
+		return
+	}
+
 	defer tests.PrepareTestEnv(t)()
 
 	req := NewRequest(t, "GET", "/user2/repo256/pulls/1/commits")
