@@ -4,6 +4,8 @@
 package setting
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -252,4 +254,48 @@ func Test_getPostgreSQLEngineGroupConnectionStrings(t *testing.T) {
 		assert.Equal(t, test.outputPrimary, primary)
 		assert.Equal(t, test.outputReplicas, replicas)
 	}
+}
+
+func Test_loadDBSetting(t *testing.T) {
+	t.Run("Does not overwrite Passwd", func(t *testing.T) {
+		expected_password := "already_set"
+
+		cfg, _ := NewConfigProviderFromData("")
+		sec := cfg.Section("database")
+		sec.NewKey("PASSWD", "new password")
+
+		Database.Passwd = expected_password
+		loadDBSetting(cfg)
+
+		assert.Equal(t, expected_password, Database.Passwd)
+	})
+	t.Run("uses PASSWD", func(t *testing.T) {
+		expected_password := "testpassword"
+
+		cfg, _ := NewConfigProviderFromData("")
+		sec := cfg.Section("database")
+		sec.NewKey("PASSWD", expected_password)
+
+		Database.Passwd = ""
+		loadDBSetting(cfg)
+
+		assert.Equal(t, expected_password, Database.Passwd)
+	})
+	t.Run("Uses PASSWD_URI", func(t *testing.T) {
+		uri := filepath.Join(t.TempDir(), "db_passwd")
+		expected_password := "testpassworduri"
+
+		if err := os.WriteFile(uri, []byte(expected_password), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, _ := NewConfigProviderFromData("")
+		sec := cfg.Section("database")
+		sec.NewKey("PASSWD_URI", "file:"+uri)
+
+		Database.Passwd = ""
+		loadDBSetting(cfg)
+
+		assert.Equal(t, expected_password, Database.Passwd)
+	})
 }
