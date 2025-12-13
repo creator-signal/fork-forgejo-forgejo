@@ -296,6 +296,19 @@ func TestPackageOpenTofuHttpBackend(t *testing.T) {
 			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
 		})
 
+		// Sends a deletion request for a locked package/state file.
+		//
+		// The state file has been locked in a previous test.
+		t.Run("DeleteEncryptedVersion4Package", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			packageName := "v4-unencrypted"
+
+			req := NewRequest(t, http.MethodDelete, rootURL+"/"+packageName).AddBasicAuth(user.Name)
+			resp := MakeRequest(t, req, http.StatusConflict)
+			assert.Contains(t, resp.Header().Get("Content-Type"), "application/json")
+		})
+
 		// Sends a deletion request to delete all versions of the previously uploaded
 		// 'v4-encrypted' package.
 		t.Run("DeleteEncryptedVersion4Package", func(t *testing.T) {

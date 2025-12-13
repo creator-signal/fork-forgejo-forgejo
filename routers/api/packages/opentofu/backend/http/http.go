@@ -237,6 +237,21 @@ func DeleteState(ctx *context.Context) {
 	packageName := ctx.Params("packagename")
 	log.Debug("Processing OpenTofu/Terraform HTTP backend package deletion request: %s [OwnerID: %d]", packageName, ctx.Package.Owner.ID)
 
+	// Get the state lock from the database.
+	lock, err := opentofu_model.GetLock(ctx, packageName, ctx.Package.Owner.ID)
+	if err != nil {
+		if !opentofu_model.IsErrStateLockNotExist(err) {
+			apiError(ctx, http.StatusInternalServerError, fmt.Errorf("failed to get the state lock status: %w", err))
+			return
+		}
+	}
+
+	// If the package/state file is locked.
+	if lock != nil {
+		apiError(ctx, http.StatusConflict, fmt.Errorf("package %s cannot be deleted as it is currently locked [OwnerID: %d]", packageName, ctx.Package.Owner.ID))
+		return
+	}
+
 	// Get all versions of the package/state file.
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypeOpenTofuState, packageName)
 	if err != nil {
