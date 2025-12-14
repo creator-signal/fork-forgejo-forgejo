@@ -233,3 +233,51 @@ func TestActionRunJob_IsWorkflowCallOuterJob(t *testing.T) {
 		})
 	}
 }
+
+func TestActionRunJob_IsIncompleteWith(t *testing.T) {
+	tests := []struct {
+		name         string
+		job          ActionRunJob
+		isIncomplete bool
+		needs        *jobparser.IncompleteNeeds
+		matrix       *jobparser.IncompleteMatrix
+		errContains  string
+	}{
+		{
+			name:         "normal workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow")},
+			isIncomplete: false,
+		},
+		{
+			name:         "incomplete_with workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_with: true\nincomplete_with_needs: { job: abc }")},
+			needs:        &jobparser.IncompleteNeeds{Job: "abc"},
+			isIncomplete: true,
+		},
+		{
+			name:         "incomplete_with workflow",
+			job:          ActionRunJob{WorkflowPayload: []byte("name: workflow\nincomplete_with: true\nincomplete_with_matrix: { dimension: abc }")},
+			matrix:       &jobparser.IncompleteMatrix{Dimension: "abc"},
+			isIncomplete: true,
+		},
+		{
+			name:        "unparseable workflow",
+			job:         ActionRunJob{WorkflowPayload: []byte("name: []\nincomplete_with: true")},
+			errContains: "failure unmarshaling WorkflowPayload to SingleWorkflow: yaml: unmarshal errors",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isIncomplete, needs, matrix, err := tt.job.IsIncompleteWith()
+			if tt.errContains != "" {
+				assert.ErrorContains(t, err, tt.errContains)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.isIncomplete, isIncomplete)
+				assert.Equal(t, tt.needs, needs)
+				assert.Equal(t, tt.matrix, matrix)
+			}
+		})
+	}
+}

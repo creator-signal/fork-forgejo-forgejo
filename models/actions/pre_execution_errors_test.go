@@ -110,6 +110,38 @@ func TestTranslatePreExecutionError(t *testing.T) {
 			},
 			expected: "Unable to evaluate `runs-on` of job blocked_job: unknown error.",
 		},
+		{
+			name: "ErrorCodeIncompleteWithMissingOutput",
+			run: &ActionRun{
+				PreExecutionErrorCode:    ErrorCodeIncompleteWithMissingOutput,
+				PreExecutionErrorDetails: []any{"blocked_job", "other_job", "some_output"},
+			},
+			expected: "Unable to evaluate `with` of job blocked_job: job other_job does not have an output some_output.",
+		},
+		{
+			name: "ErrorCodeIncompleteWithMissingJob",
+			run: &ActionRun{
+				PreExecutionErrorCode:    ErrorCodeIncompleteWithMissingJob,
+				PreExecutionErrorDetails: []any{"blocked_job", "other_job", "needs-1, needs-2"},
+			},
+			expected: "Unable to evaluate `with` of job blocked_job: job other_job is not in the `needs` list of job blocked_job (needs-1, needs-2).",
+		},
+		{
+			name: "ErrorCodeIncompleteWithMissingMatrixDimension",
+			run: &ActionRun{
+				PreExecutionErrorCode:    ErrorCodeIncompleteWithMissingMatrixDimension,
+				PreExecutionErrorDetails: []any{"blocked_job", "platfurm"},
+			},
+			expected: "Unable to evaluate `with` of job blocked_job: matrix dimension platfurm does not exist.",
+		},
+		{
+			name: "ErrorCodeIncompleteWithUnknownCause",
+			run: &ActionRun{
+				PreExecutionErrorCode:    ErrorCodeIncompleteWithUnknownCause,
+				PreExecutionErrorDetails: []any{"blocked_job"},
+			},
+			expected: "Unable to evaluate `with` of job blocked_job: unknown error.",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
