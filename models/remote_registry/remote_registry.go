@@ -78,28 +78,29 @@ type RROpts struct {
 	Auth      RRCredentials
 }
 
-func NewRemoteRegistry(name, remoteURL string, opts RROpts) (*RemoteRegistry, error) {
+func NewRemoteRegistry(name, remoteURL string, remoteType packages.Type, opts RROpts) (RemoteRegistry, error) {
 	// decide whether repo, org, or user
 
-	result := &RemoteRegistry{}
-
-	result.CreatedUnix = timeutil.TimeStampNow()
-	result.Name = name
-	result.RemoteURL = remoteURL
-	result.OwnerType = opts.OwnerType
-	result.OwnerID = opts.OwnerID
-	result.RemoteUser = opts.Auth.RemoteUser
-	result.RemotePassword = opts.Auth.RemotePassword
-	result.RemoteToken = opts.Auth.RemoteToken
+	result := RemoteRegistry{
+		CreatedUnix:    timeutil.TimeStampNow(),
+		Name:           name,
+		RemoteURL:      remoteURL,
+		RemoteType:     remoteType,
+		OwnerType:      opts.OwnerType,
+		OwnerID:        opts.OwnerID,
+		RemoteUser:     opts.Auth.RemoteUser,
+		RemotePassword: opts.Auth.RemotePassword,
+		RemoteToken:    opts.Auth.RemoteToken,
+	}
 
 	if valid, err := validation.IsValid(result); !valid {
-		return &RemoteRegistry{}, err
+		return RemoteRegistry{}, err
 	}
 	return result, nil
 }
 
 // Create a remote registry in the DB, expects a valid rr
-func CreateRemoteRegistry(ctx context.Context, rr *RemoteRegistry) error {
+func CreateRemoteRegistry(ctx context.Context, rr RemoteRegistry) error {
 	// Check if remote registry already exists
 	existing := &RemoteRegistry{}
 	exists, err := db.GetEngine(ctx).
@@ -112,22 +113,27 @@ func CreateRemoteRegistry(ctx context.Context, rr *RemoteRegistry) error {
 		return ErrDuplicateRemoteRegistry
 	}
 
+	ctx, committer, err := db.TxContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer committer.Close()
+
 	if _, err = db.GetEngine(ctx).Insert(rr); err != nil {
 		return err
 	}
 
 	log.Info("Created remote registry %q (ID: %d) for owner_type %s:%d", rr.Name, rr.ID, rr.OwnerType, rr.OwnerID)
-	return nil
+	return committer.Commit()
 }
 
 func (rr RemoteRegistry) Validate() []string {
 	var result []string
 	result = append(result, validation.ValidateNotEmpty(rr.Name, "Name")...)
 	result = append(result, validation.ValidateNotEmpty(rr.OwnerType.Name(), "OwnerType")...)
-	result = append(result, validation.ValidateNotEmpty(rr.OwnerID, "OwnderID")...)
+	result = append(result, validation.ValidateNotEmpty(rr.OwnerID, "OwnerID")...)
 	result = append(result, validation.ValidateNotEmpty(rr.RemoteType.Name(), "RemoteType")...)
 	result = append(result, validation.ValidateNotEmpty(rr.CreatedUnix, "CreatedUnix")...)
-	result = append(result, validation.ValidateNotEmpty(rr.UpdatedUnix, "UpdatedUnix")...)
 
 	parsedURL, err := url.Parse(rr.RemoteURL)
 	if err != nil {
