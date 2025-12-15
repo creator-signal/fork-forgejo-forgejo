@@ -128,6 +128,8 @@ var migrations = []*Migration{
 	NewMigration("Add action_run pre_execution_error field", AddActionRunPreExecutionError),
 	// v43 -> v44
 	NewMigration("Add foreign keys to access", AddForeignKeysAccess),
+	// v44 -> v45
+	NewMigration("Add Remote Registry", AddRemoteRegistry),
 }
 
 // GetCurrentDBVersion returns the current Forgejo database version.
