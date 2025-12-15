@@ -36,17 +36,20 @@ func Test_CreateRemoteRegistry(t *testing.T) {
 
 	name := "testreg"
 	remoteURL := "https://example.com"
+	remoteType := packages.TypeContainer
 	opts := RROpts{
 		RemoteRegistryOwnerType("org"),
 		int64(1),
 		RRCredentials{},
 	}
-	rr, _ := NewRemoteRegistry(name, remoteURL, opts)
+	rr, err := NewRemoteRegistry(name, remoteURL, remoteType, opts)
 
-	err := CreateRemoteRegistry(t.Context(), rr)
+	require.NoError(t, err)
 
-	assert.NoError(t, err)
+	err = CreateRemoteRegistry(t.Context(), rr)
 
-	unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{ID: 1})
+	require.NoError(t, err)
 
+	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{ID: 1})
+	assert.Equal(t, remoteType, retrieved.RemoteType)
 }
