@@ -13,9 +13,9 @@ import (
 func AddRemoteRegistry(x *xorm.Engine) error {
 	type RemoteRegistry struct {
 		ID             int64                                   `xorm:"pk autoincr"`
-		Name           string                                  `xorm:"UNIQUE(scope_name) NOT NULL"`
-		OwnerType      remote_registry.RemoteRegistryOwnerType `xorm:"UNIQUE(scope_name) NOT NULL"`
-		OwnerID        int64                                   `xorm:"UNIQUE(scope_name) NOT NULL DEFAULT 0"`
+		Name           string                                  `xorm:"UNIQUE NOT NULL"`
+		OwnerType      remote_registry.RemoteRegistryOwnerType `xorm:"NOT NULL"`
+		OwnerID        int64                                   `xorm:"UNIQUE NOT NULL"`
 		RemoteURL      string                                  `xorm:"NOT NULL"`
 		RemoteType     packages.Type                           `xorm:"UNIQUE(s) INDEX NOT NULL"`
 		RemoteUser     string                                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
