@@ -1,14 +1,17 @@
 // Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package remoteregistry
+package remote_registry
 
 import (
 	"testing"
 
 	"forgejo.org/models/packages"
+	"forgejo.org/models/unittest"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/validation"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_RemoteRegistryValidation(t *testing.T) {
@@ -26,4 +29,24 @@ func Test_RemoteRegistryValidation(t *testing.T) {
 	if ok, err := validation.IsValid(sut); !ok {
 		t.Errorf("sut should be valid, %v, %v", sut, err)
 	}
+}
+
+func Test_CreateRemoteRegistry(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	name := "testreg"
+	remoteURL := "https://example.com"
+	opts := RROpts{
+		RemoteRegistryOwnerType("org"),
+		int64(1),
+		RRCredentials{},
+	}
+	rr, _ := NewRemoteRegistry(name, remoteURL, opts)
+
+	err := CreateRemoteRegistry(t.Context(), rr)
+
+	assert.NoError(t, err)
+
+	unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{ID: 1})
+
 }
