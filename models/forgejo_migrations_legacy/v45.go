@@ -15,9 +15,9 @@ func AddRemoteRegistry(x *xorm.Engine) error {
 		ID             int64                                   `xorm:"pk autoincr"`
 		Name           string                                  `xorm:"UNIQUE NOT NULL"`
 		OwnerType      remote_registry.RemoteRegistryOwnerType `xorm:"NOT NULL"`
-		OwnerID        int64                                   `xorm:"UNIQUE NOT NULL"`
+		OwnerID        int64                                   `xorm:"NOT NULL"`
 		RemoteURL      string                                  `xorm:"NOT NULL"`
-		RemoteType     packages.Type                           `xorm:"UNIQUE(s) INDEX NOT NULL"`
+		RemoteType     packages.Type                           `xorm:"INDEX NOT NULL"`
 		RemoteUser     string                                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
 		RemotePassword string                                  `xorm:"TEXT"` // TODO: Password and Token encryption
 		RemoteToken    string                                  `xorm:"TEXT"` // TODO Setter and Getter for credentials

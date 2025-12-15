@@ -46,14 +46,23 @@ func (rrt RemoteRegistryOwnerType) Name() string {
 	panic(fmt.Sprintf("unknown RemoteRegistryOwnerType: %s", string(rrt)))
 }
 
+func (rrt RemoteRegistryOwnerType) Valid() bool {
+	if RemoteRegistryOwnerType(rrt.Name()) == RROrg ||
+		RemoteRegistryOwnerType(rrt.Name()) == RRRepo ||
+		RemoteRegistryOwnerType(rrt.Name()) == RRUser {
+		return true
+	}
+	return false
+}
+
 // RemoteRegistry represents a remote OCI registry configuration
 type RemoteRegistry struct {
 	ID             int64                   `xorm:"pk autoincr"`
 	Name           string                  `xorm:"UNIQUE NOT NULL"`
 	OwnerType      RemoteRegistryOwnerType `xorm:"NOT NULL"`
-	OwnerID        int64                   `xorm:"UNIQUE NOT NULL"`
+	OwnerID        int64                   `xorm:"NOT NULL"`
 	RemoteURL      string                  `xorm:"NOT NULL"`
-	RemoteType     packages.Type           `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	RemoteType     packages.Type           `xorm:"INDEX NOT NULL"`
 	RemoteUser     string                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
 	RemotePassword string                  `xorm:"TEXT"` // TODO: Password and Token encryption
 	RemoteToken    string                  `xorm:"TEXT"` // TODO Setter and Getter for credentials
@@ -148,4 +157,49 @@ func (rr RemoteRegistry) Validate() []string {
 	result = append(result, validation.ValidateOneOf(parsedURL.Scheme, []any{"http", "https"}, "parsedURL.Scheme")...)
 
 	return result
+}
+
+func GetRemoteRegistryByID(ctx context.Context, id int64) (*RemoteRegistry, error) {
+	rr := &RemoteRegistry{}
+
+	exists, err := db.GetEngine(ctx).ID(id).Get(rr)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrRemoteRegistryNotExist
+	}
+	return rr, nil
+}
+
+// FindRemoteRegistryByName finds a remote registry by name within a scope
+func FindRemoteRegistryByName(ctx context.Context, ownerType RemoteRegistryOwnerType, ownerID int64, name string) (*RemoteRegistry, error) {
+	if !ownerType.Valid() {
+		return nil, ErrInvalidRemoteRegistryOwner
+	}
+
+	rr := &RemoteRegistry{}
+	exists, err := db.GetEngine(ctx).
+		Where("owner_type = ? AND owner_id = ? AND name = ?", ownerType, ownerID, name).
+		Get(rr)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrRemoteRegistryNotExist
+	}
+	return rr, nil
+}
+
+// GetRemoteRegistriesByOwnerType gets all remote registries for a specific scope
+func GetRemoteRegistriesByOwnerType(ctx context.Context, ownerType RemoteRegistryOwnerType, ownerID int64) ([]*RemoteRegistry, error) {
+	if !ownerType.Valid() {
+		return nil, ErrInvalidRemoteRegistryOwner
+	}
+
+	var remoteRegistries []*RemoteRegistry
+	return remoteRegistries, db.GetEngine(ctx).
+		Where("owner_type = ? AND owner_id = ?", ownerType, ownerID).
+		OrderBy("name ASC").
+		Find(&remoteRegistries)
 }
