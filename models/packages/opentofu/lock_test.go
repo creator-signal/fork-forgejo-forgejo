@@ -2,17 +2,13 @@ package opentofu
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"forgejo.org/models/db"
-	packages_model "forgejo.org/models/packages"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/packages"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
-	packages_service "forgejo.org/services/packages"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,36 +16,6 @@ import (
 
 func TestMain(m *testing.M) {
 	unittest.MainTest(m)
-}
-
-func preparePackage(t *testing.T, owner *user_model.User, name string) int64 {
-	t.Helper()
-
-	data, err := packages.CreateHashedBufferFromReader(strings.NewReader("data"))
-	require.NoError(t, err)
-
-	pv, _, err := packages_service.CreatePackageOrAddFileToExisting(
-		db.DefaultContext,
-		&packages_service.PackageCreationInfo{
-			PackageInfo: packages_service.PackageInfo{
-				Owner:       owner,
-				PackageType: packages_model.TypeOpenTofuState,
-				Name:        name,
-			},
-			Creator: owner,
-		},
-		&packages_service.PackageFileCreationInfo{
-			PackageFileInfo: packages_service.PackageFileInfo{
-				Filename: name,
-			},
-			Data:    data,
-			Creator: owner,
-			IsLead:  true,
-		},
-	)
-
-	require.NoError(t, err)
-	return pv.PackageID
 }
 
 func prepareStateLock(t *testing.T, lockInfo *StateLock) {
@@ -74,19 +40,19 @@ func TestLockUniqueness(t *testing.T) {
 
 		_, err := e.Insert(StateLock{
 			PackageName: packageName,
-			OwnerID:     1,
-		})
-		require.NoError(t, err)
-
-		_, err = e.Insert(StateLock{
-			PackageName: packageName,
 			OwnerID:     2,
 		})
 		require.NoError(t, err)
 
 		_, err = e.Insert(StateLock{
 			PackageName: packageName,
-			OwnerID:     1,
+			OwnerID:     3,
+		})
+		require.NoError(t, err)
+
+		_, err = e.Insert(StateLock{
+			PackageName: packageName,
+			OwnerID:     2,
 		})
 		require.Error(t, err)
 	})
@@ -98,15 +64,12 @@ func TestGetLock(t *testing.T) {
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
+	packageNameUnlocked := "opentofu-state-unlocked"
+	packageNameLocked := "opentofu-state-locked"
+	lockIDLocked := "110e9066-29ca-49b6-b507-87c58bd1177b"
 	clientVersion := "OpenTofu v1.10.6"
 	extraInfo := "Dummy extra info"
 
-	packageNameUnlocked := "opentofu-state-unlocked"
-	preparePackage(t, user, packageNameUnlocked)
-
-	packageNameLocked := "opentofu-state-locked"
-	preparePackage(t, user, packageNameLocked)
-	lockIDLocked := "110e9066-29ca-49b6-b507-87c58bd1177b"
 	prepareStateLock(t, &StateLock{
 		PackageName:   packageNameLocked,
 		OwnerID:       user.ID,
@@ -155,16 +118,13 @@ func TestLock(t *testing.T) {
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
+	packageNameUnlocked := "opentofu-state-unlocked"
+	packageNameLocked := "opentofu-state-locked"
 	packageNameNonExisting := "non-existing-package"
+	lockIDUnlocked := "f0f34926-f710-44ec-9fe0-1605603ebf4b"
 	clientVersion := "OpenTofu v1.10.6"
 	extraInfo := "Dummy extra info"
 
-	packageNameUnlocked := "opentofu-state-unlocked"
-	preparePackage(t, user, packageNameUnlocked)
-	lockIDUnlocked := "f0f34926-f710-44ec-9fe0-1605603ebf4b"
-
-	packageNameLocked := "opentofu-state-locked"
-	preparePackage(t, user, packageNameLocked)
 	lockIDLocked := "110e9066-29ca-49b6-b507-87c58bd1177b"
 	prepareStateLock(t, &StateLock{
 		PackageName:   packageNameLocked,
@@ -245,12 +205,10 @@ func TestUnlock(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	packageNameUnlocked := "opentofu-state-unlocked"
-	preparePackage(t, user, packageNameUnlocked)
 	lockIDUnlocked := "f0f34926-f710-44ec-9fe0-1605603ebf4b"
-
 	packageNameLocked := "opentofu-state-locked"
-	preparePackage(t, user, packageNameLocked)
 	lockIDLocked := "110e9066-29ca-49b6-b507-87c58bd1177b"
+
 	prepareStateLock(t, &StateLock{
 		PackageName: packageNameLocked,
 		OwnerID:     user.ID,
