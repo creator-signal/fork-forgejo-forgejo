@@ -53,3 +53,58 @@ func Test_CreateRemoteRegistry(t *testing.T) {
 	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{ID: 1})
 	assert.Equal(t, remoteType, retrieved.RemoteType)
 }
+
+func Test_FindRemoteRegistryByName(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	name := "testreg"
+	remoteURL := "https://example.com"
+	remoteType := packages.TypeContainer
+	opts := RROpts{
+		RemoteRegistryOwnerType("org"),
+		int64(1),
+		RRCredentials{},
+	}
+	rr, err := NewRemoteRegistry(name, remoteURL, remoteType, opts)
+
+	require.NoError(t, err)
+
+	err = CreateRemoteRegistry(t.Context(), rr)
+
+	require.NoError(t, err)
+
+	retrieved, err := FindRemoteRegistryByName(t.Context(), RemoteRegistryOwnerType("org"), int64(1), "testreg")
+	require.NoError(t, err)
+	assert.Equal(t, name, retrieved.Name)
+}
+
+func Test_FindRemoteRegistryByOwnerType(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	name := "testreg"
+	remoteURL := "https://example.com"
+	remoteType := packages.TypeContainer
+	opts := RROpts{
+		RemoteRegistryOwnerType("org"),
+		int64(1),
+		RRCredentials{},
+	}
+	rr, err := NewRemoteRegistry(name, remoteURL, remoteType, opts)
+
+	name2 := "testreg2"
+	remoteURL2 := "https://example.com"
+	remoteType2 := packages.TypeContainer
+	rr2, _ := NewRemoteRegistry(name2, remoteURL2, remoteType2, opts)
+
+	require.NoError(t, err)
+
+	err = CreateRemoteRegistry(t.Context(), rr)
+	require.NoError(t, err)
+	err = CreateRemoteRegistry(t.Context(), rr2)
+	require.NoError(t, err)
+
+	retrieved, err := GetRemoteRegistriesByOwnerType(t.Context(), RemoteRegistryOwnerType("org"), int64(1))
+	require.NoError(t, err)
+	assert.Equal(t, name, retrieved[0].Name)
+	assert.Equal(t, name2, retrieved[1].Name)
+}
