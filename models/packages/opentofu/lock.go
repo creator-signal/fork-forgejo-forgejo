@@ -88,10 +88,10 @@ type StateLock struct {
 	ID int64 `xorm:"pk autoincr" json:"-"`
 
 	// The name of the locked package.
-	PackageName string `xorm:"UNIQUE(uqe_package_name_owner_id) INDEX(idx_package_name_owner_id) NOT NULL" json:"-"`
+	PackageName string `xorm:"UNIQUE(state_lock) NOT NULL" json:"-"`
 
 	// ID of the package owner (either a user or an organisation).
-	OwnerID int64 `xorm:"UNIQUE(uqe_package_name_owner_id) INDEX(idx_package_name_owner_id) NOT NULL" json:"-"`
+	OwnerID int64 `xorm:"UNIQUE(state_lock) NOT NULL" json:"-"`
 
 	// The lock ID itself.
 	//
