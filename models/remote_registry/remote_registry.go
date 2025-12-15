@@ -10,7 +10,9 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/packages"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 	"forgejo.org/modules/validation"
 )
 
@@ -26,6 +28,10 @@ const (
 	RRUser RemoteRegistryOwnerType = "user"
 	RROrg  RemoteRegistryOwnerType = "org"
 	RRRepo RemoteRegistryOwnerType = "repo"
+)
+
+var (
+	ErrDuplicateRemoteRegistry = util.NewAlreadyExistErrorf("remote registry already exists")
 )
 
 func (rrt RemoteRegistryOwnerType) Name() string {
@@ -66,14 +72,27 @@ type Credentials struct {
 	RemoteToken    string
 }
 
-func CreateRemoteRegistry(ctx context.Context, name, remoteURL string, remoteType packages.Type, cred *Credentials) {
+// Create a remote registry in the DB, expects a valid rr
+func CreateRemoteRegistry(ctx context.Context, rr *RemoteRegistry) error {
 
-	remoteRegistry = &RemoteRegistry{
-		Name:       name,
-		RemoteURL:  remoteURL,
-		RemoteType: remoteType,
+	// Check if remote registry with same name already exists in scope
+	existing := &RemoteRegistry{}
+	exists, err := db.GetEngine(ctx).
+		Where("owner_type = ? AND owner_id = ? AND name = ?", rr.OwnerType, rr.OwnerID, rr.Name).
+		Get(existing)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return ErrDuplicateRemoteRegistry
 	}
 
+	if _, err = db.GetEngine(ctx).Insert(rr); err != nil {
+		return err
+	}
+
+	log.Info("Created remote registry %q (ID: %d) for owner_type %s:%d", rr.Name, rr.ID, rr.OwnerType, rr.OwnerID)
+	return nil
 }
 
 func (rr RemoteRegistry) Validate() []string {
