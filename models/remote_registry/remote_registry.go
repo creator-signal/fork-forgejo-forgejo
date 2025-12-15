@@ -1,7 +1,7 @@
 // Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package remoteregistry
+package remote_registry
 
 import (
 	"context"
@@ -66,16 +66,41 @@ func (RemoteRegistry) TableName() string {
 	return "remote_registry"
 }
 
-type Credentials struct {
+type RRCredentials struct {
 	RemoteUser     string
 	RemotePassword string
 	RemoteToken    string
 }
 
+type RROpts struct {
+	OwnerType RemoteRegistryOwnerType
+	OwnerID   int64
+	Auth      RRCredentials
+}
+
+func NewRemoteRegistry(name, remoteURL string, opts RROpts) (*RemoteRegistry, error) {
+	// decide whether repo, org, or user
+
+	result := &RemoteRegistry{}
+
+	result.CreatedUnix = timeutil.TimeStampNow()
+	result.Name = name
+	result.RemoteURL = remoteURL
+	result.OwnerType = opts.OwnerType
+	result.OwnerID = opts.OwnerID
+	result.RemoteUser = opts.Auth.RemoteUser
+	result.RemotePassword = opts.Auth.RemotePassword
+	result.RemoteToken = opts.Auth.RemoteToken
+
+	if valid, err := validation.IsValid(result); !valid {
+		return &RemoteRegistry{}, err
+	}
+	return result, nil
+}
+
 // Create a remote registry in the DB, expects a valid rr
 func CreateRemoteRegistry(ctx context.Context, rr *RemoteRegistry) error {
-
-	// Check if remote registry with same name already exists in scope
+	// Check if remote registry already exists
 	existing := &RemoteRegistry{}
 	exists, err := db.GetEngine(ctx).
 		Where("owner_type = ? AND owner_id = ? AND name = ?", rr.OwnerType, rr.OwnerID, rr.Name).
