@@ -61,6 +61,37 @@ func prepareStateLock(t *testing.T, lockInfo *StateLock) {
 	require.NoError(t, err)
 }
 
+func TestLockUniqueness(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.Database.IterateBufferSize, 1)()
+
+	packageName := "opentofu-state"
+
+	// Try to insert twice the same combination of package name and owner ID that
+	// must be unique.
+	t.Run("InsertTwice", func(t *testing.T) {
+		e := db.GetEngine(db.DefaultContext)
+
+		_, err := e.Insert(StateLock{
+			PackageName: packageName,
+			OwnerID:     1,
+		})
+		require.NoError(t, err)
+
+		_, err = e.Insert(StateLock{
+			PackageName: packageName,
+			OwnerID:     2,
+		})
+		require.NoError(t, err)
+
+		_, err = e.Insert(StateLock{
+			PackageName: packageName,
+			OwnerID:     1,
+		})
+		require.Error(t, err)
+	})
+}
+
 func TestGetLock(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	defer test.MockVariableValue(&setting.Database.IterateBufferSize, 1)()

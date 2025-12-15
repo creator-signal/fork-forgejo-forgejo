@@ -81,15 +81,17 @@ func (err ErrInvalidLockID) Unwrap() error {
 // StateLock represents a state lock preventing an OpenTofu/Terraform state file
 // from being updating if another user is already updating it.
 //
-// The state file to lock is identified by a package name and its owner ID.
+// The state file to lock is identified by the combination of a package name and
+// its owner ID. A unique index composed of these two columns is set to avoid
+// potential race conditions.
 type StateLock struct {
 	ID int64 `xorm:"pk autoincr" json:"-"`
 
 	// The name of the locked package.
-	PackageName string `xorm:"INDEX NOT NULL" json:"-"`
+	PackageName string `xorm:"UNIQUE(uqe_package_name_owner_id) INDEX(idx_package_name_owner_id) NOT NULL" json:"-"`
 
 	// ID of the package owner (either a user or an organisation).
-	OwnerID int64 `xorm:"INDEX NOT NULL" json:"-"`
+	OwnerID int64 `xorm:"UNIQUE(uqe_package_name_owner_id) INDEX(idx_package_name_owner_id) NOT NULL" json:"-"`
 
 	// The lock ID itself.
 	//
