@@ -20,7 +20,7 @@
   color: var(--color-text);
   background: var(--color-card);
   border: 1px solid var(--fancy-card-border);
-  border-radius: var(--border-radius-large);
+  border-radius: 0.28571429rem;
   transition: all 0.1s ease-in-out;
 }
 
@@ -47,7 +47,7 @@
   .migrate-entry .content {
     text-align: center;
     border-top: 1px solid var(--fancy-card-border);
-    border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);
+    border-radius: 0 0 0.28571429rem 0.28571429rem;
     background: var(--fancy-card-bg);
   }
 }
