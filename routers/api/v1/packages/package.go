@@ -378,5 +378,35 @@ func ConfigureRemoteRegistry(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	ctx.JSON(http.StatusNoContent, "{}")
+	form := web.GetForm(ctx).(*api.CreateRemoteRegistryOption)
+	// TODO Permissions
+
+	ownerType, err := rr_service.GetOwnerType(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+	}
+
+	rr, err := rr_model.NewRemoteRegistry(form.Name,
+		form.RemoteURL,
+		packages.Type(form.RemoteType),
+		rr_model.RROpts{
+			OwnerType: ownerType,
+			OwnerID:   ctx.ContextUser.ID,
+			Auth: rr_model.RRCredentials{
+				RemoteUser:     form.RemoteUser,
+				RemotePassword: form.RemotePassword,
+				RemoteToken:    form.RemoteToken,
+			},
+		})
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+	}
+
+	err = rr_model.CreateRemoteRegistry(ctx, rr)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+	}
+
+	// TODO Responses?
+	ctx.JSON(http.StatusCreated, "{}")
 }
