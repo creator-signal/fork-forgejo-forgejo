@@ -4,12 +4,15 @@
 package setting
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"forgejo.org/modules/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_parsePostgreSQLHostPort(t *testing.T) {
@@ -257,12 +260,14 @@ func Test_getPostgreSQLEngineGroupConnectionStrings(t *testing.T) {
 }
 
 func Test_loadDBSetting(t *testing.T) {
+	defer test.MockProtect(&Database)()
 	t.Run("Does not overwrite Passwd", func(t *testing.T) {
 		expected_password := "already_set"
 
-		cfg, _ := NewConfigProviderFromData("")
-		sec := cfg.Section("database")
-		sec.NewKey("PASSWD", "new password")
+		cfg, _ := NewConfigProviderFromData(`
+			[database]
+			PASSWD="new password"
+		`)
 
 		Database.Passwd = expected_password
 		loadDBSetting(cfg)
@@ -272,9 +277,10 @@ func Test_loadDBSetting(t *testing.T) {
 	t.Run("uses PASSWD", func(t *testing.T) {
 		expected_password := "testpassword"
 
-		cfg, _ := NewConfigProviderFromData("")
-		sec := cfg.Section("database")
-		sec.NewKey("PASSWD", expected_password)
+		cfg, _ := NewConfigProviderFromData(fmt.Sprintf(`
+			[database]
+			PASSWD="%s"
+		`, expected_password))
 
 		Database.Passwd = ""
 		loadDBSetting(cfg)
@@ -282,16 +288,15 @@ func Test_loadDBSetting(t *testing.T) {
 		assert.Equal(t, expected_password, Database.Passwd)
 	})
 	t.Run("Uses PASSWD_URI", func(t *testing.T) {
-		uri := filepath.Join(t.TempDir(), "db_passwd")
 		expected_password := "testpassworduri"
 
-		if err := os.WriteFile(uri, []byte(expected_password), 0o644); err != nil {
-			t.Fatal(err)
-		}
+		uri := filepath.Join(t.TempDir(), "db_passwd")
+		require.NoError(t, os.WriteFile(uri, []byte(expected_password), 0o644))
 
-		cfg, _ := NewConfigProviderFromData("")
-		sec := cfg.Section("database")
-		sec.NewKey("PASSWD_URI", "file:"+uri)
+		cfg, _ := NewConfigProviderFromData(fmt.Sprintf(`
+			[database]
+			PASSWD_URI="file:%s"
+		`, uri))
 
 		Database.Passwd = ""
 		loadDBSetting(cfg)
