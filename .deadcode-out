@@ -50,6 +50,11 @@ forgejo.org/models/organization
 forgejo.org/models/perm/access
 	GetRepoWriters
 
+forgejo.org/models/remote_registry
+	GetRemoteRegistryByID
+	FindRemoteRegistryByName
+	GetRemoteRegistriesByOwnerType
+
 forgejo.org/models/repo
 	WatchRepoMode
 
