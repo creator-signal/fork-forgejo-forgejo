@@ -8,7 +8,7 @@ import (
 )
 
 func GetOwnerType(ctx *context.APIContext) (rr_model.RemoteRegistryOwnerType, error) {
-	if ctx.Repo.Repository.ID > 0 {
+	if ctx.Repo.Repository != nil {
 		return rr_model.RRRepo, nil
 	} else if ctx.ContextUser.IsOrganization() {
 		return rr_model.RROrg, nil
