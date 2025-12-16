@@ -1557,7 +1557,9 @@ func Routes() *web.Route {
 
 			m.Get("/", packages.ListPackages)
 			if setting.Packages.RemoteRegistry.Enabled {
-				m.Post("/remote-registry/configure", packages.ConfigureRemoteRegistry)
+				m.Group("/remote-registry", func() {
+					m.Post("", packages.CreateRemoteRegistry)
+				})
 			}
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryPackage), context.UserAssignmentAPI(), context.PackageAssignmentAPI(), reqPackageAccess(perm.AccessModeRead), checkTokenPublicOnly())
 

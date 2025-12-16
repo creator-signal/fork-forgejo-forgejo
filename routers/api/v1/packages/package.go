@@ -336,8 +336,8 @@ func UnlinkPackage(ctx *context.APIContext) {
 	ctx.Status(http.StatusNoContent)
 }
 
-// ConfigureRemoteRegistry configures a remote registry of a given type
-func ConfigureRemoteRegistry(ctx *context.APIContext) {
+// CreateRemoteRegistry creates a remote registry of a given type
+func CreateRemoteRegistry(ctx *context.APIContext) {
 	// swagger:operation POST /packages/{owner}/remote-registry/configure package configureRemoteRegistry
 	// ---
 	// summary: Allows configuration of a remote registry
