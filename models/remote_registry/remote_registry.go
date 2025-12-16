@@ -11,7 +11,6 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/packages"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/validation"
 )
@@ -66,8 +65,6 @@ type RemoteRegistry struct {
 	RemoteUser     string                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
 	RemotePassword string                  `xorm:"TEXT"` // TODO: Password and Token encryption
 	RemoteToken    string                  `xorm:"TEXT"` // TODO Setter and Getter for credentials
-	CreatedUnix    timeutil.TimeStamp      `xorm:"created NOT NULL"`
-	UpdatedUnix    timeutil.TimeStamp      `xorm:"updated NOT NULL"`
 }
 
 // TableName returns the table name for RemoteRegistry
@@ -91,7 +88,6 @@ func NewRemoteRegistry(name, remoteURL string, remoteType packages.Type, opts RR
 	// decide whether repo, org, or user
 
 	result := RemoteRegistry{
-		CreatedUnix:    timeutil.TimeStampNow(),
 		Name:           name,
 		RemoteURL:      remoteURL,
 		RemoteType:     remoteType,
@@ -142,7 +138,6 @@ func (rr RemoteRegistry) Validate() []string {
 	result = append(result, validation.ValidateNotEmpty(rr.OwnerType.Name(), "OwnerType")...)
 	result = append(result, validation.ValidateNotEmpty(rr.OwnerID, "OwnerID")...)
 	result = append(result, validation.ValidateNotEmpty(rr.RemoteType.Name(), "RemoteType")...)
-	result = append(result, validation.ValidateNotEmpty(rr.CreatedUnix, "CreatedUnix")...)
 
 	parsedURL, err := url.Parse(rr.RemoteURL)
 	if err != nil {

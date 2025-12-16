@@ -6,7 +6,6 @@ package forgejo_migrations_legacy
 import (
 	"forgejo.org/models/packages"
 	"forgejo.org/models/remote_registry"
-	"forgejo.org/modules/timeutil"
 	"xorm.io/xorm"
 )
 
@@ -21,8 +20,6 @@ func AddRemoteRegistry(x *xorm.Engine) error {
 		RemoteUser     string                                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
 		RemotePassword string                                  `xorm:"TEXT"` // TODO: Password and Token encryption
 		RemoteToken    string                                  `xorm:"TEXT"` // TODO Setter and Getter for credentials
-		CreatedUnix    timeutil.TimeStamp                      `xorm:"created NOT NULL"`
-		UpdatedUnix    timeutil.TimeStamp                      `xorm:"updated NOT NULL"`
 	}
 
 	return x.Sync(&RemoteRegistry{})
