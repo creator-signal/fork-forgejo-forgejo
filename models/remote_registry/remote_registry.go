@@ -126,8 +126,8 @@ func CreateRemoteRegistry(ctx context.Context, rr RemoteRegistry) error {
 	}
 	defer committer.Close()
 
-	if _, err = db.GetEngine(ctx).Insert(rr); err != nil {
-		return err
+	if err = db.Insert(ctx, rr); err != nil {
+		return fmt.Errorf("insert remote registry: %w", err)
 	}
 
 	log.Info("Created remote registry %q (ID: %d) for owner_type %s:%d", rr.Name, rr.ID, rr.OwnerType, rr.OwnerID)
