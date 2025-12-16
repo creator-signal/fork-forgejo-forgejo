@@ -851,9 +851,15 @@ citation-information .tab:not(.active) {
   padding-top: 0;
 }
 
-.repository.view.issue .comment-list .timeline-item.commits-list .ui.avatar,
+.repository.view.issue .comment-list .timeline-item.commits-list .ui.avatar {
+  width: 20px;
+  height: 20px;
+  margin-right: 0.25em;
+}
+
 .repository.view.issue .comment-list .timeline-item.event .ui.avatar {
   margin-right: 0.25em;
+  vertical-align: middle;
 }
 
 .repository.view.issue .comment-list .timeline-item .aggregated-actions .badge {
