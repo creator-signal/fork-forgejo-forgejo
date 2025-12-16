@@ -30,7 +30,9 @@ const (
 )
 
 var (
-	ErrDuplicateRemoteRegistry = util.NewAlreadyExistErrorf("remote registry already exists")
+	ErrDuplicateRemoteRegistry    = util.NewAlreadyExistErrorf("remote registry already exists")
+	ErrRemoteRegistryNotExist     = util.NewNotExistErrorf("remote registry does not exist")
+	ErrInvalidRemoteRegistryOwner = util.NewInvalidArgumentErrorf("remote registry owner was invalid")
 )
 
 func (rrt RemoteRegistryOwnerType) Name() string {
