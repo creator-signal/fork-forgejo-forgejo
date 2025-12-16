@@ -47,7 +47,7 @@ func Test_CreateRemoteRegistry(t *testing.T) {
 
 	require.NoError(t, err)
 
-	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{ID: 1})
+	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: "testreg"})
 	assert.Equal(t, remoteType, retrieved.RemoteType)
 }
 
