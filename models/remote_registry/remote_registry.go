@@ -61,7 +61,7 @@ type RemoteRegistry struct {
 	OwnerType      RemoteRegistryOwnerType `xorm:"NOT NULL"`
 	OwnerID        int64                   `xorm:"NOT NULL"`
 	RemoteURL      string                  `xorm:"NOT NULL"`
-	RemoteType     packages.Type           `xorm:"INDEX NOT NULL"`
+	RemoteType     packages.Type           `xorm:"NOT NULL"`
 	RemoteUser     string                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
 	RemotePassword string                  `xorm:"TEXT"` // TODO: Password and Token encryption
 	RemoteToken    string                  `xorm:"TEXT"` // TODO Setter and Getter for credentials
