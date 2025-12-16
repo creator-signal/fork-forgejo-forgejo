@@ -5,6 +5,7 @@ package integration
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
@@ -13,8 +14,6 @@ import (
 	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestConfigureRemoteRegistry(t *testing.T) {
@@ -36,9 +35,7 @@ func TestConfigureRemoteRegistry(t *testing.T) {
 		}
 
 		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user.Name), &rr).AddTokenAuth(tokenWritePackage)
-		resp := MakeRequest(t, req, 204)
-
-		assert.Equal(t, 204, resp.Code)
+		MakeRequest(t, req, http.StatusCreated)
 
 		unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{
 			ID:   int64(1),
