@@ -9,6 +9,8 @@
 # Folders
 _obj
 _test
+tests/{{TEST_TYPE}}/
+{{REPO_TEST_DIR}}tests/
 
 # IntelliJ
 .idea
