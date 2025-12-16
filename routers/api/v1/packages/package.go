@@ -8,14 +8,17 @@ import (
 	"net/http"
 
 	"forgejo.org/models/packages"
+	rr_model "forgejo.org/models/remote_registry"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	packages_service "forgejo.org/services/packages"
+	rr_service "forgejo.org/services/packages/remote_registry"
 )
 
 // ListPackages gets all packages of an owner
