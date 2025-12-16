@@ -1,6 +1,10 @@
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: MIT
+
 package structs
 
 // CreateOrgOption options for creating an organization
+// swagger:model
 type CreateRemoteRegistryOption struct {
 	// required: true
 	Name string `json:"name" binding:"Required;MaxSize(100)"`

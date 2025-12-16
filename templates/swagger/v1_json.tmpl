@@ -24183,6 +24183,42 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "CreateRemoteRegistryOption": {
+      "description": "CreateOrgOption options for creating an organization",
+      "type": "object",
+      "required": [
+        "name",
+        "remote_type",
+        "remote_url"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "remote_pass": {
+          "type": "string",
+          "x-go-name": "RemotePassword"
+        },
+        "remote_token": {
+          "type": "string",
+          "x-go-name": "RemoteToken"
+        },
+        "remote_type": {
+          "type": "string",
+          "x-go-name": "RemoteType"
+        },
+        "remote_url": {
+          "type": "string",
+          "x-go-name": "RemoteURL"
+        },
+        "remote_user": {
+          "type": "string",
+          "x-go-name": "RemoteUser"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "CreateRepoOption": {
       "description": "CreateRepoOption options when creating repository",
       "type": "object",
