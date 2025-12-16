@@ -232,6 +232,9 @@ type swaggerParameterBodies struct {
 	CreateQuotaRuleOptions api.CreateQuotaRuleOptions
 
 	// in:body
+	CreateRemoteRegistryOption api.CreateRemoteRegistryOption
+
+	// in:body
 	EditQuotaRuleOptions api.EditQuotaRuleOptions
 
 	// in:body
