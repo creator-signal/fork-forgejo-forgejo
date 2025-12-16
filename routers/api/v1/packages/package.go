@@ -373,7 +373,8 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
 
-	rr, err := rr_model.NewRemoteRegistry(rrOpts.Name,
+	rr, err := rr_model.NewRemoteRegistry(
+		rrOpts.Name,
 		rrOpts.RemoteURL,
 		packages.Type(rrOpts.RemoteType),
 		rr_model.RROpts{
