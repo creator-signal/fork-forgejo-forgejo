@@ -69,7 +69,7 @@ func TestMigrate(t *testing.T) {
 		repoName := "repo1"
 		repoOwner := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: ownerName})
 		session := loginUser(t, ownerName)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeReadMisc)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, "read:misc")
 
 		for _, s := range []struct {
 			svc structs.GitServiceType
@@ -128,7 +128,7 @@ func TestMigrateWithIssueComments(t *testing.T) {
 		repoName := "repo4"
 		repoOwner := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: ownerName})
 		session := loginUser(t, ownerName)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeReadMisc, auth_model.AccessTokenScopeAll)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, "read:misc", auth_model.AccessTokenScopeAll)
 
 		// Add issue to repo
 		issueURL := testNewIssue(t, session, ownerName, repoName, "testIssue", "testIssue")
@@ -203,7 +203,7 @@ func TestMigrateWithWiki(t *testing.T) {
 		defer f()
 
 		session := loginUser(t, user.Name)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeReadMisc)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, "read:misc")
 
 		for _, s := range []struct {
 			svc structs.GitServiceType
@@ -258,7 +258,7 @@ func TestMigrateWithReleases(t *testing.T) {
 		repoName := "repo1"
 		repoOwner := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: ownerName})
 		session := loginUser(t, ownerName)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeReadMisc)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, "read:misc")
 
 		for _, s := range []struct {
 			svc structs.GitServiceType

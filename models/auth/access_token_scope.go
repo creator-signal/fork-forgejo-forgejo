@@ -16,7 +16,7 @@ type AccessTokenScopeCategory int
 const (
 	AccessTokenScopeCategoryActivityPub = iota
 	AccessTokenScopeCategoryAdmin
-	AccessTokenScopeCategoryMisc // WARN: this is now just a placeholder, don't remove it which will change the following values
+	accessTokenScopeCategoryMisc // WARN: this is now just a placeholder, don't remove it which will change the following values
 	AccessTokenScopeCategoryNotification
 	AccessTokenScopeCategoryOrganization
 	AccessTokenScopeCategoryPackage
@@ -29,7 +29,7 @@ const (
 var AllAccessTokenScopeCategories = []AccessTokenScopeCategory{
 	AccessTokenScopeCategoryActivityPub,
 	AccessTokenScopeCategoryAdmin,
-	AccessTokenScopeCategoryMisc,
+	accessTokenScopeCategoryMisc,
 	AccessTokenScopeCategoryNotification,
 	AccessTokenScopeCategoryOrganization,
 	AccessTokenScopeCategoryPackage,
@@ -61,8 +61,8 @@ const (
 	AccessTokenScopeReadAdmin  AccessTokenScope = "read:admin"
 	AccessTokenScopeWriteAdmin AccessTokenScope = "write:admin"
 
-	AccessTokenScopeReadMisc  AccessTokenScope = "read:misc"
-	AccessTokenScopeWriteMisc AccessTokenScope = "write:misc"
+	accessTokenScopeReadMisc  AccessTokenScope = "read:misc"
+	accessTokenScopeWriteMisc AccessTokenScope = "write:misc"
 
 	AccessTokenScopeReadNotification  AccessTokenScope = "read:notification"
 	AccessTokenScopeWriteNotification AccessTokenScope = "write:notification"
@@ -134,7 +134,7 @@ var allAccessTokenScopes = []AccessTokenScope{
 	AccessTokenScopePublicOnly,
 	AccessTokenScopeWriteActivityPub, AccessTokenScopeReadActivityPub,
 	AccessTokenScopeWriteAdmin, AccessTokenScopeReadAdmin,
-	AccessTokenScopeWriteMisc, AccessTokenScopeReadMisc,
+	accessTokenScopeWriteMisc, accessTokenScopeReadMisc,
 	AccessTokenScopeWriteNotification, AccessTokenScopeReadNotification,
 	AccessTokenScopeWriteOrganization, AccessTokenScopeReadOrganization,
 	AccessTokenScopeWritePackage, AccessTokenScopeReadPackage,
@@ -151,8 +151,8 @@ var allAccessTokenScopeBits = map[AccessTokenScope]accessTokenScopeBitmap{
 	AccessTokenScopeWriteActivityPub:  accessTokenScopeWriteActivityPubBits,
 	AccessTokenScopeReadAdmin:         accessTokenScopeReadAdminBits,
 	AccessTokenScopeWriteAdmin:        accessTokenScopeWriteAdminBits,
-	AccessTokenScopeReadMisc:          accessTokenScopeReadMiscBits,
-	AccessTokenScopeWriteMisc:         accessTokenScopeWriteMiscBits,
+	accessTokenScopeReadMisc:          accessTokenScopeReadMiscBits,
+	accessTokenScopeWriteMisc:         accessTokenScopeWriteMiscBits,
 	AccessTokenScopeReadNotification:  accessTokenScopeReadNotificationBits,
 	AccessTokenScopeWriteNotification: accessTokenScopeWriteNotificationBits,
 	AccessTokenScopeReadOrganization:  accessTokenScopeReadOrganizationBits,
@@ -172,7 +172,7 @@ var accessTokenScopes = map[AccessTokenScopeLevel]map[AccessTokenScopeCategory]A
 	Read: {
 		AccessTokenScopeCategoryActivityPub:  AccessTokenScopeReadActivityPub,
 		AccessTokenScopeCategoryAdmin:        AccessTokenScopeReadAdmin,
-		AccessTokenScopeCategoryMisc:         AccessTokenScopeReadMisc,
+		accessTokenScopeCategoryMisc:         accessTokenScopeReadMisc,
 		AccessTokenScopeCategoryNotification: AccessTokenScopeReadNotification,
 		AccessTokenScopeCategoryOrganization: AccessTokenScopeReadOrganization,
 		AccessTokenScopeCategoryPackage:      AccessTokenScopeReadPackage,
@@ -183,7 +183,7 @@ var accessTokenScopes = map[AccessTokenScopeLevel]map[AccessTokenScopeCategory]A
 	Write: {
 		AccessTokenScopeCategoryActivityPub:  AccessTokenScopeWriteActivityPub,
 		AccessTokenScopeCategoryAdmin:        AccessTokenScopeWriteAdmin,
-		AccessTokenScopeCategoryMisc:         AccessTokenScopeWriteMisc,
+		accessTokenScopeCategoryMisc:         accessTokenScopeWriteMisc,
 		AccessTokenScopeCategoryNotification: AccessTokenScopeWriteNotification,
 		AccessTokenScopeCategoryOrganization: AccessTokenScopeWriteOrganization,
 		AccessTokenScopeCategoryPackage:      AccessTokenScopeWritePackage,

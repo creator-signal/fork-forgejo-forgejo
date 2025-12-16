@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	auth_model "forgejo.org/models/auth"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
 
@@ -20,7 +19,7 @@ func TestRenderAlertBlocks(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	session := loginUser(t, "user1")
-	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteMisc)
+	token := getTokenForLoggedInUser(t, session, "write:misc")
 
 	assertAlertBlock := func(t *testing.T, input, alertType, alertIcon string) {
 		t.Helper()
