@@ -6,6 +6,7 @@ package forgejo_migrations_legacy
 import (
 	"forgejo.org/models/packages"
 	"forgejo.org/models/remote_registry"
+
 	"xorm.io/xorm"
 )
 

@@ -15,6 +15,7 @@ import (
 	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,5 +37,4 @@ func TestCreateRemoteRegistry(t *testing.T) {
 
 	retrieved := unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
-
 }
