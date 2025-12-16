@@ -341,40 +341,23 @@ func UnlinkPackage(ctx *context.APIContext) {
 
 // CreateRemoteRegistry creates a remote registry of a given type
 func CreateRemoteRegistry(ctx *context.APIContext) {
-	// swagger:operation POST /packages/{owner}/remote-registry package configureRemoteRegistry
+	// swagger:operation POST /packages/{owner}/remote-registry package createRemoteRegistry
 	// ---
 	// summary: Allows configuration of a remote registry
+	// consumes:
+	// - application/json
+	// produces:
+	// - application/json
 	// parameters:
 	// - name: owner
 	//   in: path
-	//   description: owner of the packages
+	//   description: owner of the package
 	//   type: string
 	//   required: true
-	// - name: type
-	//   in: path
-	//   description: type of the remote registry
-	//   type: string
+	// - name: remote_registry
+	//   in: body
 	//   required: true
-	// - name: remote_url
-	//   in: path
-	//   description: url of the remote registry
-	//   type: string
-	//   required: true
-	// - name: remote_auth_token
-	//   in: path
-	//   description: optional token of the remote registry
-	//   type: string
-	//   required: false
-	// - name: remote_user_name
-	//   in: path
-	//   description: optional user name of the remote registry
-	//   type: string
-	//   required: false
-	// - name: remote_password
-	//   in: path
-	//   description: optional password of the remote registry
-	//   type: string
-	//   required: false
+	//   schema: { "$ref": "#/definitions/CreateRemoteRegistryOption" }
 	// responses:
 	//   "201":
 	//     "$ref": "#/responses/empty"

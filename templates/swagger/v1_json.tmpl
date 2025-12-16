@@ -4581,50 +4581,32 @@
     },
     "/packages/{owner}/remote-registry": {
       "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
         "tags": [
           "package"
         ],
         "summary": "Allows configuration of a remote registry",
-        "operationId": "configureRemoteRegistry",
+        "operationId": "createRemoteRegistry",
         "parameters": [
           {
             "type": "string",
-            "description": "owner of the packages",
+            "description": "owner of the package",
             "name": "owner",
             "in": "path",
             "required": true
           },
           {
-            "type": "string",
-            "description": "type of the remote registry",
-            "name": "type",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "url of the remote registry",
-            "name": "remote_url",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "optional token of the remote registry",
-            "name": "remote_auth_token",
-            "in": "path"
-          },
-          {
-            "type": "string",
-            "description": "optional user name of the remote registry",
-            "name": "remote_user_name",
-            "in": "path"
-          },
-          {
-            "type": "string",
-            "description": "optional password of the remote registry",
-            "name": "remote_password",
-            "in": "path"
+            "name": "remote_registry",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateRemoteRegistryOption"
+            }
           }
         ],
         "responses": {
