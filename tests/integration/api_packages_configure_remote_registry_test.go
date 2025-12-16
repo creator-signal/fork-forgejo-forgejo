@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
+	rr_model "forgejo.org/models/remote_registry"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -25,9 +27,22 @@ func TestConfigureRemoteRegistry(t *testing.T) {
 	t.Run("ConfigureRemoteRegistry", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		req := NewRequest(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry/configure", user.Name)).AddTokenAuth(tokenWritePackage)
+		rr := api.CreateRemoteRegistryOption{
+			Name:        "testreg",
+			RemoteType:  "container",
+			RemoteURL:   "https://example.registry.com",
+			RemoteUser:  "someUser",
+			RemoteToken: "asdfwoe324lkjsdf0242523",
+		}
+
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user.Name), &rr).AddTokenAuth(tokenWritePackage)
 		resp := MakeRequest(t, req, 204)
 
 		assert.Equal(t, 204, resp.Code)
+
+		unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{
+			ID:   int64(1),
+			Name: rr.Name,
+		})
 	})
 }
