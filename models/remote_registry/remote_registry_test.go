@@ -8,7 +8,6 @@ import (
 
 	"forgejo.org/models/packages"
 	"forgejo.org/models/unittest"
-	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,14 +15,12 @@ import (
 
 func Test_RemoteRegistryValidation(t *testing.T) {
 	sut := RemoteRegistry{
-		ID:          int64(1),
-		Name:        "rr",
-		OwnerType:   RRUser,
-		OwnerID:     int64(10),
-		RemoteURL:   "https://codeberg.org",
-		RemoteType:  packages.Type("container"),
-		CreatedUnix: timeutil.TimeStampNow(),
-		UpdatedUnix: timeutil.TimeStampNow(),
+		ID:         int64(1),
+		Name:       "rr",
+		OwnerType:  RRUser,
+		OwnerID:    int64(10),
+		RemoteURL:  "https://codeberg.org",
+		RemoteType: packages.Type("container"),
 	}
 
 	if ok, err := validation.IsValid(sut); !ok {
