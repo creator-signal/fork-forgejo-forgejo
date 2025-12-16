@@ -341,7 +341,7 @@ func UnlinkPackage(ctx *context.APIContext) {
 
 // CreateRemoteRegistry creates a remote registry of a given type
 func CreateRemoteRegistry(ctx *context.APIContext) {
-	// swagger:operation POST /packages/{owner}/remote-registry/configure package configureRemoteRegistry
+	// swagger:operation POST /packages/{owner}/remote-registry package configureRemoteRegistry
 	// ---
 	// summary: Allows configuration of a remote registry
 	// parameters:
@@ -381,7 +381,8 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	form := web.GetForm(ctx).(*api.CreateRemoteRegistryOption)
+	form := web.GetForm(ctx)
+	rrOpts := form.(*api.CreateRemoteRegistryOption)
 	// TODO Permissions
 
 	ownerType, err := rr_service.GetOwnerType(ctx)
@@ -389,16 +390,16 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
 
-	rr, err := rr_model.NewRemoteRegistry(form.Name,
-		form.RemoteURL,
-		packages.Type(form.RemoteType),
+	rr, err := rr_model.NewRemoteRegistry(rrOpts.Name,
+		rrOpts.RemoteURL,
+		packages.Type(rrOpts.RemoteType),
 		rr_model.RROpts{
 			OwnerType: ownerType,
 			OwnerID:   ctx.ContextUser.ID,
 			Auth: rr_model.RRCredentials{
-				RemoteUser:     form.RemoteUser,
-				RemotePassword: form.RemotePassword,
-				RemoteToken:    form.RemoteToken,
+				RemoteUser:     rrOpts.RemoteUser,
+				RemotePassword: rrOpts.RemotePassword,
+				RemoteToken:    rrOpts.RemoteToken,
 			},
 		})
 	if err != nil {
