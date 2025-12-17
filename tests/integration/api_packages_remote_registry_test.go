@@ -21,8 +21,7 @@ import (
 
 func TestCreateRemoteRegistryUser(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
-	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
@@ -34,17 +33,17 @@ func TestCreateRemoteRegistryUser(t *testing.T) {
 		RemoteUser:  "someUser",
 		RemoteToken: "asdfwoe324lkjsdf0242523",
 	}
-	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
 
 	retrieved := unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
-	assert.Equal(t, rr_model.RROrg, retrieved.OwnerType)
+	assert.Equal(t, rr_model.RRUser, retrieved.OwnerType)
 }
 
 func TestCreateRemoteRegistryOrg(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 
 	session := loginUser(t, user2.Name)
