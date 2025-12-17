@@ -62,7 +62,7 @@ func loadPackagesFrom(rootCfg ConfigProvider) (err error) {
 
 	for _, child := range sec.ChildSections() {
 		cn := child.Name()
-		if cn == "packages.remote_repository" {
+		if cn == "packages.remote_registry" {
 			Packages.RemoteRegistry.Enabled = child.Key("ENABLED").MustBool(false)
 		}
 	}
