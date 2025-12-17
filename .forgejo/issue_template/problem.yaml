@@ -1,7 +1,7 @@
 name: Report a problem or need
-description: All changes in Forgejo start by describing a problem or need. Please start here.
+description: Please start here. All changes in Forgejo start by describing a problem or need.
 title: "problem: "
-labels: ["problem", "severity/unknown"]
+labels: ["problem", "impact/unknown"]
 body:
 - type: markdown
   attributes:
@@ -12,7 +12,7 @@ body:
     value: |
       - Please speak English, as this is the language all maintainers can speak and write.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
-      - Take a moment to [check if a similar problem has already been discussed in the past.](https://codeberg.org/forgejo/forgejo/issues?q=&type=all&labels=78137). Feel free to add your own experience there, if applciable
+      - Take a moment to [check if a similar problem has already been discussed in the past.](https://codeberg.org/forgejo/forgejo/issues?q=&type=all&labels=78137). Feel free to add your own experience there, if applicable.
       - We are currently experimenting with a new workflow to understand your problems and requests. Please try to focus on explaining the problem you are facing, which could be a bug in the code, a moment of confusion, or a missing feature. We'll think about solutions to the problem at a later step. If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that lead to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
 - type: dropdown
   id: can-reproduce
@@ -22,9 +22,9 @@ body:
       Please try reproducing your problem at https://dev.next.forgejo.org or a local development version of Forgejo.
       If you check that your problem is not already addressed by a recent change, this will save all volunteers involved a lot of time.
     options:
-    - "Yes, the problem still exists on a Next instance"
-    - "No, I've tried it and the problem is not present there"
-    - "Unknown, I can't try it for some reason"
+    - "Yes, the problem still exists (tested on a next instance)"
+    - "Yes, the problem still exists (tested locally with the latest development version)"
+    - "Unknown, I can't try it for some reason (please explain)"
   validations:
     required: true
 - type: textarea
@@ -38,6 +38,7 @@ body:
       * If you report a bug with a certain functionality, it will be relevant to learn about related configuration ("This is how I configured my identity provider", "This is how my Forgejo Actions runner is set up").
       * Please elaborate on your personal relation to Forgejo and user role ("I'm new to Forgejo, but used a comparable product called …", "In my role as a designer, …").
       * If you feel that Forgejo needs a change in functionality, please describe in which environment you want to use it, so that we can understand for which audience the complexity needs to appeal to ("We're a group of friends with no technical / professional background and use a personal Forgejo instance to prepare our first libre game").
+      * If you already explained your usage of Forgejo elsewhere (e.g. in another issue or in a user research repository), you can put a link here.
       
       </details>
   validations:

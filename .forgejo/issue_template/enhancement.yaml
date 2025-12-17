@@ -1,4 +1,4 @@
-name: 💡 Enhancement
+name: Enhancement
 description: Suggest a solution to one or multiple problems that have already been reported
 title: "enh: "
 labels: ["enhancement/feature"]
@@ -7,9 +7,8 @@ body:
   attributes:
     value: |
       - Please speak English, as this is the language all maintainers can speak and write.
-      - Be as clear and concise as possible. A very verbose request is harder to interpret in a concrete way.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
-      - We are currently experimenting with a new workflow to understand your problems and requests. This is step 2 of a two-step-process. The goal is to discuss potential solutions to already-reported rpoblems. If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that lead to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+      - We are currently experimenting with a new workflow to understand your problems and requests. This is step 2 of a two-step-process. The goal is to discuss potential solutions to already-reported problems. If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that lead to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
 - type: textarea
   id: problems
   attributes:
@@ -20,12 +19,12 @@ body:
 - type: textarea
   id: description
   attributes:
-    label: Enhancement Description
-    description: As concisely as possible, describe the changes you suggest for Forgejo.
+    label: Enhancement description
+    description: As concisely as possible, describe the changes you suggest for Forgejo and explain how they address the problems.
   validations:
     required: true
 - type: textarea
   id: details
   attributes:
     label: Details and notes
-    description: Feel free to supply additional information like techncial considerations, alternative solutions, UI mockups etc.
+    description: Feel free to supply additional information like technical considerations, link to alternative solutions, UI mockups etc.
