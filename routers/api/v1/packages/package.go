@@ -343,7 +343,7 @@ func UnlinkPackage(ctx *context.APIContext) {
 func CreateRemoteRegistry(ctx *context.APIContext) {
 	// swagger:operation POST /packages/{owner}/remote-registry package createRemoteRegistry
 	// ---
-	// summary: Allows configuration of a remote registry
+	// summary: Allows creation of a remote registry
 	// consumes:
 	// - application/json
 	// produces:
