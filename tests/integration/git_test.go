@@ -470,6 +470,18 @@ func doBranchProtect(baseCtx *APITestContext, dstPath string) func(t *testing.T)
 			})
 			doGitPushTestRepository(dstPath, "origin", "topush:protected")(t)
 		})
+
+		t.Run("AllowForcePushWhenRuleEnablesIt", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			t.Run("ProtectProtectedBranch", doProtectBranch(ctx, "protected", parameterProtectBranch{
+				"enable_push": "all_force",
+			}))
+			t.Run("Create toforce2", doGitCheckoutBranch(dstPath, "-b", "toforce2", "master"))
+			t.Run("GenerateCommit", func(t *testing.T) {
+				generateCommitWithNewData(t, littleSize, dstPath, "user2@example.com", "User Two", "branch-data-file-")
+			})
+			doGitPushTestRepository(dstPath, "-f", "origin", "toforce2:protected")(t)
+		})
 	}
 }
 

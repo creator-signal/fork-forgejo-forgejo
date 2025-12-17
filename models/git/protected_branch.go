@@ -37,6 +37,7 @@ type ProtectedBranch struct {
 	globRule                      glob.Glob              `xorm:"-"`
 	isPlainName                   bool                   `xorm:"-"`
 	CanPush                       bool                   `xorm:"NOT NULL DEFAULT false"`
+	CanForcePush                  bool                   `xorm:"NOT NULL DEFAULT false"`
 	EnableWhitelist               bool
 	WhitelistUserIDs              []int64  `xorm:"JSON TEXT"`
 	WhitelistTeamIDs              []int64  `xorm:"JSON TEXT"`

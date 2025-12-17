@@ -33,9 +33,14 @@
 					<span class="help">{{ctx.Locale.Tr "repo.settings.protect_disable_push_desc"}}</span>
 				</label>
 				<label>
-					<input name="enable_push" type="radio" value="all" class="toggle-target-disabled" data-target="#whitelist_box" {{if and (.Rule.CanPush) (not .Rule.EnableWhitelist)}}checked{{end}}>
+					<input name="enable_push" type="radio" value="all" class="toggle-target-disabled" data-target="#whitelist_box" {{if and (.Rule.CanPush) (not .Rule.EnableWhitelist) (not .Rule.CanForcePush)}}checked{{end}}>
 					{{ctx.Locale.Tr "repo.settings.protect_enable_push"}}
 					<span class="help">{{ctx.Locale.Tr "repo.settings.protect_enable_push_desc"}}</span>
+				</label>
+				<label>
+					<input name="enable_push" type="radio" value="all_force" class="toggle-target-disabled" data-target="#whitelist_box" {{if and (.Rule.CanPush) (not .Rule.EnableWhitelist) (.Rule.CanForcePush)}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.protect_enable_push_force"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.protect_enable_push_force_desc"}}</span>
 				</label>
 				<label>
 					<input name="enable_push" type="radio" value="whitelist" class="toggle-target-enabled" data-target="#whitelist_box" {{if and (.Rule.CanPush) (.Rule.EnableWhitelist)}}checked{{end}}>

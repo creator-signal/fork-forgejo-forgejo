@@ -166,10 +166,17 @@ func SettingsProtectedBranchPost(ctx *context.Context) {
 		protectBranch.CanPush = true
 		protectBranch.EnableWhitelist = false
 		protectBranch.WhitelistDeployKeys = false
+		protectBranch.CanForcePush = false
+	case "all_force":
+		protectBranch.CanPush = true
+		protectBranch.EnableWhitelist = false
+		protectBranch.WhitelistDeployKeys = false
+		protectBranch.CanForcePush = true
 	case "whitelist":
 		protectBranch.CanPush = true
 		protectBranch.EnableWhitelist = true
 		protectBranch.WhitelistDeployKeys = f.WhitelistDeployKeys
+		protectBranch.CanForcePush = false
 		if strings.TrimSpace(f.WhitelistUsers) != "" {
 			whitelistUsers, _ = base.StringsToInt64s(strings.Split(f.WhitelistUsers, ","))
 		}
@@ -180,6 +187,7 @@ func SettingsProtectedBranchPost(ctx *context.Context) {
 		protectBranch.CanPush = false
 		protectBranch.EnableWhitelist = false
 		protectBranch.WhitelistDeployKeys = false
+		protectBranch.CanForcePush = false
 	}
 
 	protectBranch.EnableMergeWhitelist = f.EnableMergeWhitelist
