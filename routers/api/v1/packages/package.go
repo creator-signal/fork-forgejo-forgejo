@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 
+	"forgejo.org/models/organization"
 	"forgejo.org/models/packages"
 	rr_model "forgejo.org/models/remote_registry"
 	repo_model "forgejo.org/models/repo"
@@ -351,7 +352,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	// parameters:
 	// - name: owner
 	//   in: path
-	//   description: owner of the package
+	//   description: owner of the registry
 	//   type: string
 	//   required: true
 	// - name: remote_registry
@@ -366,7 +367,21 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 
 	form := web.GetForm(ctx)
 	rrOpts := form.(*api.CreateRemoteRegistryOption)
-	// TODO Permissions
+
+	isOrg := ctx.ContextUser.IsOrganization()
+	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+	}
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		if !isOrgOwner && !ctx.Doer.IsAdmin {
+			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			return
+		}
+	}
 
 	ownerType, err := rr_service.GetOwnerType(ctx)
 	if err != nil {
@@ -395,6 +410,6 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
 
-	// TODO Responses?
+	// TODO Return the info of the created Remote Registry?
 	ctx.JSON(http.StatusCreated, "{}")
 }
