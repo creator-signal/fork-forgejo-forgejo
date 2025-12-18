@@ -190,7 +190,7 @@ func TestUpdatePAM(t *testing.T) {
 			args: []string{
 				"pam-test",
 				"--id", "1",
-				"--active", "false",
+				"--active=false",
 			},
 			existingAuthSource: &auth.Source{
 				Type:     auth.PAM,
@@ -222,7 +222,7 @@ func TestUpdatePAM(t *testing.T) {
 			args: []string{
 				"pam-test",
 				"--id", "1",
-				"--skip-local-2fa", "false",
+				"--skip-local-2fa=false",
 			},
 			authSource: &auth.Source{
 				Type: auth.PAM,
@@ -255,16 +255,24 @@ func TestUpdatePAM(t *testing.T) {
 				return nil
 			},
 			createAuthSource: func(ctx context.Context, authSource *auth.Source) error {
-				updatedAuthSource = authSource
+				assert.FailNow(t, "should not call createAuthSource", "case: %d", n)
 				return nil
 			},
 			updateAuthSource: func(ctx context.Context, authSource *auth.Source) error {
-				assert.FailNow(t, "should not call updateAuthSource", "case: %d", n)
+				updatedAuthSource = authSource
 				return nil
 			},
 			getAuthSourceByID: func(ctx context.Context, id int64) (*auth.Source, error) {
-				assert.FailNow(t, "should not call getAuthSourceByID", "case: %d", n)
-				return nil, nil
+				if c.id != 0 {
+					assert.Equal(t, c.id, id, "case %d: wrong id", n)
+				}
+				if c.existingAuthSource != nil {
+					return c.existingAuthSource, nil
+				}
+				return &auth.Source{
+					Type: auth.PAM,
+					Cfg:  &pam.Source{},
+				}, nil
 			},
 		}
 

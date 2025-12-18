@@ -108,11 +108,11 @@ func (a *authService) updatePAM(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
-	if err := initDB(ctx); err != nil {
+	if err := a.initDB(ctx); err != nil {
 		return err
 	}
 
-	source, err := auth_model.GetSourceByID(ctx, c.Int64("id"))
+	source, err := a.getAuthSource(ctx, c, auth_model.PAM)
 	if err != nil {
 		return err
 	}
