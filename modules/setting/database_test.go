@@ -262,36 +262,36 @@ func Test_getPostgreSQLEngineGroupConnectionStrings(t *testing.T) {
 func Test_loadDBSetting(t *testing.T) {
 	defer test.MockProtect(&Database)()
 	t.Run("Does not overwrite Passwd", func(t *testing.T) {
-		expected_password := "already_set"
+		expectedPassword := "already_set"
 
 		cfg, _ := NewConfigProviderFromData(`
 			[database]
 			PASSWD="new password"
 		`)
 
-		Database.Passwd = expected_password
+		Database.Passwd = expectedPassword
 		loadDBSetting(cfg)
 
-		assert.Equal(t, expected_password, Database.Passwd)
+		assert.Equal(t, expectedPassword, Database.Passwd)
 	})
 	t.Run("uses PASSWD", func(t *testing.T) {
-		expected_password := "testpassword"
+		expectedPassword := "testpassword"
 
 		cfg, _ := NewConfigProviderFromData(fmt.Sprintf(`
 			[database]
 			PASSWD="%s"
-		`, expected_password))
+		`, expectedPassword))
 
 		Database.Passwd = ""
 		loadDBSetting(cfg)
 
-		assert.Equal(t, expected_password, Database.Passwd)
+		assert.Equal(t, expectedPassword, Database.Passwd)
 	})
 	t.Run("Uses PASSWD_URI", func(t *testing.T) {
-		expected_password := "testpassworduri"
+		expectedPassword := "testpassworduri"
 
 		uri := filepath.Join(t.TempDir(), "db_passwd")
-		require.NoError(t, os.WriteFile(uri, []byte(expected_password), 0o644))
+		require.NoError(t, os.WriteFile(uri, []byte(expectedPassword), 0o644))
 
 		cfg, _ := NewConfigProviderFromData(fmt.Sprintf(`
 			[database]
@@ -301,6 +301,6 @@ func Test_loadDBSetting(t *testing.T) {
 		Database.Passwd = ""
 		loadDBSetting(cfg)
 
-		assert.Equal(t, expected_password, Database.Passwd)
+		assert.Equal(t, expectedPassword, Database.Passwd)
 	})
 }
