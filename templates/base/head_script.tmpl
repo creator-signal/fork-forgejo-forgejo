@@ -31,6 +31,7 @@ If you introduce mistakes in it, Gitea JavaScript code wouldn't run correctly.
 		]).values()),
 		{{end}}
 		mermaidMaxSourceCharacters: {{MermaidMaxSourceCharacters}},
+		lang: '{{ctx.Locale.Lang}}',
 		{{/* this global i18n object should only contain general texts. for specialized texts, it should be provided inside the related modules by: (1) API response (2) HTML data-attribute (3) PageData */}}
 		i18n: {
 			copy_success: {{ctx.Locale.Tr "copy_success"}},

@@ -9,7 +9,8 @@ export const ONE_MINUTE = 60 * 1000;
 export const ONE_HOUR = 60 * ONE_MINUTE;
 export const ONE_DAY = 24 * ONE_HOUR;
 
-const lang = document.documentElement.getAttribute('lang');
+const lang = window.config.lang || navigator.language;
+
 const ABSOLUTE_DATETIME_FORMAT = new Intl.DateTimeFormat(lang, {
   year: 'numeric',
   month: 'short',
