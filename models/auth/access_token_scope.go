@@ -230,8 +230,8 @@ func GetScopeLevelFromAccessMode(mode perm.AccessMode) AccessTokenScopeLevel {
 	}
 }
 
-// parse the scope string into a bitmap, thus removing possible duplicates.
-func (s AccessTokenScope) parse() (accessTokenScopeBitmap, error) {
+// parse the scope string into a bitmap, thus removing possible duplicates and unknown scopes (if strict is set, unknown scopes will trigger a failure).
+func (s AccessTokenScope) parse(strict bool) (accessTokenScopeBitmap, error) {
 	var bitmap accessTokenScopeBitmap
 
 	// The following is the more performant equivalent of 'for _, v := range strings.Split(remainingScope, ",")' as this is hot code
@@ -260,7 +260,10 @@ func (s AccessTokenScope) parse() (accessTokenScopeBitmap, error) {
 
 		bits, ok := allAccessTokenScopeBits[singleScope]
 		if !ok {
-			return 0, fmt.Errorf("invalid access token scope: %s", singleScope)
+			if strict {
+				return 0, fmt.Errorf("invalid access token scope: %s", singleScope)
+			}
+			continue
 		}
 		bitmap |= bits
 	}
@@ -270,17 +273,29 @@ func (s AccessTokenScope) parse() (accessTokenScopeBitmap, error) {
 
 // StringSlice returns the AccessTokenScope as a []string
 func (s AccessTokenScope) StringSlice() []string {
+	if s == "" {
+		return []string{}
+	}
 	return strings.Split(string(s), ",")
 }
 
 // Normalize returns a normalized scope string without any duplicates.
 func (s AccessTokenScope) Normalize() (AccessTokenScope, error) {
-	bitmap, err := s.parse()
+	bitmap, err := s.parse(true)
 	if err != nil {
 		return "", err
 	}
 
 	return bitmap.toScope(), nil
+}
+
+// NormalizeStrict returns a normalized scope string without any duplicates or unknown scopes.
+func (s AccessTokenScope) NormalizeKnown() AccessTokenScope {
+	bitmap, err := s.parse(false)
+	if err != nil {
+		panic(err) //strict:false should not return an error
+	}
+	return bitmap.toScope()
 }
 
 func (s AccessTokenScope) HasPermissionScope() bool {
@@ -289,7 +304,7 @@ func (s AccessTokenScope) HasPermissionScope() bool {
 
 // PublicOnly checks if this token scope is limited to public resources
 func (s AccessTokenScope) PublicOnly() (bool, error) {
-	bitmap, err := s.parse()
+	bitmap, err := s.parse(true)
 	if err != nil {
 		return false, err
 	}
@@ -299,7 +314,7 @@ func (s AccessTokenScope) PublicOnly() (bool, error) {
 
 // HasScope returns true if the string has the given scope
 func (s AccessTokenScope) HasScope(scopes ...AccessTokenScope) (bool, error) {
-	bitmap, err := s.parse()
+	bitmap, err := s.parse(true)
 	if err != nil {
 		return false, err
 	}
