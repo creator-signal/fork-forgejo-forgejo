@@ -237,7 +237,7 @@ func (s AccessTokenScope) parse(strict bool) (accessTokenScopeBitmap, error) {
 	// The following is the more performant equivalent of 'for _, v := range strings.Split(remainingScope, ",")' as this is hot code
 	remainingScopes := string(s)
 	for len(remainingScopes) > 0 {
-		i := strings.IndexByte(remainingScopes, ',')
+		i := strings.IndexAny(remainingScopes, ", ")
 		var v string
 		if i < 0 {
 			v = remainingScopes
