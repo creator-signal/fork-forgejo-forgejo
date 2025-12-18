@@ -410,6 +410,5 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
 
-	// TODO Return the info of the created Remote Registry?
-	ctx.JSON(http.StatusCreated, "{}")
+	ctx.JSON(http.StatusCreated, convert.ToRemoteRegistry(&rr))
 }
