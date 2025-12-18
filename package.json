@@ -103,5 +103,8 @@
   },
   "browserslist": [
     "defaults"
-  ]
+  ],
+  "scarfSettings": {
+    "enabled": false
+  }
 }
