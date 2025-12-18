@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 
@@ -556,11 +557,20 @@ func AuthorizeOAuth(ctx *context.Context) {
 		return
 	}
 
+	scope := auth.AccessTokenScope(form.Scope).NormalizeKnown()
+
 	// show authorize page to grant access
 	ctx.Data["Application"] = app
 	ctx.Data["RedirectURI"] = form.RedirectURI
 	ctx.Data["State"] = form.State
-	ctx.Data["Scope"] = form.Scope
+	ctx.Data["Scope"] = scope
+	ctx.Data["ScopeMoreThanUser"] = slices.ContainsFunc(scope.StringSlice(), func(s string) bool {
+		switch auth.AccessTokenScope(s) {
+		case auth.AccessTokenScopeReadUser, auth.AccessTokenScopeWriteUser, auth.AccessTokenScopePublicOnly:
+			return false
+		}
+		return true
+	})
 	ctx.Data["Nonce"] = form.Nonce
 	if user != nil {
 		ctx.Data["ApplicationCreatorLinkHTML"] = template.HTML(fmt.Sprintf(`<a href="%s">@%s</a>`, html.EscapeString(user.HomeLink()), html.EscapeString(user.Name)))

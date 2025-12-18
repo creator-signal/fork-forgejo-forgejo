@@ -7,11 +7,32 @@
 			</h3>
 			<div class="ui attached segment">
 				{{template "base/alert" .}}
+				<p>The application requested access to the following scopes:</p>
+				<ul class="ui text left">
+				<li>
+					profile (username, full name, primary email and avatar URL)
+				</li>
+				{{range .Scope.StringSlice}}
+					{{if eq . "public-only"}}
+						{{continue}}
+					{{end}}
+					<li class="">
+						{{.}}
+					</li>
+				{{end}}
+				</ul>
+				{{if .ScopeMoreThanUser}}
+					<p>
+						{{if .Scope.PublicOnly}}
+							{{ctx.Locale.Tr "auth.authorize_application_description_public"}}
+						{{else}}
+							<strong>{{ctx.Locale.Tr "auth.authorize_application_description"}}</strong>
+						{{end}}
+					</p>
+				{{end}}
 				<p>
-					<b>{{ctx.Locale.Tr "auth.authorize_application_description"}}</b><br>
 					{{ctx.Locale.Tr "auth.authorize_application_created_by" .ApplicationCreatorLinkHTML}}
 				</p>
-				<p>With scopes: {{.Scope}}.</p>
 			</div>
 			<div class="ui attached segment">
 				<p>{{ctx.Locale.Tr "auth.authorize_redirect_notice" .ApplicationRedirectDomainHTML}}</p>
