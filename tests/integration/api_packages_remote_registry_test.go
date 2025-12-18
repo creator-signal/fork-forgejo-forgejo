@@ -34,11 +34,21 @@ func TestCreateRemoteRegistryUser(t *testing.T) {
 		RemoteToken: "asdfwoe324lkjsdf0242523",
 	}
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
-	MakeRequest(t, req, http.StatusCreated)
+	resp := MakeRequest(t, req, http.StatusCreated)
+
+	var apiRR api.RemoteRegistry
+	DecodeJSON(t, resp, &apiRR)
 
 	retrieved := unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
 	assert.Equal(t, rr_model.RRUser, retrieved.OwnerType)
+
+	assert.Equal(t, rr.Name, apiRR.Name)
+	assert.Equal(t, rr_model.RRUser.Name(), apiRR.OwnerType)
+	assert.Equal(t, user2.ID, apiRR.OwnerID)
+	assert.Equal(t, rr.RemoteURL, apiRR.RemoteURL)
+	assert.Equal(t, rr.RemoteUser, apiRR.RemoteUser)
+	assert.Equal(t, packages.TypeContainer.Name(), apiRR.RemoteType)
 }
 
 func TestCreateRemoteRegistryOrg(t *testing.T) {
@@ -57,11 +67,21 @@ func TestCreateRemoteRegistryOrg(t *testing.T) {
 		RemoteToken: "asdfwoe324lkjsdf0242523",
 	}
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
-	MakeRequest(t, req, http.StatusCreated)
+	resp := MakeRequest(t, req, http.StatusCreated)
+
+	var apiRR api.RemoteRegistry
+	DecodeJSON(t, resp, &apiRR)
 
 	retrieved := unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
 	assert.Equal(t, rr_model.RROrg, retrieved.OwnerType)
+
+	assert.Equal(t, rr.Name, apiRR.Name)
+	assert.Equal(t, rr_model.RROrg.Name(), apiRR.OwnerType)
+	assert.Equal(t, org3.ID, apiRR.OwnerID)
+	assert.Equal(t, rr.RemoteURL, apiRR.RemoteURL)
+	assert.Equal(t, rr.RemoteUser, apiRR.RemoteUser)
+	assert.Equal(t, packages.TypeContainer.Name(), apiRR.RemoteType)
 }
 
 func TestCreateRemoteRegistryOrgNotAllowed(t *testing.T) {
