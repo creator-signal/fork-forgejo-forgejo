@@ -1,5 +1,5 @@
-name: Report a problem or need
-description: Please start here. All changes in Forgejo start by describing a problem or need.
+name: "Step 1: Report a problem or need"
+description: Please start here and describe your situation.
 title: "problem: "
 labels: ["problem", "impact/unknown"]
 body:

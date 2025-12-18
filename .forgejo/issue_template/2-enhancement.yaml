@@ -1,5 +1,5 @@
-name: Enhancement
-description: Suggest a solution to one or multiple problems that have already been reported
+name: "Step 2: Enhancement"
+description: Suggest a solution to one or multiple problems that have already been reported (see step 1).
 title: "enh: "
 labels: ["enhancement/feature"]
 body:
