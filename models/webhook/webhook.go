@@ -406,9 +406,21 @@ func (w *Webhook) SetHeaderAuthorization(cleartext string) {
 }
 
 // CreateWebhook creates a new web hook.
-func CreateWebhook(ctx context.Context, w *Webhook) error {
+func CreateWebhook(ctx context.Context, w *Webhook, authorizationHeader string) error {
 	w.Type = strings.TrimSpace(w.Type)
-	return db.Insert(ctx, w)
+
+	if len(authorizationHeader) == 0 {
+		return db.Insert(ctx, w)
+	}
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		if err := db.Insert(ctx, w); err != nil {
+			return err
+		}
+
+		w.SetHeaderAuthorization(authorizationHeader)
+		_, err := db.GetEngine(ctx).Cols("header_authorization_encrypted").ID(w.ID).Update(w)
+		return err
+	})
 }
 
 // CreateWebhooks creates multiple web hooks

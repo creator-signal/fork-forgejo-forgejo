@@ -5,7 +5,6 @@
 package setting
 
 import (
-	stdCtx "context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -258,15 +257,7 @@ func WebhookCreate(ctx *context.Context) {
 		return
 	}
 
-	if err := db.WithTx(ctx, func(ctx stdCtx.Context) error {
-		if err := webhook.CreateWebhook(ctx, w); err != nil {
-			return err
-		}
-
-		w.SetHeaderAuthorization(fields.AuthorizationHeader)
-		_, err := db.GetEngine(ctx).Cols("header_authorization_encrypted").ID(w.ID).Update(w)
-		return err
-	}); err != nil {
+	if err := webhook.CreateWebhook(ctx, w, fields.AuthorizationHeader); err != nil {
 		ctx.ServerError("CreateWebhook", err)
 		return
 	}

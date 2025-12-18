@@ -4,7 +4,6 @@
 package utils
 
 import (
-	stdCtx "context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -252,15 +251,7 @@ func addHook(ctx *context.APIContext, form *api.CreateHookOption, ownerID, repoI
 		return nil, false
 	}
 
-	if err := db.WithTx(ctx, func(ctx stdCtx.Context) error {
-		if err := webhook.CreateWebhook(ctx, w); err != nil {
-			return err
-		}
-
-		w.SetHeaderAuthorization(form.AuthorizationHeader)
-		_, err := db.GetEngine(ctx).Cols("header_authorization_encrypted").ID(w.ID).Update(w)
-		return err
-	}); err != nil {
+	if err := webhook.CreateWebhook(ctx, w, form.AuthorizationHeader); err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateWebhook", err)
 		return nil, false
 	}
