@@ -8,7 +8,7 @@ body:
     value: |
       - Please speak English, as this is the language all maintainers can speak and write.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
-      - We are currently experimenting with a new workflow to understand your problems and requests. This is step 2 of a two-step-process. The goal is to discuss potential solutions to already-reported problems. If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that lead to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+      - We are currently experimenting with a new workflow to understand your problems and requests. This is step 2 of a two-step-process. The goal is to discuss potential solutions to already-reported problems. If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that led to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
 - type: textarea
   id: problems
   attributes:

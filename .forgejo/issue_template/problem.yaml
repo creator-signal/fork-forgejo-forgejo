@@ -13,11 +13,11 @@ body:
       - Please speak English, as this is the language all maintainers can speak and write.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
       - Take a moment to [check if a similar problem has already been discussed in the past.](https://codeberg.org/forgejo/forgejo/issues?q=&type=all&labels=78137). Feel free to add your own experience there, if applicable.
-      - We are currently experimenting with a new workflow to understand your problems and requests. Please try to focus on explaining the problem you are facing, which could be a bug in the code, a moment of confusion, or a missing feature. We'll think about solutions to the problem at a later step. If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that lead to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+      - We are currently experimenting with a new workflow to understand your problems and requests. Please try to focus on explaining the problem you are facing, which could be a bug in the code, a moment of confusion, or a missing feature. We'll think about solutions to the problem at a later step. If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that led to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
 - type: dropdown
   id: can-reproduce
   attributes:
-    label: Does your problem still exists on the latest Forgejo version?
+    label: Does your problem still exist on the latest Forgejo version?
     description: |
       Please try reproducing your problem at https://dev.next.forgejo.org or a local development version of Forgejo.
       If you check that your problem is not already addressed by a recent change, this will save all volunteers involved a lot of time.
