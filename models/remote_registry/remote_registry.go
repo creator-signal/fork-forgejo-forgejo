@@ -33,6 +33,7 @@ var (
 	ErrDuplicateRemoteRegistry    = util.NewAlreadyExistErrorf("remote registry already exists")
 	ErrRemoteRegistryNotExist     = util.NewNotExistErrorf("remote registry does not exist")
 	ErrInvalidRemoteRegistryOwner = util.NewInvalidArgumentErrorf("remote registry owner was invalid")
+	ValidOwnerTypes               = []any{RRUser, RROrg, RRRepo}
 )
 
 func (rrt RemoteRegistryOwnerType) Name() string {
@@ -74,38 +75,6 @@ func (RemoteRegistry) TableName() string {
 	return "remote_registry"
 }
 
-type RRCredentials struct {
-	RemoteUser     string
-	RemotePassword string
-	RemoteToken    string
-}
-
-type RROpts struct {
-	OwnerType RemoteRegistryOwnerType
-	OwnerID   int64
-	Auth      RRCredentials
-}
-
-func NewRemoteRegistry(name, remoteURL string, remoteType packages.Type, opts RROpts) (RemoteRegistry, error) {
-	// decide whether repo, org, or user
-
-	result := RemoteRegistry{
-		Name:           name,
-		RemoteURL:      remoteURL,
-		RemoteType:     remoteType,
-		OwnerType:      opts.OwnerType,
-		OwnerID:        opts.OwnerID,
-		RemoteUser:     opts.Auth.RemoteUser,
-		RemotePassword: opts.Auth.RemotePassword,
-		RemoteToken:    opts.Auth.RemoteToken,
-	}
-
-	if valid, err := validation.IsValid(result); !valid {
-		return RemoteRegistry{}, err
-	}
-	return result, nil
-}
-
 // Create a remote registry in the DB, expects a valid rr
 func CreateRemoteRegistry(ctx context.Context, rr RemoteRegistry) error {
 	// Check if remote registry already exists
@@ -137,9 +106,9 @@ func CreateRemoteRegistry(ctx context.Context, rr RemoteRegistry) error {
 func (rr RemoteRegistry) Validate() []string {
 	var result []string
 	result = append(result, validation.ValidateNotEmpty(rr.Name, "Name")...)
-	result = append(result, validation.ValidateNotEmpty(rr.OwnerType.Name(), "OwnerType")...)
 	result = append(result, validation.ValidateNotEmpty(rr.OwnerID, "OwnerID")...)
 	result = append(result, validation.ValidateNotEmpty(rr.RemoteType.Name(), "RemoteType")...)
+	result = append(result, validation.ValidateOneOf(rr.OwnerType, ValidOwnerTypes, "OwnerType")...)
 
 	parsedURL, err := url.Parse(rr.RemoteURL)
 	if err != nil {

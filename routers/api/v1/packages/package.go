@@ -9,7 +9,6 @@ import (
 
 	"forgejo.org/models/organization"
 	"forgejo.org/models/packages"
-	rr_model "forgejo.org/models/remote_registry"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
@@ -19,7 +18,6 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	packages_service "forgejo.org/services/packages"
-	rr_service "forgejo.org/services/packages/remote_registry"
 )
 
 // ListPackages gets all packages of an owner
@@ -383,19 +381,19 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		}
 	}
 
-	ownerType, err := rr_service.GetOwnerType(ctx)
+	ownerType, err := packages_service.GetOwnerType(ctx)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
 
-	rr, err := rr_model.NewRemoteRegistry(
+	rr, err := packages_service.NewRemoteRegistry(
 		rrOpts.Name,
 		rrOpts.RemoteURL,
 		packages.Type(rrOpts.RemoteType),
-		rr_model.RROpts{
+		packages_service.RROpts{
 			OwnerType: ownerType,
 			OwnerID:   ctx.ContextUser.ID,
-			Auth: rr_model.RRCredentials{
+			Auth: packages_service.RRCredentials{
 				RemoteUser:     rrOpts.RemoteUser,
 				RemotePassword: rrOpts.RemotePassword,
 				RemoteToken:    rrOpts.RemoteToken,
@@ -405,7 +403,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
 
-	err = rr_model.CreateRemoteRegistry(ctx, rr)
+	err = packages_service.CreateRemoteRegistry(ctx, rr)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
