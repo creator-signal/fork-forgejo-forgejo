@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -626,6 +627,71 @@ func TestAPIAcceptTransfer(t *testing.T) {
 	apiRepo := new(api.Repository)
 	DecodeJSON(t, resp, apiRepo)
 	assert.Equal(t, "user4", apiRepo.Owner.UserName)
+}
+
+func TestAPITransferToOtherUserWithPackage(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	session := loginUser(t, user2.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWritePackage, auth_model.AccessTokenScopeWriteUser)
+
+	// create repo
+	repoName := "package-transfer-test"
+	apiRepo := new(api.Repository)
+	req := NewRequestWithJSON(t, "POST", "/api/v1/user/repos", &api.CreateRepoOption{
+		Name:     repoName,
+		AutoInit: true,
+	}).AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusCreated)
+	DecodeJSON(t, resp, apiRepo)
+
+	// upload and link package
+	packageName := "test-package"
+	packageVersion := "1.0.0"
+	req = NewRequestWithBody(t, "PUT",
+		fmt.Sprintf("/api/packages/%s/generic/%s/%s/file.bin", user2.Name, packageName, packageVersion),
+		bytes.NewReader([]byte("package content"))).
+		AddBasicAuth(user2.Name)
+	MakeRequest(t, req, http.StatusCreated)
+
+	req = NewRequest(t, "POST",
+		fmt.Sprintf("/api/v1/packages/%s/generic/%s/-/link/%s", user2.Name, packageName, repoName)).
+		AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusCreated)
+
+	// verify package visible before transfer
+	req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/packages", user2.Name, repoName))
+	resp = MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	assert.Equal(t, 1, htmlDoc.Find(".page-content.packages .flex-list").Length())
+	assert.Equal(t, "1", htmlDoc.Find(`a[href$="/packages"].item .ui.small.label`).Text())
+
+	// transfer repo
+	req = NewRequestWithJSON(t, "POST",
+		fmt.Sprintf("/api/v1/repos/%s/%s/transfer", user2.Name, repoName),
+		&api.TransferRepoOption{NewOwner: "user4"}).
+		AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusCreated)
+
+	// accept transfer
+	user4Session := loginUser(t, "user4")
+	user4Token := getTokenForLoggedInUser(t, user4Session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+	req = NewRequest(t, "POST",
+		fmt.Sprintf("/api/v1/repos/%s/%s/transfer/accept", user2.Name, repoName)).
+		AddTokenAuth(user4Token)
+	resp = MakeRequest(t, req, http.StatusAccepted)
+
+	var transferredRepo api.Repository
+	DecodeJSON(t, resp, &transferredRepo)
+	assert.Equal(t, "user4", transferredRepo.Owner.UserName)
+
+	// verify package still visible after transfer
+	req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/packages", transferredRepo.Owner.UserName, transferredRepo.Name))
+	resp = MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+	assert.Equal(t, 1, htmlDoc.Find(".page-content.packages .flex-list").Length())
+	assert.Equal(t, "1", htmlDoc.Find(`a[href$="/packages"].item .ui.small.label`).Text())
 }
 
 func TestAPIRejectTransfer(t *testing.T) {
