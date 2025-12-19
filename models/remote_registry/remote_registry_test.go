@@ -35,16 +35,16 @@ func Test_CreateRemoteRegistry(t *testing.T) {
 	name := "testreg"
 	remoteURL := "https://example.com"
 	remoteType := packages.TypeContainer
-	opts := RROpts{
-		RemoteRegistryOwnerType("org"),
-		int64(1),
-		RRCredentials{},
+
+	rr := RemoteRegistry{
+		Name:       name,
+		RemoteURL:  remoteURL,
+		RemoteType: remoteType,
+		OwnerType:  RROrg,
+		OwnerID:    int64(1),
 	}
-	rr, err := NewRemoteRegistry(name, remoteURL, remoteType, opts)
 
-	require.NoError(t, err)
-
-	err = CreateRemoteRegistry(t.Context(), rr)
+	err := CreateRemoteRegistry(t.Context(), rr)
 
 	require.NoError(t, err)
 
@@ -58,16 +58,16 @@ func Test_FindRemoteRegistryByName(t *testing.T) {
 	name := "testreg"
 	remoteURL := "https://example.com"
 	remoteType := packages.TypeContainer
-	opts := RROpts{
-		RemoteRegistryOwnerType("org"),
-		int64(1),
-		RRCredentials{},
+
+	rr := RemoteRegistry{
+		Name:       name,
+		RemoteURL:  remoteURL,
+		RemoteType: remoteType,
+		OwnerType:  RROrg,
+		OwnerID:    int64(1),
 	}
-	rr, err := NewRemoteRegistry(name, remoteURL, remoteType, opts)
 
-	require.NoError(t, err)
-
-	err = CreateRemoteRegistry(t.Context(), rr)
+	err := CreateRemoteRegistry(t.Context(), rr)
 
 	require.NoError(t, err)
 
@@ -82,21 +82,27 @@ func Test_FindRemoteRegistryByOwnerType(t *testing.T) {
 	name := "testreg"
 	remoteURL := "https://example.com"
 	remoteType := packages.TypeContainer
-	opts := RROpts{
-		RemoteRegistryOwnerType("org"),
-		int64(1),
-		RRCredentials{},
+
+	rr := RemoteRegistry{
+		Name:       name,
+		RemoteURL:  remoteURL,
+		RemoteType: remoteType,
+		OwnerType:  RROrg,
+		OwnerID:    int64(1),
 	}
-	rr, err := NewRemoteRegistry(name, remoteURL, remoteType, opts)
 
 	name2 := "testreg2"
 	remoteURL2 := "https://example.com"
 	remoteType2 := packages.TypeContainer
-	rr2, _ := NewRemoteRegistry(name2, remoteURL2, remoteType2, opts)
+	rr2 := RemoteRegistry{
+		Name:       name2,
+		RemoteURL:  remoteURL2,
+		RemoteType: remoteType2,
+		OwnerType:  RROrg,
+		OwnerID:    int64(1),
+	}
 
-	require.NoError(t, err)
-
-	err = CreateRemoteRegistry(t.Context(), rr)
+	err := CreateRemoteRegistry(t.Context(), rr)
 	require.NoError(t, err)
 	err = CreateRemoteRegistry(t.Context(), rr2)
 	require.NoError(t, err)
