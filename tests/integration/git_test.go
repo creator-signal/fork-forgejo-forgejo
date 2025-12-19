@@ -474,7 +474,8 @@ func doBranchProtect(baseCtx *APITestContext, dstPath string) func(t *testing.T)
 		t.Run("AllowForcePushWhenRuleEnablesIt", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 			t.Run("ProtectProtectedBranch", doProtectBranch(ctx, "protected", parameterProtectBranch{
-				"enable_push": "all_force",
+				"enable_push": "all",
+				"enable_force_push": "all",
 			}))
 			t.Run("Create toforce2", doGitCheckoutBranch(dstPath, "-b", "toforce2", "master"))
 			t.Run("GenerateCommit", func(t *testing.T) {

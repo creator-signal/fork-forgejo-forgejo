@@ -275,8 +275,8 @@ func preReceiveBranch(ctx *preReceiveContext, oldCommitID, newCommitID string, r
 		return
 	}
 
-	// 2. Disallow force pushes to protected branches (unless explicitly allowed by rule)
-	if oldCommitID != objectFormat.EmptyObjectID().String() && !protectBranch.CanForcePush {
+	// 2. Check for force pushes to protected branches
+	if oldCommitID != objectFormat.EmptyObjectID().String() {
 		output, _, err := git.NewCommand(ctx, "rev-list", "--max-count=1").AddDynamicArguments(oldCommitID, "^"+newCommitID).RunStdString(&git.RunOpts{Dir: repo.RepoPath(), Env: ctx.env})
 		if err != nil {
 			log.Error("Unable to detect force push between: %s and %s in %-v Error: %v", oldCommitID, newCommitID, repo, err)
@@ -285,11 +285,30 @@ func preReceiveBranch(ctx *preReceiveContext, oldCommitID, newCommitID string, r
 			})
 			return
 		} else if len(output) > 0 {
-			log.Warn("Forbidden: Branch: %s in %-v is protected from force push", branchName, repo)
-			ctx.JSON(http.StatusForbidden, private.Response{
-				UserMsg: fmt.Sprintf("branch %s is protected from force push", branchName),
-			})
-			return
+			// Check if the force push is allowed
+			var canForcePush bool
+			if ctx.opts.DeployKeyID != 0 {
+				canForcePush = protectBranch.CanForcePush && (!protectBranch.EnableForcePushWhitelist || protectBranch.ForcePushWhitelistDeployKeys)
+			} else {
+				user, err := user_model.GetUserByID(ctx, ctx.opts.UserID)
+				if err != nil {
+					log.Error("Unable to GetUserByID for commits from %s to %s in %-v: %v", oldCommitID, newCommitID, repo, err)
+					ctx.JSON(http.StatusInternalServerError, private.Response{
+						Err: fmt.Sprintf("Unable to GetUserByID for commits from %s to %s: %v", oldCommitID, newCommitID, err),
+					})
+					return
+				}
+				canForcePush = protectBranch.CanUserForcePush(ctx, user)
+			}
+
+			// Disallow force push if not allowed
+			if !canForcePush {
+				log.Warn("Forbidden: Branch: %s in %-v is protected from force push", branchName, repo)
+				ctx.JSON(http.StatusForbidden, private.Response{
+					UserMsg: fmt.Sprintf("branch %s is protected from force push", branchName),
+				})
+				return
+			}
 		}
 	}
 

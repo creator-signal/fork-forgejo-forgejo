@@ -37,10 +37,14 @@ type ProtectedBranch struct {
 	globRule                      glob.Glob              `xorm:"-"`
 	isPlainName                   bool                   `xorm:"-"`
 	CanPush                       bool                   `xorm:"NOT NULL DEFAULT false"`
-	CanForcePush                  bool                   `xorm:"NOT NULL DEFAULT false"`
 	EnableWhitelist               bool
 	WhitelistUserIDs              []int64  `xorm:"JSON TEXT"`
 	WhitelistTeamIDs              []int64  `xorm:"JSON TEXT"`
+	CanForcePush				  bool	   `xorm:"NOT NULL DEFAULT false"`
+	EnableForcePushWhitelist      bool	   `xorm:"NOT NULL DEFAULT false"`
+	ForcePushWhitelistUserIDs     []int64  `xorm:"JSON TEXT"`
+	ForcePushWhitelistTeamIDs     []int64  `xorm:"JSON TEXT"`
+	ForcePushWhitelistDeployKeys  bool     `xorm:"NOT NULL DEFAULT false"`
 	EnableMergeWhitelist          bool     `xorm:"NOT NULL DEFAULT false"`
 	WhitelistDeployKeys           bool     `xorm:"NOT NULL DEFAULT false"`
 	MergeWhitelistUserIDs         []int64  `xorm:"JSON TEXT"`
@@ -113,6 +117,42 @@ func (protectBranch *ProtectedBranch) LoadRepo(ctx context.Context) (err error) 
 	}
 	protectBranch.Repo, err = repo_model.GetRepositoryByID(ctx, protectBranch.RepoID)
 	return err
+}
+
+// CanUserForcePush returns if some user could force push to this protected branch
+func (protectBranch *ProtectedBranch) CanUserForcePush(ctx context.Context, user *user_model.User) bool {
+	if !protectBranch.CanForcePush {
+		return false
+	}
+
+	if !protectBranch.EnableForcePushWhitelist {
+		if err := protectBranch.LoadRepo(ctx); err != nil {
+			log.Error("LoadRepo: %v", err)
+			return false
+		}
+
+		writeAccess, err := access_model.HasAccessUnit(ctx, user, protectBranch.Repo, unit.TypeCode, perm.AccessModeWrite)
+		if err != nil {
+			log.Error("HasAccessUnit: %v", err)
+			return false
+		}
+		return writeAccess
+	}
+
+	if slices.Contains(protectBranch.ForcePushWhitelistUserIDs, user.ID) {
+		return true
+	}
+
+	if len(protectBranch.ForcePushWhitelistTeamIDs) == 0 {
+		return false
+	}
+
+	in, err := organization.IsUserInTeams(ctx, user.ID, protectBranch.ForcePushWhitelistTeamIDs)
+	if err != nil {
+		log.Error("IsUserInTeams: %v", err)
+		return false
+	}
+	return in
 }
 
 // CanUserPush returns if some user could push to this protected branch
@@ -309,6 +349,9 @@ type WhitelistOptions struct {
 	UserIDs []int64
 	TeamIDs []int64
 
+	ForcePushUserIDs []int64
+	ForcePushTeamIDs []int64
+
 	MergeUserIDs []int64
 	MergeTeamIDs []int64
 
@@ -336,6 +379,12 @@ func UpdateProtectBranch(ctx context.Context, repo *repo_model.Repository, prote
 	}
 	protectBranch.WhitelistUserIDs = whitelist
 
+	whitelist, err = updateUserWhitelist(ctx, repo, protectBranch.ForcePushWhitelistUserIDs, opts.ForcePushUserIDs)
+	if err != nil {
+		return err
+	}
+	protectBranch.ForcePushWhitelistUserIDs = whitelist
+
 	whitelist, err = updateUserWhitelist(ctx, repo, protectBranch.MergeWhitelistUserIDs, opts.MergeUserIDs)
 	if err != nil {
 		return err
@@ -354,6 +403,12 @@ func UpdateProtectBranch(ctx context.Context, repo *repo_model.Repository, prote
 		return err
 	}
 	protectBranch.WhitelistTeamIDs = whitelist
+
+	whitelist, err = updateTeamWhitelist(ctx, repo, protectBranch.ForcePushWhitelistTeamIDs, opts.ForcePushTeamIDs)
+	if err != nil {
+		return err
+	}
+	protectBranch.ForcePushWhitelistTeamIDs = whitelist
 
 	whitelist, err = updateTeamWhitelist(ctx, repo, protectBranch.MergeWhitelistTeamIDs, opts.MergeTeamIDs)
 	if err != nil {

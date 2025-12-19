@@ -78,6 +78,7 @@ func SettingsProtectedBranch(c *context.Context) {
 	}
 	c.Data["Users"] = users
 	c.Data["whitelist_users"] = strings.Join(base.Int64sToStrings(rule.WhitelistUserIDs), ",")
+	c.Data["force_push_whitelist_users"] = strings.Join(base.Int64sToStrings(rule.ForcePushWhitelistUserIDs), ",")
 	c.Data["merge_whitelist_users"] = strings.Join(base.Int64sToStrings(rule.MergeWhitelistUserIDs), ",")
 	c.Data["approvals_whitelist_users"] = strings.Join(base.Int64sToStrings(rule.ApprovalsWhitelistUserIDs), ",")
 	c.Data["status_check_contexts"] = strings.Join(rule.StatusCheckContexts, "\n")
@@ -92,6 +93,7 @@ func SettingsProtectedBranch(c *context.Context) {
 		}
 		c.Data["Teams"] = teams
 		c.Data["whitelist_teams"] = strings.Join(base.Int64sToStrings(rule.WhitelistTeamIDs), ",")
+		c.Data["force_push_whitelist_teams"] = strings.Join(base.Int64sToStrings(rule.ForcePushWhitelistTeamIDs), ",")
 		c.Data["merge_whitelist_teams"] = strings.Join(base.Int64sToStrings(rule.MergeWhitelistTeamIDs), ",")
 		c.Data["approvals_whitelist_teams"] = strings.Join(base.Int64sToStrings(rule.ApprovalsWhitelistTeamIDs), ",")
 	}
@@ -153,7 +155,7 @@ func SettingsProtectedBranchPost(ctx *context.Context) {
 		}
 	}
 
-	var whitelistUsers, whitelistTeams, mergeWhitelistUsers, mergeWhitelistTeams, approvalsWhitelistUsers, approvalsWhitelistTeams []int64
+	var whitelistUsers, whitelistTeams, forcePushWhitelistUsers, forcePushWhitelistTeams, mergeWhitelistUsers, mergeWhitelistTeams, approvalsWhitelistUsers, approvalsWhitelistTeams []int64
 	protectBranch.RuleName = f.RuleName
 	if f.RequiredApprovals < 0 {
 		ctx.Flash.Error(ctx.Tr("repo.settings.protected_branch_required_approvals_min"))
@@ -166,17 +168,10 @@ func SettingsProtectedBranchPost(ctx *context.Context) {
 		protectBranch.CanPush = true
 		protectBranch.EnableWhitelist = false
 		protectBranch.WhitelistDeployKeys = false
-		protectBranch.CanForcePush = false
-	case "all_force":
-		protectBranch.CanPush = true
-		protectBranch.EnableWhitelist = false
-		protectBranch.WhitelistDeployKeys = false
-		protectBranch.CanForcePush = true
 	case "whitelist":
 		protectBranch.CanPush = true
 		protectBranch.EnableWhitelist = true
 		protectBranch.WhitelistDeployKeys = f.WhitelistDeployKeys
-		protectBranch.CanForcePush = false
 		if strings.TrimSpace(f.WhitelistUsers) != "" {
 			whitelistUsers, _ = base.StringsToInt64s(strings.Split(f.WhitelistUsers, ","))
 		}
@@ -187,7 +182,27 @@ func SettingsProtectedBranchPost(ctx *context.Context) {
 		protectBranch.CanPush = false
 		protectBranch.EnableWhitelist = false
 		protectBranch.WhitelistDeployKeys = false
+	}
+
+	switch f.EnableForcePush {
+	case "all":
+		protectBranch.CanForcePush = true
+		protectBranch.EnableForcePushWhitelist = false
+		protectBranch.ForcePushWhitelistDeployKeys = false
+	case "whitelist":
+		protectBranch.CanForcePush = true
+		protectBranch.EnableForcePushWhitelist = true
+		protectBranch.ForcePushWhitelistDeployKeys = f.ForcePushWhitelistDeployKeys
+		if strings.TrimSpace(f.ForcePushWhitelistUsers) != "" {
+			forcePushWhitelistUsers, _ = base.StringsToInt64s(strings.Split(f.ForcePushWhitelistUsers, ","))
+		}
+		if strings.TrimSpace(f.ForcePushWhitelistTeams) != "" {
+			forcePushWhitelistTeams, _ = base.StringsToInt64s(strings.Split(f.ForcePushWhitelistTeams, ","))
+		}
+	default:
 		protectBranch.CanForcePush = false
+		protectBranch.EnableForcePushWhitelist = false
+		protectBranch.ForcePushWhitelistDeployKeys = false
 	}
 
 	protectBranch.EnableMergeWhitelist = f.EnableMergeWhitelist
@@ -250,6 +265,8 @@ func SettingsProtectedBranchPost(ctx *context.Context) {
 	err = git_model.UpdateProtectBranch(ctx, ctx.Repo.Repository, protectBranch, git_model.WhitelistOptions{
 		UserIDs:          whitelistUsers,
 		TeamIDs:          whitelistTeams,
+		ForcePushUserIDs: forcePushWhitelistUsers,
+		ForcePushTeamIDs: forcePushWhitelistTeams,
 		MergeUserIDs:     mergeWhitelistUsers,
 		MergeTeamIDs:     mergeWhitelistTeams,
 		ApprovalsUserIDs: approvalsWhitelistUsers,
