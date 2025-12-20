@@ -238,5 +238,15 @@
     "admin.auths.oauth2_quota_group_claim_name": "Claim name providing group names for this source to be used for quota management. (Optional)",
     "admin.auths.oauth2_quota_group_map": "Map claimed groups to quota groups. (Optional - requires claim name above)",
     "admin.auths.oauth2_quota_group_map_removal": "Remove users from synchronized quota groups if user does not belong to corresponding group.",
-    "meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
+    "meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it.",
+    "branch_protection.force_push.title": "Force push",
+    "branch_protection.force_push.disable": "Disable force push",
+    "branch_protection.force_push.disable.description": "No force pushing will be allowed to this branch.",
+    "branch_protection.force_push.enable": "Enable force push",
+    "branch_protection.force_push.enable.description": "Anyone with write access will be allowed to force push to this branch.",
+    "branch_protection.force_push.whitelist": "Whitelist restricted force push",
+    "branch_protection.force_push.whitelist.description": "Only whitelisted users or teams will be allowed to force push to this branch.",
+    "branch_protection.force_push.whitelist.deploy_keys": "Whitelist deploy keys with write access to force push.",
+    "branch_protection.force_push.whitelist.users": "Whitelisted users for force pushing",
+    "branch_protection.force_push.whitelist.teams": "Whitelisted teams for force pushing"
 }
