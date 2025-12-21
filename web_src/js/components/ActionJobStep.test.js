@@ -1,3 +1,6 @@
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import {describe, expect, test, vi} from 'vitest';
 import {mount} from '@vue/test-utils';
 import ActionJobStep from './ActionJobStep.vue';
