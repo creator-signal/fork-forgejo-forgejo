@@ -15,6 +15,7 @@ import (
 	git_model "forgejo.org/models/git"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 )
@@ -53,22 +54,22 @@ func (graph *Graph) Height() int {
 
 // ComputeGlyphConnectivity sets ConnectsUp/ConnectsDown for commit glyphs based on parent/child relationships
 func (graph *Graph) ComputeGlyphConnectivity() {
-	commitsByHash := make(map[string]*Commit)
-	commitsByPos := make(map[[2]int]*Commit)
+	revs := make(container.Set[string])
+	revByPos := make(map[[2]int]string)
 	for _, c := range graph.Commits {
 		if c.Rev != "" {
-			commitsByHash[c.Rev] = c
-			commitsByPos[[2]int{c.Row, c.Column}] = c
+			revs.Add(c.Rev)
+			revByPos[[2]int{c.Row, c.Column}] = c.Rev
 		}
 	}
 
-	hasParentInGraph := make(map[string]bool)
-	hasChildInGraph := make(map[string]bool)
+	hasParentInGraph := make(container.Set[string])
+	hasChildInGraph := make(container.Set[string])
 	for _, c := range graph.Commits {
 		for _, parentHash := range c.ParentHashes {
-			if _, exists := commitsByHash[parentHash]; exists {
-				hasParentInGraph[c.Rev] = true
-				hasChildInGraph[parentHash] = true
+			if revs.Contains(parentHash) {
+				hasParentInGraph.Add(c.Rev)
+				hasChildInGraph.Add(parentHash)
 			}
 		}
 	}
@@ -77,9 +78,9 @@ func (graph *Graph) ComputeGlyphConnectivity() {
 		for i := range flow.Glyphs {
 			glyph := &flow.Glyphs[i]
 			if glyph.Glyph == '*' {
-				if c := commitsByPos[[2]int{glyph.Row, glyph.Column}]; c != nil {
-					glyph.ConnectsUp = hasChildInGraph[c.Rev]
-					glyph.ConnectsDown = hasParentInGraph[c.Rev]
+				if rev, exists := revByPos[[2]int{glyph.Row, glyph.Column}]; exists {
+					glyph.ConnectsUp = hasChildInGraph.Contains(rev)
+					glyph.ConnectsDown = hasParentInGraph.Contains(rev)
 				}
 			} else {
 				glyph.ConnectsUp = true
@@ -246,10 +247,8 @@ func NewCommit(row, column int, line []byte) (*Commit, error) {
 	}
 
 	var parents []string
-	if len(data[0]) > 0 {
-		for _, p := range bytes.Fields(data[0]) {
-			parents = append(parents, string(p))
-		}
+	for p := range bytes.FieldsSeq(data[0]) {
+		parents = append(parents, string(p))
 	}
 
 	return &Commit{
