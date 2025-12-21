@@ -34,7 +34,7 @@
     "mermaid": "11.12.2",
     "mini-css-extract-plugin": "2.9.3",
     "minimatch": "10.1.1",
-    "monaco-editor": "0.52.2",
+    "monaco-editor": "0.55.1",
     "monaco-editor-webpack-plugin": "7.1.1",
     "pdfobject": "2.3.0",
     "postcss": "8.5.6",
