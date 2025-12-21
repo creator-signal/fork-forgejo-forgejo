@@ -143,6 +143,7 @@ func pushUpdates(optsList []*repo_module.PushUpdateOptions) error {
 					commits.HeadCommit = repo_module.CommitToPushCommit(newCommit)
 					commits.CompareURL = repo.ComposeCompareURL(objectFormat.EmptyObjectID().String(), opts.NewCommitID)
 
+					notify_service.CreateRef(ctx, pusher, repo, opts.RefFullName, opts.NewCommitID)
 					notify_service.PushCommits(
 						ctx, pusher, repo,
 						&repo_module.PushUpdateOptions{
@@ -152,7 +153,6 @@ func pushUpdates(optsList []*repo_module.PushUpdateOptions) error {
 						}, commits)
 
 					addTags = append(addTags, tagName)
-					notify_service.CreateRef(ctx, pusher, repo, opts.RefFullName, opts.NewCommitID)
 				}
 			}
 		} else if opts.RefFullName.IsBranch() {
