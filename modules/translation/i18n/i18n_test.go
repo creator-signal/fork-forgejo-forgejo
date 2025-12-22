@@ -1,4 +1,5 @@
 // Copyright 2022 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package i18n
@@ -10,31 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-var MockPluralRule PluralFormRule = func(n int64) PluralFormIndex {
-	if n == 0 {
-		return PluralFormZero
-	}
-	if n == 1 {
-		return PluralFormOne
-	}
-	if n >= 2 && n <= 4 {
-		return PluralFormFew
-	}
-	return PluralFormOther
-}
-
-var MockPluralRuleEnglish PluralFormRule = func(n int64) PluralFormIndex {
-	if n == 1 {
-		return PluralFormOne
-	}
-	return PluralFormOther
-}
-
-var (
-	UsedPluralFormsEnglish = []PluralFormIndex{PluralFormOne, PluralFormOther}
-	UsedPluralFormsMock    = []PluralFormIndex{PluralFormZero, PluralFormOne, PluralFormFew, PluralFormOther}
 )
 
 func TestLocaleStore(t *testing.T) {
@@ -52,48 +28,11 @@ fmt = %[2]s %[1]s
 
 [section]
 sub = Changed Sub String
-commits = fallback value for commits
-`)
-
-	testDataJSON2 := []byte(`
-{
-	"section.json": "the JSON is %s",
-	"section.commits": {
-		"one": "one %d commit",
-		"few": "some %d commits",
-		"other": "lots of %d commits"
-	},
-	"section.incomplete": {
-		"few": "some %d objects (translated)"
-	},
-	"nested": {
-		"outer": {
-			"inner": {
-				"json": "Hello World",
-				"issue": {
-					"one": "one %d issue",
-					"few": "some %d issues",
-					"other": "lots of %d issues"
-				}
-			}
-		}
-	}
-}
-`)
-	testDataJSON1 := []byte(`
-{
-	"section.incomplete": {
-		"one": "[untranslated] some %d object",
-		"other": "[untranslated] some %d objects"
-	}
-}
 `)
 
 	ls := NewLocaleStore()
 	require.NoError(t, ls.AddLocaleByIni("lang1", "Lang1", MockPluralRuleEnglish, UsedPluralFormsEnglish, testData1, nil))
 	require.NoError(t, ls.AddLocaleByIni("lang2", "Lang2", MockPluralRule, UsedPluralFormsMock, testData2, nil))
-	require.NoError(t, ls.AddToLocaleFromJSON("lang1", testDataJSON1))
-	require.NoError(t, ls.AddToLocaleFromJSON("lang2", testDataJSON2))
 	ls.SetDefaultLang("lang1")
 
 	lang1, _ := ls.Locale("lang1")
@@ -118,60 +57,12 @@ commits = fallback value for commits
 	result2 := lang2.TrHTML("section.mixed", "a&b")
 	assert.EqualValues(t, `test value; <span style="color: red; background: none;">a&amp;b</span>`, result2)
 
-	result = lang2.TrString("section.json", "valid")
-	assert.Equal(t, "the JSON is valid", result)
-
-	result = lang2.TrString("nested.outer.inner.json")
-	assert.Equal(t, "Hello World", result)
-
-	result = lang2.TrString("section.commits")
-	assert.Equal(t, "lots of %d commits", result)
-
-	result2 = lang2.TrPluralString(1, "section.commits", 1)
-	assert.EqualValues(t, "one 1 commit", result2)
-
-	result2 = lang2.TrPluralString(3, "section.commits", 3)
-	assert.EqualValues(t, "some 3 commits", result2)
-
-	result2 = lang2.TrPluralString(8, "section.commits", 8)
-	assert.EqualValues(t, "lots of 8 commits", result2)
-
-	result2 = lang2.TrPluralString(0, "section.commits")
-	assert.EqualValues(t, "section.commits", result2)
-
-	result2 = lang2.TrPluralString(1, "nested.outer.inner.issue", 1)
-	assert.EqualValues(t, "one 1 issue", result2)
-
-	result2 = lang2.TrPluralString(3, "nested.outer.inner.issue", 3)
-	assert.EqualValues(t, "some 3 issues", result2)
-
-	result2 = lang2.TrPluralString(9, "nested.outer.inner.issue", 9)
-	assert.EqualValues(t, "lots of 9 issues", result2)
-
-	result2 = lang2.TrPluralString(3, "section.incomplete", 3)
-	assert.EqualValues(t, "some 3 objects (translated)", result2)
-
-	result2 = lang2.TrPluralString(1, "section.incomplete", 1)
-	assert.EqualValues(t, "[untranslated] some 1 object", result2)
-
-	result2 = lang2.TrPluralString(7, "section.incomplete", 7)
-	assert.EqualValues(t, "[untranslated] some 7 objects", result2)
-
 	langs, descs := ls.ListLangNameDesc()
 	assert.ElementsMatch(t, []string{"lang1", "lang2"}, langs)
 	assert.ElementsMatch(t, []string{"Lang1", "Lang2"}, descs)
 
-	// Test HasKey for JSON
-	found := lang2.HasKey("section.json")
-	assert.True(t, found)
-
-	// Test HasKey for INI
-	found = lang2.HasKey("section.sub")
-	assert.True(t, found)
-
-	found = lang1.HasKey("no-such")
+	found := lang1.HasKey("no-such")
 	assert.False(t, found)
-	assert.Equal(t, "no-such", lang1.TrString("no-such"))
 	require.NoError(t, ls.Close())
 }
 
