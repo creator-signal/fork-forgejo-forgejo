@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLocaleStore(t *testing.T) {
+func TestLocaleStoreINI(t *testing.T) {
 	testData1 := []byte(`
 .dot.name = Dot Name
 fmt = %[1]s %[2]s
@@ -63,6 +63,7 @@ sub = Changed Sub String
 
 	found := lang1.HasKey("no-such")
 	assert.False(t, found)
+	assert.EqualValues(t, "no-such", lang1.TrString("no-such"))
 	require.NoError(t, ls.Close())
 }
 
