@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"forgejo.org/modules/translation/i18n"
+
 	"github.com/stretchr/testify/assert"
 )
 
