@@ -627,7 +627,7 @@ func (issue *Issue) GetParticipantIDsByIssue(ctx context.Context) ([]int64, erro
 		And("`user`.is_active = ?", true).
 		And("`user`.prohibit_login = ?", false).
 		Join("INNER", "`user`", "`user`.id = `comment`.poster_id").
-		Join("INNER", "`review`", "`review`.id = `comment`.review_id").
+		Join("INNER", "`review`", "`review`.reviewer_id = `user`.id").
 		Distinct("poster_id").
 		Find(&userIDs); err != nil {
 		return nil, fmt.Errorf("get poster IDs: %w", err)

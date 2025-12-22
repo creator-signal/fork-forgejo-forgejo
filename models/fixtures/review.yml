@@ -198,3 +198,12 @@
   content: "review request for user5"
   updated_unix: 946684817
   created_unix: 946684817
+
+- 
+  id: 23
+  type: 0 # Pending review
+  reviewer_id: 8
+  issue_id: 1
+  content: "Pending Review"
+  updated_unix: 946684810
+  created_unix: 946684810
