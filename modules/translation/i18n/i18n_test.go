@@ -124,7 +124,6 @@ func TestLocaleStoreJSON(t *testing.T) {
 }
 
 func TestMissingTranslationHandling(t *testing.T) {
-
 	ls := NewLocaleStore()
 
 	// Currently LocaleStore has to be first populated with langcodes via AddLocaleByIni
