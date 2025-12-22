@@ -4,6 +4,7 @@
 package i18n
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,6 +72,11 @@ func TestLocaleStoreJSON(t *testing.T) {
 `)
 
 	ls := NewLocaleStore()
+
+	// Currently LocaleStore has to be first populated with langcodes via AddLocaleByIni
+	require.NoError(t, ls.AddLocaleByIni("lang1", "Lang1", MockPluralRuleEnglish, UsedPluralFormsEnglish, []byte(""), nil))
+	require.NoError(t, ls.AddLocaleByIni("lang2", "Lang2", MockPluralRule, UsedPluralFormsMock, []byte(""), nil))
+
 	require.NoError(t, ls.AddToLocaleFromJSON("lang1", testDataJSON1))
 	require.NoError(t, ls.AddToLocaleFromJSON("lang2", testDataJSON2))
 
@@ -115,4 +121,35 @@ func TestLocaleStoreJSON(t *testing.T) {
 
 	result2 = lang2.TrPluralString(7, "section.incomplete", 7)
 	assert.EqualValues(t, "[untranslated] some 7 objects", result2)
+}
+
+func TestMissingTranslationHandling(t *testing.T) {
+
+	ls := NewLocaleStore()
+
+	// Currently LocaleStore has to be first populated with langcodes via AddLocaleByIni
+	require.NoError(t, ls.AddLocaleByIni("en-US", "English", MockPluralRuleEnglish, UsedPluralFormsEnglish, []byte(""), nil))
+	require.NoError(t, ls.AddLocaleByIni("fun", "Funlang", MockPluralRule, UsedPluralFormsMock, []byte(""), nil))
+
+	require.NoError(t, ls.AddToLocaleFromJSON("en-US", []byte(`
+{
+	"incorrect_root_url": "This Forgejo instance...",
+	"meta.last_line": "Hi there!"
+}`)))
+	require.NoError(t, ls.AddToLocaleFromJSON("fun", []byte(`
+{
+	"meta.last_line": "This language only has one line that is never used by the UI. It will never have a translation for incorrect_root_url"
+}`)))
+
+	ls.SetDefaultLang("en-US")
+
+	// Get "fun" locale, make sure it's available
+	funLocale, found := ls.Locale("fun")
+	assert.True(t, found)
+
+	// Get translation for a string that this locale doesn't have
+	s := funLocale.TrString("incorrect_root_url")
+
+	// Verify fallback to English
+	assert.True(t, strings.HasPrefix(s, "This Forgejo instance..."))
 }
