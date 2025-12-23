@@ -512,6 +512,7 @@ class ComboMarkdownEditor {
     const indentPrefix = '    ';
     const unindentRegex = /^( {1,4}|\t|> {0,4})/;
     const indentTokens = ['    ', '\t', '> '];
+
     const indentLevel = (line) => {
       let indent = 0;
       let matchingToken;
