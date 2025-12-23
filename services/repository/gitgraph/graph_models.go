@@ -28,18 +28,20 @@ func NewGraph() *Graph {
 		Column: -1,
 	}
 	graph.Flows = map[int64]*Flow{}
+	graph.continuationAbove = map[[2]int]bool{}
 	return graph
 }
 
 // Graph represents a collection of flows
 type Graph struct {
-	Flows          map[int64]*Flow
-	Commits        []*Commit
-	MinRow         int
-	MinColumn      int
-	MaxRow         int
-	MaxColumn      int
-	relationCommit *Commit
+	Flows             map[int64]*Flow
+	Commits           []*Commit
+	MinRow            int
+	MinColumn         int
+	MaxRow            int
+	MaxColumn         int
+	relationCommit    *Commit
+	continuationAbove map[[2]int]bool
 }
 
 // Width returns the width of the graph
@@ -63,14 +65,38 @@ func (graph *Graph) ComputeGlyphConnectivity() {
 		}
 	}
 
-	hasParentInGraph := make(container.Set[string])
-	hasChildInGraph := make(container.Set[string])
+	connectsDown := make(container.Set[string])
+	connectsUp := make(container.Set[string])
+
+	// Commits with parents connect down (even if parent is on another page)
+	// Commits with visible children connect up
 	for _, c := range graph.Commits {
+		if len(c.ParentHashes) > 0 {
+			connectsDown.Add(c.Rev)
+		}
 		for _, parentHash := range c.ParentHashes {
 			if revs.Contains(parentHash) {
-				hasParentInGraph.Add(c.Rev)
-				hasChildInGraph.Add(parentHash)
+				connectsUp.Add(parentHash)
 			}
+		}
+	}
+
+	// Commits with a non-commit glyph above also connect up
+	for _, flow := range graph.Flows {
+		for _, g := range flow.Glyphs {
+			if g.Glyph != '*' {
+				pos := [2]int{g.Row + 1, g.Column}
+				if rev, exists := revByPos[pos]; exists {
+					connectsUp.Add(rev)
+				}
+			}
+		}
+	}
+
+	// Commits with continuation from previous page connect up
+	for pos := range graph.continuationAbove {
+		if rev, exists := revByPos[pos]; exists {
+			connectsUp.Add(rev)
 		}
 	}
 
@@ -78,9 +104,10 @@ func (graph *Graph) ComputeGlyphConnectivity() {
 		for i := range flow.Glyphs {
 			glyph := &flow.Glyphs[i]
 			if glyph.Glyph == '*' {
-				if rev, exists := revByPos[[2]int{glyph.Row, glyph.Column}]; exists {
-					glyph.ConnectsUp = hasChildInGraph.Contains(rev)
-					glyph.ConnectsDown = hasParentInGraph.Contains(rev)
+				pos := [2]int{glyph.Row, glyph.Column}
+				if rev, exists := revByPos[pos]; exists {
+					glyph.ConnectsUp = connectsUp.Contains(rev)
+					glyph.ConnectsDown = connectsDown.Contains(rev)
 				}
 			} else {
 				glyph.ConnectsUp = true

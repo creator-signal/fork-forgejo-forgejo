@@ -305,28 +305,18 @@ func TestNewCommitParentHashes(t *testing.T) {
 }
 
 func TestComputeGlyphConnectivity(t *testing.T) {
-	// helper to create a test commit
-	makeCommit := func(row, col int, hash string, parents []string) *Commit {
-		return &Commit{Row: row, Column: col, Rev: hash, ParentHashes: parents, Flow: int64(col + 1)}
+	addCommit := func(graph *Graph, row, col int, hash string, parents []string) {
+		flowID := int64(col + 1)
+		commit := &Commit{Row: row, Column: col, Rev: hash, ParentHashes: parents, Flow: flowID}
+		graph.AddGlyph(row, col, flowID, 1, '*')
+		graph.Commits = append(graph.Commits, commit)
+		graph.Flows[flowID].Commits = append(graph.Flows[flowID].Commits, commit)
 	}
 
-	// helper to set up graph with commits
-	setupGraph := func(commits []*Commit) *Graph {
-		graph := NewGraph()
-		for _, c := range commits {
-			graph.AddGlyph(c.Row, c.Column, c.Flow, 1, '*')
-			graph.Commits = append(graph.Commits, c)
-			graph.Flows[c.Flow].Commits = append(graph.Flows[c.Flow].Commits, c)
-		}
-		graph.ComputeGlyphConnectivity()
-		return graph
-	}
-
-	// helper to find glyph connectivity for a commit
-	getConnectivity := func(graph *Graph, row, col int) (up, down bool) {
+	getCommitConnectivity := func(graph *Graph, row, col int) (up, down bool) {
 		for _, flow := range graph.Flows {
 			for _, g := range flow.Glyphs {
-				if g.Row == row && g.Column == col {
+				if g.Row == row && g.Column == col && g.Glyph == '*' {
 					return g.ConnectsUp, g.ConnectsDown
 				}
 			}
@@ -334,70 +324,82 @@ func TestComputeGlyphConnectivity(t *testing.T) {
 		return false, false
 	}
 
-	t.Run("orphan has no connections", func(t *testing.T) {
-		graph := setupGraph([]*Commit{makeCommit(0, 0, "aaa", nil)})
-		up, down := getConnectivity(graph, 0, 0)
-		assert.False(t, up, "orphan should not connect up")
-		assert.False(t, down, "orphan should not connect down")
-	})
-
-	t.Run("linear history", func(t *testing.T) {
-		graph := setupGraph([]*Commit{
-			makeCommit(0, 0, "child", []string{"parent"}),
-			makeCommit(1, 0, "parent", nil),
-		})
-
-		childUp, childDown := getConnectivity(graph, 0, 0)
-		assert.False(t, childUp, "child should not connect up")
-		assert.True(t, childDown, "child should connect down")
-
-		parentUp, parentDown := getConnectivity(graph, 1, 0)
-		assert.True(t, parentUp, "parent should connect up")
-		assert.False(t, parentDown, "parent should not connect down")
-	})
-
-	t.Run("orphan followed by unrelated commit", func(t *testing.T) {
-		graph := setupGraph([]*Commit{
-			makeCommit(0, 0, "orphan", nil),
-			makeCommit(1, 0, "unrelated", nil),
-		})
-		orphanUp, orphanDown := getConnectivity(graph, 0, 0)
-		assert.False(t, orphanUp || orphanDown, "orphan should have no connections")
-
-		unrelatedUp, unrelatedDown := getConnectivity(graph, 1, 0)
-		assert.False(t, unrelatedUp || unrelatedDown, "unrelated should have no connections")
-	})
-
-	t.Run("merge commit with two parents", func(t *testing.T) {
-		graph := setupGraph([]*Commit{
-			makeCommit(0, 0, "merge", []string{"parent1", "parent2"}),
-			makeCommit(1, 0, "parent1", nil),
-			makeCommit(2, 1, "parent2", nil),
-		})
-
-		mergeUp, mergeDown := getConnectivity(graph, 0, 0)
-		assert.False(t, mergeUp, "merge should not connect up")
-		assert.True(t, mergeDown, "merge should connect down")
-
-		parent1Up, parent1Down := getConnectivity(graph, 1, 0)
-		assert.True(t, parent1Up, "parent1 should connect up")
-		assert.False(t, parent1Down, "parent1 should not connect down")
-
-		parent2Up, parent2Down := getConnectivity(graph, 2, 1)
-		assert.True(t, parent2Up, "parent2 should connect up")
-		assert.False(t, parent2Down, "parent2 should not connect down")
-	})
-
-	t.Run("non-commit glyphs always connect", func(t *testing.T) {
+	t.Run("ConnectsDown/no parents", func(t *testing.T) {
 		graph := NewGraph()
-		for _, glyph := range []byte{'|', '/', '\\'} {
-			graph.AddGlyph(0, 0, 1, 1, glyph)
-		}
+		addCommit(graph, 0, 0, "orphan", nil)
 		graph.ComputeGlyphConnectivity()
 
-		for _, g := range graph.Flows[1].Glyphs {
-			assert.True(t, g.ConnectsUp, "glyph %q should connect up", g.Glyph)
-			assert.True(t, g.ConnectsDown, "glyph %q should connect down", g.Glyph)
+		_, down := getCommitConnectivity(graph, 0, 0)
+		assert.False(t, down)
+	})
+
+	t.Run("ConnectsDown/has parent in graph", func(t *testing.T) {
+		graph := NewGraph()
+		addCommit(graph, 0, 0, "child", []string{"parent"})
+		addCommit(graph, 1, 0, "parent", nil)
+		graph.ComputeGlyphConnectivity()
+
+		_, down := getCommitConnectivity(graph, 0, 0)
+		assert.True(t, down)
+	})
+
+	t.Run("ConnectsDown/has parent outside graph", func(t *testing.T) {
+		graph := NewGraph()
+		addCommit(graph, 0, 0, "child", []string{"parent-not-in-graph"})
+		graph.ComputeGlyphConnectivity()
+
+		_, down := getCommitConnectivity(graph, 0, 0)
+		assert.True(t, down)
+	})
+
+	t.Run("ConnectsUp/no child, no glyph above, no continuation", func(t *testing.T) {
+		graph := NewGraph()
+		addCommit(graph, 0, 0, "orphan", nil)
+		graph.ComputeGlyphConnectivity()
+
+		up, _ := getCommitConnectivity(graph, 0, 0)
+		assert.False(t, up)
+	})
+
+	t.Run("ConnectsUp/has visible child", func(t *testing.T) {
+		graph := NewGraph()
+		addCommit(graph, 0, 0, "child", []string{"parent"})
+		addCommit(graph, 1, 0, "parent", nil)
+		graph.ComputeGlyphConnectivity()
+
+		up, _ := getCommitConnectivity(graph, 1, 0)
+		assert.True(t, up)
+	})
+
+	t.Run("ConnectsUp/has non-commit glyph above", func(t *testing.T) {
+		graph := NewGraph()
+		graph.AddGlyph(0, 0, 1, 1, '|')
+		addCommit(graph, 1, 0, "commit", nil)
+		graph.ComputeGlyphConnectivity()
+
+		up, _ := getCommitConnectivity(graph, 1, 0)
+		assert.True(t, up)
+	})
+
+	t.Run("ConnectsUp/has continuationAbove", func(t *testing.T) {
+		graph := NewGraph()
+		addCommit(graph, 0, 0, "commit", nil)
+		graph.continuationAbove[[2]int{0, 0}] = true
+		graph.ComputeGlyphConnectivity()
+
+		up, _ := getCommitConnectivity(graph, 0, 0)
+		assert.True(t, up)
+	})
+
+	t.Run("non-commit glyphs always connect both ways", func(t *testing.T) {
+		for _, glyph := range []byte{'|', '/', '\\'} {
+			graph := NewGraph()
+			graph.AddGlyph(0, 0, 1, 1, glyph)
+			graph.ComputeGlyphConnectivity()
+
+			g := graph.Flows[1].Glyphs[0]
+			assert.True(t, g.ConnectsUp, "glyph %q should connect up", glyph)
+			assert.True(t, g.ConnectsDown, "glyph %q should connect down", glyph)
 		}
 	})
 }
