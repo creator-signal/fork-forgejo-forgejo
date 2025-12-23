@@ -162,6 +162,10 @@ class ComboMarkdownEditor {
           shortcutElement.click();
           e.preventDefault();
         }
+      } else if (!e.ctrlKey && !e.altKey && !e.metaKey && this.wrapSelectionWithCharacter(e.key)) {
+        // Wrap selected text with backticks, asterisks, brackets (Shift allowed for these chars)
+        this.options?.onContentChanged?.(this, e);
+        e.preventDefault();
       } else if (noModifiers) {
         this.activateTabHandling();
       }
@@ -473,28 +477,41 @@ class ComboMarkdownEditor {
     }
   }
 
+  // Wrap selected text with a character (backtick, asterisk, underscore, brackets).
+  // Returns true if wrapping occurred, false otherwise.
+  wrapSelectionWithCharacter(char) {
+    const wrapPairs = {
+      '`': '`',
+      '~': '~',
+      '*': '*',
+      '_': '_',
+      '[': ']',
+      '{': '}',
+      '(': ')',
+    };
+    const closeChar = wrapPairs[char];
+    if (!closeChar) return false;
+
+    const {selectionStart, selectionEnd, value} = this.textarea;
+    if (selectionStart === selectionEnd) return false; // No selection
+
+    const selectedText = value.slice(selectionStart, selectionEnd);
+    const wrappedText = `${char}${selectedText}${closeChar}`;
+
+    replaceTextareaSelection(this.textarea, wrappedText);
+
+    // Restore selection to the wrapped content (excluding the wrapper chars)
+    this.textarea.setSelectionRange(selectionStart + 1, selectionEnd + 1);
+
+    return true;
+  }
+
   // Indent all lines that are included in the selection, partially or whole, while preserving the original selection at the end.
   indentSelection(unindent, validOnly) {
     // Indent with 4 spaces, unindent 4 spaces or fewer or a lost tab.
     const indentPrefix = '    ';
     const unindentRegex = /^( {1,4}|\t|> {0,4})/;
-    const indentTokens = ['    ', '\t', '> '];
-
-    const indentLevel = (line) => {
-      let indent = 0;
-      let matchingToken;
-
-      do {
-        matchingToken = indentTokens.find((token) => line.startsWith(token));
-
-        if (matchingToken) {
-          indent++;
-          line = line.substr(matchingToken.length);
-        }
-      } while (matchingToken);
-
-      return indent;
-    };
+    const indentLevel = / {4}|\t|> /g;
 
     const value = this.textarea.value;
     const lines = value.split('\n');
@@ -543,8 +560,8 @@ class ComboMarkdownEditor {
       const match = line.match(listPrefixRegex);
       if (!match || !match[0].length) return false;
       // Check that the line isn't already indented in relation to parent.
-      const levels = indentLevel(line);
-      const parentLevels = firstLineIdx > 0 ? indentLevel(lines.at(firstLineIdx - 1)) : 0;
+      const levels = line.match(indentLevel)?.length ?? 0;
+      const parentLevels = !firstLineIdx ? 0 : lines[firstLineIdx - 1].match(indentLevel)?.length ?? 0;
       // Quotes can *begin* multiple levels in, so just allow whatever for now.
       if (levels - parentLevels > 0 && !isQuote) return false;
     }
