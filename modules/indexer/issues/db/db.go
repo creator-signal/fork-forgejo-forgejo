@@ -5,10 +5,9 @@ package db
 
 import (
 	"context"
-	"strconv"
 
 	"forgejo.org/models/db"
-	issue_model "forgejo.org/models/issues"
+	issues_model "forgejo.org/models/issues"
 	indexer_internal "forgejo.org/modules/indexer/internal"
 	inner_db "forgejo.org/modules/indexer/internal/db"
 	"forgejo.org/modules/indexer/issues/internal"
@@ -54,36 +53,34 @@ func (i *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 	cond := builder.NewCond()
 
 	var priorityIssueIndex int64
-	if options.Keyword != "" {
+	if len(options.Tokens) != 0 {
 		repoCond := builder.In("repo_id", options.RepoIDs)
 		if len(options.RepoIDs) == 1 {
 			repoCond = builder.Eq{"repo_id": options.RepoIDs[0]}
 		}
 		subQuery := builder.Select("id").From("issue").Where(repoCond)
 
-		cond = builder.Or(
-			db.BuildCaseInsensitiveLike("issue.name", options.Keyword),
-			db.BuildCaseInsensitiveLike("issue.content", options.Keyword),
-			builder.In("issue.id", builder.Select("issue_id").
-				From("comment").
-				Where(builder.And(
-					builder.Eq{"type": issue_model.CommentTypeComment},
-					builder.In("issue_id", subQuery),
-					db.BuildCaseInsensitiveLike("content", options.Keyword),
-				)),
-			),
-		)
-
-		term := options.Keyword
-		if term[0] == '#' || term[0] == '!' {
-			term = term[1:]
-		}
-		if issueID, err := strconv.ParseInt(term, 10, 64); err == nil {
+		for _, token := range options.Tokens {
 			cond = builder.Or(
-				builder.Eq{"`index`": issueID},
-				cond,
+				db.BuildCaseInsensitiveLike("issue.name", token.Term),
+				db.BuildCaseInsensitiveLike("issue.content", token.Term),
+				builder.In("issue.id", builder.Select("issue_id").
+					From("comment").
+					Where(builder.And(
+						builder.Eq{"type": issues_model.CommentTypeComment},
+						builder.In("issue_id", subQuery),
+						db.BuildCaseInsensitiveLike("content", token.Term),
+					)),
+				),
 			)
-			priorityIssueIndex = issueID
+
+			if ref, err := token.ParseIssueReference(); err != nil {
+				cond = builder.Or(
+					builder.Eq{"`index`": ref},
+					cond,
+				)
+				priorityIssueIndex = ref
+			}
 		}
 	}
 
@@ -95,7 +92,7 @@ func (i *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 
 	// If pagesize == 0, return total count only. It's a special case for search count.
 	if options.Paginator != nil && options.Paginator.PageSize == 0 {
-		total, err := issue_model.CountIssues(ctx, opt, cond)
+		total, err := issues_model.CountIssues(ctx, opt, cond)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +101,7 @@ func (i *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		}, nil
 	}
 
-	ids, total, err := issue_model.IssueIDs(ctx, opt, cond)
+	ids, total, err := issues_model.IssueIDs(ctx, opt, cond)
 	if err != nil {
 		return nil, err
 	}

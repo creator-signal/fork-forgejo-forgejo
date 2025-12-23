@@ -795,7 +795,169 @@ func TestActionsCreateDeleteRefEvent(t *testing.T) {
 	})
 }
 
-func TestActionsWorkflowDispatchEvent(t *testing.T) {
+func TestActionsWorkflowDispatch(t *testing.T) {
+	testCases := []struct {
+		name              string
+		workflowID        string
+		workflowDirectory string
+	}{
+		{
+			name:              "GitHub",
+			workflowID:        "dispatch.yml",
+			workflowDirectory: ".github/workflows",
+		},
+		{
+			name:              "Gitea",
+			workflowID:        "test.yml",
+			workflowDirectory: ".gitea/workflows",
+		},
+		{
+			name:              "Forgejo",
+			workflowID:        "build.yml",
+			workflowDirectory: ".forgejo/workflows",
+		},
+	}
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+				// create the repo
+				repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
+					[]unit_model.Type{unit_model.TypeActions}, nil,
+					[]*files_service.ChangeRepoFile{
+						{
+							Operation: "create",
+							TreePath:  fmt.Sprintf("%s/%s", testCase.workflowDirectory, testCase.workflowID),
+							ContentReader: strings.NewReader(
+								"name: test\n" +
+									"on: [workflow_dispatch]\n" +
+									"jobs:\n" +
+									"  test:\n" +
+									"    runs-on: ubuntu-latest\n" +
+									"    steps:\n" +
+									"      - run: echo helloworld\n",
+							),
+						},
+					},
+				)
+				defer f()
+
+				gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+				require.NoError(t, err)
+				defer gitRepo.Close()
+
+				workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", testCase.workflowID)
+				require.NoError(t, err)
+				assert.Equal(t, "refs/heads/main", workflow.Ref)
+				assert.Equal(t, sha, workflow.Commit.ID.String())
+
+				inputGetter := func(key string) string {
+					return ""
+				}
+
+				var r *actions_model.ActionRun
+				var j []string
+				r, j, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+				require.NoError(t, err)
+
+				assert.Equal(t, 1, unittest.GetCount(t, &actions_model.ActionRun{RepoID: repo.ID}))
+
+				assert.Equal(t, "test", r.Title)
+				assert.Equal(t, testCase.workflowID, r.WorkflowID)
+				assert.Equal(t, testCase.workflowDirectory, r.WorkflowDirectory)
+				assert.Equal(t, sha, r.CommitSHA)
+				assert.Equal(t, actions_module.GithubEventWorkflowDispatch, r.TriggerEvent)
+				assert.Len(t, j, 1)
+				assert.Equal(t, "test", j[0])
+			})
+		}
+	})
+}
+
+func TestActionsWorkflowDispatchRejectsInputsThatExceedLimit(t *testing.T) {
+	workflow := `
+name: test
+on:
+  workflow_dispatch:
+    inputs:
+      boolean:
+        description: 'Boolean'
+        type: boolean
+      number:
+        description: 'Number'
+        default: '100'
+        type: number
+      string:
+        description: 'String'
+        type: string
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "OK"
+`
+
+	defer test.MockVariableValue(&setting.Actions.LimitDispatchInputs, 2)()
+
+	testCases := []struct {
+		name          string
+		inputs        map[string]string
+		expectedError string
+	}{
+		{
+			name:   "below-limit",
+			inputs: map[string]string{"boolean": "true", "number": "10"},
+		},
+		{
+			name:          "beyond-limit",
+			inputs:        map[string]string{"boolean": "true", "number": "10", "string": "my input"},
+			expectedError: "too many inputs",
+		},
+	}
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
+			[]unit_model.Type{unit_model.TypeActions}, nil,
+			[]*files_service.ChangeRepoFile{
+				{
+					Operation:     "create",
+					TreePath:      ".forgejo/workflows/dispatch.yaml",
+					ContentReader: strings.NewReader(workflow),
+				},
+			},
+		)
+		defer f()
+
+		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+		require.NoError(t, err)
+		defer gitRepo.Close()
+
+		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yaml")
+		require.NoError(t, err)
+		assert.Equal(t, "refs/heads/main", workflow.Ref)
+		assert.Equal(t, sha, workflow.Commit.ID.String())
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				inputGetter := func(key string) string {
+					return testCase.inputs[key]
+				}
+
+				_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+				if testCase.expectedError == "" {
+					require.NoError(t, err)
+				} else {
+					assert.EqualError(t, err, testCase.expectedError)
+				}
+			})
+		}
+	})
+}
+
+func TestActionsWorkflowDispatchDynamicMatrix(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -812,6 +974,9 @@ func TestActionsWorkflowDispatchEvent(t *testing.T) {
 							"jobs:\n" +
 							"  test:\n" +
 							"    runs-on: ubuntu-latest\n" +
+							"    strategy:\n" +
+							"      matrix: \n" +
+							"        dim1: \"${{ fromJSON(needs.other-job.outputs.some-output) }}\"\n" +
 							"    steps:\n" +
 							"      - run: echo helloworld\n",
 					),
@@ -833,19 +998,11 @@ func TestActionsWorkflowDispatchEvent(t *testing.T) {
 			return ""
 		}
 
-		var r *actions_model.ActionRun
-		var j []string
-		r, j, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+		run, _, err := workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
 		require.NoError(t, err)
 
-		assert.Equal(t, 1, unittest.GetCount(t, &actions_model.ActionRun{RepoID: repo.ID}))
-
-		assert.Equal(t, "test", r.Title)
-		assert.Equal(t, "dispatch.yml", r.WorkflowID)
-		assert.Equal(t, sha, r.CommitSHA)
-		assert.Equal(t, actions_module.GithubEventWorkflowDispatch, r.TriggerEvent)
-		assert.Len(t, j, 1)
-		assert.Equal(t, "test", j[0])
+		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: run.ID})
+		assert.Contains(t, string(job.WorkflowPayload), "incomplete_matrix: true")
 	})
 }
 

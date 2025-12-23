@@ -13,9 +13,7 @@ import {screenshot} from './shared/screenshots.ts';
 
 test.use({user: 'user2'});
 
-test('Markdown image preview behaviour', async ({page}, workerInfo) => {
-  test.skip(workerInfo.project.name === 'Mobile Safari', 'Flaky behaviour on mobile safari;');
-
+test('Markdown image preview behaviour', async ({page}) => {
   // Editing the root README.md file for image preview
   const editPath = '/user2/repo1/src/branch/master/README.md';
 
@@ -374,9 +372,7 @@ test('Markdown insert table', async ({page}) => {
   await screenshot(page);
 });
 
-test('Markdown insert link', async ({page}, workerInfo) => {
-  test.skip(['Mobile Safari', 'webkit'].includes(workerInfo.project.name), 'Unreliable in this test');
-
+test('Markdown insert link', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/new');
   expect(response?.status()).toBe(200);
 
@@ -563,4 +559,30 @@ test('Markdown bold/italic toolbar and shortcut', async ({page}) => {
   await expect(textarea).toHaveValue(`_line 1_\nline 2\nline 3\nline 4`);
   await textarea.press('ControlOrMeta+KeyI');
   await expect(textarea).toHaveValue(`line 1\nline 2\nline 3\nline 4`);
+});
+
+test('Monospace button aria-label', async ({page}) => {
+  // Load page with editor
+  const response = await page.goto('/user2/repo1/issues/new');
+  expect(response?.status()).toBe(200);
+
+  const monospaceButton = page.locator('.markdown-switch-monospace');
+  const enableText = await monospaceButton.getAttribute('data-enable-text');
+  const disableText = await monospaceButton.getAttribute('data-disable-text');
+
+  async function assertAriaLabel(enabled: boolean) {
+    const expected = enabled ? disableText : enableText;
+
+    await expect(monospaceButton).toHaveAttribute('aria-label', expected);
+  }
+
+  const enabled = await monospaceButton.getAttribute('aria-checked') === 'true';
+
+  await assertAriaLabel(enabled);
+
+  await monospaceButton.click();
+  await assertAriaLabel(!enabled);
+
+  await monospaceButton.click();
+  await assertAriaLabel(enabled);
 });

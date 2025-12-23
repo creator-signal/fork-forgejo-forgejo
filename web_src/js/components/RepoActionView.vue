@@ -1,9 +1,8 @@
 <script>
 import {SvgIcon} from '../svg.js';
 import ActionRunStatus from './ActionRunStatus.vue';
+import ActionJobStepList from './ActionJobStepList.vue';
 import {toggleElem} from '../utils/dom.js';
-import {formatDatetime} from '../utils/time.js';
-import {renderAnsi} from '../render/ansi.js';
 import {GET, POST, DELETE} from '../modules/fetch.js';
 
 export default {
@@ -11,6 +10,7 @@ export default {
   components: {
     SvgIcon,
     ActionRunStatus,
+    ActionJobStepList,
   },
   props: {
     initialJobData: {
@@ -62,6 +62,7 @@ export default {
       initialLoadComplete: false,
       needLoadingWithLogCursors: null,
       intervalID: null,
+      lineNumberOffset: [],
       currentJobStepsStates: [],
       artifacts: [],
       menuVisible: undefined,
@@ -109,7 +110,7 @@ export default {
       },
       currentJob: {
         title: '',
-        detail: '',
+        details: [],
         steps: [
           // {
           //   summary: '',
@@ -122,7 +123,7 @@ export default {
         // initial value here is configured so that currentingViewingMostRecentAttempt() -> true on the default `data()`, so that the
         // initial render (before `loadJob`'s first execution is complete) doesn't display "You are viewing an
         // out-of-date run..."
-        allAttempts: new Array(parseInt(this.attemptNumber)).fill({index: 0, time_since_started_html: '', status: 'success'}),
+        allAttempts: new Array(parseInt(this.attemptNumber)).fill({index: 0, time_since_started_html: '', status: 'success', status_diagnostics: []}),
       },
     };
   },
@@ -157,6 +158,7 @@ export default {
       if (!this.currentJob.allAttempts) {
         return fallback;
       }
+
       const attempt = this.currentJob.allAttempts.find((attempt) => attempt.number === this.viewingAttemptNumber);
       return attempt || fallback;
     },
@@ -179,6 +181,18 @@ export default {
     viewingOutOfDateRunLabel() {
       return this.locale.viewingOutOfDateRun
         .replace('%[1]s', this.viewingAttempt.time_since_started_html);
+    },
+
+    statusDiagnostics() {
+      if (!this.currentJob.allAttempts) {
+        return this.currentJob.details;
+      }
+
+      const useAttempt = this.currentJob.allAttempts.some((attempt) => attempt.number === this.viewingAttemptNumber);
+      if (useAttempt) {
+        return this.viewingAttempt.status_diagnostics;
+      }
+      return this.currentJob.details;
     },
   },
 
@@ -216,100 +230,20 @@ export default {
         this.loadJob();
       }
     },
+
     // cancel a run
     cancelRun() {
       POST(`${this.run.link}/cancel`);
     },
+
     // approve a run
     approveRun() {
-      POST(`${this.run.link}/approve`);
-    },
-    // show/hide the step logs for a group
-    toggleGroupLogs(event) {
-      const line = event.target.parentElement;
-      const list = line.nextSibling;
-      list.classList.toggle('hidden', event.newState !== 'open');
-    },
-
-    createLogLine(line, startTime, stepIndex, group) {
-      const div = document.createElement('div');
-      div.classList.add('job-log-line');
-      div.setAttribute('id', `jobstep-${stepIndex}-${line.index}`);
-      div._jobLogTime = line.timestamp;
-
-      const lineNumber = document.createElement('a');
-      lineNumber.classList.add('line-num', 'muted');
-      lineNumber.textContent = line.index;
-      lineNumber.setAttribute('href', `#jobstep-${stepIndex}-${line.index}`);
-      div.append(lineNumber);
-
-      // for "Show timestamps"
-      const logTimeStamp = document.createElement('span');
-      logTimeStamp.className = 'log-time-stamp';
-      const date = new Date(parseFloat(line.timestamp * 1000));
-      const timeStamp = formatDatetime(date);
-      logTimeStamp.textContent = timeStamp;
-      toggleElem(logTimeStamp, this.timeVisible['log-time-stamp']);
-      // for "Show seconds"
-      const logTimeSeconds = document.createElement('span');
-      logTimeSeconds.className = 'log-time-seconds';
-      const seconds = Math.floor(parseFloat(line.timestamp) - parseFloat(startTime));
-      logTimeSeconds.textContent = `${seconds}s`;
-      toggleElem(logTimeSeconds, this.timeVisible['log-time-seconds']);
-
-      let logMessage = document.createElement('span');
-      logMessage.innerHTML = renderAnsi(line.message);
-      if (group.isHeader) {
-        const details = document.createElement('details');
-        details.addEventListener('toggle', this.toggleGroupLogs);
-        const summary = document.createElement('summary');
-        summary.append(logMessage);
-        details.append(summary);
-        logMessage = details;
-      }
-      logMessage.className = 'log-msg';
-      logMessage.style.paddingLeft = `${group.depth}em`;
-
-      div.append(logTimeStamp);
-      div.append(logMessage);
-      div.append(logTimeSeconds);
-
-      return div;
+      const url = `${this.run.commit.branch.link}#pull-request-trust-panel`;
+      window.location.href = url;
     },
 
     appendLogs(stepIndex, logLines, startTime) {
-      const groupStack = [];
-      const container = this.$refs.logs[stepIndex];
-      for (const line of logLines) {
-        const el = groupStack.length > 0 ? groupStack[groupStack.length - 1] : container;
-        const group = {
-          depth: groupStack.length,
-          isHeader: false,
-        };
-        if (line.message.startsWith('##[group]')) {
-          group.isHeader = true;
-
-          const logLine = this.createLogLine(
-            {
-              ...line,
-              message: line.message.substring(9),
-            },
-            startTime, stepIndex, group,
-          );
-          logLine.setAttribute('data-group', group.index);
-          el.append(logLine);
-
-          const list = document.createElement('div');
-          list.classList.add('job-log-list', 'hidden');
-          list.setAttribute('data-group', group.index);
-          groupStack.push(list);
-          el.append(list);
-        } else if (line.message.startsWith('##[endgroup]')) {
-          groupStack.pop();
-        } else {
-          el.append(this.createLogLine(line, startTime, stepIndex, group));
-        }
-      }
+      this.$refs.stepList.appendLogs(stepIndex, logLines, startTime);
     },
 
     async fetchArtifacts() {
@@ -407,6 +341,7 @@ export default {
         // append logs to the UI
         for (const logs of job.logs.stepsLog) {
           // save the cursor, it will be passed to backend next time
+          this.lineNumberOffset[logs.step] = 0;
           this.currentJobStepsStates[logs.step].cursor = logs.cursor;
           this.appendLogs(logs.step, logs.lines, logs.started);
         }
@@ -466,9 +401,6 @@ export default {
 
     toggleTimeDisplay(type) {
       this.timeVisible[`log-time-${type}`] = !this.timeVisible[`log-time-${type}`];
-      for (const el of this.$refs.steps.querySelectorAll(`.log-time-${type}`)) {
-        toggleElem(el, this.timeVisible[`log-time-${type}`]);
-      }
     },
 
     toggleFullScreen() {
@@ -500,9 +432,7 @@ export default {
         // so logline can be selected by querySelector
         await this.loadJob();
       }
-      const logLine = this.$refs.steps.querySelector(selectedLogStep);
-      if (!logLine) return;
-      logLine.querySelector('.line-num').click();
+      this.$refs.stepList.scrollIntoView(step, selectedLogStep);
     },
 
     runAttemptLabel(attempt) {
@@ -537,12 +467,14 @@ export default {
         <button class="ui basic small compact button primary" @click="approveRun()" v-if="canApprove">
           {{ locale.approve }}
         </button>
-        <button class="ui basic small compact button red" @click="cancelRun()" v-else-if="canCancel">
-          {{ locale.cancel }}
-        </button>
-        <button class="ui basic small compact button tw-mr-0 tw-whitespace-nowrap link-action" :data-url="`${run.link}/rerun`" v-else-if="canRerun">
-          {{ locale.rerun_all }}
-        </button>
+        <div class="action-info-summary-actions" v-else>
+          <button class="ui basic small compact button red" @click="cancelRun()" v-if="canCancel">
+            {{ locale.cancel }}
+          </button>
+          <button class="ui basic small compact button tw-mr-0 tw-whitespace-nowrap link-action" :data-url="`${run.link}/rerun`" v-if="canRerun">
+            {{ locale.rerun_all }}
+          </button>
+        </div>
       </div>
       <div class="action-summary">
         {{ run.commit.localeCommit }}
@@ -604,9 +536,11 @@ export default {
             <h3 class="job-info-header-title gt-ellipsis">
               {{ currentJob.title }}
             </h3>
-            <p class="job-info-header-detail">
-              {{ currentJob.detail }}
-            </p>
+            <ul class="job-info-header-detail">
+              <li v-for="detail in statusDiagnostics" :key="detail">
+                {{ detail }}
+              </li>
+            </ul>
           </div>
           <div class="job-info-header-right job-attempt-dropdown tw-mr-8" v-if="shouldShowAttemptDropdown" v-cloak>
             <div class="ui dropdown selection" @click.stop="toggleAttemptDropdown()">
@@ -627,7 +561,7 @@ export default {
           </div>
           <div class="job-info-header-right">
             <div class="ui top right pointing dropdown dark-dropdown custom jump item job-gear-dropdown" @click.stop="toggleGearDropdown()">
-              <button class="btn gt-interact-bg tw-p-2">
+              <button class="btn interact-bg tw-p-2">
                 <SvgIcon name="octicon-gear" :size="18"/>
               </button>
               <div class="menu transition action-job-menu" :class="{visible: displayGearDropdown}" v-if="displayGearDropdown" v-cloak>
@@ -644,7 +578,7 @@ export default {
                   {{ locale.showFullScreen }}
                 </a>
                 <div class="divider"/>
-                <a :class="['item', !currentJob.steps.length ? 'disabled' : '']" :href="run.link+'/jobs/'+jobIndex+'/logs'" target="_blank">
+                <a :class="['item', !currentJob.steps.length ? 'disabled' : '']" :href="run.link+'/jobs/'+jobIndex+'/attempt/'+viewingAttemptNumber+'/logs'" target="_blank">
                   <i class="icon"><SvgIcon name="octicon-download"/></i>
                   {{ locale.downloadLogs }}
                 </a>
@@ -652,25 +586,17 @@ export default {
             </div>
           </div>
         </div>
-        <div class="job-step-container" ref="steps" v-if="currentJob.steps.length">
-          <div class="job-step-section" v-for="(jobStep, i) in currentJob.steps" :key="i">
-            <div class="job-step-summary" tabindex="0" @click.stop="isExpandable(jobStep.status) && toggleStepLogs(i)" @keyup.enter.stop="isExpandable(jobStep.status) && toggleStepLogs(i)" @keyup.space.stop="isExpandable(jobStep.status) && toggleStepLogs(i)" :class="[currentJobStepsStates[i].expanded ? 'selected' : '', isExpandable(jobStep.status) && 'step-expandable']">
-              <!-- If the job is done and the job step log is loaded for the first time, show the loading icon
-                currentJobStepsStates[i].cursor === null means the log is loaded for the first time
-              -->
-              <SvgIcon v-if="isDone(run.status) && currentJobStepsStates[i].expanded && currentJobStepsStates[i].cursor === null" name="octicon-sync" class="tw-mr-2 job-status-rotate"/>
-              <SvgIcon v-else :name="currentJobStepsStates[i].expanded ? 'octicon-chevron-down': 'octicon-chevron-right'" :class="['tw-mr-2', !isExpandable(jobStep.status) && 'tw-invisible']"/>
-              <ActionRunStatus :status="jobStep.status" class="tw-mr-2"/>
-
-              <span class="step-summary-msg gt-ellipsis">{{ jobStep.summary }}</span>
-              <span class="step-summary-duration">{{ jobStep.duration }}</span>
-            </div>
-
-            <!-- the log elements could be a lot, do not use v-if to destroy/reconstruct the DOM,
-            use native DOM elements for "log line" to improve performance, Vue is not suitable for managing so many reactive elements. -->
-            <div class="job-step-logs" ref="logs" v-show="currentJobStepsStates[i].expanded"/>
-          </div>
-        </div>
+        <ActionJobStepList
+          ref="stepList"
+          :steps="currentJob.steps"
+          :step-states="currentJobStepsStates"
+          :run-status="run.status"
+          :is-expandable="isExpandable"
+          :is-done="isDone"
+          :time-visible-timestamp="timeVisible['log-time-stamp']"
+          :time-visible-seconds="timeVisible['log-time-seconds']"
+          @toggle-step-logs="toggleStepLogs"
+        />
       </div>
     </div>
   </div>
@@ -692,15 +618,27 @@ export default {
 
 .action-info-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+  margin-bottom: 8px;
 }
 
 .action-info-summary-title {
   display: flex;
   align-items: center;
   gap: 0.5em;
+}
+
+.action-info-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--button-spacing);
+  margin-left: auto;
+}
+
+.action-info-summary-actions > button {
+  margin: 0;
 }
 
 .action-info-summary-title-text {
@@ -921,48 +859,13 @@ export default {
 .job-info-header .job-info-header-detail {
   color: var(--color-console-fg-subtle);
   font-size: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .job-info-header-left {
   flex: 1;
-}
-
-.job-step-container {
-  max-height: 100%;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  border-top: 1px solid var(--color-console-border);
-  z-index: 0;
-}
-
-.job-step-container .job-step-summary {
-  padding: 5px 10px;
-  display: flex;
-  align-items: center;
-  border-radius: var(--border-radius);
-}
-
-.job-step-container .job-step-summary.step-expandable {
-  cursor: pointer;
-}
-
-.job-step-container .job-step-summary.step-expandable:hover {
-  color: var(--color-console-fg);
-  background: var(--color-console-hover-bg);
-}
-
-.job-step-container .job-step-summary .step-summary-msg {
-  flex: 1;
-}
-
-.job-step-container .job-step-summary .step-summary-duration {
-  margin-left: 16px;
-}
-
-.job-step-container .job-step-summary.selected {
-  color: var(--color-console-fg);
-  background-color: var(--color-console-active-bg);
-  position: sticky;
-  top: 60px;
 }
 
 @media (max-width: 767.98px) {
@@ -988,62 +891,6 @@ export default {
   100% {
     transform: rotate(-360deg);
   }
-}
-
-.job-step-section {
-  margin: 10px;
-}
-
-.job-step-section .job-step-logs {
-  font-family: var(--fonts-monospace);
-  margin: 8px 0;
-  font-size: 12px;
-}
-
-.job-step-section .job-step-logs .job-log-line {
-  display: flex;
-}
-
-.job-log-line:hover,
-.job-log-line:target {
-  background-color: var(--color-console-hover-bg);
-}
-
-.job-log-line:target {
-  scroll-margin-top: 95px;
-}
-
-/* class names 'log-time-seconds' and 'log-time-stamp' are used in the method toggleTimeDisplay */
-.job-log-line .line-num, .log-time-seconds {
-  width: 48px;
-  color: var(--color-text-light-3);
-  text-align: right;
-  user-select: none;
-}
-
-.job-log-line:target > .line-num {
-  color: var(--color-primary);
-  text-decoration: underline;
-}
-
-.log-time-seconds {
-  padding-right: 2px;
-}
-
-.job-log-line .log-time,
-.log-time-stamp {
-  color: var(--color-text-light-3);
-  margin-left: 10px;
-  white-space: nowrap;
-}
-
-.job-step-section .job-step-logs .job-log-line .log-msg {
-  flex: 1;
-  word-break: break-all;
-  white-space: break-spaces;
-  margin-left: 10px;
-  overflow-wrap: anywhere;
-  color: var(--color-console-fg);
 }
 
 /* selectors here are intentionally exact to only match fullscreen */

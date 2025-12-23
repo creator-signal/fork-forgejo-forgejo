@@ -6,7 +6,7 @@ package actions
 import (
 	"forgejo.org/modules/translation"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
 )
 
 // Status represents the status of ActionRun, ActionRunJob, ActionTask, or ActionTaskStep
@@ -43,6 +43,16 @@ func init() {
 	}
 }
 
+// Statuses where the result is final and won't change
+func DoneStatuses() []Status {
+	return []Status{StatusSuccess, StatusFailure, StatusCancelled, StatusSkipped}
+}
+
+// Statuses where the result is not yet final
+func PendingStatuses() []Status {
+	return []Status{StatusUnknown, StatusWaiting, StatusRunning, StatusBlocked}
+}
+
 // String returns the string name of the Status
 func (s Status) String() string {
 	return statusNames[s]
@@ -55,7 +65,7 @@ func (s Status) LocaleString(lang translation.Locale) string {
 
 // IsDone returns whether the Status is final
 func (s Status) IsDone() bool {
-	return s.In(StatusSuccess, StatusFailure, StatusCancelled, StatusSkipped)
+	return s.In(DoneStatuses()...)
 }
 
 // HasRun returns whether the Status is a result of running

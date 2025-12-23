@@ -295,35 +295,7 @@ Forgejo or set your environment appropriately.`, "")
 
 // runHookUpdate process the update hook: https://git-scm.com/docs/githooks#update
 func runHookUpdate(ctx context.Context, c *cli.Command) error {
-	// Now if we're an internal don't do anything else
-	if isInternal, _ := strconv.ParseBool(os.Getenv(repo_module.EnvIsInternal)); isInternal {
-		return nil
-	}
-
-	ctx, cancel := installSignals(ctx)
-	defer cancel()
-
-	if c.NArg() != 3 {
-		return nil
-	}
-	args := c.Args().Slice()
-
-	// The arguments given to the hook are in order: reference name, old commit ID and new commit ID.
-	refFullName := git.RefName(args[0])
-	newCommitID := args[2]
-
-	// Only process pull references.
-	if !refFullName.IsPull() {
-		return nil
-	}
-
-	// Empty new commit ID means deletion.
-	if git.IsEmptyCommitID(newCommitID, nil) {
-		return fail(ctx, fmt.Sprintf("The deletion of %s is skipped as it's an internal reference.", refFullName), "")
-	}
-
-	// If the new comment isn't empty it means modification.
-	return fail(ctx, fmt.Sprintf("The modification of %s is skipped as it's an internal reference.", refFullName), "")
+	return nil
 }
 
 func runHookPostReceive(ctx context.Context, c *cli.Command) error {
@@ -480,10 +452,17 @@ func hookPrintResults(results []private.HookPostReceiveBranchResult) {
 		fmt.Fprintln(os.Stderr, "")
 		if res.Create {
 			fmt.Fprintf(os.Stderr, "Create a new pull request for '%s':\n", res.Branch)
-			fmt.Fprintf(os.Stderr, "  %s\n", res.URL)
-		} else {
-			fmt.Fprint(os.Stderr, "Visit the existing pull request:\n")
-			fmt.Fprintf(os.Stderr, "  %s\n", res.URL)
+			fmt.Fprintf(os.Stderr, "  %s\n", res.CreateURL)
+		}
+		if len(res.PullURLS) != 0 {
+			if len(res.PullURLS) >= 2 {
+				fmt.Fprint(os.Stderr, "Visit the existing pull requests:\n")
+			} else {
+				fmt.Fprint(os.Stderr, "Visit the existing pull request:\n")
+			}
+			for _, url := range res.PullURLS {
+				fmt.Fprintf(os.Stderr, "  %s\n", url)
+			}
 		}
 		fmt.Fprintln(os.Stderr, "")
 		_ = os.Stderr.Sync()

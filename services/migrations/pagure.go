@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/proxy"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 )
@@ -177,13 +178,20 @@ func processDate(dateStr *string) time.Time {
 		return date
 	}
 
+	// Try parsing as Unix timestamp first
 	unix, err := strconv.Atoi(*dateStr)
-	if err != nil {
-		log.Error("Error:", err)
+	if err == nil {
+		date = time.Unix(int64(unix), 0)
 		return date
 	}
 
-	date = time.Unix(int64(unix), 0)
+	// Try parsing as YYYY-MM-DD format
+	parsedDate, err := time.Parse("2006-01-02", *dateStr)
+	if err == nil {
+		return parsedDate
+	}
+
+	log.Error("Error parsing date '%s': %v", *dateStr, err)
 	return date
 }
 
@@ -279,6 +287,11 @@ func (d *PagureDownloader) callAPI(endpoint string, parameter map[string]string,
 	if err != nil {
 		return err
 	}
+
+	// pagure.io is protected by Anubis and requires proper headers
+	req.Header.Add("Accept", "*/*")
+	req.Header.Add("User-Agent", "Forgejo/"+setting.AppVer)
+
 	if d.privateIssuesOnlyRepo {
 		req.Header.Set("Authorization", "token "+d.token)
 	}
@@ -328,11 +341,15 @@ func (d *PagureDownloader) GetMilestones() ([]*base.Milestone, error) {
 			state = "open"
 		}
 
-		deadline := processDate(details.Date)
+		var deadline *time.Time
+		if details.Date != nil && *details.Date != "" {
+			parsedDeadline := processDate(details.Date)
+			deadline = &parsedDeadline
+		}
 		milestones = append(milestones, &base.Milestone{
 			Title:       name,
 			Description: "",
-			Deadline:    &deadline,
+			Deadline:    deadline,
 			State:       state,
 		})
 	}
@@ -344,7 +361,7 @@ func (d *PagureDownloader) GetMilestones() ([]*base.Milestone, error) {
 func (d *PagureDownloader) GetLabels() ([]*base.Label, error) {
 	rawLabels := PagureLabelsList{}
 
-	err := d.callAPI("/api/0/"+d.repoName+"/tags", nil, &rawLabels)
+	err := d.callAPI("/api/0/"+d.repoName+"/tags/", nil, &rawLabels)
 	if err != nil {
 		return nil, err
 	}

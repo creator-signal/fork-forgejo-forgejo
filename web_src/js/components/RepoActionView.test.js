@@ -67,85 +67,6 @@ const defaultTestProps = {
   workflowURL: 'https://example.com/example-org/example-repo/actions?workflow=test.yml',
 };
 
-test('processes ##[group] and ##[endgroup]', async () => {
-  Object.defineProperty(document.documentElement, 'lang', {value: 'en'});
-  vi.spyOn(global, 'fetch').mockImplementation((url, opts) => {
-    const artifacts_value = {
-      artifacts: [],
-    };
-    const stepsLog_value = [
-      {
-        step: 0,
-        cursor: 0,
-        lines: [
-          {index: 1, message: '##[group]Test group', timestamp: 0},
-          {index: 2, message: 'A test line', timestamp: 0},
-          {index: 3, message: '##[endgroup]', timestamp: 0},
-          {index: 4, message: 'A line outside the group', timestamp: 0},
-        ],
-      },
-    ];
-    const jobs_value = {
-      state: {
-        run: {
-          status: 'success',
-          commit: {
-            pusher: {},
-          },
-        },
-        currentJob: {
-          steps: [
-            {
-              summary: 'Test Job',
-              duration: '1s',
-              status: 'success',
-            },
-          ],
-          allAttempts: [{number: 1, time_since_started_html: '', status: 'success'}],
-        },
-      },
-      logs: {
-        stepsLog: opts.body?.includes('"cursor":null') ? stepsLog_value : [],
-      },
-    };
-
-    return Promise.resolve({
-      ok: true,
-      json: vi.fn().mockResolvedValue(
-        url.endsWith('/artifacts') ? artifacts_value : jobs_value,
-      ),
-    });
-  });
-
-  const wrapper = mount(RepoActionView, {
-    props: defaultTestProps,
-  });
-  await flushPromises();
-  await wrapper.get('.job-step-summary').trigger('click');
-  await flushPromises();
-
-  // Test if header was loaded correctly
-  expect(wrapper.get('.step-summary-msg').text()).toEqual('Test Job');
-
-  // Check if 3 lines where rendered
-  expect(wrapper.findAll('.job-log-line').length).toEqual(3);
-
-  // Check if line 1 contains the group header
-  expect(wrapper.get('.job-log-line:nth-of-type(1) > details.log-msg').text()).toEqual('Test group');
-
-  // Check if right after the header line exists a log list
-  expect(wrapper.find('.job-log-line:nth-of-type(1) + .job-log-list.hidden').exists()).toBe(true);
-
-  // Check if inside the loglist exist exactly one log line
-  expect(wrapper.findAll('.job-log-list > .job-log-line').length).toEqual(1);
-
-  // Check if inside the loglist is an logline with our second logline
-  expect(wrapper.get('.job-log-list > .job-log-line > .log-msg').text()).toEqual('A test line');
-
-  // Check if after the log list exists another log line
-  expect(wrapper.get('.job-log-list + .job-log-line > .log-msg').text()).toEqual('A line outside the group');
-});
-
 test('load multiple steps on a finished action', async () => {
   Object.defineProperty(document.documentElement, 'lang', {value: 'en'});
   vi.spyOn(global, 'fetch').mockImplementation((url, opts) => {
@@ -186,6 +107,7 @@ test('load multiple steps on a finished action', async () => {
           },
         },
         currentJob: {
+          title: 'test',
           steps: [
             {
               summary: 'Test Step #1',
@@ -198,7 +120,7 @@ test('load multiple steps on a finished action', async () => {
               status: 'success',
             },
           ],
-          allAttempts: [{number: 1, time_since_started_html: '', status: 'success'}],
+          allAttempts: [{number: 1, time_since_started_html: '', status: 'success', status_diagnostics: ['Success']}],
         },
       },
       logs: {
@@ -231,6 +153,11 @@ test('load multiple steps on a finished action', async () => {
   expect(wrapper.get('.job-step-section:nth-of-type(2) .job-log-line:nth-of-type(1) .log-msg').text()).toEqual('Step #2 Log #1');
   expect(wrapper.get('.job-step-section:nth-of-type(2) .job-log-line:nth-of-type(2) .log-msg').text()).toEqual('Step #2 Log #2');
   expect(wrapper.get('.job-step-section:nth-of-type(2) .job-log-line:nth-of-type(3) .log-msg').text()).toEqual('Step #2 Log #3');
+
+  // Attempt status
+  expect(wrapper.get('.job-info-header h3').text()).toEqual('test');
+  expect(wrapper.findAll('ul.job-info-header-detail li').length).toEqual(1);
+  expect(wrapper.get('ul.job-info-header-detail li:nth-child(1)').text()).toEqual('Success');
 });
 
 function configureForMultipleAttemptTests({viewHistorical}) {
@@ -246,6 +173,7 @@ function configureForMultipleAttemptTests({viewHistorical}) {
       },
     },
     currentJob: {
+      title: 'test',
       steps: [
         {
           summary: 'Test Job',
@@ -254,8 +182,8 @@ function configureForMultipleAttemptTests({viewHistorical}) {
         },
       ],
       allAttempts: [
-        {number: 2, time_since_started_html: 'yesterday', status: 'success'},
-        {number: 1, time_since_started_html: 'two days ago', status: 'failure'},
+        {number: 2, time_since_started_html: 'yesterday', status: 'success', status_diagnostics: ['Success']},
+        {number: 1, time_since_started_html: 'two days ago', status: 'failure', status_diagnostics: ['Failure']},
       ],
     },
   };
@@ -315,6 +243,11 @@ test('display baseline with most-recent attempt', async () => {
   expect(wrapper.findAll('.job-attempt-dropdown').length).toEqual(1);
   expect(wrapper.findAll('.job-attempt-dropdown .svg.octicon-check-circle-fill.text.green').length).toEqual(1);
   expect(wrapper.get('.job-attempt-dropdown .ui.dropdown').text()).toEqual('Run attempt 2 yesterday');
+
+  // Attempt status
+  expect(wrapper.get('.job-info-header h3').text()).toEqual('test');
+  expect(wrapper.findAll('ul.job-info-header-detail li').length).toEqual(1);
+  expect(wrapper.get('ul.job-info-header-detail li:nth-child(1)').text()).toEqual('Success');
 });
 
 test('display reconfigured for historical attempt', async () => {
@@ -342,6 +275,11 @@ test('display reconfigured for historical attempt', async () => {
   expect(wrapper.findAll('.job-attempt-dropdown').length).toEqual(1);
   expect(wrapper.findAll('.job-attempt-dropdown .svg.octicon-x-circle-fill.text.red').length).toEqual(1);
   expect(wrapper.get('.job-attempt-dropdown .ui.dropdown').text()).toEqual('Run attempt 1 two days ago');
+
+  // Attempt status
+  expect(wrapper.get('.job-info-header h3').text()).toEqual('test');
+  expect(wrapper.findAll('ul.job-info-header-detail li').length).toEqual(1);
+  expect(wrapper.get('ul.job-info-header-detail li:nth-child(1)').text()).toEqual('Failure');
 });
 
 test('historical attempt dropdown interactions', async () => {
@@ -397,6 +335,46 @@ test('historical attempt dropdown interactions', async () => {
   expect(window.location.href).toEqual(toAbsoluteUrl('/user1/repo2/actions/runs/123/jobs/1/attempt/2'));
 });
 
+test('run approval interaction', async () => {
+  const pullRequestLink = '/example-org/example-repo/pulls/456';
+  const wrapper = mount(RepoActionView, {
+    props: {
+      ...defaultTestProps,
+      initialJobData: {
+        state: {
+          run: {
+            canApprove: true,
+            status: 'waiting',
+            commit: {
+              pusher: {},
+              branch: {
+                link: toAbsoluteUrl(pullRequestLink),
+              },
+            },
+          },
+          currentJob: {
+            steps: [
+              {
+                summary: 'Test Job',
+                duration: '1s',
+                status: 'success',
+              },
+            ],
+          },
+        },
+        logs: {
+          stepsLog: [],
+        },
+      },
+    },
+  });
+  await flushPromises();
+  const approve = wrapper.findAll('button').filter((button) => button.text() === 'Locale Approve');
+  expect(approve.length).toEqual(1);
+  approve[0].trigger('click');
+  expect(window.location.href).toEqual(toAbsoluteUrl(`${pullRequestLink}#pull-request-trust-panel`));
+});
+
 test('artifacts download links', async () => {
   Object.defineProperty(document.documentElement, 'lang', {value: 'en'});
   vi.spyOn(global, 'fetch').mockImplementation((url, opts) => {
@@ -438,6 +416,7 @@ test('artifacts download links', async () => {
           },
         },
         currentJob: {
+          title: 'test',
           steps: [
             {
               summary: 'Test Step #1',
@@ -445,7 +424,7 @@ test('artifacts download links', async () => {
               status: 'success',
             },
           ],
-          allAttempts: [{number: 1, time_since_started_html: '', status: 'success'}],
+          allAttempts: [{number: 1, time_since_started_html: '', status: 'success', status_diagnostics: ['Success']}],
         },
       },
       logs: {
@@ -576,7 +555,7 @@ test('view non-picked action run job', async () => {
           },
           currentJob: {
             title: 'check-1',
-            detail: 'waiting (locale)', // locale-specific, not exact match to backend test
+            details: ['waiting (locale)'], // locale-specific, not exact match to backend test
             steps: [],
             allAttempts: null,
           },
@@ -586,10 +565,15 @@ test('view non-picked action run job', async () => {
   });
   await flushPromises();
 
-  expect(wrapper.get('.job-info-header-detail').text()).toEqual('waiting (locale)');
+  expect(wrapper.get('.job-info-header-detail li:first-child').text()).toEqual('waiting (locale)');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(1) .job-brief-name').text()).toEqual('check-1');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(2) .job-brief-name').text()).toEqual('check-2');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(3) .job-brief-name').text()).toEqual('check-3');
+
+  // Attempt status
+  expect(wrapper.get('.job-info-header h3').text()).toEqual('check-1');
+  expect(wrapper.findAll('ul.job-info-header-detail li').length).toEqual(1);
+  expect(wrapper.get('ul.job-info-header-detail li:nth-child(1)').text()).toEqual('waiting (locale)');
 });
 
 test('view without pre-execution error', async () => {

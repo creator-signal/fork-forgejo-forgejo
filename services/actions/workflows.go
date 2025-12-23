@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/perm"
@@ -24,8 +23,8 @@ import (
 	"forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
-	act_model "code.forgejo.org/forgejo/runner/v11/act/model"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
 )
 
 type InputRequiredErr struct {
@@ -42,13 +41,43 @@ func IsInputRequiredErr(err error) bool {
 }
 
 type Workflow struct {
-	WorkflowID string
-	Ref        string
-	Commit     *git.Commit
-	GitEntry   *git.TreeEntry
+	WorkflowDirectory string
+	WorkflowID        string
+	Ref               string
+	Commit            *git.Commit
+	GitEntry          *git.TreeEntry
 }
 
 type InputValueGetter func(key string) string
+
+var ErrSkipDispatchInput = errors.New("skip dispatching of input")
+
+func resolveDispatchInput(key, value string, input act_model.WorkflowDispatchInput) (string, error) {
+	if len(value) == 0 {
+		value = input.Default
+		if len(value) == 0 {
+			if input.Required {
+				name := input.Description
+				if len(name) == 0 {
+					name = key
+				}
+				return "", InputRequiredErr{Name: name}
+			}
+			return "", ErrSkipDispatchInput
+		}
+	} else if input.Type == "boolean" {
+		// Temporary compatibility shim for people that upgrade to Forgejo 14. Can be removed with Forgejo 15.
+		if value == "on" {
+			value = "true"
+		}
+	}
+
+	return value, nil
+}
+
+func (entry *Workflow) WorkflowPath() string {
+	return entry.WorkflowDirectory + "/" + entry.WorkflowID
+}
 
 func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGetter, repo *repo_model.Repository, doer *user.User) (r *actions_model.ActionRun, j []string, err error) {
 	content, err := actions.GetContentFromEntry(entry.GitEntry)
@@ -61,7 +90,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		return nil, nil, err
 	}
 
-	fullWorkflowID := ".forgejo/workflows/" + entry.WorkflowID
+	fullWorkflowID := entry.WorkflowPath()
 
 	title := wf.Name
 	if len(title) < 1 {
@@ -72,30 +101,19 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	inputsAny := make(map[string]any)
 	if workflowDispatch := wf.WorkflowDispatchConfig(); workflowDispatch != nil {
 		for key, input := range workflowDispatch.Inputs {
-			val := inputGetter(key)
-			if len(val) == 0 {
-				val = input.Default
-				if len(val) == 0 {
-					if input.Required {
-						name := input.Description
-						if len(name) == 0 {
-							name = key
-						}
-						return nil, nil, InputRequiredErr{Name: name}
-					}
-					continue
-				}
-			} else if input.Type == "boolean" {
-				// Since "boolean" inputs are rendered as a checkbox in html, the value inside the form is "on"
-				val = strconv.FormatBool(val == "on")
+			value, err := resolveDispatchInput(key, inputGetter(key), input)
+			if err == ErrSkipDispatchInput {
+				continue
+			} else if err != nil {
+				return nil, nil, err
 			}
-			inputs[key] = val
-			inputsAny[key] = val
+			inputs[key] = value
+			inputsAny[key] = value
 		}
 	}
 
 	if int64(len(inputs)) > setting.Actions.LimitDispatchInputs {
-		return nil, nil, errors.New("to many inputs")
+		return nil, nil, errors.New("too many inputs")
 	}
 
 	jobNames := util.KeysOfMap(wf.Jobs)
@@ -119,20 +137,21 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	}
 
 	run := &actions_model.ActionRun{
-		Title:         title,
-		RepoID:        repo.ID,
-		Repo:          repo,
-		OwnerID:       repo.OwnerID,
-		WorkflowID:    entry.WorkflowID,
-		TriggerUserID: doer.ID,
-		TriggerUser:   doer,
-		Ref:           entry.Ref,
-		CommitSHA:     entry.Commit.ID.String(),
-		Event:         webhook.HookEventWorkflowDispatch,
-		EventPayload:  string(p),
-		TriggerEvent:  string(webhook.HookEventWorkflowDispatch),
-		Status:        actions_model.StatusWaiting,
-		NotifyEmail:   notifications,
+		Title:             title,
+		RepoID:            repo.ID,
+		Repo:              repo,
+		OwnerID:           repo.OwnerID,
+		WorkflowID:        entry.WorkflowID,
+		WorkflowDirectory: entry.WorkflowDirectory,
+		TriggerUserID:     doer.ID,
+		TriggerUser:       doer,
+		Ref:               entry.Ref,
+		CommitSHA:         entry.Commit.ID.String(),
+		Event:             webhook.HookEventWorkflowDispatch,
+		EventPayload:      string(p),
+		TriggerEvent:      string(webhook.HookEventWorkflowDispatch),
+		Status:            actions_model.StatusWaiting,
+		NotifyEmail:       notifications,
 	}
 
 	vars, err := actions_model.GetVariablesOfRun(ctx, run)
@@ -155,12 +174,23 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		}
 	}
 
-	jobs, err := jobParser(content, jobparser.WithVars(vars))
+	jobs, err := actions.JobParser(content,
+		jobparser.WithVars(vars),
+		jobparser.WithInputs(inputsAny),
+		// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
+		// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+		jobparser.SupportIncompleteRunsOn(),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return run, jobNames, actions_model.InsertRun(ctx, run, jobs)
+	if err := actions_model.InsertRun(ctx, run, jobs); err != nil {
+		return run, jobNames, err
+	}
+
+	return run, jobNames, consistencyCheckRun(ctx, run)
 }
 
 func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Workflow, error) {
@@ -174,7 +204,7 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 		return nil, err
 	}
 
-	entries, err := actions.ListWorkflows(commit)
+	workflowDirectory, entries, err := actions.ListWorkflows(commit)
 	if err != nil {
 		return nil, err
 	}
@@ -191,10 +221,11 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 	}
 
 	return &Workflow{
-		WorkflowID: workflowID,
-		Ref:        ref,
-		Commit:     commit,
-		GitEntry:   workflowEntry,
+		WorkflowDirectory: workflowDirectory,
+		WorkflowID:        workflowID,
+		Ref:               ref,
+		Commit:            commit,
+		GitEntry:          workflowEntry,
 	}, nil
 }
 

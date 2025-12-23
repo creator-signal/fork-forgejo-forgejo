@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"forgejo.org/models/db"
-	issue_model "forgejo.org/models/issues"
+	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
@@ -200,16 +200,16 @@ func drawRepoSummaryCard(ctx *context.Context, repo *repo_model.Repository) (*ca
 	}
 
 	issuesText := ctx.Locale.TrN(
-		repo.NumOpenIssues,
+		repo.NumOpenIssues(ctx),
 		"repo.activity.title.issues_1",
 		"repo.activity.title.issues_n",
-		repo.NumOpenIssues,
+		repo.NumOpenIssues(ctx),
 	)
 	pullRequestsText := ctx.Locale.TrN(
-		repo.NumOpenPulls,
+		repo.NumOpenPulls(ctx),
 		"repo.activity.title.prs_1",
 		"repo.activity.title.prs_n",
-		repo.NumOpenPulls,
+		repo.NumOpenPulls(ctx),
 	)
 
 	bottomCountText := fmt.Sprintf("%s • %s", issuesText, pullRequestsText)
@@ -228,7 +228,7 @@ func drawRepoSummaryCard(ctx *context.Context, repo *repo_model.Repository) (*ca
 	return mainCard, nil
 }
 
-func drawIssueSummaryCard(ctx *context.Context, issue *issue_model.Issue) (*card.Card, error) {
+func drawIssueSummaryCard(ctx *context.Context, issue *issues_model.Issue) (*card.Card, error) {
 	width, height := card.DefaultSize()
 	mainCard, err := card.NewCard(width, height)
 	if err != nil {
@@ -457,9 +457,9 @@ func DrawRepoSummaryCard(ctx *context.Context) {
 }
 
 func DrawIssueSummaryCard(ctx *context.Context) {
-	issue, err := issue_model.GetIssueWithAttrsByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	issue, err := issues_model.GetIssueWithAttrsByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		if issue_model.IsErrIssueNotExist(err) {
+		if issues_model.IsErrIssueNotExist(err) {
 			ctx.Error(http.StatusNotFound)
 		} else {
 			ctx.Error(http.StatusInternalServerError, "GetIssueByIndex", err.Error())

@@ -57,16 +57,22 @@ type swaggerRegistrationToken struct {
 	Body shared.RegistrationToken `json:"body"`
 }
 
-// ActionRunner represents a Runner
+// ActionRunner represents a runner
 // swagger:response ActionRunner
 type swaggerActionRunner struct {
 	// in: body
 	Body api.ActionRunner `json:"body"`
 }
 
-// ActionRunnersResponse returns Runners
-// swagger:response ActionRunnersResponse
-type swaggerActionRunnerResponse struct {
-	// in: body
-	Body api.ActionRunnersResponse `json:"body"`
+// ActionRunnerList is a list of Forgejo Action runners
+// swagger:response ActionRunnerList
+type swaggerActionRunnerListResponse struct {
+	// in:body
+	Body []api.ActionRunner `json:"body"`
+
+	// Total number of runners matching the search criteria (excluding page and limit)
+	TotalCount int64 `json:"X-Total-Count"`
+
+	// Links to other pages, if any
+	Link string `json:"Link"`
 }

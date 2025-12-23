@@ -57,8 +57,10 @@ func TestRender_Commits(t *testing.T) {
 	}
 
 	sha := "65f1bf27bc3bf70f64657658635e66094edbcb4d"
+	shaWithExtra := "65f1bf27bc3bf70f64657658635e66094edbcb4d..."
 	repo := markup.TestRepoURL
 	commit := util.URLJoin(repo, "commit", sha)
+	commitWithExtra := util.URLJoin(repo, "commit", shaWithExtra)
 	tree := util.URLJoin(repo, "tree", sha, "src")
 
 	file := util.URLJoin(repo, "commit", sha, "example.txt")
@@ -69,9 +71,11 @@ func TestRender_Commits(t *testing.T) {
 	commitCompareWithHash := commitCompare + "#L2"
 
 	test(sha, `<p><a href="`+commit+`" rel="nofollow"><code>65f1bf27bc</code></a></p>`)
+	test(shaWithExtra, `<p><a href="`+commit+`" rel="nofollow"><code>65f1bf27bc</code></a>...</p>`)
 	test(sha[:7], `<p><a href="`+commit[:len(commit)-(40-7)]+`" rel="nofollow"><code>65f1bf2</code></a></p>`)
 	test(sha[:39], `<p><a href="`+commit[:len(commit)-(40-39)]+`" rel="nofollow"><code>65f1bf27bc</code></a></p>`)
 	test(commit, `<p><a href="`+commit+`" rel="nofollow"><code>65f1bf27bc</code></a></p>`)
+	test(commitWithExtra, `<p><a href="`+commit+`" rel="nofollow"><code>65f1bf27bc</code></a>...</p>`)
 	test(tree, `<p><a href="`+tree+`" rel="nofollow"><code>65f1bf27bc/src</code></a></p>`)
 
 	test(file, `<p><a href="`+file+`" rel="nofollow"><code>65f1bf27bc/example.txt</code></a></p>`)
@@ -795,7 +799,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -829,7 +833,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -908,7 +912,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -939,7 +943,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -972,7 +976,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -997,7 +1001,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1028,7 +1032,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1053,7 +1057,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1078,7 +1082,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1113,7 +1117,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="gh"></span>B`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner">B`+"\n"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1146,7 +1150,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="gh"></span>B`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner">B`+"\n"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1179,7 +1183,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="gh"></span>B`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner">B`+"\n"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1214,7 +1218,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+

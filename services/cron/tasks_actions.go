@@ -19,9 +19,11 @@ func initActionsTasks() {
 	registerStopZombieTasks()
 	registerStopEndlessTasks()
 	registerCancelAbandonedJobs()
+	registerTransferLingeringLogs()
 	registerScheduleTasks()
 	registerActionsCleanup()
 	registerOfflineRunnersCleanup()
+	registerCleanupActionUser()
 }
 
 func registerStopZombieTasks() {
@@ -51,6 +53,16 @@ func registerCancelAbandonedJobs() {
 		Schedule:   "@every 6h",
 	}, func(ctx context.Context, _ *user_model.User, cfg Config) error {
 		return actions_service.CancelAbandonedJobs(ctx)
+	})
+}
+
+func registerTransferLingeringLogs() {
+	RegisterTaskFatal("transfer_lingering_logs", &BaseConfig{
+		Enabled:    true,
+		RunAtStart: true,
+		Schedule:   "@midnight",
+	}, func(ctx context.Context, _ *user_model.User, cfg Config) error {
+		return actions_service.TransferLingeringLogs(ctx)
 	})
 }
 
@@ -93,5 +105,15 @@ func registerOfflineRunnersCleanup() {
 			c.OlderThan,
 			c.GlobalScopeOnly,
 		)
+	})
+}
+
+func registerCleanupActionUser() {
+	RegisterTaskFatal("actions_action_user", &BaseConfig{
+		Enabled:    true,
+		RunAtStart: true,
+		Schedule:   "@weekly",
+	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
+		return actions_service.CleanupActionUser(ctx)
 	})
 }

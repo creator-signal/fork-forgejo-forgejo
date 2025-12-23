@@ -159,6 +159,8 @@ func TestAPICreateIssue(t *testing.T) {
 
 	repoBefore := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repoBefore.OwnerID})
+	beforeNumIssues := repoBefore.NumIssues(t.Context())
+	beforeNumClosedIssues := repoBefore.NumClosedIssues(t.Context())
 
 	session := loginUser(t, owner.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
@@ -182,8 +184,8 @@ func TestAPICreateIssue(t *testing.T) {
 	})
 
 	repoAfter := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
-	assert.Equal(t, repoBefore.NumIssues+1, repoAfter.NumIssues)
-	assert.Equal(t, repoBefore.NumClosedIssues, repoAfter.NumClosedIssues)
+	assert.Equal(t, beforeNumIssues+1, repoAfter.NumIssues(t.Context()))
+	assert.Equal(t, beforeNumClosedIssues, repoAfter.NumClosedIssues(t.Context()))
 }
 
 func TestAPICreateIssueParallel(t *testing.T) {
@@ -238,6 +240,7 @@ func TestAPIEditIssue(t *testing.T) {
 	require.NoError(t, issueBefore.LoadAttributes(db.DefaultContext))
 	assert.Equal(t, int64(1019307200), int64(issueBefore.DeadlineUnix))
 	assert.Equal(t, api.StateOpen, issueBefore.State())
+	beforeNumClosedIssues := repoBefore.NumClosedIssues(t.Context())
 
 	session := loginUser(t, owner.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
@@ -278,7 +281,7 @@ func TestAPIEditIssue(t *testing.T) {
 	assert.Equal(t, int64(-1), apiIssue.Poster.ID)
 
 	// check repo change
-	assert.Equal(t, repoBefore.NumClosedIssues+1, repoAfter.NumClosedIssues)
+	assert.Equal(t, beforeNumClosedIssues+1, repoAfter.NumClosedIssues(t.Context()))
 
 	// API response
 	assert.Equal(t, api.StateClosed, apiIssue.State)
@@ -412,6 +415,7 @@ func TestAPIEditIssueMilestoneAutoDate(t *testing.T) {
 			Milestone: &milestone,
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusCreated)
+		unittest.FlushAsyncCalcs(t)
 
 		// the execution of the API call supposedly lasted less than one minute
 		milestoneAfter := unittest.AssertExistsAndLoadBean(t, &issues_model.Milestone{ID: milestone})
@@ -431,6 +435,7 @@ func TestAPIEditIssueMilestoneAutoDate(t *testing.T) {
 			Updated:   &updatedAt,
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusCreated)
+		unittest.FlushAsyncCalcs(t)
 
 		// the milestone date should be set to 'updatedAt'
 		// dates are converted into the same tz, in order to compare them
@@ -452,6 +457,7 @@ func TestAPIEditIssueMilestoneAutoDate(t *testing.T) {
 			Updated:   &updatedAt,
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusCreated)
+		unittest.FlushAsyncCalcs(t)
 
 		// the milestone date should not change
 		// dates are converted into the same tz, in order to compare them
@@ -485,7 +491,7 @@ func TestAPISearchIssues(t *testing.T) {
 	req = NewRequest(t, "GET", link.String()).AddTokenAuth(publicOnlyToken)
 	resp = MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 15) // 15 public issues
+	assert.Len(t, apiIssues, 16) // 16 public issues
 
 	since := "2000-01-01T00:50:01+00:00" // 946687801
 	before := time.Unix(999307200, 0).Format(time.RFC3339)
@@ -511,7 +517,7 @@ func TestAPISearchIssues(t *testing.T) {
 	req = NewRequest(t, "GET", link.String()).AddTokenAuth(token)
 	resp = MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &apiIssues)
-	assert.Equal(t, "22", resp.Header().Get("X-Total-Count"))
+	assert.Equal(t, "23", resp.Header().Get("X-Total-Count"))
 	assert.Len(t, apiIssues, 20)
 
 	query.Add("limit", "10")
@@ -519,7 +525,7 @@ func TestAPISearchIssues(t *testing.T) {
 	req = NewRequest(t, "GET", link.String()).AddTokenAuth(token)
 	resp = MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &apiIssues)
-	assert.Equal(t, "22", resp.Header().Get("X-Total-Count"))
+	assert.Equal(t, "23", resp.Header().Get("X-Total-Count"))
 	assert.Len(t, apiIssues, 10)
 
 	query = url.Values{"assigned": {"true"}, "state": {"all"}}
@@ -548,7 +554,7 @@ func TestAPISearchIssues(t *testing.T) {
 	req = NewRequest(t, "GET", link.String()).AddTokenAuth(token)
 	resp = MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 8)
+	assert.Len(t, apiIssues, 9)
 
 	query = url.Values{"owner": {"org3"}} // organization
 	link.RawQuery = query.Encode()
@@ -806,4 +812,49 @@ func TestAPIInternalAndExternalIssueTracker(t *testing.T) {
 	runTest(t, internalIssueRepo, true)
 	runTest(t, externalIssueRepo, false)
 	runTest(t, disabledIssueRepo, false)
+}
+
+func TestAPIIssueDependencyPermissions(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	actingUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	token := getUserToken(t, actingUser.Name, auth_model.AccessTokenScopeAll)
+
+	actingUserRepo, _, reset := tests.CreateDeclarativeRepoWithOptions(t, actingUser, tests.DeclarativeRepoOptions{})
+	defer reset()
+	actingUserIssue := createIssue(t, actingUser, actingUserRepo, "source issue", "some content")
+
+	otherUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	otherUserRepo, _, reset := tests.CreateDeclarativeRepoWithOptions(t, otherUser, tests.DeclarativeRepoOptions{
+		IsPrivate: optional.Some(true),
+	})
+	defer reset()
+	otherUserIssue := createIssue(t, otherUser, otherUserRepo, "target issue", "some content")
+
+	apiEndpoint := fmt.Sprintf("/api/v1/repos/%s/%s/issues/%d/dependencies", actingUserRepo.OwnerName, actingUserRepo.Name, actingUserIssue.Index)
+	req := NewRequest(t, "GET", apiEndpoint).AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+	var blockingIssues []*api.Issue
+	DecodeJSON(t, resp, &blockingIssues)
+	require.Empty(t, blockingIssues)
+
+	req = NewRequestWithJSON(t, "POST", apiEndpoint, api.IssueMeta{
+		Owner: otherUserRepo.OwnerName,
+		Name:  otherUserRepo.Name,
+		Index: otherUserIssue.Index,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNotFound) // as otherUserRepo is a private repo we can't link a dependency to it
+
+	req = NewRequest(t, "GET", apiEndpoint).AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	blockingIssues = []*api.Issue{} // reset
+	DecodeJSON(t, resp, &blockingIssues)
+	require.Empty(t, blockingIssues)
+
+	req = NewRequestWithJSON(t, "DELETE", apiEndpoint, api.IssueMeta{
+		Owner: otherUserRepo.OwnerName,
+		Name:  otherUserRepo.Name,
+		Index: otherUserIssue.Index,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNotFound) // as otherUserRepo is a private repo we can't link a dependency to it
 }

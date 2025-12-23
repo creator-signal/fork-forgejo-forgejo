@@ -54,6 +54,7 @@ forgejo.org/models/repo
 	WatchRepoMode
 
 forgejo.org/models/user
+	IsErrUserWrongType
 	IsErrExternalLoginUserAlreadyExist
 	IsErrExternalLoginUserNotExist
 	NewFederatedUser
@@ -80,7 +81,6 @@ forgejo.org/modules/base
 	SetupGiteaRoot
 
 forgejo.org/modules/cache
-	GetInt
 	WithNoCacheContext
 	RemoveContextData
 
@@ -108,6 +108,7 @@ forgejo.org/modules/git
 	AddChangesWithArgs
 	CommitChanges
 	CommitChangesWithArgs
+	IsErrMoreThanOne
 	SetUpdateHook
 	openRepositoryWithDefaultContext
 	ToEntryMode
@@ -229,9 +230,6 @@ forgejo.org/services/context
 forgejo.org/services/federation
 	FollowRemoteActor
 
-forgejo.org/services/mailer
-	ActionCloseIssueByCommit.isActionAdditionalData
-
 forgejo.org/services/notify
 	UnregisterNotifier
 
@@ -243,6 +241,9 @@ forgejo.org/services/repository/files
 
 forgejo.org/services/repository/gitgraph
 	Parser.Reset
+
+forgejo.org/services/stats
+	Flush
 
 forgejo.org/services/webhook
 	NewNotifier

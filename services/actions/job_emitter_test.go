@@ -4,11 +4,18 @@
 package actions
 
 import (
+	"slices"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/test"
 
+	"code.forgejo.org/forgejo/runner/v12/act/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
 )
 
 func Test_jobStatusResolver_Resolve(t *testing.T) {
@@ -131,6 +138,247 @@ jobs:
 		t.Run(tt.name, func(t *testing.T) {
 			r := newJobStatusResolver(tt.jobs)
 			assert.Equal(t, tt.want, r.Resolve())
+		})
+	}
+}
+
+func Test_tryHandleIncompleteMatrix(t *testing.T) {
+	// Shouldn't get any decoding errors during this test -- pop them up from a log warning to a test fatal error.
+	defer test.MockVariableValue(&model.OnDecodeNodeError, func(node yaml.Node, out any, err error) {
+		t.Fatalf("Failed to decode node %v into %T: %v", node, out, err)
+	})()
+
+	tests := []struct {
+		name                     string
+		runJobID                 int64
+		errContains              string
+		consumed                 bool
+		runJobNames              []string
+		preExecutionError        actions_model.PreExecutionError
+		preExecutionErrorDetails []any
+		runsOn                   map[string][]string
+	}{
+		{
+			name:     "not incomplete",
+			runJobID: 600,
+		},
+		{
+			name:        "matrix expanded to 3 new jobs",
+			runJobID:    601,
+			consumed:    true,
+			runJobNames: []string{"define-matrix", "produce-artifacts (blue)", "produce-artifacts (green)", "produce-artifacts (red)"},
+		},
+		{
+			name:        "needs an incomplete job",
+			runJobID:    603,
+			errContains: "jobStatusResolver attempted to tryHandleIncompleteMatrix for a job (id=603) with an incomplete 'needs' job (id=604)",
+		},
+		{
+			name:                     "missing needs for strategy.matrix evaluation",
+			runJobID:                 605,
+			preExecutionError:        actions_model.ErrorCodeIncompleteMatrixMissingJob,
+			preExecutionErrorDetails: []any{"job_1", "define-matrix-2", "define-matrix-1"},
+		},
+		{
+			name:        "matrix expanded to 0 jobs",
+			runJobID:    607,
+			consumed:    true,
+			runJobNames: []string{"define-matrix"},
+		},
+		{
+			name:     "matrix multiple dimensions from separate outputs",
+			runJobID: 609,
+			consumed: true,
+			runJobNames: []string{
+				"define-matrix",
+				"run-tests (site-a, 12.x, 17)",
+				"run-tests (site-a, 12.x, 18)",
+				"run-tests (site-a, 14.x, 17)",
+				"run-tests (site-a, 14.x, 18)",
+				"run-tests (site-b, 12.x, 17)",
+				"run-tests (site-b, 12.x, 18)",
+				"run-tests (site-b, 14.x, 17)",
+				"run-tests (site-b, 14.x, 18)",
+			},
+		},
+		{
+			name:     "matrix multiple dimensions from one output",
+			runJobID: 611,
+			consumed: true,
+			runJobNames: []string{
+				"define-matrix",
+				"run-tests (site-a, 12.x, 17)",
+				"run-tests (site-a, 12.x, 18)",
+				"run-tests (site-a, 14.x, 17)",
+				"run-tests (site-a, 14.x, 18)",
+				"run-tests (site-b, 12.x, 17)",
+				"run-tests (site-b, 12.x, 18)",
+				"run-tests (site-b, 14.x, 17)",
+				"run-tests (site-b, 14.x, 18)",
+			},
+		},
+		{
+			// This test case also includes `on: [push]` in the workflow_payload, which appears to trigger a regression
+			// in go.yaml.in/yaml/v4 v4.0.0-rc.2 (which I had accidentally referenced in job_emitter.go), and so serves
+			// as a regression prevention test for this case...
+			//
+			// unmarshal WorkflowPayload to SingleWorkflow failed: yaml: unmarshal errors: line 1: cannot unmarshal
+			// !!seq into yaml.Node
+			name:     "scalar expansion into matrix",
+			runJobID: 613,
+			consumed: true,
+			runJobNames: []string{
+				"define-matrix",
+				"scalar-job (hard-coded value)",
+				"scalar-job (just some value)",
+			},
+		},
+		{
+			name:                     "missing needs output for strategy.matrix evaluation",
+			runJobID:                 615,
+			preExecutionError:        actions_model.ErrorCodeIncompleteMatrixMissingOutput,
+			preExecutionErrorDetails: []any{"job_1", "define-matrix-1", "colours-intentional-mistake"},
+		},
+		{
+			name:     "runs-on evaluation with needs",
+			runJobID: 617,
+			consumed: true,
+			runJobNames: []string{
+				"consume-runs-on",
+				"define-runs-on",
+			},
+			runsOn: map[string][]string{
+				"define-runs-on":  {"fedora"},
+				"consume-runs-on": {"nixos-25.11"},
+			},
+		},
+		{
+			name:     "runs-on evaluation with needs dynamic matrix",
+			runJobID: 619,
+			consumed: true,
+			runJobNames: []string{
+				"consume-runs-on (site-a, 12.x, 17)",
+				"consume-runs-on (site-a, 12.x, 18)",
+				"consume-runs-on (site-a, 14.x, 17)",
+				"consume-runs-on (site-a, 14.x, 18)",
+				"consume-runs-on (site-b, 12.x, 17)",
+				"consume-runs-on (site-b, 12.x, 18)",
+				"consume-runs-on (site-b, 14.x, 17)",
+				"consume-runs-on (site-b, 14.x, 18)",
+				"define-matrix",
+			},
+			runsOn: map[string][]string{
+				"consume-runs-on (site-a, 12.x, 17)": {"node-12.x"},
+				"consume-runs-on (site-a, 12.x, 18)": {"node-12.x"},
+				"consume-runs-on (site-a, 14.x, 17)": {"node-14.x"},
+				"consume-runs-on (site-a, 14.x, 18)": {"node-14.x"},
+				"consume-runs-on (site-b, 12.x, 17)": {"node-12.x"},
+				"consume-runs-on (site-b, 12.x, 18)": {"node-12.x"},
+				"consume-runs-on (site-b, 14.x, 17)": {"node-14.x"},
+				"consume-runs-on (site-b, 14.x, 18)": {"node-14.x"},
+				"define-matrix":                      {"fedora"},
+			},
+		},
+		{
+			name:     "runs-on evaluation to part of array",
+			runJobID: 621,
+			consumed: true,
+			runJobNames: []string{
+				"consume-runs-on",
+				"define-runs-on",
+			},
+			runsOn: map[string][]string{
+				"define-runs-on": {"fedora"},
+				"consume-runs-on": {
+					"datacenter-alpha",
+					"nixos-25.11",
+					"node-27.x",
+				},
+			},
+		},
+		{
+			name:                     "missing needs job for runs-on evaluation",
+			runJobID:                 623,
+			preExecutionError:        actions_model.ErrorCodeIncompleteRunsOnMissingJob,
+			preExecutionErrorDetails: []any{"consume-runs-on", "oops-i-misspelt-the-job-id", "define-runs-on, another-needs"},
+		},
+		{
+			name:                     "missing needs output for runs-on evaluation",
+			runJobID:                 625,
+			preExecutionError:        actions_model.ErrorCodeIncompleteRunsOnMissingOutput,
+			preExecutionErrorDetails: []any{"consume-runs-on", "define-runs-on", "output-doesnt-exist"},
+		},
+		{
+			name:                     "missing matrix dimension for runs-on evaluation",
+			runJobID:                 627,
+			preExecutionError:        actions_model.ErrorCodeIncompleteRunsOnMissingMatrixDimension,
+			preExecutionErrorDetails: []any{"consume-runs-on", "dimension-oops-error"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer unittest.OverrideFixtures("services/actions/Test_tryHandleIncompleteMatrix")()
+			require.NoError(t, unittest.PrepareTestDatabase())
+
+			blockedJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: tt.runJobID})
+
+			jobsInRun, err := db.Find[actions_model.ActionRunJob](t.Context(), actions_model.FindRunJobOptions{RunID: blockedJob.RunID})
+			require.NoError(t, err)
+
+			skip, err := tryHandleIncompleteMatrix(t.Context(), blockedJob, jobsInRun)
+
+			if tt.errContains != "" {
+				require.ErrorContains(t, err, tt.errContains)
+			} else {
+				require.NoError(t, err)
+				if tt.consumed {
+					assert.True(t, skip, "skip flag")
+
+					// blockedJob should no longer exist in the database
+					unittest.AssertNotExistsBean(t, &actions_model.ActionRunJob{ID: tt.runJobID})
+
+					// expectations are that the ActionRun has an empty PreExecutionError
+					actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: blockedJob.RunID})
+					assert.EqualValues(t, 0, actionRun.PreExecutionErrorCode)
+
+					// compare jobs that exist with `runJobNames` to ensure new jobs are inserted:
+					allJobsInRun, err := db.Find[actions_model.ActionRunJob](t.Context(), actions_model.FindRunJobOptions{RunID: blockedJob.RunID})
+					require.NoError(t, err)
+					allJobNames := []string{}
+					for _, j := range allJobsInRun {
+						allJobNames = append(allJobNames, j.Name)
+					}
+					slices.Sort(allJobNames)
+					assert.Equal(t, tt.runJobNames, allJobNames)
+
+					// Check the runs-on of all jobs
+					if tt.runsOn != nil {
+						for _, j := range allJobsInRun {
+							expected, ok := tt.runsOn[j.Name]
+							if assert.Truef(t, ok, "unable to find runsOn[%q] in test case", j.Name) {
+								slices.Sort(j.RunsOn)
+								slices.Sort(expected)
+								assert.Equalf(t, expected, j.RunsOn, "comparing runsOn expectations for job %q", j.Name)
+							}
+						}
+					}
+				} else if tt.preExecutionError != 0 {
+					// expectations are that the ActionRun has a populated PreExecutionError, is marked as failed
+					actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: blockedJob.RunID})
+					assert.Equal(t, tt.preExecutionError, actionRun.PreExecutionErrorCode)
+					assert.Equal(t, tt.preExecutionErrorDetails, actionRun.PreExecutionErrorDetails)
+					assert.Equal(t, actions_model.StatusFailure, actionRun.Status)
+
+					// ActionRunJob is marked as failed
+					blockedJobReloaded := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: tt.runJobID})
+					assert.Equal(t, actions_model.StatusFailure, blockedJobReloaded.Status)
+
+					// skip is set to true
+					assert.True(t, skip, "skip flag")
+				} else {
+					assert.False(t, skip, "skip flag")
+				}
+			}
 		})
 	}
 }

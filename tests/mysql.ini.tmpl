@@ -18,6 +18,9 @@ REPO_INDEXER_PATH = tests/{{TEST_TYPE}}/gitea-{{TEST_TYPE}}-mysql/indexers/repos
 TYPE = level
 DATADIR = tests/{{TEST_TYPE}}/gitea-{{TEST_TYPE}}-mysql/indexers/issues.queue
 
+[queue.stats_recalc] # override below default of `immediate` to avoid locking issues
+TYPE = channel
+
 [queue]
 TYPE = immediate
 
@@ -133,3 +136,7 @@ FILE_EXTENSIONS = .iframehtml
 RENDER_COMMAND = cat
 RENDER_CONTENT_MODE = iframe
 NEED_POSTPROCESS = false
+
+[cache]
+# Disable caching so that data isn't kept in-memory between test cases
+ITEM_TTL = -1

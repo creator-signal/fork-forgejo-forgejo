@@ -219,10 +219,10 @@ func TestSearchUsers(t *testing.T) {
 	}
 
 	testUserSuccess(&user_model.SearchUserOptions{OrderBy: "id ASC", ListOptions: db.ListOptions{Page: 1}},
-		[]int64{1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 42, 1041})
+		[]int64{1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 43, 1041})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsActive: optional.Some(false)},
-		[]int64{42, 9})
+		[]int64{43, 9})
 
 	testUserSuccess(&user_model.SearchUserOptions{OrderBy: "id ASC", ListOptions: db.ListOptions{Page: 1}, IsActive: optional.Some(true)},
 		[]int64{1, 2, 4, 5, 8, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 1041})
@@ -241,7 +241,7 @@ func TestSearchUsers(t *testing.T) {
 		[]int64{29})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsProhibitLogin: optional.Some(true)},
-		[]int64{1041, 37})
+		[]int64{43, 1041, 37})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsTwoFactorEnabled: optional.Some(true)},
 		[]int64{24, 32})
@@ -1055,4 +1055,21 @@ func TestGetUserByEmailSimple(t *testing.T) {
 		require.ErrorIs(t, err, user_model.ErrUserNotExist{Name: "user1@noreply.example.org"})
 		assert.Nil(t, u)
 	})
+}
+
+func TestIsUserConsistency(t *testing.T) {
+	defer unittest.OverrideFixtures("models/user/fixtures/")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	test := func(userID int64) {
+		user, err := user_model.GetUserByID(t.Context(), userID)
+		require.NoError(t, err)
+		isUser, err := user_model.IsUserByID(t.Context(), userID)
+		require.NoError(t, err)
+		assert.Equal(t, user.IsUser(), isUser)
+	}
+
+	test(1)
+	test(1041)
+	test(1042)
 }

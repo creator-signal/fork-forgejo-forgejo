@@ -18,8 +18,8 @@ import (
 	"forgejo.org/modules/util"
 	actions_service "forgejo.org/services/actions"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
-	"code.gitea.io/actions-proto-go/runner/v1/runnerv1connect"
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
+	"code.forgejo.org/forgejo/actions-proto/runner/v1/runnerv1connect"
 	"connectrpc.com/connect"
 	gouuid "github.com/google/uuid"
 )
@@ -80,9 +80,7 @@ func (s *Service) Register(
 		Version:     req.Msg.Version,
 		AgentLabels: labels,
 	}
-	if err := runner.GenerateToken(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("can't generate token"))
-	}
+	runner.GenerateToken()
 
 	// create new runner
 	if err := actions_model.CreateRunner(ctx, runner); err != nil {

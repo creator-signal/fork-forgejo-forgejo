@@ -70,7 +70,7 @@ test('New repo: initialize later', async ({page}) => {
   await page.getByPlaceholder('master').fill('devbranch');
   await validate_form({page}, 'fieldset');
   await page.getByRole('button', {name: 'Create repository'}).click();
-  expect(page.url()).toBe(`http://localhost:3003/user2/${reponame}`);
+  await page.waitForURL(new RegExp(`.*/user2/${reponame}$`));
   await expect(page.getByRole('link', {name: 'New file'})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Creating a new repository on'})).toBeVisible();
   await screenshot(page);
@@ -93,8 +93,7 @@ test('New repo: initialize later', async ({page}) => {
   await screenshot(page);
 });
 
-test('New repo: from template', async ({page}, workerInfo) => {
-  test.skip(['Mobile Safari', 'webkit'].includes(workerInfo.project.name), 'WebKit browsers seem to have CORS issues with localhost here.');
+test('New repo: from template', async ({page}) => {
   const response = await page.goto('/repo/create');
   expect(response?.status()).toBe(200);
 

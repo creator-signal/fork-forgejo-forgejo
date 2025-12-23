@@ -67,6 +67,34 @@ test('PR: Create review from commit', async ({page}) => {
   await page.waitForURL(/.*\/user2\/repo1\/pulls\/3#issuecomment-\d+/);
   await screenshot(page);
 
+  // #region Use all the resolve/show/hide features
+  // The comment content is visible and offers to "Resolve conversation"
+  await expect(page.locator('.comment-content')).toBeVisible();
+  await page.getByText('Resolve conversation').click();
+
+  // Resolving conversation hides the comment content and gives a "Show resolved" button
+  await expect(page.locator('.comment-content')).toBeHidden();
+  await page.getByText('Show resolved').click();
+
+  // Clicking the "Shows resolved" button makes the comment content show up and
+  // replaces the button with one saying "Hide resolved"
+  await expect(page.locator('.comment-content')).toBeVisible();
+  await expect(page.getByText('Show resolved')).toBeHidden();
+  await page.getByText('Hide resolved').click();
+
+  // Clicking the "Hide resolved" button reverses the previous action
+  await expect(page.locator('.comment-content')).toBeHidden();
+  await expect(page.getByText('Hide resolved')).toBeHidden();
+
+  // Show the comment again to make the "Unresolve conversation" button appear
+  await page.getByText('Show resolved').click();
+  await page.getByText('Unresolve conversation').click();
+
+  // We're back to where we started
+  await expect(page.locator('.comment-content')).toBeVisible();
+  await expect(page.getByText('Resolve conversation')).toBeVisible();
+  // #endregion
+
   // In addition to testing the ability to delete comments, this also
   // performs clean up. If tests are run for multiple platforms, the data isn't reset
   // in-between, and subsequent runs of this test would fail, because when there already is
@@ -132,4 +160,56 @@ test('PR: Test mentions values', async ({page}) => {
 
   await page.locator("ul.suggestions li[data-value='@user1']").click();
   await expect(page.locator('.review-box-panel textarea#_combo_markdown_editor_0')).toHaveValue('@user1 ');
+});
+
+test('multi-commit commenting', async ({page, request}) => {
+  const response = await page.goto('/user2/long-diff-test');
+  expect(response?.status()).toBe(200);
+
+  try {
+    await page.getByText('2 branches').click(); // navigate to branch list
+    await page.getByText('New pull request').click(); // load compare view for the branch
+    await page.locator('.show-form-container').getByText('New pull request').click(); // actually open the PR form
+    await page.locator('.primary.button').getByText('Create pull request').click(); // submit PR creation
+
+    // Test situation: adding a comment on a line that was created in the *second* commit, doing it from the "Files changed" view.
+    await page.getByText('Files changed').click();
+    await page.getByText('More  This line was changed in commit 2')
+      .locator('..')
+      .locator('button.add-code-comment')
+      .click();
+    await page.getByPlaceholder('Leave a comment').fill('Comment on line changed in commit 2');
+    await page.getByText('Add single comment').click();
+
+    // Test assertion: when viewing the comment from the 'Conversation' page, it's diff should look correct:
+    await page.getByText('Conversation').click();
+    await expect(page.locator('.pull.menu .item.active')).toContainText('Conversation'); // ensure we navigated back to Conversation page
+    await expect(page.locator('.text.comment-content .render-content.markup')).toHaveText('Comment on line changed in commit 2');
+    await expect(page.locator('.diff-file-box .code-diff')).toContainText('More  This line was changed in commit 2');
+
+    // Test assertion: when viewing the comment from the second commit, it should be placed correctly in the UI:
+    await page.getByRole('link', {name: 'Commits'}).click();
+    await page.getByText('add commit to branch').nth(1).click();
+    // FIXME: The intent of this test is to make sure that the comment box appears in the "right spot", which is *below*
+    // the line of code that it was commented on.  This check uses the elements bounding boxes which... is pretty ugly
+    // and could be done better.  Probably would be better to find the line of code that the box is rendered on,
+    // instead.
+    const codeLine = await page.getByText('More  This line was changed in commit 2').boundingBox();
+    const commentBox = await page.locator('.render-content.markup').getByText('Comment on line changed in commit 2').boundingBox();
+    expect(commentBox.y).toBeGreaterThan(codeLine.y);
+  } finally {
+    // Delete any PRs on the test repo so that this test can be rerun.
+    const issuesResp = await request.get(`/api/v1/repos/user2/long-diff-test/issues`);
+    expect(issuesResp.ok()).toBeTruthy();
+    const issues = await issuesResp.json();
+    for (const issue of issues) {
+      const delResp = await request.delete(`/api/v1/repos/user2/long-diff-test/issues/${issue.number}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa(`user1:password`)}`,
+        },
+      });
+      expect(delResp.ok()).toBeTruthy();
+    }
+  }
 });

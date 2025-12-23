@@ -357,11 +357,11 @@ func TestAPICron(t *testing.T) {
 			AddTokenAuth(token)
 		resp := MakeRequest(t, req, http.StatusOK)
 
-		assert.Equal(t, "29", resp.Header().Get("X-Total-Count"))
+		assert.Equal(t, "31", resp.Header().Get("X-Total-Count"))
 
 		var crons []api.Cron
 		DecodeJSON(t, resp, &crons)
-		assert.Len(t, crons, 29)
+		assert.Len(t, crons, 31)
 	})
 
 	t.Run("Execute", func(t *testing.T) {
@@ -540,4 +540,30 @@ func TestAPIAdminDeleteUserEmailsMultiple(t *testing.T) {
 	assert.Len(t, remainingEmails, 1, "Only 1 email should remain after deletion")
 	assert.Equal(t, "user1@example.com", remainingEmails[0].Email, "Only primary email should remain")
 	assert.True(t, remainingEmails[0].Primary, "Remaining email should be primary")
+}
+
+func TestAPIAdminListHooksPagination(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	token := getUserToken(t, "user1", auth_model.AccessTokenScopeWriteAdmin)
+
+	for i := range 20 {
+		req := NewRequestWithJSON(t, "POST", "/api/v1/admin/hooks", api.CreateHookOption{
+			Config: api.CreateHookOptionConfig{
+				"url":               fmt.Sprintf("http://localhost/hook-%d", i),
+				"content_type":      "json",
+				"is_system_webhook": "true",
+			},
+			Type: "forgejo",
+		}).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusCreated)
+	}
+
+	req := NewRequest(t, "GET", "/api/v1/admin/hooks?page=1&limit=10").AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+	var hooksList []api.Hook
+	t.Logf("got response %s", resp.Body)
+	DecodeJSON(t, resp, &hooksList)
+	assert.Len(t, hooksList, 10, "page length should equal `limit` param")
+	assert.Equal(t, "20", resp.Header().Get("X-Total-Count"))
 }

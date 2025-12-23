@@ -22,14 +22,14 @@ var (
 		ZombieTaskTimeout            time.Duration     `ini:"ZOMBIE_TASK_TIMEOUT"`
 		EndlessTaskTimeout           time.Duration     `ini:"ENDLESS_TASK_TIMEOUT"`
 		AbandonedJobTimeout          time.Duration     `ini:"ABANDONED_JOB_TIMEOUT"`
-		SkipWorkflowStrings          []string          `ìni:"SKIP_WORKFLOW_STRINGS"`
+		SkipWorkflowStrings          []string          `ini:"SKIP_WORKFLOW_STRINGS"`
 		LimitDispatchInputs          int64             `ini:"LIMIT_DISPATCH_INPUTS"`
 		ConcurrencyGroupQueueEnabled bool              `ini:"CONCURRENCY_GROUP_QUEUE_ENABLED"`
 	}{
 		Enabled:                      true,
 		DefaultActionsURL:            defaultActionsURLForgejo,
 		SkipWorkflowStrings:          []string{"[skip ci]", "[ci skip]", "[no ci]", "[skip actions]", "[actions skip]"},
-		LimitDispatchInputs:          10,
+		LimitDispatchInputs:          100,
 		ConcurrencyGroupQueueEnabled: true,
 	}
 )

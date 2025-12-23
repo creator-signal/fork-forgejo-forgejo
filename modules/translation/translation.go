@@ -1,4 +1,5 @@
 // Copyright 2020 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package translation
@@ -6,6 +7,7 @@ package translation
 import (
 	"context"
 	"html/template"
+	"iter"
 	"sort"
 	"strings"
 	"sync"
@@ -325,6 +327,16 @@ func (l *locale) PrettyNumber(v any) string {
 		}
 	}
 	return l.msgPrinter.Sprintf("%v", number.Decimal(v))
+}
+
+func (l *locale) IterWithTr(kvs ...string) iter.Seq2[string, template.HTML] {
+	return func(yield func(string, template.HTML) bool) {
+		for i := 0; i < len(kvs); i += 2 {
+			if !yield(kvs[i], l.TrHTML(kvs[i+1])) {
+				return
+			}
+		}
+	}
 }
 
 func GetPluralRule(l Locale) int {
