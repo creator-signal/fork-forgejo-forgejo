@@ -202,7 +202,7 @@
 - 
   id: 23
   type: 0 # Pending review
-  reviewer_id: 8
+  reviewer_id: 10
   issue_id: 1
   content: "Pending review for issue 1"
   updated_unix: 946684810
@@ -211,7 +211,7 @@
 - 
   id: 24
   type: 0 # Pending review
-  reviewer_id: 8
+  reviewer_id: 10
   issue_id: 2
   content: "Pending review for issue 2"
   updated_unix: 946684810

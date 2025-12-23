@@ -107,7 +107,7 @@ func TestGetParticipantIDsByIssue(t *testing.T) {
 	// User 2 only labeled issue1 (see fixtures/comment.yml)
 	// Users 3 and 5 made actual comments (see fixtures/comment.yml)
 	// User 3 is inactive, thus not active participant
-	// User 8 has a pending review, thus not an active participant, yet (see fixtures/comment.yml (id 2094))
+	// User 10 has a pending review, thus not an active participant, yet (see fixtures/comment.yml (id 2094))
 	checkParticipants(1, []int{1, 5})
 }
 

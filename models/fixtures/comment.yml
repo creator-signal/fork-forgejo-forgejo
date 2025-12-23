@@ -493,7 +493,7 @@
 
 - id: 2094
   type: 21 # code comment
-  poster_id: 8
+  poster_id: 10
   issue_id: 1
   review_id: 23
   content: "Some code comment that is pending to be published"
@@ -504,7 +504,7 @@
 
 - id: 2095
   type: 21 # code comment
-  poster_id: 8
+  poster_id: 10
   issue_id: 2
   review_id: 24
   content: "Another code comment that is pending to be published"

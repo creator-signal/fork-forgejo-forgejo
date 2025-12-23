@@ -73,8 +73,8 @@ func TestPullRequestParticipants(t *testing.T) {
 	assert.Contains(t, resp.Body.String(), "2 participants")
 	assert.Contains(t, resp.Body.String(), `<a href="/user1" data-tooltip-content="user1">`)
 	assert.Contains(t, resp.Body.String(), `<a href="/user2" data-tooltip-content="user2">`)
-	// does not contain user8 which has a pending review for this issue
-	assert.NotContains(t, resp.Body.String(), `<a href="/user8" data-tooltip-content="user8">`)
+	// does not contain user10 which has a pending review for this issue
+	assert.NotContains(t, resp.Body.String(), `<a href="/user10" data-tooltip-content="user10">`)
 }
 
 func loadComment(t *testing.T, commentID string) *issues_model.Comment {
