@@ -35,6 +35,65 @@ func TestAPIAdminActionsGetJobs(t *testing.T) {
 	token := getUserToken(t, adminUsername, auth_model.AccessTokenScopeWriteAdmin)
 
 	t.Run("jobs-with-label", func(t *testing.T) {
+		url := fmt.Sprintf("/api/v1/admin/actions/runners/jobs?labels=%s", "ubuntu-latest")
+		req := NewRequest(t, "GET", url)
+		req.AddTokenAuth(token)
+		res := MakeRequest(t, req, http.StatusOK)
+
+		var jobs []*api.ActionRunJob
+		DecodeJSON(t, res, &jobs)
+
+		assert.Len(t, jobs, 1)
+		assert.Equal(t, job393.ID, jobs[0].ID)
+	})
+
+	t.Run("jobs-without-labels", func(t *testing.T) {
+		req := NewRequest(t, "GET", "/api/v1/admin/actions/runners/jobs?labels=")
+		req.AddTokenAuth(token)
+		res := MakeRequest(t, req, http.StatusOK)
+
+		var jobs []*api.ActionRunJob
+		DecodeJSON(t, res, &jobs)
+
+		assert.Len(t, jobs, 2)
+		assert.Equal(t, job397.ID, jobs[0].ID)
+		assert.Equal(t, job196.ID, jobs[1].ID)
+	})
+
+	t.Run("all-jobs", func(t *testing.T) {
+		req := NewRequest(t, "GET", "/api/v1/admin/actions/runners/jobs")
+		req.AddTokenAuth(token)
+		res := MakeRequest(t, req, http.StatusOK)
+
+		var jobs []*api.ActionRunJob
+		DecodeJSON(t, res, &jobs)
+
+		assert.Len(t, jobs, 7)
+		assert.Equal(t, job397.ID, jobs[0].ID)
+		assert.Equal(t, job396.ID, jobs[1].ID)
+		assert.Equal(t, job395.ID, jobs[2].ID)
+		assert.Equal(t, job394.ID, jobs[3].ID)
+		assert.Equal(t, job393.ID, jobs[4].ID)
+		assert.Equal(t, job198.ID, jobs[5].ID)
+		assert.Equal(t, job196.ID, jobs[6].ID)
+	})
+}
+
+func TestAPIAdminActionsSearchJobs(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	job196 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 196})
+	job198 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 198})
+	job393 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 393})
+	job394 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 394})
+	job395 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 395})
+	job396 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 396})
+	job397 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 397})
+
+	adminUsername := "user1"
+	token := getUserToken(t, adminUsername, auth_model.AccessTokenScopeWriteAdmin)
+
+	t.Run("jobs-with-label", func(t *testing.T) {
 		url := fmt.Sprintf("/api/v1/admin/runners/jobs?labels=%s", "ubuntu-latest")
 		req := NewRequest(t, "GET", url)
 		req.AddTokenAuth(token)
@@ -89,6 +148,19 @@ func TestAPIAdminActionsRegistrationTokenOperations(t *testing.T) {
 
 	t.Run("GetRegistrationToken", func(t *testing.T) {
 		request := NewRequest(t, "GET", "/api/v1/admin/actions/runners/registration-token")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		var registrationToken shared.RegistrationToken
+		DecodeJSON(t, response, &registrationToken)
+
+		expected := shared.RegistrationToken{Token: "BzcgyhjWhLeKGA4ihJIigeRDrcxrFESd0yizEpb7xZJ"}
+
+		assert.Equal(t, expected, registrationToken)
+	})
+
+	t.Run("DeprecatedGetRegistrationToken", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/admin/runners/registration-token")
 		request.AddTokenAuth(readToken)
 		response := MakeRequest(t, request, http.StatusOK)
 
