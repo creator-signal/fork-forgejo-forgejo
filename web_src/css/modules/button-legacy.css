@@ -188,22 +188,8 @@ It needs some tricks to tweak the left/right borders with active state */
 /* secondary */
 
 .ui.secondary.labels .label,
-.ui.ui.ui.secondary.label,
-.ui.secondary.button,
-.ui.secondary.buttons .button,
-.ui.secondary.button:focus,
-.ui.secondary.buttons .button:focus {
+.ui.ui.ui.secondary.label {
   background: var(--color-secondary-button);
-}
-
-.ui.secondary.button:hover,
-.ui.secondary.buttons .button:hover {
-  background: var(--color-secondary-hover);
-}
-
-.ui.secondary.button:active,
-.ui.secondary.buttons .button:active {
-  background: var(--color-secondary-active);
 }
 
 .ui.basic.secondary.buttons .button,
