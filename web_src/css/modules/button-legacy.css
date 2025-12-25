@@ -187,12 +187,6 @@ It needs some tricks to tweak the left/right borders with active state */
 
 /* secondary */
 
-.ui.basic.secondary.buttons .button,
-.ui.basic.secondary.button {
-  color: var(--color-secondary-button);
-  border-color: var(--color-secondary-button);
-}
-
 .ui.basic.secondary.buttons .button:hover,
 .ui.basic.secondary.button:hover,
 .ui.basic.secondary.button:focus,
