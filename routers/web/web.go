@@ -590,6 +590,7 @@ func registerRoutes(m *web.Route) {
 			m.Post("/hidden_comments", user_setting.UpdateUserHiddenComments)
 			m.Post("/theme", web.Bind(forms.UpdateThemeForm{}), user_setting.UpdateUIThemePost)
 		})
+		m.Combo("/notifications").Get(user_setting.Notifications).Post(user_setting.NotificationsPost)
 		m.Group("/security", func() {
 			m.Get("", security.Security)
 			m.Group("/two_factor", func() {
