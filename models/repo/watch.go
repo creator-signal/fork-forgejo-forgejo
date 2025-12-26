@@ -26,14 +26,55 @@ const (
 	WatchModeAuto // 3
 )
 
+// WatchEventType is a bitmask for granular notification event filtering
+type WatchEventType int64
+
+const (
+	// WatchEventIssues triggers notifications for issue events
+	WatchEventIssues WatchEventType = 1 << iota // 1
+	// WatchEventPullRequests triggers notifications for pull request events
+	WatchEventPullRequests // 2
+	// WatchEventReleases triggers notifications for release events
+	WatchEventReleases // 4
+)
+
+const (
+	// WatchEventAll is a convenience constant for all event types
+	WatchEventAll WatchEventType = WatchEventIssues | WatchEventPullRequests | WatchEventReleases // 7
+)
+
+// WatchesIssues returns true if this watch includes issue notifications
+func (e WatchEventType) WatchesIssues() bool {
+	return e&WatchEventIssues != 0
+}
+
+// WatchesPullRequests returns true if this watch includes pull request notifications
+func (e WatchEventType) WatchesPullRequests() bool {
+	return e&WatchEventPullRequests != 0
+}
+
+// WatchesReleases returns true if this watch includes release notifications
+func (e WatchEventType) WatchesReleases() bool {
+	return e&WatchEventReleases != 0
+}
+
 // Watch is connection request for receiving repository notification.
 type Watch struct {
 	ID          int64              `xorm:"pk autoincr"`
 	UserID      int64              `xorm:"UNIQUE(watch)"`
 	RepoID      int64              `xorm:"UNIQUE(watch)"`
 	Mode        WatchMode          `xorm:"SMALLINT NOT NULL DEFAULT 1"`
+	WatchEvents WatchEventType     `xorm:"BIGINT NOT NULL DEFAULT 7"`
 	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`
+}
+
+// GetWatchEvents returns the watch events bitmask, defaulting to all events if not set
+func (w *Watch) GetWatchEvents() WatchEventType {
+	if w.WatchEvents == 0 {
+		return WatchEventAll
+	}
+	return w.WatchEvents
 }
 
 func init() {
@@ -152,6 +193,76 @@ func GetRepoWatchersIDs(ctx context.Context, repoID int64) ([]int64, error) {
 		Find(&ids)
 }
 
+// GetRepoWatchersIDsForEvent returns IDs of watchers for a given repo ID
+// filtered by the specified event type (Issues, PRs, Releases).
+// This enables granular notifications where users can choose which events to watch.
+// User permissions must be verified elsewhere if required.
+// For backwards compatibility, watch_events=0 is treated as "all events".
+func GetRepoWatchersIDsForEvent(ctx context.Context, repoID int64, eventType WatchEventType) ([]int64, error) {
+	ids := make([]int64, 0, 64)
+	return ids, db.GetEngine(ctx).Table("watch").
+		Where("watch.repo_id=?", repoID).
+		And("watch.mode<>?", WatchModeDont).
+		And("(watch.watch_events = 0 OR watch.watch_events & ? != 0)", eventType).
+		Select("user_id").
+		Find(&ids)
+}
+
+// UpdateWatchEvents updates the event filter bitmask for a user's watch on a repository.
+// If the user is not currently watching, this will start watching with the specified events.
+// If events is 0, this will unwatch the repository.
+func UpdateWatchEvents(ctx context.Context, userID, repoID int64, events WatchEventType) error {
+	watch, err := GetWatch(ctx, userID, repoID)
+	if err != nil {
+		return err
+	}
+
+	if events == 0 {
+		return WatchRepo(ctx, userID, repoID, false)
+	}
+
+	wasWatching := IsWatchMode(watch.Mode)
+
+	// If not currently watching, start watching
+	if !wasWatching {
+		watch.Mode = WatchModeNormal
+		watch.WatchEvents = events
+		if err := db.Insert(ctx, watch); err != nil {
+			return err
+		}
+		_, err = db.GetEngine(ctx).Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoID)
+		return err
+	}
+
+	watch.WatchEvents = events
+	_, err = db.GetEngine(ctx).ID(watch.ID).Cols("watch_events").Update(&watch)
+	return err
+}
+
+// WatchRepoWithEvents starts watching a repository with specific event types.
+func WatchRepoWithEvents(ctx context.Context, userID, repoID int64, events WatchEventType) error {
+	watch, err := GetWatch(ctx, userID, repoID)
+	if err != nil {
+		return err
+	}
+
+	wasWatching := IsWatchMode(watch.Mode)
+
+	if !wasWatching {
+		watch.Mode = WatchModeNormal
+		watch.WatchEvents = events
+		if err := db.Insert(ctx, watch); err != nil {
+			return err
+		}
+		_, err = db.GetEngine(ctx).Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoID)
+		return err
+	}
+
+	watch.WatchEvents = events
+	_, err = db.GetEngine(ctx).ID(watch.ID).Cols("watch_events").Update(&watch)
+	return err
+}
+
 // GetRepoWatchers returns range of users watching given repository.
 func GetRepoWatchers(ctx context.Context, repoID int64, opts db.ListOptions) ([]*user_model.User, error) {
 	sess := db.GetEngine(ctx).Where("watch.repo_id=?", repoID).
@@ -180,6 +291,25 @@ func WatchIfAuto(ctx context.Context, userID, repoID int64, isWrite bool) error 
 	if watch.Mode != WatchModeNone {
 		return nil
 	}
+	return watchRepoMode(ctx, watch, WatchModeAuto)
+}
+
+// WatchIfAutoWithEvents subscribes to repo with specific events if AutoWatchOnChanges is set
+func WatchIfAutoWithEvents(ctx context.Context, userID, repoID int64, isWrite bool, events WatchEventType) error {
+	if !isWrite || !setting.Service.AutoWatchOnChanges {
+		return nil
+	}
+	watch, err := GetWatch(ctx, userID, repoID)
+	if err != nil {
+		return err
+	}
+	if watch.Mode != WatchModeNone {
+		return nil
+	}
+
+	// Set watch events before creating the watch
+	watch.WatchEvents = events
+
 	return watchRepoMode(ctx, watch, WatchModeAuto)
 }
 
