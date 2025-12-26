@@ -87,25 +87,31 @@ func ListRunners(ctx *context.APIContext, ownerID, repoID int64) {
 		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
 		return
 	}
+
+	listOptions := utils.GetListOptions(ctx)
 	runners, total, err := db.FindAndCount[actions_model.ActionRunner](ctx, &actions_model.FindRunnerOptions{
 		OwnerID:     ownerID,
 		RepoID:      repoID,
-		ListOptions: utils.GetListOptions(ctx),
+		ListOptions: listOptions,
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "FindCountRunners", map[string]string{})
 		return
 	}
 
-	res := new(structs.ActionRunnersResponse)
-	res.TotalCount = total
-
-	res.Entries = make([]*structs.ActionRunner, len(runners))
+	runnerList := make([]structs.ActionRunner, len(runners))
 	for i, runner := range runners {
-		res.Entries[i] = convert.ToActionRunner(ctx, runner)
+		actionRunner, err := convert.ToActionRunner(runner)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "ToActionRunner", err)
+			return
+		}
+		runnerList[i] = actionRunner
 	}
 
-	ctx.JSON(http.StatusOK, &res)
+	ctx.SetLinkHeader(int(total), listOptions.PageSize)
+	ctx.SetTotalCountHeader(total)
+	ctx.JSON(http.StatusOK, &runnerList)
 }
 
 // GetRunner get the runner for api route validated ownerID and repoID
@@ -132,7 +138,12 @@ func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 		ctx.Error(http.StatusNotFound, "RunnerEdit", "No permission to get this runner")
 		return
 	}
-	ctx.JSON(http.StatusOK, convert.ToActionRunner(ctx, runner))
+
+	actionRunner, err := convert.ToActionRunner(runner)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "ToActionRunner", err)
+	}
+	ctx.JSON(http.StatusOK, actionRunner)
 }
 
 // DeleteRunner deletes the runner for api route validated ownerID and repoID

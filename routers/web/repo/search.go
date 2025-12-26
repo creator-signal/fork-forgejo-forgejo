@@ -1,4 +1,5 @@
 // Copyright 2017 The Gitea Authors. All rights reserved.
+// Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -12,6 +13,7 @@ import (
 	"forgejo.org/modules/git"
 	code_indexer "forgejo.org/modules/indexer/code"
 	"forgejo.org/modules/setting"
+	"forgejo.org/routers/common"
 	"forgejo.org/services/context"
 )
 
@@ -22,13 +24,16 @@ type searchMode int
 const (
 	ExactSearchMode searchMode = iota
 	UnionSearchMode
+	FuzzySearchMode
 	RegExpSearchMode
 )
 
 func searchModeFromString(s string) searchMode {
 	switch s {
-	case "fuzzy", "union":
+	case "union":
 		return UnionSearchMode
+	case "fuzzy":
+		return FuzzySearchMode
 	case "regexp":
 		return RegExpSearchMode
 	default:
@@ -36,22 +41,12 @@ func searchModeFromString(s string) searchMode {
 	}
 }
 
-func (m searchMode) String() string {
-	switch m {
-	case ExactSearchMode:
-		return "exact"
-	case UnionSearchMode:
-		return "union"
-	case RegExpSearchMode:
-		return "regexp"
-	default:
-		panic("cannot happen")
-	}
-}
-
 func (m searchMode) ToIndexer() code_indexer.SearchMode {
 	if m == ExactSearchMode {
 		return code_indexer.SearchModeExact
+	}
+	if setting.Indexer.RepoIndexerEnableFuzzy && m == FuzzySearchMode {
+		return code_indexer.SearchModeFuzzy
 	}
 	return code_indexer.SearchModeUnion
 }
@@ -69,10 +64,7 @@ func (m searchMode) ToGitGrep() git.GrepMode {
 
 // Search render repository search page
 func Search(ctx *context.Context) {
-	language := ctx.FormTrim("l")
-	keyword := ctx.FormTrim("q")
-
-	path := ctx.FormTrim("path")
+	opts := common.InitCodeSearchOptions(ctx)
 	mode := ExactSearchMode
 	if modeStr := ctx.FormString("mode"); len(modeStr) > 0 {
 		mode = searchModeFromString(modeStr)
@@ -80,10 +72,6 @@ func Search(ctx *context.Context) {
 		mode = UnionSearchMode
 	}
 
-	ctx.Data["Keyword"] = keyword
-	ctx.Data["Language"] = language
-	ctx.Data["CodeSearchPath"] = path
-	ctx.Data["CodeSearchMode"] = mode.String()
 	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["CodeIndexerDisabled"] = !setting.Indexer.RepoIndexerEnabled
 	if setting.Indexer.RepoIndexerEnabled {
@@ -92,7 +80,7 @@ func Search(ctx *context.Context) {
 		ctx.Data["CodeSearchOptions"] = git.GrepSearchOptions
 	}
 
-	if keyword == "" {
+	if opts.Keyword == "" {
 		ctx.HTML(http.StatusOK, tplSearch)
 		return
 	}
@@ -106,13 +94,16 @@ func Search(ctx *context.Context) {
 	var searchResults []*code_indexer.Result
 	var searchResultLanguages []*code_indexer.SearchResultLanguages
 	if setting.Indexer.RepoIndexerEnabled {
+		m := mode.ToIndexer()
+		ctx.Data["CodeSearchMode"] = m.String()
+
 		var err error
 		total, searchResults, searchResultLanguages, err = code_indexer.PerformSearch(ctx, &code_indexer.SearchOptions{
 			RepoIDs:  []int64{ctx.Repo.Repository.ID},
-			Keyword:  keyword,
-			Mode:     mode.ToIndexer(),
-			Language: language,
-			Filename: path,
+			Keyword:  opts.Keyword,
+			Mode:     m,
+			Language: opts.Language,
+			Filename: opts.Path,
 			Paginator: &db.ListOptions{
 				Page:     page,
 				PageSize: setting.UI.RepoSearchPagingNum,
@@ -128,11 +119,14 @@ func Search(ctx *context.Context) {
 			ctx.Data["CodeIndexerUnavailable"] = !code_indexer.IsAvailable(ctx)
 		}
 	} else {
-		res, err := git.GrepSearch(ctx, ctx.Repo.GitRepo, keyword, git.GrepOptions{
+		m := mode.ToGitGrep()
+		ctx.Data["CodeSearchMode"] = m.String()
+
+		res, err := git.GrepSearch(ctx, ctx.Repo.GitRepo, opts.Keyword, git.GrepOptions{
 			ContextLineNumber: 1,
 			RefName:           ctx.Repo.RefName,
-			Filename:          path,
-			Mode:              mode.ToGitGrep(),
+			Filename:          opts.Path,
+			Mode:              m,
 		})
 		if err != nil {
 			ctx.ServerError("GrepSearch", err)

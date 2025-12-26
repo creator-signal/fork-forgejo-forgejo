@@ -19,7 +19,7 @@ import (
 	actions_service "forgejo.org/services/actions"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
-	secret_service "forgejo.org/services/secrets"
+	secrets_service "forgejo.org/services/secrets"
 )
 
 // ListActionsSecrets list an repo's actions secrets
@@ -122,7 +122,7 @@ func (Action) CreateOrUpdateSecret(ctx *context.APIContext) {
 
 	opt := web.GetForm(ctx).(*api.CreateOrUpdateSecretOption)
 
-	_, created, err := secret_service.CreateOrUpdateSecret(ctx, 0, repo.ID, ctx.Params("secretname"), opt.Data)
+	_, created, err := secrets_service.CreateOrUpdateSecret(ctx, 0, repo.ID, ctx.Params("secretname"), opt.Data)
 	if err != nil {
 		if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "CreateOrUpdateSecret", err)
@@ -176,7 +176,7 @@ func (Action) DeleteSecret(ctx *context.APIContext) {
 
 	repo := ctx.Repo.Repository
 
-	err := secret_service.DeleteSecretByName(ctx, 0, repo.ID, ctx.Params("secretname"))
+	err := secrets_service.DeleteSecretByName(ctx, 0, repo.ID, ctx.Params("secretname"))
 	if err != nil {
 		if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "DeleteSecret", err)
@@ -472,6 +472,7 @@ func (Action) ListVariables(ctx *context.APIContext) {
 			OwnerID: v.OwnerID,
 			RepoID:  v.RepoID,
 			Name:    v.Name,
+			Data:    v.Data,
 		}
 	}
 
@@ -479,11 +480,11 @@ func (Action) ListVariables(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, variables)
 }
 
-// GetRegistrationToken returns the token to register repo runners
+// GetRegistrationToken returns the runner registration token to register runners for the repository
 func (Action) GetRegistrationToken(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/runners/registration-token repository repoGetRunnerRegistrationToken
 	// ---
-	// summary: Get a repository's actions runner registration token
+	// summary: Get a repository's runner registration token
 	// produces:
 	// - application/json
 	// parameters:
@@ -504,36 +505,11 @@ func (Action) GetRegistrationToken(ctx *context.APIContext) {
 	shared.GetRegistrationToken(ctx, 0, ctx.Repo.Repository.ID)
 }
 
-// CreateRegistrationToken returns the token to register repo runners
-func (Action) CreateRegistrationToken(ctx *context.APIContext) {
-	// swagger:operation POST /repos/{owner}/{repo}/actions/runners/registration-token repository repoCreateRunnerRegistrationToken
-	// ---
-	// summary: Get a repository's actions runner registration token
-	// produces:
-	// - application/json
-	// parameters:
-	// - name: owner
-	//   in: path
-	//   description: owner of the repo
-	//   type: string
-	//   required: true
-	// - name: repo
-	//   in: path
-	//   description: name of the repo
-	//   type: string
-	//   required: true
-	// responses:
-	//   "200":
-	//     "$ref": "#/responses/RegistrationToken"
-
-	shared.GetRegistrationToken(ctx, 0, ctx.Repo.Repository.ID)
-}
-
-// ListRunners get repo-level runners
+// ListRunners returns runners that belong to the repository
 func (Action) ListRunners(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/runners repository getRepoRunners
 	// ---
-	// summary: Get repo-level runners
+	// summary: Get runners belonging to the repository
 	// produces:
 	// - application/json
 	// parameters:
@@ -547,9 +523,17 @@ func (Action) ListRunners(ctx *context.APIContext) {
 	//   description: name of the repo
 	//   type: string
 	//   required: true
+	// - name: page
+	//   in: query
+	//   description: page number of results to return (1-based)
+	//   type: integer
+	// - name: limit
+	//   in: query
+	//   description: page size of results
+	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/definitions/ActionRunnersResponse"
+	//     "$ref": "#/responses/ActionRunnerList"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "404":
@@ -557,11 +541,11 @@ func (Action) ListRunners(ctx *context.APIContext) {
 	shared.ListRunners(ctx, 0, ctx.Repo.Repository.ID)
 }
 
-// GetRunner get a repo-level runner
+// GetRunner returns a particular runner that belongs to the repository
 func (Action) GetRunner(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/runners/{runner_id} repository getRepoRunner
 	// ---
-	// summary: Get a repo-level runner
+	// summary: Get a particular runner that belongs to the repository
 	// produces:
 	// - application/json
 	// parameters:
@@ -577,12 +561,12 @@ func (Action) GetRunner(ctx *context.APIContext) {
 	//   required: true
 	// - name: runner_id
 	//   in: path
-	//   description: id of the runner
+	//   description: ID of the runner
 	//   type: string
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/definitions/ActionRunner"
+	//     "$ref": "#/responses/ActionRunner"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "404":
@@ -590,11 +574,11 @@ func (Action) GetRunner(ctx *context.APIContext) {
 	shared.GetRunner(ctx, 0, ctx.Repo.Repository.ID, ctx.ParamsInt64("runner_id"))
 }
 
-// DeleteRunner delete a repo-level runner
+// DeleteRunner removes a particular runner that belongs to a repository
 func (Action) DeleteRunner(ctx *context.APIContext) {
 	// swagger:operation DELETE /repos/{owner}/{repo}/actions/runners/{runner_id} repository deleteRepoRunner
 	// ---
-	// summary: Delete a repo-level runner
+	// summary: Delete a particular runner that belongs to a repository
 	// produces:
 	// - application/json
 	// parameters:
@@ -610,7 +594,7 @@ func (Action) DeleteRunner(ctx *context.APIContext) {
 	//   required: true
 	// - name: runner_id
 	//   in: path
-	//   description: id of the runner
+	//   description: ID of the runner
 	//   type: string
 	//   required: true
 	// responses:

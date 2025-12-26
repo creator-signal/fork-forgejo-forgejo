@@ -33,7 +33,7 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/context/upload"
 	"forgejo.org/services/forms"
-	releaseservice "forgejo.org/services/release"
+	release_service "forgejo.org/services/release"
 )
 
 const (
@@ -79,10 +79,18 @@ type ReleaseInfo struct {
 	CommitStatuses []*git_model.CommitStatus
 }
 
-func getReleaseInfos(ctx *context.Context, opts *repo_model.FindReleasesOptions) ([]*ReleaseInfo, error) {
+func getReleaseInfos(ctx *context.Context, opts *repo_model.FindReleasesOptions) ([]*ReleaseInfo, int64, error) {
 	releases, err := db.Find[repo_model.Release](ctx, opts)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	counts := int64(len(releases))
+	if !opts.IsListAll() {
+		counts, err = db.Count[repo_model.Release](ctx, opts)
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
 	for _, release := range releases {
@@ -90,7 +98,7 @@ func getReleaseInfos(ctx *context.Context, opts *repo_model.FindReleasesOptions)
 	}
 
 	if err = repo_model.GetReleaseAttachments(ctx, releases...); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Temporary cache commits count of used branches to speed up.
@@ -111,7 +119,7 @@ func getReleaseInfos(ctx *context.Context, opts *repo_model.FindReleasesOptions)
 				if user_model.IsErrUserNotExist(err) {
 					r.Publisher = user_model.NewGhostUser()
 				} else {
-					return nil, err
+					return nil, 0, err
 				}
 			}
 			cacheUsers[r.PublisherID] = r.Publisher
@@ -126,17 +134,17 @@ func getReleaseInfos(ctx *context.Context, opts *repo_model.FindReleasesOptions)
 			Ctx:     ctx,
 		}, r.Note)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		err = r.LoadArchiveDownloadCount(ctx)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		if !r.IsDraft {
 			if err := calReleaseNumCommitsBehind(ctx.Repo, r, countCache); err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 		}
 
@@ -147,7 +155,7 @@ func getReleaseInfos(ctx *context.Context, opts *repo_model.FindReleasesOptions)
 		if canReadActions {
 			statuses, _, err := git_model.GetLatestCommitStatus(ctx, r.Repo.ID, r.Sha1, db.ListOptionsAll)
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
 			info.CommitStatus = git_model.CalcCommitStatus(statuses)
@@ -157,7 +165,7 @@ func getReleaseInfos(ctx *context.Context, opts *repo_model.FindReleasesOptions)
 		releaseInfos = append(releaseInfos, info)
 	}
 
-	return releaseInfos, nil
+	return releaseInfos, counts, nil
 }
 
 // Releases render releases list page
@@ -188,7 +196,7 @@ func Releases(ctx *context.Context) {
 	writeAccess := ctx.Repo.CanWrite(unit.TypeReleases)
 	ctx.Data["CanCreateRelease"] = writeAccess && !ctx.Repo.Repository.IsArchived
 
-	releases, err := getReleaseInfos(ctx, &repo_model.FindReleasesOptions{
+	releases, releasesCount, err := getReleaseInfos(ctx, &repo_model.FindReleasesOptions{
 		ListOptions: listOptions,
 		// only show draft releases for users who can write, read-only users shouldn't see draft releases.
 		IncludeDrafts: writeAccess,
@@ -208,8 +216,7 @@ func Releases(ctx *context.Context) {
 	ctx.Data["Releases"] = releases
 	addVerifyTagToContext(ctx)
 
-	numReleases := ctx.Data["NumReleases"].(int64)
-	pager := context.NewPagination(int(numReleases), listOptions.PageSize, listOptions.Page, 5)
+	pager := context.NewPagination(int(releasesCount), listOptions.PageSize, listOptions.Page, 5)
 	pager.SetDefaultParams(ctx)
 	ctx.Data["Page"] = pager
 
@@ -341,7 +348,7 @@ func SingleRelease(ctx *context.Context) {
 	writeAccess := ctx.Repo.CanWrite(unit.TypeReleases)
 	ctx.Data["CanCreateRelease"] = writeAccess && !ctx.Repo.Repository.IsArchived
 
-	releases, err := getReleaseInfos(ctx, &repo_model.FindReleasesOptions{
+	releases, _, err := getReleaseInfos(ctx, &repo_model.FindReleasesOptions{
 		ListOptions: db.ListOptions{Page: 1, PageSize: 1},
 		RepoID:      ctx.Repo.Repository.ID,
 		// Include tags in the search too.
@@ -506,12 +513,12 @@ func NewReleasePost(ctx *context.Context) {
 		return
 	}
 
-	attachmentChanges := make(container.Set[*releaseservice.AttachmentChange])
-	attachmentChangesByID := make(map[string]*releaseservice.AttachmentChange)
+	attachmentChanges := make(container.Set[*release_service.AttachmentChange])
+	attachmentChangesByID := make(map[string]*release_service.AttachmentChange)
 
 	if setting.Attachment.Enabled {
 		for _, uuid := range form.Files {
-			attachmentChanges.Add(&releaseservice.AttachmentChange{
+			attachmentChanges.Add(&release_service.AttachmentChange{
 				Action: "add",
 				Type:   "attachment",
 				UUID:   uuid,
@@ -531,7 +538,7 @@ func NewReleasePost(ctx *context.Context) {
 					id = k[len(exturlPrefix):]
 				}
 				if _, ok := attachmentChangesByID[id]; !ok {
-					attachmentChangesByID[id] = &releaseservice.AttachmentChange{
+					attachmentChangesByID[id] = &release_service.AttachmentChange{
 						Action: "add",
 						Type:   "external",
 					}
@@ -559,7 +566,7 @@ func NewReleasePost(ctx *context.Context) {
 		}
 
 		if len(form.TagOnly) > 0 {
-			if err = releaseservice.CreateNewTag(ctx, ctx.Doer, ctx.Repo.Repository, form.Target, form.TagName, msg); err != nil {
+			if err = release_service.CreateNewTag(ctx, ctx.Doer, ctx.Repo.Repository, form.Target, form.TagName, msg); err != nil {
 				if models.IsErrTagAlreadyExists(err) {
 					e := err.(models.ErrTagAlreadyExists)
 					ctx.Flash.Error(ctx.Tr("repo.branch.tag_collision", e.TagName))
@@ -603,7 +610,7 @@ func NewReleasePost(ctx *context.Context) {
 			IsTag:            false,
 		}
 
-		if err = releaseservice.CreateRelease(ctx.Repo.GitRepo, rel, msg, attachmentChanges.Values()); err != nil {
+		if err = release_service.CreateRelease(ctx.Repo.GitRepo, rel, msg, attachmentChanges.Values()); err != nil {
 			ctx.Data["Err_TagName"] = true
 			switch {
 			case repo_model.IsErrReleaseAlreadyExist(err):
@@ -635,7 +642,7 @@ func NewReleasePost(ctx *context.Context) {
 		rel.HideArchiveLinks = form.HideArchiveLinks
 		rel.IsTag = false
 
-		if err = releaseservice.UpdateRelease(ctx, ctx.Doer, ctx.Repo.GitRepo, rel, true, attachmentChanges.Values()); err != nil {
+		if err = release_service.UpdateRelease(ctx, ctx.Doer, ctx.Repo.GitRepo, rel, true, attachmentChanges.Values()); err != nil {
 			ctx.Data["Err_TagName"] = true
 			switch {
 			case repo_model.IsErrInvalidExternalURL(err):
@@ -743,12 +750,12 @@ func EditReleasePost(ctx *context.Context) {
 	const newPrefix = "attachment-new-"
 	const namePrefix = "name-"
 	const exturlPrefix = "exturl-"
-	attachmentChanges := make(container.Set[*releaseservice.AttachmentChange])
-	attachmentChangesByID := make(map[string]*releaseservice.AttachmentChange)
+	attachmentChanges := make(container.Set[*release_service.AttachmentChange])
+	attachmentChangesByID := make(map[string]*release_service.AttachmentChange)
 
 	if setting.Attachment.Enabled {
 		for _, uuid := range form.Files {
-			attachmentChanges.Add(&releaseservice.AttachmentChange{
+			attachmentChanges.Add(&release_service.AttachmentChange{
 				Action: "add",
 				Type:   "attachment",
 				UUID:   uuid,
@@ -757,7 +764,7 @@ func EditReleasePost(ctx *context.Context) {
 
 		for k, v := range ctx.Req.Form {
 			if strings.HasPrefix(k, delPrefix) && v[0] == "true" {
-				attachmentChanges.Add(&releaseservice.AttachmentChange{
+				attachmentChanges.Add(&release_service.AttachmentChange{
 					Action: "delete",
 					UUID:   k[len(delPrefix):],
 				})
@@ -781,7 +788,7 @@ func EditReleasePost(ctx *context.Context) {
 					}
 
 					if _, ok := attachmentChangesByID[uuid]; !ok {
-						attachmentChangesByID[uuid] = &releaseservice.AttachmentChange{
+						attachmentChangesByID[uuid] = &release_service.AttachmentChange{
 							Type: "attachment",
 							UUID: uuid,
 						}
@@ -810,7 +817,7 @@ func EditReleasePost(ctx *context.Context) {
 	rel.IsDraft = len(form.Draft) > 0
 	rel.IsPrerelease = form.Prerelease
 	rel.HideArchiveLinks = form.HideArchiveLinks
-	if err = releaseservice.UpdateRelease(ctx, ctx.Doer, ctx.Repo.GitRepo, rel, false, attachmentChanges.Values()); err != nil {
+	if err = release_service.UpdateRelease(ctx, ctx.Doer, ctx.Repo.GitRepo, rel, false, attachmentChanges.Values()); err != nil {
 		switch {
 		case repo_model.IsErrInvalidExternalURL(err):
 			ctx.RenderWithErr(ctx.Tr("repo.release.invalid_external_url", err.(repo_model.ErrInvalidExternalURL).ExternalURL), tplReleaseNew, &form)
@@ -853,7 +860,7 @@ func deleteReleaseOrTag(ctx *context.Context, isDelTag bool) {
 		return
 	}
 
-	if err := releaseservice.DeleteReleaseByID(ctx, ctx.Repo.Repository, rel, ctx.Doer, isDelTag); err != nil {
+	if err := release_service.DeleteReleaseByID(ctx, ctx.Repo.Repository, rel, ctx.Doer, isDelTag); err != nil {
 		if models.IsErrProtectedTagName(err) {
 			ctx.Flash.Error(ctx.Tr("repo.release.tag_name_protected"))
 		} else {

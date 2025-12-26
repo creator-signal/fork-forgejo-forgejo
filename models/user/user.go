@@ -62,8 +62,11 @@ const (
 	// UserTypeBot defines a bot user
 	UserTypeBot // 4
 
-	// UserTypeRemoteUser defines a remote user for federated users
+	// UserTypeRemoteUser defines a remote user for users created from f3
 	UserTypeRemoteUser // 5
+
+	// UserTypeActivityPubUser defines a user created from ActivityPub
+	UserTypeActivityPubUser // 6
 )
 
 const (
@@ -461,6 +464,15 @@ func (u *User) IsUser() bool {
 	return u.Type == UserTypeIndividual || u.Type == UserTypeBot
 }
 
+// Returns true if the given user ID belongs to an actual user, not an organization
+func IsUserByID(ctx context.Context, uid int64) (bool, error) {
+	return db.GetEngine(ctx).
+		Where("id=?", uid).
+		In("type", UserTypeIndividual, UserTypeBot).
+		Table("user").
+		Exist()
+}
+
 // IsBot returns whether or not the user is of type bot
 func (u *User) IsBot() bool {
 	return u.Type == UserTypeBot
@@ -468,6 +480,10 @@ func (u *User) IsBot() bool {
 
 func (u *User) IsRemote() bool {
 	return u.Type == UserTypeRemoteUser
+}
+
+func (u *User) IsActivityPub() bool {
+	return u.Type == UserTypeActivityPubUser
 }
 
 // DisplayName returns full name if it's not empty,

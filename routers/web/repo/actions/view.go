@@ -32,16 +32,17 @@ import (
 	"forgejo.org/modules/storage"
 	"forgejo.org/modules/templates"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/translation"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/common"
 	actions_service "forgejo.org/services/actions"
-	context_module "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 
 	"xorm.io/builder"
 )
 
-func RedirectToLatestAttempt(ctx *context_module.Context) {
+func RedirectToLatestAttempt(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
 
@@ -59,7 +60,7 @@ func RedirectToLatestAttempt(ctx *context_module.Context) {
 	ctx.Redirect(jobURL, http.StatusTemporaryRedirect)
 }
 
-func View(ctx *context_module.Context) {
+func View(ctx *app_context.Context) {
 	ctx.Data["PageIsActions"] = true
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
@@ -107,7 +108,7 @@ func View(ctx *context_module.Context) {
 	ctx.HTML(http.StatusOK, tplViewActions)
 }
 
-func ViewLatest(ctx *context_module.Context) {
+func ViewLatest(ctx *app_context.Context) {
 	run, err := actions_model.GetLatestRun(ctx, ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.NotFound("GetLatestRun", err)
@@ -121,7 +122,7 @@ func ViewLatest(ctx *context_module.Context) {
 	ctx.Redirect(run.HTMLURL(), http.StatusTemporaryRedirect)
 }
 
-func ViewLatestWorkflowRun(ctx *context_module.Context) {
+func ViewLatestWorkflowRun(ctx *app_context.Context) {
 	branch := ctx.FormString("branch")
 	if branch == "" {
 		branch = ctx.Repo.Repository.DefaultBranch
@@ -182,10 +183,10 @@ type ViewRunInfo struct {
 }
 
 type ViewCurrentJob struct {
-	Title       string         `json:"title"`
-	Detail      string         `json:"detail"`
-	Steps       []*ViewJobStep `json:"steps"`
-	AllAttempts []*TaskAttempt `json:"allAttempts"`
+	Title       string          `json:"title"`
+	Details     []template.HTML `json:"details"`
+	Steps       []*ViewJobStep  `json:"steps"`
+	AllAttempts []*TaskAttempt  `json:"allAttempts"`
 }
 
 type ViewLogs struct {
@@ -241,12 +242,13 @@ type ViewStepLogLine struct {
 }
 
 type TaskAttempt struct {
-	Number  int64         `json:"number"`
-	Started template.HTML `json:"time_since_started_html"`
-	Status  string        `json:"status"`
+	Number            int64           `json:"number"`
+	Started           template.HTML   `json:"time_since_started_html"`
+	Status            string          `json:"status"`
+	StatusDiagnostics []template.HTML `json:"status_diagnostics"`
 }
 
-func ViewPost(ctx *context_module.Context) {
+func ViewPost(ctx *app_context.Context) {
 	req := web.GetForm(ctx).(*ViewRequest)
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
@@ -262,7 +264,7 @@ func ViewPost(ctx *context_module.Context) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
-func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jobIndex, attemptNumber int64) *ViewResponse {
+func getViewResponse(ctx *app_context.Context, req *ViewRequest, runIndex, jobIndex, attemptNumber int64) *ViewResponse {
 	current, jobs := getRunJobs(ctx, runIndex, jobIndex)
 	if ctx.Written() {
 		return nil
@@ -280,13 +282,12 @@ func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jo
 	resp.State.Run.Title = run.Title
 	resp.State.Run.TitleHTML = templates.RenderCommitMessage(ctx, run.Title, metas)
 	resp.State.Run.Link = run.Link()
-	resp.State.Run.CanCancel = !run.Status.IsDone() && ctx.Repo.CanWrite(unit.TypeActions)
 	resp.State.Run.CanApprove = run.NeedApproval && ctx.Repo.CanWrite(unit.TypeActions)
 	resp.State.Run.CanRerun = run.Status.IsDone() && ctx.Repo.CanWrite(unit.TypeActions)
 	resp.State.Run.CanDeleteArtifact = run.Status.IsDone() && ctx.Repo.CanWrite(unit.TypeActions)
 	resp.State.Run.Jobs = make([]*ViewJob, 0, len(jobs)) // marshal to '[]' instead of 'null' in json
 	resp.State.Run.Status = run.Status.String()
-	resp.State.Run.PreExecutionError = run.PreExecutionError
+	resp.State.Run.PreExecutionError = actions_model.TranslatePreExecutionError(ctx.Locale, run)
 
 	// It's possible for the run to be marked with a finalized status (eg. failure) because of a  single job within the
 	// run; eg. one job fails, the run fails. But other jobs can still be running. The frontend RepoActionView uses the
@@ -308,6 +309,7 @@ func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jo
 		})
 	}
 	resp.State.Run.Done = done
+	resp.State.Run.CanCancel = !done && ctx.Repo.CanWrite(unit.TypeActions)
 
 	pusher := ViewUser{
 		DisplayName: run.TriggerUser.GetDisplayName(),
@@ -358,10 +360,8 @@ func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jo
 	}
 
 	resp.State.CurrentJob.Title = current.Name
-	resp.State.CurrentJob.Detail = current.Status.LocaleString(ctx.Locale)
-	if run.NeedApproval {
-		resp.State.CurrentJob.Detail = ctx.Locale.TrString("actions.need_approval_desc")
-	}
+	resp.State.CurrentJob.Details = statusDiagnostics(current.Status, current, ctx.Locale)
+
 	resp.State.CurrentJob.Steps = make([]*ViewJobStep, 0) // marshal to '[]' instead of 'null' in json
 	resp.Logs.StepsLog = make([]*ViewStepLog, 0)          // marshal to '[]' instead of 'null' in json
 	// As noted above with TaskID; task will be nil when the job hasn't be picked yet...
@@ -374,9 +374,10 @@ func getViewResponse(ctx *context_module.Context, req *ViewRequest, runIndex, jo
 		allAttempts := make([]*TaskAttempt, len(taskAttempts))
 		for i, actionTask := range taskAttempts {
 			allAttempts[i] = &TaskAttempt{
-				Number:  actionTask.Attempt,
-				Started: templates.TimeSince(actionTask.Started),
-				Status:  actionTask.Status.String(),
+				Number:            actionTask.Attempt,
+				Started:           templates.TimeSince(actionTask.Started),
+				Status:            actionTask.Status.String(),
+				StatusDiagnostics: statusDiagnostics(actionTask.Status, task.Job, ctx.Locale),
 			}
 		}
 		resp.State.CurrentJob.AllAttempts = allAttempts
@@ -468,7 +469,7 @@ type redirectObject struct {
 
 // Rerun will rerun jobs in the given run
 // If jobIndexStr is a blank string, it means rerun all jobs
-func Rerun(ctx *context_module.Context) {
+func Rerun(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 	jobIndexStr := ctx.Params("job")
 	var jobIndex int64
@@ -565,7 +566,7 @@ func Rerun(ctx *context_module.Context) {
 	}
 }
 
-func rerunJob(ctx *context_module.Context, job *actions_model.ActionRunJob, shouldBlock bool) error {
+func rerunJob(ctx *app_context.Context, job *actions_model.ActionRunJob, shouldBlock bool) error {
 	status := job.Status
 	if !status.IsDone() {
 		return nil
@@ -590,9 +591,10 @@ func rerunJob(ctx *context_module.Context, job *actions_model.ActionRunJob, shou
 	return nil
 }
 
-func Logs(ctx *context_module.Context) {
+func Logs(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
+	attemptNumber := ctx.ParamsInt64("attempt")
 
 	job, _ := getRunJobs(ctx, runIndex, jobIndex)
 	if ctx.Written() {
@@ -609,7 +611,7 @@ func Logs(ctx *context_module.Context) {
 		return
 	}
 
-	task, err := actions_model.GetTaskByID(ctx, job.TaskID)
+	task, err := actions_model.GetTaskByJobAttempt(ctx, job.ID, attemptNumber)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
@@ -630,7 +632,7 @@ func Logs(ctx *context_module.Context) {
 	if p := strings.Index(workflowName, "."); p > 0 {
 		workflowName = workflowName[0:p]
 	}
-	ctx.ServeContent(reader, &context_module.ServeHeaderOptions{
+	ctx.ServeContent(reader, &app_context.ServeHeaderOptions{
 		Filename:           fmt.Sprintf("%v-%v-%v.log", workflowName, job.Name, task.ID),
 		ContentLength:      &task.LogSize,
 		ContentType:        "text/plain",
@@ -639,7 +641,7 @@ func Logs(ctx *context_module.Context) {
 	})
 }
 
-func Cancel(ctx *context_module.Context) {
+func Cancel(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 
 	_, jobs := getRunJobs(ctx, runIndex, -1)
@@ -680,46 +682,10 @@ func Cancel(ctx *context_module.Context) {
 	ctx.JSON(http.StatusOK, struct{}{})
 }
 
-func Approve(ctx *context_module.Context) {
-	runIndex := ctx.ParamsInt64("run")
-
-	current, jobs := getRunJobs(ctx, runIndex, -1)
-	if ctx.Written() {
-		return
-	}
-	run := current.Run
-	doer := ctx.Doer
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		run.NeedApproval = false
-		run.ApprovedBy = doer.ID
-		if err := actions_service.UpdateRun(ctx, run, "need_approval", "approved_by"); err != nil {
-			return err
-		}
-		for _, job := range jobs {
-			if len(job.Needs) == 0 && job.Status.IsBlocked() {
-				job.Status = actions_model.StatusWaiting
-				_, err := actions_service.UpdateRunJob(ctx, job, nil, "status")
-				if err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	}); err != nil {
-		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	actions_service.CreateCommitStatus(ctx, jobs...)
-
-	ctx.JSON(http.StatusOK, struct{}{})
-}
-
 // getRunJobs gets the jobs of runIndex, and returns jobs[jobIndex], jobs.
 // Any error will be written to the ctx.
 // It never returns a nil job of an empty jobs, if the jobIndex is out of range, it will be treated as 0.
-func getRunJobs(ctx *context_module.Context, runIndex, jobIndex int64) (*actions_model.ActionRunJob, []*actions_model.ActionRunJob) {
+func getRunJobs(ctx *app_context.Context, runIndex, jobIndex int64) (*actions_model.ActionRunJob, []*actions_model.ActionRunJob) {
 	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
@@ -761,7 +727,7 @@ type ArtifactsViewItem struct {
 	Status string `json:"status"`
 }
 
-func ArtifactsView(ctx *context_module.Context) {
+func ArtifactsView(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 	artifactsResponse := getArtifactsViewResponse(ctx, runIndex)
 	if ctx.Written() {
@@ -770,7 +736,7 @@ func ArtifactsView(ctx *context_module.Context) {
 	ctx.JSON(http.StatusOK, artifactsResponse)
 }
 
-func getArtifactsViewResponse(ctx *context_module.Context, runIndex int64) *ArtifactsViewResponse {
+func getArtifactsViewResponse(ctx *app_context.Context, runIndex int64) *ArtifactsViewResponse {
 	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
@@ -802,7 +768,7 @@ func getArtifactsViewResponse(ctx *context_module.Context, runIndex int64) *Arti
 	return &artifactsResponse
 }
 
-func ArtifactsDeleteView(ctx *context_module.Context) {
+func ArtifactsDeleteView(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 	artifactName := ctx.Params("artifact_name")
 
@@ -820,7 +786,7 @@ func ArtifactsDeleteView(ctx *context_module.Context) {
 	ctx.JSON(http.StatusOK, struct{}{})
 }
 
-func getRunByID(ctx *context_module.Context, runID int64) *actions_model.ActionRun {
+func getRunByID(ctx *app_context.Context, runID int64) *actions_model.ActionRun {
 	if runID == 0 {
 		log.Debug("Requested runID is zero.")
 		ctx.Error(http.StatusNotFound, "zero is not a valid run ID")
@@ -845,7 +811,7 @@ func getRunByID(ctx *context_module.Context, runID int64) *actions_model.ActionR
 	return run
 }
 
-func artifactsFind(ctx *context_module.Context, opts actions_model.FindArtifactsOptions) []*actions_model.ActionArtifact {
+func artifactsFind(ctx *app_context.Context, opts actions_model.FindArtifactsOptions) []*actions_model.ActionArtifact {
 	artifacts, err := db.Find[actions_model.ActionArtifact](ctx, opts)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
@@ -857,7 +823,7 @@ func artifactsFind(ctx *context_module.Context, opts actions_model.FindArtifacts
 	return artifacts
 }
 
-func artifactsFindByNameOrID(ctx *context_module.Context, runID int64, nameOrID string) []*actions_model.ActionArtifact {
+func artifactsFindByNameOrID(ctx *app_context.Context, runID int64, nameOrID string) []*actions_model.ActionArtifact {
 	artifacts := artifactsFind(ctx, actions_model.FindArtifactsOptions{
 		RunID:        runID,
 		ArtifactName: nameOrID,
@@ -887,7 +853,7 @@ func artifactsFindByNameOrID(ctx *context_module.Context, runID int64, nameOrID 
 	return artifacts
 }
 
-func ArtifactsDownloadView(ctx *context_module.Context) {
+func ArtifactsDownloadView(ctx *app_context.Context) {
 	run := getRunByID(ctx, ctx.ParamsInt64("run"))
 	if ctx.Written() {
 		return
@@ -966,15 +932,15 @@ func ArtifactsDownloadView(ctx *context_module.Context) {
 	}
 }
 
-func DisableWorkflowFile(ctx *context_module.Context) {
+func DisableWorkflowFile(ctx *app_context.Context) {
 	disableOrEnableWorkflowFile(ctx, false)
 }
 
-func EnableWorkflowFile(ctx *context_module.Context) {
+func EnableWorkflowFile(ctx *app_context.Context) {
 	disableOrEnableWorkflowFile(ctx, true)
 }
 
-func disableOrEnableWorkflowFile(ctx *context_module.Context, isEnable bool) {
+func disableOrEnableWorkflowFile(ctx *app_context.Context, isEnable bool) {
 	workflow := ctx.FormString("workflow")
 	if len(workflow) == 0 {
 		ctx.ServerError("workflow", nil)
@@ -1004,4 +970,25 @@ func disableOrEnableWorkflowFile(ctx *context_module.Context, isEnable bool) {
 	redirectURL := fmt.Sprintf("%s/actions?workflow=%s&actor=%s&status=%s", ctx.Repo.RepoLink, url.QueryEscape(workflow),
 		url.QueryEscape(ctx.FormString("actor")), url.QueryEscape(ctx.FormString("status")))
 	ctx.JSONRedirect(redirectURL)
+}
+
+// statusDiagnostics returns optional diagnostic information to display to the user. It should help the user understand
+// what the current Status means and whether an action needs to be performed, for example, approving a job.
+func statusDiagnostics(status actions_model.Status, job *actions_model.ActionRunJob, lang translation.Locale) []template.HTML {
+	// Initialize as empty container for it to be serialized to an empty JSON array, not `null`.
+	diagnostics := []template.HTML{}
+
+	switch status {
+	case actions_model.StatusWaiting:
+		joinedLabels := strings.Join(job.RunsOn, ", ")
+		diagnostics = append(diagnostics, lang.TrPluralString(len(job.RunsOn), "actions.status.diagnostics.waiting", joinedLabels))
+	default:
+		diagnostics = append(diagnostics, template.HTML(status.LocaleString(lang)))
+	}
+
+	if job.Run.NeedApproval {
+		diagnostics = append(diagnostics, template.HTML(lang.TrString("actions.need_approval_desc")))
+	}
+
+	return diagnostics
 }

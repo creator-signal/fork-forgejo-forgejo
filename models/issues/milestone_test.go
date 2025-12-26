@@ -307,7 +307,7 @@ func TestChangeMilestoneStatusByRepoIDAndID(t *testing.T) {
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: 1}, &issues_model.Milestone{})
 
 	require.NoError(t, issues_model.ChangeMilestoneStatusByRepoIDAndID(db.DefaultContext, 1, 1, false))
-	unittest.AssertExistsAndLoadBean(t, &issues_model.Milestone{ID: 1}, "is_closed=0")
+	unittest.AssertExistsAndLoadBean(t, &issues_model.Milestone{ID: 1}, unittest.Cond("is_closed = ?", false))
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: 1}, &issues_model.Milestone{})
 }
 
@@ -335,22 +335,20 @@ func TestUpdateMilestone(t *testing.T) {
 func TestUpdateMilestoneCounters(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{MilestoneID: 1},
-		"is_closed=0")
+		unittest.Cond("is_closed = ?", false))
 
 	issue.IsClosed = true
 	issue.ClosedUnix = timeutil.TimeStampNow()
 	_, err := db.GetEngine(db.DefaultContext).ID(issue.ID).Cols("is_closed", "closed_unix").Update(issue)
 	require.NoError(t, err)
-	err = stats.QueueRecalcMilestoneByID(issue.MilestoneID)
-	require.NoError(t, err)
+	stats.QueueRecalcMilestoneByID(t.Context(), issue.MilestoneID)
 	unittest.CheckConsistencyFor(t, &issues_model.Milestone{})
 
 	issue.IsClosed = false
 	issue.ClosedUnix = 0
 	_, err = db.GetEngine(db.DefaultContext).ID(issue.ID).Cols("is_closed", "closed_unix").Update(issue)
 	require.NoError(t, err)
-	err = stats.QueueRecalcMilestoneByID(issue.MilestoneID)
-	require.NoError(t, err)
+	stats.QueueRecalcMilestoneByID(t.Context(), issue.MilestoneID)
 	unittest.CheckConsistencyFor(t, &issues_model.Milestone{})
 }
 

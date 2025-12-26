@@ -14,6 +14,8 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"go.yaml.in/yaml/v3"
 	"xorm.io/builder"
 )
 
@@ -38,6 +40,8 @@ type ActionRunJob struct {
 	Stopped           timeutil.TimeStamp
 	Created           timeutil.TimeStamp `xorm:"created"`
 	Updated           timeutil.TimeStamp `xorm:"updated index"`
+
+	workflowPayloadDecoded *jobparser.SingleWorkflow `xorm:"-"`
 }
 
 func init() {
@@ -228,4 +232,56 @@ func AggregateJobStatus(jobs []*ActionRunJob) Status {
 	default:
 		return StatusUnknown // it shouldn't happen
 	}
+}
+
+func (job *ActionRunJob) decodeWorkflowPayload() (*jobparser.SingleWorkflow, error) {
+	if job.workflowPayloadDecoded != nil {
+		return job.workflowPayloadDecoded, nil
+	}
+
+	var jobWorkflow jobparser.SingleWorkflow
+	err := yaml.Unmarshal(job.WorkflowPayload, &jobWorkflow)
+	if err != nil {
+		return nil, fmt.Errorf("failure unmarshaling WorkflowPayload to SingleWorkflow: %w", err)
+	}
+
+	job.workflowPayloadDecoded = &jobWorkflow
+	return job.workflowPayloadDecoded, nil
+}
+
+// If `WorkflowPayload` is changed on an `ActionRunJob`, clear any cached decoded version of the payload.  Typically
+// only used for unit tests.
+func (job *ActionRunJob) ClearCachedWorkflowPayload() {
+	job.workflowPayloadDecoded = nil
+}
+
+// Checks whether the target job is an `(incomplete matrix)` job that will be blocked until the matrix is complete, and
+// then regenerated and deleted.  If it is incomplete, and if the information is available, the specific job and/or
+// output that causes it to be incomplete will be returned as well.
+func (job *ActionRunJob) IsIncompleteMatrix() (bool, *jobparser.IncompleteNeeds, error) {
+	jobWorkflow, err := job.decodeWorkflowPayload()
+	if err != nil {
+		return false, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.IncompleteMatrix, jobWorkflow.IncompleteMatrixNeeds, nil
+}
+
+// Checks whether the target job has a `runs-on` field with an expression that requires an input from another job.  The
+// job will be blocked until the other job is complete, and then regenerated and deleted.
+func (job *ActionRunJob) IsIncompleteRunsOn() (bool, *jobparser.IncompleteNeeds, *jobparser.IncompleteMatrix, error) {
+	jobWorkflow, err := job.decodeWorkflowPayload()
+	if err != nil {
+		return false, nil, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.IncompleteRunsOn, jobWorkflow.IncompleteRunsOnNeeds, jobWorkflow.IncompleteRunsOnMatrix, nil
+}
+
+// Check whether this job is a caller of a reusable workflow -- in other words, the real work done in this job is in
+// spawned child jobs, not this job.
+func (job *ActionRunJob) IsWorkflowCallOuterJob() (bool, error) {
+	jobWorkflow, err := job.decodeWorkflowPayload()
+	if err != nil {
+		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.Metadata.WorkflowCallID != "", nil
 }

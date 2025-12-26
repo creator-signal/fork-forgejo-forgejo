@@ -14,12 +14,13 @@ import (
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
+	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	webhook_module "forgejo.org/modules/webhook"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
-	act_model "code.forgejo.org/forgejo/runner/v11/act/model"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
 	"github.com/robfig/cron/v3"
 	"xorm.io/builder"
 )
@@ -122,18 +123,19 @@ func startTasks(ctx context.Context) error {
 func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule) error {
 	// Create a new action run based on the schedule
 	run := &actions_model.ActionRun{
-		Title:         cron.Title,
-		RepoID:        cron.RepoID,
-		OwnerID:       cron.OwnerID,
-		WorkflowID:    cron.WorkflowID,
-		TriggerUserID: cron.TriggerUserID,
-		Ref:           cron.Ref,
-		CommitSHA:     cron.CommitSHA,
-		Event:         cron.Event,
-		EventPayload:  cron.EventPayload,
-		TriggerEvent:  string(webhook_module.HookEventSchedule),
-		ScheduleID:    cron.ID,
-		Status:        actions_model.StatusWaiting,
+		Title:             cron.Title,
+		RepoID:            cron.RepoID,
+		OwnerID:           cron.OwnerID,
+		WorkflowID:        cron.WorkflowID,
+		WorkflowDirectory: cron.WorkflowDirectory,
+		TriggerUserID:     cron.TriggerUserID,
+		Ref:               cron.Ref,
+		CommitSHA:         cron.CommitSHA,
+		Event:             cron.Event,
+		EventPayload:      cron.EventPayload,
+		TriggerEvent:      string(webhook_module.HookEventSchedule),
+		ScheduleID:        cron.ID,
+		Status:            actions_model.StatusWaiting,
 	}
 
 	vars, err := actions_model.GetVariablesOfRun(ctx, run)
@@ -167,14 +169,31 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 		}
 	}
 
+	// In the event that local reusable workflows (eg. `uses: ./.forgejo/workflows/reusable.yml`) are present, we'll
+	// need to read the commit of the schedule to resolve that reference:
+	expandLocalReusableWorkflow, expandCleanup := lazyRepoExpandLocalReusableWorkflow(ctx, cron.RepoID, cron.CommitSHA)
+	defer expandCleanup()
+
 	// Parse the workflow specification from the cron schedule
-	workflows, err := jobParser(cron.Content, jobparser.WithVars(vars))
+	workflows, err := actions_module.JobParser(cron.Content,
+		jobparser.WithVars(vars),
+		// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
+		// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+		jobparser.SupportIncompleteRunsOn(),
+		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflow),
+		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
+	)
 	if err != nil {
 		return err
 	}
 
 	// Insert the action run and its associated jobs into the database
 	if err := actions_model.InsertRun(ctx, run, workflows); err != nil {
+		return err
+	}
+
+	if err := consistencyCheckRun(ctx, run); err != nil {
 		return err
 	}
 

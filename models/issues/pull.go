@@ -470,6 +470,23 @@ func (pr *PullRequest) GetReviewCommentsCount(ctx context.Context) int {
 	return int(count)
 }
 
+func (pr *PullRequest) IsForkPullRequest() bool {
+	var isForkPullRequest bool
+
+	switch pr.Flow {
+	case PullRequestFlowGithub:
+		isForkPullRequest = pr.IsFromFork()
+	case PullRequestFlowAGit:
+		// there is no fork concept in AGit flow, anyone with read permission can push refs/for/<target-branch>/<topic-branch> to the repo.
+		// So we must treat it as a fork pull request because it may be from an untrusted user
+		isForkPullRequest = true
+	default:
+		// unknown flow, treat it as it's a fork pull request
+		isForkPullRequest = true
+	}
+	return isForkPullRequest
+}
+
 // IsChecking returns true if this pull request is still checking conflict.
 func (pr *PullRequest) IsChecking() bool {
 	return pr.Status == PullRequestStatusChecking
@@ -612,6 +629,21 @@ func GetUnmergedPullRequest(ctx context.Context, headRepoID, baseRepoID int64, h
 		return nil, ErrPullRequestNotExist{0, 0, headRepoID, baseRepoID, headBranch, baseBranch}
 	}
 
+	return pr, nil
+}
+
+// GetUnmergedPullRequestsAnyTarget returns a pull request that is open and has not been merged
+// by given head repo and branch and targeting any other branch on the baseRepo
+func GetUnmergedPullRequestsAnyTarget(ctx context.Context, headRepoID, baseRepoID int64, headBranch string, flow PullRequestFlow) (PullRequestList, error) {
+	var pr PullRequestList
+	err := db.GetEngine(ctx).
+		Where("head_repo_id=? AND head_branch=? AND base_repo_id=? AND has_merged=? AND flow = ? AND issue.is_closed=?",
+			headRepoID, headBranch, baseRepoID, false, flow, false).
+		Join("INNER", "issue", "issue.id=pull_request.issue_id").
+		Find(&pr)
+	if err != nil {
+		return nil, err
+	}
 	return pr, nil
 }
 

@@ -24,6 +24,10 @@ func testExploreStarForkCounters(t *testing.T, repoQuery, expectedStars, expecte
 
 	assert.Equal(t, expectedStars, starsAriaLabel)
 	assert.Equal(t, expectedForks, forksAriaLabel)
+
+	// Verify that correct icons are used
+	assert.True(t, repoListEntry.Find("a[href$='/stars'] > svg").HasClass("octicon-star"))
+	assert.True(t, repoListEntry.Find("a[href$='/forks'] > svg").HasClass("octicon-repo-forked"))
 }
 
 func TestExploreRepos(t *testing.T) {
@@ -43,7 +47,7 @@ func TestExploreRepos(t *testing.T) {
 
 		// Star the repo
 		session := loginUser(t, "user5")
-		session.MakeRequest(t, NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/action/star", repo), map[string]string{}), http.StatusOK)
+		session.MakeRequest(t, NewRequest(t, "POST", fmt.Sprintf("/%s/action/star", repo)), http.StatusOK)
 
 		// Stars counter should have incremented
 		testExploreStarForkCounters(t, repo, "1 star", "0 forks")

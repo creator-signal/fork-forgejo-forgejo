@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"context"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
@@ -11,9 +12,12 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
 	webhook_module "forgejo.org/modules/webhook"
 
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v12/act/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,16 +32,17 @@ func TestServiceActions_startTask(t *testing.T) {
 	workflowID := "some.yml"
 	schedules := []*actions_model.ActionSchedule{
 		{
-			Title:         "scheduletitle1",
-			RepoID:        repo.ID,
-			OwnerID:       repo.OwnerID,
-			WorkflowID:    workflowID,
-			TriggerUserID: repo.OwnerID,
-			Ref:           "branch",
-			CommitSHA:     "fakeSHA",
-			Event:         webhook_module.HookEventSchedule,
-			EventPayload:  "fakepayload",
-			Specs:         []string{"* * * * *"},
+			Title:             "scheduletitle1",
+			RepoID:            repo.ID,
+			OwnerID:           repo.OwnerID,
+			WorkflowID:        workflowID,
+			WorkflowDirectory: ".forgejo/workflows",
+			TriggerUserID:     repo.OwnerID,
+			Ref:               "branch",
+			CommitSHA:         "fakeSHA",
+			Event:             webhook_module.HookEventSchedule,
+			EventPayload:      "fakepayload",
+			Specs:             []string{"* * * * *"},
 			Content: []byte(
 				`
 jobs:
@@ -80,6 +85,7 @@ func TestCreateScheduleTask(t *testing.T) {
 		assert.Equal(t, cron.RepoID, run.RepoID)
 		assert.Equal(t, cron.OwnerID, run.OwnerID)
 		assert.Equal(t, cron.WorkflowID, run.WorkflowID)
+		assert.Equal(t, cron.WorkflowDirectory, run.WorkflowDirectory)
 		assert.Equal(t, cron.TriggerUserID, run.TriggerUserID)
 		assert.Equal(t, cron.Ref, run.Ref)
 		assert.Equal(t, cron.CommitSHA, run.CommitSHA)
@@ -104,15 +110,16 @@ func TestCreateScheduleTask(t *testing.T) {
 		{
 			name: "simple",
 			cron: actions_model.ActionSchedule{
-				Title:         "scheduletitle1",
-				RepoID:        repo.ID,
-				OwnerID:       repo.OwnerID,
-				WorkflowID:    "some.yml",
-				TriggerUserID: repo.OwnerID,
-				Ref:           "branch",
-				CommitSHA:     "fakeSHA",
-				Event:         webhook_module.HookEventSchedule,
-				EventPayload:  "fakepayload",
+				Title:             "scheduletitle1",
+				RepoID:            repo.ID,
+				OwnerID:           repo.OwnerID,
+				WorkflowID:        "some.yml",
+				WorkflowDirectory: ".forgejo/workflows",
+				TriggerUserID:     repo.OwnerID,
+				Ref:               "branch",
+				CommitSHA:         "fakeSHA",
+				Event:             webhook_module.HookEventSchedule,
+				EventPayload:      "fakepayload",
 				Content: []byte(
 					`
 name: test
@@ -134,15 +141,16 @@ jobs:
 		{
 			name: "enable-email-notifications is true",
 			cron: actions_model.ActionSchedule{
-				Title:         "scheduletitle2",
-				RepoID:        repo.ID,
-				OwnerID:       repo.OwnerID,
-				WorkflowID:    "some.yml",
-				TriggerUserID: repo.OwnerID,
-				Ref:           "branch",
-				CommitSHA:     "fakeSHA",
-				Event:         webhook_module.HookEventSchedule,
-				EventPayload:  "fakepayload",
+				Title:             "scheduletitle2",
+				RepoID:            repo.ID,
+				OwnerID:           repo.OwnerID,
+				WorkflowID:        "some.yml",
+				WorkflowDirectory: ".github/workflows",
+				TriggerUserID:     repo.OwnerID,
+				Ref:               "branch",
+				CommitSHA:         "fakeSHA",
+				Event:             webhook_module.HookEventSchedule,
+				EventPayload:      "fakepayload",
 				Content: []byte(
 					`
 name: test
@@ -263,4 +271,217 @@ func TestCancelPreviousWithConcurrencyGroup(t *testing.T) {
 			assert.Equal(t, expected901Status, run.Status)
 		})
 	}
+}
+
+func TestServiceActions_DynamicMatrix(t *testing.T) {
+	defer unittest.OverrideFixtures("services/actions/TestServiceActions_startTask")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Load fixtures that are corrupted and create one valid scheduled workflow
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+
+	workflowID := "some.yml"
+	schedules := []*actions_model.ActionSchedule{
+		{
+			Title:             "scheduletitle1",
+			RepoID:            repo.ID,
+			OwnerID:           repo.OwnerID,
+			WorkflowID:        workflowID,
+			WorkflowDirectory: ".forgejo/workflows",
+			TriggerUserID:     repo.OwnerID,
+			Ref:               "branch",
+			CommitSHA:         "fakeSHA",
+			Event:             webhook_module.HookEventSchedule,
+			EventPayload:      "fakepayload",
+			Specs:             []string{"* * * * *"},
+			Content: []byte(
+				`
+jobs:
+  job2:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dim1: "${{ fromJSON(needs.other-job.outputs.some-output) }}"
+    steps:
+      - run: true
+`),
+		},
+	}
+
+	require.Equal(t, 2, unittest.GetCount(t, actions_model.ActionScheduleSpec{}))
+	require.NoError(t, actions_model.CreateScheduleTask(t.Context(), schedules))
+	require.Equal(t, 3, unittest.GetCount(t, actions_model.ActionScheduleSpec{}))
+	_, err := db.GetEngine(db.DefaultContext).Exec("UPDATE `action_schedule_spec` SET next = 1")
+	require.NoError(t, err)
+
+	// After running startTasks an ActionRun row is created for the valid scheduled workflow
+	require.Empty(t, unittest.GetCount(t, actions_model.ActionRun{WorkflowID: workflowID}))
+	require.NoError(t, startTasks(t.Context()))
+	require.NotEmpty(t, unittest.GetCount(t, actions_model.ActionRun{WorkflowID: workflowID}))
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		WorkflowID: workflowID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	run := runs[0]
+
+	jobs, err := db.Find[actions_model.ActionRunJob](t.Context(), actions_model.FindRunJobOptions{RunID: run.ID})
+	require.NoError(t, err)
+	require.Len(t, jobs, 1)
+	job := jobs[0]
+
+	// With a matrix that contains ${{ needs ... }} references, the only requirement to work is that when the job is
+	// first inserted it is tagged w/ incomplete_matrix
+	assert.Contains(t, string(job.WorkflowPayload), "incomplete_matrix: true")
+}
+
+func TestServiceActions_RunsOnNeeds(t *testing.T) {
+	defer unittest.OverrideFixtures("services/actions/TestServiceActions_startTask")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Load fixtures that are corrupted and create one valid scheduled workflow
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+
+	workflowID := "some.yml"
+	schedules := []*actions_model.ActionSchedule{
+		{
+			Title:         "scheduletitle1",
+			RepoID:        repo.ID,
+			OwnerID:       repo.OwnerID,
+			WorkflowID:    workflowID,
+			TriggerUserID: repo.OwnerID,
+			Ref:           "branch",
+			CommitSHA:     "fakeSHA",
+			Event:         webhook_module.HookEventSchedule,
+			EventPayload:  "fakepayload",
+			Specs:         []string{"* * * * *"},
+			Content: []byte(
+				`
+jobs:
+  job2:
+    runs-on: "${{ fromJSON(needs.other-job.outputs.some-output) }}"
+    steps:
+      - run: true
+`),
+		},
+	}
+
+	require.Equal(t, 2, unittest.GetCount(t, actions_model.ActionScheduleSpec{}))
+	require.NoError(t, actions_model.CreateScheduleTask(t.Context(), schedules))
+	require.Equal(t, 3, unittest.GetCount(t, actions_model.ActionScheduleSpec{}))
+	_, err := db.GetEngine(db.DefaultContext).Exec("UPDATE `action_schedule_spec` SET next = 1")
+	require.NoError(t, err)
+
+	// After running startTasks an ActionRun row is created for the valid scheduled workflow
+	require.Empty(t, unittest.GetCount(t, actions_model.ActionRun{WorkflowID: workflowID}))
+	require.NoError(t, startTasks(t.Context()))
+	require.NotEmpty(t, unittest.GetCount(t, actions_model.ActionRun{WorkflowID: workflowID}))
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		WorkflowID: workflowID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	run := runs[0]
+
+	jobs, err := db.Find[actions_model.ActionRunJob](t.Context(), actions_model.FindRunJobOptions{RunID: run.ID})
+	require.NoError(t, err)
+	require.Len(t, jobs, 1)
+	job := jobs[0]
+
+	// With a runs-on that contains ${{ needs ... }} references, the only requirement to work is that when the job is
+	// first inserted it is tagged w/ incomplete_runs_on
+	assert.Contains(t, string(job.WorkflowPayload), "incomplete_runs_on: true")
+}
+
+func TestServiceActions_ExpandReusableWorkflow(t *testing.T) {
+	defer unittest.OverrideFixtures("services/actions/TestServiceActions_startTask")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	type callArgs struct {
+		repoID    int64
+		commitSHA string
+		path      string
+	}
+	var localReusableCalled []*callArgs
+	var cleanupCallCount int
+	defer test.MockVariableValue(&lazyRepoExpandLocalReusableWorkflow,
+		func(ctx context.Context, repoID int64, commitSHA string) (jobparser.LocalWorkflowFetcher, CleanupFunc) {
+			fetcher := func(job *jobparser.Job, path string) ([]byte, error) {
+				localReusableCalled = append(localReusableCalled, &callArgs{repoID, commitSHA, path})
+				return []byte("{ on: pull_request, jobs: { j1: { runs-on: debian-latest } } }"), nil
+			}
+			cleanup := func() {
+				cleanupCallCount++
+			}
+			return fetcher, cleanup
+		})()
+	remoteReusableCalled := []*model.NonLocalReusableWorkflowReference{}
+	defer test.MockVariableValue(&expandInstanceReusableWorkflows,
+		func(ctx context.Context) jobparser.InstanceWorkflowFetcher {
+			return func(job *jobparser.Job, ref *model.NonLocalReusableWorkflowReference) ([]byte, error) {
+				remoteReusableCalled = append(remoteReusableCalled, ref)
+				return []byte("{ on: pull_request, jobs: { j1: { runs-on: debian-latest } } }"), nil
+			}
+		})()
+
+	// Load fixtures that are corrupted and create one valid scheduled workflow
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+
+	workflowID := "some.yml"
+	schedules := []*actions_model.ActionSchedule{
+		{
+			Title:         "scheduletitle1",
+			RepoID:        repo.ID,
+			OwnerID:       repo.OwnerID,
+			WorkflowID:    workflowID,
+			TriggerUserID: repo.OwnerID,
+			Ref:           "branch",
+			CommitSHA:     "fakeSHA",
+			Event:         webhook_module.HookEventSchedule,
+			EventPayload:  "fakepayload",
+			Specs:         []string{"* * * * *"},
+			Content: []byte(
+				`
+jobs:
+  job2:
+    uses: ./.forgejo/workflows/reusable.yml
+  job3:
+    uses: some-org/some-repo/.forgejo/workflows/reusable-path.yml@main
+`),
+		},
+	}
+
+	require.Equal(t, 2, unittest.GetCount(t, actions_model.ActionScheduleSpec{}))
+	require.NoError(t, actions_model.CreateScheduleTask(t.Context(), schedules))
+	require.Equal(t, 3, unittest.GetCount(t, actions_model.ActionScheduleSpec{}))
+	_, err := db.GetEngine(db.DefaultContext).Exec("UPDATE `action_schedule_spec` SET next = 1")
+	require.NoError(t, err)
+
+	// After running startTasks an ActionRun row is created for the valid scheduled workflow
+	require.Empty(t, unittest.GetCount(t, actions_model.ActionRun{WorkflowID: workflowID}))
+	require.NoError(t, startTasks(t.Context()))
+	require.NotEmpty(t, unittest.GetCount(t, actions_model.ActionRun{WorkflowID: workflowID}))
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		WorkflowID: workflowID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	run := runs[0]
+	assert.EqualValues(t, 0, run.PreExecutionErrorCode, "pre execution error details: %#v", run.PreExecutionErrorDetails)
+
+	require.Len(t, localReusableCalled, 1, "localReusableCalled")
+	require.Len(t, remoteReusableCalled, 1, "remoteReusableCalled")
+
+	assert.Equal(t, &callArgs{4, "fakeSHA", "./.forgejo/workflows/reusable.yml"}, localReusableCalled[0])
+	assert.Equal(t, 2, cleanupCallCount, "cleanupCallCount")
+	assert.Equal(t, &model.NonLocalReusableWorkflowReference{
+		Org:         "some-org",
+		Repo:        "some-repo",
+		Filename:    "reusable-path.yml",
+		Ref:         "main",
+		GitPlatform: "forgejo",
+	}, remoteReusableCalled[0])
 }

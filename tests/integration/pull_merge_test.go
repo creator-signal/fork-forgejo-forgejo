@@ -41,7 +41,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	"forgejo.org/services/automerge"
-	forgejo_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/pull"
 	commitstatus_service "forgejo.org/services/repository/commitstatus"
@@ -97,7 +97,7 @@ func testPullCleanUp(t *testing.T, session *TestSession, user, repo, pullnum str
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	link, exists := htmlDoc.doc.Find(".timeline-item .delete-button").Attr("data-url")
 	assert.True(t, exists, "The template has changed, can not find delete button url")
-	req = NewRequestWithValues(t, "POST", link, map[string]string{})
+	req = NewRequest(t, "POST", link)
 	resp = session.MakeRequest(t, req, http.StatusOK)
 
 	return resp
@@ -1084,7 +1084,7 @@ func TestPullAutoMergeAfterCommitStatusSucceedAndApprovalForAgitFlow(t *testing.
 		approveSession := loginUser(t, "user1")
 		testSubmitReview(t, approveSession, "user2", "repo1", strconv.Itoa(int(pr.Index)), sha, "approve", http.StatusOK)
 
-		// realod pr again
+		// reload pr again
 		pr = unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pr.ID})
 		assert.True(t, pr.HasMerged)
 		assert.NotEmpty(t, pr.MergedCommitID)
@@ -1112,7 +1112,7 @@ func TestPullDeleteBranchPerms(t *testing.T) {
 		})
 		user4Session.MakeRequest(t, req, http.StatusOK)
 
-		flashCookie := user4Session.GetCookie(forgejo_context.CookieNameFlash)
+		flashCookie := user4Session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "error%3DYou%2Bdon%2527t%2Bhave%2Bpermission%2Bto%2Bdelete%2Bthe%2Bhead%2Bbranch.", flashCookie.Value)
 
