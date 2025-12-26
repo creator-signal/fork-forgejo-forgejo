@@ -84,6 +84,7 @@ var Service = struct {
 	EnableUserHeatmap                       bool
 	AutoWatchNewRepos                       bool
 	AutoWatchOnChanges                      bool
+	DefaultWatchEvents                      int64
 	DefaultOrgMemberVisible                 bool
 	UserDeleteWithCommentsMaxTime           time.Duration
 	ValidSiteURLSchemes                     []string
@@ -247,6 +248,7 @@ func loadServiceFrom(rootCfg ConfigProvider) {
 	Service.EnableUserHeatmap = sec.Key("ENABLE_USER_HEATMAP").MustBool(true)
 	Service.AutoWatchNewRepos = sec.Key("AUTO_WATCH_NEW_REPOS").MustBool(true)
 	Service.AutoWatchOnChanges = sec.Key("AUTO_WATCH_ON_CHANGES").MustBool(false)
+	Service.DefaultWatchEvents = sec.Key("DEFAULT_WATCH_EVENTS").MustInt64(7) // 7 = all events (Issues=1, PRs=2, Releases=4)
 	modes := sec.Key("ALLOWED_USER_VISIBILITY_MODES").Strings(",")
 	if len(modes) != 0 {
 		Service.AllowedUserVisibilityModes = []string{}
