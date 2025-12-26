@@ -5,6 +5,7 @@ package repo
 
 import (
 	"context"
+	"strconv"
 
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
@@ -75,6 +76,23 @@ func (w *Watch) GetWatchEvents() WatchEventType {
 		return WatchEventAll
 	}
 	return w.WatchEvents
+}
+
+// GetDefaultWatchEvents returns the default watch events for a user.
+// Priority order: User setting > Instance setting > All events
+func GetDefaultWatchEvents(ctx context.Context, userID int64) WatchEventType {
+	// Check user setting
+	if val, err := user_model.GetUserSetting(ctx, userID, user_model.SettingsKeyDefaultWatchEvents); err == nil && val != "" {
+		if events, err := strconv.ParseInt(val, 10, 64); err == nil && events > 0 {
+			return WatchEventType(events)
+		}
+	}
+
+	if setting.Service.DefaultWatchEvents > 0 {
+		return WatchEventType(setting.Service.DefaultWatchEvents)
+	}
+
+	return WatchEventAll
 }
 
 func init() {

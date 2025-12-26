@@ -12,6 +12,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
@@ -128,7 +129,12 @@ func IsWatching(ctx *context.APIContext) {
 	//   "404":
 	//     description: User is not watching this repo or repo do not exist
 
-	if repo_model.IsWatching(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID) {
+	watch, err := repo_model.GetWatch(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetWatch", err)
+		return
+	}
+	if repo_model.IsWatchMode(watch.Mode) {
 		ctx.JSON(http.StatusOK, api.WatchInfo{
 			Subscribed:    true,
 			Ignored:       false,
@@ -136,6 +142,7 @@ func IsWatching(ctx *context.APIContext) {
 			CreatedAt:     ctx.Repo.Repository.CreatedUnix.AsTime(),
 			URL:           subscriptionURL(ctx.Repo.Repository),
 			RepositoryURL: ctx.Repo.Repository.APIURL(),
+			WatchEvents:   int64(watch.WatchEvents),
 		})
 	} else {
 		ctx.NotFound()
@@ -147,6 +154,8 @@ func Watch(ctx *context.APIContext) {
 	// swagger:operation PUT /repos/{owner}/{repo}/subscription repository userCurrentPutSubscription
 	// ---
 	// summary: Watch a repo
+	// consumes:
+	// - application/json
 	// parameters:
 	// - name: owner
 	//   in: path
@@ -158,15 +167,34 @@ func Watch(ctx *context.APIContext) {
 	//   description: name of the repo
 	//   type: string
 	//   required: true
+	// - name: body
+	//   in: body
+	//   schema:
+	//     type: object
+	//     properties:
+	//       watch_events:
+	//         type: integer
+	//         format: int64
+	//         description: "Bitmask of event types to watch: 1=Issues, 2=PullRequests, 4=Releases. If not specified, uses user/instance defaults."
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/WatchInfo"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, true)
+	opts := web.GetForm(ctx).(*api.WatchOptions)
+
+	// Determine watch events: use provided value, or fall back to defaults
+	var watchEvents repo_model.WatchEventType
+	if opts != nil && opts.WatchEvents != nil {
+		watchEvents = repo_model.WatchEventType(*opts.WatchEvents)
+	} else {
+		watchEvents = repo_model.GetDefaultWatchEvents(ctx, ctx.Doer.ID)
+	}
+
+	err := repo_model.WatchRepoWithEvents(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watchEvents)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "WatchRepo", err)
+		ctx.Error(http.StatusInternalServerError, "WatchRepoWithEvents", err)
 		return
 	}
 	ctx.JSON(http.StatusOK, api.WatchInfo{
@@ -176,6 +204,7 @@ func Watch(ctx *context.APIContext) {
 		CreatedAt:     ctx.Repo.Repository.CreatedUnix.AsTime(),
 		URL:           subscriptionURL(ctx.Repo.Repository),
 		RepositoryURL: ctx.Repo.Repository.APIURL(),
+		WatchEvents:   int64(watchEvents),
 	})
 }
 

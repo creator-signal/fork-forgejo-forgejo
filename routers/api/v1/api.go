@@ -1270,7 +1270,7 @@ func Routes() *web.Route {
 				m.Get("/subscribers", repo.ListSubscribers)
 				m.Group("/subscription", func() {
 					m.Get("", user.IsWatching)
-					m.Put("", user.Watch)
+					m.Put("", bind(api.WatchOptions{}), user.Watch)
 					m.Delete("", user.Unwatch)
 				}, reqToken())
 				m.Group("/releases", func() {

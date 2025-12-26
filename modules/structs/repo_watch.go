@@ -15,4 +15,14 @@ type WatchInfo struct {
 	CreatedAt     time.Time `json:"created_at"`
 	URL           string    `json:"url"`
 	RepositoryURL string    `json:"repository_url"`
+	// WatchEvents is a bitmask of event types: 1=Issues, 2=PullRequests, 4=Releases
+	// swagger:strfmt int64
+	WatchEvents int64 `json:"watch_events,omitempty"`
+}
+
+// WatchOptions represents options for watching a repository
+type WatchOptions struct {
+	// WatchEvents is a bitmask of event types to watch: 1=Issues, 2=PullRequests, 4=Releases
+	// If not specified, uses user/instance defaults (typically 7 = all events)
+	WatchEvents *int64 `json:"watch_events,omitempty"`
 }

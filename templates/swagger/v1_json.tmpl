@@ -16494,6 +16494,9 @@
         }
       },
       "put": {
+        "consumes": [
+          "application/json"
+        ],
         "tags": [
           "repository"
         ],
@@ -16513,6 +16516,20 @@
             "name": "repo",
             "in": "path",
             "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "watch_events": {
+                  "description": "Bitmask of event types to watch: 1=Issues, 2=PullRequests, 4=Releases. If not specified, uses user/instance defaults.",
+                  "type": "integer",
+                  "format": "int64"
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -29802,6 +29819,12 @@
         "url": {
           "type": "string",
           "x-go-name": "URL"
+        },
+        "watch_events": {
+          "description": "WatchEvents is a bitmask of event types: 1=Issues, 2=PullRequests, 4=Releases",
+          "type": "string",
+          "format": "int64",
+          "x-go-name": "WatchEvents"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
