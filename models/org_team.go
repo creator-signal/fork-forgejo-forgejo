@@ -23,6 +23,15 @@ import (
 	"xorm.io/builder"
 )
 
+// shouldAutoWatchOnAccess checks if a user should auto-watch when getting access to a repo.
+// Priority order: User setting > Instance setting (AUTO_WATCH_NEW_REPOS)
+func shouldAutoWatchOnAccess(ctx context.Context, userID int64) bool {
+	if val, err := user_model.GetUserSetting(ctx, userID, user_model.SettingsKeyAutoWatchOnAccess); err == nil && val != "" {
+		return val == "true"
+	}
+	return setting.Service.AutoWatchNewRepos
+}
+
 func AddRepository(ctx context.Context, t *organization.Team, repo *repo_model.Repository) (err error) {
 	if err = organization.AddTeamRepo(ctx, t.OrgID, t.ID, repo.ID); err != nil {
 		return err
@@ -38,12 +47,12 @@ func AddRepository(ctx context.Context, t *organization.Team, repo *repo_model.R
 		return fmt.Errorf("recalculateAccesses: %w", err)
 	}
 
-	// Make all team members watch this repo if enabled in global settings
-	if setting.Service.AutoWatchNewRepos {
-		if err = t.LoadMembers(ctx); err != nil {
-			return fmt.Errorf("getMembers: %w", err)
-		}
-		for _, u := range t.Members {
+	// Make team members watch this repo if enabled (check each user's preference)
+	if err = t.LoadMembers(ctx); err != nil {
+		return fmt.Errorf("getMembers: %w", err)
+	}
+	for _, u := range t.Members {
+		if shouldAutoWatchOnAccess(ctx, u.ID) {
 			if err = repo_model.WatchRepo(ctx, u.ID, repo.ID, true); err != nil {
 				return fmt.Errorf("watchRepo: %w", err)
 			}
@@ -425,7 +434,7 @@ func AddTeamMember(ctx context.Context, team *organization.Team, userID int64) e
 
 	// this behaviour may spend much time so run it in a goroutine
 	// FIXME: Update watch repos batchly
-	if setting.Service.AutoWatchNewRepos {
+	if shouldAutoWatchOnAccess(ctx, userID) {
 		// Get team and its repositories.
 		if err := team.LoadRepositories(ctx); err != nil {
 			log.Error("team.LoadRepositories failed: %v", err)

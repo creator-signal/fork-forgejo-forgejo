@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"forgejo.org/models"
@@ -29,6 +30,32 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 )
+
+// shouldAutoWatchOnCreate returns whether a user should auto-watch repos they create.
+// Priority order: User setting > Instance setting (AUTO_WATCH_NEW_REPOS)
+func shouldAutoWatchOnCreate(ctx context.Context, userID int64) bool {
+	if val, err := user_model.GetUserSetting(ctx, userID, user_model.SettingsKeyAutoWatchOnCreate); err == nil && val != "" {
+		return val == "true"
+	}
+	return setting.Service.AutoWatchNewRepos
+}
+
+// getDefaultWatchEvents returns the default watch events for a user watching a repository.
+// Priority order: User setting > Instance setting
+func getDefaultWatchEvents(ctx context.Context, userID int64) repo_model.WatchEventType {
+	// Check user setting
+	if val, err := user_model.GetUserSetting(ctx, userID, user_model.SettingsKeyDefaultWatchEvents); err == nil && val != "" {
+		if events, err := strconv.ParseInt(val, 10, 64); err == nil && events > 0 {
+			return repo_model.WatchEventType(events)
+		}
+	}
+
+	if setting.Service.DefaultWatchEvents > 0 {
+		return repo_model.WatchEventType(setting.Service.DefaultWatchEvents)
+	}
+
+	return repo_model.WatchEventAll
+}
 
 // CreateRepositoryByExample creates a repository for the user/organization.
 func CreateRepositoryByExample(ctx context.Context, doer, u *user_model.User, repo *repo_model.Repository, overwriteOrAdopt, isFork bool) (err error) {
@@ -152,8 +179,9 @@ func CreateRepositoryByExample(ctx context.Context, doer, u *user_model.User, re
 		return fmt.Errorf("RecalculateAccesses: %w", err)
 	}
 
-	if setting.Service.AutoWatchNewRepos {
-		if err = repo_model.WatchRepo(ctx, doer.ID, repo.ID, true); err != nil {
+	if shouldAutoWatchOnCreate(ctx, doer.ID) {
+		defaultEvents := getDefaultWatchEvents(ctx, doer.ID)
+		if err = repo_model.WatchRepoWithEvents(ctx, doer.ID, repo.ID, defaultEvents); err != nil {
 			return fmt.Errorf("WatchRepo: %w", err)
 		}
 	}

@@ -279,9 +279,18 @@ func GetRepoWatchers(ctx context.Context, repoID int64, opts db.ListOptions) ([]
 	return users, sess.Find(&users)
 }
 
+// shouldAutoWatchOnContribute checks if a user should auto-watch when contributing to a repo.
+// Priority order: User setting > Instance setting (AUTO_WATCH_ON_CHANGES)
+func shouldAutoWatchOnContribute(ctx context.Context, userID int64) bool {
+	if val, err := user_model.GetUserSetting(ctx, userID, user_model.SettingsKeyAutoWatchOnContribute); err == nil && val != "" {
+		return val == "true"
+	}
+	return setting.Service.AutoWatchOnChanges
+}
+
 // WatchIfAuto subscribes to repo if AutoWatchOnChanges is set
 func WatchIfAuto(ctx context.Context, userID, repoID int64, isWrite bool) error {
-	if !isWrite || !setting.Service.AutoWatchOnChanges {
+	if !isWrite || !shouldAutoWatchOnContribute(ctx, userID) {
 		return nil
 	}
 	watch, err := GetWatch(ctx, userID, repoID)
@@ -296,7 +305,7 @@ func WatchIfAuto(ctx context.Context, userID, repoID int64, isWrite bool) error 
 
 // WatchIfAutoWithEvents subscribes to repo with specific events if AutoWatchOnChanges is set
 func WatchIfAutoWithEvents(ctx context.Context, userID, repoID int64, isWrite bool, events WatchEventType) error {
-	if !isWrite || !setting.Service.AutoWatchOnChanges {
+	if !isWrite || !shouldAutoWatchOnContribute(ctx, userID) {
 		return nil
 	}
 	watch, err := GetWatch(ctx, userID, repoID)
