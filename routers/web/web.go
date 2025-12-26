@@ -1168,6 +1168,7 @@ func registerRoutes(m *web.Route) {
 	m.Group("/{username}/{reponame}/action", func() {
 		m.Post("/watch", repo.ActionWatch(true))
 		m.Post("/unwatch", repo.ActionWatch(false))
+		m.Post("/watch/settings", repo.ActionWatchSettings)
 		m.Post("/accept_transfer", repo.ActionTransfer(true))
 		m.Post("/reject_transfer", repo.ActionTransfer(false))
 		if !setting.Repository.DisableStars {

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 
 	"forgejo.org/models"
@@ -637,6 +638,27 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	if ctx.IsSigned {
 		ctx.Data["IsWatchingRepo"] = repo_model.IsWatching(ctx, ctx.Doer.ID, repo.ID)
 		ctx.Data["IsStaringRepo"] = repo_model.IsStaring(ctx, ctx.Doer.ID, repo.ID)
+
+		watch, err := repo_model.GetWatch(ctx, ctx.Doer.ID, repo.ID)
+		if err == nil && repo_model.IsWatchMode(watch.Mode) {
+			events := watch.GetWatchEvents()
+			ctx.Data["WatchesIssues"] = events.WatchesIssues()
+			ctx.Data["WatchesPullRequests"] = events.WatchesPullRequests()
+			ctx.Data["WatchesReleases"] = events.WatchesReleases()
+		} else {
+			// Use user's default watch settings when not currently watching
+			defaultEvents := repo_model.WatchEventAll
+			if val, err := user_model.GetUserSetting(ctx, ctx.Doer.ID, user_model.SettingsKeyDefaultWatchEvents); err == nil && val != "" {
+				if events, err := strconv.ParseInt(val, 10, 64); err == nil && events > 0 {
+					defaultEvents = repo_model.WatchEventType(events)
+				}
+			} else if setting.Service.DefaultWatchEvents > 0 {
+				defaultEvents = repo_model.WatchEventType(setting.Service.DefaultWatchEvents)
+			}
+			ctx.Data["WatchesIssues"] = defaultEvents.WatchesIssues()
+			ctx.Data["WatchesPullRequests"] = defaultEvents.WatchesPullRequests()
+			ctx.Data["WatchesReleases"] = defaultEvents.WatchesReleases()
+		}
 	}
 
 	cardWidth, cardHeight := card.DefaultSize()

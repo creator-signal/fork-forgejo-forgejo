@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 
 	"forgejo.org/models"
@@ -319,23 +320,97 @@ const (
 
 func ActionWatch(watch bool) func(ctx *context.Context) {
 	return func(ctx *context.Context) {
-		err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watch)
-		if err != nil {
-			ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watch), err)
-			return
+		if watch {
+			defaultEvents := getDefaultWatchEvents(ctx)
+			err := repo_model.WatchRepoWithEvents(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, defaultEvents)
+			if err != nil {
+				ctx.ServerError("Action (watch)", err)
+				return
+			}
+		} else {
+			err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, false)
+			if err != nil {
+				ctx.ServerError("Action (unwatch)", err)
+				return
+			}
 		}
 
-		ctx.Data["IsWatchingRepo"] = repo_model.IsWatching(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID)
-
-		// we have to reload the repository because NumStars or NumWatching (used in the templates) has just changed
-		ctx.Data["Repository"], err = repo_model.GetRepositoryByName(ctx, ctx.Repo.Repository.OwnerID, ctx.Repo.Repository.Name)
-		if err != nil {
-			ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watch), err)
-			return
-		}
-
+		loadWatchContext(ctx)
 		ctx.HTML(http.StatusOK, tplWatchUnwatch)
 	}
+}
+
+// ActionWatchSettings handles updating watch event preferences
+func ActionWatchSettings(ctx *context.Context) {
+	events := repo_model.WatchEventType(0)
+
+	if ctx.FormBool("watch_issues") {
+		events |= repo_model.WatchEventIssues
+	}
+	if ctx.FormBool("watch_pulls") {
+		events |= repo_model.WatchEventPullRequests
+	}
+	if ctx.FormBool("watch_releases") {
+		events |= repo_model.WatchEventReleases
+	}
+
+	// If no events selected, unwatch the repository
+	if events == 0 {
+		err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, false)
+		if err != nil {
+			ctx.ServerError("ActionWatchSettings", err)
+			return
+		}
+	} else {
+		err := repo_model.WatchRepoWithEvents(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, events)
+		if err != nil {
+			ctx.ServerError("ActionWatchSettings", err)
+			return
+		}
+	}
+
+	loadWatchContext(ctx)
+	ctx.HTML(http.StatusOK, tplWatchUnwatch)
+}
+
+// getDefaultWatchEvents returns the default watch events for a user
+// Priority: User setting > Instance setting > All events
+func getDefaultWatchEvents(ctx *context.Context) repo_model.WatchEventType {
+	// Check user setting
+	if val, err := user_model.GetUserSetting(ctx, ctx.Doer.ID, user_model.SettingsKeyDefaultWatchEvents); err == nil && val != "" {
+		if events, err := strconv.ParseInt(val, 10, 64); err == nil && events > 0 {
+			return repo_model.WatchEventType(events)
+		}
+	}
+
+	if setting.Service.DefaultWatchEvents > 0 {
+		return repo_model.WatchEventType(setting.Service.DefaultWatchEvents)
+	}
+
+	return repo_model.WatchEventAll
+}
+
+// loadWatchContext loads the watch-related context data for templates
+func loadWatchContext(ctx *context.Context) {
+	ctx.Data["IsWatchingRepo"] = repo_model.IsWatching(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID)
+
+	watch, err := repo_model.GetWatch(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID)
+	if err == nil && repo_model.IsWatchMode(watch.Mode) {
+		events := watch.GetWatchEvents()
+		ctx.Data["WatchEvents"] = events
+		ctx.Data["WatchesIssues"] = events.WatchesIssues()
+		ctx.Data["WatchesPullRequests"] = events.WatchesPullRequests()
+		ctx.Data["WatchesReleases"] = events.WatchesReleases()
+	} else {
+		// Use user's default watch settings when not currently watching
+		defaultEvents := getDefaultWatchEvents(ctx)
+		ctx.Data["WatchesIssues"] = defaultEvents.WatchesIssues()
+		ctx.Data["WatchesPullRequests"] = defaultEvents.WatchesPullRequests()
+		ctx.Data["WatchesReleases"] = defaultEvents.WatchesReleases()
+	}
+
+	// Reload the repository because NumWatches may have changed
+	ctx.Data["Repository"], _ = repo_model.GetRepositoryByName(ctx, ctx.Repo.Repository.OwnerID, ctx.Repo.Repository.Name)
 }
 
 func ActionStar(star bool) func(ctx *context.Context) {
