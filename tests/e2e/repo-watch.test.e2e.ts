@@ -89,10 +89,11 @@ test('User settings: notifications default watch events checkboxes', async ({bro
   const page = await login({browser}, workerInfo);
   await page.goto('/user/settings/notifications');
 
-  // Verify default watch event checkboxes exist
-  const issuesCheckbox = page.locator('input[name="default_watch_issues"]');
-  const prsCheckbox = page.locator('input[name="default_watch_pull_requests"]');
-  const releasesCheckbox = page.locator('input[name="default_watch_releases"]');
+  // Verify default watch event checkboxes exist (in WATCH_DEFAULTS form)
+  const watchDefaultsForm = page.locator('form:has(input[name="_method"][value="WATCH_DEFAULTS"])');
+  const issuesCheckbox = watchDefaultsForm.locator('input[name="watch_issues"]');
+  const prsCheckbox = watchDefaultsForm.locator('input[name="watch_pulls"]');
+  const releasesCheckbox = watchDefaultsForm.locator('input[name="watch_releases"]');
 
   await expect(issuesCheckbox).toBeVisible();
   await expect(prsCheckbox).toBeVisible();
@@ -137,8 +138,9 @@ test('User settings: notifications can save default watch events', async ({brows
   const page = await login({browser}, workerInfo);
   await page.goto('/user/settings/notifications');
 
-  // Toggle issues checkbox and save
-  const issuesCheckbox = page.locator('input[name="default_watch_issues"]');
+  // Find the watch defaults form and issues checkbox
+  const watchDefaultsForm = page.locator('form:has(input[name="_method"][value="WATCH_DEFAULTS"])');
+  const issuesCheckbox = watchDefaultsForm.locator('input[name="watch_issues"]');
 
   // Get initial state
   const wasChecked = await issuesCheckbox.evaluate((el: HTMLInputElement) => el.checked);
@@ -146,8 +148,7 @@ test('User settings: notifications can save default watch events', async ({brows
   // Toggle the checkbox
   await issuesCheckbox.click();
 
-  // Find and click the submit button for watch defaults form
-  const watchDefaultsForm = page.locator('form:has(input[name="default_watch_issues"])');
+  // Click submit button
   await watchDefaultsForm.locator('button[type="submit"]').click();
 
   // Wait for save
@@ -156,13 +157,17 @@ test('User settings: notifications can save default watch events', async ({brows
   // Reload and verify state persisted
   await page.goto('/user/settings/notifications');
 
+  // Re-locate elements after navigation
+  const newWatchDefaultsForm = page.locator('form:has(input[name="_method"][value="WATCH_DEFAULTS"])');
+  const newIssuesCheckbox = newWatchDefaultsForm.locator('input[name="watch_issues"]');
+
   if (wasChecked) {
-    await expect(issuesCheckbox).not.toBeChecked();
+    await expect(newIssuesCheckbox).not.toBeChecked();
   } else {
-    await expect(issuesCheckbox).toBeChecked();
+    await expect(newIssuesCheckbox).toBeChecked();
   }
 
   // Restore original state
-  await issuesCheckbox.click();
-  await watchDefaultsForm.locator('button[type="submit"]').click();
+  await newIssuesCheckbox.click();
+  await newWatchDefaultsForm.locator('button[type="submit"]').click();
 });
