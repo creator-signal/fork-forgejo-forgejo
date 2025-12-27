@@ -362,7 +362,7 @@
 							<a href="{{.DependentIssue.Link}}">
 								{{$strTitle := RenderRefIssueTitle $.Context .DependentIssue.Title}}
 								{{if eq .DependentIssue.RepoID .Issue.RepoID}}
-									#{{.DependentIssue.Index}} {{$strTitle}}
+									#{{.DependentIssue.Index}} - {{$strTitle}}
 								{{else}}
 									{{.DependentIssue.Repo.FullName}}#{{.DependentIssue.Index}} - {{$strTitle}}
 								{{end}}
@@ -386,7 +386,7 @@
 							<a href="{{.DependentIssue.Link}}">
 								{{$strTitle := RenderRefIssueTitle $.Context .DependentIssue.Title}}
 								{{if eq .DependentIssue.RepoID .Issue.RepoID}}
-									#{{.DependentIssue.Index}} {{$strTitle}}
+									#{{.DependentIssue.Index}} - {{$strTitle}}
 								{{else}}
 									{{.DependentIssue.Repo.FullName}}#{{.DependentIssue.Index}} - {{$strTitle}}
 								{{end}}
@@ -775,6 +775,37 @@
 						{{end}}
 					</ul>
 				</span>
+			</div>
+		{{else if or (eq .Type 38) (eq .Type 39) (eq .Type 40) (eq .Type 41)}}
+			<div class="timeline-item event" id="{{.HashTag}}">
+				<span class="badge">{{svg "octicon-list-unordered" 16}}</span>
+				{{template "shared/user/avatarlink" dict "user" .Poster}}
+				<span class="text grey muted-links">
+					{{template "shared/user/authorlink" .Poster}}
+					{{if eq .Type 38}}{{ctx.Locale.Tr "repo.issues.parent_issue.added" $createdStr}}
+					{{else if eq .Type 39}}{{ctx.Locale.Tr "repo.issues.parent_issue.removed" $createdStr}}
+					{{else if eq .Type 40}}{{ctx.Locale.Tr "repo.issues.sub_issue.added" $createdStr}}
+					{{else if eq .Type 41}}{{ctx.Locale.Tr "repo.issues.sub_issue.removed" $createdStr}}
+					{{end}}
+				</span>
+				{{$comment := .}}
+				{{range $subIssue := .ParentOrSubIssues}}
+					<div class="detail flex-text-block">
+						{{if or (eq $comment.Type 38) (eq $comment.Type 40)}}{{svg "octicon-plus"}}
+						{{else}}{{svg "octicon-trash"}}
+						{{end}}
+						<span class="text grey muted-links">
+							<a href="{{$subIssue.Link}}">
+								{{$strTitle := RenderRefIssueTitle $.Context $subIssue.Title}}
+								{{if eq $subIssue.RepoID $comment.Issue.RepoID}}
+									#{{$subIssue.Index}} - {{$strTitle}}
+								{{else}}
+									{{$subIssue.Repo.FullName}}#{{$subIssue.Index}} - {{$strTitle}}
+								{{end}}
+							</a>
+						</span>
+					</div>
+				{{end}}
 			</div>
 		{{end}}
 	{{end}}

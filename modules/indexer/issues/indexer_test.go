@@ -216,7 +216,7 @@ func searchIssueIsPull(t *testing.T) {
 			SearchOptions{
 				IsPull: optional.Some(false),
 			},
-			[]int64{17, 16, 15, 14, 13, 6, 5, 18, 10, 7, 4, 1},
+			[]int64{24, 23, 17, 16, 15, 14, 13, 6, 5, 18, 10, 7, 4, 1},
 		},
 		{
 			SearchOptions{

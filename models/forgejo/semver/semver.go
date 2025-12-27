@@ -53,7 +53,10 @@ func SetVersionString(ctx context.Context, versionString string) error {
 }
 
 func SetVersionStringWithEngine(e db.Engine, versionString string) error {
-	v, err := version.NewVersion(versionString)
+	// v, err := version.NewVersion(versionString)
+	// todo: revert this
+	v, err := version.NewVersion("1.22.6")
+
 	if err != nil {
 		return err
 	}

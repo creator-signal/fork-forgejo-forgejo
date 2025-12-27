@@ -737,6 +737,19 @@ export function initRepoIssueAssignMe() {
     });
 }
 
+export function initRepoIssueParentIssueDelete() {
+  // Remove Parent Issue
+  $(document).on('click', '.remove-parent-issue-button', (_) => {
+    $('.remove-parent-issue-confirm').modal({
+      closable: false,
+      duration: 200,
+      onApprove: () => {
+        $('#removeParentIssueForm').trigger('submit');
+      },
+    }).modal('show');
+  });
+}
+
 export function initSingleCommentEditor($commentForm) {
   // pages:
   // * normal new issue/pr page, no status-button

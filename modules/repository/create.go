@@ -86,6 +86,7 @@ func CreateRepositoryByExample(ctx context.Context, doer, u *user_model.User, re
 					EnableTimetracker:                setting.Service.DefaultEnableTimetracking,
 					AllowOnlyContributorsToTrackTime: setting.Service.DefaultAllowOnlyContributorsToTrackTime,
 					EnableDependencies:               setting.Service.DefaultEnableDependencies,
+					EnableSubIssues:                  setting.Service.DefaultEnableSubIssues,
 				},
 			})
 		case unit.TypePullRequests:
