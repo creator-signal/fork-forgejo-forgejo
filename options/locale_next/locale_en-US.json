@@ -14,10 +14,6 @@
         "other": "%s stars"
     },
     "watch.list.none": "No one is watching this repo.",
-    "watch.n_watchers": {
-        "one": "%s watcher",
-        "other": "%s watchers"
-    },
     "followers.incoming.list.self.none": "No one is following your profile.",
     "followers.incoming.list.none": "No one is following this user.",
     "followers.outgoing.list.self.none": "You are not following anyone.",
