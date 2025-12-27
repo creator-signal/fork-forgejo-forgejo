@@ -1,7 +1,7 @@
 {{if $.IsSigned}}
 <div class="ui labeled button" id="watch-button">
 	<details class="dropdown">
-		<summary class="ui small compact basic button tw-m-0">
+		<summary class="small secondary button">
 			{{svg "octicon-eye" 16}}
 			<span class="text not-mobile">{{if $.IsWatchingRepo}}{{ctx.Locale.Tr "repo.watching"}}{{else}}{{ctx.Locale.Tr "repo.watch"}}{{end}}</span>
 			{{svg "octicon-triangle-down" 14}}
