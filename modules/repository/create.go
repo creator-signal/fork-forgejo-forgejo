@@ -39,7 +39,6 @@ func shouldAutoWatchOnCreate(ctx context.Context, userID int64) bool {
 	return setting.Service.AutoWatchNewRepos
 }
 
-
 // CreateRepositoryByExample creates a repository for the user/organization.
 func CreateRepositoryByExample(ctx context.Context, doer, u *user_model.User, repo *repo_model.Repository, overwriteOrAdopt, isFork bool) (err error) {
 	if err = repo_model.IsUsableRepoName(repo.Name); err != nil {
