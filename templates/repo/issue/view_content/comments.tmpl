@@ -782,10 +782,10 @@
 				{{template "shared/user/avatarlink" dict "user" .Poster}}
 				<span class="text grey muted-links">
 					{{template "shared/user/authorlink" .Poster}}
-					{{if eq .Type 38}}{{ctx.Locale.Tr "repo.issues.parent_issue.added" $createdStr}}
-					{{else if eq .Type 39}}{{ctx.Locale.Tr "repo.issues.parent_issue.removed" $createdStr}}
-					{{else if eq .Type 40}}{{ctx.Locale.Tr "repo.issues.sub_issue.added" $createdStr}}
-					{{else if eq .Type 41}}{{ctx.Locale.Tr "repo.issues.sub_issue.removed" $createdStr}}
+						{{if eq .Type 39}}{{ctx.Locale.Tr "repo.issues.parent_issue.added" $createdStr}}
+						{{else if eq .Type 40}}{{ctx.Locale.Tr "repo.issues.parent_issue.removed" $createdStr}}
+						{{else if eq .Type 41}}{{ctx.Locale.Tr "repo.issues.sub_issue.added" $createdStr}}
+						{{else if eq .Type 42}}{{ctx.Locale.Tr "repo.issues.sub_issue.removed" $createdStr}}
 					{{end}}
 				</span>
 				{{$comment := .}}

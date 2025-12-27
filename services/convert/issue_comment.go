@@ -189,9 +189,10 @@ func ToTimelineComment(ctx context.Context, repo *repo_model.Repository, c *issu
 		comment.DependentIssue = ToAPIIssue(ctx, doer, c.DependentIssue)
 	}
 
-	if c.Type == issues_model.CommentTypeAddParentIssue || c.Type == issues_model.CommentTypeRemoveParentIssue {
+	switch c.Type {
+	case issues_model.CommentTypeAddParentIssue, issues_model.CommentTypeRemoveParentIssue:
 		comment.ParentIssue = ToAPIIssue(ctx, doer, c.ParentOrSubIssue)
-	} else if c.Type == issues_model.CommentTypeAddSubIssue || c.Type == issues_model.CommentTypeRemoveSubIssue {
+	case issues_model.CommentTypeAddSubIssue, issues_model.CommentTypeRemoveSubIssue:
 		comment.SubIssue = ToAPIIssue(ctx, doer, c.ParentOrSubIssue)
 	}
 
