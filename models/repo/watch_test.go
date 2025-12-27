@@ -151,3 +151,112 @@ func TestUnwatchRepos(t *testing.T) {
 	unittest.AssertNotExistsBean(t, &repo_model.Watch{UserID: 4, RepoID: 1})
 	unittest.AssertNotExistsBean(t, &repo_model.Watch{UserID: 4, RepoID: 2})
 }
+
+func TestWatchEventType(t *testing.T) {
+	t.Run("Bitmask values", func(t *testing.T) {
+		assert.EqualValues(t, 1, repo_model.WatchEventIssues)
+		assert.EqualValues(t, 2, repo_model.WatchEventPullRequests)
+		assert.EqualValues(t, 4, repo_model.WatchEventReleases)
+		assert.EqualValues(t, 7, repo_model.WatchEventAll)
+	})
+
+	t.Run("WatchesIssues", func(t *testing.T) {
+		assert.True(t, repo_model.WatchEventIssues.WatchesIssues())
+		assert.True(t, repo_model.WatchEventAll.WatchesIssues())
+		assert.True(t, repo_model.WatchEventType(3).WatchesIssues()) // Issues + PRs
+		assert.False(t, repo_model.WatchEventPullRequests.WatchesIssues())
+		assert.False(t, repo_model.WatchEventReleases.WatchesIssues())
+	})
+
+	t.Run("WatchesPullRequests", func(t *testing.T) {
+		assert.True(t, repo_model.WatchEventPullRequests.WatchesPullRequests())
+		assert.True(t, repo_model.WatchEventAll.WatchesPullRequests())
+		assert.True(t, repo_model.WatchEventType(3).WatchesPullRequests()) // Issues + PRs
+		assert.False(t, repo_model.WatchEventIssues.WatchesPullRequests())
+		assert.False(t, repo_model.WatchEventReleases.WatchesPullRequests())
+	})
+
+	t.Run("WatchesReleases", func(t *testing.T) {
+		assert.True(t, repo_model.WatchEventReleases.WatchesReleases())
+		assert.True(t, repo_model.WatchEventAll.WatchesReleases())
+		assert.True(t, repo_model.WatchEventType(5).WatchesReleases()) // Issues + Releases
+		assert.False(t, repo_model.WatchEventIssues.WatchesReleases())
+		assert.False(t, repo_model.WatchEventPullRequests.WatchesReleases())
+	})
+}
+
+func TestWatchGetWatchEvents(t *testing.T) {
+	t.Run("Returns stored events", func(t *testing.T) {
+		watch := &repo_model.Watch{WatchEvents: repo_model.WatchEventIssues}
+		assert.Equal(t, repo_model.WatchEventIssues, watch.GetWatchEvents())
+
+		watch = &repo_model.Watch{WatchEvents: repo_model.WatchEventType(3)}
+		assert.Equal(t, repo_model.WatchEventType(3), watch.GetWatchEvents())
+	})
+
+	t.Run("Returns all events when zero", func(t *testing.T) {
+		watch := &repo_model.Watch{WatchEvents: 0}
+		assert.Equal(t, repo_model.WatchEventAll, watch.GetWatchEvents())
+	})
+}
+
+func TestGetDefaultWatchEvents(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("Falls back to instance setting", func(t *testing.T) {
+		setting.Service.DefaultWatchEvents = 3 // Issues + PRs
+		events := repo_model.GetDefaultWatchEvents(db.DefaultContext, 1)
+		assert.Equal(t, repo_model.WatchEventType(3), events)
+	})
+
+	t.Run("Falls back to all events when instance setting is zero", func(t *testing.T) {
+		setting.Service.DefaultWatchEvents = 0
+		events := repo_model.GetDefaultWatchEvents(db.DefaultContext, 1)
+		assert.Equal(t, repo_model.WatchEventAll, events)
+	})
+}
+
+func TestWatchRepoWithEvents(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("Creates watch with specific events", func(t *testing.T) {
+		// User 12 is not watching repo 1
+		unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 0)
+
+		// Watch with only issues
+		err := repo_model.WatchRepoWithEvents(db.DefaultContext, 12, 1, repo_model.WatchEventIssues)
+		require.NoError(t, err)
+
+		watch, err := repo_model.GetWatch(db.DefaultContext, 12, 1)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchEventIssues, watch.WatchEvents)
+		assert.True(t, repo_model.IsWatchMode(watch.Mode))
+
+		// Clean up
+		require.NoError(t, repo_model.WatchRepo(db.DefaultContext, 12, 1, false))
+	})
+
+	t.Run("Updates existing watch events", func(t *testing.T) {
+		// User 12 is not watching repo 2
+		unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 2}, 0)
+
+		// First watch with all events
+		err := repo_model.WatchRepoWithEvents(db.DefaultContext, 12, 2, repo_model.WatchEventAll)
+		require.NoError(t, err)
+
+		watch, err := repo_model.GetWatch(db.DefaultContext, 12, 2)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchEventAll, watch.WatchEvents)
+
+		// Update to only releases
+		err = repo_model.UpdateWatchEvents(db.DefaultContext, 12, 2, repo_model.WatchEventReleases)
+		require.NoError(t, err)
+
+		watch, err = repo_model.GetWatch(db.DefaultContext, 12, 2)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchEventReleases, watch.WatchEvents)
+
+		// Clean up
+		require.NoError(t, repo_model.WatchRepo(db.DefaultContext, 12, 2, false))
+	})
+}
