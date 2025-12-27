@@ -42,7 +42,7 @@
 			</ul>
 		</form>
 	</details>
-	<a class="ui basic label" href="{{.RepoLink}}/watchers">
+	<a class="ui basic label" href="{{.RepoLink}}/watchers" aria-label="{{ctx.Locale.TrPluralString .Repository.NumWatches "watch.n_watchers" (printf "%d" .Repository.NumWatches)}}">
 		{{CountFmt .Repository.NumWatches}}
 	</a>
 </div>
