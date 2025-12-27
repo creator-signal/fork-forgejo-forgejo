@@ -19,25 +19,25 @@ test('Watch dropdown: toggle watch events', async ({browser}, workerInfo) => {
   await page.goto('/user2/repo1');
 
   // Find the watch dropdown
-  const watchDropdown = page.locator('.repo-buttons details.dropdown.watch-dropdown');
+  const watchDropdown = page.locator('#watch-button details.dropdown');
   const watchSummary = watchDropdown.locator('summary');
-  const watchMenu = watchDropdown.locator('.menu');
+  const watchMenu = watchDropdown.locator('ul');
 
   // Open the dropdown
   await watchSummary.click();
   await expect(watchMenu).toBeVisible();
 
   // Verify checkboxes are present
-  const issuesCheckbox = watchMenu.locator('input[name="issues"]');
-  const prsCheckbox = watchMenu.locator('input[name="pull_requests"]');
-  const releasesCheckbox = watchMenu.locator('input[name="releases"]');
+  const issuesCheckbox = watchMenu.locator('input[name="watch_issues"]');
+  const prsCheckbox = watchMenu.locator('input[name="watch_pulls"]');
+  const releasesCheckbox = watchMenu.locator('input[name="watch_releases"]');
 
   await expect(issuesCheckbox).toBeVisible();
   await expect(prsCheckbox).toBeVisible();
   await expect(releasesCheckbox).toBeVisible();
 
   // Close dropdown by clicking elsewhere
-  await page.locator('.repo-header').click();
+  await page.locator('h1').click();
   await expect(watchMenu).toBeHidden();
 });
 
@@ -45,17 +45,17 @@ test('Watch dropdown: unwatch all shows proper state', async ({browser}, workerI
   const page = await login({browser}, workerInfo);
   await page.goto('/user2/repo1');
 
-  const watchDropdown = page.locator('.repo-buttons details.dropdown.watch-dropdown');
+  const watchDropdown = page.locator('#watch-button details.dropdown');
   const watchSummary = watchDropdown.locator('summary');
-  const watchMenu = watchDropdown.locator('.menu');
+  const watchMenu = watchDropdown.locator('ul');
 
   // Open dropdown and click unwatch
   await watchSummary.click();
   await expect(watchMenu).toBeVisible();
 
-  const unwatchLink = watchMenu.locator('a:has-text("Unwatch")');
-  if (await unwatchLink.isVisible()) {
-    await unwatchLink.click();
+  const unwatchButton = watchMenu.locator('button:has-text("Unwatch")');
+  if (await unwatchButton.isVisible()) {
+    await unwatchButton.click();
     // After unwatch, the button should show "Watch" state
     await expect(watchSummary).toContainText('Watch');
   }
