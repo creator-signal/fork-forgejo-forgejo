@@ -10,7 +10,7 @@
 			<form action="{{AppSubUrl}}/user/settings/notifications" class="ui form" method="post">
 				{{$.CsrfTokenHtml}}
 				<input name="_method" type="hidden" value="EMAIL_PREFERENCE">
-				<div class="tw-mb-4">{{ctx.Locale.Tr "settings.email_notifications_desc"}}</div>
+				<div class="tw-mb-4">{{ctx.Locale.Tr "settings.email_notifications.description"}}</div>
 				<div class="tw-flex tw-flex-wrap tw-gap-2">
 					<div class="ui selection dropdown">
 						<input name="preference" type="hidden" value="{{.EmailNotificationsPreference}}">
@@ -34,7 +34,7 @@
 			{{ctx.Locale.Tr "settings.auto_watch_repos"}}
 		</h4>
 		<div class="ui attached segment">
-			<div class="tw-mb-4 tw-text-text-light-2">{{ctx.Locale.Tr "settings.auto_watch_repos_desc"}}</div>
+			<div class="tw-mb-4 tw-text-text-light-2">{{ctx.Locale.Tr "settings.auto_watch_repos.description"}}</div>
 			<form action="{{AppSubUrl}}/user/settings/notifications" class="ui form" method="post">
 				{{$.CsrfTokenHtml}}
 				<input name="_method" type="hidden" value="AUTO_WATCH">
@@ -67,7 +67,7 @@
 			{{ctx.Locale.Tr "settings.default_watch_events"}}
 		</h4>
 		<div class="ui attached segment">
-			<div class="tw-mb-2 tw-text-text-light-2">{{ctx.Locale.Tr "settings.default_watch_events_desc"}}</div>
+			<div class="tw-mb-2 tw-text-text-light-2">{{ctx.Locale.Tr "settings.default_watch_events.description"}}</div>
 			<form action="{{AppSubUrl}}/user/settings/notifications" class="ui form" method="post">
 				{{$.CsrfTokenHtml}}
 				<input name="_method" type="hidden" value="WATCH_DEFAULTS">
