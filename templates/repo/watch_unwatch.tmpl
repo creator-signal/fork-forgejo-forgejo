@@ -14,19 +14,19 @@
 						<div class="field">
 							<div class="ui checkbox">
 								<input type="checkbox" name="watch_issues" value="true" {{if $.WatchesIssues}}checked{{end}}>
-								<label>{{svg "octicon-issue-opened" 16}} {{ctx.Locale.Tr "repo.watch.issues"}}</label>
+								<label>{{svg "octicon-issue-opened"}} {{ctx.Locale.Tr "repo.watch.issues"}}</label>
 							</div>
 						</div>
 						<div class="field">
 							<div class="ui checkbox">
 								<input type="checkbox" name="watch_pulls" value="true" {{if $.WatchesPullRequests}}checked{{end}}>
-								<label>{{svg "octicon-git-pull-request" 16}} {{ctx.Locale.Tr "repo.watch.pull_requests"}}</label>
+								<label>{{svg "octicon-git-pull-request"}} {{ctx.Locale.Tr "repo.watch.pull_requests"}}</label>
 							</div>
 						</div>
 						<div class="field">
 							<div class="ui checkbox">
 								<input type="checkbox" name="watch_releases" value="true" {{if $.WatchesReleases}}checked{{end}}>
-								<label>{{svg "octicon-tag" 16}} {{ctx.Locale.Tr "repo.watch.releases"}}</label>
+								<label>{{svg "octicon-tag"}} {{ctx.Locale.Tr "repo.watch.releases"}}</label>
 							</div>
 						</div>
 						<div class="tw-flex tw-justify-between tw-items-center tw-mt-3 tw-gap-4">
