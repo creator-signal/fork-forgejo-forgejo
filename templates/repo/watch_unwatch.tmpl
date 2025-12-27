@@ -6,9 +6,9 @@
 			<span class="text not-mobile">{{if $.IsWatchingRepo}}{{ctx.Locale.Tr "repo.watching"}}{{else}}{{ctx.Locale.Tr "repo.watch"}}{{end}}</span>
 			{{svg "octicon-triangle-down" 14}}
 		</summary>
-		<ul class="tw-text-left">
-			<li>
-				<form class="tw-p-3" hx-post="{{$.RepoLink}}/action/watch/settings" hx-target="#watch-button" hx-swap="outerHTML">
+		<form class="content tw-p-3" hx-post="{{$.RepoLink}}/action/watch/settings" hx-target="#watch-button" hx-swap="outerHTML">
+			<ul class="tw-text-left">
+				<li>
 					{{$.CsrfTokenHtml}}
 					<div class="ui form">
 						<div class="field">
@@ -38,9 +38,9 @@
 							{{end}}
 						</div>
 					</div>
-				</form>
-			</li>
-		</ul>
+				</li>
+			</ul>
+		</form>
 	</details>
 	<a class="ui basic label" href="{{.RepoLink}}/watchers">
 		{{CountFmt .Repository.NumWatches}}
