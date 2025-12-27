@@ -5,7 +5,6 @@ package user
 
 import (
 	std_context "context"
-	"encoding/json"
 	"io"
 	"net/http"
 
@@ -13,6 +12,7 @@ import (
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
