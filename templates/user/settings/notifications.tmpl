@@ -38,23 +38,26 @@
 			<form action="{{AppSubUrl}}/user/settings/notifications" class="ui form" method="post">
 				{{$.CsrfTokenHtml}}
 				<input name="_method" type="hidden" value="AUTO_WATCH">
-				<div class="field">
+				<div class="field tw-flex tw-items-center tw-gap-2">
 					<div class="ui checkbox">
-						<input type="checkbox" name="auto_watch_on_create" {{if .AutoWatchOnCreate}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.auto_watch_repos.on_create"}}</label>
+						<input type="checkbox" name="auto_watch_on_create" id="auto_watch_on_create" {{if .AutoWatchOnCreate}}checked{{end}}>
+						<label for="auto_watch_on_create"></label>
 					</div>
+					<span>{{ctx.Locale.Tr "settings.auto_watch_repos.on_create"}}</span>
 				</div>
-				<div class="field">
+				<div class="field tw-flex tw-items-center tw-gap-2">
 					<div class="ui checkbox">
-						<input type="checkbox" name="auto_watch_on_access" {{if .AutoWatchOnAccess}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.auto_watch_repos.on_access"}}</label>
+						<input type="checkbox" name="auto_watch_on_access" id="auto_watch_on_access" {{if .AutoWatchOnAccess}}checked{{end}}>
+						<label for="auto_watch_on_access"></label>
 					</div>
+					<span>{{ctx.Locale.Tr "settings.auto_watch_repos.on_access"}}</span>
 				</div>
-				<div class="field">
+				<div class="field tw-flex tw-items-center tw-gap-2">
 					<div class="ui checkbox">
-						<input type="checkbox" name="auto_watch_on_contribute" {{if .AutoWatchOnContribute}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.auto_watch_repos.on_contribute"}}</label>
+						<input type="checkbox" name="auto_watch_on_contribute" id="auto_watch_on_contribute" {{if .AutoWatchOnContribute}}checked{{end}}>
+						<label for="auto_watch_on_contribute"></label>
 					</div>
+					<span>{{ctx.Locale.Tr "settings.auto_watch_repos.on_contribute"}}</span>
 				</div>
 				<div class="tw-mt-4">
 					<button class="ui primary button">{{ctx.Locale.Tr "save"}}</button>
@@ -72,17 +75,26 @@
 				{{$.CsrfTokenHtml}}
 				<input name="_method" type="hidden" value="WATCH_DEFAULTS">
 				<div class="tw-flex tw-flex-wrap tw-gap-4 tw-mb-4">
-					<div class="ui checkbox">
-						<input type="checkbox" name="watch_issues" {{if .DefaultWatchIssues}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.default_watch_events.issues"}}</label>
+					<div class="tw-flex tw-items-center tw-gap-2">
+						<div class="ui checkbox">
+							<input type="checkbox" name="watch_issues" id="watch_issues" {{if .DefaultWatchIssues}}checked{{end}}>
+							<label for="watch_issues"></label>
+						</div>
+						<span>{{ctx.Locale.Tr "settings.default_watch_events.issues"}}</span>
 					</div>
-					<div class="ui checkbox">
-						<input type="checkbox" name="watch_pulls" {{if .DefaultWatchPulls}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.default_watch_events.pull_requests"}}</label>
+					<div class="tw-flex tw-items-center tw-gap-2">
+						<div class="ui checkbox">
+							<input type="checkbox" name="watch_pulls" id="watch_pulls" {{if .DefaultWatchPulls}}checked{{end}}>
+							<label for="watch_pulls"></label>
+						</div>
+						<span>{{ctx.Locale.Tr "settings.default_watch_events.pull_requests"}}</span>
 					</div>
-					<div class="ui checkbox">
-						<input type="checkbox" name="watch_releases" {{if .DefaultWatchReleases}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.default_watch_events.releases"}}</label>
+					<div class="tw-flex tw-items-center tw-gap-2">
+						<div class="ui checkbox">
+							<input type="checkbox" name="watch_releases" id="watch_releases" {{if .DefaultWatchReleases}}checked{{end}}>
+							<label for="watch_releases"></label>
+						</div>
+						<span>{{ctx.Locale.Tr "settings.default_watch_events.releases"}}</span>
 					</div>
 				</div>
 				<button class="ui primary button">{{ctx.Locale.Tr "settings.default_watch_events.submit"}}</button>
