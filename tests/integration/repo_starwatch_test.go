@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"testing"
