@@ -115,7 +115,7 @@ test('User settings: notifications can save auto-watch preferences', async ({bro
 
   // Find and click the submit button for auto-watch form
   const autoWatchForm = page.locator('form:has(input[name="auto_watch_on_create"])');
-  await autoWatchForm.locator('button[type="submit"]').click();
+  await autoWatchForm.locator('button.ui.primary.button').click();
 
   // Wait for page to reload
   await page.waitForLoadState('load');
@@ -131,7 +131,7 @@ test('User settings: notifications can save auto-watch preferences', async ({bro
 
   // Restore original state
   await onCreateCheckbox.click();
-  await autoWatchForm.locator('button[type="submit"]').click();
+  await autoWatchForm.locator('button.ui.primary.button').click();
 });
 
 test('User settings: notifications can save default watch events', async ({browser}, workerInfo) => {
@@ -149,7 +149,7 @@ test('User settings: notifications can save default watch events', async ({brows
   await issuesCheckbox.click();
 
   // Click submit button
-  await watchDefaultsForm.locator('button[type="submit"]').click();
+  await watchDefaultsForm.locator('button.ui.primary.button').click();
 
   // Wait for save
   await page.waitForLoadState('load');
@@ -169,5 +169,5 @@ test('User settings: notifications can save default watch events', async ({brows
 
   // Restore original state
   await newIssuesCheckbox.click();
-  await newWatchDefaultsForm.locator('button[type="submit"]').click();
+  await newWatchDefaultsForm.locator('button.ui.primary.button').click();
 });
