@@ -5,6 +5,8 @@ package user
 
 import (
 	std_context "context"
+	"encoding/json"
+	"io"
 	"net/http"
 
 	"forgejo.org/models/db"
@@ -12,7 +14,6 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
-	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
@@ -182,17 +183,29 @@ func Watch(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	opts := web.GetForm(ctx).(*api.WatchOptions)
+	// Parse optional JSON body
+	var opts api.WatchOptions
+	body, err := io.ReadAll(ctx.Req.Body)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "ReadBody", err)
+		return
+	}
+	if len(body) > 0 {
+		if err := json.Unmarshal(body, &opts); err != nil {
+			ctx.Error(http.StatusBadRequest, "InvalidJSON", err)
+			return
+		}
+	}
 
 	// Determine watch events: use provided value, or fall back to defaults
 	var watchEvents repo_model.WatchEventType
-	if opts != nil && opts.WatchEvents != nil {
+	if opts.WatchEvents != nil {
 		watchEvents = repo_model.WatchEventType(*opts.WatchEvents)
 	} else {
 		watchEvents = repo_model.GetDefaultWatchEvents(ctx, ctx.Doer.ID)
 	}
 
-	err := repo_model.WatchRepoWithEvents(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watchEvents)
+	err = repo_model.WatchRepoWithEvents(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watchEvents)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "WatchRepoWithEvents", err)
 		return
