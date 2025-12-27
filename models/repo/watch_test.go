@@ -248,8 +248,8 @@ func TestWatchRepoWithEvents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, repo_model.WatchEventAll, watch.WatchEvents)
 
-		// Update to only releases
-		err = repo_model.UpdateWatchEvents(db.DefaultContext, 12, 2, repo_model.WatchEventReleases)
+		// Update to only releases using WatchRepoWithEvents
+		err = repo_model.WatchRepoWithEvents(db.DefaultContext, 12, 2, repo_model.WatchEventReleases)
 		require.NoError(t, err)
 
 		watch, err = repo_model.GetWatch(db.DefaultContext, 12, 2)
