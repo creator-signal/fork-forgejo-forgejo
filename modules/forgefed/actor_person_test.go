@@ -246,8 +246,8 @@ func TestForgePersonValidation(t *testing.T) {
 
 func TestAsloginName(t *testing.T) {
 	sut, _ := forgefed.NewPersonID("https://codeberg.org/api/v1/activitypub/user-id/12345", "forgejo")
-	assert.Equal(t, "12345-codeberg.org", sut.AsLoginName())
+	assert.Equal(t, "12345@codeberg.org", sut.AsLoginName())
 
 	sut, _ = forgefed.NewPersonID("https://codeberg.org:443/api/v1/activitypub/user-id/12345", "forgejo")
-	assert.Equal(t, "12345-codeberg.org-443", sut.AsLoginName())
+	assert.Equal(t, "12345@codeberg.org:443", sut.AsLoginName())
 }
