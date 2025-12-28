@@ -100,11 +100,11 @@ func RemoveParentIssue(ctx *context.Context) {
 		return
 	}
 
-	// Redirect
-	defer ctx.Redirect(issue.Link())
-
 	if err = issue.UpdateParentIssue(ctx, nil, ctx.Doer); err != nil {
 		ctx.ServerError("UpdateParentIssue, remove", err)
 		return
 	}
+
+	// Redirect
+	ctx.Redirect(issue.Link())
 }
