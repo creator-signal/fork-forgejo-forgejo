@@ -3639,6 +3639,7 @@ func filterXRefComments(ctx *context.Context, issue *issues_model.Issue) error {
 }
 
 func filterParentOrSubComments(ctx *context.Context, issue *issues_model.Issue) (err error) {
+	permCache := make(map[int64]access_model.Permission)
 	// Remove comments that the user has no permissions to see
 	for i := 0; i < len(issue.Comments); {
 		c := issue.Comments[i]
@@ -3651,9 +3652,14 @@ func filterParentOrSubComments(ctx *context.Context, issue *issues_model.Issue) 
 				return err
 			}
 			if c.ParentOrSubIssue.RepoID != issue.RepoID && c.ParentOrSubIssue.RepoID != 0 {
-				perm, err := access_model.GetUserRepoPermission(ctx, c.ParentOrSubIssue.Repo, ctx.Doer)
-				if err != nil {
-					return err
+				var perm access_model.Permission
+				var ok bool
+				if perm, ok = permCache[c.ParentOrSubIssue.RepoID]; !ok {
+					perm, err = access_model.GetUserRepoPermission(ctx, c.ParentOrSubIssue.Repo, ctx.Doer)
+					if err != nil {
+						return err
+					}
+					permCache[c.ParentOrSubIssue.RepoID] = perm
 				}
 				if !perm.CanReadIssuesOrPulls(false) {
 					issue.Comments = append(issue.Comments[:i], issue.Comments[i+1:]...)

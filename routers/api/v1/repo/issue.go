@@ -936,6 +936,11 @@ func EditIssue(ctx *context.APIContext) {
 				ctx.Error(http.StatusInternalServerError, "GetIssueByID", err)
 				return
 			}
+			// check if parent issue is not a pull request
+			if parentIssue.IsPull {
+				ctx.Error(http.StatusBadRequest, "ParentIssueIsPull", "cannot add a pull request as a parent issue")
+				return
+			}
 			if parentIssue.RepoID != issue.RepoID {
 				if err = parentIssue.LoadRepo(ctx); err != nil {
 					ctx.Error(http.StatusInternalServerError, "parentIssue.LoadRepo", err)
@@ -1167,6 +1172,7 @@ func ListSubIssues(ctx *context.APIContext) {
 
 	if issue.IsPull {
 		ctx.Error(http.StatusNotFound, "", "Pulls cannot have sub-issues")
+		return
 	}
 
 	if !ctx.Repo.CanReadIssuesOrPulls(issue.IsPull) {

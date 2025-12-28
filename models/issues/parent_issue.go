@@ -123,23 +123,35 @@ func (issue *Issue) LookupRootIssue(ctx context.Context) (root *Issue, depth int
 		}
 		root = root.ParentIssue
 		depth++
+
+		// Enforce maximum allowed sub-issue depth to avoid excessive resource usage.
+		// If depth exceeds configured maximum, return a specific error so callers
+		// can handle it (for example, when trying to link a new parent).
+		if setting.Repository.Issue.MaxSubIssuesDepth > 0 && depth > setting.Repository.Issue.MaxSubIssuesDepth {
+			// Use the current parent as ParentID; RootID is set to the same parent here
+			// because the actual top root may not be known at this point in traversal.
+			return nil, 0, ErrSubIssuesTooDeep{
+				ID:       issue.ID,
+				ParentID: root.ID,
+				RootID:   root.ID,
+			}
+		}
 	}
 }
 
 // CountSubIssues counts count of all sub-issues of this issue recursively
-func (issue *Issue) CountSubIssues(ctx context.Context) (count int, err error) {
-	if err = issue.LoadSubIssues(ctx); err != nil {
-		return 0, err
-	}
-	count = len(issue.SubIssues)
-	for _, subissue := range issue.SubIssues {
-		subcount, err := subissue.CountSubIssues(ctx)
-		if err != nil {
-			return 0, err
-		}
-		count += subcount
-	}
-	return count, nil
+func (issue *Issue) CountSubIssues(ctx context.Context) (int, error) {
+	var count int64
+	_, err := db.GetEngine(ctx).SQL(`
+		WITH RECURSIVE sub_issues AS (
+			SELECT id FROM issue WHERE parent_id = ?
+			UNION ALL
+			SELECT issue.id FROM issue
+			INNER JOIN sub_issues ON issue.parent_id = sub_issues.id
+		)
+		SELECT count(*) FROM sub_issues
+	`, issue.ID).Get(&count)
+	return int(count), err
 }
 
 // UpdateParentIssue adds issue to another issue as a sub-issue.
@@ -194,8 +206,6 @@ func (issue *Issue) UpdateParentIssue(ctx context.Context, parent *Issue, doer *
 	var parentID *int64
 	if parent != nil {
 		parentID = &parent.ID
-	} else {
-		parentID = nil
 	}
 
 	// Update parent ID

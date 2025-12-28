@@ -26,7 +26,7 @@ func TestIssueUpdateParent(t *testing.T) {
 	err := subIssue.UpdateParentIssue(db.DefaultContext, parentIssue, user1)
 	require.NoError(t, err)
 
-	unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 23, ParentIssueID: nil})
+	unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 23}, "parent_id IS NULL")
 	unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 24, ParentIssueID: &parentIssue.ID})
 	unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{
 		Type:               issues_model.CommentTypeAddSubIssue,
