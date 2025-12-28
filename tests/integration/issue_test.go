@@ -1675,7 +1675,7 @@ func TestParentIssue(t *testing.T) {
 	require.NoError(t, issue1.LoadRepo(db.DefaultContext))
 
 	// Test adding
-	req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/parent_issue/add", issue1.Link()), map[string]string{
+	req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/parent", issue1.Link()), map[string]string{
 		"_csrf":       GetCSRF(t, session, issue1.Link()),
 		"parentIssue": fmt.Sprintf("%d", 2),
 	})
@@ -1690,7 +1690,7 @@ func TestParentIssue(t *testing.T) {
 	assert.Contains(t, htmlDoc.Find(`.ui.parent-issue`).Text(), "#2 issue2")
 
 	// Test removing
-	req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/parent_issue/delete", issue1.Link()), map[string]string{
+	req = NewRequestWithValues(t, "DELETE", fmt.Sprintf("%s/parent", issue1.Link()), map[string]string{
 		"_csrf": GetCSRF(t, session, issue1.Link()),
 	})
 	session.MakeRequest(t, req, http.StatusSeeOther)
@@ -1704,7 +1704,7 @@ func TestParentIssue(t *testing.T) {
 	assert.Contains(t, htmlDoc.Find(`.ui.parent-issue`).Text(), "No parent issue set.")
 
 	// Test adding, without cross-repository write access
-	req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/parent_issue/add", issue1.Link()), map[string]string{
+	req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/parent", issue1.Link()), map[string]string{
 		"_csrf":       GetCSRF(t, session, issue1.Link()),
 		"parentIssue": fmt.Sprintf("%d", 13),
 	})

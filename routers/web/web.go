@@ -1240,10 +1240,9 @@ func registerRoutes(m *web.Route) {
 					})
 				})
 				m.Post("/reactions/{action}", web.Bind(forms.ReactionForm{}), repo.ChangeIssueReaction)
-				m.Group("/parent_issue", func() {
-					m.Post("/add", repo.AddParentIssue)
-					m.Post("/delete", repo.RemoveParentIssue)
-				})
+				m.Combo("/parent").
+					Post(repo.AddParentIssue).
+					Delete(repo.RemoveParentIssue)
 				m.Post("/lock", reqRepoIssuesOrPullsWriter, web.Bind(forms.IssueLockForm{}), repo.LockIssue)
 				m.Post("/unlock", reqRepoIssuesOrPullsWriter, repo.UnlockIssue)
 				m.Post("/delete", reqRepoAdmin, repo.DeleteIssue)

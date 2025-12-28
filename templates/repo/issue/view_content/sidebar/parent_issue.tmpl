@@ -28,7 +28,7 @@
 		<p>{{ctx.Locale.Tr "repo.issues.parent_issue.no_parent"}}</p>
 		{{if .CanUpdateParentIssue}}
 			<div>
-				<form method="post" action="{{.Issue.Link}}/parent_issue/add" id="addParentIssueForm">
+				<form method="post" action="{{.Issue.Link}}/parent" id="addParentIssueForm">
 					{{$.CsrfTokenHtml}}
 					<div class="ui fluid action input">
 						<div class="ui search selection dropdown" id="new-parent-issue-drop-list" data-issue-id="{{.Issue.ID}}">
@@ -56,7 +56,7 @@
 			{{ctx.Locale.Tr "repo.issues.parent_issue.remove_header"}}
 		</div>
 		<div class="content">
-			<form method="post" action="{{.Issue.Link}}/parent_issue/delete" id="removeParentIssueForm">
+			<form method="delete" action="{{.Issue.Link}}/parent" id="removeParentIssueForm">
 				{{$.CsrfTokenHtml}}
 			</form>
 			<p>{{ctx.Locale.Tr "repo.issues.parent_issue.remove_text"}}</p>
