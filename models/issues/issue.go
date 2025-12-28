@@ -594,6 +594,8 @@ func GetParticipantsIDsByIssueID(ctx context.Context, issueID int64) ([]int64, e
 		Cols("poster_id").
 		Where("issue_id = ?", issueID).
 		And("type in (?,?,?)", CommentTypeComment, CommentTypeCode, CommentTypeReview).
+		And("`review`.type != ?", ReviewTypePending).
+		Join("INNER", "`review`", "`review`.reviewer_id = `comment`.review_id").
 		Distinct("poster_id").
 		Find(&userIDs)
 }
