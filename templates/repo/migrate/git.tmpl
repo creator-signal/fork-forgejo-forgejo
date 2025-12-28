@@ -31,7 +31,7 @@
 					<div class="divider"></div>
 
 					<div class="inline required field {{if .Err_Owner}}error{{end}}">
-						<label>{{ctx.Locale.Tr "repo.owner"}}</label>
+						<label for="uid">{{ctx.Locale.Tr "repo.owner"}}</label>
 						<div class="ui selection owner dropdown">
 							<input type="hidden" id="uid" name="uid" value="{{.ContextUser.ID}}" required>
 							<span class="text truncated-item-container" title="{{.ContextUser.Name}}">
@@ -61,13 +61,13 @@
 					<div class="inline field">
 						<label>{{ctx.Locale.Tr "repo.visibility"}}</label>
 						<div class="ui checkbox">
-							<input name="private" type="checkbox"
+							<input id="migrate_private" name="private" type="checkbox"
 								{{if .IsForcedPrivate}}
 									checked disabled
 								{{else}}
 									{{if .private}}checked{{end}}
 								{{end}}>
-							<label>{{ctx.Locale.Tr "repo.visibility_helper"}}</label>
+							<label for="migrate_private">{{ctx.Locale.Tr "repo.visibility_helper"}}</label>
 						</div>
 						{{if .IsForcedPrivate}}
 							<span class="help">{{ctx.Locale.Tr "repo.visibility_helper_forced"}}</span>

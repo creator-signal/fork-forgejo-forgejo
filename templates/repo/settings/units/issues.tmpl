@@ -9,47 +9,47 @@
 	<div class="inline field">
 		<label>{{ctx.Locale.Tr "repo.issues"}}</label>
 		<div class="ui checkbox{{if $isIssuesAndExternalGlobalDisabled}} disabled{{end}}"{{if $isIssuesAndExternalGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-			<input class="enable-system" name="enable_issues" type="checkbox" data-target="#issue_box" {{if $isIssuesEnabled}}checked{{end}}>
-			<label>{{ctx.Locale.Tr "repo.settings.issues_desc"}}</label>
+			<input id="enable_issues" class="enable-system" name="enable_issues" type="checkbox" data-target="#issue_box" {{if $isIssuesEnabled}}checked{{end}}>
+			<label for="enable_issues">{{ctx.Locale.Tr "repo.settings.issues_desc"}}</label>
 		</div>
 	</div>
 	<div class="field {{if not $isIssuesEnabled}}disabled{{end}}" id="issue_box">
 		<div class="field">
 			<div class="ui radio checkbox{{if $isIssuesGlobalDisabled}} disabled{{end}}"{{if $isIssuesGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-				<input class="enable-system-radio" name="enable_external_tracker" type="radio" value="false" data-context="#internal_issue_box" data-target="#external_issue_box" {{if not (.Repository.UnitEnabled $.Context $.UnitTypeExternalTracker)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.use_internal_issue_tracker"}}</label>
+				<input id="enable_external_tracker_false" class="enable-system-radio" name="enable_external_tracker" type="radio" value="false" data-context="#internal_issue_box" data-target="#external_issue_box" {{if not (.Repository.UnitEnabled $.Context $.UnitTypeExternalTracker)}}checked{{end}}>
+				<label for="enable_external_tracker_false">{{ctx.Locale.Tr "repo.settings.use_internal_issue_tracker"}}</label>
 			</div>
 		</div>
 		<div class="field tw-pl-4 {{if (.Repository.UnitEnabled $.Context $.UnitTypeExternalTracker)}}disabled{{end}}" id="internal_issue_box">
 			{{if .Repository.CanEnableTimetracker}}
 				<div class="field">
 					<div class="ui checkbox">
-						<input name="enable_timetracker" class="enable-system" data-target="#only_contributors" type="checkbox" {{if .Repository.IsTimetrackerEnabled $.Context}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "repo.settings.enable_timetracker"}}</label>
+						<input id="enable_timetracker" name="enable_timetracker" class="enable-system" data-target="#only_contributors" type="checkbox" {{if .Repository.IsTimetrackerEnabled $.Context}}checked{{end}}>
+						<label for="enable_timetracker">{{ctx.Locale.Tr "repo.settings.enable_timetracker"}}</label>
 					</div>
 				</div>
 				<div class="field {{if not (.Repository.IsTimetrackerEnabled $.Context)}}disabled{{end}}" id="only_contributors">
 					<div class="ui checkbox">
-						<input name="allow_only_contributors_to_track_time" type="checkbox" {{if .Repository.AllowOnlyContributorsToTrackTime $.Context}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "repo.settings.allow_only_contributors_to_track_time"}}</label>
+						<input id="allow_only_contributors_to_track_time" name="allow_only_contributors_to_track_time" type="checkbox" {{if .Repository.AllowOnlyContributorsToTrackTime $.Context}}checked{{end}}>
+						<label for="allow_only_contributors_to_track_time">{{ctx.Locale.Tr "repo.settings.allow_only_contributors_to_track_time"}}</label>
 					</div>
 				</div>
 			{{end}}
 			<div class="field">
 				<div class="ui checkbox">
-					<input name="enable_issue_dependencies" type="checkbox" {{if (.Repository.IsDependenciesEnabled $.Context)}}checked{{end}}>
-					<label>{{ctx.Locale.Tr "repo.issues.dependency.setting"}}</label>
+					<input id="enable_issue_dependencies" name="enable_issue_dependencies" type="checkbox" {{if (.Repository.IsDependenciesEnabled $.Context)}}checked{{end}}>
+					<label for="enable_issue_dependencies">{{ctx.Locale.Tr "repo.issues.dependency.setting"}}</label>
 				</div>
 			</div>
 			<div class="ui checkbox">
-				<input name="enable_close_issues_via_commit_in_any_branch" type="checkbox" {{if .Repository.CloseIssuesViaCommitInAnyBranch}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.admin_enable_close_issues_via_commit_in_any_branch"}}</label>
+				<input id="enable_close_issues_via_commit_in_any_branch" name="enable_close_issues_via_commit_in_any_branch" type="checkbox" {{if .Repository.CloseIssuesViaCommitInAnyBranch}}checked{{end}}>
+				<label for="enable_close_issues_via_commit_in_any_branch">{{ctx.Locale.Tr "repo.settings.admin_enable_close_issues_via_commit_in_any_branch"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui radio checkbox{{if $isExternalTrackerGlobalDisabled}} disabled{{end}}"{{if $isExternalTrackerGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-				<input class="enable-system-radio" name="enable_external_tracker" type="radio" value="true" data-context="#internal_issue_box" data-target="#external_issue_box" {{if .Repository.UnitEnabled $.Context $.UnitTypeExternalTracker}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.use_external_issue_tracker"}}</label>
+				<input id="enable_external_tracker_true" class="enable-system-radio" name="enable_external_tracker" type="radio" value="true" data-context="#internal_issue_box" data-target="#external_issue_box" {{if .Repository.UnitEnabled $.Context $.UnitTypeExternalTracker}}checked{{end}}>
+				<label for="enable_external_tracker_true">{{ctx.Locale.Tr "repo.settings.use_external_issue_tracker"}}</label>
 			</div>
 		</div>
 		<div class="field tw-pl-4 {{if not (.Repository.UnitEnabled $.Context $.UnitTypeExternalTracker)}}disabled{{end}}" id="external_issue_box">
@@ -64,25 +64,25 @@
 				<p class="help">{{ctx.Locale.Tr "repo.settings.tracker_url_format_desc"}}</p>
 			</div>
 			<div class="inline fields">
-				<label for="issue_style">{{ctx.Locale.Tr "repo.settings.tracker_issue_style"}}</label>
+				<label>{{ctx.Locale.Tr "repo.settings.tracker_issue_style"}}</label>
 				<div class="field">
 					<div class="ui radio checkbox">
 						{{$externalTracker := (.Repository.MustGetUnit $.Context $.UnitTypeExternalTracker)}}
 						{{$externalTrackerStyle := $externalTracker.ExternalTrackerConfig.ExternalTrackerStyle}}
-						<input class="js-tracker-issue-style" name="tracker_issue_style" type="radio" value="numeric" {{if eq $externalTrackerStyle "numeric"}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "repo.settings.tracker_issue_style.numeric"}} <span class="ui light grey text">#1234</span></label>
+						<input id="tracker_issue_style_numeric" class="js-tracker-issue-style" name="tracker_issue_style" type="radio" value="numeric" {{if eq $externalTrackerStyle "numeric"}}checked{{end}}>
+						<label for="tracker_issue_style_numeric">{{ctx.Locale.Tr "repo.settings.tracker_issue_style.numeric"}} <span class="ui light grey text">#1234</span></label>
 					</div>
 				</div>
 				<div class="field">
 					<div class="ui radio checkbox">
-						<input class="js-tracker-issue-style" name="tracker_issue_style" type="radio" value="alphanumeric" {{if eq $externalTrackerStyle "alphanumeric"}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "repo.settings.tracker_issue_style.alphanumeric"}} <span class="ui light grey text">ABC-123 , DEFG-234</span></label>
+						<input id="tracker_issue_style_alphanumeric" class="js-tracker-issue-style" name="tracker_issue_style" type="radio" value="alphanumeric" {{if eq $externalTrackerStyle "alphanumeric"}}checked{{end}}>
+						<label for="tracker_issue_style_alphanumeric">{{ctx.Locale.Tr "repo.settings.tracker_issue_style.alphanumeric"}} <span class="ui light grey text">ABC-123 , DEFG-234</span></label>
 					</div>
 				</div>
 				<div class="field">
 					<div class="ui radio checkbox">
-						<input class="js-tracker-issue-style" name="tracker_issue_style" type="radio" value="regexp" {{if eq $externalTrackerStyle "regexp"}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "repo.settings.tracker_issue_style.regexp"}} <span class="ui light grey text">(ISSUE-\d+) , ISSUE-(\d+)</span></label>
+						<input id="tracker_issue_style_regexp" class="js-tracker-issue-style" name="tracker_issue_style" type="radio" value="regexp" {{if eq $externalTrackerStyle "regexp"}}checked{{end}}>
+						<label for="tracker_issue_style_regexp">{{ctx.Locale.Tr "repo.settings.tracker_issue_style.regexp"}} <span class="ui light grey text">(ISSUE-\d+) , ISSUE-(\d+)</span></label>
 					</div>
 				</div>
 			</div>

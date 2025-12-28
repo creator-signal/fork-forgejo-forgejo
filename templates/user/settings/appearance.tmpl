@@ -13,9 +13,9 @@
 
 			<form class="ui form" action="{{.Link}}/theme" method="post">
 					<div class="field">
-						<label for="ui">{{ctx.Locale.Tr "settings.ui"}}</label>
-						<div class="ui selection dropdown" id="ui">
-							<input name="theme" type="hidden" value="{{.SignedUser.Theme}}">
+						<label for="theme">{{ctx.Locale.Tr "settings.ui"}}</label>
+						<div class="ui selection dropdown">
+							<input id="theme" name="theme" type="hidden" value="{{.SignedUser.Theme}}">
 							{{svg "octicon-triangle-down" 14 "dropdown icon"}}
 							<div class="text">
 								{{- range $i,$a := .AllThemes -}}
@@ -50,8 +50,9 @@
 					{{ctx.Locale.Tr "settings.language.description"}}
 				</div>
 				<div class="field">
-					<div class="ui language selection dropdown" id="language">
-						<input name="language" type="hidden" value="{{.SignedUser.Language}}">
+					<label for="language">{{ctx.Locale.Tr "settings.language"}}</label>
+					<div class="ui language selection dropdown">
+						<input id="language" name="language" type="hidden" value="{{.SignedUser.Language}}">
 						{{svg "octicon-triangle-down" 14 "dropdown icon"}}
 						<div class="text">{{range .AllLangs}}{{if eq $.SignedUser.Language .Lang}}{{.Name}}{{end}}{{end}}</div>
 						<div class="menu">
@@ -78,8 +79,8 @@
 			<form class="ui form" action="{{.Link}}/hints" method="post">
 				<div class="inline field">
 					<div class="ui checkbox" data-tooltip-content="{{ctx.Locale.Tr "settings.additional_repo_units_hint_description"}}">
-						<input name="enable_repo_unit_hints" type="checkbox" {{if $.SignedUser.EnableRepoUnitHints}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.additional_repo_units_hint"}}</label>
+						<input id="enable_repo_unit_hints" name="enable_repo_unit_hints" type="checkbox" {{if $.SignedUser.EnableRepoUnitHints}}checked{{end}}>
+						<label for="enable_repo_unit_hints">{{ctx.Locale.Tr "settings.additional_repo_units_hint"}}</label>
 					</div>
 				</div>
 				<div class="field">
@@ -99,87 +100,87 @@
 			<form class="ui form" action="{{.Link}}/hidden_comments" method="post">
 				<div class="inline field">
 					<div class="ui checkbox" data-tooltip-content="{{ctx.Locale.Tr "settings.hidden_comment_types.ref_tooltip"}}">
-						<input name="reference" type="checkbox" {{if(call .IsCommentTypeGroupChecked "reference")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_reference"}}</label>
+						<input id="hide_comment_reference" name="reference" type="checkbox" {{if(call .IsCommentTypeGroupChecked "reference")}}checked{{end}}>
+						<label for="hide_comment_reference">{{ctx.Locale.Tr "settings.comment_type_group_reference"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="label" type="checkbox" {{if (call .IsCommentTypeGroupChecked "label")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_label"}}</label>
+						<input id="hide_comment_label" name="label" type="checkbox" {{if (call .IsCommentTypeGroupChecked "label")}}checked{{end}}>
+						<label for="hide_comment_label">{{ctx.Locale.Tr "settings.comment_type_group_label"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="milestone" type="checkbox" {{if (call .IsCommentTypeGroupChecked "milestone")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_milestone"}}</label>
+						<input id="hide_comment_milestone" name="milestone" type="checkbox" {{if (call .IsCommentTypeGroupChecked "milestone")}}checked{{end}}>
+						<label for="hide_comment_milestone">{{ctx.Locale.Tr "settings.comment_type_group_milestone"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="assignee" type="checkbox" {{if (call .IsCommentTypeGroupChecked "assignee")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_assignee"}}</label>
+						<input id="hide_comment_assignee" name="assignee" type="checkbox" {{if (call .IsCommentTypeGroupChecked "assignee")}}checked{{end}}>
+						<label for="hide_comment_assignee">{{ctx.Locale.Tr "settings.comment_type_group_assignee"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="title" type="checkbox" {{if (call .IsCommentTypeGroupChecked "title")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_title"}}</label>
+						<input id="hide_comment_title" name="title" type="checkbox" {{if (call .IsCommentTypeGroupChecked "title")}}checked{{end}}>
+						<label for="hide_comment_title">{{ctx.Locale.Tr "settings.comment_type_group_title"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="branch" type="checkbox" {{if (call .IsCommentTypeGroupChecked "branch")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_branch"}}</label>
+						<input id="hide_comment_branch" name="branch" type="checkbox" {{if (call .IsCommentTypeGroupChecked "branch")}}checked{{end}}>
+						<label for="hide_comment_branch">{{ctx.Locale.Tr "settings.comment_type_group_branch"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="time_tracking" type="checkbox" {{if (call .IsCommentTypeGroupChecked "time_tracking")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_time_tracking"}}</label>
+						<input id="hide_comment_time_tracking" name="time_tracking" type="checkbox" {{if (call .IsCommentTypeGroupChecked "time_tracking")}}checked{{end}}>
+						<label for="hide_comment_time_tracking">{{ctx.Locale.Tr "settings.comment_type_group_time_tracking"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="deadline" type="checkbox" {{if (call .IsCommentTypeGroupChecked "deadline")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_deadline"}}</label>
+						<input id="hide_comment_deadline" name="deadline" type="checkbox" {{if (call .IsCommentTypeGroupChecked "deadline")}}checked{{end}}>
+						<label for="hide_comment_deadline">{{ctx.Locale.Tr "settings.comment_type_group_deadline"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="dependency" type="checkbox" {{if (call .IsCommentTypeGroupChecked "dependency")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_dependency"}}</label>
+						<input id="hide_comment_dependency" name="dependency" type="checkbox" {{if (call .IsCommentTypeGroupChecked "dependency")}}checked{{end}}>
+						<label for="hide_comment_dependency">{{ctx.Locale.Tr "settings.comment_type_group_dependency"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="lock" type="checkbox" {{if (call .IsCommentTypeGroupChecked "lock")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_lock"}}</label>
+						<input id="hide_comment_lock" name="lock" type="checkbox" {{if (call .IsCommentTypeGroupChecked "lock")}}checked{{end}}>
+						<label for="hide_comment_lock">{{ctx.Locale.Tr "settings.comment_type_group_lock"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="review_request" type="checkbox" {{if (call .IsCommentTypeGroupChecked "review_request")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_review_request"}}</label>
+						<input id="hide_comment_review_request" name="review_request" type="checkbox" {{if (call .IsCommentTypeGroupChecked "review_request")}}checked{{end}}>
+						<label for="hide_comment_review_request">{{ctx.Locale.Tr "settings.comment_type_group_review_request"}}</label>
 					</div>
 				</div>
 
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="pull_request_push" type="checkbox" {{if (call .IsCommentTypeGroupChecked "pull_request_push")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_pull_request_push"}}</label>
+						<input id="hide_comment_pull_request_push" name="pull_request_push" type="checkbox" {{if (call .IsCommentTypeGroupChecked "pull_request_push")}}checked{{end}}>
+						<label for="hide_comment_pull_request_push">{{ctx.Locale.Tr "settings.comment_type_group_pull_request_push"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
-						<input name="project" type="checkbox" {{if (call .IsCommentTypeGroupChecked "project")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_project"}}</label>
+						<input id="hide_comment_project" name="project" type="checkbox" {{if (call .IsCommentTypeGroupChecked "project")}}checked{{end}}>
+						<label for="hide_comment_project">{{ctx.Locale.Tr "settings.comment_type_group_project"}}</label>
 					</div>
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox" data-tooltip-content="{{ctx.Locale.Tr "settings.hidden_comment_types.issue_ref_tooltip"}}">
-						<input name="issue_ref" type="checkbox" {{if (call .IsCommentTypeGroupChecked "issue_ref")}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.comment_type_group_issue_ref"}}</label>
+						<input id="hide_comment_issue_ref" name="issue_ref" type="checkbox" {{if (call .IsCommentTypeGroupChecked "issue_ref")}}checked{{end}}>
+						<label for="hide_comment_issue_ref">{{ctx.Locale.Tr "settings.comment_type_group_issue_ref"}}</label>
 					</div>
 				</div>
 				<div class="field">

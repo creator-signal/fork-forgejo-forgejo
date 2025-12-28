@@ -8,8 +8,8 @@
 	<div class="inline field">
 		<label>{{ctx.Locale.Tr "repo.pulls"}}</label>
 		<div class="ui checkbox{{if $pullRequestGlobalDisabled}} disabled{{end}}"{{if $pullRequestGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-			<input class="enable-system" name="enable_pulls" type="checkbox" data-target="#pull_box" {{if $pullRequestEnabled}}checked{{end}}>
-			<label>{{ctx.Locale.Tr "repo.settings.pulls_desc"}}</label>
+			<input id="enable_pulls" class="enable-system" name="enable_pulls" type="checkbox" data-target="#pull_box" {{if $pullRequestEnabled}}checked{{end}}>
+			<label for="enable_pulls">{{ctx.Locale.Tr "repo.settings.pulls_desc"}}</label>
 		</div>
 	</div>
 	<div class="field{{if not $pullRequestEnabled}} disabled{{end}}" id="pull_box">
@@ -20,38 +20,38 @@
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="pulls_allow_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowMerge)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.pulls.merge_pull_request"}}</label>
+				<input id="pulls_allow_merge" name="pulls_allow_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowMerge)}}checked{{end}}>
+				<label for="pulls_allow_merge">{{ctx.Locale.Tr "repo.pulls.merge_pull_request"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="pulls_allow_rebase" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowRebase)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.pulls.rebase_merge_pull_request"}}</label>
+				<input id="pulls_allow_rebase" name="pulls_allow_rebase" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowRebase)}}checked{{end}}>
+				<label for="pulls_allow_rebase">{{ctx.Locale.Tr "repo.pulls.rebase_merge_pull_request"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="pulls_allow_rebase_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowRebaseMerge)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.pulls.rebase_merge_commit_pull_request"}}</label>
+				<input id="pulls_allow_rebase_merge" name="pulls_allow_rebase_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowRebaseMerge)}}checked{{end}}>
+				<label for="pulls_allow_rebase_merge">{{ctx.Locale.Tr "repo.pulls.rebase_merge_commit_pull_request"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="pulls_allow_squash" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowSquash)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.pulls.squash_merge_pull_request"}}</label>
+				<input id="pulls_allow_squash" name="pulls_allow_squash" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowSquash)}}checked{{end}}>
+				<label for="pulls_allow_squash">{{ctx.Locale.Tr "repo.pulls.squash_merge_pull_request"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="pulls_allow_fast_forward_only" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowFastForwardOnly)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.pulls.fast_forward_only_merge_pull_request"}}</label>
+				<input id="pulls_allow_fast_forward_only" name="pulls_allow_fast_forward_only" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowFastForwardOnly)}}checked{{end}}>
+				<label for="pulls_allow_fast_forward_only">{{ctx.Locale.Tr "repo.pulls.fast_forward_only_merge_pull_request"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="pulls_allow_manual_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowManualMerge)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.pulls.merge_manually"}}</label>
+				<input id="pulls_allow_manual_merge" name="pulls_allow_manual_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowManualMerge)}}checked{{end}}>
+				<label for="pulls_allow_manual_merge">{{ctx.Locale.Tr "repo.pulls.merge_manually"}}</label>
 			</div>
 		</div>
 
@@ -95,14 +95,14 @@
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="default_allow_maintainer_edit" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.DefaultAllowMaintainerEdit)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.pulls.default_allow_edits_from_maintainers"}}</label>
+				<input id="default_allow_maintainer_edit" name="default_allow_maintainer_edit" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.DefaultAllowMaintainerEdit)}}checked{{end}}>
+				<label for="default_allow_maintainer_edit">{{ctx.Locale.Tr "repo.settings.pulls.default_allow_edits_from_maintainers"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="pulls_allow_rebase_update" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowRebaseUpdate)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.pulls.allow_rebase_update"}}</label>
+				<input id="pulls_allow_rebase_update" name="pulls_allow_rebase_update" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AllowRebaseUpdate)}}checked{{end}}>
+				<label for="pulls_allow_rebase_update">{{ctx.Locale.Tr "repo.settings.pulls.allow_rebase_update"}}</label>
 			</div>
 		</div>
 		<div class="field">
@@ -130,20 +130,20 @@
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="default_delete_branch_after_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.DefaultDeleteBranchAfterMerge)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.pulls.default_delete_branch_after_merge"}}</label>
+				<input id="default_delete_branch_after_merge" name="default_delete_branch_after_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.DefaultDeleteBranchAfterMerge)}}checked{{end}}>
+				<label for="default_delete_branch_after_merge">{{ctx.Locale.Tr "repo.settings.pulls.default_delete_branch_after_merge"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="enable_autodetect_manual_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AutodetectManualMerge)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.pulls.enable_autodetect_manual_merge"}}</label>
+				<input id="enable_autodetect_manual_merge" name="enable_autodetect_manual_merge" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.AutodetectManualMerge)}}checked{{end}}>
+				<label for="enable_autodetect_manual_merge">{{ctx.Locale.Tr "repo.settings.pulls.enable_autodetect_manual_merge"}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui checkbox">
-				<input name="pulls_ignore_whitespace" type="checkbox" {{if and $pullRequestEnabled ($prUnit.PullRequestsConfig.IgnoreWhitespaceConflicts)}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.pulls.ignore_whitespace"}}</label>
+				<input id="pulls_ignore_whitespace" name="pulls_ignore_whitespace" type="checkbox" {{if and $pullRequestEnabled ($prUnit.PullRequestsConfig.IgnoreWhitespaceConflicts)}}checked{{end}}>
+				<label for="pulls_ignore_whitespace">{{ctx.Locale.Tr "repo.settings.pulls.ignore_whitespace"}}</label>
 			</div>
 		</div>
 	</div>

@@ -61,9 +61,7 @@
 					<label id="visibility-setting" {{if .Err_Visibility}}class="field error"{{end}}>
 						{{ctx.Locale.Tr "settings.visibility"}}
 						<div class="ui selection type dropdown" aria-labelledby="visibility-setting">
-							{{if .SignedUser.Visibility.IsPublic}}<input type="hidden" id="visibility" name="visibility" value="0">{{end}}
-							{{if .SignedUser.Visibility.IsLimited}}<input type="hidden" id="visibility" name="visibility" value="1">{{end}}
-							{{if .SignedUser.Visibility.IsPrivate}}<input type="hidden" id="visibility" name="visibility" value="2">{{end}}
+							<input type="hidden" id="visibility" name="visibility" value="{{if .SignedUser.Visibility.IsPublic}}0{{else if .SignedUser.Visibility.IsLimited}}1{{else}}2{{end}}">
 							<div class="text">
 								{{if .SignedUser.Visibility.IsPublic}}{{ctx.Locale.Tr "settings.visibility.public"}}{{end}}
 								{{if .SignedUser.Visibility.IsLimited}}{{ctx.Locale.Tr "settings.visibility.limited"}}{{end}}
@@ -116,8 +114,8 @@
 				{{if not .DisableGravatar}}
 				<div class="inline field">
 					<div class="ui radio checkbox">
-						<input name="source" value="lookup" type="radio" {{if not .SignedUser.UseCustomAvatar}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.lookup_avatar_by_mail"}}</label>
+						<input id="avatar_source_lookup" name="source" value="lookup" type="radio" {{if not .SignedUser.UseCustomAvatar}}checked{{end}}>
+						<label for="avatar_source_lookup">{{ctx.Locale.Tr "settings.lookup_avatar_by_mail"}}</label>
 					</div>
 				</div>
 				<div class="field tw-pl-4 {{if .Err_Gravatar}}error{{end}}">
@@ -128,8 +126,8 @@
 
 				<div class="inline field">
 					<div class="ui radio checkbox">
-						<input name="source" value="local" type="radio" {{if .SignedUser.UseCustomAvatar}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "settings.enable_custom_avatar"}}</label>
+						<input id="avatar_source_local" name="source" value="local" type="radio" {{if .SignedUser.UseCustomAvatar}}checked{{end}}>
+						<label for="avatar_source_local">{{ctx.Locale.Tr "settings.enable_custom_avatar"}}</label>
 					</div>
 				</div>
 

@@ -8,8 +8,8 @@
 				{{template "base/disable_form_autofill"}}
 				<input type="hidden" name="action" value="update">
 				<div class="required field {{if .Err_RepoName}}error{{end}}">
-					<label>{{ctx.Locale.Tr "repo.repo_name"}}</label>
-					<input name="repo_name" value="{{.Repository.Name}}" data-repo-name="{{.Repository.Name}}" autofocus required>
+					<label for="repo_name">{{ctx.Locale.Tr "repo.repo_name"}}</label>
+					<input id="repo_name" name="repo_name" value="{{.Repository.Name}}" data-repo-name="{{.Repository.Name}}" autofocus required>
 				</div>
 				<div class="inline field">
 					<label>{{ctx.Locale.Tr "repo.repo_size"}}</label>
@@ -18,8 +18,8 @@
 				<div class="inline field">
 					<label>{{ctx.Locale.Tr "repo.template"}}</label>
 					<div class="ui checkbox">
-						<input name="template" type="checkbox" {{if .Repository.IsTemplate}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "repo.template_helper"}}</label>
+						<input id="template" name="template" type="checkbox" {{if .Repository.IsTemplate}}checked{{end}}>
+						<label for="template">{{ctx.Locale.Tr "repo.template_helper"}}</label>
 					</div>
 				</div>
 				{{if not .Repository.IsFork}}
@@ -27,12 +27,12 @@
 						<label>{{ctx.Locale.Tr "repo.visibility"}}</label>
 						<div class="ui checkbox" {{if and (not .Repository.IsPrivate) (gt .Repository.NumStars 0)}}data-tooltip-content="{{ctx.Locale.Tr "repo.stars_remove_warning"}}"{{end}}>
 							{{if .IsAdmin}}
-								<input name="private" type="checkbox" {{if .Repository.IsPrivate}}checked{{end}}>
+								<input id="private" name="private" type="checkbox" {{if .Repository.IsPrivate}}checked{{end}}>
 							{{else}}
-								<input name="private" type="checkbox" {{if .Repository.IsPrivate}}checked{{end}}{{if and $.ForcePrivate .Repository.IsPrivate}} disabled{{end}}>
+								<input id="private" name="private" type="checkbox" {{if .Repository.IsPrivate}}checked{{end}}{{if and $.ForcePrivate .Repository.IsPrivate}} disabled{{end}}>
 								{{if and .Repository.IsPrivate $.ForcePrivate}}<input type="hidden" name="private" value="{{.Repository.IsPrivate}}">{{end}}
 							{{end}}
-							<label>{{ctx.Locale.Tr "repo.visibility_helper"}} {{if .Repository.NumForks}}<span class="text red">{{ctx.Locale.Tr "repo.visibility_fork_helper"}}</span>{{end}}</label>
+							<label for="private">{{ctx.Locale.Tr "repo.visibility_helper"}} {{if .Repository.NumForks}}<span class="text red">{{ctx.Locale.Tr "repo.visibility_fork_helper"}}</span>{{end}}</label>
 						</div>
 					</div>
 				{{end}}
@@ -53,7 +53,7 @@
 			<form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
 				<div class="inline field">
 					<label for="avatar">{{ctx.Locale.Tr "settings.choose_new_avatar"}}</label>
-					<input name="avatar" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+					<input id="avatar" name="avatar" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
 					<br/><span class=help>{{ctx.Locale.Tr "avatar.constraints_hint" (ctx.Locale.TrSize .MaxAvatarFileSize) .MaxAvatarWidth .MaxAvatarHeight}}</span>
 				</div>
 				<div class="field button-sequence">
@@ -169,7 +169,7 @@
 											<label>{{ctx.Locale.Tr "repo.mirror_prune"}}</label>
 											<div class="ui checkbox">
 										<input id="enable_prune" name="enable_prune" type="checkbox" {{if .PullMirror.EnablePrune}}checked{{end}}>
-										<label>{{ctx.Locale.Tr "repo.mirror_prune_desc"}}</label>
+										<label for="enable_prune">{{ctx.Locale.Tr "repo.mirror_prune_desc"}}</label>
 											</div>
 										</div>
 										<div class="inline field {{if .Err_Interval}}error{{end}}">
@@ -204,7 +204,7 @@
 											<label>{{ctx.Locale.Tr "repo.mirror_lfs"}}</label>
 											<div class="ui checkbox">
 												<input id="mirror_lfs" name="mirror_lfs" type="checkbox" {{if .PullMirror.LFS}}checked{{end}}>
-												<label>{{ctx.Locale.Tr "repo.mirror_lfs_desc"}}</label>
+												<label for="mirror_lfs">{{ctx.Locale.Tr "repo.mirror_lfs_desc"}}</label>
 											</div>
 										</div>
 										<div class="field {{if .Err_LFSEndpoint}}error{{end}}">
@@ -387,8 +387,8 @@
 				<input type="hidden" name="action" value="admin">
 				<div class="field">
 					<div class="ui checkbox">
-						<input name="enable_health_check" type="checkbox" {{if .Repository.IsFsckEnabled}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "repo.settings.admin_enable_health_check"}}</label>
+						<input id="enable_health_check" name="enable_health_check" type="checkbox" {{if .Repository.IsFsckEnabled}}checked{{end}}>
+						<label for="enable_health_check">{{ctx.Locale.Tr "repo.settings.admin_enable_health_check"}}</label>
 					</div>
 				</div>
 

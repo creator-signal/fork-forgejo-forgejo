@@ -7,8 +7,8 @@
 	<div class="inline field">
 		<label>{{ctx.Locale.Tr "repo.code"}}</label>
 		<div class="ui checkbox{{if $isCodeGlobalDisabled}} disabled{{end}}"{{if $isCodeGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-			<input class="enable-system" name="enable_code" type="checkbox"{{if $isCodeEnabled}} checked{{end}}>
-			<label>{{ctx.Locale.Tr "repo.code.desc"}}</label>
+			<input id="enable_code" class="enable-system" name="enable_code" type="checkbox"{{if $isCodeEnabled}} checked{{end}}>
+			<label for="enable_code">{{ctx.Locale.Tr "repo.code.desc"}}</label>
 		</div>
 	</div>
 
@@ -17,8 +17,8 @@
 	<div class="inline field">
 		<label>{{ctx.Locale.Tr "repo.projects"}}</label>
 		<div class="ui checkbox{{if $isProjectsGlobalDisabled}} disabled{{end}}"{{if $isProjectsGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-			<input class="enable-system" name="enable_projects" type="checkbox" {{if $isProjectsEnabled}}checked{{end}}>
-			<label>{{ctx.Locale.Tr "repo.settings.projects_desc"}}</label>
+			<input id="enable_projects" class="enable-system" name="enable_projects" type="checkbox" {{if $isProjectsEnabled}}checked{{end}}>
+			<label for="enable_projects">{{ctx.Locale.Tr "repo.settings.projects_desc"}}</label>
 		</div>
 	</div>
 
@@ -27,8 +27,8 @@
 	<div class="inline field">
 		<label>{{ctx.Locale.Tr "repo.releases"}}</label>
 		<div class="ui checkbox{{if $isReleasesGlobalDisabled}} disabled{{end}}"{{if $isReleasesGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-			<input class="enable-system" name="enable_releases" type="checkbox" {{if $isReleasesEnabled}}checked{{end}}>
-			<label>{{ctx.Locale.Tr "repo.settings.releases_desc"}}</label>
+			<input id="enable_releases" class="enable-system" name="enable_releases" type="checkbox" {{if $isReleasesEnabled}}checked{{end}}>
+			<label for="enable_releases">{{ctx.Locale.Tr "repo.settings.releases_desc"}}</label>
 		</div>
 	</div>
 
@@ -37,8 +37,8 @@
 	<div class="inline field">
 		<label>{{ctx.Locale.Tr "repo.packages"}}</label>
 		<div class="ui checkbox{{if $isPackagesGlobalDisabled}} disabled{{end}}"{{if $isPackagesGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-			<input class="enable-system" name="enable_packages" type="checkbox" {{if $isPackagesEnabled}}checked{{end}}>
-			<label>{{ctx.Locale.Tr "repo.settings.packages_desc"}}</label>
+			<input id="enable_packages" class="enable-system" name="enable_packages" type="checkbox" {{if $isPackagesEnabled}}checked{{end}}>
+			<label for="enable_packages">{{ctx.Locale.Tr "repo.settings.packages_desc"}}</label>
 		</div>
 	</div>
 
@@ -48,8 +48,8 @@
 		<div class="inline field">
 			<label>{{ctx.Locale.Tr "actions.actions"}}</label>
 			<div class="ui checkbox{{if $isActionsGlobalDisabled}} disabled{{end}}"{{if $isActionsGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
-				<input class="enable-system" name="enable_actions" type="checkbox" {{if $isActionsEnabled}}checked{{end}}>
-				<label>{{ctx.Locale.Tr "repo.settings.actions_desc"}}</label>
+				<input id="enable_actions" class="enable-system" name="enable_actions" type="checkbox" {{if $isActionsEnabled}}checked{{end}}>
+				<label for="enable_actions">{{ctx.Locale.Tr "repo.settings.actions_desc"}}</label>
 			</div>
 		</div>
 	{{end}}

@@ -40,8 +40,8 @@
 		</div>
 		<div class="field {{if .Err_ConfidentialClient}}error{{end}}">
 			<div class="ui checkbox">
-				<label>{{ctx.Locale.Tr "settings.oauth2_confidential_client"}}</label>
-				<input type="checkbox" name="confidential_client" {{if .App.ConfidentialClient}}checked{{end}}>
+				<label for="confidential_client">{{ctx.Locale.Tr "settings.oauth2_confidential_client"}}</label>
+				<input id="confidential_client" type="checkbox" name="confidential_client" {{if .App.ConfidentialClient}}checked{{end}}>
 			</div>
 		</div>
 		<button class="ui primary button">

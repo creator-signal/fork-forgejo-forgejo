@@ -18,16 +18,16 @@
 						<span class="inline required field"><label for="visibility">{{ctx.Locale.Tr "org.settings.visibility"}}</label></span>
 						<div class="inline-grouped-list">
 							<div class="ui radio checkbox">
-								<input class="enable-system-radio" name="visibility" type="radio" value="0" {{if .visibility.IsPublic}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "org.settings.visibility.public"}}</label>
+								<input id="visibility_public" class="enable-system-radio" name="visibility" type="radio" value="0" {{if .visibility.IsPublic}}checked{{end}}>
+								<label for="visibility_public">{{ctx.Locale.Tr "org.settings.visibility.public"}}</label>
 							</div>
 							<div class="ui radio checkbox">
-								<input class="enable-system-radio" name="visibility" type="radio" value="1" {{if .visibility.IsLimited}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "org.settings.visibility.limited"}}</label>
+								<input id="visibility_limited" class="enable-system-radio" name="visibility" type="radio" value="1" {{if .visibility.IsLimited}}checked{{end}}>
+								<label for="visibility_limited">{{ctx.Locale.Tr "org.settings.visibility.limited"}}</label>
 							</div>
 							<div class="ui radio checkbox">
-								<input class="enable-system-radio" name="visibility" type="radio" value="2" {{if .visibility.IsPrivate}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "org.settings.visibility.private"}}</label>
+								<input id="visibility_private" class="enable-system-radio" name="visibility" type="radio" value="2" {{if .visibility.IsPrivate}}checked{{end}}>
+								<label for="visibility_private">{{ctx.Locale.Tr "org.settings.visibility.private"}}</label>
 							</div>
 						</div>
 					</div>
@@ -36,8 +36,8 @@
 						<span class="inline field"><label>{{ctx.Locale.Tr "org.settings.permission"}}</label></span>
 						<div class="inline-grouped-list">
 							<div class="ui checkbox">
-								<input type="checkbox" name="repo_admin_change_team_access" {{if .repo_admin_change_team_access}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "org.settings.repoadminchangeteam"}}</label>
+								<input id="repo_admin_change_team_access" type="checkbox" name="repo_admin_change_team_access" {{if .repo_admin_change_team_access}}checked{{end}}>
+								<label for="repo_admin_change_team_access">{{ctx.Locale.Tr "org.settings.repoadminchangeteam"}}</label>
 							</div>
 						</div>
 					</div>

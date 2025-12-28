@@ -31,8 +31,8 @@
 					<div class="inline field">
 						<label>{{ctx.Locale.Tr "repo.migrate_items"}}</label>
 						<div class="ui checkbox">
-							<input name="wiki" type="checkbox" {{if .wiki}}checked{{end}}>
-							<label>{{ctx.Locale.Tr "repo.migrate_items_wiki"}}</label>
+							<input id="migrate_wiki" name="wiki" type="checkbox" {{if .wiki}}checked{{end}}>
+							<label for="migrate_wiki">{{ctx.Locale.Tr "repo.migrate_items_wiki"}}</label>
 						</div>
 					</div>
 					<div id="migrate_items">
@@ -40,36 +40,36 @@
 						<div class="inline field">
 							<label></label>
 							<div class="ui checkbox">
-								<input name="issues" type="checkbox" {{if .issues}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "repo.migrate_items_issues"}}</label>
+								<input id="migrate_issues" name="issues" type="checkbox" {{if .issues}}checked{{end}}>
+								<label for="migrate_issues">{{ctx.Locale.Tr "repo.migrate_items_issues"}}</label>
 							</div>
 						</div>
 						<div class="inline field">
 							<label></label>
 							<div class="ui checkbox">
-								<input name="pull_requests" type="checkbox" {{if .pull_requests}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "repo.migrate_items_pullrequests"}}</label>
+								<input id="migrate_pull_requests" name="pull_requests" type="checkbox" {{if .pull_requests}}checked{{end}}>
+								<label for="migrate_pull_requests">{{ctx.Locale.Tr "repo.migrate_items_pullrequests"}}</label>
 							</div>
 						</div>
 						<div class="inline field">
 							<label></label>
 							<div class="ui checkbox">
-								<input name="labels" type="checkbox" {{if .labels}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "repo.migrate_items_labels"}}</label>
+								<input id="migrate_labels" name="labels" type="checkbox" {{if .labels}}checked{{end}}>
+								<label for="migrate_labels">{{ctx.Locale.Tr "repo.migrate_items_labels"}}</label>
 							</div>
 						</div>
 						<div class="inline field">
 							<label></label>
 							<div class="ui checkbox">
-								<input name="milestones" type="checkbox" {{if .milestones}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "repo.migrate_items_milestones"}}</label>
+								<input id="migrate_milestones" name="milestones" type="checkbox" {{if .milestones}}checked{{end}}>
+								<label for="migrate_milestones">{{ctx.Locale.Tr "repo.migrate_items_milestones"}}</label>
 							</div>
 						</div>
 						<div class="inline field">
 							<label></label>
 							<div class="ui checkbox">
-								<input name="releases" type="checkbox" {{if .releases}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "repo.migrate_items_releases"}}</label>
+								<input id="migrate_releases" name="releases" type="checkbox" {{if .releases}}checked{{end}}>
+								<label for="migrate_releases">{{ctx.Locale.Tr "repo.migrate_items_releases"}}</label>
 							</div>
 						</div>
 					</div>
@@ -77,7 +77,7 @@
 					<div class="divider"></div>
 
 					<div class="inline required field {{if .Err_Owner}}error{{end}}">
-						<label>{{ctx.Locale.Tr "repo.owner"}}</label>
+						<label for="uid">{{ctx.Locale.Tr "repo.owner"}}</label>
 						<div class="ui selection owner dropdown">
 							<input type="hidden" id="uid" name="uid" value="{{.ContextUser.ID}}" required>
 							<span class="text truncated-item-container" title="{{.ContextUser.Name}}">
@@ -107,13 +107,13 @@
 					<div class="inline field">
 						<label>{{ctx.Locale.Tr "repo.visibility"}}</label>
 						<div class="ui checkbox">
-							<input name="private" type="checkbox"
+							<input id="migrate_private" name="private" type="checkbox"
 								{{if .IsForcedPrivate}}
 									checked disabled
 								{{else}}
 									{{if .private}}checked{{end}}
 								{{end}}>
-							<label>{{ctx.Locale.Tr "repo.visibility_helper"}}</label>
+							<label for="migrate_private">{{ctx.Locale.Tr "repo.visibility_helper"}}</label>
 						</div>
 						{{if .IsForcedPrivate}}
 							<span class="help">{{ctx.Locale.Tr "repo.visibility_helper_forced"}}</span>

@@ -76,8 +76,8 @@
 						{{end}}
 						<div class="checkbox-sub-item field">
 							<div class="ui checkbox">
-								<input type="checkbox" name="whitelist_deploy_keys" {{if .Rule.WhitelistDeployKeys}}checked{{end}}>
-								<label>{{ctx.Locale.Tr "repo.settings.protect_whitelist_deploy_keys"}}</label>
+								<input id="whitelist_deploy_keys" type="checkbox" name="whitelist_deploy_keys" {{if .Rule.WhitelistDeployKeys}}checked{{end}}>
+								<label for="whitelist_deploy_keys">{{ctx.Locale.Tr "repo.settings.protect_whitelist_deploy_keys"}}</label>
 							</div>
 						</div>
 					</div>
@@ -142,20 +142,20 @@
 				<div id="ignore_stale_approvals_box" class="field {{if .Rule.DismissStaleApprovals}}disabled{{end}}">
 					<div class="ui checkbox">
 						<input id="ignore_stale_approvals" name="ignore_stale_approvals" type="checkbox" {{if .Rule.IgnoreStaleApprovals}}checked{{end}}>
-						<label>{{ctx.Locale.Tr "repo.settings.ignore_stale_approvals"}}</label>
+						<label for="ignore_stale_approvals">{{ctx.Locale.Tr "repo.settings.ignore_stale_approvals"}}</label>
 						<p class="help">{{ctx.Locale.Tr "repo.settings.ignore_stale_approvals_desc"}}</p>
 					</div>
 				</div>
 				<fieldset>
 					<div class="field">
 						<div class="ui checkbox">
-							<input name="enable_status_check" type="checkbox" class="toggle-target-enabled" data-target="#statuscheck_contexts_box" {{if .Rule.EnableStatusCheck}}checked{{end}}>
-							<label>{{ctx.Locale.Tr "repo.settings.protect_check_status_contexts"}}</label>
+							<input id="enable_status_check" name="enable_status_check" type="checkbox" class="toggle-target-enabled" data-target="#statuscheck_contexts_box" {{if .Rule.EnableStatusCheck}}checked{{end}}>
+							<label for="enable_status_check">{{ctx.Locale.Tr "repo.settings.protect_check_status_contexts"}}</label>
 							<p class="help">{{ctx.Locale.Tr "repo.settings.protect_check_status_contexts_desc"}}</p>
 						</div>
 					</div>
 					<div id="statuscheck_contexts_box" class="checkbox-sub-item field {{if not .Rule.EnableStatusCheck}}disabled{{end}}">
-						<label>{{ctx.Locale.Tr "repo.settings.protect_status_check_patterns"}}</label>
+						<label for="status_check_contexts">{{ctx.Locale.Tr "repo.settings.protect_status_check_patterns"}}</label>
 						<textarea id="status_check_contexts" name="status_check_contexts" rows="3">{{.status_check_contexts}}</textarea>
 						<p class="help">{{ctx.Locale.Tr "repo.settings.protect_status_check_patterns_desc"}}</p>
 						<table class="ui celled table">
@@ -185,15 +185,15 @@
 				<div class="grouped fields">
 					<div class="field">
 						<div class="ui radio checkbox">
-							<input name="enable_merge_whitelist" type="radio" value="false" class="toggle-target-disabled" data-target="#merge_whitelist_box" {{if not .Rule.EnableMergeWhitelist}}checked{{end}}>
-							<label>{{ctx.Locale.Tr "repo.settings.protect_enable_merge"}}</label>
+							<input id="enable_merge_whitelist_false" name="enable_merge_whitelist" type="radio" value="false" class="toggle-target-disabled" data-target="#merge_whitelist_box" {{if not .Rule.EnableMergeWhitelist}}checked{{end}}>
+							<label for="enable_merge_whitelist_false">{{ctx.Locale.Tr "repo.settings.protect_enable_merge"}}</label>
 							<p class="help">{{ctx.Locale.Tr "repo.settings.protect_enable_merge_desc"}}</p>
 						</div>
 					</div>
 					<div class="field">
 						<div class="ui radio checkbox">
-							<input name="enable_merge_whitelist" type="radio" value="true" class="toggle-target-enabled" data-target="#merge_whitelist_box" {{if .Rule.EnableMergeWhitelist}}checked{{end}}>
-							<label>{{ctx.Locale.Tr "repo.settings.protect_merge_whitelist_committers"}}</label>
+							<input id="enable_merge_whitelist_true" name="enable_merge_whitelist" type="radio" value="true" class="toggle-target-enabled" data-target="#merge_whitelist_box" {{if .Rule.EnableMergeWhitelist}}checked{{end}}>
+							<label for="enable_merge_whitelist_true">{{ctx.Locale.Tr "repo.settings.protect_merge_whitelist_committers"}}</label>
 							<p class="help">{{ctx.Locale.Tr "repo.settings.protect_merge_whitelist_committers_desc"}}</p>
 						</div>
 					</div>

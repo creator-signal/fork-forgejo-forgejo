@@ -7,14 +7,16 @@
 		<dt>{{ctx.Locale.Tr "admin.config.disable_gravatar"}}</dt>
 		<dd>
 			<div class="ui toggle checkbox" data-tooltip-content="{{ctx.Locale.Tr "admin.config.disable_gravatar"}}">
-				<input type="checkbox" data-config-dyn-key="picture.disable_gravatar" {{if .SystemConfig.Picture.DisableGravatar.Value ctx}}checked{{end}}><label></label>
+				<input id="disable_gravatar" type="checkbox" data-config-dyn-key="picture.disable_gravatar" {{if .SystemConfig.Picture.DisableGravatar.Value ctx}}checked{{end}}>
+				<label for="disable_gravatar">{{ctx.Locale.Tr "admin.config.disable_gravatar"}}</label>
 			</div>
 		</dd>
 		<div class="divider"></div>
 		<dt>{{ctx.Locale.Tr "admin.config.enable_federated_avatar"}}</dt>
 		<dd>
 			<div class="ui toggle checkbox" data-tooltip-content="{{ctx.Locale.Tr "admin.config.enable_federated_avatar"}}">
-				<input type="checkbox" data-config-dyn-key="picture.enable_federated_avatar" {{if .SystemConfig.Picture.EnableFederatedAvatar.Value ctx}}checked{{end}}><label></label>
+				<input id="enable_federated_avatar" type="checkbox" data-config-dyn-key="picture.enable_federated_avatar" {{if .SystemConfig.Picture.EnableFederatedAvatar.Value ctx}}checked{{end}}>
+				<label for="enable_federated_avatar">{{ctx.Locale.Tr "admin.config.enable_federated_avatar"}}</label>
 			</div>
 		</dd>
 	</dl>
@@ -32,7 +34,8 @@
 			</details>
 		</div>
 		<div class="field">
-			<textarea name="value">{{(.SystemConfig.Repository.OpenWithEditorApps.Value ctx).ToTextareaString}}</textarea>
+			<label for="open_with_editor_apps">{{ctx.Locale.Tr "admin.config.open_with_editor_apps"}}</label>
+			<textarea id="open_with_editor_apps" name="value">{{(.SystemConfig.Repository.OpenWithEditorApps.Value ctx).ToTextareaString}}</textarea>
 		</div>
 		<div class="field">
 			<button class="ui primary button">{{ctx.Locale.Tr "save"}}</button>

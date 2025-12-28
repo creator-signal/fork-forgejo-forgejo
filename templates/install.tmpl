@@ -15,7 +15,7 @@
 					<h4 class="ui dividing header">{{ctx.Locale.Tr "install.db_title"}}</h4>
 					<p>{{ctx.Locale.Tr "install.require_db_desc"}}</p>
 					<div class="inline required field {{if .Err_DbType}}error{{end}}">
-						<label>{{ctx.Locale.Tr "install.db_type"}}</label>
+						<label for="db_type">{{ctx.Locale.Tr "install.db_type"}}</label>
 						<div class="ui selection database type dropdown">
 							<input type="hidden" id="db_type" name="db_type" value="{{.CurDbType}}">
 							<div class="text">{{.CurDbType}}</div>
@@ -49,9 +49,9 @@
 
 					<div class="tw-mt-4 tw-hidden" data-db-setting-for="postgres">
 						<div class="inline required field">
-							<label>{{ctx.Locale.Tr "install.ssl_mode"}}</label>
+							<label for="ssl_mode">{{ctx.Locale.Tr "install.ssl_mode"}}</label>
 							<div class="ui selection database type dropdown">
-								<input type="hidden" name="ssl_mode" value="{{if .ssl_mode}}{{.ssl_mode}}{{else}}disable{{end}}">
+								<input type="hidden" id="ssl_mode" name="ssl_mode" value="{{if .ssl_mode}}{{.ssl_mode}}{{else}}disable{{end}}">
 								<div class="default text">disable</div>
 								{{svg "octicon-triangle-down" 14 "dropdown icon"}}
 								<div class="menu">
@@ -81,20 +81,20 @@
 						<p class="reinstall-message">{{ctx.Locale.Tr "install.reinstall_confirm_message"}}</p>
 						<div class="reinstall-confirm">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.reinstall_confirm_check_1"}}</label>
-								<input name="reinstall_confirm_first" type="checkbox">
+								<label for="reinstall_confirm_first">{{ctx.Locale.Tr "install.reinstall_confirm_check_1"}}</label>
+								<input id="reinstall_confirm_first" name="reinstall_confirm_first" type="checkbox">
 							</div>
 						</div>
 						<div class="reinstall-confirm">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.reinstall_confirm_check_2"}}</label>
-								<input name="reinstall_confirm_second" type="checkbox">
+								<label for="reinstall_confirm_second">{{ctx.Locale.Tr "install.reinstall_confirm_check_2"}}</label>
+								<input id="reinstall_confirm_second" name="reinstall_confirm_second" type="checkbox">
 							</div>
 						</div>
 						<div class="reinstall-confirm">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.reinstall_confirm_check_3"}}</label>
-								<input name="reinstall_confirm_third" type="checkbox">
+								<label for="reinstall_confirm_third">{{ctx.Locale.Tr "install.reinstall_confirm_check_3"}}</label>
+								<input id="reinstall_confirm_third" name="reinstall_confirm_third" type="checkbox">
 							</div>
 						</div>
 					</div>
@@ -154,15 +154,15 @@
 					</div>
 					<div class="inline field">
 						<div class="ui checkbox" id="disable-registration">
-							<label class="{{if .Err_DisabledRegistration}}text red{{end}}">{{ctx.Locale.Tr "install.disable_registration"}}</label>
-							<input name="disable_registration" type="checkbox" {{if .disable_registration}}checked{{end}}>
+							<label for="disable_registration" class="{{if .Err_DisabledRegistration}}text red{{end}}">{{ctx.Locale.Tr "install.disable_registration"}}</label>
+							<input id="disable_registration" name="disable_registration" type="checkbox" {{if .disable_registration}}checked{{end}}>
 						</div>
 						<span class="help">{{ctx.Locale.Tr "install.disable_registration.description"}}</span>
 					</div>
 					<div class="inline field">
 						<div class="ui checkbox">
-							<label>{{ctx.Locale.Tr "install.enable_update_checker"}}</label>
-							<input name="enable_update_checker" type="checkbox" {{if .enable_update_checker}}checked{{end}}>
+							<label for="enable_update_checker">{{ctx.Locale.Tr "install.enable_update_checker"}}</label>
+							<input id="enable_update_checker" name="enable_update_checker" type="checkbox" {{if .enable_update_checker}}checked{{end}}>
 						</div>
 						<span class="help">{{ctx.Locale.Tr "install.enable_update_checker_helper_forgejo"}}</span>
 					</div>
@@ -198,14 +198,14 @@
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.register_confirm"}}</label>
-								<input name="register_confirm" type="checkbox" {{if .register_confirm}}checked{{end}}>
+								<label for="register_confirm">{{ctx.Locale.Tr "install.register_confirm"}}</label>
+								<input id="register_confirm" name="register_confirm" type="checkbox" {{if .register_confirm}}checked{{end}}>
 							</div>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.mail_notify"}}</label>
-								<input name="mail_notify" type="checkbox" {{if .mail_notify}}checked{{end}}>
+								<label for="mail_notify">{{ctx.Locale.Tr "install.mail_notify"}}</label>
+								<input id="mail_notify" name="mail_notify" type="checkbox" {{if .mail_notify}}checked{{end}}>
 							</div>
 						</div>
 					</details>
@@ -217,84 +217,84 @@
 						</summary>
 						<div class="inline field">
 							<div class="ui checkbox" id="offline-mode">
-								<label>{{ctx.Locale.Tr "install.offline_mode"}}</label>
-								<input name="offline_mode" type="checkbox" {{if .offline_mode}}checked{{end}}>
+								<label for="offline_mode">{{ctx.Locale.Tr "install.offline_mode"}}</label>
+								<input id="offline_mode" name="offline_mode" type="checkbox" {{if .offline_mode}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.offline_mode.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox" id="disable-gravatar">
-								<label>{{ctx.Locale.Tr "install.disable_gravatar"}}</label>
-								<input name="disable_gravatar" type="checkbox" {{if .disable_gravatar}}checked{{end}}>
+								<label for="disable_gravatar">{{ctx.Locale.Tr "install.disable_gravatar"}}</label>
+								<input id="disable_gravatar" name="disable_gravatar" type="checkbox" {{if .disable_gravatar}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.disable_gravatar.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox" id="federated-avatar-lookup">
-								<label>{{ctx.Locale.Tr "install.federated_avatar_lookup"}}</label>
-								<input name="enable_federated_avatar" type="checkbox" {{if .enable_federated_avatar}}checked{{end}}>
+								<label for="enable_federated_avatar">{{ctx.Locale.Tr "install.federated_avatar_lookup"}}</label>
+								<input id="enable_federated_avatar" name="enable_federated_avatar" type="checkbox" {{if .enable_federated_avatar}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.federated_avatar_lookup.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox" id="enable-openid-signin">
-								<label>{{ctx.Locale.Tr "install.openid_signin"}}</label>
-								<input name="enable_open_id_sign_in" type="checkbox" {{if .enable_open_id_sign_in}}checked{{end}}>
+								<label for="enable_open_id_sign_in">{{ctx.Locale.Tr "install.openid_signin"}}</label>
+								<input id="enable_open_id_sign_in" name="enable_open_id_sign_in" type="checkbox" {{if .enable_open_id_sign_in}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.openid_signin.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox" id="allow-only-external-registration">
-								<label>{{ctx.Locale.Tr "install.allow_only_external_registration"}}</label>
-								<input name="allow_only_external_registration" type="checkbox" {{if .allow_only_external_registration}}checked{{end}}>
+								<label for="allow_only_external_registration">{{ctx.Locale.Tr "install.allow_only_external_registration"}}</label>
+								<input id="allow_only_external_registration" name="allow_only_external_registration" type="checkbox" {{if .allow_only_external_registration}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.allow_only_external_registration.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox" id="enable-openid-signup">
-								<label>{{ctx.Locale.Tr "install.openid_signup"}}</label>
-								<input name="enable_open_id_sign_up" type="checkbox" {{if .enable_open_id_sign_up}}checked{{end}}>
+								<label for="enable_open_id_sign_up">{{ctx.Locale.Tr "install.openid_signup"}}</label>
+								<input id="enable_open_id_sign_up" name="enable_open_id_sign_up" type="checkbox" {{if .enable_open_id_sign_up}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.openid_signup.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox" id="enable-captcha">
-								<label>{{ctx.Locale.Tr "install.enable_captcha"}}</label>
-								<input name="enable_captcha" type="checkbox" {{if .enable_captcha}}checked{{end}}>
+								<label for="enable_captcha">{{ctx.Locale.Tr "install.enable_captcha"}}</label>
+								<input id="enable_captcha" name="enable_captcha" type="checkbox" {{if .enable_captcha}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.enable_captcha.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.require_sign_in_view"}}</label>
-								<input name="require_sign_in_view" type="checkbox" {{if .require_sign_in_view}}checked{{end}}>
+								<label for="require_sign_in_view">{{ctx.Locale.Tr "install.require_sign_in_view"}}</label>
+								<input id="require_sign_in_view" name="require_sign_in_view" type="checkbox" {{if .require_sign_in_view}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.require_sign_in_view.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.default_keep_email_private"}}</label>
-								<input name="default_keep_email_private" type="checkbox" {{if .default_keep_email_private}}checked{{end}}>
+								<label for="default_keep_email_private">{{ctx.Locale.Tr "install.default_keep_email_private"}}</label>
+								<input id="default_keep_email_private" name="default_keep_email_private" type="checkbox" {{if .default_keep_email_private}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.default_keep_email_private.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.default_allow_create_organization"}}</label>
-								<input name="default_allow_create_organization" type="checkbox" {{if .default_allow_create_organization}}checked{{end}}>
+								<label for="default_allow_create_organization">{{ctx.Locale.Tr "install.default_allow_create_organization"}}</label>
+								<input id="default_allow_create_organization" name="default_allow_create_organization" type="checkbox" {{if .default_allow_create_organization}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.default_allow_create_organization.description"}}</span>
 						</div>
 						<div class="inline field">
 							<div class="ui checkbox">
-								<label>{{ctx.Locale.Tr "install.default_enable_timetracking"}}</label>
-								<input name="default_enable_timetracking" type="checkbox" {{if .default_enable_timetracking}}checked{{end}}>
+								<label for="default_enable_timetracking">{{ctx.Locale.Tr "install.default_enable_timetracking"}}</label>
+								<input id="default_enable_timetracking" name="default_enable_timetracking" type="checkbox" {{if .default_enable_timetracking}}checked{{end}}>
 							</div>
 							<span class="help">{{ctx.Locale.Tr "install.default_enable_timetracking.description"}}</span>
 						</div>
 						<div class="inline field">
 							<label for="no_reply_address">{{ctx.Locale.Tr "install.no_reply_address"}}</label>
-							<input id="_no_reply_address" name="no_reply_address" value="{{.no_reply_address}}">
+							<input id="no_reply_address" name="no_reply_address" value="{{.no_reply_address}}">
 							<span class="help">{{ctx.Locale.Tr "install.no_reply_address_helper"}}</span>
 						</div>
 						<div class="inline field">
