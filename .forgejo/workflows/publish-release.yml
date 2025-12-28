@@ -38,7 +38,7 @@ on:
 
 jobs:
   publish:
-    runs-on: lxc-bookworm
+    runs-on: lxc-trixie
     if: vars.DOER != '' && vars.FORGEJO != '' && vars.TO_OWNER != '' && vars.FROM_OWNER != '' && secrets.TOKEN != ''
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
