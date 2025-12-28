@@ -20,8 +20,8 @@ code.forgejo.org/f3/gof3/v3 v3.11.1 h1:c0vE8XvqpbXuSv8gzttn96k5T2FQi0u9bYnux46qS
 code.forgejo.org/f3/gof3/v3 v3.11.1/go.mod h1:1p2UKrqZiwxKneQF2DKrMnc403YIgR/lfcfvadZtmDs=
 code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20191008002943-06d1c002b251 h1:HTZl3CBk3ABNYtFI6TPLvJgGKFIhKT5CBk0sbOtkDKU=
 code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20191008002943-06d1c002b251/go.mod h1:PphB88CPbx601QrWPMZATeorACeVmQlyv3u+uUMbSaM=
-code.forgejo.org/forgejo/actions-proto v0.5.3 h1:dDProRNB4CDvEl9gfo8jkiVfGdiW7fXAt5TM9Irka28=
-code.forgejo.org/forgejo/actions-proto v0.5.3/go.mod h1:33iTdur/jVa/wAQP+BuciRTK9WZcVaxy0BNEnSWWFDM=
+code.forgejo.org/forgejo/actions-proto v0.6.0 h1:dw1Dogk9A4V/yrLVkhe9dSZPsqNAIkI1kCXPSqG3tZA=
+code.forgejo.org/forgejo/actions-proto v0.6.0/go.mod h1:+444hHBs9/qDh5X/AedaTv0Egj3vd/EXP93vg9zFV2E=
 code.forgejo.org/forgejo/go-rpmutils v1.0.0 h1:RZGGeKt70p/WaIEL97pyT6uiiEIoN8/aLmS5Z6WmX0M=
 code.forgejo.org/forgejo/go-rpmutils v1.0.0/go.mod h1:cg+VbgLXfrDPza9T+kBsMb3TVmmzPN4XseT6gDGLSUk=
 code.forgejo.org/forgejo/go-xsd-duration v0.0.0-20220703122237-02e73435a078 h1:RArF5AsF9LH4nEoJxqRxcP5r8hhRfWcId84G82YbqzA=
@@ -30,8 +30,8 @@ code.forgejo.org/forgejo/levelqueue v1.0.0 h1:9krYpU6BM+j/1Ntj6m+VCAIu0UNnne1/Uf
 code.forgejo.org/forgejo/levelqueue v1.0.0/go.mod h1:fmG6zhVuqim2rxSFOoasgXO8V2W/k9U31VVYqLIRLhQ=
 code.forgejo.org/forgejo/reply v1.0.2 h1:dMhQCHV6/O3L5CLWNTol+dNzDAuyCK88z4J/lCdgFuQ=
 code.forgejo.org/forgejo/reply v1.0.2/go.mod h1:RyZUfzQLc+fuLIGjTSQWDAJWPiL4WtKXB/FifT5fM7U=
-code.forgejo.org/forgejo/runner/v12 v12.3.1 h1:85W9+OyCZbNLo4PnTnSopg95gkUYL3FTBNxW5tWxlkI=
-code.forgejo.org/forgejo/runner/v12 v12.3.1/go.mod h1:m6i/RnHQObdagTZUUPR+Nb2Th3VBLOHzjZ6tVw7F0qs=
+code.forgejo.org/forgejo/runner/v12 v12.3.2-0.20251228055451-34c20aa50f1d h1:hJAh7gxXxOBZKIHMMF5EClGJP4AHMZeYpoypivYEhyI=
+code.forgejo.org/forgejo/runner/v12 v12.3.2-0.20251228055451-34c20aa50f1d/go.mod h1:qn6BR07EcqZKg7hFFuCxDhOrUbtNY8Yx56YGZNEk4IQ=
 code.forgejo.org/forgejo/ssh v0.0.0-20241211213324-5fc306ca0616 h1:kEZL84+02jY9RxXM4zHBWZ3Fml0B09cmP1LGkDsCfIA=
 code.forgejo.org/forgejo/ssh v0.0.0-20241211213324-5fc306ca0616/go.mod h1:zpHEXBstFnQYtGnB8k8kQLol82umzn/2/snG7alWVD8=
 code.forgejo.org/go-chi/binding v1.0.1 h1:coKNI+X1NzRN7X85LlrpvBRqk0TXpJ+ja28vusQWEuY=
