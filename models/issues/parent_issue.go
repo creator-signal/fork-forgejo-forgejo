@@ -219,3 +219,28 @@ func (issue *Issue) UpdateParentIssue(ctx context.Context, parent *Issue, doer *
 
 	return committer.Commit()
 }
+
+// GetTotalSubIssues returns the number of sub-issues
+func (issue *Issue) GetTotalSubIssues() int {
+	return len(issue.SubIssues)
+}
+
+// GetClosedSubIssues returns the number of closed sub-issues
+func (issue *Issue) GetClosedSubIssues() int {
+	count := 0
+	for _, sub := range issue.SubIssues {
+		if sub.IsClosed {
+			count++
+		}
+	}
+	return count
+}
+
+// GetSubIssuesProgress returns the progress of sub-issues in percentage
+func (issue *Issue) GetSubIssuesProgress() int {
+	total := issue.GetTotalSubIssues()
+	if total == 0 {
+		return 0
+	}
+	return (issue.GetClosedSubIssues() * 100) / total
+}
