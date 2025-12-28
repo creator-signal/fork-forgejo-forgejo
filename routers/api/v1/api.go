@@ -1288,7 +1288,6 @@ func Routes() *web.Route {
 								Patch(reqToken(), reqRepoWriter(unit.TypeReleases), bind(api.EditAttachmentOptions{}), repo.EditReleaseAttachment).
 								Delete(reqToken(), reqRepoWriter(unit.TypeReleases), repo.DeleteReleaseAttachment)
 						})
-						m.Get("/sub_issues", repo.ListSubIssues)
 					})
 					m.Group("/tags", func() {
 						m.Combo("/{tag}").
@@ -1524,6 +1523,7 @@ func Routes() *web.Route {
 								Delete(reqToken(), reqAdmin(), repo.UnpinIssue)
 							m.Patch("/{position}", reqToken(), reqAdmin(), repo.MoveIssuePin)
 						})
+						m.Get("/sub_issues", repo.ListSubIssues)
 					}, mustEnableLocalIssuesIfIsIssue)
 				}, mustEnableIssuesOrPulls)
 				m.Group("/labels", func() {

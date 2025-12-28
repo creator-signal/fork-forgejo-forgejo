@@ -30,7 +30,10 @@ import {
   initRepoIssueTimeTracking,
   initRepoIssueWipTitle,
   initRepoPullRequestAllowMaintainerEdit,
-  initRepoPullRequestReview, initRepoIssueSidebarList, initArchivedLabelHandler,
+  initRepoPullRequestReview,
+  initRepoIssueSidebarList,
+  initArchivedLabelHandler,
+  initRepoIssueSubIssuesIntractable,
 } from './features/repo-issue.js';
 import {initRepoEllipsisButton, initCommitStatuses, initCommitNotes} from './features/repo-commit.js';
 import {
@@ -157,6 +160,7 @@ onDomReady(() => {
   initRepoIssueList();
   initRepoIssueSidebarList();
   initArchivedLabelHandler();
+  initRepoIssueSubIssuesIntractable();
   initRepoIssueReferenceRepositorySearch();
   initRepoIssueTimeTracking();
   initRepoIssueWipTitle();

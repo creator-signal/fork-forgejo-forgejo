@@ -2,6 +2,9 @@
 	{{$total := .Issue.GetTotalSubIssues}}
 	{{$closed := .Issue.GetClosedSubIssues}}
 	{{$percent := .Issue.GetSubIssuesProgress}}
+	{{$repoID := .Issue.RepoID}}
+	{{$subIssuesCount := .Issue.SubIssuesCount}}
+
 
 	<details class="item toggleable-item" open>
 		<summary class="ui attached header sub-issues-header tw-flex tw-items-center tw-justify-between" role="heading"
@@ -16,27 +19,45 @@
 				<span class="ui label">
 					<span class="text muted-links">{{$closed}} of {{$total}}</span>
 					<span class="tw-inline-block tw-ml-1 tw-align-text-bottom" style="width: 1.2em; height: 1.2em;">
-						<svg class="tw-w-full tw-h-full" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg" style="transform: rotate(90deg)">
+						<svg class="tw-w-full tw-h-full" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg"
+							style="transform: rotate(90deg)">
 							<!-- Background circle -->
 							<circle cx="50%" cy="50%" r="45" fill="none" class="tw-stroke-current text-gray-200" stroke-width="20" />
 
 							<!-- Progress circle -->
 							<circle cx="50%" cy="50%" r="45" fill="none" stroke-width="20" stroke-linecap="round"
-								class="tw-stroke-current" style="color: {{if eq $percent 100}}  var(--color-green) {{else}} var(--color-primary) {{end}};" pathLength="100"
-								stroke-dasharray="{{$percent}} 100" />
+								class="tw-stroke-current"
+								style="color: {{if eq $percent 100}}  var(--color-green) {{else}} var(--color-primary) {{end}};"
+								pathLength="100" stroke-dasharray="{{$percent}} 100" />
 						</svg>
 					</span>
 					{{end}}
-				</div>
-				</span>
+			</div>
+			</span>
 
 		</summary>
 
 		<div class="ui attached segment sub-issues" role="article">
-			{{$repoID := .Issue.RepoID}}
+
 			{{range $s := .Issue.SubIssues}}
 			<div class="item tw-flex tw-items-center tw-justify-between">
 				<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
+
+					{{if gt $s.SubIssuesCount 0}}
+					<details class="item toggleable-item" data-sub-issue-intractable="has-sub-issues" data-sub-issue-index="{{$s.Index}}" data-sub-issue-repo-name="{{$s.Repo.Name}}" data-sub-issue-owner="{{$s.Repo.OwnerName}}">
+						<summary style="padding: 0; padding-bottom: 0.5rem;" class="sub-issues" role="heading">
+							<a class="title muted" href="{{$s.Link}}"
+								data-tooltip-content="{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}} {{RenderRefIssueTitle $.Context $s.Title}}">
+								{{if not $s.IsClosed}} <span class="ui green label">{{svg "octicon-issue-opened"}}</span>{{end}}
+								{{if $s.IsClosed}} <span class="ui red label">{{svg "octicon-issue-closed"}}</span>{{end}}
+								{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}}
+								{{RenderRefIssueTitle $.Context $s.Title}}
+							</a>
+						</summary>
+						<div class="sub-issues item-left tw-flex tw-flex-col tw-flex-1" style="padding-left: 35px;">Loading......</div>
+					</details>
+
+					{{else}}
 					<a class="title muted" href="{{$s.Link}}"
 						data-tooltip-content="{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}} {{RenderRefIssueTitle $.Context $s.Title}}">
 						{{if not $s.IsClosed}} <span class="ui green label">{{svg "octicon-issue-opened"}}</span>{{end}}
@@ -44,6 +65,7 @@
 						{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}}
 						{{RenderRefIssueTitle $.Context $s.Title}}
 					</a>
+					{{end}}
 				</div>
 			</div>
 			{{end}}

@@ -49,6 +49,13 @@ func (issue *Issue) LoadSubIssues(ctx context.Context) (err error) {
 	return nil
 }
 
+func CountSubIssues(ctx context.Context, issueID int64) (int64, error) {
+	return db.GetEngine(ctx).
+		Table("issue").
+		Where("issue.parent_id = ?", issueID).
+		Count()
+}
+
 // ErrSubIssuesTooMany represents a "SubIssuesTooMany" kind of error.
 type ErrSubIssuesTooMany struct {
 	ID       int64
@@ -243,4 +250,24 @@ func (issue *Issue) GetSubIssuesProgress() int {
 		return 0
 	}
 	return (issue.GetClosedSubIssues() * 100) / total
+}
+
+func (issue *Issue) HasSubIssues() bool {
+	ctx := context.Background()
+	count, err := CountSubIssues(ctx, issue.ID)
+	if err != nil {
+		return false
+	}
+
+	return count > 0
+}
+
+func (issue *Issue) SubIssuesCount() int64 {
+	ctx := context.Background()
+	count, err := CountSubIssues(ctx, issue.ID)
+	if err != nil {
+		return 0
+	}
+
+	return count
 }

@@ -1,16 +1,16 @@
 import $ from 'jquery';
-import {htmlEscape} from 'escape-goat';
-import {showTemporaryTooltip, createTippy} from '../modules/tippy.js';
-import {hideElem, showElem, toggleElem} from '../utils/dom.js';
-import {setFileFolding} from './file-fold.js';
-import {getComboMarkdownEditor, initComboMarkdownEditor} from './comp/ComboMarkdownEditor.js';
-import {toAbsoluteUrl} from '../utils.js';
-import {initDropzone} from './common-global.js';
-import {POST, GET} from '../modules/fetch.js';
-import {showErrorToast} from '../modules/toast.js';
-import {emojiHTML} from './emoji.js';
+import { htmlEscape } from 'escape-goat';
+import { showTemporaryTooltip, createTippy } from '../modules/tippy.js';
+import { hideElem, showElem, toggleElem } from '../utils/dom.js';
+import { setFileFolding } from './file-fold.js';
+import { getComboMarkdownEditor, initComboMarkdownEditor } from './comp/ComboMarkdownEditor.js';
+import { toAbsoluteUrl } from '../utils.js';
+import { initDropzone } from './common-global.js';
+import { POST, GET } from '../modules/fetch.js';
+import { showErrorToast } from '../modules/toast.js';
+import { emojiHTML } from './emoji.js';
 
-const {appSubUrl} = window.config;
+const { appSubUrl } = window.config;
 
 // if there are draft comments, confirm before reloading, to avoid losing comments
 export function reloadConfirmDraftComment() {
@@ -81,7 +81,7 @@ async function updateDeadline(deadlineString) {
 
   try {
     const response = await POST(document.getElementById('update-issue-deadline-form').getAttribute('action'), {
-      data: {due_date: realDeadline},
+      data: { due_date: realDeadline },
     });
 
     if (response.ok) {
@@ -122,6 +122,64 @@ function excludeLabel(item) {
   window.location.assign(href.replace(new RegExp(regStr), newStr));
 }
 
+export function initRepoIssueSubIssuesIntractable() {
+  $(document).on('click', '[data-sub-issue-intractable="has-sub-issues"]', async function () {
+
+    const hasSubIssues = $(this).find('a');
+    if (hasSubIssues.length > 1) {
+      console.log('Has sub-issues', hasSubIssues);
+      return;
+    }
+
+    console.log('Has sub-issues', hasSubIssues);
+
+    const subIssueIndex = $(this).data('sub-issue-index');
+    const repoName = $(this).data('sub-issue-repo-name');
+    const owner = $(this).data('sub-issue-owner');
+
+    console.log('Clicked sub-issues intractable', this, subIssueIndex, repoName);
+
+    const openIssueIcon = '<span class="ui green label"><svg viewBox="0 0 16 16" class="svg octicon-issue-opened" aria-hidden="true" width="16" height="16"><path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"></path><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0M1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0"></path></svg></span>'
+    const closedIssueIcon = '<span class="ui red label"><svg viewBox="0 0 16 16" class="svg octicon-issue-closed" aria-hidden="true" width="16" height="16"><path d="M11.28 6.78a.75.75 0 0 0-1.06-1.06L7.25 8.69 5.78 7.22a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0z"></path><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-1.5 0a6.5 6.5 0 1 0-13 0 6.5 6.5 0 0 0 13 0"></path></svg></span>'
+    const template = (href, state, thisOwner, thisRepoName, issueIndex, title) => `
+    <div class="item">
+      <a class="title muted" href="${href}"
+        data-tooltip-content="${thisOwner !== owner || thisRepoName !== repoName ? `${thisOwner}/${thisRepoName}` : ''}#${issueIndex} ${title}">
+        ${state === 'open' ? openIssueIcon : closedIssueIcon}
+
+        ${thisOwner !== owner || thisRepoName !== repoName ? `${thisOwner}/${thisRepoName}` : ''}#${issueIndex} ${title}
+      </a>
+    </div>
+    `;
+
+    // Make api request to get sub-issues
+    const response = await fetch(`${appSubUrl}/api/v1/repos/${owner}/${repoName}/issues/${subIssueIndex}/sub_issues`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error('Failed to get sub-issues', response.statusText);
+      return;
+    }
+
+    const data = await response.json();
+    console.log('Sub-issues', data);
+
+    const div = $(this).find('div');
+
+    div.html('');
+
+    for (const subIssue of data) {
+      const href = `${appSubUrl}/repos/${owner}/${repoName}/issues/${subIssue.index}`;
+      const html = template(href, subIssue.state, subIssue.repository.owner, subIssue.repository.name, subIssue.id, subIssue.title);
+      div.append(html);
+    }
+  });
+}
+
 export function initRepoIssueSidebarList() {
   const repolink = $('#repolink').val();
   const repoId = $('#repoId').val();
@@ -138,7 +196,7 @@ export function initRepoIssueSidebarList() {
           url: issueSearchUrl,
           onResponse(response) {
             console.log(`Called dropdown dependency onResponse`);
-            const filteredResponse = {success: true, results: []};
+            const filteredResponse = { success: true, results: [] };
             const currIssueId = $('#new-dependency-drop-list').data('issue-id');
             // Parse the response from the api to work with our dropdown
             $.each(response, (_i, issue) => {
@@ -176,7 +234,7 @@ export function initRepoIssueSidebarList() {
           url: issueSearchUrl,
           onResponse(response) {
             console.log(`Called dropdown parent issue onResponse`);
-            const filteredResponse = {success: true, results: []};
+            const filteredResponse = { success: true, results: [] };
             const currIssueId = $('#new-parent-issue-drop-list').data('issue-id');
             // Parse the response from the api to work with our dropdown
             $.each(response, (_i, issue) => {
@@ -220,7 +278,7 @@ export function initRepoIssueSidebarList() {
       }
     }
   });
-  $('.ui.dropdown.label-filter, .ui.dropdown.select-label').dropdown('setting', {'hideDividers': 'empty'}).dropdown('refreshItems');
+  $('.ui.dropdown.label-filter, .ui.dropdown.select-label').dropdown('setting', { 'hideDividers': 'empty' }).dropdown('refreshItems');
 }
 
 export function initRepoIssueCommentDelete() {
@@ -367,7 +425,7 @@ export function initRepoPullRequestAllowMaintainerEdit() {
     const url = `${wrapper.getAttribute('data-url')}/set_allow_maintainer_edit`;
     wrapper.classList.add('is-loading');
     try {
-      const resp = await POST(url, {data: new URLSearchParams({allow_maintainer_edit: checkbox.checked})});
+      const resp = await POST(url, { data: new URLSearchParams({ allow_maintainer_edit: checkbox.checked }) });
       if (!resp.ok) {
         throw new Error('Failed to update maintainer edit permission');
       }
@@ -389,7 +447,7 @@ export function initRepoIssueReferenceRepositorySearch() {
       apiSettings: {
         url: `${appSubUrl}/repo/search?q={query}&limit=20`,
         onResponse(response) {
-          const filteredResponse = {success: true, results: []};
+          const filteredResponse = { success: true, results: [] };
           for (const repo of response.data) {
             filteredResponse.results.push({
               name: htmlEscape(repo.repository.full_name),
@@ -431,7 +489,7 @@ export function initRepoIssueWipTitle() {
 
 export async function updateIssuesMeta(url, action, issue_ids, id) {
   try {
-    const response = await POST(url, {data: new URLSearchParams({action, issue_ids, id})});
+    const response = await POST(url, { data: new URLSearchParams({ action, issue_ids, id }) });
     if (!response.ok) {
       throw new Error('Failed to update issues meta');
     }
@@ -658,7 +716,7 @@ export function initRepoIssueWipToggle() {
       const params = new URLSearchParams();
       params.append('title', prefix !== undefined ? title.slice(prefix.length).trim() : `${wipPrefixes[0].trim()} ${title}`);
 
-      const response = await POST(updateUrl, {data: params});
+      const response = await POST(updateUrl, { data: params });
       if (!response.ok) {
         throw new Error('Failed to toggle WIP status');
       }
@@ -704,7 +762,7 @@ export function initRepoIssueTitleEdit() {
     const newTitle = issueTitleInput.value.trim();
     try {
       if (newTitle && newTitle !== oldTitle) {
-        const resp = await POST(editSaveButton.getAttribute('data-update-url'), {data: new URLSearchParams({title: newTitle})});
+        const resp = await POST(editSaveButton.getAttribute('data-update-url'), { data: new URLSearchParams({ title: newTitle }) });
         if (!resp.ok) {
           throw new Error(`Failed to update issue title: ${resp.statusText}`);
         }
@@ -713,7 +771,7 @@ export function initRepoIssueTitleEdit() {
         const newTargetBranch = document.querySelector('#pull-target-branch').getAttribute('data-branch');
         const oldTargetBranch = document.querySelector('#branch_target').textContent;
         if (newTargetBranch !== oldTargetBranch) {
-          const resp = await POST(prTargetUpdateUrl, {data: new URLSearchParams({target_branch: newTargetBranch})});
+          const resp = await POST(prTargetUpdateUrl, { data: new URLSearchParams({ target_branch: newTargetBranch }) });
           if (!resp.ok) {
             throw new Error(`Failed to update PR target branch: ${resp.statusText}`);
           }
