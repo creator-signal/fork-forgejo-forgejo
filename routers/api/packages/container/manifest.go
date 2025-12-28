@@ -320,7 +320,16 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 		LowerName: strings.ToLower(mci.Image),
 	}
 	var err error
-	if p, err = packages_model.TryInsertPackage(ctx, p); err != nil {
+
+	linked, err := tryAutoLinkPackageToRepo(ctx, p, mci.Creator.LowerName, strings.ToLower(mci.Image))
+	if err != nil {
+		return nil, err
+	}
+	if linked {
+		log.Info("Image manifest for %s/%s auto-linked to repo", mci.Creator.LowerName, strings.ToLower(mci.Image))
+	}
+
+	if p, err = packages_model.TryInsertPackage(ctx, p); err != nil { // LSC: Hier passiert das Manifest publishing
 		if err == packages_model.ErrDuplicatePackage {
 			created = false
 		} else {

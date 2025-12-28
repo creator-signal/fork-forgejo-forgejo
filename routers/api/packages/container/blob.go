@@ -105,7 +105,16 @@ func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 			LowerName: strings.ToLower(pi.Name),
 		}
 		var err error
-		if p, err = packages_model.TryInsertPackage(ctx, p); err != nil {
+
+		linked, err := tryAutoLinkPackageToRepo(ctx, p, pi.Owner.LowerName, strings.ToLower(pi.Name))
+		if err != nil {
+			return err
+		}
+		if linked {
+			log.Info("Image manifest for %s/%s auto-linked to repo", pi.Owner.LowerName, strings.ToLower(pi.Name))
+		}
+
+		if p, err = packages_model.TryInsertPackage(ctx, p); err != nil { // LSC: Hier werden Docker Layer (Blobs) hochgeladen
 			if err == packages_model.ErrDuplicatePackage {
 				created = false
 			} else {
