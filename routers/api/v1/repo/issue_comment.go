@@ -243,7 +243,7 @@ func isXRefCommentAccessible(ctx stdCtx.Context, user *user_model.User, c *issue
 			return false
 		}
 	}
-	if c.Type.HasParentOrSubIssue() {
+	if c.Type.IsParentOrSubIssue() {
 		if err := c.LoadParentOrSubIssue(ctx); err != nil {
 			return false
 		}

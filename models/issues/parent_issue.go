@@ -74,7 +74,7 @@ func (err ErrSubIssuesTooMany) Error() string {
 }
 
 func (err ErrSubIssuesTooMany) Unwrap() error {
-	return util.ErrNotExist
+	return util.ErrTooMany
 }
 
 // ErrSubIssuesTooDeep represents a "SubIssuesTooDeep" kind of error.

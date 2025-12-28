@@ -220,7 +220,7 @@ func ConversationCountedCommentType() []CommentType {
 	return []CommentType{CommentTypeComment, CommentTypeReview}
 }
 
-func (t CommentType) HasParentOrSubIssue() bool {
+func (t CommentType) IsParentOrSubIssue() bool {
 	switch t {
 	case CommentTypeAddParentIssue, CommentTypeRemoveParentIssue, CommentTypeAddSubIssue, CommentTypeRemoveSubIssue:
 		return true
@@ -297,7 +297,7 @@ type Comment struct {
 	DependentIssueID     int64  `xorm:"index"` // This is used by issue_service.deleteIssue
 	DependentIssue       *Issue `xorm:"-"`
 
-	ParentOrSubIssueID int64    `xorm:"index 'sub_issue_id'"` // This is used by issue_service.deleteIssue
+	ParentOrSubIssueID int64    `xorm:"index 'sub_issue_id'"` // This is used for caching parent or sub-issue
 	ParentOrSubIssue   *Issue   `xorm:"-"`
 	ParentOrSubIssues  []*Issue `xorm:"-"`
 
@@ -837,8 +837,8 @@ func (c *Comment) LoadParentOrSubIssue(ctx context.Context) (err error) {
 	if c.ParentOrSubIssue, err = GetIssueByID(ctx, c.ParentOrSubIssueID); err != nil {
 		return err
 	}
-	c.ParentOrSubIssues = make([]*Issue, 1)
-	c.ParentOrSubIssues[0] = c.ParentOrSubIssue
+
+	c.ParentOrSubIssues = []*Issue{c.ParentOrSubIssue}
 	return nil
 }
 

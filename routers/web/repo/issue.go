@@ -1776,7 +1776,7 @@ func ViewIssue(ctx *context.Context) {
 					return
 				}
 			}
-		} else if comment.Type.HasParentOrSubIssue() {
+		} else if comment.Type.IsParentOrSubIssue() {
 			if err = comment.LoadParentOrSubIssue(ctx); err != nil {
 				if !issues_model.IsErrIssueNotExist(err) {
 					ctx.ServerError("LoadParentOrSubIssueDetails", err)
@@ -3642,7 +3642,7 @@ func filterParentOrSubComments(ctx *context.Context, issue *issues_model.Issue) 
 	// Remove comments that the user has no permissions to see
 	for i := 0; i < len(issue.Comments); {
 		c := issue.Comments[i]
-		if c.Type.HasParentOrSubIssue() {
+		if c.Type.IsParentOrSubIssue() {
 			if err = c.LoadParentOrSubIssue(ctx); err != nil {
 				return err
 			}
@@ -3784,7 +3784,7 @@ func combineParentOrSubIssuesComments(issue *issues_model.Issue) {
 		} else {
 			continue
 		}
-		if !cur.Type.HasParentOrSubIssue() {
+		if !cur.Type.IsParentOrSubIssue() {
 			continue
 		}
 		// comparing with adding/removing labels, creating new sub-issues generally

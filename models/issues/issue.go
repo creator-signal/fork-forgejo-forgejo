@@ -137,7 +137,7 @@ type Issue struct {
 	// For view issue page.
 	ShowRole RoleDescriptor `xorm:"-"`
 
-	ParentIssueID       *int64   `xorm:"'parent_id' null index"`
+	ParentIssueID       *int64   `xorm:"'parent_id' NULL INDEX"`
 	ParentIssue         *Issue   `xorm:"-"`
 	isParentIssueLoaded bool     `xorm:"-"`
 	SubIssues           []*Issue `xorm:"-"`
