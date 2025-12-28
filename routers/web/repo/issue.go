@@ -1514,11 +1514,9 @@ func ViewIssue(ctx *context.Context) {
 		return
 	}
 
-	for _, subIssue := range issue.SubIssues {
-		if err = subIssue.LoadRepo(ctx); err != nil {
-			ctx.ServerError("subIssue.LoadRepo", err)
-			return
-		}
+	if err = issue.LoadSubIssueRepos(ctx); err != nil {
+		ctx.ServerError("issue.LoadSubIssueRepos", err)
+		return
 	}
 
 	if err = filterParentOrSubComments(ctx, issue); err != nil {

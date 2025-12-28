@@ -47,6 +47,16 @@ func (issue *Issue) LoadSubIssues(ctx context.Context) (err error) {
 	return nil
 }
 
+// LoadSubIssueRepos loads repositories for sub-issues of this issue.
+func (issue *Issue) LoadSubIssueRepos(ctx context.Context) error {
+	if len(issue.SubIssues) == 0 {
+		return nil
+	}
+	issueList := IssueList(issue.SubIssues)
+	_, err := issueList.LoadRepositories(ctx)
+	return err
+}
+
 // CountSubIssues counts count of all sub-issues of this issue
 func CountSubIssues(ctx context.Context, issueID int64) (int64, error) {
 	return db.GetEngine(ctx).
