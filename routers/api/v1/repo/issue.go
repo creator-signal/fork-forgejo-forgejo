@@ -962,17 +962,11 @@ func EditIssue(ctx *context.APIContext) {
 			updateErr = issue.UpdateParentIssue(ctx, nil, ctx.Doer)
 		}
 		if updateErr != nil {
-			if issues_model.IsErrSubIssuesTooMany(err) {
-				ctx.Error(http.StatusPreconditionFailed, "SubIssuesTooMany", "the number of sub-issues related to this issue has reached the limitation")
-				return
-			} else if issues_model.IsErrSubIssuesTooDeep(err) {
-				ctx.Error(http.StatusPreconditionFailed, "SubIssuesTooDeep", "the depth of sub-issues related to this issue has reached the limitation")
-				return
-			} else if issues_model.IsErrCircularParentIssue(err) {
+			if issues_model.IsErrCircularParentIssue(updateErr) {
 				ctx.Error(http.StatusPreconditionFailed, "CircularParentIssue", "cannot add circular parent issue relationship")
 				return
 			}
-			ctx.Error(http.StatusInternalServerError, "UpdateParentIssue", err)
+			ctx.Error(http.StatusInternalServerError, "UpdateParentIssue", updateErr)
 			return
 		}
 	}

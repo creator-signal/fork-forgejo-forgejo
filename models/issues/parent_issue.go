@@ -9,8 +9,6 @@ import (
 
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/setting"
-	"forgejo.org/modules/util"
 )
 
 // LoadParentIssue load parent issue of this issue.
@@ -49,49 +47,12 @@ func (issue *Issue) LoadSubIssues(ctx context.Context) (err error) {
 	return nil
 }
 
+// CountSubIssues counts count of all sub-issues of this issue
 func CountSubIssues(ctx context.Context, issueID int64) (int64, error) {
 	return db.GetEngine(ctx).
 		Table("issue").
 		Where("issue.parent_id = ?", issueID).
 		Count()
-}
-
-// ErrSubIssuesTooMany represents a "SubIssuesTooMany" kind of error.
-type ErrSubIssuesTooMany struct {
-	ID       int64
-	ParentID int64
-	RootID   int64
-}
-
-// IsErrSubIssuesTooMany checks if an error is a ErrSubIssuesTooMany.
-func IsErrSubIssuesTooMany(err error) bool {
-	_, ok := err.(ErrSubIssuesTooMany)
-	return ok
-}
-
-func (err ErrSubIssuesTooMany) Error() string {
-	return fmt.Sprintf("sub-issues count has reached limit [id: %d, parent: %d, root: %d]", err.ID, err.ParentID, err.RootID)
-}
-
-func (err ErrSubIssuesTooMany) Unwrap() error {
-	return util.ErrTooMany
-}
-
-// ErrSubIssuesTooDeep represents a "SubIssuesTooDeep" kind of error.
-type ErrSubIssuesTooDeep struct {
-	ID       int64
-	ParentID int64
-	RootID   int64
-}
-
-// IsErrSubIssuesTooDeep checks if an error is a ErrSubIssuesTooDeep.
-func IsErrSubIssuesTooDeep(err error) bool {
-	_, ok := err.(ErrSubIssuesTooDeep)
-	return ok
-}
-
-func (err ErrSubIssuesTooDeep) Error() string {
-	return fmt.Sprintf("sub-issues depth has reached limit [id: %d, parent: %d, root: %d]", err.ID, err.ParentID, err.RootID)
 }
 
 // ErrCircularParentIssue represents a "CircularParentIssue" kind of error.
@@ -123,35 +84,7 @@ func (issue *Issue) LookupRootIssue(ctx context.Context) (root *Issue, depth int
 		}
 		root = root.ParentIssue
 		depth++
-
-		// Enforce maximum allowed sub-issue depth to avoid excessive resource usage.
-		// If depth exceeds configured maximum, return a specific error so callers
-		// can handle it (for example, when trying to link a new parent).
-		if setting.Repository.Issue.MaxSubIssuesDepth > 0 && depth > setting.Repository.Issue.MaxSubIssuesDepth {
-			// Use the current parent as ParentID; RootID is set to the same parent here
-			// because the actual top root may not be known at this point in traversal.
-			return nil, 0, ErrSubIssuesTooDeep{
-				ID:       issue.ID,
-				ParentID: root.ID,
-				RootID:   root.ID,
-			}
-		}
 	}
-}
-
-// CountSubIssues counts count of all sub-issues of this issue recursively
-func (issue *Issue) CountSubIssues(ctx context.Context) (int, error) {
-	var count int64
-	_, err := db.GetEngine(ctx).SQL(`
-		WITH RECURSIVE sub_issues AS (
-			SELECT id FROM issue WHERE parent_id = ?
-			UNION ALL
-			SELECT issue.id FROM issue
-			INNER JOIN sub_issues ON issue.parent_id = sub_issues.id
-		)
-		SELECT count(*) FROM sub_issues
-	`, issue.ID).Get(&count)
-	return int(count), err
 }
 
 // UpdateParentIssue adds issue to another issue as a sub-issue.
@@ -169,21 +102,8 @@ func (issue *Issue) UpdateParentIssue(ctx context.Context, parent *Issue, doer *
 	oldParent := issue.ParentIssue
 
 	if parent != nil {
-		root, depth, err := parent.LookupRootIssue(ctx)
-		if err != nil {
+		if _, _, err := parent.LookupRootIssue(ctx); err != nil {
 			return err
-		}
-
-		// Validate count and depth limitation
-		if depth+1 > setting.Repository.Issue.MaxSubIssuesDepth {
-			return ErrSubIssuesTooDeep{issue.ID, parent.ID, root.ID}
-		}
-		rootCount, err := root.CountSubIssues(ctx)
-		if err != nil {
-			return err
-		}
-		if rootCount+1 > setting.Repository.Issue.MaxSubIssues {
-			return ErrSubIssuesTooMany{issue.ID, parent.ID, root.ID}
 		}
 
 		// Validate no circular parent issues

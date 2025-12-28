@@ -65,13 +65,7 @@ func AddParentIssue(ctx *context.Context) {
 	}
 
 	if err = issue.UpdateParentIssue(ctx, parent, ctx.Doer); err != nil {
-		if issues_model.IsErrSubIssuesTooMany(err) {
-			ctx.Flash.Error(ctx.Tr("repo.issues.parent_issue.add_error_count_limit"))
-			return
-		} else if issues_model.IsErrSubIssuesTooDeep(err) {
-			ctx.Flash.Error(ctx.Tr("repo.issues.parent_issue.add_error_depth_limit"))
-			return
-		} else if issues_model.IsErrCircularParentIssue(err) {
+		if issues_model.IsErrCircularParentIssue(err) {
 			ctx.Flash.Error(ctx.Tr("repo.issues.parent_issue.add_error_circular"))
 			return
 		}

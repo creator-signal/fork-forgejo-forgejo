@@ -64,9 +64,6 @@ func GetGeneralRepoSettings(ctx *context.APIContext) {
 		ForksDisabled:        setting.Repository.DisableForks,
 		TimeTrackingDisabled: !setting.Service.EnableTimetracking,
 		LFSDisabled:          !setting.LFS.StartServer,
-
-		MaxSubIssuesCount: setting.Repository.Issue.MaxSubIssues,
-		MaxSubIssuesDepth: setting.Repository.Issue.MaxSubIssuesDepth,
 	})
 }
 

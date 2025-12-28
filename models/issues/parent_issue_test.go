@@ -4,14 +4,12 @@
 package issues_test
 
 import (
-	"fmt"
 	"testing"
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/setting"
 
 	"github.com/stretchr/testify/require"
 )
@@ -58,38 +56,6 @@ func TestIssueUpdateParent(t *testing.T) {
 		IssueID:            subIssue.ID,
 		ParentOrSubIssueID: parentIssue.ID,
 	})
-}
-
-func TestSubIssueCountLimit(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-	parentIssue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 23})
-	for i := 0; i < setting.Repository.Issue.MaxSubIssues; i++ {
-		issue := testCreateIssue(t, 63, 1, fmt.Sprintf("Test sub-issue No. %d", i), "issue content", false)
-		err := issue.UpdateParentIssue(db.DefaultContext, parentIssue, user1)
-		require.NoError(t, err)
-	}
-	issue := testCreateIssue(t, 63, 1, "last test issue", "issue content", false)
-	err := issue.UpdateParentIssue(db.DefaultContext, parentIssue, user1)
-	require.EqualError(t, err, issues_model.ErrSubIssuesTooMany{issue.ID, parentIssue.ID, parentIssue.ID}.Error())
-}
-
-func TestSubIssueDepthLimit(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-	rootIssue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 23})
-	issue := rootIssue
-	for i := 0; i < setting.Repository.Issue.MaxSubIssuesDepth; i++ {
-		newIssue := testCreateIssue(t, 63, 1, fmt.Sprintf("Test sub-issue No. %d", i), "issue content", false)
-		err := newIssue.UpdateParentIssue(db.DefaultContext, issue, user1)
-		require.NoError(t, err)
-		issue = newIssue
-	}
-	newIssue := testCreateIssue(t, 63, 1, "last test issue", "issue content", false)
-	err := newIssue.UpdateParentIssue(db.DefaultContext, issue, user1)
-	require.EqualError(t, err, issues_model.ErrSubIssuesTooDeep{newIssue.ID, issue.ID, rootIssue.ID}.Error())
 }
 
 func TestSubIssueNoCircular(t *testing.T) {

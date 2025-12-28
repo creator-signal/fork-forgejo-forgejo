@@ -48,8 +48,6 @@ func TestAPIExposedSettings(t *testing.T) {
 		MigrationsDisabled:   setting.Repository.DisableMigrations,
 		TimeTrackingDisabled: false,
 		LFSDisabled:          !setting.LFS.StartServer,
-		MaxSubIssuesCount:    setting.Repository.Issue.MaxSubIssues,
-		MaxSubIssuesDepth:    setting.Repository.Issue.MaxSubIssuesDepth,
 	}, repo)
 
 	attachment := new(api.GeneralAttachmentSettings)
