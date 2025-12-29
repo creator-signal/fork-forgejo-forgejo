@@ -246,6 +246,37 @@ func addHook(ctx *context.APIContext, form *api.CreateHookOption, ownerID, repoI
 		w.Meta = string(meta)
 	}
 
+	if w.Type == webhook_module.PACKAGIST {
+		username, ok := form.Config["username"]
+		if !ok {
+			ctx.Error(http.StatusUnprocessableEntity, "", "Missing config option: username")
+			return nil, false
+		}
+
+		apiToken, ok := form.Config["api_token"]
+		if !ok {
+			ctx.Error(http.StatusUnprocessableEntity, "", "Missing config option: api_token")
+			return nil, false
+		}
+
+		packageURL, ok := form.Config["package_url"]
+		if !ok {
+			ctx.Error(http.StatusUnprocessableEntity, "", "Missing config option: package_url")
+			return nil, false
+		}
+
+		meta, err := json.Marshal(&webhook_service.PackagistMeta{
+			Username:   username,
+			APIToken:   apiToken,
+			PackageURL: packageURL,
+		})
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "packagist: JSON marshal failed", err)
+			return nil, false
+		}
+		w.Meta = string(meta)
+	}
+
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Error(http.StatusInternalServerError, "UpdateEvent", err)
 		return nil, false

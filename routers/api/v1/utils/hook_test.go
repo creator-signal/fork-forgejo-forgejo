@@ -125,3 +125,100 @@ func TestHookEventInclusion(t *testing.T) {
 		assert.Truef(t, val.Field(i).Interface().(bool), "missing '%s' event", ty.Field(i).Name)
 	}
 }
+
+func TestPackagistWebhookCreation(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	t.Run("Success with all required fields", func(t *testing.T) {
+		ctx, _ := contexttest.MockAPIContext(t, "user2/repo1/hooks")
+		contexttest.LoadRepo(t, ctx, 1)
+		contexttest.LoadGitRepo(t, ctx)
+		contexttest.LoadRepoCommit(t, ctx)
+		contexttest.LoadUser(t, ctx, 2)
+
+		opts := &structs.CreateHookOption{
+			Type: string(webhook_module.PACKAGIST),
+			Config: map[string]string{
+				"url":          "https://packagist.org/api/update-package?username=testuser&apiToken=testtoken",
+				"content_type": "json",
+				"username":     "testuser",
+				"api_token":    "testtoken123",
+				"package_url":  "https://packagist.org/packages/test/package",
+			},
+		}
+
+		hook, ok := addHook(ctx, opts, 2, 1)
+		require.True(t, ok)
+		require.NotNil(t, hook)
+		assert.NotEmpty(t, hook.Meta)
+		assert.Contains(t, hook.Meta, "testuser")
+		assert.Contains(t, hook.Meta, "testtoken123")
+		assert.Contains(t, hook.Meta, "https://packagist.org/packages/test/package")
+	})
+
+	t.Run("Missing username", func(t *testing.T) {
+		ctx, _ := contexttest.MockAPIContext(t, "user2/repo1/hooks")
+		contexttest.LoadRepo(t, ctx, 1)
+		contexttest.LoadGitRepo(t, ctx)
+		contexttest.LoadRepoCommit(t, ctx)
+		contexttest.LoadUser(t, ctx, 2)
+
+		opts := &structs.CreateHookOption{
+			Type: string(webhook_module.PACKAGIST),
+			Config: map[string]string{
+				"url":          "https://packagist.org/api/update-package",
+				"content_type": "json",
+				"api_token":    "testtoken123",
+				"package_url":  "https://packagist.org/packages/test/package",
+			},
+		}
+
+		_, ok := addHook(ctx, opts, 2, 1)
+		assert.False(t, ok)
+		assert.Equal(t, http.StatusUnprocessableEntity, ctx.Resp.WrittenStatus())
+	})
+
+	t.Run("Missing api_token", func(t *testing.T) {
+		ctx, _ := contexttest.MockAPIContext(t, "user2/repo1/hooks")
+		contexttest.LoadRepo(t, ctx, 1)
+		contexttest.LoadGitRepo(t, ctx)
+		contexttest.LoadRepoCommit(t, ctx)
+		contexttest.LoadUser(t, ctx, 2)
+
+		opts := &structs.CreateHookOption{
+			Type: string(webhook_module.PACKAGIST),
+			Config: map[string]string{
+				"url":          "https://packagist.org/api/update-package",
+				"content_type": "json",
+				"username":     "testuser",
+				"package_url":  "https://packagist.org/packages/test/package",
+			},
+		}
+
+		_, ok := addHook(ctx, opts, 2, 1)
+		assert.False(t, ok)
+		assert.Equal(t, http.StatusUnprocessableEntity, ctx.Resp.WrittenStatus())
+	})
+
+	t.Run("Missing package_url", func(t *testing.T) {
+		ctx, _ := contexttest.MockAPIContext(t, "user2/repo1/hooks")
+		contexttest.LoadRepo(t, ctx, 1)
+		contexttest.LoadGitRepo(t, ctx)
+		contexttest.LoadRepoCommit(t, ctx)
+		contexttest.LoadUser(t, ctx, 2)
+
+		opts := &structs.CreateHookOption{
+			Type: string(webhook_module.PACKAGIST),
+			Config: map[string]string{
+				"url":          "https://packagist.org/api/update-package",
+				"content_type": "json",
+				"username":     "testuser",
+				"api_token":    "testtoken123",
+			},
+		}
+
+		_, ok := addHook(ctx, opts, 2, 1)
+		assert.False(t, ok)
+		assert.Equal(t, http.StatusUnprocessableEntity, ctx.Resp.WrittenStatus())
+	})
+}
