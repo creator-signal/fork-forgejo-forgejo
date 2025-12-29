@@ -246,6 +246,41 @@ func addHook(ctx *context.APIContext, form *api.CreateHookOption, ownerID, repoI
 		w.Meta = string(meta)
 	}
 
+	if w.Type == webhook_module.MATRIX {
+		homeserverURL, ok := form.Config["homeserver_url"]
+		if !ok {
+			ctx.Error(http.StatusUnprocessableEntity, "", "Missing config option: homeserver_url")
+			return nil, false
+		}
+
+		roomID, ok := form.Config["room_id"]
+		if !ok {
+			ctx.Error(http.StatusUnprocessableEntity, "", "Missing config option: room_id")
+			return nil, false
+		}
+
+		messageType := 0
+		if msgType, ok := form.Config["message_type"]; ok {
+			var err error
+			messageType, err = strconv.Atoi(msgType)
+			if err != nil {
+				ctx.Error(http.StatusUnprocessableEntity, "", "Invalid message_type value")
+				return nil, false
+			}
+		}
+
+		meta, err := json.Marshal(&webhook_service.MatrixMeta{
+			HomeserverURL: homeserverURL,
+			Room:          roomID,
+			MessageType:   messageType,
+		})
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "matrix: JSON marshal failed", err)
+			return nil, false
+		}
+		w.Meta = string(meta)
+	}
+
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Error(http.StatusInternalServerError, "UpdateEvent", err)
 		return nil, false
