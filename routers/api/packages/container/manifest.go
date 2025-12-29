@@ -14,6 +14,7 @@ import (
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
@@ -321,14 +322,6 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 	}
 	var err error
 
-	linked, err := tryAutoLinkPackageToRepo(ctx, p, mci.Creator.LowerName, strings.ToLower(mci.Image))
-	if err != nil {
-		return nil, err
-	}
-	if linked {
-		log.Info("Image manifest for %s/%s auto-linked to repo", mci.Creator.LowerName, strings.ToLower(mci.Image))
-	}
-
 	if p, err = packages_model.TryInsertPackage(ctx, p); err != nil { // LSC: Hier passiert das Manifest publishing
 		if err == packages_model.ErrDuplicatePackage {
 			created = false
@@ -342,6 +335,18 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 		if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepository, strings.ToLower(mci.Owner.LowerName+"/"+mci.Image)); err != nil {
 			log.Error("Error setting package property: %v", err)
 			return nil, err
+		}
+
+		// Try auto link (this only happens on create, so that a manual "unlink" is not getting relinked again when pushing new tags)
+		repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, mci.Owner.LowerName, mci.Image)
+		if err != nil {
+			if !repo_model.IsErrRepoNotExist(err) {
+				return nil, err
+			} // repo does not exist, no auto-linking
+		} else { // repo exists, do auto-linking
+			if err := packages_service.LinkToRepository(ctx, p, repository, mci.Creator); err != nil {
+				return nil, err
+			}
 		}
 	}
 

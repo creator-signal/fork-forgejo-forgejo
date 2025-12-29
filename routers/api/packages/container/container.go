@@ -15,12 +15,9 @@ import (
 	"strconv"
 	"strings"
 
-	go_context "context" // to not collide with "forgejo.org/services/context"
-
 	auth_model "forgejo.org/models/auth"
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
-	"forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
@@ -783,20 +780,4 @@ func workaroundGetContainerBlob(ctx *context.Context, opts *container_model.Blob
 	}
 
 	return blob, nil
-}
-
-func tryAutoLinkPackageToRepo(ctx go_context.Context, p *packages_model.Package, owner, name string) (linked bool, err error) {
-	// search for repository (GetRepositoryByOwnerAndName always uses the lower owner and name)
-	repository, err := repo.GetRepositoryByOwnerAndName(ctx, owner, name)
-	if err != nil {
-		if !repo.IsErrRepoNotExist(err) {
-			return false, err
-		} else {
-			// repo does not exist, no auto-linking
-			return false, nil
-		}
-	} else { // repo exists, do auto-linking
-		p.RepoID = repository.ID
-		return true, nil
-	}
 }

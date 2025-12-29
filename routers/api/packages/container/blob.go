@@ -15,6 +15,7 @@ import (
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
@@ -106,14 +107,6 @@ func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 		}
 		var err error
 
-		linked, err := tryAutoLinkPackageToRepo(ctx, p, pi.Owner.LowerName, strings.ToLower(pi.Name))
-		if err != nil {
-			return err
-		}
-		if linked {
-			log.Info("Image manifest for %s/%s auto-linked to repo", pi.Owner.LowerName, strings.ToLower(pi.Name))
-		}
-
 		if p, err = packages_model.TryInsertPackage(ctx, p); err != nil { // LSC: Hier werden Docker Layer (Blobs) hochgeladen
 			if err == packages_model.ErrDuplicatePackage {
 				created = false
@@ -127,6 +120,20 @@ func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 			if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepository, strings.ToLower(pi.Owner.LowerName+"/"+pi.Name)); err != nil {
 				log.Error("Error setting package property: %v", err)
 				return err
+			}
+
+			// Try auto link (this only happens on create, so that a manual "unlink" is not getting relinked again when pushing new tags)
+			// Hint: There is a similar routine when pushing a manifest, but this will most likely never execute
+			//   since the Forgejo package is created at the first layer ("blob") push, instead of at manifest push.
+			repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, pi.Owner.LowerName, pi.Name)
+			if err != nil {
+				if !repo_model.IsErrRepoNotExist(err) {
+					return err
+				} // repo does not exist, no auto-linking
+			} else { // repo exists, do auto-linking
+				if err := packages_service.LinkToRepository(ctx, p, repository, pi.Owner); err != nil {
+					return err
+				}
 			}
 		}
 
