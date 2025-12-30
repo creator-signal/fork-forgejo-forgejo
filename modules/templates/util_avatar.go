@@ -5,6 +5,7 @@ package templates
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"html/template"
@@ -27,15 +28,15 @@ func NewAvatarUtils(ctx context.Context) *AvatarUtils {
 }
 
 // AvatarHTML creates the HTML for an avatar
-func AvatarHTML(src string, size int, svgContent, class, name string) template.HTML {
+func AvatarHTML(src string, size int, svgHash, class, name string) template.HTML {
 	sizeStr := fmt.Sprintf(`%d`, size)
 
 	if name == "" {
 		name = "avatar"
 	}
 
-	if svgContent != "" {
-		return template.HTML(`<svg class="svg identicon ` + class + `" viewBox="0 0 72 72" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `">` + svgContent + `</svg>`)
+	if svgHash != "" {
+		return template.HTML(`<img loading="lazy" alt="" class="svg identicon ` + class + `" src="` + setting.AppSubURL + `/svg-avatars/` + svgHash + `.svg" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
 	}
 
 	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + src + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
@@ -59,7 +60,7 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 	case *organization.Organization:
 		src := t.AsUser().AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		if src != "" {
-			return AvatarHTML(src, size, t.AsUser().AvatarSVG, class, t.DisplayName())
+			return AvatarHTML(src, size, hex.EncodeToString(t.AsUser().AvatarSVGHash), class, t.DisplayName())
 		}
 	}
 

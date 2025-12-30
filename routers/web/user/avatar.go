@@ -59,6 +59,14 @@ func AvatarByEmailHash(ctx *context.Context) {
 	cacheableRedirect(ctx, avatars.GenerateEmailAvatarFinalLink(ctx, email, size))
 }
 
+// ConvertSvgAvatar adds vital boilerplate to generated identicons
+func ConvertSvgAvatar(raw string, isCustomAvatar bool) string {
+	if isCustomAvatar {
+		return raw
+	}
+	return `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">` + raw + `</svg>`
+}
+
 // FindSvgAvatarByHash looks for svg avatar in the database
 func FindSvgAvatarByHash(ctx *context.Context, hash []byte) (string, error) {
 	user := new(user_model.User)
@@ -68,7 +76,7 @@ func FindSvgAvatarByHash(ctx *context.Context, hash []byte) (string, error) {
 	}
 
 	if found && user.AvatarSVG != "" {
-		return user.AvatarSVG, nil
+		return ConvertSvgAvatar(user.AvatarSVG, user.UseCustomAvatar), nil
 	}
 	return "", nil
 }
@@ -90,6 +98,7 @@ func GetSvgAvatarByHash(ctx *context.Context) {
 	}
 
 	if avatarXML != "" {
+		ctx.Resp.Header().Add("Content-Type", "image/svg+xml")
 		_, err := ctx.Resp.Write([]byte(avatarXML))
 		if err != nil {
 			ctx.ServerError("Couldn't write response (how is client supposed to see this then)", err)
