@@ -968,6 +968,8 @@ func NewIssue(ctx *context.Context) {
 	body := ctx.FormString("body")
 	ctx.Data["BodyQuery"] = body
 
+	ctx.Data["ParentIssue"] = ctx.Req.URL.Query().Get("parent")
+
 	isProjectsEnabled := ctx.Repo.CanRead(unit.TypeProjects)
 	ctx.Data["IsProjectsEnabled"] = isProjectsEnabled
 	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
@@ -1286,6 +1288,52 @@ func NewIssuePost(ctx *context.Context) {
 		if err := issues_model.IssueAssignOrRemoveProject(ctx, issue, ctx.Doer, projectID, 0); err != nil {
 			ctx.ServerError("IssueAssignOrRemoveProject", err)
 			return
+		}
+	}
+
+	if parent := ctx.FormString("parent_issue"); parent != "" {
+		parts := strings.Split(parent, "/")
+
+		fmt.Println("parts", parts)
+		var depRepo *repo_model.Repository
+		var issueIndex int64
+		var err error
+
+		if len(parts) == 3 {
+			depRepo, err = repo_model.GetRepositoryByOwnerAndName(ctx, parts[0], parts[1])
+		} else if len(parts) == 2 {
+			depRepo, err = repo_model.GetRepositoryByOwnerAndName(ctx, repo.OwnerName, parts[0])
+		} else {
+			err = errors.New("invalid parent issue format")
+		}
+
+		fmt.Println("depRepo", depRepo)
+		fmt.Println("err", err)
+		fmt.Println("depRepo != nil", depRepo != nil)
+
+		if err == nil && depRepo != nil {
+			issueIndex, err = strconv.ParseInt(parts[len(parts)-1], 10, 64)
+			if err == nil {
+				var depIssue *issues_model.Issue
+				depIssue, err = issues_model.GetIssueByIndex(ctx, depRepo.ID, issueIndex)
+				if err == nil {
+					depIssue.Repo = depRepo
+					if ctx.Repo.CanCreateIssueDependencies(ctx, ctx.Doer, issue.IsPull) {
+						perm, err := access_model.GetUserRepoPermission(ctx, depRepo, ctx.Doer)
+						if err == nil && perm.CanReadIssuesOrPulls(depIssue.IsPull) {
+							// err = issues_model.CreateIssueDependency(ctx, ctx.Doer, issue, depIssue)
+							// we want to add a parent, not a dependency
+							err = issue.UpdateParentIssue(ctx, depIssue, ctx.Doer)
+							if err != nil {
+								log.Error("Failed to update parent issue: %v", err)
+							}
+						}
+					}
+				}
+			}
+		}
+		if err != nil {
+			log.Error("Failed to add parent issue dependency: %v", err)
 		}
 	}
 

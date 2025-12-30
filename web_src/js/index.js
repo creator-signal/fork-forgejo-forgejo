@@ -34,6 +34,7 @@ import {
   initRepoIssueSidebarList,
   initArchivedLabelHandler,
   initRepoIssueSubIssuesIntractable,
+  initRepoIssueNew,
 } from './features/repo-issue.js';
 import {initRepoEllipsisButton, initCommitStatuses, initCommitNotes} from './features/repo-commit.js';
 import {
@@ -161,6 +162,7 @@ onDomReady(() => {
   initRepoIssueSidebarList();
   initArchivedLabelHandler();
   initRepoIssueSubIssuesIntractable();
+  initRepoIssueNew();
   initRepoIssueReferenceRepositorySearch();
   initRepoIssueTimeTracking();
   initRepoIssueWipTitle();

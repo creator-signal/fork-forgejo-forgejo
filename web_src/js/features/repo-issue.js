@@ -917,3 +917,17 @@ export function issueTitleHTML(title) {
   return title.replaceAll(/:[-+\w]+:/g, (emoji) => emojiHTML(emoji.substring(1, emoji.length - 1)))
     .replaceAll(/`[^`]+`/g, (code) => `<code class="inline-code-block">${code.substring(1, code.length - 1)}</code>`);
 }
+
+export function initRepoIssueNew() {
+  const newIssueForm = document.getElementById('new-issue');
+  if (!newIssueForm) return;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const parentIssue = urlParams.get('parent');
+  if (parentIssue) {
+    const action = newIssueForm.getAttribute('action');
+    const hasQuery = action.includes('?');
+    const separator = hasQuery ? '&' : '?';
+    newIssueForm.setAttribute('action', `${action}${separator}parent_issue=${encodeURIComponent(parentIssue)}`);
+  }
+}
