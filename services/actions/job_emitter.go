@@ -67,6 +67,7 @@ func checkJobsOfRun(ctx context.Context, runID int64) error {
 		for _, job := range jobs {
 			if status, ok := updates[job.ID]; ok {
 				job.Status = status
+				updateColumns := []string{"status"}
 
 				if status == actions_model.StatusWaiting {
 					ignore, err := tryHandleIncompleteMatrix(ctx, job, jobs)
@@ -75,9 +76,16 @@ func checkJobsOfRun(ctx context.Context, runID int64) error {
 					} else if ignore {
 						continue
 					}
+				} else if status == actions_model.StatusSuccess || status == actions_model.StatusFailure {
+					// Transition to these states can be triggered by workflow call outer jobs
+					additionalColumns, err := tryHandleWorkflowCallOuterJob(ctx, job)
+					if err != nil {
+						return fmt.Errorf("error in tryHandleWorkflowCallOuterJob: %w", err)
+					}
+					updateColumns = append(updateColumns, additionalColumns...)
 				}
 
-				if n, err := UpdateRunJob(ctx, job, builder.Eq{"status": actions_model.StatusBlocked}, "status"); err != nil {
+				if n, err := UpdateRunJob(ctx, job, builder.Eq{"status": actions_model.StatusBlocked}, updateColumns...); err != nil {
 					return err
 				} else if n != 1 {
 					return fmt.Errorf("no affected for updating blocked job %v", job.ID)
@@ -155,23 +163,34 @@ func (r *jobStatusResolver) resolve() map[int64]actions_model.Status {
 			}
 		}
 		if allDone {
-			if allSucceed {
-				ret[id] = actions_model.StatusWaiting
-			} else {
-				// Check if the job has an "if" condition
-				hasIf := false
-				if wfJobs, _ := jobparser.Parse(r.jobMap[id].WorkflowPayload, false); len(wfJobs) == 1 {
-					_, wfJob := wfJobs[0].Job()
-					hasIf = len(wfJob.If.Value) > 0
+			if isWorkflowCallOuterJob, _ := r.jobMap[id].IsWorkflowCallOuterJob(); isWorkflowCallOuterJob {
+				// If the dependent job was a workflow call outer job, then options aren't waiting/skipped, but rather
+				// success/failure.  checkJobsOfRun will do additional work in these cases to "finish" the workflow call
+				// job as well.
+				if allSucceed {
+					ret[id] = actions_model.StatusSuccess
+				} else {
+					ret[id] = actions_model.StatusFailure
 				}
-
-				if hasIf {
-					// act_runner will check the "if" condition
+			} else {
+				if allSucceed {
 					ret[id] = actions_model.StatusWaiting
 				} else {
-					// If the "if" condition is empty and not all dependent jobs completed successfully,
-					// the job should be skipped.
-					ret[id] = actions_model.StatusSkipped
+					// Check if the job has an "if" condition
+					hasIf := false
+					if wfJobs, _ := jobparser.Parse(r.jobMap[id].WorkflowPayload, false); len(wfJobs) == 1 {
+						_, wfJob := wfJobs[0].Job()
+						hasIf = len(wfJob.If.Value) > 0
+					}
+
+					if hasIf {
+						// act_runner will check the "if" condition
+						ret[id] = actions_model.StatusWaiting
+					} else {
+						// If the "if" condition is empty and not all dependent jobs completed successfully,
+						// the job should be skipped.
+						ret[id] = actions_model.StatusSkipped
+					}
 				}
 			}
 		}
@@ -354,4 +373,72 @@ func persistentIncompleteRunsOnError(job *actions_model.ActionRunJob, incomplete
 	errorCode = actions_model.ErrorCodeIncompleteRunsOnUnknownCause
 	errorDetails = []any{job.JobID}
 	return errorCode, errorDetails
+}
+
+// When a workflow call outer job's dependencies are completed, `tryHandleWorkflowCallOuterJob` will complete the job
+// without actually executing it. It will not be dispatched it to a runner. There's no job execution logic, but we need
+// to update state of a few things -- particularly workflow outputs.
+//
+// A slice of additional columns for the caller to update on the passed-in `ActionRunJob` is returned, in addition to an
+// error.
+func tryHandleWorkflowCallOuterJob(ctx context.Context, job *actions_model.ActionRunJob) ([]string, error) {
+	isWorkflowCallOuterJob, err := job.IsWorkflowCallOuterJob()
+	if err != nil {
+		return nil, fmt.Errorf("failure to identify workflow call outer job: %w", err)
+	} else if !isWorkflowCallOuterJob {
+		// Not an expected code path today, but if job status resolution changes in the future we might "try" to handle
+		// a workflow call outer job while it's not really in that state.  No work required.
+		return nil, nil
+	}
+
+	// Gather all the data that is needed to perform an expression evaluation of the job's outputs:
+	singleWorkflow, err := job.DecodeWorkflowPayload()
+	if err != nil {
+		return nil, fmt.Errorf("failure to decode workflow payload: %w", err)
+	}
+	err = job.LoadRun(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failure to load job's run: %w", err)
+	}
+	err = job.Run.LoadRepo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failure to load run's repo: %w", err)
+	}
+	githubContext := generateGiteaContextForRun(job.Run)
+	taskNeeds, err := FindTaskNeeds(ctx, job)
+	if err != nil {
+		return nil, fmt.Errorf("failure to 'needs' for job: %w", err)
+	}
+	needs := make([]string, 0, len(taskNeeds))
+	jobResults := make(map[string]string, len(taskNeeds))
+	jobOutputs := make(map[string]map[string]string, len(taskNeeds))
+	for jobID, n := range taskNeeds {
+		needs = append(needs, jobID)
+		jobResults[jobID] = n.Result.String()
+		jobOutputs[jobID] = n.Outputs
+	}
+	vars, err := actions_model.GetVariablesOfRun(ctx, job.Run)
+	if err != nil {
+		return nil, fmt.Errorf("failure to 'var' for run: %w", err)
+	}
+
+	// With all the required contexts, we can calculate the outputs.
+	outputs := jobparser.EvaluateWorkflowCallOutputs(
+		singleWorkflow,
+		githubContext,
+		vars,
+		needs,
+		jobResults,
+		jobOutputs,
+	)
+
+	// Insert a placeholder task with all the computed outputs
+	actionTask, err := actions_model.CreatePlaceholderTask(ctx, job, outputs)
+	if err != nil {
+		return nil, fmt.Errorf("failure to insert placeholder task: %w", err)
+	}
+
+	// Populate task_id and ask caller to update it in DB:
+	job.TaskID = actionTask.ID
+	return []string{"task_id"}, nil
 }
