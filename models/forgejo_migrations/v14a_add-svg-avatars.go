@@ -7,6 +7,8 @@ import (
 	"xorm.io/xorm"
 )
 
+// TODO: to support svg avatars for repos in future this has to be a separate table
+
 func init() {
 	registerMigration(&Migration{
 		Description: "add fields avatar_svg and avatar_svg_hash to user table",
