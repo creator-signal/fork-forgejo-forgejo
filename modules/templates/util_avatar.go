@@ -28,17 +28,22 @@ func NewAvatarUtils(ctx context.Context) *AvatarUtils {
 }
 
 // AvatarHTML creates the HTML for an avatar
-func AvatarHTML(src string, size int, class, name string) template.HTML {
+func AvatarHTML(srcUrl string, size int, class, name string) template.HTML {
 	sizeStr := fmt.Sprintf(`%d`, size)
 
-	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + src + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
+	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + srcUrl + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
 }
 
 // AvatarHTMLSVG creates the HTML for an SVG avatar
-func AvatarHTMLSVG(size int, svgHash, class, name string) template.HTML {
+func AvatarHTMLSVG(srcUrl string, size int, class, name string) template.HTML {
 	sizeStr := fmt.Sprintf(`%d`, size)
 
-	return template.HTML(`<img loading="lazy" alt="" class="svg identicon ` + class + `" src="` + setting.AppSubURL + `/svg-avatars/` + svgHash + `.svg" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
+	return template.HTML(`<img loading="lazy" alt="" class="svg identicon ` + class + `" src="` + srcUrl + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
+}
+
+// SVGAvatarUrl constructs complete URL for SVG avatar from it's hash
+func SVGAvatarUrl(hash []byte) string {
+	return setting.AppSubURL + "/svg-avatars/" + hex.EncodeToString(hash) + ".svg"
 }
 
 // Avatar renders user avatars. args: user, size (int), class (string)
@@ -71,7 +76,7 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 
 	// Try vector avatar first - if it is unwanted it wouldn't be present in the database
 	if vectorHash != nil {
-		return AvatarHTMLSVG(size, hex.EncodeToString(vectorHash), class, displayName)
+		return AvatarHTMLSVG(SVGAvatarUrl(vectorHash), size, class, displayName)
 	}
 
 	// Fall back to raster avatar if present
