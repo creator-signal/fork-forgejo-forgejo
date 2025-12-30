@@ -17,12 +17,15 @@ import (
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	packages_service "forgejo.org/services/packages"
 	"forgejo.org/tests"
 
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
@@ -422,6 +425,7 @@ func TestPackageContainer(t *testing.T) {
 					t.Run("UploadManifest", func(t *testing.T) {
 						defer tests.PrintCurrentTest(t)()
 
+						// HERE
 						req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", url, configDigest), strings.NewReader(configContent)).
 							AddTokenAuth(userToken)
 						MakeRequest(t, req, http.StatusCreated)
@@ -436,6 +440,7 @@ func TestPackageContainer(t *testing.T) {
 							SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 						MakeRequest(t, req, http.StatusUnauthorized)
 
+						// HERE
 						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", url, tag), strings.NewReader(manifestContent)).
 							AddTokenAuth(userToken).
 							SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
@@ -906,4 +911,98 @@ func TestPackageContainer(t *testing.T) {
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 	})
+
+	t.Run("AutoLinking", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		// create repo which is used for auto-linking
+		repo := createTestRepositoryWithPackageRegistry(t, user, "autolink-repo")
+		urlExistingRepo := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, repo.Name)
+		nameNonexistingRepo := "nonexisting-repo"
+		urlNonexistingRepo := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, nameNonexistingRepo)
+
+		// variable to hold an auto-linked package, which will be unlinked again in a later test
+		var linkedPackage *packages_model.Package
+
+		t.Run("PushToArbitraryRepo", func(t *testing.T) {
+			// Upload some blob which should create a package
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo, blobDigest), bytes.NewReader(blobContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+
+			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo)
+			if err != nil {
+				t.Error(err)
+			}
+			require.Equal(t, p.Name, nameNonexistingRepo) // just to make sure we have grabbed the correct package
+			assert.Equal(t, p.RepoID, int64(0))
+		})
+
+		t.Run("PushToExisingRepo", func(t *testing.T) {
+			// Upload blobs and manifest which should create a package with tag "v1"
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlExistingRepo, blobDigest), bytes.NewReader(blobContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlExistingRepo, configDigest), strings.NewReader(configContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlExistingRepo, "v1"), strings.NewReader(manifestContent)).
+				AddTokenAuth(userToken).
+				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			MakeRequest(t, req, http.StatusCreated)
+
+			// get the resulting package
+			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, repo.Name)
+			if err != nil {
+				t.Log(err)
+				t.FailNow() // we fail now since the success of this test is required for PushVersionToUnlinkedRepo
+			}
+			require.Equal(t, p.Name, repo.Name) // just to make sure we have grabbed the correct package
+			assert.Equal(t, p.RepoID, repo.ID)
+			linkedPackage = p // store auto-linked package for the next test
+		})
+
+		t.Run("PushVersionToUnlinkedRepo", func(t *testing.T) {
+			// unlink auto-linked package
+			if err := packages_service.UnlinkFromRepository(t.Context(), linkedPackage, user); err != nil {
+				t.Error(err)
+			}
+			// test if correctly unlinked
+			checkPackageForUnlinked, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, repo.Name)
+			if err != nil {
+				t.Error(err)
+			}
+			require.Equal(t, checkPackageForUnlinked.RepoID, int64(0))
+
+			// push updated version (e.g. tag v2)
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlExistingRepo, blobDigest), bytes.NewReader(blobContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlExistingRepo, configDigest), strings.NewReader(configContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlExistingRepo, "v2"), strings.NewReader(manifestContent)).
+				AddTokenAuth(userToken).
+				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			MakeRequest(t, req, http.StatusCreated)
+
+			// test if still unlinked
+			checkPackageForStillUnlinked, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, repo.Name)
+			if err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, checkPackageForStillUnlinked.RepoID, int64(0))
+		})
+	})
+}
+
+func createTestRepositoryWithPackageRegistry(t *testing.T, user *user_model.User, name string) *repo_model.Repository {
+	ctx := NewAPITestContext(t, user.Name, name, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+	t.Run("CreateRepo", doAPICreateRepository(ctx, nil, git.Sha1ObjectFormat, func(t *testing.T, r api.Repository) {
+		require.True(t, r.HasPackages)
+	}))
+
+	repo, err := repo_model.GetRepositoryByOwnerAndName(db.DefaultContext, user.Name, name)
+	require.NoError(t, err)
+
+	return repo
 }
