@@ -116,6 +116,7 @@ func TestRenameReservedUsername(t *testing.T) {
 		"attachments",
 		"avatar",
 		"avatars",
+		"svg-avatars",
 		"captcha",
 		"explore",
 		"favicon.ico",

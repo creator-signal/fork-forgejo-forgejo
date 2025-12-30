@@ -652,6 +652,7 @@ var (
 		"avatar",  // avatar by email hash
 		"avatars", // user avatars by file name
 		"repo-avatars",
+		"svg-avatars", // vector avatars
 
 		"captcha",
 		"login", // oauth2 login
