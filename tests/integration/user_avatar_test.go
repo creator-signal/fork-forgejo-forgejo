@@ -147,9 +147,7 @@ func TestIdenticons(t *testing.T) {
 		page.AssertElement(t, avatarSelSvgIdcon, false)
 
 		// Request deletion of current avatar - it will cause a new one to be generated
-		user20.MakeRequest(t, NewRequestWithValues(t, "POST", "/user/settings/avatar/delete", map[string]string{
-			"_csrf": GetCSRF(t, user20, "/user/settings"),
-		}), http.StatusOK)
+		user20.MakeRequest(t, NewRequest(t, "POST", "/user/settings/avatar/delete"), http.StatusOK)
 
 		page = NewHTMLParser(t, user20.MakeRequest(t, NewRequest(t, "GET", "/user20"), http.StatusOK).Body)
 		page.AssertElement(t, avatarSelDefault, false)
@@ -176,9 +174,7 @@ func TestIdenticons(t *testing.T) {
 		page.AssertElement(t, avatarSelSvgIdcon, false)
 
 		// Request deletion of current avatar - it will cause a new one to be generated
-		user2.MakeRequest(t, NewRequestWithValues(t, "POST", "/org/org3/settings/avatar/delete", map[string]string{
-			"_csrf": GetCSRF(t, user2, "/org/org3/settings"),
-		}), http.StatusOK)
+		user2.MakeRequest(t, NewRequest(t, "POST", "/org/org3/settings/avatar/delete"), http.StatusOK)
 
 		page = NewHTMLParser(t, user2.MakeRequest(t, NewRequest(t, "GET", "/org3"), http.StatusOK).Body)
 		page.AssertElement(t, avatarSelDefault, false)

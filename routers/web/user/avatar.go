@@ -62,9 +62,12 @@ func AvatarByEmailHash(ctx *context.Context) {
 // FindSvgAvatarByHash looks for svg avatar in the database
 func FindSvgAvatarByHash(ctx *context.Context, hash []byte) (string, error) {
 	user := new(user_model.User)
-	db.GetEngine(ctx).Where("avatar_svg_hash=?", hash).Get(user)
+	found, err := db.GetEngine(ctx).Where("avatar_svg_hash=?", hash).Get(user)
+	if err != nil {
+		return "", err
+	}
 
-	if user.AvatarSVG != "" {
+	if found && user.AvatarSVG != "" {
 		return user.AvatarSVG, nil
 	}
 	return "", nil
@@ -80,15 +83,17 @@ func GetSvgAvatarByHash(ctx *context.Context) {
 		return
 	}
 
-	avatarXml, err := FindSvgAvatarByHash(ctx, hashBytes)
-	println("FindSvgAvatarByHash returned: " + avatarXml)
+	avatarXML, err := FindSvgAvatarByHash(ctx, hashBytes)
 	if err != nil {
 		ctx.ServerError("Invalid avatar hash: "+hash, err)
 		return
 	}
 
-	if avatarXml != "" {
-		ctx.Resp.Write([]byte(avatarXml))
+	if avatarXML != "" {
+		_, err := ctx.Resp.Write([]byte(avatarXML))
+		if err != nil {
+			ctx.ServerError("Couldn't write response (how is client supposed to see this then)", err)
+		}
 		return
 	}
 	ctx.NotFound("Avatar was not found", nil)

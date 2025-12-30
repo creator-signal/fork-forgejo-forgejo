@@ -6,7 +6,6 @@ package user
 import (
 	"context"
 	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"image/png"
 	"io"
@@ -30,9 +29,9 @@ func (u *User) CustomAvatarRelativePath() string {
 // Requiremenents:
 // - not too many characters when encoded as string
 // - not expensive to compute
-func HashSvgAvatar(avatarXml string) []byte {
+func HashSvgAvatar(avatarXML string) []byte {
 	hasher, _ := blake2b.New256(nil)
-	hasher.Write([]byte(avatarXml))
+	hasher.Write([]byte(avatarXML))
 	sum := hasher.Sum(nil)
 	return sum[:16]
 }
@@ -52,9 +51,6 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 	u.Avatar = avatars.HashEmail(seed)
 	u.AvatarSVG = identicon.Vector
 	u.AvatarSVGHash = HashSvgAvatar(identicon.Vector)
-
-	debug_hex := hex.EncodeToString(u.AvatarSVGHash)
-	println("New hash: " + debug_hex)
 
 	_, err = storage.Avatars.Stat(u.CustomAvatarRelativePath())
 	if err != nil {
