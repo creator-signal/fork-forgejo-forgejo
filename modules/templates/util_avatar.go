@@ -31,20 +31,12 @@ func NewAvatarUtils(ctx context.Context) *AvatarUtils {
 func AvatarHTML(src string, size int, class, name string) template.HTML {
 	sizeStr := fmt.Sprintf(`%d`, size)
 
-	if name == "" {
-		name = "avatar"
-	}
-
 	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + src + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
 }
 
 // AvatarHTMLSVG creates the HTML for an SVG avatar
 func AvatarHTMLSVG(size int, svgHash, class, name string) template.HTML {
 	sizeStr := fmt.Sprintf(`%d`, size)
-
-	if name == "" {
-		name = "avatar"
-	}
 
 	return template.HTML(`<img loading="lazy" alt="" class="svg identicon ` + class + `" src="` + setting.AppSubURL + `/svg-avatars/` + svgHash + `.svg" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
 }
@@ -70,6 +62,11 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 		vectorHash = t.AsUser().AvatarSVGHash
 		rasterUrl = t.AsUser().AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		displayName = t.DisplayName()
+	}
+
+	// Fallback for displayName
+	if displayName == "" {
+		displayName = "avatar"
 	}
 
 	// Try vector avatar first - if it is unwanted it wouldn't be present in the database
