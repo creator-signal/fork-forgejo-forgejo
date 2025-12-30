@@ -75,7 +75,7 @@ func GetContentHistoryList(ctx *context.Context) {
 		src := html.EscapeString(item.UserAvatarLink)
 		class := avatars.DefaultAvatarClass + " tw-mr-2"
 		name := html.EscapeString(username)
-		avatarHTML := string(templates.AvatarHTML(src, 28, "", class, username))
+		avatarHTML := string(templates.AvatarHTML(src, 28, class, username))
 		timeSinceHTML := string(templates.TimeSince(item.EditedUnix))
 		content := fmt.Sprintf(contentFmt, avatarHTML, name, actionText, timeSinceHTML)
 
