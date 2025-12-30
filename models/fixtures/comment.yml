@@ -501,14 +501,3 @@
   tree_path: "README.md"
   created_unix: 946684812
   invalidated: false
-
-- id: 2095
-  type: 21 # code comment
-  poster_id: 10
-  issue_id: 2
-  review_id: 24
-  content: "Another code comment that is pending to be published"
-  line: -4
-  tree_path: "README.md"
-  created_unix: 946684812
-  invalidated: false

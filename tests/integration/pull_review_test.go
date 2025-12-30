@@ -65,6 +65,7 @@ func TestPullView_ReviewerMissed(t *testing.T) {
 }
 
 func TestPullRequestParticipants(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestPullRequestParticipants")()
 	defer tests.PrepareTestEnv(t)()
 	session := loginUser(t, "user1")
 
