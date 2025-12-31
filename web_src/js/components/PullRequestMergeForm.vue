@@ -225,7 +225,7 @@ export default {
 .auto-merge-small .auto-merge-tip {
   display: none;
   left: 38px;
-  top: -1px;
+  top: -0.5px;
   bottom: -1px;
   position: absolute;
   align-items: center;
