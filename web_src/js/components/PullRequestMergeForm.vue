@@ -236,6 +236,10 @@ export default {
   padding-right: 1rem;
 }
 
+.menu .item:has(.auto-merge-small:hover) {
+  overflow: unset;
+}
+
 .auto-merge-small:hover {
   color: var(--color-info-text);
   background-color: var(--color-info-bg);
