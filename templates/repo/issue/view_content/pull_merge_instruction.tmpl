@@ -25,7 +25,7 @@
 					</div>
 					{{end}}
 					<textarea id="{{$copySourceID}}" class="tw-hidden" aria-hidden="true" readonly>{{- $fullMessage -}}</textarea>
-					<button class="ui button" type="button" data-clipboard-target="#{{$copySourceID}}">{{svg "octicon-copy" 16}} {{ctx.Locale.Tr "pulls.manual_merge.copy.button"}}</button>
+					<button class="secondary button" type="button" data-clipboard-target="#{{$copySourceID}}">{{svg "octicon-copy" 16}} {{ctx.Locale.Tr "pulls.manual_merge.copy.button"}}</button>
 				</div>
 			</div>
 		</div>
