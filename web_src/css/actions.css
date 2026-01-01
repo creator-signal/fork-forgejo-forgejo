@@ -99,6 +99,15 @@
   }
 }
 
+.job-status-rotate {
+  animation: job-status-rotate-keyframes 1s linear infinite;
+}
+@keyframes job-status-rotate-keyframes {
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
 .ui.vertical.menu .item:not(:has(> :nth-child(1))),
 .ui.vertical.menu .item .content {
   white-space: nowrap;
