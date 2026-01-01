@@ -158,10 +158,12 @@ func baseExpectedViewResponse() *ViewResponse {
 				Jobs: []*ViewJob{
 					{
 						ID:       192,
+						JobID:    "job_2",
 						Name:     "job_2",
 						Status:   "success",
 						CanRerun: false,
 						Duration: "1m38s",
+						Needs:    nil,
 					},
 				},
 				Commit: ViewCommit{
@@ -258,18 +260,24 @@ func TestActionsViewViewPost(t *testing.T) {
 				resp.State.Run.Jobs = []*ViewJob{
 					{
 						ID:     194,
+						JobID:  "job1",
 						Name:   "job1 (1)",
 						Status: "success",
+						Needs:  nil,
 					},
 					{
 						ID:     195,
+						JobID:  "job1",
 						Name:   "job1 (2)",
 						Status: "success",
+						Needs:  nil,
 					},
 					{
 						ID:     196,
+						JobID:  "job2",
 						Name:   "job2",
 						Status: "waiting",
+						Needs:  []string{"job1"},
 					},
 				}
 				resp.State.CurrentJob.Title = "job1 (1)"
@@ -326,6 +334,7 @@ func TestActionsViewViewPost(t *testing.T) {
 				resp.State.Run.Jobs = []*ViewJob{
 					{
 						ID:     396,
+						JobID:  "job_2",
 						Name:   "job_2",
 						Status: "waiting",
 					},
