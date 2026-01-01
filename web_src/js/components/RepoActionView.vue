@@ -4,6 +4,7 @@ import ActionRunStatus from './ActionRunStatus.vue';
 import ActionJobStepList from './ActionJobStepList.vue';
 import {toggleElem} from '../utils/dom.js';
 import {GET, POST, DELETE} from '../modules/fetch.js';
+import WorkflowGraph from './WorkflowGraph.vue';
 
 export default {
   name: 'RepoActionView',
@@ -11,6 +12,7 @@ export default {
     SvgIcon,
     ActionRunStatus,
     ActionJobStepList,
+    WorkflowGraph,
   },
   props: {
     initialJobData: {
@@ -67,6 +69,7 @@ export default {
       artifacts: [],
       menuVisible: undefined,
       isFullScreen: false,
+      showSummary: true,
       timeVisible: {
         'log-time-stamp': false,
         'log-time-seconds': false,
@@ -86,10 +89,12 @@ export default {
         jobs: [
           // {
           //   id: 0,
+          //   job_id: '',
           //   name: '',
           //   status: '',
           //   canRerun: false,
           //   duration: '',
+          //   needs: [],
           // },
         ],
         commit: {
@@ -499,6 +504,16 @@ export default {
     </div>
     <div class="action-view-body">
       <div class="action-view-left" v-if="displayOtherJobs">
+        <div class="summary-toggle">
+          <button
+            class="ui basic small button"
+            @click="showSummary = !showSummary"
+            :class="{ active: showSummary }"
+          >
+            <SvgIcon :name="showSummary ? 'octicon-chevron-down' : 'octicon-chevron-right'"/>
+            Summary
+          </button>
+        </div>
         <div class="job-group-section">
           <div class="job-brief-list">
             <a class="job-brief-item" :href="run.link+'/jobs/'+index" :class="parseInt(jobIndex) === index ? 'selected' : ''" v-for="(job, index) in run.jobs" :key="job.id">
@@ -531,6 +546,12 @@ export default {
       </div>
 
       <div class="action-view-right">
+        <WorkflowGraph
+          v-if="showSummary && run.jobs && run.jobs.length > 1"
+          :jobs="run.jobs || []"
+          :current-job-id="parseInt(jobIndex)"
+          class="workflow-graph-container"
+        />
         <div class="job-info-header">
           <div class="job-info-header-left gt-ellipsis">
             <h3 class="job-info-header-title gt-ellipsis">
@@ -646,6 +667,31 @@ export default {
   margin: 0;
   flex: 1;
   overflow-wrap: anywhere;
+}
+
+.summary-toggle {
+  margin: 16px 0 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-secondary);
+}
+.summary-toggle .ui.button {
+  padding: 6px 12px;
+  border: 1px solid var(--color-secondary);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.summary-toggle .ui.button:hover {
+  background: var(--color-hover);
+  border-color: var(--color-secondary);
+}
+.summary-toggle .ui.button.active {
+  background: var(--color-secondary-alpha-10);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .action-summary {
@@ -770,14 +816,14 @@ export default {
 
 .action-view-right {
   flex: 1;
-  color: var(--color-console-fg-subtle);
+  color: var(--color-text);
   max-height: 100%;
   width: 70%;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-console-border);
+  border: 1px solid var(--color-secondary);
   border-radius: var(--border-radius);
-  background: var(--color-console-bg);
+  background: var(--color-body);
   align-self: flex-start;
 }
 
@@ -786,17 +832,17 @@ export default {
 .action-view-right .ui.button,
 .action-view-right .ui.button:focus {
   background: transparent;
-  color: var(--color-console-fg-subtle);
+  color: var(--color-text);
 }
 
 .action-view-right .ui.button:hover {
-  background: var(--color-console-hover-bg);
-  color: var(--color-console-fg);
+  background: var(--color-hover);
+  color: var(--color-text);
 }
 
 .action-view-right .ui.button:active {
-  background: var(--color-console-active-bg);
-  color: var(--color-console-fg);
+  background: var(--color-active);
+  color: var(--color-text);
 }
 
 /* end fomantic button overrides */
@@ -804,31 +850,31 @@ export default {
 /* begin fomantic dropdown menu overrides */
 
 .action-view-right .ui.dropdown.dark-dropdown .menu {
-  background: var(--color-console-menu-bg);
-  border-color: var(--color-console-menu-border);
+  background: var(--color-menu);
+  border-color: var(--color-secondary);
 }
 
 .action-view-right .ui.dropdown.dark-dropdown .menu > .item {
-  color: var(--color-console-fg);
+  color: var(--color-text);
 }
 
 .action-view-right .ui.dropdown.dark-dropdown .menu > .item:hover {
-  color: var(--color-console-fg);
-  background: var(--color-console-hover-bg);
+  color: var(--color-text);
+  background: var(--color-hover);
 }
 
 .action-view-right .ui.dropdown.dark-dropdown .menu > .item:active {
-  color: var(--color-console-fg);
-  background: var(--color-console-active-bg);
+  color: var(--color-text);
+  background: var(--color-active);
 }
 
 .action-view-right .ui.dropdown.dark-dropdown .menu > .divider {
-  border-top-color: var(--color-console-menu-border);
+  border-top-color: var(--color-secondary);
 }
 
 .action-view-right .ui.pointing.dropdown.dark-dropdown > .menu:not(.hidden)::after {
-  background: var(--color-console-menu-bg);
-  box-shadow: -1px -1px 0 0 var(--color-console-menu-border);
+  background: var(--color-menu);
+  box-shadow: -1px -1px 0 0 var(--color-secondary);
 }
 
 /* end fomantic dropdown menu overrides */
@@ -842,7 +888,7 @@ export default {
   top: 0;
   height: 60px;
   z-index: 1; /* above .job-step-container */
-  background: var(--color-console-bg);
+  background: var(--color-body);
   border-radius: 3px;
 }
 
@@ -851,13 +897,13 @@ export default {
 }
 
 .job-info-header .job-info-header-title {
-  color: var(--color-console-fg);
+  color: var(--color-text);
   font-size: 16px;
   margin: 0;
 }
 
 .job-info-header .job-info-header-detail {
-  color: var(--color-console-fg-subtle);
+  color: var(--color-text);
   font-size: 12px;
   list-style: none;
   padding: 0;
