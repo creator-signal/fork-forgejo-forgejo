@@ -99,11 +99,17 @@
   }
 }
 
-.ui.vertical.menu.actions-menu .item {
+.ui.vertical.menu .item:not(:has(> :nth-child(1))) {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.ui.vertical.menu .item:has(.content) {
   display: flex;
 }
 
-.ui.vertical.menu.actions-menu .item .content {
+.ui.vertical.menu .item .content {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
