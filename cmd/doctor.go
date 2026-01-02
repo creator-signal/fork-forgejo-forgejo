@@ -11,10 +11,14 @@ import (
 	golog "log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"text/tabwriter"
+	"time"
 
 	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
 	"forgejo.org/models/gitea_migrations"
 	migrate_base "forgejo.org/models/gitea_migrations/base"
 	repo_model "forgejo.org/models/repo"
@@ -41,6 +45,7 @@ func cmdDoctor() *cli.Command {
 			cmdRecreateTable(),
 			cmdDoctorConvert(),
 			cmdAvatarStripExif(),
+			cmdCleanupCommitStatuses(),
 		},
 	}
 }
@@ -112,6 +117,15 @@ func cmdAvatarStripExif() *cli.Command {
 		Usage:  "Strip EXIF metadata from all images in the avatar storage",
 		Before: noDanglingArgs,
 		Action: runAvatarStripExif,
+	}
+}
+
+func cmdCleanupCommitStatuses() *cli.Command {
+	return &cli.Command{
+		Name:   "cleanup-commit-status",
+		Usage:  "Cleanup extra records in commit_status caused by bug https://codeberg.org/forgejo/forgejo/issues/10671",
+		Before: noDanglingArgs,
+		Action: runCleanupCommitStatus,
 	}
 }
 
@@ -319,6 +333,61 @@ func runAvatarStripExif(ctx context.Context, c *cli.Command) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func getProcessMemoryMB() uint64 {
+	var rusage syscall.Rusage
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
+	// Maxrss is in KB on Linux, bytes on macOS
+	return uint64(rusage.Maxrss) / 1024 // Convert to MB (adjust for macOS)
+}
+
+func runCleanupCommitStatus(ctx context.Context, c *cli.Command) error {
+	ctx, cancel := installSignals(ctx)
+	defer cancel()
+
+	if err := initDB(ctx); err != nil {
+		return err
+	}
+
+	runtime.GC()
+	mem1 := getProcessMemoryMB()
+	// var m1, m2 runtime.MemStats
+	// println("Beginning GC")
+	// runtime.ReadMemStats(&m1)
+
+	println("Beginning iteration")
+	start := time.Now()
+	count := 0
+	err := db.IterateKeysetPagination(ctx,
+		nil,
+		[]string{"repo_id", "sha", "context", "index", "id"},
+		setting.Database.IterateBufferSize, // FIXME: replace
+		func(ctx context.Context, commit_status *git_model.CommitStatus) error {
+			count++
+			return nil
+		})
+	// err := db.SimpleIterateKeysetPagination(ctx,
+	// 	nil,
+	// 	[]string{"repo_id", "sha", "context", "index", "id"},
+	// 	func(ctx context.Context, commit_status *git_model.CommitStatus) error {
+	// 		count++
+	// 		return nil
+	// 	})
+	end := time.Now()
+	if err != nil {
+		return err
+	}
+
+	mem2 := getProcessMemoryMB()
+	// runtime.ReadMemStats(&m2)
+	// memoryAllocated := m2.Alloc - m1.Alloc
+	memoryAllocated := mem2 - mem1
+	println(fmt.Sprintf("Iterated %d records", count))
+	println(fmt.Sprintf("Memory allocated: %d MB", memoryAllocated))
+	println(fmt.Sprintf("Time taken: %d ms", end.Sub(start).Milliseconds()))
 
 	return nil
 }
