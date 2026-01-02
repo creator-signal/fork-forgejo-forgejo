@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
 	org_model "forgejo.org/models/organization"
 	"forgejo.org/models/unittest"
@@ -15,6 +16,7 @@ import (
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAPIOrgVariablesCreateOrganizationVariable(t *testing.T) {
@@ -54,6 +56,10 @@ func TestAPIOrgVariablesCreateOrganizationVariable(t *testing.T) {
 		},
 		{
 			Name:           "var@test",
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "forgejo_var",
 			ExpectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -116,6 +122,11 @@ func TestAPIOrgVariablesUpdateOrganizationVariable(t *testing.T) {
 		},
 		{
 			Name:           variableName,
+			UpdateName:     "forgejo_foo",
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           variableName,
 			UpdateName:     "updated_var_name",
 			ExpectedStatus: http.StatusNoContent,
 		},
@@ -141,6 +152,8 @@ func TestAPIOrgVariablesDeleteOrganizationVariable(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	org := unittest.AssertExistsAndLoadBean(t, &org_model.Organization{Name: "org3"})
+	variable, err := actions_model.InsertVariable(t.Context(), org.ID, 0, "FORGEJO_FORBIDDEN", "illegal")
+	require.NoError(t, err)
 	session := loginUser(t, "user2")
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteOrganization)
 
@@ -157,6 +170,11 @@ func TestAPIOrgVariablesDeleteOrganizationVariable(t *testing.T) {
 
 	request = NewRequest(t, "DELETE", url).AddTokenAuth(token)
 	MakeRequest(t, request, http.StatusNotFound)
+
+	// deleting of forbidden names should still be possible
+	url = fmt.Sprintf("/api/v1/orgs/%s/actions/variables/%s", org.Name, variable.Name)
+	request = NewRequest(t, "DELETE", url).AddTokenAuth(token)
+	MakeRequest(t, request, http.StatusNoContent)
 }
 
 func TestAPIOrgVariablesGetSingleOrganizationVariable(t *testing.T) {

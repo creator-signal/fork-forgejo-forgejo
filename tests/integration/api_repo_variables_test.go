@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
@@ -60,6 +61,10 @@ func TestAPIRepoVariablesTestCreateRepositoryVariable(t *testing.T) {
 		},
 		{
 			Name:           "var@test",
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "forgejo_var",
 			ExpectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -121,6 +126,11 @@ func TestAPIRepoVariablesUpdateRepositoryVariable(t *testing.T) {
 		},
 		{
 			Name:           variableName,
+			UpdateName:     "forgejo_foo",
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           variableName,
 			UpdateName:     "updated_var_name",
 			ExpectedStatus: http.StatusNoContent,
 		},
@@ -148,6 +158,8 @@ func TestAPIRepoVariablesDeleteRepositoryVariable(t *testing.T) {
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	variable, err := actions_model.InsertVariable(t.Context(), 0, repo.ID, "FORGEJO_FORBIDDEN", "illegal")
+	require.NoError(t, err)
 	session := loginUser(t, user.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 
@@ -164,6 +176,11 @@ func TestAPIRepoVariablesDeleteRepositoryVariable(t *testing.T) {
 
 	req = NewRequest(t, "DELETE", url).AddTokenAuth(token)
 	MakeRequest(t, req, http.StatusNotFound)
+
+	// deleting of forbidden names should still be possible
+	url = fmt.Sprintf("/api/v1/repos/%s/actions/variables/%s", repo.FullName(), variable.Name)
+	req = NewRequest(t, "DELETE", url).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNoContent)
 }
 
 func TestAPIRepoVariablesGetSingleRepositoryVariable(t *testing.T) {
