@@ -537,8 +537,8 @@ github.com/mattn/go-shellwords v1.0.12 h1:M2zGm7EW6UQJvDeQxo4T51eKPurbeFbe8WtebG
 github.com/mattn/go-shellwords v1.0.12/go.mod h1:EZzvwXDESEeg03EKmM+RmDnNOPKG4lLtQsUlTZDWQ8Y=
 github.com/mattn/go-sqlite3 v1.14.33 h1:A5blZ5ulQo2AtayQ9/limgHEkFreKj1Dv226a1K73s0=
 github.com/mattn/go-sqlite3 v1.14.33/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
-github.com/meilisearch/meilisearch-go v0.34.0 h1:P+Ohdx4/PCxXaoI5wNi0LMwPkuiNrF/kGIzBrKYS4tw=
-github.com/meilisearch/meilisearch-go v0.34.0/go.mod h1:cUVJZ2zMqTvvwIMEEAdsWH+zrHsrLpAw6gm8Lt1MXK0=
+github.com/meilisearch/meilisearch-go v0.35.1 h1:5H2FeY5eR4HSkaZMJIoefNzOj3XX1+5dd7ZfhAfzeMg=
+github.com/meilisearch/meilisearch-go v0.35.1/go.mod h1:cUVJZ2zMqTvvwIMEEAdsWH+zrHsrLpAw6gm8Lt1MXK0=
 github.com/mholt/acmez/v3 v3.1.2 h1:auob8J/0FhmdClQicvJvuDavgd5ezwLBfKuYmynhYzc=
 github.com/mholt/acmez/v3 v3.1.2/go.mod h1:L1wOU06KKvq7tswuMDwKdcHeKpFFgkppZy/y0DFxagQ=
 github.com/mholt/archives v0.1.5 h1:Fh2hl1j7VEhc6DZs2DLMgiBNChUux154a1G+2esNvzQ=
