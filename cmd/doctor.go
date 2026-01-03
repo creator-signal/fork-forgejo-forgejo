@@ -11,11 +11,8 @@ import (
 	golog "log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
 	"text/tabwriter"
-	"time"
 
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
@@ -122,10 +119,49 @@ func cmdAvatarStripExif() *cli.Command {
 
 func cmdCleanupCommitStatuses() *cli.Command {
 	return &cli.Command{
-		Name:   "cleanup-commit-status",
-		Usage:  "Cleanup extra records in commit_status caused by bug https://codeberg.org/forgejo/forgejo/issues/10671",
-		Before: noDanglingArgs,
+		Name:  "cleanup-commit-status",
+		Usage: "Cleanup extra records in commit_status table",
+		Description: `Forgejo suffered from a bug which caused the creation of more entries in the
+"commit_status" table than necessary. This operation removes the redundant
+data caused by the bug. Removing this data is almost always safe.
+These reundant records can be accessed by users through the API, making it
+possible, but unlikely, that removing it could have an impact to
+integrating services (API: /repos/{owner}/{repo}/commits/{ref}/statuses).
+
+It is safe to run while Forgejo is online.
+
+On very large Forgejo instances, the performance of operation will improve
+if the buffer-size option is used with large values. Approximately 130 MB of
+memory is required for every 100,000 records in the buffer.
+
+Bug reference: https://codeberg.org/forgejo/forgejo/issues/10671
+`,
+
+		Before: multipleBefore(noDanglingArgs, PrepareConsoleLoggerLevel(log.INFO)),
 		Action: runCleanupCommitStatus,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"V"},
+				Usage:   "Show process details",
+			},
+			&cli.BoolFlag{
+				Name:  "dry-run",
+				Usage: "Report statistics from the operation but do not modify the database",
+			},
+			&cli.IntFlag{
+				Name:  "buffer-size",
+				Usage: "Record count per query while iterating records; larger values are typically faster but use more memory",
+				// See IterateByKeyset's documentation for performance notes which led to the choice of the default
+				// buffer size for this operation.
+				Value: 100000,
+			},
+			&cli.IntFlag{
+				Name:  "delete-chunk-size",
+				Usage: "Number of records to delete per DELETE query",
+				Value: 1000,
+			},
+		},
 	}
 }
 
@@ -337,14 +373,7 @@ func runAvatarStripExif(ctx context.Context, c *cli.Command) error {
 	return nil
 }
 
-func getProcessMemoryMB() uint64 {
-	var rusage syscall.Rusage
-	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
-	// Maxrss is in KB on Linux, bytes on macOS
-	return uint64(rusage.Maxrss) / 1024 // Convert to MB (adjust for macOS)
-}
-
-func runCleanupCommitStatus(ctx context.Context, c *cli.Command) error {
+func runCleanupCommitStatus(ctx context.Context, cli *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 
@@ -352,42 +381,10 @@ func runCleanupCommitStatus(ctx context.Context, c *cli.Command) error {
 		return err
 	}
 
-	runtime.GC()
-	mem1 := getProcessMemoryMB()
-	// var m1, m2 runtime.MemStats
-	// println("Beginning GC")
-	// runtime.ReadMemStats(&m1)
+	bufferSize := cli.Int("buffer-size")
+	deleteChunkSize := cli.Int("delete-chunk-size")
+	dryRun := cli.Bool("dry-run")
+	log.Debug("bufferSize = %d, deleteChunkSize = %d, dryRun = %v", bufferSize, deleteChunkSize, dryRun)
 
-	println("Beginning iteration")
-	start := time.Now()
-	count := 0
-	err := db.IterateKeysetPagination(ctx,
-		nil,
-		[]string{"repo_id", "sha", "context", "index", "id"},
-		setting.Database.IterateBufferSize, // FIXME: replace
-		func(ctx context.Context, commit_status *git_model.CommitStatus) error {
-			count++
-			return nil
-		})
-	// err := db.SimpleIterateKeysetPagination(ctx,
-	// 	nil,
-	// 	[]string{"repo_id", "sha", "context", "index", "id"},
-	// 	func(ctx context.Context, commit_status *git_model.CommitStatus) error {
-	// 		count++
-	// 		return nil
-	// 	})
-	end := time.Now()
-	if err != nil {
-		return err
-	}
-
-	mem2 := getProcessMemoryMB()
-	// runtime.ReadMemStats(&m2)
-	// memoryAllocated := m2.Alloc - m1.Alloc
-	memoryAllocated := mem2 - mem1
-	println(fmt.Sprintf("Iterated %d records", count))
-	println(fmt.Sprintf("Memory allocated: %d MB", memoryAllocated))
-	println(fmt.Sprintf("Time taken: %d ms", end.Sub(start).Milliseconds()))
-
-	return nil
+	return git_model.CleanupCommitStatus(ctx, bufferSize, deleteChunkSize, dryRun)
 }
