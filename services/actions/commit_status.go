@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"strings"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -33,8 +34,8 @@ func CreateCommitStatus(ctx context.Context, jobs ...*actions_model.ActionRunJob
 }
 
 func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) error {
-	if incompleteMatrix, _, err := job.IsIncompleteMatrix(); err != nil {
-		return fmt.Errorf("job IsIncompleteMatrix: %w", err)
+	if incompleteMatrix, _, err := job.HasIncompleteMatrix(); err != nil {
+		return fmt.Errorf("job HasIncompleteMatrix: %w", err)
 	} else if incompleteMatrix {
 		// Don't create commit statuses for incomplete matrix jobs because they are never completed.
 		return nil
@@ -94,7 +95,8 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 	state := toCommitStatus(job.Status)
 	if statuses, _, err := git_model.GetLatestCommitStatus(ctx, repo.ID, sha, db.ListOptionsAll); err == nil {
 		for _, v := range statuses {
-			if v.Context == ctxname {
+			// TrimSpace(ctxname) to match stored value which is trimmed in `git.NewCommitStatus`
+			if v.Context == strings.TrimSpace(ctxname) {
 				if v.State == state {
 					// no need to update
 					return nil
