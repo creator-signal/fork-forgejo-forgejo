@@ -21,7 +21,6 @@ type swaggerResponseOrganizationList struct {
 	Body []api.Organization `json:"body"`
 
 	// The total number of organizations
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -46,7 +45,6 @@ type swaggerResponseTeamList struct {
 	Body []api.Team `json:"body"`
 
 	// The total number of teams
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 

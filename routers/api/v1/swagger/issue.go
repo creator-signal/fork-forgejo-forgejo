@@ -42,7 +42,6 @@ type swaggerResponseCommentList struct {
 	Body []api.Comment `json:"body"`
 
 	// The total number of comments
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -60,7 +59,6 @@ type swaggerResponseTimelineList struct {
 	Body []api.TimelineComment `json:"body"`
 
 	// The total number of timeline comments
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -78,7 +76,6 @@ type swaggerResponseLabelList struct {
 	Body []api.Label `json:"body"`
 
 	// The total number of labels
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -103,7 +100,6 @@ type swaggerResponseMilestoneList struct {
 	Body []api.Milestone `json:"body"`
 
 	// The total number of milestones
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -121,7 +117,6 @@ type swaggerResponseTrackedTimeList struct {
 	Body []api.TrackedTime `json:"body"`
 
 	// The total number of tracked times
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -160,7 +155,6 @@ type swaggerResponseStopWatchList struct {
 	Body []api.StopWatch `json:"body"`
 
 	// The total number of stop watches
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -178,7 +172,6 @@ type swaggerReactionList struct {
 	Body []api.Reaction `json:"body"`
 
 	// The total number of reactions
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 

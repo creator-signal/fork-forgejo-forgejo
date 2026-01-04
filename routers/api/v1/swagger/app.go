@@ -28,7 +28,6 @@ type swaggerResponseAccessTokenList struct {
 	Body []api.AccessToken `json:"body"`
 
 	// The total number of access tokens
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -39,6 +38,5 @@ type swaggerResponseOAuth2ApplicationList struct {
 	Body []api.OAuth2Application `json:"body"`
 
 	// The total number of OAuth2 applications
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }

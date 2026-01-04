@@ -21,7 +21,6 @@ type swaggerNotificationThreadList struct {
 	Body []api.NotificationThread `json:"body"`
 
 	// The total number of notification threads
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 

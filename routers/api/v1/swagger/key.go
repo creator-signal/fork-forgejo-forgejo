@@ -49,6 +49,5 @@ type swaggerResponseDeployKeyList struct {
 	Body []api.DeployKey `json:"body"`
 
 	// The total number of deploy keys
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }

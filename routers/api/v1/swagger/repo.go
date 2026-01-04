@@ -21,7 +21,6 @@ type swaggerResponseRepositoryList struct {
 	Body []api.Repository `json:"body"`
 
 	// The total number of repositories
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -46,7 +45,6 @@ type swaggerResponseBranchList struct {
 	Body []api.Branch `json:"body"`
 
 	// The total number of branches
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -71,7 +69,6 @@ type swaggerResponseTagList struct {
 	Body []api.Tag `json:"body"`
 
 	// The total number of tags
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -131,7 +128,6 @@ type swaggerResponseHookList struct {
 	Body []api.Hook `json:"body"`
 
 	// The total number of hooks
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -170,7 +166,6 @@ type swaggerResponseReleaseList struct {
 	Body []api.Release `json:"body"`
 
 	// The total number of releases
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -202,7 +197,6 @@ type swaggerResponsePullReviewList struct {
 	Body []api.PullReview `json:"body"`
 
 	// The total number of pull reviews
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -241,7 +235,6 @@ type swaggerResponseCommitStatusList struct {
 	Body []api.CommitStatus `json:"body"`
 
 	// The total number of commit statuses
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -322,7 +315,6 @@ type swaggerChangedFileList struct {
 	Body []api.ChangedFile `json:"body"`
 
 	// The total number of changed files
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -330,19 +322,15 @@ type swaggerChangedFileList struct {
 // swagger:response ChangedFileListWithPagination
 type swaggerChangedFileListWithPagination struct {
 	// The current page
-	// in:header
 	Page int `json:"X-Page"`
 
 	// Commits per page
-	// in:header
 	PerPage int `json:"X-PerPage"`
 
 	// Total number of pages
-	// in:header
 	PageCount int `json:"X-PageCount"`
 
 	// True if there is another page
-	// in:header
 	HasMore bool `json:"X-HasMore"`
 
 	// in: body
@@ -433,7 +421,6 @@ type swaggerWikiPageList struct {
 	Body []api.WikiPageMetaData `json:"body"`
 
 	// The total number of wiki pages
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -451,7 +438,6 @@ type swaggerWikiCommitList struct {
 	Body api.WikiCommitList `json:"body"`
 
 	// The total number of wiki commits
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -469,7 +455,6 @@ type swaggerPushMirrorList struct {
 	Body []api.PushMirror `json:"body"`
 
 	// The total number of push mirrors
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 

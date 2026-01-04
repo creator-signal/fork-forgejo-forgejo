@@ -14,6 +14,5 @@ type swaggerActivityFeedsList struct {
 	Body []api.Activity `json:"body"`
 
 	// The total number of activity feeds
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }

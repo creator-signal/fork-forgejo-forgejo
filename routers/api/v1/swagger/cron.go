@@ -14,6 +14,5 @@ type swaggerResponseCronList struct {
 	Body []api.Cron `json:"body"`
 
 	// The total number of cron jobs
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }

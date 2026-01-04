@@ -15,7 +15,6 @@ type swaggerResponseSecretList struct {
 	Body []api.Secret `json:"body"`
 
 	// The total number of secrets
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
@@ -40,7 +39,6 @@ type swaggerResponseVariableList struct {
 	Body []api.ActionVariable `json:"body"`
 
 	// The total number of variables
-	// in:header
 	TotalCount int64 `json:"X-Total-Count"`
 }
 
