@@ -150,6 +150,7 @@ func (l *Label) LoadSelectedLabelsAfterClick(currentSelectedLabels []int64, curr
 	for i, curSel := range currentSelectedLabels {
 		if curSel == l.ID {
 			labelSelected = true
+			l.IsExcluded = false
 		} else if -curSel == l.ID {
 			labelSelected = true
 			l.IsExcluded = true
