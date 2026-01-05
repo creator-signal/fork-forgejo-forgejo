@@ -29,7 +29,8 @@ func TestMakeAbsoluteAssetURL(t *testing.T) {
 }
 
 func TestMakeManifestData(t *testing.T) {
-	jsonBytes := MakeManifestData(`Example App '\"`, "https://example.com", "https://example.com/foo/bar")
+	jsonBytes, err := GetManifestJson()
+	assert.NoError(t, err)
 	assert.True(t, json.Valid(jsonBytes))
 }
 
