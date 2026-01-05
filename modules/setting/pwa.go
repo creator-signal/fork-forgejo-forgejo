@@ -4,8 +4,8 @@
 package setting
 
 import (
-	"code.gitea.io/gitea/modules/json"
-	"code.gitea.io/gitea/modules/log"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
 )
 
 type PwaConfig struct {
