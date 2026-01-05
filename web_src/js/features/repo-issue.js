@@ -113,13 +113,24 @@ export function initRepoIssueDue() {
  * @param {HTMLElement} item
  */
 function excludeLabel(item) {
-  const href = item.getAttribute('href');
   const id = item.getAttribute('data-label-id');
+  const excludedId = `-${id}`;
 
-  const regStr = `labels=((?:-?[0-9]+%2c)*)(${id})((?:%2c-?[0-9]+)*)&`;
-  const newStr = 'labels=$1-$2$3&';
+  const params = new URLSearchParams(window.location.search);
+  const labelIds = new Set((params.get('labels') ?? '').split(',').filter((id) => id.length > 0));
 
-  window.location.assign(href.replace(new RegExp(regStr), newStr));
+  if (labelIds.has(id)) {
+    labelIds.delete(id);
+    labelIds.add(excludedId);
+  } else if (labelIds.has(excludedId)) {
+    labelIds.delete(excludedId);
+  } else {
+    labelIds.add(excludedId);
+  }
+
+  params.set('labels', Array.from(labelIds).join(','));
+
+  window.location.search = params;
 }
 
 export function initRepoIssueSidebarList() {
