@@ -199,13 +199,48 @@ export function initRepoIssueSidebarList() {
   }
 
   $('.menu .ui.dropdown.label-filter').on('keydown', (e) => {
-      const selectedItem = document.querySelector('.menu .ui.dropdown.label-filter .menu .item.selected');
-      if (selectedItem) {
-        excludeLabel(selectedItem);
+    const selectedItem = document.querySelector('.menu .ui.dropdown.label-filter .menu .item.selected');
+
+    if (!selectedItem) {
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      const labelElement = selectedItem.querySelector('a.label-filter-item');
+      const excludeButtonIsSelected = selectedItem.querySelector('.label-exclude-item-btn.selected');
+
+      if (excludeButtonIsSelected) {
+        excludeLabel(labelElement);
+      } else {
+        labelElement.click();
+      }
+    }
+
+    const isOnInput = e.target.matches('input');
+
+    if (isOnInput) {
+      const input = e.target;
+
+      if (e.key === 'ArrowRight' && isCaretAtEnd(input)) {
+        selectedItem.querySelector('.label-exclude-item-btn')?.classList.add('selected');
+      }
+
+      if (e.key === 'ArrowLeft' && isCaretAtEnd(input)) {
+        selectedItem.querySelector('.label-exclude-item-btn')?.classList.remove('selected');
       }
     }
   });
+
   $('.ui.dropdown.label-filter, .ui.dropdown.select-label').dropdown('setting', {'hideDividers': 'empty'}).dropdown('refreshItems');
+}
+
+/**
+ * Returns true if the caret is at the end of the input even if it has content
+ * @param {HTMLInputElement} inputElement
+ */
+function isCaretAtEnd(inputElement) {
+  const value = inputElement.value;
+  return inputElement.selectionStart === inputElement.selectionEnd && inputElement.selectionEnd === value.length;
 }
 
 export function initRepoIssueCommentDelete() {
