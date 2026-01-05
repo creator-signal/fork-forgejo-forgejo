@@ -52,25 +52,11 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 
 	identicon, err := avatar.RandomImage([]byte(seed))
 	if err != nil {
-		return fmt.Errorf("RandomImage: %w", err)
+		return fmt.Errorf("Failed to generate identicon: %w", err)
 	}
 	var vectorHash = HashSvgAvatar(identicon.Vector)
 
-	ctx, committer, err := db.TxContext(ctx)
-	if err != nil {
-		return err
-	}
-	defer committer.Close()
-
-	if err = db.Insert(ctx, &AvatarVector{
-		SvgHash: vectorHash,
-		Svg:     identicon.Vector,
-	}); err != nil {
-		return err
-	}
-
-	_, err = storage.Avatars.Stat(u.CustomAvatarRelativePath())
-	if err != nil {
+	if _, err = storage.Avatars.Stat(u.CustomAvatarRelativePath()); err != nil {
 		// If unable to Stat the avatar file (usually it means non-existing), then try to save a new one
 		// Don't share the images so that we can delete them easily
 		if err := storage.SaveFrom(storage.Avatars, u.CustomAvatarRelativePath(), func(w io.Writer) error {
@@ -79,19 +65,35 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 			}
 			return nil
 		}); err != nil {
-			return fmt.Errorf("failed to save avatar %s: %w", u.CustomAvatarRelativePath(), err)
+			return fmt.Errorf("Failed to save avatar %s: %w", u.CustomAvatarRelativePath(), err)
 		}
 	}
 
-	u.Avatar = avatars.HashEmail(seed)
-	u.AvatarSVGHash = vectorHash
+	// Save info about the new avatar into the database
+	err = db.WithTx(ctx, func(ctx context.Context) error {
+		if err = db.Insert(ctx, &AvatarVector{
+			SvgHash: vectorHash,
+			Svg:     identicon.Vector,
+		}); err != nil {
+			return err
+		}
 
-	if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "avatar_svg_hash").Update(u); err != nil {
+		u.Avatar = avatars.HashEmail(seed)
+		u.AvatarSVGHash = vectorHash
+
+		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "avatar_svg_hash").Update(u); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 
 	log.Info("New random avatar created: %d", u.ID)
-	return committer.Commit()
+
+	return nil
 }
 
 // todo separate commit
