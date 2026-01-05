@@ -30,11 +30,17 @@ func UploadAvatar(ctx context.Context, u *user_model.User, data []byte) error {
 	}
 	defer committer.Close()
 
+	// Delete vector avatar if it was set
+	if u.AvatarSVGHash != nil {
+		if _, err := db.GetEngine(ctx).Table(&user_model.AvatarVector{}).Where("svg_hash=?", u.AvatarSVGHash).Delete(); err != nil {
+			return fmt.Errorf("Unable to delete vector avatar: %w", err)
+		}
+		u.AvatarSVGHash = nil
+	}
+
 	u.UseCustomAvatar = true
-	u.AvatarSVG = ""
-	u.AvatarSVGHash = nil
 	u.Avatar = avatar.HashAvatar(u.ID, data)
-	if err = user_model.UpdateUserCols(ctx, u, "use_custom_avatar", "avatar", "avatar_svg", "avatar_svg_hash"); err != nil {
+	if err = user_model.UpdateUserCols(ctx, u, "use_custom_avatar", "avatar", "avatar_svg_hash"); err != nil {
 		return fmt.Errorf("updateUser: %w", err)
 	}
 

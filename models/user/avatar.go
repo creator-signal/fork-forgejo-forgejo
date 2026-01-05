@@ -25,6 +25,13 @@ func (u *User) CustomAvatarRelativePath() string {
 	return u.Avatar
 }
 
+type AvatarVector struct {
+	// Hash of SVG avatar
+	SvgHash []byte `xorm:"VARBINARY(16)"`
+	// Raw SVG avatar as text
+	Svg string `xorm:"TEXT"`
+}
+
 // HashSvgAvatar returns a half of 256 bit blake2b-hash of avatar code
 // Requiremenents:
 // - not too many characters when encoded as string
@@ -47,10 +54,14 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 	if err != nil {
 		return fmt.Errorf("RandomImage: %w", err)
 	}
+	var vectorHash = HashSvgAvatar(identicon.Vector)
 
-	u.Avatar = avatars.HashEmail(seed)
-	u.AvatarSVG = identicon.Vector
-	u.AvatarSVGHash = HashSvgAvatar(identicon.Vector)
+	if err = db.Insert(ctx, &AvatarVector{
+		SvgHash: vectorHash,
+		Svg:     identicon.Vector,
+	}); err != nil {
+		return err
+	}
 
 	_, err = storage.Avatars.Stat(u.CustomAvatarRelativePath())
 	if err != nil {
@@ -66,7 +77,10 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 		}
 	}
 
-	if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "avatar_svg", "avatar_svg_hash").Update(u); err != nil {
+	u.Avatar = avatars.HashEmail(seed)
+	u.AvatarSVGHash = vectorHash
+
+	if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "avatar_svg_hash").Update(u); err != nil {
 		return err
 	}
 
