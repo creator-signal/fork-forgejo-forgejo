@@ -86,8 +86,9 @@ func (options *Options) render(c, b1, b2, tileOneAngle, tileTwoAngle int, foreCo
 	vectorParts := [9]string{}
 
 	drawTiles(raster, &vectorParts, options.size, middleShapes[c], allShapes[b1], allShapes[b2], tileOneAngle, tileTwoAngle)
-	path := `<path d="` + strings.Join(vectorParts[:], "") + `"/>`
-	g := `<g color="#` + uint32HEX(foreColor) + `">` + path + path + `</g>`
+	path1 := `<path style="clip-path:rect(0 36px 72px 0)" d="` + strings.Join(vectorParts[:], "") + `"/>`
+	path2 := `<path style="clip-path:rect(0 36px 72px 0);transform:scaleX(-1) translateX(-72px)" d="` + strings.Join(vectorParts[:], "") + `"/>`
+	g := `<g style="fill:#` + uint32HEX(foreColor) + `">` + path1 + path2 + `</g>`
 	vector := `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">` + g + `</svg>`
 
 	return &Identicon{
