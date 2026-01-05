@@ -31,7 +31,7 @@
 				<div class="divider"></div>
 			{{end}}
 			{{$previousExclusiveScope = $exclusiveScope}}
-			<div class="item tw-flex tw-items-center">
+			<div class="item tw-flex tw-items-center" {{if and .IsSelected (not .IsExcluded)}}data-selected{{end}}>
 				{{if and .IsSelected  (not .IsExcluded)}}
 					{{if $exclusiveScope}}
 						{{svg "octicon-dot-fill"}}

@@ -37,6 +37,12 @@
   }
 }
 
+.menu:has(> .item[data-selected])
+  .item:not([data-selected])
+  > .label-filter-item {
+  padding-left: 27px;
+}
+
 .menu .item .archived-label-indicator {
   margin: 0 0 0 10px !important;
 
