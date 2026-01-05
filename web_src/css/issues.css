@@ -34,10 +34,6 @@
     .label-exclude-item-btn {
       opacity: 1;
     }
-
-    .archived-label-indicator {
-      transform: translateX(-32px);
-    }
   }
 }
 
