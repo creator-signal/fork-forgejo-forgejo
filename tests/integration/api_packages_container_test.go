@@ -425,7 +425,6 @@ func TestPackageContainer(t *testing.T) {
 					t.Run("UploadManifest", func(t *testing.T) {
 						defer tests.PrintCurrentTest(t)()
 
-						// HERE
 						req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", url, configDigest), strings.NewReader(configContent)).
 							AddTokenAuth(userToken)
 						MakeRequest(t, req, http.StatusCreated)
@@ -440,7 +439,6 @@ func TestPackageContainer(t *testing.T) {
 							SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 						MakeRequest(t, req, http.StatusUnauthorized)
 
-						// HERE
 						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", url, tag), strings.NewReader(manifestContent)).
 							AddTokenAuth(userToken).
 							SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
@@ -919,6 +917,8 @@ func TestPackageContainer(t *testing.T) {
 		urlExistingRepo := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, repo.Name)
 		nameNonexistingRepo := "nonexisting-repo"
 		urlNonexistingRepo := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, nameNonexistingRepo)
+		nameExistingRepoNested := "nested-image1"
+		urlExistingRepoNested := fmt.Sprintf("%sv2/%s/%s/%s", setting.AppURL, user.Name, repo.Name, nameExistingRepoNested)
 
 		// variable to hold an auto-linked package, which will be unlinked again in a later test
 		var linkedPackage *packages_model.Package
@@ -933,8 +933,8 @@ func TestPackageContainer(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			require.Equal(t, p.Name, nameNonexistingRepo) // just to make sure we have grabbed the correct package
-			assert.Equal(t, p.RepoID, int64(0))
+			require.Equal(t, nameNonexistingRepo, p.Name) // just to make sure we have grabbed the correct package
+			assert.Equal(t, int64(0), p.RepoID)
 		})
 
 		t.Run("PushToExisingRepo", func(t *testing.T) {
@@ -956,9 +956,31 @@ func TestPackageContainer(t *testing.T) {
 				t.Log(err)
 				t.FailNow() // we fail now since the success of this test is required for PushVersionToUnlinkedRepo
 			}
-			require.Equal(t, p.Name, repo.Name) // just to make sure we have grabbed the correct package
-			assert.Equal(t, p.RepoID, repo.ID)
+			require.Equal(t, repo.Name, p.Name) // just to make sure we have grabbed the correct package
+			assert.Equal(t, repo.ID, p.RepoID)
 			linkedPackage = p // store auto-linked package for the next test
+		})
+
+		t.Run("PushToExistingRepoNested", func(t *testing.T) {
+			// Upload blobs and manifest which should create a package with tag "v1"
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlExistingRepoNested, blobDigest), bytes.NewReader(blobContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlExistingRepoNested, configDigest), strings.NewReader(configContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlExistingRepoNested, "v1"), strings.NewReader(manifestContent)).
+				AddTokenAuth(userToken).
+				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			MakeRequest(t, req, http.StatusCreated)
+
+			// get the resulting package
+			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, repo.Name+"/"+nameExistingRepoNested)
+			if err != nil {
+				t.Error(err)
+			}
+			require.Equal(t, repo.Name+"/"+nameExistingRepoNested, p.Name) // just to make sure we have grabbed the correct package
+			assert.Equal(t, repo.ID, p.RepoID)
 		})
 
 		t.Run("PushVersionToUnlinkedRepo", func(t *testing.T) {
@@ -971,7 +993,7 @@ func TestPackageContainer(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			require.Equal(t, checkPackageForUnlinked.RepoID, int64(0))
+			require.Equal(t, int64(0), checkPackageForUnlinked.RepoID)
 
 			// push updated version (e.g. tag v2)
 			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlExistingRepo, blobDigest), bytes.NewReader(blobContent)).
@@ -990,7 +1012,7 @@ func TestPackageContainer(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			assert.Equal(t, checkPackageForStillUnlinked.RepoID, int64(0))
+			assert.Equal(t, int64(0), checkPackageForStillUnlinked.RepoID)
 		})
 	})
 }

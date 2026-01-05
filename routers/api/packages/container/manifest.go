@@ -338,12 +338,13 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 		}
 
 		// Try auto link (this only happens on create, so that a manual "unlink" is not getting relinked again when pushing new tags)
-		repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, mci.Owner.LowerName, mci.Image)
+		repoName := strings.SplitN(mci.Image, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
+		repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, mci.Owner.LowerName, repoName)
 		if err != nil {
 			if !repo_model.IsErrRepoNotExist(err) {
-				return nil, err
+				return nil, err // this is a legit error
 			} // repo does not exist, no auto-linking
-		} else { // repo exists, do auto-linking
+		} else { // repo exists, perform auto-linking
 			if err := packages_service.LinkToRepository(ctx, p, repository, mci.Creator); err != nil {
 				return nil, err
 			}
