@@ -335,12 +335,11 @@ func (g *GitlabDownloader) convertGitlabRelease(rel *gitlab.Release) *base.Relea
 
 	httpClient := NewMigrationHTTPClient()
 
-	for k, asset := range rel.Assets.Links {
+	for _, asset := range rel.Assets.Links {
 		assetID := asset.ID // Don't optimize this, for closure we need a local variable
 		r.Assets = append(r.Assets, &base.ReleaseAsset{
 			ID:            int64(asset.ID),
 			Name:          asset.Name,
-			ContentType:   &rel.Assets.Sources[k].Format,
 			Size:          &zero,
 			DownloadCount: &zero,
 			DownloadFunc: func() (io.ReadCloser, error) {
