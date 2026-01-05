@@ -23,10 +23,14 @@
   }
 }
 
-.menu .item:has(> .label-filter-item) {
+.ui.menu .ui.dropdown .menu > .item:has(> .label-filter-item) {
+  max-width: 294px;
+
   &:hover,
   &.selected,
   &:has(.label-exclude-item-btn.active) {
+    padding-right: 50px !important;
+
     .label-exclude-item-btn {
       opacity: 1;
     }
@@ -41,6 +45,18 @@
   .item:not([data-selected])
   > .label-filter-item {
   padding-left: 27px;
+}
+
+.menu .item .label-filter-item {
+  width: 100%;
+  min-width: 0;
+}
+
+.menu .item .label-filter-item > .label {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  display: block;
 }
 
 .menu .item .archived-label-indicator {
