@@ -56,6 +56,12 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 	}
 	var vectorHash = HashSvgAvatar(identicon.Vector)
 
+	ctx, committer, err := db.TxContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer committer.Close()
+
 	if err = db.Insert(ctx, &AvatarVector{
 		SvgHash: vectorHash,
 		Svg:     identicon.Vector,
@@ -85,7 +91,7 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 	}
 
 	log.Info("New random avatar created: %d", u.ID)
-	return nil
+	return committer.Commit()
 }
 
 // todo separate commit
