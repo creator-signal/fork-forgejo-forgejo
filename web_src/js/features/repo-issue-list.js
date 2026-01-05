@@ -225,8 +225,8 @@ function initArchivedLabelFilter() {
   };
 
   archivedElToggle();
+
   archivedLabelEl.addEventListener('change', () => {
-    archivedElToggle();
     if (archivedLabelEl.checked) {
       url.searchParams.set('archived', 'true');
     } else {
