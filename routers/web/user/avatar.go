@@ -62,7 +62,7 @@ func AvatarByEmailHash(ctx *context.Context) {
 // FindSvgAvatarByHash looks for svg avatar in the database
 func FindSvgAvatarByHash(ctx *context.Context, hash []byte) (string, error) {
 	vectorAvatar := new(user_model.AvatarVector)
-	found, err := db.GetEngine(ctx).Where("avatar_svg_hash=?", hash).Get(vectorAvatar)
+	found, err := db.GetEngine(ctx).Where("svg_hash=?", hash).Get(vectorAvatar)
 	if err != nil {
 		return "", err
 	}
