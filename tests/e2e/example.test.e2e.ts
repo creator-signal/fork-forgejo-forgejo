@@ -1,3 +1,7 @@
+// Copyright 2022 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
 // templates/user/auth/**
 // web_src/js/features/user-**
