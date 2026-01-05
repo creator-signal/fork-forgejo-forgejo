@@ -1,5 +1,5 @@
 // Copyright 2023 The Gitea Authors. All rights reserved.
-// Copyright 2024 The Forgejo Authors.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package misc
@@ -48,10 +48,8 @@ func ManifestJSON(w http.ResponseWriter, req *http.Request) {
 
 	if _, err := w.Write(bytes); err != nil {
 		log.Error("unable to write manifest JSON. Error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func StaticRedirect(target string) func(w http.ResponseWriter, req *http.Request) {
