@@ -186,9 +186,19 @@ export function initRepoIssueSidebarList() {
     });
   });
 
-  // FIXME: this is broken, see discussion https://codeberg.org/forgejo/forgejo/pulls/8199
+  // Increase surface area to include a label in the filters
+  for (const labelFilterItem of document.querySelectorAll('.menu a.label-filter-item')) {
+    const menuItem = labelFilterItem.closest('.item');
+    menuItem.addEventListener('click', (event) => {
+      if (labelFilterItem === event.target || event.target.closest('.label-exclude-item-btn')) {
+        return;
+      }
+
+      labelFilterItem.click();
+    });
+  }
+
   $('.menu .ui.dropdown.label-filter').on('keydown', (e) => {
-    if (e.altKey && e.keyCode === 13) {
       const selectedItem = document.querySelector('.menu .ui.dropdown.label-filter .menu .item.selected');
       if (selectedItem) {
         excludeLabel(selectedItem);
