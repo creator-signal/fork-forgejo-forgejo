@@ -174,12 +174,15 @@ export function initRepoIssueSidebarList() {
       fullTextSearch: true,
     });
 
-  $('.menu a.label-filter-item').each(function () {
-    $(this).on('click', function (e) {
-      if (e.altKey) {
-        e.preventDefault();
-        excludeLabel(this);
+  $('.menu button.label-exclude-item-btn').each(function () {
+    $(this).on('click', function () {
+      const label = this.closest('.item').querySelector('a.label-filter-item');
+
+      if (!label) {
+        return;
       }
+
+      excludeLabel(label);
     });
   });
 
