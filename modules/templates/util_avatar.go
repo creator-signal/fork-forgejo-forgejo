@@ -28,21 +28,21 @@ func NewAvatarUtils(ctx context.Context) *AvatarUtils {
 }
 
 // AvatarHTML creates the HTML for an avatar
-func AvatarHTML(srcUrl string, size int, class, name string) template.HTML {
+func AvatarHTML(srcURL string, size int, class, name string) template.HTML {
 	sizeStr := fmt.Sprintf(`%d`, size)
 
-	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + srcUrl + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
+	return template.HTML(`<img loading="lazy" alt="" class="` + class + `" src="` + srcURL + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
 }
 
 // AvatarHTMLSVG creates the HTML for an SVG avatar
-func AvatarHTMLSVG(srcUrl string, size int, class, name string) template.HTML {
+func AvatarHTMLSVG(srcURL string, size int, class, name string) template.HTML {
 	sizeStr := fmt.Sprintf(`%d`, size)
 
-	return template.HTML(`<img loading="lazy" alt="" class="svg identicon ` + class + `" src="` + srcUrl + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
+	return template.HTML(`<img loading="lazy" alt="" class="svg identicon ` + class + `" src="` + srcURL + `" title="` + html.EscapeString(name) + `" width="` + sizeStr + `" height="` + sizeStr + `"/>`)
 }
 
-// SVGAvatarUrl constructs complete URL for SVG avatar from it's hash
-func SVGAvatarUrl(hash []byte) string {
+// SVGAvatarURL constructs complete URL for SVG avatar from it's hash
+func SVGAvatarURL(hash []byte) string {
 	return setting.AppSubURL + "/svg-avatars/" + hex.EncodeToString(hash) + ".svg"
 }
 
@@ -51,21 +51,21 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 	size, class := gitea_html.ParseSizeAndClass(avatars.DefaultAvatarPixelSize, avatars.DefaultAvatarClass, others...)
 
 	var vectorHash []byte
-	var rasterUrl string
+	var rasterURL string
 	var displayName string
 
 	switch t := item.(type) {
 	case *user_model.User:
 		vectorHash = t.AvatarSVGHash
-		rasterUrl = t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
+		rasterURL = t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		displayName = t.DisplayName()
 	case *repo_model.Collaborator:
 		vectorHash = t.AvatarSVGHash
-		rasterUrl = t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
+		rasterURL = t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		displayName = t.DisplayName()
 	case *organization.Organization:
 		vectorHash = t.AsUser().AvatarSVGHash
-		rasterUrl = t.AsUser().AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
+		rasterURL = t.AsUser().AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		displayName = t.DisplayName()
 	}
 
@@ -76,12 +76,12 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 
 	// Try vector avatar first - if it is unwanted it wouldn't be present in the database
 	if vectorHash != nil {
-		return AvatarHTMLSVG(SVGAvatarUrl(vectorHash), size, class, displayName)
+		return AvatarHTMLSVG(SVGAvatarURL(vectorHash), size, class, displayName)
 	}
 
 	// Fall back to raster avatar if present
-	if rasterUrl != "" {
-		return AvatarHTML(rasterUrl, size, class, displayName)
+	if rasterURL != "" {
+		return AvatarHTML(rasterURL, size, class, displayName)
 	}
 
 	// Fall back to default avatar URL

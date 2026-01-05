@@ -54,7 +54,7 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 	if err != nil {
 		return fmt.Errorf("Failed to generate identicon: %w", err)
 	}
-	var vectorHash = HashSvgAvatar(identicon.Vector)
+	vectorHash := HashSvgAvatar(identicon.Vector)
 
 	if _, err = storage.Avatars.Stat(u.CustomAvatarRelativePath()); err != nil {
 		// If unable to Stat the avatar file (usually it means non-existing), then try to save a new one

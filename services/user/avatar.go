@@ -60,7 +60,6 @@ func DeleteAvatar(ctx context.Context, u *user_model.User) error {
 	log.Trace("DeleteAvatar[%d]: %s", u.ID, aPath)
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
-
 		// Delete vector avatar if it was set
 		if u.AvatarSVGHash != nil {
 			if _, err := db.GetEngine(ctx).Table(&user_model.AvatarVector{}).Where("svg_hash=?", u.AvatarSVGHash).Delete(); err != nil {
