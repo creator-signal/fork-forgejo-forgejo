@@ -162,7 +162,7 @@ func RenderLabel(ctx *Context, label *issues_model.Label) template.HTML {
 		// Regular label
 
 		labelColor := label.Color + hex.EncodeToString([]byte{GetLabelOpacityByte(label.IsArchived())})
-		s := fmt.Sprintf("<div class='ui label %s' style='color: %s !important; background-color: %s !important;' data-tooltip-content title='%s'>%s</div>",
+		s := fmt.Sprintf("<div class='ui label %s' style='color: %s !important; background-color: %s !important;' data-tooltip-content='%s'>%s</div>",
 			archivedCSSClass, textColor, labelColor, description, RenderEmoji(ctx, label.Name))
 		return template.HTML(s)
 	}
@@ -200,7 +200,7 @@ func RenderLabel(ctx *Context, label *issues_model.Label) template.HTML {
 	scopeColor := "#" + hex.EncodeToString(scopeBytes)
 	itemColor := "#" + hex.EncodeToString(itemBytes)
 
-	s := fmt.Sprintf("<span class='ui label %s scope-parent' data-tooltip-content title='%s'>"+
+	s := fmt.Sprintf("<span class='ui label %s scope-parent' data-tooltip-content='%s'>"+
 		"<div class='ui label scope-left' style='color: %s !important; background-color: %s !important'>%s</div>"+
 		"<div class='ui label scope-right' style='color: %s !important; background-color: %s !important'>%s</div>"+
 		"</span>",
