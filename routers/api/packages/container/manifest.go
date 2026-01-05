@@ -333,21 +333,37 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 
 	if created {
 		if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepository, strings.ToLower(mci.Owner.LowerName+"/"+mci.Image)); err != nil {
-			log.Error("Error setting package property: %v", err)
+			log.Error("Error setting package property %s: %v", container_module.PropertyRepository, err)
 			return nil, err
 		}
+		if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired, "yes"); err != nil {
+			log.Error("Error setting package property %s: %v", container_module.PropertyRepositoryAutolinkingRequired, err)
+			return nil, err
+		}
+	}
 
-		// Try auto link (this only happens on create, so that a manual "unlink" is not getting relinked again when pushing new tags)
-		repoName := strings.SplitN(mci.Image, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
-		repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, mci.Owner.LowerName, repoName)
-		if err != nil {
-			if !repo_model.IsErrRepoNotExist(err) {
-				return nil, err // this is a legit error
-			} // repo does not exist, no auto-linking
-		} else { // repo exists, perform auto-linking
-			if err := packages_service.LinkToRepository(ctx, p, repository, mci.Creator); err != nil {
-				return nil, err
+	// Check if auto-linking is required (this only happens after creation of package (not version!))
+	autolinkRequiredProps, err := packages_model.GetPropertiesByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
+	if err != nil {
+		log.Error("Error getting package properties %s: %v", container_module.PropertyRepositoryAutolinkingRequired, err)
+		return nil, err
+	}
+	if len(autolinkRequiredProps) > 0 {
+		autolinkRequiredProp := autolinkRequiredProps[0]
+		if autolinkRequiredProp != nil && autolinkRequiredProp.Value == "yes" { // check if auto-link is required (this prevents re-auto-linking on new versions, since the property is not set there)
+			repoName := strings.SplitN(mci.Image, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
+			repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, mci.Owner.LowerName, repoName)
+			if err != nil {
+				if !repo_model.IsErrRepoNotExist(err) {
+					return nil, err // this is a legit error
+				} // repo does not exist, no auto-linking
+			} else { // repo exists, perform auto-linking
+				if err := packages_service.LinkToRepository(ctx, p, repository, mci.Creator); err != nil {
+					return nil, err
+				}
 			}
+			// remove property to prevent auto-linking on new versions
+			packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
 		}
 	}
 

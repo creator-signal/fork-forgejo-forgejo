@@ -15,7 +15,6 @@ import (
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
-	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
@@ -107,7 +106,7 @@ func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 		}
 		var err error
 
-		if p, err = packages_model.TryInsertPackage(ctx, p); err != nil { // LSC: Hier werden Docker Layer (Blobs) hochgeladen
+		if p, err = packages_model.TryInsertPackage(ctx, p); err != nil {
 			if err == packages_model.ErrDuplicatePackage {
 				created = false
 			} else {
@@ -118,23 +117,12 @@ func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 
 		if created {
 			if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepository, strings.ToLower(pi.Owner.LowerName+"/"+pi.Name)); err != nil {
-				log.Error("Error setting package property: %v", err)
+				log.Error("Error setting package property %s: %v", container_module.PropertyRepository, err)
 				return err
 			}
-
-			// Try auto link (this only happens on create, so that a manual "unlink" is not getting relinked again when pushing new tags)
-			// Hint: There is a similar routine when pushing a manifest, but this will most likely never execute
-			//   since the Forgejo package is created at the first layer ("blob") push, instead of at manifest push.
-			repoName := strings.SplitN(pi.Name, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
-			repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, pi.Owner.LowerName, repoName)
-			if err != nil {
-				if !repo_model.IsErrRepoNotExist(err) {
-					return err // this is a legit error
-				} // repo does not exist, no auto-linking
-			} else { // repo exists, perform auto-linking
-				if err := packages_service.LinkToRepository(ctx, p, repository, pi.Owner); err != nil {
-					return err
-				}
+			if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired, "yes"); err != nil {
+				log.Error("Error setting package property %s: %v", container_module.PropertyRepositoryAutolinkingRequired, err)
+				return err
 			}
 		}
 
