@@ -324,7 +324,7 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 	}
 	var err error
 
-	if p, err = packages_model.TryInsertPackage(ctx, p); err != nil { // LSC: Hier passiert das Manifest publishing
+	if p, err = packages_model.TryInsertPackage(ctx, p); err != nil {
 		if err == packages_model.ErrDuplicatePackage {
 			created = false
 		} else {
