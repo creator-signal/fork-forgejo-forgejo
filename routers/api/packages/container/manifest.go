@@ -20,6 +20,7 @@ import (
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 	notify_service "forgejo.org/services/notify"
 	packages_service "forgejo.org/services/packages"
@@ -354,10 +355,28 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 			repoName := strings.SplitN(mci.Image, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
 			repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, mci.Owner.LowerName, repoName)
 			if err != nil {
-				if !repo_model.IsErrRepoNotExist(err) {
+				if repo_model.IsErrRepoNotExist(err) {
+					// repo matching the image name does not exist, try linking by LABEL
+					if labelRepo, ok := metadata.Labels["org.opencontainers.image.source"]; ok {
+						pathOnly := strings.Replace(labelRepo, setting.AppURL, "", 1)
+						pathParts := strings.Split(strings.Trim(pathOnly, "/"), "/")
+						if len(pathParts) == 2 {
+							repository, err = repo_model.GetRepositoryByOwnerAndName(ctx, pathParts[0], pathParts[1])
+							if err != nil {
+								if !repo_model.IsErrRepoNotExist(err) {
+									return nil, err // this is a legit error
+								} // repository not found again --> repository is nil --> no auto-linking
+							}
+						} else {
+							log.Error("Error extracting label value from org.opencontainers.image.source: path is not in format '{host}/{owner}/{repo}'")
+							// skip linking
+						}
+					} // label does not exist --> no auto-linking
+				} else {
 					return nil, err // this is a legit error
-				} // repo does not exist, no auto-linking
-			} else { // repo exists, perform auto-linking
+				}
+
+			} else { // repo matches by name, perform auto-linking
 				if err := packages_service.LinkToRepository(ctx, p, repository, mci.Creator); err != nil {
 					return nil, err
 				}
