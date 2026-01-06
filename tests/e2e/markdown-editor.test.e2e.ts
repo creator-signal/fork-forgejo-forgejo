@@ -23,16 +23,15 @@ test('Markdown image preview behaviour', async ({page}) => {
   // Click 'Edit file' tab
   await page.locator('[data-tooltip-content="Edit file"]').click();
 
-  // This yields the monaco editor
-  const editor = page.getByRole('presentation').nth(0);
-  await editor.click();
+  // This yields the codemirror editor
+  await page.locator('.cm-content').click();
   // Clear all the content
   await page.keyboard.press('ControlOrMeta+KeyA');
   // Add the image
   await page.keyboard.type('![Logo of Forgejo](./assets/logo.svg "Logo of Forgejo")');
 
   // Click 'Preview' tab
-  await page.locator('a[data-tab="preview"]').click();
+  await page.locator('button[data-tab="preview"]').click();
 
   // Check for the image preview via the expected attribute
   const preview = page.locator('div[data-tab="preview"] p[dir="auto"] a');
@@ -559,4 +558,30 @@ test('Markdown bold/italic toolbar and shortcut', async ({page}) => {
   await expect(textarea).toHaveValue(`_line 1_\nline 2\nline 3\nline 4`);
   await textarea.press('ControlOrMeta+KeyI');
   await expect(textarea).toHaveValue(`line 1\nline 2\nline 3\nline 4`);
+});
+
+test('Monospace button aria-label', async ({page}) => {
+  // Load page with editor
+  const response = await page.goto('/user2/repo1/issues/new');
+  expect(response?.status()).toBe(200);
+
+  const monospaceButton = page.locator('.markdown-switch-monospace');
+  const enableText = await monospaceButton.getAttribute('data-enable-text');
+  const disableText = await monospaceButton.getAttribute('data-disable-text');
+
+  async function assertAriaLabel(enabled: boolean) {
+    const expected = enabled ? disableText : enableText;
+
+    await expect(monospaceButton).toHaveAttribute('aria-label', expected);
+  }
+
+  const enabled = await monospaceButton.getAttribute('aria-checked') === 'true';
+
+  await assertAriaLabel(enabled);
+
+  await monospaceButton.click();
+  await assertAriaLabel(!enabled);
+
+  await monospaceButton.click();
+  await assertAriaLabel(enabled);
 });

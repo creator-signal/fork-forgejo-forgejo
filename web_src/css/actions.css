@@ -88,9 +88,22 @@
 #workflow_dispatch_dropdown > button {
   white-space: nowrap;
 }
+#workflow_dispatch_dropdown .menu {
+  max-height: 500px;
+  overflow-x: auto;
+}
 @media (max-width: 640px) or (767.98px < width < 854px) {
   #workflow_dispatch_dropdown .menu {
     left: auto;
     right: 0;
+  }
+}
+
+.job-status-rotate {
+  animation: job-status-rotate-keyframes 1s linear infinite;
+}
+@keyframes job-status-rotate-keyframes {
+  100% {
+    transform: rotate(-360deg);
   }
 }

@@ -175,36 +175,6 @@ jobs:
 	})
 }
 
-func TestRunnerLifecycleGithubEndpoints(t *testing.T) {
-	if !setting.Database.Type.IsSQLite3() {
-		// registering a mock runner when using a database other than SQLite leaves leftovers
-		t.Skip()
-	}
-	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		session := loginUser(t, user2.Name)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
-
-		apiRepo := createActionsTestRepo(t, token, "actions-runner-registration-with-get", false)
-		runner := newMockRunner()
-		runner.registerAsRepoRunnerWithPost(t, user2.Name, apiRepo.Name, "mock-runner", []string{"ubuntu-latest"})
-		runnersList := runner.listRunners(t, user2.Name, apiRepo.Name)
-
-		assert.NotNil(t, runnersList)
-		assert.Len(t, runnersList.Entries, 1)
-		assert.Equal(t, "mock-runner", runnersList.Entries[0].Name)
-
-		runnerDetails := runner.getRunner(t, user2.Name, apiRepo.Name, runnersList.Entries[0].ID)
-		assert.Equal(t, "mock-runner", runnerDetails.Name)
-		assert.Equal(t, runnersList.Entries[0].ID, runnerDetails.ID)
-
-		runner.deleteRunner(t, user2.Name, apiRepo.Name, runnersList.Entries[0].ID)
-
-		httpContext := NewAPITestContext(t, user2.Name, apiRepo.Name, auth_model.AccessTokenScopeWriteRepository)
-		doAPIDeleteRepository(httpContext)(t)
-	})
-}
-
 func TestActionsJobNeedsMatrix(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		t.Skip()
@@ -471,7 +441,9 @@ jobs:
 		assert.Equal(t, setting.AppURL, gtCtx["server_url"].GetStringValue())
 		assert.Equal(t, actionRun.CommitSHA, gtCtx["sha"].GetStringValue())
 		assert.Equal(t, actionRun.WorkflowID, gtCtx["workflow"].GetStringValue())
+		assert.Equal(t, "user2/actions-gitea-context/.gitea/workflows/pull.yml@refs/pull/1/head", gtCtx["workflow_ref"].GetStringValue())
 		assert.Equal(t, setting.Actions.DefaultActionsURL.URL(), gtCtx["gitea_default_actions_url"].GetStringValue())
+		assert.Equal(t, setting.AppVer, gtCtx["forgejo_server_version"].GetStringValue())
 		token := gtCtx["token"].GetStringValue()
 		assert.Equal(t, actionTask.TokenLastEight, token[len(token)-8:])
 

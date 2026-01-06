@@ -41,24 +41,25 @@ const (
 
 // ActionRun represents a run of a workflow file
 type ActionRun struct {
-	ID            int64
-	Title         string
-	RepoID        int64                  `xorm:"index unique(repo_index) index(concurrency)"`
-	Repo          *repo_model.Repository `xorm:"-"`
-	OwnerID       int64                  `xorm:"index"`
-	WorkflowID    string                 `xorm:"index"`                    // the name of workflow file
-	Index         int64                  `xorm:"index unique(repo_index)"` // a unique number for each run of a repository
-	TriggerUserID int64                  `xorm:"index"`
-	TriggerUser   *user_model.User       `xorm:"-"`
-	ScheduleID    int64
-	Ref           string `xorm:"index"` // the commit/tag/… that caused the run
-	IsRefDeleted  bool   `xorm:"-"`
-	CommitSHA     string
-	Event         webhook_module.HookEventType // the webhook event that causes the workflow to run
-	EventPayload  string                       `xorm:"LONGTEXT"`
-	TriggerEvent  string                       // the trigger event defined in the `on` configuration of the triggered workflow
-	Status        Status                       `xorm:"index"`
-	Version       int                          `xorm:"version default 0"` // Status could be updated concomitantly, so an optimistic lock is needed
+	ID                int64
+	Title             string
+	RepoID            int64                  `xorm:"index unique(repo_index) index(concurrency)"`
+	Repo              *repo_model.Repository `xorm:"-"`
+	OwnerID           int64                  `xorm:"index"`
+	WorkflowID        string                 `xorm:"index"`                                 // the name of workflow file
+	WorkflowDirectory string                 `xorm:"NOT NULL DEFAULT '.forgejo/workflows'"` // directory where the workflow file resides, for example, .forgejo/workflows
+	Index             int64                  `xorm:"index unique(repo_index)"`              // a unique number for each run of a repository
+	TriggerUserID     int64                  `xorm:"index"`
+	TriggerUser       *user_model.User       `xorm:"-"`
+	ScheduleID        int64
+	Ref               string `xorm:"index"` // the commit/tag/… that caused the run
+	IsRefDeleted      bool   `xorm:"-"`
+	CommitSHA         string
+	Event             webhook_module.HookEventType // the webhook event that causes the workflow to run
+	EventPayload      string                       `xorm:"LONGTEXT"`
+	TriggerEvent      string                       // the trigger event defined in the `on` configuration of the triggered workflow
+	Status            Status                       `xorm:"index"`
+	Version           int                          `xorm:"version default 0"` // Status could be updated concomitantly, so an optimistic lock is needed
 	// Started and Stopped is used for recording last run time, if rerun happened, they will be reset to 0
 	Started timeutil.TimeStamp
 	Stopped timeutil.TimeStamp
@@ -207,6 +208,30 @@ func (run *ActionRun) SetDefaultConcurrencyGroup() {
 	))
 }
 
+func (run *ActionRun) FindOuterWorkflowCall(ctx context.Context, innerCall *ActionRunJob) (*ActionRunJob, error) {
+	allJobs, err := GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failure to get run jobs: %w", err)
+	}
+	if innerCall.workflowPayloadDecoded == nil || innerCall.workflowPayloadDecoded.Metadata.WorkflowCallParent == "" {
+		return nil, errors.New("invalid state for FindOuterWorkflowCall")
+	}
+	parent := innerCall.workflowPayloadDecoded.Metadata.WorkflowCallParent
+	for _, job := range allJobs {
+		if job.ID == innerCall.ID {
+			continue
+		}
+		swf, err := job.DecodeWorkflowPayload()
+		if err != nil {
+			return nil, err
+		}
+		if swf.Metadata.WorkflowCallID == parent {
+			return job, nil
+		}
+	}
+	return nil, fmt.Errorf("no workflow call with ID %s found in run %d", parent, run.ID)
+}
+
 func actionsCountOpenCacheKey(repoID int64) string {
 	return fmt.Sprintf("Actions:CountOpenActionRuns:%d", repoID)
 }
@@ -341,7 +366,7 @@ func InsertRunJobs(ctx context.Context, run *ActionRun, jobs []*jobparser.Single
 			}
 			payload, _ = v.Marshal()
 
-			if len(needs) > 0 || run.NeedApproval || v.IncompleteMatrix || v.IncompleteRunsOn {
+			if len(needs) > 0 || run.NeedApproval || v.IncompleteMatrix || v.IncompleteRunsOn || v.IncompleteWith {
 				status = StatusBlocked
 			} else {
 				status = StatusWaiting

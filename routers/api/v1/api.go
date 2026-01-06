@@ -856,9 +856,10 @@ func Routes() *web.Route {
 			})
 
 			m.Group("/runners", func() {
-				m.Get("", reqToken(), reqChecker, act.ListRunners)
+				m.Combo("").
+					Get(reqToken(), reqChecker, act.ListRunners).
+					Post(reqToken(), reqChecker, bind(api.RegisterRunnerOptions{}), act.RegisterRunner)
 				m.Get("/registration-token", reqToken(), reqChecker, act.GetRegistrationToken)
-				m.Post("/registration-token", reqToken(), reqChecker, act.CreateRegistrationToken)
 				m.Get("/{runner_id}", reqToken(), reqChecker, act.GetRunner)
 				m.Delete("/{runner_id}", reqToken(), reqChecker, act.DeleteRunner)
 				m.Get("/jobs", reqToken(), reqChecker, act.SearchActionRunJobs)
@@ -1020,9 +1021,10 @@ func Routes() *web.Route {
 				})
 
 				m.Group("/runners", func() {
-					m.Get("", reqToken(), user.ListRunners)
+					m.Combo("").
+						Get(reqToken(), user.ListRunners).
+						Post(bind(api.RegisterRunnerOptions{}), user.RegisterRunner)
 					m.Get("/registration-token", reqToken(), user.GetRegistrationToken)
-					m.Post("/registration-token", reqToken(), user.CreateRegistrationToken)
 					m.Get("/{runner_id}", reqToken(), user.GetRunner)
 					m.Delete("/{runner_id}", reqToken(), user.DeleteRunner)
 					m.Get("/jobs", reqToken(), user.SearchActionRunJobs)
@@ -1703,14 +1705,17 @@ func Routes() *web.Route {
 					Delete(admin.DeleteHook)
 			})
 			m.Group("/actions/runners", func() {
-				m.Get("", admin.ListRunners)
-				m.Post("/registration-token", admin.CreateRegistrationToken)
+				m.Combo("").
+					Get(admin.ListRunners).
+					Post(bind(api.RegisterRunnerOptions{}), admin.RegisterRunner)
+				m.Get("/registration-token", admin.GetRunnerRegistrationToken)
 				m.Get("/{runner_id}", admin.GetRunner)
 				m.Delete("/{runner_id}", admin.DeleteRunner)
+				m.Get("/jobs", admin.GetActionRunJobs)
 			})
 			m.Group("/runners", func() {
-				m.Get("/registration-token", admin.GetRegistrationToken)
-				m.Get("/jobs", admin.SearchActionRunJobs)
+				m.Get("/registration-token", admin.GetRegistrationToken) //nolint:staticcheck
+				m.Get("/jobs", admin.SearchActionRunJobs)                //nolint:staticcheck
 			})
 			if setting.Quota.Enabled {
 				m.Group("/quota", func() {

@@ -8,7 +8,7 @@ on:
       - labeled
 
 env:
-  RNA_VERSION: v1.4.1 # renovate: datasource=gitea-releases depName=forgejo/release-notes-assistant registryUrl=https://code.forgejo.org
+  RNA_VERSION: v1.4.2 # renovate: datasource=gitea-releases depName=forgejo/release-notes-assistant registryUrl=https://code.forgejo.org
 
 jobs:
   release-notes:
@@ -17,7 +17,7 @@ jobs:
     container:
       image: 'data.forgejo.org/oci/node:24-bookworm'
     steps:
-      - uses: https://data.forgejo.org/actions/checkout@v5
+      - uses: https://data.forgejo.org/actions/checkout@v6
 
       - name: event
         run: |
