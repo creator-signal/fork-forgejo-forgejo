@@ -1,33 +1,4 @@
-import {replaceTextareaSelection} from '../../utils/dom.js';
-
-// Test the wrap selection logic used in ComboMarkdownEditor
-// We test the core behavior without instantiating the full editor
-
-const wrapPairs = {
-  '`': '`',
-  '*': '*',
-  '_': '_',
-  '~': '~',
-  '[': ']',
-  '{': '}',
-  '(': ')',
-};
-
-function wrapSelectionWithCharacter(textarea, char) {
-  const closeChar = wrapPairs[char];
-  if (!closeChar) return false;
-
-  const {selectionStart, selectionEnd, value} = textarea;
-  if (selectionStart === selectionEnd) return false;
-
-  const selectedText = value.slice(selectionStart, selectionEnd);
-  const wrappedText = `${char}${selectedText}${closeChar}`;
-
-  replaceTextareaSelection(textarea, wrappedText);
-  textarea.setSelectionRange(selectionStart + 1, selectionEnd + 1);
-
-  return true;
-}
+import {wrapSelectionWithCharacter} from './ComboMarkdownEditor.js';
 
 function createTextareaWithSelection(value, selectionStart, selectionEnd) {
   const textarea = document.createElement('textarea');

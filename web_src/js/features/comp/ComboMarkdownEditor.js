@@ -12,6 +12,34 @@ import {showErrorToast, showHintToast} from '../../modules/toast.js';
 import {POST} from '../../modules/fetch.js';
 import {initTab} from '../../modules/tab.ts';
 
+export const wrapPairs = {
+  '`': '`',
+  '~': '~',
+  '*': '*',
+  '_': '_',
+  '[': ']',
+  '{': '}',
+  '(': ')',
+};
+
+export function wrapSelectionWithCharacter(textarea, char) {
+  const closeChar = wrapPairs[char];
+  if (!closeChar) return false;
+
+  const {selectionStart, selectionEnd, value} = textarea;
+  if (selectionStart === selectionEnd) return false; // No selection
+
+  const selectedText = value.slice(selectionStart, selectionEnd);
+  const wrappedText = `${char}${selectedText}${closeChar}`;
+
+  replaceTextareaSelection(textarea, wrappedText);
+
+  // Restore selection to the wrapped content (excluding the wrapper chars)
+  textarea.setSelectionRange(selectionStart + 1, selectionEnd + 1);
+
+  return true;
+}
+
 /**
  * validate if the given textarea is non-empty.
  * @param {HTMLElement} textarea - The textarea element to be validated.
@@ -477,33 +505,8 @@ class ComboMarkdownEditor {
     }
   }
 
-  // Wrap selected text with a character (backtick, asterisk, underscore, brackets).
-  // Returns true if wrapping occurred, false otherwise.
   wrapSelectionWithCharacter(char) {
-    const wrapPairs = {
-      '`': '`',
-      '~': '~',
-      '*': '*',
-      '_': '_',
-      '[': ']',
-      '{': '}',
-      '(': ')',
-    };
-    const closeChar = wrapPairs[char];
-    if (!closeChar) return false;
-
-    const {selectionStart, selectionEnd, value} = this.textarea;
-    if (selectionStart === selectionEnd) return false; // No selection
-
-    const selectedText = value.slice(selectionStart, selectionEnd);
-    const wrappedText = `${char}${selectedText}${closeChar}`;
-
-    replaceTextareaSelection(this.textarea, wrappedText);
-
-    // Restore selection to the wrapped content (excluding the wrapper chars)
-    this.textarea.setSelectionRange(selectionStart + 1, selectionEnd + 1);
-
-    return true;
+    return wrapSelectionWithCharacter(this.textarea, char);
   }
 
   // Indent all lines that are included in the selection, partially or whole, while preserving the original selection at the end.
