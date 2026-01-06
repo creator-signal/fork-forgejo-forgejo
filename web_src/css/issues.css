@@ -1,5 +1,5 @@
 .archived-label-filter:has(#archived-label-filter:not(:checked))
-  [data-is-archived] {
+[data-is-archived] {
   display: none !important;
 }
 
@@ -10,16 +10,16 @@
   height: 100%;
   width: 40px;
   background: none;
-  color: var(--steel-250);
+  color: var(--color-secondary-dark-5);
 
   &.active {
-    color: var(--steel-50);
+    color: var(--color-secondary-dark-10);
   }
 
   &:is(:hover, :focus-visible),
   &.selected {
-    background: var(--steel-700);
-    color: var(--steel-150);
+    background: var(--color-secondary);
+    color: var(--color-secondary-dark-7);
   }
 }
 
@@ -38,8 +38,8 @@
 }
 
 .menu:has(> .item[data-selected])
-  .item:not([data-selected])
-  > .label-filter-item {
+.item:not([data-selected])
+> .label-filter-item {
   padding-left: 27px;
 }
 
