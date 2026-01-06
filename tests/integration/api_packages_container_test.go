@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -71,10 +72,6 @@ func TestPackageContainer(t *testing.T) {
 	configDigest := "sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d"
 	configContent := `{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/true"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"container":"b89fe92a887d55c0961f02bdfbfd8ac3ddf66167db374770d2d9e9fab3311510","container_config":{"Hostname":"b89fe92a887d","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/bin/sh","-c","#(nop) ","CMD [\"/true\"]"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"created":"2022-01-01T00:00:00.000000000Z","docker_version":"20.10.12","history":[{"created":"2022-01-01T00:00:00.000000000Z","created_by":"/bin/sh -c #(nop) COPY file:0e7589b0c800daaf6fa460d2677101e4676dd9491980210cb345480e513f3602 in /true "},{"created":"2022-01-01T00:00:00.000000001Z","created_by":"/bin/sh -c #(nop)  CMD [\"/true\"]","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":["sha256:0ff3b91bdf21ecdf2f2f3d4372c2098a14dbe06cd678e8f0a85fd4902d00e2e2"]}}`
 
-	// same as configContent above, but with the added label: "org.opencontainers.image.source": "https://forgejo.org/user2/autolink-repo"
-	configDigestWithOpenContainersSourceLabelDigest := "sha256:8f00b28c4da762ed1cb1ce98a03bfc7585db454623df2931e1c6dba99ccae11c"
-	configDigestWithOpenContainersSourceLabelContent := `{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/true"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"container":"b89fe92a887d55c0961f02bdfbfd8ac3ddf66167db374770d2d9e9fab3311510","container_config":{"Hostname":"b89fe92a887d","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/bin/sh","-c","#(nop) ","CMD [\"/true\"]"],"Labels":{"org.opencontainers.image.source":"https://forgejo.org/user2/autolink-repo"},"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"created":"2022-01-01T00:00:00.000000000Z","docker_version":"20.10.12","history":[{"created":"2022-01-01T00:00:00.000000000Z","created_by":"/bin/sh -c #(nop) COPY file:0e7589b0c800daaf6fa460d2677101e4676dd9491980210cb345480e513f3602 in /true "},{"created":"2022-01-01T00:00:00.000000001Z","created_by":"/bin/sh -c #(nop)  CMD [\"/true\"]","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":["sha256:0ff3b91bdf21ecdf2f2f3d4372c2098a14dbe06cd678e8f0a85fd4902d00e2e2"]}}`
-
 	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"
 	manifestContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d","size":1069},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4","size":32}]}`
 
@@ -83,6 +80,13 @@ func TestPackageContainer(t *testing.T) {
 
 	indexManifestDigest := "sha256:bab112d6efb9e7f221995caaaa880352feb5bd8b1faf52fae8d12c113aa123ec"
 	indexManifestContent := `{"schemaVersion":2,"mediaType":"` + oci.MediaTypeImageIndex + `","manifests":[{"mediaType":"application/vnd.docker.distribution.manifest.v2+json","digest":"` + manifestDigest + `","platform":{"os":"linux","architecture":"arm","variant":"v7"}},{"mediaType":"` + oci.MediaTypeImageManifest + `","digest":"` + untaggedManifestDigest + `","platform":{"os":"linux","architecture":"arm64","variant":"v8"}}]}`
+
+	// same as configContent above (also uses blob[Digest/Content]), but with the added label in config: "org.opencontainers.image.source": "http://localhost:3003/user2/autolink-repo"
+	configWithOpenContainersSourceLabelDigest := "sha256:07b5d36c325cfc34f2fdd5487286729e056df34818add56d47defe2280cb2bca"
+	configWithOpenContainersSourceLabelContent := `{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/true"],"ArgsEscaped":true,"Labels":{"org.opencontainers.image.source":"http://localhost:3003/user2/autolink-repo"},"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"container":"b89fe92a887d55c0961f02bdfbfd8ac3ddf66167db374770d2d9e9fab3311510","container_config":{"Hostname":"b89fe92a887d","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/bin/sh","-c","#(nop) ","CMD [\"/true\"]"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"created":"2022-01-01T00:00:00.000000000Z","docker_version":"20.10.12","history":[{"created":"2022-01-01T00:00:00.000000000Z","created_by":"/bin/sh -c #(nop) COPY file:0e7589b0c800daaf6fa460d2677101e4676dd9491980210cb345480e513f3602 in /true "},{"created":"2022-01-01T00:00:00.000000001Z","created_by":"/bin/sh -c #(nop)  CMD [\"/true\"]","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":["sha256:0ff3b91bdf21ecdf2f2f3d4372c2098a14dbe06cd678e8f0a85fd4902d00e2e2"]}}`
+
+	//manifestWithOpenContainersSourceLabelDigest := "sha256:a3a061a2dffa0ad417db15ff0d76853d02b319e44795bd904c0523ab852d88c9"
+	manifestWithOpenContainersSourceLabelContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configWithOpenContainersSourceLabelDigest + `","size":` + strconv.Itoa(len(configWithOpenContainersSourceLabelContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}]}`
 
 	anonymousToken := ""
 	readUserToken := ""
@@ -919,8 +923,10 @@ func TestPackageContainer(t *testing.T) {
 		// create repo which is used for auto-linking
 		repo := createTestRepositoryWithPackageRegistry(t, user, "autolink-repo")
 		urlExistingRepo := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, repo.Name)
-		nameNonexistingRepo := "nonexisting-repo"
-		urlNonexistingRepo := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, nameNonexistingRepo)
+		nameNonexistingRepo1 := "nonexisting-repo"
+		urlNonexistingRepo1 := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, nameNonexistingRepo1)
+		nameNonexistingRepo2 := "another-nonexisting-repo"
+		urlNonexistingRepo2 := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, nameNonexistingRepo2)
 		nameExistingRepoNested := "nested-image1"
 		urlExistingRepoNested := fmt.Sprintf("%sv2/%s/%s/%s", setting.AppURL, user.Name, repo.Name, nameExistingRepoNested)
 
@@ -929,22 +935,22 @@ func TestPackageContainer(t *testing.T) {
 
 		t.Run("PushToArbitraryRepo", func(t *testing.T) {
 			// Upload blobs and manifest
-			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo, blobDigest), bytes.NewReader(blobContent)).
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo1, blobDigest), bytes.NewReader(blobContent)).
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusCreated)
-			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo, configDigest), strings.NewReader(configContent)).
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo1, configDigest), strings.NewReader(configContent)).
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusCreated)
-			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlNonexistingRepo, "v1"), strings.NewReader(manifestContent)).
+			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlNonexistingRepo1, "v1"), strings.NewReader(manifestContent)).
 				AddTokenAuth(userToken).
 				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 			MakeRequest(t, req, http.StatusCreated)
 
-			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo)
+			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo1)
 			if err != nil {
 				t.Error(err)
 			}
-			require.Equal(t, nameNonexistingRepo, p.Name) // just to make sure we have grabbed the correct package
+			require.Equal(t, nameNonexistingRepo1, p.Name) // just to make sure we have grabbed the correct package
 			assert.Equal(t, int64(0), p.RepoID)
 		})
 
@@ -1028,23 +1034,23 @@ func TestPackageContainer(t *testing.T) {
 
 		t.Run("PushToArbitraryRepoWithLabel", func(t *testing.T) {
 			// Upload blobs and manifest
-			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo, blobDigest), bytes.NewReader(blobContent)).
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo2, blobDigest), bytes.NewReader(blobContent)).
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusCreated)
-			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo, configDigestWithOpenContainersSourceLabelDigest), strings.NewReader(configDigestWithOpenContainersSourceLabelContent)).
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo2, configWithOpenContainersSourceLabelDigest), strings.NewReader(configWithOpenContainersSourceLabelContent)).
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusCreated)
-			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlNonexistingRepo, "v1"), strings.NewReader(manifestContent)).
+			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlNonexistingRepo2, "v1"), strings.NewReader(manifestWithOpenContainersSourceLabelContent)).
 				AddTokenAuth(userToken).
 				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 			MakeRequest(t, req, http.StatusCreated)
 
-			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo)
+			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo2)
 			if err != nil {
 				t.Error(err)
 			}
-			require.Equal(t, nameNonexistingRepo, p.Name) // just to make sure we have grabbed the correct package
-			assert.Equal(t, int64(0), p.RepoID)
+			require.Equal(t, nameNonexistingRepo2, p.Name) // just to make sure we have grabbed the correct package
+			assert.Equal(t, repo.ID, p.RepoID)
 		})
 	})
 }

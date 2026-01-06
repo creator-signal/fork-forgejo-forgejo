@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 
@@ -352,34 +353,23 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 	if len(autolinkRequiredProps) > 0 {
 		autolinkRequiredProp := autolinkRequiredProps[0]
 		if autolinkRequiredProp != nil && autolinkRequiredProp.Value == "yes" { // check if auto-link is required (this prevents re-auto-linking on new versions, since the property is not set there)
-			repoName := strings.SplitN(mci.Image, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
-			repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, mci.Owner.LowerName, repoName)
+			linkedByLabel, err := tryAutolinkByLabel(ctx, p, metadata, mci.Creator)
 			if err != nil {
-				if repo_model.IsErrRepoNotExist(err) {
-					// repo matching the image name does not exist, try linking by LABEL
-					if labelRepo, ok := metadata.Labels["org.opencontainers.image.source"]; ok {
-						pathOnly := strings.Replace(labelRepo, setting.AppURL, "", 1)
-						pathParts := strings.Split(strings.Trim(pathOnly, "/"), "/")
-						if len(pathParts) == 2 {
-							repository, err = repo_model.GetRepositoryByOwnerAndName(ctx, pathParts[0], pathParts[1])
-							if err != nil {
-								if !repo_model.IsErrRepoNotExist(err) {
-									return nil, err // this is a legit error
-								} // repository not found again --> repository is nil --> no auto-linking
-							}
-						} else {
-							log.Error("Error extracting label value from org.opencontainers.image.source: path is not in format '{host}/{owner}/{repo}'")
-							// skip linking
-						}
-					} // label does not exist --> no auto-linking
-				} else {
-					return nil, err // this is a legit error
-				}
-
-			} else { // repo matches by name, perform auto-linking
-				if err := packages_service.LinkToRepository(ctx, p, repository, mci.Creator); err != nil {
+				packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
+				return nil, err
+			}
+			if !linkedByLabel {
+				// try linking by name
+				linkedByImageName, err := tryAutolinkByImageName(ctx, p, mci.Owner.LowerName, mci.Image, mci.Creator)
+				if err != nil {
+					packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
 					return nil, err
 				}
+				if linkedByImageName {
+					log.Info("Image %s/%s was auto-linked by image name", mci.Owner.LowerName, mci.Image)
+				}
+			} else {
+				log.Info("Image %s/%s was auto-linked by label", mci.Owner.LowerName, mci.Image)
 			}
 			// remove property to prevent auto-linking on new versions
 			packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
@@ -530,4 +520,60 @@ func createManifestBlob(ctx context.Context, mci *manifestCreationInfo, pv *pack
 	})
 
 	return pb, !exists, manifestDigest, err
+}
+
+func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imageOwner, imageName string, doer *user_model.User) (linked bool, err error) {
+	repoName := strings.SplitN(imageName, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
+	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, imageOwner, repoName)
+	if err != nil {
+		if !repo_model.IsErrRepoNotExist(err) {
+			return false, err // this is a legit error
+		} else {
+			return false, nil
+		}
+	}
+	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// Tries to link
+// returns false, nil if the package could not be linked by label
+func tryAutolinkByLabel(ctx context.Context, p *packages_model.Package, metadata *container_module.Metadata, doer *user_model.User) (linked bool, err error) {
+	labelRepo, ok := metadata.Labels["org.opencontainers.image.source"]
+	if !ok {
+		return false, nil
+	}
+
+	u, err := url.Parse(labelRepo)
+	if err != nil {
+		log.Warn("Failed to extract label value org.opencontainers.image.source: value is not in format '{host}/{owner}/{repo}'")
+		return false, nil // we do not return an error here, since a malformed label should simply be ignored
+	}
+
+	fullBasePath := fmt.Sprintf("%s://%s/", u.Scheme, u.Host)
+	if setting.AppURL != fullBasePath {
+		log.Warn("Failed to extract label value org.opencontainers.image.source: host does not match Forgejo AppURL")
+		return false, nil
+	}
+
+	pathParts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(pathParts) != 2 {
+		log.Warn("Failed to extract label value org.opencontainers.image.source: value is not in format '{host}/{owner}/{repo}'")
+	}
+
+	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, pathParts[0], pathParts[1])
+	if err != nil {
+		if !repo_model.IsErrRepoNotExist(err) {
+			return false, err // this is a legit error
+		} else {
+			return false, nil
+		}
+	}
+
+	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
+		return false, err
+	}
+	return true, nil
 }
