@@ -91,7 +91,7 @@
 					<div class="tw-flex tw-flex-col tw-gap-1">
 						{{range $push.Commits}}
 							<div class="flex-text-block">
-								<img class="ui avatar" src="{{$push.AvatarLink $.Context .AuthorEmail}}" alt="" title="{{.AuthorName}}" width="16" height="16" loading="lazy">
+								<img class="ui avatar" src="{{$push.AvatarLink $.Context .AuthorEmail}}" alt="" title="{{.AuthorName}}" width="24" height="24" loading="lazy">
 								{{template "repo/shabox" (dict
 									"sha1" .Sha1
 									"commitLink" (printf "%s/commit/%s" $repoLink .Sha1)
