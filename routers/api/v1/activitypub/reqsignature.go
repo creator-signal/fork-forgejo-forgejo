@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"forgejo.org/modules/activitypub"
 	"forgejo.org/models/federation_key"
+	"forgejo.org/modules/activitypub"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	app_context "forgejo.org/services/context"

@@ -31,13 +31,7 @@ func Actor(ctx *context.APIContext) {
 	link := user_model.APServerActorID()
 	actor := ap.ActorNew(ap.IRI(link), ap.ApplicationType)
 
-	actor.PreferredUsername = ap.NaturalLanguageValuesNew()
-	err := actor.PreferredUsername.Set("en", ap.Content("ghost"))
-	if err != nil {
-		ctx.ServerError("PreferredUsername.Set", err)
-		return
-	}
-
+	actor.PreferredUsername = ap.DefaultNaturalLanguage("ghost")
 	actor.URL = ap.IRI(setting.AppURL)
 
 	actor.Inbox = ap.IRI(link + "/inbox")

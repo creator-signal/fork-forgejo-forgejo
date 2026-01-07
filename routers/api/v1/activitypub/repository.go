@@ -44,12 +44,7 @@ func Repository(ctx *context.APIContext) {
 	repo.Inbox = ap.IRI(link + "/inbox")
 	repo.Outbox = ap.IRI(link + "/outbox")
 
-	repo.Name = ap.NaturalLanguageValuesNew()
-	err := repo.Name.Set("en", ap.Content(ctx.Repo.Repository.Name))
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "Set Name", err)
-		return
-	}
+	repo.Name = ap.DefaultNaturalLanguage(ctx.Repo.Repository.Name)
 	response(ctx, repo)
 }
 

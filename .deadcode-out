@@ -29,6 +29,10 @@ forgejo.org/models/dbfs
 	Create
 	Rename
 
+forgejo.org/models/forgefed
+	FederatedRepository.Validate
+	validateID
+
 forgejo.org/models/forgejo/semver
 	GetVersion
 	SetVersionString

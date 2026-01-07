@@ -34,12 +34,7 @@ func newNote(doer *user_model.User, content, id string, published time.Time) (Fo
 	note := ForgeUserActivityNote{}
 	note.Type = ap.NoteType
 	note.AttributedTo = ap.IRI(doer.APActorID())
-	note.Content = ap.NaturalLanguageValues{
-		{
-			Ref:   ap.NilLangRef,
-			Value: ap.Content(content),
-		},
-	}
+	note.Content = ap.DefaultNaturalLanguage(content)
 	note.ID = ap.IRI(id)
 	note.Published = published
 	note.URL = ap.IRI(id)

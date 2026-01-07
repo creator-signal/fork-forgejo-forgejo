@@ -10,8 +10,11 @@ import (
 
 	"forgejo.org/modules/forgefed"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
 
 	ap "github.com/go-ap/activitypub"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_RepositoryMarshalJSON(t *testing.T) {
@@ -132,7 +135,13 @@ func Test_RepositoryUnmarshalJSON(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := new(forgefed.Repository)
 			err := got.UnmarshalJSON(tt.data)
-			if (err != nil || tt.wantErr != nil) && tt.wantErr.Error() != err.Error() {
+			if tt.wantErr != nil && err == nil {
+				t.Errorf("Expected UnmarshalJSON() wantErr = \"%v\"", tt.wantErr)
+				return
+			} else if tt.wantErr == nil && err != nil {
+				t.Errorf("Unxpected UnmarshalJSON() error = \"%v\"", err)
+				return
+			} else if err != nil && tt.wantErr != nil && tt.wantErr.Error() != err.Error() {
 				t.Errorf("UnmarshalJSON() error = \"%v\", wantErr \"%v\"", err, tt.wantErr)
 				return
 			}
@@ -143,4 +152,63 @@ func Test_RepositoryUnmarshalJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_RepositoryValidation(t *testing.T) {
+	objectID := "https://forgejo.org/user/repo"
+	inbox := ap.IRI(objectID + "/inbox")
+	outbox := ap.IRI(objectID + "/outbox")
+	followers := ap.IRI(objectID + "/followers")
+	team := ap.IRI(objectID + "/team")
+
+	_, key, err := util.GenerateKeyPair(3072)
+	require.NoError(t, err)
+
+	publicKey := ap.PublicKey{
+		ID:           ap.ID(fmt.Sprintf("%s#main-key", objectID)),
+		Owner:        ap.IRI(objectID),
+		PublicKeyPem: key,
+	}
+
+	sut := forgefed.Repository{
+		Actor: ap.Actor{
+			ID:        ap.ID(objectID),
+			Type:      forgefed.RepositoryType,
+			Name:      ap.DefaultNaturalLanguage("Test Repository"),
+			Summary:   ap.DefaultNaturalLanguage("<p>A repository for ActivityPub test.</p>"),
+			Inbox:     inbox,
+			Outbox:    outbox,
+			Followers: followers,
+			PublicKey: publicKey,
+		},
+		Team: team,
+	}
+
+	_, err = validation.IsValid(sut)
+	require.NoError(t, err, "expected valid Repository: %v", err)
+
+	badIRI := ap.IRI("https://bad.url/%^*")
+
+	sut.Actor.Inbox = badIRI
+
+	_, err = validation.IsValid(sut)
+	require.Error(t, err, "expected invalid Repository inbox: %v", sut)
+
+	sut.Actor.Inbox = inbox
+	sut.Actor.Outbox = badIRI
+
+	_, err = validation.IsValid(sut)
+	require.Error(t, err, "expected invalid Repository outbox: %v", sut)
+
+	sut.Actor.Outbox = outbox
+	sut.Actor.Followers = badIRI
+
+	_, err = validation.IsValid(sut)
+	require.Error(t, err, "expected invalid Repository followers: %v", sut)
+
+	sut.Actor.Followers = followers
+	sut.Team = badIRI
+
+	_, err = validation.IsValid(sut)
+	require.Error(t, err, "expected invalid Repository team: %v", sut)
 }

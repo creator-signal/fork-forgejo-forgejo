@@ -4,6 +4,11 @@
 package validation
 
 import (
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"reflect"
 	"strings"
@@ -97,4 +102,37 @@ func ValidateOneOf(value any, allowed []any, name string) []string {
 		}
 	}
 	return []string{fmt.Sprintf("Field %s contains the value %v, which is not in allowed subset %v", name, value, allowed)}
+}
+
+// ValidateIRI validates an ActivityPub IRI.
+func ValidateIRI(iri ap.IRI, name string) []string {
+	var res []string
+
+	res = append(res, ValidateNotEmpty(iri.String(), name)...)
+	if _, err := iri.URL(); err != nil {
+		res = append(res, fmt.Sprintf("invalid IRI for field %s: %v", name, err))
+	}
+
+	return res
+}
+
+// ValidatePublicKey validates a PEM-encoded public key.
+func ValidatePublicKey(key []byte, name string) []string {
+	var res []string
+
+	res = append(res, ValidateNotEmpty(key, name)...)
+
+	if block, _ := pem.Decode(key); block == nil {
+		return append(res, "invalid public key PEM encoding")
+	} else if key, err := x509.ParsePKIXPublicKey(block.Bytes); err != nil {
+		res = append(res, fmt.Sprintf("invalid public key encoding: %v", err))
+	} else {
+		switch key.(type) {
+		case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
+		default:
+			res = append(res, "invalid public key type")
+		}
+	}
+
+	return res
 }
