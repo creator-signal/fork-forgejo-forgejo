@@ -233,6 +233,10 @@ forgejo.org/services/federation
 forgejo.org/services/notify
 	UnregisterNotifier
 
+forgejo.org/services/project
+	CreateOrgProject
+	ChangeProjectStatus
+
 forgejo.org/services/repository
 	IsErrForkAlreadyExist
 

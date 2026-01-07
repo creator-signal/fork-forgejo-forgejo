@@ -1554,6 +1554,33 @@ func Routes() *web.Route {
 			}, repoAssignment(), checkTokenPublicOnly())
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryIssue))
 
+		// Projects API - using Repository scope
+		m.Group("/repos/{username}/{reponame}/projects", func() {
+			m.Combo("").Get(reqRepoReader(unit.TypeProjects), repo.ListProjects).
+				Post(reqToken(), reqRepoWriter(unit.TypeProjects), bind(api.CreateProjectOption{}), repo.CreateProject)
+			m.Combo("/{id}").Get(reqRepoReader(unit.TypeProjects), repo.GetProject).
+				Patch(reqToken(), reqRepoWriter(unit.TypeProjects), bind(api.EditProjectOption{}), repo.UpdateProject).
+				Delete(reqToken(), reqRepoWriter(unit.TypeProjects), repo.DeleteProject)
+			m.Group("/{id}/columns", func() {
+				m.Combo("").Get(reqRepoReader(unit.TypeProjects), repo.ListProjectColumns).
+					Post(reqToken(), reqRepoWriter(unit.TypeProjects), bind(api.CreateProjectColumnOption{}), repo.CreateProjectColumn)
+				m.Post("/move", reqToken(), reqRepoWriter(unit.TypeProjects), bind(api.MoveProjectColumnsOption{}), repo.MoveColumns)
+				m.Combo("/{column_id}").
+					Patch(reqToken(), reqRepoWriter(unit.TypeProjects), bind(api.EditProjectColumnOption{}), repo.UpdateProjectColumn).
+					Delete(reqToken(), reqRepoWriter(unit.TypeProjects), repo.DeleteProjectColumn)
+				m.Group("/{column_id}/cards", func() {
+					m.Combo("").Get(reqRepoReader(unit.TypeProjects), repo.ListColumnCards).
+						Post(reqToken(), reqRepoWriter(unit.TypeProjects), bind(api.AddCardToColumnOption{}), repo.AddCardToColumn)
+					m.Patch("/reorder", reqToken(), reqRepoWriter(unit.TypeProjects), bind(api.ReorderCardsInColumnOption{}), repo.ReorderCardsInColumn)
+				})
+			})
+			m.Group("/{id}/cards", func() {
+				m.Combo("/{card_id}").
+					Patch(reqToken(), reqRepoWriter(unit.TypeProjects), bind(api.MoveProjectCardOption{}), repo.MoveProjectCard).
+					Delete(reqToken(), reqRepoWriter(unit.TypeProjects), repo.DeleteProjectCard)
+			})
+		}, repoAssignment(), checkTokenPublicOnly(), tokenRequiresScopes(auth_model.AccessTokenScopeCategoryRepository))
+
 		// NOTE: these are Gitea package management API - see packages.CommonRoutes and packages.DockerContainerRoutes for endpoints that implement package manager APIs
 		m.Group("/packages/{username}", func() {
 			m.Group("/{type}/{name}", func() {
@@ -1635,6 +1662,34 @@ func Routes() *web.Route {
 					m.Get("/artifacts", org.ListQuotaArtifacts)
 				}, reqToken(), reqOrgOwnership())
 			}
+
+			m.Group("/projects", func() {
+				m.Combo("").Get(org.ListProjects).
+					Post(reqToken(), bind(api.CreateProjectOption{}), org.CreateProject)
+				m.Group("/{id}", func() {
+					m.Combo("").Get(org.GetProject).
+						Patch(reqToken(), bind(api.EditProjectOption{}), org.UpdateProject).
+						Delete(reqToken(), org.DeleteProject)
+					m.Group("/columns", func() {
+						m.Combo("").Get(reqToken(), org.ListProjectColumns).
+							Post(reqToken(), bind(api.CreateProjectColumnOption{}), org.CreateProjectColumn)
+						m.Post("/move", reqToken(), bind(api.MoveProjectColumnsOption{}), org.MoveColumns)
+						m.Combo("/{column_id}").
+							Patch(reqToken(), bind(api.EditProjectColumnOption{}), org.UpdateProjectColumn).
+							Delete(reqToken(), org.DeleteProjectColumn)
+						m.Group("/{column_id}/cards", func() {
+							m.Combo("").Get(reqToken(), reqOrgMembership(), org.ListColumnCards).
+								Post(reqToken(), reqOrgMembership(), bind(api.AddCardToColumnOption{}), org.AddCardToColumn)
+							m.Patch("/reorder", reqToken(), reqOrgMembership(), bind(api.ReorderCardsInColumnOption{}), org.ReorderCardsInColumn)
+						})
+					})
+					m.Group("/cards", func() {
+						m.Combo("/{card_id}").
+							Patch(reqToken(), reqOrgMembership(), bind(api.MoveProjectCardOption{}), org.MoveProjectCard).
+							Delete(reqToken(), reqOrgMembership(), org.DeleteProjectCard)
+					})
+				})
+			}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryOrganization))
 
 			m.Group("", func() {
 				m.Get("/list_blocked", org.ListBlockedUsers)

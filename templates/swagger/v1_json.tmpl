@@ -3990,6 +3990,726 @@
         }
       }
     },
+    "/orgs/{org}/projects": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "List an organization's projects",
+        "operationId": "orgListProjects",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "enum": [
+              "closed",
+              "open",
+              "all"
+            ],
+            "type": "string",
+            "description": "whether project is open or closed",
+            "name": "state",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "search projects by title",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "enum": [
+              "newest",
+              "oldest",
+              "alphabetically",
+              "reversealphabetically",
+              "recentupdate",
+              "leastupdate"
+            ],
+            "type": "string",
+            "description": "sort projects by created time, alphabetically, etc",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "format": "date-time",
+            "description": "Only show projects updated after the given time (RFC 3339 format)",
+            "name": "since",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "format": "date-time",
+            "description": "Only show projects updated before the given time (RFC 3339 format)",
+            "name": "before",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only show projects created by the given user",
+            "name": "created_by",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectList"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Create a project",
+        "operationId": "orgCreateProject",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/CreateProjectOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/Project"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/orgs/{org}/projects/{id}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Get a project",
+        "operationId": "orgGetProject",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project to get, identified by ID and if not available by title",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Project"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "organization"
+        ],
+        "summary": "Delete a project",
+        "operationId": "orgDeleteProject",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project, identified by ID and if not available by title",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Update a project",
+        "operationId": "orgEditProject",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project, identified by ID and if not available by title",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/EditProjectOption"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Project"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/orgs/{org}/projects/{id}/cards/{card_id}": {
+      "delete": {
+        "tags": [
+          "organization"
+        ],
+        "summary": "Delete a project card",
+        "operationId": "orgDeleteCard",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the card",
+            "name": "card_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Move a project card",
+        "operationId": "orgMoveCard",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the card",
+            "name": "card_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/MoveProjectCardOption"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectCard"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/orgs/{org}/projects/{id}/columns": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Get columns of a project",
+        "operationId": "orgListProjectColumns",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectColumnList"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Create a project column",
+        "operationId": "orgCreateProjectColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/CreateProjectColumnOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/ProjectColumn"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/orgs/{org}/projects/{id}/columns/move": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Move project columns",
+        "operationId": "orgMoveColumns",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/MoveProjectColumnsOption"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/orgs/{org}/projects/{id}/columns/{column_id}": {
+      "delete": {
+        "tags": [
+          "organization"
+        ],
+        "summary": "Delete a project column",
+        "operationId": "orgDeleteProjectColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Update a project column",
+        "operationId": "orgEditProjectColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/EditProjectColumnOption"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectColumn"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/orgs/{org}/projects/{id}/columns/{column_id}/cards": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Get cards in a project column",
+        "operationId": "orgListColumnCards",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectCardList"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Create a card in a project column",
+        "operationId": "orgCreateCard",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/AddCardToColumnOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/ProjectCard"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/orgs/{org}/projects/{id}/columns/{column_id}/cards/reorder": {
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Reorder cards in a project column",
+        "operationId": "orgReorderCards",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/ReorderCardsInColumnOption"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/orgs/{org}/public_members": {
       "get": {
         "produces": [
@@ -13819,6 +14539,831 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/projects": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "List a repository's projects",
+        "operationId": "repoListProjects",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "enum": [
+              "closed",
+              "open",
+              "all"
+            ],
+            "type": "string",
+            "description": "whether project is open or closed",
+            "name": "state",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "search projects by title",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "enum": [
+              "newest",
+              "oldest",
+              "alphabetically",
+              "reversealphabetically",
+              "recentupdate",
+              "leastupdate"
+            ],
+            "type": "string",
+            "description": "sort projects by created time, alphabetically, etc",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "format": "date-time",
+            "description": "Only show projects updated after the given time (RFC 3339 format)",
+            "name": "since",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "format": "date-time",
+            "description": "Only show projects updated before the given time (RFC 3339 format)",
+            "name": "before",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only show projects created by the given user",
+            "name": "created_by",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectList"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Create a project",
+        "operationId": "repoCreateProject",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/CreateProjectOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/Project"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/projects/{id}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Get a project",
+        "operationId": "repoGetProject",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project to get, identified by ID and if not available by title",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Project"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "repository"
+        ],
+        "summary": "Delete a project",
+        "operationId": "repoDeleteProject",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project, identified by ID and if not available by title",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Update a project",
+        "operationId": "repoEditProject",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project, identified by ID and if not available by title",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/EditProjectOption"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Project"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/projects/{id}/cards/{card_id}": {
+      "delete": {
+        "tags": [
+          "repository"
+        ],
+        "summary": "Delete a project card",
+        "operationId": "repoDeleteCard",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the card",
+            "name": "card_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Move a project card",
+        "operationId": "repoMoveCard",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the card",
+            "name": "card_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/MoveProjectCardOption"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectCard"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/projects/{id}/columns": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Get columns of a project",
+        "operationId": "repoListProjectColumns",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectColumnList"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Create a project column",
+        "operationId": "repoCreateProjectColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/CreateProjectColumnOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/ProjectColumn"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/projects/{id}/columns/move": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Move project columns",
+        "operationId": "repoMoveColumns",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/MoveProjectColumnsOption"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/projects/{id}/columns/{column_id}": {
+      "delete": {
+        "tags": [
+          "repository"
+        ],
+        "summary": "Delete a project column",
+        "operationId": "repoDeleteProjectColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Update a project column",
+        "operationId": "repoEditProjectColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/EditProjectColumnOption"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectColumn"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/projects/{id}/columns/{column_id}/cards": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "List cards in a project column",
+        "operationId": "repoListColumnCards",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectCardList"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Add a card to a project column",
+        "operationId": "repoCreateCard",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/AddCardToColumnOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/ProjectCard"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/projects/{id}/columns/{column_id}/cards/reorder": {
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Reorder cards in a project column",
+        "operationId": "repoReorderCards",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "id of the project",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the column",
+            "name": "column_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/ReorderCardsInColumnOption"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/pulls": {
       "get": {
         "produces": [
@@ -22639,6 +24184,26 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "AddCardToColumnOption": {
+      "description": "AddCardToColumnOption represents the options for adding a card to a column",
+      "type": "object",
+      "required": [
+        "issue_id"
+      ],
+      "properties": {
+        "issue_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "IssueID"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Position"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "AddCollaboratorOption": {
       "description": "AddCollaboratorOption options when adding a user as a collaborator of a repository",
       "type": "object",
@@ -22985,6 +24550,27 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "CardPosition": {
+      "description": "CardPosition represents a card's new position",
+      "type": "object",
+      "required": [
+        "card_id",
+        "position"
+      ],
+      "properties": {
+        "card_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "CardID"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Position"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "ChangeFileOperation": {
       "description": "ChangeFileOperation for creating, updating or deleting a file",
       "type": "object",
@@ -23115,6 +24701,27 @@
         "status": {
           "type": "string",
           "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ColumnPosition": {
+      "description": "ColumnPosition represents a column and its new position",
+      "type": "object",
+      "required": [
+        "column_id"
+      ],
+      "properties": {
+        "column_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ColumnID"
+        },
+        "position": {
+          "description": "Position is 0-indexed",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Position"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -24102,6 +25709,45 @@
         "website": {
           "type": "string",
           "x-go-name": "Website"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "CreateProjectColumnOption": {
+      "description": "CreateProjectColumnOption represents the options for creating a project column",
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "color": {
+          "type": "string",
+          "x-go-name": "Color"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "CreateProjectOption": {
+      "description": "CreateProjectOption represents the options for creating a project",
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "body": {
+          "type": "string",
+          "x-go-name": "Body"
+        },
+        "template_type": {
+          "$ref": "#/definitions/ProjectTemplateType"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -25224,6 +26870,39 @@
         "website": {
           "type": "string",
           "x-go-name": "Website"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "EditProjectColumnOption": {
+      "description": "EditProjectColumnOption represents the options for editing a project column",
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "x-go-name": "Color"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "EditProjectOption": {
+      "description": "EditProjectOption represents the options for editing a project",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string",
+          "x-go-name": "Body"
+        },
+        "state": {
+          "$ref": "#/definitions/StateType"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -27116,6 +28795,40 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "MoveProjectCardOption": {
+      "description": "MoveProjectCardOption represents the options for moving a project card",
+      "type": "object",
+      "properties": {
+        "column_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ColumnID"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Position"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "MoveProjectColumnsOption": {
+      "description": "MoveProjectColumnsOption represents the options for reordering project columns",
+      "type": "object",
+      "required": [
+        "columns"
+      ],
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ColumnPosition"
+          },
+          "x-go-name": "Columns"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "NewIssuePinsAllowed": {
       "description": "NewIssuePinsAllowed represents an API response that says if new Issue Pins are allowed",
       "type": "object",
@@ -27705,6 +29418,161 @@
           "x-go-name": "Push"
         }
       },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "Project": {
+      "description": "Project represents a kanban board",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string",
+          "x-go-name": "Body"
+        },
+        "card_type": {
+          "$ref": "#/definitions/ProjectCardType"
+        },
+        "closed_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Closed"
+        },
+        "closed_issues": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ClosedIssues"
+        },
+        "column_count": {
+          "description": "Counts",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ColumnCount"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "open_issues": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "OpenIssues"
+        },
+        "repository": {
+          "$ref": "#/definitions/Repository"
+        },
+        "state": {
+          "$ref": "#/definitions/StateType"
+        },
+        "template_type": {
+          "$ref": "#/definitions/ProjectTemplateType"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
+        },
+        "type": {
+          "$ref": "#/definitions/ProjectType"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Updated"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ProjectCard": {
+      "description": "ProjectCard represents an issue/card on a kanban board",
+      "type": "object",
+      "properties": {
+        "column": {
+          "$ref": "#/definitions/ProjectColumn"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "issue": {
+          "$ref": "#/definitions/Issue"
+        },
+        "project": {
+          "$ref": "#/definitions/Project"
+        },
+        "sorting": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Sorting"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ProjectCardType": {
+      "description": "ProjectCardType represents a project column card type",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ProjectColumn": {
+      "description": "ProjectColumn represents a column in a kanban board",
+      "type": "object",
+      "properties": {
+        "card_count": {
+          "description": "Counts",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "CardCount"
+        },
+        "color": {
+          "type": "string",
+          "x-go-name": "Color"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
+        "default": {
+          "type": "boolean",
+          "x-go-name": "Default"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "sorting": {
+          "type": "integer",
+          "format": "int8",
+          "x-go-name": "Sorting"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Updated"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ProjectTemplateType": {
+      "description": "ProjectTemplateType represents a project template type",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ProjectType": {
+      "description": "ProjectType represents the type of project",
+      "type": "integer",
+      "format": "int64",
       "x-go-package": "forgejo.org/modules/structs"
     },
     "PublicKey": {
@@ -28653,6 +30521,23 @@
           "type": "string",
           "uniqueItems": true,
           "x-go-name": "NewName"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ReorderCardsInColumnOption": {
+      "description": "ReorderCardsInColumnOption represents the options for reordering cards within a column",
+      "type": "object",
+      "required": [
+        "card_positions"
+      ],
+      "properties": {
+        "card_positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CardPosition"
+          },
+          "x-go-name": "CardPositions"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -30916,6 +32801,58 @@
         }
       }
     },
+    "Project": {
+      "description": "Project",
+      "schema": {
+        "$ref": "#/definitions/Project"
+      }
+    },
+    "ProjectCard": {
+      "description": "ProjectCard",
+      "schema": {
+        "$ref": "#/definitions/ProjectCard"
+      }
+    },
+    "ProjectCardList": {
+      "description": "ProjectCardList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/ProjectCard"
+        }
+      }
+    },
+    "ProjectColumn": {
+      "description": "ProjectColumn",
+      "schema": {
+        "$ref": "#/definitions/ProjectColumn"
+      }
+    },
+    "ProjectColumnList": {
+      "description": "ProjectColumnList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/ProjectColumn"
+        }
+      }
+    },
+    "ProjectList": {
+      "description": "ProjectList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Project"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of projects"
+        }
+      }
+    },
     "PublicKey": {
       "description": "PublicKey",
       "schema": {
@@ -31545,7 +33482,7 @@
     "parameterBodies": {
       "description": "parameterBodies",
       "schema": {
-        "$ref": "#/definitions/RegisterRunnerOptions"
+        "$ref": "#/definitions/ReorderCardsInColumnOption"
       }
     },
     "quotaExceeded": {
