@@ -11,7 +11,10 @@ import (
 
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
+	"forgejo.org/models/perm"
+	repo_access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
@@ -245,4 +248,42 @@ func ConvertForkToNormalRepository(ctx context.Context, repo *repo_model.Reposit
 	})
 
 	return err
+}
+
+// HasForkedRepo checks if given user has already forked a repository with given ID.
+func OrgHasForkedRepo(ctx context.Context, repoOwnerID, repoID int64) bool {
+	userHasForkedRepo := repo_model.HasForkedRepo(ctx, repoOwnerID, repoID)
+
+	if userHasForkedRepo {
+		return true
+	}
+
+	repo := new(repo_model.Repository)
+	repoExists, _ := db.GetEngine(ctx).
+		Where("fork_id=?", repoID, 1).
+		Get(repo)
+
+	if repoExists {
+		orgRepoOwnerID := repo.OwnerID
+		orgRepo, _ := db.GetEngine(ctx).
+			Table("org_user").Where("uid=? AND org_id=?", repoOwnerID, orgRepoOwnerID).Exist()
+
+		userRepo := repo
+		repoMember, err := user_model.GetUserByID(ctx, repoOwnerID)
+		if err != nil {
+			return false
+		}
+
+		userHasAccess, err := repo_access_model.HasAccessUnit(ctx, repoMember, userRepo, unit.TypeCode, perm.AccessModeRead)
+		if err != nil {
+			return false
+		} else if !userHasAccess {
+			log.Warn("User #%d does not have access to repository #%d.", repoOwnerID, repoID)
+			return false
+		}
+		if orgRepo {
+			return true
+		}
+	}
+	return false
 }

@@ -6,6 +6,8 @@ package repository
 import (
 	"testing"
 
+	"forgejo.org/models/db"
+	"forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
@@ -47,4 +49,23 @@ func TestForkRepository(t *testing.T) {
 	})
 	assert.Nil(t, fork2)
 	assert.True(t, repo_model.IsErrReachLimitOfRepo(err))
+}
+
+func TestGetOrgUserHasForkedRepo(t *testing.T) {
+	defer unittest.OverrideFixtures("models/repo/TestGetOrgUserHasForkedRepo")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// orgUser3 has repo 65 forked from repo63
+	repo63, err := repo_model.GetRepositoryByID(db.DefaultContext, 63)
+	require.NoError(t, err)
+	require.NotNil(t, repo63)
+
+	// check that user 2 who belongs to org 3
+	user, _ := user_model.GetUserByID(db.DefaultContext, 2)
+	is, err := organization.IsOrganizationMember(db.DefaultContext, 3, user.ID)
+	require.NoError(t, err)
+	require.True(t, is)
+
+	// check that we can get repo 65 via user 2 who belongs to org 3
+	require.True(t, OrgHasForkedRepo(db.DefaultContext, 2, repo63.ID))
 }
