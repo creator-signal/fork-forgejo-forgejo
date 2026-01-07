@@ -338,29 +338,29 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 			log.Error("Error setting package property %s: %v", container_module.PropertyRepository, err)
 			return nil, err
 		}
-		if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired, "yes"); err != nil {
-			log.Error("Error setting package property %s: %v", container_module.PropertyRepositoryAutolinkingRequired, err)
+		if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingPending, "yes"); err != nil {
+			log.Error("Error setting package property %s: %v", container_module.PropertyRepositoryAutolinkingPending, err)
 			return nil, err
 		}
 	}
 
 	// Check if auto-linking is required (this only happens after creation of package (not version!))
-	autolinkRequiredProps, err := packages_model.GetPropertiesByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
+	autolinkRequiredProps, err := packages_model.GetPropertiesByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingPending)
 	if err != nil {
-		log.Error("Error getting package properties %s: %v", container_module.PropertyRepositoryAutolinkingRequired, err)
+		log.Error("Error getting package properties %s: %v", container_module.PropertyRepositoryAutolinkingPending, err)
 		return nil, err
 	}
 	if len(autolinkRequiredProps) > 0 {
 		autolinkRequiredProp := autolinkRequiredProps[0]
 		if autolinkRequiredProp != nil && autolinkRequiredProp.Value == "yes" { // check if auto-link is required (this prevents re-auto-linking on new versions, since the property is not set there)
 			if _, err := tryAutoLink(ctx, p, mci.Owner.LowerName, mci.Image, metadata, mci.Creator); err != nil {
-				if err := packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired); err != nil {
+				if err := packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingPending); err != nil {
 					return nil, err
 				}
 				return nil, err
 			}
 			// remove property to prevent auto-linking on new versions
-			if err := packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired); err != nil {
+			if err := packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingPending); err != nil {
 				return nil, err
 			}
 		}

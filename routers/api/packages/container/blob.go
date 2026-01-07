@@ -120,8 +120,8 @@ func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 				log.Error("Error setting package property %s: %v", container_module.PropertyRepository, err)
 				return err
 			}
-			if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired, "yes"); err != nil {
-				log.Error("Error setting package property %s: %v", container_module.PropertyRepositoryAutolinkingRequired, err)
+			if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingPending, "yes"); err != nil {
+				log.Error("Error setting package property %s: %v", container_module.PropertyRepositoryAutolinkingPending, err)
 				return err
 			}
 		}

@@ -16,12 +16,12 @@ import (
 )
 
 const (
-	PropertyRepository                    = "container.repository"
-	PropertyRepositoryAutolinkingRequired = "container.repository.autolinking-required"
-	PropertyDigest                        = "container.digest"
-	PropertyMediaType                     = "container.mediatype"
-	PropertyManifestTagged                = "container.manifest.tagged"
-	PropertyManifestReference             = "container.manifest.reference"
+	PropertyRepository                   = "container.repository"
+	PropertyRepositoryAutolinkingPending = "container.repository.autolinking-pending"
+	PropertyDigest                       = "container.digest"
+	PropertyMediaType                    = "container.mediatype"
+	PropertyManifestTagged               = "container.manifest.tagged"
+	PropertyManifestReference            = "container.manifest.reference"
 
 	DefaultPlatform = "linux/amd64"
 
