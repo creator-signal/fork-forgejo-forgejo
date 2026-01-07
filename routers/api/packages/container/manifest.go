@@ -353,23 +353,9 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 	if len(autolinkRequiredProps) > 0 {
 		autolinkRequiredProp := autolinkRequiredProps[0]
 		if autolinkRequiredProp != nil && autolinkRequiredProp.Value == "yes" { // check if auto-link is required (this prevents re-auto-linking on new versions, since the property is not set there)
-			linkedByLabel, err := tryAutolinkByLabel(ctx, p, metadata, mci.Creator)
-			if err != nil {
+			if _, err := tryAutoLink(ctx, p, mci.Owner.LowerName, mci.Image, metadata, mci.Creator); err != nil {
 				packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
 				return nil, err
-			}
-			if !linkedByLabel {
-				// try linking by name
-				linkedByImageName, err := tryAutolinkByImageName(ctx, p, mci.Owner.LowerName, mci.Image, mci.Creator)
-				if err != nil {
-					packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
-					return nil, err
-				}
-				if linkedByImageName {
-					log.Info("Image %s/%s was auto-linked by image name", mci.Owner.LowerName, mci.Image)
-				}
-			} else {
-				log.Info("Image %s/%s was auto-linked by label", mci.Owner.LowerName, mci.Image)
 			}
 			// remove property to prevent auto-linking on new versions
 			packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
@@ -522,8 +508,28 @@ func createManifestBlob(ctx context.Context, mci *manifestCreationInfo, pv *pack
 	return pb, !exists, manifestDigest, err
 }
 
-// Tries to link a package by its name (using {owner}/{repo}[/...]).
-// Returns false, nil if the package could not be linked by name.
+// Tries to link a package to a repository.
+// If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return to determine if the linking was performed.
+func tryAutoLink(ctx context.Context, p *packages_model.Package, imageOwner, imageName string, metadata *container_module.Metadata, doer *user_model.User) (linked bool, err error) {
+	if linkedByLabel, err := tryAutolinkByLabel(ctx, p, metadata, doer); err != nil {
+		return false, err
+	} else if linkedByLabel {
+		log.Info("Image %s/%s was auto-linked by label", imageOwner, imageName)
+		return true, nil
+	}
+
+	if linkedByName, err := tryAutolinkByImageName(ctx, p, imageOwner, imageName, doer); err != nil {
+		return false, err
+	} else if linkedByName {
+		log.Info("Image %s/%s was auto-linked by image name", imageOwner, imageName)
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// Tries to link a package to a repository by its name (using {owner}/{repo}[/...]).
+// If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return to determine if the linking was performed.
 func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imageOwner, imageName string, doer *user_model.User) (linked bool, err error) {
 	repoName := strings.SplitN(imageName, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
 	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, imageOwner, repoName)
@@ -540,8 +546,8 @@ func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imag
 	return true, nil
 }
 
-// Tries to link a package by label from metadata.
-// Returns false, nil if the package could not be linked by label.
+// Tries to link a package to a repository by label from metadata.
+// If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return to determine if the linking was performed.
 func tryAutolinkByLabel(ctx context.Context, p *packages_model.Package, metadata *container_module.Metadata, doer *user_model.User) (linked bool, err error) {
 	labelRepo, ok := metadata.Labels["org.opencontainers.image.source"]
 	if !ok {
