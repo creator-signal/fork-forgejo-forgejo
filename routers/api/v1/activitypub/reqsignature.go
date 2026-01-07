@@ -106,9 +106,15 @@ func verifyHTTPMessageSignature(ctx app_context.APIContext) (authenticated bool,
 			continue
 		}
 
+		keyID, err := federation_key.NewKeyID(msgDetails.KeyID)
+		if err != nil {
+			log.Warn("invalid ActivityPub key ID: %v", err)
+			continue
+		}
+
 		log.Info("verifyHttpMessageSignatures signature: %v, alg: %v, key ID: %v", name, alg, msgDetails.KeyID)
 
-		clientKey, err := activitypub.NewClientPublicKey(msgDetails.KeyID, alg).ClientKey(ctx.Req.Context())
+		clientKey, err := activitypub.NewClientPublicKey(keyID, alg).ClientKey(ctx.Req.Context())
 		if err != nil {
 			log.Warn("error creating client key: %v", err)
 		}

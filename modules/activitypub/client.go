@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	forgefed_model "forgejo.org/models/forgefed"
+	"forgejo.org/models/federation_key"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/proxy"
@@ -104,21 +104,19 @@ type APClientFactory interface {
 
 // ClientPublicKey is a convenience struct used to construct a verifying ClientKey
 type ClientPublicKey struct {
-	KeyID string
+	KeyID federation_key.KeyID
 	Alg   setting.Algorithm
 }
 
 // NewClientPublicKey creates a new ClientPublicKey for verifying signatures.
-func NewClientPublicKey(keyID string, alg setting.Algorithm) ClientPublicKey {
+func NewClientPublicKey(keyID federation_key.KeyID, alg setting.Algorithm) ClientPublicKey {
 	return ClientPublicKey{keyID, alg}
 }
 
 func (k ClientPublicKey) PublicKeyBytes(ctx context.Context) ([]byte, error) {
-	_, federatedUser, err := user_model.FindFederatedUserByKeyID(ctx, k.KeyID)
-	if err == nil && federatedUser != nil && federatedUser.PublicKey.Valid {
-		return federatedUser.PublicKey.V, nil
-	} else if host, err := forgefed_model.FindFederationHostByKeyID(ctx, k.KeyID); err == nil && host != nil && host.PublicKey.Valid {
-		return host.PublicKey.V, nil
+	publicKey, err := federation_key.FindFederationPublicKey(ctx, k.KeyID)
+	if err == nil && publicKey != nil {
+		return publicKey.Key, nil
 	}
 	return nil, fmt.Errorf("error finding public key for key ID: %v, error: %v", k.KeyID, err)
 }
@@ -141,12 +139,12 @@ func (k ClientPublicKey) ClientKey(ctx context.Context) (*ClientKey, error) {
 type ClientKey struct {
 	privKey  []byte
 	pubKey   []byte
-	pubKeyID string
+	pubKeyID federation_key.KeyID
 	alg      setting.Algorithm
 }
 
 // NewClientKey creates a new [ClientKey] from the provided parameters.
-func NewClientKey(privKey []byte, pubKeyID string, alg setting.Algorithm) *ClientKey {
+func NewClientKey(privKey []byte, pubKeyID federation_key.KeyID, alg setting.Algorithm) *ClientKey {
 	return &ClientKey{
 		privKey:  privKey,
 		pubKeyID: pubKeyID,
@@ -401,7 +399,7 @@ func (k ClientKey) SignerRFC9421(config *httpsign9421.SignConfig, fields httpsig
 		return nil, fmt.Errorf("nil signer config")
 	}
 
-	config.SetKeyID(k.pubKeyID)
+	config.SetKeyID(k.pubKeyID.String())
 
 	signConfig := RFC9421Config{
 		Signer: config,
@@ -433,7 +431,7 @@ func (k ClientKey) VerifierRFC9421(config *httpsign9421.VerifyConfig, fields htt
 		return nil, fmt.Errorf("nil verifier config")
 	}
 
-	config.SetKeyID(k.pubKeyID)
+	config.SetKeyID(k.pubKeyID.String())
 
 	verifyConfig := RFC9421Config{
 		Verifier: config,
@@ -465,7 +463,7 @@ type Client struct {
 	getHeaders  []string
 	postHeaders []string
 	priv        *rsa.PrivateKey
-	pubID       string
+	pubID       federation_key.KeyID
 	clientKeys  []*ClientKey
 	useRFC9421  bool
 }
@@ -478,9 +476,14 @@ func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID s
 		return nil, err
 	}
 
+	keyID, err := federation_key.NewKeyID(pubID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ActivityPub key ID: %v", err)
+	}
+
 	clientKeys := []*ClientKey{
-		NewClientKey([]byte(privateKey), pubID, setting.AlgorithmRSASHA256CAVAGE),
-		NewClientKey([]byte(privateKey), pubID, setting.AlgorithmRSARFC9421),
+		NewClientKey([]byte(privateKey), keyID, setting.AlgorithmRSASHA256CAVAGE),
+		NewClientKey([]byte(privateKey), keyID, setting.AlgorithmRSARFC9421),
 	}
 
 	c := Client{
@@ -490,7 +493,7 @@ func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID s
 		getHeaders:  cf.getHeaders,
 		postHeaders: cf.postHeaders,
 		priv:        privParsed,
-		pubID:       pubID,
+		pubID:       keyID,
 		clientKeys:  clientKeys,
 		useRFC9421:  setting.Federation.UseRFC9421,
 	}
@@ -614,7 +617,7 @@ func (c *Client) Post(b []byte, to string) (resp *http.Response, err error) {
 
 // KeyID gets the key ID for the ActivityPub public key.
 func (c *Client) KeyID() string {
-	return c.pubID
+	return c.pubID.String()
 }
 
 // Create an http POST request with forgejo/gitea specific headers
@@ -656,7 +659,7 @@ func (c *Client) PostRequest(b []byte, to string) (req *http.Request, err error)
 			if err != nil {
 				return nil, err
 			}
-			if err := signer.SignRequest(c.priv, c.pubID, req, b); err != nil {
+			if err := signer.SignRequest(c.priv, c.pubID.String(), req, b); err != nil {
 				return nil, err
 			}
 		}
@@ -714,7 +717,7 @@ func (c *Client) GetRequest(to string) (req *http.Request, err error) {
 			if err != nil {
 				return nil, err
 			}
-			if err := signer.SignRequest(c.priv, c.pubID, req, nil); err != nil {
+			if err := signer.SignRequest(c.priv, c.pubID.String(), req, nil); err != nil {
 				return nil, err
 			}
 		}
