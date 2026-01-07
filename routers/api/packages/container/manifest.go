@@ -354,11 +354,15 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 		autolinkRequiredProp := autolinkRequiredProps[0]
 		if autolinkRequiredProp != nil && autolinkRequiredProp.Value == "yes" { // check if auto-link is required (this prevents re-auto-linking on new versions, since the property is not set there)
 			if _, err := tryAutoLink(ctx, p, mci.Owner.LowerName, mci.Image, metadata, mci.Creator); err != nil {
-				packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
+				if err := packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired); err != nil {
+					return nil, err
+				}
 				return nil, err
 			}
 			// remove property to prevent auto-linking on new versions
-			packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired)
+			if err := packages_model.DeletePropertyByName(ctx, packages_model.PropertyTypePackage, p.ID, container_module.PropertyRepositoryAutolinkingRequired); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -536,9 +540,8 @@ func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imag
 	if err != nil {
 		if !repo_model.IsErrRepoNotExist(err) {
 			return false, err // this is a legit error
-		} else {
-			return false, nil
 		}
+		return false, nil
 	}
 	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
 		return false, err
@@ -575,9 +578,8 @@ func tryAutolinkByLabel(ctx context.Context, p *packages_model.Package, metadata
 	if err != nil {
 		if !repo_model.IsErrRepoNotExist(err) {
 			return false, err // this is a legit error
-		} else {
-			return false, nil
 		}
+		return false, nil
 	}
 
 	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
