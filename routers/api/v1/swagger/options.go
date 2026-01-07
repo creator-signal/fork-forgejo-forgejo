@@ -242,4 +242,23 @@ type swaggerParameterBodies struct {
 
 	// in:body
 	RegisterRunnerOptions api.RegisterRunnerOptions
+
+	// in:body
+	CreateProjectOption api.CreateProjectOption
+	// in:body
+	EditProjectOption api.EditProjectOption
+
+	// in:body
+	CreateProjectColumnOption api.CreateProjectColumnOption
+	// in:body
+	EditProjectColumnOption api.EditProjectColumnOption
+	// in:body
+	MoveProjectColumnsOption api.MoveProjectColumnsOption
+
+	// in:body
+	AddCardToColumnOption api.AddCardToColumnOption
+	// in:body
+	MoveProjectCardOption api.MoveProjectCardOption
+	// in:body
+	ReorderCardsInColumnOption api.ReorderCardsInColumnOption
 }

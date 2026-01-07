@@ -173,7 +173,7 @@ SWAGGER_SPEC := templates/swagger/v1_json.tmpl
 SWAGGER_SPEC_S_TMPL := s|"basePath": *"/api/v1"|"basePath": "{{AppSubUrl \| JSEscape}}/api/v1"|g
 SWAGGER_SPEC_S_JSON := s|"basePath": *"{{AppSubUrl \| JSEscape}}/api/v1"|"basePath": "/api/v1"|g
 SWAGGER_EXCLUDE := code.gitea.io/sdk
-SWAGGER_NEWLINE_COMMAND := -e '$$a\'
+SWAGGER_NEWLINE_COMMAND := [ -n "$$(tail -c1 './$(SWAGGER_SPEC)')" ] && printf '\n' >> './$(SWAGGER_SPEC)' || true
 SWAGGER_SPEC_BRANDING := s|Gitea API|Forgejo API|g
 SWAGGER_SPEC_LICENSE := s|"name": "MIT"|"name": "This file is distributed under the MIT license for the purpose of interoperability"|
 
@@ -401,7 +401,7 @@ generate-swagger: $(SWAGGER_SPEC)
 $(SWAGGER_SPEC): $(GO_SOURCES_NO_BINDATA)
 	$(GO) run $(SWAGGER_PACKAGE) generate spec -x "$(SWAGGER_EXCLUDE)" -o './$(SWAGGER_SPEC)'
 	$(SED_INPLACE) '$(SWAGGER_SPEC_S_TMPL)' './$(SWAGGER_SPEC)'
-	$(SED_INPLACE) $(SWAGGER_NEWLINE_COMMAND) './$(SWAGGER_SPEC)'
+	$(SWAGGER_NEWLINE_COMMAND)
 	$(SED_INPLACE) '$(SWAGGER_SPEC_BRANDING)' './$(SWAGGER_SPEC)'
 	$(SED_INPLACE) '$(SWAGGER_SPEC_LICENSE)' './$(SWAGGER_SPEC)'
 

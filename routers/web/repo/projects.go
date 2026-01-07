@@ -25,6 +25,7 @@ import (
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
+	project_service "forgejo.org/services/project"
 )
 
 const (
@@ -161,16 +162,17 @@ func NewProjectPost(ctx *context.Context) {
 		return
 	}
 
-	if err := project_model.NewProject(ctx, &project_model.Project{
-		RepoID:       ctx.Repo.Repository.ID,
+	opts := project_service.CreateProjectOptions{
 		Title:        form.Title,
 		Description:  form.Content,
-		CreatorID:    ctx.Doer.ID,
 		TemplateType: form.TemplateType,
 		CardType:     form.CardType,
-		Type:         project_model.TypeRepository,
-	}); err != nil {
-		ctx.ServerError("NewProject", err)
+		CanWrite:     true, // Web UI users always have write access
+	}
+
+	_, err := project_service.CreateProject(ctx, ctx.Repo.Repository, ctx.Doer, opts)
+	if err != nil {
+		ctx.ServerError("CreateProject", err)
 		return
 	}
 
@@ -285,11 +287,14 @@ func EditProjectPost(ctx *context.Context) {
 		return
 	}
 
-	p.Title = form.Title
-	p.Description = form.Content
-	p.CardType = form.CardType
-	if err = project_model.UpdateProject(ctx, p); err != nil {
-		ctx.ServerError("UpdateProjects", err)
+	opts := project_service.UpdateProjectOptions{
+		Title:       &form.Title,
+		Description: &form.Content,
+		CardType:    &form.CardType,
+	}
+
+	if err = project_service.UpdateProject(ctx, p, opts); err != nil {
+		ctx.ServerError("UpdateProject", err)
 		return
 	}
 
@@ -645,38 +650,21 @@ func MoveIssues(ctx *context.Context) {
 	form := &movedIssuesForm{}
 	if err = json.NewDecoder(ctx.Req.Body).Decode(&form); err != nil {
 		ctx.ServerError("DecodeMovedIssuesForm", err)
-	}
-
-	issueIDs := make([]int64, 0, len(form.Issues))
-	sortedIssueIDs := make(map[int64]int64)
-	for _, issue := range form.Issues {
-		issueIDs = append(issueIDs, issue.IssueID)
-		sortedIssueIDs[issue.Sorting] = issue.IssueID
-	}
-	movedIssues, err := issues_model.GetIssuesByIDs(ctx, issueIDs)
-	if err != nil {
-		if issues_model.IsErrIssueNotExist(err) {
-			ctx.NotFound("IssueNotExisting", nil)
-		} else {
-			ctx.ServerError("GetIssueByID", err)
-		}
 		return
 	}
 
-	if len(movedIssues) != len(form.Issues) {
-		ctx.ServerError("some issues do not exist", errors.New("some issues do not exist"))
-		return
-	}
-
-	for _, issue := range movedIssues {
-		if issue.RepoID != project.RepoID {
-			ctx.ServerError("Some issue's repoID is not equal to project's repoID", errors.New("Some issue's repoID is not equal to project's repoID"))
-			return
+	// Convert to service format
+	cardPositions := make([]project_service.CardPosition, len(form.Issues))
+	for i, issue := range form.Issues {
+		cardPositions[i] = project_service.CardPosition{
+			IssueID: issue.IssueID,
+			Sorting: issue.Sorting,
 		}
 	}
 
-	if err = project_model.MoveIssuesOnProjectColumn(ctx, column, sortedIssueIDs); err != nil {
-		ctx.ServerError("MoveIssuesOnProjectColumn", err)
+	// Call shared service
+	if err = project_service.ReorderCardsInColumn(ctx, column, cardPositions); err != nil {
+		ctx.ServerError("ReorderCardsInColumn", err)
 		return
 	}
 
