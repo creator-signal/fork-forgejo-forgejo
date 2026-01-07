@@ -122,3 +122,30 @@ func TestProjectsSort(t *testing.T) {
 		}
 	}
 }
+
+func TestGetProjectForRepoByIDOrTitle(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Test getting by ID
+	project, err := GetProjectForRepoByIDOrTitle(db.DefaultContext, 1, "1")
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), project.ID)
+
+	// Test getting by title
+	project, err = GetProjectForRepoByIDOrTitle(db.DefaultContext, 1, "First project")
+	require.NoError(t, err)
+	assert.Equal(t, "First project", project.Title)
+
+	// Test non-existent project
+	_, err = GetProjectForRepoByIDOrTitle(db.DefaultContext, 1, "nonexistent")
+	require.Error(t, err)
+	assert.True(t, IsErrProjectNotExist(err))
+}
+
+func TestProjectState(t *testing.T) {
+	project := &Project{IsClosed: false}
+	assert.Equal(t, "open", string(project.State()))
+
+	project.IsClosed = true
+	assert.Equal(t, "closed", string(project.State()))
+}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"strconv"
 
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
@@ -14,6 +15,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
@@ -79,6 +81,89 @@ func (err ErrProjectColumnNotExist) Error() string {
 
 func (err ErrProjectColumnNotExist) Unwrap() error {
 	return util.ErrNotExist
+}
+
+// ErrProjectCardNotExist represents a "ErrProjectCardNotExist" kind of error.
+type ErrProjectCardNotExist struct {
+	CardID    int64
+	ProjectID int64
+	IssueID   int64
+}
+
+// IsErrProjectCardNotExist checks if an error is a ErrProjectCardNotExist
+func IsErrProjectCardNotExist(err error) bool {
+	_, ok := err.(ErrProjectCardNotExist)
+	return ok
+}
+
+func (err ErrProjectCardNotExist) Error() string {
+	if err.CardID > 0 {
+		return fmt.Sprintf("project card does not exist [card_id: %d]", err.CardID)
+	}
+	return fmt.Sprintf("project card does not exist [project_id: %d, issue_id: %d]", err.ProjectID, err.IssueID)
+}
+
+func (err ErrProjectCardNotExist) Unwrap() error {
+	return util.ErrNotExist
+}
+
+// ErrCardAlreadyInProject represents a "ErrCardAlreadyInProject" kind of error.
+type ErrCardAlreadyInProject struct {
+	ProjectID int64
+	IssueID   int64
+}
+
+// IsErrCardAlreadyInProject checks if an error is a ErrCardAlreadyInProject
+func IsErrCardAlreadyInProject(err error) bool {
+	_, ok := err.(ErrCardAlreadyInProject)
+	return ok
+}
+
+func (err ErrCardAlreadyInProject) Error() string {
+	return fmt.Sprintf("issue already exists in project [project_id: %d, issue_id: %d]", err.ProjectID, err.IssueID)
+}
+
+func (err ErrCardAlreadyInProject) Unwrap() error {
+	return util.ErrAlreadyExist
+}
+
+// ErrSomeCardsNotExist represents a "ErrSomeCardsNotExist" kind of error for reordering operations
+type ErrSomeCardsNotExist struct {
+	MissingCount int
+}
+
+// IsErrSomeCardsNotExist checks if an error is a ErrSomeCardsNotExist
+func IsErrSomeCardsNotExist(err error) bool {
+	_, ok := err.(ErrSomeCardsNotExist)
+	return ok
+}
+
+func (err ErrSomeCardsNotExist) Error() string {
+	return fmt.Sprintf("some cards do not exist [missing: %d]", err.MissingCount)
+}
+
+func (err ErrSomeCardsNotExist) Unwrap() error {
+	return util.ErrNotExist
+}
+
+// ErrCardNotInProjectRepo represents a "ErrCardNotInProjectRepo" kind of error
+type ErrCardNotInProjectRepo struct {
+	IssueID       int64
+	ProjectRepoID int64
+}
+
+// IsErrCardNotInProjectRepo checks if an error is a ErrCardNotInProjectRepo
+func IsErrCardNotInProjectRepo(err error) bool {
+	_, ok := err.(ErrCardNotInProjectRepo)
+	return ok
+}
+
+func (err ErrCardNotInProjectRepo) Error() string {
+	return fmt.Sprintf("card issue %d does not belong to project repository %d", err.IssueID, err.ProjectRepoID)
+}
+
+func (err ErrCardNotInProjectRepo) Unwrap() error {
+	return util.ErrInvalidArgument
 }
 
 // Project represents a project
@@ -177,6 +262,13 @@ func (p *Project) CanBeAccessedByOwnerRepo(ownerID int64, repo *repo_model.Repos
 	return p.OwnerID == ownerID && p.RepoID == 0
 }
 
+func (p *Project) State() api.StateType {
+	if p.IsClosed {
+		return api.StateClosed
+	}
+	return api.StateOpen
+}
+
 func init() {
 	db.RegisterModel(new(Project))
 }
@@ -238,6 +330,22 @@ func (opts SearchOptions) ToOrders() string {
 	return opts.OrderBy.String()
 }
 
+// ValidProjectSortTypes contains all valid sort type values for projects
+var ValidProjectSortTypes = []string{
+	"oldest", "newest", "alphabetically", "reversealphabetically",
+	"recentupdate", "leastupdate", "",
+}
+
+// IsValidSortType returns true if the given sort type is valid for projects
+func IsValidSortType(sortType string) bool {
+	for _, valid := range ValidProjectSortTypes {
+		if sortType == valid {
+			return true
+		}
+	}
+	return false
+}
+
 func GetSearchOrderByBySortType(sortType string) db.SearchOrderBy {
 	switch sortType {
 	case "oldest":
@@ -246,7 +354,14 @@ func GetSearchOrderByBySortType(sortType string) db.SearchOrderBy {
 		return db.SearchOrderByRecentUpdated
 	case "leastupdate":
 		return db.SearchOrderByLeastUpdated
+	case "alphabetically":
+		return "title ASC"
+	case "reversealphabetically":
+		return "title DESC"
+	case "newest", "":
+		return db.SearchOrderByNewest
 	default:
+		// This should not happen if IsValidSortType is called first
 		return db.SearchOrderByNewest
 	}
 }
@@ -309,6 +424,18 @@ func GetProjectForRepoByID(ctx context.Context, repoID, id int64) (*Project, err
 	return p, nil
 }
 
+// GetProjectForOrgByID returns a project by ID with org ownership validation
+func GetProjectForOrgByID(ctx context.Context, orgID, id int64) (*Project, error) {
+	p := new(Project)
+	has, err := db.GetEngine(ctx).Where("id=? AND owner_id=? AND type=?", id, orgID, TypeOrganization).Get(p)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrProjectNotExist{ID: id}
+	}
+	return p, nil
+}
+
 // UpdateProject updates project properties
 func UpdateProject(ctx context.Context, p *Project) error {
 	if !IsCardTypeValid(p.CardType) {
@@ -320,6 +447,8 @@ func UpdateProject(ctx context.Context, p *Project) error {
 		"title",
 		"description",
 		"card_type",
+		"is_closed",
+		"closed_date_unix",
 	).Update(p)
 	return err
 }
@@ -447,4 +576,42 @@ func DeleteProjectByRepoID(ctx context.Context, repoID int64) error {
 	}
 
 	return updateRepositoryProjectCount(ctx, repoID)
+}
+
+// GetProjectForRepoByIDOrTitle gets a project for a repository by ID and if not available by title
+func GetProjectForRepoByIDOrTitle(ctx context.Context, repoID int64, idOrTitle string) (*Project, error) {
+	// Try to parse as ID first
+	if id, err := strconv.ParseInt(idOrTitle, 10, 64); err == nil {
+		return GetProjectForRepoByID(ctx, repoID, id)
+	}
+
+	// Fall back to title lookup
+	project := &Project{}
+	has, err := db.GetEngine(ctx).Where("repo_id = ? AND type = ? AND title = ?", repoID, TypeRepository, idOrTitle).Get(project)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ErrProjectNotExist{RepoID: repoID}
+	}
+	return project, nil
+}
+
+// GetProjectForOrgByIDOrTitle gets a project for an organization by ID and if not available by title
+func GetProjectForOrgByIDOrTitle(ctx context.Context, orgID int64, idOrTitle string) (*Project, error) {
+	// Try to parse as ID first
+	if id, err := strconv.ParseInt(idOrTitle, 10, 64); err == nil {
+		return GetProjectForOrgByID(ctx, orgID, id)
+	}
+
+	// Fall back to title lookup
+	project := &Project{}
+	has, err := db.GetEngine(ctx).Where("owner_id = ? AND type = ? AND title = ?", orgID, TypeOrganization, idOrTitle).Get(project)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ErrProjectNotExist{ID: 0}
+	}
+	return project, nil
 }
