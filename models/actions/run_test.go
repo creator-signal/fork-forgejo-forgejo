@@ -272,3 +272,106 @@ jobs:
 	// Expect job with an incomplete runs-on to be StatusBlocked:
 	assert.Equal(t, StatusBlocked, job.Status)
 }
+
+func TestActionRun_FindOuterWorkflowCall(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	pullRequestPosterID := int64(4)
+	repoID := int64(10)
+	pullRequestID := int64(2)
+	run := &ActionRun{
+		RepoID:              repoID,
+		PullRequestID:       pullRequestID,
+		PullRequestPosterID: pullRequestPosterID,
+	}
+
+	workflowRaw := []byte(`
+jobs:
+  outer-job:
+    uses: ./.forgejo/workflows/reusable.yml
+`)
+	workflows, err := jobparser.Parse(workflowRaw, false,
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+		jobparser.ExpandLocalReusableWorkflows(func(job *jobparser.Job, path string) ([]byte, error) {
+			return []byte(`
+on:
+  workflow_call:
+jobs:
+  inner-job-1:
+    runs-on: debian
+    steps: []
+  inner-job-2:
+    runs-on: debian
+    steps: []
+`), nil
+		}))
+	require.NoError(t, err)
+	require.NoError(t, InsertRun(t.Context(), run, workflows))
+
+	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: run.ID})
+	require.NoError(t, err)
+	require.Len(t, jobs, 3)
+
+	for _, j := range jobs {
+		t.Run(j.Name, func(t *testing.T) {
+			_, err := j.DecodeWorkflowPayload()
+			require.NoError(t, err)
+			outer, err := run.FindOuterWorkflowCall(t.Context(), j)
+			if j.Name == "outer-job" {
+				require.ErrorContains(t, err, "invalid state for FindOuterWorkflowCall")
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, outer)
+				assert.Equal(t, "outer-job", outer.Name)
+			}
+		})
+	}
+}
+
+func TestActionRun_IncompleteWith(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	pullRequestPosterID := int64(4)
+	repoID := int64(10)
+	pullRequestID := int64(2)
+	runDoesNotNeedApproval := &ActionRun{
+		RepoID:              repoID,
+		PullRequestID:       pullRequestID,
+		PullRequestPosterID: pullRequestPosterID,
+	}
+
+	workflowRaw := []byte(`
+jobs:
+  outer-job:
+    with:
+      some_input: ${{ needs.other-job.outputs.some-output }}
+    uses: ./.forgejo/workflows/reusable.yml
+`)
+	workflows, err := jobparser.Parse(workflowRaw, false,
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+		jobparser.ExpandLocalReusableWorkflows(func(job *jobparser.Job, path string) ([]byte, error) {
+			return []byte(`
+on:
+  workflow_call:
+    inputs:
+      some_input:
+        type: string
+jobs:
+  inner-job:
+    runs-on: debian
+    steps: []
+`), nil
+		}))
+	require.NoError(t, err)
+	require.True(t, workflows[0].IncompleteWith) // must be set for this test scenario to be valid
+
+	require.NoError(t, InsertRun(t.Context(), runDoesNotNeedApproval, workflows))
+
+	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: runDoesNotNeedApproval.ID})
+	require.NoError(t, err)
+	require.Len(t, jobs, 1)
+	job := jobs[0]
+
+	// Expect job with an incomplete with to be StatusBlocked:
+	assert.Equal(t, StatusBlocked, job.Status)
+}

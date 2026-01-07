@@ -55,7 +55,7 @@
 .run-list-item-right .run-list-meta {
   display: flex;
   flex-wrap: nowrap;
-  gap: .25rem;
+  gap: 0.25rem;
   align-items: center;
 }
 
@@ -97,4 +97,34 @@
     left: auto;
     right: 0;
   }
+}
+
+.job-status-rotate {
+  animation: job-status-rotate-keyframes 1s linear infinite;
+}
+@keyframes job-status-rotate-keyframes {
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+.ui.vertical.menu .item:not(:has(> :nth-child(1))),
+.ui.vertical.menu .item .content {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.ui.vertical.menu .item:has(.content) {
+  display: flex;
+}
+
+.ui.vertical.menu.actions-menu .item .error {
+  display: flex;
+  align-items: center;
+  margin-left: 1rem;
+}
+
+.ui.vertical.menu.actions-menu .item .label {
+  flex-shrink: 0;
 }

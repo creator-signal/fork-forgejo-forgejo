@@ -10,7 +10,6 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
-	secret_model "forgejo.org/models/secret"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
@@ -39,7 +38,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner) (*runnerv
 		}
 		job = t.Job
 
-		secrets, err := secret_model.GetSecretsOfTask(ctx, t)
+		secrets, err := getSecretsOfTask(ctx, t)
 		if err != nil {
 			return fmt.Errorf("GetSecretsOfTask: %w", err)
 		}
@@ -88,7 +87,10 @@ func generateTaskContext(t *actions_model.ActionTask) (*structpb.Struct, error) 
 		return nil, err
 	}
 
-	gitCtx := GenerateGiteaContext(t.Job.Run, t.Job)
+	gitCtx, err := GenerateGiteaContext(t.Job.Run, t.Job)
+	if err != nil {
+		return nil, err
+	}
 	gitCtx["token"] = t.Token
 	gitCtx["gitea_runtime_token"] = giteaRuntimeToken
 
