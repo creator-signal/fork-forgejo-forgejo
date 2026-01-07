@@ -139,7 +139,7 @@ func updateForkRepositoryInContext(ctx *context.Context, forkRepo *repo_model.Re
 	ctx.Data["repo_name"] = forkRepo.Name
 	ctx.Data["description"] = forkRepo.Description
 	ctx.Data["IsPrivate"] = forkRepo.IsPrivate || forkRepo.Owner.Visibility == structs.VisibleTypePrivate
-	canForkToUser := forkRepo.OwnerID != ctx.Doer.ID && !repo_model.HasForkedRepo(ctx, ctx.Doer.ID, forkRepo.ID)
+	canForkToUser := forkRepo.OwnerID != ctx.Doer.ID && !repo_service.UserHasForkedRepo(ctx, ctx.Doer.ID, forkRepo.ID)
 
 	ctx.Data["ForkRepo"] = forkRepo
 
@@ -150,7 +150,7 @@ func updateForkRepositoryInContext(ctx *context.Context, forkRepo *repo_model.Re
 	}
 	var orgs []*organization.Organization
 	for _, org := range ownedOrgs {
-		if forkRepo.OwnerID != org.ID && !repo_model.HasForkedRepo(ctx, org.ID, forkRepo.ID) {
+		if forkRepo.OwnerID != org.ID && !repo_service.UserHasForkedRepo(ctx, org.ID, forkRepo.ID) {
 			orgs = append(orgs, org)
 		}
 	}

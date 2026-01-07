@@ -67,5 +67,5 @@ func TestGetOrgUserHasForkedRepo(t *testing.T) {
 	require.True(t, is)
 
 	// check that we can get repo 65 via user 2 who belongs to org 3
-	require.True(t, OrgHasForkedRepo(db.DefaultContext, 2, repo63.ID))
+	require.True(t, UserHasForkedRepo(db.DefaultContext, 2, repo63.ID))
 }

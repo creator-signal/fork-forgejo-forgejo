@@ -251,7 +251,7 @@ func ConvertForkToNormalRepository(ctx context.Context, repo *repo_model.Reposit
 }
 
 // HasForkedRepo checks if given user has already forked a repository with given ID.
-func OrgHasForkedRepo(ctx context.Context, repoOwnerID, repoID int64) bool {
+func UserHasForkedRepo(ctx context.Context, repoOwnerID, repoID int64) bool {
 	userHasForkedRepo := repo_model.HasForkedRepo(ctx, repoOwnerID, repoID)
 
 	if userHasForkedRepo {
