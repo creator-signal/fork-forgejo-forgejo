@@ -522,6 +522,8 @@ func createManifestBlob(ctx context.Context, mci *manifestCreationInfo, pv *pack
 	return pb, !exists, manifestDigest, err
 }
 
+// Tries to link a package by its name (using {owner}/{repo}[/...]).
+// Returns false, nil if the package could not be linked by name.
 func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imageOwner, imageName string, doer *user_model.User) (linked bool, err error) {
 	repoName := strings.SplitN(imageName, "/", 2)[0] // [0] = repo; [1] = remainer (no need to check length since SplitN always returns at least one element)
 	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, imageOwner, repoName)
@@ -538,8 +540,8 @@ func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imag
 	return true, nil
 }
 
-// Tries to link
-// returns false, nil if the package could not be linked by label
+// Tries to link a package by label from metadata.
+// Returns false, nil if the package could not be linked by label.
 func tryAutolinkByLabel(ctx context.Context, p *packages_model.Package, metadata *container_module.Metadata, doer *user_model.User) (linked bool, err error) {
 	labelRepo, ok := metadata.Labels["org.opencontainers.image.source"]
 	if !ok {

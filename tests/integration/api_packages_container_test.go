@@ -947,9 +947,7 @@ func TestPackageContainer(t *testing.T) {
 			MakeRequest(t, req, http.StatusCreated)
 
 			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo1)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			require.Equal(t, nameNonexistingRepo1, p.Name) // just to make sure we have grabbed the correct package
 			assert.Equal(t, int64(0), p.RepoID)
 		})
@@ -969,10 +967,7 @@ func TestPackageContainer(t *testing.T) {
 
 			// get the resulting package
 			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, repo.Name)
-			if err != nil {
-				t.Log(err)
-				t.FailNow() // we fail now since the success of this test is required for PushVersionToUnlinkedRepo
-			}
+			require.NoError(t, err)
 			require.Equal(t, repo.Name, p.Name) // just to make sure we have grabbed the correct package
 			assert.Equal(t, repo.ID, p.RepoID)
 			linkedPackage = p // store auto-linked package for the next test
@@ -993,23 +988,19 @@ func TestPackageContainer(t *testing.T) {
 
 			// get the resulting package
 			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, repo.Name+"/"+nameExistingRepoNested)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			require.Equal(t, repo.Name+"/"+nameExistingRepoNested, p.Name) // just to make sure we have grabbed the correct package
 			assert.Equal(t, repo.ID, p.RepoID)
 		})
 
 		t.Run("PushVersionToUnlinkedRepo", func(t *testing.T) {
 			// unlink auto-linked package
-			if err := packages_service.UnlinkFromRepository(t.Context(), linkedPackage, user); err != nil {
-				t.Error(err)
-			}
+			require.NoError(t,
+				packages_service.UnlinkFromRepository(t.Context(), linkedPackage, user),
+			)
 			// test if correctly unlinked
 			checkPackageForUnlinked, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, repo.Name)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			require.Equal(t, int64(0), checkPackageForUnlinked.RepoID)
 
 			// push updated version (e.g. tag v2)
@@ -1026,9 +1017,7 @@ func TestPackageContainer(t *testing.T) {
 
 			// test if still unlinked
 			checkPackageForStillUnlinked, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, repo.Name)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			assert.Equal(t, int64(0), checkPackageForStillUnlinked.RepoID)
 		})
 
@@ -1046,9 +1035,7 @@ func TestPackageContainer(t *testing.T) {
 			MakeRequest(t, req, http.StatusCreated)
 
 			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo2)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			require.Equal(t, nameNonexistingRepo2, p.Name) // just to make sure we have grabbed the correct package
 			assert.Equal(t, repo.ID, p.RepoID)
 		})
