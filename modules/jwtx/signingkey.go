@@ -1,7 +1,7 @@
 // Copyright 2021 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package oauth2
+package jwtx
 
 import (
 	"crypto/ecdsa"
@@ -34,8 +34,8 @@ func (err ErrInvalidAlgorithmType) Error() string {
 	return fmt.Sprintf("JWT signing algorithm is not supported: %s", err.Algorithm)
 }
 
-// JWTSigningKey represents a algorithm/key pair to sign JWTs
-type JWTSigningKey interface {
+// SigningKey represents a algorithm/key pair to sign JWTs
+type SigningKey interface {
 	IsSymmetric() bool
 	SigningMethod() jwt.SigningMethod
 	SignKey() any
@@ -228,8 +228,8 @@ func (key ecdsaSingingKey) PreProcessToken(token *jwt.Token) {
 	token.Header["kid"] = key.id
 }
 
-// CreateJWTSigningKey creates a signing key from an algorithm / key pair.
-func CreateJWTSigningKey(algorithm string, key any) (JWTSigningKey, error) {
+// CreateSigningKey creates a signing key from an algorithm / key pair.
+func CreateSigningKey(algorithm string, key any) (SigningKey, error) {
 	var signingMethod jwt.SigningMethod
 	switch algorithm {
 	case "HS256":
@@ -286,58 +286,9 @@ func CreateJWTSigningKey(algorithm string, key any) (JWTSigningKey, error) {
 	}
 }
 
-// DefaultSigningKey is the default signing key for JWTs.
-var DefaultSigningKey JWTSigningKey
-
-// InitSigningKey creates the default signing key from settings or creates a random key.
-func InitSigningKey() error {
-	var err error
-	var key any
-
-	switch setting.OAuth2.JWTSigningAlgorithm {
-	case "HS256":
-		fallthrough
-	case "HS384":
-		fallthrough
-	case "HS512":
-		key = setting.GetGeneralTokenSigningSecret()
-	case "RS256":
-		fallthrough
-	case "RS384":
-		fallthrough
-	case "RS512":
-		fallthrough
-	case "ES256":
-		fallthrough
-	case "ES384":
-		fallthrough
-	case "ES512":
-		fallthrough
-	case "EdDSA":
-		key, err = loadOrCreateAsymmetricKey()
-	default:
-		return ErrInvalidAlgorithmType{setting.OAuth2.JWTSigningAlgorithm}
-	}
-
-	if err != nil {
-		return fmt.Errorf("Error while loading or creating JWT key: %w", err)
-	}
-
-	signingKey, err := CreateJWTSigningKey(setting.OAuth2.JWTSigningAlgorithm, key)
-	if err != nil {
-		return err
-	}
-
-	DefaultSigningKey = signingKey
-
-	return nil
-}
-
 // loadOrCreateAsymmetricKey checks if the configured private key exists.
 // If it does not exist a new random key gets generated and saved on the configured path.
-func loadOrCreateAsymmetricKey() (any, error) {
-	keyPath := setting.OAuth2.JWTSigningPrivateKeyFile
-
+func loadOrCreateAsymmetricKey(keyPath, algorithm string) (any, error) {
 	isExist, err := util.IsExist(keyPath)
 	if err != nil {
 		log.Fatal("Unable to check if %s exists. Error: %v", keyPath, err)
@@ -346,9 +297,9 @@ func loadOrCreateAsymmetricKey() (any, error) {
 		err := func() error {
 			key, err := func() (any, error) {
 				switch {
-				case strings.HasPrefix(setting.OAuth2.JWTSigningAlgorithm, "RS"):
+				case strings.HasPrefix(algorithm, "RS"):
 					var bits int
-					switch setting.OAuth2.JWTSigningAlgorithm {
+					switch algorithm {
 					case "RS256":
 						bits = 2048
 					case "RS384":
@@ -357,12 +308,12 @@ func loadOrCreateAsymmetricKey() (any, error) {
 						bits = 4096
 					}
 					return rsa.GenerateKey(rand.Reader, bits)
-				case setting.OAuth2.JWTSigningAlgorithm == "EdDSA":
+				case algorithm == "EdDSA":
 					_, pk, err := ed25519.GenerateKey(rand.Reader)
 					return pk, err
 				default:
 					var curve elliptic.Curve
-					switch setting.OAuth2.JWTSigningAlgorithm {
+					switch algorithm {
 					case "ES256":
 						curve = elliptic.P256()
 					case "ES384":
@@ -419,4 +370,80 @@ func loadOrCreateAsymmetricKey() (any, error) {
 	}
 
 	return x509.ParsePKCS8PrivateKey(block.Bytes)
+}
+
+// InitSigningKey creates a signing key from settings or creates a random key.
+func InitSigningKey(keyPath, algorithm string) (SigningKey, error) {
+	var err error
+	var key SigningKey
+
+	key, err = InitSymmetricSigningKey(algorithm)
+	if err != nil {
+		key, err = InitAsymmetricSigningKey(keyPath, algorithm)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return key, nil
+}
+
+// InitSymmetricSigningKey creates a symmetric signing key from settings.
+func InitSymmetricSigningKey(algorithm string) (SigningKey, error) {
+	var err error
+	var key any
+
+	switch algorithm {
+	case "HS256":
+		fallthrough
+	case "HS384":
+		fallthrough
+	case "HS512":
+		key = setting.GetGeneralTokenSigningSecret()
+	default:
+		return nil, ErrInvalidAlgorithmType{Algorithm: algorithm}
+	}
+
+	signingKey, err := CreateSigningKey(algorithm, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return signingKey, nil
+}
+
+// InitAsymmetricSigningKey creates an asymmetric signing key from settings or creates a random key.
+func InitAsymmetricSigningKey(keyPath, algorithm string) (SigningKey, error) {
+	var err error
+	var key any
+
+	switch algorithm {
+	case "RS256":
+		fallthrough
+	case "RS384":
+		fallthrough
+	case "RS512":
+		fallthrough
+	case "ES256":
+		fallthrough
+	case "ES384":
+		fallthrough
+	case "ES512":
+		fallthrough
+	case "EdDSA":
+		key, err = loadOrCreateAsymmetricKey(keyPath, algorithm)
+	default:
+		return nil, ErrInvalidAlgorithmType{Algorithm: algorithm}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("Error while loading or creating JWT key: %w", err)
+	}
+
+	signingKey, err := CreateSigningKey(algorithm, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return signingKey, nil
 }
