@@ -5,7 +5,6 @@
 				</h4>
 				<div class="ui attached segment">
 					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
 						<label {{if .Err_Name}}class="field error"{{end}}>
 							{{ctx.Locale.Tr "org.org_name_holder"}}
 							<input id="org_name" name="name" value="{{.Org.Name}}" data-org-name="{{.Org.Name}}" autofocus required maxlength="40">
@@ -90,16 +89,15 @@
 					<div class="divider"></div>
 
 					<form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
-						{{.CsrfTokenHtml}}
 						<div class="inline field">
 							<label for="avatar">{{ctx.Locale.Tr "settings.choose_new_avatar"}}</label>
 							<input name="avatar" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
 							<br/><span class=help>{{ctx.Locale.Tr "avatar.constraints_hint" (ctx.Locale.TrSize .MaxAvatarFileSize) .MaxAvatarWidth .MaxAvatarHeight}}</span>
 						</div>
 
-						<div class="field">
-							<button class="ui primary button">{{ctx.Locale.Tr "settings.update_avatar"}}</button>
-							<button class="ui red button link-action" data-url="{{.Link}}/avatar/delete">{{ctx.Locale.Tr "settings.delete_current_avatar"}}</button>
+						<div class="field button-sequence">
+							<button class="primary button">{{ctx.Locale.Tr "settings.update_avatar"}}</button>
+							<button class="danger button link-action" data-url="{{.Link}}/avatar/delete">{{ctx.Locale.Tr "settings.delete_current_avatar"}}</button>
 						</div>
 					</form>
 				</div>

@@ -37,7 +37,7 @@ func TestArchivedIssues(t *testing.T) {
 	NumIssues := make(map[int64]int)
 	for _, repo := range repos {
 		IsArchived[repo.ID] = repo.IsArchived
-		NumIssues[repo.ID] = repo.NumIssues
+		NumIssues[repo.ID] = repo.NumIssues(t.Context())
 	}
 	assert.False(t, IsArchived[50])
 	assert.Equal(t, 1, NumIssues[50])
@@ -78,7 +78,7 @@ func TestPulls(t *testing.T) {
 	Pulls(ctx)
 	assert.Equal(t, http.StatusOK, ctx.Resp.Status())
 
-	assert.Len(t, ctx.Data["Issues"], 5)
+	assert.Len(t, ctx.Data["Issues"], 6)
 }
 
 func TestMilestones(t *testing.T) {

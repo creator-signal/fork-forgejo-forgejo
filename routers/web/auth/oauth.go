@@ -1096,6 +1096,11 @@ func SignInOAuthCallback(ctx *context.Context) {
 				ctx.ServerError("SyncGroupsToTeams", err)
 				return
 			}
+
+			if err := syncGroupsToQuotaGroups(ctx, source, &gothUser, u); err != nil {
+				ctx.ServerError("SyncGroupsToQuotaGroups", err)
+				return
+			}
 		} else {
 			// no existing user is found, request attach or new account
 			showLinkingLogin(ctx, gothUser)
@@ -1140,8 +1145,34 @@ func syncGroupsToTeams(ctx *context.Context, source *oauth2.Source, gothUser *go
 	return nil
 }
 
+func syncGroupsToQuotaGroups(ctx *context.Context, source *oauth2.Source, gothUser *goth.User, u *user_model.User) error {
+	if source.QuotaGroupMap != "" || source.QuotaGroupMapRemoval {
+		quotaGroupMapping, err := auth_module.UnmarshalQuotaGroupMapping(source.QuotaGroupMap)
+		if err != nil {
+			return err
+		}
+
+		groups := getClaimedQuotaGroups(source, gothUser)
+
+		if err := source_service.SyncGroupsToQuotaGroups(ctx, u, groups, quotaGroupMapping, source.QuotaGroupMapRemoval); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func getClaimedGroups(source *oauth2.Source, gothUser *goth.User) container.Set[string] {
 	groupClaims, has := gothUser.RawData[source.GroupClaimName]
+	if !has {
+		return nil
+	}
+
+	return claimValueToStringSet(groupClaims)
+}
+
+func getClaimedQuotaGroups(source *oauth2.Source, gothUser *goth.User) container.Set[string] {
+	groupClaims, has := gothUser.RawData[source.QuotaGroupClaimName]
 	if !has {
 		return nil
 	}
@@ -1262,8 +1293,14 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		ctx.ServerError("UnmarshalGroupTeamMapping", err)
 		return
 	}
+	quotaGroupMapping, err := auth_module.UnmarshalQuotaGroupMapping(oauth2Source.QuotaGroupMap)
+	if err != nil {
+		ctx.ServerError("UnmarshalQuotaGroupMapping", err)
+		return
+	}
 
 	groups := getClaimedGroups(oauth2Source, &gothUser)
+	quotaGroups := getClaimedQuotaGroups(oauth2Source, &gothUser)
 
 	// If this user is enrolled in 2FA and this source doesn't override it,
 	// we can't sign the user in just yet. Instead, redirect them to the 2FA authentication page.
@@ -1274,9 +1311,6 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 			ctx.ServerError("updateSession", err)
 			return
 		}
-
-		// Clear whatever CSRF cookie has right now, force to generate a new one
-		ctx.Csrf.DeleteCookie(ctx)
 
 		opts := &user_service.UpdateOptions{
 			SetLastLogin: true,
@@ -1290,6 +1324,13 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		if oauth2Source.GroupTeamMap != "" || oauth2Source.GroupTeamMapRemoval {
 			if err := source_service.SyncGroupsToTeams(ctx, u, groups, groupTeamMapping, oauth2Source.GroupTeamMapRemoval); err != nil {
 				ctx.ServerError("SyncGroupsToTeams", err)
+				return
+			}
+		}
+
+		if oauth2Source.QuotaGroupMap != "" || oauth2Source.QuotaGroupMapRemoval {
+			if err := source_service.SyncGroupsToQuotaGroups(ctx, u, quotaGroups, quotaGroupMapping, oauth2Source.QuotaGroupMapRemoval); err != nil {
+				ctx.ServerError("SyncGroupsToQuotaGroups", err)
 				return
 			}
 		}
@@ -1332,6 +1373,13 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		}
 	}
 
+	if oauth2Source.QuotaGroupMap != "" || oauth2Source.QuotaGroupMapRemoval {
+		if err := source_service.SyncGroupsToQuotaGroups(ctx, u, quotaGroups, quotaGroupMapping, oauth2Source.QuotaGroupMapRemoval); err != nil {
+			ctx.ServerError("SyncGroupsToQuotaGroups", err)
+			return
+		}
+	}
+
 	if err := updateSession(ctx, nil, map[string]any{
 		// User needs to use 2FA, save data and redirect to 2FA page.
 		"twofaUid":      u.ID,
@@ -1367,10 +1415,7 @@ func generateCodeChallenge(ctx *context.Context, provider string) (codeChallenge
 		// a code_challenge can be generated
 	}
 
-	codeVerifier, err := util.CryptoRandomString(43) // 256/log2(62) = 256 bits of entropy (each char having log2(62) of randomness)
-	if err != nil {
-		return "", err
-	}
+	codeVerifier := util.CryptoRandomString(util.RandomStringHigh)
 	if err = ctx.Session.Set("CodeVerifier", codeVerifier); err != nil {
 		return "", err
 	}

@@ -9,11 +9,10 @@ import {
 import {initUnicodeEscapeButton} from './repo-unicode-escape.js';
 import {svg} from '../svg.js';
 import {htmlEscape} from 'escape-goat';
-import {initRepoBranchTagSelector} from '../components/RepoBranchTagSelector.vue';
+import {initRepoBranchTagSelector} from './repo-branch-tag-selector.js';
 import {
   initRepoCloneLink, initRepoCommonBranchOrTagDropdown, initRepoCommonFilterSearchDropdown,
 } from './repo-common.js';
-import {initCitationFileCopyContent} from './citation.js';
 import {initCompLabelEdit} from './comp/LabelEdit.js';
 import {initRepoDiffConversationNav} from './repo-diff.js';
 import {showErrorToast} from '../modules/toast.js';
@@ -379,7 +378,7 @@ async function onEditContent(event) {
     editContentZone.querySelector('button[data-button-name="cancel-edit"]').addEventListener('click', cancelAndReset);
     editContentZone.querySelector('button[data-button-name="save-edit"]').addEventListener('click', saveAndRefresh);
   } else {
-    const tabEditor = editContentZone.querySelector('.combo-markdown-editor').querySelector('.switch > a[data-tab-for=markdown-writer]');
+    const tabEditor = editContentZone.querySelector('.combo-markdown-editor').querySelector('.switch > [data-tab-for=markdown-writer]');
     tabEditor?.click();
   }
 
@@ -457,7 +456,6 @@ export function initRepository() {
   }
 
   initRepoCloneLink();
-  initCitationFileCopyContent();
   initRepoSettingBranches();
 
   // Issues

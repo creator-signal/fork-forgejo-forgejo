@@ -19,7 +19,7 @@ import (
 func cmdGenerate() *cli.Command {
 	return &cli.Command{
 		Name:  "generate",
-		Usage: "Generate Gitea's secrets/keys/tokens",
+		Usage: "Generate Forgejo's secrets/keys/tokens",
 		Commands: []*cli.Command{
 			subcmdSecret(),
 		},
@@ -42,6 +42,7 @@ func microcmdGenerateInternalToken() *cli.Command {
 	return &cli.Command{
 		Name:   "INTERNAL_TOKEN",
 		Usage:  "Generate a new INTERNAL_TOKEN",
+		Before: noDanglingArgs,
 		Action: runGenerateInternalToken,
 	}
 }
@@ -51,6 +52,7 @@ func microcmdGenerateLfsJwtSecret() *cli.Command {
 		Name:    "JWT_SECRET",
 		Aliases: []string{"LFS_JWT_SECRET"},
 		Usage:   "Generate a new JWT_SECRET",
+		Before:  noDanglingArgs,
 		Action:  runGenerateLfsJwtSecret,
 	}
 }
@@ -59,6 +61,7 @@ func microcmdGenerateSecretKey() *cli.Command {
 	return &cli.Command{
 		Name:   "SECRET_KEY",
 		Usage:  "Generate a new SECRET_KEY",
+		Before: noDanglingArgs,
 		Action: runGenerateSecretKey,
 	}
 }
@@ -91,10 +94,7 @@ func runGenerateLfsJwtSecret(ctx context.Context, c *cli.Command) error {
 }
 
 func runGenerateSecretKey(ctx context.Context, c *cli.Command) error {
-	secretKey, err := generate.NewSecretKey()
-	if err != nil {
-		return err
-	}
+	secretKey := generate.NewSecretKey()
 
 	fmt.Printf("%s", secretKey)
 

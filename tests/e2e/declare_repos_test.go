@@ -5,6 +5,8 @@ package e2e
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -76,6 +78,10 @@ func DeclareGitRepos(t *testing.T) func() {
 				CommitMsg: "Another commit which mentions @user1 in the title\nand @user2 in the text",
 			},
 		}, nil),
+		newRepo(t, 2, "file-uploads", nil, []FileChanges{{
+			Filename: "UPLOAD_TEST.md",
+			Versions: []string{"# File upload test\nUse this repo to test various file upload features in new branches."},
+		}}, nil),
 		newRepo(t, 2, "unicode-escaping", &tests.DeclarativeRepoOptions{
 			EnabledUnits: optional.Some([]unit_model.Type{unit_model.TypeCode, unit_model.TypeWiki}),
 		}, []FileChanges{{
@@ -126,6 +132,47 @@ body:
 			postIssue(repo, user, 450, "right issue", "an issue containing word right")
 			postIssue(repo, user, 150, "left issue", "an issue containing word left")
 		}),
+		newRepo(t, 2, "long-diff-test", nil, []FileChanges{{
+			Filename: "test-README.md",
+			Versions: []string{
+				readStringFile(t, "tests/e2e/declarative-repo/long-diff-test/0-README.md"),
+			},
+		}}, func(user *user_model.User, repo *repo_model.Repository) {
+			commit1Sha := addCommitToBranch(t, user, repo, "main", "test-branch", "test-README.md", "",
+				readStringFile(t, "tests/e2e/declarative-repo/long-diff-test/1-README.md"))
+			commit2Sha := addCommitToBranch(t, user, repo, "test-branch", "test-branch", "test-README.md", commit1Sha,
+				readStringFile(t, "tests/e2e/declarative-repo/long-diff-test/2-README.md"))
+			addCommitToBranch(t, user, repo, "test-branch", "test-branch", "test-README.md", commit2Sha,
+				readStringFile(t, "tests/e2e/declarative-repo/long-diff-test/3-README.md"))
+		}),
+		newRepo(t, 2, "huge-diff-test", nil, []FileChanges{{
+			Filename: "glossary.po",
+			Versions: []string{
+				func() string {
+					var sb strings.Builder
+					sb.Write([]byte("0"))
+					for i := 1; i < 2000; i++ {
+						sb.WriteString(strconv.Itoa(i))
+						sb.WriteByte('\n')
+					}
+					return sb.String()
+				}(),
+			},
+		}}, func(user *user_model.User, repo *repo_model.Repository) {
+			addCommitToBranch(t, user, repo, "main", "main-2", "glossary.po", "",
+				func() string {
+					var sb strings.Builder
+					sb.Write([]byte("0"))
+					for i := 1; i < 2000; i++ {
+						sb.WriteString(strconv.Itoa(i))
+						if i%12 == 0 {
+							sb.WriteString("Blub")
+						}
+						sb.WriteByte('\n')
+					}
+					return sb.String()
+				}())
+		}),
 		// add your repo declarations here
 	}
 
@@ -134,6 +181,12 @@ body:
 			cleanup()
 		}
 	}
+}
+
+func readStringFile(t *testing.T, fn string) string {
+	c, err := os.ReadFile(fn)
+	require.NoError(t, err)
+	return string(c)
 }
 
 func newRepo(t *testing.T, userID int64, repoName string, initOpts *tests.DeclarativeRepoOptions, fileChanges []FileChanges, setup SetupRepo) func() {
@@ -201,4 +254,33 @@ func newRepo(t *testing.T, userID int64, repoName string, initOpts *tests.Declar
 	require.NoError(t, err)
 
 	return cleanupFunc
+}
+
+func addCommitToBranch(t *testing.T, user *user_model.User, repo *repo_model.Repository, oldBranch, newBranch, filename, lastSha, content string) string {
+	resp, err := files_service.ChangeRepoFiles(git.DefaultContext, repo, user, &files_service.ChangeRepoFilesOptions{
+		Files: []*files_service.ChangeRepoFile{{
+			Operation:     "update",
+			TreePath:      filename,
+			ContentReader: strings.NewReader(content),
+		}},
+		Message:   "add commit to branch",
+		OldBranch: oldBranch,
+		NewBranch: newBranch,
+		Author: &files_service.IdentityOptions{
+			Name:  user.Name,
+			Email: user.Email,
+		},
+		Committer: &files_service.IdentityOptions{
+			Name:  user.Name,
+			Email: user.Email,
+		},
+		Dates: &files_service.CommitDateOptions{
+			Author:    time.Now(),
+			Committer: time.Now(),
+		},
+		LastCommitID: lastSha,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, resp)
+	return resp.Commit.SHA
 }

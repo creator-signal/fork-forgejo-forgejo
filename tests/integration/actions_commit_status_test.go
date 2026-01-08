@@ -1,4 +1,4 @@
-// Copyright 20124 The Forgejo Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package integration
@@ -25,7 +25,7 @@ import (
 )
 
 func TestActionsAutomerge(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Actions.Enabled, true)()
 
 		ctx := db.DefaultContext

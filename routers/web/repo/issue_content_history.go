@@ -5,6 +5,7 @@ package repo
 
 import (
 	"bytes"
+	"fmt"
 	"html"
 	"net/http"
 	"strings"
@@ -54,13 +55,16 @@ func GetContentHistoryList(ctx *context.Context) {
 	var results []map[string]any
 	for _, item := range items {
 		var actionText string
-		if item.IsDeleted {
-			actionTextDeleted := ctx.Locale.TrString("repo.issues.content_history.deleted")
-			actionText = "<i data-history-is-deleted='1'>" + actionTextDeleted + "</i>"
-		} else if item.IsFirstCreated {
+		contentFmt := "%s<strong>%s</strong> %s %s"
+		if item.IsFirstCreated {
 			actionText = ctx.Locale.TrString("repo.issues.content_history.created")
 		} else {
 			actionText = ctx.Locale.TrString("repo.issues.content_history.edited")
+		}
+
+		if item.IsDeleted {
+			actionText = "<span data-history-is-deleted='1'>" + actionText + "</span>"
+			contentFmt = "<s>" + contentFmt + "</s>"
 		}
 
 		username := item.UserName
@@ -73,9 +77,10 @@ func GetContentHistoryList(ctx *context.Context) {
 		name := html.EscapeString(username)
 		avatarHTML := string(templates.AvatarHTML(src, 28, class, username))
 		timeSinceHTML := string(templates.TimeSince(item.EditedUnix))
+		content := fmt.Sprintf(contentFmt, avatarHTML, name, actionText, timeSinceHTML)
 
 		results = append(results, map[string]any{
-			"name":  avatarHTML + "<strong>" + name + "</strong> " + actionText + " " + timeSinceHTML,
+			"name":  content,
 			"value": item.HistoryID,
 		})
 	}
@@ -205,12 +210,11 @@ func SoftDeleteContentHistory(ctx *context.Context) {
 		ctx.NotFound("CompareRepoID", issues_model.ErrCommentNotExist{})
 		return
 	}
+	if history.CommentID != commentID {
+		ctx.NotFound("CompareCommentID", issues_model.ErrCommentNotExist{})
+		return
+	}
 	if commentID != 0 {
-		if history.CommentID != commentID {
-			ctx.NotFound("CompareCommentID", issues_model.ErrCommentNotExist{})
-			return
-		}
-
 		if comment, err = issues_model.GetCommentByID(ctx, commentID); err != nil {
 			log.Error("can not get comment for issue content history %v. err=%v", historyID, err)
 			return

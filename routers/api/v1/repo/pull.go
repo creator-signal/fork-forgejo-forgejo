@@ -433,7 +433,7 @@ func CreatePullRequest(ctx *context.APIContext) {
 	)
 
 	// Get repo/branch information
-	headRepo, headGitRepo, compareInfo, baseBranch, headBranch := parseCompareInfo(ctx, form)
+	headRepo, headGitRepo, _, baseBranch, headBranch := parseCompareInfo(ctx, form)
 	if ctx.Written() {
 		return
 	}
@@ -522,7 +522,6 @@ func CreatePullRequest(ctx *context.APIContext) {
 		BaseBranch: baseBranch,
 		HeadRepo:   headRepo,
 		BaseRepo:   repo,
-		MergeBase:  compareInfo.MergeBase,
 		Type:       issues_model.PullRequestGitea,
 	}
 
@@ -956,7 +955,7 @@ func MergePullRequest(ctx *context.APIContext) {
 	if manuallyMerged {
 		if err := pull_service.MergedManually(ctx, pr, ctx.Doer, ctx.Repo.GitRepo, form.MergeCommitID); err != nil {
 			if models.IsErrInvalidMergeStyle(err) {
-				ctx.Error(http.StatusMethodNotAllowed, "Invalid merge style", fmt.Errorf("%s is not allowed an allowed merge style for this repository", repo_model.MergeStyle(form.Do)))
+				ctx.Error(http.StatusMethodNotAllowed, "Invalid merge style", fmt.Errorf("%s is not an allowed merge style for this repository", repo_model.MergeStyle(form.Do)))
 				return
 			}
 			if strings.Contains(err.Error(), "Wrong commit ID") {
@@ -1006,7 +1005,7 @@ func MergePullRequest(ctx *context.APIContext) {
 
 	if err := pull_service.Merge(ctx, pr, ctx.Doer, ctx.Repo.GitRepo, repo_model.MergeStyle(form.Do), form.HeadCommitID, message, false); err != nil {
 		if models.IsErrInvalidMergeStyle(err) {
-			ctx.Error(http.StatusMethodNotAllowed, "Invalid merge style", fmt.Errorf("%s is not allowed an allowed merge style for this repository", repo_model.MergeStyle(form.Do)))
+			ctx.Error(http.StatusMethodNotAllowed, "Invalid merge style", fmt.Errorf("%s is not an allowed merge style for this repository", repo_model.MergeStyle(form.Do)))
 		} else if models.IsErrMergeConflicts(err) {
 			conflictError := err.(models.ErrMergeConflicts)
 			ctx.JSON(http.StatusConflict, conflictError)
@@ -1568,7 +1567,7 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/ChangedFileList"
+	//     "$ref": "#/responses/ChangedFileListWithPagination"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
@@ -1594,25 +1593,21 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 
 	baseGitRepo := ctx.Repo.GitRepo
 
-	var prInfo *git.CompareInfo
+	baseRef := pr.BaseBranch
 	if pr.HasMerged {
-		prInfo, err = baseGitRepo.GetCompareInfo(pr.BaseRepo.RepoPath(), pr.MergeBase, pr.GetGitRefName(), true, false)
-	} else {
-		prInfo, err = baseGitRepo.GetCompareInfo(pr.BaseRepo.RepoPath(), pr.BaseBranch, pr.GetGitRefName(), true, false)
+		baseRef = pr.MergeBase
 	}
+	startCommitID, err := baseGitRepo.GetMergeBaseSimple(baseRef, pr.GetGitRefName())
 	if err != nil {
-		ctx.ServerError("GetCompareInfo", err)
-		return
+		// No merge base exists, fallback to use base reference.
+		startCommitID = baseRef
 	}
 
-	headCommitID, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
+	endCommitID, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
 	if err != nil {
 		ctx.ServerError("GetRefCommitID", err)
 		return
 	}
-
-	startCommitID := prInfo.MergeBase
-	endCommitID := headCommitID
 
 	maxLines := setting.Git.MaxGitDiffLines
 

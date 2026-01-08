@@ -8,7 +8,6 @@ import {
   LinearScale,
 } from 'chart.js';
 import {chartJsColors} from '../utils/color.js';
-import {createApp} from 'vue';
 
 Chart.defaults.color = chartJsColors.text;
 Chart.defaults.borderColor = chartJsColors.border;
@@ -20,7 +19,7 @@ Chart.register(
   Tooltip,
 );
 
-const sfc = {
+export default {
   components: {Bar},
   props: {
     locale: {
@@ -42,6 +41,9 @@ const sfc = {
     activityTopAuthors: window.config.pageData.repoActivityTopAuthors || [],
     i18nCommitActivity: this,
   }),
+  mounted() {
+    this.init();
+  },
   methods: {
     graphPoints() {
       return {
@@ -86,75 +88,84 @@ const sfc = {
             },
           },
         },
+        plugins: {
+          tooltip: {
+            intersect: false,
+          },
+        },
       };
     },
-  },
-  mounted() {
-    const refStyle = window.getComputedStyle(this.$refs.style);
-    this.colors.barColor = refStyle.backgroundColor;
+    init() {
+      const refStyle = window.getComputedStyle(this.$refs.style);
+      this.colors.barColor = refStyle.backgroundColor;
 
-    for (const item of this.activityTopAuthors) {
-      const img = new Image();
-      img.src = item.avatar_link;
-      item.avatar_img = img;
-    }
+      for (const item of this.activityTopAuthors) {
+        const img = new Image();
+        img.src = item.avatar_link;
+        item.avatar_img = img;
+      }
 
-    Chart.register({
-      id: 'image_label',
-      afterDraw: (chart) => {
-        const xAxis = chart.boxes[0];
-        const yAxis = chart.boxes[1];
-        for (const [index] of xAxis.ticks.entries()) {
-          const x = xAxis.getPixelForTick(index);
-          const img = this.activityTopAuthors[index].avatar_img;
+      Chart.register({
+        id: 'image_label',
+        afterDraw: (chart) => {
+          const xAxis = chart.boxes[0];
+          const yAxis = chart.boxes[1];
+          for (const [index] of xAxis.ticks.entries()) {
+            const x = xAxis.getPixelForTick(index);
+            const img = this.activityTopAuthors[index].avatar_img;
 
-          chart.ctx.save();
-          chart.ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x - 10, yAxis.bottom + 10, 20, 20);
-          chart.ctx.restore();
-        }
-      },
-      beforeEvent: (chart, args) => {
-        const event = args.event;
-        if (event.type !== 'mousemove' && event.type !== 'click') return;
+            chart.ctx.save();
+            const [width, height, dx, dy] = this.calcImageSizeAndShift(img);
+            chart.ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x - 10 + dx, yAxis.bottom + 10 + dy, width, height);
+            chart.ctx.restore();
+          }
+        },
+        beforeEvent: (chart, args) => {
+          const event = args.event;
+          if (event.type !== 'mousemove' && event.type !== 'click') return;
 
-        const yAxis = chart.boxes[1];
-        if (event.y < yAxis.bottom + 10 || event.y > yAxis.bottom + 30) {
-          chart.canvas.style.cursor = '';
-          return;
-        }
+          const yAxis = chart.boxes[1];
+          if (event.y < yAxis.bottom + 10 || event.y > yAxis.bottom + 30) {
+            chart.canvas.style.cursor = '';
+            return;
+          }
 
-        const xAxis = chart.boxes[0];
-        const pointIdx = xAxis.ticks.findIndex((_, index) => {
-          const x = xAxis.getPixelForTick(index);
-          return event.x >= x - 10 && event.x <= x + 10;
-        });
+          const xAxis = chart.boxes[0];
+          const pointIdx = xAxis.ticks.findIndex((_, index) => {
+            const x = xAxis.getPixelForTick(index);
+            return event.x >= x - 10 && event.x <= x + 10;
+          });
 
-        if (pointIdx === -1) {
-          chart.canvas.style.cursor = '';
-          return;
-        }
+          if (pointIdx === -1) {
+            chart.canvas.style.cursor = '';
+            return;
+          }
 
-        chart.canvas.style.cursor = 'pointer';
-        if (event.type === 'click' && this.activityTopAuthors[pointIdx].home_link) {
-          window.location.href = this.activityTopAuthors[pointIdx].home_link;
-        }
-      },
-    });
+          chart.canvas.style.cursor = 'pointer';
+          if (event.type === 'click' && this.activityTopAuthors[pointIdx].home_link) {
+            window.location.href = this.activityTopAuthors[pointIdx].home_link;
+          }
+        },
+      });
+    },
+    calcImageSizeAndShift(img) {
+      const targetSize = 20;
+      const [imgWidth, imgHeight] = [img.naturalWidth, img.naturalHeight];
+
+      // The image should be contained in a square,
+      // so the scale depends on the longer dimension.
+      const scale = targetSize / (Math.max(imgWidth, imgHeight));
+      const calcScale = (size) => size * scale;
+      const [width, height] = [calcScale(imgWidth), calcScale(imgHeight)];
+
+      // The image should be centered in the 20x20 square.
+      const calcShift = (size) => (targetSize - size) / 2;
+      const [dx, dy] = [calcShift(width), calcShift(height)];
+
+      return [width, height, dx, dy];
+    },
   },
 };
-
-export function initRepoActivityTopAuthorsChart() {
-  const el = document.getElementById('repo-activity-top-authors-chart');
-  if (el) {
-    createApp(sfc, {
-      locale: {
-        commitActivity: el.getAttribute('data-locale-commit-activity'),
-      },
-    }).mount(el);
-  }
-}
-
-export default sfc; // activate the IDE's Vue plugin
 </script>
 <template>
   <div>

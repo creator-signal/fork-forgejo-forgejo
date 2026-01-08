@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
+	"forgejo.org/services/forms"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,6 @@ import (
 func testLoginFailed(t *testing.T, username, password, message string) {
 	session := emptyTestSession(t)
 	req := NewRequestWithValues(t, "POST", "/user/login", map[string]string{
-		"_csrf":     GetCSRF(t, session, "/user/login"),
 		"user_name": username,
 		"password":  password,
 	})
@@ -72,7 +72,6 @@ func TestSigninWithRememberMe(t *testing.T) {
 
 	session := emptyTestSession(t)
 	req := NewRequestWithValues(t, "POST", "/user/login", map[string]string{
-		"_csrf":     GetCSRF(t, session, "/user/login"),
 		"user_name": user.Name,
 		"password":  userPassword,
 		"remember":  "on",
@@ -170,7 +169,7 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			resp := session.MakeRequest(t, req, http.StatusNotFound)
 			htmlDoc := NewHTMLParser(t, resp.Body)
 			assert.Greater(t, htmlDoc.Find(".navbar-left > a.item").Length(), 1) // show the Logo, and other links
-			assert.Greater(t, htmlDoc.Find(".navbar-right .user-menu a.item").Length(), 1)
+			assert.Greater(t, htmlDoc.Find(".navbar-right details.dropdown a").Length(), 1)
 
 			// 500 page
 			reset := enableDevtest()
@@ -192,7 +191,7 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			htmlDoc := NewHTMLParser(t, resp.Body)
 			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length()) // only show the Logo, no other links
 
-			userLinks := htmlDoc.Find(".navbar-right .user-menu a.item")
+			userLinks := htmlDoc.Find(".navbar-right details.dropdown a")
 			assert.Equal(t, 1, userLinks.Length()) // only logout link
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
 
@@ -213,7 +212,7 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			assert.Equal(t, locale.TrString("settings.must_enable_2fa"), htmlDoc.Find(".ui.red.message").Text())
 			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length()) // only show the Logo, no other links
 
-			userLinks = htmlDoc.Find(".navbar-right .user-menu a.item")
+			userLinks = htmlDoc.Find(".navbar-right details.dropdown a")
 			assert.Equal(t, 1, userLinks.Length()) // only logout link
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
 
@@ -274,5 +273,66 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			runTest(t, normalUser, true, true)
 			runTest(t, restrictedUser, true, true)
 		})
+	})
+}
+
+func TestTwoFactorWithPasswordChange(t *testing.T) {
+	defer unittest.OverrideFixtures("models/fixtures/TestTwoFactorWithPasswordChange")()
+
+	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	changePasswordUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{MustChangePassword: true})
+
+	runTest := func(t *testing.T, user *user_model.User, requireTOTP bool) {
+		t.Helper()
+		defer unittest.AssertSuccessfulDelete(t, &auth.TwoFactor{UID: user.ID})
+
+		session := loginUser(t, user.Name)
+
+		if user.MustChangePassword {
+			req := NewRequest(t, "GET", fmt.Sprintf("/%s", user.Name))
+			resp := session.MakeRequest(t, req, http.StatusSeeOther)
+			assert.Equal(t, "/user/settings/change_password", resp.Header().Get("Location"))
+
+			req = NewRequest(t, "GET", "/user/settings/security")
+			resp = session.MakeRequest(t, req, http.StatusSeeOther)
+			assert.Equal(t, "/user/settings/change_password", resp.Header().Get("Location"))
+
+			req = NewRequestWithJSON(t, "POST", "/user/settings/change_password", forms.MustChangePasswordForm{
+				Password: "password",
+				Retype:   "password",
+			})
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
+		}
+
+		if requireTOTP {
+			req := NewRequest(t, "GET", fmt.Sprintf("/%s", user.Name))
+			resp := session.MakeRequest(t, req, http.StatusSeeOther)
+			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
+
+			req = NewRequest(t, "GET", "/user/settings/change_password")
+			resp = session.MakeRequest(t, req, http.StatusSeeOther)
+			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
+
+			session.EnrollTOTP(t)
+		}
+
+		req := NewRequest(t, "GET", fmt.Sprintf("/%s", user.Name))
+		session.MakeRequest(t, req, http.StatusOK)
+	}
+
+	t.Run("Don't require TwoFactor", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		runTest(t, normalUser, false)
+		runTest(t, changePasswordUser, false)
+	})
+
+	t.Run("Require TwoFactor", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.GlobalTwoFactorRequirement, setting.AllTwoFactorRequirement)()
+
+		runTest(t, normalUser, true)
+		runTest(t, changePasswordUser, true)
 	})
 }

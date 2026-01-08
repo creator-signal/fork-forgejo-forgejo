@@ -33,7 +33,7 @@ jobs:
     # root is used for testing, allow it
     if: vars.ROLE == 'forgejo-integration' || github.repository_owner == 'root'
     steps:
-      - uses: https://data.forgejo.org/actions/checkout@v4
+      - uses: https://data.forgejo.org/actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -43,11 +43,11 @@ jobs:
           repository="${{ github.repository }}"
           echo "value=${repository##*/}" >> "$GITHUB_OUTPUT"
 
-      - uses: https://data.forgejo.org/actions/setup-node@v4
+      - uses: https://data.forgejo.org/actions/setup-node@v6
         with:
           node-version: 22
 
-      - uses: https://data.forgejo.org/actions/setup-go@v5
+      - uses: https://data.forgejo.org/actions/setup-go@v6
         with:
           go-version-file: "go.mod"
 
@@ -93,7 +93,7 @@ jobs:
 
       - name: cache node_modules
         id: node
-        uses: https://data.forgejo.org/actions/cache@v4
+        uses: https://data.forgejo.org/actions/cache@v5
         with:
           path: |
             node_modules
@@ -206,7 +206,7 @@ jobs:
           origin-url: ${{ env.GITHUB_SERVER_URL }}
           origin-repo: ${{ github.repository }}
           origin-token: ${{ secrets.CASCADE_ORIGIN_TOKEN }}
-          origin-ref: refs/heads/forgejo
+          origin-ref: ${{ github.ref }}
           destination-url: https://code.forgejo.org
           destination-fork-repo: ${{ vars.CASCADE_DESTINATION_DOER }}/end-to-end
           destination-repo: forgejo/end-to-end
@@ -227,11 +227,14 @@ jobs:
             curl -sS -X DELETE $url/api/v1/repos/forgejo-experimental/forgejo/releases/tags/$tag > /dev/null
             curl -sS -X DELETE $url/api/v1/repos/forgejo-experimental/forgejo/tags/$tag > /dev/null
           fi
-          # actions/checkout@v3 sets http.https://codeberg.org/.extraheader with the automatic token.
-          # Get rid of it so it does not prevent using the token that has write permissions
-          git config --local --unset http.https://codeberg.org/.extraheader
+          # actions/checkout@v6 sets http.https://codeberg.org/.extraheader with the automatic token. Get rid of it so
+          # it does not prevent using the token that has write permissions. As of @v6, it is stored in
+          # $RUNNER_TEMP/git-credentials-(uuid).config and included in the repo via
+          # includeif.gitdir:...=$RUNNER_TEMP/git-credentials-(uuid).config. Since we don't need these credentials
+          # anymore we can just remove the generated config file.
+          rm -f $RUNNER_TEMP/git-credentials-*
           if test -f .git/shallow ; then
-            echo "unexptected .git/shallow file is present"
+            echo "unexpected .git/shallow file is present"
             echo "it suggests a checkout --depth X was used which may prevent pushing the commit"
             echo "it happens when actions/checkout is called without depth: 0"
           fi

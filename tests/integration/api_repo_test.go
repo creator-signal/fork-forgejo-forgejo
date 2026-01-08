@@ -96,9 +96,9 @@ func TestAPISearchRepo(t *testing.T) {
 	}{
 		{
 			name: "RepositoriesMax50", requestURL: "/api/v1/repos/search?limit=50&private=false", expectedResults: expectedResults{
-				nil:   {count: 37},
-				user:  {count: 37},
-				user2: {count: 37},
+				nil:   {count: 38},
+				user:  {count: 38},
+				user2: {count: 38},
 			},
 		},
 		{
@@ -402,7 +402,7 @@ func TestAPIRepoMigrate(t *testing.T) {
 }
 
 func TestAPIRepoMigrateConflict(t *testing.T) {
-	onGiteaRun(t, testAPIRepoMigrateConflict)
+	onApplicationRun(t, testAPIRepoMigrateConflict)
 }
 
 func testAPIRepoMigrateConflict(t *testing.T, u *url.URL) {
@@ -485,7 +485,7 @@ func TestAPIOrgRepoCreate(t *testing.T) {
 }
 
 func TestAPIRepoCreateConflict(t *testing.T) {
-	onGiteaRun(t, testAPIRepoCreateConflict)
+	onApplicationRun(t, testAPIRepoCreateConflict)
 }
 
 func testAPIRepoCreateConflict(t *testing.T, u *url.URL) {

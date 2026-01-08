@@ -47,6 +47,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"xorm.io/xorm/convert"
+
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 )
 
 func exitf(format string, args ...any) {
@@ -128,10 +130,10 @@ func InitTest(requireGitea bool) {
 		var db *sql.DB
 		var err error
 		if setting.Database.Host[0] == '/' {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Name, setting.Database.SSLMode, setting.Database.Host))
 		} else {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 		}
 
@@ -157,10 +159,10 @@ func InitTest(requireGitea bool) {
 		db.Close()
 
 		if setting.Database.Host[0] == '/' {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Name, setting.Database.SSLMode, setting.Database.Host))
 		} else {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 		}
 		// This is a different db object; requires a different Close()
@@ -261,12 +263,29 @@ func cancelProcesses(t testing.TB, delay time.Duration) {
 			for _, p := range processes {
 				t.Logf("PrepareTestEnv:Remaining Process: %q", p.Description)
 			}
+			stacks := allGoroutineStacks()
+			t.Errorf("All goroutine stacks during process cancellation failure:\n%s", string(stacks))
+			// exit so that we don't spin in a loop executing `delay` wait over and over again when we won't be able to
+			// complete tests correctly due to the environmental issue present.
+			exitf("terminating test run due to unrecoverable failure")
 			return
 		}
 		runtime.Gosched() // let the context cancellation propagate
 		processes, _ = processManager.Processes(true, true)
 	}
 	t.Logf("PrepareTestEnv: all processes cancelled within %s", time.Since(start))
+}
+
+// allGoroutineStacks is the same as runtime/debug.Stack(), but it captures the stack of all goroutines.
+func allGoroutineStacks() []byte {
+	buf := make([]byte, 1024)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			return buf[:n]
+		}
+		buf = make([]byte, 2*len(buf))
+	}
 }
 
 func PrepareGitRepoDirectory(t testing.TB) {
@@ -322,6 +341,13 @@ func PrepareCleanPackageData(t testing.TB) {
 var inTestEnv atomic.Bool
 
 func PrepareTestEnv(t testing.TB, skip ...int) func() {
+	deferFn := PrepareTestEnvWithPackageData(t, skip...)
+	PrepareCleanPackageData(t)
+	return deferFn
+}
+
+// Doesn't perform the `PrepareCleanPackageData` that `PrepareTestEnv` does...
+func PrepareTestEnvWithPackageData(t testing.TB, skip ...int) func() {
 	t.Helper()
 
 	if !inTestEnv.CompareAndSwap(false, true) {
@@ -346,7 +372,6 @@ func PrepareTestEnv(t testing.TB, skip ...int) func() {
 	// do not add more Prepare* functions here, only call necessary ones in the related test functions
 	PrepareGitRepoDirectory(t)
 	PrepareLFSStorage(t)
-	PrepareCleanPackageData(t)
 	return deferFn
 }
 
@@ -370,6 +395,7 @@ type DeclarativeRepoOptions struct {
 	AutoInit      optional.Option[bool]
 	IsTemplate    optional.Option[bool]
 	ObjectFormat  optional.Option[string]
+	IsPrivate     optional.Option[bool]
 }
 
 func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts DeclarativeRepoOptions) (*repo_model.Repository, string, func()) {
@@ -402,6 +428,7 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 		DefaultBranch:    "main",
 		IsTemplate:       opts.IsTemplate.Value(),
 		ObjectFormatName: opts.ObjectFormat.Value(),
+		IsPrivate:        opts.IsPrivate.Value(),
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, repo)

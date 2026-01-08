@@ -17,7 +17,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"xorm.io/builder"
 )
@@ -25,7 +25,7 @@ import (
 // ActionTask represents a distribution of job
 type ActionTask struct {
 	ID       int64
-	JobID    int64
+	JobID    int64             `xorm:"index"`
 	Job      *ActionRunJob     `xorm:"-"`
 	Steps    []*ActionTaskStep `xorm:"-"`
 	Attempt  int64
@@ -143,9 +143,8 @@ func (task *ActionTask) LoadAttributes(ctx context.Context) error {
 	return nil
 }
 
-func (task *ActionTask) GenerateToken() (err error) {
-	task.Token, task.TokenSalt, task.TokenHash, task.TokenLastEight, err = generateSaltedToken()
-	return err
+func (task *ActionTask) GenerateToken() {
+	task.Token, task.TokenSalt, task.TokenHash, task.TokenLastEight = generateSaltedToken()
 }
 
 // Retrieve all the attempts from the same job as the target `ActionTask`.  Limited fields are queried to avoid loading
@@ -239,6 +238,88 @@ func GetRunningTaskByToken(ctx context.Context, token string) (*ActionTask, erro
 	return nil, errNotExist
 }
 
+func getConcurrencyCondition() builder.Cond {
+	concurrencyCond := builder.NewCond()
+
+	// OK to pick if there's no concurrency_group on the run
+	concurrencyCond = concurrencyCond.Or(builder.Eq{"concurrency_group": ""})
+	concurrencyCond = concurrencyCond.Or(builder.IsNull{"concurrency_group"})
+
+	// OK to pick if it's not a "QueueBehind" concurrency type
+	concurrencyCond = concurrencyCond.Or(builder.Neq{"concurrency_type": QueueBehind})
+
+	// subQuery ends up representing all the runs that would block a run from executing:
+	subQuery := builder.Select("id").From("action_run", "inner_run").
+		// A run can't block itself, so exclude it from this search
+		Where(builder.Neq{"inner_run.id": builder.Expr("outer_run.id")}).
+		// Blocking runs must be from the same repo & concurrency group
+		And(builder.Eq{"inner_run.repo_id": builder.Expr("outer_run.repo_id")}).
+		And(builder.Eq{"inner_run.concurrency_group": builder.Expr("outer_run.concurrency_group")}).
+		And(
+			// Ideally the logic here would be that a blocking run is "not done", and "younger", which allows each run
+			// to be blocked on the previous runs in the concurrency group and therefore execute in order from oldest to
+			// newest.
+			//
+			// But it's possible for runs to be required to run out-of-order -- for example, if a younger run has
+			// already completed but then it is re-run.  If we only used "not done" and "younger" as logic, then the
+			// re-run would not be blocked, and therefore would violate the concurrency group's single-run goal.
+			//
+			// So we use two conditions to meet both needs:
+			//
+			// Blocking runs have a running status...
+			builder.Eq{"inner_run.status": StatusRunning}.Or(
+				// Blocking runs are pending execution, & are younger than the outer_run
+				builder.In("inner_run.status", PendingStatuses()).
+					And(builder.Lt{"inner_run.`index`": builder.Expr("outer_run.`index`")})))
+
+	// OK to pick if there are no blocking runs
+	concurrencyCond = concurrencyCond.Or(builder.NotExists(subQuery))
+
+	return concurrencyCond
+}
+
+// Returns all the available jobs that could be executed on `runner`, before label filtering is applied.  Note that
+// only a single job can actually be run from this result for any given invocation, as multiple runs (in order) from any
+// single concurrency group could be returned.
+func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJob, error) {
+	jobCond := builder.NewCond()
+	if runner.RepoID != 0 {
+		jobCond = builder.Eq{"repo_id": runner.RepoID}
+	} else if runner.OwnerID != 0 {
+		jobCond = builder.In("repo_id", builder.Select("`repository`.id").From("repository").
+			Join("INNER", "repo_unit", "`repository`.id = `repo_unit`.repo_id").
+			Where(builder.Eq{"`repository`.owner_id": runner.OwnerID, "`repo_unit`.type": unit.TypeActions}))
+	}
+	// Concurrency group checks for queuing one run behind the last run in the concurrency group are more
+	// computationally expensive on the database. To manage the risk that this might have on large-scale deployments
+	// When this feature is initially released, it can be disabled in the ini file by setting
+	// `CONCURRENCY_GROUP_QUEUE_ENABLED = false` in the `[actions]` section.  If disabled, then actions with a
+	// concurrency group and `cancel-in-progress: false` will run simultaneously rather than being queued.
+	if setting.Actions.ConcurrencyGroupQueueEnabled {
+		jobCond = jobCond.And(getConcurrencyCondition())
+	}
+	if jobCond.IsValid() {
+		// It is *likely* more efficient to use an EXISTS query here rather than an IN clause, as that allows the
+		// database's query optimizer to perform partial computation of the subquery rather than complete computation.
+		// However, database engines can be fickle and difficult to predict. We'll retain the original IN clause
+		// implementation when ConcurrencyGroupQueueEnabled is disabled, which should maintain the same performance
+		// characteristics. When ConcurrencyGroupQueueEnabled is enabled, it will switch to the EXISTS clause.
+		if setting.Actions.ConcurrencyGroupQueueEnabled {
+			jobCond = builder.Exists(builder.Select("id").From("action_run", "outer_run").
+				Where(builder.Eq{"outer_run.id": builder.Expr("action_run_job.run_id")}).
+				And(jobCond))
+		} else {
+			jobCond = builder.In("run_id", builder.Select("id").From("action_run", "outer_run").Where(jobCond))
+		}
+	}
+
+	var jobs []*ActionRunJob
+	if err := e.Where("task_id=? AND status=?", 0, StatusWaiting).And(jobCond).Asc("updated", "id").Find(&jobs); err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
 func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask, bool, error) {
 	ctx, commiter, err := db.TxContext(ctx)
 	if err != nil {
@@ -248,20 +329,8 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 
 	e := db.GetEngine(ctx)
 
-	jobCond := builder.NewCond()
-	if runner.RepoID != 0 {
-		jobCond = builder.Eq{"repo_id": runner.RepoID}
-	} else if runner.OwnerID != 0 {
-		jobCond = builder.In("repo_id", builder.Select("`repository`.id").From("repository").
-			Join("INNER", "repo_unit", "`repository`.id = `repo_unit`.repo_id").
-			Where(builder.Eq{"`repository`.owner_id": runner.OwnerID, "`repo_unit`.type": unit.TypeActions}))
-	}
-	if jobCond.IsValid() {
-		jobCond = builder.In("run_id", builder.Select("id").From("action_run").Where(jobCond))
-	}
-
-	var jobs []*ActionRunJob
-	if err := e.Where("task_id=? AND status=?", 0, StatusWaiting).And(jobCond).Asc("updated", "id").Find(&jobs); err != nil {
+	jobs, err := GetAvailableJobsForRunner(e, runner)
+	if err != nil {
 		return nil, false, err
 	}
 
@@ -297,9 +366,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 		CommitSHA:         job.CommitSHA,
 		IsForkPullRequest: job.IsForkPullRequest,
 	}
-	if err := task.GenerateToken(); err != nil {
-		return nil, false, err
-	}
+	task.GenerateToken()
 
 	var workflowJob *jobparser.Job
 	if gots, err := jobparser.Parse(job.WorkflowPayload, false); err != nil {
@@ -352,6 +419,46 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 	}
 
 	return task, true, nil
+}
+
+// Placeholder tasks are created when the status/content of an [ActionRunJob] is resolved by Forgejo without dispatch to
+// a runner, specifically in the case of a workflow call's outer job. It is the responsibility of the caller to
+// increment the job's Attempt field before invoking this method, and to update that field in the database, so that
+// reruns can function for placeholder tasks and provide updated outputs.
+func CreatePlaceholderTask(ctx context.Context, job *ActionRunJob, outputs map[string]string) (*ActionTask, error) {
+	actionTask := &ActionTask{
+		JobID:             job.ID,
+		Attempt:           job.Attempt,
+		Started:           timeutil.TimeStampNow(),
+		Stopped:           timeutil.TimeStampNow(),
+		Status:            job.Status,
+		RepoID:            job.RepoID,
+		OwnerID:           job.OwnerID,
+		CommitSHA:         job.CommitSHA,
+		IsForkPullRequest: job.IsForkPullRequest,
+	}
+	// token isn't used on a placeholder task, but generation is needed due to the unique constraint on field TokenHash
+	actionTask.GenerateToken()
+
+	err := db.WithTx(ctx, func(ctx context.Context) error {
+		_, err := db.GetEngine(ctx).Insert(actionTask)
+		if err != nil {
+			return fmt.Errorf("failure inserting action_task: %w", err)
+		}
+
+		for key, value := range outputs {
+			err := InsertTaskOutputIfNotExist(ctx, actionTask.ID, key, value)
+			if err != nil {
+				return fmt.Errorf("failure inserting action_task_output %q: %w", key, err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return actionTask, nil
 }
 
 func UpdateTask(ctx context.Context, task *ActionTask, cols ...string) error {

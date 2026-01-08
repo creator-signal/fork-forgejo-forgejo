@@ -32,7 +32,7 @@ func TestActivityPubPerson(t *testing.T) {
 	federatedSrv := mock.DistantServer(t)
 	defer federatedSrv.Close()
 
-	onGiteaRun(t, func(t *testing.T, localUrl *url.URL) {
+	onApplicationRun(t, func(t *testing.T, localUrl *url.URL) {
 		defer test.MockVariableValue(&setting.AppURL, localUrl.String())()
 
 		localUserID := 2
@@ -66,6 +66,7 @@ func TestActivityPubPerson(t *testing.T) {
 			assert.Equal(t, localUserName, person.PreferredUsername.String())
 			assert.Regexp(t, fmt.Sprintf("activitypub/user-id/%d$", localUserID), person.GetID())
 			assert.Regexp(t, fmt.Sprintf("activitypub/user-id/%d/inbox$", localUserID), person.Inbox.GetID().String())
+			assert.Regexp(t, fmt.Sprintf("activitypub/user-id/%d/outbox$", localUserID), person.Outbox.GetID().String())
 
 			assert.NotNil(t, person.PublicKey)
 			assert.Regexp(t, fmt.Sprintf("activitypub/user-id/%d#main-key$", localUserID), person.PublicKey.ID)
@@ -90,7 +91,7 @@ func TestActivityPubPersonInbox(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.AppURL, u.String())()
 		user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
@@ -117,7 +118,7 @@ func TestActivityPubPersonOutbox(t *testing.T) {
 	federatedSrv := mock.DistantServer(t)
 	defer federatedSrv.Close()
 
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.AppURL, u.String())()
 		user2outboxurl := u.JoinPath("/api/v1/activitypub/user-id/2/outbox").String()
 

@@ -38,6 +38,25 @@ routers/.* @gusted
 options/locale/.* @0ko
 options/locale_next/.* @0ko
 
-# Personal interest
+# lint-locale-usage
 build/lint-locale-usage/.* @fogti
+models/unit/.* @fogti
+services/migrations/lint-locale-usage/.* @fogti
+
+# Personal interest
 .*/webhook.* @oliverpool
+
+# Often work with, and on, the API
+modules/structs/.* @Cyborus
+routers/api/v1/.* @Cyborus
+routers/api/forgejo/.* @Cyborus
+tests/integration/api_.* @Cyborus
+
+# Federation code, requires care to be taken with regards to interoperability
+# and backwards compatibility due to the way signatures work.
+services/federation/.* @famfo
+modules/forgefed/.* @famfo
+models/forgefed/.* @famfo
+routers/api/v1/activitypub/.* @famfo
+tests/integration/api_activitypub_.* @famfo
+tests/integration/activitypub_.* @famfo

@@ -14,11 +14,12 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/actions"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 	actions_service "forgejo.org/services/actions"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
-	"code.gitea.io/actions-proto-go/runner/v1/runnerv1connect"
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
+	"code.forgejo.org/forgejo/actions-proto/runner/v1/runnerv1connect"
 	"connectrpc.com/connect"
 	gouuid "github.com/google/uuid"
 )
@@ -79,9 +80,7 @@ func (s *Service) Register(
 		Version:     req.Msg.Version,
 		AgentLabels: labels,
 	}
-	if err := runner.GenerateToken(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("can't generate token"))
-	}
+	runner.GenerateToken()
 
 	// create new runner
 	if err := actions_model.CreateRunner(ctx, runner); err != nil {
@@ -153,6 +152,7 @@ func (s *Service) FetchTask(
 		latestVersion++
 	}
 
+	var additionalTasks []*runnerv1.Task
 	if tasksVersion != latestVersion {
 		// if the task version in request is not equal to the version in db,
 		// it means there may still be some tasks not be assigned.
@@ -163,10 +163,28 @@ func (s *Service) FetchTask(
 		} else if ok {
 			task = t
 		}
+
+		taskCapacity := req.Msg.GetTaskCapacity()
+		taskCapacity-- // remove 1 for the task already fetched as `task`
+		for taskCapacity > 0 {
+			if t, ok, err := actions_service.PickTask(ctx, runner); err != nil {
+				// Don't return an error to the client/runner -- we've already assigned one-or-more tasks to the runner
+				// and if we don't return them, they can't be picked up by another runner and will become zombie tasks.
+				// Log the error and return the tasks we've assigned so far.
+				log.Error("pick task failed: %v", err)
+				break
+			} else if ok {
+				additionalTasks = append(additionalTasks, t)
+				taskCapacity--
+			} else {
+				break
+			}
+		}
 	}
 	res := connect.NewResponse(&runnerv1.FetchTaskResponse{
-		Task:         task,
-		TasksVersion: latestVersion,
+		Task:            task,
+		TasksVersion:    latestVersion,
+		AdditionalTasks: additionalTasks,
 	})
 	return res, nil
 }
@@ -223,6 +241,15 @@ func (s *Service) UpdateTask(
 	if req.Msg.State.Result != runnerv1.Result_RESULT_UNSPECIFIED {
 		if err := actions_service.EmitJobsIfReady(task.Job.RunID); err != nil {
 			log.Error("Emit ready jobs of run %d: %v", task.Job.RunID, err)
+		}
+		// Reaching a finalized result for a task can cause other tasks in the same concurrency group to become
+		// unblocked. Increasing task version here allows all applicable runners to requery to the DB for that state.
+		// Because it is only useful for that condition, and it has system performance risks, only enable it when
+		// concurrency group queuing is enabled.
+		if setting.Actions.ConcurrencyGroupQueueEnabled {
+			if err := actions_model.IncreaseTaskVersion(ctx, runner.OwnerID, runner.RepoID); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("fail to increase task version: %w", err))
+			}
 		}
 	}
 

@@ -17,7 +17,7 @@ import (
 
 	"forgejo.org/models/db"
 	db_install "forgejo.org/models/db/install"
-	"forgejo.org/models/migrations"
+	"forgejo.org/models/gitea_migrations"
 	system_model "forgejo.org/models/system"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/auth/password/hash"
@@ -362,7 +362,7 @@ func SubmitInstall(ctx *context.Context) {
 
 	// Init the engine with migration
 	// Wrap migrations.Migrate into a function of type func(db.Engine) error to fix diagnostics.
-	if err = db.InitEngineWithMigration(ctx, migrations.WrapperMigrate); err != nil {
+	if err = db.InitEngineWithMigration(ctx, gitea_migrations.WrapperMigrate); err != nil {
 		db.UnsetDefaultEngine()
 		ctx.Data["Err_DbSetting"] = true
 		ctx.RenderWithErr(ctx.Tr("install.invalid_db_setting", err), tplInstall, &form)
@@ -485,11 +485,7 @@ func SubmitInstall(ctx *context.Context) {
 
 	// if there is already a SECRET_KEY, we should not overwrite it, otherwise the encrypted data will not be able to be decrypted
 	if setting.SecretKey == "" {
-		var secretKey string
-		if secretKey, err = generate.NewSecretKey(); err != nil {
-			ctx.RenderWithErr(ctx.Tr("install.secret_key_failed", err), tplInstall, &form)
-			return
-		}
+		secretKey := generate.NewSecretKey()
 		cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 	}
 

@@ -17,8 +17,8 @@ import (
 	"testing"
 
 	"forgejo.org/models/db"
-	"forgejo.org/models/migrations"
-	migrate_base "forgejo.org/models/migrations/base"
+	"forgejo.org/models/gitea_migrations"
+	migrate_base "forgejo.org/models/gitea_migrations/base"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/charset"
@@ -29,6 +29,7 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/tests"
 
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"xorm.io/xorm"
@@ -193,11 +194,11 @@ func restoreOldDB(t *testing.T, version string) bool {
 		var db *sql.DB
 		var err error
 		if setting.Database.Host[0] == '/' {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/?sslmode=%s&host=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/?sslmode=%s&host=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.SSLMode, setting.Database.Host))
 			require.NoError(t, err)
 		} else {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.SSLMode))
 			require.NoError(t, err)
 		}
@@ -213,10 +214,10 @@ func restoreOldDB(t *testing.T, version string) bool {
 		// Check if we need to setup a specific schema
 		if len(setting.Database.Schema) != 0 {
 			if setting.Database.Host[0] == '/' {
-				db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
+				db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
 					setting.Database.User, setting.Database.Passwd, setting.Database.Name, setting.Database.SSLMode, setting.Database.Host))
 			} else {
-				db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+				db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 					setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 			}
 			require.NoError(t, err)
@@ -244,10 +245,10 @@ func restoreOldDB(t *testing.T, version string) bool {
 		}
 
 		if setting.Database.Host[0] == '/' {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Name, setting.Database.SSLMode, setting.Database.Host))
 		} else {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 		}
 		require.NoError(t, err)
@@ -262,7 +263,7 @@ func restoreOldDB(t *testing.T, version string) bool {
 
 func wrappedMigrate(x *xorm.Engine) error {
 	currentEngine = x
-	return migrations.Migrate(x)
+	return gitea_migrations.Migrate(x)
 }
 
 func doMigrationTest(t *testing.T, version string) {

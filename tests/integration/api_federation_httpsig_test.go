@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
 	"forgejo.org/services/contexttest"
+	"forgejo.org/services/federation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,7 +29,7 @@ func TestFederationHttpSigValidation(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		userID := 2
 		userURL := fmt.Sprintf("%sapi/v1/activitypub/user-id/%d", u, userID)
 
@@ -71,6 +72,14 @@ func TestFederationHttpSigValidation(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotNil(t, user)
 			assert.True(t, user.PublicKey.Valid)
+		})
+
+		t.Run("ValidateActorFromKeyID", func(t *testing.T) {
+			_, err := federation.NewActorIDFromKeyID(ctx, actorKeyID)
+			require.NoError(t, err)
+
+			_, err = federation.NewActorIDFromKeyID(ctx, "http://bad.url/%^&")
+			require.Error(t, err)
 		})
 
 		// Disable signature validation

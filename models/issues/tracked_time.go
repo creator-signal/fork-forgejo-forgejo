@@ -22,9 +22,9 @@ import (
 // TrackedTime represents a time that was spent for a specific issue.
 type TrackedTime struct {
 	ID          int64            `xorm:"pk autoincr"`
-	IssueID     int64            `xorm:"INDEX"`
+	IssueID     int64            `xorm:"INDEX REFERENCES(issue, id)"`
 	Issue       *Issue           `xorm:"-"`
-	UserID      int64            `xorm:"INDEX"`
+	UserID      int64            `xorm:"INDEX REFERENCES(user, id)"`
 	User        *user_model.User `xorm:"-"`
 	Created     time.Time        `xorm:"-"`
 	CreatedUnix int64            `xorm:"created"`
@@ -148,7 +148,7 @@ func (opts *FindTrackedTimesOptions) toSession(e db.Engine) db.Engine {
 
 // GetTrackedTimes returns all tracked times that fit to the given options.
 func GetTrackedTimes(ctx context.Context, options *FindTrackedTimesOptions) (trackedTimes TrackedTimeList, err error) {
-	err = options.toSession(db.GetEngine(ctx)).Find(&trackedTimes)
+	err = options.toSession(db.GetEngine(ctx)).Asc("tracked_time.id").Find(&trackedTimes)
 	return trackedTimes, err
 }
 

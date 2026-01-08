@@ -52,7 +52,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/IssueList"
+	//     "$ref": "#/responses/IssueListWithoutPagination"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
@@ -206,7 +206,7 @@ func CreateIssueDependency(ctx *context.APIContext) {
 		return
 	}
 
-	dependencyPerm := getPermissionForRepo(ctx, target.Repo)
+	dependencyPerm := getPermissionForRepo(ctx, dependency.Repo)
 	if ctx.Written() {
 		return
 	}
@@ -268,7 +268,7 @@ func RemoveIssueDependency(ctx *context.APIContext) {
 		return
 	}
 
-	dependencyPerm := getPermissionForRepo(ctx, target.Repo)
+	dependencyPerm := getPermissionForRepo(ctx, dependency.Repo)
 	if ctx.Written() {
 		return
 	}
@@ -315,7 +315,7 @@ func GetIssueBlocks(ctx *context.APIContext) {
 	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/IssueList"
+	//     "$ref": "#/responses/IssueListWithoutPagination"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

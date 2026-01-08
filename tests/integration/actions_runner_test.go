@@ -13,10 +13,10 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/setting"
 
-	pingv1 "code.gitea.io/actions-proto-go/ping/v1"
-	"code.gitea.io/actions-proto-go/ping/v1/pingv1connect"
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
-	"code.gitea.io/actions-proto-go/runner/v1/runnerv1connect"
+	pingv1 "code.forgejo.org/forgejo/actions-proto/ping/v1"
+	"code.forgejo.org/forgejo/actions-proto/ping/v1/pingv1connect"
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
+	"code.forgejo.org/forgejo/actions-proto/runner/v1/runnerv1connect"
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +24,8 @@ import (
 )
 
 type mockRunner struct {
-	client *mockRunnerClient
+	client           *mockRunnerClient
+	lastTasksVersion int64
 }
 
 type mockRunnerClient struct {
@@ -82,8 +83,7 @@ func (r *mockRunner) doRegister(t *testing.T, name, token string, labels []strin
 
 func (r *mockRunner) registerAsRepoRunner(t *testing.T, ownerName, repoName, runnerName string, labels []string) {
 	if !setting.Database.Type.IsSQLite3() {
-		// registering a mock runner when using a database other than SQLite leaves leftovers
-		t.FailNow()
+		assert.FailNow(t, "registering a mock runner when using a database other than SQLite leaves leftovers")
 	}
 	session := loginUser(t, ownerName)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
@@ -96,6 +96,15 @@ func (r *mockRunner) registerAsRepoRunner(t *testing.T, ownerName, repoName, run
 	r.doRegister(t, runnerName, registrationToken.Token, labels)
 }
 
+func (r *mockRunner) maybeFetchTask(t *testing.T) *runnerv1.Task {
+	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
+		TasksVersion: r.lastTasksVersion,
+	}))
+	require.NoError(t, err)
+	r.lastTasksVersion = resp.Msg.TasksVersion
+	return resp.Msg.Task
+}
+
 func (r *mockRunner) fetchTask(t *testing.T, timeout ...time.Duration) *runnerv1.Task {
 	fetchTimeout := 10 * time.Second
 	if len(timeout) > 0 {
@@ -103,18 +112,44 @@ func (r *mockRunner) fetchTask(t *testing.T, timeout ...time.Duration) *runnerv1
 	}
 
 	var task *runnerv1.Task
-	assert.Eventually(t, func() bool {
-		resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
-			TasksVersion: 0,
-		}))
-		require.NoError(t, err)
-		if resp.Msg.Task != nil {
-			task = resp.Msg.Task
+	require.Eventually(t, func() bool {
+		maybeTask := r.maybeFetchTask(t)
+		if maybeTask != nil {
+			task = maybeTask
 			return true
 		}
 		return false
 	}, fetchTimeout, time.Millisecond*100, "failed to fetch a task")
 	return task
+}
+
+func (r *mockRunner) maybeFetchMultipleTasks(t *testing.T, taskCapacity *int64) (*runnerv1.Task, []*runnerv1.Task) {
+	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
+		TasksVersion: r.lastTasksVersion,
+		TaskCapacity: taskCapacity,
+	}))
+	require.NoError(t, err)
+	r.lastTasksVersion = resp.Msg.TasksVersion
+	return resp.Msg.Task, resp.Msg.AdditionalTasks
+}
+
+func (r *mockRunner) fetchMultipleTasks(t *testing.T, taskCapacity *int64, timeout ...time.Duration) (*runnerv1.Task, []*runnerv1.Task) {
+	fetchTimeout := 10 * time.Second
+	if len(timeout) > 0 {
+		fetchTimeout = timeout[0]
+	}
+	var task *runnerv1.Task
+	var additional []*runnerv1.Task
+	require.Eventually(t, func() bool {
+		maybeTask, maybeAdditional := r.maybeFetchMultipleTasks(t, taskCapacity)
+		if maybeTask != nil {
+			task = maybeTask
+			additional = maybeAdditional
+			return true
+		}
+		return false
+	}, fetchTimeout, time.Millisecond*100, "failed to fetch a task")
+	return task, additional
 }
 
 type mockTaskOutcome struct {

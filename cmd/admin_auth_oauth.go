@@ -129,6 +129,20 @@ func oauthCLIFlags() []cli.Flag {
 			Name:  "allow-username-change",
 			Usage: "Allow users to change their username",
 		},
+		&cli.StringFlag{
+			Name:  "quota-group-claim-name",
+			Value: "",
+			Usage: "Claim name providing quota group names for this source",
+		},
+		&cli.StringFlag{
+			Name:  "quota-group-map",
+			Value: "",
+			Usage: "JSON mapping between groups and quota groups",
+		},
+		&cli.BoolFlag{
+			Name:  "quota-group-map-removal",
+			Usage: "Activate automatic quota group removal depending on groups",
+		},
 	}
 }
 
@@ -136,6 +150,7 @@ func microcmdAuthAddOauth() *cli.Command {
 	return &cli.Command{
 		Name:   "add-oauth",
 		Usage:  "Add new Oauth authentication source",
+		Before: noDanglingArgs,
 		Action: newAuthService().addOauth,
 		Flags:  oauthCLIFlags(),
 	}
@@ -145,6 +160,7 @@ func microcmdAuthUpdateOauth() *cli.Command {
 	return &cli.Command{
 		Name:   "update-oauth",
 		Usage:  "Update existing Oauth authentication source",
+		Before: noDanglingArgs,
 		Action: newAuthService().updateOauth,
 		Flags:  append(oauthCLIFlags()[:1], append([]cli.Flag{idFlag()}, oauthCLIFlags()[1:]...)...),
 	}
@@ -181,6 +197,9 @@ func parseOAuth2Config(_ context.Context, c *cli.Command) *oauth2.Source {
 		GroupTeamMap:                  c.String("group-team-map"),
 		GroupTeamMapRemoval:           c.Bool("group-team-map-removal"),
 		AllowUsernameChange:           c.Bool("allow-username-change"),
+		QuotaGroupClaimName:           c.String("quota-group-claim-name"),
+		QuotaGroupMap:                 c.String("quota-group-map"),
+		QuotaGroupMapRemoval:          c.Bool("quota-group-map-removal"),
 	}
 }
 
@@ -280,6 +299,15 @@ func (a *authService) updateOauth(ctx context.Context, c *cli.Command) error {
 	}
 	if c.IsSet("group-team-map-removal") {
 		oAuth2Config.GroupTeamMapRemoval = c.Bool("group-team-map-removal")
+	}
+	if c.IsSet("quota-group-claim-name") {
+		oAuth2Config.QuotaGroupClaimName = c.String("quota-group-claim-name")
+	}
+	if c.IsSet("quota-group-map") {
+		oAuth2Config.QuotaGroupMap = c.String("quota-group-map")
+	}
+	if c.IsSet("quota-group-map-removal") {
+		oAuth2Config.QuotaGroupMapRemoval = c.Bool("quota-group-map-removal")
 	}
 
 	if c.IsSet("allow-username-change") {

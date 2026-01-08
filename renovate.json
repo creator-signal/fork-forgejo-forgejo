@@ -9,7 +9,7 @@
   "baseBranchPatterns": [
     "$default",
     "/^v11\\.\\d+/forgejo$/",
-    "/^v12\\.\\d+/forgejo$/"
+    "/^v13\\.\\d+/forgejo$/"
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths", "npmDedupe"],
   "prConcurrentLimit": 10,
@@ -136,11 +136,6 @@
         "yamllint"
       ],
       "automerge": true
-    },
-    {
-      "description": "Hold back on some package updates for a few days",
-      "matchPackageNames": ["monaco-editor"],
-      "minimumReleaseAge": "30 days"
     },
     {
       "description": "Disable indirect updates for stable branches",

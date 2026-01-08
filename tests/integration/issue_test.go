@@ -86,6 +86,21 @@ func TestViewIssues(t *testing.T) {
 	assert.Equal(t, "Search issues…", placeholder)
 }
 
+func TestViewIssuesType(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	session := loginUser(t, user.Name)
+	req := NewRequest(t, "GET", repo.Link()+"/issues")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	issuesType := htmlDoc.doc.Find(".list-header-type > .menu .item[href*=\"type=all\"]").First()
+	assert.Equal(t, "All issues", issuesType.Text())
+}
+
 func TestViewIssuesSortByType(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -93,25 +108,57 @@ func TestViewIssuesSortByType(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 
 	session := loginUser(t, user.Name)
-	req := NewRequest(t, "GET", repo.Link()+"/issues?type=created_by")
-	resp := session.MakeRequest(t, req, http.StatusOK)
+	for _, path := range []string{"/issues?type=created_by", "/issues?q=sort:created:asc"} {
+		req := NewRequest(t, "GET", repo.Link()+path)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		issuesSelection := getIssuesSelection(t, htmlDoc)
+		expectedNumIssues := unittest.GetCount(t,
+			&issues_model.Issue{RepoID: repo.ID, PosterID: user.ID},
+			unittest.Cond("is_closed=?", false),
+			unittest.Cond("is_pull=?", false),
+		)
+		if expectedNumIssues > setting.UI.IssuePagingNum {
+			expectedNumIssues = setting.UI.IssuePagingNum
+		}
+		assert.Equal(t, expectedNumIssues, issuesSelection.Length())
+
+		issuesSelection.Each(func(_ int, selection *goquery.Selection) {
+			issue := getIssue(t, repo.ID, selection)
+			assert.Equal(t, user.ID, issue.PosterID)
+		})
+	}
+}
+
+func TestViewIssuesSortByUpdatedTime(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	// When sorting by update time, the "updated" text and icon should appear
+	for _, sort := range []string{"recentupdate", "leastupdate"} {
+		req := NewRequest(t, "GET", repo.Link()+"/issues?sort="+sort)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		issueList := htmlDoc.doc.Find("#issue-list")
+		updatedText := issueList.Find(".flex-item-body").First().Text()
+		assert.Contains(t, updatedText, "updated")
+
+		historyIcon := issueList.Find(".octicon-history")
+		assert.Positive(t, historyIcon.Length())
+	}
+
+	// When sorting by something else, the "updated" text and icon should NOT appear
+	req := NewRequest(t, "GET", repo.Link()+"/issues?sort=latest")
+	resp := MakeRequest(t, req, http.StatusOK)
 
 	htmlDoc := NewHTMLParser(t, resp.Body)
-	issuesSelection := getIssuesSelection(t, htmlDoc)
-	expectedNumIssues := unittest.GetCount(t,
-		&issues_model.Issue{RepoID: repo.ID, PosterID: user.ID},
-		unittest.Cond("is_closed=?", false),
-		unittest.Cond("is_pull=?", false),
-	)
-	if expectedNumIssues > setting.UI.IssuePagingNum {
-		expectedNumIssues = setting.UI.IssuePagingNum
-	}
-	assert.Equal(t, expectedNumIssues, issuesSelection.Length())
-
-	issuesSelection.Each(func(_ int, selection *goquery.Selection) {
-		issue := getIssue(t, repo.ID, selection)
-		assert.Equal(t, user.ID, issue.PosterID)
-	})
+	issueList := htmlDoc.doc.Find("#issue-list")
+	historyIcon := issueList.Find(".octicon-history")
+	assert.Empty(t, historyIcon.Length())
 }
 
 func TestViewIssuesKeyword(t *testing.T) {
@@ -171,6 +218,15 @@ func TestViewIssuesSearchOptions(t *testing.T) {
 
 	t.Run("All issues", func(t *testing.T) {
 		req := NewRequestf(t, "GET", "%s/issues?state=all", repo.Link())
+		resp := MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		issuesSelection := getIssuesSelection(t, htmlDoc)
+		assert.Equal(t, 3, issuesSelection.Length())
+	})
+
+	t.Run("All issues keyword override", func(t *testing.T) {
+		// Keyword should override the state parameter
+		req := NewRequestf(t, "GET", "%s/issues?q=is:all&state=open", repo.Link())
 		resp := MakeRequest(t, req, http.StatusOK)
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		issuesSelection := getIssuesSelection(t, htmlDoc)
@@ -282,15 +338,10 @@ func TestViewIssueCommentBox(t *testing.T) {
 	lockedIssueURL, lockedIssue := testIssueWithBean(t, owner.Name, repo.ID, "Locked", "Description")
 
 	// Lock the issue
-	req := NewRequest(t, "GET", lockedIssueURL)
-	resp := ownerSession.MakeRequest(t, req, http.StatusOK)
-	htmlDoc := NewHTMLParser(t, resp.Body)
-
-	req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/lock", lockedIssueURL), map[string]string{
-		"_csrf":  htmlDoc.GetCSRF(),
+	req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/lock", lockedIssueURL), map[string]string{
 		"reason": "Too heated",
 	})
-	_ = ownerSession.MakeRequest(t, req, http.StatusOK)
+	ownerSession.MakeRequest(t, req, http.StatusOK)
 
 	lockedIssue = unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: lockedIssue.ID})
 	assert.True(t, lockedIssue.IsLocked)
@@ -328,7 +379,6 @@ func testNewIssue(t *testing.T, session *TestSession, user, repo, title, content
 	link, exists := htmlDoc.doc.Find("form.ui.form").Attr("action")
 	assert.True(t, exists, "The template has changed")
 	req = NewRequestWithValues(t, "POST", link, map[string]string{
-		"_csrf":   htmlDoc.GetCSRF(),
 		"title":   title,
 		"content": content,
 	})
@@ -362,7 +412,6 @@ func testIssueAddComment(t *testing.T, session *TestSession, issueURL, content, 
 	commentCount := htmlDoc.doc.Find(".comment-list .comment .render-content").Length()
 
 	req = NewRequestWithValues(t, "POST", link, map[string]string{
-		"_csrf":   htmlDoc.GetCSRF(),
 		"content": content,
 		"status":  status,
 	})
@@ -464,7 +513,6 @@ func TestIssueDependencies(t *testing.T) {
 
 		urlStr := fmt.Sprintf("/%s/%s/issues/%d/dependency/add", owner.Name, repo.Name, issue.Index)
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-			"_csrf":         GetCSRF(t, session, fmt.Sprintf("/%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)),
 			"newDependency": fmt.Sprintf("%d", dependency.Index),
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
@@ -474,7 +522,6 @@ func TestIssueDependencies(t *testing.T) {
 
 		urlStr := fmt.Sprintf("/%s/%s/issues/%d/dependency/delete", owner.Name, repo.Name, issue.Index)
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-			"_csrf":              GetCSRF(t, session, fmt.Sprintf("/%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)),
 			"removeDependencyID": fmt.Sprintf("%d", dependency.Index),
 			"dependencyType":     "blockedBy",
 		})
@@ -527,21 +574,18 @@ func TestEditIssue(t *testing.T) {
 	issueURL := testNewIssue(t, session, "user2", "repo1", "Title", "Description")
 
 	req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/content", issueURL), map[string]string{
-		"_csrf":   GetCSRF(t, session, issueURL),
 		"content": "modified content",
 		"context": fmt.Sprintf("/%s/%s", "user2", "repo1"),
 	})
 	session.MakeRequest(t, req, http.StatusOK)
 
 	req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/content", issueURL), map[string]string{
-		"_csrf":   GetCSRF(t, session, issueURL),
 		"content": "modified content",
 		"context": fmt.Sprintf("/%s/%s", "user2", "repo1"),
 	})
 	session.MakeRequest(t, req, http.StatusBadRequest)
 
 	req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/content", issueURL), map[string]string{
-		"_csrf":           GetCSRF(t, session, issueURL),
 		"content":         "modified content",
 		"content_version": "1",
 		"context":         fmt.Sprintf("/%s/%s", "user2", "repo1"),
@@ -575,13 +619,9 @@ func TestIssueCommentDelete(t *testing.T) {
 	assert.Equal(t, comment1, comment.Content)
 
 	// Using the ID of a comment that does not belong to the repository must fail
-	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/comments/%d/delete", "user5", "repo4", commentID), map[string]string{
-		"_csrf": GetCSRF(t, session, issueURL),
-	})
+	req := NewRequest(t, "POST", fmt.Sprintf("/%s/%s/comments/%d/delete", "user5", "repo4", commentID))
 	session.MakeRequest(t, req, http.StatusNotFound)
-	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/comments/%d/delete", "user2", "repo1", commentID), map[string]string{
-		"_csrf": GetCSRF(t, session, issueURL),
-	})
+	req = NewRequest(t, "POST", fmt.Sprintf("/%s/%s/comments/%d/delete", "user2", "repo1", commentID))
 	session.MakeRequest(t, req, http.StatusOK)
 	unittest.AssertNotExistsBean(t, &issues_model.Comment{ID: commentID})
 }
@@ -601,12 +641,11 @@ func TestIssueCommentAttachment(t *testing.T) {
 	link, exists := htmlDoc.doc.Find("#comment-form").Attr("action")
 	assert.True(t, exists, "The template has changed")
 
-	uuid := createAttachment(t, session, GetCSRF(t, session, repoURL), repoURL, "image.png", generateImg(), http.StatusOK)
+	uuid := createAttachment(t, session, repoURL, "image.png", generateImg(), http.StatusOK)
 
 	commentCount := htmlDoc.doc.Find(".comment-list .comment .render-content").Length()
 
 	req = NewRequestWithValues(t, "POST", link, map[string]string{
-		"_csrf":   htmlDoc.GetCSRF(),
 		"content": content,
 		"status":  status,
 		"files":   uuid,
@@ -655,13 +694,11 @@ func TestIssueCommentUpdate(t *testing.T) {
 
 	// Using the ID of a comment that does not belong to the repository must fail
 	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/comments/%d", "user5", "repo4", commentID), map[string]string{
-		"_csrf":   GetCSRF(t, session, issueURL),
 		"content": modifiedContent,
 	})
 	session.MakeRequest(t, req, http.StatusNotFound)
 
 	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/comments/%d", "user2", "repo1", commentID), map[string]string{
-		"_csrf":   GetCSRF(t, session, issueURL),
 		"content": modifiedContent,
 	})
 	session.MakeRequest(t, req, http.StatusOK)
@@ -671,7 +708,6 @@ func TestIssueCommentUpdate(t *testing.T) {
 
 	// make the comment empty
 	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/comments/%d", "user2", "repo1", commentID), map[string]string{
-		"_csrf":           GetCSRF(t, session, issueURL),
 		"content":         "",
 		"content_version": fmt.Sprintf("%d", comment.ContentVersion),
 	})
@@ -694,7 +730,6 @@ func TestIssueCommentUpdateSimultaneously(t *testing.T) {
 	modifiedContent := comment.Content + "MODIFIED"
 
 	req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/comments/%d", "user2", "repo1", commentID), map[string]string{
-		"_csrf":   GetCSRF(t, session, issueURL),
 		"content": modifiedContent,
 	})
 	session.MakeRequest(t, req, http.StatusOK)
@@ -702,13 +737,11 @@ func TestIssueCommentUpdateSimultaneously(t *testing.T) {
 	modifiedContent = comment.Content + "2"
 
 	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/comments/%d", "user2", "repo1", commentID), map[string]string{
-		"_csrf":   GetCSRF(t, session, issueURL),
 		"content": modifiedContent,
 	})
 	session.MakeRequest(t, req, http.StatusBadRequest)
 
 	req = NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/comments/%d", "user2", "repo1", commentID), map[string]string{
-		"_csrf":           GetCSRF(t, session, issueURL),
 		"content":         modifiedContent,
 		"content_version": "1",
 	})
@@ -724,22 +757,15 @@ func TestIssueReaction(t *testing.T) {
 	session := loginUser(t, "user2")
 	issueURL := testNewIssue(t, session, "user2", "repo1", "Title", "Description")
 
-	req := NewRequest(t, "GET", issueURL)
-	resp := session.MakeRequest(t, req, http.StatusOK)
-	htmlDoc := NewHTMLParser(t, resp.Body)
-
-	req = NewRequestWithValues(t, "POST", path.Join(issueURL, "/reactions/react"), map[string]string{
-		"_csrf":   htmlDoc.GetCSRF(),
+	req := NewRequestWithValues(t, "POST", path.Join(issueURL, "/reactions/react"), map[string]string{
 		"content": "8ball",
 	})
 	session.MakeRequest(t, req, http.StatusInternalServerError)
 	req = NewRequestWithValues(t, "POST", path.Join(issueURL, "/reactions/react"), map[string]string{
-		"_csrf":   htmlDoc.GetCSRF(),
 		"content": "eyes",
 	})
 	session.MakeRequest(t, req, http.StatusOK)
 	req = NewRequestWithValues(t, "POST", path.Join(issueURL, "/reactions/unreact"), map[string]string{
-		"_csrf":   htmlDoc.GetCSRF(),
 		"content": "eyes",
 	})
 	session.MakeRequest(t, req, http.StatusOK)
@@ -834,13 +860,8 @@ func testIssueWithBean(t *testing.T, user string, repoID int64, title, content s
 func testIssueChangeInfo(t *testing.T, user, issueURL, info, value string) {
 	session := loginUser(t, user)
 
-	req := NewRequest(t, "GET", issueURL)
-	resp := session.MakeRequest(t, req, http.StatusOK)
-	htmlDoc := NewHTMLParser(t, resp.Body)
-
-	req = NewRequestWithValues(t, "POST", path.Join(issueURL, info), map[string]string{
-		"_csrf": htmlDoc.GetCSRF(),
-		info:    value,
+	req := NewRequestWithValues(t, "POST", path.Join(issueURL, info), map[string]string{
+		info: value,
 	})
 	_ = session.MakeRequest(t, req, http.StatusOK)
 }
@@ -875,90 +896,122 @@ func TestSearchIssues(t *testing.T) {
 		expectedIssueCount = setting.UI.IssuePagingNum
 	}
 
-	link, _ := url.Parse("/issues/search")
-	req := NewRequest(t, "GET", link.String())
+	req := NewRequest(t, "GET", "/issues/search")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 	var apiIssues []*api.Issue
 	DecodeJSON(t, resp, &apiIssues)
 	assert.Len(t, apiIssues, expectedIssueCount)
 
-	since := "2000-01-01T00:50:01+00:00" // 946687801
-	before := time.Unix(999307200, 0).Format(time.RFC3339)
-	query := url.Values{}
-	query.Add("since", since)
-	query.Add("before", before)
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 11)
-	query.Del("since")
-	query.Del("before")
+	t.Run("By Query Params", func(t *testing.T) {
+		link, _ := url.Parse("/issues/search")
+		since := "2000-01-01T00:50:01+00:00" // 946687801
+		before := time.Unix(999307200, 0).Format(time.RFC3339)
+		query := url.Values{}
+		query.Add("since", since)
+		query.Add("before", before)
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Len(t, apiIssues, 11)
+		query.Del("since")
+		query.Del("before")
 
-	query.Add("state", "closed")
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 2)
+		query.Add("state", "closed")
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Len(t, apiIssues, 2)
 
-	query.Set("state", "all")
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Equal(t, "22", resp.Header().Get("X-Total-Count"))
-	assert.Len(t, apiIssues, 20)
+		query.Set("state", "all")
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Equal(t, "23", resp.Header().Get("X-Total-Count"))
+		assert.Len(t, apiIssues, 20)
 
-	query.Add("limit", "5")
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Equal(t, "22", resp.Header().Get("X-Total-Count"))
-	assert.Len(t, apiIssues, 5)
+		query.Add("limit", "5")
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Equal(t, "23", resp.Header().Get("X-Total-Count"))
+		assert.Len(t, apiIssues, 5)
 
-	query = url.Values{"assigned": {"true"}, "state": {"all"}}
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 2)
+		query = url.Values{"assigned": {"true"}, "state": {"all"}}
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Len(t, apiIssues, 2)
 
-	query = url.Values{"milestones": {"milestone1"}, "state": {"all"}}
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 1)
+		query = url.Values{"milestones": {"milestone1"}, "state": {"all"}}
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Len(t, apiIssues, 1)
 
-	query = url.Values{"milestones": {"milestone1,milestone3"}, "state": {"all"}}
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 2)
+		query = url.Values{"milestones": {"milestone1,milestone3"}, "state": {"all"}}
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Len(t, apiIssues, 2)
 
-	query = url.Values{"owner": {"user2"}} // user
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 8)
+		query = url.Values{"owner": {"user2"}} // user
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Len(t, apiIssues, 9)
 
-	query = url.Values{"owner": {"org3"}} // organization
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 5)
+		query = url.Values{"owner": {"org3"}} // organization
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Len(t, apiIssues, 5)
 
-	query = url.Values{"owner": {"org3"}, "team": {"team1"}} // organization + team
-	link.RawQuery = query.Encode()
-	req = NewRequest(t, "GET", link.String())
-	resp = session.MakeRequest(t, req, http.StatusOK)
-	DecodeJSON(t, resp, &apiIssues)
-	assert.Len(t, apiIssues, 2)
+		query = url.Values{"owner": {"org3"}, "team": {"team1"}} // organization + team
+		link.RawQuery = query.Encode()
+		req = NewRequest(t, "GET", link.String())
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &apiIssues)
+		assert.Len(t, apiIssues, 2)
+	})
+
+	t.Run("By Keyword", func(t *testing.T) {
+		link, _ := url.Parse("/issues/search")
+		for keyword, len := range map[string]int{
+			"modified:>2000-01-01 modified:<2001-09-02": 11,
+			"is:closed":             2,
+			"is:all":                20,
+			"is:all assignee:user2": 2,
+		} {
+			q := url.Values{"q": {keyword}}
+			link.RawQuery = q.Encode()
+			req = NewRequest(t, "GET", link.String())
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &apiIssues)
+			assert.Len(t, apiIssues, len, "keyword: %v", keyword)
+		}
+	})
+
+	t.Run("Filter + Keyword", func(t *testing.T) {
+		link, _ := url.Parse("/issues/search")
+		exec := func(q url.Values, len int) {
+			link.RawQuery = q.Encode()
+			req = NewRequest(t, "GET", link.String())
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &apiIssues)
+			assert.Len(t, apiIssues, len, "query: %v", q.Encode())
+		}
+		exec(url.Values{"milestones": {"milestone1"}, "keyword": {"is:all"}}, 1)
+		exec(url.Values{"assigned": {"true"}, "keyword": {"is:all"}}, 2)
+	})
 }
 
 func TestSearchIssuesWithLabels(t *testing.T) {
@@ -1005,6 +1058,14 @@ func TestSearchIssuesWithLabels(t *testing.T) {
 
 	// org and repo label
 	query.Set("labels", "label2,orglabel4")
+	query.Add("q", "is:all")
+	link.RawQuery = query.Encode()
+	req = NewRequest(t, "GET", link.String())
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &apiIssues)
+	assert.Len(t, apiIssues, 2)
+	query.Del("q")
+
 	query.Add("state", "all")
 	link.RawQuery = query.Encode()
 	req = NewRequest(t, "GET", link.String())
@@ -1048,9 +1109,7 @@ func TestIssuePinMove(t *testing.T) {
 	issueURL, issue := testIssueWithBean(t, "user2", 1, "Title", "Content")
 	assert.Equal(t, 0, issue.PinOrder)
 
-	req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/pin", issueURL), map[string]string{
-		"_csrf": GetCSRF(t, session, issueURL),
-	})
+	req := NewRequest(t, "POST", fmt.Sprintf("%s/pin", issueURL))
 	session.MakeRequest(t, req, http.StatusOK)
 	issue = unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: issue.ID})
 
@@ -1062,7 +1121,7 @@ func TestIssuePinMove(t *testing.T) {
 	// Using the ID of an issue that does not belong to the repository must fail
 	{
 		session5 := loginUser(t, "user5")
-		movePinURL := "/user5/repo4/issues/move_pin?_csrf=" + GetCSRF(t, session5, issueURL)
+		movePinURL := "/user5/repo4/issues/move_pin"
 		req = NewRequestWithJSON(t, "POST", movePinURL, map[string]any{
 			"id":       issue.ID,
 			"position": newPosition,
@@ -1073,7 +1132,7 @@ func TestIssuePinMove(t *testing.T) {
 		assert.Equal(t, position, issue.PinOrder)
 	}
 
-	movePinURL := issueURL[:strings.LastIndexByte(issueURL, '/')] + "/move_pin?_csrf=" + GetCSRF(t, session, issueURL)
+	movePinURL := issueURL[:strings.LastIndexByte(issueURL, '/')] + "/move_pin"
 	req = NewRequestWithJSON(t, "POST", movePinURL, map[string]any{
 		"id":       issue.ID,
 		"position": newPosition,
@@ -1097,16 +1156,13 @@ func TestUpdateIssueDeadline(t *testing.T) {
 	session := loginUser(t, owner.Name)
 
 	issueURL := fmt.Sprintf("%s/%s/issues/%d", owner.Name, repoBefore.Name, issueBefore.Index)
-	req := NewRequest(t, "GET", issueURL)
-	resp := session.MakeRequest(t, req, http.StatusOK)
-	htmlDoc := NewHTMLParser(t, resp.Body)
 
-	urlStr := issueURL + "/deadline?_csrf=" + htmlDoc.GetCSRF()
-	req = NewRequestWithJSON(t, "POST", urlStr, map[string]string{
+	urlStr := issueURL + "/deadline"
+	req := NewRequestWithJSON(t, "POST", urlStr, map[string]string{
 		"due_date": "2022-04-06T00:00:00.000Z",
 	})
+	resp := session.MakeRequest(t, req, http.StatusCreated)
 
-	resp = session.MakeRequest(t, req, http.StatusCreated)
 	var apiIssue api.IssueDeadline
 	DecodeJSON(t, resp, &apiIssue)
 
@@ -1156,7 +1212,6 @@ func TestUpdateIssueTitle(t *testing.T) {
 	for _, issueTitleUpdateTest := range issueTitleUpdateTests {
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
 			"title": issueTitleUpdateTest.title,
-			"_csrf": GetCSRF(t, session, issueURL),
 		})
 
 		resp := session.MakeRequest(t, req, issueTitleUpdateTest.expectedHTTPCode)
@@ -1198,7 +1253,6 @@ func TestGetContentHistory(t *testing.T) {
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: issue.RepoID})
-	issueURL := fmt.Sprintf("%s/issues/%d", repo.FullName(), issue.Index)
 	contentHistory := unittest.AssertExistsAndLoadBean(t, &issues_model.ContentHistory{ID: 2, IssueID: issue.ID})
 	contentHistoryURL := fmt.Sprintf("%s/issues/%d/content-history/detail?comment_id=%d&history_id=%d", repo.FullName(), issue.Index, contentHistory.CommentID, contentHistory.ID)
 
@@ -1210,7 +1264,7 @@ func TestGetContentHistory(t *testing.T) {
 
 	testCase := func(t *testing.T, session *TestSession, canDelete bool) {
 		t.Helper()
-		contentHistoryURL := contentHistoryURL + "&_csrf=" + GetCSRF(t, session, issueURL)
+		contentHistoryURL := contentHistoryURL
 
 		req := NewRequest(t, "GET", contentHistoryURL)
 		resp := session.MakeRequest(t, req, http.StatusOK)
@@ -1305,7 +1359,7 @@ func TestIssueFilterNoFollow(t *testing.T) {
 }
 
 func TestIssueForm(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
 		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "",
@@ -1354,7 +1408,7 @@ body:
 }
 
 func TestIssueUnsubscription(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
 			AutoInit: optional.Some(false),
@@ -1364,7 +1418,6 @@ func TestIssueUnsubscription(t *testing.T) {
 
 		issueURL := testNewIssue(t, session, user.Name, repo.Name, "Issue title", "Description")
 		req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/watch", issueURL), map[string]string{
-			"_csrf": GetCSRF(t, session, issueURL),
 			"watch": "0",
 		})
 		session.MakeRequest(t, req, http.StatusOK)
@@ -1494,34 +1547,39 @@ func TestIssuePostersSearch(t *testing.T) {
 		Results []*userSearchInfo `json:"results"`
 	}
 
-	t.Run("Name search", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.UI.DefaultShowFullName, false)()
+	testCase := func(t *testing.T, showFullName bool, url, wantUserName string, wantUserID int64) {
+		t.Helper()
+		defer test.MockVariableValue(&setting.UI.DefaultShowFullName, showFullName)()
 
-		req := NewRequest(t, "GET", "/user2/repo1/issues/posters?q=USer2")
+		req := NewRequest(t, "GET", url)
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		var data userSearchResponse
 		DecodeJSON(t, resp, &data)
 
 		assert.Len(t, data.Results, 1)
-		assert.Equal(t, "user2", data.Results[0].UserName)
-		assert.EqualValues(t, 2, data.Results[0].UserID)
+		assert.Equal(t, wantUserName, data.Results[0].UserName)
+		assert.Equal(t, wantUserID, data.Results[0].UserID)
+	}
+
+	t.Run("Name search", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		testCase(t, false, "/user2/repo1/issues/posters?q=USer2", "user2", 2)
+	})
+
+	t.Run("Name search (default full_name)", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		testCase(t, true, "/user2/repo1/issues/posters?q=USer2", "user2", 2)
 	})
 
 	t.Run("Full name search", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.UI.DefaultShowFullName, true)()
+		testCase(t, true, "/user2/repo1/issues/posters?q=OnE", "user1", 1)
+	})
 
-		req := NewRequest(t, "GET", "/user2/repo1/issues/posters?q=OnE")
-		resp := MakeRequest(t, req, http.StatusOK)
-
-		var data userSearchResponse
-		DecodeJSON(t, resp, &data)
-
-		assert.Len(t, data.Results, 1)
-		assert.Equal(t, "user1", data.Results[0].UserName)
-		assert.EqualValues(t, 1, data.Results[0].UserID)
+	t.Run("Full name search (no default full_name)", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		testCase(t, false, "/user2/repo1/issues/posters?q=OnE", "user1", 1)
 	})
 }
 
@@ -1567,4 +1625,44 @@ func TestIssueAndPullRedirect(t *testing.T) {
 
 	req = NewRequest(t, "GET", "/user2/repo1/pulls/9999999")
 	MakeRequest(t, req, http.StatusNotFound)
+}
+
+func TestIssueUrlHandling(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("Overview correct", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "user2/repo1/issues")
+		MakeRequest(t, req, http.StatusOK)
+	})
+
+	t.Run("Issue correct", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "user2/repo1/issues/1")
+		MakeRequest(t, req, http.StatusOK)
+	})
+
+	t.Run("Overview left-padded", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "/user2/repo1/extra_text_issues")
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Overview right-padded", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "/user2/repo1/issues_extra_text")
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Issue left-padded", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "/user2/repo1/extra_text_issues/5")
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Issue right-padded", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "/user2/repo1/issues_extra_text/5")
+		MakeRequest(t, req, http.StatusNotFound)
+	})
 }

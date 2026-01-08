@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"forgejo.org/models"
+	"forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
@@ -582,6 +583,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 		ctx.ServerError("GetPackageCountByRepoID", err)
 		return nil
 	}
+	ctx.Data["NumOpenActionRuns"] = actions.RepoNumOpenActions(ctx, ctx.Repo.Repository.ID)
 
 	ctx.Data["Title"] = owner.Name + "/" + repo.Name
 	ctx.Data["Repository"] = repo
@@ -750,7 +752,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 
 	// People who have push access or have forked repository can propose a new pull request.
 	canPush := ctx.Repo.CanWrite(unit_model.TypeCode) ||
-		(ctx.IsSigned && repo_model.HasForkedRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID))
+		(ctx.IsSigned && repo_model.HasForkedRepoLax(ctx, ctx.Doer.ID, ctx.Repo.Repository))
 	canCompare := false
 
 	// Pull request is allowed if this is a fork repository

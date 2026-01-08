@@ -243,3 +243,87 @@ func TestGetCommitShortStat(t *testing.T) {
 		assert.Equal(t, 0, totalDeletions)
 	})
 }
+
+func TestGetShortStat(t *testing.T) {
+	// https://github.com/git/git/blob/60f3f52f17cceefa5299709b189ce6fe2d181e7b/t/t4068-diff-symmetric-merge-base.sh#L10-L23
+	repo, err := OpenRepository(t.Context(), filepath.Join(testReposDir, "symmetric_repo"))
+	require.NoError(t, err)
+	defer repo.Close()
+
+	t.Run("Normal", func(t *testing.T) {
+		t.Run("Via merge base", func(t *testing.T) {
+			numFiles, totalAdditions, totalDeletions, err := repo.GetShortStat("br2", "main", true)
+			require.NoError(t, err)
+			assert.Equal(t, 1, numFiles)
+			assert.Equal(t, 1, totalAdditions)
+			assert.Zero(t, totalDeletions)
+
+			numFiles, totalAdditions, totalDeletions, err = repo.GetShortStat("main", "br2", true)
+			require.NoError(t, err)
+			assert.Equal(t, 1, numFiles)
+			assert.Equal(t, 1, totalAdditions)
+			assert.Zero(t, totalDeletions)
+		})
+
+		t.Run("Direct compare", func(t *testing.T) {
+			numFiles, totalAdditions, totalDeletions, err := repo.GetShortStat("main", "br2", false)
+			require.NoError(t, err)
+			assert.Equal(t, 2, numFiles)
+			assert.Equal(t, 1, totalAdditions)
+			assert.Equal(t, 1, totalDeletions)
+
+			numFiles, totalAdditions, totalDeletions, err = repo.GetShortStat("main", "br3", false)
+			require.NoError(t, err)
+			assert.Equal(t, 1, numFiles)
+			assert.Equal(t, 1, totalAdditions)
+			assert.Zero(t, totalDeletions)
+
+			numFiles, totalAdditions, totalDeletions, err = repo.GetShortStat("br3", "main", false)
+			require.NoError(t, err)
+			assert.Equal(t, 1, numFiles)
+			assert.Zero(t, totalAdditions)
+			assert.Equal(t, 1, totalDeletions)
+		})
+	})
+
+	t.Run("No merge base", func(t *testing.T) {
+		numFiles, totalAdditions, totalDeletions, err := repo.GetShortStat("main", "br3", true)
+		require.ErrorIs(t, err, ErrNoMergebaseFound)
+		assert.Zero(t, numFiles)
+		assert.Zero(t, totalAdditions)
+		assert.Zero(t, totalDeletions)
+	})
+
+	t.Run("Multiple merge base", func(t *testing.T) {
+		numFiles, totalAdditions, totalDeletions, err := repo.GetShortStat("main", "br1", true)
+		require.ErrorIs(t, err, ErrMultipleMergebasesFound)
+		assert.Zero(t, numFiles)
+		assert.Zero(t, totalAdditions)
+		assert.Zero(t, totalDeletions)
+	})
+}
+
+func TestGetMergeBaseSimple(t *testing.T) {
+	repo, err := OpenRepository(t.Context(), filepath.Join(testReposDir, "symmetric_repo"))
+	require.NoError(t, err)
+
+	defer repo.Close()
+
+	t.Run("Normal", func(t *testing.T) {
+		mergebase, err := repo.GetMergeBaseSimple("main", "br2")
+		require.NoError(t, err)
+		assert.Equal(t, "9d36f18c8ca14ad28c4751afd14f3e3146a785dc", mergebase)
+	})
+
+	t.Run("No mergebase", func(t *testing.T) {
+		mergebase, err := repo.GetMergeBaseSimple("main", "br3")
+		require.ErrorContains(t, err, "exit status 1")
+		assert.Empty(t, mergebase)
+	})
+
+	t.Run("Multiple mergebase", func(t *testing.T) {
+		mergebase, err := repo.GetMergeBaseSimple("main", "br1")
+		require.NoError(t, err)
+		assert.Equal(t, "9d36f18c8ca14ad28c4751afd14f3e3146a785dc", mergebase)
+	})
+}

@@ -31,7 +31,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
-	gitea_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	doctor "forgejo.org/services/doctor"
 	"forgejo.org/services/migrations"
 	mirror_service "forgejo.org/services/mirror"
@@ -54,7 +54,6 @@ func TestPushMirrorRedactCredential(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		resp := session.MakeRequest(t, NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-			"_csrf":                GetCSRF(t, session, "/user2/repo1/settings"),
 			"action":               "push-mirror-add",
 			"push_mirror_address":  cloneAddr,
 			"push_mirror_interval": "0",
@@ -84,7 +83,7 @@ func TestPushMirrorRedactCredential(t *testing.T) {
 }
 
 func TestMirrorPush(t *testing.T) {
-	onGiteaRun(t, testMirrorPush)
+	onApplicationRun(t, testMirrorPush)
 }
 
 func testMirrorPush(t *testing.T, u *url.URL) {
@@ -161,10 +160,7 @@ func testMirrorPush(t *testing.T, u *url.URL) {
 
 func doCreatePushMirror(ctx APITestContext, address, username, password string) func(t *testing.T) {
 	return func(t *testing.T) {
-		csrf := GetCSRF(t, ctx.Session, fmt.Sprintf("/%s/%s/settings", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)))
-
 		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)), map[string]string{
-			"_csrf":                csrf,
 			"action":               "push-mirror-add",
 			"push_mirror_address":  address,
 			"push_mirror_username": username,
@@ -173,7 +169,7 @@ func doCreatePushMirror(ctx APITestContext, address, username, password string) 
 		})
 		ctx.Session.MakeRequest(t, req, http.StatusSeeOther)
 
-		flashCookie := ctx.Session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie := ctx.Session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Contains(t, flashCookie.Value, "success")
 	}
@@ -181,10 +177,7 @@ func doCreatePushMirror(ctx APITestContext, address, username, password string) 
 
 func doCreatePushMirrorWithBranchFilter(ctx APITestContext, address, username, password, branchFilter string) func(t *testing.T) {
 	return func(t *testing.T) {
-		csrf := GetCSRF(t, ctx.Session, fmt.Sprintf("/%s/%s/settings", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)))
-
 		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)), map[string]string{
-			"_csrf":                     csrf,
 			"action":                    "push-mirror-add",
 			"push_mirror_address":       address,
 			"push_mirror_username":      username,
@@ -194,7 +187,7 @@ func doCreatePushMirrorWithBranchFilter(ctx APITestContext, address, username, p
 		})
 		ctx.Session.MakeRequest(t, req, http.StatusSeeOther)
 
-		flashCookie := ctx.Session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie := ctx.Session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Contains(t, flashCookie.Value, "success")
 	}
@@ -202,10 +195,7 @@ func doCreatePushMirrorWithBranchFilter(ctx APITestContext, address, username, p
 
 func doRemovePushMirror(ctx APITestContext, address, username, password string, pushMirrorID int) func(t *testing.T) {
 	return func(t *testing.T) {
-		csrf := GetCSRF(t, ctx.Session, fmt.Sprintf("/%s/%s/settings", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)))
-
 		req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings", url.PathEscape(ctx.Username), url.PathEscape(ctx.Reponame)), map[string]string{
-			"_csrf":                csrf,
 			"action":               "push-mirror-remove",
 			"push_mirror_id":       strconv.Itoa(pushMirrorID),
 			"push_mirror_address":  address,
@@ -215,7 +205,7 @@ func doRemovePushMirror(ctx APITestContext, address, username, password string, 
 		})
 		ctx.Session.MakeRequest(t, req, http.StatusSeeOther)
 
-		flashCookie := ctx.Session.GetCookie(gitea_context.CookieNameFlash)
+		flashCookie := ctx.Session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Contains(t, flashCookie.Value, "success")
 	}
@@ -227,7 +217,7 @@ func TestSSHPushMirror(t *testing.T) {
 		t.Skip("SSH executable not present")
 	}
 
-	onGiteaRun(t, func(t *testing.T, _ *url.URL) {
+	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		defer test.MockVariableValue(&setting.SSH.RootPath, t.TempDir())()
@@ -237,19 +227,19 @@ func TestSSHPushMirror(t *testing.T) {
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 		assert.False(t, srcRepo.HasWiki())
 		sess := loginUser(t, user.Name)
+
 		pushToRepo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			Name:         optional.Some("push-mirror-test"),
+			Name:         optional.Some("push-mirror-misc-test"),
 			AutoInit:     optional.Some(false),
 			EnabledUnits: optional.Some([]unit.Type{unit.TypeCode}),
 		})
 		defer f()
-
 		sshURL := fmt.Sprintf("ssh://%s@%s/%s.git", setting.SSH.User, net.JoinHostPort(setting.SSH.ListenHost, strconv.Itoa(setting.SSH.ListenPort)), pushToRepo.FullName())
+
 		t.Run("Mutual exclusive", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings", srcRepo.FullName()), map[string]string{
-				"_csrf":                GetCSRF(t, sess, fmt.Sprintf("/%s/settings", srcRepo.FullName())),
 				"action":               "push-mirror-add",
 				"push_mirror_address":  sshURL,
 				"push_mirror_username": "username",
@@ -271,7 +261,6 @@ func TestSSHPushMirror(t *testing.T) {
 			defer test.MockVariableValue(&git.HasSSHExecutable, false)()
 
 			req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings", srcRepo.FullName()), map[string]string{
-				"_csrf":                GetCSRF(t, sess, fmt.Sprintf("/%s/settings", srcRepo.FullName())),
 				"action":               "push-mirror-add",
 				"push_mirror_address":  sshURL,
 				"push_mirror_use_ssh":  "true",
@@ -294,13 +283,22 @@ func TestSSHPushMirror(t *testing.T) {
 			htmlDoc.AssertElement(t, inputSelector, true)
 		})
 
-		t.Run("Normal", func(t *testing.T) {
+		testMirrorPush := func(t *testing.T, srcRepo *repo_model.Repository, expectedSHA string) {
+			t.Helper()
+
+			pushToRepo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
+				Name:         optional.Some("push-mirror-test"),
+				AutoInit:     optional.Some(false),
+				EnabledUnits: optional.Some([]unit.Type{unit.TypeCode}),
+			})
+			defer f()
+			sshURL := fmt.Sprintf("ssh://%s@%s/%s.git", setting.SSH.User, net.JoinHostPort(setting.SSH.ListenHost, strconv.Itoa(setting.SSH.ListenPort)), pushToRepo.FullName())
+
 			var pushMirror *repo_model.PushMirror
 			t.Run("Adding", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings", srcRepo.FullName()), map[string]string{
-					"_csrf":                GetCSRF(t, sess, fmt.Sprintf("/%s/settings", srcRepo.FullName())),
 					"action":               "push-mirror-add",
 					"push_mirror_address":  sshURL,
 					"push_mirror_use_ssh":  "true",
@@ -308,7 +306,7 @@ func TestSSHPushMirror(t *testing.T) {
 				})
 				sess.MakeRequest(t, req, http.StatusSeeOther)
 
-				flashCookie := sess.GetCookie(gitea_context.CookieNameFlash)
+				flashCookie := sess.GetCookie(app_context.CookieNameFlash)
 				assert.NotNil(t, flashCookie)
 				assert.Contains(t, flashCookie.Value, "success")
 
@@ -333,7 +331,6 @@ func TestSSHPushMirror(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings/keys", pushToRepo.FullName()), map[string]string{
-					"_csrf":       GetCSRF(t, sess, fmt.Sprintf("/%s/settings/keys", pushToRepo.FullName())),
 					"title":       "push mirror key",
 					"content":     publickey,
 					"is_writable": "true",
@@ -347,7 +344,6 @@ func TestSSHPushMirror(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings", srcRepo.FullName()), map[string]string{
-					"_csrf":          GetCSRF(t, sess, fmt.Sprintf("/%s/settings", srcRepo.FullName())),
 					"action":         "push-mirror-sync",
 					"push_mirror_id": strconv.FormatInt(pushMirror.ID, 10),
 				})
@@ -356,20 +352,19 @@ func TestSSHPushMirror(t *testing.T) {
 
 			t.Run("Check mirrored content", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
-				shortSHA := "1032bbf17f"
 
 				req := NewRequest(t, "GET", fmt.Sprintf("/%s", srcRepo.FullName()))
 				resp := sess.MakeRequest(t, req, http.StatusOK)
 				htmlDoc := NewHTMLParser(t, resp.Body)
 
-				assert.Contains(t, htmlDoc.Find(".shortsha").Text(), shortSHA)
+				assert.Contains(t, htmlDoc.Find(".shortsha").Text(), expectedSHA)
 
 				assert.Eventually(t, func() bool {
 					req = NewRequest(t, "GET", fmt.Sprintf("/%s", pushToRepo.FullName()))
 					resp = sess.MakeRequest(t, req, NoExpectedStatus)
 					htmlDoc = NewHTMLParser(t, resp.Body)
 
-					return resp.Code == http.StatusOK && htmlDoc.Find(".shortsha").Text() == shortSHA
+					return resp.Code == http.StatusOK && htmlDoc.Find(".shortsha").Text() == expectedSHA
 				}, time.Second*30, time.Second)
 			})
 
@@ -384,12 +379,23 @@ func TestSSHPushMirror(t *testing.T) {
 
 				assert.Contains(t, string(knownHosts), string(publicKey))
 			})
+		}
+
+		t.Run("Normal", func(t *testing.T) {
+			testMirrorPush(t, srcRepo, "1032bbf17f")
+		})
+
+		t.Run("LFS", func(t *testing.T) {
+			defer test.MockVariableValue(&setting.LFS.StartServer, true)()
+
+			srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 54})
+			testMirrorPush(t, srcRepo, "e9c32647ba")
 		})
 	})
 }
 
 func TestPushMirrorBranchFilterWebUI(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations.Init())
@@ -490,7 +496,7 @@ func TestPushMirrorBranchFilterWebUI(t *testing.T) {
 }
 
 func TestPushMirrorBranchFilterIntegration(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations.Init())
@@ -579,7 +585,7 @@ func TestPushMirrorBranchFilterIntegration(t *testing.T) {
 }
 
 func TestPushMirrorSettings(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations.Init())
@@ -600,7 +606,6 @@ func TestPushMirrorSettings(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings", srcRepo2.FullName()), map[string]string{
-				"_csrf":                GetCSRF(t, sess, fmt.Sprintf("/%s/settings", srcRepo2.FullName())),
 				"action":               "push-mirror-add",
 				"push_mirror_address":  u.String() + pushToRepo.FullName(),
 				"push_mirror_interval": "0",
@@ -608,14 +613,13 @@ func TestPushMirrorSettings(t *testing.T) {
 			sess.MakeRequest(t, req, http.StatusSeeOther)
 
 			req = NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings", srcRepo.FullName()), map[string]string{
-				"_csrf":                GetCSRF(t, sess, fmt.Sprintf("/%s/settings", srcRepo.FullName())),
 				"action":               "push-mirror-add",
 				"push_mirror_address":  u.String() + pushToRepo.FullName(),
 				"push_mirror_interval": "0",
 			})
 			sess.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := sess.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := sess.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Contains(t, flashCookie.Value, "success")
 		})
@@ -635,7 +639,6 @@ func TestPushMirrorSettings(t *testing.T) {
 			unittest.AssertExistsAndLoadBean(t, &repo_model.PushMirror{ID: mirrorID - 1})
 
 			req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings", srcRepo.FullName()), map[string]string{
-				"_csrf":                GetCSRF(t, sess, fmt.Sprintf("/%s/settings", srcRepo.FullName())),
 				"action":               "push-mirror-update",
 				"push_mirror_id":       strconv.FormatInt(mirrorID-1, 10),
 				"push_mirror_interval": "10m0s",
@@ -643,14 +646,13 @@ func TestPushMirrorSettings(t *testing.T) {
 			sess.MakeRequest(t, req, http.StatusNotFound)
 
 			req = NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings", srcRepo.FullName()), map[string]string{
-				"_csrf":                GetCSRF(t, sess, fmt.Sprintf("/%s/settings", srcRepo.FullName())),
 				"action":               "push-mirror-update",
 				"push_mirror_id":       strconv.FormatInt(mirrorID, 10),
 				"push_mirror_interval": "10m0s",
 			})
 			sess.MakeRequest(t, req, http.StatusSeeOther)
 
-			flashCookie := sess.GetCookie(gitea_context.CookieNameFlash)
+			flashCookie := sess.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Contains(t, flashCookie.Value, "success")
 		})
@@ -658,7 +660,7 @@ func TestPushMirrorSettings(t *testing.T) {
 }
 
 func TestPushMirrorBranchFilterSyncOperations(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations.Init())
@@ -892,7 +894,7 @@ func TestPushMirrorBranchFilterSyncOperations(t *testing.T) {
 }
 
 func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
-	onGiteaRun(t, func(t *testing.T, u *url.URL) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations.Init())
@@ -1022,7 +1024,6 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 			// Update branch filter via web form (using existing repo settings endpoint)
 			updatedFilter := "main,develop,feature-*"
 			req = NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/%s/settings", url.PathEscape(user.Name), url.PathEscape(srcRepo.Name)), map[string]string{
-				"_csrf":                     GetCSRF(t, session, fmt.Sprintf("/%s/%s/settings", url.PathEscape(user.Name), url.PathEscape(srcRepo.Name))),
 				"action":                    "push-mirror-update",
 				"push_mirror_id":            fmt.Sprintf("%d", dbMirrors[0].ID),
 				"push_mirror_interval":      "8h",

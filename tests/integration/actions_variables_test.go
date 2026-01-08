@@ -12,7 +12,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	forgejo_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -36,9 +36,7 @@ func TestActionsVariablesModification(t *testing.T) {
 	adminURL := "/admin/actions/variables"
 
 	adminSess := loginUser(t, admin.Name)
-	adminCSRF := GetCSRF(t, adminSess, "/")
 	sess := loginUser(t, user.Name)
-	csrf := GetCSRF(t, sess, "/")
 
 	type errorJSON struct {
 		Error string `json:"errorMessage"`
@@ -49,16 +47,13 @@ func TestActionsVariablesModification(t *testing.T) {
 		t.Helper()
 
 		sess := sess
-		csrf := csrf
 		if baseURL == adminURL {
 			sess = adminSess
-			csrf = adminCSRF
 		}
 
 		req := NewRequestWithValues(t, "POST", baseURL+fmt.Sprintf("/%d/edit", id), map[string]string{
-			"_csrf": csrf,
-			"name":  "glados_quote",
-			"data":  "I'm fine. Two plus two is...ten, in base four, I'm fine!",
+			"name": "glados_quote",
+			"data": "I'm fine. Two plus two is...ten, in base four, I'm fine!",
 		})
 		if fail {
 			resp := sess.MakeRequest(t, req, http.StatusBadRequest)
@@ -67,14 +62,12 @@ func TestActionsVariablesModification(t *testing.T) {
 			assert.Equal(t, "Failed to find the variable.", error.Error)
 		} else {
 			sess.MakeRequest(t, req, http.StatusOK)
-			flashCookie := sess.GetCookie(forgejo_context.CookieNameFlash)
+			flashCookie := sess.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Equal(t, "success%3DThe%2Bvariable%2Bhas%2Bbeen%2Bedited.", flashCookie.Value)
 		}
 
-		req = NewRequestWithValues(t, "POST", baseURL+fmt.Sprintf("/%d/delete", id), map[string]string{
-			"_csrf": csrf,
-		})
+		req = NewRequest(t, "POST", baseURL+fmt.Sprintf("/%d/delete", id))
 		if fail {
 			resp := sess.MakeRequest(t, req, http.StatusBadRequest)
 			var error errorJSON
@@ -82,7 +75,7 @@ func TestActionsVariablesModification(t *testing.T) {
 			assert.Equal(t, "Failed to find the variable.", error.Error)
 		} else {
 			sess.MakeRequest(t, req, http.StatusOK)
-			flashCookie := sess.GetCookie(forgejo_context.CookieNameFlash)
+			flashCookie := sess.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Equal(t, "success%3DThe%2Bvariable%2Bhas%2Bbeen%2Bremoved.", flashCookie.Value)
 		}

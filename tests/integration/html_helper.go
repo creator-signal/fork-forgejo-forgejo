@@ -6,6 +6,7 @@ package integration
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
@@ -24,6 +25,13 @@ func NewHTMLParser(t testing.TB, body *bytes.Buffer) *HTMLDoc {
 	doc, err := goquery.NewDocumentFromReader(body)
 	require.NoError(t, err)
 	return &HTMLDoc{doc: doc}
+}
+
+func (doc *HTMLDoc) AssertElementPredicate(t testing.TB, selector string, predicate func(element *goquery.Selection) bool) bool {
+	t.Helper()
+	selection := doc.doc.Find(selector)
+	require.NotEmpty(t, selection, selector)
+	return predicate(selection)
 }
 
 func (doc *HTMLDoc) AssertAttrPredicate(t testing.TB, selector, attr string, predicate func(attrValue string) bool) bool {
@@ -101,9 +109,11 @@ func (doc *HTMLDoc) FindByText(selector, text string) *goquery.Selection {
 	})
 }
 
-// GetCSRF for getting CSRF token value from input
-func (doc *HTMLDoc) GetCSRF() string {
-	return doc.GetInputValueByName("_csrf")
+// FindByText gets all elements by selector that also has the given text, w/ leading & trailing whitespace trimmed
+func (doc *HTMLDoc) FindByTextTrim(selector, text string) *goquery.Selection {
+	return doc.doc.Find(selector).FilterFunction(func(i int, s *goquery.Selection) bool {
+		return strings.TrimSpace(s.Text()) == text
+	})
 }
 
 // AssertSelection check if selection exists or does not exist depending on checkExists

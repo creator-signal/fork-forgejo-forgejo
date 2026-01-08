@@ -29,7 +29,7 @@ func TestCommentRoles(t *testing.T) {
 	newContributorTooltip := locale.TrString("repo.issues.role.first_time_contributor_helper")
 
 	// Test pulls
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		sessionUser1 := loginUser(t, "user1")
 		sessionUser2 := loginUser(t, "user2")
 		sessionUser11 := loginUser(t, "user11")
@@ -38,7 +38,6 @@ func TestCommentRoles(t *testing.T) {
 		testEditFileToNewBranch(t, sessionUser2, user, repo, "master", "comment-labels", "README.md", "test of comment labels\naline") // Owner
 		sessionUser2.MakeRequest(t, NewRequestWithValues(t, "POST", path.Join(user, repo, "compare", "master...comment-labels"),
 			map[string]string{
-				"_csrf": GetCSRF(t, sessionUser2, path.Join(user, repo, "compare", "master...comment-labels")),
 				"title": "Pull used for testing commit labels",
 			},
 		), http.StatusOK)
@@ -109,7 +108,7 @@ func TestCommentRoles(t *testing.T) {
 	})
 
 	// Test issues
-	onGiteaRun(t, func(t *testing.T, giteaURL *url.URL) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
 		sessionUser1 := loginUser(t, "user1")
 		sessionUser2 := loginUser(t, "user2")
 		sessionUser5 := loginUser(t, "user5")
@@ -117,7 +116,6 @@ func TestCommentRoles(t *testing.T) {
 		// Open a new issue in the same repo
 		sessionUser2.MakeRequest(t, NewRequestWithValues(t, "POST", path.Join(user, repo, "issues/new"),
 			map[string]string{
-				"_csrf": GetCSRF(t, sessionUser2, path.Join(user, repo)),
 				"title": "Issue used for testing commit labels",
 			},
 		), http.StatusOK)
@@ -172,7 +170,6 @@ func testIssueCommentUserLabel(t *testing.T, label *goquery.Selection, expectedT
 func testEasyLeaveIssueComment(t *testing.T, session *TestSession, user, repo, id, message string) {
 	t.Helper()
 	session.MakeRequest(t, NewRequestWithValues(t, "POST", path.Join(user, repo, "issues", id, "comments"), map[string]string{
-		"_csrf":   GetCSRF(t, session, path.Join(user, repo, "issues", id)),
 		"content": message,
 		"status":  "",
 	}), 200)
@@ -183,7 +180,6 @@ func testEasyLeaveIssueComment(t *testing.T, session *TestSession, user, repo, i
 func testEasyLeavePRComment(t *testing.T, session *TestSession, user, repo, id, message string) {
 	t.Helper()
 	session.MakeRequest(t, NewRequestWithValues(t, "POST", path.Join(user, repo, "issues", id, "comments"), map[string]string{
-		"_csrf":   GetCSRF(t, session, path.Join(user, repo, "pulls", id)),
 		"content": message,
 		"status":  "",
 	}), 200)
@@ -193,7 +189,6 @@ func testEasyLeavePRComment(t *testing.T, session *TestSession, user, repo, id, 
 func testEasyLeavePRReviewComment(t *testing.T, session *TestSession, user, repo, id, file, line, message, replyID string) {
 	t.Helper()
 	values := map[string]string{
-		"_csrf":         GetCSRF(t, session, path.Join(user, repo, "pulls", id, "files")),
 		"origin":        "diff",
 		"side":          "proposed",
 		"line":          line,

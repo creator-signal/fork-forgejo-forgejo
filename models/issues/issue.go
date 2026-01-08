@@ -117,7 +117,7 @@ type Issue struct {
 
 	DeadlineUnix timeutil.TimeStamp `xorm:"INDEX"`
 
-	Created timeutil.TimeStampNano
+	Created timeutil.TimeStampNano // more precise Created, but may not be populated for older issues
 
 	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`
@@ -365,7 +365,7 @@ func (issue *Issue) ResetAttributesLoaded() {
 	issue.isAssigneeLoaded = false
 }
 
-// GetIsRead load the `IsRead` field of the issue
+// GetIsRead loads the `IsRead` field of the issue
 func (issue *Issue) GetIsRead(ctx context.Context, userID int64) error {
 	issueUser := &IssueUser{IssueID: issue.ID, UID: userID}
 	if has, err := db.GetEngine(ctx).Get(issueUser); err != nil {
@@ -609,10 +609,12 @@ func GetParticipantsIDsByIssueID(ctx context.Context, issueID int64) ([]int64, e
 	userIDs := make([]int64, 0, 5)
 	return userIDs, db.GetEngine(ctx).
 		Table("comment").
-		Cols("poster_id").
-		Where("issue_id = ?", issueID).
-		And("type in (?,?,?)", CommentTypeComment, CommentTypeCode, CommentTypeReview).
-		Distinct("poster_id").
+		Cols("`comment`.poster_id").
+		Where("`comment`.issue_id = ?", issueID).
+		And("`comment`.type in (?,?,?)", CommentTypeComment, CommentTypeCode, CommentTypeReview).
+		And("`review`.type is null or `review`.type != ?", ReviewTypePending).
+		Join("LEFT", "`review`", "`review`.id = `comment`.review_id").
+		Distinct("`comment`.poster_id").
 		Find(&userIDs)
 }
 
@@ -641,9 +643,11 @@ func (issue *Issue) GetParticipantIDsByIssue(ctx context.Context) ([]int64, erro
 	if err := db.GetEngine(ctx).Table("comment").Cols("poster_id").
 		Where("`comment`.issue_id = ?", issue.ID).
 		And("`comment`.type in (?,?,?)", CommentTypeComment, CommentTypeCode, CommentTypeReview).
+		And("`review`.type != ?", ReviewTypePending).
 		And("`user`.is_active = ?", true).
 		And("`user`.prohibit_login = ?", false).
 		Join("INNER", "`user`", "`user`.id = `comment`.poster_id").
+		Join("INNER", "`review`", "`review`.reviewer_id = `user`.id").
 		Distinct("poster_id").
 		Find(&userIDs); err != nil {
 		return nil, fmt.Errorf("get poster IDs: %w", err)

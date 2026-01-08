@@ -1,10 +1,10 @@
 import $ from 'jquery';
 import {minimatch} from 'minimatch';
-import {createMonaco} from './codeeditor.js';
 import {onInputDebounce, toggleElem} from '../utils/dom.js';
 import {POST} from '../modules/fetch.js';
+import {createCodemirror} from './codemirror.ts';
 
-const {appSubUrl, csrfToken} = window.config;
+const {appSubUrl} = window.config;
 
 export function initRepoSettingsCollaboration() {
   // Change collaborator access mode
@@ -52,7 +52,6 @@ export function initRepoSettingSearchTeamBox() {
     minCharacters: 2,
     apiSettings: {
       url: `${appSubUrl}/org/${searchTeamBox.getAttribute('data-org-name')}/teams/-/search?q={query}`,
-      headers: {'X-Csrf-Token': csrfToken},
       onResponse(response) {
         const items = [];
         for (const item of response.data) {
@@ -72,7 +71,7 @@ export function initRepoSettingSearchTeamBox() {
 export function initRepoSettingGitHook() {
   if (!$('.edit.githook').length) return;
   const filename = document.querySelector('.hook-filename').textContent;
-  const _promise = createMonaco($('#content')[0], filename, {language: 'shell'});
+  const _promise = createCodemirror($('#content')[0], filename, {language: 'shell'});
 }
 
 export function initRepoSettingBranches() {

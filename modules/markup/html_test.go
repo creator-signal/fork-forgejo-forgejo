@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestRender_Commits(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 	test := func(input, expected string) {
 		buffer, err := markup.RenderString(&markup.RenderContext{
 			Ctx:          git.DefaultContext,
@@ -57,8 +57,10 @@ func TestRender_Commits(t *testing.T) {
 	}
 
 	sha := "65f1bf27bc3bf70f64657658635e66094edbcb4d"
+	shaWithExtra := "65f1bf27bc3bf70f64657658635e66094edbcb4d..."
 	repo := markup.TestRepoURL
 	commit := util.URLJoin(repo, "commit", sha)
+	commitWithExtra := util.URLJoin(repo, "commit", shaWithExtra)
 	tree := util.URLJoin(repo, "tree", sha, "src")
 
 	file := util.URLJoin(repo, "commit", sha, "example.txt")
@@ -69,9 +71,11 @@ func TestRender_Commits(t *testing.T) {
 	commitCompareWithHash := commitCompare + "#L2"
 
 	test(sha, `<p><a href="`+commit+`" rel="nofollow"><code>65f1bf27bc</code></a></p>`)
+	test(shaWithExtra, `<p><a href="`+commit+`" rel="nofollow"><code>65f1bf27bc</code></a>...</p>`)
 	test(sha[:7], `<p><a href="`+commit[:len(commit)-(40-7)]+`" rel="nofollow"><code>65f1bf2</code></a></p>`)
 	test(sha[:39], `<p><a href="`+commit[:len(commit)-(40-39)]+`" rel="nofollow"><code>65f1bf27bc</code></a></p>`)
 	test(commit, `<p><a href="`+commit+`" rel="nofollow"><code>65f1bf27bc</code></a></p>`)
+	test(commitWithExtra, `<p><a href="`+commit+`" rel="nofollow"><code>65f1bf27bc</code></a>...</p>`)
 	test(tree, `<p><a href="`+tree+`" rel="nofollow"><code>65f1bf27bc/src</code></a></p>`)
 
 	test(file, `<p><a href="`+file+`" rel="nofollow"><code>65f1bf27bc/example.txt</code></a></p>`)
@@ -94,10 +98,19 @@ func TestRender_Commits(t *testing.T) {
 
 	fileStrangeChars := util.URLJoin(repo, "src", "commit", "eeb243c3395e1921c5d90e73bd739827251fc99d", "path", "to", "file%20%23.txt")
 	test(fileStrangeChars, `<p><a href="`+fileStrangeChars+`" rel="nofollow"><code>eeb243c339/path/to/file #.txt</code></a></p>`)
+
+	commitLink := util.URLJoin(repo, "src", "commit", "eeb243c3395e1921c5d90e73bd739827251fc99d")
+	test(commitLink, `<p><a href="`+commitLink+`" rel="nofollow"><code>eeb243c339</code></a></p>`)
+
+	crossCommitLink := util.URLJoin(markup.TestAppURL, "forgejo/forgejo", "src", "commit", "eeb243c3395e1921c5d90e73bd739827251fc99d")
+	test(crossCommitLink, `<p><a href="`+crossCommitLink+`" rel="nofollow"><code>forgejo/forgejo@eeb243c339</code></a></p>`)
+
+	extCommitLink := util.URLJoin("https://codeberg.org/", markup.TestOrgRepo, "src", "commit", "eeb243c3395e1921c5d90e73bd739827251fc99d")
+	test(extCommitLink, `<p><a href="`+extCommitLink+`" rel="nofollow"><code>codeberg.org/`+markup.TestOrgRepo+`@eeb243c339</code></a></p>`)
 }
 
 func TestRender_CrossReferences(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 
 	test := func(input, expected string) {
 		buffer, err := markup.RenderString(&markup.RenderContext{
@@ -140,7 +153,7 @@ func TestRender_CrossReferences(t *testing.T) {
 }
 
 func TestRender_links(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 
 	test := func(input, expected string) {
 		buffer, err := markup.RenderString(&markup.RenderContext{
@@ -241,8 +254,48 @@ func TestRender_links(t *testing.T) {
 	markup.CustomLinkURLSchemes(setting.Markdown.CustomURLSchemes)
 }
 
+func TestRender_PullReviewCommitLink(t *testing.T) {
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
+
+	sha := "190d9492934af498c3f669d6a2431dc5459e5b20"
+	prCommitLink := util.URLJoin(markup.TestRepoURL, "pulls", "1", "commits", sha)
+
+	assert := func(input, expected, base string) {
+		buffer, err := markup.RenderString(&markup.RenderContext{
+			Ctx:          git.DefaultContext,
+			RelativePath: ".md",
+			Links: markup.Links{
+				AbsolutePrefix: true,
+				Base:           base,
+			},
+			Metas: localMetas,
+		}, input)
+		require.NoError(t, err)
+		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(buffer))
+	}
+
+	assert(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`, markup.TestRepoURL)
+
+	prCommitLink = util.URLJoin(markup.TestAppURL, "sub1", "sub2", markup.TestOrgRepo, "pulls", "1", "commits", sha)
+	assert(
+		prCommitLink,
+		`<p><a href="`+prCommitLink+`" rel="nofollow">localhost:3000/sub1/sub2/gogits/gogs@!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`,
+		util.URLJoin(markup.TestAppURL, "sub1", "sub2", markup.TestOrgRepo),
+	)
+	assert(
+		prCommitLink,
+		`<p><a href="`+prCommitLink+`" rel="nofollow">localhost:3000/sub1/sub2/gogits/gogs@!1 (commit <code>`+sha[0:10]+`</code>)</a></p>`,
+		markup.TestRepoURL,
+	)
+
+	prCommitLink = "https://codeberg.org/forgejo/forgejo/pulls/7979/commits/4d968c08e0a8d24bd2f3fb2a3a48b37e6d84a327#diff-7649acfa98a9ee3faf0d28b488bbff428317fc72"
+	assert(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">codeberg.org/forgejo/forgejo@!7979 (commit <code>4d968c08e0</code>)</a></p>`, markup.TestRepoURL)
+	defer test.MockVariableValue(&setting.AppURL, "https://codeberg.org/")()
+	assert(prCommitLink, `<p><a href="`+prCommitLink+`" rel="nofollow">!7979 (commit <code>4d968c08e0</code>)</a></p>`, "https://codeberg.org/forgejo/forgejo")
+}
+
 func TestRender_email(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 
 	test := func(input, expected string) {
 		res, err := markup.RenderString(&markup.RenderContext{
@@ -326,7 +379,7 @@ func TestRender_email(t *testing.T) {
 }
 
 func TestRender_emoji(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 	setting.StaticURLPrefix = markup.TestAppURL
 
 	test := func(input, expected string) {
@@ -393,7 +446,7 @@ func TestRender_emoji(t *testing.T) {
 }
 
 func TestRender_ShortLinks(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 	tree := util.URLJoin(markup.TestRepoURL, "src", "master")
 
 	test := func(input, expected, expectedWiki string) {
@@ -506,7 +559,7 @@ func TestRender_ShortLinks(t *testing.T) {
 }
 
 func TestRender_RelativeImages(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 
 	test := func(input, expected, expectedWiki string) {
 		buffer, err := markdown.RenderString(&markup.RenderContext{
@@ -546,7 +599,7 @@ func TestRender_RelativeImages(t *testing.T) {
 }
 
 func Test_ParseClusterFuzz(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 
 	localMetas := map[string]string{
 		"user": "go-gitea",
@@ -582,7 +635,7 @@ func Test_ParseClusterFuzz(t *testing.T) {
 }
 
 func TestPostProcess_RenderDocument(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 	setting.StaticURLPrefix = markup.TestAppURL // can't run standalone
 
 	localMetas := map[string]string{
@@ -627,7 +680,7 @@ func TestPostProcess_RenderDocument(t *testing.T) {
 }
 
 func TestIssue16020(t *testing.T) {
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 
 	localMetas := map[string]string{
 		"user": "go-gitea",
@@ -686,10 +739,13 @@ func TestIssue18471(t *testing.T) {
 	err := markup.PostProcess(&markup.RenderContext{
 		Ctx:   git.DefaultContext,
 		Metas: localMetas,
+		Links: markup.Links{
+			Base: "http://domain/org/repo",
+		},
 	}, strings.NewReader(data), &res)
 
 	require.NoError(t, err)
-	assert.Equal(t, "<a href=\"http://domain/org/repo/compare/783b039...da951ce\" class=\"compare\"><code class=\"nohighlight\">783b039...da951ce</code></a>", res.String())
+	assert.Equal(t, "<a href=\"http://domain/org/repo/compare/783b039...da951ce\" class=\"compare\"><code class=\"nohighlight\">domain/org/repo@783b039...da951ce</code></a>", res.String())
 }
 
 func TestRender_FilePreview(t *testing.T) {
@@ -698,7 +754,7 @@ func TestRender_FilePreview(t *testing.T) {
 	defer test.MockVariableValue(&setting.Langs, []string{"en-US"})()
 	translation.InitLocales(t.Context())
 
-	setting.AppURL = markup.TestAppURL
+	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 	markup.Init(&markup.ProcessorHelper{
 		GetRepoFileBlob: func(ctx context.Context, ownerName, repoName, commitSha, filePath string, language *string) (*git.Blob, error) {
 			gitRepo, err := git.OpenRepository(git.DefaultContext, "./tests/repo/repo1_filepreview")
@@ -723,6 +779,9 @@ func TestRender_FilePreview(t *testing.T) {
 			Ctx:          git.DefaultContext,
 			RelativePath: ".md",
 			Metas:        metas,
+			Links: markup.Links{
+				Base: markup.TestRepoURL,
+			},
 		}, input)
 		require.NoError(t, err)
 		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(buffer))
@@ -750,7 +809,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -784,7 +843,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -835,7 +894,7 @@ func TestRender_FilePreview(t *testing.T) {
 
 		testRender(
 			urlWithSub,
-			`<p><a href="http://localhost:3000/sub/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3" rel="nofollow"><code>190d949293/path/to/file.go (L2-L3)</code></a></p>`,
+			`<p><a href="http://localhost:3000/sub/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3" rel="nofollow"><code>localhost:3000/sub/gogits/gogs@190d949293/path/to/file.go (L2-L3)</code></a></p>`,
 			localMetas,
 		)
 
@@ -863,7 +922,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -875,7 +934,7 @@ func TestRender_FilePreview(t *testing.T) {
 
 		testRender(
 			"first without sub "+commitFilePreview+" second "+urlWithSub,
-			`<p>first without sub <a href="http://localhost:3000/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3" rel="nofollow"><code>190d949293/path/to/file.go (L2-L3)</code></a> second </p>`+
+			`<p>first without sub <a href="http://localhost:3000/gogits/gogs/src/commit/190d9492934af498c3f669d6a2431dc5459e5b20/path/to/file.go#L2-L3" rel="nofollow"><code>localhost:3000/gogits/gogs@190d949293/path/to/file.go (L2-L3)</code></a> second </p>`+
 				`<div class="file-preview-box">`+
 				`<div class="header">`+
 				`<div>`+
@@ -894,7 +953,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -927,7 +986,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -952,7 +1011,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -983,7 +1042,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1008,7 +1067,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1033,7 +1092,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1068,7 +1127,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="gh"></span>B`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner">B`+"\n"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1101,7 +1160,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="gh"></span>B`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner">B`+"\n"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1134,7 +1193,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="2"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="gh"></span>B`+"\n"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner">B`+"\n"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1169,7 +1228,7 @@ func TestRender_FilePreview(t *testing.T) {
 				`</tr>`+
 				`<tr>`+
 				`<td class="lines-num"><span data-line-number="3"></span></td>`+
-				`<td class="lines-code chroma"><code class="code-inner"><span class="w"></span><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
+				`<td class="lines-code chroma"><code class="code-inner"><span class="nx">C</span>`+"<span class=\"w\">\n</span>"+`</code></td>`+
 				`</tr>`+
 				`</tbody>`+
 				`</table>`+
@@ -1250,6 +1309,22 @@ func TestRender_FilePreview(t *testing.T) {
 			`<h1>`+linkRendered+`</h1>`+"\n"+
 				`<del>`+linkRendered+`</del>`+"\n"+
 				`<code>`+commitFileURLFirstLine+`</code>`,
+			localMetas,
+		)
+	})
+
+	t.Run("file previews followed by new line", func(t *testing.T) {
+		testRender(
+			commitFileURLFirstLine+"\nand\n"+commitFileURLFirstLine,
+			"<p></p>"+filePreviewBox+"<p><br/>\nand<br/>\n</p>"+filePreviewBox+"<p></p>",
+			localMetas,
+		)
+	})
+
+	t.Run("file previews followed by new line in div", func(t *testing.T) {
+		testRender(
+			"<div>"+commitFileURLFirstLine+"\nand\n"+commitFileURLFirstLine+"</div>",
+			"<div>"+filePreviewBox+"\nand\n"+filePreviewBox+"</div>",
 			localMetas,
 		)
 	})

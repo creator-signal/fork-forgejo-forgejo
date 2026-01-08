@@ -1,6 +1,6 @@
 :root {
   /* fonts */
-  --fonts-proportional: -apple-system, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial;
+  --fonts-proportional: -apple-system, "Segoe UI", system-ui, "Noto Sans", "Noto Sans Hebrew", Roboto, "Helvetica Neue", Arial;
   --fonts-monospace: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace, var(--fonts-emoji);
   --fonts-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla";
   /* font weights - use between 400 and 600 for general purposes. Avoid 700 as it is perceived too bold */
@@ -50,7 +50,7 @@
 }
 
 :root * {
-  --fonts-regular: var(--fonts-override, var(--fonts-proportional)), "Noto Sans", "Liberation Sans", sans-serif, var(--fonts-emoji);
+  --fonts-regular: var(--fonts-override, var(--fonts-proportional)), "Liberation Sans", sans-serif, var(--fonts-emoji);
 }
 
 *, ::before, ::after {
@@ -263,28 +263,6 @@ h1.error-code {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-}
-
-.button-row {
-  gap: var(--button-spacing);
-}
-
-.button-sequence {
-  display: flex;
-  flex-flow: wrap;
-  gap: var(--button-spacing);
-}
-
-.button-sequence.right {
-  justify-content: end;
-}
-
-.button-sequence .ui.button {
-  margin: 0 !important;
-}
-
-.button-row .ui.button {
-  margin-right: 0;
 }
 
 .ui.partial.secondary.menu {
@@ -671,11 +649,11 @@ img.ui.avatar,
 }
 
 .text.red {
-  color: var(--color-red) !important;
+  color: var(--color-thin-red, var(--color-red)) !important;
 }
 
 .text.orange {
-  color: var(--color-orange) !important;
+  color: var(--color-thin-orange, var(--color-orange)) !important;
 }
 
 .text.yellow {
@@ -683,7 +661,7 @@ img.ui.avatar,
 }
 
 .text.green {
-  color: var(--color-green) !important;
+  color: var(--color-thin-green, var(--color-green)) !important;
 }
 
 .text.teal {
@@ -695,7 +673,7 @@ img.ui.avatar,
 }
 
 .text.purple {
-  color: var(--color-purple) !important;
+  color: var(--color-thin-purple, var(--color-purple)) !important;
 }
 
 .text.brown {
@@ -1021,20 +999,6 @@ overflow-menu .ui.label {
 
 .archived-icon {
   color: var(--color-secondary-dark-2) !important;
-}
-
-/* colors of colorful icons */
-svg.text.green,
-.text.green svg {
-  color: var(--color-icon-green) !important;
-}
-svg.text.red,
-.text.red svg {
-  color: var(--color-icon-red) !important;
-}
-svg.text.purple,
-.text.purple svg {
-  color: var(--color-icon-purple) !important;
 }
 
 .oauth2-authorize-application-box {

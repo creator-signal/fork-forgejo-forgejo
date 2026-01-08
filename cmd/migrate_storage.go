@@ -13,7 +13,7 @@ import (
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
-	"forgejo.org/models/migrations"
+	"forgejo.org/models/gitea_migrations"
 	packages_model "forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
@@ -32,6 +32,7 @@ func cmdMigrateStorage() *cli.Command {
 		Name:        "migrate-storage",
 		Usage:       "Migrate the storage",
 		Description: "Copies stored files from storage configured in app.ini to parameter-configured storage",
+		Before:      noDanglingArgs,
 		Action:      runMigrateStorage,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -199,7 +200,7 @@ func runMigrateStorage(stdCtx context.Context, ctx *cli.Command) error {
 	log.Info("Configuration file: %s", setting.CustomConf)
 
 	if err := db.InitEngineWithMigration(context.Background(), func(e db.Engine) error {
-		return migrations.Migrate(e.(*xorm.Engine))
+		return gitea_migrations.Migrate(e.(*xorm.Engine))
 	}); err != nil {
 		log.Fatal("Failed to initialize ORM engine: %v", err)
 		return err

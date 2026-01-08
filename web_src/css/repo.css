@@ -80,7 +80,7 @@
   overflow-x: auto;
 }
 
-.repository .filter.menu.labels .label-filter .menu .info {
+.repository .filter.menu .label-filter .menu .info {
   display: inline-block;
   padding: 0.5rem 0;
   font-size: 12px;
@@ -91,7 +91,7 @@
   text-align: left;
 }
 
-.repository .filter.menu.labels .label-filter .menu .info code {
+.repository .filter.menu .label-filter .menu .info code {
   border: 1px solid var(--color-secondary);
   border-radius: var(--border-radius);
   padding: 1px 2px;
@@ -137,6 +137,13 @@
 @media (max-width: 991.98px) {
   .repository .clone-panel #repo-clone-url {
     width: 200px;
+  }
+}
+
+@media (max-width: 390px) {
+  .repository .clone-panel #repo-clone-url {
+    width: 0;
+    flex-grow: 1;
   }
 }
 
@@ -429,6 +436,10 @@ pdf-object {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+citation-information .tab:not(.active) {
+  display: none;
 }
 
 .repository.file.list .non-diff-file-content .plain-text {
@@ -1890,67 +1901,6 @@ details.repo-search-result summary::marker {
   font-weight: var(--font-weight-medium);
 }
 
-.repository .repository-summary #language-stats-bar {
-  display: flex;
-  gap: 2px;
-  padding: 0;
-  height: 10px;
-  white-space: nowrap;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  overflow: hidden;
-}
-
-.size-overview .segment:has(> .bar) {
-  display: flex;
-  height: 10px;
-  padding: 0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-#cite-repo-modal #citation-panel {
-  display: flex;
-  width: 100%;
-}
-
-#cite-repo-modal #citation-panel input {
-  border-radius: 0;
-  padding: 5px 10px;
-  width: 50%;
-  line-height: 1.4;
-}
-
-#cite-repo-modal #citation-panel #citation-copy-content {
-  border-radius: 0;
-  padding: 5px 10px;
-  font-size: 1.2em;
-  line-height: 1.4;
-  flex: 1;
-}
-
-#cite-repo-modal #citation-panel #citation-copy-bibtex {
-  font-size: 13px;
-  padding: 7.5px 5px;
-  border-right: none;
-}
-
-#cite-repo-modal #citation-panel #goto-citation-btn {
-  border-left: none;
-}
-
-#cite-repo-modal #citation-panel > :first-child {
-  border-radius: var(--border-radius) 0 0 var(--border-radius) !important;
-}
-
-#cite-repo-modal #citation-panel > :last-child {
-  border-radius: 0 var(--border-radius) var(--border-radius) 0 !important;
-}
-
-#cite-repo-modal #citation-panel .icon.button {
-  padding: 0 10px;
-}
-
 #search-user-box .results .result .image {
   order: 0;
   margin-right: 12px;
@@ -2132,6 +2082,10 @@ details.repo-search-result summary::marker {
   gap: 4px;
 }
 
+.comment-header-left > .content-history-menu.active s {
+  text-decoration-thickness: 10%;
+}
+
 .comment-body {
   background: var(--color-box-body);
   border: none !important;
@@ -2139,17 +2093,6 @@ details.repo-search-result summary::marker {
   max-width: 100% !important;
   margin: 0 !important;
   padding: 1em;
-}
-
-.edit-label.modal .form .column,
-.new-label.modal .form .column {
-  padding-right: 0;
-}
-
-.edit-label.modal .form .buttons,
-.new-label.modal .form .buttons {
-  margin-left: auto;
-  padding-top: 15px;
 }
 
 .stats-table {
@@ -2400,6 +2343,7 @@ tbody.commit-list {
   overflow-x: auto;
   padding: 6px 12px !important;
   font-size: 13px !important;
+  min-height: 46px;
 }
 
 .file-info {

@@ -40,14 +40,14 @@ jobs:
       )
     runs-on: docker
     container:
-      image: 'data.forgejo.org/oci/node:22-bookworm'
+      image: 'data.forgejo.org/oci/node:24-bookworm'
     steps:
       - name: event info
         run: |
           cat <<'EOF'
           ${{ toJSON(github) }}
           EOF
-      - uses: https://data.forgejo.org/actions/git-backporting@v4.8.5
+      - uses: https://data.forgejo.org/actions/git-backporting@v4.8.7
         with:
           target-branch-pattern: "^backport/(?<target>(v.*))$"
           strategy: ort

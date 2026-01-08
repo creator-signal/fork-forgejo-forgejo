@@ -35,7 +35,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 	federatedSrv := mock.DistantServer(t)
 	defer federatedSrv.Close()
 
-	onGiteaRun(t, func(t *testing.T, localUrl *url.URL) {
+	onApplicationRun(t, func(t *testing.T, localUrl *url.URL) {
 		defer test.MockVariableValue(&setting.AppURL, localUrl.String())()
 
 		distantURL := federatedSrv.URL
@@ -72,6 +72,13 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 				FollowingUserID: distantFederatedUser.UserID,
 			},
 		)
+
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: distantFederatedUser.UserID})
+		assert.Equal(t, user_model.UserTypeActivityPubUser, user.Type)
+		assert.True(t, user.ProhibitLogin)
+		assert.Empty(t, user.Passwd)
+		assert.Empty(t, user.PasswdHashAlgo)
+		assert.Empty(t, user.Salt)
 
 		// distant is informed about accepting follow
 		assert.Contains(t, mock.LastPost, "\"type\":\"Accept\"")

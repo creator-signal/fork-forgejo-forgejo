@@ -14,7 +14,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
-	forgejo_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -31,12 +31,11 @@ func TestUserRedirect(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings"),
-			"name":  "user2-new",
+			"name": "user2-new",
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 
-		flashCookie := session.GetCookie(forgejo_context.CookieNameFlash)
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "success%3DYour%2Bprofile%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 
@@ -47,7 +46,6 @@ func TestUserRedirect(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequestWithValues(t, "POST", "/user/sign_up", map[string]string{
-			"_csrf":     GetCSRF(t, emptyTestSession(t), "/user/sign_up"),
 			"user_name": "user2",
 			"email":     "doesnotexist@example.com",
 			"password":  "examplePassword!1",
@@ -65,12 +63,11 @@ func TestUserRedirect(t *testing.T) {
 
 		session := loginUser(t, "user4")
 		req := NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings"),
-			"name":  "user2",
+			"name": "user2",
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 
-		flashCookie := session.GetCookie(forgejo_context.CookieNameFlash)
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Contains(t, flashCookie.Value, "error%3DThe%2Busername%2Bcannot%2Bbe%2Bclaimed%252C%2Bbecause%2Bits%2Bcooldown%2Bperiod%2Bis%2Bnot%2Byet%2Bover.%2BIt%2Bcan%2Bbe%2Bclaimed%2Bon")
 	})
@@ -80,13 +77,12 @@ func TestUserRedirect(t *testing.T) {
 
 		session := loginUser(t, "user1")
 		req := NewRequestWithValues(t, "POST", "/admin/users/4/edit", map[string]string{
-			"_csrf":      GetCSRF(t, session, "/admin/users/4/edit"),
 			"user_name":  "user2",
 			"email":      "user4@example.com",
 			"login_type": "0-0",
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
-		flashCookie := session.GetCookie(forgejo_context.CookieNameFlash)
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "success%3DThe%2Buser%2Baccount%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 
@@ -98,24 +94,22 @@ func TestUserRedirect(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings"),
-			"name":  "user2-new-2",
+			"name": "user2-new-2",
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 
-		flashCookie := session.GetCookie(forgejo_context.CookieNameFlash)
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "success%3DYour%2Bprofile%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 
 		unittest.AssertExistsIf(t, true, &user_model.Redirect{LowerName: "user2-new", RedirectUserID: 2})
 
 		req = NewRequestWithValues(t, "POST", "/user/settings", map[string]string{
-			"_csrf": GetCSRF(t, session, "/user/settings"),
-			"name":  "user2-new",
+			"name": "user2-new",
 		})
 		session.MakeRequest(t, req, http.StatusSeeOther)
 
-		flashCookie = session.GetCookie(forgejo_context.CookieNameFlash)
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
 		assert.NotNil(t, flashCookie)
 		assert.Equal(t, "success%3DYour%2Bprofile%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
 

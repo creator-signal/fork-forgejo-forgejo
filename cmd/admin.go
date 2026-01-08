@@ -37,6 +37,7 @@ func subcmdRepoSyncReleases() *cli.Command {
 	return &cli.Command{
 		Name:   "repo-sync-releases",
 		Usage:  "Synchronize repository releases with tags",
+		Before: noDanglingArgs,
 		Action: runRepoSyncReleases,
 	}
 }
@@ -63,6 +64,8 @@ func subcmdAuth() *cli.Command {
 			microcmdAuthUpdateLdapBindDn(),
 			microcmdAuthAddLdapSimpleAuth(),
 			microcmdAuthUpdateLdapSimpleAuth(),
+			microcmdAuthAddPAM(),
+			microcmdAuthUpdatePAM(),
 			microcmdAuthAddSMTP(),
 			microcmdAuthUpdateSMTP(),
 			microcmdAuthList(),
@@ -75,6 +78,7 @@ func subcmdSendMail() *cli.Command {
 	return &cli.Command{
 		Name:   "sendmail",
 		Usage:  "Send a message to all users",
+		Before: noDanglingArgs,
 		Action: runSendMail,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -103,7 +107,7 @@ func idFlag() *cli.Int64Flag {
 	}
 }
 
-func runRepoSyncReleases(ctx context.Context, _ *cli.Command) error {
+func runRepoSyncReleases(ctx context.Context, c *cli.Command) error {
 	ctx, cancel := installSignals(ctx)
 	defer cancel()
 

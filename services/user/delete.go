@@ -94,12 +94,19 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 		&pull_model.ReviewState{UserID: u.ID},
 		&user_model.Redirect{RedirectUserID: u.ID},
 		&actions_model.ActionRunner{OwnerID: u.ID},
+		&actions_model.ActionUser{UserID: u.ID},
 		&user_model.BlockedUser{BlockID: u.ID},
 		&user_model.BlockedUser{UserID: u.ID},
 		&actions_model.ActionRunnerToken{OwnerID: u.ID},
 		&auth_model.AuthorizationToken{UID: u.ID},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %w", err)
+	}
+
+	// Retain the fact that time was tracked, but set DB's `user_id` to NULL.
+	_, err = e.Table(&issues_model.TrackedTime{}).Where("user_id = ?", u.ID).Update(map[string]any{"user_id": nil})
+	if err != nil {
+		return fmt.Errorf("update tracked_time user_id: %w", err)
 	}
 
 	if err := auth_model.DeleteOAuth2RelictsByUserID(ctx, u.ID); err != nil {
@@ -159,25 +166,16 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 
 	// ***** START: Branch Protections *****
 	{
-		const batchSize = 50
-		for start := 0; ; start += batchSize {
-			protections := make([]*git_model.ProtectedBranch, 0, batchSize)
-			// @perf: We can't filter on DB side by u.ID, as those IDs are serialized as JSON strings.
-			//   We could filter down with `WHERE repo_id IN (reposWithPushPermission(u))`,
-			//   though that query will be quite complex and tricky to maintain (compare `getRepoAssignees()`).
-			// Also, as we didn't update branch protections when removing entries from `access` table,
-			//   it's safer to iterate all protected branches.
-			if err = e.Limit(batchSize, start).Find(&protections); err != nil {
-				return fmt.Errorf("findProtectedBranches: %w", err)
-			}
-			if len(protections) == 0 {
-				break
-			}
-			for _, p := range protections {
-				if err := git_model.RemoveUserIDFromProtectedBranch(ctx, p, u.ID); err != nil {
-					return err
-				}
-			}
+		// @perf: We can't filter on DB side by u.ID, as those IDs are serialized as JSON strings.
+		//   We could filter down with `WHERE repo_id IN (reposWithPushPermission(u))`,
+		//   though that query will be quite complex and tricky to maintain (compare `getRepoAssignees()`).
+		// Also, as we didn't update branch protections when removing entries from `access` table,
+		//   it's safer to iterate all protected branches.
+		err := db.Iterate(ctx, nil, func(ctx context.Context, p *git_model.ProtectedBranch) error {
+			return git_model.RemoveUserIDFromProtectedBranch(ctx, p, u.ID)
+		})
+		if err != nil {
+			return fmt.Errorf("cleanup branch protection rules: %w", err)
 		}
 	}
 	// ***** END: Branch Protections *****

@@ -24,7 +24,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	webhook_module "forgejo.org/modules/webhook"
-	gitea_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/webhook/shared"
 
@@ -47,7 +47,7 @@ var _ binding.Validator = &discordForm{}
 
 // Validate implements binding.Validator.
 func (d *discordForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
-	ctx := gitea_context.GetWebContext(req)
+	ctx := app_context.GetWebContext(req)
 	if len([]rune(d.IconURL)) > 2048 {
 		errs = append(errs, binding.Error{
 			FieldNames: []string{"IconURL"},
@@ -223,7 +223,7 @@ func (d discordConvertor) Push(p *api.PushPayload) (DiscordPayload, error) {
 		if utf8.RuneCountInString(message) > 50 {
 			message = fmt.Sprintf("%.47s...", message)
 		}
-		text += fmt.Sprintf("[%s](%s) %s - %s", commit.ID[:7], commit.URL, message, commit.Author.Name)
+		text += fmt.Sprintf("[`%s`](%s) %s \\- %s", commit.ID[:7], commit.URL, message, commit.Author.Name)
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
 			text += "\n"
@@ -235,21 +235,21 @@ func (d discordConvertor) Push(p *api.PushPayload) (DiscordPayload, error) {
 
 // Issue implements PayloadConvertor Issue method
 func (d discordConvertor) Issue(p *api.IssuePayload) (DiscordPayload, error) {
-	title, _, text, color := getIssuesPayloadInfo(p, noneLinkFormatter, false)
+	title, _, text, color := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, title, text, p.Issue.HTMLURL, color), nil
 }
 
 // IssueComment implements PayloadConvertor IssueComment method
 func (d discordConvertor) IssueComment(p *api.IssueCommentPayload) (DiscordPayload, error) {
-	title, _, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, false)
+	title, _, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, title, p.Comment.Body, p.Comment.HTMLURL, color), nil
 }
 
 // PullRequest implements PayloadConvertor PullRequest method
 func (d discordConvertor) PullRequest(p *api.PullRequestPayload) (DiscordPayload, error) {
-	title, _, text, color := getPullRequestPayloadInfo(p, noneLinkFormatter, false)
+	title, _, text, color := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, title, text, p.PullRequest.HTMLURL, color), nil
 }
@@ -301,7 +301,7 @@ func (d discordConvertor) Repository(p *api.RepositoryPayload) (DiscordPayload, 
 
 // Wiki implements PayloadConvertor Wiki method
 func (d discordConvertor) Wiki(p *api.WikiPayload) (DiscordPayload, error) {
-	text, color, _ := getWikiPayloadInfo(p, noneLinkFormatter, false)
+	text, color, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 	htmlLink := p.Repository.HTMLURL + "/wiki/" + url.PathEscape(p.Page)
 
 	var description string
@@ -314,13 +314,13 @@ func (d discordConvertor) Wiki(p *api.WikiPayload) (DiscordPayload, error) {
 
 // Release implements PayloadConvertor Release method
 func (d discordConvertor) Release(p *api.ReleasePayload) (DiscordPayload, error) {
-	text, color := getReleasePayloadInfo(p, noneLinkFormatter, false)
+	text, color := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, text, p.Release.Note, p.Release.HTMLURL, color), nil
 }
 
 func (d discordConvertor) Package(p *api.PackagePayload) (DiscordPayload, error) {
-	text, color := getPackagePayloadInfo(p, noneLinkFormatter, false)
+	text, color := getPackagePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
 
 	return d.createPayload(p.Sender, text, "", p.Package.HTMLURL, color), nil
 }

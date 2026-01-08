@@ -83,7 +83,6 @@ func autoSignIn(ctx *context.Context) (bool, error) {
 		return false, err
 	}
 
-	ctx.Csrf.DeleteCookie(ctx)
 	return true, nil
 }
 
@@ -337,9 +336,6 @@ func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRe
 		ctx.Locale = middleware.Locale(ctx.Resp, ctx.Req)
 	}
 
-	// Clear whatever CSRF cookie has right now, force to generate a new one
-	ctx.Csrf.DeleteCookie(ctx)
-
 	// Register last login
 	if err := user_service.UpdateUser(ctx, u, &user_service.UpdateOptions{SetLastLogin: true}); err != nil {
 		ctx.ServerError("UpdateUser", err)
@@ -375,7 +371,6 @@ func HandleSignOut(ctx *context.Context) {
 	_ = ctx.Session.Flush()
 	_ = ctx.Session.Destroy(ctx.Resp, ctx.Req)
 	ctx.DeleteSiteCookie(setting.CookieRememberName)
-	ctx.Csrf.DeleteCookie(ctx)
 	middleware.DeleteRedirectToCookie(ctx.Resp)
 }
 
@@ -519,7 +514,7 @@ func createUserInContext(ctx *context.Context, tpl base.TplName, form any, u *us
 			switch setting.OAuth2Client.AccountLinking {
 			case setting.OAuth2AccountLinkingAuto:
 				var user *user_model.User
-				user = &user_model.User{Name: u.Name}
+				user = &user_model.User{LowerName: strings.ToLower(u.Name)}
 				hasUser, err := user_model.GetUser(ctx, user)
 				if !hasUser || err != nil {
 					user = &user_model.User{Email: u.Email}

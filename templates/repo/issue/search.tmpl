@@ -1,5 +1,5 @@
 <form class="list-header-search ui form ignore-dirty issue-list-search">
-	<div class="ui small search fluid action input">
+	<div class="ui search fluid action input">
 		<input type="hidden" name="state" value="{{$.State}}">
 		{{if not .PageIsMilestones}}
 			<input type="hidden" name="type" value="{{$.ViewType}}">
@@ -18,4 +18,7 @@
 			{{template "shared/search/combo" dict "Value" .Keyword "Placeholder" (ctx.Locale.Tr "search.issue_kind") "Tooltip" (ctx.Locale.Tr "explore.go_to")}}
 		{{end}}
 	</div>
+	{{if not .PageIsMilestones}}
+		{{template "shared/search/issue/syntax"}}
+	{{end}}
 </form>

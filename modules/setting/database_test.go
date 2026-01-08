@@ -4,10 +4,16 @@
 package setting
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"forgejo.org/modules/test"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_parsePostgreSQLHostPort(t *testing.T) {
@@ -101,6 +107,51 @@ func Test_getPostgreSQLConnectionString(t *testing.T) {
 			Name:   "gitea?param=1",
 			Output: "postgres://user:pass@localhost:1234/gitea?param=1&sslmode=",
 		},
+		{
+			// Multi-host with same ports
+			Host:    "host1,host2,host3",
+			User:    "user",
+			Passwd:  "pass",
+			Name:    "forgejo",
+			SSLMode: "disable",
+			Output:  "postgres://user:pass@host1:5432,host2:5432,host3:5432/forgejo?sslmode=disable",
+		},
+		{
+			// Multi-host with different ports
+			Host:    "host1:5432,host2:5433",
+			User:    "user",
+			Passwd:  "pass",
+			Name:    "forgejo",
+			SSLMode: "require",
+			Output:  "postgres://user:pass@host1:5432,host2:5433/forgejo?sslmode=require",
+		},
+		{
+			// Multi-host IPv6
+			Host:    "[::1]:1234,[::2]:2345",
+			User:    "user",
+			Passwd:  "pass",
+			Name:    "forgejo",
+			SSLMode: "disable",
+			Output:  "postgres://user:pass@[::1]:1234,[::2]:2345/forgejo?sslmode=disable",
+		},
+		{
+			// Multi-host with spaces (should be trimmed)
+			Host:    "host1:5432 , host2:5433 , host3",
+			User:    "user",
+			Passwd:  "pass",
+			Name:    "forgejo",
+			SSLMode: "verify-full",
+			Output:  "postgres://user:pass@host1:5432,host2:5433,host3:5432/forgejo?sslmode=verify-full",
+		},
+		{
+			// Multi-host with database parameters
+			Host:    "host1,host2",
+			User:    "user",
+			Passwd:  "pass",
+			Name:    "forgejo?connect_timeout=10",
+			SSLMode: "disable",
+			Output:  "postgres://user:pass@host1:5432,host2:5432/forgejo?connect_timeout=10&sslmode=disable",
+		},
 	}
 
 	for _, test := range tests {
@@ -120,9 +171,8 @@ func getPostgreSQLEngineGroupConnectionStrings(primaryHost, replicaHosts, user, 
 	// Build the replica connection strings.
 	replicaConns := []string{}
 	if strings.TrimSpace(replicaHosts) != "" {
-		// Split comma-separated replica host values.
-		hosts := strings.Split(replicaHosts, ",")
-		for _, h := range hosts {
+		// Split comma-separated replica host values
+		for h := range strings.SplitSeq(replicaHosts, ",") {
 			trimmed := strings.TrimSpace(h)
 			if trimmed != "" {
 				replicaConns = append(replicaConns,
@@ -208,4 +258,50 @@ func Test_getPostgreSQLEngineGroupConnectionStrings(t *testing.T) {
 		assert.Equal(t, test.outputPrimary, primary)
 		assert.Equal(t, test.outputReplicas, replicas)
 	}
+}
+
+func Test_loadDBSetting(t *testing.T) {
+	defer test.MockProtect(&Database)()
+	t.Run("Does not overwrite Passwd", func(t *testing.T) {
+		expectedPassword := "already_set"
+
+		cfg, _ := NewConfigProviderFromData(`
+			[database]
+			PASSWD="new password"
+		`)
+
+		Database.Passwd = expectedPassword
+		loadDBSetting(cfg)
+
+		assert.Equal(t, expectedPassword, Database.Passwd)
+	})
+	t.Run("uses PASSWD", func(t *testing.T) {
+		expectedPassword := "testpassword"
+
+		cfg, _ := NewConfigProviderFromData(fmt.Sprintf(`
+			[database]
+			PASSWD="%s"
+		`, expectedPassword))
+
+		Database.Passwd = ""
+		loadDBSetting(cfg)
+
+		assert.Equal(t, expectedPassword, Database.Passwd)
+	})
+	t.Run("Uses PASSWD_URI", func(t *testing.T) {
+		expectedPassword := "testpassworduri"
+
+		uri := filepath.Join(t.TempDir(), "db_passwd")
+		require.NoError(t, os.WriteFile(uri, []byte(expectedPassword), 0o644))
+
+		cfg, _ := NewConfigProviderFromData(fmt.Sprintf(`
+			[database]
+			PASSWD_URI="file:%s"
+		`, uri))
+
+		Database.Passwd = ""
+		loadDBSetting(cfg)
+
+		assert.Equal(t, expectedPassword, Database.Passwd)
+	})
 }
