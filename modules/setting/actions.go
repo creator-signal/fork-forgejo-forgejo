@@ -5,6 +5,8 @@ package setting
 
 import (
 	"fmt"
+	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -25,12 +27,18 @@ var (
 		SkipWorkflowStrings          []string          `ini:"SKIP_WORKFLOW_STRINGS"`
 		LimitDispatchInputs          int64             `ini:"LIMIT_DISPATCH_INPUTS"`
 		ConcurrencyGroupQueueEnabled bool              `ini:"CONCURRENCY_GROUP_QUEUE_ENABLED"`
+		IDTokenSigningAlgorithm      idTokenAlgorithm  `ini:"ID_TOKEN_SIGNING_ALGORITHM"`
+		IDTokenSigningPrivateKeyFile string            `ini:"ID_TOKEN_SIGNING_PRIVATE_KEY_FILE"`
+		IDTokenExpirationTime        int64             `ini:"ID_TOKEN_EXPIRATION_TIME"`
 	}{
 		Enabled:                      true,
 		DefaultActionsURL:            defaultActionsURLForgejo,
 		SkipWorkflowStrings:          []string{"[skip ci]", "[ci skip]", "[no ci]", "[skip actions]", "[actions skip]"},
 		LimitDispatchInputs:          100,
 		ConcurrencyGroupQueueEnabled: true,
+		IDTokenSigningAlgorithm:      "RS256",
+		IDTokenSigningPrivateKeyFile: "actions_id_token/private.pem",
+		IDTokenExpirationTime:        3600,
 	}
 )
 
@@ -65,6 +73,15 @@ func (c logCompression) IsNone() bool {
 
 func (c logCompression) IsZstd() bool {
 	return c == "" || strings.ToLower(string(c)) == "zstd"
+}
+
+type idTokenAlgorithm string
+
+func (c idTokenAlgorithm) IsValid() bool {
+	// Empty string implies RS256
+	validAlgs := []string{"", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "EdDSA"}
+
+	return slices.Contains(validAlgs, string(c))
 }
 
 func loadActionsFrom(rootCfg ConfigProvider) error {
@@ -102,6 +119,14 @@ func loadActionsFrom(rootCfg ConfigProvider) error {
 
 	if !Actions.LogCompression.IsValid() {
 		return fmt.Errorf("invalid [actions] LOG_COMPRESSION: %q", Actions.LogCompression)
+	}
+
+	if !Actions.IDTokenSigningAlgorithm.IsValid() {
+		return fmt.Errorf("invalid [actions] ID_TOKEN_SIGNING_ALGORITHM: %q", Actions.IDTokenSigningAlgorithm)
+	}
+
+	if !filepath.IsAbs(Actions.IDTokenSigningPrivateKeyFile) {
+		Actions.IDTokenSigningPrivateKeyFile = filepath.Join(AppDataPath, Actions.IDTokenSigningPrivateKeyFile)
 	}
 
 	return nil
