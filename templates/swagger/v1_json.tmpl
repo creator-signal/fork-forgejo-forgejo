@@ -346,6 +346,42 @@
             "$ref": "#/responses/notFound"
           }
         }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "admin"
+        ],
+        "summary": "Register a new global runner",
+        "operationId": "registerAdminRunner",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RegisterRunnerOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/RegisterRunnerResponse"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
       }
     },
     "/admin/actions/runners/jobs": {
@@ -618,7 +654,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           }
         }
       },
@@ -2369,7 +2405,7 @@
         ],
         "responses": {
           "205": {
-            "$ref": "#/responses/NotificationThreadList"
+            "$ref": "#/responses/NotificationThreadListWithoutPagination"
           }
         }
       }
@@ -2710,6 +2746,49 @@
           },
           "400": {
             "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Register a new organization-level runner",
+        "operationId": "registerOrgRunner",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RegisterRunnerOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/RegisterRunnerResponse"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -3390,7 +3469,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -5404,6 +5483,56 @@
           },
           "400": {
             "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Register a new repository-level runner",
+        "operationId": "registerRepoRunner",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RegisterRunnerOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/RegisterRunnerResponse"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -10186,7 +10315,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ReactionList"
+            "$ref": "#/responses/ReactionListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -10338,7 +10467,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -10830,7 +10959,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11287,7 +11416,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11435,7 +11564,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11487,7 +11616,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -11542,7 +11671,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -13680,7 +13809,7 @@
         ],
         "responses": {
           "205": {
-            "$ref": "#/responses/NotificationThreadList"
+            "$ref": "#/responses/NotificationThreadListWithoutPagination"
           }
         }
       }
@@ -14235,7 +14364,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ChangedFileList"
+            "$ref": "#/responses/ChangedFileListWithPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -14440,7 +14569,7 @@
         ],
         "responses": {
           "201": {
-            "$ref": "#/responses/PullReviewList"
+            "$ref": "#/responses/PullReviewListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -17181,7 +17310,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/TeamList"
+            "$ref": "#/responses/TeamListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -17439,7 +17568,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/TrackedTimeList"
+            "$ref": "#/responses/TrackedTimeListWithoutPagination"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -18853,6 +18982,42 @@
             "$ref": "#/responses/notFound"
           }
         }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "user"
+        ],
+        "summary": "Register a new user-level runner",
+        "operationId": "registerUserRunner",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RegisterRunnerOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/RegisterRunnerResponse"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
       }
     },
     "/user/actions/runners/jobs": {
@@ -20053,7 +20218,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           },
           "401": {
             "$ref": "#/responses/unauthorized"
@@ -20415,7 +20580,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OrganizationList"
+            "$ref": "#/responses/OrganizationListWithoutPagination"
           },
           "401": {
             "$ref": "#/responses/unauthorized"
@@ -21540,7 +21705,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OrganizationList"
+            "$ref": "#/responses/OrganizationListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -28321,6 +28486,46 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "RegisterRunnerOptions": {
+      "type": "object",
+      "title": "RegisterRunnerOptions declares the accepted options for registering runners.",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "description": {
+          "description": "Description of the runner to register.",
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "name": {
+          "description": "Name of the runner to register. The name of the runner does not have to be unique.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "RegisterRunnerResponse": {
+      "type": "object",
+      "title": "RegisterRunnerResponse contains the details of the just registered runner.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "token": {
+          "type": "string",
+          "x-go-name": "Token"
+        },
+        "uuid": {
+          "type": "string",
+          "x-go-name": "UUID"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "RegistrationToken": {
       "description": "RegistrationToken is a string used to register a runner with a server",
       "type": "object",
@@ -29918,11 +30123,18 @@
       }
     },
     "AccessTokenList": {
-      "description": "AccessTokenList represents a list of API access token.",
+      "description": "AccessTokenList",
       "schema": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/AccessToken"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of access tokens"
         }
       }
     },
@@ -29977,6 +30189,13 @@
         "items": {
           "$ref": "#/definitions/Activity"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of activity feeds"
+        }
       }
     },
     "ActivityPub": {
@@ -30028,6 +30247,13 @@
         "items": {
           "$ref": "#/definitions/Branch"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of branches"
+        }
       }
     },
     "BranchProtection": {
@@ -30054,6 +30280,22 @@
         }
       },
       "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of changed files"
+        }
+      }
+    },
+    "ChangedFileListWithPagination": {
+      "description": "ChangedFileListWithPagination",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/ChangedFile"
+        }
+      },
+      "headers": {
         "X-HasMore": {
           "type": "boolean",
           "description": "True if there is another page"
@@ -30072,11 +30314,6 @@
           "type": "integer",
           "format": "int64",
           "description": "Commits per page"
-        },
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total commit count"
         }
       }
     },
@@ -30099,6 +30336,22 @@
         "items": {
           "$ref": "#/definitions/Comment"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of comments"
+        }
+      }
+    },
+    "CommentListWithoutPagination": {
+      "description": "CommentListWithoutPagination - Comments without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Comment"
+        }
       }
     },
     "Commit": {
@@ -30114,32 +30367,6 @@
         "items": {
           "$ref": "#/definitions/Commit"
         }
-      },
-      "headers": {
-        "X-HasMore": {
-          "type": "boolean",
-          "description": "True if there is another page"
-        },
-        "X-Page": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The current page"
-        },
-        "X-PageCount": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total number of pages"
-        },
-        "X-PerPage": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Commits per page"
-        },
-        "X-Total": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total commit count"
-        }
       }
     },
     "CommitStatus": {
@@ -30150,6 +30377,22 @@
     },
     "CommitStatusList": {
       "description": "CommitStatusList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/CommitStatus"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of commit statuses"
+        }
+      }
+    },
+    "CommitStatusListWithoutPagination": {
+      "description": "CommitStatusListWithoutPagination - Commit statuses without pagination headers",
       "schema": {
         "type": "array",
         "items": {
@@ -30185,6 +30428,13 @@
         "items": {
           "$ref": "#/definitions/Cron"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of cron jobs"
+        }
       }
     },
     "DeployKey": {
@@ -30199,6 +30449,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/DeployKey"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of deploy keys"
         }
       }
     },
@@ -30344,6 +30601,22 @@
         "items": {
           "$ref": "#/definitions/Hook"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of hooks"
+        }
+      }
+    },
+    "HookListWithoutPagination": {
+      "description": "HookListWithoutPagination - Hooks without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Hook"
+        }
       }
     },
     "Issue": {
@@ -30360,6 +30633,15 @@
     },
     "IssueList": {
       "description": "IssueList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Issue"
+        }
+      }
+    },
+    "IssueListWithoutPagination": {
+      "description": "IssueListWithoutPagination - Issues without pagination headers (used for pinned issues, dependencies, etc.)",
       "schema": {
         "type": "array",
         "items": {
@@ -30384,6 +30666,22 @@
     },
     "LabelList": {
       "description": "LabelList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Label"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of labels"
+        }
+      }
+    },
+    "LabelListWithoutPagination": {
+      "description": "LabelListWithoutPagination - Labels for a specific issue (no pagination headers)",
       "schema": {
         "type": "array",
         "items": {
@@ -30459,6 +30757,13 @@
         "items": {
           "$ref": "#/definitions/Milestone"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of milestones"
+        }
       }
     },
     "NodeInfo": {
@@ -30492,6 +30797,22 @@
         "items": {
           "$ref": "#/definitions/NotificationThread"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of notification threads"
+        }
+      }
+    },
+    "NotificationThreadListWithoutPagination": {
+      "description": "NotificationThreadListWithoutPagination - Notification threads without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/NotificationThread"
+        }
       }
     },
     "OAuth2Application": {
@@ -30501,11 +30822,18 @@
       }
     },
     "OAuth2ApplicationList": {
-      "description": "OAuth2ApplicationList represents a list of OAuth2 applications.",
+      "description": "OAuth2ApplicationList",
       "schema": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/OAuth2Application"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of OAuth2 applications"
         }
       }
     },
@@ -30517,6 +30845,22 @@
     },
     "OrganizationList": {
       "description": "OrganizationList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Organization"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of organizations"
+        }
+      }
+    },
+    "OrganizationListWithoutPagination": {
+      "description": "OrganizationListWithoutPagination - Organizations without pagination headers",
       "schema": {
         "type": "array",
         "items": {
@@ -30557,6 +30901,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Package"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of packages"
         }
       }
     },
@@ -30618,6 +30969,22 @@
         "items": {
           "$ref": "#/definitions/PullReview"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of pull reviews"
+        }
+      }
+    },
+    "PullReviewListWithoutPagination": {
+      "description": "PullReviewListWithoutPagination - Review requests without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/PullReview"
+        }
       }
     },
     "PushMirror": {
@@ -30632,6 +30999,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/PushMirror"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of push mirrors"
         }
       }
     },
@@ -30699,6 +31073,22 @@
         "items": {
           "$ref": "#/definitions/Reaction"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of reactions"
+        }
+      }
+    },
+    "ReactionListWithoutPagination": {
+      "description": "ReactionListWithoutPagination - Reactions for a specific comment (no pagination headers)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Reaction"
+        }
       }
     },
     "Reference": {
@@ -30714,6 +31104,12 @@
         "items": {
           "$ref": "#/definitions/Reference"
         }
+      }
+    },
+    "RegisterRunnerResponse": {
+      "description": "RegisterRunnerResponse contains the details of the just registered runner.",
+      "schema": {
+        "$ref": "#/definitions/RegisterRunnerResponse"
       }
     },
     "RegistrationToken": {
@@ -30734,6 +31130,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Release"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of releases"
         }
       }
     },
@@ -30774,6 +31177,22 @@
         "items": {
           "$ref": "#/definitions/Repository"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of repositories"
+        }
+      }
+    },
+    "RepositoryListWithoutPagination": {
+      "description": "RepositoryListWithoutPagination - Repositories without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Repository"
+        }
       }
     },
     "RunJobList": {
@@ -30804,6 +31223,13 @@
         "items": {
           "$ref": "#/definitions/Secret"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of secrets"
+        }
       }
     },
     "ServerVersion": {
@@ -30824,6 +31250,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/StopWatch"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of stop watches"
         }
       }
     },
@@ -30854,6 +31287,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Tag"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of tags"
         }
       }
     },
@@ -30891,6 +31331,22 @@
         "items": {
           "$ref": "#/definitions/Team"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of teams"
+        }
+      }
+    },
+    "TeamListWithoutPagination": {
+      "description": "TeamListWithoutPagination - Teams without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Team"
+        }
       }
     },
     "TimelineList": {
@@ -30899,6 +31355,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/TimelineComment"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of timeline comments"
         }
       }
     },
@@ -30925,6 +31388,22 @@
     },
     "TrackedTimeList": {
       "description": "TrackedTimeList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/TrackedTime"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of tracked times"
+        }
+      }
+    },
+    "TrackedTimeListWithoutPagination": {
+      "description": "TrackedTimeListWithoutPagination - Tracked times for a specific user (no pagination headers)",
       "schema": {
         "type": "array",
         "items": {
@@ -30969,6 +31448,13 @@
         "items": {
           "$ref": "#/definitions/ActionVariable"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of variables"
+        }
       }
     },
     "WatchInfo": {
@@ -30981,6 +31467,13 @@
       "description": "WikiCommitList",
       "schema": {
         "$ref": "#/definitions/WikiCommitList"
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of wiki commits"
+        }
       }
     },
     "WikiPage": {
@@ -30995,6 +31488,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/WikiPageMetaData"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of wiki pages"
         }
       }
     },
@@ -31040,7 +31540,7 @@
     "parameterBodies": {
       "description": "parameterBodies",
       "schema": {
-        "$ref": "#/definitions/NoteOptions"
+        "$ref": "#/definitions/RegisterRunnerOptions"
       }
     },
     "quotaExceeded": {
