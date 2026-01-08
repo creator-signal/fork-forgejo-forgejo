@@ -1,0 +1,6 @@
+# See models/perm/access_mode.go for the meaning of the mode
+-
+  id: 50000
+  user_id: 2
+  repo_id: 63
+  mode: 1

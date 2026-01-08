@@ -281,7 +281,7 @@ func UserHasForkedRepo(ctx context.Context, repoOwnerID, repoID int64) bool {
 			log.Warn("User #%d does not have access to repository #%d.", repoOwnerID, repoID)
 			return false
 		}
-		if orgRepo {
+		if orgRepo && userHasAccess {
 			return true
 		}
 	}
