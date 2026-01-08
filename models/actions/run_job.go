@@ -306,3 +306,14 @@ func (job *ActionRunJob) HasIncompleteWith() (bool, *jobparser.IncompleteNeeds, 
 	}
 	return jobWorkflow.IncompleteWith, jobWorkflow.IncompleteWithNeeds, jobWorkflow.IncompleteWithMatrix, nil
 }
+
+// EnableOpenIDConnect checks whether the job allows for ID token generation.
+// TODO(mpminardi): is this fine, or do we want this directly on the ActionRunJob
+// struct instead?
+func (job *ActionRunJob) EnableOpenIDConnect() (bool, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
+	if err != nil {
+		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.EnableOpenIDConnect, nil
+}
