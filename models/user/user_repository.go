@@ -88,6 +88,41 @@ func FindFederatedUser(ctx context.Context, externalID string, federationHostID 
 	return user, federatedUser, nil
 }
 
+// FindFederatedUserByExternalID attempts to find `User` and `FederatedUser` records based on the external ID.
+//
+// Returns an `ErrUserNotExist` error if a `FederatedUser` record is not found.
+func FindFederatedUserByExternalID(ctx context.Context, externalID string) (*User, *FederatedUser, error) {
+	federatedUser := new(FederatedUser)
+	user := new(User)
+
+	if err := db.WithTx(ctx, func(txCtx context.Context) error {
+		has, err := db.GetEngine(ctx).Where("external_id=?", externalID).Get(federatedUser)
+		if err != nil {
+			return err
+		} else if !has {
+			return ErrUserNotExist{Name: externalID}
+		}
+		has, err = db.GetEngine(ctx).ID(federatedUser.UserID).Get(user)
+		if err != nil {
+			return err
+		} else if !has {
+			return fmt.Errorf("FederatedUser table contains entry for user ID %v, but no user with this ID exists", federatedUser.UserID)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, nil, err
+	}
+
+	if res, err := validation.IsValid(*user); !res {
+		return nil, nil, err
+	}
+	if res, err := validation.IsValid(*federatedUser); !res {
+		return nil, nil, err
+	}
+	return user, federatedUser, nil
+}
+
 func GetFederatedUser(ctx context.Context, externalID string, federationHostID int64) (*User, *FederatedUser, error) {
 	user, federatedUser, err := FindFederatedUser(ctx, externalID, federationHostID)
 	if err != nil {

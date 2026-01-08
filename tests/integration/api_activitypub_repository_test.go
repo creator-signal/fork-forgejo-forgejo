@@ -19,7 +19,9 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
 	"forgejo.org/services/contexttest"
+	"forgejo.org/services/federation"
 
+	ap "github.com/go-ap/activitypub"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -172,5 +174,88 @@ func TestActivityPubRepositoryInboxInvalid(t *testing.T) {
 		resp, err := c.Post(activity, localRepo2Inbox)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
+	})
+}
+
+func Test_FederatedRepositoryDatabase(t *testing.T) {
+	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
+
+	mock := test.NewFederationServerMock()
+	federatedSrv := mock.DistantServer(t)
+	defer federatedSrv.Close()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		err := federation.Init()
+		require.NoError(t, err)
+
+		repositoryID := 2
+		timeNow := time.Now().UTC()
+		localRepoInbox := u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d/inbox", repositoryID)).String()
+
+		ctx, _ := contexttest.MockAPIContext(t, localRepoInbox)
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
+		require.NoError(t, err)
+
+		c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
+			mock.Persons[0].KeyID(federatedSrv.URL))
+		require.NoError(t, err)
+
+		activity1 := []byte(fmt.Sprintf(
+			`{"type":"Like",`+
+				`"startTime":"%s",`+
+				`"actor":"%s/api/v1/activitypub/user-id/15",`+
+				`"object":"%s"}`,
+			timeNow.Format(time.RFC3339),
+			federatedSrv.URL, u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d", repositoryID)).String()))
+		t.Logf("activity: %s", activity1)
+		resp, err := c.Post(activity1, localRepoInbox)
+
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+		federationHost := unittest.AssertExistsAndLoadBean(t, &forgefed.FederationHost{HostFqdn: "127.0.0.1"})
+		federatedUser := unittest.AssertExistsAndLoadBean(t, &user.FederatedUser{ExternalID: "15", FederationHostID: federationHost.ID})
+
+		userURL := "https://forgejo.org/user"
+		objectID := ap.ID(userURL + "/repo")
+		inbox := ap.IRI(objectID.String() + "/inbox")
+		outbox := ap.IRI(objectID.String() + "/outbox")
+		followers := ap.IRI(objectID.String() + "/followers")
+		team := ap.IRI(objectID.String() + "/team")
+
+		repoName := "Test Repository"
+		repo := &forgefed.FederatedRepository{
+			ObjectID:  objectID,
+			Name:      repoName,
+			Summary:   "<p>A repository for ActivityPub test.</p>",
+			OwnerID:   federatedUser.ID,
+			Inbox:     inbox,
+			Outbox:    outbox,
+			Followers: followers,
+			Team:      team,
+		}
+
+		require.NoError(t, forgefed.CreateFederatedRepository(ctx, repo))
+		foundRepo, err := forgefed.FindFederatedRepository(ctx, repoName, federatedUser.ID)
+		require.NoError(t, err)
+		repo.ID = foundRepo.ID
+		assert.Equal(t, foundRepo, repo)
+
+		getRepo, err := forgefed.GetFederatedRepository(ctx, repo.ID)
+		require.NoError(t, err)
+		assert.Equal(t, getRepo, foundRepo)
+
+		// test invalid duplicate creation
+		require.Error(t, forgefed.CreateFederatedRepository(ctx, repo), "should error for duplicate creation")
+
+		// test no found repo
+		_, err = forgefed.FindFederatedRepository(ctx, repoName, -1)
+		require.Error(t, err, "should error for no found repo")
+		assert.Equal(t, forgefed.ErrFederatedRepoNotExist{Name: repo.Name}, err)
+
+		// test invalid repo ID
+		_, err = forgefed.GetFederatedRepository(ctx, -1)
+		require.Error(t, err, "should error for no found repo")
 	})
 }

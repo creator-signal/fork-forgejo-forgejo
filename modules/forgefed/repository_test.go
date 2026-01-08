@@ -212,3 +212,30 @@ func Test_RepositoryValidation(t *testing.T) {
 	_, err = validation.IsValid(sut)
 	require.Error(t, err, "expected invalid Repository team: %v", sut)
 }
+
+func Test_RepositoryOwnerID(t *testing.T) {
+	ownerID := ap.IRI("https://forgejo.org/user")
+	objectID := ap.ID(ownerID.String() + "/repo")
+
+	sut := forgefed.Repository{
+		Actor: ap.Actor{
+			ID: objectID,
+		},
+	}
+
+	id, err := sut.OwnerID()
+	require.NoError(t, err)
+	require.Equal(t, id, ownerID)
+
+	sut.Actor.ID = ownerID
+	id, err = sut.OwnerID()
+	require.Error(t, err, "expected error for not enough path parts: %s", id)
+
+	sut.Actor.ID = ap.ID("https://bad.url/%^*/repo")
+	id, err = sut.OwnerID()
+	require.Error(t, err, "expected error for invalid URL: %s", id)
+
+	sut.Actor.ID = ap.ID("")
+	id, err = sut.OwnerID()
+	require.Error(t, err, "expected error for empty ID: %s", id)
+}

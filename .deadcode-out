@@ -30,8 +30,11 @@ forgejo.org/models/dbfs
 	Rename
 
 forgejo.org/models/forgefed
-	FederatedRepository.Validate
-	validateID
+	IsErrFederatedRepoNotExist
+	ErrFederatedRepoNotExist.Error
+	CreateFederatedRepository
+	GetFederatedRepository
+	FindFederatedRepository
 
 forgejo.org/models/forgejo/semver
 	GetVersion
@@ -65,6 +68,7 @@ forgejo.org/models/user
 	IsErrUserSettingIsNotExist
 	GetUserAllSettings
 	DeleteUserSetting
+	FindFederatedUserByExternalID
 	GetFederatedUser
 
 forgejo.org/modules/activitypub

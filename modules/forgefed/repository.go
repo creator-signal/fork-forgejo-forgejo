@@ -6,8 +6,10 @@ package forgefed
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"unsafe"
 
+	forgefed_model "forgejo.org/models/forgefed"
 	"forgejo.org/modules/validation"
 
 	ap "github.com/go-ap/activitypub"
@@ -116,6 +118,73 @@ func OnRepository(it ap.Item, fn withRepositoryFn) error {
 	return fn(ob)
 }
 
+// OwnerID derives the owner (user, org, etc) from the ActivityPub ID.
+func (repo Repository) OwnerID() (ap.IRI, error) {
+	idURL, err := repo.ID.URL()
+	if err != nil {
+		return ap.IRI(""), err
+	}
+
+	// This is somewhat fragile for implementations that do not use the pattern:
+	// - forge.url/owner/repo
+	// - forge.url/org/owner/repo
+	//
+	// However, Forgejo does follow this pattern, as well as most (all?) other popular forges
+	idPathParts := strings.Split(strings.Trim(idURL.Path, "/"), "/")
+	pathLen := len(idPathParts)
+	if pathLen < 2 {
+		return ap.IRI(""), fmt.Errorf("invalid repository ID: %s", idURL.String())
+	}
+
+	ownerPath := strings.Join(idPathParts[:pathLen-1], "/")
+	idURL.Path = "/" + ownerPath
+
+	return ap.IRI(idURL.String()), nil
+}
+
+// FromActivityPubRepository attempts to convert an ActivityPub `Repository` object into a `FederatedRepository` databse record.
+//
+// `ownerID` is the database ID for the owning `FederatedUser`. It can be fetched using code similar to:
+//
+//	repo := forgefed.Repository{ ... }
+//	ownerIRI, _err := repo.OwnerID()
+//	_, federatedUser, _err := user.FindFederatedUserByExternalID(context.Background(), ownerIRI)
+//	ownerID := federatedUser.ID
+func (repo Repository) IntoFederatedRepository(ownerID int64) (*forgefed_model.FederatedRepository, error) {
+	if ownerID < 0 {
+		return nil, fmt.Errorf("invalid owner ID: %d", ownerID)
+	}
+	if _, err := repo.OwnerID(); err != nil {
+		return nil, err
+	}
+
+	res := forgefed_model.FederatedRepository{
+		OwnerID:  ownerID,
+		ObjectID: repo.ID,
+	}
+
+	if repo.Name != nil {
+		res.Name = repo.Name.String()
+	}
+	if repo.Summary != nil {
+		res.Summary = repo.Summary.String()
+	}
+	if repo.Inbox != nil && repo.Inbox.IsLink() {
+		res.Inbox = repo.Inbox.GetLink()
+	}
+	if repo.Outbox != nil && repo.Outbox.IsLink() {
+		res.Outbox = repo.Outbox.GetLink()
+	}
+	if repo.Followers != nil && repo.Followers.IsLink() {
+		res.Followers = repo.Followers.GetLink()
+	}
+	if repo.Team != nil && repo.Team.IsLink() {
+		res.Team = repo.Team.GetLink()
+	}
+
+	return &res, nil
+}
+
 // Validate performs checks to validate the `Repository`.
 func (repo Repository) Validate() []string {
 	var (
@@ -126,6 +195,7 @@ func (repo Repository) Validate() []string {
 	if repo.ID != emptyID {
 		res = append(res, validation.ValidateIRI(repo.ID, "ID")...)
 	}
+
 	res = append(res, repo.validateObjectType()...)
 	if repo.Inbox != nil && repo.Inbox.IsLink() {
 		res = append(res, validation.ValidateIRI(repo.Inbox.GetLink(), "Inbox")...)
