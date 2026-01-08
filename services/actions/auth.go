@@ -155,18 +155,16 @@ func generateOIDCSub(gitCtx map[string]any) string {
 }
 
 func ParseAuthorizationToken(req *http.Request) (int64, error) {
-	h := req.Header.Get("Authorization")
-	if h == "" {
+	token, err := parseTokenFromHeader(req)
+	if err != nil {
+		return 0, err
+	}
+
+	if token == "" {
 		return 0, nil
 	}
 
-	parts := strings.SplitN(h, " ", 2)
-	if len(parts) != 2 {
-		log.Error("split token failed: %s", h)
-		return 0, errors.New("split token failed")
-	}
-
-	return TokenToTaskID(parts[1])
+	return TokenToTaskID(token)
 }
 
 // TokenToTaskID returns the TaskID associated with the provided JWT token
@@ -187,4 +185,52 @@ func TokenToTaskID(token string) (int64, error) {
 	}
 
 	return c.TaskID, nil
+}
+
+func ParseAuthorizationTokenClaims(req *http.Request) (*AuthorizationTokenClaims, error) {
+	token, err := parseTokenFromHeader(req)
+	if err != nil {
+		return nil, err
+	}
+
+	claims, err := decodeTokenClaims(token)
+	if err != nil {
+		return nil, err
+	}
+
+	return claims, nil
+}
+
+func parseTokenFromHeader(req *http.Request) (string, error) {
+	h := req.Header.Get("Authorization")
+	if h == "" {
+		return "", nil
+	}
+
+	parts := strings.SplitN(h, " ", 2)
+	if len(parts) != 2 {
+		log.Error("split token failed: %s", h)
+		return "", errors.New("split token failed")
+	}
+
+	return parts[1], nil
+}
+
+func decodeTokenClaims(token string) (*AuthorizationTokenClaims, error) {
+	parsedToken, err := jwt.ParseWithClaims(token, &AuthorizationTokenClaims{}, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return setting.GetGeneralTokenSigningSecret(), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	c, ok := parsedToken.Claims.(*AuthorizationTokenClaims)
+	if !parsedToken.Valid || !ok {
+		return nil, errors.New("invalid token claim")
+	}
+
+	return c, nil
 }

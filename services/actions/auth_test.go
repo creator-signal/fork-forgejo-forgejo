@@ -124,6 +124,50 @@ func TestParseAuthorizationToken(t *testing.T) {
 	assert.Equal(t, task.ID, rTaskID)
 }
 
+func TestParseAuthorizationTokenClaims(t *testing.T) {
+	task := &actions_model.ActionTask{
+		ID: 23,
+		Job: &actions_model.ActionRunJob{
+			ID:    2,
+			RunID: 1,
+		},
+	}
+	gitCtx := map[string]any{
+		"actor":            "user1",
+		"base_ref":         "master",
+		"event_name":       "push",
+		"head_ref":         "master",
+		"ref":              "refs/heads/master",
+		"ref_protected":    "false",
+		"ref_type":         "branch",
+		"repository":       "mpminardi/testing",
+		"repository_owner": "mpminardi",
+		"run_attempt":      "1",
+		"run_id":           "1",
+		"run_number":       "1",
+		"sha":              "pretend-sha",
+		"workflow":         "test.yml",
+		"workflow_ref":     "pretend-ref",
+	}
+	token, err := CreateAuthorizationToken(task, gitCtx, true)
+	require.NoError(t, err)
+	assert.NotEmpty(t, token)
+	headers := http.Header{}
+	headers.Set("Authorization", "Bearer "+token)
+	tokenClaims, err := ParseAuthorizationTokenClaims(&http.Request{
+		Header: headers,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, task.ID, tokenClaims.TaskID)
+	assert.Equal(t, task.Job.ID, tokenClaims.JobID)
+	assert.Equal(t, task.Job.RunID, tokenClaims.RunID)
+	var customClaims map[string]any
+	err = json.Unmarshal([]byte(tokenClaims.OIDCExtra), &customClaims)
+	require.NoError(t, err)
+	assert.Equal(t, gitCtx, customClaims)
+	assert.Equal(t, "repo:mpminardi/testing:ref:refs/heads/master", tokenClaims.OIDCSub)
+}
+
 func TestParseAuthorizationTokenNoAuthHeader(t *testing.T) {
 	headers := http.Header{}
 	rTaskID, err := ParseAuthorizationToken(&http.Request{
