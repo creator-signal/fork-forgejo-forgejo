@@ -580,6 +580,9 @@ func tryAutolinkByLabel(ctx context.Context, p *packages_model.Package, labels m
 	}
 
 	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
+		if errors.Is(err, util.ErrPermissionDenied) {
+			return false, nil // we don't want an error case if the user does not have write access to the repo they have write access to
+		}
 		return false, err
 	}
 	return true, nil
@@ -597,6 +600,9 @@ func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imag
 		return false, nil
 	}
 	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
+		if errors.Is(err, util.ErrPermissionDenied) {
+			return false, nil // we don't want an error case if the user does not have write access to the repo they have write access to
+		}
 		return false, err
 	}
 	return true, nil
