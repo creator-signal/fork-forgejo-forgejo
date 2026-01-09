@@ -19,6 +19,8 @@ import (
 	"gopkg.in/ini.v1" //nolint:depguard // used to read .gitmodules
 )
 
+const MaxGitmodulesFileSize = 64 * 1024
+
 // GetSubmodule returns the Submodule of a given path
 func (c *Commit) GetSubmodule(path string, entry *TreeEntry) (Submodule, error) {
 	err := c.readSubmodules()
@@ -55,7 +57,7 @@ func (c *Commit) readSubmodules() error {
 		return err
 	}
 
-	rc, _, err := entry.Blob().NewTruncatedReader(10 * 1024)
+	rc, _, err := entry.Blob().NewTruncatedReader(MaxGitmodulesFileSize)
 	if err != nil {
 		return err
 	}
