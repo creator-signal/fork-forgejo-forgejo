@@ -37,7 +37,6 @@ type ActionRunnerToken struct {
 
 	Created timeutil.TimeStamp `xorm:"created"`
 	Updated timeutil.TimeStamp `xorm:"updated"`
-	Deleted timeutil.TimeStamp `xorm:"deleted"`
 }
 
 func init() {
