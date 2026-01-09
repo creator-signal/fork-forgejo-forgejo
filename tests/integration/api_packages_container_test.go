@@ -1057,9 +1057,9 @@ func TestPackageContainer(t *testing.T) {
 				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 			MakeRequest(t, req, http.StatusCreated)
 
-			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo2)
+			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo3)
 			require.NoError(t, err)
-			require.Equal(t, nameNonexistingRepo2, p.Name) // just to make sure we have grabbed the correct package
+			require.Equal(t, nameNonexistingRepo3, p.Name) // just to make sure we have grabbed the correct package
 			assert.Equal(t, repo.ID, p.RepoID)
 		})
 	})
