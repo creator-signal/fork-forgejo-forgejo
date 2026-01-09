@@ -1627,6 +1627,44 @@ func TestRepoSubmoduleView(t *testing.T) {
 
 			assert.Equal(t, expectedDst, resp.Header().Get("Location"))
 		})
+
+		t.Run("SubmodulesFileTooBig", func(t *testing.T) {
+			repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, []*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".gitmodules",
+					ContentReader: strings.NewReader(strings.Repeat("#", git.MaxGitmodulesFileSize-5) + // ensure that the partial read is invalid
+						`
+[submodule "relative-module"]
+  path = relative-module
+  url = https://git.example.org/submodule.git
+`),
+				}, {
+					Operation:     "create",
+					TreePath:      "relative-module",
+					FromTreePath:  "",
+					ContentReader: nil,
+					SHA:           "95601d16476a",
+					Options:       files_service.RepoFileOptionMode(git.EntryModeCommit),
+				},
+			})
+			defer f()
+
+			// Check that the submodule entry exist and the link is correct.
+			req := NewRequest(t, "GET", "/"+repo.FullName())
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			_, ok := htmlDoc.Find(`tr[data-entryname="relative-module"] td.name a`).Attr("href")
+			assert.False(t, ok, "should not find a link to 'relative-module' in file list")
+
+			// Check that a link to the submodule returns a redirect and that the redirect link is correct.
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/relative-module")
+			resp = MakeRequest(t, req, http.StatusSeeOther)
+
+			assert.Equal(t, "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/", resp.Header().Get("Location"))
+		})
 	})
 }
 
