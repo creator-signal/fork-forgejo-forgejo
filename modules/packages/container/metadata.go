@@ -64,6 +64,7 @@ type Metadata struct {
 	Labels           map[string]string `json:"labels,omitempty"`
 	ImageLayers      []string          `json:"layer_creation,omitempty"`
 	Manifests        []*Manifest       `json:"manifests,omitempty"`
+	Annotations      map[string]string `json:"annotations,omitempty"`
 }
 
 type Manifest struct {

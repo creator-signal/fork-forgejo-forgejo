@@ -87,6 +87,9 @@ func TestPackageContainer(t *testing.T) {
 
 	manifestWithOpenContainersSourceLabelContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configWithOpenContainersSourceLabelDigest + `","size":` + strconv.Itoa(len(configWithOpenContainersSourceLabelContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}]}`
 
+	// same as configContent above (also uses blob[Digest/Content]), but with the added annotation directly within the manifest: "org.opencontainers.image.source": "http://localhost:3003/user2/autolink-repo"
+	manifestWithOpenContainersSourceAnnotationContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configDigest + `","size":` + strconv.Itoa(len(configContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}],"annotations":{"org.opencontainers.image.source":"http://localhost:3003/user2/autolink-repo"}}`
+
 	anonymousToken := ""
 	readUserToken := ""
 	userToken := ""
@@ -926,6 +929,8 @@ func TestPackageContainer(t *testing.T) {
 		urlNonexistingRepo1 := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, nameNonexistingRepo1)
 		nameNonexistingRepo2 := "another-nonexisting-repo"
 		urlNonexistingRepo2 := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, nameNonexistingRepo2)
+		nameNonexistingRepo3 := "invisible-repo"
+		urlNonexistingRepo3 := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, nameNonexistingRepo3)
 		nameExistingRepoNested := "nested-image1"
 		urlExistingRepoNested := fmt.Sprintf("%sv2/%s/%s/%s", setting.AppURL, user.Name, repo.Name, nameExistingRepoNested)
 
@@ -1020,7 +1025,7 @@ func TestPackageContainer(t *testing.T) {
 			assert.Equal(t, int64(0), checkPackageForStillUnlinked.RepoID)
 		})
 
-		t.Run("PushToArbitraryRepoWithLabel", func(t *testing.T) {
+		t.Run("PushWithLabel", func(t *testing.T) {
 			// Upload blobs and manifest
 			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo2, blobDigest), bytes.NewReader(blobContent)).
 				AddTokenAuth(userToken)
@@ -1029,6 +1034,25 @@ func TestPackageContainer(t *testing.T) {
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusCreated)
 			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlNonexistingRepo2, "v1"), strings.NewReader(manifestWithOpenContainersSourceLabelContent)).
+				AddTokenAuth(userToken).
+				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			MakeRequest(t, req, http.StatusCreated)
+
+			p, err := packages_model.GetPackageByName(t.Context(), user.ID, packages_model.TypeContainer, nameNonexistingRepo2)
+			require.NoError(t, err)
+			require.Equal(t, nameNonexistingRepo2, p.Name) // just to make sure we have grabbed the correct package
+			assert.Equal(t, repo.ID, p.RepoID)
+		})
+
+		t.Run("PushWithAnnotation", func(t *testing.T) {
+			// Upload blobs and manifest
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo3, blobDigest), bytes.NewReader(blobContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo3, configDigest), strings.NewReader(configContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlNonexistingRepo3, "v1"), strings.NewReader(manifestWithOpenContainersSourceAnnotationContent)).
 				AddTokenAuth(userToken).
 				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 			MakeRequest(t, req, http.StatusCreated)

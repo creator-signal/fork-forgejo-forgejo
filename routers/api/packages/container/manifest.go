@@ -120,6 +120,7 @@ func processImageManifest(ctx context.Context, mci *manifestCreationInfo, buf *p
 		if err != nil {
 			return err
 		}
+		metadata.Annotations = manifest.Annotations
 
 		blobReferences := make([]*blobReference, 0, 1+len(manifest.Layers))
 
@@ -515,10 +516,19 @@ func createManifestBlob(ctx context.Context, mci *manifestCreationInfo, pv *pack
 // Tries to link a package to a repository.
 // If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return to determine if the linking was performed.
 func tryAutoLink(ctx context.Context, p *packages_model.Package, imageOwner, imageName string, metadata *container_module.Metadata, doer *user_model.User) (linked bool, err error) {
-	if linkedByLabel, err := tryAutolinkByLabel(ctx, p, metadata, doer); err != nil {
+	if linkedByLabel, err := tryAutolinkByLabel(ctx, p, metadata.Labels, doer); err != nil {
 		return false, err
 	} else if linkedByLabel {
 		log.Info("Image %s/%s was auto-linked by label", imageOwner, imageName)
+		return true, nil
+	}
+
+	// We can use the same function for linking by annotation as is used for
+	// linking by label, since the field has the exact same structure
+	if linkedByAnnotation, err := tryAutolinkByLabel(ctx, p, metadata.Annotations, doer); err != nil {
+		return false, err
+	} else if linkedByAnnotation {
+		log.Info("Image %s/%s was auto-linked by annotation", imageOwner, imageName)
 		return true, nil
 	}
 
@@ -532,6 +542,49 @@ func tryAutoLink(ctx context.Context, p *packages_model.Package, imageOwner, ima
 	return false, nil
 }
 
+// Tries to link a package to a repository by label from metadata.
+// If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return to determine if the linking was performed.
+func tryAutolinkByLabel(ctx context.Context, p *packages_model.Package, labels map[string]string, doer *user_model.User) (linked bool, err error) {
+	if labels == nil {
+		return false, nil
+	}
+
+	labelRepo, ok := labels["org.opencontainers.image.source"]
+	if !ok {
+		return false, nil
+	}
+
+	u, err := url.Parse(labelRepo)
+	if err != nil {
+		log.Warn("Failed to extract label value org.opencontainers.image.source: value is not in format '{host}/{owner}/{repo}' (is: %s)", labelRepo)
+		return false, nil // we do not return an error here, since a malformed label should simply be ignored
+	}
+
+	fullBasePath := fmt.Sprintf("%s://%s/", u.Scheme, u.Host)
+	if setting.AppURL != fullBasePath {
+		log.Warn("Failed to extract label value org.opencontainers.image.source: host does not match Forgejo AppURL (is: %s, want: %s)", fullBasePath, setting.AppURL)
+		return false, nil
+	}
+
+	pathParts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(pathParts) != 2 {
+		log.Warn("Failed to extract label value org.opencontainers.image.source: value is not in format '{host}/{owner}/{repo}' (is: %s)", labelRepo)
+	}
+
+	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, pathParts[0], pathParts[1])
+	if err != nil {
+		if !repo_model.IsErrRepoNotExist(err) {
+			return false, err // this is a legit error
+		}
+		return false, nil
+	}
+
+	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Tries to link a package to a repository by its name (using {owner}/{repo}[/...]).
 // If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return to determine if the linking was performed.
 func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imageOwner, imageName string, doer *user_model.User) (linked bool, err error) {
@@ -543,45 +596,6 @@ func tryAutolinkByImageName(ctx context.Context, p *packages_model.Package, imag
 		}
 		return false, nil
 	}
-	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// Tries to link a package to a repository by label from metadata.
-// If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return to determine if the linking was performed.
-func tryAutolinkByLabel(ctx context.Context, p *packages_model.Package, metadata *container_module.Metadata, doer *user_model.User) (linked bool, err error) {
-	labelRepo, ok := metadata.Labels["org.opencontainers.image.source"]
-	if !ok {
-		return false, nil
-	}
-
-	u, err := url.Parse(labelRepo)
-	if err != nil {
-		log.Warn("Failed to extract label value org.opencontainers.image.source: value is not in format '{host}/{owner}/{repo}'")
-		return false, nil // we do not return an error here, since a malformed label should simply be ignored
-	}
-
-	fullBasePath := fmt.Sprintf("%s://%s/", u.Scheme, u.Host)
-	if setting.AppURL != fullBasePath {
-		log.Warn("Failed to extract label value org.opencontainers.image.source: host does not match Forgejo AppURL")
-		return false, nil
-	}
-
-	pathParts := strings.Split(strings.Trim(u.Path, "/"), "/")
-	if len(pathParts) != 2 {
-		log.Warn("Failed to extract label value org.opencontainers.image.source: value is not in format '{host}/{owner}/{repo}'")
-	}
-
-	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, pathParts[0], pathParts[1])
-	if err != nil {
-		if !repo_model.IsErrRepoNotExist(err) {
-			return false, err // this is a legit error
-		}
-		return false, nil
-	}
-
 	if err := packages_service.LinkToRepository(ctx, p, repository, doer); err != nil {
 		return false, err
 	}
