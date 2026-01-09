@@ -12,6 +12,7 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/tests"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestManifestJson(t *testing.T) {
@@ -53,13 +54,13 @@ func TestManifestJsonStandalone(t *testing.T) {
 }
 
 func TestManifestJsonCustomFile(t *testing.T) {
-	assert.NoError(t, os.MkdirAll(util.FilePathJoinAbs(setting.CustomPath, "public"), 0o777))
+	require.NoError(t, os.MkdirAll(util.FilePathJoinAbs(setting.CustomPath, "public"), 0o777))
 	manifestPath := util.FilePathJoinAbs(setting.CustomPath, "public/manifest.json")
-	file, err := os.OpenFile(manifestPath, os.O_CREATE | os.O_RDWR, 0o777)
-	assert.NoError(t, err)
+	file, err := os.OpenFile(manifestPath, os.O_CREATE|os.O_RDWR, 0o777)
+	require.NoError(t, err)
 	_, err = file.Write([]byte(`{"name":"MyCustomJson"}`))
-	assert.NoError(t, err)
-	assert.NoError(t, file.Close())
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
 	defer os.Remove(manifestPath)
 
 	defer tests.PrepareTestEnv(t)()

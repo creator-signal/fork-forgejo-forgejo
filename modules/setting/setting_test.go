@@ -36,7 +36,7 @@ func TestMakeManifestData(t *testing.T) {
 
 func TestMakeManifestDataStandalone(t *testing.T) {
 	PWA.Standalone = true
-	defer func () {
+	defer func() {
 		PWA.Standalone = false
 	}()
 
