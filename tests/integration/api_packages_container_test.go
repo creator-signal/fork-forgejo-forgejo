@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -66,32 +67,20 @@ func TestPackageContainer(t *testing.T) {
 
 	unknownDigest := "sha256:0000000000000000000000000000000000000000000000000000000000000000"
 
-	blobDigest := "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
 	blobContent, _ := base64.StdEncoding.DecodeString(`H4sIAAAJbogA/2IYBaNgFIxYAAgAAP//Lq+17wAEAAA=`)
+	blobDigest := "sha256:" + sha256Hash(string(blobContent))
 
-	configDigest := "sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d"
 	configContent := `{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/true"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"container":"b89fe92a887d55c0961f02bdfbfd8ac3ddf66167db374770d2d9e9fab3311510","container_config":{"Hostname":"b89fe92a887d","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/bin/sh","-c","#(nop) ","CMD [\"/true\"]"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"created":"2022-01-01T00:00:00.000000000Z","docker_version":"20.10.12","history":[{"created":"2022-01-01T00:00:00.000000000Z","created_by":"/bin/sh -c #(nop) COPY file:0e7589b0c800daaf6fa460d2677101e4676dd9491980210cb345480e513f3602 in /true "},{"created":"2022-01-01T00:00:00.000000001Z","created_by":"/bin/sh -c #(nop)  CMD [\"/true\"]","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":["sha256:0ff3b91bdf21ecdf2f2f3d4372c2098a14dbe06cd678e8f0a85fd4902d00e2e2"]}}`
+	configDigest := "sha256:" + sha256Hash(configContent)
 
-	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"
 	manifestContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d","size":1069},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4","size":32}]}`
+	manifestDigest := "sha256:" + sha256Hash(manifestContent)
 
-	untaggedManifestDigest := "sha256:4305f5f5572b9a426b88909b036e52ee3cf3d7b9c1b01fac840e90747f56623d"
 	untaggedManifestContent := `{"schemaVersion":2,"mediaType":"` + oci.MediaTypeImageManifest + `","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d","size":1069},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4","size":32}]}`
+	untaggedManifestDigest := "sha256:" + sha256Hash(untaggedManifestContent)
 
-	indexManifestDigest := "sha256:bab112d6efb9e7f221995caaaa880352feb5bd8b1faf52fae8d12c113aa123ec"
 	indexManifestContent := `{"schemaVersion":2,"mediaType":"` + oci.MediaTypeImageIndex + `","manifests":[{"mediaType":"application/vnd.docker.distribution.manifest.v2+json","digest":"` + manifestDigest + `","platform":{"os":"linux","architecture":"arm","variant":"v7"}},{"mediaType":"` + oci.MediaTypeImageManifest + `","digest":"` + untaggedManifestDigest + `","platform":{"os":"linux","architecture":"arm64","variant":"v8"}}]}`
-
-	// same as configContent above (also uses blob[Digest/Content]), but with the added label in config: "org.opencontainers.image.source": "http://localhost:3003/user2/autolink-repo"
-	configWithOpenContainersSourceLabelDigest := "sha256:07b5d36c325cfc34f2fdd5487286729e056df34818add56d47defe2280cb2bca"
-	configWithOpenContainersSourceLabelContent := `{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/true"],"ArgsEscaped":true,"Labels":{"org.opencontainers.image.source":"http://localhost:3003/user2/autolink-repo"},"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"container":"b89fe92a887d55c0961f02bdfbfd8ac3ddf66167db374770d2d9e9fab3311510","container_config":{"Hostname":"b89fe92a887d","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/bin/sh","-c","#(nop) ","CMD [\"/true\"]"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"created":"2022-01-01T00:00:00.000000000Z","docker_version":"20.10.12","history":[{"created":"2022-01-01T00:00:00.000000000Z","created_by":"/bin/sh -c #(nop) COPY file:0e7589b0c800daaf6fa460d2677101e4676dd9491980210cb345480e513f3602 in /true "},{"created":"2022-01-01T00:00:00.000000001Z","created_by":"/bin/sh -c #(nop)  CMD [\"/true\"]","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":["sha256:0ff3b91bdf21ecdf2f2f3d4372c2098a14dbe06cd678e8f0a85fd4902d00e2e2"]}}`
-
-	manifestWithOpenContainersSourceLabelContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configWithOpenContainersSourceLabelDigest + `","size":` + strconv.Itoa(len(configWithOpenContainersSourceLabelContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}]}`
-
-	// same as configContent above (also uses blob[Digest/Content]), but with the added annotation directly within the manifest: "org.opencontainers.image.source": "{AppURL}/user2/autolink-repo"
-	manifestWithOpenContainersSourceAnnotationContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configDigest + `","size":` + strconv.Itoa(len(configContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}],"annotations":{"org.opencontainers.image.source":"` + setting.AppURL + `user2/autolink-repo"}}`
-
-	// same as configContent above (also uses blob[Digest/Content]), but with an added annotation to auto-link to a repo of the private user: "org.opencontainers.image.source": "{AppURL}/user31/autolink-repo"
-	manifestWithOpenContainersSourceAnnotationPrivateUserContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configDigest + `","size":` + strconv.Itoa(len(configContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}],"annotations":{"org.opencontainers.image.source":"` + setting.AppURL + `user31/autolink-repo"}}`
+	indexManifestDigest := "sha256:" + sha256Hash(indexManifestContent)
 
 	anonymousToken := ""
 	readUserToken := ""
@@ -925,6 +914,7 @@ func TestPackageContainer(t *testing.T) {
 
 	t.Run("AutoLinking", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
+
 		// create repo which is used for auto-linking
 		repo := createTestRepositoryWithPackageRegistry(t, user, "autolink-repo")
 
@@ -1009,7 +999,7 @@ func TestPackageContainer(t *testing.T) {
 		})
 
 		t.Run("PushVersionToUnlinkedRepo", func(t *testing.T) {
-			// unlink auto-linked package
+			// unlink previously auto-linked package
 			require.NoError(t,
 				packages_service.UnlinkFromRepository(t.Context(), linkedPackage, user),
 			)
@@ -1037,7 +1027,13 @@ func TestPackageContainer(t *testing.T) {
 		})
 
 		t.Run("PushWithLabel", func(t *testing.T) {
-			// Upload blobs and manifest
+			// Pushes to non-existing path but tries to link using an image label.
+
+			// same as configContent, but with the added label in config: "org.opencontainers.image.source": "{AppURL}/user2/autolink-repo"
+			configWithOpenContainersSourceLabelContent := `{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/true"],"ArgsEscaped":true,"Labels":{"org.opencontainers.image.source":"` + setting.AppURL + `user2/autolink-repo"},"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"container":"b89fe92a887d55c0961f02bdfbfd8ac3ddf66167db374770d2d9e9fab3311510","container_config":{"Hostname":"b89fe92a887d","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/bin/sh","-c","#(nop) ","CMD [\"/true\"]"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"created":"2022-01-01T00:00:00.000000000Z","docker_version":"20.10.12","history":[{"created":"2022-01-01T00:00:00.000000000Z","created_by":"/bin/sh -c #(nop) COPY file:0e7589b0c800daaf6fa460d2677101e4676dd9491980210cb345480e513f3602 in /true "},{"created":"2022-01-01T00:00:00.000000001Z","created_by":"/bin/sh -c #(nop)  CMD [\"/true\"]","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":["sha256:0ff3b91bdf21ecdf2f2f3d4372c2098a14dbe06cd678e8f0a85fd4902d00e2e2"]}}`
+			configWithOpenContainersSourceLabelDigest := "sha256:" + sha256Hash(configWithOpenContainersSourceLabelContent)
+			manifestWithOpenContainersSourceLabelContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configWithOpenContainersSourceLabelDigest + `","size":` + strconv.Itoa(len(configWithOpenContainersSourceLabelContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}]}`
+
 			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo2, blobDigest), bytes.NewReader(blobContent)).
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusCreated)
@@ -1056,7 +1052,11 @@ func TestPackageContainer(t *testing.T) {
 		})
 
 		t.Run("PushWithAnnotation", func(t *testing.T) {
-			// Upload blobs and manifest
+			// Pushes to non-existing path but tries to link using a push annotation in the manifest.
+
+			// same as configContent, but with the added annotation directly within the manifest: "org.opencontainers.image.source": "{AppURL}/user2/autolink-repo"
+			manifestWithOpenContainersSourceAnnotationContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configDigest + `","size":` + strconv.Itoa(len(configContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}],"annotations":{"org.opencontainers.image.source":"` + setting.AppURL + `user2/autolink-repo"}}`
+
 			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo3, blobDigest), bytes.NewReader(blobContent)).
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusCreated)
@@ -1077,6 +1077,9 @@ func TestPackageContainer(t *testing.T) {
 		t.Run("PushWithAnnotationNoPermissions", func(t *testing.T) {
 			// This tests pushes a manifest as user2, but tries to link to an existing repo of user31.
 			// This should fail silently with the created package not automatically getting linked.
+
+			// same as configContent above (also uses blob[Digest/Content]), but with an added annotation to auto-link to a repo of the private user: "org.opencontainers.image.source": "{AppURL}/user31/autolink-repo"
+			manifestWithOpenContainersSourceAnnotationPrivateUserContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"` + configDigest + `","size":` + strconv.Itoa(len(configContent)) + `},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"` + blobDigest + `","size":32}],"annotations":{"org.opencontainers.image.source":"` + setting.AppURL + `user31/autolink-repo"}}`
 
 			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlNonexistingRepo4, blobDigest), bytes.NewReader(blobContent)).
 				AddTokenAuth(userToken)
@@ -1107,4 +1110,9 @@ func createTestRepositoryWithPackageRegistry(t *testing.T, user *user_model.User
 	require.NoError(t, err)
 
 	return repo
+}
+
+func sha256Hash(in string) string {
+	sum := sha256.Sum256([]byte(in))
+	return hex.EncodeToString(sum[:])
 }
