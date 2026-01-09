@@ -34,6 +34,18 @@ func TestMakeManifestData(t *testing.T) {
 	assert.True(t, json.Valid(jsonBytes))
 }
 
+func TestMakeManifestDataStandalone(t *testing.T) {
+	PWA.Standalone = true
+	defer func () {
+		PWA.Standalone = false
+	}()
+
+	jsonBytes, err := GetManifestJSON()
+	require.NoError(t, err)
+	assert.True(t, json.Valid(jsonBytes))
+	assert.Contains(t, string(jsonBytes), `"standalone"`)
+}
+
 func TestLoadServiceDomainListsForFederation(t *testing.T) {
 	oldAppURL := AppURL
 	oldFederation := Federation
