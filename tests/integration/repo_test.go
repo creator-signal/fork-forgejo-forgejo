@@ -1664,6 +1664,16 @@ func TestRepoSubmoduleView(t *testing.T) {
 			resp = MakeRequest(t, req, http.StatusSeeOther)
 
 			assert.Equal(t, "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/", resp.Header().Get("Location"))
+
+			// Check that a warning is present
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/.gitmodules")
+			resp = MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc = NewHTMLParser(t, resp.Body)
+
+			warn, err := htmlDoc.Find(`.non-diff-file-content .warning`).Html()
+			require.NoError(t, err)
+			assert.NotEmpty(t, warn)
 		})
 	})
 }
