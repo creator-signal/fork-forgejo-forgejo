@@ -5,6 +5,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -57,8 +58,12 @@ func (c *Commit) readSubmodules() error {
 		return err
 	}
 
-	rc, _, err := entry.Blob().NewTruncatedReader(MaxGitmodulesFileSize)
+	rc, _, err := entry.Blob().NewReader(MaxGitmodulesFileSize)
 	if err != nil {
+		if errors.As(err, &BlobTooLargeError{}) {
+			c.submodules = make(map[string]Submodule)
+			return nil
+		}
 		return err
 	}
 	defer rc.Close()
