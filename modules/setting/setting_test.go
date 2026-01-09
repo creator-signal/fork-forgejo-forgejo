@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,10 +36,7 @@ func TestMakeManifestData(t *testing.T) {
 }
 
 func TestMakeManifestDataStandalone(t *testing.T) {
-	PWA.Standalone = true
-	defer func() {
-		PWA.Standalone = false
-	}()
+	defer test.MockVariableValue(&PWA.Standalone, true)()
 
 	jsonBytes, err := GetManifestJSON()
 	require.NoError(t, err)

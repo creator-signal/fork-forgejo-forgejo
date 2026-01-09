@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/util"
 	"forgejo.org/tests"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,11 +35,7 @@ func TestManifestJson(t *testing.T) {
 
 func TestManifestJsonStandalone(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-
-	setting.PWA.Standalone = true
-	defer func() {
-		setting.PWA.Standalone = false
-	}()
+	defer test.MockVariableValue(&setting.PWA.Standalone, true)()
 
 	session := loginUser(t, "user2")
 	req := NewRequest(t, "GET", "/manifest.json")
