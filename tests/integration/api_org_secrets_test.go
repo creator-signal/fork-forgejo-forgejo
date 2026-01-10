@@ -1,5 +1,5 @@
-// Copyright 2023 The Gitea Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// Copyright 2025 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package integration
 
@@ -9,29 +9,23 @@ import (
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
-	"forgejo.org/models/db"
-	repo_model "forgejo.org/models/repo"
+	org_model "forgejo.org/models/organization"
 	secret_model "forgejo.org/models/secret"
-	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
-	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
-	repo_service "forgejo.org/services/repository"
 	"forgejo.org/tests"
-
 	"github.com/stretchr/testify/require"
 )
 
-func TestAPIRepoSecrets(t *testing.T) {
+func TestAPIOrgSecrets(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
-	session := loginUser(t, user.Name)
-	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+	org := unittest.AssertExistsAndLoadBean(t, &org_model.Organization{Name: "org3"})
+	session := loginUser(t, "user2")
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteOrganization)
 
 	t.Run("List", func(t *testing.T) {
-		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/actions/secrets", repo.FullName())).
+		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/orgs/%s/actions/secrets", org.Name)).
 			AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusOK)
 	})
@@ -80,7 +74,7 @@ func TestAPIRepoSecrets(t *testing.T) {
 		}
 
 		for _, c := range cases {
-			req := NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/repos/%s/actions/secrets/%s", repo.FullName(), c.Name), api.CreateOrUpdateSecretOption{
+			req := NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/orgs/%s/actions/secrets/%s", org.Name, c.Name), api.CreateOrUpdateSecretOption{
 				Data: "data",
 			}).AddTokenAuth(token)
 			MakeRequest(t, req, c.ExpectedStatus)
@@ -89,7 +83,7 @@ func TestAPIRepoSecrets(t *testing.T) {
 
 	t.Run("Update", func(t *testing.T) {
 		name := "update_secret"
-		url := fmt.Sprintf("/api/v1/repos/%s/actions/secrets/%s", repo.FullName(), name)
+		url := fmt.Sprintf("/api/v1/orgs/%s/actions/secrets/%s", org.Name, name)
 
 		req := NewRequestWithJSON(t, "PUT", url, api.CreateOrUpdateSecretOption{
 			Data: "initial",
@@ -104,7 +98,7 @@ func TestAPIRepoSecrets(t *testing.T) {
 
 	t.Run("Delete", func(t *testing.T) {
 		name := "delete_secret"
-		url := fmt.Sprintf("/api/v1/repos/%s/actions/secrets/%s", repo.FullName(), name)
+		url := fmt.Sprintf("/api/v1/orgs/%s/actions/secrets/%s", org.Name, name)
 
 		req := NewRequestWithJSON(t, "PUT", url, api.CreateOrUpdateSecretOption{
 			Data: "initial",
@@ -119,16 +113,16 @@ func TestAPIRepoSecrets(t *testing.T) {
 			AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
 
-		req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/repos/%s/actions/secrets/000", repo.FullName())).
+		req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/orgs/%s/actions/secrets/000", org.Name)).
 			AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
 	})
 
 	t.Run("Delete with forbidden names", func(t *testing.T) {
-		secret, err := secret_model.InsertEncryptedSecret(t.Context(), 0, repo.ID, "FORGEJO_FORBIDDEN", "illegal")
+		secret, err := secret_model.InsertEncryptedSecret(t.Context(), org.ID, 0, "FORGEJO_FORBIDDEN", "illegal")
 		require.NoError(t, err)
 
-		url := fmt.Sprintf("/api/v1/repos/%s/actions/secrets/%s", repo.FullName(), secret.Name)
+		url := fmt.Sprintf("/api/v1/orgs/%s/actions/secrets/%s", org.Name, secret.Name)
 
 		req := NewRequest(t, "DELETE", url).
 			AddTokenAuth(token)
@@ -137,26 +131,5 @@ func TestAPIRepoSecrets(t *testing.T) {
 		req = NewRequest(t, "DELETE", url).
 			AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
-	})
-
-	t.Run("Endpoints disabled if Actions disabled", func(t *testing.T) {
-		repository, _, cleanUp := tests.CreateDeclarativeRepo(t, user, "no-actions",
-			[]unit_model.Type{unit_model.TypeCode, unit_model.TypeActions}, []unit_model.Type{}, nil)
-		defer cleanUp()
-
-		getURL := fmt.Sprintf("/api/v1/repos/%s/actions/secrets", repository.FullName())
-
-		getRequest := NewRequest(t, "GET", getURL)
-		getRequest.AddTokenAuth(token)
-		MakeRequest(t, getRequest, http.StatusOK)
-
-		enabledUnits := []repo_model.RepoUnit{{RepoID: repository.ID, Type: unit_model.TypeCode}}
-		disabledUnits := []unit_model.Type{unit_model.TypeActions}
-		err := repo_service.UpdateRepositoryUnits(db.DefaultContext, repository, enabledUnits, disabledUnits)
-		require.NoError(t, err)
-
-		getRequest = NewRequest(t, "GET", getURL)
-		getRequest.AddTokenAuth(token)
-		MakeRequest(t, getRequest, http.StatusNotFound)
 	})
 }

@@ -9,14 +9,19 @@ import (
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
+	secret_model "forgejo.org/models/secret"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAPIUserSecrets(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	session := loginUser(t, "user1")
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user1"})
+	session := loginUser(t, user.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
 
 	t.Run("Create", func(t *testing.T) {
@@ -34,6 +39,10 @@ func TestAPIUserSecrets(t *testing.T) {
 			},
 			{
 				Name:           "_",
+				ExpectedStatus: http.StatusCreated,
+			},
+			{
+				Name:           "ci",
 				ExpectedStatus: http.StatusCreated,
 			},
 			{
@@ -100,6 +109,21 @@ func TestAPIUserSecrets(t *testing.T) {
 
 		req = NewRequest(t, "DELETE", "/api/v1/user/actions/secrets/000").
 			AddTokenAuth(token)
-		MakeRequest(t, req, http.StatusBadRequest)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Delete with forbidden names", func(t *testing.T) {
+		secret, err := secret_model.InsertEncryptedSecret(t.Context(), user.ID, 0, "FORGEJO_FORBIDDEN", "illegal")
+		require.NoError(t, err)
+
+		url := fmt.Sprintf("/api/v1/user/actions/secrets/%s", secret.Name)
+
+		req := NewRequest(t, "DELETE", url).
+			AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNoContent)
+
+		req = NewRequest(t, "DELETE", url).
+			AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
 	})
 }

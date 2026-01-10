@@ -74,9 +74,21 @@ func TestAPIOrgVariablesCreateOrganizationVariable(t *testing.T) {
 
 	for _, c := range cases {
 		requestURL := fmt.Sprintf("/api/v1/orgs/%s/actions/variables/%s", org.Name, c.Name)
-		request := NewRequestWithJSON(t, "POST", requestURL, api.CreateVariableOption{Value: "value"})
+		request := NewRequestWithJSON(t, "POST", requestURL, api.CreateVariableOption{
+			Value: "value" + c.Name,
+		})
 		request.AddTokenAuth(token)
 		MakeRequest(t, request, c.ExpectedStatus)
+
+		if c.ExpectedStatus < 300 {
+			request = NewRequest(t, "GET", requestURL).
+				AddTokenAuth(token)
+			res := MakeRequest(t, request, http.StatusOK)
+			variable := api.ActionVariable{}
+			DecodeJSON(t, res, &variable)
+			assert.Equal(t, variable.Name, c.Name)
+			assert.Equal(t, variable.Data, "value"+c.Name)
+		}
 	}
 }
 
@@ -175,6 +187,9 @@ func TestAPIOrgVariablesDeleteOrganizationVariable(t *testing.T) {
 	url = fmt.Sprintf("/api/v1/orgs/%s/actions/variables/%s", org.Name, variable.Name)
 	request = NewRequest(t, "DELETE", url).AddTokenAuth(token)
 	MakeRequest(t, request, http.StatusNoContent)
+
+	request = NewRequest(t, "DELETE", url).AddTokenAuth(token)
+	MakeRequest(t, request, http.StatusNotFound)
 }
 
 func TestAPIOrgVariablesGetSingleOrganizationVariable(t *testing.T) {

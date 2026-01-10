@@ -75,9 +75,19 @@ func TestAPIUserVariablesCreateUserVariable(t *testing.T) {
 
 	for _, c := range cases {
 		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/user/actions/variables/%s", c.Name), api.CreateVariableOption{
-			Value: "value",
+			Value: "value" + c.Name,
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, c.ExpectedStatus)
+
+		if c.ExpectedStatus < 300 {
+			req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/user/actions/variables/%s", c.Name)).
+				AddTokenAuth(token)
+			res := MakeRequest(t, req, http.StatusOK)
+			variable := api.ActionVariable{}
+			DecodeJSON(t, res, &variable)
+			assert.Equal(t, variable.Name, c.Name)
+			assert.Equal(t, variable.Data, "value"+c.Name)
+		}
 	}
 }
 
@@ -177,6 +187,9 @@ func TestAPIUserVariablesDeleteUserVariable(t *testing.T) {
 	url = fmt.Sprintf("/api/v1/user/actions/variables/%s", variable.Name)
 	req = NewRequest(t, "DELETE", url).AddTokenAuth(token)
 	MakeRequest(t, req, http.StatusNoContent)
+
+	req = NewRequest(t, "DELETE", url).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNotFound)
 }
 
 func TestAPIUserVariablesGetSingleUserVariable(t *testing.T) {
