@@ -14,10 +14,10 @@ Template Attributes:
 		<div class="pull-request-trust-panel" id="pull-request-trust-panel">
 			<div class="divider"></div>
 			<div class="item item-section">
-				<div class="item-section-left flex-text-inline" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_is_trusted.tooltip"}}">
+				<div class="flex-text-inline" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_is_trusted.tooltip"}}">
 					{{ctx.Locale.Tr "repo.pulls.poster_is_trusted" "https://forgejo.org/docs/latest/user/actions/security-pull-request/"}}
 				</div>
-				<div class="item-section-right">
+				<div>
 					<form id="pull-request-trust-panel-revoke" class="ui form" method="post" action="{{.Link}}/action-user-trust">
 						<input type="hidden" name="trust" value="revoke">
 						<button class="ui primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke"}}</button>
@@ -29,12 +29,12 @@ Template Attributes:
 		<div class="pull-request-trust-panel" id="pull-request-trust-panel">
 			<div class="divider"></div>
 			<div class="item item-section">
-				<div class="item-section-left flex-text-inline" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_requires_approval.tooltip"}}">
+				<div class="flex-text-inline" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_requires_approval.tooltip"}}">
 					{{svg "octicon-alert" 16 "text red"}}
 					{{ctx.Locale.Tr "repo.pulls.poster_requires_approval" "https://forgejo.org/docs/latest/user/actions/security-pull-request/"}}
 				</div>
 				{{if .UserCanDelegateTrustWithPullRequest}}
-					<div class="item-section-right">
+					<div>
 						<div class="tw-inline-block">
 							<form id="pull-request-trust-panel-deny" class="ui form" method="post" action="{{.Link}}/action-user-trust">
 								<input type="hidden" name="trust" value="deny">
