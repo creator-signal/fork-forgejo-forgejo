@@ -14,6 +14,7 @@ import (
 	"forgejo.org/models/unittest"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
+
 	"github.com/stretchr/testify/require"
 )
 
