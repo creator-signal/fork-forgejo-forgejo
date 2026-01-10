@@ -18,9 +18,9 @@ Template Attributes:
 					{{ctx.Locale.Tr "repo.pulls.poster_is_trusted" "https://forgejo.org/docs/latest/user/actions/security-pull-request/"}}
 				</div>
 				<div>
-					<form id="pull-request-trust-panel-revoke" class="ui form" method="post" action="{{.Link}}/action-user-trust">
+					<form id="pull-request-trust-panel-revoke" method="post" action="{{.Link}}/action-user-trust">
 						<input type="hidden" name="trust" value="revoke">
-						<button class="ui primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke"}}</button>
+						<button class="primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke"}}</button>
 					</form>
 				</div>
 			</div>
