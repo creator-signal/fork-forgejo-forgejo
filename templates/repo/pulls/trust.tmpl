@@ -17,12 +17,10 @@ Template Attributes:
 				<div data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_is_trusted.tooltip"}}">
 					{{ctx.Locale.Tr "repo.pulls.poster_is_trusted" "https://forgejo.org/docs/latest/user/actions/security-pull-request/"}}
 				</div>
-				<div>
-					<form id="pull-request-trust-panel-revoke" method="post" action="{{.Link}}/action-user-trust">
-						<input type="hidden" name="trust" value="revoke">
-						<button class="primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke"}}</button>
-					</form>
-				</div>
+				<form id="pull-request-trust-panel-revoke" method="post" action="{{.Link}}/action-user-trust">
+					<input type="hidden" name="trust" value="revoke">
+					<button class="primary button" data-tooltip-content="{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke.tooltip"}}">{{ctx.Locale.Tr "repo.pulls.poster_trust_revoke"}}</button>
+				</form>
 			</div>
 		</div>
 	{{else if and .PullRequestPosterIsNotTrustedWithActions .SomePullRequestRunsNeedApproval}}
