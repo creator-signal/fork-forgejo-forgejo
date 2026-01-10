@@ -34,7 +34,7 @@ Template Attributes:
 					{{ctx.Locale.Tr "repo.pulls.poster_requires_approval" "https://forgejo.org/docs/latest/user/actions/security-pull-request/"}}
 				</div>
 				{{if .UserCanDelegateTrustWithPullRequest}}
-					<div>
+					<div class="button-sequence">
 						<div class="tw-inline-block">
 							<form id="pull-request-trust-panel-deny" class="ui form" method="post" action="{{.Link}}/action-user-trust">
 								<input type="hidden" name="trust" value="deny">
