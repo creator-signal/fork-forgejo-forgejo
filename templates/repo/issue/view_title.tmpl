@@ -14,7 +14,17 @@
 			<button id="issue-title-edit-show" class="ui small basic button">{{ctx.Locale.Tr "repo.issues.edit"}}</button>
 			{{end}}
 			{{if not .Issue.IsPull}}
-			<a role="button" class="ui small primary button" href="{{.RepoLink}}/issues/new{{if .NewIssueChooseTemplate}}/choose{{end}}">{{ctx.Locale.Tr "repo.issues.new"}}</a>
+			<div class="ui small primary buttons">
+				<a role="button" class="ui button" href="{{.RepoLink}}/issues/new{{if .NewIssueChooseTemplate}}/choose{{end}}">{{ctx.Locale.Tr "repo.issues.new"}}</a>
+				<div class="ui floating dropdown icon button">
+					{{svg "octicon-chevron-down" }}
+					<div class="menu">
+						<a class="item" target="_blank" href="{{.RepoLink}}/issues/new?parent={{.Repository.Name | QueryEscape}}/{{.Issue.Index}}">
+							New Sub Issue
+						</a>
+					</div>
+				</div>
+			</div>
 			{{end}}
 		</div>
 	</div>
