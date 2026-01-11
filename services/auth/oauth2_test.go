@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	"forgejo.org/models/auth"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/web/middleware"
@@ -32,6 +33,26 @@ func TestUserIDFromToken(t *testing.T) {
 		assert.Equal(t, int64(user_model.ActionsUserID), uid)
 		assert.Equal(t, true, ds["IsActionsToken"])
 		assert.Equal(t, ds["ActionsTaskID"], int64(RunningTaskID))
+	})
+
+	t.Run("Actions error-JWT", func(t *testing.T) {
+		cases := map[string]struct {
+			Token string
+			Error error
+		}{
+			"Empty":    {"", auth.ErrAccessTokenEmpty{}},
+			"To short": {"abc", auth.ErrAccessTokenNotExist{Token: "abc"}},
+		}
+
+		ds := make(middleware.ContextData)
+		o := OAuth2{}
+		for name, c := range cases {
+			t.Run(name, func(t *testing.T) {
+				uid, err := o.userIDFromToken(t.Context(), c.Token, ds)
+				require.ErrorIs(t, err, c.Error)
+				assert.Equal(t, int64(0), uid)
+			})
+		}
 	})
 }
 
