@@ -510,22 +510,22 @@ func createManifestBlob(ctx context.Context, mci *manifestCreationInfo, pv *pack
 	return pb, !exists, manifestDigest, err
 }
 
-// Tries to link a package to a repository.
-// If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return to determine if the linking was performed.
+// Attempty to link a package to a repository in the following order of precedence: by annotation, by label and finally by image name.
+// If it fails, it returns false, nil. Only actual errors are returned, so don't use the err return only to determine if the linking was performed.
 func tryAutoLink(ctx context.Context, p *packages_model.Package, imageOwner, imageName string, metadata *container_module.Metadata, doer *user_model.User) (linked bool, err error) {
-	if linkedByLabel, err := tryAutolinkByLabel(ctx, p, metadata.Labels, doer); err != nil {
-		return false, err
-	} else if linkedByLabel {
-		log.Info("Image %s/%s was auto-linked by label", imageOwner, imageName)
-		return true, nil
-	}
-
 	// We can use the same function for linking by annotation as is used for
 	// linking by label, since the field has the exact same structure
 	if linkedByAnnotation, err := tryAutolinkByLabel(ctx, p, metadata.Annotations, doer); err != nil {
 		return false, err
 	} else if linkedByAnnotation {
 		log.Info("Image %s/%s was auto-linked by annotation", imageOwner, imageName)
+		return true, nil
+	}
+
+	if linkedByLabel, err := tryAutolinkByLabel(ctx, p, metadata.Labels, doer); err != nil {
+		return false, err
+	} else if linkedByLabel {
+		log.Info("Image %s/%s was auto-linked by label", imageOwner, imageName)
 		return true, nil
 	}
 
