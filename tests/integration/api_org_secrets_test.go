@@ -6,15 +6,18 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
 	org_model "forgejo.org/models/organization"
 	secret_model "forgejo.org/models/secret"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/keying"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,9 +29,28 @@ func TestAPIOrgSecrets(t *testing.T) {
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteOrganization)
 
 	t.Run("List", func(t *testing.T) {
-		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/orgs/%s/actions/secrets", org.Name)).
-			AddTokenAuth(token)
-		MakeRequest(t, req, http.StatusOK)
+		listURL := fmt.Sprintf("/api/v1/orgs/%s/actions/secrets", org.Name)
+		req := NewRequest(t, "GET", listURL).AddTokenAuth(token)
+		res := MakeRequest(t, req, http.StatusOK)
+		secrets := []*api.Secret{}
+		DecodeJSON(t, res, &secrets)
+		assert.Empty(t, secrets)
+
+		createData := api.CreateOrUpdateSecretOption{Data: "a secret to create"}
+		req = NewRequestWithJSON(t, "PUT", listURL+"/first", createData).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusCreated)
+		req = NewRequestWithJSON(t, "PUT", listURL+"/sec2", createData).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusCreated)
+		req = NewRequestWithJSON(t, "PUT", listURL+"/last", createData).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusCreated)
+
+		req = NewRequest(t, "GET", listURL).AddTokenAuth(token)
+		res = MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, res, &secrets)
+		assert.Len(t, secrets, 3)
+		assert.Equal(t, "FIRST", secrets[0].Name)
+		assert.Equal(t, "LAST", secrets[1].Name)
+		assert.Equal(t, "SEC2", secrets[2].Name)
 	})
 
 	t.Run("Create", func(t *testing.T) {
@@ -83,7 +105,7 @@ func TestAPIOrgSecrets(t *testing.T) {
 	})
 
 	t.Run("Update", func(t *testing.T) {
-		name := "update_secret"
+		name := "update_org_secret_and_test_data"
 		url := fmt.Sprintf("/api/v1/orgs/%s/actions/secrets/%s", org.Name, name)
 
 		req := NewRequestWithJSON(t, "PUT", url, api.CreateOrUpdateSecretOption{
@@ -92,9 +114,14 @@ func TestAPIOrgSecrets(t *testing.T) {
 		MakeRequest(t, req, http.StatusCreated)
 
 		req = NewRequestWithJSON(t, "PUT", url, api.CreateOrUpdateSecretOption{
-			Data: "changed",
+			Data: "changed data",
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNoContent)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{Name: strings.ToUpper(name)})
+		data, err := keying.ActionSecret.Decrypt(secret.Data, keying.ColumnAndID("data", secret.ID))
+		require.NoError(t, err)
+		assert.Equal(t, "changed data", string(data))
 	})
 
 	t.Run("Delete", func(t *testing.T) {
@@ -111,10 +138,6 @@ func TestAPIOrgSecrets(t *testing.T) {
 		MakeRequest(t, req, http.StatusNoContent)
 
 		req = NewRequest(t, "DELETE", url).
-			AddTokenAuth(token)
-		MakeRequest(t, req, http.StatusNotFound)
-
-		req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/orgs/%s/actions/secrets/000", org.Name)).
 			AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
 	})

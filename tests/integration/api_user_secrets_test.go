@@ -6,15 +6,18 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
 	secret_model "forgejo.org/models/secret"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/keying"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -77,7 +80,7 @@ func TestAPIUserSecrets(t *testing.T) {
 	})
 
 	t.Run("Update", func(t *testing.T) {
-		name := "update_secret"
+		name := "update_user_secret_and_test_data"
 		url := fmt.Sprintf("/api/v1/user/actions/secrets/%s", name)
 
 		req := NewRequestWithJSON(t, "PUT", url, api.CreateOrUpdateSecretOption{
@@ -86,9 +89,14 @@ func TestAPIUserSecrets(t *testing.T) {
 		MakeRequest(t, req, http.StatusCreated)
 
 		req = NewRequestWithJSON(t, "PUT", url, api.CreateOrUpdateSecretOption{
-			Data: "changed",
+			Data: "changed data",
 		}).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNoContent)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{Name: strings.ToUpper(name)})
+		data, err := keying.ActionSecret.Decrypt(secret.Data, keying.ColumnAndID("data", secret.ID))
+		require.NoError(t, err)
+		assert.Equal(t, "changed data", string(data))
 	})
 
 	t.Run("Delete", func(t *testing.T) {
@@ -105,10 +113,6 @@ func TestAPIUserSecrets(t *testing.T) {
 		MakeRequest(t, req, http.StatusNoContent)
 
 		req = NewRequest(t, "DELETE", url).
-			AddTokenAuth(token)
-		MakeRequest(t, req, http.StatusNotFound)
-
-		req = NewRequest(t, "DELETE", "/api/v1/user/actions/secrets/000").
 			AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
 	})
