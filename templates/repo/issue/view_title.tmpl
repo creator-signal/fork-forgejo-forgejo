@@ -20,7 +20,7 @@
 					{{svg "octicon-chevron-down" }}
 					<div class="menu">
 						<a class="item" target="_blank" href="{{.RepoLink}}/issues/new?parent={{.Repository.Name | QueryEscape}}/{{.Issue.Index}}">
-							New Sub Issue
+							{{ctx.Locale.Tr "repo.issues.new_sub_issue"}}
 						</a>
 					</div>
 				</div>

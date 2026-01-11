@@ -791,8 +791,8 @@
 				{{$comment := .}}
 				{{range $subIssue := .ParentOrSubIssues}}
 					<div class="detail flex-text-block">
-						{{if or (eq $comment.Type 38) (eq $comment.Type 40)}}{{svg "octicon-plus"}}
-						{{else}}{{svg "octicon-trash"}}
+						{{if or (eq $comment.Type 39) (eq $comment.Type 41)}}{{svg "octicon-plus"}}
+						{{else}}{{svg "octicon-minus"}}
 						{{end}}
 						<span class="text grey muted-links">
 							<a href="{{$subIssue.Link}}">
