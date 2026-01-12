@@ -103,6 +103,21 @@
   margin-bottom: 5px;
 }
 
+.page-content.organization.members td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-content.organization.members td.fit {
+  width: 0;
+  min-width: fit-content;
+  white-space: nowrap;
+
+  button.tiny, a.tiny.button {
+    width: 100%;
+  }
+}
+
 .organization.invite #invite-box {
   margin: 50px auto auto;
   width: 500px !important;

@@ -4,14 +4,14 @@
 	<div class="ui container">
 		{{template "base/alert" .}}
 
-		<div class="flex-list">
+		<table class="ui unstackable table">
 			{{range .Members}}
 				{{$isPublic := index $.MembersIsPublicMember .ID}}
-				<div class="flex-item {{if $.PublicOnly}}tw-items-center{{end}}">
-					<div class="flex-item-leading">
+				<tr class="{{if $.PublicOnly}}tw-items-center{{end}}">
+					<td class="fit">
 						<a href="{{.HomeLink}}">{{ctx.AvatarUtils.Avatar . 48}}</a>
-					</div>
-					<div class="flex-item-main">
+					</td>
+					<td>
 						<div class="flex-item-title">
 							{{template "shared/user/name" .}}
 							{{if not $isPublic}}
@@ -36,8 +36,8 @@
 							</div>
 							{{end}}
 						{{end}}
-					</div>
-					<div class="flex-item-trailing">
+					</td>
+					<td class="fit">
 						{{if or (eq $.SignedUser.ID .ID) $.IsOrganizationOwner}}
 							{{if $isPublic}}
 								<a class="ui tiny button link-action" href data-url="{{$.OrgLink}}/members/action/private?uid={{.ID}}">{{svg "octicon-eye-closed" 12 "icon"}}{{ctx.Locale.Tr "org.members.public_helper"}}</a>
@@ -45,6 +45,8 @@
 								<a class="ui tiny button link-action" href data-url="{{$.OrgLink}}/members/action/public?uid={{.ID}}">{{svg "octicon-eye" 12 "icon"}}{{ctx.Locale.Tr "org.members.private_helper"}}</a>
 							{{end}}
 						{{end}}
+					</td>
+					<td class="fit">
 						{{if eq $.SignedUser.ID .ID}}
 							<form>
 								<button class="ui red tiny button delete-button" data-modal-id="leave-organization"
@@ -60,10 +62,10 @@
 									data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.remove"}}</button>
 							</form>
 						{{end}}
-					</div>
-				</div>
+					</td>
+				</tr>
 			{{end}}
-		</div>
+		</table>
 
 		{{template "base/paginate" .}}
 	</div>
