@@ -20,6 +20,8 @@ import (
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/structs"
 
+	"github.com/gofri/go-github-ratelimit/v2/github_ratelimit"
+	"github.com/gofri/go-github-ratelimit/v2/github_ratelimit/github_primary_ratelimit"
 	"github.com/google/go-github/v81/github"
 	"golang.org/x/oauth2"
 )
@@ -145,7 +147,12 @@ func (g *GithubDownloaderV3) LogString() string {
 }
 
 func (g *GithubDownloaderV3) addClient(roundtripper http.RoundTripper, baseURL string) {
-	githubClient := github.NewClient(&http.Client{Transport: roundtripper})
+	ratelimiter := github_ratelimit.NewClient(roundtripper,
+		github_primary_ratelimit.WithBypassLimit(),
+		github_primary_ratelimit.WithSleepUntilReset(),
+	)
+
+	githubClient := github.NewClient(ratelimiter)
 	if baseURL != "https://github.com" {
 		githubClient, _ = githubClient.WithEnterpriseURLs(baseURL, baseURL)
 	}
