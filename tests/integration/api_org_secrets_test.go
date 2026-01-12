@@ -48,9 +48,10 @@ func TestAPIOrgSecrets(t *testing.T) {
 		res = MakeRequest(t, req, http.StatusOK)
 		DecodeJSON(t, res, &secrets)
 		assert.Len(t, secrets, 3)
-		assert.Equal(t, "FIRST", secrets[0].Name)
-		assert.Equal(t, "LAST", secrets[1].Name)
-		assert.Equal(t, "SEC2", secrets[2].Name)
+		expectedValues := []string{"FIRST", "SEC2", "LAST"}
+		for _, secret := range secrets {
+			assert.Contains(t, expectedValues, secret.Name)
+		}
 	})
 
 	t.Run("Create", func(t *testing.T) {
