@@ -62,12 +62,6 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 	return AvatarHTML(avatars.DefaultAvatarLink(), size, class, "")
 }
 
-// AvatarByAction renders user avatars from action. args: action, size (int), class (string)
-func (au *AvatarUtils) AvatarByAction(action *activities_model.Action, others ...any) template.HTML {
-	action.LoadActUser(au.ctx)
-	return au.Avatar(action.ActUser, others...)
-}
-
 // AvatarByEmail renders avatars by email address. args: email, name, size (int), class (string)
 func (au *AvatarUtils) AvatarByEmail(email, name string, others ...any) template.HTML {
 	size, class := gitea_html.ParseSizeAndClass(avatars.DefaultAvatarPixelSize, avatars.DefaultAvatarClass, others...)
