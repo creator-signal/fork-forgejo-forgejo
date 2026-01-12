@@ -106,6 +106,8 @@ func NewGithubDownloaderV3(ctx context.Context, baseURL string, getPullRequests,
 		getIssues:       getIssues,
 	}
 
+	var roundtripper http.RoundTripper
+
 	if token != "" {
 		tokens := strings.Split(token, ",")
 		for _, token := range tokens {
@@ -113,14 +115,10 @@ func NewGithubDownloaderV3(ctx context.Context, baseURL string, getPullRequests,
 			ts := oauth2.StaticTokenSource(
 				&oauth2.Token{AccessToken: token},
 			)
-			client := &http.Client{
-				Transport: &oauth2.Transport{
-					Base:   NewMigrationHTTPTransport(),
-					Source: oauth2.ReuseTokenSource(nil, ts),
-				},
+			roundtripper = &oauth2.Transport{
+				Base:   NewMigrationHTTPTransport(),
+				Source: oauth2.ReuseTokenSource(nil, ts),
 			}
-
-			downloader.addClient(client, baseURL)
 		}
 	} else {
 		transport := NewMigrationHTTPTransport()
@@ -128,11 +126,9 @@ func NewGithubDownloaderV3(ctx context.Context, baseURL string, getPullRequests,
 			req.SetBasicAuth(userName, password)
 			return proxy.Proxy()(req)
 		}
-		client := &http.Client{
-			Transport: transport,
-		}
-		downloader.addClient(client, baseURL)
+		roundtripper = transport
 	}
+	downloader.addClient(roundtripper, baseURL)
 	return &downloader
 }
 
@@ -148,8 +144,8 @@ func (g *GithubDownloaderV3) LogString() string {
 	return fmt.Sprintf("<GithubDownloaderV3 %s %s/%s>", g.baseURL, g.repoOwner, g.repoName)
 }
 
-func (g *GithubDownloaderV3) addClient(client *http.Client, baseURL string) {
-	githubClient := github.NewClient(client)
+func (g *GithubDownloaderV3) addClient(roundtripper http.RoundTripper, baseURL string) {
+	githubClient := github.NewClient(&http.Client{Transport: roundtripper})
 	if baseURL != "https://github.com" {
 		githubClient, _ = githubClient.WithEnterpriseURLs(baseURL, baseURL)
 	}
