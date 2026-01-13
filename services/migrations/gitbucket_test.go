@@ -19,6 +19,6 @@ func TestGitbucketDownloaderCreation(t *testing.T) {
 	defer server.Close()
 
 	downloader := NewGitBucketDownloader(t.Context(), server.URL, "", "", token, "forgejo", "test_repo")
-	err := downloader.RefreshRate()
+	_, _, err := downloader.getClient().RateLimit.Get(downloader.ctx)
 	require.NoError(t, err)
 }
