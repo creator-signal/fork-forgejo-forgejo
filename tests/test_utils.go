@@ -12,6 +12,7 @@ import (
 	"io"
 	"mime/multipart"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -20,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"forgejo.org/cmd"
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
@@ -58,7 +60,70 @@ func exitf(format string, args ...any) {
 
 var preparedDir string
 
-func InitTest(requireGitea bool) {
+// DelegateToMainApp must be the first call in TestMain.
+// If the call must be delegated to the main, it will exit upon completion.
+func DelegateToMainApp() {
+	// GITEA_TEST_CLI is used to signal a subprocess
+	// inspired by https://abhinavg.net/2022/05/15/hijack-testmain/
+	if testCLI := os.Getenv("GITEA_TEST_CLI"); testCLI == "true" {
+		app := cmd.NewMainApp("test-version", "integration-test")
+		args := append([]string{
+			"executable-name", // unused, but expected at position 1
+			"--config", os.Getenv("GITEA_CONF"),
+		},
+			os.Args[1:]..., // skip the executable name
+		)
+		if err := cmd.RunMainApp(app, args...); err != nil {
+			panic(err) // should never happen since RunMainApp exits on error
+		}
+		os.Exit(0)
+	}
+}
+
+// RunMainAppWithStdin runs the subcommand and returns its standard output. Any returned error will usually be of type *ExitError. If c.Stderr was nil, Output populates ExitError.Stderr.
+func RunMainAppWithStdin(stdin io.Reader, subcommand string, args ...string) (string, error) {
+	// running the main app directly will very likely mess with the testing setup (logger & co.)
+	// hence we run it as a subprocess and capture its output
+	args = append([]string{subcommand}, args...)
+	cmd := exec.Command(os.Args[0], args...)
+	cmd.Env = append(os.Environ(),
+		"GITEA_TEST_CLI=true",
+		"GITEA_CONF="+setting.CustomConf,
+		"GITEA_WORK_DIR="+setting.AppWorkPath)
+	cmd.Stdin = stdin
+	out, err := cmd.Output()
+	if ee, ok := err.(*exec.ExitError); ok {
+		log.Error("%s %v exit on error %s", os.Args[0], args, ee.Stderr)
+	}
+	return string(out), err
+}
+
+// WrapMainAppPath writes the setting.AppPath to point to a wrapper script
+// with the env variable GITEA_TEST_CLI set (see DelegateToMain)
+func WrapMainAppPath(name string) error {
+	executablePath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		return fmt.Errorf("could not determine absolute path: %w", err)
+	}
+
+	wrapperPath, err := filepath.Abs(name)
+	if err != nil {
+		return fmt.Errorf("could not determine absolute path: %w", err)
+	}
+	wrapper := "#!/usr/bin/env sh"
+	wrapper += "\nGITEA_TEST_CLI=true"
+	wrapper += " GITEA_CONF=" + setting.CustomConf
+	wrapper += " GITEA_WORK_DIR=" + setting.AppWorkPath
+	wrapper += " exec " + executablePath + " $@"
+	err = os.WriteFile(wrapperPath, []byte(wrapper), 0o777)
+	if err != nil {
+		return fmt.Errorf("could not write wrapper script: %w", err)
+	}
+	setting.AppPath = wrapperPath
+	return nil
+}
+
+func InitTest() {
 	log.RegisterEventWriter("test", testlogger.NewTestLoggerWriter)
 
 	giteaRoot := base.SetupGiteaRoot()
@@ -72,13 +137,6 @@ func InitTest(requireGitea bool) {
 	setting.IsInTesting = true
 	setting.AppWorkPath = giteaRoot
 	setting.CustomPath = filepath.Join(setting.AppWorkPath, "custom")
-	if requireGitea {
-		giteaBinary := "gitea"
-		setting.AppPath = path.Join(giteaRoot, giteaBinary)
-		if _, err := os.Stat(setting.AppPath); err != nil {
-			exitf("Could not find gitea binary at %s", setting.AppPath)
-		}
-	}
 	giteaConf := os.Getenv("GITEA_CONF")
 	if giteaConf == "" {
 		// By default, use sqlite.ini for testing, then IDE like GoLand can start the test process with debugger.
@@ -95,6 +153,11 @@ func InitTest(requireGitea bool) {
 		setting.CustomConf = filepath.Join(giteaRoot, giteaConf)
 	} else {
 		setting.CustomConf = giteaConf
+	}
+
+	err := WrapMainAppPath(filepath.Join(giteaRoot, "forgejo-wrapper.test"))
+	if err != nil {
+		exitf("could not write wrapper script: %v", err)
 	}
 
 	unittest.InitSettings()
