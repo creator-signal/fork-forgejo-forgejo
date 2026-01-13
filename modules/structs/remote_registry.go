@@ -27,4 +27,5 @@ type CreateRemoteRegistryOption struct {
 	RemoteUser     string `json:"remote_user"`
 	RemotePassword string `json:"remote_pass"`
 	RemoteToken    string `json:"remote_token"`
+	TestConnection bool   `json:"test_connection"`
 }
