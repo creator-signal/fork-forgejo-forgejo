@@ -387,18 +387,18 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	}
 
 	rr, err := packages_service.NewRemoteRegistry(
-		rrOpts.Name,
-		rrOpts.RemoteURL,
-		packages.Type(rrOpts.RemoteType),
 		packages_service.RROpts{
-			OwnerType: ownerType,
-			OwnerID:   ctx.ContextUser.ID,
+			Name:       rrOpts.Name,
+			RemoteURL:  rrOpts.RemoteURL,
+			RemoteType: packages.Type(rrOpts.RemoteType),
+			OwnerType:  ownerType,
+			OwnerID:    ctx.ContextUser.ID,
 			Auth: packages_service.RRCredentials{
 				RemoteUser:     rrOpts.RemoteUser,
 				RemotePassword: rrOpts.RemotePassword,
 				RemoteToken:    rrOpts.RemoteToken,
-			},
-		})
+			}})
+
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}

@@ -16,25 +16,25 @@ type RRCredentials struct {
 }
 
 type RROpts struct {
-	OwnerType rr_model.RemoteRegistryOwnerType
-	OwnerID   int64
-	Auth      RRCredentials
+	Name       string
+	RemoteURL  string
+	RemoteType packages.Type
+	OwnerType  rr_model.RemoteRegistryOwnerType
+	OwnerID    int64
+	Auth       RRCredentials
 }
 
-func NewRemoteRegistry(name, remoteURL string, remoteType packages.Type, opts RROpts) (rr_model.RemoteRegistry, error) {
-	// decide whether repo, org, or user
-
+func NewRemoteRegistry(opts RROpts) (rr_model.RemoteRegistry, error) {
 	result := rr_model.RemoteRegistry{
-		Name:           name,
-		RemoteURL:      remoteURL,
-		RemoteType:     remoteType,
+		Name:           opts.Name,
+		RemoteURL:      opts.RemoteURL,
+		RemoteType:     opts.RemoteType,
 		OwnerType:      opts.OwnerType,
 		OwnerID:        opts.OwnerID,
 		RemoteUser:     opts.Auth.RemoteUser,
 		RemotePassword: opts.Auth.RemotePassword,
 		RemoteToken:    opts.Auth.RemoteToken,
 	}
-
 	if valid, err := validation.IsValid(result); !valid {
 		return rr_model.RemoteRegistry{}, err
 	}

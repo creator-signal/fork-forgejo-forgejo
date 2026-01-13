@@ -17,12 +17,15 @@ func Test_NewRemoteRegistry(t *testing.T) {
 	remoteURL := "https://example.com"
 	remoteType := packages.TypeContainer
 	opts := RROpts{
+		name,
+		remoteURL,
+		remoteType,
 		rr_model.RemoteRegistryOwnerType("org"),
 		int64(1),
 		RRCredentials{},
 	}
 
-	rr, err := NewRemoteRegistry(name, remoteURL, remoteType, opts)
+	rr, err := NewRemoteRegistry(opts)
 
 	require.NoError(t, err)
 	assert.Equal(t, name, rr.Name)
