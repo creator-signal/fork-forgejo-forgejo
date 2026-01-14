@@ -34,6 +34,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:description": "Forgejo is a self-hosted lightweight software forge. Easy to install and low maintenance, it just does the job.",
 				"og:type":        "website",
 				"og:image":       "/assets/img/logo.png",
+				"twitter:card":   "summary",
 				"og:site_name":   siteName,
 			},
 		},
@@ -45,6 +46,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:url":       setting.AppURL + "user30",
 				"og:type":      "profile",
 				"og:image":     setting.AppURL + "assets/img/avatar_default.png",
+				"twitter:card": "summary",
 				"og:site_name": siteName,
 			},
 		},
@@ -57,6 +59,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:description": "some [commonmark](https://commonmark.org/)!",
 				"og:type":        "profile",
 				"og:image":       setting.AppURL + "assets/img/avatar_default.png",
+				"twitter:card":  "summary",
 				"og:site_name":   siteName,
 			},
 		},
@@ -72,6 +75,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:image:alt":    "Summary card of an issue titled \"issue1\" in repository user2/repo1",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
+				"twitter:card":    "summary_large_image",
 				"og:site_name":    siteName,
 			},
 		},
@@ -87,6 +91,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:image:alt":    "Summary card of an issue titled \"issue2\" in repository user2/repo1",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
+				"twitter:card":    "summary_large_image",
 				"og:site_name":    siteName,
 			},
 		},
@@ -101,6 +106,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:image:alt":    "Summary card of repository user27/repo49, described as: A wonderful repository with more than just a README.md",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
+				"twitter:card":    "summary_large_image",
 				"og:site_name":    siteName,
 			},
 		},
@@ -115,6 +121,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:image:alt":    "Summary card of repository user2/repo1",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
+				"twitter:card":    "summary_large_image",
 				"og:site_name":    siteName,
 			},
 		},
@@ -129,6 +136,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:image:alt":    "Summary card of repository user2/repo1",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
+				"twitter:card":    "summary_large_image",
 				"og:site_name":    siteName,
 			},
 		},
@@ -144,6 +152,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:image:alt":    "Summary card of repository user27/repo49, described as: A wonderful repository with more than just a README.md",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
+				"twitter:card":    "summary_large_image",
 				"og:site_name":    siteName,
 			},
 		},
@@ -158,6 +167,7 @@ func TestOpenGraphProperties(t *testing.T) {
 				"og:image:alt":    "Summary card of an release titled \"testing-release\" in repository user2/repo1",
 				"og:image:width":  "1200",
 				"og:image:height": "600",
+				"twitter:card":    "summary_large_image",
 				"og:site_name":    siteName,
 			},
 		},
@@ -172,11 +182,14 @@ func TestOpenGraphProperties(t *testing.T) {
 			doc := NewHTMLParser(t, resp.Body)
 
 			foundProps := make(map[string]string)
-			doc.Find("head meta[property^=\"og:\"]").Each(func(_ int, selection *goquery.Selection) {
+			doc.Find(`head meta[property^="og:"], head meta[name^="twitter:"]`).Each(func(_ int, selection *goquery.Selection) {
 				prop, foundProp := selection.Attr("property")
+				if !foundProp {
+					prop, foundProp = selection.Attr("name")
+				}
 				assert.True(t, foundProp)
 				content, foundContent := selection.Attr("content")
-				assert.True(t, foundContent, "opengraph meta tag without a content property")
+				assert.True(t, foundContent, "opengraph/twitter meta tag without a content property")
 				foundProps[prop] = content
 			})
 
