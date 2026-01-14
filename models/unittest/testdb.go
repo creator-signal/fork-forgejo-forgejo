@@ -4,6 +4,7 @@
 package unittest
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log"
@@ -48,9 +49,18 @@ func fatalTestError(fmtStr string, args ...any) {
 
 // InitSettings initializes config provider and load common settings for tests
 func InitSettings() {
-	if setting.CustomConf == "" {
-		setting.CustomConf = filepath.Join(setting.CustomPath, "conf/app-unittest-tmp.ini")
-		_ = os.Remove(setting.CustomConf)
+	root := base.SetupGiteaRoot()
+	if root == "" {
+		fatalTestError("Environment variable $GITEA_ROOT not set")
+	}
+	setting.AppPath = filepath.Join(root, "gitea")
+	giteaConf := cmp.Or(setting.CustomConf, os.Getenv("GITEA_CONF"))
+	if giteaConf == "" {
+		setting.CustomConf = filepath.Join(root, "tests", "unittest.ini.tmpl")
+	} else if !filepath.IsAbs(giteaConf) {
+		setting.CustomConf = filepath.Join(root, giteaConf)
+	} else {
+		setting.CustomConf = giteaConf
 	}
 	setting.InitCfgProvider(setting.CustomConf)
 	setting.LoadCommonSettings()
