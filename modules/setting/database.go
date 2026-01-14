@@ -96,7 +96,7 @@ func loadDBSetting(rootCfg ConfigProvider) {
 		Database.ConnMaxLifetime = sec.Key("CONN_MAX_LIFETIME").MustDuration(0)
 	}
 	Database.ConnMaxIdleTime = sec.Key("CONN_MAX_IDLETIME").MustDuration(0)
-	Database.MaxOpenConns = sec.Key("MAX_OPEN_CONNS").MustInt(100)
+	Database.MaxOpenConns = sec.Key("MAX_OPEN_CONNS").MustInt(30)
 
 	Database.IterateBufferSize = sec.Key("ITERATE_BUFFER_SIZE").MustInt(50)
 	Database.LogSQL = sec.Key("LOG_SQL").MustBool(false)
@@ -239,12 +239,19 @@ func dbConnStrWithHost(host string) (string, error) {
 		if err := os.MkdirAll(filepath.Dir(Database.Path), os.ModePerm); err != nil {
 			return "", fmt.Errorf("failed to create directories: %w", err)
 		}
-		journalMode := ""
+		opts := ""
 		if Database.SQLiteJournalMode != "" {
-			journalMode = "&_journal_mode=" + Database.SQLiteJournalMode
+			opts = "&_journal_mode=" + Database.SQLiteJournalMode
 		}
-		connStr = fmt.Sprintf("file:%s?cache=shared&mode=rwc&_busy_timeout=%d&_txlock=immediate%s",
-			Database.Path, Database.Timeout, journalMode)
+
+		// in memory mode needs shared cache to be usable by multiple connections
+		// only used in tests normally
+		if Database.Path == ":memory:" {
+			opts += "&cache=shared"
+		} else {
+			opts += "&mode=rwc"
+		}
+		connStr = fmt.Sprintf("file:%s?_busy_timeout=%d&_txlock=immediate%s", Database.Path, Database.Timeout, opts)
 	default:
 		return "", fmt.Errorf("unknown database type: %s", Database.Type)
 	}
