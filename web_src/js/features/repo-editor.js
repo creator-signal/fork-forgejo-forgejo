@@ -151,6 +151,14 @@ export function initRepoEditor() {
   (async () => {
     const editor = await createCodeEditor($editArea[0], $editFilename[0]);
 
+    // People will likely expect that when the editor has been loaded that they
+    // can start typing or pasting content into it. So lets focus it, but only
+    // if they haven't yet focussed another element (loading the editor takes a
+    // bit of time).
+    if (document.activeElement === document.documentElement || document.activeElement === document.body) {
+      editor.focus();
+    }
+
     // Using events from https://github.com/codedance/jquery.AreYouSure#advanced-usage
     // to enable or disable the commit button
     const commitButton = document.getElementById('commit-button');
