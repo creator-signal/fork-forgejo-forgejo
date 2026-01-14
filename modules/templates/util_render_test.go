@@ -45,7 +45,7 @@ mail@domain.com
 var testMetas = map[string]string{
 	"user":     "user13",
 	"repo":     "repo11",
-	"repoPath": "../../tests/gitea-repositories-meta/user13/repo11.git/",
+	"repoPath": "../../tests/bare-repositories/user13/repo11.git/",
 	"mode":     "comment",
 }
 

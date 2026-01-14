@@ -42,6 +42,7 @@ import (
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 	wiki_service "forgejo.org/services/wiki"
+	barerepositories "forgejo.org/tests/bare-repositories"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -199,8 +200,8 @@ func InitTest(requireGitea bool) {
 		log.Fatal("os.MkdirTemp: %v", err)
 	}
 
-	if err := unittest.CopyDir(path.Join(filepath.Dir(setting.AppPath), "tests/gitea-repositories-meta"), dir); err != nil {
-		log.Fatal("os.RemoveAll: %v", err)
+	if err := barerepositories.CopyTo(path.Join(filepath.Dir(setting.AppPath), "tests/bare-repositories"), dir); err != nil {
+		log.Fatal("barerepositories.CopyTo: %v", err)
 	}
 	ownerDirs, err := os.ReadDir(dir)
 	if err != nil {

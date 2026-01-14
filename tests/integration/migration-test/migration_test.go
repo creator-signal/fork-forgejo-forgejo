@@ -28,6 +28,7 @@ import (
 	"forgejo.org/modules/testlogger"
 	"forgejo.org/modules/util"
 	"forgejo.org/tests"
+	barerepositories "forgejo.org/tests/bare-repositories"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"github.com/stretchr/testify/assert"
@@ -71,7 +72,7 @@ func initMigrationTest(t *testing.T) func() {
 
 	assert.NotEmpty(t, setting.RepoRootPath)
 	require.NoError(t, util.RemoveAll(setting.RepoRootPath))
-	require.NoError(t, unittest.CopyDir(path.Join(filepath.Dir(setting.AppPath), "tests/gitea-repositories-meta"), setting.RepoRootPath))
+	require.NoError(t, barerepositories.CopyTo(path.Join(filepath.Dir(setting.AppPath), "tests/bare-repositories"), setting.RepoRootPath))
 	ownerDirs, err := os.ReadDir(setting.RepoRootPath)
 	if err != nil {
 		require.NoError(t, err, "unable to read the new repo root: %v\n", err)

@@ -33,7 +33,7 @@ const (
 var localMetas = map[string]string{
 	"user":     "gogits",
 	"repo":     "gogs",
-	"repoPath": "../../../tests/gitea-repositories-meta/user13/repo11.git/",
+	"repoPath": "../../../tests/bare-repositories/user13/repo11.git/",
 }
 
 func TestMain(m *testing.M) {

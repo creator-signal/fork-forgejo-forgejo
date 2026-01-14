@@ -23,6 +23,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/util"
 	"forgejo.org/services/stats"
+	barerepositories "forgejo.org/tests/bare-repositories"
 
 	"github.com/stretchr/testify/require"
 	"xorm.io/xorm"
@@ -164,7 +165,7 @@ func MainTest(m *testing.M, testOpts ...*TestOptions) {
 	if err = util.RemoveAll(repoRootPath); err != nil {
 		fatalTestError("util.RemoveAll: %v\n", err)
 	}
-	if err = CopyDir(filepath.Join(giteaRoot, "tests", "gitea-repositories-meta"), setting.RepoRootPath); err != nil {
+	if err = barerepositories.CopyTo(filepath.Join(giteaRoot, "tests", "bare-repositories"), setting.RepoRootPath); err != nil {
 		fatalTestError("util.CopyDir: %v\n", err)
 	}
 
@@ -275,8 +276,8 @@ func PrepareTestDatabase() error {
 func PrepareTestEnv(t testing.TB) {
 	require.NoError(t, PrepareTestDatabase())
 	require.NoError(t, util.RemoveAll(setting.RepoRootPath))
-	metaPath := filepath.Join(giteaRoot, "tests", "gitea-repositories-meta")
-	require.NoError(t, CopyDir(metaPath, setting.RepoRootPath))
+	metaPath := filepath.Join(giteaRoot, "tests", "bare-repositories")
+	require.NoError(t, barerepositories.CopyTo(metaPath, setting.RepoRootPath))
 	ownerDirs, err := os.ReadDir(setting.RepoRootPath)
 	require.NoError(t, err)
 	for _, ownerDir := range ownerDirs {

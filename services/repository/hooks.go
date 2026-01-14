@@ -10,9 +10,9 @@ import (
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/webhook"
+	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/log"
-	repo_module "forgejo.org/modules/repository"
 
 	"xorm.io/builder"
 )
@@ -32,11 +32,11 @@ func SyncRepositoryHooks(ctx context.Context) error {
 			default:
 			}
 
-			if err := repo_module.CreateDelegateHooks(repo.RepoPath()); err != nil {
+			if err := git.CreatePrivateHooks(repo.RepoPath()); err != nil {
 				return fmt.Errorf("SyncRepositoryHook: %w", err)
 			}
 			if repo.HasWiki() {
-				if err := repo_module.CreateDelegateHooks(repo.WikiPath()); err != nil {
+				if err := git.CreatePrivateHooks(repo.WikiPath()); err != nil {
 					return fmt.Errorf("SyncRepositoryHook: %w", err)
 				}
 			}

@@ -23,6 +23,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/testlogger"
 	"forgejo.org/modules/util"
+	barerepositories "forgejo.org/tests/bare-repositories"
 
 	"github.com/stretchr/testify/require"
 	"xorm.io/xorm"
@@ -40,7 +41,7 @@ func PrepareTestEnv(t *testing.T, skip int, syncModels ...any) (*xorm.Engine, fu
 	ourSkip += skip
 	deferFn := testlogger.PrintCurrentTest(t, ourSkip)
 	require.NoError(t, os.RemoveAll(setting.RepoRootPath))
-	require.NoError(t, unittest.CopyDir(path.Join(filepath.Dir(setting.AppPath), "tests/gitea-repositories-meta"), setting.RepoRootPath))
+	require.NoError(t, barerepositories.CopyTo(path.Join(filepath.Dir(setting.AppPath), "tests/bare-repositories"), setting.RepoRootPath))
 	ownerDirs, err := os.ReadDir(setting.RepoRootPath)
 	if err != nil {
 		require.NoError(t, err, "unable to read the new repo root: %v\n", err)

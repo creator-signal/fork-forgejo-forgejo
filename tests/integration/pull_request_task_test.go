@@ -30,7 +30,7 @@ func TestPullRequestSynchronized(t *testing.T) {
 
 	// unmerged pull request of user2/repo1 from branch2 to master
 	pull := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 2})
-	// tip of tests/gitea-repositories-meta/user2/repo1 branch2
+	// tip of tests/bare-repositories/user2/repo1 branch2
 	pull.HeadCommitID = "985f0301dba5e7b34be866819cd15ad3d8f508ee"
 	pull.LoadIssue(db.DefaultContext)
 	pull.Issue.Created = timeutil.TimeStampNanoNow()

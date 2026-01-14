@@ -117,8 +117,8 @@ func adoptRepository(ctx context.Context, repoPath string, repo *repo_model.Repo
 		return fmt.Errorf("adoptRepository: path does not already exist: %s", repoPath)
 	}
 
-	if err := repo_module.CreateDelegateHooks(repoPath); err != nil {
-		return fmt.Errorf("createDelegateHooks: %w", err)
+	if err := git.CreatePrivateHooks(repoPath); err != nil {
+		return fmt.Errorf("git.CreatePrivateHooks: %w", err)
 	}
 
 	repo.IsEmpty = false

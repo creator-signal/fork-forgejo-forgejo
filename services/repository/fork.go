@@ -164,8 +164,8 @@ func ForkRepositoryIfNotExists(ctx context.Context, doer, owner *user_model.User
 			return fmt.Errorf("git update-server-info: %w", err)
 		}
 
-		if err = repo_module.CreateDelegateHooks(repoPath); err != nil {
-			return fmt.Errorf("createDelegateHooks: %w", err)
+		if err = git.CreatePrivateHooks(repoPath); err != nil {
+			return fmt.Errorf("git.CreatePrivateHooks: %w", err)
 		}
 
 		gitRepo, err := gitrepo.OpenRepository(txCtx, repo)

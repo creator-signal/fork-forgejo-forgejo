@@ -1,7 +1,7 @@
 // Copyright 2020 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package repository
+package git
 
 import (
 	"fmt"
@@ -104,8 +104,8 @@ done
 	return hookNames, hookTpls, giteaHookTpls
 }
 
-// CreateDelegateHooks creates all the hooks scripts for the repo
-func CreateDelegateHooks(repoPath string) (err error) {
+// CreatePrivateHooks creates all the hooks scripts needed by Forgejo for the repo
+func CreatePrivateHooks(repoPath string) (err error) {
 	hookNames, hookTpls, giteaHookTpls := getHookTemplates()
 	hookDir := filepath.Join(repoPath, "hooks")
 
@@ -164,8 +164,8 @@ func ensureExecutable(filename string) error {
 	return os.Chmod(filename, mode)
 }
 
-// CheckDelegateHooks checks the hooks scripts for the repo
-func CheckDelegateHooks(repoPath string) ([]string, error) {
+// CheckPrivateHooks checks the hooks scripts for the repo
+func CheckPrivateHooks(repoPath string) ([]string, error) {
 	hookNames, hookTpls, giteaHookTpls := getHookTemplates()
 
 	hookDir := filepath.Join(repoPath, "hooks")

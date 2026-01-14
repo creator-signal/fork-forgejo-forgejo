@@ -263,12 +263,12 @@ func cleanUpMigrateGitConfig(ctx context.Context, repoPath string) error {
 // CleanUpMigrateInfo finishes migrating repository and/or wiki with things that don't need to be done for mirrors.
 func CleanUpMigrateInfo(ctx context.Context, repo *repo_model.Repository) (*repo_model.Repository, error) {
 	repoPath := repo.RepoPath()
-	if err := repo_module.CreateDelegateHooks(repoPath); err != nil {
-		return repo, fmt.Errorf("createDelegateHooks: %w", err)
+	if err := git.CreatePrivateHooks(repoPath); err != nil {
+		return repo, fmt.Errorf("git.CreatePrivateHooks: %w", err)
 	}
 	if repo.HasWiki() {
-		if err := repo_module.CreateDelegateHooks(repo.WikiPath()); err != nil {
-			return repo, fmt.Errorf("createDelegateHooks.(wiki): %w", err)
+		if err := git.CreatePrivateHooks(repo.WikiPath()); err != nil {
+			return repo, fmt.Errorf("git.CreatePrivateHooks.(wiki): %w", err)
 		}
 	}
 
