@@ -6,9 +6,10 @@ package setting
 import (
 	"fmt"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
+
+	"forgejo.org/modules/jwtx"
 )
 
 // Actions settings
@@ -79,9 +80,7 @@ type idTokenAlgorithm string
 
 func (c idTokenAlgorithm) IsValid() bool {
 	// Empty string implies RS256
-	validAlgs := []string{"", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "EdDSA"}
-
-	return slices.Contains(validAlgs, string(c))
+	return jwtx.IsValidAsymmetricAlgorithm(string(c)) || string(c) == ""
 }
 
 func loadActionsFrom(rootCfg ConfigProvider) error {

@@ -91,7 +91,7 @@ func TestActionsIDToken(t *testing.T) {
 		}
 
 		// Default aud
-		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?api-version=0").AddTokenAuth(token)
+		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?placeholder=true").AddTokenAuth(token)
 		resp = MakeRequest(t, req, http.StatusOK)
 		var getResponse getTokenResponse
 		DecodeJSON(t, resp, &getResponse)
@@ -105,7 +105,7 @@ func TestActionsIDToken(t *testing.T) {
 		doAssertions(setting.AppURL+"user5", claims)
 
 		// Custom aud
-		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?api-version=0&audience=testingAud").AddTokenAuth(token)
+		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)
 		resp = MakeRequest(t, req, http.StatusOK)
 		DecodeJSON(t, resp, &getResponse)
 
@@ -119,13 +119,13 @@ func TestActionsIDToken(t *testing.T) {
 	})
 
 	t.Run("with no auth header", func(t *testing.T) {
-		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?api-version=0&audience=testingAud")
+		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?placeholder=true&audience=testingAud")
 		resp = MakeRequest(t, req, http.StatusUnauthorized)
 		assert.Contains(t, resp.Body.String(), "Bad authorization header")
 	})
 
 	t.Run("with bad token format", func(t *testing.T) {
-		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?api-version=0&audience=testingAud").AddTokenAuth("1234567")
+		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?placeholder=true&audience=testingAud").AddTokenAuth("1234567")
 		resp = MakeRequest(t, req, http.StatusInternalServerError)
 		assert.Contains(t, resp.Body.String(), "Error runner api parsing authorization token")
 	})
@@ -148,7 +148,7 @@ func TestActionsIDToken(t *testing.T) {
 		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true)
 		require.NoError(t, err)
 
-		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/abcde/idtoken?api-version=0&audience=testingAud").AddTokenAuth(token)
+		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/abcde/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)
 		resp = MakeRequest(t, req, http.StatusInternalServerError)
 		assert.Contains(t, resp.Body.String(), "Error runner api getting task by ID")
 	})
@@ -169,13 +169,13 @@ func TestActionsIDToken(t *testing.T) {
 		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true)
 		require.NoError(t, err)
 
-		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/abcde/idtoken?api-version=0&audience=testingAud").AddTokenAuth(token)
+		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/abcde/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)
 		resp = MakeRequest(t, req, http.StatusInternalServerError)
 		assert.Contains(t, resp.Body.String(), "Error runner api getting task: task is not running")
 	})
 
 	t.Run("with mismatched run ID", func(t *testing.T) {
-		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/123/idtoken?api-version=0&audience=testingAud").AddTokenAuth(token)
+		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/123/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)
 		resp = MakeRequest(t, req, http.StatusBadRequest)
 		assert.Contains(t, resp.Body.String(), "run-id does not match")
 	})

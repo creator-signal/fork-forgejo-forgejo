@@ -22,7 +22,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// TODO(mpminardi): is this the format we want?
 const idTokenRouteBase = "/_apis/pipelines/workflows/{run_id}/idtoken"
 
 type idTokenContextKeyType struct{}

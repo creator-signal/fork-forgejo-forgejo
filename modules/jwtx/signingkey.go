@@ -16,10 +16,10 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -373,11 +373,11 @@ func loadOrCreateAsymmetricKey(keyPath, algorithm string) (any, error) {
 }
 
 // InitSigningKey creates a signing key from settings or creates a random key.
-func InitSigningKey(keyPath, algorithm string) (SigningKey, error) {
+func InitSigningKey(getGeneralTokenSigningSecret func() []byte, keyPath, algorithm string) (SigningKey, error) {
 	var err error
 	var key SigningKey
 
-	key, err = InitSymmetricSigningKey(algorithm)
+	key, err = InitSymmetricSigningKey(getGeneralTokenSigningSecret, algorithm)
 	if err != nil {
 		key, err = InitAsymmetricSigningKey(keyPath, algorithm)
 		if err != nil {
@@ -388,23 +388,22 @@ func InitSigningKey(keyPath, algorithm string) (SigningKey, error) {
 	return key, nil
 }
 
-// InitSymmetricSigningKey creates a symmetric signing key from settings.
-func InitSymmetricSigningKey(algorithm string) (SigningKey, error) {
-	var err error
-	var key any
+// IsValidSymmetricAlgorithm checks if the passed in algorithm is a supported symettric algorithm.
+func IsValidSymmetricAlgorithm(algorithm string) bool {
+	validAlgs := []string{"HS256", "HS384", "HS512"}
 
-	switch algorithm {
-	case "HS256":
-		fallthrough
-	case "HS384":
-		fallthrough
-	case "HS512":
-		key = setting.GetGeneralTokenSigningSecret()
-	default:
-		return nil, ErrInvalidAlgorithmType{Algorithm: algorithm}
+	return slices.Contains(validAlgs, algorithm)
+}
+
+// InitSymmetricSigningKey creates a symmetric signing key from settings.
+func InitSymmetricSigningKey(getGeneralTokenSigningSecret func() []byte, algorithm string) (SigningKey, error) {
+	var err error
+
+	if !IsValidSymmetricAlgorithm(algorithm) {
+		return nil, fmt.Errorf("invalid algorithm: %s", algorithm)
 	}
 
-	signingKey, err := CreateSigningKey(algorithm, key)
+	signingKey, err := CreateSigningKey(algorithm, getGeneralTokenSigningSecret())
 	if err != nil {
 		return nil, err
 	}
@@ -412,30 +411,23 @@ func InitSymmetricSigningKey(algorithm string) (SigningKey, error) {
 	return signingKey, nil
 }
 
+// IsValidAsymmetricAlgorithm checks if the passed in algorithm is a supported asymmetric algorithm.
+func IsValidAsymmetricAlgorithm(algorithm string) bool {
+	validAlgs := []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "EdDSA"}
+
+	return slices.Contains(validAlgs, algorithm)
+}
+
 // InitAsymmetricSigningKey creates an asymmetric signing key from settings or creates a random key.
 func InitAsymmetricSigningKey(keyPath, algorithm string) (SigningKey, error) {
 	var err error
 	var key any
 
-	switch algorithm {
-	case "RS256":
-		fallthrough
-	case "RS384":
-		fallthrough
-	case "RS512":
-		fallthrough
-	case "ES256":
-		fallthrough
-	case "ES384":
-		fallthrough
-	case "ES512":
-		fallthrough
-	case "EdDSA":
-		key, err = loadOrCreateAsymmetricKey(keyPath, algorithm)
-	default:
+	if !IsValidAsymmetricAlgorithm(algorithm) {
 		return nil, ErrInvalidAlgorithmType{Algorithm: algorithm}
 	}
 
+	key, err = loadOrCreateAsymmetricKey(keyPath, algorithm)
 	if err != nil {
 		return nil, fmt.Errorf("Error while loading or creating JWT key: %w", err)
 	}
