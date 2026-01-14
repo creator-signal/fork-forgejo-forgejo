@@ -1,10 +1,10 @@
 import {matchEmoji, matchMention, matchIssue} from '../../utils/match.js';
 import {emojiHTML, emojiString} from '../emoji.js';
-const {customEmojis} = window.config;
 import {getIssueIcon, getIssueColor, isIssueSuggestionsLoaded, fetchIssueSuggestions} from '../issue.js';
 import {svg} from '../../svg.js';
 import {createElementFromHTML} from '../../utils/dom.js';
 import {parseIssueHref} from '../../utils.js';
+const {customEmojis} = window.config;
 
 async function issueSuggestions(text) {
   const key = '#';
@@ -37,7 +37,6 @@ async function issueSuggestions(text) {
 
   return {matched: true, fragment: ul};
 }
-
 
 export function initTextExpander(expander) {
   if (!expander) return;
