@@ -42,5 +42,5 @@ func TestGetDirectorySize(t *testing.T) {
 
 	size, err := getDirectorySize(repo.RepoPath())
 	require.NoError(t, err)
-	assert.Equal(t, size, repo.Size)
+	assert.InDelta(t, size, repo.Size, 100) // the setting.AppPath is part of the size, hence the need for some tolerance
 }
