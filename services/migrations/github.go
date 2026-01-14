@@ -98,13 +98,14 @@ func NewGithubDownloaderV3(ctx context.Context, baseURL string, getPullRequests,
 		userName:        userName,
 		baseURL:         baseURL,
 		password:        password,
-		ctx:             ctx,
 		repoOwner:       repoOwner,
 		repoName:        repoName,
 		maxPerPage:      100,
 		getPullRequests: getPullRequests,
 		getIssues:       getIssues,
 	}
+
+	downloader.SetContext(ctx)
 
 	if token != "" {
 		tokens := strings.Split(token, ",")
@@ -159,6 +160,7 @@ func (g *GithubDownloaderV3) addClient(client *http.Client, baseURL string) {
 
 // SetContext set context
 func (g *GithubDownloaderV3) SetContext(ctx context.Context) {
+	ctx = context.WithValue(ctx, github.SleepUntilPrimaryRateLimitResetWhenRateLimited, true)
 	g.ctx = ctx
 }
 
