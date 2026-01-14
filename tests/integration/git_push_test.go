@@ -277,20 +277,21 @@ func testOptionsGitPush(t *testing.T, u *url.URL) {
 			logChecker, cleanup := test.NewLogChecker(log.DEFAULT, log.TRACE)
 			logChecker.StopMark("Git push options validation")
 			defer cleanup()
-			sshLogChecker, cleanup := test.NewLogChecker("ssh", log.ERROR)
-			sshLogChecker.Filter("permission denied for changing repo settings")
-			defer cleanup()
-			branchName := "branch4"
+
+			const branchName = "branch4"
 			doGitCreateBranch(gitPath, branchName)(t)
-			doGitPushTestRepositoryFail(gitPath, "collaborator", branchName, "-o", "repo.private=true", "-o", "repo.template=true")(t)
+
+			_, _, serr := git.NewCommand(git.DefaultContext, "push", "-u", "collaborator", branchName, "-o", "repo.private=true", "-o", "repo.template=true").RunStdString(&git.RunOpts{Dir: gitPath})
+			require.Error(t, serr)
+			stderr := serr.Stderr()
+			assert.Contains(t, stderr, "Forgejo: options validation failed: permission denied for changing repo settings")
+
 			repo, err = repo_model.GetRepositoryByOwnerAndName(db.DefaultContext, user.Name, "repo-to-push")
 			require.NoError(t, err)
 			require.False(t, repo.IsPrivate)
 			require.False(t, repo.IsTemplate)
 			_, logStopped := logChecker.Check(5 * time.Second)
-			logFiltered, _ := sshLogChecker.Check(5 * time.Second)
 			assert.True(t, logStopped)
-			assert.True(t, logFiltered[0])
 		})
 
 		require.NoError(t, repo_service.DeleteRepositoryDirectly(db.DefaultContext, user, repo.ID))
