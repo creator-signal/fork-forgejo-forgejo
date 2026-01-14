@@ -31,7 +31,11 @@
 	{{if .OpenGraphImageAltText}}
 		<meta property="og:image:alt" content="{{.OpenGraphImageAltText}}">
 	{{end}}
+	{{if .TwitterCard}}
+		<meta name="twitter:card" content="{{.TwitterCard}}">
+	{{end}}
 {{else}}
 		<meta property="og:image" content="{{AssetUrlPrefix}}/img/logo.png">
+		<meta name="twitter:card" content="summary">
 {{end}}
 <meta property="og:site_name" content="{{AppDisplayName}}">

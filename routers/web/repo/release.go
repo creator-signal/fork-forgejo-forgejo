@@ -388,6 +388,7 @@ func SingleRelease(ctx *context.Context) {
 	ctx.Data["OpenGraphURL"] = release.HTMLURL()
 	ctx.Data["OpenGraphImageURL"] = release.SummaryCardURL()
 	ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.release.summary_card_alt", release.DisplayName(), release.Repo.FullName())
+	ctx.Data["TwitterCard"] = "summary_large_image"
 
 	ctx.HTML(http.StatusOK, tplReleasesList)
 }

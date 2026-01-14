@@ -647,6 +647,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	ctx.Data["OpenGraphImageURL"] = repo.SummaryCardURL()
 	ctx.Data["OpenGraphImageWidth"] = cardWidth
 	ctx.Data["OpenGraphImageHeight"] = cardHeight
+	ctx.Data["TwitterCard"] = "summary_large_image"
 	if util.IsEmptyString(repo.Description) {
 		ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.summary_card_alt", repo.FullName())
 	} else {

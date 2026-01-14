@@ -53,6 +53,7 @@ func Home(ctx *context.Context) {
 	ctx.Data["OpenGraphTitle"] = ctx.ContextUser.DisplayName()
 	ctx.Data["OpenGraphType"] = "profile"
 	ctx.Data["OpenGraphImageURL"] = ctx.ContextUser.AvatarLink(ctx)
+	ctx.Data["TwitterCard"] = "summary"
 	ctx.Data["OpenGraphURL"] = ctx.ContextUser.HTMLURL()
 	ctx.Data["OpenGraphDescription"] = ctx.ContextUser.Description
 

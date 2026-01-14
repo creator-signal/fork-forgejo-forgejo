@@ -2092,6 +2092,7 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["OpenGraphDescription"] = issue.Content
 	ctx.Data["OpenGraphImageURL"] = issue.SummaryCardURL()
 	ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.issues.summary_card_alt", issue.Title, issue.Repo.FullName())
+	ctx.Data["TwitterCard"] = "summary_large_image"
 	ctx.Data["IsBlocked"] = ctx.Doer != nil && user_model.IsBlockedMultiple(ctx, []int64{issue.PosterID, issue.Repo.OwnerID}, ctx.Doer.ID)
 
 	prepareHiddenCommentType(ctx)
