@@ -32,7 +32,7 @@
     "@codemirror/view": "6.39.9",
     "@github/markdown-toolbar-element": "2.2.3",
     "@github/quote-selection": "2.1.0",
-    "@github/text-expander-element": "2.8.0",
+    "@github/text-expander-element": "2.9.4",
     "@google/model-viewer": "4.1.0",
     "@lezer/highlight": "1.2.3",
     "@mcaptcha/vanilla-glue": "0.1.0-alpha-3",
@@ -122,7 +122,9 @@
     "vite-string-plugin": "1.4.9",
     "vitest": "4.0.16"
   },
-  "browserslist": ["defaults"],
+  "browserslist": [
+    "defaults"
+  ],
   "scarfSettings": {
     "enabled": false
   }
