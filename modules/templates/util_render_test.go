@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testInput = `  space @mention-user
+const testInput = `  space @mention-user  
 /just/a/path.bin
 https://example.com/file.bin
 [local link](file.bin)
@@ -137,7 +137,7 @@ func TestRenderCommitMessageLinkSubject(t *testing.T) {
 }
 
 func TestRenderIssueTitle(t *testing.T) {
-	expected := `  space @mention-user
+	expected := `  space @mention-user  
 /just/a/path.bin
 https://example.com/file.bin
 [local link](file.bin)
@@ -163,7 +163,7 @@ mail@domain.com
 }
 
 func TestRenderRefIssueTitle(t *testing.T) {
-	expected := `  space @mention-user
+	expected := `  space @mention-user  
 /just/a/path.bin
 https://example.com/file.bin
 [local link](file.bin)
