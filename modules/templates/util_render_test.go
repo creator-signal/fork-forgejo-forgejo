@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testInput = `  space @mention-user  
+const testInput = `  space @mention-user
 /just/a/path.bin
 https://example.com/file.bin
 [local link](file.bin)
@@ -137,7 +137,7 @@ func TestRenderCommitMessageLinkSubject(t *testing.T) {
 }
 
 func TestRenderIssueTitle(t *testing.T) {
-	expected := `  space @mention-user  
+	expected := `  space @mention-user
 /just/a/path.bin
 https://example.com/file.bin
 [local link](file.bin)
@@ -163,7 +163,7 @@ mail@domain.com
 }
 
 func TestRenderRefIssueTitle(t *testing.T) {
-	expected := `  space @mention-user  
+	expected := `  space @mention-user
 /just/a/path.bin
 https://example.com/file.bin
 [local link](file.bin)
@@ -230,6 +230,7 @@ func TestRenderLabels(t *testing.T) {
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=1")
 	assert.Contains(t, rendered, ">label1<")
 	assert.Contains(t, rendered, "data-tooltip-content='First label'")
+	assert.Contains(t, rendered, "aria-description='First label'")
 	rendered = RenderLabels(ctx, []*issues_model.Label{label}, "user2/repo1", true)
 	assert.Contains(t, rendered, "user2/repo1/pulls?labels=1")
 	assert.Contains(t, rendered, ">label1<")
@@ -242,6 +243,7 @@ func TestRenderLabels(t *testing.T) {
 	assert.Contains(t, rendered, ">  &lt;script&gt;malicious&lt;/script&gt; <")
 	assert.Contains(t, rendered, ">&#39;?&amp;<")
 	assert.Contains(t, rendered, "data-tooltip-content='Malicious label &#39; &lt;script&gt;malicious&lt;/script&gt;'")
+	assert.Contains(t, rendered, "aria-description='Malicious label &#39; &lt;script&gt;malicious&lt;/script&gt;'")
 	rendered = RenderLabels(ctx, []*issues_model.Label{labelArchived}, "user2/repo1", false)
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=12")
 	assert.Contains(t, rendered, ">archived label&lt;&gt;<")
