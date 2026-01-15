@@ -123,9 +123,11 @@ export function issueTitleHTML(title: string) {
 }
 
 /**
- * Adds or excludes a label from label filters given an element identified by a data-label-id attribute
+ * Excludes a label from filters provided by the data-label-id attribute of an element.
+ *
+ * If the label is included it will be converted to an exclusion, if its already excluded it will get removed, otherwise, if not present at all it will get excluded.
  */
-function excludeLabel(item: HTMLElement) {
+export function excludeLabel(item: HTMLElement) {
   const id = item.getAttribute('data-label-id');
   const excludedId = `-${id}`;
 
