@@ -1,5 +1,5 @@
 .archived-label-filter:has(#archived-label-filter:not(:checked))
-  [data-is-archived] {
+[data-is-archived] {
   display: none !important;
 }
 
@@ -38,8 +38,8 @@
 }
 
 .menu:has(> .item[data-selected])
-  .item:not([data-selected])
-  > .label-filter-item {
+.item:not([data-selected])
+> .label-filter-item {
   padding-left: 27px;
 }
 

@@ -1,6 +1,6 @@
 import {vi} from 'vitest';
 
-import {issueTitleHTML} from './repo-issue.js';
+import {issueTitleHTML} from './repo-issue-sidebar-list.ts';
 
 vi.mock('./comp/ComboMarkdownEditor.js', () => ({}));
 // jQuery is missing
