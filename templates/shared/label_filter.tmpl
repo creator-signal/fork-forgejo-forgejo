@@ -44,7 +44,7 @@
 				</a>
 				{{template "repo/issue/labels/label_archived" .}}
 				<button type="button" data-tooltip-content="{{if .IsExcluded}}Clear exclusion{{else}}Exclude label{{end}}" class="label-exclude-item-btn {{if .IsExcluded}}active{{end}}">
-					{{svg "octicon-dash"}}
+					{{svg "octicon-filter-remove"}}
 				</button>
 			</div>
 		{{end}}
