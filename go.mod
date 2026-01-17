@@ -278,4 +278,4 @@ replace xorm.io/xorm v1.3.9 => code.forgejo.org/xorm/xorm v1.3.9-forgejo.4
 
 replace github.com/urfave/cli/v3 => github.com/urfave/cli/v3 v3.5.0
 
-replace code.forgejo.org/forgejo/runner/v12 => code.forgejo.org/forgejo/runner/v12 v12.5.3-0.20260117181835-ed9f29eb6bd8
+replace code.forgejo.org/forgejo/runner/v12 => code.forgejo.org/forgejo/runner/v12 v12.5.3
