@@ -390,6 +390,7 @@ func SignOut(ctx *context.Context) {
 func registrationDisabled(ctx *context.Context) bool {
 	if setting.Service.DisableRegistration || setting.Service.AllowOnlyExternalRegistration {
 		ctx.Data["DisableRegistration"] = true
+		ctx.Data["DisableRegistrationReason"] = ctx.Locale.Tr("auth.disable_register_prompt")
 		return true
 	}
 	return false
