@@ -424,6 +424,11 @@ func SignUp(ctx *context.Context) {
 
 // SignUpPost response for sign up information submission
 func SignUpPost(ctx *context.Context) {
+	if registrationDisabled(ctx) {
+		ctx.Error(http.StatusForbidden)
+		return
+	}
+
 	form := web.GetForm(ctx).(*forms.RegisterForm)
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
@@ -439,11 +444,6 @@ func SignUpPost(ctx *context.Context) {
 	context.SetCaptchaData(ctx)
 
 	ctx.Data["PageIsSignUp"] = true
-
-	if registrationDisabled(ctx) {
-		ctx.Error(http.StatusForbidden)
-		return
-	}
 
 	if ctx.HasError() {
 		ctx.HTML(http.StatusOK, tplSignUp)
