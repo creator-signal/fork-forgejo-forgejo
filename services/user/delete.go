@@ -16,6 +16,7 @@ import (
 	asymkey_model "forgejo.org/models/asymkey"
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	f3_resource_model "forgejo.org/models/f3/resource"
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
@@ -100,6 +101,7 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 		&user_model.BlockedUser{UserID: u.ID},
 		&actions_model.ActionRunnerToken{OwnerID: optional.Some(u.ID)},
 		&auth_model.AuthorizationToken{UID: u.ID},
+		&f3_resource_model.Resource{ResourceID: u.ID, Kind: f3_resource_model.KindOwner},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %w", err)
 	}

@@ -6,6 +6,7 @@ package driver
 
 import (
 	"context"
+	"fmt"
 
 	repo_model "forgejo.org/models/repo"
 
@@ -21,55 +22,66 @@ var _ f3_tree.ForgeDriverInterface = &repository{}
 type repository struct {
 	common
 
-	name string
-	h    helpers_repository.Interface
-
+	h helpers_repository.Interface
 	f *f3.Repository
 }
 
 func (o *repository) SetNative(repository any) {
-	o.name = repository.(string)
+	o.f = repository.(*f3.Repository).Clone().(*f3.Repository)
 }
 
 func (o *repository) GetNativeID() string {
-	return o.name
+	return o.f.GetID()
 }
 
 func (o *repository) NewFormat() f3.Interface {
-	return &f3.Repository{}
+	return (&f3.Repository{}).Init()
 }
 
 func (o *repository) ToFormat() f3.Interface {
-	return &f3.Repository{
+	return (&f3.Repository{
 		Common:    f3.NewCommon(o.GetNativeID()),
-		Name:      o.GetNativeID(),
 		FetchFunc: o.f.FetchFunc,
-	}
+	}).Init()
 }
 
 func (o *repository) FromFormat(content f3.Interface) {
-	f := content.Clone().(*f3.Repository)
-	o.f = f
-	o.f.SetID(f.Name)
-	o.name = f.Name
+	o.f = content.Clone().(*f3.Repository)
 }
 
 func (o *repository) Get(ctx context.Context) bool {
 	return o.h.Get(ctx)
 }
 
+func (o *repository) setIsEmpty(ctx context.Context) {
+	repoID := f3_tree.GetProjectID(o.GetNode())
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		panic(fmt.Errorf("GetRepositoryByID(%v): %w", repoID, err))
+	}
+	if repo.IsEmpty {
+		repo.IsEmpty = false
+		if err = repo_model.UpdateRepositoryCols(ctx, repo, "is_empty"); err != nil {
+			panic(fmt.Errorf("UpdateRepositoryCols(%s): IsEmpty = false: %w", repo.Name, err))
+		}
+	}
+}
+
 func (o *repository) Put(ctx context.Context) f3_id.NodeID {
-	return o.upsert(ctx)
+	id := o.upsert(ctx)
+	o.setIsEmpty(ctx)
+	return id
 }
 
 func (o *repository) Patch(ctx context.Context) {
 	o.upsert(ctx)
+	o.setIsEmpty(ctx)
 }
 
 func (o *repository) upsert(ctx context.Context) f3_id.NodeID {
-	o.Trace("%s", o.GetNativeID())
 	o.h.Upsert(ctx, o.f)
-	return f3_id.NewNodeID(o.f.Name)
+	o.Trace("repository created %s", o.f.GetID())
+	return f3_id.NewNodeID(o.f.GetID())
 }
 
 func (o *repository) SetFetchFunc(fetchFunc func(ctx context.Context, destination, internalRef string)) {
@@ -100,7 +112,7 @@ func (o *repository) GetRepositoryPushURL() string {
 }
 
 func (o *repository) GetRepositoryInternalRef() string {
-	return ""
+	return "refs/pull/*"
 }
 
 func (o *repository) GetPullRequestBranch(pr *f3.PullRequestBranch) *f3.PullRequestBranch {
@@ -111,7 +123,7 @@ func (o *repository) DeletePullRequestBranch(pr *f3.PullRequestBranch) {}
 
 func newRepository(_ context.Context) generic.NodeDriverInterface {
 	r := &repository{
-		f: &f3.Repository{},
+		f: (&f3.Repository{}).Init(),
 	}
 	r.h = helpers_repository.NewHelper(r)
 	return r

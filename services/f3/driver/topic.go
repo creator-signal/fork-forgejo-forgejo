@@ -44,10 +44,10 @@ func (o *topic) ToFormat() f3.Interface {
 		return o.NewFormat()
 	}
 
-	return &f3.Topic{
+	return (&f3.Topic{
 		Common: f3.NewCommon(o.GetNativeID()),
 		Name:   o.forgejoTopic.Name,
-	}
+	}).Init()
 }
 
 func (o *topic) FromFormat(content f3.Interface) {
@@ -64,12 +64,13 @@ func (o *topic) Get(ctx context.Context) bool {
 
 	id := node.GetID().Int64()
 
-	if has, err := db.GetEngine(ctx).Where("ID = ?", id).Get(o.forgejoTopic); err != nil {
+	var topic repo_model.Topic
+	if has, err := db.GetEngine(ctx).Where("ID = ?", id).Get(&topic); err != nil {
 		panic(fmt.Errorf("topic %v %w", id, err))
 	} else if !has {
 		return false
 	}
-
+	o.forgejoTopic = &topic
 	return true
 }
 

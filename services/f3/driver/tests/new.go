@@ -9,6 +9,7 @@ import (
 
 	driver_options "forgejo.org/services/f3/driver/options"
 
+	"code.forgejo.org/f3/gof3/v3/forges/forgejo"
 	f3_kind "code.forgejo.org/f3/gof3/v3/kind"
 	"code.forgejo.org/f3/gof3/v3/options"
 	forge_test "code.forgejo.org/f3/gof3/v3/tree/tests/f3/forge"
@@ -30,6 +31,15 @@ func (o *forgeTest) GetNonTestUsers() []string {
 	return []string{
 		"user1",
 	}
+}
+
+func (o *forgeTest) GetF3PathConvertibleToURL() []string {
+	var f3Paths []string
+
+	for _, converter := range forgejo.PathConverters {
+		f3Paths = append(f3Paths, converter.Fixtures...)
+	}
+	return f3Paths
 }
 
 func newForgeTest() forge_test.Interface {

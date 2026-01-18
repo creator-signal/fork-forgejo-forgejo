@@ -15,6 +15,7 @@ import (
 	asymkey_model "forgejo.org/models/asymkey"
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	f3_resource_model "forgejo.org/models/f3/resource"
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
@@ -191,6 +192,7 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		&repo_model.RepoArchiveDownloadCount{RepoID: repoID},
 		&actions_model.ActionRunnerToken{RepoID: optional.Some(repoID)},
 		&auth_model.AccessTokenResourceRepo{RepoID: repoID},
+		&f3_resource_model.Resource{ResourceID: repoID, Kind: f3_resource_model.KindRepository},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %w", err)
 	}

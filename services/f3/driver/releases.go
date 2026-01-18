@@ -34,6 +34,11 @@ func (o *releases) ListPage(ctx context.Context, node f3_tree_generic.NodeInterf
 		panic(fmt.Errorf("error while listing releases: %v", err))
 	}
 
+	for _, forgejoRelease := range forgejoReleases {
+		if err := forgejoRelease.LoadAttributes(ctx); err != nil {
+			panic(fmt.Errorf("LoadUser(%+v): %w", forgejoRelease, err))
+		}
+	}
 	return f3_tree.ConvertListed(ctx, node, f3_tree.ConvertToAny(forgejoReleases...)...)
 }
 

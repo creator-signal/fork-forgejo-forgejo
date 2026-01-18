@@ -7,15 +7,17 @@ package integration
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"forgejo.org/cmd/forgejo"
+	issues_model "forgejo.org/models/issues"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	f3_context "forgejo.org/services/f3/context"
+	f3_driver "forgejo.org/services/f3/driver"
 	"forgejo.org/services/f3/driver/options"
-	"forgejo.org/tests"
 
-	_ "forgejo.org/services/f3/driver"
 	_ "forgejo.org/services/f3/driver/tests"
 
 	f3_filesystem_options "code.forgejo.org/f3/gof3/v3/forges/filesystem/options"
@@ -31,6 +33,7 @@ import (
 
 func runApp(ctx context.Context, args ...string) (string, error) {
 	l := f3_logger.NewCaptureLogger()
+	ctx = f3_context.WithF3(ctx)
 	ctx = f3_logger.ContextSetLogger(ctx, l)
 	ctx = forgejo.ContextSetNoInit(ctx, true)
 
@@ -57,69 +60,74 @@ func runApp(ctx context.Context, args ...string) (string, error) {
 }
 
 func TestF3_CmdMirror_LocalForgejo(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&f3_driver.PullRequestAddToQueue, func(ctx context.Context, pr *issues_model.PullRequest) {})()
 	defer test.MockVariableValue(&setting.F3.Enabled, true)()
 
-	ctx := t.Context()
+	// the server will be used when obtaining avatars
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		ctx := t.Context()
 
-	mirrorForge := f3_tests_forge.GetFactory(options.Name)()
-	mirrorOptions := mirrorForge.NewOptions(t)
-	mirrorTree := f3_generic.GetFactory("f3")(ctx, mirrorOptions)
+		mirrorForge := f3_tests_forge.GetFactory(options.Name)()
+		mirrorOptions := mirrorForge.NewOptions(t).(*options.Options)
+		f3Ctx := f3_context.WithF3(ctx)
+		mirrorTree := f3_generic.GetFactory("f3")(f3Ctx, mirrorOptions)
 
-	fixtureOptions := f3_tests_forge.GetFactory(f3_filesystem_options.Name)().NewOptions(t)
-	fixtureTree := f3_generic.GetFactory("f3")(ctx, fixtureOptions)
+		fixtureOptions := f3_tests_forge.GetFactory(f3_filesystem_options.Name)().NewOptions(t)
+		fixtureTree := f3_generic.GetFactory("f3")(ctx, fixtureOptions)
 
-	log := fixtureTree.GetLogger()
+		log := fixtureTree.GetLogger()
 
-	log.Trace("======= build fixture")
+		log.Trace("======= build fixture")
 
-	var fromPath string
-	{
-		fixtureUserID := "userID01"
-		fixtureProjectID := "projectID01"
+		var fromPath string
+		{
+			fixtureUserID := "userID01"
+			fixtureProjectID := "projectID01"
 
-		creator := f3_tests.NewCreator(t, "CMFixture", fixtureTree)
-		userFormat := creator.GenerateUser()
-		userFormat.SetID(fixtureUserID)
-		users := fixtureTree.MustFind(f3_generic.NewNodePathFromString("/forge/users"))
-		user := users.CreateChild(ctx)
-		user.FromFormat(userFormat)
-		user.Upsert(ctx)
-		require.Equal(t, user.GetID(), users.GetIDFromName(ctx, userFormat.UserName))
+			creator := f3_tests.NewCreator(t, "CMFixture", fixtureTree)
+			userFormat := creator.GenerateUser()
+			userFormat.SetID(fixtureUserID)
+			users := fixtureTree.MustFind(f3_generic.NewPathFromString("/forge/users"))
+			user := users.CreateChild(ctx)
+			user.FromFormat(userFormat)
+			user.Upsert(ctx)
+			require.Equal(t, user.GetID(), users.GetIDFromName(ctx, userFormat.UserName))
 
-		projectFormat := creator.GenerateProject()
-		projectFormat.SetID(fixtureProjectID)
-		projects := f3_generic.MustFind(user, f3_generic.NewNodePathFromString("projects"))
-		project := projects.CreateChild(ctx)
-		project.FromFormat(projectFormat)
-		project.Upsert(ctx)
-		require.Equal(t, project.GetID(), projects.GetIDFromName(ctx, projectFormat.Name))
+			projectFormat := creator.GenerateProject()
+			projectFormat.SetID(fixtureProjectID)
+			projects := f3_generic.MustFind(user, f3_generic.NewPathFromString("projects"))
+			project := projects.CreateChild(ctx)
+			project.FromFormat(projectFormat)
+			project.Upsert(ctx)
+			require.Equal(t, project.GetID(), projects.GetIDFromName(ctx, projectFormat.Name))
 
-		fromPath = fmt.Sprintf("/forge/users/%s/projects/%s", userFormat.UserName, projectFormat.Name)
-	}
+			fromPath = fmt.Sprintf("/forge/users/%s/projects/%s", userFormat.UserName, projectFormat.Name)
+		}
 
-	log.Trace("======= create mirror")
+		log.Trace("======= create mirror")
 
-	otherProjectName := "otherproject"
-	toPath := "/forge/users/otheruser/projects/" + otherProjectName
+		otherProjectName := "otherproject"
+		toPath := "/forge/users/otheruser/projects/" + otherProjectName
 
-	log.Trace("======= mirror %s => %s", fromPath, toPath)
-	output, err := runApp(ctx,
-		"f3", "mirror",
-		"--from-type", f3_filesystem_options.Name,
-		"--from-path", fromPath,
-		"--from-filesystem-directory", fixtureOptions.(f3_options.URLInterface).GetURL(),
+		log.Trace("======= mirror %s => %s", fromPath, toPath)
+		output, err := runApp(ctx,
+			"f3", "mirror",
+			"--from-type", f3_filesystem_options.Name,
+			"--from-path", fromPath,
+			"--from-filesystem-directory", fixtureOptions.(f3_options.URLInterface).GetURL(),
 
-		"--to-type", options.Name,
-		"--to-path", toPath,
-	)
-	require.NoError(t, err)
-	log.Trace("======= assert")
-	require.Contains(t, output, fmt.Sprintf("mirror %s", fromPath))
-	project := f3_generic.NilNode
-	mirrorTree.ApplyAndGet(ctx, f3_generic.NewNodePathFromString(toPath), f3_generic.NewApplyOptions(func(ctx context.Context, parent, p f3_generic.Path, node f3_generic.NodeInterface) {
-		project = node
-	}))
-	require.NotEqual(t, f3_generic.NilNode, project)
-	assert.Equal(t, otherProjectName, project.GetName())
+			"--to-type", options.Name,
+			"--to-path", toPath,
+			"--to-internal_forgejo-token", mirrorOptions.GetToken(),
+		)
+		require.NoError(t, err)
+		log.Trace("======= assert")
+		require.Contains(t, output, fmt.Sprintf("mirror %s", fromPath))
+		project := f3_generic.NilNode
+		mirrorTree.ApplyAndGet(f3Ctx, f3_generic.NewPathFromString(toPath), f3_generic.NewApplyOptions(func(ctx context.Context, parent, p f3_generic.Path, node f3_generic.NodeInterface) {
+			project = node
+		}))
+		require.NotEqual(t, f3_generic.NilNode, project)
+		assert.Equal(t, otherProjectName, project.GetName())
+	})
 }

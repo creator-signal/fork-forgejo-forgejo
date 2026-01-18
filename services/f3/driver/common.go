@@ -6,8 +6,15 @@ package driver
 
 import (
 	"context"
+	"fmt"
 
+	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
+	f3_context "forgejo.org/services/f3/context"
+
+	f3_id "code.forgejo.org/f3/gof3/v3/id"
 	f3_kind "code.forgejo.org/f3/gof3/v3/kind"
+	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
 	f3_tree_generic "code.forgejo.org/f3/gof3/v3/tree/generic"
 )
 
@@ -38,6 +45,14 @@ func (o *common) getPageSize() int {
 	return o.getTreeDriver().GetPageSize()
 }
 
+func (o *common) getForge() *forge {
+	return o.getTree().GetRoot().GetChild(f3_id.NewNodeID(f3_kind.KindForge)).GetDriver().(*forge)
+}
+
+func (o *common) getForgejoForgeID(ctx context.Context) int64 {
+	return o.getForge().getForgejoForgeID(ctx)
+}
+
 func (o *common) getKind() f3_kind.Kind {
 	return o.GetNode().GetKind()
 }
@@ -47,3 +62,34 @@ func (o *common) getTreeDriver() *treeDriver {
 }
 
 func (o *common) IsNull() bool { return false }
+
+func (o *common) getIssueOrPullRequestAbsoluteID(ctx context.Context, node f3_tree_generic.NodeInterface) int64 {
+	project := f3_tree.GetProjectID(node)
+	issueOrPullRequest := f3_tree.GetIssueOrPullRequest(node)
+	index := issueOrPullRequest.GetID().Int64()
+	issue, err := issues_model.GetIssueByIndex(ctx, project, index)
+	if err != nil {
+		panic(fmt.Errorf("GetIssueByIndex %v %w", index, err))
+	}
+	return issue.ID
+}
+
+func (o *common) getTeam(ctx context.Context) *org_model.Team {
+	node := o.GetNode()
+
+	teamID := f3_tree.GetTeamID(node)
+
+	team, err := org_model.GetTeamByID(ctx, teamID)
+	if err != nil {
+		panic(fmt.Errorf("GetTeamByID(%v): %w", teamID, err))
+	}
+	return team
+}
+
+func (o *common) sendNotifications(ctx context.Context) bool {
+	f3Ctx := f3_context.Get(ctx)
+	if f3Ctx == nil {
+		return true
+	}
+	return f3Ctx.GetSendNotifications()
+}

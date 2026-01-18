@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"os"
 
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
@@ -57,7 +56,7 @@ func (o *attachment) ToFormat() f3.Interface {
 		return o.NewFormat()
 	}
 
-	return &f3.Attachment{
+	return (&f3.Attachment{
 		Common:        f3.NewCommon(o.GetNativeID()),
 		Name:          o.forgejoAttachment.Name,
 		ContentType:   o.contentType,
@@ -65,24 +64,47 @@ func (o *attachment) ToFormat() f3.Interface {
 		DownloadCount: o.forgejoAttachment.DownloadCount,
 		Created:       o.forgejoAttachment.CreatedUnix.AsTime(),
 		SHA256:        o.sha,
-		DownloadURL:   o.forgejoAttachment.DownloadURL(),
 		DownloadFunc:  o.downloadFunc,
-	}
+	}).Init()
 }
 
 func (o *attachment) FromFormat(content f3.Interface) {
 	attachment := content.(*f3.Attachment)
 	o.forgejoAttachment = &repo_model.Attachment{
-		ID:                f3_util.ParseInt(attachment.GetID()),
-		Name:              attachment.Name,
-		Size:              attachment.Size,
-		DownloadCount:     attachment.DownloadCount,
-		CreatedUnix:       timeutil.TimeStamp(attachment.Created.Unix()),
-		CustomDownloadURL: attachment.DownloadURL,
+		ID:            f3_util.ParseInt(attachment.GetID()),
+		Name:          attachment.Name,
+		Size:          attachment.Size,
+		DownloadCount: attachment.DownloadCount,
+		CreatedUnix:   timeutil.TimeStamp(attachment.Created.Unix()),
 	}
 	o.contentType = attachment.ContentType
 	o.sha = attachment.SHA256
 	o.downloadFunc = attachment.DownloadFunc
+}
+
+func (o *attachment) setDownloadFunc(context.Context) {
+	path := o.forgejoAttachment.RelativePath()
+
+	{
+		f, err := storage.Attachments.Open(path)
+		if err != nil {
+			panic(err)
+		}
+		hasher := sha256.New()
+		if _, err := io.Copy(hasher, f); err != nil {
+			panic(fmt.Errorf("io.Copy to hasher: %v", err))
+		}
+		o.sha = hex.EncodeToString(hasher.Sum(nil))
+	}
+
+	o.downloadFunc = func() io.ReadCloser {
+		o.Trace("download %s from copy stored in temporary file %s", o.forgejoAttachment.DownloadURL, path)
+		f, err := storage.Attachments.Open(path)
+		if err != nil {
+			panic(err)
+		}
+		return f
+	}
 }
 
 func (o *attachment) Get(ctx context.Context) bool {
@@ -100,29 +122,8 @@ func (o *attachment) Get(ctx context.Context) bool {
 	}
 
 	o.forgejoAttachment = attachment
+	o.setDownloadFunc(ctx)
 
-	path := o.forgejoAttachment.RelativePath()
-
-	{
-		f, err := storage.Attachments.Open(path)
-		if err != nil {
-			panic(err)
-		}
-		hasher := sha256.New()
-		if _, err := io.Copy(hasher, f); err != nil {
-			panic(fmt.Errorf("io.Copy to hasher: %v", err))
-		}
-		o.sha = hex.EncodeToString(hasher.Sum(nil))
-	}
-
-	o.downloadFunc = func() io.ReadCloser {
-		o.Trace("download %s from copy stored in temporary file %s", o.forgejoAttachment.DownloadURL, path)
-		f, err := os.Open(path)
-		if err != nil {
-			panic(err)
-		}
-		return f
-	}
 	return true
 }
 
@@ -134,9 +135,6 @@ func (o *attachment) Patch(ctx context.Context) {
 }
 
 func (o *attachment) Put(ctx context.Context) f3_id.NodeID {
-	node := o.GetNode()
-	o.Trace("%s", node.GetID())
-
 	uploader, err := user_model.GetAdminUser(ctx)
 	if err != nil {
 		panic(fmt.Errorf("GetAdminUser %w", err))
@@ -150,8 +148,9 @@ func (o *attachment) Put(ctx context.Context) f3_id.NodeID {
 		o.forgejoAttachment.ReleaseID = attachableID
 	case f3_kind.KindComment:
 		o.forgejoAttachment.CommentID = attachableID
+		o.forgejoAttachment.IssueID = o.getIssueOrPullRequestAbsoluteID(ctx, attachable)
 	case f3_kind.KindIssue, f3_kind.KindPullRequest:
-		o.forgejoAttachment.IssueID = attachableID
+		o.forgejoAttachment.IssueID = o.getIssueOrPullRequestAbsoluteID(ctx, attachable)
 	default:
 		panic(fmt.Errorf("unexpected type %s", attachable.GetKind()))
 	}
@@ -167,6 +166,8 @@ func (o *attachment) Put(ctx context.Context) f3_id.NodeID {
 	if err != nil {
 		panic(err)
 	}
+
+	o.setDownloadFunc(ctx)
 
 	o.Trace("attachment created %d", o.forgejoAttachment.ID)
 	return f3_id.NewNodeID(o.forgejoAttachment.ID)

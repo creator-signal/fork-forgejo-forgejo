@@ -14,9 +14,11 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/timeutil"
+	notify_service "forgejo.org/services/notify"
 	release_service "forgejo.org/services/release"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
+	"code.forgejo.org/f3/gof3/v3/f3/markdown"
 	f3_id "code.forgejo.org/f3/gof3/v3/id"
 	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
 	"code.forgejo.org/f3/gof3/v3/tree/generic"
@@ -48,17 +50,17 @@ func (o *release) ToFormat() f3.Interface {
 	if o.forgejoRelease == nil {
 		return o.NewFormat()
 	}
-	return &f3.Release{
+	return (&f3.Release{
 		Common:          f3.NewCommon(fmt.Sprintf("%d", o.forgejoRelease.ID)),
 		TagName:         o.forgejoRelease.TagName,
 		TargetCommitish: o.forgejoRelease.Target,
 		Name:            o.forgejoRelease.Title,
-		Body:            o.forgejoRelease.Note,
+		Body:            markdown.NewContent().Set(o.forgejoRelease.Note),
 		Draft:           o.forgejoRelease.IsDraft,
 		Prerelease:      o.forgejoRelease.IsPrerelease,
 		PublisherID:     f3_tree.NewUserReference(f3_util.ToString(o.forgejoRelease.Publisher.ID)),
 		Created:         o.forgejoRelease.CreatedUnix.AsTime(),
-	}
+	}).Init()
 }
 
 func (o *release) FromFormat(content f3.Interface) {
@@ -74,7 +76,7 @@ func (o *release) FromFormat(content f3.Interface) {
 		LowerTagName: strings.ToLower(release.TagName),
 		Target:       release.TargetCommitish,
 		Title:        release.Name,
-		Note:         release.Body,
+		Note:         release.Body.Get(),
 		IsDraft:      release.Draft,
 		IsPrerelease: release.Prerelease,
 		IsTag:        false,
@@ -117,9 +119,6 @@ func (o *release) Patch(ctx context.Context) {
 }
 
 func (o *release) Put(ctx context.Context) f3_id.NodeID {
-	node := o.GetNode()
-	o.Trace("%s", node.GetID())
-
 	o.forgejoRelease.RepoID = f3_tree.GetProjectID(o.GetNode())
 
 	owner := f3_tree.GetOwnerName(o.GetNode())
@@ -134,6 +133,9 @@ func (o *release) Put(ctx context.Context) f3_id.NodeID {
 		panic(err)
 	}
 	o.Trace("release created %d", o.forgejoRelease.ID)
+	if o.sendNotifications(ctx) {
+		notify_service.NewRelease(ctx, o.forgejoRelease)
+	}
 	return f3_id.NewNodeID(o.forgejoRelease.ID)
 }
 

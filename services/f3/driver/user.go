@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"strings"
 
+	f3_resource_model "forgejo.org/models/f3/resource"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
+	permissions_user "forgejo.org/services/permissions/user"
 	user_service "forgejo.org/services/user"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
@@ -26,6 +28,7 @@ type user struct {
 	common
 
 	forgejoUser *user_model.User
+	avatar      string
 }
 
 const fakeEmailSuffix = ".fakeemail"
@@ -69,14 +72,15 @@ func (o *user) ToFormat() f3.Interface {
 	if o.forgejoUser == nil {
 		return o.NewFormat()
 	}
-	return &f3.User{
+	return (&f3.User{
 		Common:   f3.NewCommon(fmt.Sprintf("%d", o.forgejoUser.ID)),
 		UserName: o.forgejoUser.Name,
 		Name:     o.forgejoUser.FullName,
 		Email:    o.forgejoUser.Email,
 		IsAdmin:  o.forgejoUser.IsAdmin,
+		Avatar:   o.avatar,
 		Password: o.forgejoUser.Passwd,
-	}
+	}).Init()
 }
 
 func (o *user) FromFormat(content f3.Interface) {
@@ -89,6 +93,18 @@ func (o *user) FromFormat(content f3.Interface) {
 		Email:    user.Email,
 		IsAdmin:  user.IsAdmin,
 		Passwd:   user.Password,
+	}
+	o.avatar = user.Avatar
+}
+
+func (o *user) GetFormatCompareInfo(f any, field string) f3.CompareInfo {
+	switch field {
+	case "Email":
+		return f3.NewCompareInfo().SetTransform(func(v any) any {
+			return fromFakeEmail(v.(string))
+		})
+	default:
+		return o.common.GetFormatCompareInfo(f, field)
 	}
 }
 
@@ -105,28 +121,34 @@ func (o *user) Get(ctx context.Context) bool {
 	}
 	u.Email = fromFakeEmail(u.Email)
 	o.forgejoUser = u
+	o.avatar = o.getUserAvatar(ctx, o.forgejoUser)
 	return true
 }
 
-func (o *user) Patch(context.Context) {
+func (o *user) Patch(ctx context.Context) {
+	o.setUserAvatar(ctx, o.forgejoUser, o.avatar)
 }
 
 func (o *user) Put(ctx context.Context) f3_id.NodeID {
 	if user := getSystemUserByName(o.forgejoUser.Name); user != nil {
 		return f3_id.NewNodeID(user.ID)
 	}
+	permissionsCheck(ctx, permissions_user.Put(o.forgejoUser))
 
 	o.forgejoUser.LowerName = strings.ToLower(o.forgejoUser.Name)
 	o.forgejoUser.Email = toFakeEmail(o.forgejoUser.Email)
-	o.Trace("%+v", *o.forgejoUser)
 	overwriteDefault := &user_model.CreateUserOverwriteOptions{
 		IsActive: optional.Some(true),
 	}
-	err := user_model.CreateUser(ctx, o.forgejoUser, overwriteDefault)
+	if err := user_model.CreateUser(ctx, o.forgejoUser, overwriteDefault); err != nil {
+		panic(err)
+	}
+	o.Trace("user created %s/%d", o.forgejoUser.Name, o.forgejoUser.ID)
+	_, err := f3_resource_model.Upsert(ctx, f3_resource_model.NewResource(o.getForgejoForgeID(ctx), o.forgejoUser.ID, f3_resource_model.KindOwner))
 	if err != nil {
 		panic(err)
 	}
-
+	o.setUserAvatar(ctx, o.forgejoUser, o.avatar)
 	return f3_id.NewNodeID(o.forgejoUser.ID)
 }
 

@@ -14,6 +14,7 @@ import (
 	"forgejo.org/modules/timeutil"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
+	"code.forgejo.org/f3/gof3/v3/f3/markdown"
 	f3_id "code.forgejo.org/f3/gof3/v3/id"
 	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
 	"code.forgejo.org/f3/gof3/v3/tree/generic"
@@ -46,14 +47,14 @@ func (o *review) ToFormat() f3.Interface {
 		return o.NewFormat()
 	}
 
-	review := &f3.Review{
+	review := (&f3.Review{
 		Common:     f3.NewCommon(o.GetNativeID()),
 		ReviewerID: f3_tree.NewUserReference(f3_util.ToString(o.forgejoReview.ReviewerID)),
 		Official:   o.forgejoReview.Official,
 		CommitID:   o.forgejoReview.CommitID,
-		Content:    o.forgejoReview.Content,
+		Content:    markdown.NewContent().Set(o.forgejoReview.Content),
 		CreatedAt:  o.forgejoReview.CreatedUnix.AsTime(),
-	}
+	}).Init()
 
 	switch o.forgejoReview.Type {
 	case issues_model.ReviewTypeApprove:
@@ -88,7 +89,7 @@ func (o *review) FromFormat(content f3.Interface) {
 		},
 		Official:    review.Official,
 		CommitID:    review.CommitID,
-		Content:     review.Content,
+		Content:     review.Content.Get(),
 		CreatedUnix: timeutil.TimeStamp(review.CreatedAt.Unix()),
 	}
 
@@ -136,9 +137,6 @@ func (o *review) Patch(ctx context.Context) {
 }
 
 func (o *review) Put(ctx context.Context) f3_id.NodeID {
-	node := o.GetNode()
-	o.Trace("%s", node.GetID())
-
 	project := f3_tree.GetProjectID(o.GetNode())
 	pullRequest := f3_tree.GetPullRequestID(o.GetNode())
 
@@ -153,7 +151,7 @@ func (o *review) Put(ctx context.Context) f3_id.NodeID {
 	if _, err := sess.NoAutoTime().Insert(o.forgejoReview); err != nil {
 		panic(err)
 	}
-	o.Trace("review created %d", o.forgejoReview.ID)
+	o.Trace("review created %d for pull request %d", o.forgejoReview.ID, o.forgejoReview.IssueID)
 	return f3_id.NewNodeID(o.forgejoReview.ID)
 }
 

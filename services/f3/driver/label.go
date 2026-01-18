@@ -44,12 +44,12 @@ func (o *label) ToFormat() f3.Interface {
 	if o.forgejoLabel == nil {
 		return o.NewFormat()
 	}
-	return &f3.Label{
+	return (&f3.Label{
 		Common:      f3.NewCommon(fmt.Sprintf("%d", o.forgejoLabel.ID)),
 		Name:        o.forgejoLabel.Name,
 		Color:       strings.TrimPrefix(o.forgejoLabel.Color, "#"),
 		Description: o.forgejoLabel.Description,
-	}
+	}).Init()
 }
 
 func (o *label) FromFormat(content f3.Interface) {

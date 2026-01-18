@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/timeutil"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
+	"code.forgejo.org/f3/gof3/v3/f3/markdown"
 	f3_id "code.forgejo.org/f3/gof3/v3/id"
 	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
 	"code.forgejo.org/f3/gof3/v3/tree/generic"
@@ -46,15 +47,16 @@ func (o *milestone) ToFormat() f3.Interface {
 	if o.forgejoMilestone == nil {
 		return o.NewFormat()
 	}
-	return &f3.Milestone{
+	deadline := f3.Date{Time: o.forgejoMilestone.DeadlineUnix.AsTime()}
+	return (&f3.Milestone{
 		Common:      f3.NewCommon(fmt.Sprintf("%d", o.forgejoMilestone.ID)),
 		Title:       o.forgejoMilestone.Name,
-		Description: o.forgejoMilestone.Content,
+		Description: markdown.NewContent().Set(o.forgejoMilestone.Content),
 		Created:     o.forgejoMilestone.CreatedUnix.AsTime(),
 		Updated:     o.forgejoMilestone.UpdatedUnix.AsTimePtr(),
-		Deadline:    o.forgejoMilestone.DeadlineUnix.AsTimePtr(),
+		Deadline:    &deadline,
 		State:       string(o.forgejoMilestone.State()),
-	}
+	}).Init()
 }
 
 func (o *milestone) FromFormat(content f3.Interface) {
@@ -77,7 +79,7 @@ func (o *milestone) FromFormat(content f3.Interface) {
 		if milestone.Updated != nil {
 			milestone.Created = *milestone.Updated
 		} else if milestone.Deadline != nil {
-			milestone.Created = *milestone.Deadline
+			milestone.Created = milestone.Deadline.Time
 		} else {
 			milestone.Created = time.Now()
 		}
@@ -89,7 +91,7 @@ func (o *milestone) FromFormat(content f3.Interface) {
 	o.forgejoMilestone = &issues_model.Milestone{
 		ID:             f3_util.ParseInt(milestone.GetID()),
 		Name:           milestone.Title,
-		Content:        milestone.Description,
+		Content:        milestone.Description.Get(),
 		IsClosed:       milestone.State == f3.MilestoneStateClosed,
 		CreatedUnix:    timeutil.TimeStamp(milestone.Created.Unix()),
 		UpdatedUnix:    timeutil.TimeStamp(milestone.Updated.Unix()),
@@ -124,9 +126,6 @@ func (o *milestone) Patch(ctx context.Context) {
 }
 
 func (o *milestone) Put(ctx context.Context) f3_id.NodeID {
-	node := o.GetNode()
-	o.Trace("%s", node.GetID())
-
 	o.forgejoMilestone.RepoID = f3_tree.GetProjectID(o.GetNode())
 	if err := issues_model.NewMilestone(ctx, o.forgejoMilestone); err != nil {
 		panic(err)

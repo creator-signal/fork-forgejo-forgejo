@@ -7,6 +7,7 @@ package driver
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"forgejo.org/models/db"
@@ -16,8 +17,11 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/timeutil"
 	issue_service "forgejo.org/services/issue"
+	notify_service "forgejo.org/services/notify"
+	pull_service "forgejo.org/services/pull"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
+	"code.forgejo.org/f3/gof3/v3/f3/markdown"
 	f3_id "code.forgejo.org/f3/gof3/v3/id"
 	f3_kind "code.forgejo.org/f3/gof3/v3/kind"
 	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
@@ -31,8 +35,8 @@ type pullRequest struct {
 	common
 
 	forgejoPullRequest *issues_model.Issue
-	headRepository     *f3.Reference
-	baseRepository     *f3.Reference
+	headRepository     f3.Reference
+	baseRepository     f3.Reference
 	fetchFunc          f3.PullRequestFetchFunc
 }
 
@@ -49,7 +53,7 @@ func (o *pullRequest) NewFormat() f3.Interface {
 	return node.GetTree().(f3_tree.TreeInterface).NewFormat(node.GetKind())
 }
 
-func (o *pullRequest) repositoryToReference(ctx context.Context, repository *repo_model.Repository) *f3.Reference {
+func (o *pullRequest) repositoryToReference(ctx context.Context, repository *repo_model.Repository) f3.Reference {
 	if repository == nil {
 		panic("unexpected nil repository")
 	}
@@ -58,16 +62,61 @@ func (o *pullRequest) repositoryToReference(ctx context.Context, repository *rep
 	return f3_tree.NewRepositoryReference(owners.String(), f3_util.ToString(repository.OwnerID), f3_util.ToString(repository.ID), f3.RepositoryNameDefault)
 }
 
-func (o *pullRequest) referenceToRepository(reference *f3.Reference) int64 {
+func (o *pullRequest) referenceToRepository(reference f3.Reference) int64 {
 	var project int64
 	if reference.Get() == "../../repositories/vcs" {
 		project = f3_tree.GetProjectID(o.GetNode())
 	} else {
-		p := generic.PathAbsolute(generic.NewNode, o.GetNode().GetCurrentPath().String(), reference.Get())
+		p := generic.PathAbsolute(o.GetNode().GetCurrentPath().String(), reference.Get())
 		o.Trace("%v %v", o.GetNode().GetCurrentPath().String(), p)
 		_, project = p.OwnerAndProjectID()
 	}
 	return project
+}
+
+func (o *pullRequest) relativeRepositoryReference(reference f3.Reference) f3.Reference {
+	s := reference.Get()
+	if !strings.HasPrefix(s, ".") {
+		project := f3_tree.GetProject(o.GetNode())
+		projectPath := project.GetCurrentPath().String()
+		if strings.HasPrefix(s, projectPath) {
+			s = "../../repositories/vcs"
+		}
+	}
+	return f3.NewRepositoryReference(s)
+}
+
+func makePullRequestBranch(_ context.Context, repo *repo_model.Repository, refName string) f3.PullRequestBranch {
+	r, err := git.OpenRepository(context.Background(), repo.RepoPath())
+	if err != nil {
+		panic(err)
+	}
+	defer r.Close()
+
+	ref := git.RefName(refName)
+	if ref.IsPull() {
+		ref = git.RefName(f3_tree.PullRequestIDToF3Ref(ref.PullName()))
+	} else {
+		ref = git.RefNameFromBranch(refName)
+	}
+
+	sha, err := r.GetRefCommitID(ref.String())
+	if err != nil {
+		panic(fmt.Errorf("%s: %v", repo.RepoPath(), err))
+	}
+
+	return f3.PullRequestBranch{
+		Ref: refName,
+		SHA: sha,
+	}
+}
+
+func makeHeadPullRequestBranch(ctx context.Context, pr *issues_model.PullRequest, refName string) f3.PullRequestBranch {
+	if git.RefName(refName).IsPull() {
+		// that happens, for instance, when the branch of the head repository is deleted
+		return makePullRequestBranch(ctx, pr.BaseRepo, refName)
+	}
+	return makePullRequestBranch(ctx, pr.HeadRepo, refName)
 }
 
 func (o *pullRequest) ToFormat() f3.Interface {
@@ -75,8 +124,8 @@ func (o *pullRequest) ToFormat() f3.Interface {
 		return o.NewFormat()
 	}
 
-	var milestone *f3.Reference
-	if o.forgejoPullRequest.Milestone != nil {
+	milestone := f3.NewMilestoneReference("")
+	if o.forgejoPullRequest.Milestone != nil && o.forgejoPullRequest.Milestone.ID != 0 {
 		milestone = f3_tree.NewIssueMilestoneReference(f3_util.ToString(o.forgejoPullRequest.Milestone.ID))
 	}
 
@@ -90,44 +139,24 @@ func (o *pullRequest) ToFormat() f3.Interface {
 		closedTime = o.forgejoPullRequest.ClosedUnix.AsTimePtr()
 	}
 
-	makePullRequestBranch := func(repo *repo_model.Repository, branch string) f3.PullRequestBranch {
-		r, err := git.OpenRepository(context.Background(), repo.RepoPath())
-		if err != nil {
-			panic(err)
-		}
-		defer r.Close()
-
-		b, err := r.GetBranch(branch)
-		if err != nil {
-			panic(err)
-		}
-
-		c, err := b.GetCommit()
-		if err != nil {
-			panic(err)
-		}
-
-		return f3.PullRequestBranch{
-			Ref: branch,
-			SHA: c.ID.String(),
-		}
-	}
 	if err := o.forgejoPullRequest.PullRequest.LoadHeadRepo(db.DefaultContext); err != nil {
 		panic(err)
 	}
-	head := makePullRequestBranch(o.forgejoPullRequest.PullRequest.HeadRepo, o.forgejoPullRequest.PullRequest.HeadBranch)
-	head.Repository = o.headRepository
+
 	if err := o.forgejoPullRequest.PullRequest.LoadBaseRepo(db.DefaultContext); err != nil {
 		panic(err)
 	}
-	base := makePullRequestBranch(o.forgejoPullRequest.PullRequest.BaseRepo, o.forgejoPullRequest.PullRequest.BaseBranch)
-	base.Repository = o.baseRepository
+	base := makePullRequestBranch(context.Background(), o.forgejoPullRequest.PullRequest.BaseRepo, o.forgejoPullRequest.PullRequest.BaseBranch)
+	base.Repository = o.relativeRepositoryReference(o.baseRepository)
 
-	return &f3.PullRequest{
+	head := makeHeadPullRequestBranch(context.Background(), o.forgejoPullRequest.PullRequest, o.forgejoPullRequest.PullRequest.HeadBranch)
+	head.Repository = o.relativeRepositoryReference(o.headRepository)
+
+	return (&f3.PullRequest{
 		Common:         f3.NewCommon(o.GetNativeID()),
 		PosterID:       f3_tree.NewUserReference(f3_util.ToString(o.forgejoPullRequest.Poster.ID)),
 		Title:          o.forgejoPullRequest.Title,
-		Content:        o.forgejoPullRequest.Content,
+		Content:        markdown.NewContent().Set(o.forgejoPullRequest.Content),
 		Milestone:      milestone,
 		State:          string(o.forgejoPullRequest.State()),
 		IsLocked:       o.forgejoPullRequest.IsLocked,
@@ -140,7 +169,7 @@ func (o *pullRequest) ToFormat() f3.Interface {
 		Head:           head,
 		Base:           base,
 		FetchFunc:      o.fetchFunc,
-	}
+	}).Init()
 }
 
 func (o *pullRequest) FromFormat(content f3.Interface) {
@@ -152,13 +181,14 @@ func (o *pullRequest) FromFormat(content f3.Interface) {
 		}
 	}
 
-	o.headRepository = pullRequest.Head.Repository
-	o.baseRepository = pullRequest.Base.Repository
+	o.headRepository = f3.NewRepositoryReference(pullRequest.Head.Repository.Get())
+	o.baseRepository = f3.NewRepositoryReference(pullRequest.Base.Repository.Get())
 	pr := issues_model.PullRequest{
-		HeadBranch: pullRequest.Head.Ref,
-		HeadRepoID: o.referenceToRepository(o.headRepository),
-		BaseBranch: pullRequest.Base.Ref,
-		BaseRepoID: o.referenceToRepository(o.baseRepository),
+		HeadBranch:   pullRequest.Head.Ref,
+		HeadRepoID:   o.referenceToRepository(o.headRepository),
+		HeadCommitID: pullRequest.Head.SHA,
+		BaseBranch:   pullRequest.Base.Ref,
+		BaseRepoID:   o.referenceToRepository(o.baseRepository),
 
 		MergeBase: pullRequest.Base.SHA,
 		Index:     f3_util.ParseInt(pullRequest.GetID()),
@@ -172,7 +202,7 @@ func (o *pullRequest) FromFormat(content f3.Interface) {
 			ID: pullRequest.PosterID.GetIDAsInt(),
 		},
 		Title:       pullRequest.Title,
-		Content:     pullRequest.Content,
+		Content:     pullRequest.Content.Get(),
 		Milestone:   milestone,
 		IsClosed:    pullRequest.State == f3.PullRequestStateClosed,
 		CreatedUnix: timeutil.TimeStamp(pullRequest.Created.Unix()),
@@ -201,21 +231,26 @@ func (o *pullRequest) Get(ctx context.Context) bool {
 	if err != nil {
 		panic(fmt.Errorf("issue %v %w", id, err))
 	}
-	if err := issue.LoadAttributes(ctx); err != nil {
-		panic(err)
-	}
-	if err := issue.PullRequest.LoadHeadRepo(ctx); err != nil {
-		panic(err)
-	}
-	o.headRepository = o.repositoryToReference(ctx, issue.PullRequest.HeadRepo)
-	if err := issue.PullRequest.LoadBaseRepo(ctx); err != nil {
-		panic(err)
-	}
-	o.baseRepository = o.repositoryToReference(ctx, issue.PullRequest.BaseRepo)
 
 	o.forgejoPullRequest = issue
-	o.Trace("ID = %s", o.forgejoPullRequest.ID)
+	o.loadAttributes(ctx)
+
+	o.Trace("ID = %v", o.forgejoPullRequest.ID)
 	return true
+}
+
+func (o *pullRequest) loadAttributes(ctx context.Context) {
+	if err := o.forgejoPullRequest.LoadAttributes(ctx); err != nil {
+		panic(err)
+	}
+	if err := o.forgejoPullRequest.PullRequest.LoadHeadRepo(ctx); err != nil {
+		panic(err)
+	}
+	o.headRepository = o.repositoryToReference(ctx, o.forgejoPullRequest.PullRequest.HeadRepo)
+	if err := o.forgejoPullRequest.PullRequest.LoadBaseRepo(ctx); err != nil {
+		panic(err)
+	}
+	o.baseRepository = o.repositoryToReference(ctx, o.forgejoPullRequest.PullRequest.BaseRepo)
 }
 
 func (o *pullRequest) Patch(ctx context.Context) {
@@ -223,26 +258,24 @@ func (o *pullRequest) Patch(ctx context.Context) {
 	project := f3_tree.GetProjectID(o.GetNode())
 	id := node.GetID().Int64()
 	o.Trace("repo_id = %d, index = %d", project, id)
-	if _, err := db.GetEngine(ctx).Where("`repo_id` = ? AND `index` = ?", project, id).Cols("name", "content").Update(o.forgejoPullRequest); err != nil {
+	if _, err := db.GetEngine(ctx).Where("`repo_id` = ? AND `index` = ?", project, id).Cols("name", "content", "updated").NoAutoTime().Update(o.forgejoPullRequest); err != nil {
 		panic(fmt.Errorf("%v %v", o.forgejoPullRequest, err))
 	}
 }
 
-func (o *pullRequest) GetPullRequestPushRefs() []string {
-	return []string{
-		fmt.Sprintf("refs/f3/%s/head", o.GetNativeID()),
-		fmt.Sprintf("refs/pull/%s/head", o.GetNativeID()),
-	}
+func (o *pullRequest) GetPullRequestHead(ctx context.Context) string {
+	return o.forgejoPullRequest.PullRequest.HeadBranch
 }
 
 func (o *pullRequest) GetPullRequestRef() string {
-	return fmt.Sprintf("refs/pull/%s/head", o.GetNativeID())
+	return fmt.Sprintf("%s/%s/head", git.PullPrefix, o.GetNativeID())
+}
+
+var PullRequestAddToQueue = func(ctx context.Context, pr *issues_model.PullRequest) {
+	pull_service.AddToTaskQueue(ctx, pr)
 }
 
 func (o *pullRequest) Put(ctx context.Context) f3_id.NodeID {
-	node := o.GetNode()
-	o.Trace("%s", node.GetID())
-
 	o.forgejoPullRequest.RepoID = f3_tree.GetProjectID(o.GetNode())
 
 	ctx, committer, err := db.TxContext(ctx)
@@ -290,7 +323,22 @@ func (o *pullRequest) Put(ctx context.Context) f3_id.NodeID {
 		panic(err)
 	}
 
+	if git.IsBranchExist(ctx, pr.HeadRepo.RepoPath(), pr.HeadBranch) {
+		if err := pull_service.PushToBaseRepo(ctx, pr); err != nil {
+			panic(err)
+		}
+	} else {
+		if err := pull_service.UpdateRef(ctx, pr); err != nil {
+			panic(err)
+		}
+	}
+
+	PullRequestAddToQueue(ctx, pr)
+
 	o.Trace("pullRequest created %d/%d", o.forgejoPullRequest.ID, o.forgejoPullRequest.Index)
+	if o.sendNotifications(ctx) {
+		notify_service.NewPullRequest(ctx, o.forgejoPullRequest.PullRequest, nil)
+	}
 	return f3_id.NewNodeID(o.forgejoPullRequest.Index)
 }
 

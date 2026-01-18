@@ -25,6 +25,7 @@ type organization struct {
 	common
 
 	forgejoOrganization *org_model.Organization
+	avatar              string
 }
 
 func (o *organization) SetNative(organization any) {
@@ -44,11 +45,12 @@ func (o *organization) ToFormat() f3.Interface {
 	if o.forgejoOrganization == nil {
 		return o.NewFormat()
 	}
-	return &f3.Organization{
+	return (&f3.Organization{
 		Common:   f3.NewCommon(fmt.Sprintf("%d", o.forgejoOrganization.ID)),
 		Name:     o.forgejoOrganization.Name,
 		FullName: o.forgejoOrganization.FullName,
-	}
+		Avatar:   o.avatar,
+	}).Init()
 }
 
 func (o *organization) FromFormat(content f3.Interface) {
@@ -58,6 +60,15 @@ func (o *organization) FromFormat(content f3.Interface) {
 		Name:     organization.Name,
 		FullName: organization.FullName,
 	}
+	o.avatar = organization.Avatar
+}
+
+func (o *organization) getOrganizationAvatar(ctx context.Context) string {
+	return o.getUserAvatar(ctx, o.forgejoOrganization.AsUser())
+}
+
+func (o *organization) setOrganizationAvatar(ctx context.Context) {
+	o.setUserAvatar(ctx, o.forgejoOrganization.AsUser(), o.avatar)
 }
 
 func (o *organization) Get(ctx context.Context) bool {
@@ -72,6 +83,7 @@ func (o *organization) Get(ctx context.Context) bool {
 		panic(fmt.Errorf("organization %v %w", id, err))
 	}
 	o.forgejoOrganization = organization
+	o.avatar = o.getOrganizationAvatar(ctx)
 	return true
 }
 
@@ -80,12 +92,10 @@ func (o *organization) Patch(ctx context.Context) {
 	if _, err := db.GetEngine(ctx).ID(o.forgejoOrganization.ID).Cols("full_name").Update(o.forgejoOrganization); err != nil {
 		panic(fmt.Errorf("UpdateOrganizationCols: %v %v", o.forgejoOrganization, err))
 	}
+	o.setOrganizationAvatar(ctx)
 }
 
 func (o *organization) Put(ctx context.Context) f3_id.NodeID {
-	node := o.GetNode()
-	o.Trace("%s", node.GetID())
-
 	doer, err := user_model.GetAdminUser(ctx)
 	if err != nil {
 		panic(fmt.Errorf("GetAdminUser %w", err))
@@ -94,7 +104,8 @@ func (o *organization) Put(ctx context.Context) f3_id.NodeID {
 	if err != nil {
 		panic(err)
 	}
-
+	o.Trace("organization created %d", o.forgejoOrganization.ID)
+	o.setOrganizationAvatar(ctx)
 	return f3_id.NewNodeID(o.forgejoOrganization.ID)
 }
 

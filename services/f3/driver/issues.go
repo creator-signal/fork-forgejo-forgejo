@@ -10,6 +10,7 @@ import (
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
+	"forgejo.org/modules/optional"
 
 	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
 	f3_tree_generic "code.forgejo.org/f3/gof3/v3/tree/generic"
@@ -27,6 +28,7 @@ func (o *issues) ListPage(ctx context.Context, node f3_tree_generic.NodeInterfac
 	forgejoIssues, err := issues_model.Issues(ctx, &issues_model.IssuesOptions{
 		Paginator: &db.ListOptions{Page: page, PageSize: pageSize},
 		RepoIDs:   []int64{project},
+		IsPull:    optional.Some(false),
 	})
 	if err != nil {
 		panic(fmt.Errorf("error while listing issues: %v", err))

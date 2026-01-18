@@ -35,6 +35,11 @@ func (o *reviewComments) ListPage(ctx context.Context, node f3_tree_generic.Node
 		panic(fmt.Errorf("error while listing reviewComments: %v", err))
 	}
 
+	for _, forgejoReviewComment := range forgejoReviewComments {
+		if err := forgejoReviewComment.LoadPoster(ctx); err != nil {
+			panic(fmt.Errorf("LoadPoster %+v %w", *forgejoReviewComment, err))
+		}
+	}
 	return f3_tree.ConvertListed(ctx, node, f3_tree.ConvertToAny(forgejoReviewComments...)...)
 }
 

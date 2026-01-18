@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/timeutil"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
+	"code.forgejo.org/f3/gof3/v3/f3/markdown"
 	f3_id "code.forgejo.org/f3/gof3/v3/id"
 	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
 	"code.forgejo.org/f3/gof3/v3/tree/generic"
@@ -55,29 +56,30 @@ func (o *reviewComment) ToFormat() f3.Interface {
 		return o.NewFormat()
 	}
 
-	return &f3.ReviewComment{
+	return (&f3.ReviewComment{
 		Common:    f3.NewCommon(o.GetNativeID()),
 		PosterID:  f3_tree.NewUserReference(f3_util.ToString(o.forgejoReviewComment.Poster.ID)),
-		Content:   o.forgejoReviewComment.Content,
+		Content:   markdown.NewContent().Set(o.forgejoReviewComment.Content),
 		TreePath:  o.forgejoReviewComment.TreePath,
 		DiffHunk:  patch2diff(o.forgejoReviewComment.PatchQuoted),
 		Line:      int(o.forgejoReviewComment.Line),
 		CommitID:  o.forgejoReviewComment.CommitSHA,
 		CreatedAt: o.forgejoReviewComment.CreatedUnix.AsTime(),
 		UpdatedAt: o.forgejoReviewComment.UpdatedUnix.AsTime(),
-	}
+	}).Init()
 }
 
 func (o *reviewComment) FromFormat(content f3.Interface) {
 	reviewComment := content.(*f3.ReviewComment)
 	o.forgejoReviewComment = &issues_model.Comment{
 		ID:       f3_util.ParseInt(reviewComment.GetID()),
+		Type:     issues_model.CommentTypeCode,
 		PosterID: reviewComment.PosterID.GetIDAsInt(),
 		Poster: &user_model.User{
 			ID: reviewComment.PosterID.GetIDAsInt(),
 		},
 		TreePath: reviewComment.TreePath,
-		Content:  reviewComment.Content,
+		Content:  reviewComment.Content.Get(),
 		// a hunk misses the patch header but it is never used so do not bother
 		// reconstructing it
 		Patch:       reviewComment.DiffHunk,
@@ -103,7 +105,7 @@ func (o *reviewComment) Get(ctx context.Context) bool {
 		panic(fmt.Errorf("reviewComment %v %w", id, err))
 	}
 	if err := reviewComment.LoadPoster(ctx); err != nil {
-		panic(fmt.Errorf("LoadPoster %v %w", *reviewComment, err))
+		panic(fmt.Errorf("LoadPoster %+v %w", *reviewComment, err))
 	}
 	o.forgejoReviewComment = reviewComment
 	return true
@@ -111,14 +113,22 @@ func (o *reviewComment) Get(ctx context.Context) bool {
 
 func (o *reviewComment) Patch(ctx context.Context) {
 	o.Trace("%d", o.forgejoReviewComment.ID)
-	if _, err := db.GetEngine(ctx).ID(o.forgejoReviewComment.ID).Cols("content").Update(o.forgejoReviewComment); err != nil {
+	if _, err := db.GetEngine(ctx).ID(o.forgejoReviewComment.ID).Cols("content", "updated").NoAutoTime().Update(o.forgejoReviewComment); err != nil {
 		panic(fmt.Errorf("UpdateReviewCommentCols: %v %v", o.forgejoReviewComment, err))
 	}
 }
 
 func (o *reviewComment) Put(ctx context.Context) f3_id.NodeID {
 	node := o.GetNode()
-	o.Trace("%s", node.GetID())
+	issueIndex := f3_tree.GetCommentableID(node)
+	repositoryID := f3_tree.GetProjectID(node)
+
+	issue, err := issues_model.GetIssueByIndex(ctx, repositoryID, issueIndex)
+	if issues_model.IsErrIssueNotExist(err) {
+		panic(fmt.Errorf("issue index %d not found in repository id %d", issueIndex, repositoryID))
+	}
+	o.forgejoReviewComment.IssueID = issue.ID
+	o.forgejoReviewComment.ReviewID = f3_tree.GetReviewID(node)
 
 	sess := db.GetEngine(ctx)
 

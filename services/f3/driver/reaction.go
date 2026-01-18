@@ -45,11 +45,11 @@ func (o *reaction) ToFormat() f3.Interface {
 	if o.forgejoReaction == nil {
 		return o.NewFormat()
 	}
-	return &f3.Reaction{
+	return (&f3.Reaction{
 		Common:  f3.NewCommon(fmt.Sprintf("%d", o.forgejoReaction.ID)),
 		UserID:  f3_tree.NewUserReference(f3_util.ToString(o.forgejoReaction.User.ID)),
 		Content: o.forgejoReaction.Type,
-	}
+	}).Init()
 }
 
 func (o *reaction) FromFormat(content f3.Interface) {
@@ -71,11 +71,13 @@ func (o *reaction) Get(ctx context.Context) bool {
 
 	id := node.GetID().Int64()
 
-	if has, err := db.GetEngine(ctx).Where("ID = ?", id).Get(o.forgejoReaction); err != nil {
-		panic(fmt.Errorf("reaction %v %w", id, err))
+	var reaction issues_model.Reaction
+	if has, err := db.GetEngine(ctx).Where("ID = ?", id).Get(&reaction); err != nil {
+		panic(fmt.Errorf("reaction %v - %w", id, err))
 	} else if !has {
 		return false
 	}
+	o.forgejoReaction = &reaction
 	if _, err := o.forgejoReaction.LoadUser(ctx); err != nil {
 		panic(fmt.Errorf("LoadUser %v %w", *o.forgejoReaction, err))
 	}
@@ -90,33 +92,36 @@ func (o *reaction) Patch(ctx context.Context) {
 }
 
 func (o *reaction) Put(ctx context.Context) f3_id.NodeID {
-	o.Trace("%+v", o.forgejoReaction.User)
-
 	sess := db.GetEngine(ctx)
 
-	reactionable := f3_tree.GetReactionable(o.GetNode())
-	reactionableID := f3_tree.GetReactionableID(o.GetNode())
+	node := o.GetNode()
+	setCommentID := func(reactionableID int64) {
+		o.forgejoReaction.CommentID = reactionableID
+	}
+	reactionable := f3_tree.GetReactionable(node)
+	reactionableID := f3_tree.GetReactionableID(node)
+
+	o.Trace("creating %s reaction %s", reactionable.GetKind(), o.forgejoReaction.Type)
+
+	o.forgejoReaction.IssueID = o.getIssueOrPullRequestAbsoluteID(ctx, node)
 
 	switch reactionable.GetKind() {
 	case f3_kind.KindIssue, f3_kind.KindPullRequest:
-		project := f3_tree.GetProjectID(o.GetNode())
-		issue, err := issues_model.GetIssueByIndex(ctx, project, reactionableID)
-		if err != nil {
-			panic(fmt.Errorf("GetIssueByIndex %v %w", reactionableID, err))
-		}
-		o.forgejoReaction.IssueID = issue.ID
+		break
 	case f3_kind.KindComment:
-		o.forgejoReaction.CommentID = reactionableID
+		setCommentID(reactionableID)
+	case f3_kind.KindReviewComment:
+		setCommentID(reactionableID)
+	case f3_kind.KindReview:
+		break
 	default:
-		panic(fmt.Errorf("unexpected type %v", reactionable.GetKind()))
+		panic(fmt.Errorf("unexpected kind %v", reactionable.GetKind()))
 	}
-
-	o.Trace("%+v", o.forgejoReaction)
 
 	if _, err := sess.Insert(o.forgejoReaction); err != nil {
-		panic(err)
+		panic(fmt.Errorf("%+v: %v", o.forgejoReaction, err))
 	}
-	o.Trace("reaction created %d", o.forgejoReaction.ID)
+	o.Trace("reaction created %+v", o.forgejoReaction)
 	return f3_id.NewNodeID(o.forgejoReaction.ID)
 }
 

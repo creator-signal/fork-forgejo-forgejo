@@ -8,7 +8,9 @@ import (
 	"context"
 	"fmt"
 
+	f3_forge_model "forgejo.org/models/f3/forge"
 	user_model "forgejo.org/models/user"
+	f3_mirror_service "forgejo.org/services/f3/mirror"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
 	f3_id "code.forgejo.org/f3/gof3/v3/id"
@@ -21,6 +23,8 @@ type forge struct {
 	generic.NullDriver
 
 	ownersKind map[string]f3_kind.Kind
+	forge      *f3_forge_model.Forge
+	url        string
 }
 
 func newForge() generic.NodeDriverInterface {
@@ -38,28 +42,59 @@ func (o *forge) getOwnersKind(ctx context.Context, id string) f3_kind.Kind {
 		}
 		kind = f3_kind.KindUsers
 		if user.IsOrganization() {
-			kind = f3_kind.KindOrganization
+			kind = f3_kind.KindOrganizations
 		}
 		o.ownersKind[id] = kind
 	}
 	return kind
 }
 
-func (o *forge) getOwnersPath(ctx context.Context, id string) generic.Path {
-	return generic.NewNodePathFromString("/").SetForge().SetOwners(o.getOwnersKind(ctx, id))
+func (o *forge) getForgejoForge(ctx context.Context) *f3_forge_model.Forge {
+	if o.forge == nil {
+		opts := f3_forge_model.FindOptions{
+			URL: &o.url,
+		}
+		forge, err := f3_forge_model.Get(ctx, opts)
+		if err != nil {
+			panic(err)
+		}
+		o.forge = forge
+	}
+	return o.forge
 }
 
-func (o *forge) Equals(context.Context, generic.NodeInterface) bool { return true }
-func (o *forge) Get(context.Context) bool                           { return true }
-func (o *forge) Put(context.Context) f3_id.NodeID                   { return f3_id.NewNodeID("forge") }
-func (o *forge) Patch(context.Context)                              {}
-func (o *forge) Delete(context.Context)                             {}
-func (o *forge) NewFormat() f3.Interface                            { return &f3.Forge{} }
-func (o *forge) FromFormat(f3.Interface)                            {}
+func (o *forge) getForgejoForgeID(ctx context.Context) int64 {
+	return o.getForgejoForge(ctx).ID
+}
+
+func (o *forge) getOwnersPath(ctx context.Context, id string) generic.Path {
+	return generic.NewPathFromString("/").SetForge().SetOwners(o.getOwnersKind(ctx, id))
+}
+
+func (o *forge) Get(ctx context.Context) bool {
+	return o.getForgejoForge(ctx) != nil
+}
+
+func (o *forge) Put(ctx context.Context) f3_id.NodeID {
+	forge, err := f3_mirror_service.UpsertForge(ctx, o.url, "", "")
+	if err != nil {
+		panic(fmt.Errorf("UpsertForge %s: %w", o.url, err))
+	}
+	o.forge = forge
+	return f3_id.NewNodeID("forge")
+}
+
+func (o *forge) Patch(context.Context)   {}
+func (o *forge) Delete(context.Context)  {}
+func (o *forge) NewFormat() f3.Interface { return (&f3.Forge{}).Init() }
+func (o *forge) FromFormat(content f3.Interface) {
+	forge := content.(*f3.Forge)
+	o.url = forge.URL
+}
 
 func (o *forge) ToFormat() f3.Interface {
-	return &f3.Forge{
+	return (&f3.Forge{
 		Common: f3.NewCommon("forge"),
-		URL:    o.String(),
-	}
+		URL:    o.url,
+	}).Init()
 }

@@ -34,7 +34,11 @@ func (o *pullRequests) ListPage(ctx context.Context, node f3_tree_generic.NodeIn
 		panic(fmt.Errorf("error while listing pullRequests: %v", err))
 	}
 
-	return f3_tree.ConvertListed(ctx, node, f3_tree.ConvertToAny(forgejoPullRequests...)...)
+	prs := f3_tree.ConvertListed(ctx, node, f3_tree.ConvertToAny(forgejoPullRequests...)...)
+	for _, pr := range prs {
+		pr.GetDriver().(*pullRequest).loadAttributes(ctx)
+	}
+	return prs
 }
 
 func newPullRequests() f3_tree_generic.NodeDriverInterface {

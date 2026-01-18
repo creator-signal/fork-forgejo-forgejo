@@ -15,8 +15,10 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/timeutil"
 	issue_service "forgejo.org/services/issue"
+	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/f3/gof3/v3/f3"
+	"code.forgejo.org/f3/gof3/v3/f3/markdown"
 	f3_id "code.forgejo.org/f3/gof3/v3/id"
 	f3_tree "code.forgejo.org/f3/gof3/v3/tree/f3"
 	"code.forgejo.org/f3/gof3/v3/tree/generic"
@@ -49,42 +51,42 @@ func (o *issue) ToFormat() f3.Interface {
 		return o.NewFormat()
 	}
 
-	milestone := &f3.Reference{}
-	if o.forgejoIssue.Milestone != nil {
+	milestone := f3.NewMilestoneReference("")
+	if o.forgejoIssue.Milestone != nil && o.forgejoIssue.Milestone.ID != 0 {
 		milestone = f3_tree.NewIssueMilestoneReference(f3_util.ToString(o.forgejoIssue.Milestone.ID))
 	}
 
-	assignees := make([]*f3.Reference, 0, len(o.forgejoIssue.Assignees))
+	assignees := make([]f3.Reference, 0, len(o.forgejoIssue.Assignees))
 	for _, assignee := range o.forgejoIssue.Assignees {
 		assignees = append(assignees, f3_tree.NewUserReference(f3_util.ToString(assignee.ID)))
 	}
 
-	labels := make([]*f3.Reference, 0, len(o.forgejoIssue.Labels))
+	labels := make([]f3.Reference, 0, len(o.forgejoIssue.Labels))
 	for _, label := range o.forgejoIssue.Labels {
 		labels = append(labels, f3_tree.NewIssueLabelReference(f3_util.ToString(label.ID)))
 	}
 
-	return &f3.Issue{
+	return (&f3.Issue{
 		Title:     o.forgejoIssue.Title,
 		Common:    f3.NewCommon(o.GetNativeID()),
 		PosterID:  f3_tree.NewUserReference(f3_util.ToString(o.forgejoIssue.Poster.ID)),
 		Assignees: assignees,
 		Labels:    labels,
-		Content:   o.forgejoIssue.Content,
+		Content:   markdown.NewContent().Set(o.forgejoIssue.Content),
 		Milestone: milestone,
 		State:     string(o.forgejoIssue.State()),
 		Created:   o.forgejoIssue.CreatedUnix.AsTime(),
 		Updated:   o.forgejoIssue.UpdatedUnix.AsTime(),
 		Closed:    o.forgejoIssue.ClosedUnix.AsTimePtr(),
 		IsLocked:  o.forgejoIssue.IsLocked,
-	}
+	}).Init()
 }
 
 func (o *issue) FromFormat(content f3.Interface) {
 	issue := content.(*f3.Issue)
 	var milestone *issues_model.Milestone
 	var milestoneID int64
-	if issue.Milestone != nil {
+	if !issue.Milestone.IsNil() {
 		milestoneID = issue.Milestone.GetIDAsInt()
 		milestone = &issues_model.Milestone{
 			ID: milestoneID,
@@ -97,7 +99,7 @@ func (o *issue) FromFormat(content f3.Interface) {
 		Poster: &user_model.User{
 			ID: issue.PosterID.GetIDAsInt(),
 		},
-		Content:     issue.Content,
+		Content:     issue.Content.Get(),
 		MilestoneID: milestoneID,
 		Milestone:   milestone,
 		IsClosed:    issue.State == f3.IssueStateClosed,
@@ -151,7 +153,7 @@ func (o *issue) Patch(ctx context.Context) {
 	index := node.GetID().Int64()
 	id := getIssueID(ctx, project, index)
 	o.Trace("id = %d, repo_id = %d, index = %d, assignees = %v", id, project, index, o.forgejoIssue.Assignees)
-	if _, err := db.GetEngine(ctx).Where("`id` = ?", id).Cols("name", "content", "is_closed", "milestone_id", "is_locked").Update(o.forgejoIssue); err != nil {
+	if _, err := db.GetEngine(ctx).Where("`id` = ?", id).Cols("name", "content", "is_closed", "milestone_id", "is_locked", "updated").NoAutoTime().Update(o.forgejoIssue); err != nil {
 		panic(fmt.Errorf("%v %v", o.forgejoIssue, err))
 	}
 
@@ -232,6 +234,9 @@ func (o *issue) Put(ctx context.Context) f3_id.NodeID {
 	updateIssueAssignees(ctx, o.forgejoIssue.ID, o.forgejoIssue.Assignees)
 	updateIssueLabels(ctx, o.forgejoIssue.ID, o.forgejoIssue.Labels)
 
+	if o.sendNotifications(ctx) {
+		notify_service.NewIssue(ctx, o.forgejoIssue, nil)
+	}
 	o.Trace("issue created %d/%d", o.forgejoIssue.ID, o.forgejoIssue.Index)
 	return f3_id.NewNodeID(o.forgejoIssue.Index)
 }
