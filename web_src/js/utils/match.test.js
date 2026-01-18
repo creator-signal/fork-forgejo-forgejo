@@ -1,4 +1,4 @@
-import {matchEmoji, matchMention, matchIssue} from './match.js';
+import {matchEmoji, matchMention} from './match.js';
 
 test('matchEmoji', () => {
   expect(matchEmoji('')).toEqual([
@@ -60,23 +60,4 @@ test('matchEmoji', () => {
 test('matchMention', () => {
   expect(matchMention('')).toEqual(window.config.mentionValues.slice(0, 6));
   expect(matchMention('user4')).toEqual([window.config.mentionValues[3]]);
-});
-
-test('matchIssue', () => {
-  expect(matchIssue('')).toEqual(window.config.issueValues.slice(0, 6));
-  expect(matchIssue('1')).toEqual([window.config.issueValues[9], window.config.issueValues[0]]);
-  expect(matchIssue('1', 1)).toEqual([window.config.issueValues[0]]);
-  expect(matchIssue('issue')).toEqual([
-    window.config.issueValues[0],
-    window.config.issueValues[1],
-    window.config.issueValues[2],
-    window.config.issueValues[7],
-    window.config.issueValues[9],
-  ]);
-  expect(matchIssue('issue', 10)).toEqual([
-    window.config.issueValues[1],
-    window.config.issueValues[2],
-    window.config.issueValues[7],
-    window.config.issueValues[9],
-  ]);
 });

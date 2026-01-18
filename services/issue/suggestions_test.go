@@ -24,6 +24,7 @@ func Test_Suggestions(t *testing.T) {
 
 	testCases := []struct {
 		name               string
+		keyword            string
 		isPull             optional.Option[bool]
 		expectedSuggestion []*structs.IssueSuggestion
 	}{
@@ -72,11 +73,25 @@ func Test_Suggestions(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:    "Keyword pull",
+			keyword: "pull",
+			expectedSuggestion: []*structs.IssueSuggestion{
+				{
+					Index:            5,
+					State:            "open",
+					Title:            "pull5",
+					IsPr:             true,
+					HasMerged:        false,
+					IsWorkInProgress: false,
+				},
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			suggestion, err := GetSuggestions(db.DefaultContext, repo1, testCase.isPull)
+			suggestion, err := GetSuggestions(db.DefaultContext, repo1, testCase.isPull, testCase.keyword)
 			require.NoError(t, err)
 			assert.Equal(t, testCase.expectedSuggestion, suggestion)
 		})

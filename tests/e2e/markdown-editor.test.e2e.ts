@@ -403,6 +403,8 @@ test('text expander has higher prio then prefix continuation', async ({page}) =>
   expect(response?.status()).toBe(200);
 
   const textarea = page.locator('textarea[name=content]');
+  const suggestionList = page.locator('[data-tab-panel="markdown-writer"] .suggestions');
+
   const initText = `* first`;
   await textarea.fill(initText);
   await textarea.evaluate((it:HTMLTextAreaElement) => it.setSelectionRange(it.value.indexOf('rst'), it.value.indexOf('rst')));
@@ -423,6 +425,9 @@ test('text expander has higher prio then prefix continuation', async ({page}) =>
   // Test issue completion
   await textarea.press('Enter');
   await textarea.pressSequentially('#pull');
+  // Because the issue completion is async, we need to wait for it
+  await suggestionList.waitFor();
+  await expect(suggestionList).toBeVisible();
   await textarea.press('Enter');
   await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #5 `);
 

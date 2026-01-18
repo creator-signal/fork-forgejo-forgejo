@@ -1,16 +1,43 @@
 import {matchEmoji, matchMention, matchIssue} from '../../utils/match.js';
 import {emojiHTML, emojiString} from '../emoji.js';
-import {getIssueIcon, getIssueColor, isIssueSuggestionsLoaded, fetchIssueSuggestions} from '../issue.js';
+import {getIssueIcon, getIssueColor} from '../issue.js';
 import {svg} from '../../svg.js';
 import {createElementFromHTML} from '../../utils/dom.js';
-import {parseIssueHref} from '../../utils.js';
+import {parseIssueHref, parseRepoOwnerPathInfo} from '../../utils.js';
+import {debounce} from 'throttle-debounce';
+
 const {customEmojis} = window.config;
 
-async function issueSuggestions(text) {
+// throttle-debounce does not return values, so we need to wrap it
+// see https://github.com/niksy/throttle-debounce/issues/59#issuecomment-1185634656
+const debouncePromise = (delay, fn) => {
+  let resolveCallback;
+  const debouncedFn = debounce(delay, async (...args) => {
+    const result = await fn(...args);
+    if (resolveCallback) {
+      resolveCallback(result);
+    }
+  });
+  return (...args) => {
+    return new Promise((resolve) => {
+      resolveCallback = resolve;
+      debouncedFn(...args);
+    });
+  };
+};
+
+const issueSuggestions = debouncePromise(300, async (text) => {
   const key = '#';
 
   const issuePathInfo = parseIssueHref(window.location.href);
-  const matches = matchIssue(text, Number(issuePathInfo.index));
+  if (!issuePathInfo.owner) {
+    const repoOwnerPathInfo = parseRepoOwnerPathInfo(window.location.pathname);
+    issuePathInfo.owner = repoOwnerPathInfo.owner;
+    issuePathInfo.repo = repoOwnerPathInfo.repo;
+    // then no issuePathInfo.indexString here, it is only used to exclude the current issue when "matchIssue"
+  }
+
+  const matches = await matchIssue(issuePathInfo.owner, issuePathInfo.repo, issuePathInfo.index, text);
   if (!matches.length) return {matched: false};
 
   const ul = document.createElement('ul');
@@ -36,7 +63,7 @@ async function issueSuggestions(text) {
   }
 
   return {matched: true, fragment: ul};
-}
+});
 
 export function initTextExpander(expander) {
   if (!expander) return;
@@ -94,11 +121,7 @@ export function initTextExpander(expander) {
 
       provide({matched: true, fragment: ul});
     } else if (key === '#') {
-      if (!isIssueSuggestionsLoaded()) {
-        provide(fetchIssueSuggestions().then(() => issueSuggestions(text)));
-      } else {
-        provide(issueSuggestions(text));
-      }
+      provide(issueSuggestions(text));
     }
   });
   expander.addEventListener('text-expander-value', ({detail}) => {

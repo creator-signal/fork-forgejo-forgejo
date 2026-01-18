@@ -1,4 +1,5 @@
 import {emojiKeys} from '../features/emoji.js';
+import {GET} from '../modules/fetch.js';
 
 const maxMatches = 6;
 
@@ -37,46 +38,12 @@ export function matchMention(queryText) {
   return sortAndReduce(results);
 }
 
-export function matchIssue(queryText, currentIssue = null) {
-  const issues = (window.config.issueValues ?? []).filter(
-    (issue) => issue.number !== currentIssue,
-  );
-  const query = queryText.toLowerCase().trim();
+export async function matchIssue(owner, repo, issueIndexStr, query) {
+  const res = await GET(`${window.config.appSubUrl}/${owner}/${repo}/issues/suggestions?q=${encodeURIComponent(query)}`);
 
-  if (!query) {
-    return Array.from(issues)
-      .slice(0, maxMatches);
-  }
+  const issues = await res.json();
+  const issueIndex = parseInt(issueIndexStr);
 
-  const isNumber = /^\d+$/.test(query);
-  const results = new Set();
-
-  if (isNumber) {
-    // Find issues/prs with number starting with the query (prefix), sorted by number ascending
-    const prefixMatches = issues.filter((issue) =>
-      String(issue.number).startsWith(query),
-    ).sort((a, b) => a.number - b.number);
-
-    for (const issue of prefixMatches) {
-      results.add(issue);
-      if (results.size >= maxMatches) break;
-    }
-  }
-
-  if (results.size < maxMatches) {
-    // Fallback: find by title match, sorted by number descending
-    const titleMatches = issues
-      .filter((issue) =>
-        issue.title.toLowerCase().includes(query),
-      )
-      .sort((a, b) => b.number - a.number);
-
-    // Add only those not already in the result set
-    for (const match of titleMatches) {
-      results.add(match);
-      if (results.size >= maxMatches) break;
-    }
-  }
-
-  return Array.from(results);
+  // filter out issue with same id
+  return issues.filter((i) => i.id !== issueIndex);
 }

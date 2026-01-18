@@ -37,8 +37,8 @@ export function parseIssueHref(href) {
 export function parseRepoOwnerPathInfo(pathname) {
   const appSubUrl = window.config.appSubUrl;
   if (appSubUrl && pathname.startsWith(appSubUrl)) pathname = pathname.substring(appSubUrl.length);
-  const [_, ownerName, repoName] = /([^/]+)\/([^/]+)/.exec(pathname) || [];
-  return {ownerName, repoName};
+  const [_, owner, repo] = /([^/]+)\/([^/]+)/.exec(pathname) || [];
+  return {owner, repo};
 }
 
 // parse a URL, either relative '/path' or absolute 'https://localhost/path'
