@@ -56,13 +56,13 @@ func (s *Service) Register(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("runner registration token has been invalidated, please use the latest one"))
 	}
 
-	if runnerToken.OwnerID > 0 {
+	if runnerToken.OwnerID != 0 {
 		if _, err := user_model.GetUserByID(ctx, runnerToken.OwnerID); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("owner of the token not found"))
 		}
 	}
 
-	if runnerToken.RepoID > 0 {
+	if runnerToken.RepoID != 0 {
 		if _, err := repo_model.GetRepositoryByID(ctx, runnerToken.RepoID); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("repository of the token not found"))
 		}
@@ -162,22 +162,22 @@ func (s *Service) FetchTask(
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pick task: %w", err))
 		} else if ok {
 			task = t
-		}
 
-		taskCapacity := req.Msg.GetTaskCapacity()
-		taskCapacity-- // remove 1 for the task already fetched as `task`
-		for taskCapacity > 0 {
-			if t, ok, err := actions_service.PickTask(ctx, runner); err != nil {
-				// Don't return an error to the client/runner -- we've already assigned one-or-more tasks to the runner
-				// and if we don't return them, they can't be picked up by another runner and will become zombie tasks.
-				// Log the error and return the tasks we've assigned so far.
-				log.Error("pick task failed: %v", err)
-				break
-			} else if ok {
-				additionalTasks = append(additionalTasks, t)
-				taskCapacity--
-			} else {
-				break
+			taskCapacity := req.Msg.GetTaskCapacity()
+			taskCapacity-- // remove 1 for the task already fetched as `task`
+			for taskCapacity > 0 {
+				if t, ok, err := actions_service.PickTask(ctx, runner); err != nil {
+					// Don't return an error to the client/runner -- we've already assigned one-or-more tasks to the runner
+					// and if we don't return them, they can't be picked up by another runner and will become zombie tasks.
+					// Log the error and return the tasks we've assigned so far.
+					log.Error("pick task failed: %v", err)
+					break
+				} else if ok {
+					additionalTasks = append(additionalTasks, t)
+					taskCapacity--
+				} else {
+					break
+				}
 			}
 		}
 	}
