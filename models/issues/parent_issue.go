@@ -152,12 +152,20 @@ func (issue *Issue) UpdateParentIssue(ctx context.Context, parent *Issue, doer *
 
 	// Make the comment
 	if oldParent != nil {
+		if err = RemoveIssueDependencyNoComment(ctx, doer, oldParent, issue, DependencyTypeBlockedBy); err != nil && !IsErrDependencyNotExists(err) {
+			return fmt.Errorf("RemoveIssueDependencyNoComment: %w", err)
+		}
+
 		// removed old parent
 		if err = createSubIssueComment(ctx, doer, oldParent, issue, false); err != nil {
 			return fmt.Errorf("createSubIssueComment, unlink old: %w", err)
 		}
 	}
 	if parent != nil {
+		if err = CreateIssueDependencyNoComment(ctx, doer, parent, issue); err != nil && !IsErrDependencyExists(err) {
+			return fmt.Errorf("CreateIssueDependencyNoComment: %w", err)
+		}
+
 		// added new parent
 		if err = createSubIssueComment(ctx, doer, parent, issue, true); err != nil {
 			return fmt.Errorf("createSubIssueComment, link new: %w", err)

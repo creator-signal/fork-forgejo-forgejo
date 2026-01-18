@@ -126,8 +126,8 @@ const (
 	DependencyTypeBlocking
 )
 
-// CreateIssueDependency creates a new dependency for an issue
-func CreateIssueDependency(ctx context.Context, user *user_model.User, issue, dep *Issue) error {
+// CreateIssueDependencyNoComment creates a new dependency for an issue without creating a comment
+func CreateIssueDependencyNoComment(ctx context.Context, user *user_model.User, issue, dep *Issue) error {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return err
@@ -159,6 +159,21 @@ func CreateIssueDependency(ctx context.Context, user *user_model.User, issue, de
 		return err
 	}
 
+	return committer.Commit()
+}
+
+// CreateIssueDependency creates a new dependency for an issue
+func CreateIssueDependency(ctx context.Context, user *user_model.User, issue, dep *Issue) error {
+	ctx, committer, err := db.TxContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer committer.Close()
+
+	if err = CreateIssueDependencyNoComment(ctx, user, issue, dep); err != nil {
+		return err
+	}
+
 	// Add comment referencing the new dependency
 	if err = createIssueDependencyComment(ctx, user, issue, dep, true); err != nil {
 		return err
@@ -167,8 +182,8 @@ func CreateIssueDependency(ctx context.Context, user *user_model.User, issue, de
 	return committer.Commit()
 }
 
-// RemoveIssueDependency removes a dependency from an issue
-func RemoveIssueDependency(ctx context.Context, user *user_model.User, issue, dep *Issue, depType DependencyType) (err error) {
+// RemoveIssueDependencyNoComment removes a dependency from an issue without creating a comment
+func RemoveIssueDependencyNoComment(ctx context.Context, user *user_model.User, issue, dep *Issue, depType DependencyType) error {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return err
@@ -194,6 +209,21 @@ func RemoveIssueDependency(ctx context.Context, user *user_model.User, issue, de
 	// If we deleted nothing, the dependency did not exist
 	if affected <= 0 {
 		return ErrDependencyNotExists{issue.ID, dep.ID}
+	}
+
+	return committer.Commit()
+}
+
+// RemoveIssueDependency removes a dependency from an issue
+func RemoveIssueDependency(ctx context.Context, user *user_model.User, issue, dep *Issue, depType DependencyType) (err error) {
+	ctx, committer, err := db.TxContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer committer.Close()
+
+	if err = RemoveIssueDependencyNoComment(ctx, user, issue, dep, depType); err != nil {
+		return err
 	}
 
 	// Add comment referencing the removed dependency
