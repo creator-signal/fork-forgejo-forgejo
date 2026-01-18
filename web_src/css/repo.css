@@ -2787,14 +2787,17 @@ tbody.commit-list {
 }
 .sub-issues .item {
   padding: 5px;
-}
-.sub-issues .item:not(:last-child) {
+  padding-bottom: 8px;
   border-bottom: var(--color-grey) 1px solid;
 }
 
-/* summary.sub-issues[open] {
-  border-bottom: var(--color-grey) 1px solid;
-} */
+.sub-issues .sub-issues-list {
+  margin-left: 35px;
+}
+
+.sub-issues .sub-issues-list > * {
+  border-left: var(--color-grey) 1px solid;
+}
 
 .sub-issues .item.is-closed {
   text-decoration: line-through;

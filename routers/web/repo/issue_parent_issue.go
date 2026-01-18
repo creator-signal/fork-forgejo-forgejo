@@ -4,6 +4,7 @@
 package repo
 
 import (
+	"fmt"
 	"net/http"
 
 	issues_model "forgejo.org/models/issues"
@@ -78,6 +79,10 @@ func AddParentIssue(ctx *context.Context) {
 func RemoveParentIssue(ctx *context.Context) {
 	issueIndex := ctx.ParamsInt64("index")
 
+	fmt.Println("--------------------------------")
+	fmt.Println("RemoveParentIssue", issueIndex)
+	fmt.Println("--------------------------------")
+
 	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo.Repository.ID, issueIndex)
 	if err != nil {
 		ctx.ServerError("GetIssueByIndex", err)
@@ -85,20 +90,26 @@ func RemoveParentIssue(ctx *context.Context) {
 	}
 
 	if !ctx.Repo.CanUpdateParentIssues(ctx, ctx.Doer) {
+		fmt.Println("CanUpdateParentIssues", ctx.Repo.CanUpdateParentIssues(ctx, ctx.Doer))
 		ctx.Error(http.StatusForbidden, "CanUpdateParentIssues")
 		return
 	}
 
 	if err = issue.LoadRepo(ctx); err != nil {
+		fmt.Println("LoadRepo", err)
 		ctx.ServerError("LoadRepo", err)
 		return
 	}
 
+	// Remove parent issue
 	if err = issue.UpdateParentIssue(ctx, nil, ctx.Doer); err != nil {
+		fmt.Println("UpdateParentIssue", err)
 		ctx.ServerError("UpdateParentIssue, remove", err)
 		return
 	}
 
 	// Redirect
+	fmt.Println("Redirecting to", issue.Link())
+
 	ctx.Redirect(issue.Link())
 }

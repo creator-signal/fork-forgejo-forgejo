@@ -12,7 +12,9 @@
 		26 = DELETE_TIME_MANUAL, 27 = REVIEW_REQUEST, 28 = MERGE_PULL_REQUEST,
 		29 = PULL_PUSH_EVENT, 30 = PROJECT_CHANGED, 31 = PROJECT_BOARD_CHANGED
 		32 = DISMISSED_REVIEW, 33 = COMMENT_TYPE_CHANGE_ISSUE_REF, 34 = PR_SCHEDULE_TO_AUTO_MERGE,
-		35 = CANCEL_SCHEDULED_AUTO_MERGE_PR, 36 = PIN_ISSUE, 37 = UNPIN_ISSUE, 38 = ACTION_AGGREGATOR -->
+		35 = CANCEL_SCHEDULED_AUTO_MERGE_PR, 36 = PIN_ISSUE, 37 = UNPIN_ISSUE, 38 = ACTION_AGGREGATOR
+		39 = ADD_PARENT_ISSUE, 40 = REMOVE_PARENT_ISSUE
+		-->
 		{{if eq .Type 0}}
 			<div class="timeline-item comment" id="{{.HashTag}}">
 			{{if .OriginalAuthor}}
@@ -792,7 +794,7 @@
 				{{range $subIssue := .ParentOrSubIssues}}
 					<div class="detail flex-text-block">
 						{{if or (eq $comment.Type 39) (eq $comment.Type 41)}}{{svg "octicon-plus"}}
-						{{else}}{{svg "octicon-minus"}}
+						{{else}}{{svg "octicon-trash"}}
 						{{end}}
 						<span class="text grey muted-links">
 							<a href="{{$subIssue.Link}}">

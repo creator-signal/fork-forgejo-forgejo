@@ -6,7 +6,7 @@ import { setFileFolding } from './file-fold.js';
 import { getComboMarkdownEditor, initComboMarkdownEditor } from './comp/ComboMarkdownEditor.js';
 import { toAbsoluteUrl } from '../utils.js';
 import { initDropzone } from './common-global.js';
-import { POST, GET } from '../modules/fetch.js';
+import { POST, GET, DELETE } from '../modules/fetch.js';
 import { showErrorToast } from '../modules/toast.js';
 import { emojiHTML } from './emoji.js';
 
@@ -841,7 +841,14 @@ export function initRepoIssueParentIssueDelete() {
       closable: false,
       duration: 200,
       onApprove: () => {
-        $('#removeParentIssueForm').trigger('submit');
+        const action = document.querySelector('#removeParentIssueForm').getAttribute('action');
+        DELETE(action).then(async (response) => {
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            showErrorToast(`Failed to remove parent issue: ${response.status} ${await response.text()}`);
+          }
+        });
       },
     }).modal('show');
   });

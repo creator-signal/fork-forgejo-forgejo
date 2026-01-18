@@ -56,7 +56,7 @@
 			{{ctx.Locale.Tr "repo.issues.parent_issue.remove_header"}}
 		</div>
 		<div class="content">
-			<form method="delete" action="{{.Issue.Link}}/parent" id="removeParentIssueForm">
+			<form method="post" action="{{.Issue.Link}}/parent" id="removeParentIssueForm">
 				{{$.CsrfTokenHtml}}
 			</form>
 			<p>{{ctx.Locale.Tr "repo.issues.parent_issue.remove_text"}}</p>

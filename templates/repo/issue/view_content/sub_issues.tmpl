@@ -40,24 +40,13 @@
 		<div class="ui attached segment sub-issues" role="article">
 
 			{{range $s := .Issue.SubIssues}}
-			<div class="item tw-flex tw-items-center tw-justify-between">
-				<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
 
-					{{if gt $s.SubIssuesCount 0}}
-					<details class="item toggleable-item" data-sub-issue-intractable="has-sub-issues" data-sub-issue-index="{{$s.Index}}" data-sub-issue-repo-name="{{$s.Repo.Name}}" data-sub-issue-owner="{{$s.Repo.OwnerName}}">
-						<summary style="padding: 0; padding-bottom: 0.5rem;" class="sub-issues" role="heading">
-							<a class="title muted" href="{{$s.Link}}"
-								data-tooltip-content="{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}} {{RenderRefIssueTitle $.Context $s.Title}}">
-								{{if not $s.IsClosed}} <span class="ui green label">{{svg "octicon-issue-opened"}}</span>{{end}}
-								{{if $s.IsClosed}} <span class="ui red label">{{svg "octicon-issue-closed"}}</span>{{end}}
-								{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}}
-								{{RenderRefIssueTitle $.Context $s.Title}}
-							</a>
-						</summary>
-						<div class="sub-issues item-left tw-flex tw-flex-col tw-flex-1" style="padding-left: 35px;">Loading......</div>
-					</details>
 
-					{{else}}
+			{{if gt $s.SubIssuesCount 0}}
+			{{/* Has sub issues */}}
+			<details class="toggleable-item" data-sub-issue-intractable="has-sub-issues" data-sub-issue-index="{{$s.Index}}"
+				data-sub-issue-repo-name="{{$s.Repo.Name}}" data-sub-issue-owner="{{$s.Repo.OwnerName}}">
+				<summary class="item" role="heading">
 					<a class="title muted" href="{{$s.Link}}"
 						data-tooltip-content="{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}} {{RenderRefIssueTitle $.Context $s.Title}}">
 						{{if not $s.IsClosed}} <span class="ui green label">{{svg "octicon-issue-opened"}}</span>{{end}}
@@ -65,10 +54,28 @@
 						{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}}
 						{{RenderRefIssueTitle $.Context $s.Title}}
 					</a>
-					{{end}}
+				</summary>
+				<div class="sub-issues-list"> Sub Issues here</div>
+			</details>
+
+			{{else}}
+			{{/* No sub issues */}}
+			<div class="item tw-flex tw-items-center tw-justify-between">
+				<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
+					<a class="title muted" href="{{$s.Link}}"
+						data-tooltip-content="{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}} {{RenderRefIssueTitle $.Context $s.Title}}">
+						{{if not $s.IsClosed}} <span class="ui green label">{{svg "octicon-issue-opened"}}</span>{{end}}
+						{{if $s.IsClosed}} <span class="ui red label">{{svg "octicon-issue-closed"}}</span>{{end}}
+						{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}}
+						{{RenderRefIssueTitle $.Context $s.Title}}
+					</a>
 				</div>
 			</div>
+
 			{{end}}
+
+			{{end}}
+
 		</div>
 
 	</details>
