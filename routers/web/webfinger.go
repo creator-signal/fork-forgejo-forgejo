@@ -17,8 +17,6 @@ import (
 	"forgejo.org/services/context"
 )
 
-// https://datatracker.ietf.org/doc/html/draft-ietf-appsawg-webfinger-14#section-4.4
-
 // WebfingerUserActor returns a user entry from the database.
 func WebfingerUserActor(ctx *context.Context, appURL *url.URL, userActor *webfinger.UserActor) (*user_model.User, error) {
 	if userActor == nil {

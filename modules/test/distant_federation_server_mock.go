@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"forgejo.org/modules/util"
 )
@@ -119,6 +120,39 @@ func (mock *FederationServerMock) DistantServer(t *testing.T) *httptest.Server {
 				`"repository":"https://codeberg.org/forgejo/forgejo.git","homepage":"https://forgejo.org/"},`+
 				`"protocols":["activitypub"],"services":{"inbound":[],"outbound":["rss2.0"]},`+
 				`"openRegistrations":true,"usage":{"users":{"total":14,"activeHalfyear":2}},"metadata":{}}`)
+		})
+	federatedRoutes.HandleFunc("/.well-known/webfinger",
+		func(res http.ResponseWriter, req *http.Request) {
+			query := req.URL.Query()
+			resource := query.Get("resource")
+
+			parts := strings.Split(resource, "@")
+			if len(parts) != 2 {
+				res.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			userName := strings.TrimPrefix(parts[0], "acct:")
+
+			// Sleep five seconds to test timeouts
+			if userName == "sloth" {
+				time.Sleep(5 * time.Second)
+			}
+
+			for _, person := range mock.Persons {
+				if person.Name != userName {
+					continue
+				}
+
+				res.Header().Add("Content-Type", "application/json")
+				fmt.Fprintf(res, `{"subject": "acct:%[1]s@%[2]s", "links": [`+
+					`{ "rel": "self", "type": "application/activity+json", "href": "http://%[2]s/api/v1/activitypub/user-id/%[3]d" }]}`,
+					userName, req.Host, person.ID)
+
+				return
+			}
+
+			res.WriteHeader(http.StatusNotFound)
 		})
 
 	for _, person := range mock.Persons {

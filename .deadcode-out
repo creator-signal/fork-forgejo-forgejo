@@ -216,6 +216,14 @@ forgejo.org/modules/web
 	RouteMock
 	RouteMockReset
 
+forgejo.org/modules/webfinger
+	Malformed.Error
+	IsWebfingerMalformed
+	IsMissingActivityEndpoint
+	acctEscape
+	Query
+	BuildURL
+
 forgejo.org/modules/zstd
 	NewWriter
 	Writer.Write

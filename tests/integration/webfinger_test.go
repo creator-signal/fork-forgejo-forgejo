@@ -4,20 +4,24 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/webfinger"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWebfinger(t *testing.T) {
@@ -29,21 +33,6 @@ func TestWebfinger(t *testing.T) {
 
 	appURL, _ := url.Parse(setting.AppURL)
 
-	type webfingerLink struct {
-		Rel        string            `json:"rel,omitempty"`
-		Type       string            `json:"type,omitempty"`
-		Href       string            `json:"href,omitempty"`
-		Titles     map[string]string `json:"titles,omitempty"`
-		Properties map[string]any    `json:"properties,omitempty"`
-	}
-
-	type webfingerJRD struct {
-		Subject    string           `json:"subject,omitempty"`
-		Aliases    []string         `json:"aliases,omitempty"`
-		Properties map[string]any   `json:"properties,omitempty"`
-		Links      []*webfingerLink `json:"links,omitempty"`
-	}
-
 	session := loginUser(t, "user1")
 
 	ctx := t.Context()
@@ -52,10 +41,10 @@ func TestWebfinger(t *testing.T) {
 	resp := MakeRequest(t, req, http.StatusOK)
 	assert.Equal(t, "application/jrd+json", resp.Header().Get("Content-Type"))
 
-	var jrd webfingerJRD
+	var jrd webfinger.JRD
 	DecodeJSON(t, resp, &jrd)
 	assert.Equal(t, "acct:user2@"+appURL.Host, jrd.Subject)
-	assert.ElementsMatch(t, []*webfingerLink{
+	assert.ElementsMatch(t, []*webfinger.Link{
 		{
 			Rel:  "http://webfinger.net/rel/profile-page",
 			Type: "text/html",
@@ -81,7 +70,7 @@ func TestWebfinger(t *testing.T) {
 	instanceResp := MakeRequest(t, instanceReq, http.StatusOK)
 	assert.Equal(t, "application/jrd+json", instanceResp.Header().Get("Content-Type"))
 
-	var instanceActor webfingerJRD
+	var instanceActor webfinger.JRD
 	DecodeJSON(t, instanceResp, &instanceActor)
 	assert.Equal(t, "acct:ghost@"+appURL.Host, instanceActor.Subject)
 	assert.ElementsMatch(t, []string{appURL.String() + "api/v1/activitypub/actor"}, instanceActor.Aliases)
@@ -118,4 +107,55 @@ func TestWebfinger(t *testing.T) {
 
 	req = NewRequest(t, "GET", fmt.Sprintf("/.well-known/webfinger?resource=acct:@%s@%s@%s", repo2.Name, repo2.OwnerName, appURL.Host))
 	session.MakeRequest(t, req, http.StatusOK)
+}
+
+func TestQueryWebfinger(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+		defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+		defer test.MockVariableValue(&setting.IsProd, false)()
+
+		appURL, _ := url.Parse(setting.AppURL)
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		ctx := t.Context()
+
+		jrd, err := webfinger.Query(ctx, fmt.Sprintf("@%s@%s", user.LowerName, appURL.Host))
+		require.NoError(t, err)
+
+		aliases := []string{
+			fmt.Sprintf("http://%s/%s", appURL.Host, user.LowerName),
+			fmt.Sprintf("http://%s/api/v1/activitypub/user-id/%d", appURL.Host, user.ID),
+		}
+
+		assert.Equal(t, fmt.Sprintf("acct:%s@%s", user.LowerName, appURL.Host), jrd.Subject)
+		assert.Equal(t, aliases, jrd.Aliases)
+		assert.Len(t, jrd.Links, 4)
+
+		profileActivity, err := jrd.GetProfileActivity()
+		require.NoError(t, err)
+
+		assert.Equal(t, fmt.Sprintf("http://%s/api/v1/activitypub/user-id/%d", appURL.Host, user.ID), profileActivity.ActivityLocation.String())
+
+		assert.True(t, profileActivity.ProfilePage.Has())
+		assert.Equal(t, fmt.Sprintf("http://%s/%s", appURL.Host, user.LowerName), profileActivity.ProfilePage.Value().String())
+	})
+}
+
+func TestWebfingerTimeout(t *testing.T) {
+	defer test.MockVariableValue(&setting.IsProd, false)()
+
+	mock := test.NewFederationServerMock()
+	server := mock.DistantServer(t)
+	url, _ := url.Parse(server.URL)
+
+	defer server.Close()
+
+	ctx := t.Context()
+	timeoutCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+
+	// User is set to sleep for five seconds before completing
+	_, err := webfinger.Query(timeoutCtx, fmt.Sprintf("@sloth@%s", url.Host))
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
 }

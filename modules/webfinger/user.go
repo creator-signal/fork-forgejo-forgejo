@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"forgejo.org/models/user"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 
 	"github.com/oleiade/gomme"
@@ -25,6 +27,7 @@ import (
 type UserActor struct {
 	User             string
 	Host             string
+	Port             optional.Option[uint16]
 	ID               int64
 	Email            string
 	AvatarLink       string
@@ -36,9 +39,26 @@ func ParseUserActor(input string) (UserActor, error) {
 	parser := gomme.Preceded(
 		gomme.Token[string]("acct:"),
 		gomme.Map(
-			gomme.Count(ParseWebfingerAccount(), 2),
+			gomme.Sequence(
+				gomme.Terminated(
+					parseWebfingerAccount(),
+					gomme.Token[string]("@"),
+				),
+				uriHost(),
+				gomme.Optional(uriPort()),
+			),
 			func(components []string) (UserActor, error) {
-				return UserActor{User: components[0], Host: components[1]}, nil
+				userActor := UserActor{User: components[0], Host: components[1]}
+				if components[2] != "" {
+					port, err := strconv.ParseUint(components[2], 10, 16)
+					if err != nil {
+						return UserActor{}, err
+					}
+
+					userActor.Port = optional.Some(uint16(port))
+				}
+
+				return userActor, nil
 			},
 		),
 	)

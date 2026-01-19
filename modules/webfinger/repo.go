@@ -38,7 +38,7 @@ func ParseRepoActor(input string) (RepoActor, error) {
 	parser := gomme.Preceded(
 		gomme.Token[string]("acct:"),
 		gomme.Map(
-			gomme.Count(ParseWebfingerAccount(), 3),
+			gomme.Count(parseWebfingerAccount(), 3),
 			func(components []string) (RepoActor, error) {
 				return RepoActor{
 					Repo:  components[0],
