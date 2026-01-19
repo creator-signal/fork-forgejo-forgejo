@@ -230,9 +230,9 @@ func CreateRelease(ctx *context.APIContext) {
 		ctx.Error(http.StatusUnprocessableEntity, "RepoIsEmpty", errors.New("repo is empty"))
 		return
 	}
-	if len(form.Title) == 0 {
-		ctx.Error(http.StatusUnprocessableEntity, "TitleIsEmpty", errors.New("title is empty"))
-		return
+	title := form.Title
+	if len(title) == 0 {
+		title = form.TagName
 	}
 	rel, err := repo_model.GetRelease(ctx, ctx.Repo.Repository.ID, form.TagName)
 	if err != nil {
@@ -250,7 +250,7 @@ func CreateRelease(ctx *context.APIContext) {
 			Publisher:        ctx.Doer,
 			TagName:          form.TagName,
 			Target:           form.Target,
-			Title:            form.Title,
+			Title:            title,
 			Note:             form.Note,
 			IsDraft:          form.IsDraft,
 			IsPrerelease:     form.IsPrerelease,
@@ -276,7 +276,7 @@ func CreateRelease(ctx *context.APIContext) {
 			return
 		}
 
-		rel.Title = form.Title
+		rel.Title = title
 		rel.Note = form.Note
 		rel.IsDraft = form.IsDraft
 		rel.IsPrerelease = form.IsPrerelease

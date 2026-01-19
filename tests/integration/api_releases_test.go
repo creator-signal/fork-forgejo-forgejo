@@ -515,16 +515,8 @@ func TestAPIReleaseMissingTitleAsset(t *testing.T) {
 	target, err := gitRepo.GetTagCommitID("v0.0.1")
 	require.NoError(t, err)
 
-	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/releases", owner.Name, repo.Name)
-	req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateReleaseOption{
-		TagName:      target,
-		Title:        "",
-		Note:         "",
-		IsDraft:      false,
-		IsPrerelease: false,
-		Target:       target,
-	}).AddTokenAuth(token)
-	MakeRequest(t, req, http.StatusUnprocessableEntity)
+	r := createNewReleaseUsingAPI(t, token, owner, repo, target, "", "", "")
+	assert.Equal(t, r.Title, target)
 }
 
 func TestAPIReleaseGithubFormat(t *testing.T) {
