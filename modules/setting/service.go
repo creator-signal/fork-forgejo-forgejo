@@ -79,6 +79,7 @@ var Service = struct {
 	DefaultEnableDependencies               bool
 	AllowCrossRepositoryDependencies        bool
 	DefaultEnableSubIssues                  bool
+	SubIssueChildrenLimit                   int
 	AllowCrossRepositorySubIssues           bool
 	DefaultAllowOnlyContributorsToTrackTime bool
 	NoReplyAddress                          string
@@ -244,6 +245,7 @@ func loadServiceFrom(rootCfg ConfigProvider) {
 	Service.DefaultEnableDependencies = sec.Key("DEFAULT_ENABLE_DEPENDENCIES").MustBool(true)
 	Service.AllowCrossRepositoryDependencies = sec.Key("ALLOW_CROSS_REPOSITORY_DEPENDENCIES").MustBool(true)
 	Service.DefaultEnableSubIssues = sec.Key("DEFAULT_ENABLE_SUB_ISSUES").MustBool(true)
+	Service.SubIssueChildrenLimit = sec.Key("SUB_ISSUE_CHILDREN_LIMIT").MustInt(5)
 	Service.AllowCrossRepositorySubIssues = sec.Key("ALLOW_CROSS_REPOSITORY_SUB_ISSUES").MustBool(true)
 	Service.DefaultAllowOnlyContributorsToTrackTime = sec.Key("DEFAULT_ALLOW_ONLY_CONTRIBUTORS_TO_TRACK_TIME").MustBool(true)
 	Service.NoReplyAddress = sec.Key("NO_REPLY_ADDRESS").MustString("noreply." + Domain)

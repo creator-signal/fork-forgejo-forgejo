@@ -9,6 +9,7 @@ import (
 
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
 )
 
 // LoadParentIssue load parent issue of this issue.
@@ -92,11 +93,11 @@ func (issue *Issue) LoadSubIssueChildren(ctx context.Context) error {
 
 	for _, sub := range issue.SubIssues {
 		var err error
-		sub.SubIssues, err = GetSubIssueChildrenByIssueID(ctx, sub.ID, 5)
+		sub.SubIssues, err = GetSubIssueChildrenByIssueID(ctx, sub.ID, setting.Service.SubIssueChildrenLimit)
 		if err != nil {
 			return err
 		}
-		sub.HasMoreSubIssues, err = HasMoreSubIssuesByIssueID(ctx, sub.ID, 5)
+		sub.HasMoreSubIssues, err = HasMoreSubIssuesByIssueID(ctx, sub.ID, setting.Service.SubIssueChildrenLimit)
 		if err != nil {
 			return err
 		}
