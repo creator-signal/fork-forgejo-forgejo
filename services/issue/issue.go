@@ -358,10 +358,20 @@ func SetIssueUpdateDate(ctx context.Context, issue *issues_model.Issue, updated 
 }
 
 // FilterSubIssues removes in place sub-issues that the user has no permissions to see
-func FilterSubIssues(ctx context.Context, issue *issues_model.Issue, doer *user_model.User) (err error) {
-	if err = issue.LoadSubIssues(ctx); err != nil {
-		return err
+func FilterSubIssues(ctx context.Context, issue *issues_model.Issue, doer *user_model.User, listOptions *db.ListOptions) error {
+	var err error
+
+	if listOptions != nil {
+		issue.SubIssues, err = issues_model.GetSubIssuesByIssueIDAndPage(ctx, issue.ID, listOptions)
+		if err != nil {
+			return err
+		}
+	} else {
+		if err := issue.LoadSubIssues(ctx); err != nil {
+			return err
+		}
 	}
+
 	for i := 0; i < len(issue.SubIssues); {
 		subIssue := issue.SubIssues[i]
 		if subIssue.RepoID != issue.RepoID && subIssue.RepoID != 0 {

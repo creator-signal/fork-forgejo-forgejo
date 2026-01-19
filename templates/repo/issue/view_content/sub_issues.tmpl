@@ -95,6 +95,12 @@
 			{{end}}
 
 		</div>
-
+		
+		{{if .SubIssuesPage}}
+			<div class="sub-issues-pagination">
+				{{template "base/subissue_paginate" dict "Page" .SubIssuesPage "Link" .Link}}
+			</div>
+		{{end}}
+		
 	</details>
 </div>

@@ -137,12 +137,14 @@ type Issue struct {
 	// For view issue page.
 	ShowRole RoleDescriptor `xorm:"-"`
 
-	ParentIssueID       *int64   `xorm:"'parent_id' NULL INDEX"`
-	ParentIssue         *Issue   `xorm:"-"`
-	isParentIssueLoaded bool     `xorm:"-"`
-	SubIssues           []*Issue `xorm:"-"`
-	isSubIssuesLoaded   bool     `xorm:"-"`
-	HasMoreSubIssues    bool     `xorm:"-"`
+	ParentIssueID        *int64   `xorm:"'parent_id' NULL INDEX"`
+	ParentIssue          *Issue   `xorm:"-"`
+	isParentIssueLoaded  bool     `xorm:"-"`
+	SubIssues            []*Issue `xorm:"-"`
+	isSubIssuesLoaded    bool     `xorm:"-"`
+	HasMoreSubIssues     bool     `xorm:"-"`
+	TotalSubIssues       int64    `xorm:"-"`
+	TotalClosedSubIssues int64    `xorm:"-"`
 }
 
 var (

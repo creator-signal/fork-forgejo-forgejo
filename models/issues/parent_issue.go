@@ -36,6 +36,19 @@ func GetSubIssuesByIssueID(ctx context.Context, issueID int64) ([]*Issue, error)
 		Find(&subIssues)
 }
 
+// GetSubIssuesByIssueIDAndPage returns paginated sub-issues that belong to given issue by ID.
+func GetSubIssuesByIssueIDAndPage(ctx context.Context, issueID int64, listOptions *db.ListOptions) ([]*Issue, error) {
+	var subIssues []*Issue
+	sess := db.GetEngine(ctx).
+		Table("issue").
+		Where("issue.parent_id = ?", issueID).
+		Asc("issue.created_unix")
+	if listOptions != nil {
+		sess = db.SetSessionPagination(sess, listOptions)
+	}
+	return subIssues, sess.Find(&subIssues)
+}
+
 // LoadSubIssues load sub-issues of this issue.
 func (issue *Issue) LoadSubIssues(ctx context.Context) (err error) {
 	if !issue.isSubIssuesLoaded {
@@ -120,6 +133,14 @@ func CountSubIssues(ctx context.Context, issueID int64) (int64, error) {
 	return db.GetEngine(ctx).
 		Table("issue").
 		Where("issue.parent_id = ?", issueID).
+		Count()
+}
+
+// CountClosedSubIssues counts count of closed sub-issues of this issue
+func CountClosedSubIssues(ctx context.Context, issueID int64) (int64, error) {
+	return db.GetEngine(ctx).
+		Table("issue").
+		Where("issue.parent_id = ? AND issue.is_closed = ?", issueID, true).
 		Count()
 }
 
@@ -235,11 +256,17 @@ func (issue *Issue) UpdateParentIssue(ctx context.Context, parent *Issue, doer *
 
 // GetTotalSubIssues returns the number of sub-issues
 func (issue *Issue) GetTotalSubIssues() int {
+	if issue.TotalSubIssues > 0 {
+		return int(issue.TotalSubIssues)
+	}
 	return len(issue.SubIssues)
 }
 
 // GetClosedSubIssues returns the number of closed sub-issues
 func (issue *Issue) GetClosedSubIssues() int {
+	if issue.TotalClosedSubIssues > 0 {
+		return int(issue.TotalClosedSubIssues)
+	}
 	count := 0
 	for _, sub := range issue.SubIssues {
 		if sub.IsClosed {

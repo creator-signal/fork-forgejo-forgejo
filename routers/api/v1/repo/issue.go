@@ -1179,7 +1179,7 @@ func ListSubIssues(ctx *context.APIContext) {
 		return
 	}
 
-	if err = issue_service.FilterSubIssues(ctx, issue, ctx.Doer); err != nil {
+	if err = issue_service.FilterSubIssues(ctx, issue, ctx.Doer, nil); err != nil {
 		ctx.ServerError("FilterSubIssues", err)
 		return
 	}

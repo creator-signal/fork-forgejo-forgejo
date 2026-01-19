@@ -1557,10 +1557,45 @@ func ViewIssue(ctx *context.Context) {
 		}
 	}
 
-	if err = issue_service.FilterSubIssues(ctx, issue, ctx.Doer); err != nil {
+	// Handle pagination for sub-issues
+	page := ctx.FormInt("subissue_page")
+	if page <= 0 {
+		page = 1
+	}
+	subIssuesPageSize := 15
+
+	// Get total counts of sub-issues
+	totalSubIssues, err := issues_model.CountSubIssues(ctx, issue.ID)
+	if err != nil {
+		ctx.ServerError("CountSubIssues", err)
+		return
+	}
+
+	// Get closed count of sub-issues
+	totalClosedSubIssues, err := issues_model.CountClosedSubIssues(ctx, issue.ID)
+	if err != nil {
+		ctx.ServerError("CountClosedSubIssues", err)
+		return
+	}
+
+	// Set total counts on issue for progress tracking
+	issue.TotalSubIssues = totalSubIssues
+	issue.TotalClosedSubIssues = totalClosedSubIssues
+
+	// Filter sub-issues with pagination
+	err = issue_service.FilterSubIssues(ctx, issue, ctx.Doer, &db.ListOptions{
+		Page:     page,
+		PageSize: subIssuesPageSize,
+	})
+	if err != nil {
 		ctx.ServerError("FilterSubIssues", err)
 		return
 	}
+
+	// Set up pagination for template
+	pager := context.NewPagination(int(totalSubIssues), subIssuesPageSize, page, 5)
+
+	ctx.Data["SubIssuesPage"] = pager
 
 	if err = issue.LoadSubIssueRepos(ctx); err != nil {
 		ctx.ServerError("issue.LoadSubIssueRepos", err)
