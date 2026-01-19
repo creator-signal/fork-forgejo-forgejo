@@ -411,6 +411,27 @@ func (issues IssueList) LoadAttachments(ctx context.Context) (err error) {
 	return nil
 }
 
+// LoadSubIssueCounts loads sub-issue counts (total and closed) for all issues in the list
+func (issues IssueList) LoadSubIssueCounts(ctx context.Context) error {
+	if len(issues) == 0 {
+		return nil
+	}
+
+	issueIDs := issues.getIssueIDs()
+	counts, err := GetSubIssuesCountsBatch(ctx, issueIDs)
+	if err != nil {
+		return err
+	}
+
+	for _, issue := range issues {
+		if c, ok := counts[issue.ID]; ok {
+			issue.TotalSubIssues = c.Total
+			issue.TotalClosedSubIssues = c.Closed
+		}
+	}
+	return nil
+}
+
 func (issues IssueList) loadComments(ctx context.Context, cond builder.Cond) (err error) {
 	if len(issues) == 0 {
 		return nil
@@ -558,6 +579,10 @@ func (issues IssueList) LoadAttributes(ctx context.Context) error {
 
 	if err := issues.loadTotalTrackedTimes(ctx); err != nil {
 		return fmt.Errorf("issue.loadAttributes: loadTotalTrackedTimes: %w", err)
+	}
+
+	if err := issues.LoadSubIssueCounts(ctx); err != nil {
+		return fmt.Errorf("issue.loadAttributes: LoadSubIssueCounts: %w", err)
 	}
 
 	return nil

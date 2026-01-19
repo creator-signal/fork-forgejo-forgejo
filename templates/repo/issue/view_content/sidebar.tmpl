@@ -1,5 +1,11 @@
 <div class="issue-content-right ui segment">
 	{{template "repo/issue/view_content/sidebar/branch_selector_field" .}}
+	{{if and .IsRepoAdmin (not .Repository.IsArchived)}}
+
+		{{template "repo/issue/view_content/sidebar/actions" .}}
+		<div class="divider"></div>
+	{{end}}
+
 	{{if .Issue.IsPull}}
 		{{template "repo/issue/view_content/sidebar/pull_review" .}}
 		{{template "repo/issue/view_content/sidebar/pull_wip" .}}
@@ -30,6 +36,11 @@
 		{{template "repo/issue/view_content/sidebar/watch" .}}
 	{{end}}
 
+	{{if and (not .Issue.IsPull) (.Repository.IsSubIssuesEnabled $.Context)}}
+		<div class="divider"></div>
+		{{template "repo/issue/view_content/sidebar/parent_issue" .}}
+	{{end}}
+
 	{{if .Repository.IsTimetrackerEnabled $.Context}}
 		{{template "repo/issue/view_content/sidebar/timetracking" .}}
 	{{end}}
@@ -40,22 +51,6 @@
 	<div class="divider"></div>
 	{{template "repo/issue/view_content/sidebar/reference" .}}
 
-	{{if .Repository.IsDependenciesEnabled $.Context}}
-		<div class="divider"></div>
-
-		{{template "repo/issue/view_content/sidebar/dependencies" .}}
-	{{end}}
-
-	{{if and (not .Issue.IsPull) (.Repository.IsSubIssuesEnabled $.Context)}}
-		<div class="divider"></div>
-		{{template "repo/issue/view_content/sidebar/parent_issue" .}}
-	{{end}}
-
-	{{if and .IsRepoAdmin (not .Repository.IsArchived)}}
-		<div class="divider"></div>
-
-		{{template "repo/issue/view_content/sidebar/actions" .}}
-	{{end}}
 
 	{{if and
 		.Issue.IsPull
@@ -80,5 +75,11 @@
 				<span class="maintainers-can-edit-status">{{svg "octicon-x"}} {{ctx.Locale.Tr "repo.pulls.maintainers_cannot_edit"}}</span>
 			{{end}}
 		{{end}}
+	{{end}}
+
+	{{if .Repository.IsDependenciesEnabled $.Context}}
+		<div class="divider"></div>
+
+		{{template "repo/issue/view_content/sidebar/dependencies" .}}
 	{{end}}
 </div>

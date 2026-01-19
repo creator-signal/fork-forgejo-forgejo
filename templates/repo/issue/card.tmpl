@@ -52,11 +52,11 @@
 		</div>
 		{{end}}
 		{{end}}
-		{{$tasks := .GetTasks}}
-		{{if gt $tasks 0}}
+		{{$total := .GetTasksAndSubTotal}}
+		{{if gt $total 0}}
 			<div class="meta tw-my-1">
 				{{svg "octicon-checklist" 16 "tw-mr-1 tw-align-middle"}}
-				<span class="tw-align-middle">{{.GetTasksDone}} / {{$tasks}}</span>
+				<span class="tw-align-middle">{{.GetTasksAndSubDone}} / {{$total}}</span>
 			</div>
 		{{end}}
 	</div>

@@ -144,6 +144,46 @@ func CountClosedSubIssues(ctx context.Context, issueID int64) (int64, error) {
 		Count()
 }
 
+// GetSubIssuesCountsBatch returns total and closed sub-issue counts for multiple issues in one query
+func GetSubIssuesCountsBatch(ctx context.Context, issueIDs []int64) (map[int64]struct{ Total, Closed int64 }, error) {
+	if len(issueIDs) == 0 {
+		return map[int64]struct{ Total, Closed int64 }{}, nil
+	}
+
+	type result struct {
+		ParentID int64
+		Total    int64
+		Closed   int64
+	}
+
+	var results []result
+	// Use CASE WHEN is_closed THEN 1 ELSE 0 END which should work across databases
+	// In SQL: CASE WHEN boolean_expression THEN ... works with boolean columns
+	err := db.GetEngine(ctx).
+		Table("issue").
+		Select("parent_id, COUNT(*) as total, SUM(CASE WHEN is_closed THEN 1 ELSE 0 END) as closed").
+		In("parent_id", issueIDs).
+		GroupBy("parent_id").
+		Find(&results)
+	if err != nil {
+		return nil, err
+	}
+
+	counts := make(map[int64]struct{ Total, Closed int64 }, len(results))
+	for _, r := range results {
+		counts[r.ParentID] = struct{ Total, Closed int64 }{Total: r.Total, Closed: r.Closed}
+	}
+
+	// Ensure all requested IDs have entries (even if zero)
+	for _, id := range issueIDs {
+		if _, exists := counts[id]; !exists {
+			counts[id] = struct{ Total, Closed int64 }{Total: 0, Closed: 0}
+		}
+	}
+
+	return counts, nil
+}
+
 // ErrCircularParentIssue represents a "CircularParentIssue" kind of error.
 type ErrCircularParentIssue struct {
 	ID       int64
@@ -256,24 +296,12 @@ func (issue *Issue) UpdateParentIssue(ctx context.Context, parent *Issue, doer *
 
 // GetTotalSubIssues returns the number of sub-issues
 func (issue *Issue) GetTotalSubIssues() int {
-	if issue.TotalSubIssues > 0 {
-		return int(issue.TotalSubIssues)
-	}
-	return len(issue.SubIssues)
+	return int(issue.TotalSubIssues)
 }
 
 // GetClosedSubIssues returns the number of closed sub-issues
 func (issue *Issue) GetClosedSubIssues() int {
-	if issue.TotalClosedSubIssues > 0 {
-		return int(issue.TotalClosedSubIssues)
-	}
-	count := 0
-	for _, sub := range issue.SubIssues {
-		if sub.IsClosed {
-			count++
-		}
-	}
-	return count
+	return int(issue.TotalClosedSubIssues)
 }
 
 // GetSubIssuesProgress returns the progress of sub-issues in percentage
@@ -283,6 +311,32 @@ func (issue *Issue) GetSubIssuesProgress() int {
 		return 0
 	}
 	return (issue.GetClosedSubIssues() * 100) / total
+}
+
+// GetTasksAndSubTotal returns issue's checklist count + immediate sub-issues count
+func (issue *Issue) GetTasksAndSubTotal() int {
+	return issue.GetTasks() + issue.GetTotalSubIssues()
+}
+
+// GetTasksAndSubDone returns issue's done checklist count + closed immediate sub-issues count
+func (issue *Issue) GetTasksAndSubDone() int {
+	doneTasks := issue.GetTasksDone()
+	doneSubIssues := issue.GetClosedSubIssues()
+
+	return doneTasks + doneSubIssues
+}
+
+// LoadSubIssueCounts loads sub-issue counts for this single issue
+func (issue *Issue) LoadSubIssueCounts(ctx context.Context) error {
+	counts, err := GetSubIssuesCountsBatch(ctx, []int64{issue.ID})
+	if err != nil {
+		return err
+	}
+	if c, ok := counts[issue.ID]; ok {
+		issue.TotalSubIssues = c.Total
+		issue.TotalClosedSubIssues = c.Closed
+	}
+	return nil
 }
 
 func (issue *Issue) HasSubIssues() bool {

@@ -1,26 +1,35 @@
+{{/* Actions (pin, lock, delete) for issue sidebar */}}
+
+<div class="tw-flex tw-flex-wrap tw-gap-2 tw-items-center">
+
 {{if or .PinEnabled .Issue.IsPinned}}
 	<form class="tw-mt-1 form-fetch-action single-button-form" method="post" {{if $.NewPinAllowed}}action="{{.Issue.Link}}/pin"{{else}}data-tooltip-content="{{ctx.Locale.Tr "repo.issues.max_pinned"}}"{{end}}>
-		<button class="fluid ui button {{if not $.NewPinAllowed}}disabled{{end}}">
-			{{if not .Issue.IsPinned}}
+		{{if not .Issue.IsPinned}}
+			<button title="{{ctx.Locale.Tr "pin"}}" class="ui button {{if not $.NewPinAllowed}}disabled{{end}}">
 				{{svg "octicon-pin" 16 "tw-mr-2"}}
-				{{ctx.Locale.Tr "pin"}}
 			{{else}}
+			<button title="{{ctx.Locale.Tr "unpin"}}" class="ui button {{if not $.NewPinAllowed}}disabled{{end}}">
 				{{svg "octicon-pin-slash" 16 "tw-mr-2"}}
-				{{ctx.Locale.Tr "unpin"}}
 			{{end}}
 		</button>
 	</form>
 {{end}}
 
-<button class="tw-mt-1 fluid ui show-modal button {{if .Issue.IsLocked}} negative {{end}}" data-modal="#lock">
-	{{if .Issue.IsLocked}}
+{{if .Issue.IsLocked}}
+	<button title="{{ctx.Locale.Tr "repo.issues.unlock"}}" class="tw-mt-1 ui show-modal button {{if .Issue.IsLocked}} negative {{end}}" data-modal="#lock">
 		{{svg "octicon-key"}}
-		{{ctx.Locale.Tr "repo.issues.unlock"}}
-	{{else}}
+{{else}}
+	<button title="{{ctx.Locale.Tr "repo.issues.lock"}}" class="tw-mt-1 ui show-modal button {{if .Issue.IsLocked}} negative {{end}}" data-modal="#lock">
 		{{svg "octicon-lock"}}
-		{{ctx.Locale.Tr "repo.issues.lock"}}
-	{{end}}
-</button>
+{{end}}
+	</button>
+
+	<button title="{{ctx.Locale.Tr "repo.issues.delete"}}" class="tw-mt-1 ui show-modal button" data-modal="#sidebar-delete-issue">
+		{{svg "octicon-trash"}}
+	</button>
+
+</div>
+
 <div class="ui tiny modal" id="lock">
 	<div class="header">
 		{{if .Issue.IsLocked}}
@@ -84,10 +93,7 @@
 		</form>
 	</div>
 </div>
-<button class="tw-mt-1 fluid ui show-modal button" data-modal="#sidebar-delete-issue">
-	{{svg "octicon-trash"}}
-	{{ctx.Locale.Tr "repo.issues.delete"}}
-</button>
+
 <div class="ui g-modal-confirm modal" id="sidebar-delete-issue">
 	<div class="header">
 		{{if .Issue.IsPull}}

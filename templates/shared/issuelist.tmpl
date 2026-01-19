@@ -99,12 +99,12 @@
 							<span class="gt-ellipsis">{{index $.IssueRefEndNames .ID}}</span>
 						</a>
 					{{end}}
-					{{$tasks := .GetTasks}}
-					{{if gt $tasks 0}}
-						{{$tasksDone := .GetTasksDone}}
+					{{$total := .GetTasksAndSubTotal}}
+					{{if gt $total 0}}
+						{{$done := .GetTasksAndSubDone}}
 						<span class="checklist flex-text-inline">
-							{{svg "octicon-checklist" 14}}{{$tasksDone}} / {{$tasks}}
-							<progress value="{{$tasksDone}}" max="{{$tasks}}"></progress>
+							{{svg "octicon-checklist" 14}}{{$done}} / {{$total}}
+							<progress value="{{$done}}" max="{{$total}}"></progress>
 						</span>
 					{{end}}
 					{{if ne .DeadlineUnix 0}}
