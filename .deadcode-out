@@ -237,6 +237,7 @@ forgejo.org/services/context
 
 forgejo.org/services/federation
 	FollowRemoteActor
+	WebfingerSearch.Search
 
 forgejo.org/services/notify
 	UnregisterNotifier
