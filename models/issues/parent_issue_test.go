@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"forgejo.org/models/db"
+	"fmt"
+
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
@@ -70,4 +72,30 @@ func TestSubIssueNoCircular(t *testing.T) {
 
 	err = rootIssue.UpdateParentIssue(db.DefaultContext, issue1, user1)
 	require.EqualError(t, err, issues_model.ErrCircularParentIssue{rootIssue.ID, issue1.ID}.Error())
+}
+
+func TestLoadSubIssueChildren(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	issue23 := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 23})
+	issue24 := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 24})
+
+	for i := 0; i < 6; i++ {
+		sub := testCreateIssue(t, issue24.RepoID, user1.ID, fmt.Sprintf("Sub %d", i), "content", false)
+		err := sub.UpdateParentIssue(db.DefaultContext, issue24, user1)
+		require.NoError(t, err)
+	}
+
+	err := issue23.LoadSubIssues(db.DefaultContext)
+	require.NoError(t, err)
+	require.Len(t, issue23.SubIssues, 1)
+	require.Equal(t, int64(24), issue23.SubIssues[0].ID)
+
+	err = issue23.LoadSubIssueChildren(db.DefaultContext)
+	require.NoError(t, err)
+
+	sub24 := issue23.SubIssues[0]
+	require.Len(t, sub24.SubIssues, 5)
+	require.True(t, sub24.HasMoreSubIssues)
 }

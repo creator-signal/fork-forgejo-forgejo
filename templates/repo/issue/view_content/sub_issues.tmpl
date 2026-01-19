@@ -44,8 +44,7 @@
 
 			{{if gt $s.SubIssuesCount 0}}
 			{{/* Has sub issues */}}
-			<details class="toggleable-item" data-sub-issue-intractable="has-sub-issues" data-sub-issue-index="{{$s.Index}}"
-				data-sub-issue-repo-name="{{$s.Repo.Name}}" data-sub-issue-owner="{{$s.Repo.OwnerName}}">
+			<details class="toggleable-item">
 				<summary class="item" role="heading">
 					<a class="title muted" href="{{$s.Link}}"
 						data-tooltip-content="{{if not (eq $s.RepoID $repoID)}}{{$s.Repo.OwnerName}}/{{$s.Repo.Name}}{{end}}#{{$s.Index}} {{RenderRefIssueTitle $.Context $s.Title}}">
@@ -55,7 +54,26 @@
 						{{RenderRefIssueTitle $.Context $s.Title}}
 					</a>
 				</summary>
-				<div class="sub-issues-list"> Sub Issues here</div>
+				<div class="sub-issues-list">
+					{{range $sub := $s.SubIssues}}
+					<div class="item">
+						<a class="title muted" href="{{$sub.Link}}"
+							data-tooltip-content="{{if not (eq $sub.RepoID $s.RepoID)}}{{$sub.Repo.OwnerName}}/{{$sub.Repo.Name}}{{end}}#{{$sub.Index}} {{RenderRefIssueTitle $.Context $sub.Title}}">
+							{{if not $sub.IsClosed}} <span class="ui green label">{{svg "octicon-issue-opened"}}</span>{{end}}
+							{{if $sub.IsClosed}} <span class="ui red label">{{svg "octicon-issue-closed"}}</span>{{end}}
+							{{if not (eq $sub.RepoID $s.RepoID)}}{{$sub.Repo.OwnerName}}/{{$sub.Repo.Name}}{{end}}#{{$sub.Index}}
+							{{RenderRefIssueTitle $.Context $sub.Title}}
+						</a>
+					</div>
+					{{end}}
+					{{if $s.HasMoreSubIssues}}
+					<div class="item">
+						<a class="title muted" href="{{$s.Link}}">
+							{{ctx.Locale.Tr "repo.issues.sub_issues.load_more"}}
+						</a>
+					</div>
+					{{end}}
+				</div>
 			</details>
 
 			{{else}}

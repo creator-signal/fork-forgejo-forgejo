@@ -142,6 +142,7 @@ type Issue struct {
 	isParentIssueLoaded bool     `xorm:"-"`
 	SubIssues           []*Issue `xorm:"-"`
 	isSubIssuesLoaded   bool     `xorm:"-"`
+	HasMoreSubIssues    bool     `xorm:"-"`
 }
 
 var (

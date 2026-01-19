@@ -122,63 +122,6 @@ function excludeLabel(item) {
   window.location.assign(href.replace(new RegExp(regStr), newStr));
 }
 
-export function initRepoIssueSubIssuesIntractable() {
-  $(document).on('click', '[data-sub-issue-intractable="has-sub-issues"]', async function () {
-
-    const hasSubIssues = $(this).find('a');
-    if (hasSubIssues.length > 1) {
-      console.log('Has sub-issues', hasSubIssues);
-      return;
-    }
-
-    console.log('Has sub-issues', hasSubIssues);
-
-    const subIssueIndex = $(this).data('sub-issue-index');
-    const repoName = $(this).data('sub-issue-repo-name');
-    const owner = $(this).data('sub-issue-owner');
-
-    console.log('Clicked sub-issues intractable', this, subIssueIndex, repoName);
-
-    const openIssueIcon = '<span class="ui green label"><svg viewBox="0 0 16 16" class="svg octicon-issue-opened" aria-hidden="true" width="16" height="16"><path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"></path><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0M1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0"></path></svg></span>'
-    const closedIssueIcon = '<span class="ui red label"><svg viewBox="0 0 16 16" class="svg octicon-issue-closed" aria-hidden="true" width="16" height="16"><path d="M11.28 6.78a.75.75 0 0 0-1.06-1.06L7.25 8.69 5.78 7.22a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0z"></path><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-1.5 0a6.5 6.5 0 1 0-13 0 6.5 6.5 0 0 0 13 0"></path></svg></span>'
-    const template = (href, state, thisOwner, thisRepoName, issueIndex, title) => `
-    <div class="item">
-      <a class="title muted" href="${href}"
-        data-tooltip-content="${thisOwner !== owner || thisRepoName !== repoName ? `${thisOwner}/${thisRepoName}` : ''}#${issueIndex} ${title}">
-        ${state === 'open' ? openIssueIcon : closedIssueIcon}
-
-        ${thisOwner !== owner || thisRepoName !== repoName ? `${thisOwner}/${thisRepoName}` : ''}#${issueIndex} ${title}
-      </a>
-    </div>
-    `;
-
-    // Make api request to get sub-issues
-    const response = await fetch(`${appSubUrl}/api/v1/repos/${owner}/${repoName}/issues/${subIssueIndex}/sub_issues`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      console.error('Failed to get sub-issues', response.statusText);
-      return;
-    }
-
-    const data = await response.json();
-    console.log('Sub-issues', data);
-
-    const div = $(this).find('div');
-
-    div.html('');
-
-    for (const subIssue of data) {
-      const href = `${appSubUrl}/repos/${owner}/${repoName}/issues/${subIssue.index}`;
-      const html = template(href, subIssue.state, subIssue.repository.owner, subIssue.repository.name, subIssue.id, subIssue.title);
-      div.append(html);
-    }
-  });
-}
 
 export function initRepoIssueSidebarList() {
   const repolink = $('#repolink').val();

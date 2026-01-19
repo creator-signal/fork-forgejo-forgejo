@@ -47,6 +47,63 @@ func (issue *Issue) LoadSubIssues(ctx context.Context) (err error) {
 	return nil
 }
 
+// GetSubIssueChildrenByIssueID returns immediate sub-issues that belong to given issue by ID with a limit.
+func GetSubIssueChildrenByIssueID(ctx context.Context, issueID int64, limit int) ([]*Issue, error) {
+	var subIssues []*Issue
+	return subIssues, db.GetEngine(ctx).
+		Table("issue").
+		Where("issue.parent_id = ?", issueID).
+		OrderBy("issue.is_closed ASC, issue.created_unix ASC").
+		Limit(limit).
+		Find(&subIssues)
+}
+
+// HasMoreSubIssuesByIssueID checks if there are more sub-issues than the limit using EXISTS and OFFSET.
+func HasMoreSubIssuesByIssueID(ctx context.Context, issueID int64, limit int) (bool, error) {
+	rows, err := db.GetEngine(ctx).
+		Table("issue").
+		Where("issue.parent_id = ?", issueID).
+		Cols("id").       // only fetch the primary key
+		Limit(limit + 1). // we only need to see limit+1 rows
+		Rows(new(struct{ ID int64 }))
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		if err := rows.Scan(new(struct{ ID int64 })); err != nil {
+			return false, err
+		}
+		count++
+		if count > limit {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// LoadSubIssueChildren loads immediate children for sub-issues of this issue.
+func (issue *Issue) LoadSubIssueChildren(ctx context.Context) error {
+	if len(issue.SubIssues) == 0 {
+		return nil
+	}
+
+	for _, sub := range issue.SubIssues {
+		var err error
+		sub.SubIssues, err = GetSubIssueChildrenByIssueID(ctx, sub.ID, 5)
+		if err != nil {
+			return err
+		}
+		sub.HasMoreSubIssues, err = HasMoreSubIssuesByIssueID(ctx, sub.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // LoadSubIssueRepos loads repositories for sub-issues of this issue.
 func (issue *Issue) LoadSubIssueRepos(ctx context.Context) error {
 	if len(issue.SubIssues) == 0 {

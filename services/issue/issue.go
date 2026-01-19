@@ -379,5 +379,33 @@ func FilterSubIssues(ctx context.Context, issue *issues_model.Issue, doer *user_
 		}
 		i++
 	}
+
+	if err = issue.LoadSubIssueChildren(ctx); err != nil {
+		return err
+	}
+
+	for _, subIssue := range issue.SubIssues {
+		for j := 0; j < len(subIssue.SubIssues); {
+			grandChild := subIssue.SubIssues[j]
+			if grandChild.RepoID != subIssue.RepoID && grandChild.RepoID != 0 {
+				if err = grandChild.LoadRepo(ctx); err != nil {
+					return err
+				}
+				perm, err := access_model.GetUserRepoPermission(ctx, grandChild.Repo, doer)
+				if err != nil {
+					return err
+				}
+				if !perm.CanReadIssuesOrPulls(false) {
+					subIssue.SubIssues = append(subIssue.SubIssues[:j], subIssue.SubIssues[j+1:]...)
+					continue
+				}
+			}
+			j++
+		}
+		if err = subIssue.LoadSubIssueRepos(ctx); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
