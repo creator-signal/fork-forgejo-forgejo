@@ -16,25 +16,59 @@
 			<strong>{{ctx.Locale.Tr "repo.issues.dependency.blocks_short"}}</strong>
 		</span>
 		<div class="ui relaxed divided list">
-			{{range .BlockingDependencies}}
-				<div class="item dependency{{if .Issue.IsClosed}} is-closed{{end}} tw-flex tw-items-center tw-justify-between">
-					<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
-						<a class="title muted" href="{{.Issue.Link}}" data-tooltip-content="#{{.Issue.Index}} {{RenderRefIssueTitle $.Context .Issue.Title}}">
-							#{{.Issue.Index}} {{RenderRefIssueTitle $.Context .Issue.Title}}
-						</a>
-						<div class="text small gt-ellipsis" data-tooltip-content="{{.Repository.OwnerName}}/{{.Repository.Name}}">
-							{{.Repository.OwnerName}}/{{.Repository.Name}}
+			{{/* show first 5 always */}}
+			{{range $i, $dep := .BlockingDependencies}}
+				{{if lt $i 5}}
+					<div class="item dependency{{if $dep.Issue.IsClosed}} is-closed{{end}} tw-flex tw-items-center tw-justify-between">
+						<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
+							<a class="title muted" href="{{$dep.Issue.Link}}" data-tooltip-content="#{{$dep.Issue.Index}} {{RenderRefIssueTitle $.Context $dep.Issue.Title}}">
+								#{{$dep.Issue.Index}} {{RenderRefIssueTitle $.Context $dep.Issue.Title}}
+							</a>
+							<div class="text small gt-ellipsis" data-tooltip-content="{{$dep.Repository.OwnerName}}/{{$dep.Repository.Name}}">
+								{{$dep.Repository.OwnerName}}/{{$dep.Repository.Name}}
+							</div>
+						</div>
+						<div class="item-right tw-flex tw-items-center tw-m-1">
+							{{if and $.CanCreateIssueDependencies (not $.Repository.IsArchived)}}
+								<a class="delete-dependency-button ci muted" data-id="{{$dep.Issue.ID}}" data-type="blocking" data-tooltip-content="{{ctx.Locale.Tr "repo.issues.dependency.remove_info"}}">
+									{{svg "octicon-trash" 16}}
+								</a>
+							{{end}}
 						</div>
 					</div>
-					<div class="item-right tw-flex tw-items-center tw-m-1">
-						{{if and $.CanCreateIssueDependencies (not $.Repository.IsArchived)}}
-							<a class="delete-dependency-button ci muted" data-id="{{.Issue.ID}}" data-type="blocking" data-tooltip-content="{{ctx.Locale.Tr "repo.issues.dependency.remove_info"}}">
-								{{svg "octicon-trash" 16}}
-							</a>
+				{{end}}
+			{{end}}
+
+			{{/* if there are more, put the rest into a details/summary toggle */}}
+			{{if gt (len .BlockingDependencies) 5}}
+				<details class="dependency-details">
+					<summary>{{printf "Show all %d" (len .BlockingDependencies)}}</summary>
+					<div class="extra-dependencies">
+						{{range $i, $dep := .BlockingDependencies}}
+							{{if ge $i 5}}
+								<div class="item dependency{{if $dep.Issue.IsClosed}} is-closed{{end}} tw-flex tw-items-center tw-justify-between">
+									<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
+										<a class="title muted" href="{{$dep.Issue.Link}}" data-tooltip-content="#{{$dep.Issue.Index}} {{RenderRefIssueTitle $.Context $dep.Issue.Title}}">
+											#{{$dep.Issue.Index}} {{RenderRefIssueTitle $.Context $dep.Issue.Title}}
+										</a>
+										<div class="text small gt-ellipsis" data-tooltip-content="{{$dep.Repository.OwnerName}}/{{$dep.Repository.Name}}">
+											{{$dep.Repository.OwnerName}}/{{$dep.Repository.Name}}
+										</div>
+									</div>
+									<div class="item-right tw-flex tw-items-center tw-m-1">
+										{{if and $.CanCreateIssueDependencies (not $.Repository.IsArchived)}}
+											<a class="delete-dependency-button ci muted" data-id="{{$dep.Issue.ID}}" data-type="blocking" data-tooltip-content="{{ctx.Locale.Tr "repo.issues.dependency.remove_info"}}">
+												{{svg "octicon-trash" 16}}
+											</a>
+										{{end}}
+									</div>
+								</div>
+							{{end}}
 						{{end}}
 					</div>
-				</div>
+				</details>
 			{{end}}
+
 			{{if .BlockingDependenciesNotPermitted}}
 				<div class="item tw-flex tw-items-center tw-justify-between gt-ellipsis">
 					<span>{{ctx.Locale.TrN (len .BlockingDependenciesNotPermitted) "repo.issues.dependency.no_permission_1" "repo.issues.dependency.no_permission_n" (len .BlockingDependenciesNotPermitted)}}</span>
@@ -48,26 +82,60 @@
 			<strong>{{ctx.Locale.Tr "repo.issues.dependency.blocked_by_short"}}</strong>
 		</span>
 		<div class="ui relaxed divided list">
-			{{range .BlockedByDependencies}}
-				<div class="item dependency{{if .Issue.IsClosed}} is-closed{{end}} tw-flex tw-items-center tw-justify-between">
-					<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
-						{{$title := RenderRefIssueTitle $.Context .Issue.Title}}
-						<a class="title muted" href="{{.Issue.Link}}" data-tooltip-content="#{{.Issue.Index}} {{RenderRefIssueTitle $.Context .Issue.Title}}">
-							#{{.Issue.Index}} {{RenderRefIssueTitle $.Context .Issue.Title}}
-						</a>
-						<div class="text small gt-ellipsis" data-tooltip-content="{{.Repository.OwnerName}}/{{.Repository.Name}}">
-							{{.Repository.OwnerName}}/{{.Repository.Name}}
+			{{/* show first 5 always */}}
+			{{range $i, $dep := .BlockedByDependencies}}
+				{{if lt $i 5}}
+					<div class="item dependency{{if $dep.Issue.IsClosed}} is-closed{{end}} tw-flex tw-items-center tw-justify-between">
+						<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
+							{{$title := RenderRefIssueTitle $.Context $dep.Issue.Title}}
+							<a class="title muted" href="{{$dep.Issue.Link}}" data-tooltip-content="#{{$dep.Issue.Index}} {{RenderRefIssueTitle $.Context $dep.Issue.Title}}">
+								#{{$dep.Issue.Index}} {{RenderRefIssueTitle $.Context $dep.Issue.Title}}
+							</a>
+							<div class="text small gt-ellipsis" data-tooltip-content="{{$dep.Repository.OwnerName}}/{{$dep.Repository.Name}}">
+								{{$dep.Repository.OwnerName}}/{{$dep.Repository.Name}}
+							</div>
+						</div>
+						<div class="item-right tw-flex tw-items-center tw-m-1">
+							{{if and $.CanCreateIssueDependencies (not $.Repository.IsArchived)}}
+								<a class="delete-dependency-button ci muted" data-id="{{$dep.Issue.ID}}" data-type="blockedBy" data-tooltip-content="{{ctx.Locale.Tr "repo.issues.dependency.remove_info"}}">
+									{{svg "octicon-trash" 16}}
+								</a>
+							{{end}}
 						</div>
 					</div>
-					<div class="item-right tw-flex tw-items-center tw-m-1">
-						{{if and $.CanCreateIssueDependencies (not $.Repository.IsArchived)}}
-							<a class="delete-dependency-button ci muted" data-id="{{.Issue.ID}}" data-type="blockedBy" data-tooltip-content="{{ctx.Locale.Tr "repo.issues.dependency.remove_info"}}">
-								{{svg "octicon-trash" 16}}
-							</a>
+				{{end}}
+			{{end}}
+
+			{{if gt (len .BlockedByDependencies) 5}}
+				<details class="dependency-details">
+					<summary>{{printf "Show all %d" (len .BlockedByDependencies)}}</summary>
+					<div class="extra-dependencies">
+						{{range $i, $dep := .BlockedByDependencies}}
+							{{if ge $i 5}}
+								<div class="item dependency{{if $dep.Issue.IsClosed}} is-closed{{end}} tw-flex tw-items-center tw-justify-between">
+									<div class="item-left tw-flex tw-justify-center tw-flex-col tw-flex-1 gt-ellipsis">
+										{{$title := RenderRefIssueTitle $.Context $dep.Issue.Title}}
+										<a class="title muted" href="{{$dep.Issue.Link}}" data-tooltip-content="#{{$dep.Issue.Index}} {{RenderRefIssueTitle $.Context $dep.Issue.Title}}">
+											#{{$dep.Issue.Index}} {{RenderRefIssueTitle $.Context $dep.Issue.Title}}
+										</a>
+										<div class="text small gt-ellipsis" data-tooltip-content="{{$dep.Repository.OwnerName}}/{{$dep.Repository.Name}}">
+											{{$dep.Repository.OwnerName}}/{{$dep.Repository.Name}}
+										</div>
+									</div>
+									<div class="item-right tw-flex tw-items-center tw-m-1">
+										{{if and $.CanCreateIssueDependencies (not $.Repository.IsArchived)}}
+											<a class="delete-dependency-button ci muted" data-id="{{$dep.Issue.ID}}" data-type="blocking" data-tooltip-content="{{ctx.Locale.Tr "repo.issues.dependency.remove_info"}}">
+												{{svg "octicon-trash" 16}}
+											</a>
+										{{end}}
+									</div>
+								</div>
+							{{end}}
 						{{end}}
 					</div>
-				</div>
+				</details>
 			{{end}}
+
 			{{if $.CanCreateIssueDependencies}}
 				{{range .BlockedByDependenciesNotPermitted}}
 					<div class="item dependency{{if .Issue.IsClosed}} is-closed{{end}} tw-flex tw-items-center tw-justify-between">
