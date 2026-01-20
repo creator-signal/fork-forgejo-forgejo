@@ -102,6 +102,11 @@ func TestPackageDebian(t *testing.T) {
 								AddBasicAuth(user.Name)
 							MakeRequest(t, req, http.StatusCreated)
 
+							req = NewRequestWithBody(t, "PUT", uploadURL, createArchive(packageName, packageVersion, architecture)).
+								AddBasicAuth(user.Name).
+								SetHeader("content-type", "multipart/form-data")
+							MakeRequest(t, req, http.StatusBadRequest)
+
 							pv, err := packages.GetVersionByNameAndVersion(db.DefaultContext, user.ID, packages.TypeDebian, packageName, packageVersion)
 							require.NoError(t, err)
 
