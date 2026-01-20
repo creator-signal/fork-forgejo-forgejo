@@ -18,6 +18,7 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	packages_service "forgejo.org/services/packages"
+	container_client "forgejo.org/services/packages/container"
 )
 
 // ListPackages gets all packages of an owner
@@ -401,6 +402,15 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+	}
+
+	connected := true
+	if rrOpts.TestConnection {
+		connected, err = container_client.RemoteRegistryConnected(ctx, &rr)
+	}
+
+	if !connected {
+		ctx.Error(http.StatusInternalServerError, "Connection Test", err)
 	}
 
 	err = packages_service.CreateRemoteRegistry(ctx, rr)
