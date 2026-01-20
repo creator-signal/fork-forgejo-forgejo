@@ -42,8 +42,6 @@ func NewRemoteRegistry(opts RROpts) (rr_model.RemoteRegistry, error) {
 }
 
 func CreateRemoteRegistry(ctx *context.APIContext, rr rr_model.RemoteRegistry) error {
-	// Check if remote registry already exists
-
 	return rr_model.CreateRemoteRegistry(ctx, rr)
 }
 
