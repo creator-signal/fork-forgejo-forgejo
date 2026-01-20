@@ -21,7 +21,7 @@
 						<span class="date">{{.Deadline}}</span>
 					</div>
 					<div class="description">
-						{{.Description | Str2html}}
+						{{.Description | SafeHTML}}
 					</div>
 				</div>
 				<div class="extra content">

@@ -8,7 +8,7 @@
 					<div class="sub header">{{.Assignment.Deadline}}</div>
 				</h1>
 				<div class="ui segment">
-					{{.Assignment.Description | Str2html}}
+					{{.Assignment.Description | SafeHTML}}
 				</div>
 			</div>
 			<div class="four wide column">

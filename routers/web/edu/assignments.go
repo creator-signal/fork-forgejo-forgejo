@@ -2,9 +2,11 @@ package edu
 
 import (
 	"net/http"
+	"time"
 
 	"forgejo.org/internal/edu"
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
@@ -115,4 +117,67 @@ func JoinAssignment(ctx *context.Context) {
 	}
 
 	ctx.Redirect(setting.AppSubURL + "/edu/assignments/" + ctx.Params(":id"))
+}
+
+func NewAssignment(ctx *context.Context) {
+	ctx.Data["Title"] = "New Assignment"
+	ctx.Data["PageIsEduAssignments"] = true
+	ctx.HTML(http.StatusOK, "edu/assignment_new")
+}
+
+func NewAssignmentPost(ctx *context.Context) {
+	ctx.Data["Title"] = "New Assignment"
+	ctx.Data["PageIsEduAssignments"] = true
+
+	title := ctx.FormString("title")
+	description := ctx.FormString("description")
+	templateRepoName := ctx.FormString("template_repo")
+	deadlineStr := ctx.FormString("deadline")
+
+	if title == "" || templateRepoName == "" {
+		ctx.RenderWithErr("Title and Template Repository are required.", "edu/assignment_new", nil)
+		return
+	}
+
+	repo, err := repo_model.GetRepositoryByName(ctx, ctx.Doer.ID, templateRepoName)
+	if err != nil {
+		if repo_model.IsErrRepoNotExist(err) {
+			ctx.RenderWithErr("Repository not found in your account.", "edu/assignment_new", nil)
+			return
+		}
+		ctx.ServerError("GetRepositoryByName", err)
+		return
+	}
+
+	// datetimeformat: YYYY-MM-DDTHH:MM
+	var deadlineUnix int64
+	if deadlineStr != "" {
+		t, err := time.Parse("2006-01-02T15:04", deadlineStr)
+		if err != nil {
+			log.Warn("Failed to parse deadline: %v", err)
+		} else {
+			deadlineUnix = t.Unix()
+		}
+	}
+
+	svc := getEduService(ctx)
+	if svc == nil {
+		ctx.ServerError("getEduService", nil)
+		return
+	}
+
+	opts := edu.CreateAssignmentOptions{
+		RepoID:       repo.ID,
+		Title:        title,
+		Description:  description,
+		DeadlineUnix: deadlineUnix,
+	}
+
+	_, err = svc.CreateAssignment(ctx, opts)
+	if err != nil {
+		ctx.ServerError("CreateAssignment", err)
+		return
+	}
+
+	ctx.Redirect(setting.AppSubURL + "/edu/assignments")
 }

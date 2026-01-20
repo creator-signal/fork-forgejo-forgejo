@@ -518,6 +518,8 @@ func registerRoutes(m *web.Route) {
 
 	m.Group("/edu", func() {
 		m.Get("/assignments", edu.Assignments)
+		m.Get("/assignments/new", edu.NewAssignment)
+		m.Post("/assignments/new", edu.NewAssignmentPost)
 		m.Get("/assignments/{id}", edu.AssignmentDetail)
 		m.Post("/assignments/{id}/join", edu.JoinAssignment)
 		m.Get("/assignments/{id}/submissions", edu.InstructorSubmissions)
