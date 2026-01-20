@@ -29,6 +29,7 @@ import (
 	"forgejo.org/routers/web/admin"
 	"forgejo.org/routers/web/auth"
 	"forgejo.org/routers/web/devtest"
+	"forgejo.org/routers/web/edu"
 	"forgejo.org/routers/web/events"
 	"forgejo.org/routers/web/explore"
 	"forgejo.org/routers/web/feed"
@@ -514,6 +515,13 @@ func registerRoutes(m *web.Route) {
 
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/milestones", reqSignIn, reqMilestonesDashboardPageEnabled, user.Milestones)
+
+	m.Group("/edu", func() {
+		m.Get("/assignments", edu.Assignments)
+		m.Get("/assignments/{id}", edu.AssignmentDetail)
+		m.Post("/assignments/{id}/join", edu.JoinAssignment)
+		m.Get("/assignments/{id}/submissions", edu.InstructorSubmissions)
+	}, reqSignIn)
 
 	// ***** START: User *****
 	// "user/login" doesn't need signOut, then logged-in users can still access this route for redirection purposes by "/user/login?redirec_to=..."

@@ -1,0 +1,33 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu assignment-detail">
+	<div class="ui container">
+		<div class="ui grid">
+			<div class="sixteen wide column">
+				<h1 class="ui header">
+					{{.Assignment.Title}}
+				</h1>
+				<div class="ui segment">
+					<p>{{.Assignment.Description}}</p>
+					{{if .Assignment.DeadlineUnix}}
+						<p><strong>Deadline:</strong> {{.Assignment.Deadline}}</p>
+					{{end}}
+				</div>
+
+				<div class="ui segment">
+					{{if .Submission}}
+						<h3 class="ui header">Status: {{.Submission.Status}}</h3>
+						{{if .Submission.StudentRepoID}}
+							<a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}" class="ui primary button">Go to Repository</a>
+						{{end}}
+					{{else}}
+						<form action="{{AppSubUrl}}/edu/assignments/{{.Assignment.ID}}/join" method="post">
+							{{.CsrfTokenHtml}}
+							<button class="ui green button">Start Assignment</button>
+						</form>
+					{{end}}
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

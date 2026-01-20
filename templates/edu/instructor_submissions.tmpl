@@ -1,0 +1,51 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu instructor-submissions">
+	<div class="ui container">
+		<div class="ui grid">
+			<div class="sixteen wide column">
+				<h1 class="ui header">
+					{{.Assignment.Title}} - Submissions
+				</h1>
+				<div class="ui segment">
+					<table class="ui celled table">
+						<thead>
+							<tr>
+								<th>Student</th>
+								<th>Status</th>
+								<th>Link</th>
+								<th>Last Updated</th>
+							</tr>
+						</thead>
+						<tbody>
+							{{range .Submissions}}
+								<tr>
+									<td>
+										{{with (index $.UserMap .UserID)}}
+											{{.Name}}
+										{{else}}
+											User {{.UserID}}
+										{{end}}
+									</td>
+									<td>
+										<span class="ui label {{if eq .Status "passed"}}green{{else if eq .Status "failed"}}red{{else}}grey{{end}}">
+											{{.Status}}
+										</span>
+									</td>
+									<td>
+										<a href="{{AppSubUrl}}/repositories/{{.StudentRepoID}}">Sort Repo</a>
+									</td>
+									<td>{{.UpdatedUnix}}</td> <!-- TODO: Format time -->
+								</tr>
+							{{else}}
+								<tr>
+									<td colspan="4">No submissions yet.</td>
+								</tr>
+							{{end}}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

@@ -1,0 +1,32 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu assignments">
+	<div class="ui container">
+		<div class="ui grid">
+			<div class="sixteen wide column">
+				<h1 class="ui header">
+					{{.Title}}
+				</h1>
+				<div class="ui attached segment">
+					<div class="ui relaxed divided list">
+						{{range .Assignments}}
+							<div class="item">
+								<div class="content">
+									<a class="header" href="{{AppSubUrl}}/edu/assignments/{{.ID}}">{{.Title}}</a>
+									<div class="description">{{.Description}}</div>
+									<div class="extra">
+										{{if .DeadlineUnix}}
+											<span class="ui label tiny">Deadline: {{.Deadline}}</span>
+										{{end}}
+									</div>
+								</div>
+							</div>
+						{{else}}
+							<div class="item">{{.locale.Tr "edu.no_assignments"}}</div>
+						{{end}}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

@@ -1,0 +1,41 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu-assignments-list">
+	<div class="ui container">
+		<div class="ui one column grid">
+			<div class="column">
+				<h1 class="ui header">
+					{{ctx.Locale.Tr "edu.assignments"}}
+					<div class="sub header">{{ctx.Locale.Tr "edu.assignments_desc"}}</div>
+				</h1>
+			</div>
+		</div>
+
+		<div class="ui divider"></div>
+
+		<div class="ui three stackable cards">
+			{{range .Assignments}}
+			<div class="card">
+				<div class="content">
+					<div class="header">{{.Title}}</div>
+					<div class="meta">
+						<span class="date">{{.Deadline}}</span>
+					</div>
+					<div class="description">
+						{{.Description | Str2html}}
+					</div>
+				</div>
+				<div class="extra content">
+					<a href="{{AppSubUrl}}/edu/assignments/{{.ID}}" class="ui primary button">
+						{{ctx.Locale.Tr "edu.view_assignment"}}
+					</a>
+				</div>
+			</div>
+			{{else}}
+			<div class="ui message">
+				<p>{{ctx.Locale.Tr "edu.no_assignments"}}</p>
+			</div>
+			{{end}}
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
