@@ -497,7 +497,7 @@ func TestAPIReleaseMissingAsset(t *testing.T) {
 	MakeRequest(t, req, http.StatusBadRequest)
 }
 
-func TestAPIReleaseMissingTitleAsset(t *testing.T) {
+func TestAPIReleaseMissingTitle(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
