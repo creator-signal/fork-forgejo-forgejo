@@ -797,19 +797,17 @@ func (g *GitlabDownloader) awardsToReactions(awards []*gitlab.AwardEmoji) []*bas
 
 // Build on the assumption, that PR IDs will resolve after Issue IDs
 func (g *GitlabDownloader) convertMRReference(body string) string {
-	maxLength := len(body)
-	for i := 0; i < maxLength; i++ {
+	for i := 0; i < len(body); i++ {
 		if body[i] == '!' {
 			var collected string
-			for k := i + 1; k < maxLength; k++ { // for each rune after ! check if next rune is integer
+			for k := i + 1; k < len(body); k++ { // for each rune after ! check if next rune is integer
 				if body[k]-'0' <= 9 {
 					collected += string(body[k])
-					if k == maxLength-1 { // The last rune in the string was an integer
+					if k == len(body)-1 { // The last rune in the string was an integer
 						body = g.updateAndInsert(body, collected, i+1, k)
 					}
 				} else if len(collected) > 0 { // Integers have been collected, update value
 					body = g.updateAndInsert(body, collected, i+1, k)
-					maxLength = len(body)
 					i = k
 					break // We're done, continue after our replacement
 				}
