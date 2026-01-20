@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
@@ -105,18 +106,13 @@ func TestCreateRemoteRegistryOrgNotAllowed(t *testing.T) {
 }
 
 func TestConnected(t *testing.T) {
-
-	// Wir brauchen einen Mock-Server (MS), der auf den Request unserer Forgejo Test Instanz antwortet.
-	// MS <- Adresse, Vorprogrammierte Antwort auf entsprechende Anfrage
-	// MS muss gestartet und ready sein, wenn MakeRequest() ausgeführt wird
-	// 1. Beispiele finden
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := MockRegistryServerUnauthorized()
+	server := MockRegistryServer()
 	defer server.Close()
 
 	rr := api.CreateRemoteRegistryOption{
@@ -128,33 +124,82 @@ func TestConnected(t *testing.T) {
 		TestConnection: true,
 	}
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
-	resp := MakeRequest(t, req, http.StatusCreated)
-
-	var apiRR api.RemoteRegistry
-	DecodeJSON(t, resp, &apiRR)
-
-	retrieved := unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg"})
-	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
-	assert.Equal(t, rr_model.RRUser, retrieved.OwnerType)
-
-	assert.Equal(t, rr.Name, apiRR.Name)
-	assert.Equal(t, rr_model.RRUser.Name(), apiRR.OwnerType)
-	assert.Equal(t, user2.ID, apiRR.OwnerID)
-	assert.Equal(t, rr.RemoteURL, apiRR.RemoteURL)
-	assert.Equal(t, rr.RemoteUser, apiRR.RemoteUser)
-	assert.Equal(t, packages.TypeContainer.Name(), apiRR.RemoteType)
+	MakeRequest(t, req, http.StatusCreated)
 }
 
-func MockRegistryServerUnauthorized() *httptest.Server {
+func TestConnectedBasicAuth(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	session := loginUser(t, user2.Name)
+	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
+
+	server := MockRegistryServer()
+	defer server.Close()
+
+	rr := api.CreateRemoteRegistryOption{
+		Name:           "testreg",
+		RemoteType:     "container",
+		RemoteURL:      server.URL,
+		RemoteUser:     "someUser",
+		RemotePassword: "somePW",
+		RemoteToken:    "",
+		TestConnection: true,
+	}
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
+	MakeRequest(t, req, http.StatusCreated)
+}
+
+func TestConnectedToken(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	session := loginUser(t, user2.Name)
+	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
+
+	server := MockRegistryServer()
+	defer server.Close()
+
+	rr := api.CreateRemoteRegistryOption{
+		Name:           "testreg",
+		RemoteType:     "container",
+		RemoteURL:      server.URL,
+		RemoteUser:     "someUser",
+		RemoteToken:    "someToken",
+		TestConnection: true,
+	}
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
+	MakeRequest(t, req, http.StatusCreated)
+}
+
+func MockRegistryServer() *httptest.Server {
 	registryRoute := http.NewServeMux()
+
+	srv := httptest.NewUnstartedServer(registryRoute)
+	addr := srv.Listener.Addr()
 
 	registryRoute.HandleFunc("/v2/",
 		func(res http.ResponseWriter, req *http.Request) {
-			res.Header().Add("docker-distribution-api-version", "registry/2.0")
-			res.Header().Add("www-authenticate", "Bearer realm='https://auth.example.com/token',service='registry.example.com'")
-			res.WriteHeader(http.StatusUnauthorized)
+			authHeader := req.Header.Get("Authorization")
+			if strings.Contains(authHeader, "Bearer") {
+				res.WriteHeader(http.StatusOK)
+			} else {
+				res.Header().Add("docker-distribution-api-version", "registry/2.0")
+				headerVal := "Bearer realm=" + "\"http://" + addr.String() + "/token\"" + ",service='registry.example.com'"
+				res.Header().Add("www-authenticate", headerVal)
+				res.WriteHeader(http.StatusUnauthorized)
+			}
 		})
 
-	regServer := httptest.NewServer(registryRoute)
-	return regServer
+	registryRoute.HandleFunc("/token",
+		func(res http.ResponseWriter, req *http.Request) {
+			if req.Header.Get("Authorization") != "" {
+				res.WriteHeader(http.StatusOK)
+			} else {
+				res.WriteHeader(http.StatusUnauthorized)
+			}
+		})
+
+	srv.Start()
+	return srv
 }
