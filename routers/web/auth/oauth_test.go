@@ -4,7 +4,6 @@
 package auth
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/jwtx"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/templates"
@@ -110,9 +110,8 @@ func TestOIDCWellKnownEnabled(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	oidcjson := make(map[string]any)
-	err = json.Unmarshal([]byte(resp.Body.String()), &oidcjson)
-	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal([]byte(resp.Body.String()), &oidcjson))
 
 	assert.Equal(t, strings.TrimSuffix(setting.AppURL, "/"), oidcjson["issuer"])
-	assert.Equal(t, []interface{}{oauth2.DefaultSigningKey.SigningMethod().Alg()}, oidcjson["id_token_signing_alg_values_supported"])
+	assert.Equal(t, []any{oauth2.DefaultSigningKey.SigningMethod().Alg()}, oidcjson["id_token_signing_alg_values_supported"])
 }
