@@ -93,5 +93,5 @@ test.describe('Switch CSS properties', () => {
 
     expect(await evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight)).toBeTruthy();
     expect(await evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight)).toBeTruthy();
-  })
+  });
 });
