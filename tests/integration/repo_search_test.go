@@ -131,10 +131,23 @@ func testSearch(t *testing.T, rawURL string, expected []string, indexer bool) {
 
 // testDropdownOptions verifies additional properties of dropdown options
 func testDropdownOptions(t *testing.T, container *goquery.Selection, options []string, locale translation.Locale) {
-	for _, option := range options {
+	tr := make([]string, len(options))
+	for i, option := range options {
+		tr[i] = locale.TrString(fmt.Sprintf("search.%s", option))
+	}
+
+	// assert that the default value (in a .text adjacent to the menu) is a valid option
+	defaultOpt := container.
+		Find(".menu[data-test-tag=fuzzy-dropdown]").
+		Parent().
+		Find(".text").
+		Text()
+	assert.Contains(t, tr, strings.TrimSpace(defaultOpt))
+
+	for i, option := range options {
 		label := container.Find(fmt.Sprintf("label.item:has(input[value='%s'])", option))
 		name := strings.TrimSpace(label.Text())
-		assert.Equal(t, name, locale.TrString(fmt.Sprintf("search.%s", option)))
+		assert.Equal(t, name, tr[i])
 
 		tooltip, exists := label.Attr("data-tooltip-content")
 		assert.True(t, exists)
