@@ -8,7 +8,7 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test} from './utils_e2e.ts';
+import {test, login_user} from './utils_e2e.ts';
 
 test.describe('Switch CSS properties', () => {
   const noBg = 'rgba(0, 0, 0, 0)';
@@ -76,4 +76,22 @@ test.describe('Switch CSS properties', () => {
     expect(await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight)).toBeTruthy();
     expect(await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight)).toBeTruthy();
   });
+
+  // Subtest for areas that can't be reached without JS
+  test('With JS', async ({browser}, workerInfo) => {
+    const context = await login_user(browser, workerInfo, 'user2');
+    const page = await context.newPage();
+
+    // Go to files tab of a reviewable pull request
+    await page.goto('/user2/repo1/pulls/5/files');
+
+    // Open review box
+    await page.locator('#review-box .js-btn-review').click();
+
+    // Markdown editor has a special rule for a shorter switch
+    const itemHeight = 28;
+
+    expect(await evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight)).toBeTruthy();
+    expect(await evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight)).toBeTruthy();
+  })
 });
