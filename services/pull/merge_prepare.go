@@ -312,8 +312,14 @@ regular_rebase:
 	ctx.errbuf.Reset()
 
 	// Rebase before merging
-	if err := git.NewCommand(ctx, "rebase").AddDynamicArguments(baseBranch).
-		Run(ctx.RunOpts()); err != nil {
+	rebaseCmd := git.NewCommand(ctx, "rebase")
+	if ctx.signKeyID == "" {
+		rebaseCmd.AddArguments("--no-gpg-sign")
+	} else {
+		rebaseCmd.AddOptionFormat("--gpg-sign=%s", ctx.signKeyID)
+	}
+	rebaseCmd.AddDynamicArguments(baseBranch)
+	if err := rebaseCmd.Run(ctx.RunOpts()); err != nil {
 		// Rebase will leave a REBASE_HEAD file in .git if there is a conflict
 		if _, statErr := os.Stat(filepath.Join(ctx.tmpBasePath, ".git", "REBASE_HEAD")); statErr == nil {
 			var commitSha string
