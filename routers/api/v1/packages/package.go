@@ -406,7 +406,8 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 
 	connected := true
 	if rrOpts.TestConnection {
-		connected, err = container_client.RemoteRegistryConnected(ctx, &rr)
+		registryClient := container_client.NewContainerRegistryClient(&rr)
+		connected, err = registryClient.RemoteRegistryConnected(ctx)
 	}
 
 	if !connected {
