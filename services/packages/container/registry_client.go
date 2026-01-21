@@ -39,8 +39,8 @@ func PingRemoteRegistry(ctx context.Context, rr *rr_model.RemoteRegistry) (*http
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Warn("Did not find a container registry for %q: %v", rr.Name, err)
-		return &http.Response{}, ErrNoRemoteRegistry
+		log.Warn("There was an error pinging %q: %v", rr.Name, err)
+		return &http.Response{}, fmt.Errorf("failed to connect to host: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -49,36 +49,34 @@ func PingRemoteRegistry(ctx context.Context, rr *rr_model.RemoteRegistry) (*http
 
 // RemoteRegistryAvailable tests if the remote registry exists
 func RemoteRegistryAvailable(resp *http.Response, rr *rr_model.RemoteRegistry) (bool, error) {
-	log.Trace("Testing connection to remote registry %q at %s", rr.Name, rr.RemoteURL)
+	log.Trace("Checking response from %q at %s", rr.Name, rr.RemoteURL)
 
 	if resp.StatusCode == http.StatusOK {
-		log.Trace("Connected to remote registry %q", rr.Name)
+		log.Trace("Remote registry %q exists", rr.Name)
 		return true, nil
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized && validateRemoteRegistryHeader(*resp) {
+		log.Trace("Remote registry %q exists but request was unauthenticated", rr.Name)
 		return true, nil
 	}
 
-	return false, fmt.Errorf("remote registry %q returned unexpected status %d", rr.Name, resp.StatusCode)
+	return false, ErrNoRemoteRegistry
 }
 
-// RemoteRegistryAuthenticated does authentication tests against an available remote registry
-func RemoteRegistryAuthenticated(ctx context.Context, resp *http.Response, rr *rr_model.RemoteRegistry) (bool, error) {
-	log.Trace("Checking authentication against %q at %s", rr.Name, rr.RemoteURL)
-
+func AuthenticateRemoteRegistry(ctx context.Context, resp *http.Response, rr *rr_model.RemoteRegistry) (*http.Response, error) {
 	hasUserAndPW := rr.RemoteUser != "" && rr.RemotePassword != ""
 	hasToken := rr.RemoteToken != ""
 
 	authHeader := resp.Header.Get("WWW-Authenticate")
 	authURL, err := extractAuthURL(authHeader)
 	if err != nil {
-		return false, fmt.Errorf("failed to extract auth URL: %w", err)
+		return &http.Response{}, fmt.Errorf("failed to extract auth URL: %w", err)
 	}
 
 	serviceURL, err := extractServiceURL(authHeader) // TODO Forgejo itself only returns container_registry
 	if err != nil {
-		return false, fmt.Errorf("failed to extract service URL: %w", err)
+		return &http.Response{}, fmt.Errorf("failed to extract service URL: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", authURL, nil)
@@ -87,7 +85,7 @@ func RemoteRegistryAuthenticated(ctx context.Context, resp *http.Response, rr *r
 	query.Add("scope", "\"*\"")
 	req.URL.RawQuery = query.Encode()
 	if err != nil {
-		return false, fmt.Errorf("failed to create auth request: %w", err)
+		return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", "Forgejo/1.0")
@@ -97,7 +95,7 @@ func RemoteRegistryAuthenticated(ctx context.Context, resp *http.Response, rr *r
 	} else if hasUserAndPW {
 		req.SetBasicAuth(rr.RemoteUser, rr.RemotePassword)
 	} else {
-		return false, fmt.Errorf("no authentication info given for %q:", rr.Name)
+		return &http.Response{}, fmt.Errorf("no authentication info given for %q:", rr.Name)
 	}
 
 	// Create HTTP client with reasonable timeout
@@ -105,12 +103,19 @@ func RemoteRegistryAuthenticated(ctx context.Context, resp *http.Response, rr *r
 
 	authResp, err := client.Do(req)
 	if err != nil {
-		log.Warn("Remote registry connection test failed for %q: %v", rr.Name, err)
-		return false, ErrNoRemoteRegistry
+		log.Warn("Remote registry authentication failed for %q: %v", rr.Name, err)
+		return &http.Response{}, fmt.Errorf("failed to connect to auth endpoint: %w", err)
 	}
 	defer authResp.Body.Close()
 
-	if authResp.StatusCode == http.StatusOK {
+	return authResp, nil
+}
+
+// RemoteRegistryAuthenticated does authentication tests against an available remote registry
+func RemoteRegistryAuthenticated(resp *http.Response, rr *rr_model.RemoteRegistry) (bool, error) {
+	log.Trace("Checking authentication against %q at %s", rr.Name, rr.RemoteURL)
+
+	if resp.StatusCode == http.StatusOK {
 		log.Trace("Connected to remote registry %q", rr.Name)
 		return true, nil
 	}
@@ -130,9 +135,14 @@ func RemoteRegistryConnected(ctx context.Context, rr *rr_model.RemoteRegistry) (
 		return false, err
 	}
 
+	authResp, err := AuthenticateRemoteRegistry(ctx, resp, rr)
+	if err != nil {
+		return false, err
+	}
+
 	isAuthenticated := false
 	if isRegistry {
-		isAuthenticated, err = RemoteRegistryAuthenticated(ctx, resp, rr)
+		isAuthenticated, err = RemoteRegistryAuthenticated(authResp, rr)
 	}
 
 	if isRegistry && isAuthenticated {
