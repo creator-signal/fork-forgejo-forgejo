@@ -185,23 +185,33 @@ func UpdateRunJobWithoutNotification(ctx context.Context, job *ActionRunJob, con
 		if err != nil {
 			return 0, err
 		}
-		run.Status = AggregateJobStatus(jobs)
+
+		updateRequired := false
+		newStatus := AggregateJobStatus(jobs)
+		if run.Status != newStatus {
+			run.Status = newStatus
+			updateRequired = true
+		}
 		if run.Started.IsZero() && run.Status.IsRunning() {
 			run.Started = timeutil.TimeStampNow()
+			updateRequired = true
 		}
 		if run.Stopped.IsZero() && run.Status.IsDone() {
 			run.Stopped = timeutil.TimeStampNow()
+			updateRequired = true
 		}
-		// As the caller has to ensure the ActionRunNowDone notification is sent we can ignore doing so here.
-		if err := UpdateRunWithoutNotification(ctx, run, "status", "started", "stopped"); err != nil {
-			return 0, fmt.Errorf("update run %d: %w", run.ID, err)
+		if updateRequired {
+			// As the caller has to ensure the ActionRunNowDone notification is sent we can ignore doing so here.
+			if err := UpdateRunWithoutNotification(ctx, run, "status", "started", "stopped"); err != nil {
+				return 0, fmt.Errorf("update run %d: %w", run.ID, err)
+			}
 		}
 	}
 
 	return affected, nil
 }
 
-func AggregateJobStatus(jobs []*ActionRunJob) Status {
+var AggregateJobStatus = func(jobs []*ActionRunJob) Status {
 	allSuccessOrSkipped := len(jobs) != 0
 	allSkipped := len(jobs) != 0
 	var hasFailure, hasCancelled, hasWaiting, hasRunning, hasBlocked bool
@@ -305,4 +315,13 @@ func (job *ActionRunJob) HasIncompleteWith() (bool, *jobparser.IncompleteNeeds, 
 		return false, nil, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
 	}
 	return jobWorkflow.IncompleteWith, jobWorkflow.IncompleteWithNeeds, jobWorkflow.IncompleteWithMatrix, nil
+}
+
+// EnableOpenIDConnect checks whether the job allows for ID token generation.
+func (job *ActionRunJob) EnableOpenIDConnect() (bool, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
+	if err != nil {
+		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.EnableOpenIDConnect, nil
 }
