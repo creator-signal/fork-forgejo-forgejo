@@ -172,8 +172,8 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			assert.Greater(t, htmlDoc.Find(".navbar-right details.dropdown a").Length(), 1)
 
 			// 500 page
-			reset := enableDevtest()
-			req = NewRequest(t, "GET", "/devtest/error/500")
+			reset := enableDemoPages()
+			req = NewRequest(t, "GET", "/demo/error/500")
 			req.Header.Add("Accept", "text/html")
 			resp = session.MakeRequest(t, req, http.StatusInternalServerError)
 			htmlDoc = NewHTMLParser(t, resp.Body)
@@ -196,8 +196,8 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
 
 			// 500 page
-			reset := enableDevtest()
-			req = NewRequest(t, "GET", "/devtest/error/500")
+			reset := enableDemoPages()
+			req = NewRequest(t, "GET", "/demo/error/500")
 			req.Header.Add("Accept", "text/html")
 			resp = session.MakeRequest(t, req, http.StatusInternalServerError)
 			htmlDoc = NewHTMLParser(t, resp.Body)
