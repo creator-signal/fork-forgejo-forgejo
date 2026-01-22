@@ -10,6 +10,7 @@ import (
 	"forgejo.org/models/organization"
 	"forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
@@ -420,4 +421,72 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	}
 
 	ctx.JSON(http.StatusCreated, convert.ToRemoteRegistry(&rr))
+}
+
+// CreateRemotTestRemoteRegistryConnection tests the availability and the credentials of the given registry
+func TestRemoteRegistryConnection(ctx *context.APIContext) {
+	// swagger:operation POST /packages/{owner}/remote-registry/{registry-name}/test package testRemoteRegistryConnection
+	// ---
+	// summary: Test if the remote registry is actually connected
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the package
+	//   type: string
+	//   required: true
+	// - name: registry-name
+	//   in: path
+	//   description: name of the registry
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/empty"
+
+	// Check if doer can do
+
+	isOrg := ctx.ContextUser.IsOrganization()
+	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+	}
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		if !isOrgOwner && !ctx.Doer.IsAdmin {
+			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			return
+		}
+	}
+
+	ownerType, err := packages_service.GetOwnerType(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+	}
+
+	// Get correct registry from params
+	ownerParam := ctx.PathParamRaw("username")
+	owner, err := user_model.GetUserByName(ctx, ownerParam)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+	}
+
+	registryName := ctx.PathParamRaw("registry-name")
+	rr, err := packages_service.GetRemoteRegistryByName(ctx, ownerType, owner.ID, registryName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+	}
+
+	registryClient := container_client.NewContainerRegistryClient(rr)
+	connected, err := registryClient.RemoteRegistryConnected(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+	}
+
+	if !connected {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+	}
+
+	ctx.Status(http.StatusOK)
 }

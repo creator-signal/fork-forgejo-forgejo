@@ -1559,6 +1559,9 @@ func Routes() *web.Route {
 			if setting.Packages.RemoteRegistry.Enabled {
 				m.Group("/remote-registry", func() {
 					m.Post("", reqToken(), reqPackageAccess(perm.AccessModeWrite), bind(api.CreateRemoteRegistryOption{}), packages.CreateRemoteRegistry)
+					m.Group("/{registry-name}/test", func() {
+						m.Post("", reqToken(), reqPackageAccess(perm.AccessModeWrite), packages.TestRemoteRegistryConnection)
+					})
 				})
 			}
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryPackage), context.UserAssignmentAPI(), context.PackageAssignmentAPI(), reqPackageAccess(perm.AccessModeRead), checkTokenPublicOnly())

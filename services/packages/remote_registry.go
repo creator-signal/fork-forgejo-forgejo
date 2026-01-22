@@ -5,6 +5,7 @@ import (
 
 	"forgejo.org/models/packages"
 	rr_model "forgejo.org/models/remote_registry"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/validation"
 	"forgejo.org/services/context"
 )
@@ -54,4 +55,13 @@ func GetOwnerType(ctx *context.APIContext) (rr_model.RemoteRegistryOwnerType, er
 		return rr_model.RRUser, nil
 	}
 	return "", fmt.Errorf("invalid owner type")
+}
+
+func GetRemoteRegistryByName(ctx *context.APIContext, ownerType rr_model.RemoteRegistryOwnerType, ownerID int64, name string) (*rr_model.RemoteRegistry, error) {
+	rr, err := rr_model.GetRemoteRegistryByName(ctx, ownerType, ownerID, name)
+	if err != nil {
+		return &rr_model.RemoteRegistry{}, err
+	}
+	log.Trace("Found remote registry %q for ownerID: %d", name, ownerID)
+	return rr, nil
 }

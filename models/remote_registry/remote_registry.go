@@ -138,8 +138,8 @@ func GetRemoteRegistryByID(ctx context.Context, id int64) (*RemoteRegistry, erro
 	return rr, nil
 }
 
-// FindRemoteRegistryByName finds a remote registry by name within a scope
-func FindRemoteRegistryByName(ctx context.Context, ownerType RemoteRegistryOwnerType, ownerID int64, name string) (*RemoteRegistry, error) {
+// GetRemoteRegistryByName finds a remote registry by name within a scope
+func GetRemoteRegistryByName(ctx context.Context, ownerType RemoteRegistryOwnerType, ownerID int64, name string) (*RemoteRegistry, error) {
 	if !ownerType.Valid() {
 		return nil, ErrInvalidRemoteRegistryOwner
 	}
