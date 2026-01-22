@@ -399,8 +399,8 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 				RemoteUser:     rrOpts.RemoteUser,
 				RemotePassword: rrOpts.RemotePassword,
 				RemoteToken:    rrOpts.RemoteToken,
-			}})
-
+			},
+		})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}

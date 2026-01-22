@@ -8,6 +8,7 @@ import (
 
 	"forgejo.org/models/packages"
 	rr_model "forgejo.org/models/remote_registry"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

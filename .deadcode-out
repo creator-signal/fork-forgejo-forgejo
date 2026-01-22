@@ -52,7 +52,6 @@ forgejo.org/models/perm/access
 
 forgejo.org/models/remote_registry
 	GetRemoteRegistryByID
-	FindRemoteRegistryByName
 	GetRemoteRegistriesByOwnerType
 
 forgejo.org/models/repo

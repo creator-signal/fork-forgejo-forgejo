@@ -18,15 +18,15 @@ var (
 	ErrNotAuthenticated = util.NewPermissionDeniedErrorf("authentication to given remote container registry failed")
 )
 
-type ContainerRegistryClient struct {
+type RegistryClient struct {
 	httpClient     *http.Client
 	remoteRegistry *rr_model.RemoteRegistry
 }
 
-func NewContainerRegistryClient(rr *rr_model.RemoteRegistry) ContainerRegistryClient {
+func NewContainerRegistryClient(rr *rr_model.RemoteRegistry) RegistryClient {
 	client := &http.Client{Timeout: 12 * time.Second}
 
-	crc := ContainerRegistryClient{
+	crc := RegistryClient{
 		httpClient:     client,
 		remoteRegistry: rr,
 	}
@@ -34,7 +34,7 @@ func NewContainerRegistryClient(rr *rr_model.RemoteRegistry) ContainerRegistryCl
 	return crc
 }
 
-func (crc *ContainerRegistryClient) PingRemoteRegistry(ctx context.Context) (*http.Response, error) {
+func (crc *RegistryClient) PingRemoteRegistry(ctx context.Context) (*http.Response, error) {
 	// Parse the URL
 	registryURL, err := url.Parse(crc.remoteRegistry.RemoteURL)
 	if err != nil {
@@ -61,7 +61,7 @@ func (crc *ContainerRegistryClient) PingRemoteRegistry(ctx context.Context) (*ht
 }
 
 // RemoteRegistryAvailable tests if the remote registry exists
-func (crc *ContainerRegistryClient) RemoteRegistryAvailable(resp *http.Response) error {
+func (crc *RegistryClient) RemoteRegistryAvailable(resp *http.Response) error {
 	log.Trace("Checking response from %q at %s", crc.remoteRegistry.Name, crc.remoteRegistry.RemoteURL)
 
 	if resp.StatusCode == http.StatusOK {
@@ -77,7 +77,7 @@ func (crc *ContainerRegistryClient) RemoteRegistryAvailable(resp *http.Response)
 	return ErrNoRemoteRegistry
 }
 
-func (crc *ContainerRegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp *http.Response) (*http.Response, error) {
+func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp *http.Response) (*http.Response, error) {
 	hasUserAndPW := crc.remoteRegistry.RemoteUser != "" && crc.remoteRegistry.RemotePassword != ""
 	hasToken := crc.remoteRegistry.RemoteToken != ""
 
@@ -108,7 +108,7 @@ func (crc *ContainerRegistryClient) AuthenticateRemoteRegistry(ctx context.Conte
 	} else if hasUserAndPW {
 		req.SetBasicAuth(crc.remoteRegistry.RemoteUser, crc.remoteRegistry.RemotePassword)
 	} else {
-		return &http.Response{}, fmt.Errorf("no authentication info given for %q:", crc.remoteRegistry.Name)
+		return &http.Response{}, fmt.Errorf("no authentication info given for %q", crc.remoteRegistry.Name)
 	}
 
 	authResp, err := crc.httpClient.Do(req)
@@ -122,7 +122,7 @@ func (crc *ContainerRegistryClient) AuthenticateRemoteRegistry(ctx context.Conte
 }
 
 // RemoteRegistryAuthenticated does authentication tests against an available remote registry
-func (crc *ContainerRegistryClient) RemoteRegistryAuthenticated(resp *http.Response) error {
+func (crc *RegistryClient) RemoteRegistryAuthenticated(resp *http.Response) error {
 	log.Trace("Checking authentication against %q at %s", crc.remoteRegistry.Name, crc.remoteRegistry.RemoteURL)
 
 	if resp.StatusCode == http.StatusOK {
@@ -133,7 +133,7 @@ func (crc *ContainerRegistryClient) RemoteRegistryAuthenticated(resp *http.Respo
 	return ErrNotAuthenticated
 }
 
-func (crc *ContainerRegistryClient) RemoteRegistryConnected(ctx context.Context) (bool, error) {
+func (crc *RegistryClient) RemoteRegistryConnected(ctx context.Context) (bool, error) {
 	resp, err := crc.PingRemoteRegistry(ctx)
 	if err != nil {
 		return false, err
