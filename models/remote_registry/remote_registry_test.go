@@ -71,7 +71,7 @@ func Test_FindRemoteRegistryByName(t *testing.T) {
 
 	require.NoError(t, err)
 
-	retrieved, err := FindRemoteRegistryByName(t.Context(), RemoteRegistryOwnerType("org"), int64(1), "testreg")
+	retrieved, err := GetRemoteRegistryByName(t.Context(), RemoteRegistryOwnerType("org"), int64(1), "testreg")
 	require.NoError(t, err)
 	assert.Equal(t, name, retrieved.Name)
 }

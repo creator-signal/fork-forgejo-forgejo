@@ -36,7 +36,9 @@ func Test_PingRegistry(t *testing.T) {
 		Name:      rrOpts.Name,
 		RemoteURL: rrOpts.RemoteURL,
 	}
-	resp, err := PingRemoteRegistry(t.Context(), &rr)
+
+	crc := NewContainerRegistryClient(&rr)
+	resp, err := crc.PingRemoteRegistry(t.Context())
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
@@ -57,8 +59,9 @@ func Test_AuthenticateRegistry(t *testing.T) {
 		RemoteUser:  "someUser",
 		RemoteToken: "someToken",
 	}
-	resp, err := PingRemoteRegistry(t.Context(), &rr)
-	authResp, err := AuthenticateRemoteRegistry(t.Context(), resp, &rr)
+	crc := NewContainerRegistryClient(&rr)
+	resp, err := crc.PingRemoteRegistry(t.Context())
+	authResp, err := crc.AuthenticateRemoteRegistry(t.Context(), resp)
 
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, authResp.StatusCode)
