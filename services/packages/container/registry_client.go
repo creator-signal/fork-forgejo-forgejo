@@ -61,20 +61,20 @@ func (crc *ContainerRegistryClient) PingRemoteRegistry(ctx context.Context) (*ht
 }
 
 // RemoteRegistryAvailable tests if the remote registry exists
-func (crc *ContainerRegistryClient) RemoteRegistryAvailable(resp *http.Response) (bool, error) {
+func (crc *ContainerRegistryClient) RemoteRegistryAvailable(resp *http.Response) error {
 	log.Trace("Checking response from %q at %s", crc.remoteRegistry.Name, crc.remoteRegistry.RemoteURL)
 
 	if resp.StatusCode == http.StatusOK {
 		log.Trace("Remote registry %q exists", crc.remoteRegistry.Name)
-		return true, nil
+		return nil
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized && validateRemoteRegistryHeader(*resp) {
 		log.Trace("Remote registry %q exists but request was unauthenticated", crc.remoteRegistry.Name)
-		return true, nil
+		return nil
 	}
 
-	return false, ErrNoRemoteRegistry
+	return ErrNoRemoteRegistry
 }
 
 func (crc *ContainerRegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp *http.Response) (*http.Response, error) {
@@ -122,25 +122,24 @@ func (crc *ContainerRegistryClient) AuthenticateRemoteRegistry(ctx context.Conte
 }
 
 // RemoteRegistryAuthenticated does authentication tests against an available remote registry
-func (crc *ContainerRegistryClient) RemoteRegistryAuthenticated(resp *http.Response) (bool, error) {
+func (crc *ContainerRegistryClient) RemoteRegistryAuthenticated(resp *http.Response) error {
 	log.Trace("Checking authentication against %q at %s", crc.remoteRegistry.Name, crc.remoteRegistry.RemoteURL)
 
 	if resp.StatusCode == http.StatusOK {
 		log.Trace("Connected to remote registry %q", crc.remoteRegistry.Name)
-		return true, nil
+		return nil
 	}
 
-	return false, ErrNotAuthenticated
+	return ErrNotAuthenticated
 }
 
 func (crc *ContainerRegistryClient) RemoteRegistryConnected(ctx context.Context) (bool, error) {
-
 	resp, err := crc.PingRemoteRegistry(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	isRegistry, err := crc.RemoteRegistryAvailable(resp)
+	err = crc.RemoteRegistryAvailable(resp)
 	if err != nil {
 		return false, err
 	}
@@ -150,16 +149,12 @@ func (crc *ContainerRegistryClient) RemoteRegistryConnected(ctx context.Context)
 		return false, err
 	}
 
-	isAuthenticated := false
-	if isRegistry {
-		isAuthenticated, err = crc.RemoteRegistryAuthenticated(authResp)
+	err = crc.RemoteRegistryAuthenticated(authResp)
+	if err != nil {
+		return false, err
 	}
 
-	if isRegistry && isAuthenticated {
-		return true, nil
-	}
-
-	return false, err
+	return true, nil
 }
 
 func validateRemoteRegistryHeader(resp http.Response) bool {
