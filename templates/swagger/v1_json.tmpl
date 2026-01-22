@@ -21,7 +21,7 @@
     },
     "version": "{{AppVer | JSEscape}}"
   },
-  "basePath": "/api/v1",
+  "basePath": "{{AppSubUrl | JSEscape}}/api/v1",
   "paths": {
     "/activitypub/actor": {
       "get": {
@@ -4590,12 +4590,12 @@
         "tags": [
           "package"
         ],
-        "summary": "Allows configuration of a remote registry",
+        "summary": "Allows creation of a remote registry",
         "operationId": "createRemoteRegistry",
         "parameters": [
           {
             "type": "string",
-            "description": "owner of the package",
+            "description": "owner of the registry",
             "name": "owner",
             "in": "path",
             "required": true
@@ -4615,6 +4615,36 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/packages/{owner}/remote-registry/{registry-name}/test": {
+      "post": {
+        "tags": [
+          "package"
+        ],
+        "summary": "Test if the remote registry is actually connected",
+        "operationId": "testRemoteRegistryConnection",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the package",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the registry",
+            "name": "registry-name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/empty"
           }
         }
       }
@@ -24215,6 +24245,10 @@
         "remote_user": {
           "type": "string",
           "x-go-name": "RemoteUser"
+        },
+        "test_connection": {
+          "type": "boolean",
+          "x-go-name": "TestConnection"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
