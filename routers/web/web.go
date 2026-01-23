@@ -516,15 +516,7 @@ func registerRoutes(m *web.Route) {
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/milestones", reqSignIn, reqMilestonesDashboardPageEnabled, user.Milestones)
 
-	m.Group("/edu", func() {
-		m.Get("/assignments", edu.Assignments)
-		m.Get("/assignments/new", edu.NewAssignment)
-		m.Post("/assignments/new", edu.NewAssignmentPost)
-		m.Get("/assignments/{id}", edu.AssignmentDetail)
-		m.Post("/assignments/{id}/join", edu.JoinAssignment)
-		m.Get("/assignments/{id}/submissions", edu.InstructorSubmissions)
-	}, reqSignIn)
-
+	edu.RegisterRoutes(m, reqSignIn)
 	// ***** START: User *****
 	// "user/login" doesn't need signOut, then logged-in users can still access this route for redirection purposes by "/user/login?redirec_to=..."
 	m.Get("/user/login", auth.SignIn)

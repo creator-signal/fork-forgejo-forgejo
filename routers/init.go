@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 
+	"forgejo.org/internal/edu"
 	"forgejo.org/models"
 	asymkey_model "forgejo.org/models/asymkey"
 	auth_model "forgejo.org/models/auth"
@@ -148,6 +149,7 @@ func InitWebInstalled(ctx context.Context) {
 	mustInitCtx(ctx, models.Init)
 	mustInitCtx(ctx, auth_model.Init)
 	mustInitCtx(ctx, repo_service.Init)
+	mustInitCtx(ctx, edu.Init)
 
 	// Booting long running goroutines.
 	mustInit(indexer_service.Init)
