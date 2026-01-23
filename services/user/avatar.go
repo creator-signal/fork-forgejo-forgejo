@@ -41,7 +41,7 @@ func UploadAvatar(ctx context.Context, u *user_model.User, data []byte) error {
 
 	u.UseCustomAvatar = true
 	u.Avatar = avatar.HashAvatar(u.ID, data)
-	if err = user_model.UpdateUserCols(ctx, u, "use_custom_avatar", "avatar", "avatar_svg_hash"); err != nil {
+	if err = user_model.UpdateUserCols(ctx, u, "use_custom_avatar", "avatar", "svg_hash"); err != nil {
 		return fmt.Errorf("updateUser: %w", err)
 	}
 
@@ -72,7 +72,7 @@ func DeleteAvatar(ctx context.Context, u *user_model.User) error {
 		hasAvatar := len(u.Avatar) > 0
 		u.UseCustomAvatar = false
 		u.Avatar = ""
-		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar, use_custom_avatar", "avatar_svg_hash").Update(u); err != nil {
+		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar, use_custom_avatar", "svg_hash").Update(u); err != nil {
 			return fmt.Errorf("DeleteAvatar: %w", err)
 		}
 

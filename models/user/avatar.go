@@ -82,7 +82,7 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 		u.Avatar = avatars.HashEmail(seed)
 		u.AvatarSVGHash = vectorHash
 
-		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "avatar_svg_hash").Update(u); err != nil {
+		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "svg_hash").Update(u); err != nil {
 			return err
 		}
 
