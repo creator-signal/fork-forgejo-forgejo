@@ -114,47 +114,6 @@ func (u *User) ChooseAvatarToUse(ctx context.Context) (bool, bool) {
 	return useLocalAvatar, autoGenerateAvatar
 }
 
-type AvatarDisplayProperties struct {
-	RasterLink string
-	RasterSize int
-	SvgContent string
-}
-
-// todo dsc
-func (u *User) SolveAvatar(ctx context.Context, size int) AvatarDisplayProperties {
-	properties := AvatarDisplayProperties{
-		RasterLink: "",
-		RasterSize: 0,
-		SvgContent: "",
-	}
-
-	useLocalAvatar, autoGenerateAvatar := u.ChooseAvatarToUse(ctx)
-
-	if !useLocalAvatar {
-		properties.RasterLink = avatars.GenerateEmailAvatarFastLink(ctx, u.AvatarEmail, size)
-		return properties
-	}
-
-	// Attempt to generate avatar if needed
-	if u.Avatar == "" && autoGenerateAvatar {
-		if err := GenerateRandomAvatar(ctx, u); err != nil {
-			log.Error("GenerateRandomAvatar: %v", err)
-		}
-	}
-
-	// If even after that there's still no avatar available
-	if u.Avatar == "" {
-		properties.RasterLink = avatars.DefaultAvatarLink()
-		return properties
-	}
-
-	// Some raster avatar is available. If there's also a vector version available
-	// (not "") alongside of it, this is an identicon and we'll use both versions
-	properties.SvgContent = u.AvatarSVG
-	properties.RasterLink = avatars.GenerateUserAvatarImageLink(u.Avatar)
-	return properties
-}
-
 // AvatarLinkWithSize returns a link to the user's avatar. Size is only used for
 // GenerateEmailAvatarFastLink, for external email-based avatar services
 func (u *User) AvatarLinkWithSize(ctx context.Context, size int) string {
