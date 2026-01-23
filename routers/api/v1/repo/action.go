@@ -882,6 +882,10 @@ func ListActionRuns(ctx *context.APIContext) {
 	//   in: query
 	//   description: Only returns workflow runs that are associated with the specified head_sha.
 	//   type: string
+	// - name: ref
+	//   in: query
+	//   description: Only return workflow runs that involve the given Git reference, for example, `refs/heads/main`.
+	//   type: string
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/ActionRunList"
@@ -909,6 +913,7 @@ func ListActionRuns(ctx *context.APIContext) {
 		Status:      statuses,
 		RunNumber:   ctx.FormInt64("run_number"),
 		CommitSHA:   ctx.FormString("head_sha"),
+		Ref:         ctx.FormString("ref"),
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "ListActionRuns", err)
