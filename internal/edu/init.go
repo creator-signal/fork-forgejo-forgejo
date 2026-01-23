@@ -5,6 +5,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/log"
+	"xorm.io/xorm"
 )
 
 func Init(ctx context.Context) error {
@@ -21,7 +22,23 @@ func Init(ctx context.Context) error {
 		return err
 	}
 
-	repo := NewRepository(e)
+	var runner SQLRunner
+	var xormEngine *xorm.Engine
+
+	if sess, ok := e.(*xorm.Session); ok {
+		xormEngine = sess.Engine()
+	} else {
+		var err error
+		xormEngine, err = db.GetMasterEngine(e)
+		if err != nil {
+			log.Error("Educational Extension: Failed to get master engine: %v", err)
+			return nil
+		}
+	}
+
+	runner = xormEngine.DB().DB
+
+	repo := NewRepository(runner)
 
 	RegisterNotifier(repo)
 

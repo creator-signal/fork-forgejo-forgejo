@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"forgejo.org/internal/edu"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
@@ -31,13 +32,13 @@ func UpdateUserRolePost(ctx *context.Context) {
 
 	form := web.GetForm(ctx).(*forms.EduRoleForm)
 	
-	username := ctx.FormString("username")
-	role := ctx.FormString("role")
+	username := form.Username
+	role := form.Role
 
 	u, err := edu.GetUserByName(ctx, username)
 	if err != nil {
 		ctx.Flash.Error("User not found: " + err.Error())
-		ctx.Redirect(ctx.Tr("AppSubUrl") + "/edu/admin")
+		ctx.Redirect(setting.AppSubURL + "/edu/admin")
 		return
 	}
 
@@ -49,7 +50,7 @@ func UpdateUserRolePost(ctx *context.Context) {
 		r = edu.RoleStudent
 	default:
 		ctx.Flash.Error("Invalid role")
-		ctx.Redirect(ctx.Tr("AppSubUrl") + "/edu/admin")
+		ctx.Redirect(setting.AppSubURL + "/edu/admin")
 		return
 	}
 
@@ -59,5 +60,5 @@ func UpdateUserRolePost(ctx *context.Context) {
 	}
 
 	ctx.Flash.Success("Role updated for " + username)
-	ctx.Redirect(ctx.Tr("AppSubUrl") + "/edu/admin")
+	ctx.Redirect(setting.AppSubURL + "/edu/admin")
 }

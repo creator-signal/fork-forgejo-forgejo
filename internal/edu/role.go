@@ -3,12 +3,14 @@ package edu
 import (
 	"context"
 	"fmt"
+
+	"forgejo.org/models/db"
 )
 
 // GetUserRole returns the role of a user. If no role is set, returns empty string.
 func GetUserRole(ctx context.Context, userID int64) (RoleType, error) {
 	var role UserRole
-	has, err := GetSQLRunner(ctx).Where("user_id = ?", userID).Get(&role)
+	has, err := db.GetEngine(ctx).Where("user_id = ?", userID).Get(&role)
 	if err != nil {
 		return "", err
 	}
@@ -19,7 +21,7 @@ func GetUserRole(ctx context.Context, userID int64) (RoleType, error) {
 }
 
 func SetUserRole(ctx context.Context, userID int64, role RoleType) error {
-	sess := GetSQLRunner(ctx)
+	sess := db.GetEngine(ctx)
 
 	var userRole UserRole
 	has, err := sess.Where("user_id = ?", userID).Get(&userRole)
@@ -67,13 +69,14 @@ func IsStudent(ctx context.Context, userID int64) (bool, error) {
 	return role == RoleStudent, nil
 }
 
+type UserStub struct {
+	ID   int64
+	Name string
+}
+
 func GetUserByName(ctx context.Context, name string) (*UserStub, error) {
-	type UserStub struct {
-		ID   int64
-		Name string
-	}
 	var u UserStub
-	has, err := GetSQLRunner(ctx).Table("user").Where("lower_name = ?", name).Get(&u)
+	has, err := db.GetEngine(ctx).Table("user").Where("lower_name = ?", name).Get(&u)
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +84,4 @@ func GetUserByName(ctx context.Context, name string) (*UserStub, error) {
 		return nil, fmt.Errorf("user not found")
 	}
 	return &u, nil
-}
-
-type UserStub struct {
-	ID   int64
-	Name string
 }

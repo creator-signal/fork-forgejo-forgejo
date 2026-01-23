@@ -1,8 +1,10 @@
 package edu
 
 import (
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
+	"forgejo.org/services/forms"
 )
 
 func RegisterRoutes(m *web.Route, middlewares ...any) {
@@ -21,7 +23,7 @@ func RegisterRoutes(m *web.Route, middlewares ...any) {
 			m.Post("/assignments/new", NewAssignmentPost)
 			m.Get("/assignments/{id}/submissions", InstructorSubmissions)
 			m.Get("/dashboard", func(ctx *context.Context) {
-				ctx.Redirect(ctx.Tr("AppSubUrl") + "/edu/teacher/assignments")
+				ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments")
 			})
 		})
 
