@@ -116,7 +116,7 @@ func JoinAssignment(ctx *context.Context) {
 		return
 	}
 
-	ctx.Redirect(setting.AppSubURL + "/edu/assignments/" + ctx.Params(":id"))
+	ctx.Redirect(setting.AppSubURL + "/edu/student/assignments/" + ctx.Params(":id"))
 }
 
 func NewAssignment(ctx *context.Context) {
@@ -179,5 +179,5 @@ func NewAssignmentPost(ctx *context.Context) {
 		return
 	}
 
-	ctx.Redirect(setting.AppSubURL + "/edu/assignments")
+	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments")
 }

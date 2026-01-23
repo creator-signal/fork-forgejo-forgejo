@@ -16,7 +16,7 @@ func Init(ctx context.Context) error {
 		return nil
 	}
 	
-	if err := e.Sync(new(Assignment), new(Submission), new(TestResult)); err != nil {
+	if err := e.Sync(new(Assignment), new(Submission), new(TestResult), new(UserRole)); err != nil {
 		log.Error("Educational Extension: Failed to sync database schema: %v", err)
 		return err
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// GetUserRole returns the role of a user. If no role is set, returns empty string (which implies standard user).
+// GetUserRole returns the role of a user. If no role is set, returns empty string.
 func GetUserRole(ctx context.Context, userID int64) (RoleType, error) {
 	var role UserRole
 	has, err := GetSQLRunner(ctx).Where("user_id = ?", userID).Get(&role)
@@ -18,11 +18,9 @@ func GetUserRole(ctx context.Context, userID int64) (RoleType, error) {
 	return role.Role, nil
 }
 
-// SetUserRole sets the role for a user.
 func SetUserRole(ctx context.Context, userID int64, role RoleType) error {
 	sess := GetSQLRunner(ctx)
 
-	// Check if role exists
 	var userRole UserRole
 	has, err := sess.Where("user_id = ?", userID).Get(&userRole)
 	if err != nil {
@@ -42,8 +40,6 @@ func SetUserRole(ctx context.Context, userID int64, role RoleType) error {
 	return err
 }
 
-// EnsureUserRole ensures a user has at least the specified role.
-// Useful for auto-assignment logic if needed.
 func EnsureUserRole(ctx context.Context, userID int64, role RoleType) error {
 	current, err := GetUserRole(ctx, userID)
 	if err != nil {
@@ -55,7 +51,6 @@ func EnsureUserRole(ctx context.Context, userID int64, role RoleType) error {
 	return nil
 }
 
-// IsTeacher checks if the user is a teacher or admin.
 func IsTeacher(ctx context.Context, userID int64) (bool, error) {
 	role, err := GetUserRole(ctx, userID)
 	if err != nil {
@@ -64,7 +59,6 @@ func IsTeacher(ctx context.Context, userID int64) (bool, error) {
 	return role == RoleTeacher || role == RoleAdmin, nil
 }
 
-// IsStudent checks if the user is a student.
 func IsStudent(ctx context.Context, userID int64) (bool, error) {
 	role, err := GetUserRole(ctx, userID)
 	if err != nil {
@@ -73,14 +67,7 @@ func IsStudent(ctx context.Context, userID int64) (bool, error) {
 	return role == RoleStudent, nil
 }
 
-// GetUserByName finds a user by name (simple wrapper to avoid importing models/user in routers if we want to keep logic here)
-// Actually we need to import models/user here if we want to use it, or pass sql runner.
-// But models/user is where User struct is.
-// Using raw SQL for minimal dependency or just assume `user_model` is clear.
-// Let's use xorm from context.
 func GetUserByName(ctx context.Context, name string) (*UserStub, error) {
-	// We need a minimal User struct to scan into if we don't want to import the huge User model.
-	// Or we can just return a Stub.
 	type UserStub struct {
 		ID   int64
 		Name string
