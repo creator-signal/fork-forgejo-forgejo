@@ -182,7 +182,7 @@ generate_config() {
     INTERNAL_TOKEN=$(head -c 64 /dev/urandom | base64 | tr -d '\n')
     
     cat > "$config_file" << EOF
-; Автоматически сгенерировано скриптом deploy.sh
+; Автоматически сгенерировано скриптом edu_deploy.sh
 ; Документация: https://forgejo.org/docs/latest/admin/config-cheat-sheet/
 
 APP_NAME = ${APP_NAME}

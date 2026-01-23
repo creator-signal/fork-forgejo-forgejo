@@ -17,7 +17,7 @@ git clone https://github.com/your-org/forgejo-edu.git
 cd forgejo-edu
 
 # Запускаем развёртывание
-sudo ./deploy.sh deploy
+sudo ./edu_edu_deploy.sh deploy
 ```
 
 ## Подробная инструкция
@@ -67,14 +67,14 @@ git clone https://github.com/your-org/forgejo-edu.git
 cd forgejo-edu
 
 # Если бинарник отсутствует — собираем
-./deploy.sh build
+./edu_deploy.sh build
 ```
 
 ### 5. Развёртывание
 
 ```bash
 # Полное развёртывание (PostgreSQL + Forgejo + nginx)
-sudo ./deploy.sh deploy
+sudo ./edu_edu_deploy.sh deploy
 ```
 
 Скрипт автоматически:
@@ -104,7 +104,7 @@ sudo ./deploy.sh deploy
 Пример с кастомными настройками:
 
 ```bash
-sudo PUBLIC_IP=my.domain.com DB_TYPE=sqlite3 ./deploy.sh deploy
+sudo PUBLIC_IP=my.domain.com DB_TYPE=sqlite3 ./edu_deploy.sh deploy
 ```
 
 ### Файлы конфигурации
@@ -146,9 +146,9 @@ sudo systemctl restart forgejo
 sudo journalctl -u forgejo -f
 
 # Или через скрипт
-./deploy.sh status
-./deploy.sh restart
-./deploy.sh logs
+./edu_deploy.sh status
+./edu_deploy.sh restart
+./edu_deploy.sh logs
 ```
 
 ## Настройка nginx (reverse proxy)
@@ -253,7 +253,7 @@ cd /path/to/forgejo-edu
 git pull
 
 # Пересборка (если нужно)
-./deploy.sh build
+./edu_deploy.sh build
 
 # Обновление бинарника
 sudo cp gitea /usr/local/bin/forgejo
@@ -302,14 +302,14 @@ sudo tail -f /var/log/nginx/error.log
 - [Настройка app.ini](https://forgejo.org/docs/latest/admin/config-cheat-sheet/)
 - [Миграция с Gitea/GitHub](https://forgejo.org/docs/latest/admin/migrations/)
 
-## Команды deploy.sh
+## Команды edu_deploy.sh
 
 | Команда | Описание |
 |---------|----------|
-| `./deploy.sh deploy` | Полное развёртывание |
-| `./deploy.sh build` | Сборка из исходников |
-| `./deploy.sh start` | Запуск сервиса |
-| `./deploy.sh stop` | Остановка сервиса |
-| `./deploy.sh restart` | Перезапуск сервиса |
-| `./deploy.sh status` | Статус сервиса |
-| `./deploy.sh logs` | Просмотр логов |
+| `./edu_deploy.sh deploy` | Полное развёртывание |
+| `./edu_deploy.sh build` | Сборка из исходников |
+| `./edu_deploy.sh start` | Запуск сервиса |
+| `./edu_deploy.sh stop` | Остановка сервиса |
+| `./edu_deploy.sh restart` | Перезапуск сервиса |
+| `./edu_deploy.sh status` | Статус сервиса |
+| `./edu_deploy.sh logs` | Просмотр логов |
