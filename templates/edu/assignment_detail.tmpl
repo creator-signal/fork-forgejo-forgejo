@@ -9,20 +9,20 @@
 				<div class="ui segment">
 					<p>{{.Assignment.Description}}</p>
 					{{if .Assignment.DeadlineUnix}}
-						<p><strong>Deadline:</strong> {{.Assignment.Deadline}}</p>
+						<p><strong>{{.locale.Tr "edu.deadline"}}:</strong> {{.Assignment.Deadline}}</p>
 					{{end}}
 				</div>
 
 				<div class="ui segment">
 					{{if .Submission}}
-						<h3 class="ui header">Status: {{.Submission.Status}}</h3>
+						<h3 class="ui header">{{.locale.Tr "edu.status"}}: {{.Submission.Status}}</h3>
 						{{if .Submission.StudentRepoID}}
-							<a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}" class="ui primary button">Go to Repository</a>
+							<a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}" class="ui primary button">{{.locale.Tr "edu.go_to_repo"}}</a>
 						{{end}}
 					{{else}}
 						<form action="{{AppSubUrl}}/edu/assignments/{{.Assignment.ID}}/join" method="post">
 							{{.CsrfTokenHtml}}
-							<button class="ui green button">Start Assignment</button>
+							<button class="ui green button">{{.locale.Tr "edu.start_assignment"}}</button>
 						</form>
 					{{end}}
 				</div>

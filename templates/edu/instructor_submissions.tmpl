@@ -10,10 +10,10 @@
 					<table class="ui celled table">
 						<thead>
 							<tr>
-								<th>Student</th>
-								<th>Status</th>
-								<th>Link</th>
-								<th>Last Updated</th>
+								<th>{{.locale.Tr "edu.student"}}</th>
+								<th>{{.locale.Tr "edu.status"}}</th>
+								<th>{{.locale.Tr "edu.link"}}</th>
+								<th>{{.locale.Tr "edu.last_updated"}}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -32,13 +32,13 @@
 										</span>
 									</td>
 									<td>
-										<a href="{{AppSubUrl}}/repositories/{{.StudentRepoID}}">Sort Repo</a>
+										<a href="{{AppSubUrl}}/repositories/{{.StudentRepoID}}">{{.locale.Tr "edu.repo_link"}}</a>
 									</td>
 									<td>{{.UpdatedUnix}}</td> <!-- TODO: Format time -->
 								</tr>
 							{{else}}
 								<tr>
-									<td colspan="4">No submissions yet.</td>
+									<td colspan="4">{{.locale.Tr "edu.no_submissions"}}</td>
 								</tr>
 							{{end}}
 						</tbody>

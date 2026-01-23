@@ -14,7 +14,7 @@
 			<div class="four wide column">
 				<div class="ui card">
 					<div class="content">
-						<div class="header">{{ctx.Locale.Tr "edu.status"}}</div>
+						<div class="header">{{.locale.Tr "edu.status"}}</div>
 					</div>
 					<div class="content">
 						{{if .Submission}}
@@ -26,17 +26,17 @@
 								<p>Score: {{.TestResult.Score}}</p>
 							{{end}}
 						{{else}}
-							<p>{{ctx.Locale.Tr "edu.not_started"}}</p>
+							<p>{{.locale.Tr "edu.not_started"}}</p>
 						{{end}}
 					</div>
 					<div class="extra content">
 						{{if not .Submission}}
 						<form action="{{AppSubUrl}}/edu/assignments/{{.Assignment.ID}}/start" method="post">
 							{{.CsrfTokenHtml}}
-							<button class="ui fluid teal button">{{ctx.Locale.Tr "edu.start_assignment"}}</button>
+							<button class="ui fluid teal button">{{.locale.Tr "edu.start_assignment"}}</button>
 						</form>
 						{{else}}
-						<a href="{{.SubmissionRepoLink}}" class="ui fluid primary button">{{ctx.Locale.Tr "edu.go_to_repo"}}</a>
+						<a href="{{.SubmissionRepoLink}}" class="ui fluid primary button">{{.locale.Tr "edu.go_to_repo"}}</a>
 						{{end}}
 					</div>
 				</div>

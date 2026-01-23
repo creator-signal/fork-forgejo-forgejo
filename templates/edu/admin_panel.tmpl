@@ -2,26 +2,26 @@
 <div role="main" aria-label="{{.Title}}" class="page-content edu admin-panel">
 	<div class="ui container">
 		<div class="ui secondary pointing menu">
-			<a class="active item" href="{{AppSubUrl}}/edu/admin">{{.locale.Tr "Roles"}}</a>
+			<a class="active item" href="{{AppSubUrl}}/edu/admin">{{.locale.Tr "edu.roles"}}</a>
 		</div>
 
 		<div class="ui segment">
-			<h3 class="ui header">{{.locale.Tr "Manage User Roles"}}</h3>
+			<h3 class="ui header">{{.locale.Tr "edu.manage_roles"}}</h3>
 			<div class="ui info message">
-				<p>{{.locale.Tr "Assign global roles to users. Teachers can create assignments. Students can view and join assignments."}}</p>
+				<p>{{.locale.Tr "edu.manage_roles_desc"}}</p>
 			</div>
 
 			<form class="ui form" action="{{AppSubUrl}}/edu/admin/roles" method="post">
 				{{.CsrfTokenHtml}}
 				<div class="field">
-					<label>{{.locale.Tr "Username"}}</label>
+					<label>{{.locale.Tr "edu.username"}}</label>
 					<div class="ui action input">
 						<input type="text" name="username" placeholder="e.g. user1" required>
 						<select class="ui selection dropdown" name="role">
-							<option value="student">{{.locale.Tr "Student"}}</option>
-							<option value="teacher">{{.locale.Tr "Teacher"}}</option>
+							<option value="student">{{.locale.Tr "edu.student"}}</option>
+							<option value="teacher">{{.locale.Tr "edu.teacher"}}</option>
 						</select>
-						<button class="ui primary button">{{.locale.Tr "Set Role"}}</button>
+						<button class="ui primary button">{{.locale.Tr "edu.set_role"}}</button>
 					</div>
 				</div>
 			</form>

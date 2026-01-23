@@ -11,29 +11,29 @@
 					{{template "base/alert" .}}
 					
                     <div class="required field {{if .Err_Title}}error{{end}}">
-						<label for="title">{{.locale.Tr "Title"}}</label>
+						<label for="title">{{.locale.Tr "edu.title"}}</label>
 						<input id="title" name="title" value="{{.title}}" autofocus required>
 					</div>
 
                     <div class="field {{if .Err_Description}}error{{end}}">
-						<label for="description">{{.locale.Tr "Description"}}</label>
+						<label for="description">{{.locale.Tr "edu.description"}}</label>
 						<textarea id="description" name="description">{{.description}}</textarea>
 					</div>
 
                     <div class="required field {{if .Err_TemplateRepo}}error{{end}}">
-						<label for="template_repo">{{.locale.Tr "Template Repository Name"}} (e.g. 'homework-1')</label>
+						<label for="template_repo">{{.locale.Tr "edu.template_repo_name"}} (e.g. 'homework-1')</label>
 						<span class="help">The repository must be owned by you.</span>
                         <input id="template_repo" name="template_repo" value="{{.template_repo}}" required>
 					</div>
 
                     <div class="field {{if .Err_Deadline}}error{{end}}">
-						<label for="deadline">{{.locale.Tr "Deadline"}}</label>
+						<label for="deadline">{{.locale.Tr "edu.deadline"}}</label>
 						<input id="deadline" name="deadline" type="datetime-local" value="{{.deadline}}">
 					</div>
 
 					<div class="inline field">
-						<button class="ui primary button">{{.locale.Tr "Create Assignment"}}</button>
-						<a class="ui button" href="{{AppSubUrl}}/edu/assignments">{{.locale.Tr "Cancel"}}</a>
+						<button class="ui primary button">{{.locale.Tr "edu.create_assignment"}}</button>
+						<a class="ui button" href="{{AppSubUrl}}/edu/assignments">{{.locale.Tr "edu.cancel"}}</a>
 					</div>
 				</div>
 			</form>

@@ -13,7 +13,7 @@
 					<div class="right menu">
 						<a class="ui positive button" href="{{AppSubUrl}}/edu/teacher/assignments/new">
 							{{svg "octicon-plus"}}
-							{{.locale.Tr "New Assignment"}}
+							{{.locale.Tr "edu.new_assignment"}}
 						</a>
 					</div>
 				</div>
@@ -39,7 +39,7 @@
 						</div>
 						<div class="extra content">
 							<a class="ui primary button fluid" href="{{AppSubUrl}}/edu/student/assignments/{{.ID}}">
-								{{svg "octicon-eye"}} {{$.locale.Tr "View"}}
+								{{svg "octicon-eye"}} {{$.locale.Tr "edu.view"}}
 							</a>
 						</div>
 					</div>
@@ -51,7 +51,7 @@
 					{{svg "octicon-repo"}}
 					{{.locale.Tr "edu.no_assignments"}}
 				</div>
-				<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/new">{{.locale.Tr "Create First Assignment"}}</a>
+				<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/new">{{.locale.Tr "edu.create_first_assignment"}}</a>
 			</div>
 		{{end}}
 	</div>
