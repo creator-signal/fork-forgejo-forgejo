@@ -642,3 +642,22 @@ func TestRender_escapeInlineCodeBlocks(t *testing.T) {
 	test("``<`",
 		"``&lt;`")
 }
+
+func TestRender_CommitReviewedExternally(t *testing.T) {
+	defer test.MockVariableValue(&setting.AppURL, TestAppURL)()
+	test := func(input, expected string) {
+		var buf strings.Builder
+		err := postProcess(&RenderContext{
+			Ctx: git.DefaultContext,
+			Links: Links{
+				Base: TestRepoURL,
+			},
+			Metas:                    localMetas,
+			CommitReviewedExternally: "https://example.com/someorg/somerepo",
+		}, []processor{issueIndexPatternProcessor}, strings.NewReader(input), &buf)
+		require.NoError(t, err)
+		assert.Equal(t, expected, buf.String(), "input=%q", input)
+	}
+	test("Here is a link (#123)",
+		"Here is a link (<a href=\"https://example.com/someorg/somerepo/issues/123\" class=\"ref-issue ref-external-issue\" rel=\"nofollow\">#123</a>)")
+}

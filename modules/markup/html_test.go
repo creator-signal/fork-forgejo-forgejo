@@ -6,6 +6,7 @@ package markup_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -1328,6 +1329,62 @@ func TestRender_FilePreview(t *testing.T) {
 			localMetas,
 		)
 	})
+}
+
+func TestDetectReviewedExternally(t *testing.T) {
+	testCases := []struct {
+		name      string
+		commitMsg string
+		expected  string
+	}{
+		{
+			name:      "https root reviewed-on",
+			commitMsg: "fix: `PATH` modifications are lost in LXC executions (#1326)\n\nRegression in ...\n\nReviewed-on: https://code.forgejo.org/forgejo/runner/pulls/1326\n",
+			expected:  "https://code.forgejo.org/forgejo/runner",
+		},
+		{
+			name:      "http root reviewed-on",
+			commitMsg: "fix: `PATH` modifications are lost in LXC executions (#1326)\n\nRegression in ...\n\nReviewed-on: http://example.com/forgejo/runner/pulls/1326\n",
+			expected:  "http://example.com/forgejo/runner",
+		},
+		{
+			name:      "no reviewed-on",
+			commitMsg: "ci: pin buildx version\n\nSigned-off-by: someone <abc@example.com>",
+			expected:  "",
+		},
+		{
+			name:      "https sub-path reviewed-on",
+			commitMsg: "fix: `PATH` modifications are lost in LXC executions (#1326)\n\nRegression in ...\n\nReviewed-on: https://example.org/subpath/forgejo/runner/pulls/1326\n",
+			expected:  "https://example.org/subpath/forgejo/runner",
+		},
+		{
+			name:      "reviewed-on unexpected prefix",
+			commitMsg: "fix: `PATH` modifications are lost in LXC executions (#1326)\n\nNot-Reviewed-on: https://example.org/subpath/forgejo/runner/pulls/1326\n",
+			expected:  "",
+		},
+		{
+			name:      "reviewed-on not a pull-request",
+			commitMsg: "fix: `PATH` modifications are lost in LXC executions (#1326)\n\nReviewed-on: https://example.org/subpath/forgejo/runner/patch/abc\n",
+			expected:  "",
+		},
+		{
+			name:      "reviewed-on unexpected suffix",
+			commitMsg: "fix: `PATH` modifications are lost in LXC executions (#1326)\n\nRegression in ...\n\nReviewed-on: https://code.forgejo.org/forgejo/runner/pulls/1326/commits/abc\n",
+			expected:  "",
+		},
+		{
+			name:      "reviewed-on is local",
+			commitMsg: "fix: deprecate Oracle (#123)\n\nIt's bad, y'know?\n\nReviewed-on: https://gitea.com/xorm/xorm/pulls/123\n",
+			expected:  "",
+		},
+	}
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("tc-%d", i), func(t *testing.T) {
+			actual := markup.DetectReviewedExternally(tc.commitMsg)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
 }
 
 func TestRenderDescriptionHTML(t *testing.T) {

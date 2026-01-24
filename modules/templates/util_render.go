@@ -48,6 +48,8 @@ func RenderCommitMessage(ctx context.Context, msg string, metas map[string]strin
 // RenderCommitMessageLinkSubject renders commit message as a XSS-safe link to
 // the provided default url, handling for special links without email to links.
 func RenderCommitMessageLinkSubject(ctx context.Context, msg, urlDefault string, metas map[string]string) template.HTML {
+	commitReviewedExternally := markup.DetectReviewedExternally(msg)
+
 	msgLine := strings.TrimLeftFunc(msg, unicode.IsSpace)
 	lineEnd := strings.IndexByte(msgLine, '\n')
 	if lineEnd > 0 {
@@ -61,9 +63,10 @@ func RenderCommitMessageLinkSubject(ctx context.Context, msg, urlDefault string,
 	// we can safely assume that it will not return any error, since there
 	// shouldn't be any special HTML.
 	renderedMessage, err := markup.RenderCommitMessageSubject(&markup.RenderContext{
-		Ctx:         ctx,
-		DefaultLink: urlDefault,
-		Metas:       metas,
+		Ctx:                      ctx,
+		DefaultLink:              urlDefault,
+		Metas:                    metas,
+		CommitReviewedExternally: commitReviewedExternally,
 	}, html.EscapeString(msgLine))
 	if err != nil {
 		log.Error("RenderCommitMessageSubject: %v", err)

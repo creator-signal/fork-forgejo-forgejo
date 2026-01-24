@@ -86,6 +86,9 @@ var (
 	EmojiShortCodeRegex = regexp.MustCompile(`:[-+\w]+:`)
 
 	InlineCodeBlockRegex = regexp.MustCompile("`[^`]+`")
+
+	// Matches commit messages and returns the base URL if the URL pattern matches a forgejo/github/gitea PR
+	reviewedOnRegex = regexp.MustCompile(`\nReviewed-on:\s+(https?://[^\s/]+/(?:\S+/)?[^\s/]+/[^\s/]+)/pulls/(\d+)(\n|$)`)
 )
 
 // CSS class for action keywords (e.g. "closes: #1")
@@ -184,6 +187,7 @@ func PostProcess(
 }
 
 var commitMessageProcessors = []processor{
+	detectReviewedOnProcessor,
 	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
@@ -967,7 +971,10 @@ func issueIndexPatternProcessor(ctx *RenderContext, node *html.Node) {
 			if ref.IsPull {
 				path = "pulls"
 			}
-			if ref.Owner == "" {
+			if ctx.CommitReviewedExternally != "" {
+				link = createLink(util.URLJoin(ctx.CommitReviewedExternally, path, ref.Issue), reftext, "ref-issue ref-external-issue")
+				link.Attr = append(link.Attr, html.Attribute{Key: "rel", Val: "nofollow"})
+			} else if ref.Owner == "" {
 				link = createLink(util.URLJoin(ctx.Links.Prefix(), ctx.Metas["user"], ctx.Metas["repo"], path, ref.Issue), reftext, "ref-issue")
 			} else {
 				link = createLink(util.URLJoin(ctx.Links.Prefix(), ref.Owner, ref.Name, path, ref.Issue), reftext, "ref-issue")
@@ -1548,4 +1555,24 @@ func optionalRepoSlugAndInstancePath(ctx *RenderContext, text *string, fullURL, 
 // to prevent clashing with HTML parsing
 func escapeInlineCodeBlocks(input string) string {
 	return InlineCodeBlockRegex.ReplaceAllStringFunc(input, html.EscapeString)
+}
+
+func detectReviewedOnProcessor(ctx *RenderContext, node *html.Node) {
+	ctx.CommitReviewedExternally = DetectReviewedExternally(node.Data)
+}
+
+func DetectReviewedExternally(commitMsg string) string {
+	matches := reviewedOnRegex.FindAllStringSubmatch(commitMsg, 2)
+	// Ignore if not found, or if there are multiple matches
+	if len(matches) != 1 {
+		return ""
+	}
+
+	reviewedOn := matches[0][1]
+	// Only retain if it's an external URL
+	if strings.HasPrefix(reviewedOn, setting.AppURL) {
+		return ""
+	}
+
+	return reviewedOn
 }

@@ -134,6 +134,13 @@ func TestRenderCommitMessageLinkSubject(t *testing.T) {
 	expected := `<a href="https://example.com/link" class="default-link muted">space </a><a href="/mention-user" class="mention">@mention-user</a>`
 
 	assert.EqualValues(t, expected, RenderCommitMessageLinkSubject(t.Context(), testInput, "https://example.com/link", testMetas))
+
+	expected = `<a href="https://example.com/link" class="default-link muted">fix: a bug (</a><a href="/user13/repo11/issues/123" class="ref-issue">#123</a><a href="https://example.com/link" class="default-link muted">)</a>`
+	assert.EqualValues(t, expected, RenderCommitMessageLinkSubject(t.Context(), "fix: a bug (#123)\n\nNot-Reviewed-on: https://example.com/neat-user/neat-repo/pulls/123", "https://example.com/link", testMetas))
+
+	// link to #123 will change to an absolute link because of Reviewed-On's presence...
+	expected = `<a href="https://example.com/link" class="default-link muted">fix: a bug (</a><a href="https://example.com/neat-user/neat-repo/issues/123" class="ref-issue ref-external-issue" rel="nofollow">#123</a><a href="https://example.com/link" class="default-link muted">)</a>`
+	assert.EqualValues(t, expected, RenderCommitMessageLinkSubject(t.Context(), "fix: a bug (#123)\n\nReviewed-on: https://example.com/neat-user/neat-repo/pulls/123", "https://example.com/link", testMetas))
 }
 
 func TestRenderIssueTitle(t *testing.T) {
