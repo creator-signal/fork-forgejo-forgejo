@@ -901,12 +901,12 @@ func ListActionRuns(ctx *context.APIContext) {
 		}
 	}
 
-	runs, total, err := db.FindAndCount[actions_model.ActionRun](ctx, &actions_model.FindRunJobOptions{
+	runs, total, err := db.FindAndCount[actions_model.ActionRun](ctx, &actions_model.FindRunOptions{
 		ListOptions: utils.GetListOptions(ctx),
 		OwnerID:     ctx.Repo.Owner.ID,
 		RepoID:      ctx.Repo.Repository.ID,
 		Events:      ctx.FormStrings("event"),
-		Statuses:    statuses,
+		Status:      statuses,
 		RunNumber:   ctx.FormInt64("run_number"),
 		CommitSHA:   ctx.FormString("head_sha"),
 	})
