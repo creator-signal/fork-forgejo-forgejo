@@ -1547,7 +1547,5 @@ func optionalRepoSlugAndInstancePath(ctx *RenderContext, text *string, fullURL, 
 // escapeInlineCodeBlocks escapes HTML symbols in contents of Markdown inline code blocks
 // to prevent clashing with HTML parsing
 func escapeInlineCodeBlocks(input string) string {
-	return InlineCodeBlockRegex.ReplaceAllStringFunc(input, func(s string) string {
-		return html.EscapeString(s)
-	})
+	return InlineCodeBlockRegex.ReplaceAllStringFunc(input, html.EscapeString)
 }
