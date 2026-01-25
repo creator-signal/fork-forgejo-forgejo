@@ -1367,8 +1367,4 @@ func TestRenderDescriptionHTML(t *testing.T) {
 	test(
 		"A weird alternative to `Arc<RwLock<T>>`",
 		"A weird alternative to `Arc&lt;RwLock&lt;T&gt;&gt;`")
-
-	// Restore previous settings
-	markup.InitializeSanitizer()
-	markup.CustomLinkURLSchemes(setting.Markdown.CustomURLSchemes)
 }
