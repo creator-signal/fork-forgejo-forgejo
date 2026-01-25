@@ -374,6 +374,7 @@ func InsertRunJobs(ctx context.Context, run *ActionRun, jobs []*jobparser.Single
 			}
 			name, _ = util.SplitStringAtByteN(job.Name, 255)
 			runsOn = job.RunsOn()
+			// TODO: Extract environment from job.DeploymentEnvironment() once runner module is updated
 		}
 		runJobs = append(runJobs, &ActionRunJob{
 			RunID:             run.ID,

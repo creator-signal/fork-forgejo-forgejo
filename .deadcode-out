@@ -13,6 +13,20 @@ forgejo.org/models
 	IsErrSHANotFound
 	IsErrMergeDivergingFastForwardOnly
 
+forgejo.org/models/actions
+	ErrEnvironmentNotFound.Error
+	ErrEnvironmentNotFound.Unwrap
+	IsErrEnvironmentNotFound
+	FindEnvironmentOptions.ToConds
+	FindEnvironmentOptions.ToOrders
+	FindEnvironments
+	CountEnvironments
+	GetEnvironmentByID
+	GetEnvironmentByName
+	InsertEnvironment
+	UpdateEnvironment
+	DeleteEnvironment
+
 forgejo.org/models/auth
 	WebAuthnCredentials
 

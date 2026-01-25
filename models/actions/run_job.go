@@ -35,6 +35,7 @@ type ActionRunJob struct {
 	Needs             []string `xorm:"JSON TEXT"`
 	RunsOn            []string `xorm:"JSON TEXT"`
 	TaskID            int64    // the latest task of the job
+	Environment       string   `xorm:"VARCHAR(255)"` // deployment environment name
 	Status            Status   `xorm:"index"`
 	Started           timeutil.TimeStamp
 	Stopped           timeutil.TimeStamp
