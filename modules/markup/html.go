@@ -1547,35 +1547,7 @@ func optionalRepoSlugAndInstancePath(ctx *RenderContext, text *string, fullURL, 
 // escapeInlineCodeBlocks escapes HTML symbols in contents of Markdown inline code blocks
 // to prevent clashing with HTML parsing
 func escapeInlineCodeBlocks(input string) string {
-	var output strings.Builder
-	lastBacktick := 0
-	inBacktick := false
-
-	nextBacktick := strings.IndexByte(input, '`')
-	if nextBacktick == -1 {
-		return input
-	}
-
-	for {
-		if inBacktick {
-			output.WriteString(html.EscapeString(input[lastBacktick:nextBacktick]))
-		} else {
-			output.WriteString(input[lastBacktick:nextBacktick])
-		}
-		lastBacktick = nextBacktick
-
-		nextLocalBacktick := strings.IndexByte(input[nextBacktick+1:], '`')
-		if nextLocalBacktick == -1 {
-			break
-		}
-		nextBacktick += nextLocalBacktick + 1
-
-		if inBacktick || lastBacktick+1 != nextBacktick {
-			inBacktick = !inBacktick
-		}
-	}
-
-	output.WriteString(input[lastBacktick:])
-
-	return output.String()
+	return InlineCodeBlockRegex.ReplaceAllStringFunc(input, func(s string) string {
+		return html.EscapeString(s)
+	})
 }
