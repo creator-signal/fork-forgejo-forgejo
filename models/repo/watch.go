@@ -25,8 +25,8 @@ const (
 	// This means the user explicitly chose to watch the repo.
 	WatchModeNormal // 1
 	// WatchModeDont explicit don't auto-watch
-	// This means the user explicitly removed herself as a watcher.
-	// Then the AutoWatchOnChanges feature doesn't make the user a watcher when she pushes to the repo.
+	// This means the user explicitly removed themselves as a watcher.
+	// Then the AutoWatchOnChanges feature doesn't make the user a watcher when they pushes to the repo.
 	WatchModeDont // 2
 	// WatchModeAuto watch repository (from AutoWatchOnChanges)
 	// This is used when the user pushed to the repo and setting.Service.AutoWatchOnChanges is true.
