@@ -173,7 +173,7 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 
 			// 500 page
 			reset := enableDemoPages()
-			req = NewRequest(t, "GET", "/demo/error/500")
+			req = NewRequest(t, "GET", "/-/demo/error/500")
 			req.Header.Add("Accept", "text/html")
 			resp = session.MakeRequest(t, req, http.StatusInternalServerError)
 			htmlDoc = NewHTMLParser(t, resp.Body)
@@ -197,7 +197,7 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 
 			// 500 page
 			reset := enableDemoPages()
-			req = NewRequest(t, "GET", "/demo/error/500")
+			req = NewRequest(t, "GET", "/-/demo/error/500")
 			req.Header.Add("Accept", "text/html")
 			resp = session.MakeRequest(t, req, http.StatusInternalServerError)
 			htmlDoc = NewHTMLParser(t, resp.Body)

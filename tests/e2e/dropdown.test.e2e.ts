@@ -232,8 +232,8 @@ test.describe(`Visual properties`, () => {
     const context = await browser.newContext({javaScriptEnabled: false});
     const page = await context.newPage();
 
-    // `/demo` has dropdowns with various combinations of items
-    await page.goto('/demo/dropdown');
+    // `/-/demo` has dropdowns with various combinations of items
+    await page.goto('/-/demo/dropdown');
 
     // Dropdown with just 3 items and nothing special
     await page.locator(`#dropdown-1 > summary`).click();

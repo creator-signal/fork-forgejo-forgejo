@@ -664,7 +664,6 @@ var (
 		"user",  // user login/activate/settings, etc
 
 		"admin",
-		"demo",
 		"explore",
 		"issues",
 		"pulls",

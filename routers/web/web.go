@@ -1720,10 +1720,12 @@ func registerRoutes(m *web.Route) {
 	}
 
 	if !setting.IsProd {
-		m.Any("/demo", demo.List)
-		m.Any("/demo/fetch-action-test", demo.FetchActionTest)
-		m.Any("/demo/{sub}", demo.Tmpl)
-		m.Get("/demo/error/{errcode}", demo.ErrorPage)
+		m.Group("/-", func() {
+			m.Any("/demo", demo.List)
+			m.Any("/demo/fetch-action-test", demo.FetchActionTest)
+			m.Any("/demo/{sub}", demo.Tmpl)
+			m.Get("/demo/error/{errcode}", demo.ErrorPage)
+		})
 	}
 
 	m.NotFound(func(w http.ResponseWriter, req *http.Request) {

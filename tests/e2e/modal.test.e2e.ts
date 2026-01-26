@@ -50,7 +50,7 @@ test('Dialog modal', async ({page}) => {
 
 test('Dialog modal: width', async ({page, isMobile}) => {
   // This test doesn't need JS and runs a little faster without it
-  await page.goto('/demo/modal');
+  await page.goto('/-/demo/modal');
 
   // Open modal with short content
   const shortModal = page.locator('#short-modal');
