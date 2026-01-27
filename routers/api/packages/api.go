@@ -787,27 +787,27 @@ func ContainerRoutes() *web.Route {
 	r.Group("/{username}", func() {
 		r.Group("/{image}", func() {
 			r.Group("/blobs/uploads", func() {
-				r.Post("", container.InitiateUploadBlob)
+				r.Post("", container.HandleInitiateUploadBlob)
 				r.Group("/{uuid}", func() {
-					r.Get("", container.GetUploadBlob)
-					r.Patch("", container.UploadBlob)
-					r.Put("", container.EndUploadBlob)
-					r.Delete("", container.CancelUploadBlob)
+					r.Get("", container.HandleGetUploadBlob)
+					r.Patch("", container.HandleUploadBlob)
+					r.Put("", container.HandleEndUploadBlob)
+					r.Delete("", container.HandleCancelUploadBlob)
 				})
 			}, reqPackageAccess(perm.AccessModeWrite))
 			r.Group("/blobs/{digest}", func() {
-				r.Head("", container.HeadBlob)
-				r.Get("", container.GetBlob)
-				r.Delete("", reqPackageAccess(perm.AccessModeWrite), container.DeleteBlob)
+				r.Head("", container.HandleHeadBlob)
+				r.Get("", container.HandleGetBlob)
+				r.Delete("", reqPackageAccess(perm.AccessModeWrite), container.HandleDeleteBlob)
 			})
 			r.Group("/manifests/{reference}", func() {
-				r.Put("", reqPackageAccess(perm.AccessModeWrite), container.UploadManifest)
-				r.Head("", container.HeadManifest)
-				r.Get("", container.GetManifest)
-				r.Delete("", reqPackageAccess(perm.AccessModeWrite), container.DeleteManifest)
+				r.Put("", reqPackageAccess(perm.AccessModeWrite), container.HandleUploadManifest)
+				r.Head("", container.HandleHeadManifest)
+				r.Get("", container.HandleGetManifest)
+				r.Delete("", reqPackageAccess(perm.AccessModeWrite), container.HandleDeleteManifest)
 			})
 			r.Get("/tags/list", container.GetTagList)
-		}, container.VerifyImageName)
+		}, container.RemoteRegistryMiddleware, container.HandleVerifyImageName)
 
 		var (
 			blobsUploadsPattern = regexp.MustCompile(`\A(.+)/blobs/uploads/([a-zA-Z0-9-_.=]+)\z`)
@@ -832,17 +832,17 @@ func ContainerRoutes() *web.Route {
 				}
 
 				ctx.SetParams("image", path[:len(path)-14])
-				container.VerifyImageName(ctx)
+				container.HandleVerifyImageName(ctx)
 				if ctx.Written() {
 					return
 				}
 
-				container.InitiateUploadBlob(ctx)
+				container.HandleInitiateUploadBlob(ctx)
 				return
 			}
 			if isGet && strings.HasSuffix(path, "/tags/list") {
 				ctx.SetParams("image", path[:len(path)-10])
-				container.VerifyImageName(ctx)
+				container.HandleVerifyImageName(ctx)
 				if ctx.Written() {
 					return
 				}
@@ -859,7 +859,7 @@ func ContainerRoutes() *web.Route {
 				}
 
 				ctx.SetParams("image", m[1])
-				container.VerifyImageName(ctx)
+				container.HandleVerifyImageName(ctx)
 				if ctx.Written() {
 					return
 				}
@@ -867,20 +867,20 @@ func ContainerRoutes() *web.Route {
 				ctx.SetParams("uuid", m[2])
 
 				if isGet {
-					container.GetUploadBlob(ctx)
+					container.HandleGetUploadBlob(ctx)
 				} else if isPatch {
-					container.UploadBlob(ctx)
+					container.HandleUploadBlob(ctx)
 				} else if isPut {
-					container.EndUploadBlob(ctx)
+					container.HandleEndUploadBlob(ctx)
 				} else {
-					container.CancelUploadBlob(ctx)
+					container.HandleCancelUploadBlob(ctx)
 				}
 				return
 			}
 			m = blobsPattern.FindStringSubmatch(path)
 			if len(m) == 3 && (isHead || isGet || isDelete) {
 				ctx.SetParams("image", m[1])
-				container.VerifyImageName(ctx)
+				container.HandleVerifyImageName(ctx)
 				if ctx.Written() {
 					return
 				}
@@ -888,22 +888,22 @@ func ContainerRoutes() *web.Route {
 				ctx.SetParams("digest", m[2])
 
 				if isHead {
-					container.HeadBlob(ctx)
+					container.HandleHeadBlob(ctx)
 				} else if isGet {
-					container.GetBlob(ctx)
+					container.HandleGetBlob(ctx)
 				} else {
 					reqPackageAccess(perm.AccessModeWrite)(ctx)
 					if ctx.Written() {
 						return
 					}
-					container.DeleteBlob(ctx)
+					container.HandleDeleteBlob(ctx)
 				}
 				return
 			}
 			m = manifestsPattern.FindStringSubmatch(path)
 			if len(m) == 3 && (isHead || isGet || isPut || isDelete) {
 				ctx.SetParams("image", m[1])
-				container.VerifyImageName(ctx)
+				container.HandleVerifyImageName(ctx)
 				if ctx.Written() {
 					return
 				}
@@ -911,18 +911,18 @@ func ContainerRoutes() *web.Route {
 				ctx.SetParams("reference", m[2])
 
 				if isHead {
-					container.HeadManifest(ctx)
+					container.HandleHeadManifest(ctx)
 				} else if isGet {
-					container.GetManifest(ctx)
+					container.HandleGetManifest(ctx)
 				} else {
 					reqPackageAccess(perm.AccessModeWrite)(ctx)
 					if ctx.Written() {
 						return
 					}
 					if isPut {
-						container.UploadManifest(ctx)
+						container.HandleUploadManifest(ctx)
 					} else {
-						container.DeleteManifest(ctx)
+						container.HandleDeleteManifest(ctx)
 					}
 				}
 				return
