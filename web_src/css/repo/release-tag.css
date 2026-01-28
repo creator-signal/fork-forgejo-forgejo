@@ -75,6 +75,7 @@
   align-items: center;
   gap: 0.25em;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .repository.releases #release-list > li .meta {
