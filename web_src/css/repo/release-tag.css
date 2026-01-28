@@ -174,3 +174,28 @@
 .ui.ui.ui.tag-label.IsRelease:hover {
   border-color: var(--color-primary-dark-1);
 }
+
+.repository .release-tag-name .ui.label.isSigned,
+.repository .release-title-wrap .ui.label.isSigned {
+  padding: 0 0.5em;
+  box-shadow: none;
+}
+
+.repository .release-tag-name .ui.label.isSigned .avatar,
+.repository .release-title-wrap .ui.label.isSigned .avatar {
+  margin-left: .5rem;
+}
+
+.repository .release-tag-name .ui.label.isSigned.isVerified,
+.repository .release-title-wrap .ui.label.isSigned.isVerified {
+  border: 1px solid var(--color-success-border);
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.repository .release-tag-name .ui.label.isSigned.isWarning,
+.repository .release-title-wrap .ui.label.isSigned.isWarning {
+  border: 1px solid var(--color-warning-border);
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
