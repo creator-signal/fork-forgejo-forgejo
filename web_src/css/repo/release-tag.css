@@ -1,4 +1,4 @@
-.repository.releases #release-list {
+#release-list {
   margin-top: 1rem; /* = Browser default for <ul> */
   padding-left: 0; /* Unset browser default */
 }
@@ -10,21 +10,21 @@
   justify-content: end;
 }
 
-.repository.releases #release-list > li .meta {
+#release-list > li .meta {
   display: flex;
   flex-direction: column;
 }
 
-.repository.releases #release-list > li .detail {
+#release-list > li .detail {
   border-left: 1px solid var(--color-secondary);
   padding-inline-start: 1rem;
 }
 
 @media (min-width: 768px) {
-  .repository.releases #release-list > li .meta {
+  #release-list > li .meta {
     width: 25%;
   }
-  .repository.releases #release-list > li .detail {
+  #release-list > li .detail {
     width: 75%;
   }
 }
@@ -34,7 +34,7 @@
     flex-direction: column;
   }
 
-  .repository.releases #release-list > li .meta {
+  #release-list > li .meta {
     flex-direction: row;
   }
 }
