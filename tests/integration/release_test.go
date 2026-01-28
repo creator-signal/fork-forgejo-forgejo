@@ -255,7 +255,7 @@ func TestViewReleaseListNoLogin(t *testing.T) {
 	rsp := MakeRequest(t, req, http.StatusOK)
 
 	htmlDoc := NewHTMLParser(t, rsp.Body)
-	releases := htmlDoc.Find("#release-list li.ui.grid")
+	releases := htmlDoc.Find("ul#release-list > li")
 	assert.Equal(t, 5, releases.Length())
 
 	links := make([]string, 0, 5)
@@ -311,7 +311,7 @@ func TestViewReleaseListLogin(t *testing.T) {
 	rsp := session.MakeRequest(t, req, http.StatusOK)
 
 	htmlDoc := NewHTMLParser(t, rsp.Body)
-	releases := htmlDoc.Find("#release-list li.ui.grid")
+	releases := htmlDoc.Find("ul#release-list > li")
 	assert.Equal(t, 3, releases.Length())
 
 	links := make([]string, 0, 5)
@@ -342,7 +342,7 @@ func TestViewReleaseListKeyword(t *testing.T) {
 	rsp := session.MakeRequest(t, req, http.StatusOK)
 
 	htmlDoc := NewHTMLParser(t, rsp.Body)
-	releases := htmlDoc.Find("#release-list li.ui.grid")
+	releases := htmlDoc.Find("ul#release-list > li")
 	assert.Equal(t, 1, releases.Length())
 
 	links := make([]string, 0, 5)
@@ -370,7 +370,7 @@ func TestViewReleaseListKeywordNoPagination(t *testing.T) {
 	rsp := session.MakeRequest(t, req, http.StatusOK)
 
 	htmlDoc := NewHTMLParser(t, rsp.Body)
-	releases := htmlDoc.Find("#release-list li.ui.grid")
+	releases := htmlDoc.Find("ul#release-list > li")
 	assert.Equal(t, 1, releases.Length())
 
 	pagination := htmlDoc.Find("div.pagination")
