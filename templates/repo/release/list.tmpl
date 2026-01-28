@@ -18,7 +18,7 @@
 							{{template "repo/branch_dropdown" dict "root" $ "release" $release}}
 						{{end}}
 					</div>
-					<div class="ui twelve wide column detail">
+					<div class="detail">
 						<div class="tw-flex tw-items-center tw-justify-between tw-flex-wrap tw-mb-2">
 							<h4 class="release-list-title tw-break-anywhere">
 								<a href="{{$.RepoLink}}/releases/tag/{{$release.TagName | PathEscapeSegments}}">{{$release.Title}}</a>
