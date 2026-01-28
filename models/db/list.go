@@ -185,10 +185,7 @@ func Count[T any](ctx context.Context, opts FindOptions) (int64, error) {
 // FindAndCount represents a common findandcount function which accept an options interface
 func FindAndCount[T any](ctx context.Context, opts FindOptions) ([]*T, int64, error) {
 	sess := GetEngine(ctx).Where(opts.ToConds())
-	page, pageSize := opts.GetPage(), opts.GetPageSize()
-	if !opts.IsListAll() && pageSize > 0 && page >= 1 {
-		sess.Limit(pageSize, (page-1)*pageSize)
-	}
+
 	if joinOpt, ok := opts.(FindOptionsJoin); ok {
 		for _, joinFunc := range joinOpt.ToJoins() {
 			if err := joinFunc(sess); err != nil {
@@ -200,6 +197,14 @@ func FindAndCount[T any](ctx context.Context, opts FindOptions) ([]*T, int64, er
 		if order := orderOpt.ToOrders(); order != "" {
 			sess.OrderBy(order)
 		}
+	}
+
+	page, pageSize := opts.GetPage(), opts.GetPageSize()
+	if !opts.IsListAll() && pageSize > 0 {
+		if page == 0 {
+			page = 1
+		}
+		sess.Limit(pageSize, (page-1)*pageSize)
 	}
 
 	findPageSize := defaultFindSliceSize
