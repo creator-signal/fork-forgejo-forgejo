@@ -60,17 +60,6 @@
   margin: 0;
 }
 
-.repository.releases #release-list > li .detail .dot {
-  width: 10px;
-  height: 10px;
-  background-color: var(--color-secondary-dark-3);
-  position: absolute;
-  left: -5.5px;
-  top: 30px;
-  border-radius: var(--border-radius-full);
-  border: 2.5px solid var(--color-body);
-}
-
 #release-list > li {
   display: flex;
   gap: 1rem;
