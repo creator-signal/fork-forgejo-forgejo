@@ -6,13 +6,16 @@ package utils
 import (
 	"forgejo.org/models/db"
 	"forgejo.org/services/context"
-	"forgejo.org/services/convert"
 )
 
 // GetListOptions returns list options using the page and limit parameters
 func GetListOptions(ctx *context.APIContext) db.ListOptions {
-	return db.ListOptions{
+	opts := db.ListOptions{
 		Page:     ctx.FormInt("page"),
-		PageSize: convert.ToCorrectPageSize(ctx.FormInt("limit")),
+		PageSize: ctx.FormInt("limit"),
 	}
+
+	opts.SetDefaultValues()
+
+	return opts
 }
