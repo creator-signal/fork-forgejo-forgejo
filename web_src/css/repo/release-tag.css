@@ -15,17 +15,16 @@
   flex-direction: column;
 }
 
-#release-list > li .detail {
-  border-left: 1px solid var(--color-secondary);
-  padding-inline-start: 1rem;
-}
-
 @media (min-width: 768px) {
   #release-list > li .meta {
     width: 25%;
   }
   #release-list > li .detail {
     width: 75%;
+
+    /* Line separating columns on wide screen */
+    border-left: 1px solid var(--color-secondary);
+    padding-inline-start: 1rem;
   }
 }
 
