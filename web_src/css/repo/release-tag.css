@@ -14,12 +14,15 @@
 #release-list > li .meta {
   display: flex;
   flex-direction: column;
+  gap: 1em;
 }
 
 /* Column layout (desktop) */
 @media (min-width: 768px) {
   #release-list > li .meta {
     width: 25%;
+    position: relative;
+    text-align: right;
 
     /* Align contents of meta column with release name */
     padding-top: 11px;
@@ -80,12 +83,6 @@
   gap: 0.25em;
   margin: 0;
   overflow-wrap: anywhere;
-}
-
-.repository.releases #release-list > li .meta {
-  position: relative;
-  text-align: right;
-  gap: 1em;
 }
 
 .repository.releases #release-list > li .detail .author img {
