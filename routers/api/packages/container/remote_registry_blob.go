@@ -4,6 +4,8 @@
 package container
 
 import (
+	"net/http"
+
 	"forgejo.org/services/context"
 )
 
@@ -15,18 +17,20 @@ func GetRemoteTagList(ctx *context.Context) {
 	return
 }
 
-func remoteHeadBlob(ctx *context.Context) {
+func RemoteHeadBlob(ctx *context.Context) {
 	return
 }
 
-func remoteGetBlob(ctx *context.Context) {
+func RemoteGetBlob(ctx *context.Context) {
 	return
 }
 
-func remoteHeadManifest(ctx *context.Context) {
-	return
+func RemoteHeadManifest(ctx *context.Context) {
+	setResponseHeaders(ctx.Resp, &containerHeaders{
+		Status: http.StatusOK,
+	})
 }
 
-func remoteGetManifest(ctx *context.Context) {
+func RemoteGetManifest(ctx *context.Context) {
 	return
 }
