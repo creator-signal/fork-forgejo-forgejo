@@ -84,28 +84,54 @@ export function initRepoIssueSidebarList() {
       return;
     }
 
+    const selectedItemExcludeButton = selectedItem.querySelector('.label-exclude-item-btn');
+    const selectExcludeButton = () => selectedItemExcludeButton?.classList.add('selected');
+    const deselectExcludeButton = () => selectedItemExcludeButton?.classList.remove('selected');
+    const isExcludeButtonSelected = () => selectedItemExcludeButton?.classList.contains('selected');
+
     if (e.key === 'Enter') {
       const labelElement = selectedItem.querySelector<HTMLAnchorElement>('a.label-filter-item');
-      const excludeButtonIsSelected = selectedItem.querySelector('.label-exclude-item-btn.selected');
 
-      if (excludeButtonIsSelected) {
+      if (!labelElement) {
+        return;
+      }
+
+      if (isExcludeButtonSelected()) {
         excludeLabel(labelElement);
       } else {
         labelElement.click();
       }
     }
 
+    // the menu can be navigated with or without the search input being focused
+    // therefore we check if the input is currently focused and the caret is
+    // at the end to make sure the moving the caret within the input works
     const isOnInput = (e.target as HTMLElement).matches('input');
+    const input = e.target as HTMLInputElement;
 
-    if (isOnInput) {
-      const input = e.target as HTMLInputElement;
+    if (e.key === 'ArrowRight' && (!isOnInput || isCaretAtEnd(input))) {
+      selectExcludeButton();
+    }
 
-      if (e.key === 'ArrowRight' && isCaretAtEnd(input)) {
-        selectedItem.querySelector('.label-exclude-item-btn')?.classList.add('selected');
+    if (e.key === 'ArrowLeft') {
+      // it will deselect the exclude button before letting the user move along the focused input text
+      // so the user has to press once the left key to deselect and then another time to
+      // move the caret to the left side
+      if (isOnInput && isCaretAtEnd(input) && selectedItemExcludeButton.classList.contains('selected')) {
+        e.preventDefault();
       }
+      deselectExcludeButton();
+    }
 
-      if (e.key === 'ArrowLeft' && isCaretAtEnd(input)) {
-        selectedItem.querySelector('.label-exclude-item-btn')?.classList.remove('selected');
+    // when a exclude button is selected moving to the prev or next item in the menu
+    // is still possible, but the exclude button can remain selected, this makes
+    // sure to clear the selection class from the exclude buttons that are not
+    // within the currently selected menu item
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      for (const excludeButtonSelected of document.querySelectorAll('.label-exclude-item-btn.selected')) {
+        if (!selectedItem.contains(excludeButtonSelected)) {
+          excludeButtonSelected.classList.remove('selected');
+        }
       }
     }
   });
