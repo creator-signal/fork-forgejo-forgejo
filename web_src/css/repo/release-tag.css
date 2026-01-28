@@ -51,6 +51,13 @@
   #release-list > li .detail .download summary {
     margin-block: 0 0.75rem;
   }
+
+  .release-list-search {
+    order: 2 !important;
+  }
+  .release-list-buttons {
+    margin-left: auto;
+  }
 }
 
 .repository.releases #release-list .release-list-title {
@@ -134,15 +141,6 @@
 .repository.new.release .target .selection.dropdown {
   padding-top: 10px;
   padding-bottom: 10px;
-}
-
-@media (max-width: 767.98px) {
-  .release-list-search {
-    order: 2 !important;
-  }
-  .release-list-buttons {
-    margin-left: auto;
-  }
 }
 
 .repository.new.release .field .attachment_edit {
