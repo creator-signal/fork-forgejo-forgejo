@@ -10,29 +10,34 @@ import (
 
 const remoteRegistryContextKey = "RemoteRegistryContext"
 
-// Unsupported operations for remote registries
-func remoteUnsupportedOperation(ctx *context.Context) {
-	apiErrorDefined(ctx, errUnsupported.WithMessage("Pushing to remote registries is not supported"))
+// TODO HandleEndUploadBlob handles verifying the image name
+func HandleVerifyImageName(ctx *context.Context) {
+	HandleRegistryRequest(ctx, VerifyRemoteImageName, VerifyImageName)
 }
 
-// HandleGetBlob handles blob requests
-func HandleGetBlob(ctx *context.Context) {
-	HandleRegistryRequest(ctx, remoteGetBlob, GetBlob)
+// TODO HandleGetTagList handles getting the tag list
+func HandleGetTagList(ctx *context.Context) {
+	HandleRegistryRequest(ctx, GetRemoteTagList, GetTagList)
 }
 
-// HandleHeadBlob handles blob head requests
+// TODO HandleHeadBlob handles blob head requests
 func HandleHeadBlob(ctx *context.Context) {
 	HandleRegistryRequest(ctx, remoteHeadBlob, HeadBlob)
 }
 
-// HandleGetManifest handles manifest requests
-func HandleGetManifest(ctx *context.Context) {
-	HandleRegistryRequest(ctx, remoteGetManifest, GetManifest)
+// TODO HandleGetBlob handles blob requests
+func HandleGetBlob(ctx *context.Context) {
+	HandleRegistryRequest(ctx, remoteGetBlob, GetBlob)
 }
 
-// HandleHeadManifest handles manifest head requests
+// TODO HandleHeadManifest handles manifest head requests
 func HandleHeadManifest(ctx *context.Context) {
 	HandleRegistryRequest(ctx, remoteHeadManifest, HeadManifest)
+}
+
+// TODO HandleGetManifest handles manifest requests
+func HandleGetManifest(ctx *context.Context) {
+	HandleRegistryRequest(ctx, remoteGetManifest, GetManifest)
 }
 
 // HandleInitiateUploadBlob handles upload initiation (remote uploads not supported)
@@ -75,9 +80,9 @@ func HandleCancelUploadBlob(ctx *context.Context) {
 	HandleRegistryRequest(ctx, remoteUnsupportedOperation, CancelUploadBlob)
 }
 
-// HandleEndUploadBlob handles cancelation of uploading blobs (unsupported for remote)
-func HandleVerifyImageName(ctx *context.Context) {
-	HandleRegistryRequest(ctx, VerifyRemoteImageName, VerifyImageName)
+// Unsupported operations for remote registries
+func remoteUnsupportedOperation(ctx *context.Context) {
+	apiErrorDefined(ctx, errUnsupported.WithMessage("Pushing to remote registries is not supported"))
 }
 
 func GetRemoteRegistryContext(ctx *context.Context) *RemoteRegistryContext {
