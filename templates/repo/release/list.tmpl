@@ -8,7 +8,7 @@
 			{{range $idx, $info := .Releases}}
 				{{$release := $info.Release}}
 				<li>
-					<div class="ui four wide column meta">
+					<div class="meta">
 						<a class="muted" href="{{if not (and $release.Sha1 ($.Permission.CanRead $.UnitTypeCode))}}#{{else}}{{$.RepoLink}}/src/tag/{{$release.TagName | PathEscapeSegments}}{{end}}" rel="nofollow">{{svg "octicon-tag" 16 "tw-mr-1"}}{{$release.TagName}}</a>
 						{{if and $release.Sha1 ($.Permission.CanRead $.UnitTypeCode)}}
 							<a class="muted tw-font-mono" href="{{$.RepoLink}}/src/commit/{{$release.Sha1}}" rel="nofollow">{{svg "octicon-git-commit" 16 "tw-mr-1"}}{{ShortSha $release.Sha1}}</a>
