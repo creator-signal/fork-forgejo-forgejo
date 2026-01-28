@@ -4,8 +4,6 @@
 package container
 
 import (
-	"strings"
-
 	"forgejo.org/services/context"
 
 	rr_model "forgejo.org/models/remote_registry"
@@ -29,34 +27,12 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 		return
 	}
 
-	imageStr := ctx.Params("image")
-	isRemote := isRemoteRequest(imageStr)
-
-	if !isRemote {
-		// Not a remote registry request, continue with normal processing
-		return
-	}
-
+	remoteName := ctx.Params("remote-name")
+	ownerName := ctx.Params("username")
+	imageName := ctx.Params("image")
 	username := ctx.ContextUser.Name
-	remoteName, imageName := parseImageName(imageStr)
 
-	log.Trace("Detected remote registry request: owner=%s, remote=%s, image=%s",
-		username, remoteName, imageName)
+	log.Trace("Detected remote registry request: owner=%s, user=%s, remote=%s, image=%s",
+		ownerName, username, remoteName, imageName)
 
-}
-
-// Parse the request string for "remote" after {username}
-func isRemoteRequest(imageStr string) bool {
-	splitRequest := strings.Split(imageStr, "/")
-	// this is the image namespace
-	if splitRequest[0] == "remote" {
-		return true
-	}
-	return false
-}
-
-// Parse the image string for its remote name and image name
-func parseImageName(imageStr string) (string, string) {
-	pathParts := strings.Split(imageStr, "/")
-	return pathParts[1], pathParts[2]
 }
