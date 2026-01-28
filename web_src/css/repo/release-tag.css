@@ -16,6 +16,7 @@
   flex-direction: column;
 }
 
+/* Column layout (desktop) */
 @media (min-width: 768px) {
   #release-list > li .meta {
     width: 25%;
@@ -32,6 +33,7 @@
   }
 }
 
+/* Row layout (mobile) */
 @media (max-width: 767.98px) {
   #release-list > li {
     flex-direction: column;
