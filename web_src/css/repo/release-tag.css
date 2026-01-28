@@ -5,7 +5,8 @@
 
 #release-list > li {
   display: flex;
-  gap: 1rem;
+  row-gap: 0.5rem;
+  column-gap: 1rem;
   flex-direction: row;
   justify-content: end;
 }
