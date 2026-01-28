@@ -134,7 +134,7 @@ func TestDeliverTestPayloadWithoutPushEvent(t *testing.T) {
 		Type:        webhook_module.GITEA,
 		HookEvent:   &hookEvent,
 	}
-	require.NoError(t, webhook_model.CreateWebhook(t.Context(), hook, ""))
+	require.NoError(t, webhook_model.CreateWebhook(t.Context(), hook))
 
 	// if we deliver this webhook for a push event, nothing happens because the webhook isn't configured to run on those events
 	require.NoError(t, PrepareWebhook(db.DefaultContext, hook, webhook_module.HookEventPush, &api.ReleasePayload{}))
