@@ -38,6 +38,7 @@
 
   #release-list > li .meta {
     flex-direction: row;
+    align-items: center;
   }
 }
 
