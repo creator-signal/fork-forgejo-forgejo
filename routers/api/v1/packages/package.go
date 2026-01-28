@@ -10,7 +10,6 @@ import (
 	"forgejo.org/models/organization"
 	"forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
-	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
@@ -460,20 +459,7 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 		}
 	}
 
-	ownerType, err := packages_service.GetOwnerType(ctx)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
-	}
-
-	// Get correct registry from params
-	ownerParam := ctx.PathParamRaw("username")
-	owner, err := user_model.GetUserByName(ctx, ownerParam)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
-	}
-
-	registryName := ctx.PathParamRaw("registry-name")
-	rr, err := packages_service.GetRemoteRegistryByName(ctx, ownerType, owner.ID, registryName)
+	rr, err := packages_service.GetRemoteRegistryFromContext(ctx)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
 	}

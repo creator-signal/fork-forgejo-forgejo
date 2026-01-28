@@ -183,11 +183,25 @@ func TestRemoteRegistryRouting(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	defer tests.PrintCurrentTest(t)()
 
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
+	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
+
+	session := loginUser(t, user.Name)
+	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
+
+	rr := api.CreateRemoteRegistryOption{
+		Name:        "testreg",
+		RemoteType:  "container",
+		RemoteURL:   "https://example.registry.com",
+		RemoteUser:  "someUser",
+		RemoteToken: "asdfwoe324lkjsdf0242523",
+	}
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
+	resp := MakeRequest(t, req, http.StatusCreated)
 
 	// Get Bearer Token
-	req := NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL))
-	resp := MakeRequest(t, req, http.StatusUnauthorized)
+	req = NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL))
+	resp = MakeRequest(t, req, http.StatusUnauthorized)
 
 	req = NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL))
 	resp = MakeRequest(t, req, http.StatusOK)
@@ -201,7 +215,7 @@ func TestRemoteRegistryRouting(t *testing.T) {
 	image := "test"
 	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"
 
-	url := fmt.Sprintf("%sv2/%s/remote/some-remote/%s", setting.AppURL, user.Name, image)
+	url := fmt.Sprintf("%sv2/%s/remote/%s/%s", setting.AppURL, user.Name, rr.Name, image)
 
 	req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 		AddTokenAuth(anonymousToken)
