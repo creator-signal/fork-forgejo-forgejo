@@ -18,6 +18,9 @@
 @media (min-width: 768px) {
   #release-list > li .meta {
     width: 25%;
+
+    /* Align contents of meta column with release name */
+    padding-top: 11px;
   }
   #release-list > li .detail {
     width: 75%;
@@ -48,7 +51,6 @@
 }
 
 .repository.releases #release-list > li .meta {
-  padding-top: 25px;
   position: relative;
   text-align: right;
   gap: 1em;
