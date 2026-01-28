@@ -68,7 +68,7 @@
   margin-bottom: 0.5rem;
 }
 
-.repository.releases #release-list .release-list-title {
+#release-list .release-title-wrap h4 {
   font-size: 2rem;
   font-weight: var(--font-weight-normal);
   display: flex;

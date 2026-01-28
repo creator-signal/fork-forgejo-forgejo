@@ -20,7 +20,7 @@
 					</div>
 					<div class="detail">
 						<div class="release-title-wrap">
-							<h4 class="release-list-title tw-break-anywhere">
+							<h4 class="tw-break-anywhere">
 								<a href="{{$.RepoLink}}/releases/tag/{{$release.TagName | PathEscapeSegments}}">{{$release.Title}}</a>
 								{{template "repo/commit_statuses" dict "Status" $info.CommitStatus "Statuses" $info.CommitStatuses "AdditionalClasses" "tw-flex"}}
 								{{if $release.IsDraft}}

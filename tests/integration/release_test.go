@@ -261,7 +261,7 @@ func TestViewReleaseListNoLogin(t *testing.T) {
 	links := make([]string, 0, 5)
 	commitsToMain := make([]string, 0, 5)
 	releases.Each(func(i int, s *goquery.Selection) {
-		link, exist := s.Find(".release-list-title a").Attr("href")
+		link, exist := s.Find(".release-title-wrap h4 a").Attr("href")
 		if !exist {
 			return
 		}
@@ -316,7 +316,7 @@ func TestViewReleaseListLogin(t *testing.T) {
 
 	links := make([]string, 0, 5)
 	releases.Each(func(i int, s *goquery.Selection) {
-		link, exist := s.Find(".release-list-title a").Attr("href")
+		link, exist := s.Find(".release-title-wrap h4 a").Attr("href")
 		if !exist {
 			return
 		}
@@ -347,7 +347,7 @@ func TestViewReleaseListKeyword(t *testing.T) {
 
 	links := make([]string, 0, 5)
 	releases.Each(func(i int, s *goquery.Selection) {
-		link, exist := s.Find(".release-list-title a").Attr("href")
+		link, exist := s.Find(".release-title-wrap h4 a").Attr("href")
 		if !exist {
 			return
 		}
