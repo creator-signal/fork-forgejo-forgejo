@@ -806,7 +806,7 @@ func ContainerRoutes() *web.Route {
 				r.Get("", container.HandleGetManifest)
 				r.Delete("", reqPackageAccess(perm.AccessModeWrite), container.HandleDeleteManifest)
 			})
-			r.Get("/tags/list", container.GetTagList)
+			r.Get("/tags/list", container.HandleGetTagList)
 		}, container.RemoteRegistryMiddleware, container.HandleVerifyImageName)
 
 		var (
@@ -847,7 +847,7 @@ func ContainerRoutes() *web.Route {
 					return
 				}
 
-				container.GetTagList(ctx)
+				container.HandleGetTagList(ctx)
 				return
 			}
 
