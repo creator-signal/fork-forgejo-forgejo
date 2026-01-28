@@ -1,5 +1,5 @@
 #release-list {
-  margin-top: 1rem; /* = Browser default for <ul> */
+  margin-top: 10px; /* Overriding browser default for <ul>, same value as divider */
   padding-left: 0; /* Unset browser default */
 }
 
@@ -66,10 +66,6 @@
   position: relative;
   text-align: right;
   gap: 1em;
-}
-
-.repository.releases #release-list > li .detail {
-  padding-bottom: 20px;
 }
 
 .repository.releases #release-list > li .detail .author img {
