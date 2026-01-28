@@ -179,33 +179,31 @@ func TestRemoteRegistryRouting(t *testing.T) {
 	type TokenResponse struct {
 		Token string `json:"token"`
 	}
-	// TODO
-	// Request against our server
-	// endpoint GET /v2/some-org/remote/some-remote/some-image:latest/tags/list
-	// Expect our Middleware to parse correctly
 
 	defer tests.PrepareTestEnv(t)()
+	defer tests.PrintCurrentTest(t)()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-	session := loginUser(t, user.Name)
-	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadPackage)
 
 	// Get Bearer Token
-	req := NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL)).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
+	req := NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL))
+	resp := MakeRequest(t, req, http.StatusUnauthorized)
+
+	req = NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL))
+	resp = MakeRequest(t, req, http.StatusOK)
+
 	tokenResponse := &TokenResponse{}
 	DecodeJSON(t, resp, &tokenResponse)
+
 	assert.NotEmpty(t, tokenResponse.Token)
-	userToken := fmt.Sprintf("Bearer %s", tokenResponse.Token)
+	anonymousToken := fmt.Sprintf("Bearer %s", tokenResponse.Token)
 
 	image := "test"
-	blobDigest := "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"
 
 	url := fmt.Sprintf("%sv2/%s/remote/some-remote/%s", setting.AppURL, user.Name, image)
 
-	defer tests.PrintCurrentTest(t)()
-
-	req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
-		AddTokenAuth(userToken)
+	req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
+		AddTokenAuth(anonymousToken)
 	resp = MakeRequest(t, req, http.StatusOK)
 }
