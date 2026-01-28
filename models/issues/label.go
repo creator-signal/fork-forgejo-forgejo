@@ -162,9 +162,7 @@ func (l *Label) LoadSelectedLabelsAfterClick(currentSelectedLabels []int64, curr
 		}
 	}
 
-	if !labelSelected {
-		labelQuerySlice = append(labelQuerySlice, l.ID)
-	} else if labelSelected && l.IsExcluded {
+	if !labelSelected || l.IsExcluded {
 		labelQuerySlice = append(labelQuerySlice, l.ID)
 	}
 
