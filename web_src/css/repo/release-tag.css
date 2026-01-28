@@ -35,6 +35,10 @@
   #release-list > li .detail .download summary {
     margin-block: 1rem;
   }
+
+  #release-list > li:not(:last-child) .download {
+    margin-block-end: 2rem;
+  }
 }
 
 /* Row layout (mobile) */
