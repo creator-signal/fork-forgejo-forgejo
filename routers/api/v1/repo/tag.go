@@ -55,7 +55,6 @@ func ListTags(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	listOpts := utils.GetListOptions(ctx)
-	listOpts.SetDefaultValues()
 
 	tags, total, err := ctx.Repo.GitRepo.GetTagInfos(listOpts.Page, listOpts.PageSize)
 	if err != nil {

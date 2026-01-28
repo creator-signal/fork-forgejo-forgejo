@@ -64,7 +64,7 @@ func (opts ListOptions) IsListAll() bool {
 	return opts.ListAll
 }
 
-// SetDefaultValues sets default values
+// SetDefaultValues assures page and pageSize are within bounds.
 func (opts *ListOptions) SetDefaultValues() {
 	if opts.PageSize <= 0 {
 		opts.PageSize = setting.API.DefaultPagingNum

@@ -158,9 +158,6 @@ func GetAllCommits(ctx *context.APIContext) {
 	}
 
 	listOptions := utils.GetListOptions(ctx)
-	if listOptions.Page <= 0 {
-		listOptions.Page = 1
-	}
 
 	if listOptions.PageSize > setting.Git.CommitsRangeSize {
 		listOptions.PageSize = setting.Git.CommitsRangeSize

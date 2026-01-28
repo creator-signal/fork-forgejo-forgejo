@@ -263,18 +263,19 @@ func SearchIssues(ctx *context.APIContext) {
 
 	// this api is also used in UI,
 	// so the default limit is set to fit UI needs
-	limit := ctx.FormInt("limit")
-	if limit == 0 {
-		limit = setting.UI.IssuePagingNum
-	} else if limit > setting.API.MaxResponseItems {
-		limit = setting.API.MaxResponseItems
+	listOptions := db.ListOptions{
+		Page:     ctx.FormInt("page"),
+		PageSize: ctx.FormInt("limit"),
 	}
 
+	if listOptions.PageSize == 0 {
+		listOptions.PageSize = setting.UI.IssuePagingNum
+	}
+
+	listOptions.SetDefaultValues() // check pageSize upper and page lower bound
+
 	searchOpt := &issue_indexer.SearchOptions{
-		Paginator: &db.ListOptions{
-			PageSize: limit,
-			Page:     ctx.FormInt("page"),
-		},
+		Paginator:           &listOptions,
 		RepoIDs:             repoIDs,
 		AllPublic:           allPublic,
 		IsPull:              isPull,
