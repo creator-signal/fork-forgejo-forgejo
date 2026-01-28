@@ -60,6 +60,14 @@
   }
 }
 
+#release-list .release-title-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
 .repository.releases #release-list .release-list-title {
   font-size: 2rem;
   font-weight: var(--font-weight-normal);
