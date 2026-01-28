@@ -7,6 +7,9 @@
 		<ul id="release-list">
 			{{range $idx, $info := .Releases}}
 				{{$release := $info.Release}}
+				{{if ne $idx 0}}
+					<div class="divider only-mobile"></div>
+				{{end}}
 				<li>
 					<div class="meta">
 						<a class="muted" href="{{if not (and $release.Sha1 ($.Permission.CanRead $.UnitTypeCode))}}#{{else}}{{$.RepoLink}}/src/tag/{{$release.TagName | PathEscapeSegments}}{{end}}" rel="nofollow">{{svg "octicon-tag" 16 "tw-mr-1"}}{{$release.TagName}}</a>
@@ -65,7 +68,7 @@
 						{{$hasReleaseAttachment := gt (len $release.Attachments) 0}}
 						{{$hasArchiveLinks := and (not $.DisableDownloadSourceArchives) (not $release.IsDraft) (not $release.HideArchiveLinks) ($.Permission.CanRead $.UnitTypeCode)}}
 						{{if or $hasArchiveLinks $hasReleaseAttachment}}
-							<div class="divider"></div>
+							<div class="divider not-mobile"></div>
 							<details class="download" {{if eq $idx 0}}open{{end}}>
 								<summary class="tw-my-4">
 									{{ctx.Locale.Tr "repo.release.downloads"}}
