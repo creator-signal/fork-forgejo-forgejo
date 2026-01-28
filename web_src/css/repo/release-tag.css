@@ -95,6 +95,13 @@
   margin: 0;
 }
 
+@media (max-width: 640px) {
+  #release-list > li .detail .download .list .attachment {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
 .repository.tags #tags-table .tag {
   padding: 8px 12px;
 }
