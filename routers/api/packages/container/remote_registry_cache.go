@@ -4,9 +4,8 @@
 package container
 
 import (
-	"forgejo.org/services/context"
-
 	packages_model "forgejo.org/models/packages"
+	"forgejo.org/services/context"
 )
 
 func getCachedRemoteManifest(ctx *context.Context) (*packages_model.PackageFileDescriptor, error) {

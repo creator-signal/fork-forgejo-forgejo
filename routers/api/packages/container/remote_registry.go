@@ -7,11 +7,10 @@ import (
 	"errors"
 	"net/http"
 
-	"forgejo.org/services/context"
-
 	rr_model "forgejo.org/models/remote_registry"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	"forgejo.org/services/context"
 	rr_service "forgejo.org/services/packages"
 )
 

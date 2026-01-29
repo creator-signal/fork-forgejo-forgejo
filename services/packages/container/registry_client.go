@@ -12,6 +12,7 @@ import (
 	rr_model "forgejo.org/models/remote_registry"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
+
 	"github.com/regclient/regclient"
 	"github.com/regclient/regclient/config"
 	"github.com/regclient/regclient/types/manifest"

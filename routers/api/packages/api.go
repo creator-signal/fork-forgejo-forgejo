@@ -785,7 +785,6 @@ func ContainerRoutes() *web.Route {
 	})
 	r.Get("/_catalog", container.ReqContainerAccess, container.GetRepositoryList)
 	r.Group("/{username}", func() {
-
 		var (
 			blobsUploadsPattern = regexp.MustCompile(`\A(.+)/blobs/uploads/([a-zA-Z0-9-_.=]+)\z`)
 			blobsPattern        = regexp.MustCompile(`\A(.+)/blobs/([^/]+)\z`)

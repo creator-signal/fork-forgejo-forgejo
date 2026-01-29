@@ -28,7 +28,6 @@ func Test_NewClient(t *testing.T) {
 }
 
 func Test_NewRef(t *testing.T) {
-
 	rr := &rr_model.RemoteRegistry{
 		Name:        "someRegistry",
 		RemoteURL:   "https://registry.example.com",

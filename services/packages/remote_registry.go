@@ -30,7 +30,6 @@ type RROpts struct {
 }
 
 func NewRemoteRegistry(opts RROpts) (rr_model.RemoteRegistry, error) {
-
 	remoteHost, err := url.Parse(opts.RemoteURL)
 	if err != nil {
 		return rr_model.RemoteRegistry{}, err
@@ -77,7 +76,6 @@ func GetOwnerType(ctx context.Context, isOrg, isUser bool) (rr_model.RemoteRegis
 }
 
 func GetRemoteRegistry(ctx context.Context, isOrg, isUser bool, userName, registryName string) (*rr_model.RemoteRegistry, error) {
-
 	ownerType, err := GetOwnerType(ctx, isOrg, isUser)
 	if err != nil {
 		return &rr_model.RemoteRegistry{}, err
