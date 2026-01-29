@@ -16,11 +16,9 @@ import (
 
 // RemoteRegistryContext represents remote registry information in the request context
 type RemoteRegistryContext struct {
-	RemoteRegistry    *rr_model.RemoteRegistry
-	OwnerName         string
-	RemoteName        string
-	ImageName         string
-	OriginalImageName string // the parsed image part before remote resolution
+	RemoteRegistry *rr_model.RemoteRegistry
+	OwnerName      string
+	ImageName      string
 }
 
 const remoteRegistryContextKey = "RemoteRegistryContext"
@@ -31,27 +29,27 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 		return
 	}
 
-	remoteName := ctx.Params("remote-name")
+	registryName := ctx.Params("registry-name")
 	ownerName := ctx.Params("username")
 	imageName := ctx.Params("image")
 	username := ctx.ContextUser.Name
+	isOrg := ctx.ContextUser.IsOrganization()
+	isUser := ctx.ContextUser.IsUser()
 
 	log.Trace("Detected remote registry request: owner=%s, user=%s, remote=%s, image=%s",
-		ownerName, username, remoteName, imageName)
+		ownerName, username, registryName, imageName)
 
 	// Resolve remote registry with precedence
-	remoteRegistry, err := rr_service.GetRemoteRegistryFromContext(*ctx)
+	remoteRegistry, err := rr_service.GetRemoteRegistry(ctx, isOrg, isUser, ownerName, registryName)
 	if err != nil {
-		log.Error("Failed to resolve remote registry %q: %v", remoteName, err)
+		log.Error("Failed to resolve remote registry %q: %v", registryName, err)
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 	remoteCtx := &RemoteRegistryContext{
-		OwnerName:         ownerName,
-		RemoteName:        remoteName,
-		ImageName:         imageName,
-		OriginalImageName: imageName,
-		RemoteRegistry:    remoteRegistry,
+		OwnerName:      ownerName,
+		ImageName:      imageName,
+		RemoteRegistry: remoteRegistry,
 	}
 
 	// Store in context
