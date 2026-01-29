@@ -197,14 +197,14 @@ func TestRemoteRegistryManifest(t *testing.T) {
 		RemoteToken: "asdfwoe324lkjsdf0242523",
 	}
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
-	resp := MakeRequest(t, req, http.StatusCreated)
+	MakeRequest(t, req, http.StatusCreated)
 
 	// Get Bearer Token
 	req = NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL))
-	resp = MakeRequest(t, req, http.StatusUnauthorized)
+	MakeRequest(t, req, http.StatusUnauthorized)
 
 	req = NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL))
-	resp = MakeRequest(t, req, http.StatusOK)
+	resp := MakeRequest(t, req, http.StatusOK)
 
 	tokenResponse := &TokenResponse{}
 	DecodeJSON(t, resp, &tokenResponse)
@@ -222,7 +222,7 @@ func TestRemoteRegistryManifest(t *testing.T) {
 		defer server.Close()
 		req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 			AddTokenAuth(anonymousToken)
-		resp = MakeRequest(t, req, http.StatusOK)
+		MakeRequest(t, req, http.StatusOK)
 	})
 
 	t.Run("HEAD Manifest", func(t *testing.T) {
@@ -230,7 +230,6 @@ func TestRemoteRegistryManifest(t *testing.T) {
 		defer server.Close()
 		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 			AddTokenAuth(anonymousToken)
-		resp = MakeRequest(t, req, http.StatusOK)
+		MakeRequest(t, req, http.StatusOK)
 	})
-
 }
