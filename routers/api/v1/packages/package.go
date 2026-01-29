@@ -393,6 +393,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		packages_service.RROpts{
 			Name:       rrOpts.Name,
 			RemoteURL:  rrOpts.RemoteURL,
+			RemoteRepo: rrOpts.RemoteRepo,
 			RemoteType: packages.Type(rrOpts.RemoteType),
 			OwnerType:  ownerType,
 			OwnerID:    ctx.ContextUser.ID,
@@ -408,8 +409,14 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 
 	connected := true
 	if rrOpts.TestConnection {
-		registryClient := container_service.NewContainerRegistryClient(&rr)
+		registryClient, err := container_service.NewContainerRegistryClient(&rr)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		}
 		connected, err = registryClient.RemoteRegistryConnected(ctx)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		}
 	}
 
 	if !connected {
@@ -471,7 +478,10 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
 	}
 
-	registryClient := container_service.NewContainerRegistryClient(rr)
+	registryClient, err := container_service.NewContainerRegistryClient(rr)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+	}
 	connected, err := registryClient.RemoteRegistryConnected(ctx)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)

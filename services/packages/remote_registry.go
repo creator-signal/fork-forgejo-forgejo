@@ -3,6 +3,8 @@ package packages
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strconv"
 
 	"forgejo.org/models/packages"
 	rr_model "forgejo.org/models/remote_registry"
@@ -19,6 +21,7 @@ type RRCredentials struct {
 
 type RROpts struct {
 	Name       string
+	RemoteRepo string
 	RemoteURL  string
 	RemoteType packages.Type
 	OwnerType  rr_model.RemoteRegistryOwnerType
@@ -27,9 +30,26 @@ type RROpts struct {
 }
 
 func NewRemoteRegistry(opts RROpts) (rr_model.RemoteRegistry, error) {
+
+	remoteHost, err := url.Parse(opts.RemoteURL)
+	if err != nil {
+		return rr_model.RemoteRegistry{}, err
+	}
+
+	remotePort := 0
+	if remoteHost.Port() != "" {
+		remotePort, err = strconv.Atoi(remoteHost.Port())
+		if err != nil {
+			return rr_model.RemoteRegistry{}, err
+		}
+	}
+
 	result := rr_model.RemoteRegistry{
 		Name:           opts.Name,
 		RemoteURL:      opts.RemoteURL,
+		RemoteHost:     remoteHost.Host,
+		RemotePort:     uint16(remotePort),
+		RemoteRepo:     opts.RemoteRepo,
 		RemoteType:     opts.RemoteType,
 		OwnerType:      opts.OwnerType,
 		OwnerID:        opts.OwnerID,
