@@ -26,14 +26,13 @@ type RemoteRegistryOwnerType string
 const (
 	RRUser RemoteRegistryOwnerType = "user"
 	RROrg  RemoteRegistryOwnerType = "org"
-	RRRepo RemoteRegistryOwnerType = "repo"
 )
 
 var (
 	ErrDuplicateRemoteRegistry    = util.NewAlreadyExistErrorf("remote registry already exists")
 	ErrRemoteRegistryNotExist     = util.NewNotExistErrorf("remote registry does not exist")
 	ErrInvalidRemoteRegistryOwner = util.NewInvalidArgumentErrorf("remote registry owner was invalid")
-	ValidOwnerTypes               = []any{RRUser, RROrg, RRRepo}
+	ValidOwnerTypes               = []any{RRUser, RROrg}
 )
 
 func (rrt RemoteRegistryOwnerType) Name() string {
@@ -42,15 +41,12 @@ func (rrt RemoteRegistryOwnerType) Name() string {
 		return "user"
 	case RROrg:
 		return "org"
-	case RRRepo:
-		return "repo"
 	}
 	panic(fmt.Sprintf("unknown RemoteRegistryOwnerType: %s", string(rrt)))
 }
 
 func (rrt RemoteRegistryOwnerType) Valid() bool {
 	if RemoteRegistryOwnerType(rrt.Name()) == RROrg ||
-		RemoteRegistryOwnerType(rrt.Name()) == RRRepo ||
 		RemoteRegistryOwnerType(rrt.Name()) == RRUser {
 		return true
 	}
