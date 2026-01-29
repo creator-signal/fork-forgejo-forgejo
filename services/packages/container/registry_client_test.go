@@ -20,9 +20,33 @@ func Test_NewClient(t *testing.T) {
 		RemoteToken: "someToken",
 	}
 
-	crc := NewContainerRegistryClient(rr)
+	crc, err := NewContainerRegistryClient(rr)
+	require.NoError(t, err)
 	assert.NotEmpty(t, crc.httpClient)
-	assert.NotEmpty(t, crc.remoteRegistry)
+	assert.NotEmpty(t, crc.RegClient)
+	assert.NotEmpty(t, crc.RemoteRegistry)
+}
+
+func Test_NewRef(t *testing.T) {
+
+	rr := &rr_model.RemoteRegistry{
+		Name:        "someRegistry",
+		RemoteURL:   "https://registry.example.com",
+		RemoteHost:  "registry.example.com",
+		RemotePort:  443,
+		RemoteRepo:  "someorg",
+		RemoteUser:  "someUser",
+		RemoteToken: "someToken",
+	}
+
+	imageName := "test-image"
+
+	crc, err := NewContainerRegistryClient(rr)
+	require.NoError(t, err)
+
+	ref, err := crc.NewRef(imageName)
+	require.NoError(t, err)
+	require.NotEmpty(t, ref)
 }
 
 func Test_PingRegistry(t *testing.T) {
@@ -39,7 +63,8 @@ func Test_PingRegistry(t *testing.T) {
 		RemoteURL: rrOpts.RemoteURL,
 	}
 
-	crc := NewContainerRegistryClient(&rr)
+	crc, err := NewContainerRegistryClient(&rr)
+	require.NoError(t, err)
 	resp, err := crc.PingRemoteRegistry(t.Context())
 
 	require.NoError(t, err)
@@ -61,7 +86,8 @@ func Test_AuthenticateRegistry(t *testing.T) {
 		RemoteUser:  "someUser",
 		RemoteToken: "someToken",
 	}
-	crc := NewContainerRegistryClient(&rr)
+	crc, err := NewContainerRegistryClient(&rr)
+	require.NoError(t, err)
 	resp, err := crc.PingRemoteRegistry(t.Context())
 	require.NoError(t, err)
 
