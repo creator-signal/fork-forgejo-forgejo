@@ -18,12 +18,13 @@ func Test_NewRemoteRegistry(t *testing.T) {
 	remoteURL := "https://example.com"
 	remoteType := packages.TypeContainer
 	opts := RROpts{
-		name,
-		remoteURL,
-		remoteType,
-		rr_model.RemoteRegistryOwnerType("org"),
-		int64(1),
-		RRCredentials{},
+		Name:       name,
+		RemoteURL:  remoteURL,
+		RemoteType: remoteType,
+		RemoteRepo: "myorg",
+		OwnerType:  rr_model.RemoteRegistryOwnerType("org"),
+		OwnerID:    int64(1),
+		Auth:       RRCredentials{},
 	}
 
 	rr, err := NewRemoteRegistry(opts)
