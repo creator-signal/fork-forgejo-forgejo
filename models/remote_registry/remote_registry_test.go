@@ -39,6 +39,9 @@ func Test_CreateRemoteRegistry(t *testing.T) {
 	rr := RemoteRegistry{
 		Name:       name,
 		RemoteURL:  remoteURL,
+		RemoteHost: "example.com",
+		RemotePort: 443,
+		RemoteRepo: "myOrg",
 		RemoteType: remoteType,
 		OwnerType:  RROrg,
 		OwnerID:    int64(1),
@@ -63,6 +66,9 @@ func Test_FindRemoteRegistryByName(t *testing.T) {
 		Name:       name,
 		RemoteURL:  remoteURL,
 		RemoteType: remoteType,
+		RemoteHost: "example.com",
+		RemotePort: 443,
+		RemoteRepo: "myOrg",
 		OwnerType:  RROrg,
 		OwnerID:    int64(1),
 	}
@@ -87,6 +93,9 @@ func Test_FindRemoteRegistryByOwnerType(t *testing.T) {
 		Name:       name,
 		RemoteURL:  remoteURL,
 		RemoteType: remoteType,
+		RemoteHost: "example.com",
+		RemotePort: 443,
+		RemoteRepo: "myOrg",
 		OwnerType:  RROrg,
 		OwnerID:    int64(1),
 	}
