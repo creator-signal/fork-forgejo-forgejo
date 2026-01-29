@@ -215,7 +215,7 @@ func TestRemoteRegistryRouting(t *testing.T) {
 	image := "test"
 	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"
 
-	url := fmt.Sprintf("%sv2/%s/remote/%s/%s", setting.AppURL, user.Name, rr.Name, image)
+	url := fmt.Sprintf("%sv2/%s/remote/%s/%s", setting.AppURL, org3.Name, rr.Name, image)
 
 	req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 		AddTokenAuth(anonymousToken)
