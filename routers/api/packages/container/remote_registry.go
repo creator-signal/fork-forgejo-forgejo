@@ -4,6 +4,7 @@
 package container
 
 import (
+	"errors"
 	"net/http"
 
 	"forgejo.org/services/context"
@@ -54,4 +55,12 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 
 	// Store in context
 	ctx.Data[remoteRegistryContextKey] = remoteCtx
+}
+
+func GetRemoteRegistryContext(ctx *context.Context) (*RemoteRegistryContext, error) {
+	remoteCtx, ok := ctx.Data[remoteRegistryContextKey].(*RemoteRegistryContext)
+	if !ok {
+		return &RemoteRegistryContext{}, errors.New("Remote registry context not found")
+	}
+	return remoteCtx, nil
 }
