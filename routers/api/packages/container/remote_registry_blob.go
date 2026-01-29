@@ -9,10 +9,6 @@ import (
 	"forgejo.org/services/context"
 )
 
-func VerifyRemoteImageName(ctx *context.Context) {
-	return
-}
-
 func GetRemoteTagList(ctx *context.Context) {
 	return
 }
