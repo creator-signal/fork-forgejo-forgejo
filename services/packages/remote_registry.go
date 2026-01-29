@@ -1,6 +1,7 @@
 package packages
 
 import (
+	"context"
 	"fmt"
 
 	"forgejo.org/models/packages"
@@ -8,7 +9,6 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/validation"
-	"forgejo.org/services/context"
 )
 
 type RRCredentials struct {
@@ -47,32 +47,28 @@ func CreateRemoteRegistry(ctx context.Context, rr rr_model.RemoteRegistry) error
 	return rr_model.CreateRemoteRegistry(ctx, rr)
 }
 
-func GetOwnerType(ctx context.Context) (rr_model.RemoteRegistryOwnerType, error) {
-	if ctx.Repo.Repository != nil {
-		return rr_model.RRRepo, nil
-	} else if ctx.ContextUser.IsOrganization() {
+func GetOwnerType(ctx context.Context, isOrg, isUser bool) (rr_model.RemoteRegistryOwnerType, error) {
+	if isOrg {
 		return rr_model.RROrg, nil
-	} else if ctx.ContextUser.IsUser() {
+	} else if isUser {
 		return rr_model.RRUser, nil
 	}
 	return "", fmt.Errorf("invalid owner type")
 }
 
-func GetRemoteRegistryFromContext(ctx context.Context) (*rr_model.RemoteRegistry, error) {
+func GetRemoteRegistry(ctx context.Context, isOrg, isUser bool, userName, registryName string) (*rr_model.RemoteRegistry, error) {
 
-	ownerType, err := GetOwnerType(ctx)
+	ownerType, err := GetOwnerType(ctx, isOrg, isUser)
 	if err != nil {
 		return &rr_model.RemoteRegistry{}, err
 	}
 
 	// Get correct registry from params
-	ownerParam := ctx.PathParamRaw("username")
-	owner, err := user_model.GetUserByName(ctx, ownerParam)
+	owner, err := user_model.GetUserByName(ctx, userName)
 	if err != nil {
 		return &rr_model.RemoteRegistry{}, err
 	}
 
-	registryName := ctx.PathParamRaw("registry-name")
 	rr, err := rr_model.GetRemoteRegistryByName(ctx, ownerType, owner.ID, registryName)
 	if err != nil {
 		return &rr_model.RemoteRegistry{}, err
