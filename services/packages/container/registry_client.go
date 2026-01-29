@@ -6,11 +6,16 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	rr_model "forgejo.org/models/remote_registry"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
+	"github.com/regclient/regclient"
+	"github.com/regclient/regclient/config"
+	"github.com/regclient/regclient/types/manifest"
+	"github.com/regclient/regclient/types/ref"
 )
 
 var (
@@ -205,6 +210,14 @@ func (crc *RegistryClient) Close(ctx context.Context, r ref.Ref) error {
 	}
 	err := crc.RegClient.Close(ctx, r)
 	return err
+}
+
+func (crc *RegistryClient) HeadManifest(ctx context.Context, r ref.Ref) (manifest.Manifest, error) {
+	m, err := crc.RegClient.ManifestHead(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to head manifest %s: %w", r.Reference, err)
+	}
+	return m, nil
 }
 
 func validateRemoteRegistryHeader(resp http.Response) bool {
