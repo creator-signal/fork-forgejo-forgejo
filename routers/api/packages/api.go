@@ -811,7 +811,6 @@ func ContainerRoutes() *web.Route {
 						m := blobsPattern.FindStringSubmatch(path)
 						if len(m) == 3 {
 							handleBlobs = true
-							container.VerifyImageName(ctx)
 							ctx.SetParams("image", m[1])
 							ctx.SetParams("digest", m[2])
 							skip = true
