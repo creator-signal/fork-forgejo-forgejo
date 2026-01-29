@@ -18,7 +18,7 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	packages_service "forgejo.org/services/packages"
-	container_client "forgejo.org/services/packages/container"
+	container_service "forgejo.org/services/packages/container"
 )
 
 // ListPackages gets all packages of an owner
@@ -382,7 +382,9 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		}
 	}
 
-	ownerType, err := packages_service.GetOwnerType(ctx)
+	isUser := ctx.ContextUser.IsUser()
+
+	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
@@ -406,7 +408,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 
 	connected := true
 	if rrOpts.TestConnection {
-		registryClient := container_client.NewContainerRegistryClient(&rr)
+		registryClient := container_service.NewContainerRegistryClient(&rr)
 		connected, err = registryClient.RemoteRegistryConnected(ctx)
 	}
 
@@ -459,12 +461,17 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 		}
 	}
 
-	rr, err := packages_service.GetRemoteRegistryFromContext(ctx)
+	isUser := ctx.ContextUser.IsUser()
+
+	userName := ctx.PathParamRaw("username")
+	registryName := ctx.PathParamRaw("registry-name")
+
+	rr, err := packages_service.GetRemoteRegistry(ctx, isOrg, isUser, userName, registryName)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
 	}
 
-	registryClient := container_client.NewContainerRegistryClient(rr)
+	registryClient := container_service.NewContainerRegistryClient(rr)
 	connected, err := registryClient.RemoteRegistryConnected(ctx)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
