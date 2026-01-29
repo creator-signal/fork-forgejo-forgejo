@@ -189,10 +189,14 @@ func TestRemoteRegistryManifest(t *testing.T) {
 	session := loginUser(t, user.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
+	// TODO Update MockServer Capabilities to serve valid data
+	server := mock_server.MockRegistryServer()
+	defer server.Close()
+
 	rr := api.CreateRemoteRegistryOption{
 		Name:        "testreg",
 		RemoteType:  "container",
-		RemoteURL:   "https://example.registry.com",
+		RemoteURL:   server.URL,
 		RemoteUser:  "someUser",
 		RemoteToken: "asdfwoe324lkjsdf0242523",
 	}
@@ -218,16 +222,12 @@ func TestRemoteRegistryManifest(t *testing.T) {
 	url := fmt.Sprintf("%sv2/%s/remote/%s/%s", setting.AppURL, org3.Name, rr.Name, image)
 
 	t.Run("HEAD Manifest", func(t *testing.T) {
-		server := mock_server.MockRegistryServer()
-		defer server.Close()
 		req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 			AddTokenAuth(anonymousToken)
 		MakeRequest(t, req, http.StatusOK)
 	})
 
 	t.Run("HEAD Manifest", func(t *testing.T) {
-		server := mock_server.MockRegistryServer()
-		defer server.Close()
 		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 			AddTokenAuth(anonymousToken)
 		MakeRequest(t, req, http.StatusOK)
