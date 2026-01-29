@@ -175,7 +175,7 @@ func TestConnectedToken(t *testing.T) {
 	MakeRequest(t, req, http.StatusCreated)
 }
 
-func TestRemoteRegistryRouting(t *testing.T) {
+func TestRemoteRegistryManifest(t *testing.T) {
 	type TokenResponse struct {
 		Token string `json:"token"`
 	}
@@ -217,7 +217,20 @@ func TestRemoteRegistryRouting(t *testing.T) {
 
 	url := fmt.Sprintf("%sv2/%s/remote/%s/%s", setting.AppURL, org3.Name, rr.Name, image)
 
-	req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
-		AddTokenAuth(anonymousToken)
-	resp = MakeRequest(t, req, http.StatusOK)
+	t.Run("HEAD Manifest", func(t *testing.T) {
+		server := mock_server.MockRegistryServer()
+		defer server.Close()
+		req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
+			AddTokenAuth(anonymousToken)
+		resp = MakeRequest(t, req, http.StatusOK)
+	})
+
+	t.Run("HEAD Manifest", func(t *testing.T) {
+		server := mock_server.MockRegistryServer()
+		defer server.Close()
+		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
+			AddTokenAuth(anonymousToken)
+		resp = MakeRequest(t, req, http.StatusOK)
+	})
+
 }

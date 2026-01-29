@@ -34,6 +34,11 @@ func MockRegistryServer() *httptest.Server {
 			}
 		})
 
+	registryRoute.HandleFunc("/v2/{name}/manifests/{reference}",
+		func(res http.ResponseWriter, r *http.Request) {
+			res.WriteHeader(http.StatusOK)
+		})
+
 	srv.Start()
 	return srv
 }
