@@ -33,7 +33,7 @@ type RegistryClient struct {
 func NewContainerRegistryClient(rr *rr_model.RemoteRegistry) (RegistryClient, error) {
 	client := &http.Client{Timeout: 12 * time.Second}
 
-	rrUrl, err := url.Parse(rr.RemoteURL)
+	rrURL, err := url.Parse(rr.RemoteURL)
 	if err != nil {
 		return RegistryClient{}, fmt.Errorf("Unable to create registry client, url was invalid: %s", err)
 	}
@@ -44,7 +44,7 @@ func NewContainerRegistryClient(rr *rr_model.RemoteRegistry) (RegistryClient, er
 	}
 
 	remoteRegistryConfig := config.Host{
-		Name:  rrUrl.Host,
+		Name:  rrURL.Host,
 		TLS:   tls,
 		User:  rr.RemoteUser,
 		Pass:  rr.RemotePassword,

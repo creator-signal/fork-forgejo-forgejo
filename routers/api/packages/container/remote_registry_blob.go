@@ -14,15 +14,12 @@ import (
 )
 
 func GetRemoteTagList(ctx *context.Context) {
-	return
 }
 
 func RemoteHeadBlob(ctx *context.Context) {
-	return
 }
 
 func RemoteGetBlob(ctx *context.Context) {
-	return
 }
 
 func RemoteHeadManifest(ctx *context.Context) {
@@ -94,5 +91,4 @@ func RemoteHeadManifest(ctx *context.Context) {
 }
 
 func RemoteGetManifest(ctx *context.Context) {
-	return
 }
