@@ -182,6 +182,31 @@ func (crc *RegistryClient) RemoteRegistryConnected(ctx context.Context) (bool, e
 	return true, nil
 }
 
+func (crc *RegistryClient) NewRef(imageName string) (ref.Ref, error) {
+	// Ref host, repo if exists, image
+	host := crc.RemoteRegistry.RemoteHost
+	repo := crc.RemoteRegistry.RemoteRepo
+	refStr := host + "/" + imageName
+	if repo != "" {
+		refStr = host + "/" + repo + "/" + imageName
+	}
+	r, err := ref.New(refStr)
+	if err != nil {
+		return ref.Ref{}, err
+	}
+	return r, err
+}
+
+// Close cleans up resources used by the client
+func (crc *RegistryClient) Close(ctx context.Context, r ref.Ref) error {
+	// Close idle connections
+	if transport, ok := crc.httpClient.Transport.(*http.Transport); ok {
+		transport.CloseIdleConnections()
+	}
+	err := crc.RegClient.Close(ctx, r)
+	return err
+}
+
 func validateRemoteRegistryHeader(resp http.Response) bool {
 	return resp.Header.Get("Docker-Distribution-API-Version") != "" && resp.Header.Get("WWW-Authenticate") != ""
 }
