@@ -143,7 +143,7 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 	}
 
 	authResp, err := crc.httpClient.Do(req)
-	if err != nil {
+	if err != nil || authResp.StatusCode != 200 {
 		log.Warn("Remote registry authentication failed for %q: %v", crc.RemoteRegistry.Name, err)
 		return &http.Response{}, fmt.Errorf("failed to connect to auth endpoint: %w", err)
 	}
@@ -237,7 +237,7 @@ func extractServiceURL(bearer string) (string, error) {
 	matches := re.FindStringSubmatch(bearer)
 
 	if len(matches) < 2 {
-		return "", fmt.Errorf("could not extract realm from bearer string")
+		return "", fmt.Errorf("could not extract service from bearer string")
 	}
 
 	return matches[1], nil
