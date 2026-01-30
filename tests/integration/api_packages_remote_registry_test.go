@@ -94,7 +94,7 @@ func TestTestConnectionAPIEndpoint(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockRegistryServer()
+	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr := api.CreateRemoteRegistryOption{
@@ -137,7 +137,7 @@ func TestConnectedBasicAuth(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockRegistryServer()
+	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr := api.CreateRemoteRegistryOption{
@@ -160,7 +160,7 @@ func TestConnectedToken(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockRegistryServer()
+	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr := api.CreateRemoteRegistryOption{
@@ -190,7 +190,7 @@ func TestRemoteRegistryManifest(t *testing.T) {
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
 	// TODO Update MockServer Capabilities to serve valid data
-	server := mock_server.MockRegistryServer()
+	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr := api.CreateRemoteRegistryOption{

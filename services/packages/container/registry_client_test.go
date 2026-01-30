@@ -48,7 +48,7 @@ func Test_NewRef(t *testing.T) {
 }
 
 func Test_PingRegistry(t *testing.T) {
-	server := mock_server.MockRegistryServer()
+	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rrOpts := api.CreateRemoteRegistryOption{
@@ -70,7 +70,7 @@ func Test_PingRegistry(t *testing.T) {
 }
 
 func Test_AuthenticateRegistry(t *testing.T) {
-	server := mock_server.MockRegistryServer()
+	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rrOpts := api.CreateRemoteRegistryOption{
