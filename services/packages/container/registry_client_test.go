@@ -33,7 +33,6 @@ func Test_NewRef(t *testing.T) {
 		RemoteURL:   "https://registry.example.com",
 		RemoteHost:  "registry.example.com",
 		RemotePort:  443,
-		RemoteRepo:  "someorg",
 		RemoteUser:  "someUser",
 		RemoteToken: "someToken",
 	}

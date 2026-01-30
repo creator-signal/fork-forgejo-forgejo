@@ -19,7 +19,6 @@ func AddRemoteRegistry(x *xorm.Engine) error {
 		RemoteURL      string                           `xorm:"NOT NULL"`
 		RemoteHost     string                           `xorm:"NOT NULL"`
 		RemotePort     uint16                           `xorm:"NOT NULL"`
-		RemoteRepo     string                           `xorm:"TEXT"`
 		RemoteType     packages.Type                    `xorm:"NOT NULL"`
 		RemoteUser     string                           `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
 		RemotePassword string                           `xorm:"TEXT"` // TODO: Password and Token encryption

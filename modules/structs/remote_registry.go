@@ -13,7 +13,6 @@ type RemoteRegistry struct {
 	RemoteURL  string `json:"remote_url"`
 	RemoteHost string `json:"remote_host"`
 	RemotePort uint16 `json:"remote_port"`
-	RemoteRepo string `json:"remote_repo"`
 	RemoteUser string `json:"remote_user"`
 	RemoteType string `json:"remote_type"`
 }
@@ -27,7 +26,6 @@ type CreateRemoteRegistryOption struct {
 	RemoteType string `json:"remote_type" binding:"Required"`
 	// required: true
 	RemoteURL      string `json:"remote_url" binding:"Required;ValidUrl;MaxSize(255)"`
-	RemoteRepo     string `json:"remote_repo"`
 	RemoteUser     string `json:"remote_user"`
 	RemotePassword string `json:"remote_pass"`
 	RemoteToken    string `json:"remote_token"`

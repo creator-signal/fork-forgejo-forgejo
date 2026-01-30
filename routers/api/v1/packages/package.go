@@ -393,7 +393,6 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		packages_service.RROpts{
 			Name:       rrOpts.Name,
 			RemoteURL:  rrOpts.RemoteURL,
-			RemoteRepo: rrOpts.RemoteRepo,
 			RemoteType: packages.Type(rrOpts.RemoteType),
 			OwnerType:  ownerType,
 			OwnerID:    ctx.ContextUser.ID,

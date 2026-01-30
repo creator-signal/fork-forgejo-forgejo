@@ -48,7 +48,6 @@ func NewRemoteRegistry(opts RROpts) (rr_model.RemoteRegistry, error) {
 		RemoteURL:      opts.RemoteURL,
 		RemoteHost:     remoteHost.Host,
 		RemotePort:     uint16(remotePort),
-		RemoteRepo:     opts.RemoteRepo,
 		RemoteType:     opts.RemoteType,
 		OwnerType:      opts.OwnerType,
 		OwnerID:        opts.OwnerID,

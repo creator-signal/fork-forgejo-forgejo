@@ -17,7 +17,6 @@ func ToRemoteRegistry(rr *rr_model.RemoteRegistry) *api.RemoteRegistry {
 		RemoteURL:  rr.RemoteURL,
 		RemoteHost: rr.RemoteHost,
 		RemotePort: rr.RemotePort,
-		RemoteRepo: rr.RemoteRepo,
 		RemoteUser: rr.RemoteUser,
 		RemoteType: rr.RemoteType.Name(),
 	}

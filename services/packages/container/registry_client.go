@@ -188,14 +188,10 @@ func (crc *RegistryClient) RemoteRegistryConnected(ctx context.Context) (bool, e
 	return true, nil
 }
 
-func (crc *RegistryClient) NewRef(imageName string) (ref.Ref, error) {
+func (crc *RegistryClient) NewRef(namespace string) (ref.Ref, error) {
 	// Ref host, repo if exists, image
 	host := crc.RemoteRegistry.RemoteHost
-	repo := crc.RemoteRegistry.RemoteRepo
-	refStr := host + "/" + imageName
-	if repo != "" {
-		refStr = host + "/" + repo + "/" + imageName
-	}
+	refStr := host + "/" + namespace
 	r, err := ref.New(refStr)
 	if err != nil {
 		return ref.Ref{}, err
