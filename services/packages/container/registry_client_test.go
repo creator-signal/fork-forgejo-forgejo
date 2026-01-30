@@ -37,14 +37,14 @@ func Test_NewRef(t *testing.T) {
 		RemoteToken: "someToken",
 	}
 
-	imageName := "test-image"
+	imageName := "myorg/test-image:latest"
 
 	crc, err := NewContainerRegistryClient(rr)
 	require.NoError(t, err)
 
 	ref, err := crc.NewRef(imageName)
 	require.NoError(t, err)
-	require.NotEmpty(t, ref)
+	assert.Equal(t, "registry.example.com/myorg/test-image:latest", ref.Reference)
 }
 
 func Test_PingRegistry(t *testing.T) {
