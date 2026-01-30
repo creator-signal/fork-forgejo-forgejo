@@ -216,7 +216,7 @@ func TestRemoteRegistryManifest(t *testing.T) {
 	assert.NotEmpty(t, tokenResponse.Token)
 	anonymousToken := fmt.Sprintf("Bearer %s", tokenResponse.Token)
 
-	image := "test"
+	image := "myorg/test"
 	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"
 
 	url := fmt.Sprintf("%sv2/%s/remote/%s/%s", setting.AppURL, org3.Name, rr.Name, image)
