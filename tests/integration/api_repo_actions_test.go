@@ -232,49 +232,70 @@ func TestActionsAPIGetListActionRun(t *testing.T) {
 	token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeWriteRepository)
 
 	testqueries := []struct {
-		name        string
-		query       string
-		expectedIDs []int64
+		name          string
+		query         string
+		expectedIDs   []int64
+		expectedTotal int8
 	}{
 		{
-			name:        "No query parameters",
-			query:       "",
-			expectedIDs: runIDs,
+			name:          "No query parameters",
+			query:         "",
+			expectedIDs:   []int64{894, 893, 892},
+			expectedTotal: 3,
 		},
 		{
-			name:        "Search for workflow_dispatch events",
-			query:       "?event=workflow_dispatch",
-			expectedIDs: []int64{894},
+			name:          "Search for workflow_dispatch events",
+			query:         "?event=workflow_dispatch",
+			expectedIDs:   []int64{894},
+			expectedTotal: 1,
 		},
 		{
-			name:        "Search for multiple events",
-			query:       "?event=workflow_dispatch&event=push",
-			expectedIDs: []int64{892, 894},
+			name:          "Search for multiple events",
+			query:         "?event=workflow_dispatch&event=push",
+			expectedIDs:   []int64{894, 892},
+			expectedTotal: 2,
 		},
 		{
-			name:        "Search for failed status",
-			query:       "?status=failure",
-			expectedIDs: []int64{893},
+			name:          "Search for failed status",
+			query:         "?status=failure",
+			expectedIDs:   []int64{893},
+			expectedTotal: 1,
 		},
 		{
-			name:        "Search for multiple statuses",
-			query:       "?status=failure&status=running",
-			expectedIDs: []int64{893, 894},
+			name:          "Search for multiple statuses",
+			query:         "?status=failure&status=running",
+			expectedIDs:   []int64{894, 893},
+			expectedTotal: 2,
 		},
 		{
-			name:        "Search for num_nr",
-			query:       "?run_number=1",
-			expectedIDs: []int64{892},
+			name:          "Search for num_nr",
+			query:         "?run_number=1",
+			expectedIDs:   []int64{892},
+			expectedTotal: 1,
 		},
 		{
-			name:        "Search for sha",
-			query:       "?head_sha=97f29ee599c373c729132a5c46a046978311e0ee",
-			expectedIDs: []int64{892, 894},
+			name:          "Search for sha",
+			query:         "?head_sha=97f29ee599c373c729132a5c46a046978311e0ee",
+			expectedIDs:   []int64{894, 892},
+			expectedTotal: 2,
 		},
 		{
-			name:        "Search for Git reference",
-			query:       "?ref=refs/heads/main",
-			expectedIDs: []int64{892, 894},
+			name:          "Search for Git reference",
+			query:         "?ref=refs/heads/main",
+			expectedIDs:   []int64{894, 892},
+			expectedTotal: 2,
+		},
+		{
+			name:          "Fetch all with limit and default page",
+			query:         "?limit=2",
+			expectedIDs:   []int64{894, 893},
+			expectedTotal: 3,
+		},
+		{
+			name:          "Fetch all with limit and explicit page",
+			query:         "?limit=2&page=2",
+			expectedIDs:   []int64{892},
+			expectedTotal: 3,
 		},
 	}
 
@@ -291,15 +312,19 @@ func TestActionsAPIGetListActionRun(t *testing.T) {
 			apiRuns := new(api.ListActionRunResponse)
 			DecodeJSON(t, res, apiRuns)
 
-			assert.Equal(t, int64(len(tt.expectedIDs)), apiRuns.TotalCount)
+			assert.Equal(t, int64(tt.expectedTotal), apiRuns.TotalCount)
 			assert.Len(t, apiRuns.Entries, len(tt.expectedIDs))
 
-			resultIDs := make([]int64, apiRuns.TotalCount)
+			resultIDs := make([]int64, len(apiRuns.Entries))
 			for i, run := range apiRuns.Entries {
 				resultIDs[i] = run.ID
 			}
 
 			assert.ElementsMatch(t, tt.expectedIDs, resultIDs)
+
+			for i := range len(tt.expectedIDs) {
+				assert.Equal(t, tt.expectedIDs[i], resultIDs[i])
+			}
 		})
 	}
 }
