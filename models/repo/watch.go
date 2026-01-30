@@ -36,10 +36,19 @@ const (
 
 // Watch is connection request for receiving repository notification.
 type Watch struct {
-	ID          int64              `xorm:"pk autoincr"`
-	UserID      int64              `xorm:"UNIQUE(watch)"`
-	RepoID      int64              `xorm:"UNIQUE(watch)"`
-	Mode        WatchMode          `xorm:"SMALLINT NOT NULL DEFAULT 1"`
+	ID     int64     `xorm:"pk autoincr"`
+	UserID int64     `xorm:"UNIQUE(watch)"`
+	RepoID int64     `xorm:"UNIQUE(watch)"`
+	Mode   WatchMode `xorm:"SMALLINT NOT NULL DEFAULT 1"`
+
+	// The Granular settings are only relevant when Mode makes IsWatchMode return true.
+	// The default is 1 because of migration reasons.
+	// Before the granular watch feature repos could only be watched entirely or not at all.
+	// Therefore people who watched a repo before granular settings still watch everything after the migration.
+	GranularWatchIssues       bool `xorm:"Bool DEFAULT 1"`
+	GranularWatchPullRequests bool `xorm:"Bool DEFAULT 1"`
+	GranularWatchReleases     bool `xorm:"Bool DEFAULT 1"`
+
 	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`
 }
