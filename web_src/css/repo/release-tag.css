@@ -8,12 +8,8 @@
   gap: 1em;
 }
 
-#release-list > li .detail {
-  padding-block-end: 1.5rem;
-
-  .desc {
-    margin-block-start: 1rem;
-  }
+#release-list > li .detail .desc {
+  margin-block-start: 1rem;
 }
 
 /* Column layout (desktop) */
@@ -36,6 +32,7 @@
   #release-list > li .detail {
     grid-column: 2;
     grid-row: 2;
+    padding-block-end: 1.5rem;
   }
   #release-list > li :is(.detail, .release-title-wrap) {
     /* Line separating columns on wide screen */
