@@ -1,3 +1,4 @@
 {
-	"meta.last_line": "(this string was needed to make weblate regenerate the file and can be removed)"
+	"packages.owner.settings.chef.keypair.description": "Za preverjanje pristnosti v registru Chef je potreben par ključev. Če ste par ključev ustvarili že prej, se pri ustvarjanju novega para ključev stari par ključev zavrže.",
+	"meta.last_line": " "
 }
