@@ -62,9 +62,11 @@
 							{{end}}
 						</p>
 						{{template "repo/tag/verification_line" (dict "ctxData" $ "release" $release)}}
-						<div class="markup desc">
-							{{$release.RenderedNote}}
-						</div>
+						{{if $release.RenderedNote}}
+							<div class="markup desc">
+								{{$release.RenderedNote}}
+							</div>
+						{{end}}
 						{{$hasReleaseAttachment := gt (len $release.Attachments) 0}}
 						{{$hasArchiveLinks := and (not $.DisableDownloadSourceArchives) (not $release.IsDraft) (not $release.HideArchiveLinks) ($.Permission.CanRead $.UnitTypeCode)}}
 						{{if or $hasArchiveLinks $hasReleaseAttachment}}
