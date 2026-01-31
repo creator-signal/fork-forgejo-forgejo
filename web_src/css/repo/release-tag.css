@@ -3,13 +3,8 @@
   padding-left: 0; /* Unset browser default */
 }
 
-#release-list > li {
-  gap: 0 1rem;
-}
-
 #release-list > li .meta {
   display: flex;
-  flex-direction: column;
   gap: 1em;
 }
 
@@ -22,12 +17,13 @@
   #release-list > li {
     display: grid;
     grid-template-columns: 25fr 75fr;
+    gap: 0 1rem;
     justify-content: end;
   }
   #release-list > li .meta {
     grid-column: 1;
     grid-row: 1 / span 2;
-    position: relative;
+    flex-direction: column;
     text-align: right;
 
     /* Align contents of meta column with release name */
@@ -51,16 +47,23 @@
 /* Row layout (mobile) */
 @media (max-width: 767.98px) {
   #release-list > li {
+    display: flex;
     flex-direction: column;
   }
 
   #release-list > li .meta {
+    order: 1;
     flex-direction: row;
     align-items: center;
+    margin-block-end: 0.75rem;
+  }
+
+  #release-list > li .detail {
+    order: 2;
   }
 
   #release-list > li .detail .download summary {
-    margin-block: 0 0.75rem;
+    margin-block: 0.75rem;
   }
 
   .release-list-search {
