@@ -18,27 +18,27 @@
 							{{template "repo/branch_dropdown" dict "root" $ "release" $release}}
 						{{end}}
 					</div>
-					<div class="detail">
-						<div class="release-title-wrap">
-							<h4>
-								<a href="{{$.RepoLink}}/releases/tag/{{$release.TagName | PathEscapeSegments}}">{{$release.Title}}</a>
-								{{template "repo/commit_statuses" dict "Status" $info.CommitStatus "Statuses" $info.CommitStatuses "AdditionalClasses" "tw-flex"}}
-								{{if $release.IsDraft}}
-									<span class="ui yellow label">{{ctx.Locale.Tr "repo.release.draft"}}</span>
-								{{else if $release.IsPrerelease}}
-									<span class="ui orange label">{{ctx.Locale.Tr "repo.release.prerelease"}}</span>
-								{{else if (not $release.IsTag)}}
-									<span class="ui green label">{{ctx.Locale.Tr "repo.release.stable"}}</span>
-								{{end}}
-							</h4>
-							<div>
-								{{if and $.CanCreateRelease (not $release.IsTag)}}
-									<a class="muted" data-tooltip-content="{{ctx.Locale.Tr "repo.release.edit"}}" href="{{$.RepoLink}}/releases/edit/{{$release.TagName | PathEscapeSegments}}" rel="nofollow">
-										{{svg "octicon-pencil"}}
-									</a>
-								{{end}}
-							</div>
+					<div class="release-title-wrap">
+						<h4>
+							<a href="{{$.RepoLink}}/releases/tag/{{$release.TagName | PathEscapeSegments}}">{{$release.Title}}</a>
+							{{template "repo/commit_statuses" dict "Status" $info.CommitStatus "Statuses" $info.CommitStatuses "AdditionalClasses" "tw-flex"}}
+							{{if $release.IsDraft}}
+								<span class="ui yellow label">{{ctx.Locale.Tr "repo.release.draft"}}</span>
+							{{else if $release.IsPrerelease}}
+								<span class="ui orange label">{{ctx.Locale.Tr "repo.release.prerelease"}}</span>
+							{{else if (not $release.IsTag)}}
+								<span class="ui green label">{{ctx.Locale.Tr "repo.release.stable"}}</span>
+							{{end}}
+						</h4>
+						<div>
+							{{if and $.CanCreateRelease (not $release.IsTag)}}
+								<a class="muted" data-tooltip-content="{{ctx.Locale.Tr "repo.release.edit"}}" href="{{$.RepoLink}}/releases/edit/{{$release.TagName | PathEscapeSegments}}" rel="nofollow">
+									{{svg "octicon-pencil"}}
+								</a>
+							{{end}}
 						</div>
+					</div>
+					<div class="detail">
 						<p class="text grey">
 							<span class="author">
 							{{if $release.OriginalAuthor}}
