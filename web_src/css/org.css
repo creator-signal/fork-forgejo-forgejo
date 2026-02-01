@@ -95,7 +95,7 @@
 .page-content.organization.members .list {
   display: grid;
   grid-template-columns: minmax(min-content, auto) 1fr fit-content(100%) fit-content(100%);
-  gap: 0.5rem;
+  gap: 0 0.5rem;
 
   .divider {
     grid-column: 1 / -1;
