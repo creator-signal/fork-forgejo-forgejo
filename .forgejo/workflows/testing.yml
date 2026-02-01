@@ -215,6 +215,16 @@ jobs:
         uses: ./.forgejo/workflows-composite/apt-install-from
         with:
           packages: git git-lfs
+      # new tests: the exit code will be re-raised in summary
+      - run: su forgejo -c 'make test-mysql-integration || true'
+        timeout-minutes: 120
+        env:
+          TEST_MYSQL_HOST: mysql:3306
+          TEST_MYSQL_DBNAME: testgitea
+          USE_REPO_TEST_DIR: 1
+      # print the failed test and exit with code > 0 on error
+      - run: su forgejo -c 'make test-mysql-integration-summary'
+      # legacy tests
       - uses: ./.forgejo/workflows-composite/build-backend
       - run: |
           su forgejo -c 'make test-mysql-migration test-mysql'
@@ -253,6 +263,20 @@ jobs:
         uses: ./.forgejo/workflows-composite/apt-install-from
         with:
           packages: git git-lfs
+      # new tests: the exit code will be re-raised in summary
+      - run: su forgejo -c 'make test-pgsql-integration || true'
+        timeout-minutes: 120
+        env:
+          TEST_PGSQL_HOST: pgsql:5432
+          TEST_PGSQL_DBNAME: test
+          TEST_PGSQL_PASSWORD: postgres
+          TEST_PGSQL_SCHEMA: ""
+          RACE_ENABLED: true
+          USE_REPO_TEST_DIR: 1
+          TEST_LDAP: 1
+      # print the failed test and exit with code > 0 on error
+      - run: su forgejo -c 'make test-pgsql-integration-summary'
+      # legacy tests
       - uses: ./.forgejo/workflows-composite/build-backend
       - run: |
           su forgejo -c 'make test-pgsql-migration test-pgsql'
@@ -275,6 +299,16 @@ jobs:
         uses: ./.forgejo/workflows-composite/apt-install-from
         with:
           packages: git git-lfs
+      # new tests: the exit code will be re-raised in summary
+      - run: su forgejo -c 'make test-sqlite-integration || true'
+        timeout-minutes: 120
+        env:
+          TAGS: sqlite sqlite_unlock_notify
+          RACE_ENABLED: true
+          USE_REPO_TEST_DIR: 1
+      # print the failed test and exit with code > 0 on error
+      - run: su forgejo -c 'make test-sqlite-integration-summary'
+      # legacy tests
       - uses: ./.forgejo/workflows-composite/build-backend
       - run: |
           su forgejo -c 'make test-sqlite-migration test-sqlite'

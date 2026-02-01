@@ -645,6 +645,14 @@ test-sqlite\#%: integrations.sqlite.test generate-ini-sqlite
 .PHONY: test-sqlite-migration
 test-sqlite-migration:  migrations.sqlite.test migrations.individual.sqlite.test
 
+.PHONY: test-sqlite-integration
+test-sqlite-integration:
+	$(GOTEST) $(GOTESTFLAGS) -tags '$(TEST_TAGS)' $(GOTESTCOMPILEDRUNSUFFIX) -json ./tests/integration_exp | tee ./tests/integration-sqlite.json.test | TESTJSON_FORMAT=output go run ./tests/cmd/testjson-formatter/
+
+.PHONY: test-sqlite-integration-summary
+test-sqlite-integration-summary:
+	TESTJSON_FORMAT=summary $(GO) run ./tests/cmd/testjson-formatter/ < ./tests/integration-sqlite.json.test
+
 generate-ini-mysql:
 	sed -e 's|{{TEST_MYSQL_HOST}}|${TEST_MYSQL_HOST}|g' \
 		-e 's|{{TEST_MYSQL_DBNAME}}|${TEST_MYSQL_DBNAME}|g' \
@@ -665,6 +673,14 @@ test-mysql\#%: integrations.mysql.test generate-ini-mysql
 
 .PHONY: test-mysql-migration
 test-mysql-migration: migrations.mysql.test migrations.individual.mysql.test
+
+.PHONY: test-mysql-integration
+test-mysql-integration:
+	TEST_DB_TYPE=mysql TEST_DB_HOST=$(TEST_MYSQL_HOST) TEST_DB_NAME=$(TEST_MYSQL_DBNAME) TEST_DB_USER=$(TEST_MYSQL_USERNAME) TEST_DB_PASSWD=$(TEST_MYSQL_PASSWORD) $(GOTEST) $(GOTESTFLAGS) -tags '$(TEST_TAGS)' $(GOTESTCOMPILEDRUNSUFFIX) -json ./tests/integration_exp | tee ./tests/integration-mysql.json.test | TESTJSON_FORMAT=output go run ./tests/cmd/testjson-formatter/
+
+.PHONY: test-mysql-integration-summary
+test-mysql-integration-summary:
+	TESTJSON_FORMAT=summary $(GO) run ./tests/cmd/testjson-formatter/ < ./tests/integration-mysql.json.test
 
 generate-ini-pgsql:
 	sed -e 's|{{TEST_PGSQL_HOST}}|${TEST_PGSQL_HOST}|g' \
@@ -689,6 +705,14 @@ test-pgsql\#%: integrations.pgsql.test generate-ini-pgsql
 
 .PHONY: test-pgsql-migration
 test-pgsql-migration: migrations.pgsql.test migrations.individual.pgsql.test
+
+.PHONY: test-pgsql-integration
+test-pgsql-integration:
+	TEST_DB_TYPE=postgres TEST_DB_HOST=$(TEST_PGSQL_HOST) TEST_DB_NAME=$(TEST_PGSQL_DBNAME) TEST_DB_USER=$(TEST_PGSQL_USERNAME) TEST_DB_PASSWD=$(TEST_PGSQL_PASSWORD) TEST_DB_SCHEMA=$(TEST_PGSQL_SCHEMA) $(GOTEST) $(GOTESTFLAGS) -tags '$(TEST_TAGS)' $(GOTESTCOMPILEDRUNSUFFIX) -json ./tests/integration_exp | tee ./tests/integration-pgsql.json.test | TESTJSON_FORMAT=output go run ./tests/cmd/testjson-formatter/
+
+.PHONY: test-pgsql-integration-summary
+test-pgsql-integration-summary:
+	TESTJSON_FORMAT=summary $(GO) run ./tests/cmd/testjson-formatter/ < ./tests/integration-pgsql.json.test
 
 .PHONY: playwright
 playwright: deps-frontend
