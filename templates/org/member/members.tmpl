@@ -11,7 +11,7 @@
 				{{end}}
 				{{$isPublic := index $.MembersIsPublicMember .ID}}
 				<a href="{{.HomeLink}}">{{ctx.AvatarUtils.Avatar . 48}}</a>
-				<div class="meta">
+				<div>
 					<div class="flex-item-title">
 						{{template "shared/user/name" .}}
 						{{if not $isPublic}}
@@ -37,30 +37,32 @@
 						{{end}}
 					{{end}}
 				</div>
-				{{if or (eq $.SignedUser.ID .ID) $.IsOrganizationOwner}}
-					{{if $isPublic}}
-						<a class="small secondary button link-action" href data-url="{{$.OrgLink}}/members/action/private?uid={{.ID}}">
-							{{svg "octicon-eye-closed"}}
-							{{ctx.Locale.Tr "org.members.public_helper"}}
-						</a>
-					{{else}}
-						<a class="small secondary button link-action" href data-url="{{$.OrgLink}}/members/action/public?uid={{.ID}}">
-							{{svg "octicon-eye"}}
-							{{ctx.Locale.Tr "org.members.private_helper"}}
-						</a>
+				<div class="actions">
+					{{if or (eq $.SignedUser.ID .ID) $.IsOrganizationOwner}}
+						{{if $isPublic}}
+							<a class="small secondary button link-action" href data-url="{{$.OrgLink}}/members/action/private?uid={{.ID}}">
+								{{svg "octicon-eye-closed"}}
+								{{ctx.Locale.Tr "org.members.public_helper"}}
+							</a>
+						{{else}}
+							<a class="small secondary button link-action" href data-url="{{$.OrgLink}}/members/action/public?uid={{.ID}}">
+								{{svg "octicon-eye"}}
+								{{ctx.Locale.Tr "org.members.private_helper"}}
+							</a>
+						{{end}}
 					{{end}}
-				{{end}}
-				{{if eq $.SignedUser.ID .ID}}
-					<button class="small danger button delete-button" data-modal-id="leave-organization"
-						data-url="{{$.OrgLink}}/members/action/leave" data-datauid="{{.ID}}"
-						data-name="{{.DisplayName}}"
-						data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.leave"}}</button>
-				{{else if $.IsOrganizationOwner}}
-					<button class="small danger button delete-button" data-modal-id="remove-organization-member"
-						data-url="{{$.OrgLink}}/members/action/remove" data-datauid="{{.ID}}"
-						data-name="{{.DisplayName}}"
-						data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.remove"}}</button>
-				{{end}}
+					{{if eq $.SignedUser.ID .ID}}
+						<button class="small danger button delete-button" data-modal-id="leave-organization"
+							data-url="{{$.OrgLink}}/members/action/leave" data-datauid="{{.ID}}"
+							data-name="{{.DisplayName}}"
+							data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.leave"}}</button>
+					{{else if $.IsOrganizationOwner}}
+						<button class="small danger button delete-button" data-modal-id="remove-organization-member"
+							data-url="{{$.OrgLink}}/members/action/remove" data-datauid="{{.ID}}"
+							data-name="{{.DisplayName}}"
+							data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.remove"}}</button>
+					{{end}}
+				</div>
 			{{end}}
 		</div>
 

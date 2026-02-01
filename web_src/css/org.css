@@ -100,6 +100,10 @@
     grid-column: 1 / -1;
   }
 
+  .actions {
+    display: contents;
+  }
+
   .link-action, .delete-button {
     align-self: start;
   }
@@ -118,8 +122,15 @@
     /* Place both buttons in one column */
     grid-template-columns: minmax(min-content, auto) 1fr fit-content(100%);
 
-    a:has(img), .meta {
-      grid-row: span 2;
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--button-spacing);
+    }
+
+    .link-action, .delete-button {
+      width: 100%;
+      margin: 0;
     }
   }
 }
