@@ -95,7 +95,6 @@
 .page-content.organization.members .list {
   display: grid;
   grid-template-columns: minmax(min-content, auto) 1fr fit-content(100%) fit-content(100%);
-  gap: 0 0.5rem;
 
   .divider {
     grid-column: 1 / -1;
@@ -103,6 +102,10 @@
 
   .link-action {
     align-self: start;
+  }
+
+  a:has(img) {
+    margin-inline-end: 0.5rem;
   }
 
   form {
