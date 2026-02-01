@@ -5,7 +5,10 @@
 		{{template "base/alert" .}}
 
 		<div class="list">
-			{{range .Members}}
+			{{range $idx, $_ := .Members}}
+				{{if ne $idx 0}}
+					<div class="divider"></div>
+				{{end}}
 				{{$isPublic := index $.MembersIsPublicMember .ID}}
 				<div class="col-avatar">
 					<a href="{{.HomeLink}}">{{ctx.AvatarUtils.Avatar . 48}}</a>
@@ -64,7 +67,6 @@
 							data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.remove"}}</button>
 					</form>
 				{{end}}
-				<div class="divider"></div>
 			{{end}}
 		</div>
 
