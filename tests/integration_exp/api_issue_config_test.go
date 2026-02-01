@@ -6,14 +6,12 @@ package integration
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
-	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,49 +30,39 @@ func createIssueConfig(t *testing.T, user *user_model.User, repo *repo_model.Rep
 	createIssueConfigInDirectory(t, user, repo, ".gitea", issueConfig)
 }
 
-func getIssueConfig(t *testing.T, owner, repo string) api.IssueConfig {
-	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issue_config", owner, repo)
-	req := NewRequest(t, "GET", urlStr)
-	resp := MakeRequest(t, req, http.StatusOK)
-
-	var issueConfig api.IssueConfig
-	DecodeJSON(t, resp, &issueConfig)
-
-	return issueConfig
+func getIssueConfig(t *testing.T, sess forgery.Session, owner, repo string) api.IssueConfig {
+	resp := sess.Get(t, "/api/v1/repos", owner, repo, "issue_config")
+	return forgery.DecodeJSON[api.IssueConfig](t, resp)
 }
 
 func TestAPIRepoGetIssueConfig(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
+	t.Parallel()
+	sess := forgery.SharedInstance(t).Session()
 
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 49})
-	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	owner := forgery.CreateUser(t, nil)
+	repo, _, cleanup := forgery.CreateRepository(t, owner, nil)
+	t.Cleanup(cleanup)
 
 	t.Run("Default", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		issueConfig := getIssueConfig(t, owner.Name, repo.Name)
+		issueConfig := getIssueConfig(t, sess, owner.Name, repo.Name)
 
 		assert.True(t, issueConfig.BlankIssuesEnabled)
 		assert.Empty(t, issueConfig.ContactLinks)
 	})
 
 	t.Run("DisableBlankIssues", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
 		config := make(map[string]any)
 		config["blank_issues_enabled"] = false
 
 		createIssueConfig(t, owner, repo, config)
 
-		issueConfig := getIssueConfig(t, owner.Name, repo.Name)
+		issueConfig := getIssueConfig(t, sess, owner.Name, repo.Name)
 
 		assert.False(t, issueConfig.BlankIssuesEnabled)
 		assert.Empty(t, issueConfig.ContactLinks)
 	})
 
 	t.Run("ContactLinks", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
 		contactLink := make(map[string]string)
 		contactLink["name"] = "TestName"
 		contactLink["url"] = "https://example.com"
@@ -85,7 +73,7 @@ func TestAPIRepoGetIssueConfig(t *testing.T) {
 
 		createIssueConfig(t, owner, repo, config)
 
-		issueConfig := getIssueConfig(t, owner.Name, repo.Name)
+		issueConfig := getIssueConfig(t, sess, owner.Name, repo.Name)
 
 		assert.True(t, issueConfig.BlankIssuesEnabled)
 		assert.Len(t, issueConfig.ContactLinks, 1)
@@ -96,8 +84,6 @@ func TestAPIRepoGetIssueConfig(t *testing.T) {
 	})
 
 	t.Run("Full", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
 		contactLink := make(map[string]string)
 		contactLink["name"] = "TestName"
 		contactLink["url"] = "https://example.com"
@@ -109,7 +95,7 @@ func TestAPIRepoGetIssueConfig(t *testing.T) {
 
 		createIssueConfig(t, owner, repo, config)
 
-		issueConfig := getIssueConfig(t, owner.Name, repo.Name)
+		issueConfig := getIssueConfig(t, sess, owner.Name, repo.Name)
 
 		assert.False(t, issueConfig.BlankIssuesEnabled)
 		assert.Len(t, issueConfig.ContactLinks, 1)
@@ -121,10 +107,12 @@ func TestAPIRepoGetIssueConfig(t *testing.T) {
 }
 
 func TestAPIRepoIssueConfigPaths(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
+	t.Parallel()
+	sess := forgery.SharedInstance(t).Session()
 
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 49})
-	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	owner := forgery.CreateUser(t, nil)
+	repo, _, cleanup := forgery.CreateRepository(t, owner, nil)
+	t.Cleanup(cleanup)
 
 	templateConfigCandidates := []string{
 		".forgejo/ISSUE_TEMPLATE/config",
@@ -140,8 +128,6 @@ func TestAPIRepoIssueConfigPaths(t *testing.T) {
 		for _, extension := range []string{".yaml", ".yml"} {
 			fullPath := candidate + extension
 			t.Run(fullPath, func(t *testing.T) {
-				defer tests.PrintCurrentTest(t)()
-
 				configMap := make(map[string]any)
 				configMap["blank_issues_enabled"] = false
 
@@ -151,7 +137,7 @@ func TestAPIRepoIssueConfigPaths(t *testing.T) {
 				_, err = createFileInBranch(owner, repo, fullPath, repo.DefaultBranch, string(configData))
 				require.NoError(t, err)
 
-				issueConfig := getIssueConfig(t, owner.Name, repo.Name)
+				issueConfig := getIssueConfig(t, sess, owner.Name, repo.Name)
 
 				assert.False(t, issueConfig.BlankIssuesEnabled)
 				assert.Empty(t, issueConfig.ContactLinks)
@@ -164,21 +150,18 @@ func TestAPIRepoIssueConfigPaths(t *testing.T) {
 }
 
 func TestAPIRepoValidateIssueConfig(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
+	t.Parallel()
+	sess := forgery.SharedInstance(t).Session()
 
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 49})
-	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	owner := forgery.CreateUser(t, nil)
+	repo, _, cleanup := forgery.CreateRepository(t, owner, nil)
+	t.Cleanup(cleanup)
 
 	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issue_config/validate", owner.Name, repo.Name)
 
 	t.Run("Valid", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", urlStr)
-		resp := MakeRequest(t, req, http.StatusOK)
-
-		var issueConfigValidation api.IssueConfigValidation
-		DecodeJSON(t, resp, &issueConfigValidation)
+		resp := sess.Get(t, urlStr)
+		issueConfigValidation := forgery.DecodeJSON[api.IssueConfigValidation](t, resp)
 
 		assert.True(t, issueConfigValidation.Valid)
 		assert.Empty(t, issueConfigValidation.Message)
@@ -188,7 +171,6 @@ func TestAPIRepoValidateIssueConfig(t *testing.T) {
 		dirs := []string{".gitea", ".forgejo", "docs"}
 		for _, dir := range dirs {
 			t.Run(dir, func(t *testing.T) {
-				defer tests.PrintCurrentTest(t)()
 				defer func() {
 					deleteFileInBranch(owner, repo, fmt.Sprintf("%s/ISSUE_TEMPLATE/config.yaml", dir), repo.DefaultBranch)
 				}()
@@ -198,11 +180,8 @@ func TestAPIRepoValidateIssueConfig(t *testing.T) {
 
 				createIssueConfigInDirectory(t, owner, repo, dir, config)
 
-				req := NewRequest(t, "GET", urlStr)
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				var issueConfigValidation api.IssueConfigValidation
-				DecodeJSON(t, resp, &issueConfigValidation)
+				resp := sess.Get(t, urlStr)
+				issueConfigValidation := forgery.DecodeJSON[api.IssueConfigValidation](t, resp)
 
 				assert.False(t, issueConfigValidation.Valid)
 				assert.NotEmpty(t, issueConfigValidation.Message)
