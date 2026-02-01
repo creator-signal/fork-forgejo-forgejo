@@ -40,21 +40,21 @@
 					<div class="flex-item-trailing">
 						{{if or (eq $.SignedUser.ID .ID) $.IsOrganizationOwner}}
 							{{if $isPublic}}
-								<a class="ui tiny button link-action" href data-url="{{$.OrgLink}}/members/action/private?uid={{.ID}}">{{svg "octicon-eye-closed" 12 "icon"}}{{ctx.Locale.Tr "org.members.public_helper"}}</a>
+								<a class="small secondary button link-action" href data-url="{{$.OrgLink}}/members/action/private?uid={{.ID}}">{{svg "octicon-eye-closed" 12 "icon"}}{{ctx.Locale.Tr "org.members.public_helper"}}</a>
 							{{else}}
-								<a class="ui tiny button link-action" href data-url="{{$.OrgLink}}/members/action/public?uid={{.ID}}">{{svg "octicon-eye" 12 "icon"}}{{ctx.Locale.Tr "org.members.private_helper"}}</a>
+								<a class="small secondary button link-action" href data-url="{{$.OrgLink}}/members/action/public?uid={{.ID}}">{{svg "octicon-eye" 12 "icon"}}{{ctx.Locale.Tr "org.members.private_helper"}}</a>
 							{{end}}
 						{{end}}
 						{{if eq $.SignedUser.ID .ID}}
 							<form>
-								<button class="ui red tiny button delete-button" data-modal-id="leave-organization"
+								<button class="small danger button delete-button" data-modal-id="leave-organization"
 									data-url="{{$.OrgLink}}/members/action/leave" data-datauid="{{.ID}}"
 									data-name="{{.DisplayName}}"
 									data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.leave"}}</button>
 							</form>
 						{{else if $.IsOrganizationOwner}}
 							<form>
-								<button class="ui red tiny button delete-button" data-modal-id="remove-organization-member"
+								<button class="small danger button delete-button" data-modal-id="remove-organization-member"
 									data-url="{{$.OrgLink}}/members/action/remove" data-datauid="{{.ID}}"
 									data-name="{{.DisplayName}}"
 									data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.remove"}}</button>
