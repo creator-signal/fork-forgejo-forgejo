@@ -100,7 +100,7 @@
     grid-column: 1 / -1;
   }
 
-  .link-action {
+  .link-action, .delete-button {
     align-self: start;
   }
 
@@ -108,11 +108,8 @@
     margin-inline-end: 0.5rem;
   }
 
-  form {
+  .delete-button {
     margin-inline-start: var(--button-spacing);
-    button {
-      width: 100%;
-    }
   }
 }
 

@@ -51,19 +51,15 @@
 					{{end}}
 				{{end}}
 				{{if eq $.SignedUser.ID .ID}}
-					<form>
-						<button class="small danger button delete-button" data-modal-id="leave-organization"
-							data-url="{{$.OrgLink}}/members/action/leave" data-datauid="{{.ID}}"
-							data-name="{{.DisplayName}}"
-							data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.leave"}}</button>
-					</form>
+					<button class="small danger button delete-button" data-modal-id="leave-organization"
+						data-url="{{$.OrgLink}}/members/action/leave" data-datauid="{{.ID}}"
+						data-name="{{.DisplayName}}"
+						data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.leave"}}</button>
 				{{else if $.IsOrganizationOwner}}
-					<form>
-						<button class="small danger button delete-button" data-modal-id="remove-organization-member"
-							data-url="{{$.OrgLink}}/members/action/remove" data-datauid="{{.ID}}"
-							data-name="{{.DisplayName}}"
-							data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.remove"}}</button>
-					</form>
+					<button class="small danger button delete-button" data-modal-id="remove-organization-member"
+						data-url="{{$.OrgLink}}/members/action/remove" data-datauid="{{.ID}}"
+						data-name="{{.DisplayName}}"
+						data-data-organization-name="{{$.Org.DisplayName}}">{{ctx.Locale.Tr "org.members.remove"}}</button>
 				{{end}}
 			{{end}}
 		</div>
