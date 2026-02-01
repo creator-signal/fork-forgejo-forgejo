@@ -149,7 +149,7 @@ func TestAPIListIssuesWithLabels(t *testing.T) {
 	var apiIssues []*api.Issue
 	DecodeJSON(t, resp, &apiIssues)
 	if assert.Len(t, apiIssues, 1) {
-		assert.EqualValues(t, issue.ID, apiIssues[0].ID)
+		assert.Equal(t, issue.ID, apiIssues[0].ID)
 	}
 }
 
