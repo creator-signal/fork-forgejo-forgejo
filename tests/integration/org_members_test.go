@@ -1,4 +1,4 @@
-// Copyright 2026 The Forgejo Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 package integration
@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"forgejo.org/tests"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestOrgMembersPage(t *testing.T) {
@@ -20,8 +21,27 @@ func TestOrgMembersPage(t *testing.T) {
 
 		doc := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
 		/* No interactive buttons - though such evaluation is easy to break in rename */
-		doc.AssertElement(t, ".members .list .link-action", false)
-		doc.AssertElement(t, ".members .list .delete-button", false)
+		assert.Equal(t, 0, doc.Find(".members .list .link-action").Length())
+		assert.Equal(t, 0, doc.Find(".members .list .delete-button").Length())
+	})
 
+	t.Run("Member PoV", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		session := loginUser(t, "user4") // user4 is a member of org3
+		doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		/* Interactive buttons are only available for own entry in the list */
+		assert.Equal(t, 1, doc.Find(".members .list .link-action").Length())
+		assert.Equal(t, 1, doc.Find(".members .list .delete-button").Length())
+	})
+
+	t.Run("Owner PoV", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		session := loginUser(t, "user2") // user2 owns org3
+		doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		/* Interactive buttons are available for all entries in the list (> 2) */
+		assert.Less(t, 2, doc.Find(".members .list .link-action").Length())
+		assert.Less(t, 2, doc.Find(".members .list .delete-button").Length())
 	})
 }
