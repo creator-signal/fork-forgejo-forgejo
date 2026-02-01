@@ -113,6 +113,17 @@
   }
 }
 
+@media (max-width: 767.98px) {
+  .page-content.organization.members .list {
+    /* Place both buttons in one column */
+    grid-template-columns: minmax(min-content, auto) 1fr fit-content(100%);
+
+    a:has(img), .meta {
+      grid-row: span 2;
+    }
+  }
+}
+
 .page-content.organization .teams .item {
   padding: 10px 15px;
 }
