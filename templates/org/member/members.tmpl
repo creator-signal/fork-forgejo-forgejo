@@ -12,7 +12,7 @@
 				{{$isPublic := index $.MembersIsPublicMember .ID}}
 				<a href="{{.HomeLink}}">{{ctx.AvatarUtils.Avatar . 48}}</a>
 				<div>
-					<div class="flex-item-title">
+					<div class="tw-font-semibold">
 						{{template "shared/user/name" .}}
 						{{if not $isPublic}}
 							<span class="ui label">{{ctx.Locale.Tr "org.members.private"}}</span>
