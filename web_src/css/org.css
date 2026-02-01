@@ -95,27 +95,17 @@
 .page-content.organization.members .list {
   display: grid;
   grid-template-columns: minmax(min-content, auto) 1fr fit-content(100%) fit-content(100%);
+  gap: 0.5rem;
 
   .divider {
     grid-column: 1 / -1;
   }
 
-  .col-avatar {
-    margin-inline-end: 0.5rem;
-    grid-column: 1;
-  }
-
-  .col-meta {
-    grid-column: 2;
-  }
-
   .link-action {
     align-self: start;
-    grid-column: 3;
   }
 
   form {
-    grid-column: 4;
     margin-inline-start: var(--button-spacing);
     button {
       width: 100%;

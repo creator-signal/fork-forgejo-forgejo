@@ -10,10 +10,8 @@
 					<div class="divider"></div>
 				{{end}}
 				{{$isPublic := index $.MembersIsPublicMember .ID}}
-				<div class="col-avatar">
-					<a href="{{.HomeLink}}">{{ctx.AvatarUtils.Avatar . 48}}</a>
-				</div>
-				<div class="col-meta">
+				<a href="{{.HomeLink}}">{{ctx.AvatarUtils.Avatar . 48}}</a>
+				<div>
 					<div class="flex-item-title">
 						{{template "shared/user/name" .}}
 						{{if not $isPublic}}
