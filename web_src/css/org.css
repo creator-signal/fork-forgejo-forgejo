@@ -101,6 +101,7 @@
   }
 
   .col-avatar {
+    margin-inline-end: 0.5rem;
     grid-column: 1;
   }
 
@@ -115,6 +116,7 @@
 
   form {
     grid-column: 4;
+    margin-inline-start: var(--button-spacing);
     button {
       width: 100%;
     }
