@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"forgejo.org/tests"
+
 	"github.com/stretchr/testify/assert"
 )
 
