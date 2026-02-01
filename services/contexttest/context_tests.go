@@ -18,7 +18,6 @@ import (
 	org_model "forgejo.org/models/organization"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/templates"
@@ -115,8 +114,9 @@ func LoadRepo(t *testing.T, ctx gocontext.Context, repoID int64) {
 		assert.FailNow(t, "context is not *context.Context or *context.APIContext")
 	}
 
-	repo.Repository = unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
 	var err error
+	repo.Repository, err = repo_model.GetRepositoryByID(ctx, repoID)
+	require.NoError(t, err)
 	repo.Owner, err = user_model.GetUserByID(ctx, repo.Repository.OwnerID)
 	require.NoError(t, err)
 	repo.RepoLink = repo.Repository.Link()
@@ -151,7 +151,8 @@ func LoadRepoCommit(t *testing.T, ctx gocontext.Context) {
 
 // LoadUser load a user into a test context
 func LoadUser(t *testing.T, ctx gocontext.Context, userID int64) {
-	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
+	doer, err := user_model.GetUserByID(ctx, userID)
+	require.NoError(t, err)
 	switch ctx := ctx.(type) {
 	case *context.Context:
 		ctx.Doer = doer
@@ -164,7 +165,8 @@ func LoadUser(t *testing.T, ctx gocontext.Context, userID int64) {
 
 // LoadOrganization load an org into a test context
 func LoadOrganization(t *testing.T, ctx gocontext.Context, orgID int64) {
-	org := unittest.AssertExistsAndLoadBean(t, &org_model.Organization{ID: orgID})
+	org, err := org_model.GetOrgByID(ctx, orgID)
+	require.NoError(t, err)
 	switch ctx := ctx.(type) {
 	case *context.Context:
 		ctx.Org.Organization = org
