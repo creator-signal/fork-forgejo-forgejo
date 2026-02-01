@@ -72,9 +72,9 @@ func checkLatestReleaseAndCount(t *testing.T, session *TestSession, repoURL, ver
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	htmlDoc := NewHTMLParser(t, resp.Body)
-	labelText := htmlDoc.doc.Find("#release-list > li .detail .label").First().Text()
+	labelText := htmlDoc.doc.Find("#release-list > li > .release-title-wrap .label").First().Text()
 	assert.Equal(t, label, labelText)
-	titleText := htmlDoc.doc.Find("#release-list > li .detail h4 a").First().Text()
+	titleText := htmlDoc.doc.Find("#release-list > li > .release-title-wrap h4 a").First().Text()
 	assert.Equal(t, version, titleText)
 
 	// Check release count in the counter on the Release/Tag switch, as well as that the tab is highlighted
