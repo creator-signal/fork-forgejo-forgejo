@@ -201,7 +201,7 @@ func transferOwnership(ctx context.Context, doer *user_model.User, newOwnerName 
 		return fmt.Errorf("decrease old owner repository count: %w", err)
 	}
 
-	if err := repo_model.WatchRepo(ctx, doer.ID, repo.ID, repo_model.WatchNoneSelection); err != nil {
+	if err := repo_model.WatchRepo(ctx, doer.ID, repo.ID, repo_model.WatchAllSelection); err != nil {
 		return fmt.Errorf("watchRepo: %w", err)
 	}
 
