@@ -6,7 +6,7 @@
 				<span class="text not-mobile">{{if $.RepoWatchSelection.IsWatching}}{{ctx.Locale.Tr "repo.watching"}}{{else}}{{ctx.Locale.Tr "repo.watch"}}{{end}}</span>
 				{{svg "octicon-triangle-down" 14}}
 			</summary>
-		  <form class="content tw-p-3" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/selection" hx-swap="outerHTML">
+		  <form class="content tw-p-3" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
 				<ul class="tw-text-left">
 					<li>
 						<div class="ui form">
@@ -18,7 +18,7 @@
 							</div>
 							<div class="field">
 								<div class="ui checkbox">
-									<input type="checkbox" name="watch_pulls" value="true" {{if $.RepoWatchSelection.PullRequests}}checked{{end}}>
+									<input type="checkbox" name="watch_pull_requests" value="true" {{if $.RepoWatchSelection.PullRequests}}checked{{end}}>
 									<label>{{svg "octicon-git-pull-request"}} {{ctx.Locale.Tr "repo.watch.pull_requests"}}</label>
 								</div>
 							</div>
