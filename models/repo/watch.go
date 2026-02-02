@@ -76,10 +76,13 @@ func (w Watch) getWatchSelection() WatchSelection {
 	}
 }
 
-func (w Watch) setWatchSelection(watchSelection WatchSelection) {
+// Warning: this does not set the WatchMode.
+// The caller needs to do that properly.
+func (w *Watch) setWatchSelection(watchSelection WatchSelection) *Watch {
 	w.WatchSelectionIssues = watchSelection.Issues
 	w.WatchSelectionPullRequests = watchSelection.PullRequests
 	w.WatchSelectionReleases = watchSelection.Releases
+	return w
 }
 
 func init() {
