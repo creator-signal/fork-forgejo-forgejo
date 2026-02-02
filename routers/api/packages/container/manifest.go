@@ -22,6 +22,7 @@ import (
 	"forgejo.org/modules/util"
 	notify_service "forgejo.org/services/notify"
 	packages_service "forgejo.org/services/packages"
+	container_service "forgejo.org/services/packages/container"
 
 	digest "github.com/opencontainers/go-digest"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
@@ -39,18 +40,7 @@ func isImageIndexMediaType(mt string) bool {
 	return strings.EqualFold(mt, oci.MediaTypeImageIndex) || strings.EqualFold(mt, "application/vnd.docker.distribution.manifest.list.v2+json")
 }
 
-// manifestCreationInfo describes a manifest to create
-type manifestCreationInfo struct {
-	MediaType  string
-	Owner      *user_model.User
-	Creator    *user_model.User
-	Image      string
-	Reference  string
-	IsTagged   bool
-	Properties map[string]string
-}
-
-func processManifest(ctx context.Context, mci *manifestCreationInfo, buf *packages_module.HashedBuffer) (string, error) {
+func processManifest(ctx context.Context, mci *container_service.ManifestCreationInfo, buf *packages_module.HashedBuffer) (string, error) {
 	var index oci.Index
 	if err := json.NewDecoder(buf).Decode(&index); err != nil {
 		return "", err
@@ -79,7 +69,7 @@ func processManifest(ctx context.Context, mci *manifestCreationInfo, buf *packag
 	return "", errManifestInvalid
 }
 
-func processImageManifest(ctx context.Context, mci *manifestCreationInfo, buf *packages_module.HashedBuffer) (string, error) {
+func processImageManifest(ctx context.Context, mci *container_service.ManifestCreationInfo, buf *packages_module.HashedBuffer) (string, error) {
 	manifestDigest := ""
 
 	err := func() error {
@@ -196,7 +186,7 @@ func processImageManifest(ctx context.Context, mci *manifestCreationInfo, buf *p
 	return manifestDigest, nil
 }
 
-func processImageManifestIndex(ctx context.Context, mci *manifestCreationInfo, buf *packages_module.HashedBuffer) (string, error) {
+func processImageManifestIndex(ctx context.Context, mci *container_service.ManifestCreationInfo, buf *packages_module.HashedBuffer) (string, error) {
 	manifestDigest := ""
 
 	err := func() error {
@@ -311,7 +301,7 @@ func notifyPackageCreate(ctx context.Context, doer *user_model.User, pv *package
 	return nil
 }
 
-func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, metadata *container_module.Metadata) (*packages_model.PackageVersion, error) {
+func createPackageAndVersion(ctx context.Context, mci *container_service.ManifestCreationInfo, metadata *container_module.Metadata) (*packages_model.PackageVersion, error) {
 	created := true
 	p := &packages_model.Package{
 		OwnerID:   mci.Owner.ID,
@@ -446,7 +436,7 @@ func createFileFromBlobReference(ctx context.Context, pv, uploadVersion *package
 	return nil
 }
 
-func createManifestBlob(ctx context.Context, mci *manifestCreationInfo, pv *packages_model.PackageVersion, buf *packages_module.HashedBuffer) (*packages_model.PackageBlob, bool, string, error) {
+func createManifestBlob(ctx context.Context, mci *container_service.ManifestCreationInfo, pv *packages_model.PackageVersion, buf *packages_module.HashedBuffer) (*packages_model.PackageBlob, bool, string, error) {
 	pb, exists, err := packages_model.GetOrInsertBlob(ctx, packages_service.NewPackageBlob(buf))
 	if err != nil {
 		log.Error("Error inserting package blob: %v", err)

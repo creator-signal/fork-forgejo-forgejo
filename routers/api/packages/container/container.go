@@ -539,7 +539,7 @@ func DeleteBlob(ctx *context.Context) {
 func UploadManifest(ctx *context.Context) {
 	reference := ctx.Params("reference")
 
-	mci := &manifestCreationInfo{
+	mci := &container_service.ManifestCreationInfo{
 		MediaType: ctx.Req.Header.Get("Content-Type"),
 		Owner:     ctx.Package.Owner,
 		Creator:   ctx.Doer,
