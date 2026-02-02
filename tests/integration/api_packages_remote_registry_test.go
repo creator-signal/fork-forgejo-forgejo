@@ -189,7 +189,6 @@ func TestRemoteRegistryManifest(t *testing.T) {
 	session := loginUser(t, user.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	// TODO Update MockServer Capabilities to serve valid data
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
@@ -227,7 +226,7 @@ func TestRemoteRegistryManifest(t *testing.T) {
 		MakeRequest(t, req, http.StatusOK)
 	})
 
-	t.Run("HEAD Manifest", func(t *testing.T) {
+	t.Run("GET Manifest", func(t *testing.T) {
 		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 			AddTokenAuth(anonymousToken)
 		MakeRequest(t, req, http.StatusOK)
