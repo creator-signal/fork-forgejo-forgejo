@@ -5,6 +5,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
@@ -34,23 +35,51 @@ const (
 	WatchModeAuto // 3
 )
 
+type WatchSelection struct {
+	Issues       bool
+	PullRequests bool
+	Releases     bool
+}
+
+func (w WatchSelection) IsWatching() bool {
+	return w.Issues || w.PullRequests || w.Releases
+}
+
+var WatchAllSelection = WatchSelection{Issues: true, PullRequests: true, Releases: true}
+var WatchNoneSelection = WatchSelection{Issues: false, PullRequests: false, Releases: false}
+
 // Watch is connection request for receiving repository notification.
 type Watch struct {
-	ID     int64     `xorm:"pk autoincr"`
-	UserID int64     `xorm:"UNIQUE(watch)"`
-	RepoID int64     `xorm:"UNIQUE(watch)"`
-	Mode   WatchMode `xorm:"SMALLINT NOT NULL DEFAULT 1"`
+	ID     int64 `xorm:"pk autoincr"`
+	UserID int64 `xorm:"UNIQUE(watch)"`
+	RepoID int64 `xorm:"UNIQUE(watch)"`
+	// TODO: remove this in favour of just using the granular selection at some point.
+	Mode WatchMode `xorm:"SMALLINT NOT NULL DEFAULT 1"`
 
 	// The Granular settings are only relevant when Mode makes IsWatchMode return true.
 	// The default is 1 because of migration reasons.
 	// Before the granular watch feature repos could only be watched entirely or not at all.
 	// Therefore people who watched a repo before granular settings still watch everything after the migration.
-	GranularWatchIssues       bool `xorm:"Bool DEFAULT 1"`
-	GranularWatchPullRequests bool `xorm:"Bool DEFAULT 1"`
-	GranularWatchReleases     bool `xorm:"Bool DEFAULT 1"`
+	WatchSelectionIssues       bool `xorm:"Bool DEFAULT 1"`
+	WatchSelectionPullRequests bool `xorm:"Bool DEFAULT 1"`
+	WatchSelectionReleases     bool `xorm:"Bool DEFAULT 1"`
 
 	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`
+}
+
+func (w Watch) getWatchSelection() WatchSelection {
+	if IsWatchMode(w.Mode) {
+		return WatchSelection{Issues: w.WatchSelectionIssues, PullRequests: w.WatchSelectionPullRequests, Releases: w.WatchSelectionReleases}
+	} else {
+		return WatchNoneSelection
+	}
+}
+
+func (w Watch) setWatchSelection(watchSelection WatchSelection) {
+	w.WatchSelectionIssues = watchSelection.Issues
+	w.WatchSelectionPullRequests = watchSelection.PullRequests
+	w.WatchSelectionReleases = watchSelection.Releases
 }
 
 func init() {
@@ -81,8 +110,21 @@ func IsWatching(ctx context.Context, userID, repoID int64) bool {
 	return err == nil && IsWatchMode(watch.Mode)
 }
 
-func watchRepoMode(ctx context.Context, watch Watch, mode WatchMode) (err error) {
-	if watch.Mode == mode {
+// GetWatchSelection returns what parts of a repo a user is watching.
+func GetWatchSelection(ctx context.Context, userID, repoID int64) WatchSelection {
+	watch, err := GetWatch(ctx, userID, repoID)
+	if err != nil {
+		return WatchNoneSelection
+	}
+	return watch.getWatchSelection()
+}
+
+func watchRepoMode(ctx context.Context, watch Watch, mode WatchMode, watchSelection WatchSelection) (err error) {
+	if watchSelection.IsWatching() != IsWatchMode(mode) {
+		// This should never happen and indicates a bug.
+		return errors.New("watchSelection.IsWatching() != IsWatchMode(mode)")
+	}
+	if watch.Mode == mode && watch.getWatchSelection() == watchSelection {
 		return nil
 	}
 	if mode == WatchModeAuto && (watch.Mode == WatchModeDont || IsWatchMode(watch.Mode)) {
@@ -101,15 +143,15 @@ func watchRepoMode(ctx context.Context, watch Watch, mode WatchMode) (err error)
 		repodiff = -1
 	}
 
-	watch.Mode = mode
-
 	if !hadrec && needsrec {
 		watch.Mode = mode
+		watch.setWatchSelection(watchSelection)
 		if err = db.Insert(ctx, watch); err != nil {
 			return err
 		}
 	} else if needsrec {
 		watch.Mode = mode
+		watch.setWatchSelection(watchSelection)
 		if _, err := db.GetEngine(ctx).ID(watch.ID).AllCols().Update(watch); err != nil {
 			return err
 		}
@@ -123,26 +165,29 @@ func watchRepoMode(ctx context.Context, watch Watch, mode WatchMode) (err error)
 }
 
 // WatchRepoMode watch repository in specific mode.
-func WatchRepoMode(ctx context.Context, userID, repoID int64, mode WatchMode) (err error) {
+func WatchRepoMode(ctx context.Context, userID, repoID int64, mode WatchMode, watchSelection WatchSelection) (err error) {
 	var watch Watch
 	if watch, err = GetWatch(ctx, userID, repoID); err != nil {
 		return err
 	}
-	return watchRepoMode(ctx, watch, mode)
+	return watchRepoMode(ctx, watch, mode, watchSelection)
 }
 
 // WatchRepo watch or unwatch repository.
-func WatchRepo(ctx context.Context, userID, repoID int64, doWatch bool) (err error) {
+func WatchRepo(ctx context.Context, userID, repoID int64, watchSelection WatchSelection) (err error) {
 	var watch Watch
 	if watch, err = GetWatch(ctx, userID, repoID); err != nil {
 		return err
 	}
+	// This is a work-around as we don't want to remove the watch mode field for now.
+	// Instead, we calculate the legacy doWatch from the new watchSelection and store it, too.
+	var doWatch = watchSelection.IsWatching()
 	if !doWatch && watch.Mode == WatchModeAuto {
-		err = watchRepoMode(ctx, watch, WatchModeDont)
+		err = watchRepoMode(ctx, watch, WatchModeDont, watchSelection)
 	} else if !doWatch {
-		err = watchRepoMode(ctx, watch, WatchModeNone)
+		err = watchRepoMode(ctx, watch, WatchModeNone, watchSelection)
 	} else {
-		err = watchRepoMode(ctx, watch, WatchModeNormal)
+		err = watchRepoMode(ctx, watch, WatchModeNormal, watchSelection)
 	}
 	return err
 }
@@ -198,14 +243,14 @@ func WatchIfAuto(ctx context.Context, userID, repoID int64) error {
 	if watch.Mode != WatchModeNone {
 		return nil
 	}
-	return watchRepoMode(ctx, watch, WatchModeAuto)
+	return watchRepoMode(ctx, watch, WatchModeAuto, WatchAllSelection)
 }
 
 // UnwatchRepos will unwatch the user from all given repositories.
 func UnwatchRepos(ctx context.Context, userID int64, repoIDs []int64) error {
 	// Unfortunatly, we can't simply delete the Watch records because we do watcher counting in the repo relation.
 	for _, repoID := range repoIDs {
-		err := WatchRepoMode(ctx, userID, repoID, WatchModeNone)
+		err := WatchRepoMode(ctx, userID, repoID, WatchModeNone, WatchNoneSelection)
 		if err != nil {
 			return err
 		}

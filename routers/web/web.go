@@ -13,6 +13,7 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/perm"
 	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/metrics"
@@ -1167,8 +1168,9 @@ func registerRoutes(m *web.Route) {
 	}, reqSignIn, context.RepoAssignment, context.UnitTypes(), reqRepoAdmin, context.RepoRef())
 
 	m.Group("/{username}/{reponame}/action", func() {
-		m.Post("/watch", repo.ActionWatch(true))
-		m.Post("/unwatch", repo.ActionWatch(false))
+		// TODO: remove these endpoints in favour of one with a complete selection
+		m.Post("/watch", repo.ActionWatch(repo_model.WatchAllSelection))
+		m.Post("/unwatch", repo.ActionWatch(repo_model.WatchNoneSelection))
 		m.Post("/accept_transfer", repo.ActionTransfer(true))
 		m.Post("/reject_transfer", repo.ActionTransfer(false))
 		if !setting.Repository.DisableStars {

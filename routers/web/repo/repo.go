@@ -317,20 +317,20 @@ const (
 	tplStarUnstar   base.TplName = "repo/star_unstar"
 )
 
-func ActionWatch(watch bool) func(ctx *context.Context) {
+func ActionWatch(watchSelection repo_model.WatchSelection) func(ctx *context.Context) {
 	return func(ctx *context.Context) {
-		err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watch)
+		err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watchSelection)
 		if err != nil {
-			ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watch), err)
+			ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watchSelection), err)
 			return
 		}
 
-		ctx.Data["IsWatchingRepo"] = repo_model.IsWatching(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID)
+		ctx.Data["RepoWatchSelection"] = repo_model.GetWatchSelection(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID)
 
 		// we have to reload the repository because NumStars or NumWatching (used in the templates) has just changed
 		ctx.Data["Repository"], err = repo_model.GetRepositoryByName(ctx, ctx.Repo.Repository.OwnerID, ctx.Repo.Repository.Name)
 		if err != nil {
-			ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watch), err)
+			ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watchSelection), err)
 			return
 		}
 
