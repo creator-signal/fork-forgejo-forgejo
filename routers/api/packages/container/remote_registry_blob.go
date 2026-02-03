@@ -146,15 +146,24 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
-	// TODO cache manifest
+	// Serve the manifest content
+	setResponseHeaders(ctx.Resp, &containerHeaders{
+		ContentDigest: regManifest.GetRef().Digest,
+		ContentType:   regManifest.GetDescriptor().MediaType,
+		ContentLength: regManifest.GetDescriptor().Size,
+		Status:        http.StatusOK,
+	})
 
-	manifest, err = container_service.ConvertToPackageFileDescriptor(&regManifest)
+	manifestBody, err := regManifest.RawBody()
 	if err != nil {
-		log.Error("Failed to GET manifest %s:%s from remote registry %s: %v",
-			remoteCtx.ImageName, reference, remoteCtx.RemoteRegistry.Name, err)
+		log.Error("Failed to get manifest body for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	// Set response headers from remote
-	serveBlob(ctx, manifest)
+	ctx.Resp.Write(manifestBody)
+
+	// TODO The manifest needs to be saved temporarily
+	// until the pull operation is complete
+	// then we could treat it as a push operation against the current system
 }
