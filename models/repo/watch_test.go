@@ -106,7 +106,7 @@ func TestWatchIfAuto(t *testing.T) {
 	assert.Len(t, watchers, prevCount+1)
 
 	// Should remove watch, inhibit from adding auto
-	require.NoError(t, repo_model.WatchRepo(db.DefaultContext, 12, 1, false))
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, 12, 1, repo_model.WatchNoneSelection))
 	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
 	require.NoError(t, err)
 	assert.Len(t, watchers, prevCount)
@@ -125,15 +125,15 @@ func TestWatchRepoMode(t *testing.T) {
 
 	require.NoError(t, repo_model.WatchRepoMode(db.DefaultContext, 12, 1, repo_model.WatchModeAuto))
 	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 1)
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Mode: repo_model.WatchModeAuto}, 1)
+	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Source: repo_model.WatchModeAuto}, 1)
 
 	require.NoError(t, repo_model.WatchRepoMode(db.DefaultContext, 12, 1, repo_model.WatchModeNormal))
 	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 1)
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Mode: repo_model.WatchModeNormal}, 1)
+	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Source: repo_model.WatchModeNormal}, 1)
 
 	require.NoError(t, repo_model.WatchRepoMode(db.DefaultContext, 12, 1, repo_model.WatchModeDont))
 	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 1)
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Mode: repo_model.WatchModeDont}, 1)
+	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Source: repo_model.WatchModeDont}, 1)
 
 	require.NoError(t, repo_model.WatchRepoMode(db.DefaultContext, 12, 1, repo_model.WatchModeNone))
 	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 0)

@@ -69,11 +69,11 @@ func TestWatchRepo(t *testing.T) {
 	const repoID = 3
 	const userID = 2
 
-	require.NoError(t, repo_model.WatchRepo(db.DefaultContext, userID, repoID, true))
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, userID, repoID, repo_model.WatchAllSelection))
 	unittest.AssertExistsAndLoadBean(t, &repo_model.Watch{RepoID: repoID, UserID: userID})
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: repoID})
 
-	require.NoError(t, repo_model.WatchRepo(db.DefaultContext, userID, repoID, false))
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, userID, repoID, repo_model.WatchNoneSelection))
 	unittest.AssertNotExistsBean(t, &repo_model.Watch{RepoID: repoID, UserID: userID})
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: repoID})
 }

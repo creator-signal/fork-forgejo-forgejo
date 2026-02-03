@@ -29,14 +29,18 @@ import (
 	"xorm.io/builder"
 )
 
-// deleteUser deletes models associated to an user.
+// deleteUser deletes models associated to a user.
 func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error) {
 	e := db.GetEngine(ctx)
 
 	// ***** START: Watch *****
 	watchedRepoIDs, err := db.FindIDs(ctx, "watch", "watch.repo_id",
 		builder.Eq{"watch.user_id": u.ID}.
-			And(builder.Neq{"watch.mode": repo_model.WatchModeDont}))
+			And(builder.Or(
+				builder.Eq{"`watch`.watch_selection_issues": true},
+				builder.Eq{"`watch`.watch_selection_pull_requests": true},
+				builder.Eq{"`watch`.watch_selection_releases": true},
+			)))
 	if err != nil {
 		return fmt.Errorf("get all watches: %w", err)
 	}

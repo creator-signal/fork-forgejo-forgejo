@@ -67,7 +67,7 @@ func GetIssueWatch(ctx context.Context, userID, issueID int64) (iw *IssueWatch, 
 	return iw, exists, err
 }
 
-// CheckIssueWatch check if an user is watching an issue
+// CheckIssueWatch check if a user is watching an issue
 // it takes participants and repo watch into account
 func CheckIssueWatch(ctx context.Context, user *user_model.User, issue *Issue) (bool, error) {
 	iw, exist, err := GetIssueWatch(ctx, user.ID, issue.ID)
@@ -81,7 +81,7 @@ func CheckIssueWatch(ctx context.Context, user *user_model.User, issue *Issue) (
 	if err != nil {
 		return false, err
 	}
-	return repo_model.IsWatchMode(w.Mode) || IsUserParticipantsOfIssue(ctx, user, issue), nil
+	return w.GetWatchSelection().IsWatching() || IsUserParticipantsOfIssue(ctx, user, issue), nil
 }
 
 // GetIssueWatchersIDs returns IDs of subscribers or explicit unsubscribers to a given issue id

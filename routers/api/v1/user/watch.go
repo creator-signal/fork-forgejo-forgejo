@@ -164,7 +164,7 @@ func Watch(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, repo_model.WatchAllSelection)
+	err := repo_model.WatchRepoExplicitly(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, repo_model.WatchAllSelection)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "WatchRepo", err)
 		return
@@ -201,7 +201,7 @@ func Unwatch(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, repo_model.WatchNoneSelection)
+	err := repo_model.WatchRepoExplicitly(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, repo_model.WatchNoneSelection)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "UnwatchRepo", err)
 		return

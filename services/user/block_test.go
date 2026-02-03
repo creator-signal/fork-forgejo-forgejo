@@ -46,7 +46,7 @@ func TestBlockUser(t *testing.T) {
 
 		// Blocked user watch repository of doer.
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: doer.ID})
-		require.NoError(t, repo_model.WatchRepo(db.DefaultContext, blockedUser.ID, repo.ID, true))
+		require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, blockedUser.ID, repo.ID, repo_model.WatchAllSelection))
 
 		repo = unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: doer.ID})
 		oldNumWatchers := repo.NumWatches

@@ -324,7 +324,7 @@ func ActionWatch(ctx *context.Context) {
 		Releases:     ctx.FormBool("watch_releases"),
 	}
 
-	err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watchSelection)
+	err := repo_model.WatchRepoExplicitly(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watchSelection)
 	if err != nil {
 		ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watchSelection), err)
 		return
@@ -344,7 +344,7 @@ func ActionWatch(ctx *context.Context) {
 
 func ActionWatchConst(watchSelection repo_model.WatchSelection) func(ctx *context.Context) {
 	return func(ctx *context.Context) {
-		err := repo_model.WatchRepo(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watchSelection)
+		err := repo_model.WatchRepoExplicitly(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID, watchSelection)
 		if err != nil {
 			ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watchSelection), err)
 			return
