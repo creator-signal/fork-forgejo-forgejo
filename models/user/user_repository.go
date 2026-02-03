@@ -23,8 +23,9 @@ func CreateFederatedUser(ctx context.Context, user *User, federatedUser *Federat
 		return err
 	}
 	overwrite := CreateUserOverwriteOptions{
-		IsActive:     optional.Some(false),
-		IsRestricted: optional.Some(false),
+		IsActive:      optional.Some(false),
+		IsRestricted:  optional.Some(false),
+		IsActivityPub: optional.Some(true),
 	}
 
 	// Begin transaction
@@ -118,6 +119,7 @@ func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *Federa
 }
 
 func FindFederatedUserByKeyID(ctx context.Context, keyID string) (*User, *FederatedUser, error) {
+	log.Trace("FindFederatedUserByKeyID: %v", keyID)
 	federatedUser := new(FederatedUser)
 	user := new(User)
 	has, err := db.GetEngine(ctx).Where("key_id=?", keyID).Get(federatedUser)
@@ -140,6 +142,7 @@ func FindFederatedUserByKeyID(ctx context.Context, keyID string) (*User, *Federa
 		return nil, nil, err
 	}
 
+	log.Trace("FindFederatedUserByKeyID: %v found user.ID %v, federated_user %v", keyID, user.ID, federatedUser)
 	return user, federatedUser, nil
 }
 

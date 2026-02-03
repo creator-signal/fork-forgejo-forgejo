@@ -20,7 +20,7 @@ import (
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/structs"
 
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v81/github"
 	"golang.org/x/oauth2"
 )
 
@@ -98,13 +98,14 @@ func NewGithubDownloaderV3(ctx context.Context, baseURL string, getPullRequests,
 		userName:        userName,
 		baseURL:         baseURL,
 		password:        password,
-		ctx:             ctx,
 		repoOwner:       repoOwner,
 		repoName:        repoName,
 		maxPerPage:      100,
 		getPullRequests: getPullRequests,
 		getIssues:       getIssues,
 	}
+
+	downloader.SetContext(ctx)
 
 	if token != "" {
 		tokens := strings.Split(token, ",")
@@ -159,6 +160,7 @@ func (g *GithubDownloaderV3) addClient(client *http.Client, baseURL string) {
 
 // SetContext set context
 func (g *GithubDownloaderV3) SetContext(ctx context.Context) {
+	ctx = context.WithValue(ctx, github.SleepUntilPrimaryRateLimitResetWhenRateLimited, true)
 	g.ctx = ctx
 }
 
@@ -430,9 +432,6 @@ func (g *GithubDownloaderV3) GetReleases() ([]*base.Release, error) {
 
 // GetIssues returns issues according start and limit
 func (g *GithubDownloaderV3) GetIssues(page, perPage int) ([]*base.Issue, bool, error) {
-	var issues []*github.Issue
-	var resp *github.Response
-	var err error
 	if perPage > g.maxPerPage {
 		perPage = g.maxPerPage
 	}
@@ -440,29 +439,17 @@ func (g *GithubDownloaderV3) GetIssues(page, perPage int) ([]*base.Issue, bool, 
 	allIssues := make([]*base.Issue, 0, perPage)
 	g.waitAndPickClient()
 
-	if page == 1 {
-		issues, resp, err = g.getClient().Issues.ListByRepo(g.ctx, g.repoOwner, g.repoName, &github.IssueListByRepoOptions{
-			Sort:      "created",
-			Direction: "asc",
-			State:     "all",
-			ListCursorOptions: github.ListCursorOptions{
-				PerPage: perPage,
-				Page:    strconv.Itoa(page),
-			},
-		})
-		g.githubPagingInfo.After = resp.After
-	} else {
-		issues, resp, err = g.getClient().Issues.ListByRepo(g.ctx, g.repoOwner, g.repoName, &github.IssueListByRepoOptions{
-			Sort:      "created",
-			Direction: "asc",
-			State:     "all",
-			ListCursorOptions: github.ListCursorOptions{
-				PerPage: perPage,
-				After:   g.githubPagingInfo.After,
-			},
-		})
-		g.githubPagingInfo.After = resp.After
-	}
+	issues, resp, err := g.getClient().Issues.ListByRepo(g.ctx, g.repoOwner, g.repoName, &github.IssueListByRepoOptions{
+		Sort:      "created",
+		Direction: "asc",
+		State:     "all",
+		ListCursorOptions: github.ListCursorOptions{
+			PerPage: perPage,
+			After:   g.githubPagingInfo.After,
+		},
+	})
+
+	g.githubPagingInfo.After = resp.After
 
 	if err != nil {
 		return nil, false, fmt.Errorf("error while listing repos: %w", err)

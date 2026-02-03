@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // @watch start
-// templates/devtest/modal.tmpl
+// templates/demo/modal.tmpl
 // templates/repo/editor/edit.tmpl
 // templates/repo/editor/patch.tmpl
 // web_src/js/features/repo-editor.js
@@ -23,7 +23,7 @@ test('Dialog modal', async ({page}) => {
   const filename = `${dynamic_id()}.md`;
 
   await page.getByPlaceholder('Name your file…').fill(filename);
-  await page.locator('.monaco-editor').click();
+  await page.locator('.cm-content').click();
   await page.keyboard.type('Hi, nice to meet you. Can I talk about ');
 
   await page.locator('.quick-pull-choice input[value="direct"]').click();
@@ -32,7 +32,7 @@ test('Dialog modal', async ({page}) => {
   response = await page.goto(`/user2/repo1/_edit/master/${filename}`, {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
-  await page.locator('.monaco-editor-container').click();
+  await page.locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.press('Backspace');
 
@@ -50,7 +50,7 @@ test('Dialog modal', async ({page}) => {
 
 test('Dialog modal: width', async ({page, isMobile}) => {
   // This test doesn't need JS and runs a little faster without it
-  await page.goto('/devtest/modal');
+  await page.goto('/-/demo/modal');
 
   // Open modal with short content
   const shortModal = page.locator('#short-modal');

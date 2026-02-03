@@ -187,8 +187,8 @@ func notify(ctx context.Context, input *notifyInput) error {
 	return handleWorkflows(ctx, detectedWorkflows, commit, input, ref.String())
 }
 
-func getGitRepoAndCommit(_ context.Context, input *notifyInput) (*git.Repository, *git.Commit, git.RefName, error) {
-	gitRepo, err := gitrepo.OpenRepository(context.Background(), input.Repo)
+func getGitRepoAndCommit(ctx context.Context, input *notifyInput) (*git.Repository, *git.Commit, git.RefName, error) {
+	gitRepo, err := gitrepo.OpenRepository(ctx, input.Repo)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("git.OpenRepository: %w", err)
 	}
@@ -356,17 +356,18 @@ func handleWorkflows(
 
 	for _, dwf := range detectedWorkflows {
 		run := &actions_model.ActionRun{
-			Title:         strings.SplitN(commit.CommitMessage, "\n", 2)[0],
-			RepoID:        input.Repo.ID,
-			OwnerID:       input.Repo.OwnerID,
-			WorkflowID:    dwf.EntryName,
-			TriggerUserID: input.Doer.ID,
-			Ref:           ref,
-			CommitSHA:     commit.ID.String(),
-			Event:         input.Event,
-			EventPayload:  string(p),
-			TriggerEvent:  dwf.TriggerEvent.Name,
-			Status:        actions_model.StatusWaiting,
+			Title:             strings.SplitN(commit.CommitMessage, "\n", 2)[0],
+			RepoID:            input.Repo.ID,
+			OwnerID:           input.Repo.OwnerID,
+			WorkflowID:        dwf.EntryName,
+			WorkflowDirectory: dwf.EntryDirectory,
+			TriggerUserID:     input.Doer.ID,
+			Ref:               ref,
+			CommitSHA:         commit.ID.String(),
+			Event:             input.Event,
+			EventPayload:      string(p),
+			TriggerEvent:      dwf.TriggerEvent.Name,
+			Status:            actions_model.StatusWaiting,
 		}
 
 		if !actions_module.IsDefaultBranchWorkflow(input.Event) {
@@ -403,9 +404,11 @@ func handleWorkflows(
 		}
 
 		var jobs []*jobparser.SingleWorkflow
+		var errorCode actions_model.PreExecutionError
+		var errorDetails []any
 		if dwf.EventDetectionError != nil { // don't even bother trying to parse jobs due to event detection error
-			run.PreExecutionErrorCode = actions_model.ErrorCodeEventDetectionError
-			run.PreExecutionErrorDetails = []any{dwf.EventDetectionError.Error()}
+			errorCode = actions_model.ErrorCodeEventDetectionError
+			errorDetails = []any{dwf.EventDetectionError.Error()}
 			run.Status = actions_model.StatusFailure
 			jobs = []*jobparser.SingleWorkflow{{
 				Name: dwf.EntryName,
@@ -416,11 +419,14 @@ func handleWorkflows(
 				// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
 				// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
 				jobparser.WithJobOutputs(map[string]map[string]string{}),
+				jobparser.SupportIncompleteRunsOn(),
+				jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(commit)),
+				jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
 			)
 			if err != nil {
 				log.Info("jobparser.Parse: invalid workflow, setting job status to failed: %v", err)
-				run.PreExecutionErrorCode = actions_model.ErrorCodeJobParsingError
-				run.PreExecutionErrorDetails = []any{err.Error()}
+				errorCode = actions_model.ErrorCodeJobParsingError
+				errorDetails = []any{err.Error()}
 				run.Status = actions_model.StatusFailure
 				jobs = []*jobparser.SingleWorkflow{{
 					Name: dwf.EntryName,
@@ -438,7 +444,18 @@ func handleWorkflows(
 			}
 		}
 
-		if err := actions_model.InsertRun(ctx, run, jobs); err != nil {
+		err = db.WithTx(ctx, func(ctx context.Context) error {
+			// Transaction avoids any chance of a run being picked up in a Waiting state when we're about to put it into
+			// a PreExecutionError a millisecond later.
+			if err := actions_model.InsertRun(ctx, run, jobs); err != nil {
+				return err
+			}
+			if errorCode != 0 {
+				return FailRunPreExecutionError(ctx, run, errorCode, errorDetails)
+			}
+			return nil
+		})
+		if err != nil {
 			log.Error("InsertRun: %v", err)
 			continue
 		}
@@ -449,6 +466,11 @@ func handleWorkflows(
 			continue
 		}
 		CreateCommitStatus(ctx, alljobs...)
+
+		if err := consistencyCheckRun(ctx, run); err != nil {
+			log.Error("SanityCheckRun: %v", err)
+			continue
+		}
 	}
 	return nil
 }
@@ -553,17 +575,18 @@ func handleSchedules(
 		}
 
 		run := &actions_model.ActionSchedule{
-			Title:         strings.SplitN(commit.CommitMessage, "\n", 2)[0],
-			RepoID:        input.Repo.ID,
-			OwnerID:       input.Repo.OwnerID,
-			WorkflowID:    dwf.EntryName,
-			TriggerUserID: user_model.ActionsUserID,
-			Ref:           input.Repo.DefaultBranch,
-			CommitSHA:     commit.ID.String(),
-			Event:         input.Event,
-			EventPayload:  string(p),
-			Specs:         schedules,
-			Content:       dwf.Content,
+			Title:             strings.SplitN(commit.CommitMessage, "\n", 2)[0],
+			RepoID:            input.Repo.ID,
+			OwnerID:           input.Repo.OwnerID,
+			WorkflowID:        dwf.EntryName,
+			WorkflowDirectory: dwf.EntryDirectory,
+			TriggerUserID:     user_model.ActionsUserID,
+			Ref:               input.Repo.DefaultBranch,
+			CommitSHA:         commit.ID.String(),
+			Event:             input.Event,
+			EventPayload:      string(p),
+			Specs:             schedules,
+			Content:           dwf.Content,
 		}
 		crons = append(crons, run)
 	}
@@ -577,7 +600,7 @@ func DetectAndHandleSchedules(ctx context.Context, repo *repo_model.Repository) 
 		return nil
 	}
 
-	gitRepo, err := gitrepo.OpenRepository(context.Background(), repo)
+	gitRepo, err := gitrepo.OpenRepository(ctx, repo)
 	if err != nil {
 		return fmt.Errorf("git.OpenRepository: %w", err)
 	}

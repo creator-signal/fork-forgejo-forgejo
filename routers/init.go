@@ -9,7 +9,6 @@ import (
 	"runtime"
 
 	"forgejo.org/models"
-	asymkey_model "forgejo.org/models/asymkey"
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/cache"
 	"forgejo.org/modules/eventsource"
@@ -44,7 +43,7 @@ import (
 	"forgejo.org/services/mailer"
 	mailer_incoming "forgejo.org/services/mailer/incoming"
 	markup_service "forgejo.org/services/markup"
-	migration_service "forgejo.org/services/migrations"
+	migrations_service "forgejo.org/services/migrations"
 	mirror_service "forgejo.org/services/mirror"
 	pull_service "forgejo.org/services/pull"
 	release_service "forgejo.org/services/release"
@@ -95,10 +94,6 @@ func syncAppConfForGit(ctx context.Context) error {
 	if updated {
 		log.Info("re-sync repository hooks ...")
 		mustInitCtx(ctx, repo_service.SyncRepositoryHooks)
-
-		log.Info("re-write ssh public keys ...")
-		mustInitCtx(ctx, asymkey_model.RewriteAllPublicKeys)
-
 		return system.AppState.Set(ctx, runtimeState)
 	}
 	return nil
@@ -157,7 +152,7 @@ func InitWebInstalled(ctx context.Context) {
 	mustInit(pull_service.Init)
 	mustInit(automerge.Init)
 	mustInit(task.Init)
-	mustInit(migration_service.Init)
+	mustInit(migrations_service.Init)
 	eventsource.GetManager().Init()
 	mustInitCtx(ctx, mailer_incoming.Init)
 
@@ -172,6 +167,8 @@ func InitWebInstalled(ctx context.Context) {
 	mustInit(stats.Init)
 
 	mustInit(repo_service.InitLicenseClassifier)
+
+	mustInit(actions_router.InitOIDC)
 
 	// Finally start up the cron
 	cron.NewContext(ctx)

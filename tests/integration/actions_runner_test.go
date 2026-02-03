@@ -12,7 +12,6 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/setting"
-	"forgejo.org/modules/structs"
 
 	pingv1 "code.forgejo.org/forgejo/actions-proto/ping/v1"
 	"code.forgejo.org/forgejo/actions-proto/ping/v1/pingv1connect"
@@ -97,61 +96,6 @@ func (r *mockRunner) registerAsRepoRunner(t *testing.T, ownerName, repoName, run
 	r.doRegister(t, runnerName, registrationToken.Token, labels)
 }
 
-func (r *mockRunner) registerAsRepoRunnerWithPost(t *testing.T, ownerName, repoName, runnerName string, labels []string) {
-	if !setting.Database.Type.IsSQLite3() {
-		// registering a mock runner when using a database other than SQLite leaves leftovers
-		t.FailNow()
-	}
-	session := loginUser(t, ownerName)
-	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
-	req := NewRequest(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners/registration-token", ownerName, repoName)).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
-	var registrationToken struct {
-		Token string `json:"token"`
-	}
-	DecodeJSON(t, resp, &registrationToken)
-	r.doRegister(t, runnerName, registrationToken.Token, labels)
-}
-
-func (r *mockRunner) listRunners(t *testing.T, ownerName, repoName string) structs.ActionRunnersResponse {
-	if !setting.Database.Type.IsSQLite3() {
-		// registering a mock runner when using a database other than SQLite leaves leftovers
-		t.FailNow()
-	}
-	session := loginUser(t, ownerName)
-	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
-	req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners", ownerName, repoName)).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
-	var runnersList structs.ActionRunnersResponse
-	DecodeJSON(t, resp, &runnersList)
-	return runnersList
-}
-
-func (r *mockRunner) getRunner(t *testing.T, ownerName, repoName string, runnerID int64) structs.ActionRunner {
-	if !setting.Database.Type.IsSQLite3() {
-		// registering a mock runner when using a database other than SQLite leaves leftovers
-		t.FailNow()
-	}
-	session := loginUser(t, ownerName)
-	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
-	req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners/%d", ownerName, repoName, runnerID)).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
-	var runner structs.ActionRunner
-	DecodeJSON(t, resp, &runner)
-	return runner
-}
-
-func (r *mockRunner) deleteRunner(t *testing.T, ownerName, repoName string, runnerID int64) {
-	if !setting.Database.Type.IsSQLite3() {
-		// registering a mock runner when using a database other than SQLite leaves leftovers
-		t.FailNow()
-	}
-	session := loginUser(t, ownerName)
-	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
-	req := NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners/%d", ownerName, repoName, runnerID)).AddTokenAuth(token)
-	MakeRequest(t, req, http.StatusNoContent)
-}
-
 func (r *mockRunner) maybeFetchTask(t *testing.T) *runnerv1.Task {
 	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
 		TasksVersion: r.lastTasksVersion,
@@ -177,6 +121,35 @@ func (r *mockRunner) fetchTask(t *testing.T, timeout ...time.Duration) *runnerv1
 		return false
 	}, fetchTimeout, time.Millisecond*100, "failed to fetch a task")
 	return task
+}
+
+func (r *mockRunner) maybeFetchMultipleTasks(t *testing.T, taskCapacity *int64) (*runnerv1.Task, []*runnerv1.Task) {
+	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
+		TasksVersion: r.lastTasksVersion,
+		TaskCapacity: taskCapacity,
+	}))
+	require.NoError(t, err)
+	r.lastTasksVersion = resp.Msg.TasksVersion
+	return resp.Msg.Task, resp.Msg.AdditionalTasks
+}
+
+func (r *mockRunner) fetchMultipleTasks(t *testing.T, taskCapacity *int64, timeout ...time.Duration) (*runnerv1.Task, []*runnerv1.Task) {
+	fetchTimeout := 10 * time.Second
+	if len(timeout) > 0 {
+		fetchTimeout = timeout[0]
+	}
+	var task *runnerv1.Task
+	var additional []*runnerv1.Task
+	require.Eventually(t, func() bool {
+		maybeTask, maybeAdditional := r.maybeFetchMultipleTasks(t, taskCapacity)
+		if maybeTask != nil {
+			task = maybeTask
+			additional = maybeAdditional
+			return true
+		}
+		return false
+	}, fetchTimeout, time.Millisecond*100, "failed to fetch a task")
+	return task, additional
 }
 
 type mockTaskOutcome struct {

@@ -436,9 +436,16 @@ func reqSiteAdmin() func(ctx *context.APIContext) {
 	}
 }
 
-// reqOwner user should be the owner of the repo or site admin.
-func reqOwner() func(ctx *context.APIContext) {
+// reqOwner requires that the current user is either the owner of the repository or an administrator. If one or more
+// unitTypes are given, it also requires that at least one the respective unitTypes is enabled.
+func reqOwner(unitTypes ...unit.Type) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
+		if len(unitTypes) > 0 && !slices.ContainsFunc(unitTypes, func(unitType unit.Type) bool {
+			return ctx.Repo.Repository.UnitEnabled(ctx, unitType)
+		}) {
+			ctx.NotFound()
+			return
+		}
 		if !ctx.Repo.IsOwner() && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden, "reqOwner", "user should be the owner of the repo")
 			return
@@ -466,7 +473,8 @@ func reqAdmin() func(ctx *context.APIContext) {
 	}
 }
 
-// reqRepoWriter user should have a permission to write to a repo, or be a site admin
+// reqRepoWriter requires that the current user has permission to write to a repository or that it is an administrator.
+// One or more unitTypes have to be specified, and at least one of them has to be enabled.
 func reqRepoWriter(unitTypes ...unit.Type) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
 		if !slices.ContainsFunc(unitTypes, func(unitType unit.Type) bool {
@@ -856,9 +864,10 @@ func Routes() *web.Route {
 			})
 
 			m.Group("/runners", func() {
-				m.Get("", reqToken(), reqChecker, act.ListRunners)
+				m.Combo("").
+					Get(reqToken(), reqChecker, act.ListRunners).
+					Post(reqToken(), reqChecker, bind(api.RegisterRunnerOptions{}), act.RegisterRunner)
 				m.Get("/registration-token", reqToken(), reqChecker, act.GetRegistrationToken)
-				m.Post("/registration-token", reqToken(), reqChecker, act.CreateRegistrationToken)
 				m.Get("/{runner_id}", reqToken(), reqChecker, act.GetRunner)
 				m.Delete("/{runner_id}", reqToken(), reqChecker, act.DeleteRunner)
 				m.Get("/jobs", reqToken(), reqChecker, act.SearchActionRunJobs)
@@ -1020,9 +1029,10 @@ func Routes() *web.Route {
 				})
 
 				m.Group("/runners", func() {
-					m.Get("", reqToken(), user.ListRunners)
+					m.Combo("").
+						Get(reqToken(), user.ListRunners).
+						Post(bind(api.RegisterRunnerOptions{}), user.RegisterRunner)
 					m.Get("/registration-token", reqToken(), user.GetRegistrationToken)
-					m.Post("/registration-token", reqToken(), user.CreateRegistrationToken)
 					m.Get("/{runner_id}", reqToken(), user.GetRunner)
 					m.Delete("/{runner_id}", reqToken(), user.DeleteRunner)
 					m.Get("/jobs", reqToken(), user.SearchActionRunJobs)
@@ -1143,7 +1153,7 @@ func Routes() *web.Route {
 				}, reqToken())
 				addActionsRoutes(
 					m,
-					reqOwner(),
+					reqOwner(unit.TypeActions),
 					repo.NewAction(),
 				)
 				m.Group("/hooks/git", func() {
@@ -1704,14 +1714,17 @@ func Routes() *web.Route {
 					Delete(admin.DeleteHook)
 			})
 			m.Group("/actions/runners", func() {
-				m.Get("", admin.ListRunners)
-				m.Post("/registration-token", admin.CreateRegistrationToken)
+				m.Combo("").
+					Get(admin.ListRunners).
+					Post(bind(api.RegisterRunnerOptions{}), admin.RegisterRunner)
+				m.Get("/registration-token", admin.GetRunnerRegistrationToken)
 				m.Get("/{runner_id}", admin.GetRunner)
 				m.Delete("/{runner_id}", admin.DeleteRunner)
+				m.Get("/jobs", admin.GetActionRunJobs)
 			})
 			m.Group("/runners", func() {
-				m.Get("/registration-token", admin.GetRegistrationToken)
-				m.Get("/jobs", admin.SearchActionRunJobs)
+				m.Get("/registration-token", admin.GetRegistrationToken) //nolint:staticcheck
+				m.Get("/jobs", admin.SearchActionRunJobs)                //nolint:staticcheck
 			})
 			if setting.Quota.Enabled {
 				m.Group("/quota", func() {

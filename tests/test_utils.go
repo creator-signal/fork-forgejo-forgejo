@@ -263,12 +263,29 @@ func cancelProcesses(t testing.TB, delay time.Duration) {
 			for _, p := range processes {
 				t.Logf("PrepareTestEnv:Remaining Process: %q", p.Description)
 			}
+			stacks := allGoroutineStacks()
+			t.Errorf("All goroutine stacks during process cancellation failure:\n%s", string(stacks))
+			// exit so that we don't spin in a loop executing `delay` wait over and over again when we won't be able to
+			// complete tests correctly due to the environmental issue present.
+			exitf("terminating test run due to unrecoverable failure")
 			return
 		}
 		runtime.Gosched() // let the context cancellation propagate
 		processes, _ = processManager.Processes(true, true)
 	}
 	t.Logf("PrepareTestEnv: all processes cancelled within %s", time.Since(start))
+}
+
+// allGoroutineStacks is the same as runtime/debug.Stack(), but it captures the stack of all goroutines.
+func allGoroutineStacks() []byte {
+	buf := make([]byte, 1024)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			return buf[:n]
+		}
+		buf = make([]byte, 2*len(buf))
+	}
 }
 
 func PrepareGitRepoDirectory(t testing.TB) {
@@ -324,6 +341,13 @@ func PrepareCleanPackageData(t testing.TB) {
 var inTestEnv atomic.Bool
 
 func PrepareTestEnv(t testing.TB, skip ...int) func() {
+	deferFn := PrepareTestEnvWithPackageData(t, skip...)
+	PrepareCleanPackageData(t)
+	return deferFn
+}
+
+// Doesn't perform the `PrepareCleanPackageData` that `PrepareTestEnv` does...
+func PrepareTestEnvWithPackageData(t testing.TB, skip ...int) func() {
 	t.Helper()
 
 	if !inTestEnv.CompareAndSwap(false, true) {
@@ -348,7 +372,6 @@ func PrepareTestEnv(t testing.TB, skip ...int) func() {
 	// do not add more Prepare* functions here, only call necessary ones in the related test functions
 	PrepareGitRepoDirectory(t)
 	PrepareLFSStorage(t)
-	PrepareCleanPackageData(t)
 	return deferFn
 }
 
