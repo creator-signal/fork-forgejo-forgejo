@@ -40,9 +40,13 @@ func GetStarredRepos(ctx context.Context, userID int64, private bool, listOption
 func GetWatchedRepos(ctx context.Context, userID int64, private bool, listOptions db.ListOptions) ([]*Repository, int64, error) {
 	sess := db.GetEngine(ctx).
 		Where("watch.user_id=?", userID).
-		And("`watch`.watch_selection_issues=?", false).
-		And("`watch`.watch_selection_pull_requests=?", false).
-		And("`watch`.watch_selection_releases=?", false).
+		And(
+			builder.Or(
+				builder.Eq{"`watch`.watch_selection_issues": true},
+				builder.Eq{"`watch`.watch_selection_pull_requests": true},
+				builder.Eq{"`watch`.watch_selection_releases": true},
+			),
+		).
 		Join("LEFT", "watch", "`repository`.id=`watch`.repo_id")
 	if !private {
 		sess = sess.And("is_private=?", false)
@@ -199,9 +203,13 @@ func GetWatchedRepoIDsOwnedBy(ctx context.Context, userID, ownedByUserID int64) 
 		Select("`repository`.id").
 		Join("LEFT", "watch", "`repository`.id=`watch`.repo_id").
 		Where("`watch`.user_id=?", userID).
-		And("`watch`.watch_selection_issues=?", false).
-		And("`watch`.watch_selection_pull_requests=?", false).
-		And("`watch`.watch_selection_releases=?", false).
+		And(
+			builder.Or(
+				builder.Eq{"`watch`.watch_selection_issues": true},
+				builder.Eq{"`watch`.watch_selection_pull_requests": true},
+				builder.Eq{"`watch`.watch_selection_releases": true},
+			),
+		).
 		And("`repository`.owner_id=?", ownedByUserID).Find(&repoIDs)
 	return repoIDs, err
 }
