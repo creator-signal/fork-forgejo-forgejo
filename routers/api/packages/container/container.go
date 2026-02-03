@@ -39,7 +39,6 @@ const maxManifestSize = 10 * 1024 * 1024
 
 var (
 	imageNamePattern = regexp.MustCompile(`\A[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*\z`)
-	referencePattern = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
 )
 
 type containerHeaders struct {
@@ -537,19 +536,16 @@ func DeleteBlob(ctx *context.Context) {
 
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-manifests
 func UploadManifest(ctx *context.Context) {
-	reference := ctx.Params("reference")
 
-	mci := &container_service.ManifestCreationInfo{
-		MediaType: ctx.Req.Header.Get("Content-Type"),
-		Owner:     ctx.Package.Owner,
-		Creator:   ctx.Doer,
-		Image:     ctx.Params("image"),
-		Reference: reference,
-		IsTagged:  digest.Digest(reference).Validate() != nil,
-	}
-
-	if mci.IsTagged && !referencePattern.MatchString(reference) {
-		apiErrorDefined(ctx, errManifestInvalid.WithMessage("Tag is invalid"))
+	mci, err := container_service.NewManifestCreationInfo(
+		ctx.Package.Owner,
+		ctx.Doer,
+		ctx.Req.Header.Get("Content-Type"),
+		ctx.Params("image"),
+		ctx.Params("reference"),
+	)
+	if err != nil {
+		apiErrorDefined(ctx, errManifestInvalid.WithMessage(err.Error()))
 		return
 	}
 
@@ -585,7 +581,7 @@ func UploadManifest(ctx *context.Context) {
 	}
 
 	setResponseHeaders(ctx.Resp, &containerHeaders{
-		Location:      fmt.Sprintf("/v2/%s/%s/manifests/%s", ctx.Package.Owner.LowerName, mci.Image, reference),
+		Location:      fmt.Sprintf("/v2/%s/%s/manifests/%s", ctx.Package.Owner.LowerName, mci.Image, mci.Reference),
 		ContentDigest: digest,
 		Status:        http.StatusCreated,
 	})
@@ -602,7 +598,7 @@ func getBlobSearchOptionsFromContext(ctx *context.Context) (*container_model.Blo
 
 	if digest.Digest(reference).Validate() == nil {
 		opts.Digest = reference
-	} else if referencePattern.MatchString(reference) {
+	} else if container_service.ReferencePattern.MatchString(reference) {
 		opts.Tag = reference
 	} else {
 		return nil, container_model.ErrContainerBlobNotExist
