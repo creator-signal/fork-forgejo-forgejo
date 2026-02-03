@@ -17,7 +17,7 @@ func init() {
 
 type RepoLicense struct { //revive:disable-line:exported
 	ID          int64 `xorm:"pk autoincr"`
-	RepoID      int64 `xorm:"UNIQUE(s) NOT NULL"`
+	RepoID      int64 `xorm:"UNIQUE(s) NOT NULL REFERENCES(repository, id)"`
 	CommitID    string
 	License     string             `xorm:"VARCHAR(255) UNIQUE(s) NOT NULL"`
 	Path        string             `xorm:"UNIQUE(s) NOT NULL"`
