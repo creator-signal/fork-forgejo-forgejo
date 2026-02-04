@@ -7,15 +7,15 @@
 // web_src/css/repo/header.css
 // @watch end
 
-import { expect } from '@playwright/test';
-import { test, login_user, login } from './utils_e2e.ts';
+import {expect} from '@playwright/test';
+import {test, login_user, login} from './utils_e2e.ts';
 
-test.beforeAll(async ({ browser }, workerInfo) => {
+test.beforeAll(async ({browser}, workerInfo) => {
   await login_user(browser, workerInfo, 'user2');
 });
 
-test('Watch dropdown: toggle watch events', async ({ browser }, workerInfo) => {
-  const page = await login({ browser }, workerInfo);
+test('Watch dropdown: toggle watch events', async ({browser}, workerInfo) => {
+  const page = await login({browser}, workerInfo);
   await page.goto('/user2/repo1');
 
   // Find the watch dropdown
@@ -41,8 +41,8 @@ test('Watch dropdown: toggle watch events', async ({ browser }, workerInfo) => {
   await expect(watchMenu).toBeHidden();
 });
 
-test('Watch dropdown: unwatch all shows proper state', async ({ browser }, workerInfo) => {
-  const page = await login({ browser }, workerInfo);
+test('Watch dropdown: unwatch all shows proper state', async ({browser}, workerInfo) => {
+  const page = await login({browser}, workerInfo);
   await page.goto('/user2/repo1');
 
   const watchDropdown = page.locator('#watch-button details.dropdown');
@@ -61,8 +61,8 @@ test('Watch dropdown: unwatch all shows proper state', async ({ browser }, worke
   }
 });
 
-test('User settings: notifications page exists', async ({ browser }, workerInfo) => {
-  const page = await login({ browser }, workerInfo);
+test('User settings: notifications page exists', async ({browser}, workerInfo) => {
+  const page = await login({browser}, workerInfo);
   await page.goto('/user/settings/notifications');
 
   // Check page loaded correctly
@@ -71,8 +71,8 @@ test('User settings: notifications page exists', async ({ browser }, workerInfo)
   await expect(page.locator('h4:has-text("Default Watch Events")')).toBeVisible();
 });
 
-test('User settings: notifications auto-watch checkboxes', async ({ browser }, workerInfo) => {
-  const page = await login({ browser }, workerInfo);
+test('User settings: notifications auto-watch checkboxes', async ({browser}, workerInfo) => {
+  const page = await login({browser}, workerInfo);
   await page.goto('/user/settings/notifications');
 
   // Verify auto-watch checkboxes exist
@@ -85,8 +85,8 @@ test('User settings: notifications auto-watch checkboxes', async ({ browser }, w
   await expect(onContributeCheckbox).toBeVisible();
 });
 
-test('User settings: notifications default watch events checkboxes', async ({ browser }, workerInfo) => {
-  const page = await login({ browser }, workerInfo);
+test('User settings: notifications default watch events checkboxes', async ({browser}, workerInfo) => {
+  const page = await login({browser}, workerInfo);
   await page.goto('/user/settings/notifications');
 
   // Verify default watch event checkboxes exist (in WATCH_DEFAULTS form)
@@ -100,8 +100,8 @@ test('User settings: notifications default watch events checkboxes', async ({ br
   await expect(releasesCheckbox).toBeVisible();
 });
 
-test('User settings: notifications can save auto-watch preferences', async ({ browser }, workerInfo) => {
-  const page = await login({ browser }, workerInfo);
+test('User settings: notifications can save auto-watch preferences', async ({browser}, workerInfo) => {
+  const page = await login({browser}, workerInfo);
   await page.goto('/user/settings/notifications');
 
   // Toggle a checkbox and save
@@ -134,8 +134,8 @@ test('User settings: notifications can save auto-watch preferences', async ({ br
   await autoWatchForm.locator('button.ui.primary.button').click();
 });
 
-test('User settings: notifications can save default watch events', async ({ browser }, workerInfo) => {
-  const page = await login({ browser }, workerInfo);
+test('User settings: notifications can save default watch events', async ({browser}, workerInfo) => {
+  const page = await login({browser}, workerInfo);
   await page.goto('/user/settings/notifications');
 
   // Find the watch defaults form and issues checkbox
