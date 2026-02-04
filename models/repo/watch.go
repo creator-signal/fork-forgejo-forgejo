@@ -64,17 +64,14 @@ type Watch struct {
 	ID     int64       `xorm:"pk autoincr"`
 	UserID int64       `xorm:"UNIQUE(watch)"`
 	RepoID int64       `xorm:"UNIQUE(watch)"`
-	Source WatchSource `xorm:"Bool DEFAULT 1"`
+	Source WatchSource `xorm:"NOT NULL"`
 	// In the next PR there will be another mode here, choosing the user preset or a custom selection.
 	// TODO: figure out whether the user preset should count as watching
 	// TODO: (then change the description to IsWatching)
 
-	// The default is 1 because of migration reasons.
-	// Before the granular watch feature repos could only be watched entirely or not at all.
-	// Therefore people who watched a repo before granular settings still watch everything after the migration.
-	WatchSelectionIssues       bool `xorm:"Bool DEFAULT 1"`
-	WatchSelectionPullRequests bool `xorm:"Bool DEFAULT 1"`
-	WatchSelectionReleases     bool `xorm:"Bool DEFAULT 1"`
+	WatchSelectionIssues       bool `xorm:"NOT NULL"`
+	WatchSelectionPullRequests bool `xorm:"NOT NULL"`
+	WatchSelectionReleases     bool `xorm:"NOT NULL"`
 
 	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`

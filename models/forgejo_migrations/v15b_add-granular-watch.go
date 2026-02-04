@@ -18,11 +18,10 @@ func init() {
 
 func addGranularWatchColumnsAndDropModeColumn(x *xorm.Engine) error {
 	type Watch struct {
-		Source repo_model.WatchSource `xorm:"Bool DEFAULT 1"`
-		// Watch everything as it has been before when a user watches a repo.
-		WatchSelectionIssues       bool `xorm:"Bool DEFAULT 1"`
-		WatchSelectionPullRequests bool `xorm:"Bool DEFAULT 1"`
-		WatchSelectionReleases     bool `xorm:"Bool DEFAULT 1"`
+		Source                     repo_model.WatchSource `xorm:"NOT NULL"`
+		WatchSelectionIssues       bool                   `xorm:"NOT NULL"`
+		WatchSelectionPullRequests bool                   `xorm:"NOT NULL"`
+		WatchSelectionReleases     bool                   `xorm:"NOT NULL"`
 	}
 	if err := x.Sync(new(Watch)); err != nil {
 		return err
