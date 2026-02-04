@@ -38,6 +38,80 @@ func TestIsWatching(t *testing.T) {
 	assert.False(t, repo_model.IsWatcher(db.DefaultContext, unittest.NonexistentID, unittest.NonexistentID))
 }
 
+func TestGetSelectWatchers(t *testing.T) {
+	for idx, test := range []struct {
+		RepoId          int64
+		Selection       repo_model.WatchSelection
+		ExpectedUserIDs []int64
+	}{
+		{
+			1,
+			repo_model.WatchNoneSelection,
+			// This should always be empty for any repo.
+			[]int64{},
+		},
+		{
+			3,
+			repo_model.WatchNoneSelection,
+			// This should always be empty for any repo.
+			[]int64{},
+		},
+		{
+			3,
+			repo_model.WatchAllSelection,
+			[]int64{4},
+		},
+		{
+			3,
+			repo_model.WatchSelection{Issues: true},
+			[]int64{4},
+		},
+		{
+			3,
+			repo_model.WatchSelection{PullRequests: true},
+			[]int64{},
+		},
+		{
+			3,
+			repo_model.WatchSelection{Releases: true},
+			[]int64{},
+		},
+		{
+			3,
+			repo_model.WatchSelection{Releases: true, PullRequests: true},
+			[]int64{},
+		},
+
+		{
+			5,
+			repo_model.WatchSelection{Releases: true},
+			[]int64{4, 5},
+		},
+		{
+			5,
+			repo_model.WatchSelection{Releases: true, PullRequests: true},
+			[]int64{4, 5},
+		},
+		{
+			5,
+			repo_model.WatchSelection{PullRequests: true},
+			[]int64{5},
+		},
+	} {
+		watchers, err := repo_model.GetSelectWatchers(db.DefaultContext, test.RepoId, test.Selection)
+		require.NoError(t, err)
+		if assert.Len(t, watchers, len(test.ExpectedUserIDs), "idx: %d", idx) {
+			for i, watcher := range watchers {
+				assert.Equal(t, test.ExpectedUserIDs[i], watcher.UserID)
+			}
+		}
+
+		watcherIDs, err := repo_model.GetSelectWatcherIDs(db.DefaultContext, test.RepoId, test.Selection)
+		require.NoError(t, err)
+		assert.Equal(t, test.ExpectedUserIDs, watcherIDs, "idx: %d", idx)
+	}
+}
+
 func TestRepository_GetWatchers(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 

@@ -194,6 +194,10 @@ func GetSelectWatchers(ctx context.Context, repoID int64, selection WatchSelecti
 	if selection.Releases {
 		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_releases": true})
 	}
+	// When we don't select anything, don't return anything.
+	if len(sqlSelection) == 0 {
+		return []*Watch{}, nil
+	}
 
 	watches := make([]*Watch, 0, 10)
 	return watches, db.GetEngine(ctx).Where("`watch`.repo_id=?", repoID).
@@ -204,10 +208,10 @@ func GetSelectWatchers(ctx context.Context, repoID int64, selection WatchSelecti
 		Find(&watches)
 }
 
-// GetSelectWatchersIDs returns IDs of users watching any of the selected parts of the repo with the given repoID.
+// GetSelectWatcherIDs returns IDs of users watching any of the selected parts of the repo with the given repoID.
 // but avoids joining with `user` for performance reasons
 // User permissions must be verified elsewhere if required
-func GetSelectWatchersIDs(ctx context.Context, repoID int64, selection WatchSelection) ([]int64, error) {
+func GetSelectWatcherIDs(ctx context.Context, repoID int64, selection WatchSelection) ([]int64, error) {
 	sqlSelection := []builder.Cond{}
 	if selection.Issues {
 		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_issues": true})
@@ -217,6 +221,10 @@ func GetSelectWatchersIDs(ctx context.Context, repoID int64, selection WatchSele
 	}
 	if selection.Releases {
 		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_releases": true})
+	}
+	// When we don't select anything, don't return anything.
+	if len(sqlSelection) == 0 {
+		return []int64{}, nil
 	}
 
 	ids := make([]int64, 0, 64)

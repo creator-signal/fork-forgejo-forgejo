@@ -253,10 +253,6 @@ func TestIssues(t *testing.T) {
 			for i, issue := range issues {
 				assert.Equal(t, test.ExpectedIssueIDs[i], issue.ID, "idx: %d", idx)
 			}
-		} else {
-			for _, issue := range issues {
-				fmt.Println(issue.ID)
-			}
 		}
 	}
 }
