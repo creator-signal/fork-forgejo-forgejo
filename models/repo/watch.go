@@ -187,10 +187,10 @@ func GetSelectWatchers(ctx context.Context, repoID int64, selection WatchSelecti
 		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_issues": true})
 	}
 	if selection.PullRequests {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_pull_requests": true})
+		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_pull_requests": true})
 	}
 	if selection.Releases {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_releases": true})
+		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_releases": true})
 	}
 
 	watches := make([]*Watch, 0, 10)
@@ -211,10 +211,10 @@ func GetSelectWatchersIDs(ctx context.Context, repoID int64, selection WatchSele
 		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_issues": true})
 	}
 	if selection.PullRequests {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_pull_requests": true})
+		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_pull_requests": true})
 	}
 	if selection.Releases {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_releases": true})
+		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_releases": true})
 	}
 
 	ids := make([]int64, 0, 64)
