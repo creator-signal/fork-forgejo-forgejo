@@ -1169,7 +1169,6 @@ func registerRoutes(m *web.Route) {
 
 	m.Group("/{username}/{reponame}/action", func() {
 		m.Post("/watch/select", repo.ActionWatch)
-		// TODO: remove these endpoints in favour of watch/select
 		m.Post("/watch", repo.ActionWatchConst(repo_model.WatchAllSelection))
 		m.Post("/unwatch", repo.ActionWatchConst(repo_model.WatchNoneSelection))
 		m.Post("/accept_transfer", repo.ActionTransfer(true))

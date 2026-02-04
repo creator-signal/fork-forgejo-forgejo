@@ -159,9 +159,8 @@ func GetReviewers(ctx context.Context, repo *Repository, doerID, posterID int64)
 				Where(builder.Eq{"repo_id": repo.ID}.
 					And(
 						builder.Or(
-							builder.Eq{"`watch`.watch_selection_issues": true},
+							// Only care about user watching this repo's pull requests.
 							builder.Eq{"`watch`.watch_selection_pull_requests": true},
-							builder.Eq{"`watch`.watch_selection_releases": true},
 						),
 					)),
 		).Or(builder.In("`user`.id",
