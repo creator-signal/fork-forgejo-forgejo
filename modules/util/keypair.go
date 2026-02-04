@@ -5,11 +5,20 @@ package util
 
 import (
 	"crypto"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
+)
+
+type Algorithm int
+
+const (
+	RSA     Algorithm = 1
+	ED25519 Algorithm = 2
 )
 
 // GenerateKeyPair generates a public and private keypair
@@ -41,6 +50,30 @@ func pemBlockForPub(pub *rsa.PublicKey) (string, error) {
 		Bytes: pubASN1,
 	})
 	return string(pubBytes), nil
+}
+
+// RandomPKIXPublicKeyx509 generates a random RSA keypair.
+//
+// `bits` is the desired bit-length for the keypair.
+//
+// Returns the x509 asn1 DER-encoded public key bytes.
+func RandomPKIXPublicKey(bits int, alg Algorithm) ([]byte, error) {
+	switch alg {
+	case RSA:
+		priv, err := rsa.GenerateKey(rand.Reader, bits)
+		if err != nil {
+			return nil, err
+		}
+		return x509.MarshalPKIXPublicKey(priv.Public())
+	case ED25519:
+		pk, _, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		return x509.MarshalPKIXPublicKey(pk)
+	default:
+		return nil, fmt.Errorf("invalid crypto algorithm: %v", alg)
+	}
 }
 
 // CreatePublicKeyFingerprint creates a fingerprint of the given key.

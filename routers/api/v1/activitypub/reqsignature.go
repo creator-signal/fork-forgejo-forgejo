@@ -6,6 +6,7 @@ package activitypub
 import (
 	"net/http"
 
+	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	app_context "forgejo.org/services/context"
@@ -30,9 +31,15 @@ func verifyHTTPSignature(ctx app_context.APIContext) (authenticated bool, err er
 
 	log.Debug("Verify %q, signed by KeyId: %v", r.URL.Path, v.KeyId())
 	signatureAlgorithm := httpsig.Algorithm(setting.Federation.SignatureAlgorithms[0])
-	pubKey, err := federation.FindOrCreateFederatedUserKey(ctx, v.KeyId())
+
+	keyID, err := federation_key.NewKeyID(v.KeyId())
+	if err != nil {
+		return false, err
+	}
+
+	pubKey, err := federation.FindOrCreateFederatedUserKey(ctx, keyID)
 	if err != nil || pubKey == nil {
-		pubKey, err = federation.FindOrCreateFederationHostKey(ctx, v.KeyId())
+		pubKey, err = federation.FindOrCreateFederationHostKey(ctx, keyID)
 		if err != nil {
 			log.Debug("For %q verification failed: %v", r.URL.Path, err)
 			return false, err

@@ -20,6 +20,8 @@ var (
 		GetHeaders          []string
 		PostHeaders         []string
 		SignatureEnforced   bool
+		// UseInsecureHTTP is only intended for dev/testing environments, and **SHOULD NOT** be used in production
+		UseInsecureHTTP bool `ini:"USE_INSECURE_HTTP"`
 	}{
 		Enabled:             false,
 		ShareUserStatistics: true,
@@ -29,6 +31,7 @@ var (
 		GetHeaders:          []string{"(request-target)", "Date", "Host"},
 		PostHeaders:         []string{"(request-target)", "Date", "Host", "Digest"},
 		SignatureEnforced:   true,
+		UseInsecureHTTP:     false,
 	}
 )
 

@@ -19,6 +19,7 @@ import (
 
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/util"
 	"forgejo.org/tests"
 
@@ -64,6 +65,9 @@ var rootPathRe = regexp.MustCompile("\\[repository\\]\nROOT\\s=\\s.*")
 
 func onApplicationRun[T testing.TB](t T, callback func(T, *url.URL)) {
 	defer tests.PrepareTestEnv(t, 1)()
+	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&setting.Federation.UseInsecureHTTP, true)()
+
 	s := http.Server{
 		Handler: testWebRoutes,
 	}

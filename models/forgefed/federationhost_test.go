@@ -4,11 +4,16 @@
 package forgefed
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"forgejo.org/models/federation_key"
 	"forgejo.org/modules/validation"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_FederationHostValidation(t *testing.T) {
@@ -87,4 +92,58 @@ func Test_FederationHostValidation(t *testing.T) {
 	if res, _ := validation.IsValid(sut); res {
 		t.Error("sut should be invalid: HostFqdn lower case")
 	}
+}
+
+func Test_FederationHostKeyIDValidation(t *testing.T) {
+	sut := FederationHost{
+		HostFqdn: "host.do.main",
+		NodeInfo: NodeInfo{
+			SoftwareName: "forgejo",
+		},
+		LatestActivity: time.Now(),
+		HostPort:       443,
+		HostSchema:     "https",
+	}
+
+	res, err := validation.IsValid(sut)
+	assert.True(t, res)
+	require.NoError(t, err)
+
+	hostURL := sut.AsURL()
+	keyID, err := federation_key.NewKeyID(fmt.Sprintf("%s#main-key", hostURL.String()))
+	require.NoError(t, err)
+
+	keyURL, err := keyID.IRI().URL()
+	require.NoError(t, err)
+
+	assert.Equal(t, keyURL.Scheme, hostURL.Scheme)
+	assert.Equal(t, keyURL.Host, hostURL.Host)
+
+	require.NoError(t, sut.ValidateKeyID(keyID))
+}
+
+func Test_FederationHostInvalidKeyIDValidation(t *testing.T) {
+	sut := FederationHost{
+		HostFqdn: "host.do.main",
+		NodeInfo: NodeInfo{
+			SoftwareName: "forgejo",
+		},
+		LatestActivity: time.Now(),
+		HostPort:       443,
+		HostSchema:     "http",
+	}
+
+	res, err := validation.IsValid(sut)
+	assert.True(t, res)
+	require.NoError(t, err)
+
+	hostURL := sut.AsURL()
+
+	badSchemeKeyID := federation_key.KeyID("http://bad.host#main-key")
+	require.Error(t, sut.ValidateKeyID(badSchemeKeyID))
+
+	badHostKeyID, err := federation_key.NewKeyID(fmt.Sprintf("https://%s#main-key", hostURL.Host))
+	require.NoError(t, err)
+
+	require.Error(t, sut.ValidateKeyID(badHostKeyID))
 }

@@ -5,11 +5,11 @@ package federation
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/url"
 	"strings"
 
+	"forgejo.org/models/federation_key"
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
@@ -137,38 +137,38 @@ func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forge
 	return &result, nil
 }
 
-func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID int64) (*user.User, *user.FederatedUser, error) {
+func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID int64) (*user.User, *user.FederatedUser, *federation_key.FederationPublicKey, error) {
 	actionsUser := user.NewAPServerActor()
 	clientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	apClient, err := clientFactory.WithKeys(ctx, actionsUser, actionsUser.KeyID())
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	body, err := apClient.GetBody(personID.AsURI())
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	person := fm.ForgePerson{}
 	err = person.UnmarshalJSON(body)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if res, err := validation.IsValid(person); !res {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	log.Info("Fetched valid person from distant server: %q", person)
 
 	localFqdn, err := url.ParseRequestURI(setting.AppURL)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	email := fmt.Sprintf("f%v@%v", uuid.New().String(), localFqdn.Hostname())
@@ -182,12 +182,12 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 
 	inbox, err := url.ParseRequestURI(person.Inbox.GetLink().String())
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	pubKeyBytes, err := decodePublicKeyPem(person.PublicKey.PublicKeyPem)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	newUser := user.User{
@@ -205,32 +205,47 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 		IsAdmin:                      false,
 	}
 
+	federationPublicKey, err := federation_key.NewFederationPublicKey(0, person.PublicKey.ID.String(), pubKeyBytes, 0, federation_key.FederatedUserType, federation_key.RsaSha256Cavage)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	federatedUser := user.FederatedUser{
 		ExternalID:            personID.ID,
 		FederationHostID:      federationHostID,
 		InboxPath:             inbox.Path,
 		NormalizedOriginalURL: personID.AsURI(),
-		KeyID: sql.NullString{
-			String: person.PublicKey.ID.String(),
-			Valid:  true,
-		},
-		PublicKey: sql.Null[sql.RawBytes]{
-			V:     pubKeyBytes,
-			Valid: true,
-		},
 	}
 
 	log.Info("Fetched person's %q federatedUser from distant server: %q", person, federatedUser)
-	return &newUser, &federatedUser, nil
+	return &newUser, &federatedUser, federationPublicKey, nil
 }
 
 func createUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID int64) (*user.User, *user.FederatedUser, error) {
-	newUser, federatedUser, err := fetchUserFromAP(ctx, personID, federationHostID)
+	newUser, federatedUser, federationPublicKey, err := fetchUserFromAP(ctx, personID, federationHostID)
 	if err != nil {
 		return nil, nil, err
 	}
 	err = user.CreateFederatedUser(ctx, newUser, federatedUser)
 	if err != nil {
+		return nil, nil, err
+	}
+
+	_, optFederatedUser, err := user.FindFederatedUser(ctx, federatedUser.ExternalID, federatedUser.FederationHostID)
+	if err != nil {
+		return nil, nil, err
+	} else if optFederatedUser == nil {
+		return nil, nil, fmt.Errorf("missing federated user: %v", federatedUser.ExternalID)
+	}
+	federatedUser = optFederatedUser
+
+	federationPublicKey.ActorID = federatedUser.ID
+
+	if _, err = federation_key.FindOrCreateFederationPublicKey(ctx, federationPublicKey); err != nil {
+		return nil, nil, err
+	}
+
+	if err = federatedUser.ValidateKeyID(ctx, federationPublicKey.KeyID); err != nil {
 		return nil, nil, err
 	}
 

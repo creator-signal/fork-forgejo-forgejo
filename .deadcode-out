@@ -202,6 +202,7 @@ forgejo.org/modules/translation/localeiter
 	IterateMessagesContent
 
 forgejo.org/modules/util
+	RandomPKIXPublicKey
 	OptionalArg
 
 forgejo.org/modules/util/filebuffer
