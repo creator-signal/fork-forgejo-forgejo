@@ -256,8 +256,6 @@ func RemoteHeadManifest(ctx *context.Context) {
 		return
 	}
 
-	// TODO cache the manifest
-
 	// Set response headers from remote
 	setResponseHeaders(ctx.Resp, &containerHeaders{
 		ContentDigest: manifestResp.GetRef().Digest,
@@ -281,10 +279,10 @@ func RemoteGetManifest(ctx *context.Context) {
 	}
 
 	// Do we have the manifest cached locally?
-	manifest, err := getCachedRemoteManifest(ctx)
-	if manifest != nil && err == nil {
-		serveBlob(ctx, manifest)
-		log.Trace("Remote manifest with file ID: %s existed", manifest.File.ID)
+	man, err := getCachedRemoteManifest(ctx)
+	if man != nil && err == nil {
+		serveBlob(ctx, man)
+		log.Trace("Remote manifest with file ID: %s existed", man.File.ID)
 		return
 	}
 
@@ -321,6 +319,9 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
+	getAllBlobsFromRemote(ctx, &client, regManifest)
+	// TODO now cache the manifest
+
 	// Serve the manifest content
 	setResponseHeaders(ctx.Resp, &containerHeaders{
 		ContentDigest: regManifest.GetRef().Digest,
@@ -337,8 +338,4 @@ func RemoteGetManifest(ctx *context.Context) {
 	}
 
 	ctx.Resp.Write(manifestBody)
-
-	// TODO The manifest needs to be saved temporarily
-	// until the pull operation is complete
-	// then we could treat it as a push operation against the current system
 }
