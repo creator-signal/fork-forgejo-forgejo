@@ -19,25 +19,6 @@ import (
 func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	// copy of old code //
 	type WatchMode uint8
-	const (
-		// WatchModeNone don't watch
-		// This means there is no Watch record in the db.
-		// We never store this mode in the db and instead remove the record from the db.
-		// Furthermore, this means there is a WatchMode for all combinations of user and repo.
-		// We never go back to this state once we've been in a different state.
-		WatchModeNone WatchMode = iota // 0
-		// WatchModeNormal watch repository (from other sources)
-		// This means the user explicitly chose to watch the repo.
-		WatchModeNormal // 1
-		// WatchModeDont explicit don't auto-watch
-		// This means the user explicitly removed themselves as a watcher.
-		// Then the AutoWatchOnChanges feature doesn't make the user a watcher when they push to the repo.
-		WatchModeDont // 2
-		// WatchModeAuto watch repository (from AutoWatchOnChanges)
-		// This is used when the user pushed to the repo and setting.Service.AutoWatchOnChanges is true.
-		// That way we can differentiate people explicitly watching the repo and people only watching it because of the AutoWatchOnChanges feature.
-		WatchModeAuto // 3
-	)
 	type Watch struct {
 		ID     int64     `xorm:"pk autoincr"`
 		UserID int64     `xorm:"UNIQUE(watch)"`
@@ -90,56 +71,56 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 		watch, err := repo_model.GetWatch(db.DefaultContext, 1, 1)
 		require.NoError(t, err)
 		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
-		assert.Equal(t, watch.WatchSelectionIssues, true)
-		assert.Equal(t, watch.WatchSelectionPullRequests, true)
-		assert.Equal(t, watch.WatchSelectionReleases, true)
+		assert.True(t, watch.WatchSelectionIssues)
+		assert.True(t, watch.WatchSelectionPullRequests)
+		assert.True(t, watch.WatchSelectionReleases)
 	}
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 4, 1)
 		require.NoError(t, err)
 		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
-		assert.Equal(t, watch.WatchSelectionIssues, true)
-		assert.Equal(t, watch.WatchSelectionPullRequests, true)
-		assert.Equal(t, watch.WatchSelectionReleases, true)
+		assert.True(t, watch.WatchSelectionIssues)
+		assert.True(t, watch.WatchSelectionPullRequests)
+		assert.True(t, watch.WatchSelectionReleases)
 	}
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 9, 1)
 		require.NoError(t, err)
 		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
-		assert.Equal(t, watch.WatchSelectionIssues, true)
-		assert.Equal(t, watch.WatchSelectionPullRequests, true)
-		assert.Equal(t, watch.WatchSelectionReleases, true)
+		assert.True(t, watch.WatchSelectionIssues)
+		assert.True(t, watch.WatchSelectionPullRequests)
+		assert.True(t, watch.WatchSelectionReleases)
 	}
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 8, 1)
 		require.NoError(t, err)
 		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
-		assert.Equal(t, watch.WatchSelectionIssues, false)
-		assert.Equal(t, watch.WatchSelectionPullRequests, false)
-		assert.Equal(t, watch.WatchSelectionReleases, false)
+		assert.False(t, watch.WatchSelectionIssues)
+		assert.False(t, watch.WatchSelectionPullRequests)
+		assert.False(t, watch.WatchSelectionReleases)
 	}
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 11, 1)
 		require.NoError(t, err)
 		assert.Equal(t, watch.Source, repo_model.WatchSourceAutomatic)
-		assert.Equal(t, watch.WatchSelectionIssues, true)
-		assert.Equal(t, watch.WatchSelectionPullRequests, true)
-		assert.Equal(t, watch.WatchSelectionReleases, true)
+		assert.True(t, watch.WatchSelectionIssues)
+		assert.True(t, watch.WatchSelectionPullRequests)
+		assert.True(t, watch.WatchSelectionReleases)
 	}
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 4, 2)
 		require.NoError(t, err)
 		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
-		assert.Equal(t, watch.WatchSelectionIssues, true)
-		assert.Equal(t, watch.WatchSelectionPullRequests, true)
-		assert.Equal(t, watch.WatchSelectionReleases, true)
+		assert.True(t, watch.WatchSelectionIssues)
+		assert.True(t, watch.WatchSelectionPullRequests)
+		assert.True(t, watch.WatchSelectionReleases)
 	}
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 5, 2)
 		require.NoError(t, err)
 		assert.Equal(t, watch.Source, repo_model.WatchSourceAutomatic)
-		assert.Equal(t, watch.WatchSelectionIssues, false)
-		assert.Equal(t, watch.WatchSelectionPullRequests, false)
-		assert.Equal(t, watch.WatchSelectionReleases, false)
+		assert.False(t, watch.WatchSelectionIssues)
+		assert.False(t, watch.WatchSelectionPullRequests)
+		assert.False(t, watch.WatchSelectionReleases)
 	}
 }
