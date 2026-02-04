@@ -11,6 +11,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
+
 	"xorm.io/builder"
 )
 
@@ -53,8 +54,10 @@ func (w WatchSelection) IsFullyWatching() bool {
 	return w.Issues && w.PullRequests && w.Releases
 }
 
-var WatchAllSelection = WatchSelection{Issues: true, PullRequests: true, Releases: true}
-var WatchNoneSelection = WatchSelection{Issues: false, PullRequests: false, Releases: false}
+var (
+	WatchAllSelection  = WatchSelection{Issues: true, PullRequests: true, Releases: true}
+	WatchNoneSelection = WatchSelection{Issues: false, PullRequests: false, Releases: false}
+)
 
 // Watch is connection request for receiving repository notification.
 type Watch struct {
@@ -83,11 +86,10 @@ func (w Watch) GetWatchSelection() WatchSelection {
 
 // Warning: this does not set the WatchMode.
 // The caller needs to do that properly.
-func (w *Watch) setWatchSelection(watchSelection WatchSelection) *Watch {
+func (w *Watch) setWatchSelection(watchSelection WatchSelection) {
 	w.WatchSelectionIssues = watchSelection.Issues
 	w.WatchSelectionPullRequests = watchSelection.PullRequests
 	w.WatchSelectionReleases = watchSelection.Releases
-	return w
 }
 
 func init() {
@@ -132,7 +134,7 @@ func updateWatchRepo(ctx context.Context, oldWatch Watch, source WatchSource, wa
 	}
 	if source == WatchSourceAutomatic && oldWatch.Source == WatchSourceExplicit {
 		// This should never happen and indicates a bug.
-		return errors.New("We should never switch from an explicit watch state to an automatic one!")
+		return errors.New("we should never switch from an explicit watch state to an automatic one")
 	}
 
 	hadrec, err := db.GetEngine(ctx).Get(&oldWatch)
@@ -182,20 +184,20 @@ func WatchRepoExplicitly(ctx context.Context, userID, repoID int64, watchSelecti
 
 // GetSelectWatchers returns all users watching any of the selected parts of the repo with the given repoID.
 func GetSelectWatchers(ctx context.Context, repoID int64, selection WatchSelection) ([]*Watch, error) {
-	sql_selection := []builder.Cond{}
+	sqlSelection := []builder.Cond{}
 	if selection.Issues {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_issues": true})
+		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_issues": true})
 	}
 	if selection.PullRequests {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_pull_requests": true})
+		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_pull_requests": true})
 	}
 	if selection.Releases {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_releases": true})
+		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_releases": true})
 	}
 
 	watches := make([]*Watch, 0, 10)
 	return watches, db.GetEngine(ctx).Where("`watch`.repo_id=?", repoID).
-		And(builder.Or(sql_selection...)).
+		And(builder.Or(sqlSelection...)).
 		And("`user`.is_active=?", true).
 		And("`user`.prohibit_login=?", false).
 		Join("INNER", "`user`", "`user`.id = `watch`.user_id").
@@ -206,21 +208,21 @@ func GetSelectWatchers(ctx context.Context, repoID int64, selection WatchSelecti
 // but avoids joining with `user` for performance reasons
 // User permissions must be verified elsewhere if required
 func GetSelectWatchersIDs(ctx context.Context, repoID int64, selection WatchSelection) ([]int64, error) {
-	sql_selection := []builder.Cond{}
+	sqlSelection := []builder.Cond{}
 	if selection.Issues {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_issues": true})
+		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_issues": true})
 	}
 	if selection.PullRequests {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_pull_requests": true})
+		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_pull_requests": true})
 	}
 	if selection.Releases {
-		sql_selection = append(sql_selection, builder.Eq{"`watch`.watch_selection_releases": true})
+		sqlSelection = append(sqlSelection, builder.Eq{"`watch`.watch_selection_releases": true})
 	}
 
 	ids := make([]int64, 0, 64)
 	return ids, db.GetEngine(ctx).Table("watch").
 		Where("watch.repo_id=?", repoID).
-		And(builder.Or(sql_selection...)).
+		And(builder.Or(sqlSelection...)).
 		Select("user_id").
 		Find(&ids)
 }
@@ -270,7 +272,6 @@ func WatchIfAuto(ctx context.Context, userID, repoID int64) error {
 func UnwatchRepos(ctx context.Context, userID int64, repoIDs []int64) error {
 	// Unfortunatly, we can't simply delete the Watch records because we do watcher counting in the repo relation.
 	for _, repoID := range repoIDs {
-
 		var watch Watch
 		var err error
 		if watch, err = getWatch(ctx, userID, repoID); err != nil {

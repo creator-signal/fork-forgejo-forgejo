@@ -318,7 +318,7 @@ const (
 )
 
 func ActionWatch(ctx *context.Context) {
-	var watchSelection = repo_model.WatchSelection{
+	watchSelection := repo_model.WatchSelection{
 		Issues:       ctx.FormBool("watch_issues"),
 		PullRequests: ctx.FormBool("watch_pull_requests"),
 		Releases:     ctx.FormBool("watch_releases"),
