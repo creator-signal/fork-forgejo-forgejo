@@ -96,8 +96,8 @@ func init() {
 	db.RegisterModel(new(Watch))
 }
 
-// getWatch gets what kind of subscription a user has on a given repository; returns dummy record if none found
-func getWatch(ctx context.Context, userID, repoID int64) (Watch, error) {
+// GetWatch gets what kind of subscription a user has on a given repository; returns dummy record if none found
+func GetWatch(ctx context.Context, userID, repoID int64) (Watch, error) {
 	watch := Watch{UserID: userID, RepoID: repoID}
 	has, err := db.GetEngine(ctx).Get(&watch)
 	if err != nil {
@@ -112,14 +112,14 @@ func getWatch(ctx context.Context, userID, repoID int64) (Watch, error) {
 
 // IsWatcher checks if the user is a watcher of the repo.
 func IsWatcher(ctx context.Context, userID, repoID int64) bool {
-	watch, err := getWatch(ctx, userID, repoID)
+	watch, err := GetWatch(ctx, userID, repoID)
 	return err == nil && watch.GetWatchSelection().IsWatching()
 }
 
 // GetWatchSelection returns what parts of a repo a user is watching.
 // When you don't care if the user watches something explicitly or automatically this should suffice.
 func GetWatchSelection(ctx context.Context, userID, repoID int64) WatchSelection {
-	watch, err := getWatch(ctx, userID, repoID)
+	watch, err := GetWatch(ctx, userID, repoID)
 	if err != nil {
 		return WatchNoneSelection
 	}
@@ -175,7 +175,7 @@ func updateWatchRepo(ctx context.Context, oldWatch Watch, source WatchSource, wa
 // WatchRepoExplicitly explicitly watch or unwatch repository according to some selection.
 func WatchRepoExplicitly(ctx context.Context, userID, repoID int64, watchSelection WatchSelection) (err error) {
 	var watch Watch
-	if watch, err = getWatch(ctx, userID, repoID); err != nil {
+	if watch, err = GetWatch(ctx, userID, repoID); err != nil {
 		return err
 	}
 	err = updateWatchRepo(ctx, watch, WatchSourceExplicit, watchSelection)
@@ -254,7 +254,7 @@ func WatchIfAuto(ctx context.Context, userID, repoID int64) error {
 	if !setting.Service.AutoWatchOnChanges {
 		return nil
 	}
-	watch, err := getWatch(ctx, userID, repoID)
+	watch, err := GetWatch(ctx, userID, repoID)
 	if err != nil {
 		return err
 	}
@@ -274,7 +274,7 @@ func UnwatchRepos(ctx context.Context, userID int64, repoIDs []int64) error {
 	for _, repoID := range repoIDs {
 		var watch Watch
 		var err error
-		if watch, err = getWatch(ctx, userID, repoID); err != nil {
+		if watch, err = GetWatch(ctx, userID, repoID); err != nil {
 			return err
 		}
 		// This is a lot simpler than it could be.

@@ -28,6 +28,13 @@ func TestIsWatching(t *testing.T) {
 	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 4, 4))
 	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 4, 5))
 	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 5, 5))
+	watch, err := repo_model.GetWatch(db.DefaultContext, 5, 5)
+	assert.NoError(t, err)
+	assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
+	assert.False(t, watch.WatchSelectionIssues)
+	assert.True(t, watch.WatchSelectionPullRequests)
+	assert.True(t, watch.WatchSelectionReleases)
+
 	assert.False(t, repo_model.IsWatcher(db.DefaultContext, unittest.NonexistentID, unittest.NonexistentID))
 }
 
@@ -46,6 +53,75 @@ func TestRepository_GetWatchers(t *testing.T) {
 	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
 	require.NoError(t, err)
 	assert.Empty(t, watchers)
+}
+
+func TestWatchRepoExplicitly(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	// There is no record for this watch in the fixture.
+	assert.False(t, repo_model.IsWatcher(db.DefaultContext, 1, 2))
+	{
+		watch, err := repo_model.GetWatch(db.DefaultContext, 1, 2)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchSourceAutomatic, watch.Source)
+		assert.False(t, watch.WatchSelectionIssues)
+		assert.False(t, watch.WatchSelectionPullRequests)
+		assert.False(t, watch.WatchSelectionReleases)
+	}
+
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, 1, 2, repo_model.WatchAllSelection))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 1, 2))
+	{
+		watch, err := repo_model.GetWatch(db.DefaultContext, 1, 2)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
+		assert.True(t, watch.WatchSelectionIssues)
+		assert.True(t, watch.WatchSelectionPullRequests)
+		assert.True(t, watch.WatchSelectionReleases)
+	}
+
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, 1, 2, repo_model.WatchNoneSelection))
+	assert.False(t, repo_model.IsWatcher(db.DefaultContext, 1, 2))
+	{
+		watch, err := repo_model.GetWatch(db.DefaultContext, 1, 2)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
+		assert.False(t, watch.WatchSelectionIssues)
+		assert.False(t, watch.WatchSelectionPullRequests)
+		assert.False(t, watch.WatchSelectionReleases)
+	}
+
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, 1, 2, repo_model.WatchSelection{Issues: true}))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 1, 2))
+	{
+		watch, err := repo_model.GetWatch(db.DefaultContext, 1, 2)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
+		assert.True(t, watch.WatchSelectionIssues)
+		assert.False(t, watch.WatchSelectionPullRequests)
+		assert.False(t, watch.WatchSelectionReleases)
+	}
+
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, 1, 2, repo_model.WatchSelection{Issues: true, PullRequests: true}))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 1, 2))
+	{
+		watch, err := repo_model.GetWatch(db.DefaultContext, 1, 2)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
+		assert.True(t, watch.WatchSelectionIssues)
+		assert.True(t, watch.WatchSelectionPullRequests)
+		assert.False(t, watch.WatchSelectionReleases)
+	}
+
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, 1, 2, repo_model.WatchSelection{Releases: true}))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 1, 2))
+	{
+		watch, err := repo_model.GetWatch(db.DefaultContext, 1, 2)
+		require.NoError(t, err)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
+		assert.False(t, watch.WatchSelectionIssues)
+		assert.False(t, watch.WatchSelectionPullRequests)
+		assert.True(t, watch.WatchSelectionReleases)
+	}
 }
 
 func TestWatchIfAuto(t *testing.T) {
@@ -91,6 +167,12 @@ func TestWatchIfAuto(t *testing.T) {
 	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
 	require.NoError(t, err)
 	assert.Len(t, watchers, prevCount+1)
+	watch, err := repo_model.GetWatch(db.DefaultContext, 12, 1)
+	require.NoError(t, err)
+	require.Equal(t, repo_model.WatchSourceAutomatic, watch.Source)
+	require.True(t, watch.WatchSelectionIssues)
+	require.True(t, watch.WatchSelectionPullRequests)
+	require.True(t, watch.WatchSelectionReleases)
 
 	// Should remove watch, inhibit from adding auto
 	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, 12, 1, repo_model.WatchNoneSelection))
