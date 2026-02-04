@@ -23,7 +23,7 @@ const (
 	AccessTokenScopeCategoryIssue
 	AccessTokenScopeCategoryRepository
 	AccessTokenScopeCategoryUser
-	AccessTokenScopeCategoryGist
+	AccessTokenScopeCategorySnippet
 )
 
 // AllAccessTokenScopeCategories contains all access token scope categories
@@ -37,7 +37,7 @@ var AllAccessTokenScopeCategories = []AccessTokenScopeCategory{
 	AccessTokenScopeCategoryIssue,
 	AccessTokenScopeCategoryRepository,
 	AccessTokenScopeCategoryUser,
-	AccessTokenScopeCategoryGist,
+	AccessTokenScopeCategorySnippet,
 }
 
 // AccessTokenScopeLevel represents the access levels without a given scope category
@@ -84,8 +84,8 @@ const (
 	AccessTokenScopeReadUser  AccessTokenScope = "read:user"
 	AccessTokenScopeWriteUser AccessTokenScope = "write:user"
 
-	AccessTokenScopeReadGist  AccessTokenScope = "read:gist"
-	AccessTokenScopeWriteGist AccessTokenScope = "write:gist"
+	AccessTokenScopeReadSnippet  AccessTokenScope = "read:snippet"
+	AccessTokenScopeWriteSnippet AccessTokenScope = "write:snippet"
 )
 
 // accessTokenScopeBitmap represents a bitmap of access token scopes.
@@ -97,7 +97,7 @@ const (
 	accessTokenScopeAllBits accessTokenScopeBitmap = accessTokenScopeWriteActivityPubBits |
 		accessTokenScopeWriteAdminBits | accessTokenScopeWriteMiscBits | accessTokenScopeWriteNotificationBits |
 		accessTokenScopeWriteOrganizationBits | accessTokenScopeWritePackageBits | accessTokenScopeWriteIssueBits |
-		accessTokenScopeWriteRepositoryBits | accessTokenScopeWriteUserBits | accessTokenScopeWriteGistBits
+		accessTokenScopeWriteRepositoryBits | accessTokenScopeWriteUserBits | accessTokenScopeWriteSnippetBits
 
 	accessTokenScopePublicOnlyBits accessTokenScopeBitmap = 1 << iota
 
@@ -128,8 +128,8 @@ const (
 	accessTokenScopeReadUserBits  accessTokenScopeBitmap = 1 << iota
 	accessTokenScopeWriteUserBits accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadUserBits
 
-	accessTokenScopeReadGistBits  accessTokenScopeBitmap = 1 << iota
-	accessTokenScopeWriteGistBits accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadGistBits
+	accessTokenScopeReadSnippetBits  accessTokenScopeBitmap = 1 << iota
+	accessTokenScopeWriteSnippetBits accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadSnippetBits
 
 	// The current implementation only supports up to 64 token scopes.
 	// If we need to support > 64 scopes,
@@ -149,7 +149,7 @@ var allAccessTokenScopes = []AccessTokenScope{
 	AccessTokenScopeWriteIssue, AccessTokenScopeReadIssue,
 	AccessTokenScopeWriteRepository, AccessTokenScopeReadRepository,
 	AccessTokenScopeWriteUser, AccessTokenScopeReadUser,
-	AccessTokenScopeWriteGist, AccessTokenScopeReadGist,
+	AccessTokenScopeWriteSnippet, AccessTokenScopeReadSnippet,
 }
 
 // allAccessTokenScopeBits contains all access token scopes.
@@ -174,8 +174,8 @@ var allAccessTokenScopeBits = map[AccessTokenScope]accessTokenScopeBitmap{
 	AccessTokenScopeWriteRepository:   accessTokenScopeWriteRepositoryBits,
 	AccessTokenScopeReadUser:          accessTokenScopeReadUserBits,
 	AccessTokenScopeWriteUser:         accessTokenScopeWriteUserBits,
-	AccessTokenScopeReadGist:          accessTokenScopeReadGistBits,
-	AccessTokenScopeWriteGist:         accessTokenScopeWriteGistBits,
+	AccessTokenScopeReadSnippet:       accessTokenScopeReadSnippetBits,
+	AccessTokenScopeWriteSnippet:      accessTokenScopeWriteSnippetBits,
 }
 
 // readAccessTokenScopes maps a scope category to the read permission scope
@@ -190,7 +190,7 @@ var accessTokenScopes = map[AccessTokenScopeLevel]map[AccessTokenScopeCategory]A
 		AccessTokenScopeCategoryIssue:        AccessTokenScopeReadIssue,
 		AccessTokenScopeCategoryRepository:   AccessTokenScopeReadRepository,
 		AccessTokenScopeCategoryUser:         AccessTokenScopeReadUser,
-		AccessTokenScopeCategoryGist:         AccessTokenScopeReadGist,
+		AccessTokenScopeCategorySnippet:      AccessTokenScopeReadSnippet,
 	},
 	Write: {
 		AccessTokenScopeCategoryActivityPub:  AccessTokenScopeWriteActivityPub,
@@ -202,7 +202,7 @@ var accessTokenScopes = map[AccessTokenScopeLevel]map[AccessTokenScopeCategory]A
 		AccessTokenScopeCategoryIssue:        AccessTokenScopeWriteIssue,
 		AccessTokenScopeCategoryRepository:   AccessTokenScopeWriteRepository,
 		AccessTokenScopeCategoryUser:         AccessTokenScopeWriteUser,
-		AccessTokenScopeCategoryGist:         AccessTokenScopeWriteGist,
+		AccessTokenScopeCategorySnippet:      AccessTokenScopeWriteSnippet,
 	},
 }
 

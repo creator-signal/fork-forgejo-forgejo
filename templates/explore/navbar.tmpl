@@ -20,9 +20,9 @@
 		</a>
 		{{end}}
 
-		{{if .EnableGists}}
-			<a class="{{if .PageIsExploreGists}}active {{end}}item" href="{{AppSubUrl}}/explore/gists">
-				{{svg "octicon-logo-gist"}} {{ctx.Locale.Tr "explore.gists"}}
+		{{if .EnableSnippets}}
+			<a class="{{if .PageIsExploreSnippets}}active {{end}}item" href="{{AppSubUrl}}/explore/snippets">
+				{{svg "octicon-file-code"}} {{ctx.Locale.Tr "explore.snippets"}}
 			</a>
 		{{end}}
 	</div>

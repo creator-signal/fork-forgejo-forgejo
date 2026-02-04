@@ -41,7 +41,7 @@ func cmdHook() *cli.Command {
 			subcmdHookUpdate(),
 			subcmdHookPostReceive(),
 			subcmdHookProcReceive(),
-			subcmdHookGistPreReceive(),
+			subcmdHookSnippetPreReceive(),
 		},
 	}
 }
@@ -103,12 +103,12 @@ func subcmdHookProcReceive() *cli.Command {
 	}
 }
 
-func subcmdHookGistPreReceive() *cli.Command {
+func subcmdHookSnippetPreReceive() *cli.Command {
 	return &cli.Command{
-		Name:        "gist-pre-receive",
-		Usage:       "Delegate Gist pre-receive Git hook",
+		Name:        "snippet-pre-receive",
+		Usage:       "Delegate Snippet pre-receive Git hook",
 		Description: "This command should only be called by Git",
-		Action:      runHookGistPreReceive,
+		Action:      runHookSnippetPreReceive,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name: "debug",
@@ -779,7 +779,7 @@ func writeDataPktLine(ctx context.Context, out io.Writer, data []byte) error {
 	return nil
 }
 
-func checkGistDiff(ctx context.Context, repoPath, oldCommitID, newCommitID string) error {
+func checkSnippetDiff(ctx context.Context, repoPath, oldCommitID, newCommitID string) error {
 	files, err := git.GetAffectedFiles(ctx, repoPath, git.Sha1ObjectFormat, oldCommitID, newCommitID, os.Environ())
 	if err != nil {
 		return err
@@ -787,7 +787,7 @@ func checkGistDiff(ctx context.Context, repoPath, oldCommitID, newCommitID strin
 
 	for _, currentFile := range files {
 		if util.PathContainsDirectory(currentFile) {
-			return fail(ctx, "Gists are not allowed to have directories", "")
+			return fail(ctx, "Snippets are not allowed to have directories", "")
 		}
 	}
 
@@ -797,13 +797,13 @@ func checkGistDiff(ctx context.Context, repoPath, oldCommitID, newCommitID strin
 	}
 
 	if hasBinary {
-		return fail(ctx, "Gists are not allowed to have binary files", "")
+		return fail(ctx, "Snippets are not allowed to have binary files", "")
 	}
 
 	return nil
 }
 
-func runHookGistPreReceive(ctx context.Context, c *cli.Command) error {
+func runHookSnippetPreReceive(ctx context.Context, c *cli.Command) error {
 	repoPath, err := os.Getwd()
 	if err != nil {
 		return err
@@ -822,11 +822,11 @@ func runHookGistPreReceive(ctx context.Context, c *cli.Command) error {
 
 		if refFullName.IsBranch() {
 			if refFullName.BranchName() != "main" {
-				return fail(ctx, "Gists can only have a main branch", "")
+				return fail(ctx, "Snippets can only have a main branch", "")
 			}
 		}
 
-		err := checkGistDiff(ctx, repoPath, oldCommitID, newCommitID)
+		err := checkSnippetDiff(ctx, repoPath, oldCommitID, newCommitID)
 		if err != nil {
 			return err
 		}

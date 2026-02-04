@@ -41,6 +41,7 @@ import (
 	"forgejo.org/routers"
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
+	snippet_service "forgejo.org/services/snippet"
 	wiki_service "forgejo.org/services/wiki"
 
 	"github.com/google/uuid"
@@ -276,15 +277,15 @@ func PrepareGitRepoDirectory(t testing.TB) {
 
 func PrepareGistRepoDirectory(t testing.TB, tempDir string) {
 	var err error
-	setting.Gist.RootPath, err = os.MkdirTemp(tempDir, "forgejo-gist-root")
+	setting.Snippet.RootPath, err = os.MkdirTemp(tempDir, "forgejo-snippets-root")
 	require.NoError(t, err)
-	require.NoError(t, unittest.CopyDir(path.Join(filepath.Dir(setting.AppPath), "tests/forgejo-gists-meta"), setting.Gist.RootPath))
+	require.NoError(t, unittest.CopyDir(path.Join(filepath.Dir(setting.AppPath), "tests/forgejo-snippets-meta"), setting.Snippet.RootPath))
 
-	dirs, err := os.ReadDir(setting.Gist.RootPath)
+	dirs, err := os.ReadDir(setting.Snippet.RootPath)
 	require.NoError(t, err)
 
 	for _, currentDir := range dirs {
-		require.NoError(t, gist_service.SetupGistHook(filepath.Join(setting.Gist.RootPath, currentDir.Name())))
+		require.NoError(t, snippet_service.SetupSnippetHook(filepath.Join(setting.Snippet.RootPath, currentDir.Name())))
 	}
 }
 
@@ -360,7 +361,7 @@ func PrepareTestEnv(t testing.TB, skip ...int) func() {
 	tempDir := t.TempDir()
 
 	// do not add more Prepare* functions here, only call necessary ones in the related test functions
-	PrepareGitRepoDirectory(t, tempDir)
+	PrepareGitRepoDirectory(t)
 	PrepareGistRepoDirectory(t, tempDir)
 	PrepareLFSStorage(t)
 	PrepareCleanPackageData(t)

@@ -145,10 +145,12 @@
 									{{svg "octicon-organization"}} {{ctx.Locale.Tr "new_org.link"}}
 								</a>
 							</li>
-						{{if .EnableGists}}
-						<a class="item" href="{{AppSubUrl}}/gists/-/new">
-							{{svg "octicon-logo-gist"}} {{ctx.Locale.Tr "new_gist.link"}}
-						</a>
+						{{if .EnableSnippets}}
+							<li>
+								<a href="{{AppSubUrl}}/snippets/-/new">
+									{{svg "octicon-file-code"}} {{ctx.Locale.Tr "new_snippet.link"}}
+								</a>
+							</li>
 					{{end}}
 					{{end}}
 					</ul>

@@ -15,7 +15,7 @@ import (
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/setting"
 
-	_ "forgejo.org/models/gist" // This import is needed to make gists fixtures work
+	_ "forgejo.org/models/snippet" // This import is needed to make snippet fixtures work
 
 	"xorm.io/xorm"
 	"xorm.io/xorm/schemas"

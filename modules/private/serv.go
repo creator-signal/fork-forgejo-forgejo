@@ -17,8 +17,8 @@ import (
 type RepoType int
 
 const (
-	RepoTypeRepo RepoType = iota + 1 // 1，RepoTypeRepo is a normal Repo
-	RepoTypeGist                     // 2，RepoTypeGist is a Gist
+	RepoTypeRepo    RepoType = iota + 1 // 1，RepoTypeRepo is a normal Repo
+	RepoTypeSnippet                     // 2，RepoTypeSnippet is a Snippet
 )
 
 // KeyAndOwner is the response from ServNoCommand

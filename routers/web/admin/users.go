@@ -522,8 +522,8 @@ func DeleteUser(ctx *context.Context) {
 		case models.IsErrUserOwnPackages(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_own_packages"))
 			ctx.Redirect(setting.AppSubURL + "/admin/users/" + url.PathEscape(ctx.Params(":userid")))
-		case models.IsErrUserOwnGists(err):
-			ctx.Flash.Error(ctx.Tr("admin.users.still_own_gists"))
+		case models.IsErrUserOwnSnippets(err):
+			ctx.Flash.Error(ctx.Tr("admin.users.still_own_snippets"))
 			ctx.Redirect(setting.AppSubURL + "/admin/users/" + url.PathEscape(ctx.Params(":userid")))
 		case models.IsErrDeleteLastAdminUser(err):
 			ctx.Flash.Error(ctx.Tr("auth.last_admin"))

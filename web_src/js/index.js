@@ -88,7 +88,7 @@ import {initRepositorySearch} from './features/repo-search.js';
 import {initColorPickers} from './features/colorpicker.js';
 import {initRepoMilestoneEditor} from './features/repo-milestone.js';
 import {initModalClose} from './modules/modal.ts';
-import {initGist} from './features/gist.ts';
+import {initSnippets} from './features/snippet.ts';
 
 // Init Gitea's Fomantic settings
 initGiteaFomantic();
@@ -194,7 +194,7 @@ onDomReady(() => {
   initScopedAccessTokenCategories();
   initColorPickers();
 
-  initGist();
+  initSnippets();
   initModalClose();
 
   // Deactivate CSS-only noJS usability supplements

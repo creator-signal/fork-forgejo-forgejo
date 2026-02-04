@@ -10,10 +10,10 @@ import (
 
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/auth"
-	gist_model "forgejo.org/models/gist"
 	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
+	snippet_model "forgejo.org/models/snippet"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
@@ -105,21 +105,21 @@ func ServNoCommand(ctx *context.PrivateContext) {
 	ctx.JSON(http.StatusOK, &results)
 }
 
-// servCommandGist handles ServCommand for Gists
-func servCommandGist(ctx *context.PrivateContext) {
+// servCommandSnippet handles ServCommand for Snippets
+func servCommandSnippet(ctx *context.PrivateContext) {
 	mode := perm.AccessMode(ctx.FormInt("mode"))
 	keyID := ctx.ParamsInt64(":keyid")
-	gistUUID := ctx.Params(":repo")
+	snippetUUID := ctx.Params(":repo")
 
-	gist, err := gist_model.GetGistByUUID(ctx, gistUUID)
+	snippet, err := snippet_model.GetSnippetByUUID(ctx, snippetUUID)
 	if err != nil {
-		if gist_model.IsErrGistNotExist(err) {
+		if snippet_model.IsErrSnippetNotExist(err) {
 			ctx.JSON(http.StatusNotFound, private.Response{
-				UserMsg: fmt.Sprintf("Cannot find gist: %s", gistUUID),
+				UserMsg: fmt.Sprintf("Cannot find snippet: %s", snippetUUID),
 			})
 		} else {
 			ctx.JSON(http.StatusInternalServerError, private.Response{
-				UserMsg: fmt.Sprintf("Error while getting gist: %s", gistUUID),
+				UserMsg: fmt.Sprintf("Error while getting snippet: %s", snippetUUID),
 			})
 		}
 	}
@@ -154,26 +154,26 @@ func servCommandGist(ctx *context.PrivateContext) {
 		return
 	}
 
-	if !gist.HasAccess(user) {
+	if !snippet.HasAccess(user) {
 		ctx.JSON(http.StatusNotFound, private.Response{
-			UserMsg: fmt.Sprintf("Cannot find gist: %s", gistUUID),
+			UserMsg: fmt.Sprintf("Cannot find snippet: %s", snippetUUID),
 		})
 	}
 
 	if mode > perm.AccessModeRead {
-		if !gist.IsOwner(user) {
+		if !snippet.IsOwner(user) {
 			ctx.JSON(http.StatusNotFound, private.Response{
-				UserMsg: fmt.Sprintf("Not a owner of: %s", gistUUID),
+				UserMsg: fmt.Sprintf("Not a owner of: %s", snippetUUID),
 			})
 		}
 	}
 
 	results := private.ServCommandResults{
-		RepoName:  gistUUID,
-		OwnerName: "gists",
+		RepoName:  snippetUUID,
+		OwnerName: "snippets",
 		KeyID:     keyID,
-		RootPath:  setting.Gist.RootPath,
-		RepoType:  private.RepoTypeGist,
+		RootPath:  setting.Snippet.RootPath,
+		RepoType:  private.RepoTypeSnippet,
 	}
 
 	ctx.JSON(http.StatusOK, results)
@@ -514,8 +514,8 @@ func servCommandRepo(ctx *context.PrivateContext) {
 }
 
 func ServCommand(ctx *context.PrivateContext) {
-	if ctx.Params(":owner") == "gists" {
-		servCommandGist(ctx)
+	if ctx.Params(":owner") == "snippets" {
+		servCommandSnippet(ctx)
 	} else {
 		servCommandRepo(ctx)
 	}

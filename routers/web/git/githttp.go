@@ -66,8 +66,8 @@ func httpBase(ctx *context.Context) serviceHandlerBase {
 	}
 
 	var handler serviceHandlerBase
-	if ctx.Params(":gistuuid") != "" {
-		handler = new(serviceHandlerGist)
+	if ctx.Params(":snippet_uuid") != "" {
+		handler = new(serviceHandlerSnippet)
 	} else {
 		handler = new(serviceHandlerRepo)
 	}

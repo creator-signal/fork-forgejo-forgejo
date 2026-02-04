@@ -241,8 +241,8 @@ type swaggerParameterBodies struct {
 	NoteOptions api.NoteOptions
 
 	// in:body
-	CreateGistOption api.CreateGistOption
+	CreateSnippetOption api.CreateSnippetOption
 
 	// in:body
-	UpdateGistFilesOption api.UpdateGistFilesOption
+	UpdateSnippetFilesOption api.UpdateSnippetFilesOption
 }

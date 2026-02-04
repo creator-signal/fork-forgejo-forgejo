@@ -37,7 +37,7 @@ type GeneralAttachmentSettings struct {
 	MaxFiles     int    `json:"max_files"`
 }
 
-// GistSettings contains global Gist settings exposed by API
-type GistSettings struct {
+// SnippetSettings contains global Snippet settings exposed by API
+type SnippetSettings struct {
 	Enabled bool `json:"enabled"`
 }

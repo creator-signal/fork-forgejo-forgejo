@@ -1,0 +1,84 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container column grid">
+		<div class="column">
+			<template id="file-field-template">
+				{{template "snippet/file_form" dict "delete" true}}
+			</template>
+			<form id="edit-snippet-form" class="ui form" action={{if .Snippet}}"{{.Snippet.Link}}/edit/post"{{else}}"/snippets/-/new/post"{{end}} method="POST">
+				<h3 class="tw-text-center ui top attached header">
+					{{if .Snippet}}
+						{{ctx.Locale.Tr "snippet.edit.edit_header"}}
+					{{else}}
+						{{ctx.Locale.Tr "snippet.edit.new_header"}}
+					{{end}}
+				</h3>
+
+				<div class="ui attached segment">
+					{{.CsrfTokenHtml}}
+
+					<div class="field required">
+						<label for="name-input">{{ctx.Locale.Tr "snippet.edit.name"}}</label>
+						<input id="name-input" name="name" {{if .Snippet}}value="{{.Snippet.Name}}"{{end}} required></input>
+					</div>
+
+					<div class="field">
+						<label for="description-textarea">{{ctx.Locale.Tr "snippet.edit.description"}}</label>
+						<textarea id="description-textarea" name="description">{{.Snippet.Description}}</textarea>
+					</div>
+
+					<div class="field required">
+						<label>{{ctx.Locale.Tr "snippet.edit.visibility"}}</label>
+						<div class="ui selection dropdown">
+							<input type="hidden" name="visibility" value="{{if .Snippet}}{{.Snippet.Visibility.String}}{{else}}public{{end}}">
+							<div class="text">
+								{{if eq .Snippet.Visibility.String "hidden"}}
+									{{ctx.Locale.Tr "snippet.visibility.hidden"}}
+								{{else if eq .Snippet.Visibility.String "private"}}
+									{{ctx.Locale.Tr "snippet.visibility.private"}}
+								{{else}}
+									{{ctx.Locale.Tr "snippet.visibility.public"}}
+								{{end}}
+							</div>
+							{{svg "octicon-triangle-down" 14 "dropdown icon"}}
+							<div class="menu">
+								<div class="item{{if or (not .Snippet) (eq "" .Snippet.Visibility.String "public")}} active selected{{end}}" data-value="public"><p>{{ctx.Locale.Tr "snippet.visibility.public"}}</p></div>
+								<div class="item{{if eq "" .Snippet.Visibility.String "hidden"}} active selected{{end}}" data-value="hidden"><p>{{ctx.Locale.Tr "snippet.visibility.hidden"}}</p></div>
+								<div class="item{{if eq "" .Snippet.Visibility.String "private"}} active selected{{end}}" data-value="private"><p>{{ctx.Locale.Tr "snippet.visibility.private"}}</p></div>
+							</div>
+						</div>
+					</div>
+
+					<div id="file-field-container">
+						{{if .SnippetFiles}}
+							{{range $idx, $file := .SnippetFiles}}
+								{{template "snippet/file_form" dict "id" (printf "%d" $idx) "name" .Name "content" .Content "delete" (ne $idx 0)}}
+							{{end}}
+						{{else}}
+							{{template "snippet/file_form" dict "id" "0"}}
+						{{end}}
+					</div>
+
+					<br>
+
+					<div class="tw-flex tw-justify-between inline field">
+						<button id="add-snippet-file-button" class="ui primary button" type="button">
+							{{ctx.Locale.Tr "snippet.edit.add_file"}}
+						</button>
+						<div class="tw-text-right">
+							<button id="submit-snippet-button" class="ui green button" type="submit">
+								{{if .Snippet}}
+									{{ctx.Locale.Tr "save"}}
+								{{else}}
+									{{ctx.Locale.Tr "snippet.edit.new_button"}}
+								{{end}}
+							</button>
+						</div>
+					</div>
+
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

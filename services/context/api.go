@@ -12,9 +12,9 @@ import (
 	"net/url"
 	"strings"
 
-	gist_model "forgejo.org/models/gist"
 	issues_model "forgejo.org/models/issues"
 	quota_model "forgejo.org/models/quota"
+	snippet_model "forgejo.org/models/snippet"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	mc "forgejo.org/modules/cache"
@@ -47,7 +47,7 @@ type APIContext struct {
 	Package    *Package
 	QuotaGroup *quota_model.Group
 	QuotaRule  *quota_model.Rule
-	Gist       *gist_model.Gist
+	Snippet    *snippet_model.Snippet
 	PublicOnly bool // Whether the request is for a public endpoint
 }
 

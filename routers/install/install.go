@@ -499,11 +499,11 @@ func SubmitInstall(ctx *context.Context) {
 		cfg.Section("security").Key("PASSWORD_HASH_ALGO").SetValue(form.PasswordAlgorithm)
 	}
 
-	cfg.Section("gist").Key("ENABLED").SetValue(strconv.FormatBool(setting.Gist.Enabled))
-	cfg.Section("gist").Key("ROOT").SetValue(setting.Gist.RootPath)
+	cfg.Section("snippet").Key("ENABLED").SetValue(strconv.FormatBool(setting.Snippet.Enabled))
+	cfg.Section("snippet").Key("ROOT").SetValue(setting.Snippet.RootPath)
 
-	if err = os.MkdirAll(setting.Gist.RootPath, os.ModePerm); err != nil {
-		ctx.RenderWithErr("Make Gists dir", tplInstall, &form)
+	if err = os.MkdirAll(setting.Snippet.RootPath, os.ModePerm); err != nil {
+		ctx.RenderWithErr("Make Snippets dir", tplInstall, &form)
 		return
 	}
 

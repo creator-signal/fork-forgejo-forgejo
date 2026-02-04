@@ -16,8 +16,8 @@ import (
 
 	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
-	gist_model "forgejo.org/models/gist"
 	repo_model "forgejo.org/models/repo"
+	snippet_model "forgejo.org/models/snippet"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/git"
@@ -177,8 +177,8 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 		} else {
 			ctx.Data["CardsNoneMsg"] = ctx.Tr("followers.outgoing.list.none", ctx.ContextUser.Name)
 		}
-	case "gists":
-		gists, count, err := gist_model.SearchGist(ctx, &gist_model.SearchGistOptions{
+	case "snippets":
+		snippets, count, err := snippet_model.SearchSnippets(ctx, &snippet_model.SearchSnippetsOptions{
 			ListOptions: db.ListOptions{
 				PageSize: pagingNum,
 				Page:     page,
@@ -188,12 +188,12 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 			Keyword: keyword,
 		})
 		if err != nil {
-			ctx.ServerError("SearchGist", err)
+			ctx.ServerError("SearchSnippets", err)
 			return
 		}
 
-		ctx.Data["PageIsProfileGistList"] = true
-		ctx.Data["Gists"] = gists
+		ctx.Data["PageIsProfileSnippetList"] = true
+		ctx.Data["Snippets"] = snippets
 
 		total = int(count)
 	case "activity":

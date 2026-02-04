@@ -1,0 +1,28 @@
+-
+  id: 1
+  owner_id: 2
+  uuid: df852aec
+  name: PublicSnippet
+  description: This is a Description
+  visibility: 1
+
+-
+  id: 2
+  owner_id: 2
+  uuid: dec037f3
+  name: HiddenSnippet
+  visibility: 2
+
+-
+  id: 3
+  owner_id: 2
+  uuid: 261eccb7
+  name: PrivateSnippet
+  visibility: 3
+
+-
+  id: 4
+  owner_id: 3
+  uuid: ffa4659e
+  name: AnotherSnippet
+  visibility: 1

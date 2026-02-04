@@ -8,12 +8,12 @@ import (
 	"net/url"
 
 	"forgejo.org/models/db"
-	gist_model "forgejo.org/models/gist"
 	"forgejo.org/models/organization"
 	packages_model "forgejo.org/models/packages"
 	access_model "forgejo.org/models/perm/access"
 	project_model "forgejo.org/models/project"
 	repo_model "forgejo.org/models/repo"
+	snippet_model "forgejo.org/models/snippet"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
@@ -182,8 +182,8 @@ func LoadHeaderCount(ctx *context.Context) error {
 		return err
 	}
 
-	if setting.Gist.Enabled && !ctx.ContextUser.IsOrganization() {
-		ctx.Data["GistCount"], err = gist_model.CountGist(ctx, &gist_model.SearchGistOptions{
+	if setting.Snippet.Enabled && !ctx.ContextUser.IsOrganization() {
+		ctx.Data["SnippetCount"], err = snippet_model.CountSnippets(ctx, &snippet_model.SearchSnippetsOptions{
 			Actor:   ctx.Doer,
 			OwnerID: ctx.ContextUser.ID,
 		})

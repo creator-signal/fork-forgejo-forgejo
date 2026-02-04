@@ -11,8 +11,8 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
-	gist_model "forgejo.org/models/gist"
 	repo_model "forgejo.org/models/repo"
+	snippet_model "forgejo.org/models/snippet"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
@@ -129,20 +129,20 @@ func HomeSitemap(ctx *context.Context) {
 		idx++
 	}
 
-	if setting.Gist.Enabled {
-		gistCount, err := gist_model.CountGist(ctx, &gist_model.SearchGistOptions{
+	if setting.Snippet.Enabled {
+		snippetCount, err := snippet_model.CountSnippets(ctx, &snippet_model.SearchSnippetsOptions{
 			ListOptions: db.ListOptions{
 				PageSize: 1,
 			},
 		})
 		if err != nil {
-			ctx.ServerError("CountGist", err)
+			ctx.ServerError("CountSnippets", err)
 			return
 		}
 
 		idx := 1
-		for i := 0; i < int(gistCount); i += setting.UI.SitemapPagingNum {
-			m.Add(sitemap.URL{URL: setting.AppURL + "gists/-/sitemap-" + strconv.Itoa(idx) + ".xml"})
+		for i := 0; i < int(snippetCount); i += setting.UI.SitemapPagingNum {
+			m.Add(sitemap.URL{URL: setting.AppURL + "snippets/-/sitemap-" + strconv.Itoa(idx) + ".xml"})
 			idx++
 		}
 	}

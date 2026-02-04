@@ -85,7 +85,7 @@
 @import "./actions.css";
 @import "./migrate.css";
 
-@import "./gist.css";
+@import "./snippet.css";
 
 @tailwind utilities;
 @import "./helpers.css";

@@ -1,0 +1,10 @@
+.snippet-file-header .btn-octicon {
+  line-height: var(--line-height-default);
+  padding: 8px;
+  vertical-align: middle;
+  color: var(--color-text);
+}
+
+.snippet-file-header .btn-octicon:hover {
+  color: var(--color-primary);
+}

@@ -33,9 +33,9 @@ type swaggerResponseGeneralAttachmentSettings struct {
 	Body api.GeneralAttachmentSettings `json:"body"`
 }
 
-// GistSettings
-// swagger:response GistSettings
-type swaggerResponseGistSettings struct {
+// SnippetSettings
+// swagger:response SnippetSettings
+type swaggerResponseSnippetSettings struct {
 	// in:body
-	Body api.GistSettings `json:"body"`
+	Body api.SnippetSettings `json:"body"`
 }

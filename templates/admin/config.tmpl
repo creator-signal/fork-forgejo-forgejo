@@ -371,14 +371,14 @@
 		</div>
 
 		<h4 class="ui top attached header">
-			{{ctx.Locale.Tr "admin.config.gist_config"}}
+			{{ctx.Locale.Tr "admin.config.snippet_config"}}
 		</h4>
 		<div class="ui attached table segment">
 			<dl class="admin-dl-horizontal">
-				<dt>{{ctx.Locale.Tr "admin.config.gist_enabled"}}</dt>
-				<dd>{{if .Gist.Enabled}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
-				<dt>{{ctx.Locale.Tr "admin.config.gist_root_path"}}</dt>
-				<dd>{{.Gist.RootPath}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.snippet_enabled"}}</dt>
+				<dd>{{if .Snippet.Enabled}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.snippet_root_path"}}</dt>
+				<dd>{{.Snippet.RootPath}}</dd>
 			</dl>
 		</div>
 	</div>

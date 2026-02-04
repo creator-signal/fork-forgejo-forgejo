@@ -37,7 +37,7 @@ export default {
         'package',
         'repository',
         'user',
-        'gist');
+        'snippet');
       return categories;
     },
   },

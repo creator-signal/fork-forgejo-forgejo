@@ -312,7 +312,7 @@ func runServ(ctx context.Context, c *cli.Command) error {
 		return nil
 	}
 
-	if results.RepoType == private.RepoTypeGist {
+	if results.RepoType == private.RepoTypeSnippet {
 		repoPath = filepath.Base(strings.TrimSuffix(repoPath, ".git"))
 	}
 

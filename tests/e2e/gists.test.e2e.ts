@@ -1,6 +1,6 @@
 // @watch start
-// templates/gist/**
-// web_src/js/features/gist.ts
+// templates/snippet/**
+// web_src/js/features/snippet.ts
 // @watch end
 
 import {test, login_user, login} from './utils_e2e.ts';
@@ -11,24 +11,24 @@ test.beforeAll(async ({browser}, workerInfo) => {
   await login_user(browser, workerInfo, 'user2');
 });
 
-test('Create Gist', async ({browser}, workerInfo) => {
+test('Create Snippet', async ({browser}, workerInfo) => {
   const page = await login({browser}, workerInfo);
-  const response = await page.goto('/gists/-/new');
+  const response = await page.goto('/snippets/-/new');
   expect(response?.status()).toBe(200);
 
   await validate_form({page});
 
-  await page.locator('input[name="name"]').fill('NewGist');
+  await page.locator('input[name="name"]').fill('NewSnippet');
 
   await page.locator('input[name="file-name-0"]').fill('file1.txt');
   await page.locator('textarea[name="file-content-0"]').fill('Hello');
 
-  await page.locator('#add-gist-file-button').click();
+  await page.locator('#add-snippet-file-button').click();
 
   await page.locator('input[name="file-name-1"]').fill('file2.txt');
   await page.locator('textarea[name="file-content-1"]').fill('World');
 
-  await page.locator('#submit-gist-button').click();
+  await page.locator('#submit-snippet-button').click();
 
   await page.locator('#repo-clone-https').waitFor();
 
@@ -36,9 +36,9 @@ test('Create Gist', async ({browser}, workerInfo) => {
   await expect(page.getByText('file2.txt')).toBeVisible();
 });
 
-test('Edit Gist', async ({browser}, workerInfo) => {
+test('Edit Snippet', async ({browser}, workerInfo) => {
   const page = await login({browser}, workerInfo);
-  const response = await page.goto('/gists/dec037f3/edit');
+  const response = await page.goto('/snippets/dec037f3/edit');
   expect(response?.status()).toBe(200);
 
   await expect(page.locator('input[name="file-name-1"]')).toBeVisible();

@@ -675,7 +675,7 @@ var (
 		"ghost",           // reserved name for deleted users (id: -1)
 		"gitea-actions",   // gitea builtin user (id: -2)
 		"forgejo-actions", // forgejo builtin user (id: -2)
-		"gists",
+		"snippets",
 	}
 
 	// These names are reserved for user accounts: user's keys, user's rss feed, user's avatar, etc.

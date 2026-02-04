@@ -311,8 +311,8 @@ func DeleteAccount(ctx *context.Context) {
 		case models.IsErrUserOwnPackages(err):
 			ctx.Flash.Error(ctx.Tr("form.still_own_packages"))
 			ctx.Redirect(setting.AppSubURL + "/user/settings/account")
-		case models.IsErrUserOwnGists(err):
-			ctx.Flash.Error(ctx.Tr("form.still_own_gists"))
+		case models.IsErrUserOwnSnippets(err):
+			ctx.Flash.Error(ctx.Tr("form.still_own_snippets"))
 			ctx.Redirect(setting.AppSubURL + "/user/settings/account")
 		case models.IsErrDeleteLastAdminUser(err):
 			ctx.Flash.Error(ctx.Tr("auth.last_admin"))

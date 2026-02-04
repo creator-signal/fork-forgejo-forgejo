@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"strings"
 
-	gist_model "forgejo.org/models/gist"
+	snippet_model "forgejo.org/models/snippet"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	mc "forgejo.org/modules/cache"
@@ -60,7 +60,7 @@ type Context struct {
 	Repo    *Repository
 	Org     *Organization
 	Package *Package
-	Gist    *gist_model.Gist
+	Snippet *snippet_model.Snippet
 }
 
 func init() {
@@ -193,7 +193,7 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.Data["DisableStars"] = setting.Repository.DisableStars
 			ctx.Data["DisableForks"] = setting.Repository.DisableForks
 			ctx.Data["EnableActions"] = setting.Actions.Enabled
-			ctx.Data["EnableGists"] = setting.Gist.Enabled
+			ctx.Data["EnableSnippets"] = setting.Snippet.Enabled
 
 			ctx.Data["ManifestData"] = setting.ManifestData
 

@@ -15,10 +15,10 @@ import (
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/auth"
 	"forgejo.org/models/db"
-	gist_model "forgejo.org/models/gist"
 	"forgejo.org/models/organization"
 	packages_model "forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
+	snippet_model "forgejo.org/models/snippet"
 	system_model "forgejo.org/models/system"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/eventsource"
@@ -28,11 +28,11 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/services/agit"
 	"forgejo.org/services/auth/source/oauth2"
-	gist_service "forgejo.org/services/gist"
 	org_service "forgejo.org/services/org"
 	"forgejo.org/services/packages"
 	container_service "forgejo.org/services/packages/container"
 	repo_service "forgejo.org/services/repository"
+	snippet_service "forgejo.org/services/snippet"
 )
 
 // RenameUser renames a user
@@ -224,8 +224,8 @@ func DeleteUser(ctx context.Context, u *user_model.User, purge bool) error {
 			return err
 		}
 
-		// Delete all gists belonging to this user
-		err = gist_service.DeleteOwnerGists(ctx, u)
+		// Delete all snippets belonging to this user
+		err = snippet_service.DeleteOwnerSnippets(ctx, u)
 		if err != nil {
 			return err
 		}
@@ -315,13 +315,13 @@ func DeleteUser(ctx context.Context, u *user_model.User, purge bool) error {
 		return models.ErrUserOwnPackages{UID: u.ID}
 	}
 
-	// Check ownership of gists.
-	gistCount, err := gist_model.CountOwnerGists(ctx, u.ID)
+	// Check ownership of snippets.
+	snippetCount, err := snippet_model.CountOwnerSnippets(ctx, u.ID)
 	if err != nil {
-		return fmt.Errorf("CountOwnerGists: %w", err)
+		return fmt.Errorf("CountOwnerSnippets: %w", err)
 	}
-	if gistCount != 0 {
-		return models.ErrUserOwnGists{UID: u.ID}
+	if snippetCount != 0 {
+		return models.ErrUserOwnSnippets{UID: u.ID}
 	}
 
 	if err := deleteUser(ctx, u, purge); err != nil {

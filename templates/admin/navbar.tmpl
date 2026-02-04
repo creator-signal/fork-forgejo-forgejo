@@ -26,7 +26,7 @@
 				</a>
 			</div>
 		</details>
-		<details class="item toggleable-item" {{if or .PageIsAdminRepositories (and .EnablePackages .PageIsAdminPackages) (and .EnableGists .PageIsAdminGists)}}open{{end}}>
+		<details class="item toggleable-item" {{if or .PageIsAdminRepositories (and .EnablePackages .PageIsAdminPackages) (and .EnableSnippets .PageIsAdminSnippets)}}open{{end}}>
 			<summary>{{ctx.Locale.Tr "admin.assets"}}</summary>
 			<div class="menu">
 				{{if .EnablePackages}}
@@ -37,9 +37,9 @@
 				<a class="{{if .PageIsAdminRepositories}}active {{end}}item" href="{{AppSubUrl}}/admin/repos">
 					{{ctx.Locale.Tr "admin.repositories"}}
 				</a>
-				{{if .EnableGists}}
-					<a class="{{if .PageIsAdminGists}}active {{end}}item" href="{{AppSubUrl}}/admin/gists">
-						{{ctx.Locale.Tr "admin.gists.title"}}
+				{{if .EnableSnippets}}
+					<a class="{{if .PageIsAdminSnippets}}active {{end}}item" href="{{AppSubUrl}}/admin/snippets">
+						{{ctx.Locale.Tr "admin.snippets.title"}}
 					</a>
 				{{end}}
 			</div>

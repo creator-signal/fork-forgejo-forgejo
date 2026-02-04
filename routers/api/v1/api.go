@@ -74,13 +74,13 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
-	gist_model "forgejo.org/models/gist"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
 	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
 	quota_model "forgejo.org/models/quota"
 	repo_model "forgejo.org/models/repo"
+	snippet_model "forgejo.org/models/snippet"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
@@ -90,13 +90,13 @@ import (
 	"forgejo.org/routers/api/shared"
 	"forgejo.org/routers/api/v1/activitypub"
 	"forgejo.org/routers/api/v1/admin"
-	"forgejo.org/routers/api/v1/gist"
 	"forgejo.org/routers/api/v1/misc"
 	"forgejo.org/routers/api/v1/notify"
 	"forgejo.org/routers/api/v1/org"
 	"forgejo.org/routers/api/v1/packages"
 	"forgejo.org/routers/api/v1/repo"
 	"forgejo.org/routers/api/v1/settings"
+	"forgejo.org/routers/api/v1/snippet"
 	"forgejo.org/routers/api/v1/user"
 	"forgejo.org/services/actions"
 	"forgejo.org/services/auth"
@@ -382,34 +382,34 @@ func tokenRequiresScopes(requiredScopeCategories ...auth_model.AccessTokenScopeC
 	}
 }
 
-// Assigns a Gist
-func gistAssignment() func(ctx *context.APIContext) {
+// Assigns a Snippet
+func snippetAssignment() func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
-		gistUUID := ctx.Params("gistuuid")
+		snippetUUID := ctx.Params("snippet_uuid")
 
-		gist, err := gist_model.GetGistByUUID(ctx, gistUUID)
+		snippet, err := snippet_model.GetSnippetByUUID(ctx, snippetUUID)
 		if err != nil {
-			if gist_model.IsErrGistNotExist(err) {
+			if snippet_model.IsErrSnippetNotExist(err) {
 				ctx.NotFound()
 			} else {
-				ctx.ServerError("GetGistByUUID", err)
+				ctx.ServerError("GetSnippetByUUID", err)
 			}
 			return
 		}
 
-		if !gist.HasAccess(ctx.Doer) {
+		if !snippet.HasAccess(ctx.Doer) {
 			ctx.NotFound()
 			return
 		}
 
-		ctx.Gist = gist
+		ctx.Snippet = snippet
 	}
 }
 
-// Checks if the Caller is the Owner of the Gist
-func reqGistOwner() func(ctx *context.APIContext) {
+// Checks if the Caller is the Owner of the Snippet
+func reqSnippetOwner() func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
-		if !ctx.Gist.IsOwner(ctx.Doer) {
+		if !ctx.Snippet.IsOwner(ctx.Doer) {
 			ctx.NotFound()
 		}
 	}
@@ -958,7 +958,7 @@ func Routes() *web.Route {
 				m.Get("/api", settings.GetGeneralAPISettings)
 				m.Get("/attachment", settings.GetGeneralAttachmentSettings)
 				m.Get("/repository", settings.GetGeneralRepoSettings)
-				m.Get("/gist", settings.GetGistSettings)
+				m.Get("/snippet", settings.GetSnippetSettings)
 			})
 		})
 
@@ -1689,18 +1689,18 @@ func Routes() *web.Route {
 			m.Get("/activities/feeds", org.ListTeamActivityFeeds)
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryOrganization), orgAssignment(false, true), reqToken(), reqTeamMembership(), checkTokenPublicOnly())
 
-		m.Group("/gists", func() {
-			m.Get("/search", gist.Search)
-			m.Post("", reqToken(), bind(api.CreateGistOption{}), gist.Create)
-			m.Group("/{gistuuid}", func() {
-				m.Get("", gist.Get)
-				m.Get("/files", gist.GetFiles)
+		m.Group("/snippets", func() {
+			m.Get("/search", snippet.Search)
+			m.Post("", reqToken(), bind(api.CreateSnippetOption{}), snippet.Create)
+			m.Group("/{snippet_uuid}", func() {
+				m.Get("", snippet.Get)
+				m.Get("/files", snippet.GetFiles)
 				m.Group("", func() {
-					m.Delete("", gist.Delete)
-					m.Post("/files", bind(api.UpdateGistFilesOption{}), gist.UpdateFiles)
-				}, reqToken(), reqGistOwner())
-			}, gistAssignment())
-		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryGist))
+					m.Delete("", snippet.Delete)
+					m.Post("/files", bind(api.UpdateSnippetFilesOption{}), snippet.UpdateFiles)
+				}, reqToken(), reqSnippetOwner())
+			}, snippetAssignment())
+		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategorySnippet))
 
 		m.Group("/admin", func() {
 			m.Group("/cron", func() {

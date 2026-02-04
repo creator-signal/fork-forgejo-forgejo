@@ -99,10 +99,10 @@ func TestSwaggerUsersRoute(t *testing.T) {
 	checkSwaggerRouteResponse(t, swagger.Paths.Paths, "/users/{username}", http.StatusNotFound, "#/responses/notFound")
 }
 
-func TestSwaggerGistsRoute(t *testing.T) {
+func TestSwaggerSnippetsRoute(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	swagger := getSwagger(t)
 
-	checkSwaggerRouteResponse(t, swagger.Paths.Paths, "/gists/{gistuuid}", http.StatusNotFound, "#/responses/notFound")
+	checkSwaggerRouteResponse(t, swagger.Paths.Paths, "/snippets/{snippet_uuid}", http.StatusNotFound, "#/responses/notFound")
 }

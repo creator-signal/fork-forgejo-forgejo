@@ -32,7 +32,6 @@ import (
 	"forgejo.org/routers/web/events"
 	"forgejo.org/routers/web/explore"
 	"forgejo.org/routers/web/feed"
-	"forgejo.org/routers/web/gist"
 	"forgejo.org/routers/web/healthcheck"
 	"forgejo.org/routers/web/misc"
 	"forgejo.org/routers/web/moderation"
@@ -44,6 +43,7 @@ import (
 	repo_flags "forgejo.org/routers/web/repo/flags"
 	repo_setting "forgejo.org/routers/web/repo/setting"
 	"forgejo.org/routers/web/shared/project"
+	"forgejo.org/routers/web/snippet"
 	"forgejo.org/routers/web/user"
 	user_setting "forgejo.org/routers/web/user/setting"
 	"forgejo.org/routers/web/user/setting/security"
@@ -412,8 +412,8 @@ func registerRoutes(m *web.Route) {
 		}
 	}
 
-	gistsEnabled := func(ctx *context.Context) {
-		if !setting.Gist.Enabled {
+	snippetsEnabled := func(ctx *context.Context) {
+		if !setting.Snippet.Enabled {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
@@ -508,7 +508,7 @@ func registerRoutes(m *web.Route) {
 			}
 		}, explore.Code)
 		m.Get("/topics/search", explore.TopicSearch)
-		m.Get("/gists", gistsEnabled, explore.Gists)
+		m.Get("/snippets", snippetsEnabled, explore.Snippets)
 	}, ignExploreSignIn)
 	m.Group("/issues", func() {
 		m.Get("", user.Issues)
@@ -781,10 +781,10 @@ func registerRoutes(m *web.Route) {
 			m.Post("/cleanup", admin.CleanupExpiredData)
 		}, packagesEnabled)
 
-		m.Group("/gists", func() {
-			m.Get("", admin.Gists)
-			m.Post("/delete", admin.DeleteGist)
-		}, gistsEnabled)
+		m.Group("/snippets", func() {
+			m.Get("", admin.Snippets)
+			m.Post("/delete", admin.DeleteSnippet)
+		}, snippetsEnabled)
 
 		m.Group("/hooks", func() {
 			m.Get("", admin.DefaultOrSystemWebhooks)
@@ -1727,24 +1727,24 @@ func registerRoutes(m *web.Route) {
 		m.Get("/new", user.NewAvailable)
 	}, reqSignIn)
 
-	m.Group("/gists", func() {
-		m.Get("/-/new", reqSignIn, gist.New)
-		m.Post("/-/new/post", reqSignIn, gist.NewPost)
-		m.Group("/{gistuuid}", func() {
-			m.Get("", gist.View)
-			m.Get("/raw/{filename}", gist.Raw)
+	m.Group("/snippets", func() {
+		m.Get("/-/new", reqSignIn, snippet.New)
+		m.Post("/-/new/post", reqSignIn, snippet.NewPost)
+		m.Group("/{snippet_uuid}", func() {
+			m.Get("", snippet.View)
+			m.Get("/raw/{filename}", snippet.Raw)
 			m.Group("", func() {
-				m.Get("/edit", gist.Edit)
-				m.Post("/edit/post", gist.EditPost)
-				m.Post("/delete", gist.Delete)
-			}, reqSignIn, context.RequireGistOwner)
+				m.Get("/edit", snippet.Edit)
+				m.Post("/edit/post", snippet.EditPost)
+				m.Post("/delete", snippet.Delete)
+			}, reqSignIn, context.RequireSnippetOwner)
 			gitHTTPRouters(m)
 			m.Group(".git", func() {
 				gitHTTPRouters(m)
 			})
-		}, context.GistAssignment)
-		m.Get("/-/sitemap-{idx}.xml", sitemapEnabled, gist.Sitemap)
-	}, gistsEnabled)
+		}, context.SnippetAssignment)
+		m.Get("/-/sitemap-{idx}.xml", sitemapEnabled, snippet.Sitemap)
+	}, snippetsEnabled)
 
 	if setting.API.EnableSwagger {
 		m.Get("/swagger.v1.json", SwaggerV1Json)

@@ -187,7 +187,7 @@ func Config(ctx *context.Context) {
 	config.GetDynGetter().InvalidateCache()
 	prepareDeprecatedWarningsAlert(ctx)
 
-	ctx.Data["Gist"] = setting.Gist
+	ctx.Data["Snippet"] = setting.Snippet
 
 	ctx.HTML(http.StatusOK, tplConfig)
 }
