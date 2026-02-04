@@ -12,20 +12,20 @@
 						<div class="ui form">
 							<div class="field">
 								<div class="ui checkbox">
-									<input type="checkbox" name="watch_issues" value="true" {{if $.RepoWatchSelection.Issues}}checked{{end}}>
-									<label>{{svg "octicon-issue-opened"}} {{ctx.Locale.Tr "repo.watch.issues"}}</label>
+									<input id="watch-issues" type="checkbox" name="watch_issues" value="true" {{if $.RepoWatchSelection.Issues}}checked{{end}}>
+									<label for="watch-issues">{{svg "octicon-issue-opened"}} {{ctx.Locale.Tr "repo.watch.issues"}}</label>
 								</div>
 							</div>
 							<div class="field">
 								<div class="ui checkbox">
-									<input type="checkbox" name="watch_pull_requests" value="true" {{if $.RepoWatchSelection.PullRequests}}checked{{end}}>
-									<label>{{svg "octicon-git-pull-request"}} {{ctx.Locale.Tr "repo.watch.pull_requests"}}</label>
+									<input id="watch-pull-requests" type="checkbox" name="watch_pull_requests" value="true" {{if $.RepoWatchSelection.PullRequests}}checked{{end}}>
+									<label for="watch-pull-requests">{{svg "octicon-git-pull-request"}} {{ctx.Locale.Tr "repo.watch.pull_requests"}}</label>
 								</div>
 							</div>
 							<div class="field">
 								<div class="ui checkbox">
-									<input type="checkbox" name="watch_releases" value="true" {{if $.RepoWatchSelection.Releases}}checked{{end}}>
-									<label>{{svg "octicon-tag"}} {{ctx.Locale.Tr "repo.watch.releases"}}</label>
+									<input id="watch-releases" type="checkbox" name="watch_releases" value="true" {{if $.RepoWatchSelection.Releases}}checked{{end}}>
+									<label for="watch-releases">{{svg "octicon-tag"}} {{ctx.Locale.Tr "repo.watch.releases"}}</label>
 								</div>
 							</div>
 							<div class="tw-flex tw-justify-between tw-items-center tw-mt-3 tw-gap-4">

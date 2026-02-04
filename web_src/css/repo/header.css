@@ -66,3 +66,15 @@
 .repo-buttons .ui.labeled.button.disabled > .button {
   pointer-events: none !important;
 }
+
+/* Watch dropdown: ensure the details element fills the button space */
+.repo-buttons .ui.labeled.button > details.dropdown {
+  display: flex;
+  cursor: default;
+}
+
+/* Watch dropdown: ensure and the summary button has no right border radius to connect with the label */
+.repo-buttons .ui.labeled.button > details.dropdown > summary.button {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
