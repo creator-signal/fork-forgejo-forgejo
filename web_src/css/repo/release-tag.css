@@ -17,7 +17,7 @@
 @media (min-width: 768px) {
   #release-list > li {
     display: grid;
-    grid-template-columns: 25fr 75fr;
+    grid-template-columns: 25% 75%;
     gap: 0 1rem;
     justify-content: end;
 
