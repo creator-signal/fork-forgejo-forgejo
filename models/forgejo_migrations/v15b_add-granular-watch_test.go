@@ -70,7 +70,7 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 1, 1)
 		require.NoError(t, err)
-		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
 		assert.True(t, watch.WatchSelectionIssues)
 		assert.True(t, watch.WatchSelectionPullRequests)
 		assert.True(t, watch.WatchSelectionReleases)
@@ -78,7 +78,7 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 4, 1)
 		require.NoError(t, err)
-		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
 		assert.True(t, watch.WatchSelectionIssues)
 		assert.True(t, watch.WatchSelectionPullRequests)
 		assert.True(t, watch.WatchSelectionReleases)
@@ -86,7 +86,7 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 9, 1)
 		require.NoError(t, err)
-		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
 		assert.True(t, watch.WatchSelectionIssues)
 		assert.True(t, watch.WatchSelectionPullRequests)
 		assert.True(t, watch.WatchSelectionReleases)
@@ -94,7 +94,7 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 8, 1)
 		require.NoError(t, err)
-		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
 		assert.False(t, watch.WatchSelectionIssues)
 		assert.False(t, watch.WatchSelectionPullRequests)
 		assert.False(t, watch.WatchSelectionReleases)
@@ -102,7 +102,7 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 11, 1)
 		require.NoError(t, err)
-		assert.Equal(t, watch.Source, repo_model.WatchSourceAutomatic)
+		assert.Equal(t, repo_model.WatchSourceAutomatic, watch.Source)
 		assert.True(t, watch.WatchSelectionIssues)
 		assert.True(t, watch.WatchSelectionPullRequests)
 		assert.True(t, watch.WatchSelectionReleases)
@@ -110,7 +110,7 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 4, 2)
 		require.NoError(t, err)
-		assert.Equal(t, watch.Source, repo_model.WatchSourceExplicit)
+		assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
 		assert.True(t, watch.WatchSelectionIssues)
 		assert.True(t, watch.WatchSelectionPullRequests)
 		assert.True(t, watch.WatchSelectionReleases)
@@ -118,7 +118,7 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	{
 		watch, err := repo_model.GetWatch(db.DefaultContext, 5, 2)
 		require.NoError(t, err)
-		assert.Equal(t, watch.Source, repo_model.WatchSourceAutomatic)
+		assert.Equal(t, repo_model.WatchSourceAutomatic, watch.Source)
 		assert.False(t, watch.WatchSelectionIssues)
 		assert.False(t, watch.WatchSelectionPullRequests)
 		assert.False(t, watch.WatchSelectionReleases)
