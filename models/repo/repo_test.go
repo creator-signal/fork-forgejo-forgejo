@@ -74,7 +74,7 @@ func TestWatchRepo(t *testing.T) {
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: repoID})
 
 	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, userID, repoID, repo_model.WatchNoneSelection))
-	unittest.AssertNotExistsBean(t, &repo_model.Watch{RepoID: repoID, UserID: userID})
+	unittest.AssertCount(t, &repo_model.Watch{UserID: userID, RepoID: repoID, Source: repo_model.WatchSourceExplicit, WatchSelectionIssues: false, WatchSelectionPullRequests: false, WatchSelectionReleases: false}, 1)
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: repoID})
 }
 

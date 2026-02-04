@@ -127,6 +127,6 @@ func TestUnwatchRepos(t *testing.T) {
 	err := repo_model.UnwatchRepos(db.DefaultContext, 4, []int64{1, 2})
 	require.NoError(t, err)
 
-	unittest.AssertNotExistsBean(t, &repo_model.Watch{UserID: 4, RepoID: 1})
-	unittest.AssertNotExistsBean(t, &repo_model.Watch{UserID: 4, RepoID: 2})
+	unittest.AssertCount(t, &repo_model.Watch{UserID: 4, RepoID: 1, Source: repo_model.WatchSourceExplicit, WatchSelectionIssues: false, WatchSelectionPullRequests: false, WatchSelectionReleases: false}, 1)
+	unittest.AssertCount(t, &repo_model.Watch{UserID: 4, RepoID: 2, Source: repo_model.WatchSourceExplicit, WatchSelectionIssues: false, WatchSelectionPullRequests: false, WatchSelectionReleases: false}, 1)
 }
