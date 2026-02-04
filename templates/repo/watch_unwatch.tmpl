@@ -32,7 +32,7 @@
 								<button type="submit" class="ui primary tiny button">{{ctx.Locale.Tr "save"}}</button>
 								{{if $.RepoWatchSelection.IsWatching}}
 								<button type="button" class="ui tiny button" hx-post="{{$.RepoLink}}/action/unwatch" hx-target="#watch-button" hx-swap="outerHTML">
-									{{ctx.Locale.Tr "repo.unwatch_all"}}
+									{{ctx.Locale.Tr "repo.unwatch"}}
 								</button>
 								{{end}}
 							</div>
