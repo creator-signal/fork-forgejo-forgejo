@@ -111,7 +111,10 @@ test.describe('Releases', () => {
     await page.locator('input[name=tag_name]').pressSequentially('2.0');
     await page.locator('input[name=title]').pressSequentially('v'.repeat(200));
     await page.locator('textarea[name=content]').pressSequentially('v'.repeat(200)); // Description
-    await page.getByRole('button', {name: 'Publish release'}).click();
+
+    // Submit form. Mobile Chrome can't press the button in Playwright (not a Forgejo
+    // bug). Work around this by pressing Enter on submit button
+    await page.getByRole('button', {name: 'Publish release'}).press('Enter');
 
     // Check widths of UI elements
     await page.goto('/user2/repo2/releases');
@@ -122,10 +125,11 @@ test.describe('Releases', () => {
       const metaWidth = (await release.locator('.meta').boundingBox()).width;
       const titleWidth = (await release.locator('.release-title-wrap').boundingBox()).width;
       const detailsWidth = (await release.locator('.detail').boundingBox()).width;
-      // In row layout they all should be similar to the viewport length
-      await expect(metaWidth).toBeCloseTo(viewport.width);
-      await expect(titleWidth).toBeCloseTo(viewport.width);
-      await expect(detailsWidth).toBeCloseTo(viewport.width);
+      // In row layout they all should be similar to the viewport length, accounting
+      // for 8px margins on each side
+      await expect(metaWidth).toBeCloseTo(viewport.width - 16, 0);
+      await expect(titleWidth).toBeCloseTo(viewport.width - 16, 0);
+      await expect(detailsWidth).toBeCloseTo(viewport.width - 16, 0);
       // They also should all be all same width
       await expect(metaWidth).toBe(titleWidth);
       await expect(titleWidth).toBe(detailsWidth);
