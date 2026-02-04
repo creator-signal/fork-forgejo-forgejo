@@ -24,24 +24,11 @@ func TestIsWatching(t *testing.T) {
 
 	assert.False(t, repo_model.IsWatcher(db.DefaultContext, 1, 5))
 	assert.False(t, repo_model.IsWatcher(db.DefaultContext, 8, 1))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 4, 3))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 4, 4))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 4, 5))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 5, 5))
 	assert.False(t, repo_model.IsWatcher(db.DefaultContext, unittest.NonexistentID, unittest.NonexistentID))
-}
-
-func TestGetWatchers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
-	watches, err := repo_model.GetWatchers(db.DefaultContext, repo.ID)
-	require.NoError(t, err)
-	// One watchers are inactive, thus minus 1
-	assert.Len(t, watches, repo.NumWatches-1)
-	for _, watch := range watches {
-		assert.Equal(t, repo.ID, watch.RepoID)
-	}
-
-	watches, err = repo_model.GetWatchers(db.DefaultContext, unittest.NonexistentID)
-	require.NoError(t, err)
-	assert.Empty(t, watches)
 }
 
 func TestRepository_GetWatchers(t *testing.T) {

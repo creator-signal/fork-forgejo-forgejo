@@ -51,3 +51,39 @@
   watch_selection_issues: true
   watch_selection_pull_requests: true
   watch_selection_releases: true
+
+-
+  id: 7
+  user_id: 4
+  repo_id: 3
+  source: false # explicit
+  watch_selection_issues: true
+  watch_selection_pull_requests: false
+  watch_selection_releases: false
+
+-
+  id: 8
+  user_id: 4
+  repo_id: 4
+  source: false # explicit
+  watch_selection_issues: false
+  watch_selection_pull_requests: true
+  watch_selection_releases: false
+
+-
+  id: 9
+  user_id: 4
+  repo_id: 5
+  source: false # explicit
+  watch_selection_issues: false
+  watch_selection_pull_requests: false
+  watch_selection_releases: true
+
+-
+  id: 10
+  user_id: 5
+  repo_id: 5
+  source: false # explicit
+  watch_selection_issues: false
+  watch_selection_pull_requests: true
+  watch_selection_releases: true

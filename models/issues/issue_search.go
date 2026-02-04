@@ -465,8 +465,6 @@ func applySubscribedCondition(sess *xorm.Session, subscriberID int64) {
 				Where(builder.And(builder.Eq{"user_id": subscriberID},
 					builder.Or(
 						builder.Eq{"`watch`.watch_selection_issues": true},
-						builder.Eq{"`watch`.watch_selection_pull_requests": true},
-						builder.Eq{"`watch`.watch_selection_releases": true},
 					))),
 			),
 		),
