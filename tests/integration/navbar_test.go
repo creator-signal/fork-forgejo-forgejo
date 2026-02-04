@@ -71,9 +71,21 @@ func TestNavbarItems(t *testing.T) {
 		page.AssertElement(t, `details.dropdown a[href$="?tab=stars"]`, false)
 	})
 
+	t.Run(`User dropdown - instance in dev mode`, func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.IsProd, false)()
+
+		page := NewHTMLParser(t, regularUser.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+		page.AssertElement(t, `details.dropdown a[href="/-/demo"]`, true)
+
+		testNavbarUserMenuActiveItem(t, regularUser, "/user/settings")
+		testNavbarUserMenuActiveItem(t, adminUser, "/admin")
+	})
+
 	t.Run(`User dropdown - default conditions`, func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
+		// What regular user sees
 		assertions := []struct {
 			selector string
 			exists   bool
@@ -83,6 +95,7 @@ func TestNavbarItems(t *testing.T) {
 			{`details.dropdown a[href="/notifications/subscriptions"]`, true},
 			{`details.dropdown a[href="/user/settings"]`, true},
 			{`details.dropdown a[href="/admin"]`, false},
+			{`details.dropdown a[href="/-/demo"]`, false},
 			{`details.dropdown a[href="https://forgejo.org/docs/latest/"]`, true},
 			{`details.dropdown a[data-url="/user/logout"]`, true},
 		}
@@ -91,6 +104,7 @@ func TestNavbarItems(t *testing.T) {
 			page.AssertElement(t, assertion.selector, assertion.exists)
 		}
 
+		// What admin user sees
 		assertions = []struct {
 			selector string
 			exists   bool
@@ -100,6 +114,7 @@ func TestNavbarItems(t *testing.T) {
 			{`details.dropdown a[href="/notifications/subscriptions"]`, true},
 			{`details.dropdown a[href="/user/settings"]`, true},
 			{`details.dropdown a[href="/admin"]`, true},
+			{`details.dropdown a[href="/-/demo"]`, false},
 			{`details.dropdown a[href="https://forgejo.org/docs/latest/"]`, true},
 			{`details.dropdown a[data-url="/user/logout"]`, true},
 		}
@@ -107,5 +122,15 @@ func TestNavbarItems(t *testing.T) {
 		for _, assertion := range assertions {
 			page.AssertElement(t, assertion.selector, assertion.exists)
 		}
+
+		testNavbarUserMenuActiveItem(t, regularUser, "/user/settings")
+		testNavbarUserMenuActiveItem(t, adminUser, "/admin")
 	})
+}
+
+// When visiting certain pages, the corresponding entry of user menu is highlighted
+func testNavbarUserMenuActiveItem(t *testing.T, session *TestSession, url string) {
+	page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
+	// AssertElement will only pass if there's just one such element
+	page.AssertElement(t, "#navbar details.dropdown li > .active", true)
 }

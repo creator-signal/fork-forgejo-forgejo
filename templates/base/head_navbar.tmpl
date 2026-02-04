@@ -201,8 +201,11 @@
 								{{ctx.Locale.Tr "help"}}
 							</a>
 						</li>
-						{{if .IsAdmin}}
+						{{$showDemo := not .RunModeIsProd}}
+						{{if or .IsAdmin $showDemo}}
 							<hr>
+						{{end}}
+						{{if .IsAdmin}}
 							<li>
 								<a {{if .PageIsAdmin}}class="active"{{end}} href="{{AppSubUrl}}/admin">
 									{{svg "octicon-server"}}
@@ -210,8 +213,16 @@
 								</a>
 							</li>
 						{{end}}
+						{{if $showDemo}}
+							<li>
+								<a href="{{AppSubUrl}}/-/demo">
+									{{svg "octicon-beaker"}}
+									Demo pages
+								</a>
+							</li>
+						{{end}}
+						<hr>
 						<li>
-							<hr>
 							<a class="link-action" href data-url="{{AppSubUrl}}/user/logout">
 								{{svg "octicon-sign-out"}}
 								{{ctx.Locale.Tr "sign_out"}}

@@ -25,6 +25,7 @@ import (
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/jwtx"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
@@ -153,7 +154,7 @@ type AccessTokenResponse struct {
 	IDToken      string    `json:"id_token,omitempty"`
 }
 
-func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, serverKey, clientKey oauth2.JWTSigningKey) (*AccessTokenResponse, *AccessTokenError) {
+func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, serverKey, clientKey jwtx.SigningKey) (*AccessTokenResponse, *AccessTokenError) {
 	if setting.OAuth2.InvalidateRefreshTokens {
 		if err := grant.IncreaseCounter(ctx); err != nil {
 			return nil, &AccessTokenError{
@@ -673,7 +674,7 @@ func OIDCWellKnown(ctx *context.Context) {
 		return
 	}
 
-	ctx.Data["SigningKey"] = oauth2.DefaultSigningKey
+	ctx.Data["SigningAlg"] = oauth2.DefaultSigningKey.SigningMethod().Alg()
 	ctx.Data["Issuer"] = strings.TrimSuffix(setting.AppURL, "/")
 	ctx.JSONTemplate("user/auth/oidc_wellknown")
 }
@@ -741,7 +742,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 	clientKey := serverKey
 	if serverKey.IsSymmetric() {
 		var err error
-		clientKey, err = oauth2.CreateJWTSigningKey(serverKey.SigningMethod().Alg(), []byte(form.ClientSecret))
+		clientKey, err = jwtx.CreateSigningKey(serverKey.SigningMethod().Alg(), []byte(form.ClientSecret))
 		if err != nil {
 			handleAccessTokenError(ctx, AccessTokenError{
 				ErrorCode:        AccessTokenErrorCodeInvalidRequest,
@@ -764,7 +765,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 	}
 }
 
-func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey oauth2.JWTSigningKey) {
+func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey jwtx.SigningKey) {
 	app, err := auth.GetOAuth2ApplicationByClientID(ctx, form.ClientID)
 	if err != nil {
 		handleAccessTokenError(ctx, AccessTokenError{
@@ -824,7 +825,7 @@ func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, server
 	ctx.JSON(http.StatusOK, accessToken)
 }
 
-func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey oauth2.JWTSigningKey) {
+func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey jwtx.SigningKey) {
 	app, err := auth.GetOAuth2ApplicationByClientID(ctx, form.ClientID)
 	if err != nil {
 		handleAccessTokenError(ctx, AccessTokenError{
@@ -1096,6 +1097,11 @@ func SignInOAuthCallback(ctx *context.Context) {
 				ctx.ServerError("SyncGroupsToTeams", err)
 				return
 			}
+
+			if err := syncGroupsToQuotaGroups(ctx, source, &gothUser, u); err != nil {
+				ctx.ServerError("SyncGroupsToQuotaGroups", err)
+				return
+			}
 		} else {
 			// no existing user is found, request attach or new account
 			showLinkingLogin(ctx, gothUser)
@@ -1140,8 +1146,34 @@ func syncGroupsToTeams(ctx *context.Context, source *oauth2.Source, gothUser *go
 	return nil
 }
 
+func syncGroupsToQuotaGroups(ctx *context.Context, source *oauth2.Source, gothUser *goth.User, u *user_model.User) error {
+	if source.QuotaGroupMap != "" || source.QuotaGroupMapRemoval {
+		quotaGroupMapping, err := auth_module.UnmarshalQuotaGroupMapping(source.QuotaGroupMap)
+		if err != nil {
+			return err
+		}
+
+		groups := getClaimedQuotaGroups(source, gothUser)
+
+		if err := source_service.SyncGroupsToQuotaGroups(ctx, u, groups, quotaGroupMapping, source.QuotaGroupMapRemoval); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func getClaimedGroups(source *oauth2.Source, gothUser *goth.User) container.Set[string] {
 	groupClaims, has := gothUser.RawData[source.GroupClaimName]
+	if !has {
+		return nil
+	}
+
+	return claimValueToStringSet(groupClaims)
+}
+
+func getClaimedQuotaGroups(source *oauth2.Source, gothUser *goth.User) container.Set[string] {
+	groupClaims, has := gothUser.RawData[source.QuotaGroupClaimName]
 	if !has {
 		return nil
 	}
@@ -1262,8 +1294,14 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		ctx.ServerError("UnmarshalGroupTeamMapping", err)
 		return
 	}
+	quotaGroupMapping, err := auth_module.UnmarshalQuotaGroupMapping(oauth2Source.QuotaGroupMap)
+	if err != nil {
+		ctx.ServerError("UnmarshalQuotaGroupMapping", err)
+		return
+	}
 
 	groups := getClaimedGroups(oauth2Source, &gothUser)
+	quotaGroups := getClaimedQuotaGroups(oauth2Source, &gothUser)
 
 	// If this user is enrolled in 2FA and this source doesn't override it,
 	// we can't sign the user in just yet. Instead, redirect them to the 2FA authentication page.
@@ -1287,6 +1325,13 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		if oauth2Source.GroupTeamMap != "" || oauth2Source.GroupTeamMapRemoval {
 			if err := source_service.SyncGroupsToTeams(ctx, u, groups, groupTeamMapping, oauth2Source.GroupTeamMapRemoval); err != nil {
 				ctx.ServerError("SyncGroupsToTeams", err)
+				return
+			}
+		}
+
+		if oauth2Source.QuotaGroupMap != "" || oauth2Source.QuotaGroupMapRemoval {
+			if err := source_service.SyncGroupsToQuotaGroups(ctx, u, quotaGroups, quotaGroupMapping, oauth2Source.QuotaGroupMapRemoval); err != nil {
+				ctx.ServerError("SyncGroupsToQuotaGroups", err)
 				return
 			}
 		}
@@ -1325,6 +1370,13 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 	if oauth2Source.GroupTeamMap != "" || oauth2Source.GroupTeamMapRemoval {
 		if err := source_service.SyncGroupsToTeams(ctx, u, groups, groupTeamMapping, oauth2Source.GroupTeamMapRemoval); err != nil {
 			ctx.ServerError("SyncGroupsToTeams", err)
+			return
+		}
+	}
+
+	if oauth2Source.QuotaGroupMap != "" || oauth2Source.QuotaGroupMapRemoval {
+		if err := source_service.SyncGroupsToQuotaGroups(ctx, u, quotaGroups, quotaGroupMapping, oauth2Source.QuotaGroupMapRemoval); err != nil {
+			ctx.ServerError("SyncGroupsToQuotaGroups", err)
 			return
 		}
 	}

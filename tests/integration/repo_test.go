@@ -568,52 +568,110 @@ func TestViewRepoDirectoryReadme(t *testing.T) {
 }
 
 func TestRenamedFileHistory(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		t.Run("Renamed file", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
 
-	t.Run("Renamed file", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
+			req := NewRequest(t, "GET", "/user2/repo59/commits/branch/master/license")
+			resp := MakeRequest(t, req, http.StatusOK)
 
-		req := NewRequest(t, "GET", "/user2/repo59/commits/branch/master/license")
-		resp := MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
 
-		htmlDoc := NewHTMLParser(t, resp.Body)
+			renameNotice := htmlDoc.doc.Find(".ui.bottom.attached.header")
+			assert.Equal(t, 1, renameNotice.Length())
+			assert.Contains(t, renameNotice.Text(), "Renamed from licnse (Browse further)")
 
-		renameNotice := htmlDoc.doc.Find(".ui.bottom.attached.header")
-		assert.Equal(t, 1, renameNotice.Length())
-		assert.Contains(t, renameNotice.Text(), "Renamed from licnse (Browse further)")
+			oldFileHistoryLink, ok := renameNotice.Find("a").Attr("href")
+			assert.True(t, ok)
+			assert.Equal(t, "/user2/repo59/commits/commit/80b83c5c8220c3aa3906e081f202a2a7563ec879/licnse", oldFileHistoryLink)
+		})
 
-		oldFileHistoryLink, ok := renameNotice.Find("a").Attr("href")
-		assert.True(t, ok)
-		assert.Equal(t, "/user2/repo59/commits/commit/80b83c5c8220c3aa3906e081f202a2a7563ec879/licnse", oldFileHistoryLink)
-	})
+		t.Run("Renamed file, pagination", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			defer test.MockVariableValue(&setting.Git.CommitsRangeSize, 1)() // Limit commits displayed on the page to one
 
-	t.Run("Renamed file, pagination", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.Git.CommitsRangeSize, 1)() // Limit commits displayed on the page to one
+			resp := MakeRequest(t, NewRequest(t, "GET", "/user2/repo59/commits/branch/master/license"), http.StatusOK)
+			page1 := NewHTMLParser(t, resp.Body)
 
-		resp := MakeRequest(t, NewRequest(t, "GET", "/user2/repo59/commits/branch/master/license"), http.StatusOK)
-		page1 := NewHTMLParser(t, resp.Body)
+			resp = MakeRequest(t, NewRequest(t, "GET", "/user2/repo59/commits/branch/master/license?page=2"), http.StatusOK)
+			page2 := NewHTMLParser(t, resp.Body)
 
-		resp = MakeRequest(t, NewRequest(t, "GET", "/user2/repo59/commits/branch/master/license?page=2"), http.StatusOK)
-		page2 := NewHTMLParser(t, resp.Body)
+			// Browse further is only shown on 2nd page
+			browseFurtherSel := ".ui.bottom.attached.header a[href='/user2/repo59/commits/commit/80b83c5c8220c3aa3906e081f202a2a7563ec879/licnse']"
+			page1.AssertElement(t, browseFurtherSel, false)
+			page2.AssertElement(t, browseFurtherSel, true)
 
-		// Browse further is only shown on 2nd page
-		browseFurtherSel := ".ui.bottom.attached.header a[href='/user2/repo59/commits/commit/80b83c5c8220c3aa3906e081f202a2a7563ec879/licnse']"
-		page1.AssertElement(t, browseFurtherSel, false)
-		page2.AssertElement(t, browseFurtherSel, true)
+			// Pagination goes after Browser further
+			afterBrowseFurther := page2.Find(browseFurtherSel).Parent().Parent().NextAll()
+			assert.Equal(t, 1, afterBrowseFurther.Find(".pagination.menu").Length())
+		})
 
-		// Pagination goes after Browser further
-		afterBrowseFurther := page2.Find(browseFurtherSel).Parent().Parent().NextAll()
-		assert.Equal(t, 1, afterBrowseFurther.Find(".pagination.menu").Length())
-	})
+		t.Run("Non renamed file", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/user2/repo59/commits/branch/master/README.md")
+			resp := MakeRequest(t, req, http.StatusOK)
 
-	t.Run("Non renamed file", func(t *testing.T) {
-		req := NewRequest(t, "GET", "/user2/repo59/commits/branch/master/README.md")
-		resp := MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
 
-		htmlDoc := NewHTMLParser(t, resp.Body)
+			htmlDoc.AssertElement(t, ".ui.bottom.attached.header", false)
+		})
 
-		htmlDoc.AssertElement(t, ".ui.bottom.attached.header", false)
+		t.Run("Renamed file (with escaped name)", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+			repo, commitID, f := tests.CreateDeclarativeRepo(t, user2, "",
+				[]unit_model.Type{unit_model.TypeCode}, nil,
+				[]*files_service.ChangeRepoFile{
+					{
+						Operation:     "create",
+						TreePath:      "#beep",
+						ContentReader: strings.NewReader("ping pong"),
+					},
+				},
+			)
+			defer f()
+
+			files, err := files_service.ChangeRepoFiles(git.DefaultContext, repo, user2, &files_service.ChangeRepoFilesOptions{
+				Files: []*files_service.ChangeRepoFile{
+					{
+						Operation:     "update",
+						TreePath:      "beep",
+						FromTreePath:  "#beep",
+						ContentReader: strings.NewReader("ping pong"),
+					},
+				},
+				Message:   "rename",
+				OldBranch: "main",
+				NewBranch: "main",
+				Author: &files_service.IdentityOptions{
+					Name:  user2.Name,
+					Email: user2.Email,
+				},
+				Committer: &files_service.IdentityOptions{
+					Name:  user2.Name,
+					Email: user2.Email,
+				},
+				Dates: &files_service.CommitDateOptions{
+					Author:    time.Now(),
+					Committer: time.Now(),
+				},
+				LastCommitID: commitID,
+			})
+			require.NoError(t, err)
+
+			req := NewRequestf(t, "GET", "/%s/commits/branch/main/beep", repo.FullName())
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			renameNotice := htmlDoc.doc.Find(".ui.bottom.attached.header")
+			assert.Equal(t, 1, renameNotice.Length())
+			assert.Contains(t, renameNotice.Text(), "Renamed from #beep (Browse further)")
+
+			oldFileHistoryLink, ok := renameNotice.Find("a").Attr("href")
+			assert.True(t, ok)
+			assert.Equal(t, fmt.Sprintf("/%s/commits/commit/%s/%%23beep", repo.FullName(), files.Commit.SHA), oldFileHistoryLink)
+		})
 	})
 }
 
@@ -1493,42 +1551,130 @@ func TestRepoIssueFilterLinks(t *testing.T) {
 func TestRepoSubmoduleView(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, nil)
-		defer f()
+		t.Run("FromGit", func(t *testing.T) {
+			repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, nil)
+			defer f()
 
-		// Clone the repository, add a submodule and push it.
-		dstPath := t.TempDir()
+			// Clone the repository, add a submodule and push it.
+			dstPath := t.TempDir()
 
-		uClone := *u
-		uClone.Path = repo.FullName()
-		uClone.User = url.UserPassword(user2.Name, userPassword)
+			uClone := *u
+			uClone.Path = repo.FullName()
+			uClone.User = url.UserPassword(user2.Name, userPassword)
 
-		t.Run("Clone", doGitClone(dstPath, &uClone))
+			t.Run("Clone", doGitClone(dstPath, &uClone))
 
-		_, _, err := git.NewCommand(git.DefaultContext, "submodule", "add").AddDynamicArguments(u.JoinPath("/user2/repo1").String()).RunStdString(&git.RunOpts{Dir: dstPath})
-		require.NoError(t, err)
+			_, _, err := git.NewCommand(git.DefaultContext, "submodule", "add").AddDynamicArguments(u.JoinPath("/user2/repo1").String()).RunStdString(&git.RunOpts{Dir: dstPath})
+			require.NoError(t, err)
 
-		_, _, err = git.NewCommand(git.DefaultContext, "add", "repo1", ".gitmodules").RunStdString(&git.RunOpts{Dir: dstPath})
-		require.NoError(t, err)
+			_, _, err = git.NewCommand(git.DefaultContext, "add", "repo1", ".gitmodules").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.NoError(t, err)
 
-		_, _, err = git.NewCommand(git.DefaultContext, "commit", "-m", "add submodule").RunStdString(&git.RunOpts{Dir: dstPath})
-		require.NoError(t, err)
+			_, _, err = git.NewCommand(git.DefaultContext, "commit", "-m", "add submodule").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.NoError(t, err)
 
-		_, _, err = git.NewCommand(git.DefaultContext, "push").RunStdString(&git.RunOpts{Dir: dstPath})
-		require.NoError(t, err)
+			_, _, err = git.NewCommand(git.DefaultContext, "push").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.NoError(t, err)
 
-		// Check that the submodule entry exist and the link is correct.
-		req := NewRequest(t, "GET", "/"+repo.FullName())
-		resp := MakeRequest(t, req, http.StatusOK)
+			// Check that the submodule entry exist and the link is correct.
+			req := NewRequest(t, "GET", "/"+repo.FullName())
+			resp := MakeRequest(t, req, http.StatusOK)
 
-		htmlDoc := NewHTMLParser(t, resp.Body)
-		htmlDoc.AssertElement(t, fmt.Sprintf(`tr[data-entryname="repo1"] a[href="%s"]`, u.JoinPath("/user2/repo1").String()), true)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			htmlDoc.AssertElement(t, fmt.Sprintf(`tr[data-entryname="repo1"] a[href="%s"]`, u.JoinPath("/user2/repo1").String()), true)
 
-		// Check that a link to the submodule returns a redirect and that the redirect link is correct.
-		req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/repo1")
-		resp = MakeRequest(t, req, http.StatusSeeOther)
+			// Check that a link to the submodule returns a redirect and that the redirect link is correct.
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/repo1")
+			resp = MakeRequest(t, req, http.StatusSeeOther)
 
-		assert.Equal(t, u.JoinPath("/user2/repo1").String(), resp.Header().Get("Location"))
+			assert.Equal(t, u.JoinPath("/user2/repo1").String(), resp.Header().Get("Location"))
+		})
+
+		t.Run("Declarative", func(t *testing.T) {
+			repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, []*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".gitmodules",
+					ContentReader: strings.NewReader(`[submodule "relative-module"]
+  path = relative-module
+  url = https://git.example.org/submodule.git
+`),
+				}, {
+					Operation:     "create",
+					TreePath:      "relative-module",
+					FromTreePath:  "",
+					ContentReader: nil,
+					SHA:           "95601d16476a",
+					Options:       files_service.RepoFileOptionMode(git.EntryModeCommit),
+				},
+			})
+			defer f()
+
+			// Check that the submodule entry exist and the link is correct.
+			req := NewRequest(t, "GET", "/"+repo.FullName())
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			expectedDst := "https://git.example.org/submodule"
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			href, ok := htmlDoc.Find(`tr[data-entryname="relative-module"] a`).Attr("href")
+			assert.True(t, ok, "could not find entry 'relative-module' in file list")
+			assert.Equal(t, expectedDst, href)
+
+			// Check that a link to the submodule returns a redirect and that the redirect link is correct.
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/relative-module")
+			resp = MakeRequest(t, req, http.StatusSeeOther)
+
+			assert.Equal(t, expectedDst, resp.Header().Get("Location"))
+		})
+
+		t.Run("SubmodulesFileTooBig", func(t *testing.T) {
+			repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, []*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".gitmodules",
+					ContentReader: strings.NewReader(strings.Repeat("#", git.MaxGitmodulesFileSize-5) + // ensure that the partial read is invalid
+						`
+[submodule "relative-module"]
+  path = relative-module
+  url = https://git.example.org/submodule.git
+`),
+				}, {
+					Operation:     "create",
+					TreePath:      "relative-module",
+					FromTreePath:  "",
+					ContentReader: nil,
+					SHA:           "95601d16476a",
+					Options:       files_service.RepoFileOptionMode(git.EntryModeCommit),
+				},
+			})
+			defer f()
+
+			// Check that the submodule entry exist and the link is correct.
+			req := NewRequest(t, "GET", "/"+repo.FullName())
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			_, ok := htmlDoc.Find(`tr[data-entryname="relative-module"] td.name a`).Attr("href")
+			assert.False(t, ok, "should not find a link to 'relative-module' in file list")
+
+			// Check that a link to the submodule returns a redirect and that the redirect link is correct.
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/relative-module")
+			resp = MakeRequest(t, req, http.StatusSeeOther)
+
+			assert.Equal(t, "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/", resp.Header().Get("Location"))
+
+			// Check that a warning is present
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/.gitmodules")
+			resp = MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc = NewHTMLParser(t, resp.Body)
+
+			warn, err := htmlDoc.Find(`.non-diff-file-content .warning`).Html()
+			require.NoError(t, err)
+			assert.NotEmpty(t, warn)
+		})
 	})
 }
 

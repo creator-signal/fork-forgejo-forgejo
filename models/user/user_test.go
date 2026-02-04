@@ -219,10 +219,10 @@ func TestSearchUsers(t *testing.T) {
 	}
 
 	testUserSuccess(&user_model.SearchUserOptions{OrderBy: "id ASC", ListOptions: db.ListOptions{Page: 1}},
-		[]int64{1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 42, 1041})
+		[]int64{1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 43, 1041})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsActive: optional.Some(false)},
-		[]int64{42, 9})
+		[]int64{43, 9})
 
 	testUserSuccess(&user_model.SearchUserOptions{OrderBy: "id ASC", ListOptions: db.ListOptions{Page: 1}, IsActive: optional.Some(true)},
 		[]int64{1, 2, 4, 5, 8, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 24, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 1041})
@@ -241,7 +241,7 @@ func TestSearchUsers(t *testing.T) {
 		[]int64{29})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsProhibitLogin: optional.Some(true)},
-		[]int64{1041, 37})
+		[]int64{43, 1041, 37})
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsTwoFactorEnabled: optional.Some(true)},
 		[]int64{24, 32})
@@ -438,6 +438,63 @@ func TestCreateUserClaimingUsername(t *testing.T) {
 		err = user_model.AdminCreateUser(db.DefaultContext, user)
 		require.NoError(t, err)
 	})
+}
+
+// Attempts to create a username with a fediverse-format handle, which should
+// fail (without the override IsActivityPub, which is set by CreateFederatedUser)
+func TestCreateUserPlainWithFediverseHandle(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(&user_model.Redirect{RedirectUserID: 1, LowerName: "redirecting", CreatedUnix: timeutil.TimeStampNow()})
+	require.NoError(t, err)
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	user.Name = "@example@example.tld"
+	user.LowerName = strings.ToLower(user.Name)
+	user.ID = 0
+	user.Email = "unique@example.com"
+
+	t.Run("Normal creation (without ActivityPub override)", func(t *testing.T) {
+		err = user_model.CreateUser(db.DefaultContext, user)
+		require.Error(t, err)
+		assert.True(t, db.IsErrNameCharsNotAllowed(err))
+	})
+
+	t.Run("Creation as admin (without ActivityPub override)", func(t *testing.T) {
+		err = user_model.AdminCreateUser(db.DefaultContext, user)
+		require.Error(t, err)
+		assert.True(t, db.IsErrNameCharsNotAllowed(err))
+	})
+
+	// Logic borrowed from CreateFederatedUser (which invokes CreateUser), but
+	// we "lend" this here to verify CreateUser's paths.
+	overwrite := user_model.CreateUserOverwriteOptions{
+		IsActive:      optional.Some(false),
+		IsRestricted:  optional.Some(false),
+		IsActivityPub: optional.Some(true),
+	}
+
+	t.Run("Normal creation (with ActivityPub override, invalid format)", func(t *testing.T) {
+		user.Name = "invalid-format-for-an-activitypub-account"
+		user.LowerName = strings.ToLower(user.Name)
+
+		err = user_model.CreateUser(db.DefaultContext, user, &overwrite)
+		require.Error(t, err)
+		assert.True(t, db.IsErrNameActivityPubInvalid(err))
+	})
+
+	t.Run("Normal creation (with ActivityPub override)", func(t *testing.T) {
+		user.Name = "@valid@example.tld"
+		user.LowerName = strings.ToLower(user.Name)
+
+		err = user_model.CreateUser(db.DefaultContext, user, &overwrite)
+		require.NoError(t, err)
+	})
+
+	// Note: We don't expect that admins are able to access any front-facing
+	// function that sets the overwrite (i.e. CreateFederatedUser), hence it
+	// has been omitted for now.
 }
 
 func TestGetUserIDsByNames(t *testing.T) {

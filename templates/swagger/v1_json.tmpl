@@ -57,6 +57,23 @@
         }
       }
     },
+    "/activitypub/actor/outbox": {
+      "post": {
+        "produces": [
+          "application/ld+json"
+        ],
+        "tags": [
+          "activitypub"
+        ],
+        "summary": "Display the outbox (always empty)",
+        "operationId": "activitypubInstanceActorOutbox",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Outbox"
+          }
+        }
+      }
+    },
     "/activitypub/repository-id/{repository-id}": {
       "get": {
         "produces": [
@@ -114,6 +131,33 @@
         "responses": {
           "204": {
             "$ref": "#/responses/empty"
+          }
+        }
+      }
+    },
+    "/activitypub/repository-id/{repository-id}/outbox": {
+      "post": {
+        "produces": [
+          "application/ld+json"
+        ],
+        "tags": [
+          "activitypub"
+        ],
+        "summary": "Display the outbox",
+        "operationId": "activitypubRepositoryOutbox",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "repository ID of the repo",
+            "name": "repository-id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Outbox"
           }
         }
       }
@@ -259,7 +303,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/PersonFeed"
+            "$ref": "#/responses/Outbox"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -275,11 +319,25 @@
         "tags": [
           "admin"
         ],
-        "summary": "Get all runners",
+        "summary": "Get all runners, no matter whether they are global runners or scoped to an organization, user, or repository",
         "operationId": "getAdminRunners",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
-            "$ref": "#/definitions/ActionRunnersResponse"
+            "$ref": "#/responses/ActionRunnerList"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -288,18 +346,82 @@
             "$ref": "#/responses/notFound"
           }
         }
-      }
-    },
-    "/admin/actions/runners/registration-token": {
+      },
       "post": {
+        "consumes": [
+          "application/json"
+        ],
         "produces": [
           "application/json"
         ],
         "tags": [
           "admin"
         ],
-        "summary": "Get a global actions runner registration token",
-        "operationId": "adminCreateRunnerRegistrationToken",
+        "summary": "Register a new global runner",
+        "operationId": "registerAdminRunner",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RegisterRunnerOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/RegisterRunnerResponse"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/admin/actions/runners/jobs": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get action run jobs",
+        "operationId": "adminGetActionRunJobs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "a comma separated list of labels to search for",
+            "name": "labels",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/RunJobList"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          }
+        }
+      }
+    },
+    "/admin/actions/runners/registration-token": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get a runner registration token for registering global runners",
+        "operationId": "adminGetRunnerRegistrationToken",
         "responses": {
           "200": {
             "$ref": "#/responses/RegistrationToken"
@@ -315,12 +437,12 @@
         "tags": [
           "admin"
         ],
-        "summary": "Get a global runner",
+        "summary": "Get a particular runner, no matter whether it is a global runner or scoped to an organization, user, or repository",
         "operationId": "getAdminRunner",
         "parameters": [
           {
             "type": "string",
-            "description": "id of the runner",
+            "description": "ID of the runner",
             "name": "runner_id",
             "in": "path",
             "required": true
@@ -328,7 +450,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/definitions/ActionRunner"
+            "$ref": "#/responses/ActionRunner"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -345,12 +467,12 @@
         "tags": [
           "admin"
         ],
-        "summary": "Delete a global runner",
+        "summary": "Delete a particular runner, no matter whether it is a global runner or scoped to an organization, user, or repository",
         "operationId": "deleteAdminRunner",
         "parameters": [
           {
             "type": "string",
-            "description": "id of the runner",
+            "description": "ID of the runner",
             "name": "runner_id",
             "in": "path",
             "required": true
@@ -532,7 +654,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           }
         }
       },
@@ -1123,7 +1245,7 @@
           "admin"
         ],
         "summary": "Deletes a quota rule",
-        "operationId": "adminDEleteQuotaRule",
+        "operationId": "adminDeleteQuotaRule",
         "parameters": [
           {
             "type": "string",
@@ -1195,14 +1317,16 @@
     },
     "/admin/runners/jobs": {
       "get": {
+        "description": "This operation has been deprecated in Forgejo 15. Use [`/admin/actions/runners/jobs`](#/admin/adminGetActionRunJobs) instead.\n",
         "produces": [
           "application/json"
         ],
         "tags": [
           "admin"
         ],
-        "summary": "Search action jobs according filter conditions",
+        "summary": "Search action jobs according to filter conditions",
         "operationId": "adminSearchRunJobs",
+        "deprecated": true,
         "parameters": [
           {
             "type": "string",
@@ -1223,14 +1347,16 @@
     },
     "/admin/runners/registration-token": {
       "get": {
+        "description": "This operation has been deprecated in Forgejo 15. Use [`/admin/actions/runners/registration-token`](#/admin/adminGetRunnerRegistrationToken) instead.\n",
         "produces": [
           "application/json"
         ],
         "tags": [
           "admin"
         ],
-        "summary": "Get a global actions runner registration token",
-        "operationId": "adminGetRunnerRegistrationToken",
+        "summary": "Get a runner registration token for registering global runners",
+        "operationId": "adminGetRegistrationToken",
+        "deprecated": true,
         "responses": {
           "200": {
             "$ref": "#/responses/RegistrationToken"
@@ -2441,7 +2567,6 @@
               "enum": [
                 "issue",
                 "pull",
-                "commit",
                 "repository"
               ],
               "type": "string"
@@ -2529,7 +2654,7 @@
         ],
         "responses": {
           "205": {
-            "$ref": "#/responses/NotificationThreadList"
+            "$ref": "#/responses/NotificationThreadListWithoutPagination"
           }
         }
       }
@@ -2841,7 +2966,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get org-level runners",
+        "summary": "Get the organization's runners",
         "operationId": "getOrgRunners",
         "parameters": [
           {
@@ -2850,14 +2975,69 @@
             "name": "org",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "$ref": "#/definitions/ActionRunnersResponse"
+            "$ref": "#/responses/ActionRunnerList"
           },
           "400": {
             "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Register a new organization-level runner",
+        "operationId": "registerOrgRunner",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the organization",
+            "name": "org",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RegisterRunnerOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/RegisterRunnerResponse"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -2908,32 +3088,8 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get an organization's actions runner registration token",
+        "summary": "Get the organization's runner registration token",
         "operationId": "orgGetRunnerRegistrationToken",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "name of the organization",
-            "name": "org",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/RegistrationToken"
-          }
-        }
-      },
-      "post": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "organization"
-        ],
-        "summary": "Get an organization's actions runner registration token",
-        "operationId": "orgCreateRunnerRegistrationToken",
         "parameters": [
           {
             "type": "string",
@@ -2958,7 +3114,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get an org-level runner",
+        "summary": "Get a particular runner that belongs to the organization",
         "operationId": "getOrgRunner",
         "parameters": [
           {
@@ -2970,7 +3126,7 @@
           },
           {
             "type": "string",
-            "description": "id of the runner",
+            "description": "ID of the runner",
             "name": "runner_id",
             "in": "path",
             "required": true
@@ -2978,7 +3134,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/definitions/ActionRunner"
+            "$ref": "#/responses/ActionRunner"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -2995,7 +3151,7 @@
         "tags": [
           "organization"
         ],
-        "summary": "Delete an org-level runner",
+        "summary": "Delete a particular runner that belongs to the organization",
         "operationId": "deleteOrgRunner",
         "parameters": [
           {
@@ -3007,7 +3163,7 @@
           },
           {
             "type": "string",
-            "description": "id of the runner",
+            "description": "ID of the runner",
             "name": "runner_id",
             "in": "path",
             "required": true
@@ -3562,7 +3718,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -5539,7 +5695,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "Get repo-level runners",
+        "summary": "Get runners belonging to the repository",
         "operationId": "getRepoRunners",
         "parameters": [
           {
@@ -5555,14 +5711,76 @@
             "name": "repo",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "$ref": "#/definitions/ActionRunnersResponse"
+            "$ref": "#/responses/ActionRunnerList"
           },
           "400": {
             "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Register a new repository-level runner",
+        "operationId": "registerRepoRunner",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RegisterRunnerOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/RegisterRunnerResponse"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -5620,39 +5838,8 @@
         "tags": [
           "repository"
         ],
-        "summary": "Get a repository's actions runner registration token",
+        "summary": "Get a repository's runner registration token",
         "operationId": "repoGetRunnerRegistrationToken",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "owner of the repo",
-            "name": "owner",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "name of the repo",
-            "name": "repo",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/RegistrationToken"
-          }
-        }
-      },
-      "post": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "repository"
-        ],
-        "summary": "Get a repository's actions runner registration token",
-        "operationId": "repoCreateRunnerRegistrationToken",
         "parameters": [
           {
             "type": "string",
@@ -5684,7 +5871,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "Get a repo-level runner",
+        "summary": "Get a particular runner that belongs to the repository",
         "operationId": "getRepoRunner",
         "parameters": [
           {
@@ -5703,7 +5890,7 @@
           },
           {
             "type": "string",
-            "description": "id of the runner",
+            "description": "ID of the runner",
             "name": "runner_id",
             "in": "path",
             "required": true
@@ -5711,7 +5898,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/definitions/ActionRunner"
+            "$ref": "#/responses/ActionRunner"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -5728,7 +5915,7 @@
         "tags": [
           "repository"
         ],
-        "summary": "Delete a repo-level runner",
+        "summary": "Delete a particular runner that belongs to a repository",
         "operationId": "deleteRepoRunner",
         "parameters": [
           {
@@ -5747,7 +5934,7 @@
           },
           {
             "type": "string",
-            "description": "id of the runner",
+            "description": "ID of the runner",
             "name": "runner_id",
             "in": "path",
             "required": true
@@ -5842,6 +6029,12 @@
             "type": "string",
             "description": "Only returns workflow runs that are associated with the specified head_sha.",
             "name": "head_sha",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only return workflow runs that involve the given Git reference, for example, `refs/heads/main`.",
+            "name": "ref",
             "in": "query"
           }
         ],
@@ -10376,7 +10569,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ReactionList"
+            "$ref": "#/responses/ReactionListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -10528,7 +10721,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11020,7 +11213,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11477,7 +11670,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/IssueList"
+            "$ref": "#/responses/IssueListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11625,7 +11818,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -11677,7 +11870,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -11732,7 +11925,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/LabelList"
+            "$ref": "#/responses/LabelListWithoutPagination"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -13769,7 +13962,6 @@
               "enum": [
                 "issue",
                 "pull",
-                "commit",
                 "repository"
               ],
               "type": "string"
@@ -13871,7 +14063,7 @@
         ],
         "responses": {
           "205": {
-            "$ref": "#/responses/NotificationThreadList"
+            "$ref": "#/responses/NotificationThreadListWithoutPagination"
           }
         }
       }
@@ -14426,7 +14618,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ChangedFileList"
+            "$ref": "#/responses/ChangedFileListWithPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -14631,7 +14823,7 @@
         ],
         "responses": {
           "201": {
-            "$ref": "#/responses/PullReviewList"
+            "$ref": "#/responses/PullReviewListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -17372,7 +17564,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/TeamList"
+            "$ref": "#/responses/TeamListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -17630,7 +17822,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/TrackedTimeList"
+            "$ref": "#/responses/TrackedTimeListWithoutPagination"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -19031,11 +19223,61 @@
         "tags": [
           "user"
         ],
-        "summary": "Get user-level runners",
+        "summary": "Get the user's runners",
         "operationId": "getUserRunners",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ActionRunnersResponse"
+            "$ref": "#/responses/ActionRunnerList"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "user"
+        ],
+        "summary": "Register a new user-level runner",
+        "operationId": "registerUserRunner",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RegisterRunnerOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/RegisterRunnerResponse"
           },
           "400": {
             "$ref": "#/responses/error"
@@ -19088,7 +19330,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Get an user's actions runner registration token",
+        "summary": "Get the user's runner registration token",
         "operationId": "userGetRunnerRegistrationToken",
         "responses": {
           "200": {
@@ -19101,24 +19343,6 @@
             "$ref": "#/responses/forbidden"
           }
         }
-      },
-      "post": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "user"
-        ],
-        "summary": "Get an user's actions runner registration token",
-        "operationId": "userCreateRunnerRegistrationToken",
-        "responses": {
-          "200": {
-            "$ref": "#/responses/RegistrationToken"
-          },
-          "401": {
-            "$ref": "#/responses/unauthorized"
-          }
-        }
       }
     },
     "/user/actions/runners/{runner_id}": {
@@ -19129,12 +19353,12 @@
         "tags": [
           "user"
         ],
-        "summary": "Get an user-level runner",
+        "summary": "Get a particular runner that belongs to the user",
         "operationId": "getUserRunner",
         "parameters": [
           {
             "type": "string",
-            "description": "id of the runner",
+            "description": "ID of the runner",
             "name": "runner_id",
             "in": "path",
             "required": true
@@ -19162,12 +19386,12 @@
         "tags": [
           "user"
         ],
-        "summary": "Delete an user-level runner",
+        "summary": "Delete a particular user-level runner",
         "operationId": "deleteUserRunner",
         "parameters": [
           {
             "type": "string",
-            "description": "id of the runner",
+            "description": "ID of the runner",
             "name": "runner_id",
             "in": "path",
             "required": true
@@ -20265,7 +20489,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/HookList"
+            "$ref": "#/responses/HookListWithoutPagination"
           },
           "401": {
             "$ref": "#/responses/unauthorized"
@@ -20627,7 +20851,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OrganizationList"
+            "$ref": "#/responses/OrganizationListWithoutPagination"
           },
           "401": {
             "$ref": "#/responses/unauthorized"
@@ -21752,7 +21976,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OrganizationList"
+            "$ref": "#/responses/OrganizationListWithoutPagination"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -21930,7 +22154,7 @@
         "tags": [
           "user"
         ],
-        "summary": "List the authenticated user's access tokens",
+        "summary": "List the specified user's access tokens",
         "operationId": "userGetTokens",
         "parameters": [
           {
@@ -21975,7 +22199,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Generate an access token for the current user",
+        "summary": "Generate an access token for the specified user",
         "operationId": "userCreateToken",
         "parameters": [
           {
@@ -22017,7 +22241,7 @@
         "tags": [
           "user"
         ],
-        "summary": "Delete an access token from current user's account",
+        "summary": "Delete an access token from the specified user's account",
         "operationId": "userDeleteAccessToken",
         "parameters": [
           {
@@ -22192,28 +22416,6 @@
         }
       },
       "x-go-package": "forgejo.org/services/context"
-    },
-    "APPersonFollowItem": {
-      "type": "object",
-      "properties": {
-        "actor_id": {
-          "type": "string",
-          "x-go-name": "ActorID"
-        },
-        "note": {
-          "type": "string",
-          "x-go-name": "Note"
-        },
-        "original_item": {
-          "type": "string",
-          "x-go-name": "OriginalItem"
-        },
-        "original_url": {
-          "type": "string",
-          "x-go-name": "OriginalURL"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
     },
     "AccessToken": {
       "type": "object",
@@ -22427,76 +22629,64 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "ActionRunner": {
-      "description": "ActionRunner represents a Runner",
+      "description": "ActionRunner represents a runner",
       "type": "object",
       "properties": {
-        "busy": {
-          "type": "boolean",
-          "x-go-name": "Busy"
-        },
-        "ephemeral": {
-          "description": "currently unused as forgejo does not support ephemeral runners, but they are defined in gh api spec",
-          "type": "boolean",
-          "x-go-name": "Ephemeral"
+        "description": {
+          "description": "Description provides optional details about this runner.",
+          "type": "string",
+          "x-go-name": "Description"
         },
         "id": {
+          "description": "ID uniquely identifies this runner.",
           "type": "integer",
           "format": "int64",
           "x-go-name": "ID"
         },
         "labels": {
+          "description": "Labels is a list of labels attached to this runner.",
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ActionRunnerLabel"
+            "type": "string"
           },
           "x-go-name": "Labels"
         },
         "name": {
+          "description": "Name of the runner; not unique.",
           "type": "string",
           "x-go-name": "Name"
+        },
+        "owner_id": {
+          "description": "OwnerID is the identifier of the user or organization this runner belongs to. O if the runner is owned by a\nrepository.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "OwnerID"
+        },
+        "repo_id": {
+          "description": "RepoID is the identifier of the repository this runner belongs to. 0 if the runner belongs to a user or\norganization.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "RepoID"
         },
         "status": {
+          "description": "Status indicates whether this runner is offline, or active, for example.",
           "type": "string",
+          "enum": [
+            "offline",
+            "idle",
+            "active"
+          ],
           "x-go-name": "Status"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
-    "ActionRunnerLabel": {
-      "description": "ActionRunnerLabel represents a Runner Label",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "ID"
         },
-        "name": {
+        "uuid": {
+          "description": "UUID uniquely identifies this runner.",
           "type": "string",
-          "x-go-name": "Name"
+          "x-go-name": "UUID"
         },
-        "type": {
+        "version": {
+          "description": "Version is the self-reported version string of Forgejo Runner.",
           "type": "string",
-          "x-go-name": "Type"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
-    "ActionRunnersResponse": {
-      "description": "ActionRunnersResponse returns Runners",
-      "type": "object",
-      "properties": {
-        "runners": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ActionRunner"
-          },
-          "x-go-name": "Entries"
-        },
-        "total_count": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "TotalCount"
+          "x-go-name": "Version"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -26005,6 +26195,11 @@
       "type": "object",
       "x-go-package": "forgejo.org/modules/forgefed"
     },
+    "ForgeOutbox": {
+      "description": "ActivityStream OrderedCollection of activities",
+      "type": "object",
+      "x-go-package": "forgejo.org/modules/forgefed"
+    },
     "GPGKey": {
       "description": "GPGKey a user GPG key to sign commit and tag in repository",
       "type": "object",
@@ -28592,6 +28787,46 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "RegisterRunnerOptions": {
+      "type": "object",
+      "title": "RegisterRunnerOptions declares the accepted options for registering runners.",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "description": {
+          "description": "Description of the runner to register.",
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "name": {
+          "description": "Name of the runner to register. The name of the runner does not have to be unique.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "RegisterRunnerResponse": {
+      "type": "object",
+      "title": "RegisterRunnerResponse contains the details of the just registered runner.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "token": {
+          "type": "string",
+          "x-go-name": "Token"
+        },
+        "uuid": {
+          "type": "string",
+          "x-go-name": "UUID"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "RegistrationToken": {
       "description": "RegistrationToken is a string used to register a runner with a server",
       "type": "object",
@@ -30202,11 +30437,18 @@
       }
     },
     "AccessTokenList": {
-      "description": "AccessTokenList represents a list of API access token.",
+      "description": "AccessTokenList",
       "schema": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/AccessToken"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of access tokens"
         }
       }
     },
@@ -30223,15 +30465,29 @@
       }
     },
     "ActionRunner": {
-      "description": "ActionRunner represents a Runner",
+      "description": "ActionRunner represents a runner",
       "schema": {
         "$ref": "#/definitions/ActionRunner"
       }
     },
-    "ActionRunnersResponse": {
-      "description": "ActionRunnersResponse returns Runners",
+    "ActionRunnerList": {
+      "description": "ActionRunnerList is a list of Forgejo Action runners",
       "schema": {
-        "$ref": "#/definitions/ActionRunnersResponse"
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/ActionRunner"
+        }
+      },
+      "headers": {
+        "Link": {
+          "type": "string",
+          "description": "Links to other pages, if any"
+        },
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Total number of runners matching the search criteria (excluding page and limit)"
+        }
       }
     },
     "ActionVariable": {
@@ -30246,6 +30502,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Activity"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of activity feeds"
         }
       }
     },
@@ -30298,6 +30561,13 @@
         "items": {
           "$ref": "#/definitions/Branch"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of branches"
+        }
       }
     },
     "BranchProtection": {
@@ -30324,6 +30594,22 @@
         }
       },
       "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of changed files"
+        }
+      }
+    },
+    "ChangedFileListWithPagination": {
+      "description": "ChangedFileListWithPagination",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/ChangedFile"
+        }
+      },
+      "headers": {
         "X-HasMore": {
           "type": "boolean",
           "description": "True if there is another page"
@@ -30342,11 +30628,6 @@
           "type": "integer",
           "format": "int64",
           "description": "Commits per page"
-        },
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total commit count"
         }
       }
     },
@@ -30369,6 +30650,22 @@
         "items": {
           "$ref": "#/definitions/Comment"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of comments"
+        }
+      }
+    },
+    "CommentListWithoutPagination": {
+      "description": "CommentListWithoutPagination - Comments without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Comment"
+        }
       }
     },
     "Commit": {
@@ -30384,32 +30681,6 @@
         "items": {
           "$ref": "#/definitions/Commit"
         }
-      },
-      "headers": {
-        "X-HasMore": {
-          "type": "boolean",
-          "description": "True if there is another page"
-        },
-        "X-Page": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The current page"
-        },
-        "X-PageCount": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total number of pages"
-        },
-        "X-PerPage": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Commits per page"
-        },
-        "X-Total": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Total commit count"
-        }
       }
     },
     "CommitStatus": {
@@ -30420,6 +30691,22 @@
     },
     "CommitStatusList": {
       "description": "CommitStatusList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/CommitStatus"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of commit statuses"
+        }
+      }
+    },
+    "CommitStatusListWithoutPagination": {
+      "description": "CommitStatusListWithoutPagination - Commit statuses without pagination headers",
       "schema": {
         "type": "array",
         "items": {
@@ -30455,6 +30742,13 @@
         "items": {
           "$ref": "#/definitions/Cron"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of cron jobs"
+        }
       }
     },
     "DeployKey": {
@@ -30469,6 +30763,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/DeployKey"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of deploy keys"
         }
       }
     },
@@ -30641,6 +30942,22 @@
         "items": {
           "$ref": "#/definitions/Hook"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of hooks"
+        }
+      }
+    },
+    "HookListWithoutPagination": {
+      "description": "HookListWithoutPagination - Hooks without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Hook"
+        }
       }
     },
     "Issue": {
@@ -30657,6 +30974,15 @@
     },
     "IssueList": {
       "description": "IssueList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Issue"
+        }
+      }
+    },
+    "IssueListWithoutPagination": {
+      "description": "IssueListWithoutPagination - Issues without pagination headers (used for pinned issues, dependencies, etc.)",
       "schema": {
         "type": "array",
         "items": {
@@ -30681,6 +31007,22 @@
     },
     "LabelList": {
       "description": "LabelList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Label"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of labels"
+        }
+      }
+    },
+    "LabelListWithoutPagination": {
+      "description": "LabelListWithoutPagination - Labels for a specific issue (no pagination headers)",
       "schema": {
         "type": "array",
         "items": {
@@ -30756,6 +31098,13 @@
         "items": {
           "$ref": "#/definitions/Milestone"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of milestones"
+        }
       }
     },
     "NodeInfo": {
@@ -30789,6 +31138,22 @@
         "items": {
           "$ref": "#/definitions/NotificationThread"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of notification threads"
+        }
+      }
+    },
+    "NotificationThreadListWithoutPagination": {
+      "description": "NotificationThreadListWithoutPagination - Notification threads without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/NotificationThread"
+        }
       }
     },
     "OAuth2Application": {
@@ -30798,11 +31163,18 @@
       }
     },
     "OAuth2ApplicationList": {
-      "description": "OAuth2ApplicationList represents a list of OAuth2 applications.",
+      "description": "OAuth2ApplicationList",
       "schema": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/OAuth2Application"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of OAuth2 applications"
         }
       }
     },
@@ -30819,12 +31191,34 @@
         "items": {
           "$ref": "#/definitions/Organization"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of organizations"
+        }
+      }
+    },
+    "OrganizationListWithoutPagination": {
+      "description": "OrganizationListWithoutPagination - Organizations without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Organization"
+        }
       }
     },
     "OrganizationPermissions": {
       "description": "OrganizationPermissions",
       "schema": {
         "$ref": "#/definitions/OrganizationPermissions"
+      }
+    },
+    "Outbox": {
+      "description": "Outbox",
+      "schema": {
+        "$ref": "#/definitions/ForgeOutbox"
       }
     },
     "Package": {
@@ -30849,14 +31243,12 @@
         "items": {
           "$ref": "#/definitions/Package"
         }
-      }
-    },
-    "PersonFeed": {
-      "description": "Personfeed",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/APPersonFollowItem"
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of packages"
         }
       }
     },
@@ -30918,6 +31310,22 @@
         "items": {
           "$ref": "#/definitions/PullReview"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of pull reviews"
+        }
+      }
+    },
+    "PullReviewListWithoutPagination": {
+      "description": "PullReviewListWithoutPagination - Review requests without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/PullReview"
+        }
       }
     },
     "PushMirror": {
@@ -30932,6 +31340,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/PushMirror"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of push mirrors"
         }
       }
     },
@@ -30999,6 +31414,22 @@
         "items": {
           "$ref": "#/definitions/Reaction"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of reactions"
+        }
+      }
+    },
+    "ReactionListWithoutPagination": {
+      "description": "ReactionListWithoutPagination - Reactions for a specific comment (no pagination headers)",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Reaction"
+        }
       }
     },
     "Reference": {
@@ -31014,6 +31445,12 @@
         "items": {
           "$ref": "#/definitions/Reference"
         }
+      }
+    },
+    "RegisterRunnerResponse": {
+      "description": "RegisterRunnerResponse contains the details of the just registered runner.",
+      "schema": {
+        "$ref": "#/definitions/RegisterRunnerResponse"
       }
     },
     "RegistrationToken": {
@@ -31034,6 +31471,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Release"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of releases"
         }
       }
     },
@@ -31074,6 +31518,22 @@
         "items": {
           "$ref": "#/definitions/Repository"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of repositories"
+        }
+      }
+    },
+    "RepositoryListWithoutPagination": {
+      "description": "RepositoryListWithoutPagination - Repositories without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Repository"
+        }
       }
     },
     "RunJobList": {
@@ -31104,6 +31564,13 @@
         "items": {
           "$ref": "#/definitions/Secret"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of secrets"
+        }
       }
     },
     "ServerVersion": {
@@ -31124,6 +31591,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/StopWatch"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of stop watches"
         }
       }
     },
@@ -31154,6 +31628,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Tag"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of tags"
         }
       }
     },
@@ -31191,6 +31672,22 @@
         "items": {
           "$ref": "#/definitions/Team"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of teams"
+        }
+      }
+    },
+    "TeamListWithoutPagination": {
+      "description": "TeamListWithoutPagination - Teams without pagination headers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Team"
+        }
       }
     },
     "TimelineList": {
@@ -31199,6 +31696,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/TimelineComment"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of timeline comments"
         }
       }
     },
@@ -31225,6 +31729,22 @@
     },
     "TrackedTimeList": {
       "description": "TrackedTimeList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/TrackedTime"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of tracked times"
+        }
+      }
+    },
+    "TrackedTimeListWithoutPagination": {
+      "description": "TrackedTimeListWithoutPagination - Tracked times for a specific user (no pagination headers)",
       "schema": {
         "type": "array",
         "items": {
@@ -31269,6 +31789,13 @@
         "items": {
           "$ref": "#/definitions/ActionVariable"
         }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of variables"
+        }
       }
     },
     "WatchInfo": {
@@ -31281,6 +31808,13 @@
       "description": "WikiCommitList",
       "schema": {
         "$ref": "#/definitions/WikiCommitList"
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of wiki commits"
+        }
       }
     },
     "WikiPage": {
@@ -31295,6 +31829,13 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/WikiPageMetaData"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of wiki pages"
         }
       }
     },
@@ -31340,7 +31881,7 @@
     "parameterBodies": {
       "description": "parameterBodies",
       "schema": {
-        "$ref": "#/definitions/UpdateGistFilesOption"
+        "$ref": "#/definitions/RegisterRunnerOptions"
       }
     },
     "quotaExceeded": {

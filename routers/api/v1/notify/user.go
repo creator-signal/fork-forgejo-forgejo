@@ -42,7 +42,7 @@ func ListNotifications(ctx *context.APIContext) {
 	//   collectionFormat: multi
 	//   items:
 	//     type: string
-	//     enum: [issue,pull,commit,repository]
+	//     enum: [issue,pull,repository]
 	// - name: since
 	//   in: query
 	//   description: Only show notifications updated after the given time. This is a timestamp in RFC 3339 format
@@ -126,7 +126,7 @@ func ReadNotifications(ctx *context.APIContext) {
 	//   required: false
 	// responses:
 	//   "205":
-	//     "$ref": "#/responses/NotificationThreadList"
+	//     "$ref": "#/responses/NotificationThreadListWithoutPagination"
 
 	lastRead := int64(0)
 	qLastRead := ctx.FormTrim("last_read_at")

@@ -275,7 +275,6 @@ func SearchIssues(ctx *context.APIContext) {
 			PageSize: limit,
 			Page:     ctx.FormInt("page"),
 		},
-		Keyword:             keyword,
 		RepoIDs:             repoIDs,
 		AllPublic:           allPublic,
 		IsPull:              isPull,
@@ -283,6 +282,11 @@ func SearchIssues(ctx *context.APIContext) {
 		IncludedAnyLabelIDs: includedAnyLabels,
 		MilestoneIDs:        includedMilestones,
 		SortBy:              issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
+	}
+
+	if err := searchOpt.WithKeyword(ctx, keyword); err != nil {
+		ctx.Error(http.StatusInternalServerError, "WithKeyword", err)
+		return
 	}
 
 	if since != 0 {
@@ -443,6 +447,14 @@ func ListIssues(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "GetLabelIDsInRepoByNames", err)
 			return
 		}
+		if ctx.Repo.Owner.IsOrganization() {
+			orgLabelIDs, err := issues_model.GetLabelIDsInOrgByNames(ctx, ctx.Repo.Owner.ID, split)
+			if err != nil {
+				ctx.Error(http.StatusInternalServerError, "GetLabelIDsInOrgByNames", err)
+				return
+			}
+			labelIDs = append(labelIDs, orgLabelIDs...)
+		}
 	}
 
 	var mileIDs []int64
@@ -519,11 +531,14 @@ func ListIssues(ctx *context.APIContext) {
 
 	searchOpt := &issue_indexer.SearchOptions{
 		Paginator: &listOptions,
-		Keyword:   keyword,
 		RepoIDs:   []int64{ctx.Repo.Repository.ID},
 		IsPull:    isPull,
 		IsClosed:  isClosed,
 		SortBy:    issue_indexer.ParseSortBy(ctx.FormString("sort"), issue_indexer.SortByCreatedDesc),
+	}
+	if err := searchOpt.WithKeyword(ctx, keyword); err != nil {
+		ctx.Error(http.StatusInternalServerError, "WithKeyword", err)
+		return
 	}
 	if since != 0 {
 		searchOpt.UpdatedAfterUnix = optional.Some(since)

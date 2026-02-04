@@ -17,7 +17,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"xorm.io/builder"
 )
@@ -321,11 +321,11 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 }
 
 func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask, bool, error) {
-	ctx, commiter, err := db.TxContext(ctx)
+	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return nil, false, err
 	}
-	defer commiter.Close()
+	defer committer.Close()
 
 	e := db.GetEngine(ctx)
 
@@ -414,11 +414,51 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 
 	task.Job = job
 
-	if err := commiter.Commit(); err != nil {
+	if err := committer.Commit(); err != nil {
 		return nil, false, err
 	}
 
 	return task, true, nil
+}
+
+// Placeholder tasks are created when the status/content of an [ActionRunJob] is resolved by Forgejo without dispatch to
+// a runner, specifically in the case of a workflow call's outer job. It is the responsibility of the caller to
+// increment the job's Attempt field before invoking this method, and to update that field in the database, so that
+// reruns can function for placeholder tasks and provide updated outputs.
+func CreatePlaceholderTask(ctx context.Context, job *ActionRunJob, outputs map[string]string) (*ActionTask, error) {
+	actionTask := &ActionTask{
+		JobID:             job.ID,
+		Attempt:           job.Attempt,
+		Started:           timeutil.TimeStampNow(),
+		Stopped:           timeutil.TimeStampNow(),
+		Status:            job.Status,
+		RepoID:            job.RepoID,
+		OwnerID:           job.OwnerID,
+		CommitSHA:         job.CommitSHA,
+		IsForkPullRequest: job.IsForkPullRequest,
+	}
+	// token isn't used on a placeholder task, but generation is needed due to the unique constraint on field TokenHash
+	actionTask.GenerateToken()
+
+	err := db.WithTx(ctx, func(ctx context.Context) error {
+		_, err := db.GetEngine(ctx).Insert(actionTask)
+		if err != nil {
+			return fmt.Errorf("failure inserting action_task: %w", err)
+		}
+
+		for key, value := range outputs {
+			err := InsertTaskOutputIfNotExist(ctx, actionTask.ID, key, value)
+			if err != nil {
+				return fmt.Errorf("failure inserting action_task_output %q: %w", key, err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return actionTask, nil
 }
 
 func UpdateTask(ctx context.Context, task *ActionTask, cols ...string) error {

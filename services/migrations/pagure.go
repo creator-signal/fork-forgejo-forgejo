@@ -178,13 +178,20 @@ func processDate(dateStr *string) time.Time {
 		return date
 	}
 
+	// Try parsing as Unix timestamp first
 	unix, err := strconv.Atoi(*dateStr)
-	if err != nil {
-		log.Error("Error:", err)
+	if err == nil {
+		date = time.Unix(int64(unix), 0)
 		return date
 	}
 
-	date = time.Unix(int64(unix), 0)
+	// Try parsing as YYYY-MM-DD format
+	parsedDate, err := time.Parse("2006-01-02", *dateStr)
+	if err == nil {
+		return parsedDate
+	}
+
+	log.Error("Error parsing date '%s': %v", *dateStr, err)
 	return date
 }
 
@@ -334,11 +341,15 @@ func (d *PagureDownloader) GetMilestones() ([]*base.Milestone, error) {
 			state = "open"
 		}
 
-		deadline := processDate(details.Date)
+		var deadline *time.Time
+		if details.Date != nil && *details.Date != "" {
+			parsedDeadline := processDate(details.Date)
+			deadline = &parsedDeadline
+		}
 		milestones = append(milestones, &base.Milestone{
 			Title:       name,
 			Description: "",
-			Deadline:    &deadline,
+			Deadline:    deadline,
 			State:       state,
 		})
 	}

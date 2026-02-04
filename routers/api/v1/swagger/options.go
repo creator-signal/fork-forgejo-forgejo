@@ -245,4 +245,7 @@ type swaggerParameterBodies struct {
 
 	// in:body
 	UpdateSnippetFilesOption api.UpdateSnippetFilesOption
+
+	// in:body
+	RegisterRunnerOptions api.RegisterRunnerOptions
 }

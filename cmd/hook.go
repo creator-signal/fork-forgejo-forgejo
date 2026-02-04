@@ -253,7 +253,7 @@ Forgejo or set your environment appropriately.`, "")
 			continue
 		}
 
-		fields := bytes.Fields(scanner.Bytes())
+		fields := bytes.Split(scanner.Bytes(), []byte(" "))
 		if len(fields) != 3 {
 			continue
 		}
@@ -385,7 +385,7 @@ Forgejo or set your environment appropriately.`, "")
 			continue
 		}
 
-		fields := bytes.Fields(scanner.Bytes())
+		fields := bytes.Split(scanner.Bytes(), []byte(" "))
 		if len(fields) != 3 {
 			continue
 		}
@@ -468,10 +468,17 @@ func hookPrintResults(results []private.HookPostReceiveBranchResult) {
 		fmt.Fprintln(os.Stderr, "")
 		if res.Create {
 			fmt.Fprintf(os.Stderr, "Create a new pull request for '%s':\n", res.Branch)
-			fmt.Fprintf(os.Stderr, "  %s\n", res.URL)
-		} else {
-			fmt.Fprint(os.Stderr, "Visit the existing pull request:\n")
-			fmt.Fprintf(os.Stderr, "  %s\n", res.URL)
+			fmt.Fprintf(os.Stderr, "  %s\n", res.CreateURL)
+		}
+		if len(res.PullURLS) != 0 {
+			if len(res.PullURLS) >= 2 {
+				fmt.Fprint(os.Stderr, "Visit the existing pull requests:\n")
+			} else {
+				fmt.Fprint(os.Stderr, "Visit the existing pull request:\n")
+			}
+			for _, url := range res.PullURLS {
+				fmt.Fprintf(os.Stderr, "  %s\n", url)
+			}
 		}
 		fmt.Fprintln(os.Stderr, "")
 		_ = os.Stderr.Sync()
@@ -577,7 +584,7 @@ Forgejo or set your environment appropriately.`, "")
 	hookOptions.RefFullNames = make([]git.RefName, 0, hookBatchSize)
 
 	for {
-		// note: pktLineTypeUnknow means pktLineTypeFlush and pktLineTypeData all allowed
+		// note: pktLineTypeUnknown means pktLineTypeFlush and pktLineTypeData all allowed
 		rs, err = readPktLine(ctx, reader, pktLineTypeUnknown)
 		if err != nil {
 			return err

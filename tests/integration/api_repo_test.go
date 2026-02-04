@@ -52,7 +52,7 @@ func TestAPIUserReposWithWrongToken(t *testing.T) {
 		AddTokenAuth(wrongToken)
 	resp := MakeRequest(t, req, http.StatusUnauthorized)
 
-	assert.Contains(t, resp.Body.String(), "user does not exist")
+	assert.Contains(t, resp.Body.String(), "access token does not exist")
 }
 
 func TestAPISearchRepo(t *testing.T) {
@@ -96,9 +96,9 @@ func TestAPISearchRepo(t *testing.T) {
 	}{
 		{
 			name: "RepositoriesMax50", requestURL: "/api/v1/repos/search?limit=50&private=false", expectedResults: expectedResults{
-				nil:   {count: 37},
-				user:  {count: 37},
-				user2: {count: 37},
+				nil:   {count: 38},
+				user:  {count: 38},
+				user2: {count: 38},
 			},
 		},
 		{
@@ -287,6 +287,39 @@ func TestAPIViewRepo(t *testing.T) {
 	assert.EqualValues(t, 4, repo.ID)
 	assert.Equal(t, "repo4", repo.Name)
 	assert.Equal(t, 1, repo.Stars)
+}
+
+// Validate that private information on the user profile isn't exposed by way of being an owner of a public repository.
+func TestAPIViewRepoOwnerSettings(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	var repo api.Repository
+
+	req := NewRequest(t, "GET", "/api/v1/repos/user2/repo1")
+	resp := MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &repo)
+	assert.EqualValues(t, 1, repo.ID)
+	assert.Equal(t, "user2@noreply.example.org", repo.Owner.Email) // unauthed, always private
+	assert.Empty(t, repo.Owner.Pronouns)                           // user2.keep_pronouns_private = true
+
+	session := loginUser(t, "user2")
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+	req = NewRequest(t, "GET", "/api/v1/repos/user2/repo1").AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &repo)
+	assert.Equal(t, "user2@noreply.example.org", repo.Owner.Email) // user2.keep_email_private = true
+	assert.Equal(t, "he/him", repo.Owner.Pronouns)                 // user2.keep_pronouns_private = true
+
+	req = NewRequest(t, "GET", "/api/v1/repos/user12/repo10")
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &repo)
+	assert.EqualValues(t, 10, repo.ID)
+	assert.Equal(t, "user12@noreply.example.org", repo.Owner.Email) // unauthed, always private
+
+	req = NewRequest(t, "GET", "/api/v1/repos/user12/repo10").AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &repo)
+	assert.Equal(t, "user12@example.com", repo.Owner.Email) // user2.keep_email_private = false
 }
 
 func TestAPIOrgRepos(t *testing.T) {

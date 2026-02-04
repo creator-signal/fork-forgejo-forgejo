@@ -30,7 +30,7 @@ import (
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
-	issue_model "forgejo.org/models/issues"
+	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
@@ -56,7 +56,7 @@ import (
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 
-	"code.forgejo.org/forgejo/runner/v11/act/model"
+	"code.forgejo.org/forgejo/runner/v12/act/model"
 
 	_ "golang.org/x/image/bmp"  // for processing bmp images
 	_ "golang.org/x/image/webp" // for processing webp images
@@ -440,10 +440,14 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		}
 	} else if slices.Contains([]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS", ".forgejo/CODEOWNERS"}, ctx.Repo.TreePath) {
 		if rc, size, err := blob.NewTruncatedReader(setting.UI.MaxDisplayFileSize); err == nil {
-			_, warnings := issue_model.GetCodeOwnersFromReader(ctx, rc, size > setting.UI.MaxDisplayFileSize)
+			_, warnings := issues_model.GetCodeOwnersFromReader(ctx, rc, size > setting.UI.MaxDisplayFileSize)
 			if len(warnings) > 0 {
 				ctx.Data["FileWarning"] = strings.Join(warnings, "\n")
 			}
+		}
+	} else if ctx.Repo.TreePath == ".gitmodules" {
+		if fInfo.fileSize > git.MaxGitmodulesFileSize {
+			ctx.Data["FileWarning"] = ctx.Locale.Tr("repo.view.gitmodules_too_large")
 		}
 	}
 
@@ -601,7 +605,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["EscapeStatus"] = status
 			ctx.Data["FileContent"] = fileContent
 			ctx.Data["LineEscapeStatus"] = statuses
-			ctx.Data["IsCitationFile"] = isCitationFile(entry)
+			ctx.Data["IsCitationFile"] = base.IsCitationFile(entry)
 		}
 		if !fInfo.isLFSFile {
 			if ctx.Repo.CanEnableEditor(ctx, ctx.Doer) {
@@ -779,10 +783,6 @@ func checkHomeCodeViewable(ctx *context.Context) {
 	ctx.NotFound("Home", errors.New(ctx.Locale.TrString("units.error.no_unit_allowed_repo")))
 }
 
-func isCitationFile(entry *git.TreeEntry) bool {
-	return entry.Name() == "CITATION.cff" || entry.Name() == "CITATION.bib"
-}
-
 func checkCitationFile(ctx *context.Context, entry *git.TreeEntry) {
 	if entry.Name() != "" {
 		return
@@ -798,7 +798,7 @@ func checkCitationFile(ctx *context.Context, entry *git.TreeEntry) {
 		return
 	}
 	for _, entry := range allEntries {
-		if isCitationFile(entry) {
+		if base.IsCitationFile(entry) {
 			ctx.Data["CitationFile"] = entry.Name()
 			break
 		}

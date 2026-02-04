@@ -23,7 +23,7 @@ import (
 	"forgejo.org/modules/util"
 	webhook_module "forgejo.org/modules/webhook"
 
-	"code.forgejo.org/forgejo/runner/v11/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"xorm.io/builder"
 )
 
@@ -41,24 +41,25 @@ const (
 
 // ActionRun represents a run of a workflow file
 type ActionRun struct {
-	ID            int64
-	Title         string
-	RepoID        int64                  `xorm:"index unique(repo_index) index(concurrency)"`
-	Repo          *repo_model.Repository `xorm:"-"`
-	OwnerID       int64                  `xorm:"index"`
-	WorkflowID    string                 `xorm:"index"`                    // the name of workflow file
-	Index         int64                  `xorm:"index unique(repo_index)"` // a unique number for each run of a repository
-	TriggerUserID int64                  `xorm:"index"`
-	TriggerUser   *user_model.User       `xorm:"-"`
-	ScheduleID    int64
-	Ref           string `xorm:"index"` // the commit/tag/… that caused the run
-	IsRefDeleted  bool   `xorm:"-"`
-	CommitSHA     string
-	Event         webhook_module.HookEventType // the webhook event that causes the workflow to run
-	EventPayload  string                       `xorm:"LONGTEXT"`
-	TriggerEvent  string                       // the trigger event defined in the `on` configuration of the triggered workflow
-	Status        Status                       `xorm:"index"`
-	Version       int                          `xorm:"version default 0"` // Status could be updated concomitantly, so an optimistic lock is needed
+	ID                int64
+	Title             string
+	RepoID            int64                  `xorm:"index unique(repo_index) index(concurrency)"`
+	Repo              *repo_model.Repository `xorm:"-"`
+	OwnerID           int64                  `xorm:"index"`
+	WorkflowID        string                 `xorm:"index"`                                 // the name of workflow file
+	WorkflowDirectory string                 `xorm:"NOT NULL DEFAULT '.forgejo/workflows'"` // directory where the workflow file resides, for example, .forgejo/workflows
+	Index             int64                  `xorm:"index unique(repo_index)"`              // a unique number for each run of a repository
+	TriggerUserID     int64                  `xorm:"index"`
+	TriggerUser       *user_model.User       `xorm:"-"`
+	ScheduleID        int64
+	Ref               string `xorm:"index"` // the commit/tag/… that caused the run
+	IsRefDeleted      bool   `xorm:"-"`
+	CommitSHA         string
+	Event             webhook_module.HookEventType // the webhook event that causes the workflow to run
+	EventPayload      string                       `xorm:"LONGTEXT"`
+	TriggerEvent      string                       // the trigger event defined in the `on` configuration of the triggered workflow
+	Status            Status                       `xorm:"index"`
+	Version           int                          `xorm:"version default 0"` // Status could be updated concomitantly, so an optimistic lock is needed
 	// Started and Stopped is used for recording last run time, if rerun happened, they will be reset to 0
 	Started timeutil.TimeStamp
 	Stopped timeutil.TimeStamp
@@ -78,7 +79,10 @@ type ActionRun struct {
 	ConcurrencyGroup string `xorm:"'concurrency_group' index(concurrency)"`
 	ConcurrencyType  ConcurrencyMode
 
-	PreExecutionError string `xorm:"LONGTEXT"` // used to report errors that blocked execution of a workflow
+	// used to report errors that blocked execution of a workflow
+	PreExecutionError        string `xorm:"LONGTEXT"` // deprecated: replaced with PreExecutionErrorCode and PreExecutionErrorDetails for better i18n
+	PreExecutionErrorCode    PreExecutionError
+	PreExecutionErrorDetails []any `xorm:"JSON LONGTEXT"`
 }
 
 func init() {
@@ -204,6 +208,30 @@ func (run *ActionRun) SetDefaultConcurrencyGroup() {
 	))
 }
 
+func (run *ActionRun) FindOuterWorkflowCall(ctx context.Context, innerCall *ActionRunJob) (*ActionRunJob, error) {
+	allJobs, err := GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failure to get run jobs: %w", err)
+	}
+	if innerCall.workflowPayloadDecoded == nil || innerCall.workflowPayloadDecoded.Metadata.WorkflowCallParent == "" {
+		return nil, errors.New("invalid state for FindOuterWorkflowCall")
+	}
+	parent := innerCall.workflowPayloadDecoded.Metadata.WorkflowCallParent
+	for _, job := range allJobs {
+		if job.ID == innerCall.ID {
+			continue
+		}
+		swf, err := job.DecodeWorkflowPayload()
+		if err != nil {
+			return nil, err
+		}
+		if swf.Metadata.WorkflowCallID == parent {
+			return job, nil
+		}
+	}
+	return nil, fmt.Errorf("no workflow call with ID %s found in run %d", parent, run.ID)
+}
+
 func actionsCountOpenCacheKey(repoID int64) string {
 	return fmt.Sprintf("Actions:CountOpenActionRuns:%d", repoID)
 }
@@ -286,11 +314,11 @@ func GetRunsNotDoneByRepoIDAndPullRequestID(ctx context.Context, repoID, pullReq
 // The title will be cut off at 255 characters if it's longer than 255 characters.
 // We don't have to send the ActionRunNowDone notification here because there are no runs that start in a not done status.
 func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWorkflow) error {
-	ctx, commiter, err := db.TxContext(ctx)
+	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer commiter.Close()
+	defer committer.Close()
 
 	index, err := db.GetNextResourceIndex(ctx, "action_run_index", run.RepoID)
 	if err != nil {
@@ -313,6 +341,15 @@ func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWork
 
 	clearRepoRunCountCache(ctx, run.Repo)
 
+	if err := InsertRunJobs(ctx, run, jobs); err != nil {
+		return err
+	}
+
+	return committer.Commit()
+}
+
+// Adds `ActionRunJob` instances from `SingleWorkflows` to an existing ActionRun.
+func InsertRunJobs(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWorkflow) error {
 	runJobs := make([]*ActionRunJob, 0, len(jobs))
 	var hasWaiting bool
 	for _, v := range jobs {
@@ -329,7 +366,7 @@ func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWork
 			}
 			payload, _ = v.Marshal()
 
-			if len(needs) > 0 || run.NeedApproval {
+			if len(needs) > 0 || run.NeedApproval || v.IncompleteMatrix || v.IncompleteRunsOn || v.IncompleteWith {
 				status = StatusBlocked
 			} else {
 				status = StatusWaiting
@@ -352,6 +389,7 @@ func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWork
 			Status:            status,
 		})
 	}
+
 	if len(runJobs) > 0 {
 		if err := db.Insert(ctx, runJobs); err != nil {
 			return err
@@ -365,7 +403,7 @@ func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWork
 		}
 	}
 
-	return commiter.Commit()
+	return nil
 }
 
 func GetLatestRun(ctx context.Context, repoID int64) (*ActionRun, error) {
@@ -441,6 +479,10 @@ func GetRunByIndex(ctx context.Context, repoID, index int64) (*ActionRun, error)
 	return run, nil
 }
 
+// Error returned when ActionRun's optimistic concurrency control has indicated that the record has been updated in the
+// database by another session since it was loaded in-memory in this session.
+var ErrActionRunOutOfDate = errors.New("run has changed")
+
 // UpdateRun updates a run.
 // It requires the inputted run has Version set.
 // It will return error if the version is not matched (it means the run has been changed after loaded).
@@ -457,8 +499,9 @@ func UpdateRunWithoutNotification(ctx context.Context, run *ActionRun, cols ...s
 		return err
 	}
 	if affected == 0 {
-		return errors.New("run has changed")
-		// It's impossible that the run is not found, since Gitea never deletes runs.
+		// UPDATE has no conditions on it, and we never delete runs, so the only possible cause of this is
+		// `xorm:"version"` tagged field indicated that the version has changed since the record was loaded.
+		return ErrActionRunOutOfDate
 	}
 
 	if run.Status != 0 || slices.Contains(cols, "status") {
@@ -479,6 +522,37 @@ func UpdateRunWithoutNotification(ctx context.Context, run *ActionRun, cols ...s
 	}
 
 	return nil
+}
+
+// Compute the Status, Started, and Stopped fields of an ActionRun based upon the current job state within the run.
+// Returned is the [ActionRun] with modifications if necessary, a slice of column names that have been updated, or an
+// error if the calculation failed. The caller is responsible for then invoking [actions_service.UpdateRun] for an
+// update with notifications, or [actions_model.UpdateRunWithoutNotification] if notifications are already handled.
+func ComputeRunStatus(ctx context.Context, runID int64) (run *ActionRun, columns []string, err error) {
+	run, err = GetRunByID(ctx, runID)
+	if err != nil {
+		return nil, nil, err
+	}
+	jobs, err := GetRunJobsByRunID(ctx, runID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newStatus := AggregateJobStatus(jobs)
+	if run.Status != newStatus {
+		run.Status = newStatus
+		columns = append(columns, "status")
+	}
+	if run.Started.IsZero() && run.Status.IsRunning() {
+		run.Started = timeutil.TimeStampNow()
+		columns = append(columns, "started")
+	}
+	if run.Stopped.IsZero() && run.Status.IsDone() {
+		run.Stopped = timeutil.TimeStampNow()
+		columns = append(columns, "stopped")
+	}
+
+	return run, columns, nil
 }
 
 type ActionRunIndex db.ResourceIndex

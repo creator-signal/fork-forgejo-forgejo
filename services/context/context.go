@@ -1,5 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Copyright 2020 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors.
 // SPDX-License-Identifier: MIT
 
 package context
@@ -175,14 +176,6 @@ func Contexter() func(next http.Handler) http.Handler {
 				}
 			})
 
-			// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
-			if ctx.Req.Method == "POST" && strings.Contains(ctx.Req.Header.Get("Content-Type"), "multipart/form-data") {
-				if err := ctx.Req.ParseMultipartForm(setting.Attachment.MaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
-					ctx.ServerError("ParseMultipartForm", err)
-					return
-				}
-			}
-
 			httpcache.SetCacheControlInHeader(ctx.Resp.Header(), 0, "no-transform")
 			ctx.Resp.Header().Set(`X-Frame-Options`, setting.CORSConfig.XFrameOptions)
 
@@ -194,8 +187,6 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.Data["DisableForks"] = setting.Repository.DisableForks
 			ctx.Data["EnableActions"] = setting.Actions.Enabled
 			ctx.Data["EnableSnippets"] = setting.Snippet.Enabled
-
-			ctx.Data["ManifestData"] = setting.ManifestData
 
 			ctx.Data["UnitWikiGlobalDisabled"] = unit.TypeWiki.UnitGlobalDisabled()
 			ctx.Data["UnitIssuesGlobalDisabled"] = unit.TypeIssues.UnitGlobalDisabled()
@@ -216,7 +207,7 @@ func Contexter() func(next http.Handler) http.Handler {
 				"FUTURE": ctx.Locale.TrString("relativetime.future"),
 				"NOW":    ctx.Locale.TrString("relativetime.now"),
 			}
-			for _, key := range []string{"relativetime.1day", "relativetime.1week", "relativetime.1month", "relativetime.1year", "relativetime.2days", "relativetime.2weeks", "relativetime.2months", "relativetime.2years"} {
+			for _, key := range []string{"relativetime.1day", "relativetime.1week", "relativetime.1month", "relativetime.1year"} {
 				// These keys are used for special-casing some time words. We only add keys that are actually translated, so that we
 				// can fall back to the generic pluralized time word in the correct language if the special case is untranslated.
 				if ctx.Locale.HasKey(key) {

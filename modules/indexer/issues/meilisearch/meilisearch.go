@@ -116,7 +116,7 @@ func (b *Indexer) Delete(_ context.Context, ids ...int64) error {
 	}
 
 	for _, id := range ids {
-		_, err := b.inner.Client.Index(b.inner.VersionedIndexName()).DeleteDocument(strconv.FormatInt(id, 10))
+		_, err := b.inner.Client.Index(b.inner.VersionedIndexName()).DeleteDocument(strconv.FormatInt(id, 10), nil)
 		if err != nil {
 			return err
 		}
@@ -233,25 +233,19 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 	}
 
 	var keywords []string
-	if options.Keyword != "" {
-		tokens, err := options.Tokens()
-		if err != nil {
-			return nil, err
+	for _, token := range options.Tokens {
+		if !token.Fuzzy {
+			// to make it a phrase search, we have to quote the keyword(s)
+			// https://www.meilisearch.com/docs/reference/api/search#phrase-search
+			token.Term = doubleQuoteKeyword(token.Term)
 		}
-		for _, token := range tokens {
-			if !token.Fuzzy {
-				// to make it a phrase search, we have to quote the keyword(s)
-				// https://www.meilisearch.com/docs/reference/api/search#phrase-search
-				token.Term = doubleQuoteKeyword(token.Term)
-			}
 
-			// internal.BoolOptShould (Default, requires no modifications)
-			// internal.BoolOptMust (Not supported by meilisearch)
-			if token.Kind == internal.BoolOptNot {
-				token.Term = "-" + token.Term
-			}
-			keywords = append(keywords, token.Term)
+		// internal.BoolOptShould (Default, requires no modifications)
+		// internal.BoolOptMust (Not supported by meilisearch)
+		if token.Kind == internal.BoolOptNot {
+			token.Term = "-" + token.Term
 		}
+		keywords = append(keywords, token.Term)
 	}
 
 	searchRes, err := b.inner.Client.Index(b.inner.VersionedIndexName()).

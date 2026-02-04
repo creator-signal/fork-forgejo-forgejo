@@ -12,6 +12,7 @@ import (
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/cache"
 
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -198,5 +199,298 @@ func TestActionRun_NeedApproval(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, runs, 1)
 		assertApprovalEqual(t, runNeedApproval, runs[0])
+	})
+}
+
+func TestActionRun_IncompleteMatrix(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	pullRequestPosterID := int64(4)
+	repoID := int64(10)
+	pullRequestID := int64(2)
+	runDoesNotNeedApproval := &ActionRun{
+		RepoID:              repoID,
+		PullRequestID:       pullRequestID,
+		PullRequestPosterID: pullRequestPosterID,
+	}
+
+	workflowRaw := []byte(`
+jobs:
+  job2:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dim1: "${{ fromJSON(needs.other-job.outputs.some-output) }}"
+    steps:
+      - run: true
+`)
+	workflows, err := jobparser.Parse(workflowRaw, false, jobparser.WithJobOutputs(map[string]map[string]string{}))
+	require.NoError(t, err)
+	require.True(t, workflows[0].IncompleteMatrix) // must be set for this test scenario to be valid
+
+	require.NoError(t, InsertRun(t.Context(), runDoesNotNeedApproval, workflows))
+
+	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: runDoesNotNeedApproval.ID})
+	require.NoError(t, err)
+	require.Len(t, jobs, 1)
+	job := jobs[0]
+
+	// Expect job with an incomplete matrix to be StatusBlocked:
+	assert.Equal(t, StatusBlocked, job.Status)
+}
+
+func TestActionRun_IncompleteRunsOn(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	pullRequestPosterID := int64(4)
+	repoID := int64(10)
+	pullRequestID := int64(2)
+	runDoesNotNeedApproval := &ActionRun{
+		RepoID:              repoID,
+		PullRequestID:       pullRequestID,
+		PullRequestPosterID: pullRequestPosterID,
+	}
+
+	workflowRaw := []byte(`
+jobs:
+  job2:
+    runs-on: ${{ needs.other-job.outputs.some-output }}
+    steps:
+      - run: true
+`)
+	workflows, err := jobparser.Parse(workflowRaw, false, jobparser.WithJobOutputs(map[string]map[string]string{}), jobparser.SupportIncompleteRunsOn())
+	require.NoError(t, err)
+	require.True(t, workflows[0].IncompleteRunsOn) // must be set for this test scenario to be valid
+
+	require.NoError(t, InsertRun(t.Context(), runDoesNotNeedApproval, workflows))
+
+	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: runDoesNotNeedApproval.ID})
+	require.NoError(t, err)
+	require.Len(t, jobs, 1)
+	job := jobs[0]
+
+	// Expect job with an incomplete runs-on to be StatusBlocked:
+	assert.Equal(t, StatusBlocked, job.Status)
+}
+
+func TestActionRun_FindOuterWorkflowCall(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	pullRequestPosterID := int64(4)
+	repoID := int64(10)
+	pullRequestID := int64(2)
+	run := &ActionRun{
+		RepoID:              repoID,
+		PullRequestID:       pullRequestID,
+		PullRequestPosterID: pullRequestPosterID,
+	}
+
+	workflowRaw := []byte(`
+jobs:
+  outer-job:
+    uses: ./.forgejo/workflows/reusable.yml
+`)
+	workflows, err := jobparser.Parse(workflowRaw, false,
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+		jobparser.ExpandLocalReusableWorkflows(func(job *jobparser.Job, path string) ([]byte, error) {
+			return []byte(`
+on:
+  workflow_call:
+jobs:
+  inner-job-1:
+    runs-on: debian
+    steps: []
+  inner-job-2:
+    runs-on: debian
+    steps: []
+`), nil
+		}))
+	require.NoError(t, err)
+	require.NoError(t, InsertRun(t.Context(), run, workflows))
+
+	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: run.ID})
+	require.NoError(t, err)
+	require.Len(t, jobs, 3)
+
+	for _, j := range jobs {
+		t.Run(j.Name, func(t *testing.T) {
+			_, err := j.DecodeWorkflowPayload()
+			require.NoError(t, err)
+			outer, err := run.FindOuterWorkflowCall(t.Context(), j)
+			if j.Name == "outer-job" {
+				require.ErrorContains(t, err, "invalid state for FindOuterWorkflowCall")
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, outer)
+				assert.Equal(t, "outer-job", outer.Name)
+			}
+		})
+	}
+}
+
+func TestActionRun_IncompleteWith(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	pullRequestPosterID := int64(4)
+	repoID := int64(10)
+	pullRequestID := int64(2)
+	runDoesNotNeedApproval := &ActionRun{
+		RepoID:              repoID,
+		PullRequestID:       pullRequestID,
+		PullRequestPosterID: pullRequestPosterID,
+	}
+
+	workflowRaw := []byte(`
+jobs:
+  outer-job:
+    with:
+      some_input: ${{ needs.other-job.outputs.some-output }}
+    uses: ./.forgejo/workflows/reusable.yml
+`)
+	workflows, err := jobparser.Parse(workflowRaw, false,
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+		jobparser.ExpandLocalReusableWorkflows(func(job *jobparser.Job, path string) ([]byte, error) {
+			return []byte(`
+on:
+  workflow_call:
+    inputs:
+      some_input:
+        type: string
+jobs:
+  inner-job:
+    runs-on: debian
+    steps: []
+`), nil
+		}))
+	require.NoError(t, err)
+	require.True(t, workflows[0].IncompleteWith) // must be set for this test scenario to be valid
+
+	require.NoError(t, InsertRun(t.Context(), runDoesNotNeedApproval, workflows))
+
+	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: runDoesNotNeedApproval.ID})
+	require.NoError(t, err)
+	require.Len(t, jobs, 1)
+	job := jobs[0]
+
+	// Expect job with an incomplete with to be StatusBlocked:
+	assert.Equal(t, StatusBlocked, job.Status)
+}
+
+func TestComputeRunStatus(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("no changes", func(t *testing.T) {
+		run, columns, err := ComputeRunStatus(t.Context(), 791)
+		require.NoError(t, err)
+		assert.Equal(t, StatusSuccess, run.Status)
+		assert.NotContains(t, columns, "status")
+		assert.EqualValues(t, 1683636528, run.Started)
+		assert.NotContains(t, columns, "started")
+		assert.EqualValues(t, 1683636626, run.Stopped)
+		assert.NotContains(t, columns, "stopped")
+	})
+
+	t.Run("change status", func(t *testing.T) {
+		job := unittest.AssertExistsAndLoadBean(t, &ActionRunJob{ID: 192})
+		job.Status = StatusFailure
+		affected, err := db.GetEngine(t.Context()).Cols("status").ID(job.ID).Update(job)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		run, columns, err := ComputeRunStatus(t.Context(), 791)
+		require.NoError(t, err)
+		assert.Equal(t, StatusFailure, run.Status)
+		assert.Contains(t, columns, "status")
+		assert.NotContains(t, columns, "started")
+		assert.NotContains(t, columns, "stopped")
+	})
+
+	t.Run("won't change started if not running", func(t *testing.T) {
+		job := unittest.AssertExistsAndLoadBean(t, &ActionRunJob{ID: 192})
+		job.Status = StatusBlocked
+		affected, err := db.GetEngine(t.Context()).Cols("status").ID(job.ID).Update(job)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		preRun := unittest.AssertExistsAndLoadBean(t, &ActionRun{ID: 791})
+		preRun.Started = 0
+		affected, err = db.GetEngine(t.Context()).Cols("started").ID(preRun.ID).Update(preRun)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		run, columns, err := ComputeRunStatus(t.Context(), 791)
+		require.NoError(t, err)
+		assert.Equal(t, StatusBlocked, run.Status)
+		assert.EqualValues(t, 0, run.Started)
+		assert.Contains(t, columns, "status")
+		assert.NotContains(t, columns, "started")
+		assert.NotContains(t, columns, "stopped")
+	})
+
+	t.Run("change started", func(t *testing.T) {
+		// Need the job to be "Running" for started to appear to change
+		job := unittest.AssertExistsAndLoadBean(t, &ActionRunJob{ID: 192})
+		job.Status = StatusRunning
+		affected, err := db.GetEngine(t.Context()).Cols("status").ID(job.ID).Update(job)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		preRun := unittest.AssertExistsAndLoadBean(t, &ActionRun{ID: 791})
+		preRun.Started = 0
+		affected, err = db.GetEngine(t.Context()).Cols("started").ID(preRun.ID).Update(preRun)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		run, columns, err := ComputeRunStatus(t.Context(), 791)
+		require.NoError(t, err)
+		assert.Equal(t, StatusRunning, run.Status)
+		assert.NotEqualValues(t, 0, run.Started)
+		assert.Contains(t, columns, "status")
+		assert.Contains(t, columns, "started")
+		assert.NotContains(t, columns, "stopped")
+	})
+
+	t.Run("won't change stopped if not done", func(t *testing.T) {
+		job := unittest.AssertExistsAndLoadBean(t, &ActionRunJob{ID: 192})
+		job.Status = StatusRunning
+		affected, err := db.GetEngine(t.Context()).Cols("status").ID(job.ID).Update(job)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		preRun := unittest.AssertExistsAndLoadBean(t, &ActionRun{ID: 791})
+		preRun.Stopped = 0
+		affected, err = db.GetEngine(t.Context()).Cols("stopped").ID(preRun.ID).Update(preRun)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		run, columns, err := ComputeRunStatus(t.Context(), 791)
+		require.NoError(t, err)
+		assert.Equal(t, StatusRunning, run.Status)
+		assert.EqualValues(t, 0, run.Stopped)
+		assert.Contains(t, columns, "status")
+		assert.NotContains(t, columns, "stopped")
+	})
+
+	t.Run("change stopped", func(t *testing.T) {
+		// Need the job to be some version of Done for stopped to appear to change
+		job := unittest.AssertExistsAndLoadBean(t, &ActionRunJob{ID: 192})
+		job.Status = StatusSuccess
+		affected, err := db.GetEngine(t.Context()).Cols("status").ID(job.ID).Update(job)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		preRun := unittest.AssertExistsAndLoadBean(t, &ActionRun{ID: 791})
+		preRun.Stopped = 0
+		affected, err = db.GetEngine(t.Context()).Cols("stopped").ID(preRun.ID).Update(preRun)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		run, columns, err := ComputeRunStatus(t.Context(), 791)
+		require.NoError(t, err)
+		assert.Equal(t, StatusSuccess, run.Status)
+		assert.NotEqualValues(t, 0, run.Stopped)
+		assert.NotContains(t, columns, "status")
+		assert.NotContains(t, columns, "started")
+		assert.Contains(t, columns, "stopped")
 	})
 }

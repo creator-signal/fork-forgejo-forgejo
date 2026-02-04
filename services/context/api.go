@@ -291,14 +291,6 @@ func APIContexter() func(http.Handler) http.Handler {
 			ctx.AppendContextValue(apiContextKey, ctx)
 			ctx.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })
 
-			// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
-			if ctx.Req.Method == "POST" && strings.Contains(ctx.Req.Header.Get("Content-Type"), "multipart/form-data") {
-				if err := ctx.Req.ParseMultipartForm(setting.Attachment.MaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
-					ctx.InternalServerError(err)
-					return
-				}
-			}
-
 			httpcache.SetCacheControlInHeader(ctx.Resp.Header(), 0, "no-transform")
 			ctx.Resp.Header().Set(`X-Frame-Options`, setting.CORSConfig.XFrameOptions)
 
@@ -479,7 +471,7 @@ func (ctx *APIContext) IsUserRepoWriter(unitTypes []unit.Type) bool {
 
 // Returns true when the requests indicates that it accepts a Github response.
 // This should be used to return information in the way that the Github API
-// specifies it. Avoids breaking compatability with non-Github API clients.
+// specifies it. Avoids breaking compatibility with non-Github API clients.
 func (ctx *APIContext) AcceptsGithubResponse() bool {
 	return ctx.Req.Header.Get("Accept") == "application/vnd.github+json"
 }

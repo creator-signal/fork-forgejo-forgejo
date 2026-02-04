@@ -1,3 +1,4 @@
+---
 version: "2"
 output:
   sort-order:
@@ -12,6 +13,7 @@ linters:
     - forbidigo
     - gocritic
     - govet
+    - importas
     - ineffassign
     - nakedret
     - nolintlint
@@ -30,10 +32,6 @@ linters:
           deny:
             - pkg: encoding/json
               desc: use gitea's modules/json instead of encoding/json
-            - pkg: github.com/unknwon/com
-              desc: use gitea's util and replacements
-            - pkg: io/ioutil
-              desc: use os or io instead
             - pkg: golang.org/x/exp
               desc: it's experimental and unreliable
             - pkg: forgejo.org/modules/git/internal
@@ -49,6 +47,25 @@ linters:
     gocritic:
       disabled-checks:
         - ifElseChain
+    importas:
+      alias:
+        # Specific overrides that would violate the default rules further below.
+        - pkg: forgejo.org/models/db
+          alias: ""
+        - pkg: forgejo.org/models/organization
+          alias: org_model
+
+        - pkg: forgejo.org/services/context
+          alias: app_context
+        - pkg: forgejo.org/services/doctor
+          alias: doctor
+        - pkg: forgejo.org/services/repository
+          alias: repo_service
+
+        # Make sure that we follow a consistent naming for model and service aliases.
+        - pkg: 'forgejo.org/(model|service)s/(\w+)'
+          alias: '${2}_${1}'
+
     revive:
       severity: error
       rules:
