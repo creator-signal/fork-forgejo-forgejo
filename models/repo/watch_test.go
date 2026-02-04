@@ -29,7 +29,7 @@ func TestIsWatching(t *testing.T) {
 	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 4, 5))
 	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 5, 5))
 	watch, err := repo_model.GetWatch(db.DefaultContext, 5, 5)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, repo_model.WatchSourceExplicit, watch.Source)
 	assert.False(t, watch.WatchSelectionIssues)
 	assert.True(t, watch.WatchSelectionPullRequests)
@@ -40,7 +40,7 @@ func TestIsWatching(t *testing.T) {
 
 func TestGetSelectWatchers(t *testing.T) {
 	for idx, test := range []struct {
-		RepoId          int64
+		RepoID          int64
 		Selection       repo_model.WatchSelection
 		ExpectedUserIDs []int64
 	}{
@@ -98,7 +98,7 @@ func TestGetSelectWatchers(t *testing.T) {
 			[]int64{5},
 		},
 	} {
-		watchers, err := repo_model.GetSelectWatchers(db.DefaultContext, test.RepoId, test.Selection)
+		watchers, err := repo_model.GetSelectWatchers(db.DefaultContext, test.RepoID, test.Selection)
 		require.NoError(t, err)
 		if assert.Len(t, watchers, len(test.ExpectedUserIDs), "idx: %d", idx) {
 			for i, watcher := range watchers {
@@ -106,7 +106,7 @@ func TestGetSelectWatchers(t *testing.T) {
 			}
 		}
 
-		watcherIDs, err := repo_model.GetSelectWatcherIDs(db.DefaultContext, test.RepoId, test.Selection)
+		watcherIDs, err := repo_model.GetSelectWatcherIDs(db.DefaultContext, test.RepoID, test.Selection)
 		require.NoError(t, err)
 		assert.Equal(t, test.ExpectedUserIDs, watcherIDs, "idx: %d", idx)
 	}
