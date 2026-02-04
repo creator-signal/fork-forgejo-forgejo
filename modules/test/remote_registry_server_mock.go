@@ -81,7 +81,7 @@ func MockForgejoRegistryServer() *httptest.Server {
 			}
 		})
 
-	registryRoute.HandleFunc("/v2/{org}/{image}//blobs/{digest}",
+	registryRoute.HandleFunc("/v2/{org}/{image}/blobs/{digest}",
 		func(res http.ResponseWriter, req *http.Request) {
 			if req.Header.Get("Authorization") == "Bearer asd342adsdf34985udfng" {
 				switch req.Method {
@@ -97,17 +97,23 @@ func MockForgejoRegistryServer() *httptest.Server {
 					res.Header().Add("etag", "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")
 					res.Header().Add("docker-content-digest", "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")
 					res.Header().Add("docker-distribution-api-version", "registry/2.0")
-					res.Write([]byte(blobContent))
+					res.Write(blobContent)
 					res.WriteHeader(http.StatusOK)
 				default:
 					res.WriteHeader(http.StatusBadRequest)
 				}
 			} else {
+				res.Header().Add("docker-distribution-api-version", "registry/2.0")
+				res.Header().Add("content-type", "application/json")
+				headerVal := "Bearer realm=" +
+					"\"http://" + addr.String() + "/token\"" +
+					",service=" + "\"container_registry\"" + ",scope=" + "\"*\""
+				res.Header().Add("www-authenticate", headerVal)
 				res.WriteHeader(http.StatusUnauthorized)
 			}
 		})
 
-	registryRoute.HandleFunc("/v2/{org}/{image}//tags/list",
+	registryRoute.HandleFunc("/v2/{org}/{image}/tags/list",
 		func(res http.ResponseWriter, req *http.Request) {
 			if req.Header.Get("Authorization") != "" {
 				switch req.Method {
@@ -120,6 +126,12 @@ func MockForgejoRegistryServer() *httptest.Server {
 					res.WriteHeader(http.StatusNotFound)
 				}
 			} else {
+				res.Header().Add("docker-distribution-api-version", "registry/2.0")
+				res.Header().Add("content-type", "application/json")
+				headerVal := "Bearer realm=" +
+					"\"http://" + addr.String() + "/token\"" +
+					",service=" + "\"container_registry\"" + ",scope=" + "\"*\""
+				res.Header().Add("www-authenticate", headerVal)
 				res.WriteHeader(http.StatusUnauthorized)
 			}
 		})
