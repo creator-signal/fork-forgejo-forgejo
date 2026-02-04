@@ -15,7 +15,7 @@ import (
 func TestCheckIfDiffDiffers(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	err := InitRepository(t.Context(), tmpDir, false, Sha1ObjectFormat.Name())
+	err := InitRepository(t.Context(), tmpDir, InitRepositoryOptions{Bare: false, ObjectFormatName: Sha1ObjectFormat.Name()})
 	require.NoError(t, err)
 
 	gitRepo, err := openRepositoryWithDefaultContext(tmpDir)

@@ -64,7 +64,7 @@ func TestLineBlame(t *testing.T) {
 			t.Helper()
 			tmpDir := t.TempDir()
 
-			require.NoError(t, InitRepository(t.Context(), tmpDir, false, objectFormatName))
+			require.NoError(t, InitRepository(t.Context(), tmpDir, InitRepositoryOptions{Bare: false, ObjectFormatName: objectFormatName}))
 
 			gitRepo, err := OpenRepository(t.Context(), tmpDir)
 			require.NoError(t, err)
