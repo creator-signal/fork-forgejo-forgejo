@@ -2029,255 +2029,6 @@
         }
       }
     },
-    "/gists": {
-      "post": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "gist"
-        ],
-        "summary": "Create a Gist",
-        "operationId": "createGist",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/CreateGistOption"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "$ref": "#/responses/Gist"
-          },
-          "400": {
-            "$ref": "#/responses/error"
-          },
-          "401": {
-            "$ref": "#/responses/unauthorized"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          },
-          "422": {
-            "$ref": "#/responses/validationError"
-          }
-        }
-      }
-    },
-    "/gists/search": {
-      "get": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "gist"
-        ],
-        "summary": "Search for gists",
-        "operationId": "searchGists",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "keyword",
-            "name": "q",
-            "in": "query"
-          },
-          {
-            "type": "integer",
-            "format": "int64",
-            "description": "search only for repos that the user with the given id owns",
-            "name": "owner_id",
-            "in": "query"
-          },
-          {
-            "enum": [
-              "newest",
-              "oldest",
-              "alphabetically",
-              "reversealphabetically"
-            ],
-            "type": "string",
-            "description": "sort gists by attribute",
-            "name": "sort",
-            "in": "query"
-          },
-          {
-            "type": "integer",
-            "description": "page number of results to return (1-based)",
-            "name": "page",
-            "in": "query"
-          },
-          {
-            "type": "integer",
-            "description": "page size of results",
-            "name": "limit",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/GistList"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          }
-        }
-      }
-    },
-    "/gists/{gistuuid}": {
-      "get": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "gist"
-        ],
-        "summary": "Get a Gist",
-        "operationId": "getGist",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "uuid of the gist",
-            "name": "gistuuid",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/Gist"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          },
-          "404": {
-            "$ref": "#/responses/notFound"
-          }
-        }
-      },
-      "delete": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "gist"
-        ],
-        "summary": "Deletes a Gist",
-        "operationId": "deletGist",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "uuid of the gist",
-            "name": "gistuuid",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "204": {
-            "$ref": "#/responses/empty"
-          },
-          "401": {
-            "$ref": "#/responses/unauthorized"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          },
-          "404": {
-            "$ref": "#/responses/notFound"
-          }
-        }
-      }
-    },
-    "/gists/{gistuuid}/files": {
-      "get": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "gist"
-        ],
-        "summary": "Get files of a Gist",
-        "operationId": "getGistFiles",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "uuid of the gist",
-            "name": "gistuuid",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/GistFiles"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          },
-          "404": {
-            "$ref": "#/responses/notFound"
-          }
-        }
-      },
-      "post": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "gist"
-        ],
-        "summary": "Update files of a Gist",
-        "operationId": "updateGistFiles",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "uuid of the gist",
-            "name": "gistuuid",
-            "in": "path",
-            "required": true
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/UpdateGistFilesOption"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "$ref": "#/responses/empty"
-          },
-          "400": {
-            "$ref": "#/responses/error"
-          },
-          "401": {
-            "$ref": "#/responses/unauthorized"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          },
-          "404": {
-            "$ref": "#/responses/notFound"
-          },
-          "422": {
-            "$ref": "#/responses/validationError"
-          }
-        }
-      }
-    },
     "/gitignore/templates": {
       "get": {
         "produces": [
@@ -18574,23 +18325,6 @@
         }
       }
     },
-    "/settings/gist": {
-      "get": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "settings"
-        ],
-        "summary": "Get instance's global settings for gist",
-        "operationId": "getGistSettings",
-        "responses": {
-          "200": {
-            "$ref": "#/responses/GistSettings"
-          }
-        }
-      }
-    },
     "/settings/repository": {
       "get": {
         "produces": [
@@ -18604,6 +18338,23 @@
         "responses": {
           "200": {
             "$ref": "#/responses/GeneralRepoSettings"
+          }
+        }
+      }
+    },
+    "/settings/snippet": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "settings"
+        ],
+        "summary": "Get instance's global settings for snippet",
+        "operationId": "getSnippetSettings",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/SnippetSettings"
           }
         }
       }
@@ -18664,6 +18415,257 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/snippet/{snippet_uuid}": {
+      "delete": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "snippet"
+        ],
+        "summary": "Deletes a Snippet",
+        "operationId": "deleteSnippet",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uuid of the snippet",
+            "name": "snippet_uuid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/snippets": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "snippet"
+        ],
+        "summary": "Create a Snippet",
+        "operationId": "createSnippet",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/CreateSnippetOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/Snippet"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/snippets/search": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "snippet"
+        ],
+        "summary": "Search for snippets",
+        "operationId": "searchSnippets",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "keyword",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "search only for repos that the user with the given id owns",
+            "name": "owner_id",
+            "in": "query"
+          },
+          {
+            "enum": [
+              "newest",
+              "oldest",
+              "alphabetically",
+              "reversealphabetically"
+            ],
+            "type": "string",
+            "description": "sort snippets by attribute",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/SnippetList"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          }
+        }
+      }
+    },
+    "/snippets/{snippet_uuid}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "snippet"
+        ],
+        "summary": "Get a Snippet",
+        "operationId": "getSnippet",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uuid of the snippet",
+            "name": "snippet_uuid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Snippet"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/snippets/{snippet_uuid}/files": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "snippet"
+        ],
+        "summary": "Get files of a Snippet",
+        "operationId": "getSnippetFiles",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uuid of the snippet",
+            "name": "snippet_uuid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/SnippetFiles"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "snippet"
+        ],
+        "summary": "Update files of a Snippet",
+        "operationId": "updateSnippetFiles",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uuid of the snippet",
+            "name": "snippet_uuid",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/UpdateSnippetFilesOption"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -24061,36 +24063,6 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
-    "CreateGistOption": {
-      "type": "object",
-      "properties": {
-        "description": {
-          "type": "string",
-          "x-go-name": "Description"
-        },
-        "files": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/GistFile"
-          },
-          "x-go-name": "Files"
-        },
-        "name": {
-          "type": "string",
-          "x-go-name": "Name"
-        },
-        "visibility": {
-          "type": "string",
-          "enum": [
-            "public",
-            "hidden",
-            "private"
-          ],
-          "x-go-name": "Visibility"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
     "CreateHookOption": {
       "description": "CreateHookOption options when create a hook",
       "type": "object",
@@ -24706,6 +24678,36 @@
             "collaboratorcommitter"
           ],
           "x-go-name": "TrustModel"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "CreateSnippetOption": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SnippetFile"
+          },
+          "x-go-name": "Files"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "public",
+            "hidden",
+            "private"
+          ],
+          "x-go-name": "Visibility"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -29412,6 +29414,89 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "Snippet": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "owner": {
+          "$ref": "#/definitions/User"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Updated"
+        },
+        "uuid": {
+          "type": "string",
+          "x-go-name": "UUID"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "public",
+            "hidden",
+            "private"
+          ],
+          "x-go-name": "Visibility"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "SnippetFile": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "x-go-name": "Content"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "SnippetList": {
+      "type": "object",
+      "properties": {
+        "snippets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Snippet"
+          },
+          "x-go-name": "Snippets"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "SnippetSettings": {
+      "description": "SnippetSettings contains global Snippet settings exposed by API",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "x-go-name": "Enabled"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "StateType": {
       "description": "StateType issue state type",
       "type": "string",
@@ -29966,19 +30051,6 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
-    "UpdateGistFilesOption": {
-      "type": "object",
-      "properties": {
-        "files": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/GistFile"
-          },
-          "x-go-name": "Files"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
     "UpdateRepoAvatarOption": {
       "description": "UpdateRepoAvatarUserOption options when updating the repo avatar",
       "type": "object",
@@ -29987,6 +30059,19 @@
           "description": "image must be base64 encoded",
           "type": "string",
           "x-go-name": "Image"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "UpdateSnippetFilesOption": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SnippetFile"
+          },
+          "x-go-name": "Files"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -30851,35 +30936,8 @@
         "$ref": "#/definitions/GeneralUISettings"
       }
     },
-    "Gist": {
-      "description": "Gist",
-      "schema": {
-        "$ref": "#/definitions/Gist"
-      }
-    },
-    "GistFiles": {
-      "description": "GistFiles",
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/GistFile"
-        }
-      }
-    },
-    "GistList": {
-      "description": "GistList",
-      "schema": {
-        "$ref": "#/definitions/GistList"
-      }
-    },
-    "GistSettings": {
-      "description": "GistSettings",
-      "schema": {
-        "$ref": "#/definitions/GistSettings"
-      }
-    },
-    "GitBlobResponse": {
-      "description": "GitBlobResponse",
+    "GitBlob": {
+      "description": "GitBlob",
       "schema": {
         "$ref": "#/definitions/GitBlob"
       }
@@ -31577,6 +31635,33 @@
       "description": "ServerVersion",
       "schema": {
         "$ref": "#/definitions/ServerVersion"
+      }
+    },
+    "Snippet": {
+      "description": "Snippet",
+      "schema": {
+        "$ref": "#/definitions/Snippet"
+      }
+    },
+    "SnippetFiles": {
+      "description": "SnippetFiles",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/SnippetFile"
+        }
+      }
+    },
+    "SnippetList": {
+      "description": "SnippetList",
+      "schema": {
+        "$ref": "#/definitions/SnippetList"
+      }
+    },
+    "SnippetSettings": {
+      "description": "SnippetSettings",
+      "schema": {
+        "$ref": "#/definitions/SnippetSettings"
       }
     },
     "StopWatch": {

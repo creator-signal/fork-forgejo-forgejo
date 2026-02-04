@@ -18,7 +18,7 @@ import (
 
 // Search for Snippets
 func Search(ctx *context.APIContext) {
-	// swagger:operation GET /snippets/search snipped searchSnippets
+	// swagger:operation GET /snippets/search snippet searchSnippets
 	// ---
 	// summary: Search for snippets
 	// produces:
