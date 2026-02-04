@@ -15,6 +15,8 @@ import (
 
 	"github.com/regclient/regclient"
 	"github.com/regclient/regclient/config"
+	"github.com/regclient/regclient/types/blob"
+	"github.com/regclient/regclient/types/descriptor"
 	"github.com/regclient/regclient/types/manifest"
 	"github.com/regclient/regclient/types/ref"
 )
@@ -199,6 +201,11 @@ func (crc *RegistryClient) NewRef(namespace string) (ref.Ref, error) {
 	return r, err
 }
 
+func (crc *RegistryClient) NewImager(man manifest.Manifest) manifest.Imager {
+	img := man.(manifest.Imager)
+	return img
+}
+
 // Close cleans up resources used by the client
 func (crc *RegistryClient) Close(ctx context.Context, r ref.Ref) error {
 	// Close idle connections
@@ -207,6 +214,22 @@ func (crc *RegistryClient) Close(ctx context.Context, r ref.Ref) error {
 	}
 	err := crc.RegClient.Close(ctx, r)
 	return err
+}
+
+func (crc *RegistryClient) HeadBlob(ctx context.Context, r ref.Ref, d descriptor.Descriptor) (blob.Reader, error) {
+	reader, err := crc.RegClient.BlobHead(ctx, r, d)
+	if err != nil {
+		return nil, fmt.Errorf("failed to head blob %s: %w", r.Reference, err)
+	}
+	return reader, nil
+}
+
+func (crc *RegistryClient) GetBlob(ctx context.Context, r ref.Ref, d descriptor.Descriptor) (blob.Reader, error) {
+	reader, err := crc.RegClient.BlobGet(ctx, r, d)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get blob %s: %w", r.Reference, err)
+	}
+	return reader, nil
 }
 
 func (crc *RegistryClient) HeadManifest(ctx context.Context, r ref.Ref) (manifest.Manifest, error) {
