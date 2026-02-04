@@ -12,17 +12,17 @@ import (
 func init() {
 	registerMigration(&Migration{
 		Description: "Add granular watch settings to repos.",
-		Upgrade:     addGranularWatchColumns,
+		Upgrade:     addGranularWatchColumnsAndDropModeColumn,
 	})
 }
 
-func addGranularWatchColumns(x *xorm.Engine) error {
+func addGranularWatchColumnsAndDropModeColumn(x *xorm.Engine) error {
 	type Watch struct {
 		Source repo_model.WatchSource `xorm:"Bool DEFAULT 1"`
 		// Watch everything as it has been before when a user watches a repo.
-		GranularWatchIssues       bool `xorm:"Bool DEFAULT 1"`
-		GranularWatchPullRequests bool `xorm:"Bool DEFAULT 1"`
-		GranularWatchReleases     bool `xorm:"Bool DEFAULT 1"`
+		WatchSelectionIssues       bool `xorm:"Bool DEFAULT 1"`
+		WatchSelectionPullRequests bool `xorm:"Bool DEFAULT 1"`
+		WatchSelectionReleases     bool `xorm:"Bool DEFAULT 1"`
 	}
 	if err := x.Sync(new(Watch)); err != nil {
 		return err
@@ -64,6 +64,31 @@ func addGranularWatchColumns(x *xorm.Engine) error {
 		return err
 	}
 	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", repo_model.WatchSourceAutomatic, WatchModeAuto)
+	if err != nil {
+		return err
+	}
+
+	_, err = x.Exec("UPDATE `watch` SET watch_selection_issues = ? WHERE mode = ? OR mode = ?", false, WatchModeNone, WatchModeDont)
+	if err != nil {
+		return err
+	}
+	_, err = x.Exec("UPDATE `watch` SET watch_selection_pull_requests = ? WHERE mode = ? OR mode = ?", false, WatchModeNone, WatchModeDont)
+	if err != nil {
+		return err
+	}
+	_, err = x.Exec("UPDATE `watch` SET watch_selection_releases = ? WHERE mode = ? OR mode = ?", false, WatchModeNone, WatchModeDont)
+	if err != nil {
+		return err
+	}
+	_, err = x.Exec("UPDATE `watch` SET watch_selection_issues = ? WHERE mode = ? OR mode = ?", true, WatchModeNormal, WatchModeAuto)
+	if err != nil {
+		return err
+	}
+	_, err = x.Exec("UPDATE `watch` SET watch_selection_pull_requests = ? WHERE mode = ? OR mode = ?", true, WatchModeNormal, WatchModeAuto)
+	if err != nil {
+		return err
+	}
+	_, err = x.Exec("UPDATE `watch` SET watch_selection_releases = ? WHERE mode = ? OR mode = ?", true, WatchModeNormal, WatchModeAuto)
 	if err != nil {
 		return err
 	}
