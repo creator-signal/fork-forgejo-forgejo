@@ -4,13 +4,24 @@
 package container
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
+	container_model "forgejo.org/models/packages/container"
 	"forgejo.org/modules/log"
+	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/services/context"
 	container_service "forgejo.org/services/packages/container"
+	digest "github.com/opencontainers/go-digest"
+	"github.com/regclient/regclient/types/descriptor"
+	"github.com/regclient/regclient/types/manifest"
+)
+
+const (
+	blobServeBufferSize = 64 * 1024 // 64KB buffer
 )
 
 func GetRemoteTagList(ctx *context.Context) {
@@ -20,6 +31,170 @@ func RemoteHeadBlob(ctx *context.Context) {
 }
 
 func RemoteGetBlob(ctx *context.Context) {
+	remoteCtx, err := GetRemoteRegistryContext(ctx)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	ref := ctx.Params("digest")
+	if ref == "" {
+		apiErrorDefined(ctx, errBlobUnknown)
+		return
+	}
+
+	client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry)
+	if err != nil {
+		log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	// Blob Ref
+	r, err := client.NewRef(remoteCtx.ImageName)
+	if err != nil {
+		log.Error("Failed to create reference for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+	defer client.Close(ctx, r)
+
+	// Serve from cache
+	blob, err := getLocalBlob(ctx, remoteCtx, ref)
+	if err == container_model.ErrContainerBlobNotExist {
+		regDigest := digest.Digest(ref)
+		regLayer := descriptor.Descriptor{
+			Digest: regDigest,
+		}
+		buf, err := getBlobFromRemote(ctx, &client, regLayer)
+
+		// save to package
+		err = saveBlobToPackage(ctx, buf, remoteCtx.ImageName)
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		// serve from buffer
+		err = serveBlobFromBuffer(ctx, buf, regDigest.String())
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		return
+	} else if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+	serveBlob(ctx, blob)
+}
+
+func getBlobFromRemote(ctx *context.Context, client *container_service.RegistryClient, layer descriptor.Descriptor) (*packages_module.HashedBuffer, error) {
+	remoteCtx, err := GetRemoteRegistryContext(ctx)
+
+	// get ref
+	ref, err := client.NewRef(remoteCtx.ImageName)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return nil, err
+	}
+
+	// get blob
+	digest := layer.Digest
+	br, err := client.GetBlob(ctx, ref, layer)
+	buf, err := packages_module.CreateHashedBufferFromReader(br)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return nil, err
+	}
+	defer buf.Close()
+	defer br.Close()
+
+	// check digest
+	if digest.String() != digestFromHashSummer(buf) {
+		apiErrorDefined(ctx, errDigestInvalid)
+		return nil, err
+	}
+
+	return buf, nil
+}
+
+func getAllBlobsFromRemote(ctx *context.Context, client *container_service.RegistryClient, man manifest.Manifest) error {
+	remoteCtx, err := GetRemoteRegistryContext(ctx)
+
+	// get blob
+	ref, err := client.NewRef(remoteCtx.ImageName)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return err
+	}
+
+	img := client.NewImager(man)
+
+	layers, err := img.GetLayers()
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return err
+	}
+
+	for _, layer := range layers {
+		digest := layer.Digest
+		// blob reader
+		br, err := client.GetBlob(ctx, ref, layer)
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return err
+		}
+		// buffer
+		buf, err := packages_module.CreateHashedBufferFromReader(br)
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return err
+		}
+		defer buf.Close()
+		defer br.Close()
+
+		// check digest
+		if digest.String() != digestFromHashSummer(buf) {
+			apiErrorDefined(ctx, errDigestInvalid)
+			return err
+		}
+
+		// save to package
+		err = saveBlobToPackage(ctx, buf, remoteCtx.ImageName)
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return err
+		}
+	}
+	return nil
+}
+
+// serveBlobFromBuffer serves a blob from an existing buffer to a client
+func serveBlobFromBuffer(ctx *context.Context, buf *packages_module.HashedBuffer, digest string) error {
+	// Reset buffer to beginning
+	if _, err := buf.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("failed to seek buffer for serving: %w", err)
+	}
+
+	// Set response headers
+	setResponseHeaders(ctx.Resp, &containerHeaders{
+		ContentDigest: digest,
+		ContentType:   "application/octet-stream",
+		ContentLength: buf.Size(),
+		Status:        http.StatusOK,
+	})
+
+	// Copy buffer content to client
+	sbuf := make([]byte, blobServeBufferSize)
+	_, err := io.CopyBuffer(ctx.Resp, buf, sbuf)
+	if err != nil {
+		return fmt.Errorf("failed to serve blob from buffer: %w", err)
+	}
+
+	log.Debug("Served blob %s from buffer", digest)
+	return nil
 }
 
 func RemoteHeadManifest(ctx *context.Context) {
