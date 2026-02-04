@@ -45,7 +45,7 @@ test.describe('Pull: Toggle WIP', () => {
     // ensure original title
     await page.locator('#issue-title-edit-show').click();
     await page.locator('#issue-title-editor input').fill(prTitle);
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', {name: 'Save'}).click();
     await check_wip({page}, false);
   });
 
@@ -63,7 +63,7 @@ test.describe('Pull: Toggle WIP', () => {
     // manually edit title to another prefix
     await page.locator('#issue-title-edit-show').click();
     await page.locator('#issue-title-editor input').fill(`[WIP] ${prTitle}`);
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', {name: 'Save'}).click();
     await check_wip({page}, true);
     // remove again
     await toggle_wip_to({page}, false);
@@ -76,7 +76,7 @@ test.describe('Pull: Toggle WIP', () => {
     const maxLenStr = prTitle + 'a'.repeat(240);
     await page.locator('#issue-title-edit-show').click();
     await page.locator('#issue-title-editor input').fill(maxLenStr);
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', {name: 'Save'}).click();
     await expect(page.locator('h1')).toContainText(maxLenStr);
     await check_wip({page}, false);
     await toggle_wip_to({page}, true);
