@@ -1,3 +1,6 @@
+// Copyright 2024-2026 The Forgejo Authors
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
 // models/repo/attachment.go
 // modules/structs/attachment.go
