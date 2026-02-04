@@ -6,7 +6,7 @@
 				<span class="text not-mobile">{{if $.RepoWatchSelection.IsWatching}}{{ctx.Locale.Tr "repo.watching"}}{{else}}{{ctx.Locale.Tr "repo.watch"}}{{end}}</span>
 				{{svg "octicon-triangle-down" 14}}
 			</summary>
-		  <form class="content tw-p-3" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
+			<form class="content tw-p-3" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
 				<ul class="tw-text-left">
 					<li>
 						<div class="ui form">
