@@ -18,13 +18,13 @@ import (
 func TestIsWatching(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	assert.True(t, repo_model.IsWatching(db.DefaultContext, 1, 1))
-	assert.True(t, repo_model.IsWatching(db.DefaultContext, 4, 1))
-	assert.True(t, repo_model.IsWatching(db.DefaultContext, 11, 1))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 1, 1))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 4, 1))
+	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 11, 1))
 
-	assert.False(t, repo_model.IsWatching(db.DefaultContext, 1, 5))
-	assert.False(t, repo_model.IsWatching(db.DefaultContext, 8, 1))
-	assert.False(t, repo_model.IsWatching(db.DefaultContext, unittest.NonexistentID, unittest.NonexistentID))
+	assert.False(t, repo_model.IsWatcher(db.DefaultContext, 1, 5))
+	assert.False(t, repo_model.IsWatcher(db.DefaultContext, 8, 1))
+	assert.False(t, repo_model.IsWatcher(db.DefaultContext, unittest.NonexistentID, unittest.NonexistentID))
 }
 
 func TestGetWatchers(t *testing.T) {

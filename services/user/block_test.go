@@ -54,7 +54,7 @@ func TestBlockUser(t *testing.T) {
 		require.NoError(t, BlockUser(db.DefaultContext, doer.ID, blockedUser.ID))
 
 		// Ensure blocked user isn't following doer's repository.
-		assert.False(t, repo_model.IsWatching(db.DefaultContext, blockedUser.ID, repo.ID))
+		assert.False(t, repo_model.IsWatcher(db.DefaultContext, blockedUser.ID, repo.ID))
 
 		// Ensure the watcher count was reduced by one.
 		repo = unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: doer.ID})
