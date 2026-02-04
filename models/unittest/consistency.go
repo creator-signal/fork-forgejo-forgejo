@@ -19,7 +19,6 @@ import (
 const (
 	// these const values are copied from `models` package to prevent from cycle-import
 	modelsUserTypeOrganization = 1
-	modelsRepoWatchModeDont    = 2
 	modelsCommentTypeComment   = 0
 )
 
@@ -90,7 +89,13 @@ func init() {
 		}
 
 		actual := GetCountByCond(t, "watch", builder.Eq{"repo_id": repo.int("ID")}.
-			And(builder.Neq{"mode": modelsRepoWatchModeDont}))
+			And(
+				builder.Or(
+					builder.Eq{"`watch`.watch_selection_issues": true},
+					builder.Eq{"`watch`.watch_selection_pull_requests": true},
+					builder.Eq{"`watch`.watch_selection_releases": true},
+				),
+			))
 		assert.EqualValues(t, repo.int("NumWatches"), actual,
 			"Unexpected number of watches for repo id: %d", repo.int("ID"))
 

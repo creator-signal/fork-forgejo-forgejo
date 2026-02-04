@@ -118,27 +118,6 @@ func TestWatchIfAuto(t *testing.T) {
 	assert.Len(t, watchers, prevCount)
 }
 
-func TestWatchRepoMode(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 0)
-
-	require.NoError(t, repo_model.WatchRepoMode(db.DefaultContext, 12, 1, repo_model.WatchModeAuto))
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 1)
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Source: repo_model.WatchModeAuto}, 1)
-
-	require.NoError(t, repo_model.WatchRepoMode(db.DefaultContext, 12, 1, repo_model.WatchModeNormal))
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 1)
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Source: repo_model.WatchModeNormal}, 1)
-
-	require.NoError(t, repo_model.WatchRepoMode(db.DefaultContext, 12, 1, repo_model.WatchModeDont))
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 1)
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1, Source: repo_model.WatchModeDont}, 1)
-
-	require.NoError(t, repo_model.WatchRepoMode(db.DefaultContext, 12, 1, repo_model.WatchModeNone))
-	unittest.AssertCount(t, &repo_model.Watch{UserID: 12, RepoID: 1}, 0)
-}
-
 func TestUnwatchRepos(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
