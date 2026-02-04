@@ -64,14 +64,14 @@ type Watch struct {
 	ID     int64       `xorm:"pk autoincr"`
 	UserID int64       `xorm:"UNIQUE(watch)"`
 	RepoID int64       `xorm:"UNIQUE(watch)"`
-	Source WatchSource `xorm:"NOT NULL"`
+	Source WatchSource `xorm:"BOOL DEFAULT TRUE"`
 	// In the next PR there will be another mode here, choosing the user preset or a custom selection.
 	// TODO: figure out whether the user preset should count as watching
 	// TODO: (then change the description to IsWatching)
 
-	WatchSelectionIssues       bool `xorm:"NOT NULL"`
-	WatchSelectionPullRequests bool `xorm:"NOT NULL"`
-	WatchSelectionReleases     bool `xorm:"NOT NULL"`
+	WatchSelectionIssues       bool `xorm:"BOOL DEFAULT TRUE"`
+	WatchSelectionPullRequests bool `xorm:"BOOL DEFAULT TRUE"`
+	WatchSelectionReleases     bool `xorm:"BOOL DEFAULT TRUE"`
 
 	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`
