@@ -120,26 +120,26 @@ test.describe('Releases', () => {
     await page.goto('/user2/repo2/releases');
     const release = page.locator('#release-list > li:has(a[href$="/tag/2.0"])');
     // Release entry should be less than viewport
-    await expect((await release.boundingBox()).width).toBeLessThan(viewport.width);
+    expect((await release.boundingBox()).width).toBeLessThan(viewport.width);
     if (isMobile) {
       const metaWidth = (await release.locator('.meta').boundingBox()).width;
       const titleWidth = (await release.locator('.release-title-wrap').boundingBox()).width;
       const detailsWidth = (await release.locator('.detail').boundingBox()).width;
       // In row layout they all should be similar to the viewport length, accounting
       // for 8px margins on each side
-      await expect(metaWidth).toBeCloseTo(viewport.width - 16, 0);
-      await expect(titleWidth).toBeCloseTo(viewport.width - 16, 0);
-      await expect(detailsWidth).toBeCloseTo(viewport.width - 16, 0);
+      expect(metaWidth).toBeCloseTo(viewport.width - 16, 0);
+      expect(titleWidth).toBeCloseTo(viewport.width - 16, 0);
+      expect(detailsWidth).toBeCloseTo(viewport.width - 16, 0);
       // They also should all be all same width
-      await expect(metaWidth).toBe(titleWidth);
-      await expect(titleWidth).toBe(detailsWidth);
+      expect(metaWidth).toBe(titleWidth);
+      expect(titleWidth).toBe(detailsWidth);
     } else {
       // Left and right columns should be less than 25% and 75% of viewport width
       // But on wide screens there's a lot of additional emptiness, so we can't
       // match columns' width against the viewport, only make sure they fit
-      await expect((await release.locator('.meta').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
-      await expect((await release.locator('.release-title-wrap').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
-      await expect((await release.locator('.detail').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
+      expect((await release.locator('.meta').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
+      expect((await release.locator('.release-title-wrap').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
+      expect((await release.locator('.detail').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
     }
   });
 
