@@ -5,6 +5,7 @@ package integration
 
 import (
 	"net/http"
+	"strconv"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRepoStatuses_(t *testing.T) {
+func TestRepoStatuses(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -72,6 +73,12 @@ func TestRepoStatuses_(t *testing.T) {
 			}
 
 			assert.ElementsMatch(t, tt.expectedIDs, resultIDs)
+
+			if len(tt.expectedIDs) != int(tt.expectedTotal) {
+				assert.NotEmpty(t, res.Header().Get("Link"))
+			}
+			assert.NotEmpty(t, res.Header().Get("X-Total-Count"))
+			assert.Equal(t, strconv.Itoa(int(tt.expectedTotal)), res.Header().Get("X-Total-Count"))
 		})
 	}
 
