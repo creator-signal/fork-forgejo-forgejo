@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testRepoStarring(t *testing.T) {
+func TestRepoStarUnstarUI(t *testing.T) {
 	t.Helper()
 
 	defer tests.PrepareTestEnv(t)()
@@ -82,7 +82,7 @@ func testRepoStarring(t *testing.T) {
 	htmlDoc.AssertElement(t, ".user-cards > div", true)
 }
 
-func testRepoWatching(t *testing.T) {
+func TestRepoWatchUnwatchUI(t *testing.T) {
 	t.Helper()
 
 	defer tests.PrepareTestEnv(t)()
@@ -90,7 +90,7 @@ func testRepoWatching(t *testing.T) {
 	session := loginUser(t, "user5")
 
 	// Watch the repo as user5 (using watch/settings endpoint with all events)
-	req := NewRequestWithValues(t, "POST", "/user2/repo1/action/watch/settings", map[string]string{
+	req := NewRequestWithValues(t, "POST", "/user2/repo1/action/watch/select", map[string]string{
 		"watch_issues":        "true",
 		"watch_pull_requests": "true",
 		"watch_releases":      "true",
@@ -142,14 +142,6 @@ func testRepoWatching(t *testing.T) {
 	// Verify that "user5" is not among the watchers
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	htmlDoc.AssertElement(t, ".user-cards .list .item.ui.segment > a[href='/user2']", false)
-}
-
-func TestRepoStarUnstarUI(t *testing.T) {
-	testRepoStarring(t)
-}
-
-func TestRepoWatchUnwatchUI(t *testing.T) {
-	testRepoWatching(t)
 }
 
 func TestDisabledStars(t *testing.T) {
