@@ -21,6 +21,9 @@ const (
 	PropertyMediaType         = "container.mediatype"
 	PropertyManifestTagged    = "container.manifest.tagged"
 	PropertyManifestReference = "container.manifest.reference"
+	PropertyRemoteSource      = "container.remote.source"
+	PropertyCacheTime         = "container.remote.cache_time"
+	PropertyRemoteDigest      = "container.remote.digest"
 
 	DefaultPlatform = "linux/amd64"
 
