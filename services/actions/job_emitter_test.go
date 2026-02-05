@@ -173,6 +173,7 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 		preExecutionError        actions_model.PreExecutionError
 		preExecutionErrorDetails []any
 		runsOn                   map[string][]string
+		needs                    map[string][]string
 		actionRunStatusChange    actions_model.Status
 	}{
 		{
@@ -184,6 +185,12 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 			runJobID:    601,
 			consumed:    true,
 			runJobNames: []string{"define-matrix", "produce-artifacts (blue)", "produce-artifacts (green)", "produce-artifacts (red)"},
+			needs: map[string][]string{
+				"define-matrix":             nil,
+				"produce-artifacts (blue)":  {"define-matrix"},
+				"produce-artifacts (green)": {"define-matrix"},
+				"produce-artifacts (red)":   {"define-matrix"},
+			},
 		},
 		{
 			name:        "needs an incomplete job",
@@ -399,6 +406,17 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 								slices.Sort(j.RunsOn)
 								slices.Sort(expected)
 								assert.Equalf(t, expected, j.RunsOn, "comparing runsOn expectations for job %q", j.Name)
+							}
+						}
+					}
+
+					if tt.needs != nil {
+						for _, j := range allJobsInRun {
+							expected, ok := tt.needs[j.Name]
+							if assert.Truef(t, ok, "unable to find needs[%q] in test case", j.Name) {
+								slices.Sort(j.Needs)
+								slices.Sort(expected)
+								assert.Equalf(t, expected, j.Needs, "comparing needs expectations for job %q", j.Name)
 							}
 						}
 					}

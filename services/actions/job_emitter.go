@@ -242,6 +242,7 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 	// reported back to the user for them to correct their workflow, so we slip this notification into
 	// PreExecutionError.
 	for _, swf := range newJobWorkflows {
+		jobID, job := swf.Job()
 		if swf.IncompleteMatrix {
 			errorCode, errorDetails := persistentIncompleteMatrixError(blockedJob, swf.IncompleteMatrixNeeds)
 			if err := FailRunPreExecutionError(ctx, blockedJob.Run, errorCode, errorDetails); err != nil {
@@ -256,6 +257,20 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 			}
 			// Return `true` to skip running this job in this invalid state
 			return true, nil
+		}
+
+		// Original job had a `needs: ...blockedJob.Needs...`.  Even though we've now expanded that job, which would
+		// evaluate any ${{ needs.... }} reference that is required for expansion, this job could still have other
+		// reasons to require acccess to those needs variables.  We need to reinsert those `needs` into the new job so
+		// that those job's outputs and results are made available to this new job.
+		newNeeds := append(job.Needs(), blockedJob.Needs...)
+		err := job.RawNeeds.Encode(newNeeds)
+		if err != nil {
+			return false, fmt.Errorf("failure to encode newNeeds: %w", err)
+		}
+		err = swf.SetJob(jobID, job)
+		if err != nil {
+			return false, fmt.Errorf("failure to reencode updated job: %w", err)
 		}
 	}
 
