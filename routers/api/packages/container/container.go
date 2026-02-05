@@ -37,9 +37,7 @@ import (
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-manifests
 const maxManifestSize = 10 * 1024 * 1024
 
-var (
-	imageNamePattern = regexp.MustCompile(`\A[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*\z`)
-)
+var imageNamePattern = regexp.MustCompile(`\A[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*\z`)
 
 type containerHeaders struct {
 	Status        int
@@ -536,7 +534,6 @@ func DeleteBlob(ctx *context.Context) {
 
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-manifests
 func UploadManifest(ctx *context.Context) {
-
 	mci, err := container_service.NewManifestCreationInfo(
 		ctx.Package.Owner,
 		ctx.Doer,
