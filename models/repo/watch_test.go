@@ -198,7 +198,70 @@ func TestWatchRepoExplicitly(t *testing.T) {
 	}
 }
 
-func TestWatchIfAuto(t *testing.T) {
+func TestWatchIfAutoWatchNewRepos(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	watchers, err := repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
+	require.NoError(t, err)
+	assert.Len(t, watchers, repo.NumWatches)
+
+	setting.Service.AutoWatchNewRepos = false
+
+	prevCount := repo.NumWatches
+
+	// Must not add watch
+	require.NoError(t, repo_model.WatchIfAutoWatchNewRepos(db.DefaultContext, 8, 1))
+	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
+	require.NoError(t, err)
+	assert.Len(t, watchers, prevCount)
+
+	// Should not add watch
+	require.NoError(t, repo_model.WatchIfAutoWatchNewRepos(db.DefaultContext, 10, 1))
+	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
+	require.NoError(t, err)
+	assert.Len(t, watchers, prevCount)
+
+	setting.Service.AutoWatchNewRepos = true
+
+	// Must not add watch
+	require.NoError(t, repo_model.WatchIfAutoWatchNewRepos(db.DefaultContext, 8, 1))
+	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
+	require.NoError(t, err)
+	assert.Len(t, watchers, prevCount)
+
+	// Should not add watch
+	// We simply don't WatchIfAuto
+	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
+	require.NoError(t, err)
+	assert.Len(t, watchers, prevCount)
+
+	// Should add watch
+	require.NoError(t, repo_model.WatchIfAutoWatchNewRepos(db.DefaultContext, 12, 1))
+	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
+	require.NoError(t, err)
+	assert.Len(t, watchers, prevCount+1)
+	watch, err := repo_model.GetWatch(db.DefaultContext, 12, 1)
+	require.NoError(t, err)
+	require.Equal(t, repo_model.WatchSourceAutomatic, watch.Source)
+	require.True(t, watch.WatchSelectionIssues)
+	require.True(t, watch.WatchSelectionPullRequests)
+	require.True(t, watch.WatchSelectionReleases)
+
+	// Should remove watch, inhibit from adding auto
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, 12, 1, repo_model.WatchNoneSelection))
+	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
+	require.NoError(t, err)
+	assert.Len(t, watchers, prevCount)
+
+	// Must not add watch
+	require.NoError(t, repo_model.WatchIfAutoWatchNewRepos(db.DefaultContext, 12, 1))
+	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
+	require.NoError(t, err)
+	assert.Len(t, watchers, prevCount)
+}
+
+func TestWatchIfAutoWatchOnChanges(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
