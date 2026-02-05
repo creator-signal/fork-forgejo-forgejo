@@ -176,7 +176,7 @@ func TestConnectedToken(t *testing.T) {
 	MakeRequest(t, req, http.StatusCreated)
 }
 
-func TestRemoteRegistryManifest(t *testing.T) {
+func TestRemoteRegistryPull(t *testing.T) {
 	type TokenResponse struct {
 		Token string `json:"token"`
 	}
@@ -238,10 +238,18 @@ func TestRemoteRegistryManifest(t *testing.T) {
 		assert.Equal(t, manifestContent, resp.Body.String())
 	})
 
+	t.Run("HEAD Blob", func(t *testing.T) {
+		req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
+			AddTokenAuth(anonymousToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, blobDigest, resp.Header().Get("docker-content-digest"))
+	})
+
 	t.Run("GET Blob", func(t *testing.T) {
 		req = NewRequest(t, "GET", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
 			AddTokenAuth(anonymousToken)
 		resp := MakeRequest(t, req, http.StatusOK)
 		assert.Equal(t, string(blobContent), resp.Body.String())
 	})
+
 }
