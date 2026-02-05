@@ -30,6 +30,74 @@ func GetRemoteTagList(ctx *context.Context) {
 }
 
 func RemoteHeadBlob(ctx *context.Context) {
+	// Do we have the blob cached locally?
+	blob, err := getBlobFromContext(ctx)
+	if err != nil {
+		if err == container_model.ErrContainerBlobNotExist {
+
+			dig := ctx.Params("digest")
+			if dig == "" {
+				apiErrorDefined(ctx, errBlobUnknown)
+				return
+			}
+
+			regDigest := digest.Digest(dig)
+			regLayer := descriptor.Descriptor{
+				Digest: regDigest,
+			}
+
+			remoteCtx, err := GetRemoteRegistryContext(ctx)
+			if err != nil {
+				apiError(ctx, http.StatusInternalServerError, err)
+				return
+			}
+
+			client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry)
+			if err != nil {
+				log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+				apiError(ctx, http.StatusInternalServerError, err)
+				return
+			}
+
+			ref, err := client.NewRef(remoteCtx.ImageName)
+			if err != nil {
+				apiError(ctx, http.StatusInternalServerError, err)
+				return
+			}
+			defer client.Close(ctx, ref)
+
+			buf, err := getBlobFromRemote(ctx, &client, regLayer, ref)
+			if err != nil {
+				apiError(ctx, http.StatusInternalServerError, err)
+				return
+			}
+			defer buf.Close()
+
+			// save to package TODO this could happen in a go routine
+			err = saveBlobToPackage(ctx, buf, remoteCtx, dig, ctx.ContextUser, ctx.Doer)
+			if err != nil {
+				apiError(ctx, http.StatusInternalServerError, err)
+				return
+			}
+
+		} else {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+	}
+
+	// try again
+	blob, err = getBlobFromContext(ctx)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	setResponseHeaders(ctx.Resp, &containerHeaders{
+		ContentDigest: blob.Properties.GetByName(container_module.PropertyDigest),
+		ContentLength: blob.Blob.Size,
+		Status:        http.StatusOK,
+	})
 }
 
 func RemoteGetBlob(ctx *context.Context) {
