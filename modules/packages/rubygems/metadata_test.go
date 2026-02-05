@@ -106,9 +106,9 @@ PqomP8/pKaNX5WJ2DKIBHR4BCNnD2G3uzNg9OKtyVS6foyCb3I2wG+goCofdy2T6FIVWa+47il/h
 
 	assert.Len(t, rp.Metadata.RuntimeDependencies, 1)
 	assert.Equal(t, "implicit-version", rp.Metadata.RuntimeDependencies[0].Name)
-	assert.Len(t, rp.Metadata.RuntimeDependencies[0].Version, 0)
+	assert.Empty(t, rp.Metadata.RuntimeDependencies[0].Version)
 	assert.Equal(t, "explicit-version", rp.Metadata.RuntimeDependencies[0].Name)
-	assert.Len(t, rp.Metadata.RuntimeDependencies[0].Version, 0)
+	assert.Empty(t, rp.Metadata.RuntimeDependencies[0].Version)
 	assert.Equal(t, "explicit-pessimistic-version", rp.Metadata.RuntimeDependencies[0].Name)
 	assert.Len(t, rp.Metadata.RuntimeDependencies[0].Version, 1)
 	assert.Equal(t, "~>", rp.Metadata.RuntimeDependencies[0].Version[0].Restriction)
