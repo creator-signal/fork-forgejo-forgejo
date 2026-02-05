@@ -57,14 +57,14 @@ func MockForgejoRegistryServer() *httptest.Server {
 					res.Header().Add("content-type", "application/vnd.docker.distribution.manifest.v2+json")
 					res.Header().Add("docker-content-digest", "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6")
 					res.Header().Add("docker-distribution-api-version", "registry/2.0")
-					res.Header().Add("etag", "sha256:c25049d7428c0e7176de521dea90f8d47a29b7acc2e40b67d557cd79c8c6a92d")
+					res.Header().Add("etag", "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6")
 					res.WriteHeader(http.StatusOK)
 				case "GET":
 					manifestContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d","size":1069},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4","size":32}]}`
 					res.Header().Add("content-type", "application/vnd.docker.distribution.manifest.v2+json")
 					res.Header().Add("docker-content-digest", "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6")
 					res.Header().Add("docker-distribution-api-version", "registry/2.0")
-					res.Header().Add("etag", "sha256:c25049d7428c0e7176de521dea90f8d47a29b7acc2e40b67d557cd79c8c6a92d")
+					res.Header().Add("etag", "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6")
 					_, _ = res.Write([]byte(manifestContent))
 					res.WriteHeader(http.StatusOK)
 				default:

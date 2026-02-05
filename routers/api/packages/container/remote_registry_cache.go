@@ -4,7 +4,11 @@
 package container
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	packages_model "forgejo.org/models/packages"
@@ -15,6 +19,8 @@ import (
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
+	container_service "forgejo.org/services/packages/container"
+	"github.com/regclient/regclient/types/manifest"
 )
 
 func getCachedRemoteManifest(ctx *context.Context) (*packages_model.PackageFileDescriptor, error) {
@@ -101,4 +107,58 @@ func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlo
 			log.Warn("Failed to set blob property %s for remote blob: %v", name, err)
 		}
 	}
+}
+
+func saveManifest(ctx *context.Context, man manifest.Manifest) error {
+	mci, err := container_service.NewManifestCreationInfo(
+		ctx.ContextUser,
+		ctx.Doer,
+		man.GetDescriptor().MediaType,
+		ctx.Params("image"),
+		ctx.Params("reference"), // TODO Reference may need to be a tag as well
+	)
+	if err != nil {
+		apiErrorDefined(ctx, errManifestInvalid.WithMessage(err.Error()))
+		return err
+	}
+
+	maxSize := maxManifestSize + 1
+	b, err := man.RawBody()
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return err
+	}
+
+	reader := bytes.NewReader(b)
+	lReader := &io.LimitedReader{R: reader, N: int64(maxSize)}
+	buf, err := packages_module.CreateHashedBufferFromReaderWithSize(lReader, maxSize)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return err
+	}
+	defer buf.Close()
+
+	if buf.Size() > maxManifestSize {
+		apiErrorDefined(ctx, errManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
+		return err
+	}
+
+	_, err = processManifest(ctx, mci, buf)
+	if err != nil {
+		var namedError *namedError
+		if errors.As(err, &namedError) {
+			apiErrorDefined(ctx, namedError)
+		} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
+			apiErrorDefined(ctx, errBlobUnknown)
+		} else {
+			switch err {
+			case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
+				apiError(ctx, http.StatusForbidden, err)
+			default:
+				apiError(ctx, http.StatusInternalServerError, err)
+			}
+		}
+		return err
+	}
+	return nil
 }

@@ -386,6 +386,8 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
+	// TODO save manifest config as its own blob as this will later be referenced by processManifest
+
 	err = saveManifest(ctx, regManifest)
 	if err != nil {
 		log.Error("Failed to save manifest: %v", err)

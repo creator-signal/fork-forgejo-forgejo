@@ -27,7 +27,6 @@ type ManifestCreationInfo struct {
 }
 
 func NewManifestCreationInfo(owner, creator *user.User, mediaType, image, reference string) (*ManifestCreationInfo, error) {
-
 	isTagged := digest.Digest(reference).Validate() != nil
 
 	mci := &ManifestCreationInfo{
