@@ -211,13 +211,13 @@ func TestWatchIfAuto(t *testing.T) {
 	prevCount := repo.NumWatches
 
 	// Must not add watch
-	require.NoError(t, repo_model.WatchIfAuto(db.DefaultContext, 8, 1))
+	require.NoError(t, repo_model.WatchIfAutoWatchOnChanges(db.DefaultContext, 8, 1))
 	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
 	require.NoError(t, err)
 	assert.Len(t, watchers, prevCount)
 
 	// Should not add watch
-	require.NoError(t, repo_model.WatchIfAuto(db.DefaultContext, 10, 1))
+	require.NoError(t, repo_model.WatchIfAutoWatchOnChanges(db.DefaultContext, 10, 1))
 	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
 	require.NoError(t, err)
 	assert.Len(t, watchers, prevCount)
@@ -225,7 +225,7 @@ func TestWatchIfAuto(t *testing.T) {
 	setting.Service.AutoWatchOnChanges = true
 
 	// Must not add watch
-	require.NoError(t, repo_model.WatchIfAuto(db.DefaultContext, 8, 1))
+	require.NoError(t, repo_model.WatchIfAutoWatchOnChanges(db.DefaultContext, 8, 1))
 	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
 	require.NoError(t, err)
 	assert.Len(t, watchers, prevCount)
@@ -237,7 +237,7 @@ func TestWatchIfAuto(t *testing.T) {
 	assert.Len(t, watchers, prevCount)
 
 	// Should add watch
-	require.NoError(t, repo_model.WatchIfAuto(db.DefaultContext, 12, 1))
+	require.NoError(t, repo_model.WatchIfAutoWatchOnChanges(db.DefaultContext, 12, 1))
 	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
 	require.NoError(t, err)
 	assert.Len(t, watchers, prevCount+1)
@@ -255,7 +255,7 @@ func TestWatchIfAuto(t *testing.T) {
 	assert.Len(t, watchers, prevCount)
 
 	// Must not add watch
-	require.NoError(t, repo_model.WatchIfAuto(db.DefaultContext, 12, 1))
+	require.NoError(t, repo_model.WatchIfAutoWatchOnChanges(db.DefaultContext, 12, 1))
 	watchers, err = repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
 	require.NoError(t, err)
 	assert.Len(t, watchers, prevCount)

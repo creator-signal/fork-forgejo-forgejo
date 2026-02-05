@@ -44,7 +44,7 @@ func AddRepository(ctx context.Context, t *organization.Team, repo *repo_model.R
 			return fmt.Errorf("getMembers: %w", err)
 		}
 		for _, u := range t.Members {
-			if err = repo_model.WatchRepoExplicitly(ctx, u.ID, repo.ID, repo_model.WatchAllSelection); err != nil {
+			if err = repo_model.WatchIfAutoWatchNewRepos(ctx, u.ID, repo.ID); err != nil {
 				return fmt.Errorf("watchRepo: %w", err)
 			}
 		}
@@ -433,7 +433,7 @@ func AddTeamMember(ctx context.Context, team *organization.Team, userID int64) e
 		// FIXME: in the goroutine, it can't access the "ctx", it could only use db.DefaultContext at the moment
 		go func(repos []*repo_model.Repository) {
 			for _, repo := range repos {
-				if err = repo_model.WatchRepoExplicitly(db.DefaultContext, userID, repo.ID, repo_model.WatchAllSelection); err != nil {
+				if err = repo_model.WatchIfAutoWatchNewRepos(db.DefaultContext, userID, repo.ID); err != nil {
 					log.Error("watch repo failed: %v", err)
 				}
 			}

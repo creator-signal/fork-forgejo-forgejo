@@ -254,11 +254,8 @@ func GetRepoWatchers(ctx context.Context, repoID int64, opts db.ListOptions) ([]
 	return users, sess.Find(&users)
 }
 
-// WatchIfAuto subscribes to repo if AutoWatchOnChanges is set
-func WatchIfAuto(ctx context.Context, userID, repoID int64) error {
-	if !setting.Service.AutoWatchOnChanges {
-		return nil
-	}
+// Respect explicit user wish and don't change explicit watches.
+func autoWatch(ctx context.Context, userID, repoID int64) error {
 	watch, err := GetWatch(ctx, userID, repoID)
 	if err != nil {
 		return err
@@ -271,6 +268,22 @@ func WatchIfAuto(ctx context.Context, userID, repoID int64) error {
 		return nil
 	}
 	return updateWatchRepo(ctx, watch, WatchSourceAutomatic, WatchAllSelection)
+}
+
+// WatchIfAutoWatchOnChanges subscribes to repo if AutoWatchOnChanges is set
+func WatchIfAutoWatchOnChanges(ctx context.Context, userID, repoID int64) error {
+	if !setting.Service.AutoWatchOnChanges {
+		return nil
+	}
+	return autoWatch(ctx, userID, repoID)
+}
+
+// WatchIfAutoWatchNewRepos subscribes to repo if AutoWatchNewRepos is set
+func WatchIfAutoWatchNewRepos(ctx context.Context, userID, repoID int64) error {
+	if !setting.Service.AutoWatchNewRepos {
+		return nil
+	}
+	return autoWatch(ctx, userID, repoID)
 }
 
 // UnwatchRepos will unwatch the user from all given repositories.
