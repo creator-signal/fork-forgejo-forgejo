@@ -338,12 +338,6 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
-	reference := ctx.Params("reference")
-	if reference == "" {
-		apiErrorDefined(ctx, errManifestUnknown)
-		return
-	}
-
 	// Do we have the manifest cached locally?
 	man, err := getCachedRemoteManifest(ctx)
 	if man != nil && err == nil {
@@ -372,8 +366,8 @@ func RemoteGetManifest(ctx *context.Context) {
 	// Get manifest metadata from remote registry
 	regManifest, err := client.GetManifest(ctx, r)
 	if err != nil {
-		log.Error("Failed to HEAD manifest %s:%s from remote registry %s: %v",
-			remoteCtx.ImageName, reference, remoteCtx.RemoteRegistry.Name, err)
+		log.Error("Failed to HEAD manifest %s from remote registry %s: %v",
+			remoteCtx.ImageName, remoteCtx.RemoteRegistry.Name, err)
 
 		if strings.Contains(err.Error(), "404") {
 			apiErrorDefined(ctx, errManifestUnknown)
@@ -387,11 +381,17 @@ func RemoteGetManifest(ctx *context.Context) {
 
 	err = getAllBlobsFromRemote(ctx, &client, regManifest)
 	if err != nil {
-		log.Error("Failed to get blobs for manifest: %v", remoteCtx.RemoteRegistry.Name, err)
+		log.Error("Failed to get blobs for manifest: %v", err)
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	// TODO now cache the manifest
+
+	err = saveManifest(ctx, regManifest)
+	if err != nil {
+		log.Error("Failed to save manifest: %v", err)
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
 
 	// Serve the manifest content
 	setResponseHeaders(ctx.Resp, &containerHeaders{
