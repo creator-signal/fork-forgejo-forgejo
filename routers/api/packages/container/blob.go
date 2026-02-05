@@ -26,7 +26,7 @@ var uploadVersionMutex sync.Mutex
 
 // saveAsPackageBlob creates a package blob from an upload
 // The uploaded blob gets stored in a special upload version to link them to the package/image
-func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, *packages_model.PackageFile, error) { //nolint:unparam
+func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, *packages_model.PackageFile, error) {
 	pb := packages_service.NewPackageBlob(hsr)
 	pf := &packages_model.PackageFile{}
 
@@ -65,7 +65,7 @@ func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 			}
 		}
 
-		_, err = createFileForBlob(ctx, uploadVersion, pb)
+		pf, err = createFileForBlob(ctx, uploadVersion, pb)
 		return err
 	})
 	if err != nil {

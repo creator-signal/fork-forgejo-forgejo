@@ -8,19 +8,18 @@ import (
 	"regexp"
 
 	"forgejo.org/models/user"
-	user_model "forgejo.org/models/user"
+	container_module "forgejo.org/modules/packages/container"
+
 	digest "github.com/opencontainers/go-digest"
 )
 
-var (
-	ReferencePattern = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
-)
+var ReferencePattern = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
 
 // ManifestCreationInfo describes a manifest to create
 type ManifestCreationInfo struct {
 	MediaType  string
-	Owner      *user_model.User
-	Creator    *user_model.User
+	Owner      *user.User
+	Creator    *user.User
 	Image      string
 	Reference  string
 	IsTagged   bool

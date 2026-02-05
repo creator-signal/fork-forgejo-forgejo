@@ -32,7 +32,7 @@ func MockForgejoRegistryServer() *httptest.Server {
 					"\"http://" + addr.String() + "/token\"" +
 					",service=" + "\"container_registry\"" + ",scope=" + "\"*\""
 				res.Header().Add("www-authenticate", headerVal)
-				res.Write(unauthorizedContent)
+				_, _ = res.Write(unauthorizedContent)
 				res.WriteHeader(http.StatusUnauthorized)
 			}
 		})
@@ -43,7 +43,7 @@ func MockForgejoRegistryServer() *httptest.Server {
 			hasService := strings.Contains(req.URL.RawQuery, "service=")
 			if hasScope && hasService {
 				res.Header().Add("content-type", "application/json")
-				res.Write([]byte(`{"token":"asd342adsdf34985udfng"}`))
+				_, _ = res.Write([]byte(`{"token":"asd342adsdf34985udfng"}`))
 			} else {
 				res.WriteHeader(http.StatusUnauthorized)
 			}
@@ -65,7 +65,7 @@ func MockForgejoRegistryServer() *httptest.Server {
 					res.Header().Add("docker-content-digest", "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6")
 					res.Header().Add("docker-distribution-api-version", "registry/2.0")
 					res.Header().Add("etag", "sha256:c25049d7428c0e7176de521dea90f8d47a29b7acc2e40b67d557cd79c8c6a92d")
-					res.Write([]byte(manifestContent))
+					_, _ = res.Write([]byte(manifestContent))
 					res.WriteHeader(http.StatusOK)
 				default:
 					res.WriteHeader(http.StatusBadRequest)
@@ -97,7 +97,7 @@ func MockForgejoRegistryServer() *httptest.Server {
 					res.Header().Add("etag", "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")
 					res.Header().Add("docker-content-digest", "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")
 					res.Header().Add("docker-distribution-api-version", "registry/2.0")
-					res.Write(blobContent)
+					_, _ = res.Write(blobContent)
 					res.WriteHeader(http.StatusOK)
 				default:
 					res.WriteHeader(http.StatusBadRequest)
@@ -121,7 +121,7 @@ func MockForgejoRegistryServer() *httptest.Server {
 					manifestContent := `{"name":"docker-test-org/forgejo-test","tags":["latest"]}`
 					res.Header().Add("content-type", "application/json")
 					res.Header().Add("docker-distribution-api-version", "registry/2.0")
-					res.Write([]byte(manifestContent))
+					_, _ = res.Write([]byte(manifestContent))
 				default:
 					res.WriteHeader(http.StatusNotFound)
 				}

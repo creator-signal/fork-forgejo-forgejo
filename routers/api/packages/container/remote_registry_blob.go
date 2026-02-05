@@ -110,9 +110,11 @@ func RemoteGetBlob(ctx *context.Context) {
 func getBlobFromRemote(ctx *context.Context, client *container_service.RegistryClient, layer descriptor.Descriptor, regRef ref.Ref) (*packages_module.HashedBuffer, error) {
 	log.Debug("Getting blob %s locally, getting from remote %v", layer.Digest, regRef.Registry)
 	br, err := client.GetBlob(ctx, regRef, layer)
+	if err != nil {
+		return nil, err
+	}
 	buf, err := packages_module.CreateHashedBufferFromReader(br)
 	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
 		return nil, err
 	}
 	defer br.Close()
@@ -121,6 +123,10 @@ func getBlobFromRemote(ctx *context.Context, client *container_service.RegistryC
 
 func getAllBlobsFromRemote(ctx *context.Context, client *container_service.RegistryClient, man manifest.Manifest) error {
 	remoteCtx, err := GetRemoteRegistryContext(ctx)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return err
+	}
 
 	// get ref
 	ref, err := client.NewRef(remoteCtx.ImageName)
@@ -311,7 +317,12 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
-	getAllBlobsFromRemote(ctx, &client, regManifest)
+	err = getAllBlobsFromRemote(ctx, &client, regManifest)
+	if err != nil {
+		log.Error("Failed to get blobs for manifest: %v", remoteCtx.RemoteRegistry.Name, err)
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
 	// TODO now cache the manifest
 
 	// Serve the manifest content
@@ -329,5 +340,10 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
-	ctx.Resp.Write(manifestBody)
+	_, err = ctx.Resp.Write(manifestBody)
+	if err != nil {
+		log.Error("Failed to write response for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
 }

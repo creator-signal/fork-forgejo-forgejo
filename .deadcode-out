@@ -237,6 +237,10 @@ forgejo.org/services/federation
 forgejo.org/services/notify
 	UnregisterNotifier
 
+forgejo.org/services/packages/container
+	ManifestCreationInfo.IsRemote
+	RegistryClient.HeadBlob
+
 forgejo.org/services/repository
 	IsErrForkAlreadyExist
 

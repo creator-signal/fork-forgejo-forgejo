@@ -82,16 +82,13 @@ func saveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, 
 		return fmt.Errorf("failed to save blob from remote registry: %w", err)
 	}
 
-	err = addRemoteMetadataToBlob(ctx, pb, remoteCtx, pf)
-	if err != nil {
-		return fmt.Errorf("failed to add metadata to blob: %w", err)
-	}
+	addRemoteMetadataToBlob(ctx, pb, remoteCtx, pf)
 
 	return nil
 }
 
 // addRemoteMetadataToBlob Add rr id, time and remote digest as info to blob
-func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlob, remoteCtx *RemoteRegistryContext, pf *packages_model.PackageFile) error {
+func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlob, remoteCtx *RemoteRegistryContext, pf *packages_model.PackageFile) {
 	// Add remote registry metadata
 	properties := map[string]string{
 		container_module.PropertyRemoteSource: fmt.Sprintf("%d", remoteCtx.RemoteRegistry.ID),
@@ -104,6 +101,4 @@ func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlo
 			log.Warn("Failed to set blob property %s for remote blob: %v", name, err)
 		}
 	}
-
-	return nil
 }
