@@ -4,9 +4,7 @@
 package container
 
 import (
-	go_context "context"
 	"fmt"
-	"strings"
 	"time"
 
 	packages_model "forgejo.org/models/packages"
@@ -68,7 +66,7 @@ func getLocalBlob(ctx *context.Context, remoteCtx *RemoteRegistryContext, digest
 }
 
 // saveBlobToPackage saves a blob as a package
-func saveBlobToPackage(ctx go_context.Context, buf *packages_module.HashedBuffer, remoteCtx *RemoteRegistryContext, digest string, owner, creator *user_model.User) error {
+func saveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, remoteCtx *RemoteRegistryContext, digest string, owner, creator *user_model.User) error {
 	log.Debug("Saving blob %s as package", digest)
 	pci := &packages_service.PackageCreationInfo{
 		PackageInfo: packages_service.PackageInfo{
@@ -79,17 +77,12 @@ func saveBlobToPackage(ctx go_context.Context, buf *packages_module.HashedBuffer
 		Creator: creator,
 	}
 
-	pb, err := saveAsPackageBlob(ctx, buf, pci)
+	pb, pf, err := saveAsPackageBlob(ctx, buf, pci)
 	if err != nil {
 		return fmt.Errorf("failed to save blob from remote registry: %w", err)
 	}
 
-	pv, err := packages_model.GetVersionByNameAndVersion(ctx, owner.ID, packages_model.TypeContainer, pci.PackageInfo.Name, pci.PackageInfo.Version)
-	if err != nil {
-		return fmt.Errorf("package version not found: %w", err)
-	}
-
-	err = addRemoteMetadataToBlob(ctx, pb, pv.ID, remoteCtx)
+	err = addRemoteMetadataToBlob(ctx, pb, remoteCtx, pf)
 	if err != nil {
 		return fmt.Errorf("failed to add metadata to blob: %w", err)
 	}
@@ -97,15 +90,8 @@ func saveBlobToPackage(ctx go_context.Context, buf *packages_module.HashedBuffer
 	return nil
 }
 
-// addRemoteMetadataToBlob adds tracking properties to cached blob
-func addRemoteMetadataToBlob(ctx go_context.Context, pb *packages_model.PackageBlob, versionId int64, remoteCtx *RemoteRegistryContext) error {
-	// Find the package file for this blob
-	filename := strings.ToLower(fmt.Sprintf("sha256_%s", pb.HashSHA256))
-	pf, err := packages_model.GetFileForVersionByName(ctx, versionId, filename, packages_model.EmptyFileKey)
-	if err != nil {
-		return fmt.Errorf("failed to find package file for cached blob: %w", err)
-	}
-
+// addRemoteMetadataToBlob Add rr id, time and remote digest as info to blob
+func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlob, remoteCtx *RemoteRegistryContext, pf *packages_model.PackageFile) error {
 	// Add remote registry metadata
 	properties := map[string]string{
 		container_module.PropertyRemoteSource: fmt.Sprintf("%d", remoteCtx.RemoteRegistry.ID),
@@ -116,7 +102,6 @@ func addRemoteMetadataToBlob(ctx go_context.Context, pb *packages_model.PackageB
 	for name, value := range properties {
 		if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypeFile, pf.ID, name, value); err != nil {
 			log.Warn("Failed to set blob property %s for remote blob: %v", name, err)
-			// Continue even if property setting fails
 		}
 	}
 
