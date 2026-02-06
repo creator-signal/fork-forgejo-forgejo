@@ -82,6 +82,11 @@ func microcmdUserCreate() *cli.Command {
 				Name:  "fullname",
 				Usage: `The full, human-readable name of the user`,
 			},
+			&cli.Int64Flag{
+				Name:  "source-id",
+				Usage: "ID if the login source to use",
+				Value: 0,
+			},
 		},
 	}
 }
@@ -136,6 +141,7 @@ func runCreateUser(ctx context.Context, c *cli.Command) error {
 	}
 
 	isAdmin := c.Bool("admin")
+	loginSource := c.Int64("source-id")
 	mustChangePassword := true // always default to true
 	if c.IsSet("must-change-password") {
 		// if the flag is set, use the value provided by the user
@@ -169,6 +175,7 @@ func runCreateUser(ctx context.Context, c *cli.Command) error {
 		MustChangePassword: mustChangePassword,
 		Visibility:         visibility,
 		FullName:           c.String("fullname"),
+		LoginSource:        loginSource,
 	}
 
 	overwriteDefault := &user_model.CreateUserOverwriteOptions{
