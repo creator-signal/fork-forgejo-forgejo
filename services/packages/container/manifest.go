@@ -8,7 +8,6 @@ import (
 	"regexp"
 
 	"forgejo.org/models/user"
-	container_module "forgejo.org/modules/packages/container"
 
 	digest "github.com/opencontainers/go-digest"
 )
