@@ -386,7 +386,29 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
-	// TODO save manifest config as its own blob as this will later be referenced by processManifest
+	// get regRef
+	regRef, err := client.NewRef(remoteCtx.ImageName)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	img := regManifest.(manifest.Imager)
+	cfg, err := img.GetConfig()
+	cfgbuf, err := getBlobFromRemote(ctx, &client, cfg, regRef)
+	if err != nil {
+		log.Error("Failed to save configBlob: %v", err)
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+	defer cfgbuf.Close()
+
+	err = saveBlobToPackage(ctx, cfgbuf, remoteCtx, cfg.Digest.String(), ctx.ContextUser, ctx.Doer)
+	if err != nil {
+		log.Error("Failed to save config: %v", err)
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
 
 	err = saveManifest(ctx, regManifest)
 	if err != nil {
