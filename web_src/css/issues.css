@@ -1,3 +1,6 @@
+/* Copyright 2025 The Forgejo Authors. All rights reserved.
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+ 
 .archived-label-filter:has(#archived-label-filter:not(:checked))
 [data-is-archived] {
   display: none !important;
