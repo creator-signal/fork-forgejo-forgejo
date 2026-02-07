@@ -95,6 +95,7 @@
 .page-content.organization.members .list {
   display: grid;
   grid-template-columns: minmax(min-content, auto) 1fr fit-content(100%) fit-content(100%);
+  color: var(--color-text-light-2);
 
   .divider {
     grid-column: 1 / -1;
@@ -105,6 +106,7 @@
     margin: 0;
     font-size: 16px;
     font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
   }
 
   .actions {
