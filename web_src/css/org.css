@@ -100,6 +100,13 @@
     grid-column: 1 / -1;
   }
 
+  /* Username (+display name) use header */
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: var(--font-weight-semibold);
+  }
+
   .actions {
     display: contents;
   }
