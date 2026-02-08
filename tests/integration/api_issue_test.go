@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"sync"
 	"testing"
@@ -553,8 +554,25 @@ func TestAPISearchIssues(t *testing.T) {
 	req = NewRequest(t, "GET", link.String()).AddTokenAuth(token)
 	resp = MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &apiIssues)
+	assert.True(t, slices.ContainsFunc(apiIssues, func(issue *api.Issue) bool {
+		return issue.ID == 24
+	}))
+	assert.NotEmpty(t, resp.Header().Get("Link"))
 	assert.Equal(t, "23", resp.Header().Get("X-Total-Count"))
 	assert.Len(t, apiIssues, 10)
+
+	query.Add("page", "2")
+	link.RawQuery = query.Encode()
+	req = NewRequest(t, "GET", link.String()).AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &apiIssues)
+	assert.True(t, slices.ContainsFunc(apiIssues, func(issue *api.Issue) bool {
+		return issue.ID == 5
+	}))
+	assert.NotEmpty(t, resp.Header().Get("Link"))
+	assert.Equal(t, "23", resp.Header().Get("X-Total-Count"))
+	assert.Len(t, apiIssues, 10)
+	query.Del("page")
 
 	query = url.Values{"assigned": {"true"}, "state": {"all"}}
 	link.RawQuery = query.Encode()
