@@ -77,7 +77,6 @@ func TestRepoStatuses(t *testing.T) {
 			if len(tt.expectedIDs) != int(tt.expectedTotal) {
 				assert.NotEmpty(t, res.Header().Get("Link"))
 			}
-			assert.NotEmpty(t, res.Header().Get("X-Total-Count"))
 			assert.Equal(t, strconv.Itoa(int(tt.expectedTotal)), res.Header().Get("X-Total-Count"))
 		})
 	}
