@@ -31,12 +31,13 @@ func TestRepoStatuses(t *testing.T) {
 		query         string
 		expectedIDs   []int64
 		expectedTotal int8
-	}{{
-		name:          "All statuses without limit",
-		query:         "/user2/repo1/statuses/1234123412341234123412341234123412341234",
-		expectedIDs:   []int64{1, 2, 3, 4, 5, 6},
-		expectedTotal: 6,
-	},
+	}{
+		{
+			name:          "All statuses without limit",
+			query:         "/user2/repo1/statuses/1234123412341234123412341234123412341234",
+			expectedIDs:   []int64{1, 2, 3, 4, 5, 6},
+			expectedTotal: 6,
+		},
 		{
 			name:          "With limit but without page",
 			query:         "/user2/repo1/statuses/1234123412341234123412341234123412341234?limit=3",
@@ -53,7 +54,6 @@ func TestRepoStatuses(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-
 			req := NewRequestf(
 				t,
 				"GET",
@@ -80,5 +80,4 @@ func TestRepoStatuses(t *testing.T) {
 			assert.Equal(t, strconv.Itoa(int(tt.expectedTotal)), res.Header().Get("X-Total-Count"))
 		})
 	}
-
 }

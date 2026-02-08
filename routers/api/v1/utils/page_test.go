@@ -9,11 +9,11 @@ import (
 
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetListOptions(t *testing.T) {
-
 	cases := []struct {
 		path     string
 		pageSize int
@@ -39,5 +39,4 @@ func TestGetListOptions(t *testing.T) {
 		assert.Equal(t, c.page, opts.Page, "case %d: error in page", n)
 		assert.Equal(t, c.pageSize, opts.PageSize, "case %d: error in pageSize", n)
 	}
-
 }
