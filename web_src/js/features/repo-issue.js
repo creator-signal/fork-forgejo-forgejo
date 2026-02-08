@@ -537,7 +537,7 @@ export function initRepoIssueWipToggle() {
     const title = toggleWip.getAttribute('data-title');
     const wipPrefixes = JSON.parse(toggleWip.getAttribute('data-wip-prefixes'));
     const updateUrl = toggleWip.getAttribute('data-update-url');
-    const prefix = wipPrefixes.find((prefix) => title.startsWith(prefix));
+    const prefix = wipPrefixes.find((prefix) => title.toUpperCase().startsWith(prefix));
 
     try {
       const params = new URLSearchParams();
