@@ -6,6 +6,7 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -566,4 +567,86 @@ func TestAPIAdminListHooksPagination(t *testing.T) {
 	DecodeJSON(t, resp, &hooksList)
 	assert.Len(t, hooksList, 10, "page length should equal `limit` param")
 	assert.Equal(t, "20", resp.Header().Get("X-Total-Count"))
+}
+
+func TestAPIListUnadoptedRepositories(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	adminUsername := "user1"
+	token := getUserToken(t, adminUsername, auth_model.AccessTokenScopeWriteAdmin)
+
+	cases := []struct {
+		name     string
+		url      string
+		expected []string
+		total    int
+	}{
+		{
+			name:     "without paging",
+			url:      "/api/v1/admin/unadopted",
+			expected: []string{"user2/rendering-test"},
+			total:    1,
+		},
+		{
+			name:     "invalid page 0",
+			url:      "/api/v1/admin/unadopted?page=0",
+			expected: []string{"user2/rendering-test"},
+			total:    1,
+		},
+		{
+			name:     "invalid negative page",
+			url:      "/api/v1/admin/unadopted?page=-1",
+			expected: []string{"user2/rendering-test"},
+			total:    1,
+		},
+		{
+			name:     "invalid limit 0",
+			url:      "/api/v1/admin/unadopted?limit=0",
+			expected: []string{"user2/rendering-test"},
+			total:    1,
+		},
+		{
+			name:     "invalid negative limit",
+			url:      "/api/v1/admin/unadopted?limit=-1",
+			expected: []string{"user2/rendering-test"},
+			total:    1,
+		},
+		{
+			name:     "using the default page",
+			url:      "/api/v1/admin/unadopted?page=1",
+			expected: []string{"user2/rendering-test"},
+			total:    1,
+		},
+		{
+			name:     "query w/ result",
+			url:      "/api/v1/admin/unadopted?query=user2",
+			expected: []string{"user2/rendering-test"},
+			total:    1,
+		},
+		{
+			name:     "query w/o result",
+			url:      "/api/v1/admin/unadopted?query=XyZ_undertest",
+			expected: []string{},
+			total:    0,
+		},
+		{
+			name:     "with page, limit and query",
+			url:      "/api/v1/admin/unadopted?query=user2&page=0&limit=0",
+			expected: []string{"user2/rendering-test"},
+			total:    1,
+		},
+	}
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			req := NewRequest(t, "GET", test.url).AddTokenAuth(token)
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			var repos []string
+			DecodeJSON(t, resp, &repos)
+
+			assert.ElementsMatch(t, test.expected, repos)
+			assert.Equal(t, strconv.Itoa(test.total), resp.Header().Get("X-Total-Count"))
+		})
+	}
 }
