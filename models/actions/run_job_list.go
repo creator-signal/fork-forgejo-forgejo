@@ -87,3 +87,7 @@ func (opts FindRunJobOptions) ToConds() builder.Cond {
 	}
 	return cond
 }
+
+func (opts FindRunJobOptions) ToOrders() string {
+	return "`id` DESC"
+}
