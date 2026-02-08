@@ -56,4 +56,12 @@ test('Finds wip prefix in string', () => {
   expect(findWipPrefix('wIP:', wipPrefixes)).toBe('wIp:');
   expect(findWipPrefix('wip:', wipPrefixes)).toBe('wIp:');
   expect(findWipPrefix('WIP:', wipPrefixes)).toBe('wIp:');
+
+  expect(findWipPrefix('wIP:', [])).toBe(undefined);
+  expect(findWipPrefix('wIP:', [])).toBe(undefined);
+  expect(findWipPrefix('wip:', [])).toBe(undefined);
+
+  expect(findWipPrefix('wip:', ['[WIP]'])).toBe(undefined);
+  expect(findWipPrefix('WIP:', ['[WIP]'])).toBe(undefined);
+  expect(findWipPrefix('WIP:', ['[WIP]'])).toBe(undefined);
 });
