@@ -295,9 +295,7 @@ func PrepareGitRepoDirectory(t testing.TB) {
 }
 
 func PrepareGistRepoDirectory(t testing.TB, tempDir string) {
-	var err error
-	setting.Snippet.RootPath, err = os.MkdirTemp(tempDir, "forgejo-snippets-root")
-	require.NoError(t, err)
+	setting.Snippet.RootPath = t.TempDir()
 	require.NoError(t, unittest.CopyDir(path.Join(filepath.Dir(setting.AppPath), "tests/forgejo-snippets-meta"), setting.Snippet.RootPath))
 
 	dirs, err := os.ReadDir(setting.Snippet.RootPath)

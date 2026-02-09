@@ -198,7 +198,7 @@ func TestActionsWorkflowsListWorkflowsReturnsNoWorkflowsIfThereAreNone(t *testin
 
 	require.NoError(t, os.WriteFile(filepath.Join(repoHome, "README.md"), []byte("My project"), 0o644))
 
-	require.NoError(t, git.InitRepository(t.Context(), repoHome, false, git.Sha1ObjectFormat.Name()))
+	require.NoError(t, git.InitRepository(t.Context(), repoHome, git.InitRepositoryOptions{Bare: false, ObjectFormatName: git.Sha1ObjectFormat.Name()}))
 	require.NoError(t, git.AddChanges(repoHome, true))
 	require.NoError(t, git.CommitChanges(repoHome, git.CommitChangesOptions{Message: "Import", Committer: &committer}))
 
@@ -250,7 +250,7 @@ jobs:
 	require.NoError(t, os.MkdirAll(filepath.Join(repoHome, ".github/workflows"), os.ModePerm))
 	require.NoError(t, os.WriteFile(filepath.Join(repoHome, ".github/workflows", "github.yaml"), githubWorkflow, 0o644))
 
-	require.NoError(t, git.InitRepository(t.Context(), repoHome, false, git.Sha1ObjectFormat.Name()))
+	require.NoError(t, git.InitRepository(t.Context(), repoHome, git.InitRepositoryOptions{Bare: false, ObjectFormatName: git.Sha1ObjectFormat.Name()}))
 	require.NoError(t, git.AddChanges(repoHome, true))
 	require.NoError(t, git.CommitChanges(repoHome, git.CommitChangesOptions{Message: "Import", Committer: &committer}))
 
@@ -311,7 +311,7 @@ jobs:
 	require.NoError(t, os.MkdirAll(filepath.Join(repoHome, ".github/workflows"), os.ModePerm))
 	require.NoError(t, os.WriteFile(filepath.Join(repoHome, ".github/workflows", "github.yaml"), githubWorkflow, 0o644))
 
-	require.NoError(t, git.InitRepository(t.Context(), repoHome, false, git.Sha1ObjectFormat.Name()))
+	require.NoError(t, git.InitRepository(t.Context(), repoHome, git.InitRepositoryOptions{Bare: false, ObjectFormatName: git.Sha1ObjectFormat.Name()}))
 	require.NoError(t, git.AddChanges(repoHome, true))
 	require.NoError(t, git.CommitChanges(repoHome, git.CommitChangesOptions{Message: "Import", Committer: &committer}))
 
@@ -371,7 +371,7 @@ jobs:
 	require.NoError(t, os.WriteFile(filepath.Join(repoHome, ".github/workflows", "build.yaml"), buildWorkflow, 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(repoHome, ".github/workflows", "test.yml"), testWorkflow, 0o644))
 
-	require.NoError(t, git.InitRepository(t.Context(), repoHome, false, git.Sha1ObjectFormat.Name()))
+	require.NoError(t, git.InitRepository(t.Context(), repoHome, git.InitRepositoryOptions{Bare: false, ObjectFormatName: git.Sha1ObjectFormat.Name()}))
 	require.NoError(t, git.AddChanges(repoHome, true))
 	require.NoError(t, git.CommitChanges(repoHome, git.CommitChangesOptions{Message: "Import", Committer: &committer}))
 

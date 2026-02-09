@@ -90,7 +90,7 @@ func TestSyncReleasesWithTags(t *testing.T) {
 	t.Run("SHA1", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
-		require.NoError(t, git.InitRepository(t.Context(), tmpDir, false, git.Sha1ObjectFormat.Name()))
+		require.NoError(t, git.InitRepository(t.Context(), tmpDir, git.InitRepositoryOptions{Bare: false, ObjectFormatName: git.Sha1ObjectFormat.Name()}))
 		gitRepo, err := git.OpenRepository(t.Context(), tmpDir)
 		require.NoError(t, err)
 		defer gitRepo.Close()
@@ -115,7 +115,7 @@ func TestSyncReleasesWithTags(t *testing.T) {
 
 		tmpDir := t.TempDir()
 
-		require.NoError(t, git.InitRepository(t.Context(), tmpDir, false, git.Sha256ObjectFormat.Name()))
+		require.NoError(t, git.InitRepository(t.Context(), tmpDir, git.InitRepositoryOptions{Bare: false, ObjectFormatName: git.Sha256ObjectFormat.Name()}))
 		gitRepo, err := git.OpenRepository(t.Context(), tmpDir)
 		require.NoError(t, err)
 		defer gitRepo.Close()
