@@ -62,12 +62,17 @@ func TestCreateRemoteRegistryOrg(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
+	server := mock_server.MockForgejoRegistryServer()
+	defer server.Close()
+
 	rr := api.CreateRemoteRegistryOption{
-		Name:        "testreg",
-		RemoteType:  "container",
-		RemoteURL:   "https://example.registry.com",
-		RemoteUser:  "someUser",
-		RemoteToken: "asdfwoe324lkjsdf0242523",
+		Name:           "testreg",
+		RemoteType:     "container",
+		RemoteURL:      server.URL,
+		RemoteUser:     "someUser",
+		RemoteToken:    "asdfwoe324lkjsdf0242523",
+		RemotePassword: "bla",
+		TestConnection: true,
 	}
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
 	resp := MakeRequest(t, req, http.StatusCreated)
