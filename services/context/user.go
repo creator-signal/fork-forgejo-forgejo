@@ -26,8 +26,11 @@ func UserAssignmentWeb() func(ctx *Context) {
 				ctx.ServerError(title, err)
 			}
 		}
-		ctx.ContextUser = userAssignment(ctx.Base, ctx.Doer, errorFn)
-		ctx.Data["ContextUser"] = ctx.ContextUser
+
+		if ctx.Params(":snippet_uuid") == "" {
+			ctx.ContextUser = userAssignment(ctx.Base, ctx.Doer, errorFn)
+			ctx.Data["ContextUser"] = ctx.ContextUser
+		}
 	}
 }
 

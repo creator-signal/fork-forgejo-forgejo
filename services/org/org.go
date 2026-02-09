@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/storage"
 	"forgejo.org/modules/util"
 	repo_service "forgejo.org/services/repository"
+	snippet_service "forgejo.org/services/snippet"
 )
 
 // DeleteOrganization completely and permanently deletes everything of organization.
@@ -28,6 +29,11 @@ func DeleteOrganization(ctx context.Context, org *org_model.Organization, purge 
 
 	if purge {
 		err := repo_service.DeleteOwnerRepositoriesDirectly(ctx, org.AsUser())
+		if err != nil {
+			return err
+		}
+
+		err = snippet_service.DeleteOwnerSnippets(ctx, org.AsUser())
 		if err != nil {
 			return err
 		}

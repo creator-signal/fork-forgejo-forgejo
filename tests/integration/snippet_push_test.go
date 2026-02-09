@@ -17,11 +17,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSNippetsPushHttp(t *testing.T) {
+func TestSnippetsPushHttp(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		tempDir := t.TempDir()
 
-		require.NoError(t, git.Clone(db.DefaultContext, fmt.Sprintf("%sgists/df852aec.git", u.String()), tempDir, git.CloneRepoOptions{}))
+		require.NoError(t, git.Clone(db.DefaultContext, fmt.Sprintf("%ssnippets/df852aec.git", u.String()), tempDir, git.CloneRepoOptions{}))
 
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "new.txt"), []byte("New text"), 0o644))
 
@@ -33,7 +33,7 @@ func TestSNippetsPushHttp(t *testing.T) {
 
 		// the push should succeed with login
 		cmd := git.NewCommand(db.DefaultContext, "push")
-		cmd.AddDynamicArguments(fmt.Sprintf("%s://user2:password@%s/gists/df852aec.git", u.Scheme, u.Host))
+		cmd.AddDynamicArguments(fmt.Sprintf("%s://user2:password@%s/snippets/df852aec.git", u.Scheme, u.Host))
 		require.NoError(t, cmd.Run(&git.RunOpts{Dir: tempDir}))
 	})
 }
