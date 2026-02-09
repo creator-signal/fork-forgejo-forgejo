@@ -12,19 +12,27 @@ export default {
       type: Object,
       default: () => {},
     },
+    weekStartOffset: {
+      type: Number,
+      default: 0,
+    },
   },
-  data: () => ({
-    colorRange: [
-      'var(--color-secondary-alpha-60)',
-      'var(--color-secondary-alpha-60)',
-      'var(--color-primary-light-4)',
-      'var(--color-primary-light-2)',
-      'var(--color-primary)',
-      'var(--color-primary-dark-2)',
-      'var(--color-primary-dark-4)',
-    ],
-    endDate: new Date(),
-  }),
+  data() {
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() - this.weekStartOffset);
+    return {
+      colorRange: [
+        'var(--color-secondary-alpha-60)',
+        'var(--color-secondary-alpha-60)',
+        'var(--color-primary-light-4)',
+        'var(--color-primary-light-2)',
+        'var(--color-primary)',
+        'var(--color-primary-dark-2)',
+        'var(--color-primary-dark-4)',
+      ],
+      endDate,
+    };
+  },
   mounted() {
     // work around issue with first legend color being rendered twice and legend cut off
     const legend = document.querySelector('.vch__external-legend-wrapper');
@@ -32,12 +40,19 @@ export default {
     legend.style.marginRight = '-12px';
   },
   methods: {
+    normalizeHeatmapDate(date) {
+      if (!this.weekStartOffset) return date;
+      const normalized = new Date(date);
+      normalized.setDate(normalized.getDate() + this.weekStartOffset);
+      return normalized;
+    },
     handleDayClick(e) {
       // Reset filter if same date is clicked
       const params = new URLSearchParams(document.location.search);
       const queryDate = params.get('date');
       // Timezone has to be stripped because toISOString() converts to UTC
-      const clickedDate = new Date(e.date - (e.date.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+      const displayDate = this.normalizeHeatmapDate(e.date);
+      const clickedDate = new Date(displayDate - (displayDate.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
 
       if (queryDate && queryDate === clickedDate) {
         params.delete('date');
@@ -61,8 +76,9 @@ export default {
     :locale="locale"
     :no-data-text="locale.contributions_zero"
     :tooltip-formatter="
-      (v) =>
-        locale.contributions_format
+      (v) => {
+        const displayDate = normalizeHeatmapDate(v.date);
+        return locale.contributions_format
           .replace(
             '{contributions}',
             `<b>${v.count} ${
@@ -71,9 +87,10 @@ export default {
                 : locale.contributions_few
             }</b>`
           )
-          .replace('{month}', locale.months[v.date.getMonth()])
-          .replace('{day}', v.date.getDate())
-          .replace('{year}', v.date.getFullYear())
+          .replace('{month}', locale.months[displayDate.getMonth()])
+          .replace('{day}', displayDate.getDate())
+          .replace('{year}', displayDate.getFullYear());
+      }
     "
     :end-date="endDate"
     :values="values"

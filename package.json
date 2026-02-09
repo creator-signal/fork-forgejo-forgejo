@@ -122,7 +122,9 @@
     "vite-string-plugin": "1.4.9",
     "vitest": "4.0.18"
   },
-  "browserslist": ["defaults"],
+  "browserslist": [
+    "defaults"
+  ],
   "scarfSettings": {
     "enabled": false
   }

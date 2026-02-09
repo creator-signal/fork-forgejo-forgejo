@@ -6,6 +6,7 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -145,6 +146,7 @@ func Config(ctx *context.Context) {
 	ctx.Data["LFS"] = setting.LFS
 
 	ctx.Data["Service"] = setting.Service
+	ctx.Data["UserHeatmapWeekStart"] = setting.UserHeatmapWeekStartValue(ctx)
 	ctx.Data["DbCfg"] = setting.Database
 	ctx.Data["Webhook"] = setting.Webhook
 	ctx.Data["Moderation"] = setting.Moderation
@@ -195,6 +197,7 @@ func ConfigSettings(ctx *context.Context) {
 	ctx.Data["PageIsAdminConfig"] = true
 	ctx.Data["PageIsAdminConfigSettings"] = true
 	ctx.Data["DefaultOpenWithEditorAppsString"] = setting.DefaultOpenWithEditorApps().ToTextareaString()
+	ctx.Data["UserHeatmapWeekStart"] = setting.UserHeatmapWeekStartValue(ctx)
 	ctx.HTML(http.StatusOK, tplConfigSettings)
 }
 
@@ -233,10 +236,17 @@ func ChangeConfig(ctx *context.Context) {
 		}
 		return string(b), nil
 	}
+	marshalWeekStart := func(value string) (string, error) {
+		if normalized, ok := setting.NormalizeUserHeatmapWeekStart(value); ok {
+			return normalized, nil
+		}
+		return "", fmt.Errorf("invalid week start")
+	}
 	marshallers := map[string]func(string) (string, error){
 		cfg.Picture.DisableGravatar.DynKey():       marshalBool,
 		cfg.Picture.EnableFederatedAvatar.DynKey(): marshalBool,
 		cfg.Repository.OpenWithEditorApps.DynKey(): marshalOpenWithApps,
+		setting.UserHeatmapWeekStartDynKey:         marshalWeekStart,
 	}
 	marshaller, hasMarshaller := marshallers[key]
 	if !hasMarshaller {

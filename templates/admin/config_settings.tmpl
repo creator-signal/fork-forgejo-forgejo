@@ -39,4 +39,28 @@
 		</div>
 	</form>
 </div>
+
+<h4 class="ui top attached header">
+	{{ctx.Locale.Tr "admin.config.service_config"}}
+</h4>
+<div class="ui attached segment">
+	<form class="ui form form-fetch-action" method="post" action="{{AppSubUrl}}/admin/config?key=service.user_heatmap_week_start">
+		<div class="field">
+			<label>{{ctx.Locale.Tr "admin.config.user_heatmap_week_start"}}</label>
+			<select class="ui dropdown" name="value">
+				{{$current := .UserHeatmapWeekStart}}
+				<option value="monday" {{if eq $current "monday"}}selected{{end}}>{{ctx.Locale.Tr "admin.config.week_start.monday"}}</option>
+				<option value="tuesday" {{if eq $current "tuesday"}}selected{{end}}>{{ctx.Locale.Tr "admin.config.week_start.tuesday"}}</option>
+				<option value="wednesday" {{if eq $current "wednesday"}}selected{{end}}>{{ctx.Locale.Tr "admin.config.week_start.wednesday"}}</option>
+				<option value="thursday" {{if eq $current "thursday"}}selected{{end}}>{{ctx.Locale.Tr "admin.config.week_start.thursday"}}</option>
+				<option value="friday" {{if eq $current "friday"}}selected{{end}}>{{ctx.Locale.Tr "admin.config.week_start.friday"}}</option>
+				<option value="saturday" {{if eq $current "saturday"}}selected{{end}}>{{ctx.Locale.Tr "admin.config.week_start.saturday"}}</option>
+				<option value="sunday" {{if eq $current "sunday"}}selected{{end}}>{{ctx.Locale.Tr "admin.config.week_start.sunday"}}</option>
+			</select>
+		</div>
+		<div class="field">
+			<button class="ui primary button">{{ctx.Locale.Tr "save"}}</button>
+		</div>
+	</form>
+</div>
 {{template "admin/layout_footer" .}}

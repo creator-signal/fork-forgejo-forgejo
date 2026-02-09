@@ -82,6 +82,7 @@ var Service = struct {
 	NoReplyAddress                          string
 	UserLocationMapURL                      string
 	EnableUserHeatmap                       bool
+	UserHeatmapWeekStart                    string
 	AutoWatchNewRepos                       bool
 	AutoWatchOnChanges                      bool
 	DefaultOrgMemberVisible                 bool
@@ -245,6 +246,13 @@ func loadServiceFrom(rootCfg ConfigProvider) {
 	Service.NoReplyAddress = sec.Key("NO_REPLY_ADDRESS").MustString("noreply." + Domain)
 	Service.UserLocationMapURL = sec.Key("USER_LOCATION_MAP_URL").MustString("https://www.openstreetmap.org/search?query=")
 	Service.EnableUserHeatmap = sec.Key("ENABLE_USER_HEATMAP").MustBool(true)
+	rawHeatmapWeekStart := sec.Key("USER_HEATMAP_WEEK_START").MustString("monday")
+	if normalized, ok := NormalizeUserHeatmapWeekStart(rawHeatmapWeekStart); ok {
+		Service.UserHeatmapWeekStart = normalized
+	} else {
+		log.Warn("USER_HEATMAP_WEEK_START %q is invalid, defaulting to monday", rawHeatmapWeekStart)
+		Service.UserHeatmapWeekStart = "monday"
+	}
 	Service.AutoWatchNewRepos = sec.Key("AUTO_WATCH_NEW_REPOS").MustBool(true)
 	Service.AutoWatchOnChanges = sec.Key("AUTO_WATCH_ON_CHANGES").MustBool(false)
 	modes := sec.Key("ALLOWED_USER_VISIBILITY_MODES").Strings(",")

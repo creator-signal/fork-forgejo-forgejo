@@ -179,6 +179,10 @@
 					<dt>{{ctx.Locale.Tr "admin.config.default_allow_only_contributors_to_track_time"}}</dt>
 					<dd>{{if .Service.DefaultAllowOnlyContributorsToTrackTime}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
 				{{end}}
+				<dt>{{ctx.Locale.Tr "admin.config.enable_user_heatmap"}}</dt>
+				<dd>{{if .Service.EnableUserHeatmap}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.user_heatmap_week_start"}}</dt>
+				<dd>{{.UserHeatmapWeekStart}}</dd>
 				<dt>{{ctx.Locale.Tr "admin.config.default_visibility_organization"}}</dt>
 				<dd>{{.Service.DefaultOrgVisibility}}</dd>
 
