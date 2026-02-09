@@ -24,6 +24,7 @@ import (
 var (
 	ErrNoRemoteRegistry = util.NewNotExistErrorf("no remote container registry found for given hostname")
 	ErrNotAuthenticated = util.NewPermissionDeniedErrorf("authentication to given remote container registry failed")
+	ErrNoAuthInfo       = util.NewNotExistErrorf("no authentication info for given remote")
 )
 
 type RegistryClient struct {
@@ -141,7 +142,7 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 	} else if hasUserAndPW {
 		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, crc.RemoteRegistry.RemotePassword)
 	} else {
-		return &http.Response{}, fmt.Errorf("no authentication info given for %q", crc.RemoteRegistry.Name)
+		return &http.Response{}, ErrNoAuthInfo
 	}
 
 	authResp, err := crc.httpClient.Do(req)
@@ -178,7 +179,9 @@ func (crc *RegistryClient) RemoteRegistryConnected(ctx context.Context) (bool, e
 	}
 
 	authResp, err := crc.AuthenticateRemoteRegistry(ctx, resp)
-	if err != nil {
+	if err == ErrNoAuthInfo {
+		return true, nil
+	} else if err != nil {
 		return false, err
 	}
 

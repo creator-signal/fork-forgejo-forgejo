@@ -94,3 +94,26 @@ func Test_AuthenticateRegistry(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, authResp.StatusCode)
 }
+
+func Test_RemoteRegistryConnectedNoAuthInfo(t *testing.T) {
+	server := mock_server.MockForgejoRegistryServer()
+	defer server.Close()
+
+	rrOpts := api.CreateRemoteRegistryOption{
+		Name:      "testreg",
+		RemoteURL: server.URL,
+	}
+
+	rr := rr_model.RemoteRegistry{
+		Name:        rrOpts.Name,
+		RemoteURL:   rrOpts.RemoteURL,
+		RemoteUser:  "",
+		RemoteToken: "",
+	}
+	crc, err := NewContainerRegistryClient(&rr)
+	require.NoError(t, err)
+	connected, err := crc.RemoteRegistryConnected(t.Context())
+	require.NoError(t, err)
+
+	assert.True(t, connected)
+}
