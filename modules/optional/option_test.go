@@ -116,3 +116,10 @@ func TestOptionValueScan(t *testing.T) {
 		roundtrip(t, optional.None[bool]())
 	})
 }
+
+func TestDelegateSQLType(t *testing.T) {
+	assert.Equal(t, "string", optional.Some("hello world").DelegateSQLType().Name())
+	assert.Equal(t, "string", optional.None[string]().DelegateSQLType().Name())
+	assert.Equal(t, "int64", optional.Some(int64(123)).DelegateSQLType().Name())
+	assert.Equal(t, "int64", optional.None[int64]().DelegateSQLType().Name())
+}

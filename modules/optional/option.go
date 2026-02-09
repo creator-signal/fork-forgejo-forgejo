@@ -6,7 +6,10 @@ package optional
 import (
 	"database/sql"
 	"database/sql/driver"
+	"reflect"
 	"strconv"
+
+	"xorm.io/xorm/schemas"
 )
 
 type Option[T any] []T
@@ -73,6 +76,7 @@ func ParseBool(s string) Option[bool] {
 var (
 	_ sql.Scanner              = (*Option[bool])(nil) // read data from DB
 	_ driver.Valuer            = None[bool]()         // write data to DB
+	_ schemas.SQLTypeDelegator = None[bool]()         // represent column field type correctly
 )
 
 // Convert database data into an Option[T]. sql.Null[T] has all the necessary logic to perform Value(), so it is used as
@@ -101,4 +105,9 @@ func (o Option[T]) Value() (driver.Value, error) {
 		n.Valid = false
 	}
 	return n.Value()
+}
+
+// Make xorm use whatever SQLType is appropriate for T to represent Option[T] in the database table
+func (o Option[T]) DelegateSQLType() reflect.Type {
+	return reflect.TypeFor[T]()
 }
