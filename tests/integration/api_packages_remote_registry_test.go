@@ -257,4 +257,11 @@ func TestRemoteRegistryPull(t *testing.T) {
 		assert.Equal(t, string(blobContent), resp.Body.String())
 	})
 
+	t.Run("List Tags", func(t *testing.T) {
+		req = NewRequest(t, "GET", fmt.Sprintf("%s/tags/list", url)).
+			AddTokenAuth(anonymousToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Contains(t, resp.Body.String(), "latest")
+	})
+
 }
