@@ -113,9 +113,16 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name)).AddTokenAuth(tokenWritePackage)
 	resp = MakeRequest(t, req, http.StatusOK)
 
-	var apiGETRR []api.RemoteRegistry
+	var apiGETRRS []api.RemoteRegistry
+	DecodeJSON(t, resp, &apiGETRRS)
+	assert.Equal(t, rr2.Name, apiGETRRS[0].Name)
+
+	req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr2.Name)).AddTokenAuth(tokenWritePackage)
+	resp = MakeRequest(t, req, http.StatusOK)
+
+	var apiGETRR api.RemoteRegistry
 	DecodeJSON(t, resp, &apiGETRR)
-	assert.Equal(t, rr2.Name, apiGETRR[0].Name)
+	assert.Equal(t, rr2.Name, apiGETRR.Name)
 
 	// DELETE
 	req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr2.Name)).AddTokenAuth(tokenWritePackage)
