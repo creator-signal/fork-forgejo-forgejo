@@ -29,11 +29,13 @@ func Test_RemoteRegistryValidation(t *testing.T) {
 	}
 }
 
-func Test_CreateRemoteRegistry(t *testing.T) {
+func Test_CreateAndUpdateRemoteRegistry(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	name := "testreg"
+	name2 := "testreg2"
 	remoteURL := "https://example.com"
+	remoteURL2 := "https://registry.example.com"
 	remoteType := packages.TypeContainer
 
 	rr := RemoteRegistry{
@@ -46,11 +48,24 @@ func Test_CreateRemoteRegistry(t *testing.T) {
 		OwnerID:    int64(1),
 	}
 
+	rr2 := RemoteRegistry{
+		Name:       name2,
+		RemoteURL:  remoteURL2,
+		RemoteHost: "registry.example.com",
+		RemotePort: 443,
+		RemoteType: remoteType,
+		OwnerType:  RROrg,
+		OwnerID:    int64(1),
+	}
+
 	err := CreateRemoteRegistry(t.Context(), rr)
-
 	require.NoError(t, err)
+	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: name})
+	assert.Equal(t, remoteType, retrieved.RemoteType)
 
-	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: "testreg"})
+	err = UpdateRemoteRegistry(t.Context(), rr2, rr.Name)
+	require.NoError(t, err)
+	retrieved = unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: name2})
 	assert.Equal(t, remoteType, retrieved.RemoteType)
 }
 

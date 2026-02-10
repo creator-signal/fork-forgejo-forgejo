@@ -54,7 +54,7 @@ func TestCreateRemoteRegistryUser(t *testing.T) {
 	assert.Equal(t, packages.TypeContainer.Name(), apiRR.RemoteType)
 }
 
-func TestCreateRemoteRegistryOrg(t *testing.T) {
+func TestCreateAndUpdateRemoteRegistryOrg(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
@@ -74,6 +74,17 @@ func TestCreateRemoteRegistryOrg(t *testing.T) {
 		RemotePassword: "bla",
 		TestConnection: true,
 	}
+
+	rr2 := api.CreateRemoteRegistryOption{
+		Name:           "testreg2",
+		RemoteType:     "container",
+		RemoteURL:      server.URL,
+		RemoteUser:     "someOtherUser",
+		RemoteToken:    "",
+		RemotePassword: "password",
+		TestConnection: true,
+	}
+
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
 	resp := MakeRequest(t, req, http.StatusCreated)
 
@@ -90,6 +101,14 @@ func TestCreateRemoteRegistryOrg(t *testing.T) {
 	assert.Equal(t, rr.RemoteURL, apiRR.RemoteURL)
 	assert.Equal(t, rr.RemoteUser, apiRR.RemoteUser)
 	assert.Equal(t, packages.TypeContainer.Name(), apiRR.RemoteType)
+
+	req = NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr.Name), &rr2).AddTokenAuth(tokenWritePackage)
+	resp = MakeRequest(t, req, http.StatusCreated)
+
+	retrieved = unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg2"})
+	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
+
+	assert.Equal(t, rr2.RemoteUser, retrieved.RemoteUser)
 }
 
 func TestTestConnectionAPIEndpoint(t *testing.T) {
