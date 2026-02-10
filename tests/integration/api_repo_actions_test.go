@@ -496,6 +496,7 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 		assert.Positive(t, registerRunnerResponse.ID)
 		assert.Equal(t, gouuid.Version(4), gouuid.MustParse(registerRunnerResponse.UUID).Version())
 		assert.Regexp(t, "(?i)^[0-9a-f]{40}$", registerRunnerResponse.Token)
+		assert.False(t, registerRunnerResponse.Ephemeral)
 
 		registeredRunner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{UUID: registerRunnerResponse.UUID})
 		assert.Equal(t, registerRunnerResponse.ID, registeredRunner.ID)
@@ -508,6 +509,25 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 		assert.Empty(t, registeredRunner.Version)
 		assert.NotEmpty(t, registeredRunner.TokenHash)
 		assert.NotEmpty(t, registeredRunner.TokenSalt)
+		assert.False(t, registeredRunner.Ephemeral)
+	})
+
+	t.Run("Register ephemeral runner", func(t *testing.T) {
+		options := api.RegisterRunnerOptions{Name: "ephemeral-runner", Description: "Ephemeral runner", Ephemeral: true}
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners", repo1.OwnerName, repo1.Name)
+		request := NewRequestWithJSON(t, "POST", requestURL, options)
+		request.AddTokenAuth(writeToken)
+		response := MakeRequest(t, request, http.StatusCreated)
+
+		var registerRunnerResponse *api.RegisterRunnerResponse
+		DecodeJSON(t, response, &registerRunnerResponse)
+
+		assert.True(t, registerRunnerResponse.Ephemeral)
+
+		registeredRunner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{UUID: registerRunnerResponse.UUID})
+		assert.Equal(t, registerRunnerResponse.UUID, registeredRunner.UUID)
+		assert.True(t, registeredRunner.Ephemeral)
 	})
 
 	t.Run("Runner registration does not update runner with identical name", func(t *testing.T) {
