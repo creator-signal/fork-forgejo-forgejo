@@ -4,11 +4,15 @@
 package container
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 
+	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
@@ -27,6 +31,77 @@ const (
 )
 
 func GetRemoteTagList(ctx *context.Context) {
+	image := ctx.Params("image")
+	last := ctx.FormTrim("last")
+	n := -1
+	if ctx.FormTrim("n") != "" {
+		n = ctx.FormInt("n")
+	}
+
+	tagList, err := container_service.NewTagList(ctx,
+		ctx.Package.Owner.LowerName,
+		image,
+		last,
+		n,
+		ctx.Package.Owner.ID)
+
+	if errors.Is(err, packages_model.ErrPackageNotExist) {
+
+		remoteCtx, err := GetRemoteRegistryContext(ctx)
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry)
+		if err != nil {
+			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		ref, err := client.NewRef(remoteCtx.ImageName)
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+		defer client.Close(ctx, ref)
+
+		tagList, err = client.ListTags(ctx, ref, ctx.Package.Owner.LowerName, image)
+		if err != nil {
+			log.Error("Failed to get tag list for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		if len(tagList.Tags) > 0 {
+			v := url.Values{}
+			if n > 0 {
+				v.Add("n", strconv.Itoa(n))
+			}
+			v.Add("last", tagList.Tags[len(tagList.Tags)-1])
+
+			ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, v.Encode()))
+		}
+
+		jsonResponse(ctx, http.StatusOK, tagList)
+
+	} else if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	if len(tagList.Tags) > 0 {
+		v := url.Values{}
+		if n > 0 {
+			v.Add("n", strconv.Itoa(n))
+		}
+		v.Add("last", tagList.Tags[len(tagList.Tags)-1])
+
+		ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, v.Encode()))
+	}
+
+	jsonResponse(ctx, http.StatusOK, tagList)
 }
 
 func RemoteHeadBlob(ctx *context.Context) {

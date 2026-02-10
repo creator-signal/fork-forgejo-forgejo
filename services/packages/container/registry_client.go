@@ -251,6 +251,18 @@ func (crc *RegistryClient) GetManifest(ctx context.Context, r ref.Ref) (manifest
 	return m, nil
 }
 
+func (crc *RegistryClient) ListTags(ctx context.Context, r ref.Ref, ownerLower, image string) (*TagList, error) {
+	tag, err := crc.RegClient.TagList(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get manifest %s: %w", r.Reference, err)
+	}
+
+	return &TagList{
+		Name: strings.ToLower(ownerLower + "/" + image),
+		Tags: tag.Tags,
+	}, nil
+}
+
 func validateRemoteRegistryHeader(resp http.Response) bool {
 	return resp.Header.Get("Docker-Distribution-API-Version") != "" && resp.Header.Get("WWW-Authenticate") != ""
 }
