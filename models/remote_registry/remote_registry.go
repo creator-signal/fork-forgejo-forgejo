@@ -218,7 +218,6 @@ func GetRemoteRegistriesByOwnerType(ctx context.Context, ownerType RemoteRegistr
 		Where("owner_type = ? AND owner_id = ?", ownerType, ownerID).
 		OrderBy("name ASC").
 		Find(&remoteRegistries)
-
 	if err != nil {
 		return nil, err
 	}

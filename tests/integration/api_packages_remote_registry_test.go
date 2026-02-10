@@ -301,5 +301,4 @@ func TestRemoteRegistryPull(t *testing.T) {
 		resp := MakeRequest(t, req, http.StatusOK)
 		assert.Contains(t, resp.Body.String(), "latest")
 	})
-
 }

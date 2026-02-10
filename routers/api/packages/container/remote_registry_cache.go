@@ -20,6 +20,7 @@ import (
 	"forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
 	container_service "forgejo.org/services/packages/container"
+
 	"github.com/regclient/regclient/types/manifest"
 )
 

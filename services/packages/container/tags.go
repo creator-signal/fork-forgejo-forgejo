@@ -31,5 +31,4 @@ func NewTagList(ctx context.Context, ownerLower, image, last string, n int, owne
 		Name: strings.ToLower(ownerLower + "/" + image),
 		Tags: tags,
 	}, nil
-
 }
