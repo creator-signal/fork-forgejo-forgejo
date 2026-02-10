@@ -107,6 +107,10 @@ func processImageManifest(ctx context.Context, mci *container_service.ManifestCr
 		if err != nil {
 			return err
 		}
+		if mci.RemoteRegistryHost != "" {
+			metadata.RemoteRegistryHost = mci.RemoteRegistryHost
+			metadata.CacheTimeUnix = mci.CacheTimeUnix
+		}
 
 		blobReferences := make([]*blobReference, 0, 1+len(manifest.Layers))
 
@@ -208,6 +212,10 @@ func processImageManifestIndex(ctx context.Context, mci *container_service.Manif
 		metadata := &container_module.Metadata{
 			Type:      container_module.TypeOCI,
 			Manifests: make([]*container_module.Manifest, 0, len(index.Manifests)),
+		}
+		if mci.RemoteRegistryHost != "" {
+			metadata.RemoteRegistryHost = mci.RemoteRegistryHost
+			metadata.CacheTimeUnix = mci.CacheTimeUnix
 		}
 
 		for _, manifest := range index.Manifests {
