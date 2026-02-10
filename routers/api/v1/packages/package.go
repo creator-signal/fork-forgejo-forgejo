@@ -430,6 +430,106 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	ctx.JSON(http.StatusCreated, convert.ToRemoteRegistry(&rr))
 }
 
+// CreateRemoteRegistry creates a remote registry of a given type
+func UpdateRemoteRegistry(ctx *context.APIContext) {
+	// swagger:operation PUT /packages/{owner}/remote-registry/{name} package createRemoteRegistry
+	// ---
+	// summary: Update an existing remote registry
+	// consumes:
+	// - application/json
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// - name: name
+	//   in: path
+	//   description: name of the registry
+	//   type: string
+	//   required: true
+	// - name: remote_registry
+	//   in: body
+	//   required: true
+	//   schema: { "$ref": "#/definitions/CreateRemoteRegistryOption" }
+	// responses:
+	//   "201":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	// TODO
+	// Input sanitation for all form fields
+
+	form := web.GetForm(ctx)
+	rrOpts := form.(*api.CreateRemoteRegistryOption)
+	registryName := ctx.PathParamRaw("name")
+
+	isOrg := ctx.ContextUser.IsOrganization()
+	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+	}
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		if !isOrgOwner && !ctx.Doer.IsAdmin {
+			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+	}
+
+	rr, err := packages_service.NewRemoteRegistry(
+		packages_service.RROpts{
+			Name:       rrOpts.Name,
+			RemoteURL:  rrOpts.RemoteURL,
+			RemoteType: packages.Type(rrOpts.RemoteType),
+			OwnerType:  ownerType,
+			OwnerID:    ctx.ContextUser.ID,
+			Auth: packages_service.RRCredentials{
+				RemoteUser:     rrOpts.RemoteUser,
+				RemotePassword: rrOpts.RemotePassword,
+				RemoteToken:    rrOpts.RemoteToken,
+			},
+		})
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+	}
+
+	connected := true
+	if rrOpts.TestConnection {
+		registryClient, err := container_service.NewContainerRegistryClient(&rr)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		}
+		connected, err = registryClient.RemoteRegistryConnected(ctx)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		}
+	}
+
+	if !connected {
+		ctx.Error(http.StatusInternalServerError, "Connection Test", err)
+	}
+
+	err = packages_service.UpdateRemoteRegistry(ctx, rr, registryName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+	}
+
+	ctx.Status(http.StatusCreated)
+}
+
 // CreateRemotTestRemoteRegistryConnection tests the availability and the credentials of the given registry
 func TestRemoteRegistryConnection(ctx *context.APIContext) {
 	// swagger:operation POST /packages/{owner}/remote-registry/{registry-name}/test package testRemoteRegistryConnection

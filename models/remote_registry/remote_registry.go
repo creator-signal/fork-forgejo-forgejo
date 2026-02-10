@@ -101,6 +101,32 @@ func CreateRemoteRegistry(ctx context.Context, rr RemoteRegistry) error {
 	return committer.Commit()
 }
 
+// Create a remote registry in the DB, expects a valid rr
+func UpdateRemoteRegistry(ctx context.Context, rr RemoteRegistry, oldName string) error {
+	// Check if remote registry already exists
+	existing := &RemoteRegistry{}
+	exists, err := db.GetEngine(ctx).
+		Where("owner_type = ? AND owner_id = ? AND name = ?", rr.OwnerType, rr.OwnerID, oldName).
+		Get(existing)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrRemoteRegistryNotExist
+	}
+
+	affected, err := db.GetEngine(ctx).ID(existing.ID).Update(rr)
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return ErrRemoteRegistryNotExist
+	}
+
+	log.Info("Updated remote registry %q (ID: %d) for owner_type %s:%d", rr.Name, rr.ID, rr.OwnerType, rr.OwnerID)
+	return nil
+}
+
 func (rr RemoteRegistry) Validate() []string {
 	var result []string
 	result = append(result, validation.ValidateNotEmpty(rr.Name, "Name")...)

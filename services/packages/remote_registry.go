@@ -65,6 +65,10 @@ func CreateRemoteRegistry(ctx context.Context, rr rr_model.RemoteRegistry) error
 	return rr_model.CreateRemoteRegistry(ctx, rr)
 }
 
+func UpdateRemoteRegistry(ctx context.Context, rr rr_model.RemoteRegistry, name string) error {
+	return rr_model.UpdateRemoteRegistry(ctx, rr, name)
+}
+
 func GetOwnerType(ctx context.Context, isOrg, isUser bool) (rr_model.RemoteRegistryOwnerType, error) {
 	if isOrg {
 		return rr_model.RROrg, nil
