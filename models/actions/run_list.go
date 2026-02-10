@@ -5,6 +5,7 @@ package actions
 
 import (
 	"context"
+	"slices"
 
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
@@ -14,6 +15,8 @@ import (
 	webhook_module "forgejo.org/modules/webhook"
 
 	"xorm.io/builder"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 type RunList []*ActionRun
@@ -127,14 +130,18 @@ type StatusInfo struct {
 // GetStatusInfoList returns a slice of StatusInfo
 func GetStatusInfoList(ctx context.Context, lang translation.Locale) []StatusInfo {
 	// same as those in aggregateJobStatus
-	allStatus := []Status{StatusSuccess, StatusFailure, StatusWaiting, StatusRunning, StatusBlocked, StatusCancelled, StatusSkipped}
-	statusInfoList := make([]StatusInfo, 0, 4)
+	allStatus := []Status{StatusBlocked, StatusCancelled, StatusFailure, StatusRunning, StatusSkipped, StatusSuccess, StatusWaiting}
+	statusInfoList := make([]StatusInfo, 0, 7)
 	for _, s := range allStatus {
 		statusInfoList = append(statusInfoList, StatusInfo{
 			Status:          int(s),
 			DisplayedStatus: s.LocaleString(lang),
 		})
 	}
+	collator := collate.New(language.Und, collate.IgnoreCase)
+	slices.SortFunc(statusInfoList, func(a, b StatusInfo) int {
+		return collator.CompareString(a.DisplayedStatus, b.DisplayedStatus)
+	})
 	return statusInfoList
 }
 
