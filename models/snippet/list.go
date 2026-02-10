@@ -30,3 +30,9 @@ func (snippetList SnippetList) LoadOwner(ctx context.Context) error {
 
 	return nil
 }
+
+func (snippetList SnippetList) LoadLanguageColor() {
+	for _, snippet := range snippetList {
+		snippet.LoadLanguageColor()
+	}
+}

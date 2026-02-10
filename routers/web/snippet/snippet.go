@@ -23,7 +23,7 @@ type snippetForm struct {
 	Name        string
 	Description string
 	Visibility  snippet_model.SnippetVisibility
-	Files       map[string]string
+	Files       snippet_service.SnippetFiles
 }
 
 // parseSnippetForm parses the form
@@ -48,7 +48,7 @@ func parseSnippetForm(req *http.Request) (*snippetForm, error) {
 		return nil, err
 	}
 
-	form.Files = make(map[string]string)
+	form.Files = make([]*api.SnippetFile, 0)
 
 	for key, value := range req.Form {
 		if !strings.HasPrefix(key, "file-name-") {
@@ -59,13 +59,13 @@ func parseSnippetForm(req *http.Request) (*snippetForm, error) {
 			return nil, fmt.Errorf("%s has no value", key)
 		}
 
-		name := value[0]
-
 		fileID := strings.TrimPrefix(key, "file-name-")
 
-		content := req.FormValue(fmt.Sprintf("file-content-%s", fileID))
+		currentFile := new(api.SnippetFile)
+		currentFile.Name = value[0]
+		currentFile.Content = req.FormValue(fmt.Sprintf("file-content-%s", fileID))
 
-		form.Files[name] = content
+		form.Files = append(form.Files, currentFile)
 	}
 
 	if len(form.Files) == 0 {
@@ -196,11 +196,13 @@ func EditPost(ctx *context.Context) {
 	}
 
 	files := make(snippet_service.SnippetFiles, 0)
-	for name, content := range form.Files {
-		files = append(files, &api.SnippetFile{Name: name, Content: content})
+	err = files.ValidateNames()
+	if err != nil {
+		ctx.ServerError("ValidateNames", err)
+		return
 	}
 
-	err = snippet_service.UpdateFiles(ctx, ctx.Snippet, ctx.Doer, files)
+	err = snippet_service.UpdateFiles(ctx, ctx.Snippet, ctx.Doer, form.Files)
 	if err != nil {
 		ctx.ServerError("UpdateFiles", err)
 		return

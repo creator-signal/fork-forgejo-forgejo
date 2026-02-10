@@ -15,13 +15,14 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 
+	"github.com/go-enry/go-enry/v2"
 	"github.com/google/uuid"
 )
 
 type SnippetVisibility int8 //revive:disable-line:exported
 
 const (
-	SnippetVisibilityPublic  SnippetVisibility = iota + 1 // 1， GistVisibilityPublic the snippet can be seen be anyone
+	SnippetVisibilityPublic  SnippetVisibility = iota + 1 // 1， SnippetVisibilityPublic the snippet can be seen be anyone
 	SnippetVisibilityHidden                               // 2， SnippetVisibilityHidden  the snippet can be seen by anyone but don't appear in the search
 	SnippetVisibilityPrivate                              // 3， SnippetVisibilityPrivate the snippet can only been seen by the owner
 )
@@ -68,15 +69,17 @@ func (err ErrSnippetNotExist) Error() string {
 }
 
 type Snippet struct {
-	ID          int64            `xorm:"pk autoincr"`
-	OwnerID     int64            `xorm:"INDEX REFERENCES(user, id)"`
-	Owner       *user_model.User `xorm:"-"`
-	UUID        string           `xorm:"UNIQUE"`
-	Name        string
-	Description string `xorm:"TEXT"`
-	Visibility  SnippetVisibility
-	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
-	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`
+	ID            int64            `xorm:"pk autoincr"`
+	OwnerID       int64            `xorm:"INDEX REFERENCES(user, id)"`
+	Owner         *user_model.User `xorm:"-"`
+	UUID          string           `xorm:"UNIQUE"`
+	Name          string
+	Description   string `xorm:"TEXT"`
+	Visibility    SnippetVisibility
+	Language      string
+	CreatedUnix   timeutil.TimeStamp `xorm:"INDEX created"`
+	UpdatedUnix   timeutil.TimeStamp `xorm:"INDEX updated"`
+	LanguageColor string             `xorm:"-"`
 }
 
 func init() {
@@ -166,4 +169,10 @@ func (snippet *Snippet) HasAccess(user *user_model.User) bool {
 	}
 
 	return snippet.IsOwner(user)
+}
+
+func (snippet *Snippet) LoadLanguageColor() {
+	if snippet.Language != "" {
+		snippet.LanguageColor = enry.GetColor(snippet.Language)
+	}
 }

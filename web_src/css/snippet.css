@@ -8,3 +8,10 @@
 .snippet-file-header .btn-octicon:hover {
   color: var(--color-primary);
 }
+
+fieldset.snippet-file-border {
+  margin: unset;
+  padding: unset;
+  border-width: 2px;
+  border-style: groove;
+}

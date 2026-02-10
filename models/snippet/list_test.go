@@ -23,8 +23,8 @@ func TestSnippetListLoadOwner(t *testing.T) {
 	snippetList[2] = unittest.AssertExistsAndLoadBean(t, &snippet_model.Snippet{ID: 3})
 	snippetList[3] = unittest.AssertExistsAndLoadBean(t, &snippet_model.Snippet{ID: 4})
 
-	for _, gist := range snippetList {
-		assert.Nil(t, gist.Owner)
+	for _, snippet := range snippetList {
+		assert.Nil(t, snippet.Owner)
 	}
 
 	require.NoError(t, snippetList.LoadOwner(db.DefaultContext))

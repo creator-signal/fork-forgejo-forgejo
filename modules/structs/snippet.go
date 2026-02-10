@@ -16,6 +16,7 @@ type Snippet struct {
 	Description string `json:"description"`
 	// enum: public,hidden,private
 	Visibility string `json:"visibility"`
+	Language   string `json:"language"`
 	// swagger:strfmt date-time
 	Created time.Time `json:"created_at"`
 	// swagger:strfmt date-time

@@ -8,7 +8,6 @@ import (
 
 	snippet_model "forgejo.org/models/snippet"
 	api "forgejo.org/modules/structs"
-	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
@@ -119,14 +118,11 @@ func Create(ctx *context.APIContext) {
 		return
 	}
 
-	files := make(map[string]string)
-	for _, currentFile := range opt.Files {
-		if util.PathContainsDirectory(currentFile.Name) {
-			ctx.Error(http.StatusBadRequest, "invalid filename", nil)
-			return
-		}
-
-		files[currentFile.Name] = currentFile.Content
+	files := snippet_service.SnippetFiles(opt.Files)
+	err = files.ValidateNames()
+	if err != nil {
+		ctx.Error(http.StatusBadRequest, err.Error(), nil)
+		return
 	}
 
 	snippet, err := snippet_service.CreateSnippet(ctx, ctx.Doer, opt.Name, opt.Description, visibility, files)
@@ -230,14 +226,14 @@ func UpdateFiles(ctx *context.APIContext) {
 	//     "$ref": "#/responses/validationError"
 	opt := web.GetForm(ctx).(*api.UpdateSnippetFilesOption)
 
-	for _, currentFile := range opt.Files {
-		if util.PathContainsDirectory(currentFile.Name) {
-			ctx.Error(http.StatusBadRequest, "invalid filename", nil)
-			return
-		}
+	files := snippet_service.SnippetFiles(opt.Files)
+	err := files.ValidateNames()
+	if err != nil {
+		ctx.Error(http.StatusBadRequest, err.Error(), nil)
+		return
 	}
 
-	err := snippet_service.UpdateFiles(ctx, ctx.Snippet, ctx.Doer, opt.Files)
+	err = snippet_service.UpdateFiles(ctx, ctx.Snippet, ctx.Doer, opt.Files)
 	if err != nil {
 		ctx.ServerError("UpdateFiles", err)
 		return

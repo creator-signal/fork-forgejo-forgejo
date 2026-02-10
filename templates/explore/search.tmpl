@@ -2,8 +2,6 @@
 	<form class="ui form ignore-dirty list-header-search">
 		{{if .PageIsExploreUsers}}
 			{{template "shared/search/combo" dict "Value" .Keyword "Placeholder" (ctx.Locale.Tr "search.user_kind")}}
-		{{else if or .PageIsExploreSnippets .PageIsProfileSnippetList .PageIsAdminSnippets}}
-			{{template "shared/search/combo" dict "Value" .Keyword "Placeholder" (ctx.Locale.Tr "search.snippet_kind")}}
 		{{else}}
 			{{template "shared/search/combo" dict "Value" .Keyword "Placeholder" (ctx.Locale.Tr "search.org_kind")}}
 		{{end}}

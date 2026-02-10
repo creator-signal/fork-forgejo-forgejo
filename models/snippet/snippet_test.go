@@ -72,7 +72,7 @@ func TestSnippetLink(t *testing.T) {
 	assert.Equal(t, "/snippets/df852aec", snippet.Link())
 }
 
-func TestGistHTMLURL(t *testing.T) {
+func TestSnippetHTMLURL(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	snippets := unittest.AssertExistsAndLoadBean(t, &snippet_model.Snippet{ID: 1})

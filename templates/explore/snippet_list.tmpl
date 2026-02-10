@@ -12,6 +12,15 @@
 						{{end}}
 						<a class="text primary name" href="{{.Link}}">{{.Name}}</a>
 					</div>
+
+					{{if and .Language .LanguageColor}}
+						<div class="flex-item-trailing muted-links">
+							<a class="flex-text-inline" href="?language={{.Language}}{{if $.PageIsProfileSnippetList}}&tab=snippets{{end}}{{if $.Keyword}}&q={{$.Keyword}}{{end}}{{if $.SortType}}&sort={{$.SortType}}{{end}}">
+								<i class="color-icon tw-mr-2" style="background-color: {{.LanguageColor}}"></i>
+								{{.Language}}
+							</a>
+						</div>
+					{{end}}
 				</div>
 
 				<div class="flex-item-body">{{ctx.Locale.Tr "org.repo_updated" (DateUtils.TimeSince .UpdatedUnix)}}</div>

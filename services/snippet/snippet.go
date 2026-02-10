@@ -43,7 +43,12 @@ func SetupSnippetHook(path string) error {
 }
 
 // CreateSnippet creates a Snippet
-func CreateSnippet(ctx context.Context, owner *user_model.User, name, description string, visibility snippet_model.SnippetVisibility, files map[string]string) (*snippet_model.Snippet, error) {
+func CreateSnippet(ctx context.Context, owner *user_model.User, name, description string, visibility snippet_model.SnippetVisibility, files SnippetFiles) (*snippet_model.Snippet, error) {
+	err := files.ValidateNames()
+	if err != nil {
+		return nil, err
+	}
+
 	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, err
@@ -56,17 +61,13 @@ func CreateSnippet(ctx context.Context, owner *user_model.User, name, descriptio
 	}
 
 	nameList := make([]string, 0)
-	for name, content := range files {
-		if util.PathContainsDirectory(name) {
-			return nil, fmt.Errorf("%s contains a directory", name)
-		}
-
-		err := os.WriteFile(filepath.Join(tempDir, name), []byte(content), 0o644)
+	for _, currentFile := range files {
+		err := os.WriteFile(filepath.Join(tempDir, currentFile.Name), []byte(currentFile.Content), 0o644)
 		if err != nil {
 			return nil, err
 		}
 
-		nameList = append(nameList, name)
+		nameList = append(nameList, currentFile.Name)
 	}
 
 	err = git.AddChanges(tempDir, false, nameList...)
@@ -95,6 +96,7 @@ func CreateSnippet(ctx context.Context, owner *user_model.User, name, descriptio
 	snippet.Name = name
 	snippet.Description = description
 	snippet.Visibility = visibility
+	snippet.Language = files.GetLanguage()
 
 	err = snippet_model.Create(ctx, snippet)
 	if err != nil {
@@ -263,6 +265,13 @@ func UpdateFiles(ctx context.Context, snippet *snippet_model.Snippet, doer *user
 	err = git.Push(ctx, tempDir, git.PushOptions{
 		Remote: snippet.GetRepoPath(),
 	})
+	if err != nil {
+		return err
+	}
+
+	// Update the language
+	snippet.Language = files.GetLanguage()
+	err = snippet.UpdateCols(ctx, "language")
 	if err != nil {
 		return err
 	}

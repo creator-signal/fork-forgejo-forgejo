@@ -183,14 +183,17 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 				PageSize: pagingNum,
 				Page:     page,
 			},
-			Actor:   ctx.Doer,
-			OwnerID: ctx.ContextUser.ID,
-			Keyword: keyword,
+			Actor:    ctx.Doer,
+			OwnerID:  ctx.ContextUser.ID,
+			Keyword:  keyword,
+			Language: language,
 		})
 		if err != nil {
 			ctx.ServerError("SearchSnippets", err)
 			return
 		}
+
+		snippets.LoadLanguageColor()
 
 		ctx.Data["PageIsProfileSnippetList"] = true
 		ctx.Data["Snippets"] = snippets

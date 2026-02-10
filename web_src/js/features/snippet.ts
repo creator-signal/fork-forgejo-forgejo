@@ -2,10 +2,9 @@ import {showTemporaryTooltip} from '../modules/tippy.js';
 import {initRepoCloneLink} from './repo-common.js';
 import {clippie} from 'clippie';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const {i18n} = (window as any).config;
+const {i18n} = window.config;
 
-function addSnippetFileButtonClicked() {
+function addSnippetFileButtonClicked(): void {
   const template = document.getElementById('file-field-template') as HTMLTemplateElement;
   const clone = document.importNode(template.content, true);
 
@@ -31,13 +30,13 @@ function addSnippetFileButtonClicked() {
   document.getElementById('file-field-container').append(clone);
 }
 
-function deleteFileButtonClicked(event: Event) {
+function deleteFileButtonClicked(event: Event): void {
   const fileID = (event.target as HTMLButtonElement).getAttribute('data-file-id');
   const fileField = document.getElementById(`file-field-${fileID}`);
   fileField.remove();
 }
 
-function initAddSnippetFileButton() {
+function initAddSnippetFileButton(): void {
   const button = document.getElementById('add-snippet-file-button');
 
   if (button !== null) {
@@ -45,7 +44,7 @@ function initAddSnippetFileButton() {
   }
 }
 
-function initSnippetCopyContent() {
+function initSnippetCopyContent(): void {
   for (const elem of document.querySelectorAll('span[data-snippet-copy-content]')) {
     elem.addEventListener('click', async (event: Event) => {
       const target = event.currentTarget as HTMLSpanElement;
@@ -74,13 +73,13 @@ function initSnippetCopyContent() {
   }
 }
 
-function initSnippetFileDeleteButtons() {
+function initSnippetFileDeleteButtons(): void {
   for (const elem of document.querySelectorAll('#edit-snippet-form > * button[data-template-name="delete-button"]')) {
     elem.addEventListener('click', deleteFileButtonClicked);
   }
 }
 
-export function initSnippets() {
+export function initSnippets(): void {
   initAddSnippetFileButton();
   initSnippetCopyContent();
   initSnippetFileDeleteButtons();

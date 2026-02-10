@@ -10,6 +10,7 @@ import (
 	snippet_service "forgejo.org/services/snippet"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSnippetFilesContains(t *testing.T) {
@@ -20,4 +21,22 @@ func TestSnippetFilesContains(t *testing.T) {
 
 	assert.True(t, files.Contains("A.txt"))
 	assert.False(t, files.Contains("C.txt"))
+}
+
+func TestSnippetFilesValidateNames(t *testing.T) {
+	files := make(snippet_service.SnippetFiles, 1)
+
+	files[0] = &api.SnippetFile{Name: "test.txt"}
+	require.NoError(t, files.ValidateNames())
+
+	files[0] = &api.SnippetFile{Name: "dir/test.txt"}
+	assert.Error(t, files.ValidateNames())
+}
+
+func TestSnippetFilesGetLanguage(t *testing.T) {
+	files := make(snippet_service.SnippetFiles, 1)
+
+	files[0] = &api.SnippetFile{Name: "test.py", Content: "print()"}
+
+	assert.Equal(t, "Python", files.GetLanguage())
 }

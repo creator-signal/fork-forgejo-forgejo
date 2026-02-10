@@ -4,7 +4,7 @@
 			{{ctx.Locale.Tr "admin.snippets.snippet_manage_panel"}} ({{ctx.Locale.Tr "admin.total" .Total}})
 		</h4>
 		<div class="ui attached segment">
-			{{template "explore/search" .}}
+			{{template "explore/snippet_search" .}}
 		</div>
 		<div class="ui attached table segment">
 			<table class="ui very basic striped table unstackable">
@@ -13,6 +13,7 @@
 						<th>ID</th>
 						<th>{{ctx.Locale.Tr "admin.snippets.owner"}}</th>
 						<th>{{ctx.Locale.Tr "admin.snippets.name"}}</th>
+						<th>{{ctx.Locale.Tr "admin.snippets.language"}}</th>
 						<th>{{ctx.Locale.Tr "admin.snippets.updated"}}</th>
 						<th>{{ctx.Locale.Tr "admin.snippets.created"}}</th>
 						<th>{{ctx.Locale.Tr "admin.notices.op"}}</th>
@@ -24,6 +25,7 @@
 							<td>{{.ID}}</td>
 							<td><a class="tw-break-anywhere" href="{{.Owner.HomeLink}}">{{.Owner.Name}}</a></td>
 							<td><a class="tw-break-anywhere" href="{{.Link}}">{{.Name}}</a></td>
+							<td>{{if .Language}}{{.Language}}{{else}}-{{end}}</td>
 							<td>{{DateUtils.AbsoluteShort .UpdatedUnix}}</td>
 							<td>{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
 							<td><a class="delete-button" href="" data-url="{{$.Link}}/delete?page={{$.Page.Paginater.Current}}&sort={{$.SortType}}" data-id="{{.UUID}}" data-name="{{.Name}}">{{svg "octicon-trash"}}</a></td>

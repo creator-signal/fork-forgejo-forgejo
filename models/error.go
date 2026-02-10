@@ -57,7 +57,7 @@ func (err ErrUserOwnPackages) Error() string {
 	return fmt.Sprintf("user still has ownership of packages [uid: %d]", err.UID)
 }
 
-// ErrUserOwnSnippets notifies that the user (still) owns the gists.
+// ErrUserOwnSnippets notifies that the user (still) owns the snippets.
 type ErrUserOwnSnippets struct {
 	UID int64
 }

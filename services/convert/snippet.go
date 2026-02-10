@@ -19,6 +19,7 @@ func ToSnippet(ctx context.Context, snippet *snippet_model.Snippet, doer *user_m
 		Name:        snippet.Name,
 		Description: snippet.Description,
 		Visibility:  snippet.Visibility.String(),
+		Language:    snippet.Language,
 		Created:     snippet.CreatedUnix.AsTime(),
 		Updated:     snippet.UpdatedUnix.AsTime(),
 	}

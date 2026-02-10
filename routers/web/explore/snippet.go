@@ -35,6 +35,7 @@ func Snippets(ctx *context.Context) {
 	opts.SortOrder = sortOrder
 
 	opts.Keyword = ctx.FormTrim("q")
+	opts.Language = ctx.FormTrim("language")
 
 	snippets, count, err := snippet_model.SearchSnippets(ctx, opts)
 	if err != nil {
@@ -48,10 +49,13 @@ func Snippets(ctx *context.Context) {
 		return
 	}
 
+	snippets.LoadLanguageColor()
+
 	pager := context.NewPagination(int(count), opts.PageSize, opts.Page, 5)
 	pager.SetDefaultParams(ctx)
 
 	ctx.Data["PageIsExploreSnippets"] = true
+	ctx.Data["Language"] = opts.Language
 	ctx.Data["Keyword"] = opts.Keyword
 	ctx.Data["Snippets"] = snippets
 	ctx.Data["Page"] = pager

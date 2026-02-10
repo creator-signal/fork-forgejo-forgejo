@@ -1,3 +1,5 @@
+<fieldset class="snippet-file-border">
+<legend>References</legend>
 <div {{if .id}}id="file-field-{{.id}}"{{end}} data-template-name="field">
 	<div class="field required">
 		<label {{if .id}}for="file-name-{{.id}}"{{end}} data-template-name="name-label">{{ctx.Locale.Tr "snippet.edit.file_name"}}</label>
@@ -13,3 +15,4 @@
 		</div>
 	{{end}}
 </div>
+</fieldset>

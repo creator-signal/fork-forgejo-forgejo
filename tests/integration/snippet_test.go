@@ -1,4 +1,4 @@
-// Copyright 2025 The Forgejo Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 package integration
@@ -17,7 +17,7 @@ func TestViewSnippet(t *testing.T) {
 
 	session := loginUser(t, "user2")
 
-	t.Run("PublicGist", func(t *testing.T) {
+	t.Run("PublicSnippet", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		resp := MakeRequest(t, NewRequest(t, "GET", "/snippets/df852aec"), http.StatusOK)

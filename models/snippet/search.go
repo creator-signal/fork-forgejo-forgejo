@@ -17,6 +17,7 @@ type SearchSnippetsOptions struct {
 	Actor     *user_model.User
 	OwnerID   int64
 	Keyword   string
+	Language  string
 	SortOrder string
 }
 
@@ -44,6 +45,10 @@ func SearchSnippetsCondition(opts *SearchSnippetsOptions) builder.Cond {
 
 	if opts.Keyword != "" {
 		cond = cond.And(db.BuildCaseInsensitiveLike("snippet.name", opts.Keyword))
+	}
+
+	if opts.Language != "" {
+		cond = cond.And(db.BuildCaseInsensitiveLike("snippet.language", opts.Language))
 	}
 
 	return cond
