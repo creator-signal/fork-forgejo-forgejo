@@ -1563,7 +1563,7 @@ func Routes() *web.Route {
 					m.Get("/{name}", reqToken(), reqPackageAccess(perm.AccessModeRead), packages.GetRemoteRegistryByName)
 					m.Put("/{name}", reqToken(), reqPackageAccess(perm.AccessModeWrite), bind(api.CreateRemoteRegistryOption{}), packages.UpdateRemoteRegistry)
 					m.Delete("/{name}", reqToken(), reqPackageAccess(perm.AccessModeWrite), packages.DeleteRemoteRegistry)
-					m.Group("/{registry-name}/test", func() {
+					m.Group("/{name}/test", func() {
 						m.Post("", reqToken(), reqPackageAccess(perm.AccessModeWrite), packages.TestRemoteRegistryConnection)
 					})
 				})

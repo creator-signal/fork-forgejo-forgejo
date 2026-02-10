@@ -718,7 +718,7 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 	isUser := ctx.ContextUser.IsUser()
 
 	userName := ctx.PathParamRaw("username")
-	registryName := ctx.PathParamRaw("registry-name")
+	registryName := ctx.PathParamRaw("name")
 
 	rr, err := packages_service.GetRemoteRegistry(ctx, isOrg, isUser, userName, registryName)
 	if err != nil {
