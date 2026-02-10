@@ -29,6 +29,8 @@
   --page-spacing: 16px; /* space between page elements */
   --page-margin-x: 32px; /* minimum space on left and right side of page */
   --button-spacing: 0.33rem;
+  --color-selection-bg: var(--color-primary-light-1);
+  --color-selection-fg: var(--color-white);
 }
 
 @media (min-width: 768px) and (max-width: 1200px) {
@@ -243,8 +245,8 @@ h1.error-code {
 }
 
 ::selection {
-  background: var(--color-primary-light-1);
-  color: var(--color-white);
+  background: var(--color-selection-bg) !important;
+  color: var(--color-selection-fg) !important;
 }
 
 ::placeholder,

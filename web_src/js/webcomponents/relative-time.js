@@ -200,6 +200,14 @@ window.customElements.define('relative-time', class extends HTMLElement {
       this.attachShadow({mode: 'open'});
       this.contentSpan = document.createElement('span');
       this.shadowRoot.append(this.contentSpan);
+      const style = document.createElement('style');
+      style.textContent = `
+        ::selection {
+          background: var(--color-selection-bg);
+          color: var(--color-selection-fg);
+        }
+      `;
+      this.shadowRoot.append(style);
     }
 
     const next = DoUpdateRelativeTime(this);
