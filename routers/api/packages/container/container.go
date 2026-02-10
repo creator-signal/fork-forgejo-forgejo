@@ -13,7 +13,6 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 
 	auth_model "forgejo.org/models/auth"
 	packages_model "forgejo.org/models/packages"
@@ -712,47 +711,38 @@ func serveBlob(ctx *context.Context, pfd *packages_model.PackageFileDescriptor) 
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#content-discovery
 func GetTagList(ctx *context.Context) {
 	image := ctx.Params("image")
-
-	if _, err := packages_model.GetPackageByName(ctx, ctx.Package.Owner.ID, packages_model.TypeContainer, image); err != nil {
-		if errors.Is(err, packages_model.ErrPackageNotExist) {
-			apiErrorDefined(ctx, errNameUnknown)
-		} else {
-			apiError(ctx, http.StatusInternalServerError, err)
-		}
-		return
-	}
-
+	last := ctx.FormTrim("last")
 	n := -1
 	if ctx.FormTrim("n") != "" {
 		n = ctx.FormInt("n")
 	}
-	last := ctx.FormTrim("last")
 
-	tags, err := container_model.GetImageTags(ctx, ctx.Package.Owner.ID, image, n, last)
-	if err != nil {
+	tagList, err := container_service.NewTagList(ctx,
+		ctx.Package.Owner.LowerName,
+		image,
+		last,
+		n,
+		ctx.Package.Owner.ID)
+
+	if errors.Is(err, packages_model.ErrPackageNotExist) {
+		apiErrorDefined(ctx, errNameUnknown)
+		return
+	} else if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	type TagList struct {
-		Name string   `json:"name"`
-		Tags []string `json:"tags"`
-	}
-
-	if len(tags) > 0 {
+	if len(tagList.Tags) > 0 {
 		v := url.Values{}
 		if n > 0 {
 			v.Add("n", strconv.Itoa(n))
 		}
-		v.Add("last", tags[len(tags)-1])
+		v.Add("last", tagList.Tags[len(tagList.Tags)-1])
 
 		ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, v.Encode()))
 	}
 
-	jsonResponse(ctx, http.StatusOK, TagList{
-		Name: strings.ToLower(ctx.Package.Owner.LowerName + "/" + image),
-		Tags: tags,
-	})
+	jsonResponse(ctx, http.StatusOK, tagList)
 }
 
 // FIXME: Workaround to be removed in v1.20
