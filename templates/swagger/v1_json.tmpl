@@ -4580,6 +4580,33 @@
       }
     },
     "/packages/{owner}/remote-registry": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "package"
+        ],
+        "summary": "Gets all remote registries for a user",
+        "operationId": "listRemoteRegistries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
       "post": {
         "consumes": [
           "application/json"
@@ -4611,6 +4638,108 @@
         ],
         "responses": {
           "201": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/packages/{owner}/remote-registry/{name}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "package"
+        ],
+        "summary": "Gets a remote registry by name for a user",
+        "operationId": "getRemoteRegistry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "tags": [
+          "package"
+        ],
+        "summary": "Update an existing remote registry",
+        "operationId": "createRemoteRegistry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the registry",
+            "name": "name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "remote_registry",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateRemoteRegistryOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "package"
+        ],
+        "summary": "Delete an existing remote registry",
+        "operationId": "deleteRemoteRegistry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the registry",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
             "$ref": "#/responses/empty"
           },
           "404": {
