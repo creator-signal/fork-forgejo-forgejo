@@ -414,16 +414,6 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 
 	task.Job = job
 
-	// Re-scope ephemeral runner once it receives a task to a repo runner
-	if runner.Ephemeral {
-		runner.OwnerID = 0 // should be 0 hinted by GetLatestRunnerToken
-		runner.RepoID = task.RepoID
-		err := UpdateRunner(ctx, runner, "repo_id", "owner_id")
-		if err != nil {
-			return nil, false, err
-		}
-	}
-
 	if err := committer.Commit(); err != nil {
 		return nil, false, err
 	}

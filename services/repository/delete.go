@@ -30,6 +30,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
+	actions_service "forgejo.org/services/actions"
 	federation_service "forgejo.org/services/federation"
 
 	"xorm.io/builder"
@@ -145,8 +146,7 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		}
 	}
 
-	// CleanupEphemeralRunnersByPickedTaskOfRepo deletes ephemeral global/org/user that have started any task of this repo
-	// The cannot pick a second task hardening for ephemeral runners expect that task objects remain available until runner deletion
+	// CleanupEphemeralRunnersByPickedTaskOfRepo deletes ephemeral global/org/user that have started any task of this repo, as they cannot pick a second task
 	// This method will delete affected ephemeral global/org/user runners
 	// &actions_model.ActionRunner{RepoID: repoID} does only handle ephemeral repository runners
 	if err := actions_service.CleanupEphemeralRunnersByPickedTaskOfRepo(ctx, repoID); err != nil {

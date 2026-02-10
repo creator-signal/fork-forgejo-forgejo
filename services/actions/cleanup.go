@@ -186,7 +186,10 @@ func CleanupEphemeralRunnersByPickedTaskOfRepo(ctx context.Context, repoID int64
 	if err != nil {
 		return fmt.Errorf("find runners: %w", err)
 	}
-	affected, _ := res.RowsAffected()
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
 	log.Info("Removed %d runners", affected)
 	return nil
 }
