@@ -29,7 +29,7 @@ func Test_RemoteRegistryValidation(t *testing.T) {
 	}
 }
 
-func Test_CreateUpdateDeleteRemoteRegistry(t *testing.T) {
+func Test_CreateUpdateGetDeleteRemoteRegistry(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	name := "testreg"
@@ -67,6 +67,10 @@ func Test_CreateUpdateDeleteRemoteRegistry(t *testing.T) {
 	require.NoError(t, err)
 	retrieved = unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: name2})
 	assert.Equal(t, remoteType, retrieved.RemoteType)
+
+	rrs, err := GetRemoteRegistriesByOwnerType(t.Context(), RROrg, int64(1))
+	require.NoError(t, err)
+	assert.Equal(t, retrieved.ID, rrs[0].ID)
 
 	err = DeleteRemoteRegistry(t.Context(), RROrg, int64(1), rr2.Name)
 	require.NoError(t, err)

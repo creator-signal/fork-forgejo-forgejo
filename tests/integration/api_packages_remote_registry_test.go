@@ -54,7 +54,7 @@ func TestCreateRemoteRegistryUser(t *testing.T) {
 	assert.Equal(t, packages.TypeContainer.Name(), apiRR.RemoteType)
 }
 
-func TestCreateUpdateDeleteRemoteRegistryOrg(t *testing.T) {
+func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
@@ -85,6 +85,7 @@ func TestCreateUpdateDeleteRemoteRegistryOrg(t *testing.T) {
 		TestConnection: true,
 	}
 
+	// Post
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
 	resp := MakeRequest(t, req, http.StatusCreated)
 
@@ -101,12 +102,22 @@ func TestCreateUpdateDeleteRemoteRegistryOrg(t *testing.T) {
 	assert.Equal(t, rr.RemoteUser, apiRR.RemoteUser)
 	assert.Equal(t, packages.TypeContainer.Name(), apiRR.RemoteType)
 
+	// PUT
 	req = NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr.Name), &rr2).AddTokenAuth(tokenWritePackage)
 	resp = MakeRequest(t, req, http.StatusCreated)
 	retrieved = unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg2"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
 	assert.Equal(t, rr2.RemoteUser, retrieved.RemoteUser)
 
+	// GET
+	req = NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name)).AddTokenAuth(tokenWritePackage)
+	resp = MakeRequest(t, req, http.StatusOK)
+
+	var apiGETRR []api.RemoteRegistry
+	DecodeJSON(t, resp, &apiGETRR)
+	assert.Equal(t, rr2.Name, apiGETRR[0].Name)
+
+	// DELETE
 	req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr2.Name)).AddTokenAuth(tokenWritePackage)
 	resp = MakeRequest(t, req, http.StatusOK)
 	unittest.AssertNotExistsBean(t, &rr_model.RemoteRegistry{Name: "testreg2"})
