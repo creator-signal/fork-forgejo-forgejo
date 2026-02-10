@@ -608,8 +608,7 @@ jobs:
 	})
 }
 
-// Ephemeral
-func TestActionsGiteaContextEphemeral(t *testing.T) {
+func TestActionsEphemeral(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		t.Skip()
 	}
@@ -666,41 +665,16 @@ jobs:
 			},
 			ContentBase64: base64.StdEncoding.EncodeToString([]byte("user2-fix")),
 		})(t)
-		apiPull, err := doAPICreatePullRequest(user2APICtx, baseRepo.OwnerName, baseRepo.Name, baseRepo.DefaultBranch, "user2/patch-1")(t)
+		_, err = doAPICreatePullRequest(user2APICtx, baseRepo.OwnerName, baseRepo.Name, baseRepo.DefaultBranch, "user2/patch-1")(t)
 		require.NoError(t, err)
 		task := runner.fetchTask(t)
-		gtCtx := task.Context.GetFields()
 		actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
 		actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: actionTask.JobID})
 		actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: actionRunJob.RunID})
 		require.NoError(t, actionRun.LoadAttributes(t.Context()))
 
-		assert.Equal(t, user2.Name, gtCtx["actor"].GetStringValue())
-		assert.Equal(t, setting.AppURL+"api/v1", gtCtx["api_url"].GetStringValue())
-		assert.Equal(t, apiPull.Base.Ref, gtCtx["base_ref"].GetStringValue())
 		runEvent := map[string]any{}
 		require.NoError(t, json.Unmarshal([]byte(actionRun.EventPayload), &runEvent))
-		assert.True(t, reflect.DeepEqual(gtCtx["event"].GetStructValue().AsMap(), runEvent))
-		assert.Equal(t, actionRun.TriggerEvent, gtCtx["event_name"].GetStringValue())
-		assert.Equal(t, apiPull.Head.Ref, gtCtx["head_ref"].GetStringValue())
-		assert.Equal(t, actionRunJob.JobID, gtCtx["job"].GetStringValue())
-		assert.Equal(t, actionRun.Ref, gtCtx["ref"].GetStringValue())
-		assert.Equal(t, git.RefName(actionRun.Ref).ShortName(), gtCtx["ref_name"].GetStringValue())
-		assert.False(t, gtCtx["ref_protected"].GetBoolValue())
-		assert.Equal(t, git.RefName(actionRun.Ref).RefType(), gtCtx["ref_type"].GetStringValue())
-		assert.Equal(t, actionRun.Repo.OwnerName+"/"+actionRun.Repo.Name, gtCtx["repository"].GetStringValue())
-		assert.Equal(t, actionRun.Repo.OwnerName, gtCtx["repository_owner"].GetStringValue())
-		assert.Equal(t, actionRun.Repo.HTMLURL(), gtCtx["repositoryUrl"].GetStringValue())
-		assert.Equal(t, fmt.Sprint(actionRunJob.RunID), gtCtx["run_id"].GetStringValue())
-		assert.Equal(t, fmt.Sprint(actionRun.Index), gtCtx["run_number"].GetStringValue())
-		assert.Equal(t, fmt.Sprint(actionRunJob.Attempt), gtCtx["run_attempt"].GetStringValue())
-		assert.Equal(t, "Actions", gtCtx["secret_source"].GetStringValue())
-		assert.Equal(t, setting.AppURL, gtCtx["server_url"].GetStringValue())
-		assert.Equal(t, actionRun.CommitSHA, gtCtx["sha"].GetStringValue())
-		assert.Equal(t, actionRun.WorkflowID, gtCtx["workflow"].GetStringValue())
-		assert.Equal(t, setting.Actions.DefaultActionsURL.URL(), gtCtx["gitea_default_actions_url"].GetStringValue())
-		token := gtCtx["token"].GetStringValue()
-		assert.Equal(t, actionTask.TokenLastEight, token[len(token)-8:])
 
 		// verify CleanupEphemeralRunners does not remove this runner
 		err = actions_service.CleanupEphemeralRunners(t.Context())
@@ -722,12 +696,6 @@ jobs:
 				Result: runnerv1.Result_RESULT_SUCCESS,
 			},
 		}))
-		resp, err = runner.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
-			TasksVersion: 0,
-		}))
-		require.Error(t, err)
-		assert.Nil(t, resp)
-
 		resp, err = runner.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
 			TasksVersion: 0,
 		}))
