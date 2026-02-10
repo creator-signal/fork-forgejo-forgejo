@@ -110,12 +110,13 @@ func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlo
 }
 
 func saveManifest(ctx *context.Context, man manifest.Manifest) error {
-	mci, err := container_service.NewManifestCreationInfo(
+	mci, err := container_service.NewRemoteManifestCreationInfo(
 		ctx.ContextUser,
 		ctx.Doer,
 		man.GetDescriptor().MediaType,
 		ctx.Params("image"),
 		ctx.Params("reference"), // TODO Reference may need to be a tag as well
+		man.GetRef().Registry,
 	)
 	if err != nil {
 		apiErrorDefined(ctx, errManifestInvalid.WithMessage(err.Error()))
