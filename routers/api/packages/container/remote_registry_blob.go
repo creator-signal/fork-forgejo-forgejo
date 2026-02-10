@@ -46,7 +46,6 @@ func GetRemoteTagList(ctx *context.Context) {
 		ctx.Package.Owner.ID)
 
 	if errors.Is(err, packages_model.ErrPackageNotExist) {
-
 		remoteCtx, err := GetRemoteRegistryContext(ctx)
 		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -85,7 +84,6 @@ func GetRemoteTagList(ctx *context.Context) {
 		}
 
 		jsonResponse(ctx, http.StatusOK, tagList)
-
 	} else if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
@@ -106,10 +104,9 @@ func GetRemoteTagList(ctx *context.Context) {
 
 func RemoteHeadBlob(ctx *context.Context) {
 	// Do we have the blob cached locally?
-	blob, err := getBlobFromContext(ctx)
+	_, err := getBlobFromContext(ctx)
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
-
 			dig := ctx.Params("digest")
 			if dig == "" {
 				apiErrorDefined(ctx, errBlobUnknown)
@@ -154,7 +151,6 @@ func RemoteHeadBlob(ctx *context.Context) {
 				apiError(ctx, http.StatusInternalServerError, err)
 				return
 			}
-
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
@@ -162,7 +158,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 	}
 
 	// try again
-	blob, err = getBlobFromContext(ctx)
+	blob, err := getBlobFromContext(ctx)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
@@ -470,6 +466,11 @@ func RemoteGetManifest(ctx *context.Context) {
 
 	img := regManifest.(manifest.Imager)
 	cfg, err := img.GetConfig()
+	if err != nil {
+		log.Error("Failed to get config: %v", err)
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
 	cfgbuf, err := getBlobFromRemote(ctx, &client, cfg, regRef)
 	if err != nil {
 		log.Error("Failed to save configBlob: %v", err)

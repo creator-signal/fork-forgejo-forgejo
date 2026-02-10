@@ -104,7 +104,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 
 	// PUT
 	req = NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr.Name), &rr2).AddTokenAuth(tokenWritePackage)
-	resp = MakeRequest(t, req, http.StatusCreated)
+	MakeRequest(t, req, http.StatusCreated)
 	retrieved = unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg2"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
 	assert.Equal(t, rr2.RemoteUser, retrieved.RemoteUser)
@@ -126,7 +126,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 
 	// DELETE
 	req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr2.Name)).AddTokenAuth(tokenWritePackage)
-	resp = MakeRequest(t, req, http.StatusOK)
+	MakeRequest(t, req, http.StatusOK)
 	unittest.AssertNotExistsBean(t, &rr_model.RemoteRegistry{Name: "testreg2"})
 }
 

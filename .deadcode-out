@@ -52,7 +52,6 @@ forgejo.org/models/perm/access
 
 forgejo.org/models/remote_registry
 	GetRemoteRegistryByID
-	GetRemoteRegistriesByOwnerType
 
 forgejo.org/models/repo
 	WatchRepoMode
@@ -238,7 +237,6 @@ forgejo.org/services/notify
 	UnregisterNotifier
 
 forgejo.org/services/packages/container
-	ManifestCreationInfo.IsRemote
 	RegistryClient.HeadBlob
 
 forgejo.org/services/repository
