@@ -145,6 +145,14 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		}
 	}
 
+	// CleanupEphemeralRunnersByPickedTaskOfRepo deletes ephemeral global/org/user that have started any task of this repo
+	// The cannot pick a second task hardening for ephemeral runners expect that task objects remain available until runner deletion
+	// This method will delete affected ephemeral global/org/user runners
+	// &actions_model.ActionRunner{RepoID: repoID} does only handle ephemeral repository runners
+	if err := actions_service.CleanupEphemeralRunnersByPickedTaskOfRepo(ctx, repoID); err != nil {
+		return fmt.Errorf("cleanupEphemeralRunners: %w", err)
+	}
+
 	if err := db.DeleteBeans(ctx,
 		&access_model.Access{RepoID: repo.ID},
 		&activities_model.Action{RepoID: repo.ID},
