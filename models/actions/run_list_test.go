@@ -4,17 +4,17 @@
 package actions
 
 import (
-    "testing"
+	"testing"
 
-    "forgejo.org/models/unittest"
+	"forgejo.org/models/unittest"
 	"forgejo.org/modules/translation"
 
-    "github.com/stretchr/testify/assert"
-    "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestActionStatusList(t *testing.T) {
-    require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareTestDatabase())
 	translation.InitLocales(t.Context())
 
 	statusInfoList := GetStatusInfoList(t.Context(), translation.NewLocale("en-US"))
@@ -24,7 +24,7 @@ func TestActionStatusList(t *testing.T) {
 	for i, statusString := range statuses {
 		assert.Equal(t, statusInfoList[i].Status, statusInts[i])
 		assert.Equal(t, statusInfoList[i].DisplayedStatus, statusString)
-    }
+	}
 
 	statusInfoList = GetStatusInfoList(t.Context(), translation.NewLocale("de-DE"))
 	assert.Len(t, statusInfoList, 7)
@@ -33,5 +33,5 @@ func TestActionStatusList(t *testing.T) {
 	for i, statusString := range statuses {
 		assert.Equal(t, statusInfoList[i].Status, statusInts[i])
 		assert.Equal(t, statusInfoList[i].DisplayedStatus, statusString)
-    }
+	}
 }
