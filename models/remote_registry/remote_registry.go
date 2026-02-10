@@ -101,7 +101,7 @@ func CreateRemoteRegistry(ctx context.Context, rr RemoteRegistry) error {
 	return committer.Commit()
 }
 
-// Create a remote registry in the DB, expects a valid rr
+// Update a remote registry in the DB, expects a valid rr
 func UpdateRemoteRegistry(ctx context.Context, rr RemoteRegistry, oldName string) error {
 	// Check if remote registry already exists
 	existing := &RemoteRegistry{}
@@ -124,6 +124,32 @@ func UpdateRemoteRegistry(ctx context.Context, rr RemoteRegistry, oldName string
 	}
 
 	log.Info("Updated remote registry %q (ID: %d) for owner_type %s:%d", rr.Name, rr.ID, rr.OwnerType, rr.OwnerID)
+	return nil
+}
+
+// Delete a remote registry in the DB, expects a valid rr
+func DeleteRemoteRegistry(ctx context.Context, ownerType RemoteRegistryOwnerType, ownerID int64, registryName string) error {
+	// Check if remote registry already exists
+	existing := &RemoteRegistry{}
+	exists, err := db.GetEngine(ctx).
+		Where("owner_type = ? AND owner_id = ? AND name = ?", ownerType, ownerID, registryName).
+		Get(existing)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrRemoteRegistryNotExist
+	}
+
+	affected, err := db.GetEngine(ctx).ID(existing.ID).Delete(existing)
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return ErrRemoteRegistryNotExist
+	}
+
+	log.Info("Updated remote registry %q for owner_type %s:%d", registryName, ownerType, ownerID)
 	return nil
 }
 

@@ -69,6 +69,10 @@ func UpdateRemoteRegistry(ctx context.Context, rr rr_model.RemoteRegistry, name 
 	return rr_model.UpdateRemoteRegistry(ctx, rr, name)
 }
 
+func DeleteRemoteRegistry(ctx context.Context, ownerType rr_model.RemoteRegistryOwnerType, ownerID int64, registryName string) error {
+	return rr_model.DeleteRemoteRegistry(ctx, ownerType, ownerID, registryName)
+}
+
 func GetOwnerType(ctx context.Context, isOrg, isUser bool) (rr_model.RemoteRegistryOwnerType, error) {
 	if isOrg {
 		return rr_model.RROrg, nil

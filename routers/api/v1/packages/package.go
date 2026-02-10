@@ -437,8 +437,6 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 	// summary: Update an existing remote registry
 	// consumes:
 	// - application/json
-	// produces:
-	// - application/json
 	// parameters:
 	// - name: owner
 	//   in: path
@@ -528,6 +526,63 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 	}
 
 	ctx.Status(http.StatusCreated)
+}
+
+// DeleteRemoteRegistry deletes a remote registry of a given name
+func DeleteRemoteRegistry(ctx *context.APIContext) {
+	// swagger:operation DELETE /packages/{owner}/remote-registry/{name} package deleteRemoteRegistry
+	// ---
+	// summary: Delete an existing remote registry
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// - name: name
+	//   in: path
+	//   description: name of the registry
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	// TODO
+	// Input sanitation for all form fields
+
+	registryName := ctx.PathParamRaw("name")
+
+	isOrg := ctx.ContextUser.IsOrganization()
+	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+	}
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		if !isOrgOwner && !ctx.Doer.IsAdmin {
+			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+	}
+
+	err = packages_service.DeleteRemoteRegistry(ctx, ownerType, ctx.ContextUser.ID, registryName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+	}
+
+	ctx.Status(http.StatusOK)
 }
 
 // CreateRemotTestRemoteRegistryConnection tests the availability and the credentials of the given registry
