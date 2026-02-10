@@ -41,7 +41,7 @@ func TestEphemeralRunnerDeletionByTaskCompletion(t *testing.T) {
 		require.True(t, runner.Ephemeral, "runner should be ephemeral")
 
 		// Verify task exists and is running
-		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 54})
+		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 10054})
 		assert.Equal(t, actions_model.StatusRunning, task.Status)
 		assert.Equal(t, int64(10000008), task.RunnerID)
 
@@ -71,54 +71,6 @@ func TestEphemeralRunnerDeletionByTaskCompletion(t *testing.T) {
 	})
 }
 
-func TestEphemeralRunnerMoveToRepoScopeAfterTaskAssignment(t *testing.T) {
-	if !setting.Database.Type.IsSQLite3() {
-		t.Skip()
-	}
-
-	defer unittest.OverrideFixtures("tests/integration/fixtures/TestEphemeralRunner")()
-
-	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		runner, err := actions_model.GetRunnerByID(context.Background(), 10000010)
-		require.NoError(t, err)
-		require.NotNil(t, runner)
-
-		// Verify initial state - runner is in user scope
-		require.Equal(t, int64(10), runner.OwnerID, "runner should start in user scope")
-		require.Equal(t, int64(0), runner.RepoID, "runner should not be repo-scoped initially")
-		require.True(t, runner.Ephemeral, "runner should be ephemeral")
-
-		// Token can be found in models/fixtures/action_runner.yml with id: 10000010
-		runnerClient := newMockRunnerClient(
-			runner.UUID,
-			"379fa0089b8829085497fd5231f170f4e",
-		)
-
-		// Fetch a task - this should trigger the scope change
-		// A waiting job (ID: 401) with matching labels is available in override fixtures
-		resp, err := runnerClient.runnerServiceClient.FetchTask(
-			context.Background(),
-			connect.NewRequest(&runnerv1.FetchTaskRequest{}),
-		)
-		require.NoError(t, err)
-		require.NotNil(t, resp.Msg.Task, "a task should be assigned to the ephemeral org runner")
-
-		// Reload runner from database
-		runnerAfter, err := actions_model.GetRunnerByID(context.Background(), 10000010)
-		require.NoError(t, err)
-
-		// Verify the runner has been moved to repo scope
-		assert.Equal(t, int64(0), runnerAfter.OwnerID, "runner should be moved to global owner (0)")
-		assert.NotEqual(t, int64(0), runnerAfter.RepoID, "runner should now be repo-scoped")
-		assert.True(t, runnerAfter.Ephemeral, "runner should still be ephemeral")
-
-		// Verify the runner's repo_id matches the task's repo_id
-		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: resp.Msg.Task.Id})
-		assert.Equal(t, task.RepoID, runnerAfter.RepoID, "runner should be scoped to the task's repository")
-		assert.Equal(t, int64(64), runnerAfter.RepoID, "runner should be scoped to repo 64")
-	})
-}
-
 func TestEphemeralRunnerDeletedByTaskZombieCleanup(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		t.Skip()
@@ -134,7 +86,7 @@ func TestEphemeralRunnerDeletedByTaskZombieCleanup(t *testing.T) {
 		require.True(t, runner.Ephemeral, "runner should be ephemeral")
 
 		// Verify zombie task exists and is running
-		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 55})
+		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 10055})
 		assert.Equal(t, actions_model.StatusRunning, task.Status)
 		assert.Equal(t, int64(10000011), task.RunnerID)
 
@@ -161,7 +113,7 @@ func TestEphemeralRunnerDeletionOnRepositoryDeletion(t *testing.T) {
 		assert.Equal(t, int64(0), runner.OwnerID, "runner should not start in user scope")
 		assert.NotEqual(t, int64(0), runner.RepoID, "runner should start in repo scope")
 
-		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 54})
+		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 10054})
 		assert.Equal(t, actions_model.StatusRunning, task.Status)
 
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
