@@ -1,6 +1,7 @@
 interface Window {
   config?: {
     appUrl: string;
+    appSubUrl: string;
     i18n: Record<string, string>;
   }
 }

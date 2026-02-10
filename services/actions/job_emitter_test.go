@@ -326,6 +326,12 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 			runJobID:    601,
 			consumed:    true,
 			runJobNames: []string{"define-matrix", "produce-artifacts (blue)", "produce-artifacts (green)", "produce-artifacts (red)"},
+			needs: map[string][]string{
+				"define-matrix":             nil,
+				"produce-artifacts (blue)":  {"define-matrix"},
+				"produce-artifacts (green)": {"define-matrix"},
+				"produce-artifacts (red)":   {"define-matrix"},
+			},
 		},
 		{
 			name:        "needs an incomplete job",
@@ -490,8 +496,8 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 			},
 			needs: map[string][]string{
 				"define-workflow-call":    nil,
-				"inner my-workflow-input": nil,
-				"perform-workflow-call":   {"perform-workflow-call.inner_job"},
+				"inner my-workflow-input": {"define-workflow-call"},
+				"perform-workflow-call":   {"define-workflow-call", "perform-workflow-call.inner_job"},
 			},
 		},
 		// Before reusable workflow expansion, there weren't any cases where evaluating a job in the job emitter could
@@ -515,9 +521,10 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 			},
 			needs: map[string][]string{
 				"define-workflow-call":                   nil,
-				"inner define-runs-on my-workflow-input": nil,
-				"inner incomplete-job my-workflow-input": {"perform-workflow-call.define-runs-on"},
+				"inner define-runs-on my-workflow-input": {"define-workflow-call"},
+				"inner incomplete-job my-workflow-input": {"define-workflow-call", "perform-workflow-call.define-runs-on"},
 				"perform-workflow-call": {
+					"define-workflow-call",
 					"perform-workflow-call.define-runs-on",
 					"perform-workflow-call.scalar-job",
 				},
@@ -661,7 +668,7 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 					if tt.needs != nil {
 						for _, j := range allJobsInRun {
 							expected, ok := tt.needs[j.Name]
-							if assert.Truef(t, ok, "unable to find runsOn[%q] in test case", j.Name) {
+							if assert.Truef(t, ok, "unable to find needs[%q] in test case", j.Name) {
 								slices.Sort(j.Needs)
 								slices.Sort(expected)
 								assert.Equalf(t, expected, j.Needs, "comparing needs expectations for job %q", j.Name)
@@ -779,5 +786,34 @@ func Test_tryHandleWorkflowCallOuterJob(t *testing.T) {
 				assert.Equal(t, tt.outputs, outputMap)
 			}
 		})
+	}
+}
+
+func Test_checkJobsOfRun_ExpandsMatrixWithCorrectOutputJobStatuses(t *testing.T) {
+	defer unittest.OverrideFixtures("services/actions/Test_checkJobsOfRun")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	jobs, err := actions_model.GetRunJobsByRunID(t.Context(), 900)
+	require.NoError(t, err)
+	require.Len(t, jobs, 2)
+
+	require.NoError(t, checkJobsOfRun(t.Context(), 900, 0))
+
+	jobs, err = actions_model.GetRunJobsByRunID(t.Context(), 900)
+	require.NoError(t, err)
+	assert.Len(t, jobs, 4)
+	for _, job := range jobs {
+		switch job.Name {
+		case "define-matrix":
+			assert.Equal(t, actions_model.StatusSuccess, job.Status)
+		case "produce-artifacts (blue)":
+			fallthrough
+		case "produce-artifacts (green)":
+			fallthrough
+		case "produce-artifacts (red)":
+			assert.Equal(t, actions_model.StatusWaiting, job.Status)
+		default:
+			assert.Fail(t, "unexpected job name")
+		}
 	}
 }
