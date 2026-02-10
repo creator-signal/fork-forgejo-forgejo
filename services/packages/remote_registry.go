@@ -101,3 +101,23 @@ func GetRemoteRegistry(ctx context.Context, isOrg, isUser bool, userName, regist
 	log.Trace("Found remote registry %q for ownerID: %d", registryName, owner.ID)
 	return rr, nil
 }
+
+func GetRemoteRegistries(ctx context.Context, isOrg, isUser bool, userName string) ([]*rr_model.RemoteRegistry, error) {
+	ownerType, err := GetOwnerType(ctx, isOrg, isUser)
+	if err != nil {
+		return []*rr_model.RemoteRegistry{}, err
+	}
+
+	// Get correct registry from params
+	owner, err := user_model.GetUserByName(ctx, userName)
+	if err != nil {
+		return []*rr_model.RemoteRegistry{}, err
+	}
+
+	rrs, err := rr_model.GetRemoteRegistriesByOwnerType(ctx, ownerType, owner.ID)
+	if err != nil {
+		return []*rr_model.RemoteRegistry{}, err
+	}
+	log.Trace("Found remote registries for ownerID: %d", owner.ID)
+	return rrs, nil
+}

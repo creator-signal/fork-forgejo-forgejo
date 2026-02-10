@@ -528,6 +528,52 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 	ctx.Status(http.StatusCreated)
 }
 
+// ListRemoteRegistries lists all remote registries of a user
+func ListRemoteRegistries(ctx *context.APIContext) {
+	// swagger:operation GET /packages/{owner}/remote-registry package listRemoteRegistries
+	// ---
+	// summary: Gets all remote registries for a user
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	ownerName := ctx.PathParamRaw("username")
+
+	isOrg := ctx.ContextUser.IsOrganization()
+	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+	}
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		if !isOrgOwner && !ctx.Doer.IsAdmin {
+			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	rrs, err := packages_service.GetRemoteRegistries(ctx, isOrg, isUser, ownerName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToRemoteRegistryList(rrs))
+}
+
 // DeleteRemoteRegistry deletes a remote registry of a given name
 func DeleteRemoteRegistry(ctx *context.APIContext) {
 	// swagger:operation DELETE /packages/{owner}/remote-registry/{name} package deleteRemoteRegistry

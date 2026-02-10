@@ -149,7 +149,7 @@ func DeleteRemoteRegistry(ctx context.Context, ownerType RemoteRegistryOwnerType
 		return ErrRemoteRegistryNotExist
 	}
 
-	log.Info("Updated remote registry %q for owner_type %s:%d", registryName, ownerType, ownerID)
+	log.Info("Deleted remote registry %q for owner_type %s:%d", registryName, ownerType, ownerID)
 	return nil
 }
 
@@ -214,8 +214,14 @@ func GetRemoteRegistriesByOwnerType(ctx context.Context, ownerType RemoteRegistr
 	}
 
 	var remoteRegistries []*RemoteRegistry
-	return remoteRegistries, db.GetEngine(ctx).
+	err := db.GetEngine(ctx).
 		Where("owner_type = ? AND owner_id = ?", ownerType, ownerID).
 		OrderBy("name ASC").
 		Find(&remoteRegistries)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return remoteRegistries, nil
 }
