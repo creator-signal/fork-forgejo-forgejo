@@ -262,6 +262,7 @@ func TestRemoteRegistryPull(t *testing.T) {
 	image := "myorg/test"
 	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"
 	manifestContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d","size":1069},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4","size":32}]}`
+	tag := "latest"
 
 	blobDigest := "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
 	blobContent, _ := base64.StdEncoding.DecodeString(`H4sIAAAJbogA/2IYBaNgFIxYAAgAAP//Lq+17wAEAAA=`)
@@ -274,7 +275,14 @@ func TestRemoteRegistryPull(t *testing.T) {
 		MakeRequest(t, req, http.StatusOK)
 	})
 
-	t.Run("GET Manifest", func(t *testing.T) {
+	t.Run("GET Manifest Tag", func(t *testing.T) {
+		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, tag)).
+			AddTokenAuth(anonymousToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, manifestContent, resp.Body.String())
+	})
+
+	t.Run("GET Manifest Digest", func(t *testing.T) {
 		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 			AddTokenAuth(anonymousToken)
 		resp := MakeRequest(t, req, http.StatusOK)
