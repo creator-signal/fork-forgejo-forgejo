@@ -847,7 +847,7 @@ func ContainerRoutes() *web.Route {
 							return
 						}
 						ctx.Status(http.StatusNotFound)
-					}, container.VerifyImageName)
+					}, container.ReqContainerAccess, container.VerifyImageName)
 				})
 			})
 		}
