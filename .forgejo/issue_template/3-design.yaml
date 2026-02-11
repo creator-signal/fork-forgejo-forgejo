@@ -1,0 +1,29 @@
+name: "Step 3: Design"
+description: "[Contributors only] Create UX/UI or technical design unit"
+labels: ["stage/3-design"]
+body:
+- type: markdown
+  attributes:
+    value: |
+      - Please speak English, as this is the language all maintainers can speak and write.
+      - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
+      - If you intend to use AI for communication in this issue, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md). tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
+- type: markdown
+  attributes:
+    value: |
+      ### New workflow
+      
+      We are currently experimenting with a new workflow to manage issues and better understand your problems and needs. This is step 3 of the workflow, which is intended for Forgejo contributors. If you just want to raise a problem or need you have, please refer to step 1.
+      
+      This step is intended to focus on talking about the design of a solution. It covers all relevant aspects, from technical architecture to UI/UX design.
+      
+      If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that led to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+- type: textarea
+  id: description
+  attributes:
+    label: Design description
+    description: What kind of change do you want to design? What needs to be clarified (e.g. technical discussions, UI/UX, ...)?
+- type: textarea
+  id: problems
+  attributes:
+    label: Existing problems or data sources

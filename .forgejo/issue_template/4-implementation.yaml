@@ -1,0 +1,45 @@
+name: "Step 4: Implementation"
+description: "[Contributors only] Document a task ready for implementation"
+labels: ["stage/4-implementation"]
+body:
+- type: markdown
+  attributes:
+    value: |
+      - Please speak English, as this is the language all maintainers can speak and write.
+      - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
+      - If you intend to use AI for communication in this issue, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md). tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
+- type: markdown
+  attributes:
+    value: |
+      ### New workflow
+      
+      We are currently experimenting with a new workflow to manage issues and better understand your problems and needs. This is step 4 of the workflow, which is intended for Forgejo contributors. If you just want to raise a problem or need you have, please refer to step 1.
+      
+      This step is intended to document a task that is actionable to developers and ready for implementation. It is either trivial (e.g. fixing a bug) or has followed the process and was generally accepted as a solution. In particular, this means:
+      
+      * The problems this change fixes have been described and verified.
+      * Potential solutions to the problem have been considered and this one was chosen.
+      * The written details of this issue have been agreed on.
+      
+      If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that led to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+- type: textarea
+  id: description
+  attributes:
+    label: Implementation description
+    description: What kind of change does this implement? Keep this section short and refer to the detailed sections below.
+- type: textarea
+  id: ux-ui
+  attributes:
+    label: UX/UI design details
+    description: Which details for the UI/UX have been agreed on for this change? Can be left empty for trivial bugs.
+- type: textarea
+  id: technical
+  attributes:
+    label: Technical details
+    description: Which kind of technical details have been agreed on for this change? Can be left empty if only the UI/UX design was discussed and technical details are supposed to be figured out during the implementation.
+- type: textarea
+  id: references
+  attributes:
+    label: Reference problems or design and research units that are relevant for this change.
+  validations:
+    required: true

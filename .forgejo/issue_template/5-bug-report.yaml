@@ -1,7 +1,6 @@
-name: 🐛 Bug Report (server / backend)
-description: "[Advanced users only] Found something you weren't expecting? Report it here!"
-title: "bug: "
-labels: bug/new-report
+name: 🐛 Bug Report
+description: "[Contributors only] Found something you weren't expecting? Report it here!"
+labels: "bug/new-report"
 body:
 - type: markdown
   attributes:
@@ -10,10 +9,27 @@ body:
 - type: markdown
   attributes:
     value: |
+      ### New workflow
+      
+      We are currently experimenting with a new workflow to manage issues and better understand your problems and needs.
+      
+      You are currently following a template that is intended to users familiar with Forgejo's technology.
+      Most users and Forgejo admins are asked to instead file a "problem report".
+      
+      Please only proceed if you can confirm that all of this is true:
+      
+      * You are running into a strictly technical issue (and not user confusion or a potentially missing implementation)
+      * The desired fix for the problem is clear and you do not expect a discussion on how the bug is best fixed
+      
+      If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that led to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+- type: markdown
+  attributes:
+    value: |
       - Please speak English, as this is the language all maintainers can speak and write.
       - Be as clear and concise as possible. A very verbose report is harder to interpret in a concrete way.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
       - Take a moment to [check that your issue hasn't been reported before](https://codeberg.org/forgejo/forgejo/issues?q=&type=all&labels=78137).
+      - If you intend to use AI for communication in this issue, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md). tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
 - type: dropdown
   id: can-reproduce
   attributes:
@@ -36,11 +52,6 @@ body:
       Please provide a description of your issue here, with a URL if you were able to reproduce the issue (see above).
   validations:
     required: true
-- type: input
-  id: forgejo-ver
-  attributes:
-    label: Forgejo Version
-    description: Forgejo version (or commit reference) of your instance
 - type: textarea
   id: run-info
   attributes:
@@ -52,6 +63,11 @@ body:
   validations:
     required: true
 - type: textarea
+  id: screenshots
+  attributes:
+    label: Screenshots
+    description: If your bug is a visible frontend issue, please include a screenshot.
+- type: textarea
   id: logs
   attributes:
     label: Logs
@@ -60,14 +76,16 @@ body:
       Please read https://forgejo.org/docs/latest/admin/logging-documentation/.
       In addition, if your problem relates to git commands set `RUN_MODE=dev` at the top of `app.ini`.
 
-      Please copy and paste your logs here, with any sensitive information (e.g. API keys) removed/hidden.
+      Please copy and paste your logs here or add them as an attachment, with any sensitive information (e.g. API keys) removed/hidden.
       You can wrap your logs in `<details>...</details>` tags so it doesn't take up too much space in the issue.
-- type: dropdown
-  id: database
+- type: input
+  id: forgejo-ver
   attributes:
-    label: Database
-    description: What database system are you running?
-    options:
-    - SQLite
-    - PostgreSQL
-    - MySQL
+    label: Forgejo Version
+    description: Forgejo version (or commit reference) your instance is running or that you used to reproduce the bug on Forgejo Next.
+- type: textarea
+  id: versions
+  attributes:
+    label: Other details about your environment (software names and versions)
+    description: |
+      Please include details to help us understand your problem: browser engine and version (for UI issues), operating system and version running Forgejo, database engine and version, deployment methods and relevant third-party packages (e.g. renderers, identity providers)

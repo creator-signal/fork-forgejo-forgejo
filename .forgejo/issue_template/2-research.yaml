@@ -1,0 +1,29 @@
+name: "Step 2: Research"
+description: "[Contributors only] Create research / collection about related problems"
+labels: ["stage/2-research"]
+body:
+- type: markdown
+  attributes:
+    value: |
+      - Please speak English, as this is the language all maintainers can speak and write.
+      - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
+      - If you intend to use AI for communication in this issue, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md). tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
+- type: markdown
+  attributes:
+    value: |
+      ### New workflow
+      
+      We are currently experimenting with a new workflow to manage issues and better understand your problems and needs. This is step 2 of the workflow, which is intended for Forgejo contributors. If you just want to raise a problem or need you have, please refer to step 1.
+      
+      This step is intended to focus on researching the problems users are facing when a single issue is not enough for this (e.g. a lot of related problem reports that need to be discussed and summarized, or external sources such as user testing, surveys etc that need to be included).
+      
+      If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that led to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+- type: textarea
+  id: description
+  attributes:
+    label: Research description
+    description: What is the scope of this research issue?
+- type: textarea
+  id: problems
+  attributes:
+    label: Existing problems or data sources
