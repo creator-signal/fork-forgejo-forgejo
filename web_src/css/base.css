@@ -244,7 +244,8 @@ h1.error-code {
   background: var(--color-hover);
 }
 
-::selection {
+::selection,
+relative-time::part(relative-time)::selection {
   background: var(--color-selection-bg) !important;
   color: var(--color-selection-fg) !important;
 }
