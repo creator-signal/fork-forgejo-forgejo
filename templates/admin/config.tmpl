@@ -379,6 +379,8 @@
 				<dd>{{if .Snippet.Enabled}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
 				<dt>{{ctx.Locale.Tr "admin.config.snippet_root_path"}}</dt>
 				<dd>{{.Snippet.RootPath}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.max_files_per_snippet"}}</dt>
+				<dd>{{.Snippet.MaxFilesPerSnippet}}</dd>
 			</dl>
 		</div>
 	</div>

@@ -1,8 +1,7 @@
 import {basename, extname} from '../utils.js';
 import {hideElem, onInputDebounce, showElem} from '../utils/dom.js';
-import {createCodemirror, type CodemirrorEditor, type EditorOptions} from './codemirror.ts';
+import {createCodemirror, updateCodemirrorFilename, type CodemirrorEditor, type EditorOptions} from './codemirror.ts';
 import {EditorView} from '@codemirror/view';
-import type {LanguageSupport} from '@codemirror/language';
 
 interface EditorConfig {
   indent_style: string;
@@ -31,13 +30,7 @@ async function updateEditor(editor: CodemirrorEditor, filename: string, lineWrap
     effects: editor.compartments.wordWrap.reconfigure(fileOption.wordWrap ? editor.codemirrorView.EditorView.lineWrapping : []),
   });
 
-  const currentLanguage = editor.compartments.language.get(editor.view.state) as Array<unknown> | LanguageSupport;
-  const newLanguage = editor.codemirrorLanguage.LanguageDescription.matchFilename(editor.languages, filename);
-  if (!currentLanguage || (currentLanguage as Array<unknown>).length === 0 || !newLanguage || (currentLanguage as LanguageSupport).language.name.toLowerCase() !== newLanguage.name.toLowerCase()) {
-    editor.view.dispatch({
-      effects: editor.compartments.language.reconfigure(newLanguage ? await newLanguage.load() : []),
-    });
-  }
+  await updateCodemirrorFilename(editor, filename);
 }
 
 function getFileBasedOptions(filename: string, lineWrapExts: string[]): Pick<EditorOptions, 'wordWrap'> {

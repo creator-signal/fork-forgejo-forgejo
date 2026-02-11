@@ -21,6 +21,7 @@ import (
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
+	snippet_service "forgejo.org/services/snippet"
 
 	"github.com/urfave/cli/v3"
 )
@@ -42,6 +43,7 @@ func cmdHook() *cli.Command {
 			subcmdHookPostReceive(),
 			subcmdHookProcReceive(),
 			subcmdHookSnippetPreReceive(),
+			subcmdHookSnippetPostReceive(),
 		},
 	}
 }
@@ -109,6 +111,20 @@ func subcmdHookSnippetPreReceive() *cli.Command {
 		Usage:       "Delegate Snippet pre-receive Git hook",
 		Description: "This command should only be called by Git",
 		Action:      runHookSnippetPreReceive,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name: "debug",
+			},
+		},
+	}
+}
+
+func subcmdHookSnippetPostReceive() *cli.Command {
+	return &cli.Command{
+		Name:        "snippet-post-receive",
+		Usage:       "Delegate Snippet post-receive Git hook",
+		Description: "This command should only be called by Git",
+		Action:      runHookSnippetPostReceive,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name: "debug",
@@ -786,6 +802,30 @@ func writeDataPktLine(ctx context.Context, out io.Writer, data []byte) error {
 	return nil
 }
 
+func checkSnippetFileCount(ctx context.Context, repoPath, commit string) error {
+	gitRepo, err := git.OpenRepository(ctx, repoPath)
+	if err != nil {
+		return err
+	}
+	defer gitRepo.Close()
+
+	tree, err := gitRepo.GetTree(commit)
+	if err != nil {
+		return err
+	}
+
+	entries, err := tree.ListEntries()
+	if err != nil {
+		return err
+	}
+
+	if len(entries) > setting.Snippet.MaxFilesPerSnippet {
+		return fail(ctx, fmt.Sprintf("Repo contains more files than allowed (contains %d, allowed: %d)", len(entries), setting.Snippet.MaxFilesPerSnippet), "")
+	}
+
+	return nil
+}
+
 func checkSnippetDiff(ctx context.Context, repoPath, oldCommitID, newCommitID string) error {
 	files, err := git.GetAffectedFiles(ctx, repoPath, git.Sha1ObjectFormat, oldCommitID, newCommitID, os.Environ())
 	if err != nil {
@@ -833,10 +873,24 @@ func runHookSnippetPreReceive(ctx context.Context, c *cli.Command) error {
 			}
 		}
 
-		err := checkSnippetDiff(ctx, repoPath, oldCommitID, newCommitID)
+		err := checkSnippetFileCount(ctx, repoPath, newCommitID)
 		if err != nil {
 			return err
 		}
+
+		err = checkSnippetDiff(ctx, repoPath, oldCommitID, newCommitID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func runHookSnippetPostReceive(ctx context.Context, c *cli.Command) error {
+	extra := private.SnippetUpdated(ctx, os.Getenv(snippet_service.EnvSnippetUUID))
+	if extra.HasError() {
+		return fail(ctx, extra.UserMsg, "SnippetUpdated failed: %v", extra.Error)
 	}
 
 	return nil

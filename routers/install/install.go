@@ -521,6 +521,7 @@ func SubmitInstall(ctx *context.Context) {
 
 	cfg.Section("snippet").Key("ENABLED").SetValue(strconv.FormatBool(setting.Snippet.Enabled))
 	cfg.Section("snippet").Key("ROOT").SetValue(setting.Snippet.RootPath)
+	cfg.Section("snippet").Key("MAX_FILES_PER_SNIPPET").SetValue(fmt.Sprint(setting.Snippet.MaxFilesPerSnippet))
 
 	if err = os.MkdirAll(setting.Snippet.RootPath, os.ModePerm); err != nil {
 		ctx.RenderWithErr("Make Snippets dir", tplInstall, &form)

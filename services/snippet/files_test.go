@@ -27,10 +27,10 @@ func TestSnippetFilesValidateNames(t *testing.T) {
 	files := make(snippet_service.SnippetFiles, 1)
 
 	files[0] = &api.SnippetFile{Name: "test.txt"}
-	require.NoError(t, files.ValidateNames())
+	require.NoError(t, files.Validate())
 
 	files[0] = &api.SnippetFile{Name: "dir/test.txt"}
-	assert.Error(t, files.ValidateNames())
+	assert.Error(t, files.Validate())
 }
 
 func TestSnippetFilesGetLanguage(t *testing.T) {

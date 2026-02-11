@@ -13,6 +13,7 @@ import {showErrorToast} from '../modules/toast.js';
 import {request, POST, GET} from '../modules/fetch.js';
 import '../htmx.js';
 import {initTab} from '../modules/tab.ts';
+import {initComboMarkdownEditor} from './comp/ComboMarkdownEditor.js';
 
 const {appUrl, appSubUrl, i18n} = window.config;
 
@@ -552,4 +553,16 @@ export function checkAppUrl() {
   }
 
   showGlobalErrorMessage(i18n.incorrect_root_url);
+}
+
+export function initComboMarkdownEditorGlobal() {
+  const markdownEditors = document.querySelectorAll('[data-combo-markdown-editor-init]');
+
+  for (const currentEditor of markdownEditors) {
+    if (currentEditor.querySelector('markdown-toolbar') === null) {
+      throw new Error(`${currentEditor} doesn't contains a Markdown Editor`);
+    }
+
+    initComboMarkdownEditor(currentEditor);
+  }
 }

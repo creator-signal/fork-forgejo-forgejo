@@ -1,6 +1,6 @@
 import {isDarkTheme} from '../utils.js';
 import {languages} from './codemirror-lang.ts';
-import type {LanguageDescription} from '@codemirror/language';
+import type {LanguageDescription, LanguageSupport} from '@codemirror/language';
 import type {Compartment} from '@codemirror/state';
 import type {EditorView, ViewUpdate} from '@codemirror/view';
 import {searchPanel} from './codemirror-search.ts';
@@ -14,8 +14,8 @@ function exportEditor(editor: EditorView) {
 export interface EditorOptions {
   indentSize?: number;
   tabSize?: number;
-  wordWrap: boolean;
-  indentStyle: string;
+  wordWrap?: boolean;
+  indentStyle?: string;
   onContentChange?: (update: ViewUpdate) => void;
 }
 
@@ -215,4 +215,14 @@ export async function createCodemirror(
       language,
     },
   };
+}
+
+export async function updateCodemirrorFilename(editor: CodemirrorEditor, filename: string): Promise<void> {
+  const currentLanguage = editor.compartments.language.get(editor.view.state) as Array<unknown> | LanguageSupport;
+  const newLanguage = editor.codemirrorLanguage.LanguageDescription.matchFilename(editor.languages, filename);
+  if (!currentLanguage || (currentLanguage as Array<unknown>).length === 0 || !newLanguage || (currentLanguage as LanguageSupport).language.name.toLowerCase() !== newLanguage.name.toLowerCase()) {
+    editor.view.dispatch({
+      effects: editor.compartments.language.reconfigure(newLanguage ? await newLanguage.load() : []),
+    });
+  }
 }

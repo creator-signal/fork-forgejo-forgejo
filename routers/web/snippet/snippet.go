@@ -78,6 +78,7 @@ func parseSnippetForm(req *http.Request) (*snippetForm, error) {
 // New creates a Snippet
 func New(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("snippet.edit.new_header")
+	ctx.Data["MaxSnippetFiles"] = setting.Snippet.MaxFilesPerSnippet
 
 	ctx.HTML(http.StatusOK, "snippet/add_edit")
 }
@@ -101,6 +102,8 @@ func NewPost(ctx *context.Context) {
 
 // View shows a Snippet
 func View(ctx *context.Context) {
+	ctx.Snippet.RenderDescription(ctx)
+
 	err := ctx.Snippet.LoadOwner(ctx)
 	if err != nil {
 		ctx.ServerError("LoadOwner", err)
@@ -173,6 +176,7 @@ func Edit(ctx *context.Context) {
 	ctx.Data["Snippet"] = ctx.Snippet
 	ctx.Data["SnippetFiles"] = files
 	ctx.Data["Title"] = ctx.Tr("snippet.edit.edit_header")
+	ctx.Data["MaxSnippetFiles"] = setting.Snippet.MaxFilesPerSnippet
 
 	ctx.HTML(http.StatusOK, "snippet/add_edit")
 }
@@ -196,7 +200,7 @@ func EditPost(ctx *context.Context) {
 	}
 
 	files := make(snippet_service.SnippetFiles, 0)
-	err = files.ValidateNames()
+	err = files.Validate()
 	if err != nil {
 		ctx.ServerError("ValidateNames", err)
 		return

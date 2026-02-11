@@ -129,3 +129,11 @@ func SSHLog(ctx context.Context, level log.Level, msg string) error {
 	_, extra := requestJSONResp(req, &ResponseText{})
 	return extra.Error
 }
+
+// SNippetsUpdated will run some code after a Snippet is updated
+func SnippetUpdated(ctx context.Context, snippetUUID string) ResponseExtra {
+	reqURL := setting.LocalURL + fmt.Sprintf("api/internal/hook/snippet-updated/%s", url.PathEscape(snippetUUID))
+	req := newInternalRequest(ctx, reqURL, "POST")
+	_, extra := requestJSONResp(req, &ResponseText{})
+	return extra
+}

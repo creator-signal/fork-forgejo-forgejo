@@ -3,10 +3,14 @@
 	<div class="ui container">
 		<div class="tw-flex tw-justify-between tw-mb-3">
 			<h1 class="tw-flex tw-justify-center tw-items-center">
+				<div class="tw-me-2">
 					{{template "snippet/icon" .Snippet}}
-				<a class="text primary name" href="{{.Snippet.Owner.HomeLink}}">{{.Snippet.Owner.Name}}</a> / {{.Snippet.Name}}
+				</div>
+				<a class="text primary name" href="{{.Snippet.Owner.HomeLink}}">{{.Snippet.Owner.Name}}</a>
+				<span>/</span>
+				<span>{{.Snippet.Name}}</span>
 			</h1>
-			<div class="tw-text-right tw-align-middle tw-flex tw-justify-center tw-items-center">
+			<div class="tw-text-right tw-align-middle tw-flex tw-justify-center tw-items-center tw-gap-3">
 				{{if .Snippet.IsOwner .SignedUser}}
 					<a class="ui primary button" href="{{.Snippet.Link}}/edit">{{ctx.Locale.Tr "edit"}}</a>
 					<button class="ui primary button red show-modal" data-modal="#delete-snippet-modal">{{ctx.Locale.Tr "remove"}}</button>
@@ -18,8 +22,8 @@
 			</div>
 		</div>
 
-		{{if .Snippet.Description}}
-			<p>{{.Snippet.Description}}</p>
+		{{if .Snippet.RenderedDescription}}
+			<p>{{.Snippet.RenderedDescription}}</p>
 		{{end}}
 
 		<div class="tw-flex tw-flex-col tw-gap-4">

@@ -302,7 +302,7 @@ func PrepareGistRepoDirectory(t testing.TB, tempDir string) {
 	require.NoError(t, err)
 
 	for _, currentDir := range dirs {
-		require.NoError(t, snippet_service.SetupSnippetHook(filepath.Join(setting.Snippet.RootPath, currentDir.Name())))
+		require.NoError(t, snippet_service.SetupSnippetHooks(filepath.Join(setting.Snippet.RootPath, currentDir.Name())))
 	}
 }
 

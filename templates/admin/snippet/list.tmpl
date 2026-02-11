@@ -28,7 +28,7 @@
 							<td>{{if .Language}}{{.Language}}{{else}}-{{end}}</td>
 							<td>{{DateUtils.AbsoluteShort .UpdatedUnix}}</td>
 							<td>{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
-							<td><a class="delete-button" href="" data-url="{{$.Link}}/delete?page={{$.Page.Paginater.Current}}&sort={{$.SortType}}" data-id="{{.UUID}}" data-name="{{.Name}}">{{svg "octicon-trash"}}</a></td>
+							<td><a class="delete-button" href="" data-url="{{$.Link}}/delete?page={{$.Page.Paginater.Current}}&sort={{$.SortType}}" data-id="{{.UUID}}" data-name="{{.Name}}" data-modal-id="delete-snippet-modal">{{svg "octicon-trash"}}</a></td>
 						</tr>
 					{{end}}
 				</tbody>
@@ -38,7 +38,7 @@
 		{{template "base/paginate" .}}
 	</div>
 
-<div class="ui g-modal-confirm delete modal">
+<div class="ui g-modal-confirm delete modal" id="delete-snippet-modal">
 	<div class="header">
 		{{svg "octicon-trash"}}
 		{{ctx.Locale.Tr "snippet.delete"}}

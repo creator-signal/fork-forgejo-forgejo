@@ -1030,6 +1030,7 @@ func registerRoutes(m *web.Route) {
 	}, reqSignIn)
 
 	m.Group("/{username}/-", func() {
+		m.Post("/markup", web.Bind(structs.MarkupOption{}), misc.Markup)
 		if setting.Packages.Enabled {
 			m.Group("/packages", func() {
 				m.Get("", user.ListPackages)

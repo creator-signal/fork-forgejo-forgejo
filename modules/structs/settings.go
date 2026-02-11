@@ -39,5 +39,6 @@ type GeneralAttachmentSettings struct {
 
 // SnippetSettings contains global Snippet settings exposed by API
 type SnippetSettings struct {
-	Enabled bool `json:"enabled"`
+	Enabled            bool `json:"enabled"`
+	MaxFilesPerSnippet int  `json:"max_files_per_snippet"`
 }

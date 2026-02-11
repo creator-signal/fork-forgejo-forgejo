@@ -1,15 +1,17 @@
-<div {{if .id}}id="file-field-{{.id}}"{{end}} data-template-name="field">
+<div data-template-name="field">
 	<div class="field required">
-		<label {{if .id}}for="file-name-{{.id}}"{{end}} data-template-name="name-label">{{ctx.Locale.Tr "snippet.edit.file_name"}}</label>
-		<input {{if .id}}id="file-name-{{.id}}"{{end}} {{if .id}}name="file-name-{{.id}}"{{end}} {{if .name}}value="{{.name}}"{{end}} data-template-name="name-input" pattern="^[^\/\\]*$" title="{{ctx.Locale.Tr "snippet.edit.file_name_title"}}" required></input>
-	</div>
-	<div class="field required">
-		<label {{if .id}}for="file-content-{{.id}}"{{end}} data-template-name="content-label">{{ctx.Locale.Tr "snippet.edit.file_content"}}</label>
-		<textarea {{if .id}}id="file-content-{{.id}}"{{end}} {{if .id}}name="file-content-{{.id}}"{{end}} data-template-name="content-input">{{if .content}}{{.content}}{{end}}</textarea>
-	</div>
-	{{if .delete}}
-		<div class="tw-text-right">
-			<button type="button" class="ui primary button red" data-template-name="delete-button" {{if .id}}data-file-id="{{.id}}"{{end}}>{{ctx.Locale.Tr "remove"}}</button>
+		<label data-template-name="name-label">{{ctx.Locale.Tr "snippet.edit.file_name"}}</label>
+		<input {{if .name}}value="{{.name}}"{{end}} data-template-name="name-input" pattern="^[^\/\\]*$" title="{{ctx.Locale.Tr "snippet.edit.file_name_title"}}" required></input>
+		<div class="ui negative message flash-message flash-error tw-hidden" data-template-name="duplicate-error">
+			<p>{{ctx.Locale.Tr "snippet.edit.duplicate_name_error"}}</p>
 		</div>
-	{{end}}
+	</div>
+	<div class="field required">
+		<label data-template-name="content-label">{{ctx.Locale.Tr "snippet.edit.file_content"}}</label>
+		<textarea class="tw-hidden" data-template-name="content-input">{{if .content}}{{.content}}{{end}}</textarea>
+		{{template "shared/codemirror_container" .}}
+	</div>
+	<div class="tw-text-right">
+		<button type="button" class="ui primary button red tw-hidden" data-template-name="delete-button">{{ctx.Locale.Tr "remove"}}</button>
+	</div>
 </div>

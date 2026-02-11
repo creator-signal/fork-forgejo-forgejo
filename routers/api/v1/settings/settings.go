@@ -96,6 +96,7 @@ func GetSnippetSettings(ctx *context.APIContext) {
 	//   "200":
 	//     "$ref": "#/responses/SnippetSettings"
 	ctx.JSON(http.StatusOK, api.SnippetSettings{
-		Enabled: setting.Snippet.Enabled,
+		Enabled:            setting.Snippet.Enabled,
+		MaxFilesPerSnippet: setting.Snippet.MaxFilesPerSnippet,
 	})
 }

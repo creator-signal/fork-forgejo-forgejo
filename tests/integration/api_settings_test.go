@@ -61,4 +61,14 @@ func TestAPIExposedSettings(t *testing.T) {
 		MaxFiles:     setting.Attachment.MaxFiles,
 		MaxSize:      setting.Attachment.MaxSize,
 	}, attachment)
+
+	snippet := new(api.SnippetSettings)
+	req = NewRequest(t, "GET", "/api/v1/settings/snippet")
+	resp = MakeRequest(t, req, http.StatusOK)
+
+	DecodeJSON(t, resp, &snippet)
+	assert.Equal(t, &api.SnippetSettings{
+		Enabled:            setting.Snippet.Enabled,
+		MaxFilesPerSnippet: setting.Snippet.MaxFilesPerSnippet,
+	}, snippet)
 }

@@ -1,14 +1,16 @@
-// Copyright 2024 The Forgejo Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 package git
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	snippet_model "forgejo.org/models/snippet"
 	"forgejo.org/services/context"
+	snippet_service "forgejo.org/services/snippet"
 )
 
 type serviceHandlerSnippet struct {
@@ -67,5 +69,7 @@ func (h *serviceHandlerSnippet) GetRepoPath() string {
 }
 
 func (h *serviceHandlerSnippet) GetEnviron() []string {
-	return make([]string, 0)
+	return []string{
+		fmt.Sprintf("%s=%s", snippet_service.EnvSnippetUUID, h.snippet.UUID),
+	}
 }

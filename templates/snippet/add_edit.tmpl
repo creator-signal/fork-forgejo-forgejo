@@ -3,7 +3,7 @@
 	<div class="ui container column grid">
 		<div class="column">
 			<template id="file-field-template">
-				{{template "snippet/file_form" dict "delete" true}}
+				{{template "snippet/file_form"}}
 			</template>
 			<form id="edit-snippet-form" class="ui form" action={{if .Snippet}}"{{.Snippet.Link}}/edit/post"{{else}}"/snippets/-/new/post"{{end}} method="POST">
 				<h3 class="tw-text-center ui top attached header">
@@ -17,14 +17,24 @@
 				<div class="ui attached segment">
 					{{.CsrfTokenHtml}}
 
+					<input id="max-snippet-files" type="hidden" name="max-snippet-files" value="{{.MaxSnippetFiles}}" />
+
 					<div class="field required">
 						<label for="name-input">{{ctx.Locale.Tr "snippet.edit.name"}}</label>
 						<input id="name-input" name="name" {{if .Snippet}}value="{{.Snippet.Name}}"{{end}} required></input>
 					</div>
 
-					<div class="field">
-						<label for="description-textarea">{{ctx.Locale.Tr "snippet.edit.description"}}</label>
-						<textarea id="description-textarea" name="description">{{.Snippet.Description}}</textarea>
+					<div class="field" data-combo-markdown-editor-init>
+						<label>{{ctx.Locale.Tr "snippet.edit.description"}}</label>
+							{{template "shared/combomarkdowneditor" (dict
+								"MarkdownPreviewUrl" (printf "%s/-/markup" .SignedUser.HomeLink)
+								"MarkdownPreviewContext" .SignedUser.HomeLink
+								"TextareaName" "description"
+								"TextareaPlaceholder" (ctx.Locale.Tr "snippet.edit.description")
+								"TextareaAriaLabel" (ctx.Locale.Tr "snippet.edit.description")
+								"TextareaContent" .Snippet.Description
+								"HideRepoButtons" true
+							)}}
 					</div>
 
 					<div class="field required">
@@ -51,18 +61,18 @@
 
 					<div id="file-field-container">
 						{{if .SnippetFiles}}
-							{{range $idx, $file := .SnippetFiles}}
-								{{template "snippet/file_form" dict "id" (printf "%d" $idx) "name" .Name "content" .Content "delete" (ne $idx 0)}}
+							{{range .SnippetFiles}}
+								{{template "snippet/file_form" dict "name" .Name "content" .Content}}
 							{{end}}
 						{{else}}
-							{{template "snippet/file_form" dict "id" "0"}}
+							{{template "snippet/file_form"}}
 						{{end}}
 					</div>
 
 					<br>
 
 					<div class="tw-flex tw-justify-between inline field">
-						<button id="add-snippet-file-button" class="ui primary button" type="button">
+						<button id="add-snippet-file-button" class="ui primary button" type="button" disabled>
 							{{ctx.Locale.Tr "snippet.edit.add_file"}}
 						</button>
 						<div class="tw-text-right">

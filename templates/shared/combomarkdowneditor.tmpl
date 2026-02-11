@@ -11,6 +11,7 @@ Template Attributes:
 * DropzoneParentContainer: container for file upload (leave it empty if no upload)
 * DisableAutosize: whether to disable automatic height resizing
 * EasyMDE: whether to display button for switching to legacy editor
+* HideRepoButtons: hide buttons that belong to repos (issue references)
 */}}
 <div {{if .ContainerId}}id="{{.ContainerId}}"{{end}} class="combo-markdown-editor {{.ContainerClasses}}" data-dropzone-parent-container="{{.DropzoneParentContainer}}" data-tab-hint="{{ctx.Locale.TrString "editor.textarea.tab_hint"}}" data-shift-tab-hint="{{ctx.Locale.TrString "editor.textarea.shift_tab_hint"}}">
 
@@ -41,7 +42,9 @@ Template Attributes:
 		<div class="markdown-toolbar-group">
 			<button type="button" class="markdown-toolbar-button show-modal" data-md-button data-md-action="new-table" data-tooltip-content="{{ctx.Locale.Tr "editor.buttons.new_table.tooltip"}}">{{svg "octicon-table"}}</button>
 			<md-mention class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "editor.buttons.mention.tooltip"}}">{{svg "octicon-mention"}}</md-mention>
-			<md-ref class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "editor.buttons.ref.tooltip"}}">{{svg "octicon-cross-reference"}}</md-ref>
+			{{if not .HideRepoButtons}}
+				<md-ref class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "editor.buttons.ref.tooltip"}}">{{svg "octicon-cross-reference"}}</md-ref>
+			{{end}}
 		</div>
 		<div class="markdown-toolbar-group">
 			<button class="markdown-toolbar-button markdown-switch-monospace" data-md-button role="switch" data-enable-text="{{ctx.Locale.Tr "editor.buttons.enable_monospace_font"}}" data-disable-text="{{ctx.Locale.Tr "editor.buttons.disable_monospace_font"}}">{{svg "octicon-typography"}}</button>

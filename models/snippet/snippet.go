@@ -6,6 +6,7 @@ package snippet
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/templates"
 	"forgejo.org/modules/timeutil"
 
 	"github.com/go-enry/go-enry/v2"
@@ -69,17 +71,18 @@ func (err ErrSnippetNotExist) Error() string {
 }
 
 type Snippet struct {
-	ID            int64            `xorm:"pk autoincr"`
-	OwnerID       int64            `xorm:"INDEX REFERENCES(user, id)"`
-	Owner         *user_model.User `xorm:"-"`
-	UUID          string           `xorm:"UNIQUE"`
-	Name          string
-	Description   string `xorm:"TEXT"`
-	Visibility    SnippetVisibility
-	Language      string
-	CreatedUnix   timeutil.TimeStamp `xorm:"INDEX created"`
-	UpdatedUnix   timeutil.TimeStamp `xorm:"INDEX updated"`
-	LanguageColor string             `xorm:"-"`
+	ID                  int64            `xorm:"pk autoincr"`
+	OwnerID             int64            `xorm:"INDEX REFERENCES(user, id)"`
+	Owner               *user_model.User `xorm:"-"`
+	UUID                string           `xorm:"UNIQUE"`
+	Name                string
+	Description         string `xorm:"TEXT"`
+	Visibility          SnippetVisibility
+	Language            string
+	CreatedUnix         timeutil.TimeStamp `xorm:"INDEX created"`
+	UpdatedUnix         timeutil.TimeStamp `xorm:"INDEX updated"`
+	RenderedDescription template.HTML      `xorm:"-"`
+	LanguageColor       string             `xorm:"-"`
 }
 
 func init() {
@@ -171,8 +174,16 @@ func (snippet *Snippet) HasAccess(user *user_model.User) bool {
 	return snippet.IsOwner(user)
 }
 
+// RenderDescription rendes the description as markdown
+func (snippet *Snippet) RenderDescription(ctx context.Context) {
+	if snippet.Description != "" && snippet.RenderedDescription == "" {
+		snippet.RenderedDescription = templates.RenderMarkdownToHtml(ctx, snippet.Description)
+	}
+}
+
+// LoadLanguageColor loads the color for the language
 func (snippet *Snippet) LoadLanguageColor() {
-	if snippet.Language != "" {
+	if snippet.Language != "" && snippet.LanguageColor == "" {
 		snippet.LanguageColor = enry.GetColor(snippet.Language)
 	}
 }

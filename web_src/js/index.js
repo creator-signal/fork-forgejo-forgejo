@@ -46,6 +46,7 @@ import {
   initGlobalFormDirtyLeaveConfirm,
   initGlobalLinkActions,
   initHeadNavbarContentToggle,
+  initComboMarkdownEditorGlobal,
 } from './features/common-global.js';
 import {initRepoTopicBar} from './features/repo-home.js';
 import {initAdminEmails} from './features/admin/emails.js';
@@ -109,6 +110,8 @@ onDomReady(() => {
   initGlobalFormDirtyLeaveConfirm();
   initGlobalLinkActions();
   initDropdowns();
+
+  initComboMarkdownEditorGlobal();
 
   initCommonOrganization();
   initCommonIssueListQuickGoto();

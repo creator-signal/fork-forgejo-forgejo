@@ -154,6 +154,9 @@ func Dashboard(ctx *context.Context) {
 		"sync_repo_branches",
 		"sync_repo_tags",
 	}...)
+	if setting.Snippet.Enabled {
+		entries = append(entries, "resync_snippet_hooks")
+	}
 	ctx.Data["Entries"] = entries
 
 	prepareDeprecatedWarningsAlert(ctx)

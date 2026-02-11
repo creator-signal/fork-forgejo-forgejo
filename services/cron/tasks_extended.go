@@ -18,6 +18,7 @@ import (
 	moderation_service "forgejo.org/services/moderation"
 	repo_service "forgejo.org/services/repository"
 	archiver_service "forgejo.org/services/repository/archiver"
+	snippet_service "forgejo.org/services/snippet"
 	user_service "forgejo.org/services/user"
 )
 
@@ -245,6 +246,16 @@ func registerRemoveResolvedReports() {
 	})
 }
 
+func registerSnippetUpdateHook() {
+	RegisterTaskFatal("resync_snippet_hooks", &BaseConfig{
+		Enabled:    false,
+		RunAtStart: false,
+		Schedule:   "@every 72h",
+	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
+		return snippet_service.SyncSnippetHooks(ctx)
+	})
+}
+
 func initExtendedTasks() {
 	registerDeleteInactiveUsers()
 	registerDeleteRepositoryArchives()
@@ -262,5 +273,8 @@ func initExtendedTasks() {
 	registerRebuildIssueIndexer()
 	if setting.Moderation.Enabled {
 		registerRemoveResolvedReports()
+	}
+	if setting.Snippet.Enabled {
+		registerSnippetUpdateHook()
 	}
 }

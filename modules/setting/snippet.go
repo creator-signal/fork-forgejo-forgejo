@@ -8,12 +8,16 @@ import (
 	"path/filepath"
 )
 
+const maxFilesDefault = 3
+
 var Snippet = struct {
-	Enabled  bool
-	RootPath string
+	Enabled            bool
+	RootPath           string
+	MaxFilesPerSnippet int
 }{
-	Enabled:  true,
-	RootPath: "",
+	Enabled:            true,
+	RootPath:           "",
+	MaxFilesPerSnippet: maxFilesDefault,
 }
 
 func loadSnippetFrom(rootCfg ConfigProvider) {
@@ -25,4 +29,5 @@ func loadSnippetFrom(rootCfg ConfigProvider) {
 	} else {
 		Snippet.RootPath = filepath.Clean(Snippet.RootPath)
 	}
+	Snippet.MaxFilesPerSnippet = sec.Key("MAX_FILES_PER_SNIPPET").MustInt(maxFilesDefault)
 }

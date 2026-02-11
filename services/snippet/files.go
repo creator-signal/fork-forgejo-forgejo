@@ -9,6 +9,7 @@ import (
 
 	"forgejo.org/modules/analyze"
 	"forgejo.org/modules/highlight"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 )
@@ -25,11 +26,24 @@ func (files SnippetFiles) Contains(name string) bool {
 	return false
 }
 
-func (files SnippetFiles) ValidateNames() error {
+func (files SnippetFiles) Validate() error {
+	if len(files) > setting.Snippet.MaxFilesPerSnippet {
+		return fmt.Errorf("snippet contains more files than allowed (contains %d, allowed: %d)", len(files), setting.Snippet.MaxFilesPerSnippet)
+	}
+
+	nameMap := make(map[string]bool)
+
 	for _, currentFile := range files {
 		if util.PathContainsDirectory(currentFile.Name) {
 			return fmt.Errorf("invalid filename: %s", currentFile.Name)
 		}
+
+		_, exists := nameMap[currentFile.Name]
+		if exists {
+			return fmt.Errorf("duplicated filename: %s", currentFile.Name)
+		}
+
+		nameMap[currentFile.Name] = true
 	}
 
 	return nil

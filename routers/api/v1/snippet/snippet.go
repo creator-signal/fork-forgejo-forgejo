@@ -119,7 +119,7 @@ func Create(ctx *context.APIContext) {
 	}
 
 	files := snippet_service.SnippetFiles(opt.Files)
-	err = files.ValidateNames()
+	err = files.Validate()
 	if err != nil {
 		ctx.Error(http.StatusBadRequest, err.Error(), nil)
 		return
@@ -227,7 +227,7 @@ func UpdateFiles(ctx *context.APIContext) {
 	opt := web.GetForm(ctx).(*api.UpdateSnippetFilesOption)
 
 	files := snippet_service.SnippetFiles(opt.Files)
-	err := files.ValidateNames()
+	err := files.Validate()
 	if err != nil {
 		ctx.Error(http.StatusBadRequest, err.Error(), nil)
 		return

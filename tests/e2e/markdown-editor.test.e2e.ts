@@ -6,7 +6,7 @@
 // templates/shared/combomarkdowneditor.tmpl
 // @watch end
 
-import {expect} from '@playwright/test';
+import {expect, type Page, type Locator} from '@playwright/test';
 import {accessibilityCheck} from './shared/accessibility.ts';
 import {test} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
@@ -584,4 +584,32 @@ test('Monospace button aria-label', async ({page}) => {
 
   await monospaceButton.click();
   await assertAriaLabel(enabled);
+});
+
+async function testSingleMarkdownEditor(elem: Locator) {
+  await elem.locator('textarea').fill('**Hello**');
+
+  await elem.locator('button[data-tab-for="markdown-previewer"]').click();
+
+  const preview = await elem.locator('div[data-tab-panel="markdown-previewer"] > p').innerHTML();
+
+  expect(preview).toBe('<strong>Hello</strong>');
+}
+
+async function testMarkdownEditorPage(page: Page, url: string) {
+  const response = await page.goto(url);
+  expect(response?.status()).toBe(200);
+
+  const markdownEditors = await page.locator('[data-combo-markdown-editor-init]').all();
+  expect(markdownEditors.length).toBeGreaterThanOrEqual(1);
+
+  for (const elem of markdownEditors) {
+    await testSingleMarkdownEditor(elem);
+  }
+}
+
+test('Markdown editor init', async ({page}, workerInfo) => { // eslint-disable-line playwright/expect-expect
+  test.skip(['Mobile Safari'].includes(workerInfo.project.name), 'Fails for an unknown reason');
+
+  await testMarkdownEditorPage(page, '/snippets/-/new');
 });

@@ -64,6 +64,7 @@ func Routes() *web.Route {
 	r.Post("/hook/post-receive/{owner}/{repo}", context.OverrideContext, bind(private.HookOptions{}), HookPostReceive)
 	r.Post("/hook/proc-receive/{owner}/{repo}", context.OverrideContext, RepoAssignment, bind(private.HookOptions{}), HookProcReceive)
 	r.Post("/hook/set-default-branch/{owner}/{repo}/{branch}", RepoAssignment, SetDefaultBranch)
+	r.Post("/hook/snippet-updated/{snippet_uuid}", SnippetUpdated)
 	r.Get("/serv/none/{keyid}", ServNoCommand)
 	r.Get("/serv/command/{keyid}/{owner}/{repo}", ServCommand)
 	r.Post("/manager/shutdown", Shutdown)
