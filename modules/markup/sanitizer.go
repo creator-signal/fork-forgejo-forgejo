@@ -148,7 +148,7 @@ func createDefaultPolicy() *bluemonday.Policy {
 		"charoff", "charset", "checked",
 		"clear", "cols", "colspan", "color",
 		"compact", "coords", "datetime", "dir",
-		"disabled", "enctype", "for", "frame",
+		"disabled", "download", "enctype", "for", "frame",
 		"headers", "height", "hreflang",
 		"hspace", "ismap", "label", "lang",
 		"maxlength", "media", "method",
