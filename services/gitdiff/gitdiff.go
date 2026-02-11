@@ -176,7 +176,7 @@ func (d *DiffLine) GetExpandDirection() DiffLineExpandDirection {
 }
 
 func getDiffLineSectionInfo(treePath, line string, lastLeftIdx, lastRightIdx int) *DiffLineSectionInfo {
-	leftLine, leftHunk, rightLine, righHunk := git.ParseDiffHunkString(line)
+	leftLine, leftHunk, rightLine, rightHunk := git.ParseDiffHunkString(line)
 
 	return &DiffLineSectionInfo{
 		Path:          treePath,
@@ -185,7 +185,7 @@ func getDiffLineSectionInfo(treePath, line string, lastLeftIdx, lastRightIdx int
 		LeftIdx:       leftLine,
 		RightIdx:      rightLine,
 		LeftHunkSize:  leftHunk,
-		RightHunkSize: righHunk,
+		RightHunkSize: rightHunk,
 	}
 }
 
@@ -1240,11 +1240,11 @@ func GetDiffFull(ctx context.Context, gitRepo *git.Repository, opts *DiffOptions
 			log.Error("checker.CheckPath(%s) failed: %v", diffFile.Name, err)
 		} else {
 			vendored := attrs["linguist-vendored"].Bool()
-			diffFile.IsVendored = vendored.Value()
+			diffFile.IsVendored = vendored.ValueOrZeroValue()
 			gotVendor = vendored.Has()
 
 			generated := attrs["linguist-generated"].Bool()
-			diffFile.IsGenerated = generated.Value()
+			diffFile.IsGenerated = generated.ValueOrZeroValue()
 			gotGenerated = generated.Has()
 
 			diffFile.Language = cmp.Or(

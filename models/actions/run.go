@@ -314,11 +314,11 @@ func GetRunsNotDoneByRepoIDAndPullRequestID(ctx context.Context, repoID, pullReq
 // The title will be cut off at 255 characters if it's longer than 255 characters.
 // We don't have to send the ActionRunNowDone notification here because there are no runs that start in a not done status.
 func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWorkflow) error {
-	ctx, commiter, err := db.TxContext(ctx)
+	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer commiter.Close()
+	defer committer.Close()
 
 	index, err := db.GetNextResourceIndex(ctx, "action_run_index", run.RepoID)
 	if err != nil {
@@ -345,7 +345,7 @@ func InsertRun(ctx context.Context, run *ActionRun, jobs []*jobparser.SingleWork
 		return err
 	}
 
-	return commiter.Commit()
+	return committer.Commit()
 }
 
 // Adds `ActionRunJob` instances from `SingleWorkflows` to an existing ActionRun.
@@ -479,6 +479,10 @@ func GetRunByIndex(ctx context.Context, repoID, index int64) (*ActionRun, error)
 	return run, nil
 }
 
+// Error returned when ActionRun's optimistic concurrency control has indicated that the record has been updated in the
+// database by another session since it was loaded in-memory in this session.
+var ErrActionRunOutOfDate = errors.New("run has changed")
+
 // UpdateRun updates a run.
 // It requires the inputted run has Version set.
 // It will return error if the version is not matched (it means the run has been changed after loaded).
@@ -495,8 +499,9 @@ func UpdateRunWithoutNotification(ctx context.Context, run *ActionRun, cols ...s
 		return err
 	}
 	if affected == 0 {
-		return errors.New("run has changed")
-		// It's impossible that the run is not found, since Gitea never deletes runs.
+		// UPDATE has no conditions on it, and we never delete runs, so the only possible cause of this is
+		// `xorm:"version"` tagged field indicated that the version has changed since the record was loaded.
+		return ErrActionRunOutOfDate
 	}
 
 	if run.Status != 0 || slices.Contains(cols, "status") {
@@ -517,6 +522,37 @@ func UpdateRunWithoutNotification(ctx context.Context, run *ActionRun, cols ...s
 	}
 
 	return nil
+}
+
+// Compute the Status, Started, and Stopped fields of an ActionRun based upon the current job state within the run.
+// Returned is the [ActionRun] with modifications if necessary, a slice of column names that have been updated, or an
+// error if the calculation failed. The caller is responsible for then invoking [actions_service.UpdateRun] for an
+// update with notifications, or [actions_model.UpdateRunWithoutNotification] if notifications are already handled.
+func ComputeRunStatus(ctx context.Context, runID int64) (run *ActionRun, columns []string, err error) {
+	run, err = GetRunByID(ctx, runID)
+	if err != nil {
+		return nil, nil, err
+	}
+	jobs, err := GetRunJobsByRunID(ctx, runID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newStatus := AggregateJobStatus(jobs)
+	if run.Status != newStatus {
+		run.Status = newStatus
+		columns = append(columns, "status")
+	}
+	if run.Started.IsZero() && run.Status.IsRunning() {
+		run.Started = timeutil.TimeStampNow()
+		columns = append(columns, "started")
+	}
+	if run.Stopped.IsZero() && run.Status.IsDone() {
+		run.Stopped = timeutil.TimeStampNow()
+		columns = append(columns, "stopped")
+	}
+
+	return run, columns, nil
 }
 
 type ActionRunIndex db.ResourceIndex

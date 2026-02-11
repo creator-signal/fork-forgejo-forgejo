@@ -605,7 +605,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["EscapeStatus"] = status
 			ctx.Data["FileContent"] = fileContent
 			ctx.Data["LineEscapeStatus"] = statuses
-			ctx.Data["IsCitationFile"] = isCitationFile(entry)
+			ctx.Data["IsCitationFile"] = base.IsCitationFile(entry)
 		}
 		if !fInfo.isLFSFile {
 			if ctx.Repo.CanEnableEditor(ctx, ctx.Doer) {
@@ -679,8 +679,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		if err != nil {
 			log.Error("GitAttributes(%s, %s) failed: %v", ctx.Repo.CommitID, ctx.Repo.TreePath, err)
 		} else {
-			ctx.Data["IsVendored"] = attrs["linguist-vendored"].Bool().Value()
-			ctx.Data["IsGenerated"] = attrs["linguist-generated"].Bool().Value()
+			ctx.Data["IsVendored"] = attrs["linguist-vendored"].Bool().ValueOrZeroValue()
+			ctx.Data["IsGenerated"] = attrs["linguist-generated"].Bool().ValueOrZeroValue()
 		}
 	}
 
@@ -783,10 +783,6 @@ func checkHomeCodeViewable(ctx *context.Context) {
 	ctx.NotFound("Home", errors.New(ctx.Locale.TrString("units.error.no_unit_allowed_repo")))
 }
 
-func isCitationFile(entry *git.TreeEntry) bool {
-	return entry.Name() == "CITATION.cff" || entry.Name() == "CITATION.bib"
-}
-
 func checkCitationFile(ctx *context.Context, entry *git.TreeEntry) {
 	if entry.Name() != "" {
 		return
@@ -802,7 +798,7 @@ func checkCitationFile(ctx *context.Context, entry *git.TreeEntry) {
 		return
 	}
 	for _, entry := range allEntries {
-		if isCitationFile(entry) {
+		if base.IsCitationFile(entry) {
 			ctx.Data["CitationFile"] = entry.Name()
 			break
 		}

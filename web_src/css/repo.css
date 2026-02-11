@@ -252,6 +252,7 @@ td .commit-summary {
   color: var(--color-primary);
 }
 
+.repository.file.list #repo-files-table tbody .svg.octicon-cross-reference,
 .repository.file.list #repo-files-table tbody .svg.octicon-file,
 .repository.file.list #repo-files-table tbody .svg.octicon-file-symlink-file,
 .repository.file.list #repo-files-table tbody .svg.octicon-file-directory-symlink {
@@ -886,6 +887,16 @@ citation-information .tab:not(.active) {
     display: grid;
     grid-template-columns: 1fr auto;
     column-gap: 1rem;
+    span.compare {
+      /* Same height as .timeline-item .badge for alignment */
+      height: 34px;
+    }
+  }
+}
+
+@media (max-width: 767.98px) {
+  .repository.view.issue .comment-list .timeline-item .forced-push span.compare {
+    margin-inline-start: 1rem;
   }
 }
 
@@ -1737,31 +1748,6 @@ details.repo-search-result summary::marker {
 .repository .ui.attached.isSigned.isVerifiedUntrusted.bottom,
 .repository .ui.attached.isSigned.isVerifiedUnmatched.bottom {
   border-bottom: 1px solid var(--color-warning-border);
-}
-
-.repository .release-tag-name .ui.label.isSigned,
-.repository .release-list-title .ui.label.isSigned {
-  padding: 0 0.5em;
-  box-shadow: none;
-}
-
-.repository .release-tag-name .ui.label.isSigned .avatar,
-.repository .release-list-title .ui.label.isSigned .avatar {
-  margin-left: .5rem;
-}
-
-.repository .release-tag-name .ui.label.isSigned.isVerified,
-.repository .release-list-title .ui.label.isSigned.isVerified {
-  border: 1px solid var(--color-success-border);
-  background-color: var(--color-success-bg);
-  color: var(--color-success-text);
-}
-
-.repository .release-tag-name .ui.label.isSigned.isWarning,
-.repository .release-list-title .ui.label.isSigned.isWarning {
-  border: 1px solid var(--color-warning-border);
-  background-color: var(--color-warning-bg);
-  color: var(--color-warning-text);
 }
 
 .repository .segment.reactions.dropdown .menu,

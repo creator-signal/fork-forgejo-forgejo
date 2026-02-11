@@ -680,8 +680,8 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 	ctx.Data["State"] = state
 
 	ctx.SetFormString("state", state)
-	if searchOpts.AssigneeID.Has() {
-		id := strconv.FormatInt(searchOpts.AssigneeID.Value(), 10)
+	if has, value := searchOpts.AssigneeID.Get(); has {
+		id := strconv.FormatInt(value, 10)
 		ctx.SetFormString("assignee", id)
 	}
 
@@ -713,6 +713,11 @@ func ShowSSHKeys(ctx *context.Context) {
 		buf.WriteString(keys[i].OmitEmail())
 		buf.WriteString("\n")
 	}
+
+	if buf.Len() == 0 {
+		buf.WriteString("# Note: This user hasn't uploaded any SSH keys.\n")
+	}
+
 	ctx.PlainTextBytes(http.StatusOK, buf.Bytes())
 }
 
