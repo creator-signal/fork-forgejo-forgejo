@@ -128,8 +128,13 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 
 	req, err := http.NewRequestWithContext(ctx, "GET", authURL, nil)
 	query := req.URL.Query()
+	query.Add("account", crc.RemoteRegistry.RemoteUser)
+	query.Add("client_id", "docker") // TODO this may need to be configurable
+	if hasToken || hasUserAndPW {
+		query.Add("offline_token", "true")
+	}
 	query.Add("service", serviceURL)
-	query.Add("scope", "\"*\"")
+
 	req.URL.RawQuery = query.Encode()
 	if err != nil {
 		return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
@@ -138,7 +143,7 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 	req.Header.Set("User-Agent", "Forgejo/1.0")
 
 	if hasToken {
-		req.Header.Set("Authorization", "token "+crc.RemoteRegistry.RemoteToken)
+		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, crc.RemoteRegistry.RemoteToken)
 	} else if hasUserAndPW {
 		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, crc.RemoteRegistry.RemotePassword)
 	} else {
@@ -146,9 +151,13 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 	}
 
 	authResp, err := crc.httpClient.Do(req)
-	if err != nil || authResp.StatusCode != 200 {
+	if err != nil {
 		log.Warn("Remote registry authentication failed for %q: %v", crc.RemoteRegistry.Name, err)
-		return &http.Response{}, fmt.Errorf("failed to connect to auth endpoint: %w", err)
+		return &http.Response{}, err
+	}
+	if authResp.StatusCode != 200 {
+		log.Warn("Remote registry authentication failed for %q: %v", crc.RemoteRegistry.Name, err)
+		return &http.Response{}, fmt.Errorf("failed to connect to auth endpoint with Status: %s", authResp.Status)
 	}
 	defer authResp.Body.Close()
 
@@ -159,12 +168,12 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 func (crc *RegistryClient) RemoteRegistryAuthenticated(resp *http.Response) error {
 	log.Trace("Checking authentication against %q at %s", crc.RemoteRegistry.Name, crc.RemoteRegistry.RemoteURL)
 
-	if resp.StatusCode == http.StatusOK {
-		log.Trace("Connected to remote registry %q", crc.RemoteRegistry.Name)
-		return nil
+	if resp.StatusCode != http.StatusOK {
+		log.Trace("Failed to connect to remote registry %q with code: %v", crc.RemoteRegistry.Name, resp.StatusCode)
+		return ErrNotAuthenticated
 	}
 
-	return ErrNotAuthenticated
+	return nil
 }
 
 func (crc *RegistryClient) RemoteRegistryConnected(ctx context.Context) (bool, error) {

@@ -48,7 +48,8 @@ func MockForgejoRegistryServer() *httptest.Server {
 		func(res http.ResponseWriter, req *http.Request) {
 			hasScope := strings.Contains(req.URL.RawQuery, "scope=")
 			hasService := strings.Contains(req.URL.RawQuery, "service=")
-			if hasScope && hasService {
+			hasBasic := strings.Contains(req.Header.Get("Authorization"), "Basic")
+			if hasScope && hasService || hasBasic {
 				res.Header().Add("content-type", "application/json")
 				_, _ = res.Write([]byte(`{"token":"asd342adsdf34985udfng"}`))
 			} else {
