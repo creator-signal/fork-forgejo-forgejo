@@ -79,8 +79,7 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 		issueReference = "!"
 	}
 
-	issueURL := pr.Issue.HTMLURL()
-	reviewedOn := fmt.Sprintf("Reviewed-on: %s", issueURL)
+	reviewedOn := fmt.Sprintf("Reviewed-on: %s", pr.Issue.HTMLURL())
 	reviewedBy := pr.GetApprovers(ctx)
 
 	body = fmt.Sprintf("%s\n%s", reviewedOn, reviewedBy)
