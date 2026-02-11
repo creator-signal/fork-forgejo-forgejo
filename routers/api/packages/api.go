@@ -795,7 +795,6 @@ func ContainerRoutes() *web.Route {
 			r.Group("/remote", func() {
 				r.Group("/{registry-name}", func() {
 					// Considering Images can have slashes in their names
-					// TODO Permissions
 					r.Methods("HEAD,GET", "/*", func(ctx *context.Context) {
 						path := ctx.Params("*")
 						isHead := ctx.Req.Method == "HEAD"
@@ -847,7 +846,7 @@ func ContainerRoutes() *web.Route {
 							return
 						}
 						ctx.Status(http.StatusNotFound)
-					}, container.ReqContainerAccess, container.VerifyImageName)
+					}, container.VerifyImageName)
 				})
 			})
 		}
