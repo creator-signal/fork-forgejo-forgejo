@@ -26,7 +26,7 @@ var uploadVersionMutex sync.Mutex
 
 // saveAsPackageBlob creates a package blob from an upload
 // The uploaded blob gets stored in a special upload version to link them to the package/image
-func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, *packages_model.PackageFile, error) {
+func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, *packages_model.PackageFile, error) {
 	pb := packages_service.NewPackageBlob(hsr)
 	pf := &packages_model.PackageFile{}
 
@@ -34,7 +34,7 @@ func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 
 	contentStore := packages_module.NewContentStore()
 
-	uploadVersion, err := getOrCreateUploadVersion(ctx, &pci.PackageInfo)
+	uploadVersion, err := GetOrCreateUploadVersion(ctx, &pci.PackageInfo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,7 +65,7 @@ func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 			}
 		}
 
-		pf, err = createFileForBlob(ctx, uploadVersion, pb)
+		pf, err = CreateFileForBlob(ctx, uploadVersion, pb)
 		return err
 	})
 	if err != nil {
@@ -81,19 +81,19 @@ func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 }
 
 // mountBlob mounts the specific blob to a different package
-func mountBlob(ctx context.Context, pi *packages_service.PackageInfo, pb *packages_model.PackageBlob) error {
-	uploadVersion, err := getOrCreateUploadVersion(ctx, pi)
+func MountBlob(ctx context.Context, pi *packages_service.PackageInfo, pb *packages_model.PackageBlob) error {
+	uploadVersion, err := GetOrCreateUploadVersion(ctx, pi)
 	if err != nil {
 		return err
 	}
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
-		_, err := createFileForBlob(ctx, uploadVersion, pb)
+		_, err := CreateFileForBlob(ctx, uploadVersion, pb)
 		return err
 	})
 }
 
-func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageInfo) (*packages_model.PackageVersion, error) {
+func GetOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageInfo) (*packages_model.PackageVersion, error) {
 	var uploadVersion *packages_model.PackageVersion
 
 	// FIXME: Replace usage of mutex with database transaction
@@ -148,7 +148,7 @@ func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 	return uploadVersion, err
 }
 
-func createFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, pb *packages_model.PackageBlob) (*packages_model.PackageFile, error) {
+func CreateFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, pb *packages_model.PackageBlob) (*packages_model.PackageFile, error) {
 	filename := strings.ToLower(fmt.Sprintf("sha256_%s", pb.HashSHA256))
 
 	pf := &packages_model.PackageFile{
@@ -167,7 +167,7 @@ func createFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, p
 		return &packages_model.PackageFile{}, err
 	}
 
-	if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypeFile, pf.ID, container_module.PropertyDigest, digestFromPackageBlob(pb)); err != nil {
+	if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypeFile, pf.ID, container_module.PropertyDigest, DigestFromPackageBlob(pb)); err != nil {
 		log.Error("Error setting package file property: %v", err)
 		return &packages_model.PackageFile{}, err
 	}
@@ -175,7 +175,7 @@ func createFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, p
 	return pf, nil
 }
 
-func deleteBlob(ctx context.Context, ownerID int64, image, digest string) error {
+func DeleteBlob(ctx context.Context, ownerID int64, image, digest string) error {
 	return db.WithTx(ctx, func(ctx context.Context) error {
 		pfds, err := container_model.GetContainerBlobs(ctx, &container_model.BlobSearchOptions{
 			OwnerID: ownerID,
@@ -195,11 +195,11 @@ func deleteBlob(ctx context.Context, ownerID int64, image, digest string) error 
 	})
 }
 
-func digestFromHashSummer(h packages_module.HashSummer) string {
+func DigestFromHashSummer(h packages_module.HashSummer) string {
 	_, _, hashSHA256, _, _ := h.Sums()
 	return "sha256:" + hex.EncodeToString(hashSHA256)
 }
 
-func digestFromPackageBlob(pb *packages_model.PackageBlob) string {
+func DigestFromPackageBlob(pb *packages_model.PackageBlob) string {
 	return "sha256:" + pb.HashSHA256
 }

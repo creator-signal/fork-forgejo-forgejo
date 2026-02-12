@@ -219,7 +219,7 @@ func RemoteGetBlob(ctx *context.Context) {
 
 		// check digest
 		digest := regLayer.Digest
-		if digest.String() != digestFromHashSummer(buf) {
+		if digest.String() != container_service.DigestFromHashSummer(buf) {
 			apiErrorDefined(ctx, errDigestInvalid)
 			return
 		}
@@ -292,7 +292,7 @@ func getAllBlobsFromRemote(ctx *context.Context, client *container_service.Regis
 		defer buf.Close()
 
 		// check digest
-		if layer.Digest.String() != digestFromHashSummer(buf) {
+		if layer.Digest.String() != container_service.DigestFromHashSummer(buf) {
 			apiErrorDefined(ctx, errDigestInvalid)
 			return err
 		}

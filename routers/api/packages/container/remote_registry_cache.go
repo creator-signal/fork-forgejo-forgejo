@@ -85,7 +85,7 @@ func saveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, 
 		Creator: creator,
 	}
 
-	pb, pf, err := saveAsPackageBlob(ctx, buf, pci)
+	pb, pf, err := container_service.SaveAsPackageBlob(ctx, buf, pci)
 	if err != nil {
 		return fmt.Errorf("failed to save blob from remote registry: %w", err)
 	}

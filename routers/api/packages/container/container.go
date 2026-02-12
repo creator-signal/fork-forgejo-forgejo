@@ -238,7 +238,7 @@ func InitiateUploadBlob(ctx *context.Context) {
 			}
 
 			if accessible {
-				if err := mountBlob(ctx, &packages_service.PackageInfo{Owner: ctx.Package.Owner, Name: image}, blob.Blob); err != nil {
+				if err := container_service.MountBlob(ctx, &packages_service.PackageInfo{Owner: ctx.Package.Owner, Name: image}, blob.Blob); err != nil {
 					apiError(ctx, http.StatusInternalServerError, err)
 					return
 				}
@@ -262,12 +262,12 @@ func InitiateUploadBlob(ctx *context.Context) {
 		}
 		defer buf.Close()
 
-		if digest != digestFromHashSummer(buf) {
+		if digest != container_service.DigestFromHashSummer(buf) {
 			apiErrorDefined(ctx, errDigestInvalid)
 			return
 		}
 
-		if _, _, err := saveAsPackageBlob(ctx,
+		if _, _, err := container_service.SaveAsPackageBlob(ctx,
 			buf,
 			&packages_service.PackageCreationInfo{
 				PackageInfo: packages_service.PackageInfo{
@@ -402,12 +402,12 @@ func EndUploadBlob(ctx *context.Context) {
 		}
 	}
 
-	if digest != digestFromHashSummer(uploader) {
+	if digest != container_service.DigestFromHashSummer(uploader) {
 		apiErrorDefined(ctx, errDigestInvalid)
 		return
 	}
 
-	if _, _, err := saveAsPackageBlob(ctx,
+	if _, _, err := container_service.SaveAsPackageBlob(ctx,
 		uploader,
 		&packages_service.PackageCreationInfo{
 			PackageInfo: packages_service.PackageInfo{
@@ -519,7 +519,7 @@ func DeleteBlob(ctx *context.Context) {
 		return
 	}
 
-	if err := deleteBlob(ctx, ctx.Package.Owner.ID, ctx.Params("image"), d); err != nil {
+	if err := container_service.DeleteBlob(ctx, ctx.Package.Owner.ID, ctx.Params("image"), d); err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}

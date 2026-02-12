@@ -467,7 +467,7 @@ func createManifestBlob(ctx context.Context, mci *container_service.ManifestCrea
 		}
 	}
 
-	manifestDigest := digestFromHashSummer(buf)
+	manifestDigest := container_service.DigestFromHashSummer(buf)
 	err = createFileFromBlobReference(ctx, pv, nil, &blobReference{
 		Digest:       digest.Digest(manifestDigest),
 		MediaType:    mci.MediaType,
