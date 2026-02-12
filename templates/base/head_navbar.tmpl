@@ -14,7 +14,7 @@
 		<div class="ui secondary menu item navbar-mobile-right only-mobile">
 			{{if .IsSigned}}
 			<a id="mobile-notifications-icon" class="item tw-w-auto tw-p-2" href="{{AppSubUrl}}/notifications" data-tooltip-content="{{ctx.Locale.Tr "notifications"}}" aria-label="{{ctx.Locale.Tr "notifications"}}">
-				<div class="tw-relative">
+				<div class="notification-icon-relative">
 					{{svg "octicon-bell"}}
 					<span class="notification_count{{if not $notificationUnreadCount}} tw-hidden{{end}}">{{$notificationUnreadCount}}</span>
 				</div>
@@ -113,7 +113,7 @@
 			{{end}}
 
 			<a class="item not-mobile tw-mx-0" href="{{AppSubUrl}}/notifications" data-tooltip-content="{{ctx.Locale.Tr "notifications"}}" aria-label="{{ctx.Locale.Tr "notifications"}}">
-				<div class="tw-relative">
+				<div class="notification-icon-relative">
 					{{svg "octicon-bell"}}
 					<span class="notification_count{{if not $notificationUnreadCount}} tw-hidden{{end}}">{{$notificationUnreadCount}}</span>
 				</div>

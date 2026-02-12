@@ -49,8 +49,9 @@
   margin-right: 0;
 }
 
-#navbar .navbar-right .item > div {
- display: flex;
+#navbar .navbar-right .notification-icon-relative {
+  position: relative;
+  display: flex;
 }
 
 @media (max-width: 767.98px) {
@@ -123,7 +124,9 @@
   #navbar #mobile-notifications-icon {
     margin-right: 6px !important;
   }
-  #navbar #mobile-notifications-icon > div {
+
+  #navbar .navbar-mobile-right .notification-icon-relative {
+    position: relative;
     display: flex;
   }
 }
