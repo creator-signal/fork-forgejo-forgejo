@@ -39,12 +39,10 @@ func Test_NewRef(t *testing.T) {
 
 	imageName := "myorg/test-image:latest"
 
-	crc, err := NewContainerRegistryClient(rr)
+	crc, err := NewContainerRegistryClient(rr, imageName)
 	require.NoError(t, err)
 
-	ref, err := crc.NewRef(imageName)
-	require.NoError(t, err)
-	assert.Equal(t, "registry.example.com/myorg/test-image:latest", ref.Reference)
+	assert.Equal(t, "registry.example.com/myorg/test-image:latest", crc.Reference.Reference)
 }
 
 func Test_PingRegistry(t *testing.T) {

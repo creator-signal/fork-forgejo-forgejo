@@ -31,9 +31,10 @@ type RegistryClient struct {
 	httpClient     *http.Client
 	RegClient      *regclient.RegClient
 	RemoteRegistry *rr_model.RemoteRegistry
+	Reference      *ref.Ref
 }
 
-func NewContainerRegistryClient(rr *rr_model.RemoteRegistry) (RegistryClient, error) {
+func NewContainerRegistryClient(rr *rr_model.RemoteRegistry, names ...string) (RegistryClient, error) {
 	client := &http.Client{Timeout: 12 * time.Second}
 
 	rrURL, err := url.Parse(rr.RemoteURL)
@@ -59,10 +60,21 @@ func NewContainerRegistryClient(rr *rr_model.RemoteRegistry) (RegistryClient, er
 		regclient.WithUserAgent("forgejo/1.0"),
 	)
 
+	// Ref host, repo if exists, image
 	crc := RegistryClient{
 		httpClient:     client,
 		RegClient:      regclient,
 		RemoteRegistry: rr,
+	}
+
+	if len(names) > 0 {
+		host := crc.RemoteRegistry.RemoteHost
+		refStr := host + "/" + names[0]
+		r, err := ref.New(refStr)
+		if err != nil {
+			return RegistryClient{}, fmt.Errorf("Unable to create registry client, failed to create reference: %s", err)
+		}
+		crc.Reference = &r
 	}
 
 	return crc, nil
@@ -202,68 +214,57 @@ func (crc *RegistryClient) RemoteRegistryConnected(ctx context.Context) (bool, e
 	return true, nil
 }
 
-func (crc *RegistryClient) NewRef(namespace string) (ref.Ref, error) {
-	// Ref host, repo if exists, image
-	host := crc.RemoteRegistry.RemoteHost
-	refStr := host + "/" + namespace
-	r, err := ref.New(refStr)
-	if err != nil {
-		return ref.Ref{}, err
-	}
-	return r, err
-}
-
 func (crc *RegistryClient) NewImager(man manifest.Manifest) manifest.Imager {
 	img := man.(manifest.Imager)
 	return img
 }
 
 // Close cleans up resources used by the client
-func (crc *RegistryClient) Close(ctx context.Context, r ref.Ref) error {
+func (crc *RegistryClient) Close(ctx context.Context) error {
 	// Close idle connections
 	if transport, ok := crc.httpClient.Transport.(*http.Transport); ok {
 		transport.CloseIdleConnections()
 	}
-	err := crc.RegClient.Close(ctx, r)
+	err := crc.RegClient.Close(ctx, *crc.Reference)
 	return err
 }
 
-func (crc *RegistryClient) HeadBlob(ctx context.Context, r ref.Ref, d descriptor.Descriptor) (blob.Reader, error) {
-	reader, err := crc.RegClient.BlobHead(ctx, r, d)
+func (crc *RegistryClient) HeadBlob(ctx context.Context, d descriptor.Descriptor) (blob.Reader, error) {
+	reader, err := crc.RegClient.BlobHead(ctx, *crc.Reference, d)
 	if err != nil {
-		return nil, fmt.Errorf("failed to head blob %s: %w", r.Reference, err)
+		return nil, fmt.Errorf("failed to head blob %s: %w", crc.Reference, err)
 	}
 	return reader, nil
 }
 
-func (crc *RegistryClient) GetBlob(ctx context.Context, r ref.Ref, d descriptor.Descriptor) (blob.Reader, error) {
-	reader, err := crc.RegClient.BlobGet(ctx, r, d)
+func (crc *RegistryClient) GetBlob(ctx context.Context, d descriptor.Descriptor) (blob.Reader, error) {
+	reader, err := crc.RegClient.BlobGet(ctx, *crc.Reference, d)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get blob %s: %w", r.Reference, err)
+		return nil, fmt.Errorf("failed to get blob %s: %w", crc.Reference, err)
 	}
 	return reader, nil
 }
 
-func (crc *RegistryClient) HeadManifest(ctx context.Context, r ref.Ref) (manifest.Manifest, error) {
-	m, err := crc.RegClient.ManifestHead(ctx, r)
+func (crc *RegistryClient) HeadManifest(ctx context.Context) (manifest.Manifest, error) {
+	m, err := crc.RegClient.ManifestHead(ctx, *crc.Reference)
 	if err != nil {
-		return nil, fmt.Errorf("failed to head manifest %s: %w", r.Reference, err)
+		return nil, fmt.Errorf("failed to head manifest %s: %w", crc.Reference, err)
 	}
 	return m, nil
 }
 
-func (crc *RegistryClient) GetManifest(ctx context.Context, r ref.Ref) (manifest.Manifest, error) {
-	m, err := crc.RegClient.ManifestGet(ctx, r)
+func (crc *RegistryClient) GetManifest(ctx context.Context) (manifest.Manifest, error) {
+	m, err := crc.RegClient.ManifestGet(ctx, *crc.Reference)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get manifest %s: %w", r.Reference, err)
+		return nil, fmt.Errorf("failed to get manifest %s: %w", crc.Reference, err)
 	}
 	return m, nil
 }
 
-func (crc *RegistryClient) ListTags(ctx context.Context, r ref.Ref, ownerLower, image string) (*TagList, error) {
-	tag, err := crc.RegClient.TagList(ctx, r)
+func (crc *RegistryClient) ListTags(ctx context.Context, ownerLower, image string) (*TagList, error) {
+	tag, err := crc.RegClient.TagList(ctx, *crc.Reference)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get manifest %s: %w", r.Reference, err)
+		return nil, fmt.Errorf("failed to get manifest %s: %w", crc.Reference, err)
 	}
 
 	return &TagList{
