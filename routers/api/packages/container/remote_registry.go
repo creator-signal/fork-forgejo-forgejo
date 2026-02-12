@@ -7,19 +7,12 @@ import (
 	"errors"
 	"net/http"
 
-	rr_model "forgejo.org/models/remote_registry"
 	"forgejo.org/modules/log"
+	rr_module "forgejo.org/modules/packages/remote_registry"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
 	rr_service "forgejo.org/services/packages"
 )
-
-// RemoteRegistryContext represents remote registry information in the request context
-type RemoteRegistryContext struct {
-	RemoteRegistry *rr_model.RemoteRegistry
-	OwnerName      string
-	ImageName      string
-}
 
 const remoteRegistryContextKey = "RemoteRegistryContext"
 
@@ -46,7 +39,7 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	remoteCtx := &RemoteRegistryContext{
+	remoteCtx := &rr_module.RemoteRegistryContext{
 		OwnerName:      ownerName,
 		ImageName:      imageName,
 		RemoteRegistry: remoteRegistry,
@@ -56,10 +49,10 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 	ctx.Data[remoteRegistryContextKey] = remoteCtx
 }
 
-func GetRemoteRegistryContext(ctx *context.Context) (*RemoteRegistryContext, error) {
-	remoteCtx, ok := ctx.Data[remoteRegistryContextKey].(*RemoteRegistryContext)
+func GetRemoteRegistryContext(ctx *context.Context) (*rr_module.RemoteRegistryContext, error) {
+	remoteCtx, ok := ctx.Data[remoteRegistryContextKey].(*rr_module.RemoteRegistryContext)
 	if !ok {
-		return &RemoteRegistryContext{}, errors.New("Remote registry context not found")
+		return &rr_module.RemoteRegistryContext{}, errors.New("Remote registry context not found")
 	}
 	return remoteCtx, nil
 }

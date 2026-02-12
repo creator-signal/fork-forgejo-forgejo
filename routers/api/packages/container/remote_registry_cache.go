@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
+	rr_module "forgejo.org/modules/packages/remote_registry"
 	"forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
 	container_service "forgejo.org/services/packages/container"
@@ -30,7 +31,7 @@ func getCachedRemoteManifest(ctx *context.Context) (*packages_model.PackageFileD
 }
 
 // getLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
-func getLocalBlob(ctx *context.Context, remoteCtx *RemoteRegistryContext, digest string) (*packages_model.PackageFileDescriptor, error) {
+func getLocalBlob(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, digest string) (*packages_model.PackageFileDescriptor, error) {
 	opts := &container_model.BlobSearchOptions{
 		OwnerID: ctx.ContextUser.ID,
 		Image:   remoteCtx.ImageName,
@@ -73,7 +74,7 @@ func getLocalBlob(ctx *context.Context, remoteCtx *RemoteRegistryContext, digest
 }
 
 // saveBlobToPackage saves a blob as a package
-func saveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, remoteCtx *RemoteRegistryContext, digest string, owner, creator *user_model.User) error {
+func saveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, remoteCtx *rr_module.RemoteRegistryContext, digest string, owner, creator *user_model.User) error {
 	log.Debug("Saving blob %s as package", digest)
 	pci := &packages_service.PackageCreationInfo{
 		PackageInfo: packages_service.PackageInfo{
@@ -95,7 +96,7 @@ func saveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, 
 }
 
 // addRemoteMetadataToBlob Add rr id, time and remote digest as info to blob
-func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlob, remoteCtx *RemoteRegistryContext, pf *packages_model.PackageFile) {
+func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlob, remoteCtx *rr_module.RemoteRegistryContext, pf *packages_model.PackageFile) {
 	// Add remote registry metadata
 	properties := map[string]string{
 		container_module.PropertyRemoteSource: fmt.Sprintf("%d", remoteCtx.RemoteRegistry.ID),
