@@ -14,6 +14,9 @@ import (
 	ap "github.com/go-ap/activitypub"
 )
 
+// https://www.ietf.org/rfc/rfc3986.txt
+var reserved = [...]string{":", ",", "?", "#", "[", "]", "@", "!", "$", "&", "'", "(", ")", "*", "+", ",", ";", "="}
+
 // ErrNotValid represents an validation error
 type ErrNotValid struct {
 	Message string
@@ -51,22 +54,17 @@ func ValidateIDExists(value ap.Item, name string) []string {
 }
 
 func ValidateURLSafe(value string) []string {
-
 	isValid := true
-
-	reserved := []string{":", ",", "?", "#", "[", "]", "@", "!", "$", "&", "'", "(", ")", "*", "+", ",", ";", "="}
 	for _, r := range reserved {
 		if strings.Contains(value, r) {
 			isValid = false
 			break
 		}
 	}
-
 	if isValid {
 		return []string{}
 	}
 	return []string{fmt.Sprintf("Value %v is not url safe", value)}
-
 }
 
 func ValidateNotEmpty(value any, name string) []string {
