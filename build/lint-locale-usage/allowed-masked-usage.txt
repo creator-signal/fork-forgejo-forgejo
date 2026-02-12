@@ -42,3 +42,6 @@ projects.type-3.display_name
 # templates/repo/settings/webhook/link_menu.tmpl, templates/webhook/new.tmpl: repo.settings.web_hook_name_
 # tests/integration/repo_archive_text_test.go
 repo.settings.
+
+# templates/package/view.tmpl
+packages.details.remote
