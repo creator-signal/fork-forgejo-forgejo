@@ -21,7 +21,6 @@ type RRCredentials struct {
 
 type RROpts struct {
 	Name       string
-	RemoteRepo string
 	RemoteURL  string
 	RemoteType packages.Type
 	OwnerType  rr_model.RemoteRegistryOwnerType
