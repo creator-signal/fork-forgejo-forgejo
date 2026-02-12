@@ -99,7 +99,7 @@ func apiError(ctx *context.Context, status int, err error) {
 }
 
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#error-codes
-func apiErrorDefined(ctx *context.Context, err *namedError) {
+func apiErrorDefined(ctx *context.Context, err *container_service.NamedError) {
 	type ContainerError struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
@@ -121,7 +121,7 @@ func apiErrorDefined(ctx *context.Context, err *namedError) {
 
 func apiUnauthorizedError(ctx *context.Context) {
 	ctx.Resp.Header().Add("WWW-Authenticate", `Bearer realm="`+setting.AppURL+`v2/token",service="container_registry",scope="*"`)
-	apiErrorDefined(ctx, errUnauthorized)
+	apiErrorDefined(ctx, container_service.ErrUnauthorized)
 }
 
 // ReqContainerAccess is a middleware which checks the current user valid (real user or ghost if anonymous access is enabled)
@@ -134,7 +134,7 @@ func ReqContainerAccess(ctx *context.Context) {
 // VerifyImageName is a middleware which checks if the image name is allowed
 func VerifyImageName(ctx *context.Context) {
 	if !imageNamePattern.MatchString(ctx.Params("image")) {
-		apiErrorDefined(ctx, errNameInvalid)
+		apiErrorDefined(ctx, container_service.ErrNameInvalid)
 	}
 }
 
@@ -263,7 +263,7 @@ func InitiateUploadBlob(ctx *context.Context) {
 		defer buf.Close()
 
 		if digest != container_service.DigestFromHashSummer(buf) {
-			apiErrorDefined(ctx, errDigestInvalid)
+			apiErrorDefined(ctx, container_service.ErrDigestInvalid)
 			return
 		}
 
@@ -315,7 +315,7 @@ func GetUploadBlob(ctx *context.Context) {
 	upload, err := packages_model.GetBlobUploadByID(ctx, uuid)
 	if err != nil {
 		if err == packages_model.ErrPackageBlobUploadNotExist {
-			apiErrorDefined(ctx, errBlobUploadUnknown)
+			apiErrorDefined(ctx, container_service.ErrBlobUploadUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 		}
@@ -336,7 +336,7 @@ func UploadBlob(ctx *context.Context) {
 	uploader, err := container_service.NewBlobUploader(ctx, ctx.Params("uuid"))
 	if err != nil {
 		if err == packages_model.ErrPackageBlobUploadNotExist {
-			apiErrorDefined(ctx, errBlobUploadUnknown)
+			apiErrorDefined(ctx, container_service.ErrBlobUploadUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 		}
@@ -348,16 +348,16 @@ func UploadBlob(ctx *context.Context) {
 	if contentRange != "" {
 		start, end := 0, 0
 		if _, err := fmt.Sscanf(contentRange, "%d-%d", &start, &end); err != nil {
-			apiErrorDefined(ctx, errBlobUploadInvalid)
+			apiErrorDefined(ctx, container_service.ErrBlobUploadInvalid)
 			return
 		}
 
 		if int64(start) != uploader.Size() {
-			apiErrorDefined(ctx, errBlobUploadInvalid.WithStatusCode(http.StatusRequestedRangeNotSatisfiable))
+			apiErrorDefined(ctx, container_service.ErrBlobUploadInvalid.WithStatusCode(http.StatusRequestedRangeNotSatisfiable))
 			return
 		}
 	} else if uploader.Size() != 0 {
-		apiErrorDefined(ctx, errBlobUploadInvalid.WithMessage("Stream uploads after first write are not allowed"))
+		apiErrorDefined(ctx, container_service.ErrBlobUploadInvalid.WithMessage("Stream uploads after first write are not allowed"))
 		return
 	}
 
@@ -380,14 +380,14 @@ func EndUploadBlob(ctx *context.Context) {
 
 	digest := ctx.FormTrim("digest")
 	if digest == "" {
-		apiErrorDefined(ctx, errDigestInvalid)
+		apiErrorDefined(ctx, container_service.ErrDigestInvalid)
 		return
 	}
 
 	uploader, err := container_service.NewBlobUploader(ctx, ctx.Params("uuid"))
 	if err != nil {
 		if err == packages_model.ErrPackageBlobUploadNotExist {
-			apiErrorDefined(ctx, errBlobUploadUnknown)
+			apiErrorDefined(ctx, container_service.ErrBlobUploadUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 		}
@@ -403,7 +403,7 @@ func EndUploadBlob(ctx *context.Context) {
 	}
 
 	if digest != container_service.DigestFromHashSummer(uploader) {
-		apiErrorDefined(ctx, errDigestInvalid)
+		apiErrorDefined(ctx, container_service.ErrDigestInvalid)
 		return
 	}
 
@@ -445,7 +445,7 @@ func CancelUploadBlob(ctx *context.Context) {
 	_, err := packages_model.GetBlobUploadByID(ctx, uuid)
 	if err != nil {
 		if err == packages_model.ErrPackageBlobUploadNotExist {
-			apiErrorDefined(ctx, errBlobUploadUnknown)
+			apiErrorDefined(ctx, container_service.ErrBlobUploadUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 		}
@@ -481,7 +481,7 @@ func HeadBlob(ctx *context.Context) {
 	blob, err := getBlobFromContext(ctx)
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
-			apiErrorDefined(ctx, errBlobUnknown)
+			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 		}
@@ -500,7 +500,7 @@ func GetBlob(ctx *context.Context) {
 	blob, err := getBlobFromContext(ctx)
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
-			apiErrorDefined(ctx, errBlobUnknown)
+			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 		}
@@ -515,7 +515,7 @@ func DeleteBlob(ctx *context.Context) {
 	d := ctx.Params("digest")
 
 	if digest.Digest(d).Validate() != nil {
-		apiErrorDefined(ctx, errBlobUnknown)
+		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
 
@@ -539,7 +539,7 @@ func UploadManifest(ctx *context.Context) {
 		ctx.Params("reference"),
 	)
 	if err != nil {
-		apiErrorDefined(ctx, errManifestInvalid.WithMessage(err.Error()))
+		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage(err.Error()))
 		return
 	}
 
@@ -552,17 +552,17 @@ func UploadManifest(ctx *context.Context) {
 	defer buf.Close()
 
 	if buf.Size() > maxManifestSize {
-		apiErrorDefined(ctx, errManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
+		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
 		return
 	}
 
-	digest, err := processManifest(ctx, mci, buf)
+	digest, err := container_service.ProcessManifest(ctx, *mci, buf)
 	if err != nil {
-		var namedError *namedError
+		var namedError *container_service.NamedError
 		if errors.As(err, &namedError) {
 			apiErrorDefined(ctx, namedError)
 		} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-			apiErrorDefined(ctx, errBlobUnknown)
+			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		} else {
 			switch err {
 			case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
@@ -615,7 +615,7 @@ func HeadManifest(ctx *context.Context) {
 	manifest, err := getManifestFromContext(ctx)
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
-			apiErrorDefined(ctx, errManifestUnknown)
+			apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 		}
@@ -635,7 +635,7 @@ func GetManifest(ctx *context.Context) {
 	manifest, err := getManifestFromContext(ctx)
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
-			apiErrorDefined(ctx, errManifestUnknown)
+			apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 		}
@@ -650,7 +650,7 @@ func GetManifest(ctx *context.Context) {
 func DeleteManifest(ctx *context.Context) {
 	opts, err := getBlobSearchOptionsFromContext(ctx)
 	if err != nil {
-		apiErrorDefined(ctx, errManifestUnknown)
+		apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		return
 	}
 
@@ -661,7 +661,7 @@ func DeleteManifest(ctx *context.Context) {
 	}
 
 	if len(pvs) == 0 {
-		apiErrorDefined(ctx, errManifestUnknown)
+		apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		return
 	}
 
@@ -723,7 +723,7 @@ func GetTagList(ctx *context.Context) {
 		ctx.Package.Owner.ID)
 
 	if errors.Is(err, packages_model.ErrPackageNotExist) {
-		apiErrorDefined(ctx, errNameUnknown)
+		apiErrorDefined(ctx, container_service.ErrNameUnknown)
 		return
 	} else if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)

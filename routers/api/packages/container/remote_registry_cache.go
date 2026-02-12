@@ -121,7 +121,7 @@ func saveManifest(ctx *context.Context, man manifest.Manifest) error {
 		man.GetRef().Registry,
 	)
 	if err != nil {
-		apiErrorDefined(ctx, errManifestInvalid.WithMessage(err.Error()))
+		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage(err.Error()))
 		return err
 	}
 
@@ -142,17 +142,17 @@ func saveManifest(ctx *context.Context, man manifest.Manifest) error {
 	defer buf.Close()
 
 	if buf.Size() > maxManifestSize {
-		apiErrorDefined(ctx, errManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
+		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
 		return err
 	}
 
-	_, err = processManifest(ctx, mci, buf)
+	_, err = container_service.ProcessManifest(ctx, *mci, buf)
 	if err != nil {
-		var namedError *namedError
+		var namedError *container_service.NamedError
 		if errors.As(err, &namedError) {
 			apiErrorDefined(ctx, namedError)
 		} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-			apiErrorDefined(ctx, errBlobUnknown)
+			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		} else {
 			switch err {
 			case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:

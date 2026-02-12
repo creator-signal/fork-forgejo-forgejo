@@ -109,7 +109,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 		if err == container_model.ErrContainerBlobNotExist {
 			dig := ctx.Params("digest")
 			if dig == "" {
-				apiErrorDefined(ctx, errBlobUnknown)
+				apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 				return
 			}
 
@@ -180,7 +180,7 @@ func RemoteGetBlob(ctx *context.Context) {
 
 	dig := ctx.Params("digest")
 	if dig == "" {
-		apiErrorDefined(ctx, errBlobUnknown)
+		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
 
@@ -220,7 +220,7 @@ func RemoteGetBlob(ctx *context.Context) {
 		// check digest
 		digest := regLayer.Digest
 		if digest.String() != container_service.DigestFromHashSummer(buf) {
-			apiErrorDefined(ctx, errDigestInvalid)
+			apiErrorDefined(ctx, container_service.ErrDigestInvalid)
 			return
 		}
 
@@ -293,7 +293,7 @@ func getAllBlobsFromRemote(ctx *context.Context, client *container_service.Regis
 
 		// check digest
 		if layer.Digest.String() != container_service.DigestFromHashSummer(buf) {
-			apiErrorDefined(ctx, errDigestInvalid)
+			apiErrorDefined(ctx, container_service.ErrDigestInvalid)
 			return err
 		}
 
@@ -343,7 +343,7 @@ func RemoteHeadManifest(ctx *context.Context) {
 
 	reference := ctx.Params("reference")
 	if reference == "" {
-		apiErrorDefined(ctx, errManifestUnknown)
+		apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		return
 	}
 
@@ -384,9 +384,9 @@ func RemoteHeadManifest(ctx *context.Context) {
 			remoteCtx.ImageName, reference, remoteCtx.RemoteRegistry.Name, err)
 
 		if strings.Contains(err.Error(), "404") {
-			apiErrorDefined(ctx, errManifestUnknown)
+			apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
-			apiErrorDefined(ctx, errUnauthorized)
+			apiErrorDefined(ctx, container_service.ErrUnauthorized)
 		} else {
 			apiError(ctx, http.StatusBadGateway, err)
 		}
@@ -441,9 +441,9 @@ func RemoteGetManifest(ctx *context.Context) {
 			remoteCtx.ImageName, remoteCtx.RemoteRegistry.Name, err)
 
 		if strings.Contains(err.Error(), "404") {
-			apiErrorDefined(ctx, errManifestUnknown)
+			apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
-			apiErrorDefined(ctx, errUnauthorized)
+			apiErrorDefined(ctx, container_service.ErrUnauthorized)
 		} else {
 			apiError(ctx, http.StatusBadGateway, err)
 		}
