@@ -4,11 +4,7 @@
 package container
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	packages_model "forgejo.org/models/packages"
@@ -20,18 +16,10 @@ import (
 	rr_module "forgejo.org/modules/packages/remote_registry"
 	"forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
-	container_service "forgejo.org/services/packages/container"
-
-	"github.com/regclient/regclient/types/manifest"
 )
 
-func getCachedRemoteManifest(ctx *context.Context) (*packages_model.PackageFileDescriptor, error) {
-	// TODO Later we need a distinction between manifests from remote and local
-	return getManifestFromContext(ctx)
-}
-
-// getLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
-func getLocalBlob(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, digest string) (*packages_model.PackageFileDescriptor, error) {
+// GetLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
+func GetLocalBlob(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, digest string) (*packages_model.PackageFileDescriptor, error) {
 	opts := &container_model.BlobSearchOptions{
 		OwnerID: ctx.ContextUser.ID,
 		Image:   remoteCtx.ImageName,
@@ -40,7 +28,7 @@ func getLocalBlob(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryConte
 
 	// Get blob or err
 	log.Debug("Trying to find blob %s locally", digest)
-	blobDescriptor, err := container_service.WorkaroundGetContainerBlob(ctx, opts)
+	blobDescriptor, err := WorkaroundGetContainerBlob(ctx, opts)
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
 			return nil, err
@@ -73,8 +61,8 @@ func getLocalBlob(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryConte
 	return blobDescriptor, nil
 }
 
-// saveBlobToPackage saves a blob as a package
-func saveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, remoteCtx *rr_module.RemoteRegistryContext, digest string, owner, creator *user_model.User) error {
+// SaveBlobToPackage saves a blob as a package
+func SaveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, remoteCtx *rr_module.RemoteRegistryContext, digest string, owner, creator *user_model.User) error {
 	log.Debug("Saving blob %s as package", digest)
 	pci := &packages_service.PackageCreationInfo{
 		PackageInfo: packages_service.PackageInfo{
@@ -85,7 +73,7 @@ func saveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, 
 		Creator: creator,
 	}
 
-	pb, pf, err := container_service.SaveAsPackageBlob(ctx, buf, pci)
+	pb, pf, err := SaveAsPackageBlob(ctx, buf, pci)
 	if err != nil {
 		return fmt.Errorf("failed to save blob from remote registry: %w", err)
 	}
@@ -109,59 +97,4 @@ func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlo
 			log.Warn("Failed to set blob property %s for remote blob: %v", name, err)
 		}
 	}
-}
-
-func saveManifest(ctx *context.Context, man manifest.Manifest) error {
-	mci, err := container_service.NewRemoteManifestCreationInfo(
-		ctx.ContextUser,
-		ctx.Doer,
-		man.GetDescriptor().MediaType,
-		ctx.Params("image"),
-		ctx.Params("reference"), // TODO Reference may need to be a tag as well
-		man.GetRef().Registry,
-	)
-	if err != nil {
-		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage(err.Error()))
-		return err
-	}
-
-	maxSize := maxManifestSize + 1
-	b, err := man.RawBody()
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return err
-	}
-
-	reader := bytes.NewReader(b)
-	lReader := &io.LimitedReader{R: reader, N: int64(maxSize)}
-	buf, err := packages_module.CreateHashedBufferFromReaderWithSize(lReader, maxSize)
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return err
-	}
-	defer buf.Close()
-
-	if buf.Size() > maxManifestSize {
-		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
-		return err
-	}
-
-	_, err = container_service.ProcessManifest(ctx, *mci, buf)
-	if err != nil {
-		var namedError *container_service.NamedError
-		if errors.As(err, &namedError) {
-			apiErrorDefined(ctx, namedError)
-		} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
-		} else {
-			switch err {
-			case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
-				apiError(ctx, http.StatusForbidden, err)
-			default:
-				apiError(ctx, http.StatusInternalServerError, err)
-			}
-		}
-		return err
-	}
-	return nil
 }

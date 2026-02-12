@@ -4,6 +4,7 @@
 package container
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/services/context"
+	packages_service "forgejo.org/services/packages"
 	container_service "forgejo.org/services/packages/container"
 
 	digest "github.com/opencontainers/go-digest"
@@ -146,7 +148,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 			defer buf.Close()
 
 			// save to package TODO this could happen in a go routine
-			err = saveBlobToPackage(ctx, buf, remoteCtx, dig, ctx.ContextUser, ctx.Doer)
+			err = container_service.SaveBlobToPackage(ctx, buf, remoteCtx, dig, ctx.ContextUser, ctx.Doer)
 			if err != nil {
 				apiError(ctx, http.StatusInternalServerError, err)
 				return
@@ -201,7 +203,7 @@ func RemoteGetBlob(ctx *context.Context) {
 	defer client.Close(ctx, ref)
 
 	// Serve from cache
-	blob, err := getLocalBlob(ctx, remoteCtx, dig)
+	blob, err := container_service.GetLocalBlob(ctx, remoteCtx, dig)
 	if err == container_model.ErrContainerBlobNotExist {
 		log.Debug("Did not find blob with digest %s locally, getting from remote %v", dig)
 		regDigest := digest.Digest(dig)
@@ -225,7 +227,7 @@ func RemoteGetBlob(ctx *context.Context) {
 		}
 
 		// save to package TODO this could happen in a go routine
-		err = saveBlobToPackage(ctx, buf, remoteCtx, dig, ctx.ContextUser, ctx.Doer)
+		err = container_service.SaveBlobToPackage(ctx, buf, remoteCtx, dig, ctx.ContextUser, ctx.Doer)
 		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
@@ -298,7 +300,7 @@ func getAllBlobsFromRemote(ctx *context.Context, client *container_service.Regis
 		}
 
 		// save to package
-		err = saveBlobToPackage(ctx, buf, remoteCtx, layer.Digest.String(), ctx.ContextUser, ctx.Doer)
+		err = container_service.SaveBlobToPackage(ctx, buf, remoteCtx, layer.Digest.String(), ctx.ContextUser, ctx.Doer)
 		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return err
@@ -348,7 +350,7 @@ func RemoteHeadManifest(ctx *context.Context) {
 	}
 
 	// Do we have the manifest cached locally?
-	manifest, err := getCachedRemoteManifest(ctx)
+	manifest, err := getManifestFromContext(ctx)
 	if manifest != nil && err == nil {
 		setResponseHeaders(ctx.Resp, &containerHeaders{
 			ContentDigest: manifest.Properties.GetByName(container_module.PropertyDigest),
@@ -410,7 +412,7 @@ func RemoteGetManifest(ctx *context.Context) {
 	}
 
 	// Do we have the manifest cached locally?
-	man, err := getCachedRemoteManifest(ctx)
+	man, err := getManifestFromContext(ctx)
 	if man != nil && err == nil {
 		serveBlob(ctx, man)
 		log.Trace("Remote manifest with file ID: %s existed", man.File.ID)
@@ -479,7 +481,7 @@ func RemoteGetManifest(ctx *context.Context) {
 	}
 	defer cfgbuf.Close()
 
-	err = saveBlobToPackage(ctx, cfgbuf, remoteCtx, cfg.Digest.String(), ctx.ContextUser, ctx.Doer)
+	err = container_service.SaveBlobToPackage(ctx, cfgbuf, remoteCtx, cfg.Digest.String(), ctx.ContextUser, ctx.Doer)
 	if err != nil {
 		log.Error("Failed to save config: %v", err)
 		apiError(ctx, http.StatusInternalServerError, err)
@@ -514,4 +516,57 @@ func RemoteGetManifest(ctx *context.Context) {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
+}
+
+func saveManifest(ctx *context.Context, man manifest.Manifest) error {
+	mci, err := container_service.NewRemoteManifestCreationInfo(
+		ctx.ContextUser,
+		ctx.Doer,
+		man.GetDescriptor().MediaType,
+		ctx.Params("image"),
+		ctx.Params("reference"),
+		man.GetRef().Registry,
+	)
+	if err != nil {
+		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage(err.Error()))
+		return err
+	}
+
+	maxSize := maxManifestSize + 1
+	b, err := man.RawBody()
+	if err != nil {
+		return err
+	}
+
+	reader := bytes.NewReader(b)
+	lReader := &io.LimitedReader{R: reader, N: int64(maxSize)}
+	buf, err := packages_module.CreateHashedBufferFromReaderWithSize(lReader, maxSize)
+	if err != nil {
+		return err
+	}
+	defer buf.Close()
+
+	if buf.Size() > maxManifestSize {
+		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
+		return err
+	}
+
+	_, err = container_service.ProcessManifest(ctx, *mci, buf)
+	if err != nil {
+		var namedError *container_service.NamedError
+		if errors.As(err, &namedError) {
+			apiErrorDefined(ctx, namedError)
+		} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
+			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
+		} else {
+			switch err {
+			case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
+				apiError(ctx, http.StatusForbidden, err)
+			default:
+				apiError(ctx, http.StatusInternalServerError, err)
+			}
+		}
+		return err
+	}
+	return nil
 }
