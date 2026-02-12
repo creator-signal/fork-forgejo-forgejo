@@ -49,6 +49,10 @@
   margin-right: 0;
 }
 
+#navbar .navbar-right .item > div {
+ display: flex;
+}
+
 @media (max-width: 767.98px) {
   #navbar {
     align-items: stretch;
@@ -119,12 +123,19 @@
   #navbar #mobile-notifications-icon {
     margin-right: 6px !important;
   }
+  #navbar #mobile-notifications-icon > div {
+    display: flex;
+  }
 }
 
 #navbar details.dropdown summary {
   padding-inline-start: 0.75rem;
   /* The min height is dictated by the largest dropdown, which is the one that has an avatar in the opener */
   min-height: 38px;
+}
+
+#navbar details.dropdown summary > span {
+  display: inline-flex;
 }
 
 #navbar a.item .notification_count {
