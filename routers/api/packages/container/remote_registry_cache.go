@@ -40,7 +40,7 @@ func getLocalBlob(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryConte
 
 	// Get blob or err
 	log.Debug("Trying to find blob %s locally", digest)
-	blobDescriptor, err := workaroundGetContainerBlob(ctx, opts)
+	blobDescriptor, err := container_service.WorkaroundGetContainerBlob(ctx, opts)
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
 			return nil, err
