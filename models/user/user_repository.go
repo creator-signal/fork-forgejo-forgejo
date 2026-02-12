@@ -134,16 +134,6 @@ func FindFederatedUsersByHostID(ctx context.Context, federationHostID int64, opt
 	return users, nil
 }
 
-func GetFederatedUser(ctx context.Context, externalID string, federationHostID int64) (*User, *FederatedUser, error) {
-	user, federatedUser, err := FindFederatedUser(ctx, externalID, federationHostID)
-	if err != nil {
-		return nil, nil, err
-	} else if federatedUser == nil {
-		return nil, nil, fmt.Errorf("FederatedUser not found (given externalId: %v, federationHostId: %v)", externalID, federationHostID)
-	}
-	return user, federatedUser, nil
-}
-
 func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *FederatedUser, error) {
 	federatedUser := new(FederatedUser)
 	user := new(User)
