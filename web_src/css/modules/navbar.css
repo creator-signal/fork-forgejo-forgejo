@@ -142,8 +142,8 @@
   min-height: 38px;
 }
 
-#navbar details.dropdown summary > span {
-  display: inline-flex;
+#navbar details.dropdown .dropdown-icon {
+  display: contents;
 }
 
 #navbar a.item .notification_count {
