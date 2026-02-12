@@ -50,6 +50,25 @@ func ValidateIDExists(value ap.Item, name string) []string {
 	return ValidateNotEmpty(value.GetID().String(), name)
 }
 
+func ValidateURLSafe(value string) []string {
+
+	isValid := true
+
+	reserved := []string{":", ",", "?", "#", "[", "]", "@", "!", "$", "&", "'", "(", ")", "*", "+", ",", ";", "="}
+	for _, r := range reserved {
+		if strings.Contains(value, r) {
+			isValid = false
+			break
+		}
+	}
+
+	if isValid {
+		return []string{}
+	}
+	return []string{fmt.Sprintf("Value %v is not url safe", value)}
+
+}
+
 func ValidateNotEmpty(value any, name string) []string {
 	isValid := true
 	switch v := value.(type) {

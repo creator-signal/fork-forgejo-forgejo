@@ -6,6 +6,7 @@ package packages
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"forgejo.org/models/organization"
 	"forgejo.org/models/packages"
@@ -389,11 +390,13 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 	}
 
+	remoteType := strings.ToLower(rrOpts.RemoteType)
+
 	rr, err := packages_service.NewRemoteRegistry(
 		packages_service.RROpts{
 			Name:       rrOpts.Name,
 			RemoteURL:  rrOpts.RemoteURL,
-			RemoteType: packages.Type(rrOpts.RemoteType),
+			RemoteType: packages.Type(remoteType),
 			OwnerType:  ownerType,
 			OwnerID:    ctx.ContextUser.ID,
 			Auth: packages_service.RRCredentials{

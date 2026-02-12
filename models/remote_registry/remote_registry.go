@@ -155,7 +155,7 @@ func DeleteRemoteRegistry(ctx context.Context, ownerType RemoteRegistryOwnerType
 
 func (rr RemoteRegistry) Validate() []string {
 	var result []string
-	result = append(result, validation.ValidateNotEmpty(rr.Name, "Name")...)
+	result = append(result, validation.ValidateURLSafe(rr.Name)...)
 	result = append(result, validation.ValidateNotEmpty(rr.OwnerID, "OwnerID")...)
 	result = append(result, validation.ValidateNotEmpty(rr.RemoteType.Name(), "RemoteType")...)
 	result = append(result, validation.ValidateOneOf(rr.OwnerType, ValidOwnerTypes, "OwnerType")...)
