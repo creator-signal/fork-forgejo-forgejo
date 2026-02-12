@@ -21,7 +21,6 @@ func Test_NewRemoteRegistry(t *testing.T) {
 		Name:       name,
 		RemoteURL:  remoteURL,
 		RemoteType: remoteType,
-		RemoteRepo: "myorg",
 		OwnerType:  rr_model.RemoteRegistryOwnerType("org"),
 		OwnerID:    int64(1),
 		Auth:       RRCredentials{},
@@ -34,4 +33,22 @@ func Test_NewRemoteRegistry(t *testing.T) {
 	assert.Equal(t, remoteURL, rr.RemoteURL)
 	assert.Equal(t, remoteType, rr.RemoteType)
 	assert.Equal(t, opts.OwnerType, rr.OwnerType)
+}
+
+func Test_NewRemoteRegistryInvalid(t *testing.T) {
+	name := "tes,treg"
+	remoteURL := "https://example.com"
+	remoteType := packages.TypeContainer
+	opts := RROpts{
+		Name:       name,
+		RemoteURL:  remoteURL,
+		RemoteType: remoteType,
+		OwnerType:  rr_model.RemoteRegistryOwnerType("org"),
+		OwnerID:    int64(1),
+		Auth:       RRCredentials{},
+	}
+
+	_, err := NewRemoteRegistry(opts)
+
+	assert.Error(t, err)
 }
