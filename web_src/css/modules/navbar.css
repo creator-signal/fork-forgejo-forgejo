@@ -49,6 +49,11 @@
   margin-right: 0;
 }
 
+#navbar .navbar-right .timer-icon-relative {
+  position: relative;
+  display: flex;
+}
+
 #navbar .navbar-right .notification-icon-relative {
   position: relative;
   display: flex;

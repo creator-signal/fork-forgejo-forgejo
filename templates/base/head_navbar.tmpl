@@ -79,7 +79,7 @@
 		{{else if .IsSigned}}
 			{{if EnableTimetracking}}
 			<a class="active-stopwatch-trigger item tw-mx-0{{if not .ActiveStopwatch}} tw-hidden{{end}}" href="{{.ActiveStopwatch.IssueLink}}" title="{{ctx.Locale.Tr "active_stopwatch"}}">
-				<div class="tw-relative">
+				<div class="timer-icon-relative">
 					{{svg "octicon-stopwatch"}}
 					<span class="header-stopwatch-dot"></span>
 				</div>
