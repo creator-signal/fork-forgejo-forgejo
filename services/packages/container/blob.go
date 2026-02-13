@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
@@ -19,10 +20,57 @@ import (
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/modules/util"
+	api_ctx "forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
+	digest "github.com/opencontainers/go-digest"
 )
 
 var uploadVersionMutex sync.Mutex
+
+// GetLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
+func GetLocalBlob(ctx *api_ctx.Context, ownerID int64, dig, imageName string, remote ...bool) (*packages_model.PackageFileDescriptor, error) {
+	if digest.Digest(dig).Validate() != nil {
+		return nil, container_model.ErrContainerBlobNotExist
+	}
+
+	opts := &container_model.BlobSearchOptions{
+		OwnerID: ownerID,
+		Image:   imageName,
+		Digest:  dig,
+	}
+
+	// Get blob or err
+	log.Debug("Trying to find blob %s locally", dig)
+	blobDescriptor, err := WorkaroundGetContainerBlob(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(remote) > 0 {
+		// Update cache time (if it exists), as we are using this blob again
+		pf, err := packages_model.GetFileForVersionByName(
+			ctx,
+			blobDescriptor.File.VersionID,
+			blobDescriptor.File.LowerName,
+			packages_model.EmptyFileKey)
+		if err != nil {
+			log.Error("Could not find file for blob %s: %v", dig, err)
+			return nil, err
+		}
+		err = packages_model.UpdateProperty(ctx,
+			&packages_model.PackageProperty{
+				RefType: packages_model.PropertyTypeFile,
+				RefID:   pf.ID,
+				Name:    container_module.PropertyCacheTime,
+				Value:   fmt.Sprintf("%d", time.Now().Unix()),
+			})
+		if err != nil {
+			log.Warn("Failed to set/update blob property %s for remote blob: %v", container_module.PropertyCacheTime, err)
+		}
+	}
+
+	return blobDescriptor, nil
+}
 
 // saveAsPackageBlob creates a package blob from an upload
 // The uploaded blob gets stored in a special upload version to link them to the package/image

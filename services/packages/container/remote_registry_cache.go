@@ -8,7 +8,6 @@ import (
 	"time"
 
 	packages_model "forgejo.org/models/packages"
-	container_model "forgejo.org/models/packages/container"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
@@ -16,53 +15,7 @@ import (
 	rr_module "forgejo.org/modules/packages/remote_registry"
 	"forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
-	digest "github.com/opencontainers/go-digest"
 )
-
-// GetLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
-func GetLocalBlob(ctx *context.Context, ownerID int64, dig, imageName string, remote ...bool) (*packages_model.PackageFileDescriptor, error) {
-	if digest.Digest(dig).Validate() != nil {
-		return nil, container_model.ErrContainerBlobNotExist
-	}
-
-	opts := &container_model.BlobSearchOptions{
-		OwnerID: ownerID,
-		Image:   imageName,
-		Digest:  dig,
-	}
-
-	// Get blob or err
-	log.Debug("Trying to find blob %s locally", dig)
-	blobDescriptor, err := WorkaroundGetContainerBlob(ctx, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(remote) > 0 {
-		// Update cache time (if it exists), as we are using this blob again
-		pf, err := packages_model.GetFileForVersionByName(
-			ctx,
-			blobDescriptor.File.VersionID,
-			blobDescriptor.File.LowerName,
-			packages_model.EmptyFileKey)
-		if err != nil {
-			log.Error("Could not find file for blob %s: %v", dig, err)
-			return nil, err
-		}
-		err = packages_model.UpdateProperty(ctx,
-			&packages_model.PackageProperty{
-				RefType: packages_model.PropertyTypeFile,
-				RefID:   pf.ID,
-				Name:    container_module.PropertyCacheTime,
-				Value:   fmt.Sprintf("%d", time.Now().Unix()),
-			})
-		if err != nil {
-			log.Warn("Failed to set/update blob property %s for remote blob: %v", container_module.PropertyCacheTime, err)
-		}
-	}
-
-	return blobDescriptor, nil
-}
 
 // SaveBlobToPackage saves a blob as a package
 func SaveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, remoteCtx *rr_module.RemoteRegistryContext, digest string, owner, creator *user_model.User) error {
