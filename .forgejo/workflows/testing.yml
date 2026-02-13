@@ -36,9 +36,25 @@ jobs:
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
 
+      - name: debug
+        run: |
+          set -ex;
+          node -v
+          npm -v
+          command -v node
+          command -v npm
+
       - uses: https://data.forgejo.org/actions/setup-node@v6
         with:
           node-version-file: .node-version
+
+      - name: debug
+        run: |
+          set -ex;
+          node -v
+          npm -v
+          command -v node
+          command -v npm
 
       - run: make deps-frontend
       - run: make lint-frontend
