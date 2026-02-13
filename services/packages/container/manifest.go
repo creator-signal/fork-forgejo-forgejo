@@ -53,7 +53,7 @@ type ManifestCreationInfo struct {
 	Properties         map[string]string
 }
 
-func NewManifestCreationInfo(owner, creator *user.User, mediaType, image, reference string) (*ManifestCreationInfo, error) {
+func NewManifestCreationInfo(owner, creator *user.User, mediaType, image, reference string, remoteInfo ...string) (*ManifestCreationInfo, error) {
 	isTagged := digest.Digest(reference).Validate() != nil
 
 	mci := &ManifestCreationInfo{
@@ -65,30 +65,13 @@ func NewManifestCreationInfo(owner, creator *user.User, mediaType, image, refere
 		IsTagged:  isTagged,
 	}
 
+	if len(remoteInfo) > 0 {
+		mci.RemoteRegistryHost = remoteInfo[0]
+		mci.CacheTimeUnix = time.Now().Unix()
+	}
+
 	if mci.IsTagged && !ReferencePattern.MatchString(reference) {
 		return &ManifestCreationInfo{}, errors.New("Tag is invalid")
-	}
-
-	return mci, nil
-}
-
-func NewRemoteManifestCreationInfo(owner, creator *user.User, mediaType, image, reference, host string) (*ManifestCreationInfo, error) {
-	isTagged := digest.Digest(reference).Validate() != nil
-	time := time.Now().Unix()
-
-	mci := &ManifestCreationInfo{
-		MediaType:          mediaType,
-		Owner:              owner,
-		Creator:            creator,
-		Image:              image,
-		Reference:          reference,
-		IsTagged:           isTagged,
-		RemoteRegistryHost: host,
-		CacheTimeUnix:      time,
-	}
-
-	if mci.IsTagged && !ReferencePattern.MatchString(reference) {
-		return &ManifestCreationInfo{}, ErrTagInvalid
 	}
 
 	return mci, nil

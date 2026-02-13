@@ -77,7 +77,7 @@ func GetRemoteBlob(ctx *context.Context, client *RegistryClient, layer *descript
 }
 
 func SaveManifest(ctx *context.Context, owner, creator *user_model.User, remoteCtx rr_module.RemoteRegistryContext, man manifest.Manifest) error {
-	mci, err := NewRemoteManifestCreationInfo(
+	mci, err := NewManifestCreationInfo(
 		owner,
 		creator,
 		man.GetDescriptor().MediaType,
