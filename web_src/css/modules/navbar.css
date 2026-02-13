@@ -49,11 +49,7 @@
   margin-right: 0;
 }
 
-#navbar .navbar-right .stopwatch-icon-relative {
-  position: relative;
-  display: flex;
-}
-
+/* icon with notification counter - positioned relative container */
 #navbar .navbar-right .notification-icon-relative {
   position: relative;
   display: flex;
@@ -128,11 +124,6 @@
   }
   #navbar #mobile-notifications-icon {
     margin-right: 6px !important;
-  }
-
-  #navbar .navbar-mobile-right .notification-icon-relative {
-    position: relative;
-    display: flex;
   }
 }
 
