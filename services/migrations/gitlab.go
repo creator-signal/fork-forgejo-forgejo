@@ -65,10 +65,13 @@ type gitlabIIDResolver struct {
 }
 
 func (r *gitlabIIDResolver) recordIssueIID(issueIID int) {
-	if r.frozen {
-		panic("cannot record issue IID after pull request IID generation has started")
+	if int64(issueIID) <= r.maxIssueIID {
+		return
 	}
-	r.maxIssueIID = max(r.maxIssueIID, int64(issueIID))
+	if r.frozen {
+		panic("cannot record bigger issue IID after pull request IID generation has started")
+	}
+	r.maxIssueIID = int64(issueIID)
 }
 
 func (r *gitlabIIDResolver) generatePullRequestNumber(mrIID int) int64 {
@@ -403,15 +406,18 @@ type gitlabIssueContext struct {
 //	Note: issue label description and colors are not supported by the go-gitlab library at this time
 func (g *GitlabDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, error) {
 	state := "all"
-	sort := "asc"
+	// we want most recent issues first, to get the biggest issue IID immediately
+	sort := "desc"
+	orderBy := "created_at"
 
 	if perPage > g.maxPerPage {
 		perPage = g.maxPerPage
 	}
 
 	opt := &gitlab.ListProjectIssuesOptions{
-		State: &state,
-		Sort:  &sort,
+		State:   &state,
+		Sort:    &sort,
+		OrderBy: &orderBy,
 		ListOptions: gitlab.ListOptions{
 			PerPage: perPage,
 			Page:    page,
@@ -795,39 +801,14 @@ func (g *GitlabDownloader) awardsToReactions(awards []*gitlab.AwardEmoji) []*bas
 	return result
 }
 
-// Build on the assumption, that PR IDs will resolve after Issue IDs
-func (g *GitlabDownloader) convertMRReference(body string) string {
-	maxLength := len(body)
-	for i := 0; i < maxLength; i++ {
-		if body[i] == '!' {
-			var collected string
-			for k := i + 1; k < maxLength; k++ { // for each rune after ! check if next rune is integer
-				if body[k]-'0' <= 9 {
-					collected += string(body[k])
-					if k == maxLength-1 { // The last rune in the string was an integer
-						body = g.updateAndInsert(body, collected, i+1, k)
-					}
-				} else if len(collected) > 0 { // Integers have been collected, update value
-					body = g.updateAndInsert(body, collected, i+1, k)
-					maxLength = len(body)
-					i = k
-					break // We're done, continue after our replacement
-				}
-			}
-		}
-	}
-	return body
-}
+var mrFinder = regexp.MustCompile(`![0-9]+`)
 
-func (g *GitlabDownloader) updateAndInsert(description, oldReference string, endFirst, startSecond int) string {
-	oldVal, _ := strconv.Atoi(oldReference)
-	newVal := oldVal + int(g.iidResolver.maxIssueIID)
-	firstPart := description[0:endFirst]
-	firstPart += strconv.Itoa(newVal)
-	var secondPart string
-	if startSecond < len(description)-1 {
-		secondPart = description[startSecond:]
-	}
-	description = firstPart + secondPart
-	return description
+// In gitlab, issues and merge-request have split numbering
+// Adjust the merge-request numbers (preserve the issue numbers)
+func (g *GitlabDownloader) convertMRReference(body string) string {
+	return mrFinder.ReplaceAllStringFunc(body, func(s string) string {
+		oldVal, _ := strconv.Atoi(s[1:]) // skip the leading exclamation mark
+		newVal := g.iidResolver.generatePullRequestNumber(oldVal)
+		return "!" + strconv.FormatInt(newVal, 10)
+	})
 }

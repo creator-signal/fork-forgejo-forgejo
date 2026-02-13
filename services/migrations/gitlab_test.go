@@ -234,6 +234,9 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Reactions:  []*base.Reaction{},
 		},
 	}, issues)
+	issues, isEnd, err = downloader.GetIssues(2, 3)
+	require.NoError(t, err)
+	assert.True(t, isEnd)
 
 	comments, _, err := downloader.GetComments(&base.Issue{
 		Number:       2,
@@ -298,7 +301,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			PosterID:   10529876,
 			PosterName: "patdyn",
 			Created:    time.Date(2025, time.November, 25, 9, 49, 0, 750000000, time.UTC),
-			Content:    "Although we had some trouble with !4",
+			Content:    "Although we had some trouble with !4.",
 			Reactions:  nil,
 		},
 		{
@@ -744,6 +747,7 @@ func TestCommentBodyParser(t *testing.T) {
 	testNote4 := makeTestNote(4, "Closed by !1 and !14", false, now)
 	testNote5 := makeTestNote(5, "Actually !1 and !1 are the same but !100 and !214 are not", false, now)
 	testNote6 := makeTestNote(6, "!11 and !1 are simillar but !201 and !100 are not!", false, now)
+	testNote7 := makeTestNote(1, "Simillar to #9, may be solved in !004", false, now)
 
 	parsedBody1 := downloader.convertMRReference(testNote1.Body)
 	parsedBody2 := downloader.convertMRReference(testNote2.Body)
@@ -751,6 +755,7 @@ func TestCommentBodyParser(t *testing.T) {
 	parsedBody4 := downloader.convertMRReference(testNote4.Body)
 	parsedBody5 := downloader.convertMRReference(testNote5.Body)
 	parsedBody6 := downloader.convertMRReference(testNote6.Body)
+	parsedBody7 := downloader.convertMRReference(testNote7.Body)
 
 	// Assuming a total of 20 comments + PRs
 	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody1)
@@ -759,4 +764,5 @@ func TestCommentBodyParser(t *testing.T) {
 	assert.Equal(t, "Closed by !11 and !24", parsedBody4)
 	assert.Equal(t, "Actually !11 and !11 are the same but !110 and !224 are not", parsedBody5)
 	assert.Equal(t, "!21 and !11 are simillar but !211 and !110 are not!", parsedBody6)
+	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody7)
 }
