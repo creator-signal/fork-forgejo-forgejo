@@ -140,36 +140,30 @@ func TestGitlabDownloadRepo(t *testing.T) {
 	assert.False(t, isEnd)
 	assertIssuesEqual(t, []*base.Issue{
 		{
-			Number:     1,
-			Title:      "Please add an animated gif icon to the merge button",
-			Content:    "I just want the merge button to hurt my eyes a little. :stuck_out_tongue_closed_eyes:",
-			Milestone:  "1.0.0",
-			PosterID:   548513,
-			PosterName: "mkobel",
-			State:      "closed",
-			Created:    time.Date(2024, 9, 3, 14, 42, 34, 924000000, time.UTC),
-			Updated:    time.Date(2024, 9, 3, 14, 48, 43, 756000000, time.UTC),
-			Labels: []*base.Label{
-				{
-					Name: "bug",
-				},
-				{
-					Name: "discussion",
-				},
-			},
-			Reactions: []*base.Reaction{
-				{
-					UserID:   548513,
-					UserName: "mkobel",
-					Content:  "thumbsup",
-				},
-				{
-					UserID:   548513,
-					UserName: "mkobel",
-					Content:  "open_mouth",
-				},
-			},
-			Closed: timePtr(time.Date(2024, 9, 3, 14, 43, 10, 708000000, time.UTC)),
+			Number:     4,
+			Title:      "Missing \"migration_test\" and \"migration_test_migration_test_migration_test\" topic",
+			Content:    "This is required for https://codeberg.org/forgejo/forgejo/pulls/10336.",
+			Milestone:  "",
+			PosterID:   29018602,
+			PosterName: "amadaluzia",
+			State:      "opened",
+			Created:    time.Date(2025, time.December, 6, 14, 2, 59, 995000000, time.UTC),
+			Updated:    time.Date(2025, time.December, 6, 15, 4, 37, 324000000, time.UTC),
+			Labels:     []*base.Label{},
+			Reactions:  []*base.Reaction{},
+		},
+		{
+			Number:     3,
+			Title:      "Fix plz",
+			Content:    "Can we do something about it? !6 is maybe related to that.", // was "!2" on gitlab, now !6 on forgejo
+			Milestone:  "",
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			State:      "opened",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 31, 991000000, time.UTC),
+			Updated:    time.Date(2025, time.November, 25, 9, 49, 31, 991000000, time.UTC),
+			Labels:     []*base.Label{},
+			Reactions:  []*base.Reaction{},
 		},
 		{
 			Number:     2,
@@ -180,7 +174,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			PosterName: "mkobel",
 			State:      "closed",
 			Created:    time.Date(2024, 9, 3, 14, 42, 35, 371000000, time.UTC),
-			Updated:    time.Date(2024, 9, 3, 20, 3, 43, 536000000, time.UTC),
+			Updated:    time.Date(2026, 2, 13, 20, 46, 11, 889000000, time.UTC),
 			Labels: []*base.Label{
 				{
 					Name: "duplicate",
@@ -220,23 +214,44 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			},
 			Closed: timePtr(time.Date(2024, 9, 3, 14, 43, 10, 906000000, time.UTC)),
 		},
-		{
-			Number:     3,
-			Title:      "Fix plz",
-			Content:    "Can we do something about it? !5 is maybe related to that.",
-			Milestone:  "",
-			PosterID:   10529876,
-			PosterName: "patdyn",
-			State:      "opened",
-			Created:    time.Date(2025, time.November, 25, 9, 49, 31, 991000000, time.UTC),
-			Updated:    time.Date(2025, time.November, 25, 9, 49, 31, 991000000, time.UTC),
-			Labels:     []*base.Label{},
-			Reactions:  []*base.Reaction{},
-		},
 	}, issues)
 	issues, isEnd, err = downloader.GetIssues(2, 3)
 	require.NoError(t, err)
 	assert.True(t, isEnd)
+	assertIssuesEqual(t, []*base.Issue{
+		{
+			Number:     1,
+			Title:      "Please add an animated gif icon to the merge button",
+			Content:    "I just want the merge button to hurt my eyes a little. :stuck_out_tongue_closed_eyes:",
+			Milestone:  "1.0.0",
+			PosterID:   548513,
+			PosterName: "mkobel",
+			State:      "closed",
+			Created:    time.Date(2024, 9, 3, 14, 42, 34, 924000000, time.UTC),
+			Updated:    time.Date(2024, 9, 3, 14, 48, 43, 756000000, time.UTC),
+			Labels: []*base.Label{
+				{
+					Name: "bug",
+				},
+				{
+					Name: "discussion",
+				},
+			},
+			Reactions: []*base.Reaction{
+				{
+					UserID:   548513,
+					UserName: "mkobel",
+					Content:  "thumbsup",
+				},
+				{
+					UserID:   548513,
+					UserName: "mkobel",
+					Content:  "open_mouth",
+				},
+			},
+			Closed: timePtr(time.Date(2024, 9, 3, 14, 43, 10, 708000000, time.UTC)),
+		},
+	}, issues)
 
 	comments, _, err := downloader.GetComments(&base.Issue{
 		Number:       2,
@@ -263,6 +278,15 @@ func TestGitlabDownloadRepo(t *testing.T) {
 		},
 		{
 			IssueIndex:  2,
+			PosterID:    2005797,
+			PosterName:  "oliverpool",
+			Created:     time.Date(2026, 2, 13, 20, 46, 11, 841000000, time.UTC),
+			Content:     "with an image ![image](/uploads/3756af8a4893bea08b99536df000e932/image.png){width=217 height=280}",
+			Reactions:   nil,
+			CommentType: "close",
+		},
+		{
+			IssueIndex:  2,
 			PosterID:    548513,
 			PosterName:  "mkobel",
 			Created:     time.Date(2024, 9, 3, 14, 43, 10, 947000000, time.UTC),
@@ -284,7 +308,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			PosterID:   10529876,
 			PosterName: "patdyn",
 			Created:    time.Date(2025, time.November, 25, 9, 49, 50, 899000000, time.UTC),
-			Content:    "No actually its !4",
+			Content:    "No actually its !5",
 			Reactions:  nil,
 		},
 	}, comments)
@@ -301,7 +325,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			PosterID:   10529876,
 			PosterName: "patdyn",
 			Created:    time.Date(2025, time.November, 25, 9, 49, 0, 750000000, time.UTC),
-			Content:    "Although we had some trouble with !4.",
+			Content:    "Although we had some trouble with !5.",
 			Reactions:  nil,
 		},
 		{
@@ -318,9 +342,9 @@ func TestGitlabDownloadRepo(t *testing.T) {
 	require.NoError(t, err)
 	assertPullRequestsEqual(t, []*base.PullRequest{
 		{
-			Number:     5,
+			Number:     6,
 			Title:      "Test/parsing",
-			Content:    "Simillar to !4 this solves an issue.",
+			Content:    "Simillar to !5 this solves an issue.",
 			Milestone:  "",
 			PosterID:   10529876,
 			PosterName: "patdyn",
@@ -350,7 +374,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Context:        gitlabIssueContext{IsMergeRequest: true},
 		},
 		{
-			Number:     4,
+			Number:     5,
 			Title:      "Test branch",
 			Content:    "do not merge this PR",
 			Milestone:  "1.1.0",
