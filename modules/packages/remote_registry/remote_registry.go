@@ -12,4 +12,6 @@ type RemoteRegistryContext struct {
 	RemoteRegistry *rr_model.RemoteRegistry
 	OwnerName      string
 	ImageName      string
+	Reference      string
+	Digest         string
 }

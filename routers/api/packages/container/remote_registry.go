@@ -25,6 +25,8 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 	registryName := ctx.Params("registry-name")
 	ownerName := ctx.Params("username")
 	imageName := ctx.Params("image")
+	reference := ctx.Params("reference")
+	dig := ctx.Params("diges")
 	username := ctx.ContextUser.Name
 	isOrg := ctx.ContextUser.IsOrganization()
 	isUser := ctx.ContextUser.IsUser()
@@ -32,7 +34,6 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 	log.Trace("Detected remote registry request: owner=%s, user=%s, remote=%s, image=%s",
 		ownerName, username, registryName, imageName)
 
-	// Resolve remote registry with precedence
 	remoteRegistry, err := rr_service.GetRemoteRegistry(ctx, isOrg, isUser, ownerName, registryName)
 	if err != nil {
 		log.Error("Failed to resolve remote registry %q: %v", registryName, err)
@@ -43,9 +44,10 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 		OwnerName:      ownerName,
 		ImageName:      imageName,
 		RemoteRegistry: remoteRegistry,
+		Reference:      reference,
+		Digest:         dig,
 	}
 
-	// Store in context
 	ctx.Data[remoteRegistryContextKey] = remoteCtx
 }
 
