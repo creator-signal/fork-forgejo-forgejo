@@ -77,18 +77,15 @@ func GetRemoteTagList(ctx *context.Context) {
 
 func RemoteHeadBlob(ctx *context.Context) {
 	// Do we have the blob cached locally?
-	_, err := getBlobFromContext(ctx)
+	var respDigest string
+	var size int64
+	blob, err := getBlobFromContext(ctx)
 	if err != nil {
-		if err == container_model.ErrContainerBlobNotExist {
+		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
 			dig := ctx.Params("digest")
 			if dig == "" {
 				apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 				return
-			}
-
-			regDigest := digest.Digest(dig)
-			regLayer := descriptor.Descriptor{
-				Digest: regDigest,
 			}
 
 			remoteCtx, err := GetRemoteRegistryContext(ctx)
@@ -105,6 +102,8 @@ func RemoteHeadBlob(ctx *context.Context) {
 			}
 			defer client.Close(ctx)
 
+			regDigest := digest.Digest(dig)
+			regLayer := descriptor.Descriptor{Digest: regDigest}
 			buf, err := container_service.GetBlobFromRemote(ctx, &client, &regLayer)
 			if err != nil {
 				apiError(ctx, http.StatusInternalServerError, err)
@@ -118,22 +117,22 @@ func RemoteHeadBlob(ctx *context.Context) {
 				apiError(ctx, http.StatusInternalServerError, err)
 				return
 			}
+
+			respDigest = dig
+			size = buf.Size()
+
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
 		}
-	}
-
-	// try again
-	blob, err := getBlobFromContext(ctx)
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
+	} else {
+		respDigest = blob.Properties.GetByName(container_module.PropertyDigest)
+		size = blob.Blob.Size
 	}
 
 	setResponseHeaders(ctx.Resp, &containerHeaders{
-		ContentDigest: blob.Properties.GetByName(container_module.PropertyDigest),
-		ContentLength: blob.Blob.Size,
+		ContentDigest: respDigest,
+		ContentLength: size,
 		Status:        http.StatusOK,
 	})
 }
