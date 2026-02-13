@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 
 	packages_model "forgejo.org/models/packages"
@@ -37,7 +35,7 @@ func GetRemoteTagList(ctx *context.Context) {
 		n = ctx.FormInt("n")
 	}
 
-	tagList, err := container_service.NewTagList(ctx,
+	tagList, vals, err := container_service.GetLocalTagList(ctx,
 		ctx.Package.Owner.LowerName,
 		image,
 		last,
@@ -59,37 +57,19 @@ func GetRemoteTagList(ctx *context.Context) {
 		}
 		defer client.Close(ctx)
 
-		tagList, err = client.ListTags(ctx, ctx.Package.Owner.LowerName, image)
+		tagList, vals, err = container_service.GetRemoteTagList(ctx, &client, ctx.Package.Owner.LowerName, image, n)
 		if err != nil {
 			log.Error("Failed to get tag list for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
 		}
-
-		if len(tagList.Tags) > 0 {
-			v := url.Values{}
-			if n > 0 {
-				v.Add("n", strconv.Itoa(n))
-			}
-			v.Add("last", tagList.Tags[len(tagList.Tags)-1])
-
-			ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, v.Encode()))
-		}
-
-		jsonResponse(ctx, http.StatusOK, tagList)
 	} else if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
 	if len(tagList.Tags) > 0 {
-		v := url.Values{}
-		if n > 0 {
-			v.Add("n", strconv.Itoa(n))
-		}
-		v.Add("last", tagList.Tags[len(tagList.Tags)-1])
-
-		ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, v.Encode()))
+		ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, vals.Encode()))
 	}
 
 	jsonResponse(ctx, http.StatusOK, tagList)

@@ -711,7 +711,7 @@ func GetTagList(ctx *context.Context) {
 		n = ctx.FormInt("n")
 	}
 
-	tagList, err := container_service.NewTagList(ctx,
+	tagList, vals, err := container_service.GetLocalTagList(ctx,
 		ctx.Package.Owner.LowerName,
 		image,
 		last,
@@ -727,13 +727,7 @@ func GetTagList(ctx *context.Context) {
 	}
 
 	if len(tagList.Tags) > 0 {
-		v := url.Values{}
-		if n > 0 {
-			v.Add("n", strconv.Itoa(n))
-		}
-		v.Add("last", tagList.Tags[len(tagList.Tags)-1])
-
-		ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, v.Encode()))
+		ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, vals.Encode()))
 	}
 
 	jsonResponse(ctx, http.StatusOK, tagList)
