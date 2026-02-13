@@ -123,6 +123,9 @@ func TestGitlabDownloadRepo(t *testing.T) {
 
 	releases, err := downloader.GetReleases()
 	require.NoError(t, err)
+	// TODO: fix size, currently reported as 0
+	size := 0
+	dc := 0
 	assertReleasesEqual(t, []*base.Release{
 		{
 			TagName:         "v0.9.99",
@@ -132,6 +135,42 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Created:         time.Date(2024, 9, 3, 15, 1, 1, 513000000, time.UTC),
 			PublisherID:     548513,
 			PublisherName:   "mkobel",
+			Assets: []*base.ReleaseAsset{
+				{
+					// TODO: fix name or URL, doesn't make sense to download without extension
+					ID:            10687293,
+					Name:          "zip (other)",
+					Size:          &size,
+					DownloadCount: &dc,
+					// TODO: fix date, currently time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+					// Created:       time.Date(2025, time.August, 7, 23, 39, 27, 0, time.UTC),
+					// Updated:       time.Date(2025, time.August, 7, 23, 39, 29, 0, time.UTC),
+				},
+				{
+					ID:            10687292,
+					Name:          "Forgejo",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+				{
+					ID:            10687291,
+					Name:          "Frogejo 🐸",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+				{
+					ID:            10687290,
+					Name:          "tar.bz2 (runbook)",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+				{
+					ID:            10687289,
+					Name:          "tar.gz (package)",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+			},
 		},
 	}, releases)
 
