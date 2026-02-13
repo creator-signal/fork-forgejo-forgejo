@@ -420,19 +420,20 @@ func TestGitlabSkippedIssueNumber(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://gitlab.com", fixturePath, gitlabPersonalAccessToken != "")
 	defer server.Close()
 
-	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "troyengel/archbuild", "", "", gitlabPersonalAccessToken)
+	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "forgejo/test_repo-skipped-numbers", "", "", gitlabPersonalAccessToken)
 	if err != nil {
 		t.Fatalf("NewGitlabDownloader is nil: %v", err)
 	}
 	repo, err := downloader.GetRepoInfo()
 	require.NoError(t, err)
+	// Repo Owner is blank in Gitlab Group repos
 	assertRepositoryEqual(t, &base.Repository{
-		Name:          "archbuild",
-		Owner:         "troyengel",
-		Description:   "Arch packaging and build files",
-		CloneURL:      server.URL + "/troyengel/archbuild.git",
-		OriginalURL:   server.URL + "/troyengel/archbuild",
-		DefaultBranch: "master",
+		Name:          "test_repo-skipped-numbers",
+		Owner:         "",
+		Description:   "",
+		CloneURL:      server.URL + "/forgejo/test_repo-skipped-numbers.git",
+		OriginalURL:   server.URL + "/forgejo/test_repo-skipped-numbers",
+		DefaultBranch: "main",
 	}, repo)
 
 	issues, isEnd, err := downloader.GetIssues(1, 10)
@@ -442,7 +443,7 @@ func TestGitlabSkippedIssueNumber(t *testing.T) {
 	// the only issue in this repository has number 2
 	assert.Len(t, issues, 1)
 	assert.EqualValues(t, 2, issues[0].Number)
-	assert.Equal(t, "vpn unlimited errors", issues[0].Title)
+	assert.Equal(t, "2nd issue", issues[0].Title)
 
 	prs, _, err := downloader.GetPullRequests(1, 10)
 	require.NoError(t, err)
@@ -451,7 +452,7 @@ func TestGitlabSkippedIssueNumber(t *testing.T) {
 	// pull request 3 in Forgejo
 	assert.Len(t, prs, 1)
 	assert.EqualValues(t, 3, prs[0].Number)
-	assert.Equal(t, "Review", prs[0].Title)
+	assert.Equal(t, "cleanup README.md", prs[0].Title)
 }
 
 func gitlabClientMockSetup(t *testing.T) (*http.ServeMux, *httptest.Server, *gitlab.Client) {
