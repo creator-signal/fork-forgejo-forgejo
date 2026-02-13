@@ -116,7 +116,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 		return
 	}
 
-	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.ImageName)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.ImageName, true)
 	if err != nil {
 		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
 			log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Digest)
@@ -175,7 +175,7 @@ func RemoteGetBlob(ctx *context.Context) {
 		return
 	}
 
-	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.ImageName)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.ImageName, true)
 	if err == container_model.ErrContainerBlobNotExist {
 		log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Digest)
 
