@@ -563,22 +563,9 @@ func UploadManifest(ctx *context.Context) {
 	})
 }
 
-func getManifestFromContext(ctx *context.Context) (*packages_model.PackageFileDescriptor, error) {
-	opts, err := container_service.GetManifestSearchOptions(
-		ctx.Package.Owner.ID,
-		ctx.Params("image"),
-		ctx.Params("reference"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return container_service.WorkaroundGetContainerBlob(ctx, opts)
-}
-
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#checking-if-content-exists-in-the-registry
 func HeadManifest(ctx *context.Context) {
-	manifest, err := getManifestFromContext(ctx)
+	manifest, err := container_service.GetLocalManifest(ctx, ctx.Package.Owner.ID, ctx.Params("image"), ctx.Params("reference"))
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
 			apiErrorDefined(ctx, container_service.ErrManifestUnknown)
@@ -598,7 +585,7 @@ func HeadManifest(ctx *context.Context) {
 
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pulling-manifests
 func GetManifest(ctx *context.Context) {
-	manifest, err := getManifestFromContext(ctx)
+	manifest, err := container_service.GetLocalManifest(ctx, ctx.Package.Owner.ID, ctx.Params("image"), ctx.Params("reference"))
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
 			apiErrorDefined(ctx, container_service.ErrManifestUnknown)

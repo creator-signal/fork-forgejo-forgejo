@@ -27,6 +27,18 @@ import (
 
 var uploadVersionMutex sync.Mutex
 
+func GetLocalManifest(ctx *api_ctx.Context, ownerID int64, imageName, reference string) (*packages_model.PackageFileDescriptor, error) {
+	opts, err := GetManifestSearchOptions(
+		ownerID,
+		imageName,
+		reference,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return WorkaroundGetContainerBlob(ctx, opts)
+}
+
 // GetLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
 func GetLocalBlob(ctx *api_ctx.Context, ownerID int64, dig, imageName string, remote ...bool) (*packages_model.PackageFileDescriptor, error) {
 	if digest.Digest(dig).Validate() != nil {
