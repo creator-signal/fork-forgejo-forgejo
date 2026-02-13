@@ -4,6 +4,9 @@
 package container
 
 import (
+	"bytes"
+	"io"
+
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	rr_module "forgejo.org/modules/packages/remote_registry"
@@ -64,5 +67,52 @@ func GetBlobFromRemote(ctx *context.Context, client *RegistryClient, layer *desc
 		return nil, err
 	}
 	defer br.Close()
+	return buf, nil
+}
+
+func SaveManifest(ctx *context.Context, man manifest.Manifest) error {
+	mci, err := NewRemoteManifestCreationInfo(
+		ctx.ContextUser,
+		ctx.Doer,
+		man.GetDescriptor().MediaType,
+		ctx.Params("image"),
+		ctx.Params("reference"),
+		man.GetRef().Registry,
+	)
+	if err != nil {
+		return err
+	}
+
+	buf, err := createManifestBuffer(man)
+	if err != nil {
+		return err
+	}
+
+	_, err = ProcessManifest(ctx, *mci, buf)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func createManifestBuffer(man manifest.Manifest) (*packages_module.HashedBuffer, error) {
+	maxSize := MaxManifestSize + 1
+	b, err := man.RawBody()
+	if err != nil {
+		return nil, err
+	}
+
+	reader := bytes.NewReader(b)
+	lReader := &io.LimitedReader{R: reader, N: int64(maxSize)}
+	buf, err := packages_module.CreateHashedBufferFromReaderWithSize(lReader, maxSize)
+	if err != nil {
+		return nil, err
+	}
+	defer buf.Close()
+
+	if buf.Size() > MaxManifestSize {
+		return nil, ErrManifestTooLarge
+	}
+
 	return buf, nil
 }

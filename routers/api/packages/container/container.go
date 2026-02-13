@@ -30,10 +30,6 @@ import (
 	digest "github.com/opencontainers/go-digest"
 )
 
-// maximum size of a container manifest
-// https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-manifests
-const maxManifestSize = 10 * 1024 * 1024
-
 var imageNamePattern = regexp.MustCompile(`\A[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*\z`)
 
 type containerHeaders struct {
@@ -543,7 +539,7 @@ func UploadManifest(ctx *context.Context) {
 		return
 	}
 
-	maxSize := maxManifestSize + 1
+	maxSize := container_service.MaxManifestSize + 1
 	buf, err := packages_module.CreateHashedBufferFromReaderWithSize(&io.LimitedReader{R: ctx.Req.Body, N: int64(maxSize)}, maxSize)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
@@ -551,7 +547,7 @@ func UploadManifest(ctx *context.Context) {
 	}
 	defer buf.Close()
 
-	if buf.Size() > maxManifestSize {
+	if buf.Size() > container_service.MaxManifestSize {
 		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
 		return
 	}

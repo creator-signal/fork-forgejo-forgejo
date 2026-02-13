@@ -4,7 +4,6 @@
 package container
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -24,7 +23,6 @@ import (
 
 	digest "github.com/opencontainers/go-digest"
 	"github.com/regclient/regclient/types/descriptor"
-	"github.com/regclient/regclient/types/manifest"
 )
 
 const (
@@ -386,10 +384,31 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
-	err = saveManifest(ctx, regManifest)
+	err = container_service.SaveManifest(ctx, regManifest)
 	if err != nil {
 		log.Error("Failed to save manifest: %v", err)
-		apiError(ctx, http.StatusInternalServerError, err)
+		if errors.Is(err, container_service.ErrTagInvalid) {
+			apiErrorDefined(ctx, container_service.ErrManifestInvalid.
+				WithMessage(err.Error()))
+		} else if errors.Is(err, container_service.ErrManifestTooLarge) {
+			apiErrorDefined(ctx, container_service.ErrManifestInvalid.
+				WithMessage(err.Error()).
+				WithStatusCode(http.StatusRequestEntityTooLarge))
+		} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
+			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
+		} else {
+			var namedError *container_service.NamedError
+			if errors.As(err, &namedError) {
+				apiErrorDefined(ctx, namedError)
+			} else {
+				switch err {
+				case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
+					apiError(ctx, http.StatusForbidden, err)
+				default:
+					apiError(ctx, http.StatusInternalServerError, err)
+				}
+			}
+		}
 		return
 	}
 
@@ -414,57 +433,4 @@ func RemoteGetManifest(ctx *context.Context) {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-}
-
-func saveManifest(ctx *context.Context, man manifest.Manifest) error {
-	mci, err := container_service.NewRemoteManifestCreationInfo(
-		ctx.ContextUser,
-		ctx.Doer,
-		man.GetDescriptor().MediaType,
-		ctx.Params("image"),
-		ctx.Params("reference"),
-		man.GetRef().Registry,
-	)
-	if err != nil {
-		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage(err.Error()))
-		return err
-	}
-
-	maxSize := maxManifestSize + 1
-	b, err := man.RawBody()
-	if err != nil {
-		return err
-	}
-
-	reader := bytes.NewReader(b)
-	lReader := &io.LimitedReader{R: reader, N: int64(maxSize)}
-	buf, err := packages_module.CreateHashedBufferFromReaderWithSize(lReader, maxSize)
-	if err != nil {
-		return err
-	}
-	defer buf.Close()
-
-	if buf.Size() > maxManifestSize {
-		apiErrorDefined(ctx, container_service.ErrManifestInvalid.WithMessage("Manifest exceeds maximum size").WithStatusCode(http.StatusRequestEntityTooLarge))
-		return err
-	}
-
-	_, err = container_service.ProcessManifest(ctx, *mci, buf)
-	if err != nil {
-		var namedError *container_service.NamedError
-		if errors.As(err, &namedError) {
-			apiErrorDefined(ctx, namedError)
-		} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
-		} else {
-			switch err {
-			case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
-				apiError(ctx, http.StatusForbidden, err)
-			default:
-				apiError(ctx, http.StatusInternalServerError, err)
-			}
-		}
-		return err
-	}
-	return nil
 }

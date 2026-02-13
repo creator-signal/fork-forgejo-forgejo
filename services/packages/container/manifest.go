@@ -31,7 +31,14 @@ import (
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+// maximum size of a container manifest
+// https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-manifests
+const MaxManifestSize = 10 * 1024 * 1024
+
 var ReferencePattern = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
+
+var ErrTagInvalid = util.NewInvalidArgumentErrorf("Tag is invalid")
+var ErrManifestTooLarge = fmt.Errorf("Manifest exceeds maximum size")
 
 // ManifestCreationInfo describes a manifest to create
 type ManifestCreationInfo struct {
@@ -81,7 +88,7 @@ func NewRemoteManifestCreationInfo(owner, creator *user.User, mediaType, image, 
 	}
 
 	if mci.IsTagged && !ReferencePattern.MatchString(reference) {
-		return &ManifestCreationInfo{}, errors.New("Tag is invalid")
+		return &ManifestCreationInfo{}, ErrTagInvalid
 	}
 
 	return mci, nil
