@@ -5,8 +5,8 @@ on:
   pull_request:
   push:
     branches:
-      - "forgejo*"
-      - "v*/forgejo*"
+      - 'forgejo*'
+      - 'v*/forgejo*'
   workflow_dispatch:
 
 jobs:
@@ -14,7 +14,7 @@ jobs:
     if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
     runs-on: docker
     container:
-      image: "data.forgejo.org/oci/node:24-bookworm"
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - name: event info
@@ -31,7 +31,7 @@ jobs:
     if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
     runs-on: docker
     container:
-      image: "data.forgejo.org/oci/node:24-bookworm"
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
@@ -56,7 +56,7 @@ jobs:
         run: |
           apt-get update -qq
           apt-get -q install -qq -y zstd
-      - name: "Cache frontend build for playwright testing"
+      - name: 'Cache frontend build for playwright testing'
         uses: https://data.forgejo.org/actions/cache/save@v5
         with:
           path: ${{github.workspace}}/public/assets
@@ -66,7 +66,7 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: "data.forgejo.org/oci/node:24-bookworm"
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     services:
       elasticsearch:
@@ -74,7 +74,7 @@ jobs:
         options: --tmpfs /bitnami/elasticsearch/data
         env:
           discovery.type: single-node
-          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+          ES_JAVA_OPTS: '-Xms512m -Xmx512m'
       minio:
         image: data.forgejo.org/oci/bitnami/minio:2024.8.17
         options: >-
@@ -99,7 +99,7 @@ jobs:
           su forgejo -c 'make test-backend test-check'
         timeout-minutes: 120
         env:
-          RACE_ENABLED: "true"
+          RACE_ENABLED: 'true'
           TAGS: bindata
           TEST_ELASTICSEARCH_URL: http://elasticsearch:9200
           TEST_MINIO_ENDPOINT: minio:9000
@@ -108,20 +108,20 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: "data.forgejo.org/oci/playwright:latest"
+      image: 'data.forgejo.org/oci/playwright:latest'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
         with:
           fetch-depth: 20
       - uses: ./.forgejo/workflows-composite/setup-env
-      - name: "Restore frontend build"
+      - name: 'Restore frontend build'
         uses: https://data.forgejo.org/actions/cache/restore@v5
         id: cache-frontend
         with:
           path: ${{github.workspace}}/public/assets
           key: frontend-build-${{ github.sha }}
-      - name: "Build frontend (if not cached)"
+      - name: 'Build frontend (if not cached)'
         if: steps.cache-frontend.outputs.cache-hit != 'true'
         run: |
           su forgejo -c 'make deps-frontend frontend'
@@ -156,7 +156,7 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks, test-unit]
     container:
-      image: "data.forgejo.org/oci/node:24-bookworm"
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     name: ${{ format('test-remote-cacher ({0})', matrix.cacher.name) }}
     strategy:
@@ -179,7 +179,7 @@ jobs:
         image: ${{ matrix.cacher.image }}
         options: ${{ matrix.cacher.options }}
         env:
-          ALLOW_EMPTY_PASSWORD: "yes" # redis & valkey will immediately shutdown with no defined password unless overridden
+          ALLOW_EMPTY_PASSWORD: 'yes' # redis & valkey will immediately shutdown with no defined password unless overridden
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
       - uses: ./.forgejo/workflows-composite/setup-env
@@ -192,7 +192,7 @@ jobs:
           su forgejo -c 'make test-remote-cacher test-check'
         timeout-minutes: 120
         env:
-          RACE_ENABLED: "true"
+          RACE_ENABLED: 'true'
           TAGS: bindata
           TEST_REDIS_SERVER: cacher:6379
   test-mysql:
@@ -200,11 +200,11 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: "data.forgejo.org/oci/node:24-bookworm"
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     services:
       mysql:
-        image: "data.forgejo.org/oci/bitnami/mysql:8.4"
+        image: 'data.forgejo.org/oci/bitnami/mysql:8.4'
         env:
           ALLOW_EMPTY_PASSWORD: yes
           MYSQL_DATABASE: testgitea
@@ -231,7 +231,7 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: "data.forgejo.org/oci/node:24-bookworm"
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     services:
       minio:
@@ -271,7 +271,7 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: "data.forgejo.org/oci/node:24-bookworm"
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
@@ -299,7 +299,7 @@ jobs:
       - test-remote-cacher
       - test-unit
     container:
-      image: "data.forgejo.org/oci/node:24-bookworm"
+      image: 'data.forgejo.org/oci/node:24-bookworm'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
@@ -311,7 +311,7 @@ jobs:
     name: semgrep/ci
     runs-on: docker
     container:
-      image: "data.forgejo.org/oci/semgrep:latest"
+      image: 'data.forgejo.org/oci/semgrep:latest'
     steps:
       - run: apk add nodejs # required for actions/checkout
       - uses: https://data.forgejo.org/actions/checkout@v6
