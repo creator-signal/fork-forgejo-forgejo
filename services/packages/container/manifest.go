@@ -106,6 +106,24 @@ func isImageIndexMediaType(mt string) bool {
 	return strings.EqualFold(mt, oci.MediaTypeImageIndex) || strings.EqualFold(mt, "application/vnd.docker.distribution.manifest.list.v2+json")
 }
 
+func GetManifestSearchOptions(ownerID int64, image, reference string) (*container_model.BlobSearchOptions, error) {
+	opts := &container_model.BlobSearchOptions{
+		OwnerID:    ownerID,
+		Image:      image,
+		IsManifest: true,
+	}
+
+	if digest.Digest(reference).Validate() == nil {
+		opts.Digest = reference
+	} else if ReferencePattern.MatchString(reference) {
+		opts.Tag = reference
+	} else {
+		return nil, container_model.ErrContainerBlobNotExist
+	}
+
+	return opts, nil
+}
+
 func ProcessManifest(ctx context.Context, mci ManifestCreationInfo, buf *packages_module.HashedBuffer) (string, error) {
 	var index oci.Index
 	if err := json.NewDecoder(buf).Decode(&index); err != nil {

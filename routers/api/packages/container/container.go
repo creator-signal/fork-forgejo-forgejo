@@ -563,28 +563,12 @@ func UploadManifest(ctx *context.Context) {
 	})
 }
 
-func getBlobSearchOptionsFromContext(ctx *context.Context) (*container_model.BlobSearchOptions, error) {
-	reference := ctx.Params("reference")
-
-	opts := &container_model.BlobSearchOptions{
-		OwnerID:    ctx.Package.Owner.ID,
-		Image:      ctx.Params("image"),
-		IsManifest: true,
-	}
-
-	if digest.Digest(reference).Validate() == nil {
-		opts.Digest = reference
-	} else if container_service.ReferencePattern.MatchString(reference) {
-		opts.Tag = reference
-	} else {
-		return nil, container_model.ErrContainerBlobNotExist
-	}
-
-	return opts, nil
-}
-
 func getManifestFromContext(ctx *context.Context) (*packages_model.PackageFileDescriptor, error) {
-	opts, err := getBlobSearchOptionsFromContext(ctx)
+	opts, err := container_service.GetManifestSearchOptions(
+		ctx.Package.Owner.ID,
+		ctx.Params("image"),
+		ctx.Params("reference"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -630,7 +614,11 @@ func GetManifest(ctx *context.Context) {
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#deleting-tags
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#deleting-manifests
 func DeleteManifest(ctx *context.Context) {
-	opts, err := getBlobSearchOptionsFromContext(ctx)
+	opts, err := container_service.GetManifestSearchOptions(
+		ctx.Package.Owner.ID,
+		ctx.Params("image"),
+		ctx.Params("reference"),
+	)
 	if err != nil {
 		apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		return
