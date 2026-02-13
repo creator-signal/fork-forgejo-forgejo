@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"io"
 
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	rr_module "forgejo.org/modules/packages/remote_registry"
@@ -79,13 +80,13 @@ func GetBlobFromRemote(ctx *context.Context, client *RegistryClient, layer *desc
 	return buf, nil
 }
 
-func SaveManifest(ctx *context.Context, man manifest.Manifest) error {
+func SaveManifest(ctx *context.Context, owner, creator *user_model.User, remoteCtx rr_module.RemoteRegistryContext, man manifest.Manifest) error {
 	mci, err := NewRemoteManifestCreationInfo(
-		ctx.ContextUser,
-		ctx.Doer,
+		owner,
+		creator,
 		man.GetDescriptor().MediaType,
-		ctx.Params("image"),
-		ctx.Params("reference"),
+		remoteCtx.ImageName,
+		remoteCtx.Reference,
 		man.GetRef().Registry,
 	)
 	if err != nil {

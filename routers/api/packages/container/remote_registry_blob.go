@@ -377,7 +377,12 @@ func RemoteGetManifest(ctx *context.Context) {
 			return
 		}
 
-		err = container_service.SaveManifest(ctx, regManifest)
+		err = container_service.SaveManifest(
+			ctx,
+			ctx.ContextUser,
+			ctx.Doer,
+			*remoteCtx,
+			regManifest)
 		if err != nil {
 			log.Error("Failed to save manifest: %v", err)
 			if errors.Is(err, container_service.ErrTagInvalid) {

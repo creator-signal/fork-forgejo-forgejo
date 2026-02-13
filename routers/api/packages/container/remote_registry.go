@@ -26,7 +26,7 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 	ownerName := ctx.Params("username")
 	imageName := ctx.Params("image")
 	reference := ctx.Params("reference")
-	dig := ctx.Params("diges")
+	dig := ctx.Params("digest")
 	username := ctx.ContextUser.Name
 	isOrg := ctx.ContextUser.IsOrganization()
 	isUser := ctx.ContextUser.IsUser()
