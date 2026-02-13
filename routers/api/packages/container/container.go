@@ -458,23 +458,9 @@ func CancelUploadBlob(ctx *context.Context) {
 	})
 }
 
-func getBlobFromContext(ctx *context.Context) (*packages_model.PackageFileDescriptor, error) {
-	d := ctx.Params("digest")
-
-	if digest.Digest(d).Validate() != nil {
-		return nil, container_model.ErrContainerBlobNotExist
-	}
-
-	return container_service.WorkaroundGetContainerBlob(ctx, &container_model.BlobSearchOptions{
-		OwnerID: ctx.Package.Owner.ID,
-		Image:   ctx.Params("image"),
-		Digest:  d,
-	})
-}
-
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#checking-if-content-exists-in-the-registry
 func HeadBlob(ctx *context.Context) {
-	blob, err := getBlobFromContext(ctx)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.Package.Owner.ID, ctx.Params("digest"), ctx.Params("image"))
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
 			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
@@ -493,7 +479,7 @@ func HeadBlob(ctx *context.Context) {
 
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pulling-blobs
 func GetBlob(ctx *context.Context) {
-	blob, err := getBlobFromContext(ctx)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.Package.Owner.ID, ctx.Params("digest"), ctx.Params("image"))
 	if err != nil {
 		if err == container_model.ErrContainerBlobNotExist {
 			apiErrorDefined(ctx, container_service.ErrBlobUnknown)

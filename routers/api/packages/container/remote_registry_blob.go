@@ -28,7 +28,11 @@ const (
 )
 
 func GetRemoteTagList(ctx *context.Context) {
-	image := ctx.Params("image")
+	img := ctx.Params("image")
+	if img == "" {
+		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
+		return
+	}
 	last := ctx.FormTrim("last")
 	n := -1
 	if ctx.FormTrim("n") != "" {
@@ -37,7 +41,7 @@ func GetRemoteTagList(ctx *context.Context) {
 
 	tagList, vals, err := container_service.GetLocalTagList(ctx,
 		ctx.Package.Owner.LowerName,
-		image,
+		img,
 		last,
 		n,
 		ctx.Package.Owner.ID)
@@ -57,7 +61,7 @@ func GetRemoteTagList(ctx *context.Context) {
 		}
 		defer client.Close(ctx)
 
-		tagList, vals, err = container_service.GetRemoteTagList(ctx, &client, ctx.Package.Owner.LowerName, image, n)
+		tagList, vals, err = container_service.GetRemoteTagList(ctx, &client, ctx.Package.Owner.LowerName, img, n)
 		if err != nil {
 			log.Error("Failed to get tag list for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -69,7 +73,7 @@ func GetRemoteTagList(ctx *context.Context) {
 	}
 
 	if len(tagList.Tags) > 0 {
-		ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, image, vals.Encode()))
+		ctx.Resp.Header().Set("Link", fmt.Sprintf(`</v2/%s/%s/tags/list?%s>; rel="next"`, ctx.Package.Owner.LowerName, img, vals.Encode()))
 	}
 
 	jsonResponse(ctx, http.StatusOK, tagList)
@@ -79,7 +83,20 @@ func RemoteHeadBlob(ctx *context.Context) {
 	// Do we have the blob cached locally?
 	var respDigest string
 	var size int64
-	blob, err := getBlobFromContext(ctx)
+	dig := ctx.Params("digest")
+	log.Debug("Did not find blob with digest %s locally, getting from remote %v", dig)
+	if dig == "" {
+		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
+		return
+	}
+
+	img := ctx.Params("image")
+	if img == "" {
+		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
+		return
+	}
+
+	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, dig, img)
 	if err != nil {
 		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
 			dig := ctx.Params("digest")
@@ -138,30 +155,37 @@ func RemoteHeadBlob(ctx *context.Context) {
 }
 
 func RemoteGetBlob(ctx *context.Context) {
-	remoteCtx, err := GetRemoteRegistryContext(ctx)
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
+	// Serve from cache
 	dig := ctx.Params("digest")
+	log.Debug("Did not find blob with digest %s locally, getting from remote %v", dig)
 	if dig == "" {
 		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
 
-	client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
-	if err != nil {
-		log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
-		apiError(ctx, http.StatusInternalServerError, err)
+	img := ctx.Params("image")
+	if img == "" {
+		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
-	defer client.Close(ctx)
 
-	// Serve from cache
-	blob, err := container_service.GetLocalBlob(ctx, remoteCtx, dig)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, dig, img)
 	if err == container_model.ErrContainerBlobNotExist {
-		log.Debug("Did not find blob with digest %s locally, getting from remote %v", dig)
+
+		remoteCtx, err := GetRemoteRegistryContext(ctx)
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
+		if err != nil {
+			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+		defer client.Close(ctx)
+
 		regDigest := digest.Digest(dig)
 		regLayer := descriptor.Descriptor{
 			Digest: regDigest,
