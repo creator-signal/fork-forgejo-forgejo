@@ -32,14 +32,10 @@ func ReorderCardsInColumn(ctx context.Context, column *project_model.Column, car
 		sortedIssueIDs[cp.Sorting] = cp.IssueID
 	}
 
-	// Validate all issues exist
+	// Fetch issues for repo-ownership validation
 	issues, err := issues_model.GetIssuesByIDs(ctx, issueIDs)
 	if err != nil {
 		return err
-	}
-
-	if len(issues) != len(cardPositions) {
-		return project_model.ErrSomeCardsNotExist{MissingCount: len(cardPositions) - len(issues)}
 	}
 
 	// Get project to validate repo IDs
@@ -77,11 +73,6 @@ func AddCardToColumn(ctx context.Context, column *project_model.Column, issueID,
 	// Validate issue belongs to project's repository (only for repo projects)
 	if project.RepoID > 0 && issue.RepoID != project.RepoID {
 		return nil, project_model.ErrCardNotInProjectRepo{IssueID: issueID, ProjectRepoID: project.RepoID}
-	}
-
-	// Check if issue is already in this project
-	if projectIssue, err := project_model.GetProjectCard(ctx, project.ID, issueID); err == nil && projectIssue != nil {
-		return nil, project_model.ErrCardAlreadyInProject{ProjectID: project.ID, IssueID: issueID}
 	}
 
 	err = project_model.AddIssueToProject(ctx, project.ID, issueID, column.ID, sorting)

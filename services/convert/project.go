@@ -114,10 +114,10 @@ func ToAPIProjectCardList(ctx context.Context, doer *user_model.User, projectIss
 		issueMap[issue.ID] = issue
 	}
 
-	result := make([]*api.ProjectCard, len(projectIssues))
-	for i, projectIssue := range projectIssues {
+	result := make([]*api.ProjectCard, 0, len(projectIssues))
+	for _, projectIssue := range projectIssues {
 		if issue, exists := issueMap[projectIssue.IssueID]; exists {
-			result[i] = ToAPIProjectCard(ctx, doer, projectIssue, issue)
+			result = append(result, ToAPIProjectCard(ctx, doer, projectIssue, issue))
 		}
 	}
 	return result

@@ -4,6 +4,8 @@
 package org
 
 import (
+	"forgejo.org/models/perm"
+	"forgejo.org/models/unit"
 	"forgejo.org/routers/api/v1/shared"
 	"forgejo.org/services/context"
 	project_service "forgejo.org/services/project"
@@ -15,26 +17,16 @@ var orgProjectHandler = &shared.ProjectAPIHandler[project_service.OrgOwner]{
 		return project_service.OrgOwner{Org: ctx.Org.Organization}
 	},
 	CanWrite: func(ctx *context.APIContext) bool {
-		// Check if user is an owner/admin of the organization
 		if ctx.Org.Organization == nil || ctx.Doer == nil {
 			return false
 		}
-		isOwner, err := ctx.Org.Organization.IsOwnedBy(ctx, ctx.Doer.ID)
-		if err != nil {
-			return false
-		}
-		return isOwner
+		return ctx.Org.Organization.UnitPermission(ctx, ctx.Doer, unit.TypeProjects) >= perm.AccessModeWrite
 	},
 	CanRead: func(ctx *context.APIContext) bool {
-		// Check if user is a member of the organization
 		if ctx.Org.Organization == nil || ctx.Doer == nil {
 			return false
 		}
-		isMember, err := ctx.Org.Organization.IsOrgMember(ctx, ctx.Doer.ID)
-		if err != nil {
-			return false
-		}
-		return isMember
+		return ctx.Org.Organization.UnitPermission(ctx, ctx.Doer, unit.TypeProjects) >= perm.AccessModeRead
 	},
 }
 

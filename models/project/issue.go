@@ -69,15 +69,15 @@ func MoveIssuesOnProjectColumn(ctx context.Context, column *Column, sortedIssueI
 		sess := db.GetEngine(ctx)
 		issueIDs := util.ValuesOfMap(sortedIssueIDs)
 
-		// Validate all issues exist and belong to this column
+		// Validate all issues exist and belong to this project
 		count, err := sess.Table(new(ProjectIssue)).
-			Where("project_board_id=? AND project_id=?", column.ID, column.ProjectID).
+			Where("project_id=?", column.ProjectID).
 			In("issue_id", issueIDs).Count()
 		if err != nil {
 			return err
 		}
 		if int(count) != len(sortedIssueIDs) {
-			return errors.New("all issues must belong to the specified column")
+			return errors.New("all issues must belong to the specified project")
 		}
 
 		// Build reverse map: issueID → sorting
@@ -90,10 +90,10 @@ func MoveIssuesOnProjectColumn(ctx context.Context, column *Column, sortedIssueI
 		// This prevents deadlocks when multiple transactions update overlapping rows.
 		slices.Sort(issueIDs)
 
-		// Update sorting values in consistent order
+		// Update column assignment and sorting values in consistent order
 		for _, issueID := range issueIDs {
-			_, err := sess.Exec("UPDATE `project_issue` SET sorting=? WHERE issue_id=? AND project_id=?",
-				sortingByIssue[issueID], issueID, column.ProjectID)
+			_, err := sess.Exec("UPDATE `project_issue` SET project_board_id=?, sorting=? WHERE issue_id=?",
+				column.ID, sortingByIssue[issueID], issueID)
 			if err != nil {
 				return err
 			}

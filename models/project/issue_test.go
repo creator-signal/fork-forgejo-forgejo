@@ -34,14 +34,19 @@ func TestMoveIssuesOnProjectColumn(t *testing.T) {
 		assert.Equal(t, int64(0), card.Sorting)
 	})
 
-	t.Run("ErrorIssueNotInColumn", func(t *testing.T) {
-		// Issue 3 is in column 2, not column 1
+	t.Run("MoveIssueFromDifferentColumn", func(t *testing.T) {
+		// Issue 3 is in column 2, not column 1 — but same project, so cross-column move should succeed
 		sortedIssueIDs := map[int64]int64{
 			0: 3,
 		}
 		err := MoveIssuesOnProjectColumn(db.DefaultContext, column, sortedIssueIDs)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "all issues must belong to the specified column")
+		require.NoError(t, err)
+
+		// Verify the card was moved to column 1 and sorting updated
+		card, err := GetProjectCard(db.DefaultContext, column.ProjectID, 3)
+		require.NoError(t, err)
+		assert.Equal(t, column.ID, card.ProjectColumnID)
+		assert.Equal(t, int64(0), card.Sorting)
 	})
 
 	t.Run("ErrorIssueNotInProject", func(t *testing.T) {
@@ -51,7 +56,7 @@ func TestMoveIssuesOnProjectColumn(t *testing.T) {
 		}
 		err := MoveIssuesOnProjectColumn(db.DefaultContext, column, sortedIssueIDs)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "all issues must belong to the specified column")
+		assert.Contains(t, err.Error(), "all issues must belong to the specified project")
 	})
 }
 
