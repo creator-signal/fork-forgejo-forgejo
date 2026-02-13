@@ -35,7 +35,7 @@ func GetConfigDescriptor(client *RegistryClient, man manifest.Manifest) (*descri
 	return &cfg, nil
 }
 
-func GetAllBlobsFromRemote(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, client *RegistryClient, man manifest.Manifest) error {
+func GetAllRemoteBlobs(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, client *RegistryClient, man manifest.Manifest) error {
 	img := client.NewImager(man)
 
 	layers, err := img.GetLayers()
@@ -44,7 +44,7 @@ func GetAllBlobsFromRemote(ctx *context.Context, remoteCtx *rr_module.RemoteRegi
 	}
 
 	for _, layer := range layers {
-		buf, err := GetBlobFromRemote(ctx, client, &layer)
+		buf, err := GetRemoteBlob(ctx, client, &layer)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func GetAllBlobsFromRemote(ctx *context.Context, remoteCtx *rr_module.RemoteRegi
 	return nil
 }
 
-func GetBlobFromRemote(ctx *context.Context, client *RegistryClient, layer *descriptor.Descriptor) (*packages_module.HashedBuffer, error) {
+func GetRemoteBlob(ctx *context.Context, client *RegistryClient, layer *descriptor.Descriptor) (*packages_module.HashedBuffer, error) {
 	log.Debug("Getting blob %s locally, getting from remote %v", layer.Digest, client.Reference.Registry)
 	br, err := client.GetBlob(ctx, *layer)
 	if err != nil {

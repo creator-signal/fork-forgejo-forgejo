@@ -131,7 +131,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 
 			regDigest := digest.Digest(remoteCtx.Digest)
 			regLayer := descriptor.Descriptor{Digest: regDigest}
-			buf, err := container_service.GetBlobFromRemote(ctx, &client, &regLayer)
+			buf, err := container_service.GetRemoteBlob(ctx, &client, &regLayer)
 			if err != nil {
 				apiError(ctx, http.StatusInternalServerError, err)
 				return
@@ -193,7 +193,7 @@ func RemoteGetBlob(ctx *context.Context) {
 		}
 
 		// get from remote
-		buf, err := container_service.GetBlobFromRemote(ctx, &client, &regLayer)
+		buf, err := container_service.GetRemoteBlob(ctx, &client, &regLayer)
 		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
@@ -321,7 +321,7 @@ func RemoteGetManifest(ctx *context.Context) {
 			return
 		}
 
-		err = container_service.GetAllBlobsFromRemote(ctx, remoteCtx, &client, regManifest)
+		err = container_service.GetAllRemoteBlobs(ctx, remoteCtx, &client, regManifest)
 		if err != nil {
 			log.Error("Failed to get blobs for manifest: %v", err)
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -342,7 +342,7 @@ func RemoteGetManifest(ctx *context.Context) {
 			return
 		}
 
-		cfgbuf, err := container_service.GetBlobFromRemote(ctx, &client, cfg)
+		cfgbuf, err := container_service.GetRemoteBlob(ctx, &client, cfg)
 		if err != nil {
 			log.Error("Failed to save configBlob: %v", err)
 			apiError(ctx, http.StatusInternalServerError, err)
