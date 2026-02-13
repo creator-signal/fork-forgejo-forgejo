@@ -27,6 +27,33 @@ const (
 	blobServeBufferSize = 64 * 1024 // 64KB buffer
 )
 
+// serveBlobFromBuffer serves a blob from an existing buffer to a client
+func serveBlobFromBuffer(ctx *context.Context, buf *packages_module.HashedBuffer, digest string) error {
+	// Reset buffer to beginning
+	log.Debug("Serving blob %s from buffer", digest)
+	if _, err := buf.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("failed to seek buffer for serving: %w", err)
+	}
+
+	// Set response headers
+	setResponseHeaders(ctx.Resp, &containerHeaders{
+		ContentDigest: digest,
+		ContentType:   "application/octet-stream",
+		ContentLength: buf.Size(),
+		Status:        http.StatusOK,
+	})
+
+	// Copy buffer content to client
+	sbuf := make([]byte, blobServeBufferSize)
+	_, err := io.CopyBuffer(ctx.Resp, buf, sbuf)
+	if err != nil {
+		return fmt.Errorf("failed to serve blob from buffer: %w", err)
+	}
+
+	log.Debug("Served blob %s from buffer", digest)
+	return nil
+}
+
 func GetRemoteTagList(ctx *context.Context) {
 	img := ctx.Params("image")
 	if img == "" {
@@ -80,18 +107,13 @@ func GetRemoteTagList(ctx *context.Context) {
 }
 
 func RemoteHeadBlob(ctx *context.Context) {
-	// Do we have the blob cached locally?
 	var respDigest string
 	var size int64
-	dig := ctx.Params("digest")
-	log.Debug("Did not find blob with digest %s locally, getting from remote %v", dig)
-	if dig == "" {
-		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
-		return
-	}
 
+	dig := ctx.Params("digest")
 	img := ctx.Params("image")
-	if img == "" {
+
+	if dig == "" || img == "" {
 		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
@@ -99,11 +121,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, dig, img)
 	if err != nil {
 		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-			dig := ctx.Params("digest")
-			if dig == "" {
-				apiErrorDefined(ctx, container_service.ErrBlobUnknown)
-				return
-			}
+			log.Debug("Did not find blob with digest %s locally, getting from remote %v", dig)
 
 			remoteCtx, err := GetRemoteRegistryContext(ctx)
 			if err != nil {
@@ -157,21 +175,16 @@ func RemoteHeadBlob(ctx *context.Context) {
 func RemoteGetBlob(ctx *context.Context) {
 	// Serve from cache
 	dig := ctx.Params("digest")
-	log.Debug("Did not find blob with digest %s locally, getting from remote %v", dig)
-	if dig == "" {
-		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
-		return
-	}
-
 	img := ctx.Params("image")
-	if img == "" {
+
+	if img == "" || dig == "" {
 		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
 
 	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, dig, img)
 	if err == container_model.ErrContainerBlobNotExist {
-
+		log.Debug("Did not find blob with digest %s locally, getting from remote %v", dig)
 		remoteCtx, err := GetRemoteRegistryContext(ctx)
 		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -228,39 +241,10 @@ func RemoteGetBlob(ctx *context.Context) {
 	serveBlob(ctx, blob)
 }
 
-// serveBlobFromBuffer serves a blob from an existing buffer to a client
-func serveBlobFromBuffer(ctx *context.Context, buf *packages_module.HashedBuffer, digest string) error {
-	// Reset buffer to beginning
-	log.Debug("Serving blob %s from buffer", digest)
-	if _, err := buf.Seek(0, io.SeekStart); err != nil {
-		return fmt.Errorf("failed to seek buffer for serving: %w", err)
-	}
-
-	// Set response headers
-	setResponseHeaders(ctx.Resp, &containerHeaders{
-		ContentDigest: digest,
-		ContentType:   "application/octet-stream",
-		ContentLength: buf.Size(),
-		Status:        http.StatusOK,
-	})
-
-	// Copy buffer content to client
-	sbuf := make([]byte, blobServeBufferSize)
-	_, err := io.CopyBuffer(ctx.Resp, buf, sbuf)
-	if err != nil {
-		return fmt.Errorf("failed to serve blob from buffer: %w", err)
-	}
-
-	log.Debug("Served blob %s from buffer", digest)
-	return nil
-}
-
 func RemoteHeadManifest(ctx *context.Context) {
-	remoteCtx, err := GetRemoteRegistryContext(ctx)
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
+	var contentDigest string
+	var contentType string
+	var contentLength int64
 
 	reference := ctx.Params("reference")
 	if reference == "" {
@@ -270,170 +254,163 @@ func RemoteHeadManifest(ctx *context.Context) {
 
 	// Do we have the manifest cached locally?
 	manifest, err := getManifestFromContext(ctx)
-	if manifest != nil && err == nil {
-		setResponseHeaders(ctx.Resp, &containerHeaders{
-			ContentDigest: manifest.Properties.GetByName(container_module.PropertyDigest),
-			ContentType:   manifest.Properties.GetByName(container_module.PropertyMediaType),
-			ContentLength: manifest.Blob.Size,
-			Status:        http.StatusOK,
-		})
-		log.Trace("Remote manifest with file ID: %s existed", manifest.File.ID)
-		return
-	}
-
-	// Not cached, fetch from remote registry
-	client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
-	if err != nil {
-		log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-	defer client.Close(ctx)
-
-	// Get manifest metadata from remote registry
-	manifestResp, err := client.HeadManifest(ctx)
-	if err != nil {
-		log.Error("Failed to HEAD manifest %s:%s from remote registry %s: %v",
-			remoteCtx.ImageName, reference, remoteCtx.RemoteRegistry.Name, err)
-
-		if strings.Contains(err.Error(), "404") {
-			apiErrorDefined(ctx, container_service.ErrManifestUnknown)
-		} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
-			apiErrorDefined(ctx, container_service.ErrUnauthorized)
-		} else {
-			apiError(ctx, http.StatusBadGateway, err)
+	if errors.Is(err, container_model.ErrContainerBlobNotExist) {
+		remoteCtx, err := GetRemoteRegistryContext(ctx)
+		if err != nil {
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
 		}
-		return
+
+		// Not cached, fetch from remote registry
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
+		if err != nil {
+			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+		defer client.Close(ctx)
+
+		// Get manifest metadata from remote registry
+		manifestResp, err := client.HeadManifest(ctx)
+		if err != nil {
+			log.Error("Failed to HEAD manifest %s:%s from remote registry %s: %v",
+				remoteCtx.ImageName, reference, remoteCtx.RemoteRegistry.Name, err)
+			if strings.Contains(err.Error(), "404") {
+				apiErrorDefined(ctx, container_service.ErrManifestUnknown)
+			} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
+				apiErrorDefined(ctx, container_service.ErrUnauthorized)
+			} else {
+				apiError(ctx, http.StatusBadGateway, err)
+			}
+			return
+		}
+		contentDigest = manifestResp.GetRef().Digest
+		contentType = manifestResp.GetDescriptor().MediaType
+		contentLength = manifestResp.GetDescriptor().Size
+	} else {
+		contentDigest = manifest.Properties.GetByName(container_module.PropertyDigest)
+		contentType = manifest.Properties.GetByName(container_module.PropertyMediaType)
+		contentLength = manifest.Blob.Size
 	}
 
-	// Set response headers from remote
+	log.Trace("Serving manifest")
 	setResponseHeaders(ctx.Resp, &containerHeaders{
-		ContentDigest: manifestResp.GetRef().Digest,
-		ContentType:   manifestResp.GetDescriptor().MediaType,
-		ContentLength: manifestResp.GetDescriptor().Size,
+		ContentDigest: contentDigest,
+		ContentType:   contentType,
+		ContentLength: contentLength,
 		Status:        http.StatusOK,
 	})
 }
 
 func RemoteGetManifest(ctx *context.Context) {
-	remoteCtx, err := GetRemoteRegistryContext(ctx)
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
 	// Do we have the manifest cached locally?
 	man, err := getManifestFromContext(ctx)
-	if man != nil && err == nil {
-		serveBlob(ctx, man)
-		log.Trace("Remote manifest with file ID: %s existed", man.File.ID)
-		return
-	}
 
-	client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
-	if err != nil {
-		log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-	defer client.Close(ctx)
-
-	// Not cached, fetch from remote registry
-	regManifest, err := container_service.GetRemoteManifest(ctx, remoteCtx, &client)
-	if err != nil {
-		log.Error("Failed to get blobs for manifest: %v", err)
-		if strings.Contains(err.Error(), "404") {
-			apiErrorDefined(ctx, container_service.ErrManifestUnknown)
-		} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
-			apiErrorDefined(ctx, container_service.ErrUnauthorized)
-		} else {
+	if errors.Is(err, container_model.ErrContainerBlobNotExist) {
+		remoteCtx, err := GetRemoteRegistryContext(ctx)
+		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
+			return
 		}
-	}
 
-	err = container_service.GetAllBlobsFromRemote(ctx, remoteCtx, &client, regManifest)
-	if err != nil {
-		log.Error("Failed to get blobs for manifest: %v", err)
-		apiError(ctx, http.StatusInternalServerError, err)
-		if strings.Contains(err.Error(), "404") {
-			apiErrorDefined(ctx, container_service.ErrManifestUnknown)
-		} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
-			apiErrorDefined(ctx, container_service.ErrUnauthorized)
-		} else {
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
+		if err != nil {
+			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 			apiError(ctx, http.StatusInternalServerError, err)
+			return
 		}
-		return
-	}
+		defer client.Close(ctx)
 
-	cfg, err := container_service.GetConfigDescriptor(&client, regManifest)
-	if err != nil {
-		log.Error("Failed to get config: %v", err)
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
-	cfgbuf, err := container_service.GetBlobFromRemote(ctx, &client, cfg)
-	if err != nil {
-		log.Error("Failed to save configBlob: %v", err)
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-	defer cfgbuf.Close()
-
-	err = container_service.SaveBlobToPackage(ctx, cfgbuf, remoteCtx, cfg.Digest.String(), ctx.ContextUser, ctx.Doer)
-	if err != nil {
-		log.Error("Failed to save config: %v", err)
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
-	err = container_service.SaveManifest(ctx, regManifest)
-	if err != nil {
-		log.Error("Failed to save manifest: %v", err)
-		if errors.Is(err, container_service.ErrTagInvalid) {
-			apiErrorDefined(ctx, container_service.ErrManifestInvalid.
-				WithMessage(err.Error()))
-		} else if errors.Is(err, container_service.ErrManifestTooLarge) {
-			apiErrorDefined(ctx, container_service.ErrManifestInvalid.
-				WithMessage(err.Error()).
-				WithStatusCode(http.StatusRequestEntityTooLarge))
-		} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
-		} else {
-			var namedError *container_service.NamedError
-			if errors.As(err, &namedError) {
-				apiErrorDefined(ctx, namedError)
+		// Not cached, fetch from remote registry
+		regManifest, err := container_service.GetRemoteManifest(ctx, remoteCtx, &client)
+		if err != nil {
+			log.Error("Failed to get blobs for manifest: %v", err)
+			if strings.Contains(err.Error(), "404") {
+				apiErrorDefined(ctx, container_service.ErrManifestUnknown)
+			} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
+				apiErrorDefined(ctx, container_service.ErrUnauthorized)
 			} else {
-				switch err {
-				case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
-					apiError(ctx, http.StatusForbidden, err)
-				default:
-					apiError(ctx, http.StatusInternalServerError, err)
+				apiError(ctx, http.StatusInternalServerError, err)
+			}
+			return
+		}
+
+		err = container_service.GetAllBlobsFromRemote(ctx, remoteCtx, &client, regManifest)
+		if err != nil {
+			log.Error("Failed to get blobs for manifest: %v", err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			if strings.Contains(err.Error(), "404") {
+				apiErrorDefined(ctx, container_service.ErrManifestUnknown)
+			} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
+				apiErrorDefined(ctx, container_service.ErrUnauthorized)
+			} else {
+				apiError(ctx, http.StatusInternalServerError, err)
+			}
+			return
+		}
+
+		cfg, err := container_service.GetConfigDescriptor(&client, regManifest)
+		if err != nil {
+			log.Error("Failed to get config: %v", err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		cfgbuf, err := container_service.GetBlobFromRemote(ctx, &client, cfg)
+		if err != nil {
+			log.Error("Failed to save configBlob: %v", err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+		defer cfgbuf.Close()
+
+		err = container_service.SaveBlobToPackage(
+			ctx,
+			cfgbuf,
+			remoteCtx,
+			cfg.Digest.String(),
+			ctx.ContextUser,
+			ctx.Doer)
+		if err != nil {
+			log.Error("Failed to save config: %v", err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		err = container_service.SaveManifest(ctx, regManifest)
+		if err != nil {
+			log.Error("Failed to save manifest: %v", err)
+			if errors.Is(err, container_service.ErrTagInvalid) {
+				apiErrorDefined(ctx, container_service.ErrManifestInvalid.
+					WithMessage(err.Error()))
+			} else if errors.Is(err, container_service.ErrManifestTooLarge) {
+				apiErrorDefined(ctx, container_service.ErrManifestInvalid.
+					WithMessage(err.Error()).
+					WithStatusCode(http.StatusRequestEntityTooLarge))
+			} else if errors.Is(err, container_model.ErrContainerBlobNotExist) {
+				apiErrorDefined(ctx, container_service.ErrBlobUnknown)
+			} else {
+				var namedError *container_service.NamedError
+				if errors.As(err, &namedError) {
+					apiErrorDefined(ctx, namedError)
+				} else {
+					switch err {
+					case packages_service.ErrQuotaTotalCount, packages_service.ErrQuotaTypeSize, packages_service.ErrQuotaTotalSize:
+						apiError(ctx, http.StatusForbidden, err)
+					default:
+						apiError(ctx, http.StatusInternalServerError, err)
+					}
 				}
 			}
+			return
 		}
-		return
+		man, err = getManifestFromContext(ctx)
+		if err != nil {
+			log.Error("Failed to save config: %v", err)
+			apiError(ctx, http.StatusInternalServerError, err)
+			return
+		}
 	}
-
-	// Serve the manifest content
-	setResponseHeaders(ctx.Resp, &containerHeaders{
-		ContentDigest: regManifest.GetRef().Digest,
-		ContentType:   regManifest.GetDescriptor().MediaType,
-		ContentLength: regManifest.GetDescriptor().Size,
-		Status:        http.StatusOK,
-	})
-
-	manifestBody, err := regManifest.RawBody()
-	if err != nil {
-		log.Error("Failed to get manifest body for %s: %v", remoteCtx.RemoteRegistry.Name, err)
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
-	_, err = ctx.Resp.Write(manifestBody)
-	if err != nil {
-		log.Error("Failed to write response for %s: %v", remoteCtx.RemoteRegistry.Name, err)
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
+	log.Trace("Remote manifest with file ID: %s existed", man.File.ID)
+	serveBlob(ctx, man)
 }
