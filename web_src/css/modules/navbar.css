@@ -114,7 +114,7 @@
   #navbar.navbar-menu-open .navbar-left .navbar-mobile-right {
     justify-content: flex-end;
     width: 50%;
-    min-height: 48px;
+    min-height: 49px;
   }
   #navbar #mobile-notifications-icon {
     margin-right: 6px !important;
