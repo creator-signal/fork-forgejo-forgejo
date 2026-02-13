@@ -41,7 +41,6 @@ func SaveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, 
 
 // addRemoteMetadataToBlob Add rr id, time and remote digest as info to blob
 func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlob, remoteCtx *rr_module.RemoteRegistryContext, pf *packages_model.PackageFile) {
-	// Add remote registry metadata
 	properties := map[string]string{
 		container_module.PropertyRemoteSource: fmt.Sprintf("%d", remoteCtx.RemoteRegistry.ID),
 		container_module.PropertyCacheTime:    fmt.Sprintf("%d", time.Now().Unix()),

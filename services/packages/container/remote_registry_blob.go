@@ -17,7 +17,6 @@ import (
 )
 
 func GetRemoteManifest(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, client *RegistryClient) (manifest.Manifest, error) {
-	// Get manifest metadata from remote registry
 	remoteManifest, err := client.GetManifest(ctx)
 	if err != nil {
 		log.Error("Failed to GET manifest %s from remote registry %s: %v",
@@ -45,19 +44,16 @@ func GetAllBlobsFromRemote(ctx *context.Context, remoteCtx *rr_module.RemoteRegi
 	}
 
 	for _, layer := range layers {
-		// get from remote
 		buf, err := GetBlobFromRemote(ctx, client, &layer)
 		if err != nil {
 			return err
 		}
 		defer buf.Close()
 
-		// check digest
 		if layer.Digest.String() != DigestFromHashSummer(buf) {
 			return ErrDigestInvalid
 		}
 
-		// save to package
 		err = SaveBlobToPackage(ctx, buf, remoteCtx, layer.Digest.String(), ctx.ContextUser, ctx.Doer)
 		if err != nil {
 			return err
