@@ -29,7 +29,7 @@ import (
 //     test data files
 func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveMode bool) *httptest.Server {
 	mockServerBaseURL := ""
-	ignoredHeaders := []string{"cf-ray", "server", "date", "report-to", "nel", "x-request-id"}
+	ignoredHeaders := []string{"cf-ray", "server", "date", "report-to", "nel", "x-request-id", "set-cookie", "x-gitlab-meta"}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := NormalizedFullPath(r.URL)
