@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -68,8 +69,8 @@ func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveM
 			defer fixture.Close()
 			fixtureWriter := bufio.NewWriter(fixture)
 
-			for headerName, headerValues := range response.Header {
-				for _, headerValue := range headerValues {
+			for _, headerName := range slices.Sorted(maps.Keys(response.Header)) {
+				for _, headerValue := range response.Header[headerName] {
 					if !slices.Contains(ignoredHeaders, strings.ToLower(headerName)) {
 						_, err := fmt.Fprintf(fixtureWriter, "%s: %s\n", headerName, headerValue)
 						require.NoError(t, err, "writing the header of the HTTP response to the fixture file failed")
