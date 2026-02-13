@@ -362,14 +362,14 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
-	img := client.NewImager(regManifest)
-	cfg, err := img.GetConfig()
+	cfg, err := container_service.GetConfigDescriptor(&client, regManifest)
 	if err != nil {
 		log.Error("Failed to get config: %v", err)
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	cfgbuf, err := container_service.GetBlobFromRemote(ctx, &client, &cfg)
+
+	cfgbuf, err := container_service.GetBlobFromRemote(ctx, &client, cfg)
 	if err != nil {
 		log.Error("Failed to save configBlob: %v", err)
 		apiError(ctx, http.StatusInternalServerError, err)

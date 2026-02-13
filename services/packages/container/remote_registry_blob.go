@@ -26,6 +26,15 @@ func GetRemoteManifest(ctx *context.Context, remoteCtx *rr_module.RemoteRegistry
 	return remoteManifest, err
 }
 
+func GetConfigDescriptor(client *RegistryClient, man manifest.Manifest) (*descriptor.Descriptor, error) {
+	img := client.NewImager(man)
+	cfg, err := img.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
 func GetAllBlobsFromRemote(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, client *RegistryClient, man manifest.Manifest) error {
 	img := client.NewImager(man)
 
