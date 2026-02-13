@@ -354,6 +354,11 @@ func (h *ProjectAPIHandler[T]) getProjectAndColumn(ctx *context.APIContext, owne
 
 // ListColumnCards lists cards in a project column
 func (h *ProjectAPIHandler[T]) ListColumnCards(ctx *context.APIContext) {
+	if !h.CanRead(ctx) {
+		ctx.Error(http.StatusForbidden, "ListColumnCards", "no read permission")
+		return
+	}
+
 	owner := h.GetOwner(ctx)
 	project, column := h.getProjectAndColumn(ctx, owner)
 	if project == nil || column == nil {
@@ -383,6 +388,11 @@ func (h *ProjectAPIHandler[T]) ListColumnCards(ctx *context.APIContext) {
 
 // AddCardToColumn adds a card to a project column
 func (h *ProjectAPIHandler[T]) AddCardToColumn(ctx *context.APIContext) {
+	if !h.CanWrite(ctx) {
+		ctx.Error(http.StatusForbidden, "AddCardToColumn", "no write permission")
+		return
+	}
+
 	owner := h.GetOwner(ctx)
 	_, column := h.getProjectAndColumn(ctx, owner)
 	if column == nil {
@@ -416,6 +426,11 @@ func (h *ProjectAPIHandler[T]) AddCardToColumn(ctx *context.APIContext) {
 
 // ReorderCardsInColumn reorders cards in a project column
 func (h *ProjectAPIHandler[T]) ReorderCardsInColumn(ctx *context.APIContext) {
+	if !h.CanWrite(ctx) {
+		ctx.Error(http.StatusForbidden, "ReorderCardsInColumn", "no write permission")
+		return
+	}
+
 	owner := h.GetOwner(ctx)
 	_, column := h.getProjectAndColumn(ctx, owner)
 	if column == nil {
@@ -467,6 +482,11 @@ func (h *ProjectAPIHandler[T]) ReorderCardsInColumn(ctx *context.APIContext) {
 
 // MoveProjectCard moves a project card to a different column or position
 func (h *ProjectAPIHandler[T]) MoveProjectCard(ctx *context.APIContext) {
+	if !h.CanWrite(ctx) {
+		ctx.Error(http.StatusForbidden, "MoveProjectCard", "no write permission")
+		return
+	}
+
 	owner := h.GetOwner(ctx)
 	_, err := h.getProjectByIDOrTitle(ctx, ctx.Params("id"), owner)
 	if err != nil {
@@ -527,6 +547,11 @@ func (h *ProjectAPIHandler[T]) MoveProjectCard(ctx *context.APIContext) {
 
 // DeleteProjectCard deletes a project card
 func (h *ProjectAPIHandler[T]) DeleteProjectCard(ctx *context.APIContext) {
+	if !h.CanWrite(ctx) {
+		ctx.Error(http.StatusForbidden, "DeleteProjectCard", "no write permission")
+		return
+	}
+
 	owner := h.GetOwner(ctx)
 	project, err := h.getProjectByIDOrTitle(ctx, ctx.Params("id"), owner)
 	if err != nil {
