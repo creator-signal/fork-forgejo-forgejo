@@ -12,6 +12,16 @@ import (
 	api "forgejo.org/modules/structs"
 )
 
+// ToAPIProjectMeta converts a project to its lightweight API representation
+func ToAPIProjectMeta(p *project_model.Project) *api.ProjectMeta {
+	return &api.ProjectMeta{
+		ID:    p.ID,
+		Title: p.Title,
+		State: p.State(),
+		Type:  api.ProjectType(p.Type),
+	}
+}
+
 // ToAPIProject converts a project to its API representation
 func ToAPIProject(ctx context.Context, p *project_model.Project) *api.Project {
 	apiProject := &api.Project{

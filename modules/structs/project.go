@@ -33,6 +33,15 @@ type Project struct {
 	Repository *Repository `json:"repository,omitempty"`
 }
 
+// ProjectMeta basic project information
+// swagger:model
+type ProjectMeta struct {
+	ID    int64       `json:"id"`
+	Title string      `json:"title"`
+	State StateType   `json:"state"`
+	Type  ProjectType `json:"type"`
+}
+
 // ProjectColumn represents a column in a kanban board
 type ProjectColumn struct {
 	ID      int64  `json:"id"`
