@@ -2675,6 +2675,10 @@ tbody.commit-list {
   gap: 8px;
 }
 
+.commit-status-item .status-details > span {
+  padding-right: 0.5em; /* To avoid scrollbar occlusion */
+}
+
 .search-fullname {
   color: var(--color-text-light-2);
 }
