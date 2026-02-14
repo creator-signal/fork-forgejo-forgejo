@@ -51,6 +51,10 @@ forgejo.org/models/organization
 forgejo.org/models/perm/access
 	GetRepoWriters
 
+forgejo.org/models/project
+	ErrSomeCardsNotExist.Error
+	ErrSomeCardsNotExist.Unwrap
+
 forgejo.org/models/user
 	IsErrUserWrongType
 	IsErrExternalLoginUserAlreadyExist
