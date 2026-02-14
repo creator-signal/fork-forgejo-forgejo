@@ -47,6 +47,7 @@ func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveM
 			fixturePath = fmt.Sprintf("%s/%s", testDataDir, strings.TrimLeft(r.URL.Path, "/"))
 		}
 		if liveMode {
+			require.NoError(t, os.MkdirAll(testDataDir, 0o755))
 			liveURL := fmt.Sprintf("%s%s", liveServerBaseURL, path)
 
 			request, err := http.NewRequest(r.Method, liveURL, nil)
