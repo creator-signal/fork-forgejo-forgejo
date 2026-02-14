@@ -50,7 +50,7 @@
 }
 
 /* icon with notification counter - positioned relative container */
-#navbar .navbar-right .notification-icon-relative {
+#navbar .notification-icon-relative {
   position: relative;
   display: flex;
 }
