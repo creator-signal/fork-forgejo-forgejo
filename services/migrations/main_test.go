@@ -5,6 +5,7 @@
 package migrations
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -109,7 +110,9 @@ func assertIssueEqual(t *testing.T, expected, actual *base.Issue) {
 func assertIssuesEqual(t *testing.T, expected, actual []*base.Issue) {
 	if assert.Len(t, actual, len(expected)) {
 		for i := range expected {
-			assertIssueEqual(t, expected[i], actual[i])
+			t.Run(fmt.Sprintf("issue[%d]", i), func(t *testing.T) {
+				assertIssueEqual(t, expected[i], actual[i])
+			})
 		}
 	}
 }
@@ -180,9 +183,11 @@ func assertReleaseAssetEqual(t *testing.T, expected, actual *base.ReleaseAsset) 
 }
 
 func assertReleaseAssetsEqual(t *testing.T, expected, actual []*base.ReleaseAsset) {
-	if assert.Len(t, actual, len(expected)) {
+	if assert.Len(t, actual, len(expected), "wrong number of assets") {
 		for i := range expected {
-			assertReleaseAssetEqual(t, expected[i], actual[i])
+			t.Run(fmt.Sprintf("asset[%d]", i), func(t *testing.T) {
+				assertReleaseAssetEqual(t, expected[i], actual[i])
+			})
 		}
 	}
 }
@@ -203,9 +208,11 @@ func assertReleaseEqual(t *testing.T, expected, actual *base.Release) {
 }
 
 func assertReleasesEqual(t *testing.T, expected, actual []*base.Release) {
-	if assert.Len(t, actual, len(expected)) {
+	if assert.Len(t, actual, len(expected), "wrong number of releases") {
 		for i := range expected {
-			assertReleaseEqual(t, expected[i], actual[i])
+			t.Run(fmt.Sprintf("release[%d]", i), func(t *testing.T) {
+				assertReleaseEqual(t, expected[i], actual[i])
+			})
 		}
 	}
 }
