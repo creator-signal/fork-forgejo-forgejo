@@ -1,21 +1,41 @@
 <script>
 import DiffFileTreeItem from './DiffFileTreeItem.vue';
+import DiffFileFilter from './DiffFileFilter.vue';
 import {loadMoreFiles} from '../features/repo-diff.js';
 import {toggleElem} from '../utils/dom.js';
-import {diffTreeStore} from '../modules/stores.js';
+import {diffTreeStore, diffFilterStore} from '../modules/stores.js';
 import {setFileFolding} from '../features/file-fold.js';
 
 const LOCAL_STORAGE_KEY = 'diff_file_tree_visible';
 
+function matchesFilter(file, filterStore) {
+  const {viewedFilter, typeFilters, extensionFilter} = filterStore;
+  if (viewedFilter !== null) {
+    if (viewedFilter && !file.IsViewed) return false;
+    if (!viewedFilter && file.IsViewed) return false;
+  }
+  if (typeFilters.size > 0 && !typeFilters.has(file.Type)) return false;
+  if (extensionFilter) {
+    const name = file.Name || '';
+    const dotIdx = name.lastIndexOf('.');
+    const ext = dotIdx !== -1 ? name.substring(dotIdx) : '';
+    if (ext !== extensionFilter) return false;
+  }
+  return true;
+}
+
 export default {
-  components: {DiffFileTreeItem},
+  components: {DiffFileTreeItem, DiffFileFilter},
   data: () => {
-    return {store: diffTreeStore()};
+    return {store: diffTreeStore(), filterStore: diffFilterStore()};
   },
   computed: {
+    filteredFiles() {
+      return this.store.files.filter((file) => matchesFilter(file, this.filterStore));
+    },
     fileTree() {
       const result = [];
-      for (const file of this.store.files) {
+      for (const file of this.filteredFiles) {
         // Split file into directories
         const splits = file.Name.split('/');
         let index = 0;
@@ -127,6 +147,7 @@ export default {
 </script>
 <template>
   <div v-if="store.fileTreeIsVisible" class="diff-file-tree-items">
+    <DiffFileFilter/>
     <!-- only render the tree if we're visible. in many cases this is something that doesn't change very often -->
     <DiffFileTreeItem v-for="item in fileTree" :key="item.name" :item="item"/>
     <div v-if="store.isIncomplete" class="tw-pt-1">
