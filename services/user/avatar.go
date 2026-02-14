@@ -32,11 +32,11 @@ func UploadAvatar(ctx context.Context, u *user_model.User, data []byte) error {
 	defer committer.Close()
 
 	// Delete vector avatar if it was set
-	if u.AvatarSVGHash != nil {
-		if _, err := db.GetEngine(ctx).Table(&user_model.AvatarVector{}).Where("svg_hash=?", u.AvatarSVGHash).Delete(); err != nil {
+	if u.SvgAvatarID != 0 {
+		if _, err := db.GetEngine(ctx).Table(&user_model.AvatarVector{}).Where("id=?", u.SvgAvatarID).Delete(); err != nil {
 			return fmt.Errorf("Unable to delete vector avatar: %w", err)
 		}
-		u.AvatarSVGHash = nil
+		u.SvgAvatarID = 0
 	}
 
 	u.UseCustomAvatar = true
@@ -62,11 +62,11 @@ func DeleteAvatar(ctx context.Context, u *user_model.User) error {
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
 		// Delete vector avatar if it was set
-		if u.AvatarSVGHash != nil {
-			if _, err := db.GetEngine(ctx).Table(&user_model.AvatarVector{}).Where("svg_hash=?", u.AvatarSVGHash).Delete(); err != nil {
+		if u.SvgAvatarID != 0 {
+			if _, err := db.GetEngine(ctx).Table(&user_model.AvatarVector{}).Where("id=?", u.SvgAvatarID).Delete(); err != nil {
 				return fmt.Errorf("Unable to delete vector avatar: %w", err)
 			}
-			u.AvatarSVGHash = nil
+			u.SvgAvatarID = 0
 		}
 
 		hasAvatar := len(u.Avatar) > 0

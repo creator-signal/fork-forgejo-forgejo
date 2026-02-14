@@ -27,6 +27,7 @@ func (u *User) CustomAvatarRelativePath() string {
 }
 
 type AvatarVector struct {
+	ID int64 `xorm:"pk autoincr"`
 	// Hash of SVG avatar
 	SvgHash []byte `xorm:"VARBINARY(16)"`
 	// Raw SVG avatar as text
@@ -42,6 +43,12 @@ func HashSvgAvatar(avatarXML string) []byte {
 	hasher.Write([]byte(avatarXML))
 	sum := hasher.Sum(nil)
 	return sum[:16]
+}
+
+func GetSvgAvatarHash(ctx context.Context, id int64) ([]byte, error) {
+	var hash []byte
+	err := db.GetEngine(ctx).Table(&AvatarVector{}).Where("id=?", id).Find(&hash)
+	return hash, err
 }
 
 // GenerateRandomAvatar generates a random avatar for user.
@@ -80,9 +87,9 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 		}
 
 		u.Avatar = avatars.HashEmail(seed)
-		u.AvatarSVGHash = vectorHash
+		// u.SvgAvatarID = 123456789
 
-		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "svg_hash").Update(u); err != nil {
+		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "svg_avatar_id").Update(u); err != nil {
 			return err
 		}
 

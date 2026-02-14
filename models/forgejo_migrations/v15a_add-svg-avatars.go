@@ -9,19 +9,20 @@ import (
 
 func init() {
 	registerMigration(&Migration{
-		Description: "create table avatar_vector with fields svg and svg_hash, add field avatar_svg_hash to table user",
+		Description: "create table avatar_vector, add field avatar_svg_hash to table user",
 		Upgrade:     addAvatarVectorTable,
 	})
 }
 
 func addAvatarVectorTable(x *xorm.Engine) error {
 	type AvatarVector struct {
+		ID      int64  `xorm:"pk autoincr"`
 		SvgHash string `xorm:"VARBINARY(16)"`
 		Svg     string `xorm:"TEXT"`
 	}
 	type User struct {
-		AvatarSVGHash string `xorm:"VARBINARY(16)"`
+		SvgAvatarID int64
 	}
-	err := x.Sync(new(AvatarVector), new(User))
+	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(AvatarVector), new(User))
 	return err
 }

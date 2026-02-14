@@ -51,21 +51,21 @@ func SVGAvatarURL(hash []byte) string {
 func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 	size, class := gitea_html.ParseSizeAndClass(avatars.DefaultAvatarPixelSize, avatars.DefaultAvatarClass, others...)
 
-	var vectorHash []byte
+	var vectorAvatarID int64
 	var rasterURL string
 	var displayName string
 
 	switch t := item.(type) {
 	case *user_model.User:
-		vectorHash = t.AvatarSVGHash
+		vectorAvatarID = t.SvgAvatarID
 		rasterURL = t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		displayName = t.DisplayName()
 	case *repo_model.Collaborator:
-		vectorHash = t.AvatarSVGHash
+		vectorAvatarID = t.SvgAvatarID
 		rasterURL = t.AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		displayName = t.DisplayName()
 	case *organization.Organization:
-		vectorHash = t.AsUser().AvatarSVGHash
+		vectorAvatarID = t.AsUser().SvgAvatarID
 		rasterURL = t.AsUser().AvatarLinkWithSize(au.ctx, size*setting.Avatar.RenderedSizeFactor)
 		displayName = t.DisplayName()
 	}
@@ -76,8 +76,13 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 	}
 
 	// Try vector avatar first - if it is unwanted it wouldn't be present in the database
-	if vectorHash != nil {
-		return AvatarHTMLSVG(SVGAvatarURL(vectorHash), size, class, displayName)
+	fmt.Printf("vectorAvatarID check: %s", vectorAvatarID)
+	if vectorAvatarID != 0 {
+		println("vectorAvatarID != 0")
+		hash, err := user_model.GetSvgAvatarHash(au.ctx, vectorAvatarID)
+		if err == nil {
+			return AvatarHTMLSVG(SVGAvatarURL(hash), size, class, displayName)
+		}
 	}
 
 	// Fall back to raster avatar if present

@@ -136,8 +136,8 @@ type User struct {
 
 	// Hash of raster avatar
 	Avatar string `xorm:"VARCHAR(2048) NOT NULL"`
-	// Hash of SVG avatar
-	AvatarSVGHash []byte `xorm:"VARBINARY(16)"`
+	// ID of vector avatar
+	SvgAvatarID int64
 	//
 	AvatarEmail     string `xorm:"NOT NULL"`
 	UseCustomAvatar bool
