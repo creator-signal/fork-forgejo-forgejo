@@ -34,12 +34,13 @@ else
 	GOTESTCOMPILEDRUNSUFFIX ?=
 endif
 
+GOLANGCI_LINT_VERSION := v2.7.2
 XGO_VERSION := go-1.21.x
 
 AIR_PACKAGE ?= github.com/air-verse/air@v1 # renovate: datasource=go
 EDITORCONFIG_CHECKER_PACKAGE ?= github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@v3.6.1 # renovate: datasource=go
 GOFUMPT_PACKAGE ?= mvdan.cc/gofumpt@v0.9.2 # renovate: datasource=go
-GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2 # renovate: datasource=go
+GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) # renovate: datasource=go
 GXZ_PACKAGE ?= github.com/ulikunitz/xz/cmd/gxz@v0.5.15 # renovate: datasource=go
 SWAGGER_PACKAGE ?= github.com/go-swagger/go-swagger/cmd/swagger@v0.33.1 # renovate: datasource=go
 XGO_PACKAGE ?= src.techknowlogick.com/xgo@latest
@@ -485,14 +486,16 @@ RUN_DEADCODE = $(GO) run $(DEADCODE_PACKAGE) -generated=false -f='{{println .Pat
 
 .PHONY: lint-go
 lint-go:
-	$(GO) run $(GOLANGCI_LINT_PACKAGE) run $(GOLANGCI_LINT_ARGS)
+	$(GO) run $(GOLANGCI_LINT_PACKAGE) custom --version $(GOLANGCI_LINT_VERSION)
+	./golangci-lint run $(GOLANGCI_LINT_ARGS)
 	$(RUN_DEADCODE) > .cur-deadcode-out
 	@$(DIFF) .deadcode-out .cur-deadcode-out \
 	|| (code=$$?; echo "Please run 'make lint-go-fix' and commit the result"; exit $${code})
 
 .PHONY: lint-go-fix
 lint-go-fix:
-	$(GO) run $(GOLANGCI_LINT_PACKAGE) run $(GOLANGCI_LINT_ARGS) --fix
+	$(GO) run $(GOLANGCI_LINT_PACKAGE) custom --version $(GOLANGCI_LINT_VERSION)
+	./golangci-lint run $(GOLANGCI_LINT_ARGS) --fix
 	$(RUN_DEADCODE) > .deadcode-out
 
 .PHONY: lint-go-vet
@@ -943,7 +946,7 @@ deps-tools:
 	$(GO) install $(AIR_PACKAGE)
 	$(GO) install $(EDITORCONFIG_CHECKER_PACKAGE)
 	$(GO) install $(GOFUMPT_PACKAGE)
-	$(GO) install $(GOLANGCI_LINT_PACKAGE)
+	$(GO) run $(GOLANGCI_LINT_PACKAGE) custom --version $(GOLANGCI_LINT_VERSION) --destination $(shell go env GOROOT)/bin/
 	$(GO) install $(GXZ_PACKAGE)
 	$(GO) install $(SWAGGER_PACKAGE)
 	$(GO) install $(XGO_PACKAGE)

@@ -26,6 +26,7 @@ linters:
     - usetesting
     - wastedassign
     - nilnil
+    - errortype
   settings:
     depguard:
       rules:
@@ -116,6 +117,13 @@ linters:
         - go-require
     nilnil:
       only-two: false
+    custom:
+      errortype:
+        type: module
+        description: errortype helps prevent subtle bugs in error handling.
+        original-url: https://fillmore-labs.com/errortype
+        settings:
+          style-check: false
   exclusions:
     generated: lax
     presets:
