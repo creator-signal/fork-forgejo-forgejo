@@ -191,7 +191,7 @@ func CollectionMetadata(ctx *context.Context) {
 		Namespace      string                                      `json:"namespace"`
 		Name           string                                      `json:"name"`
 		Deprecated     bool                                        `json:"deprecated"`
-		VersionsUrl    string                                      `json:"versions_url"`
+		VersionsURL    string                                      `json:"versions_url"`
 		HighestVersion AnsibleCollectionMetadataHighestVersionData `json:"highest_version"`
 	}
 
@@ -200,13 +200,12 @@ func CollectionMetadata(ctx *context.Context) {
 		Namespace:   packageNamespace,
 		Name:        packageName,
 		Deprecated:  false,
-		VersionsUrl: fmt.Sprintf("/api/v3/collections/%v/%v/versions/", packageNamespace, packageName),
+		VersionsURL: fmt.Sprintf("/api/v3/collections/%v/%v/versions/", packageNamespace, packageName),
 		HighestVersion: AnsibleCollectionMetadataHighestVersionData{
 			Version: pds[0].SemVer.String(),
 			Href:    fmt.Sprintf("/api/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pds[0].SemVer),
 		},
 	})
-
 }
 
 // ListVersions returns a JSON response with a list of the available collection versions
