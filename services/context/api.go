@@ -458,6 +458,9 @@ func (ctx *APIContext) IsUserSiteAdmin() bool {
 
 // IsUserRepoAdmin returns true if current user is admin in current repo
 func (ctx *APIContext) IsUserRepoAdmin() bool {
+	if !ctx.Reducer.AllowAdminOverride() {
+		return false
+	}
 	return ctx.Repo.IsAdmin()
 }
 

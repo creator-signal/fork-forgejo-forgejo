@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"testing"
 
+	perm_model "forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
@@ -115,5 +117,39 @@ func TestIsUserSiteAdmin(t *testing.T) {
 		reducer.On("AllowAdminOverride").Return(false)
 		ctx := makeCtx(t, reducer)
 		assert.False(t, ctx.IsUserSiteAdmin())
+	})
+}
+
+func TestIsUserRepoAdmin(t *testing.T) {
+	makeCtx := func(t *testing.T, reducer authz.AuthorizationReducer) *APIContext {
+		req := httptest.NewRequest("GET", "/", nil)
+		resp := httptest.NewRecorder()
+		base, baseCleanUp := NewBaseContext(resp, req)
+		t.Cleanup(baseCleanUp)
+		ctx := &APIContext{Base: base, Reducer: reducer}
+		// setup ctx with a repo admin, and the test cases will modify to false in various ways
+		ctx.Repo = &Repository{Permission: access_model.Permission{AccessMode: perm_model.AccessModeAdmin}}
+		return ctx
+	}
+
+	defaultReducer := authz.NewMockAuthorizationReducer(t)
+	defaultReducer.On("AllowAdminOverride").Return(true)
+
+	t.Run("non-admin", func(t *testing.T) {
+		ctx := makeCtx(t, defaultReducer)
+		ctx.Repo.Permission.AccessMode = perm_model.AccessModeWrite
+		assert.False(t, ctx.IsUserRepoAdmin())
+	})
+
+	t.Run("admin", func(t *testing.T) {
+		ctx := makeCtx(t, defaultReducer)
+		assert.True(t, ctx.IsUserRepoAdmin())
+	})
+
+	t.Run("admin w/ reducer", func(t *testing.T) {
+		reducer := authz.NewMockAuthorizationReducer(t)
+		reducer.On("AllowAdminOverride").Return(false)
+		ctx := makeCtx(t, reducer)
+		assert.False(t, ctx.IsUserRepoAdmin())
 	})
 }
