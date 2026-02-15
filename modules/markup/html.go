@@ -1412,7 +1412,7 @@ func hashCurrentPatternProcessor(ctx *RenderContext, node *html.Node) {
 			continue
 		}
 
-		// If the hash is surrounded by backticks then update the range remove them.
+		// If the hash is surrounded by backticks then update the range to remove them.
 		// Prevents Forgejo from rendering code blocks twice.
 		replaceStart := m[2]
 		replaceLength := m[3]
