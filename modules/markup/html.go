@@ -1412,8 +1412,17 @@ func hashCurrentPatternProcessor(ctx *RenderContext, node *html.Node) {
 			continue
 		}
 
+		// If the hash is surrounded by backticks then update the range remove them.
+		// Prevents Forgejo from rendering code blocks twice.
+		replaceStart := m[2]
+		replaceLength := m[3]
+		if replaceStart > 0 && node.Data[replaceStart-1] == '`' && node.Data[replaceLength] == '`' {
+			replaceStart--
+			replaceLength++
+		}
+
 		link := util.URLJoin(ctx.Links.Prefix(), ctx.Metas["user"], ctx.Metas["repo"], "commit", hash)
-		replaceContent(node, m[2], m[3], createCodeLink(link, base.ShortSha(hash), "commit"))
+		replaceContent(node, replaceStart, replaceLength, createCodeLink(link, base.ShortSha(hash), "commit"))
 		start = 0
 		node = node.NextSibling.NextSibling
 	}

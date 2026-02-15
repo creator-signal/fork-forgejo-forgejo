@@ -126,8 +126,15 @@ com 88fc37a3c0a4dda553bdcfc80c178a58247f42fb mit
 
 func TestRenderCommitMessage(t *testing.T) {
 	expected := `space <a href="/mention-user" class="mention">@mention-user</a>  `
-
 	assert.EqualValues(t, expected, RenderCommitMessage(t.Context(), testInput, testMetas))
+
+	input := "code block commit hash `65f1bf27bc3bf70f64657658635e66094edbcb4d`\n"
+	expected = "code block commit hash <a href=\"/user13/repo11/commit/65f1bf27bc3bf70f64657658635e66094edbcb4d\" class=\"commit\"><code class=\"nohighlight\">65f1bf27bc</code></a>"
+	assert.EqualValues(t, expected, RenderCommitMessage(t.Context(), input, testMetas))
+
+        input = "65f1bf27bc3bf70f64657658635e66094edbcb4d commit hash without backticks"
+        expected = "<a href=\"/user13/repo11/commit/65f1bf27bc3bf70f64657658635e66094edbcb4d\" class=\"commit\"><code class=\"nohighlight\">65f1bf27bc</code></a> commit hash without backticks"
+        assert.EqualValues(t, expected, RenderCommitMessage(t.Context(), input, testMetas))
 }
 
 func TestRenderCommitMessageLinkSubject(t *testing.T) {
