@@ -129,7 +129,7 @@ func UploadCollection(ctx *context.Context) {
 	// We just return a random UUID here. The galaxy client assumes an asyncronous parsing process.
 	// Since we already did everything before, we just fake the task handling here.
 	ctx.JSON(http.StatusCreated, map[string]string{
-		"task": "/api/v3/imports/collections/" + gouuid.NewString() + "/",
+		"task": fmt.Sprintf("/api/packages/%v/ansible/api/v3/imports/collections/%v/", ctx.Params("username"), gouuid.NewString()),
 	})
 }
 
