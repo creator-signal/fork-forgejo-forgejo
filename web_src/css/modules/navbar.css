@@ -8,17 +8,12 @@
   padding: 0 10px;
 }
 
-#navbar,
-#navbar .navbar-left,
-#navbar .navbar-right {
-  min-height: 49px; /* +1px border-bottom */
-}
-
 #navbar .navbar-left,
 #navbar .navbar-right {
   margin: 0;
   display: flex;
   align-items: center;
+  min-height: 48px;
 }
 
 #navbar-logo {
@@ -78,6 +73,7 @@
   /* show items if the navbar is open */
   #navbar.navbar-menu-open {
     padding-bottom: 8px;
+    gap: .35714286em;
   }
   #navbar.navbar-menu-open,
   #navbar.navbar-menu-open .navbar-right {
