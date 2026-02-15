@@ -157,6 +157,58 @@ func ImportResult(ctx *context.Context) {
 	})
 }
 
+func CollectionMetadata(ctx *context.Context) {
+	packageNamespace := ctx.Params("namespace")
+	packageName := ctx.Params("name")
+
+	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypeAnsible, packageNamespace+"."+packageName)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+	if len(pvs) == 0 {
+		apiError(ctx, http.StatusNotFound, "Requested collection has no artifact attached to it")
+		return
+	}
+
+	pds, err := packages_model.GetPackageDescriptors(ctx, pvs)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	sort.Slice(pds, func(i, j int) bool {
+		return pds[i].SemVer.GreaterThan(pds[j].SemVer)
+	})
+
+	type AnsibleCollectionMetadataHighestVersionData struct {
+		Href    string `json:"href"`
+		Version string `json:"version"`
+	}
+
+	type AnsibleCollectionMetadataResponseData struct {
+		Href           string                                      `json:"href"`
+		Namespace      string                                      `json:"namespace"`
+		Name           string                                      `json:"name"`
+		Deprecated     bool                                        `json:"deprecated"`
+		VersionsUrl    string                                      `json:"versions_url"`
+		HighestVersion AnsibleCollectionMetadataHighestVersionData `json:"highest_version"`
+	}
+
+	ctx.JSON(http.StatusOK, AnsibleCollectionMetadataResponseData{
+		Href:        fmt.Sprintf("/api/v3/collections/%v/%v/", packageNamespace, packageName),
+		Namespace:   packageNamespace,
+		Name:        packageName,
+		Deprecated:  false,
+		VersionsUrl: fmt.Sprintf("/api/v3/collections/%v/%v/versions/", packageNamespace, packageName),
+		HighestVersion: AnsibleCollectionMetadataHighestVersionData{
+			Version: pds[0].SemVer.String(),
+			Href:    fmt.Sprintf("/api/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pds[0].SemVer),
+		},
+	})
+
+}
+
 // ListVersions returns a JSON response with a list of the available collection versions
 // as well as set of general metadata of the collection
 func ListVersions(ctx *context.Context) {
