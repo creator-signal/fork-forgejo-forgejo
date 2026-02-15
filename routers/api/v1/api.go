@@ -266,6 +266,9 @@ func reqPackageAccess(accessMode perm.AccessMode) func(ctx *context.APIContext) 
 
 func checkTokenPublicOnly() func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
+		// FIXME: revist this -- it should be OK to skip the repository check here as the resource filtering will take
+		// into account public/private limitation?  Need to ensure there's no other initializer of PublicOnly I guess
+		// that doesn't do resource filtering.
 		if !ctx.PublicOnly {
 			return
 		}
@@ -504,6 +507,7 @@ func reqAnyRepoReader() func(ctx *context.APIContext) {
 // reqOrgOwnership user should be an organization owner, or a site admin
 func reqOrgOwnership() func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
+		// FIXME: probably always an error to use this when using a fine-grained access token
 		if ctx.IsUserSiteAdmin() {
 			return
 		}
@@ -536,6 +540,7 @@ func reqOrgOwnership() func(ctx *context.APIContext) {
 // reqTeamMembership user should be an team member, or a site admin
 func reqTeamMembership() func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
+		// FIXME: probably always an error to use this when using a fine-grained access token
 		if ctx.IsUserSiteAdmin() {
 			return
 		}
@@ -573,6 +578,7 @@ func reqTeamMembership() func(ctx *context.APIContext) {
 // reqOrgMembership user should be an organization member, or a site admin
 func reqOrgMembership() func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
+		// FIXME: probably always an error to use this when using a fine-grained access token
 		if ctx.IsUserSiteAdmin() {
 			return
 		}
@@ -917,6 +923,8 @@ func Routes() *web.Route {
 
 		// Notifications (requires 'notifications' scope)
 		m.Group("/notifications", func() {
+			// FIXME: all these APIs need a treatment for AuthorizationReducer support, I think.  Or *maybe* we need to
+			// make sure that fine-grained access tokens can't have the "notification" scope... which I don't hate.
 			m.Combo("").
 				Get(reqToken(), notify.ListNotifications).
 				Put(reqToken(), notify.ReadNotifications)
@@ -1541,6 +1549,9 @@ func Routes() *web.Route {
 					m.Get("/files", packages.ListPackageFiles)
 				})
 
+				// FIXME: Link & unlink package don't take into account fine-grained access tokens for the target
+				// repository.  As with notifications, this might indicate that the "repository" scope is just
+				// independent of the "package" scope -- or they should be implemented in here.
 				m.Post("/-/link/{repo_name}", reqToken(), reqPackageAccess(perm.AccessModeWrite), packages.LinkPackage)
 				m.Post("/-/unlink", reqToken(), reqPackageAccess(perm.AccessModeWrite), packages.UnlinkPackage)
 			})

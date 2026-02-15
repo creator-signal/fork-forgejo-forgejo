@@ -298,6 +298,7 @@ func CreateUserRepo(ctx *context.APIContext, owner *user_model.User, opt api.Cre
 }
 
 // Create one repository of mine
+// FIXME: prevent this when using a repo-specific token
 func Create(ctx *context.APIContext) {
 	// swagger:operation POST /user/repos repository user createCurrentUserRepo
 	// ---
@@ -336,6 +337,7 @@ func Create(ctx *context.APIContext) {
 }
 
 // Generate Create a repository using a template
+// FIXME: prevent this when using a repo-specific token
 func Generate(ctx *context.APIContext) {
 	// swagger:operation POST /repos/{template_owner}/{template_repo}/generate repository generateRepo
 	// ---
@@ -620,6 +622,7 @@ func GetByID(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, convert.ToRepo(ctx, repo, permission))
 }
 
+// FIXME: probably prevent this when using a repo-specific token
 // Edit edit repository properties
 func Edit(ctx *context.APIContext) {
 	// swagger:operation PATCH /repos/{owner}/{repo} repository repoEdit
@@ -684,6 +687,7 @@ func Edit(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, convert.ToRepo(ctx, repo, ctx.Repo.Permission))
 }
 
+// FIXME: probably prevent this when using a repo-specific token
 // Convert converts a mirror to a normal repo
 func Convert(ctx *context.APIContext) {
 	// swagger:operation POST /repos/{owner}/{repo}/convert repository repoConvert
@@ -1212,6 +1216,7 @@ func convertMirrorToNormalRepo(ctx *context.APIContext) error {
 	return nil
 }
 
+// FIXME: probably prevent this when using a repo-specific token
 // Delete one repository
 func Delete(ctx *context.APIContext) {
 	// swagger:operation DELETE /repos/{owner}/{repo} repository repoDelete
