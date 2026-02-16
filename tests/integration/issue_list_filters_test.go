@@ -9,6 +9,7 @@ import (
 
 	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
 )
