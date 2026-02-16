@@ -56,7 +56,6 @@ test.describe('desktop viewport, unauthenticated', () => {
 
     await expect(page.locator('.overflow-menu-button')).toHaveCount(0);
     await screenshot(page);
-    await page.waitForTimeout(5000);
   });
 });
 
