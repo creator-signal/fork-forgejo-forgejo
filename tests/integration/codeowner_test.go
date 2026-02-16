@@ -20,10 +20,12 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/optional"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/require"
+	"xorm.io/xorm/convert"
 )
 
 func CodeOwnerTestCommon(t *testing.T, u *url.URL, codeownerTest CodeownerTest) {
@@ -213,5 +215,74 @@ func TestCodeOwner(t *testing.T) {
 		for _, test := range tests {
 			CodeOwnerTestCommon(t, u, test)
 		}
+	})
+}
+
+func TestCodeOwnerDisabled(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		defer tests.PrintCurrentTest(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user2, tests.DeclarativeRepoOptions{
+			Name:         optional.Some("codeowner-disabled"),
+			EnabledUnits: optional.Some([]unit_model.Type{unit_model.TypePullRequests}),
+			UnitConfig: optional.Some(map[unit_model.Type]convert.Conversion{
+				unit_model.TypePullRequests: &repo_model.PullRequestsConfig{
+					EnableCodeOwners:     false,
+					AllowMerge:           true,
+					AllowRebase:          true,
+					AllowRebaseMerge:     true,
+					AllowSquash:          true,
+					AllowFastForwardOnly: true,
+					AllowManualMerge:     true,
+					AllowRebaseUpdate:    true,
+					DefaultMergeStyle:    repo_model.MergeStyleMerge,
+					DefaultUpdateStyle:   repo_model.UpdateStyleMerge,
+				},
+			}),
+			Files: optional.Some([]*files_service.ChangeRepoFile{
+				{
+					Operation:     "create",
+					TreePath:      "CODEOWNERS",
+					ContentReader: strings.NewReader("README.md @user5"),
+				},
+			}),
+		})
+		defer f()
+
+		dstPath := t.TempDir()
+		r := fmt.Sprintf("%suser2/%s.git", u.String(), repo.Name)
+		cloneURL, _ := url.Parse(r)
+		cloneURL.User = url.UserPassword("user2", userPassword)
+		require.NoError(t, git.CloneWithArgs(t.Context(), nil, cloneURL.String(), dstPath, git.CloneRepoOptions{}))
+		doGitSetRemoteURL(dstPath, "origin", cloneURL)(t)
+
+		err := os.WriteFile(path.Join(dstPath, "README.md"), []byte("## test content"), 0o666)
+		require.NoError(t, err)
+
+		err = git.AddChanges(dstPath, true)
+		require.NoError(t, err)
+
+		err = git.CommitChanges(dstPath, git.CommitChangesOptions{
+			Committer: &git.Signature{
+				Email: "user2@example.com",
+				Name:  "user2",
+				When:  time.Now(),
+			},
+			Author: &git.Signature{
+				Email: "user2@example.com",
+				Name:  "user2",
+				When:  time.Now(),
+			},
+			Message: "Add README.",
+		})
+		require.NoError(t, err)
+
+		err = git.NewCommand(git.DefaultContext, "push", "origin", "HEAD:refs/for/main", "-o", "topic=codeowner-disabled").Run(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
+
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{BaseRepoID: repo.ID, HeadBranch: "user2/codeowner-disabled"})
+		unittest.AssertExistsIf(t, false, &issues_model.Review{IssueID: pr.IssueID, Type: issues_model.ReviewTypeRequest, ReviewerID: 5})
 	})
 }
