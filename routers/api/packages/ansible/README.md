@@ -80,61 +80,61 @@ It requests the given URL with the parameter `?limit=100`.
 
 **Observed Response:** Galaxy replies with JSON containing the number of versions as well as metadata for each version.
 
-{
-    "meta": {
-        "count": 2
-    },
-    "links": {
-        "first": "/api/v3/collections/exampleNs/exampleName/versions/?limit=10&offset=0",
-        "previous": null,
-        "next": null,
-        "last": "/api/v3/collections/exampleNs/exampleName/versions/?limit=10&offset=0"
-    },
-    "data": [
-        {
-            "version": "1.1.0",
-            "href": "/api/v3/collections/exampleNs/exampleName/versions/1.1.0/",
-            "created_at": "2026-01-08T16:04:58.634253Z",
-            "updated_at": "2026-01-08T16:04:58.669356Z",
-            "requires_ansible": ">=2.15.0",
-            "marks": []
+    {
+        "meta": {
+            "count": 2
         },
-        {
-            "version": "1.0.0",
-            "href": "/api/v3/collections/exampleNs/exampleName/versions/1.0.0/",
-            "created_at": "2025-11-03T10:04:55.871205Z",
-            "updated_at": "2025-11-03T10:04:55.983712Z",
-            "requires_ansible": ">=2.15.0",
-            "marks": []
-        }
-    ]
-}
+        "links": {
+            "first": "/api/v3/collections/exampleNs/exampleName/versions/?limit=10&offset=0",
+            "previous": null,
+            "next": null,
+            "last": "/api/v3/collections/exampleNs/exampleName/versions/?limit=10&offset=0"
+        },
+        "data": [
+            {
+                "version": "1.1.0",
+                "href": "/api/v3/collections/exampleNs/exampleName/versions/1.1.0/",
+                "created_at": "2026-01-08T16:04:58.634253Z",
+                "updated_at": "2026-01-08T16:04:58.669356Z",
+                "requires_ansible": ">=2.15.0",
+                "marks": []
+            },
+            {
+                "version": "1.0.0",
+                "href": "/api/v3/collections/exampleNs/exampleName/versions/1.0.0/",
+                "created_at": "2025-11-03T10:04:55.871205Z",
+                "updated_at": "2025-11-03T10:04:55.983712Z",
+                "requires_ansible": ">=2.15.0",
+                "marks": []
+            }
+        ]
+    }
 
 **Implementation:** We replicate the response from Galaxy, just without the pagination links. (see func `ListVersions`)
 
-{
-    "meta": {
-        "count": 2
-    },
-    "data": [
-        {
-            "version": "1.1.0",
-            "href": "/api/v3/collections/exampleNs/exampleName/versions/1.1.0/",
-            "created_at": "2026-01-08T16:04:58.634253Z",
-            "updated_at": "2026-01-08T16:04:58.669356Z",
-            "requires_ansible": ">=2.15.0",
-            "marks": []
+    {
+        "meta": {
+            "count": 2
         },
-        {
-            "version": "1.0.0",
-            "href": "/api/v3/collections/exampleNs/exampleName/versions/1.0.0/",
-            "created_at": "2025-11-03T10:04:55.871205Z",
-            "updated_at": "2025-11-03T10:04:55.983712Z",
-            "requires_ansible": ">=2.15.0",
-            "marks": []
-        }
-    ]
-}
+        "data": [
+            {
+                "version": "1.1.0",
+                "href": "/api/v3/collections/exampleNs/exampleName/versions/1.1.0/",
+                "created_at": "2026-01-08T16:04:58.634253Z",
+                "updated_at": "2026-01-08T16:04:58.669356Z",
+                "requires_ansible": ">=2.15.0",
+                "marks": []
+            },
+            {
+                "version": "1.0.0",
+                "href": "/api/v3/collections/exampleNs/exampleName/versions/1.0.0/",
+                "created_at": "2025-11-03T10:04:55.871205Z",
+                "updated_at": "2025-11-03T10:04:55.983712Z",
+                "requires_ansible": ">=2.15.0",
+                "marks": []
+            }
+        ]
+    }
 
 ### 5. Specific version data
 
@@ -155,3 +155,58 @@ This is used to process the collection asynchronously and then notify the client
 
 **Implementation:** We directly handle the collection upon upload and store the metadata. (see func `UploadCollection`)
 We respond with a "dummy" task URI, that can be queried by the client (see func `ImportResult`).
+
+## Test scenarios
+
+### 1. Uploading a collection
+
+**Requirements:** 
+* `ansible-galaxy` installed to command line
+* Source code of the valid collection (`exampleNs.exampleName`in this example)
+* Personal access token for write access to `exampleNs` organization in Forgejo.
+
+**Process:**
+Execute these commands in the directory of the collection:
+* `ansible-galaxy collection build` - This compiles the collection and creates the archive `exampleNs-exampleName-version.tar.gz`.
+* `ansible-galaxy collection publish -s https://forge.example.org/api/packages/exampleNs/ansible --token <Personal-Access-Token> exampleNs-exampleName-version.tar.gz` - The archive is uploaded to the registy.
+
+**Expected result:**
+The collection is uploaded to the organization and available for download.
+
+**Debugging options:**
+* If the second command is amended with `-vvvvv`, the debug output can be analyzed for errors.
+
+### 2. Install a collection from command line
+
+**Requirements:** 
+* `ansible-galaxy` installed to command line
+* Collection `exampleNs.exampleName` uploaded to the package registry
+
+**Process:**
+Execute the command `ansible-galaxy collection install -s https://forge.example.org/api/packages/exampleNs/ansible exampleNs.exampleName`
+
+**Expected result:**
+The collection is downloaded from the registry and installed to the configured directory (default: `~/.ansible/collections`)
+
+**Notes:**
+* The client CLI caches a lot of requests. This cache data is stored in folders below `~/.ansible`.
+
+### 3. Install a collection from requirements file
+
+**Requirements:** 
+* `ansible-galaxy` installed to command line
+* `requirements.yml` file with the following content
+
+```
+---
+collections:
+- name: 'exampleNs.exampleName'
+    version: '1.0.0'
+    source: 'https://forge.example.org/api/packages/exampleNs/ansible'
+```
+
+**Process:**
+Execute the command `ansible-galaxy collection install -r requirements.yml`
+
+**Expected result:**
+The collection is downloaded from the registry and installed to the configured directory (default: `~/.ansible/collections`)
