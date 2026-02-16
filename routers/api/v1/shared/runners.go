@@ -60,12 +60,15 @@ func GetActionRunJobs(ctx *context.APIContext, ownerID, repoID int64) {
 	ctx.JSON(http.StatusOK, res)
 }
 
+// fromRunJobModelToResponse converts job models to API structs for the runner jobs endpoint.
+// HTMLURL is omitted because this endpoint does not load run/repo attributes.
 func fromRunJobModelToResponse(job []*actions_model.ActionRunJob, labels []string) []*structs.ActionRunJob {
 	var res []*structs.ActionRunJob
 	for i := range job {
 		if len(labels) == 0 || labels[0] == "" && len(job[i].RunsOn) == 0 || job[i].ItRunsOn(labels) {
 			res = append(res, &structs.ActionRunJob{
 				ID:      job[i].ID,
+				RunID:   job[i].RunID,
 				RepoID:  job[i].RepoID,
 				OwnerID: job[i].OwnerID,
 				Name:    job[i].Name,
@@ -73,6 +76,10 @@ func fromRunJobModelToResponse(job []*actions_model.ActionRunJob, labels []strin
 				RunsOn:  job[i].RunsOn,
 				TaskID:  job[i].TaskID,
 				Status:  job[i].Status.String(),
+				Started: job[i].Started.AsTime(),
+				Stopped: job[i].Stopped.AsTime(),
+				Created: job[i].Created.AsTime(),
+				Updated: job[i].Updated.AsTime(),
 			})
 		}
 	}

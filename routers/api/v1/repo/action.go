@@ -1,4 +1,5 @@
 // Copyright 2023 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -993,4 +994,104 @@ func GetActionRun(ctx *context.APIContext) {
 	}
 
 	ctx.JSON(http.StatusOK, convert.ToActionRun(ctx, run, ctx.Doer))
+}
+
+// ListActionRunJobs return a list of jobs for a specific run
+func ListActionRunJobs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs repository repoListActionRunJobs
+	// ---
+	// summary: List jobs for an action run
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: run_id
+	//   in: path
+	//   description: id of the action run
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: status
+	//   in: query
+	//   description: filter by job status
+	//   type: array
+	//   items:
+	//     type: string
+	//     enum: [unknown, waiting, running, success, failure, cancelled, skipped, blocked]
+	// - name: page
+	//   in: query
+	//   description: page number of results to return (1-based)
+	//   type: integer
+	// - name: limit
+	//   in: query
+	//   description: page size of results, default maximum page size is 50
+	//   type: integer
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/ActionRunJobList"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	runID := ctx.ParamsInt64(":run_id")
+	run, err := actions_model.GetRunByID(ctx, runID)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetRunByID", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetRunByID", err)
+		}
+		return
+	}
+
+	if ctx.Repo.Repository.ID != run.RepoID {
+		ctx.Error(http.StatusNotFound, "GetRunByID", util.ErrNotExist)
+		return
+	}
+
+	statusStrs := ctx.FormStrings("status")
+	statuses := make([]actions_model.Status, len(statusStrs))
+	for i, s := range statusStrs {
+		if status, exists := actions_model.StatusFromString(s); exists {
+			statuses[i] = status
+		} else {
+			ctx.Error(http.StatusBadRequest, "StatusFromString", fmt.Sprintf("unknown status: %s", s))
+			return
+		}
+	}
+
+	jobs, total, err := db.FindAndCount[actions_model.ActionRunJob](ctx, &actions_model.FindRunJobOptions{
+		RunID:       runID,
+		RepoID:      ctx.Repo.Repository.ID,
+		Statuses:    statuses,
+		ListOptions: utils.GetListOptions(ctx),
+	})
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "FindAndCount", err)
+		return
+	}
+
+	if err := actions_model.ActionJobList(jobs).LoadAttributes(ctx, true); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadAttributes", err)
+		return
+	}
+
+	res := new(api.ActionRunJobList)
+	res.TotalCount = total
+	res.Entries = make([]*api.ActionRunJob, len(jobs))
+	for i, j := range jobs {
+		res.Entries[i] = convert.ToActionRunJob(ctx, j)
+	}
+
+	ctx.JSON(http.StatusOK, &res)
 }

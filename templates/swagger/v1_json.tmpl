@@ -5852,6 +5852,84 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/runs/{run_id}/jobs": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "List jobs for an action run",
+        "operationId": "repoListActionRunJobs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the action run",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "array",
+            "items": {
+              "enum": [
+                "unknown",
+                "waiting",
+                "running",
+                "success",
+                "failure",
+                "cancelled",
+                "skipped",
+                "blocked"
+              ],
+              "type": "string"
+            },
+            "description": "filter by job status",
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results, default maximum page size is 50",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActionRunJobList"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/secrets": {
       "get": {
         "produces": [
@@ -22309,6 +22387,17 @@
       "description": "ActionRunJob represents a job of a run",
       "type": "object",
       "properties": {
+        "created": {
+          "description": "when the job was created",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
+        "html_url": {
+          "description": "the url of the job",
+          "type": "string",
+          "x-go-name": "HTMLURL"
+        },
         "id": {
           "description": "the action run job id",
           "type": "integer",
@@ -22340,6 +22429,12 @@
           "format": "int64",
           "x-go-name": "RepoID"
         },
+        "run_id": {
+          "description": "the action run id",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "RunID"
+        },
         "runs_on": {
           "description": "the action run job labels to run on",
           "type": "array",
@@ -22348,16 +22443,53 @@
           },
           "x-go-name": "RunsOn"
         },
+        "started": {
+          "description": "when the job was started",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Started"
+        },
         "status": {
           "description": "the action run job status",
           "type": "string",
           "x-go-name": "Status"
+        },
+        "stopped": {
+          "description": "when the job was stopped",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Stopped"
         },
         "task_id": {
           "description": "the action run job latest task id",
           "type": "integer",
           "format": "int64",
           "x-go-name": "TaskID"
+        },
+        "updated": {
+          "description": "when the job was last updated",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Updated"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionRunJobList": {
+      "description": "ActionRunJobList return a list of ActionRunJob",
+      "type": "object",
+      "properties": {
+        "jobs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionRunJob"
+          },
+          "x-go-name": "Entries"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalCount"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -30162,6 +30294,12 @@
       "description": "ActionRun",
       "schema": {
         "$ref": "#/definitions/ActionRun"
+      }
+    },
+    "ActionRunJobList": {
+      "description": "ActionRunJobList",
+      "schema": {
+        "$ref": "#/definitions/ActionRunJobList"
       }
     },
     "ActionRunList": {

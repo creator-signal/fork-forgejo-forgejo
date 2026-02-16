@@ -9,8 +9,39 @@ import (
 	actions_model "forgejo.org/models/actions"
 	access_model "forgejo.org/models/perm/access"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
 	api "forgejo.org/modules/structs"
 )
+
+// ToActionRunJob convert actions_model.ActionRunJob to api.ActionRunJob
+// the job needs LoadAttributes called first (to populate Run for HTMLURL)
+func ToActionRunJob(ctx context.Context, job *actions_model.ActionRunJob) *api.ActionRunJob {
+	if job == nil {
+		return nil
+	}
+
+	htmlURL, err := job.HTMLURL(ctx)
+	if err != nil {
+		log.Error("ActionRunJob[%d].HTMLURL: %v", job.ID, err)
+	}
+
+	return &api.ActionRunJob{
+		ID:      job.ID,
+		RunID:   job.RunID,
+		RepoID:  job.RepoID,
+		OwnerID: job.OwnerID,
+		Name:    job.Name,
+		Needs:   job.Needs,
+		RunsOn:  job.RunsOn,
+		TaskID:  job.TaskID,
+		Status:  job.Status.String(),
+		Started: job.Started.AsTime(),
+		Stopped: job.Stopped.AsTime(),
+		Created: job.Created.AsTime(),
+		Updated: job.Updated.AsTime(),
+		HTMLURL: htmlURL,
+	}
+}
 
 // ToActionRun convert actions_model.User to api.ActionRun
 // the run needs all attributes loaded

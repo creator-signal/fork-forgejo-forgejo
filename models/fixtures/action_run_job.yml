@@ -217,3 +217,65 @@
   status: 5
   started: 1683636528
   stopped: 1683636626
+
+# Jobs for GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs tests
+# Run 892 (repo 63, owner 2) - success run: 1 success job, 1 waiting job
+-
+  id: 398
+  run_id: 892
+  repo_id: 63
+  owner_id: 2
+  commit_sha: 97f29ee599c373c729132a5c46a046978311e0ee
+  is_fork_pull_request: false
+  name: build
+  attempt: 1
+  job_id: build
+  task_id: null
+  status: 1 # success
+  started: 1683636528
+  stopped: 1683636626
+-
+  id: 399
+  run_id: 892
+  repo_id: 63
+  owner_id: 2
+  commit_sha: 97f29ee599c373c729132a5c46a046978311e0ee
+  is_fork_pull_request: false
+  name: deploy
+  attempt: 1
+  job_id: deploy
+  needs: [build]
+  task_id: null
+  status: 5 # waiting
+  started: 1683636528
+  stopped: 1683636626
+
+# Run 893 (repo 63, owner 2) - failure run: 1 failure job, 1 success job
+-
+  id: 400
+  run_id: 893
+  repo_id: 63
+  owner_id: 2
+  commit_sha: 35c5cddfc19397501ec8f4f7bb808a7c8f04445f
+  is_fork_pull_request: false
+  name: lint
+  attempt: 1
+  job_id: lint
+  task_id: null
+  status: 2 # failure
+  started: 1683636528
+  stopped: 1683636626
+-
+  id: 401
+  run_id: 893
+  repo_id: 63
+  owner_id: 2
+  commit_sha: 35c5cddfc19397501ec8f4f7bb808a7c8f04445f
+  is_fork_pull_request: false
+  name: test
+  attempt: 1
+  job_id: test
+  task_id: null
+  status: 1 # success
+  started: 1683636528
+  stopped: 1683636626

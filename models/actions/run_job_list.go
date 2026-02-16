@@ -58,6 +58,12 @@ type FindRunJobOptions struct {
 	RunNeedsApproval optional.Option[bool]
 }
 
+// ToOrders returns ASC (not DESC like FindRunOptions) because jobs
+// should be listed in execution order within a run.
+func (opts FindRunJobOptions) ToOrders() string {
+	return "`id` ASC"
+}
+
 func (opts FindRunJobOptions) ToConds() builder.Cond {
 	cond := builder.NewCond()
 	if opts.RunID > 0 {

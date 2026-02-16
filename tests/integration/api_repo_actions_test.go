@@ -574,3 +574,76 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 		MakeRequest(t, request, http.StatusNotFound)
 	})
 }
+
+func TestListActionRunJobs(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 63})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeWriteRepository)
+
+	t.Run("Basic", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+				repo.OwnerName, repo.Name, 892,
+			),
+		).AddTokenAuth(token)
+		res := MakeRequest(t, req, http.StatusOK)
+
+		var jobList api.ActionRunJobList
+		DecodeJSON(t, res, &jobList)
+
+		assert.Equal(t, int64(2), jobList.TotalCount)
+		assert.Len(t, jobList.Entries, 2)
+		assert.Equal(t, int64(892), jobList.Entries[0].RunID)
+		assert.Equal(t, "build", jobList.Entries[0].Name)
+		assert.Equal(t, "success", jobList.Entries[0].Status)
+		assert.Equal(t, "deploy", jobList.Entries[1].Name)
+		assert.Equal(t, "waiting", jobList.Entries[1].Status)
+	})
+
+	t.Run("StatusFilter", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs?status=success",
+				repo.OwnerName, repo.Name, 893,
+			),
+		).AddTokenAuth(token)
+		res := MakeRequest(t, req, http.StatusOK)
+
+		var jobList api.ActionRunJobList
+		DecodeJSON(t, res, &jobList)
+
+		assert.Equal(t, int64(1), jobList.TotalCount)
+		assert.Len(t, jobList.Entries, 1)
+		assert.Equal(t, "test", jobList.Entries[0].Name)
+		assert.Equal(t, "success", jobList.Entries[0].Status)
+	})
+
+	t.Run("RunNotFound", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+				repo.OwnerName, repo.Name, 9876543210,
+			),
+		).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("WrongRepo", func(t *testing.T) {
+		// Run 891 belongs to repo 1, not repo 63
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+				repo.OwnerName, repo.Name, 891,
+			),
+		).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("NoAuth", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+				repo.OwnerName, repo.Name, 892,
+			),
+		)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+}

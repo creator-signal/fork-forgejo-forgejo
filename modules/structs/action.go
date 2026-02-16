@@ -1,4 +1,5 @@
 // Copyright 2024 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package structs
@@ -12,6 +13,8 @@ import (
 type ActionRunJob struct {
 	// the action run job id
 	ID int64 `json:"id"`
+	// the action run id
+	RunID int64 `json:"run_id"`
 	// the repository id
 	RepoID int64 `json:"repo_id"`
 	// the owner id
@@ -26,6 +29,16 @@ type ActionRunJob struct {
 	TaskID int64 `json:"task_id"`
 	// the action run job status
 	Status string `json:"status"`
+	// when the job was started
+	Started time.Time `json:"started,omitempty"`
+	// when the job was stopped
+	Stopped time.Time `json:"stopped,omitempty"`
+	// when the job was created
+	Created time.Time `json:"created,omitempty"`
+	// when the job was last updated
+	Updated time.Time `json:"updated,omitempty"`
+	// the url of the job
+	HTMLURL string `json:"html_url"`
 }
 
 // ActionRun represents an action run
@@ -83,4 +96,10 @@ type ActionRun struct {
 type ListActionRunResponse struct {
 	Entries    []*ActionRun `json:"workflow_runs"`
 	TotalCount int64        `json:"total_count"`
+}
+
+// ActionRunJobList return a list of ActionRunJob
+type ActionRunJobList struct {
+	Entries    []*ActionRunJob `json:"jobs"`
+	TotalCount int64           `json:"total_count"`
 }
