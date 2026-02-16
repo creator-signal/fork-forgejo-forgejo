@@ -1242,6 +1242,9 @@ func Routes() *web.Route {
 						})
 					})
 				}, reqRepoReader(unit.TypeActions), context.ReferencesGitRepo(true))
+				m.Group("/actions/jobs", func() {
+					m.Get("/{job_id}/logs", repo.DownloadActionsRunJobLogs)
+				}, reqRepoReader(unit.TypeActions))
 				m.Group("/keys", func() {
 					m.Combo("").Get(repo.ListDeployKeys).
 						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)

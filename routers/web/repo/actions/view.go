@@ -594,51 +594,20 @@ func rerunJob(ctx *app_context.Context, job *actions_model.ActionRunJob, shouldB
 func Logs(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 	jobIndex := ctx.ParamsInt64("job")
-	attemptNumber := ctx.ParamsInt64("attempt")
 
-	job, _ := getRunJobs(ctx, runIndex, jobIndex)
-	if ctx.Written() {
-		return
-	}
-	if job.TaskID == 0 {
-		ctx.Error(http.StatusNotFound, "job is not started")
-		return
-	}
-
-	err := job.LoadRun(ctx)
+	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, err.Error())
+		ctx.NotFoundOrServerError("GetRunByIndex", func(err error) bool {
+			return errors.Is(err, util.ErrNotExist)
+		}, err)
 		return
 	}
 
-	task, err := actions_model.GetTaskByJobAttempt(ctx, job.ID, attemptNumber)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
+	if err = common.DownloadActionsRunJobLogsWithIndex(ctx.Base, ctx.Repo.Repository, run.ID, jobIndex); err != nil {
+		ctx.NotFoundOrServerError("DownloadActionsRunJobLogsWithIndex", func(err error) bool {
+			return errors.Is(err, util.ErrNotExist)
+		}, err)
 	}
-	if task.LogExpired {
-		ctx.Error(http.StatusNotFound, "logs have been cleaned up")
-		return
-	}
-
-	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
-	}
-	defer reader.Close()
-
-	workflowName := job.Run.WorkflowID
-	if p := strings.Index(workflowName, "."); p > 0 {
-		workflowName = workflowName[0:p]
-	}
-	ctx.ServeContent(reader, &app_context.ServeHeaderOptions{
-		Filename:           fmt.Sprintf("%v-%v-%v.log", workflowName, job.Name, task.ID),
-		ContentLength:      &task.LogSize,
-		ContentType:        "text/plain",
-		ContentTypeCharset: "utf-8",
-		Disposition:        "attachment",
-	})
 }
 
 func Cancel(ctx *app_context.Context) {

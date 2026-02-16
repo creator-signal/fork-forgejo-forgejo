@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
@@ -138,7 +140,7 @@ jobs:
 				_, err := storage.Actions.Stat(logFileName)
 				require.NoError(t, err)
 
-				// download task logs and check content
+				// download task logs via web route and check content
 				runIndex := task.Context.GetFields()["run_number"].GetStringValue()
 				attempt := task.Context.GetFields()["run_attempt"].GetStringValue()
 				logURL := fmt.Sprintf("/%s/%s/actions/runs/%s/jobs/0/attempt/%s/logs", user2.Name, repo.Name, runIndex, attempt)
@@ -152,6 +154,27 @@ jobs:
 						t,
 						fmt.Sprintf("%s %s", lr.Time.AsTime().Format("2006-01-02T15:04:05.0000000Z07:00"), lr.Content),
 						logTextLines[idx],
+					)
+				}
+
+				// download task logs via API and check content
+				runID, _ := strconv.ParseInt(task.Context.GetFields()["run_id"].GetStringValue(), 10, 64)
+				jobs, err := actions_model.GetRunJobsByRunID(t.Context(), runID)
+				require.NoError(t, err)
+				require.Len(t, jobs, 1)
+				jobID := jobs[0].ID
+
+				apiLogURL := fmt.Sprintf("/api/v1/repos/%s/%s/actions/jobs/%d/logs", user2.Name, repo.Name, jobID)
+				apiReq := NewRequest(t, "GET", apiLogURL)
+				apiReq.AddTokenAuth(token)
+				apiResp := MakeRequest(t, apiReq, http.StatusOK)
+				apiLogTextLines := strings.Split(strings.TrimSpace(apiResp.Body.String()), "\n")
+				assert.Len(t, apiLogTextLines, len(tc.outcome.logRows))
+				for idx, lr := range tc.outcome.logRows {
+					assert.Equal(
+						t,
+						fmt.Sprintf("%s %s", lr.Time.AsTime().Format("2006-01-02T15:04:05.0000000Z07:00"), lr.Content),
+						apiLogTextLines[idx],
 					)
 				}
 

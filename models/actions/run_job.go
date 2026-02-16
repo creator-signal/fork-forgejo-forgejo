@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
@@ -22,11 +23,12 @@ import (
 // ActionRunJob represents a job of a run
 type ActionRunJob struct {
 	ID                int64
-	RunID             int64      `xorm:"index"`
-	Run               *ActionRun `xorm:"-"`
-	RepoID            int64      `xorm:"index"`
-	OwnerID           int64      `xorm:"index"`
-	CommitSHA         string     `xorm:"index"`
+	RunID             int64                  `xorm:"index"`
+	Run               *ActionRun             `xorm:"-"`
+	RepoID            int64                  `xorm:"index"`
+	Repo              *repo_model.Repository `xorm:"-"`
+	OwnerID           int64                  `xorm:"index"`
+	CommitSHA         string                 `xorm:"index"`
 	IsForkPullRequest bool
 	Name              string `xorm:"VARCHAR(255)"`
 	Attempt           int64
@@ -95,6 +97,17 @@ func (job *ActionRunJob) LoadRun(ctx context.Context) error {
 	return nil
 }
 
+func (job *ActionRunJob) LoadRepo(ctx context.Context) error {
+	if job.Repo == nil {
+		repo, err := repo_model.GetRepositoryByID(ctx, job.RepoID)
+		if err != nil {
+			return err
+		}
+		job.Repo = repo
+	}
+	return nil
+}
+
 // LoadAttributes load Run if not loaded
 func (job *ActionRunJob) LoadAttributes(ctx context.Context) error {
 	if job == nil {
@@ -129,8 +142,8 @@ func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {
 	return &job, nil
 }
 
-func GetRunJobsByRunID(ctx context.Context, runID int64) ([]*ActionRunJob, error) {
-	var jobs []*ActionRunJob
+func GetRunJobsByRunID(ctx context.Context, runID int64) (ActionJobList, error) {
+	var jobs ActionJobList
 	if err := db.GetEngine(ctx).Where("run_id=?", runID).OrderBy("id").Find(&jobs); err != nil {
 		return nil, err
 	}

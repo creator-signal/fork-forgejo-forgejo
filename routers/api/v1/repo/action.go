@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/shared"
 	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/routers/common"
 	actions_service "forgejo.org/services/actions"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
@@ -993,4 +994,64 @@ func GetActionRun(ctx *context.APIContext) {
 	}
 
 	ctx.JSON(http.StatusOK, convert.ToActionRun(ctx, run, ctx.Doer))
+}
+
+// DownloadActionsRunJobLogs downloads the logs for a workflow run job
+func DownloadActionsRunJobLogs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs repository downloadActionsRunJobLogs
+	// ---
+	// summary: Downloads the logs for a workflow run job
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: name of the owner
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repository
+	//   type: string
+	//   required: true
+	// - name: job_id
+	//   in: path
+	//   description: id of the job
+	//   type: integer
+	//   required: true
+	// responses:
+	//   "200":
+	//     description: log file content
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	jobID := ctx.ParamsInt64(":job_id")
+	if jobID <= 0 {
+		ctx.Error(http.StatusBadRequest, "DownloadActionsRunJobLogs", fmt.Errorf("invalid job id %d", jobID))
+		return
+	}
+
+	curJob, err := actions_model.GetRunJobByID(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetRunJobByID", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetRunJobByID", err)
+		}
+		return
+	}
+	if err = curJob.LoadRepo(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadRepo", err)
+		return
+	}
+
+	if err = common.DownloadActionsRunJobLogs(ctx.Base, ctx.Repo.Repository, curJob); err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "DownloadActionsRunJobLogs", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "DownloadActionsRunJobLogs", err)
+		}
+	}
 }
