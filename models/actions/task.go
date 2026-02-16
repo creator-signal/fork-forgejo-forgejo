@@ -467,7 +467,6 @@ func UpdateTask(ctx context.Context, task *ActionTask, cols ...string) error {
 		sess.Cols(cols...)
 	}
 	_, err := sess.Update(task)
-
 	return err
 }
 
