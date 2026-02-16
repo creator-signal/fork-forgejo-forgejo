@@ -50,12 +50,13 @@ test.describe('desktop viewport, unauthenticated', () => {
   test.use({viewport: {width: 1920, height: 300}});
 
   test('User overview overflow menu should not be influenced', async ({page}) => {
-    await page.goto('/user2');
+    await page.goto('/user8');
 
     await expect(page.locator('.overflow-menu-items>#settings-btn')).toHaveCount(0);
 
     await expect(page.locator('.overflow-menu-button')).toHaveCount(0);
     await screenshot(page);
+    await page.waitForTimeout(5000);
   });
 });
 
