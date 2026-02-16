@@ -21,7 +21,7 @@ import (
 func UpdateAvatarSetting(ctx *context.Context, form forms.AvatarForm) error {
 	ctxRepo := ctx.Repo.Repository
 
-	if form.Avatar == nil {
+	if form.Avatar == nil || form.Avatar.Filename == "" {
 		// No avatar is uploaded and we not removing it here.
 		// No random avatar generated here.
 		// Just exit, no action.
