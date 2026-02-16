@@ -157,7 +157,6 @@ func TestAPIOrgActionsRunnerOperations(t *testing.T) {
 			Ephemeral:   true,
 		}
 
-
 		assert.ElementsMatch(t, []*api.ActionRunner{runnerOne, runnerThree, runnerFive}, runners)
 	})
 
