@@ -916,6 +916,8 @@ func Routes() *web.Route {
 			m.Get("/licenses/{name}", misc.GetLicenseTemplateInfo)
 			m.Get("/label/templates", misc.ListLabelTemplates)
 			m.Get("/label/templates/{name}", misc.GetLabelTemplate)
+			m.Get("/project/templates", misc.ListProjectTemplates)
+			m.Get("/project/templates/{name}", misc.GetProjectTemplate)
 
 			m.Group("/settings", func() {
 				m.Get("/ui", settings.GetGeneralUISettings)

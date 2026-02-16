@@ -4983,6 +4983,52 @@
         }
       }
     },
+    "/project/templates": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "miscellaneous"
+        ],
+        "summary": "Returns a list of all project template names",
+        "operationId": "listProjectTemplates",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectTemplateList"
+          }
+        }
+      }
+    },
+    "/project/templates/{name}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "miscellaneous"
+        ],
+        "summary": "Returns the columns of a project template",
+        "operationId": "getProjectTemplate",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "name of the template",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ProjectTemplateInfo"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/issues/search": {
       "get": {
         "produces": [
@@ -27839,6 +27885,43 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "ProjectTemplate": {
+      "description": "ProjectTemplate describes a project template and its columns",
+      "type": "object",
+      "properties": {
+        "columns": {
+          "description": "Columns lists the columns created by this template, in order.\nThe first column is the default column for new issues.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProjectTemplateColumn"
+          },
+          "x-go-name": "Columns"
+        },
+        "key": {
+          "description": "Name is the template key (e.g. \"basic_kanban\", \"bug_triage\")",
+          "type": "string",
+          "x-go-name": "Key"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ProjectTemplateColumn": {
+      "description": "ProjectTemplateColumn describes a column within a project template",
+      "type": "object",
+      "properties": {
+        "default": {
+          "description": "Default indicates this column receives new issues by default",
+          "type": "boolean",
+          "x-go-name": "Default"
+        },
+        "title": {
+          "description": "Title of the column",
+          "type": "string",
+          "x-go-name": "Title"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "PublicKey": {
       "description": "PublicKey publickey is a user key to push code to repository",
       "type": "object",
@@ -31086,6 +31169,21 @@
           "type": "integer",
           "format": "int64",
           "description": "The total number of packages"
+        }
+      }
+    },
+    "ProjectTemplateInfo": {
+      "description": "ProjectTemplateInfo",
+      "schema": {
+        "$ref": "#/definitions/ProjectTemplate"
+      }
+    },
+    "ProjectTemplateList": {
+      "description": "ProjectTemplateList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
         }
       }
     },
