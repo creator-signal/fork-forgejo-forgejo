@@ -252,7 +252,7 @@ func TestActionConcurrencyGroupQueueFetchNext(t *testing.T) {
 		assert.Equal(t, sha, workflow.Commit.ID.String())
 
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
 
 		// first run within the concurrency group
 		_, _, err = workflow.Dispatch(db.DefaultContext, func(key string) string { return "task1" }, repo, user2)

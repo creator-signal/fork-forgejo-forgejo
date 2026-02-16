@@ -109,7 +109,7 @@ jobs:
 		apiRepo := createActionsTestRepo(t, token, "actions-download-task-logs", false)
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: apiRepo.ID})
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("test %s", tc.treePath), func(t *testing.T) {
@@ -225,7 +225,7 @@ jobs:
 		repo := createActionsTestRepo(t, token, "actions-download-task-logs", false)
 
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
 
 		opts := getWorkflowCreateFileOptions(user2, repo.DefaultBranch, fmt.Sprintf("Create %s", treePath), fileContent)
 		createWorkflowFile(t, token, user2.Name, repo.Name, treePath, opts)

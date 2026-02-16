@@ -139,7 +139,7 @@ jobs:
 
 		apiRepo := createActionsTestRepo(t, token, "actions-jobs-with-needs", false)
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, user2.Name, apiRepo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
+		runner.registerAsRepoRunner(t, user2.Name, apiRepo.Name, "mock-runner", []string{"ubuntu-latest"})
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("test %s", tc.treePath), func(t *testing.T) {
@@ -328,7 +328,7 @@ jobs:
 
 		apiRepo := createActionsTestRepo(t, token, "actions-jobs-outputs-with-matrix", false)
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, user2.Name, apiRepo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
+		runner.registerAsRepoRunner(t, user2.Name, apiRepo.Name, "mock-runner", []string{"ubuntu-latest"})
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("test %s", tc.treePath), func(t *testing.T) {
@@ -412,7 +412,7 @@ jobs:
 		user2APICtx := NewAPITestContext(t, baseRepo.OwnerName, baseRepo.Name, auth_model.AccessTokenScopeWriteRepository)
 
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, baseRepo.OwnerName, baseRepo.Name, "mock-runner", []string{"ubuntu-latest"}, false)
+		runner.registerAsRepoRunner(t, baseRepo.OwnerName, baseRepo.Name, "mock-runner", []string{"ubuntu-latest"})
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -505,10 +505,10 @@ func TestActionsRunsOnInputsWorkflowDispatch(t *testing.T) {
 		testRepository := createActionsTestRepo(t, token, "actions-runs-on-inputs-workflow-dispatch", false)
 
 		ubuntuRunner := newMockRunner()
-		ubuntuRunner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "ubuntu-runner", []string{"ubuntu"}, false)
+		ubuntuRunner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "ubuntu-runner", []string{"ubuntu"})
 
 		windowsRunner := newMockRunner()
-		windowsRunner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "windows-runner", []string{"windows"}, false)
+		windowsRunner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "windows-runner", []string{"windows"})
 
 		workflowPath := ".gitea/workflows/pull.yaml"
 		workflow := `name: Test runs-on with inputs
@@ -562,10 +562,10 @@ func TestActionsRunsOnVars(t *testing.T) {
 		testRepository := createActionsTestRepo(t, token, "actions-runs-on-vars", false)
 
 		ubuntuRunner := newMockRunner()
-		ubuntuRunner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "ubuntu-runner", []string{"ubuntu"}, false)
+		ubuntuRunner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "ubuntu-runner", []string{"ubuntu"})
 
 		windowsRunner := newMockRunner()
-		windowsRunner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "windows-runner", []string{"windows"}, false)
+		windowsRunner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "windows-runner", []string{"windows"})
 
 		workflowPath := ".gitea/workflows/pull.yaml"
 		workflow := `name: Test runs-on with vars
@@ -623,7 +623,7 @@ func TestActionsEphemeral(t *testing.T) {
 		user2APICtx := NewAPITestContext(t, baseRepo.OwnerName, baseRepo.Name, auth_model.AccessTokenScopeWriteRepository)
 
 		runner := newMockRunner()
-		runner.registerAsRepoRunner(t, baseRepo.OwnerName, baseRepo.Name, "mock-runner", []string{"ubuntu-latest"}, true)
+		runner.registerAsEphemeralRepoRunner(t, baseRepo.OwnerName, baseRepo.Name, "mock-runner", []string{"ubuntu-latest"})
 
 		// verify CleanupEphemeralRunners does not remove this runner
 		err := actions_service.CleanupEphemeralRunners(t.Context())
@@ -704,7 +704,7 @@ jobs:
 
 		// create an runner that picks a job and get force cancelled
 		runnerToBeRemoved := newMockRunner()
-		runnerToBeRemoved.registerAsRepoRunner(t, baseRepo.OwnerName, baseRepo.Name, "mock-runner-to-be-removed", []string{"ubuntu-latest"}, true)
+		runnerToBeRemoved.registerAsEphemeralRepoRunner(t, baseRepo.OwnerName, baseRepo.Name, "mock-runner-to-be-removed", []string{"ubuntu-latest"})
 
 		taskToStopAPIObj := runnerToBeRemoved.fetchTask(t)
 
