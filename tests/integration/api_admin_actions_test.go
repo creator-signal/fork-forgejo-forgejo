@@ -226,12 +226,25 @@ func TestAPIAdminActionsRunnerOperations(t *testing.T) {
 			Labels:      []string{"fedora"},
 			Status:      "offline",
 		}
+		runnerFive := &api.ActionRunner{
+			ID:          130795,
+			UUID:        "16ca1a5c-8024-41f1-be31-e55830263cc6",
+			Name:        "runner-5-ephemeral",
+			Version:     "1.0.0",
+			OwnerID:     0,
+			RepoID:      0,
+			Description: "An ephemeral runner",
+			Labels:      []string{"ephemeral-label"},
+			Status:      "offline",
+			Ephemeral:   true,
+		}
 
 		// There are more runners in the result that originate from the global fixtures. The test ignores them to limit
 		// the impact of unrelated changes.
 		assert.Contains(t, runners, runnerOne)
 		assert.Contains(t, runners, runnerTwo)
 		assert.Contains(t, runners, runnerThree)
+		assert.Contains(t, runners, runnerFive)
 	})
 
 	t.Run("Get runners paginated", func(t *testing.T) {
@@ -291,6 +304,30 @@ func TestAPIAdminActionsRunnerOperations(t *testing.T) {
 		}
 
 		assert.Equal(t, runnerFour, runner)
+	})
+
+	t.Run("Get ephemeral runner", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/admin/actions/runners/130795")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		var runner *api.ActionRunner
+		DecodeJSON(t, response, &runner)
+
+		expectedRunner := &api.ActionRunner{
+			ID:          130795,
+			UUID:        "16ca1a5c-8024-41f1-be31-e55830263cc6",
+			Name:        "runner-5-ephemeral",
+			Version:     "1.0.0",
+			OwnerID:     0,
+			RepoID:      0,
+			Description: "An ephemeral runner",
+			Labels:      []string{"ephemeral-label"},
+			Status:      "offline",
+			Ephemeral:   true,
+		}
+
+		assert.Equal(t, expectedRunner, runner)
 	})
 
 	t.Run("Delete global runner", func(t *testing.T) {

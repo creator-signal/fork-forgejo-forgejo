@@ -117,7 +117,7 @@ func TestAPIOrgActionsRunnerOperations(t *testing.T) {
 		request.AddTokenAuth(readToken)
 		response := MakeRequest(t, request, http.StatusOK)
 
-		assert.Equal(t, "2", response.Header().Get("X-Total-Count"))
+		assert.Equal(t, "3", response.Header().Get("X-Total-Count"))
 
 		var runners []*api.ActionRunner
 		DecodeJSON(t, response, &runners)
@@ -144,8 +144,21 @@ func TestAPIOrgActionsRunnerOperations(t *testing.T) {
 			Labels:      []string{"fedora"},
 			Status:      "offline",
 		}
+		runnerFive := &api.ActionRunner{
+			ID:          655695,
+			UUID:        "0851ed0a-f0af-4a01-9b98-fc9bf9c1d332",
+			Name:        "runner-5-ephemeral",
+			Version:     "1.0.0",
+			OwnerID:     3,
+			RepoID:      0,
+			Description: "An ephemeral runner",
+			Labels:      []string{"ephemeral-label"},
+			Status:      "offline",
+			Ephemeral:   true,
+		}
 
-		assert.ElementsMatch(t, []*api.ActionRunner{runnerOne, runnerThree}, runners)
+
+		assert.ElementsMatch(t, []*api.ActionRunner{runnerOne, runnerThree, runnerFive}, runners)
 	})
 
 	t.Run("Get runners paginated", func(t *testing.T) {
@@ -182,6 +195,30 @@ func TestAPIOrgActionsRunnerOperations(t *testing.T) {
 		}
 
 		assert.Equal(t, runnerOne, runner)
+	})
+
+	t.Run("Get ephemeral runner", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/orgs/org3/actions/runners/655695")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		var runner *api.ActionRunner
+		DecodeJSON(t, response, &runner)
+
+		expectedRunner := &api.ActionRunner{
+			ID:          655695,
+			UUID:        "0851ed0a-f0af-4a01-9b98-fc9bf9c1d332",
+			Name:        "runner-5-ephemeral",
+			Version:     "1.0.0",
+			OwnerID:     3,
+			RepoID:      0,
+			Description: "An ephemeral runner",
+			Labels:      []string{"ephemeral-label"},
+			Status:      "offline",
+			Ephemeral:   true,
+		}
+
+		assert.Equal(t, expectedRunner, runner)
 	})
 
 	t.Run("Delete runner", func(t *testing.T) {
