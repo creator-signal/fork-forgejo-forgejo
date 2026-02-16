@@ -36,7 +36,7 @@
     "@google/model-viewer": "4.1.0",
     "@lezer/highlight": "1.2.3",
     "@mcaptcha/vanilla-glue": "0.1.0-alpha-3",
-    "@primer/octicons": "19.14.0",
+    "@primer/octicons": "19.22.0",
     "ansi_up": "6.0.5",
     "asciinema-player": "3.14.0",
     "chart.js": "4.5.1",
