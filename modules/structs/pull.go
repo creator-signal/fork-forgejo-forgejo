@@ -17,6 +17,7 @@ type PullRequest struct {
 	Body                    string     `json:"body"`
 	Labels                  []*Label   `json:"labels"`
 	Milestone               *Milestone `json:"milestone"`
+	Project                 *Project   `json:"project"`
 	Assignee                *User      `json:"assignee"`
 	Assignees               []*User    `json:"assignees"`
 	RequestedReviewers      []*User    `json:"requested_reviewers"`
