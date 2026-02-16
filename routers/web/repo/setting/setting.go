@@ -257,6 +257,7 @@ func UnitsPost(ctx *context.Context) {
 			RepoID: repo.ID,
 			Type:   unit_model.TypePullRequests,
 			Config: &repo_model.PullRequestsConfig{
+				EnableCodeOwners:              form.PullsEnableCodeOwners,
 				IgnoreWhitespaceConflicts:     form.PullsIgnoreWhitespace,
 				AllowMerge:                    form.PullsAllowMerge,
 				AllowRebase:                   form.PullsAllowRebase,

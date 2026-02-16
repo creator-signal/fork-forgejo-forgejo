@@ -151,6 +151,7 @@ func (cfg *IssuesConfig) ToDB() ([]byte, error) {
 
 // PullRequestsConfig describes pull requests config
 type PullRequestsConfig struct {
+	EnableCodeOwners              bool
 	IgnoreWhitespaceConflicts     bool
 	AllowMerge                    bool
 	AllowRebase                   bool
@@ -170,6 +171,8 @@ type PullRequestsConfig struct {
 func (cfg *PullRequestsConfig) FromDB(bs []byte) error {
 	// AllowRebaseUpdate = true as default for existing PullRequestConfig in DB
 	cfg.AllowRebaseUpdate = true
+	// EnableCodeOwners = true as default for existing PullRequestConfig in DB
+	cfg.EnableCodeOwners = true
 	return json.UnmarshalHandleDoubleEncode(bs, &cfg)
 }
 

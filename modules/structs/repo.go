@@ -102,6 +102,7 @@ type Repository struct {
 	AllowSquash                   bool             `json:"allow_squash_merge"`
 	AllowFastForwardOnly          bool             `json:"allow_fast_forward_only_merge"`
 	AllowRebaseUpdate             bool             `json:"allow_rebase_update"`
+	EnableCodeOwners              bool             `json:"enable_code_owners"`
 	DefaultDeleteBranchAfterMerge bool             `json:"default_delete_branch_after_merge"`
 	DefaultMergeStyle             string           `json:"default_merge_style"`
 	DefaultAllowMaintainerEdit    bool             `json:"default_allow_maintainer_edit"`
@@ -222,6 +223,8 @@ type EditRepoOption struct {
 	AutodetectManualMerge *bool `json:"autodetect_manual_merge,omitempty"`
 	// either `true` to allow updating pull request branch by rebase, or `false` to prevent it.
 	AllowRebaseUpdate *bool `json:"allow_rebase_update,omitempty"`
+	// either `true` to enable CODEOWNERS review requests, or `false` to disable them.
+	EnableCodeOwners *bool `json:"enable_code_owners,omitempty"`
 	// set to `true` to delete pr branch after merge by default
 	DefaultDeleteBranchAfterMerge *bool `json:"default_delete_branch_after_merge,omitempty"`
 	// set to a merge style to be used by this repository: "merge", "rebase", "rebase-merge", "squash", "fast-forward-only", "manually-merged", or "rebase-update-only".

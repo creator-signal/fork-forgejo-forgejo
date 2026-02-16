@@ -528,6 +528,7 @@ func CreateDeclarativeRepo(t *testing.T, owner *user_model.User, name string, en
 			if unitType == unit_model.TypePullRequests {
 				opts.UnitConfig = optional.Some(map[unit_model.Type]convert.Conversion{
 					unit_model.TypePullRequests: &repo_model.PullRequestsConfig{
+						EnableCodeOwners:     true,
 						AllowMerge:           true,
 						AllowRebase:          true,
 						AllowRebaseMerge:     true,

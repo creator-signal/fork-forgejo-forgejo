@@ -10,6 +10,7 @@ import (
 	issues_model "forgejo.org/models/issues"
 	org_model "forgejo.org/models/organization"
 	access_model "forgejo.org/models/perm/access"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
@@ -40,6 +41,12 @@ func PullRequestCodeOwnersReview(ctx context.Context, issue *issues_model.Issue,
 
 	if pr.BaseRepo.IsFork {
 		return nil, nil
+	}
+
+	if pullUnit, err := pr.BaseRepo.GetUnit(ctx, unit.TypePullRequests); err == nil {
+		if cfg, ok := pullUnit.Config.(*repo_model.PullRequestsConfig); ok && !cfg.EnableCodeOwners {
+			return nil, nil
+		}
 	}
 
 	repo, err := gitrepo.OpenRepository(ctx, pr.BaseRepo)

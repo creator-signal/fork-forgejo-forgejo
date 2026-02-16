@@ -966,6 +966,7 @@ func updateRepoUnits(ctx *context.APIContext, owner string, repo *repo_model.Rep
 			if err != nil {
 				// Unit type doesn't exist so we make a new config file with default values
 				config = &repo_model.PullRequestsConfig{
+					EnableCodeOwners:              true,
 					IgnoreWhitespaceConflicts:     false,
 					AllowMerge:                    true,
 					AllowRebase:                   true,
@@ -1010,6 +1011,9 @@ func updateRepoUnits(ctx *context.APIContext, owner string, repo *repo_model.Rep
 			}
 			if opts.AllowRebaseUpdate != nil {
 				config.AllowRebaseUpdate = *opts.AllowRebaseUpdate
+			}
+			if opts.EnableCodeOwners != nil {
+				config.EnableCodeOwners = *opts.EnableCodeOwners
 			}
 			if opts.DefaultDeleteBranchAfterMerge != nil {
 				config.DefaultDeleteBranchAfterMerge = *opts.DefaultDeleteBranchAfterMerge

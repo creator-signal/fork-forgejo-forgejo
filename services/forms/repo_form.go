@@ -185,6 +185,7 @@ type RepoUnitSettingForm struct {
 	EnablePackages                        bool
 	EnablePulls                           bool
 	EnableActions                         bool
+	PullsEnableCodeOwners                 bool
 	PullsIgnoreWhitespace                 bool
 	PullsAllowMerge                       bool
 	PullsAllowRebase                      bool

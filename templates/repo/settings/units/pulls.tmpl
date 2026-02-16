@@ -146,6 +146,12 @@
 				<label>{{ctx.Locale.Tr "repo.settings.pulls.ignore_whitespace"}}</label>
 			</div>
 		</div>
+		<div class="field">
+			<div class="ui checkbox">
+				<input name="pulls_enable_code_owners" type="checkbox" {{if or (not $pullRequestEnabled) ($prUnit.PullRequestsConfig.EnableCodeOwners)}}checked{{end}}>
+				<label>{{ctx.Locale.Tr "repo.settings.pulls.enable_code_owners"}}</label>
+			</div>
+		</div>
 	</div>
 
 	<div class="divider"></div>
