@@ -258,6 +258,7 @@ func (s *Service) UpdateTask(
 		if runner.Ephemeral {
 			err := actions_model.DeleteRunner(ctx, runner)
 			if err != nil {
+				log.Error("failed to delete ephemeral runner %v, %w", task.RunnerID, err)
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete ephemeral runner %v, %w", task.RunnerID, err))
 			}
 		}
