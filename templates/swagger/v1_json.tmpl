@@ -25434,6 +25434,11 @@
           "type": "string",
           "x-go-name": "Description"
         },
+        "enable_code_owners": {
+          "description": "either `true` to enable CODEOWNERS review requests, or `false` to disable them.",
+          "type": "boolean",
+          "x-go-name": "EnableCodeOwners"
+        },
         "enable_prune": {
           "description": "enable prune - remove obsolete remote-tracking references when mirroring",
           "type": "boolean",
@@ -28828,6 +28833,10 @@
         "empty": {
           "type": "boolean",
           "x-go-name": "Empty"
+        },
+        "enable_code_owners": {
+          "type": "boolean",
+          "x-go-name": "EnableCodeOwners"
         },
         "external_tracker": {
           "$ref": "#/definitions/ExternalTracker"
