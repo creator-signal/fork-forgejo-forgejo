@@ -13,6 +13,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Tests for contents of pages .../issues and .../pulls
+
+func TestIssueFilterLabels(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("Exclusion tooltips", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		url := "/user2/repo1/issues?labels=-2"
+		page := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", url), http.StatusOK).Body)
+
+		page.AssertElement(t, ".label-filter .menu .item:has(a[data-label-id='1']) button[data-tooltip-content='Exclude label']", true)
+		page.AssertElement(t, ".label-filter .menu .item:has(a[data-label-id='2']) button[data-tooltip-content='Clear exclusion']", true)
+	})
+}
+
 func TestIssueSorting(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
