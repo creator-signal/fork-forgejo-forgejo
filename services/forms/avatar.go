@@ -1,5 +1,6 @@
+// Copyright 2018 The Gitea Authors. All rights reserved.
 // Copyright 2026 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 
 package forms
 
