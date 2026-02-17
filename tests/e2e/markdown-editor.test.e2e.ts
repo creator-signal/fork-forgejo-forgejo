@@ -1,3 +1,6 @@
+// Copyright 2024 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
 // web_src/js/modules/tab.ts
 // web_src/css/modules/tab.css
@@ -6,7 +9,7 @@
 // templates/shared/combomarkdowneditor.tmpl
 // @watch end
 
-import {expect} from '@playwright/test';
+import {expect, type Page} from '@playwright/test';
 import {accessibilityCheck} from './shared/accessibility.ts';
 import {test} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
@@ -349,7 +352,7 @@ test('Markdown list continuation', async ({page}) => {
 });
 
 test('Markdown insert table', async ({page}) => {
-  async function evaluateTableInsertion(page, selector, isEditing) {
+  async function evaluateTableInsertion(page: Page, selector: string, isEditing: boolean) {
     const area = page.locator(selector);
 
     let expectedContent = '| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n'
