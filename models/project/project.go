@@ -367,7 +367,11 @@ func ChangeProjectStatus(ctx context.Context, p *Project, isClosed bool) error {
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
 		p.IsClosed = isClosed
-		p.ClosedDateUnix = timeutil.TimeStampNow()
+		if isClosed {
+			p.ClosedDateUnix = timeutil.TimeStampNow()
+		} else {
+			p.ClosedDateUnix = 0
+		}
 		count, err := db.GetEngine(ctx).ID(p.ID).Cols("is_closed", "closed_date_unix").Update(p)
 		if err != nil {
 			return err

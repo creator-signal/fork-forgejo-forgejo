@@ -10,6 +10,7 @@ import (
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/timeutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,6 +48,34 @@ func TestGetProjects(t *testing.T) {
 
 	// 1 value for this repo exists in the fixtures
 	assert.Len(t, projects, 1)
+}
+
+func TestChangeProjectStatusClosedDate(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	p := &Project{
+		Type:        TypeRepository,
+		CardType:    CardTypeTextOnly,
+		Title:       "Status Test Project",
+		RepoID:      1,
+		CreatedUnix: timeutil.TimeStampNow(),
+		CreatorID:   2,
+	}
+	require.NoError(t, NewProject(db.DefaultContext, p))
+
+	// Close it — ClosedDateUnix should be set
+	require.NoError(t, ChangeProjectStatus(db.DefaultContext, p, true))
+	closed, err := GetProjectByID(db.DefaultContext, p.ID)
+	require.NoError(t, err)
+	assert.True(t, closed.IsClosed)
+	assert.Positive(t, int64(closed.ClosedDateUnix))
+
+	// Reopen — ClosedDateUnix should be cleared
+	require.NoError(t, ChangeProjectStatus(db.DefaultContext, closed, false))
+	reopened, err := GetProjectByID(db.DefaultContext, p.ID)
+	require.NoError(t, err)
+	assert.False(t, reopened.IsClosed)
+	assert.Equal(t, int64(0), int64(reopened.ClosedDateUnix))
 }
 
 func TestProjectsSort(t *testing.T) {
