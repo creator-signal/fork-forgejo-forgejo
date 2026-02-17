@@ -24,6 +24,13 @@ type IssueTemplate struct {
 	Ref    string   `json:"ref" yaml:"ref" toml:"ref"`
 }
 
+/*
+Used specifically for TOML fallback.
+*/
+type TomlFallback struct {
+	Issues []IssueTemplate `toml:"issues"`
+}
+
 func (it *IssueTemplate) Valid() bool {
 	return strings.TrimSpace(it.Name) != "" && strings.TrimSpace(it.About) != ""
 }
@@ -96,6 +103,26 @@ func TestExtractMetadata(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("FallbackYAML", func(t *testing.T) {
+		var meta []string
+		body, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", minuses, fallbackYAML, minuses, bodyTest), &meta)
+		require.NoError(t, err)
+		assert.Equal(t, bodyTest, body)
+		assert.Equal(t, []string{"test"}, meta)
+		_, err2 := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", pluses, fallbackYAML, pluses, bodyTest), &meta)
+		require.Error(t, err2)
+	})
+
+	t.Run("FallbackTOML", func(t *testing.T) {
+		var meta TomlFallback
+		body, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", pluses, fallbackTOML, pluses, bodyTest), &meta)
+		require.NoError(t, err)
+		assert.Equal(t, bodyTest, body)
+		assert.Equal(t, []IssueTemplate{{}}, meta.Issues)
+		_, err2 := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", minuses, fallbackTOML, minuses, bodyTest), &meta)
+		require.Error(t, err2)
+	})
 }
 
 func TestExtractMetadataBytes(t *testing.T) {
@@ -166,10 +193,32 @@ func TestExtractMetadataBytes(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("FallbackYAML", func(t *testing.T) {
+		var meta []string
+		body, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", minuses, fallbackYAML, minuses, bodyTest)), &meta)
+		require.NoError(t, err)
+		assert.Equal(t, bodyTest, string(body))
+		assert.Equal(t, []string{"test"}, meta)
+		_, err2 := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", pluses, fallbackYAML, pluses, bodyTest)), &meta)
+		require.Error(t, err2)
+	})
+
+	t.Run("FallbackTOML", func(t *testing.T) {
+		var meta TomlFallback
+		body, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", pluses, fallbackTOML, pluses, bodyTest)), &meta)
+		require.NoError(t, err)
+		assert.Equal(t, bodyTest, string(body))
+		assert.Equal(t, []IssueTemplate{{}}, meta.Issues)
+		_, err2 := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", minuses, fallbackTOML, minuses, bodyTest)), &meta)
+		require.Error(t, err2)
+	})
 }
 
 var (
-	sepTests      = []string{"-----", "++++"}
+	minuses       = "-----"
+	pluses        = "++++"
+	sepTests      = []string{minuses, pluses}
 	frontTestYAML = `name: Test
 about: "A Test"
 title: "Test Title"
@@ -186,13 +235,14 @@ labels = ["bug", "test label"]`
 "title": "Test Title",
 "labels": ["bug", "test label"]
 }`
-	bodyTest = "This is the body"
-	metaTest = IssueTemplate{
+	frontTests = []string{frontTestYAML, frontTestTOML, frontTestJSON}
+	bodyTest   = "This is the body"
+	metaTest   = IssueTemplate{
 		Name:   "Test",
 		About:  "A Test",
 		Title:  "Test Title",
 		Labels: []string{"bug", "test label"},
 	}
+	fallbackYAML = `- test`
+	fallbackTOML = `[[issues]]`
 )
-
-var frontTests = []string{frontTestYAML, frontTestTOML, frontTestJSON}

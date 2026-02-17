@@ -6,6 +6,7 @@ package markdown
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math"
 	"unicode"
 	"unicode/utf8"
@@ -88,6 +89,23 @@ func ExtractMetadata(contents string, out any) (string, error) {
 	return string(body), err
 }
 
+// error returned by ExtractMetadataBytes
+func Failed(format int, heuristicUsed string, err error) error {
+	var formatString string
+	switch format {
+	case JSON:
+		formatString = "JSON"
+	case YAML:
+		formatString = "YAML"
+	case TOML:
+		formatString = "TOML"
+	}
+	return errors.Join(
+		fmt.Errorf("failed to parse frontmatter (%s assumed; %s)", formatString, heuristicUsed),
+		err,
+	)
+}
+
 // ExtractMetadata consumes a markdown file, parses frontmatter,
 // and returns the frontmatter metadata separated from the markdown content
 func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
@@ -145,10 +163,12 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 	}
 
 	var format int
+	var heuristicUsed string
 
 	// assume JSON if delimited by {}
 	if startSep == '{' || endSep == '}' {
 		format = JSON
+		heuristicUsed = "bare {} frontmatter"
 	} else {
 		// disambiguate based upon first appearance of {, :, or =
 		firstBrace := bytes.IndexByte(front, '{') // JSON
@@ -165,31 +185,36 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 			firstEqual = math.MaxInt
 		}
 
-		if firstBrace <= firstColon && firstBrace <= firstEqual {
+		if firstBrace < firstColon && firstBrace < firstEqual {
 			format = JSON
-		} else if firstColon <= firstBrace && firstColon <= firstEqual {
+			heuristicUsed = "{ appeared before : or ="
+		} else if firstColon < firstBrace && firstColon < firstEqual {
 			format = YAML
-		} else if firstEqual <= firstBrace && firstEqual <= firstColon {
+			heuristicUsed = ": appeared before { or ="
+		} else if firstEqual < firstBrace && firstEqual < firstColon {
 			format = TOML
+			heuristicUsed = "= appeared before { or :"
 		} else if startSep == '-' {
 			format = YAML
+			heuristicUsed = "minus separators fall back to YAML"
 		} else if startSep == '+' {
-			format = JSON
+			format = TOML
+			heuristicUsed = "plus separators fall back to YAML"
 		}
 	}
 
 	switch format {
 	case YAML:
 		if err := yaml.Unmarshal(front, out); err != nil {
-			return contents, err
+			return contents, Failed(format, heuristicUsed, err)
 		}
 	case TOML:
 		if err := toml.Unmarshal(front, out); err != nil {
-			return contents, err
+			return contents, Failed(format, heuristicUsed, err)
 		}
 	case JSON:
 		if err := json.Unmarshal(front, out); err != nil {
-			return contents, err
+			return contents, Failed(format, heuristicUsed, err)
 		}
 	}
 
