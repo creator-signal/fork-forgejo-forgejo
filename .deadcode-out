@@ -51,6 +51,16 @@ forgejo.org/models/organization
 forgejo.org/models/perm/access
 	GetRepoWriters
 
+forgejo.org/models/project
+	GetProjectIssueColumnIDs
+	IsErrCardAlreadyInProject
+	IsErrSomeCardsNotExist
+	ErrSomeCardsNotExist.Error
+	ErrSomeCardsNotExist.Unwrap
+	GetProjectsByIDs
+	GetProjectForRepoByIDOrTitle
+	GetProjectForOrgByIDOrTitle
+
 forgejo.org/models/user
 	IsErrUserWrongType
 	IsErrExternalLoginUserAlreadyExist
@@ -230,6 +240,10 @@ forgejo.org/services/federation
 
 forgejo.org/services/notify
 	UnregisterNotifier
+
+forgejo.org/services/project
+	ValidateProjectOwner
+	ChangeProjectStatus
 
 forgejo.org/services/repository
 	IsErrForkAlreadyExist

@@ -9,7 +9,9 @@ import (
 	"forgejo.org/modules/setting"
 )
 
-type Forgejo struct{}
+type Forgejo struct {
+	Unimplemented // embed for forward compatibility
+}
 
 var _ ServerInterface = &Forgejo{}
 

@@ -30,7 +30,702 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Version'
+
+  # ── Repo Projects ──────────────────────────────────────────────
+  /repos/{owner}/{repo}/projects:
+    get:
+      tags: [project]
+      summary: List repository projects
+      operationId: listRepoProjects
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/state'
+        - $ref: '#/components/parameters/keyword'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [project]
+      summary: Create a repository project
+      operationId: createRepoProject
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectOption'
+      responses:
+        '201':
+          $ref: '#/components/responses/Project'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /repos/{owner}/{repo}/projects/{project}:
+    get:
+      tags: [project]
+      summary: Get a repository project
+      operationId: getRepoProject
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Project'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [project]
+      summary: Update a repository project
+      operationId: updateRepoProject
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditProjectOption'
+      responses:
+        '200':
+          $ref: '#/components/responses/Project'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [project]
+      summary: Delete a repository project
+      operationId: deleteRepoProject
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+      responses:
+        '204':
+          description: project deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /repos/{owner}/{repo}/projects/{project}/columns:
+    get:
+      tags: [project]
+      summary: List project columns
+      operationId: listRepoProjectColumns
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectColumnList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [project]
+      summary: Create a project column
+      operationId: createRepoProjectColumn
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateColumnOption'
+      responses:
+        '201':
+          $ref: '#/components/responses/ProjectColumn'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /repos/{owner}/{repo}/projects/{project}/columns/move:
+    post:
+      tags: [project]
+      summary: Reorder project columns
+      operationId: moveRepoProjectColumns
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveColumnsOption'
+      responses:
+        '204':
+          description: columns reordered
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /repos/{owner}/{repo}/projects/{project}/columns/{column}:
+    patch:
+      tags: [project]
+      summary: Update a project column
+      operationId: updateRepoProjectColumn
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditColumnOption'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectColumn'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [project]
+      summary: Delete a project column
+      operationId: deleteRepoProjectColumn
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+      responses:
+        '204':
+          description: column deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /repos/{owner}/{repo}/projects/{project}/columns/{column}/cards:
+    get:
+      tags: [project]
+      summary: List cards in a project column
+      operationId: listRepoProjectCards
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectCardList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [project]
+      summary: Add a card to a project column
+      operationId: addRepoProjectCard
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCardOption'
+      responses:
+        '201':
+          $ref: '#/components/responses/ProjectCard'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /repos/{owner}/{repo}/projects/{project}/columns/{column}/cards/reorder:
+    patch:
+      tags: [project]
+      summary: Reorder cards in a project column
+      operationId: reorderRepoProjectCards
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderCardsOption'
+      responses:
+        '204':
+          description: cards reordered
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /repos/{owner}/{repo}/projects/{project}/cards/{card}:
+    patch:
+      tags: [project]
+      summary: Move a project card
+      operationId: moveRepoProjectCard
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/card'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveCardOption'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectCard'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [project]
+      summary: Remove a card from a project
+      operationId: deleteRepoProjectCard
+      parameters:
+        - $ref: '#/components/parameters/owner'
+        - $ref: '#/components/parameters/repo'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/card'
+      responses:
+        '204':
+          description: card removed
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Org Projects ───────────────────────────────────────────────
+  /orgs/{org}/projects:
+    get:
+      tags: [project]
+      summary: List organization projects
+      operationId: listOrgProjects
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/state'
+        - $ref: '#/components/parameters/keyword'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [project]
+      summary: Create an organization project
+      operationId: createOrgProject
+      parameters:
+        - $ref: '#/components/parameters/org'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectOption'
+      responses:
+        '201':
+          $ref: '#/components/responses/Project'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /orgs/{org}/projects/{project}:
+    get:
+      tags: [project]
+      summary: Get an organization project
+      operationId: getOrgProject
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Project'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [project]
+      summary: Update an organization project
+      operationId: updateOrgProject
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditProjectOption'
+      responses:
+        '200':
+          $ref: '#/components/responses/Project'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [project]
+      summary: Delete an organization project
+      operationId: deleteOrgProject
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+      responses:
+        '204':
+          description: project deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orgs/{org}/projects/{project}/columns:
+    get:
+      tags: [project]
+      summary: List organization project columns
+      operationId: listOrgProjectColumns
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectColumnList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [project]
+      summary: Create an organization project column
+      operationId: createOrgProjectColumn
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateColumnOption'
+      responses:
+        '201':
+          $ref: '#/components/responses/ProjectColumn'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /orgs/{org}/projects/{project}/columns/move:
+    post:
+      tags: [project]
+      summary: Reorder organization project columns
+      operationId: moveOrgProjectColumns
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveColumnsOption'
+      responses:
+        '204':
+          description: columns reordered
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /orgs/{org}/projects/{project}/columns/{column}:
+    patch:
+      tags: [project]
+      summary: Update an organization project column
+      operationId: updateOrgProjectColumn
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditColumnOption'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectColumn'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [project]
+      summary: Delete an organization project column
+      operationId: deleteOrgProjectColumn
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+      responses:
+        '204':
+          description: column deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orgs/{org}/projects/{project}/columns/{column}/cards:
+    get:
+      tags: [project]
+      summary: List cards in an organization project column
+      operationId: listOrgProjectCards
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectCardList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [project]
+      summary: Add a card to an organization project column
+      operationId: addOrgProjectCard
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCardOption'
+      responses:
+        '201':
+          $ref: '#/components/responses/ProjectCard'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /orgs/{org}/projects/{project}/columns/{column}/cards/reorder:
+    patch:
+      tags: [project]
+      summary: Reorder cards in an organization project column
+      operationId: reorderOrgProjectCards
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/column'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderCardsOption'
+      responses:
+        '204':
+          description: cards reordered
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /orgs/{org}/projects/{project}/cards/{card}:
+    patch:
+      tags: [project]
+      summary: Move an organization project card
+      operationId: moveOrgProjectCard
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/card'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveCardOption'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectCard'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [project]
+      summary: Remove a card from an organization project
+      operationId: deleteOrgProjectCard
+      parameters:
+        - $ref: '#/components/parameters/org'
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/card'
+      responses:
+        '204':
+          description: card removed
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
+  # ── Parameters ─────────────────────────────────────────────────
+  parameters:
+    owner:
+      name: owner
+      in: path
+      required: true
+      schema:
+        type: string
+      description: owner of the repo
+    repo:
+      name: repo
+      in: path
+      required: true
+      schema:
+        type: string
+      description: name of the repo
+    org:
+      name: org
+      in: path
+      required: true
+      schema:
+        type: string
+      description: name of the organization
+    projectId:
+      name: project
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+      description: ID of the project
+    column:
+      name: column
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+      description: ID of the project column
+    card:
+      name: card
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+      description: ID of the project card
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+      description: page number of results to return (1-based)
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+      description: page size of results
+    state:
+      name: state
+      in: query
+      schema:
+        type: string
+        enum: [open, closed, all]
+        default: open
+      description: filter by project state
+    keyword:
+      name: keyword
+      in: query
+      schema:
+        type: string
+      description: search projects by title keyword
+    sort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum: [oldest, newest, alphabetically, reversealphabetically, recentupdate, leastupdate]
+      description: sort order
+
+  # ── Schemas ────────────────────────────────────────────────────
   schemas:
     Version:
       type: object
@@ -38,3 +733,305 @@ components:
         version:
           type: string
 
+    APIError:
+      type: object
+      properties:
+        message:
+          type: string
+        url:
+          type: string
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        body:
+          type: string
+        state:
+          type: string
+          enum: [open, closed]
+        template_type:
+          type: integer
+          description: "0=none, 1=basic kanban, 2=bug triage"
+        card_type:
+          type: integer
+          description: "0=text only, 1=images and text"
+        type:
+          type: integer
+          description: "1=individual, 2=repository, 3=organization"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+        column_count:
+          type: integer
+        open_issues:
+          type: integer
+        closed_issues:
+          type: integer
+
+    ProjectColumn:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        color:
+          type: string
+        default:
+          type: boolean
+        sorting:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        card_count:
+          type: integer
+
+    ProjectCard:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        sorting:
+          type: integer
+          format: int64
+        issue:
+          $ref: '#/components/schemas/ProjectCardIssue'
+        column:
+          $ref: '#/components/schemas/ProjectColumn'
+
+    ProjectCardIssue:
+      type: object
+      description: Minimal issue info embedded in a project card
+      properties:
+        id:
+          type: integer
+          format: int64
+        number:
+          type: integer
+          format: int64
+        title:
+          type: string
+        state:
+          type: string
+        is_pull:
+          type: boolean
+
+    CreateProjectOption:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        body:
+          type: string
+        template_type:
+          type: integer
+          description: "0=none, 1=basic kanban, 2=bug triage"
+          default: 0
+
+    EditProjectOption:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        body:
+          type: string
+        state:
+          type: string
+          enum: [open, closed]
+        card_type:
+          type: integer
+          description: "0=text only, 1=images and text"
+
+    CreateColumnOption:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+        color:
+          type: string
+          pattern: '^#[0-9a-fA-F]{6}$'
+
+    EditColumnOption:
+      type: object
+      properties:
+        title:
+          type: string
+        color:
+          type: string
+          pattern: '^#[0-9a-fA-F]{6}$'
+
+    ColumnPosition:
+      type: object
+      required:
+        - column_id
+        - position
+      properties:
+        column_id:
+          type: integer
+          format: int64
+        position:
+          type: integer
+          minimum: 0
+
+    MoveColumnsOption:
+      type: object
+      required:
+        - columns
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnPosition'
+          minItems: 1
+
+    AddCardOption:
+      type: object
+      required:
+        - issue_id
+      properties:
+        issue_id:
+          type: integer
+          format: int64
+        position:
+          type: integer
+          format: int64
+
+    MoveCardOption:
+      type: object
+      properties:
+        column_id:
+          type: integer
+          format: int64
+        position:
+          type: integer
+          format: int64
+
+    CardPosition:
+      type: object
+      required:
+        - card_id
+        - position
+      properties:
+        card_id:
+          type: integer
+          format: int64
+        position:
+          type: integer
+          format: int64
+          minimum: 0
+
+    ReorderCardsOption:
+      type: object
+      required:
+        - card_positions
+      properties:
+        card_positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardPosition'
+          minItems: 1
+
+  # ── Responses ──────────────────────────────────────────────────
+  responses:
+    Project:
+      description: a project
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Project'
+    ProjectList:
+      description: list of projects
+      headers:
+        X-Total-Count:
+          schema:
+            type: integer
+          description: total number of projects
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Project'
+    ProjectColumn:
+      description: a project column
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProjectColumn'
+    ProjectColumnList:
+      description: list of project columns
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ProjectColumn'
+    ProjectCard:
+      description: a project card
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProjectCard'
+    ProjectCardList:
+      description: list of project cards
+      headers:
+        X-Total-Count:
+          schema:
+            type: integer
+          description: total number of cards
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ProjectCard'
+    NotFound:
+      description: resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+    Forbidden:
+      description: forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+    ValidationError:
+      description: validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+    Conflict:
+      description: conflict (e.g. duplicate)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
