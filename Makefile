@@ -172,8 +172,8 @@ FORGEJO_API_SPEC := public/assets/forgejo/api.v1.yml
 
 SWAGGER_SPEC := templates/swagger/v1_json.tmpl
 OPENAPI3_SPEC := templates/swagger/v1_openapi3_json.tmpl
-OPENAPI3_SPEC_S_TMPL := s|"url": *"/api/v1"|"url": "{{AppSubUrl \| JSEscape}}/api/v1"|g
-OPENAPI3_SPEC_S_JSON := s|"url": *"{{AppSubUrl \| JSEscape}}/api/v1"|"url": "/api/v1"|g
+OPENAPI3_SPEC_S_TMPL := s|"url": *"/api"|"url": "{{AppSubUrl \| JSEscape}}/api"|g
+OPENAPI3_SPEC_S_JSON := s|"url": *"{{AppSubUrl \| JSEscape}}/api"|"url": "/api"|g
 SWAGGER_SPEC_S_TMPL := s|"basePath": *"/api/v1"|"basePath": "{{AppSubUrl \| JSEscape}}/api/v1"|g
 SWAGGER_SPEC_S_JSON := s|"basePath": *"{{AppSubUrl \| JSEscape}}/api/v1"|"basePath": "/api/v1"|g
 SWAGGER_EXCLUDE := code.gitea.io/sdk
@@ -423,8 +423,9 @@ swagger-validate:
 .PHONY: generate-openapi3
 generate-openapi3: $(OPENAPI3_SPEC)
 
-$(OPENAPI3_SPEC): $(SWAGGER_SPEC)
+$(OPENAPI3_SPEC): $(SWAGGER_SPEC) $(FORGEJO_API_SPEC)
 	$(GO) run build/generate-openapi.go
+	$(GO) run build/merge-openapi3.go
 
 .PHONY: openapi3-check
 openapi3-check: generate-openapi3

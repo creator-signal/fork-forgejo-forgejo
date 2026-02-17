@@ -10,4 +10,5 @@ package build
 import (
 	_ "github.com/getkin/kin-openapi/openapi2"
 	_ "github.com/getkin/kin-openapi/openapi2conv"
+	_ "github.com/getkin/kin-openapi/openapi3"
 )

@@ -3261,6 +3261,7 @@
             "x-go-name": "Message"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -3275,6 +3276,7 @@
             "x-go-name": "Message"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -3289,6 +3291,7 @@
             "x-go-name": "Message"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -3327,6 +3330,7 @@
             "x-go-name": "Message"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -3341,6 +3345,7 @@
             "x-go-name": "Message"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -3355,6 +3360,7 @@
             "x-go-name": "Message"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -3369,6 +3375,7 @@
             "x-go-name": "Message"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -3447,6 +3454,7 @@
           },
           "html_url": {
             "description": "the url of this action run",
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -3708,6 +3716,7 @@
             "x-go-name": "UpdatedAt"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
@@ -3873,13 +3882,7 @@
         "description": "AddCollaboratorOption options when adding a user as a collaborator of a repository",
         "properties": {
           "permission": {
-            "enum": [
-              "read",
-              "write",
-              "admin"
-            ],
-            "type": "string",
-            "x-go-name": "Permission"
+            "$ref": "#/components/schemas/PermissionEnum"
           }
         },
         "type": "object",
@@ -3936,6 +3939,7 @@
             "$ref": "#/components/schemas/CommitUser"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
@@ -3958,6 +3962,7 @@
             "x-go-name": "Type"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -3969,6 +3974,7 @@
         "description": "Attachment a generic attachment",
         "properties": {
           "browser_download_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "DownloadURL"
           },
@@ -4109,6 +4115,7 @@
             "x-go-name": "BlockOnRejectedReviews"
           },
           "branch_name": {
+            "deprecated": true,
             "description": "Deprecated: true",
             "type": "string",
             "x-go-name": "BranchName"
@@ -4317,6 +4324,7 @@
             "x-go-name": "Changes"
           },
           "contents_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "ContentsURL"
           },
@@ -4330,6 +4338,7 @@
             "x-go-name": "Filename"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -4338,6 +4347,7 @@
             "x-go-name": "PreviousFilename"
           },
           "raw_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "RawURL"
           },
@@ -4353,6 +4363,7 @@
         "description": "CombinedStatus holds the combined state of several statuses for a single commit",
         "properties": {
           "commit_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "CommitURL"
           },
@@ -4379,6 +4390,7 @@
             "x-go-name": "TotalCount"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -4406,6 +4418,7 @@
             "x-go-name": "Created"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -4415,6 +4428,7 @@
             "x-go-name": "ID"
           },
           "issue_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "IssueURL"
           },
@@ -4428,6 +4442,7 @@
             "x-go-name": "OriginalAuthorID"
           },
           "pull_request_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "PRURL"
           },
@@ -4467,6 +4482,7 @@
             "x-go-name": "Files"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -4485,6 +4501,7 @@
             "$ref": "#/components/schemas/CommitStats"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -4537,6 +4554,7 @@
             "x-go-name": "SHA"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -4595,6 +4613,7 @@
             "$ref": "#/components/schemas/CommitStatusState"
           },
           "target_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "TargetURL"
           },
@@ -4604,6 +4623,7 @@
             "x-go-name": "Updated"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -4612,9 +4632,14 @@
         "x-go-package": "forgejo.org/modules/structs"
       },
       "CommitStatusState": {
-        "description": "CommitStatusState holds the state of a CommitStatus\nIt can be \"pending\", \"success\", \"error\", \"failure\" and \"warning\"",
-        "type": "string",
-        "x-go-package": "forgejo.org/modules/structs"
+        "enum": [
+          "pending",
+          "success",
+          "error",
+          "failure",
+          "warning"
+        ],
+        "type": "string"
       },
       "CommitUser": {
         "properties": {
@@ -4674,6 +4699,7 @@
             "x-go-name": "Content"
           },
           "download_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "DownloadURL"
           },
@@ -4683,10 +4709,12 @@
             "x-go-name": "Encoding"
           },
           "git_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "GitURL"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -4718,6 +4746,7 @@
           },
           "submodule_git_url": {
             "description": "`submodule_git_url` is populated when `type` is `submodule`, otherwise null",
+            "format": "uri",
             "type": "string",
             "x-go-name": "SubmoduleGitURL"
           },
@@ -4732,6 +4761,7 @@
             "x-go-name": "Type"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -4805,6 +4835,7 @@
             "x-go-name": "BlockOnRejectedReviews"
           },
           "branch_name": {
+            "deprecated": true,
             "description": "Deprecated: true",
             "type": "string",
             "x-go-name": "BranchName"
@@ -4911,6 +4942,7 @@
             "x-go-name": "BranchName"
           },
           "old_branch_name": {
+            "deprecated": true,
             "description": "Deprecated: true\nName of the old branch to create from",
             "type": "string",
             "uniqueItems": true,
@@ -5107,6 +5139,7 @@
         "description": "CreateIssueOption options to create one issue",
         "properties": {
           "assignee": {
+            "deprecated": true,
             "description": "deprecated",
             "type": "string",
             "x-go-name": "Assignee"
@@ -5236,12 +5269,7 @@
             "x-go-name": "Deadline"
           },
           "state": {
-            "enum": [
-              "open",
-              "closed"
-            ],
-            "type": "string",
-            "x-go-name": "State"
+            "$ref": "#/components/schemas/StateType"
           },
           "title": {
             "type": "string",
@@ -5316,14 +5344,12 @@
             "x-go-name": "UserName"
           },
           "visibility": {
-            "description": "possible values are `public` (default), `limited` or `private`",
-            "enum": [
-              "public",
-              "limited",
-              "private"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VisibilityEnum"
+              }
             ],
-            "type": "string",
-            "x-go-name": "Visibility"
+            "description": "possible values are `public` (default), `limited` or `private`"
           },
           "website": {
             "type": "string",
@@ -5603,13 +5629,12 @@
             "x-go-name": "Name"
           },
           "object_format_name": {
-            "description": "ObjectFormatName of the underlying git repository",
-            "enum": [
-              "sha1",
-              "sha256"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ObjectFormatNameEnum"
+              }
             ],
-            "type": "string",
-            "x-go-name": "ObjectFormatName"
+            "description": "ObjectFormatName of the underlying git repository"
           },
           "private": {
             "description": "Whether the repository is private",
@@ -5659,6 +5684,7 @@
             "$ref": "#/components/schemas/CommitStatusState"
           },
           "target_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "TargetURL"
           }
@@ -5733,13 +5759,7 @@
             "x-go-name": "Name"
           },
           "permission": {
-            "enum": [
-              "read",
-              "write",
-              "admin"
-            ],
-            "type": "string",
-            "x-go-name": "Permission"
+            "$ref": "#/components/schemas/PermissionEnum"
           },
           "units": {
             "example": [
@@ -6021,6 +6041,7 @@
             "x-go-name": "Title"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -6110,6 +6131,7 @@
         "properties": {
           "browser_download_url": {
             "description": "(Can only be set if existing attachment is of external type)",
+            "format": "uri",
             "type": "string",
             "x-go-name": "DownloadURL"
           },
@@ -6324,6 +6346,7 @@
         "description": "EditIssueOption options for editing an issue",
         "properties": {
           "assignee": {
+            "deprecated": true,
             "description": "deprecated",
             "type": "string",
             "x-go-name": "Assignee"
@@ -6417,8 +6440,7 @@
             "x-go-name": "Deadline"
           },
           "state": {
-            "type": "string",
-            "x-go-name": "State"
+            "$ref": "#/components/schemas/StateType"
           },
           "title": {
             "type": "string",
@@ -6452,14 +6474,12 @@
             "x-go-name": "RepoAdminChangeTeamAccess"
           },
           "visibility": {
-            "description": "possible values are `public`, `limited` or `private`",
-            "enum": [
-              "public",
-              "limited",
-              "private"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VisibilityEnum"
+              }
             ],
-            "type": "string",
-            "x-go-name": "Visibility"
+            "description": "possible values are `public`, `limited` or `private`"
           },
           "website": {
             "type": "string",
@@ -6813,13 +6833,7 @@
             "x-go-name": "Name"
           },
           "permission": {
-            "enum": [
-              "read",
-              "write",
-              "admin"
-            ],
-            "type": "string",
-            "x-go-name": "Permission"
+            "$ref": "#/components/schemas/PermissionEnum"
           },
           "units": {
             "example": [
@@ -7003,6 +7017,7 @@
           },
           "external_tracker_url": {
             "description": "URL of external issue tracker.",
+            "format": "uri",
             "type": "string",
             "x-go-name": "ExternalTrackerURL"
           }
@@ -7015,6 +7030,7 @@
         "properties": {
           "external_wiki_url": {
             "description": "URL of external wiki.",
+            "format": "uri",
             "type": "string",
             "x-go-name": "ExternalWikiURL"
           }
@@ -7036,6 +7052,7 @@
             "x-go-name": "Created"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -7058,6 +7075,7 @@
             "$ref": "#/components/schemas/CommitMeta"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -7435,6 +7453,7 @@
             "x-go-name": "Size"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -7467,6 +7486,7 @@
             "x-go-name": "Type"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -7504,6 +7524,7 @@
             "x-go-name": "Type"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -7541,6 +7562,7 @@
             "x-go-name": "Truncated"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -7582,6 +7604,7 @@
             "additionalProperties": {
               "type": "string"
             },
+            "deprecated": true,
             "description": "Deprecated: use Metadata instead",
             "type": "object",
             "x-go-name": "Config"
@@ -7620,6 +7643,7 @@
             "x-go-name": "Updated"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -7710,6 +7734,7 @@
             "x-go-name": "Deadline"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -7762,7 +7787,12 @@
             "$ref": "#/components/schemas/RepositoryMeta"
           },
           "state": {
-            "$ref": "#/components/schemas/StateType"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StateType"
+              }
+            ],
+            "description": "Whether the issue is open or closed\nopen StateOpen  StateOpen pr is opened\nclosed StateClosed  StateClosed pr is closed"
           },
           "title": {
             "type": "string",
@@ -7774,6 +7804,7 @@
             "x-go-name": "Updated"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
@@ -7812,6 +7843,7 @@
             "x-go-name": "Name"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -7858,7 +7890,16 @@
             "x-go-name": "ID"
           },
           "type": {
-            "$ref": "#/components/schemas/IssueFormFieldType"
+            "enum": [
+              "markdown",
+              "textarea",
+              "input",
+              "dropdown",
+              "checkboxes"
+            ],
+            "type": "string",
+            "x-go-enum-desc": "markdown IssueFormFieldTypeMarkdown\ntextarea IssueFormFieldTypeTextarea\ninput IssueFormFieldTypeInput\ndropdown IssueFormFieldTypeDropdown\ncheckboxes IssueFormFieldTypeCheckboxes",
+            "x-go-name": "Type"
           },
           "validations": {
             "additionalProperties": {},
@@ -7867,23 +7908,18 @@
           },
           "visible": {
             "items": {
-              "$ref": "#/components/schemas/IssueFormFieldVisible"
+              "enum": [
+                "form",
+                "content"
+              ],
+              "type": "string",
+              "x-go-enum-desc": "form IssueFormFieldVisibleForm\ncontent IssueFormFieldVisibleContent"
             },
             "type": "array",
             "x-go-name": "Visible"
           }
         },
         "type": "object",
-        "x-go-package": "forgejo.org/modules/structs"
-      },
-      "IssueFormFieldType": {
-        "title": "IssueFormFieldType defines issue form field type, can be \"markdown\", \"textarea\", \"input\", \"dropdown\" or \"checkboxes\"",
-        "type": "string",
-        "x-go-package": "forgejo.org/modules/structs"
-      },
-      "IssueFormFieldVisible": {
-        "description": "IssueFormFieldVisible defines issue form field visible",
-        "type": "string",
         "x-go-package": "forgejo.org/modules/structs"
       },
       "IssueLabelsOption": {
@@ -8004,6 +8040,7 @@
             "x-go-name": "Name"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -8056,6 +8093,7 @@
             "x-go-name": "Name"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -8075,6 +8113,7 @@
             "x-go-name": "Name"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -8289,6 +8328,7 @@
             "x-go-name": "Service"
           },
           "uid": {
+            "deprecated": true,
             "description": "deprecated (only for backwards compatibility)",
             "format": "int64",
             "type": "integer",
@@ -8535,14 +8575,17 @@
         "description": "NotificationSubject contains the notification subject (Issue/Pull/Commit)",
         "properties": {
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
           "latest_comment_html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "LatestCommentHTMLURL"
           },
           "latest_comment_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "LatestCommentURL"
           },
@@ -8554,9 +8597,18 @@
             "x-go-name": "Title"
           },
           "type": {
-            "$ref": "#/components/schemas/NotifySubjectType"
+            "enum": [
+              "Issue",
+              "Pull",
+              "Commit",
+              "Repository"
+            ],
+            "type": "string",
+            "x-go-enum-desc": "Issue NotifySubjectIssue  NotifySubjectIssue an issue is subject of an notification\nPull NotifySubjectPull  NotifySubjectPull an pull is subject of an notification\nCommit NotifySubjectCommit  NotifySubjectCommit an commit is subject of an notification\nRepository NotifySubjectRepository  NotifySubjectRepository an repository is subject of an notification",
+            "x-go-name": "Type"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -8592,16 +8644,12 @@
             "x-go-name": "UpdatedAt"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
         },
         "type": "object",
-        "x-go-package": "forgejo.org/modules/structs"
-      },
-      "NotifySubjectType": {
-        "description": "NotifySubjectType represent type of notification subject",
-        "type": "string",
         "x-go-package": "forgejo.org/modules/structs"
       },
       "OAuth2Application": {
@@ -8644,10 +8692,18 @@
         "type": "object",
         "x-go-package": "forgejo.org/modules/structs"
       },
+      "ObjectFormatNameEnum": {
+        "enum": [
+          "sha1",
+          "sha256"
+        ],
+        "type": "string"
+      },
       "Organization": {
         "description": "Organization represents an organization",
         "properties": {
           "avatar_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "AvatarURL"
           },
@@ -8681,6 +8737,7 @@
             "x-go-name": "RepoAdminChangeTeamAccess"
           },
           "username": {
+            "deprecated": true,
             "description": "deprecated",
             "type": "string",
             "x-go-name": "UserName"
@@ -8763,6 +8820,7 @@
             "$ref": "#/components/schemas/User"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -8874,6 +8932,7 @@
             "x-go-name": "Timestamp"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
@@ -8950,6 +9009,14 @@
         "type": "object",
         "x-go-package": "forgejo.org/modules/structs"
       },
+      "PermissionEnum": {
+        "enum": [
+          "read",
+          "write",
+          "admin"
+        ],
+        "type": "string"
+      },
       "PublicKey": {
         "description": "PublicKey publickey is a user key to push code to repository",
         "properties": {
@@ -8984,6 +9051,7 @@
             "x-go-name": "Title"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
@@ -9049,6 +9117,7 @@
             "x-go-name": "Deletions"
           },
           "diff_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "DiffURL"
           },
@@ -9070,6 +9139,7 @@
             "$ref": "#/components/schemas/PRBranchInfo"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -9122,6 +9192,7 @@
             "x-go-name": "Index"
           },
           "patch_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "PatchURL"
           },
@@ -9163,6 +9234,7 @@
             "x-go-name": "Updated"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
@@ -9181,6 +9253,7 @@
             "x-go-name": "IsWorkInProgress"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -9218,6 +9291,7 @@
             "x-go-name": "Dismissed"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -9231,6 +9305,7 @@
             "x-go-name": "Official"
           },
           "pull_request_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLPullURL"
           },
@@ -9282,6 +9357,7 @@
             "x-go-name": "DiffHunk"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -9314,6 +9390,7 @@
             "x-go-name": "ReviewID"
           },
           "pull_request_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLPullURL"
           },
@@ -9484,6 +9561,7 @@
         "properties": {
           "html_url": {
             "description": "HTML URL to the action run containing the artifact",
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -9515,6 +9593,7 @@
         "properties": {
           "api_url": {
             "description": "API URL for the attachment",
+            "format": "uri",
             "type": "string",
             "x-go-name": "APIURL"
           },
@@ -9563,6 +9642,7 @@
         "properties": {
           "html_url": {
             "description": "HTML URL to the package version",
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -9726,6 +9806,7 @@
             "x-go-name": "Ref"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -9761,10 +9842,6 @@
       },
       "RegisterRunnerResponse": {
         "properties": {
-          "ephemeral": {
-            "type": "boolean",
-            "x-go-name": "Ephemeral"
-          },
           "id": {
             "format": "int64",
             "type": "integer",
@@ -9828,6 +9905,7 @@
             "x-go-name": "HideArchiveLinks"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -9854,6 +9932,7 @@
             "x-go-name": "TagName"
           },
           "tarball_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "TarURL"
           },
@@ -9862,14 +9941,17 @@
             "x-go-name": "Target"
           },
           "upload_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "UploadURL"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
           "zipball_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "ZipURL"
           }
@@ -9957,6 +10039,7 @@
             "$ref": "#/components/schemas/CommitMeta"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
@@ -10040,10 +10123,12 @@
             "x-go-name": "ArchivedAt"
           },
           "avatar_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "AvatarURL"
           },
           "clone_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "CloneURL"
           },
@@ -10132,6 +10217,7 @@
             "x-go-name": "HasWiki"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -10156,6 +10242,7 @@
             "x-go-name": "Language"
           },
           "languages_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "LanguagesURL"
           },
@@ -10181,13 +10268,12 @@
             "x-go-name": "Name"
           },
           "object_format_name": {
-            "description": "ObjectFormatName of the underlying git repository",
-            "enum": [
-              "sha1",
-              "sha256"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ObjectFormatNameEnum"
+              }
             ],
-            "type": "string",
-            "x-go-name": "ObjectFormatName"
+            "description": "ObjectFormatName of the underlying git repository"
           },
           "open_issues_count": {
             "format": "int64",
@@ -10200,6 +10286,7 @@
             "x-go-name": "OpenPulls"
           },
           "original_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "OriginalURL"
           },
@@ -10230,6 +10317,7 @@
             "x-go-name": "Size"
           },
           "ssh_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "SSHURL"
           },
@@ -10255,6 +10343,7 @@
             "x-go-name": "Updated"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           },
@@ -10300,9 +10389,14 @@
         "x-go-package": "forgejo.org/modules/structs"
       },
       "ReviewStateType": {
-        "description": "ReviewStateType review state type",
-        "type": "string",
-        "x-go-package": "forgejo.org/modules/structs"
+        "enum": [
+          "APPROVED",
+          "PENDING",
+          "COMMENT",
+          "REQUEST_CHANGES",
+          "REQUEST_REVIEW"
+        ],
+        "type": "string"
       },
       "SearchResults": {
         "description": "SearchResults results of a successful search",
@@ -10369,9 +10463,11 @@
         "x-go-package": "forgejo.org/modules/structs"
       },
       "StateType": {
-        "description": "StateType issue state type",
-        "type": "string",
-        "x-go-package": "forgejo.org/modules/structs"
+        "enum": [
+          "open",
+          "closed"
+        ],
+        "type": "string"
       },
       "StopWatch": {
         "description": "StopWatch represent a running stopwatch",
@@ -10471,10 +10567,12 @@
             "x-go-name": "Name"
           },
           "tarball_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "TarballURL"
           },
           "zipball_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "ZipballURL"
           }
@@ -10645,6 +10743,7 @@
             "$ref": "#/components/schemas/Issue"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -10654,6 +10753,7 @@
             "x-go-name": "ID"
           },
           "issue_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "IssueURL"
           },
@@ -10693,6 +10793,7 @@
             "x-go-name": "ProjectID"
           },
           "pull_request_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "PRURL"
           },
@@ -10805,6 +10906,7 @@
             "$ref": "#/components/schemas/Issue"
           },
           "issue_id": {
+            "deprecated": true,
             "description": "deprecated (only for backwards compatibility)",
             "format": "int64",
             "type": "integer",
@@ -10817,6 +10919,7 @@
             "x-go-name": "Time"
           },
           "user_id": {
+            "deprecated": true,
             "description": "deprecated (only for backwards compatibility)",
             "format": "int64",
             "type": "integer",
@@ -10978,6 +11081,7 @@
           },
           "avatar_url": {
             "description": "URL to the user's avatar",
+            "format": "uri",
             "type": "string",
             "x-go-name": "AvatarURL"
           },
@@ -11014,6 +11118,7 @@
           },
           "html_url": {
             "description": "URL to the user's profile page",
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -11240,6 +11345,22 @@
         "type": "object",
         "x-go-package": "forgejo.org/modules/structs"
       },
+      "Version": {
+        "properties": {
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "VisibilityEnum": {
+        "enum": [
+          "public",
+          "limited",
+          "private"
+        ],
+        "type": "string"
+      },
       "WatchInfo": {
         "description": "WatchInfo represents an API watch status of one repository",
         "properties": {
@@ -11256,6 +11377,7 @@
             "x-go-name": "Reason"
           },
           "repository_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "RepositoryURL"
           },
@@ -11264,6 +11386,7 @@
             "x-go-name": "Subscribed"
           },
           "url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "URL"
           }
@@ -11329,6 +11452,7 @@
             "x-go-name": "Footer"
           },
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -11340,6 +11464,7 @@
             "x-go-name": "Sidebar"
           },
           "sub_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "SubURL"
           },
@@ -11355,6 +11480,7 @@
         "description": "WikiPageMetaData wiki page meta information",
         "properties": {
           "html_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "HTMLURL"
           },
@@ -11362,6 +11488,7 @@
             "$ref": "#/components/schemas/WikiCommit"
           },
           "sub_url": {
+            "format": "uri",
             "type": "string",
             "x-go-name": "SubURL"
           },
@@ -11416,7 +11543,29 @@
   },
   "openapi": "3.0.3",
   "paths": {
-    "/activitypub/actor": {
+    "/forgejo/v1/version": {
+      "get": {
+        "description": "Semantic version of the Forgejo API",
+        "operationId": "forgejoGetVersion",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Version"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "successful operation"
+          }
+        },
+        "summary": "API version"
+      }
+    },
+    "/v1/activitypub/actor": {
       "get": {
         "operationId": "activitypubInstanceActor",
         "responses": {
@@ -11430,7 +11579,7 @@
         ]
       }
     },
-    "/activitypub/actor/inbox": {
+    "/v1/activitypub/actor/inbox": {
       "post": {
         "operationId": "activitypubInstanceActorInbox",
         "responses": {
@@ -11444,7 +11593,7 @@
         ]
       }
     },
-    "/activitypub/actor/outbox": {
+    "/v1/activitypub/actor/outbox": {
       "post": {
         "operationId": "activitypubInstanceActorOutbox",
         "responses": {
@@ -11458,7 +11607,7 @@
         ]
       }
     },
-    "/activitypub/repository-id/{repository-id}": {
+    "/v1/activitypub/repository-id/{repository-id}": {
       "get": {
         "operationId": "activitypubRepository",
         "parameters": [
@@ -11484,7 +11633,7 @@
         ]
       }
     },
-    "/activitypub/repository-id/{repository-id}/inbox": {
+    "/v1/activitypub/repository-id/{repository-id}/inbox": {
       "post": {
         "operationId": "activitypubRepositoryInbox",
         "parameters": [
@@ -11525,7 +11674,7 @@
         ]
       }
     },
-    "/activitypub/repository-id/{repository-id}/outbox": {
+    "/v1/activitypub/repository-id/{repository-id}/outbox": {
       "post": {
         "operationId": "activitypubRepositoryOutbox",
         "parameters": [
@@ -11551,7 +11700,7 @@
         ]
       }
     },
-    "/activitypub/user-id/{user-id}": {
+    "/v1/activitypub/user-id/{user-id}": {
       "get": {
         "operationId": "activitypubPerson",
         "parameters": [
@@ -11577,7 +11726,7 @@
         ]
       }
     },
-    "/activitypub/user-id/{user-id}/activities/{activity-id}": {
+    "/v1/activitypub/user-id/{user-id}/activities/{activity-id}": {
       "get": {
         "operationId": "activitypubPersonActivityNote",
         "parameters": [
@@ -11611,7 +11760,7 @@
         ]
       }
     },
-    "/activitypub/user-id/{user-id}/activities/{activity-id}/activity": {
+    "/v1/activitypub/user-id/{user-id}/activities/{activity-id}/activity": {
       "get": {
         "operationId": "activitypubPersonActivity",
         "parameters": [
@@ -11645,7 +11794,7 @@
         ]
       }
     },
-    "/activitypub/user-id/{user-id}/inbox": {
+    "/v1/activitypub/user-id/{user-id}/inbox": {
       "post": {
         "operationId": "activitypubPersonInbox",
         "parameters": [
@@ -11671,7 +11820,7 @@
         ]
       }
     },
-    "/activitypub/user-id/{user-id}/outbox": {
+    "/v1/activitypub/user-id/{user-id}/outbox": {
       "get": {
         "operationId": "activitypubPersonFeed",
         "parameters": [
@@ -11699,7 +11848,7 @@
         ]
       }
     },
-    "/admin/actions/runners": {
+    "/v1/admin/actions/runners": {
       "get": {
         "operationId": "getAdminRunners",
         "parameters": [
@@ -11768,7 +11917,7 @@
         ]
       }
     },
-    "/admin/actions/runners/jobs": {
+    "/v1/admin/actions/runners/jobs": {
       "get": {
         "operationId": "adminGetActionRunJobs",
         "parameters": [
@@ -11795,7 +11944,7 @@
         ]
       }
     },
-    "/admin/actions/runners/registration-token": {
+    "/v1/admin/actions/runners/registration-token": {
       "get": {
         "operationId": "adminGetRunnerRegistrationToken",
         "responses": {
@@ -11809,7 +11958,7 @@
         ]
       }
     },
-    "/admin/actions/runners/{runner_id}": {
+    "/v1/admin/actions/runners/{runner_id}": {
       "delete": {
         "operationId": "deleteAdminRunner",
         "parameters": [
@@ -11869,7 +12018,7 @@
         ]
       }
     },
-    "/admin/cron": {
+    "/v1/admin/cron": {
       "get": {
         "operationId": "adminCronList",
         "parameters": [
@@ -11904,7 +12053,7 @@
         ]
       }
     },
-    "/admin/cron/{task}": {
+    "/v1/admin/cron/{task}": {
       "post": {
         "operationId": "adminCronRun",
         "parameters": [
@@ -11932,7 +12081,7 @@
         ]
       }
     },
-    "/admin/emails": {
+    "/v1/admin/emails": {
       "get": {
         "operationId": "adminGetAllEmails",
         "parameters": [
@@ -11967,7 +12116,7 @@
         ]
       }
     },
-    "/admin/emails/search": {
+    "/v1/admin/emails/search": {
       "get": {
         "operationId": "adminSearchEmails",
         "parameters": [
@@ -12010,7 +12159,7 @@
         ]
       }
     },
-    "/admin/hooks": {
+    "/v1/admin/hooks": {
       "get": {
         "operationId": "adminListHooks",
         "parameters": [
@@ -12065,7 +12214,7 @@
         ]
       }
     },
-    "/admin/hooks/{id}": {
+    "/v1/admin/hooks/{id}": {
       "delete": {
         "operationId": "adminDeleteHook",
         "parameters": [
@@ -12149,7 +12298,7 @@
         ]
       }
     },
-    "/admin/orgs": {
+    "/v1/admin/orgs": {
       "get": {
         "operationId": "adminGetAllOrgs",
         "parameters": [
@@ -12184,7 +12333,7 @@
         ]
       }
     },
-    "/admin/quota/groups": {
+    "/v1/admin/quota/groups": {
       "get": {
         "operationId": "adminListQuotaGroups",
         "responses": {
@@ -12242,7 +12391,7 @@
         ]
       }
     },
-    "/admin/quota/groups/{quotagroup}": {
+    "/v1/admin/quota/groups/{quotagroup}": {
       "delete": {
         "operationId": "adminDeleteQuotaGroup",
         "parameters": [
@@ -12308,7 +12457,7 @@
         ]
       }
     },
-    "/admin/quota/groups/{quotagroup}/rules/{quotarule}": {
+    "/v1/admin/quota/groups/{quotagroup}/rules/{quotarule}": {
       "delete": {
         "operationId": "adminRemoveRuleFromQuotaGroup",
         "parameters": [
@@ -12332,7 +12481,7 @@
           }
         ],
         "responses": {
-          "201": {
+          "204": {
             "$ref": "#/components/responses/empty"
           },
           "400": {
@@ -12398,7 +12547,7 @@
         ]
       }
     },
-    "/admin/quota/groups/{quotagroup}/users": {
+    "/v1/admin/quota/groups/{quotagroup}/users": {
       "get": {
         "operationId": "adminListUsersInQuotaGroup",
         "parameters": [
@@ -12432,7 +12581,7 @@
         ]
       }
     },
-    "/admin/quota/groups/{quotagroup}/users/{username}": {
+    "/v1/admin/quota/groups/{quotagroup}/users/{username}": {
       "delete": {
         "operationId": "adminRemoveUserFromQuotaGroup",
         "parameters": [
@@ -12522,7 +12671,7 @@
         ]
       }
     },
-    "/admin/quota/rules": {
+    "/v1/admin/quota/rules": {
       "get": {
         "operationId": "adminListQuotaRules",
         "responses": {
@@ -12580,7 +12729,7 @@
         ]
       }
     },
-    "/admin/quota/rules/{quotarule}": {
+    "/v1/admin/quota/rules/{quotarule}": {
       "delete": {
         "operationId": "adminDeleteQuotaRule",
         "parameters": [
@@ -12697,7 +12846,7 @@
         ]
       }
     },
-    "/admin/runners/jobs": {
+    "/v1/admin/runners/jobs": {
       "get": {
         "deprecated": true,
         "description": "This operation has been deprecated in Forgejo 15. Use [`/admin/actions/runners/jobs`](#/admin/adminGetActionRunJobs) instead.\n",
@@ -12726,7 +12875,7 @@
         ]
       }
     },
-    "/admin/runners/registration-token": {
+    "/v1/admin/runners/registration-token": {
       "get": {
         "deprecated": true,
         "description": "This operation has been deprecated in Forgejo 15. Use [`/admin/actions/runners/registration-token`](#/admin/adminGetRunnerRegistrationToken) instead.\n",
@@ -12742,7 +12891,7 @@
         ]
       }
     },
-    "/admin/unadopted": {
+    "/v1/admin/unadopted": {
       "get": {
         "operationId": "adminUnadoptedList",
         "parameters": [
@@ -12785,7 +12934,7 @@
         ]
       }
     },
-    "/admin/unadopted/{owner}/{repo}": {
+    "/v1/admin/unadopted/{owner}/{repo}": {
       "delete": {
         "operationId": "adminDeleteUnadoptedRepository",
         "parameters": [
@@ -12860,7 +13009,7 @@
         ]
       }
     },
-    "/admin/users": {
+    "/v1/admin/users": {
       "get": {
         "operationId": "adminSearchUsers",
         "parameters": [
@@ -12959,7 +13108,7 @@
         ]
       }
     },
-    "/admin/users/{username}": {
+    "/v1/admin/users/{username}": {
       "delete": {
         "operationId": "adminDeleteUser",
         "parameters": [
@@ -13043,7 +13192,7 @@
         ]
       }
     },
-    "/admin/users/{username}/emails": {
+    "/v1/admin/users/{username}/emails": {
       "delete": {
         "operationId": "adminDeleteUserEmails",
         "parameters": [
@@ -13118,7 +13267,7 @@
         ]
       }
     },
-    "/admin/users/{username}/keys": {
+    "/v1/admin/users/{username}/keys": {
       "post": {
         "operationId": "adminCreatePublicKey",
         "parameters": [
@@ -13159,7 +13308,7 @@
         ]
       }
     },
-    "/admin/users/{username}/keys/{id}": {
+    "/v1/admin/users/{username}/keys/{id}": {
       "delete": {
         "operationId": "adminDeleteUserPublicKey",
         "parameters": [
@@ -13200,7 +13349,7 @@
         ]
       }
     },
-    "/admin/users/{username}/orgs": {
+    "/v1/admin/users/{username}/orgs": {
       "post": {
         "operationId": "adminCreateOrg",
         "parameters": [
@@ -13242,7 +13391,7 @@
         ]
       }
     },
-    "/admin/users/{username}/quota": {
+    "/v1/admin/users/{username}/quota": {
       "get": {
         "operationId": "adminGetUserQuota",
         "parameters": [
@@ -13279,7 +13428,7 @@
         ]
       }
     },
-    "/admin/users/{username}/quota/groups": {
+    "/v1/admin/users/{username}/quota/groups": {
       "post": {
         "operationId": "adminSetUserQuotaGroups",
         "parameters": [
@@ -13333,7 +13482,7 @@
         ]
       }
     },
-    "/admin/users/{username}/rename": {
+    "/v1/admin/users/{username}/rename": {
       "post": {
         "operationId": "adminRenameUser",
         "parameters": [
@@ -13380,7 +13529,7 @@
         ]
       }
     },
-    "/admin/users/{username}/repos": {
+    "/v1/admin/users/{username}/repos": {
       "post": {
         "operationId": "adminCreateRepo",
         "parameters": [
@@ -13431,7 +13580,7 @@
         ]
       }
     },
-    "/gitignore/templates": {
+    "/v1/gitignore/templates": {
       "get": {
         "operationId": "listGitignoresTemplates",
         "responses": {
@@ -13445,7 +13594,7 @@
         ]
       }
     },
-    "/gitignore/templates/{name}": {
+    "/v1/gitignore/templates/{name}": {
       "get": {
         "operationId": "getGitignoreTemplateInfo",
         "parameters": [
@@ -13473,7 +13622,7 @@
         ]
       }
     },
-    "/label/templates": {
+    "/v1/label/templates": {
       "get": {
         "operationId": "listLabelTemplates",
         "responses": {
@@ -13487,7 +13636,7 @@
         ]
       }
     },
-    "/label/templates/{name}": {
+    "/v1/label/templates/{name}": {
       "get": {
         "operationId": "getLabelTemplateInfo",
         "parameters": [
@@ -13515,7 +13664,7 @@
         ]
       }
     },
-    "/licenses": {
+    "/v1/licenses": {
       "get": {
         "operationId": "listLicenseTemplates",
         "responses": {
@@ -13529,7 +13678,7 @@
         ]
       }
     },
-    "/licenses/{name}": {
+    "/v1/licenses/{name}": {
       "get": {
         "operationId": "getLicenseTemplateInfo",
         "parameters": [
@@ -13557,7 +13706,7 @@
         ]
       }
     },
-    "/markdown": {
+    "/v1/markdown": {
       "post": {
         "operationId": "renderMarkdown",
         "requestBody": {
@@ -13584,7 +13733,7 @@
         ]
       }
     },
-    "/markdown/raw": {
+    "/v1/markdown/raw": {
       "post": {
         "operationId": "renderMarkdownRaw",
         "requestBody": {
@@ -13613,7 +13762,7 @@
         ]
       }
     },
-    "/markup": {
+    "/v1/markup": {
       "post": {
         "operationId": "renderMarkup",
         "requestBody": {
@@ -13640,7 +13789,7 @@
         ]
       }
     },
-    "/nodeinfo": {
+    "/v1/nodeinfo": {
       "get": {
         "operationId": "getNodeInfo",
         "responses": {
@@ -13654,7 +13803,7 @@
         ]
       }
     },
-    "/notifications": {
+    "/v1/notifications": {
       "get": {
         "operationId": "notifyGetList",
         "parameters": [
@@ -13789,7 +13938,7 @@
         ]
       }
     },
-    "/notifications/new": {
+    "/v1/notifications/new": {
       "get": {
         "operationId": "notifyNewAvailable",
         "responses": {
@@ -13803,7 +13952,7 @@
         ]
       }
     },
-    "/notifications/threads/{id}": {
+    "/v1/notifications/threads/{id}": {
       "get": {
         "operationId": "notifyGetThread",
         "parameters": [
@@ -13874,7 +14023,7 @@
         ]
       }
     },
-    "/org/{org}/repos": {
+    "/v1/org/{org}/repos": {
       "post": {
         "deprecated": true,
         "operationId": "createOrgRepoDeprecated",
@@ -13919,7 +14068,7 @@
         ]
       }
     },
-    "/orgs": {
+    "/v1/orgs": {
       "get": {
         "operationId": "orgGetAll",
         "parameters": [
@@ -13980,7 +14129,7 @@
         ]
       }
     },
-    "/orgs/{org}": {
+    "/v1/orgs/{org}": {
       "delete": {
         "operationId": "orgDelete",
         "parameters": [
@@ -14074,7 +14223,7 @@
         ]
       }
     },
-    "/orgs/{org}/actions/runners": {
+    "/v1/orgs/{org}/actions/runners": {
       "get": {
         "operationId": "getOrgRunners",
         "parameters": [
@@ -14163,7 +14312,7 @@
         ]
       }
     },
-    "/orgs/{org}/actions/runners/jobs": {
+    "/v1/orgs/{org}/actions/runners/jobs": {
       "get": {
         "operationId": "orgSearchRunJobs",
         "parameters": [
@@ -14199,7 +14348,7 @@
         ]
       }
     },
-    "/orgs/{org}/actions/runners/registration-token": {
+    "/v1/orgs/{org}/actions/runners/registration-token": {
       "get": {
         "operationId": "orgGetRunnerRegistrationToken",
         "parameters": [
@@ -14224,7 +14373,7 @@
         ]
       }
     },
-    "/orgs/{org}/actions/runners/{runner_id}": {
+    "/v1/orgs/{org}/actions/runners/{runner_id}": {
       "delete": {
         "operationId": "deleteOrgRunner",
         "parameters": [
@@ -14302,7 +14451,7 @@
         ]
       }
     },
-    "/orgs/{org}/actions/secrets": {
+    "/v1/orgs/{org}/actions/secrets": {
       "get": {
         "operationId": "orgListActionsSecrets",
         "parameters": [
@@ -14346,7 +14495,7 @@
         ]
       }
     },
-    "/orgs/{org}/actions/secrets/{secretname}": {
+    "/v1/orgs/{org}/actions/secrets/{secretname}": {
       "delete": {
         "operationId": "deleteOrgSecret",
         "parameters": [
@@ -14437,7 +14586,7 @@
         ]
       }
     },
-    "/orgs/{org}/actions/variables": {
+    "/v1/orgs/{org}/actions/variables": {
       "get": {
         "operationId": "getOrgVariablesList",
         "parameters": [
@@ -14484,7 +14633,7 @@
         ]
       }
     },
-    "/orgs/{org}/actions/variables/{variablename}": {
+    "/v1/orgs/{org}/actions/variables/{variablename}": {
       "delete": {
         "operationId": "deleteOrgVariable",
         "parameters": [
@@ -14664,7 +14813,7 @@
         ]
       }
     },
-    "/orgs/{org}/activities/feeds": {
+    "/v1/orgs/{org}/activities/feeds": {
       "get": {
         "operationId": "orgListActivityFeeds",
         "parameters": [
@@ -14717,7 +14866,7 @@
         ]
       }
     },
-    "/orgs/{org}/avatar": {
+    "/v1/orgs/{org}/avatar": {
       "delete": {
         "operationId": "orgDeleteAvatar",
         "parameters": [
@@ -14786,7 +14935,7 @@
         ]
       }
     },
-    "/orgs/{org}/block/{username}": {
+    "/v1/orgs/{org}/block/{username}": {
       "put": {
         "operationId": "orgBlockUser",
         "parameters": [
@@ -14826,7 +14975,7 @@
         ]
       }
     },
-    "/orgs/{org}/hooks": {
+    "/v1/orgs/{org}/hooks": {
       "get": {
         "operationId": "orgListHooks",
         "parameters": [
@@ -14907,7 +15056,7 @@
         ]
       }
     },
-    "/orgs/{org}/hooks/{id}": {
+    "/v1/orgs/{org}/hooks/{id}": {
       "delete": {
         "operationId": "orgDeleteHook",
         "parameters": [
@@ -15027,7 +15176,7 @@
         ]
       }
     },
-    "/orgs/{org}/labels": {
+    "/v1/orgs/{org}/labels": {
       "get": {
         "operationId": "orgListLabels",
         "parameters": [
@@ -15123,7 +15272,7 @@
         ]
       }
     },
-    "/orgs/{org}/labels/{id}": {
+    "/v1/orgs/{org}/labels/{id}": {
       "delete": {
         "operationId": "orgDeleteLabel",
         "parameters": [
@@ -15246,7 +15395,7 @@
         ]
       }
     },
-    "/orgs/{org}/list_blocked": {
+    "/v1/orgs/{org}/list_blocked": {
       "get": {
         "operationId": "orgListBlockedUsers",
         "parameters": [
@@ -15287,7 +15436,7 @@
         ]
       }
     },
-    "/orgs/{org}/members": {
+    "/v1/orgs/{org}/members": {
       "get": {
         "operationId": "orgListMembers",
         "parameters": [
@@ -15331,7 +15480,7 @@
         ]
       }
     },
-    "/orgs/{org}/members/{username}": {
+    "/v1/orgs/{org}/members/{username}": {
       "delete": {
         "operationId": "orgDeleteMember",
         "parameters": [
@@ -15406,7 +15555,7 @@
         ]
       }
     },
-    "/orgs/{org}/public_members": {
+    "/v1/orgs/{org}/public_members": {
       "get": {
         "operationId": "orgListPublicMembers",
         "parameters": [
@@ -15450,7 +15599,7 @@
         ]
       }
     },
-    "/orgs/{org}/public_members/{username}": {
+    "/v1/orgs/{org}/public_members/{username}": {
       "delete": {
         "operationId": "orgConcealMember",
         "parameters": [
@@ -15563,7 +15712,7 @@
         ]
       }
     },
-    "/orgs/{org}/quota": {
+    "/v1/orgs/{org}/quota": {
       "get": {
         "operationId": "orgGetQuota",
         "parameters": [
@@ -15594,7 +15743,7 @@
         ]
       }
     },
-    "/orgs/{org}/quota/artifacts": {
+    "/v1/orgs/{org}/quota/artifacts": {
       "get": {
         "operationId": "orgListQuotaArtifacts",
         "parameters": [
@@ -15641,7 +15790,7 @@
         ]
       }
     },
-    "/orgs/{org}/quota/attachments": {
+    "/v1/orgs/{org}/quota/attachments": {
       "get": {
         "operationId": "orgListQuotaAttachments",
         "parameters": [
@@ -15688,7 +15837,7 @@
         ]
       }
     },
-    "/orgs/{org}/quota/check": {
+    "/v1/orgs/{org}/quota/check": {
       "get": {
         "operationId": "orgCheckQuota",
         "parameters": [
@@ -15738,7 +15887,7 @@
         ]
       }
     },
-    "/orgs/{org}/quota/packages": {
+    "/v1/orgs/{org}/quota/packages": {
       "get": {
         "operationId": "orgListQuotaPackages",
         "parameters": [
@@ -15785,7 +15934,7 @@
         ]
       }
     },
-    "/orgs/{org}/rename": {
+    "/v1/orgs/{org}/rename": {
       "post": {
         "operationId": "renameOrg",
         "parameters": [
@@ -15832,7 +15981,7 @@
         ]
       }
     },
-    "/orgs/{org}/repos": {
+    "/v1/orgs/{org}/repos": {
       "get": {
         "operationId": "orgListRepos",
         "parameters": [
@@ -15918,7 +16067,7 @@
         ]
       }
     },
-    "/orgs/{org}/teams": {
+    "/v1/orgs/{org}/teams": {
       "get": {
         "operationId": "orgListTeams",
         "parameters": [
@@ -16001,7 +16150,7 @@
         ]
       }
     },
-    "/orgs/{org}/teams/search": {
+    "/v1/orgs/{org}/teams/search": {
       "get": {
         "operationId": "teamSearch",
         "parameters": [
@@ -16080,7 +16229,7 @@
         ]
       }
     },
-    "/orgs/{org}/unblock/{username}": {
+    "/v1/orgs/{org}/unblock/{username}": {
       "put": {
         "operationId": "orgUnblockUser",
         "parameters": [
@@ -16120,7 +16269,7 @@
         ]
       }
     },
-    "/packages/{owner}": {
+    "/v1/packages/{owner}": {
       "get": {
         "operationId": "listPackages",
         "parameters": [
@@ -16203,7 +16352,7 @@
         ]
       }
     },
-    "/packages/{owner}/{type}/{name}/-/link/{repo_name}": {
+    "/v1/packages/{owner}/{type}/{name}/-/link/{repo_name}": {
       "post": {
         "operationId": "linkPackage",
         "parameters": [
@@ -16258,7 +16407,7 @@
         ]
       }
     },
-    "/packages/{owner}/{type}/{name}/-/unlink": {
+    "/v1/packages/{owner}/{type}/{name}/-/unlink": {
       "post": {
         "operationId": "unlinkPackage",
         "parameters": [
@@ -16304,7 +16453,7 @@
         ]
       }
     },
-    "/packages/{owner}/{type}/{name}/{version}": {
+    "/v1/packages/{owner}/{type}/{name}/{version}": {
       "delete": {
         "operationId": "deletePackage",
         "parameters": [
@@ -16412,7 +16561,7 @@
         ]
       }
     },
-    "/packages/{owner}/{type}/{name}/{version}/files": {
+    "/v1/packages/{owner}/{type}/{name}/{version}/files": {
       "get": {
         "operationId": "listPackageFiles",
         "parameters": [
@@ -16467,7 +16616,7 @@
         ]
       }
     },
-    "/repos/issues/search": {
+    "/v1/repos/issues/search": {
       "get": {
         "operationId": "issueSearchIssues",
         "parameters": [
@@ -16666,7 +16815,7 @@
         ]
       }
     },
-    "/repos/migrate": {
+    "/v1/repos/migrate": {
       "post": {
         "operationId": "repoMigrate",
         "requestBody": {
@@ -16702,7 +16851,7 @@
         ]
       }
     },
-    "/repos/search": {
+    "/v1/repos/search": {
       "get": {
         "operationId": "repoSearch",
         "parameters": [
@@ -16876,7 +17025,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}": {
+    "/v1/repos/{owner}/{repo}": {
       "delete": {
         "operationId": "repoDelete",
         "parameters": [
@@ -17008,7 +17157,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/runners": {
+    "/v1/repos/{owner}/{repo}/actions/runners": {
       "get": {
         "operationId": "getRepoRunners",
         "parameters": [
@@ -17115,7 +17264,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/runners/jobs": {
+    "/v1/repos/{owner}/{repo}/actions/runners/jobs": {
       "get": {
         "operationId": "repoSearchRunJobs",
         "parameters": [
@@ -17160,7 +17309,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/runners/registration-token": {
+    "/v1/repos/{owner}/{repo}/actions/runners/registration-token": {
       "get": {
         "operationId": "repoGetRunnerRegistrationToken",
         "parameters": [
@@ -17194,7 +17343,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/runners/{runner_id}": {
+    "/v1/repos/{owner}/{repo}/actions/runners/{runner_id}": {
       "delete": {
         "operationId": "deleteRepoRunner",
         "parameters": [
@@ -17290,7 +17439,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/runs": {
+    "/v1/repos/{owner}/{repo}/actions/runs": {
       "get": {
         "operationId": "ListActionRuns",
         "parameters": [
@@ -17403,7 +17552,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/runs/{run_id}": {
+    "/v1/repos/{owner}/{repo}/actions/runs/{run_id}": {
       "get": {
         "operationId": "ActionRun",
         "parameters": [
@@ -17456,7 +17605,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/secrets": {
+    "/v1/repos/{owner}/{repo}/actions/secrets": {
       "get": {
         "operationId": "repoListActionsSecrets",
         "parameters": [
@@ -17509,7 +17658,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/secrets/{secretname}": {
+    "/v1/repos/{owner}/{repo}/actions/secrets/{secretname}": {
       "delete": {
         "operationId": "deleteRepoSecret",
         "parameters": [
@@ -17618,7 +17767,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/tasks": {
+    "/v1/repos/{owner}/{repo}/actions/tasks": {
       "get": {
         "operationId": "ListActionTasks",
         "parameters": [
@@ -17683,7 +17832,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/variables": {
+    "/v1/repos/{owner}/{repo}/actions/variables": {
       "get": {
         "operationId": "getRepoVariablesList",
         "parameters": [
@@ -17739,7 +17888,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/variables/{variablename}": {
+    "/v1/repos/{owner}/{repo}/actions/variables/{variablename}": {
       "delete": {
         "operationId": "deleteRepoVariable",
         "parameters": [
@@ -17965,7 +18114,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/actions/workflows/{workflowfilename}/dispatches": {
+    "/v1/repos/{owner}/{repo}/actions/workflows/{workflowfilename}/dispatches": {
       "post": {
         "operationId": "DispatchWorkflow",
         "parameters": [
@@ -18024,7 +18173,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/activities/feeds": {
+    "/v1/repos/{owner}/{repo}/activities/feeds": {
       "get": {
         "operationId": "repoListActivityFeeds",
         "parameters": [
@@ -18086,7 +18235,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/archive/{archive}": {
+    "/v1/repos/{owner}/{repo}/archive/{archive}": {
       "get": {
         "operationId": "repoGetArchive",
         "parameters": [
@@ -18132,7 +18281,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/assignees": {
+    "/v1/repos/{owner}/{repo}/assignees": {
       "get": {
         "operationId": "repoGetAssignees",
         "parameters": [
@@ -18169,7 +18318,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/avatar": {
+    "/v1/repos/{owner}/{repo}/avatar": {
       "delete": {
         "operationId": "repoDeleteAvatar",
         "parameters": [
@@ -18256,7 +18405,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/branch_protections": {
+    "/v1/repos/{owner}/{repo}/branch_protections": {
       "get": {
         "operationId": "repoListBranchProtection",
         "parameters": [
@@ -18344,7 +18493,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/branch_protections/{name}": {
+    "/v1/repos/{owner}/{repo}/branch_protections/{name}": {
       "delete": {
         "operationId": "repoDeleteBranchProtection",
         "parameters": [
@@ -18494,7 +18643,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/branches": {
+    "/v1/repos/{owner}/{repo}/branches": {
       "get": {
         "operationId": "repoListBranches",
         "parameters": [
@@ -18601,7 +18750,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/branches/{branch}": {
+    "/v1/repos/{owner}/{repo}/branches/{branch}": {
       "delete": {
         "operationId": "repoDeleteBranch",
         "parameters": [
@@ -18757,7 +18906,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/collaborators": {
+    "/v1/repos/{owner}/{repo}/collaborators": {
       "get": {
         "operationId": "repoListCollaborators",
         "parameters": [
@@ -18810,7 +18959,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/collaborators/{collaborator}": {
+    "/v1/repos/{owner}/{repo}/collaborators/{collaborator}": {
       "delete": {
         "operationId": "repoDeleteCollaborator",
         "parameters": [
@@ -18972,7 +19121,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/collaborators/{collaborator}/permission": {
+    "/v1/repos/{owner}/{repo}/collaborators/{collaborator}/permission": {
       "get": {
         "operationId": "repoGetRepoPermissions",
         "parameters": [
@@ -19021,7 +19170,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/commits": {
+    "/v1/repos/{owner}/{repo}/commits": {
       "get": {
         "operationId": "repoGetAllCommits",
         "parameters": [
@@ -19125,7 +19274,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/commits/{ref}/status": {
+    "/v1/repos/{owner}/{repo}/commits/{ref}/status": {
       "get": {
         "operationId": "repoGetCombinedStatusByRef",
         "parameters": [
@@ -19190,7 +19339,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/commits/{ref}/statuses": {
+    "/v1/repos/{owner}/{repo}/commits/{ref}/statuses": {
       "get": {
         "operationId": "repoListStatusesByRef",
         "parameters": [
@@ -19285,7 +19434,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/commits/{sha}/pull": {
+    "/v1/repos/{owner}/{repo}/commits/{sha}/pull": {
       "get": {
         "operationId": "repoGetCommitPullRequest",
         "parameters": [
@@ -19331,7 +19480,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/compare/{basehead}": {
+    "/v1/repos/{owner}/{repo}/compare/{basehead}": {
       "get": {
         "operationId": "repoCompareDiff",
         "parameters": [
@@ -19377,7 +19526,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/contents": {
+    "/v1/repos/{owner}/{repo}/contents": {
       "get": {
         "operationId": "repoGetContentsList",
         "parameters": [
@@ -19483,7 +19632,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/contents/{filepath}": {
+    "/v1/repos/{owner}/{repo}/contents/{filepath}": {
       "delete": {
         "operationId": "repoDeleteFile",
         "parameters": [
@@ -19744,7 +19893,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/convert": {
+    "/v1/repos/{owner}/{repo}/convert": {
       "post": {
         "operationId": "repoConvert",
         "parameters": [
@@ -19787,7 +19936,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/diffpatch": {
+    "/v1/repos/{owner}/{repo}/diffpatch": {
       "post": {
         "operationId": "repoApplyDiffPatch",
         "parameters": [
@@ -19841,7 +19990,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/editorconfig/{filepath}": {
+    "/v1/repos/{owner}/{repo}/editorconfig/{filepath}": {
       "get": {
         "operationId": "repoGetEditorConfig",
         "parameters": [
@@ -19905,7 +20054,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/flags": {
+    "/v1/repos/{owner}/{repo}/flags": {
       "delete": {
         "operationId": "repoDeleteAllFlags",
         "parameters": [
@@ -20036,7 +20185,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/flags/{flag}": {
+    "/v1/repos/{owner}/{repo}/flags/{flag}": {
       "delete": {
         "operationId": "repoDeleteFlag",
         "parameters": [
@@ -20179,7 +20328,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/forks": {
+    "/v1/repos/{owner}/{repo}/forks": {
       "get": {
         "operationId": "listForks",
         "parameters": [
@@ -20294,7 +20443,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/blobs": {
+    "/v1/repos/{owner}/{repo}/git/blobs": {
       "get": {
         "operationId": "GetBlobs",
         "parameters": [
@@ -20340,7 +20489,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/blobs/{sha}": {
+    "/v1/repos/{owner}/{repo}/git/blobs/{sha}": {
       "get": {
         "operationId": "GetBlob",
         "parameters": [
@@ -20389,7 +20538,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/commits/{sha}": {
+    "/v1/repos/{owner}/{repo}/git/commits/{sha}": {
       "get": {
         "operationId": "repoGetSingleCommit",
         "parameters": [
@@ -20462,7 +20611,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/commits/{sha}.{diffType}": {
+    "/v1/repos/{owner}/{repo}/git/commits/{sha}.{diffType}": {
       "get": {
         "operationId": "repoDownloadCommitDiffOrPatch",
         "parameters": [
@@ -20521,7 +20670,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/notes/{sha}": {
+    "/v1/repos/{owner}/{repo}/git/notes/{sha}": {
       "delete": {
         "operationId": "repoRemoveNote",
         "parameters": [
@@ -20695,7 +20844,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/refs": {
+    "/v1/repos/{owner}/{repo}/git/refs": {
       "get": {
         "operationId": "repoListAllGitRefs",
         "parameters": [
@@ -20732,7 +20881,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/refs/{ref}": {
+    "/v1/repos/{owner}/{repo}/git/refs/{ref}": {
       "get": {
         "operationId": "repoListGitRefs",
         "parameters": [
@@ -20778,7 +20927,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/tags/{sha}": {
+    "/v1/repos/{owner}/{repo}/git/tags/{sha}": {
       "get": {
         "operationId": "GetAnnotatedTag",
         "parameters": [
@@ -20827,7 +20976,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/git/trees/{sha}": {
+    "/v1/repos/{owner}/{repo}/git/trees/{sha}": {
       "get": {
         "operationId": "GetTree",
         "parameters": [
@@ -20900,7 +21049,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/hooks": {
+    "/v1/repos/{owner}/{repo}/hooks": {
       "get": {
         "operationId": "repoListHooks",
         "parameters": [
@@ -20998,7 +21147,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/hooks/git": {
+    "/v1/repos/{owner}/{repo}/hooks/git": {
       "get": {
         "operationId": "repoListGitHooks",
         "parameters": [
@@ -21035,7 +21184,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/hooks/git/{id}": {
+    "/v1/repos/{owner}/{repo}/hooks/git/{id}": {
       "delete": {
         "operationId": "repoDeleteGitHook",
         "parameters": [
@@ -21184,7 +21333,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/hooks/{id}": {
+    "/v1/repos/{owner}/{repo}/hooks/{id}": {
       "delete": {
         "operationId": "repoDeleteHook",
         "parameters": [
@@ -21336,7 +21485,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/hooks/{id}/tests": {
+    "/v1/repos/{owner}/{repo}/hooks/{id}/tests": {
       "post": {
         "operationId": "repoTestHook",
         "parameters": [
@@ -21391,7 +21540,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issue_config": {
+    "/v1/repos/{owner}/{repo}/issue_config": {
       "get": {
         "operationId": "repoGetIssueConfig",
         "parameters": [
@@ -21428,7 +21577,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issue_config/validate": {
+    "/v1/repos/{owner}/{repo}/issue_config/validate": {
       "get": {
         "operationId": "repoValidateIssueConfig",
         "parameters": [
@@ -21465,7 +21614,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issue_templates": {
+    "/v1/repos/{owner}/{repo}/issue_templates": {
       "get": {
         "operationId": "repoGetIssueTemplates",
         "parameters": [
@@ -21502,7 +21651,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues": {
+    "/v1/repos/{owner}/{repo}/issues": {
       "get": {
         "operationId": "issueListIssues",
         "parameters": [
@@ -21723,7 +21872,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/comments": {
+    "/v1/repos/{owner}/{repo}/issues/comments": {
       "get": {
         "operationId": "issueGetRepoComments",
         "parameters": [
@@ -21800,7 +21949,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/comments/{id}": {
+    "/v1/repos/{owner}/{repo}/issues/comments/{id}": {
       "delete": {
         "operationId": "issueDeleteComment",
         "parameters": [
@@ -21971,7 +22120,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/comments/{id}/assets": {
+    "/v1/repos/{owner}/{repo}/issues/comments/{id}/assets": {
       "get": {
         "operationId": "issueListIssueCommentAttachments",
         "parameters": [
@@ -22115,7 +22264,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/comments/{id}/assets/{attachment_id}": {
+    "/v1/repos/{owner}/{repo}/issues/comments/{id}/assets/{attachment_id}": {
       "delete": {
         "operationId": "issueDeleteIssueCommentAttachment",
         "parameters": [
@@ -22301,7 +22450,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/comments/{id}/reactions": {
+    "/v1/repos/{owner}/{repo}/issues/comments/{id}/reactions": {
       "delete": {
         "operationId": "issueDeleteCommentReaction",
         "parameters": [
@@ -22345,7 +22494,7 @@
           "x-originalParamName": "content"
         },
         "responses": {
-          "200": {
+          "204": {
             "$ref": "#/components/responses/empty"
           },
           "403": {
@@ -22470,7 +22619,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/pinned": {
+    "/v1/repos/{owner}/{repo}/issues/pinned": {
       "get": {
         "operationId": "repoListPinnedIssues",
         "parameters": [
@@ -22507,7 +22656,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}": {
+    "/v1/repos/{owner}/{repo}/issues/{index}": {
       "delete": {
         "operationId": "issueDelete",
         "parameters": [
@@ -22663,7 +22812,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/assets": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/assets": {
       "get": {
         "operationId": "issueListIssueAttachments",
         "parameters": [
@@ -22807,7 +22956,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/assets/{attachment_id}": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/assets/{attachment_id}": {
       "delete": {
         "operationId": "issueDeleteIssueAttachment",
         "parameters": [
@@ -22993,7 +23142,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/blocks": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/blocks": {
       "delete": {
         "operationId": "issueRemoveIssueBlocking",
         "parameters": [
@@ -23176,7 +23325,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/comments": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/comments": {
       "get": {
         "operationId": "issueGetComments",
         "parameters": [
@@ -23311,7 +23460,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/comments/{id}": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/comments/{id}": {
       "delete": {
         "deprecated": true,
         "operationId": "issueDeleteCommentDeprecated",
@@ -23445,7 +23594,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/deadline": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/deadline": {
       "post": {
         "operationId": "issueEditIssueDeadline",
         "parameters": [
@@ -23505,7 +23654,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/dependencies": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/dependencies": {
       "delete": {
         "operationId": "issueRemoveIssueDependencies",
         "parameters": [
@@ -23694,7 +23843,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/labels": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/labels": {
       "delete": {
         "operationId": "issueClearLabels",
         "parameters": [
@@ -23920,7 +24069,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/labels/{identifier}": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/labels/{identifier}": {
       "delete": {
         "operationId": "issueRemoveLabel",
         "parameters": [
@@ -23997,7 +24146,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/pin": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/pin": {
       "delete": {
         "operationId": "unpinIssue",
         "parameters": [
@@ -24095,7 +24244,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/pin/{position}": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/pin/{position}": {
       "patch": {
         "operationId": "moveIssuePin",
         "parameters": [
@@ -24155,7 +24304,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/reactions": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/reactions": {
       "delete": {
         "operationId": "issueDeleteIssueReaction",
         "parameters": [
@@ -24199,7 +24348,7 @@
           "x-originalParamName": "content"
         },
         "responses": {
-          "200": {
+          "204": {
             "$ref": "#/components/responses/empty"
           },
           "403": {
@@ -24340,7 +24489,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/stopwatch/delete": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/stopwatch/delete": {
       "delete": {
         "operationId": "issueDeleteStopWatch",
         "parameters": [
@@ -24393,7 +24542,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/stopwatch/start": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/stopwatch/start": {
       "post": {
         "operationId": "issueStartStopWatch",
         "parameters": [
@@ -24446,7 +24595,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/stopwatch/stop": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/stopwatch/stop": {
       "post": {
         "operationId": "issueStopStopWatch",
         "parameters": [
@@ -24499,7 +24648,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/subscriptions": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/subscriptions": {
       "get": {
         "operationId": "issueSubscriptions",
         "parameters": [
@@ -24562,7 +24711,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/subscriptions/check": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/subscriptions/check": {
       "get": {
         "operationId": "issueCheckSubscription",
         "parameters": [
@@ -24609,7 +24758,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/subscriptions/{user}": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/subscriptions/{user}": {
       "delete": {
         "operationId": "issueDeleteSubscription",
         "parameters": [
@@ -24731,7 +24880,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/timeline": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/timeline": {
       "get": {
         "operationId": "issueGetCommentsAndTimeline",
         "parameters": [
@@ -24818,7 +24967,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/times": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/times": {
       "delete": {
         "operationId": "issueResetTime",
         "parameters": [
@@ -25019,7 +25168,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/issues/{index}/times/{id}": {
+    "/v1/repos/{owner}/{repo}/issues/{index}/times/{id}": {
       "delete": {
         "operationId": "issueDeleteTime",
         "parameters": [
@@ -25082,7 +25231,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/keys": {
+    "/v1/repos/{owner}/{repo}/keys": {
       "get": {
         "operationId": "repoListKeys",
         "parameters": [
@@ -25199,7 +25348,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/keys/{id}": {
+    "/v1/repos/{owner}/{repo}/keys/{id}": {
       "delete": {
         "operationId": "repoDeleteKey",
         "parameters": [
@@ -25294,7 +25443,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/labels": {
+    "/v1/repos/{owner}/{repo}/labels": {
       "get": {
         "operationId": "issueListLabels",
         "parameters": [
@@ -25408,7 +25557,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/labels/{id}": {
+    "/v1/repos/{owner}/{repo}/labels/{id}": {
       "delete": {
         "operationId": "issueDeleteLabel",
         "parameters": [
@@ -25558,7 +25707,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/languages": {
+    "/v1/repos/{owner}/{repo}/languages": {
       "get": {
         "operationId": "repoGetLanguages",
         "parameters": [
@@ -25595,7 +25744,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/media/{filepath}": {
+    "/v1/repos/{owner}/{repo}/media/{filepath}": {
       "get": {
         "operationId": "repoGetRawFileOrLFS",
         "parameters": [
@@ -25657,7 +25806,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/milestones": {
+    "/v1/repos/{owner}/{repo}/milestones": {
       "get": {
         "operationId": "issueGetMilestonesList",
         "parameters": [
@@ -25771,7 +25920,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/milestones/{id}": {
+    "/v1/repos/{owner}/{repo}/milestones/{id}": {
       "delete": {
         "operationId": "issueDeleteMilestone",
         "parameters": [
@@ -25918,7 +26067,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/mirror-sync": {
+    "/v1/repos/{owner}/{repo}/mirror-sync": {
       "post": {
         "operationId": "repoMirrorSync",
         "parameters": [
@@ -25961,7 +26110,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/new_pin_allowed": {
+    "/v1/repos/{owner}/{repo}/new_pin_allowed": {
       "get": {
         "operationId": "repoNewPinAllowed",
         "parameters": [
@@ -25998,7 +26147,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/notifications": {
+    "/v1/repos/{owner}/{repo}/notifications": {
       "get": {
         "operationId": "notifyGetRepoList",
         "parameters": [
@@ -26169,7 +26318,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls": {
+    "/v1/repos/{owner}/{repo}/pulls": {
       "get": {
         "operationId": "repoListPullRequests",
         "parameters": [
@@ -26345,7 +26494,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/pinned": {
+    "/v1/repos/{owner}/{repo}/pulls/pinned": {
       "get": {
         "operationId": "repoListPinnedPullRequests",
         "parameters": [
@@ -26382,7 +26531,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{base}/{head}": {
+    "/v1/repos/{owner}/{repo}/pulls/{base}/{head}": {
       "get": {
         "operationId": "repoGetPullRequestByBaseHead",
         "parameters": [
@@ -26437,7 +26586,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}": {
       "get": {
         "operationId": "repoGetPullRequest",
         "parameters": [
@@ -26551,7 +26700,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}.{diffType}": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}.{diffType}": {
       "get": {
         "operationId": "repoDownloadPullDiffOrPatch",
         "parameters": [
@@ -26619,7 +26768,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/commits": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/commits": {
       "get": {
         "operationId": "repoGetPullRequestCommits",
         "parameters": [
@@ -26698,7 +26847,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/files": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/files": {
       "get": {
         "operationId": "repoGetPullRequestFiles",
         "parameters": [
@@ -26783,7 +26932,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/merge": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/merge": {
       "delete": {
         "operationId": "repoCancelScheduledAutoMerge",
         "parameters": [
@@ -26931,6 +27080,9 @@
           "200": {
             "$ref": "#/components/responses/empty"
           },
+          "403": {
+            "$ref": "#/components/responses/forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/notFound"
           },
@@ -26953,7 +27105,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/requested_reviewers": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/requested_reviewers": {
       "delete": {
         "operationId": "repoDeletePullReviewRequests",
         "parameters": [
@@ -27086,7 +27238,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/reviews": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/reviews": {
       "get": {
         "operationId": "repoListPullReviews",
         "parameters": [
@@ -27213,7 +27365,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/reviews/{id}": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/reviews/{id}": {
       "delete": {
         "operationId": "repoDeletePullReview",
         "parameters": [
@@ -27402,7 +27554,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments": {
       "get": {
         "operationId": "repoGetPullReviewComments",
         "parameters": [
@@ -27533,7 +27685,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}": {
       "delete": {
         "operationId": "repoDeletePullReviewComment",
         "parameters": [
@@ -27671,7 +27823,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/dismissals": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/dismissals": {
       "post": {
         "operationId": "repoDismissPullReview",
         "parameters": [
@@ -27750,7 +27902,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/undismissals": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/undismissals": {
       "post": {
         "operationId": "repoUnDismissPullReview",
         "parameters": [
@@ -27813,7 +27965,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/pulls/{index}/update": {
+    "/v1/repos/{owner}/{repo}/pulls/{index}/update": {
       "post": {
         "operationId": "repoUpdatePullRequest",
         "parameters": [
@@ -27884,7 +28036,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/push_mirrors": {
+    "/v1/repos/{owner}/{repo}/push_mirrors": {
       "get": {
         "operationId": "repoListPushMirrors",
         "parameters": [
@@ -27997,7 +28149,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/push_mirrors-sync": {
+    "/v1/repos/{owner}/{repo}/push_mirrors-sync": {
       "post": {
         "operationId": "repoPushMirrorSync",
         "parameters": [
@@ -28043,7 +28195,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/push_mirrors/{name}": {
+    "/v1/repos/{owner}/{repo}/push_mirrors/{name}": {
       "delete": {
         "operationId": "repoDeletePushMirror",
         "parameters": [
@@ -28142,7 +28294,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/raw/{filepath}": {
+    "/v1/repos/{owner}/{repo}/raw/{filepath}": {
       "get": {
         "operationId": "repoGetRawFile",
         "parameters": [
@@ -28204,7 +28356,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/releases": {
+    "/v1/repos/{owner}/{repo}/releases": {
       "get": {
         "operationId": "repoListReleases",
         "parameters": [
@@ -28332,7 +28484,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/releases/latest": {
+    "/v1/repos/{owner}/{repo}/releases/latest": {
       "get": {
         "operationId": "repoGetLatestRelease",
         "parameters": [
@@ -28369,7 +28521,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/releases/tags/{tag}": {
+    "/v1/repos/{owner}/{repo}/releases/tags/{tag}": {
       "delete": {
         "operationId": "repoDeleteReleaseByTag",
         "parameters": [
@@ -28462,7 +28614,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/releases/{id}": {
+    "/v1/repos/{owner}/{repo}/releases/{id}": {
       "delete": {
         "operationId": "repoDeleteRelease",
         "parameters": [
@@ -28612,7 +28764,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/releases/{id}/assets": {
+    "/v1/repos/{owner}/{repo}/releases/{id}/assets": {
       "get": {
         "operationId": "repoListReleaseAttachments",
         "parameters": [
@@ -28758,7 +28910,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}": {
+    "/v1/repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}": {
       "delete": {
         "operationId": "repoDeleteReleaseAttachment",
         "parameters": [
@@ -28938,7 +29090,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/reviewers": {
+    "/v1/repos/{owner}/{repo}/reviewers": {
       "get": {
         "operationId": "repoGetReviewers",
         "parameters": [
@@ -28975,7 +29127,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/signing-key.gpg": {
+    "/v1/repos/{owner}/{repo}/signing-key.gpg": {
       "get": {
         "operationId": "repoSigningKey",
         "parameters": [
@@ -29016,7 +29168,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/stargazers": {
+    "/v1/repos/{owner}/{repo}/stargazers": {
       "get": {
         "operationId": "repoListStargazers",
         "parameters": [
@@ -29069,7 +29221,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/statuses/{sha}": {
+    "/v1/repos/{owner}/{repo}/statuses/{sha}": {
       "get": {
         "operationId": "repoListStatuses",
         "parameters": [
@@ -29226,7 +29378,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/subscribers": {
+    "/v1/repos/{owner}/{repo}/subscribers": {
       "get": {
         "operationId": "repoListSubscribers",
         "parameters": [
@@ -29279,7 +29431,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/subscription": {
+    "/v1/repos/{owner}/{repo}/subscription": {
       "delete": {
         "operationId": "userCurrentDeleteSubscription",
         "parameters": [
@@ -29386,7 +29538,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/sync_fork": {
+    "/v1/repos/{owner}/{repo}/sync_fork": {
       "get": {
         "operationId": "repoSyncForkDefaultInfo",
         "parameters": [
@@ -29464,7 +29616,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/sync_fork/{branch}": {
+    "/v1/repos/{owner}/{repo}/sync_fork/{branch}": {
       "get": {
         "operationId": "repoSyncForkBranchInfo",
         "parameters": [
@@ -29560,7 +29712,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/tag_protections": {
+    "/v1/repos/{owner}/{repo}/tag_protections": {
       "get": {
         "operationId": "repoListTagProtection",
         "parameters": [
@@ -29648,7 +29800,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/tag_protections/{id}": {
+    "/v1/repos/{owner}/{repo}/tag_protections/{id}": {
       "delete": {
         "operationId": "repoDeleteTagProtection",
         "parameters": [
@@ -29801,7 +29953,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/tags": {
+    "/v1/repos/{owner}/{repo}/tags": {
       "get": {
         "operationId": "repoListTags",
         "parameters": [
@@ -29919,7 +30071,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/tags/{tag}": {
+    "/v1/repos/{owner}/{repo}/tags/{tag}": {
       "delete": {
         "operationId": "repoDeleteTag",
         "parameters": [
@@ -30021,7 +30173,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/teams": {
+    "/v1/repos/{owner}/{repo}/teams": {
       "get": {
         "operationId": "repoListTeams",
         "parameters": [
@@ -30058,7 +30210,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/teams/{team}": {
+    "/v1/repos/{owner}/{repo}/teams/{team}": {
       "delete": {
         "operationId": "repoDeleteTeam",
         "parameters": [
@@ -30207,7 +30359,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/times": {
+    "/v1/repos/{owner}/{repo}/times": {
       "get": {
         "operationId": "repoTrackedTimes",
         "parameters": [
@@ -30292,7 +30444,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/times/{user}": {
+    "/v1/repos/{owner}/{repo}/times/{user}": {
       "get": {
         "deprecated": true,
         "operationId": "userTrackedTimes",
@@ -30345,7 +30497,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/topics": {
+    "/v1/repos/{owner}/{repo}/topics": {
       "get": {
         "operationId": "repoListTopics",
         "parameters": [
@@ -30451,7 +30603,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/topics/{topic}": {
+    "/v1/repos/{owner}/{repo}/topics/{topic}": {
       "delete": {
         "operationId": "repoDeleteTopic",
         "parameters": [
@@ -30547,7 +30699,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/transfer": {
+    "/v1/repos/{owner}/{repo}/transfer": {
       "post": {
         "operationId": "repoTransfer",
         "parameters": [
@@ -30610,7 +30762,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/transfer/accept": {
+    "/v1/repos/{owner}/{repo}/transfer/accept": {
       "post": {
         "operationId": "acceptRepoTransfer",
         "parameters": [
@@ -30653,7 +30805,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/transfer/reject": {
+    "/v1/repos/{owner}/{repo}/transfer/reject": {
       "post": {
         "operationId": "rejectRepoTransfer",
         "parameters": [
@@ -30693,7 +30845,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/wiki/new": {
+    "/v1/repos/{owner}/{repo}/wiki/new": {
       "post": {
         "operationId": "repoCreateWikiPage",
         "parameters": [
@@ -30752,7 +30904,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/wiki/page/{pageName}": {
+    "/v1/repos/{owner}/{repo}/wiki/page/{pageName}": {
       "delete": {
         "operationId": "repoDeleteWikiPage",
         "parameters": [
@@ -30914,7 +31066,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/wiki/pages": {
+    "/v1/repos/{owner}/{repo}/wiki/pages": {
       "get": {
         "operationId": "repoGetWikiPages",
         "parameters": [
@@ -30967,7 +31119,7 @@
         ]
       }
     },
-    "/repos/{owner}/{repo}/wiki/revisions/{pageName}": {
+    "/v1/repos/{owner}/{repo}/wiki/revisions/{pageName}": {
       "get": {
         "operationId": "repoGetWikiPageRevisions",
         "parameters": [
@@ -31021,7 +31173,7 @@
         ]
       }
     },
-    "/repos/{template_owner}/{template_repo}/generate": {
+    "/v1/repos/{template_owner}/{template_repo}/generate": {
       "post": {
         "operationId": "generateRepo",
         "parameters": [
@@ -31080,7 +31232,7 @@
         ]
       }
     },
-    "/repositories/{id}": {
+    "/v1/repositories/{id}": {
       "get": {
         "operationId": "repoGetByID",
         "parameters": [
@@ -31109,7 +31261,7 @@
         ]
       }
     },
-    "/settings/api": {
+    "/v1/settings/api": {
       "get": {
         "operationId": "getGeneralAPISettings",
         "responses": {
@@ -31123,7 +31275,7 @@
         ]
       }
     },
-    "/settings/attachment": {
+    "/v1/settings/attachment": {
       "get": {
         "operationId": "getGeneralAttachmentSettings",
         "responses": {
@@ -31137,7 +31289,7 @@
         ]
       }
     },
-    "/settings/repository": {
+    "/v1/settings/repository": {
       "get": {
         "operationId": "getGeneralRepositorySettings",
         "responses": {
@@ -31151,7 +31303,7 @@
         ]
       }
     },
-    "/settings/ui": {
+    "/v1/settings/ui": {
       "get": {
         "operationId": "getGeneralUISettings",
         "responses": {
@@ -31165,7 +31317,7 @@
         ]
       }
     },
-    "/signing-key.gpg": {
+    "/v1/signing-key.gpg": {
       "get": {
         "operationId": "getSigningKey",
         "responses": {
@@ -31186,7 +31338,7 @@
         ]
       }
     },
-    "/signing-key.ssh": {
+    "/v1/signing-key.ssh": {
       "get": {
         "operationId": "getSSHSigningKey",
         "responses": {
@@ -31210,7 +31362,7 @@
         ]
       }
     },
-    "/teams/{id}": {
+    "/v1/teams/{id}": {
       "delete": {
         "operationId": "orgDeleteTeam",
         "parameters": [
@@ -31303,7 +31455,7 @@
         ]
       }
     },
-    "/teams/{id}/activities/feeds": {
+    "/v1/teams/{id}/activities/feeds": {
       "get": {
         "operationId": "orgListTeamActivityFeeds",
         "parameters": [
@@ -31357,7 +31509,7 @@
         ]
       }
     },
-    "/teams/{id}/members": {
+    "/v1/teams/{id}/members": {
       "get": {
         "operationId": "orgListTeamMembers",
         "parameters": [
@@ -31402,7 +31554,7 @@
         ]
       }
     },
-    "/teams/{id}/members/{username}": {
+    "/v1/teams/{id}/members/{username}": {
       "delete": {
         "operationId": "orgRemoveTeamMember",
         "parameters": [
@@ -31512,7 +31664,7 @@
         ]
       }
     },
-    "/teams/{id}/repos": {
+    "/v1/teams/{id}/repos": {
       "get": {
         "operationId": "orgListTeamRepos",
         "parameters": [
@@ -31557,7 +31709,7 @@
         ]
       }
     },
-    "/teams/{id}/repos/{org}/{repo}": {
+    "/v1/teams/{id}/repos/{org}/{repo}": {
       "delete": {
         "description": "This does not delete the repository, it only removes the repository from the team.",
         "operationId": "orgRemoveTeamRepository",
@@ -31701,7 +31853,7 @@
         ]
       }
     },
-    "/topics/search": {
+    "/v1/topics/search": {
       "get": {
         "operationId": "topicSearch",
         "parameters": [
@@ -31764,7 +31916,7 @@
         ]
       }
     },
-    "/user": {
+    "/v1/user": {
       "get": {
         "operationId": "userGetCurrent",
         "responses": {
@@ -31784,7 +31936,7 @@
         ]
       }
     },
-    "/user/actions/runners": {
+    "/v1/user/actions/runners": {
       "get": {
         "operationId": "getUserRunners",
         "parameters": [
@@ -31856,7 +32008,7 @@
         ]
       }
     },
-    "/user/actions/runners/jobs": {
+    "/v1/user/actions/runners/jobs": {
       "get": {
         "operationId": "userSearchRunJobs",
         "parameters": [
@@ -31886,7 +32038,7 @@
         ]
       }
     },
-    "/user/actions/runners/registration-token": {
+    "/v1/user/actions/runners/registration-token": {
       "get": {
         "operationId": "userGetRunnerRegistrationToken",
         "responses": {
@@ -31906,7 +32058,7 @@
         ]
       }
     },
-    "/user/actions/runners/{runner_id}": {
+    "/v1/user/actions/runners/{runner_id}": {
       "delete": {
         "operationId": "deleteUserRunner",
         "parameters": [
@@ -31972,7 +32124,7 @@
         ]
       }
     },
-    "/user/actions/secrets/{secretname}": {
+    "/v1/user/actions/secrets/{secretname}": {
       "delete": {
         "operationId": "deleteUserSecret",
         "parameters": [
@@ -32057,7 +32209,7 @@
         ]
       }
     },
-    "/user/actions/variables": {
+    "/v1/user/actions/variables": {
       "get": {
         "operationId": "getUserVariablesList",
         "parameters": [
@@ -32101,7 +32253,7 @@
         ]
       }
     },
-    "/user/actions/variables/{variablename}": {
+    "/v1/user/actions/variables/{variablename}": {
       "delete": {
         "operationId": "deleteUserVariable",
         "parameters": [
@@ -32272,7 +32424,7 @@
         ]
       }
     },
-    "/user/applications/oauth2": {
+    "/v1/user/applications/oauth2": {
       "get": {
         "operationId": "userGetOAuth2Applications",
         "parameters": [
@@ -32347,7 +32499,7 @@
         ]
       }
     },
-    "/user/applications/oauth2/{id}": {
+    "/v1/user/applications/oauth2/{id}": {
       "delete": {
         "operationId": "userDeleteOAuth2Application",
         "parameters": [
@@ -32464,7 +32616,7 @@
         ]
       }
     },
-    "/user/avatar": {
+    "/v1/user/avatar": {
       "delete": {
         "operationId": "userDeleteAvatar",
         "responses": {
@@ -32517,7 +32669,7 @@
         ]
       }
     },
-    "/user/block/{username}": {
+    "/v1/user/block/{username}": {
       "put": {
         "operationId": "userBlockUser",
         "parameters": [
@@ -32554,7 +32706,7 @@
         ]
       }
     },
-    "/user/emails": {
+    "/v1/user/emails": {
       "delete": {
         "operationId": "userDeleteEmail",
         "requestBody": {
@@ -32646,7 +32798,7 @@
         ]
       }
     },
-    "/user/followers": {
+    "/v1/user/followers": {
       "get": {
         "operationId": "userCurrentListFollowers",
         "parameters": [
@@ -32684,7 +32836,7 @@
         ]
       }
     },
-    "/user/following": {
+    "/v1/user/following": {
       "get": {
         "operationId": "userCurrentListFollowing",
         "parameters": [
@@ -32722,7 +32874,7 @@
         ]
       }
     },
-    "/user/following/{username}": {
+    "/v1/user/following/{username}": {
       "delete": {
         "operationId": "userCurrentDeleteFollow",
         "parameters": [
@@ -32820,7 +32972,7 @@
         ]
       }
     },
-    "/user/gpg_key_token": {
+    "/v1/user/gpg_key_token": {
       "get": {
         "operationId": "getVerificationToken",
         "responses": {
@@ -32843,7 +32995,7 @@
         ]
       }
     },
-    "/user/gpg_key_verify": {
+    "/v1/user/gpg_key_verify": {
       "post": {
         "operationId": "userVerifyGPGKey",
         "requestBody": {
@@ -32879,7 +33031,7 @@
         ]
       }
     },
-    "/user/gpg_keys": {
+    "/v1/user/gpg_keys": {
       "get": {
         "operationId": "userCurrentListGPGKeys",
         "parameters": [
@@ -32951,7 +33103,7 @@
         ]
       }
     },
-    "/user/gpg_keys/{id}": {
+    "/v1/user/gpg_keys/{id}": {
       "delete": {
         "operationId": "userCurrentDeleteGPGKey",
         "parameters": [
@@ -33019,7 +33171,7 @@
         ]
       }
     },
-    "/user/hooks": {
+    "/v1/user/hooks": {
       "get": {
         "operationId": "userListHooks",
         "parameters": [
@@ -33086,7 +33238,7 @@
         ]
       }
     },
-    "/user/hooks/{id}": {
+    "/v1/user/hooks/{id}": {
       "delete": {
         "operationId": "userDeleteHook",
         "parameters": [
@@ -33188,7 +33340,7 @@
         ]
       }
     },
-    "/user/keys": {
+    "/v1/user/keys": {
       "get": {
         "operationId": "userCurrentListKeys",
         "parameters": [
@@ -33265,7 +33417,7 @@
         ]
       }
     },
-    "/user/keys/{id}": {
+    "/v1/user/keys/{id}": {
       "delete": {
         "operationId": "userCurrentDeleteKey",
         "parameters": [
@@ -33333,7 +33485,7 @@
         ]
       }
     },
-    "/user/list_blocked": {
+    "/v1/user/list_blocked": {
       "get": {
         "operationId": "userListBlockedUsers",
         "parameters": [
@@ -33371,7 +33523,7 @@
         ]
       }
     },
-    "/user/orgs": {
+    "/v1/user/orgs": {
       "get": {
         "operationId": "orgListCurrentUserOrgs",
         "parameters": [
@@ -33412,7 +33564,7 @@
         ]
       }
     },
-    "/user/quota": {
+    "/v1/user/quota": {
       "get": {
         "operationId": "userGetQuota",
         "responses": {
@@ -33432,7 +33584,7 @@
         ]
       }
     },
-    "/user/quota/artifacts": {
+    "/v1/user/quota/artifacts": {
       "get": {
         "operationId": "userListQuotaArtifacts",
         "parameters": [
@@ -33470,7 +33622,7 @@
         ]
       }
     },
-    "/user/quota/attachments": {
+    "/v1/user/quota/attachments": {
       "get": {
         "operationId": "userListQuotaAttachments",
         "parameters": [
@@ -33508,7 +33660,7 @@
         ]
       }
     },
-    "/user/quota/check": {
+    "/v1/user/quota/check": {
       "get": {
         "operationId": "userCheckQuota",
         "parameters": [
@@ -33549,7 +33701,7 @@
         ]
       }
     },
-    "/user/quota/packages": {
+    "/v1/user/quota/packages": {
       "get": {
         "operationId": "userListQuotaPackages",
         "parameters": [
@@ -33587,7 +33739,7 @@
         ]
       }
     },
-    "/user/repos": {
+    "/v1/user/repos": {
       "get": {
         "operationId": "userCurrentListRepos",
         "parameters": [
@@ -33697,7 +33849,7 @@
         ]
       }
     },
-    "/user/settings": {
+    "/v1/user/settings": {
       "get": {
         "operationId": "getUserSettings",
         "responses": {
@@ -33750,7 +33902,7 @@
         ]
       }
     },
-    "/user/starred": {
+    "/v1/user/starred": {
       "get": {
         "operationId": "userCurrentListStarred",
         "parameters": [
@@ -33788,7 +33940,7 @@
         ]
       }
     },
-    "/user/starred/{owner}/{repo}": {
+    "/v1/user/starred/{owner}/{repo}": {
       "delete": {
         "operationId": "userCurrentDeleteStar",
         "parameters": [
@@ -33913,7 +34065,7 @@
         ]
       }
     },
-    "/user/stopwatches": {
+    "/v1/user/stopwatches": {
       "get": {
         "operationId": "userGetStopWatches",
         "parameters": [
@@ -33951,7 +34103,7 @@
         ]
       }
     },
-    "/user/subscriptions": {
+    "/v1/user/subscriptions": {
       "get": {
         "operationId": "userCurrentListSubscriptions",
         "parameters": [
@@ -33989,7 +34141,7 @@
         ]
       }
     },
-    "/user/teams": {
+    "/v1/user/teams": {
       "get": {
         "operationId": "userListTeams",
         "parameters": [
@@ -34027,7 +34179,7 @@
         ]
       }
     },
-    "/user/times": {
+    "/v1/user/times": {
       "get": {
         "operationId": "userCurrentTrackedTimes",
         "parameters": [
@@ -34083,7 +34235,7 @@
         ]
       }
     },
-    "/user/unblock/{username}": {
+    "/v1/user/unblock/{username}": {
       "put": {
         "operationId": "userUnblockUser",
         "parameters": [
@@ -34120,7 +34272,7 @@
         ]
       }
     },
-    "/users/search": {
+    "/v1/users/search": {
       "get": {
         "operationId": "userSearch",
         "parameters": [
@@ -34204,7 +34356,7 @@
         ]
       }
     },
-    "/users/{username}": {
+    "/v1/users/{username}": {
       "get": {
         "operationId": "userGet",
         "parameters": [
@@ -34232,7 +34384,7 @@
         ]
       }
     },
-    "/users/{username}/activities/feeds": {
+    "/v1/users/{username}/activities/feeds": {
       "get": {
         "operationId": "userListActivityFeeds",
         "parameters": [
@@ -34293,7 +34445,7 @@
         ]
       }
     },
-    "/users/{username}/followers": {
+    "/v1/users/{username}/followers": {
       "get": {
         "operationId": "userListFollowers",
         "parameters": [
@@ -34337,7 +34489,7 @@
         ]
       }
     },
-    "/users/{username}/following": {
+    "/v1/users/{username}/following": {
       "get": {
         "operationId": "userListFollowing",
         "parameters": [
@@ -34381,7 +34533,7 @@
         ]
       }
     },
-    "/users/{username}/following/{target}": {
+    "/v1/users/{username}/following/{target}": {
       "get": {
         "operationId": "userCheckFollowing",
         "parameters": [
@@ -34418,7 +34570,7 @@
         ]
       }
     },
-    "/users/{username}/gpg_keys": {
+    "/v1/users/{username}/gpg_keys": {
       "get": {
         "operationId": "userListGPGKeys",
         "parameters": [
@@ -34462,7 +34614,7 @@
         ]
       }
     },
-    "/users/{username}/heatmap": {
+    "/v1/users/{username}/heatmap": {
       "get": {
         "operationId": "userGetHeatmapData",
         "parameters": [
@@ -34490,7 +34642,7 @@
         ]
       }
     },
-    "/users/{username}/keys": {
+    "/v1/users/{username}/keys": {
       "get": {
         "operationId": "userListKeys",
         "parameters": [
@@ -34542,7 +34694,7 @@
         ]
       }
     },
-    "/users/{username}/orgs": {
+    "/v1/users/{username}/orgs": {
       "get": {
         "operationId": "orgListUserOrgs",
         "parameters": [
@@ -34586,7 +34738,7 @@
         ]
       }
     },
-    "/users/{username}/orgs/{org}/permissions": {
+    "/v1/users/{username}/orgs/{org}/permissions": {
       "get": {
         "operationId": "orgGetUserPermissions",
         "parameters": [
@@ -34626,7 +34778,7 @@
         ]
       }
     },
-    "/users/{username}/repos": {
+    "/v1/users/{username}/repos": {
       "get": {
         "operationId": "userListRepos",
         "parameters": [
@@ -34670,7 +34822,7 @@
         ]
       }
     },
-    "/users/{username}/starred": {
+    "/v1/users/{username}/starred": {
       "get": {
         "operationId": "userListStarred",
         "parameters": [
@@ -34714,7 +34866,7 @@
         ]
       }
     },
-    "/users/{username}/subscriptions": {
+    "/v1/users/{username}/subscriptions": {
       "get": {
         "operationId": "userListSubscriptions",
         "parameters": [
@@ -34758,7 +34910,7 @@
         ]
       }
     },
-    "/users/{username}/tokens": {
+    "/v1/users/{username}/tokens": {
       "get": {
         "operationId": "userGetTokens",
         "parameters": [
@@ -34847,7 +34999,7 @@
         ]
       }
     },
-    "/users/{username}/tokens/{token}": {
+    "/v1/users/{username}/tokens/{token}": {
       "delete": {
         "operationId": "userDeleteAccessToken",
         "parameters": [
@@ -34890,7 +35042,7 @@
         ]
       }
     },
-    "/version": {
+    "/v1/version": {
       "get": {
         "operationId": "getVersion",
         "responses": {
@@ -34924,7 +35076,7 @@
   ],
   "servers": [
     {
-      "url": "{{AppSubUrl | JSEscape}}/api/v1"
+      "url": "{{AppSubUrl | JSEscape}}/api"
     }
   ]
 }
