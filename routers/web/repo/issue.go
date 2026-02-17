@@ -274,7 +274,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 
 	var total int
 	switch {
-	case isShowClosed.Value():
+	case isShowClosed.ValueOrZeroValue():
 		total = int(issueStats.ClosedCount)
 	case !isShowClosed.Has():
 		total = int(issueStats.OpenCount + issueStats.ClosedCount)
@@ -321,8 +321,8 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		// depending on the query syntax
 		isShowClosed = opts.IsClosed
 		sortType = opts.SortBy.ToIssueSort()
-		posterID = opts.PosterID.Value()
-		assigneeID = opts.AssigneeID.Value()
+		posterID = opts.PosterID.ValueOrZeroValue()
+		assigneeID = opts.AssigneeID.ValueOrZeroValue()
 	}
 
 	approvalCounts, err := issues.GetApprovalCounts(ctx)
@@ -440,7 +440,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		return
 	}
 
-	pinned, err := issues_model.GetPinnedIssues(ctx, repo.ID, isPullOption.Value())
+	pinned, err := issues_model.GetPinnedIssues(ctx, repo.ID, isPullOption.ValueOrZeroValue())
 	if err != nil {
 		ctx.ServerError("GetPinnedIssues", err)
 		return
@@ -475,7 +475,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["IsShowClosed"] = isShowClosed
 	switch {
-	case isShowClosed.Value():
+	case isShowClosed.ValueOrZeroValue():
 		ctx.Data["State"] = "closed"
 	case !isShowClosed.Has():
 		ctx.Data["State"] = "all"
@@ -989,8 +989,10 @@ func NewIssue(ctx *context.Context) {
 		project, err := project_model.GetProjectByID(ctx, projectID)
 		if err != nil {
 			log.Error("GetProjectByID: %d: %v", projectID, err)
-		} else if project.RepoID != ctx.Repo.Repository.ID {
-			log.Error("GetProjectByID: %d: %v", projectID, fmt.Errorf("project[%d] not in repo [%d]", project.ID, ctx.Repo.Repository.ID))
+		} else if !project.CanBeAccessedByOwnerRepo(ctx.Repo.Repository.OwnerID, ctx.Repo.Repository) {
+			log.Error("GetProjectByID: %d: %v", projectID,
+				fmt.Errorf("project[%d] neither in repo[%d] nor has the same owner (project: [%d] ./. repo: [%d])",
+					project.ID, ctx.Repo.Repository.ID, project.OwnerID, ctx.Repo.Repository.OwnerID))
 		} else {
 			ctx.Data["project_id"] = projectID
 			ctx.Data["Project"] = project

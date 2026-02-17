@@ -22371,6 +22371,11 @@
           "type": "string",
           "x-go-name": "Description"
         },
+        "ephemeral": {
+          "description": "Indicates if runner is ephemeral runner",
+          "type": "boolean",
+          "x-go-name": "Ephemeral"
+        },
         "id": {
           "description": "ID uniquely identifies this runner.",
           "type": "integer",
@@ -24044,14 +24049,14 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreateOrUpdateSecretOption": {
-      "description": "CreateOrUpdateSecretOption options when creating or updating secret",
       "type": "object",
+      "title": "CreateOrUpdateSecretOption defines the properties of the secret to create or update.",
       "required": [
         "data"
       ],
       "properties": {
         "data": {
-          "description": "Data of the secret to update",
+          "description": "Data of the secret. Special characters will be retained. Line endings will be normalized to LF to match the\nbehaviour of browsers. Encode the data with Base64 if line endings should be retained.",
           "type": "string",
           "x-go-name": "Data"
         }
@@ -24540,7 +24545,18 @@
             "type": "string"
           },
           "x-go-name": "UnitsMap",
-          "example": "{\"repo.actions\",\"repo.packages\",\"repo.code\":\"read\",\"repo.issues\":\"write\",\"repo.ext_issues\":\"none\",\"repo.wiki\":\"admin\",\"repo.pulls\":\"owner\",\"repo.releases\":\"none\",\"repo.projects\":\"none\",\"repo.ext_wiki\":\"none\"}"
+          "example": {
+            "repo.actions": "none",
+            "repo.code": "read",
+            "repo.ext_issues": "none",
+            "repo.ext_wiki": "none",
+            "repo.issues": "write",
+            "repo.packages": "none",
+            "repo.projects": "none",
+            "repo.pulls": "owner",
+            "repo.releases": "none",
+            "repo.wiki": "admin"
+          }
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -24605,14 +24621,14 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreateVariableOption": {
-      "description": "CreateVariableOption the option when creating variable",
       "type": "object",
+      "title": "CreateVariableOption defines the properties of the variable to create.",
       "required": [
         "value"
       ],
       "properties": {
         "value": {
-          "description": "Value of the variable to create",
+          "description": "Value of the variable to create. Special characters will be retained. Line endings will be normalized to LF to\nmatch the behaviour of browsers. Encode the data with Base64 if line endings should be retained.",
           "type": "string",
           "x-go-name": "Value"
         }
@@ -25608,10 +25624,12 @@
           },
           "x-go-name": "UnitsMap",
           "example": {
+            "repo.actions": "none",
             "repo.code": "read",
             "repo.ext_issues": "none",
             "repo.ext_wiki": "none",
             "repo.issues": "write",
+            "repo.packages": "none",
             "repo.projects": "none",
             "repo.pulls": "owner",
             "repo.releases": "none",
@@ -28503,6 +28521,11 @@
           "type": "string",
           "x-go-name": "Description"
         },
+        "ephemeral": {
+          "description": "Register as ephemeral runner https://forgejo.org/docs/latest/admin/actions/security/#ephemeral-runner",
+          "type": "boolean",
+          "x-go-name": "Ephemeral"
+        },
         "name": {
           "description": "Name of the runner to register. The name of the runner does not have to be unique.",
           "type": "string",
@@ -28515,6 +28538,10 @@
       "type": "object",
       "title": "RegisterRunnerResponse contains the details of the just registered runner.",
       "properties": {
+        "ephemeral": {
+          "type": "boolean",
+          "x-go-name": "Ephemeral"
+        },
         "id": {
           "type": "integer",
           "format": "int64",
@@ -29350,10 +29377,12 @@
           },
           "x-go-name": "UnitsMap",
           "example": {
+            "repo.actions": "none",
             "repo.code": "read",
             "repo.ext_issues": "none",
             "repo.ext_wiki": "none",
             "repo.issues": "write",
+            "repo.packages": "none",
             "repo.projects": "none",
             "repo.pulls": "owner",
             "repo.releases": "none",
@@ -29695,19 +29724,19 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "UpdateVariableOption": {
-      "description": "UpdateVariableOption the option when updating variable",
       "type": "object",
+      "title": "UpdateVariableOption defines the properties of the variable to update.",
       "required": [
         "value"
       ],
       "properties": {
         "name": {
-          "description": "New name for the variable. If the field is empty, the variable name won't be updated.",
+          "description": "New name for the variable. If the field is empty, the variable name won't be updated. Forgejo will convert it to\nuppercase.",
           "type": "string",
           "x-go-name": "Name"
         },
         "value": {
-          "description": "Value of the variable to update",
+          "description": "Value of the variable to update. Special characters will be retained. Line endings will be normalized to LF to\nmatch the behaviour of browsers. Encode the data with Base64 if line endings should be retained.",
           "type": "string",
           "x-go-name": "Value"
         }
@@ -31592,12 +31621,6 @@
     }
   },
   "securityDefinitions": {
-    "AccessToken": {
-      "description": "This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.",
-      "type": "apiKey",
-      "name": "access_token",
-      "in": "query"
-    },
     "AuthorizationHeaderToken": {
       "description": "API tokens must be prepended with \"token\" followed by a space.",
       "type": "apiKey",
@@ -31624,23 +31647,11 @@
       "type": "apiKey",
       "name": "X-FORGEJO-OTP",
       "in": "header"
-    },
-    "Token": {
-      "description": "This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.",
-      "type": "apiKey",
-      "name": "token",
-      "in": "query"
     }
   },
   "security": [
     {
       "BasicAuth": []
-    },
-    {
-      "Token": []
-    },
-    {
-      "AccessToken": []
     },
     {
       "AuthorizationHeaderToken": []

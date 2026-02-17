@@ -137,6 +137,22 @@ func GetRunJobsByRunID(ctx context.Context, runID int64) ([]*ActionRunJob, error
 	return jobs, nil
 }
 
+// Check if the ActionRun has any jobs other than those included in the jobs parameter.
+func RunHasOtherJobs(ctx context.Context, runID int64, jobs []*ActionRunJob) (bool, error) {
+	jobIDs := make([]int64, len(jobs))
+	for i, job := range jobs {
+		jobIDs[i] = job.ID
+	}
+	otherJobs, err := db.GetEngine(ctx).
+		Where("run_id = ?", runID).
+		Where(builder.NotIn("id", jobIDs)).
+		Count(&ActionRunJob{})
+	if err != nil {
+		return false, err
+	}
+	return otherJobs > 0, nil
+}
+
 // All calls to UpdateRunJobWithoutNotification that change run.Status for any run from a not done status to a done status must call the ActionRunNowDone notification channel.
 // Use the wrapper function UpdateRunJob instead.
 func UpdateRunJobWithoutNotification(ctx context.Context, job *ActionRunJob, cond builder.Cond, cols ...string) (int64, error) {
@@ -174,38 +190,12 @@ func UpdateRunJobWithoutNotification(ctx context.Context, job *ActionRunJob, con
 		}
 	}
 
-	{
-		// Other goroutines may aggregate the status of the run and update it too.
-		// So we need load the run and its jobs before updating the run.
-		run, err := GetRunByID(ctx, job.RunID)
-		if err != nil {
-			return 0, err
-		}
-		jobs, err := GetRunJobsByRunID(ctx, job.RunID)
-		if err != nil {
-			return 0, err
-		}
-
-		updateRequired := false
-		newStatus := AggregateJobStatus(jobs)
-		if run.Status != newStatus {
-			run.Status = newStatus
-			updateRequired = true
-		}
-		if run.Started.IsZero() && run.Status.IsRunning() {
-			run.Started = timeutil.TimeStampNow()
-			updateRequired = true
-		}
-		if run.Stopped.IsZero() && run.Status.IsDone() {
-			run.Stopped = timeutil.TimeStampNow()
-			updateRequired = true
-		}
-		if updateRequired {
-			// As the caller has to ensure the ActionRunNowDone notification is sent we can ignore doing so here.
-			if err := UpdateRunWithoutNotification(ctx, run, "status", "started", "stopped"); err != nil {
-				return 0, fmt.Errorf("update run %d: %w", run.ID, err)
-			}
-		}
+	run, columns, err := ComputeRunStatus(ctx, job.RunID)
+	if err != nil {
+		return 0, fmt.Errorf("compute run status: %w", err)
+	}
+	if err := UpdateRunWithoutNotification(ctx, run, columns...); err != nil {
+		return 0, fmt.Errorf("update run %d: %w", run.ID, err)
 	}
 
 	return affected, nil

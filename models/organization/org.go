@@ -191,7 +191,7 @@ func (org *Organization) IsGhost() bool {
 	return org.AsUser().IsGhost()
 }
 
-// FindOrgMembersOpts represensts find org members conditions
+// FindOrgMembersOpts represents find org members conditions
 type FindOrgMembersOpts struct {
 	db.ListOptions
 	Doer         *user_model.User
@@ -510,10 +510,10 @@ func ChangeOrgUserStatus(ctx context.Context, orgID, uid int64, public bool) err
 
 // AddOrgUser adds new user to given organization.
 func AddOrgUser(ctx context.Context, orgID, uid int64) error {
-	isUser, err := user_model.IsUserByID(ctx, uid)
+	eligible, err := IsAnEligibleTeamMemberByID(ctx, uid)
 	if err != nil {
 		return err
-	} else if !isUser {
+	} else if !eligible {
 		return user_model.ErrUserWrongType{UID: uid}
 	}
 

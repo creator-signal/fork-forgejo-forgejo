@@ -1750,31 +1750,6 @@ details.repo-search-result summary::marker {
   border-bottom: 1px solid var(--color-warning-border);
 }
 
-.repository .release-tag-name .ui.label.isSigned,
-.repository .release-list-title .ui.label.isSigned {
-  padding: 0 0.5em;
-  box-shadow: none;
-}
-
-.repository .release-tag-name .ui.label.isSigned .avatar,
-.repository .release-list-title .ui.label.isSigned .avatar {
-  margin-left: .5rem;
-}
-
-.repository .release-tag-name .ui.label.isSigned.isVerified,
-.repository .release-list-title .ui.label.isSigned.isVerified {
-  border: 1px solid var(--color-success-border);
-  background-color: var(--color-success-bg);
-  color: var(--color-success-text);
-}
-
-.repository .release-tag-name .ui.label.isSigned.isWarning,
-.repository .release-list-title .ui.label.isSigned.isWarning {
-  border: 1px solid var(--color-warning-border);
-  background-color: var(--color-warning-bg);
-  color: var(--color-warning-text);
-}
-
 .repository .segment.reactions.dropdown .menu,
 .repository .select-reaction.dropdown .menu {
   right: 0 !important;
@@ -2700,16 +2675,8 @@ tbody.commit-list {
   gap: 8px;
 }
 
-@media (max-width: 767.98px) {
-  .commit-status-item .status-details {
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-  }
-}
-
 .commit-status-item .status-details > span {
-  padding-right: 0.5em; /* To match the alignment with the "required" label */
+  padding-right: 0.5em; /* To avoid scrollbar occlusion */
 }
 
 .search-fullname {
