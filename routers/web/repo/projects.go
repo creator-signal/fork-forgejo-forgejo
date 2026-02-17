@@ -421,7 +421,110 @@ func UpdateIssueProject(ctx *context.Context) {
 		}
 	}
 
+	if ctx.FormBool("htmx") {
+		issue := issues[0]
+
+		if err := issue.LoadProject(ctx); err != nil {
+			ctx.ServerError("LoadProject", err)
+			return
+		}
+
+		if issue.Project != nil {
+			columns, err := issue.Project.GetColumns(ctx)
+			if err != nil {
+				ctx.ServerError("GetProjectColumns", err)
+				return
+			}
+			ctx.Data["ProjectColumns"] = columns
+
+			currentColumn, err := issue.LoadProjectColumn(ctx)
+			if err != nil {
+				ctx.ServerError("LoadProjectColumn", err)
+				return
+			}
+			ctx.Data["IssueProjectColumn"] = currentColumn
+		}
+
+		retrieveProjects(ctx, ctx.Repo.Repository)
+		if ctx.Written() {
+			return
+		}
+
+		ctx.Data["Issue"] = issue
+		ctx.Data["HasIssuesOrPullsWritePermission"] = ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull)
+		ctx.HTML(http.StatusOK, "htmx/project_sidebar")
+		return
+	}
+
 	ctx.JSONOK()
+}
+
+// UpdateIssueProjectColumn changes the column an issue is in within its current project
+func UpdateIssueProjectColumn(ctx *context.Context) {
+	issueID := ctx.FormInt64("issue_id")
+	columnID := ctx.FormInt64("column_id")
+
+	issue, err := issues_model.GetIssueByID(ctx, issueID)
+	if err != nil {
+		ctx.NotFoundOrServerError("GetIssueByID", issues_model.IsErrIssueNotExist, err)
+		return
+	}
+
+	if issue.RepoID != ctx.Repo.Repository.ID {
+		ctx.NotFound("", nil)
+		return
+	}
+
+	if err := issue.LoadProject(ctx); err != nil {
+		ctx.ServerError("LoadProject", err)
+		return
+	}
+	if issue.Project == nil {
+		ctx.NotFound("issue has no project", nil)
+		return
+	}
+
+	column, err := project_model.GetColumn(ctx, columnID)
+	if err != nil {
+		if project_model.IsErrProjectColumnNotExist(err) {
+			ctx.NotFound("column not found", nil)
+			return
+		}
+		ctx.ServerError("GetColumn", err)
+		return
+	}
+
+	if column.ProjectID != issue.Project.ID {
+		ctx.NotFound("column does not belong to project", nil)
+		return
+	}
+
+	if err := project_model.MoveIssuesOnProjectColumn(ctx, column, map[int64]int64{0: issue.ID}); err != nil {
+		ctx.ServerError("MoveIssuesOnProjectColumn", err)
+		return
+	}
+
+	if ctx.FormBool("htmx") {
+		columns, err := issue.Project.GetColumns(ctx)
+		if err != nil {
+			ctx.ServerError("GetProjectColumns", err)
+			return
+		}
+		ctx.Data["ProjectColumns"] = columns
+
+		currentColumn, err := issue.LoadProjectColumn(ctx)
+		if err != nil {
+			ctx.ServerError("LoadProjectColumn", err)
+			return
+		}
+		ctx.Data["IssueProjectColumn"] = currentColumn
+
+		ctx.Data["Issue"] = issue
+		ctx.Data["HasIssuesOrPullsWritePermission"] = ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull)
+		ctx.HTML(http.StatusOK, "htmx/project_column_sidebar")
+	} else {
+		ctx.JSONOK()
+	}
 }
 
 // DeleteProjectColumn allows for the deletion of a project column

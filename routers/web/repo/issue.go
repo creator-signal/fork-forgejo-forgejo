@@ -1580,6 +1580,22 @@ func ViewIssue(ctx *context.Context) {
 		}
 	}
 
+	if issue.Project != nil {
+		columns, err := issue.Project.GetColumns(ctx)
+		if err != nil {
+			ctx.ServerError("GetProjectColumns", err)
+			return
+		}
+		ctx.Data["ProjectColumns"] = columns
+
+		currentColumn, err := issue.LoadProjectColumn(ctx)
+		if err != nil {
+			ctx.ServerError("LoadProjectColumn", err)
+			return
+		}
+		ctx.Data["IssueProjectColumn"] = currentColumn
+	}
+
 	if issue.IsPull {
 		canChooseReviewer := false
 		if ctx.Doer != nil && ctx.IsSigned {

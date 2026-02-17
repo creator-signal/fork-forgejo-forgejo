@@ -231,6 +231,9 @@ linters:
       - path: models/issues/issue.go
         linters:
           - nilnil
+      - path: models/issues/issue_project.go
+        linters:
+          - nilnil
       - path: models/issues/issue_xref.go
         linters:
           - nilnil
