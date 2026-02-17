@@ -9,6 +9,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/util"
 	"forgejo.org/modules/validation"
 )
 
@@ -38,7 +39,7 @@ func findFederationHostFromDB(ctx context.Context, searchKey, searchValue string
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, nil
+		return nil, util.ErrNotFoundf[FederationHost]("search key: %s, search value: %s", searchKey, searchValue)
 	}
 	if res, err := validation.IsValid(host); !res {
 		return nil, err
@@ -52,7 +53,7 @@ func FindFederationHostByFqdnAndPort(ctx context.Context, fqdn string, port uint
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, nil
+		return nil, util.ErrNotFoundf[FederationHost]("host_fqdn=%s, host_port=%d", fqdn, port)
 	}
 	if res, err := validation.IsValid(host); !res {
 		return nil, err

@@ -6,6 +6,7 @@ package federation
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 	"forgejo.org/modules/validation"
 
 	"github.com/google/uuid"
@@ -34,15 +36,14 @@ func FindOrCreateFederationHost(ctx context.Context, actorURI string) (*forgefed
 		return nil, err
 	}
 	federationHost, err := forgefed.FindFederationHostByFqdnAndPort(ctx, rawActorID.Host, rawActorID.HostPort)
-	if err != nil {
-		return nil, err
-	}
-	if federationHost == nil {
+	if err != nil && errors.Is(err, util.ErrNotFound[forgefed.FederationHost]{}) {
 		result, err := createFederationHostFromAP(ctx, rawActorID)
 		if err != nil {
 			return nil, err
 		}
 		federationHost = result
+	} else if err != nil {
+		return nil, err
 	}
 	return federationHost, nil
 }

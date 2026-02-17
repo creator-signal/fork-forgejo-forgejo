@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/activitypub"
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/util"
 
 	ap "github.com/go-ap/activitypub"
 )
@@ -141,15 +142,13 @@ func FindOrCreateFederationHostKey(ctx context.Context, keyID string) (pubKey an
 
 	// Is there an already known federation host?
 	federationHost, err := forgefed.FindFederationHostByKeyID(ctx, keyURL.String())
-	if err != nil {
-		return nil, err
-	}
-
-	if federationHost == nil {
+	if err != nil && errors.Is(err, util.ErrNotFound[forgefed.FederationHost]{}) {
 		federationHost, err = FindOrCreateFederationHost(ctx, rawActorID.AsURI())
 		if err != nil {
 			return nil, err
 		}
+	} else if err != nil {
+		return nil, err
 	}
 
 	// Is there an already an key?
