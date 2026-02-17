@@ -81,7 +81,7 @@ func SaveManifest(ctx *context.Context, owner, creator *user_model.User, remoteC
 		owner,
 		creator,
 		man.GetDescriptor().MediaType,
-		remoteCtx.ImageName,
+		remoteCtx.GetLocalImageName(),
 		remoteCtx.Reference,
 		man.GetRef().Registry,
 	)

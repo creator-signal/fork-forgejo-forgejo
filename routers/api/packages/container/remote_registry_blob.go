@@ -59,7 +59,7 @@ func GetRemoteTagList(ctx *context.Context) {
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
-	} else if remoteCtx.ImageName == "" {
+	} else if remoteCtx.GetLocalImageName() == "" {
 		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
@@ -71,7 +71,7 @@ func GetRemoteTagList(ctx *context.Context) {
 
 	tagList, vals, err := container_service.GetLocalTagList(ctx,
 		ctx.Package.Owner.LowerName,
-		remoteCtx.ImageName,
+		remoteCtx.GetLocalImageName(),
 		last,
 		n,
 		ctx.Package.Owner.ID)
@@ -116,7 +116,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 		return
 	}
 
-	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.ImageName, true)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.GetLocalImageName(), true)
 	if err != nil {
 		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
 			log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Digest)
@@ -175,7 +175,7 @@ func RemoteGetBlob(ctx *context.Context) {
 		return
 	}
 
-	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.ImageName, true)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.GetLocalImageName(), true)
 	if err == container_model.ErrContainerBlobNotExist {
 		log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Digest)
 
@@ -244,7 +244,7 @@ func RemoteHeadManifest(ctx *context.Context) {
 	}
 
 	// Do we have the manifest cached locally?
-	manifest, err := container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.ImageName, remoteCtx.Reference)
+	manifest, err := container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.GetLocalImageName(), remoteCtx.Reference)
 	if errors.Is(err, container_model.ErrContainerBlobNotExist) {
 		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
 		if err != nil {
@@ -296,7 +296,7 @@ func RemoteGetManifest(ctx *context.Context) {
 		return
 	}
 
-	man, err := container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.ImageName, remoteCtx.Reference)
+	man, err := container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.GetLocalImageName(), remoteCtx.Reference)
 
 	if errors.Is(err, container_model.ErrContainerBlobNotExist) {
 		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
@@ -395,7 +395,7 @@ func RemoteGetManifest(ctx *context.Context) {
 			}
 			return
 		}
-		man, err = container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.ImageName, remoteCtx.Reference)
+		man, err = container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.GetLocalImageName(), remoteCtx.Reference)
 		if err != nil {
 			log.Error("Failed to save config: %v", err)
 			apiError(ctx, http.StatusInternalServerError, err)

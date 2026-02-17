@@ -15,3 +15,11 @@ type RemoteRegistryContext struct {
 	Reference      string
 	Digest         string
 }
+
+func (rrc *RemoteRegistryContext) GetLocalImageName() string {
+	res := ""
+	if rrc.ImageName != "" {
+		res = rrc.RemoteRegistry.Name + "/" + rrc.ImageName
+	}
+	return res
+}

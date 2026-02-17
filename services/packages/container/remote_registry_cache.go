@@ -23,7 +23,7 @@ func SaveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, 
 	pci := &packages_service.PackageCreationInfo{
 		PackageInfo: packages_service.PackageInfo{
 			Owner:   owner,
-			Name:    remoteCtx.ImageName,
+			Name:    remoteCtx.GetLocalImageName(),
 			Version: digest,
 		},
 		Creator: creator,
