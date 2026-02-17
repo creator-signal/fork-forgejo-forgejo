@@ -544,10 +544,10 @@ func FindLatestUpdatedIssues(ctx context.Context, repoID int64, isPull optional.
 	return issues, err
 }
 
-func FindIssuesSuggestionByKeyword(ctx context.Context, repoID int64, keyword string, isPull optional.Option[bool], excludedID int64, pageSize int) (IssueList, error) {
+func FindIssuesSuggestionByKeyword(ctx context.Context, repoID int64, keyword string, isPull optional.Option[bool], excludedID optional.Option[int64], pageSize int) (IssueList, error) {
 	cond := builder.NewCond()
-	if excludedID > 0 {
-		cond = cond.And(builder.Neq{"`id`": excludedID})
+	if has, value := excludedID.Get(); has {
+		cond = cond.And(builder.Neq{"`id`": value})
 	}
 
 	// It seems that GitHub searches both title and content (maybe sorting by the search engine's ranking system?)
