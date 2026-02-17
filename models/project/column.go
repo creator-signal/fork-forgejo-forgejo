@@ -302,6 +302,81 @@ func SetDefaultColumn(ctx context.Context, projectID, columnID int64) error {
 	})
 }
 
+// BatchCountCardsInColumns counts cards in multiple columns in a single query
+func BatchCountCardsInColumns(ctx context.Context, columnIDs []int64) (map[int64]int64, error) {
+	result := make(map[int64]int64, len(columnIDs))
+	if len(columnIDs) == 0 {
+		return result, nil
+	}
+
+	type countRow struct {
+		ColumnID int64 `xorm:"project_board_id"`
+		Count    int64 `xorm:"cnt"`
+	}
+
+	var rows []countRow
+	err := db.GetEngine(ctx).Table("project_issue").
+		In("project_board_id", columnIDs).
+		Select("project_board_id, count(*) as cnt").
+		GroupBy("project_board_id").
+		Find(&rows)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		result[row.ColumnID] = row.Count
+	}
+
+	return result, nil
+}
+
+// BatchCountProjectColumns counts columns in multiple projects in a single query
+func BatchCountProjectColumns(ctx context.Context, projectIDs []int64) (map[int64]int64, error) {
+	result := make(map[int64]int64, len(projectIDs))
+	if len(projectIDs) == 0 {
+		return result, nil
+	}
+
+	type countRow struct {
+		ProjectID int64 `xorm:"project_id"`
+		Count     int64 `xorm:"cnt"`
+	}
+
+	var rows []countRow
+	err := db.GetEngine(ctx).Table("project_board").
+		In("project_id", projectIDs).
+		Select("project_id, count(*) as cnt").
+		GroupBy("project_id").
+		Find(&rows)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		result[row.ProjectID] = row.Count
+	}
+
+	return result, nil
+}
+
+// GetColumnsByIDsUnscoped fetches columns by their IDs without project scoping.
+// Used for batch pre-loading in list conversions.
+func GetColumnsByIDsUnscoped(ctx context.Context, columnIDs []int64) (map[int64]*Column, error) {
+	result := make(map[int64]*Column, len(columnIDs))
+	if len(columnIDs) == 0 {
+		return result, nil
+	}
+	columns := make([]*Column, 0, len(columnIDs))
+	if err := db.GetEngine(ctx).In("id", columnIDs).Find(&columns); err != nil {
+		return nil, err
+	}
+	for _, col := range columns {
+		result[col.ID] = col
+	}
+	return result, nil
+}
+
 func GetColumnsByIDs(ctx context.Context, projectID int64, columnsIDs []int64) (ColumnList, error) {
 	columns := make([]*Column, 0, 5)
 	if len(columnsIDs) == 0 {
