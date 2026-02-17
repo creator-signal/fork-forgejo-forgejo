@@ -5,6 +5,7 @@
 package models
 
 import (
+	"errors"
 	"fmt"
 
 	repo_model "forgejo.org/models/repo"
@@ -373,6 +374,9 @@ func (err ErrSHADoesNotMatch) Error() string {
 	return fmt.Sprintf("sha does not match [given: %s, expected: %s]", err.GivenSHA, err.CurrentSHA)
 }
 
+// SHA represents the SHA hash used to identify a commit.
+type SHA string
+
 // ErrSHANotFound represents a "SHADoesNotMatch" kind of error.
 type ErrSHANotFound struct {
 	SHA string
@@ -380,16 +384,15 @@ type ErrSHANotFound struct {
 
 // IsErrSHANotFound checks if an error is a ErrSHANotFound.
 func IsErrSHANotFound(err error) bool {
-	_, ok := err.(ErrSHANotFound)
-	return ok
+	return errors.Is(err, util.ErrNotFound[SHA]{})
 }
 
 func (err ErrSHANotFound) Error() string {
-	return fmt.Sprintf("sha not found [%s]", err.SHA)
+	return err.Unwrap().Error()
 }
 
 func (err ErrSHANotFound) Unwrap() error {
-	return util.ErrNotExist
+	return util.ErrNotFoundf[SHA]("sha not found [%s]", err.SHA)
 }
 
 // ErrCommitIDDoesNotMatch represents a "CommitIDDoesNotMatch" kind of error.
