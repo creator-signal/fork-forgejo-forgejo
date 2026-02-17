@@ -6,18 +6,20 @@ package markdown
 import (
 	"bytes"
 	"errors"
+	"math"
 	"unicode"
 	"unicode/utf8"
 
-	"go.yaml.in/yaml/v3"
+	"forgejo.org/modules/json"
+
 	"github.com/BurntSushi/toml"
-	"encoding/json"
+	"go.yaml.in/yaml/v3"
 )
 
 const (
-	Json = iota
-	Yaml
-	Toml
+	JSON = iota
+	YAML
+	TOML
 )
 
 func frontmatterSeparator(line []byte, isStart bool) byte {
@@ -53,12 +55,12 @@ func frontmatterSeparator(line []byte, isStart bool) byte {
 		sepCount++
 	}
 
-	// dashes/pluses require 3 characters
+	// dashes/pluses require at laest 3 characters
 	if (sep == '-' || sep == '+') && sepCount < 3 {
 		return 0
 	}
 
-	// open/close brace require 1 character
+	// open/close brace require exactly 1 character
 	if (sep == '{' || sep == '}') && sepCount != 1 {
 		return 0
 	}
@@ -105,6 +107,9 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 	}
 
 	var frontMatterStart int
+
+	// the braces are part of the JSON frontmatter,
+	// but the other separators aren't part of frontmatter
 	if startSep == '{' {
 		frontMatterStart = start
 	} else {
@@ -121,6 +126,8 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 		line := contents[start:end]
 		endSep = frontmatterSeparator(line, false)
 		if endSep == startSep || (startSep == '{' && endSep == '}') {
+			// the braces are part of the JSON frontmatter,
+			// but the other separators aren't part of frontmatter
 			if endSep == '}' {
 				front = contents[frontMatterStart:end]
 			} else {
@@ -141,7 +148,7 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 
 	// assume JSON if delimited by {}
 	if startSep == '{' || endSep == '}' {
-		format = Json
+		format = JSON
 	} else {
 		// disambiguate based upon first appearance of {, :, or =
 		firstBrace := bytes.IndexByte(front, '{') // JSON
@@ -149,41 +156,41 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 		firstEqual := bytes.IndexByte(front, '=') // TOML
 
 		if firstBrace < 0 {
-			firstBrace = 0xFFFFFFFF
+			firstBrace = math.MaxInt
 		}
 		if firstColon < 0 {
-			firstColon = 0xFFFFFFFF
+			firstColon = math.MaxInt
 		}
 		if firstEqual < 0 {
-			firstEqual = 0xFFFFFFFF
+			firstEqual = math.MaxInt
 		}
 
 		if firstBrace <= firstColon && firstBrace <= firstEqual {
-			format = Json
+			format = JSON
 		} else if firstColon <= firstBrace && firstColon <= firstEqual {
-			format = Yaml
+			format = YAML
 		} else if firstEqual <= firstBrace && firstEqual <= firstColon {
-			format = Toml
+			format = TOML
 		} else if startSep == '-' {
-			format = Yaml
+			format = YAML
 		} else if startSep == '+' {
-			format = Json
+			format = JSON
 		}
 	}
 
 	switch format {
-		case Yaml:
-			if err := yaml.Unmarshal(front, out); err != nil {
-				return contents, err
-			}
-		case Toml:
-			if err := toml.Unmarshal(front, out); err != nil {
-				return contents, err
-			}
-		case Json:
-			if err := json.Unmarshal(front, out); err != nil {
-				return contents, err
-			}
+	case YAML:
+		if err := yaml.Unmarshal(front, out); err != nil {
+			return contents, err
+		}
+	case TOML:
+		if err := toml.Unmarshal(front, out); err != nil {
+			return contents, err
+		}
+	case JSON:
+		if err := json.Unmarshal(front, out); err != nil {
+			return contents, err
+		}
 	}
 
 	return body, nil

@@ -29,18 +29,18 @@ func (it *IssueTemplate) Valid() bool {
 }
 
 func TestExtractMetadata(t *testing.T) {
-	t.Run("PlainJsonAndBody", func(t *testing.T) {
+	t.Run("PlainJSONAndBody", func(t *testing.T) {
 		var meta IssueTemplate
-		body, err := ExtractMetadata(fmt.Sprintf("%s\n%s", frontTestJson, bodyTest), &meta)
+		body, err := ExtractMetadata(fmt.Sprintf("%s\n%s", frontTestJSON, bodyTest), &meta)
 		require.NoError(t, err)
 		assert.Equal(t, bodyTest, body)
 		assert.Equal(t, metaTest, meta)
 		assert.True(t, meta.Valid())
 	})
 
-	t.Run("PlainJsonOnly", func(t *testing.T) {
+	t.Run("PlainJSONOnly", func(t *testing.T) {
 		var meta IssueTemplate
-		body, err := ExtractMetadata(frontTestJson, &meta)
+		body, err := ExtractMetadata(frontTestJSON, &meta)
 		require.NoError(t, err)
 		assert.Empty(t, body)
 		assert.Equal(t, metaTest, meta)
@@ -65,7 +65,7 @@ func TestExtractMetadata(t *testing.T) {
 		for _, sep := range sepTests {
 			for _, front := range frontTests {
 				// JSON's brace becomes the separator in this case
-				if front == frontTestJson {
+				if front == frontTestJSON {
 					continue
 				}
 				_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s", front, sep, bodyTest), &meta)
@@ -99,18 +99,18 @@ func TestExtractMetadata(t *testing.T) {
 }
 
 func TestExtractMetadataBytes(t *testing.T) {
-	t.Run("PlainJsonAndBody", func(t *testing.T) {
+	t.Run("PlainJSONAndBody", func(t *testing.T) {
 		var meta IssueTemplate
-		body, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s", frontTestJson, bodyTest)), &meta)
+		body, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s", frontTestJSON, bodyTest)), &meta)
 		require.NoError(t, err)
 		assert.Equal(t, bodyTest, string(body))
 		assert.Equal(t, metaTest, meta)
 		assert.True(t, meta.Valid())
 	})
 
-	t.Run("PlainJsonOnly", func(t *testing.T) {
+	t.Run("PlainJSONOnly", func(t *testing.T) {
 		var meta IssueTemplate
-		body, err := ExtractMetadataBytes([]byte(frontTestJson), &meta)
+		body, err := ExtractMetadataBytes([]byte(frontTestJSON), &meta)
 		require.NoError(t, err)
 		assert.Empty(t, string(body))
 		assert.Equal(t, metaTest, meta)
@@ -135,7 +135,7 @@ func TestExtractMetadataBytes(t *testing.T) {
 		for _, sep := range sepTests {
 			for _, front := range frontTests {
 				// JSON's brace becomes the separator in this case
-				if front == frontTestJson {
+				if front == frontTestJSON {
 					continue
 				}
 				_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s", front, sep, bodyTest)), &meta)
@@ -170,17 +170,17 @@ func TestExtractMetadataBytes(t *testing.T) {
 
 var (
 	sepTests      = []string{"-----", "++++"}
-	frontTestYaml = `name: Test
+	frontTestYAML = `name: Test
 about: "A Test"
 title: "Test Title"
 labels:
   - bug
   - "test label"`
-	frontTestToml = `name = "Test"
+	frontTestTOML = `name = "Test"
 about = "A Test"
 title = "Test Title"
 labels = ["bug", "test label"]`
-	frontTestJson = `{
+	frontTestJSON = `{
 "name": "Test",
 "about": "A Test",
 "title": "Test Title",
@@ -195,6 +195,4 @@ labels = ["bug", "test label"]`
 	}
 )
 
-var (
-	frontTests = []string{frontTestYaml, frontTestToml, frontTestJson}
-)
+var frontTests = []string{frontTestYAML, frontTestTOML, frontTestJSON}
