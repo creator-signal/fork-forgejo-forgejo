@@ -1732,6 +1732,7 @@ func registerRoutes(m *web.Route) {
 
 	if setting.API.EnableSwagger {
 		m.Get("/swagger.v1.json", SwaggerV1Json)
+		m.Get("/openapi.v1.json", SwaggerV1OpenAPI3Json)
 	}
 
 	if !setting.IsProd {

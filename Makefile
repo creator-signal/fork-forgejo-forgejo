@@ -171,6 +171,9 @@ endif
 FORGEJO_API_SPEC := public/assets/forgejo/api.v1.yml
 
 SWAGGER_SPEC := templates/swagger/v1_json.tmpl
+OPENAPI3_SPEC := templates/swagger/v1_openapi3_json.tmpl
+OPENAPI3_SPEC_S_TMPL := s|"url": *"/api/v1"|"url": "{{AppSubUrl \| JSEscape}}/api/v1"|g
+OPENAPI3_SPEC_S_JSON := s|"url": *"{{AppSubUrl \| JSEscape}}/api/v1"|"url": "/api/v1"|g
 SWAGGER_SPEC_S_TMPL := s|"basePath": *"/api/v1"|"basePath": "{{AppSubUrl \| JSEscape}}/api/v1"|g
 SWAGGER_SPEC_S_JSON := s|"basePath": *"{{AppSubUrl \| JSEscape}}/api/v1"|"basePath": "/api/v1"|g
 SWAGGER_EXCLUDE := code.gitea.io/sdk
@@ -417,6 +420,26 @@ swagger-validate:
 	$(GO) run $(SWAGGER_PACKAGE) validate './$(SWAGGER_SPEC)'
 	$(SED_INPLACE) '$(SWAGGER_SPEC_S_TMPL)' './$(SWAGGER_SPEC)'
 
+.PHONY: generate-openapi3
+generate-openapi3: $(OPENAPI3_SPEC)
+
+$(OPENAPI3_SPEC): $(SWAGGER_SPEC)
+	$(GO) run build/generate-openapi.go
+
+.PHONY: openapi3-check
+openapi3-check: generate-openapi3
+	@git diff --exit-code --color=always '$(OPENAPI3_SPEC)' \
+	|| (code=$$?; echo "Please run 'make generate-openapi3' and commit the result"; exit $${code})
+
+.PHONY: openapi3-validate
+openapi3-validate:
+	@cp './$(OPENAPI3_SPEC)' './$(OPENAPI3_SPEC).bak'
+	$(SED_INPLACE) '$(OPENAPI3_SPEC_S_JSON)' './$(OPENAPI3_SPEC)'
+	$(SED_INPLACE) 's|{{AppVer \| JSEscape}}|1.0.0|g' './$(OPENAPI3_SPEC)'
+	$(GO) run $(KIN_OPENAPI_CODEGEN_PACKAGE) './$(OPENAPI3_SPEC)' && \
+	mv './$(OPENAPI3_SPEC).bak' './$(OPENAPI3_SPEC)' || \
+	(mv './$(OPENAPI3_SPEC).bak' './$(OPENAPI3_SPEC)'; exit 1)
+
 .PHONY: checks
 checks: checks-frontend checks-backend
 
@@ -424,7 +447,7 @@ checks: checks-frontend checks-backend
 checks-frontend: lockfile-check svg-check
 
 .PHONY: checks-backend
-checks-backend: tidy-check swagger-check fmt-check swagger-validate security-check
+checks-backend: tidy-check swagger-check openapi3-check fmt-check swagger-validate openapi3-validate security-check
 
 .PHONY: lint
 lint: lint-frontend lint-backend
@@ -536,7 +559,7 @@ tsc: node_modules
 
 # target for PRs to be pushed. Mandatory to succeed in CI
 .PHONY: pr-go
-pr-go: deps-backend deps-tools lint-backend tidy-check swagger-check lint-swagger fmt-check swagger-validate
+pr-go: deps-backend deps-tools lint-backend tidy-check swagger-check openapi3-check lint-swagger fmt-check swagger-validate openapi3-validate
 	TAGS=bindata $(MAKE) backend
 
 ###

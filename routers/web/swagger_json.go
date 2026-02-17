@@ -11,3 +11,8 @@ import (
 func SwaggerV1Json(ctx *context.Context) {
 	ctx.JSONTemplate("swagger/v1_json")
 }
+
+// SwaggerV1OpenAPI3Json render swagger v1 OpenAPI 3.0 json
+func SwaggerV1OpenAPI3Json(ctx *context.Context) {
+	ctx.JSONTemplate("swagger/v1_openapi3_json")
+}
