@@ -349,26 +349,44 @@ test('Markdown list continuation', async ({page}) => {
 });
 
 test('Markdown insert table', async ({page}) => {
-  const response = await page.goto('/user2/repo1/issues/new');
+  async function evaluateTableInsertion(page, selector, isEditing) {
+    const area = page.locator(selector);
+
+    let expectedContent = '| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n'
+
+    if (isEditing) {
+      // Preparations for evaluating comment editing
+      await area.locator('.context-dropdown').click();
+      await area.locator('.context-dropdown .edit-content').click();
+      expectedContent = 'good work!' + expectedContent;
+    }
+
+    const newTableButton = area.locator('button[data-md-action="new-table"]');
+    await newTableButton.click();
+
+    const newTableModal = page.locator('[data-modal-name="new-markdown-table"].active');
+    await expect(newTableModal).toBeVisible();
+    await screenshot(page);
+
+    await newTableModal.locator('input[name="table-rows"]').fill('3');
+    await newTableModal.locator('input[name="table-columns"]').fill('2');
+
+    await newTableModal.locator('button[data-selector-name="ok-button"]').click();
+
+    await expect(newTableModal).toBeHidden();
+
+    const textarea = area.locator('textarea[name=content]');
+    await expect(textarea).toHaveValue(expectedContent);
+    await screenshot(page);
+
+    return true;
+  }
+
+  const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  const newTableButton = page.locator('button[data-md-action="new-table"]');
-  await newTableButton.click();
-
-  const newTableModal = page.locator('div[data-markdown-table-modal-id="0"]');
-  await expect(newTableModal).toBeVisible();
-  await screenshot(page);
-
-  await newTableModal.locator('input[name="table-rows"]').fill('3');
-  await newTableModal.locator('input[name="table-columns"]').fill('2');
-
-  await newTableModal.locator('button[data-selector-name="ok-button"]').click();
-
-  await expect(newTableModal).toBeHidden();
-
-  const textarea = page.locator('textarea[name=content]');
-  await expect(textarea).toHaveValue('| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n');
-  await screenshot(page);
+  expect(await evaluateTableInsertion(page, '#comment-form', false)).toBeTruthy();
+  expect(await evaluateTableInsertion(page, '#issuecomment-2', true)).toBeTruthy();
 });
 
 test('Markdown insert link', async ({page}) => {
