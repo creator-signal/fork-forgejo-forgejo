@@ -355,13 +355,13 @@ test('Markdown insert table', async ({page}) => {
   async function evaluateTableInsertion(page: Page, selector: string, isEditing: boolean) {
     const area = page.locator(selector);
 
-    let expectedContent = '| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n'
+    let expectedContent = '| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n';
 
     if (isEditing) {
       // Preparations for evaluating comment editing
       await area.locator('.context-dropdown').click();
       await area.locator('.context-dropdown .edit-content').click();
-      expectedContent = 'good work!' + expectedContent;
+      expectedContent = `good work!${expectedContent}`;
     }
 
     const newTableButton = area.locator('button[data-md-action="new-table"]');
@@ -371,8 +371,8 @@ test('Markdown insert table', async ({page}) => {
     await expect(newTableModal).toBeVisible();
     await screenshot(page);
 
-    const rowsInput = newTableModal.locator('input[name="table-rows"]')
-    const columnsInput = newTableModal.locator('input[name="table-columns"]')
+    const rowsInput = newTableModal.locator('input[name="table-rows"]');
+    const columnsInput = newTableModal.locator('input[name="table-columns"]');
 
     await expect(rowsInput).not.toHaveAttribute('disabled');
     await expect(columnsInput).not.toHaveAttribute('disabled');
@@ -411,7 +411,7 @@ test('Markdown insert link', async ({page}) => {
       // Preparations for evaluating comment editing
       await area.locator('.context-dropdown').click();
       await area.locator('.context-dropdown .edit-content').click();
-      expectedContent = 'good work!' + expectedContent;
+      expectedContent = `good work!${expectedContent}`;
     }
 
     const newLinkButton = area.locator('button[data-md-action="new-link"]');
@@ -422,8 +422,8 @@ test('Markdown insert link', async ({page}) => {
     await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"].active'], [], []);
     await screenshot(page);
 
-    const urlInput = newLinkModal.locator('input[name="link-url"]')
-    const descriptionInput = newLinkModal.locator('input[name="link-description"]')
+    const urlInput = newLinkModal.locator('input[name="link-url"]');
+    const descriptionInput = newLinkModal.locator('input[name="link-description"]');
 
     await expect(urlInput).not.toHaveAttribute('disabled');
     await expect(descriptionInput).not.toHaveAttribute('disabled');
@@ -444,7 +444,7 @@ test('Markdown insert link', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  expect(await evaluateLinkInsertion(page, '#comment-form', false)).toBeTruthy();
+  expect(await evaluateLinkInsertion(page, '#comment-forma', false)).toBeTruthy();
   expect(await evaluateLinkInsertion(page, '#issuecomment-2', true)).toBeTruthy();
 });
 
