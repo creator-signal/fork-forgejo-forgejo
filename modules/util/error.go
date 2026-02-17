@@ -63,3 +63,30 @@ func NewAlreadyExistErrorf(message string, args ...any) error {
 func NewNotExistErrorf(message string, args ...any) error {
 	return NewSilentWrapErrorf(ErrNotExist, message, args...)
 }
+
+// ErrNotFound represents a database error for when a record(s) is not found.
+//
+// The generic argument `Record` represents the record type being searched for.
+type ErrNotFound[Record any] struct {
+	Message string
+}
+
+// Error returns the error message.
+func (err ErrNotFound[Record]) Error() string {
+	return fmt.Sprintf("%T record not found: %s", *new(Record), err.Message)
+}
+
+// Unwrap returns the underlying error.
+func (err ErrNotFound[Record]) Unwrap() error {
+	return ErrNotExist
+}
+
+// Is compares the `target` error to the underlying error type.
+func (err ErrNotFound[Record]) Is(target error) bool {
+	return target == ErrNotFound[Record]{}
+}
+
+// ErrNotFoundf returns an error that formats as the given text but unwraps as an ErrNotFound
+func ErrNotFoundf[Record any](message string, args ...any) error {
+	return ErrNotFound[Record]{Message: fmt.Sprintf(message, args...)}
+}
