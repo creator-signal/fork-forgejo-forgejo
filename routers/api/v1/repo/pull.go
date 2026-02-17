@@ -890,6 +890,8 @@ func MergePullRequest(ctx *context.APIContext) {
 	//     "$ref": "#/responses/quotaExceeded"
 	//   "423":
 	//     "$ref": "#/responses/repoArchivedError"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
 
 	form := web.GetForm(ctx).(*forms.MergePullRequestForm)
 

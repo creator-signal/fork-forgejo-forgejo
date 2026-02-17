@@ -35,6 +35,8 @@ type NotificationCount struct {
 }
 
 // NotifySubjectType represent type of notification subject
+//
+// swagger:enum NotifySubjectType
 type NotifySubjectType string
 
 const (

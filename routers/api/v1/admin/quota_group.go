@@ -414,7 +414,7 @@ func RemoveRuleFromQuotaGroup(ctx *context.APIContext) {
 	//   type: string
 	//   required: true
 	// responses:
-	//   "201":
+	//   "204":
 	//     "$ref": "#/responses/empty"
 	//   "400":
 	//     "$ref": "#/responses/error"

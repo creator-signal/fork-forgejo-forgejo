@@ -14,6 +14,8 @@ import (
 )
 
 // StateType issue state type
+//
+// swagger:enum StateType
 type StateType string
 
 const (
@@ -21,9 +23,10 @@ const (
 	StateOpen StateType = "open"
 	// StateClosed pr is closed
 	StateClosed StateType = "closed"
-	// StateAll is all
-	StateAll StateType = "all"
 )
+
+// StateAll is a query parameter filter value, not a valid object state.
+const StateAll = "all"
 
 // PullRequestMeta PR info if an issue is a PR
 type PullRequestMeta struct {
@@ -61,9 +64,6 @@ type Issue struct {
 	Assignee  *User   `json:"assignee"`
 	Assignees []*User `json:"assignees"`
 	// Whether the issue is open or closed
-	//
-	// type: string
-	// enum: ["open", "closed"]
 	State    StateType `json:"state"`
 	IsLocked bool      `json:"is_locked"`
 	Comments int       `json:"comments"`
@@ -132,6 +132,8 @@ type IssueDeadline struct {
 }
 
 // IssueFormFieldType defines issue form field type, can be "markdown", "textarea", "input", "dropdown" or "checkboxes"
+//
+// swagger:enum IssueFormFieldType
 type IssueFormFieldType string
 
 const (
@@ -168,7 +170,8 @@ func (iff IssueFormField) VisibleInContent() bool {
 }
 
 // IssueFormFieldVisible defines issue form field visible
-// swagger:model
+//
+// swagger:enum IssueFormFieldVisible
 type IssueFormFieldVisible string
 
 const (

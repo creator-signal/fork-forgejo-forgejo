@@ -5,6 +5,8 @@ package structs
 
 // CommitStatusState holds the state of a CommitStatus
 // It can be "pending", "success", "error", "failure" and "warning"
+//
+// swagger:enum CommitStatusState
 type CommitStatusState string
 
 const (

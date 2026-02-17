@@ -37,8 +37,9 @@ type CreateMilestoneOption struct {
 
 // EditMilestoneOption options for editing a milestone
 type EditMilestoneOption struct {
-	Title       string     `json:"title"`
-	Description *string    `json:"description"`
-	State       *string    `json:"state"`
-	Deadline    *time.Time `json:"due_on"`
+	Title       string  `json:"title"`
+	Description *string `json:"description"`
+	// enum: ["open","closed"]
+	State    *string    `json:"state"`
+	Deadline *time.Time `json:"due_on"`
 }

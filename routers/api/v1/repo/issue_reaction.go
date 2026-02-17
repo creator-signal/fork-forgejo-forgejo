@@ -152,7 +152,7 @@ func DeleteIssueCommentReaction(ctx *context.APIContext) {
 	//   schema:
 	//     "$ref": "#/definitions/EditReactionOption"
 	// responses:
-	//   "200":
+	//   "204":
 	//     "$ref": "#/responses/empty"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
@@ -202,8 +202,7 @@ func changeIssueCommentReaction(ctx *context.APIContext, form api.EditReactionOp
 			ctx.Error(http.StatusInternalServerError, "DeleteCommentReaction", err)
 			return
 		}
-		// ToDo respond 204
-		ctx.Status(http.StatusOK)
+		ctx.Status(http.StatusNoContent)
 	}
 }
 
@@ -362,7 +361,7 @@ func DeleteIssueReaction(ctx *context.APIContext) {
 	//   schema:
 	//     "$ref": "#/definitions/EditReactionOption"
 	// responses:
-	//   "200":
+	//   "204":
 	//     "$ref": "#/responses/empty"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
@@ -418,7 +417,6 @@ func changeIssueReaction(ctx *context.APIContext, form api.EditReactionOption, i
 			ctx.Error(http.StatusInternalServerError, "DeleteIssueReaction", err)
 			return
 		}
-		// ToDo respond 204
-		ctx.Status(http.StatusOK)
+		ctx.Status(http.StatusNoContent)
 	}
 }
