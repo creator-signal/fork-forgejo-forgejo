@@ -528,8 +528,8 @@ func GetIssueByIndex(ctx context.Context, repoID, index int64) (*Issue, error) {
 }
 
 func isPullToCond(isPull optional.Option[bool]) builder.Cond {
-	if isPull.Has() {
-		return builder.Eq{"is_pull": isPull.Value()}
+	if has, value := isPull.Get(); has {
+		return builder.Eq{"is_pull": value}
 	}
 	return builder.NewCond()
 }
