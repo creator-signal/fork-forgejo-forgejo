@@ -399,30 +399,53 @@ test('Markdown insert table', async ({page}) => {
 });
 
 test('Markdown insert link', async ({page}) => {
-  const response = await page.goto('/user2/repo1/issues/new');
+  async function evaluateLinkInsertion(page: Page, selector: string, isEditing: boolean) {
+    const url = 'https://example.com';
+    const description = 'Where does this lead?';
+
+    let expectedContent = `[${description}](${url})`;
+
+    const area = page.locator(selector);
+
+    if (isEditing) {
+      // Preparations for evaluating comment editing
+      await area.locator('.context-dropdown').click();
+      await area.locator('.context-dropdown .edit-content').click();
+      expectedContent = 'good work!' + expectedContent;
+    }
+
+    const newLinkButton = area.locator('button[data-md-action="new-link"]');
+    await newLinkButton.click();
+
+    const newLinkModal = page.locator('[data-modal-name="new-markdown-link"].active');
+    await expect(newLinkModal).toBeVisible();
+    await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"].active'], [], []);
+    await screenshot(page);
+
+    const urlInput = newLinkModal.locator('input[name="link-url"]')
+    const descriptionInput = newLinkModal.locator('input[name="link-description"]')
+
+    await expect(urlInput).not.toHaveAttribute('disabled');
+    await expect(descriptionInput).not.toHaveAttribute('disabled');
+
+    await urlInput.fill(url);
+    await descriptionInput.fill(description);
+
+    await newLinkModal.locator('button[data-selector-name="ok-button"]').click();
+    await expect(newLinkModal).toBeHidden();
+
+    const textarea = area.locator('textarea[name=content]');
+    await expect(textarea).toHaveValue(expectedContent);
+    await screenshot(page);
+
+    return true;
+  }
+
+  const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  const newLinkButton = page.locator('button[data-md-action="new-link"]');
-  await newLinkButton.click();
-
-  const newLinkModal = page.locator('div[data-markdown-link-modal-id="0"]');
-  await expect(newLinkModal).toBeVisible();
-  await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], []);
-  await screenshot(page);
-
-  const url = 'https://example.com';
-  const description = 'Where does this lead?';
-
-  await newLinkModal.locator('input[name="link-url"]').fill(url);
-  await newLinkModal.locator('input[name="link-description"]').fill(description);
-
-  await newLinkModal.locator('button[data-selector-name="ok-button"]').click();
-
-  await expect(newLinkModal).toBeHidden();
-
-  const textarea = page.locator('textarea[name=content]');
-  await expect(textarea).toHaveValue(`[${description}](${url})`);
-  await screenshot(page);
+  expect(await evaluateLinkInsertion(page, '#comment-form', false)).toBeTruthy();
+  expect(await evaluateLinkInsertion(page, '#issuecomment-2', true)).toBeTruthy();
 });
 
 test('text expander has higher prio then prefix continuation', async ({page}) => {
