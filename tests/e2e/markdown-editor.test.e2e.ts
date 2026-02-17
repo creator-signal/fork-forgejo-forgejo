@@ -371,8 +371,14 @@ test('Markdown insert table', async ({page}) => {
     await expect(newTableModal).toBeVisible();
     await screenshot(page);
 
-    await newTableModal.locator('input[name="table-rows"]').fill('3');
-    await newTableModal.locator('input[name="table-columns"]').fill('2');
+    const rowsInput = newTableModal.locator('input[name="table-rows"]')
+    const columnsInput = newTableModal.locator('input[name="table-columns"]')
+
+    await expect(rowsInput).not.toHaveAttribute('disabled');
+    await expect(columnsInput).not.toHaveAttribute('disabled');
+
+    await rowsInput.fill('3');
+    await columnsInput.fill('2');
 
     await newTableModal.locator('button[data-selector-name="ok-button"]').click();
 
