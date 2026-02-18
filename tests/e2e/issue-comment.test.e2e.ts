@@ -1,3 +1,6 @@
+// Copyright 2024 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
 // web_src/js/features/comp/**
 // web_src/js/features/repo-**
