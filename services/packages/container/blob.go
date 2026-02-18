@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
@@ -19,14 +20,73 @@ import (
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/modules/util"
+	api_ctx "forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
+	digest "github.com/opencontainers/go-digest"
 )
 
 var uploadVersionMutex sync.Mutex
 
+func GetLocalManifest(ctx *api_ctx.Context, ownerID int64, imageName, reference string) (*packages_model.PackageFileDescriptor, error) {
+	opts, err := GetManifestSearchOptions(
+		ownerID,
+		imageName,
+		reference,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return WorkaroundGetContainerBlob(ctx, opts)
+}
+
+// GetLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
+func GetLocalBlob(ctx *api_ctx.Context, ownerID int64, dig, imageName string, remote ...bool) (*packages_model.PackageFileDescriptor, error) {
+	if digest.Digest(dig).Validate() != nil {
+		return nil, container_model.ErrContainerBlobNotExist
+	}
+
+	opts := &container_model.BlobSearchOptions{
+		OwnerID: ownerID,
+		Image:   imageName,
+		Digest:  dig,
+	}
+
+	// Get blob or err
+	log.Debug("Trying to find blob %s locally", dig)
+	blobDescriptor, err := WorkaroundGetContainerBlob(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(remote) > 0 {
+		// Update cache time (if it exists), as we are using this blob again
+		pf, err := packages_model.GetFileForVersionByName(
+			ctx,
+			blobDescriptor.File.VersionID,
+			blobDescriptor.File.LowerName,
+			packages_model.EmptyFileKey)
+		if err != nil {
+			log.Error("Could not find file for blob %s: %v", dig, err)
+			return nil, err
+		}
+		err = packages_model.UpdateProperty(ctx,
+			&packages_model.PackageProperty{
+				RefType: packages_model.PropertyTypeFile,
+				RefID:   pf.ID,
+				Name:    container_module.PropertyCacheTime,
+				Value:   fmt.Sprintf("%d", time.Now().Unix()),
+			})
+		if err != nil {
+			log.Warn("Failed to set/update blob property %s for remote blob: %v", container_module.PropertyCacheTime, err)
+		}
+	}
+
+	return blobDescriptor, nil
+}
+
 // saveAsPackageBlob creates a package blob from an upload
 // The uploaded blob gets stored in a special upload version to link them to the package/image
-func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, *packages_model.PackageFile, error) {
+func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, *packages_model.PackageFile, error) {
 	pb := packages_service.NewPackageBlob(hsr)
 	pf := &packages_model.PackageFile{}
 
@@ -34,7 +94,7 @@ func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 
 	contentStore := packages_module.NewContentStore()
 
-	uploadVersion, err := getOrCreateUploadVersion(ctx, &pci.PackageInfo)
+	uploadVersion, err := GetOrCreateUploadVersion(ctx, &pci.PackageInfo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,7 +125,7 @@ func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 			}
 		}
 
-		pf, err = createFileForBlob(ctx, uploadVersion, pb)
+		pf, err = CreateFileForBlob(ctx, uploadVersion, pb)
 		return err
 	})
 	if err != nil {
@@ -81,19 +141,19 @@ func saveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 }
 
 // mountBlob mounts the specific blob to a different package
-func mountBlob(ctx context.Context, pi *packages_service.PackageInfo, pb *packages_model.PackageBlob) error {
-	uploadVersion, err := getOrCreateUploadVersion(ctx, pi)
+func MountBlob(ctx context.Context, pi *packages_service.PackageInfo, pb *packages_model.PackageBlob) error {
+	uploadVersion, err := GetOrCreateUploadVersion(ctx, pi)
 	if err != nil {
 		return err
 	}
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
-		_, err := createFileForBlob(ctx, uploadVersion, pb)
+		_, err := CreateFileForBlob(ctx, uploadVersion, pb)
 		return err
 	})
 }
 
-func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageInfo) (*packages_model.PackageVersion, error) {
+func GetOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageInfo) (*packages_model.PackageVersion, error) {
 	var uploadVersion *packages_model.PackageVersion
 
 	// FIXME: Replace usage of mutex with database transaction
@@ -148,7 +208,7 @@ func getOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 	return uploadVersion, err
 }
 
-func createFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, pb *packages_model.PackageBlob) (*packages_model.PackageFile, error) {
+func CreateFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, pb *packages_model.PackageBlob) (*packages_model.PackageFile, error) {
 	filename := strings.ToLower(fmt.Sprintf("sha256_%s", pb.HashSHA256))
 
 	pf := &packages_model.PackageFile{
@@ -167,7 +227,7 @@ func createFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, p
 		return &packages_model.PackageFile{}, err
 	}
 
-	if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypeFile, pf.ID, container_module.PropertyDigest, digestFromPackageBlob(pb)); err != nil {
+	if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypeFile, pf.ID, container_module.PropertyDigest, DigestFromPackageBlob(pb)); err != nil {
 		log.Error("Error setting package file property: %v", err)
 		return &packages_model.PackageFile{}, err
 	}
@@ -175,7 +235,7 @@ func createFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, p
 	return pf, nil
 }
 
-func deleteBlob(ctx context.Context, ownerID int64, image, digest string) error {
+func DeleteBlob(ctx context.Context, ownerID int64, image, digest string) error {
 	return db.WithTx(ctx, func(ctx context.Context) error {
 		pfds, err := container_model.GetContainerBlobs(ctx, &container_model.BlobSearchOptions{
 			OwnerID: ownerID,
@@ -195,11 +255,11 @@ func deleteBlob(ctx context.Context, ownerID int64, image, digest string) error 
 	})
 }
 
-func digestFromHashSummer(h packages_module.HashSummer) string {
+func DigestFromHashSummer(h packages_module.HashSummer) string {
 	_, _, hashSHA256, _, _ := h.Sums()
 	return "sha256:" + hex.EncodeToString(hashSHA256)
 }
 
-func digestFromPackageBlob(pb *packages_model.PackageBlob) string {
+func DigestFromPackageBlob(pb *packages_model.PackageBlob) string {
 	return "sha256:" + pb.HashSHA256
 }
