@@ -308,7 +308,7 @@
 			<form class="ui form" action="{{.Link}}/notes" method="post">
 
 				<div class="field">
-					<textarea name="notes">{{.NoteRendered | SanitizeHTML}}</textarea>
+					<textarea name="notes">{{.NoteRaw}}</textarea>
 				</div>
 
 				<div class="field">
