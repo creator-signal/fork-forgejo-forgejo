@@ -73,7 +73,6 @@ func NewContainerRegistryClient(rr *rr_model.RemoteRegistry, names ...string) (R
 
 	regclient := regclient.New(
 		regclient.WithConfigHost(remoteRegistryConfig),
-		regclient.WithUserAgent("forgejo/1.0"),
 	)
 
 	// Ref host, repo if exists, image
@@ -180,6 +179,7 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 		return &http.Response{}, ErrNoAuthInfo
 	}
 	query.Add("service", serviceURL)
+	query.Add("scope", "pull")
 	query.Add("client_id", "docker") // TODO this may need to be configurable
 
 	// https://distribution.github.io/distribution/spec/auth/oauth/
@@ -189,7 +189,6 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 		query.Add("access_type", "offline")
 		query.Add("username", crc.RemoteRegistry.RemoteUser)
 		query.Add("password", credential)
-		query.Add("scope", "pull")
 		req.Header.Set("content-type", "application/x-www-form-urlencoded")
 	} else {
 		query = req.URL.Query()
