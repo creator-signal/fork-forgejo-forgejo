@@ -12,40 +12,49 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	regName        string = "someRegistry"
+	remoteUser     string = "someUser"
+	remoteURL      string = "https://registry.example.com"
+	remoteHost     string = "registry.example.com"
+	remotePassword string = "somePassword"
+	remoteToken    string = "someToken"
+)
+
 func Test_NewClient(t *testing.T) {
 	rr := &rr_model.RemoteRegistry{
-		Name:       "someRegistry",
+		Name:       regName,
 		OwnerID:    int64(2),
-		RemoteURL:  "registry.example.com",
-		RemoteUser: "someUser",
+		RemoteURL:  remoteURL,
+		RemoteUser: remoteUser,
 	}
-	rr.SetRemoteToken("someToken")
-	rr.SetRemotePassword("somePassword")
+	rr.SetRemoteToken(remoteToken)
+	rr.SetRemotePassword(remotePassword)
 
 	crc, err := NewContainerRegistryClient(rr)
 	require.NoError(t, err)
 	assert.NotEmpty(t, crc.httpClient)
 	assert.NotEmpty(t, crc.RegClient)
 	assert.NotEmpty(t, crc.RemoteRegistry)
-	assert.NotEqual(t, string(crc.RemoteRegistry.RemotePassword), "somePassword")
-	assert.NotEqual(t, string(crc.RemoteRegistry.RemoteToken), "someToken")
+	assert.NotEqual(t, remotePassword, string(crc.RemoteRegistry.RemotePassword))
+	assert.NotEqual(t, remoteToken, string(crc.RemoteRegistry.RemoteToken))
 
 	pass, err := rr.GetRemotePassword()
 	require.NoError(t, err)
 	token, err := rr.GetRemoteToken()
 	require.NoError(t, err)
 
-	assert.Equal(t, "somePassword", pass)
-	assert.Equal(t, "someToken", token)
+	assert.Equal(t, remotePassword, pass)
+	assert.Equal(t, remoteToken, token)
 }
 
 func Test_NewRef(t *testing.T) {
 	rr := &rr_model.RemoteRegistry{
-		Name:       "someRegistry",
-		RemoteURL:  "https://registry.example.com",
-		RemoteHost: "registry.example.com",
+		Name:       regName,
+		RemoteURL:  remoteURL,
+		RemoteHost: remoteHost,
 		RemotePort: 443,
-		RemoteUser: "someUser",
+		RemoteUser: remoteUser,
 	}
 
 	imageName := "myorg/test-image:latest"
@@ -61,7 +70,7 @@ func Test_PingRegistry(t *testing.T) {
 	defer server.Close()
 
 	rrOpts := api.CreateRemoteRegistryOption{
-		Name:      "testreg",
+		Name:      regName,
 		RemoteURL: server.URL,
 	}
 
@@ -83,7 +92,7 @@ func Test_AuthenticateRegistry(t *testing.T) {
 	defer server.Close()
 
 	rrOpts := api.CreateRemoteRegistryOption{
-		Name:      "testreg",
+		Name:      regName,
 		RemoteURL: server.URL,
 	}
 
@@ -91,9 +100,9 @@ func Test_AuthenticateRegistry(t *testing.T) {
 		Name:       rrOpts.Name,
 		OwnerID:    int64(2),
 		RemoteURL:  rrOpts.RemoteURL,
-		RemoteUser: "someUser",
+		RemoteUser: remoteUser,
 	}
-	rr.SetRemoteToken("someToken")
+	rr.SetRemoteToken(remoteToken)
 	crc, err := NewContainerRegistryClient(&rr)
 	require.NoError(t, err)
 	resp, err := crc.PingRemoteRegistry(t.Context())
@@ -110,7 +119,7 @@ func Test_RemoteRegistryConnectedNoAuthInfo(t *testing.T) {
 	defer server.Close()
 
 	rrOpts := api.CreateRemoteRegistryOption{
-		Name:      "testreg",
+		Name:      regName,
 		RemoteURL: server.URL,
 	}
 

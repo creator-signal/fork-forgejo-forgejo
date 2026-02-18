@@ -14,14 +14,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	regName        string        = "someRegistry"
+	remoteURL      string        = "https://registry.example.com"
+	remoteHost     string        = "registry.example.com"
+	remotePassword string        = "somePassword"
+	remoteToken    string        = "someToken"
+	remoteType     packages.Type = packages.TypeContainer
+)
+
 func Test_RemoteRegistryValidation(t *testing.T) {
 	sut := RemoteRegistry{
 		ID:         int64(1),
-		Name:       "rr",
+		Name:       regName,
 		OwnerType:  RRUser,
 		OwnerID:    int64(10),
-		RemoteURL:  "https://codeberg.org",
-		RemoteType: packages.Type("container"),
+		RemoteURL:  remoteURL,
+		RemoteType: remoteType,
 	}
 
 	if ok, err := validation.IsValid(sut); !ok {
@@ -32,16 +41,14 @@ func Test_RemoteRegistryValidation(t *testing.T) {
 func Test_CreateUpdateGetDeleteRemoteRegistry(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	name := "testreg"
 	name2 := "testreg2"
-	remoteURL := "https://example.com"
 	remoteURL2 := "https://registry.example.com"
-	remoteType := packages.TypeContainer
+	remoteHost2 := "registry.example.com"
 
 	rr := RemoteRegistry{
-		Name:       name,
+		Name:       regName,
 		RemoteURL:  remoteURL,
-		RemoteHost: "example.com",
+		RemoteHost: remoteHost,
 		RemotePort: 443,
 		RemoteType: remoteType,
 		OwnerType:  RROrg,
@@ -51,7 +58,7 @@ func Test_CreateUpdateGetDeleteRemoteRegistry(t *testing.T) {
 	rr2 := RemoteRegistry{
 		Name:       name2,
 		RemoteURL:  remoteURL2,
-		RemoteHost: "registry.example.com",
+		RemoteHost: remoteHost2,
 		RemotePort: 443,
 		RemoteType: remoteType,
 		OwnerType:  RROrg,
@@ -60,7 +67,7 @@ func Test_CreateUpdateGetDeleteRemoteRegistry(t *testing.T) {
 
 	err := CreateRemoteRegistry(t.Context(), rr)
 	require.NoError(t, err)
-	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: name})
+	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: regName})
 	assert.Equal(t, remoteType, retrieved.RemoteType)
 
 	err = UpdateRemoteRegistry(t.Context(), rr2, rr.Name)
@@ -80,44 +87,36 @@ func Test_CreateUpdateGetDeleteRemoteRegistry(t *testing.T) {
 func Test_SetGetCredentials(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	name := "testreg"
-	remoteURL := "https://example.com"
-	remoteType := packages.TypeContainer
-
 	rr := RemoteRegistry{
-		Name:       name,
+		Name:       regName,
 		RemoteURL:  remoteURL,
 		RemoteType: remoteType,
-		RemoteHost: "example.com",
+		RemoteHost: remoteHost,
 		RemotePort: 443,
 		OwnerType:  RROrg,
 		OwnerID:    int64(1),
 	}
 
-	rr.SetRemotePassword("somePassword")
-	rr.SetRemoteToken("someToken")
+	rr.SetRemotePassword(remotePassword)
+	rr.SetRemoteToken(remoteToken)
 
 	pw, err := rr.GetRemotePassword()
 	require.NoError(t, err)
 	tk, err := rr.GetRemoteToken()
 	require.NoError(t, err)
 
-	assert.Equal(t, "somePassword", pw)
-	assert.Equal(t, "someToken", tk)
+	assert.Equal(t, remotePassword, pw)
+	assert.Equal(t, remoteToken, tk)
 }
 
 func Test_FindRemoteRegistryByName(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	name := "testreg"
-	remoteURL := "https://example.com"
-	remoteType := packages.TypeContainer
-
 	rr := RemoteRegistry{
-		Name:       name,
+		Name:       regName,
 		RemoteURL:  remoteURL,
 		RemoteType: remoteType,
-		RemoteHost: "example.com",
+		RemoteHost: remoteHost,
 		RemotePort: 443,
 		OwnerType:  RROrg,
 		OwnerID:    int64(1),
@@ -127,23 +126,19 @@ func Test_FindRemoteRegistryByName(t *testing.T) {
 
 	require.NoError(t, err)
 
-	retrieved, err := GetRemoteRegistryByName(t.Context(), RemoteRegistryOwnerType("org"), int64(1), "testreg")
+	retrieved, err := GetRemoteRegistryByName(t.Context(), RemoteRegistryOwnerType("org"), int64(1), regName)
 	require.NoError(t, err)
-	assert.Equal(t, name, retrieved.Name)
+	assert.Equal(t, regName, retrieved.Name)
 }
 
 func Test_FindRemoteRegistryByOwnerType(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	name := "testreg"
-	remoteURL := "https://example.com"
-	remoteType := packages.TypeContainer
-
 	rr := RemoteRegistry{
-		Name:       name,
+		Name:       regName,
 		RemoteURL:  remoteURL,
 		RemoteType: remoteType,
-		RemoteHost: "example.com",
+		RemoteHost: remoteHost,
 		RemotePort: 443,
 		OwnerType:  RROrg,
 		OwnerID:    int64(1),
@@ -151,11 +146,10 @@ func Test_FindRemoteRegistryByOwnerType(t *testing.T) {
 
 	name2 := "testreg2"
 	remoteURL2 := "https://example.com"
-	remoteType2 := packages.TypeContainer
 	rr2 := RemoteRegistry{
 		Name:       name2,
 		RemoteURL:  remoteURL2,
-		RemoteType: remoteType2,
+		RemoteType: remoteType,
 		OwnerType:  RROrg,
 		OwnerID:    int64(1),
 	}
@@ -167,6 +161,6 @@ func Test_FindRemoteRegistryByOwnerType(t *testing.T) {
 
 	retrieved, err := GetRemoteRegistriesByOwnerType(t.Context(), RemoteRegistryOwnerType("org"), int64(1))
 	require.NoError(t, err)
-	assert.Equal(t, name, retrieved[0].Name)
+	assert.Equal(t, regName, retrieved[0].Name)
 	assert.Equal(t, name2, retrieved[1].Name)
 }
