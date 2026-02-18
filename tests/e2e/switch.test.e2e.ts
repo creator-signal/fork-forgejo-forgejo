@@ -59,25 +59,31 @@ test.describe('Switch CSS properties', () => {
     await page.goto('/user2/repo1/pulls');
 
     await expect(async () => {
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight);
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight);
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight);
+      await Promise.all([
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+      ]);
     }).toPass();
 
     await page.goto('/user2/repo1/pulls?state=closed');
 
     await expect(async () => {
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight);
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight);
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight);
+      await Promise.all([
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
+      ]);
     }).toPass();
 
     await page.goto('/user2/repo1/pulls?state=all');
 
     await expect(async () => {
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight);
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight);
-      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight);
+      await Promise.all([
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+      ]);
     }).toPass();
   });
 
@@ -96,8 +102,10 @@ test.describe('Switch CSS properties', () => {
     const itemHeight = 28;
 
     await expect(async () => {
-      await evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight);
-      await evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight);
+      await Promise.all([
+        evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
+      ]);
     }).toPass();
   });
 });
