@@ -14,16 +14,14 @@ import (
 	"time"
 
 	"forgejo.org/models/db"
-	"forgejo.org/models/user"
-	"forgejo.org/modules/json"
-	"forgejo.org/modules/log"
-	"forgejo.org/modules/util"
-
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
+	"forgejo.org/modules/util"
 	notify_service "forgejo.org/services/notify"
 	packages_service "forgejo.org/services/packages"
 
@@ -35,16 +33,17 @@ import (
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-manifests
 const MaxManifestSize = 10 * 1024 * 1024
 
-var ReferencePattern = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
-
-var ErrTagInvalid = util.NewInvalidArgumentErrorf("Tag is invalid")
-var ErrManifestTooLarge = fmt.Errorf("Manifest exceeds maximum size")
+var (
+	ReferencePattern    = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
+	ErrTagInvalid       = util.NewInvalidArgumentErrorf("Tag is invalid")
+	ErrManifestTooLarge = fmt.Errorf("Manifest exceeds maximum size")
+)
 
 // ManifestCreationInfo describes a manifest to create
 type ManifestCreationInfo struct {
 	MediaType          string
-	Owner              *user.User
-	Creator            *user.User
+	Owner              *user_model.User
+	Creator            *user_model.User
 	Image              string
 	Reference          string
 	IsTagged           bool
@@ -53,7 +52,7 @@ type ManifestCreationInfo struct {
 	Properties         map[string]string
 }
 
-func NewManifestCreationInfo(owner, creator *user.User, mediaType, image, reference string, remoteInfo ...string) (*ManifestCreationInfo, error) {
+func NewManifestCreationInfo(owner, creator *user_model.User, mediaType, image, reference string, remoteInfo ...string) (*ManifestCreationInfo, error) {
 	isTagged := digest.Digest(reference).Validate() != nil
 
 	mci := &ManifestCreationInfo{

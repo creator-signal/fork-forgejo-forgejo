@@ -147,7 +147,6 @@ func RemoteHeadBlob(ctx *context.Context) {
 
 			respDigest = remoteCtx.Digest
 			size = buf.Size()
-
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return

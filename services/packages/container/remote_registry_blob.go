@@ -12,6 +12,7 @@ import (
 	packages_module "forgejo.org/modules/packages"
 	rr_module "forgejo.org/modules/packages/remote_registry"
 	"forgejo.org/services/context"
+
 	"github.com/regclient/regclient/types/descriptor"
 	"github.com/regclient/regclient/types/manifest"
 )
