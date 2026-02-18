@@ -220,20 +220,7 @@ func (rr RemoteRegistry) Validate() []string {
 	return result
 }
 
-func GetRemoteRegistryByID(ctx context.Context, id int64) (*RemoteRegistry, error) {
-	rr := &RemoteRegistry{}
-
-	exists, err := db.GetEngine(ctx).ID(id).Get(rr)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, ErrRemoteRegistryNotExist
-	}
-	return rr, nil
-}
-
-// GetRemoteRegistryByName finds a remote registry by name within a scope
+// GetRemoteRegistryByName finds a remote registry by name
 func GetRemoteRegistryByName(ctx context.Context, ownerType RemoteRegistryOwnerType, ownerID int64, name string) (*RemoteRegistry, error) {
 	if !ownerType.Valid() {
 		return nil, ErrInvalidRemoteRegistryOwner
@@ -252,7 +239,7 @@ func GetRemoteRegistryByName(ctx context.Context, ownerType RemoteRegistryOwnerT
 	return rr, nil
 }
 
-// GetRemoteRegistriesByOwnerType gets all remote registries for a specific scope
+// GetRemoteRegistriesByOwnerType gets all remote registries
 func GetRemoteRegistriesByOwnerType(ctx context.Context, ownerType RemoteRegistryOwnerType, ownerID int64) ([]*RemoteRegistry, error) {
 	if !ownerType.Valid() {
 		return nil, ErrInvalidRemoteRegistryOwner
