@@ -39,7 +39,7 @@ export function initCommitNotes() {
   const notesAddButton = document.getElementById('commit-notes-add-button');
   if (notesAddButton !== null) {
     notesAddButton.addEventListener('click', () => {
-      document.getElementById('commit-notes-add-area').classList.remove('tw-hidden');
+      document.getElementById('commit-notes-edit-area').classList.remove('tw-hidden');
     });
   }
 
