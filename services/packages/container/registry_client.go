@@ -140,6 +140,8 @@ func (crc *RegistryClient) RemoteRegistryAvailable(resp *http.Response) error {
 }
 
 func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp *http.Response) (*http.Response, error) {
+	authResp := &http.Response{}
+	var credential string
 	hasUserAndPW := crc.RemoteRegistry.RemoteUser != "" && len(crc.RemoteRegistry.RemotePassword) > 0
 	hasToken := len(crc.RemoteRegistry.RemoteToken) > 0
 
@@ -154,43 +156,57 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 		return &http.Response{}, fmt.Errorf("failed to extract service URL: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", authURL, nil)
-	query := req.URL.Query()
-	query.Add("account", crc.RemoteRegistry.RemoteUser)
-	query.Add("client_id", "docker") // TODO this may need to be configurable
-	if hasToken || hasUserAndPW {
-		query.Add("offline_token", "true")
-	}
-	query.Add("service", serviceURL)
-
-	req.URL.RawQuery = query.Encode()
-	if err != nil {
-		return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
-	}
-
-	req.Header.Set("User-Agent", "Forgejo/1.0")
-
-	if hasToken {
-		token, err := crc.RemoteRegistry.GetRemoteToken()
-		if err != nil {
-			return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
-		}
-		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, token)
-	} else if hasUserAndPW {
-		pass, err := crc.RemoteRegistry.GetRemotePassword()
-		if err != nil {
-			return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
-		}
-		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, pass)
-	} else {
-		return &http.Response{}, ErrNoAuthInfo
-	}
-
-	authResp, err := crc.httpClient.Do(req)
+	req := &http.Request{}
+	req, err = http.NewRequestWithContext(ctx, "GET", authURL, nil)
 	if err != nil {
 		log.Warn("Remote registry authentication failed for %q: %v", crc.RemoteRegistry.Name, err)
 		return &http.Response{}, err
 	}
+	query := req.URL.Query()
+
+	if hasToken {
+		credential, err = crc.RemoteRegistry.GetRemoteToken()
+		if err != nil {
+			return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
+		}
+		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, credential)
+	} else if hasUserAndPW {
+		credential, err = crc.RemoteRegistry.GetRemotePassword()
+		if err != nil {
+			return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
+		}
+		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, credential)
+	} else {
+		return &http.Response{}, ErrNoAuthInfo
+	}
+	query.Add("service", serviceURL)
+	query.Add("client_id", "docker") // TODO this may need to be configurable
+
+	// https://distribution.github.io/distribution/spec/auth/oauth/
+	if strings.Contains(crc.RemoteRegistry.RemoteHost, "docker") {
+		req.Method = http.MethodPost
+		query.Add("grant_type", "password")
+		query.Add("access_type", "offline")
+		query.Add("username", crc.RemoteRegistry.RemoteUser)
+		query.Add("password", credential)
+		query.Add("scope", "pull")
+		req.Header.Set("content-type", "application/x-www-form-urlencoded")
+	} else {
+		query = req.URL.Query()
+		query.Add("account", crc.RemoteRegistry.RemoteUser)
+		if hasToken || hasUserAndPW {
+			query.Add("offline_token", "true")
+		}
+		req.Header.Set("User-Agent", "Forgejo/1.0")
+	}
+
+	req.URL.RawQuery = query.Encode()
+	authResp, err = crc.httpClient.Do(req)
+	if err != nil {
+		log.Warn("Remote registry authentication failed for %q: %v", crc.RemoteRegistry.Name, err)
+		return &http.Response{}, err
+	}
+
 	if authResp.StatusCode != 200 {
 		log.Warn("Remote registry authentication failed for %q: %v", crc.RemoteRegistry.Name, err)
 		return &http.Response{}, fmt.Errorf("failed to connect to auth endpoint with Status: %s", authResp.Status)

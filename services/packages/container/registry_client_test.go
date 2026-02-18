@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	rr_model "forgejo.org/models/remote_registry"
-	api "forgejo.org/modules/structs"
 	mock_server "forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
@@ -69,14 +68,9 @@ func Test_PingRegistry(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rrOpts := api.CreateRemoteRegistryOption{
+	rr := rr_model.RemoteRegistry{
 		Name:      regName,
 		RemoteURL: server.URL,
-	}
-
-	rr := rr_model.RemoteRegistry{
-		Name:      rrOpts.Name,
-		RemoteURL: rrOpts.RemoteURL,
 	}
 
 	crc, err := NewContainerRegistryClient(&rr)
@@ -91,15 +85,10 @@ func Test_AuthenticateRegistry(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rrOpts := api.CreateRemoteRegistryOption{
-		Name:      regName,
-		RemoteURL: server.URL,
-	}
-
 	rr := rr_model.RemoteRegistry{
-		Name:       rrOpts.Name,
+		Name:       regName,
 		OwnerID:    int64(2),
-		RemoteURL:  rrOpts.RemoteURL,
+		RemoteURL:  server.URL,
 		RemoteUser: remoteUser,
 	}
 	rr.SetRemoteToken(remoteToken)
@@ -118,14 +107,9 @@ func Test_RemoteRegistryConnectedNoAuthInfo(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rrOpts := api.CreateRemoteRegistryOption{
-		Name:      regName,
-		RemoteURL: server.URL,
-	}
-
 	rr := rr_model.RemoteRegistry{
-		Name:        rrOpts.Name,
-		RemoteURL:   rrOpts.RemoteURL,
+		Name:        regName,
+		RemoteURL:   server.URL,
 		RemoteUser:  "",
 		RemoteToken: []byte{},
 	}
