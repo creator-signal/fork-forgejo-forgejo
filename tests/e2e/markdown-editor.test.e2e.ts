@@ -394,8 +394,10 @@ test('Markdown insert table', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  expect(await evaluateTableInsertion(page, '#comment-form', false)).toBeTruthy();
-  expect(await evaluateTableInsertion(page, '#issuecomment-2', true)).toBeTruthy();
+  await expect(async () => {
+    await evaluateTableInsertion(page, '#comment-form', false);
+    await evaluateTableInsertion(page, '#issuecomment-2', true);
+  }).toPass();
 });
 
 test('Markdown insert link', async ({page}) => {
@@ -444,8 +446,10 @@ test('Markdown insert link', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  expect(await evaluateLinkInsertion(page, '#comment-forma', false)).toBeTruthy();
-  expect(await evaluateLinkInsertion(page, '#issuecomment-2', true)).toBeTruthy();
+  await expect(async () => {
+    await evaluateLinkInsertion(page, '#comment-form', false);
+    await evaluateLinkInsertion(page, '#issuecomment-2', true);
+  }).toPass();
 });
 
 test('text expander has higher prio then prefix continuation', async ({page}) => {
