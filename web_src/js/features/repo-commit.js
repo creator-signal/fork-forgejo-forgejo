@@ -42,4 +42,12 @@ export function initCommitNotes() {
       document.getElementById('commit-notes-add-area').classList.remove('tw-hidden');
     });
   }
+
+  const notesEditCancelButton = document.getElementById('notes-cancel-button');
+  if (notesEditCancelButton !== null) {
+    notesEditCancelButton.addEventListener('click', () => {
+      document.getElementById('notes-edit-form').reset();
+      window.location.reload();
+    });
+  }
 }
