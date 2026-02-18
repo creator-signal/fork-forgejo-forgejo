@@ -28,7 +28,7 @@ const (
 )
 
 // serveBlobFromBuffer serves a blob from an existing buffer to a client
-func serveBlobFromBuffer(ctx *context.Context, buf *packages_module.HashedBuffer, digest string) error {
+func serveBlobFromBuffer(ctx *context.Context, buf *packages_module.HashedBuffer, mediaType, digest string) error {
 	// Reset buffer to beginning
 	log.Debug("Serving blob %s from buffer", digest)
 	if _, err := buf.Seek(0, io.SeekStart); err != nil {
@@ -38,7 +38,7 @@ func serveBlobFromBuffer(ctx *context.Context, buf *packages_module.HashedBuffer
 	// Set response headers
 	setResponseHeaders(ctx.Resp, &containerHeaders{
 		ContentDigest: digest,
-		ContentType:   "application/octet-stream",
+		ContentType:   mediaType,
 		ContentLength: buf.Size(),
 		Status:        http.StatusOK,
 	})
@@ -214,7 +214,7 @@ func RemoteGetBlob(ctx *context.Context) {
 		}
 
 		// serve from buffer
-		err = serveBlobFromBuffer(ctx, buf, regDigest.String())
+		err = serveBlobFromBuffer(ctx, buf, "application/octet-stream", regDigest.String())
 		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
@@ -317,6 +317,19 @@ func RemoteGetManifest(ctx *context.Context) {
 			} else {
 				apiError(ctx, http.StatusInternalServerError, err)
 			}
+			return
+		}
+
+		if regManifest.IsList() {
+			// Got an index manifest, serve it directly as we will get a request for the correct manifest in return
+			mediaType := regManifest.GetDescriptor().MediaType
+			buf, err := container_service.CreateManifestBuffer(regManifest)
+			if err != nil {
+				log.Error("Failed to serve index manifest: %v", err)
+				apiError(ctx, http.StatusInternalServerError, err)
+				return
+			}
+			serveBlobFromBuffer(ctx, buf, mediaType, regManifest.GetRef().Digest)
 			return
 		}
 

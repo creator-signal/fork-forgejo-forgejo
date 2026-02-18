@@ -90,7 +90,7 @@ func SaveManifest(ctx *context.Context, owner, creator *user_model.User, remoteC
 		return err
 	}
 
-	buf, err := createManifestBuffer(man)
+	buf, err := CreateManifestBuffer(man)
 	if err != nil {
 		return err
 	}
@@ -102,16 +102,15 @@ func SaveManifest(ctx *context.Context, owner, creator *user_model.User, remoteC
 	return nil
 }
 
-func createManifestBuffer(man manifest.Manifest) (*packages_module.HashedBuffer, error) {
+func CreateManifestBuffer(man manifest.Manifest) (*packages_module.HashedBuffer, error) {
 	maxSize := MaxManifestSize + 1
 	b, err := man.RawBody()
 	if err != nil {
 		return nil, err
 	}
 
-	reader := bytes.NewReader(b)
-	lReader := &io.LimitedReader{R: reader, N: int64(maxSize)}
-	buf, err := packages_module.CreateHashedBufferFromReaderWithSize(lReader, maxSize)
+	reader := &io.LimitedReader{R: bytes.NewReader(b), N: int64(maxSize)}
+	buf, err := packages_module.CreateHashedBufferFromReaderWithSize(reader, maxSize)
 	if err != nil {
 		return nil, err
 	}
