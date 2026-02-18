@@ -14,27 +14,38 @@ import (
 
 func Test_NewClient(t *testing.T) {
 	rr := &rr_model.RemoteRegistry{
-		Name:        "someRegistry",
-		RemoteURL:   "registry.example.com",
-		RemoteUser:  "someUser",
-		RemoteToken: "someToken",
+		Name:       "someRegistry",
+		OwnerID:    int64(2),
+		RemoteURL:  "registry.example.com",
+		RemoteUser: "someUser",
 	}
+	rr.SetRemoteToken("someToken")
+	rr.SetRemotePassword("somePassword")
 
 	crc, err := NewContainerRegistryClient(rr)
 	require.NoError(t, err)
 	assert.NotEmpty(t, crc.httpClient)
 	assert.NotEmpty(t, crc.RegClient)
 	assert.NotEmpty(t, crc.RemoteRegistry)
+	assert.NotEqual(t, string(crc.RemoteRegistry.RemotePassword), "somePassword")
+	assert.NotEqual(t, string(crc.RemoteRegistry.RemoteToken), "someToken")
+
+	pass, err := rr.GetRemotePassword()
+	require.NoError(t, err)
+	token, err := rr.GetRemoteToken()
+	require.NoError(t, err)
+
+	assert.Equal(t, "somePassword", pass)
+	assert.Equal(t, "someToken", token)
 }
 
 func Test_NewRef(t *testing.T) {
 	rr := &rr_model.RemoteRegistry{
-		Name:        "someRegistry",
-		RemoteURL:   "https://registry.example.com",
-		RemoteHost:  "registry.example.com",
-		RemotePort:  443,
-		RemoteUser:  "someUser",
-		RemoteToken: "someToken",
+		Name:       "someRegistry",
+		RemoteURL:  "https://registry.example.com",
+		RemoteHost: "registry.example.com",
+		RemotePort: 443,
+		RemoteUser: "someUser",
 	}
 
 	imageName := "myorg/test-image:latest"
@@ -77,11 +88,12 @@ func Test_AuthenticateRegistry(t *testing.T) {
 	}
 
 	rr := rr_model.RemoteRegistry{
-		Name:        rrOpts.Name,
-		RemoteURL:   rrOpts.RemoteURL,
-		RemoteUser:  "someUser",
-		RemoteToken: "someToken",
+		Name:       rrOpts.Name,
+		OwnerID:    int64(2),
+		RemoteURL:  rrOpts.RemoteURL,
+		RemoteUser: "someUser",
 	}
+	rr.SetRemoteToken("someToken")
 	crc, err := NewContainerRegistryClient(&rr)
 	require.NoError(t, err)
 	resp, err := crc.PingRemoteRegistry(t.Context())
@@ -106,7 +118,7 @@ func Test_RemoteRegistryConnectedNoAuthInfo(t *testing.T) {
 		Name:        rrOpts.Name,
 		RemoteURL:   rrOpts.RemoteURL,
 		RemoteUser:  "",
-		RemoteToken: "",
+		RemoteToken: []byte{},
 	}
 	crc, err := NewContainerRegistryClient(&rr)
 	require.NoError(t, err)

@@ -47,12 +47,28 @@ func NewContainerRegistryClient(rr *rr_model.RemoteRegistry, names ...string) (R
 		tls = config.TLSEnabled
 	}
 
+	pass := ""
+	if len(rr.RemotePassword) > 0 {
+		pass, err = rr.GetRemotePassword()
+		if err != nil {
+			return RegistryClient{}, fmt.Errorf("Unable to create registry client: %s", err)
+		}
+	}
+
+	token := ""
+	if len(rr.RemoteToken) > 0 {
+		token, err = rr.GetRemoteToken()
+		if err != nil {
+			return RegistryClient{}, fmt.Errorf("Unable to create registry client: %s", err)
+		}
+	}
+
 	remoteRegistryConfig := config.Host{
 		Name:  rrURL.Host,
 		TLS:   tls,
 		User:  rr.RemoteUser,
-		Pass:  rr.RemotePassword,
-		Token: rr.RemoteToken,
+		Pass:  pass,
+		Token: token,
 	}
 
 	regclient := regclient.New(
@@ -124,8 +140,8 @@ func (crc *RegistryClient) RemoteRegistryAvailable(resp *http.Response) error {
 }
 
 func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp *http.Response) (*http.Response, error) {
-	hasUserAndPW := crc.RemoteRegistry.RemoteUser != "" && crc.RemoteRegistry.RemotePassword != ""
-	hasToken := crc.RemoteRegistry.RemoteToken != ""
+	hasUserAndPW := crc.RemoteRegistry.RemoteUser != "" && len(crc.RemoteRegistry.RemotePassword) > 0
+	hasToken := len(crc.RemoteRegistry.RemoteToken) > 0
 
 	authHeader := resp.Header.Get("WWW-Authenticate")
 	authURL, err := extractAuthURL(authHeader)
@@ -155,9 +171,17 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 	req.Header.Set("User-Agent", "Forgejo/1.0")
 
 	if hasToken {
-		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, crc.RemoteRegistry.RemoteToken)
+		token, err := crc.RemoteRegistry.GetRemoteToken()
+		if err != nil {
+			return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
+		}
+		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, token)
 	} else if hasUserAndPW {
-		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, crc.RemoteRegistry.RemotePassword)
+		pass, err := crc.RemoteRegistry.GetRemotePassword()
+		if err != nil {
+			return &http.Response{}, fmt.Errorf("failed to create auth request: %w", err)
+		}
+		req.SetBasicAuth(crc.RemoteRegistry.RemoteUser, pass)
 	} else {
 		return &http.Response{}, ErrNoAuthInfo
 	}

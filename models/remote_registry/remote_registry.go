@@ -10,6 +10,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/packages"
+	"forgejo.org/modules/keying"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/validation"
@@ -24,8 +25,10 @@ type RemoteRegistryOwnerType string
 
 // List of supported remote registry scopes
 const (
-	RRUser RemoteRegistryOwnerType = "user"
-	RROrg  RemoteRegistryOwnerType = "org"
+	RRUser   RemoteRegistryOwnerType = "user"
+	RROrg    RemoteRegistryOwnerType = "org"
+	passwCol string                  = "remote_password"
+	tokenCol string                  = "remote_token"
 )
 
 var (
@@ -63,9 +66,9 @@ type RemoteRegistry struct {
 	RemoteHost     string                  `xorm:"NOT NULL"`
 	RemotePort     uint16                  `xorm:"NOT NULL"`
 	RemoteType     packages.Type           `xorm:"NOT NULL"`
-	RemoteUser     string                  `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
-	RemotePassword string                  `xorm:"TEXT"` // TODO: Password and Token encryption
-	RemoteToken    string                  `xorm:"TEXT"` // TODO Setter and Getter for credentials
+	RemoteUser     string                  `xorm:"NOT NULL"`
+	RemotePassword []byte                  `xorm:"BLOB"`
+	RemoteToken    []byte                  `xorm:"BLOB"`
 }
 
 // TableName returns the table name for RemoteRegistry
@@ -151,6 +154,48 @@ func DeleteRemoteRegistry(ctx context.Context, ownerType RemoteRegistryOwnerType
 
 	log.Info("Deleted remote registry %q for owner_type %s:%d", registryName, ownerType, ownerID)
 	return nil
+}
+
+func (rr *RemoteRegistry) SetRemotePassword(password string) {
+	if password != "" {
+		rr.RemotePassword = keying.RemoteRegistry.Encrypt([]byte(password), keying.ColumnAndID(passwCol, rr.OwnerID))
+	} else {
+		rr.RemotePassword = []byte{}
+	}
+}
+
+func (rr *RemoteRegistry) SetRemoteToken(token string) {
+	if token != "" {
+		rr.RemoteToken = keying.RemoteRegistry.Encrypt([]byte(token), keying.ColumnAndID(tokenCol, rr.OwnerID))
+	} else {
+		rr.RemoteToken = []byte{}
+	}
+}
+
+func (rr *RemoteRegistry) GetRemotePassword() (string, error) {
+	key := keying.RemoteRegistry
+	if len(rr.RemotePassword) > 0 {
+		password, err := key.Decrypt(rr.RemotePassword, keying.ColumnAndID(passwCol, rr.OwnerID))
+		if err != nil {
+			log.Error("unable to decrypt remote password[id=%d,name=%q]: %v", rr.ID, rr.Name, err)
+			return "", err
+		}
+		return string(password), nil
+	}
+	return "", nil
+}
+
+func (rr *RemoteRegistry) GetRemoteToken() (string, error) {
+	key := keying.RemoteRegistry
+	if len(rr.RemoteToken) > 0 {
+		token, err := key.Decrypt(rr.RemoteToken, keying.ColumnAndID(tokenCol, rr.OwnerID))
+		if err != nil {
+			log.Error("unable to decrypt remote password[id=%d,name=%q]: %v", rr.ID, rr.Name, err)
+			return "", err
+		}
+		return string(token), nil
+	}
+	return "", nil
 }
 
 func (rr RemoteRegistry) Validate() []string {

@@ -20,9 +20,9 @@ func AddRemoteRegistry(x *xorm.Engine) error {
 		RemoteHost     string                           `xorm:"NOT NULL"`
 		RemotePort     uint16                           `xorm:"NOT NULL"`
 		RemoteType     packages.Type                    `xorm:"NOT NULL"`
-		RemoteUser     string                           `xorm:"TEXT"` // TODO: Is TEXT the right type for credentials?
-		RemotePassword string                           `xorm:"TEXT"` // TODO: Password and Token encryption
-		RemoteToken    string                           `xorm:"TEXT"` // TODO Setter and Getter for credentials
+		RemoteUser     string                           `xorm:"NOT NULL"`
+		RemotePassword []byte                           `xorm:"BLOB"`
+		RemoteToken    []byte                           `xorm:"BLOB"`
 	}
 
 	return x.Sync(&RemoteRegistry{})

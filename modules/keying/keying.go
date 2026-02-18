@@ -39,6 +39,8 @@ var (
 	ActionSecret = deriveKey("action_secret")
 	// Used for the `task` table where type == TaskTypeMigrateRepo.
 	MigrateTask = deriveKey("migrate_repo_task")
+	// Used for the `task` table where type == TaskTypeMigrateRepo.
+	RemoteRegistry = deriveKey("remote_registry_credentials")
 )
 
 var (

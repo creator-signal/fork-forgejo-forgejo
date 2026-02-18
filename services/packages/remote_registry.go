@@ -43,17 +43,18 @@ func NewRemoteRegistry(opts RROpts) (rr_model.RemoteRegistry, error) {
 	}
 
 	result := rr_model.RemoteRegistry{
-		Name:           opts.Name,
-		RemoteURL:      opts.RemoteURL,
-		RemoteHost:     remoteHost.Host,
-		RemotePort:     uint16(remotePort),
-		RemoteType:     opts.RemoteType,
-		OwnerType:      opts.OwnerType,
-		OwnerID:        opts.OwnerID,
-		RemoteUser:     opts.Auth.RemoteUser,
-		RemotePassword: opts.Auth.RemotePassword,
-		RemoteToken:    opts.Auth.RemoteToken,
+		Name:       opts.Name,
+		RemoteURL:  opts.RemoteURL,
+		RemoteHost: remoteHost.Host,
+		RemotePort: uint16(remotePort),
+		RemoteType: opts.RemoteType,
+		OwnerType:  opts.OwnerType,
+		OwnerID:    opts.OwnerID,
+		RemoteUser: opts.Auth.RemoteUser,
 	}
+	result.SetRemotePassword(opts.Auth.RemotePassword)
+	result.SetRemoteToken(opts.Auth.RemoteToken)
+
 	if valid, err := validation.IsValid(result); !valid {
 		return rr_model.RemoteRegistry{}, err
 	}

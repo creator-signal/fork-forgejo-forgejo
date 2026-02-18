@@ -77,6 +77,35 @@ func Test_CreateUpdateGetDeleteRemoteRegistry(t *testing.T) {
 	unittest.AssertNotExistsBean(t, &RemoteRegistry{Name: name2})
 }
 
+func Test_SetGetCredentials(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	name := "testreg"
+	remoteURL := "https://example.com"
+	remoteType := packages.TypeContainer
+
+	rr := RemoteRegistry{
+		Name:       name,
+		RemoteURL:  remoteURL,
+		RemoteType: remoteType,
+		RemoteHost: "example.com",
+		RemotePort: 443,
+		OwnerType:  RROrg,
+		OwnerID:    int64(1),
+	}
+
+	rr.SetRemotePassword("somePassword")
+	rr.SetRemoteToken("someToken")
+
+	pw, err := rr.GetRemotePassword()
+	require.NoError(t, err)
+	tk, err := rr.GetRemoteToken()
+	require.NoError(t, err)
+
+	assert.Equal(t, "somePassword", pw)
+	assert.Equal(t, "someToken", tk)
+}
+
 func Test_FindRemoteRegistryByName(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 

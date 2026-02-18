@@ -23,12 +23,16 @@ func Test_NewRemoteRegistry(t *testing.T) {
 		RemoteType: remoteType,
 		OwnerType:  rr_model.RemoteRegistryOwnerType("org"),
 		OwnerID:    int64(1),
-		Auth:       RRCredentials{},
+		Auth: RRCredentials{
+			RemoteUser:     "someUser",
+			RemotePassword: "somePassword",
+			RemoteToken:    "someToken",
+		},
 	}
 
 	rr, err := NewRemoteRegistry(opts)
-
 	require.NoError(t, err)
+
 	assert.Equal(t, name, rr.Name)
 	assert.Equal(t, remoteURL, rr.RemoteURL)
 	assert.Equal(t, remoteType, rr.RemoteType)
