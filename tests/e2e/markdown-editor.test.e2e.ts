@@ -387,8 +387,6 @@ test('Markdown insert table', async ({page}) => {
     const textarea = area.locator('textarea[name=content]');
     await expect(textarea).toHaveValue(expectedContent);
     await screenshot(page);
-
-    return true;
   }
 
   const response = await page.goto('/user2/repo1/issues/1');
@@ -439,8 +437,6 @@ test('Markdown insert link', async ({page}) => {
     const textarea = area.locator('textarea[name=content]');
     await expect(textarea).toHaveValue(expectedContent);
     await screenshot(page);
-
-    return true;
   }
 
   const response = await page.goto('/user2/repo1/issues/1');
