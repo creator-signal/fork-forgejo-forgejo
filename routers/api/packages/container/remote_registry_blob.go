@@ -96,7 +96,7 @@ func GetRemoteTagList(ctx *context.Context) {
 		ctx.Package.Owner.ID)
 
 	if errors.Is(err, packages_model.ErrPackageNotExist) {
-		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName, remoteCtx.Reference)
 		if err != nil {
 			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -140,7 +140,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
 			log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Reference)
 
-			client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
+			client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName, remoteCtx.Reference)
 			if err != nil {
 				log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 				apiError(ctx, http.StatusInternalServerError, err)
@@ -197,7 +197,7 @@ func RemoteGetBlob(ctx *context.Context) {
 	if err == container_model.ErrContainerBlobNotExist {
 		log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Reference, remoteCtx.Reference)
 
-		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName, remoteCtx.Reference)
 		if err != nil {
 			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -264,7 +264,8 @@ func RemoteHeadManifest(ctx *context.Context) {
 	// Do we have the manifest cached locally?
 	manifest, err := container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.GetLocalImageName(), remoteCtx.Reference)
 	if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
+		log.Debug("Creating ContainerRegistryClient for %s and image: %s", remoteCtx.RemoteRegistry.Name, remoteCtx.ImageName)
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName, remoteCtx.Reference)
 		if err != nil {
 			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -317,7 +318,8 @@ func RemoteGetManifest(ctx *context.Context) {
 	man, err := container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.GetLocalImageName(), remoteCtx.Reference)
 
 	if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
+		log.Debug("Creating ContainerRegistryClient for %s and image: %s", remoteCtx.RemoteRegistry.Name, remoteCtx.ImageName)
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName, remoteCtx.Reference)
 		if err != nil {
 			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 			apiError(ctx, http.StatusInternalServerError, err)
