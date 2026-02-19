@@ -50,7 +50,7 @@ type EditIssueCommentOption struct {
 	// The body of the comment
 	// required: true
 	Body string `json:"body" binding:"Required"`
-	// The time of the comment’s update, needs admin or repository owner permission
+	// The time of the comment's update, needs admin or repository owner permission
 	// swagger:strfmt date-time
 	Updated *time.Time `json:"updated_at"`
 }
