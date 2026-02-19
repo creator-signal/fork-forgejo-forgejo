@@ -280,6 +280,8 @@
 	"packages.alpine.repository.branches": "Branches",
 	"packages.alpine.repository.repositories": "Repositories",
 	"packages.alpine.repository.architectures": "Architectures",
+	"packages.ansible.install": "To install this collection using ansible-galaxy, run the following command:",
+	"packages.ansible.requirement": "To declare this collection in a requirements.yml file, use this syntax:",
 	"packages.arch.pacman.helper.gpg": "Add trust certificate for pacman:",
 	"packages.arch.pacman.repo.multi": "%s has the same version in different distributions.",
 	"packages.arch.pacman.repo.multi.item": "Configuration for %s",
@@ -507,7 +509,5 @@
 	"editor.toggle_case": "Toggle case sensitivity",
 	"editor.toggle_regex": "Toggle using regular expressions",
 	"editor.toggle_whole_word": "Toggle matching whole words",
-	"packages.ansible.install": "To install this collection using ansible-galaxy, run the following command:",
-	"packages.ansible.requirement": "To declare this collection in a requirements.yml file, use this syntax:",
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
