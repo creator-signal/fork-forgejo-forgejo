@@ -54,6 +54,25 @@ func serveBlobFromBuffer(ctx *context.Context, buf *packages_module.HashedBuffer
 	return nil
 }
 
+func serveManifestFromBuffer(ctx *context.Context, regMan manifest.Manifest) error {
+	log.Debug("Serving manifest from buffer")
+	body, err := regMan.RawBody()
+	if err != nil {
+		return fmt.Errorf("failed to serve index manifest from buffer: %w", err)
+	}
+	headers, err := regMan.RawHeaders()
+	if err != nil {
+		return fmt.Errorf("failed to serve index manifest from buffer: %w", err)
+	}
+	ctx.Resp.Header().Set("Content-Length", headers.Get("Content-Length"))
+	ctx.Resp.Header().Set("Content-Type", headers.Get("Content-Type"))
+	ctx.Resp.Header().Set("Docker-Distribution-Api-Version", headers.Get("Docker-Distribution-Api-Version"))
+	ctx.Resp.Header().Set("ETag", headers.Get("ETag"))
+	ctx.Resp.Header().Set("Docker-Content-Digest", headers.Get("Docker-Content-Digest"))
+	ctx.Resp.Write(body)
+	return nil
+}
+
 func GetRemoteTagList(ctx *context.Context) {
 	remoteCtx, err := GetRemoteRegistryContext(ctx)
 	if err != nil {
@@ -323,13 +342,12 @@ func RemoteGetManifest(ctx *context.Context) {
 		if regManifest.IsList() {
 			// Got an index manifest, serve it directly as we will get a request for the correct manifest in return
 			mediaType := regManifest.GetDescriptor().MediaType
-			buf, err := container_service.CreateManifestBuffer(regManifest)
-			if err != nil {
-				log.Error("Failed to serve index manifest: %v", err)
-				apiError(ctx, http.StatusInternalServerError, err)
-				return
-			}
-			serveBlobFromBuffer(ctx, buf, mediaType, regManifest.GetRef().Digest)
+			digest := regManifest.GetDescriptor().Digest
+			log.Debug("Serving index manifest for %s with content-type: %s and digest: %s",
+				remoteCtx.RemoteRegistry.Name,
+				mediaType,
+				digest)
+			serveManifestFromBuffer(ctx, regManifest)
 			return
 		}
 
@@ -407,12 +425,13 @@ func RemoteGetManifest(ctx *context.Context) {
 			}
 			return
 		}
-		man, err = container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.GetLocalImageName(), remoteCtx.Reference)
+		err = serveManifestFromBuffer(ctx, regManifest)
 		if err != nil {
-			log.Error("Failed to save config: %v", err)
+			log.Error("Failed to serve manifest %v", err)
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
 		}
+		return
 	}
 	log.Trace("Remote manifest with file ID: %s existed", man.File.ID)
 	serveBlob(ctx, man)
