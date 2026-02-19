@@ -1008,6 +1008,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		if err == nil {
 			ctx.Data["NoteCommit"] = note.Commit
 			ctx.Data["NoteAuthor"] = user_model.ValidateCommitWithEmail(ctx, note.Commit)
+			ctx.Data["NoteRaw"] = string(charset.ToUTF8WithFallback(note.Message, charset.ConvertOpts{}))
 			ctx.Data["NoteRendered"], err = markup.RenderCommitMessage(&markup.RenderContext{
 				Links: markup.Links{
 					Base:       ctx.Repo.RepoLink,
@@ -2012,4 +2013,12 @@ func UpdateTrustWithPullRequestActions(ctx *context.Context) {
 	}
 
 	ctx.Redirect(fmt.Sprintf("%s#pull-request-trust-panel", pr.Issue.Link()))
+}
+
+func SetCommitNotesPullRequest(ctx *context.Context) {
+	setCommitNotes(ctx, fmt.Sprintf("%s/pulls/%s/commits/%s", ctx.Repo.Repository.Link(), ctx.Params(":index"), ctx.Params(":sha")))
+}
+
+func RemoveCommitNotesPullRequest(ctx *context.Context) {
+	removeCommitNotes(ctx, fmt.Sprintf("%s/pulls/%s/commits/%s", ctx.Repo.Repository.Link(), ctx.Params(":index"), ctx.Params(":sha")))
 }

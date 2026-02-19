@@ -464,7 +464,7 @@ func RawDiff(ctx *context.Context) {
 	}
 }
 
-func SetCommitNotes(ctx *context.Context) {
+func setCommitNotes(ctx *context.Context, redirectURL string) {
 	form := web.GetForm(ctx).(*forms.CommitNotesForm)
 
 	commitID := ctx.Params(":sha")
@@ -475,10 +475,14 @@ func SetCommitNotes(ctx *context.Context) {
 		return
 	}
 
-	ctx.Redirect(fmt.Sprintf("%s/commit/%s", ctx.Repo.Repository.HTMLURL(), commitID))
+	ctx.Redirect(redirectURL)
 }
 
-func RemoveCommitNotes(ctx *context.Context) {
+func SetCommitNotes(ctx *context.Context) {
+	setCommitNotes(ctx, ctx.Repo.Repository.CommitLink(ctx.Params(":sha")))
+}
+
+func removeCommitNotes(ctx *context.Context, redirectURL string) {
 	commitID := ctx.Params(":sha")
 
 	err := git.RemoveNote(ctx, ctx.Repo.GitRepo, commitID)
@@ -487,5 +491,9 @@ func RemoveCommitNotes(ctx *context.Context) {
 		return
 	}
 
-	ctx.Redirect(fmt.Sprintf("%s/commit/%s", ctx.Repo.Repository.HTMLURL(), commitID))
+	ctx.Redirect(redirectURL)
+}
+
+func RemoveCommitNotes(ctx *context.Context) {
+	removeCommitNotes(ctx, ctx.Repo.Repository.CommitLink(ctx.Params(":sha")))
 }

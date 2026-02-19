@@ -1564,6 +1564,10 @@ func registerRoutes(m *web.Route) {
 					m.Get("", context.RepoRef(), repo.SetEditorconfigIfExists, repo.SetDiffViewStyle, repo.SetWhitespaceBehavior, repo.SetShowOutdatedComments, repo.ViewPullFilesForSingleCommit)
 					m.Post("/reviews/submit", context.RepoMustNotBeArchived(), web.Bind(forms.SubmitReviewForm{}), repo.SubmitReview)
 				})
+				m.Group("/{sha:([a-f0-9]{4,64})$}/notes", func() {
+					m.Post("", web.Bind(forms.CommitNotesForm{}), repo.SetCommitNotesPullRequest)
+					m.Post("/remove", repo.RemoveCommitNotesPullRequest)
+				}, reqSignIn, reqRepoCodeWriter)
 			})
 			m.Post("/merge", context.RepoMustNotBeArchived(), web.Bind(forms.MergePullRequestForm{}), context.EnforceQuotaWeb(quota_model.LimitSubjectSizeGitAll, context.QuotaTargetRepo), repo.MergePullRequest)
 			m.Post("/cancel_auto_merge", context.RepoMustNotBeArchived(), repo.CancelAutoMergePullRequest)
