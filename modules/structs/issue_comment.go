@@ -10,23 +10,23 @@ import (
 // Comment represents a comment on a commit or issue
 type Comment struct {
 	// The identifier of the comment
-	ID               int64         `json:"id"`
+	ID int64 `json:"id"`
 	// The HTML URL of the comment
-	HTMLURL          string        `json:"html_url"`
+	HTMLURL string `json:"html_url"`
 	// The HTML URL of the pull request if the comment is posted on a pull request, else empty string
-	PRURL            string        `json:"pull_request_url"`
+	PRURL string `json:"pull_request_url"`
 	// The HTML URL of the issue if the comment is posted on an issue, else empty string
-	IssueURL         string        `json:"issue_url"`
+	IssueURL string `json:"issue_url"`
 	// The user that posted the comment if it was posted locally
-	Poster           *User         `json:"user"`
+	Poster *User `json:"user"`
 	// The original author that posted the comment if it was not posted locally, else empty string
-	OriginalAuthor   string        `json:"original_author"`
+	OriginalAuthor string `json:"original_author"`
 	// The ID of the original author that posted the comment if it was not posted locally, else 0
-	OriginalAuthorID int64         `json:"original_author_id"`
+	OriginalAuthorID int64 `json:"original_author_id"`
 	// The body of the comment
-	Body             string        `json:"body"`
+	Body string `json:"body"`
 	// The attachments to the comment
-	Attachments      []*Attachment `json:"assets"`
+	Attachments []*Attachment `json:"assets"`
 	// The time of the comment's creation
 	// swagger:strfmt date-time
 	Created time.Time `json:"created_at"`
