@@ -5,9 +5,9 @@ package templates
 import (
 	"testing"
 
-	"code.gitea.io/gitea/models/db"
-	user_model "code.gitea.io/gitea/models/user"
-	activities_model "code.gitea.io/gitea/models/activities"
+	""forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
+	activities_model "forgejo.org/models/activities"
 
 	"github.com/stretchr/testify/assert"
 )
