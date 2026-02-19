@@ -111,15 +111,15 @@ func RemoteHeadBlob(ctx *context.Context) {
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
-	} else if remoteCtx.Digest == "" || remoteCtx.ImageName == "" {
+	} else if remoteCtx.Reference == "" || remoteCtx.ImageName == "" {
 		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
 
-	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.GetLocalImageName(), true)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Reference, remoteCtx.GetLocalImageName(), true)
 	if err != nil {
 		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
-			log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Digest)
+			log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Reference)
 
 			client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
 			if err != nil {
@@ -129,7 +129,7 @@ func RemoteHeadBlob(ctx *context.Context) {
 			}
 			defer client.Close(ctx)
 
-			regDigest := digest.Digest(remoteCtx.Digest)
+			regDigest := digest.Digest(remoteCtx.Reference)
 			regLayer := descriptor.Descriptor{Digest: regDigest}
 			buf, err := container_service.GetRemoteBlob(ctx, &client, &regLayer)
 			if err != nil {
@@ -139,13 +139,13 @@ func RemoteHeadBlob(ctx *context.Context) {
 			defer buf.Close()
 
 			// save to package TODO this could happen in a go routine
-			err = container_service.SaveBlobToPackage(ctx, buf, remoteCtx, remoteCtx.Digest, ctx.ContextUser, ctx.Doer)
+			err = container_service.SaveBlobToPackage(ctx, buf, remoteCtx, remoteCtx.Reference, ctx.ContextUser, ctx.Doer)
 			if err != nil {
 				apiError(ctx, http.StatusInternalServerError, err)
 				return
 			}
 
-			respDigest = remoteCtx.Digest
+			respDigest = remoteCtx.Reference
 			size = buf.Size()
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -169,14 +169,14 @@ func RemoteGetBlob(ctx *context.Context) {
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
-	} else if remoteCtx.Digest == "" || remoteCtx.ImageName == "" {
+	} else if remoteCtx.Reference == "" || remoteCtx.ImageName == "" {
 		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
 
-	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Digest, remoteCtx.GetLocalImageName(), true)
+	blob, err := container_service.GetLocalBlob(ctx, ctx.ContextUser.ID, remoteCtx.Reference, remoteCtx.GetLocalImageName(), true)
 	if err == container_model.ErrContainerBlobNotExist {
-		log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Digest)
+		log.Debug("Did not find blob with digest %s locally, getting from remote %v", remoteCtx.Reference, remoteCtx.Reference)
 
 		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
 		if err != nil {
@@ -186,7 +186,7 @@ func RemoteGetBlob(ctx *context.Context) {
 		}
 		defer client.Close(ctx)
 
-		regDigest := digest.Digest(remoteCtx.Digest)
+		regDigest := digest.Digest(remoteCtx.Reference)
 		regLayer := descriptor.Descriptor{
 			Digest: regDigest,
 		}
@@ -207,7 +207,7 @@ func RemoteGetBlob(ctx *context.Context) {
 		}
 
 		// save to package TODO this could happen in a go routine
-		err = container_service.SaveBlobToPackage(ctx, buf, remoteCtx, remoteCtx.Digest, ctx.ContextUser, ctx.Doer)
+		err = container_service.SaveBlobToPackage(ctx, buf, remoteCtx, remoteCtx.Reference, ctx.ContextUser, ctx.Doer)
 		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
 			return

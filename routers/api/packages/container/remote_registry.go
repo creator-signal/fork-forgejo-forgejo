@@ -26,13 +26,16 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 	ownerName := ctx.Params("username")
 	imageName := ctx.Params("image")
 	reference := ctx.Params("reference")
-	dig := ctx.Params("digest")
+	if ctx.Params("reference") == "" {
+		reference = ctx.Params("digest")
+	}
 	username := ctx.ContextUser.Name
 	isOrg := ctx.ContextUser.IsOrganization()
 	isUser := ctx.ContextUser.IsUser()
 
-	log.Trace("Detected remote registry request: owner=%s, user=%s, remote=%s, image=%s",
-		ownerName, username, registryName, imageName)
+	log.Debug("Got remote registry request for: owner=%s, user=%s, remote=%s, image=%s, reference=%s",
+		ownerName, username, registryName, imageName, reference)
+	log.Debug("... with request url %s and path %s ", ctx.Req.URL.Host, ctx.Req.URL.Path)
 
 	remoteRegistry, err := rr_service.GetRemoteRegistry(ctx, isOrg, isUser, ownerName, registryName)
 	if err != nil {
@@ -45,7 +48,6 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 		ImageName:      imageName,
 		RemoteRegistry: remoteRegistry,
 		Reference:      reference,
-		Digest:         dig,
 	}
 
 	ctx.Data[remoteRegistryContextKey] = remoteCtx

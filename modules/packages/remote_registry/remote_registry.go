@@ -13,7 +13,6 @@ type RemoteRegistryContext struct {
 	OwnerName      string
 	ImageName      string
 	Reference      string
-	Digest         string
 }
 
 func (rrc *RemoteRegistryContext) GetLocalImageName() string {
