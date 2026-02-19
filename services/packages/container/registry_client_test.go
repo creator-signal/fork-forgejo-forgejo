@@ -25,12 +25,13 @@ func Test_NewClient(t *testing.T) {
 		Name:       regName,
 		OwnerID:    int64(2),
 		RemoteURL:  remoteURL,
+		RemoteHost: remoteHost,
 		RemoteUser: remoteUser,
 	}
 	rr.SetRemoteToken(remoteToken)
 	rr.SetRemotePassword(remotePassword)
 
-	crc, err := NewContainerRegistryClient(rr)
+	crc, err := NewContainerRegistryClient(rr, "test/image", "latest")
 	require.NoError(t, err)
 	assert.NotEmpty(t, crc.httpClient)
 	assert.NotEmpty(t, crc.RegClient)
@@ -45,6 +46,11 @@ func Test_NewClient(t *testing.T) {
 
 	assert.Equal(t, remotePassword, pass)
 	assert.Equal(t, remoteToken, token)
+	assert.Equal(t, crc.Reference.Reference, remoteHost+"/test/image:latest")
+
+	crc, err = NewContainerRegistryClient(rr, "library/nginx", "sha256:341bf0f3ce6c5277d6002cf6e1fb0319fa4252add24ab6a0e262e0056d313208")
+	require.NoError(t, err)
+
 }
 
 func Test_NewRef(t *testing.T) {
