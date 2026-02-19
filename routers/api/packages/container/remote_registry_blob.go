@@ -21,6 +21,7 @@ import (
 
 	digest "github.com/opencontainers/go-digest"
 	"github.com/regclient/regclient/types/descriptor"
+	"github.com/regclient/regclient/types/manifest"
 )
 
 const (
@@ -260,6 +261,8 @@ func RemoteHeadManifest(ctx *context.Context) {
 		apiErrorDefined(ctx, container_service.ErrManifestUnknown)
 		return
 	}
+	log.Debug("Got HEAD Manifest for registry %s", remoteCtx.RemoteRegistry.Name)
+	log.Debug(".. with image %s and reference %s", remoteCtx.ImageName, remoteCtx.Reference)
 
 	// Do we have the manifest cached locally?
 	manifest, err := container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.GetLocalImageName(), remoteCtx.Reference)
@@ -296,7 +299,11 @@ func RemoteHeadManifest(ctx *context.Context) {
 		contentLength = manifest.Blob.Size
 	}
 
-	log.Trace("Serving manifest")
+	log.Debug("Responding HEAD manifest for %s with digest: %s, content-type: %s and size: %s",
+		remoteCtx.RemoteRegistry.Name,
+		contentDigest,
+		contentType,
+		contentLength)
 	setResponseHeaders(ctx.Resp, &containerHeaders{
 		ContentDigest: contentDigest,
 		ContentType:   contentType,
@@ -314,6 +321,8 @@ func RemoteGetManifest(ctx *context.Context) {
 		apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		return
 	}
+	log.Debug("Got GET Manifest for registry %s", remoteCtx.RemoteRegistry.Name)
+	log.Debug(".. with image %s and reference %s", remoteCtx.ImageName, remoteCtx.Reference)
 
 	man, err := container_service.GetLocalManifest(ctx, ctx.ContextUser.ID, remoteCtx.GetLocalImageName(), remoteCtx.Reference)
 

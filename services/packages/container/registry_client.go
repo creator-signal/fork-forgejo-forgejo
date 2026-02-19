@@ -296,6 +296,7 @@ func (crc *RegistryClient) GetBlob(ctx context.Context, d descriptor.Descriptor)
 }
 
 func (crc *RegistryClient) HeadManifest(ctx context.Context) (manifest.Manifest, error) {
+	log.Debug("Running client HEAD Manifest with image %s and reference %s", crc.Reference.Reference)
 	m, err := crc.RegClient.ManifestHead(ctx, *crc.Reference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to head manifest %s: %w", crc.Reference, err)
@@ -304,6 +305,7 @@ func (crc *RegistryClient) HeadManifest(ctx context.Context) (manifest.Manifest,
 }
 
 func (crc *RegistryClient) GetManifest(ctx context.Context) (manifest.Manifest, error) {
+	log.Debug("Running client GET Manifest with image %s and reference %s", crc.Reference.Reference, crc.Reference.Digest)
 	m, err := crc.RegClient.ManifestGet(ctx, *crc.Reference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get manifest %s: %w", crc.Reference, err)
