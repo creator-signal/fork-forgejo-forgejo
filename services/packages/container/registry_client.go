@@ -13,6 +13,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
 
+	digest "github.com/opencontainers/go-digest"
 	"github.com/regclient/regclient"
 	"github.com/regclient/regclient/config"
 	"github.com/regclient/regclient/types/blob"
@@ -84,7 +85,17 @@ func NewContainerRegistryClient(rr *rr_model.RemoteRegistry, names ...string) (R
 
 	if len(names) > 0 {
 		host := crc.RemoteRegistry.RemoteHost
+		// Set image name
 		refStr := host + "/" + names[0]
+		if len(names) > 1 {
+			// Set reference
+			isTagged := digest.Digest(names[1]).Validate() != nil
+			if isTagged {
+				refStr = refStr + ":" + names[1]
+			} else {
+				refStr = refStr + "@" + names[1]
+			}
+		}
 		r, err := ref.New(refStr)
 		if err != nil {
 			return RegistryClient{}, fmt.Errorf("Unable to create registry client, failed to create reference: %s", err)
