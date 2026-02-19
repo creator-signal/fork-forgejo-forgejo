@@ -281,7 +281,7 @@
 	"packages.alpine.repository.repositories": "Repositories",
 	"packages.alpine.repository.architectures": "Architectures",
 	"packages.ansible.install": "To install this collection using ansible-galaxy, run the following command:",
-	"packages.ansible.requirement": "To declare this collection in a requirements.yml file, use this syntax:",
+	"packages.ansible.requirement": "To declare this collection in a <code>requirements.yml</code> file, use this syntax:",
 	"packages.arch.pacman.helper.gpg": "Add trust certificate for pacman:",
 	"packages.arch.pacman.repo.multi": "%s has the same version in different distributions.",
 	"packages.arch.pacman.repo.multi.item": "Configuration for %s",
