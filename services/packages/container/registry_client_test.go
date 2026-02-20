@@ -46,11 +46,10 @@ func Test_NewClient(t *testing.T) {
 
 	assert.Equal(t, remotePassword, pass)
 	assert.Equal(t, remoteToken, token)
-	assert.Equal(t, crc.Reference.Reference, remoteHost+"/test/image:latest")
+	assert.Equal(t, remoteHost+"/test/image:latest", crc.Reference.Reference)
 
-	crc, err = NewContainerRegistryClient(rr, "library/nginx", "sha256:341bf0f3ce6c5277d6002cf6e1fb0319fa4252add24ab6a0e262e0056d313208")
+	_, err = NewContainerRegistryClient(rr, "library/nginx", "sha256:341bf0f3ce6c5277d6002cf6e1fb0319fa4252add24ab6a0e262e0056d313208")
 	require.NoError(t, err)
-
 }
 
 func Test_NewRef(t *testing.T) {

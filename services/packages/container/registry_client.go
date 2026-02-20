@@ -150,7 +150,6 @@ func (crc *RegistryClient) RemoteRegistryAvailable(resp *http.Response) error {
 }
 
 func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp *http.Response) (*http.Response, error) {
-	authResp := &http.Response{}
 	var credential string
 	hasUserAndPW := crc.RemoteRegistry.RemoteUser != "" && len(crc.RemoteRegistry.RemotePassword) > 0
 	hasToken := len(crc.RemoteRegistry.RemoteToken) > 0
@@ -166,8 +165,7 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 		return &http.Response{}, fmt.Errorf("failed to extract service URL: %w", err)
 	}
 
-	req := &http.Request{}
-	req, err = http.NewRequestWithContext(ctx, "GET", authURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", authURL, nil)
 	if err != nil {
 		log.Warn("Remote registry authentication failed for %q: %v", crc.RemoteRegistry.Name, err)
 		return &http.Response{}, err
@@ -211,7 +209,7 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 	}
 
 	req.URL.RawQuery = query.Encode()
-	authResp, err = crc.httpClient.Do(req)
+	authResp, err := crc.httpClient.Do(req)
 	if err != nil {
 		log.Warn("Remote registry authentication failed for %q: %v", crc.RemoteRegistry.Name, err)
 		return &http.Response{}, err

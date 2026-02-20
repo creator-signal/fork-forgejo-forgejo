@@ -70,7 +70,10 @@ func serveManifestFromBuffer(ctx *context.Context, regMan manifest.Manifest) err
 	ctx.Resp.Header().Set("Docker-Distribution-Api-Version", headers.Get("Docker-Distribution-Api-Version"))
 	ctx.Resp.Header().Set("ETag", headers.Get("ETag"))
 	ctx.Resp.Header().Set("Docker-Content-Digest", headers.Get("Docker-Content-Digest"))
-	ctx.Resp.Write(body)
+	_, err = ctx.Resp.Write(body)
+	if err != nil {
+		return fmt.Errorf("failed to serve index manifest from buffer: %w", err)
+	}
 	return nil
 }
 
@@ -358,7 +361,11 @@ func RemoteGetManifest(ctx *context.Context) {
 				remoteCtx.RemoteRegistry.Name,
 				mediaType,
 				digest)
-			serveManifestFromBuffer(ctx, regManifest)
+			err = serveManifestFromBuffer(ctx, regManifest)
+			if err != nil {
+				apiError(ctx, http.StatusInternalServerError, err)
+				return
+			}
 			return
 		}
 
@@ -438,7 +445,6 @@ func RemoteGetManifest(ctx *context.Context) {
 		}
 		err = serveManifestFromBuffer(ctx, regManifest)
 		if err != nil {
-			log.Error("Failed to serve manifest %v", err)
 			apiError(ctx, http.StatusInternalServerError, err)
 			return
 		}
