@@ -156,7 +156,15 @@ func RemoteHeadBlob(ctx *context.Context) {
 			regLayer := descriptor.Descriptor{Digest: regDigest}
 			buf, err := container_service.GetRemoteBlob(ctx, &client, &regLayer)
 			if err != nil {
-				apiError(ctx, http.StatusInternalServerError, err)
+				log.Error("Failed to HEAD blob from remote registry %s: %v",
+					remoteCtx.RemoteRegistry.Name, err)
+				if strings.Contains(err.Error(), "404") {
+					apiErrorDefined(ctx, container_service.ErrManifestUnknown)
+				} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
+					apiErrorDefined(ctx, container_service.ErrUnauthorized)
+				} else {
+					apiError(ctx, http.StatusBadGateway, err)
+				}
 				return
 			}
 			defer buf.Close()
@@ -217,7 +225,15 @@ func RemoteGetBlob(ctx *context.Context) {
 		// get from remote
 		buf, err := container_service.GetRemoteBlob(ctx, &client, &regLayer)
 		if err != nil {
-			apiError(ctx, http.StatusInternalServerError, err)
+			log.Error("Failed to GET blob from remote registry %s: %v",
+				remoteCtx.RemoteRegistry.Name, err)
+			if strings.Contains(err.Error(), "404") {
+				apiErrorDefined(ctx, container_service.ErrManifestUnknown)
+			} else if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
+				apiErrorDefined(ctx, container_service.ErrUnauthorized)
+			} else {
+				apiError(ctx, http.StatusBadGateway, err)
+			}
 			return
 		}
 		defer buf.Close()
