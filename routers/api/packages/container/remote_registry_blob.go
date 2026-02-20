@@ -100,7 +100,7 @@ func GetRemoteTagList(ctx *context.Context) {
 		ctx.Package.Owner.ID)
 
 	if errors.Is(err, packages_model.ErrPackageNotExist) {
-		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName, remoteCtx.Reference)
+		client, err := container_service.NewContainerRegistryClient(remoteCtx.RemoteRegistry, remoteCtx.ImageName)
 		if err != nil {
 			log.Error("Failed to create remote registry client for %s: %v", remoteCtx.RemoteRegistry.Name, err)
 			apiError(ctx, http.StatusInternalServerError, err)
