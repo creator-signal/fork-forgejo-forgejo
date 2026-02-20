@@ -36,6 +36,13 @@ func (it *IssueTemplate) Valid() bool {
 }
 
 func TestExtractMetadata(t *testing.T) {
+	t.Run("NoFrontmatter", func(t *testing.T) {
+		var meta IssueTemplate
+		body, err := ExtractMetadata(bodyTest, &meta)
+		require.Error(t, err)
+		assert.Equal(t, bodyTest, body)
+	})
+
 	t.Run("PlainJSONAndBody", func(t *testing.T) {
 		var meta IssueTemplate
 		body, err := ExtractMetadata(fmt.Sprintf("%s\n%s", frontTestJSON, bodyTest), &meta)
@@ -126,6 +133,13 @@ func TestExtractMetadata(t *testing.T) {
 }
 
 func TestExtractMetadataBytes(t *testing.T) {
+	t.Run("NoFrontmatter", func(t *testing.T) {
+		var meta IssueTemplate
+		body, err := ExtractMetadataBytes([]byte(bodyTest), &meta)
+		require.Error(t, err)
+		assert.Equal(t, bodyTest, string(body))
+	})
+
 	t.Run("PlainJSONAndBody", func(t *testing.T) {
 		var meta IssueTemplate
 		body, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s", frontTestJSON, bodyTest)), &meta)
@@ -236,7 +250,7 @@ labels = ["bug", "test label"]`
 "labels": ["bug", "test label"]
 }`
 	frontTests = []string{frontTestYAML, frontTestTOML, frontTestJSON}
-	bodyTest   = "This is the body"
+	bodyTest   = "\nThis is the head\nAnd this is the body\nAnd this is the foot\n"
 	metaTest   = IssueTemplate{
 		Name:   "Test",
 		About:  "A Test",

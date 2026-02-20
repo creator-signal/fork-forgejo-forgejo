@@ -38,6 +38,10 @@ func frontmatterSeparator(line []byte, isStart bool) byte {
 			break
 		}
 	}
+	if len(line) == 0 {
+		return 0
+	}
+
 	sep := line[idx]
 
 	// disallow } to start and { to end
@@ -143,7 +147,7 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 		}
 		line := contents[start:end]
 		endSep = frontmatterSeparator(line, false)
-		if endSep == startSep || (startSep == '{' && endSep == '}') {
+		if endSep != 0 && (endSep == startSep || (startSep == '{' && endSep == '}')) {
 			// the braces are part of the JSON frontmatter,
 			// but the other separators aren't part of frontmatter
 			if endSep == '}' {
