@@ -94,7 +94,7 @@ func ExtractMetadata(contents string, out any) (string, error) {
 }
 
 // error returned by ExtractMetadataBytes
-func Failed(format int, heuristicUsed string, err error) error {
+func FailedParseFrontmatter(format int, heuristicUsed string, err error) error {
 	var formatString string
 	switch format {
 	case JSON:
@@ -138,7 +138,6 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 		frontMatterStart = end + 1
 	}
 
-	var endSep byte
 	for start = frontMatterStart; start < len(contents); start = end + 1 {
 		end = len(contents)
 		idx := bytes.IndexByte(contents[start:], '\n')
@@ -146,7 +145,7 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 			end = start + idx
 		}
 		line := contents[start:end]
-		endSep = frontmatterSeparator(line, false)
+		endSep := frontmatterSeparator(line, false)
 		if endSep != 0 && (endSep == startSep || (startSep == '{' && endSep == '}')) {
 			// the braces are part of the JSON frontmatter,
 			// but the other separators aren't part of frontmatter
@@ -170,7 +169,7 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 	var heuristicUsed string
 
 	// assume JSON if delimited by {}
-	if startSep == '{' || endSep == '}' {
+	if startSep == '{' {
 		format = JSON
 		heuristicUsed = "bare {} frontmatter"
 	} else {
@@ -210,15 +209,15 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 	switch format {
 	case YAML:
 		if err := yaml.Unmarshal(front, out); err != nil {
-			return contents, Failed(format, heuristicUsed, err)
+			return contents, FailedParseFrontmatter(format, heuristicUsed, err)
 		}
 	case TOML:
 		if err := toml.Unmarshal(front, out); err != nil {
-			return contents, Failed(format, heuristicUsed, err)
+			return contents, FailedParseFrontmatter(format, heuristicUsed, err)
 		}
 	case JSON:
 		if err := json.Unmarshal(front, out); err != nil {
-			return contents, Failed(format, heuristicUsed, err)
+			return contents, FailedParseFrontmatter(format, heuristicUsed, err)
 		}
 	}
 
