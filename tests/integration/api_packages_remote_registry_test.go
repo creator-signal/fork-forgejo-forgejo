@@ -264,29 +264,55 @@ func TestRemoteRegistryPull(t *testing.T) {
 	manifestContent := `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":"sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d","size":1069},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4","size":32}]}`
 	tag := "latest"
 
+	indexManifestDigest := "sha256:a45c5523b043174617cac9bda33134956c14e9add96fcacca1da36278aadbaba"
+	indexManifestContent := `{"manifests":[{"annotations":{"com.docker.official-images.bashbrew.arch":"amd64","org.opencontainers.image.base.digest":"sha256:346fa035ca82052ce8ec3ddb9df460b255507acdeb1dc880a8b6930e778a553c","org.opencontainers.image.base.name":"debian:trixie-slim","org.opencontainers.image.created":"2026-02-04T23:52:22Z","org.opencontainers.image.revision":"ffe72978e08c5b0dacecd604e528f6d0741a9ae5","org.opencontainers.image.source":"https:\/\/github.com\/nginx\/docker-nginx.git#ffe72978e08c5b0dacecd604e528f6d0741a9ae5:mainline\/debian","org.opencontainers.image.url":"https:\/\/hub.docker.com\/_\/nginx","org.opencontainers.image.version":"1.29.5"},"digest":"sha256:514a9c2814250e61396ef4d6125ece1a8fbb3b0964a2ab441e9f7acf0b66b8b5","mediaType":"application\/vnd.oci.image.manifest.v1+json","platform":{"architecture":"amd64","os":"linux"},"size":2290},{"annotations":{"com.docker.official-images.bashbrew.arch":"amd64","vnd.docker.reference.digest":"sha256:514a9c2814250e61396ef4d6125ece1a8fbb3b0964a2ab441e9f7acf0b66b8b5","vnd.docker.reference.type":"attestation-manifest"},"digest":"sha256:32923807439461f47e92b606f5fe670b1791b407c62a6b4648b38f7659c034be","mediaType":"application\/vnd.oci.image.manifest.v1+json","platform":{"architecture":"unknown","os":"unknown"},"size":841}],"mediaType":"application\/vnd.oci.image.index.v1+json","schemaVersion":2}`
+
 	blobDigest := "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
 	blobContent, _ := base64.StdEncoding.DecodeString(`H4sIAAAJbogA/2IYBaNgFIxYAAgAAP//Lq+17wAEAAA=`)
+
+	unknownDigest := "sha256:fffffffffffffffffffffffffffffffff0000000000000000000000000000000"
 
 	url := fmt.Sprintf("%sv2/%s/remote/%s/%s", setting.AppURL, org3.Name, rr.Name, image)
 
 	t.Run("HEAD Manifest", func(t *testing.T) {
 		req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 			AddTokenAuth(anonymousToken)
-		MakeRequest(t, req, http.StatusOK)
+		resp = MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, manifestDigest, resp.Header().Get("docker-content-digest"))
 	})
 
-	t.Run("GET Manifest Tag", func(t *testing.T) {
+	t.Run("HEAD Index Manifest", func(t *testing.T) {
+		req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, indexManifestDigest)).
+			AddTokenAuth(anonymousToken)
+		resp = MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, indexManifestDigest, resp.Header().Get("docker-content-digest"))
+	})
+
+	t.Run("HEAD Manifest Not Found", func(t *testing.T) {
+		req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, unknownDigest)).
+			AddTokenAuth(anonymousToken)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("GET Manifest by Tag", func(t *testing.T) {
 		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, tag)).
 			AddTokenAuth(anonymousToken)
 		resp := MakeRequest(t, req, http.StatusOK)
 		assert.Equal(t, manifestContent, resp.Body.String())
 	})
 
-	t.Run("GET Manifest Digest", func(t *testing.T) {
+	t.Run("GET Manifest by Digest", func(t *testing.T) {
 		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
 			AddTokenAuth(anonymousToken)
 		resp := MakeRequest(t, req, http.StatusOK)
 		assert.Equal(t, manifestContent, resp.Body.String())
+	})
+
+	t.Run("GET Index Manifest by Digest", func(t *testing.T) {
+		req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, indexManifestDigest)).
+			AddTokenAuth(anonymousToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, indexManifestContent, resp.Body.String())
 	})
 
 	t.Run("HEAD Blob", func(t *testing.T) {
@@ -294,6 +320,12 @@ func TestRemoteRegistryPull(t *testing.T) {
 			AddTokenAuth(anonymousToken)
 		resp := MakeRequest(t, req, http.StatusOK)
 		assert.Equal(t, blobDigest, resp.Header().Get("docker-content-digest"))
+	})
+
+	t.Run("HEAD Blob Not Found", func(t *testing.T) {
+		req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", url, unknownDigest)).
+			AddTokenAuth(anonymousToken)
+		MakeRequest(t, req, http.StatusNotFound)
 	})
 
 	t.Run("GET Blob", func(t *testing.T) {
