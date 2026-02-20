@@ -81,3 +81,15 @@
   type: 1
   created_unix: 1688973000
   updated_unix: 1688973000
+
+-
+  id: 8
+  title: project on repo10
+  owner_id: 0
+  repo_id: 10
+  is_closed: false
+  creator_id: 12
+  board_type: 1
+  type: 2
+  created_unix: 1688973025
+  updated_unix: 1688973025

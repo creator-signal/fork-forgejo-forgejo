@@ -16,6 +16,7 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
+	project_model "forgejo.org/models/project"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
@@ -125,6 +126,127 @@ func TestAPIListIssues(t *testing.T) {
 	})
 }
 
+func TestAPIIssueProject(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+
+	session := loginUser(t, owner.Name)
+	readToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadIssue)
+	writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
+
+	t.Run("IssueWithProject", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Issue 1 is assigned to project 1, column 1 ("To Do") per fixtures
+		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/issues/1", owner.Name, repo.Name)).AddTokenAuth(readToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		require.NotNil(t, apiIssue.Project)
+		assert.EqualValues(t, 1, apiIssue.Project.ID)
+		assert.Equal(t, "First project", apiIssue.Project.Title)
+		assert.Equal(t, api.StateOpen, apiIssue.Project.State)
+		assert.False(t, apiIssue.Project.Created.IsZero())
+		assert.NotNil(t, apiIssue.Project.Updated)
+		assert.Nil(t, apiIssue.Project.Closed)
+		assert.EqualValues(t, 1, apiIssue.Project.ColumnID)
+		assert.Equal(t, "To Do", apiIssue.Project.Column)
+	})
+
+	t.Run("IssueWithoutProject", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Issue 11 (index 4 in repo 1) is not assigned to any project
+		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 11, RepoID: repo.ID})
+		req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)).AddTokenAuth(readToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		assert.Nil(t, apiIssue.Project)
+	})
+
+	t.Run("CreateWithProject", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issues", owner.Name, repo.Name)
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title:   "issue with project",
+			Project: 1,
+		}).AddTokenAuth(writeToken)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		require.NotNil(t, apiIssue.Project)
+		assert.EqualValues(t, 1, apiIssue.Project.ID)
+		// Should be placed in the default column ("To Do", ID 1)
+		assert.EqualValues(t, 1, apiIssue.Project.ColumnID)
+		assert.Equal(t, "To Do", apiIssue.Project.Column)
+	})
+
+	t.Run("CreateWithProjectAndColumn", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Column 2 is "In Progress" in project 1
+		column := unittest.AssertExistsAndLoadBean(t, &project_model.Column{ID: 2, ProjectID: 1})
+
+		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issues", owner.Name, repo.Name)
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title:         "issue with project and column",
+			Project:       1,
+			ProjectColumn: column.ID,
+		}).AddTokenAuth(writeToken)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		require.NotNil(t, apiIssue.Project)
+		assert.EqualValues(t, 1, apiIssue.Project.ID)
+		assert.Equal(t, column.ID, apiIssue.Project.ColumnID)
+		assert.Equal(t, "In Progress", apiIssue.Project.Column)
+	})
+
+	t.Run("EditProject", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Issue 11 (index 4 in repo 1) is not assigned to any project
+		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 11, RepoID: repo.ID})
+		projectID := int64(1)
+
+		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)
+		req := NewRequestWithJSON(t, "PATCH", urlStr, &api.EditIssueOption{
+			Project: &projectID,
+		}).AddTokenAuth(writeToken)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		require.NotNil(t, apiIssue.Project)
+		assert.EqualValues(t, 1, apiIssue.Project.ID)
+	})
+
+	t.Run("RemoveProject", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Issue 1 is assigned to project 1 per fixtures
+		projectID := int64(0)
+
+		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issues/1", owner.Name, repo.Name)
+		req := NewRequestWithJSON(t, "PATCH", urlStr, &api.EditIssueOption{
+			Project: &projectID,
+		}).AddTokenAuth(writeToken)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		assert.Nil(t, apiIssue.Project)
+	})
+}
+
 func TestAPIListIssuesWithLabels(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -197,12 +319,16 @@ func TestAPICreateIssue(t *testing.T) {
 		Body:     body,
 		Title:    title,
 		Assignee: owner.Name,
+		Project:  1,
 	}).AddTokenAuth(token)
 	resp := MakeRequest(t, req, http.StatusCreated)
 	var apiIssue api.Issue
 	DecodeJSON(t, resp, &apiIssue)
 	assert.Equal(t, body, apiIssue.Body)
 	assert.Equal(t, title, apiIssue.Title)
+	if assert.NotNil(t, apiIssue.Project) {
+		assert.EqualValues(t, 1, apiIssue.Project.ID)
+	}
 
 	unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{
 		RepoID:     repoBefore.ID,

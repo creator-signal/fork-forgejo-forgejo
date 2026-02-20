@@ -74,6 +74,7 @@ func ToAPIPullRequest(ctx context.Context, pr *issues_model.PullRequest, doer *u
 		Body:                    apiIssue.Body,
 		Labels:                  apiIssue.Labels,
 		Milestone:               apiIssue.Milestone,
+		Project:                 apiIssue.Project,
 		Assignee:                apiIssue.Assignee,
 		Assignees:               apiIssue.Assignees,
 		State:                   apiIssue.State,

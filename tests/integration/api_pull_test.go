@@ -290,6 +290,7 @@ func TestAPICreatePullWithFieldsSuccess(t *testing.T) {
 		Milestone: 5,
 		Assignees: []string{owner10.Name},
 		Labels:    []int64{5},
+		Project:   8,
 	}
 
 	req := NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/%s/pulls", owner10.Name, repo10.Name), opts).
@@ -306,6 +307,9 @@ func TestAPICreatePullWithFieldsSuccess(t *testing.T) {
 	}
 	assert.NotNil(t, pull.Labels)
 	assert.Equal(t, opts.Labels[0], pull.Labels[0].ID)
+	if assert.NotNil(t, pull.Project) {
+		assert.EqualValues(t, 8, pull.Project.ID)
+	}
 }
 
 func TestAPICreatePullWithFieldsFailure(t *testing.T) {
@@ -378,6 +382,16 @@ func TestAPIEditPull(t *testing.T) {
 	require.NoError(t, err)
 	unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{IssueID: pull.Issue.ID, OldTitle: title, NewTitle: newTitle})
 	unittest.AssertExistsAndLoadBean(t, &issues_model.ContentHistory{IssueID: pull.Issue.ID, ContentText: newBody, IsFirstCreated: false})
+
+	// assign to project
+	req = NewRequestWithJSON(t, http.MethodPatch, urlStr, &api.EditPullRequestOption{
+		Project: 8,
+	}).AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusCreated)
+	DecodeJSON(t, resp, apiPull)
+	if assert.NotNil(t, apiPull.Project) {
+		assert.EqualValues(t, 8, apiPull.Project.ID)
+	}
 
 	// verify the idempotency of a state change
 	pullState := string(apiPull.State)

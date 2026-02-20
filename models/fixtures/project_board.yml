@@ -84,3 +84,22 @@
   sorting: 1
   created_unix: 1588117528
   updated_unix: 1588117528
+
+-
+  id: 10
+  project_id: 8
+  title: To Do
+  creator_id: 12
+  default: true
+  sorting: 0
+  created_unix: 1588117528
+  updated_unix: 1588117528
+
+-
+  id: 11
+  project_id: 8
+  title: In Progress
+  creator_id: 12
+  sorting: 1
+  created_unix: 1588117528
+  updated_unix: 1588117528

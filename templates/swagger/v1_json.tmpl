@@ -24037,6 +24037,18 @@
           "format": "int64",
           "x-go-name": "Milestone"
         },
+        "project": {
+          "description": "project id",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Project"
+        },
+        "project_column": {
+          "description": "project column id (defaults to project's default column if 0)",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ProjectColumn"
+        },
         "ref": {
           "type": "string",
           "x-go-name": "Ref"
@@ -24267,6 +24279,18 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "Milestone"
+        },
+        "project": {
+          "description": "project id",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Project"
+        },
+        "project_column": {
+          "description": "project column id (defaults to project's default column if 0)",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ProjectColumn"
         },
         "title": {
           "type": "string",
@@ -25239,6 +25263,16 @@
           "format": "int64",
           "x-go-name": "Milestone"
         },
+        "project": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Project"
+        },
+        "project_column": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ProjectColumn"
+        },
         "ref": {
           "type": "string",
           "x-go-name": "Ref"
@@ -25402,6 +25436,18 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "Milestone"
+        },
+        "project": {
+          "description": "project id",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Project"
+        },
+        "project_column": {
+          "description": "project column id (defaults to project's default column if 0)",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ProjectColumn"
         },
         "state": {
           "type": "string",
@@ -26641,6 +26687,9 @@
           "format": "int64",
           "x-go-name": "PinOrder"
         },
+        "project": {
+          "$ref": "#/definitions/Project"
+        },
         "pull_request": {
           "$ref": "#/definitions/PullRequestMeta"
         },
@@ -27839,6 +27888,53 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "Project": {
+      "description": "Project represents a project",
+      "type": "object",
+      "properties": {
+        "closed_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Closed"
+        },
+        "column": {
+          "type": "string",
+          "x-go-name": "Column"
+        },
+        "column_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ColumnID"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "state": {
+          "$ref": "#/definitions/StateType"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Updated"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "PublicKey": {
       "description": "PublicKey publickey is a user key to push code to repository",
       "type": "object",
@@ -28019,6 +28115,9 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "PinOrder"
+        },
+        "project": {
+          "$ref": "#/definitions/Project"
         },
         "requested_reviewers": {
           "type": "array",

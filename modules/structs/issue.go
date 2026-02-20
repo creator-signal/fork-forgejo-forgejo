@@ -57,6 +57,7 @@ type Issue struct {
 	Attachments      []*Attachment `json:"assets"`
 	Labels           []*Label      `json:"labels"`
 	Milestone        *Milestone    `json:"milestone"`
+	Project          *Project      `json:"project"`
 	// deprecated
 	Assignee  *User   `json:"assignee"`
 	Assignees []*User `json:"assignees"`
@@ -97,7 +98,11 @@ type CreateIssueOption struct {
 	Milestone int64 `json:"milestone"`
 	// list of label ids
 	Labels []int64 `json:"labels"`
-	Closed bool    `json:"closed"`
+	// project id
+	Project int64 `json:"project"`
+	// project column id (defaults to project's default column if 0)
+	ProjectColumn int64 `json:"project_column"`
+	Closed        bool  `json:"closed"`
 }
 
 // EditIssueOption options for editing an issue
@@ -106,10 +111,12 @@ type EditIssueOption struct {
 	Body  *string `json:"body"`
 	Ref   *string `json:"ref"`
 	// deprecated
-	Assignee  *string  `json:"assignee"`
-	Assignees []string `json:"assignees"`
-	Milestone *int64   `json:"milestone"`
-	State     *string  `json:"state"`
+	Assignee      *string  `json:"assignee"`
+	Assignees     []string `json:"assignees"`
+	Milestone     *int64   `json:"milestone"`
+	Project       *int64   `json:"project"`
+	ProjectColumn *int64   `json:"project_column"`
+	State         *string  `json:"state"`
 	// swagger:strfmt date-time
 	Deadline       *time.Time `json:"due_date"`
 	RemoveDeadline *bool      `json:"unset_due_date"`

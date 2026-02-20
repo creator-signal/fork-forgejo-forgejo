@@ -569,6 +569,21 @@ func CreatePullRequest(ctx *context.APIContext) {
 		return
 	}
 
+	if form.Project > 0 {
+		if !ctx.Repo.CanRead(unit.TypeProjects) {
+			ctx.Error(http.StatusBadRequest, "NoProjectAccess", "user doesn't have permission to read projects")
+			return
+		}
+		if err := issues_model.IssueAssignOrRemoveProject(ctx, prIssue, ctx.Doer, form.Project, form.ProjectColumn); err != nil {
+			if errors.Is(err, util.ErrPermissionDenied) {
+				ctx.Error(http.StatusUnprocessableEntity, "ProjectAccessDenied", err)
+			} else {
+				ctx.Error(http.StatusInternalServerError, "IssueAssignOrRemoveProject", err)
+			}
+			return
+		}
+	}
+
 	log.Trace("Pull request created: %d/%d", repo.ID, prIssue.ID)
 	ctx.JSON(http.StatusCreated, convert.ToAPIPullRequest(ctx, pr, ctx.Doer))
 }
@@ -731,6 +746,17 @@ func EditPullRequest(ctx *context.APIContext) {
 
 		if err = issues_model.ReplaceIssueLabels(ctx, issue, labels, ctx.Doer); err != nil {
 			ctx.Error(http.StatusInternalServerError, "ReplaceLabelsError", err)
+			return
+		}
+	}
+
+	if ctx.Repo.CanWrite(unit.TypePullRequests) && form.Project != 0 {
+		if err := issues_model.IssueAssignOrRemoveProject(ctx, issue, ctx.Doer, form.Project, form.ProjectColumn); err != nil {
+			if errors.Is(err, util.ErrPermissionDenied) {
+				ctx.Error(http.StatusUnprocessableEntity, "ProjectAccessDenied", err)
+			} else {
+				ctx.Error(http.StatusInternalServerError, "IssueAssignOrRemoveProject", err)
+			}
 			return
 		}
 	}

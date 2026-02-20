@@ -17,6 +17,7 @@ type PullRequest struct {
 	Body                    string     `json:"body"`
 	Labels                  []*Label   `json:"labels"`
 	Milestone               *Milestone `json:"milestone"`
+	Project                 *Project   `json:"project"`
 	Assignee                *User      `json:"assignee"`
 	Assignees               []*User    `json:"assignees"`
 	RequestedReviewers      []*User    `json:"requested_reviewers"`
@@ -86,6 +87,10 @@ type CreatePullRequestOption struct {
 	Assignees []string `json:"assignees"`
 	Milestone int64    `json:"milestone"`
 	Labels    []int64  `json:"labels"`
+	// project id
+	Project int64 `json:"project"`
+	// project column id (defaults to project's default column if 0)
+	ProjectColumn int64 `json:"project_column"`
 	// swagger:strfmt date-time
 	Deadline *time.Time `json:"due_date"`
 }
@@ -99,7 +104,11 @@ type EditPullRequestOption struct {
 	Assignees []string `json:"assignees"`
 	Milestone int64    `json:"milestone"`
 	Labels    []int64  `json:"labels"`
-	State     *string  `json:"state"`
+	// project id
+	Project int64 `json:"project"`
+	// project column id (defaults to project's default column if 0)
+	ProjectColumn int64   `json:"project_column"`
+	State         *string `json:"state"`
 	// swagger:strfmt date-time
 	Deadline            *time.Time `json:"due_date"`
 	RemoveDeadline      *bool      `json:"unset_due_date"`

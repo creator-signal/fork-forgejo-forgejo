@@ -102,6 +102,9 @@ type Issue struct {
 	Milestone         *Milestone             `xorm:"-"`
 	isMilestoneLoaded bool                   `xorm:"-"`
 	Project           *project_model.Project `xorm:"-"`
+	ProjectBoardID    int64                  `xorm:"-"`
+	ProjectColumnName string                 `xorm:"-"`
+	isProjectLoaded   bool                   `xorm:"-"`
 	Priority          int
 	AssigneeID        int64            `xorm:"-"`
 	Assignee          *user_model.User `xorm:"-"`

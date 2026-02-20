@@ -24,6 +24,7 @@ import (
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
@@ -763,6 +764,21 @@ func CreateIssue(ctx *context.APIContext) {
 		return
 	}
 
+	if form.Project > 0 && ctx.Repo.CanWrite(unit.TypeIssues) {
+		if !ctx.Repo.CanRead(unit.TypeProjects) {
+			ctx.Error(http.StatusBadRequest, "NoProjectAccess", "user doesn't have permission to read projects")
+			return
+		}
+		if err := issues_model.IssueAssignOrRemoveProject(ctx, issue, ctx.Doer, form.Project, form.ProjectColumn); err != nil {
+			if errors.Is(err, util.ErrPermissionDenied) {
+				ctx.Error(http.StatusUnprocessableEntity, "ProjectAccessDenied", err)
+			} else {
+				ctx.Error(http.StatusInternalServerError, "IssueAssignOrRemoveProject", err)
+			}
+			return
+		}
+	}
+
 	if form.Closed {
 		if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, "", true); err != nil {
 			if issues_model.IsErrDependenciesLeft(err) {
@@ -930,6 +946,20 @@ func EditIssue(ctx *context.APIContext) {
 		issue.MilestoneID = *form.Milestone
 		if err = issue_service.ChangeMilestoneAssign(ctx, issue, ctx.Doer, oldMilestoneID); err != nil {
 			ctx.Error(http.StatusInternalServerError, "ChangeMilestoneAssign", err)
+			return
+		}
+	}
+	if canWrite && form.Project != nil {
+		columnID := int64(0)
+		if form.ProjectColumn != nil {
+			columnID = *form.ProjectColumn
+		}
+		if err := issues_model.IssueAssignOrRemoveProject(ctx, issue, ctx.Doer, *form.Project, columnID); err != nil {
+			if errors.Is(err, util.ErrPermissionDenied) {
+				ctx.Error(http.StatusUnprocessableEntity, "ProjectAccessDenied", err)
+			} else {
+				ctx.Error(http.StatusInternalServerError, "IssueAssignOrRemoveProject", err)
+			}
 			return
 		}
 	}
