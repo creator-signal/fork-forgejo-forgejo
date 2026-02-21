@@ -165,6 +165,36 @@ func TestExtractMetadata(t *testing.T) {
 		}
 	})
 
+	t.Run("BareJSONFailed", func(t *testing.T) {
+		var meta []string
+		_, err := ExtractMetadata(fmt.Sprintf("%s\n%s", badJSON, bodyTest), &meta)
+		require.ErrorContains(t, err, errorFrontmatterJSONBare)
+	})
+
+	t.Run("HeuristicYAMLFailed", func(t *testing.T) {
+		var meta []string
+		for _, sep := range sepTests {
+			_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", sep, badYAML, sep, bodyTest), &meta)
+			require.ErrorContains(t, err, errorFrontmatterYAMLHeuristic)
+		}
+	})
+
+	t.Run("HeuristicTOMLFailed", func(t *testing.T) {
+		var meta []string
+		for _, sep := range sepTests {
+			_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", sep, badTOML, sep, bodyTest), &meta)
+			require.ErrorContains(t, err, errorFrontmatterTOMLHeuristic)
+		}
+	})
+
+	t.Run("HeuristicJSONFailed", func(t *testing.T) {
+		var meta []string
+		for _, sep := range sepTests {
+			_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", sep, badJSON, sep, bodyTest), &meta)
+			require.ErrorContains(t, err, errorFrontmatterJSONHeuristic)
+		}
+	})
+
 	t.Run("FallbackYAML", func(t *testing.T) {
 		var meta []string
 		body, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", minuses, fallbackYAML, minuses, bodyTest), &meta)
@@ -311,6 +341,36 @@ func TestExtractMetadataBytes(t *testing.T) {
 		}
 	})
 
+	t.Run("BareJSONFailed", func(t *testing.T) {
+		var meta []string
+		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s", badJSON, bodyTest)), &meta)
+		require.ErrorContains(t, err, errorFrontmatterJSONBare)
+	})
+
+	t.Run("HeuristicYAMLFailed", func(t *testing.T) {
+		var meta []string
+		for _, sep := range sepTests {
+			_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", sep, badYAML, sep, bodyTest)), &meta)
+			require.ErrorContains(t, err, errorFrontmatterYAMLHeuristic)
+		}
+	})
+
+	t.Run("HeuristicTOMLFailed", func(t *testing.T) {
+		var meta []string
+		for _, sep := range sepTests {
+			_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", sep, badTOML, sep, bodyTest)), &meta)
+			require.ErrorContains(t, err, errorFrontmatterTOMLHeuristic)
+		}
+	})
+
+	t.Run("HeuristicJSONFailed", func(t *testing.T) {
+		var meta []string
+		for _, sep := range sepTests {
+			_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", sep, badJSON, sep, bodyTest)), &meta)
+			require.ErrorContains(t, err, errorFrontmatterJSONHeuristic)
+		}
+	})
+
 	t.Run("FallbackYAML", func(t *testing.T) {
 		var meta []string
 		body, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", minuses, fallbackYAML, minuses, bodyTest)), &meta)
@@ -362,15 +422,18 @@ labels = ["bug", "test label"]`
 		Title:  "Test Title",
 		Labels: []string{"bug", "test label"},
 	}
-	fallbackYAML                 = `- test`
-	fallbackTOML                 = `[[issues]]`
-	errorNoFrontmatter           = "no frontmatter detected"
-	errorFrontmatterYAMLFallback = "YAML assumed; minus separators fall back to YAML"
-	errorFrontmatterTOMLFallback = "TOML assumed; plus separators fall back to TOML"
+	badYAML = "labels: ["
+	badTOML = "name = Test"
+	badJSON = `{
+name: "Test"
+}`
+	fallbackYAML                  = `- test`
+	fallbackTOML                  = `[[issues]]`
+	errorNoFrontmatter            = "no frontmatter detected"
+	errorFrontmatterYAMLHeuristic = "YAML assumed; : appeared before { or ="
+	errorFrontmatterTOMLHeuristic = "TOML assumed; = appeared before { or :"
+	errorFrontmatterJSONHeuristic = "JSON assumed; { appeared before : or ="
+	errorFrontmatterJSONBare      = "JSON assumed; bare {} frontmatter"
+	errorFrontmatterYAMLFallback  = "YAML assumed; minus separators fall back to YAML"
+	errorFrontmatterTOMLFallback  = "TOML assumed; plus separators fall back to TOML"
 )
-
-// untested:
-// errorFrontmatterYAMLHeuristic = "YAML assumed; : appeared before { or ="
-// errorFrontmatterTOMLHeuristic = "TOML assumed; = appeared before { or :"
-// errorFrontmatterJSONHeuristic = "JSON assumed; { appeared before : or ="
-// errorFrontmatterJSONBare = "JSON assumed; bare {} frontmatter"
