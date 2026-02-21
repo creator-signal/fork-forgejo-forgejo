@@ -43,6 +43,35 @@ func TestExtractMetadata(t *testing.T) {
 		assert.Equal(t, bodyTest, body)
 	})
 
+	t.Run("OopsAllOpens", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadata(fmt.Sprintf("{\n%s\n{\n%s", frontendTestJSONBody, bodyTest), &meta)
+		require.Error(t, err)
+	})
+
+	t.Run("OopsAllCloses", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadata(fmt.Sprintf("}\n%s\n}\n%s", frontendTestJSONBody, bodyTest), &meta)
+		require.Error(t, err)
+	})
+
+	t.Run("BackwardsJSON", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadata(fmt.Sprintf("}\n%s\n{\n%s", frontendTestJSONBody, bodyTest), &meta)
+		require.Error(t, err)
+	})
+
+	t.Run("BackwardsJSON", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadata(fmt.Sprintf("}\n%s\n{\n%s", frontendTestJSONBody, bodyTest), &meta)
+		require.Error(t, err)
+	})
+	t.Run("BraceYourselves", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadata(fmt.Sprintf("{{\n%s\n}}\n%s", frontendTestJSONBody, bodyTest), &meta)
+		require.Error(t, err)
+	})
+
 	t.Run("PlainJSONAndBody", func(t *testing.T) {
 		var meta IssueTemplate
 		body, err := ExtractMetadata(fmt.Sprintf("%s\n%s", frontTestJSON, bodyTest), &meta)
@@ -70,6 +99,31 @@ func TestExtractMetadata(t *testing.T) {
 				assert.Equal(t, bodyTest, body)
 				assert.Equal(t, metaTest, meta)
 				assert.True(t, meta.Valid())
+			}
+		}
+	})
+
+	t.Run("ShortSeparators", func(t *testing.T) {
+		var meta IssueTemplate
+		for _, sep := range badSepTests {
+			for _, front := range frontTests {
+				_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", sep, front, sep, bodyTest), &meta)
+				require.Error(t, err)
+			}
+		}
+	})
+
+	t.Run("MismatchedSeparators", func(t *testing.T) {
+		var meta IssueTemplate
+		for _, startSep := range sepTests {
+			for _, endSep := range sepTests {
+				if startSep == endSep {
+					continue
+				}
+				for _, front := range frontTests {
+					_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", startSep, front, endSep, bodyTest), &meta)
+					require.Error(t, err)
+				}
 			}
 		}
 	})
@@ -140,6 +194,30 @@ func TestExtractMetadataBytes(t *testing.T) {
 		assert.Equal(t, bodyTest, string(body))
 	})
 
+	t.Run("OopsAllOpens", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("{\n%s\n{\n%s", frontendTestJSONBody, bodyTest)), &meta)
+		require.Error(t, err)
+	})
+
+	t.Run("OopsAllCloses", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("}\n%s\n}\n%s", frontendTestJSONBody, bodyTest)), &meta)
+		require.Error(t, err)
+	})
+
+	t.Run("BackwardsJSON", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("}\n%s\n{\n%s", frontendTestJSONBody, bodyTest)), &meta)
+		require.Error(t, err)
+	})
+
+	t.Run("BraceYourselves", func(t *testing.T) {
+		var meta IssueTemplate
+		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("{{\n%s\n}}\n%s", frontendTestJSONBody, bodyTest)), &meta)
+		require.Error(t, err)
+	})
+
 	t.Run("PlainJSONAndBody", func(t *testing.T) {
 		var meta IssueTemplate
 		body, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s", frontTestJSON, bodyTest)), &meta)
@@ -167,6 +245,31 @@ func TestExtractMetadataBytes(t *testing.T) {
 				assert.Equal(t, bodyTest, string(body))
 				assert.Equal(t, metaTest, meta)
 				assert.True(t, meta.Valid())
+			}
+		}
+	})
+
+	t.Run("ShortSeparators", func(t *testing.T) {
+		var meta IssueTemplate
+		for _, sep := range badSepTests {
+			for _, front := range frontTests {
+				_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", sep, front, sep, bodyTest)), &meta)
+				require.Error(t, err)
+			}
+		}
+	})
+
+	t.Run("MismatchedSeparators", func(t *testing.T) {
+		var meta IssueTemplate
+		for _, startSep := range sepTests {
+			for _, endSep := range sepTests {
+				if startSep == endSep {
+					continue
+				}
+				for _, front := range frontTests {
+					_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", startSep, front, endSep, bodyTest)), &meta)
+					require.Error(t, err)
+				}
 			}
 		}
 	})
@@ -233,6 +336,9 @@ var (
 	minuses       = "-----"
 	pluses        = "++++"
 	sepTests      = []string{minuses, pluses}
+	badMinuses    = "--"
+	badPluses     = "++"
+	badSepTests   = []string{badMinuses, badPluses}
 	frontTestYAML = `name: Test
 about: "A Test"
 title: "Test Title"
@@ -243,15 +349,14 @@ labels:
 about = "A Test"
 title = "Test Title"
 labels = ["bug", "test label"]`
-	frontTestJSON = `{
-"name": "Test",
+	frontendTestJSONBody = `"name": "Test",
 "about": "A Test",
 "title": "Test Title",
-"labels": ["bug", "test label"]
-}`
-	frontTests = []string{frontTestYAML, frontTestTOML, frontTestJSON}
-	bodyTest   = "\nThis is the head\nAnd this is the body\nAnd this is the foot\n"
-	metaTest   = IssueTemplate{
+"labels": ["bug", "test label"]`
+	frontTestJSON = fmt.Sprintf("{\n%s\n}", frontendTestJSONBody)
+	frontTests    = []string{frontTestYAML, frontTestTOML, frontTestJSON}
+	bodyTest      = "\nThis is the head\nAnd this is the body\nAnd this is the foot\n"
+	metaTest      = IssueTemplate{
 		Name:   "Test",
 		About:  "A Test",
 		Title:  "Test Title",
