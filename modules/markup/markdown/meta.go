@@ -125,7 +125,7 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 	startSep := frontmatterSeparator(line, true)
 
 	if startSep == 0 {
-		return contents, errors.New("frontmatter must start with a separator line")
+		return contents, errors.New("no frontmatter detected")
 	}
 
 	var frontMatterStart int
@@ -138,6 +138,7 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 		frontMatterStart = end + 1
 	}
 
+	foundFrontmatter := false
 	for start = frontMatterStart; start < len(contents); start = end + 1 {
 		end = len(contents)
 		idx := bytes.IndexByte(contents[start:], '\n')
@@ -154,6 +155,7 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 			} else {
 				front = contents[frontMatterStart:start]
 			}
+			foundFrontmatter = true
 			if end+1 < len(contents) {
 				body = contents[end+1:]
 			}
@@ -161,8 +163,8 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 		}
 	}
 
-	if len(front) == 0 {
-		return contents, errors.New("could not determine metadata")
+	if !foundFrontmatter {
+		return contents, errors.New("no frontmatter detected")
 	}
 
 	var format int
@@ -202,7 +204,7 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 			heuristicUsed = "minus separators fall back to YAML"
 		} else if startSep == '+' {
 			format = TOML
-			heuristicUsed = "plus separators fall back to YAML"
+			heuristicUsed = "plus separators fall back to TOML"
 		}
 	}
 

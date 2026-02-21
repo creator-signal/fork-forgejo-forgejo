@@ -39,37 +39,37 @@ func TestExtractMetadata(t *testing.T) {
 	t.Run("NoFrontmatter", func(t *testing.T) {
 		var meta IssueTemplate
 		body, err := ExtractMetadata(bodyTest, &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 		assert.Equal(t, bodyTest, body)
 	})
 
 	t.Run("OopsAllOpens", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadata(fmt.Sprintf("{\n%s\n{\n%s", frontendTestJSONBody, bodyTest), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("OopsAllCloses", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadata(fmt.Sprintf("}\n%s\n}\n%s", frontendTestJSONBody, bodyTest), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("BackwardsJSON", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadata(fmt.Sprintf("}\n%s\n{\n%s", frontendTestJSONBody, bodyTest), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("BackwardsJSON", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadata(fmt.Sprintf("}\n%s\n{\n%s", frontendTestJSONBody, bodyTest), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 	t.Run("BraceYourselves", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadata(fmt.Sprintf("{{\n%s\n}}\n%s", frontendTestJSONBody, bodyTest), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("PlainJSONAndBody", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestExtractMetadata(t *testing.T) {
 		for _, sep := range badSepTests {
 			for _, front := range frontTests {
 				_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", sep, front, sep, bodyTest), &meta)
-				require.Error(t, err)
+				require.ErrorContains(t, err, errorNoFrontmatter)
 			}
 		}
 	})
@@ -122,7 +122,7 @@ func TestExtractMetadata(t *testing.T) {
 				}
 				for _, front := range frontTests {
 					_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", startSep, front, endSep, bodyTest), &meta)
-					require.Error(t, err)
+					require.ErrorContains(t, err, errorNoFrontmatter)
 				}
 			}
 		}
@@ -137,7 +137,7 @@ func TestExtractMetadata(t *testing.T) {
 					continue
 				}
 				_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s", front, sep, bodyTest), &meta)
-				require.Error(t, err)
+				require.ErrorContains(t, err, errorNoFrontmatter)
 			}
 		}
 	})
@@ -147,7 +147,7 @@ func TestExtractMetadata(t *testing.T) {
 		for _, sep := range sepTests {
 			for _, front := range frontTests {
 				_, err := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s", sep, front, bodyTest), &meta)
-				require.Error(t, err)
+				require.ErrorContains(t, err, errorNoFrontmatter)
 			}
 		}
 	})
@@ -172,7 +172,7 @@ func TestExtractMetadata(t *testing.T) {
 		assert.Equal(t, bodyTest, body)
 		assert.Equal(t, []string{"test"}, meta)
 		_, err2 := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", pluses, fallbackYAML, pluses, bodyTest), &meta)
-		require.Error(t, err2)
+		require.ErrorContains(t, err2, errorFrontmatterTOMLFallback)
 	})
 
 	t.Run("FallbackTOML", func(t *testing.T) {
@@ -182,7 +182,7 @@ func TestExtractMetadata(t *testing.T) {
 		assert.Equal(t, bodyTest, body)
 		assert.Equal(t, []IssueTemplate{{}}, meta.Issues)
 		_, err2 := ExtractMetadata(fmt.Sprintf("%s\n%s\n%s\n%s", minuses, fallbackTOML, minuses, bodyTest), &meta)
-		require.Error(t, err2)
+		require.ErrorContains(t, err2, errorFrontmatterYAMLFallback)
 	})
 }
 
@@ -190,32 +190,32 @@ func TestExtractMetadataBytes(t *testing.T) {
 	t.Run("NoFrontmatter", func(t *testing.T) {
 		var meta IssueTemplate
 		body, err := ExtractMetadataBytes([]byte(bodyTest), &meta)
-		require.Error(t, err)
 		assert.Equal(t, bodyTest, string(body))
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("OopsAllOpens", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("{\n%s\n{\n%s", frontendTestJSONBody, bodyTest)), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("OopsAllCloses", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("}\n%s\n}\n%s", frontendTestJSONBody, bodyTest)), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("BackwardsJSON", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("}\n%s\n{\n%s", frontendTestJSONBody, bodyTest)), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("BraceYourselves", func(t *testing.T) {
 		var meta IssueTemplate
 		_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("{{\n%s\n}}\n%s", frontendTestJSONBody, bodyTest)), &meta)
-		require.Error(t, err)
+		require.ErrorContains(t, err, errorNoFrontmatter)
 	})
 
 	t.Run("PlainJSONAndBody", func(t *testing.T) {
@@ -254,7 +254,7 @@ func TestExtractMetadataBytes(t *testing.T) {
 		for _, sep := range badSepTests {
 			for _, front := range frontTests {
 				_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", sep, front, sep, bodyTest)), &meta)
-				require.Error(t, err)
+				require.ErrorContains(t, err, errorNoFrontmatter)
 			}
 		}
 	})
@@ -268,7 +268,7 @@ func TestExtractMetadataBytes(t *testing.T) {
 				}
 				for _, front := range frontTests {
 					_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", startSep, front, endSep, bodyTest)), &meta)
-					require.Error(t, err)
+					require.ErrorContains(t, err, errorNoFrontmatter)
 				}
 			}
 		}
@@ -283,7 +283,7 @@ func TestExtractMetadataBytes(t *testing.T) {
 					continue
 				}
 				_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s", front, sep, bodyTest)), &meta)
-				require.Error(t, err)
+				require.ErrorContains(t, err, errorNoFrontmatter)
 			}
 		}
 	})
@@ -293,7 +293,7 @@ func TestExtractMetadataBytes(t *testing.T) {
 		for _, sep := range sepTests {
 			for _, front := range frontTests {
 				_, err := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s", sep, front, bodyTest)), &meta)
-				require.Error(t, err)
+				require.ErrorContains(t, err, errorNoFrontmatter)
 			}
 		}
 	})
@@ -318,7 +318,7 @@ func TestExtractMetadataBytes(t *testing.T) {
 		assert.Equal(t, bodyTest, string(body))
 		assert.Equal(t, []string{"test"}, meta)
 		_, err2 := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", pluses, fallbackYAML, pluses, bodyTest)), &meta)
-		require.Error(t, err2)
+		require.ErrorContains(t, err2, errorFrontmatterTOMLFallback)
 	})
 
 	t.Run("FallbackTOML", func(t *testing.T) {
@@ -328,7 +328,7 @@ func TestExtractMetadataBytes(t *testing.T) {
 		assert.Equal(t, bodyTest, string(body))
 		assert.Equal(t, []IssueTemplate{{}}, meta.Issues)
 		_, err2 := ExtractMetadataBytes([]byte(fmt.Sprintf("%s\n%s\n%s\n%s", minuses, fallbackTOML, minuses, bodyTest)), &meta)
-		require.Error(t, err2)
+		require.ErrorContains(t, err2, errorFrontmatterYAMLFallback)
 	})
 }
 
@@ -362,6 +362,15 @@ labels = ["bug", "test label"]`
 		Title:  "Test Title",
 		Labels: []string{"bug", "test label"},
 	}
-	fallbackYAML = `- test`
-	fallbackTOML = `[[issues]]`
+	fallbackYAML                 = `- test`
+	fallbackTOML                 = `[[issues]]`
+	errorNoFrontmatter           = "no frontmatter detected"
+	errorFrontmatterYAMLFallback = "YAML assumed; minus separators fall back to YAML"
+	errorFrontmatterTOMLFallback = "TOML assumed; plus separators fall back to TOML"
 )
+
+// untested:
+// errorFrontmatterYAMLHeuristic = "YAML assumed; : appeared before { or ="
+// errorFrontmatterTOMLHeuristic = "TOML assumed; = appeared before { or :"
+// errorFrontmatterJSONHeuristic = "JSON assumed; { appeared before : or ="
+// errorFrontmatterJSONBare = "JSON assumed; bare {} frontmatter"
