@@ -4,12 +4,15 @@
 package ansible
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -69,6 +72,8 @@ func UploadCollection(ctx *context.Context) {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
+	_, _, hashSHA256, _, _ := buffer.Sums()
+	fileSize := buffer.Size()
 	defer buffer.Close()
 
 	pck, err := ansible_module.BuildCollectionFromArchive(buffer)
@@ -107,6 +112,10 @@ func UploadCollection(ctx *context.Context) {
 			Creator: ctx.Doer,
 			Data:    buffer,
 			IsLead:  true,
+			Properties: map[string]string{
+				"sha256": hex.EncodeToString(hashSHA256),
+				"size":   fmt.Sprintf("%v", fileSize),
+			},
 		},
 	)
 	if err != nil {
@@ -275,9 +284,13 @@ func ListVersions(ctx *context.Context) {
 
 // ServeCollection returns a JSON object with the data of a single version of a collection.
 func ServeCollection(ctx *context.Context) {
+	registryUsername := ctx.Params("username")
 	packageNamespace := ctx.Params("namespace")
 	packageName := ctx.Params("name")
 	packageVersion := ctx.Params("version")
+
+	namespaceHashBuilder := sha256.New()
+	namespaceHashBuilder.Write([]byte(fmt.Sprintf("%v/%v", registryUsername, packageNamespace)))
 
 	pv, err := packages_model.GetVersionByNameAndVersion(ctx, ctx.Package.Owner.ID, packages_model.TypeAnsible, packageNamespace+"."+packageName, packageVersion)
 	if err != nil {
@@ -298,19 +311,22 @@ func ServeCollection(ctx *context.Context) {
 		apiError(ctx, http.StatusInternalServerError, "The package has no files attached to it. This seems to be an internal error.")
 		return
 	}
-	fileDescriptor := pd.Files[0].File
+	fileDescriptor := pd.Files[0]
+	fileHash := fileDescriptor.Properties.GetByName("sha256")
+	fileSize, _ := strconv.Atoi(fileDescriptor.Properties.GetByName("size"))
 
 	type AnsibleSpecificVersionResponseNamespace struct {
-		Name string  `json:"name"`
-		Hash *string `json:"metadata_sha256"`
+		Name string `json:"name"`
+		Hash string `json:"metadata_sha256"`
 	}
 	type AnsibleSpecificVersionResponseCollection struct {
 		Name string `json:"name"`
 		Href string `json:"href"`
 	}
 	type AnsibleSpecificVersionResponseArtifact struct {
-		Filename string  `json:"filename"`
-		Hash     *string `json:"sha256"`
+		Filename string `json:"filename"`
+		Hash     string `json:"sha256"`
+		Size     int    `json:"size"`
 	}
 	type AnsibleSpecificVersionResponseMetadata struct {
 		Dependencies map[string]string `json:"dependencies"`
@@ -327,17 +343,20 @@ func ServeCollection(ctx *context.Context) {
 
 	ctx.JSON(http.StatusOK, AnsibleSpecificVersionResponse{
 		Version: pd.SemVer.String(),
-		Href:    fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/%v/", ctx.Params("username"), packageNamespace, packageName, pd.SemVer),
-		URL:     util.URLJoin(setting.AppURL, pd.VersionWebLink(), fmt.Sprintf("/files/%v/", fileDescriptor.ID)),
+		Href:    fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/%v/", registryUsername, packageNamespace, packageName, pd.SemVer),
+		URL:     util.URLJoin(setting.AppURL, pd.VersionWebLink(), fmt.Sprintf("/files/%v/", fileDescriptor.File.ID)),
 		Namespace: AnsibleSpecificVersionResponseNamespace{
 			Name: packageNamespace,
+			Hash: hex.EncodeToString(namespaceHashBuilder.Sum(nil)),
 		},
 		Collection: AnsibleSpecificVersionResponseCollection{
 			Name: packageName,
-			Href: fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/", ctx.Params("username"), packageNamespace, packageName),
+			Href: fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/", registryUsername, packageNamespace, packageName),
 		},
 		Artifact: AnsibleSpecificVersionResponseArtifact{
-			Filename: fileDescriptor.LowerName,
+			Filename: fileDescriptor.File.LowerName,
+			Hash:     fileHash,
+			Size:     fileSize,
 		},
 		Metadata: AnsibleSpecificVersionResponseMetadata{
 			Dependencies: pd.Metadata.(*ansible_module.CollectionManifest).CollectionInfo.Dependencies,
