@@ -1395,9 +1395,49 @@ key: value
 </table>
 </details>`)
 
+	test(`+++
+key = "value"
++++`,
+		`<details><summary><i class="icon table"></i></summary><table>
+<thead>
+<tr>
+<th>key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>value</td>
+</tr>
+</tbody>
+</table>
+</details>`)
+
+	test(`{
+"key": "value"
+}`,
+		`<details><summary><i class="icon table"></i></summary><table>
+<thead>
+<tr>
+<th>key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>value</td>
+</tr>
+</tbody>
+</table>
+</details>`)
+
 	test("---\n---\n",
 		`<hr/>
 <hr/>`)
+
+	test("+++\n+++\n",
+		``)
+
+	test("{\n}\n",
+		``)
 
 	test(`---
 gitea:

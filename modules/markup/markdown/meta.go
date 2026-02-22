@@ -167,6 +167,16 @@ func ExtractMetadataBytes(contents []byte, out any) ([]byte, error) {
 		return contents, errors.New("no frontmatter detected")
 	}
 
+	// since ---- counts as valid markdown, ignore empty frontmatter with these
+	if startSep == '-' {
+		nonSpace := bytes.IndexFunc(front, func(r rune) bool {
+			return !unicode.IsSpace(r)
+		})
+		if nonSpace < 0 {
+			return contents, errors.New("no frontmatter detected")
+		}
+	}
+
 	var format int
 	var heuristicUsed string
 
