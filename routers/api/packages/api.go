@@ -156,18 +156,15 @@ func CommonRoutes() *web.Route {
 			})
 		}, reqPackageAccess(perm.AccessModeRead))
 		r.Group("/ansible", func() {
-			r.Get("/", ansible.Identity)
-			r.Group("/api", func() {
-				r.Get("/", ansible.AvailableApis)
-				r.Group("/v3", func() {
-					r.Post("/artifacts/collections", reqPackageAccess(perm.AccessModeWrite), enforcePackagesQuota(), ansible.UploadCollection)
-					r.Get("/imports/collections/{uuid}", ansible.ImportResult)
-					r.Group("/collections/{namespace}/{name}", func() {
-						r.Get("/", ansible.CollectionMetadata)
-						r.Group("/versions", func() {
-							r.Get("/", ansible.ListVersions)
-							r.Get("/{version}/", ansible.ServeCollection)
-						})
+			r.Get("/", ansible.AvailableApis)
+			r.Group("/v3", func() {
+				r.Post("/artifacts/collections", reqPackageAccess(perm.AccessModeWrite), enforcePackagesQuota(), ansible.UploadCollection)
+				r.Get("/imports/collections/{uuid}", ansible.ImportResult)
+				r.Group("/collections/{namespace}/{name}", func() {
+					r.Get("/", ansible.CollectionMetadata)
+					r.Group("/versions", func() {
+						r.Get("/", ansible.ListVersions)
+						r.Get("/{version}/", ansible.ServeCollection)
 					})
 				})
 			})

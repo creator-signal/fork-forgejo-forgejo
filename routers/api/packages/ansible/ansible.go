@@ -33,11 +33,6 @@ func apiError(ctx *context.Context, status int, obj any) {
 	})
 }
 
-// Identity just replies with HTTP 200 to show we are actually here
-func Identity(ctx *context.Context) {
-	ctx.Status(http.StatusOK)
-}
-
 // AvailableApis returns the supported API versions
 // We currently only support the v3 API for collections
 func AvailableApis(ctx *context.Context) {
@@ -129,7 +124,7 @@ func UploadCollection(ctx *context.Context) {
 	// We just return a random UUID here. The galaxy client assumes an asyncronous parsing process.
 	// Since we already did everything before, we just fake the task handling here.
 	ctx.JSON(http.StatusCreated, map[string]string{
-		"task": fmt.Sprintf("/api/packages/%v/ansible/api/v3/imports/collections/%v/", ctx.Params("username"), gouuid.NewString()),
+		"task": fmt.Sprintf("/api/packages/%v/ansible/v3/imports/collections/%v/", ctx.Params("username"), gouuid.NewString()),
 	})
 }
 
@@ -196,14 +191,14 @@ func CollectionMetadata(ctx *context.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, AnsibleCollectionMetadataResponseData{
-		Href:        fmt.Sprintf("/api/v3/collections/%v/%v/", packageNamespace, packageName),
+		Href:        fmt.Sprintf("/v3/collections/%v/%v/", packageNamespace, packageName),
 		Namespace:   packageNamespace,
 		Name:        packageName,
 		Deprecated:  false,
-		VersionsURL: fmt.Sprintf("/api/v3/collections/%v/%v/versions/", packageNamespace, packageName),
+		VersionsURL: fmt.Sprintf("/v3/collections/%v/%v/versions/", packageNamespace, packageName),
 		HighestVersion: AnsibleCollectionMetadataHighestVersionData{
 			Version: pds[0].SemVer.String(),
-			Href:    fmt.Sprintf("/api/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pds[0].SemVer),
+			Href:    fmt.Sprintf("/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pds[0].SemVer),
 		},
 	})
 }
@@ -238,6 +233,10 @@ func ListVersions(ctx *context.Context) {
 		Count int `json:"count"`
 	}
 
+	type AnsibleVersionsPaginationLinks struct {
+		Next *string `json:"next"`
+	}
+
 	type AnsibleVersionsResponseData struct {
 		Version         string    `json:"version"`
 		Href            string    `json:"href"`
@@ -248,15 +247,16 @@ func ListVersions(ctx *context.Context) {
 	}
 
 	type AnsibleVersionsResponse struct {
-		Meta AnsibleVersionsResponseMeta   `json:"meta"`
-		Data []AnsibleVersionsResponseData `json:"data"`
+		Meta  AnsibleVersionsResponseMeta    `json:"meta"`
+		Links AnsibleVersionsPaginationLinks `json:"links"`
+		Data  []AnsibleVersionsResponseData  `json:"data"`
 	}
 
 	responseCoreData := make([]AnsibleVersionsResponseData, 0, len(pds))
 	for _, pd := range pds {
 		responseCoreData = append(responseCoreData, AnsibleVersionsResponseData{
 			Version:         pd.SemVer.String(),
-			Href:            fmt.Sprintf("/api/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pd.SemVer),
+			Href:            fmt.Sprintf("/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pd.SemVer),
 			Created:         pd.Version.CreatedUnix.AsTime(),
 			Updated:         pd.Version.CreatedUnix.AsTime(),
 			RequiredAnsible: pd.Metadata.(*ansible_module.CollectionManifest).CollectionInfo.RequiresAnsible,
@@ -268,7 +268,8 @@ func ListVersions(ctx *context.Context) {
 		Meta: AnsibleVersionsResponseMeta{
 			Count: len(pds),
 		},
-		Data: responseCoreData,
+		Links: AnsibleVersionsPaginationLinks{},
+		Data:  responseCoreData,
 	})
 }
 
@@ -326,14 +327,14 @@ func ServeCollection(ctx *context.Context) {
 
 	ctx.JSON(http.StatusOK, AnsibleSpecificVersionResponse{
 		Version: pd.SemVer.String(),
-		Href:    fmt.Sprintf("/api/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pd.SemVer),
+		Href:    fmt.Sprintf("/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pd.SemVer),
 		URL:     util.URLJoin(setting.AppURL, pd.VersionWebLink(), fmt.Sprintf("/files/%v/", fileDescriptor.ID)),
 		Namespace: AnsibleSpecificVersionResponseNamespace{
 			Name: packageNamespace,
 		},
 		Collection: AnsibleSpecificVersionResponseCollection{
 			Name: packageName,
-			Href: fmt.Sprintf("/api/v3/collections/%v/%v/", packageNamespace, packageName),
+			Href: fmt.Sprintf("/v3/collections/%v/%v/", packageNamespace, packageName),
 		},
 		Artifact: AnsibleSpecificVersionResponseArtifact{
 			Filename: fileDescriptor.LowerName,
