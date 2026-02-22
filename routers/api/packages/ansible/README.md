@@ -37,13 +37,13 @@ Client source code shows that it expects a API discovery JSON here.
 **Observed Response:** Galaxy responds with JSON, containing metadata, including references to all available versions and the highest version.
 
     {
-        "href": "/v3/collections/exampleNs/exampleName",
+        "href": "/api/v3/plugin/ansible/content/published/collections/index/exampleNs/exampleName",
         "namespace": "exampleNs",
         "name": "exampleName",
         "deprecated": false,
-        "versions_url": "/v3/collections/exampleNs/exampleName/versions/",
+        "versions_url": "/api/v3/plugin/ansible/content/published/collections/index/exampleNs/exampleName/versions/",
         "highest_version": {
-            "href": "/v3/collections/exampleNs/exampleName/versions/1.1.1/",
+            "href": "/api/v3/plugin/ansible/content/published/collections/index/exampleName/versions/1.1.1/",
             "version": "1.1.1"
         },
         "created_at": "2025-11-03T10:04:55.839006Z",
@@ -54,13 +54,13 @@ Client source code shows that it expects a API discovery JSON here.
 **Implementation:** We respond with a reduced JSON, containing the versioning information, but no timestamps or download count. (see func `CollectionMetadata`)
 
     {
-        "href": "/v3/collections/exampleNs/exampleName",
+        "href": "/api/packages/exampleOrg/ansible/v3/collections/exampleNs/exampleName",
         "namespace": "exampleNs",
         "name": "exampleName",
         "deprecated": false,
-        "versions_url": "/v3/collections/exampleNs/exampleName/versions/",
+        "versions_url": "/api/packages/exampleOrg/ansible/v3/collections/exampleNs/exampleName/versions/",
         "highest_version": {
-            "href": "/v3/collections/exampleNs/exampleName/versions/1.1.1/",
+            "href": "/api/packages/exampleOrg/ansible/v3/collections/exampleNs/exampleName/versions/1.1.1/",
             "version": "1.1.1"
         },
     }
@@ -77,15 +77,15 @@ It requests the given URL with the parameter `?limit=100`.
             "count": 2
         },
         "links": {
-            "first": "/v3/collections/exampleNs/exampleName/versions/?limit=10&offset=0",
+            "first": "/api/v3/plugin/ansible/content/published/collections/index/exampleNs/exampleName/versions/?limit=10&offset=0",
             "previous": null,
             "next": null,
-            "last": "/v3/collections/exampleNs/exampleName/versions/?limit=10&offset=0"
+            "last": "/api/v3/plugin/ansible/content/published/collections/index/exampleNs/exampleName/versions/?limit=10&offset=0"
         },
         "data": [
             {
                 "version": "1.1.0",
-                "href": "/v3/collections/exampleNs/exampleName/versions/1.1.0/",
+                "href": "/api/v3/plugin/ansible/content/published/collections/index/exampleNs/exampleName/versions/1.1.0/",
                 "created_at": "2026-01-08T16:04:58.634253Z",
                 "updated_at": "2026-01-08T16:04:58.669356Z",
                 "requires_ansible": ">=2.15.0",
@@ -93,7 +93,7 @@ It requests the given URL with the parameter `?limit=100`.
             },
             {
                 "version": "1.0.0",
-                "href": "/v3/collections/exampleNs/exampleName/versions/1.0.0/",
+                "href": "/api/v3/plugin/ansible/content/published/collections/index/exampleNs/exampleName/versions/1.0.0/",
                 "created_at": "2025-11-03T10:04:55.871205Z",
                 "updated_at": "2025-11-03T10:04:55.983712Z",
                 "requires_ansible": ">=2.15.0",
@@ -114,7 +114,7 @@ It requests the given URL with the parameter `?limit=100`.
         "data": [
             {
                 "version": "1.1.0",
-                "href": "/api/v3/collections/exampleNs/exampleName/versions/1.1.0/",
+                "href": "/api/packages/exampleOrg/ansible/v3/collections/exampleNs/exampleName/versions/1.1.0/",
                 "created_at": "2026-01-08T16:04:58.634253Z",
                 "updated_at": "2026-01-08T16:04:58.669356Z",
                 "requires_ansible": ">=2.15.0",
@@ -122,7 +122,7 @@ It requests the given URL with the parameter `?limit=100`.
             },
             {
                 "version": "1.0.0",
-                "href": "/api/v3/collections/exampleNs/exampleName/versions/1.0.0/",
+                "href": "/api/packages/exampleOrg/ansible/v3/collections/exampleNs/exampleName/versions/1.0.0/",
                 "created_at": "2025-11-03T10:04:55.871205Z",
                 "updated_at": "2025-11-03T10:04:55.983712Z",
                 "requires_ansible": ">=2.15.0",

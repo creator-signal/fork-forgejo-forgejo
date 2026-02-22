@@ -191,14 +191,14 @@ func CollectionMetadata(ctx *context.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, AnsibleCollectionMetadataResponseData{
-		Href:        fmt.Sprintf("/v3/collections/%v/%v/", packageNamespace, packageName),
+		Href:        fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/", ctx.Params("username"), packageNamespace, packageName),
 		Namespace:   packageNamespace,
 		Name:        packageName,
 		Deprecated:  false,
-		VersionsURL: fmt.Sprintf("/v3/collections/%v/%v/versions/", packageNamespace, packageName),
+		VersionsURL: fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/", ctx.Params("username"), packageNamespace, packageName),
 		HighestVersion: AnsibleCollectionMetadataHighestVersionData{
 			Version: pds[0].SemVer.String(),
-			Href:    fmt.Sprintf("/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pds[0].SemVer),
+			Href:    fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/%v/", ctx.Params("username"), packageNamespace, packageName, pds[0].SemVer),
 		},
 	})
 }
@@ -256,7 +256,7 @@ func ListVersions(ctx *context.Context) {
 	for _, pd := range pds {
 		responseCoreData = append(responseCoreData, AnsibleVersionsResponseData{
 			Version:         pd.SemVer.String(),
-			Href:            fmt.Sprintf("/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pd.SemVer),
+			Href:            fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/%v/", ctx.Params("username"), packageNamespace, packageName, pd.SemVer),
 			Created:         pd.Version.CreatedUnix.AsTime(),
 			Updated:         pd.Version.CreatedUnix.AsTime(),
 			RequiredAnsible: pd.Metadata.(*ansible_module.CollectionManifest).CollectionInfo.RequiresAnsible,
@@ -327,14 +327,14 @@ func ServeCollection(ctx *context.Context) {
 
 	ctx.JSON(http.StatusOK, AnsibleSpecificVersionResponse{
 		Version: pd.SemVer.String(),
-		Href:    fmt.Sprintf("/v3/collections/%v/%v/versions/%v/", packageNamespace, packageName, pd.SemVer),
+		Href:    fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/%v/", ctx.Params("username"), packageNamespace, packageName, pd.SemVer),
 		URL:     util.URLJoin(setting.AppURL, pd.VersionWebLink(), fmt.Sprintf("/files/%v/", fileDescriptor.ID)),
 		Namespace: AnsibleSpecificVersionResponseNamespace{
 			Name: packageNamespace,
 		},
 		Collection: AnsibleSpecificVersionResponseCollection{
 			Name: packageName,
-			Href: fmt.Sprintf("/v3/collections/%v/%v/", packageNamespace, packageName),
+			Href: fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/", ctx.Params("username"), packageNamespace, packageName),
 		},
 		Artifact: AnsibleSpecificVersionResponseArtifact{
 			Filename: fileDescriptor.LowerName,
