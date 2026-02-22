@@ -65,7 +65,7 @@ const (
 )
 
 // CheckPullMergeable check if the pull mergeable based on all conditions (branch protection, merge options, ...)
-func CheckPullMergeable(stdCtx context.Context, doer *user_model.User, perm *access_model.Permission, pr *issues_model.PullRequest, mergeCheckType MergeCheckType, adminSkipProtectionCheck bool) error {
+func CheckPullMergeable(stdCtx context.Context, doer *user_model.User, perm *access_model.Permission, pr *issues_model.PullRequest, mergeCheckType MergeCheckType, adminSkipProtectionCheck bool, mergeStyle repo_model.MergeStyle) error {
 	return db.WithTx(stdCtx, func(ctx context.Context) error {
 		if pr.HasMerged {
 			return ErrHasMerged
@@ -136,7 +136,7 @@ func CheckPullMergeable(stdCtx context.Context, doer *user_model.User, perm *acc
 			}
 		}
 
-		if _, err := isSignedIfRequired(ctx, pr, doer); err != nil {
+		if _, err := isSignedIfRequired(ctx, pr, doer, mergeStyle); err != nil {
 			return err
 		}
 
@@ -151,7 +151,7 @@ func CheckPullMergeable(stdCtx context.Context, doer *user_model.User, perm *acc
 }
 
 // isSignedIfRequired check if merge will be signed if required
-func isSignedIfRequired(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.User) (bool, error) {
+func isSignedIfRequired(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.User, mergeStyle repo_model.MergeStyle) (bool, error) {
 	pb, err := git_model.GetFirstMatchProtectedBranchRule(ctx, pr.BaseRepoID, pr.BaseBranch)
 	if err != nil {
 		return false, err
@@ -161,9 +161,19 @@ func isSignedIfRequired(ctx context.Context, pr *issues_model.PullRequest, doer 
 		return true, nil
 	}
 
+	if !isMergeSigningRequired(mergeStyle) {
+		return true, nil
+	}
+
 	sign, _, _, err := asymkey_service.SignMerge(ctx, pr, doer, pr.BaseRepo.RepoPath(), pr.BaseBranch, pr.GetGitRefName())
 
 	return sign, err
+}
+
+func isMergeSigningRequired(mergeStyle repo_model.MergeStyle) bool {
+	// Rebase can still amend commit metadata based on templates, so it may create
+	// a new commit even when the branch is up to date.
+	return mergeStyle != repo_model.MergeStyleFastForwardOnly
 }
 
 // checkAndUpdateStatus checks if pull request is possible to leaving checking status,
