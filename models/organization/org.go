@@ -405,6 +405,7 @@ func DeleteOrganization(ctx context.Context, org *Organization) error {
 		&secret_model.Secret{OwnerID: org.ID},
 		&actions_model.ActionRunner{OwnerID: org.ID},
 		&actions_model.ActionRunnerToken{OwnerID: org.ID},
+		&user_model.AvatarVector{UserID: org.ID},
 	); err != nil {
 		return fmt.Errorf("DeleteBeans: %w", err)
 	}
