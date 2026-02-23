@@ -17,12 +17,10 @@ func init() {
 func addAvatarVectorTable(x *xorm.Engine) error {
 	type AvatarVector struct {
 		ID      int64  `xorm:"pk autoincr"`
+		UserID  int64  `xorm:"NOT NULL REFERENCES(user, id)"`
 		SvgHash string `xorm:"VARBINARY(16)"`
 		Svg     string `xorm:"TEXT"`
 	}
-	type User struct {
-		SvgAvatarID int64
-	}
-	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(AvatarVector), new(User))
+	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(AvatarVector))
 	return err
 }

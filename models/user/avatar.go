@@ -27,7 +27,8 @@ func (u *User) CustomAvatarRelativePath() string {
 }
 
 type AvatarVector struct {
-	ID int64 `xorm:"pk autoincr"`
+	ID     int64 `xorm:"pk autoincr"`
+	UserID int64 `xorm:"NOT NULL REFERENCES(user, id)"`
 	// Hash of SVG avatar
 	SvgHash []byte `xorm:"VARBINARY(16)"`
 	// Raw SVG avatar as text
@@ -45,10 +46,13 @@ func HashSvgAvatar(avatarXML string) []byte {
 	return sum[:16]
 }
 
-func GetSvgAvatarHash(ctx context.Context, id int64) ([]byte, error) {
-	var hash []byte
-	err := db.GetEngine(ctx).Table(&AvatarVector{}).Where("id=?", id).Find(&hash)
-	return hash, err
+func GetSvgAvatarHash(ctx context.Context, userID int64) ([]byte, error) {
+	var foundAvatar AvatarVector
+	found, err := db.GetEngine(ctx).Table(&AvatarVector{}).Where("user_id=?", userID).Get(&foundAvatar)
+	if !found {
+		return nil, fmt.Errorf("GetSvgAvatarHash: vector avatar not found for user %d", userID)
+	}
+	return foundAvatar.SvgHash, err
 }
 
 // GenerateRandomAvatar generates a random avatar for user.
@@ -80,6 +84,7 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 	// Save info about the new avatar into the database
 	err = db.WithTx(ctx, func(ctx context.Context) error {
 		if err = db.Insert(ctx, &AvatarVector{
+			UserID:  u.ID,
 			SvgHash: vectorHash,
 			Svg:     identicon.Vector,
 		}); err != nil {
@@ -87,9 +92,8 @@ func GenerateRandomAvatar(ctx context.Context, u *User) error {
 		}
 
 		u.Avatar = avatars.HashEmail(seed)
-		// u.SvgAvatarID = 123456789
 
-		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar", "svg_avatar_id").Update(u); err != nil {
+		if _, err := db.GetEngine(ctx).ID(u.ID).Cols("avatar").Update(u); err != nil {
 			return err
 		}
 
