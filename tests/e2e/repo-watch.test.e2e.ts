@@ -19,9 +19,9 @@ test('Watch dropdown: toggle watch events', async ({browser}, workerInfo) => {
   await page.goto('/user2/repo1');
 
   // Find the watch dropdown
-  const watchDropdown = page.locator('#watch-button details.dropdown');
+  const watchDropdown = page.locator('details.dropdown#watch-button');
   const watchSummary = watchDropdown.locator('summary');
-  const watchMenu = watchDropdown.locator('ul');
+  const watchMenu = watchDropdown.locator('.content');
 
   // Open the dropdown
   await watchSummary.click();
@@ -45,9 +45,9 @@ test('Watch dropdown: unwatch all shows proper state', async ({browser}, workerI
   const page = await login({browser}, workerInfo);
   await page.goto('/user2/repo1');
 
-  const watchDropdown = page.locator('#watch-button details.dropdown');
-  const watchSummary = watchDropdown.locator('summary');
-  const watchMenu = watchDropdown.locator('ul');
+  const watchDropdown = page.locator('details.dropdown#watch-button');
+  const watchSummary = watchDropdown.locator('summary > div');
+  const watchMenu = watchDropdown.locator('.content');
 
   // Open dropdown and click unwatch
   await watchSummary.click();
