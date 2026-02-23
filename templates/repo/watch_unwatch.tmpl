@@ -7,40 +7,36 @@
 				{{svg "octicon-triangle-down" 14}}
 			</summary>
 			<div class="content">
-				<ul class="tw-text-left">
-					<li>
-						<form class="content tw-p-3" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
-							<div class="ui form">
-								<div class="field">
-									<div class="ui checkbox">
-										<input id="watch-issues" type="checkbox" name="watch_issues" value="true" {{if $.RepoWatchSelection.Issues}}checked{{end}}>
-										<label for="watch-issues">{{svg "octicon-issue-opened"}} {{ctx.Locale.Tr "repo.watch.issues"}}</label>
-									</div>
-								</div>
-								<div class="field">
-									<div class="ui checkbox">
-										<input id="watch-pull-requests" type="checkbox" name="watch_pull_requests" value="true" {{if $.RepoWatchSelection.PullRequests}}checked{{end}}>
-										<label for="watch-pull-requests">{{svg "octicon-git-pull-request"}} {{ctx.Locale.Tr "repo.watch.pull_requests"}}</label>
-									</div>
-								</div>
-								<div class="field">
-									<div class="ui checkbox">
-										<input id="watch-releases" type="checkbox" name="watch_releases" value="true" {{if $.RepoWatchSelection.Releases}}checked{{end}}>
-										<label for="watch-releases">{{svg "octicon-tag"}} {{ctx.Locale.Tr "repo.watch.releases"}}</label>
-									</div>
-								</div>
-								<div class="tw-flex tw-justify-between tw-items-center tw-mt-3 tw-gap-4">
-									<button type="submit" class="ui primary tiny button">{{ctx.Locale.Tr "save"}}</button>
-									{{if $.RepoWatchSelection.IsWatching}}
-									<button type="button" class="ui tiny button" hx-post="{{$.RepoLink}}/action/unwatch" hx-target="#watch-button" hx-swap="outerHTML">
-										{{ctx.Locale.Tr "repo.unwatch"}}
-									</button>
-									{{end}}
-								</div>
+				<form class="content tw-p-3 tw-text-left" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
+					<div class="ui form">
+						<div class="field">
+							<div class="ui checkbox">
+								<input id="watch-issues" type="checkbox" name="watch_issues" value="true" {{if $.RepoWatchSelection.Issues}}checked{{end}}>
+								<label for="watch-issues">{{svg "octicon-issue-opened"}} {{ctx.Locale.Tr "repo.watch.issues"}}</label>
 							</div>
-						</form>
-					</li>
-				</ul>
+						</div>
+						<div class="field">
+							<div class="ui checkbox">
+								<input id="watch-pull-requests" type="checkbox" name="watch_pull_requests" value="true" {{if $.RepoWatchSelection.PullRequests}}checked{{end}}>
+								<label for="watch-pull-requests">{{svg "octicon-git-pull-request"}} {{ctx.Locale.Tr "repo.watch.pull_requests"}}</label>
+							</div>
+						</div>
+						<div class="field">
+							<div class="ui checkbox">
+								<input id="watch-releases" type="checkbox" name="watch_releases" value="true" {{if $.RepoWatchSelection.Releases}}checked{{end}}>
+								<label for="watch-releases">{{svg "octicon-tag"}} {{ctx.Locale.Tr "repo.watch.releases"}}</label>
+							</div>
+						</div>
+						<div class="tw-flex tw-justify-between tw-items-center tw-mt-3 tw-gap-4">
+							<button type="submit" class="ui primary tiny button">{{ctx.Locale.Tr "save"}}</button>
+							{{if $.RepoWatchSelection.IsWatching}}
+							<button type="button" class="ui tiny button" hx-post="{{$.RepoLink}}/action/unwatch" hx-target="#watch-button" hx-swap="outerHTML">
+								{{ctx.Locale.Tr "repo.unwatch"}}
+							</button>
+							{{end}}
+						</div>
+					</div>
+				</form>
 			</div>
 		</details>
 		<a hx-boost="false" class="ui basic label" href="{{.RepoLink}}/watchers"
