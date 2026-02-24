@@ -13,7 +13,6 @@ import (
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
-	"forgejo.org/modules/auth/password"
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
@@ -174,16 +173,11 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 
 	email := fmt.Sprintf("f%v@%v", uuid.New().String(), localFqdn.Hostname())
 	loginName := personID.AsLoginName()
-	name := fmt.Sprintf("%v%v", person.PreferredUsername.String(), personID.HostSuffix())
+	name := fmt.Sprintf("@%v%v", person.PreferredUsername.String(), personID.HostSuffix())
 	fullName := person.Name.String()
 
 	if len(person.Name) == 0 {
 		fullName = name
-	}
-
-	password, err := password.Generate(32)
-	if err != nil {
-		return nil, nil, err
 	}
 
 	inbox, err := url.ParseRequestURI(person.Inbox.GetLink().String())
@@ -202,10 +196,12 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHostID
 		FullName:                     fullName,
 		Email:                        email,
 		EmailNotificationsPreference: "disabled",
-		Passwd:                       password,
-		MustChangePassword:           false,
+		ProhibitLogin:                true,
+		Passwd:                       "",
+		Salt:                         "",
+		PasswdHashAlgo:               "",
 		LoginName:                    loginName,
-		Type:                         user.UserTypeRemoteUser,
+		Type:                         user.UserTypeActivityPubUser,
 		IsAdmin:                      false,
 	}
 

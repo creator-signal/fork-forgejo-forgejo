@@ -79,15 +79,15 @@ func loadDBSetting(rootCfg ConfigProvider) {
 	Database.Name = sec.Key("NAME").String()
 	Database.User = sec.Key("USER").String()
 	if len(Database.Passwd) == 0 {
-		Database.Passwd = sec.Key("PASSWD").String()
+		Database.Passwd = loadSecret(sec, "PASSWD_URI", "PASSWD")
 	}
 	Database.Schema = sec.Key("SCHEMA").String()
 	Database.SSLMode = sec.Key("SSL_MODE").MustString("disable")
 	Database.CharsetCollation = sec.Key("CHARSET_COLLATION").String()
 
 	Database.Path = sec.Key("PATH").MustString(filepath.Join(AppDataPath, "forgejo.db"))
-	Database.Timeout = sec.Key("SQLITE_TIMEOUT").MustInt(500)
-	Database.SQLiteJournalMode = sec.Key("SQLITE_JOURNAL_MODE").MustString("")
+	Database.Timeout = sec.Key("SQLITE_TIMEOUT").MustInt(60000)
+	Database.SQLiteJournalMode = sec.Key("SQLITE_JOURNAL_MODE").MustString("WAL")
 
 	Database.MaxIdleConns = sec.Key("MAX_IDLE_CONNS").MustInt(2)
 	if Database.Type.IsMySQL() {
@@ -96,7 +96,7 @@ func loadDBSetting(rootCfg ConfigProvider) {
 		Database.ConnMaxLifetime = sec.Key("CONN_MAX_LIFETIME").MustDuration(0)
 	}
 	Database.ConnMaxIdleTime = sec.Key("CONN_MAX_IDLETIME").MustDuration(0)
-	Database.MaxOpenConns = sec.Key("MAX_OPEN_CONNS").MustInt(100)
+	Database.MaxOpenConns = sec.Key("MAX_OPEN_CONNS").MustInt(30)
 
 	Database.IterateBufferSize = sec.Key("ITERATE_BUFFER_SIZE").MustInt(50)
 	Database.LogSQL = sec.Key("LOG_SQL").MustBool(false)
@@ -239,12 +239,19 @@ func dbConnStrWithHost(host string) (string, error) {
 		if err := os.MkdirAll(filepath.Dir(Database.Path), os.ModePerm); err != nil {
 			return "", fmt.Errorf("failed to create directories: %w", err)
 		}
-		journalMode := ""
+		opts := ""
 		if Database.SQLiteJournalMode != "" {
-			journalMode = "&_journal_mode=" + Database.SQLiteJournalMode
+			opts = "&_journal_mode=" + Database.SQLiteJournalMode
 		}
-		connStr = fmt.Sprintf("file:%s?cache=shared&mode=rwc&_busy_timeout=%d&_txlock=immediate%s",
-			Database.Path, Database.Timeout, journalMode)
+
+		// in memory mode needs shared cache to be usable by multiple connections
+		// only used in tests normally
+		if Database.Path == ":memory:" {
+			opts += "&cache=shared"
+		} else {
+			opts += "&mode=rwc"
+		}
+		connStr = fmt.Sprintf("file:%s?_busy_timeout=%d&_txlock=immediate%s", Database.Path, Database.Timeout, opts)
 	default:
 		return "", fmt.Errorf("unknown database type: %s", Database.Type)
 	}
@@ -277,6 +284,36 @@ func parsePostgreSQLHostPort(info string) (host, port string) {
 
 func getPostgreSQLConnectionString(dbHost, dbUser, dbPasswd, dbName, dbsslMode string) (connStr string) {
 	dbName, dbParam, _ := strings.Cut(dbName, "?")
+
+	// pgx multi-host specification: "host1:port1,host2:port2"
+	if strings.Contains(dbHost, ",") {
+		var hostParts []string
+		for host := range strings.SplitSeq(dbHost, ",") {
+			trimmed := strings.TrimSpace(host)
+			if trimmed == "" {
+				continue
+			}
+			h, p := parsePostgreSQLHostPort(trimmed)
+			hostParts = append(hostParts, net.JoinHostPort(h, p))
+		}
+
+		// Validate that we have at least one valid host after parsing
+		if len(hostParts) > 0 {
+			connURL := url.URL{
+				Scheme:   "postgres",
+				User:     url.UserPassword(dbUser, dbPasswd),
+				Host:     strings.Join(hostParts, ","),
+				Path:     dbName,
+				OmitHost: false,
+				RawQuery: dbParam,
+			}
+			query := connURL.Query()
+			query.Set("sslmode", dbsslMode)
+			connURL.RawQuery = query.Encode()
+			return connURL.String()
+		}
+	}
+
 	host, port := parsePostgreSQLHostPort(dbHost)
 	connURL := url.URL{
 		Scheme:   "postgres",

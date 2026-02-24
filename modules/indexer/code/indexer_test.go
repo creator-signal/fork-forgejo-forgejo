@@ -14,11 +14,6 @@ import (
 	"forgejo.org/modules/indexer/code/elasticsearch"
 	"forgejo.org/modules/indexer/code/internal"
 
-	_ "forgejo.org/models"
-	_ "forgejo.org/models/actions"
-	_ "forgejo.org/models/activities"
-	_ "forgejo.org/models/forgefed"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -115,6 +110,57 @@ func testIndexer(name string, t *testing.T, indexer internal.Indexer) {
 				assert.Equal(t, kw.IDs, ids)
 			})
 		}
+
+		t.Run("Fuzzy", func(t *testing.T) {
+			for _, kw := range []struct {
+				keyword string
+				ids     []int64
+			}{
+				{
+					keyword: "reppo1", // should match repo1
+					ids:     []int64{repoID},
+				},
+				{
+					keyword: "1", // must not be fuzzy match only repo1
+					ids:     []int64{repoID},
+				},
+				{
+					keyword: "Description!", // should match "Description"
+					ids:     []int64{repoID},
+				},
+				{
+					keyword: "escription", // should match "Description"
+					ids:     []int64{repoID},
+				},
+				{
+					keyword: "form", // should match "for"
+					ids:     []int64{repoID},
+				},
+				{
+					keyword: "invalid", // should not match anything
+					ids:     []int64{},
+				},
+			} {
+				t.Run(kw.keyword, func(t *testing.T) {
+					_, res, _, err := indexer.Search(t.Context(), &internal.SearchOptions{
+						Keyword: kw.keyword,
+						Paginator: &db.ListOptions{
+							Page:     1,
+							PageSize: 10,
+						},
+						Mode: SearchModeFuzzy,
+					})
+					require.NoError(t, err)
+
+					ids := make([]int64, 0, len(res))
+					for _, hit := range res {
+						ids = append(ids, hit.RepoID)
+					}
+
+					assert.Equal(t, kw.ids, ids)
+				})
+			}
+		})
 
 		require.NoError(t, indexer.Delete(t.Context(), repoID))
 	})

@@ -12,7 +12,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	forgejo_context "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -54,9 +54,9 @@ func TestRunnerModification(t *testing.T) {
 			sess.MakeRequest(t, req, http.StatusNotFound)
 		} else {
 			sess.MakeRequest(t, req, http.StatusSeeOther)
-			flashCookie := sess.GetCookie(forgejo_context.CookieNameFlash)
+			flashCookie := sess.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.Equal(t, "success%3DRunner%2Bupdated%2Bsuccessfully", flashCookie.Value)
+			assert.Equal(t, "success%3DRunner%2Bedited%2Bsuccessfully", flashCookie.Value)
 		}
 
 		req = NewRequest(t, "POST", baseURL+fmt.Sprintf("/%d/delete", id))
@@ -64,7 +64,7 @@ func TestRunnerModification(t *testing.T) {
 			sess.MakeRequest(t, req, http.StatusNotFound)
 		} else {
 			sess.MakeRequest(t, req, http.StatusOK)
-			flashCookie := sess.GetCookie(forgejo_context.CookieNameFlash)
+			flashCookie := sess.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Equal(t, "success%3DRunner%2Bdeleted%2Bsuccessfully", flashCookie.Value)
 		}
@@ -120,4 +120,74 @@ func TestRunnerModification(t *testing.T) {
 			test(t, false, adminURL, globalRunner.ID)
 		})
 	})
+}
+
+func TestRunnerVisibility(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestRunnerVisibility")()
+	defer tests.PrepareTestEnv(t)()
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{IsAdmin: true})
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	runnerOne := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 719931})
+	runnerTwo := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 719932})
+	runnerThree := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 719933})
+	runnerFour := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 719934})
+	runnerFive := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 719935})
+	runnerSix := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 719936})
+
+	testCases := []struct {
+		name              string
+		user              *user_model.User
+		url               string
+		expectedRunners   []*actions_model.ActionRunner
+		unexpectedRunners []*actions_model.ActionRunner
+	}{
+		{
+			name:              "admin-sees-all",
+			user:              admin,
+			url:               "/admin/actions/runners",
+			expectedRunners:   []*actions_model.ActionRunner{runnerOne, runnerTwo, runnerThree, runnerFour, runnerFive, runnerSix},
+			unexpectedRunners: []*actions_model.ActionRunner{},
+		},
+		{
+			name:              "user-sees-own-and-global",
+			user:              user2,
+			url:               "user/settings/actions/runners",
+			expectedRunners:   []*actions_model.ActionRunner{runnerTwo, runnerFour},
+			unexpectedRunners: []*actions_model.ActionRunner{runnerOne, runnerThree, runnerFive, runnerSix},
+		},
+		{
+			name:              "org-sees-own-and-global",
+			user:              user2,
+			url:               "/org/org3/settings/actions/runners",
+			expectedRunners:   []*actions_model.ActionRunner{runnerOne, runnerFour},
+			unexpectedRunners: []*actions_model.ActionRunner{runnerTwo, runnerThree, runnerFive, runnerSix},
+		},
+		{
+			name:              "user-repo-sees-own-and-users-and-global",
+			user:              user2,
+			url:               "/user2/test_workflows/settings/actions/runners",
+			expectedRunners:   []*actions_model.ActionRunner{runnerTwo, runnerFour, runnerSix},
+			unexpectedRunners: []*actions_model.ActionRunner{runnerOne, runnerThree, runnerFive},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			session := loginUser(t, testCase.user.Name)
+
+			request := NewRequest(t, "GET", testCase.url)
+			response := session.MakeRequest(t, request, http.StatusOK)
+
+			htmlDoc := NewHTMLParser(t, response.Body)
+			for _, expectedRunner := range testCase.expectedRunners {
+				selector := fmt.Sprintf("td:contains('%s')", expectedRunner.Name)
+				assert.Equal(t, 1, htmlDoc.Find(selector).Length(), "runner '%s' could not be found", expectedRunner.Name)
+			}
+			for _, unexpectedRunner := range testCase.unexpectedRunners {
+				selector := fmt.Sprintf("td:contains('%s')", unexpectedRunner.Name)
+				assert.Zero(t, htmlDoc.Find(selector).Length(), "runner '%s' is unexpectedly present", unexpectedRunner.Name)
+			}
+		})
+	}
 }

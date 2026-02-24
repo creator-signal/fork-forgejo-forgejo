@@ -62,8 +62,11 @@ const (
 	// UserTypeBot defines a bot user
 	UserTypeBot // 4
 
-	// UserTypeRemoteUser defines a remote user for federated users
+	// UserTypeRemoteUser defines a remote user for users created from f3
 	UserTypeRemoteUser // 5
+
+	// UserTypeActivityPubUser defines a user created from ActivityPub
+	UserTypeActivityPubUser // 6
 )
 
 const (
@@ -461,15 +464,6 @@ func (u *User) IsUser() bool {
 	return u.Type == UserTypeIndividual || u.Type == UserTypeBot
 }
 
-// Returns true if the given user ID belongs to an actual user, not an organization
-func IsUserByID(ctx context.Context, uid int64) (bool, error) {
-	return db.GetEngine(ctx).
-		Where("id=?", uid).
-		In("type", UserTypeIndividual, UserTypeBot).
-		Table("user").
-		Exist()
-}
-
 // IsBot returns whether or not the user is of type bot
 func (u *User) IsBot() bool {
 	return u.Type == UserTypeBot
@@ -477,6 +471,10 @@ func (u *User) IsBot() bool {
 
 func (u *User) IsRemote() bool {
 	return u.Type == UserTypeRemoteUser
+}
+
+func (u *User) IsActivityPub() bool {
+	return u.Type == UserTypeActivityPubUser
 }
 
 // DisplayName returns full name if it's not empty,
@@ -657,7 +655,6 @@ var (
 		"user",  // user login/activate/settings, etc
 
 		"admin",
-		"devtest",
 		"explore",
 		"issues",
 		"pulls",
@@ -692,6 +689,14 @@ func IsUsableUsername(name string) error {
 	return db.IsUsableName(reservedUsernames, reservedUserPatterns, name)
 }
 
+// IsActivityPubUsername returns an error if a fediverse handle (referred to as a username) cannot exist
+func IsActivityPubUsername(name string) error {
+	if !validation.IsValidActivityPubUsername(name) {
+		return db.ErrNameActivityPubInvalid{Name: name}
+	}
+	return db.IsUsableName(reservedUsernames, reservedUserPatterns, name)
+}
+
 // CreateUserOverwriteOptions are an optional options who overwrite system defaults on user creation
 type CreateUserOverwriteOptions struct {
 	KeepEmailPrivate             optional.Option[bool]
@@ -702,6 +707,7 @@ type CreateUserOverwriteOptions struct {
 	Theme                        *string
 	IsRestricted                 optional.Option[bool]
 	IsActive                     optional.Option[bool]
+	IsActivityPub                optional.Option[bool]
 }
 
 // CreateUser creates record of a new user.
@@ -716,12 +722,26 @@ func AdminCreateUser(ctx context.Context, u *User, overwriteDefault ...*CreateUs
 
 // createUser creates record of a new user.
 func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefault ...*CreateUserOverwriteOptions) (err error) {
-	if err = IsUsableUsername(u.Name); err != nil {
+	overwriteDefaultPresent := len(overwriteDefault) != 0 && overwriteDefault[0] != nil
+
+	// If a username is invalid as-is, check whether the username is meant
+	// for an ActivityPub account. Username constraints that belong to "foreign"
+	// ActivityPub servers, whose implementations we cannot control, are expected
+	// to be much less restrictive than those of Forgejo itself.
+	if overwriteDefaultPresent && overwriteDefault[0].IsActivityPub.Has() {
+		if err = IsActivityPubUsername(u.Name); err != nil {
+			return err
+		}
+	} else if err := IsUsableUsername(u.Name); err != nil {
 		return err
 	}
 
 	// Check if the new username can be claimed.
 	// Skip this check if done by an admin.
+	//
+	// Note: This skip should not currently cover usernames that could belong to
+	// fediverse accounts. This "defensive programming" is in place to prevent future
+	// breakage until the ActivityPub component matures more.
 	if !createdByAdmin {
 		if ok, expireTime, err := CanClaimUsername(ctx, u.Name, -1); err != nil {
 			return err
@@ -748,16 +768,16 @@ func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefa
 	}
 
 	// overwrite defaults if set
-	if len(overwriteDefault) != 0 && overwriteDefault[0] != nil {
+	if overwriteDefaultPresent {
 		overwrite := overwriteDefault[0]
-		if overwrite.KeepEmailPrivate.Has() {
-			u.KeepEmailPrivate = overwrite.KeepEmailPrivate.Value()
+		if has, value := overwrite.KeepEmailPrivate.Get(); has {
+			u.KeepEmailPrivate = value
 		}
 		if overwrite.Visibility != nil {
 			u.Visibility = *overwrite.Visibility
 		}
-		if overwrite.AllowCreateOrganization.Has() {
-			u.AllowCreateOrganization = overwrite.AllowCreateOrganization.Value()
+		if has, value := overwrite.AllowCreateOrganization.Get(); has {
+			u.AllowCreateOrganization = value
 		}
 		if overwrite.EmailNotificationsPreference != nil {
 			u.EmailNotificationsPreference = *overwrite.EmailNotificationsPreference
@@ -768,11 +788,11 @@ func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefa
 		if overwrite.Theme != nil {
 			u.Theme = *overwrite.Theme
 		}
-		if overwrite.IsRestricted.Has() {
-			u.IsRestricted = overwrite.IsRestricted.Value()
+		if has, value := overwrite.IsRestricted.Get(); has {
+			u.IsRestricted = value
 		}
-		if overwrite.IsActive.Has() {
-			u.IsActive = overwrite.IsActive.Value()
+		if has, value := overwrite.IsActive.Get(); has {
+			u.IsActive = value
 		}
 	}
 
@@ -881,15 +901,15 @@ func CountUsers(ctx context.Context, opts *CountUserFilter) int64 {
 func countUsers(ctx context.Context, opts *CountUserFilter) int64 {
 	sess := db.GetEngine(ctx)
 	cond := builder.NewCond()
-	cond = cond.And(builder.Eq{"type": UserTypeIndividual})
+	cond = cond.And(builder.In("type", UserTypeIndividual, UserTypeRemoteUser))
 
 	if opts != nil {
 		if opts.LastLoginSince != nil {
 			cond = cond.And(builder.Gte{"last_login_unix": *opts.LastLoginSince})
 		}
 
-		if opts.IsAdmin.Has() {
-			cond = cond.And(builder.Eq{"is_admin": opts.IsAdmin.Value()})
+		if has, value := opts.IsAdmin.Get(); has {
+			cond = cond.And(builder.Eq{"is_admin": value})
 		}
 	}
 

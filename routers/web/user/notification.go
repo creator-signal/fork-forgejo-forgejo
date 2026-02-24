@@ -109,24 +109,17 @@ func getNotifications(ctx *context.Context) {
 		return
 	}
 
-	sess := db.GetEngine(ctx).Table("notification")
-	if setting.Database.Type.IsMySQL() {
-		sess = sess.IndexHint("USE", "", "IDX_notification_user_id")
-	}
-	sess.Where("user_id = ?", ctx.Doer.ID).
-		And("status = ? OR status = ?", status, activities_model.NotificationStatusPinned).
-		OrderBy("notification.updated_unix DESC")
-
-	if perPage > 0 {
-		if page == 0 {
-			page = 1
-		}
-		sess.Limit(perPage, (page-1)*perPage)
-	}
-
-	nls := make([]*activities_model.Notification, 0, perPage)
-	if err := sess.Find(&nls); err != nil {
-		ctx.ServerError("FindNotifications", err)
+	statuses := []activities_model.NotificationStatus{status, activities_model.NotificationStatusPinned}
+	nls, err := db.Find[activities_model.Notification](ctx, activities_model.FindNotificationOptions{
+		ListOptions: db.ListOptions{
+			PageSize: perPage,
+			Page:     page,
+		},
+		UserID: ctx.Doer.ID,
+		Status: statuses,
+	})
+	if err != nil {
+		ctx.ServerError("db.Find[activities_model.Notification]", err)
 		return
 	}
 	notifications := activities_model.NotificationList(nls)
@@ -446,20 +439,20 @@ func NotificationWatching(ctx *context.Context) {
 	// redirect to last page if request page is more than total pages
 	pager := context.NewPagination(total, setting.UI.User.RepoPagingNum, page, 5)
 	pager.SetDefaultParams(ctx)
-	if archived.Has() {
-		pager.AddParamString("archived", fmt.Sprint(archived.Value()))
+	if has, value := archived.Get(); has {
+		pager.AddParamString("archived", fmt.Sprint(value))
 	}
-	if fork.Has() {
-		pager.AddParamString("fork", fmt.Sprint(fork.Value()))
+	if has, value := fork.Get(); has {
+		pager.AddParamString("fork", fmt.Sprint(value))
 	}
-	if mirror.Has() {
-		pager.AddParamString("mirror", fmt.Sprint(mirror.Value()))
+	if has, value := mirror.Get(); has {
+		pager.AddParamString("mirror", fmt.Sprint(value))
 	}
-	if template.Has() {
-		pager.AddParamString("template", fmt.Sprint(template.Value()))
+	if has, value := template.Get(); has {
+		pager.AddParamString("template", fmt.Sprint(value))
 	}
-	if private.Has() {
-		pager.AddParamString("private", fmt.Sprint(private.Value()))
+	if has, value := private.Get(); has {
+		pager.AddParamString("private", fmt.Sprint(value))
 	}
 	ctx.Data["Page"] = pager
 

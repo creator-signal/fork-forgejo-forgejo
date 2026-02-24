@@ -10,8 +10,8 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
-	"forgejo.org/modules/actions"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 )
@@ -53,18 +53,6 @@ func stopTasks(ctx context.Context, opts actions_model.FindTaskOptions) error {
 			log.Warn("Cannot stop task %v: %v", task.ID, err)
 			continue
 		}
-
-		remove, err := actions.TransferLogs(ctx, task.LogFilename)
-		if err != nil {
-			log.Warn("Cannot transfer logs of task %v: %v", task.ID, err)
-			continue
-		}
-		task.LogInStorage = true
-		if err := actions_model.UpdateTask(ctx, task, "log_in_storage"); err != nil {
-			log.Warn("Cannot update task %v: %v", task.ID, err)
-			continue
-		}
-		remove()
 	}
 
 	CreateCommitStatus(ctx, jobs...)
@@ -75,8 +63,9 @@ func stopTasks(ctx context.Context, opts actions_model.FindTaskOptions) error {
 // CancelAbandonedJobs cancels the jobs which have waiting status, but haven't been picked by a runner for a long time
 func CancelAbandonedJobs(ctx context.Context) error {
 	jobs, err := db.Find[actions_model.ActionRunJob](ctx, actions_model.FindRunJobOptions{
-		Statuses:      []actions_model.Status{actions_model.StatusWaiting, actions_model.StatusBlocked},
-		UpdatedBefore: timeutil.TimeStamp(time.Now().Add(-setting.Actions.AbandonedJobTimeout).Unix()),
+		Statuses:         []actions_model.Status{actions_model.StatusWaiting, actions_model.StatusBlocked},
+		UpdatedBefore:    timeutil.TimeStamp(time.Now().Add(-setting.Actions.AbandonedJobTimeout).Unix()),
+		RunNeedsApproval: optional.Some(false),
 	})
 	if err != nil {
 		log.Warn("find abandoned tasks: %v", err)

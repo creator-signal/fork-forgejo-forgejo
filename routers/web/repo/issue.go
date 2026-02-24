@@ -274,7 +274,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 
 	var total int
 	switch {
-	case isShowClosed.Value():
+	case isShowClosed.ValueOrZeroValue():
 		total = int(issueStats.ClosedCount)
 	case !isShowClosed.Has():
 		total = int(issueStats.OpenCount + issueStats.ClosedCount)
@@ -321,8 +321,8 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		// depending on the query syntax
 		isShowClosed = opts.IsClosed
 		sortType = opts.SortBy.ToIssueSort()
-		posterID = opts.PosterID.Value()
-		assigneeID = opts.AssigneeID.Value()
+		posterID = opts.PosterID.ValueOrZeroValue()
+		assigneeID = opts.AssigneeID.ValueOrZeroValue()
 	}
 
 	approvalCounts, err := issues.GetApprovalCounts(ctx)
@@ -440,7 +440,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		return
 	}
 
-	pinned, err := issues_model.GetPinnedIssues(ctx, repo.ID, isPullOption.Value())
+	pinned, err := issues_model.GetPinnedIssues(ctx, repo.ID, isPullOption.ValueOrZeroValue())
 	if err != nil {
 		ctx.ServerError("GetPinnedIssues", err)
 		return
@@ -475,7 +475,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["IsShowClosed"] = isShowClosed
 	switch {
-	case isShowClosed.Value():
+	case isShowClosed.ValueOrZeroValue():
 		ctx.Data["State"] = "closed"
 	case !isShowClosed.Has():
 		ctx.Data["State"] = "all"
@@ -989,8 +989,10 @@ func NewIssue(ctx *context.Context) {
 		project, err := project_model.GetProjectByID(ctx, projectID)
 		if err != nil {
 			log.Error("GetProjectByID: %d: %v", projectID, err)
-		} else if project.RepoID != ctx.Repo.Repository.ID {
-			log.Error("GetProjectByID: %d: %v", projectID, fmt.Errorf("project[%d] not in repo [%d]", project.ID, ctx.Repo.Repository.ID))
+		} else if !project.CanBeAccessedByOwnerRepo(ctx.Repo.Repository.OwnerID, ctx.Repo.Repository) {
+			log.Error("GetProjectByID: %d: %v", projectID,
+				fmt.Errorf("project[%d] neither in repo[%d] nor has the same owner (project: [%d] ./. repo: [%d])",
+					project.ID, ctx.Repo.Repository.ID, project.OwnerID, ctx.Repo.Repository.OwnerID))
 		} else {
 			ctx.Data["project_id"] = projectID
 			ctx.Data["Project"] = project
@@ -1654,8 +1656,14 @@ func ViewIssue(ctx *context.Context) {
 		ctx.ServerError("LoadAttachmentsByIssue", err)
 		return
 	}
+
 	if err := issue.Comments.LoadPosters(ctx); err != nil {
 		ctx.ServerError("LoadPosters", err)
+		return
+	}
+
+	if err := issue.Comments.LoadReviews(ctx); err != nil {
+		ctx.ServerError("LoadReviews", err)
 		return
 	}
 
@@ -1664,7 +1672,11 @@ func ViewIssue(ctx *context.Context) {
 		metas := ctx.Repo.Repository.ComposeMetas(ctx)
 		metas["scope"] = fmt.Sprintf("comment-%d", commentIdx)
 
-		if comment.Type == issues_model.CommentTypeComment || comment.Type == issues_model.CommentTypeReview {
+		if comment.Review != nil && comment.Review.Type == issues_model.ReviewTypePending {
+			continue
+		}
+
+		if comment.Type == issues_model.CommentTypeComment {
 			comment.RenderedContent, err = markdown.RenderString(&markup.RenderContext{
 				Links: markup.Links{
 					Base: ctx.Repo.RepoLink,
@@ -3767,7 +3779,7 @@ func PullPosters(ctx *context.Context) {
 func issuePosters(ctx *context.Context, isPullList bool) {
 	repo := ctx.Repo.Repository
 	search := strings.TrimSpace(ctx.FormString("q"))
-	posters, err := repo_model.GetIssuePostersWithSearch(ctx, repo, isPullList, search, setting.UI.DefaultShowFullName)
+	posters, err := repo_model.GetIssuePostersWithSearch(ctx, repo, isPullList, search)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, err)
 		return

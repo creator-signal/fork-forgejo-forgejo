@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"strings"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -33,6 +34,13 @@ func CreateCommitStatus(ctx context.Context, jobs ...*actions_model.ActionRunJob
 }
 
 func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) error {
+	if incompleteMatrix, _, err := job.HasIncompleteMatrix(); err != nil {
+		return fmt.Errorf("job HasIncompleteMatrix: %w", err)
+	} else if incompleteMatrix {
+		// Don't create commit statuses for incomplete matrix jobs because they are never completed.
+		return nil
+	}
+
 	if err := job.LoadAttributes(ctx); err != nil {
 		return fmt.Errorf("load run: %w", err)
 	}
@@ -77,28 +85,6 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 		return nil
 	}
 
-	repo := run.Repo
-	// TODO: store workflow name as a field in ActionRun to avoid parsing
-	runName := path.Base(run.WorkflowID)
-	if wfs, err := jobparser.Parse(job.WorkflowPayload, false); err == nil && len(wfs) > 0 {
-		runName = wfs[0].Name
-	}
-	ctxname := fmt.Sprintf("%s / %s (%s)", runName, job.Name, event)
-	state := toCommitStatus(job.Status)
-	if statuses, _, err := git_model.GetLatestCommitStatus(ctx, repo.ID, sha, db.ListOptionsAll); err == nil {
-		for _, v := range statuses {
-			if v.Context == ctxname {
-				if v.State == state {
-					// no need to update
-					return nil
-				}
-				break
-			}
-		}
-	} else {
-		return fmt.Errorf("GetLatestCommitStatus: %w", err)
-	}
-
 	description := ""
 	switch job.Status {
 	// TODO: if we want support description in different languages, we need to support i18n placeholders in it
@@ -116,6 +102,30 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 		description = "Waiting to run"
 	case actions_model.StatusBlocked:
 		description = "Blocked by required conditions"
+	}
+
+	repo := run.Repo
+	// TODO: store workflow name as a field in ActionRun to avoid parsing
+	runName := path.Base(run.WorkflowID)
+	if wfs, err := jobparser.Parse(job.WorkflowPayload, false); err == nil && len(wfs) > 0 {
+		runName = wfs[0].Name
+	}
+	ctxname := fmt.Sprintf("%s / %s (%s)", runName, job.Name, event)
+	state := toCommitStatus(job.Status)
+	if statuses, _, err := git_model.GetLatestCommitStatus(ctx, repo.ID, sha, db.ListOptionsAll); err == nil {
+		for _, v := range statuses {
+			// TrimSpace(ctxname) & TrimSpace(description) to match stored value which is trimmed in
+			// `git.NewCommitStatus`
+			if v.Context == strings.TrimSpace(ctxname) {
+				if v.State == state && v.Description == strings.TrimSpace(description) {
+					// no need to update
+					return nil
+				}
+				break
+			}
+		}
+	} else {
+		return fmt.Errorf("GetLatestCommitStatus: %w", err)
 	}
 
 	index, err := getIndexOfJob(ctx, job)

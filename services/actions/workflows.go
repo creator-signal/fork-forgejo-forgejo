@@ -41,10 +41,11 @@ func IsInputRequiredErr(err error) bool {
 }
 
 type Workflow struct {
-	WorkflowID string
-	Ref        string
-	Commit     *git.Commit
-	GitEntry   *git.TreeEntry
+	WorkflowDirectory string
+	WorkflowID        string
+	Ref               string
+	Commit            *git.Commit
+	GitEntry          *git.TreeEntry
 }
 
 type InputValueGetter func(key string) string
@@ -74,6 +75,10 @@ func resolveDispatchInput(key, value string, input act_model.WorkflowDispatchInp
 	return value, nil
 }
 
+func (entry *Workflow) WorkflowPath() string {
+	return entry.WorkflowDirectory + "/" + entry.WorkflowID
+}
+
 func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGetter, repo *repo_model.Repository, doer *user.User) (r *actions_model.ActionRun, j []string, err error) {
 	content, err := actions.GetContentFromEntry(entry.GitEntry)
 	if err != nil {
@@ -85,7 +90,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		return nil, nil, err
 	}
 
-	fullWorkflowID := ".forgejo/workflows/" + entry.WorkflowID
+	fullWorkflowID := entry.WorkflowPath()
 
 	title := wf.Name
 	if len(title) < 1 {
@@ -108,7 +113,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	}
 
 	if int64(len(inputs)) > setting.Actions.LimitDispatchInputs {
-		return nil, nil, errors.New("to many inputs")
+		return nil, nil, errors.New("too many inputs")
 	}
 
 	jobNames := util.KeysOfMap(wf.Jobs)
@@ -132,20 +137,21 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	}
 
 	run := &actions_model.ActionRun{
-		Title:         title,
-		RepoID:        repo.ID,
-		Repo:          repo,
-		OwnerID:       repo.OwnerID,
-		WorkflowID:    entry.WorkflowID,
-		TriggerUserID: doer.ID,
-		TriggerUser:   doer,
-		Ref:           entry.Ref,
-		CommitSHA:     entry.Commit.ID.String(),
-		Event:         webhook.HookEventWorkflowDispatch,
-		EventPayload:  string(p),
-		TriggerEvent:  string(webhook.HookEventWorkflowDispatch),
-		Status:        actions_model.StatusWaiting,
-		NotifyEmail:   notifications,
+		Title:             title,
+		RepoID:            repo.ID,
+		Repo:              repo,
+		OwnerID:           repo.OwnerID,
+		WorkflowID:        entry.WorkflowID,
+		WorkflowDirectory: entry.WorkflowDirectory,
+		TriggerUserID:     doer.ID,
+		TriggerUser:       doer,
+		Ref:               entry.Ref,
+		CommitSHA:         entry.Commit.ID.String(),
+		Event:             webhook.HookEventWorkflowDispatch,
+		EventPayload:      string(p),
+		TriggerEvent:      string(webhook.HookEventWorkflowDispatch),
+		Status:            actions_model.StatusWaiting,
+		NotifyEmail:       notifications,
 	}
 
 	vars, err := actions_model.GetVariablesOfRun(ctx, run)
@@ -168,12 +174,25 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		}
 	}
 
-	jobs, err := actions.JobParser(content, jobparser.WithVars(vars), jobparser.WithInputs(inputsAny))
+	jobs, err := actions.JobParser(content,
+		jobparser.WithVars(vars),
+		jobparser.WithInputs(inputsAny),
+		// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
+		// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
+		jobparser.WithJobOutputs(map[string]map[string]string{}),
+		jobparser.SupportIncompleteRunsOn(),
+		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(entry.Commit)),
+		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return run, jobNames, actions_model.InsertRun(ctx, run, jobs)
+	if err := actions_model.InsertRun(ctx, run, jobs); err != nil {
+		return run, jobNames, err
+	}
+
+	return run, jobNames, consistencyCheckRun(ctx, run)
 }
 
 func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Workflow, error) {
@@ -187,7 +206,7 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 		return nil, err
 	}
 
-	entries, err := actions.ListWorkflows(commit)
+	workflowDirectory, entries, err := actions.ListWorkflows(commit)
 	if err != nil {
 		return nil, err
 	}
@@ -204,10 +223,11 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 	}
 
 	return &Workflow{
-		WorkflowID: workflowID,
-		Ref:        ref,
-		Commit:     commit,
-		GitEntry:   workflowEntry,
+		WorkflowDirectory: workflowDirectory,
+		WorkflowID:        workflowID,
+		Ref:               ref,
+		Commit:            commit,
+		GitEntry:          workflowEntry,
 	}, nil
 }
 

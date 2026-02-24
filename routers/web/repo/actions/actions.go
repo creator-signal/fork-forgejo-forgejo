@@ -80,7 +80,7 @@ func List(ctx *context.Context) {
 			ctx.ServerError("GetBranchCommit", err)
 			return
 		}
-		entries, err := actions.ListWorkflows(commit)
+		_, entries, err := actions.ListWorkflows(commit)
 		if err != nil {
 			ctx.ServerError("ListWorkflows", err)
 			return
@@ -138,7 +138,7 @@ func List(ctx *context.Context) {
 						continue
 					}
 					if !allRunnerLabels.Contains(ro) {
-						workflow.ErrMsg = ctx.Locale.TrString("actions.runs.no_matching_online_runner_helper", ro)
+						workflow.ErrMsg = ctx.Locale.TrString("actions.runs.no_matching_online_runner.helper", ro)
 						break
 					}
 				}

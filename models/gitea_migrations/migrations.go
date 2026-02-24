@@ -32,7 +32,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
-	forgejo_services "forgejo.org/services/forgejo"
+	forgejo_service "forgejo.org/services/forgejo"
 
 	"xorm.io/xorm"
 	"xorm.io/xorm/names"
@@ -126,7 +126,7 @@ func prepareMigrationTasks() []*migration {
 
 		newMigration(102, "update migration repositories' service type", v1_11.DropColumnHeadUserNameOnPullRequest),
 		newMigration(103, "Add WhitelistDeployKeys to protected branch", v1_11.AddWhitelistDeployKeysToBranches),
-		newMigration(104, "remove unnecessary columns from label", v1_11.RemoveLabelUneededCols),
+		newMigration(104, "remove unnecessary columns from label", v1_11.RemoveLabelUnneededCols),
 		newMigration(105, "add includes_all_repositories to teams", v1_11.AddTeamIncludesAllRepositories),
 		newMigration(106, "add column `mode` to table watch", v1_11.AddModeColumnToWatch),
 		newMigration(107, "Add template options to repository", v1_11.AddTemplateToRepo),
@@ -323,7 +323,7 @@ func prepareMigrationTasks() []*migration {
 		newMigration(268, "Update Action Ref", v1_21.UpdateActionsRefIndex),
 		newMigration(269, "Drop deleted branch table", v1_21.DropDeletedBranchTable),
 		newMigration(270, "Fix PackageProperty typo", v1_21.FixPackagePropertyTypo),
-		newMigration(271, "Allow archiving labels", v1_21.AddArchivedUnixColumInLabelTable),
+		newMigration(271, "Allow archiving labels", v1_21.AddArchivedUnixColumnInLabelTable),
 		newMigration(272, "Add Version to ActionRun table", v1_21.AddVersionToActionRunTable),
 		newMigration(273, "Add Action Schedule Table", v1_21.AddActionScheduleTable),
 		newMigration(274, "Add Actions artifacts expiration date", v1_21.AddExpiredUnixColumnInActionArtifactTable),
@@ -502,7 +502,7 @@ Please try upgrading to a lower version first (suggested v1.6.4), then upgrade t
 		}
 	}
 
-	if err := forgejo_services.PreMigrationSanityChecks(x, previousVersion, setting.CfgProvider); err != nil {
+	if err := forgejo_service.PreMigrationSanityChecks(x, previousVersion, setting.CfgProvider); err != nil {
 		return err
 	}
 

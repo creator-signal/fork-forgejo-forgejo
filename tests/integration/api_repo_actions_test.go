@@ -13,14 +13,19 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/webhook"
+	"forgejo.org/routers/api/v1/shared"
+	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 
+	gouuid "github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,19 +107,42 @@ func TestActionsAPISearchActionJobs_RepoRunnerAllPendingJobs(t *testing.T) {
 }
 
 func TestActionsAPIWorkflowDispatchReturnInfo(t *testing.T) {
-	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		workflowName := "dispatch.yml"
-		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
+	testCases := []struct {
+		name              string
+		workflowID        string
+		workflowDirectory string
+	}{
+		{
+			name:              "GitHub",
+			workflowID:        "dispatch.yml",
+			workflowDirectory: ".github/workflows",
+		},
+		{
+			name:              "Gitea",
+			workflowID:        "test.yml",
+			workflowDirectory: ".gitea/workflows",
+		},
+		{
+			name:              "Forgejo",
+			workflowID:        "build.yml",
+			workflowDirectory: ".forgejo/workflows",
+		},
+	}
 
-		// create the repo
-		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "api-repo-workflow-dispatch",
-			[]unit_model.Type{unit_model.TypeActions}, nil,
-			[]*files_service.ChangeRepoFile{
-				{
-					Operation: "create",
-					TreePath:  fmt.Sprintf(".forgejo/workflows/%s", workflowName),
-					ContentReader: strings.NewReader(`name: WD
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+				token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
+
+				// create the repo
+				repo, _, f := tests.CreateDeclarativeRepo(t, user2, "api-repo-workflow-dispatch",
+					[]unit_model.Type{unit_model.TypeActions}, nil,
+					[]*files_service.ChangeRepoFile{
+						{
+							Operation: "create",
+							TreePath:  fmt.Sprintf("%s/%s", testCase.workflowDirectory, testCase.workflowID),
+							ContentReader: strings.NewReader(`name: WD
 on: [workflow-dispatch]
 jobs:
   t1:
@@ -126,51 +154,65 @@ jobs:
     steps:
       - run: echo "test 2"
 `,
+							),
+						},
+					},
+				)
+				defer f()
+
+				req := NewRequestWithJSON(
+					t,
+					http.MethodPost,
+					fmt.Sprintf(
+						"/api/v1/repos/%s/%s/actions/workflows/%s/dispatches",
+						repo.OwnerName, repo.Name, testCase.workflowID,
 					),
-				},
-			},
-		)
-		defer f()
+					&api.DispatchWorkflowOption{
+						Ref:           repo.DefaultBranch,
+						ReturnRunInfo: true,
+					},
+				)
+				req.AddTokenAuth(token)
 
-		req := NewRequestWithJSON(
-			t,
-			http.MethodPost,
-			fmt.Sprintf(
-				"/api/v1/repos/%s/%s/actions/workflows/%s/dispatches",
-				repo.OwnerName, repo.Name, workflowName,
-			),
-			&api.DispatchWorkflowOption{
-				Ref:           repo.DefaultBranch,
-				ReturnRunInfo: true,
-			},
-		)
-		req.AddTokenAuth(token)
+				res := MakeRequest(t, req, http.StatusCreated)
+				run := new(api.DispatchWorkflowRun)
+				DecodeJSON(t, res, run)
 
-		res := MakeRequest(t, req, http.StatusCreated)
-		run := new(api.DispatchWorkflowRun)
-		DecodeJSON(t, res, run)
+				assert.NotZero(t, run.ID)
+				assert.NotZero(t, run.RunNumber)
+				assert.Len(t, run.Jobs, 2)
 
-		assert.NotZero(t, run.ID)
-		assert.NotZero(t, run.RunNumber)
-		assert.Len(t, run.Jobs, 2)
+				actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})
+				assert.Equal(t, "WD", actionRun.Title)
+				assert.Equal(t, repo.ID, actionRun.RepoID)
+				assert.Equal(t, repo.OwnerID, actionRun.OwnerID)
+				assert.Equal(t, testCase.workflowID, actionRun.WorkflowID)
+				assert.Equal(t, testCase.workflowDirectory, actionRun.WorkflowDirectory)
+				assert.Equal(t, user2.ID, actionRun.TriggerUserID)
+				assert.Zero(t, actionRun.ScheduleID)
+				assert.Equal(t, "refs/heads/main", actionRun.Ref)
+				assert.Equal(t, webhook.HookEventType("workflow_dispatch"), actionRun.Event)
+				assert.Equal(t, "workflow_dispatch", actionRun.TriggerEvent)
 
-		req = NewRequestWithJSON(
-			t,
-			http.MethodPost,
-			fmt.Sprintf(
-				"/api/v1/repos/%s/%s/actions/workflows/%s/dispatches",
-				repo.OwnerName, repo.Name, workflowName,
-			),
-			&api.DispatchWorkflowOption{
-				Ref:           repo.DefaultBranch,
-				ReturnRunInfo: false,
-			},
-		)
-		req.AddTokenAuth(token)
-		res = MakeRequest(t, req, http.StatusNoContent)
-		body, err := io.ReadAll(res.Body)
-		require.NoError(t, err)
-		assert.Empty(t, body) // 204 No Content doesn't support a body, so should be empty
+				req = NewRequestWithJSON(
+					t,
+					http.MethodPost,
+					fmt.Sprintf(
+						"/api/v1/repos/%s/%s/actions/workflows/%s/dispatches",
+						repo.OwnerName, repo.Name, testCase.workflowID,
+					),
+					&api.DispatchWorkflowOption{
+						Ref:           repo.DefaultBranch,
+						ReturnRunInfo: false,
+					},
+				)
+				req.AddTokenAuth(token)
+				res = MakeRequest(t, req, http.StatusNoContent)
+				body, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				assert.Empty(t, body) // 204 No Content doesn't support a body, so should be empty
+			})
+		}
 	})
 }
 
@@ -227,6 +269,11 @@ func TestActionsAPIGetListActionRun(t *testing.T) {
 		{
 			name:        "Search for sha",
 			query:       "?head_sha=97f29ee599c373c729132a5c46a046978311e0ee",
+			expectedIDs: []int64{892, 894},
+		},
+		{
+			name:        "Search for Git reference",
+			query:       "?ref=refs/heads/main",
 			expectedIDs: []int64{892, 894},
 		},
 	}
@@ -312,4 +359,271 @@ func TestActionsAPIGetActionRun(t *testing.T) {
 			assert.Equal(t, dbRun.TriggerUserID, apiRun.TriggerUser.ID)
 		})
 	}
+}
+
+func TestAPIRepoActionsRunnerRegistrationTokenOperations(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAPIRepoActionsRunnerRegistrationTokenOperations")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	session := loginUser(t, user2.Name)
+	readToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+
+	t.Run("GetRegistrationToken", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners/registration-token")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		var registrationToken shared.RegistrationToken
+		DecodeJSON(t, response, &registrationToken)
+
+		expected := shared.RegistrationToken{Token: "BzcgyhjWhLeKGA4ihJIigeRDrcxrFESd0yizEpb7xZJ"}
+
+		assert.Equal(t, expected, registrationToken)
+	})
+}
+
+func TestAPIRepoActionsRunnerOperations(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAPIRepoActionsRunnerOperations")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	session := loginUser(t, user2.Name)
+	readToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+	writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+	t.Run("Get runners", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		assert.Equal(t, "3", response.Header().Get("X-Total-Count"))
+
+		var runners []*api.ActionRunner
+		DecodeJSON(t, response, &runners)
+
+		runnerOne := &api.ActionRunner{
+			ID:          899251,
+			UUID:        "a3297f3a-ba5c-4a0f-878e-6cc8b8ac79ec",
+			Name:        "runner-1-repository",
+			Version:     "dev",
+			OwnerID:     0,
+			RepoID:      62,
+			Description: "A superb runner",
+			Labels:      []string{"debian", "gpu"},
+			Status:      "offline",
+		}
+		runnerThree := &api.ActionRunner{
+			ID:          899253,
+			UUID:        "0a7e5e05-2da4-44d5-a72a-615da120cef6",
+			Name:        "runner-3-repository",
+			Version:     "11.3.1",
+			OwnerID:     0,
+			RepoID:      62,
+			Description: "Another fine runner",
+			Labels:      []string{"fedora"},
+			Status:      "offline",
+		}
+		runnerFive := &api.ActionRunner{
+			ID:          899255,
+			UUID:        "96639646-67b2-4bcb-9142-fde1ab8498cf",
+			Name:        "runner-5-repository-ephemeral",
+			Version:     "1.0.0",
+			OwnerID:     0,
+			RepoID:      62,
+			Description: "An ephemeral runner",
+			Labels:      []string{"ephemeral-label"},
+			Status:      "offline",
+			Ephemeral:   true,
+		}
+
+		assert.ElementsMatch(t, []*api.ActionRunner{runnerOne, runnerThree, runnerFive}, runners)
+	})
+
+	t.Run("Get runners paginated", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners?page=1&limit=1")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		var runners []*api.ActionRunner
+		DecodeJSON(t, response, &runners)
+
+		assert.NotEmpty(t, response.Header().Get("Link"))
+		assert.NotEmpty(t, response.Header().Get("X-Total-Count"))
+		assert.Len(t, runners, 1)
+	})
+
+	t.Run("Get runner", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners/899251")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		var runner *api.ActionRunner
+		DecodeJSON(t, response, &runner)
+
+		runnerOne := &api.ActionRunner{
+			ID:          899251,
+			UUID:        "a3297f3a-ba5c-4a0f-878e-6cc8b8ac79ec",
+			Name:        "runner-1-repository",
+			Version:     "dev",
+			OwnerID:     0,
+			RepoID:      62,
+			Description: "A superb runner",
+			Labels:      []string{"debian", "gpu"},
+			Status:      "offline",
+		}
+
+		assert.Equal(t, runnerOne, runner)
+	})
+
+	t.Run("Get ephemeral runner", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners/899255")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		var runner *api.ActionRunner
+		DecodeJSON(t, response, &runner)
+
+		expectedRunner := &api.ActionRunner{
+			ID:          899255,
+			UUID:        "96639646-67b2-4bcb-9142-fde1ab8498cf",
+			Name:        "runner-5-repository-ephemeral",
+			Version:     "1.0.0",
+			OwnerID:     0,
+			RepoID:      62,
+			Description: "An ephemeral runner",
+			Labels:      []string{"ephemeral-label"},
+			Status:      "offline",
+			Ephemeral:   true,
+		}
+
+		assert.Equal(t, expectedRunner, runner)
+	})
+
+	t.Run("Delete runner", func(t *testing.T) {
+		url := "/api/v1/repos/user2/test_workflows/actions/runners/899253"
+
+		request := NewRequest(t, "GET", url)
+		request.AddTokenAuth(readToken)
+		MakeRequest(t, request, http.StatusOK)
+
+		deleteRequest := NewRequest(t, "DELETE", url)
+		deleteRequest.AddTokenAuth(writeToken)
+		MakeRequest(t, deleteRequest, http.StatusNoContent)
+
+		request = NewRequest(t, "GET", url)
+		request.AddTokenAuth(readToken)
+		MakeRequest(t, request, http.StatusNotFound)
+	})
+
+	t.Run("Register runner", func(t *testing.T) {
+		options := api.RegisterRunnerOptions{Name: "api-runner", Description: "Some description"}
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners", repo1.OwnerName, repo1.Name)
+		request := NewRequestWithJSON(t, "POST", requestURL, options)
+		request.AddTokenAuth(writeToken)
+		response := MakeRequest(t, request, http.StatusCreated)
+
+		var registerRunnerResponse *api.RegisterRunnerResponse
+		DecodeJSON(t, response, &registerRunnerResponse)
+
+		assert.NotNil(t, registerRunnerResponse)
+		assert.Positive(t, registerRunnerResponse.ID)
+		assert.Equal(t, gouuid.Version(4), gouuid.MustParse(registerRunnerResponse.UUID).Version())
+		assert.Regexp(t, "(?i)^[0-9a-f]{40}$", registerRunnerResponse.Token)
+
+		registeredRunner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{UUID: registerRunnerResponse.UUID})
+		assert.Equal(t, registerRunnerResponse.ID, registeredRunner.ID)
+		assert.Equal(t, registerRunnerResponse.UUID, registeredRunner.UUID)
+		assert.Zero(t, registeredRunner.OwnerID)
+		assert.Equal(t, repo1.ID, registeredRunner.RepoID)
+		assert.Equal(t, "api-runner", registeredRunner.Name)
+		assert.Equal(t, "Some description", registeredRunner.Description)
+		assert.Empty(t, registeredRunner.AgentLabels)
+		assert.Empty(t, registeredRunner.Version)
+		assert.NotEmpty(t, registeredRunner.TokenHash)
+		assert.NotEmpty(t, registeredRunner.TokenSalt)
+		assert.False(t, registeredRunner.Ephemeral)
+	})
+
+	t.Run("Register ephemeral runner", func(t *testing.T) {
+		options := api.RegisterRunnerOptions{Name: "ephemeral-runner", Description: "Ephemeral runner", Ephemeral: true}
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners", repo1.OwnerName, repo1.Name)
+		request := NewRequestWithJSON(t, "POST", requestURL, options)
+		request.AddTokenAuth(writeToken)
+		response := MakeRequest(t, request, http.StatusCreated)
+
+		var registerRunnerResponse *api.RegisterRunnerResponse
+		DecodeJSON(t, response, &registerRunnerResponse)
+
+		registeredRunner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{UUID: registerRunnerResponse.UUID})
+		assert.Equal(t, registerRunnerResponse.UUID, registeredRunner.UUID)
+		assert.True(t, registeredRunner.Ephemeral)
+	})
+
+	t.Run("Runner registration does not update runner with identical name", func(t *testing.T) {
+		options := api.RegisterRunnerOptions{Name: "api-runner"}
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners", repo1.OwnerName, repo1.Name)
+		request := NewRequestWithJSON(t, "POST", requestURL, options)
+		request.AddTokenAuth(writeToken)
+		response := MakeRequest(t, request, http.StatusCreated)
+
+		var registerRunnerResponse *api.RegisterRunnerResponse
+		DecodeJSON(t, response, &registerRunnerResponse)
+
+		secondRequest := NewRequestWithJSON(t, "POST", requestURL, options)
+		secondRequest.AddTokenAuth(writeToken)
+		secondResponse := MakeRequest(t, secondRequest, http.StatusCreated)
+
+		var secondRegisterRunnerResponse *api.RegisterRunnerResponse
+		DecodeJSON(t, secondResponse, &secondRegisterRunnerResponse)
+
+		firstRunner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{UUID: registerRunnerResponse.UUID})
+		secondRunner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{UUID: secondRegisterRunnerResponse.UUID})
+
+		assert.NotEqual(t, firstRunner.ID, secondRunner.ID)
+		assert.NotEqual(t, firstRunner.UUID, secondRunner.UUID)
+	})
+
+	t.Run("Runner registration requires write token for repository scope", func(t *testing.T) {
+		options := api.RegisterRunnerOptions{Name: "api-runner"}
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners", repo1.OwnerName, repo1.Name)
+		request := NewRequestWithJSON(t, "POST", requestURL, options)
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusForbidden)
+
+		type errorResponse struct {
+			Message string `json:"message"`
+		}
+
+		var errorMessage *errorResponse
+		DecodeJSON(t, response, &errorMessage)
+
+		assert.Equal(t, "token does not have at least one of required scope(s): [write:repository]", errorMessage.Message)
+	})
+
+	t.Run("Endpoints disabled if Actions disabled", func(t *testing.T) {
+		repository, _, cleanUp := tests.CreateDeclarativeRepo(t, user2, "no-actions",
+			[]unit_model.Type{unit_model.TypeCode, unit_model.TypeActions}, []unit_model.Type{}, nil)
+		defer cleanUp()
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runners", repository.FullName())
+
+		request := NewRequest(t, "GET", requestURL)
+		request.AddTokenAuth(readToken)
+		MakeRequest(t, request, http.StatusOK)
+
+		enabledUnits := []repo_model.RepoUnit{{RepoID: repository.ID, Type: unit_model.TypeCode}}
+		disabledUnits := []unit_model.Type{unit_model.TypeActions}
+		err := repo_service.UpdateRepositoryUnits(db.DefaultContext, repository, enabledUnits, disabledUnits)
+		require.NoError(t, err)
+
+		request = NewRequest(t, "GET", requestURL)
+		request.AddTokenAuth(readToken)
+		MakeRequest(t, request, http.StatusNotFound)
+	})
 }

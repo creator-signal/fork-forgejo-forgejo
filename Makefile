@@ -37,17 +37,17 @@ endif
 XGO_VERSION := go-1.21.x
 
 AIR_PACKAGE ?= github.com/air-verse/air@v1 # renovate: datasource=go
-EDITORCONFIG_CHECKER_PACKAGE ?= github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@v3.4.1 # renovate: datasource=go
+EDITORCONFIG_CHECKER_PACKAGE ?= github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@v3.6.1 # renovate: datasource=go
 GOFUMPT_PACKAGE ?= mvdan.cc/gofumpt@v0.9.2 # renovate: datasource=go
-GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2 # renovate: datasource=go
+GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2 # renovate: datasource=go
 GXZ_PACKAGE ?= github.com/ulikunitz/xz/cmd/gxz@v0.5.15 # renovate: datasource=go
 SWAGGER_PACKAGE ?= github.com/go-swagger/go-swagger/cmd/swagger@v0.33.1 # renovate: datasource=go
 XGO_PACKAGE ?= src.techknowlogick.com/xgo@latest
 GO_LICENSES_PACKAGE ?= github.com/google/go-licenses@v1.6.0 # renovate: datasource=go
 GOVULNCHECK_PACKAGE ?= golang.org/x/vuln/cmd/govulncheck@v1 # renovate: datasource=go
-DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.39.0 # renovate: datasource=go
+DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.42.0 # renovate: datasource=go
 GOMOCK_PACKAGE ?= go.uber.org/mock/mockgen@v0.6.0 # renovate: datasource=go
-RENOVATE_NPM_PACKAGE ?= renovate@42.11.0 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
+RENOVATE_NPM_PACKAGE ?= renovate@43.31.1 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
 
 # https://github.com/disposable-email-domains/disposable-email-domains/commits/main/
 DISPOSABLE_EMAILS_SHA ?= 0c27e671231d27cf66370034d7f6818037416989 # renovate: ...
@@ -322,7 +322,7 @@ git-check:
 node-check:
 	$(eval MIN_NODE_VERSION_STR := $(shell grep -Eo '"node":.*[0-9.]+"' package.json | sed -n 's/.*[^0-9.]\([0-9.]*\)"/\1/p'))
 	$(eval MIN_NODE_VERSION := $(shell printf "%03d%03d%03d" $(shell echo '$(MIN_NODE_VERSION_STR)' | tr '.' ' ')))
-	$(eval NODE_VERSION := $(shell printf "%03d%03d%03d" $(shell node -v | cut -c2- | tr '.' ' ');))
+	$(eval NODE_VERSION := $(shell printf "%03d%03d%03d" $(shell node -v | cut -c2- | sed 's:-.*::' | tr '.' ' ');))
 	$(eval NPM_MISSING := $(shell hash npm > /dev/null 2>&1 || echo 1))
 	@if [ "$(NODE_VERSION)" -lt "$(MIN_NODE_VERSION)" -o "$(NPM_MISSING)" = "1" ]; then \
 		echo "Forgejo requires Node.js $(MIN_NODE_VERSION_STR) or greater and npm to build. You can get it at https://nodejs.org/en/download/"; \
@@ -465,7 +465,7 @@ lint-swagger: node_modules
 
 .PHONY: lint-renovate
 lint-renovate: node_modules
-	npx --yes --package $(RENOVATE_NPM_PACKAGE) -- renovate-config-validator > .lint-renovate 2>&1 || true
+	npx --yes --package $(RENOVATE_NPM_PACKAGE) -- renovate-config-validator --no-global .forgejo/renovate.json > .lint-renovate 2>&1 || true
 	@if grep --quiet --extended-regexp -e '^( ERROR:)' .lint-renovate ; then cat .lint-renovate ; rm .lint-renovate ; exit 1 ; fi
 	@rm .lint-renovate
 
@@ -519,6 +519,11 @@ security-check:
 .PHONY: tsc
 tsc: node_modules
 	npx tsc --noEmit
+
+# target for PRs to be pushed. Mandatory to succeed in CI
+.PHONY: pr-go
+pr-go: deps-backend deps-tools lint-backend tidy-check swagger-check lint-swagger fmt-check swagger-validate
+	TAGS=bindata $(MAKE) backend
 
 ###
 # Development and testing targets

@@ -54,18 +54,20 @@ func TestGenerateGiteaContext(t *testing.T) {
 
 	t.Run("Basic workflow run without job", func(t *testing.T) {
 		run := &actions_model.ActionRun{
-			ID:           1,
-			Index:        42,
-			TriggerUser:  testUser,
-			Repo:         testRepo,
-			TriggerEvent: "push",
-			Ref:          "refs/heads/main",
-			CommitSHA:    "abc123def456",
-			WorkflowID:   "test-workflow",
-			EventPayload: `{"repository": {"name": "testrepo"}}`,
+			ID:                1,
+			Index:             42,
+			TriggerUser:       testUser,
+			Repo:              testRepo,
+			TriggerEvent:      "push",
+			Ref:               "refs/heads/main",
+			CommitSHA:         "abc123def456",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			EventPayload:      `{"repository": {"name": "testrepo"}}`,
 		}
 
-		context := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(run, nil)
+		require.NoError(t, err)
 
 		assert.Equal(t, "testuser", context["actor"])
 		assert.Equal(t, setting.AppURL+"api/v1", context["api_url"])
@@ -77,7 +79,8 @@ func TestGenerateGiteaContext(t *testing.T) {
 		assert.Equal(t, "testowner", context["repository_owner"])
 		assert.Equal(t, "abc123def456", context["sha"])
 		assert.Equal(t, "42", context["run_number"])
-		assert.Equal(t, "test-workflow", context["workflow"])
+		assert.Equal(t, "test-workflow.yaml", context["workflow"])
+		assert.Equal(t, "testowner/testrepo/.forgejo/workflows/test-workflow.yaml@refs/heads/main", context["workflow_ref"])
 		assert.Equal(t, false, context["ref_protected"])
 		assert.Equal(t, "Actions", context["secret_source"])
 		assert.Equal(t, setting.AppURL, context["server_url"])
@@ -119,13 +122,15 @@ func TestGenerateGiteaContext(t *testing.T) {
 		}
 
 		job := &actions_model.ActionRunJob{
-			ID:      100,
-			RunID:   1,
-			JobID:   "test-job",
-			Attempt: 1,
+			ID:              100,
+			RunID:           1,
+			JobID:           "test-job",
+			Attempt:         1,
+			WorkflowPayload: []byte("on: [push]"),
 		}
 
-		context := GenerateGiteaContext(run, job)
+		context, err := GenerateGiteaContext(run, job)
+		require.NoError(t, err)
 
 		assert.Equal(t, "test-job", context["job"])
 		assert.Equal(t, "1", context["run_id"])
@@ -151,24 +156,27 @@ func TestGenerateGiteaContext(t *testing.T) {
 		payloadBytes, _ := json.Marshal(pullRequestPayload)
 
 		run := &actions_model.ActionRun{
-			ID:           1,
-			Index:        42,
-			TriggerUser:  testUser,
-			Repo:         testRepo,
-			TriggerEvent: "pull_request",
-			Ref:          "refs/pull/1/merge",
-			CommitSHA:    "merge789sha",
-			WorkflowID:   "test-workflow",
-			Event:        webhook_module.HookEventPullRequest,
-			EventPayload: string(payloadBytes),
+			ID:                1,
+			Index:             42,
+			TriggerUser:       testUser,
+			Repo:              testRepo,
+			TriggerEvent:      "pull_request",
+			Ref:               "refs/pull/1/merge",
+			CommitSHA:         "merge789sha",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			Event:             webhook_module.HookEventPullRequest,
+			EventPayload:      string(payloadBytes),
 		}
 
-		context := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(run, nil)
+		require.NoError(t, err)
 
 		assert.Equal(t, "main", context["base_ref"])
 		assert.Equal(t, "feature-branch", context["head_ref"])
 		assert.Equal(t, "refs/pull/1/merge", context["ref"])
 		assert.Equal(t, "merge789sha", context["sha"])
+		assert.Equal(t, "testowner/testrepo/.forgejo/workflows/test-workflow.yaml@refs/pull/1/merge", context["workflow_ref"])
 	})
 
 	t.Run("Pull request target event", func(t *testing.T) {
@@ -190,19 +198,21 @@ func TestGenerateGiteaContext(t *testing.T) {
 		payloadBytes, _ := json.Marshal(pullRequestPayload)
 
 		run := &actions_model.ActionRun{
-			ID:           1,
-			Index:        42,
-			TriggerUser:  testUser,
-			Repo:         testRepo,
-			TriggerEvent: actions_module.GithubEventPullRequestTarget,
-			Ref:          "refs/pull/1/merge",
-			CommitSHA:    "merge789sha",
-			WorkflowID:   "test-workflow",
-			Event:        webhook_module.HookEventPullRequest,
-			EventPayload: string(payloadBytes),
+			ID:                1,
+			Index:             42,
+			TriggerUser:       testUser,
+			Repo:              testRepo,
+			TriggerEvent:      actions_module.GithubEventPullRequestTarget,
+			Ref:               "refs/pull/1/merge",
+			CommitSHA:         "merge789sha",
+			WorkflowID:        "test-workflow.yml",
+			WorkflowDirectory: ".github/workflows",
+			Event:             webhook_module.HookEventPullRequest,
+			EventPayload:      string(payloadBytes),
 		}
 
-		context := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(run, nil)
+		require.NoError(t, err)
 
 		assert.Equal(t, "main", context["base_ref"])
 		assert.Equal(t, "feature-branch", context["head_ref"])
@@ -211,6 +221,34 @@ func TestGenerateGiteaContext(t *testing.T) {
 		assert.Equal(t, "base123sha", context["sha"])
 		assert.Equal(t, "main", context["ref_name"])
 		assert.Equal(t, "branch", context["ref_type"])
+		assert.Equal(t, "testowner/testrepo/.github/workflows/test-workflow.yml@refs/heads/main", context["workflow_ref"])
+	})
+
+	t.Run("workflow_call job", func(t *testing.T) {
+		run := &actions_model.ActionRun{
+			ID:           1,
+			Index:        42,
+			TriggerUser:  testUser,
+			Repo:         testRepo,
+			TriggerEvent: "push",
+			Ref:          "refs/heads/main",
+			CommitSHA:    "abc123def456",
+			WorkflowID:   "test-workflow",
+			EventPayload: `{}`,
+		}
+
+		job := &actions_model.ActionRunJob{
+			ID:              100,
+			RunID:           1,
+			JobID:           "test-job",
+			Attempt:         1,
+			WorkflowPayload: []byte("on: { workflow_call: { inputs: {} } }\n__metadata:\n  workflow_call_parent: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed\n"),
+		}
+
+		context, err := GenerateGiteaContext(run, job)
+		require.NoError(t, err)
+
+		assert.Equal(t, "workflow_call", context["event_name"])
 	})
 }
 
@@ -228,15 +266,16 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 
 	t.Run("Basic workflow run", func(t *testing.T) {
 		run := &actions_model.ActionRun{
-			ID:           1,
-			Index:        42,
-			TriggerUser:  testUser,
-			Repo:         testRepo,
-			TriggerEvent: "push",
-			Ref:          "refs/heads/main",
-			CommitSHA:    "abc123def456",
-			WorkflowID:   "test-workflow",
-			EventPayload: `{"repository": {"name": "testrepo"}}`,
+			ID:                1,
+			Index:             42,
+			TriggerUser:       testUser,
+			Repo:              testRepo,
+			TriggerEvent:      "push",
+			Ref:               "refs/heads/main",
+			CommitSHA:         "abc123def456",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			EventPayload:      `{"repository": {"name": "testrepo"}}`,
 		}
 
 		gitContextObj := generateGiteaContextForRun(run)
@@ -251,7 +290,8 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 		assert.Equal(t, "testowner", gitContextObj.RepositoryOwner)
 		assert.Equal(t, "abc123def456", gitContextObj.Sha)
 		assert.Equal(t, "42", gitContextObj.RunNumber)
-		assert.Equal(t, "test-workflow", gitContextObj.Workflow)
+		assert.Equal(t, "test-workflow.yaml", gitContextObj.Workflow)
+		assert.Equal(t, "testowner/testrepo/.forgejo/workflows/test-workflow.yaml@refs/heads/main", gitContextObj.WorkflowRef)
 
 		assert.Equal(t, "testrepo", gitContextObj.Event["repository"].(map[string]any)["name"])
 
@@ -289,16 +329,17 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 		payloadBytes, _ := json.Marshal(pullRequestPayload)
 
 		run := &actions_model.ActionRun{
-			ID:           1,
-			Index:        42,
-			TriggerUser:  testUser,
-			Repo:         testRepo,
-			TriggerEvent: "pull_request",
-			Ref:          "refs/pull/1/merge",
-			CommitSHA:    "merge789sha",
-			WorkflowID:   "test-workflow",
-			Event:        webhook_module.HookEventPullRequest,
-			EventPayload: string(payloadBytes),
+			ID:                1,
+			Index:             42,
+			TriggerUser:       testUser,
+			Repo:              testRepo,
+			TriggerEvent:      "pull_request",
+			Ref:               "refs/pull/1/merge",
+			CommitSHA:         "merge789sha",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			Event:             webhook_module.HookEventPullRequest,
+			EventPayload:      string(payloadBytes),
 		}
 
 		gitContextObj := generateGiteaContextForRun(run)
@@ -307,6 +348,7 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 		assert.Equal(t, "feature-branch", gitContextObj.HeadRef)
 		assert.Equal(t, "refs/pull/1/merge", gitContextObj.Ref)
 		assert.Equal(t, "merge789sha", gitContextObj.Sha)
+		assert.Equal(t, "testowner/testrepo/.forgejo/workflows/test-workflow.yaml@refs/pull/1/merge", gitContextObj.WorkflowRef)
 	})
 
 	t.Run("Pull request target event", func(t *testing.T) {
@@ -328,16 +370,17 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 		payloadBytes, _ := json.Marshal(pullRequestPayload)
 
 		run := &actions_model.ActionRun{
-			ID:           1,
-			Index:        42,
-			TriggerUser:  testUser,
-			Repo:         testRepo,
-			TriggerEvent: actions_module.GithubEventPullRequestTarget,
-			Ref:          "refs/pull/1/merge",
-			CommitSHA:    "merge789sha",
-			WorkflowID:   "test-workflow",
-			Event:        webhook_module.HookEventPullRequest,
-			EventPayload: string(payloadBytes),
+			ID:                1,
+			Index:             42,
+			TriggerUser:       testUser,
+			Repo:              testRepo,
+			TriggerEvent:      actions_module.GithubEventPullRequestTarget,
+			Ref:               "refs/pull/1/merge",
+			CommitSHA:         "merge789sha",
+			WorkflowID:        "test-workflow.yml",
+			WorkflowDirectory: ".github/workflows",
+			Event:             webhook_module.HookEventPullRequest,
+			EventPayload:      string(payloadBytes),
 		}
 
 		gitContextObj := generateGiteaContextForRun(run)
@@ -349,5 +392,6 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 		assert.Equal(t, "base123sha", gitContextObj.Sha)
 		assert.Equal(t, "main", gitContextObj.RefName)
 		assert.Equal(t, "branch", gitContextObj.RefType)
+		assert.Equal(t, "testowner/testrepo/.github/workflows/test-workflow.yml@refs/heads/main", gitContextObj.WorkflowRef)
 	})
 }

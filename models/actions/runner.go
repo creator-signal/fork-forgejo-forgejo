@@ -61,6 +61,8 @@ type ActionRunner struct {
 
 	// Store labels defined in state file (default: .runner file) of `act_runner`
 	AgentLabels []string `xorm:"TEXT"`
+	// Store if this is a runner that only ever get one single job assigned
+	Ephemeral bool `xorm:"ephemeral NOT NULL DEFAULT false"`
 
 	Created timeutil.TimeStamp `xorm:"created"`
 	Updated timeutil.TimeStamp `xorm:"updated"`
@@ -212,8 +214,8 @@ func (opts FindRunnerOptions) ToConds() builder.Cond {
 		cond = cond.And(builder.Like{"name", opts.Filter})
 	}
 
-	if opts.IsOnline.Has() {
-		if opts.IsOnline.Value() {
+	if has, value := opts.IsOnline.Get(); has {
+		if value {
 			cond = cond.And(builder.Gt{"last_online": time.Now().Add(-RunnerOfflineTime).Unix()})
 		} else {
 			cond = cond.And(builder.Lte{"last_online": time.Now().Add(-RunnerOfflineTime).Unix()})

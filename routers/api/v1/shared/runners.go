@@ -13,9 +13,12 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
+
+	gouuid "github.com/google/uuid"
 )
 
 // RegistrationToken is a string used to register a runner with a server
@@ -87,25 +90,31 @@ func ListRunners(ctx *context.APIContext, ownerID, repoID int64) {
 		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
 		return
 	}
+
+	listOptions := utils.GetListOptions(ctx)
 	runners, total, err := db.FindAndCount[actions_model.ActionRunner](ctx, &actions_model.FindRunnerOptions{
 		OwnerID:     ownerID,
 		RepoID:      repoID,
-		ListOptions: utils.GetListOptions(ctx),
+		ListOptions: listOptions,
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "FindCountRunners", map[string]string{})
 		return
 	}
 
-	res := new(structs.ActionRunnersResponse)
-	res.TotalCount = total
-
-	res.Entries = make([]*structs.ActionRunner, len(runners))
+	runnerList := make([]structs.ActionRunner, len(runners))
 	for i, runner := range runners {
-		res.Entries[i] = convert.ToActionRunner(ctx, runner)
+		actionRunner, err := convert.ToActionRunner(runner)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "ToActionRunner", err)
+			return
+		}
+		runnerList[i] = actionRunner
 	}
 
-	ctx.JSON(http.StatusOK, &res)
+	ctx.SetLinkHeader(int(total), listOptions.PageSize)
+	ctx.SetTotalCountHeader(total)
+	ctx.JSON(http.StatusOK, &runnerList)
 }
 
 // GetRunner get the runner for api route validated ownerID and repoID
@@ -132,7 +141,40 @@ func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 		ctx.Error(http.StatusNotFound, "RunnerEdit", "No permission to get this runner")
 		return
 	}
-	ctx.JSON(http.StatusOK, convert.ToActionRunner(ctx, runner))
+
+	actionRunner, err := convert.ToActionRunner(runner)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "ToActionRunner", err)
+	}
+	ctx.JSON(http.StatusOK, actionRunner)
+}
+
+func RegisterRunner(ctx *context.APIContext, ownerID, repoID int64) {
+	if ownerID != 0 && repoID != 0 {
+		ctx.Error(http.StatusUnprocessableEntity, "RegisterRunner", fmt.Errorf("ownerID '%d' and repoID '%d' cannot be set simultaneously", ownerID, repoID))
+		return
+	}
+
+	options := web.GetForm(ctx).(*structs.RegisterRunnerOptions)
+	runner := &actions_model.ActionRunner{
+		UUID:        gouuid.NewString(),
+		Name:        options.Name,
+		OwnerID:     ownerID,
+		RepoID:      repoID,
+		Description: options.Description,
+		Ephemeral:   options.Ephemeral,
+	}
+	runner.GenerateToken()
+	if err := actions_model.CreateRunner(ctx, runner); err != nil {
+		ctx.Error(http.StatusInternalServerError, "CreateRunner", err)
+	}
+
+	response := &structs.RegisterRunnerResponse{
+		ID:    runner.ID,
+		UUID:  runner.UUID,
+		Token: runner.Token,
+	}
+	ctx.JSON(http.StatusCreated, response)
 }
 
 // DeleteRunner deletes the runner for api route validated ownerID and repoID

@@ -6,9 +6,7 @@ package pull
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,7 +15,6 @@ import (
 	"unicode"
 
 	"forgejo.org/models"
-	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	access_model "forgejo.org/models/perm/access"
@@ -30,7 +27,6 @@ import (
 	"forgejo.org/modules/references"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
-	"forgejo.org/modules/timeutil"
 	issue_service "forgejo.org/services/issue"
 	notify_service "forgejo.org/services/notify"
 )
@@ -83,12 +79,21 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 		issueReference = "!"
 	}
 
-	issueURL, err := url.JoinPath(setting.AppURL, pr.Issue.Link())
-	if err != nil {
-		return "", "", err
-	}
-	reviewedOn := fmt.Sprintf("Reviewed-on: %s", issueURL)
+	reviewedOn := fmt.Sprintf("Reviewed-on: %s", pr.Issue.HTMLURL())
 	reviewedBy := pr.GetApprovers(ctx)
+
+	body = fmt.Sprintf("%s\n%s", reviewedOn, reviewedBy)
+
+	// Squash merge has a different from other styles.
+	if mergeStyle == repo_model.MergeStyleSquash {
+		message = fmt.Sprintf("%s (%s%d)", pr.Issue.Title, issueReference, pr.Issue.Index)
+	} else if pr.BaseRepoID == pr.HeadRepoID {
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from %s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
+	} else if pr.HeadRepo == nil {
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from <deleted>:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
+	} else {
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from %s:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadRepo.FullName(), pr.HeadBranch, pr.BaseBranch)
+	}
 
 	if mergeStyle != "" {
 		commit, err := baseGitRepo.GetBranchCommit(pr.BaseRepo.DefaultBranch)
@@ -158,8 +163,7 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 					vars["ClosingIssues"] = ""
 				}
 			}
-			message, body = expandDefaultMergeMessage(templateContent, vars)
-			return message, body, nil
+			return expandDefaultMergeMessage(templateContent, vars, message, body)
 		}
 	}
 
@@ -168,72 +172,35 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 		return "", "", nil
 	}
 
-	body = fmt.Sprintf("%s\n%s", reviewedOn, reviewedBy)
-
-	// Squash merge has a different from other styles.
-	if mergeStyle == repo_model.MergeStyleSquash {
-		return fmt.Sprintf("%s (%s%d)", pr.Issue.Title, issueReference, pr.Issue.Index), body, nil
-	}
-
-	if pr.BaseRepoID == pr.HeadRepoID {
-		return fmt.Sprintf("Merge pull request '%s' (%s%d) from %s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch), body, nil
-	}
-
-	if pr.HeadRepo == nil {
-		return fmt.Sprintf("Merge pull request '%s' (%s%d) from <deleted>:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch), body, nil
-	}
-
-	return fmt.Sprintf("Merge pull request '%s' (%s%d) from %s:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadRepo.FullName(), pr.HeadBranch, pr.BaseBranch), body, nil
+	return message, body, nil
 }
 
-func expandDefaultMergeMessage(template string, vars map[string]string) (message, body string) {
-	message = strings.TrimSpace(template)
-	if splits := strings.SplitN(message, "\n", 2); len(splits) == 2 {
-		message = splits[0]
-		body = strings.TrimSpace(splits[1])
+func expandDefaultMergeMessage(template string, vars map[string]string, message, body string) (finalMessage, finalBody string, err error) {
+	if template == "" {
+		return message, body, nil
 	}
 	mapping := func(s string) string { return vars[s] }
-	return os.Expand(message, mapping), os.Expand(body, mapping)
+	if splits := strings.SplitN(template, "\n", 2); len(splits) == 2 {
+		var templateTitle string
+		var templateBody string
+		if len(splits[0]) == 0 {
+			templateTitle = message
+		} else {
+			templateTitle = os.Expand(strings.TrimSpace(splits[0]), mapping)
+		}
+		if len(splits[1]) == 0 {
+			templateBody = body
+		} else {
+			templateBody = os.Expand(strings.TrimRightFunc(splits[1], unicode.IsSpace), mapping)
+		}
+		return templateTitle, templateBody, nil
+	}
+	return os.Expand(strings.TrimSpace(template), mapping), body, nil
 }
 
 // GetDefaultMergeMessage returns default message used when merging pull request
 func GetDefaultMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issues_model.PullRequest, mergeStyle repo_model.MergeStyle) (message, body string, err error) {
 	return getMergeMessage(ctx, baseGitRepo, pr, mergeStyle, nil)
-}
-
-func AddCommitMessageTrailer(message, tailerKey, tailerValue string) string {
-	trailerLine := tailerKey + ": " + tailerValue
-	message = strings.ReplaceAll(message, "\r\n", "\n")
-	message = strings.ReplaceAll(message, "\r", "\n")
-	if strings.Contains(message, "\n"+trailerLine+"\n") || strings.HasSuffix(message, "\n"+trailerLine) {
-		return message
-	}
-
-	if !strings.HasSuffix(message, "\n") {
-		message += "\n"
-	}
-	lastNewLine := strings.LastIndexByte(message[:len(message)-1], '\n')
-	keyEnd := -1
-	if lastNewLine != -1 {
-		keyEnd = strings.IndexByte(message[lastNewLine:], ':')
-		if keyEnd != -1 {
-			keyEnd += lastNewLine
-		}
-	}
-	var lastLineKey string
-	if lastNewLine != -1 && keyEnd != -1 {
-		lastLineKey = message[lastNewLine+1 : keyEnd]
-	}
-
-	isLikelyTrailerLine := lastLineKey != "" && unicode.IsUpper(rune(lastLineKey[0])) && strings.Contains(message, "-")
-	for i := 0; isLikelyTrailerLine && i < len(lastLineKey); i++ {
-		r := rune(lastLineKey[i])
-		isLikelyTrailerLine = unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-'
-	}
-	if !strings.HasSuffix(message, "\n\n") && !isLikelyTrailerLine {
-		message += "\n"
-	}
-	return message + trailerLine
 }
 
 // Merge merges pull request to base repository.
@@ -582,69 +549,4 @@ func CheckPullBranchProtections(ctx context.Context, pr *issues_model.PullReques
 	}
 
 	return nil, nil
-}
-
-// MergedManually mark pr as merged manually
-func MergedManually(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.User, baseGitRepo *git.Repository, commitID string) error {
-	pullWorkingPool.CheckIn(fmt.Sprint(pr.ID))
-	defer pullWorkingPool.CheckOut(fmt.Sprint(pr.ID))
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		if err := pr.LoadBaseRepo(ctx); err != nil {
-			return err
-		}
-		prUnit, err := pr.BaseRepo.GetUnit(ctx, unit.TypePullRequests)
-		if err != nil {
-			return err
-		}
-		prConfig := prUnit.PullRequestsConfig()
-
-		// Check if merge style is correct and allowed
-		if !prConfig.IsMergeStyleAllowed(repo_model.MergeStyleManuallyMerged) {
-			return models.ErrInvalidMergeStyle{ID: pr.BaseRepo.ID, Style: repo_model.MergeStyleManuallyMerged}
-		}
-
-		objectFormat := git.ObjectFormatFromName(pr.BaseRepo.ObjectFormatName)
-		if len(commitID) != objectFormat.FullLength() {
-			return errors.New("Wrong commit ID")
-		}
-
-		commit, err := baseGitRepo.GetCommit(commitID)
-		if err != nil {
-			if git.IsErrNotExist(err) {
-				return errors.New("Wrong commit ID")
-			}
-			return err
-		}
-		commitID = commit.ID.String()
-
-		ok, err := baseGitRepo.IsCommitInBranch(commitID, pr.BaseBranch)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return errors.New("Wrong commit ID")
-		}
-
-		pr.MergedCommitID = commitID
-		pr.MergedUnix = timeutil.TimeStamp(commit.Author.When.Unix())
-		pr.Status = issues_model.PullRequestStatusManuallyMerged
-		pr.Merger = doer
-		pr.MergerID = doer.ID
-
-		var merged bool
-		if merged, err = pr.SetMerged(ctx); err != nil {
-			return err
-		} else if !merged {
-			return errors.New("SetMerged failed")
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	notify_service.MergePullRequest(baseGitRepo.Ctx, doer, pr)
-	log.Info("manuallyMerged[%d]: Marked as manually merged into %s/%s by commit id: %s", pr.ID, pr.BaseRepo.Name, pr.BaseBranch, commitID)
-
-	return handleCloseCrossReferences(ctx, pr, doer)
 }

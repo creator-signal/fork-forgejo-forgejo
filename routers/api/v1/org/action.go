@@ -17,7 +17,7 @@ import (
 	"forgejo.org/routers/api/v1/utils"
 	actions_service "forgejo.org/services/actions"
 	"forgejo.org/services/context"
-	secret_service "forgejo.org/services/secrets"
+	secrets_service "forgejo.org/services/secrets"
 )
 
 // ListActionsSecrets lists actions secrets of an organization
@@ -106,7 +106,7 @@ func (Action) CreateOrUpdateSecret(ctx *context.APIContext) {
 
 	opt := web.GetForm(ctx).(*api.CreateOrUpdateSecretOption)
 
-	_, created, err := secret_service.CreateOrUpdateSecret(ctx, ctx.Org.Organization.ID, 0, ctx.Params("secretname"), opt.Data)
+	_, created, err := secrets_service.CreateOrUpdateSecret(ctx, ctx.Org.Organization.ID, 0, ctx.Params("secretname"), opt.Data)
 	if err != nil {
 		if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "CreateOrUpdateSecret", err)
@@ -153,7 +153,7 @@ func (Action) DeleteSecret(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	err := secret_service.DeleteSecretByName(ctx, ctx.Org.Organization.ID, 0, ctx.Params("secretname"))
+	err := secrets_service.DeleteSecretByName(ctx, ctx.Org.Organization.ID, 0, ctx.Params("secretname"))
 	if err != nil {
 		if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "DeleteSecret", err)
@@ -168,12 +168,11 @@ func (Action) DeleteSecret(ctx *context.APIContext) {
 	ctx.Status(http.StatusNoContent)
 }
 
-// https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#create-a-registration-token-for-an-organization
-// GetRegistrationToken returns the token to register org runners
+// GetRegistrationToken returns the organization's runner registration token
 func (Action) GetRegistrationToken(ctx *context.APIContext) {
 	// swagger:operation GET /orgs/{org}/actions/runners/registration-token organization orgGetRunnerRegistrationToken
 	// ---
-	// summary: Get an organization's actions runner registration token
+	// summary: Get the organization's runner registration token
 	// produces:
 	// - application/json
 	// parameters:
@@ -212,27 +211,6 @@ func (Action) SearchActionRunJobs(ctx *context.APIContext) {
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 	shared.GetActionRunJobs(ctx, ctx.Org.Organization.ID, 0)
-}
-
-// https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#create-a-registration-token-for-an-organization
-// CreateRegistrationToken returns the token to register org runners
-func (Action) CreateRegistrationToken(ctx *context.APIContext) {
-	// swagger:operation POST /orgs/{org}/actions/runners/registration-token organization orgCreateRunnerRegistrationToken
-	// ---
-	// summary: Get an organization's actions runner registration token
-	// produces:
-	// - application/json
-	// parameters:
-	// - name: org
-	//   in: path
-	//   description: name of the organization
-	//   type: string
-	//   required: true
-	// responses:
-	//   "200":
-	//     "$ref": "#/responses/RegistrationToken"
-
-	shared.GetRegistrationToken(ctx, ctx.Org.Organization.ID, 0)
 }
 
 // ListVariables list org-level variables
@@ -287,11 +265,11 @@ func (Action) ListVariables(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, variables)
 }
 
-// ListRunners get org-level runners
+// ListRunners returns the organization's runners
 func (Action) ListRunners(ctx *context.APIContext) {
 	// swagger:operation GET /orgs/{org}/actions/runners organization getOrgRunners
 	// ---
-	// summary: Get org-level runners
+	// summary: Get the organization's runners
 	// produces:
 	// - application/json
 	// parameters:
@@ -300,9 +278,17 @@ func (Action) ListRunners(ctx *context.APIContext) {
 	//   description: name of the organization
 	//   type: string
 	//   required: true
+	// - name: page
+	//   in: query
+	//   description: page number of results to return (1-based)
+	//   type: integer
+	// - name: limit
+	//   in: query
+	//   description: page size of results
+	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/definitions/ActionRunnersResponse"
+	//     "$ref": "#/responses/ActionRunnerList"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "404":
@@ -310,11 +296,11 @@ func (Action) ListRunners(ctx *context.APIContext) {
 	shared.ListRunners(ctx, ctx.Org.Organization.ID, 0)
 }
 
-// GetRunner get an org-level runner
+// GetRunner gets a particular runner that belongs to the organization
 func (Action) GetRunner(ctx *context.APIContext) {
 	// swagger:operation GET /orgs/{org}/actions/runners/{runner_id} organization getOrgRunner
 	// ---
-	// summary: Get an org-level runner
+	// summary: Get a particular runner that belongs to the organization
 	// produces:
 	// - application/json
 	// parameters:
@@ -325,12 +311,12 @@ func (Action) GetRunner(ctx *context.APIContext) {
 	//   required: true
 	// - name: runner_id
 	//   in: path
-	//   description: id of the runner
+	//   description: ID of the runner
 	//   type: string
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/definitions/ActionRunner"
+	//     "$ref": "#/responses/ActionRunner"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "404":
@@ -338,11 +324,43 @@ func (Action) GetRunner(ctx *context.APIContext) {
 	shared.GetRunner(ctx, ctx.Org.Organization.ID, 0, ctx.ParamsInt64("runner_id"))
 }
 
-// DeleteRunner delete an org-level runner
+// RegisterRunner registers a new organization-level runner
+func (Action) RegisterRunner(ctx *context.APIContext) {
+	// swagger:operation POST /orgs/{org}/actions/runners organization registerOrgRunner
+	// ---
+	// summary: Register a new organization-level runner
+	// consumes:
+	// - application/json
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: org
+	//   in: path
+	//   description: name of the organization
+	//   type: string
+	//   required: true
+	// - name: body
+	//   in: body
+	//   schema:
+	//     "$ref": "#/definitions/RegisterRunnerOptions"
+	// responses:
+	//   "201":
+	//     "$ref": "#/responses/RegisterRunnerResponse"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	shared.RegisterRunner(ctx, ctx.Org.Organization.ID, 0)
+}
+
+// DeleteRunner removes a particular runner that belongs to the organization
 func (Action) DeleteRunner(ctx *context.APIContext) {
 	// swagger:operation DELETE /orgs/{org}/actions/runners/{runner_id} organization deleteOrgRunner
 	// ---
-	// summary: Delete an org-level runner
+	// summary: Delete a particular runner that belongs to the organization
 	// produces:
 	// - application/json
 	// parameters:
@@ -353,7 +371,7 @@ func (Action) DeleteRunner(ctx *context.APIContext) {
 	//   required: true
 	// - name: runner_id
 	//   in: path
-	//   description: id of the runner
+	//   description: ID of the runner
 	//   type: string
 	//   required: true
 	// responses:
