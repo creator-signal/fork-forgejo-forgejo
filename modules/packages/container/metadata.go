@@ -16,14 +16,13 @@ import (
 )
 
 const (
-	PropertyRepository        = "container.repository"
-	PropertyDigest            = "container.digest"
-	PropertyMediaType         = "container.mediatype"
-	PropertyManifestTagged    = "container.manifest.tagged"
-	PropertyManifestReference = "container.manifest.reference"
-	PropertyRemoteSource      = "container.remote.source"
-	PropertyCacheTime         = "container.remote.cache_time"
-	PropertyRemoteDigest      = "container.remote.digest"
+	PropertyRepository         = "container.repository"
+	PropertyDigest             = "container.digest"
+	PropertyMediaType          = "container.mediatype"
+	PropertyManifestTagged     = "container.manifest.tagged"
+	PropertyManifestReference  = "container.manifest.reference"
+	PropertyRemoteSource       = "container.remote.source"
+	PropertyRemoteRegistryName = "container.remote.registry_name"
 
 	DefaultPlatform = "linux/amd64"
 

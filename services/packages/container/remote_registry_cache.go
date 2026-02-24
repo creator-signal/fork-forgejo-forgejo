@@ -5,7 +5,6 @@ package container
 
 import (
 	"fmt"
-	"time"
 
 	packages_model "forgejo.org/models/packages"
 	user_model "forgejo.org/models/user"
@@ -29,22 +28,21 @@ func SaveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, 
 		Creator: creator,
 	}
 
-	pb, pf, err := SaveAsPackageBlob(ctx, buf, pci)
+	_, pf, err := SaveAsPackageBlob(ctx, buf, pci)
 	if err != nil {
 		return fmt.Errorf("failed to save blob from remote registry: %w", err)
 	}
 
-	addRemoteMetadataToBlob(ctx, pb, remoteCtx, pf)
+	addRemoteMetadataToBlob(ctx, remoteCtx, pf)
 
 	return nil
 }
 
 // addRemoteMetadataToBlob Add rr id, time and remote digest as info to blob
-func addRemoteMetadataToBlob(ctx *context.Context, pb *packages_model.PackageBlob, remoteCtx *rr_module.RemoteRegistryContext, pf *packages_model.PackageFile) {
+func addRemoteMetadataToBlob(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, pf *packages_model.PackageFile) {
 	properties := map[string]string{
-		container_module.PropertyRemoteSource: fmt.Sprintf("%d", remoteCtx.RemoteRegistry.ID),
-		container_module.PropertyCacheTime:    fmt.Sprintf("%d", time.Now().Unix()),
-		container_module.PropertyRemoteDigest: fmt.Sprintf("sha256:%s", pb.HashSHA256),
+		container_module.PropertyRemoteSource:       fmt.Sprintf("%d", remoteCtx.RemoteRegistry.ID),
+		container_module.PropertyRemoteRegistryName: fmt.Sprintf("%s", remoteCtx.RemoteRegistry.Name),
 	}
 
 	for name, value := range properties {
