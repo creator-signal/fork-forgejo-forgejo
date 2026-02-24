@@ -160,7 +160,7 @@ func (crc *RegistryClient) AuthenticateRemoteRegistry(ctx context.Context, resp 
 		return &http.Response{}, fmt.Errorf("failed to extract auth URL: %w", err)
 	}
 
-	serviceURL, err := extractServiceURL(authHeader) // TODO Forgejo itself only returns container_registry
+	serviceURL, err := extractServiceURL(authHeader)
 	if err != nil {
 		return &http.Response{}, fmt.Errorf("failed to extract service URL: %w", err)
 	}

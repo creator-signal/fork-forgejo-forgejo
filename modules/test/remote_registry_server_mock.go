@@ -33,13 +33,12 @@ func MockForgejoRegistryServer() *httptest.Server {
 
 	registryRoute.HandleFunc("/v2/",
 		func(res http.ResponseWriter, req *http.Request) {
-			authHeader := req.Header.Get("Authorization")
-			if strings.Contains(authHeader, "Bearer") {
+			reqHeader := req.Header.Get("Authorization")
+			if strings.Contains(reqHeader, "Bearer") {
 				setAuthHeader(res, authHeader)
 				res.WriteHeader(http.StatusOK)
 			} else {
 				setAuthHeader(res, authHeader)
-				_, _ = res.Write([]byte(`{"errors":[{"code":"UNAUTHORIZED","message":""}]}`))
 				res.WriteHeader(http.StatusUnauthorized)
 			}
 		})
