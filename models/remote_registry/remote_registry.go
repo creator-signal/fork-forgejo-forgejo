@@ -57,11 +57,12 @@ func (rrt RemoteRegistryOwnerType) Valid() bool {
 }
 
 // RemoteRegistry represents a remote OCI registry configuration
+// https://xorm.io/docs/chapter-02/4.columns/
 type RemoteRegistry struct {
 	ID             int64                   `xorm:"pk autoincr"`
-	Name           string                  `xorm:"UNIQUE NOT NULL"`
+	Name           string                  `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	OwnerType      RemoteRegistryOwnerType `xorm:"NOT NULL"`
-	OwnerID        int64                   `xorm:"NOT NULL"`
+	OwnerID        int64                   `xorm:"UNIQUE(s) index NOT NULL"`
 	RemoteURL      string                  `xorm:"NOT NULL"`
 	RemoteHost     string                  `xorm:"NOT NULL"`
 	RemotePort     uint16                  `xorm:"NOT NULL"`
@@ -97,7 +98,7 @@ func CreateRemoteRegistry(ctx context.Context, rr RemoteRegistry) error {
 	defer committer.Close()
 
 	if err = db.Insert(ctx, rr); err != nil {
-		return fmt.Errorf("insert remote registry: %w", err)
+		return fmt.Errorf("create remote registry: %w", err)
 	}
 
 	log.Info("Created remote registry %q (ID: %d) for owner_type %s:%d", rr.Name, rr.ID, rr.OwnerType, rr.OwnerID)
