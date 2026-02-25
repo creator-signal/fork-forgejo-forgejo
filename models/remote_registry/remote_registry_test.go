@@ -84,6 +84,49 @@ func Test_CreateUpdateGetDeleteRemoteRegistry(t *testing.T) {
 	unittest.AssertNotExistsBean(t, &RemoteRegistry{Name: name2})
 }
 
+func Test_CanCreateForUserAndOrg(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	rr := RemoteRegistry{
+		Name:       regName,
+		RemoteURL:  remoteURL,
+		RemoteHost: remoteHost,
+		RemotePort: 443,
+		RemoteType: remoteType,
+		OwnerType:  RRUser,
+		OwnerID:    int64(1),
+	}
+
+	rr2 := RemoteRegistry{
+		Name:       regName,
+		RemoteURL:  remoteURL,
+		RemoteHost: remoteHost,
+		RemotePort: 443,
+		RemoteType: remoteType,
+		OwnerType:  RROrg,
+		OwnerID:    int64(2),
+	}
+
+	err := CreateRemoteRegistry(t.Context(), rr)
+	require.NoError(t, err)
+	retrieved := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: rr.Name, OwnerType: rr.OwnerType, OwnerID: rr.OwnerID})
+	assert.Equal(t, remoteType, retrieved.RemoteType)
+
+	rrs, err := GetRemoteRegistriesByOwnerType(t.Context(), rr.OwnerType, rr.OwnerID)
+	require.NoError(t, err)
+	assert.Equal(t, retrieved.ID, rrs[0].ID)
+
+	err = CreateRemoteRegistry(t.Context(), rr2)
+	require.NoError(t, err)
+	retrieved2 := unittest.AssertExistsAndLoadBean(t, &RemoteRegistry{Name: rr2.Name, OwnerType: rr2.OwnerType, OwnerID: rr2.OwnerID})
+	assert.Equal(t, remoteType, retrieved2.RemoteType)
+
+	rrs2, err := GetRemoteRegistriesByOwnerType(t.Context(), rr2.OwnerType, rr2.OwnerID)
+	require.NoError(t, err)
+	assert.Equal(t, retrieved2.ID, rrs2[0].ID)
+
+}
+
 func Test_SetGetCredentials(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
