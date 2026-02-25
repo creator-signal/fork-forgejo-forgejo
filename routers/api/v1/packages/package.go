@@ -372,6 +372,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		return
 	}
 
 	// Permissions
@@ -388,6 +389,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		return
 	}
 
 	remoteType := strings.ToLower(rrOpts.RemoteType)
@@ -407,6 +409,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		return
 	}
 
 	connected := true
@@ -414,20 +417,24 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 		registryClient, err := container_service.NewContainerRegistryClient(&rr)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+			return
 		}
 		connected, err = registryClient.RemoteRegistryConnected(ctx)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+			return
 		}
 	}
 
 	if !connected {
 		ctx.Error(http.StatusInternalServerError, "Connection Test", err)
+		return
 	}
 
 	err = packages_service.CreateRemoteRegistry(ctx, rr)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		return
 	}
 
 	ctx.JSON(http.StatusCreated, convert.ToRemoteRegistry(&rr))
@@ -472,6 +479,7 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		return
 	}
 
 	// Permissions
@@ -488,6 +496,7 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		return
 	}
 
 	rr, err := packages_service.NewRemoteRegistry(
@@ -505,6 +514,7 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 		})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		return
 	}
 
 	connected := true
@@ -512,20 +522,24 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 		registryClient, err := container_service.NewContainerRegistryClient(&rr)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+			return
 		}
 		connected, err = registryClient.RemoteRegistryConnected(ctx)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+			return
 		}
 	}
 
 	if !connected {
 		ctx.Error(http.StatusInternalServerError, "Connection Test", err)
+		return
 	}
 
 	err = packages_service.UpdateRemoteRegistry(ctx, rr, registryName)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		return
 	}
 
 	ctx.Status(http.StatusCreated)
@@ -557,6 +571,7 @@ func GetRemoteRegistryByName(ctx *context.APIContext) {
 	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+		return
 	}
 
 	// Permissions
@@ -573,6 +588,7 @@ func GetRemoteRegistryByName(ctx *context.APIContext) {
 	rr, err := packages_service.GetRemoteRegistry(ctx, isOrg, isUser, ownerName, registryName)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, convert.ToRemoteRegistry(rr))
@@ -603,6 +619,7 @@ func ListRemoteRegistries(ctx *context.APIContext) {
 	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+		return
 	}
 
 	// Permissions
@@ -619,6 +636,7 @@ func ListRemoteRegistries(ctx *context.APIContext) {
 	rrs, err := packages_service.GetRemoteRegistries(ctx, isOrg, isUser, ownerName)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, convert.ToRemoteRegistryList(rrs))
@@ -655,6 +673,7 @@ func DeleteRemoteRegistry(ctx *context.APIContext) {
 	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+		return
 	}
 
 	// Permissions
@@ -671,11 +690,13 @@ func DeleteRemoteRegistry(ctx *context.APIContext) {
 	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+		return
 	}
 
 	err = packages_service.DeleteRemoteRegistry(ctx, ownerType, ctx.ContextUser.ID, registryName)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+		return
 	}
 
 	ctx.Status(http.StatusOK)
@@ -707,6 +728,7 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
 	}
 
 	// Permissions
@@ -726,19 +748,23 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 	rr, err := packages_service.GetRemoteRegistry(ctx, isOrg, isUser, userName, registryName)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
 	}
 
 	registryClient, err := container_service.NewContainerRegistryClient(rr)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
 	}
 	connected, err := registryClient.RemoteRegistryConnected(ctx)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
 	}
 
 	if !connected {
 		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
 	}
 
 	ctx.Status(http.StatusOK)
