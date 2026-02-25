@@ -22,6 +22,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type TokenResponse struct {
+	Token string `json:"token"`
+}
+
 func TestCreateRemoteRegistryUser(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -52,6 +56,60 @@ func TestCreateRemoteRegistryUser(t *testing.T) {
 	assert.Equal(t, rr.RemoteURL, apiRR.RemoteURL)
 	assert.Equal(t, rr.RemoteUser, apiRR.RemoteUser)
 	assert.Equal(t, packages.TypeContainer.Name(), apiRR.RemoteType)
+}
+
+func TestCreateDuplicateFails(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
+	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
+
+	session := loginUser(t, user2.Name)
+	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
+
+	server := mock_server.MockForgejoRegistryServer()
+	defer server.Close()
+
+	rr := api.CreateRemoteRegistryOption{
+		Name:           "testreg",
+		RemoteType:     "container",
+		RemoteURL:      server.URL,
+		RemoteUser:     "someUser",
+		RemoteToken:    "asdfwoe324lkjsdf0242523",
+		RemotePassword: "bla",
+		TestConnection: true,
+	}
+
+	// Post
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
+	MakeRequest(t, req, http.StatusCreated)
+	MakeRequest(t, req, http.StatusUnprocessableEntity)
+}
+
+func TestFailsOnNonExisting(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
+
+	// Get Bearer Token
+	req := NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL))
+	MakeRequest(t, req, http.StatusUnauthorized)
+
+	req = NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL))
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	tokenResponse := &TokenResponse{}
+	DecodeJSON(t, resp, &tokenResponse)
+
+	assert.NotEmpty(t, tokenResponse.Token)
+	anonymousToken := fmt.Sprintf("Bearer %s", tokenResponse.Token)
+
+	image := "myorg/test"
+	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"
+
+	url := fmt.Sprintf("%sv2/%s/remote/%s/%s", setting.AppURL, org3.Name, "testReg", image)
+
+	req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, manifestDigest)).
+		AddTokenAuth(anonymousToken)
+	MakeRequest(t, req, http.StatusNotFound)
 }
 
 func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
@@ -220,10 +278,6 @@ func TestConnectedToken(t *testing.T) {
 }
 
 func TestRemoteRegistryPull(t *testing.T) {
-	type TokenResponse struct {
-		Token string `json:"token"`
-	}
-
 	defer tests.PrepareTestEnv(t)()
 	defer tests.PrintCurrentTest(t)()
 
