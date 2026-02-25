@@ -14,17 +14,16 @@ import (
 	"strings"
 
 	"forgejo.org/models/db"
-	"forgejo.org/modules/json"
-	"forgejo.org/modules/log"
-	"forgejo.org/modules/setting"
-	"forgejo.org/modules/util"
-
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/util"
 	notify_service "forgejo.org/services/notify"
 	packages_service "forgejo.org/services/packages"
 
