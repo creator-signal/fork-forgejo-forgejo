@@ -2,6 +2,7 @@ package packages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -12,6 +13,8 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/validation"
 )
+
+var ErrRemoteRegistryNotExists = errors.New("remote registry does not exist")
 
 type RRCredentials struct {
 	RemoteUser     string
@@ -96,6 +99,9 @@ func GetRemoteRegistry(ctx context.Context, isOrg, isUser bool, userName, regist
 
 	rr, err := rr_model.GetRemoteRegistryByName(ctx, ownerType, owner.ID, registryName)
 	if err != nil {
+		if errors.Is(err, rr_model.ErrRemoteRegistryNotExist) {
+			return &rr_model.RemoteRegistry{}, ErrRemoteRegistryNotExists
+		}
 		return &rr_model.RemoteRegistry{}, err
 	}
 	log.Trace("Found remote registry %q for ownerID: %d", registryName, owner.ID)

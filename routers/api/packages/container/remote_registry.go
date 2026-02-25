@@ -12,6 +12,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
 	rr_service "forgejo.org/services/packages"
+	"forgejo.org/services/packages/container"
 )
 
 const remoteRegistryContextKey = "RemoteRegistryContext"
@@ -39,6 +40,9 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 
 	remoteRegistry, err := rr_service.GetRemoteRegistry(ctx, isOrg, isUser, ownerName, registryName)
 	if err != nil {
+		if errors.Is(err, rr_service.ErrRemoteRegistryNotExists) {
+			apiErrorDefined(ctx, container.ErrNameUnknown.WithMessage(err.Error()))
+		}
 		log.Error("Failed to resolve remote registry %q: %v", registryName, err)
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
