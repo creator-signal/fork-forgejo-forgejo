@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"forgejo.org/models/db"
-	"forgejo.org/models/user"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
@@ -46,15 +45,15 @@ var (
 // ManifestCreationInfo describes a manifest to create
 type ManifestCreationInfo struct {
 	MediaType  string
-	Owner      *user.User
-	Creator    *user.User
+	Owner      *user_model.User
+	Creator    *user_model.User
 	Image      string
 	Reference  string
 	IsTagged   bool
 	Properties map[string]string
 }
 
-func NewManifestCreationInfo(owner, creator *user.User, mediaType, image, reference string) (*ManifestCreationInfo, error) {
+func NewManifestCreationInfo(owner, creator *user_model.User, mediaType, image, reference string) (*ManifestCreationInfo, error) {
 	isTagged := digest.Digest(reference).Validate() != nil
 
 	mci := &ManifestCreationInfo{
