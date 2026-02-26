@@ -26,6 +26,10 @@ type TokenResponse struct {
 	Token string `json:"token"`
 }
 
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
 var rr = api.CreateRemoteRegistryOption{
 	Name:           "testreg",
 	RemoteType:     "container",
@@ -198,14 +202,41 @@ func TestTestConnectionAPIEndpoint(t *testing.T) {
 
 func TestCreateRemoteRegistryOrgNotAllowed(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5}) // User5 is not in org3
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 
-	session := loginUser(t, user5.Name)
-	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})   // User2 is in org17, can write
+	user20 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 20}) // User20 is in org17, can only read
+	org17 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
 
-	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
-	MakeRequest(t, req, http.StatusForbidden)
+	jsonResp := &MessageResponse{}
+
+	// User does not belong to org3 at all
+	session5 := loginUser(t, user5.Name)
+	tokenWritePackage5 := getTokenForLoggedInUser(t, session5, auth_model.AccessTokenScopeWritePackage)
+
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage5)
+	resp := MakeRequest(t, req, http.StatusForbidden)
+	DecodeJSON(t, resp, &jsonResp)
+	assert.Equal(t, "user should have specific permission or be a site admin", jsonResp.Message)
+
+	// User does belong to org17, is in team with write permissions, but is not owner
+	session10 := loginUser(t, user2.Name)
+	tokenWritePackage10 := getTokenForLoggedInUser(t, session10, auth_model.AccessTokenScopeWritePackage)
+
+	req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org17.Name), &rr).AddTokenAuth(tokenWritePackage10)
+	resp = MakeRequest(t, req, http.StatusForbidden)
+	DecodeJSON(t, resp, &jsonResp)
+	assert.Equal(t, "Remote Registry creation is allowed only for owners and admins.", jsonResp.Message)
+
+	// User does belong to org17, is in team with read permissions, but is not owner
+	session11 := loginUser(t, user20.Name)
+	tokenWritePackage11 := getTokenForLoggedInUser(t, session11, auth_model.AccessTokenScopeWritePackage)
+
+	req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org17.Name), &rr).AddTokenAuth(tokenWritePackage11)
+	resp = MakeRequest(t, req, http.StatusForbidden)
+	DecodeJSON(t, resp, &jsonResp)
+	assert.Equal(t, "user should have specific permission or be a site admin", jsonResp.Message)
 }
 
 func TestConnectedBasicAuth(t *testing.T) {
