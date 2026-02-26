@@ -26,6 +26,16 @@ type TokenResponse struct {
 	Token string `json:"token"`
 }
 
+var rr = api.CreateRemoteRegistryOption{
+	Name:           "testreg",
+	RemoteType:     "container",
+	RemoteURL:      "https://example.registry.com",
+	RemoteUser:     "someUser",
+	RemoteToken:    "asdfwoe324lkjsdf0242523",
+	RemotePassword: "somePass",
+	TestConnection: true,
+}
+
 func TestCreateRemoteRegistryUser(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -33,20 +43,13 @@ func TestCreateRemoteRegistryUser(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	rr := api.CreateRemoteRegistryOption{
-		Name:        "testreg",
-		RemoteType:  "container",
-		RemoteURL:   "https://example.registry.com",
-		RemoteUser:  "someUser",
-		RemoteToken: "asdfwoe324lkjsdf0242523",
-	}
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
 	resp := MakeRequest(t, req, http.StatusCreated)
 
 	var apiRR api.RemoteRegistry
 	DecodeJSON(t, resp, &apiRR)
 
-	retrieved := unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: "testreg"})
+	retrieved := unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: rr.Name})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
 	assert.Equal(t, remote_registry_model.RRUser, retrieved.OwnerType)
 
@@ -69,15 +72,7 @@ func TestCreateDuplicateFails(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := api.CreateRemoteRegistryOption{
-		Name:           "testreg",
-		RemoteType:     "container",
-		RemoteURL:      server.URL,
-		RemoteUser:     "someUser",
-		RemoteToken:    "asdfwoe324lkjsdf0242523",
-		RemotePassword: "bla",
-		TestConnection: true,
-	}
+	rr.RemoteURL = server.URL
 
 	// Post
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
@@ -123,15 +118,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := api.CreateRemoteRegistryOption{
-		Name:           "testreg",
-		RemoteType:     "container",
-		RemoteURL:      server.URL,
-		RemoteUser:     "someUser",
-		RemoteToken:    "asdfwoe324lkjsdf0242523",
-		RemotePassword: "bla",
-		TestConnection: true,
-	}
+	rr.RemoteURL = server.URL
 
 	rr2 := api.CreateRemoteRegistryOption{
 		Name:           "testreg2",
@@ -150,7 +137,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	var apiRR api.RemoteRegistry
 	DecodeJSON(t, resp, &apiRR)
 
-	retrieved := unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: "testreg"})
+	retrieved := unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: rr.Name})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
 	assert.Equal(t, remote_registry_model.RROrg, retrieved.OwnerType)
 	assert.Equal(t, rr.Name, apiRR.Name)
@@ -163,7 +150,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	// PUT
 	req = NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr.Name), &rr2).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
-	retrieved = unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: "testreg2"})
+	retrieved = unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: rr2.Name})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
 	assert.Equal(t, rr2.RemoteUser, retrieved.RemoteUser)
 
@@ -185,7 +172,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	// DELETE
 	req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr2.Name)).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusOK)
-	unittest.AssertNotExistsBean(t, &remote_registry_model.RemoteRegistry{Name: "testreg2"})
+	unittest.AssertNotExistsBean(t, &remote_registry_model.RemoteRegistry{Name: rr2.Name})
 }
 
 func TestTestConnectionAPIEndpoint(t *testing.T) {
@@ -199,13 +186,9 @@ func TestTestConnectionAPIEndpoint(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := api.CreateRemoteRegistryOption{
-		Name:        "testreg",
-		RemoteType:  "container",
-		RemoteURL:   server.URL,
-		RemoteUser:  "someUser",
-		RemoteToken: "asdfwoe324lkjsdf0242523",
-	}
+	rr.RemoteURL = server.URL
+	rr.TestConnection = false
+
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
 
@@ -221,13 +204,6 @@ func TestCreateRemoteRegistryOrgNotAllowed(t *testing.T) {
 	session := loginUser(t, user5.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	rr := api.CreateRemoteRegistryOption{
-		Name:        "testreg",
-		RemoteType:  "container",
-		RemoteURL:   "https://example.registry.com",
-		RemoteUser:  "someUser",
-		RemoteToken: "asdfwoe324lkjsdf0242523",
-	}
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusForbidden)
 }
@@ -242,15 +218,9 @@ func TestConnectedBasicAuth(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := api.CreateRemoteRegistryOption{
-		Name:           "testreg",
-		RemoteType:     "container",
-		RemoteURL:      server.URL,
-		RemoteUser:     "someUser",
-		RemotePassword: "somePW",
-		RemoteToken:    "",
-		TestConnection: true,
-	}
+	rr.RemoteURL = server.URL
+	rr.RemoteToken = ""
+
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
 }
@@ -265,14 +235,9 @@ func TestConnectedToken(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := api.CreateRemoteRegistryOption{
-		Name:           "testreg",
-		RemoteType:     "container",
-		RemoteURL:      server.URL,
-		RemoteUser:     "someUser",
-		RemoteToken:    "someToken",
-		TestConnection: true,
-	}
+	rr.RemoteURL = server.URL
+	rr.RemotePassword = ""
+
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
 }
@@ -290,13 +255,8 @@ func TestRemoteRegistryPull(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := api.CreateRemoteRegistryOption{
-		Name:        "testreg",
-		RemoteType:  "container",
-		RemoteURL:   server.URL,
-		RemoteUser:  "someUser",
-		RemoteToken: "asdfwoe324lkjsdf0242523",
-	}
+	rr.RemoteURL = server.URL
+
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
 
