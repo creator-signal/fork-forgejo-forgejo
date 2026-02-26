@@ -42,7 +42,7 @@ func SaveBlobToPackage(ctx *context.Context, buf *packages_module.HashedBuffer, 
 func addRemoteMetadataToBlob(ctx *context.Context, remoteCtx *rr_module.RemoteRegistryContext, pf *packages_model.PackageFile) {
 	properties := map[string]string{
 		container_module.PropertyRemoteSource:       fmt.Sprintf("%d", remoteCtx.RemoteRegistry.ID),
-		container_module.PropertyRemoteRegistryName: fmt.Sprintf("%s", remoteCtx.RemoteRegistry.Name),
+		container_module.PropertyRemoteRegistryName: remoteCtx.RemoteRegistry.Name,
 	}
 
 	for name, value := range properties {

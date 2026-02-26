@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"forgejo.org/models/packages"
-	rr_model "forgejo.org/models/remote_registry"
+	remote_registry_model "forgejo.org/models/remote_registry"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +21,7 @@ func Test_NewRemoteRegistry(t *testing.T) {
 		Name:       name,
 		RemoteURL:  remoteURL,
 		RemoteType: remoteType,
-		OwnerType:  rr_model.RemoteRegistryOwnerType("org"),
+		OwnerType:  remote_registry_model.RemoteRegistryOwnerType("org"),
 		OwnerID:    int64(1),
 		Auth: RRCredentials{
 			RemoteUser:     "someUser",
@@ -47,7 +47,7 @@ func Test_NewRemoteRegistryInvalid(t *testing.T) {
 		Name:       name,
 		RemoteURL:  remoteURL,
 		RemoteType: remoteType,
-		OwnerType:  rr_model.RemoteRegistryOwnerType("org"),
+		OwnerType:  remote_registry_model.RemoteRegistryOwnerType("org"),
 		OwnerID:    int64(1),
 		Auth:       RRCredentials{},
 	}

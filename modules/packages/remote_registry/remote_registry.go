@@ -4,12 +4,12 @@
 package remote_registry
 
 import (
-	rr_model "forgejo.org/models/remote_registry"
+	remote_registry_model "forgejo.org/models/remote_registry"
 )
 
 // RemoteRegistryContext represents remote registry information in the request context
 type RemoteRegistryContext struct {
-	RemoteRegistry *rr_model.RemoteRegistry
+	RemoteRegistry *remote_registry_model.RemoteRegistry
 	OwnerName      string
 	ImageName      string
 	Reference      string

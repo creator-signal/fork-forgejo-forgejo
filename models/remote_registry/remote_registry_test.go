@@ -124,7 +124,6 @@ func Test_CanCreateForUserAndOrg(t *testing.T) {
 	rrs2, err := GetRemoteRegistriesByOwnerType(t.Context(), rr2.OwnerType, rr2.OwnerID)
 	require.NoError(t, err)
 	assert.Equal(t, retrieved2.ID, rrs2[0].ID)
-
 }
 
 func Test_SetGetCredentials(t *testing.T) {

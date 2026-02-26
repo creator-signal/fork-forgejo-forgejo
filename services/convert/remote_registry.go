@@ -4,11 +4,11 @@
 package convert
 
 import (
-	rr_model "forgejo.org/models/remote_registry"
+	remote_registry_model "forgejo.org/models/remote_registry"
 	api "forgejo.org/modules/structs"
 )
 
-func ToRemoteRegistry(rr *rr_model.RemoteRegistry) *api.RemoteRegistry {
+func ToRemoteRegistry(rr *remote_registry_model.RemoteRegistry) *api.RemoteRegistry {
 	result := &api.RemoteRegistry{
 		ID:         rr.ID,
 		Name:       rr.Name,
@@ -24,7 +24,7 @@ func ToRemoteRegistry(rr *rr_model.RemoteRegistry) *api.RemoteRegistry {
 	return result
 }
 
-func ToRemoteRegistryList(rrs []*rr_model.RemoteRegistry) []*api.RemoteRegistry {
+func ToRemoteRegistryList(rrs []*remote_registry_model.RemoteRegistry) []*api.RemoteRegistry {
 	result := []*api.RemoteRegistry{}
 	for _, rr := range rrs {
 		result = append(result, &api.RemoteRegistry{

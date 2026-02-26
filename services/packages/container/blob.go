@@ -19,7 +19,7 @@ import (
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/modules/util"
-	api_ctx "forgejo.org/services/context"
+	app_context "forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
 
 	digest "github.com/opencontainers/go-digest"
@@ -27,7 +27,7 @@ import (
 
 var uploadVersionMutex sync.Mutex
 
-func GetLocalManifest(ctx *api_ctx.Context, ownerID int64, imageName, reference string) (*packages_model.PackageFileDescriptor, error) {
+func GetLocalManifest(ctx *app_context.Context, ownerID int64, imageName, reference string) (*packages_model.PackageFileDescriptor, error) {
 	opts, err := GetManifestSearchOptions(
 		ownerID,
 		imageName,
@@ -40,7 +40,7 @@ func GetLocalManifest(ctx *api_ctx.Context, ownerID int64, imageName, reference 
 }
 
 // GetLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
-func GetLocalBlob(ctx *api_ctx.Context, ownerID int64, dig, imageName string) (*packages_model.PackageFileDescriptor, error) {
+func GetLocalBlob(ctx *app_context.Context, ownerID int64, dig, imageName string) (*packages_model.PackageFileDescriptor, error) {
 	if digest.Digest(dig).Validate() != nil {
 		return nil, container_model.ErrContainerBlobNotExist
 	}

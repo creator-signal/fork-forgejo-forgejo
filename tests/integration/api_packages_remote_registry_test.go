@@ -11,7 +11,7 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/packages"
-	rr_model "forgejo.org/models/remote_registry"
+	remote_registry_model "forgejo.org/models/remote_registry"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
@@ -46,12 +46,12 @@ func TestCreateRemoteRegistryUser(t *testing.T) {
 	var apiRR api.RemoteRegistry
 	DecodeJSON(t, resp, &apiRR)
 
-	retrieved := unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg"})
+	retrieved := unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: "testreg"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
-	assert.Equal(t, rr_model.RRUser, retrieved.OwnerType)
+	assert.Equal(t, remote_registry_model.RRUser, retrieved.OwnerType)
 
 	assert.Equal(t, rr.Name, apiRR.Name)
-	assert.Equal(t, rr_model.RRUser.Name(), apiRR.OwnerType)
+	assert.Equal(t, remote_registry_model.RRUser.Name(), apiRR.OwnerType)
 	assert.Equal(t, user2.ID, apiRR.OwnerID)
 	assert.Equal(t, rr.RemoteURL, apiRR.RemoteURL)
 	assert.Equal(t, rr.RemoteUser, apiRR.RemoteUser)
@@ -150,11 +150,11 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	var apiRR api.RemoteRegistry
 	DecodeJSON(t, resp, &apiRR)
 
-	retrieved := unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg"})
+	retrieved := unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: "testreg"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
-	assert.Equal(t, rr_model.RROrg, retrieved.OwnerType)
+	assert.Equal(t, remote_registry_model.RROrg, retrieved.OwnerType)
 	assert.Equal(t, rr.Name, apiRR.Name)
-	assert.Equal(t, rr_model.RROrg.Name(), apiRR.OwnerType)
+	assert.Equal(t, remote_registry_model.RROrg.Name(), apiRR.OwnerType)
 	assert.Equal(t, org3.ID, apiRR.OwnerID)
 	assert.Equal(t, rr.RemoteURL, apiRR.RemoteURL)
 	assert.Equal(t, rr.RemoteUser, apiRR.RemoteUser)
@@ -163,7 +163,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	// PUT
 	req = NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr.Name), &rr2).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
-	retrieved = unittest.AssertExistsAndLoadBean(t, &rr_model.RemoteRegistry{Name: "testreg2"})
+	retrieved = unittest.AssertExistsAndLoadBean(t, &remote_registry_model.RemoteRegistry{Name: "testreg2"})
 	assert.Equal(t, packages.TypeContainer, retrieved.RemoteType)
 	assert.Equal(t, rr2.RemoteUser, retrieved.RemoteUser)
 
@@ -185,7 +185,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	// DELETE
 	req = NewRequest(t, "DELETE", fmt.Sprintf("/api/v1/packages/%s/remote-registry/%s", org3.Name, rr2.Name)).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusOK)
-	unittest.AssertNotExistsBean(t, &rr_model.RemoteRegistry{Name: "testreg2"})
+	unittest.AssertNotExistsBean(t, &remote_registry_model.RemoteRegistry{Name: "testreg2"})
 }
 
 func TestTestConnectionAPIEndpoint(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	rr_model "forgejo.org/models/remote_registry"
+	remote_registry_model "forgejo.org/models/remote_registry"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
 
@@ -31,11 +31,11 @@ var (
 type RegistryClient struct {
 	httpClient     *http.Client
 	RegClient      *regclient.RegClient
-	RemoteRegistry *rr_model.RemoteRegistry
+	RemoteRegistry *remote_registry_model.RemoteRegistry
 	Reference      *ref.Ref
 }
 
-func NewContainerRegistryClient(rr *rr_model.RemoteRegistry, names ...string) (RegistryClient, error) {
+func NewContainerRegistryClient(rr *remote_registry_model.RemoteRegistry, names ...string) (RegistryClient, error) {
 	client := &http.Client{Timeout: 12 * time.Second}
 
 	rrURL, err := url.Parse(rr.RemoteURL)

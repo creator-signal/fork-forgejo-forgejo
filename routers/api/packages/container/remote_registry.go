@@ -8,10 +8,10 @@ import (
 	"net/http"
 
 	"forgejo.org/modules/log"
-	rr_module "forgejo.org/modules/packages/remote_registry"
+	remote_registry_module "forgejo.org/modules/packages/remote_registry"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
-	rr_service "forgejo.org/services/packages"
+	packages_service "forgejo.org/services/packages"
 	"forgejo.org/services/packages/container"
 )
 
@@ -38,16 +38,16 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 		ownerName, username, registryName, imageName, reference)
 	log.Debug("... with request url %s and path %s ", ctx.Req.URL.Host, ctx.Req.URL.Path)
 
-	remoteRegistry, err := rr_service.GetRemoteRegistry(ctx, isOrg, isUser, ownerName, registryName)
+	remoteRegistry, err := packages_service.GetRemoteRegistry(ctx, isOrg, isUser, ownerName, registryName)
 	if err != nil {
-		if errors.Is(err, rr_service.ErrRemoteRegistryNotExists) {
+		if errors.Is(err, packages_service.ErrRemoteRegistryNotExists) {
 			apiErrorDefined(ctx, container.ErrNameUnknown.WithMessage(err.Error()))
 		}
 		log.Error("Failed to resolve remote registry %q: %v", registryName, err)
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	remoteCtx := &rr_module.RemoteRegistryContext{
+	remoteCtx := &remote_registry_module.RemoteRegistryContext{
 		OwnerName:      ownerName,
 		ImageName:      imageName,
 		RemoteRegistry: remoteRegistry,
@@ -57,10 +57,10 @@ func RemoteRegistryMiddleware(ctx *context.Context) {
 	ctx.Data[remoteRegistryContextKey] = remoteCtx
 }
 
-func GetRemoteRegistryContext(ctx *context.Context) (*rr_module.RemoteRegistryContext, error) {
-	remoteCtx, ok := ctx.Data[remoteRegistryContextKey].(*rr_module.RemoteRegistryContext)
+func GetRemoteRegistryContext(ctx *context.Context) (*remote_registry_module.RemoteRegistryContext, error) {
+	remoteCtx, ok := ctx.Data[remoteRegistryContextKey].(*remote_registry_module.RemoteRegistryContext)
 	if !ok {
-		return &rr_module.RemoteRegistryContext{}, errors.New("Remote registry context not found")
+		return &remote_registry_module.RemoteRegistryContext{}, errors.New("Remote registry context not found")
 	}
 	return remoteCtx, nil
 }

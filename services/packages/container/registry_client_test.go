@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	rr_model "forgejo.org/models/remote_registry"
+	remote_registry_model "forgejo.org/models/remote_registry"
 	mock_server "forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +21,7 @@ const (
 )
 
 func Test_NewClient(t *testing.T) {
-	rr := &rr_model.RemoteRegistry{
+	rr := &remote_registry_model.RemoteRegistry{
 		Name:       regName,
 		OwnerID:    int64(2),
 		RemoteURL:  remoteURL,
@@ -53,7 +53,7 @@ func Test_NewClient(t *testing.T) {
 }
 
 func Test_NewRef(t *testing.T) {
-	rr := &rr_model.RemoteRegistry{
+	rr := &remote_registry_model.RemoteRegistry{
 		Name:       regName,
 		RemoteURL:  remoteURL,
 		RemoteHost: remoteHost,
@@ -73,7 +73,7 @@ func Test_PingRegistry(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := rr_model.RemoteRegistry{
+	rr := remote_registry_model.RemoteRegistry{
 		Name:      regName,
 		RemoteURL: server.URL,
 	}
@@ -90,7 +90,7 @@ func Test_AuthenticateRegistry(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := rr_model.RemoteRegistry{
+	rr := remote_registry_model.RemoteRegistry{
 		Name:       regName,
 		OwnerID:    int64(2),
 		RemoteURL:  server.URL,
@@ -112,7 +112,7 @@ func Test_RemoteRegistryConnectedNoAuthInfo(t *testing.T) {
 	server := mock_server.MockForgejoRegistryServer()
 	defer server.Close()
 
-	rr := rr_model.RemoteRegistry{
+	rr := remote_registry_model.RemoteRegistry{
 		Name:        regName,
 		RemoteURL:   server.URL,
 		RemoteUser:  "",
