@@ -80,6 +80,9 @@ type Issue struct {
 	Repo        *RepositoryMeta  `json:"repository"`
 
 	PinOrder int `json:"pin_order"`
+
+	// Version of the issue content for optimistic locking
+	ContentVersion int `json:"content_version"`
 }
 
 // CreateIssueOption options to create one issue
@@ -115,6 +118,9 @@ type EditIssueOption struct {
 	RemoveDeadline *bool      `json:"unset_due_date"`
 	// swagger:strfmt date-time
 	Updated *time.Time `json:"updated_at"`
+	// Optional content version for optimistic locking.
+	// If provided, the edit will fail with 409 if the version doesn't match.
+	ContentVersion *int `json:"content_version"`
 }
 
 // EditDeadlineOption options for creating a deadline

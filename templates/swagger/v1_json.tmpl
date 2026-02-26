@@ -10670,6 +10670,9 @@
           "404": {
             "$ref": "#/responses/notFound"
           },
+          "409": {
+            "$ref": "#/responses/error"
+          },
           "412": {
             "$ref": "#/responses/error"
           }
@@ -25229,6 +25232,12 @@
           "type": "string",
           "x-go-name": "Body"
         },
+        "content_version": {
+          "description": "Optional content version for optimistic locking.\nIf provided, the edit will fail with 409 if the version doesn't match.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ContentVersion"
+        },
         "due_date": {
           "type": "string",
           "format": "date-time",
@@ -25384,6 +25393,12 @@
         "body": {
           "type": "string",
           "x-go-name": "Body"
+        },
+        "content_version": {
+          "description": "Optional content version for optimistic locking.\nIf provided, the edit will fail with 409 if the version doesn't match.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ContentVersion"
         },
         "due_date": {
           "type": "string",
@@ -26588,6 +26603,12 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "Comments"
+        },
+        "content_version": {
+          "description": "Version of the issue content for optimistic locking",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ContentVersion"
         },
         "created_at": {
           "type": "string",
@@ -27927,6 +27948,11 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "Comments"
+        },
+        "content_version": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ContentVersion"
         },
         "created_at": {
           "type": "string",

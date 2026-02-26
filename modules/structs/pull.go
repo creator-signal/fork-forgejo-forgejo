@@ -57,8 +57,9 @@ type PullRequest struct {
 	// swagger:strfmt date-time
 	Closed *time.Time `json:"closed_at"`
 
-	PinOrder int   `json:"pin_order"`
-	Flow     int64 `json:"flow"`
+	PinOrder       int   `json:"pin_order"`
+	ContentVersion int   `json:"content_version"`
+	Flow           int64 `json:"flow"`
 }
 
 // PRBranchInfo information about a branch
@@ -104,6 +105,9 @@ type EditPullRequestOption struct {
 	Deadline            *time.Time `json:"due_date"`
 	RemoveDeadline      *bool      `json:"unset_due_date"`
 	AllowMaintainerEdit *bool      `json:"allow_maintainer_edit"`
+	// Optional content version for optimistic locking.
+	// If provided, the edit will fail with 409 if the version doesn't match.
+	ContentVersion *int `json:"content_version"`
 }
 
 // ChangedFile store information about files affected by the pull request

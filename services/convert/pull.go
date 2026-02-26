@@ -91,6 +91,7 @@ func ToAPIPullRequest(ctx context.Context, pr *issues_model.PullRequest, doer *u
 		Created:                 pr.Issue.CreatedUnix.AsTimePtr(),
 		Updated:                 pr.Issue.UpdatedUnix.AsTimePtr(),
 		PinOrder:                apiIssue.PinOrder,
+		ContentVersion:          apiIssue.ContentVersion,
 		RequestedReviewers:      []*api.User{},
 		RequestedReviewersTeams: []*api.Team{},
 

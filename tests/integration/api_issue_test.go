@@ -978,6 +978,7 @@ func TestAPIIssueDependencyPermissions(t *testing.T) {
 	MakeRequest(t, req, http.StatusNotFound) // as otherUserRepo is a private repo we can't link a dependency to it
 }
 
+<<<<<<< HEAD
 func TestAPIIssueDependencyAccessTokenResources(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -1297,4 +1298,65 @@ func TestAPIIssueBlocksModificationAccessTokenResources(t *testing.T) {
 		makeDep(t, &repo2Issue, repo2OnlyToken, http.StatusCreated)  // private repo2
 		makeDep(t, &repo3Issue, repo2OnlyToken, http.StatusNotFound) // private org3/repo3
 	})
+}
+
+func TestAPIIssueContentVersion(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	token := getUserToken(t, user.Name, auth_model.AccessTokenScopeAll)
+
+	repo, _, reset := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
+		EnabledUnits: optional.Some([]unit.Type{unit.TypeIssues}),
+	})
+	defer reset()
+
+	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issues", repo.OwnerName, repo.Name)
+
+	// Create an issue
+	resp := MakeRequest(t, NewRequestWithJSON(t, "POST", urlStr, api.CreateIssueOption{
+		Title: "content version test",
+		Body:  "original body",
+	}).AddTokenAuth(token), http.StatusCreated)
+	var issue api.Issue
+	DecodeJSON(t, resp, &issue)
+
+	// content_version should be present and start at 0
+	assert.Equal(t, 0, issue.ContentVersion)
+
+	issueURL := fmt.Sprintf("%s/%d", urlStr, issue.Index)
+
+	// Edit body without content_version (backward compat) — should succeed
+	newBody := "updated body v1"
+	resp = MakeRequest(t, NewRequestWithJSON(t, "PATCH", issueURL, api.EditIssueOption{
+		Body: &newBody,
+	}).AddTokenAuth(token), http.StatusCreated)
+	DecodeJSON(t, resp, &issue)
+	assert.Equal(t, newBody, issue.Body)
+	assert.Equal(t, 1, issue.ContentVersion)
+
+	// Edit body with correct content_version — should succeed
+	newBody2 := "updated body v2"
+	cv := 1
+	resp = MakeRequest(t, NewRequestWithJSON(t, "PATCH", issueURL, api.EditIssueOption{
+		Body:           &newBody2,
+		ContentVersion: &cv,
+	}).AddTokenAuth(token), http.StatusCreated)
+	DecodeJSON(t, resp, &issue)
+	assert.Equal(t, newBody2, issue.Body)
+	assert.Equal(t, 2, issue.ContentVersion)
+
+	// Edit body with stale content_version — should fail with 409
+	newBody3 := "this should fail"
+	staleCV := 1
+	MakeRequest(t, NewRequestWithJSON(t, "PATCH", issueURL, api.EditIssueOption{
+		Body:           &newBody3,
+		ContentVersion: &staleCV,
+	}).AddTokenAuth(token), http.StatusConflict)
+
+	// Verify the issue wasn't changed
+	resp = MakeRequest(t, NewRequest(t, "GET", issueURL).AddTokenAuth(token), http.StatusOK)
+	DecodeJSON(t, resp, &issue)
+	assert.Equal(t, newBody2, issue.Body)
+	assert.Equal(t, 2, issue.ContentVersion)
 }

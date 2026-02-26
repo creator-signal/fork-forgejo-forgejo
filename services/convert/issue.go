@@ -42,19 +42,20 @@ func toIssue(ctx context.Context, doer *user_model.User, issue *issues_model.Iss
 	}
 
 	apiIssue := &api.Issue{
-		ID:          issue.ID,
-		Index:       issue.Index,
-		Poster:      ToUser(ctx, issue.Poster, doer),
-		Title:       issue.Title,
-		Body:        issue.Content,
-		Attachments: toAttachments(issue.Repo, issue.Attachments, getDownloadURL),
-		Ref:         issue.Ref,
-		State:       issue.State(),
-		IsLocked:    issue.IsLocked,
-		Comments:    issue.NumComments,
-		Created:     issue.CreatedUnix.AsTime(),
-		Updated:     issue.UpdatedUnix.AsTime(),
-		PinOrder:    issue.PinOrder,
+		ID:             issue.ID,
+		Index:          issue.Index,
+		Poster:         ToUser(ctx, issue.Poster, doer),
+		Title:          issue.Title,
+		Body:           issue.Content,
+		Attachments:    toAttachments(issue.Repo, issue.Attachments, getDownloadURL),
+		Ref:            issue.Ref,
+		State:          issue.State(),
+		IsLocked:       issue.IsLocked,
+		Comments:       issue.NumComments,
+		Created:        issue.CreatedUnix.AsTime(),
+		Updated:        issue.UpdatedUnix.AsTime(),
+		PinOrder:       issue.PinOrder,
+		ContentVersion: issue.ContentVersion,
 	}
 
 	if issue.Repo != nil {
