@@ -379,7 +379,9 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
-			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			ctx.Error(http.StatusForbidden,
+				"CreateRemoteRegistry",
+				"Remote Registry creation is allowed only for owners and admins.")
 			return
 		}
 	}
@@ -486,7 +488,9 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
-			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			ctx.Error(http.StatusForbidden,
+				"UpdateRemoteRegistry",
+				"Remote Registry update is allowed only for owners and admins.")
 			return
 		}
 	}
@@ -578,7 +582,9 @@ func GetRemoteRegistryByName(ctx *context.APIContext) {
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
-			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			ctx.Error(http.StatusForbidden,
+				"GetRemoteRegistry",
+				"Getting info about Remote Registries is allowed only for owners and admins.")
 			return
 		}
 	}
@@ -626,7 +632,9 @@ func ListRemoteRegistries(ctx *context.APIContext) {
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
-			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			ctx.Error(http.StatusForbidden,
+				"GetRemoteRegistry",
+				"Getting info about Remote Registries is allowed only for owners and admins.")
 			return
 		}
 	}
@@ -680,7 +688,9 @@ func DeleteRemoteRegistry(ctx *context.APIContext) {
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
-			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			ctx.Error(http.StatusForbidden,
+				"DeleteRemoteRegistry",
+				"Deleting Remote Registries is allowed only for owners and admins.")
 			return
 		}
 	}
@@ -735,7 +745,9 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
-			ctx.Error(http.StatusForbidden, "Create remote registry not allowed", nil)
+			ctx.Error(http.StatusForbidden,
+				"TestRemoteRegistryConnection",
+				"Testing Remote Registriy connection is allowed only for owners and admins.")
 			return
 		}
 	}
