@@ -557,7 +557,7 @@ func UploadManifest(ctx *context.Context) {
 	}
 
 	setResponseHeaders(ctx.Resp, &containerHeaders{
-		Location:      fmt.Sprintf("/v2/%s/%s/manifests/%s", ctx.Package.Owner.LowerName, mci.Image, digest),
+		Location:      fmt.Sprintf("/v2/%s/%s/manifests/%s", ctx.Package.Owner.LowerName, mci.Image, mci.Reference),
 		ContentDigest: digest,
 		Status:        http.StatusCreated,
 	})
