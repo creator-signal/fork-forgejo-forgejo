@@ -27437,7 +27437,14 @@
           "x-go-name": "LatestCommentURL"
         },
         "state": {
-          "$ref": "#/definitions/StateType"
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "merged"
+          ],
+          "x-go-enum-desc": "open NotifySubjectStateOpen  NotifySubjectStateOpen is an open subject\nclosed NotifySubjectStateClosed  NotifySubjectStateClosed is a closed subject\nmerged NotifySubjectStateMerged  NotifySubjectStateMerged is a merged pull request",
+          "x-go-name": "State"
         },
         "title": {
           "type": "string",

@@ -20,19 +20,32 @@ type NotificationThread struct {
 
 // NotificationSubject contains the notification subject (Issue/Pull/Commit)
 type NotificationSubject struct {
-	Title                string            `json:"title"`
-	URL                  string            `json:"url"`
-	LatestCommentURL     string            `json:"latest_comment_url"`
-	HTMLURL              string            `json:"html_url"`
-	LatestCommentHTMLURL string            `json:"latest_comment_html_url"`
-	Type                 NotifySubjectType `json:"type" binding:"In(Issue,Pull,Commit,Repository)"`
-	State                StateType         `json:"state"`
+	Title                string                 `json:"title"`
+	URL                  string                 `json:"url"`
+	LatestCommentURL     string                 `json:"latest_comment_url"`
+	HTMLURL              string                 `json:"html_url"`
+	LatestCommentHTMLURL string                 `json:"latest_comment_html_url"`
+	Type                 NotifySubjectType      `json:"type" binding:"In(Issue,Pull,Commit,Repository)"`
+	State                NotifySubjectStateType `json:"state"`
 }
 
 // NotificationCount number of unread notifications
 type NotificationCount struct {
 	New int64 `json:"new"`
 }
+
+// NotifySubjectStateType represents the state of a notification subject
+// swagger:enum NotifySubjectStateType
+type NotifySubjectStateType string
+
+const (
+	// NotifySubjectStateOpen is an open subject
+	NotifySubjectStateOpen NotifySubjectStateType = "open"
+	// NotifySubjectStateClosed is a closed subject
+	NotifySubjectStateClosed NotifySubjectStateType = "closed"
+	// NotifySubjectStateMerged is a merged pull request
+	NotifySubjectStateMerged NotifySubjectStateType = "merged"
+)
 
 // NotifySubjectType represent type of notification subject
 type NotifySubjectType string

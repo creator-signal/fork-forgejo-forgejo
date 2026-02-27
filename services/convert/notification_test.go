@@ -31,7 +31,7 @@ func TestToNotificationThread(t *testing.T) {
 		assert.False(t, thread.Pinned)
 		require.NotNil(t, thread.Subject)
 		assert.Equal(t, api.NotifySubjectIssue, thread.Subject.Type)
-		assert.Equal(t, api.StateOpen, thread.Subject.State)
+		assert.Equal(t, api.NotifySubjectStateOpen, thread.Subject.State)
 	})
 
 	t.Run("pinned notification", func(t *testing.T) {
@@ -65,7 +65,7 @@ func TestToNotificationThread(t *testing.T) {
 		thread := ToNotificationThread(db.DefaultContext, n)
 		require.NotNil(t, thread.Subject)
 		assert.Equal(t, api.NotifySubjectPull, thread.Subject.Type)
-		assert.Equal(t, api.StateMerged, thread.Subject.State)
+		assert.Equal(t, api.NotifySubjectStateMerged, thread.Subject.State)
 	})
 
 	t.Run("open pull request returns open state", func(t *testing.T) {
@@ -87,6 +87,6 @@ func TestToNotificationThread(t *testing.T) {
 		thread := ToNotificationThread(db.DefaultContext, n)
 		require.NotNil(t, thread.Subject)
 		assert.Equal(t, api.NotifySubjectPull, thread.Subject.Type)
-		assert.Equal(t, api.StateOpen, thread.Subject.State)
+		assert.Equal(t, api.NotifySubjectStateOpen, thread.Subject.State)
 	})
 }
