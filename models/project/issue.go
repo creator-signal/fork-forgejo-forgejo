@@ -16,14 +16,14 @@ import (
 // ProjectIssue saves relation from issue to a project
 type ProjectIssue struct { //revive:disable-line:exported
 	ID        int64 `xorm:"pk autoincr"`
-	IssueID   int64 `xorm:"INDEX NOT NULL unique(project_issue_id)"`
-	ProjectID int64 `xorm:"INDEX NOT NULL unique(project_issue_id)"`
+	IssueID   int64 `xorm:"INDEX NOT NULL unique(project_issue)"`
+	ProjectID int64 `xorm:"INDEX NOT NULL unique(project_issue)"`
 
 	// ProjectColumnID should not be zero since 1.22. If it's zero, the issue will not be displayed on UI and it might result in errors.
-	ProjectColumnID int64 `xorm:"'project_board_id' INDEX NOT NULL unique(project_board_sorting)"`
+	ProjectColumnID int64 `xorm:"'project_board_id' INDEX NOT NULL unique(column_sorting)"`
 
 	// the sorting order on the column
-	Sorting int64 `xorm:"NOT NULL DEFAULT 0 unique(project_board_sorting)"`
+	Sorting int64 `xorm:"NOT NULL DEFAULT 0 unique(column_sorting)"`
 }
 
 func init() {
@@ -68,11 +68,10 @@ func (p *Project) NumOpenIssues(ctx context.Context) int {
 // Cards not in the map that already exist in the target column are shifted to
 // positions after the highest requested sorting value.
 func MoveIssuesOnProjectColumn(ctx context.Context, column *Column, sortedIssueIDs map[int64]int64) error {
+	if len(sortedIssueIDs) == 0 {
+		return nil
+	}
 	return db.WithTx(ctx, func(ctx context.Context) error {
-		if len(sortedIssueIDs) == 0 {
-			return nil
-		}
-
 		sess := db.GetEngine(ctx)
 		issueIDs := util.ValuesOfMap(sortedIssueIDs)
 

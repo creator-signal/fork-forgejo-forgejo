@@ -6,6 +6,7 @@ package forgejo_migrations
 import (
 	"fmt"
 
+	"forgejo.org/models/gitea_migrations/base"
 	"forgejo.org/modules/setting"
 
 	"xorm.io/xorm"
@@ -47,9 +48,9 @@ func fixProjectSortingUniqueConstraints(x *xorm.Engine) error {
 		return err
 	}
 
-	// Step 5: Enforce NOT NULL on project_issue columns
+	// Step 5: Enforce NOT NULL on project_issue columns.
 	// The struct tags declare NOT NULL but the DB may not enforce it.
-	// SQLite doesn't support ALTER COLUMN, but the unique indexes + application logic suffice.
+	// On SQLite, RecreateTables rebuilds the table with NOT NULL and unique constraints.
 	return enforceProjectIssueNotNull(x)
 }
 
@@ -154,9 +155,14 @@ func fixProjectBoardDuplicates(x *xorm.Engine) error {
 func enforceProjectIssueNotNull(x *xorm.Engine) error {
 	switch {
 	case setting.Database.Type.IsSQLite3():
-		// SQLite doesn't support ALTER COLUMN; the unique indexes and
-		// application logic are sufficient.
-		return nil
+		type ProjectIssue struct {
+			ID              int64 `xorm:"pk autoincr"`
+			IssueID         int64 `xorm:"INDEX NOT NULL unique(project_issue)"`
+			ProjectID       int64 `xorm:"INDEX NOT NULL unique(project_issue)"`
+			ProjectColumnID int64 `xorm:"'project_board_id' INDEX NOT NULL unique(column_sorting)"`
+			Sorting         int64 `xorm:"NOT NULL DEFAULT 0 unique(column_sorting)"`
+		}
+		return base.RecreateTables(new(ProjectIssue))(x)
 
 	case setting.Database.Type.IsPostgreSQL():
 		for _, col := range []string{"issue_id", "project_id", "project_board_id"} {

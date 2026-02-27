@@ -10,6 +10,7 @@ import (
 	"regexp"
 
 	"forgejo.org/models/db"
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
@@ -323,12 +324,11 @@ func MoveColumnsOnProject(ctx context.Context, project *Project, sortedColumnIDs
 		sess := db.GetEngine(ctx)
 
 		// Validate no duplicate column IDs in map values
-		columnIDSet := make(map[int64]struct{}, len(sortedColumnIDs))
+		columnIDSet := make(container.Set[int64], len(sortedColumnIDs))
 		for _, columnID := range sortedColumnIDs {
-			if _, dup := columnIDSet[columnID]; dup {
+			if !columnIDSet.Add(columnID) {
 				return errors.New("duplicate column ID in reorder request")
 			}
-			columnIDSet[columnID] = struct{}{}
 		}
 
 		// Validate all columns exist and belong to this project
