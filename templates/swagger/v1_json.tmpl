@@ -4819,6 +4819,13 @@
             "name": "owner",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the registry",
+            "name": "name",
+            "in": "path",
+            "required": true
           }
         ],
         "responses": {
@@ -4838,7 +4845,7 @@
           "package"
         ],
         "summary": "Update an existing remote registry",
-        "operationId": "createRemoteRegistry",
+        "operationId": "updateRemoteRegistry",
         "parameters": [
           {
             "type": "string",

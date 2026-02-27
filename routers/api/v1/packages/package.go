@@ -444,7 +444,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 
 // CreateRemoteRegistry creates a remote registry of a given type
 func UpdateRemoteRegistry(ctx *context.APIContext) {
-	// swagger:operation PUT /packages/{owner}/remote-registry/{name} package createRemoteRegistry
+	// swagger:operation PUT /packages/{owner}/remote-registry/{name} package updateRemoteRegistry
 	// ---
 	// summary: Update an existing remote registry
 	// consumes:
@@ -560,6 +560,11 @@ func GetRemoteRegistryByName(ctx *context.APIContext) {
 	// - name: owner
 	//   in: path
 	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// - name: name
+	//   in: path
+	//   description: name of the registry
 	//   type: string
 	//   required: true
 	// responses:
