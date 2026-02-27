@@ -201,7 +201,7 @@ func RegisterRenderer(renderer Renderer) {
 // GetRendererByFileName get renderer by filename
 func GetRendererByFileName(filename string) Renderer {
 	segments := strings.Split(filepath.Base(filename), ".")
-	for i, _ := range segments[1:] {
+	for i := range segments[1:] {
 		extension := strings.ToLower("." + strings.Join(segments[1+i:], "."))
 		if renderer, ok := extRenderers[extension]; ok {
 			return renderer
@@ -381,7 +381,7 @@ func renderFile(ctx *RenderContext, input io.Reader, output io.Writer) error {
 		}
 		return render(ctx, renderer, input, output)
 	}
-	return ErrUnsupportedRenderExtension{ctx.RelativePath[strings.Index(ctx.RelativePath, "."):]}
+	return ErrUnsupportedRenderExtension{"." + ctx.RelativePath[strings.Index(ctx.RelativePath, ".")+1:]}
 }
 
 // Type returns if markup format via the filename
