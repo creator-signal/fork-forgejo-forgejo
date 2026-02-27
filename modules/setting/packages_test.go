@@ -176,3 +176,28 @@ MINIO_SECRET_ACCESS_KEY = correct_key
 	assert.Equal(t, "my_packages/", storage.MinioConfig.BasePath)
 	assert.True(t, storage.MinioConfig.ServeDirect)
 }
+
+func Test_PackagesAllowAnonymousContainerPull_Default(t *testing.T) {
+	iniStr := `
+[packages]
+`
+	cfg, err := NewConfigProviderFromData(iniStr)
+	require.NoError(t, err)
+
+	require.NoError(t, loadPackagesFrom(cfg))
+
+	assert.False(t, Packages.AllowAnonymousContainerPull)
+}
+
+func Test_PackagesAllowAnonymousContainerPull(t *testing.T) {
+	iniStr := `
+[packages]
+ALLOW_ANONYMOUS_CONTAINER_PULL = true
+`
+	cfg, err := NewConfigProviderFromData(iniStr)
+	require.NoError(t, err)
+
+	require.NoError(t, loadPackagesFrom(cfg))
+
+	assert.True(t, Packages.AllowAnonymousContainerPull)
+}

@@ -18,6 +18,8 @@ var (
 		ChunkedUploadPath string
 		RegistryHost      string
 
+		AllowAnonymousContainerPull bool
+
 		LimitTotalOwnerCount  int64
 		LimitTotalOwnerSize   int64
 		LimitSizeAlpine       int64
@@ -45,8 +47,9 @@ var (
 		LimitSizeVagrant      int64
 		DefaultRPMSignEnabled bool
 	}{
-		Enabled:              true,
-		LimitTotalOwnerCount: -1,
+		Enabled:                     true,
+		LimitTotalOwnerCount:        -1,
+		AllowAnonymousContainerPull: false,
 	}
 )
 

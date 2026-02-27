@@ -132,6 +132,14 @@ func apiUnauthorizedError(ctx *context.Context) {
 
 // ReqContainerAccess is a middleware which checks the current user valid (real user or ghost if anonymous access is enabled)
 func ReqContainerAccess(ctx *context.Context) {
+	// If allowed anonymous pull
+	if setting.Packages.AllowAnonymousContainerPull {
+		switch ctx.Req.Method {
+		case http.MethodGet, http.MethodHead:
+			return
+		}
+	}
+
 	if ctx.Doer == nil || (setting.Service.RequireSignInView && ctx.Doer.IsGhost()) {
 		apiUnauthorizedError(ctx)
 	}
