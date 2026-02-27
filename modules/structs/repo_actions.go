@@ -86,10 +86,9 @@ type ActionRunner struct {
 
 // ActionWorkflowStep represents a step of a WorkflowJob
 type ActionWorkflowStep struct {
-	Name       string `json:"name"`
-	Number     int64  `json:"number"`
-	Status     string `json:"status"`
-	Conclusion string `json:"conclusion,omitempty"`
+	Name   string `json:"name"`
+	Number int64  `json:"number"`
+	Status string `json:"status"`
 	// swagger:strfmt date-time
 	StartedAt time.Time `json:"started_at,omitempty"`
 	// swagger:strfmt date-time
@@ -98,20 +97,20 @@ type ActionWorkflowStep struct {
 
 // ActionWorkflowJob represents a WorkflowJob
 type ActionWorkflowJob struct {
-	ID         int64                 `json:"id"`
-	URL        string                `json:"url"`
-	HTMLURL    string                `json:"html_url"`
-	RunID      int64                 `json:"run_id"`
-	RunURL     string                `json:"run_url"`
-	Name       string                `json:"name"`
-	Labels     []string              `json:"labels"`
-	RunAttempt int64                 `json:"run_attempt"`
-	HeadSha    string                `json:"head_sha"`
-	HeadBranch string                `json:"head_branch,omitempty"`
-	Status     string                `json:"status"`
-	RunnerID   int64                 `json:"runner_id,omitempty"`
-	RunnerName string                `json:"runner_name,omitempty"`
-	Steps      []*ActionWorkflowStep `json:"steps"`
+	ID           int64                 `json:"id"`
+	HTMLURL      string                `json:"html_url"`
+	RunID        int64                 `json:"run_id"`
+	RunURL       string                `json:"run_url"`
+	WorkflowName string                `json:"workflow_name"`
+	Name         string                `json:"name"`
+	Labels       []string              `json:"labels"`
+	RunAttempt   int64                 `json:"run_attempt"`
+	HeadSha      string                `json:"head_sha"`
+	HeadBranch   string                `json:"head_branch,omitempty"`
+	Status       string                `json:"status"`
+	RunnerID     int64                 `json:"runner_id,omitempty"`
+	RunnerName   string                `json:"runner_name,omitempty"`
+	Steps        []*ActionWorkflowStep `json:"steps"`
 	// swagger:strfmt date-time
 	CreatedAt time.Time `json:"created_at"`
 	// swagger:strfmt date-time

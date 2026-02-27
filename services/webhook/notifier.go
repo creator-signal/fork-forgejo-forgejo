@@ -980,12 +980,10 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 			runnerName = runner.Name
 		}
 		for i, step := range task.Steps {
-			stepStatus, stepConclusion := toActionStatus(job.Status)
 			steps = append(steps, &api.ActionWorkflowStep{
 				Name:        step.Name,
 				Number:      int64(i),
-				Status:      stepStatus,
-				Conclusion:  stepConclusion,
+				Status:      step.Status.String(),
 				StartedAt:   step.Started.AsTime().UTC(),
 				CompletedAt: step.Stopped.AsTime().UTC(),
 			})
@@ -995,23 +993,23 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 	if err := PrepareWebhooks(ctx, source, webhook_module.HookEventWorkflowJob, &api.WorkflowJobPayload{
 		Action: job.Status.String(),
 		WorkflowJob: &api.ActionWorkflowJob{
-			ID:          job.ID,
-			URL:         fmt.Sprintf("%s/actions/runs/%d/jobs/%d", repo.APIURL(), job.RunID, job.ID),
-			HTMLURL:     htmlUrl,
-			RunID:       job.RunID,
-			RunURL:      fmt.Sprintf("%s/actions/runs/%d", repo.APIURL(), job.RunID),
-			Name:        job.Name,
-			Labels:      job.RunsOn,
-			RunAttempt:  job.Attempt,
-			HeadSha:     job.Run.CommitSHA,
-			HeadBranch:  git.RefName(job.Run.Ref).BranchName(),
-			Status:      job.Status.String(),
-			RunnerID:    runnerID,
-			RunnerName:  runnerName,
-			Steps:       steps,
-			CreatedAt:   job.Created.AsTime().UTC(),
-			StartedAt:   job.Started.AsTime().UTC(),
-			CompletedAt: job.Stopped.AsTime().UTC(),
+			ID:           job.ID,
+			HTMLURL:      htmlUrl,
+			RunID:        job.RunID,
+			RunURL:       fmt.Sprintf("%s/actions/runs/%d", repo.APIURL(), job.RunID),
+			Name:         job.Name,
+			WorkflowName: job.Run.WorkflowID,
+			Labels:       job.RunsOn,
+			RunAttempt:   job.Attempt,
+			HeadSha:      job.Run.CommitSHA,
+			HeadBranch:   git.RefName(job.Run.Ref).BranchName(),
+			Status:       job.Status.String(),
+			RunnerID:     runnerID,
+			RunnerName:   runnerName,
+			Steps:        steps,
+			CreatedAt:    job.Created.AsTime().UTC(),
+			StartedAt:    job.Started.AsTime().UTC(),
+			CompletedAt:  job.Stopped.AsTime().UTC(),
 		},
 		Organization: org,
 		Repo:         convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}),
@@ -1019,30 +1017,4 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)
 	}
-}
-
-func toActionStatus(status actions_model.Status) (string, string) {
-	var action string
-	var conclusion string
-	switch status {
-	// This is a naming conflict of the webhook between Gitea and GitHub Actions
-	case actions_model.StatusWaiting:
-		action = "queued"
-	case actions_model.StatusBlocked:
-		action = "waiting"
-	case actions_model.StatusRunning:
-		action = "in_progress"
-	}
-	if status.IsDone() {
-		action = "completed"
-		switch status {
-		case actions_model.StatusSuccess:
-			conclusion = "success"
-		case actions_model.StatusCancelled:
-			conclusion = "cancelled"
-		case actions_model.StatusFailure:
-			conclusion = "failure"
-		}
-	}
-	return action, conclusion
 }
