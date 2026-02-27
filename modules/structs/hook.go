@@ -465,7 +465,6 @@ func (p *RepositoryPayload) JSONPayload() ([]byte, error) {
 type WorkflowJobPayload struct {
 	Action       string             `json:"action"`
 	WorkflowJob  *ActionWorkflowJob `json:"workflow_job"`
-	PullRequest  *PullRequest       `json:"pull_request,omitempty"`
 	Organization *Organization      `json:"organization,omitempty"`
 	Repo         *Repository        `json:"repository"`
 	Sender       *User              `json:"sender"`

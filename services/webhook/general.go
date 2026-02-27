@@ -333,17 +333,15 @@ func getActionPayloadInfo(p *api.ActionPayload, linkFormatter linkFormatter) (te
 }
 
 func getWorkflowJobPayloadInfo(p *api.WorkflowJobPayload, linkFormatter linkFormatter, withSender bool) (text string, color int) {
-	description := p.WorkflowJob.Conclusion
-	if description == "" {
-		description = p.WorkflowJob.Status
-	}
+	description := p.WorkflowJob.Status
 	refLink := linkFormatter(p.WorkflowJob.HTMLURL, fmt.Sprintf("%s(#%d)", p.WorkflowJob.Name, p.WorkflowJob.RunID)+"["+base.ShortSha(p.WorkflowJob.HeadSha)+"]:"+description)
 
 	text = fmt.Sprintf("Workflow Job %s: %s", p.Action, refLink)
+
 	switch description {
 	case "waiting":
 		color = orangeColor
-	case "queued":
+	case "running":
 		color = orangeColorLight
 	case "success":
 		color = greenColor

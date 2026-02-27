@@ -109,7 +109,6 @@ type ActionWorkflowJob struct {
 	HeadSha    string                `json:"head_sha"`
 	HeadBranch string                `json:"head_branch,omitempty"`
 	Status     string                `json:"status"`
-	Conclusion string                `json:"conclusion,omitempty"`
 	RunnerID   int64                 `json:"runner_id,omitempty"`
 	RunnerName string                `json:"runner_name,omitempty"`
 	Steps      []*ActionWorkflowStep `json:"steps"`

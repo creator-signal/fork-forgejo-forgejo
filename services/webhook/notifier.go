@@ -968,23 +968,11 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 		return
 	}
 
-	jobIndex := 0
-	jobs, err := actions_model.GetRunJobsByRunID(ctx, job.RunID)
-	if err != nil {
-		log.Error("Error loading getting run jobs: %v", err)
-		return
-	}
-	for i, j := range jobs {
-		if j.ID == job.ID {
-			jobIndex = i
-			break
-		}
-	}
+	htmlUrl, _ := job.HTMLURL(ctx)
 
-	status, conclusion := toActionStatus(job.Status)
 	var runnerID int64
 	var runnerName string
-	var steps []*api.ActionWorkflowStep
+	var steps = make([]*api.ActionWorkflowStep, 0)
 
 	if task != nil {
 		runnerID = task.RunnerID
@@ -1005,22 +993,19 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 	}
 
 	if err := PrepareWebhooks(ctx, source, webhook_module.HookEventWorkflowJob, &api.WorkflowJobPayload{
-		Action: status,
+		Action: job.Status.String(),
 		WorkflowJob: &api.ActionWorkflowJob{
-			ID: job.ID,
-			// missing api endpoint for this location
-			URL:     fmt.Sprintf("%s/actions/runs/%d/jobs/%d", repo.APIURL(), job.RunID, job.ID),
-			HTMLURL: fmt.Sprintf("%s/jobs/%d", job.Run.HTMLURL(), jobIndex),
-			RunID:   job.RunID,
-			// Missing api endpoint for this location, artifacts are available under a nested url
+			ID:          job.ID,
+			URL:         fmt.Sprintf("%s/actions/runs/%d/jobs/%d", repo.APIURL(), job.RunID, job.ID),
+			HTMLURL:     htmlUrl,
+			RunID:       job.RunID,
 			RunURL:      fmt.Sprintf("%s/actions/runs/%d", repo.APIURL(), job.RunID),
 			Name:        job.Name,
 			Labels:      job.RunsOn,
 			RunAttempt:  job.Attempt,
 			HeadSha:     job.Run.CommitSHA,
 			HeadBranch:  git.RefName(job.Run.Ref).BranchName(),
-			Status:      status,
-			Conclusion:  conclusion,
+			Status:      job.Status.String(),
 			RunnerID:    runnerID,
 			RunnerName:  runnerName,
 			Steps:       steps,
