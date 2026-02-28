@@ -16,7 +16,7 @@
 		</h4>
 		<div class="ui attached segment">
 			<p>{{ctx.Locale.Tr "packages.settings.link.description"}}</p>
-			<form class="ui form" action="{{.Link}}" method="post">
+			<form class="ui form" action="{{.PackageDescriptor.VersionWebLink}}/settings" method="post">
 				{{template "base/disable_form_autofill"}}
 				<input type="hidden" name="action" value="link">
 				<div class="field">
@@ -61,7 +61,7 @@
 							<div class="ui warning message tw-break-anywhere">
 								{{ctx.Locale.Tr "packages.settings.delete.notice" .PackageDescriptor.Package.Name .PackageDescriptor.Version.Version}}
 							</div>
-							<form class="ui form" action="{{.Link}}" method="post">
+							<form class="ui form" action="{{.PackageDescriptor.VersionWebLink}}/settings" method="post">
 								<input type="hidden" name="action" value="delete">
 								{{template "base/modal_actions_confirm" .}}
 							</form>
