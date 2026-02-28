@@ -44,7 +44,7 @@ func jobEmitterQueueHandler(items ...*jobUpdate) []*jobUpdate {
 	ctx := graceful.GetManager().ShutdownContext()
 	var ret []*jobUpdate
 	for _, update := range items {
-		if err := checkJobsOfRun(ctx, update.RunID); err != nil {
+		if err := checkJobsOfRun(ctx, update.RunID, 0); err != nil {
 			logger.Error("checkJobsOfRun failed for RunID = %d: %v", update.RunID, err)
 			ret = append(ret, update)
 		}
@@ -52,7 +52,15 @@ func jobEmitterQueueHandler(items ...*jobUpdate) []*jobUpdate {
 	return ret
 }
 
-func checkJobsOfRun(ctx context.Context, runID int64) error {
+func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error {
+	// Recursion happens if one job finishing causes another job to be evaluated so that it creates new jobs (eg.
+	// dynamic matrix), those new jobs need to have their 'needs' re-evaluated. Safety check here against infinite
+	// recursion -- no clear reason this should happen more than once in a check since after one recurse there aren't
+	// any actual new jobs completed, but better safe than sorry.
+	if recursionCount > 5 {
+		return fmt.Errorf("checkJobsOfRun for runID %d hit recursion limit %d", runID, recursionCount)
+	}
+
 	jobs, err := db.Find[actions_model.ActionRunJob](ctx, actions_model.FindRunJobOptions{RunID: runID})
 	if err != nil {
 		return err
@@ -107,6 +115,17 @@ func checkJobsOfRun(ctx context.Context, runID int64) error {
 		return err
 	}
 	CreateCommitStatus(ctx, jobs...)
+
+	// tryHandleIncompleteMatrix can create new jobs in this run which may initially be persisted in the DB as blocked
+	// because they have non-empty `needs`. In that case, we need to recursively run the job emitter so that new jobs
+	// are recognized as having their `needs` completed and be set as unblocked. Check if any new jobs were created and
+	// rerun the job emitter if so.
+	if hasNewJobs, err := actions_model.RunHasOtherJobs(ctx, runID, jobs); err != nil {
+		return fmt.Errorf("RunHasOtherJobs error: %w", err)
+	} else if hasNewJobs {
+		return checkJobsOfRun(ctx, runID, recursionCount+1)
+	}
+
 	return nil
 }
 
@@ -324,7 +343,7 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 		// it to be a "persistent incomplete" job with some error that needs to be reported to the user.  If the
 		// re-evaluated job has a different job ID, then it's likely an expanded job -- such as from a reusable workflow
 		// -- which could have it's own `needs` that allows it to expand into a correct job in the future.
-		jobID, _ := swf.Job()
+		jobID, job := swf.Job()
 		if jobID == blockedJob.JobID {
 			if swf.IncompleteMatrix {
 				errorCode, errorDetails := persistentIncompleteMatrixError(blockedJob, swf.IncompleteMatrixNeeds)
@@ -348,6 +367,20 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 				// `FailRunPreExecutionError` will mark all the pending runs in the job failed; ignore all of them.
 				return behaviourIgnoreAllJobsInRun, nil
 			}
+		}
+
+		// Original job had a `needs: ...blockedJob.Needs...`.  Even though we've now expanded that job, which would
+		// evaluate any ${{ needs.... }} reference that is required for expansion, this job could still have other
+		// reasons to require acccess to those needs variables.  We need to reinsert those `needs` into the new job so
+		// that those job's outputs and results are made available to this new job.
+		newNeeds := append(job.Needs(), blockedJob.Needs...)
+		err := job.RawNeeds.Encode(newNeeds)
+		if err != nil {
+			return behaviourError, fmt.Errorf("failure to encode newNeeds: %w", err)
+		}
+		err = swf.SetJob(jobID, job)
+		if err != nil {
+			return behaviourError, fmt.Errorf("failure to reencode updated job: %w", err)
 		}
 	}
 

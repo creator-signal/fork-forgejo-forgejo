@@ -126,6 +126,14 @@ test('workflow dispatch box not available for unauthenticated users', async ({pa
   await screenshot(page, page.locator('div.ui.container').filter({hasText: 'All workflows'}));
 });
 
+test('job run links to its defining file and all other runs from the same file', async ({page}) => {
+  await page.goto('/user2/test_workflows/actions/runs/1');
+  await expect(page.locator('.action-summary a').getByText('test-dispatch.yml', {exact: true}))
+    .toHaveAttribute('href', '/user2/test_workflows/src/commit/774f93df12d14931ea93259ae93418da4482fcc1/.forgejo/workflows/test-dispatch.yml');
+  await expect(page.locator('.action-summary a').getByText('all runs', {exact: true}))
+    .toHaveAttribute('href', '/user2/test_workflows/actions?workflow=test-dispatch.yml');
+});
+
 async function completeDynamicRefresh(page: Page) {
   // Ensure that the reloading indicator isn't active, indicating that dynamic refresh is done.
   await expect(page.locator('#reloading-indicator')).not.toHaveClass(/(^|\s)is-loading(\s|$)/);
@@ -203,11 +211,19 @@ test.describe('workflow list dynamic refresh', () => {
     await page.locator('#workflow_dispatch_dropdown>button').click();
 
     // Status dropdown
-    await expect(page.getByText('Waiting')).toBeHidden();
-    await expect(page.getByText('Failure')).toBeHidden();
-    await page.locator('#status_dropdown').click();
-    await expect(page.getByText('Waiting')).toBeVisible();
-    await expect(page.getByText('Failure')).toBeVisible();
+    const dropdown = page.locator('#status_dropdown');
+    const dropdown_menu = dropdown.locator('.menu');
+    await expect(dropdown_menu).toBeHidden();
+    await dropdown.click();
+    await expect(dropdown_menu).toBeVisible();
+    await expect(dropdown_menu.getByText('All status')).toHaveAttribute('href', /&status=0$/);
+    await expect(dropdown_menu.getByText('Success')).toHaveAttribute('href', /&status=1$/);
+    await expect(dropdown_menu.getByText('Failure')).toHaveAttribute('href', /&status=2$/);
+    await expect(dropdown_menu.getByText('Waiting')).toHaveAttribute('href', /&status=5$/);
+    await expect(dropdown_menu.getByText('Running')).toHaveAttribute('href', /&status=6$/);
+    await expect(dropdown_menu.getByText('Blocked')).toHaveAttribute('href', /&status=7$/);
+    await expect(dropdown_menu.getByText('Canceled')).toHaveAttribute('href', /&status=3$/);
+    await expect(dropdown_menu.getByText('Skipped')).toHaveAttribute('href', /&status=4$/);
 
     // Actor dropdown
     await expect(page.getByText('All actors')).toBeHidden();

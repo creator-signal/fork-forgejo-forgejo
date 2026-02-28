@@ -162,6 +162,7 @@ func RegisterRunner(ctx *context.APIContext, ownerID, repoID int64) {
 		OwnerID:     ownerID,
 		RepoID:      repoID,
 		Description: options.Description,
+		Ephemeral:   options.Ephemeral,
 	}
 	runner.GenerateToken()
 	if err := actions_model.CreateRunner(ctx, runner); err != nil {

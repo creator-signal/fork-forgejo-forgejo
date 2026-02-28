@@ -464,15 +464,6 @@ func (u *User) IsUser() bool {
 	return u.Type == UserTypeIndividual || u.Type == UserTypeBot
 }
 
-// Returns true if the given user ID belongs to an actual user, not an organization
-func IsUserByID(ctx context.Context, uid int64) (bool, error) {
-	return db.GetEngine(ctx).
-		Where("id=?", uid).
-		In("type", UserTypeIndividual, UserTypeBot).
-		Table("user").
-		Exist()
-}
-
 // IsBot returns whether or not the user is of type bot
 func (u *User) IsBot() bool {
 	return u.Type == UserTypeBot
@@ -779,14 +770,14 @@ func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefa
 	// overwrite defaults if set
 	if overwriteDefaultPresent {
 		overwrite := overwriteDefault[0]
-		if overwrite.KeepEmailPrivate.Has() {
-			u.KeepEmailPrivate = overwrite.KeepEmailPrivate.Value()
+		if has, value := overwrite.KeepEmailPrivate.Get(); has {
+			u.KeepEmailPrivate = value
 		}
 		if overwrite.Visibility != nil {
 			u.Visibility = *overwrite.Visibility
 		}
-		if overwrite.AllowCreateOrganization.Has() {
-			u.AllowCreateOrganization = overwrite.AllowCreateOrganization.Value()
+		if has, value := overwrite.AllowCreateOrganization.Get(); has {
+			u.AllowCreateOrganization = value
 		}
 		if overwrite.EmailNotificationsPreference != nil {
 			u.EmailNotificationsPreference = *overwrite.EmailNotificationsPreference
@@ -797,11 +788,11 @@ func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefa
 		if overwrite.Theme != nil {
 			u.Theme = *overwrite.Theme
 		}
-		if overwrite.IsRestricted.Has() {
-			u.IsRestricted = overwrite.IsRestricted.Value()
+		if has, value := overwrite.IsRestricted.Get(); has {
+			u.IsRestricted = value
 		}
-		if overwrite.IsActive.Has() {
-			u.IsActive = overwrite.IsActive.Value()
+		if has, value := overwrite.IsActive.Get(); has {
+			u.IsActive = value
 		}
 	}
 
@@ -917,8 +908,8 @@ func countUsers(ctx context.Context, opts *CountUserFilter) int64 {
 			cond = cond.And(builder.Gte{"last_login_unix": *opts.LastLoginSince})
 		}
 
-		if opts.IsAdmin.Has() {
-			cond = cond.And(builder.Eq{"is_admin": opts.IsAdmin.Value()})
+		if has, value := opts.IsAdmin.Get(); has {
+			cond = cond.And(builder.Eq{"is_admin": value})
 		}
 	}
 
