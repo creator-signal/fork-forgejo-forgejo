@@ -33,10 +33,10 @@
 							<label for="watch-releases">{{svg "octicon-tag"}} {{ctx.Locale.Tr "repo.watch.releases"}}</label>
 						</div>
 					</div>
-					<div class="tw-flex tw-justify-between tw-items-center tw-mt-3 tw-gap-4">
-						<button type="submit" class="small primary button">{{ctx.Locale.Tr "save"}}</button>
+					<div class="small button-sequence tw-mt-3">
+						<button type="submit" class="primary button">{{ctx.Locale.Tr "save"}}</button>
 						{{if $.RepoWatchSelection.IsWatching}}
-						<button type="button" class="small secondary button" hx-post="{{$.RepoLink}}/action/unwatch" hx-target="#watch-button" hx-swap="outerHTML">
+						<button type="button" class="secondary button" hx-post="{{$.RepoLink}}/action/unwatch" hx-target="#watch-button" hx-swap="outerHTML">
 							{{ctx.Locale.Tr "repo.unwatch"}}
 						</button>
 						{{end}}
