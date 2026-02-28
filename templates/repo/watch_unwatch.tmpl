@@ -34,9 +34,9 @@
 						</div>
 					</div>
 					<div class="tw-flex tw-justify-between tw-items-center tw-mt-3 tw-gap-4">
-						<button type="submit" class="ui primary tiny button">{{ctx.Locale.Tr "save"}}</button>
+						<button type="submit" class="small primary button">{{ctx.Locale.Tr "save"}}</button>
 						{{if $.RepoWatchSelection.IsWatching}}
-						<button type="button" class="ui tiny button" hx-post="{{$.RepoLink}}/action/unwatch" hx-target="#watch-button" hx-swap="outerHTML">
+						<button type="button" class="small secondary button" hx-post="{{$.RepoLink}}/action/unwatch" hx-target="#watch-button" hx-swap="outerHTML">
 							{{ctx.Locale.Tr "repo.unwatch"}}
 						</button>
 						{{end}}
