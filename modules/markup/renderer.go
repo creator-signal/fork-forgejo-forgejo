@@ -199,7 +199,7 @@ func RegisterRenderer(renderer Renderer) {
 }
 
 // FullExtension returns the full extension of path, i.e. everything after and including
-// the first period in path.
+// the first period in the filename of path.
 func FullExtension(path string) string {
 	_, extension, found := strings.Cut(strings.ToLower(filepath.Base(path)), ".")
 	if !found {
