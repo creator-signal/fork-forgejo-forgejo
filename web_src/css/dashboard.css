@@ -55,6 +55,11 @@
   color: var(--color-red);
 }
 
+.dashboard .dashboard-repos,
+.dashboard .dashboard-orgs {
+  margin-bottom: 0;
+}
+
 .dashboard .secondary-nav {
   padding: 1px 12px; /* match .overflow-menu-items in height */
 }
