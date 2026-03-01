@@ -198,9 +198,19 @@ func RegisterRenderer(renderer Renderer) {
 	}
 }
 
-// GetRendererByFileName get renderer by filename
-func GetRendererByFileName(filename string) Renderer {
-	_, extension, found := strings.Cut(strings.ToLower(filepath.Base(filename)), ".")
+// FullExtension returns the full extension of path, i.e. everything after and including
+// the first period in path.
+func FullExtension(path string) string {
+	_, extension, found := strings.Cut(strings.ToLower(filepath.Base(path)), ".")
+	if !found {
+		return ""
+	}
+	return "." + extension
+}
+
+// GetRendererByExtension get renderer by filename
+func GetRendererByExtension(extension string) Renderer {
+	_, extension, found := strings.Cut(extension, ".")
 	for found {
 		if renderer, ok := extRenderers["."+extension]; ok {
 			return renderer
@@ -371,7 +381,11 @@ func (err ErrUnsupportedRenderExtension) Error() string {
 }
 
 func renderFile(ctx *RenderContext, input io.Reader, output io.Writer) error {
-	if renderer := GetRendererByFileName(ctx.RelativePath); renderer != nil {
+	extension := FullExtension(ctx.RelativePath)
+	if extension == "" {
+		return fmt.Errorf("filename '%s' does not have an extension", filepath.Base(ctx.RelativePath))
+	}
+	if renderer := GetRendererByExtension(extension); renderer != nil {
 		if r, ok := renderer.(ExternalRenderer); ok && r.DisplayInIFrame() {
 			if !ctx.InStandalonePage {
 				// for an external render, it could only output its content in a standalone page
@@ -381,13 +395,12 @@ func renderFile(ctx *RenderContext, input io.Reader, output io.Writer) error {
 		}
 		return render(ctx, renderer, input, output)
 	}
-	_, extension, _ := strings.Cut(ctx.RelativePath, ".")
-	return ErrUnsupportedRenderExtension{"." + extension}
+	return ErrUnsupportedRenderExtension{extension}
 }
 
 // Type returns if markup format via the filename
 func Type(filename string) string {
-	if parser := GetRendererByFileName(filename); parser != nil {
+	if parser := GetRendererByExtension(FullExtension(filename)); parser != nil {
 		return parser.Name()
 	}
 	return ""
@@ -395,7 +408,7 @@ func Type(filename string) string {
 
 // IsMarkupFile reports whether file is a markup type file
 func IsMarkupFile(name, markup string) bool {
-	if parser := GetRendererByFileName(name); parser != nil {
+	if parser := GetRendererByExtension(FullExtension(name)); parser != nil {
 		return parser.Name() == markup
 	}
 	return false
