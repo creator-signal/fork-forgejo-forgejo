@@ -13,7 +13,7 @@
 			</a>
 		</summary>
 		<div class="content">
-			<form class="tw-p-3 tw-text-left" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
+			<form class="ui form tw-p-3 tw-text-left" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
 				<fieldset>
 					<label>
 						<input type="checkbox" name="watch_issues" value="true" {{if $.RepoWatchSelection.Issues}}checked{{end}}>
@@ -29,6 +29,7 @@
 						<input type="checkbox" name="watch_releases" value="true" {{if $.RepoWatchSelection.Releases}}checked{{end}}>
 						{{svg "octicon-tag"}}
 						{{ctx.Locale.Tr "repo.watch.releases"}}
+						<span class="help">{{ctx.Locale.Tr "repo.watch.releases.hint"}}</span>
 					</label>
 					<div class="small button-sequence tw-mt-3">
 						<button type="submit" class="primary button">{{ctx.Locale.Tr "save"}}</button>

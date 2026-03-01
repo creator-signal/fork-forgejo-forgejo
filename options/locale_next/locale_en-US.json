@@ -512,5 +512,6 @@
 	"repo.watch.issues": "Issues",
 	"repo.watch.pull_requests": "Pull requests",
 	"repo.watch.releases": "Releases",
+	"repo.watch.releases.hint": "(Email only)",
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
