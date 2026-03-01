@@ -76,3 +76,18 @@ rules:
     paths:
       include:
         - "/routers/api/**/*.go"
+
+  - id: forgejo-api-direct-IsAdmin-check
+    patterns:
+      - pattern: |
+          ctx.Doer.IsAdmin
+    languages:
+      - go
+    message: |
+      ctx.Doer.IsAdmin does not take into account limited API access tokens.  Use ctx.IsUserSiteAdmin() instead.
+    fix: |
+      ctx.IsUserSiteAdmin()
+    severity: ERROR
+    paths:
+      include:
+        - "/routers/api/**/*.go"
