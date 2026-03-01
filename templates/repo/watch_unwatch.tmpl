@@ -15,17 +15,17 @@
 		<div class="content">
 			<form class="tw-p-3 tw-text-left" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
 				<fieldset>
-					<label id="watch-issues">
+					<label>
 						<input type="checkbox" name="watch_issues" value="true" {{if $.RepoWatchSelection.Issues}}checked{{end}}>
 						{{svg "octicon-issue-opened"}}
 						{{ctx.Locale.Tr "repo.watch.issues"}}
 					</label>
-					<label id="watch-pull-requests">
+					<label>
 						<input type="checkbox" name="watch_pull_requests" value="true" {{if $.RepoWatchSelection.PullRequests}}checked{{end}}>
 						{{svg "octicon-git-pull-request"}}
 						{{ctx.Locale.Tr "repo.watch.pull_requests"}}
 					</label>
-					<label id="watch-releases">
+					<label>
 						<input type="checkbox" name="watch_releases" value="true" {{if $.RepoWatchSelection.Releases}}checked{{end}}>
 						{{svg "octicon-tag"}}
 						{{ctx.Locale.Tr "repo.watch.releases"}}
