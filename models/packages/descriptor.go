@@ -156,7 +156,7 @@ func GetPackageDescriptor(ctx context.Context, pv *PackageVersion) (*PackageDesc
 	case TypeAlpine:
 		metadata = &alpine.VersionMetadata{}
 	case TypeAnsible:
-		metadata = &ansible.CollectionManifest{}
+		metadata = &ansible.CollectionInfo{}
 	case TypeArch:
 		metadata = &arch.VersionMetadata{}
 	case TypeCargo:

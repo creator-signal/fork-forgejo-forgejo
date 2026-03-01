@@ -98,8 +98,8 @@ func UploadCollection(ctx *context.Context) {
 			PackageInfo: packages_service.PackageInfo{
 				Owner:       ctx.Package.Owner,
 				PackageType: packages_model.TypeAnsible,
-				Name:        pck.CollectionInfo.Namespace + "." + pck.CollectionInfo.Name,
-				Version:     pck.CollectionInfo.Version,
+				Name:        pck.Namespace + "." + pck.Name,
+				Version:     pck.Version,
 			},
 			Creator:          ctx.Doer,
 			SemverCompatible: true,
@@ -107,7 +107,7 @@ func UploadCollection(ctx *context.Context) {
 		},
 		&packages_service.PackageFileCreationInfo{
 			PackageFileInfo: packages_service.PackageFileInfo{
-				Filename: strings.ToLower(pck.CollectionInfo.Namespace + "-" + pck.CollectionInfo.Name + "-" + pck.CollectionInfo.Version + ".tar.gz"),
+				Filename: strings.ToLower(pck.Namespace + "-" + pck.Name + "-" + pck.Version + ".tar.gz"),
 			},
 			Creator: ctx.Doer,
 			Data:    buffer,
@@ -268,7 +268,7 @@ func ListVersions(ctx *context.Context) {
 			Href:            fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/%v/", ctx.Params("username"), packageNamespace, packageName, pd.SemVer),
 			Created:         pd.Version.CreatedUnix.AsTime(),
 			Updated:         pd.Version.CreatedUnix.AsTime(),
-			RequiredAnsible: pd.Metadata.(*ansible_module.CollectionManifest).CollectionInfo.RequiresAnsible,
+			RequiredAnsible: pd.Metadata.(*ansible_module.CollectionInfo).RequiresAnsible,
 			Marks:           []string{},
 		})
 	}
@@ -359,7 +359,7 @@ func ServeCollection(ctx *context.Context) {
 			Size:     fileSize,
 		},
 		Metadata: AnsibleSpecificVersionResponseMetadata{
-			Dependencies: pd.Metadata.(*ansible_module.CollectionManifest).CollectionInfo.Dependencies,
+			Dependencies: pd.Metadata.(*ansible_module.CollectionInfo).Dependencies,
 		},
 	})
 }
