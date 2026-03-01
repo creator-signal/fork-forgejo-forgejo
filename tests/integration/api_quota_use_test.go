@@ -1285,6 +1285,47 @@ func testAPIQuotaEnforcement(t *testing.T) {
 			env.User.Session.MakeRequest(t, req, http.StatusNoContent)
 		})
 	})
+
+	// verify that package upload quota is evaluated against the package owner, not the uploader
+	t.Run("#/packages/{org}/quota-enforcement-against-owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		t.Run("upload to limited org is rejected", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			// The limited org has a "deny-all" rule (limit=0). The uploading
+			// user has unlimited quota. The upload should still be rejected
+			// because quota is evaluated against the package owner (the org).
+			body := strings.NewReader("forgejo is awesome")
+			req := NewRequestWithBody(t, "PUT",
+				fmt.Sprintf("/api/packages/%s/generic/org-quota-test/1.0.0/file.txt", env.Orgs.Limited.UserName),
+				body,
+			).AddTokenAuth(env.User.Token)
+			env.User.Session.MakeRequest(t, req, http.StatusRequestEntityTooLarge)
+		})
+
+		t.Run("upload to unlimited org succeeds even when user quota is zero", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			defer env.SetRuleLimit(t, "all", 0)()
+
+			// The unlimited org has no quota group, so it falls back to
+			// unlimited. The user has quota=0 but that should not matter.
+			body := strings.NewReader("forgejo is awesome")
+			req := NewRequestWithBody(t, "PUT",
+				fmt.Sprintf("/api/packages/%s/generic/org-quota-test/1.0.0/file.txt", env.Orgs.Unlimited.UserName),
+				body,
+			).AddTokenAuth(env.User.Token)
+			env.User.Session.MakeRequest(t, req, http.StatusCreated)
+
+			// Cleanup
+			env.WithoutQuota(t, func() {
+				req := NewRequestf(t, "DELETE", "/api/v1/packages/%s/generic/org-quota-test/1.0.0", env.Orgs.Unlimited.UserName).
+					AddTokenAuth(env.User.Token)
+				env.User.Session.MakeRequest(t, req, http.StatusNoContent)
+			})
+		})
+	})
 }
 
 func TestAPIQuotaOrgQuotaQuery(t *testing.T) {
