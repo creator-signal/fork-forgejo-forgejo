@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -1293,9 +1294,6 @@ func testAPIQuotaEnforcement(t *testing.T) {
 		t.Run("upload to limited org is rejected", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
-			// The limited org has a "deny-all" rule (limit=0). The uploading
-			// user has unlimited quota. The upload should still be rejected
-			// because quota is evaluated against the package owner (the org).
 			body := strings.NewReader("forgejo is awesome")
 			req := NewRequestWithBody(t, "PUT",
 				fmt.Sprintf("/api/packages/%s/generic/org-quota-test/1.0.0/file.txt", env.Orgs.Limited.UserName),
@@ -1309,8 +1307,6 @@ func testAPIQuotaEnforcement(t *testing.T) {
 
 			defer env.SetRuleLimit(t, "all", 0)()
 
-			// The unlimited org has no quota group, so it falls back to
-			// unlimited. The user has quota=0 but that should not matter.
 			body := strings.NewReader("forgejo is awesome")
 			req := NewRequestWithBody(t, "PUT",
 				fmt.Sprintf("/api/packages/%s/generic/org-quota-test/1.0.0/file.txt", env.Orgs.Unlimited.UserName),
@@ -1318,11 +1314,103 @@ func testAPIQuotaEnforcement(t *testing.T) {
 			).AddTokenAuth(env.User.Token)
 			env.User.Session.MakeRequest(t, req, http.StatusCreated)
 
-			// Cleanup
 			env.WithoutQuota(t, func() {
 				req := NewRequestf(t, "DELETE", "/api/v1/packages/%s/generic/org-quota-test/1.0.0", env.Orgs.Unlimited.UserName).
 					AddTokenAuth(env.User.Token)
 				env.User.Session.MakeRequest(t, req, http.StatusNoContent)
+			})
+		})
+	})
+
+	t.Run("#/v2/{org}/container/quota-enforcement-against-owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		type tokenResponse struct {
+			Token string `json:"token"`
+		}
+
+		getContainerToken := func(t *testing.T, username string) string {
+			t.Helper()
+			req := NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL)).
+				AddBasicAuth(username)
+			resp := MakeRequest(t, req, http.StatusOK)
+			var tr tokenResponse
+			DecodeJSON(t, resp, &tr)
+			return fmt.Sprintf("Bearer %s", tr.Token)
+		}
+
+		blobContent := []byte("quota-container-blob")
+		blobDigest := fmt.Sprintf("sha256:%x", sha256.Sum256(blobContent))
+		configContent := `{}`
+		configDigest := fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(configContent)))
+		manifestContent := fmt.Sprintf(`{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json","config":{"mediaType":"application/vnd.docker.container.image.v1+json","digest":%q,"size":%d},"layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":%q,"size":%d}]}`,
+			configDigest, len(configContent), blobDigest, len(blobContent))
+
+		userToken := getContainerToken(t, env.User.User.Name)
+
+		t.Run("upload to limited org is rejected", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			image := fmt.Sprintf("%sv2/%s/quota-test-img", setting.AppURL, env.Orgs.Limited.UserName)
+
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", image, blobDigest), bytes.NewReader(blobContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusRequestEntityTooLarge)
+
+			req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", image)).
+				AddTokenAuth(userToken)
+			resp := MakeRequest(t, req, http.StatusRequestEntityTooLarge)
+
+			// chunked upload: initiate returns 413, so patch/put are never reached
+			// this is the result we expect, otherwise it's very hard to create multi-tenant environment
+			_ = resp
+		})
+
+		t.Run("upload to unlimited org succeeds even when user quota is zero", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			defer env.SetRuleLimit(t, "all", 0)()
+
+			image := fmt.Sprintf("%sv2/%s/quota-test-img", setting.AppURL, env.Orgs.Unlimited.UserName)
+
+			// monolithic blob upload
+			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", image, blobDigest), bytes.NewReader(blobContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", image, configDigest), strings.NewReader(configContent)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+
+			// chunked blob upload (patch + put)
+			req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", image)).
+				AddTokenAuth(userToken)
+			resp := MakeRequest(t, req, http.StatusAccepted)
+
+			uploadURL := resp.Header().Get("Location")
+			contentRange := fmt.Sprintf("0-%d", len(blobContent)-1)
+			req = NewRequestWithBody(t, "PATCH", setting.AppURL+uploadURL[1:], bytes.NewReader(blobContent)).
+				AddTokenAuth(userToken).
+				SetHeader("Content-Range", contentRange)
+			resp = MakeRequest(t, req, http.StatusAccepted)
+
+			uploadURL = resp.Header().Get("Location")
+			req = NewRequest(t, "PUT", fmt.Sprintf("%s?digest=%s", setting.AppURL+uploadURL[1:], blobDigest)).
+				AddTokenAuth(userToken)
+			MakeRequest(t, req, http.StatusCreated)
+
+			// upload manifest
+			req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/v1", image), strings.NewReader(manifestContent)).
+				AddTokenAuth(userToken).
+				SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			MakeRequest(t, req, http.StatusCreated)
+
+			// delete manifest
+			env.WithoutQuota(t, func() {
+				manifestDigest := fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(manifestContent)))
+				req := NewRequest(t, "DELETE", fmt.Sprintf("%s/manifests/%s", image, manifestDigest)).
+					AddTokenAuth(userToken)
+				MakeRequest(t, req, http.StatusAccepted)
 			})
 		})
 	})
