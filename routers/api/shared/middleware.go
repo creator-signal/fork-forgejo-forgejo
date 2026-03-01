@@ -166,7 +166,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 		}
 
 		if options.AdminRequired {
-			if !ctx.Doer.IsAdmin {
+			if !ctx.IsUserSiteAdmin() {
 				ctx.JSON(http.StatusForbidden, map[string]string{
 					"message": "You have no permission to request for this.",
 				})

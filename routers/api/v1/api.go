@@ -104,7 +104,7 @@ func sudo() func(ctx *context.APIContext) {
 		}
 
 		if len(sudo) > 0 {
-			if ctx.IsSigned && ctx.Doer.IsAdmin {
+			if ctx.IsSigned && ctx.IsUserSiteAdmin() {
 				user, err := user_model.GetUserByName(ctx, sudo)
 				if err != nil {
 					if user_model.IsErrUserNotExist(err) {
@@ -800,7 +800,7 @@ func individualPermsChecker(ctx *context.APIContext) {
 	if ctx.ContextUser.IsIndividual() {
 		switch ctx.ContextUser.Visibility {
 		case api.VisibleTypePrivate:
-			if ctx.Doer == nil || (ctx.ContextUser.ID != ctx.Doer.ID && !ctx.Doer.IsAdmin) {
+			if ctx.Doer == nil || (ctx.ContextUser.ID != ctx.Doer.ID && !ctx.IsUserSiteAdmin()) {
 				ctx.NotFound("Visit Project", nil)
 				return
 			}
