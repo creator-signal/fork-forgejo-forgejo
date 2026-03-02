@@ -8,7 +8,7 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test, login_user} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
 
 test.describe('Switch CSS properties', () => {
   const noBg = 'rgba(0, 0, 0, 0)';
@@ -111,8 +111,8 @@ test.describe('Switch CSS properties', () => {
 
     test('Notifications', async ({page}) => {
       // Test counter contrast boost in active and :hover items
-      const labelBgNormal = "rgba(202, 202, 202, 0.482)";
-      const labelBgContrast = "rgb(202, 202, 202)";
+      const labelBgNormal = 'rgba(202, 202, 202, 0.482)';
+      const labelBgContrast = 'rgb(202, 202, 202)';
       const counter = page.locator('a.item[href="/notifications?q=unread"] > .ui.label');
 
       // On Unread tab (item with counter is active)
