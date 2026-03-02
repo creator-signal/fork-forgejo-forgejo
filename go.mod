@@ -17,7 +17,7 @@ require (
 	code.forgejo.org/go-chi/captcha v1.0.2
 	code.forgejo.org/go-chi/session v1.0.2
 	code.gitea.io/sdk/gitea v0.21.0
-	code.superseriousbusiness.org/exif-terminator v0.11.0
+	code.superseriousbusiness.org/exif-terminator v0.11.1
 	code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0
 	codeberg.org/gusted/mcaptcha v0.0.0-20220723083913-4f3072e1d570
 	connectrpc.com/connect v1.19.1
@@ -26,7 +26,7 @@ require (
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358
 	github.com/ProtonMail/go-crypto v1.3.0
 	github.com/PuerkitoBio/goquery v1.11.0
-	github.com/SaveTheRbtz/zstd-seekable-format-go/pkg v0.7.2
+	github.com/SaveTheRbtz/zstd-seekable-format-go/pkg v0.8.0
 	github.com/alecthomas/chroma/v2 v2.23.1
 	github.com/aquasecurity/go-pep440-version v0.0.1
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
@@ -105,7 +105,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.48.0
 	golang.org/x/image v0.36.0
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/sync v0.19.0
 	golang.org/x/sys v0.41.0
@@ -193,7 +193,7 @@ require (
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/btree v1.1.2 // indirect
+	github.com/google/btree v1.1.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/go-tpm v0.9.5 // indirect
