@@ -40,8 +40,8 @@
   background: var(--color-hover);
 }
 
-/* Item that has to crawl under it's active neighbor, so when it is hovered,
-there are no ugly unpainted v/^ shapes between them */
+/* Corner rounding aid: item that has to crawl under it's active neighbor,
+so when it is hovered, there are no ugly unpainted v/^ shapes between them */
 .switch > .item:has(+ .active.item) { /* Active neighbor is next item */
   margin-right: calc(-1 * var(--border-radius));
   padding-right: calc(var(--switch-padding-inline) + var(--border-radius));
@@ -58,6 +58,7 @@ there are no ugly unpainted v/^ shapes between them */
   outline: 1px solid var(--color-input-border);
 }
 
+/* Prevent default browser styling */
 .switch > button.item {
   background: transparent;
 }
