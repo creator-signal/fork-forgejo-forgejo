@@ -664,7 +664,6 @@ func Cancel(ctx *app_context.Context) {
 			if status.IsDone() {
 				continue
 			}
-			// if TaskID is 0, it means the job has not been started
 			if job.TaskID == 0 {
 				job.Status = actions_model.StatusCancelled
 				job.Stopped = timeutil.TimeStampNow()
@@ -683,9 +682,6 @@ func Cancel(ctx *app_context.Context) {
 			if err := actions_service.StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
 				return err
 			}
-			job.Status = actions_model.StatusCancelled
-			job.Stopped = timeutil.TimeStampNow()
-			updatedjobs = append(updatedjobs, job)
 		}
 		return nil
 	}); err != nil {
