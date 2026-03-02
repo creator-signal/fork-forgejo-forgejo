@@ -6,6 +6,7 @@ package user
 
 import (
 	"cmp"
+	stdCtx "context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,11 +16,14 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/container"
+	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/authz"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 )
@@ -120,6 +124,19 @@ func ListAccessTokens(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, &apiTokens)
 }
 
+func translateAccessTokenValidationError(ctx *context.Base, err error) optional.Option[string] {
+	switch {
+	case errors.Is(err, authz.ErrSpecifiedReposNone):
+		return optional.Some[string](ctx.Locale.TrString("access_token.error.specified_repos_none"))
+	case errors.Is(err, authz.ErrSpecifiedReposNoPublicOnly):
+		return optional.Some[string](ctx.Locale.TrString("access_token.error.specified_repos_and_public_only"))
+	case errors.Is(err, authz.ErrSpecifiedReposInvalidScope):
+		return optional.Some[string](ctx.Locale.TrString("access_token.error.specified_repos_and_invalid_scope"))
+	default:
+		return optional.None[string]()
+	}
+}
+
 // CreateAccessToken creates an access token
 func CreateAccessToken(ctx *context.APIContext) {
 	// swagger:operation POST /users/{username}/tokens user userCreateToken
@@ -177,11 +194,68 @@ func CreateAccessToken(ctx *context.APIContext) {
 	}
 	t.Scope = scope
 
-	// maintain legacy behaviour until new API options are added -- token has access to all resources, is not
-	// fine-grained
-	t.ResourceAllRepos = true
+	var resourceRepos []*auth_model.AccessTokenResourceRepo
+	var tokenRepositories []*api.RepositoryMeta
 
-	if err := auth_model.NewAccessToken(ctx, t); err != nil {
+	if len(form.Repositories) != 0 {
+		repos := make([]*repo_model.Repository, len(form.Repositories))
+		for i, repoTarget := range form.Repositories {
+			repo, err := repo_model.GetRepositoryByOwnerAndName(ctx, repoTarget.Owner, repoTarget.Name)
+			if err != nil && repo_model.IsErrRepoNotExist(err) {
+				ctx.Error(http.StatusBadRequest, "GetRepositoryByOwnerAndName", fmt.Errorf("repository %s/%s does not exist", repoTarget.Owner, repoTarget.Name))
+				return
+			} else if err != nil {
+				ctx.ServerError("GetRepositoryByOwnerAndName", err)
+				return
+			}
+			permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
+			if err != nil {
+				ctx.ServerError("GetUserRepoPermissionWithReducer", err)
+				return
+			} else if !permission.HasAccess() {
+				// Prevent data existence probing -- ensure this error is the exact same as the !IsErrRepoNotExist case above
+				ctx.Error(http.StatusBadRequest, "GetRepositoryByOwnerAndName", fmt.Errorf("repository %s/%s does not exist", repoTarget.Owner, repoTarget.Name))
+				return
+			}
+			repos[i] = repo
+		}
+
+		for _, repo := range repos {
+			resourceRepos = append(resourceRepos, &auth_model.AccessTokenResourceRepo{RepoID: repo.ID})
+			tokenRepositories = append(tokenRepositories, &api.RepositoryMeta{
+				ID:       repo.ID,
+				Name:     repo.Name,
+				Owner:    repo.OwnerName,
+				FullName: repo.FullName(),
+			})
+		}
+
+		t.ResourceAllRepos = false
+	} else {
+		// token has access to all repository resources
+		t.ResourceAllRepos = true
+	}
+
+	if err := authz.ValidateAccessToken(t, resourceRepos); err != nil {
+		s := translateAccessTokenValidationError(ctx.Base, err)
+		if has, str := s.Get(); has {
+			ctx.Error(http.StatusBadRequest, "ValidateAccessToken", str)
+			return
+		}
+		ctx.ServerError("ValidateAccessToken", err)
+		return
+	}
+
+	err = db.WithTx(ctx, func(ctx stdCtx.Context) error {
+		if err := auth_model.NewAccessToken(ctx, t); err != nil {
+			return nil
+		}
+		if err := auth_model.InsertAccessTokenResourceRepos(ctx, t.ID, resourceRepos); err != nil {
+			return nil
+		}
+		return nil
+	})
+	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "NewAccessToken", err)
 		return
 	}
@@ -191,6 +265,7 @@ func CreateAccessToken(ctx *context.APIContext) {
 		ID:             t.ID,
 		TokenLastEight: t.TokenLastEight,
 		Scopes:         t.Scope.StringSlice(),
+		Repositories:   tokenRepositories,
 	})
 }
 
