@@ -290,7 +290,7 @@ func ServeCollection(ctx *context.Context) {
 	packageVersion := ctx.Params("version")
 
 	namespaceHashBuilder := sha256.New()
-	namespaceHashBuilder.Write([]byte(fmt.Sprintf("%v/%v", registryUsername, packageNamespace)))
+	fmt.Fprintf(namespaceHashBuilder, "%v/%v", registryUsername, packageNamespace)
 
 	pv, err := packages_model.GetVersionByNameAndVersion(ctx, ctx.Package.Owner.ID, packages_model.TypeAnsible, packageNamespace+"."+packageName, packageVersion)
 	if err != nil {
