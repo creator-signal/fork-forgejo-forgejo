@@ -592,9 +592,9 @@ func rerunJob(ctx *app_context.Context, job *actions_model.ActionRunJob, shouldB
 	}
 
 	actions_service.CreateCommitStatus(ctx, job)
-	_ = job.LoadAttributes(ctx)
-	notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
-
+	if err := job.LoadAttributes(ctx); err == nil {
+		notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+	}
 	return nil
 }
 
@@ -692,8 +692,9 @@ func Cancel(ctx *app_context.Context) {
 	actions_service.CreateCommitStatus(ctx, jobs...)
 
 	for _, job := range updatedjobs {
-		_ = job.LoadAttributes(ctx)
-		notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+		if err := job.LoadAttributes(ctx); err == nil {
+			notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+		}
 	}
 
 	ctx.JSON(http.StatusOK, struct{}{})
