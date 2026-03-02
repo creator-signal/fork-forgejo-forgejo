@@ -88,24 +88,53 @@ test.describe('Switch CSS properties', () => {
   });
 
   // Subtest for areas that can't be reached without JS
-  test('With JS', async ({browser}, workerInfo) => {
-    const context = await login_user(browser, workerInfo, 'user2');
-    const page = await context.newPage();
+  test.describe('With JS', () => {
+    test.use({user: 'user2'});
 
-    // Go to files tab of a reviewable pull request
-    await page.goto('/user2/repo1/pulls/5/files');
+    test('PR review box', async ({page}) => {
+      // Go to files tab of a reviewable pull request
+      await page.goto('/user2/repo1/pulls/5/files');
 
-    // Open review box
-    await page.locator('#review-box .js-btn-review').click();
+      // Open review box
+      await page.locator('#review-box .js-btn-review').click();
 
-    // Markdown editor has a special rule for a shorter switch
-    const itemHeight = 28;
+      // Markdown editor has a special rule for a shorter switch
+      const itemHeight = 28;
 
-    await expect(async () => {
+      await expect(async () => {
       await Promise.all([
         evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
-        evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
+          evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
       ]);
     }).toPass();
+    });
+
+    test('Notifications', async ({page}) => {
+      // Test counter contrast boost in active and :hover items
+      const labelBgNormal = "rgba(202, 202, 202, 0.482)";
+      const labelBgContrast = "rgb(202, 202, 202)";
+      const counter = page.locator('a.item[href="/notifications?q=unread"] > .ui.label');
+
+      // On Unread tab (item with counter is active)
+      await page.goto('/notifications?q=unread');
+
+      // * not hovering => boosted because .active
+      expect(await counter.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(labelBgContrast);
+
+      // * hoveing => boosted
+      await page.locator('a.item[href="/notifications?q=unread"]').hover();
+      expect(await counter.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(labelBgContrast);
+
+      // On Read tab (item with counter is inactive)
+      await page.goto('/notifications?q=read');
+
+      // * not hovering => normal
+      await page.locator('#navbar-logo').hover();
+      expect(await counter.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(labelBgNormal);
+
+      // * hoveing => boosted
+      await page.locator('a.item[href="/notifications?q=unread"]').hover();
+      expect(await counter.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(labelBgContrast);
+    });
   });
 });
