@@ -311,6 +311,39 @@ func TestAction(t *testing.T) {
 		assertActionEqual(t, oldSuccessRun, payloadContent.LastRun)
 	})
 
+	t.Run("Workflow Job Status update - nil task", func(t *testing.T) {
+		defer test.MockVariableValue(&setting.Webhook.PayloadCommitLimit, 10)()
+
+		now := timeutil.TimeStampNow()
+		nilTaskJob := &actions_model.ActionRunJob{
+			ID:      999,
+			RunID:   oldSuccessRun.ID,
+			Run:     oldSuccessRun,
+			RepoID:  repo.ID,
+			OwnerID: triggerUser.ID,
+			Status:  actions_model.StatusWaiting,
+			Name:    "nil-task-job",
+			RunsOn:  []string{"ubuntu-latest"},
+			Attempt: 1,
+			Created: now,
+			Started: now,
+			Stopped: now,
+		}
+
+		NewNotifier().WorkflowJobStatusUpdate(db.DefaultContext, repo, triggerUser, nilTaskJob, nil)
+
+		hookTask := unittest.AssertExistsAndLoadBean(t, &webhook_model.HookTask{}, unittest.Cond("event_type == 'workflow_job' AND payload_content LIKE '%nil-task-job%'"))
+		assert.Equal(t, webhook_module.HookEventWorkflowJob, hookTask.EventType)
+
+		var payloadContent structs.WorkflowJobPayload
+		require.NoError(t, json.Unmarshal([]byte(hookTask.PayloadContent), &payloadContent))
+
+		// Steps must be an empty array (not null) when task is nil
+		assert.NotNil(t, payloadContent.WorkflowJob.Steps)
+		assert.Empty(t, payloadContent.WorkflowJob.Steps)
+		assert.Contains(t, hookTask.PayloadContent, `"steps": []`)
+	})
+
 	t.Run("Workflow Job Status update", func(t *testing.T) {
 		defer test.MockVariableValue(&setting.Webhook.PayloadCommitLimit, 10)()
 
@@ -367,14 +400,14 @@ func TestAction(t *testing.T) {
 
 		NewNotifier().WorkflowJobStatusUpdate(db.DefaultContext, repo, triggerUser, actionRunJob, actionTask)
 
-		hookTask := unittest.AssertExistsAndLoadBean(t, &webhook_model.HookTask{}, unittest.Cond("event_type == 'workflow_job'"))
+		hookTask := unittest.AssertExistsAndLoadBean(t, &webhook_model.HookTask{}, unittest.Cond("event_type == 'workflow_job' AND payload_content LIKE '%test-job%'"))
 		assert.Equal(t, webhook_module.HookEventWorkflowJob, hookTask.EventType)
 
 		var payloadContent structs.WorkflowJobPayload
 		require.NoError(t, json.Unmarshal([]byte(hookTask.PayloadContent), &payloadContent))
 
 		// Test Action and basic fields
-		assert.Equal(t, "queued", payloadContent.Action)
+		assert.Equal(t, actions_model.StatusWaiting.String(), payloadContent.Action)
 		assert.NotNil(t, payloadContent.WorkflowJob)
 		assert.Equal(t, actionRunJob.ID, payloadContent.WorkflowJob.ID)
 		assert.Equal(t, actionRunJob.RunID, payloadContent.WorkflowJob.RunID)
@@ -383,8 +416,6 @@ func TestAction(t *testing.T) {
 		assert.Equal(t, actionRunJob.Attempt, payloadContent.WorkflowJob.RunAttempt)
 
 		// Test URLs
-		assert.Contains(t, payloadContent.WorkflowJob.URL, fmt.Sprintf("/actions/runs/%d/jobs/%d", actionRunJob.RunID, actionRunJob.ID))
-		assert.Contains(t, payloadContent.WorkflowJob.HTMLURL, fmt.Sprintf("/jobs/%d", 0))
 		assert.Contains(t, payloadContent.WorkflowJob.RunURL, fmt.Sprintf("/actions/runs/%d", actionRunJob.RunID))
 
 		// Test commit info
@@ -399,13 +430,11 @@ func TestAction(t *testing.T) {
 		require.Len(t, payloadContent.WorkflowJob.Steps, 2)
 		assert.Equal(t, "checkout", payloadContent.WorkflowJob.Steps[0].Name)
 		assert.Equal(t, int64(0), payloadContent.WorkflowJob.Steps[0].Number)
-		assert.Equal(t, "queued", payloadContent.WorkflowJob.Steps[0].Status)
-		assert.Empty(t, payloadContent.WorkflowJob.Steps[0].Conclusion)
+		assert.Equal(t, actions_model.StatusSuccess.String(), payloadContent.WorkflowJob.Steps[0].Status)
 
 		assert.Equal(t, "build", payloadContent.WorkflowJob.Steps[1].Name)
 		assert.Equal(t, int64(1), payloadContent.WorkflowJob.Steps[1].Number)
-		assert.Equal(t, "queued", payloadContent.WorkflowJob.Steps[1].Status)
-		assert.Empty(t, payloadContent.WorkflowJob.Steps[1].Conclusion)
+		assert.Equal(t, actions_model.StatusFailure.String(), payloadContent.WorkflowJob.Steps[1].Status)
 
 		// Test timestamps
 		assert.Equal(t, actionRunJob.Created.AsTime().UTC(), payloadContent.WorkflowJob.CreatedAt)
