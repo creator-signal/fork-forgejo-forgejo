@@ -205,7 +205,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	}
 	if !failed {
 		for _, job := range allJobs {
-			notify_service.WorkflowJobStatusUpdate(ctx, repo, doer, job, nil)
+			notify_service.WorkflowJobStatusUpdate(ctx, doer, job)
 		}
 	}
 

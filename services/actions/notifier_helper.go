@@ -480,7 +480,7 @@ func handleWorkflows(
 		}
 
 		for _, job := range alljobs {
-			notify_service.WorkflowJobStatusUpdate(ctx, input.Repo, input.Doer, job, nil)
+			notify_service.WorkflowJobStatusUpdate(ctx, input.Doer, job)
 		}
 	}
 	return nil

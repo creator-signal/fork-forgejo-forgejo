@@ -32,9 +32,7 @@ func killRun(ctx context.Context, run *actions_model.ActionRun, newStatus action
 				if err != nil {
 					return err
 				}
-				if err := job.LoadAttributes(ctx); err == nil {
-					notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
-				}
+				notify_service.WorkflowJobStatusUpdate(ctx, nil, job)
 				continue
 			}
 			if err := StopTask(ctx, job.TaskID, newStatus); err != nil {
@@ -71,9 +69,7 @@ func ApproveRun(ctx context.Context, run *actions_model.ActionRun, doerID int64)
 					return err
 				}
 			}
-			if err := job.LoadAttributes(ctx); err == nil {
-				notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
-			}
+			notify_service.WorkflowJobStatusUpdate(ctx, nil, job)
 		}
 		CreateCommitStatus(ctx, jobs...)
 

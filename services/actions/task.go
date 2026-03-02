@@ -11,6 +11,7 @@ import (
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	actions_module "forgejo.org/modules/actions"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
@@ -94,7 +95,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 	}
 
 	CreateCommitStatus(ctx, job)
-	notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, actionTask)
+	notify_service.WorkflowJobStatusUpdateWithTask(ctx, nil, actionTask)
 
 	return task, true, nil
 }
@@ -237,10 +238,11 @@ func StopTask(ctx context.Context, taskID int64, status actions_model.Status) er
 		return err
 	}
 
+	// do not call WorkflowJobStatusUpdate job could not be loaded from DB
 	if err := task.LoadJob(ctx); err == nil {
-		if err := task.Job.LoadAttributes(ctx); err == nil {
-			notify_service.WorkflowJobStatusUpdate(ctx, task.Job.Run.Repo, task.Job.Run.TriggerUser, task.Job, task)
-		}
+		notify_service.WorkflowJobStatusUpdateWithTask(ctx, nil, task)
+	} else {
+		log.Warn("failed to send workflow_job status webhook for task %v: %w", task.ID, err)
 	}
 
 	runner := &actions_model.ActionRunner{}

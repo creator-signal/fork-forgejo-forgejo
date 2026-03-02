@@ -102,10 +102,7 @@ func CancelAbandonedJobs(ctx context.Context) error {
 		CreateCommitStatus(ctx, job)
 
 		if hasBeenCancelled {
-			err = job.LoadAttributes(ctx)
-			if err == nil {
-				notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
-			}
+			notify_service.WorkflowJobStatusUpdate(ctx, nil, job)
 		}
 	}
 

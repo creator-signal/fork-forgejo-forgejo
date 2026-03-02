@@ -209,7 +209,7 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 	}
 	if !failed {
 		for _, job := range allJobs {
-			notify_service.WorkflowJobStatusUpdate(ctx, run.Repo, run.TriggerUser, job, nil)
+			notify_service.WorkflowJobStatusUpdate(ctx, run.TriggerUser, job)
 		}
 	}
 

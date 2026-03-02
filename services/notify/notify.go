@@ -396,8 +396,43 @@ func ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorSt
 	}
 }
 
-func WorkflowJobStatusUpdate(ctx context.Context, repo *repo_model.Repository, sender *user_model.User, job *actions_model.ActionRunJob, task *actions_model.ActionTask) {
+func WorkflowJobStatusUpdateWithTask(ctx context.Context, doer *user_model.User, task *actions_model.ActionTask) {
+	err := task.LoadAttributes(ctx)
+	// skip workflow job status update, if a jobs attributes could not be populated
+	if err != nil {
+		log.Warn("failed to send workflow_job status webhook for task %v: %v", task.ID, err)
+		return
+	}
+
+	err = task.Job.LoadAttributes(ctx)
+	// skip workflow job status update, if a jobs attributes could not be populated
+	if err != nil {
+		log.Warn("failed to send workflow_job status webhook for job/task %v/%v: %v", task.Job.ID, task.ID, err)
+		return
+	}
+
+	if doer == nil {
+		doer = task.Job.Run.TriggerUser
+	}
+
 	for _, notifier := range notifiers {
-		notifier.WorkflowJobStatusUpdate(ctx, repo, sender, job, task)
+		notifier.WorkflowJobStatusUpdate(ctx, task.Job.Run.Repo, doer, task.Job, task)
+	}
+}
+
+func WorkflowJobStatusUpdate(ctx context.Context, doer *user_model.User, job *actions_model.ActionRunJob) {
+	err := job.LoadAttributes(ctx)
+	// skip workflow job status update, if a jobs attributes could not be populated
+	if err != nil {
+		log.Warn("failed to send workflow_job status webhook for job %v: %w", job.ID, err)
+		return
+	}
+
+	if doer == nil {
+		doer = job.Run.TriggerUser
+	}
+
+	for _, notifier := range notifiers {
+		notifier.WorkflowJobStatusUpdate(ctx, job.Run.Repo, doer, job, nil)
 	}
 }
