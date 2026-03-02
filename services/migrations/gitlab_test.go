@@ -124,6 +124,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 	releases, err := downloader.GetReleases()
 	require.NoError(t, err)
 	// TODO: fix size, currently reported as 0
+	// See https://codeberg.org/forgejo/forgejo/issues/11471
 	size := 0
 	dc := 0
 	assertReleasesEqual(t, []*base.Release{
@@ -144,11 +145,13 @@ func TestGitlabDownloadRepo(t *testing.T) {
 				},
 				{
 					// TODO: fix name or URL, doesn't make sense to download without extension
+					// See https://codeberg.org/forgejo/forgejo/issues/11471
 					ID:            10687293,
 					Name:          "zip (other)",
 					Size:          &size,
 					DownloadCount: &dc,
 					// TODO: fix date, currently time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+					// See https://codeberg.org/forgejo/forgejo/issues/11471
 					// Created:       time.Date(2025, time.August, 7, 23, 39, 27, 0, time.UTC),
 					// Updated:       time.Date(2025, time.August, 7, 23, 39, 29, 0, time.UTC),
 				},
