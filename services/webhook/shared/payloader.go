@@ -90,6 +90,8 @@ func NewPayload[T any](rc PayloadConvertor[T], data []byte, event webhook_module
 		return convertUnmarshalledJSON(rc.Package, data)
 	case webhook_module.HookEventActionRunFailure, webhook_module.HookEventActionRunRecover, webhook_module.HookEventActionRunSuccess:
 		return convertUnmarshalledJSON(rc.Action, data)
+	case webhook_module.HookEventWorkflowJob:
+		return convertUnmarshalledJSON(rc.WorkflowJob, data)
 	}
 	var t T
 	return t, fmt.Errorf("newPayload unsupported event: %s", event)

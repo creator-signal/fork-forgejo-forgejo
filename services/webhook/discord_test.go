@@ -323,6 +323,55 @@ func TestDiscordPayload(t *testing.T) {
 		assert.Equal(t, setting.AppURL+p.Sender.UserName, pl.Embeds[0].Author.URL)
 		assert.Equal(t, p.Sender.AvatarURL, pl.Embeds[0].Author.IconURL)
 	})
+
+	t.Run("WorkflowJob", func(t *testing.T) {
+		p := workflowJobTestPayload()
+
+		pl, err := dc.WorkflowJob(p)
+		require.NoError(t, err)
+
+		assert.Len(t, pl.Embeds, 1)
+		assert.Equal(t, "Workflow Job queued: test-job(#1)[2020558fe2]:waiting", pl.Embeds[0].Title)
+		assert.Empty(t, pl.Embeds[0].Description)
+		assert.Equal(t, "http://localhost:3000/test/repo/actions/runs/1/jobs/1", pl.Embeds[0].URL)
+		assert.Equal(t, p.Sender.UserName, pl.Embeds[0].Author.Name)
+		assert.Equal(t, setting.AppURL+p.Sender.UserName, pl.Embeds[0].Author.URL)
+		assert.Equal(t, p.Sender.AvatarURL, pl.Embeds[0].Author.IconURL)
+	})
+}
+
+func TestDiscordWorkflowJobJSONPayload(t *testing.T) {
+	p := workflowJobTestPayload()
+	data, err := p.JSONPayload()
+	require.NoError(t, err)
+
+	hook := &webhook_model.Webhook{
+		RepoID:     3,
+		IsActive:   true,
+		Type:       webhook_module.DISCORD,
+		URL:        "https://discord.example.com/",
+		Meta:       `{}`,
+		HTTPMethod: "POST",
+	}
+	task := &webhook_model.HookTask{
+		HookID:         hook.ID,
+		EventType:      webhook_module.HookEventWorkflowJob,
+		PayloadContent: string(data),
+		PayloadVersion: 2,
+	}
+
+	req, reqBody, err := discordHandler{}.NewRequest(t.Context(), hook, task)
+	require.NotNil(t, req)
+	require.NotNil(t, reqBody)
+	require.NoError(t, err)
+
+	assert.Equal(t, "POST", req.Method)
+	assert.Equal(t, "https://discord.example.com/", req.URL.String())
+	assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
+	var body DiscordPayload
+	err = json.NewDecoder(req.Body).Decode(&body)
+	require.NoError(t, err)
+	assert.Equal(t, "Workflow Job queued: test-job(#1)[2020558fe2]:waiting", body.Embeds[0].Title)
 }
 
 func TestDiscordJSONPayload(t *testing.T) {

@@ -270,6 +270,30 @@ func pullReleaseTestPayload() *api.ReleasePayload {
 	}
 }
 
+func workflowJobTestPayload() *api.WorkflowJobPayload {
+	return &api.WorkflowJobPayload{
+		Action: "queued",
+		WorkflowJob: &api.ActionWorkflowJob{
+			ID:      1,
+			HTMLURL: "http://localhost:3000/test/repo/actions/runs/1/jobs/1",
+			RunID:   1,
+			Name:    "test-job",
+			HeadSha: "2020558fe2e34debb818a514715839cabd25e778",
+			Status:  "waiting",
+			Steps:   []*api.ActionWorkflowStep{},
+		},
+		Repo: &api.Repository{
+			HTMLURL:  "http://localhost:3000/test/repo",
+			Name:     "repo",
+			FullName: "test/repo",
+		},
+		Sender: &api.User{
+			UserName:  "user1",
+			AvatarURL: "http://localhost:3000/user1/avatar",
+		},
+	}
+}
+
 func ActionTestPayload() *api.ActionPayload {
 	// this is not a complete action payload but enough for testing purposes
 	return &api.ActionPayload{
@@ -720,6 +744,59 @@ func TestGetActionPayloadInfo(t *testing.T) {
 	for i, c := range cases {
 		p.Action = c.action
 		text, color := getActionPayloadInfo(p, noneLinkFormatter)
+		assert.Equal(t, c.text, text, "case %d", i)
+		assert.Equal(t, c.color, color, "case %d", i)
+	}
+}
+
+func TestGetWorkflowJobPayloadInfo(t *testing.T) {
+	p := workflowJobTestPayload()
+
+	cases := []struct {
+		status string
+		text   string
+		color  int
+	}{
+		{
+			"waiting",
+			"Workflow Job queued: test-job(#1)[2020558fe2]:waiting",
+			orangeColor,
+		},
+		{
+			"running",
+			"Workflow Job queued: test-job(#1)[2020558fe2]:running",
+			orangeColorLight,
+		},
+		{
+			"success",
+			"Workflow Job queued: test-job(#1)[2020558fe2]:success",
+			greenColor,
+		},
+		{
+			"failure",
+			"Workflow Job queued: test-job(#1)[2020558fe2]:failure",
+			redColor,
+		},
+		{
+			"cancelled",
+			"Workflow Job queued: test-job(#1)[2020558fe2]:cancelled",
+			yellowColor,
+		},
+		{
+			"skipped",
+			"Workflow Job queued: test-job(#1)[2020558fe2]:skipped",
+			purpleColor,
+		},
+		{
+			"unknown",
+			"Workflow Job queued: test-job(#1)[2020558fe2]:unknown",
+			greyColor,
+		},
+	}
+
+	for i, c := range cases {
+		p.WorkflowJob.Status = c.status
+		text, color := getWorkflowJobPayloadInfo(p, noneLinkFormatter, false)
 		assert.Equal(t, c.text, text, "case %d", i)
 		assert.Equal(t, c.color, color, "case %d", i)
 	}
