@@ -473,8 +473,8 @@ func handleWorkflows(
 			log.Error("SanityCheckRun: %v", err)
 			continue
 		}
-		// consistencyCheckRun already called killRun → WorkflowJobStatusUpdate with the correct
-		// status for each affected job.  Skip the loop to avoid sending stale (pre-DB-update) data.
+
+		// if consistencyCheckRun fails, WorkflowJobStatusUpdate has been called by killRun already and should be skipped now.
 		if failed {
 			continue
 		}
