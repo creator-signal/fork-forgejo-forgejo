@@ -86,7 +86,6 @@ import (
 	"forgejo.org/routers/api/v1/user"
 	"forgejo.org/services/actions"
 	"forgejo.org/services/auth"
-	"forgejo.org/services/authz"
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	redirect_service "forgejo.org/services/redirect"
@@ -356,30 +355,6 @@ func tokenRequiresScopes(requiredScopeCategories ...auth_model.AccessTokenScopeC
 		}
 
 		ctx.Data["requiredScopeCategories"] = requiredScopeCategories
-
-		// check if scope only applies to public resources
-		publicOnly, err := scope.PublicOnly()
-		if err != nil {
-			ctx.Error(http.StatusForbidden, "tokenRequiresScope", "parsing public resource scope failed: "+err.Error())
-			return
-		}
-
-		// assign to true so that those searching should only filter public repositories/users/organizations
-		ctx.PublicOnly = publicOnly
-
-		reducer, ok := ctx.Data["ApiTokenReducer"].(authz.AuthorizationReducer)
-		if ok {
-			ctx.Reducer = reducer
-		} else {
-			// No "ApiTokenReducer" will be populated if the auth method wasn't an PAT.  In this case, we populate
-			// `ctx.Reducer` so no nil checks are needed, and we respect the scope `PublicOnly()` so that it it's safe
-			// to just rely on `ctx.Reducer` to account for public-only access:
-			if ctx.PublicOnly {
-				ctx.Reducer = &authz.PublicReposAuthorizationReducer{}
-			} else {
-				ctx.Reducer = &authz.AllAccessAuthorizationReducer{}
-			}
-		}
 	}
 }
 
