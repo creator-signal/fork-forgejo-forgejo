@@ -153,7 +153,7 @@ func BuildCollectionFromArchive(r io.Reader) (*CollectionInfo, error) {
 		return nil, util.NewSilentWrapErrorf(err, "Parsing data from meta/runtime.yml failed")
 	}
 
-	var metadata *CollectionInfo = assembleCollectionManifest(rawManifest, rawRuntimeData)
+	var metadata = assembleCollectionManifest(rawManifest, rawRuntimeData)
 	return metadata, nil
 }
 
