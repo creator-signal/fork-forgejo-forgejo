@@ -8,6 +8,7 @@ import (
 
 	webhook_model "forgejo.org/models/webhook"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	webhook_module "forgejo.org/modules/webhook"
 
@@ -170,6 +171,15 @@ good job`, pl.Message)
 		require.NoError(t, err)
 
 		assert.Equal(t, `[test/repo] Release created: <a href="http://localhost:3000/test/repo/releases/tag/v1.0" rel="nofollow">v1.0</a> by user1`, pl.Message)
+	})
+
+	t.Run("WorkflowJob", func(t *testing.T) {
+		p := workflowJobTestPayload()
+
+		pl, err := tc.WorkflowJob(p)
+		require.NoError(t, err)
+
+		assert.Equal(t, `Workflow Job queued: <a href="http://localhost:3000/test/repo/actions/runs/1/jobs/1" rel="nofollow">test-job(#1)[2020558fe2]:waiting</a> by <a href="`+setting.AppURL+`user1" rel="nofollow">user1</a>`, pl.Message)
 	})
 }
 

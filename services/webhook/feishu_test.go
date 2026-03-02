@@ -154,6 +154,15 @@ func TestFeishuPayload(t *testing.T) {
 
 		assert.Equal(t, "[test/repo] Release created: v1.0 by user1", pl.Content.Text)
 	})
+
+	t.Run("WorkflowJob", func(t *testing.T) {
+		p := workflowJobTestPayload()
+
+		pl, err := fc.WorkflowJob(p)
+		require.NoError(t, err)
+
+		assert.Equal(t, "Workflow Job queued: test-job(#1)[2020558fe2]:waiting by user1", pl.Content.Text)
+	})
 }
 
 func TestFeishuJSONPayload(t *testing.T) {

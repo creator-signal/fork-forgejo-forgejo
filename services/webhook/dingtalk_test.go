@@ -213,6 +213,18 @@ func TestDingTalkPayload(t *testing.T) {
 		assert.Equal(t, "view release", pl.ActionCard.SingleTitle)
 		assert.Equal(t, "http://localhost:3000/test/repo/releases/tag/v1.0", parseRealSingleURL(pl.ActionCard.SingleURL))
 	})
+
+	t.Run("WorkflowJob", func(t *testing.T) {
+		p := workflowJobTestPayload()
+
+		pl, err := dc.WorkflowJob(p)
+		require.NoError(t, err)
+
+		assert.Equal(t, "Workflow Job queued: test-job(#1)[2020558fe2]:waiting by user1", pl.ActionCard.Text)
+		assert.Equal(t, "Workflow Job queued: test-job(#1)[2020558fe2]:waiting by user1", pl.ActionCard.Title)
+		assert.Equal(t, "Workflow Job", pl.ActionCard.SingleTitle)
+		assert.Equal(t, "http://localhost:3000/test/repo/actions/runs/1/jobs/1", parseRealSingleURL(pl.ActionCard.SingleURL))
+	})
 }
 
 func TestDingTalkJSONPayload(t *testing.T) {

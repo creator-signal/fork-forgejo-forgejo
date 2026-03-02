@@ -416,6 +416,34 @@ func TestMSTeamsPayload(t *testing.T) {
 		assert.Len(t, pl.PotentialAction[0].Targets, 1)
 		assert.Equal(t, "http://localhost:3000/test/repo/releases/tag/v1.0", pl.PotentialAction[0].Targets[0].URI)
 	})
+
+	t.Run("WorkflowJob", func(t *testing.T) {
+		p := workflowJobTestPayload()
+
+		pl, err := mc.WorkflowJob(p)
+		require.NoError(t, err)
+
+		assert.Equal(t, "Workflow Job queued: test-job(#1)[2020558fe2]:waiting", pl.Title)
+		assert.Equal(t, "Workflow Job queued: test-job(#1)[2020558fe2]:waiting", pl.Summary)
+		assert.Equal(t, "eb6420", pl.ThemeColor)
+		assert.Len(t, pl.Sections, 1)
+		assert.Equal(t, "user1", pl.Sections[0].ActivitySubtitle)
+		assert.Empty(t, pl.Sections[0].Text)
+		assert.Len(t, pl.Sections[0].Facts, 2)
+		for _, fact := range pl.Sections[0].Facts {
+			switch fact.Name {
+			case "Repository:":
+				assert.Equal(t, p.Repo.FullName, fact.Value)
+			case "WorkflowJob:":
+				assert.Equal(t, p.WorkflowJob.Name, fact.Value)
+			default:
+				t.Fail()
+			}
+		}
+		assert.Len(t, pl.PotentialAction, 1)
+		assert.Len(t, pl.PotentialAction[0].Targets, 1)
+		assert.Equal(t, "http://localhost:3000/test/repo/actions/runs/1/jobs/1", pl.PotentialAction[0].Targets[0].URI)
+	})
 }
 
 func TestMSTeamsJSONPayload(t *testing.T) {

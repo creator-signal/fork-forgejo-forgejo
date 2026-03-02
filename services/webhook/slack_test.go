@@ -8,6 +8,7 @@ import (
 
 	webhook_model "forgejo.org/models/webhook"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	webhook_module "forgejo.org/modules/webhook"
 
@@ -154,6 +155,15 @@ func TestSlackPayload(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "[test/repo] Release created: <http://localhost:3000/test/repo/releases/tag/v1.0|v1.0> by `user1`", pl.Text)
+	})
+
+	t.Run("WorkflowJob", func(t *testing.T) {
+		p := workflowJobTestPayload()
+
+		pl, err := sc.WorkflowJob(p)
+		require.NoError(t, err)
+
+		assert.Equal(t, "Workflow Job queued: <http://localhost:3000/test/repo/actions/runs/1/jobs/1|test-job(#1)[2020558fe2]:waiting> by <"+setting.AppURL+"user1|user1>", pl.Text)
 	})
 }
 

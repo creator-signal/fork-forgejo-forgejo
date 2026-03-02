@@ -8,6 +8,7 @@ import (
 
 	webhook_model "forgejo.org/models/webhook"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	webhook_module "forgejo.org/modules/webhook"
 
@@ -188,6 +189,17 @@ func TestMatrixPayload(t *testing.T) {
 
 		assert.Equal(t, "[test/repo] Release created: [v1.0](http://localhost:3000/test/repo/releases/tag/v1.0) by user1", pl.Body)
 		assert.Equal(t, `[test/repo] Release created: <a href="http://localhost:3000/test/repo/releases/tag/v1.0">v1.0</a> by user1`, pl.FormattedBody)
+	})
+
+	t.Run("WorkflowJob", func(t *testing.T) {
+		p := workflowJobTestPayload()
+
+		pl, err := mc.WorkflowJob(p)
+		require.NoError(t, err)
+		require.NotNil(t, pl)
+
+		assert.Equal(t, `Workflow Job queued: [test-job(#1)[2020558fe2]:waiting](http://localhost:3000/test/repo/actions/runs/1/jobs/1) by [user1](`+setting.AppURL+`user1)`, pl.Body)
+		assert.Equal(t, `Workflow Job queued: <a href="http://localhost:3000/test/repo/actions/runs/1/jobs/1">test-job(#1)[2020558fe2]:waiting</a> by <a href="`+setting.AppURL+`user1">user1</a>`, pl.FormattedBody)
 	})
 }
 
