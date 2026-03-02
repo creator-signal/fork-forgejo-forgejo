@@ -459,3 +459,21 @@ func TestActionsNotifier_ExpandReusableWorkflow(t *testing.T) {
 		GitPlatform: "forgejo",
 	}, remoteReusableCalled[0])
 }
+
+func TestWorkflowJobStatusUpdateWithTask(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	notifier := &mockNotifier{}
+	notify_service.RegisterNotifier(notifier)
+	defer notify_service.UnregisterNotifier(notifier)
+
+	task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 55})
+
+	notify_service.WorkflowJobStatusUpdateWithTask(t.Context(), nil, task)
+
+	require.Len(t, notifier.workflowJobStatusCalls, 1)
+	call := notifier.workflowJobStatusCalls[0]
+	assert.Equal(t, int64(198), call.job.ID)
+	require.NotNil(t, call.task, "expected non-nil task in WorkflowJobStatusUpdate call")
+	assert.Equal(t, int64(55), call.task.ID)
+}
