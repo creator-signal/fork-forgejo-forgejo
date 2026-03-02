@@ -728,6 +728,81 @@ func TestAPITokenCreation(t *testing.T) {
 		})
 		req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user4:"+userPassword)))
 
-		MakeRequest(t, req, http.StatusCreated)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		var token api.AccessToken
+		DecodeJSON(t, resp, &token)
+	})
+
+	t.Run("repo-specific", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		t.Run("valid", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			req := NewRequestWithJSON(t, "POST", "/api/v1/users/user2/tokens", &api.CreateAccessTokenOption{
+				Name:   "even-newer-token",
+				Scopes: []string{string(auth_model.AccessTokenScopeReadRepository)},
+				Repositories: []*api.RepoTargetOption{
+					{
+						Owner: "user2",
+						Name:  "repo2",
+					},
+				},
+			})
+			req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+
+			resp := MakeRequest(t, req, http.StatusCreated)
+			var token api.AccessToken
+			DecodeJSON(t, resp, &token)
+			assert.NotEmpty(t, token.Repositories)
+		})
+
+		t.Run("target other user's private repo", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			req := NewRequestWithJSON(t, "POST", "/api/v1/users/user2/tokens", &api.CreateAccessTokenOption{
+				Name:   "not-a-valid-token",
+				Scopes: []string{string(auth_model.AccessTokenScopeReadRepository)},
+				Repositories: []*api.RepoTargetOption{
+					{
+						Owner: "user10",
+						Name:  "repo7", // private repo owned by another user
+					},
+				},
+			})
+			req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+			MakeRequest(t, req, http.StatusBadRequest)
+		})
+
+		t.Run("target invalid repo", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			req := NewRequestWithJSON(t, "POST", "/api/v1/users/user2/tokens", &api.CreateAccessTokenOption{
+				Name:   "not-a-valid-token",
+				Scopes: []string{string(auth_model.AccessTokenScopeReadRepository)},
+				Repositories: []*api.RepoTargetOption{
+					{
+						// doesn't exist:
+						Owner: "user10000",
+						Name:  "repo70000",
+					},
+				},
+			})
+			req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+			MakeRequest(t, req, http.StatusBadRequest)
+		})
+
+		t.Run("invalid scopes", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			req := NewRequestWithJSON(t, "POST", "/api/v1/users/user2/tokens", &api.CreateAccessTokenOption{
+				Name:   "not-a-valid-token",
+				Scopes: []string{string(auth_model.AccessTokenScopeReadAdmin)},
+				Repositories: []*api.RepoTargetOption{
+					{
+						Owner: "user2",
+						Name:  "repo2",
+					},
+				},
+			})
+			req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+			MakeRequest(t, req, http.StatusBadRequest)
+		})
 	})
 }
