@@ -366,6 +366,20 @@ func renderByType(ctx *RenderContext, input io.Reader, output io.Writer) error {
 	return ErrUnsupportedRenderType{ctx.Type}
 }
 
+// ErrMissingExtension represents the error when a path does not have any extension.
+type ErrMissingExtension struct {
+	Path string
+}
+
+func IsErrMissingExtension(err error) bool {
+	_, ok := err.(ErrMissingExtension)
+	return ok
+}
+
+func (err ErrMissingExtension) Error() string {
+	return fmt.Sprintf("path '%s' does not have an extension", err.Path)
+}
+
 // ErrUnsupportedRenderExtension represents the error when extension doesn't supported to render
 type ErrUnsupportedRenderExtension struct {
 	Extension string
@@ -383,7 +397,7 @@ func (err ErrUnsupportedRenderExtension) Error() string {
 func renderFile(ctx *RenderContext, input io.Reader, output io.Writer) error {
 	extension := FullExtension(ctx.RelativePath)
 	if extension == "" {
-		return fmt.Errorf("filename '%s' does not have an extension", filepath.Base(ctx.RelativePath))
+		return ErrMissingExtension{ctx.RelativePath}
 	}
 	if renderer := GetRendererByExtension(extension); renderer != nil {
 		if r, ok := renderer.(ExternalRenderer); ok && r.DisplayInIFrame() {
