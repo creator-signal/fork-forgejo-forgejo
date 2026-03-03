@@ -105,7 +105,7 @@ func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 	return pb, nil
 }
 
-// mountBlob mounts the specific blob to a different package
+// MountBlob mounts the specific blob to a different package
 func MountBlob(ctx context.Context, pi *packages_service.PackageInfo, pb *packages_model.PackageBlob) error {
 	uploadVersion, err := GetOrCreateUploadVersion(ctx, pi)
 	if err != nil {
