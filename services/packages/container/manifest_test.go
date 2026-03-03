@@ -18,12 +18,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ProcessImageManifest(t *testing.T) {
+func Test_SaveAndGetManifestAndBlob(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	manifestMediaType := "application/vnd.docker.distribution.manifest.v2+json"
-	// indexMediaType := "application/vnd.docker.distribution.manifest.list.v2+json"
 	image := "test"
 	tag := "latest"
 
@@ -34,6 +33,7 @@ func Test_ProcessImageManifest(t *testing.T) {
 
 	blobReader := &io.LimitedReader{R: strings.NewReader(string(blobContent)), N: int64(MaxManifestSize + 1)}
 	blobBuf, err := packages_module.CreateHashedBufferFromReaderWithSize(blobReader, MaxManifestSize+1)
+	blobDigest := DigestFromHashSummer(blobBuf)
 	require.NoError(t, err)
 	defer blobBuf.Close()
 
@@ -79,4 +79,17 @@ func Test_ProcessImageManifest(t *testing.T) {
 	digest, err := ProcessManifest(t.Context(), *mci, buf)
 	require.NoError(t, err)
 	assert.Equal(t, digest, manifestDigest)
+
+	pdf, err := GetLocalManifest(t.Context(), user2.ID, image, tag)
+	require.NoError(t, err)
+	assert.Equal(t, "sha256:"+pdf.Blob.HashSHA256, digest)
+
+	pdf, err = GetLocalBlob(t.Context(), user2.ID, blobDigest, image)
+	require.NoError(t, err)
+	assert.Equal(t, "sha256:"+pdf.Blob.HashSHA256, blobDigest)
+
+	tl, v, err := GetLocalTagList(t.Context(), user2.LowerName, image, "", 1, user2.ID)
+	require.NoError(t, err)
+	assert.Equal(t, len(tl.Tags), 1)
+	assert.Equal(t, v.Get("last"), "latest")
 }
