@@ -1,6 +1,7 @@
 package container
 
 import (
+	"context"
 	"errors"
 	"os"
 
@@ -9,12 +10,11 @@ import (
 	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	"forgejo.org/modules/util"
-	"forgejo.org/services/context"
 )
 
 // FIXME: Workaround to be removed in v1.20
 // https://github.com/go-gitea/gitea/issues/19586
-func WorkaroundGetContainerBlob(ctx *context.Context, opts *container_model.BlobSearchOptions) (*packages_model.PackageFileDescriptor, error) {
+func WorkaroundGetContainerBlob(ctx context.Context, opts *container_model.BlobSearchOptions) (*packages_model.PackageFileDescriptor, error) {
 	blob, err := container_model.GetContainerBlob(ctx, opts)
 	if err != nil {
 		return nil, err

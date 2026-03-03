@@ -19,17 +19,16 @@ import (
 	packages_module "forgejo.org/modules/packages"
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/modules/util"
-	app_context "forgejo.org/services/context"
 	packages_service "forgejo.org/services/packages"
 
-	digest "github.com/opencontainers/go-digest"
+	oci_digest "github.com/opencontainers/go-digest"
 )
 
 var uploadVersionMutex sync.Mutex
 
 // GetLocalBlob finds a local blob if it exists, returns ErrContainerBlobNotExist otherwise
-func GetLocalBlob(ctx *app_context.Context, ownerID int64, dig, imageName string, remote ...bool) (*packages_model.PackageFileDescriptor, error) {
-	if digest.Digest(dig).Validate() != nil {
+func GetLocalBlob(ctx context.Context, ownerID int64, dig, imageName string) (*packages_model.PackageFileDescriptor, error) {
+	if oci_digest.Digest(dig).Validate() != nil {
 		return nil, container_model.ErrContainerBlobNotExist
 	}
 
@@ -49,7 +48,7 @@ func GetLocalBlob(ctx *app_context.Context, ownerID int64, dig, imageName string
 	return blobDescriptor, nil
 }
 
-// saveAsPackageBlob creates a package blob from an upload
+// SaveAsPackageBlob creates a package blob from an upload
 // The uploaded blob gets stored in a special upload version to link them to the package/image
 func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, error) {
 	pb := packages_service.NewPackageBlob(hsr)
