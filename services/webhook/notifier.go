@@ -968,11 +968,11 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 		return
 	}
 
-	htmlUrl, _ := job.HTMLURL(ctx)
+	htmlURL, _ := job.HTMLURL(ctx)
 
 	var runnerID int64
 	var runnerName string
-	var steps = make([]*api.ActionWorkflowStep, 0)
+	steps := make([]*api.ActionWorkflowStep, 0)
 
 	if task != nil {
 		runnerID = task.RunnerID
@@ -994,7 +994,7 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 		Action: job.Status.String(),
 		WorkflowJob: &api.ActionWorkflowJob{
 			ID:           job.ID,
-			HTMLURL:      htmlUrl,
+			HTMLURL:      htmlURL,
 			RunID:        job.RunID,
 			RunURL:       fmt.Sprintf("%s/actions/runs/%d", repo.APIURL(), job.RunID),
 			Name:         job.Name,
