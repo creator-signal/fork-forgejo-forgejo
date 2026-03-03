@@ -32,5 +32,6 @@ func addRemoteRegistry(x *xorm.Engine) error {
 		RemoteToken    []byte                                        `xorm:"BLOB"`
 	}
 
-	return x.Sync(&RemoteRegistry{})
+	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, &RemoteRegistry{})
+	return err
 }
