@@ -60,7 +60,18 @@ func GetLocalManifest(ctx context.Context, ownerID int64, imageName, reference s
 	if err != nil {
 		return nil, err
 	}
-	return WorkaroundGetContainerBlob(ctx, opts)
+	// Get blob or err
+	log.Debug("Trying to find manifest with %s locally", reference)
+	pdf, err := WorkaroundGetContainerBlob(ctx, opts)
+	if err != nil {
+		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
+			return nil, err
+		} else {
+			return nil, fmt.Errorf("could not get container blob: %s", err.Error())
+		}
+	}
+
+	return pdf, nil
 }
 
 func NewManifestCreationInfo(owner, creator *user_model.User, mediaType, image, reference string) (*ManifestCreationInfo, error) {

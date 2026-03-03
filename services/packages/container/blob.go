@@ -42,7 +42,11 @@ func GetLocalBlob(ctx context.Context, ownerID int64, dig, imageName string) (*p
 	log.Debug("Trying to find blob %s locally", dig)
 	blobDescriptor, err := WorkaroundGetContainerBlob(ctx, opts)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
+			return nil, err
+		} else {
+			return nil, fmt.Errorf("could not get container blob: %s", err.Error())
+		}
 	}
 
 	return blobDescriptor, nil

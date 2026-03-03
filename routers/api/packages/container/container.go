@@ -462,7 +462,7 @@ func CancelUploadBlob(ctx *context.Context) {
 func HeadBlob(ctx *context.Context) {
 	blob, err := container_service.GetLocalBlob(ctx, ctx.Package.Owner.ID, ctx.Params("digest"), ctx.Params("image"))
 	if err != nil {
-		if err == container_model.ErrContainerBlobNotExist {
+		if errors.Is(err, container_model.ErrContainerBlobNotExist) {
 			apiErrorDefined(ctx, container_service.ErrBlobUnknown)
 		} else {
 			apiError(ctx, http.StatusInternalServerError, err)
