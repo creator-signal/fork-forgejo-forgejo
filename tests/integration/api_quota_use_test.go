@@ -1294,9 +1294,16 @@ func testAPIQuotaEnforcement(t *testing.T) {
 		t.Run("upload to limited org is rejected", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
+			// Verify the user has quota remaining, so rejection is due to org quota
+			req := NewRequest(t, "GET", "/api/v1/user/quota/check?subject=size:assets:packages:all").AddTokenAuth(env.User.Token)
+			resp := env.User.Session.MakeRequest(t, req, http.StatusOK)
+			var quotaOK bool
+			DecodeJSON(t, resp, &quotaOK)
+			assert.True(t, quotaOK, "user must have quota remaining before the rejection test")
+
 			body := strings.NewReader("forgejo is awesome")
-			req := NewRequestWithBody(t, "PUT",
-				fmt.Sprintf("/api/packages/%s/generic/org-quota-test/1.0.0/file.txt", env.Orgs.Limited.UserName),
+			req = NewRequestWithBody(t, "PUT",
+				fmt.Sprintf("/api/packages/%s/generic/org-quota-test/1.0.0/file.txt", env.Orgs.Limited.Name),
 				body,
 			).AddTokenAuth(env.User.Token)
 			env.User.Session.MakeRequest(t, req, http.StatusRequestEntityTooLarge)
@@ -1307,15 +1314,22 @@ func testAPIQuotaEnforcement(t *testing.T) {
 
 			defer env.SetRuleLimit(t, "all", 0)()
 
+			// Verify the user's quota is zero before the upload
+			req := NewRequest(t, "GET", "/api/v1/user/quota/check?subject=size:assets:packages:all").AddTokenAuth(env.User.Token)
+			resp := env.User.Session.MakeRequest(t, req, http.StatusOK)
+			var quotaOK bool
+			DecodeJSON(t, resp, &quotaOK)
+			assert.False(t, quotaOK, "user must have no quota before the upload test")
+
 			body := strings.NewReader("forgejo is awesome")
-			req := NewRequestWithBody(t, "PUT",
-				fmt.Sprintf("/api/packages/%s/generic/org-quota-test/1.0.0/file.txt", env.Orgs.Unlimited.UserName),
+			req = NewRequestWithBody(t, "PUT",
+				fmt.Sprintf("/api/packages/%s/generic/org-quota-test/1.0.0/file.txt", env.Orgs.Unlimited.Name),
 				body,
 			).AddTokenAuth(env.User.Token)
 			env.User.Session.MakeRequest(t, req, http.StatusCreated)
 
 			env.WithoutQuota(t, func() {
-				req := NewRequestf(t, "DELETE", "/api/v1/packages/%s/generic/org-quota-test/1.0.0", env.Orgs.Unlimited.UserName).
+				req := NewRequestf(t, "DELETE", "/api/v1/packages/%s/generic/org-quota-test/1.0.0", env.Orgs.Unlimited.Name).
 					AddTokenAuth(env.User.Token)
 				env.User.Session.MakeRequest(t, req, http.StatusNoContent)
 			})
@@ -1351,15 +1365,22 @@ func testAPIQuotaEnforcement(t *testing.T) {
 		t.Run("upload to limited org is rejected", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
-			image := fmt.Sprintf("%sv2/%s/quota-test-img", setting.AppURL, env.Orgs.Limited.UserName)
+			// Verify the user has quota remaining, so rejection is due to org quota
+			req := NewRequest(t, "GET", "/api/v1/user/quota/check?subject=size:assets:packages:all").AddTokenAuth(env.User.Token)
+			resp := env.User.Session.MakeRequest(t, req, http.StatusOK)
+			var quotaOK bool
+			DecodeJSON(t, resp, &quotaOK)
+			assert.True(t, quotaOK, "user must have quota remaining before the rejection test")
 
-			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", image, blobDigest), bytes.NewReader(blobContent)).
+			image := fmt.Sprintf("%sv2/%s/quota-test-img", setting.AppURL, env.Orgs.Limited.Name)
+
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", image, blobDigest), bytes.NewReader(blobContent)).
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusRequestEntityTooLarge)
 
 			req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", image)).
 				AddTokenAuth(userToken)
-			resp := MakeRequest(t, req, http.StatusRequestEntityTooLarge)
+			resp = MakeRequest(t, req, http.StatusRequestEntityTooLarge)
 
 			// chunked upload: initiate returns 413, so patch/put are never reached
 			// this is the result we expect, otherwise it's very hard to create multi-tenant environment
@@ -1371,10 +1392,17 @@ func testAPIQuotaEnforcement(t *testing.T) {
 
 			defer env.SetRuleLimit(t, "all", 0)()
 
-			image := fmt.Sprintf("%sv2/%s/quota-test-img", setting.AppURL, env.Orgs.Unlimited.UserName)
+			// Verify the user's quota is zero before the upload
+			req := NewRequest(t, "GET", "/api/v1/user/quota/check?subject=size:assets:packages:all").AddTokenAuth(env.User.Token)
+			resp := env.User.Session.MakeRequest(t, req, http.StatusOK)
+			var quotaOK bool
+			DecodeJSON(t, resp, &quotaOK)
+			assert.False(t, quotaOK, "user must have no quota before the upload test")
+
+			image := fmt.Sprintf("%sv2/%s/quota-test-img", setting.AppURL, env.Orgs.Unlimited.Name)
 
 			// monolithic blob upload
-			req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", image, blobDigest), bytes.NewReader(blobContent)).
+			req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", image, blobDigest), bytes.NewReader(blobContent)).
 				AddTokenAuth(userToken)
 			MakeRequest(t, req, http.StatusCreated)
 
@@ -1385,7 +1413,7 @@ func testAPIQuotaEnforcement(t *testing.T) {
 			// chunked blob upload (patch + put)
 			req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", image)).
 				AddTokenAuth(userToken)
-			resp := MakeRequest(t, req, http.StatusAccepted)
+			resp = MakeRequest(t, req, http.StatusAccepted)
 
 			uploadURL := resp.Header().Get("Location")
 			contentRange := fmt.Sprintf("0-%d", len(blobContent)-1)
