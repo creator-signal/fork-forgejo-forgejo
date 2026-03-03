@@ -56,7 +56,7 @@ func jobEmitterQueueHandler(items ...*jobUpdate) []*jobUpdate {
 func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error {
 	// Recursion happens if one job finishing causes another job to be evaluated so that it creates new jobs (eg.
 	// dynamic matrix), those new jobs need to have their 'needs' re-evaluated. Safety check here against infinite
-	// recursion -- no clear reason thishoulds  happen more than once in a check since after one recurse there aren't
+	// recursion -- no clear reason this should happen more than once in a check since after one recurse there aren't
 	// any actual new jobs completed, but better safe than sorry.
 	if recursionCount > 5 {
 		return fmt.Errorf("checkJobsOfRun for runID %d hit recursion limit %d", runID, recursionCount)
