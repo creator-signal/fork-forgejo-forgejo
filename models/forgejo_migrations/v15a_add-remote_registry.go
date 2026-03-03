@@ -1,7 +1,7 @@
 // Copyright 2025 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package forgejo_migrations_legacy
+package forgejo_migrations
 
 import (
 	"forgejo.org/models/packages"
@@ -10,7 +10,14 @@ import (
 	"xorm.io/xorm"
 )
 
-func AddRemoteRegistry(x *xorm.Engine) error {
+func init() {
+	registerMigration(&Migration{
+		Description: "add remote_registry to table",
+		Upgrade:     addRemoteRegistry,
+	})
+}
+
+func addRemoteRegistry(x *xorm.Engine) error {
 	type RemoteRegistry struct {
 		ID             int64                                         `xorm:"pk autoincr"`
 		Name           string                                        `xorm:"UNIQUE NOT NULL"`
