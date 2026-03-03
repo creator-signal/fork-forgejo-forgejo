@@ -52,6 +52,18 @@ type ManifestCreationInfo struct {
 	Properties map[string]string
 }
 
+func GetLocalManifest(ctx context.Context, ownerID int64, imageName, reference string) (*packages_model.PackageFileDescriptor, error) {
+	opts, err := GetManifestSearchOptions(
+		ownerID,
+		imageName,
+		reference,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return WorkaroundGetContainerBlob(ctx, opts)
+}
+
 func NewManifestCreationInfo(owner, creator *user_model.User, mediaType, image, reference string) (*ManifestCreationInfo, error) {
 	isTagged := digest.Digest(reference).Validate() != nil
 
