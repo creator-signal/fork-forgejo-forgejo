@@ -1,7 +1,7 @@
 // ABOUTME: Test setup and initialization for container package router tests
 // ABOUTME: Provides database setup and cleanup for integration testing
 // Copyright 2026 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package container
 
