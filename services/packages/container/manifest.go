@@ -36,9 +36,8 @@ import (
 const MaxManifestSize = 10 * 1024 * 1024
 
 var (
-	ReferencePattern    = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
-	ErrTagInvalid       = util.NewInvalidArgumentErrorf("Tag is invalid")
-	ErrManifestTooLarge = fmt.Errorf("Manifest exceeds maximum size")
+	ReferencePattern = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
+	ErrTagInvalid    = util.NewInvalidArgumentErrorf("Tag is invalid")
 )
 
 // ManifestCreationInfo describes a manifest to create
@@ -77,7 +76,7 @@ func NewManifestCreationInfo(owner, creator *user_model.User, mediaType, image, 
 	}
 
 	if mci.IsTagged && !ReferencePattern.MatchString(reference) {
-		return &ManifestCreationInfo{}, errors.New("Tag is invalid")
+		return &ManifestCreationInfo{}, ErrTagInvalid
 	}
 
 	return mci, nil
