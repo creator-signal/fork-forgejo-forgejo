@@ -66,7 +66,7 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 	if err != nil {
 		return err
 	}
-	var updatedjobs []*actions_model.ActionRunJob
+	var updatedJobs []*actions_model.ActionRunJob
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
 		idToJobs := make(map[string][]*actions_model.ActionRunJob, len(jobs))
 		for _, job := range jobs {
@@ -111,7 +111,7 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 				} else if n != 1 {
 					return fmt.Errorf("no affected for updating blocked job %v", job.ID)
 				}
-				updatedjobs = append(updatedjobs, job)
+				updatedJobs = append(updatedJobs, job)
 			}
 		}
 		return nil
@@ -119,7 +119,7 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 		return err
 	}
 	CreateCommitStatus(ctx, jobs...)
-	for _, job := range updatedjobs {
+	for _, job := range updatedJobs {
 		notify_service.WorkflowJobStatusUpdate(ctx, nil, job)
 	}
 

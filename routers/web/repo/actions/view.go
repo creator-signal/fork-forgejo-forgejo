@@ -654,7 +654,7 @@ func Cancel(ctx *app_context.Context) {
 		return
 	}
 
-	var updatedjobs []*actions_model.ActionRunJob
+	var updatedJobs []*actions_model.ActionRunJob
 
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
 		for _, job := range jobs {
@@ -673,7 +673,7 @@ func Cancel(ctx *app_context.Context) {
 					return errors.New("job has changed, try again")
 				}
 				if n > 0 {
-					updatedjobs = append(updatedjobs, job)
+					updatedJobs = append(updatedJobs, job)
 				}
 				continue
 			}
@@ -689,7 +689,7 @@ func Cancel(ctx *app_context.Context) {
 
 	actions_service.CreateCommitStatus(ctx, jobs...)
 
-	for _, job := range updatedjobs {
+	for _, job := range updatedJobs {
 		notify_service.WorkflowJobStatusUpdate(ctx, nil, job)
 	}
 
