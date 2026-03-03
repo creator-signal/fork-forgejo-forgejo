@@ -37,7 +37,7 @@ var rr = api.CreateRemoteRegistryOption{
 	RemoteUser:     "someUser",
 	RemoteToken:    "asdfwoe324lkjsdf0242523",
 	RemotePassword: "somePass",
-	TestConnection: true,
+	TestConnection: false,
 }
 
 func TestCreateRemoteRegistryUser(t *testing.T) {
@@ -131,7 +131,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 		RemoteUser:     "someOtherUser",
 		RemoteToken:    "",
 		RemotePassword: "password",
-		TestConnection: true,
+		TestConnection: false,
 	}
 
 	// Post
@@ -191,7 +191,6 @@ func TestTestConnectionAPIEndpoint(t *testing.T) {
 	defer server.Close()
 
 	rr.RemoteURL = server.URL
-	rr.TestConnection = false
 
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", org3.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
@@ -251,6 +250,7 @@ func TestConnectedBasicAuth(t *testing.T) {
 
 	rr.RemoteURL = server.URL
 	rr.RemoteToken = ""
+	rr.TestConnection = true
 
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
@@ -268,6 +268,7 @@ func TestConnectedToken(t *testing.T) {
 
 	rr.RemoteURL = server.URL
 	rr.RemotePassword = ""
+	rr.TestConnection = true
 
 	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/packages/%s/remote-registry", user2.Name), &rr).AddTokenAuth(tokenWritePackage)
 	MakeRequest(t, req, http.StatusCreated)
