@@ -27,6 +27,8 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 		task       *runnerv1.Task
 		job        *actions_model.ActionRunJob
 		actionTask *actions_model.ActionTask
+		ok         bool
+		err        error
 	)
 
 	if runner.Ephemeral {
@@ -43,7 +45,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 	}
 
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		actionTask, ok, err := actions_model.CreateTaskForRunner(ctx, runner, requestKey)
+		actionTask, ok, err = actions_model.CreateTaskForRunner(ctx, runner, requestKey)
 		if err != nil {
 			return fmt.Errorf("CreateTaskForRunner: %w", err)
 		}
