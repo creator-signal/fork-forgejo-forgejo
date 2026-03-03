@@ -16,7 +16,9 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 	mock_server "forgejo.org/modules/test"
+	"forgejo.org/routers"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -41,6 +43,8 @@ var rr = api.CreateRemoteRegistryOption{
 }
 
 func TestCreateRemoteRegistryUser(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -66,6 +70,8 @@ func TestCreateRemoteRegistryUser(t *testing.T) {
 }
 
 func TestCreateDuplicateFails(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
@@ -85,6 +91,8 @@ func TestCreateDuplicateFails(t *testing.T) {
 }
 
 func TestFailsOnNonExisting(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 
@@ -112,6 +120,8 @@ func TestFailsOnNonExisting(t *testing.T) {
 }
 
 func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
@@ -180,6 +190,8 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 }
 
 func TestTestConnectionAPIEndpoint(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // user2 is admin of org3
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
@@ -200,6 +212,8 @@ func TestTestConnectionAPIEndpoint(t *testing.T) {
 }
 
 func TestCreateRemoteRegistryOrgNotAllowed(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5}) // User5 is not in org3
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
@@ -239,6 +253,8 @@ func TestCreateRemoteRegistryOrgNotAllowed(t *testing.T) {
 }
 
 func TestConnectedBasicAuth(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -257,6 +273,8 @@ func TestConnectedBasicAuth(t *testing.T) {
 }
 
 func TestConnectedToken(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -275,6 +293,8 @@ func TestConnectedToken(t *testing.T) {
 }
 
 func TestRemoteRegistryPull(t *testing.T) {
+	defer test.MockVariableValue(&setting.Packages.RemoteRegistry.Enabled, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 	defer tests.PrepareTestEnv(t)()
 	defer tests.PrintCurrentTest(t)()
 
