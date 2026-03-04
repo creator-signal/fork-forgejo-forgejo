@@ -806,3 +806,31 @@ func TestAPITokenCreation(t *testing.T) {
 		})
 	})
 }
+
+func TestAPITokenDelete(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequestWithJSON(t, "POST", "/api/v1/users/user2/tokens", &api.CreateAccessTokenOption{
+		Name:   "delete-this-token",
+		Scopes: []string{string(auth_model.AccessTokenScopeReadRepository)},
+		Repositories: []*api.RepoTargetOption{
+			{
+				Owner: "user2",
+				Name:  "repo2",
+			},
+		},
+	})
+	req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+
+	resp := MakeRequest(t, req, http.StatusCreated)
+	var token api.AccessToken
+	DecodeJSON(t, resp, &token)
+
+	unittest.AssertExistsAndLoadBean(t, &auth_model.AccessToken{ID: token.ID})
+
+	req = NewRequestf(t, "DELETE", "/api/v1/users/user2/tokens/%d", token.ID)
+	req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+	MakeRequest(t, req, http.StatusNoContent)
+
+	unittest.AssertNotExistsBean(t, &auth_model.AccessToken{ID: token.ID})
+}
