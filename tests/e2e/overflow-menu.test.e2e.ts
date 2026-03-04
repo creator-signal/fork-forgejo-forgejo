@@ -8,7 +8,7 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test} from './utils_e2e';
+import {test} from './utils_e2e.ts';
 
 test.describe(`Visual properties`, () => {
   test(`Overflow menu`, async ({browser, isMobile}) => {
@@ -27,7 +27,7 @@ test.describe(`Visual properties`, () => {
     for (let i = 0; i < itemCount; i++) {
       const item = page.locator(`${selectorPrefix} > a.item`).nth(i);
       await item.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await overflowMenuButton.click();
       const activeItem = page.locator(`${selectorPrefix} > a.item.active`);
