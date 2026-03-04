@@ -283,10 +283,6 @@ func processImageManifestIndex(ctx context.Context, mci ManifestCreationInfo, bu
 			Type:      container_module.TypeOCI,
 			Manifests: make([]*container_module.Manifest, 0, len(index.Manifests)),
 		}
-		if mci.RemoteRegistryHost != "" {
-			metadata.RemoteRegistryHost = mci.RemoteRegistryHost
-			metadata.CacheTimeUnix = mci.CacheTimeUnix
-		}
 
 		for _, manifest := range index.Manifests {
 			if !isImageManifestMediaType(manifest.MediaType) {
