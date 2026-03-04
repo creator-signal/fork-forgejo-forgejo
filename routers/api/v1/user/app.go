@@ -5,14 +5,18 @@
 package user
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/container"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
@@ -57,6 +61,45 @@ func ListAccessTokens(ctx *context.APIContext) {
 		return
 	}
 
+	// Load all the AccessTokenResourceRepo for the tokens that we're returning:
+	allRepoIDs := container.Set[int64]{}
+	repoResourcesByTokenID, err := auth_model.GetRepositoriesAccessibleWithTokens(ctx, tokens)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	// Load all the Repository models that are referenced by the AccessTokenResourceRepo's:
+	for _, repoResources := range repoResourcesByTokenID {
+		for _, repoResource := range repoResources {
+			allRepoIDs.Add(repoResource.RepoID)
+		}
+	}
+	reposByID, err := repo_model.GetRepositoriesMapByIDs(ctx, allRepoIDs.Slice())
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	// Prepare a lookup map to access the repositories by token ID:
+	reposByTokenID := make(map[int64][]*api.RepositoryMeta)
+	for tokenID, repoResources := range repoResourcesByTokenID {
+		for _, repoResource := range repoResources {
+			repo, ok := reposByID[repoResource.RepoID]
+			if !ok {
+				// Shouldn't be possible with the foreign key on `AccessTokenResourceRepo` to the repository table.
+				ctx.Error(http.StatusInternalServerError, "reposById", "missing repository")
+				return
+			}
+			reposByTokenID[tokenID] = append(reposByTokenID[tokenID], &api.RepositoryMeta{
+				ID:       repo.ID,
+				Name:     repo.Name,
+				Owner:    repo.OwnerName,
+				FullName: repo.FullName(),
+			})
+		}
+	}
+
 	apiTokens := make([]*api.AccessToken, len(tokens))
 	for i := range tokens {
 		apiTokens[i] = &api.AccessToken{
@@ -64,7 +107,13 @@ func ListAccessTokens(ctx *context.APIContext) {
 			Name:           tokens[i].Name,
 			TokenLastEight: tokens[i].TokenLastEight,
 			Scopes:         tokens[i].Scope.StringSlice(),
+			Repositories:   reposByTokenID[tokens[i].ID],
 		}
+		// Provide a consistent sort order on repositories, helpful for test consistency.  Hard to do any earlier
+		// because of the bulk loading maps.
+		slices.SortFunc(apiTokens[i].Repositories, func(a, b *api.RepositoryMeta) int {
+			return cmp.Compare(a.ID, b.ID)
+		})
 	}
 
 	ctx.SetTotalCountHeader(count)
