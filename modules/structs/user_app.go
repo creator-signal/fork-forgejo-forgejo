@@ -16,6 +16,8 @@ type AccessToken struct {
 	Token          string   `json:"sha1"`
 	TokenLastEight string   `json:"token_last_eight"`
 	Scopes         []string `json:"scopes"`
+	// Indicates that an access token only has access to the specified repositories.
+	Repositories []*RepositoryMeta `json:"repositories"`
 }
 
 // AccessTokenList represents a list of API access token.
