@@ -369,15 +369,15 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 	rrOpts := form.(*api.CreateRemoteRegistryOption)
 
 	isOrg := ctx.ContextUser.IsOrganization()
-	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
-		return
-	}
 
 	// Permissions
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+			return
+		}
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
 			ctx.Error(http.StatusForbidden,
 				"CreateRemoteRegistry",
@@ -577,15 +577,15 @@ func GetRemoteRegistryByName(ctx *context.APIContext) {
 	registryName := ctx.PathParamRaw("name")
 
 	isOrg := ctx.ContextUser.IsOrganization()
-	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
-		return
-	}
 
 	// Permissions
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+			return
+		}
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
 			ctx.Error(http.StatusForbidden,
 				"GetRemoteRegistry",
@@ -627,15 +627,15 @@ func ListRemoteRegistries(ctx *context.APIContext) {
 	ownerName := ctx.PathParamRaw("username")
 
 	isOrg := ctx.ContextUser.IsOrganization()
-	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
-		return
-	}
 
 	// Permissions
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+			return
+		}
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
 			ctx.Error(http.StatusForbidden,
 				"GetRemoteRegistry",
@@ -683,15 +683,15 @@ func DeleteRemoteRegistry(ctx *context.APIContext) {
 	registryName := ctx.PathParamRaw("name")
 
 	isOrg := ctx.ContextUser.IsOrganization()
-	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
-		return
-	}
 
 	// Permissions
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+			return
+		}
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
 			ctx.Error(http.StatusForbidden,
 				"DeleteRemoteRegistry",
@@ -740,15 +740,15 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 	// Check if doer can do
 
 	isOrg := ctx.ContextUser.IsOrganization()
-	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
-		return
-	}
 
 	// Permissions
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+			return
+		}
 		if !isOrgOwner && !ctx.Doer.IsAdmin {
 			ctx.Error(http.StatusForbidden,
 				"TestRemoteRegistryConnection",
