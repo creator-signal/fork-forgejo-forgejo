@@ -1,3 +1,6 @@
+// Copyright 2026 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
 // templates/explore/navbar.tmpl
 // templates/user/dashboard/navbar.tmpl
@@ -10,28 +13,37 @@
 import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 
-test.describe(`Visual properties`, () => {
-  test(`Overflow menu`, async ({browser, isMobile}) => {
-    test.skip(!isMobile, 'Overflow menu button only appears on mobile');
+test(`Visual properties`, async ({browser, isMobile}) => {
+  test.skip(!isMobile, 'Overflow menu button only appears on mobile');
 
-    const context = await browser.newContext({javaScriptEnabled: true});
-    const page = await context.newPage();
+  const context = await browser.newContext({javaScriptEnabled: true});
+  const page = await context.newPage();
 
-    await page.goto(`/panc/test1`);
-    const selectorPrefix = '.tippy-box .tippy-content .tippy-target';
-    const overflowMenuButton = page.locator(`.overflow-menu-button`);
+  const noBg = 'rgba(0, 0, 0, 0)';
+  const activeBg = 'rgb(226, 226, 229)';
+  const menuItemSelector = `.tippy-box .tippy-content .tippy-target > a.item`;
+  const activeItemSelector = `${menuItemSelector}.active`;
+  const inactiveItemSelector = `${menuItemSelector}:not(.active)`;
+
+  await page.goto(`/user2/repo1`);
+  const overflowMenuButton = page.locator(`.overflow-menu-button`);
+
+  await overflowMenuButton.click();
+  const menuItems = page.locator(`${menuItemSelector}`);
+  const itemCount = await menuItems.count();
+  for (let i = 0; i < itemCount; i++) {
+    await menuItems.nth(i).click();
+    await page.waitForLoadState('domcontentloaded');
+
     await overflowMenuButton.click();
+    const activeItem = page.locator(`${activeItemSelector}`);
+    expect(await activeItem.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(activeBg);
 
-    const menuItems = page.locator(`${selectorPrefix} > a.item`);
-    const itemCount = await menuItems.count();
-    for (let i = 0; i < itemCount; i++) {
-      const item = page.locator(`${selectorPrefix} > a.item`).nth(i);
-      await item.click();
-      await page.waitForLoadState('domcontentloaded');
-
-      await overflowMenuButton.click();
-      const activeItem = page.locator(`${selectorPrefix} > a.item.active`);
-      await expect(activeItem).toHaveCSS(`background-color`, `rgb(226, 226, 229)`);
+    const inactiveItems = page.locator(inactiveItemSelector);
+    const inactiveCount = await inactiveItems.count();
+    for (let j = 0; j < itemCount - inactiveCount; j++) {
+      const nonActiveItem = page.locator(`${inactiveItemSelector}`).nth(j);
+      expect(await nonActiveItem.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(noBg);
     }
-  });
+  }
 });
