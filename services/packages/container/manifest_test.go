@@ -90,6 +90,6 @@ func Test_SaveAndGetManifestAndBlob(t *testing.T) {
 
 	tl, v, err := GetLocalTagList(t.Context(), user2.LowerName, image, "", 1, user2.ID)
 	require.NoError(t, err)
-	assert.Len(t, 1, len(tl.Tags))
+	assert.Len(t, tl.Tags, 1)
 	assert.Equal(t, "latest", v.Get("last"))
 }
