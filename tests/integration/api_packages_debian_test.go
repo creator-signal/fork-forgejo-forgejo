@@ -205,7 +205,10 @@ func TestPackageDebian(t *testing.T) {
 			t.Run("Release", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				req := NewRequest(t, "GET", fmt.Sprintf("%s/dists/%s/Release", rootURL, distribution))
+				req := NewRequest(t, "HEAD", fmt.Sprintf("%s/dists/%s/Release", rootURL, distribution))
+				MakeRequest(t, req, http.StatusOK)
+
+				req = NewRequest(t, "GET", fmt.Sprintf("%s/dists/%s/Release", rootURL, distribution))
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				body := resp.Body.String()
@@ -230,6 +233,9 @@ func TestPackageDebian(t *testing.T) {
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				assert.Contains(t, resp.Body.String(), "-----BEGIN PGP SIGNATURE-----")
+
+				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/dists/%s/InRelease", rootURL, distribution))
+				MakeRequest(t, req, http.StatusOK)
 
 				req = NewRequest(t, "GET", fmt.Sprintf("%s/dists/%s/InRelease", rootURL, distribution))
 				resp = MakeRequest(t, req, http.StatusOK)
