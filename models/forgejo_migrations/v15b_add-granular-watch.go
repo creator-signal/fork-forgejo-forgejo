@@ -23,7 +23,9 @@ func addGranularWatchColumnsAndDropModeColumn(x *xorm.Engine) error {
 		WatchSelectionPullRequests bool                   `xorm:"BOOL DEFAULT TRUE"`
 		WatchSelectionReleases     bool                   `xorm:"BOOL DEFAULT TRUE"`
 	}
-	if err := x.Sync(new(Watch)); err != nil {
+
+	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(Watch))
+	if err != nil {
 		return err
 	}
 
@@ -50,7 +52,7 @@ func addGranularWatchColumnsAndDropModeColumn(x *xorm.Engine) error {
 	)
 	// end copy of old code //
 
-	_, err := x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", repo_model.WatchSourceAutomatic, WatchModeNone)
+	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", repo_model.WatchSourceAutomatic, WatchModeNone)
 	if err != nil {
 		return err
 	}
