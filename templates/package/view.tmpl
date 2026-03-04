@@ -49,9 +49,11 @@
 					{{if .HasRepositoryAccess}}
 					<div class="item">{{svg "octicon-repo" 16 "tw-mr-2"}} <a href="{{.PackageDescriptor.Repository.Link}}">{{.PackageDescriptor.Repository.FullName}}</a></div>
 					{{end}}
-					{{if .PackageDescriptor.Metadata.RemoteRegistryHost}}
+					{{with .PackageDescriptor.Metadata}}
+					{{if .RemoteRegistryHost}}
 					<div class="item">{{svg "octicon-link-external" 16 "tw-mr-2"}} {{ctx.Locale.Tr "packages.details.remote_registry_host"}} {{.PackageDescriptor.Metadata.RemoteRegistryHost}}</div>
 					<div class="item">{{svg "octicon-link-external" 16 "tw-mr-2"}} {{ctx.Locale.Tr "packages.details.remote_registry_time"}} {{DateUtils.AbsoluteShort .PackageDescriptor.Metadata.CacheTimeUnix}}</div>
+					{{end}}
 					{{end}}
 					<div class="item">{{svg "octicon-calendar" 16 "tw-mr-2"}} {{DateUtils.TimeSince .PackageDescriptor.Version.CreatedUnix}}</div>
 					<div class="item">{{svg "octicon-download" 16 "tw-mr-2"}} {{.PackageDescriptor.Version.DownloadCount}}</div>
