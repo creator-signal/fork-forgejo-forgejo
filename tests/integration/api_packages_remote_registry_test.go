@@ -17,7 +17,6 @@ import (
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
-	mock_server "forgejo.org/modules/test"
 	"forgejo.org/routers"
 	"forgejo.org/tests"
 
@@ -79,7 +78,7 @@ func TestCreateDuplicateFails(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockForgejoRegistryServer()
+	server := test.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr.RemoteURL = server.URL
@@ -129,7 +128,7 @@ func TestCreateUpdateGetDeleteRemoteRegistryOrg(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockForgejoRegistryServer()
+	server := test.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr.RemoteURL = server.URL
@@ -199,7 +198,7 @@ func TestTestConnectionAPIEndpoint(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockForgejoRegistryServer()
+	server := test.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr.RemoteURL = server.URL
@@ -261,7 +260,7 @@ func TestConnectedBasicAuth(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockForgejoRegistryServer()
+	server := test.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr.RemoteURL = server.URL
@@ -281,7 +280,7 @@ func TestConnectedToken(t *testing.T) {
 	session := loginUser(t, user2.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockForgejoRegistryServer()
+	server := test.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr.RemoteURL = server.URL
@@ -304,7 +303,7 @@ func TestRemoteRegistryPull(t *testing.T) {
 	session := loginUser(t, user.Name)
 	tokenWritePackage := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWritePackage)
 
-	server := mock_server.MockForgejoRegistryServer()
+	server := test.MockForgejoRegistryServer()
 	defer server.Close()
 
 	rr.RemoteURL = server.URL
