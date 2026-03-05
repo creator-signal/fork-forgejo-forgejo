@@ -378,7 +378,7 @@ func CreateRemoteRegistry(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
 			return
 		}
-		if !isOrgOwner && !ctx.Doer.IsAdmin {
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden,
 				"CreateRemoteRegistry",
 				"Remote Registry creation is allowed only for owners and admins.")
@@ -487,7 +487,7 @@ func UpdateRemoteRegistry(ctx *context.APIContext) {
 	// Permissions
 	if isOrg {
 		// Then user needs to be org owner or has write permissions to org
-		if !isOrgOwner && !ctx.Doer.IsAdmin {
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden,
 				"UpdateRemoteRegistry",
 				"Remote Registry update is allowed only for owners and admins.")
@@ -586,7 +586,7 @@ func GetRemoteRegistryByName(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
 			return
 		}
-		if !isOrgOwner && !ctx.Doer.IsAdmin {
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden,
 				"GetRemoteRegistry",
 				"Getting info about Remote Registries is allowed only for owners and admins.")
@@ -636,7 +636,7 @@ func ListRemoteRegistries(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
 			return
 		}
-		if !isOrgOwner && !ctx.Doer.IsAdmin {
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden,
 				"GetRemoteRegistry",
 				"Getting info about Remote Registries is allowed only for owners and admins.")
@@ -692,7 +692,7 @@ func DeleteRemoteRegistry(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
 			return
 		}
-		if !isOrgOwner && !ctx.Doer.IsAdmin {
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden,
 				"DeleteRemoteRegistry",
 				"Deleting Remote Registries is allowed only for owners and admins.")
@@ -749,7 +749,7 @@ func TestRemoteRegistryConnection(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
 			return
 		}
-		if !isOrgOwner && !ctx.Doer.IsAdmin {
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden,
 				"TestRemoteRegistryConnection",
 				"Testing Remote Registriy connection is allowed only for owners and admins.")
