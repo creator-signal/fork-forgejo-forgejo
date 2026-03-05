@@ -55,6 +55,80 @@ func TestAPIUserReposWithWrongToken(t *testing.T) {
 	assert.Contains(t, resp.Body.String(), "access token does not exist")
 }
 
+func TestAPIUserReposAccessTokenResources(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	var repos []api.Repository
+
+	// Test cases repo1 (public), repo2 (private), repo16 (private).
+	session := loginUser(t, "user2")
+
+	find := func() (bool, bool, bool) {
+		foundRepo1 := false  // public user2/repo1
+		foundRepo2 := false  // private user2/repo2
+		foundRepo16 := false // second private repo user2/repo16 used in fine-grain testing, included as baseline
+		for _, repo := range repos {
+			switch repo.Name {
+			case "repo1":
+				foundRepo1 = true
+			case "repo2":
+				foundRepo2 = true
+			case "repo16":
+				foundRepo16 = true
+			}
+		}
+		return foundRepo1, foundRepo2, foundRepo16
+	}
+
+	t.Run("all access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadUser, auth_model.AccessTokenScopeReadRepository)
+
+		req := NewRequest(t, "GET", "/api/v1/users/user2/repos").AddTokenAuth(allToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)  // public user2/repo1
+		assert.True(t, foundRepo2)  // private user2/repo2
+		assert.True(t, foundRepo16) // private user2/repo16, used in fine-grain testing, included as baseline
+	})
+
+	t.Run("public-only access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadUser, auth_model.AccessTokenScopeReadRepository)
+
+		req := NewRequest(t, "GET", "/api/v1/users/user2/repos").AddTokenAuth(publicOnlyToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)   // public user2/repo1
+		assert.False(t, foundRepo2)  // private user2/repo2
+		assert.False(t, foundRepo16) // private user2/repo16
+	})
+
+	t.Run("specific repo access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadUser, auth_model.AccessTokenScopeReadRepository},
+			[]int64{2},
+		)
+
+		req := NewRequest(t, "GET", "/api/v1/users/user2/repos").AddTokenAuth(repo2OnlyToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)   // public user2/repo1, allowed as it's public and read-access only
+		assert.True(t, foundRepo2)   // private user2/repo2, allowed inside fine-grain
+		assert.False(t, foundRepo16) // private user2/repo16, denied outside fine-grain
+	})
+}
+
 func TestAPISearchRepo(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	const keyword = "test"
@@ -250,6 +324,83 @@ func TestAPISearchRepo(t *testing.T) {
 	}
 }
 
+func TestAPISearchRepoAccessTokenResources(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	var searchResults *api.SearchResults
+
+	// Test cases repo1 (public), repo2 (private), repo16 (private).
+	session := loginUser(t, "user2")
+
+	find := func() (bool, bool, bool) {
+		foundRepo1 := false  // public user2/repo1
+		foundRepo2 := false  // private user2/repo2
+		foundRepo16 := false // second private repo user2/repo16 used in fine-grain testing, included as baseline
+		for _, repo := range searchResults.Data {
+			switch repo.Name {
+			case "repo1":
+				foundRepo1 = true
+			case "repo2":
+				foundRepo2 = true
+			case "repo16":
+				foundRepo16 = true
+			}
+		}
+		return foundRepo1, foundRepo2, foundRepo16
+	}
+
+	t.Run("all access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+
+		req := NewRequest(t, "GET", "/api/v1/repos/search").AddTokenAuth(allToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &searchResults)
+		require.True(t, searchResults.OK)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)  // public user2/repo1
+		assert.True(t, foundRepo2)  // private user2/repo2
+		assert.True(t, foundRepo16) // private user2/repo16, used in fine-grain testing, included as baseline
+	})
+
+	t.Run("public-only access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadRepository)
+
+		req := NewRequest(t, "GET", "/api/v1/repos/search").AddTokenAuth(publicOnlyToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &searchResults)
+		require.True(t, searchResults.OK)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)   // public user2/repo1
+		assert.False(t, foundRepo2)  // private user2/repo2
+		assert.False(t, foundRepo16) // private user2/repo16
+	})
+
+	t.Run("specific repo access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadRepository},
+			[]int64{2},
+		)
+
+		req := NewRequest(t, "GET", "/api/v1/repos/search").AddTokenAuth(repo2OnlyToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &searchResults)
+		require.True(t, searchResults.OK)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)   // public user2/repo1, allowed as it's public and read-access only
+		assert.True(t, foundRepo2)   // private user2/repo2, allowed inside fine-grain
+		assert.False(t, foundRepo16) // private user2/repo16, denied outside fine-grain
+	})
+}
+
 var repoCache = make(map[int64]*repo_model.Repository)
 
 func getRepo(t *testing.T, repoID int64) *repo_model.Repository {
@@ -287,6 +438,83 @@ func TestAPIViewRepo(t *testing.T) {
 	assert.EqualValues(t, 4, repo.ID)
 	assert.Equal(t, "repo4", repo.Name)
 	assert.Equal(t, 1, repo.Stars)
+}
+
+// `/repos/{username}/{reponame}` uses repoAssignment() middleware -- this test runs that middleware through all
+// variations of access token resource access.
+func TestAPIViewRepoAccessTokenResources(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	var repo api.Repository
+
+	t.Run("all access token", func(t *testing.T) {
+		session := loginUser(t, "user2")
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+
+		t.Run("allowed public repo1", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo1").AddTokenAuth(allToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.False(t, repo.Private)
+		})
+		t.Run("allowed private repo2", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo2").AddTokenAuth(allToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.True(t, repo.Private)
+		})
+		// repo16 is a second repo used in fine-grain testing below, so we include it in other tests as a baseline
+		t.Run("allowed private repo16", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo16").AddTokenAuth(allToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.True(t, repo.Private)
+		})
+	})
+
+	t.Run("public-only access token", func(t *testing.T) {
+		session := loginUser(t, "user2")
+		publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadRepository)
+
+		t.Run("allowed public repo1", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo1").AddTokenAuth(publicOnlyToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.False(t, repo.Private)
+		})
+		t.Run("denied private repo2", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo2").AddTokenAuth(publicOnlyToken)
+			MakeRequest(t, req, http.StatusNotFound)
+		})
+		t.Run("denied private repo16", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo16").AddTokenAuth(publicOnlyToken)
+			MakeRequest(t, req, http.StatusNotFound)
+		})
+	})
+
+	t.Run("specific repo access token", func(t *testing.T) {
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadRepository},
+			[]int64{2},
+		)
+
+		t.Run("allowed public repo1", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo1").AddTokenAuth(repo2OnlyToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.False(t, repo.Private)
+		})
+		t.Run("allowed inside fine-grain repo2", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo2").AddTokenAuth(repo2OnlyToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.True(t, repo.Private)
+		})
+		t.Run("denied private outside fine-grain repo16", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/repos/user2/repo16").AddTokenAuth(repo2OnlyToken)
+			MakeRequest(t, req, http.StatusNotFound)
+		})
+	})
 }
 
 // Validate that private information on the user profile isn't exposed by way of being an owner of a public repository.
@@ -401,6 +629,57 @@ func TestAPIGetRepoByIDUnauthorized(t *testing.T) {
 	req := NewRequest(t, "GET", "/api/v1/repositories/2").
 		AddTokenAuth(token)
 	MakeRequest(t, req, http.StatusNotFound)
+}
+
+func TestAPIGetRepoByIDAccessTokenResources(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user2")
+
+	// Test targets:
+	// id 1 - user2/repo1 - public repo
+	// id 2 - user2/repo2 - private repo
+	// id 16 - user2/repo16 - private repo
+	testCase := func(t *testing.T, repoID int, token string, expectedStatus int) {
+		req := NewRequest(t,
+			"GET",
+			fmt.Sprintf("/api/v1/repositories/%d", repoID)).
+			AddTokenAuth(token)
+		MakeRequest(t, req, expectedStatus)
+	}
+
+	t.Run("all access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+
+		testCase(t, 1, allToken, http.StatusOK)  // public user2/repo1
+		testCase(t, 2, allToken, http.StatusOK)  // private user2/repo2
+		testCase(t, 16, allToken, http.StatusOK) // private org3/repo3
+	})
+
+	t.Run("public-only access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadRepository)
+
+		testCase(t, 1, publicOnlyToken, http.StatusOK)        // public user2/repo1
+		testCase(t, 2, publicOnlyToken, http.StatusNotFound)  // private user2/repo2
+		testCase(t, 16, publicOnlyToken, http.StatusNotFound) // private org3/repo3
+	})
+
+	t.Run("specific repo access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadRepository},
+			[]int64{2},
+		)
+
+		testCase(t, 1, repo2OnlyToken, http.StatusOK)        // public user2/repo1, read-only outside of the auth'd repos
+		testCase(t, 2, repo2OnlyToken, http.StatusOK)        // private org3/repo3
+		testCase(t, 16, repo2OnlyToken, http.StatusNotFound) // private user2/repo20, outside of fine-grain
+	})
 }
 
 func TestAPIRepoMigrate(t *testing.T) {
@@ -836,5 +1115,79 @@ func TestAPIListOwnRepoSorting(t *testing.T) {
 		assert.Len(t, repos, 2)
 		assert.Equal(t, "utf8", repos[0].Name)
 		assert.Equal(t, "test_workflows", repos[1].Name)
+	})
+}
+
+func TestAPIListOwnRepoAccessTokenResources(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	var repos []api.Repository
+
+	// Test cases repo1 (public), repo2 (private), repo16 (private).
+	session := loginUser(t, "user2")
+
+	find := func() (bool, bool, bool) {
+		foundRepo1 := false  // public user2/repo1
+		foundRepo2 := false  // private user2/repo2
+		foundRepo16 := false // second private repo user2/repo16 used in fine-grain testing, included as baseline
+		for _, repo := range repos {
+			switch repo.Name {
+			case "repo1":
+				foundRepo1 = true
+			case "repo2":
+				foundRepo2 = true
+			case "repo16":
+				foundRepo16 = true
+			}
+		}
+		return foundRepo1, foundRepo2, foundRepo16
+	}
+
+	t.Run("all access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadUser, auth_model.AccessTokenScopeReadRepository)
+
+		req := NewRequest(t, "GET", "/api/v1/user/repos").AddTokenAuth(allToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)  // public user2/repo1
+		assert.True(t, foundRepo2)  // private user2/repo2
+		assert.True(t, foundRepo16) // private user2/repo16, used in fine-grain testing, included as baseline
+	})
+
+	t.Run("public-only access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadUser, auth_model.AccessTokenScopeReadRepository)
+
+		req := NewRequest(t, "GET", "/api/v1/user/repos").AddTokenAuth(publicOnlyToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)   // public user2/repo1
+		assert.False(t, foundRepo2)  // private user2/repo2
+		assert.False(t, foundRepo16) // private user2/repo16
+	})
+
+	t.Run("specific repo access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadUser, auth_model.AccessTokenScopeReadRepository},
+			[]int64{2},
+		)
+
+		req := NewRequest(t, "GET", "/api/v1/user/repos").AddTokenAuth(repo2OnlyToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo1, foundRepo2, foundRepo16 := find()
+
+		assert.True(t, foundRepo1)   // public user2/repo1, allowed as it's public and read-access only
+		assert.True(t, foundRepo2)   // private user2/repo2, allowed inside fine-grain
+		assert.False(t, foundRepo16) // private user2/repo16, denied outside fine-grain
 	})
 }

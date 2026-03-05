@@ -131,6 +131,8 @@ func Search(ctx *context.APIContext) {
 	//   "422":
 	//     "$ref": "#/responses/validationError"
 
+	// Note that ctx.Resource's `RepoFilter()` will be added below, which may implement a PAT's scope to only display
+	// public repos regardless of the request for private repos in the API call.
 	private := ctx.IsSigned && (ctx.FormString("private") == "" || ctx.FormBool("private"))
 	if ctx.PublicOnly {
 		private = false
@@ -149,6 +151,8 @@ func Search(ctx *context.APIContext) {
 		Template:           optional.None[bool](),
 		StarredByID:        ctx.FormInt64("starredBy"),
 		IncludeDescription: ctx.FormBool("includeDesc"),
+
+		AuthorizationReducer: ctx.Reducer,
 	}
 
 	if ctx.FormString("template") != "" {
@@ -222,13 +226,19 @@ func Search(ctx *context.APIContext) {
 			})
 			return
 		}
-		permission, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, api.SearchError{
 				OK:    false,
 				Error: err.Error(),
 			})
+		} else if !permission.HasAccess() {
+			// It shouldn't happen that a repo is returned from GetTeamRepositories which we have no access to at all.
+			// Due to the pagination of the API it doesn't make sense to skip it, as we wouldn't be giving the right
+			// number of results back to the API consumer.
+			ctx.Error(http.StatusInternalServerError, "InvalidAuthorizationReducer", "Repository was available from SearchRepository, but not readable.")
 		}
+
 		results[i] = convert.ToRepo(ctx, repo, permission)
 	}
 	ctx.SetLinkHeader(int(count), opts.PageSize)
@@ -409,12 +419,12 @@ func Generate(ctx *context.APIContext) {
 			return
 		}
 
-		if !ctx.Doer.IsAdmin && !ctxUser.IsOrganization() {
+		if !ctx.IsUserSiteAdmin() && !ctxUser.IsOrganization() {
 			ctx.Error(http.StatusForbidden, "", "Only admin can generate repository for other user.")
 			return
 		}
 
-		if !ctx.Doer.IsAdmin {
+		if !ctx.IsUserSiteAdmin() {
 			canCreate, err := organization.OrgFromUser(ctxUser).CanCreateOrgRepo(ctx, ctx.Doer.ID)
 			if err != nil {
 				ctx.ServerError("CanCreateOrgRepo", err)
@@ -524,7 +534,7 @@ func CreateOrgRepo(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.Doer.IsAdmin {
+	if !ctx.IsUserSiteAdmin() {
 		canCreate, err := org.CanCreateOrgRepo(ctx, ctx.Doer.ID)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "CanCreateOrgRepo", err)
@@ -599,9 +609,9 @@ func GetByID(ctx *context.APIContext) {
 		return
 	}
 
-	permission, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermission", err)
+		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 		return
 	} else if !permission.HasAccess() {
 		ctx.NotFound()
@@ -766,7 +776,7 @@ func updateBasicProperties(ctx *context.APIContext, opts api.EditRepoOption) err
 
 		visibilityChanged = repo.IsPrivate != *opts.Private
 		// when ForcePrivate enabled, you could change public repo to private, but only admin users can change private to public
-		if visibilityChanged && setting.Repository.ForcePrivate && !*opts.Private && !ctx.Doer.IsAdmin {
+		if visibilityChanged && setting.Repository.ForcePrivate && !*opts.Private && !ctx.IsUserSiteAdmin() {
 			err := errors.New("cannot change private repository to public")
 			ctx.Error(http.StatusUnprocessableEntity, "Force Private enabled", err)
 			return err
