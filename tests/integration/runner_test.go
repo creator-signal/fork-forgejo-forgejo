@@ -47,8 +47,9 @@ func TestRunnerModification(t *testing.T) {
 			sess = adminSess
 		}
 
-		req := NewRequestWithValues(t, "POST", baseURL+fmt.Sprintf("/%d", id), map[string]string{
-			"description": "New Description",
+		req := NewRequestWithValues(t, "POST", baseURL+fmt.Sprintf("/%d/edit", id), map[string]string{
+			"runner_name":        "New Name",
+			"runner_description": "New Description",
 		})
 		if fail {
 			sess.MakeRequest(t, req, http.StatusNotFound)
@@ -153,7 +154,7 @@ func TestRunnerVisibility(t *testing.T) {
 		{
 			name:              "user-sees-own-and-global",
 			user:              user2,
-			url:               "user/settings/actions/runners",
+			url:               "/user/settings/actions/runners",
 			expectedRunners:   []*actions_model.ActionRunner{runnerTwo, runnerFour},
 			unexpectedRunners: []*actions_model.ActionRunner{runnerOne, runnerThree, runnerFive, runnerSix},
 		},

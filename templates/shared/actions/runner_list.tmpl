@@ -4,8 +4,8 @@
 		{{ctx.Locale.Tr "actions.runners.runner_manage_panel"}} ({{ctx.Locale.Tr "admin.total" .Total}})
 		<div class="ui right">
 			<div class="ui top right pointing dropdown">
-				<button class="ui primary tiny button">
-					{{ctx.Locale.Tr "actions.runners.new"}}
+				<button class="ui secondary tiny button">
+					{{ctx.Locale.Tr "actions.runners.show_registration_token"}}
 					{{svg "octicon-triangle-down" 14 "dropdown icon"}}
 				</button>
 				<div class="menu">
@@ -14,7 +14,7 @@
 					</div>
 					<div class="divider"></div>
 					<div class="header">
-						Registration Token
+						{{ctx.Locale.Tr "actions.runners.reset_registration_token.token"}}
 					</div>
 					<div class="ui input">
 						<input type="text" value="{{.RegistrationToken}}">
@@ -28,7 +28,9 @@
 					</div>
 				</div>
 			</div>
-
+			<a class="ui primary tiny button" href="{{$.Link}}/new" tabindex="0">
+				{{ctx.Locale.Tr "actions.runners.new"}}
+			</a>
 		</div>
 	</h4>
 	<div class="ui attached segment">
@@ -37,59 +39,111 @@
 		</form>
 	</div>
 	<div class="ui attached table segment">
-		<table class="ui very basic striped table unstackable">
-			<thead>
-				<tr>
-					<th data-sortt-asc="online" data-sortt-desc="offline">
-						{{ctx.Locale.Tr "actions.runners.status"}}
-						{{SortArrow "online" "offline" .SortType false}}
-					</th>
-					<th data-sortt-asc="newest" data-sortt-desc="oldest">
-						{{ctx.Locale.Tr "actions.runners.id"}}
-						{{SortArrow "oldest" "newest" .SortType false}}
-					</th>
-					<th data-sortt-asc="alphabetically" data-sortt-desc="reversealphabetically">
+		{{if .Runners}}
+		<table class="ui very basic striped table unstackable" style="display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto; column-gap: 1rem;">
+			<thead style="display: contents;">
+				<tr style="display: contents;">
+					<th scope="col" data-sortt-asc="alphabetically" data-sortt-desc="reversealphabetically" style="font-weight: 500">
 						{{ctx.Locale.Tr "actions.runners.name"}}
 						{{SortArrow "alphabetically" "reversealphabetically" .SortType false}}
 					</th>
-					<th>{{ctx.Locale.Tr "actions.runners.version"}}</th>
-					<th>{{ctx.Locale.Tr "actions.runners.owner_type"}}</th>
-					<th>{{ctx.Locale.Tr "actions.runners.labels"}}</th>
-					<th>{{ctx.Locale.Tr "actions.runners.last_online"}}</th>
-					<th>{{ctx.Locale.Tr "edit"}}</th>
+					<th scope="col" style="font-weight: 500">
+						{{ctx.Locale.Tr "actions.runners.labels"}}
+					</th>
+					<th scope="col" style="font-weight: 500">
+						{{ctx.Locale.Tr "actions.runners.owner_type"}}
+					</th>
+					<th scope="col" data-sortt-asc="online" data-sortt-desc="offline" style="font-weight: 500">
+						{{ctx.Locale.Tr "actions.runners.status"}}
+						{{SortArrow "online" "offline" .SortType false}}
+					</th>
+					<th scope="col">
+						<span class="tw-sr-only">{{ctx.Locale.Tr "actions.runners.list_runners.details_column"}}</span>
+					</th>
+					<th scope="col">
+						<span class="tw-sr-only">{{ctx.Locale.Tr "actions.runners.list_runners.edit_column"}}</span>
+					</th>
+					<th scope="col">
+						<span class="tw-sr-only">{{ctx.Locale.Tr "actions.runners.list_runners.delete_column"}}</span>
+					</th>
 				</tr>
 			</thead>
-			<tbody>
-				{{if .Runners}}
-					{{range .Runners}}
-					<tr>
-						<td>
-							<span class="ui {{if .IsOnline}}green{{end}} label">{{.StatusLocaleName ctx.Locale}}</span>
-						</td>
-						<td>{{.ID}}</td>
-						<td><p data-tooltip-content="{{.Description}}">{{.Name}}</p></td>
-						<td>{{if .Version}}{{.Version}}{{else}}{{ctx.Locale.Tr "unknown"}}{{end}}</td>
-						<td><span data-tooltip-content="{{.BelongsToOwnerName}}">{{.BelongsToOwnerType.LocaleString ctx.Locale}}</span></td>
-						<td class="tw-flex tw-flex-wrap tw-gap-2 runner-tags">
-							{{range .AgentLabels}}<span class="ui label">{{.}}</span>{{end}}
-						</td>
-						<td>{{if .LastOnline}}{{DateUtils.TimeSince .LastOnline}}{{else}}{{ctx.Locale.Tr "never"}}{{end}}</td>
-						<td class="runner-ops">
-							{{if .Editable $.RunnerOwnerID $.RunnerRepoID}}
-							<a href="{{$.Link}}/{{.ID}}">{{svg "octicon-pencil"}}</a>
+			<tbody style="display: contents;">
+				{{range .Runners}}
+				<tr style="display: contents;">
+					<td style="padding-block: 1rem">
+						<div style="font-weight: 500;">{{.Name}}</div>
+						<div style="margin-top: 0.25rem; color: var(--color-text-light-1);">{{.UUID}}</div>
+					</td>
+					<td style="padding-block: 1rem; display: flex; align-items: flex-start; flex-wrap: wrap; column-gap: 0.5rem; row-gap: 0.5rem;">
+						{{if gt (len .AgentLabels) 0}}
+							{{range .AgentLabels}}
+							<div class="ui label special">{{.}}</div>
 							{{end}}
-						</td>
-					</tr>
-					{{end}}
-				{{else}}
-					<tr>
-						<td class="center aligned" colspan="8">{{ctx.Locale.Tr "actions.runners.none"}}</td>
-					</tr>
+						{{else}}
+							&mdash;
+						{{end}}
+					</td>
+					<td style="padding-block: 1rem">
+						{{.BelongsToOwnerType.LocaleString ctx.Locale}}
+					</td>
+					<td style="padding-block: 1rem;">
+						<div style="display: flex; align-items: center; column-gap: 0.25rem">
+							{{if .IsActive}}
+								<div style="flex: none; border-radius: calc(infinity * 1px); padding: 0.25rem; color: oklch(54.6% 0.245 262.881); background-color: oklch(54.6% 0.245 262.881 / 0.1)">
+									<div style="width: 0.5rem; height: 0.5rem; border-radius: calc(infinity * 1px); background-color: currentColor;"></div>
+								</div>
+							{{else if .IsIdle}}
+								<div style="flex: none; border-radius: calc(infinity * 1px); padding: 0.25rem; color: oklch(62.7% 0.194 149.214); background-color: oklch(62.7% 0.194 149.214 / 0.1)">
+									<div style="width: 0.5rem; height: 0.5rem; border-radius: calc(infinity * 1px); background-color: currentColor;"></div>
+								</div>
+							{{else}}
+								<div style="flex: none; border-radius: calc(infinity * 1px); padding: 0.25rem; color: oklch(44.6% 0.03 256.802); background-color: oklch(44.6% 0.03 256.802 / 0.1)">
+									<div style="width: 0.5rem; height: 0.5rem; border-radius: calc(infinity * 1px); background-color: currentColor;"></div>
+								</div>
+							{{end}}
+							<div>
+								{{.StatusLocaleName ctx.Locale}}
+							</div>
+						</div>
+					</td>
+					<td style="padding-block: 1rem; text-align: right;">
+						<!-- FIXME: hover -->
+						<a href="{{$.Link}}/{{.ID}}" tabindex="0" aria-label="{{ctx.Locale.Tr "actions.runners.list_runners.details_button_aria" .Name}}" style="font-weight: 500;">{{ctx.Locale.Tr "actions.runners.list_runners.details_button"}}</a>
+					</td>
+					<td style="padding-block: 1rem; text-align: right;">
+						<!-- FIXME: hover -->
+						{{if .Editable $.RunnerOwnerID $.RunnerRepoID}}
+							<a href="{{$.Link}}/{{.ID}}/edit" tabindex="0" style="font-weight: 500;" aria-label="{{ctx.Locale.Tr "actions.runners.list_runners.edit_button_aria" .Name}}">{{ctx.Locale.Tr "actions.runners.list_runners.edit_button"}}</a>
+						{{end}}
+					</td>
+					<td style="padding-block: 1rem; text-align: right">
+						<!-- FIXME: hover, should look like an ordinary link -->
+						{{if .Editable $.RunnerOwnerID $.RunnerRepoID}}
+							<button class="delete-button" style="background-color: transparent; font-weight: 500;" aria-label="{{ctx.Locale.Tr "actions.runners.list_runners.delete_button_aria" .Name}}" data-url="{{$.Link}}/{{.ID}}/delete" data-modal-id="runner-delete-modal">{{ctx.Locale.Tr "actions.runners.list_runners.delete_button"}}</button>
+						{{end}}
+					</td>
+				</tr>
 				{{end}}
 			</tbody>
 		</table>
+		{{else}}
+		<div style="display: flex; padding: 1rem;">
+			{{ctx.Locale.Tr "actions.runners.none"}}
+		</div>
+		{{end}}
 	</div>
 
 	{{template "base/paginate" .}}
 
+	<div class="ui g-modal-confirm delete modal" id="runner-delete-modal">
+		<div class="header">
+			{{svg "octicon-trash"}}
+			{{ctx.Locale.Tr "actions.runners.delete_runner.header"}}
+		</div>
+		<div class="content">
+			<p>{{ctx.Locale.Tr "actions.runners.delete_runner.notice"}}</p>
+		</div>
+		{{template "base/modal_actions_confirm" .}}
+	</div>
 </div>
