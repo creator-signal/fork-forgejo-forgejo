@@ -171,6 +171,15 @@ func TestPackageContainer(t *testing.T) {
 				MakeRequest(t, req, http.StatusOK)
 			})
 		})
+
+		t.Run("No token issued if credentials are invalid", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL))
+			// Setting the header explicitly instead of using AddBasicAuth to supply an invalid password.
+			req.Request.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("user2:very-invalid")))
+			MakeRequest(t, req, http.StatusUnauthorized)
+		})
 	})
 
 	t.Run("DetermineSupport", func(t *testing.T) {
