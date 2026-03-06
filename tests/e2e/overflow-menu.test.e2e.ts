@@ -11,11 +11,8 @@
 import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 
-test(`Visual properties`, async ({browser, isMobile}) => {
+test(`Visual properties`, async ({page, isMobile}) => {
   test.skip(!isMobile, 'Overflow menu button only appears on mobile');
-
-  const context = await browser.newContext({javaScriptEnabled: true});
-  const page = await context.newPage();
 
   const noBg = 'rgba(0, 0, 0, 0)';
   const activeBg = 'rgb(226, 226, 229)';
