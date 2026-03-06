@@ -278,6 +278,9 @@ func (f *file) createEmpty() error {
 		return os.ErrExist
 	}
 	now := time.Now()
+	// Needs to be run in a transaction, or it could try to read the metadata from a different replica server.
+	// This can happen if you use PostgresSQL with primary and replica servers.
+	// The time between insert and read can be too low to allow the replicas to sync.
 	return db.WithTx(f.ctx, func(ctx context.Context) error {
 		_, err := db.GetEngine(ctx).Insert(&DbfsMeta{
 			FullPath:        f.fullPath,
