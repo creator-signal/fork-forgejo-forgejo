@@ -12,6 +12,7 @@ import (
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
 	"forgejo.org/models/perm"
+	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
 	api "forgejo.org/modules/structs"
@@ -1077,6 +1078,168 @@ func DeletePullReviewComment(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	deleteIssueComment(ctx, issues_model.CommentTypeCode)
+}
+
+// ResolvePullReviewComment resolves a pull request review comment conversation
+func ResolvePullReviewComment(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}/resolve repository repoResolvePullReviewComment
+	// ---
+	// summary: Resolve a pull request review comment conversation
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: index
+	//   in: path
+	//   description: index of the pull request
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: id
+	//   in: path
+	//   description: id of the review
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: comment
+	//   in: path
+	//   description: id of the comment
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/PullReviewComment"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	resolveOrUnresolveComment(ctx, true)
+}
+
+// UnResolvePullReviewComment unresolves a pull request review comment conversation
+func UnResolvePullReviewComment(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}/unresolve repository repoUnResolvePullReviewComment
+	// ---
+	// summary: Unresolve a pull request review comment conversation
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: index
+	//   in: path
+	//   description: index of the pull request
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: id
+	//   in: path
+	//   description: id of the review
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: comment
+	//   in: path
+	//   description: id of the comment
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/PullReviewComment"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	resolveOrUnresolveComment(ctx, false)
+}
+
+func resolveOrUnresolveComment(ctx *context.APIContext, isResolve bool) {
+	review, _, statusSet := prepareSingleReview(ctx)
+	if statusSet {
+		return
+	}
+
+	comment := ctx.Comment
+
+	// Validate the comment belongs to the review
+	if comment.ReviewID != review.ID {
+		ctx.NotFound("CommentNotInReview")
+		return
+	}
+
+	// Only code comments can be resolved
+	if comment.Type != issues_model.CommentTypeCode {
+		ctx.Error(http.StatusBadRequest, "CommentNotCode", errors.New("only code review comments can be resolved"))
+		return
+	}
+
+	// Check permission using API context (respects repo-specific access tokens).
+	// review.Issue is already loaded by review.LoadAttributes() in prepareSingleReview.
+	canMark := ctx.Doer.ID == review.Issue.PosterID || ctx.IsUserRepoWriter([]unit.Type{unit.TypePullRequests})
+	if !canMark {
+		var err error
+		canMark, err = issues_model.IsOfficialReviewer(ctx, review.Issue, ctx.Doer)
+		if err != nil {
+			ctx.InternalServerError(err)
+			return
+		}
+	}
+	if !canMark {
+		ctx.Error(http.StatusForbidden, "ResolvePermissionDenied", errors.New("no permission to resolve/unresolve conversations"))
+		return
+	}
+
+	if err := issues_model.MarkConversation(ctx, comment, ctx.Doer, isResolve); err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	// Update in-memory state to reflect the DB change
+	if isResolve {
+		comment.ResolveDoerID = ctx.Doer.ID
+		comment.ResolveDoer = ctx.Doer
+	} else {
+		comment.ResolveDoerID = 0
+		comment.ResolveDoer = nil
+	}
+
+	if err := comment.LoadPoster(ctx); err != nil && !user_model.IsErrUserNotExist(err) {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	apiComment, err := convert.ToPullReviewComment(ctx, review, comment, ctx.Doer)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, apiComment)
 }
 
 func dismissReview(ctx *context.APIContext, msg string, isDismiss, dismissPriors bool) {

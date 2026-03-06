@@ -673,6 +673,90 @@ func TestAPIPullReviewStayDismissed(t *testing.T) {
 		pullIssue.ID, user8.ID, 2, 0, 3, false)
 }
 
+func TestAPIPullReviewResolveConversation(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	pullIssue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 3})
+	require.NoError(t, pullIssue.LoadAttributes(db.DefaultContext))
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: pullIssue.RepoID})
+
+	// user2 is the repo owner, has write access
+	session := loginUser(t, "user2")
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+	// Use review 10 which has code comment 7
+	reviewID := int64(10)
+	commentID := int64(7)
+
+	urlBase := fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/reviews/%d/comments/%d",
+		repo.OwnerName, repo.Name, pullIssue.Index, reviewID, commentID)
+
+	t.Run("Resolve", func(t *testing.T) {
+		req := NewRequest(t, http.MethodPost, urlBase+"/resolve").AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var comment api.PullReviewComment
+		DecodeJSON(t, resp, &comment)
+		assert.Equal(t, commentID, comment.ID)
+		assert.NotNil(t, comment.Resolver)
+		assert.EqualValues(t, 2, comment.Resolver.ID)
+	})
+
+	t.Run("ResolveIdempotent", func(t *testing.T) {
+		req := NewRequest(t, http.MethodPost, urlBase+"/resolve").AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusOK)
+	})
+
+	t.Run("Unresolve", func(t *testing.T) {
+		req := NewRequest(t, http.MethodPost, urlBase+"/unresolve").AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var comment api.PullReviewComment
+		DecodeJSON(t, resp, &comment)
+		assert.Equal(t, commentID, comment.ID)
+		assert.Nil(t, comment.Resolver)
+	})
+
+	t.Run("UnresolveIdempotent", func(t *testing.T) {
+		req := NewRequest(t, http.MethodPost, urlBase+"/unresolve").AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusOK)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		// user5 has no write access and is not PR author or reviewer
+		session5 := loginUser(t, "user5")
+		token5 := getTokenForLoggedInUser(t, session5, auth_model.AccessTokenScopeWriteRepository)
+		req := NewRequest(t, http.MethodPost, urlBase+"/resolve").AddTokenAuth(token5)
+		MakeRequest(t, req, http.StatusForbidden)
+	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		req := NewRequest(t, http.MethodPost, urlBase+"/resolve")
+		MakeRequest(t, req, http.StatusUnauthorized)
+	})
+
+	t.Run("CommentNotInReview", func(t *testing.T) {
+		// comment 7 belongs to review 10, try with review 8
+		wrongURL := fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/reviews/%d/comments/%d",
+			repo.OwnerName, repo.Name, pullIssue.Index, 8, commentID)
+		req := NewRequest(t, http.MethodPost, wrongURL+"/resolve").AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("NonCodeComment", func(t *testing.T) {
+		// comment 11 is a review comment (type 22), not a code comment (type 21),
+		// under review 21 on the same pull request
+		nonCodeURL := fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/reviews/%d/comments/%d",
+			repo.OwnerName, repo.Name, pullIssue.Index, 21, 11)
+		req := NewRequest(t, http.MethodPost, nonCodeURL+"/resolve").AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusBadRequest)
+	})
+
+	t.Run("NonExistentComment", func(t *testing.T) {
+		nonExistURL := fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/reviews/%d/comments/%d",
+			repo.OwnerName, repo.Name, pullIssue.Index, reviewID, 999999)
+		req := NewRequest(t, http.MethodPost, nonExistURL+"/resolve").AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+}
+
 func reviewsCountCheck(t *testing.T, name string, issueID, reviewerID int64, expectedDismissed, expectedRequested, expectedTotal int, expectApproval bool) {
 	t.Run(name, func(t *testing.T) {
 		unittest.AssertCountByCond(t, "review", builder.Eq{
