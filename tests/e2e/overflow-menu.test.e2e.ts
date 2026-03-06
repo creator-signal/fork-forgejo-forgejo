@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // @watch start
-// templates/explore/navbar.tmpl
-// templates/user/dashboard/navbar.tmpl
-// templates/repo/header.tmpl
-// templates/org/header.tmpl
-// web_src/js/components/DashboardRepoList.vue
+// templates/user/profile.tmpl
+// templates/user/overview/header.tmpl
+// web_src/css/modules/tippy.css
 // web_src/js/modules/tippy.js
 // @watch end
 
