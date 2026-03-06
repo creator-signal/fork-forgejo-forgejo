@@ -60,6 +60,8 @@ func toUser(ctx context.Context, user *user_model.User, signed, authed bool) *ap
 		Pronouns:    user.GetPronouns(signed),
 		Website:     user.Website,
 		Description: user.Description,
+		SocialFields: user.SocialFields,
+		CompanyFields: user.CompanyFields,
 		// counter's
 		Followers:    user.NumFollowers,
 		Following:    user.NumFollowing,
@@ -101,6 +103,8 @@ func User2UserSettings(user *user_model.User) api.UserSettings {
 		HideActivity:        user.KeepActivityPrivate,
 		DiffViewStyle:       user.DiffViewStyle,
 		EnableRepoUnitHints: user.EnableRepoUnitHints,
+		SocialFields:        user.SocialFields,
+		CompanyFields:       user.CompanyFields,
 	}
 }
 

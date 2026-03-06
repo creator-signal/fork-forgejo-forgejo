@@ -38,6 +38,76 @@
 							<input id="location" name="location"  value="{{.Org.Location}}" maxlength="50">
 						</div>
 
+						<div class="dynamic-fields-container tw-mt-4" data-prefix="social">
+							<h5 class="ui header">Social Media</h5>
+							<div class="field-list">
+								{{range .Org.SocialFields}}
+									<div class="field-group-row tw-flex tw-gap-2 tw-mb-2">
+										<div class="field tw-flex-1 tw-mb-0">
+											<input type="text" name="social_name[]" value="{{.Name}}" placeholder="{{ctx.Locale.Tr "settings.social_field_name"}}" maxlength="50" data-name="name">
+										</div>
+										<div class="field tw-flex-1 tw-mb-0">
+											<input type="text" name="social_value[]" value="{{.Value}}" placeholder="{{ctx.Locale.Tr "settings.social_field_value"}}" maxlength="255" data-name="value">
+										</div>
+										<button type="button" class="ui icon button remove-field-button tw-m-0" title="Remove field">
+											{{svg "octicon-trash"}}
+										</button>
+									</div>
+								{{end}}
+							</div>
+							<button type="button" class="ui basic button add-field-button tw-mt-2">
+								{{svg "octicon-plus"}} {{ctx.Locale.Tr "settings.add_social_account"}}
+							</button>
+							<template>
+								<div class="field-group-row tw-flex tw-gap-2 tw-mb-2">
+									<div class="field tw-flex-1 tw-mb-0">
+										<input type="text" name="social_name[]" value="" placeholder="{{ctx.Locale.Tr "settings.social_field_name"}}" maxlength="50" data-name="name">
+									</div>
+									<div class="field tw-flex-1 tw-mb-0">
+										<input type="text" name="social_value[]" value="" placeholder="{{ctx.Locale.Tr "settings.social_field_value"}}" maxlength="255" data-name="value">
+									</div>
+									<button type="button" class="ui icon button remove-field-button tw-m-0" title="Remove field">
+										{{svg "octicon-trash"}}
+									</button>
+								</div>
+							</template>
+						</div>
+
+						<div class="dynamic-fields-container tw-mt-6" data-prefix="company">
+							<h5 class="ui header">Companies / Organizations</h5>
+							<div class="field-list">
+								{{range .Org.CompanyFields}}
+									<div class="field-group-row tw-flex tw-gap-2 tw-mb-2">
+										<div class="field tw-flex-1 tw-mb-0">
+											<input type="text" name="company_name[]" value="{{.Name}}" placeholder="{{ctx.Locale.Tr "settings.company_field_name"}}" maxlength="50" data-name="name">
+										</div>
+										<div class="field tw-flex-1 tw-mb-0">
+											<input type="text" name="company_value[]" value="{{.Value}}" placeholder="{{ctx.Locale.Tr "settings.company_field_value"}}" maxlength="255" data-name="value">
+										</div>
+										<button type="button" class="ui icon button remove-field-button tw-m-0" title="Remove field">
+											{{svg "octicon-trash"}}
+										</button>
+									</div>
+								{{end}}
+							</div>
+							<button type="button" class="ui basic button add-field-button tw-mt-2">
+								{{svg "octicon-plus"}} {{ctx.Locale.Tr "settings.add_company"}}
+							</button>
+							<template>
+								<div class="field-group-row tw-flex tw-gap-2 tw-mb-2">
+									<div class="field tw-flex-1 tw-mb-0">
+										<input type="text" name="company_name[]" value="" placeholder="{{ctx.Locale.Tr "settings.company_field_name"}}" maxlength="50" data-name="name">
+									</div>
+									<div class="field tw-flex-1 tw-mb-0">
+										<input type="text" name="company_value[]" value="" placeholder="{{ctx.Locale.Tr "settings.company_field_value"}}" maxlength="255" data-name="value">
+									</div>
+									<button type="button" class="ui icon button remove-field-button tw-m-0" title="Remove field">
+										{{svg "octicon-trash"}}
+									</button>
+								</div>
+							</template>
+						</div>
+
 						<div class="divider"></div>
 						<div class="field" id="visibility_box">
 							<label for="visibility">{{ctx.Locale.Tr "org.settings.visibility"}}</label>

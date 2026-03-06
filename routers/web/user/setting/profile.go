@@ -24,6 +24,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
 	"forgejo.org/modules/translation"
 	"forgejo.org/modules/typesniffer"
 	"forgejo.org/modules/util"
@@ -105,11 +106,27 @@ func ProfilePost(ctx *context.Context) {
 		}
 	}
 
+	socialFields := make([]structs.ProfileField, 0, len(form.SocialNames))
+	for i := 0; i < len(form.SocialNames); i++ {
+		if form.SocialNames[i] != "" && form.SocialValues[i] != "" {
+			socialFields = append(socialFields, structs.ProfileField{Name: form.SocialNames[i], Value: form.SocialValues[i]})
+		}
+	}
+
+	companyFields := make([]structs.ProfileField, 0, len(form.CompanyNames))
+	for i := 0; i < len(form.CompanyNames); i++ {
+		if form.CompanyNames[i] != "" && form.CompanyValues[i] != "" {
+			companyFields = append(companyFields, structs.ProfileField{Name: form.CompanyNames[i], Value: form.CompanyValues[i]})
+		}
+	}
+
 	opts := &user_service.UpdateOptions{
 		FullName:            optional.Some(form.FullName),
 		KeepEmailPrivate:    optional.Some(form.KeepEmailPrivate),
 		Description:         optional.Some(form.Biography),
 		Pronouns:            optional.Some(form.Pronouns),
+		SocialFields:        optional.Some(socialFields),
+		CompanyFields:       optional.Some(companyFields),
 		Website:             optional.Some(form.Website),
 		Location:            optional.Some(form.Location),
 		Visibility:          optional.Some(form.Visibility),

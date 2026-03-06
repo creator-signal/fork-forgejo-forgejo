@@ -48,6 +48,12 @@ func TestUpdateUser(t *testing.T) {
 		AllowCreateOrganization:      optional.Some(false),
 		EmailNotificationsPreference: optional.Some("disabled"),
 		SetLastLogin:                 true,
+		SocialFields: optional.Some([]structs.ProfileField{
+			{Name: "Twitter", Value: "https://twitter.com/test"},
+		}),
+		CompanyFields: optional.Some([]structs.ProfileField{
+			{Name: "Forgejo", Value: "https://forgejo.org"},
+		}),
 	}
 	require.NoError(t, UpdateUser(db.DefaultContext, user, opts))
 
@@ -69,6 +75,8 @@ func TestUpdateUser(t *testing.T) {
 	assert.Equal(t, opts.DiffViewStyle.ValueOrZeroValue(), user.DiffViewStyle)
 	assert.Equal(t, opts.AllowCreateOrganization.ValueOrZeroValue(), user.AllowCreateOrganization)
 	assert.Equal(t, opts.EmailNotificationsPreference.ValueOrZeroValue(), user.EmailNotificationsPreference)
+	assert.Equal(t, opts.SocialFields.ValueOrZeroValue(), user.SocialFields)
+	assert.Equal(t, opts.CompanyFields.ValueOrZeroValue(), user.CompanyFields)
 
 	user = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 28})
 	assert.Equal(t, opts.KeepEmailPrivate.ValueOrZeroValue(), user.KeepEmailPrivate)
@@ -89,6 +97,8 @@ func TestUpdateUser(t *testing.T) {
 	assert.Equal(t, opts.DiffViewStyle.ValueOrZeroValue(), user.DiffViewStyle)
 	assert.Equal(t, opts.AllowCreateOrganization.ValueOrZeroValue(), user.AllowCreateOrganization)
 	assert.Equal(t, opts.EmailNotificationsPreference.ValueOrZeroValue(), user.EmailNotificationsPreference)
+	assert.Equal(t, opts.SocialFields.ValueOrZeroValue(), user.SocialFields)
+	assert.Equal(t, opts.CompanyFields.ValueOrZeroValue(), user.CompanyFields)
 }
 
 func TestUpdateAuth(t *testing.T) {

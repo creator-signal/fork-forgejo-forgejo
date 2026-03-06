@@ -41,6 +41,8 @@ type UpdateOptions struct {
 	RepoAdminChangeTeamAccess    optional.Option[bool]
 	EnableRepoUnitHints          optional.Option[bool]
 	KeepPronounsPrivate          optional.Option[bool]
+	SocialFields                 optional.Option[[]structs.ProfileField]
+	CompanyFields                optional.Option[[]structs.ProfileField]
 }
 
 func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) error {
@@ -57,6 +59,14 @@ func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) er
 	if has, value := opts.Pronouns.Get(); has {
 		u.Pronouns = value
 		cols = append(cols, "pronouns")
+	}
+	if has, value := opts.SocialFields.Get(); has {
+		u.SocialFields = value
+		cols = append(cols, "social_fields")
+	}
+	if has, value := opts.CompanyFields.Get(); has {
+		u.CompanyFields = value
+		cols = append(cols, "company_fields")
 	}
 	if has, value := opts.Website.Get(); has {
 		u.Website = value

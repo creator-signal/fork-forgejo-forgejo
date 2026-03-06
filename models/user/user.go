@@ -104,7 +104,9 @@ type User struct {
 	Location    string
 	Website     string
 	Pronouns    string
-	Rands       string `xorm:"VARCHAR(32)"`
+	SocialFields []structs.ProfileField `xorm:"JSON TEXT"`
+	CompanyFields []structs.ProfileField `xorm:"JSON TEXT"`
+	Rands       string                 `xorm:"VARCHAR(32)"`
 	Salt        string `xorm:"VARCHAR(32)"`
 	Language    string `xorm:"VARCHAR(5)"`
 	Description string
@@ -197,6 +199,14 @@ func (u *User) BeforeUpdate() {
 	u.Location = base.TruncateString(u.Location, 255)
 	u.Website = base.TruncateString(u.Website, 255)
 	u.Description = base.TruncateString(u.Description, 255)
+	for i := range u.SocialFields {
+		u.SocialFields[i].Name = base.TruncateString(u.SocialFields[i].Name, 50)
+		u.SocialFields[i].Value = base.TruncateString(u.SocialFields[i].Value, 255)
+	}
+	for i := range u.CompanyFields {
+		u.CompanyFields[i].Name = base.TruncateString(u.CompanyFields[i].Name, 50)
+		u.CompanyFields[i].Value = base.TruncateString(u.CompanyFields[i].Value, 255)
+	}
 }
 
 // AfterLoad is invoked from XORM after filling all the fields of this object.

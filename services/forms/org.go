@@ -42,6 +42,10 @@ type UpdateOrgSettingForm struct {
 	Description               string `binding:"MaxSize(255)"`
 	Website                   string `binding:"ValidUrl;MaxSize(255)"`
 	Location                  string `binding:"MaxSize(50)"`
+	SocialNames               []string `form:"social_name[]"`
+	SocialValues              []string `form:"social_value[]"`
+	CompanyNames              []string `form:"company_name[]"`
+	CompanyValues             []string `form:"company_value[]"`
 	Visibility                structs.VisibleType
 	MaxRepoCreation           int
 	RepoAdminChangeTeamAccess bool

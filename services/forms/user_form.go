@@ -222,6 +222,10 @@ type UpdateProfileForm struct {
 	Location            string `binding:"MaxSize(50)"`
 	Pronouns            string `binding:"MaxSize(50)"`
 	Biography           string `binding:"MaxSize(255)"`
+	SocialNames         []string `form:"social_name[]"`
+	SocialValues        []string `form:"social_value[]"`
+	CompanyNames        []string `form:"company_name[]"`
+	CompanyValues       []string `form:"company_value[]"`
 	Visibility          structs.VisibleType
 	KeepActivityPrivate bool
 	KeepPronounsPrivate bool

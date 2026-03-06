@@ -85,6 +85,8 @@ func CreateUser(ctx *context.APIContext) {
 		MustChangePassword: true,
 		LoginType:          auth.Plain,
 		LoginName:          form.LoginName,
+		SocialFields:       form.SocialFields,
+		CompanyFields:      form.CompanyFields,
 	}
 	if form.MustChangePassword != nil {
 		u.MustChangePassword = *form.MustChangePassword
@@ -255,6 +257,8 @@ func EditUser(ctx *context.APIContext) {
 		AllowCreateOrganization: optional.FromPtr(form.AllowCreateOrganization),
 		IsRestricted:            optional.FromPtr(form.Restricted),
 		KeepEmailPrivate:        optional.FromPtr(form.HideEmail),
+		SocialFields:            optional.FromPtr(form.SocialFields),
+		CompanyFields:           optional.FromPtr(form.CompanyFields),
 	}
 
 	if err := user_service.UpdateUser(ctx, ctx.ContextUser, opts); err != nil {

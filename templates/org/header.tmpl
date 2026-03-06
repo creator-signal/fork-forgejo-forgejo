@@ -46,7 +46,42 @@
 		{{if .RenderedDescription}}<div class="render-content markup">{{.RenderedDescription}}</div>{{end}}
 		<div class="text light meta tw-mt-1">
 			{{if .Org.Location}}<div class="flex-text-block">{{svg "octicon-location"}} <span>{{.Org.Location}}</span></div>{{end}}
-			{{if .Org.Website}}<div class="flex-text-block">{{svg "octicon-link"}} <a class="muted" target="_blank" rel="noopener noreferrer me" href="{{.Org.Website}}">{{.Org.Website}}</a></div>{{end}}
+			{{if .Org.Website}}<div class="flex-text-block">{{svg "octicon-link"}} <a class="muted tw-break-anywhere" target="_blank" rel="noopener noreferrer me" href="{{.Org.Website}}">{{.Org.Website}}</a></div>{{end}}
+			{{if .Org.SocialFields}}
+				<div class="flex-text-block tw-items-start">
+					{{svg "octicon-globe" 16 "tw-mt-1"}}
+					<div class="tw-flex-1 tw-min-w-0">
+						{{range .Org.SocialFields}}
+							{{if and .Name .Value}}
+								<div class="tw-mb-1 last:tw-mb-0 tw-flex tw-flex-col">
+									<span class="tw-font-semibold">{{.Name}}:</span>
+									<span class="tw-min-w-0">
+										{{if or (StringUtils.HasPrefix .Value "http://") (StringUtils.HasPrefix .Value "https://")}}
+											<a class="muted tw-break-anywhere" target="_blank" rel="noopener noreferrer me" href="{{.Value}}">{{.Value}}</a>
+										{{else}}
+											<span class="tw-break-anywhere">{{.Value}}</span>
+										{{end}}
+									</span>
+								</div>
+							{{end}}
+						{{end}}
+					</div>
+				</div>
+			{{end}}
+			{{if .Org.CompanyFields}}
+				<div class="flex-text-block tw-items-start">
+					{{svg "octicon-briefcase" 16 "tw-mt-1"}}
+					<div class="tw-flex-1 tw-min-w-0">
+						{{range .Org.CompanyFields}}
+							{{if .Name}}
+								<div class="tw-mb-1 last:tw-mb-0">
+									<span class="tw-break-anywhere">{{.Name}}</span>
+								</div>
+							{{end}}
+						{{end}}
+					</div>
+				</div>
+			{{end}}
 			{{if .IsSigned}}
 				{{if .Org.Email}}<div class="flex-text-block">{{svg "octicon-mail"}} <a class="muted" href="mailto:{{.Org.Email}}">{{.Org.Email}}</a></div>{{end}}
 			{{end}}

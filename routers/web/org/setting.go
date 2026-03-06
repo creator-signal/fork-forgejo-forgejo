@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/optional"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	shared_user "forgejo.org/routers/web/shared/user"
 	user_setting "forgejo.org/routers/web/user/setting"
@@ -119,11 +120,27 @@ func SettingsPost(ctx *context.Context) {
 		}
 	}
 
+	socialFields := make([]structs.ProfileField, 0, len(form.SocialNames))
+	for i := 0; i < len(form.SocialNames); i++ {
+		if form.SocialNames[i] != "" && form.SocialValues[i] != "" {
+			socialFields = append(socialFields, structs.ProfileField{Name: form.SocialNames[i], Value: form.SocialValues[i]})
+		}
+	}
+
+	companyFields := make([]structs.ProfileField, 0, len(form.CompanyNames))
+	for i := 0; i < len(form.CompanyNames); i++ {
+		if form.CompanyNames[i] != "" && form.CompanyValues[i] != "" {
+			companyFields = append(companyFields, structs.ProfileField{Name: form.CompanyNames[i], Value: form.CompanyValues[i]})
+		}
+	}
+
 	opts := &user_service.UpdateOptions{
 		FullName:                  optional.Some(form.FullName),
 		Description:               optional.Some(form.Description),
 		Website:                   optional.Some(form.Website),
 		Location:                  optional.Some(form.Location),
+		SocialFields:              optional.Some(socialFields),
+		CompanyFields:             optional.Some(companyFields),
 		Visibility:                optional.Some(form.Visibility),
 		RepoAdminChangeTeamAccess: optional.Some(form.RepoAdminChangeTeamAccess),
 	}

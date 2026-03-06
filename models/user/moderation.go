@@ -5,12 +5,14 @@ package user
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"slices"
 	"sync"
 
 	"forgejo.org/models/moderation"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
 
 	"xorm.io/xorm/names"
@@ -27,6 +29,8 @@ type UserData struct { //revive:disable-line:exported
 	Website     string
 	Pronouns    string
 	Description string
+	SocialFields []structs.ProfileField
+	CompanyFields []structs.ProfileField
 	CreatedUnix timeutil.TimeStamp
 	UpdatedUnix timeutil.TimeStamp
 	// This field was intentionally renamed so that is not the same with the one from User struct.
@@ -40,7 +44,7 @@ type UserData struct { //revive:disable-line:exported
 // Implements GetFieldsMap() from ShadowCopyData interface, returning a list of <key, value> pairs
 // to be used when rendering the shadow copy for admins reviewing the corresponding abuse report(s).
 func (ud UserData) GetFieldsMap() []moderation.ShadowCopyField {
-	return []moderation.ShadowCopyField{
+	fields := []moderation.ShadowCopyField{
 		{Key: "Name", Value: ud.Name},
 		{Key: "FullName", Value: ud.FullName},
 		{Key: "Email", Value: ud.Email},
@@ -49,12 +53,33 @@ func (ud UserData) GetFieldsMap() []moderation.ShadowCopyField {
 		{Key: "Website", Value: ud.Website},
 		{Key: "Pronouns", Value: ud.Pronouns},
 		{Key: "Description", Value: ud.Description},
-		{Key: "CreatedUnix", Value: ud.CreatedUnix.AsLocalTime().String()},
-		{Key: "UpdatedUnix", Value: ud.UpdatedUnix.AsLocalTime().String()},
-		{Key: "LastLogin", Value: ud.LastLogin.AsLocalTime().String()},
-		{Key: "Avatar", Value: ud.Avatar},
-		{Key: "AvatarEmail", Value: ud.AvatarEmail},
 	}
+	for i, field := range ud.SocialFields {
+		fields = append(fields, moderation.ShadowCopyField{
+			Key:   fmt.Sprintf("SocialField[%d].Name", i),
+			Value: field.Name,
+		}, moderation.ShadowCopyField{
+			Key:   fmt.Sprintf("SocialField[%d].Value", i),
+			Value: field.Value,
+		})
+	}
+	for i, field := range ud.CompanyFields {
+		fields = append(fields, moderation.ShadowCopyField{
+			Key:   fmt.Sprintf("CompanyField[%d].Name", i),
+			Value: field.Name,
+		}, moderation.ShadowCopyField{
+			Key:   fmt.Sprintf("CompanyField[%d].Value", i),
+			Value: field.Value,
+		})
+	}
+	fields = append(fields,
+		moderation.ShadowCopyField{Key: "CreatedUnix", Value: ud.CreatedUnix.AsLocalTime().String()},
+		moderation.ShadowCopyField{Key: "UpdatedUnix", Value: ud.UpdatedUnix.AsLocalTime().String()},
+		moderation.ShadowCopyField{Key: "LastLogin", Value: ud.LastLogin.AsLocalTime().String()},
+		moderation.ShadowCopyField{Key: "Avatar", Value: ud.Avatar},
+		moderation.ShadowCopyField{Key: "AvatarEmail", Value: ud.AvatarEmail},
+	)
+	return fields
 }
 
 // Implements GetAbuserID() from ShadowCopyData interface, returning (GhostUserID, false), since for users/organizations
@@ -75,6 +100,8 @@ func newUserData(user *User) UserData {
 		Website:     user.Website,
 		Pronouns:    user.Pronouns,
 		Description: user.Description,
+		SocialFields: user.SocialFields,
+		CompanyFields: user.CompanyFields,
 		CreatedUnix: user.CreatedUnix,
 		UpdatedUnix: user.UpdatedUnix,
 		LastLogin:   user.LastLoginUnix,

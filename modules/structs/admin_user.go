@@ -26,6 +26,9 @@ type CreateUserOption struct {
 	// migrated from other systems. When omitted, the user's creation timestamp
 	// will be set to "now".
 	Created *time.Time `json:"created_at"`
+
+	SocialFields []ProfileField `json:"social_fields"`
+	CompanyFields []ProfileField `json:"company_fields"`
 }
 
 // EditUserOption edit user options
@@ -51,4 +54,6 @@ type EditUserOption struct {
 	Restricted              *bool   `json:"restricted"`
 	Visibility              string  `json:"visibility" binding:"In(,public,limited,private)"`
 	HideEmail               *bool   `json:"hide_email"`
+	SocialFields            *[]ProfileField `json:"social_fields"`
+	CompanyFields           *[]ProfileField `json:"company_fields"`
 }
