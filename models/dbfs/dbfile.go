@@ -278,16 +278,18 @@ func (f *file) createEmpty() error {
 		return os.ErrExist
 	}
 	now := time.Now()
-	_, err := db.GetEngine(f.ctx).Insert(&DbfsMeta{
-		FullPath:        f.fullPath,
-		BlockSize:       f.blockSize,
-		CreateTimestamp: timeToFileTimestamp(now),
-		ModifyTimestamp: timeToFileTimestamp(now),
+	return db.WithTx(f.ctx, func(ctx context.Context) error {
+		_, err := db.GetEngine(ctx).Insert(&DbfsMeta{
+			FullPath:        f.fullPath,
+			BlockSize:       f.blockSize,
+			CreateTimestamp: timeToFileTimestamp(now),
+			ModifyTimestamp: timeToFileTimestamp(now),
+		})
+		if err != nil {
+			return err
+		}
+		return f.loadMetaByPath()
 	})
-	if err != nil {
-		return err
-	}
-	return f.loadMetaByPath()
 }
 
 func (f *file) truncate() error {
