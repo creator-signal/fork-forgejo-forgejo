@@ -276,4 +276,4 @@ replace git.sr.ht/~mariusor/go-xsd-duration => code.forgejo.org/forgejo/go-xsd-d
 
 replace github.com/urfave/cli/v3 => github.com/urfave/cli/v3 v3.5.0
 
-replace xorm.io/xorm => code.forgejo.org/xorm/xorm v1.3.10-0.20260306203611-cd692a5ef15c
+replace xorm.io/xorm => code.forgejo.org/xorm/xorm v1.3.10-0.20260306203958-3136c62de29f
