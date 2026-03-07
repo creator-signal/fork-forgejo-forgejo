@@ -70,7 +70,10 @@ func TestPackageDebian(t *testing.T) {
 	t.Run("RepositoryKey", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		req := NewRequest(t, "GET", rootURL+"/repository.key")
+		req := NewRequest(t, "HEAD", rootURL+"/repository.key")
+		MakeRequest(t, req, http.StatusOK)
+
+		req = NewRequest(t, "GET", rootURL+"/repository.key")
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		assert.Equal(t, "application/pgp-keys", resp.Header().Get("Content-Type"))
