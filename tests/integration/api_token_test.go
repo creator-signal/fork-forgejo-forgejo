@@ -720,7 +720,7 @@ func TestAPITokenCreation(t *testing.T) {
 			"name":   "new-new-token",
 			"scopes": []auth_model.AccessTokenScope{auth_model.AccessTokenScopeWriteUser},
 		})
-		req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user4:"+userPassword)))
+		req.AddBasicAuth("user4")
 
 		resp := MakeRequest(t, req, http.StatusCreated)
 		var token api.AccessToken
@@ -742,7 +742,7 @@ func TestAPITokenCreation(t *testing.T) {
 					},
 				},
 			})
-			req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusCreated)
 			var token api.AccessToken
@@ -762,7 +762,7 @@ func TestAPITokenCreation(t *testing.T) {
 					},
 				},
 			})
-			req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+			req.AddBasicAuth("user2")
 			MakeRequest(t, req, http.StatusBadRequest)
 		})
 
@@ -779,7 +779,7 @@ func TestAPITokenCreation(t *testing.T) {
 					},
 				},
 			})
-			req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+			req.AddBasicAuth("user2")
 			MakeRequest(t, req, http.StatusBadRequest)
 		})
 
@@ -795,7 +795,7 @@ func TestAPITokenCreation(t *testing.T) {
 					},
 				},
 			})
-			req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+			req.AddBasicAuth("user2")
 			MakeRequest(t, req, http.StatusBadRequest)
 		})
 	})
@@ -814,7 +814,7 @@ func TestAPITokenDelete(t *testing.T) {
 			},
 		},
 	})
-	req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+	req.AddBasicAuth("user2")
 
 	resp := MakeRequest(t, req, http.StatusCreated)
 	var token api.AccessToken
@@ -823,7 +823,7 @@ func TestAPITokenDelete(t *testing.T) {
 	unittest.AssertExistsAndLoadBean(t, &auth_model.AccessToken{ID: token.ID})
 
 	req = NewRequestf(t, "DELETE", "/api/v1/users/user2/tokens/%d", token.ID)
-	req.Request.Header.Set("Authorization", "basic "+base64.StdEncoding.EncodeToString([]byte("user2:"+userPassword)))
+	req.AddBasicAuth("user2")
 	MakeRequest(t, req, http.StatusNoContent)
 
 	unittest.AssertNotExistsBean(t, &auth_model.AccessToken{ID: token.ID})
