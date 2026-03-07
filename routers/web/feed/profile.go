@@ -34,6 +34,7 @@ func showUserFeed(ctx *context.Context, formatType string) {
 		IncludePrivate:  includePrivate,
 		OnlyPerformedBy: !ctx.ContextUser.IsOrganization(),
 		Date:            ctx.FormString("date"),
+		Year:            ctx.FormInt("year"),
 	})
 	if err != nil {
 		ctx.ServerError("GetFeeds", err)

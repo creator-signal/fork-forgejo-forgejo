@@ -18,6 +18,8 @@ export async function initHeatmap() {
       return {date: new Date(v), count: heatmap[v]};
     });
 
+    const year = parseInt(el.getAttribute('data-heatmap-year'));
+
     const locale = {
       months: new Array(12).fill().map((_, idx) => translateMonth(idx)),
       days: new Array(7).fill().map((_, idx) => translateDay(idx)),
@@ -30,7 +32,7 @@ export async function initHeatmap() {
       less: el.getAttribute('data-locale-less'),
     };
 
-    const View = createApp(ActivityHeatmap, {values, locale});
+    const View = createApp(ActivityHeatmap, {values, locale, year});
     View.mount(el);
     el.classList.remove('is-loading');
   } catch (err) {

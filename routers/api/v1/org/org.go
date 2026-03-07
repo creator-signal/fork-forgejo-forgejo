@@ -503,6 +503,7 @@ func ListOrgActivityFeeds(ctx *context.APIContext) {
 		Actor:          ctx.Doer,
 		IncludePrivate: includePrivate,
 		Date:           ctx.FormString("date"),
+		Year:           ctx.FormInt("year"),
 		ListOptions:    listOptions,
 	}
 

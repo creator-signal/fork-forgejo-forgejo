@@ -12,19 +12,25 @@ export default {
       type: Object,
       default: () => {},
     },
+    year: {
+      type: Number,
+      default: 0,
+    },
   },
-  data: () => ({
-    colorRange: [
-      'var(--color-secondary-alpha-60)',
-      'var(--color-secondary-alpha-60)',
-      'var(--color-primary-light-4)',
-      'var(--color-primary-light-2)',
-      'var(--color-primary)',
-      'var(--color-primary-dark-2)',
-      'var(--color-primary-dark-4)',
-    ],
-    endDate: new Date(),
-  }),
+  data() {
+    return {
+      colorRange: [
+        'var(--color-secondary-alpha-60)',
+        'var(--color-secondary-alpha-60)',
+        'var(--color-primary-light-4)',
+        'var(--color-primary-light-2)',
+        'var(--color-primary)',
+        'var(--color-primary-dark-2)',
+        'var(--color-primary-dark-4)',
+      ],
+      endDate: this.year ? new Date(this.year, 11, 31) : new Date(),
+    };
+  },
   mounted() {
     // work around issue with first legend color being rendered twice and legend cut off
     const legend = document.querySelector('.vch__external-legend-wrapper');
@@ -55,7 +61,7 @@ export default {
 </script>
 <template>
   <div class="total-contributions">
-    {{ locale.contributions_in_the_last_12_months }}
+    {{ year ? locale.contributions_format.replace('{contributions}', values.reduce((a, b) => a + b.count, 0)).replace('{month}', '').replace('{day}', '').replace('{year}', year) : locale.contributions_in_the_last_12_months }}
   </div>
   <calendar-heatmap
     :locale="locale"

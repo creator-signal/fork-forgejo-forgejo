@@ -4,6 +4,18 @@
 	<div class="ui container flex-container">
 		<div class="flex-container-main">
 			{{template "base/alert" .}}
+			{{if .YearList}}
+				<overflow-menu class="ui secondary pointing tabular borderless menu">
+					<div class="overflow-menu-items">
+						{{$dashboardLink := .ContextUser.DashboardLink}}
+						{{if .Team}}{{$dashboardLink = (printf "%s/%s" $dashboardLink (PathEscape .Team.Name))}}{{end}}
+						<a class="{{if eq .Year 0}}active {{end}}item" href="{{$dashboardLink}}">{{ctx.Locale.Tr "heatmap.last_12_months"}}</a>
+						{{range .YearList}}
+							<a class="{{if eq $.Year .}}active {{end}}item" href="{{$dashboardLink}}?year={{.}}">{{.}}</a>
+						{{end}}
+					</div>
+				</overflow-menu>
+			{{end}}
 			{{template "user/heatmap" .}}
 			{{if .Feeds}}
 				{{template "user/dashboard/feeds" .}}

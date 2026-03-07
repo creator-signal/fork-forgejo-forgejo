@@ -171,7 +171,7 @@ func GetUserHeatmapData(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	heatmap, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
+	heatmap, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer, 0)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetUserHeatmapDataByUser", err)
 		return
@@ -223,6 +223,7 @@ func ListUserActivityFeeds(ctx *context.APIContext) {
 		IncludePrivate:  includePrivate,
 		OnlyPerformedBy: ctx.FormBool("only-performed-by"),
 		Date:            ctx.FormString("date"),
+		Year:            ctx.FormInt("year"),
 		ListOptions:     listOptions,
 	}
 

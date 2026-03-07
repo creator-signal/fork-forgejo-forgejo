@@ -1393,6 +1393,7 @@ func ListRepoActivityFeeds(ctx *context.APIContext) {
 		Actor:                ctx.Doer,
 		IncludePrivate:       true,
 		Date:                 ctx.FormString("date"),
+		Year:                 ctx.FormInt("year"),
 		ListOptions:          listOptions,
 	}
 

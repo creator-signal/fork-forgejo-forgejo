@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	activities_model "forgejo.org/models/activities"
 	asymkey_model "forgejo.org/models/asymkey"
@@ -104,15 +105,26 @@ func Dashboard(ctx *context.Context) {
 	}
 
 	if setting.Service.EnableUserHeatmap {
-		data, err := activities_model.GetUserHeatmapDataByUserTeam(ctx, ctxUser, ctx.Org.Team, ctx.Doer)
+		year := ctx.FormInt("year")
+		data, err := activities_model.GetUserHeatmapDataByUserTeam(ctx, ctxUser, ctx.Org.Team, ctx.Doer, year)
 		if err != nil {
 			ctx.ServerError("GetUserHeatmapDataByUserTeam", err)
 			return
 		}
 		ctx.Data["HeatmapData"] = data
 		ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
+		ctx.Data["Year"] = year
+
+		years := make([]int, 0)
+		startYear := ctxUser.CreatedUnix.AsTimeInLocation(setting.DefaultUILocation).Year()
+		currentYear := time.Now().In(setting.DefaultUILocation).Year()
+		for i := currentYear; i >= startYear; i-- {
+			years = append(years, i)
+		}
+		ctx.Data["YearList"] = years
 	}
 
+	year := ctx.FormInt("year")
 	feeds, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
 		RequestedUser:   ctxUser,
 		RequestedTeam:   ctx.Org.Team,
@@ -120,6 +132,7 @@ func Dashboard(ctx *context.Context) {
 		IncludePrivate:  true,
 		OnlyPerformedBy: false,
 		Date:            ctx.FormString("date"),
+		Year:            year,
 		ListOptions: db.ListOptions{
 			Page:     page,
 			PageSize: setting.UI.FeedPagingNum,
@@ -134,6 +147,7 @@ func Dashboard(ctx *context.Context) {
 
 	pager := context.NewPagination(int(count), setting.UI.FeedPagingNum, page, 5)
 	pager.AddParam(ctx, "date", "Date")
+	pager.AddParam(ctx, "year", "Year")
 	ctx.Data["Page"] = pager
 
 	ctx.HTML(http.StatusOK, tplDashboard)

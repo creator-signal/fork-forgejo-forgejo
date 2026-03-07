@@ -9,9 +9,11 @@ import (
 
 	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 
 	"github.com/stretchr/testify/assert"
@@ -86,7 +88,7 @@ func TestGetUserHeatmapDataByUser(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get the heatmap and compare
-		heatmap, err := activities_model.GetUserHeatmapDataByUser(db.DefaultContext, user, doer)
+		heatmap, err := activities_model.GetUserHeatmapDataByUser(db.DefaultContext, user, doer, 0)
 		var contributions int
 		for _, hm := range heatmap {
 			contributions += int(hm.Contributions)
@@ -102,3 +104,57 @@ func TestGetUserHeatmapDataByUser(t *testing.T) {
 		assert.JSONEq(t, tc.JSONResult, string(jsonData))
 	}
 }
+
+func TestGetUserHeatmapDataYear(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 34})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	// Add actions in different years
+	action2024 := &activities_model.Action{
+		UserID:    user.ID,
+		ActUserID: user.ID,
+		RepoID:    repo.ID,
+		IsPrivate: false,
+		OpType:    activities_model.ActionCreateRepo,
+	}
+	require.NoError(t, db.Insert(db.DefaultContext, action2024))
+	_, err := db.GetEngine(db.DefaultContext).Exec("UPDATE action SET created_unix = ? WHERE id = ?", time.Date(2024, 6, 1, 12, 0, 0, 0, setting.DefaultUILocation).Unix(), action2024.ID)
+	require.NoError(t, err)
+
+	action2025 := &activities_model.Action{
+		UserID:    user.ID,
+		ActUserID: user.ID,
+		RepoID:    repo.ID,
+		IsPrivate: false,
+		OpType:    activities_model.ActionCreateRepo,
+	}
+	require.NoError(t, db.Insert(db.DefaultContext, action2025))
+	_, err = db.GetEngine(db.DefaultContext).Exec("UPDATE action SET created_unix = ? WHERE id = ?", time.Date(2025, 6, 1, 12, 0, 0, 0, setting.DefaultUILocation).Unix(), action2025.ID)
+	require.NoError(t, err)
+
+	// rounded expected timestamps
+	ts2024 := time.Date(2024, 6, 1, 12, 0, 0, 0, setting.DefaultUILocation).Unix() / 900 * 900
+	ts2025 := time.Date(2025, 6, 1, 12, 0, 0, 0, setting.DefaultUILocation).Unix() / 900 * 900
+
+	// Test heatmap for 2024
+	heatmap, err := activities_model.GetUserHeatmapDataByUser(db.DefaultContext, user, admin, 2024)
+	require.NoError(t, err)
+	assert.Len(t, heatmap, 1)
+	assert.EqualValues(t, ts2024, heatmap[0].Timestamp)
+	assert.EqualValues(t, 1, heatmap[0].Contributions)
+
+	// Test heatmap for 2025
+	heatmap, err = activities_model.GetUserHeatmapDataByUser(db.DefaultContext, user, admin, 2025)
+	require.NoError(t, err)
+	assert.Len(t, heatmap, 1)
+	assert.EqualValues(t, ts2025, heatmap[0].Timestamp)
+	assert.EqualValues(t, 1, heatmap[0].Contributions)
+
+	// Test heatmap for 2022 (empty)
+	heatmap, err = activities_model.GetUserHeatmapDataByUser(db.DefaultContext, user, admin, 2022)
+	require.NoError(t, err)
+	assert.Empty(t, heatmap)
+}
+

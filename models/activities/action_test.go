@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path"
 	"testing"
+	"time"
 
 	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
@@ -371,3 +372,76 @@ func TestGetIssueInfos(t *testing.T) {
 		assert.Equal(t, test.field3, issueInfos[2])
 	}
 }
+
+func TestGetFeedsYear(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 34})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1}) // double check
+
+	dateLow2024 := time.Date(2024, time.January, 1, 0, 0, 0, 0, setting.DefaultUILocation)
+	dateLow2025 := time.Date(2025, time.January, 1, 0, 0, 0, 0, setting.DefaultUILocation)
+
+	// Add actions in different years
+	action2024 := &activities_model.Action{
+		UserID:    user.ID,
+		ActUserID: user.ID,
+		RepoID:    repo.ID,
+		IsPrivate: false,
+		OpType:    activities_model.ActionCreateRepo,
+	}
+	require.NoError(t, db.Insert(db.DefaultContext, action2024))
+	_, err := db.GetEngine(db.DefaultContext).Exec("UPDATE action SET created_unix = ? WHERE id = ?", dateLow2024.Unix()+3600, action2024.ID)
+	require.NoError(t, err)
+
+	action2025 := &activities_model.Action{
+		UserID:    user.ID,
+		ActUserID: user.ID,
+		RepoID:    repo.ID,
+		IsPrivate: false,
+		OpType:    activities_model.ActionCreateRepo,
+	}
+	require.NoError(t, db.Insert(db.DefaultContext, action2025))
+	_, err = db.GetEngine(db.DefaultContext).Exec("UPDATE action SET created_unix = ? WHERE id = ?", dateLow2025.Unix()+3600, action2025.ID)
+	require.NoError(t, err)
+
+	// Test filtering by 2024
+	actions, count, err := activities_model.GetFeeds(db.DefaultContext, activities_model.GetFeedsOptions{
+		RequestedUser:  user,
+		Actor:          admin,
+		IncludePrivate: true,
+		Year:           2024,
+		ListOptions:    db.ListOptions{PageSize: 10},
+	})
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, count)
+	require.Len(t, actions, 1)
+	assert.EqualValues(t, 2024, actions[0].CreatedUnix.AsTime().Year())
+
+	// Test filtering by 2025
+	actions, count, err = activities_model.GetFeeds(db.DefaultContext, activities_model.GetFeedsOptions{
+		RequestedUser:  user,
+		Actor:          admin,
+		IncludePrivate: true,
+		Year:           2025,
+		ListOptions:    db.ListOptions{PageSize: 10},
+	})
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, count)
+	require.Len(t, actions, 1)
+	assert.EqualValues(t, 2025, actions[0].CreatedUnix.AsTime().Year())
+
+	// Test filtering by 2022 (should be empty for this user)
+	actions, count, err = activities_model.GetFeeds(db.DefaultContext, activities_model.GetFeedsOptions{
+		RequestedUser:  user,
+		Actor:          admin,
+		IncludePrivate: true,
+		Year:           2022,
+		ListOptions:    db.ListOptions{PageSize: 10},
+	})
+	require.NoError(t, err)
+	assert.EqualValues(t, 0, count)
+	assert.Empty(t, actions)
+}
+

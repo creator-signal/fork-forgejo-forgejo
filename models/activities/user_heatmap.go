@@ -26,16 +26,16 @@ type UserHeatmapData struct {
 }
 
 // GetUserHeatmapDataByUser returns an array of UserHeatmapData
-func GetUserHeatmapDataByUser(ctx context.Context, user, doer *user_model.User) ([]*UserHeatmapData, error) {
-	return getUserHeatmapData(ctx, user, nil, doer)
+func GetUserHeatmapDataByUser(ctx context.Context, user, doer *user_model.User, year int) ([]*UserHeatmapData, error) {
+	return getUserHeatmapData(ctx, user, nil, doer, year)
 }
 
 // GetUserHeatmapDataByUserTeam returns an array of UserHeatmapData
-func GetUserHeatmapDataByUserTeam(ctx context.Context, user *user_model.User, team *organization.Team, doer *user_model.User) ([]*UserHeatmapData, error) {
-	return getUserHeatmapData(ctx, user, team, doer)
+func GetUserHeatmapDataByUserTeam(ctx context.Context, user *user_model.User, team *organization.Team, doer *user_model.User, year int) ([]*UserHeatmapData, error) {
+	return getUserHeatmapData(ctx, user, team, doer, year)
 }
 
-func getUserHeatmapData(ctx context.Context, user *user_model.User, team *organization.Team, doer *user_model.User) ([]*UserHeatmapData, error) {
+func getUserHeatmapData(ctx context.Context, user *user_model.User, team *organization.Team, doer *user_model.User, year int) ([]*UserHeatmapData, error) {
 	hdata := make([]*UserHeatmapData, 0)
 
 	if !ActivityReadable(user, doer) {
@@ -58,19 +58,24 @@ func getUserHeatmapData(ctx context.Context, user *user_model.User, team *organi
 		// * For organizations actions by all users that were made in owned
 		//   repositories are counted.
 		OnlyPerformedBy: !user.IsOrganization(),
+		Year:            year,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return hdata, db.GetEngine(ctx).
+	sess := db.GetEngine(ctx).
 		Select(groupBy+" AS timestamp, count(user_id) as contributions").
 		Table("action").
 		Where(cond).
-		And("created_unix >= ?", timeutil.TimeStampNow()-contributionsMaxAgeSeconds).
 		GroupBy("timestamp").
-		OrderBy("timestamp").
-		Find(&hdata)
+		OrderBy("timestamp")
+
+	if year == 0 {
+		sess = sess.And("created_unix >= ?", timeutil.TimeStampNow()-contributionsMaxAgeSeconds)
+	}
+
+	return hdata, sess.Find(&hdata)
 }
 
 // GetTotalContributionsInHeatmap returns the total number of contributions in a heatmap

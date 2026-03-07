@@ -37,6 +37,14 @@
 						{{end}}
 					{{end}}
 					{{if or .IsAdmin (eq .SignedUserID .ContextUser.ID) (not .ContextUser.KeepActivityPrivate)}}
+						<overflow-menu class="ui secondary pointing tabular borderless menu">
+							<div class="overflow-menu-items">
+								<a class="{{if eq .Year 0}}active {{end}}item" href="{{$.ContextUser.HomeLink}}?tab=activity">{{ctx.Locale.Tr "heatmap.last_12_months"}}</a>
+								{{range .YearList}}
+									<a class="{{if eq $.Year .}}active {{end}}item" href="{{$.ContextUser.HomeLink}}?tab=activity&year={{.}}">{{.}}</a>
+								{{end}}
+							</div>
+						</overflow-menu>
 						{{template "user/heatmap" .}}
 						{{template "user/dashboard/feeds" .}}
 					{{end}}

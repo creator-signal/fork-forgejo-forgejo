@@ -21,6 +21,7 @@ func ShowRepoFeed(ctx *context.Context, repo *repo_model.Repository, formatType 
 		Actor:                ctx.Doer,
 		IncludePrivate:       true,
 		Date:                 ctx.FormString("date"),
+		Year:                 ctx.FormInt("year"),
 	})
 	if err != nil {
 		ctx.ServerError("GetFeeds", err)

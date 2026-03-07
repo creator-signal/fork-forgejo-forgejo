@@ -484,6 +484,7 @@ type GetFeedsOptions struct {
 	OnlyPerformedBy      bool                   // only actions performed by requested user
 	OnlyPerformedByActor bool                   // only actions performed by the original actor
 	Date                 string                 // the day we want activity for: YYYY-MM-DD
+	Year                 int                    // the year we want activity for
 }
 
 // GetFeeds returns actions according to the provided options
@@ -609,6 +610,14 @@ func activityQueryCondition(ctx context.Context, opts GetFeedsOptions) (builder.
 			cond = cond.And(builder.Gte{"`action`.created_unix": dateLow.Unix()})
 			cond = cond.And(builder.Lte{"`action`.created_unix": dateHigh.Unix()})
 		}
+	}
+
+	if opts.Year != 0 {
+		dateLow := time.Date(opts.Year, time.January, 1, 0, 0, 0, 0, setting.DefaultUILocation)
+		dateHigh := dateLow.AddDate(1, 0, 0)
+
+		cond = cond.And(builder.Gte{"`action`.created_unix": dateLow.Unix()})
+		cond = cond.And(builder.Lt{"`action`.created_unix": dateHigh.Unix()})
 	}
 
 	return cond, nil

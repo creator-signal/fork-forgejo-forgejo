@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"time"
 
 	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
@@ -178,8 +179,9 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 		}
 	case "activity":
 		// prepare heatmap data
+		year := ctx.FormInt("year")
 		if setting.Service.EnableUserHeatmap {
-			data, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer)
+			data, err := activities_model.GetUserHeatmapDataByUser(ctx, ctx.ContextUser, ctx.Doer, year)
 			if err != nil {
 				ctx.ServerError("GetUserHeatmapDataByUser", err)
 				return
@@ -196,6 +198,7 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 			IncludePrivate:  showPrivate,
 			OnlyPerformedBy: true,
 			Date:            date,
+			Year:            year,
 			ListOptions: db.ListOptions{
 				PageSize: pagingNum,
 				Page:     page,
@@ -207,6 +210,15 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 		}
 		ctx.Data["Feeds"] = items
 		ctx.Data["Date"] = date
+		ctx.Data["Year"] = year
+
+		years := make([]int, 0)
+		startYear := ctx.ContextUser.CreatedUnix.AsTimeInLocation(setting.DefaultUILocation).Year()
+		currentYear := time.Now().In(setting.DefaultUILocation).Year()
+		for i := currentYear; i >= startYear; i-- {
+			years = append(years, i)
+		}
+		ctx.Data["YearList"] = years
 
 		total = int(count)
 	case "stars":
@@ -344,6 +356,7 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 	}
 	if tab == "activity" {
 		pager.AddParam(ctx, "date", "Date")
+		pager.AddParam(ctx, "year", "Year")
 	}
 	if has, value := archived.Get(); has {
 		pager.AddParamString("archived", fmt.Sprint(value))
