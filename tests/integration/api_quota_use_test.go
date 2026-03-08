@@ -403,7 +403,7 @@ func testAPIQuotaEnforcement(t *testing.T) {
 
 	t.Run("#/orgs/{org}/repos", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		defer env.SetRuleLimit(t, "all", 0)
+		defer env.SetRuleLimit(t, "all", 0)()
 
 		assertCreateRepo := func(t *testing.T, orgName, repoName string, expectedStatus int) func() {
 			t.Helper()
@@ -1290,6 +1290,8 @@ func testAPIQuotaEnforcement(t *testing.T) {
 	// verify that package upload quota is evaluated against the package owner, not the uploader
 	t.Run("#/packages/{org}/quota-enforcement-against-owner", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
+		// Ensure the user's own quota is unlimited for this block; prior tests may have left it at 0.
+		defer env.SetRuleLimit(t, "all", -1)()
 
 		t.Run("upload to limited org is rejected", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -1338,6 +1340,8 @@ func testAPIQuotaEnforcement(t *testing.T) {
 
 	t.Run("#/v2/{org}/container/quota-enforcement-against-owner", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
+		// Ensure the user's own quota is unlimited for this block; prior tests may have left it at 0.
+		defer env.SetRuleLimit(t, "all", -1)()
 
 		type tokenResponse struct {
 			Token string `json:"token"`
