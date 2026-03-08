@@ -41,3 +41,9 @@ h4.divider {
   border-top: 1px solid var(--color-secondary);
   margin: 4px 0;
 }
+
+/* Just add a full-width divider to secondary-nav */
+.secondary-nav .divider {
+  margin-top: -1px;
+  margin-bottom: 0;
+}

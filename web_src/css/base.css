@@ -652,6 +652,10 @@ img.ui.avatar,
   margin-top: calc(var(--page-spacing) - 1rem);
 }
 
+.page-content >:first-child.secondary-nav.multi-lines {
+  margin-top: 12px;
+}
+
 .ui.pagination.menu .active.item {
   color: var(--color-text);
   background: var(--color-active);
