@@ -507,7 +507,8 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 			for _, ownerAndName := range opts.OwnerAndName {
 				subQuery.Or(builder.Eq{
 					"`user`.lower_name":     strings.ToLower(ownerAndName[0]),
-					"inner_repo.lower_name": strings.ToLower(ownerAndName[1])})
+					"inner_repo.lower_name": strings.ToLower(ownerAndName[1]),
+				})
 			}
 			cond = cond.And(builder.In("id", subQuery))
 		} else {
