@@ -5,29 +5,29 @@
 	<form class="ui form attached segment" action="{{.Link}}" method="post">
 		<fieldset>
 			<legend>{{ctx.Locale.Tr "actions.runners.edit_runner.properties_fieldset"}}</legend>
-			<div style="margin-block-end: 1rem;">
-				<label for="name" style="font-weight: 500;">{{ctx.Locale.Tr "actions.runners.edit_runner.name_label"}}</label>
+			<div class="form-field">
+				<label for="name">{{ctx.Locale.Tr "actions.runners.edit_runner.name_label"}}</label>
 				<input id="name" name="runner_name" type="text" value="{{.Runner.Name}}" {{if .Err_RunnerName}}class="error"{{end}}>
 			</div>
-			<div style="margin-block-end: 1rem;">
-				<label for="description" style="font-weight: 500;">{{ctx.Locale.Tr "actions.runners.edit_runner.description_label"}}</label>
+			<div class="form-field">
+				<label for="description">{{ctx.Locale.Tr "actions.runners.edit_runner.description_label"}}</label>
 				<textarea id="description" name="runner_description" {{if .Err_RunnerDescription}}class="error"{{end}}>{{.Runner.Description}}</textarea>
 			</div>
 		</fieldset>
 		<fieldset>
 			<legend>{{ctx.Locale.Tr "actions.runners.edit_runner.properties_options"}}</legend>
-			<div style="display: flex; column-gap: 1rem; margin-block-end: 1rem;">
-				<div style="display: flex; height: 1.5rem; align-items: center;">
+			<div class="form-field tw-flex tw-gap-x-4">
+				<div class="tw-flex tw-h-6 tw-items-center">
 					<input type="checkbox" id="regenerate_token" name="regenerate_token">
 				</div>
 				<div>
-					<label for="regenerate_token" style="font-weight: 500; margin-bottom: 0;">{{ctx.Locale.Tr "actions.runners.edit_runner.regenerate_token_label"}}</label>
+					<label for="regenerate_token" class="tw-font-medium tw-m-0">{{ctx.Locale.Tr "actions.runners.edit_runner.regenerate_token_label"}}</label>
 					<p class="help">{{ctx.Locale.Tr "actions.runners.edit_runner.regenerate_token_help"}}</p>
 				</div>
 			</div>
 		</fieldset>
-		<div style="display: flex; justify-content: flex-end; column-gap: 1.5rem;">
-			<a class="ui secondary button" href="../">{{ctx.Locale.Tr "actions.runners.edit_runner.cancel_button"}}</a>
+		<div class="form-buttons">
+			<a class="ui secondary button" href="{{$.RunnersListLink}}">{{ctx.Locale.Tr "actions.runners.edit_runner.cancel_button"}}</a>
 			<button class="ui primary button">{{ctx.Locale.Tr "actions.runners.edit_runner.save_button"}}</button>
 		</div>
 	</form>

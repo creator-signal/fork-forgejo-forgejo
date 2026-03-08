@@ -11,33 +11,33 @@
 	</h4>
 	<div class="ui attached segment">
 		<dl aria-label="Properties of {{.Runner.Name}}">
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.uuid"}}</dt>
-				<dd style="flex-grow: 1;">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.uuid"}}</dt>
+				<dd>
 					{{.Runner.UUID}}
 				</dd>
 			</div>
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.owner_type"}}</dt>
-				<dd style="flex-grow: 1;">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.owner_type"}}</dt>
+				<dd>
 					{{.Runner.BelongsToOwnerType.LocaleString ctx.Locale}}
 				</dd>
 			</div>
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.labels"}}</dt>
-				<dd style="flex-grow: 1; display: flex; column-gap: 0.5rem;">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.labels"}}</dt>
+				<dd class="tw-flex tw-items-start tw-flex-wrap tw-gap-2">
 					{{if gt (len .Runner.AgentLabels) 0}}
 						{{range .Runner.AgentLabels}}
-							<span class="ui label">{{.}}</span>
+							<div class="ui label">{{.}}</div>
 						{{end}}
 					{{else}}
 						&mdash;
 					{{end}}
 				</dd>
 			</div>
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.last_online"}}</dt>
-				<dd style="flex-grow: 1;">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.last_online"}}</dt>
+				<dd>
 					<div>
 						{{if .Runner.LastOnline}}
 							{{DateUtils.TimeSince .Runner.LastOnline}}
@@ -47,30 +47,30 @@
 					</div>
 				</dd>
 			</div>
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.status"}}</dt>
-				<dd style="flex-grow: 1; display: flex; flex: auto; align-items: center; column-gap: 0.25rem">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.status"}}</dt>
+				<dd class="tw-flex tw-items-center tw-gap-x-2">
 					{{if .Runner.IsActive}}
-						<div style="flex: none; border-radius: calc(infinity * 1px); padding: 0.25rem; color: oklch(54.6% 0.245 262.881); background-color: oklch(54.6% 0.245 262.881 / 0.1)">
-							<div style="width: 0.5rem; height: 0.5rem; border-radius: calc(infinity * 1px); background-color: currentColor;"></div>
-						</div>
+					<div class="indicator-active">
+						<div></div>
+					</div>
 					{{else if .Runner.IsIdle}}
-						<div style="flex: none; border-radius: calc(infinity * 1px); padding: 0.25rem; color: oklch(62.7% 0.194 149.214); background-color: oklch(62.7% 0.194 149.214 / 0.1)">
-							<div style="width: 0.5rem; height: 0.5rem; border-radius: calc(infinity * 1px); background-color: currentColor;"></div>
-						</div>
+					<div class="indicator-idle">
+						<div></div>
+					</div>
 					{{else}}
-						<div style="flex: none; border-radius: calc(infinity * 1px); padding: 0.25rem; color: oklch(44.6% 0.03 256.802); background-color: oklch(44.6% 0.03 256.802 / 0.1)">
-							<div style="width: 0.5rem; height: 0.5rem; border-radius: calc(infinity * 1px); background-color: currentColor;"></div>
-						</div>
+					<div class="indicator-offline">
+						<div></div>
+					</div>
 					{{end}}
 					<div>
 						{{.Runner.StatusLocaleName ctx.Locale}}
 					</div>
 				</dd>
 			</div>
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.ephemeral"}}</dt>
-				<dd style="flex-grow: 1;">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.ephemeral"}}</dt>
+				<dd>
 					{{if .Runner.Ephemeral}}
 						{{ctx.Locale.Tr "actions.runners.ephemeral.yes"}}
 					{{else}}
@@ -78,9 +78,9 @@
 					{{end}}
 				</dd>
 			</div>
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.description"}}</dt>
-				<dd style="flex-grow: 1;">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.description"}}</dt>
+				<dd>
 					{{if .Runner.Description}}
 						{{.Runner.Description}}
 					{{else}}
@@ -88,7 +88,7 @@
 					{{end}}
 				</dd>
 			</div>
-			<p style="margin-top: 2rem; font-style: italic;">{{ctx.Locale.Tr "actions.runners.runner_details.labels_note"}}</p>
+			<p class="tw-mt-8 tw-italic">{{ctx.Locale.Tr "actions.runners.runner_details.labels_note"}}</p>
 		</dl>
 	</div>
 

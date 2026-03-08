@@ -10,9 +10,9 @@
 	<div class="ui attached segment">
 		<p>{{ctx.Locale.Tr "actions.runners.runner_setup.last_chance_copying_token"}}</p>
 		<dl>
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.uuid"}}</dt>
-				<dd style="flex-grow: 1;">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.uuid"}}</dt>
+				<dd>
 					{{.Runner.UUID}}
 					<button class="ui basic label button"
 							aria-label="{{ctx.Locale.Tr "actions.runners.runner_setup.button_copy_uuid_aria"}}"
@@ -21,9 +21,9 @@
 					</button>
 				</dd>
 			</div>
-			<div style="display: flex; padding-block: 0.5rem">
-				<dt style="flex: none; font-weight: 500; width: 12rem; padding-right: 1.5rem;">{{ctx.Locale.Tr "actions.runners.token"}}</dt>
-				<dd style="flex-grow: 1;">
+			<div class="item">
+				<dt>{{ctx.Locale.Tr "actions.runners.token"}}</dt>
+				<dd>
 					{{.Runner.Token}}
 					<button class="ui basic label button"
 							aria-label="{{ctx.Locale.Tr "actions.runners.runner_setup.button_copy_token_aria"}}"
@@ -34,7 +34,7 @@
 			</div>
 		</dl>
 		<h5>{{ctx.Locale.Tr "actions.runners.runner_setup.heading_using_configuration"}}</h5>
-		<pre style="background-color: white; border-color: black; border-width: 1px; border-radius: 0.5rem; border-style: dotted; padding: 1rem;"><code aria-label="{{ctx.Locale.Tr "actions.runners.runner_setup.configuration_snippet_aria"}}">server:
+		<pre><code aria-label="{{ctx.Locale.Tr "actions.runners.runner_setup.configuration_snippet_aria"}}">server:
 &nbsp;&nbsp;connections:
 &nbsp;&nbsp;&nbsp;&nbsp;forgejo:
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;url: {{.AppURL}}
@@ -43,7 +43,7 @@
 </code></pre>
 		<p>{{ctx.Locale.Tr "actions.runners.runner_setup.instruction_replace_connection_name"}}</p>
 		<h5>{{ctx.Locale.Tr "actions.runners.runner_setup.heading_using_options"}}</h5>
-		<pre style="background-color: white; border-color: black; border-width: 1px; border-radius: 0.5rem; border-style: dotted; padding: 1rem;"><code aria-label="{{ctx.Locale.Tr "actions.runners.runner_setup.program_options_snippet_aria"}}">forgejo-runner daemon \
+		<pre><code aria-label="{{ctx.Locale.Tr "actions.runners.runner_setup.program_options_snippet_aria"}}">forgejo-runner daemon \
 	--url {{.AppURL}} \
 	--uuid {{.Runner.UUID}} \
 	--token {{.Runner.Token}}
