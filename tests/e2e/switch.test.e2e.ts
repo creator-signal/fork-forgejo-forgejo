@@ -7,14 +7,14 @@
 // web_src/css/themes
 // @watch end
 
-import {expect} from '@playwright/test';
+import {expect, type Page} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 
 test.describe('Switch CSS properties', () => {
   const noBg = 'rgba(0, 0, 0, 0)';
   const activeBg = 'rgb(226, 226, 229)';
 
-  async function evaluateSwitchItem(page, selector, isActive, marginLeft, marginRight, paddingLeft, paddingRight, itemHeight) {
+  async function evaluateSwitchItem(page: Page, selector: string, isActive: boolean, marginLeft, marginRight, paddingLeft, paddingRight: string, itemHeight: number) {
     const item = page.locator(selector);
     const cs = await item.evaluate((el) => {
       // In Firefox getComputedStyle is undefined if returned from evaluate
@@ -104,12 +104,12 @@ test.describe('Switch CSS properties', () => {
       await expect(async () => {
       await Promise.all([
         evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
-          evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
       ]);
     }).toPass();
     });
 
-    test('Notifications', async ({page}) => {
+    test('Notifications page', async ({page}) => {
       // Test counter contrast boost in active and :hover items
       const labelBgNormal = 'rgba(202, 202, 202, 0.482)';
       const labelBgContrast = 'rgb(202, 202, 202)';
