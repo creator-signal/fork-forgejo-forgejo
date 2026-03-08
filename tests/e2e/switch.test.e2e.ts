@@ -13,9 +13,13 @@ import {test} from './utils_e2e.ts';
 test.describe('Switch CSS properties', () => {
   const noBg = 'rgba(0, 0, 0, 0)';
   const activeBg = 'rgb(226, 226, 229)';
+  const hoverBg = 'rgba(228, 228, 228, 0.667)';
 
-  async function evaluateSwitchItem(page: Page, selector: string, isActive: boolean, marginLeft, marginRight, paddingLeft, paddingRight: string, itemHeight: number) {
+  async function evaluateSwitchItem(page: Page, selector: string, hover, isActive: boolean, marginLeft, marginRight, paddingLeft, paddingRight: string, itemHeight: number) {
     const item = page.locator(selector);
+
+    if (hover) await item.hover();
+
     const cs = await item.evaluate((el) => {
       // In Firefox getComputedStyle is undefined if returned from evaluate
       const s = getComputedStyle(el);
@@ -34,13 +38,27 @@ test.describe('Switch CSS properties', () => {
 
     if (isActive) {
       await expect(item).toHaveClass(/active/);
+
+      // Active item has active background color regardless of `hover`
       expect(cs.backgroundColor).toBe(activeBg);
     } else {
       await expect(item).not.toHaveClass(/active/);
-      expect(cs.backgroundColor).toBe(noBg);
+
+      // When hovering, `getComputedStyle` returns random `backgroundColor` values
+      // because of transition. `toHaveCSS` is reliable
+      if (hover) {
+        // Verify that inactive item changes it's background color on hover
+        await expect(item).toHaveCSS('background-color', hoverBg);
+      } else {
+        // Verify that inactive item doesn't have a background color
+        await expect(item).toHaveCSS('background-color', noBg);
+      }
     }
 
-    expect((await item.boundingBox()).height).toBeCloseTo(itemHeight);
+    expect((await item.boundingBox()).height).toBeCloseTo(itemHeight, 1);
+
+    // Reset hover
+    if (hover) await page.locator('#navbar-logo').hover();
   }
 
   const normalMargin = '0px';
@@ -60,9 +78,9 @@ test.describe('Switch CSS properties', () => {
 
     await expect(async () => {
       await Promise.all([
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
       ]);
     }).toPass();
 
@@ -70,9 +88,9 @@ test.describe('Switch CSS properties', () => {
 
     await expect(async () => {
       await Promise.all([
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight),
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
       ]);
     }).toPass();
 
@@ -80,10 +98,17 @@ test.describe('Switch CSS properties', () => {
 
     await expect(async () => {
       await Promise.all([
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight),
-        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', false, false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', false, false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight),
+        evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', false, true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
       ]);
+    }).toPass();
+
+    // Check colors on hover synchronously - can only hover one item at a time
+    await expect(async () => {
+      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(1)', true, false, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight);
+      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(2)', true, false, normalMargin, specialLeftMargin, normalPadding, specialPadding, itemHeight);
+      await evaluateSwitchItem(page, '#issue-filters .switch > .item:nth-child(3)', true, true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight);
     }).toPass();
   });
 
@@ -102,11 +127,11 @@ test.describe('Switch CSS properties', () => {
       const itemHeight = 28;
 
       await expect(async () => {
-      await Promise.all([
-        evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(1)', true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
-        evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
-      ]);
-    }).toPass();
+        await Promise.all([
+          evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(1)', false, true, normalMargin, normalMargin, normalPadding, normalPadding, itemHeight),
+          evaluateSwitchItem(page, '.review-box-panel .switch > .item:nth-child(2)', false, false, specialLeftMargin, normalMargin, specialPadding, normalPadding, itemHeight),
+        ]);
+      }).toPass();
     });
 
     test('Notifications page', async ({page}) => {
