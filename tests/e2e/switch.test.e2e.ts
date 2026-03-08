@@ -15,6 +15,12 @@ test.describe('Switch CSS properties', () => {
   const activeBg = 'rgb(226, 226, 229)';
   const hoverBg = 'rgba(228, 228, 228, 0.667)';
 
+  const normalMargin = '0px';
+  const normalPadding = '15.75px';
+
+  const specialLeftMargin = '-4px';
+  const specialPadding = '19.75px';
+
   async function evaluateSwitchItem(page: Page, selector: string, hover, isActive: boolean, marginLeft, marginRight, paddingLeft, paddingRight: string, itemHeight: number) {
     const item = page.locator(selector);
 
@@ -60,12 +66,6 @@ test.describe('Switch CSS properties', () => {
     // Reset hover
     if (hover) await page.locator('#navbar-logo').hover();
   }
-
-  const normalMargin = '0px';
-  const normalPadding = '15.75px';
-
-  const specialLeftMargin = '-4px';
-  const specialPadding = '19.75px';
 
   // Subtest for areas that can be evaluated without JS
   test('No JS', async ({browser}) => {
