@@ -1,4 +1,5 @@
 // Copyright 2023 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -713,7 +714,8 @@ func ListActionTasks(ctx *context.APIContext) {
 	// - name: status
 	//   in: query
 	//   description: |
-	//     Returns workflow tasks with the check run status or conclusion that is specified. For example, a conclusion can be success or a status can be in_progress. Only Forgejo Actions can set a status of waiting, pending, or requested.
+	//     Returns workflow tasks with the check run status or conclusion that is specified.
+	// 		 For example, a conclusion can be success or a status can be in_progress.
 	//   type: array
 	//   items:
 	//     type: string
