@@ -325,9 +325,15 @@ export default {
 </script>
 <template>
   <div>
-    <div v-if="!isOrganization" class="ui secondary stackable menu tabs-with-labels">
-      <a :class="{item: true, active: tab === 'repos'}" @click="changeTab('repos')">{{ textMyRepos }} <span class="ui grey label tw-ml-2">{{ reposTotalCount }}</span></a>
-      <a :class="{item: true, active: tab === 'organizations'}" @click="changeTab('organizations')">{{ textMyOrgs }} <span class="ui grey label tw-ml-2">{{ organizationsTotalCount }}</span></a>
+    <div v-if="!isOrganization" class="stackable f-menu">
+      <ul class="group">
+        <li>
+          <a :class="{item: true, active: tab === 'repos'}" @click="changeTab('repos')">{{ textMyRepos }} <span class="ui grey label tw-ml-2">{{ reposTotalCount }}</span></a>
+        </li>
+        <li>
+          <a :class="{item: true, active: tab === 'organizations'}" @click="changeTab('organizations')">{{ textMyOrgs }} <span class="ui grey label tw-ml-2">{{ organizationsTotalCount }}</span></a>
+        </li>
+      </ul>
     </div>
     <div v-show="tab === 'repos'" class="ui tab active list dashboard-repos">
       <h4 v-if="isOrganization" class="tw-mt-4 tw-flex tw-items-center">

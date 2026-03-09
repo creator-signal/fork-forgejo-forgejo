@@ -97,6 +97,21 @@
   gap: var(--button-spacing);
 }
 
+/* .button > span.button-text.
+*  Sometimes the button row does not need to be wrapped, but the content can be omitted*/
+.button:has(.button-text) {
+  min-width: var(--button-min-height);
+}
+.button .button-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  margin-top: -1px;
+  margin-bottom: -1px;
+}
+
 /* Fomantic buttons have annoying margins to set distance between elements. In
  * the button-row/sequence helpers this is set by flex+gap */
 .button-row .ui.button {

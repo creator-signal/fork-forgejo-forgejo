@@ -1,0 +1,94 @@
+/* nav/div ul li a */
+/* 
+  The new menu style, in order to avoid style conflicts,
+  is temporarily prefixed with f-(forgejo) 
+*/
+
+:root {
+  --menu-min-height: 36px;  /* same as button height */
+  --menu-padding-inline: .5rem;
+}
+
+.f-menu {
+  display: flex;
+}
+
+.f-menu .group {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  gap: var(--button-spacing);
+}
+
+@media (max-width: 768px) {
+  .f-menu.stackable {
+    flex-direction: column;
+    gap: var(--button-spacing);
+  }
+
+  .f-menu.stackable .group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .f-menu.stackable .group .item {
+    width: 100%;
+  }
+
+  .f-menu.stackable .group>li>.dropdown {
+    max-width: max-content;
+  }
+}
+
+.f-menu .group.left {
+  margin-right: auto;
+}
+
+.f-menu .group.right {
+  margin-left: auto;
+}
+
+.f-menu .group li {
+  padding: 0;
+  border: none !important;
+  list-style: none;
+}
+
+.f-menu .group>li>a.item {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--menu-min-height);
+  color: var(--color-text);
+  padding-inline: var(--menu-padding-inline);
+  border-radius: var(--border-radius);
+  text-decoration: none;
+}
+
+.f-menu .group>li>a.item:has(.menu-item-text) {
+  min-width: 36px;
+}
+
+/* Same as button */
+.f-menu .group>li>a.item span.menu-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  margin-top: -1px;
+  margin-bottom: -1px;
+}
+
+.f-menu .group>li>a.item:hover,
+.f-menu .group>li>a.item.active {
+  background-color: var(--color-hover);
+  cursor: pointer;
+}
+
+.f-menu.stackable .group .dropdown>summary {
+    min-height: var(--menu-min-height);
+}
+
+.f-menu.stackable .group .dropdown>summary:has(img.avatar) {
+    padding: .25rem .5rem;
+}

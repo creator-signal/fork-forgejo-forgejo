@@ -61,7 +61,7 @@
 }
 
 .dashboard .secondary-nav {
-  padding: 1px 12px; /* match .overflow-menu-items in height */
+  padding: 3.5px 0; /* match .overflow-menu-items in height */
 }
 
 .dashboard .secondary-nav .right.menu {
