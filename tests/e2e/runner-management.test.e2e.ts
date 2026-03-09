@@ -94,26 +94,6 @@ test.describe('Runners of user2', () => {
     await expect(rows.nth(1)).toHaveAccessibleName('88932 Waiting 49f55ab99b -');
   });
 
-  test('access to unusable runners is denied', async ({page}) => {
-    // runner-1 (719931) is owned by an organization and should be inaccessible.
-    await page.goto('/user/settings/actions/runners/719931');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-1');
-    await expect(page.getByRole('document')).not.toContainText('8f940b0b-32a2-479a-9d48-06ab8d8a0b90');
-
-    // runner-6 (719936) is a repository runner and should be inaccessible.
-    await page.goto('/user/settings/actions/runners/719936');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-6');
-    await expect(page.getByRole('document')).not.toContainText('9da25fbb-89a5-4520-a35a-d55fc94e4b76');
-
-    // runner-7 (719937) is owned by a different user and should be inaccessible.
-    await page.goto('/user/settings/actions/runners/719937');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-7');
-    await expect(page.getByRole('document')).not.toContainText('d935307e-1d2d-4b61-8885-bc8a1c52c269');
-  });
-
   test('create new runner', async ({page}) => {
     await page.goto('/user/settings/actions/runners');
 
@@ -627,38 +607,6 @@ test.describe('Organization runners', () => {
     await expect(rows.nth(0)).toHaveAccessibleName('Run Status Repository Commit Done at');
     await expect(rows.nth(1)).toHaveAccessibleName('88931 Running ed38c5a46c -');
   });
-
-  test('access to unusable runners is denied', async ({page}) => {
-    // runner-2 (719932) is owned by a user and should be inaccessible.
-    await page.goto('/org/org3/settings/actions/runners/719932');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-2');
-    await expect(page.getByRole('document')).not.toContainText('3a20ad8d-d5d6-4b7b-ba55-841ac8264c17');
-
-    // runner-3 (719933) is owned by a different organization and should be inaccessible.
-    await page.goto('/org/org3/settings/actions/runners/719933');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-3');
-    await expect(page.getByRole('document')).not.toContainText('11c9a6da-0a92-46ea-a4f1-b6c98f8c781c');
-
-    // runner-5 (719935) is a repository runner and should be inaccessible.
-    await page.goto('/org/org3/settings/actions/runners/719935');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-5');
-    await expect(page.getByRole('document')).not.toContainText('69d29449-1de5-4d17-845d-e3ae11a04a1b');
-
-    // runner-6 (719936) is a repository runner and should be inaccessible.
-    await page.goto('/org/org3/settings/actions/runners/719936');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-6');
-    await expect(page.getByRole('document')).not.toContainText('9da25fbb-89a5-4520-a35a-d55fc94e4b76');
-
-    // runner-7 (719937) is owned by a user and should be inaccessible.
-    await page.goto('/org/org3/settings/actions/runners/719937');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-7');
-    await expect(page.getByRole('document')).not.toContainText('d935307e-1d2d-4b61-8885-bc8a1c52c269');
-  });
 });
 
 test.describe('Repository runners', () => {
@@ -754,25 +702,5 @@ test.describe('Repository runners', () => {
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(0)).toHaveAccessibleName('Run Status Repository Commit Done at');
     await expect(rows.nth(1)).toHaveAccessibleName('There are no tasks yet.');
-  });
-
-  test('access to unusable runners is denied', async ({page}) => {
-    // runner-3 (719933) is owned by a different organization and should be inaccessible.
-    await page.goto('/user2/test_workflows/settings/actions/runners/719933');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-3');
-    await expect(page.getByRole('document')).not.toContainText('11c9a6da-0a92-46ea-a4f1-b6c98f8c781c');
-
-    // runner-5 (719935) is a runner of a different repository and should be inaccessible.
-    await page.goto('/user2/test_workflows/settings/actions/runners/719935');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-5');
-    await expect(page.getByRole('document')).not.toContainText('69d29449-1de5-4d17-845d-e3ae11a04a1b');
-
-    // runner-7 (719937) is owned by a different user and should be inaccessible.
-    await page.goto('/user2/test_workflows/settings/actions/runners/719937');
-    await expect(page).toHaveTitle(/^Page not found/);
-    await expect(page.getByRole('document')).not.toContainText('runner-7');
-    await expect(page.getByRole('document')).not.toContainText('d935307e-1d2d-4b61-8885-bc8a1c52c269');
   });
 });

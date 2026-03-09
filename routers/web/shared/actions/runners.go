@@ -170,6 +170,9 @@ func RunnerEdit(ctx *context.Context, runnerID, ownerID, repoID int64, template 
 	if errors.Is(err, util.ErrNotExist) {
 		ctx.NotFound("GetAvailableRunnerByID", err)
 		return
+	} else if err != nil {
+		ctx.ServerError("GetAvailableRunnerByID", err)
+		return
 	}
 	if err := runner.LoadAttributes(ctx); err != nil {
 		ctx.ServerError("LoadAttributes", err)
