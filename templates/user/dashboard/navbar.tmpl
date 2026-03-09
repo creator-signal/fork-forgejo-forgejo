@@ -60,8 +60,8 @@
 					<li>
 						<details class="dropdown">
 							<summary>
+								{{svg "octicon-people" 18}}
 								<span>
-									{{svg "octicon-people" 18}}
 									{{if .Team}}
 										{{.Team.Name}}
 									{{else}}
@@ -103,17 +103,19 @@
 		{{if .ContextUser.IsOrganization}}
 			<ul class="group right">
 				<li>
-					<a class="{{if .PageIsNews}}active {{end}}item tw-ml-auto" href="{{.ContextUser.DashboardLink}}{{if .Team}}/{{PathEscape .Team.Name}}{{end}}">
+					<a class="{{if .PageIsNews}}active {{end}}item" href="{{.ContextUser.DashboardLink}}{{if .Team}}/{{PathEscape .Team.Name}}{{end}}">
+						{{svg "octicon-rss"}}
 						<span class="menu-item-text">
-							{{svg "octicon-rss"}}&nbsp;{{ctx.Locale.Tr "activities"}}
+							{{ctx.Locale.Tr "activities"}}
 						</span>
 					</a>
 				</li>
 				{{if not .UnitIssuesGlobalDisabled}}
 				<li>
 					<a class="{{if .PageIsIssues}}active {{end}}item" href="{{.ContextUser.OrganisationLink}}/issues{{if .Team}}/{{PathEscape .Team.Name}}{{end}}">
+						{{svg "octicon-issue-opened"}}
 						<span class="menu-item-text">
-							{{svg "octicon-issue-opened"}}&nbsp;{{ctx.Locale.Tr "issues"}}
+							{{ctx.Locale.Tr "issues"}}
 						</span>
 					</a>
 				</li>
@@ -121,8 +123,9 @@
 				{{if not .UnitPullsGlobalDisabled}}
 				<li>
 					<a class="{{if .PageIsPulls}}active {{end}}item" href="{{.ContextUser.OrganisationLink}}/pulls{{if .Team}}/{{PathEscape .Team.Name}}{{end}}">
+						{{svg "octicon-git-pull-request"}}
 						<span class="menu-item-text">
-							{{svg "octicon-git-pull-request"}}&nbsp;{{ctx.Locale.Tr "pull_requests"}}
+							{{ctx.Locale.Tr "pull_requests"}}
 						</span>
 					</a>
 				</li>
@@ -130,8 +133,9 @@
 				{{if and .ShowMilestonesDashboardPage (not (and .UnitIssuesGlobalDisabled .UnitPullsGlobalDisabled))}}
 				<li>
 					<a class="{{if .PageIsMilestonesDashboard}}active {{end}}item" href="{{.ContextUser.OrganisationLink}}/milestones{{if .Team}}/{{PathEscape .Team.Name}}{{end}}">
+						{{svg "octicon-milestone"}}
 						<span class="menu-item-text">
-							{{svg "octicon-milestone"}}&nbsp;{{ctx.Locale.Tr "milestones"}}
+							{{ctx.Locale.Tr "milestones"}}
 						</span>
 					</a>
 				</li>

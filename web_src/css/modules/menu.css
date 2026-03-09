@@ -48,7 +48,7 @@
   margin-left: auto;
 }
 
-.f-menu .group li {
+.f-menu .group>li {
   padding: 0;
   border: none !important;
   list-style: none;
@@ -62,6 +62,9 @@
   padding-inline: var(--menu-padding-inline);
   border-radius: var(--border-radius);
   text-decoration: none;
+
+  /* icon text spacing */
+  gap: .25rem;
 }
 
 .f-menu .group>li>a.item:has(.menu-item-text) {
