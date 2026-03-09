@@ -18,7 +18,6 @@ func TestActions(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 
 	t.Run("ListActionRuns", func(t *testing.T) {
-
 		t.Run("paging", func(t *testing.T) {
 			var runResp api.ListActionRunResponse
 			ctx, resp := contexttest.MockAPIContext(t, "user5/repo4/actions/runs")
@@ -73,7 +72,6 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("ListActionTasks", func(t *testing.T) {
-
 		t.Run("paging", func(t *testing.T) {
 			var taskResp api.ActionTaskResponse
 			ctx, resp := contexttest.MockAPIContext(t, "user5/repo4/actions/tasks")
