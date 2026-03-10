@@ -264,7 +264,7 @@ func InitiateUploadBlob(ctx *context.Context) {
 			return
 		}
 
-		if _, err := container_service.SaveAsPackageBlob(ctx,
+		if _, _, err := container_service.SaveAsPackageBlob(ctx,
 			buf,
 			&packages_service.PackageCreationInfo{
 				PackageInfo: packages_service.PackageInfo{
@@ -404,7 +404,7 @@ func EndUploadBlob(ctx *context.Context) {
 		return
 	}
 
-	if _, err := container_service.SaveAsPackageBlob(ctx,
+	if _, _, err := container_service.SaveAsPackageBlob(ctx,
 		uploader,
 		&packages_service.PackageCreationInfo{
 			PackageInfo: packages_service.PackageInfo{

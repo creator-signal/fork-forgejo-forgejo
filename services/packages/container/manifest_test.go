@@ -45,7 +45,7 @@ func Test_SaveAndGetManifestAndBlob(t *testing.T) {
 		Creator: user2,
 	}
 
-	_, err = SaveAsPackageBlob(t.Context(), blobBuf, blobPCI)
+	_, _, err = SaveAsPackageBlob(t.Context(), blobBuf, blobPCI)
 	require.NoError(t, err)
 
 	configDigest := "sha256:4607e093bec406eaadb6f3a340f63400c9d3a7038680744c406903766b938f0d"
@@ -65,7 +65,7 @@ func Test_SaveAndGetManifestAndBlob(t *testing.T) {
 		Creator: user2,
 	}
 
-	_, err = SaveAsPackageBlob(t.Context(), cfgBuf, confPci)
+	_, _, err = SaveAsPackageBlob(t.Context(), cfgBuf, confPci)
 	require.NoError(t, err)
 
 	manifestDigest := "sha256:4f10484d1c1bb13e3956b4de1cd42db8e0f14a75be1617b60f2de3cd59c803c6"

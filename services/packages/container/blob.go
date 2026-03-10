@@ -53,8 +53,9 @@ func GetLocalBlob(ctx context.Context, ownerID int64, dig, imageName string) (*p
 
 // SaveAsPackageBlob creates a package blob from an upload
 // The uploaded blob gets stored in a special upload version to link them to the package/image
-func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, error) {
+func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader, pci *packages_service.PackageCreationInfo) (*packages_model.PackageBlob, *packages_model.PackageFile, error) {
 	pb := packages_service.NewPackageBlob(hsr)
+	pf := &packages_model.PackageFile{}
 
 	exists := false
 
@@ -62,7 +63,7 @@ func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 
 	uploadVersion, err := GetOrCreateUploadVersion(ctx, &pci.PackageInfo)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	err = db.WithTx(ctx, func(ctx context.Context) error {
@@ -91,7 +92,8 @@ func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 			}
 		}
 
-		return CreateFileForBlob(ctx, uploadVersion, pb)
+		pf, err = CreateFileForBlob(ctx, uploadVersion, pb)
+		return err
 	})
 	if err != nil {
 		if !exists {
@@ -99,10 +101,10 @@ func SaveAsPackageBlob(ctx context.Context, hsr packages_module.HashedSizeReader
 				log.Error("Error deleting package blob from content store: %v", err)
 			}
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
-	return pb, nil
+	return pb, pf, nil
 }
 
 // MountBlob mounts the specific blob to a different package
@@ -113,7 +115,8 @@ func MountBlob(ctx context.Context, pi *packages_service.PackageInfo, pb *packag
 	}
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
-		return CreateFileForBlob(ctx, uploadVersion, pb)
+		_, err := CreateFileForBlob(ctx, uploadVersion, pb)
+		return err
 	})
 }
 
@@ -177,7 +180,7 @@ func GetOrCreateUploadVersion(ctx context.Context, pi *packages_service.PackageI
 	return uploadVersion, err
 }
 
-func CreateFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, pb *packages_model.PackageBlob) error {
+func CreateFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, pb *packages_model.PackageBlob) (*packages_model.PackageFile, error) {
 	filename := strings.ToLower(fmt.Sprintf("sha256_%s", pb.HashSHA256))
 
 	pf := &packages_model.PackageFile{
@@ -190,18 +193,18 @@ func CreateFileForBlob(ctx context.Context, pv *packages_model.PackageVersion, p
 	var err error
 	if pf, err = packages_model.TryInsertFile(ctx, pf); err != nil {
 		if err == packages_model.ErrDuplicatePackageFile {
-			return nil
+			return pf, nil
 		}
 		log.Error("Error inserting package file: %v", err)
-		return err
+		return &packages_model.PackageFile{}, err
 	}
 
 	if _, err := packages_model.InsertProperty(ctx, packages_model.PropertyTypeFile, pf.ID, container_module.PropertyDigest, DigestFromPackageBlob(pb)); err != nil {
 		log.Error("Error setting package file property: %v", err)
-		return err
+		return &packages_model.PackageFile{}, err
 	}
 
-	return nil
+	return pf, nil
 }
 
 func DeleteBlob(ctx context.Context, ownerID int64, image, digest string) error {
