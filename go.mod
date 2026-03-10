@@ -114,7 +114,7 @@ require (
 	gopkg.in/ini.v1 v1.67.0
 	mvdan.cc/xurls/v2 v2.5.0
 	xorm.io/builder v0.3.13
-	xorm.io/xorm v1.3.9
+	xorm.io/xorm v1.3.11
 )
 
 require (
