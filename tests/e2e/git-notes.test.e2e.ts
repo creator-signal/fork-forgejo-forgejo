@@ -26,7 +26,7 @@ test('Change git note', async ({page}) => {
   await textarea.fill(text);
   await screenshot(page, page.locator('.ui.container.fluid.padded'));
 
-  await page.locator('#notes-save-button').click();
+  await page.locator('#commit-notes-save-button').click();
 
   await expect(renderedarea).toBeVisible();
   await expect(textarea).toBeHidden();
@@ -49,7 +49,7 @@ test('Change git note', async ({page}) => {
   // Cancel note editing
   await page.locator('#commit-notes-edit-button').click();
   await textarea.fill('Edited note');
-  await page.locator('#notes-cancel-button').click();
+  await page.locator('#commit-notes-cancel-button').click();
   await expect(renderedarea).toBeVisible();
   await expect(renderedarea).toHaveText(text);
   await expect(textarea).toBeHidden();

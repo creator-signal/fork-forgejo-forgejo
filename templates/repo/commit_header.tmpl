@@ -306,14 +306,14 @@
 {{end}}
 {{if and ($.Permission.CanWrite $.UnitTypeCode) (not $.Repository.IsArchived) (not .IsDeleted)}}
 	<div id="commit-notes-edit-area" class="ui bottom attached info segment git-notes tw-hidden">
-		<form id="notes-edit-form" class="ui form" action="{{.Link}}/notes" method="post">
+		<form id="commit-notes-edit-form" class="ui form" action="{{.Link}}/notes" method="post">
 			<div class="field">
 				<textarea name="notes">{{.NoteRaw}}</textarea>
 			</div>
 			<div class="field">
 				<div class="text right edit">
-					<button id="notes-cancel-button" type="button" class="ui cancel button">{{ctx.Locale.Tr "cancel"}}</button>
-					<button id="notes-save-button" type="submit" class="ui primary button">{{if .NoteRaw}}{{ctx.Locale.Tr "save"}}{{else}}{{ctx.Locale.Tr "add"}}{{end}}</button>
+					<button id="commit-notes-cancel-button" type="button" class="ui cancel button">{{ctx.Locale.Tr "cancel"}}</button>
+					<button id="commit-notes-save-button" type="submit" class="ui primary button">{{if .NoteRaw}}{{ctx.Locale.Tr "save"}}{{else}}{{ctx.Locale.Tr "add"}}{{end}}</button>
 				</div>
 			</div>
 		</form>
