@@ -36,19 +36,22 @@ import (
 const MaxManifestSize = 10 * 1024 * 1024
 
 var (
-	ReferencePattern = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
-	ErrTagInvalid    = util.NewInvalidArgumentErrorf("Tag is invalid")
+	ReferencePattern    = regexp.MustCompile(`\A[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}\z`)
+	ErrTagInvalid       = util.NewInvalidArgumentErrorf("Tag is invalid")
+	ErrManifestTooLarge = fmt.Errorf("Manifest exceeds maximum size")
 )
 
 // ManifestCreationInfo describes a manifest to create
 type ManifestCreationInfo struct {
-	MediaType  string
-	Owner      *user_model.User
-	Creator    *user_model.User
-	Image      string
-	Reference  string
-	IsTagged   bool
-	Properties map[string]string
+	MediaType          string
+	Owner              *user_model.User
+	Creator            *user_model.User
+	Image              string
+	Reference          string
+	IsTagged           bool
+	RemoteRegistryHost string
+	CacheTimeUnix      int64
+	Properties         map[string]string
 }
 
 func GetLocalManifest(ctx context.Context, ownerID int64, imageName, reference string) (*packages_model.PackageFileDescriptor, error) {
@@ -188,6 +191,10 @@ func processImageManifest(ctx context.Context, mci ManifestCreationInfo, buf *pa
 		metadata, err := container_module.ParseImageConfig(manifest.Config.MediaType, configReader)
 		if err != nil {
 			return err
+		}
+		if mci.RemoteRegistryHost != "" {
+			metadata.RemoteRegistryHost = mci.RemoteRegistryHost
+			metadata.CacheTimeUnix = mci.CacheTimeUnix
 		}
 
 		metadata.Annotations = manifest.Annotations
@@ -394,7 +401,6 @@ func createPackageAndVersion(ctx context.Context, mci ManifestCreationInfo, meta
 		LowerName: strings.ToLower(mci.Image),
 	}
 	var err error
-
 	if p, err = packages_model.TryInsertPackage(ctx, p); err != nil {
 		if err == packages_model.ErrDuplicatePackage {
 			created = false

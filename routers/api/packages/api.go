@@ -798,6 +798,72 @@ func ContainerRoutes() *web.Route {
 	})
 	r.Get("/_catalog", container.ReqContainerAccess, container.GetRepositoryList)
 	r.Group("/{username}", func() {
+		var (
+			blobsUploadsPattern = regexp.MustCompile(`\A(.+)/blobs/uploads/([a-zA-Z0-9-_.=]+)\z`)
+			blobsPattern        = regexp.MustCompile(`\A(.+)/blobs/([^/]+)\z`)
+			manifestsPattern    = regexp.MustCompile(`\A(.+)/manifests/([^/]+)\z`)
+		)
+
+		if setting.Packages.RemoteRegistry.Enabled {
+			r.Group("/remote", func() {
+				r.Group("/{registry-name}", func() {
+					// Considering Images can have slashes in their names
+					r.Methods("HEAD,GET", "/*", func(ctx *context.Context) {
+						path := ctx.Params("*")
+						isHead := ctx.Req.Method == "HEAD"
+						isGet := ctx.Req.Method == "GET"
+						handleTags := false
+						handleBlobs := false
+						handleManifests := false
+						skip := false
+						if isGet && strings.HasSuffix(path, "/tags/list") {
+							handleTags = true
+							ctx.SetParams("image", path[:len(path)-10])
+						}
+						m := blobsPattern.FindStringSubmatch(path)
+						if len(m) == 3 {
+							handleBlobs = true
+							ctx.SetParams("image", m[1])
+							ctx.SetParams("digest", m[2])
+							skip = true
+						}
+						m = manifestsPattern.FindStringSubmatch(path)
+						if len(m) == 3 && !skip {
+							handleManifests = true
+							ctx.SetParams("image", m[1])
+							ctx.SetParams("reference", m[2])
+						}
+						container.VerifyImageName(ctx)
+						container.RemoteRegistryMiddleware(ctx)
+						if ctx.Written() {
+							return
+						}
+						if handleTags && isGet {
+							container.GetRemoteTagList(ctx)
+							return
+						}
+						if handleManifests && isGet {
+							container.RemoteGetManifest(ctx)
+							return
+						}
+						if handleManifests && isHead {
+							container.RemoteHeadManifest(ctx)
+							return
+						}
+						if handleBlobs && isGet {
+							container.RemoteGetBlob(ctx)
+							return
+						}
+						if handleBlobs && isHead {
+							container.RemoteHeadBlob(ctx)
+							return
+						}
+						ctx.Status(http.StatusNotFound)
+					}, container.VerifyImageName)
+				})
+			})
+		}
+
 		r.Group("/{image}", func() {
 			r.Group("/blobs/uploads", func() {
 				r.Post("", enforcePackagesQuota(), container.InitiateUploadBlob)
@@ -821,12 +887,6 @@ func ContainerRoutes() *web.Route {
 			})
 			r.Get("/tags/list", container.GetTagList)
 		}, container.VerifyImageName)
-
-		var (
-			blobsUploadsPattern = regexp.MustCompile(`\A(.+)/blobs/uploads/([a-zA-Z0-9-_.=]+)\z`)
-			blobsPattern        = regexp.MustCompile(`\A(.+)/blobs/([^/]+)\z`)
-			manifestsPattern    = regexp.MustCompile(`\A(.+)/manifests/([^/]+)\z`)
-		)
 
 		// Manual mapping of routes because {image} can contain slashes which chi does not support
 		r.Methods("HEAD,GET,POST,PUT,PATCH,DELETE", "/*", func(ctx *context.Context) {

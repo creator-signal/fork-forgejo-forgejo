@@ -22,6 +22,8 @@ const (
 	PropertyMediaType                    = "container.mediatype"
 	PropertyManifestTagged               = "container.manifest.tagged"
 	PropertyManifestReference            = "container.manifest.reference"
+	PropertyRemoteSource                 = "container.remote.source"
+	PropertyRemoteRegistryName           = "container.remote.registry_name"
 
 	DefaultPlatform = "linux/amd64"
 
@@ -52,19 +54,21 @@ func (it ImageType) Name() string {
 
 // Metadata represents the metadata of a Container package
 type Metadata struct {
-	Type             ImageType         `json:"type"`
-	IsTagged         bool              `json:"is_tagged"`
-	Platform         string            `json:"platform,omitempty"`
-	Description      string            `json:"description,omitempty"`
-	Authors          []string          `json:"authors,omitempty"`
-	Licenses         string            `json:"license,omitempty"`
-	ProjectURL       string            `json:"project_url,omitempty"`
-	RepositoryURL    string            `json:"repository_url,omitempty"`
-	DocumentationURL string            `json:"documentation_url,omitempty"`
-	Labels           map[string]string `json:"labels,omitempty"`
-	ImageLayers      []string          `json:"layer_creation,omitempty"`
-	Manifests        []*Manifest       `json:"manifests,omitempty"`
-	Annotations      map[string]string `json:"annotations,omitempty"`
+	Type               ImageType         `json:"type"`
+	IsTagged           bool              `json:"is_tagged"`
+	RemoteRegistryHost string            `json:"remote_registry_host,omitempty"`
+	CacheTimeUnix      int64             `json:"cache_time,omitempty"`
+	Platform           string            `json:"platform,omitempty"`
+	Description        string            `json:"description,omitempty"`
+	Authors            []string          `json:"authors,omitempty"`
+	Licenses           string            `json:"license,omitempty"`
+	ProjectURL         string            `json:"project_url,omitempty"`
+	RepositoryURL      string            `json:"repository_url,omitempty"`
+	DocumentationURL   string            `json:"documentation_url,omitempty"`
+	Labels             map[string]string `json:"labels,omitempty"`
+	ImageLayers        []string          `json:"layer_creation,omitempty"`
+	Manifests          []*Manifest       `json:"manifests,omitempty"`
+	Annotations        map[string]string `json:"annotations,omitempty"`
 }
 
 type Manifest struct {
