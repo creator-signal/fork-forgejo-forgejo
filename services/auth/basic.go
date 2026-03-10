@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web/middleware"
+	"forgejo.org/services/authz"
 )
 
 // Ensure the struct implements the interface.
@@ -72,7 +73,7 @@ func (b *Basic) Verify(req *http.Request, w http.ResponseWriter, store DataStore
 	}
 
 	// check oauth2 token
-	uid, _ := CheckOAuthAccessToken(req.Context(), authToken)
+	uid, grantScopes := CheckOAuthAccessToken(req.Context(), authToken)
 	if uid != 0 {
 		log.Trace("Basic Authorization: Valid OAuthAccessToken for user[%d]", uid)
 
@@ -83,6 +84,11 @@ func (b *Basic) Verify(req *http.Request, w http.ResponseWriter, store DataStore
 		}
 
 		store.GetData()["IsApiToken"] = true
+		if grantScopes != "" {
+			store.GetData()["ApiTokenScope"] = auth_model.AccessTokenScope(grantScopes)
+		} else {
+			store.GetData()["ApiTokenScope"] = auth_model.AccessTokenScopeAll // fallback to all
+		}
 		return u, nil
 	}
 
@@ -102,6 +108,14 @@ func (b *Basic) Verify(req *http.Request, w http.ResponseWriter, store DataStore
 
 		store.GetData()["IsApiToken"] = true
 		store.GetData()["ApiTokenScope"] = token.Scope
+
+		reducer, err := authz.GetAuthorizationReducerForAccessToken(req.Context(), token)
+		if err != nil {
+			log.Error("authz.GetAuthorizationReducerForAccessToken: %v", err)
+			return nil, err
+		}
+		store.GetData()["ApiTokenReducer"] = reducer
+
 		return u, nil
 	} else if !auth_model.IsErrAccessTokenNotExist(err) && !auth_model.IsErrAccessTokenEmpty(err) {
 		log.Error("GetAccessTokenBySha: %v", err)

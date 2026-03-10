@@ -54,7 +54,7 @@ func NewFuncMap() template.FuncMap {
 		// html/template related functions
 		"dict":         dict, // it's lowercase because this name has been widely used. Our other functions should have uppercase names.
 		"Eval":         Eval,
-		"SafeHTML":     SafeHTML,
+		"TrustHTML":    TrustHTML,
 		"HTMLFormat":   HTMLFormat,
 		"HTMLEscape":   HTMLEscape,
 		"QueryEscape":  QueryEscape,
@@ -229,6 +229,7 @@ func HTMLFormat(s string, rawArgs ...any) template.HTML {
 		switch v := v.(type) {
 		case nil, bool, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, template.HTML:
 			// for most basic types (including template.HTML which is safe), just do nothing and use it
+			break
 		case string:
 			args[i] = template.HTMLEscapeString(v)
 		case fmt.Stringer:
@@ -240,8 +241,8 @@ func HTMLFormat(s string, rawArgs ...any) template.HTML {
 	return template.HTML(fmt.Sprintf(s, args...))
 }
 
-// SafeHTML render raw as HTML
-func SafeHTML(s any) template.HTML {
+// TrustHTML render raw as HTML
+func TrustHTML(s any) template.HTML {
 	switch v := s.(type) {
 	case string:
 		return template.HTML(v)

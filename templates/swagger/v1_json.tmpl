@@ -5787,6 +5787,12 @@
             "description": "Only return workflow runs that involve the given Git reference, for example, `refs/heads/main`.",
             "name": "ref",
             "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only return workflow runs that involve the given workflow ID.",
+            "name": "workflow_id",
+            "in": "query"
           }
         ],
         "responses": {
@@ -6041,6 +6047,25 @@
             "type": "integer",
             "description": "page size of results, default maximum page size is 50",
             "name": "limit",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "enum": [
+                "unknown",
+                "waiting",
+                "running",
+                "success",
+                "failure",
+                "cancelled",
+                "skipped",
+                "blocked"
+              ],
+              "type": "string"
+            },
+            "description": "Returns workflow tasks with the check run status or conclusion that is specified.\n For example, a conclusion can be success or a status can be in_progress.\n",
+            "name": "status",
             "in": "query"
           }
         ],
@@ -14576,6 +14601,9 @@
           "201": {
             "$ref": "#/responses/PullReviewListWithoutPagination"
           },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
           "404": {
             "$ref": "#/responses/notFound"
           },
@@ -22164,6 +22192,14 @@
           "type": "string",
           "x-go-name": "Name"
         },
+        "repositories": {
+          "description": "Indicates that an access token only has access to the specified repositories.  Will be null if the access token\nis not limited to a set of specified repositories.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryMeta"
+          },
+          "x-go-name": "Repositories"
+        },
         "scopes": {
           "type": "array",
           "items": {
@@ -23166,6 +23202,7 @@
       "type": "object",
       "properties": {
         "assets": {
+          "description": "The attachments to the comment",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Attachment"
@@ -23173,41 +23210,50 @@
           "x-go-name": "Attachments"
         },
         "body": {
+          "description": "The body of the comment",
           "type": "string",
           "x-go-name": "Body"
         },
         "created_at": {
+          "description": "The time of the comment's creation",
           "type": "string",
           "format": "date-time",
           "x-go-name": "Created"
         },
         "html_url": {
+          "description": "The HTML URL of the comment",
           "type": "string",
           "x-go-name": "HTMLURL"
         },
         "id": {
+          "description": "The identifier of the comment",
           "type": "integer",
           "format": "int64",
           "x-go-name": "ID"
         },
         "issue_url": {
+          "description": "The HTML URL of the issue if the comment is posted on an issue, else empty string",
           "type": "string",
           "x-go-name": "IssueURL"
         },
         "original_author": {
+          "description": "The original author that posted the comment if it was not posted locally, else empty string",
           "type": "string",
           "x-go-name": "OriginalAuthor"
         },
         "original_author_id": {
+          "description": "The ID of the original author that posted the comment if it was not posted locally, else 0",
           "type": "integer",
           "format": "int64",
           "x-go-name": "OriginalAuthorID"
         },
         "pull_request_url": {
+          "description": "The HTML URL of the pull request if the comment is posted on a pull request, else empty string",
           "type": "string",
           "x-go-name": "PRURL"
         },
         "updated_at": {
+          "description": "The time of the comment's update",
           "type": "string",
           "format": "date-time",
           "x-go-name": "Updated"
@@ -23524,6 +23570,14 @@
         "name": {
           "type": "string",
           "x-go-name": "Name"
+        },
+        "repositories": {
+          "description": "If provided and not-empty, creates an access token with access only to specified repositories.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepoTargetOption"
+          },
+          "x-go-name": "Repositories"
         },
         "scopes": {
           "type": "array",
@@ -23867,10 +23921,12 @@
       ],
       "properties": {
         "body": {
+          "description": "The body of the comment",
           "type": "string",
           "x-go-name": "Body"
         },
         "updated_at": {
+          "description": "The time of the comment's update, needs admin or repository owner permission",
           "type": "string",
           "format": "date-time",
           "x-go-name": "Updated"
@@ -25084,10 +25140,12 @@
       ],
       "properties": {
         "body": {
+          "description": "The body of the comment",
           "type": "string",
           "x-go-name": "Body"
         },
         "updated_at": {
+          "description": "The time of the comment's update, needs admin or repository owner permission",
           "type": "string",
           "format": "date-time",
           "x-go-name": "Updated"
@@ -28538,10 +28596,6 @@
       "type": "object",
       "title": "RegisterRunnerResponse contains the details of the just registered runner.",
       "properties": {
-        "ephemeral": {
-          "type": "boolean",
-          "x-go-name": "Ephemeral"
-        },
         "id": {
           "type": "integer",
           "format": "int64",
@@ -28739,6 +28793,26 @@
         },
         "verification": {
           "$ref": "#/definitions/PayloadCommitVerification"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "RepoTargetOption": {
+      "type": "object",
+      "required": [
+        "owner",
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "description": "Name of repository",
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "owner": {
+          "description": "Name of user or organisation that owns the repository",
+          "type": "string",
+          "x-go-name": "Owner"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"

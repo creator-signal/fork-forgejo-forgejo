@@ -56,14 +56,14 @@ func (s *Service) Register(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("runner registration token has been invalidated, please use the latest one"))
 	}
 
-	if runnerToken.OwnerID != 0 {
-		if _, err := user_model.GetUserByID(ctx, runnerToken.OwnerID); err != nil {
+	if has, ownerID := runnerToken.OwnerID.Get(); has {
+		if _, err := user_model.GetUserByID(ctx, ownerID); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("owner of the token not found"))
 		}
 	}
 
-	if runnerToken.RepoID != 0 {
-		if _, err := repo_model.GetRepositoryByID(ctx, runnerToken.RepoID); err != nil {
+	if has, repoID := runnerToken.RepoID.Get(); has {
+		if _, err := repo_model.GetRepositoryByID(ctx, repoID); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("repository of the token not found"))
 		}
 	}
@@ -75,8 +75,8 @@ func (s *Service) Register(
 	runner := &actions_model.ActionRunner{
 		UUID:        gouuid.New().String(),
 		Name:        name,
-		OwnerID:     runnerToken.OwnerID,
-		RepoID:      runnerToken.RepoID,
+		OwnerID:     runnerToken.OwnerID.ValueOrDefault(0),
+		RepoID:      runnerToken.RepoID.ValueOrDefault(0),
 		Version:     req.Msg.Version,
 		AgentLabels: labels,
 		Ephemeral:   req.Msg.Ephemeral,
@@ -140,6 +140,30 @@ func (s *Service) FetchTask(
 ) (*connect.Response[runnerv1.FetchTaskResponse], error) {
 	runner := GetRunner(ctx)
 
+	requestKey := getRequestKey(ctx)
+	if requestKey != nil {
+		// Search for previous tasks is based upon both the runner and the request key in order to reduce the security
+		// risk. If a request key is leaked (eg. it appears in a log file, log file gets published in a bug report) it
+		// could be used indefinitely to retrieve the associated task(s), so requiring the correctly authenticated
+		// runner reduces that risk.
+		recoveredTasks, err := actions_model.GetTasksByRunnerRequestKey(ctx, runner, *requestKey)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query by request key failed: %w", err))
+		} else if len(recoveredTasks) > 0 {
+			// Recovered tasks from a repeat request key
+			tasks, err := actions_service.RecoverTasks(ctx, recoveredTasks)
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("recover tasks failed: %w", err))
+			}
+			resp := &runnerv1.FetchTaskResponse{
+				Task:            tasks[0],
+				TasksVersion:    0,
+				AdditionalTasks: tasks[1:],
+			}
+			return connect.NewResponse(resp), nil
+		}
+	}
+
 	var task *runnerv1.Task
 	tasksVersion := req.Msg.TasksVersion // task version from runner
 	latestVersion, err := actions_model.GetTasksVersionByScope(ctx, runner.OwnerID, runner.RepoID)
@@ -160,7 +184,7 @@ func (s *Service) FetchTask(
 		// if the task version in request is not equal to the version in db,
 		// it means there may still be some tasks not be assigned.
 		// try to pick a task for the runner that send the request.
-		if t, ok, err := actions_service.PickTask(ctx, runner); err != nil {
+		if t, ok, err := actions_service.PickTask(ctx, runner, requestKey); err != nil {
 			log.Error("pick task failed: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pick task: %w", err))
 		} else if ok {
@@ -169,7 +193,7 @@ func (s *Service) FetchTask(
 			taskCapacity := req.Msg.GetTaskCapacity()
 			taskCapacity-- // remove 1 for the task already fetched as `task`
 			for taskCapacity > 0 {
-				if t, ok, err := actions_service.PickTask(ctx, runner); err != nil {
+				if t, ok, err := actions_service.PickTask(ctx, runner, requestKey); err != nil {
 					// Don't return an error to the client/runner -- we've already assigned one-or-more tasks to the runner
 					// and if we don't return them, they can't be picked up by another runner and will become zombie tasks.
 					// Log the error and return the tasks we've assigned so far.
