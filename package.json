@@ -31,7 +31,7 @@
     "@codemirror/state": "6.5.4",
     "@codemirror/view": "6.39.16",
     "@github/markdown-toolbar-element": "2.2.3",
-    "@github/quote-selection": "2.1.0",
+    "@github/quote-selection": "2.2.0",
     "@github/text-expander-element": "2.9.4",
     "@google/model-viewer": "4.1.0",
     "@lezer/highlight": "1.2.3",
