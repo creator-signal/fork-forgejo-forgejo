@@ -48,6 +48,7 @@ func TestUpdateUser(t *testing.T) {
 		AllowCreateOrganization:      optional.Some(false),
 		EmailNotificationsPreference: optional.Some("disabled"),
 		SetLastLogin:                 true,
+		FirstDOW:                     optional.Some(0),
 	}
 	require.NoError(t, UpdateUser(db.DefaultContext, user, opts))
 
@@ -69,6 +70,7 @@ func TestUpdateUser(t *testing.T) {
 	assert.Equal(t, opts.DiffViewStyle.ValueOrZeroValue(), user.DiffViewStyle)
 	assert.Equal(t, opts.AllowCreateOrganization.ValueOrZeroValue(), user.AllowCreateOrganization)
 	assert.Equal(t, opts.EmailNotificationsPreference.ValueOrZeroValue(), user.EmailNotificationsPreference)
+	assert.Equal(t, opts.FirstDOW.ValueOrZeroValue(), user.FirstDOW)
 
 	user = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 28})
 	assert.Equal(t, opts.KeepEmailPrivate.ValueOrZeroValue(), user.KeepEmailPrivate)
@@ -89,6 +91,7 @@ func TestUpdateUser(t *testing.T) {
 	assert.Equal(t, opts.DiffViewStyle.ValueOrZeroValue(), user.DiffViewStyle)
 	assert.Equal(t, opts.AllowCreateOrganization.ValueOrZeroValue(), user.AllowCreateOrganization)
 	assert.Equal(t, opts.EmailNotificationsPreference.ValueOrZeroValue(), user.EmailNotificationsPreference)
+	assert.Equal(t, opts.FirstDOW.ValueOrZeroValue(), user.FirstDOW)
 }
 
 func TestUpdateAuth(t *testing.T) {
