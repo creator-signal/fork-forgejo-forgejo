@@ -174,15 +174,11 @@
 					{{ctx.Locale.Tr "repo.settings.event_action_success"}}
 					<span class="help">{{ctx.Locale.Tr "repo.settings.event_action_success_desc"}}</span>
 				</label>
-			</fieldset>
-			<fieldset class="simple-grid grid-2">
-			<!-- Action Job Events -->
-				<legend>{{ctx.Locale.Tr "repo.settings.event_header_workflow_job"}}</legend>
 				<!-- Workflow Job Event -->
 				<label>
 					<input name="workflow_job" type="checkbox" {{if .Webhook.WorkflowJob}}checked{{end}}>
-					{{ctx.Locale.Tr "webhook.event.workflow_job.title"}}
-					<span class="help">{{ctx.Locale.Tr "webhook.event.workflow_job.description"}}</span>
+					{{ctx.Locale.Tr "repo.settings.event_workflow_job"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_workflow_job_desc"}}</span>
 				</label>
 			</fieldset>
 		</fieldset>
