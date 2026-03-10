@@ -5,6 +5,8 @@ package structs
 
 import (
 	"time"
+
+	"forgejo.org/modules/optional"
 )
 
 // ActionTask represents a ActionTask
@@ -90,9 +92,9 @@ type ActionWorkflowStep struct {
 	Number int64  `json:"number"`
 	Status string `json:"status"`
 	// swagger:strfmt date-time
-	StartedAt time.Time `json:"started_at,omitempty"`
+	StartedAt optional.Option[time.Time] `json:"started_at,omitempty"`
 	// swagger:strfmt date-time
-	CompletedAt time.Time `json:"completed_at,omitempty"`
+	CompletedAt optional.Option[time.Time] `json:"completed_at,omitempty"`
 }
 
 // ActionWorkflowJob represents a WorkflowJob
@@ -112,9 +114,9 @@ type ActionWorkflowJob struct {
 	RunnerName   string                `json:"runner_name,omitempty"`
 	Steps        []*ActionWorkflowStep `json:"steps"`
 	// swagger:strfmt date-time
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt optional.Option[time.Time] `json:"created_at"`
 	// swagger:strfmt date-time
-	StartedAt time.Time `json:"started_at,omitempty"`
+	StartedAt optional.Option[time.Time] `json:"started_at,omitempty"`
 	// swagger:strfmt date-time
-	CompletedAt time.Time `json:"completed_at,omitempty"`
+	CompletedAt optional.Option[time.Time] `json:"completed_at,omitempty"`
 }

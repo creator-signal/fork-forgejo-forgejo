@@ -6,6 +6,7 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"time"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -18,6 +19,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
@@ -980,14 +982,35 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 			runnerName = runner.Name
 		}
 		for i, step := range task.Steps {
+			startedAt := optional.None[time.Time]()
+			if !step.Started.IsZero() {
+				startedAt = optional.Some(step.Started.AsTime().UTC())
+			}
+			completedAt := optional.None[time.Time]()
+			if !step.Stopped.IsZero() {
+				completedAt = optional.Some(step.Stopped.AsTime().UTC())
+			}
 			steps = append(steps, &api.ActionWorkflowStep{
 				Name:        step.Name,
 				Number:      int64(i),
 				Status:      step.Status.String(),
-				StartedAt:   step.Started.AsTime().UTC(),
-				CompletedAt: step.Stopped.AsTime().UTC(),
+				StartedAt:   startedAt,
+				CompletedAt: completedAt,
 			})
 		}
+	}
+
+	createdAt := optional.None[time.Time]()
+	if !job.Created.IsZero() {
+		createdAt = optional.Some(job.Created.AsTime().UTC())
+	}
+	startedAt := optional.None[time.Time]()
+	if !job.Started.IsZero() {
+		startedAt = optional.Some(job.Started.AsTime().UTC())
+	}
+	completedAt := optional.None[time.Time]()
+	if !job.Stopped.IsZero() {
+		completedAt = optional.Some(job.Stopped.AsTime().UTC())
 	}
 
 	if err := PrepareWebhooks(ctx, source, webhook_module.HookEventWorkflowJob, &api.WorkflowJobPayload{
@@ -1007,9 +1030,9 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 			RunnerID:     runnerID,
 			RunnerName:   runnerName,
 			Steps:        steps,
-			CreatedAt:    job.Created.AsTime().UTC(),
-			StartedAt:    job.Started.AsTime().UTC(),
-			CompletedAt:  job.Stopped.AsTime().UTC(),
+			CreatedAt:    createdAt,
+			StartedAt:    startedAt,
+			CompletedAt:  completedAt,
 		},
 		Organization: org,
 		Repo:         convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}),
