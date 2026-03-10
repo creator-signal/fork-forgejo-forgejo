@@ -762,6 +762,7 @@ func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefa
 	u.Theme = setting.UI.DefaultTheme
 	u.IsRestricted = setting.Service.DefaultUserIsRestricted
 	u.IsActive = !setting.Service.RegisterEmailConfirm && !setting.Service.RegisterManualConfirm
+	u.FirstDOW = 1
 
 	// Ensure consistency of the dates.
 	if u.UpdatedUnix < u.CreatedUnix {
