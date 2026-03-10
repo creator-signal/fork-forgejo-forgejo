@@ -4735,6 +4735,212 @@
         }
       }
     },
+    "/packages/{owner}/remote-registry": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "package"
+        ],
+        "summary": "Gets all remote registries for a user",
+        "operationId": "listRemoteRegistries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "package"
+        ],
+        "summary": "Allows creation of a remote registry",
+        "operationId": "createRemoteRegistry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "remote_registry",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateRemoteRegistryOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/packages/{owner}/remote-registry/{name}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "package"
+        ],
+        "summary": "Gets a remote registry by name for a user",
+        "operationId": "getRemoteRegistry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the registry",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "tags": [
+          "package"
+        ],
+        "summary": "Update an existing remote registry",
+        "operationId": "updateRemoteRegistry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the registry",
+            "name": "name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "remote_registry",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateRemoteRegistryOption"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "package"
+        ],
+        "summary": "Delete an existing remote registry",
+        "operationId": "deleteRemoteRegistry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the registry",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the registry",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/empty"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/packages/{owner}/remote-registry/{registry-name}/test": {
+      "post": {
+        "tags": [
+          "package"
+        ],
+        "summary": "Test if the remote registry is actually connected",
+        "operationId": "testRemoteRegistryConnection",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the package",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the registry",
+            "name": "registry-name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/empty"
+          }
+        }
+      }
+    },
     "/packages/{owner}/{type}/{name}/-/link/{repo_name}": {
       "post": {
         "tags": [
@@ -24390,6 +24596,46 @@
         "target_commitish": {
           "type": "string",
           "x-go-name": "Target"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "CreateRemoteRegistryOption": {
+      "description": "CreateRemoteRegistryOption options for creating a RemoteRegistry",
+      "type": "object",
+      "required": [
+        "name",
+        "remote_type",
+        "remote_url"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "remote_pass": {
+          "type": "string",
+          "x-go-name": "RemotePassword"
+        },
+        "remote_token": {
+          "type": "string",
+          "x-go-name": "RemoteToken"
+        },
+        "remote_type": {
+          "type": "string",
+          "x-go-name": "RemoteType"
+        },
+        "remote_url": {
+          "type": "string",
+          "x-go-name": "RemoteURL"
+        },
+        "remote_user": {
+          "type": "string",
+          "x-go-name": "RemoteUser"
+        },
+        "test_connection": {
+          "type": "boolean",
+          "x-go-name": "TestConnection"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"

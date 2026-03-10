@@ -6,16 +6,20 @@ package packages
 import (
 	"errors"
 	"net/http"
+	"strings"
 
+	"forgejo.org/models/organization"
 	"forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
+	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	packages_service "forgejo.org/services/packages"
+	container_service "forgejo.org/services/packages/container"
 )
 
 // ListPackages gets all packages of an owner
@@ -334,4 +338,451 @@ func UnlinkPackage(ctx *context.APIContext) {
 		return
 	}
 	ctx.Status(http.StatusNoContent)
+}
+
+// CreateRemoteRegistry creates a remote registry of a given type
+func CreateRemoteRegistry(ctx *context.APIContext) {
+	// swagger:operation POST /packages/{owner}/remote-registry package createRemoteRegistry
+	// ---
+	// summary: Allows creation of a remote registry
+	// consumes:
+	// - application/json
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// - name: remote_registry
+	//   in: body
+	//   required: true
+	//   schema: { "$ref": "#/definitions/CreateRemoteRegistryOption" }
+	// responses:
+	//   "201":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	form := web.GetForm(ctx)
+	rrOpts := form.(*api.CreateRemoteRegistryOption)
+
+	isOrg := ctx.ContextUser.IsOrganization()
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+			return
+		}
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
+			ctx.Error(http.StatusForbidden,
+				"CreateRemoteRegistry",
+				"Remote Registry creation is allowed only for owners and admins.")
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		return
+	}
+
+	remoteType := strings.ToLower(rrOpts.RemoteType)
+
+	rr, err := packages_service.NewRemoteRegistry(
+		packages_service.RROpts{
+			Name:       rrOpts.Name,
+			RemoteURL:  rrOpts.RemoteURL,
+			RemoteType: packages.Type(remoteType),
+			OwnerType:  ownerType,
+			OwnerID:    ctx.ContextUser.ID,
+			Auth: packages_service.RRCredentials{
+				RemoteUser:     rrOpts.RemoteUser,
+				RemotePassword: rrOpts.RemotePassword,
+				RemoteToken:    rrOpts.RemoteToken,
+			},
+		})
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		return
+	}
+
+	connected := true
+	if rrOpts.TestConnection {
+		registryClient, err := container_service.NewContainerRegistryClient(&rr)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+			return
+		}
+		connected, err = registryClient.RemoteRegistryConnected(ctx)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+			return
+		}
+	}
+
+	if !connected {
+		ctx.Error(http.StatusInternalServerError, "Connection Test", err)
+		return
+	}
+
+	err = packages_service.CreateRemoteRegistry(ctx, rr)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "CreateRemoteRegistry", err)
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, convert.ToRemoteRegistry(&rr))
+}
+
+// CreateRemoteRegistry creates a remote registry of a given type
+func UpdateRemoteRegistry(ctx *context.APIContext) {
+	// swagger:operation PUT /packages/{owner}/remote-registry/{name} package updateRemoteRegistry
+	// ---
+	// summary: Update an existing remote registry
+	// consumes:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// - name: name
+	//   in: path
+	//   description: name of the registry
+	//   type: string
+	//   required: true
+	// - name: remote_registry
+	//   in: body
+	//   required: true
+	//   schema: { "$ref": "#/definitions/CreateRemoteRegistryOption" }
+	// responses:
+	//   "201":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	// TODO
+	// Input sanitation for all form fields
+
+	form := web.GetForm(ctx)
+	rrOpts := form.(*api.CreateRemoteRegistryOption)
+	registryName := ctx.PathParamRaw("name")
+
+	isOrg := ctx.ContextUser.IsOrganization()
+	isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		return
+	}
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
+			ctx.Error(http.StatusForbidden,
+				"UpdateRemoteRegistry",
+				"Remote Registry update is allowed only for owners and admins.")
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		return
+	}
+
+	rr, err := packages_service.NewRemoteRegistry(
+		packages_service.RROpts{
+			Name:       rrOpts.Name,
+			RemoteURL:  rrOpts.RemoteURL,
+			RemoteType: packages.Type(rrOpts.RemoteType),
+			OwnerType:  ownerType,
+			OwnerID:    ctx.ContextUser.ID,
+			Auth: packages_service.RRCredentials{
+				RemoteUser:     rrOpts.RemoteUser,
+				RemotePassword: rrOpts.RemotePassword,
+				RemoteToken:    rrOpts.RemoteToken,
+			},
+		})
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		return
+	}
+
+	connected := true
+	if rrOpts.TestConnection {
+		registryClient, err := container_service.NewContainerRegistryClient(&rr)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+			return
+		}
+		connected, err = registryClient.RemoteRegistryConnected(ctx)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+			return
+		}
+	}
+
+	if !connected {
+		ctx.Error(http.StatusInternalServerError, "Connection Test", err)
+		return
+	}
+
+	err = packages_service.UpdateRemoteRegistry(ctx, rr, registryName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "UpdateRemoteRegistry", err)
+		return
+	}
+
+	ctx.Status(http.StatusCreated)
+}
+
+// ListRemoteRegistries lists all remote registries of a user
+func GetRemoteRegistryByName(ctx *context.APIContext) {
+	// swagger:operation GET /packages/{owner}/remote-registry/{name} package getRemoteRegistry
+	// ---
+	// summary: Gets a remote registry by name for a user
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// - name: name
+	//   in: path
+	//   description: name of the registry
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	ownerName := ctx.PathParamRaw("username")
+	registryName := ctx.PathParamRaw("name")
+
+	isOrg := ctx.ContextUser.IsOrganization()
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+			return
+		}
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
+			ctx.Error(http.StatusForbidden,
+				"GetRemoteRegistry",
+				"Getting info about Remote Registries is allowed only for owners and admins.")
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	rr, err := packages_service.GetRemoteRegistry(ctx, isOrg, isUser, ownerName, registryName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToRemoteRegistry(rr))
+}
+
+// ListRemoteRegistries lists all remote registries of a user
+func ListRemoteRegistries(ctx *context.APIContext) {
+	// swagger:operation GET /packages/{owner}/remote-registry package listRemoteRegistries
+	// ---
+	// summary: Gets all remote registries for a user
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	ownerName := ctx.PathParamRaw("username")
+
+	isOrg := ctx.ContextUser.IsOrganization()
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+			return
+		}
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
+			ctx.Error(http.StatusForbidden,
+				"GetRemoteRegistry",
+				"Getting info about Remote Registries is allowed only for owners and admins.")
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	rrs, err := packages_service.GetRemoteRegistries(ctx, isOrg, isUser, ownerName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetRemoteRegistry", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToRemoteRegistryList(rrs))
+}
+
+// DeleteRemoteRegistry deletes a remote registry of a given name
+func DeleteRemoteRegistry(ctx *context.APIContext) {
+	// swagger:operation DELETE /packages/{owner}/remote-registry/{name} package deleteRemoteRegistry
+	// ---
+	// summary: Delete an existing remote registry
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the registry
+	//   type: string
+	//   required: true
+	// - name: name
+	//   in: path
+	//   description: name of the registry
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/empty"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	// TODO
+	// Input sanitation for all form fields
+
+	registryName := ctx.PathParamRaw("name")
+
+	isOrg := ctx.ContextUser.IsOrganization()
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+			return
+		}
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
+			ctx.Error(http.StatusForbidden,
+				"DeleteRemoteRegistry",
+				"Deleting Remote Registries is allowed only for owners and admins.")
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	ownerType, err := packages_service.GetOwnerType(ctx, isOrg, isUser)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+		return
+	}
+
+	err = packages_service.DeleteRemoteRegistry(ctx, ownerType, ctx.ContextUser.ID, registryName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "DeleteRemoteRegistry", err)
+		return
+	}
+
+	ctx.Status(http.StatusOK)
+}
+
+// CreateRemotTestRemoteRegistryConnection tests the availability and the credentials of the given registry
+func TestRemoteRegistryConnection(ctx *context.APIContext) {
+	// swagger:operation POST /packages/{owner}/remote-registry/{registry-name}/test package testRemoteRegistryConnection
+	// ---
+	// summary: Test if the remote registry is actually connected
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the package
+	//   type: string
+	//   required: true
+	// - name: registry-name
+	//   in: path
+	//   description: name of the registry
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/empty"
+
+	// Check if doer can do
+
+	isOrg := ctx.ContextUser.IsOrganization()
+
+	// Permissions
+	if isOrg {
+		// Then user needs to be org owner or has write permissions to org
+		isOrgOwner, err := organization.IsOrganizationOwner(ctx, ctx.ContextUser.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+			return
+		}
+		if !isOrgOwner && !ctx.IsUserSiteAdmin() {
+			ctx.Error(http.StatusForbidden,
+				"TestRemoteRegistryConnection",
+				"Testing Remote Registriy connection is allowed only for owners and admins.")
+			return
+		}
+	}
+
+	isUser := ctx.ContextUser.IsUser()
+
+	userName := ctx.PathParamRaw("username")
+	registryName := ctx.PathParamRaw("name")
+
+	rr, err := packages_service.GetRemoteRegistry(ctx, isOrg, isUser, userName, registryName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
+	}
+
+	registryClient, err := container_service.NewContainerRegistryClient(rr)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
+	}
+	connected, err := registryClient.RemoteRegistryConnected(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
+	}
+
+	if !connected {
+		ctx.Error(http.StatusInternalServerError, "TestRemoteRegistryConnection", err)
+		return
+	}
+
+	ctx.Status(http.StatusOK)
 }
