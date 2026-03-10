@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
@@ -437,9 +438,9 @@ func TestAction(t *testing.T) {
 		assert.Equal(t, actions_model.StatusFailure.String(), payloadContent.WorkflowJob.Steps[1].Status)
 
 		// Test timestamps
-		assert.Equal(t, actionRunJob.Created.AsTime().UTC(), payloadContent.WorkflowJob.CreatedAt)
-		assert.Equal(t, actionRunJob.Started.AsTime().UTC(), payloadContent.WorkflowJob.StartedAt)
-		assert.Equal(t, actionRunJob.Stopped.AsTime().UTC(), payloadContent.WorkflowJob.CompletedAt)
+		assert.Equal(t, optional.FromNonDefault(actionRunJob.Created.AsTime().UTC()), payloadContent.WorkflowJob.CreatedAt)
+		assert.Equal(t, optional.FromNonDefault(actionRunJob.Started.AsTime().UTC()), payloadContent.WorkflowJob.StartedAt)
+		assert.Equal(t, optional.FromNonDefault(actionRunJob.Stopped.AsTime().UTC()), payloadContent.WorkflowJob.CompletedAt)
 
 		// Test repository info
 		assert.NotNil(t, payloadContent.Repo)
