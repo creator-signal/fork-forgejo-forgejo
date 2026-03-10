@@ -22,6 +22,11 @@
 				<div class="flex-item-title">
 					<a href="{{.VersionWebLink}}">{{.Package.Name}}</a>
 					<span class="ui label">{{svg .Package.Type.SVGName 16}} {{.Package.Type.Name}}</span>
+					{{with .Metadata}}
+					{{if .RemoteRegistryHost}}
+					<span class="ui label">{{svg "octicon-link-external" 16 "tw-mr-2"}}{{.Metadata.RemoteRegistryHost}}</span>
+					{{end}}
+					{{end}}
 				</div>
 				<div class="flex-item-body">
 					{{$timeStr := DateUtils.TimeSince .Version.CreatedUnix}}
