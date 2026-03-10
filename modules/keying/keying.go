@@ -41,6 +41,8 @@ var (
 	MigrateTask = deriveKey("migrate_repo_task")
 	// Used for the `webhook` table.
 	Webhook = deriveKey("webhook")
+	// Used for the `remote_registry` table.
+	RemoteRegistry = deriveKey("remote_registry_credentials")
 )
 
 var (
