@@ -17,6 +17,9 @@ var (
 		Enabled           bool
 		ChunkedUploadPath string
 		RegistryHost      string
+		RemoteRegistry    struct {
+			Enabled bool `ini:"ENABLED"`
+		} `ini:"packages.remote_registry"`
 
 		LimitTotalOwnerCount  int64
 		LimitTotalOwnerSize   int64
@@ -55,6 +58,13 @@ func loadPackagesFrom(rootCfg ConfigProvider) (err error) {
 	if sec == nil {
 		Packages.Storage, err = getStorage(rootCfg, "packages", "", nil)
 		return err
+	}
+
+	for _, child := range sec.ChildSections() {
+		cn := child.Name()
+		if cn == "packages.remote_registry" {
+			Packages.RemoteRegistry.Enabled = child.Key("ENABLED").MustBool(false)
+		}
 	}
 
 	if err = sec.MapTo(&Packages); err != nil {
