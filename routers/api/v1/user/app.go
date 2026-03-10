@@ -19,7 +19,6 @@ import (
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/container"
-	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
@@ -124,16 +123,19 @@ func ListAccessTokens(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, &apiTokens)
 }
 
-func translateAccessTokenValidationError(ctx *context.Base, err error) optional.Option[string] {
+func translateAccessTokenValidationError(err error) (string, bool) {
 	switch {
 	case errors.Is(err, authz.ErrSpecifiedReposNone):
-		return optional.Some[string](ctx.Locale.TrString("access_token.error.specified_repos_none"))
+		return "access_token.error.specified_repos_none", true
+
 	case errors.Is(err, authz.ErrSpecifiedReposNoPublicOnly):
-		return optional.Some[string](ctx.Locale.TrString("access_token.error.specified_repos_and_public_only"))
+		return "access_token.error.specified_repos_and_public_only", true
+
 	case errors.Is(err, authz.ErrSpecifiedReposInvalidScope):
-		return optional.Some[string](ctx.Locale.TrString("access_token.error.specified_repos_and_invalid_scope"))
+		return "access_token.error.specified_repos_and_invalid_scope", true
+
 	default:
-		return optional.None[string]()
+		return "", false
 	}
 }
 
@@ -237,12 +239,13 @@ func CreateAccessToken(ctx *context.APIContext) {
 	}
 
 	if err := authz.ValidateAccessToken(t, resourceRepos); err != nil {
-		s := translateAccessTokenValidationError(ctx.Base, err)
-		if has, str := s.Get(); has {
-			ctx.Error(http.StatusBadRequest, "ValidateAccessToken", str)
+		trKey, ok := translateAccessTokenValidationError(err)
+		if !ok {
+			ctx.ServerError("ValidateAccessToken", err)
 			return
 		}
-		ctx.ServerError("ValidateAccessToken", err)
+
+		ctx.Error(http.StatusBadRequest, "ValidateAccessToken", ctx.Locale.TrString(trKey))
 		return
 	}
 
