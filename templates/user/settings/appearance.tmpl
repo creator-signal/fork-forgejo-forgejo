@@ -70,6 +70,36 @@
 			</form>
 		</div>
 
+		<!-- First Day of Week -->
+		<h4 class="ui top attached header">
+			{{ctx.Locale.Tr "settings.first_dow"}}
+		</h4>
+		<div class="ui attached segment">
+			<form class="ui form" action="{{.Link}}/first_dow" method="post">
+				<div class="tw-mb-4">
+					{{ctx.Locale.Tr "settings.first_dow.description"}}
+				</div>
+				<div class="field">
+					<div class="ui selection dropdown" id="first_dow">
+						<input name="first_dow" type="hidden" value="{{.SignedUser.FirstDOW}}">
+						{{svg "octicon-triangle-down" 14 "dropdown icon"}}
+						<div class="text">
+							{{if eq .SignedUser.FirstDOW 0}}{{ctx.Locale.Tr "settings.day.sunday"}}{{else if eq .SignedUser.FirstDOW 1}}{{ctx.Locale.Tr "settings.day.monday"}}{{else if eq .SignedUser.FirstDOW 5}}{{ctx.Locale.Tr "settings.day.saturday"}}{{else if eq .SignedUser.FirstDOW 4}}{{ctx.Locale.Tr "settings.day.friday"}}{{else}}{{ctx.Locale.Tr "settings.day.monday"}}{{end}}
+						</div>
+						<div class="menu">
+							<div class="item{{if eq .SignedUser.FirstDOW 1}} active selected{{end}}" data-value="1">{{ctx.Locale.Tr "settings.day.monday"}}</div>
+							<div class="item{{if eq .SignedUser.FirstDOW 0}} active selected{{end}}" data-value="0">{{ctx.Locale.Tr "settings.day.sunday"}}</div>
+							<div class="item{{if eq .SignedUser.FirstDOW 6}} active selected{{end}}" data-value="6">{{ctx.Locale.Tr "settings.day.saturday"}}</div>
+							<div class="item{{if eq .SignedUser.FirstDOW 5}} active selected{{end}}" data-value="5">{{ctx.Locale.Tr "settings.day.friday"}}</div>
+						</div>
+					</div>
+				</div>
+				<div class="field">
+					<button class="ui primary button">{{ctx.Locale.Tr "settings.update_first_dow"}}</button>
+				</div>
+			</form>
+		</div>
+
 		<!-- Hints -->
 		<h4 class="ui top attached header">
 			{{ctx.Locale.Tr "settings.hints"}}

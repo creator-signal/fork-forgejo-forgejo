@@ -1,5 +1,6 @@
 import {createApp} from 'vue';
 import {translateMonth, translateDay} from '../utils.js';
+import '@hsablonniere/activity-graph';
 
 export async function initHeatmap() {
   const el = document.getElementById('user-heatmap');
@@ -9,7 +10,6 @@ export async function initHeatmap() {
   try {
     const heatmap = {};
     for (const {contributions, timestamp} of JSON.parse(el.getAttribute('data-heatmap-data'))) {
-      // Convert to user timezone and sum contributions by date
       const dateStr = new Date(timestamp * 1000).toDateString();
       heatmap[dateStr] = (heatmap[dateStr] || 0) + contributions;
     }
@@ -30,7 +30,9 @@ export async function initHeatmap() {
       less: el.getAttribute('data-locale-less'),
     };
 
-    const View = createApp(ActivityHeatmap, {values, locale});
+    const firstDOW = parseInt(el.getAttribute('data-first-dow') || '1', 10);
+
+    const View = createApp(ActivityHeatmap, {values, locale, firstDOW});
     View.mount(el);
     el.classList.remove('is-loading');
   } catch (err) {

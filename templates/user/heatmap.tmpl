@@ -1,6 +1,7 @@
 {{if .HeatmapData}}
 	<div id="user-heatmap" class="is-loading"
 		data-heatmap-data="{{JsonUtils.EncodeToString .HeatmapData}}"
+		data-first-dow="{{.HeatmapFirstDOW}}"
 		data-locale-total-contributions="{{ctx.Locale.Tr "heatmap.number_of_contributions_in_the_last_12_months" (ctx.Locale.PrettyNumber .HeatmapTotalContributions)}}"
 		data-locale-contributions-zero="{{ctx.Locale.Tr "heatmap.contributions_zero"}}"
 		data-locale-contributions-format="{{ctx.Locale.Tr "heatmap.contributions_format"}}"

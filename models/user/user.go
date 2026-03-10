@@ -107,6 +107,7 @@ type User struct {
 	Rands       string `xorm:"VARCHAR(32)"`
 	Salt        string `xorm:"VARCHAR(32)"`
 	Language    string `xorm:"VARCHAR(5)"`
+	FirstDOW    int    `xorm:"NOT NULL DEFAULT 1"`
 	Description string
 
 	CreatedUnix   timeutil.TimeStamp `xorm:"INDEX created"`

@@ -305,6 +305,17 @@ func (f UpdateThemeForm) IsThemeExists() bool {
 	return exists
 }
 
+// UpdateFirstDOWForm form for updating a user's first day of week
+type UpdateFirstDOWForm struct {
+	FirstDOW int `binding:"Required;Range(0,6)"`
+}
+
+// Validate validates the field
+func (f *UpdateFirstDOWForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetValidateContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // ChangePasswordForm form for changing password
 type ChangePasswordForm struct {
 	OldPassword string `form:"old_password" binding:"MaxSize(255)"`

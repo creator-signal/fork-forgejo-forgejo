@@ -403,6 +403,25 @@ func UpdateUserLang(ctx *context.Context) {
 	ctx.Redirect(setting.AppSubURL + "/user/settings/appearance")
 }
 
+// UpdateUserFirstDOW update a user's first day of week
+func UpdateUserFirstDOW(ctx *context.Context) {
+	form := web.GetForm(ctx).(*forms.UpdateFirstDOWForm)
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsAppearance"] = true
+
+	opts := &user_service.UpdateOptions{
+		FirstDOW: optional.Some(form.FirstDOW),
+	}
+	if err := user_service.UpdateUser(ctx, ctx.Doer, opts); err != nil {
+		ctx.ServerError("UpdateUser", err)
+		return
+	}
+
+	log.Trace("User first day of week updated: %s", ctx.Doer.Name)
+	ctx.Flash.Success(ctx.Tr("settings.update_first_dow_success"))
+	ctx.Redirect(setting.AppSubURL + "/user/settings/appearance")
+}
+
 // UpdateUserHints updates a user's hints settings
 func UpdateUserHints(ctx *context.Context) {
 	form := web.GetForm(ctx).(*forms.UpdateHintsForm)

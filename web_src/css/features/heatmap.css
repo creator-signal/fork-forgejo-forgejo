@@ -4,8 +4,29 @@
   position: relative;
 }
 
+#user-heatmap .activity-graph-scroll-wrapper {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+}
+
+#user-heatmap .activity-graph-scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+#user-heatmap .activity-graph-scroll-wrapper::-webkit-scrollbar-track {
+  background: var(--color-secondary-alpha-30);
+  border-radius: 3px;
+}
+
+#user-heatmap .activity-graph-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: var(--color-secondary);
+  border-radius: 3px;
+}
+
 /* before the Vue component is mounted, show a loading indicator with dummy size */
-/* the ratio is guesswork, see https://github.com/razorness/vue3-calendar-heatmap/issues/26 */
 #user-heatmap.is-loading {
   aspect-ratio: 5.415; /* the size is about 790 x 145 */
 }
@@ -13,46 +34,127 @@
   aspect-ratio: 5.645; /* the size is about 953 x 169 */
 }
 
-#user-heatmap text {
-  fill: currentcolor !important;
+#user-heatmap .forgejo-activity-graph {
+  gap: 2px;
+  --activity-graph-month-gap: 0px;
+  line-height: 13px;
+  min-width: fit-content;
 }
 
-/* for the "Less" and "More" legend */
-#user-heatmap .vch__legend .vch__legend {
+#user-heatmap .forgejo-activity-graph::part(day) {
+  width: 13px;
+  height: 13px;
+  background-color: var(--color-secondary-alpha-60);
+  border-radius: 2px;
+}
+
+#user-heatmap .forgejo-activity-graph::part(day):hover {
+  outline: 1px solid var(--color-text);
+}
+
+#user-heatmap .forgejo-activity-graph::part(level-1) {
+  background-color: var(--color-primary-light-4);
+}
+
+#user-heatmap .forgejo-activity-graph::part(level-2) {
+  background-color: var(--color-primary-light-2);
+}
+
+#user-heatmap .forgejo-activity-graph::part(level-3) {
+  background-color: var(--color-primary);
+}
+
+#user-heatmap .forgejo-activity-graph::part(level-4) {
+  background-color: var(--color-primary-dark-2);
+}
+
+#user-heatmap .forgejo-activity-graph::part(weekday-header) {
+  font-size: 10px;
+  margin-right: 3px;
+  position: sticky;
+  left: 0;
+  background: var(--color-body);
+  z-index: 1;
+}
+
+#user-heatmap .forgejo-activity-graph::part(month-header) {
+  font-size: 10px;
+}
+
+#user-heatmap .heatmap-footer {
   display: flex;
-  font-size: 11px;
   align-items: center;
-  justify-content: right;
+  margin-top: 1em;
+  padding-left: 1em;
 }
 
-#user-heatmap .vch__legend .vch__legend div:first-child,
-#user-heatmap .vch__legend .vch__legend div:last-child {
-  display: inline-block;
-  padding: 0 5px;
+#user-heatmap .total-contributions {
+  flex: 0 0 auto;
 }
 
-#user-heatmap .vch__day__square:hover {
-  outline: 1.5px solid var(--color-text);
+#user-heatmap .heatmap-legend {
+  margin-left: auto;
 }
 
-/* move the "? contributions in the last ? months" text from top to bottom */
 #user-heatmap .total-contributions {
   font-size: 11px;
-  position: absolute;
-  bottom: 0;
-  left: 25px;
 }
 
-@media (max-width: 1200px) {
-  #user-heatmap .total-contributions {
-    left: 21px;
-  }
+#user-heatmap .heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+}
+
+#user-heatmap .heatmap-legend-label {
+  color: var(--color-text);
+  margin: 0 3px;
+}
+
+#user-heatmap .heatmap-legend-box {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background-color: var(--color-secondary-alpha-60);
+}
+
+#user-heatmap .heatmap-legend-box.heatmap-legend-level-1 {
+  background-color: var(--color-primary-light-4);
+}
+
+#user-heatmap .heatmap-legend-box.heatmap-legend-level-2 {
+  background-color: var(--color-primary-light-2);
+}
+
+#user-heatmap .heatmap-legend-box.heatmap-legend-level-3 {
+  background-color: var(--color-primary);
+}
+
+#user-heatmap .heatmap-legend-box.heatmap-legend-level-4 {
+  background-color: var(--color-primary-dark-2);
 }
 
 @media (max-width: 1000px) {
-  #user-heatmap .total-contributions {
+  #user-heatmap .total-contributions,
+  #user-heatmap .heatmap-legend {
     font-size: 10px;
-    left: 17px;
-    bottom: -4px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  #user-heatmap .forgejo-activity-graph {
+    gap: 1px;
+    line-height: 10px;
+  }
+
+  #user-heatmap .forgejo-activity-graph::part(day) {
+    width: 10px;
+    height: 10px;
+  }
+
+  #user-heatmap .forgejo-activity-graph::part(weekday-header),
+  #user-heatmap .forgejo-activity-graph::part(month-header) {
+    font-size: 9px;
   }
 }

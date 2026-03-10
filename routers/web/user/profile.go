@@ -186,6 +186,7 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 			}
 			ctx.Data["HeatmapData"] = data
 			ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
+			ctx.Data["HeatmapFirstDOW"] = ctx.ContextUser.FirstDOW
 		}
 
 		date := ctx.FormString("date")

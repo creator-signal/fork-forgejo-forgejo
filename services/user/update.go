@@ -31,6 +31,7 @@ type UpdateOptions struct {
 	Visibility                   optional.Option[structs.VisibleType]
 	KeepActivityPrivate          optional.Option[bool]
 	Language                     optional.Option[string]
+	FirstDOW                     optional.Option[int]
 	Theme                        optional.Option[string]
 	DiffViewStyle                optional.Option[string]
 	AllowCreateOrganization      optional.Option[bool]
@@ -73,6 +74,10 @@ func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) er
 	if has, value := opts.Language.Get(); has {
 		u.Language = value
 		cols = append(cols, "language")
+	}
+	if has, value := opts.FirstDOW.Get(); has {
+		u.FirstDOW = value
+		cols = append(cols, "first_dow")
 	}
 	if has, value := opts.Theme.Get(); has {
 		u.Theme = value
