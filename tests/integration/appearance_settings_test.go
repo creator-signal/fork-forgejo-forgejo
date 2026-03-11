@@ -74,14 +74,13 @@ func TestFirstDayOfWeekChange(t *testing.T) {
 	testChangeFirstDOW(t, user, "6")
 	testSelectedFirstDOW(t, user, "6")
 
-	// Test that invalid values are rejected
-	response := user.MakeRequest(t, NewRequestWithValues(t, "POST", "/user/settings/appearance/first_dow", map[string]string{
+	// Test that invalid values are rejected by checking the setting was not changed
+	user.MakeRequest(t, NewRequestWithValues(t, "POST", "/user/settings/appearance/first_dow", map[string]string{
 		"first_dow": "7",
 	}), http.StatusSeeOther)
 
-	// Verify the value was not changed
-	page := NewHTMLParser(t, response.Body)
-	assert.True(t, page.Find(".flash-error").Length() > 0 || strings.Contains(response.Body.String(), "error"))
+	// Verify the value was not changed (should still be "6" from previous test)
+	testSelectedFirstDOW(t, user, "6")
 }
 
 // testSelectedFirstDOW checks that the expected first day of week is selected on appearance page
@@ -95,12 +94,14 @@ func testSelectedFirstDOW(t *testing.T, session *TestSession, expectedFirstDOW s
 	assert.True(t, selectorExists)
 	assert.Equal(t, expectedFirstDOW, selectorValue)
 
-	// Verify the user model has the correct value
+	// Verify the user setting has the correct value
 	// Since we logged in as user2, load that user and check the value
 	user, err := user_model.GetUserByName(db.DefaultContext, "user2")
 	require.NoError(t, err)
 	expectedValue, _ := strconv.Atoi(expectedFirstDOW)
-	assert.Equal(t, expectedValue, user.FirstDOW)
+	firstDOW, err := user_model.GetFirstDayOfWeek(db.DefaultContext, user.ID)
+	require.NoError(t, err)
+	assert.Equal(t, expectedValue, firstDOW)
 }
 
 // testChangeFirstDOW changes user's first day of week setting

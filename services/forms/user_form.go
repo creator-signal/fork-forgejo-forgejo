@@ -307,7 +307,7 @@ func (f UpdateThemeForm) IsThemeExists() bool {
 
 // UpdateFirstDOWForm form for updating a user's first day of week
 type UpdateFirstDOWForm struct {
-	FirstDOW int `binding:"Required;Range(0,6)"`
+	FirstDOW int `form:"first_dow" binding:"Range(0,6)" locale:"settings.first_dow"`
 }
 
 // Validate validates the field

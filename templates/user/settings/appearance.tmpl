@@ -81,16 +81,16 @@
 				</div>
 				<div class="field">
 					<div class="ui selection dropdown" id="first_dow">
-						<input name="first_dow" type="hidden" value="{{.SignedUser.FirstDOW}}">
+						<input name="first_dow" type="hidden" value="{{.FirstDOW}}">
 						{{svg "octicon-triangle-down" 14 "dropdown icon"}}
 						<div class="text">
-							{{if eq .SignedUser.FirstDOW 0}}{{ctx.Locale.Tr "settings.day.sunday"}}{{else if eq .SignedUser.FirstDOW 1}}{{ctx.Locale.Tr "settings.day.monday"}}{{else if eq .SignedUser.FirstDOW 5}}{{ctx.Locale.Tr "settings.day.saturday"}}{{else if eq .SignedUser.FirstDOW 4}}{{ctx.Locale.Tr "settings.day.friday"}}{{else}}{{ctx.Locale.Tr "settings.day.monday"}}{{end}}
+							{{if eq .FirstDOW 0}}{{ctx.Locale.Tr "settings.day.sunday"}}{{else if eq .FirstDOW 1}}{{ctx.Locale.Tr "settings.day.monday"}}{{else if eq .FirstDOW 5}}{{ctx.Locale.Tr "settings.day.saturday"}}{{else if eq .FirstDOW 4}}{{ctx.Locale.Tr "settings.day.friday"}}{{else}}{{ctx.Locale.Tr "settings.day.monday"}}{{end}}
 						</div>
 						<div class="menu">
-							<div class="item{{if eq .SignedUser.FirstDOW 1}} active selected{{end}}" data-value="1">{{ctx.Locale.Tr "settings.day.monday"}}</div>
-							<div class="item{{if eq .SignedUser.FirstDOW 0}} active selected{{end}}" data-value="0">{{ctx.Locale.Tr "settings.day.sunday"}}</div>
-							<div class="item{{if eq .SignedUser.FirstDOW 6}} active selected{{end}}" data-value="6">{{ctx.Locale.Tr "settings.day.saturday"}}</div>
-							<div class="item{{if eq .SignedUser.FirstDOW 5}} active selected{{end}}" data-value="5">{{ctx.Locale.Tr "settings.day.friday"}}</div>
+							<div class="item{{if eq .FirstDOW 1}} active selected{{end}}" data-value="1">{{ctx.Locale.Tr "settings.day.monday"}}</div>
+							<div class="item{{if eq .FirstDOW 0}} active selected{{end}}" data-value="0">{{ctx.Locale.Tr "settings.day.sunday"}}</div>
+							<div class="item{{if eq .FirstDOW 6}} active selected{{end}}" data-value="6">{{ctx.Locale.Tr "settings.day.saturday"}}</div>
+							<div class="item{{if eq .FirstDOW 5}} active selected{{end}}" data-value="5">{{ctx.Locale.Tr "settings.day.friday"}}</div>
 						</div>
 					</div>
 				</div>

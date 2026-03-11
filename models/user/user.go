@@ -107,7 +107,6 @@ type User struct {
 	Rands       string `xorm:"VARCHAR(32)"`
 	Salt        string `xorm:"VARCHAR(32)"`
 	Language    string `xorm:"VARCHAR(5)"`
-	FirstDOW    int    `xorm:"NOT NULL DEFAULT 1"`
 	Description string
 
 	CreatedUnix   timeutil.TimeStamp `xorm:"INDEX created"`
@@ -762,7 +761,6 @@ func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefa
 	u.Theme = setting.UI.DefaultTheme
 	u.IsRestricted = setting.Service.DefaultUserIsRestricted
 	u.IsActive = !setting.Service.RegisterEmailConfirm && !setting.Service.RegisterManualConfirm
-	u.FirstDOW = 1
 
 	// Ensure consistency of the dates.
 	if u.UpdatedUnix < u.CreatedUnix {

@@ -14,4 +14,6 @@ const (
 	UserActivityPubPrivPem = "activitypub.priv_pem"
 	// UserActivityPubPubPem is user's public key
 	UserActivityPubPubPem = "activitypub.pub_pem"
+	// SettingsKeyFirstDoW is the setting key for first day of week (0=Sunday, 1=Monday, 5=Friday, 6=Saturday)
+	SettingsKeyFirstDoW = "first_day_of_week"
 )

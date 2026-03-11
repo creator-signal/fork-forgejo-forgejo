@@ -211,3 +211,24 @@ func upsertUserSettingValue(ctx context.Context, userID int64, key, value string
 		return err
 	})
 }
+
+// GetFirstDayOfWeek returns the first day of week setting for a user
+func GetFirstDayOfWeek(ctx context.Context, userID int64) (int, error) {
+	// Returns: 0=Sunday, 1=Monday, 5=Friday, 6=Saturday
+	// Default is 1 (Monday)
+	value, err := GetUserSetting(ctx, userID, SettingsKeyFirstDoW, "1")
+	if err != nil {
+		return 1, err
+	}
+	// Parse the value to int
+	var firstDOW int
+	// Try to parse as int, default to 1 (Monday) if parsing fails
+	if _, err := fmt.Sscanf(value, "%d", &firstDOW); err != nil {
+		return 1, nil
+	}
+	// Validate the value is in valid range (0-6)
+	if firstDOW < 0 || firstDOW > 6 {
+		return 1, nil
+	}
+	return firstDOW, nil
+}

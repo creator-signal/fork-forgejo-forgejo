@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -341,6 +342,13 @@ func Appearance(ctx *context.Context) {
 		return forms.IsUserHiddenCommentTypeGroupChecked(commentTypeGroup, hiddenCommentTypes)
 	}
 
+	firstDOW, err := user_model.GetFirstDayOfWeek(ctx, ctx.Doer.ID)
+	if err != nil {
+		ctx.ServerError("GetFirstDayOfWeek", err)
+		return
+	}
+	ctx.Data["FirstDOW"] = firstDOW
+
 	ctx.HTML(http.StatusOK, tplSettingsAppearance)
 }
 
@@ -409,11 +417,13 @@ func UpdateUserFirstDOW(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsAppearance"] = true
 
-	opts := &user_service.UpdateOptions{
-		FirstDOW: optional.Some(form.FirstDOW),
+	if ctx.HasError() {
+		ctx.Redirect(setting.AppSubURL + "/user/settings/appearance")
+		return
 	}
-	if err := user_service.UpdateUser(ctx, ctx.Doer, opts); err != nil {
-		ctx.ServerError("UpdateUser", err)
+
+	if err := user_model.SetUserSetting(ctx, ctx.Doer.ID, user_model.SettingsKeyFirstDoW, strconv.Itoa(form.FirstDOW)); err != nil {
+		ctx.ServerError("SetUserSetting", err)
 		return
 	}
 

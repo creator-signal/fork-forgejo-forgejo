@@ -111,7 +111,8 @@ func Dashboard(ctx *context.Context) {
 		}
 		ctx.Data["HeatmapData"] = data
 		ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
-		ctx.Data["HeatmapFirstDOW"] = ctxUser.FirstDOW
+		firstDOW, _ := user_model.GetFirstDayOfWeek(ctx, ctxUser.ID)
+		ctx.Data["HeatmapFirstDOW"] = firstDOW
 	}
 
 	feeds, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
