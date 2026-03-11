@@ -25,7 +25,7 @@ func CatFileBatchCheck(ctx context.Context, shasToCheckReader *io.PipeReader, ca
 
 	stderr := new(bytes.Buffer)
 	var errbuf strings.Builder
-	cmd := git.NewCommand(ctx, "cat-file", "--batch-check")
+	cmd := git.NewCommand(ctx, "cat-file", "--batch-check", "--use-mailmap")
 	if err := cmd.Run(&git.RunOpts{
 		Dir:    tmpBasePath,
 		Stdin:  shasToCheckReader,
@@ -43,7 +43,7 @@ func CatFileBatchCheckAllObjects(ctx context.Context, catFileCheckWriter *io.Pip
 
 	stderr := new(bytes.Buffer)
 	var errbuf strings.Builder
-	cmd := git.NewCommand(ctx, "cat-file", "--batch-check", "--batch-all-objects")
+	cmd := git.NewCommand(ctx, "cat-file", "--batch-check", "--batch-all-objects", "--use-mailmap")
 	if err := cmd.Run(&git.RunOpts{
 		Dir:    tmpBasePath,
 		Stdout: catFileCheckWriter,
@@ -64,7 +64,7 @@ func CatFileBatch(ctx context.Context, shasToBatchReader *io.PipeReader, catFile
 
 	stderr := new(bytes.Buffer)
 	var errbuf strings.Builder
-	if err := git.NewCommand(ctx, "cat-file", "--batch").Run(&git.RunOpts{
+	if err := git.NewCommand(ctx, "cat-file", "--batch", "--use-mailmap").Run(&git.RunOpts{
 		Dir:    tmpBasePath,
 		Stdout: catFileBatchWriter,
 		Stdin:  shasToBatchReader,

@@ -119,7 +119,7 @@ func catFileBatch(ctx context.Context, repoPath string) (WriteCloserError, *bufi
 
 	go func() {
 		stderr := strings.Builder{}
-		err := NewCommand(ctx, "cat-file", "--batch").
+		err := NewCommand(ctx, "cat-file", "--batch", "--use-mailmap").
 			SetDescription(fmt.Sprintf("%s cat-file --batch [repo_path: %s] (%s:%d)", GitExecutable, repoPath, filename, line)).
 			Run(&RunOpts{
 				Dir:    repoPath,
