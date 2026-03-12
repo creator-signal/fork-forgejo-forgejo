@@ -266,7 +266,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/hashicorp/go-version => github.com/6543/go-version v1.3.1
+replace github.com/hashicorp/go-version => github.com/6543/go-version v1.4.0
 
 replace github.com/mholt/archiver/v3 => code.forgejo.org/forgejo/archiver/v3 v3.5.1
 
