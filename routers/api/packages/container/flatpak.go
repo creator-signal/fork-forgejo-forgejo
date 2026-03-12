@@ -1,4 +1,4 @@
-// Copyright 2025 The Forgejo Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package container
@@ -6,7 +6,6 @@ package container
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -55,38 +54,6 @@ func getFlatpakPackageVersion(ctx *context.Context) (bool, *packages_model.Packa
 	}
 
 	return true, packageVersion, metadata
-}
-
-func SetFlatpakRuntimeRepo(ctx *context.Context) {
-	ok, packageVersion, metadata := getFlatpakPackageVersion(ctx)
-	if !ok {
-		return
-	}
-
-	body, err := io.ReadAll(ctx.Req.Body)
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
-	metadata.Flatpak.RuntimeRepo = string(body)
-	fmt.Println(metadata.Flatpak)
-
-	metadataJSON, err := json.Marshal(metadata)
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
-	packageVersion.MetadataJSON = string(metadataJSON)
-
-	err = packages_model.UpdateVersion(ctx, packageVersion)
-	if err != nil {
-		apiError(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
-	ctx.Status(http.StatusNoContent)
 }
 
 func FlatpakRef(ctx *context.Context) {

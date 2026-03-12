@@ -338,10 +338,7 @@ func CommonRoutes() *web.Route {
 			r.Get("/index/dynamic", container.Index)
 			r.Group("/flatpak", func() {
 				r.Get("/repo.flatpakrepo", container.FlatpakRepo)
-				r.Group("/{package}/{version}", func() {
-					r.Get("/ref.flatpakref", container.FlatpakRef)
-					r.Put("/runtime_repo", reqPackageAccess(perm.AccessModeWrite), container.SetFlatpakRuntimeRepo)
-				})
+				r.Get("/ref/{package}/{version}/ref.flatpakref", container.FlatpakRef)
 			})
 		})
 		r.Group("/cran", func() {

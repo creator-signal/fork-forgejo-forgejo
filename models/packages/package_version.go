@@ -176,17 +176,18 @@ const (
 // PackageSearchOptions are options for SearchXXX methods
 // All fields optional and are not used if they have their default value (nil, "", 0)
 type PackageSearchOptions struct {
-	OwnerID         int64
-	RepoID          int64
-	Type            Type
-	PackageID       int64
-	Name            SearchValue       // only results with the specific name are found
-	Version         SearchValue       // only results with the specific version are found
-	Properties      map[string]string // only results are found which contain all listed version properties with the specific value
-	IsInternal      optional.Option[bool]
-	HasFileWithName string                // only results are found which are associated with a file with the specific name
-	HasFiles        optional.Option[bool] // only results are found which have associated files
-	Sort            VersionSort
+	OwnerID            int64
+	RepoID             int64
+	Type               Type
+	PackageID          int64
+	Name               SearchValue       // only results with the specific name are found
+	Version            SearchValue       // only results with the specific version are found
+	Properties         map[string]string // only results are found which contain all listed version properties with the specific value
+	ExistingProperties []string
+	IsInternal         optional.Option[bool]
+	HasFileWithName    string                // only results are found which are associated with a file with the specific name
+	HasFiles           optional.Option[bool] // only results are found which have associated files
+	Sort               VersionSort
 	db.Paginator
 }
 
@@ -228,23 +229,33 @@ func (opts *PackageSearchOptions) ToConds() builder.Cond {
 		}
 	}
 
-	if len(opts.Properties) != 0 {
+	if len(opts.Properties) != 0 || len(opts.ExistingProperties) != 0 {
 		var propsCond builder.Cond = builder.Eq{
 			"package_property.ref_type": PropertyTypeVersion,
 		}
 		propsCond = propsCond.And(builder.Expr("package_property.ref_id = package_version.id"))
 
 		propsCondBlock := builder.NewCond()
-		for name, value := range opts.Properties {
-			propsCondBlock = propsCondBlock.Or(builder.Eq{
-				"package_property.name":  name,
-				"package_property.value": value,
-			})
+
+		if len(opts.Properties) != 0 {
+			for name, value := range opts.Properties {
+				propsCondBlock = propsCondBlock.Or(builder.Eq{
+					"package_property.name":  name,
+					"package_property.value": value,
+				})
+			}
 		}
+
+		if len(opts.ExistingProperties) != 0 {
+			for _, value := range opts.ExistingProperties {
+				propsCondBlock = propsCondBlock.Or(builder.Eq{"package_property.name": value})
+			}
+		}
+
 		propsCond = propsCond.And(propsCondBlock)
 
 		cond = cond.And(builder.Eq{
-			strconv.Itoa(len(opts.Properties)): builder.Select("COUNT(*)").Where(propsCond).From("package_property"),
+			strconv.Itoa(len(opts.Properties) + len(opts.ExistingProperties)): builder.Select("COUNT(*)").Where(propsCond).From("package_property"),
 		})
 	}
 

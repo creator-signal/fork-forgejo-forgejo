@@ -1,4 +1,4 @@
-// Copyright 2025 The Forgejo Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package container
@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 
@@ -38,31 +37,6 @@ type indexResponse struct {
 	Results  []indexRepository
 }
 
-// Implements the check for the label: param
-func checkLabelParam(labels map[string]string, labelParam string) (bool, error) {
-	if labelParam == "" {
-		return true, nil
-	}
-
-	if strings.HasSuffix(labelParam, ":exists=1") {
-		labelName := strings.TrimSuffix(labelParam, ":exists=1")
-		_, ok := labels[labelName]
-		return ok, nil
-	}
-
-	labelParamParts := strings.Split(labelParam, "=")
-	if len(labelParamParts) != 2 {
-		return false, fmt.Errorf("invalid label parameter")
-	}
-
-	content, ok := labels[labelParamParts[0]]
-	if !ok {
-		return false, nil
-	}
-
-	return labelParamParts[1] == content, nil
-}
-
 // Returns all properties needed by index
 func getAllPackageVersionProperties(ctx *context.Context, packageVersion *packages_model.PackageVersion) ([]*packages_model.PackageProperty, error) {
 	// FIrst we need the container.repository property which is part of the package
@@ -88,36 +62,48 @@ func getAllPackageVersionProperties(ctx *context.Context, packageVersion *packag
 	return slices.Concat(packageProperties, fileProperties), nil
 }
 
-// Returns the label param which is separated by a : rather than a =
-func getLabelParam(rawQuery string) string {
-	unescapedQuery, err := url.QueryUnescape(rawQuery)
-	if err != nil {
-		return ""
-	}
-
-	for _, currentPart := range strings.Split(unescapedQuery, "&") {
-		if strings.HasPrefix(currentPart, "label:") {
-			return strings.TrimPrefix(currentPart, "label:")
-		}
-	}
-
-	return ""
-}
-
 // Implements https://github.com/flatpak/flatpak-oci-specs/blob/32a803aaa58f8406b49c5f9c81fc3f6ca761c06d/registry-index.md
 func Index(ctx *context.Context) {
 	architectureParam := ctx.FormString("architecture")
-	labelParam := getLabelParam(ctx.Req.URL.RawQuery)
 	tagParam := ctx.FormString("tag")
 	osParam := ctx.FormString("os")
 
 	searchOptions := &packages_model.PackageSearchOptions{
-		OwnerID: ctx.ContextUser.ID,
-		Type:    packages_model.TypeContainer,
+		OwnerID:    ctx.ContextUser.ID,
+		Type:       packages_model.TypeContainer,
+		Properties: make(map[string]string),
 	}
 
 	if tagParam != "" {
 		searchOptions.Version = packages_model.SearchValue{Value: tagParam, ExactMatch: true}
+	}
+
+	if osParam != "" {
+		searchOptions.Properties[container_module.PropertyOperatingSystem] = osParam
+	}
+
+	if architectureParam != "" {
+		searchOptions.Properties[container_module.PropertyArchitecture] = architectureParam
+	}
+
+	// Search for the label
+	for key, values := range ctx.Req.URL.Query() {
+		if len(values) != 1 {
+			continue
+		}
+
+		if !strings.HasPrefix(key, "label:") {
+			continue
+		}
+
+		label, _ := strings.CutPrefix(key, "label:")
+
+		if strings.HasSuffix(label, ":exists") {
+			name, _ := strings.CutSuffix(label, ":exists")
+			searchOptions.ExistingProperties = append(searchOptions.ExistingProperties, container_module.GetLabelPropertyKey(name))
+		} else {
+			searchOptions.Properties[label] = values[0]
+		}
 	}
 
 	pvs, _, err := packages_model.SearchVersions(ctx, searchOptions)
@@ -143,23 +129,6 @@ func Index(ctx *context.Context) {
 
 		os := platformParts[0]
 		architecture := platformParts[1]
-
-		if osParam != "" && osParam != os {
-			continue
-		}
-
-		if architectureParam != "" && architectureParam != architecture {
-			continue
-		}
-
-		labelAllowed, err := checkLabelParam(metadata.Labels, labelParam)
-		if err != nil {
-			apiError(ctx, http.StatusBadRequest, err)
-			return
-		}
-		if !labelAllowed {
-			continue
-		}
 
 		properties, err := getAllPackageVersionProperties(ctx, packageVersion)
 		if err != nil {

@@ -20,6 +20,8 @@ const (
 	PropertyRepository        = "container.repository"
 	PropertyDigest            = "container.digest"
 	PropertyMediaType         = "container.mediatype"
+	PropertyOperatingSystem   = "container.os"
+	PropertyArchitecture      = "container.architecture"
 	PropertyManifestTagged    = "container.manifest.tagged"
 	PropertyManifestReference = "container.manifest.reference"
 
@@ -207,5 +209,14 @@ func parseFlatpakMetadata(labels map[string]string) (*flatpak.Flatpak, error) {
 	flatpakData.ID = refParts[1]
 	flatpakData.Branch = refParts[3]
 
+	runtimeRepo, ok := labels["org.flatpak.runtime-repo"]
+	if ok {
+		flatpakData.RuntimeRepo = runtimeRepo
+	}
+
 	return flatpakData, nil
+}
+
+func GetLabelPropertyKey(name string) string {
+	return fmt.Sprintf("container.label.%s", name)
 }

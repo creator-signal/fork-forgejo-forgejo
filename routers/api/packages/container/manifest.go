@@ -387,6 +387,28 @@ func createPackageAndVersion(ctx context.Context, mci *manifestCreationInfo, met
 		}
 	}
 
+	platformParts := strings.Split(metadata.Platform, "/")
+	if len(platformParts) != 2 {
+		return nil, fmt.Errorf("Invalid platform: %s", metadata.Platform)
+	}
+
+	_, err = packages_model.InsertProperty(ctx, packages_model.PropertyTypeVersion, pv.ID, container_module.PropertyOperatingSystem, platformParts[0])
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = packages_model.InsertProperty(ctx, packages_model.PropertyTypeVersion, pv.ID, container_module.PropertyArchitecture, platformParts[1])
+	if err != nil {
+		return nil, err
+	}
+
+	for labelKey, labelValue := range metadata.Labels {
+		_, err = packages_model.InsertProperty(ctx, packages_model.PropertyTypeVersion, pv.ID, container_module.GetLabelPropertyKey(labelKey), labelValue)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return pv, nil
 }
 
