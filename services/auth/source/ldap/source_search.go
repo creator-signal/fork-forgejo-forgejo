@@ -324,7 +324,7 @@ func (source *Source) SearchEntry(name, passwd string, directBind bool) *SearchR
 	}
 
 	isAttributeSSHPublicKeySet := len(strings.TrimSpace(source.AttributeSSHPublicKey)) > 0
-	isAtributeAvatarSet := len(strings.TrimSpace(source.AttributeAvatar)) > 0
+	isAttributeAvatarSet := len(strings.TrimSpace(source.AttributeAvatar)) > 0
 
 	attribs := []string{source.AttributeUsername, source.AttributeName, source.AttributeSurname, source.AttributeMail}
 	if len(strings.TrimSpace(source.UserUID)) > 0 {
@@ -333,7 +333,7 @@ func (source *Source) SearchEntry(name, passwd string, directBind bool) *SearchR
 	if isAttributeSSHPublicKeySet {
 		attribs = append(attribs, source.AttributeSSHPublicKey)
 	}
-	if isAtributeAvatarSet {
+	if isAttributeAvatarSet {
 		attribs = append(attribs, source.AttributeAvatar)
 	}
 
@@ -375,7 +375,7 @@ func (source *Source) SearchEntry(name, passwd string, directBind bool) *SearchR
 		isRestricted = checkRestricted(l, source, userDN)
 	}
 
-	if isAtributeAvatarSet {
+	if isAttributeAvatarSet {
 		Avatar = sr.Entries[0].GetRawAttributeValue(source.AttributeAvatar)
 	}
 
@@ -386,6 +386,7 @@ func (source *Source) SearchEntry(name, passwd string, directBind bool) *SearchR
 		usersLdapGroups = source.listLdapGroupMemberships(l, userAttributeListedInGroup, true)
 
 		if source.GroupFilter != "" && len(usersLdapGroups) == 0 {
+			log.Info("Rejecting LDAP login: group filter set but user is not in any group")
 			return nil
 		}
 	}
@@ -441,13 +442,13 @@ func (source *Source) SearchEntries() ([]*SearchResult, error) {
 	userFilter := fmt.Sprintf(source.Filter, "*")
 
 	isAttributeSSHPublicKeySet := len(strings.TrimSpace(source.AttributeSSHPublicKey)) > 0
-	isAtributeAvatarSet := len(strings.TrimSpace(source.AttributeAvatar)) > 0
+	isAttributeAvatarSet := len(strings.TrimSpace(source.AttributeAvatar)) > 0
 
 	attribs := []string{source.AttributeUsername, source.AttributeName, source.AttributeSurname, source.AttributeMail, source.UserUID}
 	if isAttributeSSHPublicKeySet {
 		attribs = append(attribs, source.AttributeSSHPublicKey)
 	}
-	if isAtributeAvatarSet {
+	if isAttributeAvatarSet {
 		attribs = append(attribs, source.AttributeAvatar)
 	}
 
@@ -503,7 +504,7 @@ func (source *Source) SearchEntries() ([]*SearchResult, error) {
 			user.SSHPublicKey = v.GetAttributeValues(source.AttributeSSHPublicKey)
 		}
 
-		if isAtributeAvatarSet {
+		if isAttributeAvatarSet {
 			user.Avatar = v.GetRawAttributeValue(source.AttributeAvatar)
 		}
 

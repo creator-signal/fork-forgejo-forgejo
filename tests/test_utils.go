@@ -47,6 +47,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"xorm.io/xorm/convert"
+
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 )
 
 func exitf(format string, args ...any) {
@@ -128,10 +130,10 @@ func InitTest(requireGitea bool) {
 		var db *sql.DB
 		var err error
 		if setting.Database.Host[0] == '/' {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Name, setting.Database.SSLMode, setting.Database.Host))
 		} else {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 		}
 
@@ -157,10 +159,10 @@ func InitTest(requireGitea bool) {
 		db.Close()
 
 		if setting.Database.Host[0] == '/' {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@/%s?sslmode=%s&host=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Name, setting.Database.SSLMode, setting.Database.Host))
 		} else {
-			db, err = sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			db, err = sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 				setting.Database.User, setting.Database.Passwd, setting.Database.Host, setting.Database.Name, setting.Database.SSLMode))
 		}
 		// This is a different db object; requires a different Close()
@@ -261,12 +263,29 @@ func cancelProcesses(t testing.TB, delay time.Duration) {
 			for _, p := range processes {
 				t.Logf("PrepareTestEnv:Remaining Process: %q", p.Description)
 			}
+			stacks := allGoroutineStacks()
+			t.Errorf("All goroutine stacks during process cancellation failure:\n%s", string(stacks))
+			// exit so that we don't spin in a loop executing `delay` wait over and over again when we won't be able to
+			// complete tests correctly due to the environmental issue present.
+			exitf("terminating test run due to unrecoverable failure")
 			return
 		}
 		runtime.Gosched() // let the context cancellation propagate
 		processes, _ = processManager.Processes(true, true)
 	}
 	t.Logf("PrepareTestEnv: all processes cancelled within %s", time.Since(start))
+}
+
+// allGoroutineStacks is the same as runtime/debug.Stack(), but it captures the stack of all goroutines.
+func allGoroutineStacks() []byte {
+	buf := make([]byte, 1024)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			return buf[:n]
+		}
+		buf = make([]byte, 2*len(buf))
+	}
 }
 
 func PrepareGitRepoDirectory(t testing.TB) {
@@ -322,6 +341,13 @@ func PrepareCleanPackageData(t testing.TB) {
 var inTestEnv atomic.Bool
 
 func PrepareTestEnv(t testing.TB, skip ...int) func() {
+	deferFn := PrepareTestEnvWithPackageData(t, skip...)
+	PrepareCleanPackageData(t)
+	return deferFn
+}
+
+// Doesn't perform the `PrepareCleanPackageData` that `PrepareTestEnv` does...
+func PrepareTestEnvWithPackageData(t testing.TB, skip ...int) func() {
 	t.Helper()
 
 	if !inTestEnv.CompareAndSwap(false, true) {
@@ -346,7 +372,6 @@ func PrepareTestEnv(t testing.TB, skip ...int) func() {
 	// do not add more Prepare* functions here, only call necessary ones in the related test functions
 	PrepareGitRepoDirectory(t)
 	PrepareLFSStorage(t)
-	PrepareCleanPackageData(t)
 	return deferFn
 }
 
@@ -379,15 +404,15 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 	// Not using opts.Name.ValueOrDefault() here to avoid unnecessarily
 	// generating an UUID when a name is specified.
 	var repoName string
-	if opts.Name.Has() {
-		repoName = opts.Name.Value()
+	if has, value := opts.Name.Get(); has {
+		repoName = value
 	} else {
 		repoName = uuid.NewString()
 	}
 
 	var autoInit bool
-	if opts.AutoInit.Has() {
-		autoInit = opts.AutoInit.Value()
+	if has, value := opts.AutoInit.Get(); has {
+		autoInit = value
 	} else {
 		autoInit = true
 	}
@@ -401,22 +426,21 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 		License:          "WTFPL",
 		Readme:           "Default",
 		DefaultBranch:    "main",
-		IsTemplate:       opts.IsTemplate.Value(),
-		ObjectFormatName: opts.ObjectFormat.Value(),
-		IsPrivate:        opts.IsPrivate.Value(),
+		IsTemplate:       opts.IsTemplate.ValueOrZeroValue(),
+		ObjectFormatName: opts.ObjectFormat.ValueOrZeroValue(),
+		IsPrivate:        opts.IsPrivate.ValueOrZeroValue(),
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, repo)
 
 	// Populate `enabledUnits` if we have any enabled.
 	var enabledUnits []repo_model.RepoUnit
-	if opts.EnabledUnits.Has() {
-		units := opts.EnabledUnits.Value()
+	if has, units := opts.EnabledUnits.Get(); has {
 		enabledUnits = make([]repo_model.RepoUnit, len(units))
 
 		for i, unitType := range units {
 			var config convert.Conversion
-			if cfg, ok := opts.UnitConfig.Value()[unitType]; ok {
+			if cfg, ok := opts.UnitConfig.ValueOrZeroValue()[unitType]; ok {
 				config = cfg
 			}
 			enabledUnits[i] = repo_model.RepoUnit{
@@ -435,9 +459,8 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 
 	// Add files, if any.
 	var sha string
-	if opts.Files.Has() {
+	if has, files := opts.Files.Get(); has {
 		assert.True(t, autoInit, "Files cannot be specified if AutoInit is disabled")
-		files := opts.Files.Value()
 
 		commitID, err := gitrepo.GetBranchCommitID(git.DefaultContext, repo, "main")
 		require.NoError(t, err)
@@ -468,9 +491,9 @@ func CreateDeclarativeRepoWithOptions(t *testing.T, owner *user_model.User, opts
 	}
 
 	// If there's a Wiki branch specified, create a wiki, and a default wiki page.
-	if opts.WikiBranch.Has() {
+	if has, value := opts.WikiBranch.Get(); has {
 		// Set the wiki branch in the database first
-		repo.WikiBranch = opts.WikiBranch.Value()
+		repo.WikiBranch = value
 		err := repo_model.UpdateRepositoryCols(db.DefaultContext, repo, "wiki_branch")
 		require.NoError(t, err)
 

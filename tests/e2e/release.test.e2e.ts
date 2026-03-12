@@ -1,3 +1,6 @@
+// Copyright 2024-2026 The Forgejo Authors
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
 // models/repo/attachment.go
 // modules/structs/attachment.go
@@ -15,13 +18,23 @@ import {validate_form} from './shared/forms.ts';
 
 test.use({user: 'user2'});
 
+test.afterEach(async ({page}) => {
+  // Delete release
+  const response = await page.goto('/user2/repo2/releases/edit/2.0');
+  test.skip(response.status() === 404, 'No release to delete');
+
+  await page.locator('.delete-button').dispatchEvent('click');
+  await page.locator('.button.ok').click();
+  await expect(page).toHaveURL('/user2/repo2/releases');
+});
+
 test.describe('Releases', () => {
-  test('External Release Attachments', async ({page, isMobile}) => {
+  test('External release attachments', async ({page, isMobile}) => {
     test.skip(isMobile);
 
-    // Click "New Release"
+    // Click "New release"
     await page.goto('/user2/repo2/releases');
-    await page.click('.button.small.primary');
+    await page.getByRole('link', {name: 'New release'}).click();
 
     // Fill out form and create new release
     await expect(page).toHaveURL('/user2/repo2/releases/new');
@@ -35,7 +48,7 @@ test.describe('Releases', () => {
     await page.fill('input[name=attachment-new-exturl-2]', 'https://forgejo.org/');
     await page.click('.remove-rel-attach');
     await screenshot(page);
-    await page.click('.button.small.primary');
+    await page.getByRole('button', {name: 'Publish release'}).click();
 
     // Validate release page and click edit
     await expect(page).toHaveURL('/user2/repo2/releases');
@@ -69,7 +82,7 @@ test.describe('Releases', () => {
     await page.locator('.attachment_edit:visible').nth(2).fill('Test3');
     await page.locator('.attachment_edit:visible').nth(3).fill('https://gitea.com/');
     await screenshot(page);
-    await page.click('.button.small.primary');
+    await page.getByRole('button', {name: 'Update release'}).click();
 
     // Validate release page and click edit
     await expect(page).toHaveURL('/user2/repo2/releases');
@@ -95,20 +108,48 @@ test.describe('Releases', () => {
 
     await page.locator('input[name=title]').pressSequentially('v2.0');
     await page.locator('input[name=tag_name]').pressSequentially('2.0');
-    await page.click('.button.small.primary');
+    await page.getByRole('button', {name: 'Publish release'}).click();
 
     await page.goto('/user2/repo2/releases/edit/2.0');
 
     await expect(page.locator('input[name=title]')).toHaveValue('v2.0');
   });
 
-  test.afterEach(async ({page}) => {
-    // Delete release
-    const response = await page.goto('/user2/repo2/releases/edit/2.0');
-    test.skip(response.status() === 404, 'No release to delete');
+  test('UI reaction to lengthy UGC', async ({page, viewport, isMobile}) => {
+    await page.goto('/user2/repo2/releases/new');
 
-    await page.locator('.delete-button').dispatchEvent('click');
-    await page.locator('.button.ok').click();
-    await expect(page).toHaveURL('/user2/repo2/releases');
+    await page.locator('input[name=tag_name]').pressSequentially('2.0');
+    await page.locator('input[name=title]').pressSequentially('v'.repeat(200));
+    await page.locator('textarea[name=content]').pressSequentially('v'.repeat(200)); // Description
+
+    // Submit form. Mobile Chrome can't press the button in Playwright (not a Forgejo
+    // bug). Work around this by pressing Enter on submit button
+    await page.getByRole('button', {name: 'Publish release'}).press('Enter');
+
+    // Check widths of UI elements
+    await page.goto('/user2/repo2/releases');
+    const release = page.locator('#release-list > li:has(a[href$="/tag/2.0"])');
+    // Release entry should be less than viewport
+    expect((await release.boundingBox()).width).toBeLessThan(viewport.width);
+    if (isMobile) {
+      const metaWidth = (await release.locator('.meta').boundingBox()).width;
+      const titleWidth = (await release.locator('.release-title-wrap').boundingBox()).width;
+      const detailsWidth = (await release.locator('.detail').boundingBox()).width;
+      // In row layout they all should be similar to the viewport length, accounting
+      // for 8px margins on each side
+      expect(metaWidth).toBeCloseTo(viewport.width - 16, 0);
+      expect(titleWidth).toBeCloseTo(viewport.width - 16, 0);
+      expect(detailsWidth).toBeCloseTo(viewport.width - 16, 0);
+      // They also should all be all same width
+      expect(metaWidth).toBe(titleWidth);
+      expect(titleWidth).toBe(detailsWidth);
+    } else {
+      // Left and right columns should be less than 25% and 75% of viewport width
+      // But on wide screens there's a lot of additional emptiness, so we can't
+      // match columns' width against the viewport, only make sure they fit
+      expect((await release.locator('.meta').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
+      expect((await release.locator('.release-title-wrap').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
+      expect((await release.locator('.detail').boundingBox()).width).toBeLessThan(viewport.width * 0.75);
+    }
   });
 });

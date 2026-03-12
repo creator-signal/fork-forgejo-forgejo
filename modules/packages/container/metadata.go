@@ -17,13 +17,14 @@ import (
 )
 
 const (
-	PropertyRepository        = "container.repository"
-	PropertyDigest            = "container.digest"
-	PropertyMediaType         = "container.mediatype"
-	PropertyOperatingSystem   = "container.os"
-	PropertyArchitecture      = "container.architecture"
-	PropertyManifestTagged    = "container.manifest.tagged"
-	PropertyManifestReference = "container.manifest.reference"
+	PropertyRepository                   = "container.repository"
+	PropertyRepositoryAutolinkingPending = "container.repository.autolinking-pending"
+	PropertyDigest                       = "container.digest"
+	PropertyMediaType                    = "container.mediatype"
+	PropertyOperatingSystem              = "container.os"
+	PropertyArchitecture                 = "container.architecture"
+	PropertyManifestTagged               = "container.manifest.tagged"
+	PropertyManifestReference            = "container.manifest.reference"
 
 	DefaultPlatform = "linux/amd64"
 
@@ -69,6 +70,7 @@ type Metadata struct {
 	Labels           map[string]string `json:"labels,omitempty"`
 	ImageLayers      []string          `json:"layer_creation,omitempty"`
 	Manifests        []*Manifest       `json:"manifests,omitempty"`
+	Annotations      map[string]string `json:"annotations,omitempty"`
 	Flatpak          *flatpak.Flatpak  `json:"flatpak,omitempty"`
 }
 

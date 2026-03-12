@@ -23,6 +23,7 @@ forgejo.org/models/db
 	DumpTables
 	GetTableNames
 	extendBeansForCascade
+	IsErrNameActivityPubInvalid
 
 forgejo.org/models/dbfs
 	file.renameTo
@@ -49,9 +50,6 @@ forgejo.org/models/organization
 
 forgejo.org/models/perm/access
 	GetRepoWriters
-
-forgejo.org/models/repo
-	WatchRepoMode
 
 forgejo.org/models/user
 	IsErrUserWrongType
@@ -238,6 +236,7 @@ forgejo.org/services/repository
 
 forgejo.org/services/repository/files
 	ContentType.String
+	RepoFileOptionMode
 
 forgejo.org/services/repository/gitgraph
 	Parser.Reset

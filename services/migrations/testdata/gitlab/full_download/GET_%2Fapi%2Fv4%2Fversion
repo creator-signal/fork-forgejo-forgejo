@@ -1,17 +1,20 @@
-Content-Type: application/json
 Cache-Control: max-age=0, private, must-revalidate
-Etag: W/"a27b6b3c661f4ee7a68e5b905f5291fb"
-Vary: Origin, Accept-Encoding
-X-Gitlab-Meta: {"correlation_id":"10488cc696aabdc48229039f2c9e4ebd","version":"1"}
-Gitlab-Sv: api-gke-us-east1-d
 Cf-Cache-Status: MISS
-Strict-Transport-Security: max-age=31536000
-X-Frame-Options: SAMEORIGIN
-X-Runtime: 0.034189
-Referrer-Policy: strict-origin-when-cross-origin
-Set-Cookie: _cfuvid=hbFjaLVJudhzz6Sqg5QnViD.eikToNruD.b1oEG5xrc-1725394792940-0.0.1.1-604800000; path=/; domain=.gitlab.com; HttpOnly; Secure; SameSite=None
 Content-Security-Policy: default-src 'none'
-Gitlab-Lb: haproxy-main-56-lb-gprd
+Content-Type: application/json
+Etag: W/"eb8caeed3eb2f6feb10c7f2b9610d346"
+Gitlab-Lb: haproxy-main-24-lb-gprd
+Gitlab-Sv: api-gke-us-east1-d
+Ratelimit-Limit: 2000
+Ratelimit-Name: throttle_authenticated_api
+Ratelimit-Observed: 1
+Ratelimit-Remaining: 1999
+Ratelimit-Reset: 1771055640
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=31536000
+Vary: Origin, Accept-Encoding
 X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Runtime: 0.054657
 
-{"version":"17.4.0-pre","revision":"8c6dcc9e627","kas":{"enabled":true,"externalUrl":"wss://kas.gitlab.com","version":"17.4.0+a2ca345cd681ef39094623d8f4b6ed65996de57d"},"enterprise":true}
+{"version":"18.9.0-pre","revision":"dde8b248bb9","kas":{"enabled":true,"externalUrl":"wss://kas.gitlab.com","externalK8sProxyUrl":"https://kas.gitlab.com/k8s-proxy","version":"18.9.0-rc1+f6b096ad1f478a35a7335ec9b905c1230fd27b4e"},"enterprise":true}

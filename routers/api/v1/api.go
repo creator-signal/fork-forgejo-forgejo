@@ -22,8 +22,6 @@
 //
 //	Security:
 //	- BasicAuth :
-//	- Token :
-//	- AccessToken :
 //	- AuthorizationHeaderToken :
 //	- SudoParam :
 //	- SudoHeader :
@@ -32,16 +30,6 @@
 //	SecurityDefinitions:
 //	BasicAuth:
 //	     type: basic
-//	Token:
-//	     type: apiKey
-//	     name: token
-//	     in: query
-//	     description: This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.
-//	AccessToken:
-//	     type: apiKey
-//	     name: access_token
-//	     in: query
-//	     description: This authentication option is deprecated for removal in Forgejo v13.0.0. Please use AuthorizationHeaderToken instead.
 //	AuthorizationHeaderToken:
 //	     type: apiKey
 //	     name: Authorization
@@ -116,7 +104,7 @@ func sudo() func(ctx *context.APIContext) {
 		}
 
 		if len(sudo) > 0 {
-			if ctx.IsSigned && ctx.Doer.IsAdmin {
+			if ctx.IsSigned && ctx.IsUserSiteAdmin() {
 				user, err := user_model.GetUserByName(ctx, sudo)
 				if err != nil {
 					if user_model.IsErrUserNotExist(err) {
@@ -220,9 +208,9 @@ func repoAssignment() func(ctx *context.APIContext) {
 				ctx.Repo.UnitsMode[u.Type] = ctx.Repo.AccessMode
 			}
 		} else {
-			ctx.Repo.Permission, err = access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+			ctx.Repo.Permission, err = access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 			if err != nil {
-				ctx.Error(http.StatusInternalServerError, "GetUserRepoPermission", err)
+				ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 				return
 			}
 		}
@@ -367,16 +355,6 @@ func tokenRequiresScopes(requiredScopeCategories ...auth_model.AccessTokenScopeC
 		}
 
 		ctx.Data["requiredScopeCategories"] = requiredScopeCategories
-
-		// check if scope only applies to public resources
-		publicOnly, err := scope.PublicOnly()
-		if err != nil {
-			ctx.Error(http.StatusForbidden, "tokenRequiresScope", "parsing public resource scope failed: "+err.Error())
-			return
-		}
-
-		// assign to true so that those searching should only filter public repositories/users/organizations
-		ctx.PublicOnly = publicOnly
 	}
 }
 
@@ -436,9 +414,16 @@ func reqSiteAdmin() func(ctx *context.APIContext) {
 	}
 }
 
-// reqOwner user should be the owner of the repo or site admin.
-func reqOwner() func(ctx *context.APIContext) {
+// reqOwner requires that the current user is either the owner of the repository or an administrator. If one or more
+// unitTypes are given, it also requires that at least one the respective unitTypes is enabled.
+func reqOwner(unitTypes ...unit.Type) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
+		if len(unitTypes) > 0 && !slices.ContainsFunc(unitTypes, func(unitType unit.Type) bool {
+			return ctx.Repo.Repository.UnitEnabled(ctx, unitType)
+		}) {
+			ctx.NotFound()
+			return
+		}
 		if !ctx.Repo.IsOwner() && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden, "reqOwner", "user should be the owner of the repo")
 			return
@@ -466,7 +451,8 @@ func reqAdmin() func(ctx *context.APIContext) {
 	}
 }
 
-// reqRepoWriter user should have a permission to write to a repo, or be a site admin
+// reqRepoWriter requires that the current user has permission to write to a repository or that it is an administrator.
+// One or more unitTypes have to be specified, and at least one of them has to be enabled.
 func reqRepoWriter(unitTypes ...unit.Type) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
 		if !slices.ContainsFunc(unitTypes, func(unitType unit.Type) bool {
@@ -814,7 +800,7 @@ func individualPermsChecker(ctx *context.APIContext) {
 	if ctx.ContextUser.IsIndividual() {
 		switch ctx.ContextUser.Visibility {
 		case api.VisibleTypePrivate:
-			if ctx.Doer == nil || (ctx.ContextUser.ID != ctx.Doer.ID && !ctx.Doer.IsAdmin) {
+			if ctx.Doer == nil || (ctx.ContextUser.ID != ctx.Doer.ID && !ctx.IsUserSiteAdmin()) {
 				ctx.NotFound("Visit Project", nil)
 				return
 			}
@@ -856,9 +842,10 @@ func Routes() *web.Route {
 			})
 
 			m.Group("/runners", func() {
-				m.Get("", reqToken(), reqChecker, act.ListRunners)
+				m.Combo("").
+					Get(reqToken(), reqChecker, act.ListRunners).
+					Post(reqToken(), reqChecker, bind(api.RegisterRunnerOptions{}), act.RegisterRunner)
 				m.Get("/registration-token", reqToken(), reqChecker, act.GetRegistrationToken)
-				m.Post("/registration-token", reqToken(), reqChecker, act.CreateRegistrationToken)
 				m.Get("/{runner_id}", reqToken(), reqChecker, act.GetRunner)
 				m.Delete("/{runner_id}", reqToken(), reqChecker, act.DeleteRunner)
 				m.Get("/jobs", reqToken(), reqChecker, act.SearchActionRunJobs)
@@ -878,27 +865,29 @@ func Routes() *web.Route {
 			m.Get("/nodeinfo", misc.NodeInfo)
 			m.Group("/activitypub", func() {
 				m.Group("/user-id/{user-id}", func() {
-					m.Get("", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.Person)
+					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Person)
 					m.Post("/inbox",
-						activitypub.ReqHTTPUserSignature(),
+						activitypub.ReqHTTPSignature(),
 						bind(ap.Activity{}),
 						activitypub.PersonInbox)
 					m.Group("/activities/{activity-id}", func() {
 						m.Get("", activitypub.PersonActivityNote)
 						m.Get("/activity", activitypub.PersonActivity)
 					})
-					m.Get("/outbox", activitypub.ReqHTTPUserSignature(), activitypub.PersonFeed)
+					m.Get("/outbox", activitypub.ReqHTTPSignature(), activitypub.PersonFeed)
 				}, context.UserIDAssignmentAPI(), checkTokenPublicOnly())
 				m.Group("/actor", func() {
 					m.Get("", activitypub.Actor)
-					m.Post("/inbox", activitypub.ReqHTTPUserOrInstanceSignature(), activitypub.ActorInbox)
+					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.ActorInbox)
+					m.Get("/outbox", activitypub.ActorOutbox)
 				})
 				m.Group("/repository-id/{repository-id}", func() {
-					m.Get("", activitypub.ReqHTTPUserSignature(), activitypub.Repository)
+					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Repository)
 					m.Post("/inbox",
 						bind(ap.Activity{}),
-						activitypub.ReqHTTPUserSignature(),
+						activitypub.ReqHTTPSignature(),
 						activitypub.RepositoryInbox)
+					m.Get("/outbox", activitypub.ReqHTTPSignature(), activitypub.RepositoryOutbox)
 				}, context.RepositoryIDAssignmentAPI())
 			}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryActivityPub))
 		}
@@ -1018,9 +1007,10 @@ func Routes() *web.Route {
 				})
 
 				m.Group("/runners", func() {
-					m.Get("", reqToken(), user.ListRunners)
-					m.Get("/registration-token", reqToken(), user.GetRegistrationToken)
-					m.Post("/registration-token", reqToken(), user.CreateRegistrationToken)
+					m.Combo("").
+						Get(reqToken(), user.ListRunners).
+						Post(bind(api.RegisterRunnerOptions{}), user.RegisterRunner)
+					m.Get("/registration-token", reqToken(), user.GetRegistrationToken) //nolint:staticcheck
 					m.Get("/{runner_id}", reqToken(), user.GetRunner)
 					m.Delete("/{runner_id}", reqToken(), user.DeleteRunner)
 					m.Get("/jobs", reqToken(), user.SearchActionRunJobs)
@@ -1141,7 +1131,7 @@ func Routes() *web.Route {
 				}, reqToken())
 				addActionsRoutes(
 					m,
-					reqOwner(),
+					reqOwner(unit.TypeActions),
 					repo.NewAction(),
 				)
 				m.Group("/hooks/git", func() {
@@ -1701,14 +1691,17 @@ func Routes() *web.Route {
 					Delete(admin.DeleteHook)
 			})
 			m.Group("/actions/runners", func() {
-				m.Get("", admin.ListRunners)
-				m.Post("/registration-token", admin.CreateRegistrationToken)
+				m.Combo("").
+					Get(admin.ListRunners).
+					Post(bind(api.RegisterRunnerOptions{}), admin.RegisterRunner)
+				m.Get("/registration-token", admin.GetRunnerRegistrationToken) //nolint:staticcheck
 				m.Get("/{runner_id}", admin.GetRunner)
 				m.Delete("/{runner_id}", admin.DeleteRunner)
+				m.Get("/jobs", admin.GetActionRunJobs)
 			})
 			m.Group("/runners", func() {
-				m.Get("/registration-token", admin.GetRegistrationToken)
-				m.Get("/jobs", admin.SearchActionRunJobs)
+				m.Get("/registration-token", admin.GetRegistrationToken) //nolint:staticcheck
+				m.Get("/jobs", admin.SearchActionRunJobs)                //nolint:staticcheck
 			})
 			if setting.Quota.Enabled {
 				m.Group("/quota", func() {

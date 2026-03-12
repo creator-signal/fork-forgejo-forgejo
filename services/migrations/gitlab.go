@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,10 +65,13 @@ type gitlabIIDResolver struct {
 }
 
 func (r *gitlabIIDResolver) recordIssueIID(issueIID int) {
-	if r.frozen {
-		panic("cannot record issue IID after pull request IID generation has started")
+	if int64(issueIID) <= r.maxIssueIID {
+		return
 	}
-	r.maxIssueIID = max(r.maxIssueIID, int64(issueIID))
+	if r.frozen {
+		panic("cannot record bigger issue IID after pull request IID generation has started")
+	}
+	r.maxIssueIID = int64(issueIID)
 }
 
 func (r *gitlabIIDResolver) generatePullRequestNumber(mrIID int) int64 {
@@ -331,12 +335,11 @@ func (g *GitlabDownloader) convertGitlabRelease(rel *gitlab.Release) *base.Relea
 
 	httpClient := NewMigrationHTTPClient()
 
-	for k, asset := range rel.Assets.Links {
+	for _, asset := range rel.Assets.Links {
 		assetID := asset.ID // Don't optimize this, for closure we need a local variable
 		r.Assets = append(r.Assets, &base.ReleaseAsset{
 			ID:            int64(asset.ID),
 			Name:          asset.Name,
-			ContentType:   &rel.Assets.Sources[k].Format,
 			Size:          &zero,
 			DownloadCount: &zero,
 			DownloadFunc: func() (io.ReadCloser, error) {
@@ -402,15 +405,18 @@ type gitlabIssueContext struct {
 //	Note: issue label description and colors are not supported by the go-gitlab library at this time
 func (g *GitlabDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, error) {
 	state := "all"
-	sort := "asc"
+	// we want most recent issues first, to get the biggest issue IID immediately
+	sort := "desc"
+	orderBy := "created_at"
 
 	if perPage > g.maxPerPage {
 		perPage = g.maxPerPage
 	}
 
 	opt := &gitlab.ListProjectIssuesOptions{
-		State: &state,
-		Sort:  &sort,
+		State:   &state,
+		Sort:    &sort,
+		OrderBy: &orderBy,
 		ListOptions: gitlab.ListOptions{
 			PerPage: perPage,
 			Page:    page,
@@ -453,12 +459,15 @@ func (g *GitlabDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, er
 			awardPage++
 		}
 
+		// record the issue IID, to be used in GetPullRequests()
+		g.iidResolver.recordIssueIID(issue.IID)
+
 		allIssues = append(allIssues, &base.Issue{
 			Title:        issue.Title,
 			Number:       int64(issue.IID),
 			PosterID:     int64(issue.Author.ID),
 			PosterName:   issue.Author.Username,
-			Content:      issue.Description,
+			Content:      g.convertMRReference(issue.Description),
 			Milestone:    milestone,
 			State:        issue.State,
 			Created:      *issue.CreatedAt,
@@ -470,9 +479,6 @@ func (g *GitlabDownloader) GetIssues(page, perPage int) ([]*base.Issue, bool, er
 			ForeignIndex: int64(issue.IID),
 			Context:      gitlabIssueContext{IsMergeRequest: false},
 		})
-
-		// record the issue IID, to be used in GetPullRequests()
-		g.iidResolver.recordIssueIID(issue.IID)
 	}
 
 	return allIssues, len(issues) < perPage, nil
@@ -593,7 +599,7 @@ func (g *GitlabDownloader) convertNoteToComment(localIndex int64, note *gitlab.N
 		PosterID:    int64(note.Author.ID),
 		PosterName:  note.Author.Username,
 		PosterEmail: note.Author.Email,
-		Content:     note.Body,
+		Content:     g.convertMRReference(note.Body),
 		Created:     *note.CreatedAt,
 		Meta:        map[string]any{},
 	}
@@ -706,7 +712,7 @@ func (g *GitlabDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 			Number:         newPRNumber,
 			PosterName:     pr.Author.Username,
 			PosterID:       int64(pr.Author.ID),
-			Content:        pr.Description,
+			Content:        g.convertMRReference(pr.Description),
 			Milestone:      milestone,
 			State:          pr.State,
 			Created:        *pr.CreatedAt,
@@ -792,4 +798,16 @@ func (g *GitlabDownloader) awardsToReactions(awards []*gitlab.AwardEmoji) []*bas
 		}
 	}
 	return result
+}
+
+var mrFinder = regexp.MustCompile(`![0-9]+`)
+
+// In gitlab, issues and merge-request have split numbering
+// Adjust the merge-request numbers (preserve the issue numbers)
+func (g *GitlabDownloader) convertMRReference(body string) string {
+	return mrFinder.ReplaceAllStringFunc(body, func(s string) string {
+		oldVal, _ := strconv.Atoi(s[1:]) // skip the leading exclamation mark
+		newVal := g.iidResolver.generatePullRequestNumber(oldVal)
+		return "!" + strconv.FormatInt(newVal, 10)
+	})
 }

@@ -509,6 +509,41 @@ func createApplicationSettingsToken(t testing.TB, session *TestSession, name str
 	}
 }
 
+// TODO: currently this is implemented with direct DB access, which is somewhat against the grain for the integration
+// tests.  But fine-grained repo access tokens don't currently have an API or Web UI to create or manage them.  This
+// should be reimplemented when one of those alternatives lands.
+func createFineGrainedRepoAccessToken(t testing.TB, username string, scopes []auth.AccessTokenScope, repoIDs []int64) string {
+	user, err := user_model.GetUserByName(t.Context(), username)
+	require.NoError(t, err)
+
+	scopesStr := make([]string, len(scopes))
+	for i := range scopes {
+		scopesStr[i] = string(scopes[i])
+	}
+	scope, err := auth.AccessTokenScope(strings.Join(scopesStr, ",")).Normalize()
+	require.NoError(t, err)
+
+	token := &auth.AccessToken{
+		UID:              user.ID,
+		Name:             "integration test token",
+		Scope:            scope,
+		ResourceAllRepos: false,
+	}
+	err = auth.NewAccessToken(t.Context(), token)
+	require.NoError(t, err)
+
+	for _, id := range repoIDs {
+		resource := &auth.AccessTokenResourceRepo{
+			TokenID: token.ID,
+			RepoID:  id,
+		}
+		_, err = db.GetEngine(t.Context()).Insert(resource)
+		require.NoError(t, err)
+	}
+
+	return token.Token
+}
+
 // assertAccessToken retrieves a token from "/user/settings/applications" and returns it.
 // It will also assert that the page contains a token.
 func assertAccessToken(t testing.TB, session *TestSession) string {
@@ -708,16 +743,23 @@ func VerifyJSONSchema(t testing.TB, resp *httptest.ResponseRecorder, schemaFile 
 func GetHTMLTitle(t testing.TB, session *TestSession, urlStr string) string {
 	t.Helper()
 
+	doc := getHTMLDoc(t, session, urlStr, http.StatusOK)
+	return doc.Find("head title").Text()
+}
+
+// getHTMLDoc gets HTMLDoc from url with expected status. Use status
+// NoExpectedStatus to ignore status.
+func getHTMLDoc(t testing.TB, session *TestSession, urlStr string, expectedStatus int) *HTMLDoc {
+	t.Helper()
+
 	req := NewRequest(t, "GET", urlStr)
 	var resp *httptest.ResponseRecorder
 	if session == nil {
-		resp = MakeRequest(t, req, http.StatusOK)
+		resp = MakeRequest(t, req, expectedStatus)
 	} else {
-		resp = session.MakeRequest(t, req, http.StatusOK)
+		resp = session.MakeRequest(t, req, expectedStatus)
 	}
-
-	doc := NewHTMLParser(t, resp.Body)
-	return doc.Find("head title").Text()
+	return NewHTMLParser(t, resp.Body)
 }
 
 func SortMailerMessages(msgs []*mailer.Message) {

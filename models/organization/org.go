@@ -17,6 +17,7 @@ import (
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
@@ -191,7 +192,7 @@ func (org *Organization) IsGhost() bool {
 	return org.AsUser().IsGhost()
 }
 
-// FindOrgMembersOpts represensts find org members conditions
+// FindOrgMembersOpts represents find org members conditions
 type FindOrgMembersOpts struct {
 	db.ListOptions
 	Doer         *user_model.User
@@ -404,7 +405,7 @@ func DeleteOrganization(ctx context.Context, org *Organization) error {
 		&TeamInvite{OrgID: org.ID},
 		&secret_model.Secret{OwnerID: org.ID},
 		&actions_model.ActionRunner{OwnerID: org.ID},
-		&actions_model.ActionRunnerToken{OwnerID: org.ID},
+		&actions_model.ActionRunnerToken{OwnerID: optional.Some(org.ID)},
 	); err != nil {
 		return fmt.Errorf("DeleteBeans: %w", err)
 	}
@@ -510,10 +511,10 @@ func ChangeOrgUserStatus(ctx context.Context, orgID, uid int64, public bool) err
 
 // AddOrgUser adds new user to given organization.
 func AddOrgUser(ctx context.Context, orgID, uid int64) error {
-	isUser, err := user_model.IsUserByID(ctx, uid)
+	eligible, err := IsAnEligibleTeamMemberByID(ctx, uid)
 	if err != nil {
 		return err
-	} else if !isUser {
+	} else if !eligible {
 		return user_model.ErrUserWrongType{UID: uid}
 	}
 

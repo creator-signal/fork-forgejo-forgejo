@@ -48,8 +48,8 @@ func TestGitlabDownloadRepo(t *testing.T) {
 
 	topics, err := downloader.GetTopics()
 	require.NoError(t, err)
-	assert.Len(t, topics, 2)
-	assert.Equal(t, []string{"migration", "test"}, topics)
+	assert.Len(t, topics, 3)
+	assert.Equal(t, []string{"migration", "migration test", "test"}, topics)
 
 	milestones, err := downloader.GetMilestones()
 	require.NoError(t, err)
@@ -123,6 +123,10 @@ func TestGitlabDownloadRepo(t *testing.T) {
 
 	releases, err := downloader.GetReleases()
 	require.NoError(t, err)
+	// TODO: fix size, currently reported as 0
+	// See https://codeberg.org/forgejo/forgejo/issues/11471
+	size := 0
+	dc := 0
 	assertReleasesEqual(t, []*base.Release{
 		{
 			TagName:         "v0.9.99",
@@ -132,44 +136,82 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Created:         time.Date(2024, 9, 3, 15, 1, 1, 513000000, time.UTC),
 			PublisherID:     548513,
 			PublisherName:   "mkobel",
+			Assets: []*base.ReleaseAsset{
+				{
+					ID:            10694714,
+					Name:          "Forgejo logo",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+				{
+					// TODO: fix name or URL, doesn't make sense to download without extension
+					// See https://codeberg.org/forgejo/forgejo/issues/11471
+					ID:            10687293,
+					Name:          "zip (other)",
+					Size:          &size,
+					DownloadCount: &dc,
+					// TODO: fix date, currently time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+					// See https://codeberg.org/forgejo/forgejo/issues/11471
+					// Created:       time.Date(2025, time.August, 7, 23, 39, 27, 0, time.UTC),
+					// Updated:       time.Date(2025, time.August, 7, 23, 39, 29, 0, time.UTC),
+				},
+				{
+					ID:            10687292,
+					Name:          "Forgejo",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+				{
+					ID:            10687291,
+					Name:          "Frogejo 🐸",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+				{
+					ID:            10687290,
+					Name:          "tar.bz2 (runbook)",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+				{
+					ID:            10687289,
+					Name:          "tar.gz (package)",
+					Size:          &size,
+					DownloadCount: &dc,
+				},
+			},
 		},
 	}, releases)
 
-	issues, isEnd, err := downloader.GetIssues(1, 2)
+	issues, isEnd, err := downloader.GetIssues(1, 3)
 	require.NoError(t, err)
 	assert.False(t, isEnd)
 	assertIssuesEqual(t, []*base.Issue{
 		{
-			Number:     1,
-			Title:      "Please add an animated gif icon to the merge button",
-			Content:    "I just want the merge button to hurt my eyes a little. :stuck_out_tongue_closed_eyes:",
-			Milestone:  "1.0.0",
-			PosterID:   548513,
-			PosterName: "mkobel",
-			State:      "closed",
-			Created:    time.Date(2024, 9, 3, 14, 42, 34, 924000000, time.UTC),
-			Updated:    time.Date(2024, 9, 3, 14, 48, 43, 756000000, time.UTC),
-			Labels: []*base.Label{
-				{
-					Name: "bug",
-				},
-				{
-					Name: "discussion",
-				},
-			},
-			Reactions: []*base.Reaction{
-				{
-					UserID:   548513,
-					UserName: "mkobel",
-					Content:  "thumbsup",
-				},
-				{
-					UserID:   548513,
-					UserName: "mkobel",
-					Content:  "open_mouth",
-				},
-			},
-			Closed: timePtr(time.Date(2024, 9, 3, 14, 43, 10, 708000000, time.UTC)),
+			Number:     4,
+			Title:      "Missing \"migration_test\" and \"migration_test_migration_test_migration_test\" topic",
+			Content:    "This is required for https://codeberg.org/forgejo/forgejo/pulls/10336.",
+			Milestone:  "",
+			PosterID:   29018602,
+			PosterName: "amadaluzia",
+			State:      "opened",
+			Created:    time.Date(2025, time.December, 6, 14, 2, 59, 995000000, time.UTC),
+			Updated:    time.Date(2025, time.December, 6, 15, 4, 37, 324000000, time.UTC),
+			Labels:     []*base.Label{},
+			Reactions:  []*base.Reaction{},
+		},
+		{
+			Number:     3,
+			Title:      "Fix plz",
+			Content:    "Can we do something about it? !6 is maybe related to that.", // was "!2" on gitlab, now !6 on forgejo
+			Milestone:  "",
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			State:      "opened",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 31, 991000000, time.UTC),
+			Updated:    time.Date(2025, time.November, 25, 9, 49, 31, 991000000, time.UTC),
+			Labels:     []*base.Label{},
+			Reactions:  []*base.Reaction{},
 		},
 		{
 			Number:     2,
@@ -180,7 +222,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			PosterName: "mkobel",
 			State:      "closed",
 			Created:    time.Date(2024, 9, 3, 14, 42, 35, 371000000, time.UTC),
-			Updated:    time.Date(2024, 9, 3, 20, 3, 43, 536000000, time.UTC),
+			Updated:    time.Date(2026, 2, 13, 20, 46, 11, 889000000, time.UTC),
 			Labels: []*base.Label{
 				{
 					Name: "duplicate",
@@ -221,6 +263,43 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Closed: timePtr(time.Date(2024, 9, 3, 14, 43, 10, 906000000, time.UTC)),
 		},
 	}, issues)
+	issues, isEnd, err = downloader.GetIssues(2, 3)
+	require.NoError(t, err)
+	assert.True(t, isEnd)
+	assertIssuesEqual(t, []*base.Issue{
+		{
+			Number:     1,
+			Title:      "Please add an animated gif icon to the merge button",
+			Content:    "I just want the merge button to hurt my eyes a little. :stuck_out_tongue_closed_eyes:",
+			Milestone:  "1.0.0",
+			PosterID:   548513,
+			PosterName: "mkobel",
+			State:      "closed",
+			Created:    time.Date(2024, 9, 3, 14, 42, 34, 924000000, time.UTC),
+			Updated:    time.Date(2024, 9, 3, 14, 48, 43, 756000000, time.UTC),
+			Labels: []*base.Label{
+				{
+					Name: "bug",
+				},
+				{
+					Name: "discussion",
+				},
+			},
+			Reactions: []*base.Reaction{
+				{
+					UserID:   548513,
+					UserName: "mkobel",
+					Content:  "thumbsup",
+				},
+				{
+					UserID:   548513,
+					UserName: "mkobel",
+					Content:  "open_mouth",
+				},
+			},
+			Closed: timePtr(time.Date(2024, 9, 3, 14, 43, 10, 708000000, time.UTC)),
+		},
+	}, issues)
 
 	comments, _, err := downloader.GetComments(&base.Issue{
 		Number:       2,
@@ -247,6 +326,15 @@ func TestGitlabDownloadRepo(t *testing.T) {
 		},
 		{
 			IssueIndex:  2,
+			PosterID:    2005797,
+			PosterName:  "oliverpool",
+			Created:     time.Date(2026, 2, 13, 20, 46, 11, 841000000, time.UTC),
+			Content:     "with an image ![image](/uploads/3756af8a4893bea08b99536df000e932/image.png){width=217 height=280}",
+			Reactions:   nil,
+			CommentType: "close",
+		},
+		{
+			IssueIndex:  2,
 			PosterID:    548513,
 			PosterName:  "mkobel",
 			Created:     time.Date(2024, 9, 3, 14, 43, 10, 947000000, time.UTC),
@@ -256,11 +344,85 @@ func TestGitlabDownloadRepo(t *testing.T) {
 		},
 	}, comments)
 
-	prs, _, err := downloader.GetPullRequests(1, 1)
+	comments, _, err = downloader.GetComments(&base.Issue{
+		Number:       3,
+		ForeignIndex: 3,
+		Context:      gitlabIssueContext{IsMergeRequest: false},
+	})
+	require.NoError(t, err)
+	assertCommentsEqual(t, []*base.Comment{
+		{
+			IssueIndex: 3,
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 50, 899000000, time.UTC),
+			Content:    "No actually its !5",
+			Reactions:  nil,
+		},
+	}, comments)
+
+	comments, _, err = downloader.GetComments(&base.Issue{
+		Number:       5,
+		ForeignIndex: 2,
+		Context:      gitlabIssueContext{IsMergeRequest: true},
+	})
+	require.NoError(t, err)
+	assertCommentsEqual(t, []*base.Comment{
+		{
+			IssueIndex: 5,
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 0, 750000000, time.UTC),
+			Content:    "Although we had some trouble with !5.",
+			Reactions:  nil,
+		},
+		{
+			IssueIndex: 5,
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			Created:    time.Date(2025, time.November, 25, 9, 49, 32, 263000000, time.UTC),
+			Content:    "mentioned in issue #3",
+			Reactions:  nil,
+		},
+	}, comments)
+
+	prs, _, err := downloader.GetPullRequests(1, 2)
 	require.NoError(t, err)
 	assertPullRequestsEqual(t, []*base.PullRequest{
 		{
-			Number:     3,
+			Number:     6,
+			Title:      "Test/parsing",
+			Content:    "Simillar to !5 this solves an issue.",
+			Milestone:  "",
+			PosterID:   10529876,
+			PosterName: "patdyn",
+			State:      "opened",
+			Created:    time.Date(2025, time.November, 25, 9, 48, 20, 259000000, time.UTC),
+			Labels:     []*base.Label{},
+			Reactions:  []*base.Reaction{},
+			PatchURL:   server.URL + "/forgejo/test_repo/-/merge_requests/2.patch",
+			Head: base.PullRequestBranch{
+				Ref:       "test/parsing",
+				CloneURL:  server.URL + "/forgejo/test_repo/-/merge_requests/2",
+				SHA:       "c59c9b451acca9d106cc19d61d87afe3fbbb8b83",
+				RepoName:  "test_repo",
+				OwnerName: "patdyn",
+			},
+			Base: base.PullRequestBranch{
+				Ref:       "master",
+				SHA:       "c59c9b451acca9d106cc19d61d87afe3fbbb8b83",
+				OwnerName: "patdyn",
+				RepoName:  "test_repo",
+			},
+			Closed:         nil,
+			Merged:         false,
+			MergedTime:     nil,
+			MergeCommitSHA: "",
+			ForeignIndex:   2,
+			Context:        gitlabIssueContext{IsMergeRequest: true},
+		},
+		{
+			Number:     5,
 			Title:      "Test branch",
 			Content:    "do not merge this PR",
 			Milestone:  "1.1.0",
@@ -303,7 +465,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Merged:         false,
 			MergedTime:     nil,
 			MergeCommitSHA: "",
-			ForeignIndex:   2,
+			ForeignIndex:   1,
 			Context:        gitlabIssueContext{IsMergeRequest: true},
 		},
 	}, prs)
@@ -330,19 +492,20 @@ func TestGitlabSkippedIssueNumber(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://gitlab.com", fixturePath, gitlabPersonalAccessToken != "")
 	defer server.Close()
 
-	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "troyengel/archbuild", "", "", gitlabPersonalAccessToken)
+	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "forgejo/test_repo-skipped-numbers", "", "", gitlabPersonalAccessToken)
 	if err != nil {
 		t.Fatalf("NewGitlabDownloader is nil: %v", err)
 	}
 	repo, err := downloader.GetRepoInfo()
 	require.NoError(t, err)
+	// Repo Owner is blank in Gitlab Group repos
 	assertRepositoryEqual(t, &base.Repository{
-		Name:          "archbuild",
-		Owner:         "troyengel",
-		Description:   "Arch packaging and build files",
-		CloneURL:      server.URL + "/troyengel/archbuild.git",
-		OriginalURL:   server.URL + "/troyengel/archbuild",
-		DefaultBranch: "master",
+		Name:          "test_repo-skipped-numbers",
+		Owner:         "",
+		Description:   "",
+		CloneURL:      server.URL + "/forgejo/test_repo-skipped-numbers.git",
+		OriginalURL:   server.URL + "/forgejo/test_repo-skipped-numbers",
+		DefaultBranch: "main",
 	}, repo)
 
 	issues, isEnd, err := downloader.GetIssues(1, 10)
@@ -352,7 +515,7 @@ func TestGitlabSkippedIssueNumber(t *testing.T) {
 	// the only issue in this repository has number 2
 	assert.Len(t, issues, 1)
 	assert.EqualValues(t, 2, issues[0].Number)
-	assert.Equal(t, "vpn unlimited errors", issues[0].Title)
+	assert.Equal(t, "2nd issue", issues[0].Title)
 
 	prs, _, err := downloader.GetPullRequests(1, 10)
 	require.NoError(t, err)
@@ -361,7 +524,7 @@ func TestGitlabSkippedIssueNumber(t *testing.T) {
 	// pull request 3 in Forgejo
 	assert.Len(t, prs, 1)
 	assert.EqualValues(t, 3, prs[0].Number)
-	assert.Equal(t, "Review", prs[0].Title)
+	assert.Equal(t, "cleanup README.md", prs[0].Title)
 }
 
 func gitlabClientMockSetup(t *testing.T) (*http.ServeMux, *httptest.Server, *gitlab.Client) {
@@ -545,36 +708,37 @@ func TestAwardsToReactions(t *testing.T) {
 	}, reactions)
 }
 
+func makeTestNote(id int, body string, system bool, t time.Time) gitlab.Note {
+	return gitlab.Note{
+		ID: id,
+		Author: struct {
+			ID        int    `json:"id"`
+			Username  string `json:"username"`
+			Email     string `json:"email"`
+			Name      string `json:"name"`
+			State     string `json:"state"`
+			AvatarURL string `json:"avatar_url"`
+			WebURL    string `json:"web_url"`
+		}{
+			ID:       72,
+			Email:    "test@example.com",
+			Username: "test",
+		},
+		Body:      body,
+		CreatedAt: &t,
+		System:    system,
+	}
+}
+
 func TestNoteToComment(t *testing.T) {
 	downloader := &GitlabDownloader{}
 
 	now := time.Now()
-	makeTestNote := func(id int, body string, system bool) gitlab.Note {
-		return gitlab.Note{
-			ID: id,
-			Author: struct {
-				ID        int    `json:"id"`
-				Username  string `json:"username"`
-				Email     string `json:"email"`
-				Name      string `json:"name"`
-				State     string `json:"state"`
-				AvatarURL string `json:"avatar_url"`
-				WebURL    string `json:"web_url"`
-			}{
-				ID:       72,
-				Email:    "test@example.com",
-				Username: "test",
-			},
-			Body:      body,
-			CreatedAt: &now,
-			System:    system,
-		}
-	}
 	notes := []gitlab.Note{
-		makeTestNote(1, "This is a regular comment", false),
-		makeTestNote(2, "enabled an automatic merge for abcd1234", true),
-		makeTestNote(3, "changed target branch from `master` to `main`", true),
-		makeTestNote(4, "canceled the automatic merge", true),
+		makeTestNote(1, "This is a regular comment", false, now),
+		makeTestNote(2, "enabled an automatic merge for abcd1234", true, now),
+		makeTestNote(3, "changed target branch from `master` to `main`", true, now),
+		makeTestNote(4, "canceled the automatic merge", true, now),
 	}
 	comments := []base.Comment{{
 		IssueIndex:  17,
@@ -642,4 +806,36 @@ func TestGitlabIIDResolver(t *testing.T) {
 		assert.EqualValues(t, 2, r.generatePullRequestNumber(1))
 		r.recordIssueIID(3) // the generation procedure has been started, it shouldn't accept any new issue IID, so it panics
 	})
+}
+
+func TestCommentBodyParser(t *testing.T) {
+	downloader := GitlabDownloader{}
+	downloader.iidResolver.maxIssueIID = int64(10)
+	now := time.Now()
+
+	// Gitlab note references issue with #N and PR with !M, with N and M being arbitrary integers, so N == M is possible
+	testNote1 := makeTestNote(1, "Simillar to #9, may be solved in !4", false, now)
+	testNote2 := makeTestNote(2, "Simillar to #21, may be solved in !144", false, now)
+	testNote3 := makeTestNote(3, "Should actually be discussed in !5 or !6 and not in #2 (here)", false, now)
+	testNote4 := makeTestNote(4, "Closed by !1 and !14", false, now)
+	testNote5 := makeTestNote(5, "Actually !1 and !1 are the same but !100 and !214 are not", false, now)
+	testNote6 := makeTestNote(6, "!11 and !1 are simillar but !201 and !100 are not!", false, now)
+	testNote7 := makeTestNote(1, "Simillar to #9, may be solved in !004", false, now)
+
+	parsedBody1 := downloader.convertMRReference(testNote1.Body)
+	parsedBody2 := downloader.convertMRReference(testNote2.Body)
+	parsedBody3 := downloader.convertMRReference(testNote3.Body)
+	parsedBody4 := downloader.convertMRReference(testNote4.Body)
+	parsedBody5 := downloader.convertMRReference(testNote5.Body)
+	parsedBody6 := downloader.convertMRReference(testNote6.Body)
+	parsedBody7 := downloader.convertMRReference(testNote7.Body)
+
+	// Assuming a total of 20 comments + PRs
+	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody1)
+	assert.Equal(t, "Simillar to #21, may be solved in !154", parsedBody2)
+	assert.Equal(t, "Should actually be discussed in !15 or !16 and not in #2 (here)", parsedBody3)
+	assert.Equal(t, "Closed by !11 and !24", parsedBody4)
+	assert.Equal(t, "Actually !11 and !11 are the same but !110 and !224 are not", parsedBody5)
+	assert.Equal(t, "!21 and !11 are simillar but !211 and !110 are not!", parsedBody6)
+	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody7)
 }

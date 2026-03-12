@@ -1008,6 +1008,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		if err == nil {
 			ctx.Data["NoteCommit"] = note.Commit
 			ctx.Data["NoteAuthor"] = user_model.ValidateCommitWithEmail(ctx, note.Commit)
+			ctx.Data["NoteRaw"] = string(charset.ToUTF8WithFallback(note.Message, charset.ConvertOpts{}))
 			ctx.Data["NoteRendered"], err = markup.RenderCommitMessage(&markup.RenderContext{
 				Links: markup.Links{
 					Base:       ctx.Repo.RepoLink,
@@ -1538,17 +1539,22 @@ func CancelAutoMergePullRequest(ctx *context.Context) {
 		return
 	}
 
-	if err := automerge.RemoveScheduledAutoMerge(ctx, ctx.Doer, issue.PullRequest); err != nil {
-		if db.IsErrNotExist(err) {
+	if err := automerge.RemoveScheduledAutoMerge(ctx, ctx.Doer, issue.PullRequest, ctx.Repo.Permission); err != nil {
+		switch {
+		case errors.Is(err, util.ErrPermissionDenied):
+			ctx.Flash.Error(ctx.Tr("repo.pulls.auto_merge.no_permission"))
+			ctx.Redirect(issue.HTMLURL())
+		case db.IsErrNotExist(err):
 			ctx.Flash.Error(ctx.Tr("repo.pulls.auto_merge_not_scheduled"))
-			ctx.Redirect(fmt.Sprintf("%s/pulls/%d", ctx.Repo.RepoLink, issue.Index))
-			return
+			ctx.Redirect(issue.HTMLURL())
+		default:
+			ctx.ServerError("RemoveScheduledAutoMerge", err)
 		}
-		ctx.ServerError("RemoveScheduledAutoMerge", err)
 		return
 	}
+
 	ctx.Flash.Success(ctx.Tr("repo.pulls.auto_merge_canceled_schedule"))
-	ctx.Redirect(fmt.Sprintf("%s/pulls/%d", ctx.Repo.RepoLink, issue.Index))
+	ctx.Redirect(issue.HTMLURL())
 }
 
 func stopTimerIfAvailable(ctx *context.Context, user *user_model.User, issue *issues_model.Issue) error {
@@ -2012,4 +2018,12 @@ func UpdateTrustWithPullRequestActions(ctx *context.Context) {
 	}
 
 	ctx.Redirect(fmt.Sprintf("%s#pull-request-trust-panel", pr.Issue.Link()))
+}
+
+func SetCommitNotesPullRequest(ctx *context.Context) {
+	setCommitNotes(ctx, fmt.Sprintf("%s/pulls/%s/commits/%s", ctx.Repo.Repository.Link(), ctx.Params(":index"), ctx.Params(":sha")))
+}
+
+func RemoveCommitNotesPullRequest(ctx *context.Context) {
+	removeCommitNotes(ctx, fmt.Sprintf("%s/pulls/%s/commits/%s", ctx.Repo.Repository.Link(), ctx.Params(":index"), ctx.Params(":sha")))
 }

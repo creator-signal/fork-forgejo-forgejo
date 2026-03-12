@@ -5,9 +5,7 @@
 package setting
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"math/big"
 	"net/http"
 	"os"
@@ -25,7 +23,6 @@ import (
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
-	"forgejo.org/modules/typesniffer"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/modules/web/middleware"
@@ -43,8 +40,8 @@ const (
 
 var commonPronouns = []string{"he/him", "she/her", "they/them", "it/its", "any pronouns"}
 
-// Profile render user's profile page
-func Profile(ctx *context.Context) {
+// profileContext sets common context for profile settings template.
+func profileContext(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings.profile")
 	ctx.Data["PageIsSettingsProfile"] = true
 	ctx.Data["AllowedUserVisibilityModes"] = setting.Service.AllowedUserVisibilityModesSlice.ToVisibleTypeSlice()
@@ -55,20 +52,24 @@ func Profile(ctx *context.Context) {
 	ctx.Data["MaxAvatarWidth"] = setting.Avatar.MaxWidth
 	ctx.Data["MaxAvatarHeight"] = setting.Avatar.MaxHeight
 
+	canUserRename, err := user_service.CanUserRename(ctx, ctx.Doer)
+	if err != nil {
+		log.Error("CanUserRename for user[%d]: %v", ctx.Doer.ID, err)
+	}
+
+	ctx.Data["UserRenameDisabled"] = !canUserRename
+}
+
+// Profile render user's profile page
+func Profile(ctx *context.Context) {
+	profileContext(ctx)
+
 	ctx.HTML(http.StatusOK, tplSettingsProfile)
 }
 
 // ProfilePost response for change user's profile
 func ProfilePost(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsProfile"] = true
-	ctx.Data["AllowedUserVisibilityModes"] = setting.Service.AllowedUserVisibilityModesSlice.ToVisibleTypeSlice()
-	ctx.Data["DisableGravatar"] = setting.Config().Picture.DisableGravatar.Value(ctx)
-	ctx.Data["CooldownPeriod"] = setting.Service.UsernameCooldownPeriod
-	ctx.Data["CommonPronouns"] = commonPronouns
-	ctx.Data["MaxAvatarFileSize"] = setting.Avatar.MaxFileSize
-	ctx.Data["MaxAvatarWidth"] = setting.Avatar.MaxWidth
-	ctx.Data["MaxAvatarHeight"] = setting.Avatar.MaxHeight
+	profileContext(ctx)
 
 	if ctx.HasError() {
 		ctx.HTML(http.StatusOK, tplSettingsProfile)
@@ -123,7 +124,6 @@ func ProfilePost(ctx *context.Context) {
 }
 
 // UpdateAvatarSetting update user's avatar
-// FIXME: limit size.
 func UpdateAvatarSetting(ctx *context.Context, form *forms.AvatarForm, ctxUser *user_model.User) error {
 	ctxUser.UseCustomAvatar = form.Source == forms.AvatarLocal
 	if len(form.Gravatar) > 0 {
@@ -135,27 +135,12 @@ func UpdateAvatarSetting(ctx *context.Context, form *forms.AvatarForm, ctxUser *
 		ctxUser.AvatarEmail = form.Gravatar
 	}
 
-	if form.Avatar != nil && form.Avatar.Filename != "" {
-		fr, err := form.Avatar.Open()
-		if err != nil {
-			return fmt.Errorf("Avatar.Open: %w", err)
-		}
-		defer fr.Close()
-
-		if form.Avatar.Size > setting.Avatar.MaxFileSize {
-			return errors.New(ctx.Locale.TrString("settings.uploaded_avatar_is_too_big", form.Avatar.Size/1024, setting.Avatar.MaxFileSize/1024))
-		}
-
-		data, err := io.ReadAll(fr)
-		if err != nil {
-			return fmt.Errorf("io.ReadAll: %w", err)
-		}
-
-		st := typesniffer.DetectContentType(data, "")
-		if !st.IsImage() || st.IsSvgImage() {
-			return errors.New(ctx.Locale.TrString("settings.uploaded_avatar_not_a_image"))
-		}
-		if err = user_service.UploadAvatar(ctx, ctxUser, data); err != nil {
+	data, err := forms.ReadAvatar(form.Avatar, ctx.Locale)
+	if err != nil {
+		return err
+	}
+	if data != nil {
+		if err := user_service.UploadAvatar(ctx, ctxUser, data); err != nil {
 			return fmt.Errorf("UploadAvatar: %w", err)
 		}
 	} else if ctxUser.UseCustomAvatar && ctxUser.Avatar == "" {

@@ -8,13 +8,13 @@ import (
 	"fmt"
 
 	"forgejo.org/models/db"
-	issue_model "forgejo.org/models/issues"
+	issues_model "forgejo.org/models/issues"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/indexer/issues/internal"
 	"forgejo.org/modules/optional"
 )
 
-func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_model.IssuesOptions, error) {
+func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issues_model.IssuesOptions, error) {
 	var sortType string
 	switch options.SortBy {
 	case internal.SortByCreatedAsc:
@@ -39,17 +39,17 @@ func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_m
 
 	// See the comment of issues_model.SearchOptions for the reason why we need to convert
 	convertID := func(id optional.Option[int64]) int64 {
-		if !id.Has() {
+		has, value := id.Get()
+		if !has {
 			return 0
 		}
-		value := id.Value()
 		if value == 0 {
 			return db.NoConditionID
 		}
 		return value
 	}
 
-	opts := &issue_model.IssuesOptions{
+	opts := &issues_model.IssuesOptions{
 		Paginator:          options.Paginator,
 		RepoIDs:            options.RepoIDs,
 		AllPublic:          options.AllPublic,
@@ -69,8 +69,8 @@ func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_m
 		IncludeMilestones:  nil,
 		SortType:           sortType,
 		IssueIDs:           nil,
-		UpdatedAfterUnix:   options.UpdatedAfterUnix.Value(),
-		UpdatedBeforeUnix:  options.UpdatedBeforeUnix.Value(),
+		UpdatedAfterUnix:   options.UpdatedAfterUnix.ValueOrZeroValue(),
+		UpdatedBeforeUnix:  options.UpdatedBeforeUnix.ValueOrZeroValue(),
 		PriorityRepoID:     0,
 		IsArchived:         optional.None[bool](),
 		Org:                nil,
@@ -78,9 +78,9 @@ func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_m
 		User:               nil,
 	}
 
-	if options.PriorityRepoID.Has() {
+	if has, value := options.PriorityRepoID.Get(); has {
 		opts.SortType = "priorityrepo"
-		opts.PriorityRepoID = options.PriorityRepoID.Value()
+		opts.PriorityRepoID = value
 	}
 
 	if len(options.MilestoneIDs) == 1 && options.MilestoneIDs[0] == 0 {
@@ -99,7 +99,7 @@ func ToDBOptions(ctx context.Context, options *internal.SearchOptions) (*issue_m
 		}
 
 		if len(options.IncludedLabelIDs) == 0 && len(options.IncludedAnyLabelIDs) > 0 {
-			labels, err := issue_model.GetLabelsByIDs(ctx, options.IncludedAnyLabelIDs, "name")
+			labels, err := issues_model.GetLabelsByIDs(ctx, options.IncludedAnyLabelIDs, "name")
 			if err != nil {
 				return nil, fmt.Errorf("GetLabelsByIDs: %v", err)
 			}

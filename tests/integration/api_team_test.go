@@ -295,6 +295,82 @@ func TestAPITeamSearch(t *testing.T) {
 	MakeRequest(t, req, http.StatusForbidden)
 }
 
+func TestAPIGetTeamReposAccessTokenResources(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAPIGetTeamReposAccessTokenResources")()
+	defer tests.PrepareTestEnv(t)()
+
+	var repos []api.Repository
+
+	// Test cases org3/repo21 (public), org3/repo3 (private), org3/repo5 (private) --
+	// TestAPIGetTeamReposAccessTokenResources fixtures create a team w/ ID=26 that contains all three repos.
+	session := loginUser(t, "user2")
+
+	find := func() (bool, bool, bool) {
+		foundRepo21 := false // public org3/repo21
+		foundRepo3 := false  // private org3/repo3
+		foundRepo5 := false  // second private repo org3/repo5 used in fine-grain testing, included as baseline
+		for _, repo := range repos {
+			switch repo.Name {
+			case "repo21":
+				foundRepo21 = true
+			case "repo3":
+				foundRepo3 = true
+			case "repo5":
+				foundRepo5 = true
+			}
+		}
+		return foundRepo21, foundRepo3, foundRepo5
+	}
+
+	t.Run("all access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadOrganization)
+
+		req := NewRequest(t, "GET", "/api/v1/teams/26/repos").AddTokenAuth(allToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo21, foundRepo3, foundRepo5 := find()
+
+		assert.True(t, foundRepo21) // public org3/repo21
+		assert.True(t, foundRepo3)  // private org3/repo3
+		assert.True(t, foundRepo5)  // private org3/repo5, used in fine-grain testing, included as baseline
+	})
+
+	t.Run("public-only access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadOrganization)
+
+		req := NewRequest(t, "GET", "/api/v1/teams/26/repos").AddTokenAuth(publicOnlyToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo21, foundRepo3, foundRepo5 := find()
+
+		assert.True(t, foundRepo21) // public org3/repo21
+		assert.False(t, foundRepo3) // private org3/repo3
+		assert.False(t, foundRepo5) // private org3/repo5
+	})
+
+	t.Run("specific repo access token", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadOrganization},
+			[]int64{3},
+		)
+
+		req := NewRequest(t, "GET", "/api/v1/teams/26/repos").AddTokenAuth(repo2OnlyToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &repos)
+		foundRepo21, foundRepo3, foundRepo5 := find()
+
+		assert.True(t, foundRepo21) // public org3/repo21, allowed as it's public and read-access only
+		assert.True(t, foundRepo3)  // private org3/repo3, allowed inside fine-grain
+		assert.False(t, foundRepo5) // private org3/repo5, denied outside fine-grain
+	})
+}
+
 func TestAPIGetTeamRepo(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -318,4 +394,82 @@ func TestAPIGetTeamRepo(t *testing.T) {
 	req = NewRequestf(t, "GET", "/api/v1/teams/%d/repos/%s/", team.ID, teamRepo.FullName()).
 		AddTokenAuth(token5)
 	MakeRequest(t, req, http.StatusNotFound)
+}
+
+func TestAPIGetTeamRepoAccessTokenResources(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAPIGetTeamRepoAccessTokenResources")()
+	defer tests.PrepareTestEnv(t)()
+
+	// Test cases org3/repo21 (public), org3/repo3 (private), org3/repo5 (private) --
+	// TestAPIGetTeamRepoAccessTokenResources fixtures create a team w/ ID=26 that contains all three repos.
+	session := loginUser(t, "user2")
+
+	var repo api.Repository
+
+	t.Run("all access token", func(t *testing.T) {
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadOrganization)
+
+		t.Run("allowed public repo21", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo21").AddTokenAuth(allToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.False(t, repo.Private)
+		})
+		t.Run("allowed private repo3", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo3").AddTokenAuth(allToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.True(t, repo.Private)
+		})
+		// org3/repo5 is a second repo used in fine-grain testing below, so we include it in other tests as a baseline
+		t.Run("allowed private repo5", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo5").AddTokenAuth(allToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.True(t, repo.Private)
+		})
+	})
+
+	t.Run("public-only access token", func(t *testing.T) {
+		publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadOrganization)
+
+		t.Run("allowed public repo21", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo21").AddTokenAuth(publicOnlyToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.False(t, repo.Private)
+		})
+		t.Run("denied private repo3", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo3").AddTokenAuth(publicOnlyToken)
+			MakeRequest(t, req, http.StatusNotFound)
+		})
+		t.Run("denied private repo5", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo5").AddTokenAuth(publicOnlyToken)
+			MakeRequest(t, req, http.StatusNotFound)
+		})
+	})
+
+	t.Run("specific repo access token", func(t *testing.T) {
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadOrganization},
+			[]int64{3},
+		)
+
+		t.Run("allowed public repo21", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo21").AddTokenAuth(repo2OnlyToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.False(t, repo.Private)
+		})
+		t.Run("allowed inside fine-grain repo3", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo3").AddTokenAuth(repo2OnlyToken)
+			resp := MakeRequest(t, req, http.StatusOK)
+			DecodeJSON(t, resp, &repo)
+			assert.True(t, repo.Private)
+		})
+		t.Run("denied private outside fine-grain repo5", func(t *testing.T) {
+			req := NewRequest(t, "GET", "/api/v1/teams/26/repos/org3/repo5").AddTokenAuth(repo2OnlyToken)
+			MakeRequest(t, req, http.StatusNotFound)
+		})
+	})
 }

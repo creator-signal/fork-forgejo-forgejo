@@ -61,6 +61,8 @@ type ActionRunner struct {
 
 	// Store labels defined in state file (default: .runner file) of `act_runner`
 	AgentLabels []string `xorm:"TEXT"`
+	// Store if this is a runner that only ever get one single job assigned
+	Ephemeral bool `xorm:"ephemeral NOT NULL DEFAULT false"`
 
 	Created timeutil.TimeStamp `xorm:"created"`
 	Updated timeutil.TimeStamp `xorm:"updated"`
@@ -123,6 +125,18 @@ func (r *ActionRunner) IsOnline() bool {
 		return true
 	}
 	return false
+}
+
+func (r *ActionRunner) IsActive() bool {
+	return r.Status() == runnerv1.RunnerStatus_RUNNER_STATUS_ACTIVE
+}
+
+func (r *ActionRunner) IsIdle() bool {
+	return r.Status() == runnerv1.RunnerStatus_RUNNER_STATUS_IDLE
+}
+
+func (r *ActionRunner) IsOffline() bool {
+	return r.Status() == runnerv1.RunnerStatus_RUNNER_STATUS_OFFLINE
 }
 
 // Editable checks if the runner is editable by the user
@@ -212,8 +226,8 @@ func (opts FindRunnerOptions) ToConds() builder.Cond {
 		cond = cond.And(builder.Like{"name", opts.Filter})
 	}
 
-	if opts.IsOnline.Has() {
-		if opts.IsOnline.Value() {
+	if has, value := opts.IsOnline.Get(); has {
+		if value {
 			cond = cond.And(builder.Gt{"last_online": time.Now().Add(-RunnerOfflineTime).Unix()})
 		} else {
 			cond = cond.And(builder.Lte{"last_online": time.Now().Add(-RunnerOfflineTime).Unix()})
@@ -260,6 +274,31 @@ func GetRunnerByID(ctx context.Context, id int64) (*ActionRunner, error) {
 		return nil, err
 	} else if !has {
 		return nil, fmt.Errorf("runner with id %d: %w", id, util.ErrNotExist)
+	}
+	return &runner, nil
+}
+
+// GetAvailableRunnerByID is like GetRunnerByID, but it only finds the runner if it is accessible to the given owner or
+// repository. If it is not, util.ErrNotExist will be returned even if the runner exists.
+func GetAvailableRunnerByID(ctx context.Context, id, ownerID, repoID int64) (*ActionRunner, error) {
+	query := db.GetEngine(ctx).Where("id=?", id)
+
+	if repoID > 0 {
+		cond := builder.NewCond().And(builder.Eq{"repo_id": repoID})
+		cond = cond.Or(builder.Eq{"owner_id": builder.Select("owner_id").From("repository").Where(builder.Eq{"id": repoID})})
+		cond = cond.Or(builder.Eq{"repo_id": 0, "owner_id": 0})
+		query = query.And(cond)
+	} else if ownerID > 0 { // ownerID is ignored if repoID is set
+		cond := builder.NewCond().And(builder.Eq{"owner_id": ownerID}).Or(builder.Eq{"repo_id": 0, "owner_id": 0})
+		query = query.And(cond)
+	}
+
+	var runner ActionRunner
+	has, err := query.Get(&runner)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf("runner with ID %d: %w", id, util.ErrNotExist)
 	}
 	return &runner, nil
 }

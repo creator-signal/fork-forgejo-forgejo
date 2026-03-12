@@ -142,12 +142,12 @@ func getTestCases() []struct {
 		{
 			name:  "AllPublic/PublicRepositoriesOfUserIncludingCollaborative",
 			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerID: 15, AllPublic: true, Template: optional.Some(false)},
-			count: 35,
+			count: 36,
 		},
 		{
 			name:  "AllPublic/PublicAndPrivateRepositoriesOfUserIncludingCollaborative",
 			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerID: 15, Private: true, AllPublic: true, AllLimited: true, Template: optional.Some(false)},
-			count: 40,
+			count: 41,
 		},
 		{
 			name:  "AllPublic/PublicAndPrivateRepositoriesOfUserIncludingCollaborativeByName",
@@ -162,7 +162,7 @@ func getTestCases() []struct {
 		{
 			name:  "AllPublic/PublicRepositoriesOfOrganization",
 			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerID: 17, AllPublic: true, Collaborate: optional.Some(false), Template: optional.Some(false)},
-			count: 35,
+			count: 36,
 		},
 		{
 			name:  "AllTemplates",
@@ -172,7 +172,7 @@ func getTestCases() []struct {
 		{
 			name:  "OwnerSlashRepoSearch",
 			opts:  &repo_model.SearchRepoOptions{Keyword: "user/repo2", ListOptions: db.ListOptions{Page: 1, PageSize: 10}, Private: true, OwnerID: 0},
-			count: 2,
+			count: 3,
 		},
 		{
 			name:  "OwnerSlashSearch",
@@ -331,21 +331,21 @@ func TestSearchRepository(t *testing.T) {
 						assert.False(t, repo.IsPrivate)
 					}
 
-					if testCase.opts.Fork.Value() && testCase.opts.Mirror.Value() {
+					if testCase.opts.Fork.ValueOrZeroValue() && testCase.opts.Mirror.ValueOrZeroValue() {
 						assert.True(t, repo.IsFork && repo.IsMirror)
 					} else {
-						if testCase.opts.Fork.Has() {
-							assert.Equal(t, testCase.opts.Fork.Value(), repo.IsFork)
+						if has, value := testCase.opts.Fork.Get(); has {
+							assert.Equal(t, value, repo.IsFork)
 						}
 
-						if testCase.opts.Mirror.Has() {
-							assert.Equal(t, testCase.opts.Mirror.Value(), repo.IsMirror)
+						if has, value := testCase.opts.Mirror.Get(); has {
+							assert.Equal(t, value, repo.IsMirror)
 						}
 					}
 
 					if testCase.opts.OwnerID > 0 && !testCase.opts.AllPublic {
-						if testCase.opts.Collaborate.Has() {
-							if testCase.opts.Collaborate.Value() {
+						if has, value := testCase.opts.Collaborate.Get(); has {
+							if value {
 								assert.NotEqual(t, testCase.opts.OwnerID, repo.Owner.ID)
 							} else {
 								assert.Equal(t, testCase.opts.OwnerID, repo.Owner.ID)
@@ -420,15 +420,15 @@ func TestSearchRepositoryIDsByCondition(t *testing.T) {
 	}{
 		{
 			user:    nil,
-			repoIDs: []int64{1, 4, 8, 9, 10, 11, 12, 14, 17, 18, 21, 23, 25, 27, 29, 32, 33, 34, 35, 36, 37, 42, 44, 45, 46, 47, 48, 49, 50, 51, 53, 57, 58, 60, 61, 62, 1059},
+			repoIDs: []int64{1, 4, 8, 9, 10, 11, 12, 14, 17, 18, 21, 23, 25, 27, 29, 32, 33, 34, 35, 36, 37, 42, 44, 45, 46, 47, 48, 49, 50, 51, 53, 57, 58, 60, 61, 62, 66, 1059},
 		},
 		{
 			user:    unittest.AssertExistsAndLoadBean(t, &user.User{ID: 4}),
-			repoIDs: []int64{1, 3, 4, 8, 9, 10, 11, 12, 14, 17, 18, 21, 23, 25, 27, 29, 32, 33, 34, 35, 36, 37, 38, 40, 42, 44, 45, 46, 47, 48, 49, 50, 51, 53, 57, 58, 60, 61, 62, 1001, 1059},
+			repoIDs: []int64{1, 3, 4, 8, 9, 10, 11, 12, 14, 17, 18, 21, 23, 25, 27, 29, 32, 33, 34, 35, 36, 37, 38, 40, 42, 44, 45, 46, 47, 48, 49, 50, 51, 53, 57, 58, 60, 61, 62, 66, 1001, 1059},
 		},
 		{
 			user:    unittest.AssertExistsAndLoadBean(t, &user.User{ID: 5}),
-			repoIDs: []int64{1, 4, 8, 9, 10, 11, 12, 14, 17, 18, 21, 23, 25, 27, 29, 32, 33, 34, 35, 36, 37, 38, 40, 42, 44, 45, 46, 47, 48, 49, 50, 51, 53, 57, 58, 60, 61, 62, 1001, 1059},
+			repoIDs: []int64{1, 4, 8, 9, 10, 11, 12, 14, 17, 18, 21, 23, 25, 27, 29, 32, 33, 34, 35, 36, 37, 38, 40, 42, 44, 45, 46, 47, 48, 49, 50, 51, 53, 57, 58, 60, 61, 62, 66, 1001, 1059},
 		},
 	}
 

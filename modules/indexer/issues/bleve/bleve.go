@@ -13,7 +13,6 @@ import (
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/custom"
-	"github.com/blevesearch/bleve/v2/analysis/token/camelcase"
 	"github.com/blevesearch/bleve/v2/analysis/token/lowercase"
 	"github.com/blevesearch/bleve/v2/analysis/token/unicodenorm"
 	"github.com/blevesearch/bleve/v2/analysis/tokenizer/unicode"
@@ -24,7 +23,7 @@ import (
 const (
 	issueIndexerAnalyzer      = "issueIndexer"
 	issueIndexerDocType       = "issueIndexerDocType"
-	issueIndexerLatestVersion = 5
+	issueIndexerLatestVersion = 7
 )
 
 const unicodeNormalizeName = "unicodeNormalize"
@@ -83,7 +82,7 @@ func generateIssueIndexMapping() (mapping.IndexMapping, error) {
 	docMapping.AddFieldMappingsAt("project_id", numberFieldMapping)
 	docMapping.AddFieldMappingsAt("project_board_id", numberFieldMapping)
 	docMapping.AddFieldMappingsAt("poster_id", numberFieldMapping)
-	docMapping.AddFieldMappingsAt("assignee_id", numberFieldMapping)
+	docMapping.AddFieldMappingsAt("assignee_ids", numberFieldMapping)
 	docMapping.AddFieldMappingsAt("mention_ids", numberFieldMapping)
 	docMapping.AddFieldMappingsAt("reviewed_ids", numberFieldMapping)
 	docMapping.AddFieldMappingsAt("review_requested_ids", numberFieldMapping)
@@ -100,7 +99,7 @@ func generateIssueIndexMapping() (mapping.IndexMapping, error) {
 		"type":          custom.Name,
 		"char_filters":  []string{},
 		"tokenizer":     unicode.Name,
-		"token_filters": []string{unicodeNormalizeName, camelcase.Name, lowercase.Name},
+		"token_filters": []string{unicodeNormalizeName, lowercase.Name},
 	}); err != nil {
 		return nil, err
 	}
@@ -196,19 +195,19 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		filters = append(filters, bleve.NewDisjunctionQuery(repoQueries...))
 	}
 
-	if options.PriorityRepoID.Has() {
-		eq := inner_bleve.NumericEqualityQuery(options.PriorityRepoID.Value(), "repo_id")
+	if has, value := options.PriorityRepoID.Get(); has {
+		eq := inner_bleve.NumericEqualityQuery(value, "repo_id")
 		eq.SetBoost(10.0)
 		meh := bleve.NewMatchAllQuery()
 		meh.SetBoost(0)
 		q.AddShould(bleve.NewDisjunctionQuery(eq, meh))
 	}
 
-	if options.IsPull.Has() {
-		filters = append(filters, inner_bleve.BoolFieldQuery(options.IsPull.Value(), "is_pull"))
+	if has, value := options.IsPull.Get(); has {
+		filters = append(filters, inner_bleve.BoolFieldQuery(value, "is_pull"))
 	}
-	if options.IsClosed.Has() {
-		filters = append(filters, inner_bleve.BoolFieldQuery(options.IsClosed.Value(), "is_closed"))
+	if has, value := options.IsClosed.Get(); has {
+		filters = append(filters, inner_bleve.BoolFieldQuery(value, "is_closed"))
 	}
 
 	if options.NoLabelOnly {
@@ -246,14 +245,14 @@ func (b *Indexer) Search(ctx context.Context, options *internal.SearchOptions) (
 		"project_id":           options.ProjectID,
 		"project_board_id":     options.ProjectColumnID,
 		"poster_id":            options.PosterID,
-		"assignee_id":          options.AssigneeID,
+		"assignee_ids":         options.AssigneeID,
 		"mention_ids":          options.MentionID,
 		"reviewed_ids":         options.ReviewedID,
 		"review_requested_ids": options.ReviewRequestedID,
 		"subscriber_ids":       options.SubscriberID,
 	} {
-		if val.Has() {
-			filters = append(filters, inner_bleve.NumericEqualityQuery(val.Value(), key))
+		if has, value := val.Get(); has {
+			filters = append(filters, inner_bleve.NumericEqualityQuery(value, key))
 		}
 	}
 

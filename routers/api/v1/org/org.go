@@ -27,7 +27,7 @@ import (
 
 func listUserOrgs(ctx *context.APIContext, u *user_model.User) {
 	listOptions := utils.GetListOptions(ctx)
-	showPrivate := ctx.IsSigned && (ctx.Doer.IsAdmin || ctx.Doer.ID == u.ID)
+	showPrivate := ctx.IsSigned && (ctx.IsUserSiteAdmin() || ctx.Doer.ID == u.ID)
 
 	opts := organization.FindOrgOptions{
 		ListOptions:    listOptions,
@@ -68,7 +68,7 @@ func ListMyOrgs(ctx *context.APIContext) {
 	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/OrganizationList"
+	//     "$ref": "#/responses/OrganizationListWithoutPagination"
 	//   "401":
 	//     "$ref": "#/responses/unauthorized"
 	//   "403":
@@ -102,7 +102,7 @@ func ListUserOrgs(ctx *context.APIContext) {
 	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/OrganizationList"
+	//     "$ref": "#/responses/OrganizationListWithoutPagination"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
@@ -199,7 +199,7 @@ func GetAll(ctx *context.APIContext) {
 	vMode := []api.VisibleType{api.VisibleTypePublic}
 	if ctx.IsSigned && !ctx.PublicOnly {
 		vMode = append(vMode, api.VisibleTypeLimited)
-		if ctx.Doer.IsAdmin {
+		if ctx.IsUserSiteAdmin() {
 			vMode = append(vMode, api.VisibleTypePrivate)
 		}
 	}
@@ -483,7 +483,7 @@ func ListOrgActivityFeeds(ctx *context.APIContext) {
 
 	includePrivate := false
 	if ctx.IsSigned {
-		if ctx.Doer.IsAdmin {
+		if ctx.IsUserSiteAdmin() {
 			includePrivate = true
 		} else {
 			org := organization.OrgFromUser(ctx.ContextUser)

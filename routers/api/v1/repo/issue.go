@@ -166,6 +166,8 @@ func SearchIssues(ctx *context.APIContext) {
 			// MySQL will return different results when sorting by null in some cases
 			OrderBy: db.SearchOrderByAlphabetically,
 			Actor:   ctx.Doer,
+
+			AuthorizationReducer: ctx.Reducer,
 		}
 		if ctx.IsSigned {
 			opts.Private = !ctx.PublicOnly
@@ -447,6 +449,14 @@ func ListIssues(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "GetLabelIDsInRepoByNames", err)
 			return
 		}
+		if ctx.Repo.Owner.IsOrganization() {
+			orgLabelIDs, err := issues_model.GetLabelIDsInOrgByNames(ctx, ctx.Repo.Owner.ID, split)
+			if err != nil {
+				ctx.Error(http.StatusInternalServerError, "GetLabelIDsInOrgByNames", err)
+				return
+			}
+			labelIDs = append(labelIDs, orgLabelIDs...)
+		}
 	}
 
 	var mileIDs []int64
@@ -489,7 +499,7 @@ func ListIssues(ctx *context.APIContext) {
 		isPull = optional.Some(false)
 	}
 
-	if isPull.Has() && !ctx.Repo.CanReadIssuesOrPulls(isPull.Value()) {
+	if has, value := isPull.Get(); has && !ctx.Repo.CanReadIssuesOrPulls(value) {
 		ctx.NotFound()
 		return
 	}

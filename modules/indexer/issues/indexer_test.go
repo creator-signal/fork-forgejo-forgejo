@@ -4,7 +4,11 @@
 package issues
 
 import (
+	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/issues"
@@ -12,11 +16,7 @@ import (
 	"forgejo.org/modules/indexer/issues/internal"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
-
-	_ "forgejo.org/models"
-	_ "forgejo.org/models/actions"
-	_ "forgejo.org/models/activities"
-	_ "forgejo.org/models/forgefed"
+	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 func TestDBSearchIssues(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	setting.Indexer.IssueType = "db"
+	defer test.MockVariableValue(&setting.Indexer.IssueType, "db")()
 	InitIssueIndexer(true)
 
 	t.Run("search issues with keyword", searchIssueWithKeyword)
@@ -53,6 +53,13 @@ func searchIssueWithKeyword(t *testing.T) {
 	}{
 		{
 			"issue2",
+			&SearchOptions{
+				RepoIDs: []int64{1},
+			},
+			[]int64{2},
+		},
+		{
+			"ISSUe2", // case-insensitive search
 			&SearchOptions{
 				RepoIDs: []int64{1},
 			},
@@ -157,7 +164,7 @@ func searchIssueByID(t *testing.T) {
 		{
 			// NOTE: This tests no assignees filtering and also ToSearchOptions() to ensure it will set AssigneeID to 0 when it is passed as -1.
 			opts:        *ToSearchOptions(t.Context(), "", &issues.IssuesOptions{AssigneeID: -1}),
-			expectedIDs: []int64{22, 21, 16, 15, 14, 13, 12, 11, 20, 5, 19, 18, 10, 7, 4, 9, 8, 3, 2},
+			expectedIDs: []int64{24, 22, 21, 16, 15, 14, 13, 12, 11, 20, 5, 19, 18, 10, 7, 4, 9, 8, 3, 2},
 		},
 		{
 			opts: SearchOptions{
@@ -222,7 +229,7 @@ func searchIssueIsPull(t *testing.T) {
 			SearchOptions{
 				IsPull: optional.Some(true),
 			},
-			[]int64{22, 21, 12, 11, 20, 19, 9, 8, 3, 2},
+			[]int64{24, 22, 21, 12, 11, 20, 19, 9, 8, 3, 2},
 		},
 	}
 	for _, test := range tests {
@@ -242,7 +249,7 @@ func searchIssueIsClosed(t *testing.T) {
 			SearchOptions{
 				IsClosed: optional.Some(false),
 			},
-			[]int64{22, 21, 17, 16, 15, 14, 13, 12, 11, 20, 6, 19, 18, 10, 7, 9, 8, 3, 2, 1},
+			[]int64{24, 22, 21, 17, 16, 15, 14, 13, 12, 11, 20, 6, 19, 18, 10, 7, 9, 8, 3, 2, 1},
 		},
 		{
 			SearchOptions{
@@ -305,7 +312,7 @@ func searchIssueByLabelID(t *testing.T) {
 			SearchOptions{
 				ExcludedLabelIDs: []int64{1},
 			},
-			[]int64{22, 21, 17, 16, 15, 14, 13, 12, 11, 20, 6, 5, 19, 18, 10, 7, 4, 9, 8, 3},
+			[]int64{24, 22, 21, 17, 16, 15, 14, 13, 12, 11, 20, 6, 5, 19, 18, 10, 7, 4, 9, 8, 3},
 		},
 	}
 	for _, test := range tests {
@@ -325,7 +332,7 @@ func searchIssueByTime(t *testing.T) {
 			SearchOptions{
 				UpdatedAfterUnix: optional.Some(int64(0)),
 			},
-			[]int64{22, 21, 17, 16, 15, 14, 13, 12, 11, 20, 6, 5, 19, 18, 10, 7, 4, 9, 8, 3, 2, 1},
+			[]int64{24, 22, 21, 17, 16, 15, 14, 13, 12, 11, 20, 6, 5, 19, 18, 10, 7, 4, 9, 8, 3, 2, 1},
 		},
 	}
 	for _, test := range tests {
@@ -345,7 +352,7 @@ func searchIssueWithOrder(t *testing.T) {
 			SearchOptions{
 				SortBy: internal.SortByCreatedAsc,
 			},
-			[]int64{1, 2, 3, 8, 9, 4, 7, 10, 18, 19, 5, 6, 20, 11, 12, 13, 14, 15, 16, 17, 21, 22},
+			[]int64{1, 2, 3, 8, 9, 4, 7, 10, 18, 19, 5, 6, 20, 11, 12, 13, 14, 15, 16, 17, 21, 22, 24},
 		},
 	}
 	for _, test := range tests {
@@ -400,8 +407,8 @@ func searchIssueWithPaginator(t *testing.T) {
 					PageSize: 5,
 				},
 			},
-			[]int64{22, 21, 17, 16, 15},
-			22,
+			[]int64{24, 22, 21, 17, 16},
+			23,
 		},
 	}
 	for _, test := range tests {
@@ -411,4 +418,40 @@ func searchIssueWithPaginator(t *testing.T) {
 		assert.Equal(t, test.expectedIDs, issueIDs)
 		assert.Equal(t, test.expectedTotal, total)
 	}
+}
+
+func TestBleveDeleteIssue(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	tmp := t.TempDir()
+	defer test.MockVariableValue(&setting.Indexer.IssuePath, filepath.Join(tmp, "indexers/issues.bleve"))()
+	defer test.MockVariableValue(&setting.Indexer.IssueType, "bleve")()
+	InitIssueIndexer(false)
+
+	ctx := t.Context()
+	issue := unittest.AssertExistsAndLoadBean(t, &issues.Issue{ID: 1})
+	UpdateIssueIndexer(ctx, issue.ID)
+
+	opts := &internal.SearchOptions{
+		RepoIDs: []int64{issue.RepoID},
+	}
+	opts.WithKeyword(ctx, "first")
+
+	assert.Eventually(t, func() bool {
+		ids, _, err := SearchIssues(ctx, opts)
+		if err != nil && strings.Contains(err.Error(), "not ready") {
+			return false
+		}
+		assert.NoError(t, err)
+
+		assert.NoError(t, err)
+		return slices.Contains(ids, issue.ID)
+	}, time.Second*5, time.Millisecond*100, "failed to update issue")
+
+	DeleteIssueIndexer(ctx, issue.ID)
+	assert.Eventually(t, func() bool {
+		ids, _, err := SearchIssues(ctx, opts)
+		assert.NoError(t, err)
+		return !slices.Contains(ids, issue.ID)
+	}, time.Second*5, time.Millisecond*100, "failed to delete issue")
 }

@@ -4,7 +4,7 @@
   repo_id: 4
   owner_id: 1
   commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job_2
   attempt: 1
   job_id: job_2
@@ -18,7 +18,7 @@
   repo_id: 4
   owner_id: 1
   commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job_2
   attempt: 1
   job_id: job_2
@@ -32,7 +32,7 @@
   repo_id: 4
   owner_id: 1
   commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job1 (1)
   attempt: 1
   job_id: job1
@@ -46,7 +46,7 @@
   repo_id: 4
   owner_id: 1
   commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job1 (2)
   attempt: 1
   job_id: job1
@@ -60,7 +60,7 @@
   repo_id: 4
   owner_id: 1
   commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job2
   attempt: 1
   job_id: job2
@@ -70,12 +70,72 @@
   started: 1683636528
   stopped: 1683636626
 -
+  id: 197
+  run_id: 895
+  repo_id: 4
+  owner_id: 1
+  commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
+  is_fork_pull_request: false
+  name: job1 (1)
+  attempt: 0
+  job_id: job1
+  task_id: 54
+  status: 2 # failure
+  runs_on: '["postmarketOS"]'
+  started: 1683636528
+  stopped: 1683636626
+-
+  id: 198
+  run_id: 895
+  repo_id: 4
+  owner_id: 1
+  commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
+  is_fork_pull_request: false
+  name: job1 (2)
+  attempt: 0
+  job_id: job1
+  task_id: 55
+  status: 6 # running
+  runs_on: '["postmarketOS"]'
+  started: 1683636528
+  stopped: 1683636626
+-
+  id: 199
+  run_id: 896
+  repo_id: 4
+  owner_id: 1
+  commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
+  is_fork_pull_request: false
+  name: job1 (1)
+  attempt: 0
+  job_id: job1
+  task_id: 56
+  status: 2 # failure
+  runs_on: '["postmarketOS"]'
+  started: 1683636528
+  stopped: 1683636626
+-
+  id: 200
+  run_id: 896
+  repo_id: 4
+  owner_id: 1
+  commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
+  is_fork_pull_request: false
+  name: job1 (2)
+  attempt: 0
+  job_id: job1
+  task_id: 57
+  status: 1 # success
+  runs_on: '["postmarketOS"]'
+  started: 1683636528
+  stopped: 1683636626
+-
   id: 292
   run_id: 891
   repo_id: 1
   owner_id: 1
   commit_sha: 985f0301dba5e7b34be866819cd15ad3d8f508ee
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job_2
   attempt: 1
   job_id: job_2
@@ -89,7 +149,7 @@
   repo_id: 1
   owner_id: 1
   commit_sha: 985f0301dba5e7b34be866819cd15ad3d8f508ee
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job_2
   attempt: 1
   job_id: job_2
@@ -104,7 +164,7 @@
   repo_id: 1
   owner_id: 2
   commit_sha: 985f0301dba5e7b34be866819cd15ad3d8f508ee
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job_2
   attempt: 2
   job_id: job_2
@@ -119,7 +179,7 @@
   repo_id: 1
   owner_id: 3
   commit_sha: 985f0301dba5e7b34be866819cd15ad3d8f508ee
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job_2
   attempt: 1
   job_id: job_2
@@ -134,7 +194,7 @@
   repo_id: 4
   owner_id: 1
   commit_sha: 985f0301dba5e7b34be866819cd15ad3d8f508ee
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job_2
   attempt: 0
   job_id: job_2
@@ -149,7 +209,7 @@
   repo_id: 1
   owner_id: 3
   commit_sha: ea09cba7099f7e3bea80dee1a42f0b5d5e127f2e
-  is_fork_pull_request: 0
+  is_fork_pull_request: false
   name: job_3
   attempt: 1
   job_id: job_3
