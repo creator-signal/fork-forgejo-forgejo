@@ -4,12 +4,13 @@
 package container
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
 	packages_model "forgejo.org/models/packages"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
 	container_module "forgejo.org/modules/packages/container"
 	flatpak_module "forgejo.org/modules/packages/container/flatpak"
 	"forgejo.org/modules/setting"
@@ -18,17 +19,20 @@ import (
 
 func FlatpakRepo(ctx *context.Context) {
 	var repoBuilder strings.Builder
-	repoBuilder.WriteString("[Flatpak Repo]\n")
-	repoBuilder.WriteString(fmt.Sprintf("Title=%s-%s\n", setting.AppName, ctx.ContextUser.Name))
-	repoBuilder.WriteString(fmt.Sprintf("Url=oci+%sapi/packages/%s/container\n", setting.AppURL, ctx.ContextUser.Name))
-	repoBuilder.WriteString(fmt.Sprintf("Homepage=%s\n", ctx.ContextUser.HTMLURL()))
-	repoBuilder.WriteString(fmt.Sprintf("Comment=Flatpak repo of %s/%s\n", setting.AppName, ctx.ContextUser.Name))
-	repoBuilder.WriteString(fmt.Sprintf("Description=Flatpak repo of %s/%s\n", setting.AppName, ctx.ContextUser.Name))
-	repoBuilder.WriteString(fmt.Sprintf("Icon=%s\n", ctx.ContextUser.AvatarLink(ctx)))
+	fmt.Fprintf(&repoBuilder, "[Flatpak Repo]\n")
+	fmt.Fprintf(&repoBuilder, "Title=%s-%s\n", setting.AppName, ctx.ContextUser.Name)
+	fmt.Fprintf(&repoBuilder, "Url=oci+%sapi/packages/%s/container\n", setting.AppURL, ctx.ContextUser.Name)
+	fmt.Fprintf(&repoBuilder, "Homepage=%s\n", ctx.ContextUser.HTMLURL())
+	fmt.Fprintf(&repoBuilder, "Comment=Flatpak repo of %s/%s\n", setting.AppName, ctx.ContextUser.Name)
+	fmt.Fprintf(&repoBuilder, "Description=Flatpak repo of %s/%s\n", setting.AppName, ctx.ContextUser.Name)
+	fmt.Fprintf(&repoBuilder, "Icon=%s\n", ctx.ContextUser.AvatarLink(ctx))
 
 	ctx.Resp.Header().Set("Content-Type", "application/vnd.flatpak.repo")
 	ctx.Resp.WriteHeader(http.StatusOK)
-	ctx.Resp.Write([]byte(repoBuilder.String()))
+	_, err := ctx.Resp.Write([]byte(repoBuilder.String()))
+	if err != nil {
+		log.Error("write to resp err: %v", err)
+	}
 }
 
 func getFlatpakPackageVersion(ctx *context.Context) (bool, *packages_model.PackageVersion, *container_module.Metadata) {
@@ -63,26 +67,29 @@ func FlatpakRef(ctx *context.Context) {
 	}
 
 	var refBuilder strings.Builder
-	refBuilder.WriteString("[Flatpak Ref]\n")
-	refBuilder.WriteString(fmt.Sprintf("Name=%s\n", metadata.Flatpak.ID))
-	refBuilder.WriteString(fmt.Sprintf("Title=%s from %s\n", metadata.Flatpak.ID, setting.AppName))
-	refBuilder.WriteString(fmt.Sprintf("SuggestRemoteName=%s\n", flatpak_module.GetRepoName(ctx.ContextUser.LowerName)))
-	refBuilder.WriteString(fmt.Sprintf("Url=%s\n", flatpak_module.GetRepoURL(ctx.ContextUser.LowerName)))
-	refBuilder.WriteString(fmt.Sprintf("Branch=%s\n", metadata.Flatpak.Branch))
+	fmt.Fprintf(&refBuilder, "[Flatpak Ref]\n")
+	fmt.Fprintf(&refBuilder, "Name=%s\n", metadata.Flatpak.ID)
+	fmt.Fprintf(&refBuilder, "Title=%s from %s\n", metadata.Flatpak.ID, setting.AppName)
+	fmt.Fprintf(&refBuilder, "SuggestRemoteName=%s\n", flatpak_module.GetRepoName(ctx.ContextUser.LowerName))
+	fmt.Fprintf(&refBuilder, "Url=%s\n", flatpak_module.GetRepoURL(ctx.ContextUser.LowerName))
+	fmt.Fprintf(&refBuilder, "Branch=%s\n", metadata.Flatpak.Branch)
 
 	if metadata.Flatpak.RuntimeRepo == "" {
-		refBuilder.WriteString(fmt.Sprintf("RuntimeRepo=%s\n", flatpak_module.GetRepoInfoURL(ctx.ContextUser.LowerName)))
+		fmt.Fprintf(&refBuilder, "RuntimeRepo=%s\n", flatpak_module.GetRepoInfoURL(ctx.ContextUser.LowerName))
 	} else {
-		refBuilder.WriteString(fmt.Sprintf("RuntimeRepo=%s\n", metadata.Flatpak.RuntimeRepo))
+		fmt.Fprintf(&refBuilder, "RuntimeRepo=%s\n", metadata.Flatpak.RuntimeRepo)
 	}
 
 	if metadata.Flatpak.Kind == flatpak_module.FlatpakKindRuntime {
-		refBuilder.WriteString("IsRuntime=true\n")
+		fmt.Fprintf(&refBuilder, "IsRuntime=true\n")
 	} else {
-		refBuilder.WriteString("IsRuntime=false\n")
+		fmt.Fprintf(&refBuilder, "IsRuntime=false\n")
 	}
 
 	ctx.Resp.Header().Set("Content-Type", "application/vnd.flatpak.ref")
 	ctx.Resp.WriteHeader(http.StatusOK)
-	ctx.Resp.Write([]byte(refBuilder.String()))
+	_, err := ctx.Resp.Write([]byte(refBuilder.String()))
+	if err != nil {
+		log.Error("write to resp err: %v", err)
+	}
 }

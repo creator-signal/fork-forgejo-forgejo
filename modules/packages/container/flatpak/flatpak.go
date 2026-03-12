@@ -10,7 +10,7 @@ import (
 	"forgejo.org/modules/setting"
 )
 
-type FlatpakKind string
+type FlatpakKind string //revive:disable-line:exported
 
 const (
 	FlatpakKindApp     FlatpakKind = "app"

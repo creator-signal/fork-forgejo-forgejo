@@ -4,7 +4,6 @@
 package container
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"slices"
@@ -12,6 +11,7 @@ import (
 
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
+	"forgejo.org/modules/json"
 	container_module "forgejo.org/modules/packages/container"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
