@@ -6,7 +6,6 @@ package integration
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -24,12 +23,6 @@ import (
 
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 )
-
-func sha256Hash(c string) string {
-	hasher := sha256.New()
-	hasher.Write([]byte(c))
-	return fmt.Sprintf("%x", hasher.Sum(nil))
-}
 
 func uploadFlatpakPackage(t *testing.T, user *user_model.User) {
 	t.Helper()
