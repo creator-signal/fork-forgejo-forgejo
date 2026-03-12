@@ -44,8 +44,8 @@ code.forgejo.org/go-chi/session v1.0.2 h1:pG+AXre9L9VXJmTaADXkmeEPuRalhmBXyv6tG2
 code.forgejo.org/go-chi/session v1.0.2/go.mod h1:HnEGyBny7WPzCiVLP2vzL5ssma+3gCSl/vLpuVNYrqc=
 code.forgejo.org/xorm/xorm v1.3.9-forgejo.8 h1:dsSKm2nus0NhHsqYxeuB3Gldk6TtlusD1CBGV6V1SS0=
 code.forgejo.org/xorm/xorm v1.3.9-forgejo.8/go.mod h1:A7sFd3BFmRp20h6drSsCXgQRQdF8Vz8HuCSrzFS3m90=
-code.gitea.io/sdk/gitea v0.21.0 h1:69n6oz6kEVHRo1+APQQyizkhrZrLsTLXey9142pfkD4=
-code.gitea.io/sdk/gitea v0.21.0/go.mod h1:tnBjVhuKJCn8ibdyyhvUyxrR1Ca2KHEoTWoukNhXQPA=
+code.gitea.io/sdk/gitea v0.23.2 h1:iJB1FDmLegwfwjX8gotBDHdPSbk/ZR8V9VmEJaVsJYg=
+code.gitea.io/sdk/gitea v0.23.2/go.mod h1:yyF5+GhljqvA30sRDreoyHILruNiy4ASufugzYg0VHM=
 code.superseriousbusiness.org/exif-terminator v0.11.1 h1:qnujLH4/Yk/CFtFMmtjozbdV6Ry5G3Q/E/mLlWm/gQI=
 code.superseriousbusiness.org/exif-terminator v0.11.1/go.mod h1:/Z+3DHSrefCzzN5ePkGjVYKFErRimoeUf694Gz8Pn/Y=
 code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0 h1:r9uq8StaSHYKJ8DklR9Xy+E9c40G1Z8yj5TRGi8L6+4=
