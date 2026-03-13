@@ -33,7 +33,7 @@ var Webhook = struct {
 func loadWebhookFrom(rootCfg ConfigProvider) {
 	sec := rootCfg.Section("webhook")
 	Webhook.QueueLength = sec.Key("QUEUE_LENGTH").MustInt(1000)
-	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
+	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(30)
 	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
 	Webhook.AllowedHostList = sec.Key("ALLOWED_HOST_LIST").MustString("")
 	Webhook.PagingNum = sec.Key("PAGING_NUM").MustInt(10)
