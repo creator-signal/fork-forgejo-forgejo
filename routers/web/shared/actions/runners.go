@@ -261,6 +261,10 @@ func RunnerDetails(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("actions.runners.runner_details.page_title", runner.Name)
 	ctx.Data["Runner"] = runner
 	ctx.Data["Tasks"] = tasks
+	ctx.Data["IsRepo"] = rCtx.IsRepo
+	ctx.Data["IsOrg"] = rCtx.IsOrg
+	ctx.Data["IsAdmin"] = rCtx.IsAdmin
+	ctx.Data["IsUser"] = rCtx.IsUser
 	pager := context.NewPagination(int(count), opts.PageSize, opts.Page, 5)
 	ctx.Data["Page"] = pager
 	ctx.Data["RunnersListLink"] = rCtx.RedirectLink

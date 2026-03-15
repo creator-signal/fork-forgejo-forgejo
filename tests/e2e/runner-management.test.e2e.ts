@@ -84,7 +84,7 @@ test.describe('Runners of user2', () => {
       - definition: A runner for everyone
     `);
 
-    await expect(page.getByRole('heading', {name: 'Recent tasks on this runner '})).toBeVisible();
+    await expect(page.getByRole('heading', {name: 'Recent tasks of this user on this runner'})).toBeVisible();
 
     const rows = page.getByRole('row');
 
@@ -374,7 +374,7 @@ test.describe('Global runners', () => {
       - definition: A runner for everyone
     `);
 
-    await expect(page.getByRole('heading', {name: 'Recent tasks on this runner '})).toBeVisible();
+    await expect(page.getByRole('heading', {name: 'Recent tasks on this runner'})).toBeVisible();
 
     const rows = page.getByRole('row');
 
@@ -598,7 +598,7 @@ test.describe('Organization runners', () => {
       - definition: A runner for everyone
     `);
 
-    await expect(page.getByRole('heading', {name: 'Recent tasks on this runner '})).toBeVisible();
+    await expect(page.getByRole('heading', {name: 'Recent tasks on this runner within this organization'})).toBeVisible();
 
     const rows = page.getByRole('row');
 
@@ -694,7 +694,7 @@ test.describe('Repository runners', () => {
       - definition: A runner for everyone
     `);
 
-    await expect(page.getByRole('heading', {name: 'Recent tasks on this runner '})).toBeVisible();
+    await expect(page.getByRole('heading', {name: 'Recent tasks of this repository on this runner'})).toBeVisible();
 
     const rows = page.getByRole('row');
 
