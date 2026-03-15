@@ -485,17 +485,12 @@ func createPackageAndVersion(ctx context.Context, mci ManifestCreationInfo, meta
 		}
 	}
 
-	platformParts := strings.Split(metadata.Platform, "/")
-	if len(platformParts) != 2 {
-		return nil, fmt.Errorf("Invalid platform: %s", metadata.Platform)
-	}
-
-	_, err = packages_model.InsertProperty(ctx, packages_model.PropertyTypeVersion, pv.ID, container_module.PropertyOperatingSystem, platformParts[0])
+	_, err = packages_model.InsertProperty(ctx, packages_model.PropertyTypeVersion, pv.ID, container_module.PropertyOperatingSystem, metadata.OperatingSystem)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = packages_model.InsertProperty(ctx, packages_model.PropertyTypeVersion, pv.ID, container_module.PropertyArchitecture, platformParts[1])
+	_, err = packages_model.InsertProperty(ctx, packages_model.PropertyTypeVersion, pv.ID, container_module.PropertyArchitecture, metadata.Architecture)
 	if err != nil {
 		return nil, err
 	}

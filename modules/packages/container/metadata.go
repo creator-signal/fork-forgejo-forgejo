@@ -26,7 +26,9 @@ const (
 	PropertyManifestTagged               = "container.manifest.tagged"
 	PropertyManifestReference            = "container.manifest.reference"
 
-	DefaultPlatform = "linux/amd64"
+	DefaultOperatingSystem = "linux"
+	DefaultArchitecture    = "amd64"
+	DefaultPlatform        = DefaultOperatingSystem + "/" + DefaultArchitecture
 
 	labelLicenses      = "org.opencontainers.image.licenses"
 	labelURL           = "org.opencontainers.image.url"
@@ -60,6 +62,8 @@ func (it ImageType) Name() string {
 type Metadata struct {
 	Type             ImageType         `json:"type"`
 	IsTagged         bool              `json:"is_tagged"`
+	OperatingSystem  string            `json:"os,omitempty"`
+	Architecture     string            `json:"architecture,omitempty"`
 	Platform         string            `json:"platform,omitempty"`
 	Description      string            `json:"description,omitempty"`
 	Authors          []string          `json:"authors,omitempty"`
@@ -103,8 +107,13 @@ func parseOCIImageConfig(r io.Reader) (*Metadata, error) {
 		return nil, err
 	}
 
+	os := DefaultOperatingSystem
 	platform := DefaultPlatform
+	architecture := DefaultArchitecture
+
 	if image.OS != "" && image.Architecture != "" {
+		os = image.OS
+		architecture = image.Architecture
 		platform = fmt.Sprintf("%s/%s", image.OS, image.Architecture)
 		if image.Variant != "" {
 			platform = fmt.Sprintf("%s/%s", platform, image.Variant)
@@ -124,6 +133,8 @@ func parseOCIImageConfig(r io.Reader) (*Metadata, error) {
 
 	metadata := &Metadata{
 		Type:             TypeOCI,
+		OperatingSystem:  os,
+		Architecture:     architecture,
 		Platform:         platform,
 		Licenses:         image.Config.Labels[labelLicenses],
 		ProjectURL:       image.Config.Labels[labelURL],

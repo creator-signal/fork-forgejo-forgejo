@@ -4,7 +4,6 @@
 package container
 
 import (
-	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -121,15 +120,6 @@ func Index(ctx *context.Context) {
 			return
 		}
 
-		platformParts := strings.Split(metadata.Platform, "/")
-		if len(platformParts) != 2 {
-			apiError(ctx, http.StatusInternalServerError, fmt.Errorf("Invalid platform: %s", metadata.Platform))
-			return
-		}
-
-		os := platformParts[0]
-		architecture := platformParts[1]
-
 		properties, err := getAllPackageVersionProperties(ctx, packageVersion)
 		if err != nil {
 			apiError(ctx, http.StatusInternalServerError, err)
@@ -138,8 +128,8 @@ func Index(ctx *context.Context) {
 
 		image := indexImage{
 			Tags:         []string{packageVersion.Version},
-			OS:           os,
-			Architecture: architecture,
+			OS:           metadata.OperatingSystem,
+			Architecture: metadata.Architecture,
 			Annotations:  make(map[string]string),
 			Labels:       metadata.Labels,
 		}
