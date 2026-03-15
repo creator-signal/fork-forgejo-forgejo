@@ -13,7 +13,7 @@ import (
 	"forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
-	gitea_html "forgejo.org/modules/html"
+	forgejo_html "forgejo.org/modules/html"
 	"forgejo.org/modules/setting"
 )
 
@@ -38,7 +38,7 @@ func AvatarHTML(src string, size int, class, name string) template.HTML {
 
 // Avatar renders user avatars. args: user, size (int), class (string)
 func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
-	size, class := gitea_html.ParseSizeAndClass(avatars.DefaultAvatarPixelSize, avatars.DefaultAvatarClass, others...)
+	size, class := forgejo_html.ParseSizeAndClass(avatars.DefaultAvatarPixelSize, avatars.DefaultAvatarClass, others...)
 
 	switch t := item.(type) {
 	case *user_model.User:
@@ -63,7 +63,7 @@ func (au *AvatarUtils) Avatar(item any, others ...any) template.HTML {
 
 // AvatarByEmail renders avatars by email address. args: email, name, size (int), class (string)
 func (au *AvatarUtils) AvatarByEmail(email, name string, others ...any) template.HTML {
-	size, class := gitea_html.ParseSizeAndClass(avatars.DefaultAvatarPixelSize, avatars.DefaultAvatarClass, others...)
+	size, class := forgejo_html.ParseSizeAndClass(avatars.DefaultAvatarPixelSize, avatars.DefaultAvatarClass, others...)
 	src := avatars.GenerateEmailAvatarFastLink(au.ctx, email, size*setting.Avatar.RenderedSizeFactor)
 
 	if src != "" {
