@@ -94,7 +94,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 	blockerIssues := make([]*issues_model.Issue, 0, limit)
 
 	// 2. Get the issues this issue depends on, i.e. the `<#b>`: `<issue> <- <#b>`
-	blockersInfo, err := issue.BlockedByDependencies(ctx, db.ListOptions{
+	blockersInfo, count, err := issue.BlockedByDependencies(ctx, db.ListOptions{
 		Page:     page,
 		PageSize: limit,
 	})
@@ -154,6 +154,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 		blockerIssues = append(blockerIssues, &blocker.Issue)
 	}
 
+	ctx.SetTotalCountHeader(count)
 	ctx.JSON(http.StatusOK, convert.ToAPIIssueList(ctx, ctx.Doer, blockerIssues))
 }
 
@@ -350,16 +351,14 @@ func GetIssueBlocks(ctx *context.APIContext) {
 		return
 	}
 
+	var issuesVisible []*issues_model.Issue
 	var issues []*issues_model.Issue
 
 	repoPerms := make(map[int64]access_model.Permission)
 	repoPerms[ctx.Repo.Repository.ID] = ctx.Repo.Permission
 
-	for i, depMeta := range deps {
-		if i < skip || i >= max {
-			continue
-		}
-
+	// get visible issues
+	for _, depMeta := range deps {
 		// Get the permissions for this repository
 		// If the repo ID exists in the map, return the exist permissions
 		// else get the permission and add it to the map
@@ -382,9 +381,19 @@ func GetIssueBlocks(ctx *context.APIContext) {
 		}
 
 		depMeta.Repo = &depMeta.Repository
-		issues = append(issues, &depMeta.Issue)
+		issuesVisible = append(issuesVisible, &depMeta.Issue)
 	}
 
+	// skip issues
+	for i, issue := range issuesVisible {
+		if i < skip || i >= max {
+			continue
+		}
+
+		issues = append(issues, issue)
+	}
+
+	ctx.SetTotalCountHeader(int64(len(issuesVisible)))
 	ctx.JSON(http.StatusOK, convert.ToAPIIssueList(ctx, ctx.Doer, issues))
 }
 

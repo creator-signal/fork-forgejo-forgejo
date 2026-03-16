@@ -641,7 +641,7 @@ func (issue *Issue) GetParticipantIDsByIssue(ctx context.Context) ([]int64, erro
 }
 
 // BlockedByDependencies finds all Dependencies an issue is blocked by
-func (issue *Issue) BlockedByDependencies(ctx context.Context, opts db.ListOptions) (issueDeps []*DependencyInfo, err error) {
+func (issue *Issue) BlockedByDependencies(ctx context.Context, opts db.ListOptions) (issueDeps []*DependencyInfo, count int64, err error) {
 	sess := db.GetEngine(ctx).
 		Table("issue").
 		Join("INNER", "repository", "repository.id = issue.repo_id").
@@ -652,13 +652,13 @@ func (issue *Issue) BlockedByDependencies(ctx context.Context, opts db.ListOptio
 	if opts.Page > 0 {
 		sess = db.SetSessionPagination(sess, &opts)
 	}
-	err = sess.Find(&issueDeps)
+	count, err = sess.FindAndCount(&issueDeps)
 
 	for _, depInfo := range issueDeps {
 		depInfo.Repo = &depInfo.Repository
 	}
 
-	return issueDeps, err
+	return issueDeps, count, err
 }
 
 // BlockingDependencies returns all blocking dependencies, aka all other issues a given issue blocks
