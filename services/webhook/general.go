@@ -101,7 +101,7 @@ func getIssuesCommentInfo(p *api.IssueCommentPayload, nameFormatter nameFormatte
 	return title, link, by, operator
 }
 
-func getIssuesPayloadInfo(p *api.IssuePayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender bool, withRepoName bool) (text string, issueTitle string, attachmentText string, color int) {
+func getIssuesPayloadInfo(p *api.IssuePayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender, withRepoName bool) (text, issueTitle, attachmentText string, color int) {
 	issueTitle = fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
 	titleLink := linkFormatter(fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index), issueTitle)
 	color = yellowColor
@@ -153,7 +153,7 @@ func getIssuesPayloadInfo(p *api.IssuePayload, linkFormatter linkFormatter, name
 	return text, issueTitle, attachmentText, color
 }
 
-func getPullRequestPayloadInfo(p *api.PullRequestPayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender bool, withRepoName bool) (text string, issueTitle string, attachmentText string, color int) {
+func getPullRequestPayloadInfo(p *api.PullRequestPayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender, withRepoName bool) (text, issueTitle, attachmentText string, color int) {
 	issueTitle = fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title)
 	titleLink := linkFormatter(p.PullRequest.URL, issueTitle)
 	color = yellowColor
@@ -216,7 +216,7 @@ func getPullRequestPayloadInfo(p *api.PullRequestPayload, linkFormatter linkForm
 	return text, issueTitle, attachmentText, color
 }
 
-func getReleasePayloadInfo(p *api.ReleasePayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender bool, withRepoName bool) (text string, color int) {
+func getReleasePayloadInfo(p *api.ReleasePayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender, withRepoName bool) (text string, color int) {
 	refLink := linkFormatter(p.Repository.HTMLURL+"/releases/tag/"+util.PathEscapeSegments(p.Release.TagName), p.Release.TagName)
 
 	repoPrefix := ""
@@ -242,7 +242,7 @@ func getReleasePayloadInfo(p *api.ReleasePayload, linkFormatter linkFormatter, n
 	return text, color
 }
 
-func getWikiPayloadInfo(p *api.WikiPayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender bool, withRepoName bool, withCommitMessage bool) (text string, color int, pageLink string) {
+func getWikiPayloadInfo(p *api.WikiPayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender, withRepoName, withCommitMessage bool) (text string, color int, pageLink string) {
 	pageLink = linkFormatter(p.Repository.HTMLURL+"/wiki/"+url.PathEscape(p.Page), p.Page)
 
 	color = greenColor
@@ -274,7 +274,7 @@ func getWikiPayloadInfo(p *api.WikiPayload, linkFormatter linkFormatter, nameFor
 	return text, color, pageLink
 }
 
-func getIssueCommentPayloadInfo(p *api.IssueCommentPayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender bool, withRepoName bool) (text string, issueTitle string, color int) {
+func getIssueCommentPayloadInfo(p *api.IssueCommentPayload, linkFormatter linkFormatter, nameFormatter nameFormatter, withSender, withRepoName bool) (text, issueTitle string, color int) {
 	issueTitle = fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
 
 	var typ, titleLink string
