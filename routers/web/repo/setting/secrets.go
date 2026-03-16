@@ -92,7 +92,7 @@ func Secrets(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, sCtx.SecretsTemplate)
 }
 
-func SecretsPost(ctx *context.Context) {
+func SecretsCreatePost(ctx *context.Context) {
 	sCtx, err := getSecretsCtx(ctx)
 	if err != nil {
 		ctx.ServerError("getSecretsCtx", err)
@@ -104,7 +104,7 @@ func SecretsPost(ctx *context.Context) {
 		return
 	}
 
-	shared.PerformSecretsPost(
+	shared.CreateSecretPost(
 		ctx,
 		sCtx.OwnerID,
 		sCtx.RepoID,
@@ -112,13 +112,13 @@ func SecretsPost(ctx *context.Context) {
 	)
 }
 
-func SecretsDelete(ctx *context.Context) {
+func SecretsDeletePost(ctx *context.Context) {
 	sCtx, err := getSecretsCtx(ctx)
 	if err != nil {
 		ctx.ServerError("getSecretsCtx", err)
 		return
 	}
-	shared.PerformSecretsDelete(
+	shared.DeleteSecretPost(
 		ctx,
 		sCtx.OwnerID,
 		sCtx.RepoID,

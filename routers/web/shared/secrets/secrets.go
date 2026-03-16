@@ -24,8 +24,8 @@ func SetSecretsContext(ctx *context.Context, ownerID, repoID int64) {
 	ctx.Data["Secrets"] = secrets
 }
 
-func PerformSecretsPost(ctx *context.Context, ownerID, repoID int64, redirectURL string) {
-	form := web.GetForm(ctx).(*forms.AddSecretForm)
+func CreateSecretPost(ctx *context.Context, ownerID, repoID int64, redirectURL string) {
+	form := web.GetForm(ctx).(*forms.CreateSecretForm)
 
 	s, _, err := secrets_service.CreateOrUpdateSecret(ctx, ownerID, repoID, form.Name, util.ReserveLineBreakForTextarea(form.Data))
 	if err != nil {
@@ -38,7 +38,7 @@ func PerformSecretsPost(ctx *context.Context, ownerID, repoID int64, redirectURL
 	ctx.JSONRedirect(redirectURL)
 }
 
-func PerformSecretsDelete(ctx *context.Context, ownerID, repoID int64, redirectURL string) {
+func DeleteSecretPost(ctx *context.Context, ownerID, repoID int64, redirectURL string) {
 	id := ctx.FormInt64("id")
 
 	err := secrets_service.DeleteSecretByID(ctx, ownerID, repoID, id)
