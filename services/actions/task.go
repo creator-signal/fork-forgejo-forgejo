@@ -244,7 +244,7 @@ func StopTask(ctx context.Context, taskID int64, status actions_model.Status) er
 	if err := task.LoadJob(ctx); err == nil {
 		notify_service.WorkflowJobStatusUpdateWithTask(ctx, nil, task)
 	} else {
-		log.Warn("failed to send workflow_job status webhook for task %v: %w", task.ID, err)
+		log.Warn("Failed to send workflow_job status webhook for task %v: %w", task.ID, err)
 	}
 
 	runner := &actions_model.ActionRunner{}

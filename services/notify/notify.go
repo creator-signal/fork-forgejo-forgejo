@@ -400,14 +400,14 @@ func WorkflowJobStatusUpdateWithTask(ctx context.Context, doer *user_model.User,
 	err := task.LoadAttributes(ctx)
 	// skip workflow job status update, if a jobs attributes could not be populated
 	if err != nil {
-		log.Warn("failed to send workflow_job status webhook for task %v: %v", task.ID, err)
+		log.Warn("Failed to send workflow_job status webhook for task %v: %v", task.ID, err)
 		return
 	}
 
 	err = task.Job.LoadAttributes(ctx)
 	// skip workflow job status update, if a jobs attributes could not be populated
 	if err != nil {
-		log.Warn("failed to send workflow_job status webhook for job/task %v/%v: %v", task.Job.ID, task.ID, err)
+		log.Warn("Failed to send workflow_job status webhook for job/task %v/%v: %v", task.Job.ID, task.ID, err)
 		return
 	}
 
@@ -424,7 +424,7 @@ func WorkflowJobStatusUpdate(ctx context.Context, doer *user_model.User, job *ac
 	err := job.LoadAttributes(ctx)
 	// skip workflow job status update, if a jobs attributes could not be populated
 	if err != nil {
-		log.Warn("failed to send workflow_job status webhook for job %v: %w", job.ID, err)
+		log.Warn("Failed to send workflow_job status webhook for job %v: %w", job.ID, err)
 		return
 	}
 
