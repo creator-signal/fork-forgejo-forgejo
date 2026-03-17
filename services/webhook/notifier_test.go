@@ -447,8 +447,5 @@ func TestAction(t *testing.T) {
 		assert.Equal(t, repo.ID, payloadContent.Repo.ID)
 		assert.Equal(t, repo.Name, payloadContent.Repo.Name)
 		assert.Equal(t, repo.FullName(), payloadContent.Repo.FullName)
-
-		// Test organization info (should be nil in this case since repo owner is not an org)
-		assert.Nil(t, payloadContent.Organization)
 	})
 }

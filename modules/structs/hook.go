@@ -463,11 +463,10 @@ func (p *RepositoryPayload) JSONPayload() ([]byte, error) {
 
 // WorkflowJobPayload represents a payload information of workflow job event.
 type WorkflowJobPayload struct {
-	Action       string             `json:"action"`
-	WorkflowJob  *ActionWorkflowJob `json:"workflow_job"`
-	Organization *Organization      `json:"organization,omitempty"`
-	Repo         *Repository        `json:"repository"`
-	Sender       *User              `json:"sender"`
+	Action      string             `json:"action"`
+	WorkflowJob *ActionWorkflowJob `json:"workflow_job"`
+	Repo        *Repository        `json:"repository"`
+	Sender      *User              `json:"sender"`
 }
 
 // JSONPayload implements Payload

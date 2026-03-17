@@ -11,7 +11,6 @@ import (
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
-	"forgejo.org/models/organization"
 	packages_model "forgejo.org/models/packages"
 	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
@@ -959,11 +958,6 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 		Owner:      repo.Owner,
 	}
 
-	var org *api.Organization
-	if repo.Owner.IsOrganization() {
-		org = convert.ToOrganization(ctx, organization.OrgFromUser(repo.Owner))
-	}
-
 	err := job.LoadAttributes(ctx)
 	if err != nil {
 		log.Error("Error loading job attributes: %v", err)
@@ -1034,9 +1028,8 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 			StartedAt:    startedAt,
 			CompletedAt:  completedAt,
 		},
-		Organization: org,
-		Repo:         convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}),
-		Sender:       convert.ToUser(ctx, sender, nil),
+		Repo:   convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}),
+		Sender: convert.ToUser(ctx, sender, nil),
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)
 	}
