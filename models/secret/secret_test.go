@@ -4,6 +4,7 @@
 package secret
 
 import (
+	"strings"
 	"testing"
 
 	"forgejo.org/models/unittest"
@@ -122,4 +123,49 @@ func TestSecretGetDecryptedData(t *testing.T) {
 		assert.Empty(t, decryptedData)
 		assert.ErrorContains(t, err, "unable to decrypt secret[id=495,name=\"A_SECRET\"]")
 	})
+}
+
+func TestSecretValidateName(t *testing.T) {
+	testCases := []struct {
+		name  string
+		valid bool
+	}{
+		{"FORGEJO_", false},
+		{"FORGEJO_123", false},
+		{"FORGEJO_ABC", false},
+		{"GITEA_", false},
+		{"GITEA_123", false},
+		{"GITEA_ABC", false},
+		{"GITHUB_", false},
+		{"GITHUB_123", false},
+		{"GITHUB_ABC", false},
+		{"123_TEST", false},
+		{"CI", true},
+		{"_CI", true},
+		{"CI_", true},
+		{"CI123", true},
+		{"CIABC", true},
+		{"FORGEJO", true},
+		{"FORGEJO123", true},
+		{"FORGEJOABC", true},
+		{"GITEA", true},
+		{"GITEA123", true},
+		{"GITEAABC", true},
+		{"GITHUB", true},
+		{"GITHUB123", true},
+		{"GITHUBABC", true},
+		{"_123_TEST", true},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			t.Helper()
+			if tC.valid {
+				assert.NoError(t, ValidateName(tC.name))
+				assert.NoError(t, ValidateName(strings.ToLower(tC.name)))
+			} else {
+				require.ErrorIs(t, ValidateName(tC.name), ErrInvalidName)
+				require.ErrorIs(t, ValidateName(strings.ToLower(tC.name)), ErrInvalidName)
+			}
+		})
+	}
 }

@@ -6,6 +6,7 @@ package secret
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"forgejo.org/models/db"
@@ -15,6 +16,13 @@ import (
 	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
+)
+
+var (
+	namePattern            = regexp.MustCompile("(?i)^[A-Z_][A-Z0-9_]*$")
+	forbiddenPrefixPattern = regexp.MustCompile("(?i)^FORGEJO_|GITEA_|GITHUB_")
+
+	ErrInvalidName = util.NewInvalidArgumentErrorf("invalid secret name")
 )
 
 // Secret represents a secret
@@ -153,4 +161,11 @@ func FetchActionSecrets(ctx context.Context, ownerID, repoID int64) (map[string]
 	}
 
 	return secrets, nil
+}
+
+func ValidateName(name string) error {
+	if !namePattern.MatchString(name) || forbiddenPrefixPattern.MatchString(name) {
+		return ErrInvalidName
+	}
+	return nil
 }
