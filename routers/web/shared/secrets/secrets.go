@@ -29,14 +29,15 @@ func SetSecretsContext(ctx *context.Context, ownerID, repoID int64) {
 func CreateSecretPost(ctx *context.Context, ownerID, repoID int64, redirectURL string) {
 	form := web.GetForm(ctx).(*forms.CreateSecretForm)
 
-	s, _, err := secrets_service.CreateOrUpdateSecret(ctx, ownerID, repoID, form.Name, util.ReserveLineBreakForTextarea(form.Data))
+	normalizedData := util.ReserveLineBreakForTextarea(form.Data)
+	secret, err := secret_model.InsertEncryptedSecret(ctx, ownerID, repoID, form.Name, normalizedData)
 	if err != nil {
-		log.Error("CreateOrUpdateSecret failed: %v", err)
+		log.Error("InsertEncryptedSecret failed: %v", err)
 		ctx.JSONError(ctx.Tr("secrets.creation.failed"))
 		return
 	}
 
-	ctx.Flash.Success(ctx.Tr("secrets.creation.success", s.Name))
+	ctx.Flash.Success(ctx.Tr("secrets.creation.success", secret.Name))
 	ctx.JSONRedirect(redirectURL)
 }
 

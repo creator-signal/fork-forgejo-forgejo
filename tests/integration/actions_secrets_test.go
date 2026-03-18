@@ -76,6 +76,78 @@ func TestActionsSecretsCreateSecret(t *testing.T) {
 	}
 }
 
+func TestActionsSecretsCreateSecretRejectsNameMatchingExistingSecret(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1, OwnerID: user2.ID})
+	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3, Type: user_model.UserTypeOrganization})
+
+	sess := loginUser(t, user2.Name)
+
+	testCases := []struct {
+		name    string
+		url     string
+		ownerID int64
+		repoID  int64
+	}{
+		{
+			name:    "User",
+			url:     "/user/settings/actions/secrets",
+			ownerID: user2.ID,
+			repoID:  0,
+		},
+		{
+			name:    "Repository",
+			url:     "/" + repo1.FullName() + "/settings/actions/secrets",
+			ownerID: 0,
+			repoID:  repo1.ID,
+		},
+		{
+			name:    "Organization",
+			url:     "/org/" + org3.Name + "/settings/actions/secrets",
+			ownerID: org3.ID,
+			repoID:  0,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			req := NewRequestWithValues(t, "POST", testCase.url, map[string]string{
+				"name": "my_secret",
+				"data": "original value",
+			})
+			sess.MakeRequest(t, req, http.StatusOK)
+
+			flashCookie := sess.GetCookie(app_context.CookieNameFlash)
+			assert.NotNil(t, flashCookie)
+			assert.Equal(t, "success%3DThe%2Bsecret%2B%2522MY_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+			secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: testCase.ownerID, RepoID: testCase.repoID, Name: "MY_SECRET"})
+			assert.Equal(t, "MY_SECRET", secret.Name)
+
+			value, err := secret.GetDecryptedData()
+			require.NoError(t, err)
+			assert.Equal(t, "original value", value)
+
+			// Try to create a new secret with the name but another value.
+			req = NewRequestWithValues(t, "POST", testCase.url, map[string]string{
+				"name": "my_secret",
+				"data": "changed value",
+			})
+			sess.MakeRequest(t, req, http.StatusBadRequest)
+
+			// Verify that the original secret has not been changed.
+			secret = unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: testCase.ownerID, RepoID: testCase.repoID, Name: "MY_SECRET"})
+			value, err = secret.GetDecryptedData()
+			require.NoError(t, err)
+
+			assert.Equal(t, "MY_SECRET", secret.Name)
+			assert.Equal(t, "original value", value)
+		})
+	}
+}
+
 func TestActionsSecretsEditSecret(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
