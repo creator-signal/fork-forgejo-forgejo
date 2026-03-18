@@ -9,11 +9,12 @@ import (
 )
 
 func TestActionRunNowDone(t *testing.T) {
-	mockRepo := new(MockRepository)
-	notifier := &EduNotifier{repo: mockRepo}
 	ctx := context.Background()
 
 	t.Run("SuccessMatchesSubmission", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		notifier := &EduNotifier{repo: mockRepo}
+
 		repoID := int64(100)
 		run := &actions_model.ActionRun{
 			RepoID: repoID,
@@ -30,6 +31,9 @@ func TestActionRunNowDone(t *testing.T) {
 		mockRepo.On("UpdateSubmission", ctx, mock.MatchedBy(func(s *Submission) bool {
 			return s.ID == submission.ID && s.Status == StatusPassed
 		})).Return(nil)
+		mockRepo.On("CreateTestResult", ctx, mock.MatchedBy(func(tr *TestResult) bool {
+			return tr.SubmissionID == submission.ID && tr.Score == 100
+		})).Return(nil)
 
 		notifier.ActionRunNowDone(ctx, run, actions_model.StatusRunning, nil)
 
@@ -37,6 +41,9 @@ func TestActionRunNowDone(t *testing.T) {
 	})
 
 	t.Run("FailureMatchesSubmission", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		notifier := &EduNotifier{repo: mockRepo}
+
 		repoID := int64(101)
 		run := &actions_model.ActionRun{
 			RepoID: repoID,
@@ -53,6 +60,9 @@ func TestActionRunNowDone(t *testing.T) {
 		mockRepo.On("UpdateSubmission", ctx, mock.MatchedBy(func(s *Submission) bool {
 			return s.ID == submission.ID && s.Status == StatusFailed
 		})).Return(nil)
+		mockRepo.On("CreateTestResult", ctx, mock.MatchedBy(func(tr *TestResult) bool {
+			return tr.SubmissionID == submission.ID && tr.Score == 0
+		})).Return(nil)
 
 		notifier.ActionRunNowDone(ctx, run, actions_model.StatusRunning, nil)
 
@@ -60,6 +70,9 @@ func TestActionRunNowDone(t *testing.T) {
 	})
 
 	t.Run("NotSubmissionRepo", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		notifier := &EduNotifier{repo: mockRepo}
+
 		repoID := int64(999)
 		run := &actions_model.ActionRun{
 			RepoID: repoID,
@@ -74,10 +87,15 @@ func TestActionRunNowDone(t *testing.T) {
 	})
 
 	t.Run("IgnoreNotDone", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		notifier := &EduNotifier{repo: mockRepo}
+
 		run := &actions_model.ActionRun{
 			Status: actions_model.StatusRunning,
 		}
 		// Should do nothing, no repo calls
 		notifier.ActionRunNowDone(ctx, run, actions_model.StatusWaiting, nil)
+
+		mockRepo.AssertExpectations(t)
 	})
 }

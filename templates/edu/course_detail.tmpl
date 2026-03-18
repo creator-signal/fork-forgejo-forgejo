@@ -1,0 +1,143 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu course-detail">
+	<div class="ui container">
+		<div class="ui grid">
+			<div class="sixteen wide column">
+				<div class="ui secondary menu">
+					<div class="header item">
+						<h1 class="ui header" style="margin:0">
+							{{svg "octicon-mortar-board" 28}}
+							{{.Course.Name}}
+						</h1>
+					</div>
+					<div class="right menu">
+						<a class="ui button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/edit">
+							{{svg "octicon-pencil"}} Edit
+						</a>
+						<form action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/delete" method="post" style="margin-left: 5px;">
+							{{.CsrfTokenHtml}}
+							<button class="ui red button" onclick="return confirm('Are you sure you want to delete this course?')">
+								{{svg "octicon-trash"}} Delete
+							</button>
+						</form>
+					</div>
+				</div>
+
+				<div class="ui segment">
+					{{if .Course.Description}}
+						<p>{{.Course.Description}}</p>
+					{{end}}
+					{{if .Course.StartUnix}}
+						<p><strong>Start:</strong> {{.Course.StartDate.Format "02 Jan 2006 15:04"}}</p>
+					{{end}}
+					{{if .Course.EndUnix}}
+						<p><strong>End:</strong> {{.Course.EndDate.Format "02 Jan 2006 15:04"}}</p>
+					{{end}}
+					{{if .Course.IsActive}}
+						<span class="ui green label">Active</span>
+					{{else}}
+						<span class="ui red label">Ended</span>
+					{{end}}
+				</div>
+
+				<!-- Assignments -->
+				<h2 class="ui header">
+					{{svg "octicon-tasklist"}} Assignments
+					<a class="ui small primary button" href="{{AppSubUrl}}/edu/teacher/assignments/new?course_id={{.Course.ID}}" style="margin-left: 10px;">
+						{{svg "octicon-plus"}} New Assignment
+					</a>
+				</h2>
+				<div class="ui segment">
+					{{if .Assignments}}
+						<div class="ui divided list">
+							{{range .Assignments}}
+								<div class="item">
+									<div class="content">
+										<a class="header" href="{{AppSubUrl}}/edu/teacher/assignments/{{.ID}}/submissions">
+											{{.Title}}
+											{{with (index $.SubmissionCounts .ID)}}
+												<span class="ui mini label">{{.}} submissions</span>
+											{{end}}
+										</a>
+										<div class="description">
+											{{if .DeadlineUnix}}{{svg "octicon-clock"}} {{.Deadline.Format "02 Jan 2006"}}{{end}}
+										</div>
+									</div>
+								</div>
+							{{end}}
+						</div>
+					{{else}}
+						<p>No assignments in this course yet.</p>
+					{{end}}
+				</div>
+
+				<!-- Enrollments -->
+				<h2 class="ui header">
+					{{svg "octicon-people"}} Participants
+					<a class="ui small teal button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/import" style="margin-left: 10px;">
+						{{svg "octicon-upload"}} Import from CSV
+					</a>
+				</h2>
+				<div class="ui segment">
+					<form class="ui form" action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/enroll" method="post">
+						{{.CsrfTokenHtml}}
+						<div class="ui action input" style="margin-bottom: 15px;">
+							<input type="text" name="username" placeholder="Username" required>
+							<select class="ui compact selection dropdown" name="role">
+								<option value="student">Student</option>
+								<option value="teacher">Teacher</option>
+							</select>
+							<button class="ui primary button" type="submit">{{svg "octicon-plus"}} Add</button>
+						</div>
+					</form>
+
+					{{if .Enrollments}}
+						<table class="ui celled table">
+							<thead>
+								<tr>
+									<th>Username</th>
+									<th>Role</th>
+									<th>Enrolled</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								{{range .Enrollments}}
+									<tr>
+										<td>
+											{{with (index $.UserMap .UserID)}}
+												{{.Name}}
+											{{else}}
+												User #{{.UserID}}
+											{{end}}
+										</td>
+										<td>
+											{{if eq (printf "%s" .Role) "teacher"}}
+												<span class="ui blue label">Teacher</span>
+											{{else if eq (printf "%s" .Role) "admin"}}
+												<span class="ui purple label">Admin</span>
+											{{else}}
+												<span class="ui teal label">Student</span>
+											{{end}}
+										</td>
+										<td>{{(DateUtils).AbsoluteShort .CreatedUnix}}</td>
+										<td>
+											<form action="{{AppSubUrl}}/edu/teacher/courses/{{$.Course.ID}}/unenroll" method="post" style="display:inline">
+												{{$.CsrfTokenHtml}}
+												<input type="hidden" name="user_id" value="{{.UserID}}">
+												<button class="ui mini red button">{{svg "octicon-x"}} Remove</button>
+											</form>
+										</td>
+									</tr>
+								{{end}}
+							</tbody>
+						</table>
+					{{else}}
+						<p>No participants enrolled yet.</p>
+					{{end}}
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

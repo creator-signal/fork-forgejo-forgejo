@@ -1,0 +1,83 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu courses">
+	<div class="ui container">
+		<div class="ui grid">
+			<div class="column">
+				<div class="ui secondary menu">
+					<div class="header item">
+						<h1 class="ui header" style="margin:0">
+							{{svg "octicon-mortar-board" 32}}
+							Courses
+						</h1>
+					</div>
+					<div class="right menu">
+						<a class="ui positive button" href="{{AppSubUrl}}/edu/teacher/courses/new">
+							{{svg "octicon-plus"}}
+							New Course
+						</a>
+					</div>
+				</div>
+
+				<div class="ui secondary pointing menu">
+					<a class="item" href="{{AppSubUrl}}/edu/teacher/assignments">Assignments</a>
+					<a class="active item" href="{{AppSubUrl}}/edu/teacher/courses">Courses</a>
+				</div>
+			</div>
+		</div>
+
+		<div class="ui divider"></div>
+
+		{{if .Courses}}
+			<div class="ui three stackable cards">
+				{{range .Courses}}
+					<div class="ui fluid card">
+						<div class="content">
+							<div class="header">
+								<a href="{{AppSubUrl}}/edu/teacher/courses/{{.ID}}">{{.Name}}</a>
+							</div>
+							<div class="meta">
+								{{if .StartUnix}}
+									<span class="date">{{svg "octicon-calendar"}} {{.StartDate.Format "02 Jan 2006"}}</span>
+								{{end}}
+								{{if .EndUnix}}
+									<span class="date"> — {{.EndDate.Format "02 Jan 2006"}}</span>
+								{{end}}
+							</div>
+							<div class="description">
+								{{.Description}}
+							</div>
+						</div>
+						<div class="extra content">
+							{{if .IsActive}}
+								<span class="ui green label">Active</span>
+							{{else}}
+								<span class="ui red label">Ended</span>
+							{{end}}
+							<a class="ui primary button right floated" href="{{AppSubUrl}}/edu/teacher/courses/{{.ID}}">
+								{{svg "octicon-eye"}} View
+							</a>
+						</div>
+					</div>
+				{{end}}
+			</div>
+		{{else}}
+			<div class="ui placeholder segment">
+				<div class="ui icon header">
+					{{svg "octicon-repo"}}
+					No courses yet
+				</div>
+				<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/courses/new">Create first course</a>
+			</div>
+		{{end}}
+	</div>
+</div>
+<style>
+	.edu.courses .card {
+		box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+		transition: transform 0.2s;
+	}
+	.edu.courses .card:hover {
+		transform: translateY(-5px);
+	}
+</style>
+{{template "base/footer" .}}

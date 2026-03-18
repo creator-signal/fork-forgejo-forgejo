@@ -1,0 +1,52 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu import-upload">
+	<div class="ui container">
+		<h1 class="ui header">
+			{{svg "octicon-upload" 28}}
+			Import Users to {{.Course.Name}}
+		</h1>
+
+		<div class="ui segment">
+			<form class="ui form" action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/import" method="post" enctype="multipart/form-data">
+				{{.CsrfTokenHtml}}
+
+				<div class="field required">
+					<label>CSV File</label>
+					<input type="file" name="csv_file" accept=".csv,.txt" required>
+					<p class="help">CSV format: columns separated by <code>;</code> or <code>,</code>. First column is usually Full Name.</p>
+				</div>
+
+				<div class="field">
+					<div class="ui checkbox">
+						<input type="checkbox" name="has_header" checked>
+						<label>First row is header</label>
+					</div>
+				</div>
+
+				<div class="three fields">
+					<div class="field">
+						<label>Full Name column index</label>
+						<input type="number" name="fullname_col" value="0" min="0">
+						<p class="help">0-based column index (default: 0)</p>
+					</div>
+					<div class="field">
+						<label>Email column index</label>
+						<input type="number" name="email_col" value="-1">
+						<p class="help">-1 to skip (email will be auto-generated)</p>
+					</div>
+					<div class="field">
+						<label>Group column index</label>
+						<input type="number" name="group_col" value="-1">
+						<p class="help">-1 to skip</p>
+					</div>
+				</div>
+
+				<div class="ui divider"></div>
+
+				<button class="ui primary button" type="submit">{{svg "octicon-upload"}} Upload and Preview</button>
+				<a class="ui button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}">Cancel</a>
+			</form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

@@ -2,6 +2,7 @@ package edu
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	actions_model "forgejo.org/models/actions"
@@ -56,5 +57,21 @@ func (n *EduNotifier) ActionRunNowDone(
 		log.Error("EduNotifier: failed to update submission %d status: %v", submission.ID, err)
 	} else {
 		log.Info("EduNotifier: updated submission %d status to %s", submission.ID, newStatus)
+	}
+
+	// Create TestResult record
+	result := &TestResult{
+		SubmissionID: submission.ID,
+		CommitSHA:    run.CommitSHA,
+		Score:        0,
+		Details:      fmt.Sprintf("Workflow: %s, Status: %s", run.Title, run.Status),
+		CreatedUnix:  time.Now().Unix(),
+	}
+	if run.Status == actions_model.StatusSuccess {
+		result.Score = 100
+	}
+
+	if err := n.repo.CreateTestResult(ctx, result); err != nil {
+		log.Error("EduNotifier: failed to create test result for submission %d: %v", submission.ID, err)
 	}
 }

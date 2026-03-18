@@ -1,0 +1,80 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu import-preview">
+	<div class="ui container">
+		<h1 class="ui header">
+			{{svg "octicon-eye" 28}}
+			Import Preview — {{.RowCount}} rows
+		</h1>
+		<p>Course: <strong>{{.Course.Name}}</strong></p>
+
+		<div class="ui segment" style="overflow-x: auto;">
+			<table class="ui celled table">
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Full Name</th>
+						<th>Username</th>
+						<th>Email</th>
+						<th>Group</th>
+						<th>Status</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range $i, $row := .Rows}}
+						<tr>
+							<td>{{$i}}</td>
+							<td>{{$row.FullName}}</td>
+							<td colspan="3">
+								<form class="ui form" action="{{AppSubUrl}}/edu/teacher/courses/{{$.Course.ID}}/import/{{$.Draft.ID}}/update-row" method="post" style="display: flex; gap: 5px; align-items: center;">
+									{{$.CsrfTokenHtml}}
+									<input type="hidden" name="row_id" value="{{$row.ID}}">
+									<input type="text" name="username" value="{{$row.Username}}" style="width: 150px;" required>
+									<input type="text" name="email" value="{{$row.Email}}" placeholder="auto-generated" style="width: 180px;">
+									<span style="flex-shrink: 0;">{{$row.Group}}</span>
+									<button class="ui mini primary button" type="submit" style="flex-shrink: 0;">Save</button>
+								</form>
+							</td>
+							<td>
+								{{if eq $row.Status "pending"}}
+									<span class="ui yellow label">Pending</span>
+								{{else if eq $row.Status "created"}}
+									<span class="ui green label">Created</span>
+								{{else if eq $row.Status "exists"}}
+									<span class="ui blue label">Exists</span>
+								{{else if eq $row.Status "error"}}
+									<span class="ui red label" title="{{$row.ErrorMsg}}">Error</span>
+								{{else}}
+									<span class="ui label">{{$row.Status}}</span>
+								{{end}}
+							</td>
+							<td></td>
+						</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+
+		<div class="ui segment">
+			<form class="ui form" action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/import/{{.Draft.ID}}/execute" method="post" style="display: inline;">
+				{{.CsrfTokenHtml}}
+				<div class="inline field">
+					<label>Default role:</label>
+					<select name="default_role" class="ui compact selection dropdown">
+						<option value="student" selected>Student</option>
+						<option value="teacher">Teacher</option>
+					</select>
+				</div>
+				<button class="ui green button" type="submit" onclick="return confirm('This will create users and enroll them. Continue?')">
+					{{svg "octicon-check"}} Import All
+				</button>
+			</form>
+
+			<form action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/import/{{.Draft.ID}}/delete" method="post" style="display: inline; margin-left: 10px;">
+				{{.CsrfTokenHtml}}
+				<button class="ui red button" type="submit">{{svg "octicon-trash"}} Cancel Import</button>
+			</form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

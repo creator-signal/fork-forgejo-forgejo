@@ -1,0 +1,53 @@
+FROM golang:1.25-alpine3.23 AS build
+
+RUN apk --no-cache add build-base git nodejs npm sqlite-dev bash
+
+WORKDIR /app
+
+# Cache Go modules (re-downloads only when go.mod/go.sum change)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Cache npm modules (re-installs only when package.json/lock change)
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Copy everything else
+COPY . .
+
+# Frontend
+RUN make frontend
+
+# Backend
+ENV CGO_ENABLED=1
+ENV TAGS="sqlite sqlite_unlock_notify"
+RUN go build -tags "${TAGS}" -o gitea .
+
+# ------- runtime -------
+FROM alpine:3.23
+
+RUN apk --no-cache add bash git git-lfs sqlite gnupg openssh-keygen ca-certificates tzdata \
+    && adduser -D -h /data/git -s /bin/bash git
+
+COPY --from=build /app/gitea /app/gitea
+COPY --from=build /app/templates /app/templates
+COPY --from=build /app/options /app/options
+COPY --from=build /app/public /app/public
+COPY --from=build /app/custom /app/custom
+
+COPY docker/app.ini /data/gitea/conf/app.ini
+
+WORKDIR /app
+ENV GITEA_WORK_DIR=/app
+ENV GITEA_CUSTOM=/data/gitea
+ENV USER=git
+
+RUN mkdir -p /data/gitea/conf /data/git /data/gitea/log \
+    && chown -R git:git /data /app
+
+EXPOSE 3000 22
+
+USER git
+
+# First run will trigger install wizard at http://localhost:3000
+CMD ["./gitea", "web"]

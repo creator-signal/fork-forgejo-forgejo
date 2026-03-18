@@ -52,14 +52,18 @@ func TestGetSubmission_Repo(t *testing.T) {
 		UserID:        2,
 		StudentRepoID: 3,
 		Status:        "started",
+		Grade:         -1,
+		Comment:       "",
+		GradedByID:    0,
+		GradedUnix:    0,
 		CreatedUnix:   12345,
 		UpdatedUnix:   12345,
 	}
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, assignment_id, user_id, student_repo_id, status, created_unix, updated_unix FROM edu_submissions WHERE assignment_id = $1 AND user_id = $2`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, assignment_id, user_id, student_repo_id, status, grade, comment, graded_by_id, graded_unix, created_unix, updated_unix FROM edu_submissions WHERE assignment_id = $1 AND user_id = $2`)).
 		WithArgs(expected.AssignmentID, expected.UserID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "assignment_id", "user_id", "student_repo_id", "status", "created_unix", "updated_unix"}).
-			AddRow(expected.ID, expected.AssignmentID, expected.UserID, expected.StudentRepoID, expected.Status, expected.CreatedUnix, expected.UpdatedUnix))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "assignment_id", "user_id", "student_repo_id", "status", "grade", "comment", "graded_by_id", "graded_unix", "created_unix", "updated_unix"}).
+			AddRow(expected.ID, expected.AssignmentID, expected.UserID, expected.StudentRepoID, expected.Status, expected.Grade, expected.Comment, expected.GradedByID, expected.GradedUnix, expected.CreatedUnix, expected.UpdatedUnix))
 
 	result, err := repo.GetSubmission(ctx, expected.AssignmentID, expected.UserID)
 	assert.NoError(t, err)
@@ -81,14 +85,18 @@ func TestGetSubmissionByRepoID_Repo(t *testing.T) {
 		UserID:        2,
 		StudentRepoID: 3,
 		Status:        "started",
+		Grade:         -1,
+		Comment:       "",
+		GradedByID:    0,
+		GradedUnix:    0,
 		CreatedUnix:   12345,
 		UpdatedUnix:   12345,
 	}
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, assignment_id, user_id, student_repo_id, status, created_unix, updated_unix FROM edu_submissions WHERE student_repo_id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, assignment_id, user_id, student_repo_id, status, grade, comment, graded_by_id, graded_unix, created_unix, updated_unix FROM edu_submissions WHERE student_repo_id = $1`)).
 		WithArgs(expected.StudentRepoID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "assignment_id", "user_id", "student_repo_id", "status", "created_unix", "updated_unix"}).
-			AddRow(expected.ID, expected.AssignmentID, expected.UserID, expected.StudentRepoID, expected.Status, expected.CreatedUnix, expected.UpdatedUnix))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "assignment_id", "user_id", "student_repo_id", "status", "grade", "comment", "graded_by_id", "graded_unix", "created_unix", "updated_unix"}).
+			AddRow(expected.ID, expected.AssignmentID, expected.UserID, expected.StudentRepoID, expected.Status, expected.Grade, expected.Comment, expected.GradedByID, expected.GradedUnix, expected.CreatedUnix, expected.UpdatedUnix))
 
 	result, err := repo.GetSubmissionByRepoID(ctx, expected.StudentRepoID)
 	assert.NoError(t, err)

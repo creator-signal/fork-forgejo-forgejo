@@ -3,13 +3,13 @@ package edu
 import (
 	"net/http"
 
+	"forgejo.org/internal/edu"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/modules/base"
-	"forgejo.org/services/context"
-
 	unit_model "forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/base"
+	"forgejo.org/services/context"
 )
 
 const (
@@ -78,6 +78,21 @@ func InstructorSubmissions(ctx *context.Context) {
 
 	ctx.Data["Submissions"] = submissions
 	ctx.Data["UserMap"] = userMap
+
+	testResultMap := make(map[int64]*edu.TestResult)
+	for _, sub := range submissions {
+		tr, _ := svc.GetLatestTestResult(ctx, sub.ID)
+		if tr != nil {
+			testResultMap[sub.ID] = tr
+		}
+	}
+	ctx.Data["TestResultMap"] = testResultMap
+
+	bulkTask, _ := svc.GetBulkForkTaskByAssignment(ctx, assignmentID)
+	ctx.Data["BulkForkTask"] = bulkTask
+
+	syncTask, _ := svc.GetSyncForkTaskByAssignment(ctx, assignmentID)
+	ctx.Data["SyncForkTask"] = syncTask
 
 	ctx.HTML(http.StatusOK, tplInstructorSubmissions)
 }

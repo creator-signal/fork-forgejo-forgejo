@@ -9,23 +9,60 @@
 				<div class="ui segment">
 					<p>{{.Assignment.Description}}</p>
 					{{if .Assignment.DeadlineUnix}}
-						<p><strong>{{.locale.Tr "edu.deadline"}}:</strong> {{.Assignment.Deadline}}</p>
+						<p>
+							<strong>{{ctx.Locale.Tr "edu.deadline"}}:</strong> {{.Assignment.Deadline.Format "02 Jan 2006 15:04"}}
+							{{if .DeadlinePassed}}
+								<span class="ui red label">Deadline passed</span>
+							{{end}}
+						</p>
 					{{end}}
 				</div>
 
 				<div class="ui segment">
 					{{if .Submission}}
-						<h3 class="ui header">{{.locale.Tr "edu.status"}}: {{.Submission.Status}}</h3>
+						<h3 class="ui header">
+							{{ctx.Locale.Tr "edu.status"}}:
+							<span class="ui label {{if eq (printf "%s" .Submission.Status) "passed"}}green{{else if eq (printf "%s" .Submission.Status) "failed"}}red{{else if eq (printf "%s" .Submission.Status) "submitted"}}blue{{else if eq (printf "%s" .Submission.Status) "graded"}}purple{{else}}grey{{end}}">
+								{{.Submission.Status}}
+							</span>
+						</h3>
 						{{if .Submission.StudentRepoID}}
-							<a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}" class="ui primary button">{{.locale.Tr "edu.go_to_repo"}}</a>
+							<a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}" class="ui primary button">{{ctx.Locale.Tr "edu.go_to_repo"}}</a>
 						{{end}}
 					{{else}}
-						<form action="{{AppSubUrl}}/edu/assignments/{{.Assignment.ID}}/join" method="post">
-							{{.CsrfTokenHtml}}
-							<button class="ui green button">{{.locale.Tr "edu.start_assignment"}}</button>
-						</form>
+						{{if .DeadlinePassed}}
+							<p class="ui red message">The deadline for this assignment has passed. You can no longer start it.</p>
+						{{else}}
+							<form action="{{AppSubUrl}}/edu/student/assignments/{{.Assignment.ID}}/join" method="post">
+								{{.CsrfTokenHtml}}
+								<button class="ui green button">{{ctx.Locale.Tr "edu.start_assignment"}}</button>
+							</form>
+						{{end}}
 					{{end}}
 				</div>
+
+				{{if .LatestTestResult}}
+				<div class="ui segment">
+					<h4>{{svg "octicon-check-circle"}} Latest Test Result</h4>
+					<p>
+						Score: <span class="ui label {{if ge .LatestTestResult.Score 50}}green{{else}}red{{end}}">{{.LatestTestResult.Score}}%</span>
+					</p>
+					<p>Commit: <code>{{slice .LatestTestResult.CommitSHA 0 7}}</code></p>
+					{{if .LatestTestResult.Details}}
+						<p>{{.LatestTestResult.Details}}</p>
+					{{end}}
+				</div>
+				{{end}}
+
+				{{if and .Submission .Submission.IsGraded}}
+				<div class="ui segment">
+					<h4>{{svg "octicon-star"}} Grade</h4>
+					<p><span class="ui large purple label">{{.Submission.Grade}}/100</span></p>
+					{{if .Submission.Comment}}
+						<p><strong>Comment:</strong> {{.Submission.Comment}}</p>
+					{{end}}
+				</div>
+				{{end}}
 			</div>
 		</div>
 	</div>

@@ -2,9 +2,13 @@ package edu
 
 import (
 	"context"
+	"fmt"
 
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/optional"
+	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/services/repository"
 )
 
@@ -29,4 +33,52 @@ func (a *ForgejoAdapter) ForkRepositoryAndUpdates(ctx context.Context, doer, own
 // GetRepositoryByID retrieves a repository by ID.
 func (a *ForgejoAdapter) GetRepositoryByID(ctx context.Context, id int64) (*repo_model.Repository, error) {
 	return repo_model.GetRepositoryByID(ctx, id)
+}
+
+// CreateUser creates a new Forgejo user via admin API.
+func (a *ForgejoAdapter) CreateUser(ctx context.Context, username, email, password, fullName string) error {
+	u := &user_model.User{
+		Name:               username,
+		Email:              email,
+		Passwd:             password,
+		FullName:           fullName,
+		MustChangePassword: true,
+	}
+	overwrite := &user_model.CreateUserOverwriteOptions{
+		IsActive: optional.Some(true),
+	}
+	return user_model.AdminCreateUser(ctx, u, overwrite)
+}
+
+// GetUserByName retrieves a Forgejo user by username.
+func (a *ForgejoAdapter) GetUserByName(ctx context.Context, name string) (*user_model.User, error) {
+	return user_model.GetUserByName(ctx, name)
+}
+
+// GetUserByID retrieves a Forgejo user by ID.
+func (a *ForgejoAdapter) GetUserByID(ctx context.Context, id int64) (*user_model.User, error) {
+	return user_model.GetUserByID(ctx, id)
+}
+
+// SyncFork pushes changes from the base repo to a fork using InternalPushingEnvironment
+// to bypass branch protection.
+func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, forkRepo *repo_model.Repository, branch string) error {
+	if err := forkRepo.GetBaseRepo(ctx); err != nil {
+		return fmt.Errorf("get base repo: %w", err)
+	}
+
+	return git.Push(ctx, forkRepo.BaseRepo.RepoPath(), git.PushOptions{
+		Remote: forkRepo.RepoPath(),
+		Branch: fmt.Sprintf("%s:%s", branch, branch),
+		Env:    repo_module.InternalPushingEnvironment(doer, forkRepo),
+	})
+}
+
+// GetDefaultBranch returns the default branch name for a repository.
+func (a *ForgejoAdapter) GetDefaultBranch(ctx context.Context, repoID int64) (string, error) {
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		return "", err
+	}
+	return repo.DefaultBranch, nil
 }

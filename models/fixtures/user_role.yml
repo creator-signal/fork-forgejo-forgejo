@@ -1,0 +1,13 @@
+-
+  id: 1
+  user_id: 1
+  role: "teacher"
+  created_unix: 1700000000
+  updated_unix: 1700000000
+
+-
+  id: 2
+  user_id: 2
+  role: "student"
+  created_unix: 1700000000
+  updated_unix: 1700000000

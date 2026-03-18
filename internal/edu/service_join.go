@@ -17,6 +17,20 @@ func (s *service) JoinAssignment(ctx context.Context, doer *user_model.User, ass
 		return nil, fmt.Errorf("assignment not found")
 	}
 
+	if assignment.DeadlineUnix > 0 && time.Now().Unix() > assignment.DeadlineUnix {
+		return nil, fmt.Errorf("assignment deadline has passed")
+	}
+
+	if assignment.CourseID > 0 {
+		enrollment, err := s.repo.GetEnrollment(ctx, assignment.CourseID, doer.ID)
+		if err != nil {
+			return nil, fmt.Errorf("check enrollment: %w", err)
+		}
+		if enrollment == nil {
+			return nil, fmt.Errorf("you are not enrolled in this course")
+		}
+	}
+
 	existing, err := s.repo.GetSubmission(ctx, assignment.ID, doer.ID)
 	if err != nil {
 		return nil, fmt.Errorf("get submission: %w", err)

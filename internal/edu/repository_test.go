@@ -28,8 +28,8 @@ func TestCreateAssignment_Repo(t *testing.T) {
 		UpdatedUnix:  now,
 	}
 
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO edu_assignments (repo_id,title,description,deadline_unix,created_unix,updated_unix) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`)).
-		WithArgs(a.RepoID, a.Title, a.Description, a.DeadlineUnix, a.CreatedUnix, a.UpdatedUnix).
+	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO edu_assignments (course_id,repo_id,title,description,deadline_unix,created_unix,updated_unix) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`)).
+		WithArgs(a.CourseID, a.RepoID, a.Title, a.Description, a.DeadlineUnix, a.CreatedUnix, a.UpdatedUnix).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(100))
 
 	err = repo.CreateAssignment(ctx, a)
@@ -57,10 +57,10 @@ func TestGetAssignmentByID_Repo(t *testing.T) {
 		UpdatedUnix:  12345,
 	}
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, repo_id, title, description, deadline_unix, created_unix, updated_unix FROM edu_assignments WHERE id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, course_id, repo_id, title, description, deadline_unix, created_unix, updated_unix FROM edu_assignments WHERE id = $1`)).
 		WithArgs(expected.ID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "repo_id", "title", "description", "deadline_unix", "created_unix", "updated_unix"}).
-			AddRow(expected.ID, expected.RepoID, expected.Title, expected.Description, expected.DeadlineUnix, expected.CreatedUnix, expected.UpdatedUnix))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "course_id", "repo_id", "title", "description", "deadline_unix", "created_unix", "updated_unix"}).
+			AddRow(expected.ID, expected.CourseID, expected.RepoID, expected.Title, expected.Description, expected.DeadlineUnix, expected.CreatedUnix, expected.UpdatedUnix))
 
 	result, err := repo.GetAssignmentByID(ctx, expected.ID)
 	assert.NoError(t, err)

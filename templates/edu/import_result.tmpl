@@ -1,0 +1,90 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu import-result">
+	<div class="ui container">
+		<h1 class="ui header">
+			{{svg "octicon-check-circle" 28}}
+			Import Complete
+		</h1>
+		<p>Course: <strong>{{.Course.Name}}</strong></p>
+
+		<div class="ui four statistics">
+			<div class="statistic">
+				<div class="value">{{.Result.TotalRows}}</div>
+				<div class="label">Total Rows</div>
+			</div>
+			<div class="green statistic">
+				<div class="value">{{.Result.Created}}</div>
+				<div class="label">Created</div>
+			</div>
+			<div class="blue statistic">
+				<div class="value">{{.Result.AlreadyExist}}</div>
+				<div class="label">Already Existed</div>
+			</div>
+			<div class="red statistic">
+				<div class="value">{{.Result.Errors}}</div>
+				<div class="label">Errors</div>
+			</div>
+		</div>
+
+		{{if .Result.Credentials}}
+			<h2 class="ui header" style="margin-top: 20px;">Generated Credentials</h2>
+			<div class="ui warning message">
+				<p>Save these credentials now. Passwords cannot be recovered later.</p>
+			</div>
+			<div class="ui segment" style="overflow-x: auto;">
+				<table class="ui celled table" id="credentials-table">
+					<thead>
+						<tr>
+							<th>Username</th>
+							<th>Password</th>
+							<th>Full Name</th>
+							<th>Email</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Result.Credentials}}
+							<tr>
+								<td>{{.Username}}</td>
+								<td><code>{{.Password}}</code></td>
+								<td>{{.FullName}}</td>
+								<td>{{.Email}}</td>
+							</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+			<button class="ui teal button" onclick="downloadCredentialsCSV()">
+				{{svg "octicon-download"}} Download Credentials CSV
+			</button>
+			<script>
+				function downloadCredentialsCSV() {
+					const table = document.getElementById('credentials-table');
+					const rows = table.querySelectorAll('tr');
+					let csv = '';
+					rows.forEach(function(row) {
+						const cells = row.querySelectorAll('th, td');
+						const values = [];
+						cells.forEach(function(cell) {
+							values.push('"' + cell.textContent.trim().replace(/"/g, '""') + '"');
+						});
+						csv += values.join(',') + '\n';
+					});
+					const blob = new Blob([csv], {type: 'text/csv'});
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = 'credentials.csv';
+					a.click();
+					URL.revokeObjectURL(url);
+				}
+			</script>
+		{{end}}
+
+		<div style="margin-top: 20px;">
+			<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}">
+				{{svg "octicon-arrow-left"}} Back to Course
+			</a>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

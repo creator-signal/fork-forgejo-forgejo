@@ -3,17 +3,48 @@
 	<div class="ui container">
 		<div class="ui grid">
 			<div class="sixteen wide column">
-				<h1 class="ui header">
-					{{.Assignment.Title}} - Submissions
-				</h1>
+				<div class="ui secondary menu">
+					<div class="header item">
+						<h1 class="ui header" style="margin:0">
+							{{.Assignment.Title}} - Submissions
+						</h1>
+					</div>
+					<div class="right menu">
+						<form action="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/bulk-fork" method="post" style="margin-left: 5px;">
+							{{.CsrfTokenHtml}}
+							<button class="ui teal button" onclick="return confirm('This will create repository forks for all enrolled students who don\'t have one yet. Continue?')">
+								{{svg "octicon-repo-forked"}} Fork for All Students
+							</button>
+						</form>
+						<form action="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/sync-forks" method="post" style="margin-left: 5px;">
+							{{.CsrfTokenHtml}}
+							<button class="ui olive button" onclick="return confirm('This will push latest changes from the template repo to all student forks. Continue?')">
+								{{svg "octicon-sync"}} Sync All Forks
+							</button>
+						</form>
+						<a class="ui button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/edit" style="margin-left: 5px;">
+							{{svg "octicon-pencil"}} Edit Assignment
+						</a>
+						<form action="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/delete" method="post" style="margin-left: 5px;">
+							{{.CsrfTokenHtml}}
+							<button class="ui red button" onclick="return confirm('Are you sure you want to delete this assignment and all its submissions?')">
+								{{svg "octicon-trash"}} Delete
+							</button>
+						</form>
+					</div>
+				</div>
+
 				<div class="ui segment">
 					<table class="ui celled table">
 						<thead>
 							<tr>
-								<th>{{.locale.Tr "edu.student"}}</th>
-								<th>{{.locale.Tr "edu.status"}}</th>
-								<th>{{.locale.Tr "edu.link"}}</th>
-								<th>{{.locale.Tr "edu.last_updated"}}</th>
+								<th>Student</th>
+								<th>Status</th>
+								<th>CI Score</th>
+								<th>Grade</th>
+								<th>Repo</th>
+								<th>Updated</th>
+								<th></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -27,24 +58,87 @@
 										{{end}}
 									</td>
 									<td>
-										<span class="ui label {{if eq .Status "passed"}}green{{else if eq .Status "failed"}}red{{else}}grey{{end}}">
+										<span class="ui label {{if eq (printf "%s" .Status) "passed"}}green{{else if eq (printf "%s" .Status) "failed"}}red{{else if eq (printf "%s" .Status) "submitted"}}blue{{else if eq (printf "%s" .Status) "graded"}}purple{{else}}grey{{end}}">
 											{{.Status}}
 										</span>
 									</td>
 									<td>
-										<a href="{{AppSubUrl}}/repositories/{{.StudentRepoID}}">{{.locale.Tr "edu.repo_link"}}</a>
+										{{with (index $.TestResultMap .ID)}}
+											<span class="ui label {{if ge .Score 50}}green{{else}}red{{end}}">
+												{{.Score}}%
+											</span>
+											<small title="{{.CommitSHA}}">{{slice .CommitSHA 0 7}}</small>
+										{{else}}
+											<span class="ui grey label">—</span>
+										{{end}}
 									</td>
-									<td>{{.UpdatedUnix}}</td> <!-- TODO: Format time -->
+									<td>
+										{{if .IsGraded}}
+											<span class="ui purple label">{{.Grade}}/100</span>
+										{{else}}
+											<span class="ui grey label">Not graded</span>
+										{{end}}
+									</td>
+									<td>
+										<a href="{{AppSubUrl}}/repositories/{{.StudentRepoID}}">Repo</a>
+									</td>
+									<td>{{(DateUtils).AbsoluteShort .UpdatedUnix}}</td>
+									<td>
+										<a class="ui mini button" href="{{AppSubUrl}}/edu/teacher/assignments/{{$.Assignment.ID}}/submissions/{{.ID}}">
+											{{svg "octicon-eye"}} Detail
+										</a>
+									</td>
 								</tr>
 							{{else}}
 								<tr>
-									<td colspan="4">{{.locale.Tr "edu.no_submissions"}}</td>
+									<td colspan="7">No submissions yet.</td>
 								</tr>
 							{{end}}
 						</tbody>
 					</table>
 				</div>
 			</div>
+
+				{{if .BulkForkTask}}
+				<div class="ui segment">
+					<h4>{{svg "octicon-sync"}} Bulk Fork Status</h4>
+					<div class="ui indicating progress" data-total="{{.BulkForkTask.TotalUsers}}" data-value="{{.BulkForkTask.Completed}}">
+						<div class="bar"><div class="progress"></div></div>
+						<div class="label">
+							{{.BulkForkTask.Completed}}/{{.BulkForkTask.TotalUsers}} completed
+							{{if .BulkForkTask.Failed}}, {{.BulkForkTask.Failed}} failed{{end}}
+							— {{.BulkForkTask.Status}}
+						</div>
+					</div>
+					{{if .BulkForkTask.ErrorLog}}
+					<details>
+						<summary class="ui red text">Error log</summary>
+						<pre>{{.BulkForkTask.ErrorLog}}</pre>
+					</details>
+					{{end}}
+				</div>
+				{{end}}
+
+				{{if .SyncForkTask}}
+				<div class="ui segment">
+					<h4>{{svg "octicon-sync"}} Last Sync Status</h4>
+					<div class="ui indicating progress" data-total="{{.SyncForkTask.TotalRepos}}" data-value="{{.SyncForkTask.Synced}}">
+						<div class="bar"><div class="progress"></div></div>
+						<div class="label">
+							Synced: {{.SyncForkTask.Synced}},
+							Skipped: {{.SyncForkTask.Skipped}},
+							Failed: {{.SyncForkTask.Failed}}
+							— {{.SyncForkTask.Status}}
+						</div>
+					</div>
+					{{if .SyncForkTask.ErrorLog}}
+					<details>
+						<summary class="ui red text">Error log</summary>
+						<pre>{{.SyncForkTask.ErrorLog}}</pre>
+					</details>
+					{{end}}
+				</div>
+				{{end}}
 		</div>
 	</div>
 </div>

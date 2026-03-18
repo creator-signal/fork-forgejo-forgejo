@@ -4,8 +4,8 @@
 		<div class="ui one column grid">
 			<div class="column">
 				<h1 class="ui header">
-					{{.locale.Tr "edu.assignments"}}
-					<div class="sub header">{{.locale.Tr "edu.assignments_desc"}}</div>
+					{{ctx.Locale.Tr "edu.assignments"}}
+					<div class="sub header">{{ctx.Locale.Tr "edu.assignments_desc"}}</div>
 				</h1>
 			</div>
 		</div>
@@ -26,13 +26,13 @@
 				</div>
 				<div class="extra content">
 					<a href="{{AppSubUrl}}/edu/assignments/{{.ID}}" class="ui primary button">
-						{{.locale.Tr "edu.view_assignment"}}
+						{{ctx.Locale.Tr "edu.view_assignment"}}
 					</a>
 				</div>
 			</div>
 			{{else}}
 			<div class="ui message">
-				<p>{{.locale.Tr "edu.no_assignments"}}</p>
+				<p>{{ctx.Locale.Tr "edu.no_assignments"}}</p>
 			</div>
 			{{end}}
 		</div>

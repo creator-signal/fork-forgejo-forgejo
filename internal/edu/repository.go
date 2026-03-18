@@ -29,8 +29,8 @@ func (r *dbRepository) CreateAssignment(ctx context.Context, a *Assignment) erro
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	query, args, err := psql.Insert("edu_assignments").
-		Columns("repo_id", "title", "description", "deadline_unix", "created_unix", "updated_unix").
-		Values(a.RepoID, a.Title, a.Description, a.DeadlineUnix, a.CreatedUnix, a.UpdatedUnix).
+		Columns("course_id", "repo_id", "title", "description", "deadline_unix", "created_unix", "updated_unix").
+		Values(a.CourseID, a.RepoID, a.Title, a.Description, a.DeadlineUnix, a.CreatedUnix, a.UpdatedUnix).
 		Suffix("RETURNING id").
 		ToSql()
 
@@ -49,7 +49,7 @@ func (r *dbRepository) CreateAssignment(ctx context.Context, a *Assignment) erro
 func (r *dbRepository) GetSubmissions(ctx context.Context, assignmentID int64) ([]*Submission, error) {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
-	query, args, err := psql.Select("id", "assignment_id", "student_repo_id", "status", "created_unix", "updated_unix").
+	query, args, err := psql.Select("id", "assignment_id", "user_id", "student_repo_id", "status", "grade", "comment", "graded_by_id", "graded_unix", "created_unix", "updated_unix").
 		From("edu_submissions").
 		Where(sq.Eq{"assignment_id": assignmentID}).
 		ToSql()
@@ -67,7 +67,7 @@ func (r *dbRepository) GetSubmissions(ctx context.Context, assignmentID int64) (
 	var submissions []*Submission
 	for rows.Next() {
 		var s Submission
-		err := rows.Scan(&s.ID, &s.AssignmentID, &s.StudentRepoID, &s.Status, &s.CreatedUnix, &s.UpdatedUnix)
+		err := rows.Scan(&s.ID, &s.AssignmentID, &s.UserID, &s.StudentRepoID, &s.Status, &s.Grade, &s.Comment, &s.GradedByID, &s.GradedUnix, &s.CreatedUnix, &s.UpdatedUnix)
 		if err != nil {
 			return nil, fmt.Errorf("scan row: %w", err)
 		}
@@ -84,7 +84,7 @@ func (r *dbRepository) GetSubmissions(ctx context.Context, assignmentID int64) (
 func (r *dbRepository) GetAssignmentByID(ctx context.Context, id int64) (*Assignment, error) {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
-	query, args, err := psql.Select("id", "repo_id", "title", "description", "deadline_unix", "created_unix", "updated_unix").
+	query, args, err := psql.Select("id", "course_id", "repo_id", "title", "description", "deadline_unix", "created_unix", "updated_unix").
 		From("edu_assignments").
 		Where(sq.Eq{"id": id}).
 		ToSql()
@@ -96,7 +96,7 @@ func (r *dbRepository) GetAssignmentByID(ctx context.Context, id int64) (*Assign
 	row := r.runner.QueryRowContext(ctx, query, args...)
 
 	var a Assignment
-	err = row.Scan(&a.ID, &a.RepoID, &a.Title, &a.Description, &a.DeadlineUnix, &a.CreatedUnix, &a.UpdatedUnix)
+	err = row.Scan(&a.ID, &a.CourseID, &a.RepoID, &a.Title, &a.Description, &a.DeadlineUnix, &a.CreatedUnix, &a.UpdatedUnix)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

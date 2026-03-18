@@ -1,0 +1,44 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content repository new repo">
+	<div class="ui middle aligned center aligned grid">
+		<div class="column">
+			<form class="ui form" action="{{.Link}}" method="post">
+				{{.CsrfTokenHtml}}
+				<h3 class="ui top attached header">
+					{{.Title}}
+				</h3>
+				<div class="ui attached segment">
+					{{template "base/alert" .}}
+
+					<div class="required field">
+						<label for="name">Name</label>
+						<input id="name" name="name" value="{{if .Course}}{{.Course.Name}}{{end}}" autofocus required>
+					</div>
+
+					<div class="field">
+						<label for="description">Description</label>
+						<textarea id="description" name="description">{{if .Course}}{{.Course.Description}}{{end}}</textarea>
+					</div>
+
+					<div class="field">
+						<label for="start_date">Start Date</label>
+						<input id="start_date" name="start_date" type="datetime-local"
+							{{if and .Course .Course.StartUnix}}value="{{.Course.StartDate.Format "2006-01-02T15:04"}}"{{end}}>
+					</div>
+
+					<div class="field">
+						<label for="end_date">End Date</label>
+						<input id="end_date" name="end_date" type="datetime-local"
+							{{if and .Course .Course.EndUnix}}value="{{.Course.EndDate.Format "2006-01-02T15:04"}}"{{end}}>
+					</div>
+
+					<div class="inline field">
+						<button type="submit" class="ui primary button">{{if .Course}}Save{{else}}Create Course{{end}}</button>
+						<a class="ui button" href="{{AppSubUrl}}/edu/teacher/courses">Cancel</a>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

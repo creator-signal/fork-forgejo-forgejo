@@ -1,0 +1,38 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content repository new repo">
+	<div class="ui middle aligned center aligned grid">
+		<div class="column">
+			<form class="ui form" action="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/edit" method="post">
+				{{.CsrfTokenHtml}}
+				<h3 class="ui top attached header">
+					{{.Title}}
+				</h3>
+				<div class="ui attached segment">
+					{{template "base/alert" .}}
+
+					<div class="required field">
+						<label for="title">{{ctx.Locale.Tr "edu.title"}}</label>
+						<input id="title" name="title" value="{{.Assignment.Title}}" autofocus required>
+					</div>
+
+					<div class="field">
+						<label for="description">{{ctx.Locale.Tr "edu.description"}}</label>
+						<textarea id="description" name="description">{{.Assignment.Description}}</textarea>
+					</div>
+
+					<div class="field">
+						<label for="deadline">{{ctx.Locale.Tr "edu.deadline"}}</label>
+						<input id="deadline" name="deadline" type="datetime-local"
+							{{if .Assignment.DeadlineUnix}}value="{{.Assignment.Deadline.Format "2006-01-02T15:04"}}"{{end}}>
+					</div>
+
+					<div class="inline field">
+						<button class="ui primary button">Save</button>
+						<a class="ui button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/submissions">{{ctx.Locale.Tr "edu.cancel"}}</a>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

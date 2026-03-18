@@ -13,11 +13,16 @@
 					<div class="right menu">
 						<a class="ui positive button" href="{{AppSubUrl}}/edu/teacher/assignments/new">
 							{{svg "octicon-plus"}}
-							{{.locale.Tr "edu.new_assignment"}}
+							{{ctx.Locale.Tr "edu.new_assignment"}}
 						</a>
 					</div>
 				</div>
 			</div>
+		</div>
+
+		<div class="ui secondary pointing menu">
+			<a class="active item" href="{{AppSubUrl}}/edu/teacher/assignments">Assignments</a>
+			<a class="item" href="{{AppSubUrl}}/edu/teacher/courses">Courses</a>
 		</div>
 
 		<div class="ui divider"></div>
@@ -28,9 +33,14 @@
 					<div class="ui fluid card">
 						<div class="content">
 							<div class="header">
-								<a href="{{AppSubUrl}}/edu/student/assignments/{{.ID}}">{{.Title}}</a>
+								<a href="{{AppSubUrl}}/edu/teacher/assignments/{{.ID}}/submissions">{{.Title}}</a>
 							</div>
 							<div class="meta">
+								{{if .CourseID}}
+									{{with (index $.CourseMap .CourseID)}}
+										<span class="ui tiny blue label">{{.Name}}</span>
+									{{end}}
+								{{end}}
 								<span class="date">{{if .DeadlineUnix}}{{svg "octicon-clock"}} {{.Deadline.Format "02 Jan 2006"}}{{else}}No Deadline{{end}}</span>
 							</div>
 							<div class="description">
@@ -38,8 +48,11 @@
 							</div>
 						</div>
 						<div class="extra content">
-							<a class="ui primary button fluid" href="{{AppSubUrl}}/edu/student/assignments/{{.ID}}">
-								{{svg "octicon-eye"}} {{$.locale.Tr "edu.view"}}
+							<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.ID}}/submissions">
+								{{svg "octicon-eye"}} Submissions
+							</a>
+							<a class="ui button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.ID}}/edit">
+								{{svg "octicon-pencil"}} Edit
 							</a>
 						</div>
 					</div>
@@ -49,9 +62,9 @@
 			<div class="ui placeholder segment">
 				<div class="ui icon header">
 					{{svg "octicon-repo"}}
-					{{.locale.Tr "edu.no_assignments"}}
+					{{ctx.Locale.Tr "edu.no_assignments"}}
 				</div>
-				<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/new">{{.locale.Tr "edu.create_first_assignment"}}</a>
+				<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/new">{{ctx.Locale.Tr "edu.create_first_assignment"}}</a>
 			</div>
 		{{end}}
 	</div>

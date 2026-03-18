@@ -1,0 +1,68 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu assignments">
+	<div class="ui container">
+		<div class="ui grid">
+			<div class="column">
+				<div class="ui secondary menu">
+					<div class="header item">
+						<h1 class="ui header" style="margin:0">
+							{{svg "octicon-mortar-board" 32}}
+							{{.Title}}
+						</h1>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="ui divider"></div>
+
+		{{if .Assignments}}
+			<div class="ui three stackable cards">
+				{{range .Assignments}}
+					<div class="ui fluid card">
+						<div class="content">
+							<div class="header">
+								<a href="{{AppSubUrl}}/edu/student/assignments/{{.ID}}">{{.Title}}</a>
+							</div>
+							<div class="meta">
+								<span class="date">
+									{{if .DeadlineUnix}}
+										{{svg "octicon-clock"}} {{.Deadline.Format "02 Jan 2006"}}
+									{{else}}
+										No Deadline
+									{{end}}
+								</span>
+							</div>
+							<div class="description">
+								{{.Description | SafeHTML}}
+							</div>
+						</div>
+						<div class="extra content">
+							<a class="ui primary button fluid" href="{{AppSubUrl}}/edu/student/assignments/{{.ID}}">
+								{{svg "octicon-eye"}} {{ctx.Locale.Tr "edu.view"}}
+							</a>
+						</div>
+					</div>
+				{{end}}
+			</div>
+		{{else}}
+			<div class="ui placeholder segment">
+				<div class="ui icon header">
+					{{svg "octicon-repo"}}
+					{{ctx.Locale.Tr "edu.no_assignments"}}
+				</div>
+				<p>You are not enrolled in any courses yet, or there are no assignments.</p>
+			</div>
+		{{end}}
+	</div>
+</div>
+<style>
+	.edu.assignments .card {
+		box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+		transition: transform 0.2s;
+	}
+	.edu.assignments .card:hover {
+		transform: translateY(-5px);
+	}
+</style>
+{{template "base/footer" .}}

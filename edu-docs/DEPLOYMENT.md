@@ -17,10 +17,23 @@ git clone https://github.com/your-org/forgejo-edu.git
 cd forgejo-edu
 
 # Запускаем развёртывание
-sudo ./edu_edu_deploy.sh deploy
+sudo ./edu_deploy.sh deploy
 ```
 
-## Подробная инструкция
+## Локальная разработка (Docker)
+
+Для быстрого запуска на Windows/Mac/Linux без установки Go и Node.js:
+
+```bash
+cd forgejo-edu
+docker compose -f docker-compose.dev.yml up forgejo --build
+```
+
+Сайт будет доступен на http://localhost:3000. Первый зарегистрированный пользователь — администратор. SQLite база, Install Wizard пропущен автоматически.
+
+Для сброса данных: `docker compose -f docker-compose.dev.yml down -v`
+
+## Подробная инструкция (продакшен)
 
 ### 1. Подготовка сервера
 
@@ -35,9 +48,9 @@ sudo apt install -y git curl wget
 ### 2. Установка Go (если нужна сборка из исходников)
 
 ```bash
-# Скачиваем Go 1.22+
-wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz
+# Скачиваем Go 1.25+
+wget https://go.dev/dl/go1.25.0.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.25.0.linux-amd64.tar.gz
 
 # Добавляем в PATH
 echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
@@ -74,7 +87,7 @@ cd forgejo-edu
 
 ```bash
 # Полное развёртывание (PostgreSQL + Forgejo + nginx)
-sudo ./edu_edu_deploy.sh deploy
+sudo ./edu_deploy.sh deploy
 ```
 
 Скрипт автоматически:

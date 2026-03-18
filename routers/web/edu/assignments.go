@@ -16,18 +16,18 @@ import (
 )
 
 const (
-	tplAssignmentList   base.TplName = "edu/assignment_list"
-	tplAssignmentDetail base.TplName = "edu/assignment_detail"
+	tplAssignmentList        base.TplName = "edu/assignment_list"
+	tplStudentAssignmentList base.TplName = "edu/student_assignment_list"
+	tplAssignmentDetail      base.TplName = "edu/assignment_detail"
+	tplAssignmentEdit        base.TplName = "edu/assignment_edit"
 )
 
 func getSQLRunner(ctx *context.Context) edu.SQLRunner {
 	e := db.GetEngine(ctx)
 	if sess, ok := e.(*xorm.Session); ok {
 		if sess.Tx() != nil {
-			// *core.Tx embeds *sql.Tx
 			return sess.Tx().Tx
 		}
-		// *core.DB embeds *sql.DB
 		return sess.Engine().DB().DB
 	}
 	if eng, ok := e.(*xorm.Engine); ok {
@@ -43,10 +43,10 @@ func getEduService(ctx *context.Context) edu.EducationalService {
 	}
 	repo := edu.NewRepository(runner)
 	adapter := edu.NewForgejoAdapter()
-	return edu.NewService(repo, adapter)
+	return edu.NewService(repo, adapter, adapter)
 }
 
-func Assignments(ctx *context.Context) {
+func StudentAssignments(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("edu.assignments")
 	ctx.Data["PageIsEduAssignments"] = true
 
@@ -56,14 +56,47 @@ func Assignments(ctx *context.Context) {
 		return
 	}
 
-	// TODO: filter by course/org user is enrolled in.
-	assignments, err := svc.GetAssignments(ctx, 0)
+	assignments, err := svc.GetAssignmentsForUser(ctx, ctx.Doer.ID)
 	if err != nil {
-		ctx.ServerError("GetAssignments", err)
+		ctx.ServerError("GetAssignmentsForUser", err)
 		return
 	}
 
 	ctx.Data["Assignments"] = assignments
+	ctx.HTML(http.StatusOK, tplStudentAssignmentList)
+}
+
+func TeacherAssignments(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("edu.assignments")
+	ctx.Data["PageIsEduAssignments"] = true
+
+	svc := getEduService(ctx)
+	if svc == nil {
+		ctx.ServerError("getEduService", nil)
+		return
+	}
+
+	assignments, err := svc.GetAssignmentsForUser(ctx, ctx.Doer.ID)
+	if err != nil {
+		ctx.ServerError("GetAssignmentsForUser", err)
+		return
+	}
+
+	// Build a map of courseID -> course name for display
+	courseMap := make(map[int64]*edu.Course)
+	for _, a := range assignments {
+		if a.CourseID > 0 {
+			if _, ok := courseMap[a.CourseID]; !ok {
+				course, err := svc.GetCourseByID(ctx, a.CourseID)
+				if err == nil && course != nil {
+					courseMap[a.CourseID] = course
+				}
+			}
+		}
+	}
+
+	ctx.Data["Assignments"] = assignments
+	ctx.Data["CourseMap"] = courseMap
 	ctx.HTML(http.StatusOK, tplAssignmentList)
 }
 
@@ -89,15 +122,20 @@ func AssignmentDetail(ctx *context.Context) {
 	}
 
 	ctx.Data["Assignment"] = assignment
+	ctx.Data["DeadlinePassed"] = assignment.DeadlineUnix > 0 && time.Now().Unix() > assignment.DeadlineUnix
 
 	repo := edu.NewRepository(getSQLRunner(ctx))
 	submission, err := repo.GetSubmission(ctx, assignment.ID, ctx.Doer.ID)
 
 	if err != nil {
 		log.Error("Failed to get submission: %v", err)
-		// Assume no submission indstead of failing with error
 	}
 	ctx.Data["Submission"] = submission
+
+	if submission != nil {
+		latestResult, _ := svc.GetLatestTestResult(ctx, submission.ID)
+		ctx.Data["LatestTestResult"] = latestResult
+	}
 
 	ctx.HTML(http.StatusOK, tplAssignmentDetail)
 }
@@ -112,7 +150,8 @@ func JoinAssignment(ctx *context.Context) {
 
 	_, err := svc.JoinAssignment(ctx, ctx.Doer, assignmentID)
 	if err != nil {
-		ctx.ServerError("JoinAssignment", err)
+		ctx.Flash.Error(err.Error())
+		ctx.Redirect(setting.AppSubURL + "/edu/student/assignments/" + ctx.Params(":id"))
 		return
 	}
 
@@ -122,6 +161,7 @@ func JoinAssignment(ctx *context.Context) {
 func NewAssignment(ctx *context.Context) {
 	ctx.Data["Title"] = "New Assignment"
 	ctx.Data["PageIsEduAssignments"] = true
+	ctx.Data["CourseID"] = ctx.FormInt64("course_id")
 	ctx.HTML(http.StatusOK, "edu/assignment_new")
 }
 
@@ -149,7 +189,6 @@ func NewAssignmentPost(ctx *context.Context) {
 		return
 	}
 
-	// datetimeformat: YYYY-MM-DDTHH:MM
 	var deadlineUnix int64
 	if deadlineStr != "" {
 		t, err := time.Parse("2006-01-02T15:04", deadlineStr)
@@ -166,7 +205,10 @@ func NewAssignmentPost(ctx *context.Context) {
 		return
 	}
 
+	courseID := ctx.FormInt64("course_id")
+
 	opts := edu.CreateAssignmentOptions{
+		CourseID:     courseID,
 		RepoID:       repo.ID,
 		Title:        title,
 		Description:  description,
@@ -176,6 +218,95 @@ func NewAssignmentPost(ctx *context.Context) {
 	_, err = svc.CreateAssignment(ctx, opts)
 	if err != nil {
 		ctx.ServerError("CreateAssignment", err)
+		return
+	}
+
+	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments")
+}
+
+func EditAssignment(ctx *context.Context) {
+	ctx.Data["Title"] = "Edit Assignment"
+	ctx.Data["PageIsEduAssignments"] = true
+
+	assignmentID := ctx.ParamsInt64(":id")
+	svc := getEduService(ctx)
+	if svc == nil {
+		ctx.ServerError("getEduService", nil)
+		return
+	}
+
+	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
+	if err != nil {
+		ctx.ServerError("GetAssignmentByID", err)
+		return
+	}
+	if assignment == nil {
+		ctx.NotFound("Assignment not found", nil)
+		return
+	}
+
+	ctx.Data["Assignment"] = assignment
+	ctx.HTML(http.StatusOK, tplAssignmentEdit)
+}
+
+func EditAssignmentPost(ctx *context.Context) {
+	ctx.Data["Title"] = "Edit Assignment"
+	ctx.Data["PageIsEduAssignments"] = true
+
+	assignmentID := ctx.ParamsInt64(":id")
+	svc := getEduService(ctx)
+	if svc == nil {
+		ctx.ServerError("getEduService", nil)
+		return
+	}
+
+	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
+	if err != nil {
+		ctx.ServerError("GetAssignmentByID", err)
+		return
+	}
+	if assignment == nil {
+		ctx.NotFound("Assignment not found", nil)
+		return
+	}
+
+	assignment.Title = ctx.FormString("title")
+	assignment.Description = ctx.FormString("description")
+
+	if assignment.Title == "" {
+		ctx.Data["Assignment"] = assignment
+		ctx.RenderWithErr("Title is required.", tplAssignmentEdit, nil)
+		return
+	}
+
+	deadlineStr := ctx.FormString("deadline")
+	if deadlineStr != "" {
+		t, err := time.Parse("2006-01-02T15:04", deadlineStr)
+		if err == nil {
+			assignment.DeadlineUnix = t.Unix()
+		}
+	} else {
+		assignment.DeadlineUnix = 0
+	}
+
+	if err := svc.UpdateAssignment(ctx, assignment); err != nil {
+		ctx.ServerError("UpdateAssignment", err)
+		return
+	}
+
+	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions")
+}
+
+func DeleteAssignmentPost(ctx *context.Context) {
+	assignmentID := ctx.ParamsInt64(":id")
+	svc := getEduService(ctx)
+	if svc == nil {
+		ctx.ServerError("getEduService", nil)
+		return
+	}
+
+	if err := svc.DeleteAssignment(ctx, assignmentID); err != nil {
+		ctx.ServerError("DeleteAssignment", err)
 		return
 	}
 

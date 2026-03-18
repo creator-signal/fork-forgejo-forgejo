@@ -1,0 +1,58 @@
+FROM golang:1.25-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential git git-lfs sqlite3 libsqlite3-dev \
+    bash openssh-client gnupg curl \
+    # Playwright/Chromium dependencies
+    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
+    libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 22
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV CGO_ENABLED=1
+ENV TAGS="sqlite sqlite_unlock_notify"
+ENV GITEA_ROOT=/app
+
+# Cache Go modules
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Cache npm modules
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Copy everything else
+COPY . .
+
+# Frontend
+RUN make frontend
+
+# Install Playwright browsers to a shared location accessible by testuser
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+RUN npx playwright install --with-deps chromium
+
+# Build the e2e test binary
+RUN go test -c forgejo.org/tests/e2e -o e2e.sqlite.test -tags "${TAGS}"
+
+# Build the main binary (needed for test server)
+RUN go build -tags "${TAGS}" -o gitea .
+
+# Generate test config
+RUN sed -e 's|{{REPO_TEST_DIR}}||g' \
+    -e 's|{{TEST_LOGGER}}|test,file|g' \
+    -e 's|{{TEST_TYPE}}|e2e|g' \
+    tests/sqlite.ini.tmpl > tests/sqlite.ini
+
+# Forgejo refuses to run as root
+RUN useradd -m testuser \
+    && chown -R testuser:testuser /app /home/testuser /opt/pw-browsers
+USER testuser
+
+CMD ["./e2e.sqlite.test", "-test.run", "TestE2e", "-test.timeout", "10m"]

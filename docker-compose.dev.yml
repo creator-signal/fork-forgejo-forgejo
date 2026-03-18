@@ -1,0 +1,45 @@
+services:
+  forgejo:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+      - "2222:22"
+    volumes:
+      - forgejo-data:/data
+    restart: unless-stopped
+
+  # Run integration tests (one-shot)
+  test-integration:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    profiles: ["test"]
+    environment:
+      - GITEA_ROOT=/app
+      - CGO_ENABLED=1
+
+  # Run unit tests (one-shot)
+  test-unit:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    profiles: ["test"]
+    command: ["go", "test", "-tags", "sqlite sqlite_unlock_notify", "./internal/edu/..."]
+    environment:
+      - CGO_ENABLED=1
+
+  # Run E2E tests (one-shot, requires Playwright + Chromium)
+  test-e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    profiles: ["test"]
+    environment:
+      - GITEA_ROOT=/app
+      - CGO_ENABLED=1
+      - PLAYWRIGHT_PROJECT=chromium
+
+volumes:
+  forgejo-data:

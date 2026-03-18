@@ -1,0 +1,93 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content edu submission-detail">
+	<div class="ui container">
+		<h1 class="ui header">
+			{{svg "octicon-git-pull-request" 28}}
+			Submission Detail
+		</h1>
+
+		<div class="ui segment">
+			<p><strong>Assignment:</strong> {{.Assignment.Title}}</p>
+			<p><strong>Student:</strong> {{if .Student}}{{.Student.Name}}{{else}}User #{{.Submission.UserID}}{{end}}</p>
+			<p><strong>Status:</strong>
+				<span class="ui label {{if eq (printf "%s" .Submission.Status) "passed"}}green{{else if eq (printf "%s" .Submission.Status) "failed"}}red{{else if eq (printf "%s" .Submission.Status) "graded"}}purple{{else if eq (printf "%s" .Submission.Status) "submitted"}}blue{{else}}grey{{end}}">
+					{{.Submission.Status}}
+				</span>
+			</p>
+			{{if .Submission.StudentRepoID}}
+				<p><strong>Repo:</strong> <a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}">Open Repository</a></p>
+			{{end}}
+		</div>
+
+		<!-- CI/CD Test Results -->
+		<h2 class="ui header">{{svg "octicon-check-circle"}} CI/CD Test Results</h2>
+		<div class="ui segment">
+			{{if .TestResults}}
+				<table class="ui celled table">
+					<thead>
+						<tr>
+							<th>#</th>
+							<th>Commit</th>
+							<th>Score</th>
+							<th>Details</th>
+							<th>Date</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range $i, $tr := .TestResults}}
+							<tr>
+								<td>{{$tr.ID}}</td>
+								<td><code>{{slice $tr.CommitSHA 0 7}}</code></td>
+								<td>
+									<span class="ui label {{if ge $tr.Score 50}}green{{else}}red{{end}}">
+										{{$tr.Score}}%
+									</span>
+								</td>
+								<td>{{$tr.Details}}</td>
+								<td>{{(DateUtils).AbsoluteShort $tr.CreatedUnix}}</td>
+							</tr>
+						{{end}}
+					</tbody>
+				</table>
+			{{else}}
+				<p>No CI/CD test results yet.</p>
+			{{end}}
+		</div>
+
+		<!-- Grading -->
+		<h2 class="ui header">{{svg "octicon-star"}} Grading</h2>
+		<div class="ui segment">
+			{{if .Submission.IsGraded}}
+				<div class="ui message">
+					<p>Current grade: <span class="ui large purple label">{{.Submission.Grade}}/100</span></p>
+					{{if .Submission.Comment}}
+						<p><strong>Comment:</strong> {{.Submission.Comment}}</p>
+					{{end}}
+					{{if .Grader}}
+						<p><small>Graded by {{.Grader.Name}} on {{(DateUtils).AbsoluteShort .Submission.GradedUnix}}</small></p>
+					{{end}}
+				</div>
+			{{end}}
+
+			<form class="ui form" action="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/submissions/{{.Submission.ID}}/grade" method="post">
+				{{.CsrfTokenHtml}}
+				<div class="field">
+					<label>Grade (0–100)</label>
+					<input type="number" name="grade" min="0" max="100" value="{{if .Submission.IsGraded}}{{.Submission.Grade}}{{end}}" required>
+				</div>
+				<div class="field">
+					<label>Comment</label>
+					<textarea name="comment" rows="3">{{.Submission.Comment}}</textarea>
+				</div>
+				<button class="ui primary button" type="submit">{{svg "octicon-check"}} Save Grade</button>
+			</form>
+		</div>
+
+		<div style="margin-top: 15px;">
+			<a class="ui button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/submissions">
+				{{svg "octicon-arrow-left"}} Back to Submissions
+			</a>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

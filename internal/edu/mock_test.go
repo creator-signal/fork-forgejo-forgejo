@@ -68,6 +68,242 @@ func (m *MockRepository) GetSubmissions(ctx context.Context, assignmentID int64)
 	return args.Get(0).([]*Submission), args.Error(1)
 }
 
+func (m *MockRepository) GetAssignmentsForUser(ctx context.Context, userID int64) ([]*Assignment, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*Assignment), args.Error(1)
+}
+
+func (m *MockRepository) UpdateAssignment(ctx context.Context, assignment *Assignment) error {
+	args := m.Called(ctx, assignment)
+	return args.Error(0)
+}
+
+func (m *MockRepository) DeleteAssignment(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CreateCourse(ctx context.Context, course *Course) error {
+	args := m.Called(ctx, course)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetCourseByID(ctx context.Context, id int64) (*Course, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Course), args.Error(1)
+}
+
+func (m *MockRepository) GetCoursesByCreator(ctx context.Context, creatorID int64) ([]*Course, error) {
+	args := m.Called(ctx, creatorID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*Course), args.Error(1)
+}
+
+func (m *MockRepository) GetCoursesByUser(ctx context.Context, userID int64) ([]*Course, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*Course), args.Error(1)
+}
+
+func (m *MockRepository) UpdateCourse(ctx context.Context, course *Course) error {
+	args := m.Called(ctx, course)
+	return args.Error(0)
+}
+
+func (m *MockRepository) DeleteCourse(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetAssignmentsByCourse(ctx context.Context, courseID int64) ([]*Assignment, error) {
+	args := m.Called(ctx, courseID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*Assignment), args.Error(1)
+}
+
+func (m *MockRepository) EnrollUser(ctx context.Context, enrollment *CourseEnrollment) error {
+	args := m.Called(ctx, enrollment)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetEnrollment(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error) {
+	args := m.Called(ctx, courseID, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*CourseEnrollment), args.Error(1)
+}
+
+func (m *MockRepository) GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error) {
+	args := m.Called(ctx, courseID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*CourseEnrollment), args.Error(1)
+}
+
+func (m *MockRepository) RemoveEnrollment(ctx context.Context, courseID, userID int64) error {
+	args := m.Called(ctx, courseID, userID)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CreateImportDraft(ctx context.Context, draft *ImportDraft) error {
+	args := m.Called(ctx, draft)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetImportDraft(ctx context.Context, id int64) (*ImportDraft, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*ImportDraft), args.Error(1)
+}
+
+func (m *MockRepository) CreateImportDraftRows(ctx context.Context, rows []*ImportDraftRow) error {
+	args := m.Called(ctx, rows)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetImportDraftRows(ctx context.Context, draftID int64) ([]*ImportDraftRow, error) {
+	args := m.Called(ctx, draftID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*ImportDraftRow), args.Error(1)
+}
+
+func (m *MockRepository) UpdateImportDraftRow(ctx context.Context, row *ImportDraftRow) error {
+	args := m.Called(ctx, row)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpdateImportDraft(ctx context.Context, draft *ImportDraft) error {
+	args := m.Called(ctx, draft)
+	return args.Error(0)
+}
+
+func (m *MockRepository) DeleteImportDraft(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CreateBulkForkTask(ctx context.Context, task *BulkForkTask) error {
+	args := m.Called(ctx, task)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetBulkForkTask(ctx context.Context, id int64) (*BulkForkTask, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*BulkForkTask), args.Error(1)
+}
+
+func (m *MockRepository) GetBulkForkTaskByAssignment(ctx context.Context, assignmentID int64) (*BulkForkTask, error) {
+	args := m.Called(ctx, assignmentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*BulkForkTask), args.Error(1)
+}
+
+func (m *MockRepository) UpdateBulkForkTask(ctx context.Context, task *BulkForkTask) error {
+	args := m.Called(ctx, task)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CreateTestResult(ctx context.Context, tr *TestResult) error {
+	args := m.Called(ctx, tr)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetTestResultsBySubmission(ctx context.Context, submissionID int64) ([]*TestResult, error) {
+	args := m.Called(ctx, submissionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*TestResult), args.Error(1)
+}
+
+func (m *MockRepository) GetLatestTestResult(ctx context.Context, submissionID int64) (*TestResult, error) {
+	args := m.Called(ctx, submissionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*TestResult), args.Error(1)
+}
+
+func (m *MockRepository) GradeSubmission(ctx context.Context, submissionID int64, grade int, comment string, gradedByID int64) error {
+	args := m.Called(ctx, submissionID, grade, comment, gradedByID)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CreateSyncForkTask(ctx context.Context, task *SyncForkTask) error {
+	args := m.Called(ctx, task)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetSyncForkTask(ctx context.Context, id int64) (*SyncForkTask, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*SyncForkTask), args.Error(1)
+}
+
+func (m *MockRepository) GetSyncForkTaskByAssignment(ctx context.Context, assignmentID int64) (*SyncForkTask, error) {
+	args := m.Called(ctx, assignmentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*SyncForkTask), args.Error(1)
+}
+
+func (m *MockRepository) UpdateSyncForkTask(ctx context.Context, task *SyncForkTask) error {
+	args := m.Called(ctx, task)
+	return args.Error(0)
+}
+
+// MockUserCreator mocks the UserCreator interface
+type MockUserCreator struct {
+	mock.Mock
+}
+
+func (m *MockUserCreator) CreateUser(ctx context.Context, username, email, password, fullName string) error {
+	args := m.Called(ctx, username, email, password, fullName)
+	return args.Error(0)
+}
+
+func (m *MockUserCreator) GetUserByName(ctx context.Context, name string) (*user_model.User, error) {
+	args := m.Called(ctx, name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user_model.User), args.Error(1)
+}
+
+func (m *MockUserCreator) GetUserByID(ctx context.Context, id int64) (*user_model.User, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user_model.User), args.Error(1)
+}
+
 // MockRepoForker mocks the RepoForker interface
 type MockRepoForker struct {
 	mock.Mock
@@ -87,4 +323,14 @@ func (m *MockRepoForker) GetRepositoryByID(ctx context.Context, id int64) (*repo
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*repo_model.Repository), args.Error(1)
+}
+
+func (m *MockRepoForker) SyncFork(ctx context.Context, doer *user_model.User, forkRepo *repo_model.Repository, branch string) error {
+	args := m.Called(ctx, doer, forkRepo, branch)
+	return args.Error(0)
+}
+
+func (m *MockRepoForker) GetDefaultBranch(ctx context.Context, repoID int64) (string, error) {
+	args := m.Called(ctx, repoID)
+	return args.String(0), args.Error(1)
 }
