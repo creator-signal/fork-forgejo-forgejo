@@ -211,10 +211,12 @@ func FullExtension(path string) string {
 // GetRendererByExtension returns the most specific registered renderer for extension.
 func GetRendererByExtension(extension string) Renderer {
 	_, extension, found := strings.Cut(extension, ".")
-	for found {
+	checkedExtensions := 0
+	for found && checkedExtensions < 10 {
 		if renderer, ok := extRenderers["."+extension]; ok {
 			return renderer
 		}
+		checkedExtensions += 1
 		_, extension, found = strings.Cut(extension, ".")
 	}
 	return nil
