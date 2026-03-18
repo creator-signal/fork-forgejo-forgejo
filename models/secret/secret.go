@@ -71,6 +71,9 @@ func InsertEncryptedSecret(ctx context.Context, ownerID, repoID int64, name, dat
 	if ownerID == 0 && repoID == 0 {
 		return nil, fmt.Errorf("%w: ownerID and repoID cannot be both zero, global secrets are not supported", util.ErrInvalidArgument)
 	}
+	if err := ValidateName(name); err != nil {
+		return nil, err
+	}
 
 	secret := &Secret{
 		OwnerID: ownerID,
@@ -142,7 +145,7 @@ func GetSecretByID(ctx context.Context, ownerID, repoID, id int64) (*Secret, err
 
 	if repoID > 0 {
 		query = query.And(builder.Eq{"repo_id": repoID})
-	} else if ownerID > 1 {
+	} else if ownerID > 0 {
 		query = query.And(builder.Eq{"owner_id": ownerID})
 	} else {
 		return nil, fmt.Errorf("ownerID and repoID cannot be simultaneously 0")

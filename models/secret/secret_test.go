@@ -84,6 +84,11 @@ func TestInsertEncryptedSecret(t *testing.T) {
 		})
 	})
 
+	t.Run("Rejects invalid name", func(t *testing.T) {
+		_, err := InsertEncryptedSecret(t.Context(), 2, 0, "invalid name", "some secret")
+		require.ErrorContains(t, err, "invalid secret name")
+	})
+
 	t.Run("FetchActionSecrets", func(t *testing.T) {
 		secrets, err := FetchActionSecrets(t.Context(), 2, 1)
 		require.NoError(t, err)
@@ -174,6 +179,14 @@ func TestSecretGetSecretByID(t *testing.T) {
 			repoID:        0,
 			id:            637341,
 			expectedError: "ownerID and repoID cannot be simultaneously 0",
+		},
+		{
+			name:         "User secret",
+			ownerID:      1,
+			repoID:       0,
+			id:           637342,
+			expectedName: "TEST_SECRET",
+			expectedData: "super secret",
 		},
 	}
 
