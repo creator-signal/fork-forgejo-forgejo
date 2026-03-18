@@ -45,6 +45,88 @@ func TestActionsSecretsManageUserSecrets(t *testing.T) {
 		assert.Equal(t, "   \n\tSecrët dåtä\\   \n", value)
 	})
 
+	t.Run("Edit secret", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "value",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: user.ID, RepoID: 0, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": secret.Name,
+			"data": "   \r\n\tSecrët dåtä\\   \r\n",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
+
+		updatedSecret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{ID: secret.ID})
+		decryptedValue, err := updatedSecret.GetDecryptedData()
+		require.NoError(t, err)
+
+		assert.Equal(t, secret.Name, updatedSecret.Name)
+		assert.Equal(t, "   \n\tSecrët dåtä\\   \n", decryptedValue)
+	})
+
+	t.Run("Edit secret without changing its value", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "   \r\n\tSecrët dåtä\\   \r\n",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: user.ID, RepoID: 0, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": "changed_secret",
+			"data": "",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522CHANGED_SECRET%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
+
+		updatedSecret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{ID: secret.ID})
+		decryptedValue, err := updatedSecret.GetDecryptedData()
+		require.NoError(t, err)
+
+		assert.Equal(t, "CHANGED_SECRET", updatedSecret.Name)
+		assert.Equal(t, "   \n\tSecrët dåtä\\   \n", decryptedValue)
+	})
+
+	t.Run("Edit secret rejects invalid name", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "value",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: user.ID, RepoID: 0, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": "FORGEJO_IS_INVALID",
+			"data": "",
+		})
+		session.MakeRequest(t, req, http.StatusBadRequest)
+	})
+
 	t.Run("Remove secret", func(t *testing.T) {
 		req := NewRequestWithValues(t, "POST", url, map[string]string{
 			"name": "TEST_SECRET",
@@ -58,7 +140,7 @@ func TestActionsSecretsManageUserSecrets(t *testing.T) {
 
 		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: user.ID, RepoID: 0, Name: "TEST_SECRET"})
 
-		req = NewRequest(t, "POST", fmt.Sprintf("%s/delete?id=%d", url, secret.ID))
+		req = NewRequest(t, "POST", fmt.Sprintf("%s/%d/delete", url, secret.ID))
 		session.MakeRequest(t, req, http.StatusOK)
 
 		flashCookie = session.GetCookie(app_context.CookieNameFlash)
@@ -97,6 +179,88 @@ func TestActionsSecretsManageRepositorySecrets(t *testing.T) {
 		assert.Equal(t, "   \n\tSecrët dåtä\\   \n", value)
 	})
 
+	t.Run("Edit secret", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "value",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: 0, RepoID: repo.ID, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": secret.Name,
+			"data": "   \r\n\tSécrët dåtä\\   \r\n",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
+
+		updatedSecret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{ID: secret.ID})
+		decryptedValue, err := updatedSecret.GetDecryptedData()
+		require.NoError(t, err)
+
+		assert.Equal(t, secret.Name, updatedSecret.Name)
+		assert.Equal(t, "   \n\tSécrët dåtä\\   \n", decryptedValue)
+	})
+
+	t.Run("Edit secret without changing its value", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "   \r\n\tSécrët dåtä\\   \r\n",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: 0, RepoID: repo.ID, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": "changed_secret",
+			"data": "",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522CHANGED_SECRET%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
+
+		updatedSecret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{ID: secret.ID})
+		decryptedValue, err := updatedSecret.GetDecryptedData()
+		require.NoError(t, err)
+
+		assert.Equal(t, "CHANGED_SECRET", updatedSecret.Name)
+		assert.Equal(t, "   \n\tSécrët dåtä\\   \n", decryptedValue)
+	})
+
+	t.Run("Edit secret rejects invalid name", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "value",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: 0, RepoID: repo.ID, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": "FORGEJO_IS_INVALID",
+			"data": "",
+		})
+		session.MakeRequest(t, req, http.StatusBadRequest)
+	})
+
 	t.Run("Remove secret", func(t *testing.T) {
 		req := NewRequestWithValues(t, "POST", url, map[string]string{
 			"name": "TEST_SECRET",
@@ -110,7 +274,7 @@ func TestActionsSecretsManageRepositorySecrets(t *testing.T) {
 
 		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: 0, RepoID: repo.ID, Name: "TEST_SECRET"})
 
-		req = NewRequest(t, "POST", fmt.Sprintf("%s/delete?id=%d", url, secret.ID))
+		req = NewRequest(t, "POST", fmt.Sprintf("%s/%d/delete", url, secret.ID))
 		session.MakeRequest(t, req, http.StatusOK)
 
 		flashCookie = session.GetCookie(app_context.CookieNameFlash)
@@ -149,6 +313,88 @@ func TestActionsSecretsManageOrganizationSecrets(t *testing.T) {
 		assert.Equal(t, "   \n\tSecrët dåtä\\   \n", value)
 	})
 
+	t.Run("Edit secret", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "value",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: org.ID, RepoID: 0, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": secret.Name,
+			"data": "   \r\n\tSecrët dåtä\\   \r\n",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
+
+		updatedSecret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{ID: secret.ID})
+		decryptedValue, err := updatedSecret.GetDecryptedData()
+		require.NoError(t, err)
+
+		assert.Equal(t, secret.Name, updatedSecret.Name)
+		assert.Equal(t, "   \n\tSecrët dåtä\\   \n", decryptedValue)
+	})
+
+	t.Run("Edit secret without changing its value", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "   \r\n\tSecrët dåtä\\   \r\n",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: org.ID, RepoID: 0, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": "changed_secret",
+			"data": "",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie = session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522CHANGED_SECRET%2522%2Bhas%2Bbeen%2Bupdated.", flashCookie.Value)
+
+		updatedSecret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{ID: secret.ID})
+		decryptedValue, err := updatedSecret.GetDecryptedData()
+		require.NoError(t, err)
+
+		assert.Equal(t, "CHANGED_SECRET", updatedSecret.Name)
+		assert.Equal(t, "   \n\tSecrët dåtä\\   \n", decryptedValue)
+	})
+
+	t.Run("Edit secret rejects invalid name", func(t *testing.T) {
+		req := NewRequestWithValues(t, "POST", url, map[string]string{
+			"name": "TEST_SECRET",
+			"data": "value",
+		})
+		session.MakeRequest(t, req, http.StatusOK)
+
+		flashCookie := session.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "success%3DThe%2Bsecret%2B%2522TEST_SECRET%2522%2Bhas%2Bbeen%2Badded.", flashCookie.Value)
+
+		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: org.ID, RepoID: 0, Name: "TEST_SECRET"})
+
+		req = NewRequestWithValues(t, "POST", fmt.Sprintf("%s/%d/edit", url, secret.ID), map[string]string{
+			"name": "FORGEJO_IS_INVALID",
+			"data": "",
+		})
+		session.MakeRequest(t, req, http.StatusBadRequest)
+	})
+
 	t.Run("Remove secret", func(t *testing.T) {
 		req := NewRequestWithValues(t, "POST", url, map[string]string{
 			"name": "TEST_SECRET",
@@ -162,7 +408,7 @@ func TestActionsSecretsManageOrganizationSecrets(t *testing.T) {
 
 		secret := unittest.AssertExistsAndLoadBean(t, &secret_model.Secret{OwnerID: org.ID, RepoID: 0, Name: "TEST_SECRET"})
 
-		req = NewRequest(t, "POST", fmt.Sprintf("%s/delete?id=%d", url, secret.ID))
+		req = NewRequest(t, "POST", fmt.Sprintf("%s/%d/delete", url, secret.ID))
 		session.MakeRequest(t, req, http.StatusOK)
 
 		flashCookie = session.GetCookie(app_context.CookieNameFlash)

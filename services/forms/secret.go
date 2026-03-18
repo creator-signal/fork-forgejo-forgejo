@@ -24,3 +24,15 @@ func (f *CreateSecretForm) Validate(req *http.Request, errs binding.Errors) bind
 	ctx := context.GetValidateContext(req)
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
+
+// EditSecretForm needs to be filled in by the user to change an existing secret.
+type EditSecretForm struct {
+	Name string `binding:"Required;MaxSize(255)"`
+	Data string `binding:"MaxSize(65535)"`
+}
+
+// Validate validates the submitted EditSecretForm.
+func (f *EditSecretForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetValidateContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
+}

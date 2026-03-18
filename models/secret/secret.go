@@ -137,6 +137,46 @@ func (s *Secret) GetDecryptedData() (string, error) {
 	return string(v), nil
 }
 
+func GetSecretByID(ctx context.Context, ownerID, repoID, id int64) (*Secret, error) {
+	query := db.GetEngine(ctx).Where("id=?", id)
+
+	if repoID > 0 {
+		query = query.And(builder.Eq{"repo_id": repoID})
+	} else if ownerID > 1 {
+		query = query.And(builder.Eq{"owner_id": ownerID})
+	} else {
+		return nil, fmt.Errorf("ownerID and repoID cannot be simultaneously 0")
+	}
+
+	var secret Secret
+	has, err := query.Get(&secret)
+
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf("secret with ID %d: %w", id, util.ErrNotExist)
+	}
+	return &secret, nil
+}
+
+func UpdateSecret(ctx context.Context, secret *Secret, columns ...string) error {
+	e := db.GetEngine(ctx)
+
+	if err := ValidateName(secret.Name); err != nil {
+		return err
+	}
+	secret.Name = strings.ToUpper(secret.Name)
+
+	var err error
+	if len(columns) == 0 {
+		_, err = e.ID(secret.ID).AllCols().Update(secret)
+	} else {
+		_, err = e.ID(secret.ID).Cols(columns...).Update(secret)
+	}
+
+	return err
+}
+
 func FetchActionSecrets(ctx context.Context, ownerID, repoID int64) (map[string]string, error) {
 	secrets := map[string]string{}
 

@@ -4,6 +4,8 @@
 package secrets
 
 import (
+	"errors"
+
 	"forgejo.org/models/db"
 	secret_model "forgejo.org/models/secret"
 	"forgejo.org/modules/log"
@@ -38,9 +40,35 @@ func CreateSecretPost(ctx *context.Context, ownerID, repoID int64, redirectURL s
 	ctx.JSONRedirect(redirectURL)
 }
 
-func DeleteSecretPost(ctx *context.Context, ownerID, repoID int64, redirectURL string) {
-	id := ctx.FormInt64("id")
+func EditSecretPost(ctx *context.Context, ownerID, repoID, id int64, redirectURL string) {
+	form := web.GetForm(ctx).(*forms.EditSecretForm)
 
+	secret, err := secret_model.GetSecretByID(ctx, ownerID, repoID, id)
+	if errors.Is(err, util.ErrNotExist) {
+		ctx.NotFound("GetSecretByID", err)
+		return
+	} else if err != nil {
+		ctx.ServerError("GetSecretByID", err)
+		return
+	}
+
+	secret.Name = form.Name
+	if form.Data != "" {
+		secret.SetData(util.ReserveLineBreakForTextarea(form.Data))
+	}
+
+	err = secret_model.UpdateSecret(ctx, secret)
+	if err != nil {
+		log.Error("UpdateSecret failed: %v", err)
+		ctx.JSONError(ctx.Tr("actions.secrets.mutation.failure_message", secret.Name))
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("actions.secrets.mutation.success_message", secret.Name))
+	ctx.JSONRedirect(redirectURL)
+}
+
+func DeleteSecretPost(ctx *context.Context, ownerID, repoID, id int64, redirectURL string) {
 	err := secrets_service.DeleteSecretByID(ctx, ownerID, repoID, id)
 	if err != nil {
 		log.Error("DeleteSecretByID(%d) failed: %v", id, err)
