@@ -216,7 +216,7 @@ func GetRendererByExtension(extension string) Renderer {
 		if renderer, ok := extRenderers["."+extension]; ok {
 			return renderer
 		}
-		checkedExtensions += 1
+		checkedExtensions++
 		_, extension, found = strings.Cut(extension, ".")
 	}
 	return nil
