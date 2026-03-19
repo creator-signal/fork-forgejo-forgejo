@@ -283,9 +283,9 @@ func (d discordConvertor) Review(p *api.PullRequestPayload, event webhook_module
 }
 
 func (d discordConvertor) WorkflowJob(p *api.WorkflowJobPayload) (DiscordPayload, error) {
-	text, color := getWorkflowJobPayloadInfo(p, noneLinkFormatter, false)
+	text, color := getWorkflowJobPayloadInfo(p, noneLinkFormatter)
 
-	return d.createPayload(p.Sender, text, "", p.WorkflowJob.HTMLURL, color), nil
+	return d.createPayload(nil, text, "", p.WorkflowJob.HTMLURL, color), nil
 }
 
 // Repository implements PayloadConvertor Repository method
@@ -371,6 +371,14 @@ func (d discordConvertor) createPayload(s *api.User, title, text, url string, co
 	if len([]rune(text)) > 4096 {
 		text = fmt.Sprintf("%.4093s...", text)
 	}
+	author := DiscordEmbedAuthor{}
+	if s != nil {
+		author = DiscordEmbedAuthor{
+			Name:    s.UserName,
+			URL:     setting.AppURL + s.UserName,
+			IconURL: s.AvatarURL,
+		}
+	}
 	return DiscordPayload{
 		Username:  d.Username,
 		AvatarURL: d.AvatarURL,
@@ -380,11 +388,7 @@ func (d discordConvertor) createPayload(s *api.User, title, text, url string, co
 				Description: base.TruncateString(text, discordDescriptionCharactersLimit),
 				URL:         url,
 				Color:       color,
-				Author: DiscordEmbedAuthor{
-					Name:    s.UserName,
-					URL:     setting.AppURL + s.UserName,
-					IconURL: s.AvatarURL,
-				},
+				Author:      author,
 			},
 		},
 	}

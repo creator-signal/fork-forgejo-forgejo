@@ -214,7 +214,7 @@ func (dc dingtalkConvertor) Action(p *api.ActionPayload) (DingtalkPayload, error
 }
 
 func (dingtalkConvertor) WorkflowJob(p *api.WorkflowJobPayload) (DingtalkPayload, error) {
-	text, _ := getWorkflowJobPayloadInfo(p, noneLinkFormatter, true)
+	text, _ := getWorkflowJobPayloadInfo(p, noneLinkFormatter)
 
 	return createDingtalkPayload(text, text, "Workflow Job", p.WorkflowJob.HTMLURL), nil
 }

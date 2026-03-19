@@ -334,9 +334,6 @@ func TestDiscordPayload(t *testing.T) {
 		assert.Equal(t, "Workflow Job queued: test-job(#1)[2020558fe2]:waiting", pl.Embeds[0].Title)
 		assert.Empty(t, pl.Embeds[0].Description)
 		assert.Equal(t, "http://localhost:3000/test/repo/actions/runs/1/jobs/1", pl.Embeds[0].URL)
-		assert.Equal(t, p.Sender.UserName, pl.Embeds[0].Author.Name)
-		assert.Equal(t, setting.AppURL+p.Sender.UserName, pl.Embeds[0].Author.URL)
-		assert.Equal(t, p.Sender.AvatarURL, pl.Embeds[0].Author.IconURL)
 	})
 }
 

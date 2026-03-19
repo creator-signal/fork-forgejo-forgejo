@@ -208,7 +208,7 @@ func (wc wechatworkConvertor) Action(p *api.ActionPayload) (WechatworkPayload, e
 }
 
 func (wc wechatworkConvertor) WorkflowJob(p *api.WorkflowJobPayload) (WechatworkPayload, error) {
-	text, _ := getWorkflowJobPayloadInfo(p, noneLinkFormatter, true)
+	text, _ := getWorkflowJobPayloadInfo(p, noneLinkFormatter)
 
 	return newWechatworkMarkdownPayload(text), nil
 }

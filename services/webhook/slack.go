@@ -224,7 +224,7 @@ func (s slackConvertor) Package(p *api.PackagePayload) (SlackPayload, error) {
 }
 
 func (s slackConvertor) WorkflowJob(p *api.WorkflowJobPayload) (SlackPayload, error) {
-	text, _ := getWorkflowJobPayloadInfo(p, SlackLinkFormatter, true)
+	text, _ := getWorkflowJobPayloadInfo(p, SlackLinkFormatter)
 
 	return s.createPayload(text, nil), nil
 }

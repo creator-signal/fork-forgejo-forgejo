@@ -332,7 +332,7 @@ func getActionPayloadInfo(p *api.ActionPayload, linkFormatter linkFormatter) (te
 	return text, color
 }
 
-func getWorkflowJobPayloadInfo(p *api.WorkflowJobPayload, linkFormatter linkFormatter, withSender bool) (text string, color int) {
+func getWorkflowJobPayloadInfo(p *api.WorkflowJobPayload, linkFormatter linkFormatter) (text string, color int) {
 	description := p.WorkflowJob.Status
 	refLink := linkFormatter(p.WorkflowJob.HTMLURL, fmt.Sprintf("%s(#%d)", p.WorkflowJob.Name, p.WorkflowJob.RunID)+"["+base.ShortSha(p.WorkflowJob.HeadSha)+"]:"+description)
 
@@ -353,9 +353,6 @@ func getWorkflowJobPayloadInfo(p *api.WorkflowJobPayload, linkFormatter linkForm
 		color = purpleColor
 	default:
 		color = greyColor
-	}
-	if withSender {
-		text += fmt.Sprintf(" by %s", linkFormatter(setting.AppURL+url.PathEscape(p.Sender.UserName), p.Sender.UserName))
 	}
 
 	return text, color

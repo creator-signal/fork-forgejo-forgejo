@@ -280,7 +280,7 @@ func (m matrixConvertor) Action(p *api.ActionPayload) (MatrixPayload, error) {
 }
 
 func (m matrixConvertor) WorkflowJob(p *api.WorkflowJobPayload) (MatrixPayload, error) {
-	text, _ := getWorkflowJobPayloadInfo(p, htmlLinkFormatter, true)
+	text, _ := getWorkflowJobPayloadInfo(p, htmlLinkFormatter)
 
 	return m.newPayload(text)
 }

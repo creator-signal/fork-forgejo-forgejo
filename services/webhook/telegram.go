@@ -212,7 +212,7 @@ func (telegramConvertor) Action(p *api.ActionPayload) (TelegramPayload, error) {
 }
 
 func (telegramConvertor) WorkflowJob(p *api.WorkflowJobPayload) (TelegramPayload, error) {
-	text, _ := getWorkflowJobPayloadInfo(p, htmlLinkFormatter, true)
+	text, _ := getWorkflowJobPayloadInfo(p, htmlLinkFormatter)
 
 	return createTelegramPayload(text), nil
 }

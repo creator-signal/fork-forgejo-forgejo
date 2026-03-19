@@ -287,10 +287,6 @@ func workflowJobTestPayload() *api.WorkflowJobPayload {
 			Name:     "repo",
 			FullName: "test/repo",
 		},
-		Sender: &api.User{
-			UserName:  "user1",
-			AvatarURL: "http://localhost:3000/user1/avatar",
-		},
 	}
 }
 
@@ -796,7 +792,7 @@ func TestGetWorkflowJobPayloadInfo(t *testing.T) {
 
 	for i, c := range cases {
 		p.WorkflowJob.Status = c.status
-		text, color := getWorkflowJobPayloadInfo(p, noneLinkFormatter, false)
+		text, color := getWorkflowJobPayloadInfo(p, noneLinkFormatter)
 		assert.Equal(t, c.text, text, "case %d", i)
 		assert.Equal(t, c.color, color, "case %d", i)
 	}

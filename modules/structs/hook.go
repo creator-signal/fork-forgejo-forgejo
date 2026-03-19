@@ -466,7 +466,6 @@ type WorkflowJobPayload struct {
 	Action      string             `json:"action"`
 	WorkflowJob *ActionWorkflowJob `json:"workflow_job"`
 	Repo        *Repository        `json:"repository"`
-	Sender      *User              `json:"sender"`
 }
 
 // JSONPayload implements Payload

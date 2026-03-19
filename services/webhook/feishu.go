@@ -202,7 +202,7 @@ type feishuConvertor struct{}
 var _ shared.PayloadConvertor[FeishuPayload] = feishuConvertor{}
 
 func (feishuConvertor) WorkflowJob(p *api.WorkflowJobPayload) (FeishuPayload, error) {
-	text, _ := getWorkflowJobPayloadInfo(p, noneLinkFormatter, true)
+	text, _ := getWorkflowJobPayloadInfo(p, noneLinkFormatter)
 
 	return newFeishuTextPayload(text), nil
 }

@@ -344,11 +344,11 @@ func (m msteamsConvertor) Action(p *api.ActionPayload) (MSTeamsPayload, error) {
 }
 
 func (msteamsConvertor) WorkflowJob(p *api.WorkflowJobPayload) (MSTeamsPayload, error) {
-	title, color := getWorkflowJobPayloadInfo(p, noneLinkFormatter, false)
+	title, color := getWorkflowJobPayloadInfo(p, noneLinkFormatter)
 
 	return createMSTeamsPayload(
 		p.Repo,
-		p.Sender,
+		nil,
 		title,
 		"",
 		p.WorkflowJob.HTMLURL,
@@ -367,6 +367,14 @@ func createMSTeamsPayload(r *api.Repository, s *api.User, title, text, actionTar
 	}
 	if fact != nil {
 		facts = append(facts, *fact)
+	}
+
+	if s == nil {
+		s = &api.User{
+			FullName:  "Unknown",
+			UserName:  "unknown",
+			AvatarURL: "https://avatar.invalid", // should return NXDOMAIN as of rfc6761
+		}
 	}
 
 	return MSTeamsPayload{

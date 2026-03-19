@@ -1028,8 +1028,7 @@ func (*webhookNotifier) WorkflowJobStatusUpdate(ctx context.Context, repo *repo_
 			StartedAt:    startedAt,
 			CompletedAt:  completedAt,
 		},
-		Repo:   convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}),
-		Sender: convert.ToUser(ctx, sender, nil),
+		Repo: convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}),
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)
 	}
