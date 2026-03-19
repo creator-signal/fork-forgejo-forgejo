@@ -213,13 +213,19 @@ func CreateUserPublicKey(ctx *context.APIContext, form api.CreateKeyOption, uid 
 		return
 	}
 
-	content, err := asymkey_model.CheckPublicKeyString(form.Key)
+	content, options, err := asymkey_model.CheckPublicKeyString(form.Key)
 	if err != nil {
 		repo.HandleCheckKeyStringError(ctx, err)
 		return
 	}
 
-	key, err := asymkey_model.AddPublicKey(ctx, uid, form.Title, content, 0)
+	isCA, principals, err := asymkey_model.ParseCAOptions(options)
+	if err != nil {
+		repo.HandleParseCAOptionsError(ctx, err)
+		return
+	}
+
+	key, err := asymkey_model.AddPublicKey(ctx, uid, form.Title, content, 0, isCA, principals)
 	if err != nil {
 		repo.HandleAddKeyError(ctx, err)
 		return

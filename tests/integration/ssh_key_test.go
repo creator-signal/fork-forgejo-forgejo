@@ -123,7 +123,7 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 
 			t.Run("FailToClone", doGitCloneFail(sshURL))
 
-			t.Run("CreateUserKey", doAPICreateUserKey(ctx, keyname, keyFile, func(t *testing.T, publicKey api.PublicKey) {
+			t.Run("CreateUserKey", doAPICreateUserKey(ctx, keyname, keyFile, nil, func(t *testing.T, publicKey api.PublicKey) {
 				userKeyPublicKeyID = publicKey.ID
 			}))
 
@@ -167,7 +167,7 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 
 			t.Run("PushToOther", doGitPushTestRepository(dstOtherPath, "origin", "master"))
 
-			t.Run("FailToCreateUserKey", doAPICreateUserKey(failCtx, keyname, keyFile))
+			t.Run("FailToCreateUserKey", doAPICreateUserKey(failCtx, keyname, keyFile, nil))
 		})
 
 		t.Run("DeleteRepositoryShouldReleaseKey", func(t *testing.T) {
@@ -176,7 +176,7 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 
 			t.Run("DeleteRepository", doAPIDeleteRepository(ctxWithDeleteRepo))
 
-			t.Run("FailToCreateUserKeyAsStillDeploy", doAPICreateUserKey(failCtx, keyname, keyFile))
+			t.Run("FailToCreateUserKeyAsStillDeploy", doAPICreateUserKey(failCtx, keyname, keyFile, nil))
 
 			t.Run("MakeSureCloneOtherStillWorks", doGitClone(dstOtherPath, otherSSHURL))
 
@@ -188,7 +188,7 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 
 			t.Run("RecreateRepository", doAPICreateRepository(ctxWithDeleteRepo, nil, git.Sha1ObjectFormat)) // FIXME: use forEachObjectFormat
 
-			t.Run("CreateUserKey", doAPICreateUserKey(ctx, keyname, keyFile, func(t *testing.T, publicKey api.PublicKey) {
+			t.Run("CreateUserKey", doAPICreateUserKey(ctx, keyname, keyFile, nil, func(t *testing.T, publicKey api.PublicKey) {
 				userKeyPublicKeyID = publicKey.ID
 			}))
 

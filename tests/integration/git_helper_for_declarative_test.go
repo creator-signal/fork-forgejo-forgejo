@@ -26,6 +26,41 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// For use with defer. Compare t.Setenv, which runs cleanup hooks at test end time.
+func tempSetenv(t *testing.T, key, value string) (cleanup func()) {
+	oldValue, hasValue := os.LookupEnv(key)
+	t.Setenv(key, value)
+	return func() {
+		if hasValue {
+			// Explanation for the nolint here: we can't use t.Setenv because we're already
+			// in a *restoring previous values* phase, so the lint's naive evaluation doesn't
+			// apply
+			os.Setenv(key, oldValue) //nolint:usetesting
+		} else {
+			os.Unsetenv(key)
+		}
+	}
+}
+
+func withActiveKey(t *testing.T, keyFile string, callback func()) {
+	tmpDir := t.TempDir()
+
+	err := os.Chmod(tmpDir, 0o700)
+	require.NoError(t, err)
+
+	err = os.WriteFile(path.Join(tmpDir, "ssh"), []byte("#!/bin/bash\n"+
+		"ssh -o \"UserKnownHostsFile=/dev/null\" -o \"StrictHostKeyChecking=no\" -o \"IdentitiesOnly=yes\" -i \""+keyFile+"\" \"$@\""), 0o700)
+	require.NoError(t, err)
+
+	// Setup ssh wrapper
+	defer tempSetenv(t, "GIT_SSH", path.Join(tmpDir, "ssh"))()
+	defer tempSetenv(t, "GIT_SSH_COMMAND",
+		"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i \""+keyFile+"\"")()
+	defer tempSetenv(t, "GIT_SSH_VARIANT", "ssh")()
+
+	callback()
+}
+
 func withKeyFile(t *testing.T, keyname string, callback func(string)) {
 	tmpDir := t.TempDir()
 
@@ -38,17 +73,7 @@ func withKeyFile(t *testing.T, keyname string, callback func(string)) {
 	require.NoError(t, os.WriteFile(keyFile, privkey, 0o600))
 	require.NoError(t, os.WriteFile(keyFile+".pub", pubkey, 0o600))
 
-	err = os.WriteFile(path.Join(tmpDir, "ssh"), []byte("#!/bin/bash\n"+
-		"ssh -o \"UserKnownHostsFile=/dev/null\" -o \"StrictHostKeyChecking=no\" -o \"IdentitiesOnly=yes\" -i \""+keyFile+"\" \"$@\""), 0o700)
-	require.NoError(t, err)
-
-	// Setup ssh wrapper
-	t.Setenv("GIT_SSH", path.Join(tmpDir, "ssh"))
-	t.Setenv("GIT_SSH_COMMAND",
-		"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i \""+keyFile+"\"")
-	t.Setenv("GIT_SSH_VARIANT", "ssh")
-
-	callback(keyFile)
+	withActiveKey(t, keyFile, func() { callback(keyFile) })
 }
 
 func createSSHUrl(gitPath string, u *url.URL) *url.URL {

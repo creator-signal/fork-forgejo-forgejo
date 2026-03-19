@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
@@ -41,13 +42,12 @@ import (
 
 const (
 	tplCommentPrefix = `# gitea public key`
-	tplPublicKey     = tplCommentPrefix + "\n" + `command=%s,no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty,no-user-rc,restrict %s` + "\n"
 )
 
 var sshOpLocker sync.Mutex
 
 // AuthorizedStringForKey creates the authorized keys string appropriate for the provided key
-func AuthorizedStringForKey(key *PublicKey) string {
+func AuthorizedStringForKey(ctx context.Context, key *PublicKey) string {
 	sb := &strings.Builder{}
 	_ = setting.SSH.AuthorizedKeysCommandTemplateTemplate.Execute(sb, map[string]any{
 		"AppPath":     util.ShellEscape(setting.AppPath),
@@ -57,7 +57,32 @@ func AuthorizedStringForKey(key *PublicKey) string {
 		"Key":         key,
 	})
 
-	return fmt.Sprintf(tplPublicKey, util.ShellEscape(sb.String()), key.Content)
+	const (
+		tplPublicCAKeyOptions     = `cert-authority,principals="%s"`
+		tplPublicKeyCommonOptions = `command=%s,no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty,no-user-rc,restrict %s` + "\n"
+	)
+
+	if key.IsCA {
+		principals := key.Principals
+		if principals == "" {
+			owner, err := user_model.GetUserByID(ctx, key.OwnerID)
+			if err == nil {
+				// forgejo usernames are a subset of what we permit for principals, so this is OK
+				principals = owner.Name
+			}
+		}
+		// This pasting of principals without any escaping is safe because we reject anything
+		// with doublequotes or backslashes in the UI/API layers; and if it came from owner.Name above,
+		// it's also been checked for doublequotes or backslashes.
+		return fmt.Sprintf(tplCommentPrefix+"\n"+tplPublicCAKeyOptions+","+tplPublicKeyCommonOptions,
+			principals,
+			util.ShellEscape(sb.String()),
+			key.Content)
+	}
+
+	return fmt.Sprintf(tplCommentPrefix+"\n"+tplPublicKeyCommonOptions,
+		util.ShellEscape(sb.String()),
+		key.Content)
 }
 
 // appendAuthorizedKeysToFile appends new SSH keys' content to authorized_keys file.
@@ -106,7 +131,7 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 		if key.Type == KeyTypePrincipal {
 			continue
 		}
-		if _, err = f.WriteString(key.AuthorizedString()); err != nil {
+		if _, err = f.WriteString(key.AuthorizedString(db.DefaultContext)); err != nil {
 			return err
 		}
 	}
@@ -146,7 +171,7 @@ func InspectPublicKeys(ctx context.Context) ([]InspectionFinding, error) {
 	// Create a set of all the expected output in the `authorized_keys` file.
 	expectedKeys := make(container.Set[string])
 	if err := db.GetEngine(ctx).Where("type != ?", KeyTypePrincipal).Iterate(new(PublicKey), func(idx int, bean any) (err error) {
-		keyWithComment := (bean.(*PublicKey)).AuthorizedString()
+		keyWithComment := (bean.(*PublicKey)).AuthorizedString(ctx)
 		if !strings.HasPrefix(keyWithComment, tplCommentPrefix) {
 			return fmt.Errorf("unexpected AuthorizedString")
 		}
@@ -267,7 +292,7 @@ func RewriteAllPublicKeys(ctx context.Context) error {
 // regeneratePublicKeys regenerates the authorized_keys file
 func regeneratePublicKeys(ctx context.Context, t io.StringWriter) error {
 	if err := db.GetEngine(ctx).Where("type != ?", KeyTypePrincipal).Iterate(new(PublicKey), func(idx int, bean any) (err error) {
-		_, err = t.WriteString((bean.(*PublicKey)).AuthorizedString())
+		_, err = t.WriteString((bean.(*PublicKey)).AuthorizedString(ctx))
 		return err
 	}); err != nil {
 		return err

@@ -183,6 +183,15 @@ func HandleCheckKeyStringError(ctx *context.APIContext, err error) {
 	}
 }
 
+// HandleParseCAOptionsError handle error from asymkey_model.ParseCAOptions
+func HandleParseCAOptionsError(ctx *context.APIContext, err error) {
+	if asymkey_model.IsErrSSHCADisabled(err) || asymkey_model.IsErrInvalidSSHCAPrincipals(err) {
+		ctx.Error(http.StatusUnprocessableEntity, "", err.Error())
+	} else {
+		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("Invalid SSH CA key options: %w", err))
+	}
+}
+
 // HandleAddKeyError handle add key error
 func HandleAddKeyError(ctx *context.APIContext, err error) {
 	switch {
@@ -232,7 +241,8 @@ func CreateDeployKey(ctx *context.APIContext) {
 	//     "$ref": "#/responses/validationError"
 
 	form := web.GetForm(ctx).(*api.CreateKeyOption)
-	content, err := asymkey_model.CheckPublicKeyString(form.Key)
+	// TODO: we ignore options here, but we could in future consider allowing SSH CA keys
+	content, _, err := asymkey_model.CheckPublicKeyString(form.Key)
 	if err != nil {
 		HandleCheckKeyStringError(ctx, err)
 		return

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,13 +168,17 @@ func doAPIDeleteRepository(ctx APITestContext) func(*testing.T) {
 	}
 }
 
-func doAPICreateUserKey(ctx APITestContext, keyname, keyFile string, callback ...func(*testing.T, api.PublicKey)) func(*testing.T) {
+func doAPICreateUserKey(ctx APITestContext, keyname, keyFile string, keyOptions []string, callback ...func(*testing.T, api.PublicKey)) func(*testing.T) {
 	return func(t *testing.T) {
 		dataPubKey, err := os.ReadFile(keyFile + ".pub")
 		require.NoError(t, err)
+		keyStr := string(dataPubKey)
+		if len(keyOptions) > 0 {
+			keyStr = strings.Join(keyOptions, ",") + " " + keyStr
+		}
 		req := NewRequestWithJSON(t, "POST", "/api/v1/user/keys", &api.CreateKeyOption{
 			Title: keyname,
-			Key:   string(dataPubKey),
+			Key:   keyStr,
 		}).AddTokenAuth(ctx.Token)
 		if ctx.ExpectedCode != 0 {
 			ctx.Session.MakeRequest(t, req, ctx.ExpectedCode)

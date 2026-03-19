@@ -30,6 +30,7 @@ func Keys(ctx *context.Context) {
 	ctx.Data["DisableSSH"] = setting.SSH.Disabled
 	ctx.Data["BuiltinSSH"] = setting.SSH.StartBuiltinServer
 	ctx.Data["AllowPrincipals"] = setting.SSH.AuthorizedPrincipalsEnabled
+	ctx.Data["EnableCertAuth"] = setting.SSH.EnableCertAuth
 
 	loadKeysData(ctx)
 
@@ -44,6 +45,7 @@ func KeysPost(ctx *context.Context) {
 	ctx.Data["DisableSSH"] = setting.SSH.Disabled
 	ctx.Data["BuiltinSSH"] = setting.SSH.StartBuiltinServer
 	ctx.Data["AllowPrincipals"] = setting.SSH.AuthorizedPrincipalsEnabled
+	ctx.Data["EnableCertAuth"] = setting.SSH.EnableCertAuth
 
 	if ctx.HasError() {
 		loadKeysData(ctx)
@@ -165,7 +167,7 @@ func KeysPost(ctx *context.Context) {
 			return
 		}
 
-		content, err := asymkey_model.CheckPublicKeyString(form.Content)
+		content, options, err := asymkey_model.CheckPublicKeyString(form.Content)
 		if err != nil {
 			if db.IsErrSSHDisabled(err) {
 				ctx.Flash.Info(ctx.Tr("settings.ssh_disabled"))
@@ -180,7 +182,20 @@ func KeysPost(ctx *context.Context) {
 			return
 		}
 
-		if _, err = asymkey_model.AddPublicKey(ctx, ctx.Doer.ID, form.Title, content, 0); err != nil {
+		isCA, principals, err := asymkey_model.ParseCAOptions(options)
+		if err != nil {
+			if asymkey_model.IsErrSSHCADisabled(err) {
+				ctx.Flash.Info(ctx.Tr("settings.ssh_ca_disabled"))
+			} else if asymkey_model.IsErrInvalidSSHCAPrincipals(err) {
+				ctx.Flash.Info(ctx.Tr("form.invalid_ssh_ca_principals"))
+			} else {
+				ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
+			}
+			ctx.Redirect(setting.AppSubURL + "/user/settings/keys")
+			return
+		}
+
+		if _, err = asymkey_model.AddPublicKey(ctx, ctx.Doer.ID, form.Title, content, 0, isCA, principals); err != nil {
 			ctx.Data["HasSSHError"] = true
 			switch {
 			case asymkey_model.IsErrKeyAlreadyExist(err):

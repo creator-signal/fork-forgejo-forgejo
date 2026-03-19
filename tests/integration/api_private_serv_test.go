@@ -170,7 +170,7 @@ func TestAPIPrivateServAndNoServWithRequiredTwoFactor(t *testing.T) {
 			repo, _, reset := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{})
 			defer reset()
 
-			pubKey, err := asymkey_model.AddPublicKey(ctx, user.ID, "tmp-key-"+user.Name, "sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBGXEEzWmm1dxb+57RoK5KVCL0w2eNv9cqJX2AGGVlkFsVDhOXHzsadS3LTK4VlEbbrDMJdoti9yM8vclA8IeRacAAAAEc3NoOg== nocomment", 0)
+			pubKey, err := asymkey_model.AddPublicKey(ctx, user.ID, "tmp-key-"+user.Name, "sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBGXEEzWmm1dxb+57RoK5KVCL0w2eNv9cqJX2AGGVlkFsVDhOXHzsadS3LTK4VlEbbrDMJdoti9yM8vclA8IeRacAAAAEc3NoOg== nocomment", 0, false, "")
 			require.NoError(t, err)
 			defer unittest.AssertSuccessfulDelete(t, &asymkey_model.PublicKey{ID: pubKey.ID})
 

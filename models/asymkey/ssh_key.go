@@ -6,6 +6,7 @@ package asymkey
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -44,6 +45,8 @@ type PublicKey struct {
 	Mode          perm.AccessMode `xorm:"NOT NULL DEFAULT 2"`
 	Type          KeyType         `xorm:"NOT NULL DEFAULT 1"`
 	LoginSourceID int64           `xorm:"NOT NULL DEFAULT 0"`
+	IsCA          bool            `xorm:"NOT NULL DEFAULT false"`
+	Principals    string          `xorm:"NOT NULL DEFAULT ''"`
 
 	CreatedUnix       timeutil.TimeStamp `xorm:"created"`
 	UpdatedUnix       timeutil.TimeStamp `xorm:"updated"`
@@ -70,8 +73,8 @@ func (key *PublicKey) OmitEmail() string {
 // AuthorizedString returns formatted public key string for authorized_keys file.
 //
 // TODO: Consider dropping this function
-func (key *PublicKey) AuthorizedString() string {
-	return AuthorizedStringForKey(key)
+func (key *PublicKey) AuthorizedString(ctx context.Context) string {
+	return AuthorizedStringForKey(ctx, key)
 }
 
 func addKey(ctx context.Context, key *PublicKey) (err error) {
@@ -91,7 +94,7 @@ func addKey(ctx context.Context, key *PublicKey) (err error) {
 }
 
 // AddPublicKey adds new public key to database and authorized_keys file.
-func AddPublicKey(ctx context.Context, ownerID int64, name, content string, authSourceID int64) (*PublicKey, error) {
+func AddPublicKey(ctx context.Context, ownerID int64, name, content string, authSourceID int64, isCA bool, principals string) (*PublicKey, error) {
 	log.Trace(content)
 
 	fingerprint, err := CalcFingerprint(content)
@@ -127,6 +130,8 @@ func AddPublicKey(ctx context.Context, ownerID int64, name, content string, auth
 		Mode:          perm.AccessModeWrite,
 		Type:          KeyTypeUser,
 		LoginSourceID: authSourceID,
+		IsCA:          isCA,
+		Principals:    principals,
 	}
 	if err = addKey(ctx, key); err != nil {
 		return nil, fmt.Errorf("addKey: %w", err)
@@ -186,6 +191,7 @@ type FindPublicKeyOptions struct {
 	KeyTypes      []KeyType
 	NotKeytype    KeyType
 	LoginSourceID int64
+	IsCA          sql.NullBool
 }
 
 func (opts FindPublicKeyOptions) ToConds() builder.Cond {
@@ -204,6 +210,9 @@ func (opts FindPublicKeyOptions) ToConds() builder.Cond {
 	}
 	if opts.LoginSourceID > 0 {
 		cond = cond.And(builder.Eq{"login_source_id": opts.LoginSourceID})
+	}
+	if opts.IsCA.Valid {
+		cond = cond.And(builder.Eq{"is_ca": opts.IsCA.Bool})
 	}
 	return cond
 }
@@ -327,8 +336,10 @@ func AddPublicKeysBySource(ctx context.Context, usr *user_model.User, s *auth.So
 	loop:
 		for len(keys) > 0 && err == nil {
 			var out ssh.PublicKey
-			// We ignore options as they are not relevant to Gitea
-			out, _, _, keys, err = ssh.ParseAuthorizedKey(keys)
+			var keyOptions []string
+			// TODO: Could/should we switch to CheckPublicKeyString here?
+			// We would get a couple of additional checks e.g. minimum key size
+			out, _, keyOptions, keys, err = ssh.ParseAuthorizedKey(keys)
 			if err != nil {
 				break loop
 			}
@@ -337,7 +348,17 @@ func AddPublicKeysBySource(ctx context.Context, usr *user_model.User, s *auth.So
 			marshalled = marshalled[:len(marshalled)-1]
 			sshKeyName := fmt.Sprintf("%s-%s", s.Name, ssh.FingerprintSHA256(out))
 
-			if _, err := AddPublicKey(ctx, usr.ID, sshKeyName, marshalled, s.ID); err != nil {
+			isCA, principals, err := ParseCAOptions(keyOptions)
+			if err != nil {
+				if IsErrSSHCADisabled(err) || IsErrInvalidSSHCAPrincipals(err) {
+					log.Warn("AddPublicKeysBySource[%s]: %v", sshKeyName, err)
+				} else {
+					log.Warn("AddPublicKeysBySource[%s]: Error in per-user SSH CA options: %v", sshKeyName, err)
+				}
+				break loop
+			}
+
+			if _, err := AddPublicKey(ctx, usr.ID, sshKeyName, marshalled, s.ID, isCA, principals); err != nil {
 				if IsErrKeyAlreadyExist(err) {
 					log.Trace("AddPublicKeysBySource[%s]: Public SSH Key %s already exists for user", sshKeyName, usr.Name)
 				} else {

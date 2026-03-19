@@ -19,4 +19,13 @@ type PublicKey struct {
 	Owner    *User     `json:"user,omitempty"`
 	ReadOnly bool      `json:"read_only,omitempty"`
 	KeyType  string    `json:"key_type,omitempty"`
+	// TODO: I'm not sure how best to handle user-supplied SSH CA keys here.
+	// In the asymkey model there are fields IsCA, Principals. We could add
+	// optional fields for those here, too (in variously ugly ways), or we
+	// could add `cert-authority,principals="..."` options to the Key field.
+	// Which is nicer/least bad? The latter avoids confusion for a plain key
+	// in code not aware of the IsCA field, but the former allows consumers to
+	// avoid parsing the weird authorized_keys format. Maybe both then???
+	// Raises the possibility of inconsistency! So I'm still not sure.
+	// See services/convert/convert.go
 }

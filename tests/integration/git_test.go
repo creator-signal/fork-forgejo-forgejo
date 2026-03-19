@@ -147,7 +147,7 @@ func testGit(t *testing.T, u *url.URL) {
 			// Setup key the user ssh key
 			withKeyFile(t, keyname, func(keyFile string) {
 				var publicKeyID int64
-				t.Run("CreateUserKey", doAPICreateUserKey(sshContext, "test-key-"+objectFormat.Name(), keyFile, func(t *testing.T, pk api.PublicKey) {
+				t.Run("CreateUserKey", doAPICreateUserKey(sshContext, "test-key-"+objectFormat.Name(), keyFile, nil, func(t *testing.T, pk api.PublicKey) {
 					publicKeyID = pk.ID
 				}))
 

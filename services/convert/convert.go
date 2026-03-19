@@ -254,7 +254,7 @@ func ToVerification(ctx context.Context, c *git.Commit) *api.PayloadCommitVerifi
 func ToPublicKey(apiLink string, key *asymkey_model.PublicKey) *api.PublicKey {
 	return &api.PublicKey{
 		ID:          key.ID,
-		Key:         key.Content,
+		Key:         key.Content, // TODO: IsCA, Principals?? See notes against api.PublicKey
 		URL:         fmt.Sprintf("%s%d", apiLink, key.ID),
 		Title:       key.Name,
 		Fingerprint: key.Fingerprint,

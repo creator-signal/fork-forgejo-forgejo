@@ -15,7 +15,7 @@
 			</div>
 			<div class="field {{if .Err_Content}}error{{end}}">
 				<label for="ssh-key-content">{{ctx.Locale.Tr "settings.key_content"}}</label>
-				<textarea id="ssh-key-content" name="content" class="js-quick-submit" placeholder="{{ctx.Locale.Tr "settings.key_content_ssh_placeholder"}}" required>{{.content}}</textarea>
+				<textarea id="ssh-key-content" name="content" class="js-quick-submit" placeholder="{{if .EnableCertAuth}}{{ctx.Locale.Tr "settings.key_content_ssh_placeholder_cert_auth"}}{{else}}{{ctx.Locale.Tr "settings.key_content_ssh_placeholder"}}{{end}}" required>{{.content}}</textarea>
 			</div>
 			<input name="type" type="hidden" value="ssh">
 			<button class="ui primary button">
@@ -41,11 +41,14 @@
 		{{range $index, $key := .Keys}}
 			<div class="flex-item">
 				<div class="flex-item-leading">
-					<span class="text {{if .HasRecentActivity}}green{{end}}" {{if .HasRecentActivity}}data-tooltip-content="{{ctx.Locale.Tr "settings.key_state_desc"}}"{{end}}>{{svg "octicon-key" 32}}</span>
+					<span class="text {{if .HasRecentActivity}}green{{end}}" {{if .HasRecentActivity}}data-tooltip-content="{{ctx.Locale.Tr "settings.key_state_desc"}}"{{end}}>{{if .IsCA}}{{svg "octicon-log" 32}}{{else}}{{svg "octicon-key" 32}}{{end}}</span>
 				</div>
 				<div class="flex-item-main">
 						{{if .Verified}}
 							<div class="flex-item-title flex-text-block" data-tooltip-content="{{ctx.Locale.Tr "settings.ssh_key_verified_long"}}">{{svg "octicon-verified"}}{{ctx.Locale.Tr "settings.ssh_key_verified"}}</div>
+						{{end}}
+						{{if .IsCA}}
+						<div class="flex-item-body">SSH Certificate Authority</div>
 						{{end}}
 						<div class="flex-item-title">{{.Name}}</div>
 						<div class="flex-item-body">
@@ -54,6 +57,9 @@
 						<div class="flex-item-body">
 								<p>{{ctx.Locale.Tr "settings.added_on" (DateUtils.AbsoluteShort .CreatedUnix)}} —	{{svg "octicon-info"}} {{if .HasUsed}}{{ctx.Locale.Tr "settings.last_used"}} <span {{if .HasRecentActivity}}class="text green"{{end}}>{{DateUtils.AbsoluteShort .UpdatedUnix}}</span>{{else}}{{ctx.Locale.Tr "settings.no_activity"}}{{end}}</p>
 						</div>
+						{{if .Principals}}
+						<div class="flex-item-body">Accepted principals: {{.Principals}}</div>
+						{{end}}
 				</div>
 				<div class="flex-item-trailing">
 					<button class="ui red tiny button delete-button{{if index $.ExternalKeys $index}} disabled{{end}}" data-modal-id="delete-ssh" data-url="{{$.Link}}/delete?type=ssh" data-id="{{.ID}}"{{if index $.ExternalKeys $index}} title="{{ctx.Locale.Tr "settings.ssh_externally_managed"}}"{{end}}>

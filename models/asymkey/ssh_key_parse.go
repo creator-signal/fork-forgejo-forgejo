@@ -54,14 +54,14 @@ func extractTypeFromBase64Key(key string) (string, error) {
 }
 
 // parseKeyString parses any key string in OpenSSH or SSH2 format to clean OpenSSH string (RFC4253).
-func parseKeyString(content string) (string, error) {
+// Also returns key options (e.g. from OpenSSH authorized_keys lines) if they are present.
+func parseKeyString(content string) (string, []string, error) {
 	// remove whitespace at start and end
 	content = strings.TrimSpace(content)
 
-	var keyType, keyContent, keyComment string
-
-	if strings.HasPrefix(content, ssh2keyStart) {
-		// Parse SSH2 file format.
+	switch {
+	case strings.HasPrefix(content, ssh2keyStart):
+		// Convert SSH2 file format to OpenSSH format
 
 		// Transform all legal line endings to a single "\n".
 		content = strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(content)
@@ -69,6 +69,7 @@ func parseKeyString(content string) (string, error) {
 		lines := strings.Split(content, "\n")
 		continuationLine := false
 
+		var keyContent string
 		for _, line := range lines {
 			// Skip lines that:
 			// 1) are a continuation of the previous line,
@@ -81,98 +82,81 @@ func parseKeyString(content string) (string, error) {
 			}
 		}
 
-		t, err := extractTypeFromBase64Key(keyContent)
+		keyType, err := extractTypeFromBase64Key(keyContent)
 		if err != nil {
-			return "", fmt.Errorf("extractTypeFromBase64Key: %w", err)
-		}
-		keyType = t
-	} else {
-		if strings.Contains(content, "-----BEGIN") {
-			// Convert PEM Keys to OpenSSH format
-			// Transform all legal line endings to a single "\n".
-			content = strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(content)
-
-			block, _ := pem.Decode([]byte(content))
-			if block == nil {
-				return "", errors.New("failed to parse PEM block containing the public key")
-			}
-			if strings.Contains(block.Type, "PRIVATE") {
-				return "", ErrKeyIsPrivate
-			}
-
-			pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-			if err != nil {
-				var pk rsa.PublicKey
-				_, err2 := asn1.Unmarshal(block.Bytes, &pk)
-				if err2 != nil {
-					return "", fmt.Errorf("failed to parse DER encoded public key as either PKIX or PEM RSA Key: %v %w", err, err2)
-				}
-				pub = &pk
-			}
-
-			sshKey, err := ssh.NewPublicKey(pub)
-			if err != nil {
-				return "", fmt.Errorf("unable to convert to ssh public key: %w", err)
-			}
-			content = string(ssh.MarshalAuthorizedKey(sshKey))
-		}
-		// Parse OpenSSH format.
-
-		// Remove all newlines
-		content = strings.NewReplacer("\r\n", "", "\n", "").Replace(content)
-
-		parts := strings.SplitN(content, " ", 3)
-		switch len(parts) {
-		case 0:
-			return "", util.NewInvalidArgumentErrorf("empty key")
-		case 1:
-			keyContent = parts[0]
-		case 2:
-			keyType = parts[0]
-			keyContent = parts[1]
-		default:
-			keyType = parts[0]
-			keyContent = parts[1]
-			keyComment = parts[2]
+			return "", nil, fmt.Errorf("extractTypeFromBase64Key: %w", err)
 		}
 
-		// If keyType is not given, extract it from content. If given, validate it.
-		t, err := extractTypeFromBase64Key(keyContent)
+		content = keyType + " " + keyContent
+	case strings.Contains(content, "-----BEGIN"):
+		// Convert PEM Keys to OpenSSH format
+
+		// Transform all legal line endings to a single "\n".
+		content = strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(content)
+
+		block, _ := pem.Decode([]byte(content))
+		if block == nil {
+			return "", nil, errors.New("failed to parse PEM block containing the public key")
+		}
+		if strings.Contains(block.Type, "PRIVATE") {
+			return "", nil, ErrKeyIsPrivate
+		}
+
+		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
-			return "", fmt.Errorf("extractTypeFromBase64Key: %w", err)
+			var pk rsa.PublicKey
+			_, err2 := asn1.Unmarshal(block.Bytes, &pk)
+			if err2 != nil {
+				return "", nil, fmt.Errorf("failed to parse DER encoded public key as either PKIX or PEM RSA Key: %v %w", err, err2)
+			}
+			pub = &pk
 		}
-		if len(keyType) == 0 {
-			keyType = t
-		} else if keyType != t {
-			return "", fmt.Errorf("key type and content does not match: %s - %s", keyType, t)
+
+		sshKey, err := ssh.NewPublicKey(pub)
+		if err != nil {
+			return "", nil, fmt.Errorf("unable to convert to ssh public key: %w", err)
 		}
+		content = string(ssh.MarshalAuthorizedKey(sshKey))
+	default:
+		// Just try OpenSSH format.
 	}
-	// Finally we need to check whether we can actually read the proposed key:
-	_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(keyType + " " + keyContent + " " + keyComment))
+
+	// Parse OpenSSH format.
+
+	// Remove all newlines
+	content = strings.NewReplacer("\r\n", "", "\n", "").Replace(content)
+
+	sshKey, comment, options, _, err := ssh.ParseAuthorizedKey([]byte(content))
 	if err != nil {
-		return "", fmt.Errorf("invalid ssh public key: %w", err)
+		return "", nil, fmt.Errorf("invalid ssh public key: %w", err)
 	}
-	return keyType + " " + keyContent + " " + keyComment, nil
+
+	validated := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshKey)))
+	if comment != "" {
+		validated = validated + " " + comment
+	}
+
+	return validated, options, nil
 }
 
 // CheckPublicKeyString checks if the given public key string is recognized by SSH.
-// It returns the actual public key line on success.
-func CheckPublicKeyString(content string) (_ string, err error) {
-	content, err = parseKeyString(content)
+// It returns the actual public key line on success, along with any key options that were present.
+func CheckPublicKeyString(content string) (_ string, options []string, err error) {
+	content, options, err = parseKeyString(content)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	content = strings.TrimRight(content, "\n\r")
 	if strings.ContainsAny(content, "\n\r") {
-		return "", util.NewInvalidArgumentErrorf("only a single line with a single key please")
+		return "", nil, util.NewInvalidArgumentErrorf("only a single line with a single key please")
 	}
 
 	// remove any unnecessary whitespace now
 	content = strings.TrimSpace(content)
 
 	if !setting.SSH.MinimumKeySizeCheck {
-		return content, nil
+		return content, nil, nil
 	}
 
 	var (
@@ -188,16 +172,52 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		keyType, length, err = SSHKeyGenParsePublicKey(content)
 	}
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", fnName, err)
+		return "", nil, fmt.Errorf("%s: %w", fnName, err)
 	}
 	log.Trace("Key info [native: %v]: %s-%d", setting.SSH.StartBuiltinServer, keyType, length)
 
 	if minLen, found := setting.SSH.MinimumKeySizes[keyType]; found && length >= minLen {
-		return content, nil
+		return content, options, nil
 	} else if found && length < minLen {
-		return "", fmt.Errorf("key length is not enough: got %d, needs %d", length, minLen)
+		return "", nil, fmt.Errorf("key length is not enough: got %d, needs %d", length, minLen)
 	}
-	return "", fmt.Errorf("key type is not allowed: %s", keyType)
+	return "", nil, fmt.Errorf("key type is not allowed: %s", keyType)
+}
+
+// Extracts `cert-authority` and `principals` options from authorized_keys key options.
+// Yields isCA true if `cert-authority` present, and principals the string value directly
+// from the options field.
+func ParseCAOptions(options []string) (isCA bool, principals string, err error) {
+	principalsPresent := false
+	for _, opt := range options {
+		optLC := strings.ToLower(opt)
+		switch {
+		case optLC == "cert-authority":
+			isCA = true
+		case strings.HasPrefix(opt, `principals="`):
+			principalsPresent = true
+			principals = opt[len(`principals="`) : len(opt)-1] // drop trailing quote too
+		}
+	}
+
+	if isCA {
+		if !setting.SSH.EnableCertAuth {
+			return false, "", ErrSSHCADisabled{}
+		}
+		if principalsPresent {
+			// We reject: empty string; anything with a control character; spaces, backslash, doublequote
+			// This is because OpenSSH's parser is simple and well defined but WEIRD.
+			// If we want to allow exotic principal strings we can do so later.
+			principalsOk := principals != "" && !strings.ContainsFunc(principals, func(r rune) bool {
+				return r <= 0x20 || r == '\\' || r == '"'
+			})
+			if !principalsOk {
+				return false, "", ErrInvalidSSHCAPrincipals{InvalidPrincipals: principals}
+			}
+		}
+	}
+
+	return isCA, principals, nil
 }
 
 // SSHNativeParsePublicKey extracts the key type and length using the golang SSH library.

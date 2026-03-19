@@ -51,7 +51,8 @@ func DeployKeysPost(ctx *context.Context) {
 		return
 	}
 
-	content, err := asymkey_model.CheckPublicKeyString(form.Content)
+	// TODO: consider using asymkey_model.ParseCAOptions etc. to allow SSH CAs as deploy keys
+	content, _, err := asymkey_model.CheckPublicKeyString(form.Content)
 	if err != nil {
 		if db.IsErrSSHDisabled(err) {
 			ctx.Flash.Info(ctx.Tr("settings.ssh_disabled"))

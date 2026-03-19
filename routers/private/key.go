@@ -57,5 +57,6 @@ func AuthorizedPublicKeyByContent(ctx *context.PrivateContext) {
 		})
 		return
 	}
-	ctx.PlainText(http.StatusOK, publicKey.AuthorizedString())
+	// TODO: is `ctx` the correct context for AuthorizedString here?
+	ctx.PlainText(http.StatusOK, publicKey.AuthorizedString(ctx))
 }

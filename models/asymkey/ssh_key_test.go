@@ -147,7 +147,7 @@ AAAAC3NzaC1lZDI1NTE5AAAAICV0MGX/W9IvLA4FXpIuUcdDcbj5KX4syHgsTy7soVgf
 ---- END SSH2 PUBLIC KEY ----
 `},
 	} {
-		_, err := CheckPublicKeyString(test.content)
+		_, _, err := CheckPublicKeyString(test.content)
 		require.NoError(t, err)
 	}
 	setting.SSH.MinimumKeySizeCheck = oldValue
@@ -160,7 +160,7 @@ AAAAC3NzaC1lZDI1NTE5AAAAICV0MGX/W9IvLA4FXpIuUcdDcbj5KX4syHgsTy7soVgf
 		{"\t\t:)\t\r\n"},
 		{"\r\ntest \r\ngitea\r\n\r\n"},
 	} {
-		_, err := CheckPublicKeyString(invalidKeys.content)
+		_, _, err := CheckPublicKeyString(invalidKeys.content)
 		require.Error(t, err)
 	}
 }

@@ -51,6 +51,7 @@ var SSH = struct {
 	TrustedUserCAKeysParsed               []gossh.PublicKey  `ini:"-"`
 	PerWriteTimeout                       time.Duration      `ini:"SSH_PER_WRITE_TIMEOUT"`
 	PerWritePerKbTimeout                  time.Duration      `ini:"SSH_PER_WRITE_PER_KB_TIMEOUT"`
+	EnableCertAuth                        bool               `ini:"SSH_ENABLE_CERT_AUTH"`
 }{
 	Disabled:                      false,
 	StartBuiltinServer:            false,

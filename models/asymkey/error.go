@@ -294,3 +294,29 @@ func (err ErrSSHInvalidTokenSignature) Error() string {
 func (err ErrSSHInvalidTokenSignature) Unwrap() error {
 	return util.ErrInvalidArgument
 }
+
+// ErrSSHCADisabled signalled when per-user SSH CA functionality is used, but not enabled in app.ini
+type ErrSSHCADisabled struct{}
+
+func IsErrSSHCADisabled(err error) bool {
+	_, ok := err.(ErrSSHCADisabled)
+	return ok
+}
+
+func (err ErrSSHCADisabled) Error() string {
+	return "Per-user SSH CA functionality is disabled"
+}
+
+// ErrInvalidSSHCAPrincipals signalled when an invalid `principals="..."` key option is detected.
+type ErrInvalidSSHCAPrincipals struct {
+	InvalidPrincipals string
+}
+
+func IsErrInvalidSSHCAPrincipals(err error) bool {
+	_, ok := err.(ErrInvalidSSHCAPrincipals)
+	return ok
+}
+
+func (err ErrInvalidSSHCAPrincipals) Error() string {
+	return "Invalid SSH CA principals string"
+}

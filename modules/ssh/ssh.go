@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"database/sql"
 	"encoding/pem"
 	"errors"
 	"io"
@@ -16,12 +17,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 
 	asymkey_model "forgejo.org/models/asymkey"
+	"forgejo.org/models/db"
+	"forgejo.org/models/user"
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/process"
@@ -163,89 +167,170 @@ func publicKeyHandler(ctx ssh.Context, key ssh.PublicKey) bool {
 		logger.Debug("Handle Public Key: Fingerprint: %s from %s", gossh.FingerprintSHA256(key), ctx.RemoteAddr())
 	}
 
+	var loginOk bool
 	if ctx.User() != setting.SSH.BuiltinServerUser {
 		logger.Warn("Invalid SSH username %s - must use %s for all git operations via ssh", ctx.User(), setting.SSH.BuiltinServerUser)
+		loginOk = false
+	} else if cert, ok := key.(*gossh.Certificate); ok {
+		loginOk = authenticationWithCert(ctx, cert)
+	} else {
+		loginOk = authenticationWithPlainKey(ctx, key)
+	}
+
+	if !loginOk {
 		logger.Warn("Failed authentication attempt from %s", ctx.RemoteAddr())
+	}
+	return loginOk
+}
+
+func authenticationWithCert(ctx ssh.Context, cert *gossh.Certificate) bool {
+	if logger.LevelEnabled(log.DEBUG) { // <- FingerprintSHA256 is kinda expensive so only calculate it if necessary
+		logger.Debug("Handle Certificate: %s Fingerprint: %s is a certificate", ctx.RemoteAddr(), gossh.FingerprintSHA256(cert))
+	}
+
+	if cert.CertType != gossh.UserCert {
+		logger.Warn("Certificate Rejected: Not a user certificate")
 		return false
 	}
 
-	// check if we have a certificate
-	if cert, ok := key.(*gossh.Certificate); ok {
-		if logger.LevelEnabled(log.DEBUG) { // <- FingerprintSHA256 is kinda expensive so only calculate it if necessary
-			logger.Debug("Handle Certificate: %s Fingerprint: %s is a certificate", ctx.RemoteAddr(), gossh.FingerprintSHA256(key))
-		}
-
-		if len(setting.SSH.TrustedUserCAKeys) == 0 {
-			logger.Warn("Certificate Rejected: No trusted certificate authorities for this server")
-			logger.Warn("Failed authentication attempt from %s", ctx.RemoteAddr())
+	var userCAs []*asymkey_model.PublicKey
+	var err error
+	if setting.SSH.EnableCertAuth {
+		signerFingerprint := gossh.FingerprintSHA256(cert.SignatureKey)
+		userCAs, err = db.Find[asymkey_model.PublicKey](ctx, asymkey_model.FindPublicKeyOptions{
+			Fingerprint: signerFingerprint,
+			KeyTypes:    []asymkey_model.KeyType{asymkey_model.KeyTypeUser},
+			IsCA:        sql.NullBool{Bool: true, Valid: true},
+		})
+		if err != nil {
+			logger.Error("Failed retrieving user CAs for fingerprint %s: %v", signerFingerprint, err.Error())
 			return false
 		}
+	}
 
-		if cert.CertType != gossh.UserCert {
-			logger.Warn("Certificate Rejected: Not a user certificate")
-			logger.Warn("Failed authentication attempt from %s", ctx.RemoteAddr())
-			return false
+	var activeKeyID int64
+	var authenticated bool
+	if len(userCAs) == 1 {
+		activeKeyID, authenticated = authenticationWithUserSuppliedCA(ctx, cert, userCAs[0])
+	} else {
+		activeKeyID, authenticated = authenticationWithTrustedCA(ctx, cert)
+	}
+
+	if authenticated {
+		if ctx.Permissions().Extensions == nil {
+			ctx.Permissions().Extensions = map[string]string{}
 		}
+		ctx.Permissions().Extensions["forgejo-key-id"] = strconv.FormatInt(activeKeyID, 10)
+	}
+	return authenticated
+}
 
-		// look for the exact principal
-	principalLoop:
-		for _, principal := range cert.ValidPrincipals {
-			pkey, err := asymkey_model.SearchPublicKeyByContentExact(ctx, principal)
-			if err != nil {
-				if asymkey_model.IsErrKeyNotExist(err) {
-					logger.Debug("Principal Rejected: %s Unknown Principal: %s", ctx.RemoteAddr(), principal)
-					continue principalLoop
-				}
-				logger.Error("SearchPublicKeyByContentExact: %v", err)
-				return false
-			}
+func authenticationWithUserSuppliedCA(ctx ssh.Context, cert *gossh.Certificate, userCA *asymkey_model.PublicKey) (keyID int64, ok bool) {
+	allowedPrincipals := splitPrincipals(userCA.Principals)
+	if len(allowedPrincipals) == 0 {
+		owner, err := user.GetUserByID(ctx, userCA.OwnerID)
+		if err != nil {
+			logger.Error("Failed to retrieve owner for user SSH CA key ID %d: %v", userCA.ID, err)
+			return 0, false
+		}
+		allowedPrincipals = []string{owner.Name}
+	}
 
-			c := &gossh.CertChecker{
-				IsUserAuthority: func(auth gossh.PublicKey) bool {
-					marshaled := auth.Marshal()
-					for _, k := range setting.SSH.TrustedUserCAKeysParsed {
-						if bytes.Equal(marshaled, k.Marshal()) {
-							return true
-						}
-					}
+	principal, matchedPrincipal := findMatchingPrincipal(cert.ValidPrincipals, allowedPrincipals)
+	if !matchedPrincipal {
+		logger.Error("No principal listed in certificate is also listed in CA key's allowed principals list")
+		return 0, false
+	}
 
-					return false
-				},
-			}
+	c := &gossh.CertChecker{}
+	err := c.CheckCert(principal, cert)
+	if err != nil {
+		logger.Error("Certificate rejected: %v", err)
+		return 0, false
+	}
 
-			// check the CA of the cert
-			if !c.IsUserAuthority(cert.SignatureKey) {
-				if logger.LevelEnabled(log.DEBUG) {
-					logger.Debug("Principal Rejected: %s Untrusted Authority Signature Fingerprint %s for Principal: %s", ctx.RemoteAddr(), gossh.FingerprintSHA256(cert.SignatureKey), principal)
-				}
+	if logger.LevelEnabled(log.DEBUG) { // <- FingerprintSHA256 is kinda expensive so only calculate it if necessary
+		logger.Debug("Successfully authenticated: %s Certificate Fingerprint: %s Principal: %s", ctx.RemoteAddr(), gossh.FingerprintSHA256(cert), principal)
+	}
+
+	return userCA.ID, true
+}
+
+func splitPrincipals(principals string) []string {
+	if principals == "" {
+		return nil
+	}
+	return strings.Split(principals, ",")
+}
+
+func findMatchingPrincipal(suppliedPrincipals, allowedPrincipals []string) (string, bool) {
+	for _, suppliedPrincipal := range suppliedPrincipals {
+		if slices.Contains(allowedPrincipals, suppliedPrincipal) {
+			return suppliedPrincipal, true
+		}
+	}
+	return "", false
+}
+
+func authenticationWithTrustedCA(ctx ssh.Context, cert *gossh.Certificate) (keyID int64, ok bool) {
+	if len(setting.SSH.TrustedUserCAKeys) == 0 {
+		logger.Warn("Certificate Rejected: No trusted certificate authorities for this server")
+		return 0, false
+	}
+
+	// look for the exact principal
+principalLoop:
+	for _, principal := range cert.ValidPrincipals {
+		pkey, err := asymkey_model.SearchPublicKeyByContentExact(ctx, principal)
+		if err != nil {
+			if asymkey_model.IsErrKeyNotExist(err) {
+				logger.Debug("Principal Rejected: %s Unknown Principal: %s", ctx.RemoteAddr(), principal)
 				continue principalLoop
 			}
-
-			// validate the cert for this principal
-			if err := c.CheckCert(principal, cert); err != nil {
-				// User is presenting an invalid certificate - STOP any further processing
-				logger.Error("Invalid Certificate KeyID %s with Signature Fingerprint %s presented for Principal: %s from %s", cert.KeyId, gossh.FingerprintSHA256(cert.SignatureKey), principal, ctx.RemoteAddr())
-				logger.Warn("Failed authentication attempt from %s", ctx.RemoteAddr())
-
-				return false
-			}
-
-			if logger.LevelEnabled(log.DEBUG) { // <- FingerprintSHA256 is kinda expensive so only calculate it if necessary
-				logger.Debug("Successfully authenticated: %s Certificate Fingerprint: %s Principal: %s", ctx.RemoteAddr(), gossh.FingerprintSHA256(key), principal)
-			}
-			if ctx.Permissions().Extensions == nil {
-				ctx.Permissions().Extensions = map[string]string{}
-			}
-			ctx.Permissions().Extensions["forgejo-key-id"] = strconv.FormatInt(pkey.ID, 10)
-
-			return true
+			logger.Error("SearchPublicKeyByContentExact: %v", err)
+			return 0, false
 		}
 
-		logger.Warn("From %s Fingerprint: %s is a certificate, but no valid principals found", ctx.RemoteAddr(), gossh.FingerprintSHA256(key))
-		logger.Warn("Failed authentication attempt from %s", ctx.RemoteAddr())
-		return false
+		c := &gossh.CertChecker{
+			IsUserAuthority: func(auth gossh.PublicKey) bool {
+				marshaled := auth.Marshal()
+				for _, k := range setting.SSH.TrustedUserCAKeysParsed {
+					if bytes.Equal(marshaled, k.Marshal()) {
+						return true
+					}
+				}
+
+				return false
+			},
+		}
+
+		// check the CA of the cert
+		if !c.IsUserAuthority(cert.SignatureKey) {
+			if logger.LevelEnabled(log.DEBUG) {
+				logger.Debug("Principal Rejected: %s Untrusted Authority Signature Fingerprint %s for Principal: %s", ctx.RemoteAddr(), gossh.FingerprintSHA256(cert.SignatureKey), principal)
+			}
+			continue principalLoop
+		}
+
+		// validate the cert for this principal
+		if err := c.CheckCert(principal, cert); err != nil {
+			// User is presenting an invalid certificate - STOP any further processing
+			logger.Error("Invalid Certificate KeyID %s with Signature Fingerprint %s presented for Principal: %s from %s", cert.KeyId, gossh.FingerprintSHA256(cert.SignatureKey), principal, ctx.RemoteAddr())
+			return 0, false
+		}
+
+		if logger.LevelEnabled(log.DEBUG) { // <- FingerprintSHA256 is kinda expensive so only calculate it if necessary
+			logger.Debug("Successfully authenticated: %s Certificate Fingerprint: %s Principal: %s", ctx.RemoteAddr(), gossh.FingerprintSHA256(cert), principal)
+		}
+
+		return pkey.ID, true
 	}
 
+	logger.Warn("From %s Fingerprint: %s is a certificate, but no valid principals found", ctx.RemoteAddr(), gossh.FingerprintSHA256(cert))
+	return 0, false
+}
+
+func authenticationWithPlainKey(ctx ssh.Context, key ssh.PublicKey) bool {
 	if logger.LevelEnabled(log.DEBUG) { // <- FingerprintSHA256 is kinda expensive so only calculate it if necessary
 		logger.Debug("Handle Public Key: %s Fingerprint: %s is not a certificate", ctx.RemoteAddr(), gossh.FingerprintSHA256(key))
 	}
@@ -254,10 +339,15 @@ func publicKeyHandler(ctx ssh.Context, key ssh.PublicKey) bool {
 	if err != nil {
 		if asymkey_model.IsErrKeyNotExist(err) {
 			logger.Warn("Unknown public key: %s from %s", gossh.FingerprintSHA256(key), ctx.RemoteAddr())
-			logger.Warn("Failed authentication attempt from %s", ctx.RemoteAddr())
 			return false
 		}
 		logger.Error("SearchPublicKeyByContent: %v", err)
+		return false
+	}
+
+	// We deny use of CA keys as plain authentication keys directly. They're only allowed to sign certificates.
+	if pkey.IsCA {
+		logger.Warn("Rejecting direct use of CA key: %s from %s", gossh.FingerprintSHA256(key), ctx.RemoteAddr())
 		return false
 	}
 
