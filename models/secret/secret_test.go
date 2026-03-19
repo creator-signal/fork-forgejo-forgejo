@@ -4,6 +4,7 @@
 package secret
 
 import (
+	"encoding/hex"
 	"strings"
 	"testing"
 
@@ -249,6 +250,40 @@ func TestSecretUpdateSecret_RejectsInvalidName(t *testing.T) {
 
 	assert.Equal(t, "A_SECRET", updatedSecret.Name)
 	assert.Equal(t, "very secret", decryptedData)
+}
+
+func TestSecretGetFingerprint(t *testing.T) {
+	secret := Secret{ID: 253}
+	secret.SetData("secret")
+
+	fingerprint, err := secret.GetFingerprint()
+	require.NoError(t, err)
+
+	// echo -n "secret" | openssl dgst -sha256
+	assert.Equal(t, "2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b", hex.EncodeToString(fingerprint))
+
+	// Induce an error by making the secret impossible to decrypt.
+	secret.ID++
+
+	_, err = secret.GetFingerprint()
+	require.ErrorContains(t, err, "cannot calculate fingerprint: unable to decrypt secret")
+}
+
+func TestSecretGetFormattedFingerprint(t *testing.T) {
+	secret := Secret{ID: 526}
+	secret.SetData("very secret")
+
+	fingerprint, err := secret.GetFormattedFingerprint()
+	require.NoError(t, err)
+
+	// echo -n "very secret" | openssl dgst -sha256
+	assert.Equal(t, "sha256:546bb0a05a36cf112fbc47938f3d554e4d339a2ef033948e40a66ebe63a35a77", fingerprint)
+
+	// Induce an error by making the secret impossible to decrypt.
+	secret.ID++
+
+	_, err = secret.GetFormattedFingerprint()
+	require.ErrorContains(t, err, "cannot calculate fingerprint: unable to decrypt secret")
 }
 
 func TestSecretValidateName(t *testing.T) {

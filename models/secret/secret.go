@@ -5,6 +5,7 @@ package secret
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"regexp"
 	"strings"
@@ -138,6 +139,24 @@ func (s *Secret) GetDecryptedData() (string, error) {
 	}
 
 	return string(v), nil
+}
+
+func (s *Secret) GetFingerprint() ([]byte, error) {
+	data, err := s.GetDecryptedData()
+	if err != nil {
+		return []byte{}, fmt.Errorf("cannot calculate fingerprint: %w", err)
+	}
+	hash := sha256.New()
+	hash.Write([]byte(data))
+	return hash.Sum(nil), nil
+}
+
+func (s *Secret) GetFormattedFingerprint() (string, error) {
+	fingerprint, err := s.GetFingerprint()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("sha256:%x", fingerprint), nil
 }
 
 func GetSecretByID(ctx context.Context, ownerID, repoID, id int64) (*Secret, error) {
