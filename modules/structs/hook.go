@@ -463,9 +463,12 @@ func (p *RepositoryPayload) JSONPayload() ([]byte, error) {
 
 // WorkflowJobPayload represents a payload information of workflow job event.
 type WorkflowJobPayload struct {
-	Action      string             `json:"action"`
+	// Status of Job
+	Action string `json:"action"`
+	// Job the webhook is triggered for
 	WorkflowJob *ActionWorkflowJob `json:"workflow_job"`
-	Repo        *Repository        `json:"repository"`
+	// Repository that owns the job the webhook is triggered for
+	Repo *Repository `json:"repository"`
 }
 
 // JSONPayload implements Payload

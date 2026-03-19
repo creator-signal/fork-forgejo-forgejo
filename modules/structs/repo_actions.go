@@ -99,20 +99,33 @@ type ActionWorkflowStep struct {
 
 // ActionWorkflowJob represents a WorkflowJob
 type ActionWorkflowJob struct {
-	ID           int64                 `json:"id"`
-	HTMLURL      string                `json:"html_url"`
-	RunID        int64                 `json:"run_id"`
-	RunURL       string                `json:"run_url"`
-	WorkflowName string                `json:"workflow_name"`
-	Name         string                `json:"name"`
-	Labels       []string              `json:"labels"`
-	RunAttempt   int64                 `json:"run_attempt"`
-	HeadSha      string                `json:"head_sha"`
-	HeadBranch   string                `json:"head_branch,omitempty"`
-	Status       string                `json:"status"`
-	RunnerID     int64                 `json:"runner_id,omitempty"`
-	RunnerName   string                `json:"runner_name,omitempty"`
-	Steps        []*ActionWorkflowStep `json:"steps"`
+	// ID uniquely identifies this job.
+	ID int64 `json:"id"`
+	// ID uniquely identifies this runner.
+	RunID int64 `json:"run_id"`
+
+	// URL to find the job in the UI
+	HTMLURL string `json:"html_url"`
+
+	// RunURL is the API url to that run
+	RunURL string `json:"run_url"`
+	// Name of the workflow file (e.g. deploy.yaml)
+	WorkflowName string `json:"workflow_name"`
+	// Name of the Job
+	Name string `json:"name"`
+	// Labels a runner requires, if it wants to pick that job
+	Labels     []string `json:"labels"`
+	RunAttempt int64    `json:"run_attempt"`
+	HeadSha    string   `json:"head_sha"`
+	HeadBranch string   `json:"head_branch,omitempty"`
+	// Status name of the Job
+	Status string `json:"status"`
+	// RunnerID of the runner serving this job (not defined if job has not been picked up by a runner, yet)
+	RunnerID int64 `json:"runner_id,omitempty"`
+	// RunnerName of the runner serving this job (not defined if job has not been picked up by a runner, yet)
+	RunnerName string `json:"runner_name,omitempty"`
+	// Steps that a runner has to execute (not defined if job has not been picked up by a runner, yet)
+	Steps []*ActionWorkflowStep `json:"steps"`
 	// swagger:strfmt date-time
 	CreatedAt optional.Option[time.Time] `json:"created_at"`
 	// swagger:strfmt date-time
