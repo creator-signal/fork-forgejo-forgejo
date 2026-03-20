@@ -978,7 +978,6 @@ func TestAPIIssueDependencyPermissions(t *testing.T) {
 	MakeRequest(t, req, http.StatusNotFound) // as otherUserRepo is a private repo we can't link a dependency to it
 }
 
-<<<<<<< HEAD
 func TestAPIIssueDependencyAccessTokenResources(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
