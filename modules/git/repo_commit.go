@@ -222,6 +222,10 @@ type CommitsByFileAndRangeOptions struct {
 
 // CommitsByFileAndRange return the commits according revision file and the page
 func (repo *Repository) CommitsByFileAndRange(opts CommitsByFileAndRangeOptions) ([]*Commit, error) {
+	if opts.PageSize <= 0 {
+		opts.PageSize = setting.Git.CommitsRangeSize
+	}
+
 	skip := (opts.Page - 1) * setting.Git.CommitsRangeSize
 
 	stdoutReader, stdoutWriter := io.Pipe()

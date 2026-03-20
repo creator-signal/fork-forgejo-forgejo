@@ -10,7 +10,6 @@ import (
 
 	"forgejo.org/models/repo"
 	"forgejo.org/modules/git"
-	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 	"forgejo.org/services/context"
 
@@ -28,7 +27,6 @@ func ShowFileFeed(ctx *context.Context, repo *repo.Repository, formatType string
 			Revision: ctx.Repo.RefName,
 			File:     fileName,
 			Page:     1,
-			PageSize: setting.Git.CommitsRangeSize,
 		})
 	if err != nil {
 		ctx.ServerError("ShowBranchFeed", err)

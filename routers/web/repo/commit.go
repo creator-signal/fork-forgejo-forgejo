@@ -251,7 +251,6 @@ func FileHistory(ctx *context.Context) {
 			Revision: ctx.Repo.RefName,
 			File:     fileName,
 			Page:     page,
-			PageSize: setting.Git.CommitsRangeSize,
 		})
 	if err != nil {
 		ctx.ServerError("CommitsByFileAndRange", err)
