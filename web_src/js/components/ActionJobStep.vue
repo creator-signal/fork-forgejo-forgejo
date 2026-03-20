@@ -68,7 +68,16 @@ export default {
   data() {
     return {
       lineNumberOffset: 0,
+      isAutoScroll: true,
     };
+  },
+
+  mounted() {
+    window.addEventListener('scroll', this.handleScroll);
+  },
+
+  beforeUnmount() {
+    window.removeEventListener('scroll', this.handleScroll);
   },
 
   methods: {
@@ -161,6 +170,10 @@ export default {
           el.append(this.createLogLine(line, startTime, group));
         }
       }
+
+      if (this.isAutoScroll) {
+        window.scrollTo({top: container.scrollHeight, behavior: 'smooth'});
+      }
     },
 
     // show/hide the step logs for a group
@@ -176,6 +189,11 @@ export default {
         return;
       }
       logLine.querySelector('.line-num').scrollIntoView();
+    },
+
+    handleScroll() {
+      const distanceFromBottom = document.body.scrollHeight - window.scrollY - window.innerHeight;
+      this.isAutoScroll = distanceFromBottom < 50;
     },
   },
 };
