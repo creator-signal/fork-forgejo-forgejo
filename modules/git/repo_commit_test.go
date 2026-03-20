@@ -177,23 +177,28 @@ func TestCommitsByFileAndRange(t *testing.T) {
 	testCases := []struct {
 		File                string
 		Page                int
+		PageSize            int
 		ExpectedCommitCount int
 	}{
-		{"file1.txt", 1, 1},
-		{"file2.txt", 1, 1},
-		{"file*.txt", 1, 2},
-		{"foo", 1, 2},
-		{"foo", 2, 1},
-		{"foo", 3, 0},
-		{"f*", 1, 2},
-		{"f*", 2, 2},
-		{"f*", 3, 1},
+		{"file1.txt", 1, 1, 1},
+		{"file2.txt", 1, 1, 1},
+		{"file*.txt", 1, 2, 2},
+		{"file*.txt", 1, 1, 1},
+		{"foo", 1, 2, 2},
+		{"foo", 1, 1, 1},
+		{"foo", 2, 1, 1},
+		{"foo", 3, 0, 0},
+		{"foo", 3, 2, 0},
+		{"f*", 1, 2, 2},
+		{"f*", 2, 2, 2},
+		{"f*", 3, 1, 1},
 	}
 	for _, testCase := range testCases {
 		commits, err := bareRepo1.CommitsByFileAndRange(CommitsByFileAndRangeOptions{
 			Revision: "master",
 			File:     testCase.File,
 			Page:     testCase.Page,
+			PageSize: testCase.PageSize,
 		})
 		require.NoError(t, err)
 		assert.Len(t, commits, testCase.ExpectedCommitCount, "file: '%s', page: %d", testCase.File, testCase.Page)

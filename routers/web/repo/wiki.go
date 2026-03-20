@@ -385,6 +385,7 @@ func renderRevisionPage(ctx *context.Context) (*git.Repository, *git.TreeEntry) 
 			Revision: ctx.Repo.Repository.GetWikiBranchName(),
 			File:     pageFilename,
 			Page:     page,
+			PageSize: setting.Git.CommitsRangeSize,
 		})
 	if err != nil {
 		if wikiRepo != nil {
