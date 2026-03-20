@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"forgejo.org/models/db"
+	"forgejo.org/models/perm"
+	"forgejo.org/models/unittest"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 
@@ -124,6 +126,44 @@ func TestRewriteAllPublicKeys(t *testing.T) {
 				assert.Contains(t, stringContent, "hacker@example.com")
 			} else {
 				assert.NotContains(t, stringContent, "hacker@example.com")
+			}
+		})
+	}
+}
+
+func TestAuthorizedStringForKey(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	cases := []struct {
+		desc                           string
+		isCA                           bool
+		principals, expectedPrincipals string
+		ownerID                        int64
+	}{
+		{"CA key with a single explicit principal", true, "xyzzy", "xyzzy", 2},
+		{"CA key with multiple explicit principals", true, "a,b,c", "a,b,c", 2},
+		{"plain key, should have no cert-authority or principals options", false, "", "", 2},
+		{"CA key with no explicit principal, i.e. default to username", true, "", "user2", 2},
+		{"CA key with no explicit principal but where the owner somehow isn't in the database", true, "", "", 23456},
+	}
+
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			authorizedKeyLine := AuthorizedStringForKey(t.Context(), &PublicKey{
+				ID:          12345,
+				OwnerID:     c.ownerID,
+				Name:        c.desc,
+				Fingerprint: "SHA256:yR3hbHOk3T4rlHHqPaSZfWTkcmV7coiLmTHhNN638wI",
+				Content:     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICY0a0IrWYTsjdlgMFe61U3scKLy3hqgWHSUoorlNkhc plainkey",
+				Mode:        perm.AccessModeWrite,
+				Type:        KeyTypeUser,
+				IsCA:        c.isCA,
+				Principals:  c.principals,
+			})
+			assert.Equal(t, c.isCA, strings.Contains(authorizedKeyLine, `cert-authority`))
+			if c.isCA {
+				assert.True(t, strings.Contains(authorizedKeyLine, `principals="`+c.expectedPrincipals+`"`),
+					"Expected to see principals %q in: %s", c.expectedPrincipals, authorizedKeyLine)
 			}
 		})
 	}
