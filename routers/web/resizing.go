@@ -111,7 +111,7 @@ func cachingHandler(prefix string, imgStore storage.ObjectStorage, whenMissing f
 
 		rPath := strings.TrimPrefix(req.URL.Path, "/"+prefix+"/")
 		rPath = util.PathJoinRelX(rPath)
-		if rPath == "" || rPath == "." {
+		if rPath == "" || rPath == "." || strings.Contains(rPath, "/") {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
 		}

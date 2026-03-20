@@ -112,6 +112,10 @@ func TestUserAvatar(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 64, respImg.Bounds().Dx())
 	assert.Equal(t, 64, respImg.Bounds().Dy())
+
+	// request a resized avatar using its internal storage path: not found
+	req = NewRequest(t, "GET", fmt.Sprintf("/avatars/resized/64/%s", user2.Avatar))
+	MakeRequest(t, req, http.StatusNotFound)
 }
 
 func TestAvatarAnchorDestination(t *testing.T) {
