@@ -774,6 +774,36 @@ func CreateIssue(ctx *context.APIContext) {
 		}
 	}
 
+	// Allow site admins to backdate created_at and updated_at.
+	// When using Sudo, ctx.Doer is the impersonated user, not the real
+	// API caller.  Since only site admins can use Sudo (enforced by the
+	// sudo middleware), a Sudo header implies the real caller is admin.
+	isAdmin := ctx.Doer.IsAdmin || ctx.Req.Header.Get("Sudo") != "" || ctx.FormString("sudo") != ""
+	if err := issue_service.SetIssueCreateDate(ctx, issue, form.Created, isAdmin); err != nil {
+		ctx.Error(http.StatusForbidden, "SetIssueCreateDate", err)
+		return
+	}
+	if form.Updated != nil {
+		if !isAdmin {
+			ctx.Error(http.StatusForbidden, "SetIssueUpdateDate", errors.New("site admin required to set update date"))
+			return
+		}
+		updatedUnix := timeutil.TimeStamp(form.Updated.Unix())
+		if updatedUnix < issue.CreatedUnix || updatedUnix > timeutil.TimeStampNow() {
+			ctx.Error(http.StatusForbidden, "SetIssueUpdateDate",
+				errors.New("update date must be between issue creation date and now"))
+			return
+		}
+		issue.UpdatedUnix = updatedUnix
+		issue.NoAutoTime = true
+	}
+	if issue.NoAutoTime {
+		if err := issues_model.UpdateIssueCols(ctx, issue, "updated_unix"); err != nil {
+			ctx.Error(http.StatusInternalServerError, "UpdateIssueCols", err)
+			return
+		}
+	}
+
 	// Refetch from database to assign some automatic values
 	issue, err = issues_model.GetIssueByID(ctx, issue.ID)
 	if err != nil {

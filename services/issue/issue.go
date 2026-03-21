@@ -328,6 +328,28 @@ func deleteIssue(ctx context.Context, issue *issues_model.Issue) error {
 // In order to set a specific update time, the DB will be updated with
 // NoAutoTime(). A 'NoAutoTime' boolean field in the Issue struct is used to
 // propagate down to the DB update calls the will to apply autoupdate or not.
+// SetIssueCreateDate allows admins to backdate the creation time of an issue.
+// Must be called after the issue is inserted; updates the DB directly.
+func SetIssueCreateDate(ctx context.Context, issue *issues_model.Issue, created *time.Time, isAdmin bool) error {
+	if created == nil {
+		return nil
+	}
+
+	if !isAdmin {
+		return errors.New("user needs to be a site admin to set a creation date")
+	}
+
+	createdUnix := timeutil.TimeStamp(created.Unix())
+	if createdUnix > timeutil.TimeStampNow() {
+		return errors.New("creation date must not be in the future")
+	}
+
+	issue.CreatedUnix = createdUnix
+	// Use raw SQL because xorm's "created" tagged columns can't be updated normally
+	_, err := db.GetEngine(ctx).Exec("UPDATE issue SET created_unix=? WHERE id=?", int64(createdUnix), issue.ID)
+	return err
+}
+
 func SetIssueUpdateDate(ctx context.Context, issue *issues_model.Issue, updated *time.Time, doer *user_model.User) error {
 	issue.NoAutoTime = false
 	if updated == nil {

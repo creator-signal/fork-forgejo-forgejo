@@ -216,6 +216,106 @@ func TestAPICreateIssue(t *testing.T) {
 	assert.Equal(t, beforeNumClosedIssues, repoAfter.NumClosedIssues(t.Context()))
 }
 
+func TestAPICreateIssueWithDates(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Site admin is required to set created_at/updated_at on issue creation
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{IsAdmin: true})
+	session := loginUser(t, admin.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
+	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issues?sudo=%s", owner.Name, repo.Name, owner.Name)
+
+	utcTZ, _ := time.LoadLocation("UTC")
+
+	t.Run("WithDates", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		createdAt := time.Date(2024, 6, 15, 10, 30, 0, 0, time.UTC)
+		updatedAt := time.Date(2024, 6, 20, 12, 0, 0, 0, time.UTC)
+
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title:   "backdated issue",
+			Body:    "test",
+			Created: &createdAt,
+			Updated: &updatedAt,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusCreated)
+
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+		assert.Equal(t, createdAt.In(utcTZ), apiIssue.Created.In(utcTZ))
+		assert.Equal(t, updatedAt.In(utcTZ), apiIssue.Updated.In(utcTZ))
+
+		issueAfter := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: apiIssue.ID})
+		assert.Equal(t, createdAt.Unix(), issueAfter.CreatedUnix.AsTime().Unix())
+		assert.Equal(t, updatedAt.Unix(), issueAfter.UpdatedUnix.AsTime().Unix())
+	})
+
+	t.Run("WithoutDates", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title: "normal issue",
+			Body:  "test",
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusCreated)
+
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+		// should be recent (within last minute)
+		assert.LessOrEqual(t, time.Since(apiIssue.Created), time.Minute)
+		assert.LessOrEqual(t, time.Since(apiIssue.Updated), time.Minute)
+	})
+
+	t.Run("FutureDateRejected", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		futureDate := time.Now().Add(24 * time.Hour)
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title:   "future issue",
+			Body:    "test",
+			Created: &futureDate,
+		}).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusForbidden)
+	})
+
+	t.Run("UpdatedBeforeCreatedRejected", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		createdAt := time.Date(2024, 6, 20, 12, 0, 0, 0, time.UTC)
+		updatedAt := time.Date(2024, 6, 15, 10, 0, 0, 0, time.UTC)
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title:   "bad dates",
+			Body:    "test",
+			Created: &createdAt,
+			Updated: &updatedAt,
+		}).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusForbidden)
+	})
+
+	t.Run("NonAdminCannotSetDates", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// user4 is a write collaborator on repo4 (owned by user5) but not admin
+		repo4 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+		nonOwner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+		nonOwnerSession := loginUser(t, nonOwner.Name)
+		nonOwnerToken := getTokenForLoggedInUser(t, nonOwnerSession, auth_model.AccessTokenScopeWriteIssue)
+		repo4Owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo4.OwnerID})
+
+		createdAt := time.Date(2024, 6, 15, 10, 30, 0, 0, time.UTC)
+		nonAdminURL := fmt.Sprintf("/api/v1/repos/%s/%s/issues", repo4Owner.Name, repo4.Name)
+		req := NewRequestWithJSON(t, "POST", nonAdminURL, &api.CreateIssueOption{
+			Title:   "non-admin backdated",
+			Body:    "test",
+			Created: &createdAt,
+		}).AddTokenAuth(nonOwnerToken)
+		MakeRequest(t, req, http.StatusForbidden)
+	})
+}
+
 func TestAPICreateIssueParallel(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	const body, title = "apiTestBody", "apiTestTitle"

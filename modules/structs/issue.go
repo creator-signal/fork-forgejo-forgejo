@@ -98,6 +98,10 @@ type CreateIssueOption struct {
 	// list of label ids
 	Labels []int64 `json:"labels"`
 	Closed bool    `json:"closed"`
+	// swagger:strfmt date-time
+	Created *time.Time `json:"created_at"`
+	// swagger:strfmt date-time
+	Updated *time.Time `json:"updated_at"`
 }
 
 // EditIssueOption options for editing an issue
