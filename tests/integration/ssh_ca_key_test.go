@@ -31,6 +31,10 @@ func TestUserSuppliedSSHCAKeys(t *testing.T) {
 }
 
 func endorseKey(t *testing.T, identityKeyFile, signingKeyFile string, certType uint32, principals []string, validitySeconds int) {
+	endorseKeyWithValidityOffset(t, identityKeyFile, signingKeyFile, certType, principals, validitySeconds, 0)
+}
+
+func endorseKeyWithValidityOffset(t *testing.T, identityKeyFile, signingKeyFile string, certType uint32, principals []string, validitySeconds int, validityWindowOffset int) {
 	dataIdentityKey, err := os.ReadFile(identityKeyFile + ".pub")
 	require.NoError(t, err)
 	identityKey, _, _, _, err := ssh.ParseAuthorizedKey(dataIdentityKey)
@@ -39,13 +43,14 @@ func endorseKey(t *testing.T, identityKeyFile, signingKeyFile string, certType u
 	require.NoError(t, err)
 	ca, err := ssh.ParsePrivateKey(dataPrivKey)
 	require.NoError(t, err)
+	validAfter := uint64(time.Now().Add(time.Duration(validityWindowOffset) * time.Second).Unix())
 	cert := &ssh.Certificate{
 		Key:             identityKey, // SPKI "object" - key to which authority is delegated
 		Serial:          uint64(1),
 		CertType:        certType,
 		ValidPrincipals: principals,
-		ValidAfter:      0,
-		ValidBefore:     uint64(time.Now().Add(time.Duration(validitySeconds) * time.Second).Unix()),
+		ValidAfter:      validAfter,
+		ValidBefore:     uint64(int64(validAfter) + int64(validitySeconds)),
 		// Permissions: a reasonable, standardesque collection
 		Permissions: ssh.Permissions{
 			Extensions: map[string]string{
@@ -160,6 +165,10 @@ func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 					t.Run("FailToCloneWithEphemeralKeySignedByPlainNonCAKey", doGitCloneFail(f.cloneUrl))
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, -60)
 					t.Run("FailToCloneWithEphemeralKeyExpiredCert", doGitCloneFail(f.cloneUrl))
+
+					endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, 60, 60)
+					t.Run("FailToCloneWithFutureValidityCert", doGitCloneFail(f.cloneUrl))
+
 					defer test.MockVariableValue(&setting.SSH.EnableCertAuth, false)()
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, 60)
 					t.Run("FailToCloneWithEphemeralKeyAfterDisablingCertAuth", doGitCloneFail(f.cloneUrl))
