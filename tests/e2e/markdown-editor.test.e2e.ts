@@ -513,15 +513,38 @@ test('text expander has higher prio then prefix continuation', async ({page}) =>
 
   // Test issue completion
   await textarea.press('Enter');
-  await textarea.pressSequentially('#pull');
+  await textarea.pressSequentially('#issue1');
   // Because the issue completion is async, we need to wait for it
   await suggestionList.waitFor();
   await expect(suggestionList).toBeVisible();
   await textarea.press('Enter');
-  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #5 `);
+  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1 `);  
+
+  // Test pull request completion via '#'
+  await textarea.press('Enter');
+  await textarea.pressSequentially('#pull');
+  await suggestionList.waitFor();
+  await expect(suggestionList).toBeVisible();
+  await textarea.press('Enter');
+  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1 \n* !5 `);
+  
+  // Test pull request completion via '!'
+  await textarea.press('Enter');
+  await textarea.pressSequentially('!issue');
+  await suggestionList.waitFor();
+  await expect(suggestionList).toBeVisible();
+
+  // Only pull requests should be suggested, not issues
+  await expect(suggestionList.locator('[class*="octicon-issue"]')).toHaveCount(0);
+  await expect(suggestionList.locator('[class*="octicon-git-pull-request"]')).not.toHaveCount(0);
+  
+  await textarea.press('Enter');
+  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1 \n* !5 \n* !2 `);
 
   await textarea.press('Enter');
-  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #5 \n* `);
+  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1 \n* !5 \n* !2 \n* `);
+
+
 });
 
 test('Combo Markdown: preview mode switch', async ({page}) => {
