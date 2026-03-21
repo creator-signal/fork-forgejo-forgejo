@@ -439,6 +439,12 @@ func CreateIssueComment(ctx *context.APIContext) {
 		return
 	}
 
+	// Allow admins to set original poster
+	if err := issue_service.SetCommentPoster(ctx, comment, form.PosterName, ctx.Doer); err != nil {
+		ctx.Error(http.StatusForbidden, "SetCommentPoster", err)
+		return
+	}
+
 	ctx.JSON(http.StatusCreated, convert.ToAPIComment(ctx, ctx.Repo.Repository, comment))
 }
 

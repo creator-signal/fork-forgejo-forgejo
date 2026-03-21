@@ -98,6 +98,8 @@ type CreateIssueOption struct {
 	// list of label ids
 	Labels []int64 `json:"labels"`
 	Closed bool    `json:"closed"`
+	// username of the original poster (admin only; sets original_author if user not found locally)
+	PosterName string `json:"poster_name"`
 }
 
 // EditIssueOption options for editing an issue

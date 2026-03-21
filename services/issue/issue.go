@@ -322,6 +322,79 @@ func deleteIssue(ctx context.Context, issue *issues_model.Issue) error {
 	return committer.Commit()
 }
 
+// SetIssuePoster allows admins to set the original poster of an issue.
+// If posterName matches a local user, that user becomes the poster.
+// Otherwise, the issue is attributed to the Ghost user with original_author set.
+// Must be called after the issue is inserted; updates the DB directly.
+func SetIssuePoster(ctx context.Context, issue *issues_model.Issue, posterName string, doer *user_model.User) error {
+	if posterName == "" {
+		return nil
+	}
+
+	if err := issue.LoadRepo(ctx); err != nil {
+		return err
+	}
+
+	perm, err := access_model.GetUserRepoPermission(ctx, issue.Repo, doer)
+	if err != nil {
+		return err
+	}
+	if !perm.IsAdmin() && !perm.IsOwner() {
+		return errors.New("user needs to have admin or owner right to set the poster")
+	}
+
+	// Try to find the user locally
+	poster, err := user_model.GetUserByName(ctx, posterName)
+	if err == nil {
+		// User exists — set as poster
+		_, err = db.GetEngine(ctx).Exec("UPDATE issue SET poster_id=? WHERE id=?", poster.ID, issue.ID)
+		return err
+	}
+
+	// User not found — set as original_author with Ghost as poster
+	_, err = db.GetEngine(ctx).Exec(
+		"UPDATE issue SET poster_id=?, original_author=?, original_author_id=0 WHERE id=?",
+		user_model.GhostUserID, posterName, issue.ID,
+	)
+	return err
+}
+
+// SetCommentPoster allows admins to set the original poster of a comment.
+// Same logic as SetIssuePoster but for comments.
+func SetCommentPoster(ctx context.Context, comment *issues_model.Comment, posterName string, doer *user_model.User) error {
+	if posterName == "" {
+		return nil
+	}
+
+	issue, err := issues_model.GetIssueByID(ctx, comment.IssueID)
+	if err != nil {
+		return err
+	}
+	if err := issue.LoadRepo(ctx); err != nil {
+		return err
+	}
+
+	perm, err := access_model.GetUserRepoPermission(ctx, issue.Repo, doer)
+	if err != nil {
+		return err
+	}
+	if !perm.IsAdmin() && !perm.IsOwner() {
+		return errors.New("user needs to have admin or owner right to set the poster")
+	}
+
+	poster, err := user_model.GetUserByName(ctx, posterName)
+	if err == nil {
+		_, err = db.GetEngine(ctx).Exec("UPDATE comment SET poster_id=? WHERE id=?", poster.ID, comment.ID)
+		return err
+	}
+
+	_, err = db.GetEngine(ctx).Exec(
+		"UPDATE comment SET poster_id=?, original_author=?, original_author_id=0 WHERE id=?",
+		user_model.GhostUserID, posterName, comment.ID,
+	)
+	return err
+}
+
 // Set the UpdatedUnix date and the NoAutoTime field of an Issue if a non
 // nil 'updated' time is provided
 //

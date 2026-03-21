@@ -43,6 +43,8 @@ type CreateIssueCommentOption struct {
 	// The time of the comment's update, needs admin or repository owner permission
 	// swagger:strfmt date-time
 	Updated *time.Time `json:"updated_at"`
+	// username of the original poster (admin only; sets original_author if user not found locally)
+	PosterName string `json:"poster_name"`
 }
 
 // EditIssueCommentOption options for editing a comment

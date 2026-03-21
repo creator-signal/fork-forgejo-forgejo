@@ -774,6 +774,12 @@ func CreateIssue(ctx *context.APIContext) {
 		}
 	}
 
+	// Allow admins to set original poster
+	if err := issue_service.SetIssuePoster(ctx, issue, form.PosterName, ctx.Doer); err != nil {
+		ctx.Error(http.StatusForbidden, "SetIssuePoster", err)
+		return
+	}
+
 	// Refetch from database to assign some automatic values
 	issue, err = issues_model.GetIssueByID(ctx, issue.ID)
 	if err != nil {

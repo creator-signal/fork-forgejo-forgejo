@@ -216,6 +216,92 @@ func TestAPICreateIssue(t *testing.T) {
 	assert.Equal(t, beforeNumClosedIssues, repoAfter.NumClosedIssues(t.Context()))
 }
 
+func TestAPICreateIssueWithPosterName(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	session := loginUser(t, owner.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
+	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issues", owner.Name, repo.Name)
+
+	t.Run("ExternalUser", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title:      "external poster",
+			Body:       "test",
+			PosterName: "jira-real-user",
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusCreated)
+
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		// API returns Ghost as the poster (original_author not serialized by API)
+		issueDB := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: apiIssue.ID})
+		assert.Equal(t, int64(-1), issueDB.PosterID)
+		assert.Equal(t, "jira-real-user", issueDB.OriginalAuthor)
+	})
+
+	t.Run("LocalUser", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// user1 exists in the test fixtures
+		localUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title:      "local poster",
+			Body:       "test",
+			PosterName: localUser.Name,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusCreated)
+
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		issueDB := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: apiIssue.ID})
+		assert.Equal(t, localUser.ID, issueDB.PosterID)
+		assert.Empty(t, issueDB.OriginalAuthor)
+	})
+
+	t.Run("NoPosterName", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateIssueOption{
+			Title: "default poster",
+			Body:  "test",
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusCreated)
+
+		var apiIssue api.Issue
+		DecodeJSON(t, resp, &apiIssue)
+
+		issueDB := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: apiIssue.ID})
+		assert.Equal(t, owner.ID, issueDB.PosterID)
+		assert.Empty(t, issueDB.OriginalAuthor)
+	})
+
+	t.Run("NonAdminCannotSetPoster", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// user4 is a write collaborator on repo4 (owned by user5) but not admin
+		repo4 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+		nonOwner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+		nonOwnerSession := loginUser(t, nonOwner.Name)
+		nonOwnerToken := getTokenForLoggedInUser(t, nonOwnerSession, auth_model.AccessTokenScopeWriteIssue)
+		repo4Owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo4.OwnerID})
+
+		nonAdminURL := fmt.Sprintf("/api/v1/repos/%s/%s/issues", repo4Owner.Name, repo4.Name)
+		req := NewRequestWithJSON(t, "POST", nonAdminURL, &api.CreateIssueOption{
+			Title:      "non-admin poster",
+			Body:       "test",
+			PosterName: "someone",
+		}).AddTokenAuth(nonOwnerToken)
+		MakeRequest(t, req, http.StatusForbidden)
+	})
+}
+
 func TestAPICreateIssueParallel(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	const body, title = "apiTestBody", "apiTestTitle"
