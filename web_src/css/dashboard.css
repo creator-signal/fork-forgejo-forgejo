@@ -50,14 +50,9 @@
   }
 }
 
-.dashboard.feeds .right.stackable.menu > .item.active,
-.dashboard.issues .right.stackable.menu > .item.active {
-  color: var(--color-red);
-}
-
 .dashboard .dashboard-repos,
 .dashboard .dashboard-orgs {
-  margin: 0 1px; /* Accommodate for Semantic's 1px hacks on .attached elements */
+  margin-bottom: 0;
 }
 
 .dashboard .secondary-nav {

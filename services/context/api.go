@@ -24,6 +24,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
 	web_types "forgejo.org/modules/web/types"
+	"forgejo.org/services/authz"
 
 	"code.forgejo.org/go-chi/cache"
 )
@@ -47,6 +48,7 @@ type APIContext struct {
 	QuotaGroup *quota_model.Group
 	QuotaRule  *quota_model.Rule
 	PublicOnly bool // Whether the request is for a public endpoint
+	Reducer    authz.AuthorizationReducer
 }
 
 func init() {
@@ -448,11 +450,17 @@ func (ctx *APIContext) NotFoundOrServerError(logMsg string, errCheck func(error)
 
 // IsUserSiteAdmin returns true if current user is a site admin
 func (ctx *APIContext) IsUserSiteAdmin() bool {
+	if !ctx.Reducer.AllowAdminOverride() {
+		return false
+	}
 	return ctx.IsSigned && ctx.Doer.IsAdmin
 }
 
 // IsUserRepoAdmin returns true if current user is admin in current repo
 func (ctx *APIContext) IsUserRepoAdmin() bool {
+	if !ctx.Reducer.AllowAdminOverride() {
+		return false
+	}
 	return ctx.Repo.IsAdmin()
 }
 

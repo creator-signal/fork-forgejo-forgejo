@@ -127,6 +127,18 @@ func (r *ActionRunner) IsOnline() bool {
 	return false
 }
 
+func (r *ActionRunner) IsActive() bool {
+	return r.Status() == runnerv1.RunnerStatus_RUNNER_STATUS_ACTIVE
+}
+
+func (r *ActionRunner) IsIdle() bool {
+	return r.Status() == runnerv1.RunnerStatus_RUNNER_STATUS_IDLE
+}
+
+func (r *ActionRunner) IsOffline() bool {
+	return r.Status() == runnerv1.RunnerStatus_RUNNER_STATUS_OFFLINE
+}
+
 // Editable checks if the runner is editable by the user
 func (r *ActionRunner) Editable(ownerID, repoID int64) bool {
 	if ownerID == 0 && repoID == 0 {
@@ -184,12 +196,12 @@ func init() {
 
 type FindRunnerOptions struct {
 	db.ListOptions
-	RepoID        int64
-	OwnerID       int64 // it will be ignored if RepoID is set
-	Sort          string
-	Filter        string
-	IsOnline      optional.Option[bool]
-	WithAvailable bool // not only runners belong to, but also runners can be used
+	RepoID      int64
+	OwnerID     int64 // it will be ignored if RepoID is set
+	Sort        string
+	Filter      string
+	IsOnline    optional.Option[bool]
+	WithVisible bool // include all runners that are visible to the repository, owner, or instance
 }
 
 func (opts FindRunnerOptions) ToConds() builder.Cond {
@@ -197,21 +209,23 @@ func (opts FindRunnerOptions) ToConds() builder.Cond {
 
 	if opts.RepoID > 0 {
 		c := builder.NewCond().And(builder.Eq{"repo_id": opts.RepoID})
-		if opts.WithAvailable {
+		if opts.WithVisible {
 			c = c.Or(builder.Eq{"owner_id": builder.Select("owner_id").From("repository").Where(builder.Eq{"id": opts.RepoID})})
 			c = c.Or(builder.Eq{"repo_id": 0, "owner_id": 0})
 		}
 		cond = cond.And(c)
 	} else if opts.OwnerID > 0 { // OwnerID is ignored if RepoID is set
 		c := builder.NewCond().And(builder.Eq{"owner_id": opts.OwnerID})
-		if opts.WithAvailable {
+		if opts.WithVisible {
 			c = c.Or(builder.Eq{"repo_id": 0, "owner_id": 0})
 		}
 		cond = cond.And(c)
+	} else if !opts.WithVisible {
+		cond = cond.And(builder.Eq{"repo_id": 0, "owner_id": 0})
 	}
 
 	if opts.Filter != "" {
-		cond = cond.And(builder.Like{"name", opts.Filter})
+		cond = cond.And(builder.Like{"name", opts.Filter}).Or(builder.Like{"uuid", opts.Filter})
 	}
 
 	if has, value := opts.IsOnline.Get(); has {
@@ -262,6 +276,31 @@ func GetRunnerByID(ctx context.Context, id int64) (*ActionRunner, error) {
 		return nil, err
 	} else if !has {
 		return nil, fmt.Errorf("runner with id %d: %w", id, util.ErrNotExist)
+	}
+	return &runner, nil
+}
+
+// GetVisibleRunnerByID is like GetRunnerByID, but it only finds the runner if it is visible to the given owner or
+// repository. If it is not, util.ErrNotExist will be returned even if the runner exists.
+func GetVisibleRunnerByID(ctx context.Context, id, ownerID, repoID int64) (*ActionRunner, error) {
+	query := db.GetEngine(ctx).Where("id=?", id)
+
+	if repoID > 0 {
+		cond := builder.NewCond().And(builder.Eq{"repo_id": repoID})
+		cond = cond.Or(builder.Eq{"owner_id": builder.Select("owner_id").From("repository").Where(builder.Eq{"id": repoID})})
+		cond = cond.Or(builder.Eq{"repo_id": 0, "owner_id": 0})
+		query = query.And(cond)
+	} else if ownerID > 0 { // ownerID is ignored if repoID is set
+		cond := builder.NewCond().And(builder.Eq{"owner_id": ownerID}).Or(builder.Eq{"repo_id": 0, "owner_id": 0})
+		query = query.And(cond)
+	}
+
+	var runner ActionRunner
+	has, err := query.Get(&runner)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf("runner with ID %d: %w", id, util.ErrNotExist)
 	}
 	return &runner, nil
 }

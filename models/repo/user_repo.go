@@ -17,13 +17,14 @@ import (
 )
 
 // GetStarredRepos returns the repos starred by a particular user
-func GetStarredRepos(ctx context.Context, userID int64, private bool, listOptions db.ListOptions) ([]*Repository, error) {
+func GetStarredRepos(ctx context.Context, userID int64, private bool, listOptions db.ListOptions, reducer RepositoryAuthorizationReducer) ([]*Repository, error) {
 	sess := db.GetEngine(ctx).
 		Where("star.uid=?", userID).
 		Join("LEFT", "star", "`repository`.id=`star`.repo_id")
 	if !private {
 		sess = sess.And("is_private=?", false)
 	}
+	sess = sess.And(reducer.RepoReadAccessFilter())
 
 	if listOptions.Page != 0 {
 		sess = db.SetSessionPagination(sess, &listOptions)
@@ -37,7 +38,7 @@ func GetStarredRepos(ctx context.Context, userID int64, private bool, listOption
 }
 
 // GetWatchedRepos returns the repos watched by a particular user
-func GetWatchedRepos(ctx context.Context, userID int64, private bool, listOptions db.ListOptions) ([]*Repository, int64, error) {
+func GetWatchedRepos(ctx context.Context, userID int64, private bool, listOptions db.ListOptions, reducer RepositoryAuthorizationReducer) ([]*Repository, int64, error) {
 	sess := db.GetEngine(ctx).
 		Where("watch.user_id=?", userID).
 		And("`watch`.mode<>?", WatchModeDont).
@@ -45,6 +46,7 @@ func GetWatchedRepos(ctx context.Context, userID int64, private bool, listOption
 	if !private {
 		sess = sess.And("is_private=?", false)
 	}
+	sess = sess.And(reducer.RepoReadAccessFilter())
 
 	if listOptions.Page != 0 {
 		sess = db.SetSessionPagination(sess, &listOptions)

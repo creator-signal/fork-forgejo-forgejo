@@ -104,7 +104,7 @@ func sudo() func(ctx *context.APIContext) {
 		}
 
 		if len(sudo) > 0 {
-			if ctx.IsSigned && ctx.Doer.IsAdmin {
+			if ctx.IsSigned && ctx.IsUserSiteAdmin() {
 				user, err := user_model.GetUserByName(ctx, sudo)
 				if err != nil {
 					if user_model.IsErrUserNotExist(err) {
@@ -208,9 +208,9 @@ func repoAssignment() func(ctx *context.APIContext) {
 				ctx.Repo.UnitsMode[u.Type] = ctx.Repo.AccessMode
 			}
 		} else {
-			ctx.Repo.Permission, err = access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+			ctx.Repo.Permission, err = access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 			if err != nil {
-				ctx.Error(http.StatusInternalServerError, "GetUserRepoPermission", err)
+				ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 				return
 			}
 		}
@@ -355,16 +355,16 @@ func tokenRequiresScopes(requiredScopeCategories ...auth_model.AccessTokenScopeC
 		}
 
 		ctx.Data["requiredScopeCategories"] = requiredScopeCategories
+	}
+}
 
-		// check if scope only applies to public resources
-		publicOnly, err := scope.PublicOnly()
-		if err != nil {
-			ctx.Error(http.StatusForbidden, "tokenRequiresScope", "parsing public resource scope failed: "+err.Error())
-			return
-		}
-
-		// assign to true so that those searching should only filter public repositories/users/organizations
-		ctx.PublicOnly = publicOnly
+// Middleware that dynamically checks either the organization or user scope, depending on the owner type of the
+// repository (requires `repoAssignment()` middleware to be used before this).
+func tokenRequiresRepoOwnerScope(ctx *context.APIContext) {
+	if ctx.Repo.Owner.IsOrganization() {
+		tokenRequiresScopes(auth_model.AccessTokenScopeCategoryOrganization)(ctx)
+	} else {
+		tokenRequiresScopes(auth_model.AccessTokenScopeCategoryUser)(ctx)
 	}
 }
 
@@ -810,7 +810,7 @@ func individualPermsChecker(ctx *context.APIContext) {
 	if ctx.ContextUser.IsIndividual() {
 		switch ctx.ContextUser.Visibility {
 		case api.VisibleTypePrivate:
-			if ctx.Doer == nil || (ctx.ContextUser.ID != ctx.Doer.ID && !ctx.Doer.IsAdmin) {
+			if ctx.Doer == nil || (ctx.ContextUser.ID != ctx.Doer.ID && !ctx.IsUserSiteAdmin()) {
 				ctx.NotFound("Visit Project", nil)
 				return
 			}
@@ -1020,7 +1020,7 @@ func Routes() *web.Route {
 					m.Combo("").
 						Get(reqToken(), user.ListRunners).
 						Post(bind(api.RegisterRunnerOptions{}), user.RegisterRunner)
-					m.Get("/registration-token", reqToken(), user.GetRegistrationToken)
+					m.Get("/registration-token", reqToken(), user.GetRegistrationToken) //nolint:staticcheck
 					m.Get("/{runner_id}", reqToken(), user.GetRunner)
 					m.Delete("/{runner_id}", reqToken(), user.DeleteRunner)
 					m.Get("/jobs", reqToken(), user.SearchActionRunJobs)
@@ -1119,6 +1119,10 @@ func Routes() *web.Route {
 		// FIXME: Don't expose repository id outside of the system
 		m.Combo("/repositories/{id}", reqToken(), tokenRequiresScopes(auth_model.AccessTokenScopeCategoryRepository)).Get(repo.GetByID)
 
+		// Needs to be extracted from the larger `/repos` group because deleting a repo isn't protected by
+		// `AccessTokenScopeCategoryRepository`; it's protected by either the User or Organization scope.
+		m.Delete("/repos/{username}/{reponame}", repoAssignment(), tokenRequiresRepoOwnerScope, reqOwner(), repo.Delete)
+
 		// Repos (requires repo scope)
 		m.Group("/repos", func() {
 			m.Get("/search", repo.Search)
@@ -1130,12 +1134,12 @@ func Routes() *web.Route {
 				m.Get("/compare/*", reqRepoReader(unit.TypeCode), repo.CompareDiff)
 
 				m.Combo("").Get(reqAnyRepoReader(), repo.Get).
-					Delete(reqToken(), reqOwner(), repo.Delete).
 					Patch(reqToken(), reqAdmin(), bind(api.EditRepoOption{}), repo.Edit)
-				m.Post("/convert", reqOwner(), repo.Convert)
+
+				m.Post("/convert", reqOwner(), reqAdmin(), repo.Convert)
 				m.Post("/generate", reqToken(), reqRepoReader(unit.TypeCode), bind(api.GenerateRepoOption{}), repo.Generate)
 				m.Group("/transfer", func() {
-					m.Post("", reqOwner(), bind(api.TransferRepoOption{}), repo.Transfer)
+					m.Post("", reqOwner(), reqAdmin(), bind(api.TransferRepoOption{}), repo.Transfer)
 					m.Post("/accept", repo.AcceptTransfer)
 					m.Post("/reject", repo.RejectTransfer)
 				}, reqToken())
@@ -1704,7 +1708,7 @@ func Routes() *web.Route {
 				m.Combo("").
 					Get(admin.ListRunners).
 					Post(bind(api.RegisterRunnerOptions{}), admin.RegisterRunner)
-				m.Get("/registration-token", admin.GetRunnerRegistrationToken)
+				m.Get("/registration-token", admin.GetRunnerRegistrationToken) //nolint:staticcheck
 				m.Get("/{runner_id}", admin.GetRunner)
 				m.Delete("/{runner_id}", admin.DeleteRunner)
 				m.Get("/jobs", admin.GetActionRunJobs)

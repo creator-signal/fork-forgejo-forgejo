@@ -73,6 +73,8 @@ type AccessToken struct {
 	UpdatedUnix       timeutil.TimeStamp `xorm:"INDEX updated"`
 	HasRecentActivity bool               `xorm:"-"`
 	HasUsed           bool               `xorm:"-"`
+
+	ResourceAllRepos bool `xorm:"NOT NULL DEFAULT TRUE"` // flag for whether AccessTokenResourceRepo instances will limit the resources this access token can access (false) or won't limit them (true).
 }
 
 // AfterLoad is invoked from XORM after setting the values of all fields of this object.
@@ -222,15 +224,23 @@ func (opts ListAccessTokensOptions) ToOrders() string {
 
 // DeleteAccessTokenByID deletes access token by given ID.
 func DeleteAccessTokenByID(ctx context.Context, id, userID int64) error {
-	cnt, err := db.GetEngine(ctx).ID(id).Delete(&AccessToken{
-		UID: userID,
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		if err := db.DeleteBeans(ctx,
+			&AccessTokenResourceRepo{TokenID: id},
+		); err != nil {
+			return fmt.Errorf("DeleteBeans: %w", err)
+		}
+
+		cnt, err := db.GetEngine(ctx).ID(id).Delete(&AccessToken{
+			UID: userID,
+		})
+		if err != nil {
+			return err
+		} else if cnt != 1 {
+			return ErrAccessTokenNotExist{}
+		}
+		return nil
 	})
-	if err != nil {
-		return err
-	} else if cnt != 1 {
-		return ErrAccessTokenNotExist{}
-	}
-	return nil
 }
 
 // RegenerateAccessTokenByID regenerates access token by given ID.

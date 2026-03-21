@@ -2605,7 +2605,7 @@ func UpdatePullReviewRequest(ctx *context.Context) {
 			return
 		}
 
-		err = issue_service.IsValidReviewRequest(ctx, reviewer, ctx.Doer, action == "attach", issue, nil)
+		err = issue_service.IsValidReviewRequest(ctx, reviewer, ctx.Doer, action == "attach", issue)
 		if err != nil {
 			if issues_model.IsErrNotValidReviewRequest(err) {
 				log.Warn(
@@ -3682,7 +3682,7 @@ func updateAttachments(ctx *context.Context, item any, files []string) error {
 	if len(files) > 0 {
 		switch content := item.(type) {
 		case *issues_model.Issue:
-			err = issues_model.UpdateIssueAttachments(ctx, content.ID, files)
+			err = issues_model.UpdateIssueAttachments(ctx, content, files)
 		case *issues_model.Comment:
 			err = content.UpdateAttachments(ctx, files)
 		default:

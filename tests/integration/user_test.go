@@ -256,7 +256,7 @@ func TestAccessTokenRegenerate(t *testing.T) {
 
 	assert.Equal(t, "TestAccessToken", oldTokenName)
 
-	req := NewRequestWithValues(t, "POST", "/user/settings/applications/regenerate", map[string]string{
+	req := NewRequestWithValues(t, "POST", "/user/settings/applications/tokens/regenerate", map[string]string{
 		"id": strconv.Itoa(oldTokenID),
 	})
 	session.MakeRequest(t, req, http.StatusOK)
@@ -268,7 +268,7 @@ func TestAccessTokenRegenerate(t *testing.T) {
 	assert.Equal(t, oldTokenID, newTokenID)
 	assert.Equal(t, "TestAccessToken", newTokenName)
 
-	req = NewRequestWithValues(t, "POST", "/user/settings/applications/delete", map[string]string{
+	req = NewRequestWithValues(t, "POST", "/user/settings/applications/tokens/delete", map[string]string{
 		"id": strconv.Itoa(newTokenID),
 	})
 	session.MakeRequest(t, req, http.StatusOK)
@@ -279,6 +279,38 @@ func TestAccessTokenRegenerate(t *testing.T) {
 	assert.Equal(t, latestTokenID, prevLatestTokenID)
 	assert.Equal(t, latestTokenName, prevLatestTokenName)
 	assert.NotEqual(t, "TestAccessToken", latestTokenName)
+}
+
+func TestAccessTokenResourceRepos(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	locale := translation.NewLocale("en-US")
+	repoAccess := locale.TrString("settings.specific_repo_access") + ":"
+
+	session := loginUser(t, "user2")
+
+	// Before creating a repo-specific access token, we shouldn't have the "Repository access:" list in the personal
+	// access token page:
+	req := NewRequest(t, "GET", "/user/settings/applications")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByText(".user-setting-content p", repoAccess), false)
+
+	// Then we create a repo-specific access token.  We give it access to two repos, user2/repo2, but also user30/empty,
+	// a private repo owned by someone else...  We'll pretend user2 used to be a collaborator on this repo and
+	// previously had access to view it, but doesn't anymore.
+	createFineGrainedRepoAccessToken(t, "user2",
+		[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadUser},
+		[]int64{2, 52},
+	)
+
+	// Now we have "Repository access:"...
+	req = NewRequest(t, "GET", "/user/settings/applications")
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByText(".user-setting-content p", repoAccess), true)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByText(".user-setting-content a", "user2/repo2"), true)   // link to repo
+	htmlDoc.AssertSelection(t, htmlDoc.FindByText(".user-setting-content a", "user30/empty"), false) // missing - user2 has no visibility
 }
 
 func findLatestTokenID(t *testing.T, session *TestSession) (string, int) {

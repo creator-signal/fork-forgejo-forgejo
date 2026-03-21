@@ -1,4 +1,5 @@
 // Copyright 2023 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -481,10 +482,16 @@ func (Action) ListVariables(ctx *context.APIContext) {
 }
 
 // GetRegistrationToken returns the runner registration token to register runners for the repository
+//
+// Deprecated: This operation has been deprecated in Forgejo 15. Use the web UI or RegisterRunner instead.
 func (Action) GetRegistrationToken(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/runners/registration-token repository repoGetRunnerRegistrationToken
 	// ---
 	// summary: Get a repository's runner registration token
+	// description: >
+	//   This operation has been deprecated in Forgejo 15.
+	//   Use the web UI or [`/repos/{owner}/{repo}/actions/runners`](#/repository/registerRepoRunner) instead.
+	// deprecated: true
 	// produces:
 	// - application/json
 	// parameters:
@@ -523,6 +530,10 @@ func (Action) ListRunners(ctx *context.APIContext) {
 	//   description: name of the repo
 	//   type: string
 	//   required: true
+	// - name: visible
+	//   in: query
+	//   description: whether to include all visible runners (true) or only those that are directly owned by the repository (false)
+	//   type: boolean
 	// - name: page
 	//   in: query
 	//   description: page number of results to return (1-based)
@@ -710,6 +721,15 @@ func ListActionTasks(ctx *context.APIContext) {
 	//   in: query
 	//   description: page size of results, default maximum page size is 50
 	//   type: integer
+	// - name: status
+	//   in: query
+	//   description: |
+	//     Returns workflow tasks with the check run status or conclusion that is specified.
+	// 		 For example, a conclusion can be success or a status can be in_progress.
+	//   type: array
+	//   items:
+	//     type: string
+	//     enum: [unknown, waiting, running, success, failure, cancelled, skipped, blocked]
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/TasksList"
@@ -724,9 +744,21 @@ func ListActionTasks(ctx *context.APIContext) {
 	//   "422":
 	//     "$ref": "#/responses/validationError"
 
+	statusStrs := ctx.FormStrings("status")
+	statuses := make([]actions_model.Status, len(statusStrs))
+	for i, s := range statusStrs {
+		if status, exists := actions_model.StatusFromString(s); exists {
+			statuses[i] = status
+		} else {
+			ctx.Error(http.StatusBadRequest, "StatusFromString", fmt.Sprintf("unknown status: %s", s))
+			return
+		}
+	}
+
 	tasks, total, err := db.FindAndCount[actions_model.ActionTask](ctx, &actions_model.FindTaskOptions{
 		ListOptions: utils.GetListOptions(ctx),
 		RepoID:      ctx.Repo.Repository.ID,
+		Status:      statuses,
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "ListActionTasks", err)
@@ -886,6 +918,10 @@ func ListActionRuns(ctx *context.APIContext) {
 	//   in: query
 	//   description: Only return workflow runs that involve the given Git reference, for example, `refs/heads/main`.
 	//   type: string
+	// - name: workflow_id
+	//   in: query
+	//   description: Only return workflow runs that involve the given workflow ID.
+	//   type: string
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/ActionRunList"
@@ -914,6 +950,7 @@ func ListActionRuns(ctx *context.APIContext) {
 		RunNumber:   ctx.FormInt64("run_number"),
 		CommitSHA:   ctx.FormString("head_sha"),
 		Ref:         ctx.FormString("ref"),
+		WorkflowID:  ctx.FormString("workflow_id"),
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "ListActionRuns", err)

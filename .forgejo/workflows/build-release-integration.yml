@@ -2,7 +2,7 @@ name: Integration tests for the release process
 enable-email-notifications: true
 
 env:
-  FORGEJO_VERSION: 11.0.10 # renovate: datasource=docker depName=data.forgejo.org/forgejo/forgejo
+  FORGEJO_VERSION: 11.0.11 # renovate: datasource=docker depName=data.forgejo.org/forgejo/forgejo
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
       - uses: https://data.forgejo.org/actions/checkout@v6
 
       - id: forgejo
-        uses: https://data.forgejo.org/actions/setup-forgejo@v3.1.4
+        uses: https://data.forgejo.org/actions/setup-forgejo@v3.1.8
         with:
           user: root
           password: admin1234

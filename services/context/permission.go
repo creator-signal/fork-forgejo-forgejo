@@ -7,9 +7,11 @@ import (
 	"net/http"
 
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/modules/log"
+	"forgejo.org/services/authz"
 )
 
 // RequireRepoAdmin returns a middleware for requiring repository admin permission
@@ -156,6 +158,49 @@ func CheckRepoScopedToken(ctx *Context, repo *repo_model.Repository, level auth_
 
 		if !scopeMatched {
 			ctx.Error(http.StatusForbidden)
+			return
+		}
+	}
+
+	reducer, ok := ctx.Data["ApiTokenReducer"].(authz.AuthorizationReducer)
+	if ok {
+		var accessMode perm.AccessMode
+		switch level {
+		case auth_model.Read:
+			accessMode = perm.AccessModeRead
+		case auth_model.Write:
+			accessMode = perm.AccessModeWrite
+		case auth_model.NoAccess:
+			fallthrough
+		default:
+			accessMode = perm.AccessModeNone
+		}
+		actualAccessMode, err := reducer.ReduceRepoAccess(ctx, repo, accessMode)
+		if err != nil {
+			ctx.ServerError("HasScope", err)
+			return
+		} else if actualAccessMode != accessMode {
+			ctx.Error(http.StatusForbidden)
+			return
+		}
+	}
+}
+
+func CheckRuntimeDeterminedScope(ctx *APIContext, scopeCategory auth_model.AccessTokenScopeCategory, level auth_model.AccessTokenScopeLevel, msg string) {
+	scope, ok := ctx.Data["ApiTokenScope"].(auth_model.AccessTokenScope)
+	if ok {
+		var scopeMatched bool
+
+		requiredScopes := auth_model.GetRequiredScopes(level, scopeCategory)
+
+		scopeMatched, err := scope.HasScope(requiredScopes...)
+		if err != nil {
+			ctx.ServerError("HasScope", err)
+			return
+		}
+
+		if !scopeMatched {
+			ctx.Error(http.StatusForbidden, "!scopeMatched", msg)
 			return
 		}
 	}

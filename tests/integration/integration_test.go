@@ -487,12 +487,14 @@ func getTokenForLoggedInUser(t testing.TB, session *TestSession, scopes ...auth.
 // createApplicationSettingsToken creates a token with given name and scopes for the currently logged in user.
 // It will redirect to the application settings page.
 func createApplicationSettingsToken(t testing.TB, session *TestSession, name string, scopes ...auth.AccessTokenScope) {
+	require.NotEmpty(t, scopes, "attempted to create access token with no scopes, which is not valid")
+
 	urlValues := url.Values{}
 	urlValues.Add("name", name)
 	for _, scope := range scopes {
 		urlValues.Add("scope", string(scope))
 	}
-	req := NewRequestWithURLValues(t, "POST", "/user/settings/applications", urlValues)
+	req := NewRequestWithURLValues(t, "POST", "/user/settings/applications/tokens/new", urlValues)
 	resp := session.MakeRequest(t, req, http.StatusSeeOther)
 
 	// Log the flash values on failure
@@ -507,6 +509,41 @@ func createApplicationSettingsToken(t testing.TB, session *TestSession, name str
 			}
 		}
 	}
+}
+
+// TODO: currently this is implemented with direct DB access, which is somewhat against the grain for the integration
+// tests.  But fine-grained repo access tokens don't currently have an API or Web UI to create or manage them.  This
+// should be reimplemented when one of those alternatives lands.
+func createFineGrainedRepoAccessToken(t testing.TB, username string, scopes []auth.AccessTokenScope, repoIDs []int64) string {
+	user, err := user_model.GetUserByName(t.Context(), username)
+	require.NoError(t, err)
+
+	scopesStr := make([]string, len(scopes))
+	for i := range scopes {
+		scopesStr[i] = string(scopes[i])
+	}
+	scope, err := auth.AccessTokenScope(strings.Join(scopesStr, ",")).Normalize()
+	require.NoError(t, err)
+
+	token := &auth.AccessToken{
+		UID:              user.ID,
+		Name:             "integration test token",
+		Scope:            scope,
+		ResourceAllRepos: false,
+	}
+	err = auth.NewAccessToken(t.Context(), token)
+	require.NoError(t, err)
+
+	for _, id := range repoIDs {
+		resource := &auth.AccessTokenResourceRepo{
+			TokenID: token.ID,
+			RepoID:  id,
+		}
+		_, err = db.GetEngine(t.Context()).Insert(resource)
+		require.NoError(t, err)
+	}
+
+	return token.Token
 }
 
 // assertAccessToken retrieves a token from "/user/settings/applications" and returns it.
