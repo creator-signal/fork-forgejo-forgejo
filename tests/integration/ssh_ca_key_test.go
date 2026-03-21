@@ -15,12 +15,85 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/ssh"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/ssh"
+	gossh "golang.org/x/crypto/ssh"
 )
+
+type principalMatchingTestCase = struct {
+	Allowed  string
+	Supplied string
+	Matched  bool
+}
+
+func variousPrincipalMatchingTestCases(userName string, otherUser string) []principalMatchingTestCase {
+	userAndOther := userName + "," + otherUser
+	unrelated := userName + "_," + otherUser + "_"
+	repeated := userName + "," + userName
+
+	return []principalMatchingTestCase{
+		{"", "", false},
+		{"", userName, true},
+		{"", otherUser, false},
+		{"", userAndOther, true},
+		{"", unrelated, false},
+
+		{userName, "", false},
+		{userName, userName, true},
+		{userName, otherUser, false},
+		{userName, userAndOther, true},
+		{userName, unrelated, false},
+
+		{otherUser, "", false},
+		{otherUser, userName, false},
+		{otherUser, otherUser, true},
+		{otherUser, userAndOther, true},
+		{otherUser, unrelated, false},
+
+		{userAndOther, "", false},
+		{userAndOther, userName, true},
+		{userAndOther, otherUser, true},
+		{userAndOther, userAndOther, true},
+		{userAndOther, unrelated, false},
+
+		{userName, strings.ToUpper(userName), false},
+
+		{userAndOther, userName[1 : len(userName)-1], false},
+		{userAndOther, userName[:len(userName)/2], false},
+		{userAndOther, userName[len(userName)/2:], false},
+		{userAndOther, otherUser[len(otherUser)/2:], false},
+
+		{repeated, userName, true},
+		{userName, repeated, true},
+	}
+}
+
+// This is, strictly, a unit test and should be in modules/ssh/ssh_test.go, but it's here so we can
+// share variousPrincipalMatchingTestCases with the E2E tests elsewhere in this file
+func TestCertificatePrincipalMatching(t *testing.T) {
+	userName := "username"
+
+	for _, c := range append(variousPrincipalMatchingTestCases(userName, "garbage"), []principalMatchingTestCase{
+		{"a,b,c", "c", true},
+		{"a,c,b", "c", true},
+		{"c,a,b", "c", true},
+		{"a,d", "a,b,c", true},
+		{"d,b", "a,b,c", true},
+		{"v,w", "x,y,z", false},
+	}...) {
+		allowed := ssh.SplitPrincipals(c.Allowed)
+		supplied := ssh.SplitPrincipals(c.Supplied)
+		if len(allowed) == 0 {
+			allowed = []string{userName}
+		}
+		_, found := ssh.FindMatchingPrincipal(supplied, allowed)
+		assert.Equal(t, c.Matched, found, "Expected that for allowed %q and supplied %q, found should be %v", c.Allowed, c.Supplied, c.Matched)
+	}
+}
 
 func TestUserSuppliedSSHCAKeys(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
@@ -37,14 +110,14 @@ func endorseKey(t *testing.T, identityKeyFile, signingKeyFile string, certType u
 func endorseKeyWithValidityOffset(t *testing.T, identityKeyFile, signingKeyFile string, certType uint32, principals []string, validitySeconds int, validityWindowOffset int) {
 	dataIdentityKey, err := os.ReadFile(identityKeyFile + ".pub")
 	require.NoError(t, err)
-	identityKey, _, _, _, err := ssh.ParseAuthorizedKey(dataIdentityKey)
+	identityKey, _, _, _, err := gossh.ParseAuthorizedKey(dataIdentityKey)
 	require.NoError(t, err)
 	dataPrivKey, err := os.ReadFile(signingKeyFile)
 	require.NoError(t, err)
-	ca, err := ssh.ParsePrivateKey(dataPrivKey)
+	ca, err := gossh.ParsePrivateKey(dataPrivKey)
 	require.NoError(t, err)
 	validAfter := uint64(time.Now().Add(time.Duration(validityWindowOffset) * time.Second).Unix())
-	cert := &ssh.Certificate{
+	cert := &gossh.Certificate{
 		Key:             identityKey, // SPKI "object" - key to which authority is delegated
 		Serial:          uint64(1),
 		CertType:        certType,
@@ -52,7 +125,7 @@ func endorseKeyWithValidityOffset(t *testing.T, identityKeyFile, signingKeyFile 
 		ValidAfter:      validAfter,
 		ValidBefore:     uint64(int64(validAfter) + int64(validitySeconds)),
 		// Permissions: a reasonable, standardesque collection
-		Permissions: ssh.Permissions{
+		Permissions: gossh.Permissions{
 			Extensions: map[string]string{
 				"permit-pty":              "",
 				"permit-port-forwarding":  "",
@@ -63,7 +136,7 @@ func endorseKeyWithValidityOffset(t *testing.T, identityKeyFile, signingKeyFile 
 		},
 	}
 	require.NoError(t, cert.SignCert(rand.Reader, ca))
-	require.NoError(t, os.WriteFile(identityKeyFile+"-cert.pub", ssh.MarshalAuthorizedKey(cert), 0o700))
+	require.NoError(t, os.WriteFile(identityKeyFile+"-cert.pub", gossh.MarshalAuthorizedKey(cert), 0o700))
 }
 
 type sshKeyFixture = struct {
@@ -155,28 +228,28 @@ func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 
 					withKeyFile(t, fmt.Sprintf("%s-unregCA", userName), func(unregFile string) {
 						withActiveKey(t, ephemeralkeyFile, func() {
-							endorseKey(t, ephemeralkeyFile, unregFile, ssh.UserCert, []string{userName}, 60)
+							endorseKey(t, ephemeralkeyFile, unregFile, gossh.UserCert, []string{userName}, 60)
 							t.Run("FailToCloneWithUnregisteredCAKey", doGitCloneFail(f.cloneUrl))
 						})
 					})
 
-					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.HostCert, []string{userName}, 60)
+					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.HostCert, []string{userName}, 60)
 					t.Run("FailToCloneWithEphemeralKeyAndHostCert", doGitCloneFail(f.cloneUrl))
 
-					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, 60)
+					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, 60)
 					t.Run("CloneWithEphemeralKeyAndUserCert", doGitClone(t.TempDir(), f.cloneUrl))
 
-					endorseKey(t, ephemeralkeyFile, f.plainkey.fileName, ssh.UserCert, []string{userName}, 60)
+					endorseKey(t, ephemeralkeyFile, f.plainkey.fileName, gossh.UserCert, []string{userName}, 60)
 					t.Run("FailToCloneWithEphemeralKeySignedByPlainNonCAKey", doGitCloneFail(f.cloneUrl))
 
-					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, -60)
+					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, -60)
 					t.Run("FailToCloneWithEphemeralKeyExpiredCert", doGitCloneFail(f.cloneUrl))
 
-					endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, 60, 60)
+					endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, 60, 60)
 					t.Run("FailToCloneWithFutureValidityCert", doGitCloneFail(f.cloneUrl))
 
 					defer test.MockVariableValue(&setting.SSH.EnableCertAuth, false)()
-					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, 60)
+					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, 60)
 					t.Run("FailToCloneWithEphemeralKeyAfterDisablingCertAuth", doGitCloneFail(f.cloneUrl))
 				})
 			})

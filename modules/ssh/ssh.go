@@ -226,7 +226,7 @@ func authenticationWithCert(ctx ssh.Context, cert *gossh.Certificate) bool {
 }
 
 func authenticationWithUserSuppliedCA(ctx ssh.Context, cert *gossh.Certificate, userCA *asymkey_model.PublicKey) (keyID int64, ok bool) {
-	allowedPrincipals := splitPrincipals(userCA.Principals)
+	allowedPrincipals := SplitPrincipals(userCA.Principals)
 	if len(allowedPrincipals) == 0 {
 		owner, err := user.GetUserByID(ctx, userCA.OwnerID)
 		if err != nil {
@@ -236,7 +236,7 @@ func authenticationWithUserSuppliedCA(ctx ssh.Context, cert *gossh.Certificate, 
 		allowedPrincipals = []string{owner.Name}
 	}
 
-	principal, matchedPrincipal := findMatchingPrincipal(cert.ValidPrincipals, allowedPrincipals)
+	principal, matchedPrincipal := FindMatchingPrincipal(cert.ValidPrincipals, allowedPrincipals)
 	if !matchedPrincipal {
 		logger.Error("No principal listed in certificate is also listed in CA key's allowed principals list")
 		return 0, false
@@ -256,14 +256,16 @@ func authenticationWithUserSuppliedCA(ctx ssh.Context, cert *gossh.Certificate, 
 	return userCA.ID, true
 }
 
-func splitPrincipals(principals string) []string {
+// Exposed for testing
+func SplitPrincipals(principals string) []string {
 	if principals == "" {
 		return nil
 	}
 	return strings.Split(principals, ",")
 }
 
-func findMatchingPrincipal(suppliedPrincipals, allowedPrincipals []string) (string, bool) {
+// Exposed for testing
+func FindMatchingPrincipal(suppliedPrincipals, allowedPrincipals []string) (string, bool) {
 	for _, suppliedPrincipal := range suppliedPrincipals {
 		if slices.Contains(allowedPrincipals, suppliedPrincipal) {
 			return suppliedPrincipal, true
