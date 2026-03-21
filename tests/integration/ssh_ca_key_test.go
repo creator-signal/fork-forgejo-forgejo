@@ -150,13 +150,16 @@ func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 
 				userName := f.ctx.Username
 				withKeyFile(t, fmt.Sprintf("%s-ephemeralkey", userName), func(ephemeralkeyFile string) {
+					// This test must appear first, before ephemeralkeyFile is ever endorsed
+					t.Run("FailToCloneWithUnsignedEphemeralKey", doGitCloneFail(f.cloneUrl))
+
 					withKeyFile(t, fmt.Sprintf("%s-unregCA", userName), func(unregFile string) {
 						withActiveKey(t, ephemeralkeyFile, func() {
 							endorseKey(t, ephemeralkeyFile, unregFile, ssh.UserCert, []string{userName}, 60)
 							t.Run("FailToCloneWithUnregisteredCAKey", doGitCloneFail(f.cloneUrl))
 						})
 					})
-					t.Run("FailToCloneWithEphemeralKey", doGitCloneFail(f.cloneUrl))
+
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.HostCert, []string{userName}, 60)
 					t.Run("FailToCloneWithEphemeralKeyAndHostCert", doGitCloneFail(f.cloneUrl))
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, 60)
