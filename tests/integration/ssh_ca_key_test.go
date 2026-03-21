@@ -100,14 +100,23 @@ func TestUserSuppliedSSHCAKeys(t *testing.T) {
 		testUserSuppliedSSHCAKeyBasics(t, u)
 		testCAKeyProvisioning(t, u)
 		testPrincipalMatchingE2E(t, u)
+		testTamperedCertificates(t, u)
 	})
 }
 
 func endorseKey(t *testing.T, identityKeyFile, signingKeyFile string, certType uint32, principals []string, validitySeconds int) {
-	endorseKeyWithValidityOffset(t, identityKeyFile, signingKeyFile, certType, principals, validitySeconds, 0)
+	endorseKeyWithValidityOffset(t, identityKeyFile, signingKeyFile, certType, principals, validitySeconds, 0, nil)
 }
 
-func endorseKeyWithValidityOffset(t *testing.T, identityKeyFile, signingKeyFile string, certType uint32, principals []string, validitySeconds int, validityWindowOffset int) {
+func endorseKeyWithValidityOffset(
+	t *testing.T,
+	identityKeyFile, signingKeyFile string,
+	certType uint32,
+	principals []string,
+	validitySeconds int,
+	validityWindowOffset int,
+	tamperFn func(cert *gossh.Certificate),
+) {
 	dataIdentityKey, err := os.ReadFile(identityKeyFile + ".pub")
 	require.NoError(t, err)
 	identityKey, _, _, _, err := gossh.ParseAuthorizedKey(dataIdentityKey)
@@ -136,6 +145,9 @@ func endorseKeyWithValidityOffset(t *testing.T, identityKeyFile, signingKeyFile 
 		},
 	}
 	require.NoError(t, cert.SignCert(rand.Reader, ca))
+	if tamperFn != nil {
+		tamperFn(cert)
+	}
 	require.NoError(t, os.WriteFile(identityKeyFile+"-cert.pub", gossh.MarshalAuthorizedKey(cert), 0o700))
 }
 
@@ -245,7 +257,7 @@ func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, -60)
 					t.Run("FailToCloneWithEphemeralKeyExpiredCert", doGitCloneFail(f.cloneUrl))
 
-					endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, 60, 60)
+					endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, 60, 60, nil)
 					t.Run("FailToCloneWithFutureValidityCert", doGitCloneFail(f.cloneUrl))
 
 					defer test.MockVariableValue(&setting.SSH.EnableCertAuth, false)()
@@ -336,5 +348,30 @@ func testPrincipalMatchingE2E(t *testing.T, u *url.URL) {
 				})
 			})
 		}
+	})
+}
+
+func testTamperedCertificates(t *testing.T, u *url.URL) {
+	sshCASetup(t, u, func(t *testing.T, f *sshCAFixture) {
+		withRegisteredKey(t, f.ctx, f.cakey, caOptions(""), func(t *testing.T, caKey api.PublicKey) {
+			withKeyFile(t, fmt.Sprintf("%s-ephemeralkey", f.ctx.Username), func(ephemeralkeyFile string) {
+				// Make sure an unmodified certificate is accepted first
+				endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{f.ctx.Username}, 60, 0, nil)
+				for _, c := range []struct {
+					desc     string
+					tamperFn func(cert *gossh.Certificate)
+				}{
+					{"nonce", func(cert *gossh.Certificate) { cert.Nonce[len(cert.Nonce)-1]++ }},
+					{"principals", func(cert *gossh.Certificate) { cert.ValidPrincipals = []string{"invalid"} }},
+					{"signature", func(cert *gossh.Certificate) { cert.Signature.Blob[len(cert.Signature.Blob)/2]++ }},
+					{"validity1", func(cert *gossh.Certificate) { cert.ValidAfter += 60; cert.ValidBefore += 60 }},
+					{"validity2", func(cert *gossh.Certificate) { cert.ValidAfter -= 600; cert.ValidBefore -= 600 }},
+					{"signingkey", func(cert *gossh.Certificate) { cert.SignatureKey = cert.Key }},
+				} {
+					endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{f.ctx.Username}, 60, 0, c.tamperFn)
+					t.Run("Tamper with "+c.desc, doGitCloneFail(f.cloneUrl))
+				}
+			})
+		})
 	})
 }
