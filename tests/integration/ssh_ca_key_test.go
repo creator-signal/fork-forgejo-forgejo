@@ -99,7 +99,7 @@ func TestUserSuppliedSSHCAKeys(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		testUserSuppliedSSHCAKeyBasics(t, u)
 		testCAKeyProvisioning(t, u)
-		// testPrincipalMatchingE2E(t, u)
+		testPrincipalMatchingE2E(t, u)
 	})
 }
 
@@ -321,5 +321,20 @@ func expectKeyRegistration1(t *testing.T, ctx APITestContext, k sshKeyFixture, k
 	)
 }
 
-// func testPrincipalMatchingE2E(t *testing.T, u *url.URL) {
-// }
+func testPrincipalMatchingE2E(t *testing.T, u *url.URL) {
+	sshCASetup(t, u, func(t *testing.T, f *sshCAFixture) {
+		for _, c := range variousPrincipalMatchingTestCases(f.ctx.Username, "not-"+f.ctx.Username+"-not") {
+			withRegisteredKey(t, f.ctx, f.cakey, caOptions(c.Allowed), func(t *testing.T, caKey api.PublicKey) {
+				withKeyFile(t, fmt.Sprintf("%s-ephemeralkey", f.ctx.Username), func(ephemeralkeyFile string) {
+					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, ssh.SplitPrincipals(c.Supplied), 60)
+					desc := fmt.Sprintf("allowed=%s supplied=%s ok=%v", c.Allowed, c.Supplied, c.Matched)
+					if c.Matched {
+						t.Run(desc, doGitClone(t.TempDir(), f.cloneUrl))
+					} else {
+						t.Run(desc, doGitCloneFail(f.cloneUrl))
+					}
+				})
+			})
+		}
+	})
+}
