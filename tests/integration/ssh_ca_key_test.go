@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ import (
 func TestUserSuppliedSSHCAKeys(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		testUserSuppliedSSHCAKeyBasics(t, u)
-		testCannotRegisterSameCAKeyTwice(t, u)
+		testCAKeyProvisioning(t, u)
 		// testPrincipalMatchingE2E(t, u)
 	})
 }
@@ -120,6 +121,14 @@ func withRegisteredKey(t *testing.T, ctx APITestContext, k sshKeyFixture, keyOpt
 	}))
 }
 
+func caOptions(principals string, emptyPrincipalsAllowed ...bool) []string {
+	options := []string{`cert-authority`}
+	if principals != "" || (len(emptyPrincipalsAllowed) > 0 && emptyPrincipalsAllowed[0]) {
+		options = append(options, fmt.Sprintf(`principals="%s"`, principals))
+	}
+	return options
+}
+
 func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 	sshCASetup(t, u, func(t *testing.T, f *sshCAFixture) {
 		// Shouldn't be able to clone initially as the keys aren't associated with the account yet
@@ -128,7 +137,7 @@ func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 		withRegisteredKey(t, f.ctx, f.plainkey, nil, func(t *testing.T, plainKey api.PublicKey) {
 			// Can clone using the plain key
 			t.Run("CloneWithPlainKey", doGitClone(t.TempDir(), f.cloneUrl))
-			withRegisteredKey(t, f.ctx, f.cakey, []string{`cert-authority`}, func(t *testing.T, caKey api.PublicKey) {
+			withRegisteredKey(t, f.ctx, f.cakey, caOptions(""), func(t *testing.T, caKey api.PublicKey) {
 				withActiveKey(t, f.cakey.fileName, func() {
 					// Not allowed to use a CA key directly to push/pull
 					t.Run("FailToCloneWithCAKey", doGitCloneFail(f.cloneUrl))
@@ -154,27 +163,68 @@ func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 	})
 }
 
-func testCannotRegisterSameCAKeyTwice(t *testing.T, u *url.URL) {
+func testCAKeyProvisioning(t *testing.T, u *url.URL) {
 	sshCASetup(t, u, func(t *testing.T, f *sshCAFixture) {
 		// Register & delete
-		withRegisteredKey(t, f.ctx, f.cakey, []string{
-			`cert-authority`,
-			`principals="firstRegistration"`,
-		}, func(t *testing.T, caKey api.PublicKey) {})
+		withRegisteredKey(t, f.ctx, f.cakey, caOptions("firstRegistration"), func(t *testing.T, caKey api.PublicKey) {})
 
 		// Then register...
-		withRegisteredKey(t, f.ctx, f.cakey, []string{
-			`cert-authority`,
-			`principals="firstRegistration"`,
-		}, func(t *testing.T, caKey api.PublicKey) {
+		withRegisteredKey(t, f.ctx, f.cakey, caOptions("firstRegistration"), func(t *testing.T, caKey api.PublicKey) {
 			// ... and try registering the same key again with a different name/options...
 			f.ctx.ExpectedCode = 422 // Unprocessable entity (because duplicate key content)
-			secondOptions := []string{`cert-authority`, `principals="secondRegistration"`}
+			secondOptions := caOptions("secondRegistration")
 			t.Run("FailToCreateSecondCAInstanceOfCAKey", doAPICreateUserKey(f.ctx, f.cakey.name+"2", f.cakey.fileName, secondOptions))
 			// ... OK but let's also try registering it as a plain key...
 			t.Run("FailToCreateSecondPlainInstanceOfCAKey", doAPICreateUserKey(f.ctx, f.cakey.name+"3", f.cakey.fileName, nil))
 		})
+
+		// plain key provisioned with SSH_ENABLE_CERT_AUTH true
+		// plain key provisioned with SSH_ENABLE_CERT_AUTH false
+		expectKeyRegistration(t, f.ctx, f.plainkey, nil, 0, 0)
+
+		// CA key provisioned with principals absent SSH_ENABLE_CERT_AUTH true
+		// CA key provisioned with principals absent SSH_ENABLE_CERT_AUTH false - rejected
+		expectKeyRegistration(t, f.ctx, f.cakey, caOptions(""), 0, 422)
+
+		// CA key provisioned with valid principals and SSH_ENABLE_CERT_AUTH true
+		// CA key provisioned with valid principals and SSH_ENABLE_CERT_AUTH false - rejected
+		expectKeyRegistration(t, f.ctx, f.cakey, caOptions("a,b,c"), 0, 422)
+		expectKeyRegistration(t, f.ctx, f.cakey, caOptions(f.ctx.Username), 0, 422)
+
+		// CA key provisioned with present but empty principals and SSH_ENABLE_CERT_AUTH true - rejected
+		// CA key provisioned with present but empty principals and SSH_ENABLE_CERT_AUTH false - rejected
+		expectKeyRegistration(t, f.ctx, f.cakey, caOptions("", true), 422, 422)
+
+		// CA key provisioned with present but invalid principals and SSH_ENABLE_CERT_AUTH true - rejected
+		// CA key provisioned with present but invalid principals and SSH_ENABLE_CERT_AUTH false - rejected
+		expectKeyRegistration(t, f.ctx, f.cakey, caOptions(`with, spaces, forbidden`), 422, 422)
+		expectKeyRegistration(t, f.ctx, f.cakey, caOptions(`with,\backslash,forbidden`), 422, 422)
+		expectKeyRegistration(t, f.ctx, f.cakey, caOptions("with,nul\000,forbidden"), 422, 422)
 	})
+}
+
+func expectKeyRegistration(t *testing.T, ctx APITestContext, k sshKeyFixture, keyOptions []string, expectedWithCAEnabled, expectedWithCADisabled int) {
+	// Assumption: SSH_ENABLE_CERT_AUTH true on entry
+	expectKeyRegistration1(t, ctx, k, keyOptions, expectedWithCAEnabled, true)
+	defer test.MockVariableValue(&setting.SSH.EnableCertAuth, false)()
+	expectKeyRegistration1(t, ctx, k, keyOptions, expectedWithCADisabled, false)
+}
+
+func expectKeyRegistration1(t *testing.T, ctx APITestContext, k sshKeyFixture, keyOptions []string, expectedCode int, isEnabled bool) {
+	t.Run(
+		fmt.Sprintf("SSH_ENABLED_CERT_AUTH=%v options=%s expectedCode=%d",
+			isEnabled,
+			strings.Join(keyOptions, ","),
+			expectedCode),
+		func(t *testing.T) {
+			ctx.ExpectedCode = expectedCode
+			if expectedCode == 0 {
+				withRegisteredKey(t, ctx, k, keyOptions, func(t *testing.T, pk api.PublicKey) {})
+			} else {
+				doAPICreateUserKey(ctx, k.name, k.fileName, keyOptions)(t)
+			}
+		},
+	)
 }
 
 // func testPrincipalMatchingE2E(t *testing.T, u *url.URL) {
