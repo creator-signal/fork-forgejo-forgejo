@@ -54,7 +54,7 @@ func TestParseCAOptions(t *testing.T) {
 				assert.Equal(t, c.isCA, isCA)
 				assert.Equal(t, c.principals, principals)
 			} else {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 			}
 		})
 	}

@@ -136,7 +136,7 @@ func TestAddLdapSSHCAKeys(t *testing.T) {
 	for i, kase := range testCases {
 		s.ID = (int64(i) * 2) + 30
 		key1 := insertAndRetrieveKey(t, user, s, kase.keyOptions)
-		s.ID = s.ID + 1
+		s.ID++
 		setting.SSH.EnableCertAuth = false
 		key2 := insertAndRetrieveKey(t, user, s, kase.keyOptions)
 		setting.SSH.EnableCertAuth = true

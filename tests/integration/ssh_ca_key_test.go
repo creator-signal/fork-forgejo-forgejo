@@ -30,7 +30,7 @@ type principalMatchingTestCase = struct {
 	Matched  bool
 }
 
-func variousPrincipalMatchingTestCases(userName string, otherUser string) []principalMatchingTestCase {
+func variousPrincipalMatchingTestCases(userName, otherUser string) []principalMatchingTestCase {
 	userAndOther := userName + "," + otherUser
 	unrelated := userName + "_," + otherUser + "_"
 	repeated := userName + "," + userName

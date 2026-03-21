@@ -162,7 +162,7 @@ func TestAuthorizedStringForKey(t *testing.T) {
 			})
 			assert.Equal(t, c.isCA, strings.Contains(authorizedKeyLine, `cert-authority`))
 			if c.isCA {
-				assert.True(t, strings.Contains(authorizedKeyLine, `principals="`+c.expectedPrincipals+`"`),
+				assert.Contains(t, authorizedKeyLine, `principals="`+c.expectedPrincipals+`"`,
 					"Expected to see principals %q in: %s", c.expectedPrincipals, authorizedKeyLine)
 			}
 		})
