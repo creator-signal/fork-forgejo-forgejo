@@ -4,65 +4,76 @@
 package ssh
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCertificatePrincipalMatching(t *testing.T) {
-	cases := []struct {
-		Allowed  string
-		Supplied string
-		Matched  bool
-	}{
+type PrincipalMatchingTestCase = struct {
+	Allowed  string
+	Supplied string
+	Matched  bool
+}
+
+// Exposed for use in E2E tests, where we need the same kind of list
+func VariousPrincipalMatchingTestCases(userName string, otherUser string) []PrincipalMatchingTestCase {
+	userAndOther := userName + "," + otherUser
+	unrelated := userName + "_," + otherUser + "_"
+	repeated := userName + "," + userName
+
+	return []PrincipalMatchingTestCase{
 		{"", "", false},
-		{"", "username", true},
-		{"", "garbage", false},
-		{"", "username,garbage", true},
-		{"", "foo,bar", false},
+		{"", userName, true},
+		{"", otherUser, false},
+		{"", userAndOther, true},
+		{"", unrelated, false},
 
-		{"username", "", false},
-		{"username", "username", true},
-		{"username", "garbage", false},
-		{"username", "username,garbage", true},
-		{"username", "foo,bar", false},
+		{userName, "", false},
+		{userName, userName, true},
+		{userName, otherUser, false},
+		{userName, userAndOther, true},
+		{userName, unrelated, false},
 
-		{"garbage", "", false},
-		{"garbage", "username", false},
-		{"garbage", "garbage", true},
-		{"garbage", "username,garbage", true},
-		{"garbage", "foo,bar", false},
+		{otherUser, "", false},
+		{otherUser, userName, false},
+		{otherUser, otherUser, true},
+		{otherUser, userAndOther, true},
+		{otherUser, unrelated, false},
 
-		{"username,garbage", "", false},
-		{"username,garbage", "username", true},
-		{"username,garbage", "garbage", true},
-		{"username,garbage", "username,garbage", true},
-		{"username,garbage", "foo,bar", false},
+		{userAndOther, "", false},
+		{userAndOther, userName, true},
+		{userAndOther, otherUser, true},
+		{userAndOther, userAndOther, true},
+		{userAndOther, unrelated, false},
 
-		{"username", "USERNAME", false},
+		{userName, strings.ToUpper(userName), false},
 
-		{"username,garbage", "erna", false},
-		{"username,garbage", "user", false},
-		{"username,garbage", "name", false},
-		{"username,garbage", "bage", false},
+		{userAndOther, userName[1 : len(userName)-1], false},
+		{userAndOther, userName[:len(userName)/2], false},
+		{userAndOther, userName[len(userName)/2:], false},
+		{userAndOther, otherUser[len(otherUser)/2:], false},
 
-		{"username,username", "username", true},
-		{"username", "username,username", true},
+		{repeated, userName, true},
+		{userName, repeated, true},
+	}
+}
+
+func TestCertificatePrincipalMatching(t *testing.T) {
+	userName := "username"
+
+	for _, c := range append(VariousPrincipalMatchingTestCases(userName, "garbage"), []PrincipalMatchingTestCase{
 		{"a,b,c", "c", true},
 		{"a,c,b", "c", true},
 		{"c,a,b", "c", true},
 		{"a,d", "a,b,c", true},
 		{"d,b", "a,b,c", true},
 		{"v,w", "x,y,z", false},
-	}
-
-	const defaultUsername = "username"
-
-	for _, c := range cases {
+	}...) {
 		allowed := splitPrincipals(c.Allowed)
 		supplied := splitPrincipals(c.Supplied)
 		if len(allowed) == 0 {
-			allowed = []string{defaultUsername}
+			allowed = []string{userName}
 		}
 		_, found := findMatchingPrincipal(supplied, allowed)
 		assert.Equal(t, c.Matched, found, "Expected that for allowed %q and supplied %q, found should be %v", c.Allowed, c.Supplied, c.Matched)
