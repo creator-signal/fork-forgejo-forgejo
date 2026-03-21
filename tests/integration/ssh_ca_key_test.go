@@ -162,10 +162,13 @@ func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.HostCert, []string{userName}, 60)
 					t.Run("FailToCloneWithEphemeralKeyAndHostCert", doGitCloneFail(f.cloneUrl))
+
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, 60)
 					t.Run("CloneWithEphemeralKeyAndUserCert", doGitClone(t.TempDir(), f.cloneUrl))
+
 					endorseKey(t, ephemeralkeyFile, f.plainkey.fileName, ssh.UserCert, []string{userName}, 60)
 					t.Run("FailToCloneWithEphemeralKeySignedByPlainNonCAKey", doGitCloneFail(f.cloneUrl))
+
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, ssh.UserCert, []string{userName}, -60)
 					t.Run("FailToCloneWithEphemeralKeyExpiredCert", doGitCloneFail(f.cloneUrl))
 
