@@ -1244,8 +1244,8 @@ func Routes() *web.Route {
 						m.Group("/{workflowfilename}", func() {
 							m.Post("/dispatches", reqToken(), reqRepoWriter(unit.TypeActions), mustNotBeArchived, bind(api.DispatchWorkflowOption{}), repo.DispatchWorkflow)
 						})
-					})
-				}, reqRepoReader(unit.TypeActions), context.ReferencesGitRepo(true))
+					}, context.ReferencesGitRepo(true))
+				}, reqRepoReader(unit.TypeActions))
 				m.Group("/keys", func() {
 					m.Combo("").Get(repo.ListDeployKeys).
 						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)
