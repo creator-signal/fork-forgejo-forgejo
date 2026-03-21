@@ -7,7 +7,6 @@ package actions
 import (
 	"archive/zip"
 	"compress/gzip"
-	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -31,15 +30,12 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	"forgejo.org/modules/templates"
-	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/translation"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/common"
 	actions_service "forgejo.org/services/actions"
 	app_context "forgejo.org/services/context"
-
-	"xorm.io/builder"
 )
 
 func RedirectToLatestAttempt(ctx *app_context.Context) {
@@ -494,64 +490,39 @@ func Rerun(ctx *app_context.Context) {
 		return
 	}
 
-	// reset run's start and stop time when it is done
-	if run.Status.IsDone() {
-		run.PreviousDuration = run.Duration()
-		run.Started = 0
-		run.Stopped = 0
-		if err := actions_service.UpdateRun(ctx, run, "started", "stopped", "previous_duration"); err != nil {
-			ctx.Error(http.StatusInternalServerError, err.Error())
+	var jobID int64
+	if jobIndexStr != "" {
+		// Translate job index to job ID
+		job, _ := getRunJobs(ctx, runIndex, jobIndex)
+		if ctx.Written() {
 			return
 		}
+		jobID = job.ID
 	}
 
-	job, jobs := getRunJobs(ctx, runIndex, jobIndex)
-	if ctx.Written() {
+	rerunJobs, err := actions_service.RerunRunJobs(ctx, run, jobID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	if jobIndexStr == "" { // rerun all jobs
-		var redirectURL string
-		for _, j := range jobs {
-			// if the job has needs, it should be set to "blocked" status to wait for other jobs
-			shouldBlock := len(j.Needs) > 0
-			if err := rerunJob(ctx, j, shouldBlock); err != nil {
-				ctx.Error(http.StatusInternalServerError, err.Error())
-				return
-			}
-			if redirectURL == "" {
-				redirectURL, err = j.HTMLURL(ctx)
-				if err != nil {
-					ctx.Error(http.StatusInternalServerError, err.Error())
-					return
+	// Determine redirect URL
+	var redirectURL string
+	if len(rerunJobs) > 0 {
+		targetJob := rerunJobs[0]
+		if jobIndexStr != "" {
+			// For single-job rerun, redirect to the specific job
+			for _, j := range rerunJobs {
+				if j.ID == jobID {
+					targetJob = j
+					break
 				}
 			}
 		}
-
-		if redirectURL != "" {
-			ctx.JSON(http.StatusOK, &redirectObject{Redirect: redirectURL})
-		} else {
-			ctx.Error(http.StatusInternalServerError, "unable to determine redirectURL for job rerun")
-		}
-		return
-	}
-
-	rerunJobs := actions_service.GetAllRerunJobs(job, jobs)
-
-	var redirectURL string
-	for _, j := range rerunJobs {
-		// jobs other than the specified one should be set to "blocked" status
-		shouldBlock := j.JobID != job.JobID
-		if err := rerunJob(ctx, j, shouldBlock); err != nil {
+		redirectURL, err = targetJob.HTMLURL(ctx)
+		if err != nil {
 			ctx.Error(http.StatusInternalServerError, err.Error())
 			return
-		}
-		if j.JobID == job.JobID {
-			redirectURL, err = j.HTMLURL(ctx)
-			if err != nil {
-				ctx.Error(http.StatusInternalServerError, err.Error())
-				return
-			}
 		}
 	}
 
@@ -560,31 +531,6 @@ func Rerun(ctx *app_context.Context) {
 	} else {
 		ctx.Error(http.StatusInternalServerError, "unable to determine redirectURL for job rerun")
 	}
-}
-
-func rerunJob(ctx *app_context.Context, job *actions_model.ActionRunJob, shouldBlock bool) error {
-	status := job.Status
-	if !status.IsDone() {
-		return nil
-	}
-
-	initialStatus := actions_model.StatusWaiting
-	if shouldBlock {
-		initialStatus = actions_model.StatusBlocked
-	}
-	if err := job.PrepareNextAttempt(initialStatus); err != nil {
-		return err
-	}
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		_, err := actions_service.UpdateRunJob(ctx, job, builder.Eq{"status": status}, "attempt", "task_id", "status", "started", "stopped")
-		return err
-	}); err != nil {
-		return err
-	}
-
-	actions_service.CreateCommitStatus(ctx, job)
-	return nil
 }
 
 func Logs(ctx *app_context.Context) {
@@ -640,40 +586,16 @@ func Logs(ctx *app_context.Context) {
 func Cancel(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 
-	_, jobs := getRunJobs(ctx, runIndex, -1)
-	if ctx.Written() {
-		return
-	}
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		for _, job := range jobs {
-			status := job.Status
-			if status.IsDone() {
-				continue
-			}
-			if job.TaskID == 0 {
-				job.Status = actions_model.StatusCancelled
-				job.Stopped = timeutil.TimeStampNow()
-				n, err := actions_service.UpdateRunJob(ctx, job, builder.Eq{"task_id": 0}, "status", "stopped")
-				if err != nil {
-					return err
-				}
-				if n == 0 {
-					return errors.New("job has changed, try again")
-				}
-				continue
-			}
-			if err := actions_service.StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
+	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
+	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	actions_service.CreateCommitStatus(ctx, jobs...)
+	if err := actions_service.CancelRun(ctx, run); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	ctx.JSON(http.StatusOK, struct{}{})
 }

@@ -1,0 +1,37 @@
+-
+  id: 1000
+  title: "run done for rerun"
+  repo_id: 63
+  owner_id: 2
+  workflow_id: "test.yaml"
+  index: 6
+  trigger_user_id: 2
+  ref: "refs/heads/main"
+  commit_sha: "97f29ee599c373c729132a5c46a046978311e0ee"
+  trigger_event: "push"
+  is_fork_pull_request: false
+  status: 1 # success
+  started: 1683636528
+  stopped: 1683636626
+  created: 1683636108
+  updated: 1683636626
+  need_approval: false
+  approved_by: 0
+-
+  id: 1100
+  title: "run still running"
+  repo_id: 63
+  owner_id: 2
+  workflow_id: "test.yaml"
+  index: 7
+  trigger_user_id: 2
+  ref: "refs/heads/main"
+  commit_sha: "97f29ee599c373c729132a5c46a046978311e0ee"
+  trigger_event: "push"
+  is_fork_pull_request: false
+  status: 6 # running
+  started: 1683636528
+  created: 1683636108
+  updated: 1683636626
+  need_approval: false
+  approved_by: 0
