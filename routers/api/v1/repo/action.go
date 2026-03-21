@@ -11,7 +11,9 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	secret_model "forgejo.org/models/secret"
+	"forgejo.org/modules/container"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
@@ -768,6 +770,12 @@ func ListActionTasks(ctx *context.APIContext) {
 	res := new(api.ActionTaskResponse)
 	res.TotalCount = total
 
+	taskList := actions_model.TaskList(tasks)
+	if err := taskList.LoadAttributes(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadAttributes", err)
+		return
+	}
+
 	res.Entries = make([]*api.ActionTask, len(tasks))
 	for i := range tasks {
 		convertedTask, err := convert.ToActionTask(ctx, tasks[i])
@@ -960,14 +968,26 @@ func ListActionRuns(ctx *context.APIContext) {
 	res := new(api.ListActionRunResponse)
 	res.TotalCount = total
 
+	runList := actions_model.RunList(runs)
+	if err := runList.LoadTriggerUser(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadTriggerUser", err)
+		return
+	}
+	if err := runList.LoadRepos(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadRepos", err)
+		return
+	}
+	repos := repo_model.RepositoryList(container.FilterSlice(runs, func(r *actions_model.ActionRun) (*repo_model.Repository, bool) {
+		return r.Repo, r.Repo != nil
+	}))
+	if err := repos.LoadAttributes(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadRepoAttributes", err)
+		return
+	}
+
 	res.Entries = make([]*api.ActionRun, len(runs))
 	for i, r := range runs {
-		if err := r.LoadAttributes(ctx); err != nil {
-			ctx.Error(http.StatusInternalServerError, "LoadAttributes", err)
-			return
-		}
-		cr := convert.ToActionRun(ctx, r, ctx.Doer)
-		res.Entries[i] = cr
+		res.Entries[i] = convert.ToActionRun(ctx, r, ctx.Doer)
 	}
 
 	ctx.JSON(http.StatusOK, &res)
