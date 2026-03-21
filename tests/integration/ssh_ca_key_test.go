@@ -158,7 +158,7 @@ type sshKeyFixture = struct {
 
 type sshCAFixture = struct {
 	ctx                   APITestContext
-	relativeUrl, cloneUrl *url.URL
+	relativeURL, cloneURL *url.URL
 	plainkey, cakey       sshKeyFixture
 }
 
@@ -169,9 +169,9 @@ func sshCASetup(t *testing.T, u *url.URL, callback func(t *testing.T, f *sshCAFi
 	repoName := "ssh-ca-test-repo"
 	userName := "user2"
 
-	relativeUrl := &url.URL{}
-	*relativeUrl = *u
-	relativeUrl.Path = fmt.Sprintf("%s/%s.git", userName, repoName)
+	relativeURL := &url.URL{}
+	*relativeURL = *u
+	relativeURL.Path = fmt.Sprintf("%s/%s.git", userName, repoName)
 
 	// User configures this one as a normal key for pulling & pushing
 	plainkeyName := fmt.Sprintf("%s-plainkey", userName)
@@ -183,14 +183,14 @@ func sshCASetup(t *testing.T, u *url.URL, callback func(t *testing.T, f *sshCAFi
 
 	t.Run("CreateRepository", doAPICreateRepository(ctx, nil, git.Sha1ObjectFormat))
 	defer doAPIDeleteRepository(ctx)(t)
-	cloneUrl := createSSHUrl(ctx.GitPath(), u)
+	cloneURL := createSSHUrl(ctx.GitPath(), u)
 
 	withKeyFile(t, cakeyName, func(cakeyFile string) {
 		withKeyFile(t, plainkeyName, func(plainkeyFile string) {
 			callback(t, &sshCAFixture{
 				ctx:         ctx,
-				relativeUrl: relativeUrl,
-				cloneUrl:    cloneUrl,
+				relativeURL: relativeURL,
+				cloneURL:    cloneURL,
 				plainkey: sshKeyFixture{
 					name:     plainkeyName,
 					fileName: plainkeyFile,
@@ -222,47 +222,47 @@ func caOptions(principals string, emptyPrincipalsAllowed ...bool) []string {
 func testUserSuppliedSSHCAKeyBasics(t *testing.T, u *url.URL) {
 	sshCASetup(t, u, func(t *testing.T, f *sshCAFixture) {
 		// Shouldn't be able to clone initially as the keys aren't associated with the account yet
-		t.Run("FailToClone", doGitCloneFail(f.cloneUrl))
+		t.Run("FailToClone", doGitCloneFail(f.cloneURL))
 
 		withRegisteredKey(t, f.ctx, f.plainkey, nil, func(t *testing.T, plainKey api.PublicKey) {
 			// Can clone using the plain key
-			t.Run("CloneWithPlainKey", doGitClone(t.TempDir(), f.cloneUrl))
+			t.Run("CloneWithPlainKey", doGitClone(t.TempDir(), f.cloneURL))
 			withRegisteredKey(t, f.ctx, f.cakey, caOptions(""), func(t *testing.T, caKey api.PublicKey) {
 				withActiveKey(t, f.cakey.fileName, func() {
 					// Not allowed to use a CA key directly to push/pull
-					t.Run("FailToCloneWithCAKey", doGitCloneFail(f.cloneUrl))
+					t.Run("FailToCloneWithCAKey", doGitCloneFail(f.cloneURL))
 				})
 
 				userName := f.ctx.Username
 				withKeyFile(t, fmt.Sprintf("%s-ephemeralkey", userName), func(ephemeralkeyFile string) {
 					// This test must appear first, before ephemeralkeyFile is ever endorsed
-					t.Run("FailToCloneWithUnsignedEphemeralKey", doGitCloneFail(f.cloneUrl))
+					t.Run("FailToCloneWithUnsignedEphemeralKey", doGitCloneFail(f.cloneURL))
 
 					withKeyFile(t, fmt.Sprintf("%s-unregCA", userName), func(unregFile string) {
 						withActiveKey(t, ephemeralkeyFile, func() {
 							endorseKey(t, ephemeralkeyFile, unregFile, gossh.UserCert, []string{userName}, 60)
-							t.Run("FailToCloneWithUnregisteredCAKey", doGitCloneFail(f.cloneUrl))
+							t.Run("FailToCloneWithUnregisteredCAKey", doGitCloneFail(f.cloneURL))
 						})
 					})
 
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.HostCert, []string{userName}, 60)
-					t.Run("FailToCloneWithEphemeralKeyAndHostCert", doGitCloneFail(f.cloneUrl))
+					t.Run("FailToCloneWithEphemeralKeyAndHostCert", doGitCloneFail(f.cloneURL))
 
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, 60)
-					t.Run("CloneWithEphemeralKeyAndUserCert", doGitClone(t.TempDir(), f.cloneUrl))
+					t.Run("CloneWithEphemeralKeyAndUserCert", doGitClone(t.TempDir(), f.cloneURL))
 
 					endorseKey(t, ephemeralkeyFile, f.plainkey.fileName, gossh.UserCert, []string{userName}, 60)
-					t.Run("FailToCloneWithEphemeralKeySignedByPlainNonCAKey", doGitCloneFail(f.cloneUrl))
+					t.Run("FailToCloneWithEphemeralKeySignedByPlainNonCAKey", doGitCloneFail(f.cloneURL))
 
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, -60)
-					t.Run("FailToCloneWithEphemeralKeyExpiredCert", doGitCloneFail(f.cloneUrl))
+					t.Run("FailToCloneWithEphemeralKeyExpiredCert", doGitCloneFail(f.cloneURL))
 
 					endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, 60, 60, nil)
-					t.Run("FailToCloneWithFutureValidityCert", doGitCloneFail(f.cloneUrl))
+					t.Run("FailToCloneWithFutureValidityCert", doGitCloneFail(f.cloneURL))
 
 					defer test.MockVariableValue(&setting.SSH.EnableCertAuth, false)()
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{userName}, 60)
-					t.Run("FailToCloneWithEphemeralKeyAfterDisablingCertAuth", doGitCloneFail(f.cloneUrl))
+					t.Run("FailToCloneWithEphemeralKeyAfterDisablingCertAuth", doGitCloneFail(f.cloneURL))
 				})
 			})
 		})
@@ -341,9 +341,9 @@ func testPrincipalMatchingE2E(t *testing.T, u *url.URL) {
 					endorseKey(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, ssh.SplitPrincipals(c.Supplied), 60)
 					desc := fmt.Sprintf("allowed=%s supplied=%s ok=%v", c.Allowed, c.Supplied, c.Matched)
 					if c.Matched {
-						t.Run(desc, doGitClone(t.TempDir(), f.cloneUrl))
+						t.Run(desc, doGitClone(t.TempDir(), f.cloneURL))
 					} else {
-						t.Run(desc, doGitCloneFail(f.cloneUrl))
+						t.Run(desc, doGitCloneFail(f.cloneURL))
 					}
 				})
 			})
@@ -369,7 +369,7 @@ func testTamperedCertificates(t *testing.T, u *url.URL) {
 					{"signingkey", func(cert *gossh.Certificate) { cert.SignatureKey = cert.Key }},
 				} {
 					endorseKeyWithValidityOffset(t, ephemeralkeyFile, f.cakey.fileName, gossh.UserCert, []string{f.ctx.Username}, 60, 0, c.tamperFn)
-					t.Run("Tamper with "+c.desc, doGitCloneFail(f.cloneUrl))
+					t.Run("Tamper with "+c.desc, doGitCloneFail(f.cloneURL))
 				}
 			})
 		})
