@@ -4,6 +4,8 @@
 package asymkey
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	asymkey_model "forgejo.org/models/asymkey"
@@ -88,4 +90,80 @@ ssh-dss AAAAB3NzaC1kc3MAAACBAOChCC7lf6Uo9n7BmZ6M8St19PZf4Tn59NriyboW2x/DZuYAz3ib
 			DeletePublicKey(db.DefaultContext, user, key.ID)
 		}
 	}
+}
+
+// Duplicated in ssh_ca_key_test.go -- TODO: is there a clean way to factor out common test infrastructure?
+func caOptions(principals string, emptyPrincipalsAllowed ...bool) []string {
+	options := []string{`cert-authority`}
+	if principals != "" || (len(emptyPrincipalsAllowed) > 0 && emptyPrincipalsAllowed[0]) {
+		options = append(options, fmt.Sprintf(`principals="%s"`, principals))
+	}
+	return options
+}
+
+func TestAddLdapSSHCAKeys(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.SSH.RootPath, t.TempDir())()
+	defer test.MockVariableValue(&setting.SSH.EnableCertAuth, true)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	s := &auth.Source{ID: 1}
+
+	testCases := []struct {
+		keyOptions                                []string
+		acceptedWhenEnabled, acceptedWhenDisabled bool
+	}{
+		// CA key provisioned with principals absent SSH_ENABLE_CERT_AUTH true
+		// CA key provisioned with principals absent SSH_ENABLE_CERT_AUTH false - rejected
+		{caOptions(""), true, false},
+
+		// CA key provisioned with valid principals and SSH_ENABLE_CERT_AUTH true
+		// CA key provisioned with valid principals and SSH_ENABLE_CERT_AUTH false - rejected
+		{caOptions("a,b,c"), true, false},
+		{caOptions(user.LoginName), true, false},
+
+		// CA key provisioned with present but empty principals and SSH_ENABLE_CERT_AUTH true - rejected
+		// CA key provisioned with present but empty principals and SSH_ENABLE_CERT_AUTH false - rejected
+		{caOptions("", true), false, false},
+
+		// CA key provisioned with present but invalid principals and SSH_ENABLE_CERT_AUTH true - rejected
+		// CA key provisioned with present but invalid principals and SSH_ENABLE_CERT_AUTH false - rejected
+		{caOptions(`with, spaces, forbidden`), false, false},
+		{caOptions(`with,\backslash,forbidden`), false, false},
+		{caOptions("with,nul\000,forbidden"), false, false},
+	}
+
+	for i, kase := range testCases {
+		s.ID = (int64(i) * 2) + 30
+		key1 := insertAndRetrieveKey(t, user, s, kase.keyOptions)
+		s.ID = s.ID + 1
+		setting.SSH.EnableCertAuth = false
+		key2 := insertAndRetrieveKey(t, user, s, kase.keyOptions)
+		setting.SSH.EnableCertAuth = true
+
+		assert.Equal(t, kase.acceptedWhenEnabled, key1 != nil, "Expected key with options %v acceptedWhenEnabled=%v, was %v", kase.keyOptions, kase.acceptedWhenEnabled, key1)
+		assert.Equal(t, kase.acceptedWhenDisabled, key2 != nil, "Expected key with options %v acceptedWhenDisabled=%v, was %v", kase.keyOptions, kase.acceptedWhenDisabled, key2)
+
+		if key1 != nil {
+			DeletePublicKey(db.DefaultContext, user, key1.ID)
+		}
+		if key2 != nil {
+			DeletePublicKey(db.DefaultContext, user, key2.ID)
+		}
+	}
+}
+
+func insertAndRetrieveKey(t *testing.T, user *user_model.User, s *auth.Source, keyOptions []string) *asymkey_model.PublicKey {
+	keyContent := strings.Join(keyOptions, ",") + " ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICY0a0IrWYTsjdlgMFe61U3scKLy3hqgWHSUoorlNkhc ldapkey"
+	asymkey_model.AddPublicKeysBySource(db.DefaultContext, user, s, []string{keyContent})
+	keys, err := db.Find[asymkey_model.PublicKey](db.DefaultContext, asymkey_model.FindPublicKeyOptions{
+		OwnerID:       user.ID,
+		LoginSourceID: s.ID,
+	})
+	require.NoError(t, err)
+	if len(keys) > 0 {
+		assert.Contains(t, keyContent, keys[0].Content)
+		return keys[0]
+	}
+	return nil
 }
