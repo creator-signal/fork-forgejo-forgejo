@@ -20,6 +20,7 @@ const (
 	AgitForcePush   = Key("force-push")
 	AgitTitle       = Key("title")
 	AgitDescription = Key("description")
+	AgitSkipCI      = Key("ci.skip")
 
 	envPrefix = "GIT_PUSH_OPTION"
 	EnvCount  = envPrefix + "_COUNT"
@@ -65,7 +66,7 @@ func (o *gitPushOptions) Parse(data string) bool {
 		value = "true"
 	}
 	switch Key(key) {
-	case RepoPrivate, RepoTemplate, AgitTopic, AgitForcePush, AgitTitle, AgitDescription:
+	case RepoPrivate, RepoTemplate, AgitTopic, AgitForcePush, AgitTitle, AgitDescription, AgitSkipCI:
 		break
 	default:
 		return false

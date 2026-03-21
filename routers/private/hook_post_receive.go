@@ -54,6 +54,8 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 	updates := make([]*repo_module.PushUpdateOptions, 0, len(opts.OldCommitIDs))
 	wasEmpty := false
 
+	shouldSkipCI := !opts.GetGitPushOptions().Empty() && opts.GetGitPushOptions().GetBool(pushoptions.AgitSkipCI, false)
+
 	for i := range opts.OldCommitIDs {
 		refFullName := opts.RefFullNames[i]
 
@@ -80,6 +82,7 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 				RepoUserName: ownerName,
 				RepoName:     repoName,
 				TimeNano:     time.Now().UnixNano(),
+				SkipCI:       shouldSkipCI,
 			}
 			updates = append(updates, option)
 			if repo.IsEmpty && (refFullName.BranchName() == "master" || refFullName.BranchName() == "main") {

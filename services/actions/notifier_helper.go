@@ -315,6 +315,12 @@ func SkipPullRequestEvent(ctx context.Context, event webhook_module.HookEventTyp
 }
 
 func skipWorkflows(input *notifyInput, commit *git.Commit) bool {
+	// skip workflow if push option ci.skip is true; only affects branch pipelines, not merge request pipelines.
+	// https://docs.gitlab.com/topics/git/commit/#push-options-for-gitlab-cicd
+	if prp, ok := input.Payload.(*api.PushPayload); ok {
+		return prp.IsSkipCI
+	}
+
 	// skip workflow runs with a configured skip-ci string in commit message or pr title if the event is push or pull_request(_sync)
 	// https://docs.github.com/en/actions/managing-workflow-runs/skipping-workflow-runs
 	skipWorkflowEvents := []webhook_module.HookEventType{

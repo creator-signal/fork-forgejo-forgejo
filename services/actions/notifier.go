@@ -577,6 +577,7 @@ func (n *actionsNotifier) PushCommits(ctx context.Context, pusher *user_model.Us
 			Repo:       convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm_model.AccessModeOwner}),
 			Pusher:     apiPusher,
 			Sender:     apiPusher,
+			IsSkipCI:   opts.SkipCI,
 		}).
 		Notify(ctx)
 }

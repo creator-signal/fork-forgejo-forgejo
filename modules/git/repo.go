@@ -238,6 +238,7 @@ type PushOptions struct {
 	Env            []string
 	Timeout        time.Duration
 	PrivateKeyPath string
+	SkipCI         bool
 }
 
 // Push pushs local commits to given remote branch.
@@ -264,6 +265,9 @@ func Push(ctx context.Context, repoPath string, opts PushOptions) error {
 			" -o UserKnownHostsFile="+filepath.Join(setting.SSH.RootPath, "known_hosts"))
 	}
 
+	if opts.SkipCI {
+		cmd.AddArguments("-o ci.skip")
+	}
 	if opts.Force {
 		cmd.AddArguments("-f")
 	}

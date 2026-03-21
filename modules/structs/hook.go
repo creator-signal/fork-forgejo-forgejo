@@ -266,6 +266,7 @@ type PushPayload struct {
 	Repo         *Repository      `json:"repository"`
 	Pusher       *User            `json:"pusher"`
 	Sender       *User            `json:"sender"`
+	IsSkipCI     bool             `json:"skip_ci"`
 }
 
 // JSONPayload FIXME

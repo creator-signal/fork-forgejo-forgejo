@@ -62,6 +62,18 @@ func TestActionsNotifier_SkipPullRequestEvent(t *testing.T) {
 	assert.True(t, SkipPullRequestEvent(db.DefaultContext, webhook_module.HookEventPullRequestSync, repoID, commitSHA))
 }
 
+func TestActionsNotifier_skipWorkflows(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	assert.False(t, skipWorkflows(&notifyInput{Payload: &api.PushPayload{
+		IsSkipCI: false,
+	}}, &git.Commit{}))
+
+	assert.True(t, skipWorkflows(&notifyInput{Payload: &api.PushPayload{
+		IsSkipCI: true,
+	}}, &git.Commit{}))
+}
+
 func TestActionsNotifier_IssueCommentOnForkPullRequestEvent(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 

@@ -127,6 +127,7 @@ func pushUpdates(optsList []*repo_module.PushUpdateOptions) error {
 						RefFullName: git.RefNameFromTag(tagName),
 						OldCommitID: opts.OldCommitID,
 						NewCommitID: objectFormat.EmptyObjectID().String(),
+						SkipCI:      true,
 					}, repo_module.NewPushCommits())
 
 				delTags = append(delTags, tagName)
@@ -149,6 +150,7 @@ func pushUpdates(optsList []*repo_module.PushUpdateOptions) error {
 							RefFullName: opts.RefFullName,
 							OldCommitID: objectFormat.EmptyObjectID().String(),
 							NewCommitID: opts.NewCommitID,
+							SkipCI:      opts.SkipCI,
 						}, commits)
 
 					addTags = append(addTags, tagName)

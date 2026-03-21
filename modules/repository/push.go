@@ -17,6 +17,7 @@ type PushUpdateOptions struct {
 	OldCommitID  string
 	NewCommitID  string
 	TimeNano     int64
+	SkipCI       bool
 }
 
 // IsNewRef return true if it's a first-time push to a branch, tag or etc.
