@@ -5882,6 +5882,150 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/runs/{run_id}/artifacts": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "List artifacts for an action run",
+        "operationId": "ListActionRunArtifacts",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the action run",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActionArtifactList"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/actions/runs/{run_id}/artifacts/{artifact_name}": {
+      "get": {
+        "produces": [
+          "application/zip"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Download an artifact by name",
+        "operationId": "DownloadActionRunArtifact",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the action run",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the artifact",
+            "name": "artifact_name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "artifact content"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "repository"
+        ],
+        "summary": "Delete an artifact by name",
+        "operationId": "DeleteActionRunArtifact",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the action run",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the artifact",
+            "name": "artifact_name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "artifact marked for deletion"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/secrets": {
       "get": {
         "produces": [
@@ -22268,6 +22412,75 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "ActionArtifact": {
+      "description": "ActionArtifact represents an artifact of an action run",
+      "type": "object",
+      "properties": {
+        "archive_download_url": {
+          "description": "the URL to download the artifact",
+          "type": "string",
+          "x-go-name": "ArchiveDownloadURL"
+        },
+        "created_at": {
+          "description": "when the artifact was created",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "CreatedAt"
+        },
+        "expires_at": {
+          "description": "when the artifact expires",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "ExpiresAt"
+        },
+        "name": {
+          "description": "the artifact name",
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "size": {
+          "description": "the total size of the artifact in bytes",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Size"
+        },
+        "status": {
+          "description": "the status of the artifact",
+          "type": "string",
+          "enum": [
+            "completed",
+            "expired"
+          ],
+          "x-go-name": "Status"
+        },
+        "updated_at": {
+          "description": "when the artifact was last updated",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "UpdatedAt"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionArtifactResponse": {
+      "description": "ActionArtifactResponse returns a list of ActionArtifact",
+      "type": "object",
+      "properties": {
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionArtifact"
+          },
+          "x-go-name": "Entries"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalCount"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "ActionRun": {
       "description": "ActionRun represents an action run",
       "type": "object",
@@ -30314,6 +30527,12 @@
           "format": "int64",
           "description": "The total number of access tokens"
         }
+      }
+    },
+    "ActionArtifactList": {
+      "description": "ActionArtifactList is a list of action artifacts",
+      "schema": {
+        "$ref": "#/definitions/ActionArtifactResponse"
       }
     },
     "ActionRun": {

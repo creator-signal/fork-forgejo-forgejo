@@ -89,3 +89,10 @@ type swaggerRegisterRunnerResponse struct {
 	// in: body
 	Body api.RegisterRunnerResponse `json:"body"`
 }
+
+// ActionArtifactList is a list of action artifacts
+// swagger:response ActionArtifactList
+type swaggerActionArtifactList struct {
+	// in:body
+	Body api.ActionArtifactResponse `json:"body"`
+}

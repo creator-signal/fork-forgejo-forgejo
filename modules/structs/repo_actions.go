@@ -83,3 +83,32 @@ type ActionRunner struct {
 	// Indicates if runner is ephemeral runner
 	Ephemeral bool `json:"ephemeral"`
 }
+
+// ActionArtifact represents an artifact of an action run
+// swagger:model
+type ActionArtifact struct {
+	// the artifact name
+	Name string `json:"name"`
+	// the total size of the artifact in bytes
+	Size int64 `json:"size"`
+	// the status of the artifact
+	// enum: ["completed", "expired"]
+	Status string `json:"status"`
+	// the URL to download the artifact
+	ArchiveDownloadURL string `json:"archive_download_url"`
+	// when the artifact was created
+	// swagger:strfmt date-time
+	CreatedAt time.Time `json:"created_at"`
+	// when the artifact was last updated
+	// swagger:strfmt date-time
+	UpdatedAt time.Time `json:"updated_at"`
+	// when the artifact expires
+	// swagger:strfmt date-time
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// ActionArtifactResponse returns a list of ActionArtifact
+type ActionArtifactResponse struct {
+	Entries    []*ActionArtifact `json:"artifacts"`
+	TotalCount int64             `json:"total_count"`
+}
