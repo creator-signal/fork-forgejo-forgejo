@@ -35,7 +35,7 @@ const issueSuggestions = debouncePromise(300, async (text, key) => {
     // then no issuePathInfo.indexString here, it is only used to exclude the current issue when "matchIssue"
   }
 
-  let isPull = null;
+  let isPull;
   if (key === '!') {
     isPull = true;
   }
