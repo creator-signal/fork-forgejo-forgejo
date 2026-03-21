@@ -14,16 +14,24 @@ import (
 
 // IssueSuggestions returns a list of issue suggestions
 func IssueSuggestions(ctx *context.Context) {
-	keyword := ctx.Req.FormValue("q")
+	keyword := ctx.FormString("q")
+	isPull := ctx.FormOptionalBool("pull")
 
-	canReadIssues := ctx.Repo.CanRead(unit.TypeIssues)
-	canReadPulls := ctx.Repo.CanRead(unit.TypePullRequests)
+	if has, value := isPull.Get(); has {
+		if !ctx.Repo.CanReadIssuesOrPulls(value) {
+			ctx.NotFound(ctx.Req.URL.RequestURI(), nil)
+		}
+	} else {
+		canReadIssues := ctx.Repo.CanRead(unit.TypeIssues)
+		canReadPulls := ctx.Repo.CanRead(unit.TypePullRequests)
 
-	var isPull optional.Option[bool]
-	if canReadPulls && !canReadIssues {
-		isPull = optional.Some(true)
-	} else if canReadIssues && !canReadPulls {
-		isPull = optional.Some(false)
+		if !canReadPulls && !canReadIssues {
+			ctx.NotFound(ctx.Req.URL.RequestURI(), nil)
+		} else if canReadPulls && !canReadIssues {
+			isPull = optional.Some(true)
+		} else if canReadIssues && !canReadPulls {
+			isPull = optional.Some(false)
+		}
 	}
 
 	suggestions, err := issue_service.GetSuggestions(ctx, ctx.Repo.Repository, isPull, keyword)

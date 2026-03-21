@@ -38,8 +38,12 @@ export function matchMention(queryText) {
   return sortAndReduce(results);
 }
 
-export async function matchIssue(owner, repo, issueIndexStr, query) {
-  const res = await GET(`${window.config.appSubUrl}/${owner}/${repo}/issues/suggestions?q=${encodeURIComponent(query)}`);
+export async function matchIssue(owner, repo, issueIndexStr, query, isPull = null) {
+  let url = `${window.config.appSubUrl}/${owner}/${repo}/issues/suggestions?q=${encodeURIComponent(query)}`
+  if (isPull != null) {
+    url += "&pull=" + (isPull ? '1' : '0')
+  }
+  const res = await GET(url);
 
   const issues = await res.json();
   const issueIndex = parseInt(issueIndexStr);

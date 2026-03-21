@@ -26,9 +26,7 @@ const debouncePromise = (delay, fn) => {
   };
 };
 
-const issueSuggestions = debouncePromise(300, async (text) => {
-  const key = '#';
-
+const issueSuggestions = debouncePromise(300, async (text, key) => {
   const issuePathInfo = parseIssueHref(window.location.href);
   if (!issuePathInfo.owner) {
     const repoOwnerPathInfo = parseRepoOwnerPathInfo(window.location.pathname);
@@ -37,7 +35,12 @@ const issueSuggestions = debouncePromise(300, async (text) => {
     // then no issuePathInfo.indexString here, it is only used to exclude the current issue when "matchIssue"
   }
 
-  const matches = await matchIssue(issuePathInfo.owner, issuePathInfo.repo, issuePathInfo.index, text);
+  let isPull = null;
+  if (key === '!') {
+    isPull = true;
+  }
+
+  const matches = await matchIssue(issuePathInfo.owner, issuePathInfo.repo, issuePathInfo.index, text, isPull);
   if (!matches.length) return {matched: false};
 
   const ul = document.createElement('ul');
@@ -45,7 +48,7 @@ const issueSuggestions = debouncePromise(300, async (text) => {
   for (const issue of matches) {
     const li = document.createElement('li');
     li.setAttribute('role', 'option');
-    li.setAttribute('data-value', `${key}${issue.number}`);
+    li.setAttribute('data-value', `${issue.is_pr ? '!' : '#'}${issue.number}`);
     li.classList.add('tw-flex', 'tw-gap-2');
 
     const icon = svg(getIssueIcon(issue), 16, ['text', getIssueColor(issue)].join(' '));
@@ -120,14 +123,14 @@ export function initTextExpander(expander) {
       }
 
       provide({matched: true, fragment: ul});
-    } else if (key === '#') {
-      provide(issueSuggestions(text));
+    } else if (key === '#' || key === '!') {
+      provide(issueSuggestions(text, key));
     }
   });
   expander.addEventListener('text-expander-value', ({detail}) => {
     if (detail?.item) {
-      // add a space after @mentions and #issue as it's likely the user wants one
-      const suffix = ['@', '#'].includes(detail.key) ? ' ' : '';
+      // add a space after @mentions, #issue and !pr as it's likely the user wants one
+      const suffix = ['@', '#', '!'].includes(detail.key) ? ' ' : '';
       detail.value = `${detail.item.getAttribute('data-value')}${suffix}`;
     }
   });
