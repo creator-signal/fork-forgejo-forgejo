@@ -59,19 +59,14 @@
 		"many": "%d месяцаў таму"
 	},
 	"relativetime.1day": "учора",
-	"relativetime.2days": "два дні таму",
 	"relativetime.1week": "на мінулай тыдні",
-	"relativetime.2weeks": "два тыдні таму",
 	"relativetime.1month": "у мінулым месяцы",
-	"relativetime.2months": "два месяцы таму",
 	"relativetime.1year": "у мінулым годзе",
-	"relativetime.2years": "два гады таму",
 	"repo.issues.filter_poster.hint": "Фільтраваць па аўтары",
 	"repo.issues.filter_assignee.hint": "Фільтраваць па прызначаным карыстальніку",
 	"repo.issues.filter_reviewers.hint": "Фільтраваць па карыстальніку, які праверыў",
 	"repo.issues.filter_mention.hint": "Фільтраваць па згаданым карыстальніку",
 	"repo.issues.filter_modified.hint": "Фільтраваць па дате апошняй змены",
-	"repo.issues.filter_sort.hint": "Сартаваць па: створаны/каментары/абноўлены/дэдлайн",
 	"repo.pulls.poster_manage_approval": "Кіраваць зацвярджэннем",
 	"repo.pulls.poster_requires_approval": "Некаторыя працэсы <a href=\"%[1]s\">чакаюць рэвізіі.</a>",
 	"repo.pulls.poster_requires_approval.tooltip": "Аўтар гэтага запыту на зліццё не з’яўляецца надзейным для запуску працэсаў, якія запускаюцца запытам на зліццё, створаным з фаркаванага рэпазіторыя або з AGit. Працэсы, якія запускаюцца падзеяй `pull_request`, не будуць выконвацца, пакуль іх не зацвердзяць.",
@@ -224,5 +219,5 @@
 		"few": "%s актыўныя запыты на зліццё",
 		"many": "%s актыўных запытав на зліццё"
 	},
-	"meta.last_line": "Слава вялікай бульбе! Лукашэнка, гары ў адку! Kiss (this string was needed to make weblate regenerate the file and can be removed)"
+	"meta.last_line": "Слава вялікай бульбе! Лукашэнка, гары ў адку! Kiss"
 }

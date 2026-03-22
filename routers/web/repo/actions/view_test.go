@@ -168,6 +168,7 @@ func baseExpectedViewResponse() *ViewResponse {
 					LocaleCommit:   "actions.runs.commit",
 					LocalePushedBy: "actions.runs.pushed_by",
 					LocaleWorkflow: "actions.runs.workflow",
+					LocaleAllRuns:  "actions.runs.all_runs_link",
 					ShortSha:       "c2d72f5484",
 					Link:           "/user5/repo4/commit/c2d72f548424103f01ee1dc02889c1e2bff816b0",
 					Pusher: ViewUser{
@@ -520,6 +521,9 @@ func TestActionsViewRedirectToLatestAttempt(t *testing.T) {
 }
 
 func TestActionsRerun(t *testing.T) {
+	defer unittest.OverrideFixtures("routers/web/repo/actions/TestActionsRerun")()
+	unittest.PrepareTestEnv(t)
+
 	tests := []struct {
 		name         string
 		runIndex     int64
@@ -529,20 +533,20 @@ func TestActionsRerun(t *testing.T) {
 	}{
 		{
 			name:        "rerun all",
-			runIndex:    187,
+			runIndex:    138574,
 			jobIndex:    -1,
-			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/0/attempt/2",
+			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/138574/jobs/0/attempt/3",
 		},
 		{
 			name:        "rerun job",
-			runIndex:    187,
+			runIndex:    138574,
 			jobIndex:    2,
-			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/2/attempt/3",
+			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/138574/jobs/2/attempt/6",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, resp := contexttest.MockContext(t, "user2/repo1/actions/runs/187/rerun")
+			ctx, resp := contexttest.MockContext(t, "user2/repo1/actions/runs/138574/rerun")
 			contexttest.LoadUser(t, ctx, 2)
 			contexttest.LoadRepo(t, ctx, 1)
 			ctx.SetParams(":run", fmt.Sprintf("%d", tt.runIndex))

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	activities_model "forgejo.org/models/activities"
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	"forgejo.org/models/organization"
 	"forgejo.org/models/perm"
@@ -131,6 +132,8 @@ func Search(ctx *context.APIContext) {
 	//   "422":
 	//     "$ref": "#/responses/validationError"
 
+	// Note that ctx.Resource's `RepoFilter()` will be added below, which may implement a PAT's scope to only display
+	// public repos regardless of the request for private repos in the API call.
 	private := ctx.IsSigned && (ctx.FormString("private") == "" || ctx.FormBool("private"))
 	if ctx.PublicOnly {
 		private = false
@@ -149,6 +152,8 @@ func Search(ctx *context.APIContext) {
 		Template:           optional.None[bool](),
 		StarredByID:        ctx.FormInt64("starredBy"),
 		IncludeDescription: ctx.FormBool("includeDesc"),
+
+		AuthorizationReducer: ctx.Reducer,
 	}
 
 	if ctx.FormString("template") != "" {
@@ -172,6 +177,7 @@ func Search(ctx *context.APIContext) {
 		opts.Mirror = optional.Some(false)
 		opts.Collaborate = optional.Some(true)
 	case "":
+		break
 	default:
 		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("Invalid search mode: \"%s\"", mode))
 		return
@@ -222,13 +228,19 @@ func Search(ctx *context.APIContext) {
 			})
 			return
 		}
-		permission, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, api.SearchError{
 				OK:    false,
 				Error: err.Error(),
 			})
+		} else if !permission.HasAccess() {
+			// It shouldn't happen that a repo is returned from GetTeamRepositories which we have no access to at all.
+			// Due to the pagination of the API it doesn't make sense to skip it, as we wouldn't be giving the right
+			// number of results back to the API consumer.
+			ctx.Error(http.StatusInternalServerError, "InvalidAuthorizationReducer", "Repository was available from SearchRepository, but not readable.")
 		}
+
 		results[i] = convert.ToRepo(ctx, repo, permission)
 	}
 	ctx.SetLinkHeader(int(count), opts.PageSize)
@@ -393,10 +405,10 @@ func Generate(ctx *context.APIContext) {
 		return
 	}
 
-	ctxUser := ctx.Doer
+	targetOwner := ctx.Doer
 	var err error
-	if form.Owner != ctxUser.Name {
-		ctxUser, err = user_model.GetUserByName(ctx, form.Owner)
+	if form.Owner != targetOwner.Name {
+		targetOwner, err = user_model.GetUserByName(ctx, form.Owner)
 		if err != nil {
 			if user_model.IsErrUserNotExist(err) {
 				ctx.JSON(http.StatusNotFound, map[string]any{
@@ -409,13 +421,13 @@ func Generate(ctx *context.APIContext) {
 			return
 		}
 
-		if !ctx.Doer.IsAdmin && !ctxUser.IsOrganization() {
+		if !ctx.IsUserSiteAdmin() && !targetOwner.IsOrganization() {
 			ctx.Error(http.StatusForbidden, "", "Only admin can generate repository for other user.")
 			return
 		}
 
-		if !ctx.Doer.IsAdmin {
-			canCreate, err := organization.OrgFromUser(ctxUser).CanCreateOrgRepo(ctx, ctx.Doer.ID)
+		if !ctx.IsUserSiteAdmin() {
+			canCreate, err := organization.OrgFromUser(targetOwner).CanCreateOrgRepo(ctx, ctx.Doer.ID)
 			if err != nil {
 				ctx.ServerError("CanCreateOrgRepo", err)
 				return
@@ -424,13 +436,23 @@ func Generate(ctx *context.APIContext) {
 				return
 			}
 		}
+
+		context.CheckRuntimeDeterminedScope(ctx, auth_model.AccessTokenScopeCategoryOrganization, auth_model.Write, "token requires scope write:organization to create a repository owned by a user")
+		if ctx.Written() {
+			return
+		}
+	} else {
+		context.CheckRuntimeDeterminedScope(ctx, auth_model.AccessTokenScopeCategoryUser, auth_model.Write, "token requires scope write:user to create a repository owned by a user")
+		if ctx.Written() {
+			return
+		}
 	}
 
-	if !ctx.CheckQuota(quota_model.LimitSubjectSizeReposAll, ctxUser.ID, ctxUser.Name) {
+	if !ctx.CheckQuota(quota_model.LimitSubjectSizeReposAll, targetOwner.ID, targetOwner.Name) {
 		return
 	}
 
-	repo, err := repo_service.GenerateRepository(ctx, ctx.Doer, ctxUser, ctx.Repo.Repository, opts)
+	repo, err := repo_service.GenerateRepository(ctx, ctx.Doer, targetOwner, ctx.Repo.Repository, opts)
 	if err != nil {
 		if repo_model.IsErrRepoAlreadyExist(err) {
 			ctx.Error(http.StatusConflict, "", "The repository with the same name already exists.")
@@ -442,7 +464,7 @@ func Generate(ctx *context.APIContext) {
 		}
 		return
 	}
-	log.Trace("Repository generated [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
+	log.Trace("Repository generated [%d]: %s/%s", repo.ID, targetOwner.Name, repo.Name)
 
 	ctx.JSON(http.StatusCreated, convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}))
 }
@@ -524,7 +546,7 @@ func CreateOrgRepo(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.Doer.IsAdmin {
+	if !ctx.IsUserSiteAdmin() {
 		canCreate, err := org.CanCreateOrgRepo(ctx, ctx.Doer.ID)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "CanCreateOrgRepo", err)
@@ -599,9 +621,9 @@ func GetByID(ctx *context.APIContext) {
 		return
 	}
 
-	permission, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermission", err)
+		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 		return
 	} else if !permission.HasAccess() {
 		ctx.NotFound()
@@ -766,7 +788,7 @@ func updateBasicProperties(ctx *context.APIContext, opts api.EditRepoOption) err
 
 		visibilityChanged = repo.IsPrivate != *opts.Private
 		// when ForcePrivate enabled, you could change public repo to private, but only admin users can change private to public
-		if visibilityChanged && setting.Repository.ForcePrivate && !*opts.Private && !ctx.Doer.IsAdmin {
+		if visibilityChanged && setting.Repository.ForcePrivate && !*opts.Private && !ctx.IsUserSiteAdmin() {
 			err := errors.New("cannot change private repository to public")
 			ctx.Error(http.StatusUnprocessableEntity, "Force Private enabled", err)
 			return err

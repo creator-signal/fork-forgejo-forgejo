@@ -1,4 +1,9 @@
 {
+	"actions.runners.labels": "Štítky",
+	"gpg.error.no_committer_account": "Žiadny účet nie je prepojený s e-mailovou adresou prispievateľa",
+	"gpg.error.not_signed_commit": "Nie je podpísaný commit",
+	"packages.alpine.repository.repositories": "Repozitáre",
+	"packages.container.labels": "Štítky",
 	"fork.n_forks": {
 		"one": "%s fork",
 		"few": "%s forky",
@@ -26,7 +31,6 @@
 	"relativetime.now": "teraz",
 	"relativetime.future": "v budúcnosti",
 	"relativetime.1week": "posledný týždeň",
-	"relativetime.2months": "pred dvoma mesiacmi",
 	"relativetime.days": {
 		"one": "pred %d dňom",
 		"few": "pred %d dňami",
@@ -38,7 +42,6 @@
 	"followers.incoming.list.none": "Nikto nesleduje tohoto užívateľa.",
 	"followers.outgoing.list.self.none": "Nikoho nesledujete.",
 	"followers.outgoing.list.none": "%s nesleduje nikoho.",
-	"relativetime.2weeks": "pred dvoma týždňami",
 	"relativetime.1month": "posledný mesiac",
 	"relativetime.months": {
 		"one": "pred %d mesiacom",
@@ -55,7 +58,6 @@
 		"few": "pred %d týždňami",
 		"other": "pred %d týždňami"
 	},
-	"relativetime.2days": "pred dvoma dňami",
 	"relativetime.1day": "včera",
 	"relativetime.mins": {
 		"one": "pred %d minútou",
@@ -68,7 +70,6 @@
 		"other": "pred %d hodinami"
 	},
 	"relativetime.1year": "minulý rok",
-	"relativetime.2years": "pred dvoma rokmi",
 	"repo.form.cannot_create": "Všetky priestory, v ktorých môžete vytvárať repozitáre, dosiahli svoj limit.",
 	"repo.issue_indexer.title": "Indexovanie problémov",
 	"editor.textarea.shift_tab_hint": "V tomto riadku nie je žiadne odsadenie. Pre opustenie editoru stlačte znovu <kbd>Shift</kbd> + <kbd>Tab</kbd> alebo <kbd>Escape</kbd>.",
@@ -133,7 +134,7 @@
 	"settings.twofa_reenroll.description": "Znovu zaregistrujte Vaše dvojfaktorové overenie",
 	"settings.must_enable_2fa": "Táto inštancia Forgejo vyžaduje, aby používatelia povolili dvojfaktorové overenie predtým, ako budú môcť pristupovať k svojim účtom.",
 	"error.must_enable_2fa": "Táto inštancia Forgejo vyžaduje, aby používatelia povolili dvojfaktorové overenie predtým, ako budú môcť pristupovať k svojim účtom. Povolíte ho tu: %s",
-	"meta.last_line": "Ďakujem za preklad Forgejo! Tento riadok používatelia nevidia, ale slúži na iné účely v správe prekladov. Namiesto prekladu môžete do prekladu vložiť zaujímavý fakt.\n(this string was needed to make weblate regenerate the file and can be removed)",
+	"meta.last_line": "Ďakujem za preklad Forgejo! Tento riadok používatelia nevidia, ale slúži na iné účely v správe prekladov. Namiesto prekladu môžete do prekladu vložiť zaujímavý fakt.",
 	"moderation.abuse_category": "Kategória",
 	"warning.repository.out_of_sync": "Databázová reprezentácia tohto repozitára nie je synchronizovaná. Ak sa toto upozornenie zobrazuje aj po odoslaní commitu do tohto repozitára, kontaktujte administrátora.",
 	"repo.pulls.already_merged": "Zlúčenie zlyhalo: Táto žiadosť už bola spracovaná.",
@@ -156,5 +157,15 @@
 	"migrate.pagure.description": "Migrujte dáta z pagure.io alebo iných inštancií Pagure.",
 	"migrate.pagure.incorrect_url": "Bola zadaná nesprávna URL adresa zdrojového repozitáru",
 	"migrate.pagure.project_url": "URL adresa projektu Pagure",
-	"migrate.pagure.token_label": "Token"
+	"migrate.pagure.token_label": "Token",
+	"watch.n_watchers": {
+		"one": "sledovateľ",
+		"few": "sledovatelia",
+		"other": "sledovateľov"
+	},
+	"repo.issues.filter_poster.hint": "Filtrovať podľa autora",
+	"repo.issues.filter_mention.hint": "Filtrovať podľa spomenutého použivateľa",
+	"repo.issues.filter_modified.hint": "Filtrovať podľa dátumu poslednej úpravy",
+	"repo.issues.filter_assignee.hint": "Filtrovať podľa priradeného používateľa",
+	"issues.updated": "aktualizované %s"
 }

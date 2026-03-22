@@ -10,7 +10,6 @@ import (
 
 	"forgejo.org/internal/edu"
 	"forgejo.org/models"
-	asymkey_model "forgejo.org/models/asymkey"
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/cache"
 	"forgejo.org/modules/eventsource"
@@ -96,10 +95,6 @@ func syncAppConfForGit(ctx context.Context) error {
 	if updated {
 		log.Info("re-sync repository hooks ...")
 		mustInitCtx(ctx, repo_service.SyncRepositoryHooks)
-
-		log.Info("re-write ssh public keys ...")
-		mustInitCtx(ctx, asymkey_model.RewriteAllPublicKeys)
-
 		return system.AppState.Set(ctx, runtimeState)
 	}
 	return nil

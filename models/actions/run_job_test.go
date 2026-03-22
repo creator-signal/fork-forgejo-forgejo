@@ -8,7 +8,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
-	"forgejo.org/modules/test"
+	"forgejo.org/modules/timeutil"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
@@ -283,59 +283,58 @@ func TestActionRunJob_HasIncompleteWith(t *testing.T) {
 	}
 }
 
-func TestUpdateRunJobWithoutNotificationConcurrency(t *testing.T) {
+func TestRunHasOtherJobs(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	testJob := unittest.AssertExistsAndLoadBean(t, &ActionRunJob{ID: 192})
-	testRun := unittest.AssertExistsAndLoadBean(t, &ActionRun{ID: testJob.RunID})
+	jobs, err := GetRunJobsByRunID(t.Context(), 791)
+	require.NoError(t, err)
+	assert.Len(t, jobs, 1)
 
-	// UpdateRunJobWithoutNotification is intended to update the related `ActionRun`, setting its `Started`, `Stopped`,
-	// and `Status` field to an appropriate state considering the job update.  It has a retry loop to perform this work
-	// even if `ActionRun` is updated concurrently.  To test that loop, we're going to intercept the invocation of
-	// AggregateJobStatus and freeze that update process, perform a different modification to the run, and then release
-	// the frozen test.  The retry loop should trigger and a second pass updating the `ActionRun` should succeed.
+	has, err := RunHasOtherJobs(t.Context(), 791, nil)
+	require.NoError(t, err)
+	assert.True(t, has)
 
-	syncBeginPoint := make(chan any)
-	syncMidPoint := make(chan any)
-	syncEndPoint := make(chan any)
-	firstPass := true
+	has, err = RunHasOtherJobs(t.Context(), 791, []*ActionRunJob{})
+	require.NoError(t, err)
+	assert.True(t, has)
 
-	defer test.MockVariableValue(&AggregateJobStatus, func(jobs []*ActionRunJob) Status {
-		// Synchronization here needs to handle the faact that `AggregateJobStatus` will be invoked twice -- pause
-		// correctly on the first run, but continue with no concerns on the second run.
-		if firstPass {
-			firstPass = false
-			// Signal that we're in AggregateJobStatus()...
-			close(syncBeginPoint)
-			// Wait until signalled to continue
-			<-syncMidPoint
-		}
-		return StatusCancelled
-	})()
+	has, err = RunHasOtherJobs(t.Context(), 791, jobs)
+	require.NoError(t, err)
+	assert.False(t, has)
+}
 
-	go func() {
-		testJob.Status = StatusCancelled
-		updated, err := UpdateRunJobWithoutNotification(t.Context(), testJob, nil, "status")
-		close(syncEndPoint) // close before asserts, so that the test doesn't hang if it fails
-		require.NoError(t, err)
-		assert.EqualValues(t, 1, updated)
-	}()
-
-	// Wait until UpdateRunJobWithoutNotification reaches AggregateJobStatus()...
-	<-syncBeginPoint
-
-	// Perform a concurrent modification to `ActionRun`
-	testRun.Status = StatusSkipped
-	err := UpdateRunWithoutNotification(t.Context(), testRun, "status")
+func TestActionRunJobPrepareNextAttempt(t *testing.T) {
+	job := ActionRunJob{ID: 46}
+	err := job.PrepareNextAttempt(StatusWaiting)
 	require.NoError(t, err)
 
-	// Signal for AggregateJobStatus to continue
-	close(syncMidPoint)
+	assert.Equal(t, int64(1), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusWaiting, job.Status)
 
-	// Wait for goroutine to complete
-	<-syncEndPoint
+	job.Started = timeutil.TimeStampNow()
+	job.Stopped = timeutil.TimeStampNow()
+	job.TaskID = int64(59)
+	job.Status = StatusFailure
 
-	// Reload the `ActionRun`
-	testRun = unittest.AssertExistsAndLoadBean(t, &ActionRun{ID: testJob.RunID})
-	assert.Equal(t, StatusCancelled, testRun.Status)
+	err = job.PrepareNextAttempt(StatusBlocked)
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(2), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusBlocked, job.Status)
+
+	// The job hasn't finished yet. Preparing a next attempt should not be possible. It should be left untouched.
+	err = job.PrepareNextAttempt(StatusWaiting)
+	require.ErrorContains(t, err, "cannot prepare next attempt because job 46 is active: blocked")
+
+	assert.Equal(t, int64(2), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusBlocked, job.Status)
 }
