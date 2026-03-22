@@ -556,3 +556,142 @@ if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
 *   **Как подписаться на события?** → `internal/edu/notifier.go` → `notify.RegisterNotifier`
 
 Код модульный: изменения в `internal/edu/` не влияют на ядро Forgejo. Удачи!
+
+---
+
+## Часть 5: Обновление из upstream Forgejo
+
+Образовательное расширение — это форк Forgejo. Периодически нужно подтягивать изменения из основного репозитория. Благодаря минимальным вмешательствам в ядро (всего 4 строки в 2 файлах), конфликты при мерже будут редкими и тривиальными.
+
+### 5.1 Точки вмешательства в ядро
+
+| Файл | Изменение | Строки |
+|------|-----------|--------|
+| `routers/init.go` | Импорт `"forgejo.org/internal/edu"` | +1 строка в `import` |
+| `routers/init.go` | `mustInitCtx(ctx, edu.Init)` | +1 строка после `repo_service.Init` |
+| `routers/web/web.go` | Импорт `"forgejo.org/routers/web/edu"` | +1 строка в `import` |
+| `routers/web/web.go` | `edu.RegisterRoutes(m, reqSignIn)` | +1 строка перед `// ***** START: User *****` |
+
+Всё остальное (модели, сервисы, роутеры, шаблоны, локали) живёт в изолированных директориях (`internal/edu/`, `routers/web/edu/`, `templates/edu/`) и не конфликтует с upstream.
+
+### 5.2 Автоматический мерж (рекомендуется)
+
+В корне репозитория есть скрипт `edu_merge_upstream.sh`, который автоматизирует весь процесс:
+
+```bash
+./edu_merge_upstream.sh           # мерж из upstream/forgejo
+./edu_merge_upstream.sh v12.0     # мерж из конкретной ветки
+```
+
+Скрипт автоматически:
+- Добавляет upstream remote (если нет)
+- Создаёт ветку `merge-upstream-YYYY-MM-DD`
+- Выполняет мерж
+- Резолвит `go.sum`/`go.mod` конфликты через `go mod tidy`
+- Проверяет что edu-строки в ядре не потеряны
+- Если есть сложные конфликты — останавливается и просит ручной помощи
+
+### 5.3 Ручная инструкция
+
+Если скрипт недоступен или нужен полный контроль:
+
+```bash
+# 1. Добавить upstream remote (один раз)
+git remote add upstream https://codeberg.org/forgejo/forgejo.git
+
+# 2. Получить свежие изменения
+git fetch upstream
+
+# 3. Создать ветку для мержа
+git checkout forgejo
+git checkout -b merge-upstream-YYYY-MM-DD
+
+# 4. Выполнить мерж
+git merge upstream/forgejo
+
+# 5. Разрешить конфликты (см. ниже)
+
+# 6. Проверить сборку
+make build
+
+# 7. Запустить тесты
+make test-sqlite#TestEdu
+
+# 8. Создать PR для review
+```
+
+### 5.4 Типичные конфликты и их решение
+
+#### `go.sum` (будет конфликтовать почти всегда)
+Это автогенерируемый файл. Резолвить руками не нужно:
+```bash
+git checkout --theirs go.sum
+go mod tidy
+git add go.sum
+```
+
+#### `go.mod` (редко)
+Если upstream обновил Go-зависимости:
+```bash
+# Принять upstream версию, затем добавить наши зависимости обратно (если есть)
+git checkout --theirs go.mod
+go mod tidy
+git add go.mod
+```
+
+#### `routers/web/web.go` (редко)
+Upstream может добавить новые роуты рядом с нашей точкой вставки. Нужно принять обе стороны:
+1. Оставить все upstream изменения
+2. Убедиться что `"forgejo.org/routers/web/edu"` есть в `import`
+3. Убедиться что `edu.RegisterRoutes(m, reqSignIn)` стоит перед `// ***** START: User *****`
+```bash
+# После ручной правки:
+git add routers/web/web.go
+```
+
+#### `routers/init.go` (очень редко)
+Аналогично web.go — убедиться что наши 2 строки на месте:
+- `"forgejo.org/internal/edu"` в импорте
+- `mustInitCtx(ctx, edu.Init)` после `repo_service.Init`
+
+### 5.5 Верификация после мержа
+
+```bash
+# Сборка
+make build
+
+# Edu-тесты
+make test-sqlite#TestEdu
+
+# Юнит-тесты edu
+go test ./internal/edu/...
+
+# Полный тест-сьют (опционально, долго)
+make test
+```
+
+### 5.6 Деплой после мержа
+
+Время простоя при обновлении — **минимальное** (1–5 минут):
+
+1. **Сборка** (`make build`) — 3–10 минут (зависит от сервера)
+2. **Остановка сервиса** → **Запуск новой версии** — секунды
+3. **Миграция БД** — автоматическая. Xorm `Sync()` при старте добавит новые колонки/таблицы. Edu-таблицы мигрируются через `edu.Init()`.
+
+Данные не теряются. Откат — запустить предыдущий бинарник.
+
+```bash
+# Типичный деплой:
+cd /path/to/forgejo-edu
+git pull
+make build
+sudo systemctl restart forgejo
+# Готово. Forgejo поднимется за ~5 секунд.
+```
+
+### 5.7 Рекомендации
+
+- **Мержить регулярно** (раз в 1–2 месяца). Чем реже — тем больше конфликтов.
+- **Не модифицировать файлы ядра** без крайней необходимости. Все новые фичи — в `internal/edu/`, `routers/web/edu/`, `templates/edu/`.
+- **Использовать extension points Forgejo** где возможно (`templates/custom/`, `notify.RegisterNotifier`, `i18n.AddToLocaleFromJSON`).
+- **`go.sum` конфликты — нормально**. Это не проблема, а рутина. `go mod tidy` фиксит их за секунду.
