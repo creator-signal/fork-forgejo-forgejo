@@ -13,6 +13,7 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/test"
+	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"code.forgejo.org/forgejo/runner/v12/act/model"
@@ -276,6 +277,20 @@ jobs:
     steps: []
 `
 
+type callArgsActionRunNowDone struct {
+	run         *actions_model.ActionRun
+	priorStatus actions_model.Status
+	lastRun     *actions_model.ActionRun
+}
+type mockNotifier struct {
+	notify_service.NullNotifier
+	calls []*callArgsActionRunNowDone
+}
+
+func (m *mockNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun) {
+	m.calls = append(m.calls, &callArgsActionRunNowDone{run, priorStatus, lastRun})
+}
+
 func Test_tryHandleIncompleteMatrix(t *testing.T) {
 	// Shouldn't get any decoding errors during this test -- pop them up from a log warning to a test fatal error.
 	defer test.MockVariableValue(&model.OnDecodeNodeError, func(node yaml.Node, out any, err error) {
@@ -300,6 +315,7 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 		needs                         map[string][]string
 		expectIncompleteJob           []string
 		localReusableWorkflowCallArgs *localReusableWorkflowCallArgs
+		actionRunStatusChange         actions_model.Status
 	}{
 		{
 			name:     "not incomplete",
@@ -310,6 +326,12 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 			runJobID:    601,
 			consumed:    true,
 			runJobNames: []string{"define-matrix", "produce-artifacts (blue)", "produce-artifacts (green)", "produce-artifacts (red)"},
+			needs: map[string][]string{
+				"define-matrix":             nil,
+				"produce-artifacts (blue)":  {"define-matrix"},
+				"produce-artifacts (green)": {"define-matrix"},
+				"produce-artifacts (red)":   {"define-matrix"},
+			},
 		},
 		{
 			name:        "needs an incomplete job",
@@ -474,8 +496,8 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 			},
 			needs: map[string][]string{
 				"define-workflow-call":    nil,
-				"inner my-workflow-input": nil,
-				"perform-workflow-call":   {"perform-workflow-call.inner_job"},
+				"inner my-workflow-input": {"define-workflow-call"},
+				"perform-workflow-call":   {"define-workflow-call", "perform-workflow-call.inner_job"},
 			},
 		},
 		// Before reusable workflow expansion, there weren't any cases where evaluating a job in the job emitter could
@@ -499,9 +521,10 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 			},
 			needs: map[string][]string{
 				"define-workflow-call":                   nil,
-				"inner define-runs-on my-workflow-input": nil,
-				"inner incomplete-job my-workflow-input": {"perform-workflow-call.define-runs-on"},
+				"inner define-runs-on my-workflow-input": {"define-workflow-call"},
+				"inner incomplete-job my-workflow-input": {"define-workflow-call", "perform-workflow-call.define-runs-on"},
 				"perform-workflow-call": {
+					"define-workflow-call",
 					"perform-workflow-call.define-runs-on",
 					"perform-workflow-call.scalar-job",
 				},
@@ -541,11 +564,25 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 				path:      "./.forgejo/workflows/reusable.yml",
 			},
 		},
+		{
+			name:     "action run completed after expansion",
+			runJobID: 642,
+			consumed: true,
+			runJobNames: []string{
+				"job1",
+				// job2 which expanded into an empty matrix is gone
+			},
+			actionRunStatusChange: actions_model.StatusSuccess,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer unittest.OverrideFixtures("services/actions/Test_tryHandleIncompleteMatrix")()
 			require.NoError(t, unittest.PrepareTestDatabase())
+
+			notifier := &mockNotifier{}
+			notify_service.RegisterNotifier(notifier)
+			defer notify_service.UnregisterNotifier(notifier)
 
 			// Mock access to reusable workflows, both local and remote
 			var localReusableCalled []*localReusableWorkflowCallArgs
@@ -596,6 +633,15 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 					// expectations are that the ActionRun has an empty PreExecutionError
 					actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: blockedJob.RunID})
 					assert.EqualValues(t, 0, actionRun.PreExecutionErrorCode, "PreExecutionError Details: %#v", actionRun.PreExecutionErrorDetails)
+					if tt.actionRunStatusChange != 0 {
+						assert.Equal(t, tt.actionRunStatusChange, actionRun.Status)
+						require.Len(t, notifier.calls, 1)
+						call := notifier.calls[0]
+						assert.Equal(t, actionRun.ID, call.run.ID)
+						assert.Nil(t, call.lastRun)
+						assert.Equal(t, actions_model.StatusRunning, call.priorStatus)
+						assert.Equal(t, tt.actionRunStatusChange, call.run.Status)
+					}
 
 					// compare jobs that exist with `runJobNames` to ensure new jobs are inserted:
 					allJobsInRun, err := db.Find[actions_model.ActionRunJob](t.Context(), actions_model.FindRunJobOptions{RunID: blockedJob.RunID})
@@ -622,7 +668,7 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 					if tt.needs != nil {
 						for _, j := range allJobsInRun {
 							expected, ok := tt.needs[j.Name]
-							if assert.Truef(t, ok, "unable to find runsOn[%q] in test case", j.Name) {
+							if assert.Truef(t, ok, "unable to find needs[%q] in test case", j.Name) {
 								slices.Sort(j.Needs)
 								slices.Sort(expected)
 								assert.Equalf(t, expected, j.Needs, "comparing needs expectations for job %q", j.Name)
@@ -740,5 +786,34 @@ func Test_tryHandleWorkflowCallOuterJob(t *testing.T) {
 				assert.Equal(t, tt.outputs, outputMap)
 			}
 		})
+	}
+}
+
+func Test_checkJobsOfRun_ExpandsMatrixWithCorrectOutputJobStatuses(t *testing.T) {
+	defer unittest.OverrideFixtures("services/actions/Test_checkJobsOfRun")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	jobs, err := actions_model.GetRunJobsByRunID(t.Context(), 900)
+	require.NoError(t, err)
+	require.Len(t, jobs, 2)
+
+	require.NoError(t, checkJobsOfRun(t.Context(), 900, 0))
+
+	jobs, err = actions_model.GetRunJobsByRunID(t.Context(), 900)
+	require.NoError(t, err)
+	assert.Len(t, jobs, 4)
+	for _, job := range jobs {
+		switch job.Name {
+		case "define-matrix":
+			assert.Equal(t, actions_model.StatusSuccess, job.Status)
+		case "produce-artifacts (blue)":
+			fallthrough
+		case "produce-artifacts (green)":
+			fallthrough
+		case "produce-artifacts (red)":
+			assert.Equal(t, actions_model.StatusWaiting, job.Status)
+		default:
+			assert.Fail(t, "unexpected job name")
+		}
 	}
 }

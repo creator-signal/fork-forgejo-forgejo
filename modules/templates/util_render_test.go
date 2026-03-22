@@ -54,7 +54,7 @@ func TestApostrophesInMentions(t *testing.T) {
 	assert.Equal(t, template.HTML("<p><a href=\"/mention-user\" class=\"mention\" rel=\"nofollow\">@mention-user</a>&#39;s comment</p>\n"), rendered)
 }
 
-func TestNonExistantUserMention(t *testing.T) {
+func TestNonExistentUserMention(t *testing.T) {
 	rendered := RenderMarkdownToHtml(t.Context(), "@ThisUserDoesNotExist @mention-user")
 	assert.Equal(t, template.HTML("<p>@ThisUserDoesNotExist <a href=\"/mention-user\" class=\"mention\" rel=\"nofollow\">@mention-user</a></p>\n"), rendered)
 }
@@ -229,7 +229,8 @@ func TestRenderLabels(t *testing.T) {
 	rendered := RenderLabels(ctx, []*issues_model.Label{label}, "user2/repo1", false)
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=1")
 	assert.Contains(t, rendered, ">label1<")
-	assert.Contains(t, rendered, "title='First label'")
+	assert.Contains(t, rendered, "data-tooltip-content='First label'")
+	assert.Contains(t, rendered, "aria-description='First label'")
 	rendered = RenderLabels(ctx, []*issues_model.Label{label}, "user2/repo1", true)
 	assert.Contains(t, rendered, "user2/repo1/pulls?labels=1")
 	assert.Contains(t, rendered, ">label1<")
@@ -241,11 +242,11 @@ func TestRenderLabels(t *testing.T) {
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=11")
 	assert.Contains(t, rendered, ">  &lt;script&gt;malicious&lt;/script&gt; <")
 	assert.Contains(t, rendered, ">&#39;?&amp;<")
-	assert.Contains(t, rendered, "title='Malicious label &#39; &lt;script&gt;malicious&lt;/script&gt;'")
+	assert.Contains(t, rendered, "data-tooltip-content='Malicious label &#39; &lt;script&gt;malicious&lt;/script&gt;'")
+	assert.Contains(t, rendered, "aria-description='Malicious label &#39; &lt;script&gt;malicious&lt;/script&gt;'")
 	rendered = RenderLabels(ctx, []*issues_model.Label{labelArchived}, "user2/repo1", false)
 	assert.Contains(t, rendered, "user2/repo1/issues?labels=12")
 	assert.Contains(t, rendered, ">archived label&lt;&gt;<")
-	assert.Contains(t, rendered, "title='repo.issues.archived_label_description'")
 }
 
 func TestRenderUser(t *testing.T) {

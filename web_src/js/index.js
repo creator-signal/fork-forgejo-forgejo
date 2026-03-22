@@ -2,7 +2,6 @@
 import './bootstrap.js';
 
 import {initRepoActivityTopAuthorsChart} from './features/repo-activity-top-authors.ts';
-import {initScopedAccessTokenCategories} from './features/scoped-access-token-selector.ts';
 import {initDashboardRepoList} from './features/dashboard-repo-list.ts';
 
 import {initGlobalCopyToClipboardListener} from './features/clipboard.js';
@@ -30,8 +29,10 @@ import {
   initRepoIssueTimeTracking,
   initRepoIssueWipTitle,
   initRepoPullRequestAllowMaintainerEdit,
-  initRepoPullRequestReview, initRepoIssueSidebarList, initArchivedLabelHandler,
+  initRepoPullRequestReview,
+  initArchivedLabelHandler,
 } from './features/repo-issue.js';
+import {initRepoIssueSidebarList} from './features/repo-issue-sidebar-list.ts';
 import {initRepoEllipsisButton, initCommitStatuses, initCommitNotes} from './features/repo-commit.js';
 import {
   initFootLanguageMenu,
@@ -96,7 +97,7 @@ initDirAuto();
 onDomReady(() => {
   initGlobalCommon();
 
-  initDisabledInputs();
+  initDisabledInputs(document);
   initGlobalTooltips();
   initGlobalButtonClickOnEnter();
   initGlobalButtons();
@@ -190,7 +191,6 @@ onDomReady(() => {
   initUserAuthWebAuthnRegister();
   initUserAuth();
   initRepoDiffView();
-  initScopedAccessTokenCategories();
   initColorPickers();
   initModalClose();
 

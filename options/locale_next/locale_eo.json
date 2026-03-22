@@ -1,4 +1,5 @@
 {
+	"packages.npm.details.tag": "Etikedo",
 	"fork.n_forks": {
 		"one": "%s disbranĉigo",
 		"other": "%s disbranĉigoj"
@@ -39,13 +40,9 @@
 		"other": "antaŭ %d jaroj"
 	},
 	"relativetime.1day": "hieraŭ",
-	"relativetime.2days": "antaŭ du tagoj",
 	"relativetime.1week": "je lasta semajno",
-	"relativetime.2weeks": "antaŭ du semajnoj",
 	"relativetime.1month": "je lasta monato",
-	"relativetime.2months": "antaŭ du monatoj",
 	"relativetime.1year": "je lasta jaro",
-	"relativetime.2years": "antaŭ du jaroj",
 	"migrate.github.description": "Migrigi datumojn el github.com aŭ Github Enterprise server.",
 	"migrate.git.description": "Migrigi nur deponejon el ajna Git servilo.",
 	"migrate.gitea.description": "Migrigi datumojn el gitea.com aŭ aliaj Gitea instancoj.",
@@ -93,5 +90,6 @@
 	"repo.issues.filter_reviewers.hint": "Filtri laŭ uzanto kiu recenzis",
 	"repo.issues.filter_mention.hint": "Filtri laŭ menciita uzanto",
 	"repo.issues.filter_modified.hint": "Filtri laŭ lasta modifdato",
-	"meta.last_line": "(this string was needed to make weblate regenerate the file and can be removed)"
+	"meta.last_line": " ",
+	"moderation.report_remarks": "Rimarkoj"
 }

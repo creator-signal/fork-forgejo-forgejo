@@ -12,6 +12,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/routers/common"
 	"forgejo.org/services/auth"
+	"forgejo.org/services/authz"
 	"forgejo.org/services/context"
 
 	"github.com/go-chi/cors"
@@ -34,7 +35,8 @@ func Middlewares() (stack []any) {
 
 		checkDeprecatedAuthMethods,
 		// Get user from session if logged in.
-		apiAuth(buildAuthGroup()),
+		apiAuthentication(buildAuthGroup()),
+		apiAuthorization,
 		verifyAuthWithOptions(&common.VerifyOptions{
 			SignInRequired: setting.Service.RequireSignInView,
 		}),
@@ -54,7 +56,7 @@ func buildAuthGroup() *auth.Group {
 	return group
 }
 
-func apiAuth(authMethod auth.Method) func(*context.APIContext) {
+func apiAuthentication(authMethod auth.Method) func(*context.APIContext) {
 	return func(ctx *context.APIContext) {
 		ar, err := common.AuthShared(ctx.Base, nil, authMethod)
 		if err != nil {
@@ -64,6 +66,32 @@ func apiAuth(authMethod auth.Method) func(*context.APIContext) {
 		ctx.Doer = ar.Doer
 		ctx.IsSigned = ar.Doer != nil
 		ctx.IsBasicAuth = ar.IsBasicAuth
+	}
+}
+
+func apiAuthorization(ctx *context.APIContext) {
+	scope, scopeExists := ctx.Data["ApiTokenScope"].(auth_model.AccessTokenScope)
+	if scopeExists {
+		publicOnly, err := scope.PublicOnly()
+		if err != nil {
+			ctx.Error(http.StatusForbidden, "tokenRequiresScope", "parsing public resource scope failed: "+err.Error())
+			return
+		}
+		ctx.PublicOnly = publicOnly
+	}
+
+	reducer, reducerExists := ctx.Data["ApiTokenReducer"].(authz.AuthorizationReducer)
+	if reducerExists {
+		ctx.Reducer = reducer
+	} else {
+		// No "ApiTokenReducer" will be populated if the auth method wasn't an PAT.  In this case, we populate
+		// `ctx.Reducer` so no nil checks are needed, and we respect the scope `PublicOnly()` so that it it's safe to
+		// just rely on `ctx.Reducer` to account for public-only access:
+		if ctx.PublicOnly {
+			ctx.Reducer = &authz.PublicReposAuthorizationReducer{}
+		} else {
+			ctx.Reducer = &authz.AllAccessAuthorizationReducer{}
+		}
 	}
 }
 
@@ -138,7 +166,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 		}
 
 		if options.AdminRequired {
-			if !ctx.Doer.IsAdmin {
+			if !ctx.IsUserSiteAdmin() {
 				ctx.JSON(http.StatusForbidden, map[string]string{
 					"message": "You have no permission to request for this.",
 				})

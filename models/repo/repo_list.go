@@ -186,6 +186,8 @@ type SearchRepoOptions struct {
 	// - Don't show forks, when opts.Fork is OptionalBoolNone.
 	// - Do not display repositories that don't have a description, an icon and topics.
 	OnlyShowRelevant bool
+	// Filters repositories based upon optional authorization restrictions.
+	AuthorizationReducer RepositoryAuthorizationReducer
 }
 
 // UserOwnedRepoCond returns user ownered repositories
@@ -311,23 +313,6 @@ func userOrgPublicRepoCond(userID int64) builder.Cond {
 	)
 }
 
-// userOrgPublicRepoCondPrivate returns the condition that one user could access all public repositories in private organizations
-func userOrgPublicRepoCondPrivate(userID int64) builder.Cond {
-	return builder.And(
-		builder.Eq{"`repository`.is_private": false},
-		builder.In("`repository`.owner_id",
-			builder.Select("`org_user`.org_id").
-				From("org_user").
-				Join("INNER", "`user`", "`user`.id = `org_user`.org_id").
-				Where(builder.Eq{
-					"`org_user`.uid":    userID,
-					"`user`.`type`":     user_model.UserTypeOrganization,
-					"`user`.visibility": structs.VisibleTypePrivate,
-				}),
-		),
-	)
-}
-
 // UserOrgPublicUnitRepoCond returns the condition that one user could access all public repositories in the special organization
 func UserOrgPublicUnitRepoCond(userID, orgID int64) builder.Cond {
 	return userOrgPublicRepoCond(userID).
@@ -354,12 +339,12 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 			)))
 	}
 
-	if opts.IsPrivate.Has() {
-		cond = cond.And(builder.Eq{"is_private": opts.IsPrivate.Value()})
+	if has, value := opts.IsPrivate.Get(); has {
+		cond = cond.And(builder.Eq{"is_private": value})
 	}
 
-	if opts.Template.Has() {
-		cond = cond.And(builder.Eq{"is_template": opts.Template.Value()})
+	if has, value := opts.Template.Get(); has {
+		cond = cond.And(builder.Eq{"is_template": value})
 	}
 
 	// Restrict to starred repositories
@@ -375,31 +360,19 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 	// Restrict repositories to those the OwnerID owns or contributes to as per opts.Collaborate
 	if opts.OwnerID > 0 {
 		accessCond := builder.NewCond()
-		if !opts.Collaborate.Value() {
+		if !opts.Collaborate.ValueOrZeroValue() {
 			accessCond = builder.Eq{"owner_id": opts.OwnerID}
 		}
 
 		if opts.Collaborate.ValueOrDefault(true) {
-			// A Collaboration is:
-
 			collaborateCond := builder.NewCond()
+
+			// A Collaboration is:
 			// 1. Repository we don't own
 			collaborateCond = collaborateCond.And(builder.Neq{"owner_id": opts.OwnerID})
-			// 2. But we can see because of:
-			{
-				userAccessCond := builder.NewCond()
-				// A. We have unit independent access
-				userAccessCond = userAccessCond.Or(UserAccessRepoCond("`repository`.id", opts.OwnerID))
-				// B. We are in a team for
-				if opts.UnitType == unit.TypeInvalid {
-					userAccessCond = userAccessCond.Or(UserOrgTeamRepoCond("`repository`.id", opts.OwnerID))
-				} else {
-					userAccessCond = userAccessCond.Or(userOrgTeamUnitRepoCond("`repository`.id", opts.OwnerID, opts.UnitType))
-				}
-				// C. Public repositories in organizations that we are member of
-				userAccessCond = userAccessCond.Or(userOrgPublicRepoCondPrivate(opts.OwnerID))
-				collaborateCond = collaborateCond.And(userAccessCond)
-			}
+			// 2. But we can have access to unit on the repo > AccessModeNone
+			collaborateCond = collaborateCond.And(UserAccessRepoCond("`repository`.id", opts.OwnerID))
+
 			if !opts.Private {
 				collaborateCond = collaborateCond.And(builder.Expr("owner_id NOT IN (SELECT org_id FROM org_user WHERE org_user.uid = ? AND org_user.is_public = ?)", opts.OwnerID, false))
 			}
@@ -467,28 +440,28 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 			Where(builder.Eq{"language": opts.Language}).And(builder.Eq{"is_primary": true})))
 	}
 
-	if opts.Fork.Has() || opts.OnlyShowRelevant {
-		if opts.OnlyShowRelevant && !opts.Fork.Has() {
+	if has, value := opts.Fork.Get(); has || opts.OnlyShowRelevant {
+		if opts.OnlyShowRelevant && !has {
 			cond = cond.And(builder.Eq{"is_fork": false})
 		} else {
-			cond = cond.And(builder.Eq{"is_fork": opts.Fork.Value()})
+			cond = cond.And(builder.Eq{"is_fork": value})
 		}
 	}
 
-	if opts.Mirror.Has() {
-		cond = cond.And(builder.Eq{"is_mirror": opts.Mirror.Value()})
+	if has, value := opts.Mirror.Get(); has {
+		cond = cond.And(builder.Eq{"is_mirror": value})
 	}
 
 	if opts.Actor != nil && opts.Actor.IsRestricted {
 		cond = cond.And(AccessibleRepositoryCondition(opts.Actor, unit.TypeInvalid))
 	}
 
-	if opts.Archived.Has() {
-		cond = cond.And(builder.Eq{"is_archived": opts.Archived.Value()})
+	if has, value := opts.Archived.Get(); has {
+		cond = cond.And(builder.Eq{"is_archived": value})
 	}
 
-	if opts.HasMilestones.Has() {
-		if opts.HasMilestones.Value() {
+	if has, value := opts.HasMilestones.Get(); has {
+		if value {
 			cond = cond.And(builder.Gt{"num_milestones": 0})
 		} else {
 			cond = cond.And(builder.Eq{"num_milestones": 0}.Or(builder.IsNull{"num_milestones"}))
@@ -516,6 +489,10 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 		subQueryCond = subQueryCond.And(builder.Eq{"is_empty": false})
 
 		cond = cond.And(subQueryCond)
+	}
+
+	if opts.AuthorizationReducer != nil {
+		cond = cond.And(opts.AuthorizationReducer.RepoReadAccessFilter())
 	}
 
 	return cond

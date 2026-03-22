@@ -11,6 +11,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
@@ -27,9 +28,18 @@ type RegistrationToken struct {
 }
 
 func GetRegistrationToken(ctx *context.APIContext, ownerID, repoID int64) {
-	token, err := actions_model.GetLatestRunnerToken(ctx, ownerID, repoID)
+	optOwnerID := optional.None[int64]()
+	if ownerID != 0 {
+		optOwnerID = optional.Some(ownerID)
+	}
+	optRepoID := optional.None[int64]()
+	if repoID != 0 {
+		optRepoID = optional.Some(repoID)
+	}
+
+	token, err := actions_model.GetLatestRunnerToken(ctx, optOwnerID, optRepoID)
 	if errors.Is(err, util.ErrNotExist) || (token != nil && !token.IsActive) {
-		token, err = actions_model.NewRunnerToken(ctx, ownerID, repoID)
+		token, err = actions_model.NewRunnerToken(ctx, optOwnerID, optRepoID)
 	}
 	if err != nil {
 		ctx.InternalServerError(err)
@@ -66,6 +76,7 @@ func fromRunJobModelToResponse(job []*actions_model.ActionRunJob, labels []strin
 		if len(labels) == 0 || labels[0] == "" && len(job[i].RunsOn) == 0 || job[i].ItRunsOn(labels) {
 			res = append(res, &structs.ActionRunJob{
 				ID:      job[i].ID,
+				Attempt: job[i].Attempt,
 				RepoID:  job[i].RepoID,
 				OwnerID: job[i].OwnerID,
 				Name:    job[i].Name,
@@ -96,6 +107,7 @@ func ListRunners(ctx *context.APIContext, ownerID, repoID int64) {
 		OwnerID:     ownerID,
 		RepoID:      repoID,
 		ListOptions: listOptions,
+		WithVisible: ctx.FormBool("visible"),
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "FindCountRunners", map[string]string{})
@@ -128,17 +140,13 @@ func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
 		return
 	}
-	runner, err := actions_model.GetRunnerByID(ctx, runnerID)
+	runner, err := actions_model.GetVisibleRunnerByID(ctx, runnerID, ownerID, repoID)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "GetRunnerNotFound", err)
 		} else {
 			ctx.Error(http.StatusInternalServerError, "GetRunnerFailed", err)
 		}
-		return
-	}
-	if !runner.Editable(ownerID, repoID) {
-		ctx.Error(http.StatusNotFound, "RunnerEdit", "No permission to get this runner")
 		return
 	}
 
@@ -162,6 +170,7 @@ func RegisterRunner(ctx *context.APIContext, ownerID, repoID int64) {
 		OwnerID:     ownerID,
 		RepoID:      repoID,
 		Description: options.Description,
+		Ephemeral:   options.Ephemeral,
 	}
 	runner.GenerateToken()
 	if err := actions_model.CreateRunner(ctx, runner); err != nil {
@@ -187,7 +196,7 @@ func DeleteRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
 		return
 	}
-	runner, err := actions_model.GetRunnerByID(ctx, runnerID)
+	runner, err := actions_model.GetVisibleRunnerByID(ctx, runnerID, ownerID, repoID)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "DeleteRunnerNotFound", err)

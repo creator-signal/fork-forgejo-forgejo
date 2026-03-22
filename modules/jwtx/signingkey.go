@@ -34,6 +34,12 @@ func (err ErrInvalidAlgorithmType) Error() string {
 	return fmt.Sprintf("JWT signing algorithm is not supported: %s", err.Algorithm)
 }
 
+func jwtHelper(key SigningKey, claims jwt.Claims, opts ...jwt.TokenOption) (string, error) {
+	jwt := jwt.NewWithClaims(key.SigningMethod(), claims, opts...)
+	key.PreProcessToken(jwt)
+	return jwt.SignedString(key.SignKey())
+}
+
 // SigningKey represents a algorithm/key pair to sign JWTs
 type SigningKey interface {
 	IsSymmetric() bool
@@ -42,6 +48,8 @@ type SigningKey interface {
 	VerifyKey() any
 	ToJWK() (map[string]string, error)
 	PreProcessToken(*jwt.Token)
+	// convenience: jwt.NewWithClaims + PreProcessToken + SignedString
+	JWT(jwt.Claims, ...jwt.TokenOption) (string, error)
 }
 
 type hmacSigningKey struct {
@@ -74,42 +82,46 @@ func (key hmacSigningKey) ToJWK() (map[string]string, error) {
 
 func (key hmacSigningKey) PreProcessToken(*jwt.Token) {}
 
-type rsaSingingKey struct {
+func (key hmacSigningKey) JWT(claims jwt.Claims, opts ...jwt.TokenOption) (string, error) {
+	return jwtHelper(key, claims, opts...)
+}
+
+type rsaSigningKey struct {
 	signingMethod jwt.SigningMethod
 	key           *rsa.PrivateKey
 	id            string
 }
 
-func newRSASingingKey(signingMethod jwt.SigningMethod, key *rsa.PrivateKey) (rsaSingingKey, error) {
+func newRSASigningKey(signingMethod jwt.SigningMethod, key *rsa.PrivateKey) (rsaSigningKey, error) {
 	kid, err := util.CreatePublicKeyFingerprint(key.Public().(*rsa.PublicKey))
 	if err != nil {
-		return rsaSingingKey{}, err
+		return rsaSigningKey{}, err
 	}
 
-	return rsaSingingKey{
+	return rsaSigningKey{
 		signingMethod,
 		key,
 		base64.RawURLEncoding.EncodeToString(kid),
 	}, nil
 }
 
-func (key rsaSingingKey) IsSymmetric() bool {
+func (key rsaSigningKey) IsSymmetric() bool {
 	return false
 }
 
-func (key rsaSingingKey) SigningMethod() jwt.SigningMethod {
+func (key rsaSigningKey) SigningMethod() jwt.SigningMethod {
 	return key.signingMethod
 }
 
-func (key rsaSingingKey) SignKey() any {
+func (key rsaSigningKey) SignKey() any {
 	return key.key
 }
 
-func (key rsaSingingKey) VerifyKey() any {
+func (key rsaSigningKey) VerifyKey() any {
 	return key.key.Public()
 }
 
-func (key rsaSingingKey) ToJWK() (map[string]string, error) {
+func (key rsaSigningKey) ToJWK() (map[string]string, error) {
 	pubKey := key.key.Public().(*rsa.PublicKey)
 
 	return map[string]string{
@@ -121,8 +133,12 @@ func (key rsaSingingKey) ToJWK() (map[string]string, error) {
 	}, nil
 }
 
-func (key rsaSingingKey) PreProcessToken(token *jwt.Token) {
+func (key rsaSigningKey) PreProcessToken(token *jwt.Token) {
 	token.Header["kid"] = key.id
+}
+
+func (key rsaSigningKey) JWT(claims jwt.Claims, opts ...jwt.TokenOption) (string, error) {
+	return jwtHelper(key, claims, opts...)
 }
 
 type eddsaSigningKey struct {
@@ -131,7 +147,7 @@ type eddsaSigningKey struct {
 	id            string
 }
 
-func newEdDSASingingKey(signingMethod jwt.SigningMethod, key ed25519.PrivateKey) (eddsaSigningKey, error) {
+func newEdDSASigningKey(signingMethod jwt.SigningMethod, key ed25519.PrivateKey) (eddsaSigningKey, error) {
 	kid, err := util.CreatePublicKeyFingerprint(key.Public().(ed25519.PublicKey))
 	if err != nil {
 		return eddsaSigningKey{}, err
@@ -176,42 +192,46 @@ func (key eddsaSigningKey) PreProcessToken(token *jwt.Token) {
 	token.Header["kid"] = key.id
 }
 
-type ecdsaSingingKey struct {
+func (key eddsaSigningKey) JWT(claims jwt.Claims, opts ...jwt.TokenOption) (string, error) {
+	return jwtHelper(key, claims, opts...)
+}
+
+type ecdsaSigningKey struct {
 	signingMethod jwt.SigningMethod
 	key           *ecdsa.PrivateKey
 	id            string
 }
 
-func newECDSASingingKey(signingMethod jwt.SigningMethod, key *ecdsa.PrivateKey) (ecdsaSingingKey, error) {
+func newECDSASigningKey(signingMethod jwt.SigningMethod, key *ecdsa.PrivateKey) (ecdsaSigningKey, error) {
 	kid, err := util.CreatePublicKeyFingerprint(key.Public().(*ecdsa.PublicKey))
 	if err != nil {
-		return ecdsaSingingKey{}, err
+		return ecdsaSigningKey{}, err
 	}
 
-	return ecdsaSingingKey{
+	return ecdsaSigningKey{
 		signingMethod,
 		key,
 		base64.RawURLEncoding.EncodeToString(kid),
 	}, nil
 }
 
-func (key ecdsaSingingKey) IsSymmetric() bool {
+func (key ecdsaSigningKey) IsSymmetric() bool {
 	return false
 }
 
-func (key ecdsaSingingKey) SigningMethod() jwt.SigningMethod {
+func (key ecdsaSigningKey) SigningMethod() jwt.SigningMethod {
 	return key.signingMethod
 }
 
-func (key ecdsaSingingKey) SignKey() any {
+func (key ecdsaSigningKey) SignKey() any {
 	return key.key
 }
 
-func (key ecdsaSingingKey) VerifyKey() any {
+func (key ecdsaSigningKey) VerifyKey() any {
 	return key.key.Public()
 }
 
-func (key ecdsaSingingKey) ToJWK() (map[string]string, error) {
+func (key ecdsaSigningKey) ToJWK() (map[string]string, error) {
 	pubKey := key.key.Public().(*ecdsa.PublicKey)
 
 	return map[string]string{
@@ -224,37 +244,40 @@ func (key ecdsaSingingKey) ToJWK() (map[string]string, error) {
 	}, nil
 }
 
-func (key ecdsaSingingKey) PreProcessToken(token *jwt.Token) {
+func (key ecdsaSigningKey) PreProcessToken(token *jwt.Token) {
 	token.Header["kid"] = key.id
+}
+
+func (key ecdsaSigningKey) JWT(claims jwt.Claims, opts ...jwt.TokenOption) (string, error) {
+	return jwtHelper(key, claims, opts...)
+}
+
+var allowedAlgorithms = map[string]bool{
+	"HS256": true,
+	"HS384": true,
+	"HS512": true,
+
+	"RS256": true,
+	"RS384": true,
+	"RS512": true,
+
+	"ES256": true,
+	"ES384": true,
+	"ES512": true,
+	"EdDSA": true,
+}
+
+func GetSigningMethod(algorithm string) jwt.SigningMethod {
+	if !allowedAlgorithms[algorithm] {
+		return nil
+	}
+	return jwt.GetSigningMethod(algorithm)
 }
 
 // CreateSigningKey creates a signing key from an algorithm / key pair.
 func CreateSigningKey(algorithm string, key any) (SigningKey, error) {
-	var signingMethod jwt.SigningMethod
-	switch algorithm {
-	case "HS256":
-		signingMethod = jwt.SigningMethodHS256
-	case "HS384":
-		signingMethod = jwt.SigningMethodHS384
-	case "HS512":
-		signingMethod = jwt.SigningMethodHS512
-
-	case "RS256":
-		signingMethod = jwt.SigningMethodRS256
-	case "RS384":
-		signingMethod = jwt.SigningMethodRS384
-	case "RS512":
-		signingMethod = jwt.SigningMethodRS512
-
-	case "ES256":
-		signingMethod = jwt.SigningMethodES256
-	case "ES384":
-		signingMethod = jwt.SigningMethodES384
-	case "ES512":
-		signingMethod = jwt.SigningMethodES512
-	case "EdDSA":
-		signingMethod = jwt.SigningMethodEdDSA
-	default:
+	signingMethod := GetSigningMethod(algorithm)
+	if signingMethod == nil {
 		return nil, ErrInvalidAlgorithmType{algorithm}
 	}
 
@@ -264,19 +287,19 @@ func CreateSigningKey(algorithm string, key any) (SigningKey, error) {
 		if !ok {
 			return nil, jwt.ErrInvalidKeyType
 		}
-		return newEdDSASingingKey(signingMethod, privateKey)
+		return newEdDSASigningKey(signingMethod, privateKey)
 	case *jwt.SigningMethodECDSA:
 		privateKey, ok := key.(*ecdsa.PrivateKey)
 		if !ok {
 			return nil, jwt.ErrInvalidKeyType
 		}
-		return newECDSASingingKey(signingMethod, privateKey)
+		return newECDSASigningKey(signingMethod, privateKey)
 	case *jwt.SigningMethodRSA:
 		privateKey, ok := key.(*rsa.PrivateKey)
 		if !ok {
 			return nil, jwt.ErrInvalidKeyType
 		}
-		return newRSASingingKey(signingMethod, privateKey)
+		return newRSASigningKey(signingMethod, privateKey)
 	default:
 		secret, ok := key.([]byte)
 		if !ok {
@@ -286,77 +309,65 @@ func CreateSigningKey(algorithm string, key any) (SigningKey, error) {
 	}
 }
 
-// loadOrCreateAsymmetricKey checks if the configured private key exists.
-// If it does not exist a new random key gets generated and saved on the configured path.
-func loadOrCreateAsymmetricKey(keyPath, algorithm string) (any, error) {
-	isExist, err := util.IsExist(keyPath)
-	if err != nil {
-		log.Fatal("Unable to check if %s exists. Error: %v", keyPath, err)
-	}
-	if !isExist {
-		err := func() error {
-			key, err := func() (any, error) {
-				switch {
-				case strings.HasPrefix(algorithm, "RS"):
-					var bits int
-					switch algorithm {
-					case "RS256":
-						bits = 2048
-					case "RS384":
-						bits = 3072
-					case "RS512":
-						bits = 4096
-					}
-					return rsa.GenerateKey(rand.Reader, bits)
-				case algorithm == "EdDSA":
-					_, pk, err := ed25519.GenerateKey(rand.Reader)
-					return pk, err
-				default:
-					var curve elliptic.Curve
-					switch algorithm {
-					case "ES256":
-						curve = elliptic.P256()
-					case "ES384":
-						curve = elliptic.P384()
-					case "ES512":
-						curve = elliptic.P521()
-					}
-					return ecdsa.GenerateKey(curve, rand.Reader)
-				}
-			}()
-			if err != nil {
-				return err
+func createAsymmetricKey(keyPath, algorithm string) error {
+	key, err := func() (any, error) {
+		switch {
+		case strings.HasPrefix(algorithm, "RS"):
+			var bits int
+			switch algorithm {
+			case "RS256":
+				bits = 2048
+			case "RS384":
+				bits = 3072
+			case "RS512":
+				bits = 4096
 			}
-
-			bytes, err := x509.MarshalPKCS8PrivateKey(key)
-			if err != nil {
-				return err
+			return rsa.GenerateKey(rand.Reader, bits)
+		case algorithm == "EdDSA":
+			_, pk, err := ed25519.GenerateKey(rand.Reader)
+			return pk, err
+		default:
+			var curve elliptic.Curve
+			switch algorithm {
+			case "ES256":
+				curve = elliptic.P256()
+			case "ES384":
+				curve = elliptic.P384()
+			case "ES512":
+				curve = elliptic.P521()
 			}
-
-			privateKeyPEM := &pem.Block{Type: "PRIVATE KEY", Bytes: bytes}
-
-			if err := os.MkdirAll(filepath.Dir(keyPath), os.ModePerm); err != nil {
-				return err
-			}
-
-			f, err := os.OpenFile(keyPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				if err = f.Close(); err != nil {
-					log.Error("Close: %v", err)
-				}
-			}()
-
-			return pem.Encode(f, privateKeyPEM)
-		}()
-		if err != nil {
-			log.Fatal("Error generating private key: %v", err)
-			return nil, err
+			return ecdsa.GenerateKey(curve, rand.Reader)
 		}
+	}()
+	if err != nil {
+		return err
 	}
 
+	bytes, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return err
+	}
+
+	privateKeyPEM := &pem.Block{Type: "PRIVATE KEY", Bytes: bytes}
+
+	if err := os.MkdirAll(filepath.Dir(keyPath), os.ModePerm); err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err = f.Close(); err != nil {
+			log.Error("Close: %v", err)
+		}
+	}()
+
+	return pem.Encode(f, privateKeyPEM)
+}
+
+func loadAsymmetricKey(keyPath string) (any, error) {
 	bytes, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, err
@@ -370,6 +381,22 @@ func loadOrCreateAsymmetricKey(keyPath, algorithm string) (any, error) {
 	}
 
 	return x509.ParsePKCS8PrivateKey(block.Bytes)
+}
+
+// loadOrCreateAsymmetricKey checks if the configured private key exists.
+// If it does not exist a new random key gets generated and saved on the configured path.
+func loadOrCreateAsymmetricKey(keyPath, algorithm string) (any, error) {
+	isExist, err := util.IsExist(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to check if %s exists. Error: %v", keyPath, err)
+	}
+	if !isExist {
+		err := createAsymmetricKey(keyPath, algorithm)
+		if err != nil {
+			return nil, fmt.Errorf("Error generating private key %s: %v", keyPath, err)
+		}
+	}
+	return loadAsymmetricKey(keyPath)
 }
 
 // InitSigningKey creates a signing key from settings or creates a random key.

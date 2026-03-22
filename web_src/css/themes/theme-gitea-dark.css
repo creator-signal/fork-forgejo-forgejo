@@ -234,9 +234,17 @@
   --color-highlight-fg: #87651e;
   --color-highlight-bg: #352c1c;
   --color-overlay-backdrop: #080808c0;
+  --color-selection-bg: var(--color-primary-light-1);
+  --color-selection-fg: var(--color-white);
   /* pattern colors for image diff */
   --checkerboard-color-1: #313131;
   --checkerboard-color-2: #212121;
+  --color-indicator-offline: #a1a1aa;
+  --color-indicator-offline-20: #a1a1aa1a;
+  --color-indicator-idle: #16a34a;
+  --color-indicator-idle-20: #16a34a1a;
+  --color-indicator-active: #2185d0;
+  --color-indicator-active-20: #2185d033;
   accent-color: var(--color-accent);
   color-scheme: dark;
 }

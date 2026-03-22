@@ -7,6 +7,7 @@ package unit
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -141,7 +142,7 @@ func DisabledRepoUnitsSet(v []Type) {
 
 // Get valid set of default repository units from settings
 func validateDefaultRepoUnits(defaultUnits, settingDefaultUnits []Type) []Type {
-	units := defaultUnits
+	units := slices.Clone(defaultUnits)
 
 	// Use setting if not empty
 	if len(settingDefaultUnits) > 0 {
@@ -431,7 +432,7 @@ func AllUnitKeyNames() []string {
 	return res
 }
 
-// MinUnitAccessMode returns the minial permission of the permission map
+// MinUnitAccessMode returns the minimal permission of the permission map
 func MinUnitAccessMode(unitsMap map[Type]perm.AccessMode) perm.AccessMode {
 	res := perm.AccessModeNone
 	for t, mode := range unitsMap {
@@ -440,7 +441,7 @@ func MinUnitAccessMode(unitsMap map[Type]perm.AccessMode) perm.AccessMode {
 			continue
 		}
 
-		// get the minial permission great than AccessModeNone except all are AccessModeNone
+		// get the minimal permission greater than AccessModeNone except all are AccessModeNone
 		if mode > perm.AccessModeNone && (res == perm.AccessModeNone || mode < res) {
 			res = mode
 		}

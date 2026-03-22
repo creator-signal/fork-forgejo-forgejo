@@ -1,19 +1,16 @@
 {
+	"packages.alpine.repository.branches": "Alamharud",
 	"stars.n_stars": {
 		"one": "%s tärn",
 		"other": "%s tärni"
 	},
 	"search.milestone_kind": "Otsi verstaposte…",
-	"relativetime.2years": "kaks aastat tagasi",
 	"error.not_found.title": "Lehte ei leidu",
 	"themes.names.forgejo-light": "Forgejo hele kujundus",
 	"themes.names.forgejo-dark": "Forgejo tume kujundus",
 	"themes.names.forgejo-auto": "Forgejo (süsteemi kujundus)",
-	"relativetime.2days": "kaks päeva tagasi",
 	"relativetime.1week": "eelmisel nädalal",
-	"relativetime.2weeks": "kaks nädalat tagasi",
 	"relativetime.1month": "eelmisel kuul",
-	"relativetime.2months": "kaks kuud tagasi",
 	"relativetime.months": {
 		"one": "%d kuu tagasi",
 		"other": "%d kuud tagasi"
@@ -53,7 +50,7 @@
 	"home.explore_repos": "Uuri lähtekoodi hoidlaid",
 	"home.explore_users": "Otsi kasutajaid",
 	"home.explore_orgs": "Tutvu organisatsioonidega",
-	"meta.last_line": "Tänud, et oled Forgejo'd tõlkinud! Work hard and put in the effort, and love will come. (Tee tööd ja näe vaeva, siis tuleb armastus - A. H. Tammsaare)\n(this string was needed to make weblate regenerate the file and can be removed)",
+	"meta.last_line": "Tänud, et oled Forgejo'd tõlkinud! Work hard and put in the effort, and love will come. (Tee tööd ja näe vaeva, siis tuleb armastus - A. H. Tammsaare).",
 	"keys.ssh.link": "SSH võtmed",
 	"keys.gpg.link": "GPG võtmed",
 	"profile.edit.link": "Muuda profiili",
@@ -66,5 +63,11 @@
 	"release.n_downloads": {
 		"one": "%s allalaadimine",
 		"other": "%s allalaadimist"
-	}
+	},
+	"fork.n_forks": {
+		"one": "%s koodiharu",
+		"other": "%s koodiharu"
+	},
+	"compare.branches.title": "Võrdle alamharusid",
+	"repo.settings.push_mirror.branch_filter.label": "Alamharude filter (kui soovid)"
 }

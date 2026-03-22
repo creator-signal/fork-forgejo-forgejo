@@ -64,7 +64,6 @@ func (o *VirtualSessionProvider) Read(sid string) (session.RawStore, error) {
 		return o.provider.Read(sid)
 	}
 	kv := make(map[any]any)
-	kv["_old_uid"] = "0"
 	return NewVirtualStore(o, sid, kv), nil
 }
 
@@ -77,7 +76,10 @@ func (o *VirtualSessionProvider) Exist(sid string) bool {
 func (o *VirtualSessionProvider) Destroy(sid string) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-	return o.provider.Destroy(sid)
+	if o.provider.Exist(sid) {
+		return o.provider.Destroy(sid)
+	}
+	return nil
 }
 
 // Regenerate regenerates a session store from old session ID to new one.
@@ -159,7 +161,7 @@ func (s *VirtualStore) Release() error {
 	// Now need to lock the provider
 	s.p.lock.Lock()
 	defer s.p.lock.Unlock()
-	if oldUID, ok := s.data["_old_uid"]; (ok && (oldUID != "0" || len(s.data) > 1)) || (!ok && len(s.data) > 0) {
+	if len(s.data) > 0 {
 		// Now ensure that we don't exist!
 		realProvider := s.p.provider
 
@@ -195,4 +197,9 @@ func (s *VirtualStore) Flush() error {
 
 	s.data = make(map[any]any)
 	return nil
+}
+
+// True if no keys have been set
+func (s *VirtualStore) Empty() bool {
+	return len(s.data) == 0
 }

@@ -5,14 +5,12 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/container"
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
@@ -119,6 +117,20 @@ func (job *ActionRunJob) ItRunsOn(labels []string) bool {
 	return labelSet.IsSubset(job.RunsOn)
 }
 
+func (job *ActionRunJob) PrepareNextAttempt(initialStatus Status) error {
+	if job.Status != StatusUnknown && !job.Status.IsDone() {
+		return fmt.Errorf("cannot prepare next attempt because job %d is active: %s", job.ID, job.Status.String())
+	}
+
+	job.Attempt++
+	job.Started = 0
+	job.Stopped = 0
+	job.TaskID = 0
+	job.Status = initialStatus
+
+	return nil
+}
+
 func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {
 	var job ActionRunJob
 	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&job)
@@ -137,6 +149,22 @@ func GetRunJobsByRunID(ctx context.Context, runID int64) ([]*ActionRunJob, error
 		return nil, err
 	}
 	return jobs, nil
+}
+
+// Check if the ActionRun has any jobs other than those included in the jobs parameter.
+func RunHasOtherJobs(ctx context.Context, runID int64, jobs []*ActionRunJob) (bool, error) {
+	jobIDs := make([]int64, len(jobs))
+	for i, job := range jobs {
+		jobIDs[i] = job.ID
+	}
+	otherJobs, err := db.GetEngine(ctx).
+		Where("run_id = ?", runID).
+		Where(builder.NotIn("id", jobIDs)).
+		Count(&ActionRunJob{})
+	if err != nil {
+		return false, err
+	}
+	return otherJobs > 0, nil
 }
 
 // All calls to UpdateRunJobWithoutNotification that change run.Status for any run from a not done status to a done status must call the ActionRunNowDone notification channel.
@@ -176,44 +204,12 @@ func UpdateRunJobWithoutNotification(ctx context.Context, job *ActionRunJob, con
 		}
 	}
 
-	for {
-		// Other goroutines may aggregate the status of the run and update it too.
-		// So we need load the run and its jobs before updating the run.
-		run, err := GetRunByID(ctx, job.RunID)
-		if err != nil {
-			return 0, err
-		}
-		jobs, err := GetRunJobsByRunID(ctx, job.RunID)
-		if err != nil {
-			return 0, err
-		}
-
-		updateRequired := false
-		newStatus := AggregateJobStatus(jobs)
-		if run.Status != newStatus {
-			run.Status = newStatus
-			updateRequired = true
-		}
-		if run.Started.IsZero() && run.Status.IsRunning() {
-			run.Started = timeutil.TimeStampNow()
-			updateRequired = true
-		}
-		if run.Stopped.IsZero() && run.Status.IsDone() {
-			run.Stopped = timeutil.TimeStampNow()
-			updateRequired = true
-		}
-		if updateRequired {
-			// As the caller has to ensure the ActionRunNowDone notification is sent we can ignore doing so here.
-			if err := UpdateRunWithoutNotification(ctx, run, "status", "started", "stopped"); err != nil && errors.Is(err, ErrActionRunOutOfDate) {
-				// Retry update; another session affected `run` simultaneously. It wasn't necessarily another update
-				// from this same loop -- there are other codepaths that update `ActionRun`.
-				log.Debug("UpdateRunWithoutNotification failed with %v; looping for retry", err)
-				continue
-			} else if err != nil {
-				return 0, fmt.Errorf("update run %d: %w", run.ID, err)
-			}
-		}
-		break // exit retry loop
+	run, columns, err := ComputeRunStatus(ctx, job.RunID)
+	if err != nil {
+		return 0, fmt.Errorf("compute run status: %w", err)
+	}
+	if err := UpdateRunWithoutNotification(ctx, run, columns...); err != nil {
+		return 0, fmt.Errorf("update run %d: %w", run.ID, err)
 	}
 
 	return affected, nil
