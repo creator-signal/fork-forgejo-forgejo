@@ -484,10 +484,19 @@ func SyncPullMirror(ctx context.Context, repoID int64) bool {
 	log.Trace("SyncMirrors [repo: %-v]: Running Sync", m.Repo)
 	results, ok := runSync(ctx, m)
 	if !ok {
-		if err = repo_model.TouchMirror(ctx, m); err != nil {
-			log.Error("SyncMirrors [repo: %-v]: failed to TouchMirror: %v", m.Repo, err)
+		m.FailedSyncCount++
+		if setting.Mirror.MaxFailedSyncCount > 0 && m.FailedSyncCount >= setting.Mirror.MaxFailedSyncCount {
+			m.Enabled = false
+			log.Warn("SyncMirrors [repo: %-v]: disabling pull mirror after %d consecutive failures", m.Repo, m.FailedSyncCount)
+		}
+		if err = repo_model.UpdateMirror(ctx, m); err != nil {
+			log.Error("SyncMirrors [repo: %-v]: failed to UpdateMirror: %v", m.Repo, err)
 		}
 		return false
+	}
+
+	if m.FailedSyncCount > 0 {
+		m.FailedSyncCount = 0
 	}
 
 	log.Trace("SyncMirrors [repo: %-v]: Scheduling next update", m.Repo)

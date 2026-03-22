@@ -163,6 +163,13 @@ func SyncPushMirror(ctx context.Context, mirrorID int64) bool {
 	if err != nil {
 		log.Error("SyncPushMirror [mirror: %d][repo: %-v]: %v", m.ID, m.Repo, err)
 		m.LastError = stripExitStatus.ReplaceAllLiteralString(err.Error(), "")
+		m.FailedSyncCount++
+		if setting.Mirror.MaxFailedSyncCount > 0 && m.FailedSyncCount >= setting.Mirror.MaxFailedSyncCount {
+			m.Enabled = false
+			log.Error("SyncPushMirror [mirror: %d][repo: %-v]: disabling push mirror after %d consecutive failures", m.ID, m.Repo, m.FailedSyncCount)
+		}
+	} else {
+		m.FailedSyncCount = 0
 	}
 
 	m.LastUpdateUnix = timeutil.TimeStampNow()

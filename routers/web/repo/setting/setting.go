@@ -456,6 +456,10 @@ func SettingsPost(ctx *context.Context) {
 
 		pullMirror.EnablePrune = form.EnablePrune
 		pullMirror.Interval = interval
+		pullMirror.Enabled = form.MirrorEnabled
+		if pullMirror.Enabled {
+			pullMirror.FailedSyncCount = 0
+		}
 		pullMirror.ScheduleNextUpdate()
 		if err := repo_model.UpdateMirror(ctx, pullMirror); err != nil {
 			ctx.ServerError("UpdateMirror", err)
@@ -592,8 +596,12 @@ func SettingsPost(ctx *context.Context) {
 		}
 
 		m.Interval = interval
-		if err := repo_model.UpdatePushMirrorInterval(ctx, m); err != nil {
-			ctx.ServerError("UpdatePushMirrorInterval", err)
+		m.Enabled = form.PushMirrorEnabled
+		if m.Enabled {
+			m.FailedSyncCount = 0
+		}
+		if err := repo_model.UpdatePushMirror(ctx, m); err != nil {
+			ctx.ServerError("UpdatePushMirror", err)
 			return
 		}
 

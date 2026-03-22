@@ -32,6 +32,9 @@ type Mirror struct {
 	LFSEndpoint string `xorm:"lfs_endpoint TEXT"`
 
 	RemoteAddress string `xorm:"VARCHAR(2048)"`
+
+	FailedSyncCount int  `xorm:"NOT NULL DEFAULT 0"`
+	Enabled         bool `xorm:"NOT NULL DEFAULT true"`
 }
 
 func init() {
@@ -43,6 +46,7 @@ func (m *Mirror) BeforeInsert() {
 	if m != nil {
 		m.UpdatedUnix = timeutil.TimeStampNow()
 		m.NextUpdateUnix = timeutil.TimeStampNow()
+		m.Enabled = true
 	}
 }
 
@@ -104,11 +108,12 @@ func DeleteMirrorByRepoID(ctx context.Context, repoID int64) error {
 	return err
 }
 
-// MirrorsIterate iterates all mirror repositories.
+// MirrorsIterate iterates all enabled mirror repositories.
 func MirrorsIterate(ctx context.Context, limit int, f func(idx int, bean any) error) error {
 	sess := db.GetEngine(ctx).
 		Where("next_update_unix<=?", time.Now().Unix()).
 		And("next_update_unix!=0").
+		And("enabled=?", true).
 		OrderBy("updated_unix ASC")
 	if limit > 0 {
 		sess = sess.Limit(limit)

@@ -43,6 +43,9 @@ type PushMirror struct {
 	CreatedUnix    timeutil.TimeStamp `xorm:"created"`
 	LastUpdateUnix timeutil.TimeStamp `xorm:"INDEX last_update"`
 	LastError      string             `xorm:"text"`
+
+	FailedSyncCount int  `xorm:"NOT NULL DEFAULT 0"`
+	Enabled         bool `xorm:"NOT NULL DEFAULT true"`
 }
 
 type PushMirrorOptions struct {
@@ -150,21 +153,22 @@ func GetPushMirrorsByRepoID(ctx context.Context, repoID int64, listOptions db.Li
 	return mirrors, count, err
 }
 
-// GetPushMirrorsSyncedOnCommit returns push-mirrors for this repo that should be updated by new commits
+// GetPushMirrorsSyncedOnCommit returns enabled push-mirrors for this repo that should be updated by new commits
 func GetPushMirrorsSyncedOnCommit(ctx context.Context, repoID int64) ([]*PushMirror, error) {
 	mirrors := make([]*PushMirror, 0, 10)
 	return mirrors, db.GetEngine(ctx).
-		Where("repo_id = ? AND sync_on_commit = ?", repoID, true).
+		Where("repo_id = ? AND sync_on_commit = ? AND enabled = ?", repoID, true, true).
 		Find(&mirrors)
 }
 
-// PushMirrorsIterate iterates all push-mirror repositories.
+// PushMirrorsIterate iterates all enabled push-mirror repositories.
 func PushMirrorsIterate(ctx context.Context, limit int, f func(idx int, bean any) error) error {
 	sess := db.GetEngine(ctx).
 		Table("push_mirror").
 		Join("INNER", "`repository`", "`repository`.id = `push_mirror`.repo_id").
 		Where("`push_mirror`.last_update + (`push_mirror`.`interval` / ?) <= ?", time.Second, time.Now().Unix()).
 		And("`push_mirror`.`interval` != 0").
+		And("`push_mirror`.enabled = ?", true).
 		And("`repository`.is_archived = ?", false).
 		OrderBy("last_update ASC")
 	if limit > 0 {

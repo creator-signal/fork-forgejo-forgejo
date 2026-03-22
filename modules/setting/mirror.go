@@ -11,17 +11,19 @@ import (
 
 // Mirror settings
 var Mirror = struct {
-	Enabled         bool
-	DisableNewPull  bool
-	DisableNewPush  bool
-	DefaultInterval time.Duration
-	MinInterval     time.Duration
+	Enabled            bool
+	DisableNewPull     bool
+	DisableNewPush     bool
+	DefaultInterval    time.Duration
+	MinInterval        time.Duration
+	MaxFailedSyncCount int
 }{
-	Enabled:         true,
-	DisableNewPull:  false,
-	DisableNewPush:  false,
-	MinInterval:     10 * time.Minute,
-	DefaultInterval: 8 * time.Hour,
+	Enabled:            true,
+	DisableNewPull:     false,
+	DisableNewPush:     false,
+	MinInterval:        10 * time.Minute,
+	DefaultInterval:    8 * time.Hour,
+	MaxFailedSyncCount: 10,
 }
 
 func loadMirrorFrom(rootCfg ConfigProvider) {
