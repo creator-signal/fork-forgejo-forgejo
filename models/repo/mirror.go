@@ -46,7 +46,6 @@ func (m *Mirror) BeforeInsert() {
 	if m != nil {
 		m.UpdatedUnix = timeutil.TimeStampNow()
 		m.NextUpdateUnix = timeutil.TimeStampNow()
-		m.Enabled = true
 	}
 }
 
