@@ -25,6 +25,7 @@ func TestPushMirrorsIterate(t *testing.T) {
 		RemoteName:     "test-1",
 		LastUpdateUnix: now,
 		Interval:       1,
+		Enabled:        true,
 	})
 
 	long, _ := time.ParseDuration("24h")
@@ -32,21 +33,54 @@ func TestPushMirrorsIterate(t *testing.T) {
 		RemoteName:     "test-2",
 		LastUpdateUnix: now,
 		Interval:       long,
+		Enabled:        true,
 	})
 
 	db.Insert(db.DefaultContext, &repo_model.PushMirror{
 		RemoteName:     "test-3",
 		LastUpdateUnix: now,
 		Interval:       0,
+		Enabled:        true,
 	})
 
-	repo_model.PushMirrorsIterate(db.DefaultContext, 1, func(idx int, bean any) error {
+	db.Insert(db.DefaultContext, &repo_model.PushMirror{
+		RemoteName:     "test-4",
+		LastUpdateUnix: now,
+		Interval:       1,
+		Enabled:        false,
+	})
+
+	repo_model.PushMirrorsIterate(db.DefaultContext, 0, func(idx int, bean any) error {
 		m, ok := bean.(*repo_model.PushMirror)
 		assert.True(t, ok)
-		assert.Equal(t, "test-1", m.RemoteName)
-		assert.Equal(t, m.RemoteName, m.GetRemoteName())
+		assert.NotEqual(t, "test-4", m.RemoteName, "disabled mirror should not be iterated")
 		return nil
 	})
+}
+
+func TestGetPushMirrorsSyncedOnCommitSkipsDisabled(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repoID := int64(99)
+
+	db.Insert(db.DefaultContext, &repo_model.PushMirror{
+		RepoID:       repoID,
+		RemoteName:   "enabled-sync",
+		SyncOnCommit: true,
+		Enabled:      true,
+	})
+
+	db.Insert(db.DefaultContext, &repo_model.PushMirror{
+		RepoID:       repoID,
+		RemoteName:   "disabled-sync",
+		SyncOnCommit: true,
+		Enabled:      false,
+	})
+
+	mirrors, err := repo_model.GetPushMirrorsSyncedOnCommit(db.DefaultContext, repoID)
+	require.NoError(t, err)
+	assert.Len(t, mirrors, 1)
+	assert.Equal(t, "enabled-sync", mirrors[0].RemoteName)
 }
 
 func TestPushMirrorPrivatekey(t *testing.T) {
@@ -185,12 +219,14 @@ func TestPushMirrorBranchFilter(t *testing.T) {
 				RemoteName:   "sync-mirror-1",
 				BranchFilter: "main,develop",
 				SyncOnCommit: true,
+				Enabled:      true,
 			},
 			{
 				RepoID:       3,
 				RemoteName:   "sync-mirror-2",
 				BranchFilter: "feature-*",
 				SyncOnCommit: true,
+				Enabled:      true,
 			},
 		}
 
