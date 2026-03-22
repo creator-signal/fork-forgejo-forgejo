@@ -118,12 +118,6 @@ func UpdatePushMirror(ctx context.Context, m *PushMirror) error {
 	return err
 }
 
-// UpdatePushMirrorInterval updates the push-mirror
-func UpdatePushMirrorInterval(ctx context.Context, m *PushMirror) error {
-	_, err := db.GetEngine(ctx).ID(m.ID).Cols("interval").Update(m)
-	return err
-}
-
 func UpdatePushMirrorBranchFilter(ctx context.Context, m *PushMirror) error {
 	_, err := db.GetEngine(ctx).ID(m.ID).Cols("branch_filter").Update(m)
 	return err

@@ -7,6 +7,8 @@
   next_update_unix: 0
   lfs_enabled: false
   lfs_endpoint: ""
+  failed_sync_count: 0
+  enabled: true
 
 -
   id: 2
@@ -17,6 +19,8 @@
   next_update_unix: 0
   lfs_enabled: false
   lfs_endpoint: ""
+  failed_sync_count: 0
+  enabled: true
 
 -
   id: 3
@@ -27,6 +31,8 @@
   next_update_unix: 0
   lfs_enabled: false
   lfs_endpoint: ""
+  failed_sync_count: 0
+  enabled: true
 
 -
   id: 4
@@ -37,6 +43,8 @@
   next_update_unix: 0
   lfs_enabled: false
   lfs_endpoint: ""
+  failed_sync_count: 0
+  enabled: true
 
 -
   id: 5
@@ -47,3 +55,5 @@
   next_update_unix: 0
   lfs_enabled: false
   lfs_endpoint: ""
+  failed_sync_count: 0
+  enabled: true

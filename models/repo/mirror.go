@@ -95,13 +95,6 @@ func UpdateMirror(ctx context.Context, m *Mirror) error {
 	return err
 }
 
-// TouchMirror updates the mirror updatedUnix
-func TouchMirror(ctx context.Context, m *Mirror) error {
-	m.UpdatedUnix = timeutil.TimeStampNow()
-	_, err := db.GetEngine(ctx).ID(m.ID).Cols("updated_unix").Update(m)
-	return err
-}
-
 // DeleteMirrorByRepoID deletes a mirror by repoID
 func DeleteMirrorByRepoID(ctx context.Context, repoID int64) error {
 	_, err := db.GetEngine(ctx).Delete(&Mirror{RepoID: repoID})
