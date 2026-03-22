@@ -77,3 +77,23 @@
   log_length: 707
   log_size: 90179
   log_expired: false
+-
+  id: 800004
+  job_id: 20004
+  attempt: 1
+  runner_id: 1
+  status: 2 # failure
+  started: 1683636528
+  stopped: 1683636626
+  repo_id: 63
+  owner_id: 2
+  commit_sha: 97f29ee599c373c729132a5c46a046978311e0ee
+  is_fork_pull_request: false
+  token_hash: ee0ef48297195edcc8e22c70b3020eaa06c52976db67d39b4260c64a69a2cc1508825121b7b8394e48e00b1bf8718b2a867e
+  token_salt: eeRerunT05
+  token_last_eight: ee05ee05
+  log_filename: artifact-test2/2f/51.log
+  log_in_storage: true
+  log_length: 707
+  log_size: 90179
+  log_expired: false

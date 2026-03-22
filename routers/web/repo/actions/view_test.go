@@ -522,7 +522,6 @@ func TestActionsViewRedirectToLatestAttempt(t *testing.T) {
 
 func TestActionsRerun(t *testing.T) {
 	defer unittest.OverrideFixtures("routers/web/repo/actions/TestActionsRerun")()
-	unittest.PrepareTestEnv(t)
 
 	tests := []struct {
 		name         string
@@ -546,6 +545,7 @@ func TestActionsRerun(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			unittest.PrepareTestEnv(t)
 			ctx, resp := contexttest.MockContext(t, "user2/repo1/actions/runs/138574/rerun")
 			contexttest.LoadUser(t, ctx, 2)
 			contexttest.LoadRepo(t, ctx, 1)

@@ -6,6 +6,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -14,7 +15,7 @@ import (
 	"xorm.io/builder"
 )
 
-// GetAllRerunJobs get all jobs that need to be rerun when job should be rerun
+// GetAllRerunJobs returns the given job and all jobs that transitively depend on it.
 func GetAllRerunJobs(job *actions_model.ActionRunJob, allJobs []*actions_model.ActionRunJob) []*actions_model.ActionRunJob {
 	rerunJobs := []*actions_model.ActionRunJob{job}
 	rerunJobsIDSet := make(container.Set[string])
@@ -43,14 +44,10 @@ func GetAllRerunJobs(job *actions_model.ActionRunJob, allJobs []*actions_model.A
 	return rerunJobs
 }
 
-// RerunJob resets a single completed job for rerun.
-// If shouldBlock is true, the job will be set to StatusBlocked; otherwise StatusWaiting.
-// Jobs that are not done are skipped (not an error).
-// This only updates the job record; the caller is responsible for recomputing the
-// run status and creating commit statuses after all jobs are updated.
+// RerunJob resets a completed job for rerun.
 func RerunJob(ctx context.Context, job *actions_model.ActionRunJob, shouldBlock bool) error {
 	if !job.Status.IsDone() {
-		return nil
+		return fmt.Errorf("cannot rerun job %d because it is still active: %s", job.ID, job.Status)
 	}
 
 	status := job.Status
@@ -80,16 +77,11 @@ func RerunJob(ctx context.Context, job *actions_model.ActionRunJob, shouldBlock 
 	return nil
 }
 
-// RerunRunJobs reruns jobs for a run.
-// If jobID is 0, all jobs are rerun. Otherwise, only the specified job and its
-// transitive dependents are rerun. If the run is done, its timing is reset.
-// Returns the jobs that were rerun.
+// RerunRunJobs reruns all or a subset of jobs for a run.
 func RerunRunJobs(ctx context.Context, run *actions_model.ActionRun, jobID int64) ([]*actions_model.ActionRunJob, error) {
 	// Reset run timing if the run is done
 	if run.Status.IsDone() {
-		run.PreviousDuration = run.Duration()
-		run.Started = 0
-		run.Stopped = 0
+		run.PrepareForRerun()
 		if err := actions_model.UpdateRunWithoutNotification(ctx, run, "started", "stopped", "previous_duration"); err != nil {
 			return nil, err
 		}
@@ -104,9 +96,12 @@ func RerunRunJobs(ctx context.Context, run *actions_model.ActionRun, jobID int64
 
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
 		if jobID == 0 {
-			// Rerun all jobs
-			rerunJobs = jobs
+			// Rerun all jobs (skip any that are still active)
 			for _, j := range jobs {
+				if !j.Status.IsDone() {
+					continue
+				}
+				rerunJobs = append(rerunJobs, j)
 				shouldBlock := len(j.Needs) > 0
 				if err := RerunJob(ctx, j, shouldBlock); err != nil {
 					return err
@@ -125,9 +120,12 @@ func RerunRunJobs(ctx context.Context, run *actions_model.ActionRun, jobID int64
 				return nil
 			}
 
-			// Rerun the target job and its transitive dependents
-			rerunJobs = GetAllRerunJobs(targetJob, jobs)
-			for _, j := range rerunJobs {
+			// Rerun the target job and its transitive dependents (skip active)
+			for _, j := range GetAllRerunJobs(targetJob, jobs) {
+				if !j.Status.IsDone() {
+					continue
+				}
+				rerunJobs = append(rerunJobs, j)
 				shouldBlock := j.JobID != targetJob.JobID
 				if err := RerunJob(ctx, j, shouldBlock); err != nil {
 					return err

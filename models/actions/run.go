@@ -172,6 +172,12 @@ func (run *ActionRun) Duration() time.Duration {
 	return calculateDuration(run.Started, run.Stopped, run.Status) + run.PreviousDuration
 }
 
+func (run *ActionRun) PrepareForRerun() {
+	run.PreviousDuration = run.Duration()
+	run.Started = 0
+	run.Stopped = 0
+}
+
 func (run *ActionRun) GetPushEventPayload() (*api.PushPayload, error) {
 	if run.Event == webhook_module.HookEventPush {
 		var payload api.PushPayload

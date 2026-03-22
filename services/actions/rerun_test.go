@@ -84,14 +84,14 @@ func TestActions_RerunJobs(t *testing.T) {
 		assert.Zero(t, job.TaskID)
 	})
 
-	t.Run("RerunJob running job is no-op", func(t *testing.T) {
+	t.Run("RerunJob running job returns error", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestActions_RerunJobs")()
 		require.NoError(t, unittest.PrepareTestDatabase())
 
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 20003})
 		require.Equal(t, actions_model.StatusRunning, job.Status)
 
-		require.NoError(t, RerunJob(t.Context(), job, false))
+		require.Error(t, RerunJob(t.Context(), job, false))
 
 		// Should remain unchanged
 		job = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 20003})
@@ -160,7 +160,7 @@ func TestActions_RerunJobs(t *testing.T) {
 		assert.Equal(t, int64(2), job3.Attempt)
 	})
 
-	t.Run("RerunRunJobs running run does not reset timing", func(t *testing.T) {
+	t.Run("RerunRunJobs running run skips active jobs", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestActions_RerunJobs")()
 		require.NoError(t, unittest.PrepareTestDatabase())
 
@@ -170,16 +170,22 @@ func TestActions_RerunJobs(t *testing.T) {
 
 		rerunJobs, err := RerunRunJobs(t.Context(), run, 0)
 		require.NoError(t, err)
-		// The running job should not be rerun
+		// Only the failed job should be rerun, not the running one
 		assert.Len(t, rerunJobs, 1)
+		assert.Equal(t, int64(20004), rerunJobs[0].ID)
 
 		// Run timing should NOT be reset (run is not done)
 		run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 1100})
 		assert.Equal(t, originalStarted, run.Started)
 
 		// Running job should remain unchanged
-		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 20003})
-		assert.Equal(t, actions_model.StatusRunning, job.Status)
-		assert.Equal(t, int64(1), job.Attempt)
+		runningJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 20003})
+		assert.Equal(t, actions_model.StatusRunning, runningJob.Status)
+		assert.Equal(t, int64(1), runningJob.Attempt)
+
+		// Failed job should be rerun
+		failedJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 20004})
+		assert.Equal(t, actions_model.StatusBlocked, failedJob.Status) // blocked because it needs job_1
+		assert.Equal(t, int64(2), failedJob.Attempt)
 	})
 }
