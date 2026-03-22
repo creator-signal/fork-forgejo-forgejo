@@ -22,7 +22,7 @@ func ImportUpload(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -47,7 +47,7 @@ func ImportUploadPost(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -100,7 +100,7 @@ func ImportPreview(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	draftID := ctx.ParamsInt64(":draftID")
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -141,7 +141,7 @@ func ImportUpdateRow(ctx *context.Context) {
 	username := ctx.FormString("username")
 	email := ctx.FormString("email")
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -162,7 +162,7 @@ func ImportExecutePost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	draftID := ctx.ParamsInt64(":draftID")
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -202,7 +202,7 @@ func ImportDeletePost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	draftID := ctx.ParamsInt64(":draftID")
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return

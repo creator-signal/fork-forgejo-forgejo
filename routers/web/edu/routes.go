@@ -4,7 +4,6 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
-	"forgejo.org/services/forms"
 )
 
 func RegisterRoutes(m *web.Route, middlewares ...any) {
@@ -56,7 +55,7 @@ func RegisterRoutes(m *web.Route, middlewares ...any) {
 
 		m.Group("/admin", func() {
 			m.Get("", AdminPanel)
-			m.Post("/roles", web.Bind(forms.EduRoleForm{}), UpdateUserRolePost)
+			m.Post("/roles", web.Bind(EduRoleForm{}), UpdateUserRolePost)
 		})
 	}, middlewares...)
 }

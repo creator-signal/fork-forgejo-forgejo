@@ -73,7 +73,7 @@ HTTP Handler (routers/web/edu/)
 EducationalService (interface в service.go)
     │
     ├──> Repository (interface в service.go, реализация в repository_*.go)
-    │        └──> SQLRunner (database/sql) через squirrel
+    │        └──> Xorm ORM через db.GetEngine(ctx)
     │
     ├──> RepoForker (interface в service.go)
     │        └──> ForgejoAdapter (adapter.go) → Forgejo core services
@@ -131,13 +131,13 @@ EducationalService (interface в service.go)
 
 | Таблица | Назначение |
 |---------|------------|
-| `user_role` | Глобальная роль пользователя (student/teacher/admin). **Внимание:** эта таблица управляется через Xorm ORM напрямую (`role.go`), а не через squirrel, поэтому **не имеет** префикса `edu_`. |
+| `user_role` | Глобальная роль пользователя (student/teacher/admin). **Внимание:** эта таблица **не имеет** префикса `edu_` (нет метода `TableName()`). |
 | `edu_import_draft` | Черновик CSV-импорта (храним сырой CSV) |
 | `edu_import_draft_row` | Строки черновика импорта (ФИО, email, username, status) |
 | `bulk_fork_task` | Задача массового форка (прогресс: completed/failed/total) |
 | `sync_fork_task` | Задача массовой синхронизации форков (synced/skipped/failed) |
 
-> **Важно о именовании таблиц:** Модели `Course`, `Assignment`, `Submission`, `TestResult`, `CourseEnrollment`, `ImportDraft`, `ImportDraftRow` определяют метод `TableName()` в `models.go`, чтобы Xorm создавал таблицы с `edu_` префиксом (соответствуя squirrel-запросам). `UserRole` не имеет `TableName()`, поэтому Xorm создаёт таблицу как `user_role`. `BulkForkTask` и `SyncForkTask` также не имеют `TableName()`, и squirrel-запросы к ним используют имена `bulk_fork_task` / `sync_fork_task` (совпадают с дефолтным поведением Xorm).
+> **Важно о именовании таблиц:** Модели `Course`, `Assignment`, `Submission`, `TestResult`, `CourseEnrollment`, `ImportDraft`, `ImportDraftRow` определяют метод `TableName()` в `models.go`, чтобы Xorm создавал таблицы с `edu_` префиксом. `UserRole`, `BulkForkTask` и `SyncForkTask` не имеют `TableName()`, поэтому Xorm создаёт таблицы по дефолтным именам (`user_role`, `bulk_fork_task`, `sync_fork_task`).
 
 #### Статусы Submission:
 - `started` — студент взял задание, форк создан
@@ -152,7 +152,7 @@ EducationalService (interface в service.go)
 |------|------------|
 | `models.go` | Все структуры данных (Course, Assignment, Submission, TestResult, ...) |
 | `service.go` | Интерфейсы EducationalService, Repository, RepoForker, UserCreator; конструктор |
-| `repository.go` | SQLRunner, dbRepository, CRUD для assignments и submissions |
+| `repository.go` | xormRepository, CRUD для assignments и submissions |
 | `repository_courses.go` | CRUD для courses |
 | `repository_enrollments.go` | CRUD для enrollments |
 | `repository_submissions.go` | Дополнительные методы submissions (GetByRepoID) |
@@ -173,9 +173,10 @@ EducationalService (interface в service.go)
 | `adapter.go` | ForgejoAdapter — мост к ядру Forgejo |
 | `notifier.go` | EduNotifier — обработка событий CI/CD |
 | `role.go` | Управление глобальными ролями через Xorm ORM (таблица `user_role`) |
-| `init.go` | Инициализация: sync схемы, создание репозитория, регистрация нотификатора |
+| `init.go` | Инициализация: sync схемы, регистрация нотификатора, загрузка edu-локалей |
 | `mock_test.go` | Моки для unit-тестов |
-| `*_test.go` | Unit-тесты для каждого компонента (19 файлов) |
+| `locale/*.json` | Встраиваемые (embed) JSON-файлы локализации для edu-ключей |
+| `*_test.go` | Unit-тесты для каждого компонента |
 
 ### 2.5 Ключевые сценарии
 
@@ -344,23 +345,31 @@ Edu-модуль затрагивает ядро Forgejo в **4 точках**:
 
 ## Часть 3: Технический стек и паттерны
 
-### 3.1 SQL: Squirrel (не Xorm для запросов)
+### 3.1 ORM: Xorm
 
-Хотя Forgejo использует Xorm для ORM, edu-модуль использует **squirrel** (SQL builder) для всех запросов через `database/sql`:
+Edu-модуль использует **Xorm** — тот же ORM, что и ядро Forgejo. Все запросы идут через `db.GetEngine(ctx)`:
 
 ```go
-psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+// Insert
+_, err := db.GetEngine(ctx).Insert(assignment)
 
-query, args, err := psql.Select("id", "title", "course_id").
-    From("edu_assignments").
-    Where(sq.Eq{"course_id": courseID}).
-    OrderBy("created_unix DESC").
-    ToSql()
+// Select by ID
+has, err := db.GetEngine(ctx).ID(id).Get(assignment)
 
-rows, err := r.runner.QueryContext(ctx, query, args...)
+// Select with conditions
+err := db.GetEngine(ctx).Where("course_id = ?", courseID).OrderBy("created_unix DESC").Find(&assignments)
+
+// Update specific columns
+_, err := db.GetEngine(ctx).ID(a.ID).Cols("title", "description", "deadline_unix", "updated_unix").Update(a)
+
+// Join
+err := db.GetEngine(ctx).
+    Join("INNER", "edu_course_enrollments", "edu_course_enrollments.course_id = edu_assignments.course_id").
+    Where("edu_course_enrollments.user_id = ?", userID).
+    Find(&assignments)
 ```
 
-**Почему**: чистый SQL, безопасные плейсхолдеры, явный контроль над запросами. Xorm используется только для auto-migration схемы (`e.Sync()`).
+Xorm используется как для auto-migration схемы (`e.Sync()`), так и для всех CRUD-операций. Это обеспечивает единообразие с ядром Forgejo и отсутствие внешних зависимостей (squirrel ранее использовался, но был заменён).
 
 ### 3.2 Фронтенд: Server-side rendering
 
@@ -373,27 +382,31 @@ rows, err := r.runner.QueryContext(ctx, query, args...)
 
 ### 3.3 Локализация (i18n)
 
-Forgejo использует собственную систему интернационализации на основе INI-файлов с секциями.
+Forgejo использует собственную систему интернационализации на основе INI/JSON-файлов.
 
 #### Где хранятся переводы
 
-Файлы локали находятся в `options/locale/`:
-- `locale_en-US.ini` — английский (базовый, fallback)
-- `locale_ru-RU.ini` — русский
+Edu-переводы хранятся **отдельно от ядра Forgejo** в JSON-файлах, встроенных через Go embed:
 
-Edu-ключи расположены в секции `[edu]` в конце каждого файла:
-
-```ini
-[edu]
-assignments=Задания
-new_assignment=Новое задание
-no_assignments=Заданий не найдено.
-roles=Роли
-manage_roles=Управление ролями
-...
+```
+internal/edu/locale/
+├── locale_en-US.json   — английский
+└── locale_ru-RU.json   — русский
 ```
 
-INI-парсер автоматически формирует ключ как `секция.имя`: секция `[edu]` + ключ `roles` = `edu.roles`.
+Формат — плоский JSON с полными ключами:
+
+```json
+{
+    "edu.assignments": "Задания",
+    "edu.new_assignment": "Новое задание",
+    "edu.no_assignments": "Заданий не найдено.",
+    "edu.roles": "Роли",
+    "edu.manage_roles": "Управление ролями"
+}
+```
+
+При инициализации (`init.go`) файлы загружаются через `i18n.DefaultLocales.AddToLocaleFromJSON()` и мерджатся с основными переводами Forgejo. Это позволяет **не трогать** core locale файлы (`options/locale/*.ini`).
 
 #### Использование в шаблонах
 
@@ -418,25 +431,24 @@ INI-парсер автоматически формирует ключ как `
 
 #### Как добавить новый ключ перевода
 
-1. Добавить ключ в секцию `[edu]` файла `options/locale/locale_en-US.ini`:
-   ```ini
-   [edu]
-   my_new_key=My new text
+1. Добавить ключ в `internal/edu/locale/locale_en-US.json`:
+   ```json
+   "edu.my_new_key": "My new text"
    ```
-2. Добавить перевод в `options/locale/locale_ru-RU.ini`:
-   ```ini
-   [edu]
-   my_new_key=Мой новый текст
+2. Добавить перевод в `internal/edu/locale/locale_ru-RU.json`:
+   ```json
+   "edu.my_new_key": "Мой новый текст"
    ```
 3. Использовать в шаблоне: `{{ctx.Locale.Tr "edu.my_new_key"}}`
-4. Использовать в Go-хендлере (для заголовков страниц и flash-сообщений): `ctx.Tr("edu.my_new_key")`
+4. Использовать в Go-хендлере: `ctx.Tr("edu.my_new_key")`
 
 #### Как это работает под капотом
 
-1. При старте `modules/translation/translation.go` → `InitLocales()` загружает все INI-файлы через `options.AssetFS()`.
-2. `i18n/localestore.go` → `AddLocaleByIni()` парсит секции и строит карту `trKeyToIdxMap` (ключ → индекс) и `idxToMsgMap` (индекс → перевод).
-3. Если ключ не найден в текущей локали, система fallback'ится на дефолтный язык (en-US). Если и там нет — возвращает имя ключа как есть (например, `"edu.roles"`).
-4. В шаблонах `ctx` — это template function, зарегистрированная в `htmlrenderer.go`, которая возвращает `templates.Context` с полем `Locale`.
+1. При старте Forgejo `modules/translation/translation.go` → `InitLocales()` загружает core INI-файлы.
+2. Затем `internal/edu/init.go` → `Init()` загружает edu JSON-файлы через `i18n.DefaultLocales.AddToLocaleFromJSON()`.
+3. JSON-ключи попадают в `newStyleMessages` map, которая проверяется **первой** при вызове `TrString()`.
+4. Если ключ не найден — fallback на дефолтный язык (en-US). Если и там нет — возвращается имя ключа.
+5. В шаблонах `ctx` — template function из `htmlrenderer.go`, возвращает `templates.Context` с полем `Locale`.
 
 ### 3.4 Локальная разработка (Docker)
 
@@ -508,7 +520,7 @@ if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
 
 ### Добавление новой сущности
 
-1. Определить структуру в `models.go` (с тегами `xorm` и `json`). Добавить метод `TableName()` если squirrel-запросы будут обращаться к таблице с `edu_` префиксом.
+1. Определить структуру в `models.go` (с тегами `xorm` и `json`). Добавить метод `TableName()` для задания имени таблицы с `edu_` префиксом.
 2. Добавить `new(Entity)` в `e.Sync()` в `init.go`.
 3. Добавить CRUD-методы в интерфейс `Repository` (`service.go`).
 4. Реализовать методы в `repository_<entity>.go`.
@@ -525,11 +537,7 @@ if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
 3. Паттерн хендлера:
    ```go
    func MyHandler(ctx *context.Context) {
-       svc := getEduService(ctx)
-       if svc == nil {
-           ctx.ServerError("getEduService", nil)
-           return
-       }
+       svc := getEduService()
        // ... бизнес-логика ...
        ctx.Data["Key"] = value
        ctx.HTML(http.StatusOK, tplMyTemplate)

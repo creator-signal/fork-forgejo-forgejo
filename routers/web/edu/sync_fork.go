@@ -13,7 +13,7 @@ import (
 
 func SyncAllForksPost(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -58,7 +58,7 @@ func SyncAllForksPost(ctx *context.Context) {
 
 func SyncForkStatus(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return

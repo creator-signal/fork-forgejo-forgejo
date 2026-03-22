@@ -5,14 +5,11 @@ import (
 	"time"
 
 	"forgejo.org/internal/edu"
-	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
-
-	"xorm.io/xorm"
 )
 
 const (
@@ -22,26 +19,8 @@ const (
 	tplAssignmentEdit        base.TplName = "edu/assignment_edit"
 )
 
-func getSQLRunner(ctx *context.Context) edu.SQLRunner {
-	e := db.GetEngine(ctx)
-	if sess, ok := e.(*xorm.Session); ok {
-		if sess.Tx() != nil {
-			return sess.Tx().Tx
-		}
-		return sess.Engine().DB().DB
-	}
-	if eng, ok := e.(*xorm.Engine); ok {
-		return eng.DB().DB
-	}
-	return nil
-}
-
-func getEduService(ctx *context.Context) edu.EducationalService {
-	runner := getSQLRunner(ctx)
-	if runner == nil {
-		return nil
-	}
-	repo := edu.NewRepository(runner)
+func getEduService() edu.EducationalService {
+	repo := edu.NewRepository()
 	adapter := edu.NewForgejoAdapter()
 	return edu.NewService(repo, adapter, adapter)
 }
@@ -50,11 +29,7 @@ func StudentAssignments(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("edu.assignments")
 	ctx.Data["PageIsEduAssignments"] = true
 
-	svc := getEduService(ctx)
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
+	svc := getEduService()
 
 	assignments, err := svc.GetAssignmentsForUser(ctx, ctx.Doer.ID)
 	if err != nil {
@@ -70,11 +45,7 @@ func TeacherAssignments(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("edu.assignments")
 	ctx.Data["PageIsEduAssignments"] = true
 
-	svc := getEduService(ctx)
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
+	svc := getEduService()
 
 	assignments, err := svc.GetAssignmentsForUser(ctx, ctx.Doer.ID)
 	if err != nil {
@@ -105,11 +76,7 @@ func AssignmentDetail(ctx *context.Context) {
 	ctx.Data["PageIsEduAssignments"] = true
 
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
+	svc := getEduService()
 
 	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
 	if err != nil {
@@ -124,7 +91,7 @@ func AssignmentDetail(ctx *context.Context) {
 	ctx.Data["Assignment"] = assignment
 	ctx.Data["DeadlinePassed"] = assignment.DeadlineUnix > 0 && time.Now().Unix() > assignment.DeadlineUnix
 
-	repo := edu.NewRepository(getSQLRunner(ctx))
+	repo := edu.NewRepository()
 	submission, err := repo.GetSubmission(ctx, assignment.ID, ctx.Doer.ID)
 
 	if err != nil {
@@ -142,11 +109,7 @@ func AssignmentDetail(ctx *context.Context) {
 
 func JoinAssignment(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
+	svc := getEduService()
 
 	_, err := svc.JoinAssignment(ctx, ctx.Doer, assignmentID)
 	if err != nil {
@@ -199,11 +162,7 @@ func NewAssignmentPost(ctx *context.Context) {
 		}
 	}
 
-	svc := getEduService(ctx)
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
+	svc := getEduService()
 
 	courseID := ctx.FormInt64("course_id")
 
@@ -229,11 +188,7 @@ func EditAssignment(ctx *context.Context) {
 	ctx.Data["PageIsEduAssignments"] = true
 
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
+	svc := getEduService()
 
 	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
 	if err != nil {
@@ -254,11 +209,7 @@ func EditAssignmentPost(ctx *context.Context) {
 	ctx.Data["PageIsEduAssignments"] = true
 
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
+	svc := getEduService()
 
 	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
 	if err != nil {
@@ -299,11 +250,7 @@ func EditAssignmentPost(ctx *context.Context) {
 
 func DeleteAssignmentPost(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
+	svc := getEduService()
 
 	if err := svc.DeleteAssignment(ctx, assignmentID); err != nil {
 		ctx.ServerError("DeleteAssignment", err)

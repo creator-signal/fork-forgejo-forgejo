@@ -7,7 +7,6 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
-	"forgejo.org/services/forms"
 )
 
 func AdminPanel(ctx *context.Context) {
@@ -30,7 +29,7 @@ func UpdateUserRolePost(ctx *context.Context) {
 		return
 	}
 
-	form := web.GetForm(ctx).(*forms.EduRoleForm)
+	form := web.GetForm(ctx).(*EduRoleForm)
 	
 	username := form.Username
 	role := form.Role

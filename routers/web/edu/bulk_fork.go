@@ -12,7 +12,7 @@ import (
 
 func BulkForkPost(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -62,7 +62,7 @@ func BulkForkPost(ctx *context.Context) {
 
 func BulkForkStatus(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return

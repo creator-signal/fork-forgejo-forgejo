@@ -25,7 +25,7 @@ func SubmissionDetail(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
 	subID := ctx.ParamsInt64(":subID")
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -107,7 +107,7 @@ func GradeSubmissionPost(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
 	subID := ctx.ParamsInt64(":subID")
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return

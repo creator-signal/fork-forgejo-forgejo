@@ -2,105 +2,44 @@ package edu
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
-	sq "github.com/Masterminds/squirrel"
+	"forgejo.org/models/db"
 )
 
-func (r *dbRepository) EnrollUser(ctx context.Context, enrollment *CourseEnrollment) error {
-	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-
-	query, args, err := psql.Insert("edu_course_enrollments").
-		Columns("course_id", "user_id", "role", "created_unix").
-		Values(enrollment.CourseID, enrollment.UserID, enrollment.Role, enrollment.CreatedUnix).
-		Suffix("RETURNING id").
-		ToSql()
+func (r *xormRepository) EnrollUser(ctx context.Context, enrollment *CourseEnrollment) error {
+	_, err := db.GetEngine(ctx).Insert(enrollment)
 	if err != nil {
-		return fmt.Errorf("build query: %w", err)
+		return fmt.Errorf("insert enrollment: %w", err)
 	}
-
-	err = r.runner.QueryRowContext(ctx, query, args...).Scan(&enrollment.ID)
-	if err != nil {
-		return fmt.Errorf("exec query: %w", err)
-	}
-
 	return nil
 }
 
-func (r *dbRepository) GetEnrollment(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error) {
-	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-
-	query, args, err := psql.Select("id", "course_id", "user_id", "role", "created_unix").
-		From("edu_course_enrollments").
-		Where(sq.Eq{"course_id": courseID, "user_id": userID}).
-		ToSql()
+func (r *xormRepository) GetEnrollment(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error) {
+	e := &CourseEnrollment{}
+	has, err := db.GetEngine(ctx).Where("course_id = ? AND user_id = ?", courseID, userID).Get(e)
 	if err != nil {
-		return nil, fmt.Errorf("build query: %w", err)
+		return nil, fmt.Errorf("get enrollment: %w", err)
 	}
-
-	row := r.runner.QueryRowContext(ctx, query, args...)
-
-	var e CourseEnrollment
-	err = row.Scan(&e.ID, &e.CourseID, &e.UserID, &e.Role, &e.CreatedUnix)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("scan row: %w", err)
+	if !has {
+		return nil, nil
 	}
-
-	return &e, nil
+	return e, nil
 }
 
-func (r *dbRepository) GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error) {
-	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-
-	query, args, err := psql.Select("id", "course_id", "user_id", "role", "created_unix").
-		From("edu_course_enrollments").
-		Where(sq.Eq{"course_id": courseID}).
-		OrderBy("created_unix ASC").
-		ToSql()
-	if err != nil {
-		return nil, fmt.Errorf("build query: %w", err)
-	}
-
-	rows, err := r.runner.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("exec query: %w", err)
-	}
-	defer rows.Close()
-
+func (r *xormRepository) GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error) {
 	var enrollments []*CourseEnrollment
-	for rows.Next() {
-		var e CourseEnrollment
-		if err := rows.Scan(&e.ID, &e.CourseID, &e.UserID, &e.Role, &e.CreatedUnix); err != nil {
-			return nil, fmt.Errorf("scan row: %w", err)
-		}
-		enrollments = append(enrollments, &e)
+	err := db.GetEngine(ctx).Where("course_id = ?", courseID).OrderBy("created_unix ASC").Find(&enrollments)
+	if err != nil {
+		return nil, fmt.Errorf("find enrollments: %w", err)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration: %w", err)
-	}
-
 	return enrollments, nil
 }
 
-func (r *dbRepository) RemoveEnrollment(ctx context.Context, courseID, userID int64) error {
-	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-
-	query, args, err := psql.Delete("edu_course_enrollments").
-		Where(sq.Eq{"course_id": courseID, "user_id": userID}).
-		ToSql()
+func (r *xormRepository) RemoveEnrollment(ctx context.Context, courseID, userID int64) error {
+	_, err := db.GetEngine(ctx).Where("course_id = ? AND user_id = ?", courseID, userID).Delete(&CourseEnrollment{})
 	if err != nil {
-		return fmt.Errorf("build query: %w", err)
+		return fmt.Errorf("delete enrollment: %w", err)
 	}
-
-	_, err = r.runner.ExecContext(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("exec query: %w", err)
-	}
-
 	return nil
 }

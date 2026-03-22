@@ -23,7 +23,7 @@ func CourseList(ctx *context.Context) {
 	ctx.Data["Title"] = "Courses"
 	ctx.Data["PageIsEduCourses"] = true
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -44,7 +44,7 @@ func CourseDetail(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -143,7 +143,7 @@ func NewCoursePost(ctx *context.Context) {
 		}
 	}
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -170,7 +170,7 @@ func EditCourse(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -195,7 +195,7 @@ func EditCoursePost(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -250,7 +250,7 @@ func EditCoursePost(ctx *context.Context) {
 
 func DeleteCoursePost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -292,7 +292,7 @@ func EnrollUserPost(ctx *context.Context) {
 		r = edu.RoleStudent
 	}
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
@@ -311,7 +311,7 @@ func RemoveEnrollmentPost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	userID := ctx.FormInt64("user_id")
 
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return

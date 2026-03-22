@@ -21,7 +21,7 @@ func InstructorSubmissions(ctx *context.Context) {
 	ctx.Data["PageIsEduAssignments"] = true
 
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService(ctx)
+	svc := getEduService()
 	if svc == nil {
 		ctx.ServerError("getEduService", nil)
 		return
