@@ -1026,6 +1026,10 @@ func registerRoutes(m *web.Route) {
 		m.Get("/search", repo.SearchRepo)
 	}, reqSignIn)
 
+	m.Group("", func() {
+		m.Get("/new", misc.StaticRedirect("/repo/create"))
+	}, reqSignIn)
+
 	m.Group("/{username}/-", func() {
 		if setting.Packages.Enabled {
 			m.Group("/packages", func() {
