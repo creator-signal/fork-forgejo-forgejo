@@ -171,8 +171,9 @@ func isSignedIfRequired(ctx context.Context, pr *issues_model.PullRequest, doer 
 }
 
 func isMergeSigningRequired(mergeStyle repo_model.MergeStyle) bool {
-	// Rebase can still amend commit metadata based on templates, so it may create
-	// a new commit even when the branch is up to date.
+	// Only fast-forward-only is guaranteed not to create a new commit. Rebase
+	// rewrites commits when the pull request is behind, and it can also amend
+	// the tip commit when a REBASE_TEMPLATE is configured.
 	return mergeStyle != repo_model.MergeStyleFastForwardOnly
 }
 
