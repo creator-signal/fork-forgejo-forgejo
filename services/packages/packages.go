@@ -289,6 +289,20 @@ func addFileToPackageVersion(ctx context.Context, pv *packages_model.PackageVers
 func addFileToPackageVersionUnchecked(ctx context.Context, pv *packages_model.PackageVersion, pfci *PackageFileCreationInfo, packageType packages_model.Type) (*packages_model.PackageFile, *packages_model.PackageBlob, bool, error) {
 	log.Trace("Adding package file: %v, %s", pv.ID, pfci.Filename)
 
+	// The `OverwriteExisting` capability in this method has a race condition in it -- it will check if the file already
+	// exists in the package, and delete the file's properties and the file, and then it will attempt to insert the new
+	// file.  This can cause the `ErrDuplicatePackageFile` error to be returned even when `OverwriteExisting` in
+	// concurrent modifications, as both modifications will attempt to delete the existing file, one will succeed, one
+	// will delete zero records and think it succeeded, and then both will attempt to add the file and one will hit
+	// `ErrDuplicatePackageFile`.
+	//
+	// To address this, lock the package version being modified by performing a `SELECT ... FOR UPDATE` on it,
+	// guaranteeing only one `addFileToPackageVersionUnchecked` is running on a specific package version.
+	err := pv.LockForUpdate(ctx)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
 	pb, exists, err := packages_model.GetOrInsertBlob(ctx, NewPackageBlob(pfci.Data))
 	if err != nil {
 		log.Error("Error inserting package blob: %v", err)
