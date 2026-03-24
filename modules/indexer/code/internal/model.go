@@ -3,7 +3,11 @@
 
 package internal
 
-import "forgejo.org/modules/timeutil"
+import (
+	"html/template"
+
+	"forgejo.org/modules/timeutil"
+)
 
 type FileUpdate struct {
 	Filename string
@@ -51,4 +55,23 @@ type SearchResultLanguages struct {
 	Language string
 	Color    string
 	Count    int
+}
+
+type Result struct {
+	RepoID      int64
+	Filename    string
+	CommitID    string
+	UpdatedUnix timeutil.TimeStamp
+	Language    string
+	Color       string
+	Lines       []ResultLine
+}
+
+type ResultLine struct {
+	Num              int
+	FormattedContent template.HTML
+}
+
+type ResultFormatter interface {
+	Format(*SearchResult) (*Result, error)
 }

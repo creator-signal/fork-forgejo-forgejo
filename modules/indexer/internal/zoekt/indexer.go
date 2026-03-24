@@ -37,7 +37,7 @@ func (i *Indexer) Init(_ context.Context) (bool, error) {
 
 	if _, err := os.Stat(i.indexDir); err != nil && os.IsNotExist(err) {
 		exists = false
-		err = os.MkdirAll(i.indexDir, 0o755)
+		err = os.MkdirAll(i.indexDir, 0o750)
 		if err != nil {
 			return false, fmt.Errorf("failed to create index directory: %w", err)
 		}
@@ -72,7 +72,7 @@ func (i *Indexer) Init(_ context.Context) (bool, error) {
 
 		if _, err := os.Stat(i.indexDir); err != nil && os.IsNotExist(err) {
 			exists = false
-			err = os.MkdirAll(i.indexDir, 0o755)
+			err = os.MkdirAll(i.indexDir, 0o750)
 			if err != nil {
 				return false, fmt.Errorf("failed to create index directory: %w", err)
 			}

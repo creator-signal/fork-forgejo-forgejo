@@ -38,7 +38,11 @@ import (
 	"github.com/sourcegraph/zoekt/query"
 )
 
+var errSkipIndexing = errors.New("skip indexing")
+
 const repoIndexerLatestVersion = 1
+
+type zoektFormatter struct{}
 
 type Indexer struct {
 	indexer_internal.Indexer // do not composite inner_zoekt.Indexer directly to avoid exposing too much
@@ -59,6 +63,7 @@ func newZoektIndexBuilder(indexDir string, repo *repo_model.Repository, targetSH
 	opts := index.Options{
 		IndexDir: indexDir,
 		SizeMax:  int(setting.Indexer.MaxIndexerFileSize),
+		ShardMax: 512 * 1024 * 1024, // 512 MB max shard
 		IsDelta:  true,
 		RepositoryDescription: zoekt.Repository{
 			ID:   uint32(repo.ID),
@@ -73,7 +78,7 @@ func newZoektIndexBuilder(indexDir string, repo *repo_model.Repository, targetSH
 	}
 
 	if opts.IncrementalSkipIndexing() {
-		return nil, nil
+		return nil, errSkipIndexing
 	}
 
 	opts.SetDefaults()
@@ -136,7 +141,6 @@ func (b *Indexer) addUpdate(ctx context.Context, builder *index.Builder, batchWr
 
 	builder.MarkFileAsChangedOrRemoved(update.Filename)
 
-	// branches := []string{repo.DefaultBranch}
 	branches := []string{"HEAD"}
 
 	err = builder.Add(
@@ -155,22 +159,18 @@ func (b *Indexer) addUpdate(ctx context.Context, builder *index.Builder, batchWr
 
 func detectLanguage(filename string, content []byte) string {
 	lang := enry.GetLanguage(filename, content)
-	if lang == "" {
-		lang = "Plain Text"
-	}
-	return lang
+	return normalizeLanguage(lang)
 }
 
 // Index will save the index data
 func (b *Indexer) Index(ctx context.Context, repo *repo_model.Repository, sha string, changes *internal.RepoChanges) error {
 	builder, err := newZoektIndexBuilder(b.indexDir, repo, sha)
-	if err != nil {
-		return fmt.Errorf("error creating builder: %w", err)
+	if errors.Is(err, errSkipIndexing) {
+		return nil
 	}
 
-	if builder == nil {
-		// skip indexing when there is no change
-		return nil
+	if err != nil {
+		return fmt.Errorf("error creating builder: %w", err)
 	}
 
 	if len(changes.Updates) > 0 {
@@ -204,7 +204,7 @@ func (b *Indexer) Delete(ctx context.Context, repoID int64) error {
 	repoPathPrefix := strconv.FormatInt(repoID, 10)
 
 	// remove all {repoId}_v{N}.{X}.zoekt or {repoId}_v{N}.{X}.zoekt.meta where X is %05d formatted int in b.indexDir
-	pattern := repoPathPrefix + "_v*.[0-9][0-9][0-9][0-9][0-9].zoekt*"
+	pattern := repoPathPrefix + "_v*.[0-9]{5}.zoekt*"
 	matches, err := filepath.Glob(filepath.Join(b.indexDir, pattern))
 	if err != nil {
 		return fmt.Errorf("finding files to delete: %w", err)
@@ -236,7 +236,7 @@ func TransToZoektContentQueryString(s string) string {
 }
 
 // generateZoektQuery creates a Zoekt query object based on search options
-func (b *Indexer) generateZoektQuery(_ context.Context, opts *internal.SearchOptions) (query.Q, error) {
+func (b *Indexer) generateZoektQuery(opts *internal.SearchOptions) (query.Q, error) {
 	keyword := opts.Keyword
 	var contentQuery query.Q
 	var err error
@@ -305,18 +305,15 @@ func (b *Indexer) generateZoektQuery(_ context.Context, opts *internal.SearchOpt
 		finalQuery = query.NewAnd(finalQuery, fileQuery)
 	}
 
-	return finalQuery, nil
-}
-
-// excludeVendored filters out search results whose filenames indicate they are vendored dependencies.
-func excludeVendored(results []*internal.SearchResult) []*internal.SearchResult {
-	filtered := make([]*internal.SearchResult, 0, len(results))
-	for _, res := range results {
-		if !analyze.IsVendor(res.Filename) {
-			filtered = append(filtered, res)
+	if opts.Language != "" {
+		lang := opts.Language
+		if lang == "Plain Text" {
+			lang = ""
 		}
+		finalQuery = query.NewAnd(finalQuery, &query.Language{Language: lang})
 	}
-	return filtered
+
+	return finalQuery, nil
 }
 
 // paginateResults returns a slice of results starting from `skip` index up to `take` number of items.
@@ -332,10 +329,7 @@ func getSearchResultLanguages(searchResult *zoekt.SearchResult) []*internal.Sear
 	languages := make(map[string]int)
 
 	for _, file := range searchResult.Files {
-		lang := file.Language
-		if lang == "" {
-			lang = "Plain Text"
-		}
+		lang := normalizeLanguage(file.Language)
 		languages[lang]++
 	}
 
@@ -405,10 +399,7 @@ func convertZoektResult(files []zoekt.FileMatch) []*internal.SearchResult {
 			continue
 		}
 
-		lang := f.Language
-		if lang == "" {
-			lang = "Plain Text"
-		}
+		lang := normalizeLanguage(f.Language)
 
 		results = append(results, &internal.SearchResult{
 			RepoID:      int64(f.RepositoryID),
@@ -426,8 +417,15 @@ func convertZoektResult(files []zoekt.FileMatch) []*internal.SearchResult {
 	return results
 }
 
+func normalizeLanguage(lang string) string {
+	if lang == "" {
+		return "Plain Text"
+	}
+	return lang
+}
+
 func (b *Indexer) Search(ctx context.Context, opts *internal.SearchOptions) (int64, []*internal.SearchResult, []*internal.SearchResultLanguages, error) {
-	q, err := b.generateZoektQuery(ctx, opts)
+	q, err := b.generateZoektQuery(opts)
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -443,20 +441,135 @@ func (b *Indexer) Search(ctx context.Context, opts *internal.SearchOptions) (int
 
 	searchResultsLanguages := getSearchResultLanguages(result)
 
-	if opts.Language != "" {
-		allHits = slices.DeleteFunc(allHits, func(r *internal.SearchResult) bool {
-			return r.Language != opts.Language
-		})
-	}
-
-	if setting.Indexer.ExcludeVendored {
-		allHits = excludeVendored(allHits)
-	}
-
 	skip, take := opts.GetSkipTake()
 	pagedHits := paginateResults(allHits, skip, take)
 
 	total := int64(len(allHits))
 
 	return total, pagedHits, searchResultsLanguages, nil
+}
+
+func (b *Indexer) Formatter() internal.ResultFormatter {
+	return &zoektFormatter{}
+}
+
+func (f *zoektFormatter) Format(r *internal.SearchResult) (*internal.Result, error) {
+	// Sort matches by start position
+	slices.SortFunc(r.Matches, func(a, b internal.Match) int { return a.Start - b.Start })
+
+	// Precompute line offsets once to avoid repeated string slicing
+	lineOffsets := []int{0} // starting index of the first line
+	for i, c := range r.Content {
+		if c == '\n' {
+			lineOffsets = append(lineOffsets, i+1)
+		}
+	}
+	lineOffsets = append(lineOffsets, len(r.Content)) // end offset for the last line
+
+	// Line numbers (1-based)
+	lineNumbers := make([]int, len(lineOffsets)-1)
+	for i := range lineNumbers {
+		lineNumbers[i] = i + 1
+	}
+
+	// Collect all lines to display (+/- 1 line around each match)
+	sortedLines := make([]int, 0, len(r.Matches)*3)
+	for _, m := range r.Matches {
+		for i := m.LineNumber - 1; i <= m.LineNumber+1; i++ {
+			if i > 0 {
+				sortedLines = append(sortedLines, i)
+			}
+		}
+	}
+
+	// Sort lines and remove duplicates
+	slices.Sort(sortedLines)
+	sortedLines = slices.Compact(sortedLines)
+
+	// Group lines into blocks (break block if distance > 2 lines)
+	var blocks [][]int
+	var currentBlock []int
+	for _, line := range sortedLines {
+		if len(currentBlock) > 0 && line > currentBlock[len(currentBlock)-1]+2 {
+			blocks = append(blocks, currentBlock)
+			currentBlock = nil
+		}
+		currentBlock = append(currentBlock, line)
+	}
+	if len(currentBlock) > 0 {
+		blocks = append(blocks, currentBlock)
+	}
+
+	var resultLines []internal.ResultLine
+
+	// Iterate over blocks to generate ResultLines
+	for _, block := range blocks {
+		startLine := block[0]
+		endLine := block[len(block)-1]
+
+		// Slice block content directly from r.Content using precomputed offsets
+		startOffset := lineOffsets[startLine-1]
+		endOffset := lineOffsets[endLine]
+		blockContent := r.Content[startOffset:endOffset]
+
+		// Map for highlights per line within the block
+		highlightByLine := make(map[int][][2]int)
+		for _, match := range r.Matches {
+			if match.LineNumber < startLine || match.LineNumber > endLine {
+				continue
+			}
+			lineInBlock := match.LineNumber - startLine
+			globalLineIdx := match.LineNumber - 1
+
+			highlightStart := match.Start - lineOffsets[globalLineIdx]
+			highlightEnd := match.End - lineOffsets[globalLineIdx]
+
+			highlightByLine[lineInBlock] = append(highlightByLine[lineInBlock], [2]int{highlightStart, highlightEnd})
+		}
+
+		// Merge overlapping highlight ranges
+		var highlightRanges [][3]int
+		for lineIdx, ranges := range highlightByLine {
+			if len(ranges) == 0 {
+				continue
+			}
+			slices.SortFunc(ranges, func(a, b [2]int) int { return a[0] - b[0] })
+			merged := make([][2]int, 0, len(ranges))
+			current := ranges[0]
+			for _, r := range ranges[1:] {
+				if r[0] <= current[1] {
+					if r[1] > current[1] {
+						current[1] = r[1]
+					}
+				} else {
+					merged = append(merged, current)
+					current = r
+				}
+			}
+			merged = append(merged, current)
+
+			for _, r := range merged {
+				highlightRanges = append(highlightRanges, [3]int{lineIdx, r[0], r[1]})
+			}
+		}
+
+		// Generate the formatted lines with highlighting
+		resultLines = append(resultLines, internal.HighlightSearchResultCode(
+			r.Filename,
+			block,
+			highlightRanges,
+			blockContent,
+		)...)
+	}
+
+	// Return the final search result
+	return &internal.Result{
+		RepoID:      r.RepoID,
+		Filename:    r.Filename,
+		CommitID:    r.CommitID,
+		UpdatedUnix: r.UpdatedUnix,
+		Language:    r.Language,
+		Color:       r.Color,
+		Lines:       resultLines,
+	}, nil
 }

@@ -4,7 +4,6 @@
 package zoekt
 
 import (
-	"context"
 	"testing"
 
 	"forgejo.org/modules/indexer/code/internal"
@@ -115,7 +114,7 @@ func TestGenerateZoektQuery_Union(t *testing.T) {
 		RepoIDs: []int64{1, 2},
 	}
 
-	q, err := indexer.generateZoektQuery(context.Background(), opts)
+	q, err := indexer.generateZoektQuery(opts)
 	require.NoError(t, err)
 	require.NotNil(t, q)
 }
@@ -128,7 +127,7 @@ func TestGenerateZoektQuery_SpecialCharacters(t *testing.T) {
 		Mode:    internal.CodeSearchModeExact,
 	}
 
-	q, err := indexer.generateZoektQuery(context.Background(), opts)
+	q, err := indexer.generateZoektQuery(opts)
 	require.NoError(t, err)
 	require.NotNil(t, q)
 }
