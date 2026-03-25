@@ -145,6 +145,7 @@ func (repo *Repository) GetLanguageStats(commitID string) (map[string]int64, err
 		isGenerated := optional.None[bool]()
 		isDocumentation := optional.None[bool]()
 		isDetectable := optional.None[bool]()
+		language := ""
 
 		attrs, err := checker.CheckPath(f.Name())
 		if err == nil {
@@ -152,23 +153,13 @@ func (repo *Repository) GetLanguageStats(commitID string) (map[string]int64, err
 			isGenerated = attrs["linguist-generated"].Bool()
 			isDocumentation = attrs["linguist-documentation"].Bool()
 			isDetectable = attrs["linguist-detectable"].Bool()
-			if language := cmp.Or(
+			language = cmp.Or(
 				attrs["linguist-language"].String(),
 				attrs["gitlab-language"].Prefix(),
-			); language != "" {
-				// group languages, such as Pug -> HTML; SCSS -> CSS
-				group := enry.GetLanguageGroup(language)
-				if len(group) != 0 {
-					language = group
-				}
-
-				// this language will always be added to the size
-				sizes[language] += f.Size()
-				continue
-			}
+			)
 		}
 
-		if isFalse(isDetectable) || isTrue(isVendored) || isTrue(isDocumentation) ||
+		if isFalse(isDetectable) || isTrue(isVendored) || isTrue(isGenerated) || isTrue(isDocumentation) ||
 			(!isFalse(isVendored) && analyze.IsVendor(f.Name())) ||
 			enry.IsDotFile(f.Name()) ||
 			enry.IsConfiguration(f.Name()) ||
@@ -176,9 +167,9 @@ func (repo *Repository) GetLanguageStats(commitID string) (map[string]int64, err
 			continue
 		}
 
+		// If language or isGenerated is not determined from linguist attributes, need content
 		// If content can not be read or file is too big just do detection by filename
-
-		if f.Size() <= bigFileSize {
+		if language == "" && !isFalse(isGenerated) && f.Size() <= bigFileSize {
 			if err := writeID(f.ID.String()); err != nil {
 				return nil, err
 			}
@@ -206,19 +197,24 @@ func (repo *Repository) GetLanguageStats(commitID string) (map[string]int64, err
 		}
 
 		// We consider three cases:
-		// 1. linguist-generated=true, then we ignore the file.
+		// 1. linguist-generated=true, then we ignore the file, see above
 		// 2. linguist-generated=false, we don't ignore the file.
 		// 3. linguist-generated is not set, then `enry.IsGenerated` determines if the file is generated.
-		if isTrue(isGenerated) || !isFalse(isGenerated) && enry.IsGenerated(f.Name(), content) {
+		if !isFalse(isGenerated) && enry.IsGenerated(f.Name(), content) {
 			log.Trace("Ignore %q for language stats, because it is generated", f.Name())
 			continue
 		}
 
 		// FIXME: Why can't we split this and the IsGenerated tests to avoid reading the blob unless absolutely necessary?
 		// - eg. do the all the detection tests using filename first before reading content.
-		language := analyze.GetCodeLanguage(f.Name(), content)
 		if language == "" {
-			continue
+			language = analyze.GetCodeLanguage(f.Name(), content)
+			if language == "" {
+				continue
+			}
+		} else {
+			// If language is set with linguist attribute, always include
+			includedLanguage[language] = true
 		}
 
 		// group languages, such as Pug -> HTML; SCSS -> CSS
