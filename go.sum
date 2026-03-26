@@ -20,8 +20,8 @@ code.forgejo.org/f3/gof3/v3 v3.11.15 h1:/EzJWRQUhVVia1EmCWRZHCuW8qdAX1DEXY0M1n0m
 code.forgejo.org/f3/gof3/v3 v3.11.15/go.mod h1:k99wl7QiI9LjS3qEd1RXLdcZPE3wZP5gkVhy8/WhzJ4=
 code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20260301104140-add494e31dab h1:g/uf/tNOvCdGL9EuYV9EJQglEH8n572P1ZwH4lBBkjI=
 code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20260301104140-add494e31dab/go.mod h1:PphB88CPbx601QrWPMZATeorACeVmQlyv3u+uUMbSaM=
-code.forgejo.org/forgejo/actions-proto v0.6.0 h1:dw1Dogk9A4V/yrLVkhe9dSZPsqNAIkI1kCXPSqG3tZA=
-code.forgejo.org/forgejo/actions-proto v0.6.0/go.mod h1:+444hHBs9/qDh5X/AedaTv0Egj3vd/EXP93vg9zFV2E=
+code.forgejo.org/forgejo/actions-proto v0.7.0 h1:0UA8AIOIWEiMLQvBbnZ6GQ9reh6BbM15Ep8x+oeTCY8=
+code.forgejo.org/forgejo/actions-proto v0.7.0/go.mod h1:+444hHBs9/qDh5X/AedaTv0Egj3vd/EXP93vg9zFV2E=
 code.forgejo.org/forgejo/go-rpmutils v1.0.0 h1:RZGGeKt70p/WaIEL97pyT6uiiEIoN8/aLmS5Z6WmX0M=
 code.forgejo.org/forgejo/go-rpmutils v1.0.0/go.mod h1:cg+VbgLXfrDPza9T+kBsMb3TVmmzPN4XseT6gDGLSUk=
 code.forgejo.org/forgejo/go-xsd-duration v0.0.0-20220703122237-02e73435a078 h1:RArF5AsF9LH4nEoJxqRxcP5r8hhRfWcId84G82YbqzA=
@@ -30,8 +30,8 @@ code.forgejo.org/forgejo/levelqueue v1.0.0 h1:9krYpU6BM+j/1Ntj6m+VCAIu0UNnne1/Uf
 code.forgejo.org/forgejo/levelqueue v1.0.0/go.mod h1:fmG6zhVuqim2rxSFOoasgXO8V2W/k9U31VVYqLIRLhQ=
 code.forgejo.org/forgejo/reply v1.0.2 h1:dMhQCHV6/O3L5CLWNTol+dNzDAuyCK88z4J/lCdgFuQ=
 code.forgejo.org/forgejo/reply v1.0.2/go.mod h1:RyZUfzQLc+fuLIGjTSQWDAJWPiL4WtKXB/FifT5fM7U=
-code.forgejo.org/forgejo/runner/v12 v12.7.2 h1:S+r+brf6oo7X2VM/ztypSK/L8JT96RTZi+MbkhrcvcY=
-code.forgejo.org/forgejo/runner/v12 v12.7.2/go.mod h1:qwF/qaXUGhwQzFccS4N7NIQNI5P+3+erlDR9xJJomK8=
+code.forgejo.org/forgejo/runner/v12 v12.7.3 h1:+thSawVfLeAZaWB6sYeUPvLj4lxYjCIDt/ktvkfX5Rs=
+code.forgejo.org/forgejo/runner/v12 v12.7.3/go.mod h1:OO+Vy9Dww6WNV7GG/6VUWo/0WwXY+ASGlINmAfEA9Ws=
 code.forgejo.org/forgejo/ssh v0.0.0-20241211213324-5fc306ca0616 h1:kEZL84+02jY9RxXM4zHBWZ3Fml0B09cmP1LGkDsCfIA=
 code.forgejo.org/forgejo/ssh v0.0.0-20241211213324-5fc306ca0616/go.mod h1:zpHEXBstFnQYtGnB8k8kQLol82umzn/2/snG7alWVD8=
 code.forgejo.org/go-chi/binding v1.0.1 h1:coKNI+X1NzRN7X85LlrpvBRqk0TXpJ+ja28vusQWEuY=
@@ -447,8 +447,8 @@ github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsI
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 h1:iCEnooe7UlwOQYpKFhBabPMi4aNAfoODPEFNiAnClxo=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761/go.mod h1:5TJZWKEWniPve33vlWYSoGYefn3gLQRzjfDlhSJ9ZKM=
-github.com/jackc/pgx/v5 v5.8.0 h1:TYPDoleBBme0xGSAX3/+NujXXtpZn9HBONkQC7IEZSo=
-github.com/jackc/pgx/v5 v5.8.0/go.mod h1:QVeDInX2m9VyzvNeiCJVjCkNFqzsNb43204HshNSZKw=
+github.com/jackc/pgx/v5 v5.9.1 h1:uwrxJXBnx76nyISkhr33kQLlUqjv7et7b9FjCen/tdc=
+github.com/jackc/pgx/v5 v5.9.1/go.mod h1:mal1tBGAFfLHvZzaYh77YS/eC6IX9OWbRV1QIIM0Jn4=
 github.com/jackc/puddle/v2 v2.2.2 h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo=
 github.com/jackc/puddle/v2 v2.2.2/go.mod h1:vriiEXHvEE654aYKXXjOvZM39qJ0q+azkZFrfEOc3H4=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
@@ -738,8 +738,8 @@ golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 h1:mgKeJMpvi0yx/sU5GsxQ7p6s2
 golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546/go.mod h1:j/pmGrbnkbPtQfxEe5D0VQhZC6qKbfKifgD0oM7sR70=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
 golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
-golang.org/x/image v0.37.0 h1:ZiRjArKI8GwxZOoEtUfhrBtaCN+4b/7709dlT6SSnQA=
-golang.org/x/image v0.37.0/go.mod h1:/3f6vaXC+6CEanU4KJxbcUZyEePbyKbaLoDOe4ehFYY=
+golang.org/x/image v0.38.0 h1:5l+q+Y9JDC7mBOMjo4/aPhMDcxEptsX+Tt3GgRQRPuE=
+golang.org/x/image v0.38.0/go.mod h1:/3f6vaXC+6CEanU4KJxbcUZyEePbyKbaLoDOe4ehFYY=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
 golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961/go.mod h1:wehouNa3lNwaWXcvxsM5YxQ5yQlVC4a0KAMCusXpPoU=
 golang.org/x/lint v0.0.0-20190301231843-5614ed5bae6f/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
