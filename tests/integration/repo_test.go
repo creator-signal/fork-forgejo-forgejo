@@ -72,6 +72,10 @@ func testViewRepo(t *testing.T) {
 	htmlDoc := NewHTMLParser(t, resp.Body)
 	files := htmlDoc.doc.Find("#repo-files-table  > TBODY > TR")
 
+	// The first row in the table body is the latest commit rather than a file so
+	// we discard it here
+	files = files.Slice(1, files.Length())
+
 	type file struct {
 		fileName   string
 		commitID   string
