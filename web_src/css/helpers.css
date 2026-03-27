@@ -58,12 +58,3 @@ Gitea's private styles use `g-` prefix.
 .tab-size-14 { tab-size: 14 !important; }
 .tab-size-15 { tab-size: 15 !important; }
 .tab-size-16 { tab-size: 16 !important; }
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}

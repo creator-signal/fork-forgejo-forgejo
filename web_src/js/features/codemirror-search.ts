@@ -92,7 +92,7 @@ class SearchPanel implements Panel {
     searchFieldContainer.replaceChildren(this.searchField, this.caseLabel, this.reLabel, this.wordLabel);
 
     const hiddenInputs = document.createElement('div');
-    hiddenInputs.classList.add('sr-only');
+    hiddenInputs.classList.add('search-hidden-inputs');
     hiddenInputs.replaceChildren(this.caseField, this.reField, this.wordField);
 
     const prevSearch = document.createElement('button');
