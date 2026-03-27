@@ -1,8 +1,8 @@
 <table id="repo-files-table" class="ui single line table tw-mt-0" {{if .HasFilesWithoutLatestCommit}}hx-indicator="tr.notready td.message span" hx-trigger="load" hx-swap="morph" hx-post="{{.LastCommitLoaderURL}}"{{end}}>
-	<caption class="repo-files-table-caption">
+	<caption class="sr-only">
 		{{ctx.Locale.Tr "repo.files.caption"}}
 	</caption>
-	<thead class="repo-files-table-header">
+	<thead class="sr-only">
 		<th>{{ctx.Locale.Tr "repo.files.filename"}}</th>
 		<th>{{ctx.Locale.Tr "repo.files.last_commit_message"}}</th>
 		<th>{{ctx.Locale.Tr "repo.files.last_commit_date"}}</th>
