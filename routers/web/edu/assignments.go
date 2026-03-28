@@ -101,6 +101,13 @@ func AssignmentDetail(ctx *context.Context) {
 	if submission != nil {
 		latestResult, _ := svc.GetLatestTestResult(ctx, submission.ID)
 		ctx.Data["LatestTestResult"] = latestResult
+
+		if submission.StudentRepoID > 0 {
+			studentRepo, err := repo_model.GetRepositoryByID(ctx, submission.StudentRepoID)
+			if err == nil && studentRepo != nil {
+				ctx.Data["StudentRepoLink"] = studentRepo.FullName()
+			}
+		}
 	}
 
 	ctx.Data["PageIsEduStudent"] = true

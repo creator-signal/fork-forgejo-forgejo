@@ -22,6 +22,13 @@ func NewForgejoAdapter() *ForgejoAdapter {
 
 // ForkRepositoryAndUpdates calls the Forgejo service to fork a repository.
 func (a *ForgejoAdapter) ForkRepositoryAndUpdates(ctx context.Context, doer, owner *user_model.User, opts ForkRepoOptions) (*repo_model.Repository, error) {
+	// Forgejo's fork logic accesses BaseRepo.Owner.Visibility,
+	// so Owner must be loaded before calling.
+	if opts.BaseRepo.Owner == nil {
+		if err := opts.BaseRepo.LoadOwner(ctx); err != nil {
+			return nil, fmt.Errorf("load repo owner: %w", err)
+		}
+	}
 	serviceOpts := repository.ForkRepoOptions{
 		BaseRepo:    opts.BaseRepo,
 		Name:        opts.Name,

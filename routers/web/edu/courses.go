@@ -202,7 +202,7 @@ func EditCourse(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only edit your own courses")
 		return
 	}
@@ -234,7 +234,7 @@ func EditCoursePost(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only edit your own courses")
 		return
 	}
@@ -296,7 +296,7 @@ func DeleteCoursePost(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only delete your own courses")
 		return
 	}
@@ -330,7 +330,7 @@ func EnrollUserPost(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only manage enrollments for your own courses")
 		return
 	}
@@ -387,7 +387,7 @@ func RemoveEnrollmentPost(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only manage enrollments for your own courses")
 		return
 	}

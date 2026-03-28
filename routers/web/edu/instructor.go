@@ -79,6 +79,18 @@ func InstructorSubmissions(ctx *context.Context) {
 	ctx.Data["Submissions"] = submissions
 	ctx.Data["UserMap"] = userMap
 
+	// Build repo link map for student repos
+	repoLinkMap := make(map[int64]string)
+	for _, sub := range submissions {
+		if sub.StudentRepoID > 0 {
+			r, err := repo_model.GetRepositoryByID(ctx, sub.StudentRepoID)
+			if err == nil && r != nil {
+				repoLinkMap[sub.ID] = r.FullName()
+			}
+		}
+	}
+	ctx.Data["RepoLinkMap"] = repoLinkMap
+
 	testResultMap := make(map[int64]*edu.TestResult)
 	for _, sub := range submissions {
 		tr, _ := svc.GetLatestTestResult(ctx, sub.ID)

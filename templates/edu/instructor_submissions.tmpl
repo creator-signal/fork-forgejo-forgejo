@@ -82,7 +82,7 @@
 										{{end}}
 									</td>
 									<td>
-										<a href="{{AppSubUrl}}/repositories/{{.StudentRepoID}}">{{ctx.Locale.Tr "edu.repo"}}</a>
+										{{with (index $.RepoLinkMap .ID)}}<a href="{{AppSubUrl}}/{{.}}">{{ctx.Locale.Tr "edu.repo"}}</a>{{end}}
 									</td>
 									<td>{{(DateUtils).AbsoluteShort .UpdatedUnix}}</td>
 									<td>

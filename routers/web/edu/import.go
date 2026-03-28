@@ -38,7 +38,7 @@ func ImportUpload(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}
@@ -69,7 +69,7 @@ func ImportUploadPost(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}
@@ -128,7 +128,7 @@ func ImportPreview(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}
@@ -176,7 +176,7 @@ func ImportUpdateRow(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}
@@ -212,7 +212,7 @@ func ImportExecutePost(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}
@@ -259,7 +259,7 @@ func ImportDeletePost(ctx *context.Context) {
 		return
 	}
 
-	if course.CreatorID != ctx.Doer.ID {
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}

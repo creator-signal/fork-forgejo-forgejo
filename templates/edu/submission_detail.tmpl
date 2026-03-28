@@ -16,8 +16,8 @@
 					{{.Submission.Status}}
 				</span>
 			</p>
-			{{if .Submission.StudentRepoID}}
-				<p><strong>{{ctx.Locale.Tr "edu.repo"}}:</strong> <a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}">{{ctx.Locale.Tr "edu.open_repo"}}</a></p>
+			{{if .StudentRepoLink}}
+				<p><strong>{{ctx.Locale.Tr "edu.repo"}}:</strong> <a href="{{AppSubUrl}}/{{.StudentRepoLink}}">{{ctx.Locale.Tr "edu.open_repo"}}</a></p>
 			{{end}}
 		</div>
 

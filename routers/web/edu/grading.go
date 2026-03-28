@@ -85,6 +85,14 @@ func SubmissionDetail(ctx *context.Context) {
 				}
 			}
 
+			// Load student repo link
+			if s.StudentRepoID > 0 {
+				studentRepo, err := repo_model.GetRepositoryByID(ctx, s.StudentRepoID)
+				if err == nil && studentRepo != nil {
+					ctx.Data["StudentRepoLink"] = studentRepo.FullName()
+				}
+			}
+
 			break
 		}
 	}

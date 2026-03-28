@@ -28,8 +28,8 @@
 								{{.Submission.Status}}
 							</span>
 						</h3>
-						{{if .Submission.StudentRepoID}}
-							<a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}" class="ui primary button">{{ctx.Locale.Tr "edu.go_to_repo"}}</a>
+						{{if .StudentRepoLink}}
+							<a href="{{AppSubUrl}}/{{.StudentRepoLink}}" class="ui primary button">{{ctx.Locale.Tr "edu.go_to_repo"}}</a>
 						{{end}}
 					{{else}}
 						{{if .DeadlinePassed}}
