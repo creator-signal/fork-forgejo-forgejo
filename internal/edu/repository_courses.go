@@ -58,11 +58,78 @@ func (r *xormRepository) UpdateCourse(ctx context.Context, c *Course) error {
 }
 
 func (r *xormRepository) DeleteCourse(ctx context.Context, id int64) error {
-	_, err := db.GetEngine(ctx).ID(id).Delete(&Course{})
-	if err != nil {
-		return fmt.Errorf("delete course: %w", err)
-	}
-	return nil
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		e := db.GetEngine(ctx)
+
+		// 1. Find all assignments for this course
+		var assignments []*Assignment
+		if err := e.Where("course_id = ?", id).Find(&assignments); err != nil {
+			return fmt.Errorf("find assignments for course: %w", err)
+		}
+
+		for _, a := range assignments {
+			// 1a. Collect submission IDs for this assignment
+			var submissions []*Submission
+			if err := e.Where("assignment_id = ?", a.ID).Find(&submissions); err != nil {
+				return fmt.Errorf("find submissions for assignment %d: %w", a.ID, err)
+			}
+
+			// 1b. Delete test results for all submissions
+			for _, sub := range submissions {
+				if _, err := e.Where("submission_id = ?", sub.ID).Delete(&TestResult{}); err != nil {
+					return fmt.Errorf("delete test results for submission %d: %w", sub.ID, err)
+				}
+			}
+
+			// 1c. Delete submissions
+			if _, err := e.Where("assignment_id = ?", a.ID).Delete(&Submission{}); err != nil {
+				return fmt.Errorf("delete submissions for assignment %d: %w", a.ID, err)
+			}
+
+			// 1d. Delete bulk fork tasks
+			if _, err := e.Where("assignment_id = ?", a.ID).Delete(&BulkForkTask{}); err != nil {
+				return fmt.Errorf("delete bulk fork tasks for assignment %d: %w", a.ID, err)
+			}
+
+			// 1e. Delete sync fork tasks
+			if _, err := e.Where("assignment_id = ?", a.ID).Delete(&SyncForkTask{}); err != nil {
+				return fmt.Errorf("delete sync fork tasks for assignment %d: %w", a.ID, err)
+			}
+		}
+
+		// 2. Delete all assignments
+		if _, err := e.Where("course_id = ?", id).Delete(&Assignment{}); err != nil {
+			return fmt.Errorf("delete assignments for course: %w", err)
+		}
+
+		// 3. Delete import draft rows (via drafts belonging to this course)
+		var drafts []*ImportDraft
+		if err := e.Where("course_id = ?", id).Find(&drafts); err != nil {
+			return fmt.Errorf("find import drafts for course: %w", err)
+		}
+		for _, d := range drafts {
+			if _, err := e.Where("draft_id = ?", d.ID).Delete(&ImportDraftRow{}); err != nil {
+				return fmt.Errorf("delete import draft rows for draft %d: %w", d.ID, err)
+			}
+		}
+
+		// 4. Delete import drafts
+		if _, err := e.Where("course_id = ?", id).Delete(&ImportDraft{}); err != nil {
+			return fmt.Errorf("delete import drafts for course: %w", err)
+		}
+
+		// 5. Delete enrollments
+		if _, err := e.Where("course_id = ?", id).Delete(&CourseEnrollment{}); err != nil {
+			return fmt.Errorf("delete enrollments for course: %w", err)
+		}
+
+		// 6. Delete the course itself
+		if _, err := e.ID(id).Delete(&Course{}); err != nil {
+			return fmt.Errorf("delete course: %w", err)
+		}
+
+		return nil
+	})
 }
 
 func (r *xormRepository) GetAssignmentsByCourse(ctx context.Context, courseID int64) ([]*Assignment, error) {
