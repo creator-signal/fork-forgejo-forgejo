@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 )
@@ -81,6 +83,14 @@ type UserCreator interface {
 	GetUserByID(ctx context.Context, id int64) (*user_model.User, error)
 }
 
+// OrgManager abstracts organization team management for enrollment.
+type OrgManager interface {
+	EnsureTeam(ctx context.Context, orgID int64, teamName string, accessMode perm.AccessMode) (*organization.Team, error)
+	AddTeamMember(ctx context.Context, team *organization.Team, userID int64) error
+	RemoveTeamMember(ctx context.Context, team *organization.Team, userID int64) error
+	GetTeam(ctx context.Context, orgID int64, name string) (*organization.Team, error)
+}
+
 // ForkRepoOptions is a subset of options needed for forking.
 type ForkRepoOptions struct {
 	BaseRepo *repo_model.Repository
@@ -89,9 +99,10 @@ type ForkRepoOptions struct {
 
 // private implementation
 type service struct {
-	repo    Repository
-	forker  RepoForker
-	users   UserCreator
+	repo   Repository
+	forker RepoForker
+	users  UserCreator
+	orgs   OrgManager
 }
 
 // Repository defines the data access layer interface.
@@ -153,10 +164,14 @@ func GetService() EducationalService {
 }
 
 // NewService creates a new instance of EducationalService.
+// If the provided UserCreator also implements OrgManager, it is used for org team management.
 func NewService(repo Repository, forker RepoForker, users ...UserCreator) EducationalService {
 	s := &service{repo: repo, forker: forker}
 	if len(users) > 0 {
 		s.users = users[0]
+		if o, ok := users[0].(OrgManager); ok {
+			s.orgs = o
+		}
 	}
 	return s
 }

@@ -3,6 +3,8 @@ package edu
 import (
 	"context"
 
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"github.com/stretchr/testify/mock"
@@ -333,4 +335,35 @@ func (m *MockRepoForker) SyncFork(ctx context.Context, doer *user_model.User, fo
 func (m *MockRepoForker) GetDefaultBranch(ctx context.Context, repoID int64) (string, error) {
 	args := m.Called(ctx, repoID)
 	return args.String(0), args.Error(1)
+}
+
+// MockOrgManager mocks the OrgManager interface
+type MockOrgManager struct {
+	mock.Mock
+}
+
+func (m *MockOrgManager) EnsureTeam(ctx context.Context, orgID int64, teamName string, accessMode perm.AccessMode) (*organization.Team, error) {
+	args := m.Called(ctx, orgID, teamName, accessMode)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*organization.Team), args.Error(1)
+}
+
+func (m *MockOrgManager) AddTeamMember(ctx context.Context, team *organization.Team, userID int64) error {
+	args := m.Called(ctx, team, userID)
+	return args.Error(0)
+}
+
+func (m *MockOrgManager) RemoveTeamMember(ctx context.Context, team *organization.Team, userID int64) error {
+	args := m.Called(ctx, team, userID)
+	return args.Error(0)
+}
+
+func (m *MockOrgManager) GetTeam(ctx context.Context, orgID int64, name string) (*organization.Team, error) {
+	args := m.Called(ctx, orgID, name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*organization.Team), args.Error(1)
 }

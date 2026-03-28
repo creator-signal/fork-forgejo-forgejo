@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"forgejo.org/models"
+	org_model "forgejo.org/models/organization"
+	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
@@ -88,4 +91,46 @@ func (a *ForgejoAdapter) GetDefaultBranch(ctx context.Context, repoID int64) (st
 		return "", err
 	}
 	return repo.DefaultBranch, nil
+}
+
+// EnsureTeam gets or creates a team in the given org with the specified access mode.
+func (a *ForgejoAdapter) EnsureTeam(ctx context.Context, orgID int64, teamName string, accessMode perm.AccessMode) (*org_model.Team, error) {
+	team, err := org_model.GetTeam(ctx, orgID, teamName)
+	if err == nil {
+		return team, nil
+	}
+	if !org_model.IsErrTeamNotExist(err) {
+		return nil, fmt.Errorf("get team: %w", err)
+	}
+
+	// Team doesn't exist, create it
+	team = &org_model.Team{
+		OrgID:                   orgID,
+		Name:                    teamName,
+		AccessMode:              accessMode,
+		IncludesAllRepositories: true,
+	}
+	if err := models.NewTeam(ctx, team); err != nil {
+		if org_model.IsErrTeamAlreadyExist(err) {
+			// Race condition: another goroutine created it
+			return org_model.GetTeam(ctx, orgID, teamName)
+		}
+		return nil, fmt.Errorf("create team: %w", err)
+	}
+	return team, nil
+}
+
+// AddTeamMember adds a user to a team (idempotent).
+func (a *ForgejoAdapter) AddTeamMember(ctx context.Context, team *org_model.Team, userID int64) error {
+	return models.AddTeamMember(ctx, team, userID)
+}
+
+// RemoveTeamMember removes a user from a team.
+func (a *ForgejoAdapter) RemoveTeamMember(ctx context.Context, team *org_model.Team, userID int64) error {
+	return models.RemoveTeamMember(ctx, team, userID)
+}
+
+// GetTeam retrieves a team by org ID and name.
+func (a *ForgejoAdapter) GetTeam(ctx context.Context, orgID int64, name string) (*org_model.Team, error) {
+	return org_model.GetTeam(ctx, orgID, name)
 }

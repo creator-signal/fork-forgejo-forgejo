@@ -148,6 +148,9 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 				result.Errors++
 				continue
 			}
+			if err := s.addToOrgTeam(ctx, draft.CourseID, existingUser.ID, defaultRole); err != nil {
+				log.Error("Failed to add imported user %d to org team: %v", existingUser.ID, err)
+			}
 			row.Status = "exists"
 			if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
 				log.Error("Failed to update import draft row: %v", errUpd)
@@ -212,6 +215,9 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 			}
 			result.Errors++
 			continue
+		}
+		if err := s.addToOrgTeam(ctx, draft.CourseID, newUser.ID, defaultRole); err != nil {
+			log.Error("Failed to add imported user %d to org team: %v", newUser.ID, err)
 		}
 
 		row.Status = "created"
