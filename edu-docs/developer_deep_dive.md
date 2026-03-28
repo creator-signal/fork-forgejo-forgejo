@@ -79,8 +79,11 @@ EducationalService (singleton, interface в service.go)
     ├──> RepoForker (interface в service.go)
     │        └──> ForgejoAdapter (adapter.go) → Forgejo core services
     │
-    └──> UserCreator (interface в service.go)
-             └──> ForgejoAdapter (adapter.go) → user_model.*
+    ├──> UserCreator (interface в service.go)
+    │        └──> ForgejoAdapter (adapter.go) → user_model.*
+    │
+    └──> OrgManager (interface в service.go)
+             └──> ForgejoAdapter (adapter.go) → models.NewTeam, AddTeamMember, RemoveTeamMember
 ```
 
 **Ключевые абстракции:**
@@ -88,7 +91,8 @@ EducationalService (singleton, interface в service.go)
 - **`Repository`** — интерфейс DAL (~40 методов для CRUD всех сущностей)
 - **`RepoForker`** — абстракция над git-операциями (fork, sync, получение репо)
 - **`UserCreator`** — абстракция над управлением пользователями
-- **`ForgejoAdapter`** — мост к ядру Forgejo, реализует `RepoForker` и `UserCreator`
+- **`OrgManager`** — абстракция над управлением командами организаций (EnsureTeam, AddTeamMember, RemoveTeamMember, GetTeam)
+- **`ForgejoAdapter`** — мост к ядру Forgejo, реализует `RepoForker`, `UserCreator` и `OrgManager`
 
 Все интерфейсы определены в `internal/edu/service.go`.
 
@@ -163,7 +167,7 @@ EducationalService (singleton, interface в service.go)
 | Файл | Содержимое |
 |------|------------|
 | `models.go` | Все структуры данных (Course, Assignment, Submission, TestResult, ...) |
-| `service.go` | Интерфейсы EducationalService, Repository, RepoForker, UserCreator; конструктор |
+| `service.go` | Интерфейсы EducationalService, Repository, RepoForker, UserCreator, OrgManager; конструктор |
 | `repository.go` | xormRepository, CRUD для assignments и submissions |
 | `repository_courses.go` | CRUD для courses |
 | `repository_enrollments.go` | CRUD для enrollments |
@@ -241,11 +245,13 @@ EducationalService (singleton, interface в service.go)
 Файлы: `routers/web/edu/bulk_fork.go`, `internal/edu/service_bulk_fork.go`
 
 1. На странице submissions преподаватель нажимает "Fork for All Students".
-2. Система берёт всех `student` enrollments курса, для каждого:
+2. Система создаёт задачу `BulkForkTask` со статусом `pending` и запускает фоновую горутину через `graceful.GetManager().RunWithShutdownContext()`.
+3. HTTP-запрос сразу возвращает redirect — страница не блокируется.
+4. Горутина для каждого студента:
    - Проверяет, нет ли уже submission.
    - Создаёт форк шаблона → создаёт submission.
-3. Прогресс записывается в `BulkForkTask` (completed/failed/total).
-4. Результат показывается на странице submissions (progress bar, error log).
+   - Обновляет прогресс в БД (completed/failed/total).
+5. Фронтенд опрашивает `/bulk-fork-status` (JSON) для отображения прогресса.
 
 #### Е. Синхронизация форков (Sync Forks)
 
@@ -253,7 +259,10 @@ EducationalService (singleton, interface в service.go)
 
 1. Преподаватель обновляет шаблон-репозиторий (добавляет тесты, README и т.д.).
 2. Нажимает "Sync All Forks" на странице submissions.
-3. Для каждого форка студента выполняется `git push` из шаблона в форк.
+3. Система создаёт задачу `SyncForkTask` со статусом `pending` и запускает фоновую горутину через `graceful.GetManager().RunWithShutdownContext()`.
+4. HTTP-запрос сразу возвращает redirect — страница не блокируется.
+5. Горутина для каждого форка студента выполняет `git push` из шаблона в форк, обновляя прогресс в БД.
+6. Фронтенд опрашивает `/sync-fork-status` (JSON) для отображения прогресса.
 
 **Ключевое решение**: используется `InternalPushingEnvironment` из `modules/repository/env.go`, что устанавливает переменную `GITEA_INTERNAL_PUSH=true`. Это приводит к тому, что git-хуки Forgejo пропускают проверку branch protection. Без этого `push` в чужой форк блокировался бы защитой веток.
 
@@ -297,6 +306,43 @@ func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, fo
 
 - `/edu/admin` — управление глобальными ролями пользователей (student/teacher/admin).
 - Роли определяют, какие разделы видит пользователь (student vs teacher dashboards).
+
+#### К. Маппинг ролей на организацию Forgejo
+
+Файлы: `internal/edu/adapter.go`, `internal/edu/service_courses.go`
+
+При записи пользователя в курс, привязанный к организации Forgejo (`OrgID > 0`), система автоматически:
+
+1. Создаёт (или находит) команду в организации:
+   - `edu-course-{id}-students` с правами `Write` (для студентов)
+   - `edu-course-{id}-teachers` с правами `Admin` (для преподавателей)
+2. Добавляет пользователя в соответствующую команду.
+3. Команды создаются с `IncludesAllRepositories: true` — доступ ко всем репозиториям организации.
+
+При отчислении пользователь удаляется из обеих команд. Операция идемпотентна (повторная запись не вызывает ошибок).
+
+Интерфейс `OrgManager` в `service.go` абстрагирует эти операции. `ForgejoAdapter` реализует его через `models.NewTeam`, `models.AddTeamMember`, `models.RemoveTeamMember`.
+
+#### Л. Каскадное удаление курса
+
+Файл: `internal/edu/repository_courses.go`
+
+Удаление курса выполняется в одной транзакции (`db.WithTx`) и каскадно удаляет:
+1. Для каждого задания курса: `TestResult` → `Submission` → `BulkForkTask` → `SyncForkTask`
+2. `Assignment` (все задания курса)
+3. `ImportDraftRow` → `ImportDraft` (черновики импорта)
+4. `CourseEnrollment` (записи студентов)
+5. Сам `Course`
+
+Порядок удаления — от "листьев" к "корню", чтобы не оставлять orphaned записей.
+
+#### М. Ограничение доступа по активности курса
+
+Файлы: `internal/edu/repository_ext.go`, `internal/edu/service_join.go`, `routers/web/edu/assignments.go`
+
+- `GetAssignmentsForUser` фильтрует по `edu_courses.end_unix = 0 OR end_unix > now()` — студент не видит задания из завершённых курсов.
+- `JoinAssignment` проверяет `course.IsActive()` — нельзя взять задание из завершённого курса.
+- `AssignmentDetail` проверяет enrollment — студент не может просматривать задания из курсов, в которых не записан.
 
 ### 2.6 Полная карта роутов
 
