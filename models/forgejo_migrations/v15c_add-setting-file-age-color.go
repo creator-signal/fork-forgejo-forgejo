@@ -14,9 +14,9 @@ func init() {
 
 func addSettingFileAgeColor(x *xorm.Engine) error {
 	type User struct {
-		ID                 int64 `xorm:"pk autoincr"`
-		EnableFileAgeColor bool  `xorm:"NOT NULL DEFAULT true"`
+		EnableFileAgeColor bool `xorm:"NOT NULL DEFAULT true"`
 	}
 
-	return x.Sync(new(User))
+	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(User))
+	return err
 }
