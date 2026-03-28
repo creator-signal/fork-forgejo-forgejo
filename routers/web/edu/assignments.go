@@ -87,6 +87,22 @@ func AssignmentDetail(ctx *context.Context) {
 		return
 	}
 
+	// Verify enrollment for students
+	if assignment.CourseID > 0 {
+		enrollment, err := edu.NewRepository().GetEnrollment(ctx, assignment.CourseID, ctx.Doer.ID)
+		if err != nil {
+			ctx.ServerError("GetEnrollment", err)
+			return
+		}
+		if enrollment == nil {
+			isTeacher, _ := edu.IsTeacher(ctx, ctx.Doer.ID)
+			if !isTeacher && !ctx.Doer.IsAdmin {
+				ctx.NotFound("Not enrolled in this course", nil)
+				return
+			}
+		}
+	}
+
 	ctx.Data["Assignment"] = assignment
 	ctx.Data["DeadlinePassed"] = assignment.DeadlineUnix > 0 && time.Now().Unix() > assignment.DeadlineUnix
 

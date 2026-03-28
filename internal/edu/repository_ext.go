@@ -3,6 +3,7 @@ package edu
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"forgejo.org/models/db"
 )
@@ -20,7 +21,9 @@ func (r *xormRepository) GetAssignmentsForUser(ctx context.Context, userID int64
 	var assignments []*Assignment
 	err := db.GetEngine(ctx).
 		Join("INNER", "edu_course_enrollments", "edu_course_enrollments.course_id = edu_assignments.course_id").
+		Join("INNER", "edu_courses", "edu_courses.id = edu_assignments.course_id").
 		Where("edu_course_enrollments.user_id = ?", userID).
+		And("(edu_courses.end_unix = 0 OR edu_courses.end_unix > ?)", time.Now().Unix()).
 		OrderBy("edu_assignments.created_unix DESC").
 		Find(&assignments)
 	if err != nil {

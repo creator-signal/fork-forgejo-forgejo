@@ -29,6 +29,14 @@ func (s *service) JoinAssignment(ctx context.Context, doer *user_model.User, ass
 		if enrollment == nil {
 			return nil, fmt.Errorf("you are not enrolled in this course")
 		}
+
+		course, err := s.repo.GetCourseByID(ctx, assignment.CourseID)
+		if err != nil {
+			return nil, fmt.Errorf("get course: %w", err)
+		}
+		if course != nil && !course.IsActive() {
+			return nil, fmt.Errorf("course is no longer active")
+		}
 	}
 
 	existing, err := s.repo.GetSubmission(ctx, assignment.ID, doer.ID)
