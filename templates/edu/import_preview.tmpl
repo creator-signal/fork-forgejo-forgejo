@@ -3,20 +3,20 @@
 	<div class="ui container">
 		<h1 class="ui header">
 			{{svg "octicon-eye" 28}}
-			Import Preview — {{.RowCount}} rows
+			{{ctx.Locale.Tr "edu.import_preview"}} — {{.RowCount}} rows
 		</h1>
-		<p>Course: <strong>{{.Course.Name}}</strong></p>
+		<p>{{ctx.Locale.Tr "edu.course"}}: <strong>{{.Course.Name}}</strong></p>
 
 		<div class="ui segment" style="overflow-x: auto;">
 			<table class="ui celled table">
 				<thead>
 					<tr>
 						<th>#</th>
-						<th>Full Name</th>
-						<th>Username</th>
-						<th>Email</th>
-						<th>Group</th>
-						<th>Status</th>
+						<th>{{ctx.Locale.Tr "edu.full_name"}}</th>
+						<th>{{ctx.Locale.Tr "edu.username"}}</th>
+						<th>{{ctx.Locale.Tr "edu.email"}}</th>
+						<th>{{ctx.Locale.Tr "edu.group"}}</th>
+						<th>{{ctx.Locale.Tr "edu.status"}}</th>
 						<th></th>
 					</tr>
 				</thead>
@@ -32,18 +32,18 @@
 									<input type="text" name="username" value="{{$row.Username}}" style="width: 150px;" required>
 									<input type="text" name="email" value="{{$row.Email}}" placeholder="auto-generated" style="width: 180px;">
 									<span style="flex-shrink: 0;">{{$row.Group}}</span>
-									<button class="ui mini primary button" type="submit" style="flex-shrink: 0;">Save</button>
+									<button class="ui mini primary button" type="submit" style="flex-shrink: 0;">{{ctx.Locale.Tr "edu.save"}}</button>
 								</form>
 							</td>
 							<td>
 								{{if eq $row.Status "pending"}}
-									<span class="ui yellow label">Pending</span>
+									<span class="ui yellow label">{{ctx.Locale.Tr "edu.pending"}}</span>
 								{{else if eq $row.Status "created"}}
-									<span class="ui green label">Created</span>
+									<span class="ui green label">{{ctx.Locale.Tr "edu.created"}}</span>
 								{{else if eq $row.Status "exists"}}
-									<span class="ui blue label">Exists</span>
+									<span class="ui blue label">{{ctx.Locale.Tr "edu.exists"}}</span>
 								{{else if eq $row.Status "error"}}
-									<span class="ui red label" title="{{$row.ErrorMsg}}">Error</span>
+									<span class="ui red label" title="{{$row.ErrorMsg}}">{{ctx.Locale.Tr "edu.error"}}</span>
 								{{else}}
 									<span class="ui label">{{$row.Status}}</span>
 								{{end}}
@@ -59,20 +59,20 @@
 			<form class="ui form" action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/import/{{.Draft.ID}}/execute" method="post" style="display: inline;">
 				{{.CsrfTokenHtml}}
 				<div class="inline field">
-					<label>Default role:</label>
+					<label>{{ctx.Locale.Tr "edu.default_role"}}</label>
 					<select name="default_role" class="ui compact selection dropdown">
-						<option value="student" selected>Student</option>
-						<option value="teacher">Teacher</option>
+						<option value="student" selected>{{ctx.Locale.Tr "edu.student"}}</option>
+						<option value="teacher">{{ctx.Locale.Tr "edu.teacher"}}</option>
 					</select>
 				</div>
-				<button class="ui green button" type="submit" onclick="return confirm('This will create users and enroll them. Continue?')">
-					{{svg "octicon-check"}} Import All
+				<button class="ui green button" type="submit" onclick="return confirm('{{ctx.Locale.Tr "edu.import_all_confirm"}}')">
+					{{svg "octicon-check"}} {{ctx.Locale.Tr "edu.import_all"}}
 				</button>
 			</form>
 
 			<form action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/import/{{.Draft.ID}}/delete" method="post" style="display: inline; margin-left: 10px;">
 				{{.CsrfTokenHtml}}
-				<button class="ui red button" type="submit">{{svg "octicon-trash"}} Cancel Import</button>
+				<button class="ui red button" type="submit">{{svg "octicon-trash"}} {{ctx.Locale.Tr "edu.cancel_import"}}</button>
 			</form>
 		</div>
 	</div>

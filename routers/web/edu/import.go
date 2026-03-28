@@ -22,9 +22,9 @@ func ImportUpload(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -35,6 +35,11 @@ func ImportUpload(ctx *context.Context) {
 	}
 	if course == nil {
 		ctx.NotFound("Course not found", nil)
+		return
+	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}
 
@@ -47,9 +52,9 @@ func ImportUploadPost(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -62,6 +67,12 @@ func ImportUploadPost(ctx *context.Context) {
 		ctx.NotFound("Course not found", nil)
 		return
 	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
+		return
+	}
+
 	ctx.Data["Course"] = course
 
 	file, _, err := ctx.Req.FormFile("csv_file")
@@ -100,9 +111,9 @@ func ImportPreview(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	draftID := ctx.ParamsInt64(":draftID")
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -115,6 +126,12 @@ func ImportPreview(ctx *context.Context) {
 		ctx.NotFound("Course not found", nil)
 		return
 	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
+		return
+	}
+
 	ctx.Data["Course"] = course
 
 	draft, rows, err := svc.GetImportDraft(ctx, draftID)
@@ -141,9 +158,24 @@ func ImportUpdateRow(ctx *context.Context) {
 	username := ctx.FormString("username")
 	email := ctx.FormString("email")
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
+		return
+	}
+
+	course, err := svc.GetCourseByID(ctx, courseID)
+	if err != nil {
+		ctx.ServerError("GetCourseByID", err)
+		return
+	}
+	if course == nil {
+		ctx.NotFound("Course not found", nil)
+		return
+	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}
 
@@ -162,9 +194,9 @@ func ImportExecutePost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	draftID := ctx.ParamsInt64(":draftID")
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -177,6 +209,12 @@ func ImportExecutePost(ctx *context.Context) {
 		ctx.NotFound("Course not found", nil)
 		return
 	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
+		return
+	}
+
 	ctx.Data["Course"] = course
 
 	roleStr := ctx.FormString("default_role")
@@ -202,9 +240,24 @@ func ImportDeletePost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	draftID := ctx.ParamsInt64(":draftID")
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
+		return
+	}
+
+	course, err := svc.GetCourseByID(ctx, courseID)
+	if err != nil {
+		ctx.ServerError("GetCourseByID", err)
+		return
+	}
+	if course == nil {
+		ctx.NotFound("Course not found", nil)
+		return
+	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
 		return
 	}
 

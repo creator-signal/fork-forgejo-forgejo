@@ -37,8 +37,8 @@ func (c *Course) IsActive() bool {
 // CourseEnrollment represents a user's participation in a course.
 type CourseEnrollment struct {
 	ID          int64    `json:"id" xorm:"pk autoincr"`
-	CourseID    int64    `json:"course_id" xorm:"INDEX NOT NULL"`
-	UserID      int64    `json:"user_id" xorm:"INDEX NOT NULL"`
+	CourseID    int64    `json:"course_id" xorm:"INDEX NOT NULL UNIQUE(idx_course_user)"`
+	UserID      int64    `json:"user_id" xorm:"INDEX NOT NULL UNIQUE(idx_course_user)"`
 	Role        RoleType `json:"role" xorm:"VARCHAR(20) NOT NULL"`
 	CreatedUnix int64    `json:"created_unix" xorm:"created"`
 }
@@ -200,3 +200,12 @@ type SyncForkTask struct {
 	CreatedUnix  int64  `json:"created_unix" xorm:"created"`
 	UpdatedUnix  int64  `json:"updated_unix" xorm:"updated"`
 }
+
+// Task/draft status constants.
+const (
+	StatusDraft   = "draft"
+	StatusPending = "pending"
+	StatusRunning = "running"
+	StatusDone    = "done"
+	StatusError   = "error"
+)

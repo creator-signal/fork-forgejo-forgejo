@@ -29,7 +29,7 @@
 									{{if .DeadlineUnix}}
 										{{svg "octicon-clock"}} {{.Deadline.Format "02 Jan 2006"}}
 									{{else}}
-										No Deadline
+										{{ctx.Locale.Tr "edu.no_deadline"}}
 									{{end}}
 								</span>
 							</div>
@@ -51,7 +51,7 @@
 					{{svg "octicon-repo"}}
 					{{ctx.Locale.Tr "edu.no_assignments"}}
 				</div>
-				<p>You are not enrolled in any courses yet, or there are no assignments.</p>
+				<p>{{ctx.Locale.Tr "edu.not_enrolled_message"}}</p>
 			</div>
 		{{end}}
 	</div>

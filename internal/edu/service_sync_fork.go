@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"forgejo.org/modules/log"
 )
 
 func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) (*SyncForkTask, error) {
@@ -40,7 +42,7 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 		AssignmentID: assignmentID,
 		CreatorID:    doerID,
 		TotalRepos:   len(submissions),
-		Status:       "running",
+		Status:       StatusRunning,
 		CreatedUnix:  now,
 		UpdatedUnix:  now,
 	}
@@ -50,9 +52,11 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 	}
 
 	if len(submissions) == 0 {
-		task.Status = "done"
+		task.Status = StatusDone
 		task.UpdatedUnix = time.Now().Unix()
-		_ = s.repo.UpdateSyncForkTask(ctx, task)
+		if err := s.repo.UpdateSyncForkTask(ctx, task); err != nil {
+			log.Error("Failed to update sync fork task: %v", err)
+		}
 		return task, nil
 	}
 
@@ -60,7 +64,9 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 		if sub.StudentRepoID == 0 {
 			task.Skipped++
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateSyncForkTask(ctx, task)
+			if errUpd := s.repo.UpdateSyncForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update sync fork task: %v", errUpd)
+			}
 			continue
 		}
 
@@ -69,14 +75,18 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 			task.Failed++
 			task.ErrorLog += fmt.Sprintf("repo %d: get repo: %v\n", sub.StudentRepoID, err)
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateSyncForkTask(ctx, task)
+			if errUpd := s.repo.UpdateSyncForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update sync fork task: %v", errUpd)
+			}
 			continue
 		}
 
 		if !forkRepo.IsFork {
 			task.Skipped++
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateSyncForkTask(ctx, task)
+			if errUpd := s.repo.UpdateSyncForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update sync fork task: %v", errUpd)
+			}
 			continue
 		}
 
@@ -90,22 +100,28 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 				task.ErrorLog += fmt.Sprintf("%s: sync: %v\n", forkRepo.Name, err)
 			}
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateSyncForkTask(ctx, task)
+			if errUpd := s.repo.UpdateSyncForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update sync fork task: %v", errUpd)
+			}
 			continue
 		}
 
 		task.Synced++
 		task.UpdatedUnix = time.Now().Unix()
-		_ = s.repo.UpdateSyncForkTask(ctx, task)
+		if errUpd := s.repo.UpdateSyncForkTask(ctx, task); errUpd != nil {
+			log.Error("Failed to update sync fork task: %v", errUpd)
+		}
 	}
 
 	if task.Failed > 0 {
-		task.Status = "error"
+		task.Status = StatusError
 	} else {
-		task.Status = "done"
+		task.Status = StatusDone
 	}
 	task.UpdatedUnix = time.Now().Unix()
-	_ = s.repo.UpdateSyncForkTask(ctx, task)
+	if err := s.repo.UpdateSyncForkTask(ctx, task); err != nil {
+		log.Error("Failed to update sync fork task: %v", err)
+	}
 
 	return task, nil
 }

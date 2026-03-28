@@ -55,22 +55,23 @@ Forgejo (форк Gitea) — это монолитное приложение н
 |------|------|------------|
 | Модели + Сервисы + DAL | `internal/edu/` | Ядро бизнес-логики, интерфейсы, данные |
 | HTTP-хендлеры | `routers/web/edu/` | Привязка к URL, обработка запросов |
+| Middleware | `routers/web/edu/middleware.go` | Авторизация (reqEduTeacher, reqEduAdmin) |
 | Шаблоны | `templates/edu/` | UI (Fomantic UI) |
 | Интеграционные тесты | `tests/integration/edu_assignments_test.go` | SQLite-based Go тесты (15 тестов) |
 | E2E тесты | `tests/e2e/edu.test.e2e.ts` | Playwright тесты (8 тестов) |
 | Фикстуры | `models/fixtures/user_role.yml` | Тестовые данные для edu ролей |
-| Docker Dev | `Dockerfile.dev`, `docker-compose.dev.yml`, `docker/app.ini` | Локальная среда разработки |
+| Docker Dev | `edu-docker/Dockerfile.dev`, `edu-docker/docker-compose.yml`, `edu-docker/app.ini` | Локальная среда разработки |
 | Документация | `edu-docs/` | Руководства для разработчиков и пользователей |
 
 ### 2.2 Архитектура модуля
 
-Модуль следует чистой слоёной архитектуре:
+Модуль следует чистой слоёной архитектуре. Сервис создаётся **один раз** при старте (`Init()`) и хранится как синглтон в `globalService`. Хендлеры получают его через `edu.GetService()`:
 
 ```
 HTTP Handler (routers/web/edu/)
-    │
+    │  вызывает edu.GetService()
     ▼
-EducationalService (interface в service.go)
+EducationalService (singleton, interface в service.go)
     │
     ├──> Repository (interface в service.go, реализация в repository_*.go)
     │        └──> Xorm ORM через db.GetEngine(ctx)
@@ -139,6 +140,17 @@ EducationalService (interface в service.go)
 
 > **Важно о именовании таблиц:** Модели `Course`, `Assignment`, `Submission`, `TestResult`, `CourseEnrollment`, `ImportDraft`, `ImportDraftRow` определяют метод `TableName()` в `models.go`, чтобы Xorm создавал таблицы с `edu_` префиксом. `UserRole`, `BulkForkTask` и `SyncForkTask` не имеют `TableName()`, поэтому Xorm создаёт таблицы по дефолтным именам (`user_role`, `bulk_fork_task`, `sync_fork_task`).
 
+> **UNIQUE constraint на enrollments:** `edu_course_enrollments` имеет UNIQUE индекс `idx_course_user` на `(CourseID, UserID)`, что предотвращает дублирование записей студента в одном курсе. При попытке повторной записи БД вернёт ошибку.
+
+#### Общие константы статусов:
+
+В `models.go` определены константы статусов, используемые в нескольких моделях (import drafts, bulk fork tasks, sync fork tasks):
+- `StatusDraft` — черновик
+- `StatusPending` — ожидает обработки
+- `StatusRunning` — выполняется
+- `StatusDone` — завершено успешно
+- `StatusError` — завершено с ошибкой
+
 #### Статусы Submission:
 - `started` — студент взял задание, форк создан
 - `submitted` — (зарезервирован для ручной сдачи)
@@ -173,7 +185,7 @@ EducationalService (interface в service.go)
 | `adapter.go` | ForgejoAdapter — мост к ядру Forgejo |
 | `notifier.go` | EduNotifier — обработка событий CI/CD |
 | `role.go` | Управление глобальными ролями через Xorm ORM (таблица `user_role`) |
-| `init.go` | Инициализация: sync схемы, регистрация нотификатора, загрузка edu-локалей |
+| `init.go` | Инициализация: sync схемы, создание singleton-сервиса (`NewService`), регистрация нотификатора (`RegisterNotifier`), загрузка edu-локалей |
 | `mock_test.go` | Моки для unit-тестов |
 | `locale/*.json` | Встраиваемые (embed) JSON-файлы локализации для edu-ключей |
 | `*_test.go` | Unit-тесты для каждого компонента |
@@ -211,6 +223,8 @@ EducationalService (interface в service.go)
 1. Преподаватель создаёт обычный репозиторий-шаблон в Forgejo.
 2. Заходит на `/edu/teacher/assignments/new`, выбирает курс и репозиторий, заполняет название, описание, дедлайн.
 3. Запись создаётся в `edu_assignments` с привязкой к `course_id` и `repo_id`.
+
+**Техническая реализация**: Хелпер `loadCoursesAndRepos()` в `assignments.go` загружает курсы и определяет, какие репозитории показать. Если курс привязан к организации, отображаются репозитории организации. Если у организации нет репозиториев, список остаётся пустым (нет fallback на собственные репозитории пользователя). Если курс без организации — показываются собственные репозитории пользователя. JavaScript на клиенте при смене курса делает redirect с `?course_id=X`, чтобы сервер подгрузил правильные репозитории.
 
 #### Г. Студент берёт задание (Join)
 
@@ -258,7 +272,7 @@ func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, fo
 
 Файл: `internal/edu/notifier.go`
 
-1. `EduNotifier` регистрируется через `notify.RegisterNotifier` при старте.
+1. `EduNotifier` регистрируется через `notify.RegisterNotifier` в `Init()` (не в `NewService()`).
 2. Когда Forgejo Actions runner завершает workflow, срабатывает `ActionRunNowDone`.
 3. Наш нотификатор:
    - Ищет submission по `run.RepoID` (это форк студента).
@@ -295,7 +309,7 @@ func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, fo
 │   ├── /assignments/{id}               → Детали задания + CI результат + оценка
 │   └── /assignments/{id}/join          → POST: взять задание (fork + submission)
 │
-├── /teacher
+├── /teacher                                [reqEduTeacher middleware — требует роль teacher/admin]
 │   ├── /assignments                    → Список заданий преподавателя
 │   ├── /assignments/new                → GET/POST: создать задание
 │   ├── /assignments/{id}/edit          → GET/POST: редактировать задание
@@ -323,7 +337,7 @@ func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, fo
 │       ├── /{id}/import/{draftID}/execute    → POST: выполнить импорт
 │       └── /{id}/import/{draftID}/delete     → POST: удалить черновик
 │
-└── /admin
+└── /admin                                  [reqEduAdmin middleware — требует Forgejo site admin]
     ├── /                               → Панель управления ролями
     └── /roles                          → POST: обновить роль пользователя
 ```
@@ -334,7 +348,7 @@ Edu-модуль затрагивает ядро Forgejo в **4 точках**:
 
 | Точка | Файл ядра | Что делается |
 |-------|-----------|-------------|
-| **Init** | `routers/init.go` | `mustInitCtx(ctx, edu.Init)` — запуск инициализации |
+| **Init** | `routers/init.go` | `mustInitCtx(ctx, edu.Init)` — запуск инициализации (sync схемы, создание singleton-сервиса, регистрация нотификатора, загрузка локалей) |
 | **Routes** | `routers/web/web.go` | `edu.RegisterRoutes(m, ...)` — регистрация роутов |
 | **Notifier** | (runtime) | `notify.RegisterNotifier(&EduNotifier{})` — подписка на события |
 | **Navbar** | `templates/custom/extra_links.tmpl` | Ссылка "Education" в навигации |
@@ -455,22 +469,22 @@ internal/edu/locale/
 Forgejo не компилируется на Windows (файлы `_unix.go` используют `syscall.Setpgid`, `unix.Umask` и т.д.). Для локальной разработки используется Docker.
 
 **Файлы:**
-- `Dockerfile.dev` — двухстадийная сборка: `golang:1.25-alpine` (build) → `alpine:3.23` (runtime). Запуск от пользователя `git` (Forgejo не работает от root).
-- `docker-compose.dev.yml` — сервис `forgejo` (порт 3000), опциональные сервисы тестов (profile: test).
-- `docker/app.ini` — преконфигурированный SQLite, `INSTALL_LOCK=true` (пропускает Install Wizard), Forgejo Actions включены.
+- `edu-docker/Dockerfile.dev` — двухстадийная сборка: `golang:1.25-alpine` (build) → `alpine:3.23` (runtime). Запуск от пользователя `git` (Forgejo не работает от root).
+- `edu-docker/docker-compose.yml` — сервис `forgejo` (порт 3000), опциональные сервисы тестов (profile: test).
+- `edu-docker/app.ini` — преконфигурированный SQLite, `INSTALL_LOCK=true` (пропускает Install Wizard), Forgejo Actions включены.
 
 **Запуск:**
 ```bash
 cd forgejo-edu
-docker compose -f docker-compose.dev.yml build forgejo
-docker compose -f docker-compose.dev.yml up forgejo
+docker compose -f edu-docker/docker-compose.yml build forgejo
+docker compose -f edu-docker/docker-compose.yml up forgejo
 # Сайт: http://localhost:3000, первый зарегистрированный пользователь — админ
 ```
 
 **Сброс БД:**
 ```bash
-docker compose -f docker-compose.dev.yml down -v   # -v удаляет volume с данными
-docker compose -f docker-compose.dev.yml up forgejo --build
+docker compose -f edu-docker/docker-compose.yml down -v   # -v удаляет volume с данными
+docker compose -f edu-docker/docker-compose.yml up forgejo --build
 ```
 
 ### 3.5 Тестирование
@@ -487,8 +501,8 @@ docker compose -f docker-compose.dev.yml up forgejo --build
 
 **Docker-тесты:**
 ```bash
-docker compose -f docker-compose.dev.yml run --rm test-integration   # Integration
-docker compose -f docker-compose.dev.yml run --rm test-unit          # Unit
+docker compose -f edu-docker/docker-compose.yml run --rm test-integration   # Integration
+docker compose -f edu-docker/docker-compose.yml run --rm test-unit          # Unit
 ```
 
 ### 3.6 Ошибки и логирование
@@ -502,9 +516,24 @@ log.Error("EduNotifier: failed to create test result: %v", err)
 log.Info("Educational Extension initialized successfully.")
 ```
 
-### 3.7 Права доступа
+### 3.7 Права доступа и авторизация
 
-В хендлерах проверка прав выполняется через Forgejo core:
+Edu-модуль использует **два уровня** авторизации:
+
+#### Middleware (роутерный уровень)
+
+Файл `routers/web/edu/middleware.go` содержит два middleware:
+
+- **`reqEduTeacher`** — проверяет, что у текущего пользователя edu-роль `teacher` или `admin` (через таблицу `user_role`). Применяется ко всей группе `/edu/teacher/*`. Если роль отсутствует — возвращает 403.
+- **`reqEduAdmin`** — проверяет, что пользователь является Forgejo site admin (`ctx.Doer.IsAdmin`). Применяется к `/edu/admin/*`.
+
+#### Проверка владения курсом (хендлерный уровень)
+
+Мутирующие операции над курсами (edit, delete, enroll, unenroll, import) дополнительно проверяют `course.CreatorID == ctx.Doer.ID`. Это гарантирует, что один преподаватель не может редактировать курсы другого. Если проверка не проходит — возвращается 403.
+
+#### Проверка прав доступа к репозиторию (Forgejo core)
+
+Для операций с репозиториями используется Forgejo core:
 
 ```go
 perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
@@ -512,6 +541,28 @@ if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
     ctx.Error(http.StatusForbidden, "Only instructors can view this page")
     return
 }
+```
+
+### 3.8 Обработка ошибок
+
+Все операции с побочными эффектами (обновление BulkForkTask, SyncForkTask, ImportDraftRow, ImportDraft) логируют ошибки через `log.Error(...)` вместо игнорирования. Паттерн:
+
+```go
+if err := s.repo.UpdateBulkForkTask(ctx, task); err != nil {
+    log.Error("failed to update bulk fork task: %v", err)
+}
+```
+
+### 3.9 XSS-защита в шаблонах
+
+Все пользовательские данные в шаблонах пропускаются через `| SanitizeHTML`. **Никогда не используйте `| SafeHTML`** для данных, введённых пользователем (названия курсов, описания, комментарии к оценкам и т.д.):
+
+```html
+<!-- ПРАВИЛЬНО -->
+<p>{{.Course.Description | SanitizeHTML}}</p>
+
+<!-- НЕПРАВИЛЬНО — XSS уязвимость -->
+<p>{{.Course.Description | SafeHTML}}</p>
 ```
 
 ---
@@ -537,7 +588,7 @@ if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
 3. Паттерн хендлера:
    ```go
    func MyHandler(ctx *context.Context) {
-       svc := getEduService()
+       svc := edu.GetService()  // singleton, НЕ создавать новый сервис
        // ... бизнес-логика ...
        ctx.Data["Key"] = value
        ctx.HTML(http.StatusOK, tplMyTemplate)

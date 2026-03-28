@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"forgejo.org/internal/edu"
+	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
@@ -19,17 +20,11 @@ const (
 	tplAssignmentEdit        base.TplName = "edu/assignment_edit"
 )
 
-func getEduService() edu.EducationalService {
-	repo := edu.NewRepository()
-	adapter := edu.NewForgejoAdapter()
-	return edu.NewService(repo, adapter, adapter)
-}
-
 func StudentAssignments(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("edu.assignments")
 	ctx.Data["PageIsEduAssignments"] = true
 
-	svc := getEduService()
+	svc := edu.GetService()
 
 	assignments, err := svc.GetAssignmentsForUser(ctx, ctx.Doer.ID)
 	if err != nil {
@@ -45,7 +40,7 @@ func TeacherAssignments(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("edu.assignments")
 	ctx.Data["PageIsEduAssignments"] = true
 
-	svc := getEduService()
+	svc := edu.GetService()
 
 	assignments, err := svc.GetAssignmentsForUser(ctx, ctx.Doer.ID)
 	if err != nil {
@@ -76,7 +71,7 @@ func AssignmentDetail(ctx *context.Context) {
 	ctx.Data["PageIsEduAssignments"] = true
 
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 
 	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
 	if err != nil {
@@ -109,7 +104,7 @@ func AssignmentDetail(ctx *context.Context) {
 
 func JoinAssignment(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 
 	_, err := svc.JoinAssignment(ctx, ctx.Doer, assignmentID)
 	if err != nil {
@@ -121,16 +116,61 @@ func JoinAssignment(ctx *context.Context) {
 	ctx.Redirect(setting.AppSubURL + "/edu/student/assignments/" + ctx.Params(":id"))
 }
 
+// loadCoursesAndRepos populates template data with courses list and repos for the selected course.
+// If a course with OrgID is selected, repos from that org are shown; otherwise user's own repos.
+func loadCoursesAndRepos(ctx *context.Context, svc edu.EducationalService, selectedCourseID int64) {
+	courses, err := svc.GetCoursesForUser(ctx, ctx.Doer.ID)
+	if err != nil {
+		log.Error("Failed to get courses: %v", err)
+	}
+	ctx.Data["Courses"] = courses
+	ctx.Data["SelectedCourseID"] = selectedCourseID
+
+	// Determine which repos to show based on selected course's org
+	var repos repo_model.RepositoryList
+	var courseHasOrg bool
+	if selectedCourseID > 0 {
+		for _, c := range courses {
+			if c.ID == selectedCourseID && c.OrgID > 0 {
+				courseHasOrg = true
+				repos, err = org_model.GetOrgRepositories(ctx, c.OrgID)
+				if err != nil {
+					log.Error("Failed to get org repos: %v", err)
+				}
+				break
+			}
+		}
+	}
+	if !courseHasOrg {
+		// Show user's own repos only when course is not linked to an org
+		repos, _, err = repo_model.GetUserRepositories(ctx, &repo_model.SearchRepoOptions{
+			ListOptions: db.ListOptions{ListAll: true},
+			Actor:       ctx.Doer,
+			Private:     true,
+		})
+		if err != nil {
+			log.Error("Failed to get user repos: %v", err)
+		}
+	}
+	ctx.Data["Repos"] = repos
+}
+
 func NewAssignment(ctx *context.Context) {
 	ctx.Data["Title"] = "New Assignment"
 	ctx.Data["PageIsEduAssignments"] = true
-	ctx.Data["CourseID"] = ctx.FormInt64("course_id")
+
+	svc := edu.GetService()
+	selectedCourseID := ctx.FormInt64("course_id")
+	loadCoursesAndRepos(ctx, svc, selectedCourseID)
+
 	ctx.HTML(http.StatusOK, "edu/assignment_new")
 }
 
 func NewAssignmentPost(ctx *context.Context) {
 	ctx.Data["Title"] = "New Assignment"
 	ctx.Data["PageIsEduAssignments"] = true
+
+	svc := edu.GetService()
 
 	title := ctx.FormString("title")
 	description := ctx.FormString("description")
@@ -188,7 +228,7 @@ func EditAssignment(ctx *context.Context) {
 	ctx.Data["PageIsEduAssignments"] = true
 
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 
 	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
 	if err != nil {
@@ -209,7 +249,7 @@ func EditAssignmentPost(ctx *context.Context) {
 	ctx.Data["PageIsEduAssignments"] = true
 
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 
 	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
 	if err != nil {
@@ -250,7 +290,7 @@ func EditAssignmentPost(ctx *context.Context) {
 
 func DeleteAssignmentPost(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 
 	if err := svc.DeleteAssignment(ctx, assignmentID); err != nil {
 		ctx.ServerError("DeleteAssignment", err)

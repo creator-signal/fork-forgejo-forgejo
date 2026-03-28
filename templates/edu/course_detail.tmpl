@@ -12,12 +12,12 @@
 					</div>
 					<div class="right menu">
 						<a class="ui button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/edit">
-							{{svg "octicon-pencil"}} Edit
+							{{svg "octicon-pencil"}} {{ctx.Locale.Tr "edu.edit"}}
 						</a>
 						<form action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/delete" method="post" style="margin-left: 5px;">
 							{{.CsrfTokenHtml}}
-							<button class="ui red button" onclick="return confirm('Are you sure you want to delete this course?')">
-								{{svg "octicon-trash"}} Delete
+							<button class="ui red button" onclick="return confirm('{{ctx.Locale.Tr "edu.delete_course_confirm"}}')">
+								{{svg "octicon-trash"}} {{ctx.Locale.Tr "edu.delete"}}
 							</button>
 						</form>
 					</div>
@@ -25,26 +25,26 @@
 
 				<div class="ui segment">
 					{{if .Course.Description}}
-						<p>{{.Course.Description}}</p>
+						<p>{{.Course.Description | SanitizeHTML}}</p>
 					{{end}}
 					{{if .Course.StartUnix}}
-						<p><strong>Start:</strong> {{.Course.StartDate.Format "02 Jan 2006 15:04"}}</p>
+						<p><strong>{{ctx.Locale.Tr "edu.start_date"}}:</strong> {{.Course.StartDate.Format "02 Jan 2006 15:04"}}</p>
 					{{end}}
 					{{if .Course.EndUnix}}
-						<p><strong>End:</strong> {{.Course.EndDate.Format "02 Jan 2006 15:04"}}</p>
+						<p><strong>{{ctx.Locale.Tr "edu.end_date"}}:</strong> {{.Course.EndDate.Format "02 Jan 2006 15:04"}}</p>
 					{{end}}
 					{{if .Course.IsActive}}
-						<span class="ui green label">Active</span>
+						<span class="ui green label">{{ctx.Locale.Tr "edu.active"}}</span>
 					{{else}}
-						<span class="ui red label">Ended</span>
+						<span class="ui red label">{{ctx.Locale.Tr "edu.ended"}}</span>
 					{{end}}
 				</div>
 
 				<!-- Assignments -->
 				<h2 class="ui header">
-					{{svg "octicon-tasklist"}} Assignments
+					{{svg "octicon-tasklist"}} {{ctx.Locale.Tr "edu.assignments"}}
 					<a class="ui small primary button" href="{{AppSubUrl}}/edu/teacher/assignments/new?course_id={{.Course.ID}}" style="margin-left: 10px;">
-						{{svg "octicon-plus"}} New Assignment
+						{{svg "octicon-plus"}} {{ctx.Locale.Tr "edu.new_assignment"}}
 					</a>
 				</h2>
 				<div class="ui segment">
@@ -67,27 +67,27 @@
 							{{end}}
 						</div>
 					{{else}}
-						<p>No assignments in this course yet.</p>
+						<p>{{ctx.Locale.Tr "edu.no_assignments_in_course"}}</p>
 					{{end}}
 				</div>
 
 				<!-- Enrollments -->
 				<h2 class="ui header">
-					{{svg "octicon-people"}} Participants
+					{{svg "octicon-people"}} {{ctx.Locale.Tr "edu.participants"}}
 					<a class="ui small teal button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/import" style="margin-left: 10px;">
-						{{svg "octicon-upload"}} Import from CSV
+						{{svg "octicon-upload"}} {{ctx.Locale.Tr "edu.import_csv"}}
 					</a>
 				</h2>
 				<div class="ui segment">
 					<form class="ui form" action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/enroll" method="post">
 						{{.CsrfTokenHtml}}
 						<div class="ui action input" style="margin-bottom: 15px;">
-							<input type="text" name="username" placeholder="Username" required>
+							<input type="text" name="username" placeholder="{{ctx.Locale.Tr "edu.username"}}" required>
 							<select class="ui compact selection dropdown" name="role">
-								<option value="student">Student</option>
-								<option value="teacher">Teacher</option>
+								<option value="student">{{ctx.Locale.Tr "edu.student"}}</option>
+								<option value="teacher">{{ctx.Locale.Tr "edu.teacher"}}</option>
 							</select>
-							<button class="ui primary button" type="submit">{{svg "octicon-plus"}} Add</button>
+							<button class="ui primary button" type="submit">{{svg "octicon-plus"}} {{ctx.Locale.Tr "edu.add"}}</button>
 						</div>
 					</form>
 
@@ -95,9 +95,9 @@
 						<table class="ui celled table">
 							<thead>
 								<tr>
-									<th>Username</th>
-									<th>Role</th>
-									<th>Enrolled</th>
+									<th>{{ctx.Locale.Tr "edu.username"}}</th>
+									<th>{{ctx.Locale.Tr "edu.role"}}</th>
+									<th>{{ctx.Locale.Tr "edu.enrolled"}}</th>
 									<th></th>
 								</tr>
 							</thead>
@@ -113,11 +113,11 @@
 										</td>
 										<td>
 											{{if eq (printf "%s" .Role) "teacher"}}
-												<span class="ui blue label">Teacher</span>
+												<span class="ui blue label">{{ctx.Locale.Tr "edu.teacher"}}</span>
 											{{else if eq (printf "%s" .Role) "admin"}}
-												<span class="ui purple label">Admin</span>
+												<span class="ui purple label">{{ctx.Locale.Tr "edu.admin"}}</span>
 											{{else}}
-												<span class="ui teal label">Student</span>
+												<span class="ui teal label">{{ctx.Locale.Tr "edu.student"}}</span>
 											{{end}}
 										</td>
 										<td>{{(DateUtils).AbsoluteShort .CreatedUnix}}</td>
@@ -125,7 +125,7 @@
 											<form action="{{AppSubUrl}}/edu/teacher/courses/{{$.Course.ID}}/unenroll" method="post" style="display:inline">
 												{{$.CsrfTokenHtml}}
 												<input type="hidden" name="user_id" value="{{.UserID}}">
-												<button class="ui mini red button">{{svg "octicon-x"}} Remove</button>
+												<button class="ui mini red button">{{svg "octicon-x"}} {{ctx.Locale.Tr "edu.remove"}}</button>
 											</form>
 										</td>
 									</tr>
@@ -133,7 +133,7 @@
 							</tbody>
 						</table>
 					{{else}}
-						<p>No participants enrolled yet.</p>
+						<p>{{ctx.Locale.Tr "edu.no_participants"}}</p>
 					{{end}}
 				</div>
 			</div>

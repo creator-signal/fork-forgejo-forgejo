@@ -3,42 +3,42 @@
 	<div class="ui container">
 		<h1 class="ui header">
 			{{svg "octicon-check-circle" 28}}
-			Import Complete
+			{{ctx.Locale.Tr "edu.import_complete"}}
 		</h1>
-		<p>Course: <strong>{{.Course.Name}}</strong></p>
+		<p>{{ctx.Locale.Tr "edu.course"}}: <strong>{{.Course.Name}}</strong></p>
 
 		<div class="ui four statistics">
 			<div class="statistic">
 				<div class="value">{{.Result.TotalRows}}</div>
-				<div class="label">Total Rows</div>
+				<div class="label">{{ctx.Locale.Tr "edu.total_rows"}}</div>
 			</div>
 			<div class="green statistic">
 				<div class="value">{{.Result.Created}}</div>
-				<div class="label">Created</div>
+				<div class="label">{{ctx.Locale.Tr "edu.created"}}</div>
 			</div>
 			<div class="blue statistic">
 				<div class="value">{{.Result.AlreadyExist}}</div>
-				<div class="label">Already Existed</div>
+				<div class="label">{{ctx.Locale.Tr "edu.already_existed"}}</div>
 			</div>
 			<div class="red statistic">
 				<div class="value">{{.Result.Errors}}</div>
-				<div class="label">Errors</div>
+				<div class="label">{{ctx.Locale.Tr "edu.errors"}}</div>
 			</div>
 		</div>
 
 		{{if .Result.Credentials}}
-			<h2 class="ui header" style="margin-top: 20px;">Generated Credentials</h2>
+			<h2 class="ui header" style="margin-top: 20px;">{{ctx.Locale.Tr "edu.generated_credentials"}}</h2>
 			<div class="ui warning message">
-				<p>Save these credentials now. Passwords cannot be recovered later.</p>
+				<p>{{ctx.Locale.Tr "edu.credentials_warning"}}</p>
 			</div>
 			<div class="ui segment" style="overflow-x: auto;">
 				<table class="ui celled table" id="credentials-table">
 					<thead>
 						<tr>
-							<th>Username</th>
-							<th>Password</th>
-							<th>Full Name</th>
-							<th>Email</th>
+							<th>{{ctx.Locale.Tr "edu.username"}}</th>
+							<th>{{ctx.Locale.Tr "edu.password"}}</th>
+							<th>{{ctx.Locale.Tr "edu.full_name"}}</th>
+							<th>{{ctx.Locale.Tr "edu.email"}}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -54,7 +54,7 @@
 				</table>
 			</div>
 			<button class="ui teal button" onclick="downloadCredentialsCSV()">
-				{{svg "octicon-download"}} Download Credentials CSV
+				{{svg "octicon-download"}} {{ctx.Locale.Tr "edu.download_csv"}}
 			</button>
 			<script>
 				function downloadCredentialsCSV() {
@@ -82,7 +82,7 @@
 
 		<div style="margin-top: 20px;">
 			<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}">
-				{{svg "octicon-arrow-left"}} Back to Course
+				{{svg "octicon-arrow-left"}} {{ctx.Locale.Tr "edu.back_to_course"}}
 			</a>
 		</div>
 	</div>

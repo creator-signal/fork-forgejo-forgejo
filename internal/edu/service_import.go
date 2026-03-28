@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"regexp"
 	"time"
+
+	"forgejo.org/modules/log"
 )
 
 var validUsernameRe = regexp.MustCompile(`^[\da-zA-Z][-.\w]*$`)
@@ -33,7 +35,7 @@ func (s *service) UploadCSV(ctx context.Context, courseID, creatorID int64, data
 	draft := &ImportDraft{
 		CourseID:    courseID,
 		CreatorID:   creatorID,
-		Status:      "draft",
+		Status:      StatusDraft,
 		RawCSV:      string(data),
 		CreatedUnix: now,
 	}
@@ -51,7 +53,7 @@ func (s *service) UploadCSV(ctx context.Context, courseID, creatorID int64, data
 			Group:       r.Group,
 			Username:    r.Username,
 			Role:        "student",
-			Status:      "pending",
+			Status:      StatusPending,
 			CreatedUnix: now,
 		})
 	}
@@ -85,7 +87,7 @@ func (s *service) UpdateDraftRow(ctx context.Context, rowID int64, username, ema
 		ID:       rowID,
 		Username: username,
 		Email:    email,
-		Status:   "pending",
+		Status:   StatusPending,
 	}
 	return s.repo.UpdateImportDraftRow(ctx, row)
 }
@@ -113,14 +115,16 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 	}
 
 	for _, row := range rows {
-		if row.Status != "pending" {
+		if row.Status != StatusPending {
 			continue
 		}
 
 		if !validUsernameRe.MatchString(row.Username) {
-			row.Status = "error"
+			row.Status = StatusError
 			row.ErrorMsg = "invalid username format"
-			_ = s.repo.UpdateImportDraftRow(ctx, row)
+			if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+				log.Error("Failed to update import draft row: %v", errUpd)
+			}
 			result.Errors++
 			continue
 		}
@@ -136,14 +140,18 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 				CreatedUnix: time.Now().Unix(),
 			}
 			if err := s.repo.EnrollUser(ctx, enrollment); err != nil {
-				row.Status = "error"
+				row.Status = StatusError
 				row.ErrorMsg = fmt.Sprintf("enroll existing user: %v", err)
-				_ = s.repo.UpdateImportDraftRow(ctx, row)
+				if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+					log.Error("Failed to update import draft row: %v", errUpd)
+				}
 				result.Errors++
 				continue
 			}
 			row.Status = "exists"
-			_ = s.repo.UpdateImportDraftRow(ctx, row)
+			if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+				log.Error("Failed to update import draft row: %v", errUpd)
+			}
 			result.AlreadyExist++
 			continue
 		}
@@ -157,18 +165,22 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 		// Generate password
 		password, err := generatePassword()
 		if err != nil {
-			row.Status = "error"
+			row.Status = StatusError
 			row.ErrorMsg = fmt.Sprintf("generate password: %v", err)
-			_ = s.repo.UpdateImportDraftRow(ctx, row)
+			if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+				log.Error("Failed to update import draft row: %v", errUpd)
+			}
 			result.Errors++
 			continue
 		}
 
 		// Create user
 		if err := s.users.CreateUser(ctx, row.Username, email, password, row.FullName); err != nil {
-			row.Status = "error"
+			row.Status = StatusError
 			row.ErrorMsg = fmt.Sprintf("create user: %v", err)
-			_ = s.repo.UpdateImportDraftRow(ctx, row)
+			if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+				log.Error("Failed to update import draft row: %v", errUpd)
+			}
 			result.Errors++
 			continue
 		}
@@ -176,9 +188,11 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 		// Get the created user for enrollment
 		newUser, err := s.users.GetUserByName(ctx, row.Username)
 		if err != nil {
-			row.Status = "error"
+			row.Status = StatusError
 			row.ErrorMsg = fmt.Sprintf("get created user: %v", err)
-			_ = s.repo.UpdateImportDraftRow(ctx, row)
+			if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+				log.Error("Failed to update import draft row: %v", errUpd)
+			}
 			result.Errors++
 			continue
 		}
@@ -191,15 +205,19 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 			CreatedUnix: time.Now().Unix(),
 		}
 		if err := s.repo.EnrollUser(ctx, enrollment); err != nil {
-			row.Status = "error"
+			row.Status = StatusError
 			row.ErrorMsg = fmt.Sprintf("enroll new user: %v", err)
-			_ = s.repo.UpdateImportDraftRow(ctx, row)
+			if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+				log.Error("Failed to update import draft row: %v", errUpd)
+			}
 			result.Errors++
 			continue
 		}
 
 		row.Status = "created"
-		_ = s.repo.UpdateImportDraftRow(ctx, row)
+		if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+			log.Error("Failed to update import draft row: %v", errUpd)
+		}
 		result.Created++
 		result.Credentials = append(result.Credentials, UserCredential{
 			Username: row.Username,
@@ -209,8 +227,10 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 		})
 	}
 
-	draft.Status = "done"
-	_ = s.repo.UpdateImportDraft(ctx, draft)
+	draft.Status = StatusDone
+	if err := s.repo.UpdateImportDraft(ctx, draft); err != nil {
+		log.Error("Failed to update import draft: %v", err)
+	}
 
 	return result, nil
 }

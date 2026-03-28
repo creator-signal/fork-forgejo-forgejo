@@ -51,11 +51,11 @@ func RegisterRoutes(m *web.Route, middlewares ...any) {
 				m.Post("/{id}/import/{draftID}/execute", ImportExecutePost)
 				m.Post("/{id}/import/{draftID}/delete", ImportDeletePost)
 			})
-		})
+		}, reqEduTeacher)
 
 		m.Group("/admin", func() {
 			m.Get("", AdminPanel)
 			m.Post("/roles", web.Bind(EduRoleForm{}), UpdateUserRolePost)
-		})
+		}, reqEduAdmin)
 	}, middlewares...)
 }

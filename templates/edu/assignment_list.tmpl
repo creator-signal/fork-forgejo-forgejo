@@ -21,8 +21,8 @@
 		</div>
 
 		<div class="ui secondary pointing menu">
-			<a class="active item" href="{{AppSubUrl}}/edu/teacher/assignments">Assignments</a>
-			<a class="item" href="{{AppSubUrl}}/edu/teacher/courses">Courses</a>
+			<a class="active item" href="{{AppSubUrl}}/edu/teacher/assignments">{{ctx.Locale.Tr "edu.assignments"}}</a>
+			<a class="item" href="{{AppSubUrl}}/edu/teacher/courses">{{ctx.Locale.Tr "edu.courses"}}</a>
 		</div>
 
 		<div class="ui divider"></div>
@@ -41,7 +41,7 @@
 										<span class="ui tiny blue label">{{.Name}}</span>
 									{{end}}
 								{{end}}
-								<span class="date">{{if .DeadlineUnix}}{{svg "octicon-clock"}} {{.Deadline.Format "02 Jan 2006"}}{{else}}No Deadline{{end}}</span>
+								<span class="date">{{if .DeadlineUnix}}{{svg "octicon-clock"}} {{.Deadline.Format "02 Jan 2006"}}{{else}}{{ctx.Locale.Tr "edu.no_deadline"}}{{end}}</span>
 							</div>
 							<div class="description">
 								{{.Description | SafeHTML}}
@@ -49,10 +49,10 @@
 						</div>
 						<div class="extra content">
 							<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.ID}}/submissions">
-								{{svg "octicon-eye"}} Submissions
+								{{svg "octicon-eye"}} {{ctx.Locale.Tr "edu.submissions"}}
 							</a>
 							<a class="ui button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.ID}}/edit">
-								{{svg "octicon-pencil"}} Edit
+								{{svg "octicon-pencil"}} {{ctx.Locale.Tr "edu.edit"}}
 							</a>
 						</div>
 					</div>

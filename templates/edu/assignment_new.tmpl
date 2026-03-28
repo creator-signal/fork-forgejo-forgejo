@@ -9,7 +9,16 @@
 				</h3>
 				<div class="ui attached segment">
 					{{template "base/alert" .}}
-					{{if .CourseID}}<input type="hidden" name="course_id" value="{{.CourseID}}">{{end}}
+
+					<div class="required field">
+						<label for="course_id">{{ctx.Locale.Tr "edu.course"}}</label>
+						<select id="course_id" name="course_id" class="ui dropdown" required>
+							<option value="">{{ctx.Locale.Tr "edu.select_course"}}</option>
+							{{range .Courses}}
+								<option value="{{.ID}}" {{if eq .ID $.SelectedCourseID}}selected{{end}}>{{.Name}}</option>
+							{{end}}
+						</select>
+					</div>
 
                     <div class="required field {{if .Err_Title}}error{{end}}">
 						<label for="title">{{ctx.Locale.Tr "edu.title"}}</label>
@@ -22,9 +31,13 @@
 					</div>
 
                     <div class="required field {{if .Err_TemplateRepo}}error{{end}}">
-						<label for="template_repo">{{ctx.Locale.Tr "edu.template_repo_name"}} (e.g. 'homework-1')</label>
-						<span class="help">The repository must be owned by you.</span>
-                        <input id="template_repo" name="template_repo" value="{{.template_repo}}" required>
+						<label for="repo_id">{{ctx.Locale.Tr "edu.template_repo_name"}}</label>
+						<select id="repo_id" name="repo_id" class="ui search dropdown" required>
+							<option value="">{{ctx.Locale.Tr "edu.select_repo"}}</option>
+							{{range .Repos}}
+								<option value="{{.ID}}">{{.OwnerName}}/{{.Name}}</option>
+							{{end}}
+						</select>
 					</div>
 
                     <div class="field {{if .Err_Deadline}}error{{end}}">
@@ -41,4 +54,15 @@
 		</div>
 	</div>
 </div>
+<script>
+	var courseSelect = document.getElementById('course_id');
+	if (courseSelect) {
+		courseSelect.addEventListener('change', function() {
+			var courseID = this.value;
+			var url = new URL(window.location.href);
+			url.searchParams.set('course_id', courseID);
+			window.location.href = url.toString();
+		});
+	}
+</script>
 {{template "base/footer" .}}

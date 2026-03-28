@@ -3,6 +3,7 @@ package edu
 import (
 	"context"
 	"embed"
+	"fmt"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/log"
@@ -17,8 +18,7 @@ func Init(ctx context.Context) error {
 
 	e := db.GetEngine(ctx)
 	if e == nil {
-		log.Fatal("Educational Extension: Database engine not available")
-		return nil
+		return fmt.Errorf("Educational Extension: Database engine not available")
 	}
 
 	if err := e.Sync(new(Course), new(CourseEnrollment), new(Assignment), new(Submission), new(TestResult), new(UserRole), new(ImportDraft), new(ImportDraftRow), new(BulkForkTask), new(SyncForkTask)); err != nil {
@@ -28,6 +28,9 @@ func Init(ctx context.Context) error {
 
 	repo := NewRepository()
 	RegisterNotifier(repo)
+
+	adapter := NewForgejoAdapter()
+	globalService = NewService(repo, adapter, adapter)
 
 	// Load edu-specific locale strings into the global i18n store.
 	localeFiles, err := localeFS.ReadDir("locale")

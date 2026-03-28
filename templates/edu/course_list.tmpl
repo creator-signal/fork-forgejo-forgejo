@@ -7,20 +7,20 @@
 					<div class="header item">
 						<h1 class="ui header" style="margin:0">
 							{{svg "octicon-mortar-board" 32}}
-							Courses
+							{{ctx.Locale.Tr "edu.courses"}}
 						</h1>
 					</div>
 					<div class="right menu">
 						<a class="ui positive button" href="{{AppSubUrl}}/edu/teacher/courses/new">
 							{{svg "octicon-plus"}}
-							New Course
+							{{ctx.Locale.Tr "edu.new_course"}}
 						</a>
 					</div>
 				</div>
 
 				<div class="ui secondary pointing menu">
-					<a class="item" href="{{AppSubUrl}}/edu/teacher/assignments">Assignments</a>
-					<a class="active item" href="{{AppSubUrl}}/edu/teacher/courses">Courses</a>
+					<a class="item" href="{{AppSubUrl}}/edu/teacher/assignments">{{ctx.Locale.Tr "edu.assignments"}}</a>
+					<a class="active item" href="{{AppSubUrl}}/edu/teacher/courses">{{ctx.Locale.Tr "edu.courses"}}</a>
 				</div>
 			</div>
 		</div>
@@ -44,17 +44,17 @@
 								{{end}}
 							</div>
 							<div class="description">
-								{{.Description}}
+								{{.Description | SanitizeHTML}}
 							</div>
 						</div>
 						<div class="extra content">
 							{{if .IsActive}}
-								<span class="ui green label">Active</span>
+								<span class="ui green label">{{ctx.Locale.Tr "edu.active"}}</span>
 							{{else}}
-								<span class="ui red label">Ended</span>
+								<span class="ui red label">{{ctx.Locale.Tr "edu.ended"}}</span>
 							{{end}}
 							<a class="ui primary button right floated" href="{{AppSubUrl}}/edu/teacher/courses/{{.ID}}">
-								{{svg "octicon-eye"}} View
+								{{svg "octicon-eye"}} {{ctx.Locale.Tr "edu.view"}}
 							</a>
 						</div>
 					</div>
@@ -64,9 +64,9 @@
 			<div class="ui placeholder segment">
 				<div class="ui icon header">
 					{{svg "octicon-repo"}}
-					No courses yet
+					{{ctx.Locale.Tr "edu.no_courses"}}
 				</div>
-				<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/courses/new">Create first course</a>
+				<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/courses/new">{{ctx.Locale.Tr "edu.create_first_course"}}</a>
 			</div>
 		{{end}}
 	</div>

@@ -26,12 +26,12 @@ sudo ./edu_deploy.sh deploy
 
 ```bash
 cd forgejo-edu
-docker compose -f docker-compose.dev.yml up forgejo --build
+docker compose -f edu-docker/docker-compose.yml up forgejo --build
 ```
 
 Сайт будет доступен на http://localhost:3000. Первый зарегистрированный пользователь — администратор. SQLite база, Install Wizard пропущен автоматически.
 
-Для сброса данных: `docker compose -f docker-compose.dev.yml down -v`
+Для сброса данных: `docker compose -f edu-docker/docker-compose.yml down -v`
 
 ## Подробная инструкция (продакшен)
 

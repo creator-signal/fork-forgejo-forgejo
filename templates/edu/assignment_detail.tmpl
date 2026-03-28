@@ -7,12 +7,12 @@
 					{{.Assignment.Title}}
 				</h1>
 				<div class="ui segment">
-					<p>{{.Assignment.Description}}</p>
+					<p>{{.Assignment.Description | SanitizeHTML}}</p>
 					{{if .Assignment.DeadlineUnix}}
 						<p>
 							<strong>{{ctx.Locale.Tr "edu.deadline"}}:</strong> {{.Assignment.Deadline.Format "02 Jan 2006 15:04"}}
 							{{if .DeadlinePassed}}
-								<span class="ui red label">Deadline passed</span>
+								<span class="ui red label">{{ctx.Locale.Tr "edu.deadline_passed"}}</span>
 							{{end}}
 						</p>
 					{{end}}
@@ -31,7 +31,7 @@
 						{{end}}
 					{{else}}
 						{{if .DeadlinePassed}}
-							<p class="ui red message">The deadline for this assignment has passed. You can no longer start it.</p>
+							<p class="ui red message">{{ctx.Locale.Tr "edu.deadline_passed_message"}}</p>
 						{{else}}
 							<form action="{{AppSubUrl}}/edu/student/assignments/{{.Assignment.ID}}/join" method="post">
 								{{.CsrfTokenHtml}}
@@ -43,23 +43,23 @@
 
 				{{if .LatestTestResult}}
 				<div class="ui segment">
-					<h4>{{svg "octicon-check-circle"}} Latest Test Result</h4>
+					<h4>{{svg "octicon-check-circle"}} {{ctx.Locale.Tr "edu.latest_test_result"}}</h4>
 					<p>
-						Score: <span class="ui label {{if ge .LatestTestResult.Score 50}}green{{else}}red{{end}}">{{.LatestTestResult.Score}}%</span>
+						{{ctx.Locale.Tr "edu.score"}}: <span class="ui label {{if ge .LatestTestResult.Score 50}}green{{else}}red{{end}}">{{.LatestTestResult.Score}}%</span>
 					</p>
-					<p>Commit: <code>{{slice .LatestTestResult.CommitSHA 0 7}}</code></p>
+					<p>{{ctx.Locale.Tr "edu.commit"}}: <code>{{slice .LatestTestResult.CommitSHA 0 7}}</code></p>
 					{{if .LatestTestResult.Details}}
-						<p>{{.LatestTestResult.Details}}</p>
+						<p>{{.LatestTestResult.Details | SanitizeHTML}}</p>
 					{{end}}
 				</div>
 				{{end}}
 
 				{{if and .Submission .Submission.IsGraded}}
 				<div class="ui segment">
-					<h4>{{svg "octicon-star"}} Grade</h4>
+					<h4>{{svg "octicon-star"}} {{ctx.Locale.Tr "edu.grade"}}</h4>
 					<p><span class="ui large purple label">{{.Submission.Grade}}/100</span></p>
 					{{if .Submission.Comment}}
-						<p><strong>Comment:</strong> {{.Submission.Comment}}</p>
+						<p><strong>{{ctx.Locale.Tr "edu.comment"}}:</strong> {{.Submission.Comment | SanitizeHTML}}</p>
 					{{end}}
 				</div>
 				{{end}}

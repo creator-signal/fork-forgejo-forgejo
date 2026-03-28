@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"forgejo.org/modules/log"
 )
 
 func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerID int64) (*BulkForkTask, error) {
@@ -46,7 +48,7 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 		AssignmentID: assignmentID,
 		CreatorID:    doerID,
 		TotalUsers:   len(studentEnrollments),
-		Status:       "running",
+		Status:       StatusRunning,
 		CreatedUnix:  now,
 		UpdatedUnix:  now,
 	}
@@ -56,9 +58,11 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 	}
 
 	if len(studentEnrollments) == 0 {
-		task.Status = "done"
+		task.Status = StatusDone
 		task.UpdatedUnix = time.Now().Unix()
-		_ = s.repo.UpdateBulkForkTask(ctx, task)
+		if err := s.repo.UpdateBulkForkTask(ctx, task); err != nil {
+			log.Error("Failed to update bulk fork task: %v", err)
+		}
 		return task, nil
 	}
 
@@ -73,7 +77,9 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 			task.Failed++
 			task.ErrorLog += fmt.Sprintf("user %d: get user: %v\n", enrollment.UserID, err)
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateBulkForkTask(ctx, task)
+			if errUpd := s.repo.UpdateBulkForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update bulk fork task: %v", errUpd)
+			}
 			continue
 		}
 
@@ -83,13 +89,17 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 			task.Failed++
 			task.ErrorLog += fmt.Sprintf("%s: check submission: %v\n", studentUser.Name, err)
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateBulkForkTask(ctx, task)
+			if errUpd := s.repo.UpdateBulkForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update bulk fork task: %v", errUpd)
+			}
 			continue
 		}
 		if existing != nil {
 			task.Completed++
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateBulkForkTask(ctx, task)
+			if errUpd := s.repo.UpdateBulkForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update bulk fork task: %v", errUpd)
+			}
 			continue
 		}
 
@@ -103,7 +113,9 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 			task.Failed++
 			task.ErrorLog += fmt.Sprintf("%s: fork: %v\n", studentUser.Name, err)
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateBulkForkTask(ctx, task)
+			if errUpd := s.repo.UpdateBulkForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update bulk fork task: %v", errUpd)
+			}
 			continue
 		}
 
@@ -111,7 +123,7 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 			AssignmentID:  assignmentID,
 			UserID:        enrollment.UserID,
 			StudentRepoID: forkedRepo.ID,
-			Status:        "started",
+			Status:        StatusStarted,
 			CreatedUnix:   time.Now().Unix(),
 			UpdatedUnix:   time.Now().Unix(),
 		}
@@ -120,22 +132,28 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 			task.Failed++
 			task.ErrorLog += fmt.Sprintf("%s: create submission: %v\n", studentUser.Name, err)
 			task.UpdatedUnix = time.Now().Unix()
-			_ = s.repo.UpdateBulkForkTask(ctx, task)
+			if errUpd := s.repo.UpdateBulkForkTask(ctx, task); errUpd != nil {
+				log.Error("Failed to update bulk fork task: %v", errUpd)
+			}
 			continue
 		}
 
 		task.Completed++
 		task.UpdatedUnix = time.Now().Unix()
-		_ = s.repo.UpdateBulkForkTask(ctx, task)
+		if errUpd := s.repo.UpdateBulkForkTask(ctx, task); errUpd != nil {
+			log.Error("Failed to update bulk fork task: %v", errUpd)
+		}
 	}
 
 	if task.Failed > 0 {
-		task.Status = "error"
+		task.Status = StatusError
 	} else {
-		task.Status = "done"
+		task.Status = StatusDone
 	}
 	task.UpdatedUnix = time.Now().Unix()
-	_ = s.repo.UpdateBulkForkTask(ctx, task)
+	if err := s.repo.UpdateBulkForkTask(ctx, task); err != nil {
+		log.Error("Failed to update bulk fork task: %v", err)
+	}
 
 	return task, nil
 }

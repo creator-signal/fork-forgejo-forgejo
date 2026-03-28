@@ -35,7 +35,7 @@ COPY --from=build /app/options /app/options
 COPY --from=build /app/public /app/public
 COPY --from=build /app/custom /app/custom
 
-COPY docker/app.ini /data/gitea/conf/app.ini
+COPY edu-docker/app.ini /data/gitea/conf/app.ini
 
 WORKDIR /app
 ENV GITEA_WORK_DIR=/app

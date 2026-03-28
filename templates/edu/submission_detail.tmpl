@@ -3,34 +3,34 @@
 	<div class="ui container">
 		<h1 class="ui header">
 			{{svg "octicon-git-pull-request" 28}}
-			Submission Detail
+			{{ctx.Locale.Tr "edu.submission_detail"}}
 		</h1>
 
 		<div class="ui segment">
-			<p><strong>Assignment:</strong> {{.Assignment.Title}}</p>
-			<p><strong>Student:</strong> {{if .Student}}{{.Student.Name}}{{else}}User #{{.Submission.UserID}}{{end}}</p>
-			<p><strong>Status:</strong>
+			<p><strong>{{ctx.Locale.Tr "edu.assignment"}}:</strong> {{.Assignment.Title}}</p>
+			<p><strong>{{ctx.Locale.Tr "edu.student"}}:</strong> {{if .Student}}{{.Student.Name}}{{else}}User #{{.Submission.UserID}}{{end}}</p>
+			<p><strong>{{ctx.Locale.Tr "edu.status"}}:</strong>
 				<span class="ui label {{if eq (printf "%s" .Submission.Status) "passed"}}green{{else if eq (printf "%s" .Submission.Status) "failed"}}red{{else if eq (printf "%s" .Submission.Status) "graded"}}purple{{else if eq (printf "%s" .Submission.Status) "submitted"}}blue{{else}}grey{{end}}">
 					{{.Submission.Status}}
 				</span>
 			</p>
 			{{if .Submission.StudentRepoID}}
-				<p><strong>Repo:</strong> <a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}">Open Repository</a></p>
+				<p><strong>{{ctx.Locale.Tr "edu.repo"}}:</strong> <a href="{{AppSubUrl}}/repositories/{{.Submission.StudentRepoID}}">{{ctx.Locale.Tr "edu.open_repo"}}</a></p>
 			{{end}}
 		</div>
 
 		<!-- CI/CD Test Results -->
-		<h2 class="ui header">{{svg "octicon-check-circle"}} CI/CD Test Results</h2>
+		<h2 class="ui header">{{svg "octicon-check-circle"}} {{ctx.Locale.Tr "edu.ci_test_results"}}</h2>
 		<div class="ui segment">
 			{{if .TestResults}}
 				<table class="ui celled table">
 					<thead>
 						<tr>
 							<th>#</th>
-							<th>Commit</th>
-							<th>Score</th>
-							<th>Details</th>
-							<th>Date</th>
+							<th>{{ctx.Locale.Tr "edu.commit"}}</th>
+							<th>{{ctx.Locale.Tr "edu.score"}}</th>
+							<th>{{ctx.Locale.Tr "edu.details"}}</th>
+							<th>{{ctx.Locale.Tr "edu.date"}}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -43,28 +43,28 @@
 										{{$tr.Score}}%
 									</span>
 								</td>
-								<td>{{$tr.Details}}</td>
+								<td>{{$tr.Details | SanitizeHTML}}</td>
 								<td>{{(DateUtils).AbsoluteShort $tr.CreatedUnix}}</td>
 							</tr>
 						{{end}}
 					</tbody>
 				</table>
 			{{else}}
-				<p>No CI/CD test results yet.</p>
+				<p>{{ctx.Locale.Tr "edu.no_test_results"}}</p>
 			{{end}}
 		</div>
 
 		<!-- Grading -->
-		<h2 class="ui header">{{svg "octicon-star"}} Grading</h2>
+		<h2 class="ui header">{{svg "octicon-star"}} {{ctx.Locale.Tr "edu.grading"}}</h2>
 		<div class="ui segment">
 			{{if .Submission.IsGraded}}
 				<div class="ui message">
-					<p>Current grade: <span class="ui large purple label">{{.Submission.Grade}}/100</span></p>
+					<p>{{ctx.Locale.Tr "edu.current_grade"}}: <span class="ui large purple label">{{.Submission.Grade}}/100</span></p>
 					{{if .Submission.Comment}}
-						<p><strong>Comment:</strong> {{.Submission.Comment}}</p>
+						<p><strong>{{ctx.Locale.Tr "edu.comment"}}:</strong> {{.Submission.Comment | SanitizeHTML}}</p>
 					{{end}}
 					{{if .Grader}}
-						<p><small>Graded by {{.Grader.Name}} on {{(DateUtils).AbsoluteShort .Submission.GradedUnix}}</small></p>
+						<p><small>{{ctx.Locale.Tr "edu.graded_by"}} {{.Grader.Name}} — {{(DateUtils).AbsoluteShort .Submission.GradedUnix}}</small></p>
 					{{end}}
 				</div>
 			{{end}}
@@ -72,20 +72,20 @@
 			<form class="ui form" action="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/submissions/{{.Submission.ID}}/grade" method="post">
 				{{.CsrfTokenHtml}}
 				<div class="field">
-					<label>Grade (0–100)</label>
+					<label>{{ctx.Locale.Tr "edu.grade_range"}}</label>
 					<input type="number" name="grade" min="0" max="100" value="{{if .Submission.IsGraded}}{{.Submission.Grade}}{{end}}" required>
 				</div>
 				<div class="field">
-					<label>Comment</label>
+					<label>{{ctx.Locale.Tr "edu.comment"}}</label>
 					<textarea name="comment" rows="3">{{.Submission.Comment}}</textarea>
 				</div>
-				<button class="ui primary button" type="submit">{{svg "octicon-check"}} Save Grade</button>
+				<button class="ui primary button" type="submit">{{svg "octicon-check"}} {{ctx.Locale.Tr "edu.save_grade"}}</button>
 			</form>
 		</div>
 
 		<div style="margin-top: 15px;">
 			<a class="ui button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/submissions">
-				{{svg "octicon-arrow-left"}} Back to Submissions
+				{{svg "octicon-arrow-left"}} {{ctx.Locale.Tr "edu.back_to_submissions"}}
 			</a>
 		</div>
 	</div>

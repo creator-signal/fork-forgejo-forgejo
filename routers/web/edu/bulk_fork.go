@@ -3,6 +3,7 @@ package edu
 import (
 	"net/http"
 
+	"forgejo.org/internal/edu"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
@@ -12,9 +13,9 @@ import (
 
 func BulkForkPost(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -62,9 +63,9 @@ func BulkForkPost(ctx *context.Context) {
 
 func BulkForkStatus(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 

@@ -3,15 +3,15 @@ package edu
 import (
 	"net/http"
 
+	"forgejo.org/internal/edu"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
-
-	user_model "forgejo.org/models/user"
 )
 
 const (
@@ -25,9 +25,9 @@ func SubmissionDetail(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
 	subID := ctx.ParamsInt64(":subID")
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -107,9 +107,9 @@ func GradeSubmissionPost(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
 	subID := ctx.ParamsInt64(":subID")
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 

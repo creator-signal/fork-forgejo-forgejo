@@ -1,8 +1,8 @@
 services:
   forgejo:
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: edu-docker/Dockerfile.dev
     ports:
       - "3000:3000"
       - "2222:22"
@@ -13,8 +13,8 @@ services:
   # Run integration tests (one-shot)
   test-integration:
     build:
-      context: .
-      dockerfile: Dockerfile.test
+      context: ..
+      dockerfile: edu-docker/Dockerfile.test
     profiles: ["test"]
     environment:
       - GITEA_ROOT=/app
@@ -23,8 +23,8 @@ services:
   # Run unit tests (one-shot)
   test-unit:
     build:
-      context: .
-      dockerfile: Dockerfile.test
+      context: ..
+      dockerfile: edu-docker/Dockerfile.test
     profiles: ["test"]
     command: ["go", "test", "-tags", "sqlite sqlite_unlock_notify", "./internal/edu/..."]
     environment:
@@ -33,8 +33,8 @@ services:
   # Run E2E tests (one-shot, requires Playwright + Chromium)
   test-e2e:
     build:
-      context: .
-      dockerfile: Dockerfile.e2e
+      context: ..
+      dockerfile: edu-docker/Dockerfile.e2e
     profiles: ["test"]
     environment:
       - GITEA_ROOT=/app

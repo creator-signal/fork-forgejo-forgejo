@@ -23,9 +23,9 @@ func CourseList(ctx *context.Context) {
 	ctx.Data["Title"] = "Courses"
 	ctx.Data["PageIsEduCourses"] = true
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -44,9 +44,9 @@ func CourseDetail(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -143,9 +143,9 @@ func NewCoursePost(ctx *context.Context) {
 		}
 	}
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -170,9 +170,9 @@ func EditCourse(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -183,6 +183,11 @@ func EditCourse(ctx *context.Context) {
 	}
 	if course == nil {
 		ctx.NotFound("Course not found", nil)
+		return
+	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only edit your own courses")
 		return
 	}
 
@@ -195,9 +200,9 @@ func EditCoursePost(ctx *context.Context) {
 	ctx.Data["PageIsEduCourses"] = true
 
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
 		return
 	}
 
@@ -208,6 +213,11 @@ func EditCoursePost(ctx *context.Context) {
 	}
 	if course == nil {
 		ctx.NotFound("Course not found", nil)
+		return
+	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only edit your own courses")
 		return
 	}
 
@@ -250,9 +260,24 @@ func EditCoursePost(ctx *context.Context) {
 
 func DeleteCoursePost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
+		return
+	}
+
+	course, err := svc.GetCourseByID(ctx, courseID)
+	if err != nil {
+		ctx.ServerError("GetCourseByID", err)
+		return
+	}
+	if course == nil {
+		ctx.NotFound("Course not found", nil)
+		return
+	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only delete your own courses")
 		return
 	}
 
@@ -268,6 +293,27 @@ func EnrollUserPost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	username := ctx.FormString("username")
 	role := ctx.FormString("role")
+
+	svc := edu.GetService()
+	if svc == nil {
+		ctx.ServerError("GetService", nil)
+		return
+	}
+
+	course, err := svc.GetCourseByID(ctx, courseID)
+	if err != nil {
+		ctx.ServerError("GetCourseByID", err)
+		return
+	}
+	if course == nil {
+		ctx.NotFound("Course not found", nil)
+		return
+	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only manage enrollments for your own courses")
+		return
+	}
 
 	if username == "" {
 		ctx.Flash.Error("Username is required")
@@ -292,12 +338,6 @@ func EnrollUserPost(ctx *context.Context) {
 		r = edu.RoleStudent
 	}
 
-	svc := getEduService()
-	if svc == nil {
-		ctx.ServerError("getEduService", nil)
-		return
-	}
-
 	if err := svc.EnrollUser(ctx, courseID, u.ID, r); err != nil {
 		ctx.ServerError("EnrollUser", err)
 		return
@@ -311,9 +351,24 @@ func RemoveEnrollmentPost(ctx *context.Context) {
 	courseID := ctx.ParamsInt64(":id")
 	userID := ctx.FormInt64("user_id")
 
-	svc := getEduService()
+	svc := edu.GetService()
 	if svc == nil {
-		ctx.ServerError("getEduService", nil)
+		ctx.ServerError("GetService", nil)
+		return
+	}
+
+	course, err := svc.GetCourseByID(ctx, courseID)
+	if err != nil {
+		ctx.ServerError("GetCourseByID", err)
+		return
+	}
+	if course == nil {
+		ctx.NotFound("Course not found", nil)
+		return
+	}
+
+	if course.CreatorID != ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "You can only manage enrollments for your own courses")
 		return
 	}
 

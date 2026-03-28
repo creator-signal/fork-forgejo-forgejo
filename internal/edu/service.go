@@ -145,9 +145,15 @@ type Repository interface {
 	GradeSubmission(ctx context.Context, submissionID int64, grade int, comment string, gradedByID int64) error
 }
 
+var globalService EducationalService
+
+// GetService returns the singleton edu service instance. Must be called after Init().
+func GetService() EducationalService {
+	return globalService
+}
+
 // NewService creates a new instance of EducationalService.
 func NewService(repo Repository, forker RepoForker, users ...UserCreator) EducationalService {
-	RegisterNotifier(repo)
 	s := &service{repo: repo, forker: forker}
 	if len(users) > 0 {
 		s.users = users[0]

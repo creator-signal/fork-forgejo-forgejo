@@ -3,7 +3,7 @@
 	<div class="ui container">
 		<h1 class="ui header">
 			{{svg "octicon-upload" 28}}
-			Import Users to {{.Course.Name}}
+			{{ctx.Locale.Tr "edu.import_users_to"}} {{.Course.Name}}
 		</h1>
 
 		<div class="ui segment">
@@ -11,40 +11,40 @@
 				{{.CsrfTokenHtml}}
 
 				<div class="field required">
-					<label>CSV File</label>
+					<label>{{ctx.Locale.Tr "edu.csv_file"}}</label>
 					<input type="file" name="csv_file" accept=".csv,.txt" required>
-					<p class="help">CSV format: columns separated by <code>;</code> or <code>,</code>. First column is usually Full Name.</p>
+					<p class="help">{{ctx.Locale.Tr "edu.csv_help"}}</p>
 				</div>
 
 				<div class="field">
 					<div class="ui checkbox">
 						<input type="checkbox" name="has_header" checked>
-						<label>First row is header</label>
+						<label>{{ctx.Locale.Tr "edu.first_row_header"}}</label>
 					</div>
 				</div>
 
 				<div class="three fields">
 					<div class="field">
-						<label>Full Name column index</label>
+						<label>{{ctx.Locale.Tr "edu.fullname_col"}}</label>
 						<input type="number" name="fullname_col" value="0" min="0">
-						<p class="help">0-based column index (default: 0)</p>
+						<p class="help">{{ctx.Locale.Tr "edu.col_help_0"}}</p>
 					</div>
 					<div class="field">
-						<label>Email column index</label>
+						<label>{{ctx.Locale.Tr "edu.email_col"}}</label>
 						<input type="number" name="email_col" value="-1">
-						<p class="help">-1 to skip (email will be auto-generated)</p>
+						<p class="help">{{ctx.Locale.Tr "edu.col_help_email"}}</p>
 					</div>
 					<div class="field">
-						<label>Group column index</label>
+						<label>{{ctx.Locale.Tr "edu.group_col"}}</label>
 						<input type="number" name="group_col" value="-1">
-						<p class="help">-1 to skip</p>
+						<p class="help">{{ctx.Locale.Tr "edu.col_help_skip"}}</p>
 					</div>
 				</div>
 
 				<div class="ui divider"></div>
 
-				<button class="ui primary button" type="submit">{{svg "octicon-upload"}} Upload and Preview</button>
-				<a class="ui button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}">Cancel</a>
+				<button class="ui primary button" type="submit">{{svg "octicon-upload"}} {{ctx.Locale.Tr "edu.upload_preview"}}</button>
+				<a class="ui button" href="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}">{{ctx.Locale.Tr "edu.cancel"}}</a>
 			</form>
 		</div>
 	</div>

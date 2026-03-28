@@ -11,30 +11,42 @@
 					{{template "base/alert" .}}
 
 					<div class="required field">
-						<label for="name">Name</label>
+						<label for="name">{{ctx.Locale.Tr "edu.name"}}</label>
 						<input id="name" name="name" value="{{if .Course}}{{.Course.Name}}{{end}}" autofocus required>
 					</div>
 
 					<div class="field">
-						<label for="description">Description</label>
+						<label for="description">{{ctx.Locale.Tr "edu.description"}}</label>
 						<textarea id="description" name="description">{{if .Course}}{{.Course.Description}}{{end}}</textarea>
 					</div>
 
 					<div class="field">
-						<label for="start_date">Start Date</label>
+						<label for="org_id">{{ctx.Locale.Tr "edu.organization"}}</label>
+						<select id="org_id" name="org_id" class="ui dropdown">
+							<option value="0">{{ctx.Locale.Tr "edu.no_organization"}}</option>
+							{{$selectedOrg := 0}}
+							{{if .Course}}{{$selectedOrg = .Course.OrgID}}{{end}}
+							{{range .Orgs}}
+								<option value="{{.ID}}" {{if eq .ID $selectedOrg}}selected{{end}}>{{.Name}}</option>
+							{{end}}
+						</select>
+					</div>
+
+					<div class="field">
+						<label for="start_date">{{ctx.Locale.Tr "edu.start_date"}}</label>
 						<input id="start_date" name="start_date" type="datetime-local"
 							{{if and .Course .Course.StartUnix}}value="{{.Course.StartDate.Format "2006-01-02T15:04"}}"{{end}}>
 					</div>
 
 					<div class="field">
-						<label for="end_date">End Date</label>
+						<label for="end_date">{{ctx.Locale.Tr "edu.end_date"}}</label>
 						<input id="end_date" name="end_date" type="datetime-local"
 							{{if and .Course .Course.EndUnix}}value="{{.Course.EndDate.Format "2006-01-02T15:04"}}"{{end}}>
 					</div>
 
 					<div class="inline field">
-						<button type="submit" class="ui primary button">{{if .Course}}Save{{else}}Create Course{{end}}</button>
-						<a class="ui button" href="{{AppSubUrl}}/edu/teacher/courses">Cancel</a>
+						<button type="submit" class="ui primary button">{{if .Course}}{{ctx.Locale.Tr "edu.save"}}{{else}}{{ctx.Locale.Tr "edu.create_course"}}{{end}}</button>
+						<a class="ui button" href="{{AppSubUrl}}/edu/teacher/courses">{{ctx.Locale.Tr "edu.cancel"}}</a>
 					</div>
 				</div>
 			</form>
