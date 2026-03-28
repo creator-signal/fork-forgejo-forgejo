@@ -187,5 +187,23 @@
 				</div>
 			</form>
 		</div>
+
+		<!-- File age color -->
+		<h4 class="ui top attached header">
+			{{ctx.Locale.Tr "settings.file_age_color"}}
+		</h4>
+		<div class="ui attached segment">
+			<form class="ui form" action="{{.Link}}/file_age_color" method="post">
+				<div class="inline field">
+					<div class="ui checkbox" data-tooltip-content="{{ctx.Locale.Tr "settings.additional_file_age_color_description"}}">
+						<input name="enable_file_age_color" type="checkbox" {{if $.SignedUser.EnableFileAgeColor}}checked{{end}}>
+						<label>{{ctx.Locale.Tr "settings.file_age_color_label"}}</label>
+					</div>
+				</div>
+				<div class="field">
+					<button class="ui primary button">{{ctx.Locale.Tr "save"}}</button>
+				</div>
+			</form>
+		</div>
 	</div>
 {{template "user/settings/layout_footer" .}}

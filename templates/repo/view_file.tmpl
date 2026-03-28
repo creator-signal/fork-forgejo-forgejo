@@ -18,7 +18,11 @@
 			{{if .LatestCommit}}
 				{{if .LatestCommit.Committer}}
 					<div class="text grey age">
-						{{DateUtils.TimeSince .LatestCommit.Committer.When}}
+						{{if and $.IsSigned $.SignedUser.EnableFileAgeColor}}
+							{{DateUtils.TimeSinceHeat .LatestCommit.Committer.When}}
+						{{else}}
+							{{DateUtils.TimeSince .LatestCommit.Committer.When}}
+						{{end}}
 					</div>
 				{{end}}
 			{{end}}

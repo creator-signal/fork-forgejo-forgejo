@@ -434,3 +434,22 @@ func UpdateUserHiddenComments(ctx *context.Context) {
 	ctx.Flash.Success(ctx.Tr("settings.saved_successfully"))
 	ctx.Redirect(setting.AppSubURL + "/user/settings/appearance")
 }
+
+// UpdateFileAgeColor updates a user's file age color preference
+func UpdateFileAgeColor(ctx *context.Context) {
+	form := web.GetForm(ctx).(*forms.UpdateFileAgeColorForm)
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsAppearance"] = true
+
+	opts := &user_service.UpdateOptions{
+		EnableFileAgeColor: optional.Some(form.EnableFileAgeColor),
+	}
+	if err := user_service.UpdateUser(ctx, ctx.Doer, opts); err != nil {
+		ctx.ServerError("UpdateUser", err)
+		return
+	}
+
+	log.Trace("User settings updated: %s", ctx.Doer.Name)
+	ctx.Flash.Success(translation.NewLocale(ctx.Doer.Language).TrString("settings.saved_successfully"))
+	ctx.Redirect(setting.AppSubURL + "/user/settings/appearance")
+}

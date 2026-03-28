@@ -157,6 +157,7 @@ type User struct {
 	KeepActivityPrivate bool   `xorm:"NOT NULL DEFAULT false"`
 	KeepPronounsPrivate bool   `xorm:"NOT NULL DEFAULT false"`
 	EnableRepoUnitHints bool   `xorm:"NOT NULL DEFAULT true"`
+	EnableFileAgeColor  bool   `xorm:"NOT NULL DEFAULT true"`
 
 	// If you add new fields that might be used to store abusive content (mainly string fields),
 	// please also add them in the UserData struct and the corresponding constructor.

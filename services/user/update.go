@@ -40,6 +40,7 @@ type UpdateOptions struct {
 	SetLastLogin                 bool
 	RepoAdminChangeTeamAccess    optional.Option[bool]
 	EnableRepoUnitHints          optional.Option[bool]
+	EnableFileAgeColor           optional.Option[bool]
 	KeepPronounsPrivate          optional.Option[bool]
 }
 
@@ -85,6 +86,10 @@ func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) er
 	if has, value := opts.EnableRepoUnitHints.Get(); has {
 		u.EnableRepoUnitHints = value
 		cols = append(cols, "enable_repo_unit_hints")
+	}
+	if has, value := opts.EnableFileAgeColor.Get(); has {
+		u.EnableFileAgeColor = value
+		cols = append(cols, "enable_file_age_color")
 	}
 	if has, value := opts.KeepPronounsPrivate.Get(); has {
 		u.KeepPronounsPrivate = value

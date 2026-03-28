@@ -8,7 +8,13 @@
 					</div>
 				</div>
 			</th>
-			<th class="text grey right age">{{if .LatestCommit}}{{if .LatestCommit.Committer}}{{DateUtils.TimeSince .LatestCommit.Committer.When}}{{end}}{{end}}</th>
+			<th class="text grey right age">{{if .LatestCommit}}{{if .LatestCommit.Committer -}}
+				{{- if and $.IsSigned $.SignedUser.EnableFileAgeColor -}}
+					{{- DateUtils.TimeSinceHeat .LatestCommit.Committer.When -}}
+				{{- else -}}
+					{{- DateUtils.TimeSince .LatestCommit.Committer.When -}}
+				{{- end -}}
+			{{- end}}{{end}}</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -62,7 +68,13 @@
 						{{end}}
 					</span>
 				</td>
-				<td class="text right age three wide">{{if $commit}}{{DateUtils.TimeSince $commit.Committer.When}}{{end}}</td>
+				<td class="text right age three wide">{{if $commit -}}
+					{{- if and $.IsSigned $.SignedUser.EnableFileAgeColor -}}
+						{{- DateUtils.TimeSinceHeat $commit.Committer.When -}}
+					{{- else -}}
+						{{- DateUtils.TimeSince $commit.Committer.When -}}
+					{{- end -}}
+				{{- end}}</td>
 			</tr>
 		{{end}}
 	</tbody>

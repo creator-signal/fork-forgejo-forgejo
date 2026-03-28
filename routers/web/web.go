@@ -597,6 +597,7 @@ func registerRoutes(m *web.Route) {
 			m.Post("/hints", web.Bind(forms.UpdateHintsForm{}), user_setting.UpdateUserHints)
 			m.Post("/hidden_comments", user_setting.UpdateUserHiddenComments)
 			m.Post("/theme", web.Bind(forms.UpdateThemeForm{}), user_setting.UpdateUIThemePost)
+			m.Post("/file_age_color", web.Bind(forms.UpdateFileAgeColorForm{}), user_setting.UpdateFileAgeColor)
 		})
 		m.Group("/security", func() {
 			m.Get("", security.Security)

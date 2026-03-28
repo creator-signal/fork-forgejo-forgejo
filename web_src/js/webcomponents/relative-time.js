@@ -109,6 +109,14 @@ export function DoUpdateRelativeTime(object, now) {
   const nowJS = dayjs.utc(now);
   const thenJS = dayjs.utc(absoluteTime);
 
+  if (object.getAttribute('heat')) {
+    const seconds = Math.floor(nowJS.diff(thenJS, 'second'));
+    const threshold = 3600 * 24 * 7 * 3; // 3 weeks
+    const heat = 10 - Math.floor(seconds / threshold * 10);
+    if (heat < 0) heat = 0;
+    object.setAttribute('data-heat', heat);
+  }
+
   object.setAttribute('data-tooltip-content', ABSOLUTE_DATETIME_FORMAT.format(thenJS.toDate()));
 
   if (nowJS.isBefore(thenJS)) {

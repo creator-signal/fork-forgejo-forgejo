@@ -40,6 +40,10 @@ func (du *DateUtils) TimeSince(time any) template.HTML {
 	return TimeSince(time)
 }
 
+func (du *DateUtils) TimeSinceHeat(time any) template.HTML {
+	return TimeSinceHeat(time)
+}
+
 // ParseLegacy parses the datetime in legacy format, eg: "2016-01-02" in server's timezone.
 // It shouldn't be used in new code. New code should use Time or TimeStamp as much as possible.
 func (du *DateUtils) ParseLegacy(datetime string) time.Time {
@@ -123,6 +127,10 @@ func dateTimeFormat(format string, datetime any) template.HTML {
 }
 
 func timeSinceTo(then any, now time.Time) template.HTML {
+	return timeSinceToEx(then, now, "")
+}
+
+func timeSinceToEx(then any, now time.Time, extraAttributes string) template.HTML {
 	thenTime, isZero := anyToTime(then)
 	if isZero {
 		return "-"
@@ -137,6 +145,10 @@ func timeSinceTo(then any, now time.Time) template.HTML {
 		attrs = `tense="future"`
 	}
 
+	if extraAttributes != "" {
+		attrs += " " + extraAttributes
+	}
+
 	// declare data-tooltip-content attribute to switch from "title" tooltip to "tippy" tooltip
 	htm := fmt.Sprintf(`<relative-time prefix="" %s datetime="%s" data-tooltip-content data-tooltip-interactive="true">%s</relative-time>`,
 		attrs, thenTime.Format(time.RFC3339), friendlyText)
@@ -146,4 +158,9 @@ func timeSinceTo(then any, now time.Time) template.HTML {
 // TimeSince renders relative time HTML given a time
 func TimeSince(then any) template.HTML {
 	return timeSinceTo(then, time.Now())
+}
+
+// TimeSinceHeat renders relative time HTML with a highlight threshold given a time
+func TimeSinceHeat(then any) template.HTML {
+	return timeSinceToEx(then, time.Now(), `heat="true"`)
 }
