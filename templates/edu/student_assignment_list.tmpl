@@ -1,6 +1,8 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Title}}" class="page-content edu assignments">
 	<div class="ui container">
+		{{template "edu/navbar" .}}
+
 		<div class="ui grid">
 			<div class="column">
 				<div class="ui secondary menu">
@@ -34,7 +36,7 @@
 								</span>
 							</div>
 							<div class="description">
-								{{.Description | SafeHTML}}
+								{{.Description | SanitizeHTML}}
 							</div>
 						</div>
 						<div class="extra content">

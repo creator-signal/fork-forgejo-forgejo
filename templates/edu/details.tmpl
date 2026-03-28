@@ -1,6 +1,8 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Assignment.Title}}" class="page-content edu-assignment-details">
 	<div class="ui container">
+		{{template "edu/navbar" .}}
+
 		<div class="ui grid">
 			<div class="twelve wide column">
 				<h1 class="ui header">
@@ -8,7 +10,7 @@
 					<div class="sub header">{{.Assignment.Deadline}}</div>
 				</h1>
 				<div class="ui segment">
-					{{.Assignment.Description | SafeHTML}}
+					{{.Assignment.Description | SanitizeHTML}}
 				</div>
 			</div>
 			<div class="four wide column">

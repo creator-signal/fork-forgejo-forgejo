@@ -30,6 +30,17 @@ func (s *service) CreateCourse(ctx context.Context, creatorID int64, opts Create
 		return nil, fmt.Errorf("create course: %w", err)
 	}
 
+	// Auto-enroll the creator as teacher
+	enrollment := &CourseEnrollment{
+		CourseID:    course.ID,
+		UserID:      creatorID,
+		Role:        RoleTeacher,
+		CreatedUnix: now,
+	}
+	if err := s.repo.EnrollUser(ctx, enrollment); err != nil {
+		return nil, fmt.Errorf("enroll creator: %w", err)
+	}
+
 	return course, nil
 }
 

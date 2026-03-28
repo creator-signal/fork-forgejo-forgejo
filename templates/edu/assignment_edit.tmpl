@@ -1,5 +1,9 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Title}}" class="page-content repository new repo">
+	<div class="ui container">
+		{{template "edu/navbar" .}}
+	</div>
+
 	<div class="ui middle aligned center aligned grid">
 		<div class="column">
 			<form class="ui form" action="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/edit" method="post">

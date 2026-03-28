@@ -12,11 +12,16 @@ RUN go mod download
 COPY package.json package-lock.json ./
 RUN npm install
 
-# Copy everything else
-COPY . .
-
-# Frontend
+# Cache frontend build (re-runs only when web_src/ or webpack config change)
+COPY web_src web_src/
+COPY webpack.config.js tailwind.config.js ./
+COPY Makefile ./
+COPY assets assets/
+COPY public/assets/img public/assets/img/
 RUN make frontend
+
+# Copy everything else (Go sources, templates, etc.)
+COPY . .
 
 # Backend
 ENV CGO_ENABLED=1

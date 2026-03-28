@@ -6,6 +6,7 @@ import (
 
 	"forgejo.org/internal/edu"
 	"forgejo.org/models/db"
+	org_model "forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
@@ -33,6 +34,8 @@ func StudentAssignments(ctx *context.Context) {
 	}
 
 	ctx.Data["Assignments"] = assignments
+	ctx.Data["PageIsEduStudent"] = true
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplStudentAssignmentList)
 }
 
@@ -63,6 +66,7 @@ func TeacherAssignments(ctx *context.Context) {
 
 	ctx.Data["Assignments"] = assignments
 	ctx.Data["CourseMap"] = courseMap
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplAssignmentList)
 }
 
@@ -99,6 +103,8 @@ func AssignmentDetail(ctx *context.Context) {
 		ctx.Data["LatestTestResult"] = latestResult
 	}
 
+	ctx.Data["PageIsEduStudent"] = true
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplAssignmentDetail)
 }
 
@@ -163,6 +169,7 @@ func NewAssignment(ctx *context.Context) {
 	selectedCourseID := ctx.FormInt64("course_id")
 	loadCoursesAndRepos(ctx, svc, selectedCourseID)
 
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, "edu/assignment_new")
 }
 
@@ -174,21 +181,27 @@ func NewAssignmentPost(ctx *context.Context) {
 
 	title := ctx.FormString("title")
 	description := ctx.FormString("description")
-	templateRepoName := ctx.FormString("template_repo")
+	repoID := ctx.FormInt64("repo_id")
 	deadlineStr := ctx.FormString("deadline")
+	courseID := ctx.FormInt64("course_id")
 
-	if title == "" || templateRepoName == "" {
+	if courseID == 0 {
+		loadCoursesAndRepos(ctx, svc, courseID)
+		ctx.RenderWithErr("Course is required.", "edu/assignment_new", nil)
+		return
+	}
+
+	if title == "" || repoID == 0 {
+		loadCoursesAndRepos(ctx, svc, courseID)
 		ctx.RenderWithErr("Title and Template Repository are required.", "edu/assignment_new", nil)
 		return
 	}
 
-	repo, err := repo_model.GetRepositoryByName(ctx, ctx.Doer.ID, templateRepoName)
+	// Verify repo exists
+	_, err := repo_model.GetRepositoryByID(ctx, repoID)
 	if err != nil {
-		if repo_model.IsErrRepoNotExist(err) {
-			ctx.RenderWithErr("Repository not found in your account.", "edu/assignment_new", nil)
-			return
-		}
-		ctx.ServerError("GetRepositoryByName", err)
+		loadCoursesAndRepos(ctx, svc, courseID)
+		ctx.RenderWithErr("Repository not found.", "edu/assignment_new", nil)
 		return
 	}
 
@@ -202,13 +215,9 @@ func NewAssignmentPost(ctx *context.Context) {
 		}
 	}
 
-	svc := getEduService()
-
-	courseID := ctx.FormInt64("course_id")
-
 	opts := edu.CreateAssignmentOptions{
 		CourseID:     courseID,
-		RepoID:       repo.ID,
+		RepoID:       repoID,
 		Title:        title,
 		Description:  description,
 		DeadlineUnix: deadlineUnix,
@@ -241,6 +250,7 @@ func EditAssignment(ctx *context.Context) {
 	}
 
 	ctx.Data["Assignment"] = assignment
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplAssignmentEdit)
 }
 

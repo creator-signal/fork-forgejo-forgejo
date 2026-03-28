@@ -1,0 +1,15 @@
+<div class="ui secondary pointing menu">
+	{{if .IsEduAdmin}}
+		<a class="{{if .PageIsEduAdmin}}active {{end}}item" href="{{AppSubUrl}}/edu/admin">
+			{{svg "octicon-gear"}} {{ctx.Locale.Tr "edu.admin"}}
+		</a>
+	{{end}}
+	{{if .IsEduTeacher}}
+		<a class="{{if and (not .PageIsEduStudent) (not .PageIsEduAdmin)}}active {{end}}item" href="{{AppSubUrl}}/edu/teacher/assignments">
+			{{svg "octicon-tasklist"}} {{ctx.Locale.Tr "edu.teacher"}}
+		</a>
+	{{end}}
+	<a class="{{if .PageIsEduStudent}}active {{end}}item" href="{{AppSubUrl}}/edu/student/assignments">
+		{{svg "octicon-person"}} {{ctx.Locale.Tr "edu.student"}}
+	</a>
+</div>

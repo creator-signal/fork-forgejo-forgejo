@@ -94,5 +94,6 @@ func InstructorSubmissions(ctx *context.Context) {
 	syncTask, _ := svc.GetSyncForkTaskByAssignment(ctx, assignmentID)
 	ctx.Data["SyncForkTask"] = syncTask
 
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplInstructorSubmissions)
 }

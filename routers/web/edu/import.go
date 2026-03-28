@@ -44,6 +44,7 @@ func ImportUpload(ctx *context.Context) {
 	}
 
 	ctx.Data["Course"] = course
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplImportUpload)
 }
 
@@ -147,6 +148,7 @@ func ImportPreview(ctx *context.Context) {
 	ctx.Data["Draft"] = draft
 	ctx.Data["Rows"] = rows
 	ctx.Data["RowCount"] = len(rows)
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplImportPreview)
 }
 
@@ -233,6 +235,7 @@ func ImportExecutePost(ctx *context.Context) {
 	}
 
 	ctx.Data["Result"] = result
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplImportResult)
 }
 

@@ -100,6 +100,7 @@ func SubmissionDetail(ctx *context.Context) {
 	}
 	ctx.Data["TestResults"] = testResults
 
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplSubmissionDetail)
 }
 

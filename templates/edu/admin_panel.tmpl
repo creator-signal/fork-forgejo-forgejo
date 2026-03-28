@@ -1,6 +1,8 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Title}}" class="page-content edu admin-panel">
 	<div class="ui container">
+		{{template "edu/navbar" .}}
+
 		<div class="ui secondary pointing menu">
 			<a class="active item" href="{{AppSubUrl}}/edu/admin">{{ctx.Locale.Tr "edu.roles"}}</a>
 		</div>

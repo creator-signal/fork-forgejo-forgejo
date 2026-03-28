@@ -1,6 +1,8 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Title}}" class="page-content edu assignments">
 	<div class="ui container">
+		{{template "edu/navbar" .}}
+
 		<div class="ui grid">
 			<div class="column">
 				<div class="ui secondary menu">
@@ -44,7 +46,7 @@
 								<span class="date">{{if .DeadlineUnix}}{{svg "octicon-clock"}} {{.Deadline.Format "02 Jan 2006"}}{{else}}{{ctx.Locale.Tr "edu.no_deadline"}}{{end}}</span>
 							</div>
 							<div class="description">
-								{{.Description | SafeHTML}}
+								{{.Description | SanitizeHTML}}
 							</div>
 						</div>
 						<div class="extra content">

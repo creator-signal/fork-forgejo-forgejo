@@ -1,6 +1,8 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Title}}" class="page-content edu import-upload">
 	<div class="ui container">
+		{{template "edu/navbar" .}}
+
 		<h1 class="ui header">
 			{{svg "octicon-upload" 28}}
 			{{ctx.Locale.Tr "edu.import_users_to"}} {{.Course.Name}}

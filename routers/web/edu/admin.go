@@ -17,8 +17,10 @@ func AdminPanel(ctx *context.Context) {
 	}
 
 	ctx.Data["Title"] = "Education Admin Panel"
+	ctx.Data["PageIsEduAdmin"] = true
 
 	// TODO: List users
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, "edu/admin_panel")
 }
 

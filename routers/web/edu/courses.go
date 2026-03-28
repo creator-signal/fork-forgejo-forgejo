@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"forgejo.org/internal/edu"
+	org_model "forgejo.org/models/organization"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
-
-	user_model "forgejo.org/models/user"
 )
 
 const (
@@ -36,6 +36,7 @@ func CourseList(ctx *context.Context) {
 	}
 
 	ctx.Data["Courses"] = courses
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplCourseList)
 }
 
@@ -102,12 +103,23 @@ func CourseDetail(ctx *context.Context) {
 	}
 	ctx.Data["SubmissionCounts"] = submissionCounts
 
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplCourseDetail)
+}
+
+func loadOrgsForUser(ctx *context.Context) {
+	orgs, err := org_model.GetOrgsCanCreateRepoByUserID(ctx, ctx.Doer.ID)
+	if err != nil {
+		log.Error("Failed to get orgs for user: %v", err)
+	}
+	ctx.Data["Orgs"] = orgs
 }
 
 func NewCourse(ctx *context.Context) {
 	ctx.Data["Title"] = "New Course"
 	ctx.Data["PageIsEduCourses"] = true
+	loadOrgsForUser(ctx)
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplCourseForm)
 }
 
@@ -120,7 +132,10 @@ func NewCoursePost(ctx *context.Context) {
 	startDateStr := ctx.FormString("start_date")
 	endDateStr := ctx.FormString("end_date")
 
+	orgID := ctx.FormInt64("org_id")
+
 	if name == "" {
+		loadOrgsForUser(ctx)
 		ctx.RenderWithErr("Name is required.", tplCourseForm, nil)
 		return
 	}
@@ -152,6 +167,7 @@ func NewCoursePost(ctx *context.Context) {
 	opts := edu.CreateCourseOptions{
 		Name:        name,
 		Description: description,
+		OrgID:       orgID,
 		StartUnix:   startUnix,
 		EndUnix:     endUnix,
 	}
@@ -192,6 +208,8 @@ func EditCourse(ctx *context.Context) {
 	}
 
 	ctx.Data["Course"] = course
+	loadOrgsForUser(ctx)
+	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplCourseForm)
 }
 
@@ -223,9 +241,11 @@ func EditCoursePost(ctx *context.Context) {
 
 	course.Name = ctx.FormString("name")
 	course.Description = ctx.FormString("description")
+	course.OrgID = ctx.FormInt64("org_id")
 
 	if course.Name == "" {
 		ctx.Data["Course"] = course
+		loadOrgsForUser(ctx)
 		ctx.RenderWithErr("Name is required.", tplCourseForm, nil)
 		return
 	}
