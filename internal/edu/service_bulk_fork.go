@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"forgejo.org/models/db"
+	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
+
+	repo_model "forgejo.org/models/repo"
 )
 
 func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerID int64) (*BulkForkTask, error) {
@@ -48,7 +52,7 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 		AssignmentID: assignmentID,
 		CreatorID:    doerID,
 		TotalUsers:   len(studentEnrollments),
-		Status:       StatusRunning,
+		Status:       StatusPending,
 		CreatedUnix:  now,
 		UpdatedUnix:  now,
 	}
@@ -66,9 +70,32 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 		return task, nil
 	}
 
+	// Start async execution
+	go graceful.GetManager().RunWithShutdownContext(func(_ context.Context) {
+		s.executeBulkFork(db.DefaultContext, task, assignmentID, doerID, baseRepo, studentEnrollments)
+	})
+
+	return task, nil
+}
+
+// executeBulkFork runs the actual fork loop in a background goroutine.
+func (s *service) executeBulkFork(ctx context.Context, task *BulkForkTask, assignmentID, doerID int64, baseRepo *repo_model.Repository, studentEnrollments []*CourseEnrollment) {
+	task.Status = StatusRunning
+	task.UpdatedUnix = time.Now().Unix()
+	if err := s.repo.UpdateBulkForkTask(ctx, task); err != nil {
+		log.Error("Failed to update bulk fork task to running: %v", err)
+		return
+	}
+
 	doerUser, err := s.users.GetUserByID(ctx, doerID)
 	if err != nil {
-		return nil, fmt.Errorf("get doer user: %w", err)
+		task.Status = StatusError
+		task.ErrorLog += fmt.Sprintf("get doer: %v\n", err)
+		task.UpdatedUnix = time.Now().Unix()
+		if errUpd := s.repo.UpdateBulkForkTask(ctx, task); errUpd != nil {
+			log.Error("Failed to update bulk fork task: %v", errUpd)
+		}
+		return
 	}
 
 	for _, enrollment := range studentEnrollments {
@@ -154,8 +181,6 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 	if err := s.repo.UpdateBulkForkTask(ctx, task); err != nil {
 		log.Error("Failed to update bulk fork task: %v", err)
 	}
-
-	return task, nil
 }
 
 func (s *service) GetBulkForkTask(ctx context.Context, taskID int64) (*BulkForkTask, error) {

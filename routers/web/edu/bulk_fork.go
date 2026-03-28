@@ -45,19 +45,14 @@ func BulkForkPost(ctx *context.Context) {
 		return
 	}
 
-	task, err := svc.BulkForkForAssignment(ctx, assignmentID, ctx.Doer.ID)
+	_, err = svc.BulkForkForAssignment(ctx, assignmentID, ctx.Doer.ID)
 	if err != nil {
 		ctx.Flash.Error("Bulk fork failed: " + err.Error())
 		ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions")
 		return
 	}
 
-	if task.Failed > 0 {
-		ctx.Flash.Warning("Bulk fork completed with errors: " + task.ErrorLog)
-	} else {
-		ctx.Flash.Success("Bulk fork completed successfully")
-	}
-
+	ctx.Flash.Success("Bulk fork started. Check status for progress.")
 	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions")
 }
 

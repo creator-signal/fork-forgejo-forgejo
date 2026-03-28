@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/models/db"
+	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 )
 
@@ -27,11 +29,6 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 		return nil, fmt.Errorf("get default branch: %w", err)
 	}
 
-	doer, err := s.users.GetUserByID(ctx, doerID)
-	if err != nil {
-		return nil, fmt.Errorf("get doer: %w", err)
-	}
-
 	submissions, err := s.repo.GetSubmissions(ctx, assignmentID)
 	if err != nil {
 		return nil, fmt.Errorf("get submissions: %w", err)
@@ -42,7 +39,7 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 		AssignmentID: assignmentID,
 		CreatorID:    doerID,
 		TotalRepos:   len(submissions),
-		Status:       StatusRunning,
+		Status:       StatusPending,
 		CreatedUnix:  now,
 		UpdatedUnix:  now,
 	}
@@ -58,6 +55,34 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 			log.Error("Failed to update sync fork task: %v", err)
 		}
 		return task, nil
+	}
+
+	// Start async execution
+	go graceful.GetManager().RunWithShutdownContext(func(_ context.Context) {
+		s.executeSyncAllForks(db.DefaultContext, task, doerID, submissions, branch)
+	})
+
+	return task, nil
+}
+
+// executeSyncAllForks runs the actual sync loop in a background goroutine.
+func (s *service) executeSyncAllForks(ctx context.Context, task *SyncForkTask, doerID int64, submissions []*Submission, branch string) {
+	task.Status = StatusRunning
+	task.UpdatedUnix = time.Now().Unix()
+	if err := s.repo.UpdateSyncForkTask(ctx, task); err != nil {
+		log.Error("Failed to update sync fork task to running: %v", err)
+		return
+	}
+
+	doer, err := s.users.GetUserByID(ctx, doerID)
+	if err != nil {
+		task.Status = StatusError
+		task.ErrorLog += fmt.Sprintf("get doer: %v\n", err)
+		task.UpdatedUnix = time.Now().Unix()
+		if errUpd := s.repo.UpdateSyncForkTask(ctx, task); errUpd != nil {
+			log.Error("Failed to update sync fork task: %v", errUpd)
+		}
+		return
 	}
 
 	for _, sub := range submissions {
@@ -122,8 +147,6 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 	if err := s.repo.UpdateSyncForkTask(ctx, task); err != nil {
 		log.Error("Failed to update sync fork task: %v", err)
 	}
-
-	return task, nil
 }
 
 func (s *service) GetSyncForkTask(ctx context.Context, taskID int64) (*SyncForkTask, error) {

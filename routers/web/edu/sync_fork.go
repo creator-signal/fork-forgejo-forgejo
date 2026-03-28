@@ -1,7 +1,6 @@
 package edu
 
 import (
-	"fmt"
 	"net/http"
 
 	"forgejo.org/internal/edu"
@@ -46,14 +45,14 @@ func SyncAllForksPost(ctx *context.Context) {
 		return
 	}
 
-	task, err := svc.SyncAllForks(ctx, assignmentID, ctx.Doer.ID)
+	_, err = svc.SyncAllForks(ctx, assignmentID, ctx.Doer.ID)
 	if err != nil {
 		ctx.Flash.Error("Sync forks failed: " + err.Error())
 		ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions")
 		return
 	}
 
-	ctx.Flash.Success(fmt.Sprintf("Sync complete: %d synced, %d skipped, %d failed", task.Synced, task.Skipped, task.Failed))
+	ctx.Flash.Success("Fork sync started. Check status for progress.")
 	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions")
 }
 
