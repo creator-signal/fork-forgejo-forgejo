@@ -12,6 +12,7 @@ export function initTextExpander(expander) {
       ul.classList.add('suggestions');
       for (const name of matches) {
         const li = document.createElement('li');
+        li.setAttribute('id', `combobox-emoji-${name}`);
         li.setAttribute('role', 'option');
         li.setAttribute('data-value', emojiString(name));
         if (customEmojis.has(name)) {
