@@ -112,7 +112,7 @@ export function DoUpdateRelativeTime(object, now) {
   if (object.getAttribute('heat')) {
     const seconds = Math.floor(nowJS.diff(thenJS, 'second'));
     const threshold = 3600 * 24 * 7 * 3; // 3 weeks
-    const heat = 10 - Math.floor(seconds / threshold * 10);
+    let heat = 10 - Math.floor(seconds / threshold * 10);
     if (heat < 0) heat = 0;
     object.setAttribute('data-heat', heat);
   }
