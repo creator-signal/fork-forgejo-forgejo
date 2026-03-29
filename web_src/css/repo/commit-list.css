@@ -1,7 +1,7 @@
 /* Copyright 2025 The Forgejo Authors. All rights reserved.
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
-/* Layout for templates/repo/pulls/commits_list.tmpl */
+/* Modern layout for templates/repo/pulls/commits_list.tmpl using responsive grid */
 
 .commit-group {
   margin-bottom: 1rem;
@@ -13,18 +13,16 @@
   .commits {
     background: var(--color-box-body);
   }
-}
 
+  .commits .commit {
+    display: grid;
+    padding: 0.5rem;
+    gap: 0.5rem;
+    grid-template-columns: minmax(8ch, 15%) 1fr minmax(20ch, 1%) minmax(12ch, 10%) auto;
+    align-items: center;
+  }
 
-/* Redesigned commit layout using responsive grid configuration */
-.commit-group .commits .commit {
-  display: grid;
-  padding: 0.5rem;
-  gap: 0.5rem;
-  grid-template-columns: minmax(8ch, 15%) 1fr minmax(20ch, 1%) minmax(12ch, 10%) auto;
-  align-items: center;
-
-  .sha.label {
+  .commits .commit .sha.label {
     /* Unwanted property of .sha.label, needs fix upstream in hashbox.css */
     margin-inline: 0 !important;
   }
@@ -32,13 +30,14 @@
 
 @media (max-width: 440px) {
   .commit-group .commits .commit .mobile-shabox .badge {
+    /* Hide signature badge (lock icon) on narrow layout */
     display: none;
   }
 }
 
 @media (min-width: 640px) {
   .commit-group .commits .commit .mobile-shabox {
-    /* Hiding the button in desktop view, only accessible in mobile view */
+    /* Hide the button in desktop view, only accessible in mobile view */
     display: none;
   }
 }
@@ -48,7 +47,6 @@
     grid-template-columns: 1fr 1fr;
 
     .author {
-      /* Manual div allocation in grid cols, since it uses a new layout for mobile */
       grid-row: 1;
       grid-column: 1;
     }
