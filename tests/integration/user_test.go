@@ -1287,3 +1287,42 @@ func TestExportUserSSHKeys(t *testing.T) {
 		assert.Equal(t, "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDWVj0fQ5N8wNc0LVNA41wDLYJ89ZIbejrPfg/avyj3u/ZohAKsQclxG4Ju0VirduBFF9EOiuxoiFBRr3xRpqzpsZtnMPkWVWb+akZwBFAx8p+jKdy4QXR/SZqbVobrGwip2UjSrri1CtBxpJikojRIZfCnDaMOyd9Jp6KkujvniFzUWdLmCPxUE9zhTaPu0JsEP7MW0m6yx7ZUhHyfss+NtqmFTaDO+QlMR7L2QkDliN2Jl3Xa3PhuWnKJfWhdAq1Cw4oraKUOmIgXLkuiuxVQ6mD3AiFupkmfqdHq6h+uHHmyQqv3gU+/sD8GbGAhf6ftqhTsXjnv1Aj4R8NoDf9BS6KRkzkeun5UisSzgtfQzjOMEiJtmrep2ZQrMGahrXa+q4VKr0aKJfm+KlLfwm/JztfsBcqQWNcTURiCFqz+fgZw0Ey/de0eyMzldYTdXXNRYCKjs9bvBK+6SSXRM7AhftfQ0ZuoW5+gtinPrnmoOaSCEJbAiEiTO/BzOHgowiM=\n", resp.Body.String())
 	})
 }
+
+func TestUserFileAgeColor(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
+	session := loginUser(t, user.Name)
+
+	t.Run("user settings", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		assertFileAgeColorState := func(t *testing.T, enabled bool) {
+			t.Helper()
+
+			req := NewRequest(t, "GET", "/user/settings/appearance")
+			resp := session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			_, fileAgeColorChecked := htmlDoc.Find(`input[name="enable_file_age_color"]`).Attr("checked")
+			assert.Equal(t, enabled, fileAgeColorChecked)
+		}
+
+		t.Run("view", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			assertFileAgeColorState(t, false)
+		})
+
+		t.Run("change", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequestWithValues(t, "POST", "/user/settings/appearance/file_age_color", map[string]string{
+				"enable_file_age_color": "true",
+			})
+			session.MakeRequest(t, req, http.StatusSeeOther)
+
+			assertFileAgeColorState(t, true)
+		})
+	})
+}
