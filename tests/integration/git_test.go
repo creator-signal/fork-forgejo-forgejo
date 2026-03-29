@@ -718,7 +718,7 @@ func doAutoPRMerge(baseCtx *APITestContext, dstPath string) func(t *testing.T) {
 		doc := NewHTMLParser(t, resp.Body)
 
 		// Get first commit URL
-		commitURL, exists := doc.doc.Find(".commit-timeline .shabox .sha.label").Last().Attr("href")
+		commitURL, exists := doc.doc.Find(".commit .shabox .sha.label").Last().Attr("href")
 		assert.True(t, exists)
 		assert.NotEmpty(t, commitURL)
 

@@ -25,7 +25,7 @@ test('PR Commits: mobile responsive layout checks', async ({page, isMobile}) => 
   await expect(commitGroup.locator('h4')).toBeVisible();
 
   // mobile-specific visibility test
-  const commit = commitGroup.locator('.commit-timeline:first-child');
+  const commit = commitGroup.locator('.commit:first-child');
   await expect(commit.locator('.mobile-shabox')).toBeVisible();
   await expect(commit.locator('.shabox')).toBeHidden();
   await expect(commit.locator('.commit-buttons')).toBeHidden();
@@ -50,7 +50,7 @@ test('PR Commits: dropdown check in mobile viewport', async ({page, isMobile}) =
   const response = await page.goto('/user2/repo1/pulls/3/commits');
   expect(response?.status()).toBe(200);
 
-  const commit = page.locator('.commit-group:first-of-type .commit-timeline:first-child');
+  const commit = page.locator('.commit-group:first-of-type .commit:first-child');
 
   // click dropdown btn
   const dropdown = commit.locator('details.dropdown');
@@ -77,7 +77,7 @@ test('PR Commits: desktop responsive layout checks', async ({page, isMobile}) =>
   await expect(commitGroup).toBeVisible();
   await expect(commitGroup.locator('h4')).toBeVisible();
 
-  const commit = commitGroup.locator('.commit-timeline:first-child');
+  const commit = commitGroup.locator('.commit:first-child');
 
   // desktop grid is the default 5‑column template; just assert it’s a grid (I hope it's fine?)
   await expect(commit).toHaveCSS('display', 'grid');
