@@ -260,16 +260,16 @@ relative-time::part(relative-time)::selection {
   color: var(--color-selection-fg);
 }
 
-relative-time[data-heat="10"] { color: var(--color-primary-light-2); }
-relative-time[data-heat="9"] { color: var(--color-primary-light-1); }
-relative-time[data-heat="8"] { color: var(--color-primary); }
-relative-time[data-heat="7"] { color: var(--color-primary-dark-1); }
-relative-time[data-heat="6"] { color: var(--color-primary-dark-2); }
-relative-time[data-heat="5"] { color: var(--color-primary-dark-3); }
-relative-time[data-heat="4"] { color: var(--color-primary-dark-4); }
-relative-time[data-heat="3"] { color: var(--color-primary-dark-5); }
-relative-time[data-heat="2"] { color: var(--color-primary-dark-6); }
-relative-time[data-heat="1"] { color: var(--color-primary-dark-7); }
+relative-time[data-heat="10"] { color: oklch(from var(--color-accent) l 50% h); }
+relative-time[data-heat="9"] { color: oklch(from var(--color-accent) l 45% h); }
+relative-time[data-heat="8"] { color: oklch(from var(--color-accent) l 40% h); }
+relative-time[data-heat="7"] { color: oklch(from var(--color-accent) l 35% h); }
+relative-time[data-heat="6"] { color: oklch(from var(--color-accent) l 30% h); }
+relative-time[data-heat="5"] { color: oklch(from var(--color-accent) l 25% h); }
+relative-time[data-heat="4"] { color: oklch(from var(--color-accent) l 20% h); }
+relative-time[data-heat="3"] { color: oklch(from var(--color-accent) l 15% h); }
+relative-time[data-heat="2"] { color: oklch(from var(--color-accent) l 10% h); }
+relative-time[data-heat="1"] { color: oklch(from var(--color-accent) l 5% h); }
 
 ::placeholder,
 .ui.dropdown:not(.button) > .default.text,
