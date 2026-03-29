@@ -491,6 +491,10 @@ export function initRepository() {
 
       const $form = $repoComparePull.find('.pullrequest-form');
       showElem($form);
+      // A short timeout is necessary here in order to give the accessibility
+      // tree time to update, otherwise this .focus() call is unreliable in
+      // screen readers
+      setTimeout(() => $form.find('#issue_title').focus(), 64);
     });
   }
 
