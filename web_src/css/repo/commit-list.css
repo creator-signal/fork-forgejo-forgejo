@@ -29,14 +29,14 @@
 }
 
 @media (max-width: 440px) {
-  .commit-group .commits .commit .mobile-shabox .badge {
+  .commit-group .commits .commit .mobile-actions .badge {
     /* Hide signature badge (lock icon) on narrow layout */
     display: none;
   }
 }
 
 @media (min-width: 640px) {
-  .commit-group .commits .commit .mobile-shabox {
+  .commit-group .commits .commit .mobile-actions {
     /* Hide the button in desktop view, only accessible in mobile view */
     display: none;
   }
@@ -61,7 +61,7 @@
       grid-column: 1 / span 2;
     }
 
-    .mobile-shabox {
+    .mobile-actions {
       grid-column: 1 / -1;
       display: flex;
       justify-content: space-between;
