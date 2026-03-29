@@ -13,6 +13,15 @@ import {screenshot} from './shared/screenshots.ts';
 test.describe(`PR commits`, () => {
   test.use({user: 'user2'});
 
+  test('Any layout', async ({page}) => {
+    const response = await page.goto('/user2/repo1/pulls/3/commits');
+    expect(response?.status()).toBe(200);
+
+    const commit = page.locator('.commit-group:first-of-type .commit:first-child');
+
+    await expect(commit).toHaveCSS('display', 'grid');
+  });
+
   test('Mobile responsive layout checks', async ({page, isMobile}) => {
     test.skip(!isMobile);
 
@@ -32,6 +41,9 @@ test.describe(`PR commits`, () => {
     await expect(commit.locator('.commit-buttons')).toBeHidden();
 
     // Mobile-specific grid positioning
+    // toHaveCSS returns absolute values in px with decimals. This matcher only
+    // checks if the string has two \S+px separated by one \s+
+    await expect(commit).toHaveCSS('grid-template-columns', /^\S+px\s+\S+px$/);
     await expect(commit.locator('.author')).toHaveCSS('grid-column-start', '1');
     await expect(commit.locator('.date')).toHaveCSS('grid-column-start', '2');
     await expect(commit.locator('.message')).toHaveCSS('grid-column-end', 'span 2');
@@ -79,14 +91,16 @@ test.describe(`PR commits`, () => {
 
     const commit = commitGroup.locator('.commit:first-child');
 
-    // Desktop grid is the default 5‑column template; just assert it’s a grid (I hope it's fine?)
-    await expect(commit).toHaveCSS('display', 'grid');
-
     // Desktop-specific visibility test
     await expect(commit.locator('.mobile-actions')).toBeHidden();
     await expect(commit.locator('.shabox')).toBeVisible();
     await expect(commit.locator('.commit-buttons')).toBeVisible();
 
+    // Desktop layout is has specific grid-template-columns
+    // toHaveCSS returns absolute values in px with decimals. This matcher only
+    // checks if the string has five \S+px separated by four \s+
+    await expect(commit).toHaveCSS('grid-template-columns', /^\S+px\s+\S+px\s+\S+px\s+\S+px\s+\S+px$/);
+
     await screenshot(page);
   });
-})
+});
