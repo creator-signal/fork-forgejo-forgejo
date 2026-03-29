@@ -10,6 +10,8 @@ const (
 	SettingsKeyDiffWhitespaceBehavior = "diff.whitespace_behaviour"
 	// SettingsKeyShowOutdatedComments is the setting key whether or not to show outdated comments in PRs
 	SettingsKeyShowOutdatedComments = "comment_code.show_outdated"
+	// SettingsKeyFileAgeColor is the setting key whether to show file age coloring
+	SettingsKeyFileAgeColor = "appearance.file_age_color"
 	// UserActivityPubPrivPem is user's private key
 	UserActivityPubPrivPem = "activitypub.priv_pem"
 	// UserActivityPubPubPem is user's public key

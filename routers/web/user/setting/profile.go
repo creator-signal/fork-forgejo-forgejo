@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -341,6 +342,13 @@ func Appearance(ctx *context.Context) {
 		return forms.IsUserHiddenCommentTypeGroupChecked(commentTypeGroup, hiddenCommentTypes)
 	}
 
+	val, err = user_model.GetUserSetting(ctx, ctx.Doer.ID, user_model.SettingsKeyFileAgeColor, "false")
+	if err != nil {
+		ctx.ServerError("GetUserSetting", err)
+		return
+	}
+	ctx.Data["FileAgeColor"] = val == "true"
+
 	ctx.HTML(http.StatusOK, tplSettingsAppearance)
 }
 
@@ -438,14 +446,10 @@ func UpdateUserHiddenComments(ctx *context.Context) {
 // UpdateFileAgeColor updates a user's file age color preference
 func UpdateFileAgeColor(ctx *context.Context) {
 	form := web.GetForm(ctx).(*forms.UpdateFileAgeColorForm)
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsAppearance"] = true
 
-	opts := &user_service.UpdateOptions{
-		EnableFileAgeColor: optional.Some(form.EnableFileAgeColor),
-	}
-	if err := user_service.UpdateUser(ctx, ctx.Doer, opts); err != nil {
-		ctx.ServerError("UpdateUser", err)
+	err := user_model.SetUserSetting(ctx, ctx.Doer.ID, user_model.SettingsKeyFileAgeColor, strconv.FormatBool(form.EnableFileAgeColor))
+	if err != nil {
+		ctx.ServerError("SetUserSetting", err)
 		return
 	}
 

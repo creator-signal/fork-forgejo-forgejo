@@ -1178,6 +1178,17 @@ PostRecentBranchCheck:
 		}
 	}
 
+	if ctx.IsSigned {
+		val, err := user_model.GetUserSetting(ctx, ctx.Doer.ID, user_model.SettingsKeyFileAgeColor, "false")
+		if err != nil {
+			ctx.ServerError("GetUserSetting", err)
+			return
+		}
+		ctx.Data["FileAgeColor"] = val == "true"
+	} else {
+		ctx.Data["FileAgeColor"] = false
+	}
+
 	ctx.Data["Paths"] = paths
 
 	branchLink := ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchNameSubURL()
