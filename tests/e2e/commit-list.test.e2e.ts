@@ -37,6 +37,7 @@ test.describe(`PR commits`, () => {
     // Mobile-specific visibility test
     const commit = page.locator('.commit-group:first-of-type .commit:first-child');
     await expect(commit.locator('.commit-buttons')).toBeHidden();
+    await expect(commit.locator('.button-sequence button[data-clipboard-text]')).toBeVisible();
 
     // Mobile-specific grid positioning
     // toHaveCSS returns absolute values in px with decimals. This matcher only
@@ -80,10 +81,11 @@ test.describe(`PR commits`, () => {
     const response = await page.goto('/user2/repo1/pulls/3/commits');
     expect(response?.status()).toBe(200);
 
-    const commit = page.locator('.commit-group:first-of-type .commit:first-child');
-
     // Desktop-specific visibility test
+    const commit = page.locator('.commit-group:first-of-type .commit:first-child');
     await expect(commit.locator('.commit-buttons')).toBeVisible();
+    await expect(commit.locator('.button-sequence button[data-clipboard-text]')).toBeHidden();
+    await expect(commit.locator('details.dropdown')).toBeHidden();
 
     // Desktop layout is has specific grid-template-columns
     // toHaveCSS returns absolute values in px with decimals. This matcher only
