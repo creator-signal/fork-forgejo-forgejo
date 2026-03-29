@@ -260,16 +260,16 @@ relative-time::part(relative-time)::selection {
   color: var(--color-selection-fg);
 }
 
-relative-time[data-heat="10"] { color: oklch(from var(--color-accent) l 50% h); }
-relative-time[data-heat="9"] { color: oklch(from var(--color-accent) l 45% h); }
-relative-time[data-heat="8"] { color: oklch(from var(--color-accent) l 40% h); }
-relative-time[data-heat="7"] { color: oklch(from var(--color-accent) l 35% h); }
-relative-time[data-heat="6"] { color: oklch(from var(--color-accent) l 30% h); }
-relative-time[data-heat="5"] { color: oklch(from var(--color-accent) l 25% h); }
-relative-time[data-heat="4"] { color: oklch(from var(--color-accent) l 20% h); }
-relative-time[data-heat="3"] { color: oklch(from var(--color-accent) l 15% h); }
-relative-time[data-heat="2"] { color: oklch(from var(--color-accent) l 10% h); }
-relative-time[data-heat="1"] { color: oklch(from var(--color-accent) l 5% h); }
+relative-time[data-heat="10"] { --time-color: oklch(from var(--color-accent) l 50% h); color: var(--time-color); }
+relative-time[data-heat="9"] { --time-color: oklch(from var(--color-accent) l 45% h); color: var(--time-color); }
+relative-time[data-heat="8"] { --time-color: oklch(from var(--color-accent) l 40% h); color: var(--time-color); }
+relative-time[data-heat="7"] { --time-color: oklch(from var(--color-accent) l 35% h); color: var(--time-color); }
+relative-time[data-heat="6"] { --time-color: oklch(from var(--color-accent) l 30% h); color: var(--time-color); }
+relative-time[data-heat="5"] { --time-color: oklch(from var(--color-accent) l 25% h); color: var(--time-color); }
+relative-time[data-heat="4"] { --time-color: oklch(from var(--color-accent) l 20% h); color: var(--time-color); }
+relative-time[data-heat="3"] { --time-color: oklch(from var(--color-accent) l 15% h); color: var(--time-color); }
+relative-time[data-heat="2"] { --time-color: oklch(from var(--color-accent) l 10% h); color: var(--time-color); }
+relative-time[data-heat="1"] { --time-color: oklch(from var(--color-accent) l 5% h); color: var(--time-color); }
 
 ::placeholder,
 .ui.dropdown:not(.button) > .default.text,
