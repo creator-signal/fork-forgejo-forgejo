@@ -36,16 +36,16 @@
 }
 
 @media (min-width: 640px) {
-  .commit-group .commits .commit details.dropdown {
-    /* Hide the button in desktop view, only accessible in mobile view */
-    display: none;
-  }
-  .commit-group .commits .commit .button-sequence {
-    display: contents;
-  }
+  .commit-group .commits .commit {
+    details.dropdown,
+    .button-sequence button[data-clipboard-text] {
+      /* Hide additional copy button and dropdown opener that are exclusive to mobile layout */
+      display: none;
+    }
 
-  .commit-group .commits .commit .button-sequence button[data-clipboard-text] {
-    display: none;
+    .button-sequence {
+      display: contents;
+    }
   }
 }
 
