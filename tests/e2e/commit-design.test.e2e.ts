@@ -12,11 +12,11 @@ import {screenshot} from './shared/screenshots.ts';
 
 test.use({user: 'user2'});
 
-test('PR Commits: mobile responsive layout checks', async ({page}) => {
+test('PR Commits: mobile responsive layout checks', async ({page, isMobile}) => {
+  test.skip(!isMobile);
+
   const response = await page.goto('/user2/repo1/pulls/3/commits');
   expect(response?.status()).toBe(200);
-  // mobile view
-  await page.setViewportSize({width: 375, height: 667});
 
   // mobile-specific grid positioning
   await expect(page.locator('.commit-timeline .author').first()).toHaveCSS('grid-column-start', '1');
@@ -37,11 +37,11 @@ test('PR Commits: mobile responsive layout checks', async ({page}) => {
   await screenshot(page);
 });
 
-test('PR Commits: dropdown check in mobile viewport', async ({page}) => {
+test('PR Commits: dropdown check in mobile viewport', async ({page, isMobile}) => {
+  test.skip(!isMobile);
+
   const response = await page.goto('/user2/repo1/pulls/3/commits');
   expect(response?.status()).toBe(200);
-  // mobile view
-  await page.setViewportSize({width: 375, height: 667});
 
   // click dropdown btn
   const dropdown = page.locator('.commit-timeline details.dropdown').first();
@@ -56,11 +56,11 @@ test('PR Commits: dropdown check in mobile viewport', async ({page}) => {
   await screenshot(page);
 });
 
-test('PR Commits: desktop responsive layout checks', async ({page}) => {
+test('PR Commits: desktop responsive layout checks', async ({page, isMobile}) => {
+  test.skip(isMobile);
+
   const response = await page.goto('/user2/repo1/pulls/3/commits');
   expect(response?.status()).toBe(200);
-  // desktop view
-  await page.setViewportSize({width: 1200, height: 800});
 
   // date group visibility test
   await expect(page.locator('.commit-group').first()).toBeVisible();
