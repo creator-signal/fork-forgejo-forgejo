@@ -36,8 +36,6 @@ test.describe(`PR commits`, () => {
 
     // Mobile-specific visibility test
     const commit = page.locator('.commit-group:first-of-type .commit:first-child');
-    await expect(commit.locator('.mobile-actions')).toBeVisible();
-    await expect(commit.locator('.shabox')).toBeHidden();
     await expect(commit.locator('.commit-buttons')).toBeHidden();
 
     // Mobile-specific grid positioning
@@ -47,7 +45,6 @@ test.describe(`PR commits`, () => {
     await expect(commit.locator('.author')).toHaveCSS('grid-column-start', '1');
     await expect(commit.locator('.date')).toHaveCSS('grid-column-start', '2');
     await expect(commit.locator('.message')).toHaveCSS('grid-column-end', 'span 2');
-    await expect(commit.locator('.mobile-actions')).toHaveCSS('grid-column-start', '1');
     await expect(commit.locator('details')).toHaveCSS('grid-column-start', '2');
 
     // Horizontal scrolling to check for overflow
@@ -86,8 +83,6 @@ test.describe(`PR commits`, () => {
     const commit = page.locator('.commit-group:first-of-type .commit:first-child');
 
     // Desktop-specific visibility test
-    await expect(commit.locator('.mobile-actions')).toBeHidden();
-    await expect(commit.locator('.shabox')).toBeVisible();
     await expect(commit.locator('.commit-buttons')).toBeVisible();
 
     // Desktop layout is has specific grid-template-columns

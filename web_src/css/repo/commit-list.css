@@ -18,7 +18,7 @@
     display: grid;
     padding: 0.5rem;
     gap: 0.5rem;
-    grid-template-columns: minmax(8ch, 15%) 1fr minmax(20ch, 1%) minmax(12ch, 10%) auto;
+    grid-template-columns: minmax(8ch, 15%) 1fr auto minmax(12ch, 10%) auto;
     align-items: center;
   }
 
@@ -29,15 +29,22 @@
 }
 
 @media (max-width: 440px) {
-  .commit-group .commits .commit .mobile-actions .badge {
+  .commit-group .commits .commit .sha.label .signature {
     /* Hide signature badge (lock icon) on narrow layout */
     display: none;
   }
 }
 
 @media (min-width: 640px) {
-  .commit-group .commits .commit .mobile-actions {
+  .commit-group .commits .commit details.dropdown {
     /* Hide the button in desktop view, only accessible in mobile view */
+    display: none;
+  }
+  .commit-group .commits .commit .button-sequence {
+    display: contents;
+  }
+
+  .commit-group .commits .commit .button-sequence button[data-clipboard-text] {
     display: none;
   }
 }
@@ -59,16 +66,6 @@
     .message {
       grid-row: 2;
       grid-column: 1 / span 2;
-    }
-
-    .mobile-actions {
-      grid-column: 1 / -1;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .shabox {
-      display: none;
     }
 
     details.dropdown {
