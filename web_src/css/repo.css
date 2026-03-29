@@ -2754,14 +2754,14 @@ tbody.commit-list {
 
 .commit-group {
   margin-bottom: 1rem;
+
+  h4 {
+    font-weight: var(--font-weight-semibold);
+  }
 }
 
 .commit-group-commits {
   background: var(--color-box-body);
-}
-
-.commit-group h4 {
-  font-weight: var(--font-weight-semibold);
 }
 
 /* Redesigned commit layout using responsive grid configuration */
@@ -2771,24 +2771,32 @@ tbody.commit-list {
   gap: 0.5rem;
   grid-template-columns: minmax(8ch, 15%) 1fr minmax(20ch, 1%) minmax(12ch, 10%) auto;
   align-items: center;
+
   .sha.label {
-    /* unwanted property of .sha.label, needs fix upstream in hashbox.css at some point */
+    /* Unwanted property of .sha.label, needs fix upstream in hashbox.css */
     margin-inline: 0 !important;
   }
 }
+
 @media (max-width: 440px) {
-  .commit .mobile-shabox .badge {display: none;}
+  .commit .mobile-shabox .badge {
+    display: none;
+  }
 }
 
 @media (min-width: 640px) {
-  .mobile-shabox {display: none;} /*hiding the button in desktop view, only accessible in mobile view*/
+  .mobile-shabox {
+    /* Hiding the button in desktop view, only accessible in mobile view */
+    display: none;
+  }
 }
 
 @media (max-width: 639.9px) {
   .commit {
     grid-template-columns: 1fr 1fr;
   }
-  /* manual div allocation in grid cols, since it uses a new layout for mobile */
+
+  /* Manual div allocation in grid cols, since it uses a new layout for mobile */
   .commit .author {
     grid-row: 1;
     grid-column: 1;
@@ -2810,7 +2818,9 @@ tbody.commit-list {
     justify-content: space-between;
   }
 
-  .commit .shabox {display: none;}
+  .commit .shabox {
+    display: none;
+  }
 
   .commit details.dropdown {
     grid-row: 3;
