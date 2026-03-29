@@ -2760,7 +2760,7 @@ tbody.commit-list {
   }
 }
 
-.commit-group-commits {
+.commits {
   background: var(--color-box-body);
 }
 

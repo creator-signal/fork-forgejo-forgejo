@@ -39,7 +39,7 @@ test.describe(`PR commits`, () => {
     await expect(commit.locator('details')).toHaveCSS('grid-column-start', '2');
 
     // Horizontal scrolling to check for overflow
-    await expect(page.locator('.commit-group-commits').first()).not.toHaveCSS('overflow-x', 'scroll');
+    await expect(page.locator('.commits').first()).not.toHaveCSS('overflow-x', 'scroll');
 
     await screenshot(page);
   });
