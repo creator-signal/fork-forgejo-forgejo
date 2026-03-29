@@ -10,7 +10,7 @@
 			</a>
 			{{if $.Permission.CanRead $.UnitTypeCode}}
 				<a class="item muted {{if .PageIsTagList}}active{{end}}" href="{{.RepoLink}}/tags">
-					{{svg "octicon-tag"}} {{ctx.Locale.TrN .NumTags "repo.n_tag_one" "repo.n_tag_few" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .NumTags) | TrustHTML)}}
+					{{svg "octicon-tag"}} {{ctx.Locale.TrPluralString .NumTags "counters.n_tags" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .NumTags) | TrustHTML)}}
 				</a>
 			{{end}}
 			<span class="item" {{if not (eq .Repository.Size 0)}}data-tooltip-content="{{.Repository.SizeDetailsString ctx.Locale}}"{{end}}>
