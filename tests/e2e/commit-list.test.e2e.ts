@@ -17,7 +17,13 @@ test.describe(`PR commits`, () => {
     const response = await page.goto('/user2/repo1/pulls/3/commits');
     expect(response?.status()).toBe(200);
 
-    const commit = page.locator('.commit-group:first-of-type .commit:first-child');
+    const commitGroup = page.locator('.commit-group:first-of-type');
+
+    // Date group visibility test
+    await expect(commitGroup).toBeVisible();
+    await expect(commitGroup.locator('h4')).toBeVisible();
+
+    const commit = commitGroup.locator('.commit:first-child');
 
     await expect(commit).toHaveCSS('display', 'grid');
   });
@@ -28,14 +34,8 @@ test.describe(`PR commits`, () => {
     const response = await page.goto('/user2/repo1/pulls/3/commits');
     expect(response?.status()).toBe(200);
 
-    const commitGroup = page.locator('.commit-group:first-of-type');
-
-    // Date group visibility test
-    await expect(commitGroup).toBeVisible();
-    await expect(commitGroup.locator('h4')).toBeVisible();
-
     // Mobile-specific visibility test
-    const commit = commitGroup.locator('.commit:first-child');
+    const commit = page.locator('.commit-group:first-of-type .commit:first-child');
     await expect(commit.locator('.mobile-actions')).toBeVisible();
     await expect(commit.locator('.shabox')).toBeHidden();
     await expect(commit.locator('.commit-buttons')).toBeHidden();
@@ -83,13 +83,7 @@ test.describe(`PR commits`, () => {
     const response = await page.goto('/user2/repo1/pulls/3/commits');
     expect(response?.status()).toBe(200);
 
-    const commitGroup = page.locator('.commit-group:first-of-type');
-
-    // Date group visibility test
-    await expect(commitGroup).toBeVisible();
-    await expect(commitGroup.locator('h4')).toBeVisible();
-
-    const commit = commitGroup.locator('.commit:first-child');
+    const commit = page.locator('.commit-group:first-of-type .commit:first-child');
 
     // Desktop-specific visibility test
     await expect(commit.locator('.mobile-actions')).toBeHidden();
