@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // @watch start
-// templates/repo/diff/new_review.tmpl
-// web_src/js/features/repo-issue.js
+// templates/repo/pulls/commits_list.tmpl
+// web_src/css/repo.css
 // @watch end
 
 import {expect} from '@playwright/test';
