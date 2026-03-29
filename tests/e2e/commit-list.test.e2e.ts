@@ -18,18 +18,25 @@ test('PR Commits: mobile responsive layout checks', async ({page, isMobile}) => 
   const response = await page.goto('/user2/repo1/pulls/3/commits');
   expect(response?.status()).toBe(200);
 
-  // mobile-specific grid positioning
-  await expect(page.locator('.commit-timeline .author').first()).toHaveCSS('grid-column-start', '1');
-  await expect(page.locator('.commit-timeline .date').first()).toHaveCSS('grid-column-start', '2');
-  await expect(page.locator('.commit-timeline .message').first()).toHaveCSS('grid-column-end', 'span 2');
-  await expect(page.locator('.commit-timeline .mobile-shabox').first()).toHaveCSS('grid-column-start', '1');
-  await expect(page.locator('.commit-timeline details').first()).toHaveCSS('grid-column-start', '2');
+  const commitGroup = page.locator('.commit-group:first-of-type');
+
+  // date group visibility test
+  await expect(commitGroup).toBeVisible();
+  await expect(commitGroup.locator('h4')).toBeVisible();
 
   // mobile-specific visibility test
-  await expect(page.locator('.mobile-shabox').first()).toBeVisible();
-  await expect(page.locator('.commit-group h4').first()).toBeVisible();
-  await expect(page.locator('.shabox').first()).toBeHidden();
-  await expect(page.locator('.commit-buttons').first()).toBeHidden();
+  const commit = commitGroup.locator('.commit-timeline:first-child');
+  await expect(commit.locator('.mobile-shabox')).toBeVisible();
+  await expect(commit.locator('.shabox')).toBeHidden();
+  await expect(commit.locator('.commit-buttons')).toBeHidden();
+
+  // mobile-specific grid positioning
+  await expect(commit.locator('.author')).toHaveCSS('grid-column-start', '1');
+  await expect(commit.locator('.date')).toHaveCSS('grid-column-start', '2');
+  await expect(commit.locator('.message')).toHaveCSS('grid-column-end', 'span 2');
+  await expect(commit.locator('.mobile-shabox')).toHaveCSS('grid-column-start', '1');
+  await expect(commit.locator('details')).toHaveCSS('grid-column-start', '2');
+
 
   // horizontal scrolling to check for overflow
   await expect(page.locator('.commit-group-commits').first()).not.toHaveCSS('overflow-x', 'scroll');
@@ -43,13 +50,15 @@ test('PR Commits: dropdown check in mobile viewport', async ({page, isMobile}) =
   const response = await page.goto('/user2/repo1/pulls/3/commits');
   expect(response?.status()).toBe(200);
 
+  const commit = page.locator('.commit-group:first-of-type .commit-timeline:first-child');
+
   // click dropdown btn
-  const dropdown = page.locator('.commit-timeline details.dropdown').first();
+  const dropdown = commit.locator('details.dropdown');
   await expect(dropdown).toBeVisible();
   await dropdown.locator('summary').click();
 
   // list menu items of dropdown
-  const menuItem = page.locator('.commit-timeline details.dropdown ul li a').first(); // repo_path; always visible
+  const menuItem = commit.locator('details.dropdown ul li a'); // repo_path; always visible
   await expect(menuItem).toHaveAttribute('href', '/user2/repo1/src/commit/5f22f7d0d95d614d25a5b68592adb345a4b5c7fd');
   await menuItem.click();
   await page.waitForURL(/.*\/user2\/repo1\/src\/commit\/5f22f7d0d95d614d25a5b68592adb345a4b5c7f/);
@@ -62,17 +71,21 @@ test('PR Commits: desktop responsive layout checks', async ({page, isMobile}) =>
   const response = await page.goto('/user2/repo1/pulls/3/commits');
   expect(response?.status()).toBe(200);
 
+  const commitGroup = page.locator('.commit-group:first-of-type');
+
   // date group visibility test
-  await expect(page.locator('.commit-group').first()).toBeVisible();
-  await expect(page.locator('.commit-group h4').first()).toBeVisible();
+  await expect(commitGroup).toBeVisible();
+  await expect(commitGroup.locator('h4')).toBeVisible();
+
+  const commit = commitGroup.locator('.commit-timeline:first-child');
 
   // desktop grid is the default 5‑column template; just assert it’s a grid (I hope it's fine?)
-  await expect(page.locator('.commit-timeline').first()).toHaveCSS('display', 'grid');
+  await expect(commit).toHaveCSS('display', 'grid');
 
   // desktop-specific visibility test
-  await expect(page.locator('.mobile-shabox').first()).toBeHidden();
-  await expect(page.locator('.shabox').first()).toBeVisible();
-  await expect(page.locator('.commit-buttons').first()).toBeVisible();
+  await expect(commit.locator('.mobile-shabox')).toBeHidden();
+  await expect(commit.locator('.shabox')).toBeVisible();
+  await expect(commit.locator('.commit-buttons')).toBeVisible();
 
   await screenshot(page);
 });
