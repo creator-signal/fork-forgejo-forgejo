@@ -1,4 +1,5 @@
 // Copyright 2020 The Gitea Authors. All rights reserved.
+// Copyright 2024 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package git
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRepository_GetLanguageStats(t *testing.T) {
+func TestRepositoryLanguageStats(t *testing.T) {
 	repoPath := filepath.Join(testReposDir, "language_stats_repo")
 	gitRepo, err := openRepositoryWithDefaultContext(repoPath)
 	require.NoError(t, err)
@@ -34,9 +35,18 @@ func TestRepository_GetLanguageStats(t *testing.T) {
 		"Python": 67,
 		"Java":   112,
 	}, stats)
+
+	stats, err = gitRepo.GetLanguageStats("31aaddaa0c597a0c0375b6718134cd9df8c5d889")
+	require.NoError(t, err)
+
+    assert.Equal(t, map[string]int64{
+        "Cobra":  67,
+        "Python": 67,
+        "Java":   112,
+    }, stats)
 }
 
-func TestMergeLanguageStats(t *testing.T) {
+func TestRepositoryLanguageStatsMerge(t *testing.T) {
 	assert.Equal(t, map[string]int64{
 		"PHP":    1,
 		"python": 10,
