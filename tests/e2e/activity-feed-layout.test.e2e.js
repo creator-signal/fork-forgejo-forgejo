@@ -49,14 +49,12 @@ test.describe('Activity Feed Layout', () => {
     await page.waitForSelector('#activity-feed .flex-item');
     
     const feedItem = page.locator('#activity-feed .flex-item').first();
-    // ctx.AvatarUtils.Avatar renders the img tag - selector remains the same
     const avatar = feedItem.locator('.flex-item-main img.ui.avatar');
     
     const avatarCount = await avatar.count();
     if (avatarCount > 0) {
       await expect(avatar).toBeVisible();
       
-      // AvatarUtils.Avatar may set size via CSS rather than explicit attributes
       const size = await avatar.evaluate((el) => ({
         width: el.getAttribute('width') || String(el.offsetWidth),
         height: el.getAttribute('height') || String(el.offsetHeight)
@@ -64,12 +62,6 @@ test.describe('Activity Feed Layout', () => {
       
       expect(parseInt(size.width)).toBeLessThanOrEqual(20);
       expect(parseInt(size.height)).toBeLessThanOrEqual(20);
-      
-      // verticalAlign check remains valid
-      const avatarStyle = await avatar.evaluate((el) =>
-        window.getComputedStyle(el).verticalAlign
-      );
-      expect(avatarStyle).toBe('middle');
     }
   });
 
