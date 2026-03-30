@@ -1,0 +1,31 @@
+{{if and (not .IsEmptyRepo) .LanguageStats}}
+<div class="flex-item">
+	<div class="flex-item-main">
+		<div class="flex-item-title">
+			Languages
+		</div>
+		<div class="stats">
+			<div class="bar">
+				{{range .LanguageStats}}
+					<div class="slice" style="width: {{.Percentage}}%; background-color: {{.Color}}" data-tooltip-placement="top" data-tooltip-content={{.Language}} data-tooltip-follow-cursor="horizontal"></div>
+				{{end}}
+			</div>
+			<ul>
+				{{range .LanguageStats}}
+					<div class="item tw-flex tw-gap-1 tw-items-center">
+						<i class="color-icon" style="background-color: {{.Color}}"></i>
+						<span class="tw-font-semibold">
+							{{if eq .Language "other"}}
+								{{ctx.Locale.Tr "repo.language_other"}}
+							{{else}}
+								{{.Language}}
+							{{end}}
+						</span>
+						{{.Percentage}}%
+					</div>
+				{{end}}
+			</ul>
+		</div>
+	</div>
+</div>
+{{end}}

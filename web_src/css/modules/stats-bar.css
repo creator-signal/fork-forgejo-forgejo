@@ -1,18 +1,18 @@
 /* Copyright 2025 The Forgejo Authors. All rights reserved.
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
-:root stats-bar {
+:root .bar {
   --stats-bar-height: 0.75rem;
 }
 
 @media (pointer: coarse) {
-  :root stats-bar {
+  :root .bar {
     --stats-bar-height: 1rem;
   }
 }
 
 /* General properties, can be reused by different kinds of stats bars */
-stats-bar {
+.stats .bar {
   display: flex !important;
   height: var(--stats-bar-height);
   width: 100%;
@@ -30,24 +30,6 @@ stats-bar {
     &:only-child {
       border-radius: var(--border-radius);
     }
-  }
-}
-
-/* Properties for stats bars with legend included via <details> */
-details.stats {
-  /* Summary and legend should be stacked vertically */
-  display: flex;
-  flex-direction: column;
-
-  /* Prevent opener marker from showing up */
-  summary {
-    display: flex;
-  }
-
-  /* Cancel unwanted <ul> properties of legend */
-  ul {
-    display: flex;
-    margin: 0;
   }
 }
 
@@ -95,15 +77,7 @@ details.stats {
 
 /* Properties specific to the lang stats in repo overview */
 #language-stats {
-  stats-bar {
-    gap: 2px;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
-    overflow: hidden;
-    .slice {
-      border-radius: 0;
-    }
-  }
-  &[open] stats-bar {
+  .slice {
     border-radius: 0;
   }
 

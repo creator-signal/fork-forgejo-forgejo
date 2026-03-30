@@ -1638,7 +1638,7 @@ details.repo-search-result summary::marker {
   padding: 5px 10px;
   font-size: 1.2em;
   line-height: 1.4;
-  flex: 1
+  flex: 1;
 }
 
 .empty-placeholder {
@@ -1854,16 +1854,10 @@ details.repo-search-result summary::marker {
 }
 
 .repository .repository-summary .repository-menu {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
   padding: 0;
-}
-
-@media (max-width: 767.98px) {
-  .repository .repository-summary .repository-menu {
-    grid-template-rows: repeat(2, 1fr);
-    grid-template-columns: repeat(2, 1fr);
-  }
+  display: flex;
+  align-items: start;
+  flex-direction: column;
 }
 
 .repository .repository-summary .segment.sub-menu {

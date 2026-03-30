@@ -52,6 +52,7 @@
 	"relativetime.1week": "last week",
 	"relativetime.1month": "last month",
 	"relativetime.1year": "last year",
+	"repo.home.description": "Description",
 	"repo.issues.filter_poster.hint": "Filter by the author",
 	"repo.issues.filter_assignee.hint": "Filter by assigned user",
 	"repo.issues.filter_reviewers.hint": "Filter by user who reviewed",

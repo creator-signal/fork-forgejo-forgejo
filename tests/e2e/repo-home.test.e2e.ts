@@ -12,25 +12,6 @@ import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
 
-test('Language stats bar', async ({browser}) => {
-  // This test doesn't need JS and runs a little faster without it
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
-  const response = await page.goto('/user2/language-stats-test');
-  expect(response?.status()).toBe(200);
-
-  await expect(page.locator('#language-stats ul')).toBeHidden();
-
-  await page.click('#language-stats summary');
-  await expect(page.locator('#language-stats ul')).toBeVisible();
-  await screenshot(page);
-
-  await page.click('#language-stats summary');
-  await expect(page.locator('#language-stats ul')).toBeHidden();
-  await screenshot(page);
-});
-
 test('Repo title', async ({browser}) => {
   const context = await browser.newContext({javaScriptEnabled: false});
   const page = await context.newPage();
