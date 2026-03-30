@@ -39,11 +39,11 @@ func TestRepositoryLanguageStats(t *testing.T) {
 	stats, err = gitRepo.GetLanguageStats("31aaddaa0c597a0c0375b6718134cd9df8c5d889")
 	require.NoError(t, err)
 
-    assert.Equal(t, map[string]int64{
-        "Cobra":  67,
-        "Python": 67,
-        "Java":   112,
-    }, stats)
+	assert.Equal(t, map[string]int64{
+		"Cobra":  67,
+		"Python": 67,
+		"Java":   112,
+	}, stats)
 }
 
 func TestRepositoryLanguageStatsMerge(t *testing.T) {
