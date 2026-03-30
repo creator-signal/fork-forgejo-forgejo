@@ -83,7 +83,3 @@
 .dashboard .help {
   color: var(--color-secondary-dark-8);
 }
-
-.dashboard.feeds img.ui.avatar {
-  vertical-align: middle;
-}
