@@ -53,6 +53,7 @@
 	"relativetime.1month": "last month",
 	"relativetime.1year": "last year",
 	"repo.home.description": "Description",
+	"repo.home.languages": "Languages",
 	"repo.issues.filter_poster.hint": "Filter by the author",
 	"repo.issues.filter_assignee.hint": "Filter by assigned user",
 	"repo.issues.filter_reviewers.hint": "Filter by user who reviewed",
@@ -222,6 +223,7 @@
 	"migrate.pagure.private_issues.description": "This feature is designed to create a second repository containing only private issues from your Pagure project for archive purposes. First, perform a normal migration (without a token) to import all public content. Then, if you have private issues to preserve, create a separate repository using this token option to archive those private issues.",
 	"migrate.pagure.private_issues.warning": "Be sure to set the repository visibility above to Private if you are using the API key to import private issues. This prevents accidentally exposing private content in a public repository.",
 	"migrate.pagure.token.placeholder": "Only for creating private issues archive",
+	"release.latest": "Latest",
 	"release.n_downloads": {
 		"one": "%s download",
 		"other": "%s downloads"

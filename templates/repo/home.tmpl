@@ -159,7 +159,7 @@
 			<div class="flex-container-nav tw-w-80">
 				<div class="flex-list">
 					<div class="flex-item">
-						<div class="flex-item-main">
+						<div class="flex-item-main tw-pb-2">
 							<div class="flex-item-title">
 								{{ctx.Locale.Tr "repo.home.description"}}
 							</div>
@@ -178,29 +178,51 @@
 											<button id="manage_topic" class="btn interact-fg tw-text-12">{{ctx.Locale.Tr "repo.topic.manage_topics"}}</button>
 										{{end}}
 									</div>
+									{{if and .Permission.IsAdmin (not .Repository.IsArchived)}}
+										<div class="ui form tw-hidden tw-flex tw-flex-col tw-gap-2 tw-my-2" id="topic_edit">
+											<div class="ui fluid multiple search selection dropdown tw-flex-wrap tw-flex-1">
+												<input type="hidden" name="topics" value="{{range $i, $v := .Topics}}{{.Name}}{{if Eval $i "+" 1 "<" (len $.Topics)}},{{end}}{{end}}">
+												{{range .Topics}}
+													{{/* keep the same layout as Fomantic UI generated labels */}}
+													<a class="ui label transition visible tw-cursor-default tw-inline-block" data-value="{{.Name}}">{{.Name}}{{svg "octicon-x" 16 "delete icon"}}</a>
+												{{end}}
+												<div class="text"></div>
+											</div>
+											<div>
+												<button class="ui basic button" id="cancel_topic_edit">{{ctx.Locale.Tr "cancel"}}</button>
+												<button class="ui primary button" id="save_topic" data-link="{{.RepoLink}}/topics">{{ctx.Locale.Tr "save"}}</button>
+											</div>
+										</div>
+									{{end}}
+									{{if and (not .HideRepoInfo) (not .IsBlame)}}
+										<div class="ui repository-summary tw-mt-1 tw-mb-0">
+											<div class="ui repository-menu tw-gap-2.5">
+												{{if and (.Permission.CanRead $.UnitTypeCode) (not .IsEmptyRepo)}}
+													<a class="item muted {{if .PageIsCommits}}active{{end}}" href="{{.RepoLink}}/commits/{{.BranchNameSubURL}}">
+														{{svg "octicon-history"}} {{ctx.Locale.TrN .CommitsCount "repo.n_commit_one" "repo.n_commit_few" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .CommitsCount) | TrustHTML)}}
+													</a>
+													<a class="item muted {{if .PageIsBranches}}active{{end}}" href="{{.RepoLink}}/branches">
+														{{svg "octicon-git-branch"}} {{ctx.Locale.TrN .BranchesCount "repo.n_branch_one" "repo.n_branch_few" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .BranchesCount) | TrustHTML)}}
+													</a>
+													{{if $.Permission.CanRead $.UnitTypeCode}}
+														<a class="item muted {{if .PageIsTagList}}active{{end}}" href="{{.RepoLink}}/tags">
+															{{svg "octicon-tag"}} {{ctx.Locale.TrN .NumTags "repo.n_tag_one" "repo.n_tag_few" (printf "<b>%s</b>" (ctx.Locale.PrettyNumber .NumTags) | TrustHTML)}}
+														</a>
+													{{end}}
+													<span class="item" {{if not (eq .Repository.Size 0)}}data-tooltip-content="{{.Repository.SizeDetailsString ctx.Locale}}"{{end}}>
+														{{$fileSizeFields :=  ctx.Locale.TrSize .Repository.Size}}
+														{{svg "octicon-database"}} <b>{{$fileSizeFields.PrettyNumber}}</b> {{$fileSizeFields.TranslatedUnit}}
+													</span>
+												{{end}}
+											</div>
+										</div>
+									{{end}}
 								</div>
 							</div>
 						</div>
 					</div>
+					{{template "repo/home_sidebar" .}}
 				</div>
-				{{if and .Permission.IsAdmin (not .Repository.IsArchived)}}
-					<div class="ui form tw-hidden tw-flex tw-gap-2 tw-my-2" id="topic_edit">
-						<div class="ui fluid multiple search selection dropdown tw-flex-wrap tw-flex-1">
-							<input type="hidden" name="topics" value="{{range $i, $v := .Topics}}{{.Name}}{{if Eval $i "+" 1 "<" (len $.Topics)}},{{end}}{{end}}">
-							{{range .Topics}}
-								{{/* keep the same layout as Fomantic UI generated labels */}}
-								<a class="ui label transition visible tw-cursor-default tw-inline-block" data-value="{{.Name}}">{{.Name}}{{svg "octicon-x" 16 "delete icon"}}</a>
-							{{end}}
-							<div class="text"></div>
-						</div>
-						<div>
-							<button class="ui basic button" id="cancel_topic_edit">{{ctx.Locale.Tr "cancel"}}</button>
-							<button class="ui primary button" id="save_topic" data-link="{{.RepoLink}}/topics">{{ctx.Locale.Tr "save"}}</button>
-						</div>
-					</div>
-				{{end}}
-				{{template "repo/home_sidebar" .}}
-				{{template "repo/sub_menu" .}}
 			</div>
 			{{end}}
 		{{end}}
