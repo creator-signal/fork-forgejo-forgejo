@@ -170,7 +170,7 @@ func (repo *Repository) GetLanguageStats(commitID string) (map[string]int64, err
 
 		// If language or isGenerated is not determined from linguist attributes, need content
 		// If content can not be read or file is too big just do detection by filename
-		if language == "" && !isFalse(isGenerated) && f.Size() <= bigFileSize {
+		if (language == "" || !isFalse(isGenerated)) && f.Size() <= bigFileSize {
 			if err := writeID(f.ID.String()); err != nil {
 				return nil, err
 			}
