@@ -192,7 +192,6 @@
 		"many": "%s étoiles",
 		"other": ""
 	},
-	"release.latest": "Dernière",
 	"release.n_downloads": {
 		"one": "%s téléchargement",
 		"many": "%s téléchargements",

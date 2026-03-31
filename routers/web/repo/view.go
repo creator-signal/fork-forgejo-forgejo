@@ -933,6 +933,15 @@ func renderDirectoryFiles(ctx *context.Context, timeout time.Duration) git.Entri
 	return allEntries
 }
 
+func renderLatestRelease(ctx *context.Context) {
+	release, err := repo_model.GetLatestReleaseByRepoID(ctx, ctx.Repo.Repository.ID)
+	if err != nil {
+		return
+	}
+
+	ctx.Data["LatestRelease"] = release
+}
+
 func renderLanguageStats(ctx *context.Context) {
 	langs, err := repo_model.GetTopLanguageStats(ctx, ctx.Repo.Repository, 5)
 	if err != nil {
@@ -1051,6 +1060,7 @@ func renderHomeCode(ctx *context.Context) {
 	}
 
 	renderLanguageStats(ctx)
+	renderLatestRelease(ctx)
 	if ctx.Written() {
 		return
 	}
