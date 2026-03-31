@@ -11,24 +11,6 @@
   }
 }
 
-/* Properties for stats bars with legend included via <details> */
-details.stats {
-  /* Summary and legend should be stacked vertically */
-  display: flex;
-  flex-direction: column;
-
-  /* Prevent opener marker from showing up */
-  summary {
-    display: flex;
-  }
-
-  /* Cancel unwanted <ul> properties of legend */
-  ul {
-    display: flex;
-    margin: 0;
-  }
-}
-
 /* General properties, can be reused by different kinds of stats bars */
 stats-bar {
   display: flex !important;
@@ -48,6 +30,24 @@ stats-bar {
     &:only-child {
       border-radius: var(--border-radius);
     }
+  }
+}
+
+/* Properties for stats bars with legend included via <details> */
+details.stats {
+  /* Summary and legend should be stacked vertically */
+  display: flex;
+  flex-direction: column;
+
+  /* Prevent opener marker from showing up */
+  summary {
+    display: flex;
+  }
+
+  /* Cancel unwanted <ul> properties of legend */
+  ul {
+    display: flex;
+    margin: 0;
   }
 }
 
