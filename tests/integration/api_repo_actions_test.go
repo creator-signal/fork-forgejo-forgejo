@@ -676,19 +676,18 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 
 	t.Run("Jobs", func(t *testing.T) {
 		for _, setup := range []struct {
-			run_id, repo_id, owner_id int64
-			job_ids                   []int64
+			runID, repoID int64
+			jobIDs        []int64
 		}{
-			{793, 4, 1, []int64{194, 195, 196}},
-			{895, 4, 1, []int64{197, 198}},
+			{793, 4, []int64{194, 195, 196}},
+			{895, 4, []int64{197, 198}},
 		} {
-
-			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: setup.repo_id})
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: setup.repoID})
 			user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
 			token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeWriteRepository)
 			req := NewRequest(t, http.MethodGet,
 				fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
-					repo.OwnerName, repo.Name, setup.run_id,
+					repo.OwnerName, repo.Name, setup.runID,
 				),
 			).AddTokenAuth(token)
 			res := MakeRequest(t, req, http.StatusOK)
@@ -697,11 +696,11 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 			slices.SortFunc(jobList, func(a, b *api.ActionRunJob) int {
 				return cmp.Compare(a.ID, b.ID)
 			})
-			assert.Equal(t, len(setup.job_ids), len(jobList))
+			assert.Len(t, jobList, len(setup.jobIDs))
 
-			var correctJobList = make([]*actions_model.ActionRunJob, 0, len(setup.job_ids))
-			for _, job_id := range setup.job_ids {
-				correctJobList = append(correctJobList, unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: job_id}))
+			correctJobList := make([]*actions_model.ActionRunJob, 0, len(setup.jobIDs))
+			for _, jobID := range setup.jobIDs {
+				correctJobList = append(correctJobList, unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: jobID}))
 			}
 
 			// Test each field manually without convert function
@@ -723,16 +722,16 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 	})
 
 	t.Run("Errors", func(t *testing.T) {
-		runId := int64(793)
-		repoId := int64(4)
-		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoId})
+		runID := int64(793)
+		repoID := int64(4)
+		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
 		token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeWriteRepository)
 
 		// no auth token
 		req := NewRequest(t, http.MethodGet,
 			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
-				repo.OwnerName, repo.Name, runId,
+				repo.OwnerName, repo.Name, runID,
 			),
 		)
 		MakeRequest(t, req, http.StatusNotFound)
@@ -740,7 +739,7 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 		// wrong run id
 		req = NewRequest(t, http.MethodGet,
 			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
-				repo.OwnerName, repo.Name, runId+9999,
+				repo.OwnerName, repo.Name, runID+9999,
 			),
 		).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
@@ -748,7 +747,7 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 		// wrong repo
 		req = NewRequest(t, http.MethodGet,
 			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
-				repo.OwnerName, repo.Name+"_wrong_repo", runId,
+				repo.OwnerName, repo.Name+"_wrong_repo", runID,
 			),
 		).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
@@ -756,7 +755,7 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 		// wrong owner
 		req = NewRequest(t, http.MethodGet,
 			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
-				repo.OwnerName+"_wrong_owner", repo.Name, runId,
+				repo.OwnerName+"_wrong_owner", repo.Name, runID,
 			),
 		).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
