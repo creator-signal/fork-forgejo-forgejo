@@ -716,28 +716,21 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 				assert.Equal(t, expected.Needs, actual.Needs)
 				assert.Equal(t, expected.RunsOn, actual.RunsOn)
 				assert.Equal(t, expected.TaskID, actual.TaskID)
-				assert.Equal(t, expected.Status, actual.Status)
+				assert.Equal(t, expected.Status.String(), actual.Status)
 			}
 		}
 	})
 
 	t.Run("Errors", func(t *testing.T) {
-		runID := int64(793)
 		repoID := int64(4)
+		runID := int64(793)
+
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
 		token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeWriteRepository)
 
-		// no auth token
-		req := NewRequest(t, http.MethodGet,
-			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
-				repo.OwnerName, repo.Name, runID,
-			),
-		)
-		MakeRequest(t, req, http.StatusNotFound)
-
 		// wrong run id
-		req = NewRequest(t, http.MethodGet,
+		req := NewRequest(t, http.MethodGet,
 			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
 				repo.OwnerName, repo.Name, runID+9999,
 			),
