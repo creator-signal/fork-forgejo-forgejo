@@ -36,11 +36,11 @@
 			{{ctx.Locale.Tr "repo.home.languages"}}
 		</div>
 		<div class="flex-item tw-flex-col stats">
-			<div class="bar tw-w-full tw-rounded-full">
+			<stats-bar class="bar tw-w-full tw-rounded-full">
 				{{range .LanguageStats}}
 					<div class="slice tw-w-full" style="width: {{.Percentage}}%; background-color: {{.Color}}" data-tooltip-placement="top" data-tooltip-content={{.Language}} data-tooltip-follow-cursor="horizontal"></div>
 				{{end}}
-			</div>
+			</stats-bar>
 			<ul class="tw-p-0 tw-m-0 tw-flex-wrap tw-flex tw-gap-x-3 tw-gap-y-1">
 				{{range .LanguageStats}}
 					<div class="item tw-flex tw-gap-1 tw-items-center">
