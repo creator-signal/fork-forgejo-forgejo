@@ -38,7 +38,7 @@
 		<div class="flex-item tw-flex-col stats">
 			<stats-bar class="bar tw-w-full tw-rounded-full">
 				{{range .LanguageStats}}
-					<div class="slice tw-w-full" style="width: {{.Percentage}}%; background-color: {{.Color}}" data-tooltip-placement="top" data-tooltip-content={{.Language}} data-tooltip-follow-cursor="horizontal"></div>
+					<div class="slice" style="width: {{.Percentage}}%; background-color: {{.Color}}" data-tooltip-placement="top" data-tooltip-content={{.Language}} data-tooltip-follow-cursor="horizontal"></div>
 				{{end}}
 			</stats-bar>
 			<ul class="tw-p-0 tw-m-0 tw-flex-wrap tw-flex tw-gap-x-3 tw-gap-y-1">
