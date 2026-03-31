@@ -462,12 +462,12 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		u, err := git.GetRemoteURL(ctx, ctx.Repo.Repository.RepoPath(), pullMirror.GetRemoteName())
+		u, err := mirror_service.GetRemoteURLWithFallback(ctx, pullMirror)
 		if err != nil {
-			ctx.Data["Err_MirrorAddress"] = true
-			handleSettingRemoteAddrError(ctx, err, form)
+			ctx.ServerError("GetRemoteURLWithFallback", err)
 			return
 		}
+
 		if u.User != nil && form.MirrorPassword == "" && form.MirrorUsername == u.User.Username() {
 			form.MirrorPassword, _ = u.User.Password()
 		}
@@ -482,17 +482,18 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		if err := mirror_service.UpdateAddress(ctx, pullMirror, address); err != nil {
-			ctx.ServerError("UpdateAddress", err)
-			return
-		}
-		remoteAddress, err := util.SanitizeURL(address)
-		if err != nil {
+		if err := pullMirror.UpdateRemoteAddress(ctx, address); err != nil {
 			ctx.Data["Err_MirrorAddress"] = true
 			handleSettingRemoteAddrError(ctx, err, form)
 			return
 		}
-		pullMirror.RemoteAddress = remoteAddress
+
+		// Update the unencrypted address stored in the git config, so that future `git fetch` will access the right
+		// address. pullMirror.RemoteAddress is the sanitized no-creds version from UpdateRemoteAddress.
+		if err := mirror_service.UpdateAddress(ctx, pullMirror, pullMirror.RemoteAddress); err != nil {
+			ctx.ServerError("UpdateAddress", err)
+			return
+		}
 
 		form.LFS = form.LFS && setting.LFS.StartServer
 
