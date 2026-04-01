@@ -684,7 +684,7 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 		} {
 			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: setup.repoID})
 			user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
-			token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeWriteRepository)
+			token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeReadRepository)
 			req := NewRequest(t, http.MethodGet,
 				fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
 					repo.OwnerName, repo.Name, setup.runID,
@@ -721,32 +721,33 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 		}
 	})
 
-	t.Run("Errors", func(t *testing.T) {
-		repoID := int64(4)
-		runID := int64(793)
+	repoID := int64(4)
+	runID := int64(793)
 
-		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
-		token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeWriteRepository)
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeReadRepository)
 
-		// wrong run id
+	t.Run("Wrong Run ID", func(t *testing.T) {
 		req := NewRequest(t, http.MethodGet,
 			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
 				repo.OwnerName, repo.Name, runID+9999,
 			),
 		).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
+	})
 
-		// wrong repo
-		req = NewRequest(t, http.MethodGet,
+	t.Run("Wrong Repo Name", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
 			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
 				repo.OwnerName, repo.Name+"_wrong_repo", runID,
 			),
 		).AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
+	})
 
-		// wrong owner
-		req = NewRequest(t, http.MethodGet,
+	t.Run("Wrong Owner", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
 			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
 				repo.OwnerName+"_wrong_owner", repo.Name, runID,
 			),
