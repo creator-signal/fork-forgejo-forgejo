@@ -1032,11 +1032,11 @@ func GetActionRun(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, convert.ToActionRun(ctx, run, ctx.Doer))
 }
 
-// ListActionRunJobs return a filtered list of ActionRunJob
+// ListActionRunJobs return a filtered list of jobs that belong to a single workflow run
 func ListActionRunJobs(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs repository ListActionRunJobs
 	// ---
-	// summary: List an action run's jobs
+	// summary: List jobs of a workflow run
 	// produces:
 	// - application/json
 	// parameters:
@@ -1052,7 +1052,7 @@ func ListActionRunJobs(ctx *context.APIContext) {
 	//   required: true
 	// - name: run_id
 	//   in: path
-	//   description: id of the action run
+	//   description: ID of the workflow run
 	//   type: integer
 	//   format: int64
 	//   required: true
