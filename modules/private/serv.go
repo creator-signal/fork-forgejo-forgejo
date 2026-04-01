@@ -49,15 +49,15 @@ type ServCommandResults struct {
 // ServCommand preps for a serv call
 func ServCommand(ctx context.Context, keyID int64, ownerName, repoName string, mode perm.AccessMode, verbs ...string) (*ServCommandResults, ResponseExtra) {
 	var reqURL strings.Builder
-	reqURL.WriteString(setting.LocalURL + fmt.Sprintf("api/internal/serv/command/%d/%s/%s?mode=%d",
+	fmt.Fprintf(&reqURL, "%sapi/internal/serv/command/%d/%s/%s?mode=%d",
+		setting.LocalURL,
 		keyID,
 		url.PathEscape(ownerName),
 		url.PathEscape(repoName),
-		mode,
-	))
+		mode)
 	for _, verb := range verbs {
 		if verb != "" {
-			reqURL.WriteString(fmt.Sprintf("&verb=%s", url.QueryEscape(verb)))
+			fmt.Fprintf(&reqURL, "&verb=%s", url.QueryEscape(verb))
 		}
 	}
 	req := newInternalRequest(ctx, reqURL.String(), "GET")
