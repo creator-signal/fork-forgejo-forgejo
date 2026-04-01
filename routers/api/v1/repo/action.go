@@ -5,9 +5,11 @@
 package repo
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -1093,5 +1095,10 @@ func ListActionRunJobs(ctx *context.APIContext) {
 	for _, job := range jobs {
 		response = append(response, convert.ToActionRunJob(job))
 	}
+
+	slices.SortFunc(response, func(a, b *api.ActionRunJob) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
+
 	ctx.JSON(http.StatusOK, response)
 }

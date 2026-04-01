@@ -4,12 +4,10 @@
 package integration
 
 import (
-	"cmp"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 	"testing"
 
@@ -693,9 +691,6 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 			res := MakeRequest(t, req, http.StatusOK)
 			var jobList []*api.ActionRunJob
 			DecodeJSON(t, res, &jobList)
-			slices.SortFunc(jobList, func(a, b *api.ActionRunJob) int {
-				return cmp.Compare(a.ID, b.ID)
-			})
 			assert.Len(t, jobList, len(setup.jobIDs))
 
 			correctJobList := make([]*actions_model.ActionRunJob, 0, len(setup.jobIDs))
