@@ -23,10 +23,10 @@
 }
 
 .markup .anchor {
-  float: left;
-  padding-right: 4px;
-  margin-left: -20px;
   color: inherit;
+  position: absolute;
+  left: -22px;
+  top: 0;
 }
 
 .markup .anchor .svg {
@@ -37,87 +37,72 @@
   outline: none;
 }
 
-.markup h1 .anchor {
-  margin-top: -2px; /* re-align to center */
+.markup .markdown-heading {
+  position: relative;
 }
 
-.markup h1 .anchor .svg,
-.markup h2 .anchor .svg,
-.markup h3 .anchor .svg,
-.markup h4 .anchor .svg,
-.markup h5 .anchor .svg,
-.markup h6 .anchor .svg {
+.markup .markdown-heading .anchor .svg {
   visibility: hidden;
 }
 
-.markup h1:hover .anchor .svg,
-.markup h2:hover .anchor .svg,
-.markup h3:hover .anchor .svg,
-.markup h4:hover .anchor .svg,
-.markup h5:hover .anchor .svg,
-.markup h6:hover .anchor .svg {
+.markup .markdown-heading:hover .anchor .svg {
   visibility: visible;
 }
 
-.markup h2 .anchor .svg,
-.markup h3 .anchor .svg,
-.markup h4 .anchor .svg {
-  position: relative;
+.markup .markdown-heading-h1 .anchor,
+.markup .markdown-heading-h2 .anchor,
+.markup .markdown-heading-h3 .anchor,
+.markup .markdown-heading-h4 .anchor {
   top: -2px;
 }
 
-.markup h1,
-.markup h2,
-.markup h3,
-.markup h4,
-.markup h5,
-.markup h6 {
-  margin-top: 24px !important;
+.markup .markdown-heading {
+  margin-top: 24px;
   margin-bottom: 16px;
   font-weight: var(--font-weight-semibold);
   line-height: 1.25;
 }
 
-.markup h1 tt,
-.markup h1 code,
-.markup h2 tt,
-.markup h2 code,
-.markup h3 tt,
-.markup h3 code,
-.markup h4 tt,
-.markup h4 code,
-.markup h5 tt,
-.markup h5 code,
-.markup h6 tt,
-.markup h6 code {
+.markup .markdown-heading h1,
+.markup .markdown-heading h2,
+.markup .markdown-heading h3,
+.markup .markdown-heading h4,
+.markup .markdown-heading h5,
+.markup .markdown-heading h6 {
+  margin: 0;
+  padding: 0;
+}
+
+.markup .markdown-heading code,
+.markup .markdown-heading tt {
   font-size: inherit;
 }
 
-.markup h1 {
+.markup .markdown-heading-h1 {
   padding-bottom: 0.3em;
   font-size: 2em;
   border-bottom: 1px solid var(--color-secondary);
 }
 
-.markup h2 {
+.markup .markdown-heading-h2 {
   padding-bottom: 0.3em;
   font-size: 1.5em;
   border-bottom: 1px solid var(--color-secondary);
 }
 
-.markup h3 {
+.markup .markdown-heading-h3 {
   font-size: 1.25em;
 }
 
-.markup h4 {
+.markup .markdown-heading-h4 {
   font-size: 1em;
 }
 
-.markup h5 {
+.markup .markdown-heading-h5 {
   font-size: 0.875em;
 }
 
-.markup h6 {
+.markup .markdown-heading-h6 {
   font-size: 0.85em;
   color: var(--color-text-light-2);
 }
@@ -162,7 +147,7 @@
 }
 
 .markup .task-list-item input[type="checkbox"] {
-  margin: 0 .4em .25em -1.4em;
+  margin: 0 0.4em 0.25em -1.4em;
   padding: 0;
 }
 
@@ -381,7 +366,7 @@
   text-align: center;
 }
 
-.markup span.align-center span img
+.markup span.align-center span img,
 .markup span.align-center span video {
   margin: 0 auto;
   text-align: center;
@@ -400,7 +385,7 @@
   text-align: right;
 }
 
-.markup span.align-right span img,
+.markup span.align-right span img
 .markup span.align-right span video {
   margin: 0;
   text-align: right;
