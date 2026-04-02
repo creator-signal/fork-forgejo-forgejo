@@ -1241,6 +1241,10 @@ func Routes() *web.Route {
 						m.Get("/{run_id}/jobs", repo.ListActionRunJobs)
 					})
 
+					m.Group("/jobs", func() {
+						m.Get("/{job_id}/logs", repo.GetJobLogs)
+					})
+
 					m.Group("/workflows", func() {
 						m.Group("/{workflowfilename}", func() {
 							m.Post("/dispatches", reqToken(), reqRepoWriter(unit.TypeActions), mustNotBeArchived, bind(api.DispatchWorkflowOption{}), repo.DispatchWorkflow)
