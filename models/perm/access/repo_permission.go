@@ -6,6 +6,7 @@ package access
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -15,6 +16,7 @@ import (
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
+	"forgejo.org/services/authz"
 )
 
 // Permission contains all the permissions related variables to a repository for a user
@@ -114,7 +116,8 @@ func (p *Permission) CanWriteIssuesOrPulls(isPull bool) bool {
 }
 
 func (p *Permission) LogString() string {
-	format := "<Permission AccessMode=%s, %d Units, %d UnitsMode(s): [ "
+	var format strings.Builder
+	format.WriteString("<Permission AccessMode=%s, %d Units, %d UnitsMode(s): [ ")
 	args := []any{p.AccessMode.String(), len(p.Units), len(p.UnitsMode)}
 
 	for i, unit := range p.Units {
@@ -126,15 +129,15 @@ func (p *Permission) LogString() string {
 				config = err.Error()
 			}
 		}
-		format += "\nUnits[%d]: ID: %d RepoID: %d Type: %s Config: %s"
+		format.WriteString("\nUnits[%d]: ID: %d RepoID: %d Type: %s Config: %s")
 		args = append(args, i, unit.ID, unit.RepoID, unit.Type.LogString(), config)
 	}
 	for key, value := range p.UnitsMode {
-		format += "\nUnitMode[%-v]: %-v"
+		format.WriteString("\nUnitMode[%-v]: %-v")
 		args = append(args, key.LogString(), value.LogString())
 	}
-	format += " ]>"
-	return fmt.Sprintf(format, args...)
+	format.WriteString(" ]>")
+	return fmt.Sprintf(format.String(), args...)
 }
 
 func GetActionRepoPermission(ctx context.Context, repo *repo_model.Repository, task *actions_model.ActionTask) (Permission, error) {
@@ -164,7 +167,28 @@ func GetActionRepoPermission(ctx context.Context, repo *repo_model.Repository, t
 	return GetUserRepoPermission(ctx, repo, user_model.NewActionsUser())
 }
 
-// GetUserRepoPermission returns the user permissions to the repository
+// GetUserRepoPermission returns the user permissions to the repository, where the user's permissions may be
+// artificially restricted by a an authorization reducer.
+func GetUserRepoPermissionWithReducer(ctx context.Context, repo *repo_model.Repository, user *user_model.User, reducer authz.AuthorizationReducer) (Permission, error) {
+	perm, err := GetUserRepoPermission(ctx, repo, user)
+	if err != nil {
+		return perm, err
+	}
+	perm.AccessMode, err = reducer.ReduceRepoAccess(ctx, repo, perm.AccessMode)
+	if err != nil {
+		return perm, fmt.Errorf("failure in ReduceRepoAccess: %w", err)
+	}
+	for unit, currentAccessMode := range perm.UnitsMode {
+		reduced, err := reducer.ReduceRepoAccess(ctx, repo, currentAccessMode)
+		if err != nil {
+			return perm, fmt.Errorf("failure in ReduceRepoAccess: %w", err)
+		}
+		perm.UnitsMode[unit] = reduced
+	}
+	return perm, nil
+}
+
+// GetUserRepoPermission returns the user permissions to the repository.
 func GetUserRepoPermission(ctx context.Context, repo *repo_model.Repository, user *user_model.User) (Permission, error) {
 	var perm Permission
 	if log.IsTrace() {

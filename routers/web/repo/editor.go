@@ -101,9 +101,9 @@ func getParentTreeFields(treePath string) (treeNames, treePaths []string) {
 }
 
 // getSelectableEmailAddresses returns which emails can be used by the user as
-// email for a Git commiter.
+// email for a Git committer.
 func getSelectableEmailAddresses(ctx *context.Context) ([]*user_model.ActivatedEmailAddress, error) {
-	// Retrieve emails that the user could use for commiter identity.
+	// Retrieve emails that the user could use for committer identity.
 	commitEmails, err := user_model.GetActivatedEmailAddresses(ctx, ctx.Doer.ID)
 	if err != nil {
 		return nil, fmt.Errorf("GetActivatedEmailAddresses: %w", err)
@@ -832,7 +832,7 @@ func cleanUploadFileName(name string) string {
 	// Rebase the filename
 	name = util.PathJoinRel(name)
 	// Git disallows any filenames to have a .git directory in them.
-	for _, part := range strings.Split(name, "/") {
+	for part := range strings.SplitSeq(name, "/") {
 		if strings.ToLower(part) == ".git" {
 			return ""
 		}

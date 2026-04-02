@@ -76,6 +76,8 @@ body {
   flex-direction: column;
   overflow-x: visible;
   overflow-wrap: break-word;
+  text-autospace: normal;
+  text-spacing-trim: normal;
 }
 
 textarea {
@@ -87,6 +89,16 @@ code,
 kbd,
 samp {
   font-family: var(--fonts-monospace);
+}
+
+pre,
+code,
+kbd,
+samp,
+tt {
+  text-spacing: none;
+  text-autospace: initial;
+  text-spacing-trim: initial;
 }
 
 pre,
@@ -242,9 +254,10 @@ h1.error-code {
   background: var(--color-hover);
 }
 
-::selection {
-  background: var(--color-primary-light-1);
-  color: var(--color-white);
+::selection,
+relative-time::part(relative-time)::selection {
+  background: var(--color-selection-bg);
+  color: var(--color-selection-fg);
 }
 
 ::placeholder,
@@ -346,6 +359,11 @@ a.label,
 .ui.search > .results .result:hover,
 .ui.category.search > .results .category .result:hover {
   background: var(--color-hover);
+}
+
+.ui.search > .results .content {
+  padding: 0;
+  background: none;
 }
 
 .inline-code-block {
@@ -972,6 +990,7 @@ strong.attention-caution, svg.attention-caution {
 overflow-menu {
   border-bottom: 1px solid var(--color-secondary) !important;
   display: flex;
+  overflow-x: auto;
 }
 
 overflow-menu .overflow-menu-items {

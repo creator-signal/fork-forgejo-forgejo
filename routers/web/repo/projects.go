@@ -57,10 +57,7 @@ func Projects(ctx *context.Context) {
 	isShowClosed := strings.ToLower(ctx.FormTrim("state")) == "closed"
 	keyword := ctx.FormTrim("q")
 	repo := ctx.Repo.Repository
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	ctx.Data["OpenCount"] = repo.NumOpenProjects
 	ctx.Data["ClosedCount"] = repo.NumClosedProjects
@@ -192,8 +189,13 @@ func ChangeProjectStatus(ctx *context.Context) {
 	}
 	id := ctx.ParamsInt64(":id")
 
-	if err := project_model.ChangeProjectStatusByRepoIDAndID(ctx, ctx.Repo.Repository.ID, id, toClose); err != nil {
-		ctx.NotFoundOrServerError("ChangeProjectStatusByRepoIDAndID", project_model.IsErrProjectNotExist, err)
+	project, err := project_model.GetProjectForRepoByID(ctx, ctx.Repo.Repository.ID, id)
+	if err != nil {
+		ctx.NotFoundOrServerError("GetProjectForRepoByID", project_model.IsErrProjectNotExist, err)
+		return
+	}
+	if err := project_model.ChangeProjectStatus(ctx, project, toClose); err != nil {
+		ctx.ServerError("ChangeProjectStatus", err)
 		return
 	}
 	ctx.JSONRedirect(project_model.ProjectLinkForRepo(ctx.Repo.Repository, id))

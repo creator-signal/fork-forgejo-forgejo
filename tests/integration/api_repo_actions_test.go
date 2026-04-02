@@ -13,6 +13,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
@@ -20,6 +21,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/webhook"
 	"forgejo.org/routers/api/v1/shared"
+	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 
@@ -34,7 +36,6 @@ func TestActionsAPISearchActionJobs_RepoRunner(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	token := getUserToken(t, user2.LowerName, auth_model.AccessTokenScopeWriteRepository)
-	job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 393})
 
 	req := NewRequestf(
 		t,
@@ -48,8 +49,20 @@ func TestActionsAPISearchActionJobs_RepoRunner(t *testing.T) {
 	var jobs []*api.ActionRunJob
 	DecodeJSON(t, res, &jobs)
 
-	assert.Len(t, jobs, 1)
-	assert.Equal(t, job.ID, jobs[0].ID)
+	job393 := api.ActionRunJob{
+		ID:      393,
+		Attempt: 1,
+		Handle:  "18e9cf40-c2f6-409f-b832-b945ea7dc79b",
+		RepoID:  1,
+		OwnerID: 1,
+		Name:    "job_2",
+		Needs:   nil,
+		RunsOn:  []string{"ubuntu-latest"},
+		TaskID:  47,
+		Status:  "waiting",
+	}
+
+	assert.ElementsMatch(t, []*api.ActionRunJob{&job393}, jobs)
 }
 
 func TestActionsAPISearchActionJobs_RepoRunnerAllPendingJobsWithoutLabels(t *testing.T) {
@@ -269,6 +282,11 @@ func TestActionsAPIGetListActionRun(t *testing.T) {
 			query:       "?head_sha=97f29ee599c373c729132a5c46a046978311e0ee",
 			expectedIDs: []int64{892, 894},
 		},
+		{
+			name:        "Search for Git reference",
+			query:       "?ref=refs/heads/main",
+			expectedIDs: []int64{892, 894},
+		},
 	}
 
 	for _, tt := range testqueries {
@@ -386,40 +404,74 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 	readToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
 	writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 
+	runnerOne := &api.ActionRunner{
+		ID:          899251,
+		UUID:        "a3297f3a-ba5c-4a0f-878e-6cc8b8ac79ec",
+		Name:        "runner-1-repository",
+		Version:     "dev",
+		OwnerID:     0,
+		RepoID:      62,
+		Description: "A superb runner",
+		Labels:      []string{"debian", "gpu"},
+		Status:      "offline",
+	}
+	runnerTwo := &api.ActionRunner{
+		ID:          899252,
+		UUID:        "6d2d13ef-b19f-47a8-85ad-e82e51f606c5",
+		Name:        "runner-2-user",
+		Version:     "11.3.1",
+		OwnerID:     1,
+		RepoID:      0,
+		Description: "A splendid runner",
+		Labels:      []string{"docker"},
+		Status:      "offline",
+	}
+	runnerThree := &api.ActionRunner{
+		ID:          899253,
+		UUID:        "0a7e5e05-2da4-44d5-a72a-615da120cef6",
+		Name:        "runner-3-repository",
+		Version:     "11.3.1",
+		OwnerID:     0,
+		RepoID:      62,
+		Description: "Another fine runner",
+		Labels:      []string{"fedora"},
+		Status:      "offline",
+	}
+	runnerFour := &api.ActionRunner{
+		ID:          899254,
+		UUID:        "6456ac1f-70ec-4e8f-9ab7-bf117ee23d47",
+		Name:        "runner-4-global",
+		Version:     "11.3.1",
+		OwnerID:     0,
+		RepoID:      0,
+		Description: "",
+		Labels:      []string{},
+		Status:      "offline",
+	}
+	runnerFive := &api.ActionRunner{
+		ID:          899255,
+		UUID:        "96639646-67b2-4bcb-9142-fde1ab8498cf",
+		Name:        "runner-5-repository-ephemeral",
+		Version:     "1.0.0",
+		OwnerID:     0,
+		RepoID:      62,
+		Description: "An ephemeral runner",
+		Labels:      []string{"ephemeral-label"},
+		Status:      "offline",
+		Ephemeral:   true,
+	}
+
 	t.Run("Get runners", func(t *testing.T) {
 		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners")
 		request.AddTokenAuth(readToken)
 		response := MakeRequest(t, request, http.StatusOK)
 
-		assert.Equal(t, "2", response.Header().Get("X-Total-Count"))
+		assert.Equal(t, "3", response.Header().Get("X-Total-Count"))
 
 		var runners []*api.ActionRunner
 		DecodeJSON(t, response, &runners)
 
-		runnerOne := &api.ActionRunner{
-			ID:          899251,
-			UUID:        "a3297f3a-ba5c-4a0f-878e-6cc8b8ac79ec",
-			Name:        "runner-1-repository",
-			Version:     "dev",
-			OwnerID:     0,
-			RepoID:      62,
-			Description: "A superb runner",
-			Labels:      []string{"debian", "gpu"},
-			Status:      "offline",
-		}
-		runnerThree := &api.ActionRunner{
-			ID:          899253,
-			UUID:        "0a7e5e05-2da4-44d5-a72a-615da120cef6",
-			Name:        "runner-3-repository",
-			Version:     "11.3.1",
-			OwnerID:     0,
-			RepoID:      62,
-			Description: "Another fine runner",
-			Labels:      []string{"fedora"},
-			Status:      "offline",
-		}
-
-		assert.ElementsMatch(t, []*api.ActionRunner{runnerOne, runnerThree}, runners)
+		assert.ElementsMatch(t, []*api.ActionRunner{runnerOne, runnerThree, runnerFive}, runners)
 	})
 
 	t.Run("Get runners paginated", func(t *testing.T) {
@@ -435,6 +487,25 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 		assert.Len(t, runners, 1)
 	})
 
+	t.Run("Get visible runners", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners?visible=true")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		assert.NotEmpty(t, response.Header().Get("X-Total-Count"))
+
+		var runners []*api.ActionRunner
+		DecodeJSON(t, response, &runners)
+
+		// There are more runners in the result that originate from the global fixtures. The test ignores them to limit
+		// the impact of unrelated changes.
+		assert.Contains(t, runners, runnerOne)
+		assert.NotContains(t, runners, runnerTwo)
+		assert.Contains(t, runners, runnerThree)
+		assert.Contains(t, runners, runnerFour)
+		assert.Contains(t, runners, runnerFive)
+	})
+
 	t.Run("Get runner", func(t *testing.T) {
 		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners/899251")
 		request.AddTokenAuth(readToken)
@@ -443,19 +514,32 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 		var runner *api.ActionRunner
 		DecodeJSON(t, response, &runner)
 
-		runnerOne := &api.ActionRunner{
-			ID:          899251,
-			UUID:        "a3297f3a-ba5c-4a0f-878e-6cc8b8ac79ec",
-			Name:        "runner-1-repository",
-			Version:     "dev",
-			OwnerID:     0,
-			RepoID:      62,
-			Description: "A superb runner",
-			Labels:      []string{"debian", "gpu"},
-			Status:      "offline",
-		}
-
 		assert.Equal(t, runnerOne, runner)
+
+		// Runner of instance is visible
+		request = NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners/899254")
+		request.AddTokenAuth(readToken)
+		response = MakeRequest(t, request, http.StatusOK)
+
+		DecodeJSON(t, response, &runner)
+
+		assert.Equal(t, runnerFour, runner)
+
+		// Runner of user that does not own the repository is invisible
+		request = NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners/899252")
+		request.AddTokenAuth(readToken)
+		MakeRequest(t, request, http.StatusNotFound)
+	})
+
+	t.Run("Get ephemeral runner", func(t *testing.T) {
+		request := NewRequest(t, "GET", "/api/v1/repos/user2/test_workflows/actions/runners/899255")
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusOK)
+
+		var runner *api.ActionRunner
+		DecodeJSON(t, response, &runner)
+
+		assert.Equal(t, runnerFive, runner)
 	})
 
 	t.Run("Delete runner", func(t *testing.T) {
@@ -501,6 +585,23 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 		assert.Empty(t, registeredRunner.Version)
 		assert.NotEmpty(t, registeredRunner.TokenHash)
 		assert.NotEmpty(t, registeredRunner.TokenSalt)
+		assert.False(t, registeredRunner.Ephemeral)
+	})
+
+	t.Run("Register ephemeral runner", func(t *testing.T) {
+		options := api.RegisterRunnerOptions{Name: "ephemeral-runner", Description: "Ephemeral runner", Ephemeral: true}
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners", repo1.OwnerName, repo1.Name)
+		request := NewRequestWithJSON(t, "POST", requestURL, options)
+		request.AddTokenAuth(writeToken)
+		response := MakeRequest(t, request, http.StatusCreated)
+
+		var registerRunnerResponse *api.RegisterRunnerResponse
+		DecodeJSON(t, response, &registerRunnerResponse)
+
+		registeredRunner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{UUID: registerRunnerResponse.UUID})
+		assert.Equal(t, registerRunnerResponse.UUID, registeredRunner.UUID)
+		assert.True(t, registeredRunner.Ephemeral)
 	})
 
 	t.Run("Runner registration does not update runner with identical name", func(t *testing.T) {
@@ -544,5 +645,26 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 		DecodeJSON(t, response, &errorMessage)
 
 		assert.Equal(t, "token does not have at least one of required scope(s): [write:repository]", errorMessage.Message)
+	})
+
+	t.Run("Endpoints disabled if Actions disabled", func(t *testing.T) {
+		repository, _, cleanUp := tests.CreateDeclarativeRepo(t, user2, "no-actions",
+			[]unit_model.Type{unit_model.TypeCode, unit_model.TypeActions}, []unit_model.Type{}, nil)
+		defer cleanUp()
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runners", repository.FullName())
+
+		request := NewRequest(t, "GET", requestURL)
+		request.AddTokenAuth(readToken)
+		MakeRequest(t, request, http.StatusOK)
+
+		enabledUnits := []repo_model.RepoUnit{{RepoID: repository.ID, Type: unit_model.TypeCode}}
+		disabledUnits := []unit_model.Type{unit_model.TypeActions}
+		err := repo_service.UpdateRepositoryUnits(db.DefaultContext, repository, enabledUnits, disabledUnits)
+		require.NoError(t, err)
+
+		request = NewRequest(t, "GET", requestURL)
+		request.AddTokenAuth(readToken)
+		MakeRequest(t, request, http.StatusNotFound)
 	})
 }

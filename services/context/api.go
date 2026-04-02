@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	issues_model "forgejo.org/models/issues"
@@ -24,6 +25,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
 	web_types "forgejo.org/modules/web/types"
+	"forgejo.org/services/authz"
 
 	"code.forgejo.org/go-chi/cache"
 )
@@ -47,6 +49,7 @@ type APIContext struct {
 	QuotaGroup *quota_model.Group
 	QuotaRule  *quota_model.Rule
 	PublicOnly bool // Whether the request is for a public endpoint
+	Reducer    authz.AuthorizationReducer
 }
 
 func init() {
@@ -289,14 +292,6 @@ func APIContexter() func(http.Handler) http.Handler {
 			ctx.AppendContextValue(apiContextKey, ctx)
 			ctx.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })
 
-			// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
-			if ctx.Req.Method == "POST" && strings.Contains(ctx.Req.Header.Get("Content-Type"), "multipart/form-data") {
-				if err := ctx.Req.ParseMultipartForm(setting.Attachment.MaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
-					ctx.InternalServerError(err)
-					return
-				}
-			}
-
 			httpcache.SetCacheControlInHeader(ctx.Resp.Header(), 0, "no-transform")
 			ctx.Resp.Header().Set(`X-Frame-Options`, setting.CORSConfig.XFrameOptions)
 
@@ -456,28 +451,28 @@ func (ctx *APIContext) NotFoundOrServerError(logMsg string, errCheck func(error)
 
 // IsUserSiteAdmin returns true if current user is a site admin
 func (ctx *APIContext) IsUserSiteAdmin() bool {
+	if !ctx.Reducer.AllowAdminOverride() {
+		return false
+	}
 	return ctx.IsSigned && ctx.Doer.IsAdmin
 }
 
 // IsUserRepoAdmin returns true if current user is admin in current repo
 func (ctx *APIContext) IsUserRepoAdmin() bool {
+	if !ctx.Reducer.AllowAdminOverride() {
+		return false
+	}
 	return ctx.Repo.IsAdmin()
 }
 
 // IsUserRepoWriter returns true if current user has write privilege in current repo
 func (ctx *APIContext) IsUserRepoWriter(unitTypes []unit.Type) bool {
-	for _, unitType := range unitTypes {
-		if ctx.Repo.CanWrite(unitType) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(unitTypes, ctx.Repo.CanWrite)
 }
 
 // Returns true when the requests indicates that it accepts a Github response.
 // This should be used to return information in the way that the Github API
-// specifies it. Avoids breaking compatability with non-Github API clients.
+// specifies it. Avoids breaking compatibility with non-Github API clients.
 func (ctx *APIContext) AcceptsGithubResponse() bool {
 	return ctx.Req.Header.Get("Accept") == "application/vnd.github+json"
 }

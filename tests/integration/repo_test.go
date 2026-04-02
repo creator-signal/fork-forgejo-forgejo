@@ -1219,374 +1219,133 @@ func TestFileHistoryPager(t *testing.T) {
 	})
 }
 
-func TestRepoIssueSorting(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-
-	t.Run("Dropdown content", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		assert.Equal(t,
-			9,
-			htmlDoc.Find(`.list-header-sort .menu a`).Length(),
-			"Wrong amount of sort options in dropdown")
-
-		menuItemsHTML := htmlDoc.Find(`.list-header-sort .menu`).Text()
-		locale := translation.NewLocale("en-US")
-		for _, key := range []string{
-			"relevance",
-			"latest",
-			"oldest",
-			"recentupdate",
-			"leastupdate",
-			"mostcomment",
-			"leastcomment",
-			"nearduedate",
-			"farduedate",
-		} {
-			assert.Contains(t,
-				menuItemsHTML,
-				locale.Tr("repo.issues.filter_sort."+key),
-				"Sort option %s ('%s') not found in dropdown", key, locale.Tr("repo.issues.filter_sort."+key))
-		}
-	})
-}
-
-func TestRepoIssueFilterLinks(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-
-	t.Run("No filters", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Keyword", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?q=search-on-this")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=search-on-this")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Sort", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?sort=oldest")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.list-header-sort a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=oldest")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Type", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?type=assigned")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.list-header-type a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=assigned")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("State", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?state=closed")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.issue-list-toolbar-left a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=closed")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Milestone", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?milestone=1")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.list-header-milestone a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=1")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Milestone", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?milestone=1")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.list-header-milestone a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=1")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Project", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?project=1")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.list-header-project a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=1")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Assignee", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?assignee=1")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.list-header-assignee a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=1")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Poster", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?poster=1")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.list-header-poster a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=1")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Labels", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?labels=1")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']:not(.label-filter a)").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=1")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-		})
-		assert.True(t, called)
-	})
-
-	t.Run("Archived labels", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/issues?archived=true")
-		resp := MakeRequest(t, req, http.StatusOK)
-		htmlDoc := NewHTMLParser(t, resp.Body)
-
-		called := false
-		htmlDoc.Find("#issue-filters a[href^='?']").Each(func(_ int, s *goquery.Selection) {
-			called = true
-			href, _ := s.Attr("href")
-			assert.Contains(t, href, "?q=&")
-			assert.Contains(t, href, "&type=")
-			assert.Contains(t, href, "&sort=")
-			assert.Contains(t, href, "&state=")
-			assert.Contains(t, href, "&labels=")
-			assert.Contains(t, href, "&milestone=")
-			assert.Contains(t, href, "&project=")
-			assert.Contains(t, href, "&assignee=")
-			assert.Contains(t, href, "&poster=")
-			assert.Contains(t, href, "&archived=true")
-		})
-		assert.True(t, called)
-	})
-}
-
 func TestRepoSubmoduleView(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, nil)
-		defer f()
+		t.Run("FromGit", func(t *testing.T) {
+			repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, nil)
+			defer f()
 
-		// Clone the repository, add a submodule and push it.
-		dstPath := t.TempDir()
+			// Clone the repository, add a submodule and push it.
+			dstPath := t.TempDir()
 
-		uClone := *u
-		uClone.Path = repo.FullName()
-		uClone.User = url.UserPassword(user2.Name, userPassword)
+			uClone := *u
+			uClone.Path = repo.FullName()
+			uClone.User = url.UserPassword(user2.Name, userPassword)
 
-		t.Run("Clone", doGitClone(dstPath, &uClone))
+			t.Run("Clone", doGitClone(dstPath, &uClone))
 
-		_, _, err := git.NewCommand(git.DefaultContext, "submodule", "add").AddDynamicArguments(u.JoinPath("/user2/repo1").String()).RunStdString(&git.RunOpts{Dir: dstPath})
-		require.NoError(t, err)
+			_, _, err := git.NewCommand(git.DefaultContext, "submodule", "add").AddDynamicArguments(u.JoinPath("/user2/repo1").String()).RunStdString(&git.RunOpts{Dir: dstPath})
+			require.NoError(t, err)
 
-		_, _, err = git.NewCommand(git.DefaultContext, "add", "repo1", ".gitmodules").RunStdString(&git.RunOpts{Dir: dstPath})
-		require.NoError(t, err)
+			_, _, err = git.NewCommand(git.DefaultContext, "add", "repo1", ".gitmodules").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.NoError(t, err)
 
-		_, _, err = git.NewCommand(git.DefaultContext, "commit", "-m", "add submodule").RunStdString(&git.RunOpts{Dir: dstPath})
-		require.NoError(t, err)
+			_, _, err = git.NewCommand(git.DefaultContext, "commit", "-m", "add submodule").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.NoError(t, err)
 
-		_, _, err = git.NewCommand(git.DefaultContext, "push").RunStdString(&git.RunOpts{Dir: dstPath})
-		require.NoError(t, err)
+			_, _, err = git.NewCommand(git.DefaultContext, "push").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.NoError(t, err)
 
-		// Check that the submodule entry exist and the link is correct.
-		req := NewRequest(t, "GET", "/"+repo.FullName())
-		resp := MakeRequest(t, req, http.StatusOK)
+			// Check that the submodule entry exist and the link is correct.
+			req := NewRequest(t, "GET", "/"+repo.FullName())
+			resp := MakeRequest(t, req, http.StatusOK)
 
-		htmlDoc := NewHTMLParser(t, resp.Body)
-		htmlDoc.AssertElement(t, fmt.Sprintf(`tr[data-entryname="repo1"] a[href="%s"]`, u.JoinPath("/user2/repo1").String()), true)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			htmlDoc.AssertElement(t, fmt.Sprintf(`tr[data-entryname="repo1"] a[href="%s"]`, u.JoinPath("/user2/repo1").String()), true)
 
-		// Check that a link to the submodule returns a redirect and that the redirect link is correct.
-		req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/repo1")
-		resp = MakeRequest(t, req, http.StatusSeeOther)
+			// Check that a link to the submodule returns a redirect and that the redirect link is correct.
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/repo1")
+			resp = MakeRequest(t, req, http.StatusSeeOther)
 
-		assert.Equal(t, u.JoinPath("/user2/repo1").String(), resp.Header().Get("Location"))
+			assert.Equal(t, u.JoinPath("/user2/repo1").String(), resp.Header().Get("Location"))
+		})
+
+		t.Run("Declarative", func(t *testing.T) {
+			repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, []*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".gitmodules",
+					ContentReader: strings.NewReader(`[submodule "relative-module"]
+  path = relative-module
+  url = https://git.example.org/submodule.git
+`),
+				}, {
+					Operation:     "create",
+					TreePath:      "relative-module",
+					FromTreePath:  "",
+					ContentReader: nil,
+					SHA:           "95601d16476a",
+					Options:       files_service.RepoFileOptionMode(git.EntryModeCommit),
+				},
+			})
+			defer f()
+
+			// Check that the submodule entry exist and the link is correct.
+			req := NewRequest(t, "GET", "/"+repo.FullName())
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			expectedDst := "https://git.example.org/submodule"
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			href, ok := htmlDoc.Find(`tr[data-entryname="relative-module"] a`).Attr("href")
+			assert.True(t, ok, "could not find entry 'relative-module' in file list")
+			assert.Equal(t, expectedDst, href)
+
+			// Check that a link to the submodule returns a redirect and that the redirect link is correct.
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/relative-module")
+			resp = MakeRequest(t, req, http.StatusSeeOther)
+
+			assert.Equal(t, expectedDst, resp.Header().Get("Location"))
+		})
+
+		t.Run("SubmodulesFileTooBig", func(t *testing.T) {
+			repo, _, f := tests.CreateDeclarativeRepo(t, user2, "", []unit_model.Type{unit_model.TypeCode}, nil, []*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".gitmodules",
+					ContentReader: strings.NewReader(strings.Repeat("#", git.MaxGitmodulesFileSize-5) + // ensure that the partial read is invalid
+						`
+[submodule "relative-module"]
+  path = relative-module
+  url = https://git.example.org/submodule.git
+`),
+				}, {
+					Operation:     "create",
+					TreePath:      "relative-module",
+					FromTreePath:  "",
+					ContentReader: nil,
+					SHA:           "95601d16476a",
+					Options:       files_service.RepoFileOptionMode(git.EntryModeCommit),
+				},
+			})
+			defer f()
+
+			// Check that the submodule entry exist and the link is correct.
+			req := NewRequest(t, "GET", "/"+repo.FullName())
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			_, ok := htmlDoc.Find(`tr[data-entryname="relative-module"] td.name a`).Attr("href")
+			assert.False(t, ok, "should not find a link to 'relative-module' in file list")
+
+			// Check that a link to the submodule returns a redirect and that the redirect link is correct.
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/relative-module")
+			resp = MakeRequest(t, req, http.StatusSeeOther)
+
+			assert.Equal(t, "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/", resp.Header().Get("Location"))
+
+			// Check that a warning is present
+			req = NewRequest(t, "GET", "/"+repo.FullName()+"/src/branch/"+repo.DefaultBranch+"/.gitmodules")
+			resp = MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc = NewHTMLParser(t, resp.Body)
+
+			warn, err := htmlDoc.Find(`.non-diff-file-content .warning`).Html()
+			require.NoError(t, err)
+			assert.NotEmpty(t, warn)
+		})
 	})
 }
 

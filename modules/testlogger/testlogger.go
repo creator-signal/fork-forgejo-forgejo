@@ -367,7 +367,7 @@ var ignoredErrorMessage = []string{
 	// Test_CmdForgejo_Actions
 	`DB: No dedicated replica host defined; falling back to primary DSN for replica connections`,
 
-	// TestDevtestErrorpages
+	// TestDemoErrorPages
 	`ErrorPage() [E] Example error: Example error`,
 }
 
@@ -501,7 +501,7 @@ func PrintCurrentTest(t testing.TB, skip ...int) func() {
 // Printf takes a format and args and prints the string to os.Stdout
 func Printf(format string, args ...any) {
 	if log.CanColorStdout {
-		for i := 0; i < len(args); i++ {
+		for i := range args {
 			args[i] = log.NewColoredValue(args[i])
 		}
 	}

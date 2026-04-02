@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"forgejo.org/modules/jwtx"
 	"forgejo.org/modules/timeutil"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -41,7 +42,7 @@ type Token struct {
 }
 
 // ParseToken parses a signed jwt string
-func ParseToken(jwtToken string, signingKey JWTSigningKey) (*Token, error) {
+func ParseToken(jwtToken string, signingKey jwtx.SigningKey) (*Token, error) {
 	parsedToken, err := jwt.ParseWithClaims(jwtToken, &Token{}, func(token *jwt.Token) (any, error) {
 		if token.Method == nil || token.Method.Alg() != signingKey.SigningMethod().Alg() {
 			return nil, fmt.Errorf("unexpected signing algo: %v", token.Header["alg"])
@@ -63,11 +64,9 @@ func ParseToken(jwtToken string, signingKey JWTSigningKey) (*Token, error) {
 }
 
 // SignToken signs the token with the JWT secret
-func (token *Token) SignToken(signingKey JWTSigningKey) (string, error) {
+func (token *Token) SignToken(signingKey jwtx.SigningKey) (string, error) {
 	token.IssuedAt = jwt.NewNumericDate(time.Now())
-	jwtToken := jwt.NewWithClaims(signingKey.SigningMethod(), token)
-	signingKey.PreProcessToken(jwtToken)
-	return jwtToken.SignedString(signingKey.SignKey())
+	return signingKey.JWT(token)
 }
 
 // OIDCToken represents an OpenID Connect id_token
@@ -93,9 +92,7 @@ type OIDCToken struct {
 }
 
 // SignToken signs an id_token with the (symmetric) client secret key
-func (token *OIDCToken) SignToken(signingKey JWTSigningKey) (string, error) {
+func (token *OIDCToken) SignToken(signingKey jwtx.SigningKey) (string, error) {
 	token.IssuedAt = jwt.NewNumericDate(time.Now())
-	jwtToken := jwt.NewWithClaims(signingKey.SigningMethod(), token)
-	signingKey.PreProcessToken(jwtToken)
-	return jwtToken.SignedString(signingKey.SignKey())
+	return signingKey.JWT(token)
 }

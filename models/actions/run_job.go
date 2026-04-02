@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/util"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	gouuid "github.com/google/uuid"
 	"go.yaml.in/yaml/v3"
 	"xorm.io/builder"
 )
@@ -30,6 +31,7 @@ type ActionRunJob struct {
 	IsForkPullRequest bool
 	Name              string `xorm:"VARCHAR(255)"`
 	Attempt           int64
+	Handle            string `xorm:"unique"`
 	WorkflowPayload   []byte
 	JobID             string   `xorm:"VARCHAR(255)"` // job id in workflow, not job's id
 	Needs             []string `xorm:"JSON TEXT"`
@@ -108,6 +110,12 @@ func (job *ActionRunJob) LoadAttributes(ctx context.Context) error {
 	return job.Run.LoadAttributes(ctx)
 }
 
+// IsRequestedByRunner returns true if this attempt of this ActionRunJob was explicitly requested by the runner or if
+// the runner expressed no preference.
+func (job *ActionRunJob) IsRequestedByRunner(handle *string) bool {
+	return handle == nil || job.Handle == *handle
+}
+
 func (job *ActionRunJob) ItRunsOn(labels []string) bool {
 	if len(labels) == 0 || len(job.RunsOn) == 0 {
 		return false
@@ -115,6 +123,21 @@ func (job *ActionRunJob) ItRunsOn(labels []string) bool {
 	labelSet := make(container.Set[string])
 	labelSet.AddMultiple(labels...)
 	return labelSet.IsSubset(job.RunsOn)
+}
+
+func (job *ActionRunJob) PrepareNextAttempt(initialStatus Status) error {
+	if job.Status != StatusUnknown && !job.Status.IsDone() {
+		return fmt.Errorf("cannot prepare next attempt because job %d is active: %s", job.ID, job.Status.String())
+	}
+
+	job.Attempt++
+	job.Started = 0
+	job.Stopped = 0
+	job.TaskID = 0
+	job.Handle = gouuid.New().String()
+	job.Status = initialStatus
+
+	return nil
 }
 
 func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {
@@ -135,6 +158,22 @@ func GetRunJobsByRunID(ctx context.Context, runID int64) ([]*ActionRunJob, error
 		return nil, err
 	}
 	return jobs, nil
+}
+
+// Check if the ActionRun has any jobs other than those included in the jobs parameter.
+func RunHasOtherJobs(ctx context.Context, runID int64, jobs []*ActionRunJob) (bool, error) {
+	jobIDs := make([]int64, len(jobs))
+	for i, job := range jobs {
+		jobIDs[i] = job.ID
+	}
+	otherJobs, err := db.GetEngine(ctx).
+		Where("run_id = ?", runID).
+		Where(builder.NotIn("id", jobIDs)).
+		Count(&ActionRunJob{})
+	if err != nil {
+		return false, err
+	}
+	return otherJobs > 0, nil
 }
 
 // All calls to UpdateRunJobWithoutNotification that change run.Status for any run from a not done status to a done status must call the ActionRunNowDone notification channel.
@@ -174,34 +213,18 @@ func UpdateRunJobWithoutNotification(ctx context.Context, job *ActionRunJob, con
 		}
 	}
 
-	{
-		// Other goroutines may aggregate the status of the run and update it too.
-		// So we need load the run and its jobs before updating the run.
-		run, err := GetRunByID(ctx, job.RunID)
-		if err != nil {
-			return 0, err
-		}
-		jobs, err := GetRunJobsByRunID(ctx, job.RunID)
-		if err != nil {
-			return 0, err
-		}
-		run.Status = AggregateJobStatus(jobs)
-		if run.Started.IsZero() && run.Status.IsRunning() {
-			run.Started = timeutil.TimeStampNow()
-		}
-		if run.Stopped.IsZero() && run.Status.IsDone() {
-			run.Stopped = timeutil.TimeStampNow()
-		}
-		// As the caller has to ensure the ActionRunNowDone notification is sent we can ignore doing so here.
-		if err := UpdateRunWithoutNotification(ctx, run, "status", "started", "stopped"); err != nil {
-			return 0, fmt.Errorf("update run %d: %w", run.ID, err)
-		}
+	run, columns, err := ComputeRunStatus(ctx, job.RunID)
+	if err != nil {
+		return 0, fmt.Errorf("compute run status: %w", err)
+	}
+	if err := UpdateRunWithoutNotification(ctx, run, columns...); err != nil {
+		return 0, fmt.Errorf("update run %d: %w", run.ID, err)
 	}
 
 	return affected, nil
 }
 
-func AggregateJobStatus(jobs []*ActionRunJob) Status {
+var AggregateJobStatus = func(jobs []*ActionRunJob) Status {
 	allSuccessOrSkipped := len(jobs) != 0
 	allSkipped := len(jobs) != 0
 	var hasFailure, hasCancelled, hasWaiting, hasRunning, hasBlocked bool
@@ -305,4 +328,13 @@ func (job *ActionRunJob) HasIncompleteWith() (bool, *jobparser.IncompleteNeeds, 
 		return false, nil, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
 	}
 	return jobWorkflow.IncompleteWith, jobWorkflow.IncompleteWithNeeds, jobWorkflow.IncompleteWithMatrix, nil
+}
+
+// EnableOpenIDConnect checks whether the job allows for ID token generation.
+func (job *ActionRunJob) EnableOpenIDConnect() (bool, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
+	if err != nil {
+		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.EnableOpenIDConnect, nil
 }

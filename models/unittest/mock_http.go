@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,7 +30,7 @@ import (
 //     test data files
 func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveMode bool) *httptest.Server {
 	mockServerBaseURL := ""
-	ignoredHeaders := []string{"cf-ray", "server", "date", "report-to", "nel", "x-request-id"}
+	ignoredHeaders := []string{"cf-ray", "server", "date", "report-to", "nel", "x-request-id", "set-cookie", "x-gitlab-meta"}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := NormalizedFullPath(r.URL)
@@ -46,6 +47,7 @@ func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveM
 			fixturePath = fmt.Sprintf("%s/%s", testDataDir, strings.TrimLeft(r.URL.Path, "/"))
 		}
 		if liveMode {
+			require.NoError(t, os.MkdirAll(testDataDir, 0o755))
 			liveURL := fmt.Sprintf("%s%s", liveServerBaseURL, path)
 
 			request, err := http.NewRequest(r.Method, liveURL, nil)
@@ -68,8 +70,8 @@ func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveM
 			defer fixture.Close()
 			fixtureWriter := bufio.NewWriter(fixture)
 
-			for headerName, headerValues := range response.Header {
-				for _, headerValue := range headerValues {
+			for _, headerName := range slices.Sorted(maps.Keys(response.Header)) {
+				for _, headerValue := range response.Header[headerName] {
 					if !slices.Contains(ignoredHeaders, strings.ToLower(headerName)) {
 						_, err := fmt.Fprintf(fixtureWriter, "%s: %s\n", headerName, headerValue)
 						require.NoError(t, err, "writing the header of the HTTP response to the fixture file failed")
@@ -91,8 +93,6 @@ func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveM
 		fixture, err := os.ReadFile(fixturePath)
 		require.NoError(t, err, "missing mock HTTP response: "+fixturePath)
 
-		w.WriteHeader(http.StatusOK)
-
 		// replace any mention of the live HTTP service by the mocked host
 		stringFixture := strings.ReplaceAll(string(fixture), liveServerBaseURL, mockServerBaseURL)
 		if isGh {
@@ -102,12 +102,18 @@ func NewMockWebServer(t *testing.T, liveServerBaseURL, testDataDir string, liveM
 		// parse back the fixture file into a series of HTTP headers followed by response body
 		lines := strings.Split(stringFixture, "\n")
 		for idx, line := range lines {
-			colonIndex := strings.Index(line, ": ")
-			if colonIndex != -1 {
-				w.Header().Set(line[0:colonIndex], line[colonIndex+2:])
+			before, after, ok := strings.Cut(line, ": ")
+			if ok {
+				// Because we modified the body with ReplaceAll() above, we need to
+				// remove Content-Length. w.Write() should add it back.
+				header := before
+				if !strings.EqualFold(header, "Content-Length") {
+					w.Header().Set(before, after)
+				}
 			} else {
 				// we reached the end of the headers (empty line), so what follows is the body
 				responseBody := strings.Join(lines[idx+1:], "\n")
+				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(responseBody))
 				require.NoError(t, err, "writing the body of the HTTP response failed")
 				break

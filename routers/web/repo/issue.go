@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"maps"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -267,14 +268,11 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 
 	archived := ctx.FormBool("archived")
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	var total int
 	switch {
-	case isShowClosed.Value():
+	case isShowClosed.ValueOrZeroValue():
 		total = int(issueStats.ClosedCount)
 	case !isShowClosed.Has():
 		total = int(issueStats.OpenCount + issueStats.ClosedCount)
@@ -321,8 +319,8 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		// depending on the query syntax
 		isShowClosed = opts.IsClosed
 		sortType = opts.SortBy.ToIssueSort()
-		posterID = opts.PosterID.Value()
-		assigneeID = opts.AssigneeID.Value()
+		posterID = opts.PosterID.ValueOrZeroValue()
+		assigneeID = opts.AssigneeID.ValueOrZeroValue()
 	}
 
 	approvalCounts, err := issues.GetApprovalCounts(ctx)
@@ -440,7 +438,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		return
 	}
 
-	pinned, err := issues_model.GetPinnedIssues(ctx, repo.ID, isPullOption.Value())
+	pinned, err := issues_model.GetPinnedIssues(ctx, repo.ID, isPullOption.ValueOrZeroValue())
 	if err != nil {
 		ctx.ServerError("GetPinnedIssues", err)
 		return
@@ -475,7 +473,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["IsShowClosed"] = isShowClosed
 	switch {
-	case isShowClosed.Value():
+	case isShowClosed.ValueOrZeroValue():
 		ctx.Data["State"] = "closed"
 	case !isShowClosed.Has():
 		ctx.Data["State"] = "all"
@@ -989,8 +987,10 @@ func NewIssue(ctx *context.Context) {
 		project, err := project_model.GetProjectByID(ctx, projectID)
 		if err != nil {
 			log.Error("GetProjectByID: %d: %v", projectID, err)
-		} else if project.RepoID != ctx.Repo.Repository.ID {
-			log.Error("GetProjectByID: %d: %v", projectID, fmt.Errorf("project[%d] not in repo [%d]", project.ID, ctx.Repo.Repository.ID))
+		} else if !project.CanBeAccessedByOwnerRepo(ctx.Repo.Repository.OwnerID, ctx.Repo.Repository) {
+			log.Error("GetProjectByID: %d: %v", projectID,
+				fmt.Errorf("project[%d] neither in repo[%d] nor has the same owner (project: [%d] ./. repo: [%d])",
+					project.ID, ctx.Repo.Repository.ID, project.OwnerID, ctx.Repo.Repository.OwnerID))
 		} else {
 			ctx.Data["project_id"] = projectID
 			ctx.Data["Project"] = project
@@ -1012,9 +1012,7 @@ func NewIssue(ctx *context.Context) {
 
 	_, templateErrs := issue_service.GetTemplatesFromDefaultBranch(ctx.Repo.Repository, ctx.Repo.GitRepo)
 	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, issueTemplateCandidates)
-	for k, v := range errs {
-		templateErrs[k] = v
-	}
+	maps.Copy(templateErrs, errs)
 	if ctx.Written() {
 		return
 	}
@@ -2188,7 +2186,7 @@ func getActionIssues(ctx *context.Context) issues_model.IssueList {
 		return nil
 	}
 	issueIDs := make([]int64, 0, 10)
-	for _, stringIssueID := range strings.Split(commaSeparatedIssueIDs, ",") {
+	for stringIssueID := range strings.SplitSeq(commaSeparatedIssueIDs, ",") {
 		issueID, err := strconv.ParseInt(stringIssueID, 10, 64)
 		if err != nil {
 			ctx.ServerError("ParseInt", err)
@@ -2603,7 +2601,7 @@ func UpdatePullReviewRequest(ctx *context.Context) {
 			return
 		}
 
-		err = issue_service.IsValidReviewRequest(ctx, reviewer, ctx.Doer, action == "attach", issue, nil)
+		err = issue_service.IsValidReviewRequest(ctx, reviewer, ctx.Doer, action == "attach", issue)
 		if err != nil {
 			if issues_model.IsErrNotValidReviewRequest(err) {
 				log.Warn(
@@ -3680,7 +3678,7 @@ func updateAttachments(ctx *context.Context, item any, files []string) error {
 	if len(files) > 0 {
 		switch content := item.(type) {
 		case *issues_model.Issue:
-			err = issues_model.UpdateIssueAttachments(ctx, content.ID, files)
+			err = issues_model.UpdateIssueAttachments(ctx, content, files)
 		case *issues_model.Comment:
 			err = content.UpdateAttachments(ctx, files)
 		default:

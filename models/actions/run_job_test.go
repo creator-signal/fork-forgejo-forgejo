@@ -8,6 +8,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/timeutil"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
@@ -280,4 +281,91 @@ func TestActionRunJob_HasIncompleteWith(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunHasOtherJobs(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	jobs, err := GetRunJobsByRunID(t.Context(), 791)
+	require.NoError(t, err)
+	assert.Len(t, jobs, 1)
+
+	has, err := RunHasOtherJobs(t.Context(), 791, nil)
+	require.NoError(t, err)
+	assert.True(t, has)
+
+	has, err = RunHasOtherJobs(t.Context(), 791, []*ActionRunJob{})
+	require.NoError(t, err)
+	assert.True(t, has)
+
+	has, err = RunHasOtherJobs(t.Context(), 791, jobs)
+	require.NoError(t, err)
+	assert.False(t, has)
+}
+
+func TestActionRunJobPrepareNextAttempt(t *testing.T) {
+	lastHandle := "original-handle"
+	job := ActionRunJob{ID: 46, Handle: lastHandle}
+
+	err := job.PrepareNextAttempt(StatusWaiting)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, lastHandle, job.Handle)
+	assert.NotEmpty(t, job.Handle)
+	assert.Equal(t, int64(1), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusWaiting, job.Status)
+
+	lastHandle = job.Handle
+	job.Started = timeutil.TimeStampNow()
+	job.Stopped = timeutil.TimeStampNow()
+	job.TaskID = int64(59)
+	job.Status = StatusFailure
+
+	err = job.PrepareNextAttempt(StatusBlocked)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, lastHandle, job.Handle)
+	assert.NotEmpty(t, job.Handle)
+	assert.Equal(t, int64(2), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusBlocked, job.Status)
+
+	lastHandle = job.Handle
+
+	// The job hasn't finished yet. Preparing a next attempt should not be possible. It should be left untouched.
+	err = job.PrepareNextAttempt(StatusWaiting)
+	require.ErrorContains(t, err, "cannot prepare next attempt because job 46 is active: blocked")
+
+	assert.Equal(t, lastHandle, job.Handle)
+	assert.Equal(t, int64(2), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusBlocked, job.Status)
+}
+
+func TestIsRequestedByRunner(t *testing.T) {
+	sameHandle := "4a1ca0be-4470-486d-8504-89b4a5ac00cf"
+	differentHandle := "88423da3-67af-4f2d-9a92-a0db822697e9"
+	emptyHandle := ""
+
+	job := &ActionRunJob{ID: 422, Attempt: 5, Handle: sameHandle}
+
+	assert.True(t, job.IsRequestedByRunner(nil))
+	assert.True(t, job.IsRequestedByRunner(&sameHandle))
+	assert.False(t, job.IsRequestedByRunner(&differentHandle))
+	assert.False(t, job.IsRequestedByRunner(&emptyHandle))
+
+	// Old jobs that were created before the introduction of Handle do not have one.
+	emptyHandleJob := &ActionRunJob{ID: 422, Attempt: 5, Handle: ""}
+
+	assert.True(t, emptyHandleJob.IsRequestedByRunner(nil))
+	assert.True(t, emptyHandleJob.IsRequestedByRunner(&emptyHandle))
+
+	assert.False(t, emptyHandleJob.IsRequestedByRunner(&differentHandle))
 }

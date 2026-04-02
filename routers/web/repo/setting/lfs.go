@@ -44,10 +44,7 @@ func LFSFiles(ctx *context.Context) {
 		ctx.NotFound("LFSFiles", nil)
 		return
 	}
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 	total, err := git_model.CountLFSMetaObjects(ctx, ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.ServerError("LFSFiles", err)
@@ -76,10 +73,7 @@ func LFSLocks(ctx *context.Context) {
 	}
 	ctx.Data["LFSFilesLink"] = ctx.Repo.RepoLink + "/settings/lfs"
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 	total, err := git_model.CountLFSLockByRepoID(ctx, ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.ServerError("LFSLocks", err)
@@ -190,7 +184,7 @@ func lockablesGitAttributes(gitRepo *git.Repository, lfsLocks []*git_model.LFSLo
 		if err != nil {
 			return nil, fmt.Errorf("could not CheckPath(%s): %w", lock.Path, err)
 		}
-		lockables[i] = attrs["lockable"].Bool().Value()
+		lockables[i] = attrs["lockable"].Bool().ValueOrZeroValue()
 	}
 	return lockables, nil
 }
@@ -326,13 +320,13 @@ func LFSFileGet(ctx *context.Context) {
 			if index != len(lines)-1 {
 				line += "\n"
 			}
-			output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, line))
+			fmt.Fprintf(&output, `<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, line)
 		}
 		ctx.Data["FileContent"] = gotemplate.HTML(output.String())
 
 		output.Reset()
 		for i := 0; i < len(lines); i++ {
-			output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
+			fmt.Fprintf(&output, `<span id="L%d">%d</span>`, i+1, i+1)
 		}
 		ctx.Data["LineNums"] = gotemplate.HTML(output.String())
 

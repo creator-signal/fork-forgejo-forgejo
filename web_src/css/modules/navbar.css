@@ -8,17 +8,12 @@
   padding: 0 10px;
 }
 
-#navbar,
-#navbar .navbar-left,
-#navbar .navbar-right {
-  min-height: 49px; /* +1px border-bottom */
-}
-
 #navbar .navbar-left,
 #navbar .navbar-right {
   margin: 0;
   display: flex;
   align-items: center;
+  min-height: 48px;
 }
 
 #navbar-logo {
@@ -31,10 +26,6 @@
   padding-top: 3px;
   padding-bottom: 3px;
   display: flex;
-}
-
-#navbar > .menu > .item {
-  color: var(--color-nav-text);
 }
 
 #navbar .dropdown .item {
@@ -51,6 +42,12 @@
 #navbar .secondary.menu > .item > .svg,
 #navbar .right.menu > .item > .svg {
   margin-right: 0;
+}
+
+/* icon with notification counter - positioned relative container */
+#navbar .notification-icon-relative {
+  position: relative;
+  display: flex;
 }
 
 @media (max-width: 767.98px) {
@@ -82,6 +79,7 @@
   /* show items if the navbar is open */
   #navbar.navbar-menu-open {
     padding-bottom: 8px;
+    gap: .35714286em;
   }
   #navbar.navbar-menu-open,
   #navbar.navbar-menu-open .navbar-right {
@@ -129,6 +127,10 @@
   padding-inline-start: 0.75rem;
   /* The min height is dictated by the largest dropdown, which is the one that has an avatar in the opener */
   min-height: 38px;
+}
+
+#navbar details.dropdown .dropdown-icon {
+  display: contents;
 }
 
 #navbar a.item .notification_count {

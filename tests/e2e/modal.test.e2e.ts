@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // @watch start
-// templates/devtest/modal.tmpl
+// templates/demo/modal.tmpl
 // templates/repo/editor/edit.tmpl
 // templates/repo/editor/patch.tmpl
 // web_src/js/features/repo-editor.js
@@ -50,7 +50,7 @@ test('Dialog modal', async ({page}) => {
 
 test('Dialog modal: width', async ({page, isMobile}) => {
   // This test doesn't need JS and runs a little faster without it
-  await page.goto('/devtest/modal');
+  await page.goto('/-/demo/modal');
 
   // Open modal with short content
   const shortModal = page.locator('#short-modal');
@@ -102,4 +102,28 @@ test('Dialog modal: width', async ({page, isMobile}) => {
     // Bound by max-width
     expect(width).toBe(800);
   }
+});
+
+test('Dialog modal: short viewport', async ({page, isMobile}) => {
+  test.skip(isMobile);
+
+  // Small height for viewport.
+  await page.setViewportSize({
+    width: 1000,
+    height: 200,
+  });
+
+  await page.goto('/user2/repo1/settings');
+
+  // Open modal with long content
+  const deleteModal = page.locator('#delete-repo-modal');
+  await expect(deleteModal).toBeHidden();
+  await page.getByRole('button', {name: 'Delete this repository'}).click();
+  await expect(deleteModal).toBeVisible();
+
+  // Scroll to the bottom.
+  const scrollY = await page.evaluate(() => document.querySelector('.ui.dimmer').scrollHeight);
+  await page.mouse.wheel(0, scrollY);
+  const scrollTop = await page.evaluate(() => document.querySelector('.ui.dimmer').scrollTop);
+  expect(scrollTop).toBeGreaterThan(0);
 });

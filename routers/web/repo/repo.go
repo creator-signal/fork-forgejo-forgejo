@@ -92,7 +92,7 @@ func checkContextUser(ctx *context.Context, uid int64) *user_model.User {
 
 	if !ctx.Doer.IsAdmin {
 		orgsAvailable := []*organization.Organization{}
-		for i := 0; i < len(orgs); i++ {
+		for i := range orgs {
 			if orgs[i].CanCreateRepo() {
 				orgsAvailable = append(orgsAvailable, orgs[i])
 			}
@@ -634,6 +634,7 @@ func SearchRepo(ctx *context.Context) {
 		opts.Mirror = optional.Some(false)
 		opts.Collaborate = optional.Some(true)
 	case "":
+		break
 	default:
 		ctx.Error(http.StatusUnprocessableEntity, fmt.Sprintf("Invalid search mode: \"%s\"", mode))
 		return
@@ -687,9 +688,9 @@ func SearchRepo(ctx *context.Context) {
 
 	ctx.SetTotalCountHeader(count)
 
-	latestCommitStatuses, err := commitstatus_service.FindReposLastestCommitStatuses(ctx, repos)
+	latestCommitStatuses, err := commitstatus_service.FindReposLatestCommitStatuses(ctx, repos)
 	if err != nil {
-		log.Error("FindReposLastestCommitStatuses: %v", err)
+		log.Error("FindReposLatestCommitStatuses: %v", err)
 		ctx.JSON(http.StatusInternalServerError, nil)
 		return
 	}

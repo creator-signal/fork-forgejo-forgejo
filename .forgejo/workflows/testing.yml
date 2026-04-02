@@ -14,7 +14,7 @@ jobs:
     if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
     runs-on: docker
     container:
-      image: 'data.forgejo.org/oci/node:24-bookworm'
+      image: 'data.forgejo.org/oci/node:24-trixie'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - name: event info
@@ -24,21 +24,29 @@ jobs:
           EOF
       - uses: https://data.forgejo.org/actions/checkout@v6
       - uses: ./.forgejo/workflows-composite/setup-env
-      - run: su forgejo -c 'make deps-backend deps-tools'
-      - run: su forgejo -c 'make --always-make -j$(nproc) lint-backend tidy-check swagger-check lint-swagger fmt-check swagger-validate' # ensure the "go-licenses" make target runs
+      # DO NOT add checks here, but rather in the makefile
+      - run: su forgejo -c './tools/cimake.sh pr-go'
+      # this will re-run the backend target also contained in pr-go, but
+      # a re-build is insignificant
       - uses: ./.forgejo/workflows-composite/build-backend
   frontend-checks:
     if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
     runs-on: docker
     container:
-      image: 'data.forgejo.org/oci/node:24-bookworm'
+      image: 'data.forgejo.org/oci/node:24-trixie'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
+
+      - uses: https://data.forgejo.org/actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+
       - run: make deps-frontend
       - run: make lint-frontend
       - run: make checks-frontend
-      - run: |
+      - name: make test-frontend-coverage
+        run: |
           # Usage of `dayjs` can be impacted by local system timezone and can be sensitive to DST differences; since
           # frontend tests are very short they're run twice with varying DST rules to reduce regression risk.
           TZ=Europe/Berlin make test-frontend-coverage
@@ -50,7 +58,7 @@ jobs:
         run: |
           apt-get update -qq
           apt-get -q install -qq -y zstd
-      - name: "Cache frontend build for playwright testing"
+      - name: 'Cache frontend build for playwright testing'
         uses: https://data.forgejo.org/actions/cache/save@v5
         with:
           path: ${{github.workspace}}/public/assets
@@ -60,7 +68,7 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: 'data.forgejo.org/oci/node:24-bookworm'
+      image: 'data.forgejo.org/oci/node:24-trixie'
       options: --tmpfs /tmp:exec,noatime
     services:
       elasticsearch:
@@ -68,7 +76,7 @@ jobs:
         options: --tmpfs /bitnami/elasticsearch/data
         env:
           discovery.type: single-node
-          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+          ES_JAVA_OPTS: '-Xms512m -Xmx512m'
       minio:
         image: data.forgejo.org/oci/bitnami/minio:2024.8.17
         options: >-
@@ -80,10 +88,6 @@ jobs:
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
       - uses: ./.forgejo/workflows-composite/setup-env
-      - name: install git >= 2.42
-        uses: ./.forgejo/workflows-composite/apt-install-from
-        with:
-          packages: git
       - name: test release-notes-assistant.sh
         run: |
           apt-get -q install -qq -y jq
@@ -109,13 +113,13 @@ jobs:
         with:
           fetch-depth: 20
       - uses: ./.forgejo/workflows-composite/setup-env
-      - name: "Restore frontend build"
+      - name: 'Restore frontend build'
         uses: https://data.forgejo.org/actions/cache/restore@v5
         id: cache-frontend
         with:
           path: ${{github.workspace}}/public/assets
           key: frontend-build-${{ github.sha }}
-      - name: "Build frontend (if not cached)"
+      - name: 'Build frontend (if not cached)'
         if: steps.cache-frontend.outputs.cache-hit != 'true'
         run: |
           su forgejo -c 'make deps-frontend frontend'
@@ -140,7 +144,7 @@ jobs:
           RUN_ALL: ${{steps.run-all.all}}
       - name: Upload test artifacts on failure
         if: failure()
-        uses: https://data.forgejo.org/forgejo/upload-artifact@v4
+        uses: https://data.forgejo.org/forgejo/upload-artifact@v5
         with:
           name: test-artifacts.zip
           path: tests/e2e/test-artifacts/
@@ -150,7 +154,7 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks, test-unit]
     container:
-      image: 'data.forgejo.org/oci/node:24-bookworm'
+      image: 'data.forgejo.org/oci/node:24-trixie'
       options: --tmpfs /tmp:exec,noatime
     name: ${{ format('test-remote-cacher ({0})', matrix.cacher.name) }}
     strategy:
@@ -173,14 +177,10 @@ jobs:
         image: ${{ matrix.cacher.image }}
         options: ${{ matrix.cacher.options }}
         env:
-          ALLOW_EMPTY_PASSWORD: "yes" # redis & valkey will immediately shutdown with no defined password unless overridden
+          ALLOW_EMPTY_PASSWORD: 'yes' # redis & valkey will immediately shutdown with no defined password unless overridden
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
       - uses: ./.forgejo/workflows-composite/setup-env
-      - name: install git >= 2.42
-        uses: ./.forgejo/workflows-composite/apt-install-from
-        with:
-          packages: git
       - uses: ./.forgejo/workflows-composite/build-backend
       - run: |
           su forgejo -c 'make test-remote-cacher test-check'
@@ -194,7 +194,7 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: 'data.forgejo.org/oci/node:24-bookworm'
+      image: 'data.forgejo.org/oci/node:24-trixie'
       options: --tmpfs /tmp:exec,noatime
     services:
       mysql:
@@ -210,10 +210,10 @@ jobs:
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
       - uses: ./.forgejo/workflows-composite/setup-env
-      - name: install dependencies & git >= 2.42
-        uses: ./.forgejo/workflows-composite/apt-install-from
-        with:
-          packages: git git-lfs
+      - name: install dependencies
+        run: apt-get update -qq && apt-get -q install -qq -y git-lfs
+        env:
+          DEBIAN_FRONTEND: noninteractive
       - uses: ./.forgejo/workflows-composite/build-backend
       - run: |
           su forgejo -c 'make test-mysql-migration test-mysql'
@@ -225,7 +225,7 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: 'data.forgejo.org/oci/node:24-bookworm'
+      image: 'data.forgejo.org/oci/node:24-trixie'
       options: --tmpfs /tmp:exec,noatime
     services:
       minio:
@@ -248,10 +248,10 @@ jobs:
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
       - uses: ./.forgejo/workflows-composite/setup-env
-      - name: install dependencies & git >= 2.42
-        uses: ./.forgejo/workflows-composite/apt-install-from
-        with:
-          packages: git git-lfs
+      - name: install dependencies
+        run: apt-get update -qq && apt-get -q install -qq -y git-lfs
+        env:
+          DEBIAN_FRONTEND: noninteractive
       - uses: ./.forgejo/workflows-composite/build-backend
       - run: |
           su forgejo -c 'make test-pgsql-migration test-pgsql'
@@ -265,15 +265,15 @@ jobs:
     runs-on: docker
     needs: [backend-checks, frontend-checks]
     container:
-      image: 'data.forgejo.org/oci/node:24-bookworm'
+      image: 'data.forgejo.org/oci/node:24-trixie'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
       - uses: ./.forgejo/workflows-composite/setup-env
-      - name: install dependencies & git >= 2.42
-        uses: ./.forgejo/workflows-composite/apt-install-from
-        with:
-          packages: git git-lfs
+      - name: install dependencies
+        run: apt-get update -qq && apt-get -q install -qq -y git-lfs
+        env:
+          DEBIAN_FRONTEND: noninteractive
       - uses: ./.forgejo/workflows-composite/build-backend
       - run: |
           su forgejo -c 'make test-sqlite-migration test-sqlite'
@@ -293,10 +293,23 @@ jobs:
       - test-remote-cacher
       - test-unit
     container:
-      image: 'data.forgejo.org/oci/node:24-bookworm'
+      image: 'data.forgejo.org/oci/node:24-trixie'
       options: --tmpfs /tmp:exec,noatime
     steps:
       - uses: https://data.forgejo.org/actions/checkout@v6
       - uses: ./.forgejo/workflows-composite/setup-env
       - run: su forgejo -c 'make deps-backend deps-tools'
       - run: su forgejo -c 'make security-check'
+  semgrep:
+    if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
+    name: semgrep/ci
+    runs-on: docker
+    container:
+      image: 'data.forgejo.org/oci/semgrep:latest'
+    steps:
+      - run: apk add nodejs # required for actions/checkout
+      - uses: https://data.forgejo.org/actions/checkout@v6
+      - name: self-check semgrep rules
+        run: semgrep --test .semgrep/tests/ --config .semgrep/config/
+      - name: semgrep ci
+        run: semgrep ci --config .semgrep/config/ --metrics=off

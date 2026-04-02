@@ -7,6 +7,7 @@
 package repo
 
 import (
+	stdCtx "context"
 	"errors"
 	"fmt"
 	"html"
@@ -16,6 +17,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"forgejo.org/models"
 	actions_model "forgejo.org/models/actions"
@@ -1008,6 +1010,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		if err == nil {
 			ctx.Data["NoteCommit"] = note.Commit
 			ctx.Data["NoteAuthor"] = user_model.ValidateCommitWithEmail(ctx, note.Commit)
+			ctx.Data["NoteRaw"] = string(charset.ToUTF8WithFallback(note.Message, charset.ConvertOpts{}))
 			ctx.Data["NoteRendered"], err = markup.RenderCommitMessage(&markup.RenderContext{
 				Links: markup.Links{
 					Base:       ctx.Repo.RepoLink,
@@ -1419,7 +1422,15 @@ func MergePullRequest(ctx *context.Context) {
 		}
 	}
 
-	if err := pull_service.Merge(ctx, pr, ctx.Doer, ctx.Repo.GitRepo, repo_model.MergeStyle(form.Do), form.HeadCommitID, message, false); err != nil {
+	// If the HTTP request is cancelled by the user agent, don't stop work. We've started a merge and need to finish all
+	// the related work. All usage of `ctx` throughout the rest of this function should be only for error handling or UI
+	// interactions, and all effective work should use `workCtx` instead.
+	workCtx, cancelWorkCtx := stdCtx.WithTimeout(
+		stdCtx.WithoutCancel(ctx),
+		time.Duration(setting.Git.Timeout.Default)*time.Second)
+	defer cancelWorkCtx()
+
+	if err := pull_service.Merge(workCtx, pr, ctx.Doer, ctx.Repo.GitRepo, repo_model.MergeStyle(form.Do), form.HeadCommitID, message, false); err != nil {
 		if models.IsErrInvalidMergeStyle(err) {
 			ctx.JSONError(ctx.Tr("repo.pulls.invalid_merge_option"))
 		} else if models.IsErrMergeConflicts(err) {
@@ -1490,7 +1501,7 @@ func MergePullRequest(ctx *context.Context) {
 	}
 	log.Trace("Pull request merged: %d", pr.ID)
 
-	if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
+	if err := stopTimerIfAvailable(workCtx, ctx.Doer, issue); err != nil {
 		ctx.ServerError("stopTimerIfAvailable", err)
 		return
 	}
@@ -1503,7 +1514,7 @@ func MergePullRequest(ctx *context.Context) {
 			headRepo = ctx.Repo.GitRepo
 		} else {
 			var err error
-			headRepo, err = gitrepo.OpenRepository(ctx, pr.HeadRepo)
+			headRepo, err = gitrepo.OpenRepository(workCtx, pr.HeadRepo)
 			if err != nil {
 				ctx.ServerError(fmt.Sprintf("OpenRepository[%s]", pr.HeadRepo.FullName()), err)
 				return
@@ -1511,7 +1522,7 @@ func MergePullRequest(ctx *context.Context) {
 			defer headRepo.Close()
 		}
 
-		if err := repo_service.DeleteBranchAfterMerge(ctx, ctx.Doer, pr, headRepo); err != nil {
+		if err := repo_service.DeleteBranchAfterMerge(workCtx, ctx.Doer, pr, headRepo); err != nil {
 			switch {
 			case errors.Is(err, repo_service.ErrBranchIsDefault):
 				ctx.Flash.Error(ctx.Tr("repo.pulls.delete_after_merge.head_branch.is_default"))
@@ -1538,20 +1549,25 @@ func CancelAutoMergePullRequest(ctx *context.Context) {
 		return
 	}
 
-	if err := automerge.RemoveScheduledAutoMerge(ctx, ctx.Doer, issue.PullRequest); err != nil {
-		if db.IsErrNotExist(err) {
+	if err := automerge.RemoveScheduledAutoMerge(ctx, ctx.Doer, issue.PullRequest, ctx.Repo.Permission); err != nil {
+		switch {
+		case errors.Is(err, util.ErrPermissionDenied):
+			ctx.Flash.Error(ctx.Tr("repo.pulls.auto_merge.no_permission"))
+			ctx.Redirect(issue.HTMLURL())
+		case db.IsErrNotExist(err):
 			ctx.Flash.Error(ctx.Tr("repo.pulls.auto_merge_not_scheduled"))
-			ctx.Redirect(fmt.Sprintf("%s/pulls/%d", ctx.Repo.RepoLink, issue.Index))
-			return
+			ctx.Redirect(issue.HTMLURL())
+		default:
+			ctx.ServerError("RemoveScheduledAutoMerge", err)
 		}
-		ctx.ServerError("RemoveScheduledAutoMerge", err)
 		return
 	}
+
 	ctx.Flash.Success(ctx.Tr("repo.pulls.auto_merge_canceled_schedule"))
-	ctx.Redirect(fmt.Sprintf("%s/pulls/%d", ctx.Repo.RepoLink, issue.Index))
+	ctx.Redirect(issue.HTMLURL())
 }
 
-func stopTimerIfAvailable(ctx *context.Context, user *user_model.User, issue *issues_model.Issue) error {
+func stopTimerIfAvailable(ctx stdCtx.Context, user *user_model.User, issue *issues_model.Issue) error {
 	if issues_model.StopwatchExists(ctx, user.ID, issue.ID) {
 		if err := issues_model.CreateOrStopIssueStopwatch(ctx, user, issue); err != nil {
 			return err
@@ -2012,4 +2028,12 @@ func UpdateTrustWithPullRequestActions(ctx *context.Context) {
 	}
 
 	ctx.Redirect(fmt.Sprintf("%s#pull-request-trust-panel", pr.Issue.Link()))
+}
+
+func SetCommitNotesPullRequest(ctx *context.Context) {
+	setCommitNotes(ctx, fmt.Sprintf("%s/pulls/%s/commits/%s", ctx.Repo.Repository.Link(), ctx.Params(":index"), ctx.Params(":sha")))
+}
+
+func RemoveCommitNotesPullRequest(ctx *context.Context) {
+	removeCommitNotes(ctx, fmt.Sprintf("%s/pulls/%s/commits/%s", ctx.Repo.Repository.Link(), ctx.Params(":index"), ctx.Params(":sha")))
 }

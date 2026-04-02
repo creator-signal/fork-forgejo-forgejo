@@ -25,6 +25,7 @@ import (
 
 type mockRunner struct {
 	client           *mockRunnerClient
+	uuid, token      string
 	lastTasksVersion int64
 }
 
@@ -38,7 +39,7 @@ func newMockRunner() *mockRunner {
 	return &mockRunner{client: client}
 }
 
-func newMockRunnerClient(uuid, token string) *mockRunnerClient {
+func newMockRunnerClientWithRequestKey(uuid, token, requestKey string) *mockRunnerClient {
 	baseURL := fmt.Sprintf("%sapi/actions", setting.AppURL)
 
 	opt := connect.WithInterceptors(connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
@@ -48,6 +49,9 @@ func newMockRunnerClient(uuid, token string) *mockRunnerClient {
 			}
 			if token != "" {
 				req.Header().Set("x-runner-token", token)
+			}
+			if requestKey != "" {
+				req.Header().Set("x-runner-request-key", requestKey)
 			}
 			return next(ctx, req)
 		}
@@ -61,6 +65,10 @@ func newMockRunnerClient(uuid, token string) *mockRunnerClient {
 	return client
 }
 
+func newMockRunnerClient(uuid, token string) *mockRunnerClient {
+	return newMockRunnerClientWithRequestKey(uuid, token, "")
+}
+
 func (r *mockRunner) doPing(t *testing.T) {
 	resp, err := r.client.pingServiceClient.Ping(t.Context(), connect.NewRequest(&pingv1.PingRequest{
 		Data: "mock-runner",
@@ -72,13 +80,35 @@ func (r *mockRunner) doPing(t *testing.T) {
 func (r *mockRunner) doRegister(t *testing.T, name, token string, labels []string) {
 	r.doPing(t)
 	resp, err := r.client.runnerServiceClient.Register(t.Context(), connect.NewRequest(&runnerv1.RegisterRequest{
-		Name:    name,
-		Token:   token,
-		Version: "mock-runner-version",
-		Labels:  labels,
+		Name:      name,
+		Token:     token,
+		Version:   "mock-runner-version",
+		Labels:    labels,
+		Ephemeral: false,
 	}))
 	require.NoError(t, err)
-	r.client = newMockRunnerClient(resp.Msg.Runner.Uuid, resp.Msg.Runner.Token)
+	r.uuid = resp.Msg.Runner.Uuid
+	r.token = resp.Msg.Runner.Token
+	r.client = newMockRunnerClient(r.uuid, r.token)
+}
+
+func (r *mockRunner) doRegisterEphemeral(t *testing.T, name, token string, labels []string) {
+	r.doPing(t)
+	resp, err := r.client.runnerServiceClient.Register(t.Context(), connect.NewRequest(&runnerv1.RegisterRequest{
+		Name:      name,
+		Token:     token,
+		Version:   "mock-runner-version",
+		Labels:    labels,
+		Ephemeral: true,
+	}))
+	require.NoError(t, err)
+	r.uuid = resp.Msg.Runner.Uuid
+	r.token = resp.Msg.Runner.Token
+	r.client = newMockRunnerClient(r.uuid, r.token)
+}
+
+func (r *mockRunner) setRequestKey(requestKey string) {
+	r.client = newMockRunnerClientWithRequestKey(r.uuid, r.token, requestKey)
 }
 
 func (r *mockRunner) registerAsRepoRunner(t *testing.T, ownerName, repoName, runnerName string, labels []string) {
@@ -96,9 +126,34 @@ func (r *mockRunner) registerAsRepoRunner(t *testing.T, ownerName, repoName, run
 	r.doRegister(t, runnerName, registrationToken.Token, labels)
 }
 
+func (r *mockRunner) registerAsEphemeralRepoRunner(t *testing.T, ownerName, repoName, runnerName string, labels []string) {
+	if !setting.Database.Type.IsSQLite3() {
+		assert.FailNow(t, "registering a mock runner when using a database other than SQLite leaves leftovers")
+	}
+	session := loginUser(t, ownerName)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+	req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/actions/runners/registration-token", ownerName, repoName)).AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+	var registrationToken struct {
+		Token string `json:"token"`
+	}
+	DecodeJSON(t, resp, &registrationToken)
+	r.doRegisterEphemeral(t, runnerName, registrationToken.Token, labels)
+}
+
 func (r *mockRunner) maybeFetchTask(t *testing.T) *runnerv1.Task {
 	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
 		TasksVersion: r.lastTasksVersion,
+	}))
+	require.NoError(t, err)
+	r.lastTasksVersion = resp.Msg.TasksVersion
+	return resp.Msg.Task
+}
+
+func (r *mockRunner) maybeFetchSingleTask(t *testing.T, handle *string) *runnerv1.Task {
+	resp, err := r.client.runnerServiceClient.FetchSingleTask(t.Context(), connect.NewRequest(&runnerv1.FetchSingleTaskRequest{
+		TasksVersion: r.lastTasksVersion,
+		Handle:       handle,
 	}))
 	require.NoError(t, err)
 	r.lastTasksVersion = resp.Msg.TasksVersion

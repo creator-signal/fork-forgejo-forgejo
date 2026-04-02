@@ -49,6 +49,10 @@ export default {
       type: String,
       required: true,
     },
+    workflowSourceURL: {
+      type: String,
+      required: true,
+    },
     locale: {
       type: Object,
       required: true,
@@ -78,6 +82,7 @@ export default {
         title: '',
         titleHTML: '',
         status: '',
+        description: '',
         canCancel: false,
         canApprove: false,
         canRerun: false,
@@ -93,9 +98,8 @@ export default {
           // },
         ],
         commit: {
-          localeCommit: '',
-          localePushedBy: '',
           localeWorkflow: '',
+          localeAllRuns: '',
           shortSHA: '',
           link: '',
           pusher: {
@@ -477,10 +481,8 @@ export default {
         </div>
       </div>
       <div class="action-summary">
-        {{ run.commit.localeCommit }}
-        <a class="muted" :href="run.commit.link">{{ run.commit.shortSHA }}</a>
-        {{ run.commit.localePushedBy }}
-        <a class="muted" :href="run.commit.pusher.link">{{ run.commit.pusher.displayName }}</a>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <span v-html="run.description"/>
         <span class="ui label tw-max-w-full" v-if="run.commit.shortSHA">
           <span v-if="run.commit.branch.isDeleted" class="gt-ellipsis tw-line-through" :data-tooltip-content="run.commit.branch.name">{{ run.commit.branch.name }}</span>
           <a v-else class="gt-ellipsis" :href="run.commit.branch.link" :data-tooltip-content="run.commit.branch.name">{{ run.commit.branch.name }}</a>
@@ -488,7 +490,7 @@ export default {
       </div>
       <div class="action-summary">
         {{ run.commit.localeWorkflow }}
-        <a class="muted" :href="workflowURL">{{ workflowName }}</a>
+        <a :href="workflowSourceURL">{{ workflowName }}</a> <span>(<a :href="workflowURL">{{ run.commit.localeAllRuns }}</a>)</span>
       </div>
       <div class="ui error message pre-execution-error" v-if="run.preExecutionError">
         <div class="header">

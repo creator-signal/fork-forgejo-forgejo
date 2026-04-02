@@ -20,7 +20,7 @@ type ReviewList []*Review
 // LoadReviewers loads reviewers
 func (reviews ReviewList) LoadReviewers(ctx context.Context) error {
 	reviewerIDs := make([]int64, len(reviews))
-	for i := 0; i < len(reviews); i++ {
+	for i := range reviews {
 		reviewerIDs[i] = reviews[i].ReviewerID
 	}
 	reviewers, err := user_model.GetPossibleUserByIDs(ctx, reviewerIDs)
@@ -113,8 +113,8 @@ func (opts *FindReviewOptions) toCond() builder.Cond {
 	if opts.OfficialOnly {
 		cond = cond.And(builder.Eq{"official": true})
 	}
-	if opts.Dismissed.Has() {
-		cond = cond.And(builder.Eq{"dismissed": opts.Dismissed.Value()})
+	if has, value := opts.Dismissed.Get(); has {
+		cond = cond.And(builder.Eq{"dismissed": value})
 	}
 	return cond
 }

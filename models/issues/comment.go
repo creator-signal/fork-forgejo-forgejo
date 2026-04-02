@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"slices"
 	"strconv"
 	"unicode/utf8"
 
@@ -198,12 +199,7 @@ func (t CommentType) HasMailReplySupport() bool {
 }
 
 func (t CommentType) CountedAsConversation() bool {
-	for _, ct := range ConversationCountedCommentType() {
-		if t == ct {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ConversationCountedCommentType(), t)
 }
 
 // ConversationCountedCommentType returns the comment types that are counted as a conversation
@@ -611,11 +607,15 @@ func (c *Comment) UpdateAttachments(ctx context.Context, uuids []string) error {
 	}
 	defer committer.Close()
 
-	attachments, err := repo_model.GetAttachmentsByUUIDs(ctx, uuids)
-	if err != nil {
-		return fmt.Errorf("getAttachmentsByUUIDs [uuids: %v]: %w", uuids, err)
+	if err := c.LoadIssue(ctx); err != nil {
+		return fmt.Errorf("LoadIssue: %w", err)
 	}
-	for i := 0; i < len(attachments); i++ {
+
+	attachments, err := repo_model.FindRepoAttachmentsByUUID(ctx, c.Issue.RepoID, uuids, repo_model.FindAttachmentOptions{})
+	if err != nil {
+		return fmt.Errorf("FindRepoAttachmentsByUUID[uuids=%q,repoID=%d]: %w", uuids, c.Issue.RepoID, err)
+	}
+	for i := range attachments {
 		attachments[i].IssueID = c.IssueID
 		attachments[i].CommentID = c.ID
 		if err := repo_model.UpdateAttachment(ctx, attachments[i]); err != nil {
@@ -889,7 +889,7 @@ func updateCommentInfos(ctx context.Context, opts *CreateCommentOptions, comment
 	// Check comment type.
 	switch opts.Type {
 	case CommentTypeCode:
-		if err = updateAttachments(ctx, opts, comment); err != nil {
+		if err := comment.UpdateAttachments(ctx, opts.Attachments); err != nil {
 			return err
 		}
 		if comment.ReviewID != 0 {
@@ -909,7 +909,7 @@ func updateCommentInfos(ctx context.Context, opts *CreateCommentOptions, comment
 		}
 		fallthrough
 	case CommentTypeReview:
-		if err = updateAttachments(ctx, opts, comment); err != nil {
+		if err := comment.UpdateAttachments(ctx, opts.Attachments); err != nil {
 			return err
 		}
 	case CommentTypeReopen, CommentTypeClose:
@@ -919,23 +919,6 @@ func updateCommentInfos(ctx context.Context, opts *CreateCommentOptions, comment
 	}
 	// update the issue's updated_unix column
 	return UpdateIssueCols(ctx, opts.Issue, "updated_unix")
-}
-
-func updateAttachments(ctx context.Context, opts *CreateCommentOptions, comment *Comment) error {
-	attachments, err := repo_model.GetAttachmentsByUUIDs(ctx, opts.Attachments)
-	if err != nil {
-		return fmt.Errorf("getAttachmentsByUUIDs [uuids: %v]: %w", opts.Attachments, err)
-	}
-	for i := range attachments {
-		attachments[i].IssueID = opts.Issue.ID
-		attachments[i].CommentID = comment.ID
-		// No assign value could be 0, so ignore AllCols().
-		if _, err = db.GetEngine(ctx).ID(attachments[i].ID).Update(attachments[i]); err != nil {
-			return fmt.Errorf("update attachment [%d]: %w", attachments[i].ID, err)
-		}
-	}
-	comment.Attachments = attachments
-	return nil
 }
 
 func createDeadlineComment(ctx context.Context, doer *user_model.User, issue *Issue, newDeadlineUnix timeutil.TimeStamp) (*Comment, error) {
@@ -1102,11 +1085,11 @@ func (opts FindCommentsOptions) ToConds() builder.Cond {
 	if len(opts.TreePath) > 0 {
 		cond = cond.And(builder.Eq{"comment.tree_path": opts.TreePath})
 	}
-	if opts.Invalidated.Has() {
-		cond = cond.And(builder.Eq{"comment.invalidated": opts.Invalidated.Value()})
+	if has, value := opts.Invalidated.Get(); has {
+		cond = cond.And(builder.Eq{"comment.invalidated": value})
 	}
-	if opts.IsPull.Has() {
-		cond = cond.And(builder.Eq{"issue.is_pull": opts.IsPull.Value()})
+	if has, value := opts.IsPull.Get(); has {
+		cond = cond.And(builder.Eq{"issue.is_pull": value})
 	}
 	return cond
 }

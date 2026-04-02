@@ -179,6 +179,26 @@ func getTestCases() []struct {
 			opts:  &repo_model.SearchRepoOptions{Keyword: "user20/", ListOptions: db.ListOptions{Page: 1, PageSize: 10}, Private: true, OwnerID: 0},
 			count: 4,
 		},
+		{
+			name:  "OwnerAndName Single",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerAndName: [][2]string{{"user15", "big_test_public_1"}}},
+			count: 1,
+		},
+		{
+			name:  "OwnerAndName Multiple",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerAndName: [][2]string{{"user15", "big_test_public_1"}, {"user15", "big_test_public_2"}}},
+			count: 2,
+		},
+		{
+			name:  "OwnerAndName Miss",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerAndName: [][2]string{{"user15", "big_test_public_1"}, {"user15", "blah blah"}}},
+			count: 1,
+		},
+		{
+			name:  "OwnerAndName Empty",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerAndName: [][2]string{}},
+			count: 0,
+		},
 	}
 
 	return testCases
@@ -331,21 +351,21 @@ func TestSearchRepository(t *testing.T) {
 						assert.False(t, repo.IsPrivate)
 					}
 
-					if testCase.opts.Fork.Value() && testCase.opts.Mirror.Value() {
+					if testCase.opts.Fork.ValueOrZeroValue() && testCase.opts.Mirror.ValueOrZeroValue() {
 						assert.True(t, repo.IsFork && repo.IsMirror)
 					} else {
-						if testCase.opts.Fork.Has() {
-							assert.Equal(t, testCase.opts.Fork.Value(), repo.IsFork)
+						if has, value := testCase.opts.Fork.Get(); has {
+							assert.Equal(t, value, repo.IsFork)
 						}
 
-						if testCase.opts.Mirror.Has() {
-							assert.Equal(t, testCase.opts.Mirror.Value(), repo.IsMirror)
+						if has, value := testCase.opts.Mirror.Get(); has {
+							assert.Equal(t, value, repo.IsMirror)
 						}
 					}
 
 					if testCase.opts.OwnerID > 0 && !testCase.opts.AllPublic {
-						if testCase.opts.Collaborate.Has() {
-							if testCase.opts.Collaborate.Value() {
+						if has, value := testCase.opts.Collaborate.Get(); has {
+							if value {
 								assert.NotEqual(t, testCase.opts.OwnerID, repo.Owner.ID)
 							} else {
 								assert.Equal(t, testCase.opts.OwnerID, repo.Owner.ID)

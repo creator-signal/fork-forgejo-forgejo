@@ -7,7 +7,7 @@ package pull
 import (
 	"context"
 	"fmt"
-	"net/url"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -80,11 +80,7 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 		issueReference = "!"
 	}
 
-	issueURL, err := url.JoinPath(setting.AppURL, pr.Issue.Link())
-	if err != nil {
-		return "", "", err
-	}
-	reviewedOn := fmt.Sprintf("Reviewed-on: %s", issueURL)
+	reviewedOn := fmt.Sprintf("Reviewed-on: %s", pr.Issue.HTMLURL())
 	reviewedBy := pr.GetApprovers(ctx)
 
 	body = fmt.Sprintf("%s\n%s", reviewedOn, reviewedBy)
@@ -144,9 +140,7 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 				vars["HeadRepoOwnerName"] = pr.HeadRepo.OwnerName
 				vars["HeadRepoName"] = pr.HeadRepo.Name
 			}
-			for extraKey, extraValue := range extraVars {
-				vars[extraKey] = extraValue
-			}
+			maps.Copy(vars, extraVars)
 			refs, err := pr.ResolveCrossReferences(ctx)
 			if err == nil {
 				closeIssueIndexes := make([]string, 0, len(refs))
@@ -206,41 +200,6 @@ func expandDefaultMergeMessage(template string, vars map[string]string, message,
 // GetDefaultMergeMessage returns default message used when merging pull request
 func GetDefaultMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issues_model.PullRequest, mergeStyle repo_model.MergeStyle) (message, body string, err error) {
 	return getMergeMessage(ctx, baseGitRepo, pr, mergeStyle, nil)
-}
-
-func AddCommitMessageTrailer(message, tailerKey, tailerValue string) string {
-	trailerLine := tailerKey + ": " + tailerValue
-	message = strings.ReplaceAll(message, "\r\n", "\n")
-	message = strings.ReplaceAll(message, "\r", "\n")
-	if strings.Contains(message, "\n"+trailerLine+"\n") || strings.HasSuffix(message, "\n"+trailerLine) {
-		return message
-	}
-
-	if !strings.HasSuffix(message, "\n") {
-		message += "\n"
-	}
-	lastNewLine := strings.LastIndexByte(message[:len(message)-1], '\n')
-	keyEnd := -1
-	if lastNewLine != -1 {
-		keyEnd = strings.IndexByte(message[lastNewLine:], ':')
-		if keyEnd != -1 {
-			keyEnd += lastNewLine
-		}
-	}
-	var lastLineKey string
-	if lastNewLine != -1 && keyEnd != -1 {
-		lastLineKey = message[lastNewLine+1 : keyEnd]
-	}
-
-	isLikelyTrailerLine := lastLineKey != "" && unicode.IsUpper(rune(lastLineKey[0])) && strings.Contains(message, "-")
-	for i := 0; isLikelyTrailerLine && i < len(lastLineKey); i++ {
-		r := rune(lastLineKey[i])
-		isLikelyTrailerLine = unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-'
-	}
-	if !strings.HasSuffix(message, "\n\n") && !isLikelyTrailerLine {
-		message += "\n"
-	}
-	return message + trailerLine
 }
 
 // Merge merges pull request to base repository.

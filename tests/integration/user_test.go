@@ -117,7 +117,6 @@ func TestRenameReservedUsername(t *testing.T) {
 		"avatar",
 		"avatars",
 		"captcha",
-		"devtest",
 		"explore",
 		"favicon.ico",
 		"ghost",
@@ -257,7 +256,7 @@ func TestAccessTokenRegenerate(t *testing.T) {
 
 	assert.Equal(t, "TestAccessToken", oldTokenName)
 
-	req := NewRequestWithValues(t, "POST", "/user/settings/applications/regenerate", map[string]string{
+	req := NewRequestWithValues(t, "POST", "/user/settings/applications/tokens/regenerate", map[string]string{
 		"id": strconv.Itoa(oldTokenID),
 	})
 	session.MakeRequest(t, req, http.StatusOK)
@@ -269,7 +268,7 @@ func TestAccessTokenRegenerate(t *testing.T) {
 	assert.Equal(t, oldTokenID, newTokenID)
 	assert.Equal(t, "TestAccessToken", newTokenName)
 
-	req = NewRequestWithValues(t, "POST", "/user/settings/applications/delete", map[string]string{
+	req = NewRequestWithValues(t, "POST", "/user/settings/applications/tokens/delete", map[string]string{
 		"id": strconv.Itoa(newTokenID),
 	})
 	session.MakeRequest(t, req, http.StatusOK)
@@ -280,6 +279,38 @@ func TestAccessTokenRegenerate(t *testing.T) {
 	assert.Equal(t, latestTokenID, prevLatestTokenID)
 	assert.Equal(t, latestTokenName, prevLatestTokenName)
 	assert.NotEqual(t, "TestAccessToken", latestTokenName)
+}
+
+func TestAccessTokenResourceRepos(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	locale := translation.NewLocale("en-US")
+	repoAccess := locale.TrString("settings.specific_repo_access") + ":"
+
+	session := loginUser(t, "user2")
+
+	// Before creating a repo-specific access token, we shouldn't have the "Repository access:" list in the personal
+	// access token page:
+	req := NewRequest(t, "GET", "/user/settings/applications")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByText(".user-setting-content p", repoAccess), false)
+
+	// Then we create a repo-specific access token.  We give it access to two repos, user2/repo2, but also user30/empty,
+	// a private repo owned by someone else...  We'll pretend user2 used to be a collaborator on this repo and
+	// previously had access to view it, but doesn't anymore.
+	createFineGrainedRepoAccessToken(t, "user2",
+		[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadUser},
+		[]int64{2, 52},
+	)
+
+	// Now we have "Repository access:"...
+	req = NewRequest(t, "GET", "/user/settings/applications")
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByText(".user-setting-content p", repoAccess), true)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByText(".user-setting-content a", "user2/repo2"), true)   // link to repo
+	htmlDoc.AssertSelection(t, htmlDoc.FindByText(".user-setting-content a", "user30/empty"), false) // missing - user2 has no visibility
 }
 
 func findLatestTokenID(t *testing.T, session *TestSession) (string, int) {
@@ -999,7 +1030,7 @@ func TestUserRepos(t *testing.T) {
 
 		sel := htmlDoc.doc.Find("a.name")
 		assert.Len(t, repos, len(sel.Nodes))
-		for i := 0; i < len(repos); i++ {
+		for i := range repos {
 			assert.Equal(t, repos[i], strings.TrimSpace(sel.Eq(i).Text()))
 		}
 	}
@@ -1237,4 +1268,22 @@ func TestActivateEmailAddress(t *testing.T) {
 
 	unittest.AssertNotExistsBean(t, &auth_model.AuthorizationToken{ID: authToken.ID})
 	unittest.AssertExistsAndLoadBean(t, &user_model.EmailAddress{UID: user2.ID, IsActivated: true, Email: "newemail@example.org"})
+}
+
+func TestExportUserSSHKeys(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("No exported keys", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		resp := MakeRequest(t, NewRequest(t, "GET", "/user1.keys"), http.StatusOK)
+
+		assert.Equal(t, "# Note: This user hasn't uploaded any SSH keys.\n", resp.Body.String())
+	})
+
+	t.Run("Exported key", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		resp := MakeRequest(t, NewRequest(t, "GET", "/user2.keys"), http.StatusOK)
+
+		assert.Equal(t, "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDWVj0fQ5N8wNc0LVNA41wDLYJ89ZIbejrPfg/avyj3u/ZohAKsQclxG4Ju0VirduBFF9EOiuxoiFBRr3xRpqzpsZtnMPkWVWb+akZwBFAx8p+jKdy4QXR/SZqbVobrGwip2UjSrri1CtBxpJikojRIZfCnDaMOyd9Jp6KkujvniFzUWdLmCPxUE9zhTaPu0JsEP7MW0m6yx7ZUhHyfss+NtqmFTaDO+QlMR7L2QkDliN2Jl3Xa3PhuWnKJfWhdAq1Cw4oraKUOmIgXLkuiuxVQ6mD3AiFupkmfqdHq6h+uHHmyQqv3gU+/sD8GbGAhf6ftqhTsXjnv1Aj4R8NoDf9BS6KRkzkeun5UisSzgtfQzjOMEiJtmrep2ZQrMGahrXa+q4VKr0aKJfm+KlLfwm/JztfsBcqQWNcTURiCFqz+fgZw0Ey/de0eyMzldYTdXXNRYCKjs9bvBK+6SSXRM7AhftfQ0ZuoW5+gtinPrnmoOaSCEJbAiEiTO/BzOHgowiM=\n", resp.Body.String())
+	})
 }

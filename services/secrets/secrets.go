@@ -11,7 +11,7 @@ import (
 )
 
 func CreateOrUpdateSecret(ctx context.Context, ownerID, repoID int64, name, data string) (*secret_model.Secret, bool, error) {
-	if err := ValidateName(name); err != nil {
+	if err := secret_model.ValidateName(name); err != nil {
 		return nil, false, err
 	}
 
@@ -32,7 +32,7 @@ func CreateOrUpdateSecret(ctx context.Context, ownerID, repoID int64, name, data
 		return s, true, nil
 	}
 
-	s.SetSecret(data)
+	s.SetData(data)
 	if _, err := db.GetEngine(ctx).Cols("data").ID(s.ID).Update(s); err != nil {
 		return nil, false, err
 	}
@@ -56,10 +56,6 @@ func DeleteSecretByID(ctx context.Context, ownerID, repoID, secretID int64) erro
 }
 
 func DeleteSecretByName(ctx context.Context, ownerID, repoID int64, name string) error {
-	if err := ValidateName(name); err != nil {
-		return err
-	}
-
 	s, err := db.Find[secret_model.Secret](ctx, secret_model.FindSecretsOptions{
 		OwnerID: ownerID,
 		RepoID:  repoID,

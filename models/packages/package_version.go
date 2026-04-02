@@ -5,11 +5,13 @@ package packages
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
@@ -155,6 +157,25 @@ func HasVersionFileReferences(ctx context.Context, versionID int64) (bool, error
 	})
 }
 
+func (pv *PackageVersion) LockForUpdate(ctx context.Context) error {
+	if !db.InTransaction(ctx) {
+		return errors.New("invalid state for PackageVersion.LockForUpdate: database is not in a transaction")
+	} else if setting.Database.Type.IsSQLite3() {
+		// SQLite both doesn't support "SELECT ... FOR UPDATE", and it's irrelevant for SQLite as the entire database is
+		// locked for write when a write transaction is open.
+		return nil
+	}
+
+	pvfu := PackageVersion{}
+	has, err := db.GetEngine(ctx).ID(pv.ID).ForUpdate().Get(&pvfu)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrPackageNotExist
+	}
+	return nil
+}
+
 // SearchValue describes a value to search
 // If ExactMatch is true, the field must match the value otherwise a LIKE search is performed.
 type SearchValue struct {
@@ -192,9 +213,9 @@ type PackageSearchOptions struct {
 
 func (opts *PackageSearchOptions) ToConds() builder.Cond {
 	cond := builder.NewCond()
-	if opts.IsInternal.Has() {
+	if has, value := opts.IsInternal.Get(); has {
 		cond = builder.Eq{
-			"package_version.is_internal": opts.IsInternal.Value(),
+			"package_version.is_internal": value,
 		}
 	}
 
@@ -254,10 +275,10 @@ func (opts *PackageSearchOptions) ToConds() builder.Cond {
 		cond = cond.And(builder.Exists(builder.Select("package_file.id").From("package_file").Where(fileCond)))
 	}
 
-	if opts.HasFiles.Has() {
+	if has, value := opts.HasFiles.Get(); has {
 		filesCond := builder.Exists(builder.Select("package_file.id").From("package_file").Where(builder.Expr("package_file.version_id = package_version.id")))
 
-		if !opts.HasFiles.Value() {
+		if !value {
 			filesCond = builder.Not{filesCond}
 		}
 

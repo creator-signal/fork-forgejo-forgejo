@@ -226,10 +226,7 @@ func NotificationPurgePost(ctx *context.Context) {
 
 // NotificationSubscriptions returns the list of subscribed issues
 func NotificationSubscriptions(ctx *context.Context) {
-	page := ctx.FormInt("page")
-	if page < 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	sortType := ctx.FormString("sort")
 	ctx.Data["SortType"] = sortType
@@ -358,10 +355,7 @@ func NotificationSubscriptions(ctx *context.Context) {
 
 // NotificationWatching returns the list of watching repos
 func NotificationWatching(ctx *context.Context) {
-	page := ctx.FormInt("page")
-	if page < 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	keyword := ctx.FormTrim("q")
 	ctx.Data["Keyword"] = keyword
@@ -439,20 +433,20 @@ func NotificationWatching(ctx *context.Context) {
 	// redirect to last page if request page is more than total pages
 	pager := context.NewPagination(total, setting.UI.User.RepoPagingNum, page, 5)
 	pager.SetDefaultParams(ctx)
-	if archived.Has() {
-		pager.AddParamString("archived", fmt.Sprint(archived.Value()))
+	if has, value := archived.Get(); has {
+		pager.AddParamString("archived", fmt.Sprint(value))
 	}
-	if fork.Has() {
-		pager.AddParamString("fork", fmt.Sprint(fork.Value()))
+	if has, value := fork.Get(); has {
+		pager.AddParamString("fork", fmt.Sprint(value))
 	}
-	if mirror.Has() {
-		pager.AddParamString("mirror", fmt.Sprint(mirror.Value()))
+	if has, value := mirror.Get(); has {
+		pager.AddParamString("mirror", fmt.Sprint(value))
 	}
-	if template.Has() {
-		pager.AddParamString("template", fmt.Sprint(template.Value()))
+	if has, value := template.Get(); has {
+		pager.AddParamString("template", fmt.Sprint(value))
 	}
-	if private.Has() {
-		pager.AddParamString("private", fmt.Sprint(private.Value()))
+	if has, value := private.Get(); has {
+		pager.AddParamString("private", fmt.Sprint(value))
 	}
 	ctx.Data["Page"] = pager
 
