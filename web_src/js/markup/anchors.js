@@ -35,17 +35,16 @@ export function initMarkupAnchors() {
     // create link icons for markup headings, the resulting link href will remove `user-content-`
     for (const heading of markupEl.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
       const wrapper = document.createElement('div');
-      wrapper.classList.add('markdown-heading');
-      wrapper.classList.add(`markdown-heading-${heading.tagName.toLowerCase()}`);
+      wrapper.classList.add('markdown-heading', `markdown-heading-${heading.tagName.toLowerCase()}`);
       heading.replaceWith(wrapper);
-      wrapper.appendChild(heading);
+      wrapper.append(heading);
 
       const a = document.createElement('a');
       a.classList.add('anchor');
-      a.setAttribute('aria-label', `Permalink: ${heading.innerText}`);
+      a.setAttribute('aria-label', `Permalink: ${heading.textContent}`);
       a.setAttribute('href', `#${encodeURIComponent(removePrefix(heading.id))}`);
       a.innerHTML = svg('octicon-link');
-      wrapper.appendChild(a);
+      wrapper.append(a);
     }
 
     // remove `user-content-` prefix from links so they don't show in url bar when clicked
