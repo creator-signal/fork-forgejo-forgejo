@@ -739,11 +739,11 @@ NotAutomatic: false
 		var blake2b strings.Builder
 
 		for _, pkglistByArch := range pkglist[architecture] {
-			md5Sum.WriteString(fmt.Sprintf(" %s %d %s\n", pkglistByArch.MD5Checksum.Value, pkglistByArch.Size, "base/"+pkglistByArch.Type))
-			blake2b.WriteString(fmt.Sprintf(" %s %d %s\n", pkglistByArch.Blake2bHash.Value, pkglistByArch.Size, "base/"+pkglistByArch.Type))
+			fmt.Fprintf(&md5Sum, " %s %d %s\n", pkglistByArch.MD5Checksum.Value, pkglistByArch.Size, "base/"+pkglistByArch.Type)
+			fmt.Fprintf(&blake2b, " %s %d %s\n", pkglistByArch.Blake2bHash.Value, pkglistByArch.Size, "base/"+pkglistByArch.Type)
 		}
-		md5Sum.WriteString(fmt.Sprintf(" %s %d %s\n", fileInfo.MD5Checksum.Value, fileInfo.Size, "base/"+fileInfo.Type))
-		blake2b.WriteString(fmt.Sprintf(" %s %d %s\n", fileInfo.Blake2bHash.Value, fileInfo.Size, "base/"+fileInfo.Type))
+		fmt.Fprintf(&md5Sum, " %s %d %s\n", fileInfo.MD5Checksum.Value, fileInfo.Size, "base/"+fileInfo.Type)
+		fmt.Fprintf(&blake2b, " %s %d %s\n", fileInfo.Blake2bHash.Value, fileInfo.Size, "base/"+fileInfo.Type)
 
 		data = fmt.Sprintf(`Origin: %s
 Label: %s

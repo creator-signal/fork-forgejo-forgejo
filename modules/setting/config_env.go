@@ -120,18 +120,17 @@ func EnvironmentToConfig(cfg ConfigProvider, envs []string) (changed bool) {
 
 		// parse the environment variable to config section name and key name
 		envKey := before
-		envValue := after
+		keyValue := after
 		ok, sectionName, keyName, useFileValue := decodeEnvironmentKey(prefixRegexp, EnvConfigKeySuffixFile, envKey)
 		if !ok {
 			continue
 		}
 
 		// use environment value as config value, or read the file content as value if the key indicates a file
-		keyValue := envValue
 		if useFileValue {
-			fileContent, err := os.ReadFile(envValue)
+			fileContent, err := os.ReadFile(keyValue)
 			if err != nil {
-				log.Error("Error reading file for %s : %v", envKey, envValue, err)
+				log.Error("Error reading file for %s : %v", envKey, keyValue, err)
 				continue
 			}
 			if bytes.HasSuffix(fileContent, []byte("\r\n")) {

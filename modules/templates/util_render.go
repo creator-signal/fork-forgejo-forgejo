@@ -258,8 +258,8 @@ func RenderLabels(ctx *Context, labels []*issues_model.Label, repoLink string, i
 		if isPull {
 			issuesOrPull = "pulls"
 		}
-		htmlCode.WriteString(fmt.Sprintf("<a href='%s/%s?labels=%d' rel='nofollow'>%s</a> ",
-			repoLink, issuesOrPull, label.ID, RenderLabel(ctx, label)))
+		fmt.Fprintf(&htmlCode, "<a href='%s/%s?labels=%d' rel='nofollow'>%s</a> ",
+			repoLink, issuesOrPull, label.ID, RenderLabel(ctx, label))
 	}
 	htmlCode.WriteString("</span>")
 	return template.HTML(htmlCode.String())
