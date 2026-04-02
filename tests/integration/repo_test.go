@@ -1039,7 +1039,7 @@ func TestRepoFilesList(t *testing.T) {
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		htmlDoc := NewHTMLParser(t, resp.Body)
-		filesList := htmlDoc.Find("#repo-files-table tbody tr").Map(func(_ int, s *goquery.Selection) string {
+		filesList := htmlDoc.Find("#repo-files-table tbody tr:not(.commit-list)").Map(func(_ int, s *goquery.Selection) string {
 			return s.AttrOr("data-entryname", "")
 		})
 
