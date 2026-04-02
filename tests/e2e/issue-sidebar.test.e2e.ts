@@ -380,6 +380,6 @@ test('Issue: Reference', async ({page}) => {
   );
 
   await page.getByRole('button', {name: 'Copy'}).click();
-  const reference= await page.evaluate(() => navigator.clipboard.readText());
+  const reference = await page.evaluate(() => navigator.clipboard.readText());
   expect(reference).toBe('user2/repo1#1');
 });
