@@ -9,15 +9,22 @@ import (
 
 func init() {
 	registerMigration(&Migration{
-		Description: "add remote_address_auth to mirror",
+		Description: "replace remote_address with encrypted_remote_address in table mirror",
 		Upgrade:     addMirrorRemoteAddressAuth,
 	})
 }
 
 func addMirrorRemoteAddressAuth(x *xorm.Engine) error {
 	type Mirror struct {
-		RemoteAddressAuth []byte `xorm:"BLOB NULL"`
+		EncryptedRemoteAddress []byte `xorm:"BLOB NULL"`
 	}
-	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(Mirror))
+	if _, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(Mirror)); err != nil {
+		return err
+	}
+	// No data migration is necessary or desired.  `remote_address` contains sanitized URLs which don't have
+	// credentials, so they can't be migrated to `encrypted_remote_address`. Instead, as this data is accessed,
+	// `DecryptOrRecoverRemoteAddress` will recover the fully credentialed contents of the remote address from the git
+	// repo's `origin` remote address.
+	_, err := x.Exec("ALTER TABLE `mirror` DROP COLUMN `remote_address`")
 	return err
 }

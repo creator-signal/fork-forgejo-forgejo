@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ import (
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -231,6 +233,83 @@ func TestMirrorPull(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("migrate from repo config credentials", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		mirrorRepo, _, cleanupMirror := tests.CreateDeclarativeRepoWithOptions(t, user2,
+			tests.DeclarativeRepoOptions{},
+		)
+		defer cleanupMirror()
+
+		// Write to the repo a config file that would have plausibly existed before EncryptedRemoteAddress was
+		// introduced:
+		repoPath := mirrorRepo.RepoPath()
+		err := os.WriteFile(path.Join(repoPath, "config"), []byte(`
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+[remote "origin"]
+	url = https://user:password@example.com/org/repo.git
+	tagOpt = --no-tags
+	fetch = +refs/*:refs/*
+	mirror = true
+	fetch = +refs/tags/*:refs/tags/*
+`), 0o644)
+		require.NoError(t, err)
+
+		// Create a Mirror record without an EncryptedRemoteAddress:
+		mirror := &repo_model.Mirror{
+			RepoID:      mirrorRepo.ID,
+			Interval:    8 * time.Hour,
+			EnablePrune: true,
+		}
+		_, err = db.GetEngine(t.Context()).Insert(mirror)
+		require.NoError(t, err)
+		require.Nil(t, mirror.EncryptedRemoteAddress)
+
+		remoteURL, err := mirror_service.DecryptOrRecoverRemoteAddress(t.Context(), mirror)
+		require.NoError(t, err)
+		assert.Equal(t, "https://user:password@example.com/org/repo.git", remoteURL.URL.String())
+
+		// EncryptedRemoteAddress should now be populated from the recovery:
+		assert.NotNil(t, mirror.EncryptedRemoteAddress)
+		maybeDecryptedURL, err := mirror.DecryptRemoteAddress()
+		require.NoError(t, err)
+		has, decryptedURL := maybeDecryptedURL.Get()
+		require.True(t, has)
+		assert.Equal(t, "https://user:password@example.com/org/repo.git", decryptedURL)
+
+		// SanitizedRemoteAddress can be fetched:
+		maybeSanitizedURL, err := mirror.SanitizedRemoteAddress()
+		require.NoError(t, err)
+		has, sanitizedURL := maybeSanitizedURL.Get()
+		require.True(t, has)
+		assert.Equal(t, "https://user@example.com/org/repo.git", sanitizedURL)
+
+		// Database record is updated in the database:
+		refetchMirror := unittest.AssertExistsAndLoadBean(t, &repo_model.Mirror{RepoID: mirrorRepo.ID})
+		assert.Equal(t, mirror.EncryptedRemoteAddress, refetchMirror.EncryptedRemoteAddress)
+
+		// Config file is rewritten:
+		config, err := os.ReadFile(path.Join(repoPath, "config"))
+		require.NoError(t, err)
+		assert.Equal(t, `
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+[remote "origin"]
+	url = https://user@example.com/org/repo.git
+	tagOpt = --no-tags
+	fetch = +refs/*:refs/*
+	mirror = true
+	fetch = +refs/tags/*:refs/tags/*
+`, string(config))
+	})
 }
 
 func createPullMirrorViaWeb(t *testing.T, sourceRepo *repo_model.Repository, authenticate bool) string {
@@ -327,6 +406,17 @@ func verifyPullMirrorViaWeb(t *testing.T, sourceRepo *repo_model.Repository, mir
 		htmlDoc.AssertAttrEqual(t, "#mirror_password", "value", "")
 		htmlDoc.AssertAttrEqual(t, "#mirror_password", "placeholder", "(Unset)")
 	}
+
+	resp = session.MakeRequest(t,
+		NewRequestf(t, "GET", "/user2/%s", mirrorName),
+		http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertElementPredicate(t, ".fork-flag", func(selection *goquery.Selection) bool {
+		text := strings.TrimSpace(selection.Text())
+		assert.Contains(t, text, "mirror of")
+		assert.Contains(t, text, sourceRepo.CloneLink().HTTPS)
+		return true
+	})
 }
 
 func triggerPullMirrorViaWeb(t *testing.T, mirrorName string) {

@@ -234,27 +234,42 @@ func checkRecoverableSyncError(stderrMessage string) bool {
 	}
 }
 
-// Decrypt RemoteAddressAuth from the mirror; if absent, fall back to the older method where credentials are stored in
-// the git config file as the remote's address.
-func GetRemoteURLWithFallback(ctx context.Context, m *repo_model.Mirror) (*giturl.GitURL, error) {
-	decryptedRemoteURL, err := m.DecryptRemoteAddressAuth()
+// Decrypt RemoteAddressAuth from the mirror. If absent on the mirror database table, fallback to the older method where
+// credentials are stored in the git config file as the remote's address, encrypt those credentials and store them in
+// the database, and wipe them from the git config file so that they're only stored in the one encrypted location in DB.
+func DecryptOrRecoverRemoteAddress(ctx context.Context, m *repo_model.Mirror) (*giturl.GitURL, error) {
+	decryptedRemoteURL, err := m.DecryptRemoteAddress()
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt remote address: %w", err)
 	}
 
-	var remoteURL *giturl.GitURL
 	if has, url := decryptedRemoteURL.Get(); has {
-		remoteURL, err = giturl.Parse(url)
+		remoteURL, err := giturl.Parse(url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse decrypted remote address: %w", err)
 		}
-	} else {
-		// fallback to reading remote URL from the git config file for repos that predate DecryptRemoteAddressAuth
-		repoPath := m.GetRepository(ctx).RepoPath()
-		remoteURL, err = git.GetRemoteURL(ctx, repoPath, m.GetRemoteName())
-		if err != nil {
-			return nil, fmt.Errorf("GetRemoteAddress error: %w", err)
-		}
+		return remoteURL, nil
+	}
+
+	// fallback to reading remote URL from the git config file for repos that predate DecryptRemoteAddress
+	repoPath := m.GetRepository(ctx).RepoPath()
+	remoteURL, err := git.GetRemoteURL(ctx, repoPath, m.GetRemoteName())
+	if err != nil {
+		return nil, fmt.Errorf("GetRemoteAddress error: %w", err)
+	}
+
+	// Store the full address in the database
+	if err := m.UpdateRemoteAddress(ctx, remoteURL.URL.String()); err != nil {
+		return nil, fmt.Errorf("UpdateRemoteAddress error: %w", err)
+	}
+
+	// Update the git config file to just contain the sanitized address
+	if maybeSanitizedURL, err := m.SanitizedRemoteAddress(); err != nil {
+		return nil, fmt.Errorf("SanitizedRemoteAddress error: %w", err)
+	} else if has, sanitizedURL := maybeSanitizedURL.Get(); !has {
+		return nil, fmt.Errorf("SanitizedRemoteAddress must be present after we just stored it, but had error: %w", err)
+	} else if err := UpdateAddress(ctx, m, sanitizedURL); err != nil {
+		return nil, fmt.Errorf("UpdateAddress error: %w", err)
 	}
 	return remoteURL, nil
 }
@@ -267,7 +282,7 @@ func runSync(ctx context.Context, m *repo_model.Mirror) ([]*mirrorSyncResult, bo
 
 	log.Trace("SyncMirrors [repo: %-v]: running git remote update...", m.Repo)
 
-	remoteURL, err := GetRemoteURLWithFallback(ctx, m)
+	remoteURL, err := DecryptOrRecoverRemoteAddress(ctx, m)
 	if err != nil {
 		log.Error("SyncMirrors [repo: %-v]: failed to get remote address: %v", m.Repo, err)
 		return nil, false

@@ -462,9 +462,9 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		u, err := mirror_service.GetRemoteURLWithFallback(ctx, pullMirror)
+		u, err := mirror_service.DecryptOrRecoverRemoteAddress(ctx, pullMirror)
 		if err != nil {
-			ctx.ServerError("GetRemoteURLWithFallback", err)
+			ctx.ServerError("DecryptOrRecoverRemoteAddress", err)
 			return
 		}
 
@@ -490,7 +490,14 @@ func SettingsPost(ctx *context.Context) {
 
 		// Update the unencrypted address stored in the git config, so that future `git fetch` will access the right
 		// address. pullMirror.RemoteAddress is the sanitized no-creds version from UpdateRemoteAddress.
-		if err := mirror_service.UpdateAddress(ctx, pullMirror, pullMirror.RemoteAddress); err != nil {
+		if maybeSanitizedURL, err := pullMirror.SanitizedRemoteAddress(); err != nil {
+			ctx.ServerError("SanitizedRemoteAddress", err)
+			return
+		} else if has, sanitizedURL := maybeSanitizedURL.Get(); !has {
+			// SanitizedRemoteAddress must be present after we just stored it
+			ctx.ServerError("SanitizedRemoteAddress", err)
+			return
+		} else if err := mirror_service.UpdateAddress(ctx, pullMirror, sanitizedURL); err != nil {
 			ctx.ServerError("UpdateAddress", err)
 			return
 		}

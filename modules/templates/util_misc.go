@@ -165,9 +165,9 @@ type remoteAddress struct {
 
 func mirrorRemoteAddress(ctx context.Context, mirror *repo_model.Mirror) remoteAddress {
 	ret := remoteAddress{}
-	u, err := mirror_service.GetRemoteURLWithFallback(ctx, mirror)
+	u, err := mirror_service.DecryptOrRecoverRemoteAddress(ctx, mirror)
 	if err != nil {
-		log.Error("GetRemoteURLWithFallback %v", err)
+		log.Error("DecryptOrRecoverRemoteAddress %v", err)
 		return ret
 	}
 
