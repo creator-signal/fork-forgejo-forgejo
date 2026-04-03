@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -675,10 +676,9 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 	t.Run("Jobs", func(t *testing.T) {
 		for _, setup := range []struct {
 			runID, repoID int64
-			jobIDs        []int64
 		}{
-			{793, 4, []int64{194, 195, 196}},
-			{895, 4, []int64{197, 198}},
+			{793, 4},
+			{895, 4},
 		} {
 			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: setup.repoID})
 			user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
@@ -691,14 +691,11 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 			res := MakeRequest(t, req, http.StatusOK)
 			var jobList []*api.ActionRunJob
 			DecodeJSON(t, res, &jobList)
-			assert.Len(t, jobList, len(setup.jobIDs))
 
-			correctJobList := make([]*actions_model.ActionRunJob, 0, len(setup.jobIDs))
-			for _, jobID := range setup.jobIDs {
-				correctJobList = append(correctJobList, unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: jobID}))
-			}
+			correctJobList, err := actions_model.GetRunJobsByRunID(context.Background(), setup.runID)
+			require.NoError(t, err, "GetRunJobsByRunID")
+			assert.Len(t, jobList, len(correctJobList))
 
-			// Test each field manually without convert function
 			for i := range jobList {
 				expected := correctJobList[i]
 				actual := jobList[i]
@@ -712,6 +709,34 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 				assert.Equal(t, expected.RunsOn, actual.RunsOn)
 				assert.Equal(t, expected.TaskID, actual.TaskID)
 				assert.Equal(t, expected.Status.String(), actual.Status)
+
+				if expected.ID == 195 {
+					assert.Equal(t, api.ActionRunJob{
+						ID:      195,
+						Attempt: 1,
+						Handle:  "",
+						RepoID:  4,
+						OwnerID: 1,
+						Name:    "job1 (2)",
+						Needs:   nil,
+						RunsOn:  nil,
+						TaskID:  50,
+						Status:  "success",
+					}, actual)
+				} else if expected.ID == 197 {
+					assert.Equal(t, api.ActionRunJob{
+						ID:      197,
+						Attempt: 0,
+						Handle:  "",
+						RepoID:  4,
+						OwnerID: 1,
+						Name:    "job1 (1)",
+						Needs:   nil,
+						RunsOn:  []string{"postmarketOS"},
+						TaskID:  54,
+						Status:  "failure",
+					}, actual)
+				}
 			}
 		}
 	})
