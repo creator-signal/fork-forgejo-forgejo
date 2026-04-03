@@ -494,7 +494,7 @@ export function initRepository() {
       // A short timeout is necessary here in order to give the accessibility
       // tree time to update, otherwise this .focus() call is unreliable in
       // screen readers
-      setTimeout(() => $form.find('#issue_title').trigger('focus'), 64);
+      setTimeout(() => $form.find('#issue_title')[0].focus(), 64);
     });
   }
 
