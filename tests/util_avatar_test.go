@@ -12,13 +12,13 @@ import (
 
 func TestAvatarHTML(t *testing.T) {
 	t.Run("contains expected attributes", func(t *testing.T) {
-		result := string(AvatarHTML("https://example.com/avatar.png", 32, "avatar-class", "John"))
+		result := string(AvatarHTML("https://example.com/avatar.png", 28, "avatar-class", "Max Mustermann"))
 
 		assert.Contains(t, result, `src="https://example.com/avatar.png"`)
-		assert.Contains(t, result, `width="32"`)
-		assert.Contains(t, result, `height="32"`)
+		assert.Contains(t, result, `width="28"`)
+		assert.Contains(t, result, `height="28"`)
 		assert.Contains(t, result, `class="avatar-class"`)
-		assert.Contains(t, result, `title="John"`)
+		assert.Contains(t, result, `title="Max Mustermann"`)
 		assert.Contains(t, result, `loading="lazy"`)
 	})
 
