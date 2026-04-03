@@ -218,52 +218,7 @@
 				<span class="ui text">{{ctx.Locale.Tr .Verification.Reason}}</span>
 			{{end}}
 		</div>
-		<div>
-			{{if .Verification.Verified}}
-				{{svg "octicon-verified" 16 "tw-mr-2"}}
-				{{if ne .Verification.SigningUser.ID 0}}
-					{{if .Verification.SigningSSHKey}}
-						<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
-						{{.Verification.SigningSSHKey.Fingerprint}}
-					{{else}}
-						<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
-						{{.Verification.SigningKey.PaddedKeyID}}
-					{{end}}
-				{{else}}
-					{{if .Verification.SigningSSHKey}}
-						<span class="ui text tw-mr-2" data-tooltip-content="{{ctx.Locale.Tr "gpg.default_key"}}">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
-						{{.Verification.SigningSSHKey.Fingerprint}}
-					{{else}}
-						<span class="ui text tw-mr-2" data-tooltip-content="{{ctx.Locale.Tr "gpg.default_key"}}">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
-						{{.Verification.SigningKey.PaddedKeyID}}
-					{{end}}
-				{{end}}
-			{{else if .Verification.Warning}}
-				{{svg "octicon-unverified" 16 "tw-mr-2"}}
-				{{if .Verification.SigningSSHKey}}
-					<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
-					{{.Verification.SigningSSHKey.Fingerprint}}
-				{{else}}
-					<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
-					{{.Verification.SigningKey.PaddedKeyID}}
-				{{end}}
-			{{else}}
-				{{if .Verification.SigningKey}}
-					{{if ne .Verification.SigningKey.KeyID ""}}
-						{{svg "octicon-verified" 16 "tw-mr-2"}}
-						<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
-						{{.Verification.SigningKey.PaddedKeyID}}
-					{{end}}
-				{{end}}
-				{{if .Verification.SigningSSHKey}}
-					{{if ne .Verification.SigningSSHKey.Fingerprint ""}}
-						{{svg "octicon-verified" 16 "tw-mr-2"}}
-						<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
-						{{.Verification.SigningSSHKey.Fingerprint}}
-					{{end}}
-				{{end}}
-			{{end}}
-		</div>
+		{{template "repo/verification_key" .Verification}}
 	</div>
 {{end}}
 {{if .NoteRendered}}

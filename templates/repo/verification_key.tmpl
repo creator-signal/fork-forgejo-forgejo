@@ -1,0 +1,46 @@
+<div>
+	{{if .Verified}}
+		{{svg "octicon-verified" 16 "tw-mr-2"}}
+		{{if ne .SigningUser.ID 0}}
+			{{if .SigningSSHKey}}
+				<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
+				<span class="ui text key">{{.SigningSSHKey.Fingerprint}}</span>
+			{{else}}
+				<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
+				<span class="ui text key">{{.SigningKey.PaddedKeyID}}</span>
+			{{end}}
+		{{else}}
+			{{if .SigningSSHKey}}
+				<span class="ui text tw-mr-2" data-tooltip-content="{{ctx.Locale.Tr "gpg.default_key"}}">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
+				<span class="ui text key">{{.SigningSSHKey.Fingerprint}}</span>
+			{{else}}
+				<span class="ui text tw-mr-2" data-tooltip-content="{{ctx.Locale.Tr "gpg.default_key"}}">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
+				<span class="ui text key">{{.SigningKey.PaddedKeyID}}</span>
+			{{end}}
+		{{end}}
+	{{else if .Warning}}
+		{{svg "octicon-unverified" 16 "tw-mr-2"}}
+		{{if .SigningSSHKey}}
+			<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
+			<span class="ui text key">{{.SigningSSHKey.Fingerprint}}</span>
+		{{else}}
+			<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
+			<span class="ui text key">{{.SigningKey.PaddedKeyID}}</span>
+		{{end}}
+	{{else}}
+		{{if .SigningKey}}
+			{{if ne .SigningKey.KeyID ""}}
+				{{svg "octicon-unverified" 16 "tw-mr-2"}}
+				<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
+				<span class="ui text key">{{.SigningKey.PaddedKeyID}}</span>
+			{{end}}
+		{{end}}
+		{{if .SigningSSHKey}}
+			{{if ne .SigningSSHKey.Fingerprint ""}}
+				{{svg "octicon-unverified" 16 "tw-mr-2"}}
+				<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
+				<span class="ui text key">{{.SigningSSHKey.Fingerprint}}</span>
+			{{end}}
+		{{end}}
+	{{end}}
+</div>

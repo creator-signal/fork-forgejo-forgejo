@@ -1939,6 +1939,10 @@ details.repo-search-result summary::marker {
   align-items: center;
 }
 
+.signature-row .key {
+  word-wrap: anywhere;
+}
+
 .commit-header-buttons {
   display: flex;
   gap: 4px;

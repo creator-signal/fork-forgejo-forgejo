@@ -28,53 +28,6 @@
 				<span class="ui text">{{ctx.Locale.Tr $v.Reason}}</span>
 			{{end}}
 		</div>
-
-		<div>
-			{{if $v.Verified}}
-				{{if ne $v.SigningUser.ID 0}}
-					{{svg "octicon-verified" 16 "tw-mr-2"}}
-					{{if $v.SigningSSHKey}}
-						<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
-						{{$v.SigningSSHKey.Fingerprint}}
-					{{else}}
-						<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
-						{{$v.SigningKey.PaddedKeyID}}
-					{{end}}
-				{{else}}
-					{{svg "octicon-unverified" 16 "tw-mr-2"}}
-					{{if $v.SigningSSHKey}}
-						<span class="ui text tw-mr-2" data-tooltip-content="{{ctx.Locale.Tr "gpg.default_key"}}">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
-						{{$v.SigningSSHKey.Fingerprint}}
-					{{else}}
-						<span class="ui text tw-mr-2" data-tooltip-content="{{ctx.Locale.Tr "gpg.default_key"}}">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
-						{{$v.SigningKey.PaddedKeyID}}
-					{{end}}
-				{{end}}
-			{{else if $v.Warning}}
-				{{svg "octicon-unverified" 16 "tw-mr-2"}}
-				{{if $v.SigningSSHKey}}
-					<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
-					{{$v.SigningSSHKey.Fingerprint}}
-				{{else}}
-					<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
-					{{$v.SigningKey.PaddedKeyID}}
-				{{end}}
-			{{else}}
-				{{if $v.SigningKey}}
-					{{if ne $v.SigningKey.KeyID ""}}
-						{{svg "octicon-unverified" 16 "tw-mr-2"}}
-						<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.gpg_key_id"}}:</span>
-						{{$v.SigningKey.PaddedKeyID}}
-					{{end}}
-				{{end}}
-				{{if $v.SigningSSHKey}}
-					{{if ne $v.SigningSSHKey.Fingerprint ""}}
-						{{svg "octicon-unverified" 16 "tw-mr-2"}}
-						<span class="ui text tw-mr-2">{{ctx.Locale.Tr "repo.commits.ssh_key_fingerprint"}}:</span>
-						{{$v.SigningSSHKey.Fingerprint}}
-					{{end}}
-				{{end}}
-			{{end}}
-		</div>
+		{{template "repo/verification_key" $v}}
 	</div>
 {{end}}
