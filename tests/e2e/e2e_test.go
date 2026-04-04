@@ -26,6 +26,8 @@ import (
 	"forgejo.org/modules/web"
 	"forgejo.org/routers"
 	"forgejo.org/tests"
+
+	_ "forgejo.org/modules/testimport"
 )
 
 var testE2eWebRoutes *web.Route

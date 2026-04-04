@@ -17,6 +17,8 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 
+	_ "forgejo.org/modules/testimport"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v3"

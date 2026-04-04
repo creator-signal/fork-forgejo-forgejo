@@ -24,6 +24,8 @@ import (
 	"forgejo.org/modules/testlogger"
 	"forgejo.org/modules/util"
 
+	_ "forgejo.org/modules/testimport" //revive:disable:blank-imports
+
 	"code.forgejo.org/xorm/xorm"
 	"github.com/stretchr/testify/require"
 

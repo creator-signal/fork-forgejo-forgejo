@@ -9,6 +9,8 @@ import (
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/webhook"
+
+	_ "forgejo.org/modules/testimport"
 )
 
 func TestMain(m *testing.M) {
