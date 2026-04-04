@@ -129,6 +129,25 @@ func (m *LoggerManager) GetSharedWriter(writerName string) EventWriter {
 	return m.writers[writerName]
 }
 
+func (m *LoggerManager) GetSharedWriterBufferString(writerName string) string {
+	m.pauseMu.Lock()
+	defer m.pauseMu.Unlock()
+	if writer, ok := m.writers[writerName]; ok {
+		wb := writer.(EventWriterBuffer)
+		return wb.GetString()
+	}
+	return ""
+}
+
+func (m *LoggerManager) DeleteSharedWriter(writerName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, has := m.writers[writerName]; has {
+		eventWriterStopWait(m.writers[writerName])
+		delete(m.writers, writerName)
+	}
+}
+
 var loggerManager = NewManager()
 
 func GetManager() *LoggerManager {

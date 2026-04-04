@@ -46,3 +46,7 @@ func NewEventWriterBuffer(name string, mode WriterMode) EventWriter {
 	w.OutputWriteCloser = w
 	return w
 }
+
+func init() {
+	RegisterEventWriter("buffer", NewEventWriterBuffer)
+}
