@@ -33,6 +33,10 @@ import (
 var (
 	// Used for the `push_mirror` table.
 	PushMirror = deriveKey("pushmirror")
+	// Used for the `f3_forge` table.
+	F3Forge = deriveKey("f3_forge")
+	// Used for the `f3_mirror` table.
+	F3Mirror = deriveKey("f3_mirror")
 	// Used for the `two_factor` table.
 	TOTP = deriveKey("totp")
 	// Used for the `secret` table.
