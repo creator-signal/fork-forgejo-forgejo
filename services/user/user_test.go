@@ -30,6 +30,8 @@ import (
 	"forgejo.org/services/auth/source/oauth2"
 	redirect_service "forgejo.org/services/redirect"
 
+	_ "forgejo.org/modules/testimport"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

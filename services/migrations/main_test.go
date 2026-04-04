@@ -12,6 +12,8 @@ import (
 	"forgejo.org/models/unittest"
 	base "forgejo.org/modules/migration"
 
+	_ "forgejo.org/modules/testimport"
+
 	"github.com/stretchr/testify/assert"
 )
 

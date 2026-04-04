@@ -14,6 +14,8 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/web/middleware"
 
+	_ "forgejo.org/modules/testimport"
+
 	"github.com/stretchr/testify/assert"
 )
 

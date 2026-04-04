@@ -9,6 +9,8 @@ import (
 
 	"forgejo.org/models/unittest"
 
+	_ "forgejo.org/modules/testimport"
+
 	"github.com/stretchr/testify/assert"
 )
 

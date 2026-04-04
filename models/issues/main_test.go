@@ -9,6 +9,8 @@ import (
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/unittest"
 
+	_ "forgejo.org/modules/testimport"
+
 	"github.com/stretchr/testify/require"
 )
 
