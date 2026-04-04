@@ -55,3 +55,11 @@ test('Branch selector commit icon', async ({page}) => {
   await expect(page.locator('.branch-dropdown-button svg.octicon-git-commit')).toBeVisible();
   await expect(page.locator('.branch-dropdown-button')).toHaveText('65f1bf27bc');
 });
+
+test('README heading anchor links', async ({page}) => {
+  const response = await page.goto('/user2/repo1');
+  expect(response?.status()).toBe(200);
+
+  const anchor = page.locator('[href="#repo1"]');
+  await expect(anchor).toHaveAccessibleName('Permalink: repo1');
+});
