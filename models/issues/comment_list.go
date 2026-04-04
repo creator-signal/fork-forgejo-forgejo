@@ -5,6 +5,7 @@ package issues
 
 import (
 	"context"
+	"errors"
 
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
@@ -424,6 +425,45 @@ func (comments CommentList) LoadResolveDoers(ctx context.Context) (err error) {
 		} else {
 			comment.ResolveDoer = resolveDoer
 		}
+	}
+
+	return nil
+}
+
+func (comments CommentList) LoadReactions(ctx context.Context, repo *repo_model.Repository) (err error) {
+	loadIssueID := int64(0)
+	loadCommentIDs := make([]int64, 0, len(comments))
+
+	for _, comment := range comments {
+		if loadIssueID == 0 {
+			loadIssueID = comment.IssueID
+		} else if loadIssueID != comment.IssueID {
+			return errors.New("unable to load reactions from comments on different issues than each other")
+		}
+		if comment.Reactions == nil {
+			loadCommentIDs = append(loadCommentIDs, comment.ID)
+		}
+	}
+
+	if loadIssueID == 0 {
+		return nil
+	}
+
+	reactions, err := getReactionsForComments(ctx, loadIssueID, loadCommentIDs)
+	if err != nil {
+		return err
+	}
+
+	allReactions := make(ReactionList, 0, len(reactions))
+	for _, comment := range comments {
+		if comment.Reactions == nil {
+			comment.Reactions = reactions[comment.ID]
+			allReactions = append(allReactions, comment.Reactions...)
+		}
+	}
+
+	if _, err := allReactions.LoadUsers(ctx, repo); err != nil {
+		return err
 	}
 
 	return nil

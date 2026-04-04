@@ -52,9 +52,17 @@ func TestFetchCodeConversations(t *testing.T) {
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	_, err := issues_model.CreateReaction(t.Context(), &issues_model.ReactionOptions{
+		Type:      "eyes",
+		DoerID:    2,
+		IssueID:   issue.ID,
+		CommentID: 4,
+	})
+	require.NoError(t, err)
 	require.NoError(t, issues_model.MarkConversation(t.Context(),
 		unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: 4}),
 		user, true))
+
 	res, err := issues_model.FetchCodeConversations(db.DefaultContext, issue, user, false)
 	require.NoError(t, err)
 	require.Contains(t, res, "README.md")
@@ -64,6 +72,9 @@ func TestFetchCodeConversations(t *testing.T) {
 	comment := res["README.md"][4][0][0]
 	assert.Equal(t, int64(4), comment.ID)
 	assert.NotNil(t, comment.ResolveDoer)
+	require.Len(t, comment.Reactions, 1)
+	r := comment.Reactions[0]
+	assert.NotNil(t, r.User)
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	res, err = issues_model.FetchCodeConversations(db.DefaultContext, issue, user2, false)

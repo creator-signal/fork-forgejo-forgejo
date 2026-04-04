@@ -150,11 +150,11 @@ func findCodeComments(ctx context.Context, opts FindCommentsOptions, issue *Issu
 		return nil, err
 	}
 
-	for _, comment := range readyComments {
-		if err := comment.LoadReactions(ctx, issue.Repo); err != nil {
-			return nil, err
-		}
+	if err := readyComments.LoadReactions(ctx, issue.Repo); err != nil {
+		return nil, err
+	}
 
+	for _, comment := range readyComments {
 		var err error
 		if comment.RenderedContent, err = markdown.RenderString(&markup.RenderContext{
 			Ctx: ctx,
