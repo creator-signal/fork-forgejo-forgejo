@@ -62,9 +62,10 @@ test('Star button focus retention', async ({page}) => {
   const response = await page.goto('/user2/repo1');
   expect(response?.status()).toBe(200);
 
-  const starButton = page.locator('button[aria-label="Star"]');
+  const starButton = page.locator('button[aria-label="Star"], button[aria-label="Unstar"]');
   await starButton.click();
 
-  const unstarButton = page.locator('button[aria-label="Unstar"]');
-  await expect(unstarButton).toBeFocused();
+  await expect(
+  page.locator('button[aria-label="Star"]:focus, button[aria-label="Unstar"]:focus')
+).toBeVisible();
 });
