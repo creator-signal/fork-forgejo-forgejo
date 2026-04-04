@@ -29,6 +29,27 @@ forgejo.org/models/dbfs
 	Create
 	Rename
 
+forgejo.org/models/f3/forge
+	Find
+
+forgejo.org/models/f3/mirror
+	NewMirror
+	Mirror.decryptToken
+	Mirror.encryptToken
+	Equal
+	Upsert
+	Insert
+	FindOptions.ToConds
+	Find
+	findFromPathEquivalents
+	removeRedundants
+	Get
+	Update
+	Iterate
+
+forgejo.org/models/f3/resource
+	Find
+
 forgejo.org/models/forgejo/semver
 	GetVersion
 	SetVersionString
@@ -225,8 +246,21 @@ forgejo.org/routers/web/org
 forgejo.org/services/context
 	GetPrivateContext
 
+forgejo.org/services/f3/context
+	WithF3
+
+forgejo.org/services/f3/mirror
+	GetForge
+	GetMirror
+	DeleteForge
+
 forgejo.org/services/notify
 	UnregisterNotifier
+
+forgejo.org/services/permissions/helpers
+	ToScopeString
+	CreateToken
+	CreateAdminReadToken
 
 forgejo.org/services/repository
 	IsErrForkAlreadyExist
