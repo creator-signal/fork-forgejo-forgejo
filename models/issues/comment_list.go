@@ -390,6 +390,45 @@ func (comments CommentList) LoadAttachments(ctx context.Context) (err error) {
 	return nil
 }
 
+func (comments CommentList) LoadResolveDoers(ctx context.Context) (err error) {
+	relevant := func(c *Comment) bool {
+		return c.ResolveDoerID != 0 && c.Type == CommentTypeCode
+	}
+	userIDs := make(container.Set[int64])
+	for _, comment := range comments {
+		if relevant(comment) {
+			userIDs.Add(comment.ResolveDoerID)
+		}
+	}
+
+	if len(userIDs) == 0 {
+		return nil
+	}
+
+	userMap := make(map[int64]*user_model.User)
+	users, err := user_model.GetUsersByIDs(ctx, userIDs.Slice())
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		userMap[user.ID] = user
+	}
+
+	for _, comment := range comments {
+		if !relevant(comment) {
+			continue
+		}
+		resolveDoer, ok := userMap[comment.ResolveDoerID]
+		if !ok {
+			comment.ResolveDoer = user_model.NewGhostUser()
+		} else {
+			comment.ResolveDoer = resolveDoer
+		}
+	}
+
+	return nil
+}
+
 func (comments CommentList) getReviewIDs() []int64 {
 	return container.FilterSlice(comments, func(comment *Comment) (int64, bool) {
 		return comment.ReviewID, comment.ReviewID > 0
