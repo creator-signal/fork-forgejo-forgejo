@@ -66,6 +66,6 @@ test('Star button focus retention', async ({page}) => {
   await starButton.click();
 
   await expect(
-  page.locator('button[aria-label="Star"]:focus, button[aria-label="Unstar"]:focus')
-).toBeVisible();
+    page.locator('button[aria-label="Star"]:focus, button[aria-label="Unstar"]:focus'),
+  ).toBeVisible();
 });
