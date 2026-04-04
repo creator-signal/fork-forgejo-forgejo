@@ -711,7 +711,7 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 				assert.Equal(t, expected.Status.String(), actual.Status)
 
 				if expected.ID == 195 {
-					assert.Equal(t, api.ActionRunJob{
+					assert.Equal(t, &api.ActionRunJob{
 						ID:      195,
 						Attempt: 1,
 						Handle:  "",
@@ -724,7 +724,7 @@ func TestActionsAPIListActionRunJobs(t *testing.T) {
 						Status:  "success",
 					}, actual)
 				} else if expected.ID == 197 {
-					assert.Equal(t, api.ActionRunJob{
+					assert.Equal(t, &api.ActionRunJob{
 						ID:      197,
 						Attempt: 0,
 						Handle:  "",
