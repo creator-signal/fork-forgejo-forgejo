@@ -40,18 +40,9 @@ func (issues IssueList) LoadRepositories(ctx context.Context) (repo_model.Reposi
 	}
 
 	repoIDs := issues.getRepoIDs()
-	repoMaps := make(map[int64]*repo_model.Repository, len(repoIDs))
-	left := len(repoIDs)
-	for left > 0 {
-		limit := min(left, db.DefaultMaxInSize)
-		err := db.GetEngine(ctx).
-			In("id", repoIDs[:limit]).
-			Find(&repoMaps)
-		if err != nil {
-			return nil, fmt.Errorf("find repository: %w", err)
-		}
-		left -= limit
-		repoIDs = repoIDs[limit:]
+	repoMaps, err := db.GetByIDs(ctx, "id", repoIDs, &repo_model.Repository{})
+	if err != nil {
+		return nil, fmt.Errorf("find repository: %w", err)
 	}
 
 	for _, issue := range issues {
@@ -93,18 +84,9 @@ func (issues IssueList) LoadPosters(ctx context.Context) error {
 }
 
 func getPostersByIDs(ctx context.Context, posterIDs []int64) (map[int64]*user_model.User, error) {
-	posterMaps := make(map[int64]*user_model.User, len(posterIDs))
-	left := len(posterIDs)
-	for left > 0 {
-		limit := min(left, db.DefaultMaxInSize)
-		err := db.GetEngine(ctx).
-			In("id", posterIDs[:limit]).
-			Find(&posterMaps)
-		if err != nil {
-			return nil, err
-		}
-		left -= limit
-		posterIDs = posterIDs[limit:]
+	posterMaps, err := db.GetByIDs(ctx, "id", posterIDs, &user_model.User{})
+	if err != nil {
+		return nil, err
 	}
 	return posterMaps, nil
 }
@@ -180,18 +162,9 @@ func (issues IssueList) LoadMilestones(ctx context.Context) error {
 		return nil
 	}
 
-	milestoneMaps := make(map[int64]*Milestone, len(milestoneIDs))
-	left := len(milestoneIDs)
-	for left > 0 {
-		limit := min(left, db.DefaultMaxInSize)
-		err := db.GetEngine(ctx).
-			In("id", milestoneIDs[:limit]).
-			Find(&milestoneMaps)
-		if err != nil {
-			return err
-		}
-		left -= limit
-		milestoneIDs = milestoneIDs[limit:]
+	milestoneMaps, err := db.GetByIDs(ctx, "id", milestoneIDs, &Milestone{})
+	if err != nil {
+		return err
 	}
 
 	for _, issue := range issues {
@@ -306,33 +279,9 @@ func (issues IssueList) LoadPullRequests(ctx context.Context) error {
 		return nil
 	}
 
-	pullRequestMaps := make(map[int64]*PullRequest, len(issuesIDs))
-	left := len(issuesIDs)
-	for left > 0 {
-		limit := min(left, db.DefaultMaxInSize)
-		rows, err := db.GetEngine(ctx).
-			In("issue_id", issuesIDs[:limit]).
-			Rows(new(PullRequest))
-		if err != nil {
-			return err
-		}
-
-		for rows.Next() {
-			var pr PullRequest
-			err = rows.Scan(&pr)
-			if err != nil {
-				if err1 := rows.Close(); err1 != nil {
-					return fmt.Errorf("IssueList.loadPullRequests: Close: %w", err1)
-				}
-				return err
-			}
-			pullRequestMaps[pr.IssueID] = &pr
-		}
-		if err1 := rows.Close(); err1 != nil {
-			return fmt.Errorf("IssueList.loadPullRequests: Close: %w", err1)
-		}
-		left -= limit
-		issuesIDs = issuesIDs[limit:]
+	pullRequestMaps, err := db.GetByIDs(ctx, "issue_id", issuesIDs, &PullRequest{})
+	if err != nil {
+		return err
 	}
 
 	for _, issue := range issues {
@@ -350,34 +299,10 @@ func (issues IssueList) LoadAttachments(ctx context.Context) (err error) {
 		return nil
 	}
 
-	attachments := make(map[int64][]*repo_model.Attachment, len(issues))
 	issuesIDs := issues.getIssueIDs()
-	left := len(issuesIDs)
-	for left > 0 {
-		limit := min(left, db.DefaultMaxInSize)
-		rows, err := db.GetEngine(ctx).
-			In("issue_id", issuesIDs[:limit]).
-			Rows(new(repo_model.Attachment))
-		if err != nil {
-			return err
-		}
-
-		for rows.Next() {
-			var attachment repo_model.Attachment
-			err = rows.Scan(&attachment)
-			if err != nil {
-				if err1 := rows.Close(); err1 != nil {
-					return fmt.Errorf("IssueList.loadAttachments: Close: %w", err1)
-				}
-				return err
-			}
-			attachments[attachment.IssueID] = append(attachments[attachment.IssueID], &attachment)
-		}
-		if err1 := rows.Close(); err1 != nil {
-			return fmt.Errorf("IssueList.loadAttachments: Close: %w", err1)
-		}
-		left -= limit
-		issuesIDs = issuesIDs[limit:]
+	attachments, err := db.GetByFieldIn(ctx, "issue_id", issuesIDs, &repo_model.Attachment{})
+	if err != nil {
+		return err
 	}
 
 	for _, issue := range issues {
