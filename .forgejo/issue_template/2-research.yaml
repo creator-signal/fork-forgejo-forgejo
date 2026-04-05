@@ -1,29 +1,39 @@
-name: "Step 2: Research"
-description: "[Contributors only] Create research / collection about related problems"
+name: "Stage 2: Research"
+description: "[Contributors only] Create research task / collection about related problems"
 labels: ["stage/2-research"]
 body:
 - type: markdown
   attributes:
     value: |
-      - Please speak English, as this is the language all maintainers can speak and write.
+      - Please write in English.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
-      - If you intend to use AI for communication in this issue, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md). tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
+      - If you are using AI for communication, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).\
+        tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
 - type: markdown
   attributes:
     value: |
       ### New workflow
       
-      We are currently experimenting with a new workflow to manage issues and better understand your problems and needs. This is step 2 of the workflow, which is intended for Forgejo contributors. If you just want to raise a problem or need you have, please refer to step 1.
+      We are introducing **a new workflow** to manage issues and understand your problems and needs.
+      Want to report a bug or request a feature? Please follow step 1 instead.
       
-      This step is intended to focus on researching the problems users are facing when a single issue is not enough for this (e.g. a lot of related problem reports that need to be discussed and summarized, or external sources such as user testing, surveys etc that need to be included).
+      <details><summary>**Instructions for research tasks**</summary>
       
-      If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that led to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+      * Why should this be researched (motivation)?
+      * What questions should be answered? What information is missing?
+      * What existing information is available? (user problems and other data)
+      * Who is interested in working on ...
+        * This research? (If no one, the user research team will consider to take over)
+        * The next steps?
+      * Want to learn more? [→ Workflow documentation](), [→ Discussion issue](https://codeberg.org/forgejo/discussions/issues/415).
+      
+      </details>
 - type: textarea
   id: description
   attributes:
-    label: Research description
+    label: Research task
     description: What is the scope of this research issue?
 - type: textarea
-  id: problems
+  id: information
   attributes:
-    label: Existing problems or data sources
+    label: Existing information, user reports and other data

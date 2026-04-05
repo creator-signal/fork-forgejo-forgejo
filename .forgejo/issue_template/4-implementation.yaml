@@ -1,27 +1,34 @@
-name: "Step 4: Implementation"
+name: "Stage 4: Implementation"
 description: "[Contributors only] Document a task ready for implementation"
 labels: ["stage/4-implementation"]
 body:
 - type: markdown
   attributes:
     value: |
-      - Please speak English, as this is the language all maintainers can speak and write.
+      - Please write in English.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
-      - If you intend to use AI for communication in this issue, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md). tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
+      - If you are using AI for communication, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).\
+        tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
 - type: markdown
   attributes:
     value: |
       ### New workflow
       
-      We are currently experimenting with a new workflow to manage issues and better understand your problems and needs. This is step 4 of the workflow, which is intended for Forgejo contributors. If you just want to raise a problem or need you have, please refer to step 1.
+      We are introducing **a new workflow** to manage issues and understand your problems and needs.
+      Want to report a bug or request a feature? Please follow step 1 instead.
       
-      This step is intended to document a task that is actionable to developers and ready for implementation. It is either trivial (e.g. fixing a bug) or has followed the process and was generally accepted as a solution. In particular, this means:
+      <details><summary>**Instructions for implementation tasks**</summary>
       
-      * The problems this change fixes have been described and verified.
-      * Potential solutions to the problem have been considered and this one was chosen.
-      * The written details of this issue have been agreed on.
+      * This task must be actionable to developers, without anticipating further UX design discussion.
+        * It is either trivial (e.g. fixing a bug) ...
+        * Or has followed through the previous steps of the process.
+      * Is all of this true?
+        * The problem(s) this change fixes have been described and verified.
+        * Potential solutions to the problem have been considered and this one was chosen.
+        * The written details of this task have been agreed on. Details can be left open if you don't suggest they are "decided" in this task.
+      * Want to learn more? [→ Workflow documentation](), [→ Discussion issue](https://codeberg.org/forgejo/discussions/issues/415).
       
-      If you want to learn more about the background of our workflow, feel invited to read and participate in [the discussion that led to the current approach](https://codeberg.org/forgejo/discussions/issues/415). We are looking forward to your feedback.
+      </details>
 - type: textarea
   id: description
   attributes:

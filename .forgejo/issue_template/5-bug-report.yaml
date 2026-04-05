@@ -25,11 +25,12 @@ body:
 - type: markdown
   attributes:
     value: |
-      - Please speak English, as this is the language all maintainers can speak and write.
+      - Please write in English.
       - Be as clear and concise as possible. A very verbose report is harder to interpret in a concrete way.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
       - Take a moment to [check that your issue hasn't been reported before](https://codeberg.org/forgejo/forgejo/issues?q=&type=all&labels=78137).
-      - If you intend to use AI for communication in this issue, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md). tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
+      - If you are using AI for communication, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).\
+        tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
 - type: dropdown
   id: can-reproduce
   attributes:
