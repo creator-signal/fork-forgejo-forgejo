@@ -60,7 +60,7 @@ func (handler Handler) handleTemplateNode(fset *token.FileSet, node tmplParser.N
 
 		case tmplParser.NodeField:
 			nodeField := nodeCommand.Args[0].(*tmplParser.FieldNode)
-			if len(nodeField.Ident) != 2 || !(nodeField.Ident[0] == "locale" || nodeField.Ident[0] == "Locale") {
+			if len(nodeField.Ident) != 2 || nodeField.Ident[0] != "locale" {
 				return
 			}
 			funcname = nodeField.Ident[1]
