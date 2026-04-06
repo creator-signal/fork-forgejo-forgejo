@@ -17,7 +17,7 @@ body:
       We are introducing **a new workflow** to manage issues and understand your problems and needs.
       Want to report a bug or request a feature? Please follow step 1 instead.
       
-      <details><summary>**Instructions for implementation tasks**</summary>
+      <details><summary><b>Instructions for implementation tasks</b></summary>
       
       * This task must be actionable to developers, without anticipating further UX design discussion.
         * It is either trivial (e.g. fixing a bug) ...
