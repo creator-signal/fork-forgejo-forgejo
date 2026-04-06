@@ -63,6 +63,10 @@ func (handler Handler) handleTemplateNode(fset *token.FileSet, node tmplParser.N
 			if len(nodeField.Ident) != 2 || nodeField.Ident[0] != "locale" {
 				return
 			}
+			resolvedPos := fset.PositionFor(token.Pos(nodeCommand.Pos), false)
+			if !strings.Contains(resolvedPos.Filename, "templates/mail/") {
+				handler.OnWarning(fset, token.Pos(nodeCommand.Pos), "encountered unexpected .locale usage")
+			}
 			funcname = nodeField.Ident[1]
 
 		case tmplParser.NodeVariable:
