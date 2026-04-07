@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -1217,6 +1218,46 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			tester.assertFilesChangedDiff(diff1, "checking commit1 contents in full PR diff")
 			tester.assertCommitDiff(commit1, diff1, "checking commit1 contents in single-commit diff")
 		})
+
+		t.Run("comment lands on blame with original line number varying from current", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			// Remove "Line 1" - "Line 10", on the base branch. If you "git blame" Line 50 at that point, it will have
+			// an original line number 50, but actually be appearing at line number index 40, causing wrong outputs.
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\n", "", 1)
+			tester.changeFileOnBase("file1.md", content)
+
+			// Now modify "Line 51" in a PR:
+			commitSHA := tester.changeFile("file1.md", strings.Replace(content, "Line 51\n", "Line 51--modified\n", 1))
+			tester.createPR()
+
+			// Place a comment on "Line 50", which would "git blame" to the original commit and line number 50, even
+			// though it's now actually at line number 40.
+			comment := tester.commentFromFilesChanged("file1.md", lineNumber(content, "Line 50"))
+			assert.Equal(t, `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -38,7 +38,7 @@ Line 47
+ Line 48
+ Line 49
+ Line 50`, comment.PatchQuoted)
+			assert.Equal(t, "proposed", comment.DiffSide())
+			assert.EqualValues(t, 50, comment.Line)
+			assert.Equal(t, tester.initialSHA, comment.CommitSHA)
+
+			diff := []diffTableRow{
+				{rowType: RowHasCode, code: "Line 49"},
+				{rowType: RowHasCode, code: "Line 50"},
+				{rowType: RowComment, commentID: comment.ID},
+				{rowType: RowDelCode, code: "Line 51"},
+				{rowType: RowAddCode, code: "Line 51--modified"},
+				{rowType: RowHasCode, code: "Line 52"},
+			}
+			tester.assertFilesChangedDiff(diff)
+			tester.assertCommitDiff(commitSHA, diff)
+		})
 	})
 }
 
@@ -1227,6 +1268,7 @@ type PullRequestCommentPlacementTester struct {
 	apiToken    string
 	fileContent string
 	repo        *repo_model.Repository
+	initialSHA  string
 	branch      optional.Option[string]
 	pr          *api.PullRequest
 }
@@ -1241,7 +1283,7 @@ func newPullRequestCommentPlacementTester(t *testing.T) *PullRequestCommentPlace
 		content.WriteString(fmt.Sprintf("Line %d\n", i+1)) // +1 -> make "Line N" appear on the Nth line and avoid off-by-one confusions
 	}
 
-	repo, _, reset := tests.CreateDeclarativeRepoWithOptions(t, user2, tests.DeclarativeRepoOptions{
+	repo, initialSHA, reset := tests.CreateDeclarativeRepoWithOptions(t, user2, tests.DeclarativeRepoOptions{
 		Files: optional.Some([]*files_service.ChangeRepoFile{
 			{
 				Operation:     "create",
@@ -1264,6 +1306,7 @@ func newPullRequestCommentPlacementTester(t *testing.T) *PullRequestCommentPlace
 		apiToken:    token,
 		fileContent: content.String(),
 		repo:        repo,
+		initialSHA:  initialSHA,
 	}
 }
 
@@ -1385,6 +1428,10 @@ func (tester *PullRequestCommentPlacementTester) assertCommitDiff(commitSHA stri
 		testNote = note[0]
 	}
 	assertDiffTable(tester.t, doc, rowAssertions, testNote)
+}
+
+func lineNumber(content, line string) int {
+	return slices.Index(strings.Split(content, "\n"), line) + 1
 }
 
 type diffTableRowType int
