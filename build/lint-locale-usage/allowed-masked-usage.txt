@@ -6,17 +6,11 @@ translation_meta.test
 # this also gets instantiated as a Messenger once
 repo.migrate.migrating_failed.error
 
-# models/system/notice.go: func (n *Notice) TrStr() string
-admin.notices.type_%d
-
 # modules/setting/ui.go
 themes.names.
 
 # services/context/context.go
 relativetime.
-
-# templates/repo/migrate/migrate.tmpl
-migrate.%s.description
 
 # templates/repo/issue/view_content.tmpl: indirection via $closeTranslationKey
 repo.issues.close
@@ -27,9 +21,6 @@ repo.issues.ref_closing_from
 repo.issues.ref_issue_from
 repo.issues.ref_pull_from
 repo.issues.ref_reopening_from
-
-# templates/repo/issue/view_content/comments.tmpl
-projects.type-%d.display_name
 
 # templates/repo/settings/webhook/link_menu.tmpl, templates/webhook/new.tmpl: repo.settings.web_hook_name_
 # tests/integration/repo_archive_text_test.go

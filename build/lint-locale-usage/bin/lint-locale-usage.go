@@ -313,10 +313,7 @@ func main() {
 	handler := llu.Handler{
 		OnMsgidPattern: func(fset *token.FileSet, pos token.Pos, msgidPattern string) {
 			msgidPatternSplit := strings.Split(msgidPattern, ".")
-			if !allowedMaskedPrefixes.Matches(msgidPatternSplit) {
-				gotAnyMsgidError = true
-				fmt.Printf("%s:\tmissing msgid pattern: %s\n", fset.Position(pos).String(), msgidPattern)
-			}
+			allowedMaskedPrefixes.Insert(msgidPatternSplit)
 		},
 		OnMsgidPrefix: func(fset *token.FileSet, pos token.Pos, msgidPrefix string, truncated bool) {
 			msgidPrefixSplit := strings.Split(msgidPrefix, ".")
@@ -328,13 +325,8 @@ func main() {
 			}
 		},
 		OnMsgid: func(fset *token.FileSet, pos token.Pos, msgid string, weak bool) {
-			// fallback due to missing printf handling in HandleGo...
 			if strings.Contains(msgid, "%") {
-				msgidPatternSplit := strings.Split(msgid, ".")
-				if !allowedMaskedPrefixes.Matches(msgidPatternSplit) {
-					gotAnyMsgidError = true
-					fmt.Printf("%s:\tmissing msgid pattern: %s\n", fset.Position(pos).String(), msgid)
-				}
+				fmt.Printf("%s:\tunexpected msgid pattern: %s\n", fset.Position(pos).String(), msgid)
 				return
 			}
 			if !msgids.Contains(msgid) {
