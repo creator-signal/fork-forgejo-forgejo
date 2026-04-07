@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -44,12 +45,57 @@ type StringTrie interface {
 
 type StringTrieMap map[string]StringTrie
 
+func printfPatternToRegex(key string) (string, bool) {
+	parts := strings.Split(key, "%")
+	if len(parts) < 2 {
+		return key, false
+	}
+	var pattern strings.Builder
+	pattern.WriteString("^")
+	pattern.WriteString(parts[0])
+	skip := false
+	for _, part := range parts[1:] {
+		if skip {
+			skip = false
+			continue
+		}
+		if len(part) == 0 {
+			// "%%"
+			pattern.WriteString("%")
+			continue
+		}
+		switch part[0] {
+		case 'd':
+			pattern.WriteString("[0-9]+")
+		default:
+			pattern.WriteString("[A-Za-z0-9]*")
+		}
+		pattern.WriteString(part[1:])
+	}
+	pattern.WriteString("$")
+	return pattern.String(), true
+}
+
 func (m StringTrieMap) Matches(key []string) bool {
 	if len(key) == 0 || m == nil {
 		return true
 	}
 	value, ok := m[key[0]]
 	if !ok {
+		for altKey, value := range m {
+			// TODO: cache mapping $printfFormatString -> $regexpCompileOutput
+			pattern, found := printfPatternToRegex(altKey)
+			if !found {
+				continue
+			}
+			matched, err := regexp.MatchString(pattern, key[0])
+			if err != nil {
+				panic(fmt.Sprintf("unable to compile regexp '%s': %s", pattern, err.Error()))
+			}
+			if matched && (value == nil || value.Matches(key[1:])) {
+				return true
+			}
+		}
 		return false
 	}
 	if value == nil {
@@ -101,7 +147,7 @@ func ParseAllowedMaskedUsages(fname string, usedMsgids container.Set[string], al
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if linePrefix, found := strings.CutSuffix(line, "."); found {
+		if linePrefix, found := strings.CutSuffix(line, "."); found || strings.Contains(line, "%") {
 			allowedMaskedPrefixes.Insert(strings.Split(linePrefix, "."))
 		} else {
 			if !chkMsgid(line) {
@@ -260,6 +306,13 @@ func main() {
 	}
 
 	handler := llu.Handler{
+		OnMsgidPattern: func(fset *token.FileSet, pos token.Pos, msgidPattern string) {
+			msgidPatternSplit := strings.Split(msgidPattern, ".")
+			if !allowedMaskedPrefixes.Matches(msgidPatternSplit) {
+				gotAnyMsgidError = true
+				fmt.Printf("%s:\tmissing msgid pattern: %s\n", fset.Position(pos).String(), msgidPattern)
+			}
+		},
 		OnMsgidPrefix: func(fset *token.FileSet, pos token.Pos, msgidPrefix string, truncated bool) {
 			msgidPrefixSplit := strings.Split(msgidPrefix, ".")
 			if !truncated {
@@ -270,6 +323,15 @@ func main() {
 			}
 		},
 		OnMsgid: func(fset *token.FileSet, pos token.Pos, msgid string, weak bool) {
+			// fallback due to missing printf handling in HandleGo...
+			if strings.Contains(msgid, "%") {
+				msgidPatternSplit := strings.Split(msgid, ".")
+				if !allowedMaskedPrefixes.Matches(msgidPatternSplit) {
+					gotAnyMsgidError = true
+					fmt.Printf("%s:\tmissing msgid pattern: %s\n", fset.Position(pos).String(), msgid)
+				}
+				return
+			}
 			if !msgids.Contains(msgid) {
 				if weak && allowWeakMissingMsgids {
 					return
