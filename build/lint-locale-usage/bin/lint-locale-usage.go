@@ -191,9 +191,14 @@ func Usage() {
 
 	fmt.Fprintf(outp, "\nSpecial Go doc comments:\n")
 	for _, i := range []string{
+		"//llu:returnsTrKeyWeak",
+		"\tcan be used in front of functions to indicate",
+		"\tthat the function returns message IDs (allows nesting inside complicated function calls)",
+		"\tWARNING: this currently doesn't support nested functions properly",
+		"",
 		"//llu:returnsTrKey",
 		"\tcan be used in front of functions to indicate",
-		"\tthat the function returns message IDs",
+		"\tthat the function returns message IDs (doesn't allow nesting inside complicated function calls)",
 		"\tWARNING: this currently doesn't support nested functions properly",
 		"",
 		"//llu:returnsTrKeySuffix prefix.",
