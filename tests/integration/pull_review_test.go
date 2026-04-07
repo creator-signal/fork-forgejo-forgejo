@@ -1170,6 +1170,53 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			tester.assertFilesChangedDiff(diff)
 			tester.assertCommitDiff(commitSHA, diff)
 		})
+
+		t.Run("comment on line moves due to a following commit", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			// Modify line 50
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 50\n", "Line 50--modified\n", 1)
+			commit1 := tester.changeFile("file1.md", content)
+			tester.createPR()
+
+			// Place a comment on "Line 50--modified"
+			comment := tester.commentFromFilesChanged("file1.md", 50)
+			assert.Equal(t, `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -48,3 +48,3 @@
+ Line 48
+ Line 49
+-Line 50
++Line 50--modified`, comment.PatchQuoted)
+			assert.Equal(t, "proposed", comment.DiffSide())
+			assert.EqualValues(t, 50, comment.Line)
+			assert.Equal(t, commit1, comment.CommitSHA)
+
+			// Add a second commit to the PR which removes  "Line 1" - "Line 10".
+			content = strings.Replace(content, "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\n", "", 1)
+			commit2 := tester.changeFile("file1.md", content)
+
+			diff2 := []diffTableRow{
+				{rowType: RowDelCode, code: "Line 9"},
+				{rowType: RowDelCode, code: "Line 10"},
+				{rowType: RowHasCode, code: "Line 11"},
+			}
+			tester.assertFilesChangedDiff(diff2, "checking commit2 contents in full PR diff")
+			tester.assertCommitDiff(commit2, diff2, "checking commit2 contents in single-commit diff")
+
+			diff1 := []diffTableRow{
+				{rowType: RowHasCode, code: "Line 49"},
+				{rowType: RowDelCode, code: "Line 50"},
+				{rowType: RowAddCode, code: "Line 50--modified"},
+				{rowType: RowComment, commentID: comment.ID},
+				{rowType: RowHasCode, code: "Line 51"},
+			}
+			tester.assertFilesChangedDiff(diff1, "checking commit1 contents in full PR diff")
+			tester.assertCommitDiff(commit1, diff1, "checking commit1 contents in single-commit diff")
+		})
 	})
 }
 
