@@ -1219,6 +1219,139 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			tester.assertCommitDiff(commit1, diff1, "checking commit1 contents in single-commit diff")
 		})
 
+		t.Run("comment on line moves due to a following commit, following commit is rewritten and force-push'd", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			// Modify line 50
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 50\n", "Line 50--modified\n", 1)
+			commit1 := tester.changeFile("file1.md", content)
+			tester.createPR()
+
+			// Place a comment on "Line 50--modified"
+			comment := tester.commentFromFilesChanged("file1.md", 50)
+			assert.Equal(t, `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -48,3 +48,3 @@
+ Line 48
+ Line 49
+-Line 50
++Line 50--modified`, comment.PatchQuoted)
+			assert.Equal(t, "proposed", comment.DiffSide())
+			assert.EqualValues(t, 50, comment.Line)
+			assert.Equal(t, commit1, comment.CommitSHA)
+
+			// Add a second commit to the PR which removes  "Line 1" - "Line 10".
+			content = strings.Replace(content, "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\n", "", 1)
+			tester.changeFile("file1.md", content)
+
+			// Now amend commit2v1 with an additional change, causing a force push of the branch
+			tester.withBranchCheckout(func(repoPath string) {
+				content = strings.Replace(content, "Line 11\n", "", 1) // Remove Line 11 as well
+				require.NoError(t, os.WriteFile(path.Join(repoPath, "file1.md"), []byte(content), 0o644))
+				require.NoError(t, git.NewCommand(t.Context(), "commit", "-a", "--amend", "--no-edit").Run(&git.RunOpts{Dir: repoPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "--force").Run(&git.RunOpts{Dir: repoPath}))
+			})
+
+			diff2 := []diffTableRow{
+				{rowType: RowDelCode, code: "Line 10"},
+				{rowType: RowDelCode, code: "Line 11"},
+				{rowType: RowHasCode, code: "Line 12"},
+			}
+			tester.assertFilesChangedDiff(diff2, "checking commit2 (force push) contents in full PR diff")
+
+			diff1 := []diffTableRow{
+				{rowType: RowHasCode, code: "Line 49"},
+				{rowType: RowDelCode, code: "Line 50"},
+				{rowType: RowAddCode, code: "Line 50--modified"},
+				{rowType: RowComment, commentID: comment.ID},
+				{rowType: RowHasCode, code: "Line 51"},
+			}
+			tester.assertFilesChangedDiff(diff1, "checking commit1 contents in full PR diff")
+			tester.assertCommitDiff(commit1, diff1, "checking commit1 contents in single-commit diff")
+		})
+
+		t.Run("comment on line commit is rewritten and force-push'd", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			// Modify line 50
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 50\n", "Line 50--modified\n", 1)
+			commit1 := tester.changeFile("file1.md", content)
+			tester.createPR()
+
+			// Place a comment on "Line 50--modified"
+			comment := tester.commentFromFilesChanged("file1.md", 50)
+			assert.Equal(t, `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -48,3 +48,3 @@
+ Line 48
+ Line 49
+-Line 50
++Line 50--modified`, comment.PatchQuoted)
+			assert.Equal(t, "proposed", comment.DiffSide())
+			assert.EqualValues(t, 50, comment.Line)
+			assert.Equal(t, commit1, comment.CommitSHA)
+
+			// Add a second commit to the PR which removes  "Line 1" - "Line 10".
+			content = strings.Replace(content, "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\n", "", 1)
+			commit2 := tester.changeFile("file1.md", content)
+
+			// Now, reorganize these commits, so that it's main->commit2->commit1 on the branch, rather than
+			// main->commit1->commit2. Then force push the branch.
+			tester.withBranchCheckout(func(repoPath string) {
+				// move commit2 onto main, off commit1
+				require.NoError(t,
+					git.NewCommand(t.Context(), "rebase").
+						AddArguments("--onto").AddDynamicArguments(tester.initialSHA).
+						AddDynamicArguments(commit1).
+						AddDynamicArguments(commit2).
+						Run(&git.RunOpts{Dir: repoPath}))
+				// move commit1 onto HEAD, off main
+				require.NoError(t,
+					git.NewCommand(t.Context(), "rebase").
+						AddArguments("--onto").AddDynamicArguments("HEAD").
+						AddDynamicArguments(tester.initialSHA).
+						AddDynamicArguments(commit1).
+						Run(&git.RunOpts{Dir: repoPath}))
+
+				// delete branch for the PR
+				has, branch := tester.branch.Get()
+				require.True(t, has)
+				require.NoError(t,
+					git.NewCommand(t.Context(), "branch").
+						AddArguments("-D").AddDynamicArguments(branch).
+						Run(&git.RunOpts{Dir: repoPath}))
+				// call HEAD as the branch
+				require.NoError(t,
+					git.NewCommand(t.Context(), "branch").
+						AddDynamicArguments(branch).
+						Run(&git.RunOpts{Dir: repoPath}))
+
+				// force push the rebuilt branch
+				require.NoError(t, git.NewCommand(t.Context(), "push", "--force", "origin").AddDynamicArguments(branch).Run(&git.RunOpts{Dir: repoPath}))
+			})
+
+			diff2 := []diffTableRow{
+				{rowType: RowDelCode, code: "Line 10"},
+				{rowType: RowHasCode, code: "Line 11"},
+			}
+			tester.assertFilesChangedDiff(diff2, "checking commit2 (force push) contents in full PR diff")
+
+			diff1 := []diffTableRow{
+				{rowType: RowHasCode, code: "Line 49"},
+				{rowType: RowDelCode, code: "Line 50"},
+				{rowType: RowAddCode, code: "Line 50--modified"},
+				// no comment visible anymore; force push has lost its place at this time
+				{rowType: RowHasCode, code: "Line 51"},
+			}
+			tester.assertFilesChangedDiff(diff1, "checking commit1 contents in full PR diff")
+		})
+
 		t.Run("comment lands on blame with original line number varying from current", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 			tester := newPullRequestCommentPlacementTester(t)
@@ -1400,6 +1533,20 @@ func (tester *PullRequestCommentPlacementTester) commentFromFilesChanged(filenam
 
 	comment := unittest.AssertExistsAndLoadBean(tester.t, &issues_model.Comment{Content: commentContent})
 	return comment
+}
+
+func (tester *PullRequestCommentPlacementTester) withBranchCheckout(action func(string)) {
+	dstPath := tester.t.TempDir()
+	cloneURL, _ := url.Parse(tester.repo.CloneLink().HTTPS)
+	cloneURL.User = url.UserPassword(tester.user.LoginName, userPassword)
+	require.NoError(tester.t, git.CloneWithArgs(tester.t.Context(), nil, cloneURL.String(), dstPath, git.CloneRepoOptions{}))
+	doGitSetRemoteURL(dstPath, "origin", cloneURL)(tester.t)
+
+	branchExists, branch := tester.branch.Get()
+	require.True(tester.t, branchExists)
+	require.NoError(tester.t, git.NewCommand(tester.t.Context(), "checkout").AddDynamicArguments(branch).Run(&git.RunOpts{Dir: dstPath}))
+
+	action(dstPath)
 }
 
 func (tester *PullRequestCommentPlacementTester) assertFilesChangedDiff(rowAssertions []diffTableRow, note ...string) {
