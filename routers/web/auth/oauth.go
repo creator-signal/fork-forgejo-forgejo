@@ -44,6 +44,7 @@ import (
 
 	"code.forgejo.org/go-chi/binding"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jmespath-community/go-jmespath"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/fitbit"
@@ -1168,8 +1169,8 @@ func syncGroupsToQuotaGroups(ctx *context.Context, source *oauth2.Source, gothUs
 }
 
 func getClaimedGroups(source *oauth2.Source, gothUser *goth.User) container.Set[string] {
-	groupClaims, has := gothUser.RawData[source.GroupClaimName]
-	if !has {
+	groupClaims, err := searchJSONForAttr(source.GroupClaimName, gothUser.RawData)
+	if err != nil {
 		return nil
 	}
 
@@ -1183,6 +1184,24 @@ func getClaimedQuotaGroups(source *oauth2.Source, gothUser *goth.User) container
 	}
 
 	return claimValueToStringSet(groupClaims)
+}
+
+// searchJSONForAttr searches for a specific attribute in a JSON object.
+// The claimGroupsPath parameter is a string that specifies the path to the attribute.
+// The data parameter is the JSON object that we're searching.
+// The function returns the value of the attribute and an error if one occurred.
+func searchJSONForAttr(claimGroupsPath string, data map[string]any) (any, error) {
+	// Copy the data to a new variable
+	jsonData := data
+
+	// Search for the attribute in the JSON object
+	value, err := jmespath.Search(claimGroupsPath, jsonData)
+	if err != nil {
+		return "", fmt.Errorf("failed to search user info JSON response with provided path: %q: %w", claimGroupsPath, err)
+	}
+
+	// Return the value and nil error
+	return value, nil
 }
 
 func getUserAdminAndRestrictedFromGroupClaims(source *oauth2.Source, gothUser *goth.User) (isAdmin, isRestricted optional.Option[bool]) {

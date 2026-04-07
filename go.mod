@@ -69,6 +69,7 @@ require (
 	github.com/inbucket/html2text v1.0.0
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/jhillyerd/enmime/v2 v2.2.0
+	github.com/jmespath-community/go-jmespath v1.1.1
 	github.com/json-iterator/go v1.1.12
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.18.5
@@ -256,6 +257,7 @@ require (
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
+	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect

@@ -12,6 +12,7 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/jwtx"
 	"forgejo.org/modules/setting"
@@ -22,6 +23,7 @@ import (
 	"forgejo.org/services/contexttest"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/markbates/goth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -114,4 +116,34 @@ func TestOIDCWellKnownEnabled(t *testing.T) {
 
 	assert.Equal(t, strings.TrimSuffix(setting.AppURL, "/"), oidcjson["issuer"])
 	assert.Equal(t, []any{oauth2.DefaultSigningKey.SigningMethod().Alg()}, oidcjson["id_token_signing_alg_values_supported"])
+}
+
+func TestGetClaimedGroups(t *testing.T) {
+	gothUser := &goth.User{
+		RawData: map[string]any{
+			"roles": []any{
+				map[string]any{
+					"name": "admin",
+					"key":  "value",
+				},
+				map[string]any{
+					"name": "staff",
+					"key":  "value2",
+				},
+			},
+			"groups": []string{"group1", "group2"},
+		},
+	}
+	source := &oauth2.Source{
+		GroupClaimName: "groups",
+	}
+
+	attributeSource := &oauth2.Source{
+		GroupClaimName: "roles[*].name",
+	}
+
+	groups := getClaimedGroups(source, gothUser)
+	roles := getClaimedGroups(attributeSource, gothUser)
+	assert.Equal(t, container.SetOf("group1", "group2"), groups)
+	assert.Equal(t, container.SetOf("admin", "staff"), roles)
 }
