@@ -42,8 +42,8 @@ code.forgejo.org/go-chi/captcha v1.0.2 h1:vyHDPXkpjDv8bLO9NqtWzZayzstD/WpJ5xwEkA
 code.forgejo.org/go-chi/captcha v1.0.2/go.mod h1:lxiPLcJ76UCZHoH31/Wbum4GUi2NgjfFZLrJkKv1lLE=
 code.forgejo.org/go-chi/session v1.0.4 h1:WQ1NaVxcCpxYwCliEGypKclZnOCjh3p1fk8XciJc62U=
 code.forgejo.org/go-chi/session v1.0.4/go.mod h1:+sSTiomM5C8AUPtxZyTENIbcTz22kcVottKO0lnmDRk=
-code.forgejo.org/xorm/xorm v1.3.9-forgejo.10 h1:DCProZz7GP10ue7NoVr1vreuADhH9tEImYFye2+aDG8=
-code.forgejo.org/xorm/xorm v1.3.9-forgejo.10/go.mod h1:ly5tUt9l3b+y7HdXDM1UucQXuS58ahNxB9tPM5/6LfM=
+code.forgejo.org/xorm/xorm v1.3.10-0.20260407030159-f6f0cee6783b h1:V5WWX0QnUK+AIEPKNLyiddRbTZxHVdzb3cl/jq6b0rM=
+code.forgejo.org/xorm/xorm v1.3.10-0.20260407030159-f6f0cee6783b/go.mod h1:ws6rEJTCeRPTwYuDmDQ+6AWz2Qm1IHL5hb4tpH55gYc=
 code.gitea.io/sdk/gitea v0.21.0 h1:69n6oz6kEVHRo1+APQQyizkhrZrLsTLXey9142pfkD4=
 code.gitea.io/sdk/gitea v0.21.0/go.mod h1:tnBjVhuKJCn8ibdyyhvUyxrR1Ca2KHEoTWoukNhXQPA=
 code.superseriousbusiness.org/exif-terminator v0.11.1 h1:qnujLH4/Yk/CFtFMmtjozbdV6Ry5G3Q/E/mLlWm/gQI=
@@ -517,8 +517,8 @@ github.com/mattn/go-runewidth v0.0.17 h1:78v8ZlW0bP43XfmAfPsdXcoNCelfMHsDmd/pkEN
 github.com/mattn/go-runewidth v0.0.17/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/mattn/go-shellwords v1.0.12 h1:M2zGm7EW6UQJvDeQxo4T51eKPurbeFbe8WtebGE2xrk=
 github.com/mattn/go-shellwords v1.0.12/go.mod h1:EZzvwXDESEeg03EKmM+RmDnNOPKG4lLtQsUlTZDWQ8Y=
-github.com/mattn/go-sqlite3 v1.14.40 h1:f7+saIsbq4EF86mUqe0uiecQOJYMOdfi5uATADmUG94=
-github.com/mattn/go-sqlite3 v1.14.40/go.mod h1:pjEuOr8IwzLJP2MfGeTb0A35jauH+C2kbHKBr7yXKVQ=
+github.com/mattn/go-sqlite3 v1.14.41 h1:8p7Pwz5NHkEbWSqc/ygU4CBGubhFFkpgP9KwcdkAHNA=
+github.com/mattn/go-sqlite3 v1.14.41/go.mod h1:pjEuOr8IwzLJP2MfGeTb0A35jauH+C2kbHKBr7yXKVQ=
 github.com/meilisearch/meilisearch-go v0.36.0 h1:N1etykTektXt5KPcSbhBO0d5Xx5NaKj4pJWEM7WA5dI=
 github.com/meilisearch/meilisearch-go v0.36.0/go.mod h1:HBfHzKMxcSbTOvqdfuRA/yf6Vk9IivcwKocWRuW7W78=
 github.com/mholt/acmez/v3 v3.1.2 h1:auob8J/0FhmdClQicvJvuDavgd5ezwLBfKuYmynhYzc=
