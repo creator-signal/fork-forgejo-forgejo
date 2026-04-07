@@ -12,12 +12,6 @@ themes.names.
 # services/context/context.go
 relativetime.
 
-# templates/repo/issue/view_content/comments.tmpl: indirection via $refTr
-repo.issues.ref_closing_from
-repo.issues.ref_issue_from
-repo.issues.ref_pull_from
-repo.issues.ref_reopening_from
-
 # templates/repo/settings/webhook/link_menu.tmpl, templates/webhook/new.tmpl: repo.settings.web_hook_name_
 # tests/integration/repo_archive_text_test.go
 repo.settings.
