@@ -249,6 +249,42 @@ func TestUpdateIssuesCommit_AnotherRepo_FullAddress(t *testing.T) {
 	unittest.CheckConsistencyFor(t, &activities_model.Action{})
 }
 
+func TestUpdateIssuesCommit_ClosePullRequest(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Test that a commit message can close a pull request
+	pushCommits := []*repository.PushCommit{
+		{
+			Sha1:           "abcdef1",
+			CommitterEmail: "user2@example.com",
+			CommitterName:  "User Two",
+			AuthorEmail:    "user2@example.com",
+			AuthorName:     "User Two",
+			Message:        "close #2",
+		},
+	}
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	repo.Owner = user
+
+	// Issue ID 2 is a pull request in repo 1 with index 2
+	prBean := &issues_model.Issue{RepoID: repo.ID, Index: 2, ID: 2}
+	commentBean := &issues_model.Comment{
+		Type:      issues_model.CommentTypeCommitRef,
+		CommitSHA: "abcdef1",
+		PosterID:  user.ID,
+		IssueID:   2,
+	}
+
+	unittest.AssertNotExistsBean(t, commentBean)
+	unittest.AssertNotExistsBean(t, prBean, unittest.Cond("is_closed = ?", true))
+	require.NoError(t, UpdateIssuesCommit(db.DefaultContext, user, repo, pushCommits, repo.DefaultBranch))
+	unittest.AssertExistsAndLoadBean(t, commentBean)
+	unittest.AssertExistsAndLoadBean(t, prBean, unittest.Cond("is_closed = ?", true))
+	unittest.CheckConsistencyFor(t, &activities_model.Action{})
+}
+
 func TestUpdateIssuesCommit_AnotherRepoNoPermission(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})

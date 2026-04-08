@@ -162,8 +162,8 @@ func UpdateIssuesCommit(ctx context.Context, doer *user_model.User, repo *repo_m
 				return err
 			}
 
-			// Only issues can be closed/reopened this way, and user needs the correct permissions
-			if refIssue.IsPull || !canclose {
+			// User needs the correct permissions to close/reopen
+			if !canclose {
 				continue
 			}
 
