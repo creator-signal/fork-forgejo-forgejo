@@ -10,6 +10,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/exec"
@@ -49,21 +50,21 @@ func TestMain(m *testing.M) {
 		},
 	)
 	if err != nil {
-		fmt.Printf("Error initializing test database: %v\n", err)
+		slog.Error("Error initializing test database", "error", err)
 		os.Exit(1)
 	}
 
 	exitVal := m.Run()
 
 	if err := testlogger.WriterCloser.Reset(); err != nil {
-		fmt.Printf("testlogger.WriterCloser.Reset: error ignored: %v\n", err)
+		slog.Info("testlogger.WriterCloser.Reset: ignored:", "error", err)
 	}
 	if err = util.RemoveAll(setting.Indexer.IssuePath); err != nil {
-		fmt.Printf("util.RemoveAll: %v\n", err)
+		slog.Error("util.RemoveAll", "error", err)
 		os.Exit(1)
 	}
 	if err = util.RemoveAll(setting.Indexer.RepoPath); err != nil {
-		fmt.Printf("Unable to remove repo indexer: %v\n", err)
+		slog.Error("Unable to remove repo indexer", "error", err)
 		os.Exit(1)
 	}
 
@@ -98,7 +99,7 @@ func TestE2e(t *testing.T) {
 		testname := filename[:len(filename)-len(filepath.Ext(path))]
 
 		if canSkipTest(path) {
-			fmt.Printf("No related changes for test, skipping: %s\n", filename)
+			t.Logf("No related changes for test, skipping: %s", filename)
 			continue
 		}
 
