@@ -1502,7 +1502,7 @@ func TestCodeblockLanguageStripping(t *testing.T) {
 			"fn main() {}\n"+
 			"```",
 		`<pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
-		</span></code></pre>`)
+</span></code></pre>`)
 
 	// Stripped
 	test(
