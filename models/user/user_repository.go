@@ -85,7 +85,7 @@ func FindFederatedUser(ctx context.Context, externalID string, federationHostID 
 
 func FindFederatedUsers(ctx context.Context) ([]*FederatedUser, error) {
 	var users []*FederatedUser
-	err := db.GetEngine(ctx).Join("INNER", []string{"user", "u"}, "user_id = u.id").Find(&users)
+	err := db.GetEngine(ctx).Find(&users)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func FindFederatedUsers(ctx context.Context) ([]*FederatedUser, error) {
 
 func FindFederatedUsersByHostID(ctx context.Context, federationHostID int64) ([]*FederatedUser, error) {
 	var users []*FederatedUser
-	err := db.GetEngine(ctx).Where("federation_host_id = ?", federationHostID).Join("INNER", []string{"user", "u"}, "user_id = u.id").Find(&users)
+	err := db.GetEngine(ctx).Where("federation_host_id = ?", federationHostID).Find(&users)
 	if err != nil {
 		return nil, err
 	}
