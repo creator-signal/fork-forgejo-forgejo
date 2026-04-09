@@ -132,3 +132,44 @@ func Test_isGitRawOrLFSPath(t *testing.T) {
 	}
 	setting.LFS.StartServer = origLFSStartServer
 }
+
+func Test_isAttachmentPath(t *testing.T) {
+	tests := []struct {
+		path string
+
+		want bool
+	}{
+		{
+			"/owner/repo/actions/runs/1/jobs/1/attempt/1/logs",
+			true,
+		},
+		{
+			"/owner/repo/actions/runs/1738/jobs/12/attempt/300/logs",
+			true,
+		},
+		{
+			"/attachments/",
+			true,
+		},
+		{
+			"/attachments/1234-1234-1234-1234",
+			true,
+		},
+		{
+			"/owner/repo/whatever",
+			false,
+		},
+		{
+			"/owner/repo/actions/but/not/the/right/logs",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", "http://localhost"+tt.path, nil)
+			if got := isAttachmentDownload(req); got != tt.want {
+				t.Errorf("isAttachmentDownload() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

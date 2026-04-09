@@ -26,11 +26,6 @@ func Init() {
 	webauthn.Init()
 }
 
-// isAttachmentDownload check if request is a file download (GET) with URL to an attachment
-func isAttachmentDownload(req *http.Request) bool {
-	return strings.HasPrefix(req.URL.Path, "/attachments/") && req.Method == "GET"
-}
-
 // isContainerPath checks if the request targets the container endpoint
 func isContainerPath(req *http.Request) bool {
 	return strings.HasPrefix(req.URL.Path, "/v2/")
@@ -38,9 +33,15 @@ func isContainerPath(req *http.Request) bool {
 
 var (
 	gitRawOrAttachPathRe = regexp.MustCompile(`^/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+/(?:(?:git-(?:(?:upload)|(?:receive))-pack$)|(?:info/refs$)|(?:HEAD$)|(?:objects/)|(?:raw/)|(?:releases/download/)|(?:attachments/))`)
+	attachmentPathRe     = regexp.MustCompile(`^\/(attachments\/.*|[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/actions\/runs\/[0-9]+\/jobs\/[0-9]+\/attempt\/[0-9]+\/logs)$`)
 	lfsPathRe            = regexp.MustCompile(`^/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+/info/lfs/`)
 	archivePathRe        = regexp.MustCompile(`^/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+/archive/`)
 )
+
+// isAttachmentDownload check if request is a file download (GET) with URL to an attachment
+func isAttachmentDownload(req *http.Request) bool {
+	return attachmentPathRe.MatchString(req.URL.Path) && req.Method == "GET"
+}
 
 func isGitRawOrAttachPath(req *http.Request) bool {
 	return gitRawOrAttachPathRe.MatchString(req.URL.Path)
