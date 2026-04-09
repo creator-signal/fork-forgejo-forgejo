@@ -338,3 +338,17 @@ func (job *ActionRunJob) EnableOpenIDConnect() (bool, error) {
 	}
 	return jobWorkflow.EnableOpenIDConnect, nil
 }
+
+// AllNeedsExist checks whether this ActionRunJob's Needs can theoretically be met by comparing them with the supplied
+// list of all job IDs that part of a particular workflow run. Returns the list of unknown job IDs found in Needs
+// alongside an indicator whether the check was successful.
+func (job *ActionRunJob) AllNeedsExist(allExistingJobIDs container.Set[string]) ([]string, bool) {
+	unknownJobIDs := []string{}
+	for _, need := range job.Needs {
+		if !allExistingJobIDs.Contains(need) {
+			unknownJobIDs = append(unknownJobIDs, need)
+		}
+	}
+
+	return unknownJobIDs, len(unknownJobIDs) == 0
+}
