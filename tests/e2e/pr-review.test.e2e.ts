@@ -170,11 +170,12 @@ test('multi-commit commenting', async ({page, request}) => {
     await page.getByText('2 branches').click(); // navigate to branch list
     await page.getByText('New pull request').click(); // load compare view for the branch
     await page.locator('.show-form-container').getByText('New pull request').click(); // actually open the PR form
-    await page.locator('.primary.button').getByText('Create pull request').click(); // submit PR creation
 
     // Test assertion: opening the pull request creation form should programmatically focus the first input field
     const titleInput = page.locator('input#issue_title');
     await expect(titleInput).toBeFocused();
+
+    await page.locator('.primary.button').getByText('Create pull request').click(); // submit PR creation
 
     // Test situation: adding a comment on a line that was created in the *second* commit, doing it from the "Files changed" view.
     await page.getByText('Files changed').click();
