@@ -140,6 +140,15 @@ func (job *ActionRunJob) PrepareNextAttempt(initialStatus Status) error {
 	return nil
 }
 
+// CanBeRerun answers whether this ActionRunJob can be rerun. Returns true if it is done and the Run it belongs to
+// is runnable. Returns false in all other cases, including when Run is nil.
+func (job *ActionRunJob) CanBeRerun() bool {
+	if job.Run == nil || !job.Run.IsRunnable() {
+		return false
+	}
+	return job.Status.IsDone()
+}
+
 func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {
 	var job ActionRunJob
 	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&job)

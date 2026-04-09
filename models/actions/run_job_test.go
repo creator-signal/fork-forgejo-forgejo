@@ -425,3 +425,71 @@ func TestAllNeedsExist(t *testing.T) {
 		})
 	}
 }
+
+func TestActionRunJob_CanBeRerun(t *testing.T) {
+	testCases := []struct {
+		name       string
+		job        ActionRunJob
+		canBeRerun bool
+	}{
+		{
+			name:       "job with unknown status",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusUnknown},
+			canBeRerun: false,
+		},
+		{
+			name:       "successful job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusSuccess},
+			canBeRerun: true,
+		},
+		{
+			name:       "failed job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusFailure},
+			canBeRerun: true,
+		},
+		{
+			name:       "cancelled job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusCancelled},
+			canBeRerun: true,
+		},
+		{
+			name:       "skipped job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusSkipped},
+			canBeRerun: true,
+		},
+		{
+			name:       "waiting job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusWaiting},
+			canBeRerun: false,
+		},
+		{
+			name:       "blocked job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusBlocked},
+			canBeRerun: false,
+		},
+		{
+			name:       "ActionRun is nil",
+			job:        ActionRunJob{Run: nil, Status: StatusSuccess},
+			canBeRerun: false,
+		},
+		{
+			name:       "with busy run but completed job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusRunning}, Status: StatusSuccess},
+			canBeRerun: true,
+		},
+		{
+			name: "with run that cannot be run",
+			job: ActionRunJob{
+				Run:    &ActionRun{Status: StatusRunning, PreExecutionErrorCode: ErrorCodeEventDetectionError},
+				Status: StatusSuccess,
+			},
+			canBeRerun: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.canBeRerun, testCase.job.CanBeRerun())
+		})
+	}
+}
