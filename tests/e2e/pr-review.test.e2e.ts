@@ -172,7 +172,7 @@ test('multi-commit commenting', async ({page, request}) => {
     await page.locator('.show-form-container').getByText('New pull request').click(); // actually open the PR form
 
     // Test assertion: opening the pull request creation form should programmatically focus the first input field
-    const titleInput = page.locator('input#issue_title');
+    const titleInput = page.getByRole('textbox', { name: 'title' });
     await expect(titleInput).toBeFocused();
 
     await page.locator('.primary.button').getByText('Create pull request').click(); // submit PR creation
