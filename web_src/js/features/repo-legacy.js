@@ -493,7 +493,8 @@ export function initRepository() {
       showElem($form);
       // A short timeout is necessary here in order to give the accessibility
       // tree time to update, otherwise this .focus() call is unreliable in
-      // screen readers
+      // screen readers. Timeout chosen iteratively by doubling and testing
+      // manually until the .focus() call succeeded reliably.
       setTimeout(() => $form.find('#issue_title')[0].focus(), 64);
     });
   }
