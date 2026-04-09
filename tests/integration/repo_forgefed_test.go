@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"testing"
 
+	"forgejo.org/models/db"
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
@@ -177,26 +178,42 @@ func TestForgefedRepositoryFindHostsAndUsers(t *testing.T) {
 		require.NoError(t, err)
 
 		// Act & Assert
-		hosts, err := forgefed.FindFederationHosts(ctx)
+		hosts, err := forgefed.FindFederationHosts(ctx, db.ListOptions{PageSize: 100, Page: 1})
 		require.NoError(t, err)
 		assert.Len(t, hosts, 2)
 		hostFqdns := []string{hosts[0].HostFqdn, hosts[1].HostFqdn}
 		assert.Contains(t, hostFqdns, "bob.example.com")
 		assert.Contains(t, hostFqdns, "alice.example.com")
 
-		users, err := user.FindFederatedUsers(ctx)
+		count, err := forgefed.CountFederationHosts(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), count)
+
+		users, err := user.FindFederatedUsers(ctx, db.ListOptions{PageSize: 100, Page: 1})
 		require.NoError(t, err)
 		assert.Len(t, users, 3) // Bob, Alice and Eve
 
-		users, err = user.FindFederatedUsersByHostID(ctx, 1)
+		count, err = user.CountFederatedUsers(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, int64(3), count)
+
+		users, err = user.FindFederatedUsersByHostID(ctx, 1, db.ListOptions{PageSize: 100, Page: 1})
 		require.NoError(t, err)
 		assert.Len(t, users, 1) // Only Bob belongs to the host with ID 1
 		assert.Equal(t, int64(1), users[0].FederationHostID)
 
-		users, err = user.FindFederatedUsersByHostID(ctx, 2)
+		count, err = user.CountFederatedUsersByHostID(ctx, 1)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), count)
+
+		users, err = user.FindFederatedUsersByHostID(ctx, 2, db.ListOptions{PageSize: 100, Page: 1})
 		require.NoError(t, err)
 		assert.Len(t, users, 2) // Alice and Eve belong to the host with ID 2
 		assert.Equal(t, int64(2), users[0].FederationHostID)
 		assert.Equal(t, int64(2), users[1].FederationHostID)
+
+		count, err = user.CountFederatedUsersByHostID(ctx, 2)
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), count)
 	})
 }
