@@ -263,8 +263,8 @@ td .commit-summary {
 }
 
 .repository.file.list #repo-files-table td {
-  padding-top: 0;
-  padding-bottom: 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
   overflow: initial;
 }
 
@@ -324,11 +324,6 @@ td .commit-summary {
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
-}
-
-.repository.file.list #repo-files-table td {
-  padding-top: 8px;
-  padding-bottom: 8px;
 }
 
 .repository.file.list #repo-files-table td .at {
