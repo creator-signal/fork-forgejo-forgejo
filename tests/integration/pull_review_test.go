@@ -1680,6 +1680,56 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			commentReloaded := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: comment.ID})
 			assert.False(t, commentReloaded.Invalidated)
 		})
+
+		t.Run("comment on removed line invalidated due to force push", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			// Modify line 50
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 50\n", "", 1)
+			tester.changeFile("file1.md", content)
+			tester.createPR()
+
+			// Place a comment on "Line 50" (removed side)
+			comment := tester.commentOnPreviousFromFilesChanged("file1.md", 50)
+			assert.Equal(t, `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -47,7 +47,6 @@ Line 46
+ Line 47
+ Line 48
+ Line 49
+-Line 50`, comment.PatchQuoted)
+			assert.Equal(t, "previous", comment.DiffSide())
+			assert.EqualValues(t, -50, comment.Line)
+			assert.Equal(t, tester.initialSHA, comment.CommitSHA)
+			assert.False(t, comment.Invalidated)
+
+			// Now amend commit1 with an additional change that undoes the earlier change, changes something else instead
+			tester.withBranchCheckout(func(repoPath string) {
+				content = strings.Replace(content, "Line 49\n", "Line 49\nLine 50\n", 1)
+				content = strings.Replace(content, "Line 52\n", "", 1)
+				require.NoError(t, os.WriteFile(path.Join(repoPath, "file1.md"), []byte(content), 0o644))
+				require.NoError(t, git.NewCommand(t.Context(), "commit", "-a", "--amend", "--no-edit").Run(&git.RunOpts{Dir: repoPath}))
+				require.NoError(t, git.NewCommand(t.Context(), "push", "--force").Run(&git.RunOpts{Dir: repoPath}))
+			})
+
+			diff := []diffTableRow{
+				{rowType: RowHasCode, code: "Line 49"},
+				{rowType: RowHasCode, code: "Line 50"},
+				{rowType: RowHasCode, code: "Line 51"},
+				{rowType: RowDelCode, code: "Line 52"},
+				{rowType: RowHasCode, code: "Line 53"},
+			}
+			tester.assertFilesChangedDiff(diff, "checking commit2 (force push) contents in full PR diff")
+
+			// The comment on "Line 50" can't be valid anymore since that's not in the diff:
+			assert.EventuallyWithT(t, func(t *assert.CollectT) {
+				commentReloaded := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: comment.ID})
+				assert.True(t, commentReloaded.Invalidated)
+			}, 1*time.Second, 50*time.Millisecond)
+		})
 	})
 }
 
