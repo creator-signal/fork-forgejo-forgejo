@@ -261,6 +261,31 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 		} else {
 			blamedCommitID = commitID
 		}
+	} else {
+		// Commenting on a line that was removed. In this case, what we want to track in the comment is which line of
+		// code was this, in the last commit that the line of code actually existed in. We'll use a reverse git blame to
+		// identify this, from the PR base -> commit being viewed.
+		blame, err := gitRepo.ReverseLineBlame(pr.MergeBase, treePath, uint64(-1*line), afterCommitID)
+		if err != nil {
+			return nil, fmt.Errorf("ReverseLineBlame[%s, %s, %d, %s]: %w", pr.MergeBase, treePath, -1*line, afterCommitID, err)
+		} else if blame.CommitID == afterCommitID {
+			// Although this is a comment on the "previous" side of the diff, the reverse blame indicates that the line
+			// of code still exists in the commit being viewed (eg. it was a comment on a white line in the left-side of
+			// the diff, not a red removed line). In order to record the right information for where to place this
+			// commit, we'll convert this into a right-hand comment -- using the present line number that the reverse
+			// blame gave us:
+			commit, lineres, err := gitRepo.LineBlame(afterCommitID, treePath, blame.LineNumber)
+			if err == nil {
+				blamedCommitID = commit.ID.String()
+				blamedLine = int64(lineres)
+			} else if !errors.Is(err, git.ErrBlameFileDoesNotExist) && !errors.Is(err, git.ErrBlameFileNotEnoughLines) {
+				return nil, fmt.Errorf("LineBlame[%s, %s, %s, %d]: %w", pr.GetGitRefName(), gitRepo.Path, treePath, line, err)
+			}
+		} else {
+			blamedCommitID = blame.CommitID
+			// retain negative line numbering to identify we're commenting on the "previous" side of the diff
+			blamedLine = -1 * int64(blame.LineNumber)
+		}
 	}
 
 	// Only fetch diff if comment is review comment
