@@ -1528,7 +1528,7 @@ func TestCodeblockLanguageTransformation(t *testing.T) {
 	// Pandoc language extracting
 	// https://pandoc.org/MANUAL.html#extension-fenced_code_attributes
 	test(
-		"```{#mycode .numberLines .haskell startFrom=\"100\"}\n"+
+		"```   { #mycode .numberLines .haskell startFrom=\"100\" }   \n"+
 			"qsort []     = []\n"+
 			"qsort (x:xs) = qsort (filter (< x) xs) ++ [x] ++\n"+
 			"               qsort (filter (>= x) xs)\n"+
