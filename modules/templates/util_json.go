@@ -33,3 +33,33 @@ func (su *JsonUtils) PrettyIndent(s string) string {
 	}
 	return out.String()
 }
+
+func (su *JsonUtils) Comma(index int, length int) string {
+	if index+1 == length {
+		return ""
+	} else {
+		return ","
+	}
+}
+
+var accumulators map[string]int = make(map[string]int)
+
+func (su *JsonUtils) Count(key string, increment int) string {
+	n, ok := accumulators[key]
+	if ok {
+		n += increment
+	} else {
+		n = increment
+	}
+	accumulators[key] = n
+	return ""
+}
+
+func (su *JsonUtils) Counted(key string) int {
+	n, ok := accumulators[key]
+	if ok {
+		return n
+	} else {
+		return 0
+	}
+}
