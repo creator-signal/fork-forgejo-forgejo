@@ -18,6 +18,7 @@
         "requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
       }
     }
+    {{end}}{{end}}
   },
   "urls": [
     {{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
