@@ -32,7 +32,7 @@ type ObjectVerification struct {
 	CommittingUser *user_model.User
 	SigningEmail   string
 	SigningKey     *GPGKey
-	SigningSSHKey  *PublicKey
+	SigningSSHKey  *PublicKeySigning
 	TrustStatus    string
 }
 

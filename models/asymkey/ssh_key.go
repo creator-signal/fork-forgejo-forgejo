@@ -34,7 +34,7 @@ const (
 	KeyTypePrincipal
 )
 
-// PublicKey represents a user or deploy SSH public key.
+// PublicKey represents a user or deploy SSH public key for authentication.
 type PublicKey struct {
 	ID            int64           `xorm:"pk autoincr"`
 	OwnerID       int64           `xorm:"INDEX NOT NULL"`

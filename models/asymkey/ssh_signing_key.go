@@ -5,9 +5,11 @@
 package asymkey
 
 import (
+	"context"
 	"strings"
 
 	"forgejo.org/models/db"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/timeutil"
 )
 
@@ -32,4 +34,15 @@ func (key *PublicKeySigning) OmitEmail() string {
 
 func init() {
 	db.RegisterModel(new(PublicKeySigning))
+}
+
+type FindPublicKeySigningOptions struct {
+	db.ListOptions
+	OwnerID int64
+}
+
+func GetSignKeysForUser(ctx context.Context, user *user_model.User) ([]*PublicKeySigning, error) {
+	return db.Find[PublicKeySigning](ctx, FindPublicKeySigningOptions{
+		OwnerID: user.ID,
+	})
 }

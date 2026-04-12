@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 
-	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
@@ -22,10 +21,7 @@ import (
 func ParseObjectWithSSHSignature(ctx context.Context, c *GitObject, committer *user_model.User) *ObjectVerification {
 	// Now try to associate the signature with the committer, if present
 	if committer.ID != 0 {
-		keys, err := db.Find[PublicKey](ctx, FindPublicKeyOptions{
-			OwnerID:    committer.ID,
-			NotKeytype: KeyTypePrincipal,
-		})
+		keys, err := GetSignKeysForUser(ctx, committer)
 		if err != nil { // Skipping failed to get ssh keys of user
 			log.Error("ListPublicKeys: %v", err)
 			return &ObjectVerification{
@@ -66,7 +62,7 @@ func ParseObjectWithSSHSignature(ctx context.Context, c *GitObject, committer *u
 
 	// If the SSH instance key is set, try to verify it with that key.
 	if setting.SSHInstanceKey != nil {
-		instanceSSHKey := &PublicKey{
+		instanceSSHKey := &PublicKeySigning{
 			Content:     string(ssh.MarshalAuthorizedKey(setting.SSHInstanceKey)),
 			Fingerprint: ssh.FingerprintSHA256(setting.SSHInstanceKey),
 		}
@@ -87,7 +83,7 @@ func ParseObjectWithSSHSignature(ctx context.Context, c *GitObject, committer *u
 	}
 }
 
-func verifySSHObjectVerification(sig, payload string, k *PublicKey, committer, signer *user_model.User, email string) *ObjectVerification {
+func verifySSHObjectVerification(sig, payload string, k *PublicKeySigning, committer, signer *user_model.User, email string) *ObjectVerification {
 	if err := sshsig.Verify(bytes.NewBuffer([]byte(payload)), []byte(sig), []byte(k.Content), "git"); err != nil {
 		return nil
 	}
