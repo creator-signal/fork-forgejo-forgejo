@@ -191,7 +191,7 @@ func repoAssignment() func(ctx *context.APIContext) {
 				return
 			}
 
-			if task.IsForkPullRequest {
+			if !task.HasWriteAccess(ctx) {
 				ctx.Repo.AccessMode = perm.AccessModeRead
 			} else {
 				ctx.Repo.AccessMode = perm.AccessModeWrite

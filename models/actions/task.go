@@ -117,6 +117,16 @@ func (task *ActionTask) GetRepoLink() string {
 	return task.Job.Run.Repo.Link()
 }
 
+func (task *ActionTask) HasWriteAccess(ctx context.Context) bool {
+	if !task.IsForkPullRequest {
+		return true
+	}
+	if err := task.LoadAttributes(ctx); err != nil {
+		return false
+	}
+	return task.Job.Run.TriggerEvent == "pull_request_target"
+}
+
 func (task *ActionTask) LoadJob(ctx context.Context) error {
 	if task.Job == nil {
 		job, err := GetRunJobByID(ctx, task.JobID)
