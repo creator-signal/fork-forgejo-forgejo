@@ -99,3 +99,34 @@ func TestActionTask_GetTasksByRunnerRequestKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, tasks)
 }
+
+func TestActionTask_HasWriteAccess(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("Not a fork PR", func(t *testing.T) {
+		task := &ActionTask{
+			IsForkPullRequest: false,
+		}
+		assert.True(t, task.HasWriteAccess(t.Context()))
+	})
+
+	t.Run("Fork PR, pull_request_target", func(t *testing.T) {
+		task, err := GetTaskByJobAttempt(t.Context(), 192, 2)
+		require.NoError(t, err)
+		err = task.LoadAttributes(t.Context())
+		require.NoError(t, err)
+		task.IsForkPullRequest = true
+		task.Job.Run.TriggerEvent = "pull_request_target"
+		assert.True(t, task.HasWriteAccess(t.Context()))
+	})
+
+	t.Run("Fork PR, not pull_request_target", func(t *testing.T) {
+		task, err := GetTaskByJobAttempt(t.Context(), 192, 2)
+		require.NoError(t, err)
+		err = task.LoadAttributes(t.Context())
+		require.NoError(t, err)
+		task.IsForkPullRequest = true
+		task.Job.Run.TriggerEvent = "pull_request"
+		assert.False(t, task.HasWriteAccess(t.Context()))
+	})
+}
