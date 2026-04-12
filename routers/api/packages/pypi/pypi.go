@@ -73,6 +73,7 @@ func PackageMetadata(ctx *context.Context) {
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
+	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
@@ -103,6 +104,7 @@ func JSONPackageMetadata(ctx *context.Context) {
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
+	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
 	ctx.JSONTemplate("api/packages/pypi/json")
 }
 
