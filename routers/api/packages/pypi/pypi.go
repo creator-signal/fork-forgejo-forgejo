@@ -97,8 +97,8 @@ func JSONPackageMetadata(ctx *contex.Context) {
 	}
 
 	// sort package descriptors by version to mimic PyPI format
-	slices.SortFunc(pds, func(i int, j int) int {
-		return strings.Compare(pds[i].Version.Version, pds[j].Version.Version)
+	slices.SortFunc(pds, func(a *packages_model.PackageDescriptor, b *packages_model.PackageDescriptor) int {
+		return strings.Compare(a.Version.Version, b.Version.Version)
 	})
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
 	ctx.Data["PackageDescriptor"] = pds[0]
