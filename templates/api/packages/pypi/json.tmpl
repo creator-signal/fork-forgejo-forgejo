@@ -1,7 +1,7 @@
 {
     "info": {
 	"name": "{{.PackageDescriptor.Package.Name}}",
-	"urls": [{{range .PackageDescriptors}}{{$p := ..}}{{range .Files}}
+	"urls": [{{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
 	    {
 		"digests": {
 		    "sha256": "{{.Blob.HashSHA256}}"
