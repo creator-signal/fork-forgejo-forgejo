@@ -51,7 +51,6 @@ Forgejo (форк Gitea) — это монолитное приложение н
 ### 1.1 Структура папок
 
 *   **`cmd/`**: Точки входа (main). Команда `web` запускает сервер.
-*   **`conf/`**: Конфигурация (шаблоны `app.ini`).
 *   **`routers/`**: **Контроллеры (C)**. Здесь живут HTTP-хендлеры.
     *   `routers/web/`: Обработчики HTML-страниц (UI).
     *   `routers/api/`: Обработчики REST API (v1).
@@ -71,7 +70,7 @@ Forgejo (форк Gitea) — это монолитное приложение н
 Когда приходит HTTP-запрос (например, `GET /user/repo`):
 
 1.  **Chi Router (`routers/routes.go`)**: Маршрутизатор определяет, какой хендлер вызвать.
-2.  **Middleware (`modules/context/`)**:
+2.  **Middleware (`services/context/`)**:
     *   Оборачивает `http.Request` в `context.Context` (свой, "толстый" контекст Forgejo).
     *   Загружает текущего пользователя (`ctx.Doer`).
     *   Загружает репозиторий, если URL содержит `/user/repo` (`ctx.Repo`).
@@ -99,7 +98,7 @@ Forgejo (форк Gitea) — это монолитное приложение н
 | Шаблоны | `templates/edu/` | UI (Fomantic UI) |
 | Интеграционные тесты | `tests/integration/edu_assignments_test.go` | SQLite-based Go тесты (15 тестов) |
 | E2E тесты | `tests/e2e/edu.test.e2e.ts` | Playwright тесты (8 тестов) |
-| Фикстуры | `models/fixtures/user_role.yml` | Тестовые данные для edu ролей |
+| Фикстуры | `models/fixtures/edu_user_role.yml` | Тестовые данные для edu ролей |
 | Docker Dev | `edu-docker/Dockerfile.dev`, `edu-docker/docker-compose.yml`, `edu-docker/app.ini` | Локальная среда разработки |
 | Документация | `edu-docs/` | Руководства для разработчиков и пользователей |
 
@@ -561,7 +560,7 @@ docker compose -f edu-docker/docker-compose.yml up forgejo --build
 | Integration (Go + SQLite) | `tests/integration/edu_assignments_test.go` (15 тестов) | `make test-sqlite#TestEdu` |
 | E2E (Playwright) | `tests/e2e/edu.test.e2e.ts` (8 тестов) | `make test-e2e-sqlite` |
 
-**Integration тесты**: in-memory SQLite, fixtures из `models/fixtures/*.yml` (включая `user_role.yml` для edu ролей), хелперы `tests.PrepareTestEnv(t)()` и `loginUser(t, "user1")`. Тесты используют helper `ensureEduTables()` для создания edu-таблиц через DDL и `setupEduEnv()` для подготовки окружения.
+**Integration тесты**: in-memory SQLite, fixtures из `models/fixtures/*.yml` (включая `edu_user_role.yml` для edu ролей), хелперы `tests.PrepareTestEnv(t)()` и `loginUser(t, "user1")`. Тесты используют helper `ensureEduTables()` для создания edu-таблиц через DDL и `setupEduEnv()` для подготовки окружения.
 
 **E2E тесты**: Playwright, SQLite-сервер на `localhost:3003`, fixture-юзеры (password="password").
 

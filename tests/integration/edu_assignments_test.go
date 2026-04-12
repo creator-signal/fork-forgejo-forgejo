@@ -72,7 +72,7 @@ func ensureEduTables(t *testing.T) {
 			details TEXT,
 			created_unix INTEGER DEFAULT 0
 		)`,
-		`CREATE TABLE IF NOT EXISTS edu_user_roles (
+		`CREATE TABLE IF NOT EXISTS edu_user_role (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			user_id INTEGER NOT NULL UNIQUE,
 			role VARCHAR(20) NOT NULL,
@@ -93,7 +93,7 @@ func cleanEduTables(t *testing.T) {
 	ctx := context.Background()
 	engine := db.GetEngine(ctx)
 
-	for _, tbl := range []string{"edu_submissions", "edu_test_results", "edu_assignments", "edu_course_enrollments", "edu_courses", "edu_user_roles"} {
+	for _, tbl := range []string{"edu_submissions", "edu_test_results", "edu_assignments", "edu_course_enrollments", "edu_courses", "edu_user_role"} {
 		_, err := engine.Exec(fmt.Sprintf("DELETE FROM %s", tbl))
 		require.NoError(t, err)
 	}
@@ -173,7 +173,7 @@ func insertEduSubmission(t *testing.T, assignmentID, userID int64, status string
 	return id
 }
 
-// insertEduUserRole inserts a user role into the Xorm-managed 'user_role' table.
+// insertEduUserRole inserts a user role into the Xorm-managed 'edu_user_role' table.
 // This is used by edu.GetUserRole (role.go) which queries via Xorm ORM.
 func insertEduUserRole(t *testing.T, userID int64, role string) {
 	t.Helper()
@@ -181,9 +181,9 @@ func insertEduUserRole(t *testing.T, userID int64, role string) {
 	engine := db.GetEngine(ctx)
 	now := time.Now().Unix()
 
-	// The UserRole struct is managed by Xorm, table name = 'user_role'
+	// The UserRole struct is managed by Xorm, table name = 'edu_user_role'
 	_, err := engine.Exec(
-		"INSERT OR REPLACE INTO user_role (user_id, role, created_unix, updated_unix) VALUES (?, ?, ?, ?)",
+		"INSERT OR REPLACE INTO edu_user_role (user_id, role, created_unix, updated_unix) VALUES (?, ?, ?, ?)",
 		userID, role, now, now,
 	)
 	require.NoError(t, err)

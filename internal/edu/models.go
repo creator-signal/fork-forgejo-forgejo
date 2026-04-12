@@ -127,6 +127,8 @@ type UserRole struct {
 	UpdatedUnix int64    `json:"updated_unix" xorm:"updated"`
 }
 
+func (*UserRole) TableName() string { return "edu_user_role" }
+
 // ImportDraft represents a CSV import session.
 type ImportDraft struct {
 	ID          int64  `json:"id" xorm:"pk autoincr"`
@@ -186,6 +188,8 @@ type BulkForkTask struct {
 	UpdatedUnix  int64  `json:"updated_unix" xorm:"updated"`
 }
 
+func (*BulkForkTask) TableName() string { return "edu_bulk_fork_task" }
+
 // SyncForkTask tracks a mass fork sync operation for an assignment.
 type SyncForkTask struct {
 	ID           int64  `json:"id" xorm:"pk autoincr"`
@@ -200,6 +204,8 @@ type SyncForkTask struct {
 	CreatedUnix  int64  `json:"created_unix" xorm:"created"`
 	UpdatedUnix  int64  `json:"updated_unix" xorm:"updated"`
 }
+
+func (*SyncForkTask) TableName() string { return "edu_sync_fork_task" }
 
 // Task/draft status constants.
 const (
