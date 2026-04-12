@@ -10,7 +10,9 @@ import (
 
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
+	"xorm.io/builder"
 )
 
 // PublicKeySigning represents an SSH public key used for git object signatures.
@@ -34,6 +36,74 @@ func (key *PublicKeySigning) OmitEmail() string {
 
 func init() {
 	db.RegisterModel(new(PublicKeySigning))
+}
+
+// checks if this fingerprint is aleady in use by another user
+func checkSigningKeyFingerprint(ctx context.Context, fingerprint string) error {
+	has, err := db.Exist[PublicKeySigning](ctx, builder.Eq{"fingerprint": fingerprint})
+	if err != nil {
+		return err
+	} else if has {
+		return ErrKeyAlreadyExist{0, fingerprint, ""}
+	}
+	return nil
+}
+
+// AddPublicSigningKey adds new public signing key to the database.
+func AddPublicSigningKey(ctx context.Context, ownerID int64, name, content string) (*PublicKeySigning, error) {
+	log.Trace(content)
+
+	fingerprint, err := CalcFingerprint(content)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, committer, err := db.TxContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer committer.Close()
+
+	if err := checkSigningKeyFingerprint(ctx, fingerprint); err != nil {
+		return nil, err
+	}
+
+	// Keys need unique names for each user
+	has, err := db.GetEngine(ctx).
+		Where("owner_id = ? AND name = ?", ownerID, name).
+		Get(new(PublicKeySigning))
+	if err != nil {
+		return nil, err
+	} else if has {
+		return nil, ErrKeyNameAlreadyUsed{ownerID, name}
+	}
+
+	key := &PublicKeySigning{
+		OwnerID:     ownerID,
+		Name:        name,
+		Fingerprint: fingerprint,
+		Content:     content,
+	}
+
+	if err = db.Insert(ctx, key); err != nil {
+		return nil, err
+	}
+
+	return key, committer.Commit()
+}
+
+// GetPublicSigningKeyByID returns public signing key by given ID.
+func GetPublicSigningKeyByID(ctx context.Context, keyID int64) (*PublicKeySigning, error) {
+	key := new(PublicKeySigning)
+	has, err := db.GetEngine(ctx).
+		ID(keyID).
+		Get(key)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrKeyNotExist{keyID}
+	}
+	return key, nil
 }
 
 type FindPublicKeySigningOptions struct {

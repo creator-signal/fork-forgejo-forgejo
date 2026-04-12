@@ -13,6 +13,18 @@
 				<label for="ssh-key-title">{{ctx.Locale.Tr "settings.key_name"}}</label>
 				<input id="ssh-key-title" name="title" value="{{.title}}" autofocus required maxlength="50">
 			</div>
+			<div class="field {{if .Err_Title}}error{{end}}">
+				<label for="ssh-key-capability">{{ctx.Locale.Tr "settings.key_capability"}}</label>
+				<div class="ui selection type dropdown">
+					<input type="hidden" id="ssh-key-capability" name="capability" value="{{or .capability "auth"}}" required>
+					<div class="text"></div>
+					{{svg "octicon-triangle-down" 14 "dropdown icon"}}
+					<div class="menu">
+						<div class="item" data-value="auth">{{ctx.Locale.Tr "settings.key_capability_auth"}}</div>
+						<div class="item" data-value="sign">{{ctx.Locale.Tr "settings.key_capability_sign"}}</div>
+					</div>
+				</div>
+			</div>
 			<div class="field {{if .Err_Content}}error{{end}}">
 				<label for="ssh-key-content">{{ctx.Locale.Tr "settings.key_content"}}</label>
 				<textarea id="ssh-key-content" name="content" class="js-quick-submit" placeholder="{{ctx.Locale.Tr "settings.key_content_ssh_placeholder"}}" required>{{.content}}</textarea>
@@ -38,76 +50,119 @@
 				{{ctx.Locale.Tr "settings.ssh_signonly"}}
 			</div>
 		{{end}}
-		{{range $index, $key := .Keys}}
-			<div class="flex-item">
-				<div class="flex-item-leading">
-					<span class="text {{if .HasRecentActivity}}green{{end}}" {{if .HasRecentActivity}}data-tooltip-content="{{ctx.Locale.Tr "settings.key_state_desc"}}"{{end}}>{{svg "octicon-key" 32}}</span>
+		{{with .AuthenticationKeys}}
+			<h4>{{ctx.Locale.Tr "settings.ssh_title_auth"}}</h4>
+			<p>{{ctx.Locale.Tr "settings.ssh_desc_auth"}}</p>
+			{{range $index, $key := .}}
+				<div class="flex-item">
+					<div class="flex-item-leading">
+						{{if .HasRecentActivity}}
+						<span class="text green" data-tooltip-content="{{ctx.Locale.Tr "settings.key_state_desc"}}">
+						{{else}}
+						<span class="text">
+						{{end}}
+							{{svg "octicon-key" 32}}
+						</span>
+					</div>
+					<div class="flex-item-main">
+							<div class="flex-item-title">{{.Name}}</div>
+							<div class="flex-item-body">
+									{{.Fingerprint}}
+							</div>
+							<div class="flex-item-body">
+									<p>{{ctx.Locale.Tr "settings.added_on" (DateUtils.AbsoluteShort .CreatedUnix)}} —	{{svg "octicon-info"}} {{if .HasUsed}}{{ctx.Locale.Tr "settings.last_used"}} <span {{if .HasRecentActivity}}class="text green"{{end}}>{{DateUtils.AbsoluteShort .UpdatedUnix}}</span>{{else}}{{ctx.Locale.Tr "settings.no_activity"}}{{end}}</p>
+							</div>
+					</div>
+					<div class="flex-item-trailing">
+						<button class="ui red tiny button delete-button{{if index $.ExternalKeys $index}} disabled{{end}}" data-modal-id="delete-ssh" data-url="{{$.Link}}/delete?type=ssh" data-id="{{.ID}}"{{if index $.ExternalKeys $index}} title="{{ctx.Locale.Tr "settings.ssh_externally_managed"}}"{{end}}>
+							{{ctx.Locale.Tr "settings.delete_key"}}
+						</button>
+					</div>
 				</div>
-				<div class="flex-item-main">
+			{{end}}
+		{{end}}
+		{{with .SigningKeys}}
+			<h4>{{ctx.Locale.Tr "settings.ssh_title_sign"}}</h4>
+			<p>{{ctx.Locale.Tr "settings.ssh_desc_sign"}}</p>
+			{{range $index, $key := .}}
+				<div class="flex-item">
+					<div class="flex-item-leading">
+						{{ if not .Verified }}
+						<span class="text red" data-tooltip-content="{{ctx.Locale.Tr "settings.key_needs_verification"}}">
+						{{else}}
+						<span class="text green">
+						{{end}}
+							{{svg "octicon-key" 32}}
+						</span>
+					</div>
+					<div class="flex-item-main">
 						{{if .Verified}}
 							<div class="flex-item-title flex-text-block" data-tooltip-content="{{ctx.Locale.Tr "settings.ssh_key_verified_long"}}">{{svg "octicon-verified"}}{{ctx.Locale.Tr "settings.ssh_key_verified"}}</div>
+						{{else}}
+							<div class="flex-item-title flex-text-block" data-tooltip-content="{{ctx.Locale.Tr "settings.ssh_key_not_verified_long"}}">{{svg "octicon-alert"}}{{ctx.Locale.Tr "settings.ssh_key_not_verified"}}</div>
 						{{end}}
-						<div class="flex-item-title">{{.Name}}</div>
-						<div class="flex-item-body">
-								{{.Fingerprint}}
-						</div>
-						<div class="flex-item-body">
-								<p>{{ctx.Locale.Tr "settings.added_on" (DateUtils.AbsoluteShort .CreatedUnix)}} —	{{svg "octicon-info"}} {{if .HasUsed}}{{ctx.Locale.Tr "settings.last_used"}} <span {{if .HasRecentActivity}}class="text green"{{end}}>{{DateUtils.AbsoluteShort .UpdatedUnix}}</span>{{else}}{{ctx.Locale.Tr "settings.no_activity"}}{{end}}</p>
-						</div>
-				</div>
-				<div class="flex-item-trailing">
-					<button class="ui red tiny button delete-button{{if index $.ExternalKeys $index}} disabled{{end}}" data-modal-id="delete-ssh" data-url="{{$.Link}}/delete?type=ssh" data-id="{{.ID}}"{{if index $.ExternalKeys $index}} title="{{ctx.Locale.Tr "settings.ssh_externally_managed"}}"{{end}}>
-						{{ctx.Locale.Tr "settings.delete_key"}}
-					</button>
-					{{if and (not .Verified) (ne $.VerifyingFingerprint .Fingerprint)}}
-						<a class="ui primary tiny button" href="?verify_ssh={{.Fingerprint}}">{{ctx.Locale.Tr "settings.ssh_key_verify"}}</a>
-					{{end}}
-				</div>
-			</div>
-			{{if and (not .Verified) (eq $.VerifyingFingerprint .Fingerprint)}}
-				<div class="ui segment">
-					<h4>{{ctx.Locale.Tr "settings.ssh_token_required"}}</h4>
-					<form class="ui form{{if $.HasSSHVerifyError}} error{{end}}" action="{{$.Link}}" method="post">
-						<input type="hidden" name="title" value="none">
-						<input type="hidden" name="content" value="{{.Content}}">
-						<input type="hidden" name="fingerprint" value="{{.Fingerprint}}">
-						<div class="field">
-							<label for="token">{{ctx.Locale.Tr "settings.ssh_token"}}</label>
-							<input readonly="" value="{{$.TokenToSign}}">
-							<span class="help">{{ctx.Locale.Tr "keys.verify.token.hint" (printf "?verify_ssh=%s" .Fingerprint)}}</span>
-							<div class="help">
-								<br>
-								<p>{{ctx.Locale.Tr "settings.ssh_token_help"}}</p>
-								<div class="markup"><pre class="code-block"><code>echo -n '{{$.TokenToSign}}' | ssh-keygen -Y sign -n {{AppDomain}} -f ~/.ssh/id_ed25519 # or the path to the private key if it is different.</code></pre></div>
-								<br>
-								<p>{{ctx.Locale.Tr "settings.ssh_token_help_ssh_agent"}}</p>
-								<div class="markup"><pre class="code-block"><code>bash -c "echo -n '{{$.TokenToSign}}' | ssh-keygen -Y sign -n {{AppDomain}} -f <(echo '{{.OmitEmail}}')"</code></pre></div>
-								<br>
-								<details>
-									<summary>Windows PowerShell</summary>
-									<div class="markup"><pre class="code-block"><code>cmd /c "&lt;NUL set /p=`"{{$.TokenToSign}}`"| ssh-keygen -Y sign -n {{AppDomain}} -f /path_to_PrivateKey_or_RelatedPublicKey"</code></pre></div>
-								</details>
-								<br>
-								<details>
-									<summary>Windows CMD</summary>
-									<div class="markup"><pre class="code-block"><code>&lt;NUL set /p="{{$.TokenToSign}}"| ssh-keygen -Y sign -n {{AppDomain}} -f /path_to_PrivateKey_or_RelatedPublicKey</code></pre></div>
-								</details>
+							<div class="flex-item-title">{{.Name}}</div>
+							<div class="flex-item-body">
+									{{.Fingerprint}}
 							</div>
-							<br>
-						</div>
-						<div class="field">
-							<label for="signature">{{ctx.Locale.Tr "settings.ssh_token_signature"}}</label>
-							<textarea id="ssh-key-signature" name="signature" class="js-quick-submit" placeholder="{{ctx.Locale.Tr "settings.key_signature_ssh_placeholder"}}" required>{{$.signature}}</textarea>
-						</div>
-						<input name="type" type="hidden" value="verify_ssh">
-						<button class="ui primary button">
-							{{ctx.Locale.Tr "settings.ssh_key_verify"}}
+							<div class="flex-item-body">
+									<p>{{ctx.Locale.Tr "settings.added_on" (DateUtils.AbsoluteShort .CreatedUnix)}}</p>
+							</div>
+					</div>
+					<div class="flex-item-trailing">
+						<button class="ui red tiny button delete-button" data-modal-id="delete-ssh" data-url="{{$.Link}}/delete?type=ssh-sign" data-id="{{.ID}}">
+							{{ctx.Locale.Tr "settings.delete_key"}}
 						</button>
-						<a class="ui red button" href="{{$.Link}}">
-							{{ctx.Locale.Tr "settings.cancel"}}
-						</a>
-					</form>
+						{{if and (not .Verified) (ne $.VerifyingSSHKeyID .ID)}}
+							<a class="ui primary tiny button" href="?verify_ssh={{.ID}}">{{ctx.Locale.Tr "settings.ssh_key_verify"}}</a>
+						{{end}}
+					</div>
 				</div>
+				{{if and (not .Verified) (eq $.VerifyingSSHKeyID .ID)}}
+					<div class="ui segment">
+						<h5>{{ctx.Locale.Tr "settings.ssh_token_required"}}</h5>
+						<form class="ui form{{if $.HasSSHVerifyError}} error{{end}}" action="{{$.Link}}" method="post">
+							<input type="hidden" name="title" value="none">
+							<input type="hidden" name="content" value="{{.Content}}">
+							<input type="hidden" name="ssh_key_id" value="{{.ID}}">
+							<div class="field">
+								<label for="token">{{ctx.Locale.Tr "settings.ssh_token"}}</label>
+								<input readonly="" value="{{$.TokenToSign}}">
+								<span class="help">{{ctx.Locale.Tr "keys.verify.token.hint" (printf "?verify_ssh=%d" .ID)}}</span>
+								<div class="help">
+									<br>
+									<p>{{ctx.Locale.Tr "settings.ssh_token_help"}}</p>
+									<div class="markup"><pre class="code-block"><code>echo -n '{{$.TokenToSign}}' | ssh-keygen -Y sign -n {{AppDomain}} -f ~/.ssh/id_ed25519 # or the path to the private key if it is different.</code></pre></div>
+									<br>
+									<p>{{ctx.Locale.Tr "settings.ssh_token_help_ssh_agent"}}</p>
+									<div class="markup"><pre class="code-block"><code>bash -c "echo -n '{{$.TokenToSign}}' | ssh-keygen -Y sign -n {{AppDomain}} -f <(echo '{{.OmitEmail}}')"</code></pre></div>
+									<br>
+									<details>
+										<summary>Windows PowerShell</summary>
+										<div class="markup"><pre class="code-block"><code>cmd /c "&lt;NUL set /p=`"{{$.TokenToSign}}`"| ssh-keygen -Y sign -n {{AppDomain}} -f /path_to_PrivateKey_or_RelatedPublicKey"</code></pre></div>
+									</details>
+									<br>
+									<details>
+										<summary>Windows CMD</summary>
+										<div class="markup"><pre class="code-block"><code>&lt;NUL set /p="{{$.TokenToSign}}"| ssh-keygen -Y sign -n {{AppDomain}} -f /path_to_PrivateKey_or_RelatedPublicKey</code></pre></div>
+									</details>
+								</div>
+								<br>
+							</div>
+							<div class="field">
+								<label for="signature">{{ctx.Locale.Tr "settings.ssh_token_signature"}}</label>
+								<textarea id="ssh-key-signature" name="signature" class="js-quick-submit" placeholder="{{ctx.Locale.Tr "settings.key_signature_ssh_placeholder"}}" required>{{$.signature}}</textarea>
+							</div>
+							<input name="type" type="hidden" value="verify_ssh">
+							<button class="ui primary button">
+								{{ctx.Locale.Tr "settings.ssh_key_verify"}}
+							</button>
+							<a class="ui red button" href="{{$.Link}}">
+								{{ctx.Locale.Tr "settings.cancel"}}
+							</a>
+						</form>
+					</div>
+				{{end}}
 			{{end}}
 		{{end}}
 	</div>

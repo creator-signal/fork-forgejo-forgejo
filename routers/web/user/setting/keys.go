@@ -180,7 +180,17 @@ func KeysPost(ctx *context.Context) {
 			return
 		}
 
-		if _, err = asymkey_model.AddPublicKey(ctx, ctx.Doer.ID, form.Title, content, 0); err != nil {
+		switch form.Capability {
+		case forms.CapabilitySign:
+			_, err = asymkey_model.AddPublicSigningKey(ctx, ctx.Doer.ID, form.Title, content)
+		case forms.CapabilityAuth:
+			_, err = asymkey_model.AddPublicKey(ctx, ctx.Doer.ID, form.Title, content, 0)
+		default:
+			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", "capability must be given for ssh keys"))
+			return
+		}
+
+		if err != nil {
 			ctx.Data["HasSSHError"] = true
 			switch {
 			case asymkey_model.IsErrKeyAlreadyExist(err):
@@ -212,9 +222,9 @@ func KeysPost(ctx *context.Context) {
 		token := asymkey_model.VerificationToken(ctx.Doer, 1)
 		lastToken := asymkey_model.VerificationToken(ctx.Doer, 0)
 
-		fingerprint, err := asymkey_model.VerifySSHKey(ctx, ctx.Doer.ID, form.Fingerprint, token, form.Signature)
+		fingerprint, err := asymkey_model.VerifySSHKey(ctx, ctx.Doer.ID, form.SSHKeyID, token, form.Signature)
 		if err != nil && asymkey_model.IsErrSSHInvalidTokenSignature(err) {
-			fingerprint, err = asymkey_model.VerifySSHKey(ctx, ctx.Doer.ID, form.Fingerprint, lastToken, form.Signature)
+			fingerprint, err = asymkey_model.VerifySSHKey(ctx, ctx.Doer.ID, form.SSHKeyID, lastToken, form.Signature)
 		}
 		if err != nil {
 			ctx.Data["HasSSHVerifyError"] = true
@@ -272,6 +282,18 @@ func DeleteKey(ctx *context.Context) {
 		} else {
 			ctx.Flash.Success(ctx.Tr("settings.ssh_key_deletion_success"))
 		}
+	case "ssh-sign":
+		if user_model.IsFeatureDisabledWithLoginType(ctx.Doer, setting.UserFeatureManageSSHKeys) {
+			ctx.NotFound("Not Found", errors.New("ssh keys setting is not allowed to be visited"))
+			return
+		}
+
+		keyID := ctx.FormInt64("id")
+		if err := asymkey_service.DeletePublicSigningKey(ctx, ctx.Doer, keyID); err != nil {
+			ctx.Flash.Error("DeletePublicKey: " + err.Error())
+		} else {
+			ctx.Flash.Success(ctx.Tr("settings.ssh_key_deletion_success"))
+		}
 	case "principal":
 		if err := asymkey_service.DeletePublicKey(ctx, ctx.Doer, ctx.FormInt64("id")); err != nil {
 			ctx.Flash.Error("DeletePublicKey: " + err.Error())
@@ -294,7 +316,18 @@ func loadKeysData(ctx *context.Context) {
 		ctx.ServerError("ListPublicKeys", err)
 		return
 	}
-	ctx.Data["Keys"] = keys
+	if len(keys) > 0 {
+		ctx.Data["AuthenticationKeys"] = keys
+	}
+
+	signingKeys, err := asymkey_model.GetSignKeysForUser(ctx, ctx.Doer)
+	if err != nil {
+		ctx.ServerError("ListPublicKeys", err)
+		return
+	}
+	if len(signingKeys) > 0 {
+		ctx.Data["SigningKeys"] = signingKeys
+	}
 
 	externalKeys, err := asymkey_model.PublicKeysAreExternallyManaged(ctx, keys)
 	if err != nil {
@@ -333,6 +366,6 @@ func loadKeysData(ctx *context.Context) {
 	ctx.Data["Principals"] = principals
 
 	ctx.Data["VerifyingID"] = ctx.FormString("verify_gpg")
-	ctx.Data["VerifyingFingerprint"] = ctx.FormString("verify_ssh")
+	ctx.Data["VerifyingSSHKeyID"] = ctx.FormInt64("verify_ssh")
 	ctx.Data["UserDisabledFeatures"] = user_model.DisabledFeaturesWithLoginType(ctx.Doer)
 }

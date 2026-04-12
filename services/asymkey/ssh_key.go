@@ -48,3 +48,35 @@ func DeletePublicKey(ctx context.Context, doer *user_model.User, id int64) (err 
 
 	return asymkey_model.RewriteAllPublicKeys(ctx)
 }
+
+// DeletePublicSigningKey deletes SSH key information in database
+func DeletePublicSigningKey(ctx context.Context, doer *user_model.User, id int64) (err error) {
+	key, err := asymkey_model.GetPublicSigningKeyByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Check if user has access to delete this key.
+	if !doer.IsAdmin && doer.ID != key.OwnerID {
+		return asymkey_model.ErrKeyAccessDenied{
+			UserID: doer.ID,
+			KeyID:  key.ID,
+			Note:   "public signing",
+		}
+	}
+
+	dbCtx, committer, err := db.TxContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer committer.Close()
+
+	if _, err = db.DeleteByID[asymkey_model.PublicKeySigning](dbCtx, id); err != nil {
+		return err
+	}
+
+	if err = committer.Commit(); err != nil {
+		return err
+	}
+	return committer.Close()
+}

@@ -15,16 +15,16 @@ import (
 )
 
 // VerifySSHKey marks a SSH key as verified
-func VerifySSHKey(ctx context.Context, ownerID int64, fingerprint, token, signature string) (string, error) {
+func VerifySSHKey(ctx context.Context, ownerID, keyID int64, token, signature string) (string, error) {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return "", err
 	}
 	defer committer.Close()
 
-	key := new(PublicKey)
+	key := new(PublicKeySigning)
 
-	has, err := db.GetEngine(ctx).Where("owner_id = ? AND fingerprint = ?", ownerID, fingerprint).Get(key)
+	has, err := db.GetEngine(ctx).Where("owner_id = ? AND id = ?", ownerID, keyID).Get(key)
 	if err != nil {
 		return "", err
 	} else if !has {
