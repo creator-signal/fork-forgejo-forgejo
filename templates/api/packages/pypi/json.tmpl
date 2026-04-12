@@ -5,22 +5,30 @@
     "name": "{{.PackageDescriptor.Package.Name}}"
   },
   "releases": {
-    {{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
-    "{{$p.Version.Version}}": {
-      "digests": {
-        "sha256": "{{.Blob.HashSHA256}}",
-        "downloads": -1,
-        "filename": "{{.File.Name}}",
-        "packagetype": {{if StringUtils.HasSuffix .File.Name "whl"}}"bdist_wheel"{{else}}"sdist"{{end}},
-        "python_version": "py3",
-        "url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
-        "requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
-      }
-    }
-    {{end}}{{end}}
+    {{$packages := len .PackageDescriptors}}
+    {{range $pkgidx, $p := .PackageDescriptors}}
+    "{{$p.Version.Version}}": [
+      {{$files := len .Files}}
+      {{JsonUtils.Count "totalFiles" $files}}
+      {{range $fileidx, $_ := .Files}}
+      {
+	"digests": {
+          "sha256": "{{.Blob.HashSHA256}}"
+	  },
+          "downloads": -1,
+          "filename": "{{.File.Name}}",
+          "packagetype": {{if StringUtils.HasSuffix .File.Name "whl"}}"bdist_wheel"{{else}}"sdist"{{end}},
+          "python_version": "py3",
+          "url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
+          "requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
+	  }{{JsonUtils.Comma $fileidx $files}}
+      {{end}}
+    ]{{JsonUtils.Comma $pkgidx $packages}}{{end}}
   },
   "urls": [
-    {{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
+    {{range .PackageDescriptors}}
+    {{$p := .}}
+    {{range .Files}}
     {
       "digests": {
         "sha256": "{{.Blob.HashSHA256}}"
@@ -29,7 +37,8 @@
       "python_version": "py3",
       "url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
       "requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
-    }
+    }{{JsonUtils.Comma (JsonUtils.Counted "fileUrls") (JsonUtils.Counted "totalFiles")}}
+    {{JsonUtils.Count "fileUrls" 1}}
     {{end}}{{end}}
   ]
 }
