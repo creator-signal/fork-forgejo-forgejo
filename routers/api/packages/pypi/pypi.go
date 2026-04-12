@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -96,7 +97,7 @@ func JSONPackageMetadata(ctx *contex.Context) {
 	}
 
 	// sort package descriptors by version to mimic PyPI format
-	sort.Slice(pds, func(i, j int) bool {
+	slices.SortFunc(pds, func(i, j int) bool {
 		return strings.Compare(pds[i].Version.Version, pds[j].Version.Version) < 0
 	})
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
