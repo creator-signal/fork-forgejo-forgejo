@@ -87,17 +87,30 @@ func AssignmentDetail(ctx *context.Context) {
 		return
 	}
 
-	// Verify enrollment for students
+	// Verify enrollment and course active status for students
 	if assignment.CourseID > 0 {
 		enrollment, err := edu.NewRepository().GetEnrollment(ctx, assignment.CourseID, ctx.Doer.ID)
 		if err != nil {
 			ctx.ServerError("GetEnrollment", err)
 			return
 		}
-		if enrollment == nil {
-			isTeacher, _ := edu.IsTeacher(ctx, ctx.Doer.ID)
-			if !isTeacher && !ctx.Doer.IsAdmin {
-				ctx.NotFound("Not enrolled in this course", nil)
+
+		isTeacher, _ := edu.IsTeacher(ctx, ctx.Doer.ID)
+		if enrollment == nil && !isTeacher && !ctx.Doer.IsAdmin {
+			ctx.NotFound("Not enrolled in this course", nil)
+			return
+		}
+
+		// Block students from viewing assignments in expired courses
+		if !isTeacher && !ctx.Doer.IsAdmin {
+			course, err := svc.GetCourseByID(ctx, assignment.CourseID)
+			if err != nil {
+				ctx.ServerError("GetCourseByID", err)
+				return
+			}
+			if course != nil && !course.IsActive() {
+				ctx.Flash.Error(ctx.Tr("edu.course_expired"))
+				ctx.Redirect(setting.AppSubURL + "/edu/student/assignments")
 				return
 			}
 		}
@@ -219,6 +232,11 @@ func NewAssignmentPost(ctx *context.Context) {
 		ctx.RenderWithErr("Title and Template Repository are required.", "edu/assignment_new", nil)
 		return
 	}
+	if len(title) > 255 {
+		loadCoursesAndRepos(ctx, svc, courseID)
+		ctx.RenderWithErr(ctx.Tr("edu.title_too_long"), "edu/assignment_new", nil)
+		return
+	}
 
 	// Verify repo exists
 	_, err := repo_model.GetRepositoryByID(ctx, repoID)
@@ -300,6 +318,11 @@ func EditAssignmentPost(ctx *context.Context) {
 	if assignment.Title == "" {
 		ctx.Data["Assignment"] = assignment
 		ctx.RenderWithErr("Title is required.", tplAssignmentEdit, nil)
+		return
+	}
+	if len(assignment.Title) > 255 {
+		ctx.Data["Assignment"] = assignment
+		ctx.RenderWithErr(ctx.Tr("edu.title_too_long"), tplAssignmentEdit, nil)
 		return
 	}
 

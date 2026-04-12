@@ -2,12 +2,16 @@ package edu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"forgejo.org/models/perm"
 	"forgejo.org/modules/log"
 )
+
+// ErrUserAlreadyEnrolled is returned when trying to enroll a user who is already enrolled in the course.
+var ErrUserAlreadyEnrolled = errors.New("user is already enrolled in this course")
 
 func (s *service) CreateCourse(ctx context.Context, creatorID int64, opts CreateCourseOptions) (*Course, error) {
 	if opts.Name == "" {
@@ -76,6 +80,15 @@ func (s *service) DeleteCourse(ctx context.Context, id int64) error {
 }
 
 func (s *service) EnrollUser(ctx context.Context, courseID, userID int64, role RoleType) error {
+	// Check if the user is already enrolled to avoid UNIQUE constraint violation
+	existing, err := s.repo.GetEnrollment(ctx, courseID, userID)
+	if err != nil {
+		return fmt.Errorf("check existing enrollment: %w", err)
+	}
+	if existing != nil {
+		return ErrUserAlreadyEnrolled
+	}
+
 	enrollment := &CourseEnrollment{
 		CourseID:    courseID,
 		UserID:      userID,

@@ -21,6 +21,7 @@
 					<div class="ui action input">
 						<input type="text" name="username" placeholder="e.g. user1" required>
 						<select class="ui selection dropdown" name="role">
+							<option value="">{{ctx.Locale.Tr "edu.no_role"}}</option>
 							<option value="student">{{ctx.Locale.Tr "edu.student"}}</option>
 							<option value="teacher">{{ctx.Locale.Tr "edu.teacher"}}</option>
 						</select>

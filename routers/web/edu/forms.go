@@ -11,7 +11,7 @@ import (
 // EduRoleForm form for admin role assignment
 type EduRoleForm struct {
 	Username string `binding:"Required"`
-	Role     string `binding:"Required"`
+	Role     string
 }
 
 func (f *EduRoleForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {

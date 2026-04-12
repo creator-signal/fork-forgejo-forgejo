@@ -326,6 +326,34 @@ make test-sqlite#TestEduCourseCreate
 make test-e2e-sqlite
 ```
 
+## CI/CD Runner (Forgejo Actions)
+
+Для тестирования CI/CD (раздел 6) необходим Forgejo Actions runner. Он включён в `docker-compose.yml`:
+
+```bash
+# Запуск Forgejo + runner
+docker compose -f edu-docker/docker-compose.yml up forgejo forgejo-runner --build
+```
+
+Runner автоматически регистрируется при первом запуске (требует пользователя `eduadmin` с паролем `Password123!`).
+Если авто-регистрация не сработала — зарегистрируйте вручную:
+1. Откройте `http://localhost:3000/-/admin/runners`
+2. Скопируйте Registration Token
+3. `docker exec -it <runner-container> forgejo-runner register --instance http://forgejo:3000 --token <TOKEN> --name edu-runner --labels ubuntu-latest:docker://node:20-bookworm --no-interactive`
+
+---
+
+## Расширенный тест-кит
+
+Полный набор тестовых данных и скриптов находится в `test-kit/` (корень репозитория course-work):
+
+- `test-kit/TESTING_PLAN.md` — Полный план (~133 тест-кейсов, 15 разделов)
+- `test-kit/setup.sh` — Скрипт создания тестового окружения (пользователи, орг, репозитории, роли)
+- `test-kit/csv/` — 8 CSV-файлов для тестирования импорта (UTF-8, Win-1251, BOM, XSS, пустой, невалидный)
+- `test-kit/template-repo/` — Шаблон Go-задания с CI/CD workflow и эталонным решением
+
+---
+
 ## Ограничения
 
 - Автоматическое обновление UI в реальном времени не реализовано — нужна перезагрузка страницы.

@@ -43,23 +43,29 @@ func UpdateUserRolePost(ctx *context.Context) {
 		return
 	}
 
-	var r edu.RoleType
 	switch role {
+	case "":
+		if err := edu.DeleteUserRole(ctx, u.ID); err != nil {
+			ctx.ServerError("DeleteUserRole", err)
+			return
+		}
+		ctx.Flash.Success("Role removed for " + username)
 	case "teacher":
-		r = edu.RoleTeacher
+		if err := edu.SetUserRole(ctx, u.ID, edu.RoleTeacher); err != nil {
+			ctx.ServerError("SetUserRole", err)
+			return
+		}
+		ctx.Flash.Success("Role updated for " + username)
 	case "student":
-		r = edu.RoleStudent
+		if err := edu.SetUserRole(ctx, u.ID, edu.RoleStudent); err != nil {
+			ctx.ServerError("SetUserRole", err)
+			return
+		}
+		ctx.Flash.Success("Role updated for " + username)
 	default:
 		ctx.Flash.Error("Invalid role")
 		ctx.Redirect(setting.AppSubURL + "/edu/admin")
 		return
 	}
-
-	if err := edu.SetUserRole(ctx, u.ID, r); err != nil {
-		ctx.ServerError("SetUserRole", err)
-		return
-	}
-
-	ctx.Flash.Success("Role updated for " + username)
 	ctx.Redirect(setting.AppSubURL + "/edu/admin")
 }

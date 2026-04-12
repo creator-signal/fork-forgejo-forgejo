@@ -1,6 +1,7 @@
 package edu
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -139,6 +140,11 @@ func NewCoursePost(ctx *context.Context) {
 		ctx.RenderWithErr("Name is required.", tplCourseForm, nil)
 		return
 	}
+	if len(name) > 255 {
+		loadOrgsForUser(ctx)
+		ctx.RenderWithErr(ctx.Tr("edu.name_too_long"), tplCourseForm, nil)
+		return
+	}
 
 	var startUnix, endUnix int64
 	if startDateStr != "" {
@@ -247,6 +253,12 @@ func EditCoursePost(ctx *context.Context) {
 		ctx.Data["Course"] = course
 		loadOrgsForUser(ctx)
 		ctx.RenderWithErr("Name is required.", tplCourseForm, nil)
+		return
+	}
+	if len(course.Name) > 255 {
+		ctx.Data["Course"] = course
+		loadOrgsForUser(ctx)
+		ctx.RenderWithErr(ctx.Tr("edu.name_too_long"), tplCourseForm, nil)
 		return
 	}
 
@@ -359,6 +371,11 @@ func EnrollUserPost(ctx *context.Context) {
 	}
 
 	if err := svc.EnrollUser(ctx, courseID, u.ID, r); err != nil {
+		if errors.Is(err, edu.ErrUserAlreadyEnrolled) {
+			ctx.Flash.Error(ctx.Tr("edu.user_already_enrolled"))
+			ctx.Redirect(setting.AppSubURL + "/edu/teacher/courses/" + ctx.Params(":id"))
+			return
+		}
 		ctx.ServerError("EnrollUser", err)
 		return
 	}

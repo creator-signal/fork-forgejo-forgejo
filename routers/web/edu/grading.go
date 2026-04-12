@@ -156,6 +156,11 @@ func GradeSubmissionPost(ctx *context.Context) {
 		ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions/" + ctx.Params(":subID"))
 		return
 	}
+	if len(comment) > 10000 {
+		ctx.Flash.Error(ctx.Tr("edu.comment_too_long"))
+		ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions/" + ctx.Params(":subID"))
+		return
+	}
 
 	if err := svc.GradeSubmission(ctx, subID, grade, comment, ctx.Doer.ID); err != nil {
 		ctx.ServerError("GradeSubmission", err)

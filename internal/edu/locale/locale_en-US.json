@@ -17,6 +17,7 @@
 	"edu.username": "Username",
 	"edu.student": "Student",
 	"edu.teacher": "Teacher",
+	"edu.no_role": "None (remove role)",
 	"edu.set_role": "Set Role",
 	"edu.title": "Title",
 	"edu.description": "Description",
@@ -133,5 +134,10 @@
 	"edu.failed": "failed",
 	"edu.error_log": "Error log",
 	"edu.synced": "Synced",
-	"edu.skipped": "Skipped"
+	"edu.skipped": "Skipped",
+	"edu.user_already_enrolled": "This user is already enrolled in the course.",
+	"edu.course_expired": "This course has ended. You can no longer view its assignments.",
+	"edu.name_too_long": "Name is too long (maximum 255 characters).",
+	"edu.title_too_long": "Title is too long (maximum 255 characters).",
+	"edu.comment_too_long": "Comment is too long (maximum 10000 characters)."
 }

@@ -42,6 +42,11 @@ func SetUserRole(ctx context.Context, userID int64, role RoleType) error {
 	return err
 }
 
+func DeleteUserRole(ctx context.Context, userID int64) error {
+	_, err := db.GetEngine(ctx).Where("user_id = ?", userID).Delete(&UserRole{})
+	return err
+}
+
 func EnsureUserRole(ctx context.Context, userID int64, role RoleType) error {
 	current, err := GetUserRole(ctx, userID)
 	if err != nil {
