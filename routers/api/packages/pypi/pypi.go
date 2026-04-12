@@ -75,6 +75,37 @@ func PackageMetadata(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
+// JSONPackageMetadata returns the same data as PackageMetadata, but in JSON
+func JSONPackageMetadata(ctx *contex.Context) {
+	packageName := normalizer.Replace(ctx.Params("id"))
+
+	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypePyPI, packageName)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+	if len(pvs) == 0 {
+		apiError(ctx, http.StatusNotFound, err)
+		return
+	}
+
+	pds, err := packages_model.GetPackageDescriptors(ctx, pvs)
+	if err != nil {
+		apiError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	// sort package descriptors by version to mimic PyPI format
+	sort.Slice(pds, func(i, j int) bool {
+		return strings.Compare(pds[i].Version.Version, pds[j].Version.Version) < 0
+	})
+	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
+	ctx.Data["PackageDescriptor"] = pds[0]
+	ctx.Data["PackageDescriptors"] = pds
+	ctx.JSONTemplate(http.StatusOK, "api/packages/pypi/simple")
+}
+
+	
 // DownloadPackageFile serves the content of a package
 func DownloadPackageFile(ctx *context.Context) {
 	packageName := normalizer.Replace(ctx.Params("id"))
