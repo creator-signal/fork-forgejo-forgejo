@@ -4,16 +4,32 @@
     "description": "{{.PackageDescriptor.Metadata.Description}}",
     "license": "{{.PackageDescriptor.Metadata.License}}",
     "name": "{{.PackageDescriptor.Package.Name}}"
-	},
-  "urls": [
-		{{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
-		{
-			"digests": {
-				"sha256": "{{.Blob.HashSHA256}}"
-			},
-			"url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
-			"requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
+  },
+  "releases": {
+    {{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
+    "{{$p.Version.Version}}": {
+      "digests": {
+        "sha256": "{{.Blob.HashSHA256}}",
+        "downloads": -1,
+        "filename": "{{.File.Name}}",
+        "packagetype": '{{if eq (slice .File.Name -3) `"whl"`}}bdist_wheel{{else}}sdist{{end}}'
+        "python_version": "py3",
+        "url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
+        "requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
+      }
     }
-		{{end}}{{end}}
-	]
+  },
+  "urls": [
+    {{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
+    {
+      "digests": {
+        "sha256": "{{.Blob.HashSHA256}}"
+      },
+      "packagetype": '{{if eq (slice .File.Name -3) `"whl"`}}bdist_wheel{{else}}sdist{{end}}',
+      "python_version": "py3",
+      "url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
+      "requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
+    }
+    {{end}}{{end}}
+  ]
 }
