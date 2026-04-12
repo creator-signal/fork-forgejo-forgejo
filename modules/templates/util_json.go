@@ -42,21 +42,36 @@ func (su *JsonUtils) Comma(index int, length int) string {
 	}
 }
 
-var accumulators map[string]int = make(map[string]int)
 
-func (su *JsonUtils) Count(key string, increment int) string {
-	n, ok := accumulators[key]
+func (su *JsonUtils) Count(data map[string]any, key string, increment int) string {
+	var accs map[string]int
+	accumulators, ok := data["accumulators"]
+	if ok {
+		accs = accumulators.(map[string]int)
+	} else {
+		accs = make(map[string]int)
+		data["accumulators"] = accs
+	}
+	n, ok := accs[key]
 	if ok {
 		n += increment
 	} else {
 		n = increment
 	}
-	accumulators[key] = n
+	accs[key] = n
 	return ""
 }
 
-func (su *JsonUtils) Counted(key string) int {
-	n, ok := accumulators[key]
+func (su *JsonUtils) Counted(data map[string]any, key string) int {
+	var accs map[string]int
+	accumulators, ok := data["accumulators"]
+	if ok {
+		accs = accumulators.(map[string]int)
+	} else {
+		accs = make(map[string]int)
+		data["accumulators"] = accs
+	}
+	n, ok := accs[key]
 	if ok {
 		return n
 	} else {

@@ -1,3 +1,4 @@
+{{$counters := dict}}
 {
   "info": {
     "author": "{{.PackageDescriptor.Metadata.Author}}",
@@ -9,7 +10,7 @@
     {{range $pkgidx, $p := .PackageDescriptors}}
     "{{$p.Version.Version}}": [
       {{$files := len .Files}}
-      {{JsonUtils.Count "totalFiles" $files}}
+      {{JsonUtils.Count $counters "totalFiles" $files}}
       {{range $fileidx, $_ := .Files}}
       {
 	"digests": {
@@ -37,8 +38,8 @@
       "python_version": "py3",
       "url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
       "requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
-    }{{JsonUtils.Comma (JsonUtils.Counted "fileUrls") (JsonUtils.Counted "totalFiles")}}
-    {{JsonUtils.Count "fileUrls" 1}}
+    }{{JsonUtils.Comma (JsonUtils.Counted $counters "fileUrls") (JsonUtils.Counted $counters "totalFiles")}}
+    {{JsonUtils.Count $counters "fileUrls" 1}}
     {{end}}{{end}}
   ]
 }
