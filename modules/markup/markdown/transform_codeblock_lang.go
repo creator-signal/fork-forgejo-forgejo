@@ -6,6 +6,7 @@ package markdown
 import (
 	"bytes"
 
+	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 )
@@ -16,6 +17,47 @@ func (g *ASTTransformer) transformCodeblockLanguage(v *ast.FencedCodeBlock, read
 	}
 	src := reader.Source()
 	info := v.Info.Segment.Value(src)
+
+	// Parse Pandoc style attributes
+	// https://pandoc.org/MANUAL.html#extension-fenced_code_attributes
+	//
+	// For example,
+	// ```{.haskell .numberLines}
+	// ...
+	// ```
+	// Should have a language of "haskell", not "{.haskell .numberLines}"
+	if trimmed := bytes.TrimSpace(info); len(trimmed) != 0 && trimmed[0] == '{' && trimmed[len(trimmed)-1] == '}' {
+		attributes := trimmed[1 : len(trimmed)-1]
+		for attribute := range bytes.SplitSeq(attributes, []byte{' '}) {
+			if len(attribute) != 0 && attribute[0] == '.' {
+				class := attribute[1:]
+				if lexer := lexers.Get(string(class)); lexer != nil {
+					lang := class
+					langInx := bytes.Index(info, lang)
+					start := v.Info.Segment.Start + langInx
+					end := start + len(lang)
+					v.Info = ast.NewTextSegment(text.NewSegment(start, end))
+					return
+				}
+			}
+		}
+		return
+	}
+
+	// Strip trailing Pandoc style attributes
+	// https://pandoc.org/MANUAL.html#extension-fenced_code_attributes
+	//
+	// For example,
+	// ```haskell {.numberLines}
+	// ...
+	// ```
+	// Should have a language of "haskell ", not "haskell {.numberLines}"
+	if i := bytes.IndexByte(info, '{'); i != -1 {
+		start := v.Info.Segment.Start
+		v.Info = ast.NewTextSegment(text.NewSegment(start, start+i))
+		return
+	}
+
 	// Strip language after commas
 	//
 	// For example,
@@ -26,5 +68,6 @@ func (g *ASTTransformer) transformCodeblockLanguage(v *ast.FencedCodeBlock, read
 	if i := bytes.IndexByte(info, ','); i != -1 {
 		start := v.Info.Segment.Start
 		v.Info = ast.NewTextSegment(text.NewSegment(start, start+i))
+		return
 	}
 }
