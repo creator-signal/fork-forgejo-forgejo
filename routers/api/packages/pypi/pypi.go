@@ -103,7 +103,7 @@ func JSONPackageMetadata(ctx *contex.Context) {
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
-	ctx.JSONTemplate(http.StatusOK, "api/packages/pypi")
+	ctx.JSONTemplate(http.StatusOK, "api/packages/pypi/" + packageName)
 }
 
 	
