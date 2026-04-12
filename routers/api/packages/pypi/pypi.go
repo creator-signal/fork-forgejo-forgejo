@@ -77,7 +77,7 @@ func PackageMetadata(ctx *context.Context) {
 }
 
 // JSONPackageMetadata returns the same data as PackageMetadata, but in JSON
-func JSONPackageMetadata(ctx *contex.Context) {
+func JSONPackageMetadata(ctx *context.Context) {
 	packageName := normalizer.Replace(ctx.Params("id"))
 
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypePyPI, packageName)
