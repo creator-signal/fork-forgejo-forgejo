@@ -1,14 +1,16 @@
 {
-    "info": {
-	"name": "{{.PackageDescriptor.Package.Name}}",
-	"urls": [{{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
-	    {
-		"digests": {
-		    "sha256": "{{.Blob.HashSHA256}}"
-		},
-		"url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
-		"requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
-	    }
-		 {{end}}{{end}}]
-    }
+  "info": {
+    "name": "{{.PackageDescriptor.Package.Name}}",
+    "urls": [
+			{{range .PackageDescriptors}}{{$p := .}}{{range .Files}}
+			{
+				"digests": {
+					"sha256": "{{.Blob.HashSHA256}}"
+				},
+				"url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
+				"requires_python": "{{$p.Metadata.RequiresPython}}"{{end}}
+      }
+			{{end}}{{end}}
+		]
+  }
 }
