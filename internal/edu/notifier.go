@@ -41,22 +41,8 @@ func (n *EduNotifier) ActionRunNowDone(
 		return
 	}
 
-	var newStatus SubmissionStatus
-	if run.Status == actions_model.StatusSuccess {
-		newStatus = StatusPassed
-	} else if run.Status == actions_model.StatusFailure {
-		newStatus = StatusFailed
-	} else {
+	if run.Status != actions_model.StatusSuccess && run.Status != actions_model.StatusFailure {
 		return
-	}
-
-	submission.Status = newStatus
-	submission.UpdatedUnix = time.Now().Unix()
-
-	if err := n.repo.UpdateSubmission(ctx, submission); err != nil {
-		log.Error("EduNotifier: failed to update submission %d status: %v", submission.ID, err)
-	} else {
-		log.Info("EduNotifier: updated submission %d status to %s", submission.ID, newStatus)
 	}
 
 	// Try to parse grade from workflow logs
@@ -82,12 +68,25 @@ func (n *EduNotifier) ActionRunNowDone(
 		log.Error("EduNotifier: failed to create test result for submission %d: %v", submission.ID, err)
 	}
 
-	// Update submission grade only if not manually graded
+	// Update submission: auto-grade if not manually graded, otherwise just update CI status
 	if !submission.ManualGrade {
 		if err := n.repo.AutoGradeSubmission(ctx, submission.ID, score); err != nil {
 			log.Error("EduNotifier: failed to auto-grade submission %d: %v", submission.ID, err)
 		} else {
 			log.Info("EduNotifier: auto-graded submission %d with score %d", submission.ID, score)
+		}
+	} else {
+		// ManualGrade=true: just update CI status (passed/failed) without touching grade
+		var ciStatus SubmissionStatus
+		if run.Status == actions_model.StatusSuccess {
+			ciStatus = StatusPassed
+		} else {
+			ciStatus = StatusFailed
+		}
+		submission.Status = ciStatus
+		submission.UpdatedUnix = time.Now().Unix()
+		if err := n.repo.UpdateSubmission(ctx, submission); err != nil {
+			log.Error("EduNotifier: failed to update submission %d status: %v", submission.ID, err)
 		}
 	}
 }

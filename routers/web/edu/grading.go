@@ -206,6 +206,24 @@ func ResetGradePost(ctx *context.Context) {
 		return
 	}
 
+	// Verify submission belongs to this assignment
+	submissions, err := svc.GetSubmissions(ctx, assignmentID)
+	if err != nil {
+		ctx.ServerError("GetSubmissions", err)
+		return
+	}
+	found := false
+	for _, s := range submissions {
+		if s.ID == subID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		ctx.NotFound("Submission not found", nil)
+		return
+	}
+
 	if err := svc.ResetToAutoGrade(ctx, subID); err != nil {
 		ctx.ServerError("ResetToAutoGrade", err)
 		return
