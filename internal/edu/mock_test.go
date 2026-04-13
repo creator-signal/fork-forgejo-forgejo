@@ -254,6 +254,16 @@ func (m *MockRepository) GradeSubmission(ctx context.Context, submissionID int64
 	return args.Error(0)
 }
 
+func (m *MockRepository) AutoGradeSubmission(ctx context.Context, submissionID int64, grade int) error {
+	args := m.Called(ctx, submissionID, grade)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ResetToAutoGrade(ctx context.Context, submissionID int64, grade int) error {
+	args := m.Called(ctx, submissionID, grade)
+	return args.Error(0)
+}
+
 func (m *MockRepository) CreateSyncForkTask(ctx context.Context, task *SyncForkTask) error {
 	args := m.Called(ctx, task)
 	return args.Error(0)
