@@ -59,7 +59,14 @@
 				{{if and .Submission .Submission.IsGraded}}
 				<div class="ui segment">
 					<h4>{{svg "octicon-star"}} {{ctx.Locale.Tr "edu.grade"}}</h4>
-					<p><span class="ui large purple label">{{.Submission.Grade}}/100</span></p>
+					<p>
+						<span class="ui large purple label">{{.Submission.Grade}}/100</span>
+						{{if .Submission.ManualGrade}}
+							<span class="ui small orange label">{{ctx.Locale.Tr "edu.manual_grade_label"}}</span>
+						{{else}}
+							<span class="ui small teal label">{{ctx.Locale.Tr "edu.auto_grade"}}</span>
+						{{end}}
+					</p>
 					{{if .Submission.Comment}}
 						<p><strong>{{ctx.Locale.Tr "edu.comment"}}:</strong> {{.Submission.Comment | SanitizeHTML}}</p>
 					{{end}}

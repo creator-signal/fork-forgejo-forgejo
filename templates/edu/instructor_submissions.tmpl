@@ -77,6 +77,11 @@
 									<td>
 										{{if .IsGraded}}
 											<span class="ui purple label">{{.Grade}}/100</span>
+											{{if .ManualGrade}}
+												<small class="ui small orange label" style="margin-left:3px">{{ctx.Locale.Tr "edu.manual_grade_label"}}</small>
+											{{else}}
+												<small class="ui small teal label" style="margin-left:3px">{{ctx.Locale.Tr "edu.auto_grade"}}</small>
+											{{end}}
 										{{else}}
 											<span class="ui grey label">{{ctx.Locale.Tr "edu.not_graded"}}</span>
 										{{end}}
