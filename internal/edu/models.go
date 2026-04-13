@@ -83,6 +83,7 @@ type Submission struct {
 	StudentRepoID int64            `json:"student_repo_id"`
 	Status        SubmissionStatus `json:"status" xorm:"VARCHAR(50) NOT NULL DEFAULT 'started'"`
 	Grade         int              `json:"grade" xorm:"DEFAULT -1"`
+	ManualGrade   bool             `json:"manual_grade" xorm:"DEFAULT false"`
 	Comment       string           `json:"comment" xorm:"TEXT"`
 	GradedByID    int64            `json:"graded_by_id" xorm:"INDEX"`
 	GradedUnix    int64            `json:"graded_unix"`
