@@ -5,18 +5,21 @@ package pypi
 
 import (
 	"encoding/hex"
+	"errors"
 	"io"
 	"net/http"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
+	"text/template"
 	"unicode"
 
 	packages_model "forgejo.org/models/packages"
 	packages_module "forgejo.org/modules/packages"
 	pypi_module "forgejo.org/modules/packages/pypi"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/templates"
 	"forgejo.org/modules/validation"
 	"forgejo.org/routers/api/packages/helper"
 	"forgejo.org/services/context"
@@ -105,7 +108,21 @@ func JSONPackageMetadata(ctx *context.Context) {
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
 	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
-	ctx.JSONTemplate("api/packages/pypi/simple-json")
+	m := templates.NewFuncMap()
+	m["ctx"] = func() any { return ctx }
+	tmpl, err := template.New("simple-json").Funcs(m).ParseFiles("templates/api/packages/pypi/simple-json.tmpl")
+	if err != nil {
+		ctx.ServerError("Unable to parse template", err)
+		return
+	}
+	t := tmpl.Lookup("simple-json.tmpl")
+	if t == nil {
+		ctx.ServerError("simple-json.tmpl wasn't in itself" + tmpl.DefinedTemplates(), errors.New("simple-json missing"))
+		return
+	}
+	if err = t.Execute(ctx.Resp, ctx.Data); err != nil {
+		ctx.ServerError("Unable to execute template" + tmpl.DefinedTemplates(), err)
+	}
 }
 
 
