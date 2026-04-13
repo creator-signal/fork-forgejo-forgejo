@@ -185,7 +185,6 @@ func TestAPIViewPullsFilterByBaseHead(t *testing.T) {
 	ctx := NewAPITestContext(t, "user2", repo.Name, auth_model.AccessTokenScopeReadRepository)
 
 	t.Run("FilterByBase", func(t *testing.T) {
-		// Repo 1 has PRs with base_branch "master" (PR 1, 2) and "branch2" (PR 5)
 		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/pulls?state=all&base=master", repo.OwnerName, repo.Name).
 			AddTokenAuth(ctx.Token)
 		resp := ctx.Session.MakeRequest(t, req, http.StatusOK)
