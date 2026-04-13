@@ -66,6 +66,7 @@ type EducationalService interface {
 	GetTestResults(ctx context.Context, submissionID int64) ([]*TestResult, error)
 	GetLatestTestResult(ctx context.Context, submissionID int64) (*TestResult, error)
 	GradeSubmission(ctx context.Context, submissionID int64, grade int, comment string, gradedByID int64) error
+	ResetToAutoGrade(ctx context.Context, submissionID int64) error
 }
 
 // RepoForker abstracts the repository forking, retrieval, and sync logic.
@@ -154,6 +155,8 @@ type Repository interface {
 	GetTestResultsBySubmission(ctx context.Context, submissionID int64) ([]*TestResult, error)
 	GetLatestTestResult(ctx context.Context, submissionID int64) (*TestResult, error)
 	GradeSubmission(ctx context.Context, submissionID int64, grade int, comment string, gradedByID int64) error
+	AutoGradeSubmission(ctx context.Context, submissionID int64, grade int) error
+	ResetToAutoGrade(ctx context.Context, submissionID int64, grade int) error
 }
 
 var globalService EducationalService

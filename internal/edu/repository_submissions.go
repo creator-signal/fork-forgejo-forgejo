@@ -54,16 +54,48 @@ func (r *xormRepository) UpdateSubmission(ctx context.Context, s *Submission) er
 
 func (r *xormRepository) GradeSubmission(ctx context.Context, submissionID int64, grade int, comment string, gradedByID int64) error {
 	now := timeNowUnix()
-	_, err := db.GetEngine(ctx).ID(submissionID).Cols("grade", "comment", "graded_by_id", "graded_unix", "status", "updated_unix").Update(&Submission{
-		Grade:      grade,
-		Comment:    comment,
-		GradedByID: gradedByID,
-		GradedUnix: now,
-		Status:     "graded",
+	_, err := db.GetEngine(ctx).ID(submissionID).Cols("grade", "comment", "graded_by_id", "graded_unix", "status", "manual_grade", "updated_unix").Update(&Submission{
+		Grade:       grade,
+		Comment:     comment,
+		GradedByID:  gradedByID,
+		GradedUnix:  now,
+		Status:      StatusGraded,
+		ManualGrade: true,
 		UpdatedUnix: now,
 	})
 	if err != nil {
 		return fmt.Errorf("grade submission: %w", err)
+	}
+	return nil
+}
+
+func (r *xormRepository) AutoGradeSubmission(ctx context.Context, submissionID int64, grade int) error {
+	now := timeNowUnix()
+	_, err := db.GetEngine(ctx).ID(submissionID).Cols("grade", "status", "updated_unix").Update(&Submission{
+		Grade:       grade,
+		Status:      StatusGraded,
+		UpdatedUnix: now,
+	})
+	if err != nil {
+		return fmt.Errorf("auto-grade submission: %w", err)
+	}
+	return nil
+}
+
+func (r *xormRepository) ResetToAutoGrade(ctx context.Context, submissionID int64, grade int) error {
+	now := timeNowUnix()
+	var status SubmissionStatus = StatusGraded
+	if grade < 0 {
+		status = StatusStarted
+	}
+	_, err := db.GetEngine(ctx).ID(submissionID).Cols("grade", "manual_grade", "status", "updated_unix").Update(&Submission{
+		Grade:       grade,
+		ManualGrade: false,
+		Status:      status,
+		UpdatedUnix: now,
+	})
+	if err != nil {
+		return fmt.Errorf("reset to auto grade: %w", err)
 	}
 	return nil
 }

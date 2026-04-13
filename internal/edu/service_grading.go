@@ -19,3 +19,17 @@ func (s *service) GradeSubmission(ctx context.Context, submissionID int64, grade
 	}
 	return s.repo.GradeSubmission(ctx, submissionID, grade, comment, gradedByID)
 }
+
+func (s *service) ResetToAutoGrade(ctx context.Context, submissionID int64) error {
+	latestResult, err := s.repo.GetLatestTestResult(ctx, submissionID)
+	if err != nil {
+		return fmt.Errorf("get latest test result: %w", err)
+	}
+
+	grade := -1
+	if latestResult != nil {
+		grade = latestResult.Score
+	}
+
+	return s.repo.ResetToAutoGrade(ctx, submissionID, grade)
+}
