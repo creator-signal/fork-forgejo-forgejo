@@ -170,3 +170,47 @@ func GradeSubmissionPost(ctx *context.Context) {
 	ctx.Flash.Success("Grade saved successfully")
 	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions")
 }
+
+func ResetGradePost(ctx *context.Context) {
+	assignmentID := ctx.ParamsInt64(":id")
+	subID := ctx.ParamsInt64(":subID")
+
+	svc := edu.GetService()
+	if svc == nil {
+		ctx.ServerError("GetService", nil)
+		return
+	}
+
+	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
+	if err != nil {
+		ctx.ServerError("GetAssignmentByID", err)
+		return
+	}
+	if assignment == nil {
+		ctx.NotFound("Assignment not found", nil)
+		return
+	}
+
+	repo, err := repo_model.GetRepositoryByID(ctx, assignment.RepoID)
+	if err != nil {
+		ctx.ServerError("GetRepositoryByID", err)
+		return
+	}
+	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	if err != nil {
+		ctx.ServerError("GetUserRepoPermission", err)
+		return
+	}
+	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
+		ctx.Error(http.StatusForbidden, "Only instructors can reset grades")
+		return
+	}
+
+	if err := svc.ResetToAutoGrade(ctx, subID); err != nil {
+		ctx.ServerError("ResetToAutoGrade", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("edu.grade_reset_success"))
+	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions/" + ctx.Params(":subID"))
+}

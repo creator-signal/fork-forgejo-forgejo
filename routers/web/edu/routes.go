@@ -30,6 +30,7 @@ func RegisterRoutes(m *web.Route, middlewares ...any) {
 			m.Get("/assignments/{id}/sync-fork-status", SyncForkStatus)
 			m.Get("/assignments/{id}/submissions/{subID}", SubmissionDetail)
 			m.Post("/assignments/{id}/submissions/{subID}/grade", GradeSubmissionPost)
+			m.Post("/assignments/{id}/submissions/{subID}/reset-grade", ResetGradePost)
 			m.Get("/dashboard", func(ctx *context.Context) {
 				ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments")
 			})
