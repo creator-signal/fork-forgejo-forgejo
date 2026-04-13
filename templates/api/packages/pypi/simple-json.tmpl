@@ -1,0 +1,29 @@
+{{$counters := dict}}
+{
+  "name": "{{.PackageDescriptor.Package.Name}}",
+  "meta": {
+    "api-version": "1.4"
+  },
+  "versions": [
+    {{$packages := len .PackageDescriptors}}
+    {{range $pkgidx, $p := .PackageDescriptors}}
+    "{{$p.Version.Version}}"{{JsonUtils.Comma $pkgidx $packages}}{{JsonUtils.Count $counters "totalFiles" (len .Files)}}
+    {{end}}
+  ],
+  "files": [
+    {{range .PackageDescriptors}}
+    {{$p := .}}
+    {{range .Files}}
+    {
+      "hashes": {
+        "sha256": "{{.Blob.HashSHA256}}"
+      },
+      "filename": "{{.File.Name}}",
+      "size": {{.Blob.Size}},
+      "url": "{{$.RegistryURL}}/files/{{$p.Package.LowerName}}/{{$p.Version.Version}}/{{.File.Name}}"{{if $p.Metadata.RequiresPython}},
+      "requires-python": "{{$p.Metadata.RequiresPython}}"{{end}}
+    }{{JsonUtils.Comma (JsonUtils.Counted $counters "fileUrls") (JsonUtils.Counted $counters "totalFiles")}}
+    {{JsonUtils.Count $counters "fileUrls" 1}}
+    {{end}}{{end}}
+  ]
+}

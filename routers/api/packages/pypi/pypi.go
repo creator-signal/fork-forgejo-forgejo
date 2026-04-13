@@ -105,7 +105,7 @@ func JSONPackageMetadata(ctx *context.Context) {
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
 	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
-	ctx.JSONTemplate("api/packages/pypi/json")
+	ctx.JSONTemplate("api/packages/pypi/simple-json")
 }
 
 
