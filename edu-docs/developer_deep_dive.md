@@ -97,7 +97,7 @@ Forgejo (форк Gitea) — это монолитное приложение н
 | Middleware | `routers/web/edu/middleware.go` | Авторизация (reqEduTeacher, reqEduAdmin) |
 | Шаблоны | `templates/edu/` | UI (Fomantic UI) |
 | Интеграционные тесты | `tests/integration/edu_assignments_test.go` | SQLite-based Go тесты (15 тестов) |
-| E2E тесты | `tests/e2e/edu.test.e2e.ts` | Playwright тесты (8 тестов) |
+| E2E тесты | `tests/e2e/edu.test.e2e.ts` | Playwright тесты (7 тестов) |
 | Фикстуры | `models/fixtures/edu_user_role.yml` | Тестовые данные для edu ролей |
 | Docker Dev | `edu-docker/Dockerfile.dev`, `edu-docker/docker-compose.yml`, `edu-docker/app.ini` | Локальная среда разработки |
 | Документация | `edu-docs/` | Руководства для разработчиков и пользователей |
@@ -145,13 +145,13 @@ EducationalService (singleton, interface в service.go)
 
 | Таблица | Назначение |
 |---------|------------|
-| `user_role` | Глобальная роль пользователя (student/teacher/admin). **Внимание:** эта таблица **не имеет** префикса `edu_` (нет метода `TableName()`). |
+| `edu_user_role` | Глобальная роль пользователя (student/teacher/admin). |
 | `edu_import_draft` | Черновик CSV-импорта (храним сырой CSV) |
 | `edu_import_draft_row` | Строки черновика импорта (ФИО, email, username, status) |
-| `bulk_fork_task` | Задача массового форка (прогресс: completed/failed/total) |
-| `sync_fork_task` | Задача массовой синхронизации форков (synced/skipped/failed) |
+| `edu_bulk_fork_task` | Задача массового форка (прогресс: completed/failed/total) |
+| `edu_sync_fork_task` | Задача массовой синхронизации форков (synced/skipped/failed) |
 
-> **Важно о именовании таблиц:** Модели `Course`, `Assignment`, `Submission`, `TestResult`, `CourseEnrollment`, `ImportDraft`, `ImportDraftRow` определяют метод `TableName()` в `models.go`, чтобы Xorm создавал таблицы с `edu_` префиксом. `UserRole`, `BulkForkTask` и `SyncForkTask` не имеют `TableName()`, поэтому Xorm создаёт таблицы по дефолтным именам (`user_role`, `bulk_fork_task`, `sync_fork_task`).
+> **Именование таблиц:** Все 10 моделей определяют метод `TableName()` в `models.go`, поэтому Xorm создаёт таблицы с единообразным префиксом `edu_` (например, `edu_courses`, `edu_user_role`, `edu_bulk_fork_task` и т.д.).
 
 > **UNIQUE constraint на enrollments:** `edu_course_enrollments` имеет UNIQUE индекс `idx_course_user` на `(CourseID, UserID)`, что предотвращает дублирование записей студента в одном курсе. При попытке повторной записи БД вернёт ошибку.
 
@@ -197,7 +197,8 @@ EducationalService (singleton, interface в service.go)
 | `translit.go` | Транслитерация кириллицы → латиница (ГОСТ 7.79-2000) |
 | `adapter.go` | ForgejoAdapter — мост к ядру Forgejo |
 | `notifier.go` | EduNotifier — обработка событий CI/CD |
-| `role.go` | Управление глобальными ролями через Xorm ORM (таблица `user_role`) |
+| `grade_parser.go` | Парсинг `::edu-grade::XX` из строк CI-логов (`ParseGradeFromLogLines`) |
+| `role.go` | Управление глобальными ролями через Xorm ORM (таблица `edu_user_role`) |
 | `init.go` | Инициализация: sync схемы, создание singleton-сервиса (`NewService`), регистрация нотификатора (`RegisterNotifier`), загрузка edu-локалей |
 | `mock_test.go` | Моки для unit-тестов |
 | `locale/*.json` | Встраиваемые (embed) JSON-файлы локализации для edu-ключей |
@@ -305,7 +306,50 @@ func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, fo
 3. Наш нотификатор:
    - Ищет submission по `run.RepoID` (это форк студента).
    - Если нашёл — обновляет статус: `Success` → `passed`, `Failure` → `failed`.
-   - Создаёт запись `TestResult` с `CommitSHA`, `Score` (0 или 100) и описанием.
+   - Парсит оценку из логов CI (см. ниже) и создаёт запись `TestResult` с `CommitSHA`, `Score` и описанием.
+
+#### Ж.1. Автоматическое выставление оценки из CI-логов
+
+Файлы: `internal/edu/notifier.go`, `internal/edu/grade_parser.go`
+
+Workflow может вывести оценку в лог командой вида `::edu-grade::XX`, где `XX` — целое число от 0 до 100. Нотификатор разбирает эту команду и записывает оценку в `TestResult.Score`, а затем (если `submission.ManualGrade == false`) — в `submission.Grade`.
+
+**Формат команды:**
+
+```
+::edu-grade::85
+```
+
+**Пример workflow:**
+
+```yaml
+- name: Run tests and grade
+  run: |
+    PASS=$(go test ./... 2>&1 | grep -c PASS || true)
+    TOTAL=10
+    SCORE=$(( PASS * 100 / TOTAL ))
+    echo "::edu-grade::${SCORE}"
+```
+
+**Алгоритм парсинга (`ParseGradeFromLogLines` в `grade_parser.go`):**
+
+- Регулярное выражение: `::edu-grade::(\d{1,3})`
+- Разбираются все строки логов всех jobs и tasks workflow через `actions.ReadLogs`.
+- Побеждает **последнее** вхождение команды.
+- Значение валидируется в диапазоне 0–100; невалидные значения игнорируются.
+- Если команда `::edu-grade::` не найдена в логах — применяется **бинарная оценка**: 100 при успехе workflow, 0 при неудаче (поведение до введения фичи).
+
+**Поле `ManualGrade` на `Submission`:**
+
+- `ManualGrade bool` (DEFAULT `false`) — флаг, что преподаватель вручную выставил оценку.
+- Если `ManualGrade == true`, нотификатор **не перезаписывает** `submission.Grade` результатом CI.
+- При сохранении оценки через форму (`POST .../grade`) сервис устанавливает `ManualGrade = true`.
+
+**Сброс на автоматическую оценку (`ResetToAutoGrade`):**
+
+- Сервисный метод `ResetToAutoGrade` устанавливает `ManualGrade = false` и восстанавливает `Grade` из последнего `TestResult.Score`.
+- Роут: `POST /edu/teacher/assignments/{id}/submissions/{subID}/reset-grade`.
+- На странице детали submission отображается кнопка **"Reset to auto-grade"**, которая вызывает этот роут.
 
 #### З. Ручное оценивание (Grading)
 
@@ -315,7 +359,7 @@ func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, fo
 2. Нажимает "Detail" → переходит на `/edu/teacher/assignments/{id}/submissions/{subID}`.
 3. Видит: информацию о студенте, историю CI-прогонов (таблица TestResult), форму оценивания.
 4. Вводит оценку (0–100) и комментарий, нажимает "Save Grade".
-5. Оценка сохраняется в полях `grade`, `comment`, `graded_by_id`, `graded_unix` таблицы submissions.
+5. Оценка сохраняется в полях `grade`, `comment`, `graded_by_id`, `graded_unix` таблицы submissions, флаг `manual_grade` устанавливается в `true`.
 
 Студент видит свою оценку на странице задания (`/edu/student/assignments/{id}`), а также последний результат CI.
 
@@ -384,8 +428,9 @@ func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, fo
 │   ├── /assignments/{id}/bulk-fork-status → GET: статус/прогресс массового форка
 │   ├── /assignments/{id}/sync-forks       → POST: синхронизация форков
 │   ├── /assignments/{id}/sync-fork-status → GET: статус/прогресс синхронизации
-│   ├── /assignments/{id}/submissions/{subID}       → Детали submission
-│   ├── /assignments/{id}/submissions/{subID}/grade → POST: выставить оценку
+│   ├── /assignments/{id}/submissions/{subID}             → Детали submission
+│   ├── /assignments/{id}/submissions/{subID}/grade       → POST: выставить оценку
+│   ├── /assignments/{id}/submissions/{subID}/reset-grade → POST: сброс на авто-оценку CI
 │   ├── /dashboard                      → Redirect на /teacher/assignments
 │   │
 │   └── /courses
@@ -535,7 +580,9 @@ Forgejo не компилируется на Windows (файлы `_unix.go` ис
 
 **Файлы:**
 - `edu-docker/Dockerfile.dev` — двухстадийная сборка: `golang:1.25-alpine` (build) → `alpine:3.23` (runtime). Запуск от пользователя `git` (Forgejo не работает от root).
-- `edu-docker/docker-compose.yml` — сервис `forgejo` (порт 3000), опциональные сервисы тестов (profile: test).
+- `edu-docker/docker-compose.yml` — сервисы: `forgejo` (порт 3000), `forgejo-runner` (CI/CD runner с авторегистрацией), опциональные `test-integration`, `test-unit`, `test-e2e`.
+- `edu-docker/Dockerfile.test` — сборка для запуска integration и unit тестов.
+- `edu-docker/Dockerfile.e2e` — сборка для запуска E2E (Playwright) тестов.
 - `edu-docker/app.ini` — преконфигурированный SQLite, `INSTALL_LOCK=true` (пропускает Install Wizard), Forgejo Actions включены.
 
 **Запуск:**
@@ -556,9 +603,9 @@ docker compose -f edu-docker/docker-compose.yml up forgejo --build
 
 | Тип | Файлы | Как запускать |
 |-----|-------|--------------|
-| Unit-тесты (Go) | `internal/edu/*_test.go` (19 файлов) | `go test ./internal/edu/...` |
+| Unit-тесты (Go) | `internal/edu/*_test.go` (13 файлов, ~61 тестовая функция) | `go test ./internal/edu/...` |
 | Integration (Go + SQLite) | `tests/integration/edu_assignments_test.go` (15 тестов) | `make test-sqlite#TestEdu` |
-| E2E (Playwright) | `tests/e2e/edu.test.e2e.ts` (8 тестов) | `make test-e2e-sqlite` |
+| E2E (Playwright) | `tests/e2e/edu.test.e2e.ts` (7 тестов) | `make test-e2e-sqlite` |
 
 **Integration тесты**: in-memory SQLite, fixtures из `models/fixtures/*.yml` (включая `edu_user_role.yml` для edu ролей), хелперы `tests.PrepareTestEnv(t)()` и `loginUser(t, "user1")`. Тесты используют helper `ensureEduTables()` для создания edu-таблиц через DDL и `setupEduEnv()` для подготовки окружения.
 
@@ -589,7 +636,7 @@ Edu-модуль использует **два уровня** авторизац
 
 Файл `routers/web/edu/middleware.go` содержит два middleware:
 
-- **`reqEduTeacher`** — проверяет, что у текущего пользователя edu-роль `teacher` или `admin` (через таблицу `user_role`). Применяется ко всей группе `/edu/teacher/*`. Если роль отсутствует — возвращает 403.
+- **`reqEduTeacher`** — проверяет, что у текущего пользователя edu-роль `teacher` или `admin` (через таблицу `edu_user_role`). Применяется ко всей группе `/edu/teacher/*`. Если роль отсутствует — возвращает 403.
 - **`reqEduAdmin`** — проверяет, что пользователь является Forgejo site admin (`ctx.Doer.IsAdmin`). Применяется к `/edu/admin/*`.
 
 #### Проверка владения курсом (хендлерный уровень)
