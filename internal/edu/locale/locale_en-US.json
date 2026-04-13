@@ -139,5 +139,10 @@
 	"edu.course_expired": "This course has ended. You can no longer view its assignments.",
 	"edu.name_too_long": "Name is too long (maximum 255 characters).",
 	"edu.title_too_long": "Title is too long (maximum 255 characters).",
-	"edu.comment_too_long": "Comment is too long (maximum 10000 characters)."
+	"edu.comment_too_long": "Comment is too long (maximum 10000 characters).",
+	"edu.auto_grade": "Auto-grade (CI)",
+	"edu.manual_grade_label": "Teacher grade",
+	"edu.reset_to_auto_grade": "Reset to auto-grade",
+	"edu.reset_to_auto_grade_confirm": "This will replace the manual grade with the latest CI auto-grade. Continue?",
+	"edu.grade_reset_success": "Grade has been reset to auto-grade."
 }
