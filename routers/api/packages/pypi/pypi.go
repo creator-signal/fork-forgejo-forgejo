@@ -80,6 +80,23 @@ func PackageMetadata(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
+var simpleJSONTemplate *template.Template = nil
+
+func LoadSimpleJSONTemplate(m template.FuncMap) (*template.Template, error) {
+	if simpleJSONTemplate != nil {
+		return simpleJSONTemplate, nil
+	}
+	tmpl, err := template.New("simple-json").Funcs(m).ParseFiles("templates/api/packages/pypi/simple-json.tmpl")
+	if err != nil {
+		return nil, err
+	}
+	simpleJSONTemplate = tmpl.Lookup("simple-json.tmpl")
+	if simpleJSONTemplate == nil {
+		return nil, errors.New("simple-json.tmpl wasn't in itself" + tmpl.DefinedTemplates())
+	}
+	return simpleJSONTemplate, nil
+}
+
 // JSONPackageMetadata returns the same data as PackageMetadata, but in JSON
 func JSONPackageMetadata(ctx *context.Context) {
 	packageName := normalizer.Replace(ctx.Params("id"))
@@ -110,21 +127,15 @@ func JSONPackageMetadata(ctx *context.Context) {
 	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
 	m := templates.NewFuncMap()
 	m["ctx"] = func() any { return ctx }
-	tmpl, err := template.New("simple-json").Funcs(m).ParseFiles("templates/api/packages/pypi/simple-json.tmpl")
+	t, err := LoadSimpleJSONTemplate(m)
 	if err != nil {
-		ctx.ServerError("Unable to parse template", err)
-		return
-	}
-	t := tmpl.Lookup("simple-json.tmpl")
-	if t == nil {
-		ctx.ServerError("simple-json.tmpl wasn't in itself" + tmpl.DefinedTemplates(), errors.New("simple-json missing"))
+		ctx.ServerError("Failed to load or parse template", err)
 		return
 	}
 	if err = t.Execute(ctx.Resp, ctx.Data); err != nil {
-		ctx.ServerError("Unable to execute template" + tmpl.DefinedTemplates(), err)
+		ctx.ServerError("Unable to execute template" + t.DefinedTemplates(), err)
 	}
 }
-
 
 // DownloadPackageFile serves the content of a package
 func DownloadPackageFile(ctx *context.Context) {
