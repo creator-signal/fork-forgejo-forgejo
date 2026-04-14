@@ -56,12 +56,6 @@ func contentTypeSupported(ctyps []string, v string) bool {
 
 // HTMLPackageMetadata returns the metadata for a single package in Simple HTML per PEP691
 func HTMLPackageMetadata(ctx *context.Context) {
-	ctyp := ctx.Req.Header["Accept"]
-	if !contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+html") {
-		err := errors.New("The simple HTML API was not requested: " + strings.Join(ctyp, ", "))
-		apiError(ctx, http.StatusNotAcceptable, err)
-		return
-	}
 	packageName := normalizer.Replace(ctx.Params("id"))
 
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypePyPI, packageName)
@@ -111,12 +105,6 @@ type PackageJSON struct {
 
 // JSONPackageMetadata returns the metadata for a single package in Simple JSON per PEP691
 func JSONPackageMetadata(ctx *context.Context) {
-	ctyp := ctx.Req.Header["Accept"]
-	if !contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+json") {
-		err := errors.New("The simple JSON API was not requested: " + strings.Join(ctyp, ", "))
-		apiError(ctx, http.StatusNotAcceptable, err)
-		return
-	}
 	packageName := normalizer.Replace(ctx.Params("id"))
 
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypePyPI, packageName)
