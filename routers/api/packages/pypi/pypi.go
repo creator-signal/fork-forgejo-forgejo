@@ -140,7 +140,7 @@ func JSONPackageMetadata(ctx *context.Context) {
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
-	ctx.Resp.Header().Set("Content-Type", "application/json")
+	ctx.Resp.Header().Set("Content-Type", "application/vnd.pypi.simple.v1+json")
 	m := templates.NewFuncMap()
 	m["ctx"] = func() any { return ctx }
 	t, err := LoadSimpleJSONTemplate(m)
