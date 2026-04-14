@@ -34,16 +34,6 @@ func (su *StringUtils) HasPrefix(s any, prefix string) bool {
 	return false
 }
 
-func (su *StringUtils) HasSuffix(s any, suffix string) bool {
-	switch v := s.(type) {
-	case string:
-		return strings.HasSuffix(v, suffix)
-	case template.HTML:
-		return strings.HasSuffix(string(v), suffix)
-	}
-	return false
-}
-
 func (su *StringUtils) ToString(v any) string {
 	switch v := v.(type) {
 	case string:
