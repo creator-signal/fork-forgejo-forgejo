@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -211,18 +212,19 @@ func TestPackagePyPI(t *testing.T) {
 		assert.Equal(t, int64(2), pvs[0].DownloadCount)
 	})
 
-	t.Run("PackageMetadata", func(t *testing.T) {
+	hrefMatcher := regexp.MustCompile(fmt.Sprintf(`%s/files/%s/%s/test\..+#sha256=%s`, root, regexp.QuoteMeta(packageName), regexp.QuoteMeta(packageVersion), hashSHA256))
+
+	t.Run("PackageMetadataHTML", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		req := NewRequest(t, "GET", fmt.Sprintf("%s/simple/%s", root, packageName)).
 			AddBasicAuth(user.Name)
+		req.Header["Accept"] = []string{"application/vnd.pypi.simple.v1+html"}
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		nodes := htmlDoc.doc.Find("a").Nodes
 		assert.Len(t, nodes, 2)
-
-		hrefMatcher := regexp.MustCompile(fmt.Sprintf(`%s/files/%s/%s/test\..+#sha256=%s`, root, regexp.QuoteMeta(packageName), regexp.QuoteMeta(packageVersion), hashSHA256))
 
 		for _, a := range nodes {
 			for _, att := range a.Attr {
@@ -235,6 +237,33 @@ func TestPackagePyPI(t *testing.T) {
 					t.Fail()
 				}
 			}
+		}
+	})
+
+	t.Run("PackageMetadataJSON", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", fmt.Sprintf("%s/simple/%s", root, packageName)).
+			AddBasicAuth(user.Name)
+		req.Header["Accept"] = []string{"application/vnd.pypi.simple.v1+json"}
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		obj := make(map[string]any)
+		json.NewDecoder(resp.Body).Decode(obj)
+		assert.Contains(t, obj, "name")
+		assert.Equal(t, obj["name"], packageName)
+		assert.Contains(t, obj, "meta")
+		assert.IsType(t, make(map[string]any), obj["meta"])
+		assert.Contains(t, obj, "versions")
+		assert.IsType(t, []string{}, obj["versions"])
+		assert.Contains(t, obj, "files")
+		files := obj["files"].([]map[string]any)
+		for _, filed := range files {
+			assert.IsType(t, make(map[string]any), filed)
+			assert.Contains(t, filed, "filename")
+			assert.Contains(t, filed, "hashes")
+			assert.Contains(t, filed, "url")
+			assert.Regexp(t, hrefMatcher, filed["url"])
 		}
 	})
 }
