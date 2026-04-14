@@ -125,6 +125,7 @@ func JSONPackageMetadata(ctx *context.Context) {
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
 	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
+	ctx.Resp.Header().Set("Content-Type", "application/json")
 	m := templates.NewFuncMap()
 	m["ctx"] = func() any { return ctx }
 	t, err := LoadSimpleJSONTemplate(m)
