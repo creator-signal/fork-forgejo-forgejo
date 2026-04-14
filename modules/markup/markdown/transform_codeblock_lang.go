@@ -26,10 +26,10 @@ func (g *ASTTransformer) transformCodeblockLanguage(v *ast.FencedCodeBlock, read
 	// ...
 	// ```
 	// Should have a language of "haskell", not "{.haskell .numberLines}"
-	if trimmed := bytes.TrimSpace(info); len(trimmed) != 0 && trimmed[0] == '{' && trimmed[len(trimmed)-1] == '}' {
+	if trimmed := bytes.TrimSpace(info); bytes.HasPrefix(trimmed, []byte{'{'}) && bytes.HasSuffix(trimmed, []byte{'}'}) {
 		attributes := trimmed[1 : len(trimmed)-1]
 		for attribute := range bytes.SplitSeq(attributes, []byte{' '}) {
-			if len(attribute) != 0 && attribute[0] == '.' {
+			if bytes.HasPrefix(attribute, []byte{'.'}) {
 				class := attribute[1:]
 				if lexer := lexers.Get(string(class)); lexer != nil {
 					lang := class
@@ -51,10 +51,12 @@ func (g *ASTTransformer) transformCodeblockLanguage(v *ast.FencedCodeBlock, read
 	// ```haskell {.numberLines}
 	// ...
 	// ```
-	// Should have a language of "haskell ", not "haskell {.numberLines}"
+	// Should have a language of "haskell", not "haskell {.numberLines}"
 	if i := bytes.IndexByte(info, '{'); i != -1 {
 		start := v.Info.Segment.Start
-		v.Info = ast.NewTextSegment(text.NewSegment(start, start+i))
+		// Strip trailing spaces
+		length := len(bytes.TrimRight(info[:i], " "))
+		v.Info = ast.NewTextSegment(text.NewSegment(start, start+length))
 		return
 	}
 
@@ -68,6 +70,5 @@ func (g *ASTTransformer) transformCodeblockLanguage(v *ast.FencedCodeBlock, read
 	if i := bytes.IndexByte(info, ','); i != -1 {
 		start := v.Info.Segment.Start
 		v.Info = ast.NewTextSegment(text.NewSegment(start, start+i))
-		return
 	}
 }
