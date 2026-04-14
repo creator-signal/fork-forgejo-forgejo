@@ -60,6 +60,7 @@ func HTMLPackageMetadata(ctx *context.Context) {
 	if !contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+html") {
 		err := errors.New("The simple HTML API was not requested: " + strings.Join(ctyp, ", "))
 		apiError(ctx, http.StatusNotAcceptable, err)
+		return
 	}
 	packageName := normalizer.Replace(ctx.Params("id"))
 
