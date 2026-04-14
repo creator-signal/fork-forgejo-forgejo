@@ -29,8 +29,7 @@ func (g *ASTTransformer) transformCodeblockLanguage(v *ast.FencedCodeBlock, read
 	if trimmed := bytes.TrimSpace(info); bytes.HasPrefix(trimmed, []byte{'{'}) && bytes.HasSuffix(trimmed, []byte{'}'}) {
 		attributes := trimmed[1 : len(trimmed)-1]
 		for attribute := range bytes.SplitSeq(attributes, []byte{' '}) {
-			if bytes.HasPrefix(attribute, []byte{'.'}) {
-				class := attribute[1:]
+			if class, found := bytes.CutPrefix(attribute, []byte{'.'}); found {
 				if lexer := lexers.Get(string(class)); lexer != nil {
 					lang := class
 					langInx := bytes.Index(info, lang)
