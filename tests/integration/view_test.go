@@ -183,6 +183,7 @@ func TestCommitListActions(t *testing.T) {
 
 			htmlDoc.AssertElement(t, fmt.Sprintf(".commit-list a[href='/%s/src/commit/%s/test.sh']", repo.FullName(), commitID), true)
 			htmlDoc.AssertElement(t, fileDiffSelector, true)
+			htmlDoc.AssertElement(t, ".repo-path", true)
 		})
 	})
 }
