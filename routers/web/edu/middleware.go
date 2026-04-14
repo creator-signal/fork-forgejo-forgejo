@@ -20,9 +20,13 @@ func reqEduTeacher(ctx *context.Context) {
 	}
 }
 
-// reqEduAdmin is middleware that requires the user to be a Forgejo site admin.
+// reqEduAdmin is middleware that requires the user to be a Forgejo site admin or have edu admin role.
 func reqEduAdmin(ctx *context.Context) {
-	if !ctx.Doer.IsAdmin {
+	if ctx.Doer.IsAdmin {
+		return
+	}
+	role, err := edu.GetUserRole(ctx, ctx.Doer.ID)
+	if err != nil || role != edu.RoleAdmin {
 		ctx.Error(http.StatusForbidden, "Admin access required")
 		return
 	}

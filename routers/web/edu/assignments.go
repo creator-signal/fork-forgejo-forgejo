@@ -227,6 +227,21 @@ func NewAssignmentPost(ctx *context.Context) {
 		return
 	}
 
+	// Verify course ownership
+	course, err := svc.GetCourseByID(ctx, courseID)
+	if err != nil {
+		ctx.ServerError("GetCourseByID", err)
+		return
+	}
+	if course == nil {
+		ctx.NotFound("Course not found", nil)
+		return
+	}
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
+		ctx.Error(http.StatusForbidden, "You can only create assignments in your own courses")
+		return
+	}
+
 	if title == "" || repoID == 0 {
 		loadCoursesAndRepos(ctx, svc, courseID)
 		ctx.RenderWithErr("Title and Template Repository are required.", "edu/assignment_new", nil)
@@ -239,7 +254,7 @@ func NewAssignmentPost(ctx *context.Context) {
 	}
 
 	// Verify repo exists
-	_, err := repo_model.GetRepositoryByID(ctx, repoID)
+	_, err = repo_model.GetRepositoryByID(ctx, repoID)
 	if err != nil {
 		loadCoursesAndRepos(ctx, svc, courseID)
 		ctx.RenderWithErr("Repository not found.", "edu/assignment_new", nil)
@@ -290,6 +305,19 @@ func EditAssignment(ctx *context.Context) {
 		return
 	}
 
+	// Verify course ownership
+	if assignment.CourseID > 0 {
+		course, err := svc.GetCourseByID(ctx, assignment.CourseID)
+		if err != nil {
+			ctx.ServerError("GetCourseByID", err)
+			return
+		}
+		if course != nil && course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
+			ctx.Error(http.StatusForbidden, "You can only edit assignments in your own courses")
+			return
+		}
+	}
+
 	ctx.Data["Assignment"] = assignment
 	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplAssignmentEdit)
@@ -310,6 +338,19 @@ func EditAssignmentPost(ctx *context.Context) {
 	if assignment == nil {
 		ctx.NotFound("Assignment not found", nil)
 		return
+	}
+
+	// Verify course ownership
+	if assignment.CourseID > 0 {
+		course, err := svc.GetCourseByID(ctx, assignment.CourseID)
+		if err != nil {
+			ctx.ServerError("GetCourseByID", err)
+			return
+		}
+		if course != nil && course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
+			ctx.Error(http.StatusForbidden, "You can only edit assignments in your own courses")
+			return
+		}
 	}
 
 	assignment.Title = ctx.FormString("title")
@@ -347,6 +388,29 @@ func EditAssignmentPost(ctx *context.Context) {
 func DeleteAssignmentPost(ctx *context.Context) {
 	assignmentID := ctx.ParamsInt64(":id")
 	svc := edu.GetService()
+
+	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
+	if err != nil {
+		ctx.ServerError("GetAssignmentByID", err)
+		return
+	}
+	if assignment == nil {
+		ctx.NotFound("Assignment not found", nil)
+		return
+	}
+
+	// Verify course ownership
+	if assignment.CourseID > 0 {
+		course, err := svc.GetCourseByID(ctx, assignment.CourseID)
+		if err != nil {
+			ctx.ServerError("GetCourseByID", err)
+			return
+		}
+		if course != nil && course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
+			ctx.Error(http.StatusForbidden, "You can only delete assignments in your own courses")
+			return
+		}
+	}
 
 	if err := svc.DeleteAssignment(ctx, assignmentID); err != nil {
 		ctx.ServerError("DeleteAssignment", err)

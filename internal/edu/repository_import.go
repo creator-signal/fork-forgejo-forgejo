@@ -64,17 +64,19 @@ func (r *xormRepository) UpdateImportDraft(ctx context.Context, d *ImportDraft) 
 }
 
 func (r *xormRepository) DeleteImportDraft(ctx context.Context, id int64) error {
-	// Delete rows first
-	_, err := db.GetEngine(ctx).Where("draft_id = ?", id).Delete(&ImportDraftRow{})
-	if err != nil {
-		return fmt.Errorf("delete import draft rows: %w", err)
-	}
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		e := db.GetEngine(ctx)
 
-	// Delete draft
-	_, err = db.GetEngine(ctx).ID(id).Delete(&ImportDraft{})
-	if err != nil {
-		return fmt.Errorf("delete import draft: %w", err)
-	}
+		// Delete rows first
+		if _, err := e.Where("draft_id = ?", id).Delete(&ImportDraftRow{}); err != nil {
+			return fmt.Errorf("delete import draft rows: %w", err)
+		}
 
-	return nil
+		// Delete draft
+		if _, err := e.ID(id).Delete(&ImportDraft{}); err != nil {
+			return fmt.Errorf("delete import draft: %w", err)
+		}
+
+		return nil
+	})
 }

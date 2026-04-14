@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"forgejo.org/models/db"
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 )
@@ -22,6 +21,12 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 	}
 	if assignment == nil {
 		return nil, fmt.Errorf("assignment not found")
+	}
+
+	// Prevent duplicate concurrent tasks
+	existing, _ := s.repo.GetSyncForkTaskByAssignment(ctx, assignmentID)
+	if existing != nil && (existing.Status == StatusPending || existing.Status == StatusRunning) {
+		return existing, nil
 	}
 
 	branch, err := s.forker.GetDefaultBranch(ctx, assignment.RepoID)
@@ -58,8 +63,8 @@ func (s *service) SyncAllForks(ctx context.Context, assignmentID, doerID int64) 
 	}
 
 	// Start async execution
-	go graceful.GetManager().RunWithShutdownContext(func(_ context.Context) {
-		s.executeSyncAllForks(db.DefaultContext, task, doerID, submissions, branch)
+	go graceful.GetManager().RunWithShutdownContext(func(ctx context.Context) {
+		s.executeSyncAllForks(ctx, task, doerID, submissions, branch)
 	})
 
 	return task, nil

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"forgejo.org/models/db"
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 
@@ -27,6 +26,12 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 
 	if assignment.CourseID == 0 {
 		return nil, fmt.Errorf("assignment is not bound to a course")
+	}
+
+	// Prevent duplicate concurrent tasks
+	existing, _ := s.repo.GetBulkForkTaskByAssignment(ctx, assignmentID)
+	if existing != nil && (existing.Status == StatusPending || existing.Status == StatusRunning) {
+		return existing, nil
 	}
 
 	baseRepo, err := s.forker.GetRepositoryByID(ctx, assignment.RepoID)
@@ -71,8 +76,8 @@ func (s *service) BulkForkForAssignment(ctx context.Context, assignmentID, doerI
 	}
 
 	// Start async execution
-	go graceful.GetManager().RunWithShutdownContext(func(_ context.Context) {
-		s.executeBulkFork(db.DefaultContext, task, assignmentID, doerID, baseRepo, studentEnrollments)
+	go graceful.GetManager().RunWithShutdownContext(func(ctx context.Context) {
+		s.executeBulkFork(ctx, task, assignmentID, doerID, baseRepo, studentEnrollments)
 	})
 
 	return task, nil

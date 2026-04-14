@@ -21,25 +21,27 @@ func GetUserRole(ctx context.Context, userID int64) (RoleType, error) {
 }
 
 func SetUserRole(ctx context.Context, userID int64, role RoleType) error {
-	sess := db.GetEngine(ctx)
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		sess := db.GetEngine(ctx)
 
-	var userRole UserRole
-	has, err := sess.Where("user_id = ?", userID).Get(&userRole)
-	if err != nil {
-		return err
-	}
-
-	if has {
-		userRole.Role = role
-		_, err = sess.ID(userRole.ID).Cols("role").Update(&userRole)
-	} else {
-		userRole = UserRole{
-			UserID: userID,
-			Role:   role,
+		var userRole UserRole
+		has, err := sess.Where("user_id = ?", userID).ForUpdate().Get(&userRole)
+		if err != nil {
+			return err
 		}
-		_, err = sess.Insert(&userRole)
-	}
-	return err
+
+		if has {
+			userRole.Role = role
+			_, err = sess.ID(userRole.ID).Cols("role").Update(&userRole)
+		} else {
+			userRole = UserRole{
+				UserID: userID,
+				Role:   role,
+			}
+			_, err = sess.Insert(&userRole)
+		}
+		return err
+	})
 }
 
 func DeleteUserRole(ctx context.Context, userID int64) error {

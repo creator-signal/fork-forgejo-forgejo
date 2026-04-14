@@ -71,7 +71,8 @@ func (r *xormRepository) GradeSubmission(ctx context.Context, submissionID int64
 
 func (r *xormRepository) AutoGradeSubmission(ctx context.Context, submissionID int64, grade int) error {
 	now := timeNowUnix()
-	_, err := db.GetEngine(ctx).ID(submissionID).Cols("grade", "status", "updated_unix").Update(&Submission{
+	_, err := db.GetEngine(ctx).Where("id = ? AND manual_grade = ?", submissionID, false).
+		Cols("grade", "status", "updated_unix").Update(&Submission{
 		Grade:       grade,
 		Status:      StatusGraded,
 		UpdatedUnix: now,

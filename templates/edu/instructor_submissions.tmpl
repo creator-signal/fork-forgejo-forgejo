@@ -2,6 +2,7 @@
 <div role="main" aria-label="{{.Title}}" class="page-content edu instructor-submissions">
 	<div class="ui container">
 		{{template "edu/navbar" .}}
+		{{template "base/alert" .}}
 
 		<div class="ui grid">
 			<div class="sixteen wide column">
@@ -69,7 +70,7 @@
 											<span class="ui label {{if ge .Score 50}}green{{else}}red{{end}}">
 												{{.Score}}%
 											</span>
-											<small title="{{.CommitSHA}}">{{slice .CommitSHA 0 7}}</small>
+											<small title="{{.CommitSHA}}">{{if ge (len .CommitSHA) 7}}{{slice .CommitSHA 0 7}}{{else}}{{.CommitSHA}}{{end}}</small>
 										{{else}}
 											<span class="ui grey label">—</span>
 										{{end}}

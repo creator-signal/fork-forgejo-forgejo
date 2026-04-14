@@ -2,6 +2,7 @@
 <div role="main" aria-label="{{.Title}}" class="page-content edu submission-detail">
 	<div class="ui container">
 		{{template "edu/navbar" .}}
+		{{template "base/alert" .}}
 
 		<h1 class="ui header">
 			{{svg "octicon-git-pull-request" 28}}
@@ -39,7 +40,7 @@
 						{{range $i, $tr := .TestResults}}
 							<tr>
 								<td>{{$tr.ID}}</td>
-								<td><code>{{slice $tr.CommitSHA 0 7}}</code></td>
+								<td><code>{{if ge (len $tr.CommitSHA) 7}}{{slice $tr.CommitSHA 0 7}}{{else}}{{$tr.CommitSHA}}{{end}}</code></td>
 								<td>
 									<span class="ui label {{if ge $tr.Score 50}}green{{else}}red{{end}}">
 										{{$tr.Score}}%

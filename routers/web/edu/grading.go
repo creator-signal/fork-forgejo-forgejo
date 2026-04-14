@@ -148,6 +148,24 @@ func GradeSubmissionPost(ctx *context.Context) {
 		return
 	}
 
+	// Verify submission belongs to this assignment
+	submissions, err := svc.GetSubmissions(ctx, assignmentID)
+	if err != nil {
+		ctx.ServerError("GetSubmissions", err)
+		return
+	}
+	found := false
+	for _, s := range submissions {
+		if s.ID == subID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		ctx.NotFound("Submission not found for this assignment", nil)
+		return
+	}
+
 	grade := int(ctx.FormInt64("grade"))
 	comment := ctx.FormString("comment")
 

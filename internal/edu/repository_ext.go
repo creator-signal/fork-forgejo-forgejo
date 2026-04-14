@@ -41,17 +41,42 @@ func (r *xormRepository) UpdateAssignment(ctx context.Context, a *Assignment) er
 }
 
 func (r *xormRepository) DeleteAssignment(ctx context.Context, id int64) error {
-	// Delete related submissions first
-	_, err := db.GetEngine(ctx).Where("assignment_id = ?", id).Delete(&Submission{})
-	if err != nil {
-		return fmt.Errorf("delete submissions: %w", err)
-	}
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		e := db.GetEngine(ctx)
 
-	// Delete the assignment
-	_, err = db.GetEngine(ctx).ID(id).Delete(&Assignment{})
-	if err != nil {
-		return fmt.Errorf("delete assignment: %w", err)
-	}
+		// 1. Find all submissions for this assignment
+		var submissions []*Submission
+		if err := e.Where("assignment_id = ?", id).Find(&submissions); err != nil {
+			return fmt.Errorf("find submissions for assignment: %w", err)
+		}
 
-	return nil
+		// 2. Delete test results for all submissions
+		for _, sub := range submissions {
+			if _, err := e.Where("submission_id = ?", sub.ID).Delete(&TestResult{}); err != nil {
+				return fmt.Errorf("delete test results for submission %d: %w", sub.ID, err)
+			}
+		}
+
+		// 3. Delete submissions
+		if _, err := e.Where("assignment_id = ?", id).Delete(&Submission{}); err != nil {
+			return fmt.Errorf("delete submissions: %w", err)
+		}
+
+		// 4. Delete bulk fork tasks
+		if _, err := e.Where("assignment_id = ?", id).Delete(&BulkForkTask{}); err != nil {
+			return fmt.Errorf("delete bulk fork tasks: %w", err)
+		}
+
+		// 5. Delete sync fork tasks
+		if _, err := e.Where("assignment_id = ?", id).Delete(&SyncForkTask{}); err != nil {
+			return fmt.Errorf("delete sync fork tasks: %w", err)
+		}
+
+		// 6. Delete the assignment
+		if _, err := e.ID(id).Delete(&Assignment{}); err != nil {
+			return fmt.Errorf("delete assignment: %w", err)
+		}
+
+		return nil
+	})
 }

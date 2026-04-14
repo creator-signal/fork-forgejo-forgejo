@@ -2,6 +2,7 @@
 <div role="main" aria-label="{{.Title}}" class="page-content edu assignment-detail">
 	<div class="ui container">
 		{{template "edu/navbar" .}}
+		{{template "base/alert" .}}
 
 		<div class="ui grid">
 			<div class="sixteen wide column">
@@ -49,7 +50,7 @@
 					<p>
 						{{ctx.Locale.Tr "edu.score"}}: <span class="ui label {{if ge .LatestTestResult.Score 50}}green{{else}}red{{end}}">{{.LatestTestResult.Score}}%</span>
 					</p>
-					<p>{{ctx.Locale.Tr "edu.commit"}}: <code>{{slice .LatestTestResult.CommitSHA 0 7}}</code></p>
+					<p>{{ctx.Locale.Tr "edu.commit"}}: <code>{{if ge (len .LatestTestResult.CommitSHA) 7}}{{slice .LatestTestResult.CommitSHA 0 7}}{{else}}{{.LatestTestResult.CommitSHA}}{{end}}</code></p>
 					{{if .LatestTestResult.Details}}
 						<p>{{.LatestTestResult.Details | SanitizeHTML}}</p>
 					{{end}}

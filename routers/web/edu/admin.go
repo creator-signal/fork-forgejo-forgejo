@@ -10,12 +10,6 @@ import (
 )
 
 func AdminPanel(ctx *context.Context) {
-	// Only Forgejo Admins
-	if !ctx.Doer.IsAdmin {
-		ctx.Error(http.StatusForbidden)
-		return
-	}
-
 	ctx.Data["Title"] = "Education Admin Panel"
 	ctx.Data["PageIsEduAdmin"] = true
 
@@ -25,12 +19,6 @@ func AdminPanel(ctx *context.Context) {
 }
 
 func UpdateUserRolePost(ctx *context.Context) {
-	// Only Forgejo Admins
-	if !ctx.Doer.IsAdmin {
-		ctx.Error(http.StatusForbidden)
-		return
-	}
-
 	form := web.GetForm(ctx).(*EduRoleForm)
 	
 	username := form.Username

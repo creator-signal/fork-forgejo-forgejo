@@ -83,7 +83,7 @@ func ImportUploadPost(ctx *context.Context) {
 	}
 	defer file.Close()
 
-	data, err := io.ReadAll(file)
+	data, err := io.ReadAll(io.LimitReader(file, 10*1024*1024)) // 10MB limit
 	if err != nil {
 		ctx.ServerError("ReadAll", err)
 		return
@@ -144,6 +144,10 @@ func ImportPreview(ctx *context.Context) {
 		ctx.NotFound("Draft not found", nil)
 		return
 	}
+	if draft.CourseID != courseID {
+		ctx.NotFound("Draft does not belong to this course", nil)
+		return
+	}
 
 	ctx.Data["Draft"] = draft
 	ctx.Data["Rows"] = rows
@@ -178,6 +182,39 @@ func ImportUpdateRow(ctx *context.Context) {
 
 	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
+		return
+	}
+
+	// Verify draft belongs to this course
+	draft, _, err := svc.GetImportDraft(ctx, draftID)
+	if err != nil {
+		ctx.ServerError("GetImportDraft", err)
+		return
+	}
+	if draft == nil {
+		ctx.NotFound("Draft not found", nil)
+		return
+	}
+	if draft.CourseID != courseID {
+		ctx.NotFound("Draft does not belong to this course", nil)
+		return
+	}
+
+	// Verify row belongs to this draft
+	rows, err := edu.NewRepository().GetImportDraftRows(ctx, draftID)
+	if err != nil {
+		ctx.ServerError("GetImportDraftRows", err)
+		return
+	}
+	rowFound := false
+	for _, r := range rows {
+		if r.ID == rowID {
+			rowFound = true
+			break
+		}
+	}
+	if !rowFound {
+		ctx.NotFound("Row does not belong to this draft", nil)
 		return
 	}
 
@@ -218,6 +255,21 @@ func ImportExecutePost(ctx *context.Context) {
 	}
 
 	ctx.Data["Course"] = course
+
+	// Verify draft belongs to this course
+	draft, _, err := svc.GetImportDraft(ctx, draftID)
+	if err != nil {
+		ctx.ServerError("GetImportDraft", err)
+		return
+	}
+	if draft == nil {
+		ctx.NotFound("Draft not found", nil)
+		return
+	}
+	if draft.CourseID != courseID {
+		ctx.NotFound("Draft does not belong to this course", nil)
+		return
+	}
 
 	roleStr := ctx.FormString("default_role")
 	var defaultRole edu.RoleType
@@ -261,6 +313,21 @@ func ImportDeletePost(ctx *context.Context) {
 
 	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
 		ctx.Error(http.StatusForbidden, "You can only import users into your own courses")
+		return
+	}
+
+	// Verify draft belongs to this course
+	draft, _, err := svc.GetImportDraft(ctx, draftID)
+	if err != nil {
+		ctx.ServerError("GetImportDraft", err)
+		return
+	}
+	if draft == nil {
+		ctx.NotFound("Draft not found", nil)
+		return
+	}
+	if draft.CourseID != courseID {
+		ctx.NotFound("Draft does not belong to this course", nil)
 		return
 	}
 
