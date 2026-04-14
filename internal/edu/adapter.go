@@ -70,6 +70,11 @@ func (a *ForgejoAdapter) GetUserByID(ctx context.Context, id int64) (*user_model
 	return user_model.GetUserByID(ctx, id)
 }
 
+// GetUserByEmail retrieves a Forgejo user by email address.
+func (a *ForgejoAdapter) GetUserByEmail(ctx context.Context, email string) (*user_model.User, error) {
+	return user_model.GetUserByEmail(ctx, email)
+}
+
 // SyncFork pushes changes from the base repo to a fork using InternalPushingEnvironment
 // to bypass branch protection.
 func (a *ForgejoAdapter) SyncFork(ctx context.Context, doer *user_model.User, forkRepo *repo_model.Repository, branch string) error {

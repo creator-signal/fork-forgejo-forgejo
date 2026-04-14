@@ -82,6 +82,7 @@ type UserCreator interface {
 	CreateUser(ctx context.Context, username, email, password, fullName string) error
 	GetUserByName(ctx context.Context, name string) (*user_model.User, error)
 	GetUserByID(ctx context.Context, id int64) (*user_model.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*user_model.User, error)
 }
 
 // OrgManager abstracts organization team management for enrollment.

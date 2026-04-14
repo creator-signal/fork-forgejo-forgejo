@@ -101,7 +101,7 @@ func TestGenerateUsername(t *testing.T) {
 		{
 			name:     "Standard full name with patronymic",
 			input:    "Иванов Иван Иванович",
-			expected: "ivanov-i",
+			expected: "ivanov-ii",
 		},
 		{
 			name:     "Two-part name",
@@ -111,7 +111,7 @@ func TestGenerateUsername(t *testing.T) {
 		{
 			name:     "Hyphenated parts with patronymic",
 			input:    "Мухаммад-Али Аль-Хасан Ибрагимович",
-			expected: "mukhammad-ali-a",
+			expected: "mukhammad-ali-ai",
 		},
 		{
 			name:     "Latin name",
@@ -139,14 +139,24 @@ func TestGenerateUsername(t *testing.T) {
 			expected: "kozlov-d",
 		},
 		{
-			name:     "Four-part name",
+			name:     "Four-part name uses only first and patronymic initials",
 			input:    "Иванов Пётр Сергеевич Младший",
-			expected: "ivanov-p",
+			expected: "ivanov-ps",
 		},
 		{
 			name:     "Name with Yo",
 			input:    "Ёлкин Ёж",
 			expected: "yolkin-y",
+		},
+		{
+			name:     "Two-part name no patronymic",
+			input:    "Козлова Мария",
+			expected: "kozlova-m",
+		},
+		{
+			name:     "Three-part name with patronymic",
+			input:    "Козлова Мария Сергеевна",
+			expected: "kozlova-ms",
 		},
 	}
 

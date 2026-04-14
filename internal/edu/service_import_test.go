@@ -120,14 +120,20 @@ func TestExecuteImport_CreateNewUsers(t *testing.T) {
 	mockRepo.On("GetImportDraft", mock.Anything, int64(1)).Return(draft, nil)
 	mockRepo.On("GetImportDraftRows", mock.Anything, int64(1)).Return(rows, nil)
 
-	// First call: user doesn't exist (returns error)
+	// Email check: petrova has email, not found in system
+	mockUsers.On("GetUserByEmail", mock.Anything, "anna@test.com").Return(nil, fmt.Errorf("not found"))
+
+	// Username check: neither exists — first call from existing-user check, second from resolveUniqueUsername
+	mockUsers.On("GetUserByName", mock.Anything, "ivanov-i").Return(nil, fmt.Errorf("not found")).Once()  // existing check
+	mockUsers.On("GetUserByName", mock.Anything, "petrova-a").Return(nil, fmt.Errorf("not found")).Once() // existing check
+	// resolveUniqueUsername calls (username is free so returns immediately)
 	mockUsers.On("GetUserByName", mock.Anything, "ivanov-i").Return(nil, fmt.Errorf("not found")).Once()
 	mockUsers.On("GetUserByName", mock.Anything, "petrova-a").Return(nil, fmt.Errorf("not found")).Once()
 
 	mockUsers.On("CreateUser", mock.Anything, "ivanov-i", "ivanov-i@edu.local", mock.AnythingOfType("string"), "Ivanov Ivan").Return(nil)
 	mockUsers.On("CreateUser", mock.Anything, "petrova-a", "anna@test.com", mock.AnythingOfType("string"), "Petrova Anna").Return(nil)
 
-	// Second call: after creation, GetUserByName returns the new user
+	// After creation, GetUserByName returns the new user
 	mockUsers.On("GetUserByName", mock.Anything, "ivanov-i").Return(&user_model.User{ID: 100, Name: "ivanov-i"}, nil)
 	mockUsers.On("GetUserByName", mock.Anything, "petrova-a").Return(&user_model.User{ID: 101, Name: "petrova-a"}, nil)
 
@@ -159,7 +165,7 @@ func TestExecuteImport_ExistingUser(t *testing.T) {
 	mockRepo.On("GetImportDraft", mock.Anything, int64(1)).Return(draft, nil)
 	mockRepo.On("GetImportDraftRows", mock.Anything, int64(1)).Return(rows, nil)
 
-	// User already exists
+	// User already exists by username (no email to check)
 	mockUsers.On("GetUserByName", mock.Anything, "ivanov-i").Return(&user_model.User{ID: 50, Name: "ivanov-i"}, nil)
 
 	mockRepo.On("EnrollUser", mock.Anything, mock.AnythingOfType("*edu.CourseEnrollment")).Return(nil)
@@ -205,6 +211,113 @@ func TestExecuteImport_NoUserCreator(t *testing.T) {
 	_, err := svc.ExecuteImport(context.Background(), 1, 1, RoleStudent)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "user creator not configured")
+}
+
+func TestExecuteImport_ExistingUserByEmail(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockForker := new(MockRepoForker)
+	mockUsers := new(MockUserCreator)
+	svc := NewService(mockRepo, mockForker, mockUsers)
+
+	draft := &ImportDraft{ID: 1, CourseID: 10, Status: "draft"}
+	rows := []*ImportDraftRow{
+		{ID: 1, DraftID: 1, FullName: "Ivanov Ivan", Username: "ivanov-i", Email: "ivan@uni.edu", Status: "pending"},
+	}
+
+	mockRepo.On("GetImportDraft", mock.Anything, int64(1)).Return(draft, nil)
+	mockRepo.On("GetImportDraftRows", mock.Anything, int64(1)).Return(rows, nil)
+
+	// User found by email (different username in system)
+	mockUsers.On("GetUserByEmail", mock.Anything, "ivan@uni.edu").
+		Return(&user_model.User{ID: 42, Name: "old-username"}, nil)
+
+	mockRepo.On("EnrollUser", mock.Anything, mock.MatchedBy(func(e *CourseEnrollment) bool {
+		return e.UserID == 42 && e.CourseID == 10
+	})).Return(nil)
+	mockRepo.On("UpdateImportDraftRow", mock.Anything, mock.AnythingOfType("*edu.ImportDraftRow")).Return(nil)
+	mockRepo.On("UpdateImportDraft", mock.Anything, mock.AnythingOfType("*edu.ImportDraft")).Return(nil)
+
+	result, err := svc.ExecuteImport(context.Background(), 1, 1, RoleStudent)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, result.TotalRows)
+	assert.Equal(t, 0, result.Created)
+	assert.Equal(t, 1, result.AlreadyExist)
+	assert.Equal(t, 0, result.Errors)
+}
+
+func TestExecuteImport_DuplicateUsernamesInBatch(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockForker := new(MockRepoForker)
+	mockUsers := new(MockUserCreator)
+	svc := NewService(mockRepo, mockForker, mockUsers)
+
+	draft := &ImportDraft{ID: 1, CourseID: 10, Status: "draft"}
+	rows := []*ImportDraftRow{
+		{ID: 1, DraftID: 1, FullName: "Ivanov Ivan Ivanovich", Username: "ivanov-ii", Status: "pending"},
+		{ID: 2, DraftID: 1, FullName: "Ivanov Igor Igorevich", Username: "ivanov-ii", Status: "pending"},
+	}
+
+	mockRepo.On("GetImportDraft", mock.Anything, int64(1)).Return(draft, nil)
+	mockRepo.On("GetImportDraftRows", mock.Anything, int64(1)).Return(rows, nil)
+
+	// Row 1: username "ivanov-ii" not in system → create
+	mockUsers.On("GetUserByName", mock.Anything, "ivanov-ii").Return(nil, fmt.Errorf("not found")).Once()  // existing check
+	mockUsers.On("GetUserByName", mock.Anything, "ivanov-ii").Return(nil, fmt.Errorf("not found")).Once()  // resolveUniqueUsername
+	mockUsers.On("CreateUser", mock.Anything, "ivanov-ii", "ivanov-ii@edu.local", mock.AnythingOfType("string"), "Ivanov Ivan Ivanovich").Return(nil)
+	mockUsers.On("GetUserByName", mock.Anything, "ivanov-ii").Return(&user_model.User{ID: 100, Name: "ivanov-ii"}, nil) // after creation
+
+	// Row 2: username "ivanov-ii" already in batch → resolveUniqueUsername tries "ivanov-ii2"
+	mockUsers.On("GetUserByName", mock.Anything, "ivanov-ii2").Return(nil, fmt.Errorf("not found")).Once() // resolveUniqueUsername
+	mockUsers.On("CreateUser", mock.Anything, "ivanov-ii2", "ivanov-ii2@edu.local", mock.AnythingOfType("string"), "Ivanov Igor Igorevich").Return(nil)
+	mockUsers.On("GetUserByName", mock.Anything, "ivanov-ii2").Return(&user_model.User{ID: 101, Name: "ivanov-ii2"}, nil) // after creation
+
+	mockRepo.On("EnrollUser", mock.Anything, mock.AnythingOfType("*edu.CourseEnrollment")).Return(nil).Times(2)
+	mockRepo.On("UpdateImportDraftRow", mock.Anything, mock.AnythingOfType("*edu.ImportDraftRow")).Return(nil)
+	mockRepo.On("UpdateImportDraft", mock.Anything, mock.AnythingOfType("*edu.ImportDraft")).Return(nil)
+
+	result, err := svc.ExecuteImport(context.Background(), 1, 1, RoleStudent)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, result.TotalRows)
+	assert.Equal(t, 2, result.Created)
+	assert.Equal(t, 0, result.AlreadyExist)
+	assert.Equal(t, 0, result.Errors)
+	assert.Len(t, result.Credentials, 2)
+	assert.Equal(t, "ivanov-ii", result.Credentials[0].Username)
+	assert.Equal(t, "ivanov-ii2", result.Credentials[1].Username)
+}
+
+func TestExecuteImport_UsernameExistsInSystem(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockForker := new(MockRepoForker)
+	mockUsers := new(MockUserCreator)
+	svc := NewService(mockRepo, mockForker, mockUsers)
+
+	draft := &ImportDraft{ID: 1, CourseID: 10, Status: "draft"}
+	rows := []*ImportDraftRow{
+		{ID: 1, DraftID: 1, FullName: "Ivanov Ivan Ivanovich", Username: "ivanov-ii", Email: "new-ivan@test.com", Status: "pending"},
+	}
+
+	mockRepo.On("GetImportDraft", mock.Anything, int64(1)).Return(draft, nil)
+	mockRepo.On("GetImportDraftRows", mock.Anything, int64(1)).Return(rows, nil)
+
+	// Email not found → not an existing user
+	mockUsers.On("GetUserByEmail", mock.Anything, "new-ivan@test.com").Return(nil, fmt.Errorf("not found"))
+
+	// Username exists in system → enroll existing user (not create new with suffix)
+	mockUsers.On("GetUserByName", mock.Anything, "ivanov-ii").Return(&user_model.User{ID: 50, Name: "ivanov-ii"}, nil)
+
+	mockRepo.On("EnrollUser", mock.Anything, mock.MatchedBy(func(e *CourseEnrollment) bool {
+		return e.UserID == 50 && e.CourseID == 10
+	})).Return(nil)
+	mockRepo.On("UpdateImportDraftRow", mock.Anything, mock.AnythingOfType("*edu.ImportDraftRow")).Return(nil)
+	mockRepo.On("UpdateImportDraft", mock.Anything, mock.AnythingOfType("*edu.ImportDraft")).Return(nil)
+
+	result, err := svc.ExecuteImport(context.Background(), 1, 1, RoleStudent)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, result.TotalRows)
+	assert.Equal(t, 0, result.Created)
+	assert.Equal(t, 1, result.AlreadyExist)
+	assert.Equal(t, 0, result.Errors)
 }
 
 func TestDeleteImportDraft(t *testing.T) {

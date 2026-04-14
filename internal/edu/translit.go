@@ -77,8 +77,8 @@ func cleanUsername(s string) string {
 }
 
 // GenerateUsername creates a username from a full name (ФИО).
-// Format: "ivanov-i" (transliterated last name + "-" + first letter of first name), all lowercase.
-// If >= 3 parts (space-separated), only the first two are used (patronymic is discarded).
+// Format: "ivanov-ii" (transliterated last name + "-" + first letter of first name + first letter of patronymic), all lowercase.
+// If only 2 parts, patronymic initial is omitted: "petrova-a".
 // The result contains only valid Forgejo username characters: [a-zA-Z0-9._-].
 // Truncated to 40 chars.
 func GenerateUsername(fullName string) string {
@@ -96,7 +96,7 @@ func GenerateUsername(fullName string) string {
 		// Only last name, no first name initial
 		username = strings.ToLower(Transliterate(parts[0]))
 	default:
-		// >= 2 parts: last name + first letter of first name; ignore 3rd+ parts
+		// >= 2 parts: last name + first letter of first name + first letter of patronymic (if present)
 		lastName := strings.ToLower(Transliterate(parts[0]))
 		firstNameTranslit := strings.ToLower(Transliterate(parts[1]))
 		firstInitial := ""
@@ -106,8 +106,19 @@ func GenerateUsername(fullName string) string {
 				break
 			}
 		}
-		if firstInitial != "" {
-			username = lastName + "-" + firstInitial
+		patronymicInitial := ""
+		if len(parts) >= 3 {
+			patronymicTranslit := strings.ToLower(Transliterate(parts[2]))
+			for _, r := range patronymicTranslit {
+				if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+					patronymicInitial = string(r)
+					break
+				}
+			}
+		}
+		initials := firstInitial + patronymicInitial
+		if initials != "" {
+			username = lastName + "-" + initials
 		} else {
 			username = lastName
 		}

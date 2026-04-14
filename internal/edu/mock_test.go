@@ -316,6 +316,14 @@ func (m *MockUserCreator) GetUserByID(ctx context.Context, id int64) (*user_mode
 	return args.Get(0).(*user_model.User), args.Error(1)
 }
 
+func (m *MockUserCreator) GetUserByEmail(ctx context.Context, email string) (*user_model.User, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user_model.User), args.Error(1)
+}
+
 // MockRepoForker mocks the RepoForker interface
 type MockRepoForker struct {
 	mock.Mock

@@ -25,7 +25,7 @@ func TestParseCSV_WithHeaderSemicolon(t *testing.T) {
 	assert.Equal(t, "Иванов Иван Иванович", rows[0].FullName)
 	assert.Equal(t, "ivanov@example.com", rows[0].Email)
 	assert.Equal(t, "ИУ7-11Б", rows[0].Group)
-	assert.Equal(t, "ivanov-i", rows[0].Username)
+	assert.Equal(t, "ivanov-ii", rows[0].Username)
 
 	assert.Equal(t, "Петрова Анна", rows[1].FullName)
 	assert.Equal(t, "petrova@example.com", rows[1].Email)
@@ -50,7 +50,7 @@ func TestParseCSV_NoHeaderComma(t *testing.T) {
 	assert.Equal(t, "Сидоров Пётр Петрович", rows[0].FullName)
 	assert.Equal(t, "sidorov@mail.ru", rows[0].Email)
 	assert.Equal(t, "", rows[0].Group)
-	assert.Equal(t, "sidorov-p", rows[0].Username)
+	assert.Equal(t, "sidorov-pp", rows[0].Username)
 
 	assert.Equal(t, "Козлова Мария", rows[1].FullName)
 	assert.Equal(t, "kozlova@mail.ru", rows[1].Email)
@@ -143,7 +143,7 @@ func TestParseCSV_ColumnMappingWithAllFields(t *testing.T) {
 	assert.Equal(t, "Иванов Иван Иванович", rows[0].FullName)
 	assert.Equal(t, "ivanov@mail.ru", rows[0].Email)
 	assert.Equal(t, "ИУ7-11", rows[0].Group)
-	assert.Equal(t, "ivanov-i", rows[0].Username)
+	assert.Equal(t, "ivanov-ii", rows[0].Username)
 
 	assert.Equal(t, "Петрова Анна", rows[1].FullName)
 	assert.Equal(t, "petrova@mail.ru", rows[1].Email)

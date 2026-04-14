@@ -13,6 +13,23 @@ import (
 
 var validUsernameRe = regexp.MustCompile(`^[\da-zA-Z][-.\w]*$`)
 
+// resolveUniqueUsername finds a unique username by appending numeric suffixes if needed.
+// It checks both the current batch (usedInBatch) and existing users in the system.
+func (s *service) resolveUniqueUsername(ctx context.Context, base string, usedInBatch map[string]bool) string {
+	candidate := base
+	suffix := 2
+	for {
+		if !usedInBatch[candidate] {
+			existing, err := s.users.GetUserByName(ctx, candidate)
+			if err != nil || existing == nil {
+				return candidate
+			}
+		}
+		candidate = fmt.Sprintf("%s%d", base, suffix)
+		suffix++
+	}
+}
+
 func generatePassword() (string, error) {
 	b := make([]byte, 12)
 	if _, err := rand.Read(b); err != nil {
@@ -114,6 +131,8 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 		TotalRows: len(rows),
 	}
 
+	usedInBatch := map[string]bool{}
+
 	for _, row := range rows {
 		if row.Status != StatusPending {
 			continue
@@ -129,35 +148,73 @@ func (s *service) ExecuteImport(ctx context.Context, draftID int64, doerID int64
 			continue
 		}
 
-		// Check if user already exists
-		existingUser, err := s.users.GetUserByName(ctx, row.Username)
-		if err == nil && existingUser != nil {
-			// User exists — just enroll
-			enrollment := &CourseEnrollment{
-				CourseID:    draft.CourseID,
-				UserID:      existingUser.ID,
-				Role:        defaultRole,
-				CreatedUnix: time.Now().Unix(),
-			}
-			if err := s.repo.EnrollUser(ctx, enrollment); err != nil {
-				row.Status = StatusError
-				row.ErrorMsg = fmt.Sprintf("enroll existing user: %v", err)
+		// Check if user already exists by email (if email is provided)
+		if row.Email != "" {
+			existingByEmail, err := s.users.GetUserByEmail(ctx, row.Email)
+			if err == nil && existingByEmail != nil {
+				enrollment := &CourseEnrollment{
+					CourseID:    draft.CourseID,
+					UserID:      existingByEmail.ID,
+					Role:        defaultRole,
+					CreatedUnix: time.Now().Unix(),
+				}
+				if err := s.repo.EnrollUser(ctx, enrollment); err != nil {
+					row.Status = StatusError
+					row.ErrorMsg = fmt.Sprintf("enroll existing user (by email): %v", err)
+					if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+						log.Error("Failed to update import draft row: %v", errUpd)
+					}
+					result.Errors++
+					continue
+				}
+				if err := s.addToOrgTeam(ctx, draft.CourseID, existingByEmail.ID, defaultRole); err != nil {
+					log.Error("Failed to add imported user %d to org team: %v", existingByEmail.ID, err)
+				}
+				row.Status = "exists"
 				if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
 					log.Error("Failed to update import draft row: %v", errUpd)
 				}
-				result.Errors++
+				result.AlreadyExist++
 				continue
 			}
-			if err := s.addToOrgTeam(ctx, draft.CourseID, existingUser.ID, defaultRole); err != nil {
-				log.Error("Failed to add imported user %d to org team: %v", existingUser.ID, err)
-			}
-			row.Status = "exists"
-			if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
-				log.Error("Failed to update import draft row: %v", errUpd)
-			}
-			result.AlreadyExist++
-			continue
 		}
+
+		// Check if user already exists by username (only if not already claimed in this batch)
+		if !usedInBatch[row.Username] {
+			existingUser, err := s.users.GetUserByName(ctx, row.Username)
+			if err == nil && existingUser != nil {
+				// User exists — just enroll
+				enrollment := &CourseEnrollment{
+					CourseID:    draft.CourseID,
+					UserID:      existingUser.ID,
+					Role:        defaultRole,
+					CreatedUnix: time.Now().Unix(),
+				}
+				if err := s.repo.EnrollUser(ctx, enrollment); err != nil {
+					row.Status = StatusError
+					row.ErrorMsg = fmt.Sprintf("enroll existing user: %v", err)
+					if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+						log.Error("Failed to update import draft row: %v", errUpd)
+					}
+					result.Errors++
+					continue
+				}
+				if err := s.addToOrgTeam(ctx, draft.CourseID, existingUser.ID, defaultRole); err != nil {
+					log.Error("Failed to add imported user %d to org team: %v", existingUser.ID, err)
+				}
+				row.Status = "exists"
+				if errUpd := s.repo.UpdateImportDraftRow(ctx, row); errUpd != nil {
+					log.Error("Failed to update import draft row: %v", errUpd)
+				}
+				usedInBatch[row.Username] = true
+				result.AlreadyExist++
+				continue
+			}
+		}
+
+		// Resolve unique username for new user creation (handles batch and system duplicates)
+		row.Username = s.resolveUniqueUsername(ctx, row.Username, usedInBatch)
+		usedInBatch[row.Username] = true
 
 		// Generate email if empty
 		email := row.Email
