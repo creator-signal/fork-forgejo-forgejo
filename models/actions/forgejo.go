@@ -60,6 +60,13 @@ func RegisterRunner(ctx context.Context, ownerID, repoID int64, token string, la
 	//
 	name, _ = util.SplitStringAtByteN(name, 255)
 
+	//
+	// Repo scoped runners should have their owner ID set to 0 to mirror behaviour in NewRunnerToken
+	//
+	if repoID != 0 {
+		ownerID = 0
+	}
+
 	cols := []string{"name", "owner_id", "repo_id", "version", "ephemeral"}
 	runner.Name = name
 	runner.OwnerID = ownerID
