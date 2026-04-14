@@ -134,12 +134,12 @@ func JSONPackageMetadata(ctx *context.Context) {
 	for i, pv := range pvs {
 		versions[i] = pv.Version
 	}
-	var fileCounter int = 0
+	var fileCounter int
 	for _, pd := range pds {
 		fileCounter += len(pd.Files)
 	}
 	files := make([]FileJSON, fileCounter)
-	var i int = 0
+	var i int
 	for _, pd := range pds {
 		for _, file := range pd.Files {
 			files[i] = FileJSON{
@@ -202,7 +202,7 @@ func DownloadPackageFile(ctx *context.Context) {
 	}
 
 	helper.ServePackageFile(ctx, s, u, pf, &context.ServeHeaderOptions{
-		AdditionalHeaders:	http.Header{"Access-Control-Allow-Origin": []string{"*"}},
+		AdditionalHeaders: http.Header{"Access-Control-Allow-Origin": []string{"*"}},
 	})
 }
 
