@@ -43,22 +43,6 @@ func (g *ASTTransformer) transformCodeblockLanguage(v *ast.FencedCodeBlock, read
 		return
 	}
 
-	// Strip trailing Pandoc style attributes
-	// https://pandoc.org/MANUAL.html#extension-fenced_code_attributes
-	//
-	// For example,
-	// ```haskell {.numberLines}
-	// ...
-	// ```
-	// Should have a language of "haskell", not "haskell {.numberLines}"
-	if i := bytes.IndexByte(info, '{'); i != -1 {
-		start := v.Info.Segment.Start
-		// Strip trailing spaces
-		length := len(bytes.TrimRight(info[:i], " "))
-		v.Info = ast.NewTextSegment(text.NewSegment(start, start+length))
-		return
-	}
-
 	// Strip language after commas
 	//
 	// For example,
