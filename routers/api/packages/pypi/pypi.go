@@ -154,7 +154,9 @@ func JSONPackageMetadata(ctx *context.Context) {
 }
 
 func PackageMetadata(ctx *context.Context) {
-	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
+	origin := ctx.Req.Header["Origin"]
+	ctx.Resp.Header().Add("Vary", "Origin")
+	ctx.Resp.Header().Add("Access-Control-Allow-Origin", strings.Join(origin, ", "))
 	ctyp := ctx.Req.Header["Accept"]
 	if contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+html") {
 		HTMLPackageMetadata(ctx)
@@ -171,6 +173,7 @@ func DownloadPackageFile(ctx *context.Context) {
 	packageName := normalizer.Replace(ctx.Params("id"))
 	packageVersion := ctx.Params("version")
 	filename := ctx.Params("filename")
+	origin := ctx.Req.Header["Origin"]
 
 	s, u, pf, err := packages_service.GetFileStreamByPackageNameAndVersion(
 		ctx,
@@ -192,6 +195,9 @@ func DownloadPackageFile(ctx *context.Context) {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
+
+	ctx.Resp.Header().Add("Vary", "Origin")
+	ctx.Resp.Header().Add("Access-Control-Allow-Origin", strings.Join(origin, ", "))
 
 	helper.ServePackageFile(ctx, s, u, pf)
 }
