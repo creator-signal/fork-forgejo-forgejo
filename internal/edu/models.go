@@ -115,6 +115,7 @@ type RoleType string
 
 const (
 	RoleStudent RoleType = "student"
+	RoleTA      RoleType = "ta"
 	RoleTeacher RoleType = "teacher"
 	RoleAdmin   RoleType = "admin"
 )

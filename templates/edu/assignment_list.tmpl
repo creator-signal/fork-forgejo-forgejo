@@ -12,19 +12,23 @@
 							{{.Title}}
 						</h1>
 					</div>
+					{{if .IsFullTeacher}}
 					<div class="right menu">
 						<a class="ui positive button" href="{{AppSubUrl}}/edu/teacher/assignments/new">
 							{{svg "octicon-plus"}}
 							{{ctx.Locale.Tr "edu.new_assignment"}}
 						</a>
 					</div>
+					{{end}}
 				</div>
 			</div>
 		</div>
 
 		<div class="ui secondary pointing menu">
 			<a class="active item" href="{{AppSubUrl}}/edu/teacher/assignments">{{ctx.Locale.Tr "edu.assignments"}}</a>
+			{{if .IsFullTeacher}}
 			<a class="item" href="{{AppSubUrl}}/edu/teacher/courses">{{ctx.Locale.Tr "edu.courses"}}</a>
+			{{end}}
 		</div>
 
 		<div class="ui divider"></div>
@@ -53,9 +57,11 @@
 							<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.ID}}/submissions">
 								{{svg "octicon-eye"}} {{ctx.Locale.Tr "edu.submissions"}}
 							</a>
+							{{if $.IsFullTeacher}}
 							<a class="ui button" href="{{AppSubUrl}}/edu/teacher/assignments/{{.ID}}/edit">
 								{{svg "octicon-pencil"}} {{ctx.Locale.Tr "edu.edit"}}
 							</a>
+							{{end}}
 						</div>
 					</div>
 				{{end}}
@@ -66,7 +72,7 @@
 					{{svg "octicon-repo"}}
 					{{ctx.Locale.Tr "edu.no_assignments"}}
 				</div>
-				<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/new">{{ctx.Locale.Tr "edu.create_first_assignment"}}</a>
+				{{if .IsFullTeacher}}<a class="ui primary button" href="{{AppSubUrl}}/edu/teacher/assignments/new">{{ctx.Locale.Tr "edu.create_first_assignment"}}</a>{{end}}
 			</div>
 		{{end}}
 	</div>

@@ -49,7 +49,7 @@ func InstructorSubmissions(ctx *context.Context) {
 		return
 	}
 
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
+	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) && !isEduInstructor(ctx) {
 		ctx.Error(http.StatusForbidden, "Only instructors can view this page")
 		return
 	}

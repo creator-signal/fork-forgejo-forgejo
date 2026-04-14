@@ -12,6 +12,7 @@
 							{{.Assignment.Title}} - {{ctx.Locale.Tr "edu.submissions"}}
 						</h1>
 					</div>
+					{{if .IsFullTeacher}}
 					<div class="right menu">
 						<form action="{{AppSubUrl}}/edu/teacher/assignments/{{.Assignment.ID}}/bulk-fork" method="post" style="margin-left: 5px;">
 							{{.CsrfTokenHtml}}
@@ -35,6 +36,7 @@
 							</button>
 						</form>
 					</div>
+					{{end}}
 				</div>
 
 				<div class="ui segment">

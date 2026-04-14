@@ -3,6 +3,7 @@ package edu
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"forgejo.org/models/db"
 )
@@ -65,7 +66,7 @@ func IsTeacher(ctx context.Context, userID int64) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return role == RoleTeacher || role == RoleAdmin, nil
+	return role == RoleTA || role == RoleTeacher || role == RoleAdmin, nil
 }
 
 func IsStudent(ctx context.Context, userID int64) (bool, error) {
@@ -83,7 +84,7 @@ type UserStub struct {
 
 func GetUserByName(ctx context.Context, name string) (*UserStub, error) {
 	var u UserStub
-	has, err := db.GetEngine(ctx).Table("user").Where("lower_name = ?", name).Get(&u)
+	has, err := db.GetEngine(ctx).Table("user").Where("lower_name = ?", strings.ToLower(name)).Get(&u)
 	if err != nil {
 		return nil, err
 	}

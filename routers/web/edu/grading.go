@@ -53,7 +53,7 @@ func SubmissionDetail(ctx *context.Context) {
 		ctx.ServerError("GetUserRepoPermission", err)
 		return
 	}
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
+	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) && !isEduInstructor(ctx) {
 		ctx.Error(http.StatusForbidden, "Only instructors can view this page")
 		return
 	}
@@ -143,7 +143,7 @@ func GradeSubmissionPost(ctx *context.Context) {
 		ctx.ServerError("GetUserRepoPermission", err)
 		return
 	}
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
+	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) && !isEduInstructor(ctx) {
 		ctx.Error(http.StatusForbidden, "Only instructors can grade")
 		return
 	}
@@ -219,7 +219,7 @@ func ResetGradePost(ctx *context.Context) {
 		ctx.ServerError("GetUserRepoPermission", err)
 		return
 	}
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
+	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) && !isEduInstructor(ctx) {
 		ctx.Error(http.StatusForbidden, "Only instructors can reset grades")
 		return
 	}

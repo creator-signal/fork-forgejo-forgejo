@@ -12,6 +12,10 @@ import (
 )
 
 func SyncAllForksPost(ctx *context.Context) {
+	if !isFullTeacher(ctx) {
+		ctx.Error(http.StatusForbidden, "Only teachers can sync forks")
+		return
+	}
 	assignmentID := ctx.ParamsInt64(":id")
 	svc := edu.GetService()
 	if svc == nil {

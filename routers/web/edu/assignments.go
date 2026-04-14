@@ -198,6 +198,10 @@ func loadCoursesAndRepos(ctx *context.Context, svc edu.EducationalService, selec
 }
 
 func NewAssignment(ctx *context.Context) {
+	if !isFullTeacher(ctx) {
+		ctx.Error(http.StatusForbidden, "Only teachers can create assignments")
+		return
+	}
 	ctx.Data["Title"] = "New Assignment"
 	ctx.Data["PageIsEduAssignments"] = true
 
@@ -210,6 +214,10 @@ func NewAssignment(ctx *context.Context) {
 }
 
 func NewAssignmentPost(ctx *context.Context) {
+	if !isFullTeacher(ctx) {
+		ctx.Error(http.StatusForbidden, "Only teachers can create assignments")
+		return
+	}
 	ctx.Data["Title"] = "New Assignment"
 	ctx.Data["PageIsEduAssignments"] = true
 

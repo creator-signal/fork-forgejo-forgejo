@@ -38,14 +38,32 @@ func UpdateUserRolePost(ctx *context.Context) {
 			return
 		}
 		ctx.Flash.Success("Role removed for " + username)
+	case "student":
+		if err := edu.SetUserRole(ctx, u.ID, edu.RoleStudent); err != nil {
+			ctx.ServerError("SetUserRole", err)
+			return
+		}
+		ctx.Flash.Success("Role updated for " + username)
+	case "ta":
+		if err := edu.SetUserRole(ctx, u.ID, edu.RoleTA); err != nil {
+			ctx.ServerError("SetUserRole", err)
+			return
+		}
+		ctx.Flash.Success("Role updated for " + username)
 	case "teacher":
 		if err := edu.SetUserRole(ctx, u.ID, edu.RoleTeacher); err != nil {
 			ctx.ServerError("SetUserRole", err)
 			return
 		}
 		ctx.Flash.Success("Role updated for " + username)
-	case "student":
-		if err := edu.SetUserRole(ctx, u.ID, edu.RoleStudent); err != nil {
+	case "admin":
+		// Only site admin can assign edu admin role
+		if !ctx.Doer.IsAdmin {
+			ctx.Flash.Error("Only site administrators can assign the admin role")
+			ctx.Redirect(setting.AppSubURL + "/edu/admin")
+			return
+		}
+		if err := edu.SetUserRole(ctx, u.ID, edu.RoleAdmin); err != nil {
 			ctx.ServerError("SetUserRole", err)
 			return
 		}

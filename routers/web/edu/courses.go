@@ -117,6 +117,10 @@ func loadOrgsForUser(ctx *context.Context) {
 }
 
 func NewCourse(ctx *context.Context) {
+	if !isFullTeacher(ctx) {
+		ctx.Error(http.StatusForbidden, "Only teachers can create courses")
+		return
+	}
 	ctx.Data["Title"] = "New Course"
 	ctx.Data["PageIsEduCourses"] = true
 	loadOrgsForUser(ctx)
@@ -125,6 +129,10 @@ func NewCourse(ctx *context.Context) {
 }
 
 func NewCoursePost(ctx *context.Context) {
+	if !isFullTeacher(ctx) {
+		ctx.Error(http.StatusForbidden, "Only teachers can create courses")
+		return
+	}
 	ctx.Data["Title"] = "New Course"
 	ctx.Data["PageIsEduCourses"] = true
 
@@ -362,6 +370,8 @@ func EnrollUserPost(ctx *context.Context) {
 
 	var r edu.RoleType
 	switch role {
+	case "ta":
+		r = edu.RoleTA
 	case "teacher":
 		r = edu.RoleTeacher
 	case "admin":

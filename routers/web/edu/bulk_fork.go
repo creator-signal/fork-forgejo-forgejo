@@ -12,6 +12,10 @@ import (
 )
 
 func BulkForkPost(ctx *context.Context) {
+	if !isFullTeacher(ctx) {
+		ctx.Error(http.StatusForbidden, "Only teachers can perform bulk fork")
+		return
+	}
 	assignmentID := ctx.ParamsInt64(":id")
 	svc := edu.GetService()
 	if svc == nil {

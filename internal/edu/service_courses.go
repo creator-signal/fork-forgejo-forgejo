@@ -130,6 +130,8 @@ func eduTeamName(courseID int64, role RoleType) string {
 	switch role {
 	case RoleTeacher, RoleAdmin:
 		return fmt.Sprintf("edu-course-%d-teachers", courseID)
+	case RoleTA:
+		return fmt.Sprintf("edu-course-%d-ta", courseID)
 	default:
 		return fmt.Sprintf("edu-course-%d-students", courseID)
 	}
@@ -139,6 +141,8 @@ func eduAccessMode(role RoleType) perm.AccessMode {
 	switch role {
 	case RoleTeacher, RoleAdmin:
 		return perm.AccessModeAdmin
+	case RoleTA:
+		return perm.AccessModeRead
 	default:
 		return perm.AccessModeWrite
 	}
@@ -188,8 +192,8 @@ func (s *service) removeFromOrgTeam(ctx context.Context, courseID, userID int64)
 		return nil
 	}
 
-	// Try to remove from both team types
-	for _, role := range []RoleType{RoleStudent, RoleTeacher} {
+	// Try to remove from all team types
+	for _, role := range []RoleType{RoleStudent, RoleTA, RoleTeacher} {
 		teamName := eduTeamName(courseID, role)
 		team, err := s.orgs.GetTeam(ctx, course.OrgID, teamName)
 		if err != nil {

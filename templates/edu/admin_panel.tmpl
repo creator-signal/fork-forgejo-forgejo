@@ -23,7 +23,9 @@
 						<select class="ui selection dropdown" name="role">
 							<option value="">{{ctx.Locale.Tr "edu.no_role"}}</option>
 							<option value="student">{{ctx.Locale.Tr "edu.student"}}</option>
+							<option value="ta">TA</option>
 							<option value="teacher">{{ctx.Locale.Tr "edu.teacher"}}</option>
+							{{if .IsSiteAdmin}}<option value="admin">Admin</option>{{end}}
 						</select>
 						<button class="ui primary button">{{ctx.Locale.Tr "edu.set_role"}}</button>
 					</div>
