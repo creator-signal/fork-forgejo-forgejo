@@ -12,14 +12,14 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"text/template"
 	"unicode"
 
 	packages_model "forgejo.org/models/packages"
+	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
 	packages_module "forgejo.org/modules/packages"
 	pypi_module "forgejo.org/modules/packages/pypi"
 	"forgejo.org/modules/setting"
-	"forgejo.org/modules/templates"
 	"forgejo.org/modules/validation"
 	"forgejo.org/routers/api/packages/helper"
 	"forgejo.org/services/context"
@@ -91,21 +91,22 @@ func HTMLPackageMetadata(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
-var simpleJSONTemplate *template.Template
+type FileHashesJSON struct {
+	SHA256 string `json:"sha256"`
+}
 
-func LoadSimpleJSONTemplate(m template.FuncMap) (*template.Template, error) {
-	if simpleJSONTemplate != nil {
-		return simpleJSONTemplate, nil
-	}
-	tmpl, err := template.New("simple-json").Funcs(m).ParseFiles("templates/api/packages/pypi/simple-json.tmpl")
-	if err != nil {
-		return nil, err
-	}
-	simpleJSONTemplate = tmpl.Lookup("simple-json.tmpl")
-	if simpleJSONTemplate == nil {
-		return nil, errors.New("simple-json.tmpl wasn't in itself" + tmpl.DefinedTemplates())
-	}
-	return simpleJSONTemplate, nil
+type FileJSON struct {
+	Filename       string         `json:"filename"`
+	URL            string         `json:"url"`
+	Hashes         FileHashesJSON `json:"hashes"`
+	RequiresPython string         `json:"requires-python"`
+	Size           int64          `json:"size"`
+}
+
+type PackageJSON struct {
+	Name     string     `json:"name"`
+	Versions []string   `json:"versions"`
+	Files    []FileJSON `json:"files"`
 }
 
 // JSONPackageMetadata returns the metadata for a single package in Simple JSON per PEP691
@@ -138,26 +139,43 @@ func JSONPackageMetadata(ctx *context.Context) {
 	slices.SortFunc(pds, func(a, b *packages_model.PackageDescriptor) int {
 		return strings.Compare(a.Version.Version, b.Version.Version)
 	})
-	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
-	ctx.Data["PackageDescriptor"] = pds[0]
-	ctx.Data["PackageDescriptors"] = pds
-	ctx.Resp.Header().Set("Content-Type", "application/vnd.pypi.simple.v1+json")
-	m := templates.NewFuncMap()
-	m["ctx"] = func() any { return ctx }
-	t, err := LoadSimpleJSONTemplate(m)
-	if err != nil {
-		ctx.ServerError("Failed to load or parse template", err)
-		return
+	registryURL := setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
+	versions := make([]string, len(pvs))
+	for i, pv := range pvs {
+		versions[i] = pv.Version
 	}
-	if err = t.Execute(ctx.Resp, ctx.Data); err != nil {
-		ctx.ServerError("Unable to execute template"+t.DefinedTemplates(), err)
+	var fileCounter int = 0
+	for _, pd := range pds {
+		fileCounter += len(pd.Files)
+	}
+	files := make([]FileJSON, fileCounter)
+	var i int = 0
+	for _, pd := range pds {
+		for _, file := range pd.Files {
+			files[i] = FileJSON{
+				Filename:       file.File.Name,
+				URL:            registryURL + "/files/" + pd.Package.LowerName + "/" + pd.Version.Version + "/" + file.File.Name,
+				RequiresPython: pd.Metadata.(*pypi_module.Metadata).RequiresPython,
+				Hashes:         FileHashesJSON{SHA256: file.Blob.HashSHA256},
+				Size:           file.Blob.Size,
+			}
+			i++
+		}
+	}
+	content := PackageJSON{
+		Name:     pds[0].Package.Name,
+		Versions: versions,
+		Files:    files,
+	}
+	ctx.Resp.Header().Set("Content-Type", "application/vnd.pypi.simple.v1+json")
+	ctx.Resp.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(ctx.Resp).Encode(content); err != nil {
+		log.Error("Render JSON failed: %v", err)
 	}
 }
 
 func PackageMetadata(ctx *context.Context) {
-	origin := ctx.Req.Header["Origin"]
-	ctx.Resp.Header().Add("Vary", "Origin")
-	ctx.Resp.Header().Add("Access-Control-Allow-Origin", strings.Join(origin, ", "))
+	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
 	ctyp := ctx.Req.Header["Accept"]
 	if contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+html") {
 		HTMLPackageMetadata(ctx)
