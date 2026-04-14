@@ -34,14 +34,12 @@ func (su *JsonUtils) PrettyIndent(s string) string {
 	return out.String()
 }
 
-func (su *JsonUtils) Comma(index int, length int) string {
+func (su *JsonUtils) Comma(index, length int) string {
 	if index+1 == length {
 		return ""
-	} else {
-		return ","
 	}
+	return ","
 }
-
 
 func (su *JsonUtils) Count(data map[string]any, key string, increment int) string {
 	var accs map[string]int
@@ -74,7 +72,6 @@ func (su *JsonUtils) Counted(data map[string]any, key string) int {
 	n, ok := accs[key]
 	if ok {
 		return n
-	} else {
-		return 0
 	}
+	return 0
 }

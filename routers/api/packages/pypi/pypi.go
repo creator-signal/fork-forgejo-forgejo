@@ -90,7 +90,7 @@ func HTMLPackageMetadata(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
-var simpleJSONTemplate *template.Template = nil
+var simpleJSONTemplate *template.Template
 
 func LoadSimpleJSONTemplate(m template.FuncMap) (*template.Template, error) {
 	if simpleJSONTemplate != nil {
@@ -134,7 +134,7 @@ func JSONPackageMetadata(ctx *context.Context) {
 	}
 
 	// sort package descriptors by version to mimic PyPI format
-	slices.SortFunc(pds, func(a *packages_model.PackageDescriptor, b *packages_model.PackageDescriptor) int {
+	slices.SortFunc(pds, func(a, b *packages_model.PackageDescriptor) int {
 		return strings.Compare(a.Version.Version, b.Version.Version)
 	})
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
@@ -149,7 +149,7 @@ func JSONPackageMetadata(ctx *context.Context) {
 		return
 	}
 	if err = t.Execute(ctx.Resp, ctx.Data); err != nil {
-		ctx.ServerError("Unable to execute template" + t.DefinedTemplates(), err)
+		ctx.ServerError("Unable to execute template"+t.DefinedTemplates(), err)
 	}
 }
 
