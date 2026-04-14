@@ -48,8 +48,19 @@ func apiError(ctx *context.Context, status int, obj any) {
 	})
 }
 
-// PackageMetadata returns the metadata for a single package
-func PackageMetadata(ctx *context.Context) {
+func contentTypeSupported(ctyps []string, v string) bool {
+	return slices.ContainsFunc(ctyps, func(ctyp string) bool {
+		return strings.HasPrefix(ctyp, v)
+	})
+}
+
+// HTMLPackageMetadata returns the metadata for a single package in Simple HTML per PEP691
+func HTMLPackageMetadata(ctx *context.Context) {
+	ctyp := ctx.Req.Header["Accept"]
+	if !contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+html") {
+		err := errors.New("The simple HTML API was not requested: " + strings.Join(ctyp, ", "))
+		apiError(ctx, http.StatusNotAcceptable, err)
+	}
 	packageName := normalizer.Replace(ctx.Params("id"))
 
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypePyPI, packageName)
@@ -76,7 +87,6 @@ func PackageMetadata(ctx *context.Context) {
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
-	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
@@ -97,8 +107,14 @@ func LoadSimpleJSONTemplate(m template.FuncMap) (*template.Template, error) {
 	return simpleJSONTemplate, nil
 }
 
-// JSONPackageMetadata returns the same data as PackageMetadata, but in JSON
+// JSONPackageMetadata returns the metadata for a single package in Simple JSON per PEP691
 func JSONPackageMetadata(ctx *context.Context) {
+	ctyp := ctx.Req.Header["Accept"]
+	if !contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+json") {
+		err := errors.New("The simple JSON API was not requested: " + strings.Join(ctyp, ", "))
+		apiError(ctx, http.StatusNotAcceptable, err)
+		return
+	}
 	packageName := normalizer.Replace(ctx.Params("id"))
 
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypePyPI, packageName)
@@ -124,7 +140,6 @@ func JSONPackageMetadata(ctx *context.Context) {
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
-	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
 	ctx.Resp.Header().Set("Content-Type", "application/json")
 	m := templates.NewFuncMap()
 	m["ctx"] = func() any { return ctx }
@@ -135,6 +150,19 @@ func JSONPackageMetadata(ctx *context.Context) {
 	}
 	if err = t.Execute(ctx.Resp, ctx.Data); err != nil {
 		ctx.ServerError("Unable to execute template" + t.DefinedTemplates(), err)
+	}
+}
+
+func PackageMetadata(ctx *context.Context) {
+	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
+	ctyp := ctx.Req.Header["Accept"]
+	if contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+html") {
+		HTMLPackageMetadata(ctx)
+	} else if contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+json") {
+		JSONPackageMetadata(ctx)
+	} else {
+		err := errors.New("Don't know how to serve these content types: " + strings.Join(ctyp, ", "))
+		apiError(ctx, http.StatusNotAcceptable, err)
 	}
 }
 

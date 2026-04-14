@@ -617,8 +617,6 @@ func CommonRoutes() *web.Route {
 			r.Post("/", reqPackageAccess(perm.AccessModeWrite), enforcePackagesQuota(), pypi.UploadPackageFile)
 			r.Get("/files/{id}/{version}/{filename}", pypi.DownloadPackageFile)
 			r.Get("/simple/{id}", pypi.PackageMetadata)
-			r.Get("/{id}", pypi.JSONPackageMetadata)
-			r.Get("/{id}/json", pypi.JSONPackageMetadata)
 		}, reqPackageAccess(perm.AccessModeRead))
 		r.Group("/rpm", func() {
 			r.Group("/repository.key", func() {
