@@ -155,7 +155,7 @@
     },
     {
       "description": "Disable updates for old stable branches but still allow security updates",
-      "matchBaseBranches": ["v11.0/forgejo","v11.0/forgejo"],
+      "matchBaseBranches": ["v11.0/forgejo", "v14.0/forgejo"],
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "enabled": false
     },
