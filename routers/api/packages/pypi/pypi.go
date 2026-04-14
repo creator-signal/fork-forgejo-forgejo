@@ -5,7 +5,6 @@ package pypi
 
 import (
 	"encoding/hex"
-	"errors"
 	"io"
 	"net/http"
 	"regexp"
@@ -82,6 +81,9 @@ func HTMLPackageMetadata(ctx *context.Context) {
 	ctx.Data["RegistryURL"] = setting.AppURL + "api/packages/" + ctx.Package.Owner.Name + "/pypi"
 	ctx.Data["PackageDescriptor"] = pds[0]
 	ctx.Data["PackageDescriptors"] = pds
+	// Content-Type headers need to be in this order for the page to show in the browser
+	ctx.Resp.Header().Set("Content-Type", "application/vnd.pypi.simple.v1+html")
+	ctx.Resp.Header().Add("Content-Type", "text/html")
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
@@ -165,13 +167,10 @@ func JSONPackageMetadata(ctx *context.Context) {
 func PackageMetadata(ctx *context.Context) {
 	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
 	ctyp := ctx.Req.Header["Accept"]
-	if contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+html") {
-		HTMLPackageMetadata(ctx)
-	} else if contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+json") {
+	if contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+json") {
 		JSONPackageMetadata(ctx)
 	} else {
-		err := errors.New("Don't know how to serve these content types: " + strings.Join(ctyp, ", "))
-		apiError(ctx, http.StatusNotAcceptable, err)
+		HTMLPackageMetadata(ctx)
 	}
 }
 
