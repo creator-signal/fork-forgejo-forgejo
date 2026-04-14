@@ -179,7 +179,6 @@ func DownloadPackageFile(ctx *context.Context) {
 	packageName := normalizer.Replace(ctx.Params("id"))
 	packageVersion := ctx.Params("version")
 	filename := ctx.Params("filename")
-	origin := ctx.Req.Header["Origin"]
 
 	s, u, pf, err := packages_service.GetFileStreamByPackageNameAndVersion(
 		ctx,
@@ -202,10 +201,9 @@ func DownloadPackageFile(ctx *context.Context) {
 		return
 	}
 
-	ctx.Resp.Header().Add("Vary", "Origin")
-	ctx.Resp.Header().Add("Access-Control-Allow-Origin", strings.Join(origin, ", "))
-
-	helper.ServePackageFile(ctx, s, u, pf)
+	helper.ServePackageFile(ctx, s, u, pf, &context.ServeHeaderOptions{
+		AdditionalHeaders:	http.Header{"Access-Control-Allow-Origin": []string{"*"}},
+	})
 }
 
 // UploadPackageFile adds a file to the package. If the package does not exist, it gets created.
