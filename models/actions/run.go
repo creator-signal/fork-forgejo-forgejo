@@ -255,14 +255,14 @@ func (run *ActionRun) IsDispatchedRun() bool {
 	return run.TriggerEvent == "workflow_dispatch"
 }
 
-// IsRunnable indicates whether this ActionRun can generally be run.
-func (run *ActionRun) IsRunnable() bool {
+// IsValid indicates whether this ActionRun is valid and can be run.
+func (run *ActionRun) IsValid() bool {
 	return run.PreExecutionErrorCode == 0 && run.PreExecutionError == ""
 }
 
 // CanBeRerun indicates whether this ActionRun can be rerun.
 func (run *ActionRun) CanBeRerun() bool {
-	if !run.IsRunnable() {
+	if !run.IsValid() {
 		return false
 	}
 	return run.Status.IsDone()

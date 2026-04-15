@@ -143,7 +143,7 @@ func (job *ActionRunJob) PrepareNextAttempt(initialStatus Status) error {
 // CanBeRerun answers whether this ActionRunJob can be rerun. Returns true if it is done and the Run it belongs to
 // is runnable. Returns false in all other cases, including when Run is nil.
 func (job *ActionRunJob) CanBeRerun() bool {
-	if job.Run == nil || !job.Run.IsRunnable() {
+	if job.Run == nil || !job.Run.IsValid() {
 		return false
 	}
 	return job.Status.IsDone()
