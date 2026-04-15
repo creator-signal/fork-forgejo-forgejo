@@ -314,11 +314,16 @@ func getViewResponse(ctx *app_context.Context, req *ViewRequest, runIndex, jobIn
 			// Ah, another job is still running. Keep the frontend polling enabled then.
 			done = false
 		}
+		canBeRerun, err := v.CanBeRerun(ctx)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, err.Error())
+			return nil
+		}
 		resp.State.Run.Jobs = append(resp.State.Run.Jobs, &ViewJob{
 			ID:       v.ID,
 			Name:     v.Name,
 			Status:   v.Status.String(),
-			CanRerun: v.CanBeRerun() && ctx.Repo.CanWrite(unit.TypeActions),
+			CanRerun: canBeRerun && ctx.Repo.CanWrite(unit.TypeActions),
 			Duration: v.Duration().String(),
 		})
 	}
@@ -527,7 +532,7 @@ func Rerun(ctx *app_context.Context) {
 	if jobIndexStr == "" { // rerun all jobs
 		var redirectURL string
 		for _, j := range jobs {
-			if !j.CanBeRerun() {
+			if canBeRerun, _ := j.CanBeRerun(ctx); !canBeRerun {
 				ctx.JSONError(ctx.Locale.Tr("actions.workflow.job_rerun_impossible"))
 				return
 			}
@@ -559,7 +564,7 @@ func Rerun(ctx *app_context.Context) {
 
 	var redirectURL string
 	for _, j := range rerunJobs {
-		if !j.CanBeRerun() {
+		if canBeRerun, _ := j.CanBeRerun(ctx); !canBeRerun {
 			ctx.JSONError(ctx.Locale.Tr("actions.workflow.job_rerun_impossible"))
 			return
 		}
