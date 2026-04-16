@@ -117,14 +117,14 @@ func (task *ActionTask) GetRepoLink() string {
 	return task.Job.Run.Repo.Link()
 }
 
-func (task *ActionTask) HasWriteAccess(ctx context.Context) bool {
+func (task *ActionTask) HasWriteAccess(ctx context.Context) (bool, error) {
 	if !task.IsForkPullRequest {
-		return true
+		return true, nil
 	}
 	if err := task.LoadAttributes(ctx); err != nil {
-		return false
+		return false, err
 	}
-	return task.Job.Run.TriggerEvent == "pull_request_target"
+	return task.Job.Run.TriggerEvent == "pull_request_target", nil
 }
 
 func (task *ActionTask) LoadJob(ctx context.Context) error {

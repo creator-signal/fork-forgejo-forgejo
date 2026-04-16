@@ -146,7 +146,12 @@ func GetActionRepoPermission(ctx context.Context, repo *repo_model.Repository, t
 		var mode perm_model.AccessMode
 
 		// determine default access mode for repo:
-		if !task.HasWriteAccess(ctx) {
+		writeAccess, err := task.HasWriteAccess(ctx)
+		if err != nil {
+			return Permission{}, err
+		}
+
+		if !writeAccess {
 			mode = perm_model.AccessModeRead
 		} else {
 			mode = perm_model.AccessModeWrite

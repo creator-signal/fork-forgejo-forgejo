@@ -107,7 +107,9 @@ func TestActionTask_HasWriteAccess(t *testing.T) {
 		task := &ActionTask{
 			IsForkPullRequest: false,
 		}
-		assert.True(t, task.HasWriteAccess(t.Context()))
+		perm, err := task.HasWriteAccess(t.Context())
+		require.NoError(t, err)
+		assert.True(t, perm)
 	})
 
 	t.Run("Fork PR, pull_request_target", func(t *testing.T) {
@@ -117,7 +119,9 @@ func TestActionTask_HasWriteAccess(t *testing.T) {
 		require.NoError(t, err)
 		task.IsForkPullRequest = true
 		task.Job.Run.TriggerEvent = "pull_request_target"
-		assert.True(t, task.HasWriteAccess(t.Context()))
+		perm, err := task.HasWriteAccess(t.Context())
+		require.NoError(t, err)
+		assert.True(t, perm)
 	})
 
 	t.Run("Fork PR, not pull_request_target", func(t *testing.T) {
@@ -127,6 +131,8 @@ func TestActionTask_HasWriteAccess(t *testing.T) {
 		require.NoError(t, err)
 		task.IsForkPullRequest = true
 		task.Job.Run.TriggerEvent = "pull_request"
-		assert.False(t, task.HasWriteAccess(t.Context()))
+		perm, err := task.HasWriteAccess(t.Context())
+		require.NoError(t, err)
+		assert.False(t, perm)
 	})
 }

@@ -191,7 +191,13 @@ func repoAssignment() func(ctx *context.APIContext) {
 				return
 			}
 
-			if !task.HasWriteAccess(ctx) {
+			writeAccess, err := task.HasWriteAccess(ctx)
+			if err != nil {
+				ctx.Error(http.StatusInternalServerError, "task.HasWriteAccess", err)
+				return
+			}
+
+			if !writeAccess {
 				ctx.Repo.AccessMode = perm.AccessModeRead
 			} else {
 				ctx.Repo.AccessMode = perm.AccessModeWrite

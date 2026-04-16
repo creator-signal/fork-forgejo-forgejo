@@ -549,7 +549,12 @@ func authenticate(ctx *context.Context, repository *repo_model.Repository, autho
 			return false
 		}
 
-		if !task.HasWriteAccess(ctx) {
+		writeAccess, err := task.HasWriteAccess(ctx)
+		if err != nil {
+			log.Error("Unable to HasWriteAccess for task[%d] Error: %v", taskID, err)
+			return false
+		}
+		if !writeAccess {
 			return accessMode <= perm.AccessModeRead
 		}
 		return accessMode <= perm.AccessModeWrite
