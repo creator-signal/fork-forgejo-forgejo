@@ -97,15 +97,15 @@ func CheckOAuthAccessToken(ctx context.Context, accessToken string) (int64, stri
 }
 
 // CheckTaskIsRunning verifies that the TaskID corresponds to a running task
-func CheckTaskIsRunning(ctx context.Context, taskID int64) bool {
+func CheckTaskIsRunning(ctx context.Context, taskID int64) (bool, *actions_model.ActionTask) {
 	// Verify the task exists
 	task, err := actions_model.GetTaskByID(ctx, taskID)
 	if err != nil {
-		return false
+		return false, nil
 	}
 
 	// Verify that it's running
-	return task.Status == actions_model.StatusRunning
+	return task.Status == actions_model.StatusRunning, task
 }
 
 // OAuth2 implements the Auth interface and authenticates requests
@@ -156,9 +156,10 @@ func (o *OAuth2) userIDFromToken(ctx context.Context, tokenSHA string, store Dat
 	if strings.Contains(tokenSHA, ".") {
 		// First attempt to decode an actions JWT, returning the actions user
 		if taskID, err := actions.TokenToTaskID(tokenSHA); err == nil {
-			if CheckTaskIsRunning(ctx, taskID) {
+			if running, task := CheckTaskIsRunning(ctx, taskID); running {
 				store.GetData()["IsActionsToken"] = true
 				store.GetData()["ActionsTaskID"] = taskID
+				store.GetData()["ApiTokenReducer"] = authz.GetAuthorizationReducerForActionsToken(task)
 				return user_model.ActionsUserID, nil
 			}
 		}
@@ -185,6 +186,7 @@ func (o *OAuth2) userIDFromToken(ctx context.Context, tokenSHA string, store Dat
 
 				store.GetData()["IsActionsToken"] = true
 				store.GetData()["ActionsTaskID"] = task.ID
+				store.GetData()["ApiTokenReducer"] = authz.GetAuthorizationReducerForActionsToken(task)
 
 				return user_model.ActionsUserID, nil
 			}

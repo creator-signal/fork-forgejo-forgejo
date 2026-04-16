@@ -128,6 +128,7 @@ func (b *Basic) Verify(req *http.Request, w http.ResponseWriter, store DataStore
 
 		store.GetData()["IsActionsToken"] = true
 		store.GetData()["ActionsTaskID"] = task.ID
+		store.GetData()["ApiTokenReducer"] = authz.GetAuthorizationReducerForActionsToken(task)
 
 		return user_model.NewActionsUser(), nil
 	}

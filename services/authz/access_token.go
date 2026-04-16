@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 
+	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
 )
 
@@ -26,6 +27,12 @@ func GetAuthorizationReducerForAccessToken(ctx context.Context, token *auth_mode
 		return nil, fmt.Errorf("GetRepositoriesAccessibleWithToken: %w", err)
 	}
 	return &SpecificReposAuthorizationReducer{resourceRepos: repos}, nil
+}
+
+func GetAuthorizationReducerForActionsToken(task *actions_model.ActionTask) AuthorizationReducer {
+	return &SpecificReposAuthorizationReducer{resourceRepos: []*auth_model.AccessTokenResourceRepo{
+		{RepoID: task.RepoID},
+	}}
 }
 
 // A locale lookup string for the error -- eg. `access_token.error.invalid_something`
