@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
+	"xorm.io/xorm"
 )
 
 // ArtifactStatus is the status of an artifact, uploading, expired or need-delete
@@ -150,6 +151,27 @@ type ActionArtifactMeta struct {
 	Status       ArtifactStatus
 }
 
+// ActionArtifactMetaWithID is the meta data of a logical artifact with its canonical ID
+type ActionArtifactMetaWithID struct {
+	ID           int64              `xorm:"id"`
+	RunID        int64              `xorm:"run_id"`
+	RepoID       int64              `xorm:"-"` // not from aggregation, set manually
+	ArtifactName string             `xorm:"artifact_name"`
+	FileSize     int64              `xorm:"file_size"`
+	Status       ArtifactStatus     `xorm:"status"`
+	CreatedUnix  timeutil.TimeStamp `xorm:"created_unix"`
+	UpdatedUnix  timeutil.TimeStamp `xorm:"updated_unix"`
+	ExpiredUnix  timeutil.TimeStamp `xorm:"expired_unix"`
+}
+
+// FindArtifactsMetaOptions is the options for finding artifact metadata with pagination
+type FindArtifactsMetaOptions struct {
+	db.ListOptions
+	RepoID       int64
+	RunID        int64
+	ArtifactName string
+}
+
 // ListUploadedArtifactsMeta returns all uploaded artifacts meta of a run
 func ListUploadedArtifactsMeta(ctx context.Context, runID int64) ([]*ActionArtifactMeta, error) {
 	arts := make([]*ActionArtifactMeta, 0, 10)
@@ -192,3 +214,97 @@ func SetArtifactDeleted(ctx context.Context, artifactID int64) error {
 	_, err := db.GetEngine(ctx).ID(artifactID).Cols("status").Update(&ActionArtifact{Status: int64(ArtifactStatusDeleted)})
 	return err
 }
+
+func artifactMetaBaseSess(engine db.Engine, opts FindArtifactsMetaOptions) *xorm.Session {
+	sess := engine.Table("action_artifact").
+		Where("status = ? OR status = ?", ArtifactStatusUploadConfirmed, ArtifactStatusExpired)
+
+	if opts.RepoID > 0 {
+		sess = sess.And("repo_id = ?", opts.RepoID)
+	}
+	if opts.RunID > 0 {
+		sess = sess.And("run_id = ?", opts.RunID)
+	}
+	if opts.ArtifactName != "" {
+		sess = sess.And("artifact_name = ?", opts.ArtifactName)
+	}
+	return sess
+}
+
+func listUploadedArtifactsMeta(ctx context.Context, opts FindArtifactsMetaOptions) ([]*ActionArtifactMetaWithID, int64, error) {
+	e := db.GetEngine(ctx)
+
+	// Count total groups (each run_id + artifact_name pair is one logical artifact)
+	type countResult struct {
+		ID int64 `xorm:"id"`
+	}
+	countResults := make([]*countResult, 0)
+	if err := artifactMetaBaseSess(e, opts).
+		GroupBy("run_id, artifact_name").
+		Select("min(id) as id").
+		Find(&countResults); err != nil {
+		return nil, 0, err
+	}
+	total := int64(len(countResults))
+
+	// Fetch paginated results
+	sess := artifactMetaBaseSess(e, opts).
+		GroupBy("run_id, artifact_name").
+		Select("min(id) as id, run_id, artifact_name, sum(file_size) as file_size, max(status) as status, min(created_unix) as created_unix, max(updated_unix) as updated_unix, max(expired_unix) as expired_unix")
+
+	if opts.PageSize > 0 {
+		sess = sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize)
+	}
+
+	arts := make([]*ActionArtifactMetaWithID, 0, 10)
+	return arts, total, sess.OrderBy("id DESC").Find(&arts)
+}
+
+// ListUploadedArtifactsMetaByRepoID returns paginated artifact metadata for a repository
+func ListUploadedArtifactsMetaByRepoID(ctx context.Context, repoID int64, opts FindArtifactsMetaOptions) ([]*ActionArtifactMetaWithID, int64, error) {
+	opts.RepoID = repoID
+	return listUploadedArtifactsMeta(ctx, opts)
+}
+
+// ListUploadedArtifactsMetaByRunID returns paginated artifact metadata for a workflow run
+func ListUploadedArtifactsMetaByRunID(ctx context.Context, runID int64, opts FindArtifactsMetaOptions) ([]*ActionArtifactMetaWithID, int64, error) {
+	opts.RunID = runID
+	return listUploadedArtifactsMeta(ctx, opts)
+}
+
+// GetArtifactMetaByID returns the aggregated artifact metadata by its canonical ID (MIN(id) of the group)
+func GetArtifactMetaByID(ctx context.Context, artifactID int64) (*ActionArtifactMetaWithID, error) {
+	// First, look up the artifact row by ID to get run_id and artifact_name
+	var art ActionArtifact
+	has, err := db.GetEngine(ctx).ID(artifactID).Get(&art)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, util.ErrNotExist
+	}
+
+	// Now aggregate all rows with the same run_id + artifact_name
+	meta := new(ActionArtifactMetaWithID)
+	has, err = db.GetEngine(ctx).Table("action_artifact").
+		Where("run_id = ? AND artifact_name = ? AND (status = ? OR status = ?)",
+			art.RunID, art.ArtifactName, ArtifactStatusUploadConfirmed, ArtifactStatusExpired).
+		Select("min(id) as id, run_id, artifact_name, sum(file_size) as file_size, max(status) as status, min(created_unix) as created_unix, max(updated_unix) as updated_unix, max(expired_unix) as expired_unix").
+		GroupBy("run_id, artifact_name").
+		Get(meta)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, util.ErrNotExist
+	}
+
+	// Verify the canonical ID matches — the queried artifact_id must be the MIN(id) of its group
+	if meta.ID != artifactID {
+		return nil, util.ErrNotExist
+	}
+
+	meta.RepoID = art.RepoID
+	return meta, nil
+}
+
