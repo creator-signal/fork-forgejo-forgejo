@@ -268,6 +268,20 @@ func (run *ActionRun) CanBeRerun() bool {
 	return run.Status.IsDone()
 }
 
+func (run *ActionRun) PrepareNextAttempt() error {
+	if run.Status != StatusUnknown && !run.Status.IsDone() {
+		return fmt.Errorf("cannot prepare next attempt because run %d is active: %s", run.ID, run.Status.String())
+	}
+
+	run.PreviousDuration = run.Duration()
+
+	run.Status = StatusWaiting
+	run.Started = 0
+	run.Stopped = 0
+
+	return nil
+}
+
 func actionsCountOpenCacheKey(repoID int64) string {
 	return fmt.Sprintf("Actions:CountOpenActionRuns:%d", repoID)
 }
