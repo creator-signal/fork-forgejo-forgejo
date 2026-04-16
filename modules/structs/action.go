@@ -115,5 +115,5 @@ type ActionArtifact struct {
 // ListActionArtifactResponse returns a list of ActionArtifact
 type ListActionArtifactResponse struct {
 	Entries    []*ActionArtifact `json:"artifacts"`
-	TotalCount int64            `json:"total_count"`
+	TotalCount int64             `json:"total_count"`
 }

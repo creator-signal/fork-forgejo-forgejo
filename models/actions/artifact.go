@@ -307,4 +307,3 @@ func GetArtifactMetaByID(ctx context.Context, artifactID int64) (*ActionArtifact
 	meta.RepoID = art.RepoID
 	return meta, nil
 }
-
