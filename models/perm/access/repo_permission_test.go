@@ -81,6 +81,46 @@ func TestActionTaskNoAccessPrivateRepo(t *testing.T) {
 	assertAccess(t, perm_model.AccessModeNone, &perm)
 }
 
+func TestActionTask_GetActionRepoPermission_HasWriteAccess(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("Not a fork PR", func(t *testing.T) {
+		actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
+		actionTask.IsForkPullRequest = false
+		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: actionTask.RepoID})
+
+		perm, err := access.GetActionRepoPermission(db.DefaultContext, repo, actionTask)
+		require.NoError(t, err)
+		assertAccess(t, perm_model.AccessModeWrite, &perm)
+	})
+
+	t.Run("Fork PR pull_request_target", func(t *testing.T) {
+		actionTask, err := actions_model.GetTaskByJobAttempt(db.DefaultContext, 192, 2)
+		require.NoError(t, err)
+		require.NoError(t, actionTask.LoadAttributes(db.DefaultContext))
+		actionTask.IsForkPullRequest = true
+		actionTask.Job.Run.TriggerEvent = "pull_request_target"
+		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: actionTask.RepoID})
+
+		perm, err := access.GetActionRepoPermission(db.DefaultContext, repo, actionTask)
+		require.NoError(t, err)
+		assertAccess(t, perm_model.AccessModeWrite, &perm)
+	})
+
+	t.Run("Fork PR pull_request", func(t *testing.T) {
+		actionTask, err := actions_model.GetTaskByJobAttempt(db.DefaultContext, 192, 2)
+		require.NoError(t, err)
+		require.NoError(t, actionTask.LoadAttributes(db.DefaultContext))
+		actionTask.IsForkPullRequest = true
+		actionTask.Job.Run.TriggerEvent = "pull_request"
+		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: actionTask.RepoID})
+
+		perm, err := access.GetActionRepoPermission(db.DefaultContext, repo, actionTask)
+		require.NoError(t, err)
+		assertAccess(t, perm_model.AccessModeRead, &perm)
+	})
+}
+
 func TestGetUserRepoPermissionWithReducer(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
