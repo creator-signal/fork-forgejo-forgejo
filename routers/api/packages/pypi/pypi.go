@@ -165,7 +165,6 @@ func JSONPackageMetadata(ctx *context.Context) {
 }
 
 func PackageMetadata(ctx *context.Context) {
-	ctx.Resp.Header().Add("Access-Control-Allow-Origin", "*")
 	ctyp := ctx.Req.Header["Accept"]
 	if contentTypeSupported(ctyp, "application/vnd.pypi.simple.v1+json") {
 		JSONPackageMetadata(ctx)
@@ -201,9 +200,7 @@ func DownloadPackageFile(ctx *context.Context) {
 		return
 	}
 
-	helper.ServePackageFile(ctx, s, u, pf, &context.ServeHeaderOptions{
-		AdditionalHeaders: http.Header{"Access-Control-Allow-Origin": []string{"*"}},
-	})
+	helper.ServePackageFile(ctx, s, u, pf)
 }
 
 // UploadPackageFile adds a file to the package. If the package does not exist, it gets created.
