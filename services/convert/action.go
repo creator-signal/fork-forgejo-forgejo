@@ -5,6 +5,7 @@ package convert
 
 import (
 	"context"
+	"fmt"
 
 	actions_model "forgejo.org/models/actions"
 	access_model "forgejo.org/models/perm/access"
@@ -45,6 +46,21 @@ func ToActionRun(ctx context.Context, run *actions_model.ActionRun, doer *user_m
 		Updated:           run.Updated.AsTime(),
 		Duration:          run.Duration(),
 		HTMLURL:           run.HTMLURL(),
+	}
+}
+
+// ToActionArtifact converts an ActionArtifactMetaWithID to an API ActionArtifact
+func ToActionArtifact(repoAPILink string, meta *actions_model.ActionArtifactMetaWithID) *api.ActionArtifact {
+	return &api.ActionArtifact{
+		ID:                 meta.ID,
+		Name:               meta.ArtifactName,
+		SizeInBytes:        meta.FileSize,
+		ArchiveDownloadURL: fmt.Sprintf("%s/actions/artifacts/%d/zip", repoAPILink, meta.ID),
+		Expired:            meta.Status == actions_model.ArtifactStatusExpired,
+		WorkflowRunID:      meta.RunID,
+		CreatedAt:          meta.CreatedUnix.AsTime(),
+		UpdatedAt:          meta.UpdatedUnix.AsTime(),
+		ExpiresAt:          meta.ExpiredUnix.AsTime(),
 	}
 }
 
