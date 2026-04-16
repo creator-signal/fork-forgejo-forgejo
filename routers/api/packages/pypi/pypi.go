@@ -158,6 +158,7 @@ func JSONPackageMetadata(ctx *context.Context) {
 		Files:    files,
 	}
 	ctx.Resp.Header().Set("Content-Type", "application/vnd.pypi.simple.v1+json")
+	ctx.Resp.Header().Add("Content-Type", "application/json")
 	ctx.Resp.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(ctx.Resp).Encode(content); err != nil {
 		log.Error("Render JSON failed: %v", err)
