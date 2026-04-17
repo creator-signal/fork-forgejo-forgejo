@@ -16,6 +16,7 @@ import (
 // Could be refactored in the future while keeping backwards compatibility.
 var LFS = struct {
 	StartServer    bool          `ini:"LFS_START_SERVER"`
+	AllowPureSSH   bool          `ini:"LFS_ALLOW_PURE_SSH"`
 	JWTSecretBytes []byte        `ini:"-"`
 	HTTPAuthExpiry time.Duration `ini:"LFS_HTTP_AUTH_EXPIRY"`
 	MaxFileSize    int64         `ini:"LFS_MAX_FILE_SIZE"`

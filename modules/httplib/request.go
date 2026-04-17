@@ -111,6 +111,10 @@ func (r *Request) Body(data any) *Request {
 		bf := bytes.NewBuffer(t)
 		r.req.Body = io.NopCloser(bf)
 		r.req.ContentLength = int64(len(t))
+	case io.ReadCloser:
+		r.req.Body = t
+	case io.Reader:
+		r.req.Body = io.NopCloser(t)
 	}
 	return r
 }

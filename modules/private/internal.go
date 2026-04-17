@@ -94,3 +94,59 @@ Ensure you are running in the correct environment or set the correct configurati
 	req.SetTimeout(10*time.Second, 60*time.Second)
 	return req
 }
+
+// NewInternalRequestForLFS creates an internal request that uses X-Forgejo-Internal-Auth
+// for internal authentication instead of Authorization, allowing Authorization to carry
+// an LFS JWT token for the LFS handler's access control.
+func NewInternalRequestForLFS(ctx context.Context, url, method string) *httplib.Request {
+	if setting.InternalToken == "" {
+		log.Fatal(`The INTERNAL_TOKEN setting is missing from the configuration file: %q.
+Ensure you are running in the correct environment or set the correct configuration file with -c.`, setting.CustomConf)
+	}
+
+	req := httplib.NewRequest(url, method).
+		SetContext(ctx).
+		Header("X-Real-IP", getClientIP()).
+		Header("X-Forgejo-Internal-Auth", fmt.Sprintf("Bearer %s", setting.InternalToken)).
+		SetTLSClientConfig(&tls.Config{
+			InsecureSkipVerify: true,
+			ServerName:         setting.Domain,
+		})
+
+	if setting.Protocol == setting.HTTPUnix {
+		req.SetTransport(&http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				var d net.Dialer
+				conn, err := d.DialContext(ctx, "unix", setting.HTTPAddr)
+				if err != nil {
+					return conn, err
+				}
+				if setting.LocalUseProxyProtocol {
+					if err = proxyprotocol.WriteLocalHeader(conn); err != nil {
+						_ = conn.Close()
+						return nil, err
+					}
+				}
+				return conn, err
+			},
+		})
+	} else if setting.LocalUseProxyProtocol {
+		req.SetTransport(&http.Transport{
+			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+				var d net.Dialer
+				conn, err := d.DialContext(ctx, network, address)
+				if err != nil {
+					return conn, err
+				}
+				if err = proxyprotocol.WriteLocalHeader(conn); err != nil {
+					_ = conn.Close()
+					return nil, err
+				}
+				return conn, err
+			},
+		})
+	}
+
+	req.SetReadWriteTimeout(0)
+	return req
+}

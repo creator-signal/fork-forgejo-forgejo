@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 	"unicode"
 
 	asymkey_model "forgejo.org/models/asymkey"
@@ -23,6 +22,7 @@ import (
 	"forgejo.org/models/perm"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/lfstransfer"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/pprof"
 	"forgejo.org/modules/private"
@@ -31,13 +31,13 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/lfs"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/kballard/go-shellquote"
 	"github.com/urfave/cli/v3"
 )
 
 const (
 	lfsAuthenticateVerb = "git-lfs-authenticate"
+	lfsTransferVerb     = "git-lfs-transfer"
 )
 
 // CmdServ represents the available serv sub-command.
@@ -84,6 +84,7 @@ var (
 		"git-upload-archive": perm.AccessModeRead,
 		"git-receive-pack":   perm.AccessModeWrite,
 		lfsAuthenticateVerb:  perm.AccessModeNone,
+		lfsTransferVerb:      perm.AccessModeNone,
 	}
 	alphaDashDotPattern = regexp.MustCompile(`[^\w-\.]`)
 )
@@ -210,9 +211,12 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	repoPath := strings.TrimPrefix(words[1], "/")
 
 	var lfsVerb string
-	if verb == lfsAuthenticateVerb {
+	if verb == lfsAuthenticateVerb || verb == lfsTransferVerb {
 		if !setting.LFS.StartServer {
 			return fail(ctx, "Unknown git command", "LFS authentication request over SSH denied, LFS support is disabled")
+		}
+		if verb == lfsTransferVerb && !setting.LFS.AllowPureSSH {
+			return fail(ctx, "LFS SSH transfer is not enabled", "")
 		}
 
 		if len(words) > 2 {
@@ -260,7 +264,7 @@ func runServ(ctx context.Context, c *cli.Command) error {
 		return fail(ctx, "Unknown git command", "Unknown git command %s", verb)
 	}
 
-	if verb == lfsAuthenticateVerb {
+	if verb == lfsAuthenticateVerb || verb == lfsTransferVerb {
 		switch lfsVerb {
 		case "upload":
 			requestedMode = perm.AccessModeWrite
@@ -276,33 +280,35 @@ func runServ(ctx context.Context, c *cli.Command) error {
 		return fail(ctx, extra.UserMsg, "ServCommand failed: %s", extra.Error)
 	}
 
+	// LFS SSH protocol (pure SSH transfer)
+	if verb == lfsTransferVerb {
+		// because the original repoPath may have been redirected, use the returned actual repository info
+		if results.IsWiki {
+			repoPath = strings.ToLower(results.OwnerName) + "/" + strings.ToLower(results.RepoName) + ".wiki.git"
+		} else {
+			repoPath = strings.ToLower(results.OwnerName) + "/" + strings.ToLower(results.RepoName) + ".git"
+		}
+		token, err := lfs.GetLFSAuthTokenWithBearer(lfs.AuthTokenOptions{Op: lfsVerb, UserID: results.UserID, RepoID: results.RepoID})
+		if err != nil {
+			return fail(ctx, "Failed to generate LFS token", "Failed to generate LFS token: %v", err)
+		}
+		return lfstransfer.Main(ctx, repoPath, lfsVerb, token)
+	}
+
 	// LFS token authentication
 	if verb == lfsAuthenticateVerb {
-		url := fmt.Sprintf("%s%s/%s.git/info/lfs", setting.AppURL, url.PathEscape(results.OwnerName), url.PathEscape(results.RepoName))
+		lfsURL := fmt.Sprintf("%s%s/%s.git/info/lfs", setting.AppURL, url.PathEscape(results.OwnerName), url.PathEscape(results.RepoName))
 
-		now := time.Now()
-		claims := lfs.Claims{
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(now.Add(setting.LFS.HTTPAuthExpiry)),
-				NotBefore: jwt.NewNumericDate(now),
-			},
-			RepoID: results.RepoID,
-			Op:     lfsVerb,
-			UserID: results.UserID,
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-		// Sign and get the complete encoded token as a string using the secret
-		tokenString, err := token.SignedString(setting.LFS.JWTSecretBytes)
+		token, err := lfs.GetLFSAuthTokenWithBearer(lfs.AuthTokenOptions{Op: lfsVerb, UserID: results.UserID, RepoID: results.RepoID})
 		if err != nil {
 			return fail(ctx, "Failed to sign JWT Token", "Failed to sign JWT token: %v", err)
 		}
 
 		tokenAuthentication := &git_model.LFSTokenResponse{
 			Header: make(map[string]string),
-			Href:   url,
+			Href:   lfsURL,
 		}
-		tokenAuthentication.Header["Authorization"] = fmt.Sprintf("Bearer %s", tokenString)
+		tokenAuthentication.Header["Authorization"] = token
 
 		enc := json.NewEncoder(os.Stdout)
 		err = enc.Encode(tokenAuthentication)

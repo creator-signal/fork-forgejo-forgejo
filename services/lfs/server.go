@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
@@ -51,6 +52,34 @@ type Claims struct {
 	Op     string
 	UserID int64
 	jwt.RegisteredClaims
+}
+
+// AuthTokenOptions contains the options for creating an LFS auth token.
+type AuthTokenOptions struct {
+	RepoID int64
+	Op     string
+	UserID int64
+}
+
+// GetLFSAuthTokenWithBearer creates a signed LFS JWT token and returns it as a Bearer string.
+// It is used by both git-lfs-authenticate and git-lfs-transfer SSH flows.
+func GetLFSAuthTokenWithBearer(opts AuthTokenOptions) (string, error) {
+	now := time.Now()
+	claims := Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(setting.LFS.HTTPAuthExpiry)),
+			NotBefore: jwt.NewNumericDate(now),
+		},
+		RepoID: opts.RepoID,
+		Op:     opts.Op,
+		UserID: opts.UserID,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(setting.LFS.JWTSecretBytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign LFS JWT token: %w", err)
+	}
+	return "Bearer " + tokenString, nil
 }
 
 // DownloadLink builds a URL to download the object.
@@ -136,7 +165,9 @@ func DownloadHandler(ctx *context.Context) {
 	}
 
 	contentLength := toByte + 1 - fromByte
-	ctx.Resp.Header().Set("Content-Length", strconv.FormatInt(contentLength, 10))
+	contentLengthStr := strconv.FormatInt(contentLength, 10)
+	ctx.Resp.Header().Set("Content-Length", contentLengthStr)
+	ctx.Resp.Header().Set("X-Forgejo-LFS-Content-Length", contentLengthStr) // needed to avoid being affected by reverse proxy or compression
 	ctx.Resp.Header().Set("Content-Type", "application/octet-stream")
 
 	filename := ctx.Params("filename")
