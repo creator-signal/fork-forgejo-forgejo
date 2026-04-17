@@ -1,4 +1,4 @@
-// Copyright 2025 The Forgejo Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 package integration
@@ -33,16 +33,16 @@ func TestAPIListActionArtifacts(t *testing.T) {
 		req.AddTokenAuth(token)
 
 		res := MakeRequest(t, req, http.StatusOK)
-		var body api.ListActionArtifactResponse
-		DecodeJSON(t, res, &body)
+		var entries []*api.ActionArtifact
+		DecodeJSON(t, res, &entries)
 
 		// Fixture has 2 logical artifacts with confirmed status:
 		// "multi-file-download" (run 791, ids 19+20) and "artifact-v4-download" (run 792, id 22)
-		assert.Equal(t, int64(2), body.TotalCount)
-		require.Len(t, body.Entries, 2)
+		assert.Equal(t, "2", res.Header().Get("X-Total-Count"))
+		require.Len(t, entries, 2)
 
-		names := make([]string, len(body.Entries))
-		for i, a := range body.Entries {
+		names := make([]string, len(entries))
+		for i, a := range entries {
 			names[i] = a.Name
 			assert.False(t, a.Expired)
 			assert.NotZero(t, a.SizeInBytes)
@@ -59,14 +59,14 @@ func TestAPIListActionArtifacts(t *testing.T) {
 		req.AddTokenAuth(token)
 
 		res := MakeRequest(t, req, http.StatusOK)
-		var body api.ListActionArtifactResponse
-		DecodeJSON(t, res, &body)
+		var entries []*api.ActionArtifact
+		DecodeJSON(t, res, &entries)
 
-		assert.Equal(t, int64(1), body.TotalCount)
-		require.Len(t, body.Entries, 1)
-		assert.Equal(t, "multi-file-download", body.Entries[0].Name)
+		assert.Equal(t, "1", res.Header().Get("X-Total-Count"))
+		require.Len(t, entries, 1)
+		assert.Equal(t, "multi-file-download", entries[0].Name)
 		// multi-file-download has 2 rows of 1024 bytes each
-		assert.Equal(t, int64(2048), body.Entries[0].SizeInBytes)
+		assert.Equal(t, int64(2048), entries[0].SizeInBytes)
 	})
 
 	t.Run("ListRunArtifacts", func(t *testing.T) {
@@ -76,13 +76,13 @@ func TestAPIListActionArtifacts(t *testing.T) {
 		req.AddTokenAuth(token)
 
 		res := MakeRequest(t, req, http.StatusOK)
-		var body api.ListActionArtifactResponse
-		DecodeJSON(t, res, &body)
+		var entries []*api.ActionArtifact
+		DecodeJSON(t, res, &entries)
 
 		// run 791 has only "multi-file-download" (id=1 is pending, not listed)
-		assert.Equal(t, int64(1), body.TotalCount)
-		require.Len(t, body.Entries, 1)
-		assert.Equal(t, "multi-file-download", body.Entries[0].Name)
+		assert.Equal(t, "1", res.Header().Get("X-Total-Count"))
+		require.Len(t, entries, 1)
+		assert.Equal(t, "multi-file-download", entries[0].Name)
 	})
 
 	t.Run("ListRunArtifactsNotFound", func(t *testing.T) {
