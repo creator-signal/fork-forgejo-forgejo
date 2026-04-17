@@ -110,3 +110,7 @@
   margin-bottom: 8px;
   min-width: fit-content;
 }
+
+.issue-list-toolbar-right .filter.menu .dropdown.item.filter-applied {
+  background: var(--color-active);
+}

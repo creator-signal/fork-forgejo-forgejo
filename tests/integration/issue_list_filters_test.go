@@ -5,6 +5,7 @@ package integration
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"forgejo.org/modules/translation"
@@ -357,4 +358,54 @@ func TestIssueFilterLinks(t *testing.T) {
 		})
 		assert.True(t, called)
 	})
+}
+
+func TestIssueFilterApplied(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user2")
+
+	cases := []struct {
+		name string
+		url  string
+		// Dropdowns accessed by the Type filter are only rendered for signed-in users.
+		loggedIn bool
+		// CSS selector of the dropdown expected to carry filter-applied, or "" if none should.
+		activeDropdown string
+	}{
+		{"NoFilter", "/user2/repo1/issues", false, ""},
+		{"Labels", "/user2/repo1/issues?labels=1", false, ".label-filter"},
+		{"Unlabeled", "/user2/repo1/issues?labels=0", false, ".label-filter"},
+		{"Milestone", "/user2/repo1/issues?milestone=1", false, ".list-header-milestone"},
+		{"NoMilestone", "/user2/repo1/issues?milestone=-1", false, ".list-header-milestone"},
+		{"Project", "/user2/repo1/issues?project=1", false, ".list-header-project"},
+		{"Poster", "/user2/repo1/issues?poster=1", false, ".list-header-author"},
+		{"Assignee", "/user2/repo1/issues?assignee=1", false, ".list-header-assignee"},
+		{"Sort", "/user2/repo1/issues?sort=oldest", false, ".list-header-sort"},
+		{"Type", "/user2/repo1/issues?type=assigned", true, ".list-header-type"},
+		{"TypeAll", "/user2/repo1/issues?type=all", true, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, "GET", tc.url)
+			var resp *httptest.ResponseRecorder
+			if tc.loggedIn {
+				resp = session.MakeRequest(t, req, http.StatusOK)
+			} else {
+				resp = MakeRequest(t, req, http.StatusOK)
+			}
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			all := htmlDoc.Find("#issue-filters .filter-applied")
+			if tc.activeDropdown == "" {
+				assert.Equal(t, 0, all.Length(), "Expected no dropdown to be marked as filter-applied")
+			} else {
+				assert.Equal(t, 1, all.Length(), "Expected exactly one dropdown to be marked as filter-applied")
+				assert.Equal(t, 1, htmlDoc.Find("#issue-filters "+tc.activeDropdown+".filter-applied").Length(),
+					"Expected %s to carry the filter-applied class", tc.activeDropdown)
+			}
+		})
+	}
 }
