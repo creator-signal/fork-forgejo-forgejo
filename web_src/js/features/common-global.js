@@ -453,6 +453,9 @@ export function initGlobalShowModal() {
     if (!$modal.length) {
       throw new Error('no modal for this action');
     }
+
+    $modal.addClass('ui modal');
+
     const modalAttrPrefix = 'data-modal-';
     for (const attrib of this.attributes) {
       if (!attrib.name.startsWith(modalAttrPrefix)) {
