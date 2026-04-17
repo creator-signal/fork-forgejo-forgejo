@@ -27393,25 +27393,6 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
-    "ListActionArtifactResponse": {
-      "description": "ListActionArtifactResponse returns a list of ActionArtifact",
-      "type": "object",
-      "properties": {
-        "artifacts": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ActionArtifact"
-          },
-          "x-go-name": "Entries"
-        },
-        "total_count": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "TotalCount"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
     "ListActionRunResponse": {
       "description": "ListActionRunResponse return a list of ActionRun",
       "type": "object",
@@ -30766,7 +30747,10 @@
     "ActionArtifactList": {
       "description": "ActionArtifactList",
       "schema": {
-        "$ref": "#/definitions/ListActionArtifactResponse"
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/ActionArtifact"
+        }
       }
     },
     "ActionRun": {

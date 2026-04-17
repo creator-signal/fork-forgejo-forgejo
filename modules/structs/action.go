@@ -111,9 +111,3 @@ type ActionArtifact struct {
 	// swagger:strfmt date-time
 	ExpiresAt time.Time `json:"expires_at"`
 }
-
-// ListActionArtifactResponse returns a list of ActionArtifact
-type ListActionArtifactResponse struct {
-	Entries    []*ActionArtifact `json:"artifacts"`
-	TotalCount int64             `json:"total_count"`
-}

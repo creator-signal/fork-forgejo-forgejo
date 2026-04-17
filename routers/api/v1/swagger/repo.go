@@ -538,7 +538,7 @@ type swaggerActionRunJobList struct {
 // swagger:response ActionArtifactList
 type swaggerActionArtifactList struct {
 	// in:body
-	Body api.ListActionArtifactResponse `json:"body"`
+	Body []api.ActionArtifact `json:"body"`
 }
 
 // ActionArtifact

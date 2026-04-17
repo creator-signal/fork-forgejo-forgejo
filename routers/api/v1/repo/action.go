@@ -1142,27 +1142,28 @@ func ListActionArtifacts(ctx *context.APIContext) {
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 
-	opts := actions_model.FindArtifactsMetaOptions{
+	opts := actions_model.FindArtifactsOptions{
 		ListOptions:  utils.GetListOptions(ctx),
+		RepoID:       ctx.Repo.Repository.ID,
 		ArtifactName: ctx.FormString("name"),
 	}
 
-	arts, total, err := actions_model.ListUploadedArtifactsMetaByRepoID(ctx, ctx.Repo.Repository.ID, opts)
+	arts, total, err := actions_model.ListUploadedArtifactsMetaWithID(ctx, opts)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "ListUploadedArtifactsMetaByRepoID", err)
+		ctx.Error(http.StatusInternalServerError, "ListUploadedArtifactsMetaWithID", err)
 		return
 	}
 
 	repoAPILink := fmt.Sprintf("%sapi/v1/repos/%s/%s", setting.AppURL, url.PathEscape(ctx.Repo.Owner.Name), url.PathEscape(ctx.Repo.Repository.Name))
 
-	res := new(api.ListActionArtifactResponse)
-	res.TotalCount = total
-	res.Entries = make([]*api.ActionArtifact, len(arts))
+	entries := make([]*api.ActionArtifact, len(arts))
 	for i, art := range arts {
-		res.Entries[i] = convert.ToActionArtifact(repoAPILink, art)
+		entries[i] = convert.ToActionArtifact(repoAPILink, art)
 	}
 
-	ctx.JSON(http.StatusOK, &res)
+	ctx.SetLinkHeader(int(total), opts.PageSize)
+	ctx.SetTotalCountHeader(total)
+	ctx.JSON(http.StatusOK, entries)
 }
 
 // ListActionRunArtifacts list artifacts for a workflow run
@@ -1226,27 +1227,28 @@ func ListActionRunArtifacts(ctx *context.APIContext) {
 		return
 	}
 
-	opts := actions_model.FindArtifactsMetaOptions{
+	opts := actions_model.FindArtifactsOptions{
 		ListOptions:  utils.GetListOptions(ctx),
+		RunID:        runID,
 		ArtifactName: ctx.FormString("name"),
 	}
 
-	arts, total, err := actions_model.ListUploadedArtifactsMetaByRunID(ctx, runID, opts)
+	arts, total, err := actions_model.ListUploadedArtifactsMetaWithID(ctx, opts)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "ListUploadedArtifactsMetaByRunID", err)
+		ctx.Error(http.StatusInternalServerError, "ListUploadedArtifactsMetaWithID", err)
 		return
 	}
 
 	repoAPILink := fmt.Sprintf("%sapi/v1/repos/%s/%s", setting.AppURL, url.PathEscape(ctx.Repo.Owner.Name), url.PathEscape(ctx.Repo.Repository.Name))
 
-	res := new(api.ListActionArtifactResponse)
-	res.TotalCount = total
-	res.Entries = make([]*api.ActionArtifact, len(arts))
+	entries := make([]*api.ActionArtifact, len(arts))
 	for i, art := range arts {
-		res.Entries[i] = convert.ToActionArtifact(repoAPILink, art)
+		entries[i] = convert.ToActionArtifact(repoAPILink, art)
 	}
 
-	ctx.JSON(http.StatusOK, &res)
+	ctx.SetLinkHeader(int(total), opts.PageSize)
+	ctx.SetTotalCountHeader(total)
+	ctx.JSON(http.StatusOK, entries)
 }
 
 // GetActionArtifact get an artifact by its ID
