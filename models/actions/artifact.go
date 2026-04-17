@@ -151,25 +151,19 @@ type ActionArtifactMeta struct {
 	Status       ArtifactStatus
 }
 
-// ActionArtifactMetaWithID is the meta data of a logical artifact with its canonical ID
+// ActionArtifactMetaWithID is the aggregated view of a logical artifact
+// (one or more rows sharing the same run_id + artifact_name), used by the
+// public API to represent a single artifact to clients.
 type ActionArtifactMetaWithID struct {
 	ID           int64              `xorm:"id"`
 	RunID        int64              `xorm:"run_id"`
-	RepoID       int64              `xorm:"-"` // not from aggregation, set manually
+	RepoID       int64              `xorm:"-"` // populated after query
 	ArtifactName string             `xorm:"artifact_name"`
 	FileSize     int64              `xorm:"file_size"`
 	Status       ArtifactStatus     `xorm:"status"`
 	CreatedUnix  timeutil.TimeStamp `xorm:"created_unix"`
 	UpdatedUnix  timeutil.TimeStamp `xorm:"updated_unix"`
 	ExpiredUnix  timeutil.TimeStamp `xorm:"expired_unix"`
-}
-
-// FindArtifactsMetaOptions is the options for finding artifact metadata with pagination
-type FindArtifactsMetaOptions struct {
-	db.ListOptions
-	RepoID       int64
-	RunID        int64
-	ArtifactName string
 }
 
 // ListUploadedArtifactsMeta returns all uploaded artifacts meta of a run
@@ -215,7 +209,7 @@ func SetArtifactDeleted(ctx context.Context, artifactID int64) error {
 	return err
 }
 
-func artifactMetaBaseSess(engine db.Engine, opts FindArtifactsMetaOptions) *xorm.Session {
+func artifactMetaBaseSess(engine db.Engine, opts FindArtifactsOptions) *xorm.Session {
 	sess := engine.Table("action_artifact").
 		Where("status = ? OR status = ?", ArtifactStatusUploadConfirmed, ArtifactStatusExpired)
 
@@ -231,7 +225,12 @@ func artifactMetaBaseSess(engine db.Engine, opts FindArtifactsMetaOptions) *xorm
 	return sess
 }
 
-func listUploadedArtifactsMeta(ctx context.Context, opts FindArtifactsMetaOptions) ([]*ActionArtifactMetaWithID, int64, error) {
+// ListUploadedArtifactsMetaWithID returns paginated aggregated artifact metadata.
+// Each result represents one logical artifact: a (run_id, artifact_name) group,
+// with ID = MIN(id), FileSize = SUM(file_size), Status = MAX(status), and
+// timestamps aggregated accordingly. Status filter in opts is ignored; results
+// are always restricted to UploadConfirmed and Expired statuses.
+func ListUploadedArtifactsMetaWithID(ctx context.Context, opts FindArtifactsOptions) ([]*ActionArtifactMetaWithID, int64, error) {
 	e := db.GetEngine(ctx)
 
 	// Count total groups (each run_id + artifact_name pair is one logical artifact)
@@ -252,24 +251,14 @@ func listUploadedArtifactsMeta(ctx context.Context, opts FindArtifactsMetaOption
 		GroupBy("run_id, artifact_name").
 		Select("min(id) as id, run_id, artifact_name, sum(file_size) as file_size, max(status) as status, min(created_unix) as created_unix, max(updated_unix) as updated_unix, max(expired_unix) as expired_unix")
 
+	capacity := 10
 	if opts.PageSize > 0 {
 		sess = sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize)
+		capacity = opts.PageSize
 	}
 
-	arts := make([]*ActionArtifactMetaWithID, 0, 10)
+	arts := make([]*ActionArtifactMetaWithID, 0, capacity)
 	return arts, total, sess.OrderBy("id DESC").Find(&arts)
-}
-
-// ListUploadedArtifactsMetaByRepoID returns paginated artifact metadata for a repository
-func ListUploadedArtifactsMetaByRepoID(ctx context.Context, repoID int64, opts FindArtifactsMetaOptions) ([]*ActionArtifactMetaWithID, int64, error) {
-	opts.RepoID = repoID
-	return listUploadedArtifactsMeta(ctx, opts)
-}
-
-// ListUploadedArtifactsMetaByRunID returns paginated artifact metadata for a workflow run
-func ListUploadedArtifactsMetaByRunID(ctx context.Context, runID int64, opts FindArtifactsMetaOptions) ([]*ActionArtifactMetaWithID, int64, error) {
-	opts.RunID = runID
-	return listUploadedArtifactsMeta(ctx, opts)
 }
 
 // GetArtifactMetaByID returns the aggregated artifact metadata by its canonical ID (MIN(id) of the group)
