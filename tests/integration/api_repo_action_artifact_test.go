@@ -115,7 +115,7 @@ func TestAPIGetActionArtifact(t *testing.T) {
 		assert.Equal(t, int64(19), art.ID)
 		assert.Equal(t, "multi-file-download", art.Name)
 		assert.Equal(t, int64(2048), art.SizeInBytes)
-		assert.Equal(t, int64(791), art.WorkflowRunID)
+		assert.Equal(t, int64(791), art.RunID)
 		assert.False(t, art.Expired)
 	})
 
@@ -132,7 +132,7 @@ func TestAPIGetActionArtifact(t *testing.T) {
 		assert.Equal(t, int64(22), art.ID)
 		assert.Equal(t, "artifact-v4-download", art.Name)
 		assert.Equal(t, int64(1024), art.SizeInBytes)
-		assert.Equal(t, int64(792), art.WorkflowRunID)
+		assert.Equal(t, int64(792), art.RunID)
 		assert.False(t, art.Expired)
 	})
 
