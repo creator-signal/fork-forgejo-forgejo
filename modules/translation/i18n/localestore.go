@@ -157,7 +157,7 @@ func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex, is
 
 	// Severify depends on the lang. A missing string in default lang will affect
 	// all translations, while community translations may just be incomplete
-	logFunc := log.Info
+	logFunc := log.Debug
 	if isDefaultLang {
 		logFunc = log.Error
 	}
