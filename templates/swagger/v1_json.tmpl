@@ -22631,7 +22631,7 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "ActionArtifact": {
-      "description": "ActionArtifact represents an artifact of an action run",
+      "description": "ActionArtifact represents an artifact of a workflow run",
       "type": "object",
       "properties": {
         "archive_download_url": {
@@ -22665,6 +22665,12 @@
           "type": "string",
           "x-go-name": "Name"
         },
+        "run_id": {
+          "description": "the ID of the workflow run that produced this artifact",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "RunID"
+        },
         "size_in_bytes": {
           "description": "the total size of the artifact in bytes",
           "type": "integer",
@@ -22675,12 +22681,6 @@
           "type": "string",
           "format": "date-time",
           "x-go-name": "UpdatedAt"
-        },
-        "workflow_run_backend_id": {
-          "description": "the ID of the workflow run that produced this artifact",
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "WorkflowRunID"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
