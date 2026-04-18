@@ -14,14 +14,19 @@
 				<input id="ssh-key-title" name="title" value="{{.title}}" autofocus required maxlength="50">
 			</div>
 			<div class="field {{if .Err_Title}}error{{end}}">
-				<label for="ssh-key-capability">{{ctx.Locale.Tr "settings.key_capability"}}</label>
-				<div class="ui selection type dropdown">
-					<input type="hidden" id="ssh-key-capability" name="capability" value="{{or .capability "auth"}}" required>
-					<div class="text"></div>
-					{{svg "octicon-triangle-down" 14 "dropdown icon"}}
-					<div class="menu">
-						<div class="item" data-value="auth">{{ctx.Locale.Tr "settings.key_capability_auth"}}</div>
-						<div class="item" data-value="sign">{{ctx.Locale.Tr "settings.key_capability_sign"}}</div>
+				<label for="visibility">{{ctx.Locale.Tr "settings.key_capability"}}</label>
+				<div class="field">
+					<div class="ui radio checkbox">
+						<input class="enable-system-radio" name="capability" type="radio" value="auth" {{if eq .capability "auth"}}checked{{end}}>
+						<label>{{ctx.Locale.Tr "settings.key_capability_auth"}}</label>
+						<p>{{ctx.Locale.Tr "settings.key_capability_auth_desc"}}</p>
+					</div>
+				</div>
+				<div class="field">
+					<div class="ui radio checkbox">
+						<input class="enable-system-radio" name="capability" type="radio" value="sign" {{if eq .capability "sign"}}checked{{end}}>
+						<label>{{ctx.Locale.Tr "settings.key_capability_sign"}}</label>
+						<p>{{ctx.Locale.Tr "settings.key_capability_sign_desc"}}</p>
 					</div>
 				</div>
 			</div>
