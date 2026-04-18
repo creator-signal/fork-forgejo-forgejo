@@ -1148,17 +1148,17 @@ func ListActionArtifacts(ctx *context.APIContext) {
 		ArtifactName: ctx.FormString("name"),
 	}
 
-	arts, total, err := actions_model.ListUploadedArtifactsMetaWithID(ctx, opts)
+	arts, total, err := actions_model.ListAggregatedArtifacts(ctx, opts)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "ListUploadedArtifactsMetaWithID", err)
+		ctx.Error(http.StatusInternalServerError, "ListAggregatedArtifacts", err)
 		return
 	}
 
-	repoAPILink := fmt.Sprintf("%sapi/v1/repos/%s/%s", setting.AppURL, url.PathEscape(ctx.Repo.Owner.Name), url.PathEscape(ctx.Repo.Repository.Name))
+	repoAPIURL := ctx.Repo.Repository.APIURL()
 
 	entries := make([]*api.ActionArtifact, len(arts))
 	for i, art := range arts {
-		entries[i] = convert.ToActionArtifact(repoAPILink, art)
+		entries[i] = convert.ToActionArtifact(repoAPIURL, art)
 	}
 
 	ctx.SetLinkHeader(int(total), opts.PageSize)
@@ -1233,17 +1233,17 @@ func ListActionRunArtifacts(ctx *context.APIContext) {
 		ArtifactName: ctx.FormString("name"),
 	}
 
-	arts, total, err := actions_model.ListUploadedArtifactsMetaWithID(ctx, opts)
+	arts, total, err := actions_model.ListAggregatedArtifacts(ctx, opts)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "ListUploadedArtifactsMetaWithID", err)
+		ctx.Error(http.StatusInternalServerError, "ListAggregatedArtifacts", err)
 		return
 	}
 
-	repoAPILink := fmt.Sprintf("%sapi/v1/repos/%s/%s", setting.AppURL, url.PathEscape(ctx.Repo.Owner.Name), url.PathEscape(ctx.Repo.Repository.Name))
+	repoAPIURL := ctx.Repo.Repository.APIURL()
 
 	entries := make([]*api.ActionArtifact, len(arts))
 	for i, art := range arts {
-		entries[i] = convert.ToActionArtifact(repoAPILink, art)
+		entries[i] = convert.ToActionArtifact(repoAPIURL, art)
 	}
 
 	ctx.SetLinkHeader(int(total), opts.PageSize)
@@ -1285,22 +1285,21 @@ func GetActionArtifact(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	meta, err := actions_model.GetArtifactMetaByID(ctx, ctx.ParamsInt64(":artifact_id"))
+	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.ParamsInt64(":artifact_id"))
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
-			ctx.Error(http.StatusNotFound, "GetArtifactMetaByID", err)
+			ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", err)
 		} else {
-			ctx.Error(http.StatusInternalServerError, "GetArtifactMetaByID", err)
+			ctx.Error(http.StatusInternalServerError, "GetAggregatedArtifactByID", err)
 		}
 		return
 	}
 	if meta.RepoID != ctx.Repo.Repository.ID {
-		ctx.Error(http.StatusNotFound, "GetArtifactMetaByID", util.ErrNotExist)
+		ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", util.ErrNotExist)
 		return
 	}
 
-	repoAPILink := fmt.Sprintf("%sapi/v1/repos/%s/%s", setting.AppURL, url.PathEscape(ctx.Repo.Owner.Name), url.PathEscape(ctx.Repo.Repository.Name))
-	ctx.JSON(http.StatusOK, convert.ToActionArtifact(repoAPILink, meta))
+	ctx.JSON(http.StatusOK, convert.ToActionArtifact(ctx.Repo.Repository.APIURL(), meta))
 }
 
 // DownloadActionArtifact download an artifact by its ID
@@ -1337,17 +1336,17 @@ func DownloadActionArtifact(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	meta, err := actions_model.GetArtifactMetaByID(ctx, ctx.ParamsInt64(":artifact_id"))
+	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.ParamsInt64(":artifact_id"))
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
-			ctx.Error(http.StatusNotFound, "GetArtifactMetaByID", err)
+			ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", err)
 		} else {
-			ctx.Error(http.StatusInternalServerError, "GetArtifactMetaByID", err)
+			ctx.Error(http.StatusInternalServerError, "GetAggregatedArtifactByID", err)
 		}
 		return
 	}
 	if meta.RepoID != ctx.Repo.Repository.ID {
-		ctx.Error(http.StatusNotFound, "GetArtifactMetaByID", util.ErrNotExist)
+		ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", util.ErrNotExist)
 		return
 	}
 
@@ -1370,7 +1369,7 @@ func DownloadActionArtifact(ctx *context.APIContext) {
 	}
 
 	// V4 backend: single zip file
-	if len(artifacts) == 1 && artifacts[0].ArtifactName+".zip" == artifacts[0].ArtifactPath && artifacts[0].ContentEncoding == "application/zip" {
+	if len(artifacts) == 1 && artifacts[0].IsV4() {
 		art := artifacts[0]
 		if setting.Actions.ArtifactStorage.MinioConfig.ServeDirect {
 			u, err := storage.ActionsArtifacts.URL(art.StoragePath, art.ArtifactPath, nil)
@@ -1457,17 +1456,17 @@ func DeleteActionArtifact(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	meta, err := actions_model.GetArtifactMetaByID(ctx, ctx.ParamsInt64(":artifact_id"))
+	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.ParamsInt64(":artifact_id"))
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
-			ctx.Error(http.StatusNotFound, "GetArtifactMetaByID", err)
+			ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", err)
 		} else {
-			ctx.Error(http.StatusInternalServerError, "GetArtifactMetaByID", err)
+			ctx.Error(http.StatusInternalServerError, "GetAggregatedArtifactByID", err)
 		}
 		return
 	}
 	if meta.RepoID != ctx.Repo.Repository.ID {
-		ctx.Error(http.StatusNotFound, "GetArtifactMetaByID", util.ErrNotExist)
+		ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", util.ErrNotExist)
 		return
 	}
 

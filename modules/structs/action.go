@@ -89,7 +89,7 @@ type ListActionRunResponse struct {
 	TotalCount int64        `json:"total_count"`
 }
 
-// ActionArtifact represents an artifact of an action run
+// ActionArtifact represents an artifact of a workflow run
 // swagger:model
 type ActionArtifact struct {
 	// the artifact's ID
@@ -103,7 +103,7 @@ type ActionArtifact struct {
 	// whether the artifact has expired
 	Expired bool `json:"expired"`
 	// the ID of the workflow run that produced this artifact
-	WorkflowRunID int64 `json:"workflow_run_backend_id"`
+	RunID int64 `json:"run_id"`
 	// swagger:strfmt date-time
 	CreatedAt time.Time `json:"created_at"`
 	// swagger:strfmt date-time

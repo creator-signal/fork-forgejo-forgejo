@@ -5,7 +5,6 @@ package convert
 
 import (
 	"context"
-	"fmt"
 
 	actions_model "forgejo.org/models/actions"
 	access_model "forgejo.org/models/perm/access"
@@ -49,18 +48,19 @@ func ToActionRun(ctx context.Context, run *actions_model.ActionRun, doer *user_m
 	}
 }
 
-// ToActionArtifact converts an ActionArtifactMetaWithID to an API ActionArtifact
-func ToActionArtifact(repoAPILink string, meta *actions_model.ActionArtifactMetaWithID) *api.ActionArtifact {
+// ToActionArtifact converts an AggregatedArtifact to an API ActionArtifact.
+// repoAPIURL is the API URL prefix for the repository (e.g. from Repository.APIURL()).
+func ToActionArtifact(repoAPIURL string, art *actions_model.AggregatedArtifact) *api.ActionArtifact {
 	return &api.ActionArtifact{
-		ID:                 meta.ID,
-		Name:               meta.ArtifactName,
-		SizeInBytes:        meta.FileSize,
-		ArchiveDownloadURL: fmt.Sprintf("%s/actions/artifacts/%d/zip", repoAPILink, meta.ID),
-		Expired:            meta.Status == actions_model.ArtifactStatusExpired,
-		WorkflowRunID:      meta.RunID,
-		CreatedAt:          meta.CreatedUnix.AsTime(),
-		UpdatedAt:          meta.UpdatedUnix.AsTime(),
-		ExpiresAt:          meta.ExpiredUnix.AsTime(),
+		ID:                 art.ID,
+		Name:               art.ArtifactName,
+		SizeInBytes:        art.FileSize,
+		ArchiveDownloadURL: art.APIDownloadURL(repoAPIURL),
+		Expired:            art.Status == actions_model.ArtifactStatusExpired,
+		RunID:              art.RunID,
+		CreatedAt:          art.CreatedUnix.AsTime(),
+		UpdatedAt:          art.UpdatedUnix.AsTime(),
+		ExpiresAt:          art.ExpiredUnix.AsTime(),
 	}
 }
 
