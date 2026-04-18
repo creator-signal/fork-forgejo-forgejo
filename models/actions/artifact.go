@@ -9,6 +9,7 @@ package actions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"forgejo.org/models/db"
@@ -89,6 +90,13 @@ func CreateArtifact(ctx context.Context, t *ActionTask, artifactName, artifactPa
 	return artifact, nil
 }
 
+// IsV4 reports whether the artifact was uploaded via the v4 backend.
+// The v4 backend stores the whole artifact as a single zip file;
+// v1-v3 stores each file as a separate row.
+func (a *ActionArtifact) IsV4() bool {
+	return a.ArtifactName+".zip" == a.ArtifactPath && a.ContentEncoding == "application/zip"
+}
+
 func getArtifactByNameAndPath(ctx context.Context, runID int64, name, fpath string) (*ActionArtifact, error) {
 	var art ActionArtifact
 	has, err := db.GetEngine(ctx).Where("run_id = ? AND artifact_name = ? AND artifact_path = ?", runID, name, fpath).Get(&art)
@@ -151,10 +159,10 @@ type ActionArtifactMeta struct {
 	Status       ArtifactStatus
 }
 
-// ActionArtifactMetaWithID is the aggregated view of a logical artifact
+// AggregatedArtifact is the aggregated view of a logical artifact
 // (one or more rows sharing the same run_id + artifact_name), used by the
 // public API to represent a single artifact to clients.
-type ActionArtifactMetaWithID struct {
+type AggregatedArtifact struct {
 	ID           int64              `xorm:"id"`
 	RunID        int64              `xorm:"run_id"`
 	RepoID       int64              `xorm:"-"` // populated after query
@@ -164,6 +172,12 @@ type ActionArtifactMetaWithID struct {
 	CreatedUnix  timeutil.TimeStamp `xorm:"created_unix"`
 	UpdatedUnix  timeutil.TimeStamp `xorm:"updated_unix"`
 	ExpiredUnix  timeutil.TimeStamp `xorm:"expired_unix"`
+}
+
+// APIDownloadURL returns the download URL for this artifact under the given
+// repository API URL prefix (e.g. "https://host/api/v1/repos/owner/name").
+func (a *AggregatedArtifact) APIDownloadURL(repoAPIURL string) string {
+	return fmt.Sprintf("%s/actions/artifacts/%d/zip", repoAPIURL, a.ID)
 }
 
 // ListUploadedArtifactsMeta returns all uploaded artifacts meta of a run
@@ -225,12 +239,12 @@ func artifactMetaBaseSess(engine db.Engine, opts FindArtifactsOptions) *xorm.Ses
 	return sess
 }
 
-// ListUploadedArtifactsMetaWithID returns paginated aggregated artifact metadata.
+// ListAggregatedArtifacts returns paginated aggregated artifacts.
 // Each result represents one logical artifact: a (run_id, artifact_name) group,
 // with ID = MIN(id), FileSize = SUM(file_size), Status = MAX(status), and
 // timestamps aggregated accordingly. Status filter in opts is ignored; results
 // are always restricted to UploadConfirmed and Expired statuses.
-func ListUploadedArtifactsMetaWithID(ctx context.Context, opts FindArtifactsOptions) ([]*ActionArtifactMetaWithID, int64, error) {
+func ListAggregatedArtifacts(ctx context.Context, opts FindArtifactsOptions) ([]*AggregatedArtifact, int64, error) {
 	e := db.GetEngine(ctx)
 
 	// Count total groups (each run_id + artifact_name pair is one logical artifact)
@@ -257,12 +271,12 @@ func ListUploadedArtifactsMetaWithID(ctx context.Context, opts FindArtifactsOpti
 		capacity = opts.PageSize
 	}
 
-	arts := make([]*ActionArtifactMetaWithID, 0, capacity)
+	arts := make([]*AggregatedArtifact, 0, capacity)
 	return arts, total, sess.OrderBy("id DESC").Find(&arts)
 }
 
-// GetArtifactMetaByID returns the aggregated artifact metadata by its canonical ID (MIN(id) of the group)
-func GetArtifactMetaByID(ctx context.Context, artifactID int64) (*ActionArtifactMetaWithID, error) {
+// GetAggregatedArtifactByID returns the aggregated artifact by its canonical ID (MIN(id) of the group)
+func GetAggregatedArtifactByID(ctx context.Context, artifactID int64) (*AggregatedArtifact, error) {
 	// First, look up the artifact row by ID to get run_id and artifact_name
 	var art ActionArtifact
 	has, err := db.GetEngine(ctx).ID(artifactID).Get(&art)
@@ -274,7 +288,7 @@ func GetArtifactMetaByID(ctx context.Context, artifactID int64) (*ActionArtifact
 	}
 
 	// Now aggregate all rows with the same run_id + artifact_name
-	meta := new(ActionArtifactMetaWithID)
+	meta := new(AggregatedArtifact)
 	has, err = db.GetEngine(ctx).Table("action_artifact").
 		Where("run_id = ? AND artifact_name = ? AND (status = ? OR status = ?)",
 			art.RunID, art.ArtifactName, ArtifactStatusUploadConfirmed, ArtifactStatusExpired).
