@@ -119,7 +119,7 @@ func (l *locale) LookupNewStyleMessage(trKey string) string {
 	return ""
 }
 
-func (l *locale) LookupPluralByCount(trKey string, count any, isBaseLang bool) string {
+func (l *locale) LookupPluralByCount(trKey string, count any, isDefaultLang bool) string {
 	n, err := util.ToInt64(count)
 	if err != nil {
 		log.Error("Invalid plural count '%s'", count)
@@ -127,10 +127,10 @@ func (l *locale) LookupPluralByCount(trKey string, count any, isBaseLang bool) s
 	}
 
 	pluralForm := l.pluralRule(n)
-	return l.LookupPluralByForm(trKey, pluralForm, isBaseLang)
+	return l.LookupPluralByForm(trKey, pluralForm, isDefaultLang)
 }
 
-func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex, isBaseLang bool) string {
+func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex, isDefaultLang bool) string {
 	suffix := ""
 	switch pluralForm {
 	case PluralFormZero:
@@ -158,7 +158,7 @@ func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex, is
 	// Severify depends on the lang. A missing string in default lang will affect
 	// all translations, while community translations may just be incomplete
 	logFunc := log.Info
-	if isBaseLang {
+	if isDefaultLang {
 		logFunc = log.Error
 	}
 
