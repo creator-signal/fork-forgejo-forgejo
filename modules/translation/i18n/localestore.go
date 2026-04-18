@@ -162,7 +162,7 @@ func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex, is
 		logFunc = log.Error
 	}
 
-	logFunc("Missing translation for plural form %s", suffix)
+	logFunc("Missing translation for key `%[1]s`, plural form `%[2]s`", trKey, suffix)
 	return ""
 }
 
