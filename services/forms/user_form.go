@@ -332,8 +332,9 @@ func (f *AddOpenIDForm) Validate(req *http.Request, errs binding.Errors) binding
 type KeyCapability string
 
 const (
-	CapabilityAuth KeyCapability = "auth"
-	CapabilitySign KeyCapability = "sign"
+	CapabilityAuth        KeyCapability = "auth"
+	CapabilitySign        KeyCapability = "sign"
+	CapabilityAuthAndSign KeyCapability = "auth_and_sign"
 )
 
 // AddKeyForm form for adding SSH/GPG key
@@ -345,7 +346,7 @@ type AddKeyForm struct {
 	KeyID       string        `binding:"OmitEmpty"`
 	SSHKeyID    int64         `binding:"OmitEmpty"`
 	Fingerprint string        `binding:"OmitEmpty"`
-	Capability  KeyCapability `binding:"OmitEmpty;In(auth,sign)"`
+	Capability  KeyCapability `binding:"OmitEmpty;In(auth,sign,auth_and_sign)"`
 	IsWritable  bool
 }
 

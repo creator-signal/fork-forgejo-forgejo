@@ -180,14 +180,27 @@ func KeysPost(ctx *context.Context) {
 			return
 		}
 
+		auth, sign := false, false
+
 		switch form.Capability {
 		case forms.CapabilitySign:
-			_, err = asymkey_model.AddPublicSigningKey(ctx, ctx.Doer.ID, form.Title, content)
+			sign = true
 		case forms.CapabilityAuth:
-			_, err = asymkey_model.AddPublicKey(ctx, ctx.Doer.ID, form.Title, content, 0)
+			auth = true
+		case forms.CapabilityAuthAndSign:
+			auth = true
+			sign = true
 		default:
 			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", "capability must be given for ssh keys"))
 			return
+		}
+
+		if sign {
+			_, err = asymkey_model.AddPublicSigningKey(ctx, ctx.Doer.ID, form.Title, content)
+		}
+
+		if err == nil && auth {
+			_, err = asymkey_model.AddPublicKey(ctx, ctx.Doer.ID, form.Title, content, 0)
 		}
 
 		if err != nil {

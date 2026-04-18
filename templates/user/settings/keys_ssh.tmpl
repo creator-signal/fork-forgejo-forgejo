@@ -13,23 +13,30 @@
 				<label for="ssh-key-title">{{ctx.Locale.Tr "settings.key_name"}}</label>
 				<input id="ssh-key-title" name="title" value="{{.title}}" autofocus required maxlength="50">
 			</div>
-			<div class="field {{if .Err_Title}}error{{end}}">
-				<label for="visibility">{{ctx.Locale.Tr "settings.key_capability"}}</label>
+			<fieldset id="ssh-key-capability" class="field {{if .Err_Title}}error{{end}}">
+				<label for="ssh-key-capability">{{ctx.Locale.Tr "settings.key_capability"}}</label>
 				<div class="field">
 					<div class="ui radio checkbox">
-						<input class="enable-system-radio" name="capability" type="radio" value="auth" {{if eq .capability "auth"}}checked{{end}}>
+						<input required class="enable-system-radio" name="capability" type="radio" value="auth" {{if eq .capability "auth"}}checked{{end}}>
 						<label>{{ctx.Locale.Tr "settings.key_capability_auth"}}</label>
 						<p>{{ctx.Locale.Tr "settings.key_capability_auth_desc"}}</p>
 					</div>
 				</div>
 				<div class="field">
 					<div class="ui radio checkbox">
-						<input class="enable-system-radio" name="capability" type="radio" value="sign" {{if eq .capability "sign"}}checked{{end}}>
+						<input required class="enable-system-radio" name="capability" type="radio" value="sign" {{if eq .capability "sign"}}checked{{end}}>
 						<label>{{ctx.Locale.Tr "settings.key_capability_sign"}}</label>
 						<p>{{ctx.Locale.Tr "settings.key_capability_sign_desc"}}</p>
 					</div>
 				</div>
-			</div>
+				<div class="field">
+					<div class="ui radio checkbox">
+						<input required class="enable-system-radio" name="capability" type="radio" value="auth_and_sign" {{if eq .capability "auth_and_auth_and_sign"}}checked{{end}}>
+						<label>{{ctx.Locale.Tr "settings.key_capability_auth_and_sign"}}</label>
+						<p>{{ctx.Locale.Tr "settings.key_capability_auth_and_sign_desc"}}</p>
+					</div>
+				</div>
+			</fieldset>
 			<div class="field {{if .Err_Content}}error{{end}}">
 				<label for="ssh-key-content">{{ctx.Locale.Tr "settings.key_content"}}</label>
 				<textarea id="ssh-key-content" name="content" class="js-quick-submit" placeholder="{{ctx.Locale.Tr "settings.key_content_ssh_placeholder"}}" required>{{.content}}</textarea>
