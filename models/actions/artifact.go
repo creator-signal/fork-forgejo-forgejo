@@ -17,7 +17,6 @@ import (
 	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
-	"xorm.io/xorm"
 )
 
 // ArtifactStatus is the status of an artifact, uploading, expired or need-delete
@@ -165,7 +164,7 @@ type ActionArtifactMeta struct {
 type AggregatedArtifact struct {
 	ID           int64              `xorm:"id"`
 	RunID        int64              `xorm:"run_id"`
-	RepoID       int64              `xorm:"-"` // populated after query
+	RepoID       int64              `xorm:"-"`
 	ArtifactName string             `xorm:"artifact_name"`
 	FileSize     int64              `xorm:"file_size"`
 	Status       ArtifactStatus     `xorm:"status"`
@@ -184,7 +183,7 @@ func (a *AggregatedArtifact) APIDownloadURL(repoAPIURL string) string {
 func ListUploadedArtifactsMeta(ctx context.Context, runID int64) ([]*ActionArtifactMeta, error) {
 	arts := make([]*ActionArtifactMeta, 0, 10)
 	return arts, db.GetEngine(ctx).Table("action_artifact").
-		Where("run_id=? AND (status=? OR status=?)", runID, ArtifactStatusUploadConfirmed, ArtifactStatusExpired).
+		Where(builder.Eq{"run_id": runID}.And(builder.In("status", ArtifactStatusUploadConfirmed, ArtifactStatusExpired))).
 		GroupBy("artifact_name").
 		Select("artifact_name, sum(file_size) as file_size, max(status) as status").
 		Find(&arts)
@@ -223,21 +222,15 @@ func SetArtifactDeleted(ctx context.Context, artifactID int64) error {
 	return err
 }
 
-func artifactMetaBaseSess(engine db.Engine, opts FindArtifactsOptions) *xorm.Session {
-	sess := engine.Table("action_artifact").
-		Where("status = ? OR status = ?", ArtifactStatusUploadConfirmed, ArtifactStatusExpired)
-
-	if opts.RepoID > 0 {
-		sess = sess.And("repo_id = ?", opts.RepoID)
-	}
-	if opts.RunID > 0 {
-		sess = sess.And("run_id = ?", opts.RunID)
-	}
-	if opts.ArtifactName != "" {
-		sess = sess.And("artifact_name = ?", opts.ArtifactName)
-	}
-	return sess
+// aggregatedArtifactConds returns the common WHERE clause used by aggregated
+// artifact queries: restrict to visible statuses and apply the caller's filters.
+// The Status field on opts is ignored — visibility is fixed to UploadConfirmed/Expired.
+func aggregatedArtifactConds(opts FindArtifactsOptions) builder.Cond {
+	opts.Status = 0
+	return opts.ToConds().And(builder.In("status", ArtifactStatusUploadConfirmed, ArtifactStatusExpired))
 }
+
+const aggregatedArtifactSelect = "min(id) as id, run_id, artifact_name, sum(file_size) as file_size, max(status) as status, min(created_unix) as created_unix, max(updated_unix) as updated_unix, max(expired_unix) as expired_unix"
 
 // ListAggregatedArtifacts returns paginated aggregated artifacts.
 // Each result represents one logical artifact: a (run_id, artifact_name) group,
@@ -245,25 +238,25 @@ func artifactMetaBaseSess(engine db.Engine, opts FindArtifactsOptions) *xorm.Ses
 // timestamps aggregated accordingly. Status filter in opts is ignored; results
 // are always restricted to UploadConfirmed and Expired statuses.
 func ListAggregatedArtifacts(ctx context.Context, opts FindArtifactsOptions) ([]*AggregatedArtifact, int64, error) {
-	e := db.GetEngine(ctx)
+	cond := aggregatedArtifactConds(opts)
 
-	// Count total groups (each run_id + artifact_name pair is one logical artifact)
-	type countResult struct {
+	var countKeys []struct {
 		ID int64 `xorm:"id"`
 	}
-	countResults := make([]*countResult, 0)
-	if err := artifactMetaBaseSess(e, opts).
+	if err := db.GetEngine(ctx).Table("action_artifact").
+		Where(cond).
 		GroupBy("run_id, artifact_name").
 		Select("min(id) as id").
-		Find(&countResults); err != nil {
+		Find(&countKeys); err != nil {
 		return nil, 0, err
 	}
-	total := int64(len(countResults))
+	total := int64(len(countKeys))
 
-	// Fetch paginated results
-	sess := artifactMetaBaseSess(e, opts).
+	sess := db.GetEngine(ctx).Table("action_artifact").
+		Where(cond).
 		GroupBy("run_id, artifact_name").
-		Select("min(id) as id, run_id, artifact_name, sum(file_size) as file_size, max(status) as status, min(created_unix) as created_unix, max(updated_unix) as updated_unix, max(expired_unix) as expired_unix")
+		Select(aggregatedArtifactSelect).
+		OrderBy("id DESC")
 
 	capacity := 10
 	if opts.PageSize > 0 {
@@ -272,14 +265,16 @@ func ListAggregatedArtifacts(ctx context.Context, opts FindArtifactsOptions) ([]
 	}
 
 	arts := make([]*AggregatedArtifact, 0, capacity)
-	return arts, total, sess.OrderBy("id DESC").Find(&arts)
+	return arts, total, sess.Find(&arts)
 }
 
-// GetAggregatedArtifactByID returns the aggregated artifact by its canonical ID (MIN(id) of the group)
-func GetAggregatedArtifactByID(ctx context.Context, artifactID int64) (*AggregatedArtifact, error) {
-	// First, look up the artifact row by ID to get run_id and artifact_name
+// GetAggregatedArtifactByID returns the aggregated artifact by its canonical ID
+// (MIN(id) of the group), scoped to the given repository. Returns util.ErrNotExist
+// when the ID does not exist, is not canonical for its group, or does not belong to repoID.
+// The repoID scoping is performed in the query so callers don't need a follow-up check.
+func GetAggregatedArtifactByID(ctx context.Context, repoID, artifactID int64) (*AggregatedArtifact, error) {
 	var art ActionArtifact
-	has, err := db.GetEngine(ctx).ID(artifactID).Get(&art)
+	has, err := db.GetEngine(ctx).Where(builder.Eq{"id": artifactID, "repo_id": repoID}).Get(&art)
 	if err != nil {
 		return nil, err
 	}
@@ -287,23 +282,21 @@ func GetAggregatedArtifactByID(ctx context.Context, artifactID int64) (*Aggregat
 		return nil, util.ErrNotExist
 	}
 
-	// Now aggregate all rows with the same run_id + artifact_name
+	cond := aggregatedArtifactConds(FindArtifactsOptions{
+		RunID:        art.RunID,
+		ArtifactName: art.ArtifactName,
+	})
+
 	meta := new(AggregatedArtifact)
 	has, err = db.GetEngine(ctx).Table("action_artifact").
-		Where("run_id = ? AND artifact_name = ? AND (status = ? OR status = ?)",
-			art.RunID, art.ArtifactName, ArtifactStatusUploadConfirmed, ArtifactStatusExpired).
-		Select("min(id) as id, run_id, artifact_name, sum(file_size) as file_size, max(status) as status, min(created_unix) as created_unix, max(updated_unix) as updated_unix, max(expired_unix) as expired_unix").
+		Where(cond).
 		GroupBy("run_id, artifact_name").
+		Select(aggregatedArtifactSelect).
 		Get(meta)
 	if err != nil {
 		return nil, err
 	}
-	if !has {
-		return nil, util.ErrNotExist
-	}
-
-	// Verify the canonical ID matches — the queried artifact_id must be the MIN(id) of its group
-	if meta.ID != artifactID {
+	if !has || meta.ID != artifactID {
 		return nil, util.ErrNotExist
 	}
 

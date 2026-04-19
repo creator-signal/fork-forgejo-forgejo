@@ -1285,17 +1285,13 @@ func GetActionArtifact(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.ParamsInt64(":artifact_id"))
+	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":artifact_id"))
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", err)
 		} else {
 			ctx.Error(http.StatusInternalServerError, "GetAggregatedArtifactByID", err)
 		}
-		return
-	}
-	if meta.RepoID != ctx.Repo.Repository.ID {
-		ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", util.ErrNotExist)
 		return
 	}
 
@@ -1336,17 +1332,13 @@ func DownloadActionArtifact(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.ParamsInt64(":artifact_id"))
+	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":artifact_id"))
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", err)
 		} else {
 			ctx.Error(http.StatusInternalServerError, "GetAggregatedArtifactByID", err)
 		}
-		return
-	}
-	if meta.RepoID != ctx.Repo.Repository.ID {
-		ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", util.ErrNotExist)
 		return
 	}
 
@@ -1456,17 +1448,13 @@ func DeleteActionArtifact(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.ParamsInt64(":artifact_id"))
+	meta, err := actions_model.GetAggregatedArtifactByID(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":artifact_id"))
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", err)
 		} else {
 			ctx.Error(http.StatusInternalServerError, "GetAggregatedArtifactByID", err)
 		}
-		return
-	}
-	if meta.RepoID != ctx.Repo.Repository.ID {
-		ctx.Error(http.StatusNotFound, "GetAggregatedArtifactByID", util.ErrNotExist)
 		return
 	}
 
