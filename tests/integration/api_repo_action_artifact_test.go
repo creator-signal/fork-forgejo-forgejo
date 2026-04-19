@@ -161,6 +161,48 @@ func TestAPIGetActionArtifact(t *testing.T) {
 		req.AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
 	})
+
+	t.Run("GetFromWrongRepository", func(t *testing.T) {
+		// artifact id=22 belongs to user5/repo4; requesting it through a repo
+		// the caller can access but that doesn't own the artifact must 404 —
+		// this is the load-bearing check that caller-side RepoID was replaced
+		// by a query-side constraint.
+		otherRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+		otherUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: otherRepo.OwnerID})
+		otherToken := getUserToken(t, otherUser.LowerName, auth_model.AccessTokenScopeReadRepository)
+
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/artifacts/22", otherRepo.OwnerName, otherRepo.Name),
+		)
+		req.AddTokenAuth(otherToken)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+}
+
+func TestAPIActionArtifactsRequireRepoScope(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	wrongScopeToken := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeReadNotification)
+
+	endpoints := []struct {
+		name string
+		path string
+	}{
+		{"list repo", fmt.Sprintf("/api/v1/repos/%s/%s/actions/artifacts", repo.OwnerName, repo.Name)},
+		{"list run", fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/791/artifacts", repo.OwnerName, repo.Name)},
+		{"get", fmt.Sprintf("/api/v1/repos/%s/%s/actions/artifacts/19", repo.OwnerName, repo.Name)},
+		{"download", fmt.Sprintf("/api/v1/repos/%s/%s/actions/artifacts/19/zip", repo.OwnerName, repo.Name)},
+	}
+
+	for _, ep := range endpoints {
+		t.Run(ep.name, func(t *testing.T) {
+			req := NewRequest(t, http.MethodGet, ep.path)
+			req.AddTokenAuth(wrongScopeToken)
+			MakeRequest(t, req, http.StatusForbidden)
+		})
+	}
 }
 
 func TestAPIDownloadActionArtifact(t *testing.T) {
