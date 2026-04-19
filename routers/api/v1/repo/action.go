@@ -1355,7 +1355,7 @@ func DownloadActionArtifact(ctx *context.APIContext) {
 	// Only confirmed artifacts can be downloaded
 	for _, art := range artifacts {
 		if art.Status != int64(actions_model.ArtifactStatusUploadConfirmed) {
-			ctx.Error(http.StatusNotFound, "DownloadActionArtifact", fmt.Errorf("artifact not confirmed"))
+			ctx.Error(http.StatusNotFound, "DownloadActionArtifact", errors.New("artifact not confirmed"))
 			return
 		}
 	}
@@ -1416,11 +1416,14 @@ func DownloadActionArtifact(ctx *context.APIContext) {
 	}
 }
 
-// DeleteActionArtifact delete an artifact by its ID
+// DeleteActionArtifact marks an artifact for deletion
 func DeleteActionArtifact(ctx *context.APIContext) {
 	// swagger:operation DELETE /repos/{owner}/{repo}/actions/artifacts/{artifact_id} repository DeleteActionArtifact
 	// ---
-	// summary: Delete an artifact
+	// summary: Mark an artifact for deletion
+	// description: |
+	//   Marks the artifact for deletion. Storage space will be reclaimed
+	//   asynchronously by a background job.
 	// parameters:
 	// - name: owner
 	//   in: path
@@ -1440,7 +1443,7 @@ func DeleteActionArtifact(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "204":
-	//     description: artifact deleted
+	//     description: artifact marked for deletion
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "403":
