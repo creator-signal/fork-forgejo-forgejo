@@ -5,25 +5,18 @@
 package repo
 
 import (
-	"archive/zip"
-	"compress/gzip"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	secret_model "forgejo.org/models/secret"
-	"forgejo.org/modules/setting"
-	"forgejo.org/modules/storage"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/shared"
 	"forgejo.org/routers/api/v1/utils"
-	"forgejo.org/routers/common"
 	actions_service "forgejo.org/services/actions"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
@@ -1352,7 +1345,6 @@ func DownloadActionArtifact(ctx *context.APIContext) {
 		return
 	}
 
-	// Only confirmed artifacts can be downloaded
 	for _, art := range artifacts {
 		if art.Status != int64(actions_model.ArtifactStatusUploadConfirmed) {
 			ctx.Error(http.StatusNotFound, "DownloadActionArtifact", errors.New("artifact not confirmed"))
@@ -1360,59 +1352,9 @@ func DownloadActionArtifact(ctx *context.APIContext) {
 		}
 	}
 
-	// V4 backend: single zip file
-	if len(artifacts) == 1 && artifacts[0].IsV4() {
-		art := artifacts[0]
-		if setting.Actions.ArtifactStorage.MinioConfig.ServeDirect {
-			u, err := storage.ActionsArtifacts.URL(art.StoragePath, art.ArtifactPath, nil)
-			if u != nil && err == nil {
-				ctx.Redirect(u.String())
-				return
-			}
-		}
-		f, err := storage.ActionsArtifacts.Open(art.StoragePath)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "OpenArtifact", err)
-			return
-		}
-		common.ServeContentByReadSeeker(ctx.Base, art.ArtifactName+".zip", util.ToPointer(art.UpdatedUnix.AsTime()), f)
+	if err := actions_service.ServeArtifact(ctx.Base, artifacts); err != nil {
+		ctx.Error(http.StatusInternalServerError, "ServeArtifact", err)
 		return
-	}
-
-	// V1-V3 backend: multiple files, create zip on-the-fly
-	artifactName := artifacts[0].ArtifactName
-	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.zip; filename*=UTF-8''%s.zip", url.PathEscape(artifactName), artifactName))
-	writer := zip.NewWriter(ctx.Resp)
-	defer writer.Close()
-	for _, art := range artifacts {
-		f, err := storage.ActionsArtifacts.Open(art.StoragePath)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "OpenArtifact", err)
-			return
-		}
-
-		var r io.ReadCloser
-		if art.ContentEncoding == "gzip" {
-			r, err = gzip.NewReader(f)
-			if err != nil {
-				f.Close()
-				ctx.Error(http.StatusInternalServerError, "GzipReader", err)
-				return
-			}
-		} else {
-			r = f
-		}
-		defer r.Close()
-
-		w, err := writer.Create(art.ArtifactPath)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "ZipCreate", err)
-			return
-		}
-		if _, err := io.Copy(w, r); err != nil {
-			ctx.Error(http.StatusInternalServerError, "ZipCopy", err)
-			return
-		}
 	}
 }
 
