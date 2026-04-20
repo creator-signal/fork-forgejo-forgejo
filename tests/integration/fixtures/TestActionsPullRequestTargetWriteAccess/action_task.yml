@@ -1,0 +1,10 @@
+- id: 100
+  job_id: 101
+  repo_id: 1
+  status: 6
+  is_fork_pull_request: true
+- id: 200
+  job_id: 201
+  repo_id: 1
+  status: 6
+  is_fork_pull_request: true

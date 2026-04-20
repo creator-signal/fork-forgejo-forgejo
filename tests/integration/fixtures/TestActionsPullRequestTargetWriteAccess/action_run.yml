@@ -1,0 +1,30 @@
+- id: 102
+  title: "test pull_request"
+  repo_id: 1
+  owner_id: 2
+  workflow_id: "test.yaml"
+  index: 900
+  trigger_user_id: 2
+  ref: "refs/heads/master"
+  commit_sha: "c2d72f548424103f01ee1dc02889c1e2bff816b0"
+  event: "pull_request"
+  trigger_event: "pull_request"
+  is_fork_pull_request: true
+  status: 6
+  started: 1683636528
+  created: 1683636108
+- id: 202
+  title: "test pull_request_target"
+  repo_id: 1
+  owner_id: 2
+  workflow_id: "test.yaml"
+  index: 901
+  trigger_user_id: 2
+  ref: "refs/heads/master"
+  commit_sha: "c2d72f548424103f01ee1dc02889c1e2bff816b0"
+  event: "pull_request_target"
+  trigger_event: "pull_request_target"
+  is_fork_pull_request: true
+  status: 6
+  started: 1683636528
+  created: 1683636108

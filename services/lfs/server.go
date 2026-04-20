@@ -551,7 +551,7 @@ func authenticate(ctx *context.Context, repository *repo_model.Repository, autho
 
 		writeAccess, err := task.HasWriteAccess(ctx)
 		if err != nil {
-			log.Error("Unable to HasWriteAccess for task[%d] Error: %v", taskID, err)
+			log.Error("Unable to determine if task %d has write access because HasWriteAccess failed with error: %v", taskID, err)
 			return false
 		}
 		if !writeAccess {

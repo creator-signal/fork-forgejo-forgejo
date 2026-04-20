@@ -1,3 +1,6 @@
+// Copyright 2026 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package integration
 
 import (
@@ -17,40 +20,13 @@ import (
 )
 
 func TestActionsPullRequestTargetWriteAccess(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestActionsPullRequestTargetWriteAccess")()
 	defer tests.PrepareTestEnv(t)()
 
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 100})
+	require.NoError(t, task.LoadAttributes(db.DefaultContext))
 
-	run := &actions_model.ActionRun{
-		Title:             "test run",
-		RepoID:            repo.ID,
-		OwnerID:           repo.OwnerID,
-		TriggerUserID:     repo.OwnerID,
-		WorkflowID:        "test.yml",
-		TriggerEvent:      "pull_request",
-		IsForkPullRequest: true,
-	}
-	require.NoError(t, db.Insert(db.DefaultContext, run))
-
-	job := &actions_model.ActionRunJob{
-		RunID:             run.ID,
-		RepoID:            repo.ID,
-		Name:              "test job",
-		Attempt:           1,
-		IsForkPullRequest: true,
-	}
-	require.NoError(t, db.Insert(db.DefaultContext, job))
-
-	task := &actions_model.ActionTask{
-		JobID:             job.ID,
-		RepoID:            repo.ID,
-		Status:            actions_model.StatusRunning,
-		IsForkPullRequest: true,
-	}
-	require.NoError(t, db.Insert(db.DefaultContext, task))
-
-	task.Job = job
-	task.Job.Run = run
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: task.RepoID})
 
 	token, err := actions.CreateAuthorizationToken(task, nil, false)
 	require.NoError(t, err)
@@ -61,17 +37,19 @@ func TestActionsPullRequestTargetWriteAccess(t *testing.T) {
 		Name:  "test-label-action-pr",
 		Color: "#000000",
 	})
-	req1.Header.Set("Authorization", "Bearer "+token)
+	req1.AddTokenAuth(token)
 	MakeRequest(t, req1, http.StatusForbidden)
 
-	run.TriggerEvent = "pull_request_target"
-	_, err = db.GetEngine(db.DefaultContext).ID(run.ID).Cols("trigger_event").Update(run)
+	taskTarget := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 200})
+	require.NoError(t, taskTarget.LoadAttributes(db.DefaultContext))
+
+	tokenTarget, err := actions.CreateAuthorizationToken(taskTarget, nil, false)
 	require.NoError(t, err)
 
 	req2 := NewRequestWithJSON(t, "POST", urlStr, &api.CreateLabelOption{
 		Name:  "test-label-action-pr-target",
 		Color: "#000000",
 	})
-	req2.Header.Set("Authorization", "Bearer "+token)
+	req2.AddTokenAuth(tokenTarget)
 	MakeRequest(t, req2, http.StatusCreated)
 }
