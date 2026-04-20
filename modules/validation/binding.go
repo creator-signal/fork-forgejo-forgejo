@@ -10,6 +10,7 @@ import (
 
 	"forgejo.org/modules/auth"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 
 	"code.forgejo.org/go-chi/binding"
@@ -33,7 +34,25 @@ const (
 	ErrInvalidQuotaGroupMap = "InvalidQuotaGroupMap"
 	// ErrEmail is returned when an email address is invalid
 	ErrEmail = "Email"
+	// ErrAlphaDashDotPlus is returned when a value contains characters outside
+	// the AlphaDashDot set plus the '+' sign (used for repository names).
+	ErrAlphaDashDotPlus = "AlphaDashDotPlusError"
 )
+
+var (
+	alphaDashDotPattern     = regexp.MustCompile(`^[\w\-\.]*$`)
+	alphaDashDotPlusPattern = regexp.MustCompile(`^[\w\-\.\+]*$`)
+)
+
+// repoNameBindingPattern returns the regex used by the AlphaDashDotPlus
+// binding rule, honoring setting.Repository.AllowPlusInNames. When plus is
+// disabled the rule behaves identically to the standard AlphaDashDot rule.
+func repoNameBindingPattern() *regexp.Regexp {
+	if setting.Repository.AllowPlusInNames {
+		return alphaDashDotPlusPattern
+	}
+	return alphaDashDotPattern
+}
 
 // AddBindingRules adds additional binding rules
 func AddBindingRules() {
@@ -49,6 +68,23 @@ func AddBindingRules() {
 	addValidGroupTeamMapRule()
 	addValidQuotaGroupMapRule()
 	addEmailBindingRules()
+	addAlphaDashDotPlusRule()
+}
+
+func addAlphaDashDotPlusRule() {
+	binding.AddRule(&binding.Rule{
+		IsMatch: func(rule string) bool {
+			return rule == "AlphaDashDotPlus"
+		},
+		IsValid: func(errs binding.Errors, name string, val any) (bool, binding.Errors) {
+			str := fmt.Sprintf("%v", val)
+			if !repoNameBindingPattern().MatchString(str) {
+				errs.Add([]string{name}, ErrAlphaDashDotPlus, "AlphaDashDotPlus")
+				return false, errs
+			}
+			return true, errs
+		},
+	})
 }
 
 func addGitRefNameBindingRule() {

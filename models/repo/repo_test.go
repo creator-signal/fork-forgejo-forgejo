@@ -220,6 +220,32 @@ func TestComposeSSHCloneURL(t *testing.T) {
 	assert.Equal(t, "ssh://git@[::1]:123/user/repo.git", repo_model.ComposeSSHCloneURL("user", "repo"))
 }
 
+func TestIsUsableRepoName(t *testing.T) {
+	defer test.MockVariableValue(&setting.Repository.AllowPlusInNames, setting.Repository.AllowPlusInNames)()
+
+	alwaysRejected := []string{"", ".", "..", "-", "a/b", "a b", "a@b", "a#b", "foo.git", "bar.wiki"}
+
+	t.Run("plus disabled (default)", func(t *testing.T) {
+		setting.Repository.AllowPlusInNames = false
+		for _, name := range []string{"a", "a-b", "a.b", "a_b", "plain-name", "dbus-cpp"} {
+			require.NoError(t, repo_model.IsUsableRepoName(name), "expected %q to be usable", name)
+		}
+		for _, name := range append([]string{"a+b", "c++", "gcc-c++"}, alwaysRejected...) {
+			require.Error(t, repo_model.IsUsableRepoName(name), "expected %q to be rejected", name)
+		}
+	})
+
+	t.Run("plus enabled", func(t *testing.T) {
+		setting.Repository.AllowPlusInNames = true
+		for _, name := range []string{"a", "a-b", "a.b", "a_b", "a+b", "c++", "gcc-c++", "a+b-c.d_e"} {
+			require.NoError(t, repo_model.IsUsableRepoName(name), "expected %q to be usable", name)
+		}
+		for _, name := range alwaysRejected {
+			require.Error(t, repo_model.IsUsableRepoName(name), "expected %q to be rejected", name)
+		}
+	})
+}
+
 func TestAPActorID(t *testing.T) {
 	repo := repo_model.Repository{ID: 1}
 	url := repo.APActorID()

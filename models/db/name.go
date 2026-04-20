@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 )
 
@@ -19,7 +20,20 @@ var (
 
 	// AlphaDashDotPattern characters prohibited in a user name (anything except A-Za-z0-9_.-)
 	AlphaDashDotPattern = regexp.MustCompile(`[^\w-\.]`)
+
+	// AlphaDashDotPlusPattern is AlphaDashDotPattern extended with '+'.
+	// Only used for repository names when setting.Repository.AllowPlusInNames is true.
+	AlphaDashDotPlusPattern = regexp.MustCompile(`[^\w\-\.\+]`)
 )
+
+// RepoNamePattern returns the regex used to validate repository names,
+// switching on setting.Repository.AllowPlusInNames.
+func RepoNamePattern() *regexp.Regexp {
+	if setting.Repository.AllowPlusInNames {
+		return AlphaDashDotPlusPattern
+	}
+	return AlphaDashDotPattern
+}
 
 // ErrNameReserved represents a "reserved name" error.
 type ErrNameReserved struct {

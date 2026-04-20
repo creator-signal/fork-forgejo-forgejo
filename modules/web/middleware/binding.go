@@ -122,6 +122,8 @@ func Validate(errs binding.Errors, data map[string]any, f any, l translation.Loc
 				data["ErrorMsg"] = trName + l.TrString("form.alpha_dash_error")
 			case binding.ERR_ALPHA_DASH_DOT:
 				data["ErrorMsg"] = trName + l.TrString("form.alpha_dash_dot_error")
+			case validation.ErrAlphaDashDotPlus:
+				data["ErrorMsg"] = trName + l.TrString("form.alpha_dash_dot_plus_error")
 			case validation.ErrGitRefName:
 				data["ErrorMsg"] = trName + l.TrString("form.git_ref_name_error")
 			case binding.ERR_SIZE:

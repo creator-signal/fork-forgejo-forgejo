@@ -85,7 +85,8 @@ var (
 		"git-receive-pack":   perm.AccessModeWrite,
 		lfsAuthenticateVerb:  perm.AccessModeNone,
 	}
-	alphaDashDotPattern = regexp.MustCompile(`[^\w-\.]`)
+	alphaDashDotPattern     = regexp.MustCompile(`[^\w\-\.]`)
+	alphaDashDotPlusPattern = regexp.MustCompile(`[^\w\-\.\+]`)
 )
 
 func sshLog(ctx context.Context, level log.Level, message string) error {
@@ -233,7 +234,11 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	// so that username and reponame are not affected.
 	repoPath = strings.ToLower(strings.TrimSpace(repoPath))
 
-	if alphaDashDotPattern.MatchString(reponame) {
+	repoNamePattern := alphaDashDotPattern
+	if setting.Repository.AllowPlusInNames {
+		repoNamePattern = alphaDashDotPlusPattern
+	}
+	if repoNamePattern.MatchString(reponame) {
 		return fail(ctx, "Invalid repo name", "Invalid repo name: %s", reponame)
 	}
 

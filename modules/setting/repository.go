@@ -63,6 +63,7 @@ var (
 		AllowDeleteOfUnadoptedRepositories      bool
 		DisableDownloadSourceArchives           bool
 		AllowForkWithoutMaximumLimit            bool
+		AllowPlusInNames                        bool
 
 		// Repository editor settings
 		Editor struct {
