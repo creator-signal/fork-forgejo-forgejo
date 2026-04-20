@@ -235,21 +235,21 @@ func (d discordConvertor) Push(p *api.PushPayload) (DiscordPayload, error) {
 
 // Issue implements PayloadConvertor Issue method
 func (d discordConvertor) Issue(p *api.IssuePayload) (DiscordPayload, error) {
-	title, _, text, color := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
+	title, _, text, color := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, true)
 
 	return d.createPayload(p.Sender, title, text, p.Issue.HTMLURL, color), nil
 }
 
 // IssueComment implements PayloadConvertor IssueComment method
 func (d discordConvertor) IssueComment(p *api.IssueCommentPayload) (DiscordPayload, error) {
-	title, _, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
+	title, _, color := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, true)
 
 	return d.createPayload(p.Sender, title, p.Comment.Body, p.Comment.HTMLURL, color), nil
 }
 
 // PullRequest implements PayloadConvertor PullRequest method
 func (d discordConvertor) PullRequest(p *api.PullRequestPayload) (DiscordPayload, error) {
-	title, _, text, color := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
+	title, _, text, color := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, true)
 
 	return d.createPayload(p.Sender, title, text, p.PullRequest.HTMLURL, color), nil
 }
@@ -301,7 +301,7 @@ func (d discordConvertor) Repository(p *api.RepositoryPayload) (DiscordPayload, 
 
 // Wiki implements PayloadConvertor Wiki method
 func (d discordConvertor) Wiki(p *api.WikiPayload) (DiscordPayload, error) {
-	text, color, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
+	text, color, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, true, true)
 	htmlLink := p.Repository.HTMLURL + "/wiki/" + url.PathEscape(p.Page)
 
 	var description string
@@ -314,7 +314,7 @@ func (d discordConvertor) Wiki(p *api.WikiPayload) (DiscordPayload, error) {
 
 // Release implements PayloadConvertor Release method
 func (d discordConvertor) Release(p *api.ReleasePayload) (DiscordPayload, error) {
-	text, color := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
+	text, color := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, true)
 
 	return d.createPayload(p.Sender, text, p.Release.Note, p.Release.HTMLURL, color), nil
 }

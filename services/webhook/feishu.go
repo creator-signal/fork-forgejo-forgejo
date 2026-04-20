@@ -174,14 +174,14 @@ func (fc feishuConvertor) Repository(p *api.RepositoryPayload) (FeishuPayload, e
 
 // Wiki implements PayloadConvertor Wiki method
 func (fc feishuConvertor) Wiki(p *api.WikiPayload) (FeishuPayload, error) {
-	text, _, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, _, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true, true, true)
 
 	return newFeishuTextPayload(text), nil
 }
 
 // Release implements PayloadConvertor Release method
 func (fc feishuConvertor) Release(p *api.ReleasePayload) (FeishuPayload, error) {
-	text, _ := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, _ := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, true, true)
 
 	return newFeishuTextPayload(text), nil
 }

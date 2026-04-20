@@ -174,7 +174,7 @@ func (s slackConvertor) Fork(p *api.ForkPayload) (SlackPayload, error) {
 
 // Issue implements payloadConvertor Issue method
 func (s slackConvertor) Issue(p *api.IssuePayload) (SlackPayload, error) {
-	text, issueTitle, attachmentText, color := getIssuesPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, issueTitle, attachmentText, color := getIssuesPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true, true)
 
 	var attachments []SlackAttachment
 	if attachmentText != "" {
@@ -193,7 +193,7 @@ func (s slackConvertor) Issue(p *api.IssuePayload) (SlackPayload, error) {
 
 // IssueComment implements payloadConvertor IssueComment method
 func (s slackConvertor) IssueComment(p *api.IssueCommentPayload) (SlackPayload, error) {
-	text, issueTitle, color := getIssueCommentPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, issueTitle, color := getIssueCommentPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true, true)
 
 	return s.createPayload(text, []SlackAttachment{{
 		Color:     fmt.Sprintf("%x", color),
@@ -205,14 +205,14 @@ func (s slackConvertor) IssueComment(p *api.IssueCommentPayload) (SlackPayload, 
 
 // Wiki implements payloadConvertor Wiki method
 func (s slackConvertor) Wiki(p *api.WikiPayload) (SlackPayload, error) {
-	text, _, _ := getWikiPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, _, _ := getWikiPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true, true, true)
 
 	return s.createPayload(text, nil), nil
 }
 
 // Release implements payloadConvertor Release method
 func (s slackConvertor) Release(p *api.ReleasePayload) (SlackPayload, error) {
-	text, _ := getReleasePayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, _ := getReleasePayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true, true)
 
 	return s.createPayload(text, nil), nil
 }
@@ -265,7 +265,7 @@ func (s slackConvertor) Push(p *api.PushPayload) (SlackPayload, error) {
 
 // PullRequest implements payloadConvertor PullRequest method
 func (s slackConvertor) PullRequest(p *api.PullRequestPayload) (SlackPayload, error) {
-	text, issueTitle, attachmentText, color := getPullRequestPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, issueTitle, attachmentText, color := getPullRequestPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true, true)
 
 	var attachments []SlackAttachment
 	if attachmentText != "" {
