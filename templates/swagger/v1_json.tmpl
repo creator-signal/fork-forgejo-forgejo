@@ -5561,10 +5561,11 @@
         }
       },
       "delete": {
+        "description": "Marks the artifact for deletion. Storage space will be reclaimed\nasynchronously by a background job.\n",
         "tags": [
           "repository"
         ],
-        "summary": "Delete an artifact",
+        "summary": "Mark an artifact for deletion",
         "operationId": "DeleteActionArtifact",
         "parameters": [
           {
@@ -5592,7 +5593,7 @@
         ],
         "responses": {
           "204": {
-            "description": "artifact deleted"
+            "description": "artifact marked for deletion"
           },
           "400": {
             "$ref": "#/responses/error"

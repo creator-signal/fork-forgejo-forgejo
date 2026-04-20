@@ -6,6 +6,7 @@ package actions
 import (
 	"archive/zip"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -29,7 +30,7 @@ import (
 // file rows, applying gzip decompression where needed.
 func ServeArtifact(base *context.Base, artifacts []*actions_model.ActionArtifact) error {
 	if len(artifacts) == 0 {
-		return fmt.Errorf("no artifacts to serve")
+		return errors.New("no artifacts to serve")
 	}
 
 	if len(artifacts) == 1 && artifacts[0].IsV4() {
