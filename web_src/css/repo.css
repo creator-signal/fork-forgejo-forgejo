@@ -239,6 +239,14 @@ td .commit-summary {
 
 .repo-files-table-latest-commit-row td {
   font-weight: var(--font-weight-normal);
+  background: var(--color-box-header);
+  text-align: inherit;
+  color: var(--color-text);
+  padding: 6px 5px;
+  vertical-align: inherit;
+  border-bottom: 1px solid var(--color-secondary);
+  border-left: none;
+  padding-left: 10px;
 }
 
 .repository.file.list #repo-files-table tbody .svg {
