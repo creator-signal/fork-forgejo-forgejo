@@ -249,6 +249,10 @@ td .commit-summary {
   padding-left: 10px;
 }
 
+.repo-files-table-latest-commit-row .commit-summary {
+  white-space: nowrap;
+}
+
 .repository.file.list #repo-files-table tbody .svg {
   margin-left: 3px;
   margin-right: 5px;
