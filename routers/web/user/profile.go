@@ -179,7 +179,7 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 	case "feed":
 		if setting.Federation.Enabled {
 			pagingNum = setting.UI.FeedPagingNum
-			items := make([]*activities_model.FederatedUserActivity, 0)
+			var items []*activities_model.FederatedUserActivity
 			var count int64
 			if ctx.Doer != nil {
 				items, count, err = activities_model.GetFollowingFeeds(ctx,
@@ -367,20 +367,20 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 	if tab == "activity" {
 		pager.AddParam(ctx, "date", "Date")
 	}
-	if archived.Has() {
-		pager.AddParamString("archived", fmt.Sprint(archived.Value()))
+	if has, value := archived.Get(); has {
+		pager.AddParamString("archived", fmt.Sprint(value))
 	}
-	if fork.Has() {
-		pager.AddParamString("fork", fmt.Sprint(fork.Value()))
+	if has, value := fork.Get(); has {
+		pager.AddParamString("fork", fmt.Sprint(value))
 	}
-	if mirror.Has() {
-		pager.AddParamString("mirror", fmt.Sprint(mirror.Value()))
+	if has, value := mirror.Get(); has {
+		pager.AddParamString("mirror", fmt.Sprint(value))
 	}
-	if template.Has() {
-		pager.AddParamString("template", fmt.Sprint(template.Value()))
+	if has, value := template.Get(); has {
+		pager.AddParamString("template", fmt.Sprint(value))
 	}
-	if private.Has() {
-		pager.AddParamString("private", fmt.Sprint(private.Value()))
+	if has, value := private.Get(); has {
+		pager.AddParamString("private", fmt.Sprint(value))
 	}
 	ctx.Data["Page"] = pager
 }

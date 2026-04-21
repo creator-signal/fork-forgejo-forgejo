@@ -99,7 +99,7 @@ func testMirrorPush(t *testing.T, u *url.URL) {
 	})
 	require.NoError(t, err)
 
-	ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+	ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 
 	doCreatePushMirror(ctx, fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(ctx.Username), url.PathEscape(mirrorRepo.Name)), user.LowerName, userPassword)(t)
 	doCreatePushMirror(ctx, fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(ctx.Username), url.PathEscape("does-not-matter")), user.LowerName, userPassword)(t)
@@ -227,14 +227,15 @@ func TestSSHPushMirror(t *testing.T) {
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 		assert.False(t, srcRepo.HasWiki())
 		sess := loginUser(t, user.Name)
+
 		pushToRepo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			Name:         optional.Some("push-mirror-test"),
+			Name:         optional.Some("push-mirror-misc-test"),
 			AutoInit:     optional.Some(false),
 			EnabledUnits: optional.Some([]unit.Type{unit.TypeCode}),
 		})
 		defer f()
-
 		sshURL := fmt.Sprintf("ssh://%s@%s/%s.git", setting.SSH.User, net.JoinHostPort(setting.SSH.ListenHost, strconv.Itoa(setting.SSH.ListenPort)), pushToRepo.FullName())
+
 		t.Run("Mutual exclusive", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
@@ -282,7 +283,17 @@ func TestSSHPushMirror(t *testing.T) {
 			htmlDoc.AssertElement(t, inputSelector, true)
 		})
 
-		t.Run("Normal", func(t *testing.T) {
+		testMirrorPush := func(t *testing.T, srcRepo *repo_model.Repository, expectedSHA string) {
+			t.Helper()
+
+			pushToRepo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
+				Name:         optional.Some("push-mirror-test"),
+				AutoInit:     optional.Some(false),
+				EnabledUnits: optional.Some([]unit.Type{unit.TypeCode}),
+			})
+			defer f()
+			sshURL := fmt.Sprintf("ssh://%s@%s/%s.git", setting.SSH.User, net.JoinHostPort(setting.SSH.ListenHost, strconv.Itoa(setting.SSH.ListenPort)), pushToRepo.FullName())
+
 			var pushMirror *repo_model.PushMirror
 			t.Run("Adding", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -341,20 +352,19 @@ func TestSSHPushMirror(t *testing.T) {
 
 			t.Run("Check mirrored content", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
-				shortSHA := "1032bbf17f"
 
 				req := NewRequest(t, "GET", fmt.Sprintf("/%s", srcRepo.FullName()))
 				resp := sess.MakeRequest(t, req, http.StatusOK)
 				htmlDoc := NewHTMLParser(t, resp.Body)
 
-				assert.Contains(t, htmlDoc.Find(".shortsha").Text(), shortSHA)
+				assert.Contains(t, htmlDoc.Find(".shortsha").Text(), expectedSHA)
 
 				assert.Eventually(t, func() bool {
 					req = NewRequest(t, "GET", fmt.Sprintf("/%s", pushToRepo.FullName()))
 					resp = sess.MakeRequest(t, req, NoExpectedStatus)
 					htmlDoc = NewHTMLParser(t, resp.Body)
 
-					return resp.Code == http.StatusOK && htmlDoc.Find(".shortsha").Text() == shortSHA
+					return resp.Code == http.StatusOK && htmlDoc.Find(".shortsha").Text() == expectedSHA
 				}, time.Second*30, time.Second)
 			})
 
@@ -369,6 +379,17 @@ func TestSSHPushMirror(t *testing.T) {
 
 				assert.Contains(t, string(knownHosts), string(publicKey))
 			})
+		}
+
+		t.Run("Normal", func(t *testing.T) {
+			testMirrorPush(t, srcRepo, "1032bbf17f")
+		})
+
+		t.Run("LFS", func(t *testing.T) {
+			defer test.MockVariableValue(&setting.LFS.StartServer, true)()
+
+			srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 54})
+			testMirrorPush(t, srcRepo, "e9c32647ba")
 		})
 	})
 }
@@ -386,7 +407,7 @@ func TestPushMirrorBranchFilterWebUI(t *testing.T) {
 		mirrorRepo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit.Type{unit.TypeCode}, nil, nil)
 		defer f()
 
-		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 		ctx.Session = sess
 		remoteAddress := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo.Name))
 
@@ -485,7 +506,7 @@ func TestPushMirrorBranchFilterIntegration(t *testing.T) {
 		sess := loginUser(t, user.Name)
 		token := getTokenForLoggedInUser(t, sess, auth_model.AccessTokenScopeAll)
 
-		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 		ctx.Session = sess
 		remoteAddress := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape("foo"))
 		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/push_mirrors", user.LowerName, srcRepo.Name)
@@ -661,7 +682,7 @@ func TestPushMirrorBranchFilterSyncOperations(t *testing.T) {
 		_, _, err = git.NewCommand(git.DefaultContext, "update-ref", "refs/heads/hotfix-123", "refs/heads/master").RunStdString(&git.RunOpts{Dir: testRepoPath})
 		require.NoError(t, err)
 
-		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 		ctx.Session = sess
 
 		t.Run("Create push mirror with branch filter and trigger sync", func(t *testing.T) {
@@ -886,7 +907,7 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 		mirrorRepo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit.Type{unit.TypeCode}, nil, nil)
 		defer f()
 
-		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 		ctx.Session = session
 		remoteAddress := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo.Name))
 		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/push_mirrors", user.Name, srcRepo.Name)

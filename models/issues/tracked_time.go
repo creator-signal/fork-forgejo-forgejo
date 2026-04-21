@@ -148,7 +148,7 @@ func (opts *FindTrackedTimesOptions) toSession(e db.Engine) db.Engine {
 
 // GetTrackedTimes returns all tracked times that fit to the given options.
 func GetTrackedTimes(ctx context.Context, options *FindTrackedTimesOptions) (trackedTimes TrackedTimeList, err error) {
-	err = options.toSession(db.GetEngine(ctx)).Find(&trackedTimes)
+	err = options.toSession(db.GetEngine(ctx)).Asc("tracked_time.id").Find(&trackedTimes)
 	return trackedTimes, err
 }
 
@@ -350,10 +350,7 @@ func GetIssueTotalTrackedTime(ctx context.Context, opts *IssuesOptions, isClosed
 	// we get the statistics in smaller chunks and get accumulates
 	var accum int64
 	for i := 0; i < len(opts.IssueIDs); {
-		chunk := i + MaxQueryParameters
-		if chunk > len(opts.IssueIDs) {
-			chunk = len(opts.IssueIDs)
-		}
+		chunk := min(i+MaxQueryParameters, len(opts.IssueIDs))
 		time, err := getIssueTotalTrackedTimeChunk(ctx, opts, isClosed, opts.IssueIDs[i:chunk])
 		if err != nil {
 			return 0, err
@@ -379,8 +376,8 @@ func getIssueTotalTrackedTimeChunk(ctx context.Context, opts *IssuesOptions, isC
 	}
 
 	session := sumSession(opts, issueIDs)
-	if isClosed.Has() {
-		session = session.And("issue.is_closed = ?", isClosed.Value())
+	if has, value := isClosed.Get(); has {
+		session = session.And("issue.is_closed = ?", value)
 	}
 	return session.SumInt(new(trackedTime), "tracked_time.time")
 }

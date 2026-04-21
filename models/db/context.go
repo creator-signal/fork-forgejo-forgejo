@@ -6,6 +6,9 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+	"slices"
 
 	"xorm.io/builder"
 	"xorm.io/xorm"
@@ -268,6 +271,91 @@ func GetByID[T any](ctx context.Context, id int64) (object *T, exist bool, err e
 	return &bean, true, nil
 }
 
+// Retrieves multiple objects with database queries similar to an xorm `.In(idField, idList)`. idField must be a unique
+// field on the database table, as a map[id]obj is returned and the usage of a non-unique field would result in objects
+// being overwritten in the map.
+//
+// The length of the IN list is constrained to DefaultMaxInSize for each database query, resulting in multiple database
+// queries if the length of the idList exceeds that setting; this constraint prevents exceeding bind parameter
+// limitations or query length limitations in the database engine.
+func GetByIDs[Bean any, Id comparable](ctx context.Context, idField string, idList []Id, bean *Bean) (map[Id]*Bean, error) {
+	retval := make(map[Id]*Bean, len(idList))
+	if len(idList) == 0 {
+		return retval, nil
+	}
+
+	table, err := TableInfo(bean)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch table info for bean %v: %w", bean, err)
+	}
+
+	var structFieldName string
+	for _, c := range table.Columns() {
+		if c.Name == idField {
+			structFieldName = c.FieldName
+			break
+		}
+	}
+	if structFieldName == "" {
+		return nil, fmt.Errorf("unable to identify struct field for id field %s", idField)
+	}
+
+	for idChunk := range slices.Chunk(idList, DefaultMaxInSize) {
+		beans := make([]*Bean, 0, len(idChunk))
+		if err := GetEngine(ctx).In(idField, idChunk).Find(&beans); err != nil {
+			return nil, err
+		}
+		for _, bean := range beans {
+			retval[extractFieldValue(bean, structFieldName).(Id)] = bean
+		}
+	}
+
+	return retval, nil
+}
+
+// Retrieves multiple objects with database queries similar to an xorm `.In(field, valueList)`. Similar to GetByIDs,
+// except that a map[Id][]*Bean is returned as the field value is not assumed to be a unique value -- if there are
+// multiple rows in the table for each value, all of them are returned.
+//
+// The length of the IN list is constrained to DefaultMaxInSize for each database query, resulting in multiple database
+// queries if the length of the idList exceeds that setting; this constraint prevents exceeding bind parameter
+// limitations or query length limitations in the database engine.
+func GetByFieldIn[Bean any, Id comparable](ctx context.Context, field string, valueList []Id, bean *Bean) (map[Id][]*Bean, error) {
+	retval := make(map[Id][]*Bean, len(valueList))
+	if len(valueList) == 0 {
+		return retval, nil
+	}
+
+	table, err := TableInfo(bean)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch table info for bean %v: %w", bean, err)
+	}
+
+	var structFieldName string
+	for _, c := range table.Columns() {
+		if c.Name == field {
+			structFieldName = c.FieldName
+			break
+		}
+	}
+	if structFieldName == "" {
+		return nil, fmt.Errorf("unable to identify struct field for field %s", field)
+	}
+
+	for idChunk := range slices.Chunk(valueList, DefaultMaxInSize) {
+		beans := make([]*Bean, 0, len(idChunk))
+		if err := GetEngine(ctx).In(field, idChunk).Find(&beans); err != nil {
+			return nil, err
+		}
+		for _, bean := range beans {
+			fieldValue := extractFieldValue(bean, structFieldName).(Id)
+			retval[fieldValue] = append(retval[fieldValue], bean)
+		}
+	}
+
+	return retval, nil
+}
+
 func Exist[T any](ctx context.Context, cond builder.Cond) (bool, error) {
 	if !cond.IsValid() {
 		panic("cond is invalid in db.Exist(ctx, cond). This should not be possible.")
@@ -415,4 +503,43 @@ func inTransaction(ctx context.Context) (*xorm.Session, bool) {
 	default:
 		return nil, false
 	}
+}
+
+type RetryConfig struct {
+	ErrorIs      []error
+	AttemptCount int
+}
+
+// Execute the given function in a transaction. RetryConfig will retry the function on an error, if it matches the
+// ErrorIs parameter, up to the total of AttemptCount number of tries. RetryTx cannot be invoked when already within a
+// transaction and will return an error immediately.
+func RetryTx(ctx context.Context, config RetryConfig, f func(ctx context.Context) error) error {
+	if InTransaction(ctx) {
+		return errors.New("unsupported operation: attempted to use RetryTx while already within a transaction")
+	} else if config.AttemptCount == 0 {
+		return errors.New("unsupported operation: attempted to use RetryTx with 0 attempts")
+	}
+
+	var lastError error
+	for range config.AttemptCount {
+		err := WithTx(ctx, f)
+		if err == nil {
+			return nil
+		}
+
+		foundMatch := false
+		for _, possibleError := range config.ErrorIs {
+			if errors.Is(err, possibleError) {
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			return err
+		}
+
+		lastError = err
+	}
+
+	return fmt.Errorf("retry tx failed after %d attempts; last error: %w", config.AttemptCount, lastError)
 }

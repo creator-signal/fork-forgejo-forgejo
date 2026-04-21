@@ -8,6 +8,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/container"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/timeutil"
 
 	"xorm.io/builder"
@@ -19,6 +20,14 @@ func (jobs ActionJobList) GetRunIDs() []int64 {
 	return container.FilterSlice(jobs, func(j *ActionRunJob) (int64, bool) {
 		return j.RunID, j.RunID != 0
 	})
+}
+
+func (jobs ActionJobList) GetJobIDs() container.Set[string] {
+	jobIDs := container.SetOf[string]()
+	for _, job := range jobs {
+		jobIDs.Add(job.JobID)
+	}
+	return jobIDs
 }
 
 func (jobs ActionJobList) LoadRuns(ctx context.Context, withRepo bool) error {
@@ -48,14 +57,13 @@ func (jobs ActionJobList) LoadAttributes(ctx context.Context, withRepo bool) err
 
 type FindRunJobOptions struct {
 	db.ListOptions
-	RunID         int64
-	RepoID        int64
-	OwnerID       int64
-	CommitSHA     string
-	Statuses      []Status
-	UpdatedBefore timeutil.TimeStamp
-	Events        []string // []webhook_module.HookEventType
-	RunNumber     int64
+	RunID            int64
+	RepoID           int64
+	OwnerID          int64
+	CommitSHA        string
+	Statuses         []Status
+	UpdatedBefore    timeutil.TimeStamp
+	RunNeedsApproval optional.Option[bool]
 }
 
 func (opts FindRunJobOptions) ToConds() builder.Cond {
@@ -66,7 +74,7 @@ func (opts FindRunJobOptions) ToConds() builder.Cond {
 	if opts.RepoID > 0 {
 		cond = cond.And(builder.Eq{"repo_id": opts.RepoID})
 	}
-	if opts.OwnerID > 0 {
+	if opts.OwnerID != 0 {
 		cond = cond.And(builder.Eq{"owner_id": opts.OwnerID})
 	}
 	if opts.CommitSHA != "" {
@@ -78,11 +86,12 @@ func (opts FindRunJobOptions) ToConds() builder.Cond {
 	if opts.UpdatedBefore > 0 {
 		cond = cond.And(builder.Lt{"updated": opts.UpdatedBefore})
 	}
-	if len(opts.Events) > 0 {
-		cond = cond.And(builder.In("event", opts.Events))
-	}
-	if opts.RunNumber > 0 {
-		cond = cond.And(builder.Eq{"`index`": opts.RunNumber})
+	if has, value := opts.RunNeedsApproval.Get(); has {
+		cond = cond.And(builder.Exists(builder.Select("id").From("action_run", "outer_run").
+			Where(builder.Eq{
+				"outer_run.need_approval": value,
+				"outer_run.id":            builder.Expr("run_id"),
+			})))
 	}
 	return cond
 }

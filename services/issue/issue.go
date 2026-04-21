@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	activities_model "forgejo.org/models/activities"
@@ -85,17 +86,17 @@ func ChangeTitle(ctx context.Context, issue *issues_model.Issue, doer *user_mode
 		return err
 	}
 
-	var reviewNotifers []*ReviewRequestNotifier
+	var reviewNotifiers []*ReviewRequestNotifier
 	if issue.IsPull && issues_model.HasWorkInProgressPrefix(oldTitle) && !issues_model.HasWorkInProgressPrefix(title) {
 		var err error
-		reviewNotifers, err = PullRequestCodeOwnersReview(ctx, issue, issue.PullRequest)
+		reviewNotifiers, err = PullRequestCodeOwnersReview(ctx, issue, issue.PullRequest)
 		if err != nil {
 			log.Error("PullRequestCodeOwnersReview: %v", err)
 		}
 	}
 
 	notify_service.IssueChangeTitle(ctx, doer, issue, oldTitle)
-	ReviewRequestNotify(ctx, issue, issue.Poster, reviewNotifers)
+	ReviewRequestNotify(ctx, issue, issue.Poster, reviewNotifiers)
 
 	return nil
 }
@@ -127,11 +128,8 @@ func UpdateAssignees(ctx context.Context, issue *issues_model.Issue, oneAssignee
 	if oneAssignee != "" {
 		// Prevent double adding assignees
 		var isDouble bool
-		for _, assignee := range multipleAssignees {
-			if assignee == oneAssignee {
-				isDouble = true
-				break
-			}
+		if slices.Contains(multipleAssignees, oneAssignee) {
+			isDouble = true
 		}
 
 		if !isDouble {
@@ -197,6 +195,8 @@ func DeleteIssue(ctx context.Context, doer *user_model.User, gitRepo *git.Reposi
 			return err
 		}
 	}
+
+	notify_service.DeleteIssue(ctx, doer, issue)
 
 	return nil
 }
@@ -342,13 +342,13 @@ func SetIssueUpdateDate(ctx context.Context, issue *issues_model.Issue, updated 
 		return err
 	}
 	if !perm.IsAdmin() && !perm.IsOwner() {
-		return errors.New("user needs to have admin or owner right")
+		return errors.New("user needs to have admin or repository owner right to set an update date")
 	}
 
 	// A simple guard against potential inconsistent calls
 	updatedUnix := timeutil.TimeStamp(updated.Unix())
 	if updatedUnix < issue.CreatedUnix || updatedUnix > timeutil.TimeStampNow() {
-		return errors.New("unallowed update date")
+		return errors.New("unallowed update date, because given date must be between issue creation date and now")
 	}
 
 	issue.UpdatedUnix = updatedUnix

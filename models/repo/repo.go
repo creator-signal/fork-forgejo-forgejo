@@ -9,16 +9,19 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"maps"
 	"net"
 	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/cache"
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
@@ -541,9 +544,7 @@ func (repo *Repository) ComposeMetas(ctx context.Context) map[string]string {
 func (repo *Repository) ComposeDocumentMetas(ctx context.Context) map[string]string {
 	if len(repo.DocumentRenderingMetas) == 0 {
 		metas := map[string]string{}
-		for k, v := range repo.ComposeMetas(ctx) {
-			metas[k] = v
-		}
+		maps.Copy(metas, repo.ComposeMetas(ctx))
 		metas["mode"] = "document"
 		repo.DocumentRenderingMetas = metas
 	}
@@ -784,8 +785,8 @@ func GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*Repo
 
 // getRepositoryURLPathSegments returns segments (owner, reponame) extracted from a url
 func getRepositoryURLPathSegments(repoURL string) []string {
-	if strings.HasPrefix(repoURL, setting.AppURL) {
-		return strings.Split(strings.TrimPrefix(repoURL, setting.AppURL), "/")
+	if after, ok := strings.CutPrefix(repoURL, setting.AppURL); ok {
+		return strings.Split(after, "/")
 	}
 
 	sshURLVariants := [4]string{
@@ -796,8 +797,8 @@ func getRepositoryURLPathSegments(repoURL string) []string {
 	}
 
 	for _, sshURL := range sshURLVariants {
-		if strings.HasPrefix(repoURL, sshURL) {
-			return strings.Split(strings.TrimPrefix(repoURL, sshURL), "/")
+		if after, ok := strings.CutPrefix(repoURL, sshURL); ok {
+			return strings.Split(after, "/")
 		}
 	}
 
@@ -892,11 +893,12 @@ type CountRepositoryOptions struct {
 func CountRepositories(ctx context.Context, opts CountRepositoryOptions) (int64, error) {
 	sess := db.GetEngine(ctx).Where("id > 0")
 
+	// nosemgrep: forgejo-logic-suspicious-OwnerID-check (repositories cannot be owned by system users)
 	if opts.OwnerID > 0 {
 		sess.And("owner_id = ?", opts.OwnerID)
 	}
-	if opts.Private.Has() {
-		sess.And("is_private=?", opts.Private.Value())
+	if has, value := opts.Private.Get(); has {
+		sess.And("is_private=?", value)
 	}
 
 	count, err := sess.Count(new(Repository))
@@ -1000,4 +1002,56 @@ func UpdateRepoIssueNumbers(ctx context.Context, repoID int64, isPull, isClosed 
 		cache.Remove(repoCacheKey(cacheKeyBase, repoID))
 	})
 	return nil
+}
+
+// Bulk load of all the repo_model.Repository objects for the repository resources that can be accessed by the given
+// access tokens.  Any access tokens which are not repository-specific tokens will not be present in the map.  An
+// optional filter function can be used to remove repositories (based upon a user visibility check, for example) before
+// the map is constructed -- return `true` for repos to include.
+func BulkGetRepositoriesForAccessTokens(ctx context.Context, tokens []*auth_model.AccessToken, filter func(*Repository) (bool, error)) (map[int64][]*Repository, error) {
+	// Load all the AccessTokenResourceRepo for the tokens that we're returning:
+	allRepoIDs := container.Set[int64]{}
+	repoResourcesByTokenID, err := auth_model.GetRepositoriesAccessibleWithTokens(ctx, tokens)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch repositories for tokens: %w", err)
+	}
+
+	// Load all the Repository models that are referenced by the AccessTokenResourceRepo's:
+	for _, repoResources := range repoResourcesByTokenID {
+		for _, repoResource := range repoResources {
+			allRepoIDs.Add(repoResource.RepoID)
+		}
+	}
+	reposByID, err := GetRepositoriesMapByIDs(ctx, allRepoIDs.Slice())
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch repositories: %w", err)
+	}
+
+	if filter != nil {
+		// Rebuild reposByID, filtering it with the provided filter function.  It's more efficient to do this here,
+		// rather than returning the data and allowing the caller to filter it, because this guarantees one invocation
+		// per repository.  `reposByTokenID` could have the same repository referenced by multiple access tokens.
+		tmp := reposByID
+		reposByID = make(map[int64]*Repository, len(tmp))
+		for id, repo := range tmp {
+			if ok, err := filter(repo); err != nil {
+				return nil, fmt.Errorf("error filtering repo %d: %w", repo.ID, err)
+			} else if ok {
+				reposByID[id] = repo
+			}
+		}
+	}
+
+	// Prepare a lookup map to access the repositories by token ID:
+	reposByTokenID := make(map[int64][]*Repository)
+	for tokenID, repoResources := range repoResourcesByTokenID {
+		for _, repoResource := range repoResources {
+			repo, ok := reposByID[repoResource.RepoID]
+			if ok {
+				reposByTokenID[tokenID] = append(reposByTokenID[tokenID], repo)
+			}
+		}
+	}
+
+	return reposByTokenID, nil
 }

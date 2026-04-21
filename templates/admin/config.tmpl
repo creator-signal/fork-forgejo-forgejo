@@ -20,7 +20,7 @@
 				<dt>{{ctx.Locale.Tr "admin.config.offline_mode"}}</dt>
 				<dd>{{if .OfflineMode}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
 				<dt>{{ctx.Locale.Tr "admin.config.disable_router_log"}}</dt>
-				<dd>{{if .DisableRouterLog}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
+				<dd>{{if .Loggers.router.IsEnabled}}{{svg "octicon-x"}}{{else}}{{svg "octicon-check"}}{{end}}</dd>
 
 				<div class="divider"></div>
 
@@ -341,6 +341,33 @@
 				<dd>{{.Git.Timeout.Pull}} {{ctx.Locale.Tr "tool.raw_seconds"}}</dd>
 				<dt>{{ctx.Locale.Tr "admin.config.git_gc_timeout"}}</dt>
 				<dd>{{.Git.Timeout.GC}} {{ctx.Locale.Tr "tool.raw_seconds"}}</dd>
+			</dl>
+		</div>
+
+		<h4 class="ui top attached header">
+			{{ctx.Locale.Tr "admin.config.federation"}}
+		</h4>
+		<div class="ui attached table segment">
+			<dl class="admin-dl-horizontal">
+				<dt>{{ctx.Locale.Tr "admin.config.federation.enabled"}}</dt>
+				<dd>{{if .Federation.Enabled}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.federation.share_user_statistics"}}</dt>
+				<dd>{{if .Federation.ShareUserStatistics}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.federation.max_size"}}</dt>
+				<dd>{{.FederationMaxSize}} MiB</dd>
+
+				<div class="divider"></div>
+
+				<dt>{{ctx.Locale.Tr "admin.config.federation.signature_enforced"}}</dt>
+				<dd>{{if .Federation.SignatureEnforced}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.federation.signature_algorithms"}}</dt>
+				<dd>{{.Federation.SignatureAlgorithms}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.federation.digest_algorithm"}}</dt>
+				<dd>{{.Federation.DigestAlgorithm}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.federation.get_headers"}}</dt>
+				<dd>{{.Federation.GetHeaders}}</dd>
+				<dt>{{ctx.Locale.Tr "admin.config.federation.post_headers"}}</dt>
+				<dd>{{.Federation.PostHeaders}}</dd>
 			</dl>
 		</div>
 

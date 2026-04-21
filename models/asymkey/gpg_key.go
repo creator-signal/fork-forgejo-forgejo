@@ -81,7 +81,7 @@ func (opts FindGPGKeyOptions) ToConds() builder.Cond {
 		cond = cond.And(builder.Eq{"primary_key_id": ""})
 	}
 
-	if opts.OwnerID > 0 {
+	if opts.OwnerID != 0 {
 		cond = cond.And(builder.Eq{"owner_id": opts.OwnerID})
 	}
 	if opts.KeyID != "" {
@@ -111,7 +111,13 @@ func GPGKeyToEntity(ctx context.Context, k *GPGKey) (*openpgp.Entity, error) {
 	if err != nil {
 		return nil, err
 	}
-	return keys[0], err
+
+	for _, key := range keys {
+		if key.PrimaryKey.KeyIdString() == k.KeyID {
+			return key, nil
+		}
+	}
+	return nil, fmt.Errorf("key with %s id not found", k.KeyID)
 }
 
 // parseSubGPGKey parse a sub Key

@@ -11,7 +11,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	repo_model "forgejo.org/models/repo"
-	unittest_model "forgejo.org/models/unittest"
+	"forgejo.org/models/unittest"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/translation"
 	"forgejo.org/modules/web"
@@ -22,9 +22,9 @@ import (
 )
 
 func TestActionsViewGetRunByID(t *testing.T) {
-	unittest_model.PrepareTestEnv(t)
+	unittest.PrepareTestEnv(t)
 
-	repo := unittest_model.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: 5, ID: 4})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: 5, ID: 4})
 
 	for _, testCase := range []struct {
 		name  string
@@ -63,7 +63,7 @@ func TestActionsViewGetRunByID(t *testing.T) {
 }
 
 func TestActionsViewArtifactsFind(t *testing.T) {
-	unittest_model.PrepareTestEnv(t)
+	unittest.PrepareTestEnv(t)
 
 	for _, testCase := range []struct {
 		name         string
@@ -95,7 +95,7 @@ func TestActionsViewArtifactsFind(t *testing.T) {
 }
 
 func TestActionsViewArtifactsFindByNameOrID(t *testing.T) {
-	unittest_model.PrepareTestEnv(t)
+	unittest.PrepareTestEnv(t)
 
 	for _, testCase := range []struct {
 		name     string
@@ -150,6 +150,7 @@ func baseExpectedViewResponse() *ViewResponse {
 				Title:             "update actions",
 				TitleHTML:         template.HTML("update actions"),
 				Status:            "success",
+				Description:       "actions.runs.on_push_description",
 				CanCancel:         false,
 				CanApprove:        false,
 				CanRerun:          false,
@@ -165,9 +166,8 @@ func baseExpectedViewResponse() *ViewResponse {
 					},
 				},
 				Commit: ViewCommit{
-					LocaleCommit:   "actions.runs.commit",
-					LocalePushedBy: "actions.runs.pushed_by",
 					LocaleWorkflow: "actions.runs.workflow",
+					LocaleAllRuns:  "actions.runs.all_runs_link",
 					ShortSha:       "c2d72f5484",
 					Link:           "/user5/repo4/commit/c2d72f548424103f01ee1dc02889c1e2bff816b0",
 					Pusher: ViewUser{
@@ -223,7 +223,7 @@ func baseExpectedViewResponse() *ViewResponse {
 }
 
 func TestActionsViewViewPost(t *testing.T) {
-	unittest_model.PrepareTestEnv(t)
+	unittest.PrepareTestEnv(t)
 
 	tests := []struct {
 		name           string
@@ -382,8 +382,57 @@ func TestActionsViewViewPost(t *testing.T) {
 	}
 }
 
+func TestActionsViewCancelableUntilAllJobsFinished(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	tests := []struct {
+		name     string
+		runIndex int64
+		assert   func(*testing.T, *ViewResponse)
+	}{
+		{
+			name:     "failed and running",
+			runIndex: 191,
+			assert: func(t *testing.T, actual *ViewResponse) {
+				assert.Equal(t, "failure", actual.State.Run.Jobs[0].Status)
+				assert.Equal(t, "running", actual.State.Run.Jobs[1].Status)
+				assert.True(t, actual.State.Run.CanCancel)
+			},
+		},
+		{
+			name:     "failed and success",
+			runIndex: 192,
+			assert: func(t *testing.T, actual *ViewResponse) {
+				assert.Equal(t, "failure", actual.State.Run.Jobs[0].Status)
+				assert.Equal(t, "success", actual.State.Run.Jobs[1].Status)
+				assert.False(t, actual.State.Run.CanCancel)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, resp := contexttest.MockContext(t, "user2/repo1/actions/runs/0")
+			contexttest.LoadUser(t, ctx, 1)
+			contexttest.LoadRepo(t, ctx, 4)
+			ctx.SetParams(":run", fmt.Sprintf("%d", tt.runIndex))
+			ctx.SetParams(":attempt", fmt.Sprintf("%d", 0))
+			web.SetForm(ctx, &ViewRequest{})
+
+			ViewPost(ctx)
+			require.Equal(t, http.StatusOK, resp.Result().StatusCode, "failure in ViewPost(): %q", resp.Body.String())
+
+			var actual ViewResponse
+			err := json.Unmarshal(resp.Body.Bytes(), &actual)
+			require.NoError(t, err)
+
+			tt.assert(t, &actual)
+		})
+	}
+}
+
 func TestActionsViewRedirectToLatestAttempt(t *testing.T) {
-	unittest_model.PrepareTestEnv(t)
+	unittest.PrepareTestEnv(t)
 
 	tests := []struct {
 		name         string
@@ -477,23 +526,43 @@ func TestActionsRerun(t *testing.T) {
 		jobIndex     int64
 		expectedCode int
 		expectedURL  string
+		expectedBody string
 	}{
 		{
-			name:        "rerun all",
-			runIndex:    187,
-			jobIndex:    -1,
-			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/0/attempt/2",
+			name:         "rerun all",
+			runIndex:     138574,
+			jobIndex:     -1,
+			expectedCode: 200,
+			expectedURL:  "https://try.gitea.io/user2/repo1/actions/runs/138574/jobs/0/attempt/3",
 		},
 		{
-			name:        "rerun job",
-			runIndex:    187,
-			jobIndex:    2,
-			expectedURL: "https://try.gitea.io/user2/repo1/actions/runs/187/jobs/2/attempt/3",
+			name:         "rerun job",
+			runIndex:     138574,
+			jobIndex:     2,
+			expectedCode: 200,
+			expectedURL:  "https://try.gitea.io/user2/repo1/actions/runs/138574/jobs/2/attempt/6",
+		},
+		{
+			name:         "rerun workflow that cannot be run",
+			runIndex:     138575,
+			jobIndex:     -1,
+			expectedCode: 400,
+			expectedBody: "{\"errorMessage\":\"actions.workflow.rerun_impossible\",\"renderFormat\":\"html\"}\n",
+		},
+		{
+			name:         "rerun job that cannot be run",
+			runIndex:     138575,
+			jobIndex:     1,
+			expectedCode: 400,
+			expectedBody: "{\"errorMessage\":\"actions.workflow.rerun_impossible\",\"renderFormat\":\"html\"}\n",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, resp := contexttest.MockContext(t, "user2/repo1/actions/runs/187/rerun")
+			defer unittest.OverrideFixtures("routers/web/repo/actions/TestActionsRerun")()
+			unittest.PrepareTestEnv(t)
+
+			ctx, resp := contexttest.MockContext(t, "user2/repo1/actions/runs/138574/rerun")
 			contexttest.LoadUser(t, ctx, 2)
 			contexttest.LoadRepo(t, ctx, 1)
 			ctx.SetParams(":run", fmt.Sprintf("%d", tt.runIndex))
@@ -502,16 +571,22 @@ func TestActionsRerun(t *testing.T) {
 			}
 
 			Rerun(ctx)
-			require.Equal(t, http.StatusOK, resp.Result().StatusCode, "failure in Rerun(): %q", resp.Body.String())
 
-			var actual redirectObject
-			err := json.Unmarshal(resp.Body.Bytes(), &actual)
-			require.NoError(t, err)
+			if tt.expectedCode < 300 {
+				require.Equal(t, tt.expectedCode, resp.Result().StatusCode, "failure in Rerun(): %q", resp.Body.String())
 
-			// Note: this test isn't doing any functional testing of the Rerun handler's actual ability to set up a job
-			// rerun.  This test was added when the redirect to the correct `attempt` was added and only covers that
-			// addition at this time.
-			assert.Equal(t, redirectObject{Redirect: tt.expectedURL}, actual)
+				var actual redirectObject
+				err := json.Unmarshal(resp.Body.Bytes(), &actual)
+				require.NoError(t, err)
+
+				// Note: this test isn't doing any functional testing of the Rerun handler's actual ability to set up a job
+				// rerun.  This test was added when the redirect to the correct `attempt` was added and only covers that
+				// addition at this time.
+				assert.Equal(t, redirectObject{Redirect: tt.expectedURL}, actual)
+			} else {
+				require.Equal(t, tt.expectedCode, resp.Result().StatusCode)
+				assert.Equal(t, tt.expectedBody, resp.Body.String())
+			}
 		})
 	}
 }

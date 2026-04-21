@@ -1,9 +1,8 @@
 <script>
 import {SvgIcon} from '../svg.js';
 import ActionRunStatus from './ActionRunStatus.vue';
+import ActionJobStepList from './ActionJobStepList.vue';
 import {toggleElem} from '../utils/dom.js';
-import {formatDatetime} from '../utils/time.js';
-import {renderAnsi} from '../render/ansi.js';
 import {GET, POST, DELETE} from '../modules/fetch.js';
 
 export default {
@@ -11,6 +10,7 @@ export default {
   components: {
     SvgIcon,
     ActionRunStatus,
+    ActionJobStepList,
   },
   props: {
     initialJobData: {
@@ -49,6 +49,10 @@ export default {
       type: String,
       required: true,
     },
+    workflowSourceURL: {
+      type: String,
+      required: true,
+    },
     locale: {
       type: Object,
       required: true,
@@ -78,6 +82,7 @@ export default {
         title: '',
         titleHTML: '',
         status: '',
+        description: '',
         canCancel: false,
         canApprove: false,
         canRerun: false,
@@ -93,9 +98,8 @@ export default {
           // },
         ],
         commit: {
-          localeCommit: '',
-          localePushedBy: '',
           localeWorkflow: '',
+          localeAllRuns: '',
           shortSHA: '',
           link: '',
           pusher: {
@@ -120,10 +124,10 @@ export default {
         ],
         // All available attempts for the job we're currently viewing.
         //
-        // initial value here is configured so that currentingViewingMostRecentAttempt() -> true on the default `data()`, so that the
+        // initial value here is configured so that currentlyViewingMostRecentAttempt() -> true on the default `data()`, so that the
         // initial render (before `loadJob`'s first execution is complete) doesn't display "You are viewing an
         // out-of-date run..."
-        allAttempts: new Array(parseInt(this.attemptNumber)).fill({index: 0, time_since_started_html: '', status: 'success', status_diagnostics: []}),
+        allAttempts: [],
       },
     };
   },
@@ -134,19 +138,19 @@ export default {
     },
 
     displayOtherJobs() {
-      return this.currentingViewingMostRecentAttempt;
+      return this.currentlyViewingMostRecentAttempt;
     },
 
     canApprove() {
-      return this.currentingViewingMostRecentAttempt && this.run.canApprove;
+      return this.currentlyViewingMostRecentAttempt && this.run.canApprove;
     },
 
     canCancel() {
-      return this.currentingViewingMostRecentAttempt && this.run.canCancel;
+      return this.currentlyViewingMostRecentAttempt && this.run.canCancel;
     },
 
     canRerun() {
-      return this.currentingViewingMostRecentAttempt && this.run.canRerun;
+      return this.currentlyViewingMostRecentAttempt && this.run.canRerun;
     },
 
     viewingAttemptNumber() {
@@ -163,11 +167,13 @@ export default {
       return attempt || fallback;
     },
 
-    currentingViewingMostRecentAttempt() {
-      if (!this.currentJob.allAttempts) {
+    currentlyViewingMostRecentAttempt() {
+      if (!this.currentJob.allAttempts || this.currentJob.allAttempts.length === 0) {
         return true;
       }
-      return this.viewingAttemptNumber === this.currentJob.allAttempts.length;
+
+      const mostRecentAttemptNumber = this.currentJob.allAttempts[0].number;
+      return this.viewingAttemptNumber === mostRecentAttemptNumber;
     },
 
     displayGearDropdown() {
@@ -230,109 +236,20 @@ export default {
         this.loadJob();
       }
     },
+
     // cancel a run
     cancelRun() {
       POST(`${this.run.link}/cancel`);
     },
+
     // approve a run
     approveRun() {
       const url = `${this.run.commit.branch.link}#pull-request-trust-panel`;
       window.location.href = url;
     },
-    // show/hide the step logs for a group
-    toggleGroupLogs(event) {
-      const line = event.target.parentElement;
-      const list = line.nextSibling;
-      list.classList.toggle('hidden', event.newState !== 'open');
-    },
-
-    createLogLine(line, startTime, stepIndex, group) {
-      const lineNo = line.index - this.lineNumberOffset[stepIndex];
-      const div = document.createElement('div');
-      div.classList.add('job-log-line');
-      div.setAttribute('id', `jobstep-${stepIndex}-${lineNo}`);
-      div._jobLogTime = line.timestamp;
-
-      const lineNumber = document.createElement('a');
-      lineNumber.classList.add('line-num', 'muted');
-      lineNumber.textContent = lineNo;
-      lineNumber.setAttribute('href', `#jobstep-${stepIndex}-${lineNo}`);
-      div.append(lineNumber);
-
-      // for "Show timestamps"
-      const logTimeStamp = document.createElement('span');
-      logTimeStamp.className = 'log-time-stamp';
-      const date = new Date(parseFloat(line.timestamp * 1000));
-      const timeStamp = formatDatetime(date);
-      logTimeStamp.textContent = timeStamp;
-      toggleElem(logTimeStamp, this.timeVisible['log-time-stamp']);
-      // for "Show seconds"
-      const logTimeSeconds = document.createElement('span');
-      logTimeSeconds.className = 'log-time-seconds';
-      const seconds = Math.floor(parseFloat(line.timestamp) - parseFloat(startTime));
-      logTimeSeconds.textContent = `${seconds}s`;
-      toggleElem(logTimeSeconds, this.timeVisible['log-time-seconds']);
-
-      let logMessage = document.createElement('span');
-      logMessage.innerHTML = renderAnsi(line.message);
-      // If the input to renderAnsi is not empty and the output is empty we can
-      // assume the input was only ANSI escape codes that have been removed. In
-      // that case we should not display this message
-      if (line.message !== '' && logMessage.innerHTML === '') {
-        this.lineNumberOffset[stepIndex]++;
-        return [];
-      }
-      if (group.isHeader) {
-        const details = document.createElement('details');
-        details.addEventListener('toggle', this.toggleGroupLogs);
-        const summary = document.createElement('summary');
-        summary.append(logMessage);
-        details.append(summary);
-        logMessage = details;
-      }
-      logMessage.className = 'log-msg';
-      logMessage.style.paddingLeft = `${group.depth}em`;
-
-      div.append(logTimeStamp);
-      div.append(logMessage);
-      div.append(logTimeSeconds);
-
-      return div;
-    },
 
     appendLogs(stepIndex, logLines, startTime) {
-      const groupStack = [];
-      const container = this.$refs.logs[stepIndex];
-      for (const line of logLines) {
-        const el = groupStack.length > 0 ? groupStack[groupStack.length - 1] : container;
-        const group = {
-          depth: groupStack.length,
-          isHeader: false,
-        };
-        if (line.message.startsWith('##[group]')) {
-          group.isHeader = true;
-
-          const logLine = this.createLogLine(
-            {
-              ...line,
-              message: line.message.substring(9),
-            },
-            startTime, stepIndex, group,
-          );
-          logLine.setAttribute('data-group', group.index);
-          el.append(logLine);
-
-          const list = document.createElement('div');
-          list.classList.add('job-log-list', 'hidden');
-          list.setAttribute('data-group', group.index);
-          groupStack.push(list);
-          el.append(list);
-        } else if (line.message.startsWith('##[endgroup]')) {
-          groupStack.pop();
-        } else {
-          el.append(this.createLogLine(line, startTime, stepIndex, group));
-        }
-      }
+      this.$refs.stepList.appendLogs(stepIndex, logLines, startTime);
     },
 
     async fetchArtifacts() {
@@ -490,9 +407,6 @@ export default {
 
     toggleTimeDisplay(type) {
       this.timeVisible[`log-time-${type}`] = !this.timeVisible[`log-time-${type}`];
-      for (const el of this.$refs.steps.querySelectorAll(`.log-time-${type}`)) {
-        toggleElem(el, this.timeVisible[`log-time-${type}`]);
-      }
     },
 
     toggleFullScreen() {
@@ -524,9 +438,7 @@ export default {
         // so logline can be selected by querySelector
         await this.loadJob();
       }
-      const logLine = this.$refs.steps.querySelector(selectedLogStep);
-      if (!logLine) return;
-      logLine.querySelector('.line-num').click();
+      this.$refs.stepList.scrollIntoView(step, selectedLogStep);
     },
 
     runAttemptLabel(attempt) {
@@ -542,7 +454,7 @@ export default {
 </script>
 <template>
   <div class="ui container fluid padded action-view-container" :class="{ 'interval-pending': intervalID }">
-    <div class="action-view-header job-out-of-date-warning" v-if="!currentingViewingMostRecentAttempt">
+    <div class="action-view-header job-out-of-date-warning" v-if="!currentlyViewingMostRecentAttempt">
       <div class="ui warning message">
         <!-- eslint-disable-next-line vue/no-v-html -->
         <span v-html="viewingOutOfDateRunLabel"/>
@@ -561,18 +473,18 @@ export default {
         <button class="ui basic small compact button primary" @click="approveRun()" v-if="canApprove">
           {{ locale.approve }}
         </button>
-        <button class="ui basic small compact button red" @click="cancelRun()" v-else-if="canCancel">
-          {{ locale.cancel }}
-        </button>
-        <button class="ui basic small compact button tw-mr-0 tw-whitespace-nowrap link-action" :data-url="`${run.link}/rerun`" v-else-if="canRerun">
-          {{ locale.rerun_all }}
-        </button>
+        <div class="action-info-summary-actions" v-else>
+          <button class="ui basic small compact button red" @click="cancelRun()" v-if="canCancel">
+            {{ locale.cancel }}
+          </button>
+          <button class="ui basic small compact button tw-mr-0 tw-whitespace-nowrap link-action" :data-url="`${run.link}/rerun`" v-if="canRerun">
+            {{ locale.rerun_all }}
+          </button>
+        </div>
       </div>
       <div class="action-summary">
-        {{ run.commit.localeCommit }}
-        <a class="muted" :href="run.commit.link">{{ run.commit.shortSHA }}</a>
-        {{ run.commit.localePushedBy }}
-        <a class="muted" :href="run.commit.pusher.link">{{ run.commit.pusher.displayName }}</a>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <span v-html="run.description"/>
         <span class="ui label tw-max-w-full" v-if="run.commit.shortSHA">
           <span v-if="run.commit.branch.isDeleted" class="gt-ellipsis tw-line-through" :data-tooltip-content="run.commit.branch.name">{{ run.commit.branch.name }}</span>
           <a v-else class="gt-ellipsis" :href="run.commit.branch.link" :data-tooltip-content="run.commit.branch.name">{{ run.commit.branch.name }}</a>
@@ -580,7 +492,7 @@ export default {
       </div>
       <div class="action-summary">
         {{ run.commit.localeWorkflow }}
-        <a class="muted" :href="workflowURL">{{ workflowName }}</a>
+        <a :href="workflowSourceURL">{{ workflowName }}</a> <span>(<a :href="workflowURL">{{ run.commit.localeAllRuns }}</a>)</span>
       </div>
       <div class="ui error message pre-execution-error" v-if="run.preExecutionError">
         <div class="header">
@@ -678,25 +590,17 @@ export default {
             </div>
           </div>
         </div>
-        <div class="job-step-container" ref="steps" v-if="currentJob.steps.length">
-          <div class="job-step-section" v-for="(jobStep, i) in currentJob.steps" :key="i">
-            <div class="job-step-summary" tabindex="0" @click.stop="isExpandable(jobStep.status) && toggleStepLogs(i)" @keyup.enter.stop="isExpandable(jobStep.status) && toggleStepLogs(i)" @keyup.space.stop="isExpandable(jobStep.status) && toggleStepLogs(i)" :class="[currentJobStepsStates[i].expanded ? 'selected' : '', isExpandable(jobStep.status) && 'step-expandable']">
-              <!-- If the job is done and the job step log is loaded for the first time, show the loading icon
-                currentJobStepsStates[i].cursor === null means the log is loaded for the first time
-              -->
-              <SvgIcon v-if="isDone(run.status) && currentJobStepsStates[i].expanded && currentJobStepsStates[i].cursor === null" name="octicon-sync" class="tw-mr-2 job-status-rotate"/>
-              <SvgIcon v-else :name="currentJobStepsStates[i].expanded ? 'octicon-chevron-down': 'octicon-chevron-right'" :class="['tw-mr-2', !isExpandable(jobStep.status) && 'tw-invisible']"/>
-              <ActionRunStatus :status="jobStep.status" class="tw-mr-2"/>
-
-              <span class="step-summary-msg gt-ellipsis">{{ jobStep.summary }}</span>
-              <span class="step-summary-duration">{{ jobStep.duration }}</span>
-            </div>
-
-            <!-- the log elements could be a lot, do not use v-if to destroy/reconstruct the DOM,
-            use native DOM elements for "log line" to improve performance, Vue is not suitable for managing so many reactive elements. -->
-            <div class="job-step-logs" ref="logs" v-show="currentJobStepsStates[i].expanded"/>
-          </div>
-        </div>
+        <ActionJobStepList
+          ref="stepList"
+          :steps="currentJob.steps"
+          :step-states="currentJobStepsStates"
+          :run-status="run.status"
+          :is-expandable="isExpandable"
+          :is-done="isDone"
+          :time-visible-timestamp="timeVisible['log-time-stamp']"
+          :time-visible-seconds="timeVisible['log-time-seconds']"
+          @toggle-step-logs="toggleStepLogs"
+        />
       </div>
     </div>
   </div>
@@ -718,15 +622,27 @@ export default {
 
 .action-info-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+  margin-bottom: 8px;
 }
 
 .action-info-summary-title {
   display: flex;
   align-items: center;
   gap: 0.5em;
+}
+
+.action-info-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--button-spacing);
+  margin-left: auto;
+}
+
+.action-info-summary-actions > button {
+  margin: 0;
 }
 
 .action-info-summary-title-text {
@@ -956,44 +872,6 @@ export default {
   flex: 1;
 }
 
-.job-step-container {
-  max-height: 100%;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  border-top: 1px solid var(--color-console-border);
-  z-index: 0;
-}
-
-.job-step-container .job-step-summary {
-  padding: 5px 10px;
-  display: flex;
-  align-items: center;
-  border-radius: var(--border-radius);
-}
-
-.job-step-container .job-step-summary.step-expandable {
-  cursor: pointer;
-}
-
-.job-step-container .job-step-summary.step-expandable:hover {
-  color: var(--color-console-fg);
-  background: var(--color-console-hover-bg);
-}
-
-.job-step-container .job-step-summary .step-summary-msg {
-  flex: 1;
-}
-
-.job-step-container .job-step-summary .step-summary-duration {
-  margin-left: 16px;
-}
-
-.job-step-container .job-step-summary.selected {
-  color: var(--color-console-fg);
-  background-color: var(--color-console-active-bg);
-  position: sticky;
-  top: 60px;
-}
-
 @media (max-width: 767.98px) {
   .action-view-body {
     flex-direction: column;
@@ -1009,72 +887,6 @@ export default {
 
 <style>
 /* some elements are not managed by vue, so we need to use global style */
-.job-status-rotate {
-  animation: job-status-rotate-keyframes 1s linear infinite;
-}
-
-@keyframes job-status-rotate-keyframes {
-  100% {
-    transform: rotate(-360deg);
-  }
-}
-
-.job-step-section {
-  margin: 10px;
-}
-
-.job-step-section .job-step-logs {
-  font-family: var(--fonts-monospace);
-  margin: 8px 0;
-  font-size: 12px;
-}
-
-.job-step-section .job-step-logs .job-log-line {
-  display: flex;
-}
-
-.job-log-line:hover,
-.job-log-line:target {
-  background-color: var(--color-console-hover-bg);
-}
-
-.job-log-line:target {
-  scroll-margin-top: 95px;
-}
-
-/* class names 'log-time-seconds' and 'log-time-stamp' are used in the method toggleTimeDisplay */
-.job-log-line .line-num, .log-time-seconds {
-  width: 48px;
-  color: var(--color-text-light-3);
-  text-align: right;
-  user-select: none;
-}
-
-.job-log-line:target > .line-num {
-  color: var(--color-primary);
-  text-decoration: underline;
-}
-
-.log-time-seconds {
-  padding-right: 2px;
-}
-
-.job-log-line .log-time,
-.log-time-stamp {
-  color: var(--color-text-light-3);
-  margin-left: 10px;
-  white-space: nowrap;
-}
-
-.job-step-section .job-step-logs .job-log-line .log-msg {
-  flex: 1;
-  word-break: break-all;
-  white-space: break-spaces;
-  margin-left: 10px;
-  overflow-wrap: anywhere;
-  color: var(--color-console-fg);
-}
-
 /* selectors here are intentionally exact to only match fullscreen */
 
 .full.height > .action-view-right {

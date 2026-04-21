@@ -1,3 +1,6 @@
+// Copyright 2024 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // @watch start
 // web_src/js/modules/tab.ts
 // web_src/css/modules/tab.css
@@ -6,7 +9,7 @@
 // templates/shared/combomarkdowneditor.tmpl
 // @watch end
 
-import {expect} from '@playwright/test';
+import {expect, type Page} from '@playwright/test';
 import {accessibilityCheck} from './shared/accessibility.ts';
 import {test} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
@@ -23,16 +26,15 @@ test('Markdown image preview behaviour', async ({page}) => {
   // Click 'Edit file' tab
   await page.locator('[data-tooltip-content="Edit file"]').click();
 
-  // This yields the monaco editor
-  const editor = page.getByRole('presentation').nth(0);
-  await editor.click();
+  // This yields the codemirror editor
+  await page.locator('.cm-content').click();
   // Clear all the content
   await page.keyboard.press('ControlOrMeta+KeyA');
   // Add the image
   await page.keyboard.type('![Logo of Forgejo](./assets/logo.svg "Logo of Forgejo")');
 
   // Click 'Preview' tab
-  await page.locator('a[data-tab="preview"]').click();
+  await page.locator('button[data-tab="preview"]').click();
 
   // Check for the image preview via the expected attribute
   const preview = page.locator('div[data-tab="preview"] p[dir="auto"] a');
@@ -350,53 +352,139 @@ test('Markdown list continuation', async ({page}) => {
 });
 
 test('Markdown insert table', async ({page}) => {
-  const response = await page.goto('/user2/repo1/issues/new');
+  async function evaluateTableInsertion(page: Page, selector: string, isEditing: boolean) {
+    const area = page.locator(selector);
+
+    let expectedContent = '| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n';
+
+    if (isEditing) {
+      // Preparations for evaluating comment editing
+      await area.locator('.context-dropdown').click();
+      await area.locator('.context-dropdown .edit-content').click();
+      expectedContent = `good work!${expectedContent}`;
+    }
+
+    const newTableButton = area.locator('button[data-md-action="new-table"]');
+    await newTableButton.click();
+
+    const newTableModal = page.locator('[data-modal-name="new-markdown-table"].active');
+    await expect(newTableModal).toBeVisible();
+    await screenshot(page);
+
+    const rowsInput = newTableModal.locator('input[name="table-rows"]');
+    const columnsInput = newTableModal.locator('input[name="table-columns"]');
+
+    await expect(rowsInput).not.toHaveAttribute('disabled');
+    await expect(columnsInput).not.toHaveAttribute('disabled');
+
+    await rowsInput.fill('3');
+    await columnsInput.fill('2');
+
+    await newTableModal.locator('button[data-selector-name="ok-button"]').click();
+
+    await expect(newTableModal).toBeHidden();
+
+    const textarea = area.locator('textarea[name=content]');
+    await expect(textarea).toHaveValue(expectedContent);
+    await screenshot(page);
+  }
+
+  const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  const newTableButton = page.locator('button[data-md-action="new-table"]');
-  await newTableButton.click();
-
-  const newTableModal = page.locator('div[data-markdown-table-modal-id="0"]');
-  await expect(newTableModal).toBeVisible();
-  await screenshot(page);
-
-  await newTableModal.locator('input[name="table-rows"]').fill('3');
-  await newTableModal.locator('input[name="table-columns"]').fill('2');
-
-  await newTableModal.locator('button[data-selector-name="ok-button"]').click();
-
-  await expect(newTableModal).toBeHidden();
-
-  const textarea = page.locator('textarea[name=content]');
-  await expect(textarea).toHaveValue('| Header  | Header  |\n|---------|---------|\n| Content | Content |\n| Content | Content |\n| Content | Content |\n');
-  await screenshot(page);
+  await expect(async () => {
+    await evaluateTableInsertion(page, '#comment-form', false);
+    await evaluateTableInsertion(page, '#issuecomment-2', true);
+  }).toPass();
 });
 
 test('Markdown insert link', async ({page}) => {
-  const response = await page.goto('/user2/repo1/issues/new');
+  async function evaluateLinkInsertion(page: Page, selector: string, isEditing: boolean) {
+    const url = 'https://example.com';
+    const description = 'Where does this lead?';
+
+    let expectedContent = `[${description}](${url})`;
+
+    const area = page.locator(selector);
+
+    if (isEditing) {
+      // Preparations for evaluating comment editing
+      await area.locator('.context-dropdown').click();
+      await area.locator('.context-dropdown .edit-content').click();
+      expectedContent = `good work!${expectedContent}`;
+    }
+
+    const newLinkButton = area.locator('button[data-md-action="new-link"]');
+    await newLinkButton.click();
+
+    const newLinkModal = page.locator('[data-modal-name="new-markdown-link"].active');
+    await expect(newLinkModal).toBeVisible();
+    await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"].active'], [], []);
+    await screenshot(page);
+
+    const urlInput = newLinkModal.locator('input[name="link-url"]');
+    const descriptionInput = newLinkModal.locator('input[name="link-description"]');
+
+    await expect(urlInput).not.toHaveAttribute('disabled');
+    await expect(descriptionInput).not.toHaveAttribute('disabled');
+
+    await urlInput.fill(url);
+    await descriptionInput.fill(description);
+
+    await newLinkModal.locator('button[data-selector-name="ok-button"]').click();
+    await expect(newLinkModal).toBeHidden();
+
+    const textarea = area.locator('textarea[name=content]');
+    await expect(textarea).toHaveValue(expectedContent);
+    await screenshot(page);
+  }
+
+  async function evaluateLinkInsertionShortcut(page: Page, selector: string) {
+    const url = 'https://example.com';
+    const description = 'Where does this lead?';
+
+    const expectedContent = `[${description}](${url})`;
+
+    const area = page.locator(selector);
+
+    const textarea = area.locator('textarea[name=content]');
+
+    await textarea.fill(description);
+    await textarea.focus();
+    await textarea.evaluate((it:HTMLTextAreaElement) => it.setSelectionRange(0, it.value.length));
+
+    await textarea.press('ControlOrMeta+KeyK');
+
+    const newLinkModal = page.locator('[data-modal-name="new-markdown-link"].active');
+    await expect(newLinkModal).toBeVisible();
+    await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"].active'], [], []);
+    await screenshot(page);
+
+    const urlInput = newLinkModal.locator('input[name="link-url"]');
+
+    await expect(urlInput).not.toHaveAttribute('disabled');
+
+    await urlInput.fill(url);
+
+    await newLinkModal.locator('button[data-selector-name="ok-button"]').click();
+    await expect(newLinkModal).toBeHidden();
+
+    await expect(textarea).toHaveValue(expectedContent);
+    await screenshot(page);
+  }
+
+  const response = await page.goto('/user2/repo1/issues/1');
   expect(response?.status()).toBe(200);
 
-  const newLinkButton = page.locator('button[data-md-action="new-link"]');
-  await newLinkButton.click();
+  await expect(async () => {
+    await evaluateLinkInsertion(page, '#comment-form', false);
+    await evaluateLinkInsertion(page, '#issuecomment-2', true);
+  }).toPass();
 
-  const newLinkModal = page.locator('div[data-markdown-link-modal-id="0"]');
-  await expect(newLinkModal).toBeVisible();
-  await accessibilityCheck({page}, ['[data-modal-name="new-markdown-link"]'], [], []);
-  await screenshot(page);
-
-  const url = 'https://example.com';
-  const description = 'Where does this lead?';
-
-  await newLinkModal.locator('input[name="link-url"]').fill(url);
-  await newLinkModal.locator('input[name="link-description"]').fill(description);
-
-  await newLinkModal.locator('button[data-selector-name="ok-button"]').click();
-
-  await expect(newLinkModal).toBeHidden();
-
-  const textarea = page.locator('textarea[name=content]');
-  await expect(textarea).toHaveValue(`[${description}](${url})`);
-  await screenshot(page);
+  await expect(async () => {
+    await evaluateLinkInsertionShortcut(page, '#comment-form');
+    await evaluateLinkInsertionShortcut(page, '#issuecomment-2');
+  }).toPass();
 });
 
 test('text expander has higher prio then prefix continuation', async ({page}) => {
@@ -559,4 +647,30 @@ test('Markdown bold/italic toolbar and shortcut', async ({page}) => {
   await expect(textarea).toHaveValue(`_line 1_\nline 2\nline 3\nline 4`);
   await textarea.press('ControlOrMeta+KeyI');
   await expect(textarea).toHaveValue(`line 1\nline 2\nline 3\nline 4`);
+});
+
+test('Monospace button aria-label', async ({page}) => {
+  // Load page with editor
+  const response = await page.goto('/user2/repo1/issues/new');
+  expect(response?.status()).toBe(200);
+
+  const monospaceButton = page.locator('.markdown-switch-monospace');
+  const enableText = await monospaceButton.getAttribute('data-enable-text');
+  const disableText = await monospaceButton.getAttribute('data-disable-text');
+
+  async function assertAriaLabel(enabled: boolean) {
+    const expected = enabled ? disableText : enableText;
+
+    await expect(monospaceButton).toHaveAttribute('aria-label', expected);
+  }
+
+  const enabled = await monospaceButton.getAttribute('aria-checked') === 'true';
+
+  await assertAriaLabel(enabled);
+
+  await monospaceButton.click();
+  await assertAriaLabel(!enabled);
+
+  await monospaceButton.click();
+  await assertAriaLabel(enabled);
 });

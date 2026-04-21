@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/util"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	gouuid "github.com/google/uuid"
 	"go.yaml.in/yaml/v3"
 	"xorm.io/builder"
 )
@@ -30,6 +31,7 @@ type ActionRunJob struct {
 	IsForkPullRequest bool
 	Name              string `xorm:"VARCHAR(255)"`
 	Attempt           int64
+	Handle            string `xorm:"unique"`
 	WorkflowPayload   []byte
 	JobID             string   `xorm:"VARCHAR(255)"` // job id in workflow, not job's id
 	Needs             []string `xorm:"JSON TEXT"`
@@ -108,6 +110,12 @@ func (job *ActionRunJob) LoadAttributes(ctx context.Context) error {
 	return job.Run.LoadAttributes(ctx)
 }
 
+// IsRequestedByRunner returns true if this attempt of this ActionRunJob was explicitly requested by the runner or if
+// the runner expressed no preference.
+func (job *ActionRunJob) IsRequestedByRunner(handle *string) bool {
+	return handle == nil || job.Handle == *handle
+}
+
 func (job *ActionRunJob) ItRunsOn(labels []string) bool {
 	if len(labels) == 0 || len(job.RunsOn) == 0 {
 		return false
@@ -115,6 +123,34 @@ func (job *ActionRunJob) ItRunsOn(labels []string) bool {
 	labelSet := make(container.Set[string])
 	labelSet.AddMultiple(labels...)
 	return labelSet.IsSubset(job.RunsOn)
+}
+
+func (job *ActionRunJob) PrepareNextAttempt(initialStatus Status) error {
+	if job.Status != StatusUnknown && !job.Status.IsDone() {
+		return fmt.Errorf("cannot prepare next attempt because job %d is active: %s", job.ID, job.Status.String())
+	}
+
+	job.Attempt++
+	job.Started = 0
+	job.Stopped = 0
+	job.TaskID = 0
+	job.Handle = gouuid.New().String()
+	job.Status = initialStatus
+
+	return nil
+}
+
+// CanBeRerun answers whether this ActionRunJob can be rerun. Returns true if it is done and the Run it belongs to
+// is valid. Returns false in all other cases.
+func (job *ActionRunJob) CanBeRerun(ctx context.Context) (bool, error) {
+	if err := job.LoadRun(ctx); err != nil {
+		return false, fmt.Errorf("cannot load run %d of job %d: %w", job.RunID, job.ID, err)
+	}
+
+	if !job.Run.IsValid() {
+		return false, nil
+	}
+	return job.Status.IsDone(), nil
 }
 
 func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {
@@ -135,6 +171,22 @@ func GetRunJobsByRunID(ctx context.Context, runID int64) ([]*ActionRunJob, error
 		return nil, err
 	}
 	return jobs, nil
+}
+
+// Check if the ActionRun has any jobs other than those included in the jobs parameter.
+func RunHasOtherJobs(ctx context.Context, runID int64, jobs []*ActionRunJob) (bool, error) {
+	jobIDs := make([]int64, len(jobs))
+	for i, job := range jobs {
+		jobIDs[i] = job.ID
+	}
+	otherJobs, err := db.GetEngine(ctx).
+		Where("run_id = ?", runID).
+		Where(builder.NotIn("id", jobIDs)).
+		Count(&ActionRunJob{})
+	if err != nil {
+		return false, err
+	}
+	return otherJobs > 0, nil
 }
 
 // All calls to UpdateRunJobWithoutNotification that change run.Status for any run from a not done status to a done status must call the ActionRunNowDone notification channel.
@@ -174,34 +226,18 @@ func UpdateRunJobWithoutNotification(ctx context.Context, job *ActionRunJob, con
 		}
 	}
 
-	{
-		// Other goroutines may aggregate the status of the run and update it too.
-		// So we need load the run and its jobs before updating the run.
-		run, err := GetRunByID(ctx, job.RunID)
-		if err != nil {
-			return 0, err
-		}
-		jobs, err := GetRunJobsByRunID(ctx, job.RunID)
-		if err != nil {
-			return 0, err
-		}
-		run.Status = AggregateJobStatus(jobs)
-		if run.Started.IsZero() && run.Status.IsRunning() {
-			run.Started = timeutil.TimeStampNow()
-		}
-		if run.Stopped.IsZero() && run.Status.IsDone() {
-			run.Stopped = timeutil.TimeStampNow()
-		}
-		// As the caller has to ensure the ActionRunNowDone notification is sent we can ignore doing so here.
-		if err := UpdateRunWithoutNotification(ctx, run, "status", "started", "stopped"); err != nil {
-			return 0, fmt.Errorf("update run %d: %w", run.ID, err)
-		}
+	run, columns, err := ComputeRunStatus(ctx, job.RunID)
+	if err != nil {
+		return 0, fmt.Errorf("compute run status: %w", err)
+	}
+	if err := UpdateRunWithoutNotification(ctx, run, columns...); err != nil {
+		return 0, fmt.Errorf("update run %d: %w", run.ID, err)
 	}
 
 	return affected, nil
 }
 
-func AggregateJobStatus(jobs []*ActionRunJob) Status {
+var AggregateJobStatus = func(jobs []*ActionRunJob) Status {
 	allSuccessOrSkipped := len(jobs) != 0
 	allSkipped := len(jobs) != 0
 	var hasFailure, hasCancelled, hasWaiting, hasRunning, hasBlocked bool
@@ -234,7 +270,9 @@ func AggregateJobStatus(jobs []*ActionRunJob) Status {
 	}
 }
 
-func (job *ActionRunJob) decodeWorkflowPayload() (*jobparser.SingleWorkflow, error) {
+// Retrieves the parsed workflow for this specific job.  This field is often accessed multiple times in succession, so
+// the parsed content is cached in-memory on the `ActionRunJob` instance.
+func (job *ActionRunJob) DecodeWorkflowPayload() (*jobparser.SingleWorkflow, error) {
 	if job.workflowPayloadDecoded != nil {
 		return job.workflowPayloadDecoded, nil
 	}
@@ -258,8 +296,8 @@ func (job *ActionRunJob) ClearCachedWorkflowPayload() {
 // Checks whether the target job is an `(incomplete matrix)` job that will be blocked until the matrix is complete, and
 // then regenerated and deleted.  If it is incomplete, and if the information is available, the specific job and/or
 // output that causes it to be incomplete will be returned as well.
-func (job *ActionRunJob) IsIncompleteMatrix() (bool, *jobparser.IncompleteNeeds, error) {
-	jobWorkflow, err := job.decodeWorkflowPayload()
+func (job *ActionRunJob) HasIncompleteMatrix() (bool, *jobparser.IncompleteNeeds, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
 	if err != nil {
 		return false, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
 	}
@@ -268,10 +306,62 @@ func (job *ActionRunJob) IsIncompleteMatrix() (bool, *jobparser.IncompleteNeeds,
 
 // Checks whether the target job has a `runs-on` field with an expression that requires an input from another job.  The
 // job will be blocked until the other job is complete, and then regenerated and deleted.
-func (job *ActionRunJob) IsIncompleteRunsOn() (bool, *jobparser.IncompleteNeeds, *jobparser.IncompleteMatrix, error) {
-	jobWorkflow, err := job.decodeWorkflowPayload()
+func (job *ActionRunJob) HasIncompleteRunsOn() (bool, *jobparser.IncompleteNeeds, *jobparser.IncompleteMatrix, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
 	if err != nil {
 		return false, nil, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
 	}
 	return jobWorkflow.IncompleteRunsOn, jobWorkflow.IncompleteRunsOnNeeds, jobWorkflow.IncompleteRunsOnMatrix, nil
+}
+
+// Check whether the target job was generated as a result of expanding a reusable workflow.
+func (job *ActionRunJob) IsWorkflowCallInnerJob() (bool, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
+	if err != nil {
+		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.Metadata.WorkflowCallParent != "", nil
+}
+
+// Check whether this job is a caller of a reusable workflow -- in other words, the real work done in this job is in
+// spawned child jobs, not this job.
+func (job *ActionRunJob) IsWorkflowCallOuterJob() (bool, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
+	if err != nil {
+		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.Metadata.WorkflowCallID != "", nil
+}
+
+// Checks whether the target job has a `with` field with an expression that requires an input from another job.  The job
+// will be blocked until the other job is complete, and then regenerated and deleted.
+func (job *ActionRunJob) HasIncompleteWith() (bool, *jobparser.IncompleteNeeds, *jobparser.IncompleteMatrix, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
+	if err != nil {
+		return false, nil, nil, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.IncompleteWith, jobWorkflow.IncompleteWithNeeds, jobWorkflow.IncompleteWithMatrix, nil
+}
+
+// EnableOpenIDConnect checks whether the job allows for ID token generation.
+func (job *ActionRunJob) EnableOpenIDConnect() (bool, error) {
+	jobWorkflow, err := job.DecodeWorkflowPayload()
+	if err != nil {
+		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
+	}
+	return jobWorkflow.EnableOpenIDConnect, nil
+}
+
+// AllNeedsExist checks whether this ActionRunJob's Needs can theoretically be met by comparing them with the supplied
+// list of all job IDs that part of a particular workflow run. Returns the list of unknown job IDs found in Needs
+// alongside an indicator whether the check was successful.
+func (job *ActionRunJob) AllNeedsExist(allExistingJobIDs container.Set[string]) ([]string, bool) {
+	unknownJobIDs := []string{}
+	for _, need := range job.Needs {
+		if !allExistingJobIDs.Contains(need) {
+			unknownJobIDs = append(unknownJobIDs, need)
+		}
+	}
+
+	return unknownJobIDs, len(unknownJobIDs) == 0
 }

@@ -10,8 +10,12 @@ import (
 // ActionRunJob represents a job of a run
 // swagger:model
 type ActionRunJob struct {
-	// the action run job id
+	// Identifier of this job.
 	ID int64 `json:"id"`
+	// How many times the job has been attempted including the current attempt.
+	Attempt int64 `json:"attempt"`
+	// Opaque identifier that uniquely identifies a single attempt of a job.
+	Handle string `json:"handle"`
 	// the repository id
 	RepoID int64 `json:"repo_id"`
 	// the owner id
@@ -66,13 +70,13 @@ type ActionRun struct {
 	// the current status of this run
 	Status string `json:"status"`
 	// when the action run was started
-	Started time.Time `json:"started,omitempty"`
+	Started time.Time `json:"started"`
 	// when the action run was stopped
-	Stopped time.Time `json:"stopped,omitempty"`
+	Stopped time.Time `json:"stopped"`
 	// when the action run was created
-	Created time.Time `json:"created,omitempty"`
+	Created time.Time `json:"created"`
 	// when the action run was last updated
-	Updated time.Time `json:"updated,omitempty"`
+	Updated time.Time `json:"updated"`
 	// how long the action run ran for
 	Duration time.Duration `json:"duration,omitempty"`
 	// the url of this action run
@@ -83,4 +87,27 @@ type ActionRun struct {
 type ListActionRunResponse struct {
 	Entries    []*ActionRun `json:"workflow_runs"`
 	TotalCount int64        `json:"total_count"`
+}
+
+// ActionArtifact represents an artifact of a workflow run
+// swagger:model
+type ActionArtifact struct {
+	// the artifact's ID
+	ID int64 `json:"id"`
+	// the artifact's name
+	Name string `json:"name"`
+	// the total size of the artifact in bytes
+	SizeInBytes int64 `json:"size_in_bytes"`
+	// the URL to download the artifact zip archive
+	ArchiveDownloadURL string `json:"archive_download_url"`
+	// whether the artifact has expired
+	Expired bool `json:"expired"`
+	// the ID of the workflow run that produced this artifact
+	RunID int64 `json:"run_id"`
+	// swagger:strfmt date-time
+	CreatedAt time.Time `json:"created_at"`
+	// swagger:strfmt date-time
+	UpdatedAt time.Time `json:"updated_at"`
+	// swagger:strfmt date-time
+	ExpiresAt time.Time `json:"expires_at"`
 }

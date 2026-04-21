@@ -31,7 +31,7 @@ func ListHooks(ctx *context.APIContext) {
 	//   type: integer
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/HookList"
+	//     "$ref": "#/responses/HookListWithoutPagination"
 	//   "401":
 	//     "$ref": "#/responses/unauthorized"
 	//   "403":
@@ -70,7 +70,7 @@ func GetHook(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.Doer.IsAdmin && hook.OwnerID != ctx.Doer.ID {
+	if !ctx.IsUserSiteAdmin() && hook.OwnerID != ctx.Doer.ID {
 		ctx.NotFound()
 		return
 	}

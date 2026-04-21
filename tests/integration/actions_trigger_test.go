@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ import (
 	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
@@ -88,7 +90,7 @@ jobs:
 		labelStr := "/api/v1/repos/user2/repo-pull-request/labels"
 		labelsCount := 2
 		labels := make([]*api.Label, labelsCount)
-		for i := 0; i < labelsCount; i++ {
+		for i := range labelsCount {
 			color := "abcdef"
 			req := NewRequestWithJSON(t, "POST", labelStr, &api.CreateLabelOption{
 				Name:  fmt.Sprintf("label%d", i),
@@ -795,26 +797,137 @@ func TestActionsCreateDeleteRefEvent(t *testing.T) {
 	})
 }
 
-func TestActionsWorkflowDispatchEvent(t *testing.T) {
+func TestActionsWorkflowDispatch(t *testing.T) {
+	testCases := []struct {
+		name              string
+		workflowID        string
+		workflowDirectory string
+	}{
+		{
+			name:              "GitHub",
+			workflowID:        "dispatch.yml",
+			workflowDirectory: ".github/workflows",
+		},
+		{
+			name:              "Gitea",
+			workflowID:        "test.yml",
+			workflowDirectory: ".gitea/workflows",
+		},
+		{
+			name:              "Forgejo",
+			workflowID:        "build.yml",
+			workflowDirectory: ".forgejo/workflows",
+		},
+	}
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+				// create the repo
+				repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
+					[]unit_model.Type{unit_model.TypeActions}, nil,
+					[]*files_service.ChangeRepoFile{
+						{
+							Operation: "create",
+							TreePath:  fmt.Sprintf("%s/%s", testCase.workflowDirectory, testCase.workflowID),
+							ContentReader: strings.NewReader(
+								"name: test\n" +
+									"on: [workflow_dispatch]\n" +
+									"jobs:\n" +
+									"  test:\n" +
+									"    runs-on: ubuntu-latest\n" +
+									"    steps:\n" +
+									"      - run: echo helloworld\n",
+							),
+						},
+					},
+				)
+				defer f()
+
+				gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+				require.NoError(t, err)
+				defer gitRepo.Close()
+
+				workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", testCase.workflowID)
+				require.NoError(t, err)
+				assert.Equal(t, "refs/heads/main", workflow.Ref)
+				assert.Equal(t, sha, workflow.Commit.ID.String())
+
+				inputGetter := func(key string) string {
+					return ""
+				}
+
+				var r *actions_model.ActionRun
+				var j []string
+				r, j, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+				require.NoError(t, err)
+
+				assert.Equal(t, 1, unittest.GetCount(t, &actions_model.ActionRun{RepoID: repo.ID}))
+
+				assert.Equal(t, "test", r.Title)
+				assert.Equal(t, testCase.workflowID, r.WorkflowID)
+				assert.Equal(t, testCase.workflowDirectory, r.WorkflowDirectory)
+				assert.Equal(t, sha, r.CommitSHA)
+				assert.Equal(t, actions_module.GithubEventWorkflowDispatch, r.TriggerEvent)
+				assert.Len(t, j, 1)
+				assert.Equal(t, "test", j[0])
+			})
+		}
+	})
+}
+
+func TestActionsWorkflowDispatchRejectsInputsThatExceedLimit(t *testing.T) {
+	workflow := `
+name: test
+on:
+  workflow_dispatch:
+    inputs:
+      boolean:
+        description: 'Boolean'
+        type: boolean
+      number:
+        description: 'Number'
+        default: '100'
+        type: number
+      string:
+        description: 'String'
+        type: string
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "OK"
+`
+
+	defer test.MockVariableValue(&setting.Actions.LimitDispatchInputs, 2)()
+
+	testCases := []struct {
+		name          string
+		inputs        map[string]string
+		expectedError string
+	}{
+		{
+			name:   "below-limit",
+			inputs: map[string]string{"boolean": "true", "number": "10"},
+		},
+		{
+			name:          "beyond-limit",
+			inputs:        map[string]string{"boolean": "true", "number": "10", "string": "my input"},
+			expectedError: "too many inputs",
+		},
+	}
+
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
-		// create the repo
 		repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
 			[]unit_model.Type{unit_model.TypeActions}, nil,
 			[]*files_service.ChangeRepoFile{
 				{
-					Operation: "create",
-					TreePath:  ".gitea/workflows/dispatch.yml",
-					ContentReader: strings.NewReader(
-						"name: test\n" +
-							"on: [workflow_dispatch]\n" +
-							"jobs:\n" +
-							"  test:\n" +
-							"    runs-on: ubuntu-latest\n" +
-							"    steps:\n" +
-							"      - run: echo helloworld\n",
-					),
+					Operation:     "create",
+					TreePath:      ".forgejo/workflows/dispatch.yaml",
+					ContentReader: strings.NewReader(workflow),
 				},
 			},
 		)
@@ -824,28 +937,25 @@ func TestActionsWorkflowDispatchEvent(t *testing.T) {
 		require.NoError(t, err)
 		defer gitRepo.Close()
 
-		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yml")
+		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yaml")
 		require.NoError(t, err)
 		assert.Equal(t, "refs/heads/main", workflow.Ref)
 		assert.Equal(t, sha, workflow.Commit.ID.String())
 
-		inputGetter := func(key string) string {
-			return ""
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				inputGetter := func(key string) string {
+					return testCase.inputs[key]
+				}
+
+				_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+				if testCase.expectedError == "" {
+					require.NoError(t, err)
+				} else {
+					assert.EqualError(t, err, testCase.expectedError)
+				}
+			})
 		}
-
-		var r *actions_model.ActionRun
-		var j []string
-		r, j, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
-		require.NoError(t, err)
-
-		assert.Equal(t, 1, unittest.GetCount(t, &actions_model.ActionRun{RepoID: repo.ID}))
-
-		assert.Equal(t, "test", r.Title)
-		assert.Equal(t, "dispatch.yml", r.WorkflowID)
-		assert.Equal(t, sha, r.CommitSHA)
-		assert.Equal(t, actions_module.GithubEventWorkflowDispatch, r.TriggerEvent)
-		assert.Len(t, j, 1)
-		assert.Equal(t, "test", j[0])
 	})
 }
 
@@ -895,6 +1005,77 @@ func TestActionsWorkflowDispatchDynamicMatrix(t *testing.T) {
 
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: run.ID})
 		assert.Contains(t, string(job.WorkflowPayload), "incomplete_matrix: true")
+	})
+}
+
+func TestActionsWorkflowDispatchReusableWorkflow(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
+			[]unit_model.Type{unit_model.TypeActions}, nil,
+			[]*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".forgejo/workflows/dispatch.yml",
+					ContentReader: strings.NewReader(
+						"name: test\n" +
+							"on: [workflow_dispatch]\n" +
+							"jobs:\n" +
+							"  test:\n" +
+							"    uses: ./.forgejo/workflows/reusable.yml\n",
+					),
+				},
+				{
+					Operation: "create",
+					TreePath:  ".forgejo/workflows/reusable.yml",
+					ContentReader: strings.NewReader(
+						"name: test\n" +
+							"on: [workflow_call]\n" +
+							"jobs:\n" +
+							"  inner:\n" +
+							"    runs-on: ubuntu-latest\n" +
+							"    steps:\n" +
+							"      - run: echo helloworld\n",
+					),
+				},
+			},
+		)
+		defer f()
+
+		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+		require.NoError(t, err)
+		defer gitRepo.Close()
+
+		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yml")
+		require.NoError(t, err)
+		assert.Equal(t, "refs/heads/main", workflow.Ref)
+		assert.Equal(t, sha, workflow.Commit.ID.String())
+
+		inputGetter := func(key string) string {
+			return ""
+		}
+
+		run, _, err := workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+		require.NoError(t, err)
+
+		var runJobs []*actions_model.ActionRunJob
+		db.GetEngine(t.Context()).Where("run_id=?", run.ID).Find(&runJobs)
+		assert.Len(t, runJobs, 2)
+
+		var parentJob *actions_model.ActionRunJob
+		var childJob *actions_model.ActionRunJob
+		for _, j := range runJobs {
+			switch j.JobID {
+			case "test":
+				parentJob = j
+			case "test.inner":
+				childJob = j
+			}
+		}
+		assert.NotNil(t, parentJob, "parentJob")
+		assert.NotNil(t, childJob, "childJob")
 	})
 }
 
@@ -953,5 +1134,124 @@ func TestActionsWorkflowDispatchConcurrencyGroup(t *testing.T) {
 		assert.Equal(t, actions_model.CancelInProgress, secondRun.ConcurrencyType)
 		firstRunReload := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: firstRun.ID})
 		assert.Equal(t, actions_model.StatusCancelled, firstRunReload.Status)
+	})
+}
+
+func TestActionsScheduledWorkflow(t *testing.T) {
+	type expectedSpec struct {
+		cron     string
+		timeZone optional.Option[string]
+	}
+
+	testCases := []struct {
+		name                  string
+		workflowID            string
+		workflowDirectory     string
+		workflowContent       string
+		expectedWorkflowTitle string
+		expectedCronSpecs     []expectedSpec
+	}{
+		{
+			name:              "GitHub",
+			workflowID:        "scheduled.yml",
+			workflowDirectory: ".github/workflows",
+			workflowContent: `
+on:
+  schedule:
+    - cron: "30 5,17 * * *"
+jobs:
+  test:
+    steps:
+      - run: echo OK
+`,
+			expectedWorkflowTitle: ".github/workflows/scheduled.yml",
+			expectedCronSpecs:     []expectedSpec{{cron: "30 5,17 * * *", timeZone: optional.None[string]()}},
+		},
+		{
+			name:              "Gitea",
+			workflowID:        "test.yml",
+			workflowDirectory: ".gitea/workflows",
+			workflowContent: `
+name: My scheduled workflow
+on:
+  schedule:
+    - cron: "* * * * *"
+jobs:
+  test:
+    steps:
+      - run: echo OK
+`,
+			expectedWorkflowTitle: "My scheduled workflow",
+			expectedCronSpecs:     []expectedSpec{{cron: "* * * * *", timeZone: optional.None[string]()}},
+		},
+		{
+			name:              "Forgejo with time zone",
+			workflowID:        "tz.yml",
+			workflowDirectory: ".forgejo/workflows",
+			workflowContent: `
+on:
+  schedule:
+    - cron: "44 10 * * *"
+    - cron: "25 19 * * *"
+      timezone: Europe/Madrid
+jobs:
+  test:
+    steps:
+      - run: echo OK
+`,
+			expectedWorkflowTitle: ".forgejo/workflows/tz.yml",
+			expectedCronSpecs: []expectedSpec{
+				{cron: "44 10 * * *", timeZone: optional.None[string]()},
+				{cron: "25 19 * * *", timeZone: optional.Some("Europe/Madrid")},
+			},
+		},
+	}
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+				// create the repo
+				repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
+					[]unit_model.Type{unit_model.TypeActions}, nil,
+					[]*files_service.ChangeRepoFile{
+						{
+							Operation:     "create",
+							TreePath:      fmt.Sprintf("%s/%s", testCase.workflowDirectory, testCase.workflowID),
+							ContentReader: strings.NewReader(testCase.workflowContent),
+						},
+					},
+				)
+				defer f()
+
+				schedules, err := db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
+				require.NoError(t, err)
+				require.Len(t, schedules, 1)
+
+				assert.Equal(t, testCase.expectedWorkflowTitle, schedules[0].Title)
+				assert.Equal(t, repo.ID, schedules[0].RepoID)
+				assert.Equal(t, repo.OwnerID, schedules[0].OwnerID)
+				assert.Equal(t, testCase.workflowID, schedules[0].WorkflowID)
+				assert.Equal(t, testCase.workflowDirectory, schedules[0].WorkflowDirectory)
+				assert.Equal(t, int64(-2), schedules[0].TriggerUserID)
+				assert.Equal(t, sha, schedules[0].CommitSHA)
+				assert.Equal(t, webhook_module.HookEventPush, schedules[0].Event)
+				assert.Equal(t, []byte(testCase.workflowContent), schedules[0].Content)
+
+				specs, total, err := actions_model.FindSpecs(t.Context(), actions_model.FindSpecOptions{RepoID: repo.ID})
+				require.NoError(t, err)
+
+				assert.Equal(t, int64(len(testCase.expectedCronSpecs)), total)
+
+				// The query to return cron specs orders by `id DESC`.
+				slices.Reverse(testCase.expectedCronSpecs)
+
+				for i, expected := range testCase.expectedCronSpecs {
+					assert.Equal(t, schedules[0].ID, specs[i].ScheduleID)
+					assert.Equal(t, expected.cron, specs[i].Spec)
+					assert.Equal(t, expected.timeZone, specs[i].TimeZone)
+				}
+			})
+		}
 	})
 }

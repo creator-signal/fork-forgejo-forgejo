@@ -69,8 +69,12 @@ func ListTrackedTimes(ctx *context.APIContext) {
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/TrackedTimeList"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
 
 	if !ctx.Repo.Repository.IsTimetrackerEnabled(ctx) {
 		ctx.NotFound("Timetracker is disabled")
@@ -109,7 +113,7 @@ func ListTrackedTimes(ctx *context.APIContext) {
 		return
 	}
 
-	cantSetUser := !ctx.Doer.IsAdmin &&
+	cantSetUser := !ctx.IsUserSiteAdmin() &&
 		opts.UserID != ctx.Doer.ID &&
 		!ctx.IsUserRepoWriter([]unit.Type{unit.TypeIssues})
 
@@ -203,7 +207,7 @@ func AddTime(ctx *context.APIContext) {
 
 	user := ctx.Doer
 	if form.User != "" {
-		if (ctx.IsUserRepoAdmin() && ctx.Doer.Name != form.User) || ctx.Doer.IsAdmin {
+		if (ctx.IsUserRepoAdmin() && ctx.Doer.Name != form.User) || ctx.IsUserSiteAdmin() {
 			// allow only RepoAdmin, Admin and User to add time
 			user, err = user_model.GetUserByName(ctx, form.User)
 			if err != nil {
@@ -371,7 +375,7 @@ func DeleteTime(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.Doer.IsAdmin && time.UserID != ctx.Doer.ID {
+	if !ctx.IsUserSiteAdmin() && time.UserID != ctx.Doer.ID {
 		// Only Admin and User itself can delete their time
 		ctx.Status(http.StatusForbidden)
 		return
@@ -411,7 +415,7 @@ func ListTrackedTimesByUser(ctx *context.APIContext) {
 	//   required: true
 	// responses:
 	//   "200":
-	//     "$ref": "#/responses/TrackedTimeList"
+	//     "$ref": "#/responses/TrackedTimeListWithoutPagination"
 	//   "400":
 	//     "$ref": "#/responses/error"
 	//   "403":
@@ -437,7 +441,7 @@ func ListTrackedTimesByUser(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.IsUserRepoAdmin() && !ctx.Doer.IsAdmin && ctx.Doer.ID != user.ID {
+	if !ctx.IsUserRepoAdmin() && !ctx.IsUserSiteAdmin() && ctx.Doer.ID != user.ID {
 		ctx.Error(http.StatusForbidden, "", errors.New("query by user not allowed; not enough rights"))
 		return
 	}
@@ -508,6 +512,8 @@ func ListTrackedTimesByRepository(ctx *context.APIContext) {
 	//     "$ref": "#/responses/forbidden"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
 
 	if !ctx.Repo.Repository.IsTimetrackerEnabled(ctx) {
 		ctx.Error(http.StatusBadRequest, "", "time tracking disabled")
@@ -538,7 +544,7 @@ func ListTrackedTimesByRepository(ctx *context.APIContext) {
 		return
 	}
 
-	cantSetUser := !ctx.Doer.IsAdmin &&
+	cantSetUser := !ctx.IsUserSiteAdmin() &&
 		opts.UserID != ctx.Doer.ID &&
 		!ctx.IsUserRepoWriter([]unit.Type{unit.TypeIssues})
 

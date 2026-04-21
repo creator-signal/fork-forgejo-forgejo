@@ -97,6 +97,36 @@ func TestSigninWithRememberMe(t *testing.T) {
 	session.MakeRequest(t, req, http.StatusOK)
 }
 
+func TestProviderDisplayNameIsPathEscaped(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	testCases := []string{
+		"sla/shed",
+		"per%cent",
+		"que?ry=string",
+		"ha#sh",
+		"spa ce",     // doesn't break the path
+		"pl+us",      // unchanged by url.PathEscape
+		"amper&sand", // unchanged by url.PathEscape
+	}
+
+	for _, testCase := range testCases {
+		// GitLab is only used here for convenience.
+		addAuthSource(t, authSourcePayloadGitLabCustom(testCase))
+	}
+
+	request := NewRequest(t, "GET", "/user/login")
+	response := MakeRequest(t, request, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, response.Body)
+
+	for _, testCase := range testCases {
+		t.Run(testCase, func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			htmlDoc.AssertElement(t, fmt.Sprintf("a.oauth-login-link[href='/user/oauth2/%s']", url.PathEscape(testCase)), true)
+		})
+	}
+}
+
 func TestDisableSignin(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	// Mock alternative auth ways as enabled
@@ -171,9 +201,9 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			assert.Greater(t, htmlDoc.Find(".navbar-left > a.item").Length(), 1) // show the Logo, and other links
 			assert.Greater(t, htmlDoc.Find(".navbar-right details.dropdown a").Length(), 1)
 
-			// 500 page
-			reset := enableDevtest()
-			req = NewRequest(t, "GET", "/devtest/error/500")
+			// demo pages are using ignSignIn and are expected to be accessible with loginAllowed
+			reset := enableDemoPages()
+			req = NewRequest(t, "GET", "/-/demo/error/500")
 			req.Header.Add("Accept", "text/html")
 			resp = session.MakeRequest(t, req, http.StatusInternalServerError)
 			htmlDoc = NewHTMLParser(t, resp.Body)
@@ -195,14 +225,12 @@ func TestGlobalTwoFactorRequirement(t *testing.T) {
 			assert.Equal(t, 1, userLinks.Length()) // only logout link
 			assert.Equal(t, "Sign out", strings.TrimSpace(userLinks.Text()))
 
-			// 500 page
-			reset := enableDevtest()
-			req = NewRequest(t, "GET", "/devtest/error/500")
+			// demo pages are using ignSignIn and should redirect like any other pages if 2FA is required but missing
+			reset := enableDemoPages()
+			req = NewRequest(t, "GET", "/-/demo/error/500")
 			req.Header.Add("Accept", "text/html")
-			resp = session.MakeRequest(t, req, http.StatusInternalServerError)
-			htmlDoc = NewHTMLParser(t, resp.Body)
-			assert.Equal(t, 1, htmlDoc.Find(".navbar-left > a.item").Length())
-			htmlDoc.AssertElement(t, ".navbar-right", false)
+			resp = session.MakeRequest(t, req, http.StatusSeeOther)
+			assert.Equal(t, "/user/settings/security", resp.Header().Get("Location"))
 			reset()
 
 			// 2fa page

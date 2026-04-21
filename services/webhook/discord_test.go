@@ -4,6 +4,8 @@
 package webhook
 
 import (
+	"bytes"
+	"io"
 	"testing"
 
 	webhook_model "forgejo.org/models/webhook"
@@ -72,7 +74,7 @@ func TestDiscordPayload(t *testing.T) {
 
 		assert.Len(t, pl.Embeds, 1)
 		assert.Equal(t, "[test/repo:test] 2 new commits", pl.Embeds[0].Title)
-		assert.Equal(t, "[2020558](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) commit message - user1\n[2020558](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) commit message - user1", pl.Embeds[0].Description)
+		assert.Equal(t, "[`2020558`](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) commit message \\- user1\n[`2020558`](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) commit message \\- user1", pl.Embeds[0].Description)
 		assert.Equal(t, "http://localhost:3000/test/repo/src/test", pl.Embeds[0].URL)
 		assert.Equal(t, p.Sender.UserName, pl.Embeds[0].Author.Name)
 		assert.Equal(t, setting.AppURL+p.Sender.UserName, pl.Embeds[0].Author.URL)
@@ -87,7 +89,7 @@ func TestDiscordPayload(t *testing.T) {
 
 		assert.Len(t, pl.Embeds, 1)
 		assert.Equal(t, "[test/repo:test] 2 new commits", pl.Embeds[0].Title)
-		assert.Equal(t, "[2020558](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) This is a commit summary ⚠️⚠️⚠️⚠️ containing 你好... - user1\n[2020558](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) This is a commit summary ⚠️⚠️⚠️⚠️ containing 你好... - user1", pl.Embeds[0].Description)
+		assert.Equal(t, "[`2020558`](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) This is a commit summary ⚠️⚠️⚠️⚠️ containing 你好... \\- user1\n[`2020558`](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) This is a commit summary ⚠️⚠️⚠️⚠️ containing 你好... \\- user1", pl.Embeds[0].Description)
 		assert.Equal(t, p.Sender.UserName, pl.Embeds[0].Author.Name)
 		assert.Equal(t, setting.AppURL+p.Sender.UserName, pl.Embeds[0].Author.URL)
 		assert.Equal(t, p.Sender.AvatarURL, pl.Embeds[0].Author.IconURL)
@@ -101,7 +103,7 @@ func TestDiscordPayload(t *testing.T) {
 
 		assert.Len(t, pl.Embeds, 1)
 		assert.Equal(t, "[test/repo:test] 2 new commits", pl.Embeds[0].Title)
-		assert.Equal(t, "[2020558](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) \\# conflicts\n\\# \\- some/conflicting/file.txt - user1\n[2020558](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) \\# conflicts\n\\# \\- some/conflicting/file.txt - user1", pl.Embeds[0].Description)
+		assert.Equal(t, "[`2020558`](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) \\# conflicts\n\\# \\- some/conflicting/file.txt \\- user1\n[`2020558`](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) \\# conflicts\n\\# \\- some/conflicting/file.txt \\- user1", pl.Embeds[0].Description)
 		assert.Equal(t, p.Sender.UserName, pl.Embeds[0].Author.Name)
 		assert.Equal(t, setting.AppURL+p.Sender.UserName, pl.Embeds[0].Author.URL)
 		assert.Equal(t, p.Sender.AvatarURL, pl.Embeds[0].Author.IconURL)
@@ -354,10 +356,17 @@ func TestDiscordJSONPayload(t *testing.T) {
 	assert.Equal(t, "https://discord.example.com/", req.URL.String())
 	assert.Equal(t, "sha256=", req.Header.Get("X-Hub-Signature-256"))
 	assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
-	var body DiscordPayload
-	err = json.NewDecoder(req.Body).Decode(&body)
+
+	buf, err := io.ReadAll(req.Body)
 	require.NoError(t, err)
-	assert.Equal(t, "[2020558](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) commit message - user1\n[2020558](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) commit message - user1", body.Embeds[0].Description)
+
+	// https://codeberg.org/forgejo/forgejo/issues/11573
+	assert.NotContains(t, string(buf), `"footer":`)
+
+	var body DiscordPayload
+	err = json.NewDecoder(bytes.NewReader(buf)).Decode(&body)
+	require.NoError(t, err)
+	assert.Equal(t, "[`2020558`](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) commit message \\- user1\n[`2020558`](http://localhost:3000/test/repo/commit/2020558fe2e34debb818a514715839cabd25e778) commit message \\- user1", body.Embeds[0].Description)
 }
 
 var escapedMarkdownTests = map[string]struct {

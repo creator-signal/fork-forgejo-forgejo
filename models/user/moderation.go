@@ -57,6 +57,12 @@ func (ud UserData) GetFieldsMap() []moderation.ShadowCopyField {
 	}
 }
 
+// Implements GetAbuserID() from ShadowCopyData interface, returning (GhostUserID, false), since for users/organizations
+// the ID is not saved within the shadow copy (because it is already stored as ContentID in the abuse report).
+func (ud *UserData) GetAbuserID() (int64, bool) {
+	return GhostUserID, false
+}
+
 // newUserData creates a trimmed down user to be used just to create a JSON structure
 // (keeping only the fields relevant for moderation purposes)
 func newUserData(user *User) UserData {
@@ -81,7 +87,7 @@ func newUserData(user *User) UserData {
 // (e.g. FieldName -> field_name) corresponding to UserData struct fields.
 var userDataColumnNames = sync.OnceValue(func() []string {
 	mapper := new(names.GonicMapper)
-	udType := reflect.TypeOf(UserData{})
+	udType := reflect.TypeFor[UserData]()
 	columnNames := make([]string, 0, udType.NumField())
 	for i := 0; i < udType.NumField(); i++ {
 		columnNames = append(columnNames, mapper.Obj2Table(udType.Field(i).Name))

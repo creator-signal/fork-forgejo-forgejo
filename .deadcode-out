@@ -19,10 +19,10 @@ forgejo.org/models/auth
 forgejo.org/models/db
 	TruncateBeans
 	TruncateBeansCascade
-	InTransaction
 	DumpTables
 	GetTableNames
 	extendBeansForCascade
+	IsErrNameActivityPubInvalid
 
 forgejo.org/models/dbfs
 	file.renameTo
@@ -50,9 +50,6 @@ forgejo.org/models/organization
 forgejo.org/models/perm/access
 	GetRepoWriters
 
-forgejo.org/models/repo
-	WatchRepoMode
-
 forgejo.org/models/user
 	IsErrUserWrongType
 	IsErrExternalLoginUserAlreadyExist
@@ -61,7 +58,6 @@ forgejo.org/models/user
 	IsErrUserSettingIsNotExist
 	GetUserAllSettings
 	DeleteUserSetting
-	GetFederatedUser
 
 forgejo.org/modules/activitypub
 	NewContext
@@ -136,6 +132,9 @@ forgejo.org/modules/json
 	StdJSON.Indent
 
 forgejo.org/modules/log
+	eventWriterBuffer.Close
+	eventWriterBuffer.Write
+	eventWriterBuffer.GetString
 	NewEventWriterBuffer
 
 forgejo.org/modules/markup
@@ -234,6 +233,7 @@ forgejo.org/services/repository
 
 forgejo.org/services/repository/files
 	ContentType.String
+	RepoFileOptionMode
 
 forgejo.org/services/repository/gitgraph
 	Parser.Reset

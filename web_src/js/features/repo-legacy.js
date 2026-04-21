@@ -27,7 +27,7 @@ import {attachRefIssueContextPopup} from './contextpopup.js';
 import {POST} from '../modules/fetch.js';
 import {MarkdownQuote} from '@github/quote-selection';
 import {toAbsoluteUrl} from '../utils.js';
-import {initDropzone, initGlobalShowModal} from './common-global.js';
+import {initDropzone, initGlobalShowModal, initDisabledInputs} from './common-global.js';
 
 export function initRepoCommentForm() {
   const $commentForm = $('.comment.form');
@@ -90,6 +90,9 @@ export function initRepoCommentForm() {
     $(`.${selector}`).dropdown({
       'action': 'nothing', // do not hide the menu if user presses Enter
       fullTextSearch: 'exact',
+      selector: {
+        unselectable: '.disabled, .filtered, .tw-hidden',
+      },
       async onHide() {
         hasUpdateAction = $listMenu.data('action') === 'update'; // Update the var
         if (hasUpdateAction) {
@@ -370,6 +373,7 @@ async function onEditContent(event) {
   comboMarkdownEditor = getComboMarkdownEditor(editContentZone.querySelector('.combo-markdown-editor'));
   if (!comboMarkdownEditor) {
     editContentZone.innerHTML = document.getElementById('issue-comment-editor-template').innerHTML;
+    initDisabledInputs(editContentZone);
     const dropzone = editContentZone.querySelector('.dropzone');
     if (!dropzone.dropzone) await initDropzone(dropzone, editContentZone);
     comboMarkdownEditor = await initComboMarkdownEditor(editContentZone.querySelector('.combo-markdown-editor'));

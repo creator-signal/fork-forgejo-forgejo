@@ -1,19 +1,26 @@
-<div id="activity-feed">
+<div id="activity-feed" class="flex-list">
 	{{range .FollowingFeeds}}
-		<div class="ap-feed-item">
+		<div class="flex-item">
 			{{if not (eq .Actor.ID 0)}}
-				<p>
-					<a href="{{.ActorURI}}">{{.Actor.Name}}</a>
-					{{if .NoteURL}}
-						<a href="{{.NoteURL}}">{{ctx.Locale.Tr "user.activitypub_feed.wrote"}}</a>
-					{{else}}
-						{{ctx.Locale.Tr "user.activitypub_feed.wrote"}}
-					{{end}}:
-				</p>
+				<div class="flex-item-leading">
+					{{ctx.AvatarUtils.Avatar . 48}}
+				</div>
 			{{end}}
-			{{.NoteContent | SanitizeHTML}}
+			<div class="flex-item-main">
+				<div class="flex-item-title">
+					<a class="text muted" href="{{.ActorURI}}">{{.Actor.Name}}</a>
+				</div>
+				<div class="render-content markup">
+					{{.NoteContent | SanitizeHTMLStrict}}
+				</div>
+				{{if .NoteURL}}
+					<div class="flex-item-footer">
+						<span class="flex-text-inline">{{svg "octicon-calendar"}}{{ctx.Locale.Tr "user.activitypub_feed.posted_on" (DateUtils.TimeSince .Created)}}</span>
+						<a class="flex-text-inline" href="{{.NoteURL}}">{{svg "octicon-link-external"}}{{ctx.Locale.Tr "user.activitypub_feed.original_source"}}</a>
+					</div>
+				{{end}}
+			</div>
 		</div>
-		<hr>
 	{{end}}
 	{{template "base/paginate" .}}
 </div>

@@ -405,7 +405,7 @@ func GetTeamMembers(ctx *context.APIContext) {
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsOrganizationMember", err)
 		return
-	} else if !isMember && !ctx.Doer.IsAdmin {
+	} else if !isMember && !ctx.IsUserSiteAdmin() {
 		ctx.NotFound()
 		return
 	}
@@ -572,8 +572,9 @@ func GetTeamRepos(ctx *context.APIContext) {
 
 	team := ctx.Org.Team
 	teamRepos, err := organization.GetTeamRepositories(ctx, &organization.SearchTeamRepoOptions{
-		ListOptions: utils.GetListOptions(ctx),
-		TeamID:      team.ID,
+		ListOptions:          utils.GetListOptions(ctx),
+		TeamID:               team.ID,
+		AuthorizationReducer: ctx.Reducer,
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetTeamRepos", err)
@@ -581,9 +582,15 @@ func GetTeamRepos(ctx *context.APIContext) {
 	}
 	repos := make([]*api.Repository, len(teamRepos))
 	for i, repo := range teamRepos {
-		permission, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "GetTeamRepos", err)
+			ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
+			return
+		} else if !permission.HasAccess() {
+			// It shouldn't happen that a repo is returned from GetTeamRepositories which we have no access to at all.
+			// Due to the pagination of the API it doesn't make sense to skip it, as we wouldn't be giving the right
+			// number of results back to the API consumer.
+			ctx.Error(http.StatusInternalServerError, "InvalidAuthorizationReducer", "Repository was available from GetTeamRepositories, but not readable.")
 			return
 		}
 		repos[i] = convert.ToRepo(ctx, repo, permission)
@@ -632,9 +639,13 @@ func GetTeamRepo(ctx *context.APIContext) {
 		return
 	}
 
-	permission, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetTeamRepos", err)
+		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
+		return
+	}
+	if !permission.HasAccess() {
+		ctx.NotFound()
 		return
 	}
 
@@ -812,7 +823,7 @@ func SearchTeam(ctx *context.APIContext) {
 	}
 
 	// Only admin is allowed to search for all teams
-	if !ctx.Doer.IsAdmin {
+	if !ctx.IsUserSiteAdmin() {
 		opts.UserID = ctx.Doer.ID
 	}
 

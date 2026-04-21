@@ -114,14 +114,11 @@ func TestViewIssuesSortByType(t *testing.T) {
 
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		issuesSelection := getIssuesSelection(t, htmlDoc)
-		expectedNumIssues := unittest.GetCount(t,
+		expectedNumIssues := min(unittest.GetCount(t,
 			&issues_model.Issue{RepoID: repo.ID, PosterID: user.ID},
 			unittest.Cond("is_closed=?", false),
 			unittest.Cond("is_pull=?", false),
-		)
-		if expectedNumIssues > setting.UI.IssuePagingNum {
-			expectedNumIssues = setting.UI.IssuePagingNum
-		}
+		), setting.UI.IssuePagingNum)
 		assert.Equal(t, expectedNumIssues, issuesSelection.Length())
 
 		issuesSelection.Each(func(_ int, selection *goquery.Selection) {
@@ -129,6 +126,36 @@ func TestViewIssuesSortByType(t *testing.T) {
 			assert.Equal(t, user.ID, issue.PosterID)
 		})
 	}
+}
+
+func TestViewIssuesSortByUpdatedTime(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	// When sorting by update time, the "updated" text and icon should appear
+	for _, sort := range []string{"recentupdate", "leastupdate"} {
+		req := NewRequest(t, "GET", repo.Link()+"/issues?sort="+sort)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		issueList := htmlDoc.doc.Find("#issue-list")
+		updatedText := issueList.Find(".flex-item-body").First().Text()
+		assert.Contains(t, updatedText, "updated")
+
+		historyIcon := issueList.Find(".octicon-history")
+		assert.Positive(t, historyIcon.Length())
+	}
+
+	// When sorting by something else, the "updated" text and icon should NOT appear
+	req := NewRequest(t, "GET", repo.Link()+"/issues?sort=latest")
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	issueList := htmlDoc.doc.Find("#issue-list")
+	historyIcon := issueList.Find(".octicon-history")
+	assert.Empty(t, historyIcon.Length())
 }
 
 func TestViewIssuesKeyword(t *testing.T) {
@@ -861,10 +888,9 @@ func TestSearchIssues(t *testing.T) {
 
 	session := loginUser(t, "user2")
 
-	expectedIssueCount := 20 // from the fixtures
-	if expectedIssueCount > setting.UI.IssuePagingNum {
-		expectedIssueCount = setting.UI.IssuePagingNum
-	}
+	expectedIssueCount := min(
+		// from the fixtures
+		20, setting.UI.IssuePagingNum)
 
 	req := NewRequest(t, "GET", "/issues/search")
 	resp := session.MakeRequest(t, req, http.StatusOK)
@@ -899,7 +925,7 @@ func TestSearchIssues(t *testing.T) {
 		req = NewRequest(t, "GET", link.String())
 		resp = session.MakeRequest(t, req, http.StatusOK)
 		DecodeJSON(t, resp, &apiIssues)
-		assert.Equal(t, "22", resp.Header().Get("X-Total-Count"))
+		assert.Equal(t, "23", resp.Header().Get("X-Total-Count"))
 		assert.Len(t, apiIssues, 20)
 
 		query.Add("limit", "5")
@@ -907,7 +933,7 @@ func TestSearchIssues(t *testing.T) {
 		req = NewRequest(t, "GET", link.String())
 		resp = session.MakeRequest(t, req, http.StatusOK)
 		DecodeJSON(t, resp, &apiIssues)
-		assert.Equal(t, "22", resp.Header().Get("X-Total-Count"))
+		assert.Equal(t, "23", resp.Header().Get("X-Total-Count"))
 		assert.Len(t, apiIssues, 5)
 
 		query = url.Values{"assigned": {"true"}, "state": {"all"}}
@@ -936,7 +962,7 @@ func TestSearchIssues(t *testing.T) {
 		req = NewRequest(t, "GET", link.String())
 		resp = session.MakeRequest(t, req, http.StatusOK)
 		DecodeJSON(t, resp, &apiIssues)
-		assert.Len(t, apiIssues, 8)
+		assert.Len(t, apiIssues, 9)
 
 		query = url.Values{"owner": {"org3"}} // organization
 		link.RawQuery = query.Encode()
@@ -987,10 +1013,9 @@ func TestSearchIssues(t *testing.T) {
 func TestSearchIssuesWithLabels(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	expectedIssueCount := 20 // from the fixtures
-	if expectedIssueCount > setting.UI.IssuePagingNum {
-		expectedIssueCount = setting.UI.IssuePagingNum
-	}
+	expectedIssueCount := min(
+		// from the fixtures
+		20, setting.UI.IssuePagingNum)
 
 	session := loginUser(t, "user1")
 	link, _ := url.Parse("/issues/search")
@@ -1517,34 +1542,39 @@ func TestIssuePostersSearch(t *testing.T) {
 		Results []*userSearchInfo `json:"results"`
 	}
 
-	t.Run("Name search", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.UI.DefaultShowFullName, false)()
+	testCase := func(t *testing.T, showFullName bool, url, wantUserName string, wantUserID int64) {
+		t.Helper()
+		defer test.MockVariableValue(&setting.UI.DefaultShowFullName, showFullName)()
 
-		req := NewRequest(t, "GET", "/user2/repo1/issues/posters?q=USer2")
+		req := NewRequest(t, "GET", url)
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		var data userSearchResponse
 		DecodeJSON(t, resp, &data)
 
 		assert.Len(t, data.Results, 1)
-		assert.Equal(t, "user2", data.Results[0].UserName)
-		assert.EqualValues(t, 2, data.Results[0].UserID)
+		assert.Equal(t, wantUserName, data.Results[0].UserName)
+		assert.Equal(t, wantUserID, data.Results[0].UserID)
+	}
+
+	t.Run("Name search", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		testCase(t, false, "/user2/repo1/issues/posters?q=USer2", "user2", 2)
+	})
+
+	t.Run("Name search (default full_name)", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		testCase(t, true, "/user2/repo1/issues/posters?q=USer2", "user2", 2)
 	})
 
 	t.Run("Full name search", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		defer test.MockVariableValue(&setting.UI.DefaultShowFullName, true)()
+		testCase(t, true, "/user2/repo1/issues/posters?q=OnE", "user1", 1)
+	})
 
-		req := NewRequest(t, "GET", "/user2/repo1/issues/posters?q=OnE")
-		resp := MakeRequest(t, req, http.StatusOK)
-
-		var data userSearchResponse
-		DecodeJSON(t, resp, &data)
-
-		assert.Len(t, data.Results, 1)
-		assert.Equal(t, "user1", data.Results[0].UserName)
-		assert.EqualValues(t, 1, data.Results[0].UserID)
+	t.Run("Full name search (no default full_name)", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		testCase(t, false, "/user2/repo1/issues/posters?q=OnE", "user1", 1)
 	})
 }
 
@@ -1590,4 +1620,44 @@ func TestIssueAndPullRedirect(t *testing.T) {
 
 	req = NewRequest(t, "GET", "/user2/repo1/pulls/9999999")
 	MakeRequest(t, req, http.StatusNotFound)
+}
+
+func TestIssueUrlHandling(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("Overview correct", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "user2/repo1/issues")
+		MakeRequest(t, req, http.StatusOK)
+	})
+
+	t.Run("Issue correct", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "user2/repo1/issues/1")
+		MakeRequest(t, req, http.StatusOK)
+	})
+
+	t.Run("Overview left-padded", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "/user2/repo1/extra_text_issues")
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Overview right-padded", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "/user2/repo1/issues_extra_text")
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Issue left-padded", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "/user2/repo1/extra_text_issues/5")
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Issue right-padded", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		req := NewRequest(t, "GET", "/user2/repo1/issues_extra_text/5")
+		MakeRequest(t, req, http.StatusNotFound)
+	})
 }

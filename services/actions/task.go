@@ -10,7 +10,8 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
-	secret_model "forgejo.org/models/secret"
+	actions_module "forgejo.org/modules/actions"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
@@ -19,14 +20,27 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func PickTask(ctx context.Context, runner *actions_model.ActionRunner) (*runnerv1.Task, bool, error) {
+func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKey, handle *string) (*runnerv1.Task, bool, error) {
 	var (
 		task *runnerv1.Task
 		job  *actions_model.ActionRunJob
 	)
 
+	if runner.Ephemeral {
+		hasRunnerAssignedTask, err := actions_model.HasTaskForRunner(ctx, runner.ID)
+		// Let the runner retry the request, do not allow to proceed
+		if err != nil {
+			return nil, false, err
+		}
+
+		// if runner has task, dont assign new task
+		if hasRunnerAssignedTask {
+			return nil, false, nil
+		}
+	}
+
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		t, ok, err := actions_model.CreateTaskForRunner(ctx, runner)
+		t, ok, err := actions_model.CreateTaskForRunner(ctx, runner, requestKey, handle)
 		if err != nil {
 			return fmt.Errorf("CreateTaskForRunner: %w", err)
 		}
@@ -39,7 +53,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner) (*runnerv
 		}
 		job = t.Job
 
-		secrets, err := secret_model.GetSecretsOfTask(ctx, t)
+		secrets, err := getSecretsOfTask(ctx, t)
 		if err != nil {
 			return fmt.Errorf("GetSecretsOfTask: %w", err)
 		}
@@ -82,15 +96,94 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner) (*runnerv
 	return task, true, nil
 }
 
-func generateTaskContext(t *actions_model.ActionTask) (*structpb.Struct, error) {
-	giteaRuntimeToken, err := CreateAuthorizationToken(t.ID, t.Job.RunID, t.JobID)
+func RecoverTasks(ctx context.Context, tasks []*actions_model.ActionTask) ([]*runnerv1.Task, error) {
+	retval := make([]*runnerv1.Task, len(tasks))
+
+	err := db.WithTx(ctx, func(ctx context.Context) error {
+		for i, t := range tasks {
+			// `Token` is stored in the database w/ a one-way hash, so we can't recover it from the original.  Instead
+			// we generate a new token to create usable runnerv1.Task objects.
+			t.GenerateToken()
+			if err := t.UpdateToken(ctx); err != nil {
+				return fmt.Errorf("UpdateTask failed: %w", err)
+			}
+
+			if err := t.LoadAttributes(ctx); err != nil {
+				return fmt.Errorf("task LoadAttributes: %w", err)
+			}
+			job := t.Job
+
+			secrets, err := getSecretsOfTask(ctx, t)
+			if err != nil {
+				return fmt.Errorf("GetSecretsOfTask: %w", err)
+			}
+
+			vars, err := actions_model.GetVariablesOfRun(ctx, t.Job.Run)
+			if err != nil {
+				return fmt.Errorf("GetVariablesOfRun: %w", err)
+			}
+
+			needs, err := findTaskNeeds(ctx, job)
+			if err != nil {
+				return fmt.Errorf("findTaskNeeds: %w", err)
+			}
+
+			taskContext, err := generateTaskContext(t)
+			if err != nil {
+				return fmt.Errorf("generateTaskContext: %w", err)
+			}
+
+			retval[i] = &runnerv1.Task{
+				Id:              t.ID,
+				WorkflowPayload: t.Job.WorkflowPayload,
+				Context:         taskContext,
+				Secrets:         secrets,
+				Vars:            vars,
+				Needs:           needs,
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	gitCtx := GenerateGiteaContext(t.Job.Run, t.Job)
+	return retval, nil
+}
+
+func generateTaskContext(t *actions_model.ActionTask) (*structpb.Struct, error) {
+	run := t.Job.Run
+	gitCtx, err := GenerateGiteaContext(run, t.Job)
+	if err != nil {
+		return nil, err
+	}
 	gitCtx["token"] = t.Token
+
+	enableOpenIDConnect, err := t.Job.EnableOpenIDConnect()
+	if err != nil {
+		return nil, err
+	}
+
+	// Override the setting from the workflow is this is coming from a fork pull request
+	// and this isn't a pull_request_target event.
+	if run.IsForkPullRequest && run.TriggerEvent != actions_module.GithubEventPullRequestTarget {
+		enableOpenIDConnect = false
+	}
+
+	giteaRuntimeToken, err := CreateAuthorizationToken(t, gitCtx, enableOpenIDConnect)
+	if err != nil {
+		return nil, err
+	}
+
 	gitCtx["gitea_runtime_token"] = giteaRuntimeToken
+
+	if enableOpenIDConnect {
+		gitCtx["forgejo_actions_id_token_request_token"] = giteaRuntimeToken
+		// The "placeholder=true" at the end of the URL is meaningless, but we need a param
+		// here if we want to match the format used in GitHub actions examples (e.g., to ensure
+		// that "ACTIONS_ID_TOKEN_REQUEST_URL&audience=..." will work as expected).
+		gitCtx["forgejo_actions_id_token_request_url"] = setting.AppURL + setting.AppSubURL + fmt.Sprintf("api/actions/_apis/pipelines/workflows/%d/idtoken?placeholder=true", t.Job.RunID)
+	}
 
 	return structpb.NewStruct(gitCtx)
 }
@@ -141,6 +234,18 @@ func StopTask(ctx context.Context, taskID int64, status actions_model.Status) er
 		return err
 	}
 
+	runner := &actions_model.ActionRunner{}
+	if _, err := e.ID(task.RunnerID).Get(runner); err != nil {
+		return fmt.Errorf("failed to find runner assigned to task")
+	}
+
+	if runner.Ephemeral {
+		err := actions_model.DeleteRunner(ctx, runner)
+		if err != nil {
+			return fmt.Errorf("failed to remove ephemeral runner from stopped task: %w", err)
+		}
+	}
+
 	if err := task.LoadAttributes(ctx); err != nil {
 		return err
 	}
@@ -170,11 +275,11 @@ func UpdateTaskByState(ctx context.Context, runnerID int64, state *runnerv1.Task
 		stepStates[v.Id] = v
 	}
 
-	ctx, commiter, err := db.TxContext(ctx)
+	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer commiter.Close()
+	defer committer.Close()
 
 	e := db.GetEngine(ctx)
 
@@ -237,7 +342,7 @@ func UpdateTaskByState(ctx context.Context, runnerID int64, state *runnerv1.Task
 		}
 	}
 
-	if err := commiter.Commit(); err != nil {
+	if err := committer.Commit(); err != nil {
 		return nil, err
 	}
 

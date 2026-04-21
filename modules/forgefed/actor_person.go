@@ -20,6 +20,8 @@ type PersonID struct {
 const (
 	personIDapiPathV1       = "api/v1/activitypub/user-id"
 	personIDapiPathV1Latest = "api/activitypub/user-id"
+	actorIDapiPathV1        = "api/v1/activitypub"
+	actorIDapiPathLatest    = "api/activitypub"
 )
 
 // Factory function for PersonID. Created struct is asserted to be valid
@@ -71,12 +73,13 @@ func (id PersonID) AsLoginName() string {
 	return result
 }
 
+// HostSuffix returns the host part of a handle, i.e. @host.tld (if port is supplemented) or @host.tld:1234
 func (id PersonID) HostSuffix() string {
 	var result string
 	if !id.IsPortSupplemented {
-		result = fmt.Sprintf("-%s-%d", strings.ToLower(id.Host), id.HostPort)
+		result = fmt.Sprintf("@%s:%d", strings.ToLower(id.Host), id.HostPort)
 	} else {
-		result = fmt.Sprintf("-%s", strings.ToLower(id.Host))
+		result = fmt.Sprintf("@%s", strings.ToLower(id.Host))
 	}
 	return result
 }
@@ -87,8 +90,11 @@ func (id PersonID) Validate() []string {
 	result = append(result, validation.ValidateOneOf(id.Source, []any{"forgejo", "gitea", "mastodon", "gotosocial"}, "Source")...)
 	if id.Source == "forgejo" {
 		result = append(result, validation.ValidateNotEmpty(id.Path, "path")...)
-		if strings.ToLower(id.Path) != personIDapiPathV1 && strings.ToLower(id.Path) != personIDapiPathV1Latest {
-			result = append(result, fmt.Sprintf("path: %q has to be a person specific api path", id.Path))
+		lowerPath := strings.ToLower(id.Path)
+		if lowerPath != personIDapiPathV1 && lowerPath != personIDapiPathV1Latest {
+			if lowerPath != actorIDapiPathV1 && lowerPath != actorIDapiPathLatest || id.ID != "actor" {
+				result = append(result, fmt.Sprintf("path: %q has to be a person specific api path", id.Path))
+			}
 		}
 	}
 
@@ -114,8 +120,8 @@ func (s *ForgePerson) UnmarshalJSON(data []byte) error {
 
 func (s ForgePerson) Validate() []string {
 	var result []string
-	result = append(result, validation.ValidateNotEmpty(string(s.Type), "Type")...)
-	result = append(result, validation.ValidateOneOf(string(s.Type), []any{string(ap.PersonType)}, "Type")...)
+	result = append(result, validation.ValidateNotEmpty(s.Type, "Type")...)
+	result = append(result, validation.ValidateOneOf(s.Type, []any{ap.PersonType}, "Type")...)
 	result = append(result, validation.ValidateNotEmpty(s.PreferredUsername.String(), "PreferredUsername")...)
 
 	return result

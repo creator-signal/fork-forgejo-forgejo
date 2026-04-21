@@ -120,6 +120,10 @@ Clone URL: %s%s/%s.git`,
 	req = NewRequestf(t, "GET", "/%s/%s/raw/branch/master/%s.log", generateOwner.Name, generateRepoName, generateRepoName)
 	resp = session.MakeRequest(t, req, http.StatusOK)
 	assert.Equal(t, generateRepoName, resp.Body.String())
+
+	// The .gitea/template file should not be present in the generated repo
+	req = NewRequestf(t, "GET", "/%s/%s/raw/branch/master/.gitea/template", generateOwner.Name, generateRepoName)
+	session.MakeRequest(t, req, http.StatusNotFound)
 }
 
 // test form elements before and after POST error response
@@ -291,6 +295,16 @@ func TestRepoGenerateTemplating(t *testing.T) {
 			user.Name,
 			generatedName)
 		assert.Equal(t, body, resp.Body.String())
+
+		// The .forgejo/template file should not be present in the generated repo
+		req = NewRequestf(
+			t,
+			"GET", "/%s/%s/raw/branch/%s/.forgejo/template",
+			user.Name,
+			generatedName,
+			template.DefaultBranch,
+		)
+		session.MakeRequest(t, req, http.StatusNotFound)
 	})
 }
 
@@ -343,7 +357,7 @@ func TestRepoGenerateTemplatingSymlink(t *testing.T) {
 							Operation:     "create",
 							TreePath:      "problem/Readme.md",
 							ContentReader: strings.NewReader(tc.symlinkTarget),
-							Symlink:       true,
+							Options:       files_service.RepoFileOptionMode(git.EntryModeSymlink),
 						},
 					}),
 				})
@@ -420,7 +434,7 @@ func TestRepoGenerateTemplatingSymlinkGlobFile(t *testing.T) {
 					Operation:     "create",
 					TreePath:      ".forgejo/template",
 					ContentReader: strings.NewReader("/etc/passwd"),
-					Symlink:       true,
+					Options:       files_service.RepoFileOptionMode(git.EntryModeSymlink),
 				},
 			}),
 		})

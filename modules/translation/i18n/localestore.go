@@ -119,7 +119,7 @@ func (l *locale) LookupNewStyleMessage(trKey string) string {
 	return ""
 }
 
-func (l *locale) LookupPluralByCount(trKey string, count any) string {
+func (l *locale) LookupPluralByCount(trKey string, count any, isDefaultLang bool) string {
 	n, err := util.ToInt64(count)
 	if err != nil {
 		log.Error("Invalid plural count '%s'", count)
@@ -127,10 +127,10 @@ func (l *locale) LookupPluralByCount(trKey string, count any) string {
 	}
 
 	pluralForm := l.pluralRule(n)
-	return l.LookupPluralByForm(trKey, pluralForm)
+	return l.LookupPluralByForm(trKey, pluralForm, isDefaultLang)
 }
 
-func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex) string {
+func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex, isDefaultLang bool) string {
 	suffix := ""
 	switch pluralForm {
 	case PluralFormZero:
@@ -145,6 +145,7 @@ func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex) st
 		suffix = PluralFormSeparator + "many"
 	case PluralFormOther:
 		// No suffix for the "other" string.
+		break
 	default:
 		log.Error("Invalid plural form index %d", pluralForm)
 		return ""
@@ -154,7 +155,14 @@ func (l *locale) LookupPluralByForm(trKey string, pluralForm PluralFormIndex) st
 		return result
 	}
 
-	log.Error("Missing translation for plural form %s", suffix)
+	// Severify depends on the lang. A missing string in default lang will affect
+	// all translations, while community translations may just be incomplete
+	logFunc := log.Debug
+	if isDefaultLang {
+		logFunc = log.Error
+	}
+
+	logFunc("Missing translation for key `%[1]s`, plural form `%[2]s`", trKey, suffix)
 	return ""
 }
 
@@ -248,6 +256,7 @@ func PrepareArgsForHTML(trArgs ...any) []any {
 		switch v := v.(type) {
 		case nil, bool, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, template.HTML:
 			// for most basic types (including template.HTML which is safe), just do nothing and use it
+			break
 		case string:
 			args[i] = template.HTMLEscapeString(v)
 		case fmt.Stringer:
@@ -264,11 +273,11 @@ func (l *locale) TrHTML(trKey string, trArgs ...any) template.HTML {
 }
 
 func (l *locale) TrPluralString(count any, trKey string, trArgs ...any) template.HTML {
-	message := l.LookupPluralByCount(trKey, count)
+	message := l.LookupPluralByCount(trKey, count, false)
 
 	if message == "" {
 		if defaultLang, ok := l.store.localeMap[l.store.defaultLang]; ok {
-			message = defaultLang.LookupPluralByCount(trKey, count)
+			message = defaultLang.LookupPluralByCount(trKey, count, true)
 		}
 		if message == "" {
 			message = trKey
@@ -292,7 +301,7 @@ func (l *locale) TrPluralStringAllForms(trKey string) ([]string, []string) {
 	allPresent := true
 
 	for i, form := range l.usedPluralForms {
-		result[i] = l.LookupPluralByForm(trKey, form)
+		result[i] = l.LookupPluralByForm(trKey, form, false)
 		if result[i] == "" {
 			allPresent = false
 		}
@@ -302,7 +311,7 @@ func (l *locale) TrPluralStringAllForms(trKey string) ([]string, []string) {
 		if hasDefaultLang {
 			fallback = make([]string, len(defaultLang.usedPluralForms))
 			for i, form := range defaultLang.usedPluralForms {
-				fallback[i] = defaultLang.LookupPluralByForm(trKey, form)
+				fallback[i] = defaultLang.LookupPluralByForm(trKey, form, true)
 			}
 		} else {
 			log.Error("Plural set for '%s' is incomplete and no fallback language is set.", trKey)

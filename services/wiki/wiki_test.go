@@ -14,7 +14,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 
-	_ "forgejo.org/models/actions"
+	_ "forgejo.org/modules/testimport"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -116,9 +116,9 @@ func TestGitPathToWebPath(t *testing.T) {
 func TestUserWebGitPathConsistency(t *testing.T) {
 	maxLen := 20
 	b := make([]byte, maxLen)
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		l := rand.Intn(maxLen)
-		for j := 0; j < l; j++ {
+		for j := range l {
 			r := rand.Intn(0x80-0x20) + 0x20
 			b[j] = byte(r)
 		}

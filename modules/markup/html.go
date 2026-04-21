@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -46,10 +47,13 @@ var (
 
 	// valid chars in encoded path and parameter: [-+~_%.a-zA-Z0-9/]
 
+	// httpSchemePattern matches https:// or http://
+	httpSchemePattern = regexp.MustCompile(`^https?://`)
+
 	// hashCurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	// Although SHA1 hashes are 40 chars long, SHA256 are 64, the regex matches the hash from 7 to 64 chars in length
 	// so that abbreviated hash links can be used as well. This matches git and GitHub usability.
-	hashCurrentPattern = regexp.MustCompile(`(?:^|\s)[^\w\d]{0,2}([0-9a-f]{7,64})[^\w\d]{0,2}(?:\s|$)`)
+	hashCurrentPattern = regexp.MustCompile(`(?:^|\s)[^\w\d]*([0-9a-f]{7,64})[^\w\d]*(?:\s|$)`)
 
 	// shortLinkPattern matches short but difficult to parse [[name|link|arg=test]] syntax
 	shortLinkPattern = regexp.MustCompile(`\[\[(.*?)\]\](\w*)`)
@@ -72,7 +76,7 @@ var (
 	//   https://html.spec.whatwg.org/multipage/input.html#e-mail-state-(type%3Demail)
 	emailRegex = regexp.MustCompile("(?:\\s|^|\\(|\\[)([a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9]{2,}(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)(?:\\s|$|\\)|\\]|;|,|\\?|!|\\.(\\s|$))")
 
-	// Fediverse handle regex (same as emailRegex but with additonal @ or !
+	// Fediverse handle regex (same as emailRegex but with additional @ or !
 	// at start)
 	fediRegex = regexp.MustCompile("(?:\\s|^|\\(|\\[)([@!]([a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+)@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9]{2,}(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+))(?:\\s|$|\\)|\\]|;|,|\\?|!|\\.(\\s|$))")
 
@@ -121,13 +125,7 @@ func CustomLinkURLSchemes(schemes []string) {
 		if !validScheme.MatchString(s) {
 			continue
 		}
-		without := false
-		for _, sna := range xurls.SchemesNoAuthority {
-			if s == sna {
-				without = true
-				break
-			}
-		}
+		without := slices.Contains(xurls.SchemesNoAuthority, s)
 		if without {
 			s += ":"
 		} else {
@@ -297,7 +295,7 @@ func RenderDescriptionHTML(
 		descriptionLinkProcessor,
 		emojiShortCodeProcessor,
 		emojiProcessor,
-	}, content)
+	}, escapeInlineCodeBlocks(content))
 }
 
 // RenderEmoji for when we want to just process emoji and shortcodes
@@ -672,9 +670,9 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 		// It makes page handling terrible, but we prefer GitHub syntax
 		// And fall back to MediaWiki only when it is obvious from the look
 		// Of text and link contents
-		sl := strings.Split(content, "|")
-		for _, v := range sl {
-			if equalPos := strings.IndexByte(v, '='); equalPos == -1 {
+		sl := strings.SplitSeq(content, "|")
+		for v := range sl {
+			if found := strings.Contains(v, "="); !found {
 				// There is no equal in this argument; this is a mandatory arg
 				if props["name"] == "" {
 					if IsLinkStr(v) {
@@ -696,8 +694,8 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 			} else {
 				// There is an equal; optional argument.
 
-				sep := strings.IndexByte(v, '=')
-				key, val := v[:sep], html.UnescapeString(v[sep+1:])
+				before, after, _ := strings.Cut(v, "=")
+				key, val := before, html.UnescapeString(after)
 
 				// When parsing HTML, x/net/html will change all quotes which are
 				// not used for syntax into UTF-8 quotes. So checking val[0] won't
@@ -739,6 +737,7 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 		// fast path: empty string, ignore
 		case "":
 			// leave image as false
+			break
 		case ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".gif", ".bmp", ".ico", ".svg":
 			image = true
 		}
@@ -826,10 +825,7 @@ func pullReviewCommitPatternProcessor(ctx *RenderContext, node *html.Node) {
 
 		text := "!" + id + " (commit "
 
-		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
-		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
-			text = repoSlug + "@" + text
-		}
+		optionalRepoSlugAndInstancePath(ctx, &text, urlFull, repoSlug)
 
 		aNode.AppendChild(&html.Node{
 			Type: html.TextNode,
@@ -1083,10 +1079,7 @@ func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 		// We need to figure out the base of the provided URL, which is up to and including the
 		// `<owner>/<repo>` slug.
 		// With that we can determine if it matches the current repo, or if the slug should be shown.
-		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
-		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
-			text = repoSlug + "@" + text
-		}
+		optionalRepoSlugAndInstancePath(ctx, &text, urlFull, repoSlug)
 
 		// 3rd capture group matches an optional file path after the SHA
 		filePath := ""
@@ -1150,7 +1143,7 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 		}
 
 		// Ensure that every group (m[0]...m[9]) has a match
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			if m[i] == -1 {
 				return
 			}
@@ -1191,10 +1184,7 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 
 		text := text1 + textDots + text2
 
-		baseURLEnd := strings.Index(urlFull, repoSlug) + len(repoSlug)
-		if len(ctx.Links.Base) > 0 && !strings.HasPrefix(ctx.Links.Base, urlFull[:baseURLEnd]) {
-			text = repoSlug + "@" + text
-		}
+		optionalRepoSlugAndInstancePath(ctx, &text, urlFull, repoSlug)
 
 		extra := ""
 		if query != "" {
@@ -1524,4 +1514,34 @@ func createDescriptionLink(href, content string) *html.Node {
 	}
 	textNode.Parent = linkNode
 	return linkNode
+}
+
+// Adds an optional repo slug and optionally the instance domain and URL
+//
+// The repo slug is added if the link points to a different repo
+// The instance domain and sub-path is added if the link points to a different instance
+func optionalRepoSlugAndInstancePath(ctx *RenderContext, text *string, fullURL, slug string) {
+	if len(ctx.Links.Base) > 0 {
+		// The fullURL is the url to e.g. the commit. The slug is e.g. `forgejo/forgejo`.
+		// To retrieve the instance domain and sub-path we need to remove the repo slug
+		slugStart := strings.LastIndex(fullURL, slug)
+		targetInstance := fullURL[:slugStart]
+
+		// Check if the URL points to a different instance
+		if setting.AppURL != targetInstance {
+			// Remove the http scheme for displaying
+			targetInstance = httpSchemePattern.ReplaceAllString(targetInstance, "")
+
+			*text = targetInstance + slug + "@" + *text
+		} else if !strings.HasSuffix(strings.TrimSuffix(ctx.Links.Base, "/"), slug) {
+			// If it is a link to a different repo, but on the same instance only add the repo slug
+			*text = slug + "@" + *text
+		}
+	}
+}
+
+// escapeInlineCodeBlocks escapes HTML symbols in contents of Markdown inline code blocks
+// to prevent clashing with HTML parsing
+func escapeInlineCodeBlocks(input string) string {
+	return InlineCodeBlockRegex.ReplaceAllStringFunc(input, html.EscapeString)
 }

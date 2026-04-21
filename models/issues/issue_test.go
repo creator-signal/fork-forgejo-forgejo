@@ -5,6 +5,7 @@ package issues_test
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"sync"
 	"testing"
@@ -85,6 +86,7 @@ func TestGetIssuesByIDs(t *testing.T) {
 }
 
 func TestGetParticipantIDsByIssue(t *testing.T) {
+	defer unittest.OverrideFixtures("models/issues/TestGetParticipantIDsByIssue")()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	checkParticipants := func(issueID int64, userIDs []int) {
@@ -107,6 +109,7 @@ func TestGetParticipantIDsByIssue(t *testing.T) {
 	// User 2 only labeled issue1 (see fixtures/comment.yml)
 	// Users 3 and 5 made actual comments (see fixtures/comment.yml)
 	// User 3 is inactive, thus not active participant
+	// User 10 has a pending review, thus not an active participant, yet (see TestGetParticipantIDsByIssue/comment.yml)
 	checkParticipants(1, []int{1, 5})
 }
 
@@ -309,7 +312,7 @@ func TestIssue_ResolveMentions(t *testing.T) {
 		for i, user := range resolved {
 			ids[i] = user.ID
 		}
-		sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+		slices.Sort(ids)
 		assert.Equal(t, expected, ids)
 	}
 
@@ -336,7 +339,7 @@ func TestResourceIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		t.Run(fmt.Sprintf("issue %d", i+1), func(t *testing.T) {
 			t.Parallel()
@@ -367,7 +370,7 @@ func TestCorrectIssueStats(t *testing.T) {
 	issueAmount := issues_model.MaxQueryParameters + 10
 
 	var wg sync.WaitGroup
-	for i := 0; i < issueAmount; i++ {
+	for i := range issueAmount {
 		wg.Add(1)
 		go func(i int) {
 			testInsertIssue(t, fmt.Sprintf("Issue %d", i+1), "Bugs are nasty", 0)
@@ -431,7 +434,7 @@ func TestCountIssues(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	count, err := issues_model.CountIssues(db.DefaultContext, &issues_model.IssuesOptions{})
 	require.NoError(t, err)
-	assert.EqualValues(t, 22, count)
+	assert.EqualValues(t, 23, count)
 }
 
 func TestIssueLoadAttributes(t *testing.T) {

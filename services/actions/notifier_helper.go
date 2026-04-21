@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -24,6 +25,7 @@ import (
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
@@ -187,8 +189,8 @@ func notify(ctx context.Context, input *notifyInput) error {
 	return handleWorkflows(ctx, detectedWorkflows, commit, input, ref.String())
 }
 
-func getGitRepoAndCommit(_ context.Context, input *notifyInput) (*git.Repository, *git.Commit, git.RefName, error) {
-	gitRepo, err := gitrepo.OpenRepository(context.Background(), input.Repo)
+func getGitRepoAndCommit(ctx context.Context, input *notifyInput) (*git.Repository, *git.Commit, git.RefName, error) {
+	gitRepo, err := gitrepo.OpenRepository(ctx, input.Repo)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("git.OpenRepository: %w", err)
 	}
@@ -356,17 +358,18 @@ func handleWorkflows(
 
 	for _, dwf := range detectedWorkflows {
 		run := &actions_model.ActionRun{
-			Title:         strings.SplitN(commit.CommitMessage, "\n", 2)[0],
-			RepoID:        input.Repo.ID,
-			OwnerID:       input.Repo.OwnerID,
-			WorkflowID:    dwf.EntryName,
-			TriggerUserID: input.Doer.ID,
-			Ref:           ref,
-			CommitSHA:     commit.ID.String(),
-			Event:         input.Event,
-			EventPayload:  string(p),
-			TriggerEvent:  dwf.TriggerEvent.Name,
-			Status:        actions_model.StatusWaiting,
+			Title:             strings.SplitN(commit.CommitMessage, "\n", 2)[0],
+			RepoID:            input.Repo.ID,
+			OwnerID:           input.Repo.OwnerID,
+			WorkflowID:        dwf.EntryName,
+			WorkflowDirectory: dwf.EntryDirectory,
+			TriggerUserID:     input.Doer.ID,
+			Ref:               ref,
+			CommitSHA:         commit.ID.String(),
+			Event:             input.Event,
+			EventPayload:      string(p),
+			TriggerEvent:      dwf.TriggerEvent.Name,
+			Status:            actions_model.StatusWaiting,
 		}
 
 		if !actions_module.IsDefaultBranchWorkflow(input.Event) {
@@ -419,6 +422,8 @@ func handleWorkflows(
 				// `IncompleteMatrix` tagging for any jobs that require the inputs of other jobs.
 				jobparser.WithJobOutputs(map[string]map[string]string{}),
 				jobparser.SupportIncompleteRunsOn(),
+				jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(commit)),
+				jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
 			)
 			if err != nil {
 				log.Info("jobparser.Parse: invalid workflow, setting job status to failed: %v", err)
@@ -571,18 +576,34 @@ func handleSchedules(
 			continue
 		}
 
+		now := time.Now()
+		specs := make([]*actions_model.ActionScheduleSpec, 0, len(schedules))
+		for _, schedule := range schedules {
+			scheduleSpec, err := actions_model.NewActionScheduleSpec(schedule.Cron, optional.FromNonDefault(schedule.TimeZone), now)
+			if err != nil {
+				return err
+			}
+			specs = append(specs, scheduleSpec)
+		}
+
+		title := workflow.Name
+		if len(title) < 1 {
+			title = dwf.GetWorkflowPath()
+		}
+
 		run := &actions_model.ActionSchedule{
-			Title:         strings.SplitN(commit.CommitMessage, "\n", 2)[0],
-			RepoID:        input.Repo.ID,
-			OwnerID:       input.Repo.OwnerID,
-			WorkflowID:    dwf.EntryName,
-			TriggerUserID: user_model.ActionsUserID,
-			Ref:           input.Repo.DefaultBranch,
-			CommitSHA:     commit.ID.String(),
-			Event:         input.Event,
-			EventPayload:  string(p),
-			Specs:         schedules,
-			Content:       dwf.Content,
+			Title:             title,
+			RepoID:            input.Repo.ID,
+			OwnerID:           input.Repo.OwnerID,
+			WorkflowID:        dwf.EntryName,
+			WorkflowDirectory: dwf.EntryDirectory,
+			TriggerUserID:     user_model.ActionsUserID,
+			Ref:               input.Repo.DefaultBranch,
+			CommitSHA:         commit.ID.String(),
+			Event:             input.Event,
+			EventPayload:      string(p),
+			Specs:             specs,
+			Content:           dwf.Content,
 		}
 		crons = append(crons, run)
 	}
@@ -596,7 +617,7 @@ func DetectAndHandleSchedules(ctx context.Context, repo *repo_model.Repository) 
 		return nil
 	}
 
-	gitRepo, err := gitrepo.OpenRepository(context.Background(), repo)
+	gitRepo, err := gitrepo.OpenRepository(ctx, repo)
 	if err != nil {
 		return fmt.Errorf("git.OpenRepository: %w", err)
 	}

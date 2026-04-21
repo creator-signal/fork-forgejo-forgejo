@@ -1,4 +1,5 @@
 // Copyright 2022 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package actions
@@ -64,13 +65,13 @@ func (opts FindTaskOptions) ToConds() builder.Cond {
 	if opts.RepoID > 0 {
 		cond = cond.And(builder.Eq{"repo_id": opts.RepoID})
 	}
-	if opts.OwnerID > 0 {
+	if opts.OwnerID != 0 {
 		cond = cond.And(builder.Eq{"owner_id": opts.OwnerID})
 	}
 	if opts.CommitSHA != "" {
 		cond = cond.And(builder.Eq{"commit_sha": opts.CommitSHA})
 	}
-	if opts.Status != nil {
+	if len(opts.Status) > 0 {
 		cond = cond.And(builder.In("status", opts.Status))
 	}
 	if opts.UpdatedBefore > 0 {
@@ -82,11 +83,11 @@ func (opts FindTaskOptions) ToConds() builder.Cond {
 	if opts.RunnerID > 0 {
 		cond = cond.And(builder.Eq{"runner_id": opts.RunnerID})
 	}
-	if opts.LogExpired.Has() {
-		cond = cond.And(builder.Eq{"log_expired": opts.LogExpired.Value()})
+	if has, value := opts.LogExpired.Get(); has {
+		cond = cond.And(builder.Eq{"log_expired": value})
 	}
-	if opts.LogInStorage.Has() {
-		cond = cond.And(builder.Eq{"log_in_storage": opts.LogInStorage.Value()})
+	if has, value := opts.LogInStorage.Get(); has {
+		cond = cond.And(builder.Eq{"log_in_storage": value})
 	}
 	return cond
 }

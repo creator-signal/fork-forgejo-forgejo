@@ -2,7 +2,6 @@
 import './bootstrap.js';
 
 import {initRepoActivityTopAuthorsChart} from './features/repo-activity-top-authors.ts';
-import {initScopedAccessTokenCategories} from './features/scoped-access-token-selector.ts';
 import {initDashboardRepoList} from './features/dashboard-repo-list.ts';
 
 import {initGlobalCopyToClipboardListener} from './features/clipboard.js';
@@ -30,8 +29,10 @@ import {
   initRepoIssueTimeTracking,
   initRepoIssueWipTitle,
   initRepoPullRequestAllowMaintainerEdit,
-  initRepoPullRequestReview, initRepoIssueSidebarList, initArchivedLabelHandler,
+  initRepoPullRequestReview,
+  initArchivedLabelHandler,
 } from './features/repo-issue.js';
+import {initRepoIssueSidebarList} from './features/repo-issue-sidebar-list.ts';
 import {initRepoEllipsisButton, initCommitStatuses, initCommitNotes} from './features/repo-commit.js';
 import {
   initFootLanguageMenu,
@@ -63,6 +64,7 @@ import {initOrgTeamSearchRepoBox} from './features/org-team.js';
 import {initUserAuthWebAuthn, initUserAuthWebAuthnRegister} from './features/user-auth-webauthn.js';
 import {initRepoRelease, initRepoReleaseNew} from './features/repo-release.js';
 import {initRepoEditor} from './features/repo-editor.js';
+import {initAddOrgMemberButton} from './features/add-org-member.ts';
 import {initCompSearchUserBox} from './features/comp/SearchUserBox.js';
 import {initInstall} from './features/install.js';
 import {initCompWebHookEditor} from './features/comp/WebHookEditor.js';
@@ -96,7 +98,7 @@ initDirAuto();
 onDomReady(() => {
   initGlobalCommon();
 
-  initDisabledInputs();
+  initDisabledInputs(document);
   initGlobalTooltips();
   initGlobalButtonClickOnEnter();
   initGlobalButtons();
@@ -151,6 +153,7 @@ onDomReady(() => {
   initRepoEllipsisButton();
   initRepoDiffCommitBranchesAndTags();
   initRepoEditor();
+  initAddOrgMemberButton();
   initRepoGraphGit();
   initRepoIssueContentHistory();
   initRepoIssueDue();
@@ -190,7 +193,6 @@ onDomReady(() => {
   initUserAuthWebAuthnRegister();
   initUserAuth();
   initRepoDiffView();
-  initScopedAccessTokenCategories();
   initColorPickers();
   initModalClose();
 

@@ -29,7 +29,7 @@ type ActionTask struct {
 	Job      *ActionRunJob     `xorm:"-"`
 	Steps    []*ActionTaskStep `xorm:"-"`
 	Attempt  int64
-	RunnerID int64              `xorm:"index"`
+	RunnerID int64              `xorm:"index index(request_key)"`
 	Status   Status             `xorm:"index"`
 	Started  timeutil.TimeStamp `xorm:"index"`
 	Stopped  timeutil.TimeStamp `xorm:"index(stopped_log_expired)"`
@@ -50,6 +50,15 @@ type ActionTask struct {
 	LogSize      int64      // blob size
 	LogIndexes   LogIndexes `xorm:"LONGBLOB"`                   // line number to offset
 	LogExpired   bool       `xorm:"index(stopped_log_expired)"` // files that are too old will be deleted
+
+	// When the FetchTask() API is invoked to create a task, unpreventable environmental errors may occur; for example,
+	// network disconnects and timeouts. If that API call has a unique identifier associated with it, it is stored in
+	// RunnerRequestKey. This allows the API call to be implemented idempotently using this state: if one API call
+	// assigns a task to a runner and a second API call is received from the same runner with the same request key, the
+	// existing assigned tasks can be returned.
+	//
+	// Indexed for an efficient search on runner_id=? AND runner_request_key=?.
+	RunnerRequestKey string `xorm:"index(request_key)"`
 
 	Created timeutil.TimeStamp `xorm:"created"`
 	Updated timeutil.TimeStamp `xorm:"updated index"`
@@ -147,6 +156,11 @@ func (task *ActionTask) GenerateToken() {
 	task.Token, task.TokenSalt, task.TokenHash, task.TokenLastEight = generateSaltedToken()
 }
 
+// After using GenerateToken, UpdateToken can be used to update the database record affecting the same columns.
+func (task *ActionTask) UpdateToken(ctx context.Context) error {
+	return UpdateTask(ctx, task, "token_hash", "token_salt", "token_last_eight")
+}
+
 // Retrieve all the attempts from the same job as the target `ActionTask`.  Limited fields are queried to avoid loading
 // the LogIndexes blob when not needed.
 func (task *ActionTask) GetAllAttempts(ctx context.Context) ([]*ActionTask, error) {
@@ -172,6 +186,10 @@ func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
 	}
 
 	return &task, nil
+}
+
+func HasTaskForRunner(ctx context.Context, runnerID int64) (bool, error) {
+	return db.GetEngine(ctx).Where("runner_id = ?", runnerID).Exist(&ActionTask{})
 }
 
 func GetTaskByJobAttempt(ctx context.Context, jobID, attempt int64) (*ActionTask, error) {
@@ -236,6 +254,15 @@ func GetRunningTaskByToken(ctx context.Context, token string) (*ActionTask, erro
 		}
 	}
 	return nil, errNotExist
+}
+
+func GetTasksByRunnerRequestKey(ctx context.Context, runner *ActionRunner, requestKey string) ([]*ActionTask, error) {
+	var tasks []*ActionTask
+	err := db.GetEngine(ctx).Where("runner_id = ? AND runner_request_key = ?", runner.ID, requestKey).Find(&tasks)
+	if err != nil {
+		return nil, err
+	}
+	return tasks, nil
 }
 
 func getConcurrencyCondition() builder.Cond {
@@ -320,12 +347,12 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 	return jobs, nil
 }
 
-func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask, bool, error) {
-	ctx, commiter, err := db.TxContext(ctx)
+func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, handle *string) (*ActionTask, bool, error) {
+	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return nil, false, err
 	}
-	defer commiter.Close()
+	defer committer.Close()
 
 	e := db.GetEngine(ctx)
 
@@ -337,9 +364,9 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 	// TODO: a more efficient way to filter labels
 	var job *ActionRunJob
 	log.Trace("runner labels: %v", runner.AgentLabels)
-	for _, v := range jobs {
-		if v.ItRunsOn(runner.AgentLabels) {
-			job = v
+	for _, j := range jobs {
+		if j.IsRequestedByRunner(handle) && j.ItRunsOn(runner.AgentLabels) {
+			job = j
 			break
 		}
 	}
@@ -351,7 +378,6 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 	}
 
 	now := timeutil.TimeStampNow()
-	job.Attempt++
 	job.Started = now
 	job.Status = StatusRunning
 
@@ -365,6 +391,9 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 		OwnerID:           job.OwnerID,
 		CommitSHA:         job.CommitSHA,
 		IsForkPullRequest: job.IsForkPullRequest,
+	}
+	if requestKey != nil {
+		task.RunnerRequestKey = *requestKey
 	}
 	task.GenerateToken()
 
@@ -414,11 +443,49 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner) (*ActionTask
 
 	task.Job = job
 
-	if err := commiter.Commit(); err != nil {
+	if err := committer.Commit(); err != nil {
 		return nil, false, err
 	}
 
 	return task, true, nil
+}
+
+// Placeholder tasks are created when the status/content of an [ActionRunJob] is resolved by Forgejo without dispatch to
+// a runner, specifically in the case of a workflow call's outer job.
+func CreatePlaceholderTask(ctx context.Context, job *ActionRunJob, outputs map[string]string) (*ActionTask, error) {
+	actionTask := &ActionTask{
+		JobID:             job.ID,
+		Attempt:           job.Attempt,
+		Started:           timeutil.TimeStampNow(),
+		Stopped:           timeutil.TimeStampNow(),
+		Status:            job.Status,
+		RepoID:            job.RepoID,
+		OwnerID:           job.OwnerID,
+		CommitSHA:         job.CommitSHA,
+		IsForkPullRequest: job.IsForkPullRequest,
+	}
+	// token isn't used on a placeholder task, but generation is needed due to the unique constraint on field TokenHash
+	actionTask.GenerateToken()
+
+	err := db.WithTx(ctx, func(ctx context.Context) error {
+		_, err := db.GetEngine(ctx).Insert(actionTask)
+		if err != nil {
+			return fmt.Errorf("failure inserting action_task: %w", err)
+		}
+
+		for key, value := range outputs {
+			err := InsertTaskOutputIfNotExist(ctx, actionTask.ID, key, value)
+			if err != nil {
+				return fmt.Errorf("failure inserting action_task_output %q: %w", key, err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return actionTask, nil
 }
 
 func UpdateTask(ctx context.Context, task *ActionTask, cols ...string) error {

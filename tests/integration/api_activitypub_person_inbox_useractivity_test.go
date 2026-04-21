@@ -29,7 +29,6 @@ import (
 
 func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
-	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	federation.Init()
@@ -65,7 +64,9 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 
 		// send note (distant -> local)
 		distantNoteURL := fmt.Sprintf("%s/api/v1/activitypub/note/104", distantURL)
-		userActivity := []byte(fmt.Sprintf(
+
+		userActivity := fmt.Appendf(
+			[]byte{},
 			`{"type":"Create",`+
 				`"actor":"%s",`+
 				`"to": ["https://www.w3.org/ns/activitystreams#Public"],`+
@@ -75,15 +76,18 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 			distantUser15URL,
 			localUser2URL,
 			distantNoteURL,
-		))
+		)
+
 		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
-		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
-			mock.ApActor.KeyID(federatedSrv.URL))
+
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
+
 		resp, err := c.Post(userActivity, localUser2Inbox)
 		require.NoError(t, err)
+
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
 		// check whether user activity exists in local instance
@@ -97,7 +101,6 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 
 func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
-	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	federation.Init()
@@ -122,21 +125,24 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 		defer f()
 
 		// follow (distant follows local)
-		followActivity := []byte(fmt.Sprintf(
+		followActivity := fmt.Appendf(nil,
 			`{"type":"Follow",`+
 				`"actor":"%s",`+
 				`"object":"%s"}`,
 			distantUser15URL,
 			localUser2URL,
-		))
+		)
+
 		ctx, _ := contexttest.MockAPIContext(t, localUser2Inbox)
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
-		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
-			mock.ApActor.KeyID(federatedSrv.URL))
+
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
+
 		resp, err := c.Post(followActivity, localUser2Inbox)
 		require.NoError(t, err)
+
 		assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 
 		// local action which triggers a user activity
@@ -156,9 +162,11 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 		// distant request activity & activity note
 		localUser2ActivityNote := fmt.Sprintf("%v/activities/1", localUser2URL)
 		localUser2Activity := fmt.Sprintf("%v/activities/1/activity", localUser2URL)
+
 		resp, err = c.Get(localUser2ActivityNote)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
 		resp, err = c.Get(localUser2Activity)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

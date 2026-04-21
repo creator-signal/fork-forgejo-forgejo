@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/secret"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
-	secret_service "forgejo.org/services/secrets"
 )
 
 func CreateVariable(ctx context.Context, ownerID, repoID int64, name, data string) (*actions_model.ActionVariable, error) {
-	if err := secret_service.ValidateName(name); err != nil {
+	if err := secret.ValidateName(name); err != nil {
 		return nil, err
 	}
 
@@ -32,7 +32,7 @@ func CreateVariable(ctx context.Context, ownerID, repoID int64, name, data strin
 }
 
 func UpdateVariable(ctx context.Context, variableID, ownerID, repoID int64, name, data string) (bool, error) {
-	if err := secret_service.ValidateName(name); err != nil {
+	if err := secret.ValidateName(name); err != nil {
 		return false, err
 	}
 
@@ -50,14 +50,6 @@ func UpdateVariable(ctx context.Context, variableID, ownerID, repoID int64, name
 }
 
 func DeleteVariableByName(ctx context.Context, ownerID, repoID int64, name string) error {
-	if err := secret_service.ValidateName(name); err != nil {
-		return err
-	}
-
-	if err := envNameCIRegexMatch(name); err != nil {
-		return err
-	}
-
 	v, err := GetVariable(ctx, actions_model.FindVariablesOpts{
 		OwnerID: ownerID,
 		RepoID:  repoID,
@@ -86,6 +78,7 @@ func GetVariable(ctx context.Context, opts actions_model.FindVariablesOpts) (*ac
 // reference to:
 // https://docs.github.com/en/actions/learn-github-actions/variables#naming-conventions-for-configuration-variables
 // https://docs.github.com/en/actions/security-guides/encrypted-secrets#naming-your-secrets
+// https://forgejo.org/docs/next/user/actions/basic-concepts/#name-constraints
 var (
 	forbiddenEnvNameCIRx = regexp.MustCompile("(?i)^CI$")
 )
