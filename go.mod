@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.26.2
 
 require (
-	code.forgejo.org/f3/gof3/v3 v3.11.15
+	code.forgejo.org/f3/gof3/v3 v3.11.38
 	code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20260301104140-add494e31dab
 	code.forgejo.org/forgejo/actions-proto v0.7.0
 	code.forgejo.org/forgejo/go-rpmutils v1.0.0
@@ -21,7 +21,7 @@ require (
 	code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0
 	codeberg.org/gusted/mcaptcha v0.0.0-20220723083913-4f3072e1d570
 	connectrpc.com/connect v1.19.2
-	github.com/42wim/httpsig v1.2.3
+	github.com/42wim/httpsig v1.2.4
 	github.com/42wim/sshsig v0.0.0-20250502153856-5100632e8920
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358
 	github.com/ProtonMail/go-crypto v1.4.1
@@ -63,7 +63,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/feeds v1.2.0
 	github.com/gorilla/sessions v1.4.0
-	github.com/hashicorp/go-version v1.8.0
+	github.com/hashicorp/go-version v1.9.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/huandu/xstrings v1.5.0
 	github.com/inbucket/html2text v1.0.0
@@ -124,6 +124,7 @@ require (
 	git.sr.ht/~mariusor/go-xsd-duration v0.0.0-20220703122237-02e73435a078 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.4.5 // indirect
 	github.com/STARRY-S/zip v0.2.3 // indirect
+	github.com/aio-arch/graphlib v1.0.2 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
