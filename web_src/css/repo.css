@@ -340,7 +340,7 @@ td .commit-summary {
   padding-bottom: 8px;
 }
 
-.repository.file.list #repo-files-table td a:not(.sha) {
+.repository.file.list #repo-files-table td a:not(.sha, .author-wrapper) {
   padding-top: 8px;
   padding-bottom: 8px;
 }
