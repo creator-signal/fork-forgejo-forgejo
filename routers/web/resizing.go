@@ -127,7 +127,11 @@ func cachingHandler(prefix string, imgStore storage.ObjectStorage, whenMissing f
 			return
 		}
 
-		// If no size is provided, or if the original file is small enough, fall back on the original image
+		// If no size is provided, or if the original file is small enough, fall back on the original image.
+		// This is primarily for the purpose of preserving animated images that are small enough, because
+		// the image-resizing code would remove the animation from the images otherwise.
+		// An alternative could be to only preserve such images if they are actually animated, but it would
+		// require reading the image and and inspecting its contents.
 		if size == 0 || originalFile.Size() < setting.Avatar.MaxOriginSize {
 			reader, err := imgStore.Open(rPath)
 			if err != nil {
