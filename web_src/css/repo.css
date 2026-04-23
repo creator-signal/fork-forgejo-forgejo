@@ -255,7 +255,7 @@ td .commit-summary {
   padding-top: 4px;
 }
 
-.repo-files-table-latest-commit-row .commit-summary {
+.latest-commit .commit-summary {
   white-space: nowrap;
 }
 
