@@ -54,6 +54,7 @@ func GenerateResizedUserAvatars(imgStorage storage.ObjectStorage, maxOriginSize 
 				return precomputeResizedAvatars(imgStorage, user.Avatar, maxOriginSize)
 			},
 		)
+		logger.Error("Generation of resized user avatars failed: %v", err)
 		return err
 	}
 }
@@ -73,6 +74,7 @@ func GenerateResizedRepoAvatars(imgStorage storage.ObjectStorage, maxOriginSize 
 				return precomputeResizedAvatars(imgStorage, repo.Avatar, maxOriginSize)
 			},
 		)
+		logger.Error("Generation of resized repository avatars failed: %v", err)
 		return err
 	}
 }
