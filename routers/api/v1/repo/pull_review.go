@@ -1082,6 +1082,155 @@ func DeletePullReviewComment(ctx *context.APIContext) {
 	deleteIssueComment(ctx, issues_model.CommentTypeCode)
 }
 
+// ResolvePullReviewComment resolve a pull review comment
+func ResolvePullReviewComment(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}/resolve repository repoResolvePullReviewComment
+	// ---
+	// summary: Resolve a pull review comment
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: index
+	//   in: path
+	//   description: index of the pull request
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: id
+	//   in: path
+	//   description: id of the review
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: comment
+	//   in: path
+	//   description: id of the comment
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/PullReviewComment"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	resolveConversation(ctx, true)
+}
+
+// UnResolvePullReviewComment unresolve a pull review comment
+func UnResolvePullReviewComment(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}/unresolve repository repoUnResolvePullReviewComment
+	// ---
+	// summary: Unresolve a pull review comment
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: index
+	//   in: path
+	//   description: index of the pull request
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: id
+	//   in: path
+	//   description: id of the review
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: comment
+	//   in: path
+	//   description: id of the comment
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/PullReviewComment"
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	resolveConversation(ctx, false)
+}
+
+func resolveConversation(ctx *context.APIContext, isResolve bool) {
+	review, _, statusSet := prepareSingleReview(ctx)
+	if statusSet {
+		return
+	}
+
+	if ctx.Comment.ReviewID != review.ID {
+		ctx.NotFound("CommentNotInReview")
+		return
+	}
+
+	if ctx.Comment.Type != issues_model.CommentTypeCode {
+		ctx.Error(http.StatusBadRequest, "CommentNotCode", errors.New("not a code comment"))
+		return
+	}
+
+	permResult, err := issues_model.CanMarkConversation(ctx, ctx.Comment.Issue, ctx.Doer)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+	if !permResult {
+		ctx.Error(http.StatusForbidden, "CanMarkConversation", errors.New("no permission"))
+		return
+	}
+
+	if err := issues_model.MarkConversation(ctx, ctx.Comment, ctx.Doer, isResolve); err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	if isResolve {
+		ctx.Comment.ResolveDoerID = ctx.Doer.ID
+		ctx.Comment.ResolveDoer = ctx.Doer
+	} else {
+		ctx.Comment.ResolveDoerID = 0
+		ctx.Comment.ResolveDoer = nil
+	}
+
+	if err := ctx.Comment.LoadPoster(ctx); err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	apiComment, err := convert.ToPullReviewComment(ctx, review, ctx.Comment, ctx.Doer)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, apiComment)
+}
+
 func dismissReview(ctx *context.APIContext, msg string, isDismiss, dismissPriors bool) {
 	if !ctx.IsUserRepoAdmin() {
 		ctx.Error(http.StatusForbidden, "", "Must be repo admin")

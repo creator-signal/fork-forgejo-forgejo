@@ -675,6 +675,128 @@ func TestAPIPullReviewStayDismissed(t *testing.T) {
 		pullIssue.ID, user8.ID, 2, 0, 3, false)
 }
 
+func TestAPIPullReviewCommentResolve(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	pullIssue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 3})
+	require.NoError(t, pullIssue.LoadAttributes(db.DefaultContext))
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: pullIssue.RepoID})
+
+	// user2 is the repo owner
+	const userID2 int64 = 2
+	session := loginUser(t, "user2")
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+	createReview := func(body, commentBody string) api.PullReview {
+		var review api.PullReview
+		req := NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/reviews", repo.FullName(), pullIssue.Index), &api.CreatePullReviewOptions{
+			Body:  body,
+			Event: api.ReviewStateComment,
+			Comments: []api.CreatePullReviewComment{
+				{
+					Path:       "README.md",
+					Body:       commentBody,
+					OldLineNum: 1,
+				},
+			},
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &review)
+		return review
+	}
+	getReviewComment := func(reviewID int64) *api.PullReviewComment {
+		var comments []*api.PullReviewComment
+		req := NewRequestf(t, http.MethodGet, "/api/v1/repos/%s/pulls/%d/reviews/%d/comments", repo.FullName(), pullIssue.Index, reviewID).
+			AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &comments)
+		require.NotEmpty(t, comments)
+		return comments[0]
+	}
+
+	review := createReview("review for resolve test", "comment to resolve")
+	comment := getReviewComment(review.ID)
+	assert.Nil(t, comment.Resolver)
+
+	baseURL := fmt.Sprintf("/api/v1/repos/%s/pulls/%d/reviews/%d/comments/%d", repo.FullName(), pullIssue.Index, review.ID, comment.ID)
+
+	t.Run("Resolve", func(t *testing.T) {
+		req := NewRequestf(t, http.MethodPost, "%s/resolve", baseURL).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var resolved api.PullReviewComment
+		DecodeJSON(t, resp, &resolved)
+		assert.NotNil(t, resolved.Resolver)
+		assert.Equal(t, userID2, resolved.Resolver.ID)
+	})
+
+	t.Run("ResolveIdempotent", func(t *testing.T) {
+		req := NewRequestf(t, http.MethodPost, "%s/resolve", baseURL).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var resolved api.PullReviewComment
+		DecodeJSON(t, resp, &resolved)
+		assert.NotNil(t, resolved.Resolver)
+		assert.Equal(t, userID2, resolved.Resolver.ID)
+	})
+
+	t.Run("Unresolve", func(t *testing.T) {
+		req := NewRequestf(t, http.MethodPost, "%s/unresolve", baseURL).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var unresolved api.PullReviewComment
+		DecodeJSON(t, resp, &unresolved)
+		assert.Nil(t, unresolved.Resolver)
+	})
+
+	t.Run("UnresolveIdempotent", func(t *testing.T) {
+		req := NewRequestf(t, http.MethodPost, "%s/unresolve", baseURL).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var unresolved api.PullReviewComment
+		DecodeJSON(t, resp, &unresolved)
+		assert.Nil(t, unresolved.Resolver)
+	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		req := NewRequestf(t, http.MethodPost, "%s/resolve", baseURL)
+		MakeRequest(t, req, http.StatusUnauthorized)
+	})
+
+	t.Run("Forbidden", func(t *testing.T) {
+		// user5 has no write access to this repo
+		session5 := loginUser(t, "user5")
+		token5 := getTokenForLoggedInUser(t, session5, auth_model.AccessTokenScopeWriteRepository)
+		req := NewRequestf(t, http.MethodPost, "%s/resolve", baseURL).AddTokenAuth(token5)
+		MakeRequest(t, req, http.StatusForbidden)
+	})
+
+	t.Run("CommentFromDifferentReview", func(t *testing.T) {
+		otherReview := createReview("other review for resolve test", "other comment to resolve")
+		req := NewRequestf(t, http.MethodPost, "/api/v1/repos/%s/pulls/%d/reviews/%d/comments/%d/resolve", repo.FullName(), pullIssue.Index, otherReview.ID, comment.ID).
+			AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("CommentNotCode", func(t *testing.T) {
+		// Create the comment directly so it reaches the type guard instead of
+		// failing earlier as a comment from another review.
+		nonCodeComment := &issues_model.Comment{
+			Type:     issues_model.CommentTypeComment,
+			PosterID: userID2,
+			IssueID:  pullIssue.ID,
+			ReviewID: review.ID,
+			Content:  "non-code comment",
+		}
+		_, err := db.GetEngine(db.DefaultContext).Insert(nonCodeComment)
+		require.NoError(t, err)
+
+		req := NewRequestf(t, http.MethodPost, "/api/v1/repos/%s/pulls/%d/reviews/%d/comments/%d/resolve", repo.FullName(), pullIssue.Index, review.ID, nonCodeComment.ID).
+			AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusBadRequest)
+	})
+
+	// Cleanup
+	req := NewRequestf(t, http.MethodDelete, "/api/v1/repos/%s/pulls/%d/reviews/%d", repo.FullName(), pullIssue.Index, review.ID).
+		AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNoContent)
+}
+
 func reviewsCountCheck(t *testing.T, name string, issueID, reviewerID int64, expectedDismissed, expectedRequested, expectedTotal int, expectApproval bool) {
 	t.Run(name, func(t *testing.T) {
 		unittest.AssertCountByCond(t, "review", builder.Eq{
