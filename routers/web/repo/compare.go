@@ -608,6 +608,16 @@ func PrepareCompareDiff(
 		return false
 	}
 	ctx.Data["Diff"] = diff
+    ctx.PageData["diff"] = map[string]any{
+        "files":            diff.Files,
+        "isIncomplete":     diff.IsIncomplete,
+        "end":              diff.End,
+        "numfiles":         diff.NumFiles,
+        "tooManyFilesMessage": ctx.Locale.TrString("repo.diff.too_many_files"),
+        "binaryFileMessage":   ctx.Locale.TrString("repo.diff.bin"),
+        "showMoreMessage":     ctx.Locale.TrString("repo.diff.show_more"),
+        "statisticsMessage":   ctx.Locale.TrString("repo.diff.stats_desc_file"),
+    }
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles == 0
 
 	headCommit, err := ci.HeadGitRepo.GetCommit(headCommitID)

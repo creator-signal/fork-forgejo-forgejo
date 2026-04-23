@@ -16,6 +16,7 @@ import (
 
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
+	//"forgejo.org/models/organization"
 	mc "forgejo.org/modules/cache"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/httpcache"
@@ -130,6 +131,14 @@ func (ctx *Context) AddPluralStringsToPageData(keys []string) {
 	}
 }
 
+type MentionValue struct {
+    Key      string `json:"key"`
+    Value    string `json:"value"`
+    Name     string `json:"name"`
+    FullName string `json:"fullname,omitempty"`
+    Avatar   string `json:"avatar"`
+}
+
 // Contexter initializes a classic context for a request.
 func Contexter() func(next http.Handler) http.Handler {
 	rnd := templates.HTMLRenderer()
@@ -144,9 +153,33 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.Data["CurrentURL"] = setting.AppSubURL + req.URL.RequestURI()
 			ctx.Data["Link"] = ctx.Link
 
-			// PageData is passed by reference, and it will be rendered to `window.config.pageData` in `head.tmpl` for JavaScript modules
-			ctx.PageData = map[string]any{}
-			ctx.Data["PageData"] = ctx.PageData
+            mentionsMap := make(map[string]MentionValue)
+
+            mentionValues := make([]MentionValue, 0, len(mentionsMap))
+            for _, v := range mentionsMap {
+                mentionValues = append(mentionValues, v)
+            }
+
+
+            ctx.Data["mentionValues"] = mentionValues
+
+            i18n := map[string]string{
+                "copy_success":       string(ctx.Locale.Tr("copy_success")),
+                "copy_error":         string(ctx.Locale.Tr("copy_error")),
+                "error_occurred":     string(ctx.Locale.Tr("error.occurred")),
+                "network_error":      string(ctx.Locale.Tr("error.network_error")),
+                "remove_label_str":   string(ctx.Locale.Tr("remove_label_str")),
+                "modal_confirm":      string(ctx.Locale.Tr("modal.confirm")),
+                "modal_cancel":       string(ctx.Locale.Tr("modal.cancel")),
+                "more_items":         string(ctx.Locale.Tr("more_items")),
+                "incorrect_root_url": string(ctx.Locale.Tr("incorrect_root_url", setting.AppURL)),
+            }
+
+            ctx.Data["i18n"] = i18n
+
+            // PageData is passed by reference, and it will be rendered to `window.config.pageData` in `head.tmpl` for JavaScript modules
+            ctx.PageData = map[string]any{}
+            ctx.Data["PageData"] = ctx.PageData
 
 			ctx.AppendContextValue(WebContextKey, ctx)
 			ctx.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })

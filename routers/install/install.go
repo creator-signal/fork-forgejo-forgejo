@@ -67,6 +67,19 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx := context.NewWebContext(base, rnd, session.GetSession(req))
 			ctx.AppendContextValue(context.WebContextKey, ctx)
 			ctx.Data.MergeFrom(middleware.CommonTemplateContextData())
+
+			i18n := map[string]string{
+                "copy_success":       string(ctx.Locale.Tr("copy_success")),
+                "copy_error":         string(ctx.Locale.Tr("copy_error")),
+                "error_occurred":     string(ctx.Locale.Tr("error.occurred")),
+                "network_error":      string(ctx.Locale.Tr("error.network_error")),
+                "remove_label_str":   string(ctx.Locale.Tr("remove_label_str")),
+                "modal_confirm":      string(ctx.Locale.Tr("modal.confirm")),
+                "modal_cancel":       string(ctx.Locale.Tr("modal.cancel")),
+                "more_items":         string(ctx.Locale.Tr("more_items")),
+                "incorrect_root_url": string(ctx.Locale.Tr("incorrect_root_url", setting.AppURL)),
+            }
+
 			ctx.Data.MergeFrom(middleware.ContextData{
 				"Context":        ctx, // TODO: use "ctx" in template and remove this
 				"locale":         ctx.Locale,
@@ -78,6 +91,8 @@ func Contexter() func(next http.Handler) http.Handler {
 				"AllLangs":       translation.AllLangs(),
 
 				"PasswordHashAlgorithms": hash.RecommendedHashAlgorithms,
+				"mentionValues": nil,
+				"i18n": i18n,
 			})
 			next.ServeHTTP(resp, ctx.Req)
 		})

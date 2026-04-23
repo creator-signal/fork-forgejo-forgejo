@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"encoding/json"
 
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
@@ -59,6 +60,7 @@ func NewFuncMap() template.FuncMap {
 		"HTMLEscape":         HTMLEscape,
 		"QueryEscape":        QueryEscape,
 		"JSEscape":           JSEscapeSafe,
+		"toJSON":             toJSON,
 		"SanitizeHTML":       SanitizeHTML,
 		"SanitizeHTMLStrict": SanitizeHTMLStrict,
 		"URLJoin":            util.URLJoin,
@@ -283,6 +285,11 @@ func QueryEscape(s string) template.URL {
 // DotEscape wraps a dots in names with ZWJ [U+200D] in order to prevent autolinkers from detecting these as urls
 func DotEscape(raw string) string {
 	return strings.ReplaceAll(raw, ".", "\u200d.\u200d")
+}
+
+func toJSON(v interface{}) template.JS {
+    b, _ := json.Marshal(v)
+    return template.JS(b)
 }
 
 // Eval the expression and return the result, see the comment of eval.Expr for details.

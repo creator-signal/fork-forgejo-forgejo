@@ -1,5 +1,20 @@
 <!DOCTYPE html>
-<html lang="{{ctx.Locale.Lang}}" data-theme="{{ThemeName .SignedUser}}">
+<html
+    lang="{{ctx.Locale.Lang}}"
+    data-theme="{{ThemeName .SignedUser}}"
+    data-pageData='{{toJSON .PageData}}'
+    data-appUrl="{{AppUrl}}"
+    data-appSubUrl="{{AppSubUrl}}"
+    data-assetVersion="{{AssetVersion}}"
+    data-assetUrlPrefix="{{AssetUrlPrefix}}"
+    data-runModelIsProd="{{.RunModeIsProd}}"
+    data-customEmojis='{{toJSON CustomEmojis}}'
+    data-NotificationSettings='{{toJSON NotificationSettings}}' {{/*a map provided by NewFuncMap in helper.go*/}}
+    data-enableTimeTracking="{{EnableTimetracking}}"
+    data-mermaidMaxSourceCharacters="{{MermaidMaxSourceCharacters}}"
+    data-mention-values='{{toJSON .mentionValues}}'
+	data-i18n='{{toJSON .i18n}}'
+	>
 <head>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	{{/* Display `- .Repository.FullName` only if `.Title` does not already start with that. */}}

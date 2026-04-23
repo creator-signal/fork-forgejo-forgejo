@@ -80,6 +80,10 @@ body {
   text-spacing-trim: normal;
 }
 
+body.js #asset-error {
+  display: none;
+}
+
 textarea {
   font-family: var(--fonts-regular);
 }
