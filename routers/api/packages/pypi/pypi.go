@@ -87,29 +87,6 @@ func HTMLPackageMetadata(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
-type FileHashesJSON struct {
-	SHA256 string `json:"sha256"`
-}
-
-type FileJSON struct {
-	Filename       string         `json:"filename"`
-	URL            string         `json:"url"`
-	Hashes         FileHashesJSON `json:"hashes"`
-	RequiresPython string         `json:"requires-python"`
-	Size           int64          `json:"size"`
-}
-
-type PackageMetaJSON struct {
-	ApiVersion	string	`json:"api-version"`
-}
-
-type PackageJSON struct {
-	Name		string		`json:"name"`
-	Meta		PackageMetaJSON	`json:"meta"`
-	Versions	[]string	`json:"versions"`
-	Files		[]FileJSON	`json:"files"`
-}
-
 // JSONPackageMetadata returns the metadata for a single package in Simple JSON per PEP691
 func JSONPackageMetadata(ctx *context.Context) {
 	packageName := normalizer.Replace(ctx.Params("id"))
@@ -143,23 +120,23 @@ func JSONPackageMetadata(ctx *context.Context) {
 	for _, pd := range pds {
 		fileCounter += len(pd.Files)
 	}
-	files := make([]FileJSON, fileCounter)
+	files := make([]pypi_module.FileJSON, fileCounter)
 	var i int
 	for _, pd := range pds {
 		for _, file := range pd.Files {
-			files[i] = FileJSON{
+			files[i] = pypi_module.FileJSON{
 				Filename:       file.File.Name,
 				URL:            registryURL + "/files/" + pd.Package.LowerName + "/" + pd.Version.Version + "/" + file.File.Name,
 				RequiresPython: pd.Metadata.(*pypi_module.Metadata).RequiresPython,
-				Hashes:         FileHashesJSON{SHA256: file.Blob.HashSHA256},
+				Hashes:         pypi_module.FileHashesJSON{SHA256: file.Blob.HashSHA256},
 				Size:           file.Blob.Size,
 			}
 			i++
 		}
 	}
-	content := PackageJSON{
+	content := pypi_module.PackageJSON{
 		Name:		pds[0].Package.Name,
-		Meta:		PackageMetaJSON{ApiVersion:"1.4"},
+		Meta:		pypi_module.PackageMetaJSON{ApiVersion:"1.4"},
 		Versions:	versions,
 		Files:		files,
 	}

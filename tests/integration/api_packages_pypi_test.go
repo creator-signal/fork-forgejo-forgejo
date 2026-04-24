@@ -247,23 +247,15 @@ func TestPackagePyPI(t *testing.T) {
 			AddBasicAuth(user.Name)
 		req.Header["Accept"] = []string{"application/vnd.pypi.simple.v1+json"}
 		resp := MakeRequest(t, req, http.StatusOK)
-
-		obj := make(map[string]any)
-		json.NewDecoder(resp.Body).Decode(obj)
-		assert.Contains(t, obj, "name")
-		assert.Equal(t, obj["name"], packageName)
-		assert.Contains(t, obj, "meta")
-		assert.IsType(t, make(map[string]any), obj["meta"])
-		assert.Contains(t, obj, "versions")
-		assert.IsType(t, []string{}, obj["versions"])
-		assert.Contains(t, obj, "files")
-		files := obj["files"].([]map[string]any)
-		for _, filed := range files {
-			assert.IsType(t, make(map[string]any), filed)
-			assert.Contains(t, filed, "filename")
-			assert.Contains(t, filed, "hashes")
-			assert.Contains(t, filed, "url")
-			assert.Regexp(t, hrefMatcher, filed["url"])
+		objs := make([]pypi.PackageJSON, 1)
+		dec := json.NewDecoder(resp.Body)
+		dec.Decode(&objs)
+		assert.Len(t, objs, 1)
+		obj := objs[0]
+		assert.Equal(t, obj.Name, packageName)
+		assert.Equal(t, obj.Meta, pypi.PackageMetaJSON{ApiVersion: "1.4"})
+		for _, filed := range obj.Files {
+			assert.Regexp(t, hrefMatcher, filed.URL)
 		}
 	})
 }
