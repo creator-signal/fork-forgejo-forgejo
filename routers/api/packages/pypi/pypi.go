@@ -99,10 +99,15 @@ type FileJSON struct {
 	Size           int64          `json:"size"`
 }
 
+type PackageMetaJSON struct {
+	ApiVersion	string	`json:"api-version"`
+}
+
 type PackageJSON struct {
-	Name     string     `json:"name"`
-	Versions []string   `json:"versions"`
-	Files    []FileJSON `json:"files"`
+	Name		string		`json:"name"`
+	Meta		PackageMetaJSON	`json:"meta"`
+	Versions	[]string	`json:"versions"`
+	Files		[]FileJSON	`json:"files"`
 }
 
 // JSONPackageMetadata returns the metadata for a single package in Simple JSON per PEP691
@@ -153,9 +158,10 @@ func JSONPackageMetadata(ctx *context.Context) {
 		}
 	}
 	content := PackageJSON{
-		Name:     pds[0].Package.Name,
-		Versions: versions,
-		Files:    files,
+		Name:		pds[0].Package.Name,
+		Meta:		PackageMetaJSON{ApiVersion:"1.4"},
+		Versions:	versions,
+		Files:		files,
 	}
 	ctx.Resp.Header().Set("Content-Type", "application/vnd.pypi.simple.v1+json")
 	ctx.Resp.Header().Add("Content-Type", "application/json")
