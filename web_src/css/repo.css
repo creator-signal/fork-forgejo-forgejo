@@ -250,11 +250,6 @@ td .commit-summary {
   padding-bottom: 6px;
 }
 
-/* repeating 3 times to defeat `.ui.table > tbody > tr > td` in the specificity contest */
-.repo-files-table-latest-commit-right.repo-files-table-latest-commit-right.repo-files-table-latest-commit-right {
-  padding-top: 4px;
-}
-
 .latest-commit .commit-summary {
   white-space: nowrap;
 }
