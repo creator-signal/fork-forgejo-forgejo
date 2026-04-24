@@ -259,6 +259,16 @@ td .commit-summary {
   margin-right: 5px;
 }
 
+@media (min-width: 767.98px) {
+  #repo-files-table tbody > tr.commit-list td {
+    border-bottom: 1px solid var(--color-secondary);
+  }
+
+  #repo-files-table tbody > tr:is(.entry, .has-parent):nth-child(2) td {
+    border-top: none;
+  }
+}
+
 .repository.file.list #repo-files-table tbody .svg.octicon-reply {
   margin-right: 10px;
 }
