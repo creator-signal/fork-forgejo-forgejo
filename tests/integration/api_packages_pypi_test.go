@@ -247,15 +247,16 @@ func TestPackagePyPI(t *testing.T) {
 			AddBasicAuth(user.Name)
 		req.Header["Accept"] = []string{"application/vnd.pypi.simple.v1+json"}
 		resp := MakeRequest(t, req, http.StatusOK)
-		objs := make([]pypi.PackageJSON, 1)
-		dec := json.NewDecoder(resp.Body)
-		dec.Decode(&objs)
-		assert.Len(t, objs, 1)
-		obj := objs[0]
-		assert.Equal(t, obj.Name, packageName)
-		assert.Equal(t, obj.Meta, pypi.PackageMetaJSON{ApiVersion: "1.4"})
+		assert.Greater(t, resp.Body.Len(), 3)
+		txt := make([]byte, resp.Body.Len())
+		resp.Body.Read(txt)
+		var obj pypi.PackageJSON
+		require.NoError(t, json.Unmarshal(txt, &obj))
+		assert.Equal(t, packageName, obj.Name)
+		assert.Equal(t, pypi.PackageMetaJSON{ApiVersion: "1.4"}, obj.Meta)
 		for _, filed := range obj.Files {
-			assert.Regexp(t, hrefMatcher, filed.URL)
+			hrefMatcher = regexp.MustCompile(fmt.Sprintf(`%s/files/%s/%s/test\.(tar\.gz)|(whl)`, root, regexp.QuoteMeta(packageName), regexp.QuoteMeta(packageVersion)))
+			assert.Regexp(t, hrefMatcher, filed.URL[21:])
 		}
 	})
 }
