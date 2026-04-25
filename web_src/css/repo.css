@@ -244,10 +244,7 @@ td .commit-summary {
   color: var(--color-text);
   vertical-align: inherit;
   border-left: none;
-  padding-right: 5px;
-  padding-left: 10px;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding: 6px 5px 6px 10px;
 }
 
 .latest-commit .commit-summary {
