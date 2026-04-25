@@ -845,6 +845,11 @@ func ContainerRoutes() *web.Route {
 		&auth_method.ActionRuntimeToken{},
 		&auth_method.ActionTaskToken{},
 		&container.Auth{},
+		&auth_method.AuthorizedIntegration{
+			// `docker login` can't send a bearer token, so enable reading a token from the password field of
+			// `Authorization: Basic ...`.
+			PermitBasic: true,
+		},
 	})
 
 	r.Get("", container.ReqContainerAccess, container.DetermineSupport)
