@@ -145,8 +145,6 @@ func JSONPackageMetadata(ctx *context.Context) {
 	if err := json.NewEncoder(ctx.Resp).Encode(content); err != nil {
 		log.Error("Render JSON failed: %v", err)
 		apiError(ctx, http.StatusInternalServerError, err)
-	} else {
-		ctx.Resp.WriteHeader(http.StatusOK)
 	}
 
 }
