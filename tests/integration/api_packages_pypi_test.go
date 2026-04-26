@@ -253,7 +253,7 @@ func TestPackagePyPI(t *testing.T) {
 		var obj pypi.PackageJSON
 		require.NoError(t, json.Unmarshal(txt, &obj))
 		assert.Equal(t, packageName, obj.Name)
-		assert.Equal(t, pypi.PackageMetaJSON{ApiVersion: "1.4"}, obj.Meta)
+		assert.Equal(t, pypi.PackageMetaJSON{APIVersion: "1.4"}, obj.Meta)
 		for _, filed := range obj.Files {
 			hrefMatcher = regexp.MustCompile(fmt.Sprintf(`%s/files/%s/%s/test\.(tar\.gz)|(whl)`, root, regexp.QuoteMeta(packageName), regexp.QuoteMeta(packageVersion)))
 			assert.Regexp(t, hrefMatcher, filed.URL[21:])

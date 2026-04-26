@@ -135,10 +135,10 @@ func JSONPackageMetadata(ctx *context.Context) {
 		}
 	}
 	content := pypi_module.PackageJSON{
-		Name:		pds[0].Package.Name,
-		Meta:		pypi_module.PackageMetaJSON{ApiVersion:"1.4"},
-		Versions:	versions,
-		Files:		files,
+		Name:     pds[0].Package.Name,
+		Meta:     pypi_module.PackageMetaJSON{APIVersion: "1.4"},
+		Versions: versions,
+		Files:    files,
 	}
 	ctx.Resp.Header().Set("Content-Type", "application/vnd.pypi.simple.v1+json")
 	ctx.Resp.Header().Add("Content-Type", "application/json")
@@ -146,7 +146,6 @@ func JSONPackageMetadata(ctx *context.Context) {
 		log.Error("Render JSON failed: %v", err)
 		apiError(ctx, http.StatusInternalServerError, err)
 	}
-
 }
 
 func PackageMetadata(ctx *context.Context) {

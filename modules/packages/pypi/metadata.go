@@ -14,7 +14,6 @@ type Metadata struct {
 	RequiresPython  string `json:"requires_python,omitempty"`
 }
 
-
 type FileHashesJSON struct {
 	SHA256 string `json:"sha256"`
 }
@@ -28,12 +27,12 @@ type FileJSON struct {
 }
 
 type PackageMetaJSON struct {
-	ApiVersion	string	`json:"api-version"`
+	APIVersion string `json:"api-version"`
 }
 
 type PackageJSON struct {
-	Name		string		`json:"name"`
-	Meta		PackageMetaJSON	`json:"meta"`
-	Versions	[]string	`json:"versions"`
-	Files		[]FileJSON	`json:"files"`
+	Name     string          `json:"name"`
+	Meta     PackageMetaJSON `json:"meta"`
+	Versions []string        `json:"versions"`
+	Files    []FileJSON      `json:"files"`
 }
