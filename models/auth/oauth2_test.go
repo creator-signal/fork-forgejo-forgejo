@@ -209,13 +209,12 @@ func TestGetOAuth2AuthorizationByCode(t *testing.T) {
 }
 
 func TestOAuth2AuthorizationCode_ValidateCodeChallenge(t *testing.T) {
-	// test plain
+	// test plain is rejected (insecure, only S256 allowed)
 	code := &auth_model.OAuth2AuthorizationCode{
 		CodeChallengeMethod: "plain",
 		CodeChallenge:       "test123",
 	}
-	assert.True(t, code.ValidateCodeChallenge("test123"))
-	assert.False(t, code.ValidateCodeChallenge("ierwgjoergjio"))
+	assert.False(t, code.ValidateCodeChallenge("test123"))
 
 	// test S256
 	code = &auth_model.OAuth2AuthorizationCode{

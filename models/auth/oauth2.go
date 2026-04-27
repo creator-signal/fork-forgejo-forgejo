@@ -422,12 +422,10 @@ func (code *OAuth2AuthorizationCode) ValidateCodeChallenge(verifier string) bool
 		h := sha256.Sum256([]byte(verifier))
 		hashedVerifier := base64.RawURLEncoding.EncodeToString(h[:])
 		return hashedVerifier == code.CodeChallenge
-	case "plain":
-		return verifier == code.CodeChallenge
 	case "":
 		return true
 	default:
-		// unsupported method -> return false
+		// unsupported method (including "plain") -> return false
 		return false
 	}
 }
