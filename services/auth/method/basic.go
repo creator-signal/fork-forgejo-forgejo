@@ -101,10 +101,22 @@ func validateTOTP(req *http.Request, u *user_model.User) error {
 		}
 		return err
 	}
-	if ok, err := twofa.ValidateTOTP(getOtpHeader(req.Header)); err != nil {
+
+	passcode := getOtpHeader(req.Header)
+	if ok, err := twofa.ValidateTOTP(passcode); err != nil {
 		return err
 	} else if !ok {
 		return util.NewInvalidArgumentErrorf("invalid provided OTP")
 	}
+
+	// Prevent replay of the same TOTP code within the validity window
+	if twofa.LastUsedPasscode == passcode {
+		return util.NewInvalidArgumentErrorf("cannot reuse a TOTP code")
+	}
+	twofa.LastUsedPasscode = passcode
+	if err = auth_model.UpdateTwoFactor(req.Context(), twofa); err != nil {
+		return err
+	}
+
 	return nil
 }
