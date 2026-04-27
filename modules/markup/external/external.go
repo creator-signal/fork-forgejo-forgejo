@@ -68,18 +68,14 @@ func (p *Renderer) DisplayInIFrame() bool {
 	return p.RenderContentMode == setting.RenderContentModeIframe
 }
 
-func envMark(envName string) string {
-	return "$" + envName
-}
-
 // Render renders the data of the document to HTML via the external tool.
 func (p *Renderer) Render(ctx *markup.RenderContext, input io.Reader, output io.Writer) error {
+	// Split the command string BEFORE substituting user-influenced values.
+	// User-influenced values (repo owner, repo name, branch name) are passed
+	// only via environment variables to avoid argument injection through spaces
+	// or other shell metacharacters in path components.
 	var (
-		command = strings.NewReplacer(
-			envMark("GITEA_PREFIX_SRC"), ctx.Links.SrcLink(),
-			envMark("GITEA_PREFIX_RAW"), ctx.Links.RawLink(),
-		).Replace(p.Command)
-		commands = strings.Fields(command)
+		commands = strings.Fields(p.Command)
 		args     = commands[1:]
 	)
 
