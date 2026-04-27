@@ -259,11 +259,11 @@ export function initRepoCommentForm() {
       } else if (input_id === '#project_id') {
         icon = svg('octicon-project', 18, 'tw-mr-2');
       } else if (input_id === '#assignee_ids') {
-        icon = `<img class="ui avatar image tw-mr-2" alt="avatar" src=${$(this).data('avatar')}>`;
+        icon = `<img class="ui avatar image tw-mr-2" alt="avatar" src="${$(this).data('avatar')}">`;
       }
 
       $list.find('.selected').html(`
-        <a class="item muted sidebar-item-link" href=${$(this).data('href')}>
+        <a class="item muted sidebar-item-link" href="${$(this).data('href')}">
           ${icon}
           ${htmlEscape($(this).text())}
         </a>
