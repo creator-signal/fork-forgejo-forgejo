@@ -24,6 +24,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/models/webhook"
 	issue_indexer "forgejo.org/modules/indexer/issues"
+	code_indexer "forgejo.org/modules/indexer/code"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
@@ -281,6 +282,26 @@ func UpdateRepository(ctx context.Context, repo *repo_model.Repository, visibili
 			if err = repo_model.ClearRepoStars(ctx, repo.ID); err != nil {
 				return err
 			}
+
+			// Remove watches from users who no longer have access to the now-private repo
+			watchers, err := repo_model.GetWatchers(ctx, repo.ID)
+			if err != nil {
+				return fmt.Errorf("getWatchers: %w", err)
+			}
+			for _, w := range watchers {
+				has, err := access_model.HasAccess(ctx, w.UserID, repo)
+				if err != nil {
+					return fmt.Errorf("hasAccess [user_id: %d]: %w", w.UserID, err)
+				}
+				if !has {
+					if err := repo_model.WatchRepo(ctx, w.UserID, repo.ID, false); err != nil {
+						return fmt.Errorf("watchRepo [user_id: %d]: %w", w.UserID, err)
+					}
+				}
+			}
+
+			// Update the code indexer so previously-public source code is no longer searchable
+			code_indexer.UpdateRepoIndexer(repo)
 		}
 
 		// Create/Remove git-daemon-export-ok for git-daemon...
