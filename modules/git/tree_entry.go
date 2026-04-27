@@ -212,7 +212,7 @@ func (te *TreeEntry) Path() (string, error) {
 	targetPath := te.Name()
 	parentTree := te.ptree
 	if parentTree == nil {
-		return "", fmt.Errorf("couldn't find parent tree of entry")
+		return "", fmt.Errorf("couldn't find the parent tree of the entry")
 	}
 
 	prevID := parentTree.ID
@@ -220,7 +220,7 @@ func (te *TreeEntry) Path() (string, error) {
 	for parentTree != nil {
 		entries, err := parentTree.ListEntries()
 		if err != nil {
-			return "", fmt.Errorf("couldn't list entries")
+			return "", fmt.Errorf("couldn't list entries: %v", err)
 		}
 
 		var matchingEntry *TreeEntry
@@ -232,7 +232,7 @@ func (te *TreeEntry) Path() (string, error) {
 		}
 
 		if matchingEntry == nil {
-			return "", fmt.Errorf("this shouldn't happen: couldn't find entry")
+			return "", fmt.Errorf("this shouldn't happen: couldn't find entry (ID: %s) in tree (ID: %s)", prevID, parentTree.ID)
 		}
 
 		targetPath = matchingEntry.name + "/" + targetPath
