@@ -716,7 +716,7 @@ func RemoveReviewRequest(ctx context.Context, issue *Issue, reviewer, doer *user
 	}
 	defer committer.Close()
 
-	review, err := GetReviewByIssueIDAndUserID(ctx, issue.ID, reviewer.ID)
+	review, err := GetReviewByIssueIDUserIDAndTypes(ctx, issue.ID, reviewer.ID, []ReviewType{ReviewTypeRequest})
 	if err != nil && !IsErrReviewNotExist(err) {
 		return nil, err
 	}
