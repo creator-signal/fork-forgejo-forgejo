@@ -516,10 +516,14 @@ func SubmitReview(ctx context.Context, doer *user_model.User, issue *Issue, revi
 
 // GetReviewByIssueIDAndUserID get the latest review of reviewer for a pull request
 func GetReviewByIssueIDAndUserID(ctx context.Context, issueID, userID int64) (*Review, error) {
+	return GetReviewByIssueIDUserIDAndTypes(ctx, issueID, userID, []ReviewType{ReviewTypeApprove, ReviewTypeReject, ReviewTypeRequest})
+}
+
+func GetReviewByIssueIDUserIDAndTypes(ctx context.Context, issueID, userID int64, types []ReviewType) (*Review, error) {
 	review := new(Review)
 
 	has, err := db.GetEngine(ctx).Where(
-		builder.In("type", ReviewTypeApprove, ReviewTypeReject, ReviewTypeRequest).
+		builder.In("type", types).
 			And(builder.Eq{"issue_id": issueID, "reviewer_id": userID, "original_author_id": 0})).
 		Desc("id").
 		Get(review)
