@@ -539,8 +539,7 @@ func authenticate(ctx *context.Context, repository *repo_model.Repository, autho
 		accessMode = perm.AccessModeWrite
 	}
 
-	if ctx.Data["IsActionsToken"] == true {
-		taskID := ctx.Data["ActionsTaskID"].(int64)
+	if hasTaskID, taskID := ctx.Authentication.ActionsTaskID().Get(); hasTaskID {
 		task, err := actions_model.GetTaskByID(ctx, taskID)
 		if err != nil {
 			log.Error("Unable to GetTaskByID for task[%d] Error: %v", taskID, err)
@@ -580,10 +579,11 @@ func authenticate(ctx *context.Context, repository *repo_model.Repository, autho
 
 func handleLFSToken(ctx stdCtx.Context, tokenSHA string, target *repo_model.Repository, mode perm.AccessMode) (*user_model.User, error) {
 	token, err := jwt.ParseWithClaims(tokenSHA, &Claims{}, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		k := setting.LFS.SigningKey
+		if t.Method != k.SigningMethod() {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
-		return setting.LFS.JWTSecretBytes, nil
+		return k.VerifyKey(), nil
 	})
 	if err != nil {
 		return nil, errors.New("invalid token")
