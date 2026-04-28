@@ -457,6 +457,11 @@ func SubmitReview(ctx context.Context, doer *user_model.User, issue *Issue, revi
 			if official, err = IsOfficialReviewer(ctx, issue, doer); err != nil {
 				return nil, nil, err
 			}
+			// delete previous review requests from the same user, fixing #12243
+			reviewCond := builder.Eq{"reviewer_id": doer.ID, "issue_id": issue.ID}
+			if _, err := sess.Where(reviewCond.And(builder.Eq{"type": ReviewTypeRequest})).Delete(new(Review)); err != nil {
+				return nil, nil, err
+			}
 		}
 
 		review.Official = official
