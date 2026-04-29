@@ -33,6 +33,10 @@ type Renderer struct {
 	*setting.MarkupRenderer
 }
 
+// commandContext is exec.CommandContext by default. Tests overwrite it to
+// inspect the constructed *exec.Cmd without spawning the real renderer.
+var commandContext = exec.CommandContext
+
 var (
 	_ markup.PostProcessRenderer = (*Renderer)(nil)
 	_ markup.ExternalRenderer    = (*Renderer)(nil)
@@ -117,7 +121,7 @@ func (p *Renderer) Render(ctx *markup.RenderContext, input io.Reader, output io.
 	processCtx, _, finished := process.GetManager().AddContext(ctx.Ctx, fmt.Sprintf("Render [%s] for %s", commands[0], ctx.Links.SrcLink()))
 	defer finished()
 
-	cmd := exec.CommandContext(processCtx, commands[0], args...)
+	cmd := commandContext(processCtx, commands[0], args...)
 	cmd.Env = append(
 		os.Environ(),
 		"GITEA_PREFIX_SRC="+ctx.Links.SrcLink(),
