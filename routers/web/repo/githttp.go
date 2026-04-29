@@ -183,8 +183,7 @@ func httpBase(ctx *context.Context) *serviceHandler {
 		}
 
 		if repoExist {
-			// Because of special ref "refs/for" .. , need delay write permission check
-			if git.SupportProcReceive {
+			if !isWiki && git.SupportProcReceive {
 				accessMode = perm.AccessModeRead
 			}
 
