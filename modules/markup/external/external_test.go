@@ -19,21 +19,78 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestRender_UserSuppliedStringsNotInArgv pins the contract that
-// user-influenced URL fragments (SrcLink / RawLink) reach the external
-// renderer ONLY via environment variables, never via argv.
-//
-// Pre-fix the renderer Command template had $GITEA_PREFIX_SRC /
-// $GITEA_PREFIX_RAW substituted into the command string before strings.Fields
-// split it. A whitespace-bearing path component (e.g. a filename containing a
-// space) split into extra argv tokens, letting an attacker inject arguments
-// into asciidoctor / pandoc / etc.
-//
-// Post-fix, no string substitution happens; the literal "$GITEA_PREFIX_SRC"
-// stays in argv and the URL is only available via the environment.
-func TestRender_UserSuppliedStringsNotInArgv(t *testing.T) {
+func TestSubstitutePrefixPlaceholders(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("relies on the POSIX `true` no-op binary")
+		t.Skip("uses POSIX $VAR placeholder syntax")
+	}
+
+	cases := []struct {
+		name             string
+		args             []string
+		srcLink, rawLink string
+		want             []string
+	}{
+		{
+			name:    "clean URLs",
+			args:    []string{"$GITEA_PREFIX_SRC", "--raw=$GITEA_PREFIX_RAW", "--safe"},
+			srcLink: "https://example.com/o/r/src/branch/main/dir/file",
+			rawLink: "https://example.com/o/r/raw/branch/main/dir/file",
+			want: []string{
+				"https://example.com/o/r/src/branch/main/dir/file",
+				"--raw=https://example.com/o/r/raw/branch/main/dir/file",
+				"--safe",
+			},
+		},
+		{
+			name:    "whitespace in srcLink does not split argv",
+			args:    []string{"$GITEA_PREFIX_SRC", "--raw=$GITEA_PREFIX_RAW", "--safe"},
+			srcLink: "https://example.com/dir/has space/file",
+			rawLink: "https://example.com/dir/has space/file.raw",
+			want: []string{
+				"https://example.com/dir/has space/file",
+				"--raw=https://example.com/dir/has space/file.raw",
+				"--safe",
+			},
+		},
+		{
+			name:    "flag-shaped content in srcLink stays in one token",
+			args:    []string{"$GITEA_PREFIX_SRC", "--safe"},
+			srcLink: "innocent --evil-flag=evil --another",
+			rawLink: "x",
+			want: []string{
+				"innocent --evil-flag=evil --another",
+				"--safe",
+			},
+		},
+		{
+			name:    "no placeholder",
+			args:    []string{"--no-placeholders", "literal", "args"},
+			srcLink: "https://example.com/x",
+			rawLink: "https://example.com/y",
+			want:    []string{"--no-placeholders", "literal", "args"},
+		},
+		{
+			name:    "embedded placeholder",
+			args:    []string{"--prefix=$GITEA_PREFIX_SRC/foo", "--bar"},
+			srcLink: "https://example.com",
+			rawLink: "z",
+			want:    []string{"--prefix=https://example.com/foo", "--bar"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string(nil), tc.args...)
+			substitutePrefixPlaceholders(args, tc.srcLink, tc.rawLink)
+			assert.Equal(t, tc.want, args)
+			assert.Len(t, args, len(tc.args))
+		})
+	}
+}
+
+func TestRender_PrefixPlaceholderSubstitution(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses POSIX $VAR placeholder syntax")
 	}
 
 	var capturedName string
@@ -43,16 +100,16 @@ func TestRender_UserSuppliedStringsNotInArgv(t *testing.T) {
 	defer test.MockVariableValue(&commandContext, func(ctx context.Context, name string, args ...string) *exec.Cmd {
 		capturedName = name
 		capturedArgs = append([]string(nil), args...)
-		// Return a benign command so Render's cmd.Run() succeeds. Render mutates
-		// cmd.Env after we return; we inspect it after Render returns.
 		capturedCmd = exec.CommandContext(ctx, "true")
 		return capturedCmd
 	})()
 
+	const cmdTemplate = "fake-renderer $GITEA_PREFIX_SRC --raw=$GITEA_PREFIX_RAW --safe"
+
 	r := &Renderer{
 		MarkupRenderer: &setting.MarkupRenderer{
-			MarkupName: "noinject-test",
-			Command:    "fake-renderer $GITEA_PREFIX_SRC $GITEA_PREFIX_RAW",
+			MarkupName: "placeholder-test",
+			Command:    cmdTemplate,
 		},
 	}
 
@@ -66,15 +123,11 @@ func TestRender_UserSuppliedStringsNotInArgv(t *testing.T) {
 	}
 	srcLink := ctx.Links.SrcLink()
 	rawLink := ctx.Links.RawLink()
-	require.NotEmpty(t, srcLink)
-	require.NotEmpty(t, rawLink)
 
 	require.NoError(t, r.Render(ctx, strings.NewReader(""), &bytes.Buffer{}))
 
 	assert.Equal(t, "fake-renderer", capturedName)
-	assert.Equal(t, []string{"$GITEA_PREFIX_SRC", "$GITEA_PREFIX_RAW"}, capturedArgs)
-	assert.NotContains(t, capturedArgs, srcLink, "SrcLink leaked into argv")
-	assert.NotContains(t, capturedArgs, rawLink, "RawLink leaked into argv")
+	assert.Equal(t, []string{srcLink, "--raw=" + rawLink, "--safe"}, capturedArgs)
 
 	require.NotNil(t, capturedCmd)
 	assert.Contains(t, capturedCmd.Env, "GITEA_PREFIX_SRC="+srcLink)

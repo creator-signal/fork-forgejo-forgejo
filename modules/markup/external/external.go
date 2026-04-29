@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"forgejo.org/modules/graceful"
@@ -72,16 +73,33 @@ func (p *Renderer) DisplayInIFrame() bool {
 	return p.RenderContentMode == setting.RenderContentModeIframe
 }
 
+func envMark(envName string) string {
+	if runtime.GOOS == "windows" {
+		return "%" + envName + "%"
+	}
+	return "$" + envName
+}
+
+// substitutePrefixPlaceholders replaces placeholders per-argv-token. The
+// caller must split the command template on whitespace first - that's what
+// keeps separators inside srcLink/rawLink from introducing extra argv tokens.
+func substitutePrefixPlaceholders(args []string, srcLink, rawLink string) {
+	replacer := strings.NewReplacer(
+		envMark("GITEA_PREFIX_SRC"), srcLink,
+		envMark("GITEA_PREFIX_RAW"), rawLink,
+	)
+	for i := range args {
+		args[i] = replacer.Replace(args[i])
+	}
+}
+
 // Render renders the data of the document to HTML via the external tool.
 func (p *Renderer) Render(ctx *markup.RenderContext, input io.Reader, output io.Writer) error {
-	// Split the command string BEFORE substituting user-influenced values.
-	// User-influenced values (repo owner, repo name, branch name) are passed
-	// only via environment variables to avoid argument injection through spaces
-	// or other shell metacharacters in path components.
 	var (
 		commands = strings.Fields(p.Command)
 		args     = commands[1:]
 	)
+	substitutePrefixPlaceholders(args, ctx.Links.SrcLink(), ctx.Links.RawLink())
 
 	if p.IsInputFile {
 		// write to temp file
