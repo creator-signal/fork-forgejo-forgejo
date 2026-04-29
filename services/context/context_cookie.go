@@ -54,3 +54,13 @@ func (ctx *Context) SetLTACookie(u *user_model.User) error {
 	ctx.SetSiteCookie(setting.CookieRememberName, lookup+":"+validator, days)
 	return nil
 }
+
+func (ctx *Context) SetSSOLTACookie(u *user_model.User) error {
+	days := 86400 * setting.LogInRememberDays
+	lookup, validator, err := auth_model.GenerateAuthToken(ctx, u.ID, timeutil.TimeStampNow().Add(int64(days)), auth_model.LongTermAuthorizationSSO)
+	if err != nil {
+		return err
+	}
+	ctx.SetSiteCookie(setting.CookieRememberName, lookup+":"+validator, days)
+	return nil
+}

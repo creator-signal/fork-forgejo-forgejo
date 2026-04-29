@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -49,7 +50,6 @@ const (
 	TplActivate base.TplName = "user/auth/activate"
 )
 
-// autoSignIn reads cookie and try to auto-login.
 func autoSignIn(ctx *context.Context) (bool, error) {
 	isSucceed := false
 	defer func() {
@@ -67,23 +67,39 @@ func autoSignIn(ctx *context.Context) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("VerifyUserAuthorizationToken: %w", err)
 	}
+	if u != nil {
+		isSucceed = true
+
+		if err := updateSession(ctx, nil, map[string]any{"uid": u.ID}); err != nil {
+			return false, fmt.Errorf("unable to updateSession: %w", err)
+		}
+
+		if err := resetLocale(ctx, u); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	u, _, err = user_model.VerifyUserAuthorizationToken(ctx, authCookie, auth.LongTermAuthorizationSSO)
+	if err != nil {
+		return false, fmt.Errorf("VerifyUserAuthorizationToken (SSO): %w", err)
+	}
 	if u == nil {
 		return false, nil
 	}
 
-	isSucceed = true
-
-	if err := updateSession(ctx, nil, map[string]any{
-		// Set session IDs
-		"uid": u.ID,
-	}); err != nil {
-		return false, fmt.Errorf("unable to updateSession: %w", err)
+	source, err := auth.GetSourceByID(ctx, u.LoginSource)
+	if err != nil {
+		return false, fmt.Errorf("GetSourceByID: %w", err)
+	}
+	if !source.IsActive || !source.IsOAuth2() {
+		return false, nil
 	}
 
-	if err := resetLocale(ctx, u); err != nil {
-		return false, err
-	}
+	isSucceed = true // keep the cookie; the IdP bounce will replace it on success
 
+	ctx.Redirect(fmt.Sprintf("%s/user/oauth2/%s?prompt=none", setting.AppSubURL, url.PathEscape(source.Name)))
 	return true, nil
 }
 
@@ -122,15 +138,20 @@ func RedirectAfterLogin(ctx *context.Context) {
 }
 
 func CheckAutoLogin(ctx *context.Context) bool {
-	isSucceed, err := autoSignIn(ctx) // try to auto-login
+	// Set redirect_to before autoSignIn: the SSO LTA path writes its redirect from inside it.
+	redirectTo := ctx.FormString("redirect_to")
+	if len(redirectTo) > 0 {
+		middleware.SetRedirectToCookie(ctx.Resp, redirectTo)
+	}
+
+	isSucceed, err := autoSignIn(ctx)
 	if err != nil {
 		ctx.ServerError("autoSignIn", err)
 		return true
 	}
 
-	redirectTo := ctx.FormString("redirect_to")
-	if len(redirectTo) > 0 {
-		middleware.SetRedirectToCookie(ctx.Resp, redirectTo)
+	if ctx.Written() {
+		return true
 	}
 
 	if isSucceed {
@@ -296,7 +317,13 @@ func handleSignIn(ctx *context.Context, u *user_model.User, remember bool) {
 
 func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRedirect bool) string {
 	if remember {
-		if err := ctx.SetLTACookie(u); err != nil {
+		var err error
+		if ssoLTA, _ := ctx.Session.Get("twofaSSOLTA").(bool); ssoLTA {
+			err = ctx.SetSSOLTACookie(u)
+		} else {
+			err = ctx.SetLTACookie(u)
+		}
+		if err != nil {
 			ctx.ServerError("GenerateAuthToken", err)
 			return setting.AppSubURL + "/"
 		}
@@ -310,6 +337,7 @@ func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRe
 		"openid_determined_username",
 		"twofaUid",
 		"twofaRemember",
+		"twofaSSOLTA",
 		"twofaOpenID",
 		"linkAccount",
 	}, map[string]any{

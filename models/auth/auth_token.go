@@ -21,6 +21,9 @@ var (
 	// Used to store long term authorization tokens.
 	LongTermAuthorization AuthorizationPurpose = "long_term_authorization"
 
+	// Long-term token for OAuth2/OIDC sign-ins; bounces through the IdP rather than auto-logging in.
+	LongTermAuthorizationSSO AuthorizationPurpose = "long_term_authorization_sso"
+
 	// Used to activate a user account.
 	UserActivation AuthorizationPurpose = "user_activation"
 
