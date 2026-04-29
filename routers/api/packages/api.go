@@ -199,6 +199,7 @@ func CommonRoutes() *web.Route {
 		&nuget.Auth{},
 		&conan.Auth{},
 		&chef.Auth{},
+		&auth_method.AuthorizedIntegration{},
 	})
 
 	r.Group("/{username}", func() {
