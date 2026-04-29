@@ -485,6 +485,72 @@ func TestRefreshTokenInvalidation(t *testing.T) {
 	assert.Equal(t, "token was already used", parsedError.ErrorDescription)
 }
 
+// TestRefreshTokenRejectsAccessToken pins that the refresh-token endpoint
+// rejects tokens whose Type is not TypeRefreshToken — in particular, an
+// access token from the same grant must NOT be accepted as a refresh token.
+// Without this check, an access token leaked via a referrer / proxy log /
+// browser history could be replayed at /login/oauth/access_token to mint
+// fresh access+refresh pairs, turning a short-lived leak into durable
+// account compromise.
+//
+// The test pins behavior with `OAuth2.InvalidateRefreshTokens = false`, which
+// is the configuration where the bug is actually exploitable: with the
+// default `= true`, the counter check incidentally rejects the access token
+// as "token was already used", masking the underlying type confusion. With
+// it false, pre-fix code mints new tokens (HTTP 200) for the access-token
+// replay — full exploit. Post-fix, the type check fires first and returns
+// HTTP 400 "token is not a refresh token" regardless of the setting.
+func TestRefreshTokenRejectsAccessToken(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	defer test.MockVariableValue(&setting.OAuth2.InvalidateRefreshTokens, false)()
+
+	// First, exchange an authorization code for a normal token pair so we
+	// have a real, valid access token signed with the server key.
+	req := NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+		"grant_type":    "authorization_code",
+		"client_id":     "da7da3ba-9a13-4167-856f-3899de0b0138",
+		"client_secret": "4MK8Na6R55smdCY0WuCCumZ6hjRPnGY5saWVRHHjJiA=",
+		"redirect_uri":  "a",
+		"code":          "authcode",
+		"code_verifier": "N1Zo9-8Rfwhkt68r1r29ty8YwIraXR8eh_1Qwxg7yQXsonBt",
+	})
+	resp := MakeRequest(t, req, http.StatusOK)
+	type tokenResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+	parsed := new(tokenResponse)
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), parsed))
+	require.NotEmpty(t, parsed.AccessToken)
+	require.NotEqual(t, parsed.AccessToken, parsed.RefreshToken)
+
+	// Submit the *access* token in the refresh_token slot.
+	req = NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+		"grant_type":    "refresh_token",
+		"client_id":     "da7da3ba-9a13-4167-856f-3899de0b0138",
+		"client_secret": "4MK8Na6R55smdCY0WuCCumZ6hjRPnGY5saWVRHHjJiA=",
+		"redirect_uri":  "a",
+		"refresh_token": parsed.AccessToken,
+	})
+	resp = MakeRequest(t, req, http.StatusBadRequest)
+
+	var parsedError auth.AccessTokenErrorResponse
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &parsedError))
+	assert.Equal(t, "unauthorized_client", string(parsedError.ErrorCode))
+	assert.Equal(t, "token is not a refresh token", parsedError.ErrorDescription)
+
+	// Sanity: the actual refresh token from the same grant still works.
+	req = NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+		"grant_type":    "refresh_token",
+		"client_id":     "da7da3ba-9a13-4167-856f-3899de0b0138",
+		"client_secret": "4MK8Na6R55smdCY0WuCCumZ6hjRPnGY5saWVRHHjJiA=",
+		"redirect_uri":  "a",
+		"refresh_token": parsed.RefreshToken,
+	})
+	MakeRequest(t, req, http.StatusOK)
+}
+
 func TestSignInOAuthCallbackSignIn(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
