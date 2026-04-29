@@ -65,6 +65,42 @@ func TestAPITwoFactor(t *testing.T) {
 	MakeRequest(t, req, http.StatusOK)
 }
 
+// TestAPITwoFactor_RejectsReplay pins that submitting the same TOTP passcode
+// twice at the BasicAuth API endpoint is rejected on the second attempt.
+// Without this check, a passcode captured via network MITM, shoulder surf,
+// proxy log, or browser history can be replayed for any number of API /
+// Git-over-HTTPS calls during the ~60 s validity window — turning a
+// one-shot OTP capture into a stream of authenticated requests.
+func TestAPITwoFactor_RejectsReplay(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 16})
+
+	otpKey, err := totp.Generate(totp.GenerateOpts{
+		SecretSize:  40,
+		Issuer:      "forgejo-test",
+		AccountName: user.Name,
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, auth_model.NewTwoFactor(db.DefaultContext, &auth_model.TwoFactor{UID: user.ID}, otpKey.Secret()))
+
+	passcode, err := totp.GenerateCode(otpKey.Secret(), time.Now())
+	require.NoError(t, err)
+
+	// First request with the passcode succeeds and burns the code.
+	req := NewRequest(t, "GET", "/api/v1/user").
+		AddBasicAuth(user.Name)
+	req.Header.Set("X-Forgejo-OTP", passcode)
+	MakeRequest(t, req, http.StatusOK)
+
+	// Second request with the same passcode is rejected as a replay.
+	req = NewRequest(t, "GET", "/api/v1/user").
+		AddBasicAuth(user.Name)
+	req.Header.Set("X-Forgejo-OTP", passcode)
+	MakeRequest(t, req, http.StatusUnauthorized)
+}
+
 func TestAPIWebAuthn(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
