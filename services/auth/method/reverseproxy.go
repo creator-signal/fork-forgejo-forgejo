@@ -56,14 +56,19 @@ func (r *ReverseProxy) getUserFromAuthUser(req *http.Request) (*user_model.User,
 	log.Trace("ReverseProxy Authorization: Found username: %s", username)
 
 	user, err := user_model.GetUserByName(req.Context(), username)
-	if err != nil {
-		if !user_model.IsErrUserNotExist(err) || !r.isAutoRegisterAllowed() {
-			log.Error("GetUserByName: %v", err)
-			return nil, err
+	switch {
+	case err == nil:
+		return user, nil
+	case user_model.IsErrUserNotExist(err) && r.isAutoRegisterAllowed():
+		if user = r.newUser(req); user != nil {
+			// creation succeeded
+			return user, nil
 		}
-		user = r.newUser(req)
+		fallthrough
+	default:
+		log.Error("GetUserByName: %v", err)
+		return nil, err
 	}
-	return user, nil
 }
 
 // getEmail extracts the email from the "setting.ReverseProxyAuthEmail" header
