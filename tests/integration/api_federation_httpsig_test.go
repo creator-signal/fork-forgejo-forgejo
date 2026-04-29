@@ -5,8 +5,10 @@ package integration
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 	"forgejo.org/routers"
 	"forgejo.org/services/contexttest"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -92,5 +95,104 @@ func TestFederationHttpSigValidation(t *testing.T) {
 			req := NewRequest(t, "GET", userURL)
 			MakeRequest(t, req, http.StatusOK)
 		})
+	})
+}
+
+// TestFederationActivityPubRouteSignatureCoverage walks every route under
+// /api/v1/activitypub and pins the signature-gate behavior. The test
+// introspects the live router and asserts the registered route set equals
+// the table below: a new route added to api.go without a matching entry
+// here fails the coverage check, forcing the author to make an explicit
+// requireSig decision.
+func TestFederationActivityPubRouteSignatureCoverage(t *testing.T) {
+	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, true)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user1 := unittest.AssertExistsAndLoadBean(t, &user.User{ID: 1})
+		ctx, _ := contexttest.MockAPIContext(t, u.String())
+		clientFactory, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
+		require.NoError(t, err)
+		apClient, err := clientFactory.WithKeys(ctx, user1, user1.KeyID())
+		require.NoError(t, err)
+
+		type route struct {
+			name       string
+			method     string
+			pattern    string // chi pattern under /api/v1/activitypub, e.g. /user-id/{user-id}
+			concrete   string // path used to issue the test request
+			requireSig bool
+		}
+		routes := []route{
+			{"Person", "GET", "/user-id/{user-id}", "/user-id/2", true},
+			{"PersonInbox", "POST", "/user-id/{user-id}/inbox", "/user-id/2/inbox", true},
+			{"PersonActivityNote", "GET", "/user-id/{user-id}/activities/{activity-id}", "/user-id/2/activities/1", true},
+			{"PersonActivity", "GET", "/user-id/{user-id}/activities/{activity-id}/activity", "/user-id/2/activities/1/activity", true},
+			{"PersonOutbox", "GET", "/user-id/{user-id}/outbox", "/user-id/2/outbox", true},
+			// requireSig is false only for the bare /actor route — that endpoint
+			// hosts the public key peers need to verify our signed requests, so
+			// gating it would break the HTTP-signature bootstrap
+			// (services/federation/signature_service.go fetchKeyFromAp).
+			{"Actor", "GET", "/actor", "/actor", false},
+			{"ActorInbox", "POST", "/actor/inbox", "/actor/inbox", true},
+			{"ActorOutbox", "GET", "/actor/outbox", "/actor/outbox", true},
+			{"Repository", "GET", "/repository-id/{repository-id}", "/repository-id/2", true},
+			{"RepositoryInbox", "POST", "/repository-id/{repository-id}/inbox", "/repository-id/2/inbox", true},
+			{"RepositoryOutbox", "GET", "/repository-id/{repository-id}/outbox", "/repository-id/2/outbox", true},
+		}
+
+		t.Run("RouteSetMatchesRouter", func(t *testing.T) {
+			const prefix = "/api/v1/activitypub"
+			expected := map[string]bool{}
+			for _, r := range routes {
+				expected[r.method+" "+prefix+r.pattern] = true
+			}
+			actual := map[string]bool{}
+			err := chi.Walk(testWebRoutes.R, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+				if strings.HasPrefix(route, prefix+"/") || route == prefix {
+					actual[method+" "+route] = true
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			assert.Equal(t, expected, actual,
+				"activitypub route set drifted from this test's table — add or remove an entry above and pick requireSig deliberately")
+		})
+
+		const sigErrMsg = "request signature verification failed"
+
+		for _, r := range routes {
+			full := fmt.Sprintf("%sapi/v1/activitypub%s", u, r.concrete)
+
+			t.Run(r.name+"_Unsigned", func(t *testing.T) {
+				req := NewRequest(t, r.method, full)
+				if r.requireSig {
+					resp := MakeRequest(t, req, http.StatusBadRequest)
+					assert.Contains(t, resp.Body.String(), sigErrMsg)
+				} else {
+					MakeRequest(t, req, http.StatusOK)
+				}
+			})
+
+			t.Run(r.name+"_Signed", func(t *testing.T) {
+				var resp *http.Response
+				var err error
+				switch r.method {
+				case "GET":
+					resp, err = apClient.Get(full)
+				case "POST":
+					resp, err = apClient.Post([]byte("{}"), full)
+				default:
+					t.Fatalf("unhandled method %q", r.method)
+				}
+				require.NoError(t, err)
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				assert.NotContains(t, string(body), sigErrMsg,
+					"signed %s %s rejected by signature gate (status %d): %s",
+					r.method, r.concrete, resp.StatusCode, string(body))
+			})
+		}
 	})
 }
