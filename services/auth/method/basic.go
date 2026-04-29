@@ -114,9 +114,5 @@ func validateTOTP(req *http.Request, u *user_model.User) error {
 		return util.NewInvalidArgumentErrorf("cannot reuse a TOTP code")
 	}
 	twofa.LastUsedPasscode = passcode
-	if err = auth_model.UpdateTwoFactor(req.Context(), twofa); err != nil {
-		return err
-	}
-
-	return nil
+	return auth_model.UpdateTwoFactor(req.Context(), twofa)
 }
