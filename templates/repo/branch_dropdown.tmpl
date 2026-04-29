@@ -5,19 +5,19 @@
 */}}
 {{$defaultSelectedRefName := $.root.BranchName}}
 {{if and .root.IsViewTag (not .noTag)}}
-       {{$defaultSelectedRefName = .root.TagName}}
+  {{$defaultSelectedRefName = .root.TagName}}
 {{end}}
 {{if eq $defaultSelectedRefName ""}}
-       {{$defaultSelectedRefName = $.root.Repository.DefaultBranch}}
+  {{$defaultSelectedRefName = $.root.Repository.DefaultBranch}}
 {{end}}
 
 {{$type := ""}}
 {{if and .root.IsViewTag (not .noTag)}}
-       {{$type = "tag"}}
+  {{$type = "tag"}}
 {{else if .root.IsViewBranch}}
-       {{$type = "branch"}}
+  {{$type = "branch"}}
 {{else}}
-       {{$type = "tree"}}
+{{$type = "tree"}}
 {{end}}
 
 {{$showBranchesInDropdown := not .root.HideBranchesInDropdown}}
@@ -109,22 +109,22 @@
 
 {{- $branchName := "" -}}
 {{- if .root -}}
-  {{- $branchName = .root.branchName -}}
+  {{- $branchName = .root.BranchName -}}
 {{- end -}}
 
 {{- $repoLink := "" -}}
 {{- if .root -}}
-  {{- $repoLink = .root.repoLink -}}
+  {{- $repoLink = .root.RepoLink -}}
 {{- end -}}
 
 {{- $treePath := "" -}}
 {{- if .root -}}
-  {{- $treePath = .root.treePath -}}
+  {{- $treePath = .root.TreePath -}}
 {{- end -}}
 
 {{- $branchNameSubURL := "" -}}
 {{- if .root -}}
-  {{- $branchNameSubURL = .root.branchNameSubURL -}}
+  {{- $branchNameSubURL = .root.BranchNameSubURL -}}
 {{- end -}}
 
 {{- $data := dict
@@ -182,7 +182,7 @@
 <script src="{{AssetUrlPrefix}}/js/branchdropdown.js" type="module"></script>
 
 <div class="js-branch-tag-selector {{if .ContainerClasses}}{{.ContainerClasses}}{{end}}">
-	{{/* show dummy elements before Vue componment is mounted, this code must match the code in BranchTagSelector.vue */}}
+	{{/* show dummy elements before Vue component is mounted, this code must match the code in BranchTagSelector.vue */}}
 	<div class="ui dropdown custom">
 		<button class="branch-dropdown-button gt-ellipsis ui basic small compact button tw-flex tw-m-0">
 			<span class="text tw-flex tw-items-center tw-mr-1 gt-ellipsis">
