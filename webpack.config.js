@@ -141,6 +141,9 @@ export default {
     repolist: [
         fileURLToPath(new URL('web_src/js/repolist.js', import.meta.url)),
     ],
+    list: [
+        fileURLToPath(new URL('web_src/js/list.js', import.meta.url)),
+    ],
     webcomponents: [
       fileURLToPath(new URL('web_src/js/webcomponents/index.js', import.meta.url)),
     ],
