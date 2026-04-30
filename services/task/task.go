@@ -133,7 +133,8 @@ func CreateMigrateTask(ctx context.Context, doer, u *user_model.User, opts base.
 	return task, nil
 }
 
-// RetryMigrateTask retry a migrate task
+// RetryMigrateTask will retry the migration.
+// All data, from a previous migration, is deleted before it's retried.
 func RetryMigrateTask(ctx context.Context, repoID int64) error {
 	migratingTask, err := admin_model.GetMigratingTask(ctx, repoID)
 	if err != nil {
@@ -143,7 +144,14 @@ func RetryMigrateTask(ctx context.Context, repoID int64) error {
 		return nil
 	}
 
-	// TODO Need to removing the storage/database garbage brought by the failed task
+	// The migration is being retried, it could've failed for a variety of cases.
+	// In most cases however, some data already got uploaded to the disk or
+	// database. The migration code makes the assumption this is not the case and
+	// if we do not clean it up, the retry attempt will fail with absolute
+	// certainty.
+	if err := repo_service.DeleteRepositoryDirectly(ctx, repoID, repo_service.DeleteRepositoryOpts{IgnoreOrgTeams: true, KeepMigrationBeans: true}); err != nil {
+		return fmt.Errorf("DeleteRepositoryDirectly: %v", err)
+	}
 
 	// Reset task status and messages
 	migratingTask.Status = structs.TaskStatusQueued
