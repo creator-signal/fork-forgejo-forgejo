@@ -1,4 +1,4 @@
-const dataset = document.getElementById('dashboard-repo-list-data');
+const dataset = document.getElementById('dashboard-repo-list-data').dataset;
 
 const data = {
 	...window.config.pageData.dashboardRepoList, // runtime values
