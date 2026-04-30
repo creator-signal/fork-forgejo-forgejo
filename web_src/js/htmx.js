@@ -7,6 +7,7 @@ import 'idiomorph/dist/idiomorph-ext.js';
 // https://htmx.org/reference/#config
 htmx.config.requestClass = 'is-loading';
 htmx.config.scrollIntoViewOnBoost = false;
+htmx.config.includeIndicatorStyles = false; // included in our own CSS due to CSP constraints
 
 // https://htmx.org/events/#htmx:sendError
 document.body.addEventListener('htmx:sendError', (event) => {

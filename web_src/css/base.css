@@ -1413,3 +1413,14 @@ table th[data-sortt-desc] .svg {
   gap: .25rem;
   min-width: 0;
 }
+
+.htmx-indicator {
+  opacity:0;
+  visibility: hidden
+}
+.is-loading .htmx-indicator,
+.is-loading.htmx-indicator {
+  opacity:1;
+  visibility: visible;
+  transition: opacity 200ms ease-in
+}
