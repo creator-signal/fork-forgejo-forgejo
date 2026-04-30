@@ -135,6 +135,9 @@ export default {
     diff: [
         fileURLToPath(new URL('web_src/js/diff.js', import.meta.url)),
     ],
+    pull: [
+        fileURLToPath(new URL('web_src/js/pull.js', import.meta.url)),
+    ],
     webcomponents: [
       fileURLToPath(new URL('web_src/js/webcomponents/index.js', import.meta.url)),
     ],
