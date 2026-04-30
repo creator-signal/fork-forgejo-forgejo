@@ -721,7 +721,7 @@ func RemoveReviewRequest(ctx context.Context, issue *Issue, reviewer, doer *user
 		return nil, err
 	}
 
-	if review == nil || review.Type != ReviewTypeRequest {
+	if review == nil {
 		return nil, nil
 	}
 
