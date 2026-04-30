@@ -137,8 +137,7 @@ func CreateMigrateTask(ctx context.Context, doer, u *user_model.User, opts base.
 func RetryMigrateTask(ctx context.Context, repoID int64) error {
 	migratingTask, err := admin_model.GetMigratingTask(ctx, repoID)
 	if err != nil {
-		log.Error("GetMigratingTask: %v", err)
-		return err
+		return fmt.Errorf("GetMigratingTask: %w", err)
 	}
 	if migratingTask.Status == structs.TaskStatusQueued || migratingTask.Status == structs.TaskStatusRunning {
 		return nil
@@ -150,8 +149,7 @@ func RetryMigrateTask(ctx context.Context, repoID int64) error {
 	migratingTask.Status = structs.TaskStatusQueued
 	migratingTask.Message = ""
 	if err = migratingTask.UpdateCols(ctx, "status", "message"); err != nil {
-		log.Error("task.UpdateCols failed: %v", err)
-		return err
+		return fmt.Errorf("task.UpdateCols: %w", err)
 	}
 
 	return taskQueue.Push(migratingTask)
