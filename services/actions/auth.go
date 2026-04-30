@@ -30,21 +30,24 @@ type AuthorizationTokenClaims struct {
 }
 
 type IDTokenCustomClaims struct {
-	Actor           string `json:"actor"`
-	BaseRef         string `json:"base_ref"`
-	EventName       string `json:"event_name"`
-	HeadRef         string `json:"head_ref"`
-	Ref             string `json:"ref"`
-	RefProtected    string `json:"ref_protected"`
-	RefType         string `json:"ref_type"`
-	Repository      string `json:"repository"`
-	RepositoryOwner string `json:"repository_owner"`
-	RunAttempt      string `json:"run_attempt"`
-	RunID           string `json:"run_id"`
-	RunNumber       string `json:"run_number"`
-	Sha             string `json:"sha"`
-	Workflow        string `json:"workflow"`
-	WorkflowRef     string `json:"workflow_ref"`
+	Actor             string `json:"actor"`
+	ActorID           string `json:"actor_id"`
+	BaseRef           string `json:"base_ref"`
+	EventName         string `json:"event_name"`
+	HeadRef           string `json:"head_ref"`
+	Ref               string `json:"ref"`
+	RefProtected      string `json:"ref_protected"`
+	RefType           string `json:"ref_type"`
+	Repository        string `json:"repository"`
+	RepositoryID      string `json:"repository_id"`
+	RepositoryOwner   string `json:"repository_owner"`
+	RepositoryOwnerID string `json:"repository_owner_id"`
+	RunAttempt        string `json:"run_attempt"`
+	RunID             string `json:"run_id"`
+	RunNumber         string `json:"run_number"`
+	Sha               string `json:"sha"`
+	Workflow          string `json:"workflow"`
+	WorkflowRef       string `json:"workflow_ref"`
 }
 
 type actionsCacheScope struct {
@@ -120,21 +123,24 @@ func generateOIDCExtra(gitCtx map[string]any) (string, error) {
 	}
 
 	claims := IDTokenCustomClaims{
-		Actor:           ctxVal("actor"),
-		BaseRef:         ctxVal("base_ref"),
-		EventName:       ctxVal("event_name"),
-		HeadRef:         ctxVal("head_ref"),
-		Ref:             ctxVal("ref"),
-		RefProtected:    ctxVal("ref_protected"),
-		RefType:         ctxVal("ref_type"),
-		Repository:      ctxVal("repository"),
-		RepositoryOwner: ctxVal("repository_owner"),
-		RunAttempt:      ctxVal("run_attempt"),
-		RunID:           ctxVal("run_id"),
-		RunNumber:       ctxVal("run_number"),
-		Sha:             ctxVal("sha"),
-		Workflow:        ctxVal("workflow"),
-		WorkflowRef:     ctxVal("workflow_ref"),
+		Actor:             ctxVal("actor"),
+		ActorID:           ctxVal("actor_id"),
+		BaseRef:           ctxVal("base_ref"),
+		EventName:         ctxVal("event_name"),
+		HeadRef:           ctxVal("head_ref"),
+		Ref:               ctxVal("ref"),
+		RefProtected:      ctxVal("ref_protected"),
+		RefType:           ctxVal("ref_type"),
+		Repository:        ctxVal("repository"),
+		RepositoryID:      ctxVal("repository_id"),
+		RepositoryOwner:   ctxVal("repository_owner"),
+		RepositoryOwnerID: ctxVal("repository_owner_id"),
+		RunAttempt:        ctxVal("run_attempt"),
+		RunID:             ctxVal("run_id"),
+		RunNumber:         ctxVal("run_number"),
+		Sha:               ctxVal("sha"),
+		Workflow:          ctxVal("workflow"),
+		WorkflowRef:       ctxVal("workflow_ref"),
 	}
 
 	ret, err := json.Marshal(claims)
