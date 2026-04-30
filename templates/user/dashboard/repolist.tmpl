@@ -1,55 +1,62 @@
-<script type="module">
-const data = {
-	...window.config.pageData.dashboardRepoList, // it only contains searchLimit and uid
+<div
+	id="dashboard-repo-list-data"
 
-	isMirrorsEnabled: {{.MirrorsEnabled}},
-	isStarsEnabled: {{not .IsDisableStars}},
+	data-is-mirrors-enabled="{{.MirrorsEnabled}}"
+	data-is-stars-enabled="{{not .IsDisableStars}}"
 
-	textMyRepos: {{ctx.Locale.Tr "home.my_repos"}},
-	textSearchRepos: {{ctx.Locale.Tr "search.repo_kind"}},
-	textFilter: {{ctx.Locale.Tr "home.filter"}},
-	textShowArchived: {{ctx.Locale.Tr "home.show_archived"}},
-	textShowPrivate: {{ctx.Locale.Tr "home.show_private"}},
+	data-text-my-repos="{{ctx.Locale.Tr "home.my_repos"}}"
+	data-text-search-repos="{{ctx.Locale.Tr "search.repo_kind"}}"
+	data-text-filter="{{ctx.Locale.Tr "home.filter"}}"
+	data-text-show-archived="{{ctx.Locale.Tr "home.show_archived"}}"
+	data-text-show-private="{{ctx.Locale.Tr "home.show_private"}}"
 
-	textShowBothArchivedUnarchived: {{ctx.Locale.Tr "home.show_both_archived_unarchived"}},
-	textShowOnlyUnarchived: {{ctx.Locale.Tr "home.show_only_unarchived"}},
-	textShowOnlyArchived: {{ctx.Locale.Tr "home.show_only_archived"}},
+	data-text-show-both-archived-unarchived="{{ctx.Locale.Tr "home.show_both_archived_unarchived"}}"
+	data-text-show-only-unarchived="{{ctx.Locale.Tr "home.show_only_unarchived"}}"
+	data-text-show-only-archived="{{ctx.Locale.Tr "home.show_only_archived"}}"
 
-	textShowBothPrivatePublic: {{ctx.Locale.Tr "home.show_both_private_public"}},
-	textShowOnlyPublic: {{ctx.Locale.Tr "home.show_only_public"}},
-	textShowOnlyPrivate: {{ctx.Locale.Tr "home.show_only_private"}},
+	data-text-show-both-private-public="{{ctx.Locale.Tr "home.show_both_private_public"}}"
+	data-text-show-only-public="{{ctx.Locale.Tr "home.show_only_public"}}"
+	data-text-show-only-private="{{ctx.Locale.Tr "home.show_only_private"}}"
 
-	textAll: {{ctx.Locale.Tr "all"}},
-	textSources: {{ctx.Locale.Tr "sources"}},
-	textForks: {{ctx.Locale.Tr "forks"}},
-	textMirrors: {{ctx.Locale.Tr "mirrors"}},
-	textCollaborative: {{ctx.Locale.Tr "collaborative"}},
+	data-text-all="{{ctx.Locale.Tr "all"}}"
+	data-text-sources="{{ctx.Locale.Tr "sources"}}"
+	data-text-forks="{{ctx.Locale.Tr "forks"}}"
+	data-text-mirrors="{{ctx.Locale.Tr "mirrors"}}"
+	data-text-collaborative="{{ctx.Locale.Tr "collaborative"}}"
 
-	textFirstPage: {{ctx.Locale.Tr "admin.first_page"}},
-	textPreviousPage: {{ctx.Locale.Tr "repo.issues.previous"}},
-	textNextPage: {{ctx.Locale.Tr "repo.issues.next"}},
-	textLastPage: {{ctx.Locale.Tr "admin.last_page"}},
+	data-text-first-page="{{ctx.Locale.Tr "admin.first_page"}}"
+	data-text-previous-page="{{ctx.Locale.Tr "repo.issues.previous"}}"
+	data-text-next-page="{{ctx.Locale.Tr "repo.issues.next"}}"
+	data-text-last-page="{{ctx.Locale.Tr "admin.last_page"}}"
 
-	textMyOrgs: {{ctx.Locale.Tr "home.my_orgs"}},
+	data-text-my-orgs="{{ctx.Locale.Tr "home.my_orgs"}}"
 
-	textOrgVisibilityLimited: {{ctx.Locale.Tr "org.settings.visibility.limited_shortname"}},
-	textOrgVisibilityPrivate: {{ctx.Locale.Tr "org.settings.visibility.private_shortname"}},
-};
+	data-text-org-visibility-limited="{{ctx.Locale.Tr "org.settings.visibility.limited_shortname"}}"
+	data-text-org-visibility-private="{{ctx.Locale.Tr "org.settings.visibility.private_shortname"}}"
 
-{{if .Team}}
-data.teamId = {{.Team.ID}};
-{{end}}
+	{{if .Team}}
+	data-team-id="{{.Team.ID}}"
+	{{end}}
 
-{{if not .ContextUser.IsOrganization}}
-data.organizations = [{{range .Orgs}}{'name': {{.Name}}, 'num_repos': {{.NumRepos}}, 'org_visibility': {{.Visibility}}},{{end}}];
-data.isOrganization = false;
-data.organizationsTotalCount = {{.UserOrgsCount}};
-data.canCreateOrganization = {{.SignedUser.CanCreateOrganization}};
-{{else}}
-data.organizationId = {{.ContextUser.ID}};
-{{end}}
+	{{if not .ContextUser.IsOrganization}}
+	data-organizations='[
+		{{range $i, $org := .Orgs}}
+			{{if $i}},{{end}}
+			{
+				"name": {{$org.Name}},
+				"numRepos": {{$org.NumRepos}},
+				"orgVisibility": {{$org.Visibility}}
+			}
+		{{end}}
+	]'
+	data-is-organization="false"
+	data-organizations-total-count="{{.UserOrgsCount}}"
+	data-can-create-organization="{{.SignedUser.CanCreateOrganization}}"
+	{{else}}
+	data-organization-id="{{.ContextUser.ID}}"
+	{{end}}
+></div>
 
-window.config.pageData.dashboardRepoList = data;
-</script>
+<script type="module" src="{{AssetUrlPrefix}}/js/repolist.js"></script>
 
 <div id="dashboard-repo-list" class="flex-container-sidebar"></div>
