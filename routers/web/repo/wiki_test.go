@@ -95,6 +95,7 @@ func TestWikiPages(t *testing.T) {
 	ctx, _ := contexttest.MockContext(t, "user2/repo1/wiki/?action=_pages")
 	contexttest.LoadRepo(t, ctx, 1)
 	WikiPages(ctx)
+	assert.Equal(t, http.StatusOK, ctx.Resp.Status())
 	assertPagesMetas(t, []string{"Home", "Long Page", "Page With Image", "Page With Spaced Name", "Unescaped File", "XSS"}, ctx.Data["Pages"])
 }
 
@@ -125,7 +126,7 @@ func TestNewWikiPost(t *testing.T) {
 			Message: message,
 		})
 		NewWikiPost(ctx)
-		assert.EqualValues(t, http.StatusSeeOther, ctx.Resp.Status())
+		assert.Equal(t, http.StatusSeeOther, ctx.Resp.Status())
 		sanitzied, err := wiki_service.SanitizeWikiPath(title)
 		require.NoError(t, err)
 		assertWikiExists(t, ctx.Repo.Repository, wiki_service.WebPath(sanitzied))
@@ -188,7 +189,7 @@ func TestEditWikiPost(t *testing.T) {
 			Message: message,
 		})
 		EditWikiPost(ctx)
-		assert.EqualValues(t, http.StatusSeeOther, ctx.Resp.Status())
+		assert.Equal(t, http.StatusSeeOther, ctx.Resp.Status())
 		sanitized, err := wiki_service.SanitizeWikiPath(page.in)
 		require.NoError(t, err)
 		assertWikiExists(t, ctx.Repo.Repository, wiki_service.WebPath(sanitized))
