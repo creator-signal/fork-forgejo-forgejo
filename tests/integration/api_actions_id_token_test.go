@@ -12,6 +12,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/setting"
 	actions_service "forgejo.org/services/actions"
 	"forgejo.org/tests"
@@ -45,9 +46,9 @@ func TestActionsIDToken(t *testing.T) {
 	gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
 	require.NoError(t, err)
 
-	token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true)
+	token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})
 	require.NoError(t, err)
-	tokenWithoutOIDCAccess, err := actions_service.CreateAuthorizationToken(task, gitCtx, false)
+	tokenWithoutOIDCAccess, err := actions_service.CreateAuthorizationToken(task, gitCtx, false, &repo_model.ActionsConfig{})
 	require.NoError(t, err)
 
 	// get JWKs information
@@ -87,7 +88,7 @@ func TestActionsIDToken(t *testing.T) {
 			assert.Equal(t, "792", claims["run_id"])
 			assert.Equal(t, "188", claims["run_number"])
 			assert.Equal(t, "c2d72f548424103f01ee1dc02889c1e2bff816b0", claims["sha"])
-			assert.Equal(t, "repo:user5/repo4:ref:refs/heads/master", claims["sub"])
+			assert.Equal(t, "repo:user5-5/repo4-4:ref:refs/heads/master", claims["sub"])
 			assert.Equal(t, "artifact.yaml", claims["workflow"])
 			assert.Equal(t, "user5/repo4/.forgejo/workflows/artifact.yaml@refs/heads/master", claims["workflow_ref"])
 		}
@@ -154,7 +155,7 @@ func TestActionsIDToken(t *testing.T) {
 		gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
 		require.NoError(t, err)
 
-		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true)
+		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})
 		require.NoError(t, err)
 
 		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/abcde/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)
@@ -175,7 +176,7 @@ func TestActionsIDToken(t *testing.T) {
 		gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
 		require.NoError(t, err)
 
-		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true)
+		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})
 		require.NoError(t, err)
 
 		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/abcde/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)

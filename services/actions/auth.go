@@ -11,6 +11,7 @@ import (
 	"time"
 
 	actions_model "forgejo.org/models/actions"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
@@ -62,7 +63,7 @@ const (
 	actionsCachePermissionWrite
 )
 
-func CreateAuthorizationToken(task *actions_model.ActionTask, gitGtx map[string]any, enableOpenIDConnect bool) (string, error) {
+func CreateAuthorizationToken(task *actions_model.ActionTask, gitGtx map[string]any, enableOpenIDConnect bool, actionsConfig *repo_model.ActionsConfig) (string, error) {
 	now := time.Now()
 	taskID := task.ID
 	runID := task.Job.RunID
@@ -99,7 +100,16 @@ func CreateAuthorizationToken(task *actions_model.ActionTask, gitGtx map[string]
 		}
 
 		claims.OIDCExtra = oidcExtra
-		claims.OIDCSub = generateOIDCSub(gitGtx)
+
+		switch actionsConfig.OIDCSubjectFormat {
+		case repo_model.OIDCSubjectFormatDefault:
+			claims.OIDCSub = generateOIDCSub(gitGtx)
+		case repo_model.OIDCSubjectFormatLegacyForgejo15:
+			claims.OIDCSub = legacyGenerateOIDCSub(gitGtx)
+		default:
+			return "", fmt.Errorf("unexpected oidc subject format: %q", actionsConfig.OIDCSubjectFormat)
+		}
+
 		claims.Scp = fmt.Sprintf("%s generate_id_token:%s", claims.Scp, runIDJobID)
 	}
 
@@ -152,6 +162,17 @@ func generateOIDCExtra(gitCtx map[string]any) (string, error) {
 }
 
 func generateOIDCSub(gitCtx map[string]any) string {
+	nameParts := strings.SplitN(gitCtx["repository"].(string), "/", 2)
+	repoName := nameParts[1]
+	switch gitCtx["event_name"] {
+	case "pull_request":
+		return fmt.Sprintf("repo:%s-%s/%s-%s:pull_request", gitCtx["repository_owner"], gitCtx["repository_owner_id"], repoName, gitCtx["repository_id"])
+	default:
+		return fmt.Sprintf("repo:%s-%s/%s-%s:ref:%s", gitCtx["repository_owner"], gitCtx["repository_owner_id"], repoName, gitCtx["repository_id"], gitCtx["ref"])
+	}
+}
+
+func legacyGenerateOIDCSub(gitCtx map[string]any) string {
 	switch gitCtx["event_name"] {
 	case "pull_request":
 		return fmt.Sprintf("repo:%s:pull_request", gitCtx["repository"])
