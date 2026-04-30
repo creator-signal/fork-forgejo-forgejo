@@ -30,6 +30,19 @@ func ValidIssueID(ctx context.Context, ownerID int64, issues issues_model.IssueL
 	return nil
 }
 
+// ListProjectIssues Get list of ProjectIssues of project
+func ListProjectIssuesByColumn(ctx context.Context, columnID int64, listOptions db.ListOptions) ([]*project_model.ProjectIssue, int64, error) {
+	col, err := project_model.GetColumn(ctx, columnID)
+	if err != nil {
+		return nil, 0, err
+	}
+	issues, total, err := col.GetIssues(ctx, listOptions)
+	if err != nil {
+		return nil, 0, err
+	}
+	return issues, total, nil
+}
+
 // getProjectIssueByID Gets a single ProjectIssue by its ID
 func getProjectIssueByID(ctx context.Context, issueID int64) (*project_model.ProjectIssue, error) {
 	issue, err := project_model.GetProjectIssue(ctx, issueID)

@@ -3,12 +3,57 @@
 
 package structs
 
+type ProjectIssue struct {
+	ID              int64 `json:"id"`
+	IssueID         int64 `json:"issue_id"`
+	ProjectID       int64 `json:"project_id"`
+	ProjectColumnID int64 `json:"project_column_id"`
+	Sorting         int64 `json:"sorting"`
+}
+
+type ProjectColumn struct {
+	ID        int64  `json:"id"`
+	Title     string `json:"title"`
+	Default   bool   `json:"default"`
+	Sorting   int8   `json:"sorting"`
+	Color     string `json:"color"`
+	ProjectID int64  `json:"project_id"`
+}
+
 type CreateProjectOptions struct {
 	Title        string `json:"title"`
 	Description  string `json:"description"`
 	TemplateType string `json:"template_type"`
 	CardType     string `json:"card_type"`
 	Status       string `json:"status"`
+}
+
+type CreateProjectColumnOptions struct {
+	Title   string `json:"title"`
+	Default bool   `json:"default"`
+	Sorting int8   `json:"sorting"`
+	Color   string `json:"color"`
+}
+
+type CreateProjectIssueOptions struct {
+	IssueID int64 `json:"issue_id"`
+}
+
+type UpdateProjectColumnIssueOptions struct {
+	ProjectColumnID int64 `json:"project_column_id"`
+	Sorting         int64 `json:"sorting"`
+}
+
+type Project struct {
+	ID           int64  `json:"id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	OwnerName    string `json:"owner_name"`
+	RepoName     string `json:"repo_name"`
+	Status       string `json:"status"`
+	OwnerType    string `json:"project_type"`
+	TemplateType string `json:"template_type"`
+	CardType     string `json:"card_type"`
 }
 
 type MovedIssuesOption struct {

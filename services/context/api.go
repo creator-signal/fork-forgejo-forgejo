@@ -48,10 +48,12 @@ type APIContext struct {
 
 	user *user_model.User // the user which is being visited, in most cases it differs from Doer
 
+	// TODO: unexport project
 	repo       *Repository
 	comment    *issues_model.Comment
 	org        *APIOrganization
 	pkg        *Package
+	Project    *Project
 	quotaGroup *quota_model.Group
 	quotaRule  *quota_model.Rule
 	publicOnly bool // Whether the request is for a public endpoint

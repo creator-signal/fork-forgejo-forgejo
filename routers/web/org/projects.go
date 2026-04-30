@@ -69,16 +69,16 @@ func Projects(ctx *context.Context) {
 	keyword := ctx.FormTrim("q")
 	page := max(ctx.FormInt("page"), 1)
 
-	projectType := project_service.GetAPIOwnerType(ctx.ContextUser.IsOrganization(), false)
+	ownerType := project_service.GetAPIOwnerType(ctx.ContextUser.IsOrganization(), false)
 	opts := project_service.GetSearchOpts(
 		ctx.ContextUser.ID,
 		showClosed,
 		sortType,
 		keyword,
-		projectType,
+		ownerType,
 		page,
 		setting.UI.IssuePagingNum)
-	log.Debug("Got OwnerSearch Opts for user %v and project type %v", ctx.ContextUser.Name, projectType)
+	log.Debug("Got OwnerSearch Opts for user %v and project type %v", ctx.ContextUser.Name, ownerType)
 	projects, err := project_service.ListProjectsByOptions(*ctx, opts)
 	if err != nil {
 		ctx.ServerError("ListProjectsByOptions", err)
@@ -91,7 +91,7 @@ func Projects(ctx *context.Context) {
 		return
 	}
 	log.Debug("Counted %v projects", total)
-	countOpts := project_service.GetSearchOpts(ctx.ContextUser.ID, !showClosed, "", "", projectType)
+	countOpts := project_service.GetSearchOpts(ctx.ContextUser.ID, !showClosed, "", "", ownerType)
 	opTotal, err := project_service.CountProjectsByOptions(*ctx, countOpts)
 	if err != nil {
 		ctx.ServerError("CountProjectsByOptions", err)
@@ -189,8 +189,8 @@ func CreateProject(ctx *context.Context) {
 		return
 	}
 
-	projectType := project_service.GetAPIOwnerType(ctx.ContextUser.IsOrganization(), false)
-	log.Debug("Got project type %v", projectType)
+	ownerType := project_service.GetAPIOwnerType(ctx.ContextUser.IsOrganization(), false)
+	log.Debug("Got ownerType %v", ownerType)
 
 	opt := &project_structs.CreateProjectOptions{
 		Title:        form.Title,
@@ -199,7 +199,7 @@ func CreateProject(ctx *context.Context) {
 		CardType:     form.CardType,
 		Status:       "open",
 	}
-	project, err := project_service.NewProject(opt, ctx.ContextUser, nil, projectType)
+	project, err := project_service.NewProject(opt, ctx.ContextUser, nil, ownerType)
 	if err != nil {
 		ctx.ServerError("NewProject", err)
 		return

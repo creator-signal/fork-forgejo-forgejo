@@ -602,7 +602,7 @@ func TestProjectPermissionsAndConsistency(t *testing.T) {
 }
 
 // Test creation/getting/updating/deleting project for user
-func TestProjectAPICRUD(t *testing.T) {
+func TestProjectWebCRUD(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	// User and auth

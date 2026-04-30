@@ -33,9 +33,9 @@ var (
 	keyword            = "Title"
 	projectTitle       = "Project"
 	projectDescription = "Description"
-	projectType1       = project_module.APIOwnerTypeOrganization
-	projectType2       = project_module.TypeIndividual
-	projectType3       = project_module.APIOwnerTypeRepository
+	ownerType1         = project_module.APIOwnerTypeOrganization
+	ownerType2         = project_module.TypeIndividual
+	ownerType3         = project_module.APIOwnerTypeRepository
 	columnTitle1       = "Title 1"
 	columnTitle2       = "Title 2"
 	columnColor        = "#23adff"
@@ -49,16 +49,19 @@ func TestMain(m *testing.M) {
 	unittest.MainTest(m)
 }
 
-func TestGetProjectType(t *testing.T) {
+func TestGetOwnerType(t *testing.T) {
 	pT := GetAPIOwnerType(false, false)
 	assert.Equal(t, project_module.APIOwnerTypeIndividual, pT)
 
 	pT = GetAPIOwnerType(true, false)
+	pT = GetAPIOwnerType(true, false)
 	assert.Equal(t, project_module.APIOwnerTypeOrganization, pT)
 
 	pT = GetAPIOwnerType(false, true)
+	pT = GetAPIOwnerType(false, true)
 	assert.Equal(t, project_module.APIOwnerTypeRepository, pT)
 
+	pT = GetAPIOwnerType(true, true)
 	pT = GetAPIOwnerType(true, true)
 	assert.Equal(t, project_module.APIOwnerTypeOrganization, pT)
 }
@@ -69,7 +72,7 @@ func TestGetSearchOpts(t *testing.T) {
 		isShowClosed,
 		sortType,
 		keyword,
-		projectType1,
+		ownerType1,
 		page,
 		pageSize,
 	)
@@ -77,7 +80,7 @@ func TestGetSearchOpts(t *testing.T) {
 	assert.Equal(t, ownerID, opts.OwnerID)
 	assert.Equal(t, optional.Some(isShowClosed), opts.IsClosed)
 	assert.Equal(t, keyword, opts.Title)
-	assert.Equal(t, projectType1, opts.Type.ToAPIOwnerType())
+	assert.Equal(t, ownerType1, opts.Type.ToAPIOwnerType())
 	assert.NotNil(t, opts.ListOptions)
 
 	opts = GetSearchOpts(
@@ -85,7 +88,7 @@ func TestGetSearchOpts(t *testing.T) {
 		isShowClosed,
 		sortType,
 		keyword,
-		projectType3,
+		ownerType3,
 		page,
 		pageSize,
 	)
@@ -93,7 +96,7 @@ func TestGetSearchOpts(t *testing.T) {
 	assert.Equal(t, repoID, opts.RepoID)
 	assert.Equal(t, optional.Some(isShowClosed), opts.IsClosed)
 	assert.Equal(t, keyword, opts.Title)
-	assert.Equal(t, projectType3, opts.Type.ToAPIOwnerType())
+	assert.Equal(t, ownerType3, opts.Type.ToAPIOwnerType())
 	assert.NotNil(t, opts.ListOptions)
 
 	opts = GetSearchOpts(
@@ -101,21 +104,31 @@ func TestGetSearchOpts(t *testing.T) {
 		!isShowClosed,
 		"",
 		"",
-		projectType3,
+		ownerType3,
 	)
 	require.NotNil(t, opts)
 	assert.Equal(t, repoID, opts.RepoID)
 	assert.Equal(t, optional.Some(!isShowClosed), opts.IsClosed)
 	assert.Equal(t, db.SearchOrderByNewest, opts.OrderBy)
 	assert.Empty(t, opts.Title)
-	assert.Equal(t, projectType3, opts.Type.ToAPIOwnerType())
+	assert.Equal(t, ownerType3, opts.Type.ToAPIOwnerType())
+}
+
+func TestListProjects(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: ownerID})
+	projects, total, err := ListProjects(t.Context(), owner, project_module.APIOwnerTypeIndividual, db.ListOptionsAll, nil)
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), projects[0].ID)
+	assert.Equal(t, owner, projects[0].Owner)
+	assert.Equal(t, int64(3), total)
 }
 
 func TestListProjectByOptions(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	opts := &project_model.SearchOptions{
 		OwnerID: 2,
-		Type:    projectType2,
+		Type:    ownerType2,
 	}
 	projects, err := ListProjectsByOptions(t.Context(), opts)
 	require.NoError(t, err)
@@ -148,7 +161,7 @@ func TestCountProjectsByOptions(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	opts := &project_model.SearchOptions{
 		OwnerID: 2,
-		Type:    projectType2,
+		Type:    ownerType2,
 	}
 	count, err := CountProjectsByOptions(t.Context(), opts)
 	require.NoError(t, err)
@@ -215,7 +228,7 @@ func TestNewProject(t *testing.T) {
 
 	invalidCardType := project_module.APICardType("invalid")
 	invalidTemplateType := project_module.APITemplateType("invalid")
-	invalidProjectType := project_module.APIOwnerType("99")
+	invalidOwnerType := project_module.APIOwnerType("99")
 
 	opts = project_structs.CreateProjectOptions{
 		Title:        "Test",
@@ -246,7 +259,7 @@ func TestNewProject(t *testing.T) {
 		CardType:     project_module.APICardTypeTextOnly.String(),
 	}
 
-	_, err = NewProject(&opts, user2, nilRepo, invalidProjectType)
+	_, err = NewProject(&opts, user2, nilRepo, invalidOwnerType)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Field APIOwnerType")
 }
@@ -276,7 +289,7 @@ func TestCRUDProject(t *testing.T) {
 	project := &project_model.Project{
 		OwnerID:      ownerID,
 		Title:        projectTitle,
-		Type:         projectType2,
+		Type:         ownerType2,
 		Description:  projectDescription,
 		CreatorID:    ownerID,
 		TemplateType: templateType,
@@ -296,7 +309,7 @@ func TestCRUDProject(t *testing.T) {
 		repoProject := &project_model.Project{
 			RepoID:       repoID,
 			Title:        projectTitle,
-			Type:         projectType3.ToOwnerType(),
+			Type:         ownerType3.ToOwnerType(),
 			Description:  projectDescription,
 			CreatorID:    ownerID,
 			TemplateType: templateType,
@@ -306,7 +319,7 @@ func TestCRUDProject(t *testing.T) {
 		orgProject := &project_model.Project{
 			OwnerID:      orgOwnerID,
 			Title:        projectTitle,
-			Type:         projectType1.ToOwnerType(),
+			Type:         ownerType1.ToOwnerType(),
 			Description:  projectDescription,
 			CreatorID:    ownerID,
 			TemplateType: templateType,
@@ -365,7 +378,21 @@ func TestCRUDProject(t *testing.T) {
 		assert.Equal(t, wantCol2.Title, columnTitle2)
 		assert.False(t, wantCol2.Default)
 
-		err = DeleteColumnInProject(t.Context(), column1.ID)
+		updateOpts := project_structs.CreateProjectColumnOptions{
+			Title:   "New Other Title",
+			Default: true,
+			Sorting: 1,
+		}
+		err = UpdateColumnInProject(t.Context(), wantCol2, &updateOpts, project.ID, wantCol2.ID)
+		require.NoError(t, err)
+
+		updatedCol := unittest.AssertExistsAndLoadBean(t, &project_model.Column{ID: column2.ID})
+		assert.Equal(t, wantCol2.Title, updatedCol.Title)
+		assert.True(t, updatedCol.Default)
+		assert.Equal(t, wantCol2.Sorting, updatedCol.Sorting)
+		assert.Equal(t, columnColor, updatedCol.Color)
+
+		err = DeleteColumnInProject(t.Context(), column2.ID)
 		require.Error(t, err) // Can not delete default col
 
 		err = DeleteColumnInProject(t.Context(), column2.ID)

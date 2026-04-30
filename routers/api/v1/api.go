@@ -68,6 +68,7 @@ import (
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
+	project_module "forgejo.org/modules/project"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
@@ -223,6 +224,12 @@ func commentAssignment(idParam string) func(ctx *context.APIContext) {
 		comment.Issue.Repo = ctx.Repo().Repository
 
 		ctx.SetComment(comment)
+	}
+}
+
+func setProjectType(ownerType project_module.APIOwnerType) func(ctx *context.APIContext) {
+	return func(ctx *context.APIContext) {
+		ctx.Data["OwnerType"] = ownerType
 	}
 }
 
@@ -511,6 +518,46 @@ func Routes() *web.Route {
 				m.Delete("/{runner_id}", reqToken(), reqChecker, act.DeleteRunner)
 				m.Get("/jobs", reqToken(), reqChecker, act.SearchActionRunJobs)
 			})
+		})
+	}
+
+	addProjectsRoutes := func(
+		m *web.Route,
+		pI context.ProjectAPI,
+	) {
+		m.Group("/projects", func() {
+			m.Combo("").
+				Post(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateProjectOptions{}), pI.CreateProject).
+				Get(context.ReqProjectReadPermissions, pI.ListProjects)
+			m.Group("/{project_id}", func() {
+				m.Combo("").
+					Get(context.ReqProjectReadPermissions, pI.GetProject).
+					Patch(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateProjectOptions{}), pI.UpdateProject).
+					Delete(reqToken(), context.ReqProjectWritePermissions, pI.DeleteProject)
+				m.Combo("/issues").
+					Get(context.ReqProjectReadPermissions, pI.ListProjectIssues).
+					Post(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateProjectIssueOptions{}), pI.CreateProjectIssue)
+				m.Group("/columns", func() {
+					m.Combo("").
+						Get(context.ReqProjectReadPermissions, pI.ListProjectColumns).
+						Post(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateProjectColumnOptions{}), pI.CreateProjectColumn)
+					m.Group("/{column_id}", func() {
+						m.Combo("").
+							Get(context.ReqProjectReadPermissions, pI.GetProjectColumn).
+							Patch(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateProjectColumnOptions{}), pI.UpdateProjectColumn).
+							Delete(reqToken(), context.ReqProjectWritePermissions, pI.DeleteProjectColumn)
+						m.Group("/issues", func() {
+							m.Combo("").
+								Get(reqToken(), context.ReqProjectReadPermissions, pI.ListProjectColumnIssues).
+								Post(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateProjectIssueOptions{}), pI.CreateProjectColumnIssue)
+							m.Combo("/{issue_id}").
+								Get(context.ReqProjectReadPermissions, pI.GetProjectColumnIssue).
+								Patch(reqToken(), context.ReqProjectWritePermissions, bind(api.UpdateProjectColumnIssueOptions{}), pI.UpdateProjectColumnIssue).
+								Delete(reqToken(), context.ReqProjectWritePermissions, pI.DeleteProjectColumnIssue)
+						})
+					})
+				})
+			}, context.ProjectAssignment)
 		})
 	}
 
@@ -1306,6 +1353,7 @@ func Routes() *web.Route {
 				}, context.UserAssignmentAPI())
 			}, reqToken(), reqOrgOwnership())
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryOrganization), orgAssignment, checkTokenPublicOnly())
+
 		m.Group("/teams/{teamid}", func() {
 			m.Combo("").Get(reqToken(), org.GetTeam).
 				Patch(reqToken(), reqOrgOwnership(), bind(api.EditTeamOption{}), org.EditTeam).
@@ -1326,6 +1374,17 @@ func Routes() *web.Route {
 			})
 			m.Get("/activities/feeds", org.ListTeamActivityFeeds)
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryOrganization), orgTeamAssignment, reqToken(), reqTeamMembership(), checkTokenPublicOnly())
+
+		// Projects
+		m.Group("/orgs/{org}", func() {
+			addProjectsRoutes(m, org.NewProjectAPI())
+		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryProject), setProjectType(project_module.APIOwnerTypeOrganization), orgAssignment, checkTokenPublicOnly())
+		m.Group("/users/{username}", func() {
+			addProjectsRoutes(m, user.NewProjectAPI())
+		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryProject), setProjectType(project_module.APIOwnerTypeIndividual), context.UserAssignmentAPI(), checkTokenPublicOnly())
+		m.Group("/repos/{username}/{reponame}", func() {
+			addProjectsRoutes(m, repo.NewProjectAPI())
+		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryProject), setProjectType(project_module.APIOwnerTypeRepository), repoAssignment, repoAccess(), checkTokenPublicOnly())
 
 		m.Group("/admin", func() {
 			m.Group("/cron", func() {
