@@ -16,3 +16,15 @@ function noActiveDropdowns() {
 		return false;
 	return true;
 }
+
+document.addEventListener("visibilitychange", () => {
+  if (pollingOk()) {
+    htmx.trigger("#repo-actions-list", "poll-now");
+  }
+});
+
+setInterval(() => {
+  if (pollingOk()) {
+    htmx.trigger("#repo-actions-list", "poll-now");
+  }
+}, 30000);
