@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.6
 FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/xx AS xx
 
 FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/golang:1.26-alpine3.23 AS build-env
@@ -35,15 +34,9 @@ COPY . ${GOPATH}/src/forgejo.org
 WORKDIR ${GOPATH}/src/forgejo.org
 
 RUN make clean-no-bindata
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    make frontend
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    go build contrib/environment-to-ini/environment-to-ini.go && xx-verify environment-to-ini
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    LDFLAGS="-buildid=" make FORGEJO_GENERATE_SKIP_HASH=true RELEASE_VERSION=$RELEASE_VERSION GOFLAGS="-trimpath" go-check generate-backend static-executable && xx-verify gitea
+RUN make frontend
+	RUN go build contrib/environment-to-ini/environment-to-ini.go && xx-verify environment-to-ini
+	RUN LDFLAGS="-buildid=" make FORGEJO_GENERATE_SKIP_HASH=true RELEASE_VERSION=$RELEASE_VERSION GOFLAGS="-trimpath" go-check generate-backend static-executable && xx-verify gitea
 
 # Copy local files
 COPY docker/root /tmp/local
