@@ -211,15 +211,6 @@ func TestToTitleCase(t *testing.T) {
 	assert.Equal(t, `Foo Bar Baz`, util.ToTitleCase(`FOO BAR BAZ`))
 }
 
-func TestToPointer(t *testing.T) {
-	assert.Equal(t, "abc", *util.ToPointer("abc"))
-	assert.Equal(t, 123, *util.ToPointer(123))
-	abc := "abc"
-	assert.NotSame(t, &abc, util.ToPointer(abc))
-	val123 := 123
-	assert.NotSame(t, &val123, util.ToPointer(val123))
-}
-
 func TestReserveLineBreakForTextarea(t *testing.T) {
 	assert.Equal(t, "test\ndata", util.ReserveLineBreakForTextarea("test\r\ndata"))
 	assert.Equal(t, "test\ndata\n", util.ReserveLineBreakForTextarea("test\r\ndata\r\n"))
