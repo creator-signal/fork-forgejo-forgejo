@@ -25,7 +25,8 @@ for (const [key, value] of Object.entries(dataset)) {
 		try {
 			parsedValue = JSON.parse(value);
 		} catch {
-			// ignore parse failures
+			console.error("could not parse dataset attribute as Json", key, value);
+            continue;
 		}
 	}
 

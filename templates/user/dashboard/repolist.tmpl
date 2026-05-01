@@ -43,9 +43,9 @@
 		{{range $i, $org := .Orgs}}
 			{{if $i}},{{end}}
 			{
-				"name": {{$org.Name}},
+				"name": "{{$org.Name}}",
 				"numRepos": {{$org.NumRepos}},
-				"orgVisibility": {{$org.Visibility}}
+				"orgVisibility": "{{$org.Visibility}}"
 			}
 		{{end}}
 	]'
