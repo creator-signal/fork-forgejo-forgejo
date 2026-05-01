@@ -1278,7 +1278,7 @@ func registerRoutes(m *web.Route) {
 		}
 		m.Group("/issues", func() {
 			m.Group("/new", func() {
-				m.Combo("", context.OrgAssignment()).Get(context.RepoRef(), repo.NewIssue).
+				m.Combo("", context.EnsureOrg()).Get(context.RepoRef(), repo.NewIssue).
 					Post(web.Bind(forms.CreateIssueForm{}), repo.NewIssuePost)
 				m.Get("/choose", context.RepoRef(), repo.NewIssueChooseTemplate)
 			})
@@ -1324,7 +1324,7 @@ func registerRoutes(m *web.Route) {
 
 			m.Post("/labels", reqRepoIssuesOrPullsWriter, repo.UpdateIssueLabel)
 			m.Post("/milestone", reqRepoIssuesOrPullsWriter, repo.UpdateIssueMilestone)
-			m.Post("/projects", reqRepoIssuesOrPullsWriter, context.OrgAssignment(), reqRepoOrOwnerProjectReader, repo.UpdateIssueProject)
+			m.Post("/projects", reqRepoIssuesOrPullsWriter, context.EnsureOrg(), reqRepoOrOwnerProjectReader, repo.UpdateIssueProject)
 			m.Post("/assignee", reqRepoIssuesOrPullsWriter, repo.UpdateIssueAssignee)
 			m.Post("/request_review", reqRepoIssuesOrPullsReader, repo.UpdatePullReviewRequest)
 			m.Post("/dismiss_review", reqRepoAdmin, web.Bind(forms.DismissReviewForm{}), repo.DismissReview)
@@ -1450,7 +1450,7 @@ func registerRoutes(m *web.Route) {
 		m.Group("", func() {
 			m.Get("/issues/posters", repo.IssuePosters) // it can't use {type:issues|pulls} because other routes like "/pulls/{index}" has higher priority
 			m.Get("/{type:^(issues|pulls)$}", repo.Issues)
-			m.Get("/{type:^(issues|pulls)$}/{index}", context.OrgAssignment(), repo.ViewIssue)
+			m.Get("/{type:^(issues|pulls)$}/{index}", context.EnsureOrg(), repo.ViewIssue)
 			m.Group("/{type:^(issues|pulls)$}/{index}/content-history", func() {
 				m.Get("/overview", repo.GetContentHistoryOverview)
 				m.Get("/list", repo.GetContentHistoryList)
@@ -1623,7 +1623,7 @@ func registerRoutes(m *web.Route) {
 
 		m.Get("/pulls/posters", repo.PullPosters)
 		m.Group("/pulls/{index}", func() {
-			m.Get("", repo.SetWhitespaceBehavior, repo.GetPullDiffStats, context.OrgAssignment(), repo.ViewIssue)
+			m.Get("", repo.SetWhitespaceBehavior, repo.GetPullDiffStats, context.EnsureOrg(), repo.ViewIssue)
 			m.Get(".diff", repo.DownloadPullDiff)
 			m.Get(".patch", repo.DownloadPullPatch)
 			m.Group("/commits", func() {
