@@ -75,8 +75,8 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.11
 	github.com/markbates/goth v1.82.0
 	github.com/mattn/go-isatty v0.0.21
-	github.com/mattn/go-sqlite3 v1.14.42
-	github.com/meilisearch/meilisearch-go v0.36.0
+	github.com/mattn/go-sqlite3 v1.14.44
+	github.com/meilisearch/meilisearch-go v0.36.2
 	github.com/mholt/archives v0.1.5
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/minio/minio-go/v7 v7.0.99
