@@ -32,11 +32,23 @@ func (r *xormRepository) GetSubmission(ctx context.Context, assignmentID, userID
 	return s, nil
 }
 
-func (r *xormRepository) GetSubmissionByRepoID(ctx context.Context, repoID int64) (*Submission, error) {
+func (r *xormRepository) GetSubmissionByID(ctx context.Context, id int64) (*Submission, error) {
 	s := &Submission{}
-	has, err := db.GetEngine(ctx).Where("student_repo_id = ?", repoID).Get(s)
+	has, err := db.GetEngine(ctx).ID(id).Get(s)
 	if err != nil {
-		return nil, fmt.Errorf("get submission by repo: %w", err)
+		return nil, fmt.Errorf("get submission by id: %w", err)
+	}
+	if !has {
+		return nil, nil
+	}
+	return s, nil
+}
+
+func (r *xormRepository) GetSubmissionByEnrollmentAssignment(ctx context.Context, enrollmentID, assignmentID int64) (*Submission, error) {
+	s := &Submission{}
+	has, err := db.GetEngine(ctx).Where("enrollment_id = ? AND assignment_id = ?", enrollmentID, assignmentID).Get(s)
+	if err != nil {
+		return nil, err
 	}
 	if !has {
 		return nil, nil

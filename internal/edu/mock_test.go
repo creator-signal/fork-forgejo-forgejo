@@ -49,8 +49,16 @@ func (m *MockRepository) GetSubmission(ctx context.Context, assignmentID, userID
 	return args.Get(0).(*Submission), args.Error(1)
 }
 
-func (m *MockRepository) GetSubmissionByRepoID(ctx context.Context, repoID int64) (*Submission, error) {
-	args := m.Called(ctx, repoID)
+func (m *MockRepository) GetSubmissionByID(ctx context.Context, id int64) (*Submission, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Submission), args.Error(1)
+}
+
+func (m *MockRepository) GetSubmissionByEnrollmentAssignment(ctx context.Context, enrollmentID, assignmentID int64) (*Submission, error) {
+	args := m.Called(ctx, enrollmentID, assignmentID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

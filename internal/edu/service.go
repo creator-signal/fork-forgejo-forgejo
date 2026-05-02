@@ -118,7 +118,8 @@ type Repository interface {
 	DeleteAssignment(ctx context.Context, id int64) error
 	CreateSubmission(ctx context.Context, submission *Submission) error
 	GetSubmission(ctx context.Context, assignmentID, userID int64) (*Submission, error)
-	GetSubmissionByRepoID(ctx context.Context, repoID int64) (*Submission, error)
+	GetSubmissionByID(ctx context.Context, id int64) (*Submission, error)
+	GetSubmissionByEnrollmentAssignment(ctx context.Context, enrollmentID, assignmentID int64) (*Submission, error)
 	GetSubmissions(ctx context.Context, assignmentID int64) ([]*Submission, error)
 	UpdateSubmission(ctx context.Context, submission *Submission) error
 

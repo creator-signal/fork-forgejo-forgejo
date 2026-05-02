@@ -83,9 +83,11 @@ const (
 // Submission represents a student's attempt at an assignment.
 type Submission struct {
 	ID            int64            `json:"id" xorm:"pk autoincr"`
-	AssignmentID  int64            `json:"assignment_id" xorm:"INDEX NOT NULL"`
+	AssignmentID  int64            `json:"assignment_id" xorm:"INDEX NOT NULL UNIQUE(idx_enroll_assign)"`
+	EnrollmentID  int64            `json:"enrollment_id" xorm:"INDEX NOT NULL UNIQUE(idx_enroll_assign)"`
 	UserID        int64            `json:"user_id" xorm:"INDEX NOT NULL"`
-	StudentRepoID int64            `json:"student_repo_id"`
+	BranchName    string           `json:"branch_name" xorm:"VARCHAR(255) NOT NULL"`
+	PullRequestID int64            `json:"pull_request_id" xorm:"INDEX"`
 	Status        SubmissionStatus `json:"status" xorm:"VARCHAR(50) NOT NULL DEFAULT 'pending'"`
 	Grade         int              `json:"grade" xorm:"DEFAULT -1"`
 	ManualGrade   bool             `json:"manual_grade" xorm:"DEFAULT false"`
