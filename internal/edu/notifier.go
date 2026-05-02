@@ -13,13 +13,16 @@ import (
 
 type EduNotifier struct {
 	notify.NullNotifier
-	repo Repository
+	repo        Repository
+	gradeParser func(ctx context.Context, run *actions_model.ActionRun) (int, bool)
 }
 
 var _ notify.Notifier = &EduNotifier{}
 
 func RegisterNotifier(repo Repository) {
-	notify.RegisterNotifier(&EduNotifier{repo: repo})
+	n := &EduNotifier{repo: repo}
+	n.gradeParser = n.parseGradeFromRun
+	notify.RegisterNotifier(n)
 }
 
 func (n *EduNotifier) ActionRunNowDone(
@@ -46,7 +49,7 @@ func (n *EduNotifier) ActionRunNowDone(
 	}
 
 	// Try to parse grade from workflow logs
-	score, foundGrade := n.parseGradeFromRun(ctx, run)
+	score, foundGrade := n.gradeParser(ctx, run)
 	if !foundGrade {
 		// Fallback: binary scoring
 		if run.Status == actions_model.StatusSuccess {

@@ -25,6 +25,9 @@ func TestCreateCourse(t *testing.T) {
 		mockRepo.On("CreateCourse", ctx, mock.MatchedBy(func(c *Course) bool {
 			return c.Name == opts.Name && c.CreatorID == int64(1)
 		})).Return(nil).Once()
+		mockRepo.On("EnrollUser", ctx, mock.MatchedBy(func(e *CourseEnrollment) bool {
+			return e.UserID == int64(1) && e.Role == RoleTeacher
+		})).Return(nil).Once()
 
 		course, err := service.CreateCourse(ctx, 1, opts)
 		assert.NoError(t, err)
@@ -99,6 +102,7 @@ func TestEnrollUser(t *testing.T) {
 	service := NewService(mockRepo, mockForker)
 	ctx := context.Background()
 
+	mockRepo.On("GetEnrollment", ctx, int64(1), int64(5)).Return(nil, nil)
 	mockRepo.On("EnrollUser", ctx, mock.MatchedBy(func(e *CourseEnrollment) bool {
 		return e.CourseID == int64(1) && e.UserID == int64(5) && e.Role == RoleStudent
 	})).Return(nil)

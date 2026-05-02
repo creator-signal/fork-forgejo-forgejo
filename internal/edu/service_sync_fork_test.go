@@ -19,6 +19,7 @@ func TestSyncAllForks_ReturnsPending(t *testing.T) {
 
 	assignment := &Assignment{ID: 1, RepoID: 100}
 	mockRepo.On("GetAssignmentByID", mock.Anything, int64(1)).Return(assignment, nil)
+	mockRepo.On("GetSyncForkTaskByAssignment", mock.Anything, int64(1)).Return(nil, nil)
 	mockForker.On("GetDefaultBranch", mock.Anything, int64(100)).Return("main", nil)
 
 	submissions := []*Submission{
@@ -142,6 +143,7 @@ func TestSyncAllForks_EmptySubmissions(t *testing.T) {
 
 	assignment := &Assignment{ID: 1, RepoID: 100}
 	mockRepo.On("GetAssignmentByID", mock.Anything, int64(1)).Return(assignment, nil)
+	mockRepo.On("GetSyncForkTaskByAssignment", mock.Anything, int64(1)).Return(nil, nil)
 	mockForker.On("GetDefaultBranch", mock.Anything, int64(100)).Return("main", nil)
 
 	mockRepo.On("GetSubmissions", mock.Anything, int64(1)).Return([]*Submission{}, nil)

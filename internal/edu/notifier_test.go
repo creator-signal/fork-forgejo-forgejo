@@ -13,7 +13,10 @@ func TestActionRunNowDone(t *testing.T) {
 
 	t.Run("SuccessMatchesSubmission", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		notifier := &EduNotifier{repo: mockRepo}
+		notifier := &EduNotifier{
+			repo:        mockRepo,
+			gradeParser: func(_ context.Context, _ *actions_model.ActionRun) (int, bool) { return 0, false },
+		}
 
 		repoID := int64(100)
 		run := &actions_model.ActionRun{
@@ -28,9 +31,7 @@ func TestActionRunNowDone(t *testing.T) {
 		}
 
 		mockRepo.On("GetSubmissionByRepoID", ctx, repoID).Return(submission, nil)
-		mockRepo.On("UpdateSubmission", ctx, mock.MatchedBy(func(s *Submission) bool {
-			return s.ID == submission.ID && s.Status == StatusPassed
-		})).Return(nil)
+		mockRepo.On("AutoGradeSubmission", ctx, int64(1), 100).Return(nil)
 		mockRepo.On("CreateTestResult", ctx, mock.MatchedBy(func(tr *TestResult) bool {
 			return tr.SubmissionID == submission.ID && tr.Score == 100
 		})).Return(nil)
@@ -42,7 +43,10 @@ func TestActionRunNowDone(t *testing.T) {
 
 	t.Run("FailureMatchesSubmission", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		notifier := &EduNotifier{repo: mockRepo}
+		notifier := &EduNotifier{
+			repo:        mockRepo,
+			gradeParser: func(_ context.Context, _ *actions_model.ActionRun) (int, bool) { return 0, false },
+		}
 
 		repoID := int64(101)
 		run := &actions_model.ActionRun{
@@ -57,9 +61,7 @@ func TestActionRunNowDone(t *testing.T) {
 		}
 
 		mockRepo.On("GetSubmissionByRepoID", ctx, repoID).Return(submission, nil)
-		mockRepo.On("UpdateSubmission", ctx, mock.MatchedBy(func(s *Submission) bool {
-			return s.ID == submission.ID && s.Status == StatusFailed
-		})).Return(nil)
+		mockRepo.On("AutoGradeSubmission", ctx, int64(2), 0).Return(nil)
 		mockRepo.On("CreateTestResult", ctx, mock.MatchedBy(func(tr *TestResult) bool {
 			return tr.SubmissionID == submission.ID && tr.Score == 0
 		})).Return(nil)
@@ -71,7 +73,10 @@ func TestActionRunNowDone(t *testing.T) {
 
 	t.Run("NotSubmissionRepo", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		notifier := &EduNotifier{repo: mockRepo}
+		notifier := &EduNotifier{
+			repo:        mockRepo,
+			gradeParser: func(_ context.Context, _ *actions_model.ActionRun) (int, bool) { return 0, false },
+		}
 
 		repoID := int64(999)
 		run := &actions_model.ActionRun{
@@ -88,7 +93,10 @@ func TestActionRunNowDone(t *testing.T) {
 
 	t.Run("IgnoreNotDone", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		notifier := &EduNotifier{repo: mockRepo}
+		notifier := &EduNotifier{
+			repo:        mockRepo,
+			gradeParser: func(_ context.Context, _ *actions_model.ActionRun) (int, bool) { return 0, false },
+		}
 
 		run := &actions_model.ActionRun{
 			Status: actions_model.StatusRunning,

@@ -110,8 +110,10 @@ func TestJoinAssignment_WithEnrollment(t *testing.T) {
 	baseRepo := &repo_model.Repository{ID: 100, Name: "hw1-template"}
 	forkedRepo := &repo_model.Repository{ID: 200, Name: "student-hw1-template"}
 
+	activeCourse := &Course{ID: 5, EndUnix: 0}
 	mockRepo.On("GetAssignmentByID", ctx, assignment.ID).Return(assignment, nil)
 	mockRepo.On("GetEnrollment", ctx, int64(5), int64(10)).Return(enrollment, nil)
+	mockRepo.On("GetCourseByID", ctx, int64(5)).Return(activeCourse, nil)
 	mockRepo.On("GetSubmission", ctx, assignment.ID, doer.ID).Return(nil, nil)
 	mockForker.On("GetRepositoryByID", ctx, assignment.RepoID).Return(baseRepo, nil)
 	mockForker.On("ForkRepositoryAndUpdates", ctx, doer, doer, mock.MatchedBy(func(opts ForkRepoOptions) bool {

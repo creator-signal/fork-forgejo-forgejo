@@ -492,10 +492,10 @@ func TestEduGradeValidation(t *testing.T) {
 func TestEduDashboardRedirect(t *testing.T) {
 	defer setupEduEnv(t)()
 
-	// Set user1 as teacher
-	insertEduUserRole(t, 1, "teacher")
+	// Use user4 (non-admin) as teacher to avoid site-admin redirect to /edu/admin
+	insertEduUserRole(t, 4, "teacher")
 
-	session := loginUser(t, "user1")
+	session := loginUser(t, "user4")
 	req := NewRequest(t, "GET", "/edu/dashboard")
 	resp := session.MakeRequest(t, req, http.StatusSeeOther)
 

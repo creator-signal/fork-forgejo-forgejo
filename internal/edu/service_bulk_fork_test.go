@@ -21,6 +21,7 @@ func TestBulkForkForAssignment_ReturnsPending(t *testing.T) {
 	baseRepo := &repo_model.Repository{ID: 100, Name: "homework1"}
 
 	mockRepo.On("GetAssignmentByID", mock.Anything, int64(1)).Return(assignment, nil)
+	mockRepo.On("GetBulkForkTaskByAssignment", mock.Anything, int64(1)).Return(nil, nil)
 	mockForker.On("GetRepositoryByID", mock.Anything, int64(100)).Return(baseRepo, nil)
 
 	enrollments := []*CourseEnrollment{
@@ -169,6 +170,7 @@ func TestBulkForkForAssignment_EmptyCourse(t *testing.T) {
 	baseRepo := &repo_model.Repository{ID: 100, Name: "hw1"}
 
 	mockRepo.On("GetAssignmentByID", mock.Anything, int64(1)).Return(assignment, nil)
+	mockRepo.On("GetBulkForkTaskByAssignment", mock.Anything, int64(1)).Return(nil, nil)
 	mockForker.On("GetRepositoryByID", mock.Anything, int64(100)).Return(baseRepo, nil)
 
 	mockRepo.On("GetEnrollments", mock.Anything, int64(10)).Return([]*CourseEnrollment{}, nil)
