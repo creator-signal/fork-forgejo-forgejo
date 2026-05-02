@@ -194,11 +194,11 @@ func NewService(repo Repository, forker RepoForker, users ...UserCreator) Educat
 }
 
 func (s *service) CreateAssignment(ctx context.Context, opts CreateAssignmentOptions) (*Assignment, error) {
-	if opts.Title == "" {
-		return nil, fmt.Errorf("title is required")
+	if opts.CourseID == 0 || opts.TaskName == "" || opts.Title == "" {
+		return nil, fmt.Errorf("course_id, task_name and title are required")
 	}
 
-	assignment := &Assignment{
+	a := &Assignment{
 		CourseID:         opts.CourseID,
 		TaskName:         opts.TaskName,
 		AllowedFilesGlob: opts.AllowedFilesGlob,
@@ -207,11 +207,11 @@ func (s *service) CreateAssignment(ctx context.Context, opts CreateAssignmentOpt
 		DeadlineUnix:     opts.DeadlineUnix,
 	}
 
-	if err := s.repo.CreateAssignment(ctx, assignment); err != nil {
-		return nil, fmt.Errorf("failed to create assignment: %w", err)
+	if err := s.repo.CreateAssignment(ctx, a); err != nil {
+		return nil, err
 	}
 
-	return assignment, nil
+	return a, nil
 }
 
 func (s *service) GetAssignmentByID(ctx context.Context, id int64) (*Assignment, error) {

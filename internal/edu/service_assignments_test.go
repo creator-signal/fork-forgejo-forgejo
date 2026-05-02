@@ -8,6 +8,26 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func TestCreateAssignment_StoresTaskNameAndGlob(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockForker := new(MockRepoForker)
+	service := NewService(mockRepo, mockForker)
+	ctx := context.Background()
+
+	mockRepo.On("CreateAssignment", ctx, mock.MatchedBy(func(a *Assignment) bool {
+		return a.TaskName == "multiplication" && a.AllowedFilesGlob == "tasks/multiplication/*.cpp"
+	})).Return(nil).Once()
+
+	a, err := service.CreateAssignment(ctx, CreateAssignmentOptions{
+		CourseID:         1,
+		TaskName:         "multiplication",
+		AllowedFilesGlob: "tasks/multiplication/*.cpp",
+		Title:            "Умножение",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "multiplication", a.TaskName)
+}
+
 func TestGetAssignmentsForUser_Service(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockForker := new(MockRepoForker)
