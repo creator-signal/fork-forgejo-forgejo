@@ -152,3 +152,19 @@ func (a *ForgejoAdapter) BranchExists(ctx context.Context, repoID int64, branchN
 	}
 	return true, nil
 }
+
+// AddCollaborator adds the user as a collaborator on the repo with the given access mode.
+func (a *ForgejoAdapter) AddCollaborator(ctx context.Context, repoID, userID int64, mode perm.AccessMode) error {
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		return err
+	}
+	user, err := user_model.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if err := repo_module.AddCollaborator(ctx, repo, user); err != nil {
+		return err
+	}
+	return repo_model.ChangeCollaborationAccessMode(ctx, repo, userID, mode)
+}
