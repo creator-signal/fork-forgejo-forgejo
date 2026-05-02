@@ -313,7 +313,7 @@ func TestAPIGetCommentHistory(t *testing.T) {
 
 	newCommentBody := "This is the new comment body"
 
-	token := getUserToken(t, repoOwner.Name, auth_model.AccessTokenScopeReadIssue)
+	token := getUserToken(t, repoOwner.Name, auth_model.AccessTokenScopeWriteIssue)
 	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/issues/%d/comments/%d",
 		repoOwner.Name, repo.Name, comment.IssueID, comment.ID)
 	req := NewRequestWithValues(t, "PATCH", urlStr, map[string]string{
