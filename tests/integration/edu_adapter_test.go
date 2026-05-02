@@ -55,6 +55,19 @@ func TestAdapter_MergePullRequest(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestAdapter_AddPullRequestComment(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	a := edu.NewForgejoAdapter()
+	ctx := db.DefaultContext
+	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	c, err := a.AddPullRequestComment(ctx, 2, "Constraint check failed: extra files", doer)
+	assert.NoError(t, err)
+	assert.NotNil(t, c)
+	assert.Equal(t, "Constraint check failed: extra files", c.Content)
+}
+
 func TestAdapter_BranchExists(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 

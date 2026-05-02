@@ -8,6 +8,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	issue_service "forgejo.org/services/issue"
 	pull_service "forgejo.org/services/pull"
 )
 
@@ -87,4 +88,19 @@ func (a *ForgejoAdapter) MergePullRequest(ctx context.Context, opts MergePullReq
 
 	style := repo_model.MergeStyle(opts.MergeStyle)
 	return pull_service.Merge(ctx, pr, opts.Doer, gitRepo, style, "", opts.Message, false)
+}
+
+// AddPullRequestComment adds a plain comment to the given pull request.
+func (a *ForgejoAdapter) AddPullRequestComment(ctx context.Context, prID int64, body string, doer *user_model.User) (*issues_model.Comment, error) {
+	pr, err := issues_model.GetPullRequestByID(ctx, prID)
+	if err != nil {
+		return nil, err
+	}
+	if err := pr.LoadIssue(ctx); err != nil {
+		return nil, err
+	}
+	if err := pr.LoadBaseRepo(ctx); err != nil {
+		return nil, err
+	}
+	return issue_service.CreateIssueComment(ctx, doer, pr.BaseRepo, pr.Issue, body, nil)
 }
