@@ -6,15 +6,16 @@ import (
 
 // Course represents an educational course (учебный поток).
 type Course struct {
-	ID          int64  `json:"id" xorm:"pk autoincr"`
-	Name        string `json:"name" xorm:"VARCHAR(255) NOT NULL"`
-	Description string `json:"description" xorm:"TEXT"`
-	CreatorID   int64  `json:"creator_id" xorm:"INDEX NOT NULL"`
-	OrgID       int64  `json:"org_id" xorm:"INDEX"`
-	StartUnix   int64  `json:"start_unix"`
-	EndUnix     int64  `json:"end_unix"`
-	CreatedUnix int64  `json:"created_unix" xorm:"created"`
-	UpdatedUnix int64  `json:"updated_unix" xorm:"updated"`
+	ID                int64  `json:"id" xorm:"pk autoincr"`
+	Name              string `json:"name" xorm:"VARCHAR(255) NOT NULL"`
+	Description       string `json:"description" xorm:"TEXT"`
+	CreatorID         int64  `json:"creator_id" xorm:"INDEX NOT NULL"`
+	OrgID             int64  `json:"org_id" xorm:"INDEX"`
+	TasksMasterRepoID int64  `json:"tasks_master_repo_id" xorm:"INDEX"`
+	StartUnix         int64  `json:"start_unix"`
+	EndUnix           int64  `json:"end_unix"`
+	CreatedUnix       int64  `json:"created_unix" xorm:"created"`
+	UpdatedUnix       int64  `json:"updated_unix" xorm:"updated"`
 }
 
 func (*Course) TableName() string { return "edu_courses" }
