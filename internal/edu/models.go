@@ -71,11 +71,12 @@ func (a *Assignment) Deadline() time.Time {
 type SubmissionStatus string
 
 const (
-	StatusStarted   SubmissionStatus = "started"
-	StatusSubmitted SubmissionStatus = "submitted"
-	StatusGraded    SubmissionStatus = "graded"
-	StatusPassed    SubmissionStatus = "passed"
-	StatusFailed    SubmissionStatus = "failed"
+	StatusSubmissionPending  SubmissionStatus = "pending"
+	StatusSubmissionRunning  SubmissionStatus = "running"
+	StatusSubmissionDone     SubmissionStatus = "done"
+	StatusSubmissionApproved SubmissionStatus = "approved"
+	StatusSubmissionMerged   SubmissionStatus = "merged"
+	StatusSubmissionFailed   SubmissionStatus = "failed"
 )
 
 // Submission represents a student's attempt at an assignment.
@@ -84,7 +85,7 @@ type Submission struct {
 	AssignmentID  int64            `json:"assignment_id" xorm:"INDEX NOT NULL"`
 	UserID        int64            `json:"user_id" xorm:"INDEX NOT NULL"`
 	StudentRepoID int64            `json:"student_repo_id"`
-	Status        SubmissionStatus `json:"status" xorm:"VARCHAR(50) NOT NULL DEFAULT 'started'"`
+	Status        SubmissionStatus `json:"status" xorm:"VARCHAR(50) NOT NULL DEFAULT 'pending'"`
 	Grade         int              `json:"grade" xorm:"DEFAULT -1"`
 	ManualGrade   bool             `json:"manual_grade" xorm:"DEFAULT false"`
 	Comment       string           `json:"comment" xorm:"TEXT"`

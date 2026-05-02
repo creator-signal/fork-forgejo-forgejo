@@ -82,9 +82,9 @@ func (n *EduNotifier) ActionRunNowDone(
 		// ManualGrade=true: just update CI status (passed/failed) without touching grade
 		var ciStatus SubmissionStatus
 		if run.Status == actions_model.StatusSuccess {
-			ciStatus = StatusPassed
+			ciStatus = StatusSubmissionMerged
 		} else {
-			ciStatus = StatusFailed
+			ciStatus = StatusSubmissionFailed
 		}
 		submission.Status = ciStatus
 		submission.UpdatedUnix = time.Now().Unix()

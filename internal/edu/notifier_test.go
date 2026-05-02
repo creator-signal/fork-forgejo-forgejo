@@ -57,7 +57,7 @@ func TestActionRunNowDone(t *testing.T) {
 		submission := &Submission{
 			ID:            2,
 			StudentRepoID: repoID,
-			Status:        StatusStarted,
+			Status:        StatusSubmissionPending,
 		}
 
 		mockRepo.On("GetSubmissionByRepoID", ctx, repoID).Return(submission, nil)

@@ -59,7 +59,7 @@ func (r *xormRepository) GradeSubmission(ctx context.Context, submissionID int64
 		Comment:     comment,
 		GradedByID:  gradedByID,
 		GradedUnix:  now,
-		Status:      StatusGraded,
+		Status:      StatusSubmissionDone,
 		ManualGrade: true,
 		UpdatedUnix: now,
 	})
@@ -74,7 +74,7 @@ func (r *xormRepository) AutoGradeSubmission(ctx context.Context, submissionID i
 	_, err := db.GetEngine(ctx).Where("id = ? AND manual_grade = ?", submissionID, false).
 		Cols("grade", "status", "updated_unix").Update(&Submission{
 		Grade:       grade,
-		Status:      StatusGraded,
+		Status:      StatusSubmissionDone,
 		UpdatedUnix: now,
 	})
 	if err != nil {
@@ -85,9 +85,9 @@ func (r *xormRepository) AutoGradeSubmission(ctx context.Context, submissionID i
 
 func (r *xormRepository) ResetToAutoGrade(ctx context.Context, submissionID int64, grade int) error {
 	now := timeNowUnix()
-	var status SubmissionStatus = StatusGraded
+	var status SubmissionStatus = StatusSubmissionDone
 	if grade < 0 {
-		status = StatusStarted
+		status = StatusSubmissionPending
 	}
 	_, err := db.GetEngine(ctx).ID(submissionID).Cols("grade", "manual_grade", "status", "updated_unix").Update(&Submission{
 		Grade:       grade,

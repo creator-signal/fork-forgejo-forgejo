@@ -155,7 +155,7 @@ func (s *service) executeBulkFork(ctx context.Context, task *BulkForkTask, assig
 			AssignmentID:  assignmentID,
 			UserID:        enrollment.UserID,
 			StudentRepoID: forkedRepo.ID,
-			Status:        StatusStarted,
+			Status:        StatusSubmissionPending,
 			CreatedUnix:   time.Now().Unix(),
 			UpdatedUnix:   time.Now().Unix(),
 		}

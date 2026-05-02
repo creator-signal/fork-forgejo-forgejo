@@ -64,7 +64,7 @@ func TestGetSubmissions(t *testing.T) {
 	ctx := context.Background()
 
 	assignmentID := int64(100)
-	expected := []*Submission{{ID: 1, Status: StatusStarted}}
+	expected := []*Submission{{ID: 1, Status: StatusSubmissionPending}}
 
 	mockRepo.On("GetSubmissions", ctx, assignmentID).Return(expected, nil)
 
