@@ -18,6 +18,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAdapter_CreatePullRequest(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	a := edu.NewForgejoAdapter()
+	ctx := db.DefaultContext
+	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+	pr, err := a.CreatePullRequest(ctx, edu.CreatePullRequestOptions{
+		BaseRepoID: 1,
+		BaseBranch: "master",
+		HeadRepoID: 1,
+		HeadBranch: "branch2",
+		Title:      "[se241] Submit: multiplication",
+		Body:       "Auto-submit",
+		Doer:       doer,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, pr)
+	assert.Greater(t, pr.ID, int64(0))
+}
+
 func TestAdapter_BranchExists(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
