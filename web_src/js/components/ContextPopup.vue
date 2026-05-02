@@ -95,11 +95,23 @@ export default {
 
       try {
         const response = await GET(`${appSubUrl}/${data.owner}/${data.repo}/issues/${data.index}/info`);
-        const respJson = await response.json();
-        if (!response.ok) {
-          this.i18nErrorMessage = respJson.message ?? i18n.network_error;
+
+        let respJson = null;
+        try {
+          respJson = await response.json();
+        } catch {}
+
+        if (!response.ok || respJson === null) {
+          if (respJson && respJson.message) {
+            this.i18nErrorMessage = respJson.message;
+          } else if (response.status === 404) {
+            this.i18nErrorMessage = i18n.error_issue_not_found;
+          } else {
+            this.i18nErrorMessage = i18n.error_occurred;
+          }
           return;
         }
+
         this.issue = respJson;
       } catch {
         this.i18nErrorMessage = i18n.network_error;
@@ -113,18 +125,20 @@ export default {
 <template>
   <div ref="root">
     <div v-if="loading" class="tw-h-12 tw-w-12 is-loading"/>
-    <div v-if="!loading && issue !== null" id="issue-info-popup">
-      <p><small>{{ issue.repository.full_name }} on {{ createdAt }}</small></p>
-      <p><svg-icon :name="icon" :class="['text', color]"/> <strong>{{ issue.title }}</strong> #{{ issue.number }}</p>
-      <p>{{ body }}</p>
-      <div class="labels-list">
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div v-for="label in labels" :key="label.name" class="ui label" :style="{ color: label.textColor, backgroundColor: label.color }" v-html="label.name"/>
-      </div>
-    </div>
-    <div v-if="!loading && issue === null">
-      <p><small>{{ i18nErrorOccurred }}</small></p>
-      <p>{{ i18nErrorMessage }}</p>
+    <div v-else id="issue-info-popup">
+      <template v-if="issue !== null">
+        <p><small>{{ issue.repository.full_name }} on {{ createdAt }}</small></p>
+        <p><svg-icon :name="icon" :class="['text', color]"/> <strong>{{ issue.title }}</strong> #{{ issue.number }}</p>
+        <p>{{ body }}</p>
+        <div class="labels-list" v-if="labels.length > 0">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div v-for="label in labels" :key="label.name" class="ui label" :style="{ color: label.textColor, backgroundColor: label.color }" v-html="label.name"/>
+        </div>
+      </template>
+      <template v-else>
+        <p><small>{{ i18nErrorOccurred }}</small></p>
+        <p>{{ i18nErrorMessage }}</p>
+      </template>
     </div>
   </div>
 </template>

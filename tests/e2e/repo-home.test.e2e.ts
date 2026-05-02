@@ -68,4 +68,21 @@ test('Star button focus retention', async ({page}) => {
   await expect(
     page.locator('button[aria-label="Star"]:focus, button[aria-label="Unstar"]:focus'),
   ).toBeVisible();
+
+test('Issue / PR popup test', async ({page}) => {
+  const response = await page.goto('/user1/issues-highlighted/commits/branch/main');
+  expect(response?.status()).toBe(200);
+
+  await page.locator(".ref-issue[href='/user1/issues-highlighted/issues/1']").hover();
+  await expect(page.locator('#issue-info-popup')).toBeVisible();
+  await expect(page.locator('#issue-info-popup')).toContainText('Issue #1');
+
+  // Appears to take a short while for the popup to disappear
+  // In my testing only webkit failed but better to be sure
+  await page.mouse.move(0, 0);
+  await expect(page.locator('#issue-info-popup')).toBeHidden();
+
+  await page.locator(".ref-issue[href='/user1/issues-highlighted/issues/2']").hover();
+  await expect(page.locator('#issue-info-popup')).toBeVisible();
+  await expect(page.locator('#issue-info-popup')).toContainText('Issue not found');
 });
