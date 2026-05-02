@@ -46,6 +46,19 @@ func (a *ForgejoAdapter) GetRepositoryByID(ctx context.Context, id int64) (*repo
 	return repo_model.GetRepositoryByID(ctx, id)
 }
 
+// GetRepositoryByOwnerAndName returns the repo with the given name owned by the user/org with ownerID.
+// Returns (nil, nil) if not found.
+func (a *ForgejoAdapter) GetRepositoryByOwnerAndName(ctx context.Context, ownerID int64, repoName string) (*repo_model.Repository, error) {
+	repo, err := repo_model.GetRepositoryByName(ctx, ownerID, repoName)
+	if err != nil {
+		if repo_model.IsErrRepoNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return repo, nil
+}
+
 // CreateUser creates a new Forgejo user via admin API.
 func (a *ForgejoAdapter) CreateUser(ctx context.Context, username, email, password, fullName string) error {
 	u := &user_model.User{
@@ -167,6 +180,15 @@ func (a *ForgejoAdapter) AddCollaborator(ctx context.Context, repoID, userID int
 		return err
 	}
 	return repo_model.ChangeCollaborationAccessMode(ctx, repo, userID, mode)
+}
+
+// RemoveCollaborator removes a user as collaborator from the repo.
+func (a *ForgejoAdapter) RemoveCollaborator(ctx context.Context, repoID, userID int64) error {
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		return err
+	}
+	return repository.DeleteCollaboration(ctx, repo, userID)
 }
 
 // ProtectMainBranch enables branch protection on the named branch (CanPush=false, no merge whitelist).

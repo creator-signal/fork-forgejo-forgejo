@@ -105,6 +105,10 @@ func (s *service) EnrollUser(ctx context.Context, opts EnrollUserOptions) error 
 		log.Error("Failed to add user %d to org team for course %d: %v", opts.UserID, opts.CourseID, err)
 	}
 
+	if err := s.ensureForkForEnrollment(ctx, opts.CourseID, opts.UserID); err != nil {
+		log.Error("Failed to ensure fork for late enrollment (course %d, user %d): %v", opts.CourseID, opts.UserID, err)
+	}
+
 	return nil
 }
 
@@ -113,12 +117,22 @@ func (s *service) GetEnrollments(ctx context.Context, courseID int64) ([]*Course
 }
 
 func (s *service) RemoveEnrollment(ctx context.Context, courseID, userID int64) error {
+	// Capture fork id before deletion so we can remove the collaborator afterwards.
+	var formerForkRepoID int64
+	if existing, err := s.repo.GetEnrollment(ctx, courseID, userID); err == nil && existing != nil {
+		formerForkRepoID = existing.StudentForkRepoID
+	}
+
 	if err := s.repo.RemoveEnrollment(ctx, courseID, userID); err != nil {
 		return err
 	}
 
 	if err := s.removeFromOrgTeam(ctx, courseID, userID); err != nil {
 		log.Error("Failed to remove user %d from org team for course %d: %v", userID, courseID, err)
+	}
+
+	if err := s.ensureCollaboratorRemovedForEnrollment(ctx, courseID, userID, formerForkRepoID); err != nil {
+		log.Error("Failed to remove collaborator (course %d, user %d, fork %d): %v", courseID, userID, formerForkRepoID, err)
 	}
 
 	return nil

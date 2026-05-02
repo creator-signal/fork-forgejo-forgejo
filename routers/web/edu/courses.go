@@ -108,12 +108,22 @@ func CourseDetail(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, tplCourseDetail)
 }
 
-func loadOrgsForUser(ctx *context.Context) {
+// loadOrgsAndRepos populates Orgs and (if selectedOrgID > 0) OrgRepos for the course form.
+func loadOrgsAndRepos(ctx *context.Context, selectedOrgID int64) {
 	orgs, err := org_model.GetOrgsCanCreateRepoByUserID(ctx, ctx.Doer.ID)
 	if err != nil {
 		log.Error("Failed to get orgs for user: %v", err)
 	}
 	ctx.Data["Orgs"] = orgs
+	ctx.Data["SelectedOrgID"] = selectedOrgID
+
+	if selectedOrgID > 0 {
+		repos, err := org_model.GetOrgRepositories(ctx, selectedOrgID)
+		if err != nil {
+			log.Error("Failed to get org repos for %d: %v", selectedOrgID, err)
+		}
+		ctx.Data["OrgRepos"] = repos
+	}
 }
 
 func NewCourse(ctx *context.Context) {
@@ -123,7 +133,8 @@ func NewCourse(ctx *context.Context) {
 	}
 	ctx.Data["Title"] = "New Course"
 	ctx.Data["PageIsEduCourses"] = true
-	loadOrgsForUser(ctx)
+	selectedOrgID := ctx.FormInt64("org_id")
+	loadOrgsAndRepos(ctx, selectedOrgID)
 	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplCourseForm)
 }
@@ -144,12 +155,12 @@ func NewCoursePost(ctx *context.Context) {
 	orgID := ctx.FormInt64("org_id")
 
 	if name == "" {
-		loadOrgsForUser(ctx)
+		loadOrgsAndRepos(ctx, orgID)
 		ctx.RenderWithErr("Name is required.", tplCourseForm, nil)
 		return
 	}
 	if len(name) > 255 {
-		loadOrgsForUser(ctx)
+		loadOrgsAndRepos(ctx, orgID)
 		ctx.RenderWithErr(ctx.Tr("edu.name_too_long"), tplCourseForm, nil)
 		return
 	}
@@ -179,11 +190,12 @@ func NewCoursePost(ctx *context.Context) {
 	}
 
 	opts := edu.CreateCourseOptions{
-		Name:        name,
-		Description: description,
-		OrgID:       orgID,
-		StartUnix:   startUnix,
-		EndUnix:     endUnix,
+		Name:              name,
+		Description:       description,
+		OrgID:             orgID,
+		TasksMasterRepoID: ctx.FormInt64("tasks_master_repo_id"),
+		StartUnix:         startUnix,
+		EndUnix:           endUnix,
 	}
 
 	_, err := svc.CreateCourse(ctx, ctx.Doer.ID, opts)
@@ -222,7 +234,11 @@ func EditCourse(ctx *context.Context) {
 	}
 
 	ctx.Data["Course"] = course
-	loadOrgsForUser(ctx)
+	selectedOrgID := course.OrgID
+	if ctx.FormString("org_id") != "" {
+		selectedOrgID = ctx.FormInt64("org_id")
+	}
+	loadOrgsAndRepos(ctx, selectedOrgID)
 	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplCourseForm)
 }
@@ -256,16 +272,17 @@ func EditCoursePost(ctx *context.Context) {
 	course.Name = ctx.FormString("name")
 	course.Description = ctx.FormString("description")
 	course.OrgID = ctx.FormInt64("org_id")
+	course.TasksMasterRepoID = ctx.FormInt64("tasks_master_repo_id")
 
 	if course.Name == "" {
 		ctx.Data["Course"] = course
-		loadOrgsForUser(ctx)
+		loadOrgsAndRepos(ctx, course.OrgID)
 		ctx.RenderWithErr("Name is required.", tplCourseForm, nil)
 		return
 	}
 	if len(course.Name) > 255 {
 		ctx.Data["Course"] = course
-		loadOrgsForUser(ctx)
+		loadOrgsAndRepos(ctx, course.OrgID)
 		ctx.RenderWithErr(ctx.Tr("edu.name_too_long"), tplCourseForm, nil)
 		return
 	}
@@ -426,4 +443,80 @@ func RemoveEnrollmentPost(ctx *context.Context) {
 
 	ctx.Flash.Success("User removed from course")
 	ctx.Redirect(setting.AppSubURL + "/edu/teacher/courses/" + ctx.Params(":id"))
+}
+
+// InitForksPost starts an asynchronous course-level init-forks operation.
+// Only the course creator (or site admin) may run it; teacher role enforced by reqEduTeacher middleware.
+func InitForksPost(ctx *context.Context) {
+	if !isFullTeacher(ctx) {
+		ctx.Error(http.StatusForbidden, "Only teachers can init forks")
+		return
+	}
+
+	courseID := ctx.ParamsInt64(":id")
+	svc := edu.GetService()
+	if svc == nil {
+		ctx.ServerError("GetService", nil)
+		return
+	}
+
+	course, err := svc.GetCourseByID(ctx, courseID)
+	if err != nil {
+		ctx.ServerError("GetCourseByID", err)
+		return
+	}
+	if course == nil {
+		ctx.NotFound("Course not found", nil)
+		return
+	}
+	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
+		ctx.Error(http.StatusForbidden, "You can only init forks for your own courses")
+		return
+	}
+
+	if _, err := svc.InitCourseForks(ctx, courseID, ctx.Doer.ID); err != nil {
+		switch {
+		case errors.Is(err, edu.ErrTasksMasterRepoNotSet):
+			ctx.Flash.Error(ctx.Tr("edu.init_forks_no_master"))
+		case errors.Is(err, edu.ErrCourseHasNoOrg):
+			ctx.Flash.Error(ctx.Tr("edu.init_forks_no_org"))
+		default:
+			ctx.ServerError("InitCourseForks", err)
+			return
+		}
+		ctx.Redirect(setting.AppSubURL + "/edu/teacher/courses/" + ctx.Params(":id"))
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("edu.init_forks_started"))
+	ctx.Redirect(setting.AppSubURL + "/edu/teacher/courses/" + ctx.Params(":id"))
+}
+
+// InitForksStatus returns JSON progress of the latest course-level init-forks task.
+func InitForksStatus(ctx *context.Context) {
+	courseID := ctx.ParamsInt64(":id")
+	svc := edu.GetService()
+	if svc == nil {
+		ctx.ServerError("GetService", nil)
+		return
+	}
+
+	task, err := svc.GetInitForksTaskByCourse(ctx, courseID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	if task == nil {
+		ctx.JSON(http.StatusOK, map[string]any{"status": "none"})
+		return
+	}
+	ctx.JSON(http.StatusOK, map[string]any{
+		"id":        task.ID,
+		"status":    task.Status,
+		"total":     task.TotalUsers,
+		"completed": task.Completed,
+		"failed":    task.Failed,
+		"error_log": task.ErrorLog,
+		"updated":   task.UpdatedUnix,
+	})
 }

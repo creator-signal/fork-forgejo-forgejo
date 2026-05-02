@@ -53,6 +53,12 @@ type EducationalService interface {
 	GetCoursesForUser(ctx context.Context, userID int64) ([]*Course, error)
 	UpdateCourse(ctx context.Context, course *Course) error
 	DeleteCourse(ctx context.Context, id int64) error
+
+	// Init forks (course-level)
+	InitCourseForks(ctx context.Context, courseID, doerID int64) (*InitForksTask, error)
+	GetInitForksTaskByCourse(ctx context.Context, courseID int64) (*InitForksTask, error)
+	GetInitForksTaskByID(ctx context.Context, id int64) (*InitForksTask, error)
+
 	EnrollUser(ctx context.Context, opts EnrollUserOptions) error
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
@@ -76,6 +82,10 @@ type RepoForker interface {
 	GetRepositoryByID(ctx context.Context, id int64) (*repo_model.Repository, error)
 	SyncFork(ctx context.Context, doer *user_model.User, forkRepo *repo_model.Repository, branch string) error
 	GetDefaultBranch(ctx context.Context, repoID int64) (string, error)
+	AddCollaborator(ctx context.Context, repoID, userID int64, mode perm.AccessMode) error
+	RemoveCollaborator(ctx context.Context, repoID, userID int64) error
+	ProtectMainBranch(ctx context.Context, repoID int64, branchName string) error
+	GetRepositoryByOwnerAndName(ctx context.Context, ownerID int64, repoName string) (*repo_model.Repository, error)
 }
 
 // UserCreator abstracts user creation and lookup for import and bulk operations.
@@ -136,6 +146,7 @@ type Repository interface {
 	GetEnrollmentByCourseUser(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error)
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
+	UpdateEnrollment(ctx context.Context, enrollment *CourseEnrollment) error
 
 	CreateImportDraft(ctx context.Context, draft *ImportDraft) error
 	GetImportDraft(ctx context.Context, id int64) (*ImportDraft, error)

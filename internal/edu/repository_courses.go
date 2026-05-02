@@ -50,7 +50,10 @@ func (r *xormRepository) GetCoursesByUser(ctx context.Context, userID int64) ([]
 }
 
 func (r *xormRepository) UpdateCourse(ctx context.Context, c *Course) error {
-	_, err := db.GetEngine(ctx).ID(c.ID).Cols("name", "description", "start_unix", "end_unix", "updated_unix").Update(c)
+	_, err := db.GetEngine(ctx).
+		ID(c.ID).
+		Cols("name", "description", "org_id", "tasks_master_repo_id", "start_unix", "end_unix", "updated_unix").
+		Update(c)
 	if err != nil {
 		return fmt.Errorf("update course: %w", err)
 	}

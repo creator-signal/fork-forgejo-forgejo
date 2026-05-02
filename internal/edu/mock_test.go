@@ -175,6 +175,11 @@ func (m *MockRepository) RemoveEnrollment(ctx context.Context, courseID, userID 
 	return args.Error(0)
 }
 
+func (m *MockRepository) UpdateEnrollment(ctx context.Context, e *CourseEnrollment) error {
+	args := m.Called(ctx, e)
+	return args.Error(0)
+}
+
 func (m *MockRepository) CreateImportDraft(ctx context.Context, draft *ImportDraft) error {
 	args := m.Called(ctx, draft)
 	return args.Error(0)
@@ -419,6 +424,29 @@ func (m *MockRepoForker) SyncFork(ctx context.Context, doer *user_model.User, fo
 func (m *MockRepoForker) GetDefaultBranch(ctx context.Context, repoID int64) (string, error) {
 	args := m.Called(ctx, repoID)
 	return args.String(0), args.Error(1)
+}
+
+func (m *MockRepoForker) AddCollaborator(ctx context.Context, repoID, userID int64, mode perm.AccessMode) error {
+	args := m.Called(ctx, repoID, userID, mode)
+	return args.Error(0)
+}
+
+func (m *MockRepoForker) RemoveCollaborator(ctx context.Context, repoID, userID int64) error {
+	args := m.Called(ctx, repoID, userID)
+	return args.Error(0)
+}
+
+func (m *MockRepoForker) ProtectMainBranch(ctx context.Context, repoID int64, branchName string) error {
+	args := m.Called(ctx, repoID, branchName)
+	return args.Error(0)
+}
+
+func (m *MockRepoForker) GetRepositoryByOwnerAndName(ctx context.Context, ownerID int64, repoName string) (*repo_model.Repository, error) {
+	args := m.Called(ctx, ownerID, repoName)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*repo_model.Repository), args.Error(1)
 }
 
 // MockOrgManager mocks the OrgManager interface
