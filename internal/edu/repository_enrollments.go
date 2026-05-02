@@ -55,3 +55,14 @@ func (r *xormRepository) RemoveEnrollment(ctx context.Context, courseID, userID 
 	}
 	return nil
 }
+
+func (r *xormRepository) UpdateEnrollment(ctx context.Context, e *CourseEnrollment) error {
+	_, err := db.GetEngine(ctx).
+		ID(e.ID).
+		Cols("role", "group_name", "student_fork_repo_id").
+		Update(e)
+	if err != nil {
+		return fmt.Errorf("update enrollment: %w", err)
+	}
+	return nil
+}

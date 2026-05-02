@@ -175,6 +175,11 @@ func (m *MockRepository) RemoveEnrollment(ctx context.Context, courseID, userID 
 	return args.Error(0)
 }
 
+func (m *MockRepository) UpdateEnrollment(ctx context.Context, e *CourseEnrollment) error {
+	args := m.Called(ctx, e)
+	return args.Error(0)
+}
+
 func (m *MockRepository) CreateImportDraft(ctx context.Context, draft *ImportDraft) error {
 	args := m.Called(ctx, draft)
 	return args.Error(0)

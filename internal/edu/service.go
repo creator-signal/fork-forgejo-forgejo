@@ -140,6 +140,7 @@ type Repository interface {
 	GetEnrollmentByCourseUser(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error)
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
+	UpdateEnrollment(ctx context.Context, enrollment *CourseEnrollment) error
 
 	CreateImportDraft(ctx context.Context, draft *ImportDraft) error
 	GetImportDraft(ctx context.Context, id int64) (*ImportDraft, error)
