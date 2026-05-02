@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"forgejo.org/models"
+	git_model "forgejo.org/models/git"
 	org_model "forgejo.org/models/organization"
 	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
@@ -138,4 +139,16 @@ func (a *ForgejoAdapter) RemoveTeamMember(ctx context.Context, team *org_model.T
 // GetTeam retrieves a team by org ID and name.
 func (a *ForgejoAdapter) GetTeam(ctx context.Context, orgID int64, name string) (*org_model.Team, error) {
 	return org_model.GetTeam(ctx, orgID, name)
+}
+
+// BranchExists checks whether the given branch exists in the repo.
+func (a *ForgejoAdapter) BranchExists(ctx context.Context, repoID int64, branchName string) (bool, error) {
+	_, err := git_model.GetBranch(ctx, repoID, branchName)
+	if err != nil {
+		if git_model.IsErrBranchNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
