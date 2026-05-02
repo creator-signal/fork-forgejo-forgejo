@@ -38,7 +38,6 @@ type EducationalService interface {
 	UpdateAssignment(ctx context.Context, assignment *Assignment) error
 	DeleteAssignment(ctx context.Context, id int64) error
 	GetSubmissions(ctx context.Context, assignmentID int64) ([]*Submission, error)
-	JoinAssignment(ctx context.Context, doer *user_model.User, assignmentID int64) (*Submission, error)
 
 	CreateCourse(ctx context.Context, creatorID int64, opts CreateCourseOptions) (*Course, error)
 	GetCourseByID(ctx context.Context, id int64) (*Course, error)
