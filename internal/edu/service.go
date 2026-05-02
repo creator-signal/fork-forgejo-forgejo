@@ -55,14 +55,6 @@ type EducationalService interface {
 	ExecuteImport(ctx context.Context, draftID int64, doerID int64, defaultRole RoleType) (*ImportResult, error)
 	DeleteImportDraft(ctx context.Context, id int64) error
 
-	BulkForkForAssignment(ctx context.Context, assignmentID, doerID int64) (*BulkForkTask, error)
-	GetBulkForkTask(ctx context.Context, taskID int64) (*BulkForkTask, error)
-	GetBulkForkTaskByAssignment(ctx context.Context, assignmentID int64) (*BulkForkTask, error)
-
-	SyncAllForks(ctx context.Context, assignmentID, doerID int64) (*SyncForkTask, error)
-	GetSyncForkTask(ctx context.Context, taskID int64) (*SyncForkTask, error)
-	GetSyncForkTaskByAssignment(ctx context.Context, assignmentID int64) (*SyncForkTask, error)
-
 	GetTestResults(ctx context.Context, submissionID int64) ([]*TestResult, error)
 	GetLatestTestResult(ctx context.Context, submissionID int64) (*TestResult, error)
 	GradeSubmission(ctx context.Context, submissionID int64, grade int, comment string, gradedByID int64) error
