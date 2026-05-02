@@ -380,7 +380,7 @@ func EnrollUserPost(ctx *context.Context) {
 		r = edu.RoleStudent
 	}
 
-	if err := svc.EnrollUser(ctx, courseID, u.ID, r); err != nil {
+	if err := svc.EnrollUser(ctx, edu.EnrollUserOptions{CourseID: courseID, UserID: u.ID, Role: r}); err != nil {
 		if errors.Is(err, edu.ErrUserAlreadyEnrolled) {
 			ctx.Flash.Error(ctx.Tr("edu.user_already_enrolled"))
 			ctx.Redirect(setting.AppSubURL + "/edu/teacher/courses/" + ctx.Params(":id"))

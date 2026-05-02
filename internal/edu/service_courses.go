@@ -80,9 +80,9 @@ func (s *service) DeleteCourse(ctx context.Context, id int64) error {
 	return s.repo.DeleteCourse(ctx, id)
 }
 
-func (s *service) EnrollUser(ctx context.Context, courseID, userID int64, role RoleType) error {
+func (s *service) EnrollUser(ctx context.Context, opts EnrollUserOptions) error {
 	// Check if the user is already enrolled to avoid UNIQUE constraint violation
-	existing, err := s.repo.GetEnrollment(ctx, courseID, userID)
+	existing, err := s.repo.GetEnrollment(ctx, opts.CourseID, opts.UserID)
 	if err != nil {
 		return fmt.Errorf("check existing enrollment: %w", err)
 	}
@@ -91,17 +91,18 @@ func (s *service) EnrollUser(ctx context.Context, courseID, userID int64, role R
 	}
 
 	enrollment := &CourseEnrollment{
-		CourseID:    courseID,
-		UserID:      userID,
-		Role:        role,
+		CourseID:    opts.CourseID,
+		UserID:      opts.UserID,
+		Role:        opts.Role,
+		GroupName:   opts.GroupName,
 		CreatedUnix: time.Now().Unix(),
 	}
 	if err := s.repo.EnrollUser(ctx, enrollment); err != nil {
 		return err
 	}
 
-	if err := s.addToOrgTeam(ctx, courseID, userID, role); err != nil {
-		log.Error("Failed to add user %d to org team for course %d: %v", userID, courseID, err)
+	if err := s.addToOrgTeam(ctx, opts.CourseID, opts.UserID, opts.Role); err != nil {
+		log.Error("Failed to add user %d to org team for course %d: %v", opts.UserID, opts.CourseID, err)
 	}
 
 	return nil

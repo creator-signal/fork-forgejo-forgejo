@@ -107,9 +107,29 @@ func TestEnrollUser(t *testing.T) {
 		return e.CourseID == int64(1) && e.UserID == int64(5) && e.Role == RoleStudent
 	})).Return(nil)
 
-	err := service.EnrollUser(ctx, 1, 5, RoleStudent)
+	err := service.EnrollUser(ctx, EnrollUserOptions{CourseID: 1, UserID: 5, Role: RoleStudent})
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
+}
+
+func TestEnrollUser_StoresGroup(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockForker := new(MockRepoForker)
+	service := NewService(mockRepo, mockForker)
+	ctx := context.Background()
+
+	mockRepo.On("GetEnrollment", ctx, int64(1), int64(7)).Return(nil, nil)
+	mockRepo.On("EnrollUser", ctx, mock.MatchedBy(func(e *CourseEnrollment) bool {
+		return e.GroupName == "se241" && e.Role == RoleStudent
+	})).Return(nil).Once()
+
+	err := service.EnrollUser(ctx, EnrollUserOptions{
+		CourseID:  1,
+		UserID:    7,
+		Role:      RoleStudent,
+		GroupName: "se241",
+	})
+	assert.NoError(t, err)
 }
 
 func TestRemoveEnrollment(t *testing.T) {

@@ -20,6 +20,14 @@ type CreateAssignmentOptions struct {
 	DeadlineUnix     int64
 }
 
+// EnrollUserOptions contains options for enrolling a user in a course.
+type EnrollUserOptions struct {
+	CourseID  int64
+	UserID    int64
+	Role      RoleType
+	GroupName string
+}
+
 // CreateCourseOptions contains options for creating a new course.
 type CreateCourseOptions struct {
 	Name              string
@@ -45,7 +53,7 @@ type EducationalService interface {
 	GetCoursesForUser(ctx context.Context, userID int64) ([]*Course, error)
 	UpdateCourse(ctx context.Context, course *Course) error
 	DeleteCourse(ctx context.Context, id int64) error
-	EnrollUser(ctx context.Context, courseID, userID int64, role RoleType) error
+	EnrollUser(ctx context.Context, opts EnrollUserOptions) error
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
 	GetAssignmentsByCourse(ctx context.Context, courseID int64) ([]*Assignment, error)
