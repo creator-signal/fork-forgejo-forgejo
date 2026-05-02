@@ -125,6 +125,26 @@ func TestRemoveEnrollment(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
+func TestCreateCourse_StoresTasksMasterRepoID(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockForker := new(MockRepoForker)
+	service := NewService(mockRepo, mockForker)
+	ctx := context.Background()
+
+	opts := CreateCourseOptions{
+		Name:              "Cxx",
+		TasksMasterRepoID: 101,
+	}
+	mockRepo.On("CreateCourse", ctx, mock.MatchedBy(func(c *Course) bool {
+		return c.TasksMasterRepoID == 101
+	})).Return(nil).Once()
+	mockRepo.On("EnrollUser", ctx, mock.Anything).Return(nil).Once()
+
+	course, err := service.CreateCourse(ctx, 1, opts)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(101), course.TasksMasterRepoID)
+}
+
 func TestGetAssignmentsByCourse(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockForker := new(MockRepoForker)

@@ -22,11 +22,12 @@ type CreateAssignmentOptions struct {
 
 // CreateCourseOptions contains options for creating a new course.
 type CreateCourseOptions struct {
-	Name        string
-	Description string
-	OrgID       int64
-	StartUnix   int64
-	EndUnix     int64
+	Name              string
+	Description       string
+	OrgID             int64
+	TasksMasterRepoID int64
+	StartUnix         int64
+	EndUnix           int64
 }
 
 // EducationalService defines the business logic for the educational module.

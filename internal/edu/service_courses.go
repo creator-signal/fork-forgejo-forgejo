@@ -23,14 +23,15 @@ func (s *service) CreateCourse(ctx context.Context, creatorID int64, opts Create
 
 	now := time.Now().Unix()
 	course := &Course{
-		Name:        opts.Name,
-		Description: opts.Description,
-		CreatorID:   creatorID,
-		OrgID:       opts.OrgID,
-		StartUnix:   opts.StartUnix,
-		EndUnix:     opts.EndUnix,
-		CreatedUnix: now,
-		UpdatedUnix: now,
+		Name:              opts.Name,
+		Description:       opts.Description,
+		CreatorID:         creatorID,
+		OrgID:             opts.OrgID,
+		TasksMasterRepoID: opts.TasksMasterRepoID,
+		StartUnix:         opts.StartUnix,
+		EndUnix:           opts.EndUnix,
+		CreatedUnix:       now,
+		UpdatedUnix:       now,
 	}
 
 	if err := s.repo.CreateCourse(ctx, course); err != nil {
