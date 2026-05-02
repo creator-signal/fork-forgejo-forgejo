@@ -3,6 +3,7 @@ package edu
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
@@ -103,4 +104,43 @@ func (a *ForgejoAdapter) AddPullRequestComment(ctx context.Context, prID int64, 
 		return nil, err
 	}
 	return issue_service.CreateIssueComment(ctx, doer, pr.BaseRepo, pr.Issue, body, nil)
+}
+
+// GetPullRequestChangedFiles returns the list of files changed in the given pull request.
+func (a *ForgejoAdapter) GetPullRequestChangedFiles(ctx context.Context, prID int64) ([]string, error) {
+	pr, err := issues_model.GetPullRequestByID(ctx, prID)
+	if err != nil {
+		return nil, err
+	}
+	if err := pr.LoadBaseRepo(ctx); err != nil {
+		return nil, err
+	}
+
+	gitRepo, err := git.OpenRepository(ctx, pr.BaseRepo.RepoPath())
+	if err != nil {
+		return nil, err
+	}
+	defer gitRepo.Close()
+
+	mergeBase, _, err := gitRepo.GetMergeBase("", pr.BaseBranch, pr.HeadBranch)
+	if err != nil {
+		return nil, err
+	}
+	headCommit, err := gitRepo.GetBranchCommit(pr.HeadBranch)
+	if err != nil {
+		return nil, err
+	}
+
+	stdout, _, err := git.NewCommand(ctx, "diff", "--name-only").
+		AddDynamicArguments(mergeBase+"..."+headCommit.ID.String()).
+		RunStdString(&git.RunOpts{Dir: pr.BaseRepo.RepoPath()})
+	if err != nil {
+		return nil, err
+	}
+
+	raw := strings.TrimSpace(stdout)
+	if raw == "" {
+		return []string{}, nil
+	}
+	return strings.Split(raw, "\n"), nil
 }

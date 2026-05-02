@@ -68,6 +68,17 @@ func TestAdapter_AddPullRequestComment(t *testing.T) {
 	assert.Equal(t, "Constraint check failed: extra files", c.Content)
 }
 
+func TestAdapter_GetPullRequestChangedFiles(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	a := edu.NewForgejoAdapter()
+	ctx := db.DefaultContext
+
+	files, err := a.GetPullRequestChangedFiles(ctx, 2)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, files)
+}
+
 func TestAdapter_BranchExists(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
