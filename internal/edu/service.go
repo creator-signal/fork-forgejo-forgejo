@@ -12,11 +12,12 @@ import (
 
 // CreateAssignmentOptions contains options for creating a new assignment.
 type CreateAssignmentOptions struct {
-	CourseID     int64
-	RepoID       int64
-	Title        string
-	Description  string
-	DeadlineUnix int64
+	CourseID         int64
+	TaskName         string
+	AllowedFilesGlob string
+	Title            string
+	Description      string
+	DeadlineUnix     int64
 }
 
 // CreateCourseOptions contains options for creating a new course.
@@ -32,7 +33,7 @@ type CreateCourseOptions struct {
 type EducationalService interface {
 	CreateAssignment(ctx context.Context, opts CreateAssignmentOptions) (*Assignment, error)
 	GetAssignmentByID(ctx context.Context, id int64) (*Assignment, error)
-	GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error)
+	GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error)
 	GetAssignmentsForUser(ctx context.Context, userID int64) ([]*Assignment, error)
 	UpdateAssignment(ctx context.Context, assignment *Assignment) error
 	DeleteAssignment(ctx context.Context, id int64) error
@@ -111,7 +112,7 @@ type service struct {
 type Repository interface {
 	CreateAssignment(ctx context.Context, assignment *Assignment) error
 	GetAssignmentByID(ctx context.Context, id int64) (*Assignment, error)
-	GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error)
+	GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error)
 	GetAssignmentsForUser(ctx context.Context, userID int64) ([]*Assignment, error)
 	UpdateAssignment(ctx context.Context, assignment *Assignment) error
 	DeleteAssignment(ctx context.Context, id int64) error
@@ -187,11 +188,12 @@ func (s *service) CreateAssignment(ctx context.Context, opts CreateAssignmentOpt
 	}
 
 	assignment := &Assignment{
-		CourseID:     opts.CourseID,
-		RepoID:       opts.RepoID,
-		Title:        opts.Title,
-		Description:  opts.Description,
-		DeadlineUnix: opts.DeadlineUnix,
+		CourseID:         opts.CourseID,
+		TaskName:         opts.TaskName,
+		AllowedFilesGlob: opts.AllowedFilesGlob,
+		Title:            opts.Title,
+		Description:      opts.Description,
+		DeadlineUnix:     opts.DeadlineUnix,
 	}
 
 	if err := s.repo.CreateAssignment(ctx, assignment); err != nil {
@@ -203,6 +205,10 @@ func (s *service) CreateAssignment(ctx context.Context, opts CreateAssignmentOpt
 
 func (s *service) GetAssignmentByID(ctx context.Context, id int64) (*Assignment, error) {
 	return s.repo.GetAssignmentByID(ctx, id)
+}
+
+func (s *service) GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error) {
+	return s.repo.GetAssignmentByCourseAndTask(ctx, courseID, taskName)
 }
 
 func (s *service) GetSubmissions(ctx context.Context, assignmentID int64) ([]*Submission, error) {

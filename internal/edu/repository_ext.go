@@ -8,15 +8,6 @@ import (
 	"forgejo.org/models/db"
 )
 
-func (r *xormRepository) GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error) {
-	var assignments []*Assignment
-	err := db.GetEngine(ctx).Where("repo_id = ?", repoID).Find(&assignments)
-	if err != nil {
-		return nil, fmt.Errorf("find assignments by repo: %w", err)
-	}
-	return assignments, nil
-}
-
 func (r *xormRepository) GetAssignmentsForUser(ctx context.Context, userID int64) ([]*Assignment, error) {
 	var assignments []*Assignment
 	err := db.GetEngine(ctx).

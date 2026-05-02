@@ -28,12 +28,12 @@ func (m *MockRepository) GetAssignmentByID(ctx context.Context, id int64) (*Assi
 	return args.Get(0).(*Assignment), args.Error(1)
 }
 
-func (m *MockRepository) GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error) {
-	args := m.Called(ctx, repoID)
+func (m *MockRepository) GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error) {
+	args := m.Called(ctx, courseID, taskName)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*Assignment), args.Error(1)
+	return args.Get(0).(*Assignment), args.Error(1)
 }
 
 func (m *MockRepository) CreateSubmission(ctx context.Context, submission *Submission) error {

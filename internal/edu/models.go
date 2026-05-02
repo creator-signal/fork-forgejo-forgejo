@@ -50,14 +50,15 @@ func (*CourseEnrollment) TableName() string { return "edu_course_enrollments" }
 
 // Assignment represents a task assigned to students.
 type Assignment struct {
-	ID           int64  `json:"id" xorm:"pk autoincr"`
-	CourseID     int64  `json:"course_id" xorm:"INDEX"`
-	RepoID       int64  `json:"repo_id" xorm:"INDEX NOT NULL"`
-	Title        string `json:"title" xorm:"VARCHAR(255) NOT NULL"`
-	Description  string `json:"description" xorm:"TEXT"`
-	DeadlineUnix int64  `json:"deadline_unix"`
-	CreatedUnix  int64  `json:"created_unix" xorm:"created"`
-	UpdatedUnix  int64  `json:"updated_unix" xorm:"updated"`
+	ID               int64  `json:"id" xorm:"pk autoincr"`
+	CourseID         int64  `json:"course_id" xorm:"INDEX NOT NULL UNIQUE(idx_course_task)"`
+	TaskName         string `json:"task_name" xorm:"VARCHAR(100) NOT NULL UNIQUE(idx_course_task)"`
+	AllowedFilesGlob string `json:"allowed_files_glob" xorm:"VARCHAR(500) NOT NULL"`
+	Title            string `json:"title" xorm:"VARCHAR(255) NOT NULL"`
+	Description      string `json:"description" xorm:"TEXT"`
+	DeadlineUnix     int64  `json:"deadline_unix"`
+	CreatedUnix      int64  `json:"created_unix" xorm:"created"`
+	UpdatedUnix      int64  `json:"updated_unix" xorm:"updated"`
 }
 
 func (*Assignment) TableName() string { return "edu_assignments" }
