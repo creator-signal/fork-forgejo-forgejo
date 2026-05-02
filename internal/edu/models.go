@@ -215,22 +215,22 @@ type DistributeTask struct {
 
 func (*DistributeTask) TableName() string { return "edu_distribute_task" }
 
-// SyncForkTask tracks a mass fork sync operation for an assignment.
-type SyncForkTask struct {
-	ID           int64  `json:"id" xorm:"pk autoincr"`
-	AssignmentID int64  `json:"assignment_id" xorm:"INDEX NOT NULL"`
-	CreatorID    int64  `json:"creator_id" xorm:"NOT NULL"`
-	TotalRepos   int    `json:"total_repos" xorm:"NOT NULL DEFAULT 0"`
-	Synced       int    `json:"synced" xorm:"NOT NULL DEFAULT 0"`
-	Skipped      int    `json:"skipped" xorm:"NOT NULL DEFAULT 0"`
-	Failed       int    `json:"failed" xorm:"NOT NULL DEFAULT 0"`
-	Status       string `json:"status" xorm:"VARCHAR(20) NOT NULL DEFAULT 'pending'"`
-	ErrorLog     string `json:"error_log" xorm:"TEXT"`
-	CreatedUnix  int64  `json:"created_unix" xorm:"created"`
-	UpdatedUnix  int64  `json:"updated_unix" xorm:"updated"`
+// CourseSyncTask tracks bulk course-sync (branch + auto-merge) for all student forks.
+type CourseSyncTask struct {
+	ID          int64  `json:"id" xorm:"pk autoincr"`
+	CourseID    int64  `json:"course_id" xorm:"INDEX NOT NULL"`
+	CreatorID   int64  `json:"creator_id" xorm:"NOT NULL"`
+	TotalRepos  int    `json:"total_repos" xorm:"NOT NULL DEFAULT 0"`
+	Synced      int    `json:"synced" xorm:"NOT NULL DEFAULT 0"`
+	Skipped     int    `json:"skipped" xorm:"NOT NULL DEFAULT 0"`
+	Failed      int    `json:"failed" xorm:"NOT NULL DEFAULT 0"`
+	Status      string `json:"status" xorm:"VARCHAR(20) NOT NULL DEFAULT 'pending'"`
+	ErrorLog    string `json:"error_log" xorm:"TEXT"`
+	CreatedUnix int64  `json:"created_unix" xorm:"created"`
+	UpdatedUnix int64  `json:"updated_unix" xorm:"updated"`
 }
 
-func (*SyncForkTask) TableName() string { return "edu_sync_fork_task" }
+func (*CourseSyncTask) TableName() string { return "edu_course_sync_task" }
 
 // Task/draft status constants.
 const (

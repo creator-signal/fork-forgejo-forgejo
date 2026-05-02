@@ -155,10 +155,10 @@ type Repository interface {
 	UpdateDistributeTask(ctx context.Context, t *DistributeTask) error
 	GetDistributeTaskByAssignment(ctx context.Context, assignmentID int64) (*DistributeTask, error)
 
-	CreateSyncForkTask(ctx context.Context, task *SyncForkTask) error
-	GetSyncForkTask(ctx context.Context, id int64) (*SyncForkTask, error)
-	GetSyncForkTaskByAssignment(ctx context.Context, assignmentID int64) (*SyncForkTask, error)
-	UpdateSyncForkTask(ctx context.Context, task *SyncForkTask) error
+	CreateCourseSyncTask(ctx context.Context, task *CourseSyncTask) error
+	GetCourseSyncTask(ctx context.Context, id int64) (*CourseSyncTask, error)
+	GetCourseSyncTaskByCourse(ctx context.Context, courseID int64) (*CourseSyncTask, error)
+	UpdateCourseSyncTask(ctx context.Context, task *CourseSyncTask) error
 
 	CreateTestResult(ctx context.Context, tr *TestResult) error
 	GetTestResultsBySubmission(ctx context.Context, submissionID int64) ([]*TestResult, error)
