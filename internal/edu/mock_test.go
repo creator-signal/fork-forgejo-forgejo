@@ -216,28 +216,28 @@ func (m *MockRepository) DeleteImportDraft(ctx context.Context, id int64) error 
 	return args.Error(0)
 }
 
-func (m *MockRepository) CreateBulkForkTask(ctx context.Context, task *BulkForkTask) error {
+func (m *MockRepository) CreateInitForksTask(ctx context.Context, task *InitForksTask) error {
 	args := m.Called(ctx, task)
 	return args.Error(0)
 }
 
-func (m *MockRepository) GetBulkForkTask(ctx context.Context, id int64) (*BulkForkTask, error) {
+func (m *MockRepository) GetInitForksTask(ctx context.Context, id int64) (*InitForksTask, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*BulkForkTask), args.Error(1)
+	return args.Get(0).(*InitForksTask), args.Error(1)
 }
 
-func (m *MockRepository) GetBulkForkTaskByAssignment(ctx context.Context, assignmentID int64) (*BulkForkTask, error) {
-	args := m.Called(ctx, assignmentID)
+func (m *MockRepository) GetInitForksTaskByCourse(ctx context.Context, courseID int64) (*InitForksTask, error) {
+	args := m.Called(ctx, courseID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*BulkForkTask), args.Error(1)
+	return args.Get(0).(*InitForksTask), args.Error(1)
 }
 
-func (m *MockRepository) UpdateBulkForkTask(ctx context.Context, task *BulkForkTask) error {
+func (m *MockRepository) UpdateInitForksTask(ctx context.Context, task *InitForksTask) error {
 	args := m.Called(ctx, task)
 	return args.Error(0)
 }

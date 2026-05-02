@@ -183,21 +183,21 @@ type UserCredential struct {
 	Email    string
 }
 
-// BulkForkTask tracks a mass fork operation for an assignment.
-type BulkForkTask struct {
-	ID           int64  `json:"id" xorm:"pk autoincr"`
-	AssignmentID int64  `json:"assignment_id" xorm:"INDEX NOT NULL"`
-	CreatorID    int64  `json:"creator_id" xorm:"NOT NULL"`
-	TotalUsers   int    `json:"total_users" xorm:"NOT NULL DEFAULT 0"`
-	Completed    int    `json:"completed" xorm:"NOT NULL DEFAULT 0"`
-	Failed       int    `json:"failed" xorm:"NOT NULL DEFAULT 0"`
-	Status       string `json:"status" xorm:"VARCHAR(20) NOT NULL DEFAULT 'pending'"`
-	ErrorLog     string `json:"error_log" xorm:"TEXT"`
-	CreatedUnix  int64  `json:"created_unix" xorm:"created"`
-	UpdatedUnix  int64  `json:"updated_unix" xorm:"updated"`
+// InitForksTask tracks initialization of student forks for a course.
+type InitForksTask struct {
+	ID          int64  `json:"id" xorm:"pk autoincr"`
+	CourseID    int64  `json:"course_id" xorm:"INDEX NOT NULL"`
+	CreatorID   int64  `json:"creator_id" xorm:"NOT NULL"`
+	TotalUsers  int    `json:"total_users" xorm:"NOT NULL DEFAULT 0"`
+	Completed   int    `json:"completed" xorm:"NOT NULL DEFAULT 0"`
+	Failed      int    `json:"failed" xorm:"NOT NULL DEFAULT 0"`
+	Status      string `json:"status" xorm:"VARCHAR(20) NOT NULL DEFAULT 'pending'"`
+	ErrorLog    string `json:"error_log" xorm:"TEXT"`
+	CreatedUnix int64  `json:"created_unix" xorm:"created"`
+	UpdatedUnix int64  `json:"updated_unix" xorm:"updated"`
 }
 
-func (*BulkForkTask) TableName() string { return "edu_bulk_fork_task" }
+func (*InitForksTask) TableName() string { return "edu_init_forks_task" }
 
 // SyncForkTask tracks a mass fork sync operation for an assignment.
 type SyncForkTask struct {

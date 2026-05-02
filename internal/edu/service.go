@@ -145,10 +145,10 @@ type Repository interface {
 	UpdateImportDraft(ctx context.Context, draft *ImportDraft) error
 	DeleteImportDraft(ctx context.Context, id int64) error
 
-	CreateBulkForkTask(ctx context.Context, task *BulkForkTask) error
-	GetBulkForkTask(ctx context.Context, id int64) (*BulkForkTask, error)
-	GetBulkForkTaskByAssignment(ctx context.Context, assignmentID int64) (*BulkForkTask, error)
-	UpdateBulkForkTask(ctx context.Context, task *BulkForkTask) error
+	CreateInitForksTask(ctx context.Context, task *InitForksTask) error
+	GetInitForksTask(ctx context.Context, id int64) (*InitForksTask, error)
+	GetInitForksTaskByCourse(ctx context.Context, courseID int64) (*InitForksTask, error)
+	UpdateInitForksTask(ctx context.Context, task *InitForksTask) error
 
 	CreateSyncForkTask(ctx context.Context, task *SyncForkTask) error
 	GetSyncForkTask(ctx context.Context, id int64) (*SyncForkTask, error)

@@ -86,15 +86,15 @@ func (r *xormRepository) DeleteCourse(ctx context.Context, id int64) error {
 				return fmt.Errorf("delete submissions for assignment %d: %w", a.ID, err)
 			}
 
-			// 1d. Delete bulk fork tasks
-			if _, err := e.Where("assignment_id = ?", a.ID).Delete(&BulkForkTask{}); err != nil {
-				return fmt.Errorf("delete bulk fork tasks for assignment %d: %w", a.ID, err)
-			}
-
-			// 1e. Delete sync fork tasks
+			// 1d. Delete sync fork tasks
 			if _, err := e.Where("assignment_id = ?", a.ID).Delete(&SyncForkTask{}); err != nil {
 				return fmt.Errorf("delete sync fork tasks for assignment %d: %w", a.ID, err)
 			}
+		}
+
+		// 1e. Delete init-forks tasks for this course
+		if _, err := e.Where("course_id = ?", id).Delete(&InitForksTask{}); err != nil {
+			return fmt.Errorf("delete init forks tasks for course: %w", err)
 		}
 
 		// 2. Delete all assignments
