@@ -168,3 +168,27 @@ func (a *ForgejoAdapter) AddCollaborator(ctx context.Context, repoID, userID int
 	}
 	return repo_model.ChangeCollaborationAccessMode(ctx, repo, userID, mode)
 }
+
+// ProtectMainBranch enables branch protection on the named branch (CanPush=false, no merge whitelist).
+func (a *ForgejoAdapter) ProtectMainBranch(ctx context.Context, repoID int64, branchName string) error {
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		return err
+	}
+
+	existing, err := git_model.GetProtectedBranchRuleByName(ctx, repoID, branchName)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		existing = &git_model.ProtectedBranch{
+			RepoID:   repoID,
+			RuleName: branchName,
+		}
+	}
+	existing.CanPush = false
+	existing.EnableMergeWhitelist = false
+	existing.RequireSignedCommits = false
+
+	return git_model.UpdateProtectBranch(ctx, repo, existing, git_model.WhitelistOptions{})
+}

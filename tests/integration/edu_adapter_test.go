@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"forgejo.org/internal/edu"
+	git_model "forgejo.org/models/git"
 	"forgejo.org/models/db"
 	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
@@ -46,4 +47,20 @@ func TestAdapter_AddCollaborator(t *testing.T) {
 	mode, err := access_model.AccessLevel(ctx, user, repo)
 	assert.NoError(t, err)
 	assert.Equal(t, perm.AccessModeWrite, mode)
+}
+
+func TestAdapter_ProtectMainBranch(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	a := edu.NewForgejoAdapter()
+	ctx := db.DefaultContext
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	err := a.ProtectMainBranch(ctx, repo.ID, "master")
+	assert.NoError(t, err)
+
+	pb, err := git_model.GetProtectedBranchRuleByName(ctx, repo.ID, "master")
+	assert.NoError(t, err)
+	assert.NotNil(t, pb)
+	assert.False(t, pb.CanPush)
 }
