@@ -43,6 +43,26 @@
 					{{end}}
 				</div>
 
+				<!-- Init forks -->
+				<h2 class="ui header">
+					{{svg "octicon-repo-forked"}} {{ctx.Locale.Tr "edu.init_forks"}}
+				</h2>
+				<div class="ui segment" id="edu-init-forks-block" data-course-id="{{.Course.ID}}">
+					{{if eq .Course.TasksMasterRepoID 0}}
+						<div class="ui warning message">
+							{{ctx.Locale.Tr "edu.init_forks_no_master"}}
+						</div>
+					{{else}}
+						<form action="{{AppSubUrl}}/edu/teacher/courses/{{.Course.ID}}/init-forks" method="post" style="display:inline-block">
+							{{.CsrfTokenHtml}}
+							<button class="ui primary button" type="submit" id="edu-init-forks-button">
+								{{svg "octicon-rocket"}} {{ctx.Locale.Tr "edu.init_forks_run"}}
+							</button>
+						</form>
+						<div id="edu-init-forks-progress" style="margin-top:10px"></div>
+					{{end}}
+				</div>
+
 				<!-- Assignments -->
 				<h2 class="ui header">
 					{{svg "octicon-tasklist"}} {{ctx.Locale.Tr "edu.assignments"}}
@@ -144,4 +164,60 @@
 		</div>
 	</div>
 </div>
+<script>
+	(function() {
+		const block = document.getElementById('edu-init-forks-block');
+		if (!block) return;
+		const courseID = block.dataset.courseId;
+		const progressEl = document.getElementById('edu-init-forks-progress');
+		const buttonEl = document.getElementById('edu-init-forks-button');
+		if (!progressEl) return;
+
+		function render(data) {
+			if (!data || data.status === 'none') {
+				progressEl.innerHTML = '';
+				return;
+			}
+			const completed = data.completed || 0;
+			const failed = data.failed || 0;
+			const total = data.total || 0;
+			let cls = 'ui label';
+			let label = data.status;
+			if (data.status === 'running' || data.status === 'pending') {
+				cls = 'ui blue label';
+				label = '{{ctx.Locale.Tr "edu.init_forks_in_progress"}}';
+				if (buttonEl) buttonEl.disabled = true;
+			} else if (data.status === 'done') {
+				cls = 'ui green label';
+				label = '{{ctx.Locale.Tr "edu.init_forks_done"}}';
+				if (buttonEl) buttonEl.disabled = false;
+			} else if (data.status === 'error') {
+				cls = 'ui red label';
+				label = '{{ctx.Locale.Tr "edu.init_forks_error"}}';
+				if (buttonEl) buttonEl.disabled = false;
+			}
+			let html = `<span class="${cls}">${label}</span> `;
+			html += `{{ctx.Locale.Tr "edu.init_forks_progress"}}: ${completed} / ${total}`;
+			if (failed > 0) html += ` (failed: ${failed})`;
+			if (data.error_log) {
+				const safe = data.error_log.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+				html += `<pre style="margin-top:8px;max-height:200px;overflow:auto;font-size:0.85em">${safe}</pre>`;
+			}
+			progressEl.innerHTML = html;
+		}
+
+		function poll() {
+			fetch(`{{AppSubUrl}}/edu/teacher/courses/${courseID}/init-forks-status`)
+				.then(r => r.json())
+				.then(data => {
+					render(data);
+					if (data.status === 'running' || data.status === 'pending') {
+						setTimeout(poll, 2000);
+					}
+				})
+				.catch(err => console.error('init-forks-status:', err));
+		}
+		poll();
+	})();
+</script>
 {{template "base/footer" .}}
