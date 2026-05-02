@@ -76,6 +76,10 @@ type RepoForker interface {
 	GetRepositoryByID(ctx context.Context, id int64) (*repo_model.Repository, error)
 	SyncFork(ctx context.Context, doer *user_model.User, forkRepo *repo_model.Repository, branch string) error
 	GetDefaultBranch(ctx context.Context, repoID int64) (string, error)
+	AddCollaborator(ctx context.Context, repoID, userID int64, mode perm.AccessMode) error
+	RemoveCollaborator(ctx context.Context, repoID, userID int64) error
+	ProtectMainBranch(ctx context.Context, repoID int64, branchName string) error
+	GetRepositoryByOwnerAndName(ctx context.Context, ownerID int64, repoName string) (*repo_model.Repository, error)
 }
 
 // UserCreator abstracts user creation and lookup for import and bulk operations.
