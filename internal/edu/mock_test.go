@@ -278,6 +278,32 @@ func (m *MockRepository) ResetToAutoGrade(ctx context.Context, submissionID int6
 	return args.Error(0)
 }
 
+func (m *MockRepository) CreateDistributeTask(ctx context.Context, t *DistributeTask) error {
+	args := m.Called(ctx, t)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetDistributeTask(ctx context.Context, id int64) (*DistributeTask, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*DistributeTask), args.Error(1)
+}
+
+func (m *MockRepository) UpdateDistributeTask(ctx context.Context, t *DistributeTask) error {
+	args := m.Called(ctx, t)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetDistributeTaskByAssignment(ctx context.Context, assignmentID int64) (*DistributeTask, error) {
+	args := m.Called(ctx, assignmentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*DistributeTask), args.Error(1)
+}
+
 func (m *MockRepository) CreateSyncForkTask(ctx context.Context, task *SyncForkTask) error {
 	args := m.Called(ctx, task)
 	return args.Error(0)

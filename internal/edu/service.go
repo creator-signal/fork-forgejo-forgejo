@@ -150,6 +150,11 @@ type Repository interface {
 	GetInitForksTaskByCourse(ctx context.Context, courseID int64) (*InitForksTask, error)
 	UpdateInitForksTask(ctx context.Context, task *InitForksTask) error
 
+	CreateDistributeTask(ctx context.Context, t *DistributeTask) error
+	GetDistributeTask(ctx context.Context, id int64) (*DistributeTask, error)
+	UpdateDistributeTask(ctx context.Context, t *DistributeTask) error
+	GetDistributeTaskByAssignment(ctx context.Context, assignmentID int64) (*DistributeTask, error)
+
 	CreateSyncForkTask(ctx context.Context, task *SyncForkTask) error
 	GetSyncForkTask(ctx context.Context, id int64) (*SyncForkTask, error)
 	GetSyncForkTaskByAssignment(ctx context.Context, assignmentID int64) (*SyncForkTask, error)
