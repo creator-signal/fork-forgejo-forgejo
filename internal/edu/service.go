@@ -53,6 +53,12 @@ type EducationalService interface {
 	GetCoursesForUser(ctx context.Context, userID int64) ([]*Course, error)
 	UpdateCourse(ctx context.Context, course *Course) error
 	DeleteCourse(ctx context.Context, id int64) error
+
+	// Init forks (course-level)
+	InitCourseForks(ctx context.Context, courseID, doerID int64) (*InitForksTask, error)
+	GetInitForksTaskByCourse(ctx context.Context, courseID int64) (*InitForksTask, error)
+	GetInitForksTaskByID(ctx context.Context, id int64) (*InitForksTask, error)
+
 	EnrollUser(ctx context.Context, opts EnrollUserOptions) error
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
