@@ -26,14 +26,31 @@
 
 					<div class="field">
 						<label for="org_id">{{ctx.Locale.Tr "edu.organization"}}</label>
-						<select id="org_id" name="org_id" class="ui dropdown">
+						<select id="org_id" name="org_id" class="ui dropdown" onchange="onOrgChange(this.value)">
 							<option value="0">{{ctx.Locale.Tr "edu.no_organization"}}</option>
 							{{$selectedOrg := 0}}
-							{{if .Course}}{{$selectedOrg = .Course.OrgID}}{{end}}
+							{{if .SelectedOrgID}}{{$selectedOrg = .SelectedOrgID}}{{else if .Course}}{{$selectedOrg = .Course.OrgID}}{{end}}
 							{{range .Orgs}}
 								<option value="{{.ID}}" {{if eq .ID $selectedOrg}}selected{{end}}>{{.Name}}</option>
 							{{end}}
 						</select>
+					</div>
+
+					<div class="field">
+						<label for="tasks_master_repo_id">{{ctx.Locale.Tr "edu.tasks_master_repo"}}</label>
+						{{if .OrgRepos}}
+							<select id="tasks_master_repo_id" name="tasks_master_repo_id" class="ui dropdown">
+								<option value="0">{{ctx.Locale.Tr "edu.no_tasks_master_repo"}}</option>
+								{{$selectedRepo := 0}}
+								{{if .Course}}{{$selectedRepo = .Course.TasksMasterRepoID}}{{end}}
+								{{range .OrgRepos}}
+									<option value="{{.ID}}" {{if eq .ID $selectedRepo}}selected{{end}}>{{.Name}}</option>
+								{{end}}
+							</select>
+						{{else}}
+							<input id="tasks_master_repo_id" name="tasks_master_repo_id" type="hidden" value="0">
+							<div class="ui small message">{{ctx.Locale.Tr "edu.tasks_master_repo_help"}}</div>
+						{{end}}
 					</div>
 
 					<div class="field">
@@ -57,4 +74,12 @@
 		</div>
 	</div>
 </div>
+<script>
+	function onOrgChange(orgID) {
+		const url = new URL(window.location.href);
+		// Always set the param (even "0" = "no org") so the server can detect explicit user choice.
+		url.searchParams.set('org_id', orgID || '0');
+		window.location.href = url.toString();
+	}
+</script>
 {{template "base/footer" .}}
