@@ -39,6 +39,22 @@ func TestAdapter_CreatePullRequest(t *testing.T) {
 	assert.Greater(t, pr.ID, int64(0))
 }
 
+func TestAdapter_MergePullRequest(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	a := edu.NewForgejoAdapter()
+	ctx := db.DefaultContext
+	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	err := a.MergePullRequest(ctx, edu.MergePullRequestOptions{
+		PullRequestID: 2,
+		Doer:          doer,
+		MergeStyle:    "merge",
+		Message:       "Auto-merged by edu",
+	})
+	assert.NoError(t, err)
+}
+
 func TestAdapter_BranchExists(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 

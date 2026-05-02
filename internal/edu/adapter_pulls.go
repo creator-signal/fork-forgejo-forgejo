@@ -7,6 +7,7 @@ import (
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
 	pull_service "forgejo.org/services/pull"
 )
 
@@ -55,4 +56,35 @@ func (a *ForgejoAdapter) CreatePullRequest(ctx context.Context, opts CreatePullR
 		return nil, fmt.Errorf("create PR: %w", err)
 	}
 	return pr, nil
+}
+
+// MergePullRequestOptions describes a PR merge request.
+type MergePullRequestOptions struct {
+	PullRequestID int64
+	Doer          *user_model.User
+	MergeStyle    string // "merge", "rebase", "squash"
+	Message       string
+}
+
+// MergePullRequest merges the given pull request.
+func (a *ForgejoAdapter) MergePullRequest(ctx context.Context, opts MergePullRequestOptions) error {
+	pr, err := issues_model.GetPullRequestByID(ctx, opts.PullRequestID)
+	if err != nil {
+		return fmt.Errorf("load PR: %w", err)
+	}
+	if err := pr.LoadBaseRepo(ctx); err != nil {
+		return err
+	}
+	if err := pr.LoadHeadRepo(ctx); err != nil {
+		return err
+	}
+
+	gitRepo, err := git.OpenRepository(ctx, pr.BaseRepo.RepoPath())
+	if err != nil {
+		return err
+	}
+	defer gitRepo.Close()
+
+	style := repo_model.MergeStyle(opts.MergeStyle)
+	return pull_service.Merge(ctx, pr, opts.Doer, gitRepo, style, "", opts.Message, false)
 }
