@@ -131,6 +131,7 @@ type Repository interface {
 
 	EnrollUser(ctx context.Context, enrollment *CourseEnrollment) error
 	GetEnrollment(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error)
+	GetEnrollmentByCourseUser(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error)
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
 

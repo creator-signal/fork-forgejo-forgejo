@@ -27,6 +27,18 @@ func (r *xormRepository) GetEnrollment(ctx context.Context, courseID, userID int
 	return e, nil
 }
 
+func (r *xormRepository) GetEnrollmentByCourseUser(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error) {
+	e := &CourseEnrollment{}
+	has, err := db.GetEngine(ctx).Where("course_id = ? AND user_id = ?", courseID, userID).Get(e)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, nil
+	}
+	return e, nil
+}
+
 func (r *xormRepository) GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error) {
 	var enrollments []*CourseEnrollment
 	err := db.GetEngine(ctx).Where("course_id = ?", courseID).OrderBy("created_unix ASC").Find(&enrollments)

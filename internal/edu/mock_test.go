@@ -148,6 +148,12 @@ func (m *MockRepository) GetEnrollment(ctx context.Context, courseID, userID int
 	return args.Get(0).(*CourseEnrollment), args.Error(1)
 }
 
+func (m *MockRepository) GetEnrollmentByCourseUser(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error) {
+	args := m.Called(ctx, courseID, userID)
+	v, _ := args.Get(0).(*CourseEnrollment)
+	return v, args.Error(1)
+}
+
 func (m *MockRepository) GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error) {
 	args := m.Called(ctx, courseID)
 	if args.Get(0) == nil {
