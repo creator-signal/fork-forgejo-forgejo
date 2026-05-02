@@ -144,3 +144,18 @@ func (a *ForgejoAdapter) GetPullRequestChangedFiles(ctx context.Context, prID in
 	}
 	return strings.Split(raw, "\n"), nil
 }
+
+// GetPullRequestComments returns all plain comments on the given pull request.
+func (a *ForgejoAdapter) GetPullRequestComments(ctx context.Context, prID int64) ([]*issues_model.Comment, error) {
+	pr, err := issues_model.GetPullRequestByID(ctx, prID)
+	if err != nil {
+		return nil, err
+	}
+	if err := pr.LoadIssue(ctx); err != nil {
+		return nil, err
+	}
+	return issues_model.FindComments(ctx, &issues_model.FindCommentsOptions{
+		IssueID: pr.IssueID,
+		Type:    issues_model.CommentTypeComment,
+	})
+}

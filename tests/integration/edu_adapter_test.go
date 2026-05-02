@@ -79,6 +79,17 @@ func TestAdapter_GetPullRequestChangedFiles(t *testing.T) {
 	assert.NotEmpty(t, files)
 }
 
+func TestAdapter_GetPullRequestComments(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	a := edu.NewForgejoAdapter()
+	ctx := db.DefaultContext
+
+	comments, err := a.GetPullRequestComments(ctx, 2)
+	assert.NoError(t, err)
+	assert.NotNil(t, comments)
+}
+
 func TestAdapter_BranchExists(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
