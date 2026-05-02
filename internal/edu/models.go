@@ -232,6 +232,30 @@ type CourseSyncTask struct {
 
 func (*CourseSyncTask) TableName() string { return "edu_course_sync_task" }
 
+// SyncPRStatus represents the state of an individual course-sync pull request.
+type SyncPRStatus string
+
+const (
+	SyncPRStatusPending  SyncPRStatus = "pending"
+	SyncPRStatusMerged   SyncPRStatus = "merged"
+	SyncPRStatusConflict SyncPRStatus = "conflict"
+	SyncPRStatusFailed   SyncPRStatus = "failed"
+)
+
+// CourseSyncPR tracks an individual course-sync PR for a single student fork.
+type CourseSyncPR struct {
+	ID            int64        `json:"id" xorm:"pk autoincr"`
+	SyncTaskID    int64        `json:"sync_task_id" xorm:"INDEX NOT NULL"`
+	EnrollmentID  int64        `json:"enrollment_id" xorm:"INDEX NOT NULL"`
+	PullRequestID int64        `json:"pull_request_id" xorm:"INDEX"`
+	Status        SyncPRStatus `json:"status" xorm:"VARCHAR(20) NOT NULL DEFAULT 'pending'"`
+	ErrorMsg      string       `json:"error_msg" xorm:"TEXT"`
+	CreatedUnix   int64        `json:"created_unix" xorm:"created"`
+	UpdatedUnix   int64        `json:"updated_unix" xorm:"updated"`
+}
+
+func (*CourseSyncPR) TableName() string { return "edu_course_sync_pr" }
+
 // Task/draft status constants.
 const (
 	StatusDraft   = "draft"

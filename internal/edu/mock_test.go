@@ -330,6 +330,32 @@ func (m *MockRepository) UpdateCourseSyncTask(ctx context.Context, task *CourseS
 	return args.Error(0)
 }
 
+func (m *MockRepository) CreateCourseSyncPR(ctx context.Context, p *CourseSyncPR) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpdateCourseSyncPR(ctx context.Context, p *CourseSyncPR) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ListCourseSyncPRsByTask(ctx context.Context, taskID int64) ([]*CourseSyncPR, error) {
+	args := m.Called(ctx, taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*CourseSyncPR), args.Error(1)
+}
+
+func (m *MockRepository) GetCourseSyncPR(ctx context.Context, id int64) (*CourseSyncPR, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*CourseSyncPR), args.Error(1)
+}
+
 // MockUserCreator mocks the UserCreator interface
 type MockUserCreator struct {
 	mock.Mock

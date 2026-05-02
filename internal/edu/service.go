@@ -160,6 +160,11 @@ type Repository interface {
 	GetCourseSyncTaskByCourse(ctx context.Context, courseID int64) (*CourseSyncTask, error)
 	UpdateCourseSyncTask(ctx context.Context, task *CourseSyncTask) error
 
+	CreateCourseSyncPR(ctx context.Context, p *CourseSyncPR) error
+	UpdateCourseSyncPR(ctx context.Context, p *CourseSyncPR) error
+	ListCourseSyncPRsByTask(ctx context.Context, taskID int64) ([]*CourseSyncPR, error)
+	GetCourseSyncPR(ctx context.Context, id int64) (*CourseSyncPR, error)
+
 	CreateTestResult(ctx context.Context, tr *TestResult) error
 	GetTestResultsBySubmission(ctx context.Context, submissionID int64) ([]*TestResult, error)
 	GetLatestTestResult(ctx context.Context, submissionID int64) (*TestResult, error)
