@@ -12,39 +12,48 @@ import (
 
 // CreateAssignmentOptions contains options for creating a new assignment.
 type CreateAssignmentOptions struct {
-	CourseID     int64
-	RepoID       int64
-	Title        string
-	Description  string
-	DeadlineUnix int64
+	CourseID         int64
+	TaskName         string
+	AllowedFilesGlob string
+	Title            string
+	Description      string
+	DeadlineUnix     int64
+}
+
+// EnrollUserOptions contains options for enrolling a user in a course.
+type EnrollUserOptions struct {
+	CourseID  int64
+	UserID    int64
+	Role      RoleType
+	GroupName string
 }
 
 // CreateCourseOptions contains options for creating a new course.
 type CreateCourseOptions struct {
-	Name        string
-	Description string
-	OrgID       int64
-	StartUnix   int64
-	EndUnix     int64
+	Name              string
+	Description       string
+	OrgID             int64
+	TasksMasterRepoID int64
+	StartUnix         int64
+	EndUnix           int64
 }
 
 // EducationalService defines the business logic for the educational module.
 type EducationalService interface {
 	CreateAssignment(ctx context.Context, opts CreateAssignmentOptions) (*Assignment, error)
 	GetAssignmentByID(ctx context.Context, id int64) (*Assignment, error)
-	GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error)
+	GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error)
 	GetAssignmentsForUser(ctx context.Context, userID int64) ([]*Assignment, error)
 	UpdateAssignment(ctx context.Context, assignment *Assignment) error
 	DeleteAssignment(ctx context.Context, id int64) error
 	GetSubmissions(ctx context.Context, assignmentID int64) ([]*Submission, error)
-	JoinAssignment(ctx context.Context, doer *user_model.User, assignmentID int64) (*Submission, error)
 
 	CreateCourse(ctx context.Context, creatorID int64, opts CreateCourseOptions) (*Course, error)
 	GetCourseByID(ctx context.Context, id int64) (*Course, error)
 	GetCoursesForUser(ctx context.Context, userID int64) ([]*Course, error)
 	UpdateCourse(ctx context.Context, course *Course) error
 	DeleteCourse(ctx context.Context, id int64) error
-	EnrollUser(ctx context.Context, courseID, userID int64, role RoleType) error
+	EnrollUser(ctx context.Context, opts EnrollUserOptions) error
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
 	GetAssignmentsByCourse(ctx context.Context, courseID int64) ([]*Assignment, error)
@@ -54,14 +63,6 @@ type EducationalService interface {
 	UpdateDraftRow(ctx context.Context, rowID int64, username, email string) error
 	ExecuteImport(ctx context.Context, draftID int64, doerID int64, defaultRole RoleType) (*ImportResult, error)
 	DeleteImportDraft(ctx context.Context, id int64) error
-
-	BulkForkForAssignment(ctx context.Context, assignmentID, doerID int64) (*BulkForkTask, error)
-	GetBulkForkTask(ctx context.Context, taskID int64) (*BulkForkTask, error)
-	GetBulkForkTaskByAssignment(ctx context.Context, assignmentID int64) (*BulkForkTask, error)
-
-	SyncAllForks(ctx context.Context, assignmentID, doerID int64) (*SyncForkTask, error)
-	GetSyncForkTask(ctx context.Context, taskID int64) (*SyncForkTask, error)
-	GetSyncForkTaskByAssignment(ctx context.Context, assignmentID int64) (*SyncForkTask, error)
 
 	GetTestResults(ctx context.Context, submissionID int64) ([]*TestResult, error)
 	GetLatestTestResult(ctx context.Context, submissionID int64) (*TestResult, error)
@@ -111,13 +112,14 @@ type service struct {
 type Repository interface {
 	CreateAssignment(ctx context.Context, assignment *Assignment) error
 	GetAssignmentByID(ctx context.Context, id int64) (*Assignment, error)
-	GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error)
+	GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error)
 	GetAssignmentsForUser(ctx context.Context, userID int64) ([]*Assignment, error)
 	UpdateAssignment(ctx context.Context, assignment *Assignment) error
 	DeleteAssignment(ctx context.Context, id int64) error
 	CreateSubmission(ctx context.Context, submission *Submission) error
 	GetSubmission(ctx context.Context, assignmentID, userID int64) (*Submission, error)
-	GetSubmissionByRepoID(ctx context.Context, repoID int64) (*Submission, error)
+	GetSubmissionByID(ctx context.Context, id int64) (*Submission, error)
+	GetSubmissionByEnrollmentAssignment(ctx context.Context, enrollmentID, assignmentID int64) (*Submission, error)
 	GetSubmissions(ctx context.Context, assignmentID int64) ([]*Submission, error)
 	UpdateSubmission(ctx context.Context, submission *Submission) error
 
@@ -131,6 +133,7 @@ type Repository interface {
 
 	EnrollUser(ctx context.Context, enrollment *CourseEnrollment) error
 	GetEnrollment(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error)
+	GetEnrollmentByCourseUser(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error)
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
 
@@ -142,15 +145,25 @@ type Repository interface {
 	UpdateImportDraft(ctx context.Context, draft *ImportDraft) error
 	DeleteImportDraft(ctx context.Context, id int64) error
 
-	CreateBulkForkTask(ctx context.Context, task *BulkForkTask) error
-	GetBulkForkTask(ctx context.Context, id int64) (*BulkForkTask, error)
-	GetBulkForkTaskByAssignment(ctx context.Context, assignmentID int64) (*BulkForkTask, error)
-	UpdateBulkForkTask(ctx context.Context, task *BulkForkTask) error
+	CreateInitForksTask(ctx context.Context, task *InitForksTask) error
+	GetInitForksTask(ctx context.Context, id int64) (*InitForksTask, error)
+	GetInitForksTaskByCourse(ctx context.Context, courseID int64) (*InitForksTask, error)
+	UpdateInitForksTask(ctx context.Context, task *InitForksTask) error
 
-	CreateSyncForkTask(ctx context.Context, task *SyncForkTask) error
-	GetSyncForkTask(ctx context.Context, id int64) (*SyncForkTask, error)
-	GetSyncForkTaskByAssignment(ctx context.Context, assignmentID int64) (*SyncForkTask, error)
-	UpdateSyncForkTask(ctx context.Context, task *SyncForkTask) error
+	CreateDistributeTask(ctx context.Context, t *DistributeTask) error
+	GetDistributeTask(ctx context.Context, id int64) (*DistributeTask, error)
+	UpdateDistributeTask(ctx context.Context, t *DistributeTask) error
+	GetDistributeTaskByAssignment(ctx context.Context, assignmentID int64) (*DistributeTask, error)
+
+	CreateCourseSyncTask(ctx context.Context, task *CourseSyncTask) error
+	GetCourseSyncTask(ctx context.Context, id int64) (*CourseSyncTask, error)
+	GetCourseSyncTaskByCourse(ctx context.Context, courseID int64) (*CourseSyncTask, error)
+	UpdateCourseSyncTask(ctx context.Context, task *CourseSyncTask) error
+
+	CreateCourseSyncPR(ctx context.Context, p *CourseSyncPR) error
+	UpdateCourseSyncPR(ctx context.Context, p *CourseSyncPR) error
+	ListCourseSyncPRsByTask(ctx context.Context, taskID int64) ([]*CourseSyncPR, error)
+	GetCourseSyncPR(ctx context.Context, id int64) (*CourseSyncPR, error)
 
 	CreateTestResult(ctx context.Context, tr *TestResult) error
 	GetTestResultsBySubmission(ctx context.Context, submissionID int64) ([]*TestResult, error)
@@ -181,27 +194,32 @@ func NewService(repo Repository, forker RepoForker, users ...UserCreator) Educat
 }
 
 func (s *service) CreateAssignment(ctx context.Context, opts CreateAssignmentOptions) (*Assignment, error) {
-	if opts.Title == "" {
-		return nil, fmt.Errorf("title is required")
+	if opts.CourseID == 0 || opts.TaskName == "" || opts.Title == "" {
+		return nil, fmt.Errorf("course_id, task_name and title are required")
 	}
 
-	assignment := &Assignment{
-		CourseID:     opts.CourseID,
-		RepoID:       opts.RepoID,
-		Title:        opts.Title,
-		Description:  opts.Description,
-		DeadlineUnix: opts.DeadlineUnix,
+	a := &Assignment{
+		CourseID:         opts.CourseID,
+		TaskName:         opts.TaskName,
+		AllowedFilesGlob: opts.AllowedFilesGlob,
+		Title:            opts.Title,
+		Description:      opts.Description,
+		DeadlineUnix:     opts.DeadlineUnix,
 	}
 
-	if err := s.repo.CreateAssignment(ctx, assignment); err != nil {
-		return nil, fmt.Errorf("failed to create assignment: %w", err)
+	if err := s.repo.CreateAssignment(ctx, a); err != nil {
+		return nil, err
 	}
 
-	return assignment, nil
+	return a, nil
 }
 
 func (s *service) GetAssignmentByID(ctx context.Context, id int64) (*Assignment, error) {
 	return s.repo.GetAssignmentByID(ctx, id)
+}
+
+func (s *service) GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error) {
+	return s.repo.GetAssignmentByCourseAndTask(ctx, courseID, taskName)
 }
 
 func (s *service) GetSubmissions(ctx context.Context, assignmentID int64) ([]*Submission, error) {

@@ -28,12 +28,12 @@ func (m *MockRepository) GetAssignmentByID(ctx context.Context, id int64) (*Assi
 	return args.Get(0).(*Assignment), args.Error(1)
 }
 
-func (m *MockRepository) GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error) {
-	args := m.Called(ctx, repoID)
+func (m *MockRepository) GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error) {
+	args := m.Called(ctx, courseID, taskName)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*Assignment), args.Error(1)
+	return args.Get(0).(*Assignment), args.Error(1)
 }
 
 func (m *MockRepository) CreateSubmission(ctx context.Context, submission *Submission) error {
@@ -49,8 +49,16 @@ func (m *MockRepository) GetSubmission(ctx context.Context, assignmentID, userID
 	return args.Get(0).(*Submission), args.Error(1)
 }
 
-func (m *MockRepository) GetSubmissionByRepoID(ctx context.Context, repoID int64) (*Submission, error) {
-	args := m.Called(ctx, repoID)
+func (m *MockRepository) GetSubmissionByID(ctx context.Context, id int64) (*Submission, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Submission), args.Error(1)
+}
+
+func (m *MockRepository) GetSubmissionByEnrollmentAssignment(ctx context.Context, enrollmentID, assignmentID int64) (*Submission, error) {
+	args := m.Called(ctx, enrollmentID, assignmentID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -148,6 +156,12 @@ func (m *MockRepository) GetEnrollment(ctx context.Context, courseID, userID int
 	return args.Get(0).(*CourseEnrollment), args.Error(1)
 }
 
+func (m *MockRepository) GetEnrollmentByCourseUser(ctx context.Context, courseID, userID int64) (*CourseEnrollment, error) {
+	args := m.Called(ctx, courseID, userID)
+	v, _ := args.Get(0).(*CourseEnrollment)
+	return v, args.Error(1)
+}
+
 func (m *MockRepository) GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error) {
 	args := m.Called(ctx, courseID)
 	if args.Get(0) == nil {
@@ -202,28 +216,28 @@ func (m *MockRepository) DeleteImportDraft(ctx context.Context, id int64) error 
 	return args.Error(0)
 }
 
-func (m *MockRepository) CreateBulkForkTask(ctx context.Context, task *BulkForkTask) error {
+func (m *MockRepository) CreateInitForksTask(ctx context.Context, task *InitForksTask) error {
 	args := m.Called(ctx, task)
 	return args.Error(0)
 }
 
-func (m *MockRepository) GetBulkForkTask(ctx context.Context, id int64) (*BulkForkTask, error) {
+func (m *MockRepository) GetInitForksTask(ctx context.Context, id int64) (*InitForksTask, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*BulkForkTask), args.Error(1)
+	return args.Get(0).(*InitForksTask), args.Error(1)
 }
 
-func (m *MockRepository) GetBulkForkTaskByAssignment(ctx context.Context, assignmentID int64) (*BulkForkTask, error) {
-	args := m.Called(ctx, assignmentID)
+func (m *MockRepository) GetInitForksTaskByCourse(ctx context.Context, courseID int64) (*InitForksTask, error) {
+	args := m.Called(ctx, courseID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*BulkForkTask), args.Error(1)
+	return args.Get(0).(*InitForksTask), args.Error(1)
 }
 
-func (m *MockRepository) UpdateBulkForkTask(ctx context.Context, task *BulkForkTask) error {
+func (m *MockRepository) UpdateInitForksTask(ctx context.Context, task *InitForksTask) error {
 	args := m.Called(ctx, task)
 	return args.Error(0)
 }
@@ -264,30 +278,82 @@ func (m *MockRepository) ResetToAutoGrade(ctx context.Context, submissionID int6
 	return args.Error(0)
 }
 
-func (m *MockRepository) CreateSyncForkTask(ctx context.Context, task *SyncForkTask) error {
-	args := m.Called(ctx, task)
+func (m *MockRepository) CreateDistributeTask(ctx context.Context, t *DistributeTask) error {
+	args := m.Called(ctx, t)
 	return args.Error(0)
 }
 
-func (m *MockRepository) GetSyncForkTask(ctx context.Context, id int64) (*SyncForkTask, error) {
+func (m *MockRepository) GetDistributeTask(ctx context.Context, id int64) (*DistributeTask, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*SyncForkTask), args.Error(1)
+	return args.Get(0).(*DistributeTask), args.Error(1)
 }
 
-func (m *MockRepository) GetSyncForkTaskByAssignment(ctx context.Context, assignmentID int64) (*SyncForkTask, error) {
+func (m *MockRepository) UpdateDistributeTask(ctx context.Context, t *DistributeTask) error {
+	args := m.Called(ctx, t)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetDistributeTaskByAssignment(ctx context.Context, assignmentID int64) (*DistributeTask, error) {
 	args := m.Called(ctx, assignmentID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*SyncForkTask), args.Error(1)
+	return args.Get(0).(*DistributeTask), args.Error(1)
 }
 
-func (m *MockRepository) UpdateSyncForkTask(ctx context.Context, task *SyncForkTask) error {
+func (m *MockRepository) CreateCourseSyncTask(ctx context.Context, task *CourseSyncTask) error {
 	args := m.Called(ctx, task)
 	return args.Error(0)
+}
+
+func (m *MockRepository) GetCourseSyncTask(ctx context.Context, id int64) (*CourseSyncTask, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*CourseSyncTask), args.Error(1)
+}
+
+func (m *MockRepository) GetCourseSyncTaskByCourse(ctx context.Context, courseID int64) (*CourseSyncTask, error) {
+	args := m.Called(ctx, courseID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*CourseSyncTask), args.Error(1)
+}
+
+func (m *MockRepository) UpdateCourseSyncTask(ctx context.Context, task *CourseSyncTask) error {
+	args := m.Called(ctx, task)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CreateCourseSyncPR(ctx context.Context, p *CourseSyncPR) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpdateCourseSyncPR(ctx context.Context, p *CourseSyncPR) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ListCourseSyncPRsByTask(ctx context.Context, taskID int64) ([]*CourseSyncPR, error) {
+	args := m.Called(ctx, taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*CourseSyncPR), args.Error(1)
+}
+
+func (m *MockRepository) GetCourseSyncPR(ctx context.Context, id int64) (*CourseSyncPR, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*CourseSyncPR), args.Error(1)
 }
 
 // MockUserCreator mocks the UserCreator interface

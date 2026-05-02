@@ -43,3 +43,15 @@ func (r *xormRepository) GetAssignmentByID(ctx context.Context, id int64) (*Assi
 	}
 	return a, nil
 }
+
+func (r *xormRepository) GetAssignmentByCourseAndTask(ctx context.Context, courseID int64, taskName string) (*Assignment, error) {
+	a := &Assignment{}
+	has, err := db.GetEngine(ctx).Where("course_id = ? AND task_name = ?", courseID, taskName).Get(a)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, nil
+	}
+	return a, nil
+}

@@ -3,91 +3,15 @@ package edu
 import (
 	"net/http"
 
-	"forgejo.org/internal/edu"
-	access_model "forgejo.org/models/perm/access"
-	repo_model "forgejo.org/models/repo"
-	unit_model "forgejo.org/models/unit"
-	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
 )
 
+// TODO
 func BulkForkPost(ctx *context.Context) {
-	if !isFullTeacher(ctx) {
-		ctx.Error(http.StatusForbidden, "Only teachers can perform bulk fork")
-		return
-	}
-	assignmentID := ctx.ParamsInt64(":id")
-	svc := edu.GetService()
-	if svc == nil {
-		ctx.ServerError("GetService", nil)
-		return
-	}
-
-	assignment, err := svc.GetAssignmentByID(ctx, assignmentID)
-	if err != nil {
-		ctx.ServerError("GetAssignmentByID", err)
-		return
-	}
-	if assignment == nil {
-		ctx.NotFound("Assignment not found", nil)
-		return
-	}
-
-	repo, err := repo_model.GetRepositoryByID(ctx, assignment.RepoID)
-	if err != nil {
-		ctx.ServerError("GetRepositoryByID", err)
-		return
-	}
-
-	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
-	if err != nil {
-		ctx.ServerError("GetUserRepoPermission", err)
-		return
-	}
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) {
-		ctx.Error(http.StatusForbidden, "Only instructors can perform bulk fork")
-		return
-	}
-
-	_, err = svc.BulkForkForAssignment(ctx, assignmentID, ctx.Doer.ID)
-	if err != nil {
-		ctx.Flash.Error("Bulk fork failed: " + err.Error())
-		ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions")
-		return
-	}
-
-	ctx.Flash.Success("Bulk fork started. Check status for progress.")
-	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments/" + ctx.Params(":id") + "/submissions")
+	ctx.Error(http.StatusGone, "TODO")
 }
 
+// TODO
 func BulkForkStatus(ctx *context.Context) {
-	assignmentID := ctx.ParamsInt64(":id")
-	svc := edu.GetService()
-	if svc == nil {
-		ctx.ServerError("GetService", nil)
-		return
-	}
-
-	task, err := svc.GetBulkForkTaskByAssignment(ctx, assignmentID)
-	if err != nil {
-		ctx.ServerError("GetBulkForkTaskByAssignment", err)
-		return
-	}
-
-	if task == nil {
-		ctx.JSON(http.StatusOK, map[string]any{
-			"status":    "none",
-			"total":     0,
-			"completed": 0,
-			"failed":    0,
-		})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, map[string]any{
-		"status":    task.Status,
-		"total":     task.TotalUsers,
-		"completed": task.Completed,
-		"failed":    task.Failed,
-	})
+	ctx.Error(http.StatusGone, "TODO")
 }

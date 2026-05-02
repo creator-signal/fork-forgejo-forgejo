@@ -4,9 +4,6 @@ import (
 	"net/http"
 
 	"forgejo.org/internal/edu"
-	access_model "forgejo.org/models/perm/access"
-	repo_model "forgejo.org/models/repo"
-	unit_model "forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
@@ -42,18 +39,8 @@ func SubmissionDetail(ctx *context.Context) {
 	}
 	ctx.Data["Assignment"] = assignment
 
-	// Permission check
-	repo, err := repo_model.GetRepositoryByID(ctx, assignment.RepoID)
-	if err != nil {
-		ctx.ServerError("GetRepositoryByID", err)
-		return
-	}
-	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
-	if err != nil {
-		ctx.ServerError("GetUserRepoPermission", err)
-		return
-	}
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) && !isEduInstructor(ctx) {
+	// TODO: repo-based permission check
+	if !isEduInstructor(ctx) {
 		ctx.Error(http.StatusForbidden, "Only instructors can view this page")
 		return
 	}
@@ -85,13 +72,7 @@ func SubmissionDetail(ctx *context.Context) {
 				}
 			}
 
-			// Load student repo link
-			if s.StudentRepoID > 0 {
-				studentRepo, err := repo_model.GetRepositoryByID(ctx, s.StudentRepoID)
-				if err == nil && studentRepo != nil {
-					ctx.Data["StudentRepoLink"] = studentRepo.FullName()
-				}
-			}
+			// TODO: student fork link
 
 			break
 		}
@@ -132,18 +113,8 @@ func GradeSubmissionPost(ctx *context.Context) {
 		return
 	}
 
-	// Permission check
-	repo, err := repo_model.GetRepositoryByID(ctx, assignment.RepoID)
-	if err != nil {
-		ctx.ServerError("GetRepositoryByID", err)
-		return
-	}
-	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
-	if err != nil {
-		ctx.ServerError("GetUserRepoPermission", err)
-		return
-	}
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) && !isEduInstructor(ctx) {
+	// TODO: repo-based permission check
+	if !isEduInstructor(ctx) {
 		ctx.Error(http.StatusForbidden, "Only instructors can grade")
 		return
 	}
@@ -209,17 +180,8 @@ func ResetGradePost(ctx *context.Context) {
 		return
 	}
 
-	repo, err := repo_model.GetRepositoryByID(ctx, assignment.RepoID)
-	if err != nil {
-		ctx.ServerError("GetRepositoryByID", err)
-		return
-	}
-	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
-	if err != nil {
-		ctx.ServerError("GetUserRepoPermission", err)
-		return
-	}
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) && !isEduInstructor(ctx) {
+	// TODO: repo-based permission check
+	if !isEduInstructor(ctx) {
 		ctx.Error(http.StatusForbidden, "Only instructors can reset grades")
 		return
 	}

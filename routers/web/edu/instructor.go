@@ -4,9 +4,6 @@ import (
 	"net/http"
 
 	"forgejo.org/internal/edu"
-	access_model "forgejo.org/models/perm/access"
-	repo_model "forgejo.org/models/repo"
-	unit_model "forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/services/context"
@@ -37,19 +34,8 @@ func InstructorSubmissions(ctx *context.Context) {
 		return
 	}
 
-	repo, err := repo_model.GetRepositoryByID(ctx, assignment.RepoID)
-	if err != nil {
-		ctx.ServerError("GetRepositoryByID", err)
-		return
-	}
-
-	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
-	if err != nil {
-		ctx.ServerError("GetUserRepoPermission", err)
-		return
-	}
-
-	if !perm.IsAdmin() && !perm.CanWrite(unit_model.TypeCode) && !isEduInstructor(ctx) {
+	// TODO: repo-based permission check
+	if !isEduInstructor(ctx) {
 		ctx.Error(http.StatusForbidden, "Only instructors can view this page")
 		return
 	}
@@ -79,17 +65,10 @@ func InstructorSubmissions(ctx *context.Context) {
 	ctx.Data["Submissions"] = submissions
 	ctx.Data["UserMap"] = userMap
 
-	// Build repo link map for student repos
-	repoLinkMap := make(map[int64]string)
-	for _, sub := range submissions {
-		if sub.StudentRepoID > 0 {
-			r, err := repo_model.GetRepositoryByID(ctx, sub.StudentRepoID)
-			if err == nil && r != nil {
-				repoLinkMap[sub.ID] = r.FullName()
-			}
-		}
-	}
-	ctx.Data["RepoLinkMap"] = repoLinkMap
+	// TODO: student-fork links and bulk-fork/sync-fork task progress
+	ctx.Data["RepoLinkMap"] = map[int64]string{}
+	ctx.Data["BulkForkTask"] = nil
+	ctx.Data["SyncForkTask"] = nil
 
 	testResultMap := make(map[int64]*edu.TestResult)
 	for _, sub := range submissions {
@@ -99,12 +78,6 @@ func InstructorSubmissions(ctx *context.Context) {
 		}
 	}
 	ctx.Data["TestResultMap"] = testResultMap
-
-	bulkTask, _ := svc.GetBulkForkTaskByAssignment(ctx, assignmentID)
-	ctx.Data["BulkForkTask"] = bulkTask
-
-	syncTask, _ := svc.GetSyncForkTaskByAssignment(ctx, assignmentID)
-	ctx.Data["SyncForkTask"] = syncTask
 
 	setEduNavContext(ctx)
 	ctx.HTML(http.StatusOK, tplInstructorSubmissions)

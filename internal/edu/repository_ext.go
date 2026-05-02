@@ -8,15 +8,6 @@ import (
 	"forgejo.org/models/db"
 )
 
-func (r *xormRepository) GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error) {
-	var assignments []*Assignment
-	err := db.GetEngine(ctx).Where("repo_id = ?", repoID).Find(&assignments)
-	if err != nil {
-		return nil, fmt.Errorf("find assignments by repo: %w", err)
-	}
-	return assignments, nil
-}
-
 func (r *xormRepository) GetAssignmentsForUser(ctx context.Context, userID int64) ([]*Assignment, error) {
 	var assignments []*Assignment
 	err := db.GetEngine(ctx).
@@ -62,17 +53,7 @@ func (r *xormRepository) DeleteAssignment(ctx context.Context, id int64) error {
 			return fmt.Errorf("delete submissions: %w", err)
 		}
 
-		// 4. Delete bulk fork tasks
-		if _, err := e.Where("assignment_id = ?", id).Delete(&BulkForkTask{}); err != nil {
-			return fmt.Errorf("delete bulk fork tasks: %w", err)
-		}
-
-		// 5. Delete sync fork tasks
-		if _, err := e.Where("assignment_id = ?", id).Delete(&SyncForkTask{}); err != nil {
-			return fmt.Errorf("delete sync fork tasks: %w", err)
-		}
-
-		// 6. Delete the assignment
+		// 4. Delete the assignment
 		if _, err := e.ID(id).Delete(&Assignment{}); err != nil {
 			return fmt.Errorf("delete assignment: %w", err)
 		}

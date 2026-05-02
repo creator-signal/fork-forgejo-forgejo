@@ -26,7 +26,7 @@ func SetUserRole(ctx context.Context, userID int64, role RoleType) error {
 		sess := db.GetEngine(ctx)
 
 		var userRole UserRole
-		has, err := sess.Where("user_id = ?", userID).ForUpdate().Get(&userRole)
+		has, err := sess.Where("user_id = ?", userID).Get(&userRole)
 		if err != nil {
 			return err
 		}

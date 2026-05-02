@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-func (s *service) GetAssignments(ctx context.Context, repoID int64) ([]*Assignment, error) {
-	return s.repo.GetAssignments(ctx, repoID)
-}
-
 func (s *service) GetAssignmentsForUser(ctx context.Context, userID int64) ([]*Assignment, error) {
 	return s.repo.GetAssignmentsForUser(ctx, userID)
 }

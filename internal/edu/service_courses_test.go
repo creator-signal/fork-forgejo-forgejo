@@ -25,6 +25,9 @@ func TestCreateCourse(t *testing.T) {
 		mockRepo.On("CreateCourse", ctx, mock.MatchedBy(func(c *Course) bool {
 			return c.Name == opts.Name && c.CreatorID == int64(1)
 		})).Return(nil).Once()
+		mockRepo.On("EnrollUser", ctx, mock.MatchedBy(func(e *CourseEnrollment) bool {
+			return e.UserID == int64(1) && e.Role == RoleTeacher
+		})).Return(nil).Once()
 
 		course, err := service.CreateCourse(ctx, 1, opts)
 		assert.NoError(t, err)
@@ -99,13 +102,34 @@ func TestEnrollUser(t *testing.T) {
 	service := NewService(mockRepo, mockForker)
 	ctx := context.Background()
 
+	mockRepo.On("GetEnrollment", ctx, int64(1), int64(5)).Return(nil, nil)
 	mockRepo.On("EnrollUser", ctx, mock.MatchedBy(func(e *CourseEnrollment) bool {
 		return e.CourseID == int64(1) && e.UserID == int64(5) && e.Role == RoleStudent
 	})).Return(nil)
 
-	err := service.EnrollUser(ctx, 1, 5, RoleStudent)
+	err := service.EnrollUser(ctx, EnrollUserOptions{CourseID: 1, UserID: 5, Role: RoleStudent})
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
+}
+
+func TestEnrollUser_StoresGroup(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockForker := new(MockRepoForker)
+	service := NewService(mockRepo, mockForker)
+	ctx := context.Background()
+
+	mockRepo.On("GetEnrollment", ctx, int64(1), int64(7)).Return(nil, nil)
+	mockRepo.On("EnrollUser", ctx, mock.MatchedBy(func(e *CourseEnrollment) bool {
+		return e.GroupName == "se241" && e.Role == RoleStudent
+	})).Return(nil).Once()
+
+	err := service.EnrollUser(ctx, EnrollUserOptions{
+		CourseID:  1,
+		UserID:    7,
+		Role:      RoleStudent,
+		GroupName: "se241",
+	})
+	assert.NoError(t, err)
 }
 
 func TestRemoveEnrollment(t *testing.T) {
@@ -119,6 +143,26 @@ func TestRemoveEnrollment(t *testing.T) {
 	err := service.RemoveEnrollment(ctx, 1, 5)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
+}
+
+func TestCreateCourse_StoresTasksMasterRepoID(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockForker := new(MockRepoForker)
+	service := NewService(mockRepo, mockForker)
+	ctx := context.Background()
+
+	opts := CreateCourseOptions{
+		Name:              "Cxx",
+		TasksMasterRepoID: 101,
+	}
+	mockRepo.On("CreateCourse", ctx, mock.MatchedBy(func(c *Course) bool {
+		return c.TasksMasterRepoID == 101
+	})).Return(nil).Once()
+	mockRepo.On("EnrollUser", ctx, mock.Anything).Return(nil).Once()
+
+	course, err := service.CreateCourse(ctx, 1, opts)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(101), course.TasksMasterRepoID)
 }
 
 func TestGetAssignmentsByCourse(t *testing.T) {

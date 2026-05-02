@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"forgejo.org/models"
+	git_model "forgejo.org/models/git"
 	org_model "forgejo.org/models/organization"
 	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
@@ -138,4 +139,56 @@ func (a *ForgejoAdapter) RemoveTeamMember(ctx context.Context, team *org_model.T
 // GetTeam retrieves a team by org ID and name.
 func (a *ForgejoAdapter) GetTeam(ctx context.Context, orgID int64, name string) (*org_model.Team, error) {
 	return org_model.GetTeam(ctx, orgID, name)
+}
+
+// BranchExists checks whether the given branch exists in the repo.
+func (a *ForgejoAdapter) BranchExists(ctx context.Context, repoID int64, branchName string) (bool, error) {
+	_, err := git_model.GetBranch(ctx, repoID, branchName)
+	if err != nil {
+		if git_model.IsErrBranchNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// AddCollaborator adds the user as a collaborator on the repo with the given access mode.
+func (a *ForgejoAdapter) AddCollaborator(ctx context.Context, repoID, userID int64, mode perm.AccessMode) error {
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		return err
+	}
+	user, err := user_model.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if err := repo_module.AddCollaborator(ctx, repo, user); err != nil {
+		return err
+	}
+	return repo_model.ChangeCollaborationAccessMode(ctx, repo, userID, mode)
+}
+
+// ProtectMainBranch enables branch protection on the named branch (CanPush=false, no merge whitelist).
+func (a *ForgejoAdapter) ProtectMainBranch(ctx context.Context, repoID int64, branchName string) error {
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		return err
+	}
+
+	existing, err := git_model.GetProtectedBranchRuleByName(ctx, repoID, branchName)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		existing = &git_model.ProtectedBranch{
+			RepoID:   repoID,
+			RuleName: branchName,
+		}
+	}
+	existing.CanPush = false
+	existing.EnableMergeWhitelist = false
+	existing.RequireSignedCommits = false
+
+	return git_model.UpdateProtectBranch(ctx, repo, existing, git_model.WhitelistOptions{})
 }

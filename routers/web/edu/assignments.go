@@ -130,13 +130,7 @@ func AssignmentDetail(ctx *context.Context) {
 	if submission != nil {
 		latestResult, _ := svc.GetLatestTestResult(ctx, submission.ID)
 		ctx.Data["LatestTestResult"] = latestResult
-
-		if submission.StudentRepoID > 0 {
-			studentRepo, err := repo_model.GetRepositoryByID(ctx, submission.StudentRepoID)
-			if err == nil && studentRepo != nil {
-				ctx.Data["StudentRepoLink"] = studentRepo.FullName()
-			}
-		}
+		// TODO: student-fork link
 	}
 
 	ctx.Data["PageIsEduStudent"] = true
@@ -144,18 +138,9 @@ func AssignmentDetail(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, tplAssignmentDetail)
 }
 
+// TODO
 func JoinAssignment(ctx *context.Context) {
-	assignmentID := ctx.ParamsInt64(":id")
-	svc := edu.GetService()
-
-	_, err := svc.JoinAssignment(ctx, ctx.Doer, assignmentID)
-	if err != nil {
-		ctx.Flash.Error(err.Error())
-		ctx.Redirect(setting.AppSubURL + "/edu/student/assignments/" + ctx.Params(":id"))
-		return
-	}
-
-	ctx.Redirect(setting.AppSubURL + "/edu/student/assignments/" + ctx.Params(":id"))
+	ctx.Error(http.StatusGone, "TODO")
 }
 
 // loadCoursesAndRepos populates template data with courses list and repos for the selected course.
@@ -213,87 +198,9 @@ func NewAssignment(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, "edu/assignment_new")
 }
 
+// TODO
 func NewAssignmentPost(ctx *context.Context) {
-	if !isFullTeacher(ctx) {
-		ctx.Error(http.StatusForbidden, "Only teachers can create assignments")
-		return
-	}
-	ctx.Data["Title"] = "New Assignment"
-	ctx.Data["PageIsEduAssignments"] = true
-
-	svc := edu.GetService()
-
-	title := ctx.FormString("title")
-	description := ctx.FormString("description")
-	repoID := ctx.FormInt64("repo_id")
-	deadlineStr := ctx.FormString("deadline")
-	courseID := ctx.FormInt64("course_id")
-
-	if courseID == 0 {
-		loadCoursesAndRepos(ctx, svc, courseID)
-		ctx.RenderWithErr("Course is required.", "edu/assignment_new", nil)
-		return
-	}
-
-	// Verify course ownership
-	course, err := svc.GetCourseByID(ctx, courseID)
-	if err != nil {
-		ctx.ServerError("GetCourseByID", err)
-		return
-	}
-	if course == nil {
-		ctx.NotFound("Course not found", nil)
-		return
-	}
-	if course.CreatorID != ctx.Doer.ID && !ctx.Doer.IsAdmin {
-		ctx.Error(http.StatusForbidden, "You can only create assignments in your own courses")
-		return
-	}
-
-	if title == "" || repoID == 0 {
-		loadCoursesAndRepos(ctx, svc, courseID)
-		ctx.RenderWithErr("Title and Template Repository are required.", "edu/assignment_new", nil)
-		return
-	}
-	if len(title) > 255 {
-		loadCoursesAndRepos(ctx, svc, courseID)
-		ctx.RenderWithErr(ctx.Tr("edu.title_too_long"), "edu/assignment_new", nil)
-		return
-	}
-
-	// Verify repo exists
-	_, err = repo_model.GetRepositoryByID(ctx, repoID)
-	if err != nil {
-		loadCoursesAndRepos(ctx, svc, courseID)
-		ctx.RenderWithErr("Repository not found.", "edu/assignment_new", nil)
-		return
-	}
-
-	var deadlineUnix int64
-	if deadlineStr != "" {
-		t, err := time.Parse("2006-01-02T15:04", deadlineStr)
-		if err != nil {
-			log.Warn("Failed to parse deadline: %v", err)
-		} else {
-			deadlineUnix = t.Unix()
-		}
-	}
-
-	opts := edu.CreateAssignmentOptions{
-		CourseID:     courseID,
-		RepoID:       repoID,
-		Title:        title,
-		Description:  description,
-		DeadlineUnix: deadlineUnix,
-	}
-
-	_, err = svc.CreateAssignment(ctx, opts)
-	if err != nil {
-		ctx.ServerError("CreateAssignment", err)
-		return
-	}
-
-	ctx.Redirect(setting.AppSubURL + "/edu/teacher/assignments")
+	ctx.Error(http.StatusGone, "TODO")
 }
 
 func EditAssignment(ctx *context.Context) {
