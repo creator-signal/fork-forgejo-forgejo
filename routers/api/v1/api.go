@@ -87,6 +87,7 @@ import (
 	"forgejo.org/services/actions"
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
+	permissions_context "forgejo.org/services/permissions/context"
 	redirect_service "forgejo.org/services/redirect"
 
 	_ "forgejo.org/routers/api/v1/swagger" // for swagger generation
