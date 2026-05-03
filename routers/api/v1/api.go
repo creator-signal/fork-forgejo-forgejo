@@ -323,38 +323,41 @@ func checkTokenPublicOnly(ctx permissions_context.PermissionsContext) {
 // if a token is not being used, reqToken will enforce other sign in methods
 func tokenRequiresScopes(requiredScopeCategories ...auth_model.AccessTokenScopeCategory) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
-		// no scope required
-		if len(requiredScopeCategories) == 0 {
-			return
-		}
-
-		// Need OAuth2 token to be present.
-		hasScope, scope := ctx.Authentication.Scope().Get()
-		if !hasScope {
-			return
-		}
-
 		// use the http method to determine the access level
 		requiredScopeLevel := auth_model.Read
 		if ctx.Req.Method == "POST" || ctx.Req.Method == "PUT" || ctx.Req.Method == "PATCH" || ctx.Req.Method == "DELETE" {
 			requiredScopeLevel = auth_model.Write
 		}
-
-		// get the required scope for the given access level and category
-		requiredScopes := auth_model.GetRequiredScopes(requiredScopeLevel, requiredScopeCategories...)
-		allow, err := scope.HasScope(requiredScopes...)
-		if err != nil {
-			ctx.Error(http.StatusForbidden, "tokenRequiresScope", "checking scope failed: "+err.Error())
-			return
-		}
-
-		if !allow {
-			ctx.Error(http.StatusForbidden, "tokenRequiresScope", fmt.Sprintf("token does not have at least one of required scope(s): %v", requiredScopes))
-			return
-		}
-
-		ctx.Data["requiredScopeCategories"] = requiredScopeCategories
+		internalTokenRequiresScopes(ctx, requiredScopeLevel, requiredScopeCategories...)
 	}
+}
+
+func internalTokenRequiresScopes(ctx permissions_context.PermissionsContext, requiredScopeLevel auth_model.AccessTokenScopeLevel, requiredScopeCategories ...auth_model.AccessTokenScopeCategory) {
+	// no scope required
+	if len(requiredScopeCategories) == 0 {
+		return
+	}
+
+	// Need OAuth2 token to be present.
+	hasScope, scope := ctx.GetAuthentication().Scope().Get()
+	if !hasScope {
+		return
+	}
+
+	// get the required scope for the given access level and category
+	requiredScopes := auth_model.GetRequiredScopes(requiredScopeLevel, requiredScopeCategories...)
+	allow, err := scope.HasScope(requiredScopes...)
+	if err != nil {
+		ctx.Error(http.StatusForbidden, "tokenRequiresScope", "checking scope failed: "+err.Error())
+		return
+	}
+
+	if !allow {
+		ctx.Error(http.StatusForbidden, "tokenRequiresScope", fmt.Sprintf("token does not have at least one of required scope(s): %v", requiredScopes))
+		return
+	}
+
+	ctx.SetRequiredScopeCategories(requiredScopeCategories)
 }
 
 // Middleware that dynamically checks either the organization or user scope, depending on the owner type of the
