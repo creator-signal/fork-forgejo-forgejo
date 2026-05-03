@@ -68,6 +68,7 @@ test('Star button focus retention', async ({page}) => {
   await expect(
     page.locator('button[aria-label="Star"]:focus, button[aria-label="Unstar"]:focus'),
   ).toBeVisible();
+});
 
 test('Issue / PR popup test', async ({page}) => {
   const response = await page.goto('/user1/issues-highlighted/commits/branch/main');

@@ -172,6 +172,7 @@ body:
 					}
 					return sb.String()
 				}())
+		}),
 		newRepo(t, 1, "issues-highlighted", &tests.DeclarativeRepoOptions{
 			UnitConfig: optional.Some(map[unit_model.Type]convert.Conversion{
 				unit_model.TypeIssues: &repo_model.IssuesConfig{
