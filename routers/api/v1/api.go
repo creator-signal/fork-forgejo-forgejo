@@ -125,99 +125,100 @@ func sudo() func(ctx *context.APIContext) {
 	}
 }
 
-func repoAssignment() func(ctx *context.APIContext) {
-	return func(ctx *context.APIContext) {
-		userName := ctx.Params("username")
-		repoName := ctx.Params("reponame")
+func repoAssignment(ctx *context.APIContext) {
+	userName := ctx.Params("username")
+	repoName := ctx.Params("reponame")
 
-		var (
-			owner *user_model.User
-			err   error
-		)
+	var (
+		owner *user_model.User
+		err   error
+	)
 
-		// Check if the user is the same as the repository owner.
-		if ctx.IsSigned && ctx.Doer.LowerName == strings.ToLower(userName) {
-			owner = ctx.Doer
-		} else {
-			owner, err = user_model.GetUserByName(ctx, userName)
-			if err != nil {
-				if user_model.IsErrUserNotExist(err) {
-					if redirectUserID, err := redirect_service.LookupUserRedirect(ctx, ctx.Doer, userName); err == nil {
-						context.RedirectToUser(ctx.Base, userName, redirectUserID)
-					} else if user_model.IsErrUserRedirectNotExist(err) {
-						ctx.NotFound("GetUserByName", err)
-					} else {
-						ctx.Error(http.StatusInternalServerError, "LookupRedirect", err)
-					}
-				} else {
-					ctx.Error(http.StatusInternalServerError, "GetUserByName", err)
-				}
-				return
-			}
-		}
-		ctx.Repo.Owner = owner
-		ctx.ContextUser = owner
-
-		// Get repository.
-		repo, err := repo_model.GetRepositoryByName(ctx, owner.ID, repoName)
+	// Check if the user is the same as the repository owner.
+	if ctx.IsSigned && ctx.Doer.LowerName == strings.ToLower(userName) {
+		owner = ctx.Doer
+	} else {
+		owner, err = user_model.GetUserByName(ctx, userName)
 		if err != nil {
-			if repo_model.IsErrRepoNotExist(err) {
-				redirectRepoID, err := redirect_service.LookupRepoRedirect(ctx, ctx.Doer, owner.ID, repoName)
-				if err == nil {
-					context.RedirectToRepo(ctx.Base, redirectRepoID)
-				} else if repo_model.IsErrRedirectNotExist(err) {
-					ctx.NotFound()
+			if user_model.IsErrUserNotExist(err) {
+				if redirectUserID, err := redirect_service.LookupUserRedirect(ctx, ctx.Doer, userName); err == nil {
+					context.RedirectToUser(ctx.Base, userName, redirectUserID)
+				} else if user_model.IsErrUserRedirectNotExist(err) {
+					ctx.NotFound("GetUserByName", err)
 				} else {
-					ctx.Error(http.StatusInternalServerError, "LookupRepoRedirect", err)
+					ctx.Error(http.StatusInternalServerError, "LookupRedirect", err)
 				}
 			} else {
-				ctx.Error(http.StatusInternalServerError, "GetRepositoryByName", err)
+				ctx.Error(http.StatusInternalServerError, "GetUserByName", err)
 			}
 			return
 		}
+	}
+	ctx.Repo.Owner = owner
+	ctx.ContextUser = owner
 
-		repo.Owner = owner
-		ctx.Repo.Repository = repo
-
-		if ctx.Doer != nil && ctx.Doer.ID == user_model.ActionsUserID && ctx.Authentication.ActionsTaskID().Has() {
-			_, taskID := ctx.Authentication.ActionsTaskID().Get()
-			task, err := actions_model.GetTaskByID(ctx, taskID)
-			if err != nil {
-				ctx.Error(http.StatusInternalServerError, "actions_model.GetTaskByID", err)
-				return
-			}
-			if task.RepoID != repo.ID {
+	// Get repository.
+	repo, err := repo_model.GetRepositoryByName(ctx, owner.ID, repoName)
+	if err != nil {
+		if repo_model.IsErrRepoNotExist(err) {
+			redirectRepoID, err := redirect_service.LookupRepoRedirect(ctx, ctx.Doer, owner.ID, repoName)
+			if err == nil {
+				context.RedirectToRepo(ctx.Base, redirectRepoID)
+			} else if repo_model.IsErrRedirectNotExist(err) {
 				ctx.NotFound()
-				return
-			}
-
-			if task.IsForkPullRequest {
-				ctx.Repo.AccessMode = perm.AccessModeRead
 			} else {
-				ctx.Repo.AccessMode = perm.AccessModeWrite
-			}
-
-			if err := ctx.Repo.Repository.LoadUnits(ctx); err != nil {
-				ctx.Error(http.StatusInternalServerError, "LoadUnits", err)
-				return
-			}
-			ctx.Repo.Units = ctx.Repo.Repository.Units
-			ctx.Repo.UnitsMode = make(map[unit.Type]perm.AccessMode)
-			for _, u := range ctx.Repo.Repository.Units {
-				ctx.Repo.UnitsMode[u.Type] = ctx.Repo.AccessMode
+				ctx.Error(http.StatusInternalServerError, "LookupRepoRedirect", err)
 			}
 		} else {
-			ctx.Repo.Permission, err = access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
-			if err != nil {
-				ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
-				return
-			}
+			ctx.Error(http.StatusInternalServerError, "GetRepositoryByName", err)
 		}
+		return
+	}
 
-		if !ctx.Repo.HasAccess() {
+	repo.Owner = owner
+	ctx.Repo.Repository = repo
+}
+
+func repoAccess(ctx *context.APIContext) {
+	if ctx.Doer != nil && ctx.Doer.ID == user_model.ActionsUserID && ctx.Authentication.ActionsTaskID().Has() {
+		_, taskID := ctx.Authentication.ActionsTaskID().Get()
+		task, err := actions_model.GetTaskByID(ctx, taskID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "actions_model.GetTaskByID", err)
+			return
+		}
+		if task.RepoID != ctx.Repo.Repository.ID {
 			ctx.NotFound()
 			return
 		}
+
+		if task.IsForkPullRequest {
+			ctx.Repo.AccessMode = perm.AccessModeRead
+		} else {
+			ctx.Repo.AccessMode = perm.AccessModeWrite
+		}
+
+		if err := ctx.Repo.Repository.LoadUnits(ctx); err != nil {
+			ctx.Error(http.StatusInternalServerError, "LoadUnits", err)
+			return
+		}
+		ctx.Repo.Units = ctx.Repo.Repository.Units
+		ctx.Repo.UnitsMode = make(map[unit.Type]perm.AccessMode)
+		for _, u := range ctx.Repo.Repository.Units {
+			ctx.Repo.UnitsMode[u.Type] = ctx.Repo.AccessMode
+		}
+	} else {
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, ctx.Repo.Repository, ctx.Doer, ctx.Reducer)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
+			return
+		}
+		ctx.Repo.Permission = permission
+	}
+
+	if !ctx.Repo.HasAccess() {
+		ctx.NotFound()
+		return
 	}
 }
 
@@ -1082,7 +1083,7 @@ func Routes() *web.Route {
 						m.Get("", user.IsStarring)
 						m.Put("", user.Star)
 						m.Delete("", user.Unstar)
-					}, repoAssignment(), checkTokenPublicOnly())
+					}, repoAssignment, repoAccess, checkTokenPublicOnly())
 				}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryRepository))
 			}
 			m.Get("/times", repo.ListMyTrackedTimes)
@@ -1125,7 +1126,7 @@ func Routes() *web.Route {
 
 		// Needs to be extracted from the larger `/repos` group because deleting a repo isn't protected by
 		// `AccessTokenScopeCategoryRepository`; it's protected by either the User or Organization scope.
-		m.Delete("/repos/{username}/{reponame}", repoAssignment(), tokenRequiresRepoOwnerScope, reqOwner(), repo.Delete)
+		m.Delete("/repos/{username}/{reponame}", repoAssignment, repoAccess, tokenRequiresRepoOwnerScope, reqOwner(), repo.Delete)
 
 		// Repos (requires repo scope)
 		m.Group("/repos", func() {
@@ -1432,7 +1433,7 @@ func Routes() *web.Route {
 				})
 
 				m.Get("/{ball_type:tarball|zipball|bundle}/*", reqRepoReader(unit.TypeCode), repo.DownloadArchive)
-			}, repoAssignment(), checkTokenPublicOnly())
+			}, repoAssignment, repoAccess, checkTokenPublicOnly())
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryRepository))
 
 		// Notifications (requires notifications scope)
@@ -1441,7 +1442,7 @@ func Routes() *web.Route {
 				m.Combo("/notifications", reqToken()).
 					Get(notify.ListRepoNotifications).
 					Put(notify.ReadRepoNotifications)
-			}, repoAssignment(), checkTokenPublicOnly())
+			}, repoAssignment, repoAccess, checkTokenPublicOnly())
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryNotification))
 
 		// Issue (requires issue scope)
@@ -1555,7 +1556,7 @@ func Routes() *web.Route {
 						Patch(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), bind(api.EditMilestoneOption{}), repo.EditMilestone).
 						Delete(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), repo.DeleteMilestone)
 				})
-			}, repoAssignment(), checkTokenPublicOnly())
+			}, repoAssignment, repoAccess, checkTokenPublicOnly())
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryIssue))
 
 		// NOTE: these are Gitea package management API - see packages.CommonRoutes and packages.DockerContainerRoutes for endpoints that implement package manager APIs
