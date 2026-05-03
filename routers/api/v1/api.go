@@ -724,25 +724,25 @@ func mustAllowPulls(ctx *context.APIContext) {
 	}
 }
 
-func mustEnableIssuesOrPulls(ctx *context.APIContext) {
-	if !ctx.Repo.CanRead(unit.TypeIssues) &&
-		(!ctx.Repo.Repository.CanEnablePulls() || !ctx.Repo.CanRead(unit.TypePullRequests)) {
-		if ctx.Repo.Repository.CanEnablePulls() && log.IsTrace() {
-			if ctx.IsSigned {
+func mustEnableIssuesOrPulls(ctx permissions_context.PermissionsContext) {
+	if !ctx.GetPermission().CanRead(unit.TypeIssues) &&
+		(!ctx.GetRepository().CanEnablePulls() || !ctx.GetPermission().CanRead(unit.TypePullRequests)) {
+		if ctx.GetRepository().CanEnablePulls() && log.IsTrace() {
+			if ctx.GetIsSigned() {
 				log.Trace("Permission Denied: User %-v cannot read %-v and %-v in Repo %-v\n"+
 					"User in Repo has Permissions: %-+v",
-					ctx.Doer,
+					ctx.GetDoer(),
 					unit.TypeIssues,
 					unit.TypePullRequests,
-					ctx.Repo.Repository,
-					ctx.Repo.Permission)
+					ctx.GetRepository(),
+					ctx.GetPermission())
 			} else {
 				log.Trace("Permission Denied: Anonymous user cannot read %-v and %-v in Repo %-v\n"+
 					"Anonymous user in Repo has Permissions: %-+v",
 					unit.TypeIssues,
 					unit.TypePullRequests,
-					ctx.Repo.Repository,
-					ctx.Repo.Permission)
+					ctx.GetRepository(),
+					ctx.GetPermission())
 			}
 		}
 		ctx.NotFound()
