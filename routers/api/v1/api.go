@@ -370,13 +370,13 @@ func tokenRequiresRepoOwnerScope(ctx *context.APIContext) {
 }
 
 // Contexter middleware already checks token for user sign in process.
-func reqToken(ctx *context.APIContext) {
+func reqToken(ctx permissions_context.PermissionsContext) {
 	// If actions token is present
-	if ctx.Authentication.ActionsTaskID().Has() {
+	if ctx.GetAuthentication().ActionsTaskID().Has() {
 		return
 	}
 
-	if ctx.IsSigned {
+	if ctx.GetIsSigned() {
 		return
 	}
 	ctx.Error(http.StatusUnauthorized, "reqToken", "token is required")
