@@ -13,8 +13,12 @@ import (
 	"slices"
 	"strings"
 
+	auth_model "forgejo.org/models/auth"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
 	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	mc "forgejo.org/modules/cache"
@@ -27,6 +31,7 @@ import (
 	web_types "forgejo.org/modules/web/types"
 	"forgejo.org/services/auth"
 	"forgejo.org/services/authz"
+	permissions_context "forgejo.org/services/permissions/context"
 
 	"code.forgejo.org/go-chi/cache"
 )
@@ -56,6 +61,9 @@ type APIContext struct {
 func init() {
 	web.RegisterResponseStatusProvider[*APIContext](func(req *http.Request) web_types.ResponseStatusProvider {
 		return req.Context().Value(apiContextKey).(*APIContext)
+	})
+	web.RegisterResponseStatusProvider[permissions_context.PermissionsContext](func(req *http.Request) web_types.ResponseStatusProvider {
+		return req.Context().Value(apiContextKey).(permissions_context.PermissionsContext)
 	})
 }
 
@@ -176,6 +184,122 @@ type swaggerAPIInternalServerError struct {
 // ServerError responds with error message, status is 500
 func (ctx *APIContext) ServerError(title string, err error) {
 	ctx.Error(http.StatusInternalServerError, title, err)
+}
+
+func (ctx *APIContext) GetContext() context.Context {
+	return ctx.originCtx
+}
+
+func (ctx *APIContext) GetRepository() *repo_model.Repository {
+	return ctx.Repo.Repository
+}
+
+func (ctx *APIContext) SetRepository(repository *repo_model.Repository) {
+	ctx.Repo.Repository = repository
+}
+
+func (ctx *APIContext) GetPermission() *access_model.Permission {
+	return &ctx.Repo.Permission
+}
+
+func (ctx *APIContext) SetPermission(permission *access_model.Permission) {
+	ctx.Repo.Permission = *permission
+}
+
+func (ctx *APIContext) GetDoer() *user_model.User {
+	return ctx.Doer
+}
+
+func (ctx *APIContext) SetDoer(doer *user_model.User) {
+	ctx.Doer = doer
+}
+
+func (ctx *APIContext) GetIsSigned() bool {
+	return ctx.IsSigned
+}
+
+func (ctx *APIContext) SetIsSigned(isSigned bool) {
+	ctx.IsSigned = isSigned
+}
+
+func (ctx *APIContext) GetUser() *user_model.User {
+	return ctx.ContextUser
+}
+
+func (ctx *APIContext) SetUser(user *user_model.User) {
+	ctx.ContextUser = user
+}
+
+func (ctx *APIContext) GetOrg() *org_model.Organization {
+	return ctx.Org.Organization
+}
+
+func (ctx *APIContext) SetOrg(org *org_model.Organization) {
+	ctx.Org.Organization = org
+}
+
+func (ctx *APIContext) GetTeam() *org_model.Team {
+	return ctx.Org.Team
+}
+
+func (ctx *APIContext) SetTeam(team *org_model.Team) {
+	ctx.Org.Team = team
+}
+
+func (ctx *APIContext) GetPackageOwner() *user_model.User {
+	if ctx.Package != nil {
+		return ctx.Package.Owner
+	}
+	return nil
+}
+
+func (ctx *APIContext) SetPackageOwner(owner *user_model.User) {
+	if ctx.Package != nil {
+		ctx.Package.Owner = owner
+	}
+}
+
+func (ctx *APIContext) GetToken() *auth_model.AccessToken {
+	return nil
+}
+
+func (ctx *APIContext) SetToken(doer *auth_model.AccessToken) {
+}
+
+func (ctx *APIContext) GetPublicOnly() bool {
+	return ctx.PublicOnly
+}
+
+func (ctx *APIContext) SetPublicOnly(publicOnly bool) {
+	ctx.PublicOnly = publicOnly
+}
+
+func (ctx *APIContext) GetReducer() authz.AuthorizationReducer {
+	return ctx.Reducer
+}
+
+func (ctx *APIContext) SetReducer(reducer authz.AuthorizationReducer) {
+	ctx.Reducer = reducer
+}
+
+func (ctx *APIContext) GetAuthentication() auth.AuthenticationResult {
+	return ctx.Authentication
+}
+
+func (ctx *APIContext) SetAuthentication(authentication auth.AuthenticationResult) {
+	ctx.Authentication = authentication
+}
+
+func (ctx *APIContext) GetRequiredScopeCategories() []auth_model.AccessTokenScopeCategory {
+	requiredScopeCategories, ok := ctx.Data["requiredScopeCategories"].([]auth_model.AccessTokenScopeCategory)
+	if !ok || len(requiredScopeCategories) == 0 {
+		return nil
+	}
+	return requiredScopeCategories
+}
+
+func (ctx *APIContext) SetRequiredScopeCategories(requiredScopeCategories []auth_model.AccessTokenScopeCategory) {
+	ctx.Data["requiredScopeCategories"] = requiredScopeCategories
 }
 
 // Error responds with an error message to client with given obj as the message.

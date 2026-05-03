@@ -16,6 +16,7 @@ import (
 	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/authz"
 	"forgejo.org/services/context"
+	permissions_context "forgejo.org/services/permissions/context"
 
 	"github.com/go-chi/cors"
 )
