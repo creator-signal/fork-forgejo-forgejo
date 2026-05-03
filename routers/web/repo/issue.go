@@ -1033,6 +1033,13 @@ func NewIssue(ctx *context.Context) {
 
 	ctx.Data["HasIssuesOrPullsWritePermission"] = ctx.Repo.CanWrite(unit.TypeIssues)
 
+	// Carry the "blocks" issue index so the new-issue form can create a
+	// dependency back to the blocking issue after submission.
+	blocks := ctx.FormInt64("blocks")
+	if blocks > 0 {
+		ctx.Data["blocks"] = blocks
+	}
+
 	if !issueConfig.BlankIssuesEnabled && hasTemplates && !templateLoaded {
 		// The "issues/new" and "issues/new/choose" share the same query parameters "project" and "milestone", if blank issues are disabled, just redirect to the "issues/choose" page with these parameters.
 		ctx.Redirect(fmt.Sprintf("%s/issues/new/choose?%s", ctx.Repo.Repository.Link(), ctx.Req.URL.RawQuery), http.StatusSeeOther)
@@ -1090,6 +1097,9 @@ func NewIssueChooseTemplate(ctx *context.Context) {
 
 	ctx.Data["milestone"] = ctx.FormInt64("milestone")
 	ctx.Data["project"] = ctx.FormInt64("project")
+	// Forward "blocks" through the template chooser so it survives the
+	// redirect chain from the pane's "Create blocking issue" button.
+	ctx.Data["blocks"] = ctx.FormInt64("blocks")
 
 	ctx.HTML(http.StatusOK, tplIssueChoose)
 }
@@ -1298,6 +1308,30 @@ func NewIssuePost(ctx *context.Context) {
 	}
 
 	log.Trace("Issue created: %d/%d", repo.ID, issue.ID)
+
+	// Wire up the dependency to the blocking issue and return to the board,
+	// instead of the normal issue-view redirect.
+	if blocks := ctx.FormInt64("blocks"); blocks > 0 {
+		blockingIssue, err := issues_model.GetIssueByIndex(ctx, repo.ID, blocks)
+		if err != nil {
+			log.Error("GetIssueByIndex for blocks param: %v", err)
+			ctx.Flash.Error(ctx.Tr("repo.issues.dependency.add_error_dep_issue_not_exist"))
+		} else if !ctx.Repo.CanCreateIssueDependencies(ctx, ctx.Doer, blockingIssue.IsPull) {
+			ctx.Flash.Error(ctx.Tr("repo.issues.dependency.add_error_cannot_create_circular"))
+		} else if err := issues_model.CreateIssueDependency(ctx, ctx.Doer, blockingIssue, issue); err != nil {
+			if issues_model.IsErrDependencyExists(err) {
+				ctx.Flash.Error(ctx.Tr("repo.issues.dependency.add_error_dep_exists"))
+			} else if issues_model.IsErrCircularDependency(err) {
+				ctx.Flash.Error(ctx.Tr("repo.issues.dependency.add_error_cannot_create_circular"))
+			} else {
+				log.Error("CreateIssueDependency: %v", err)
+				ctx.Flash.Error(ctx.Tr("repo.issues.dependency.add_error_dep_issue_not_exist"))
+			}
+		}
+		ctx.JSONRedirect(repo.Link() + "/issues/dependency-board")
+		return
+	}
+
 	if ctx.FormString("redirect_after_creation") == "project" && projectID > 0 {
 		project, err := project_model.GetProjectByID(ctx, projectID)
 		if err == nil {
@@ -1440,6 +1474,30 @@ func ViewIssue(ctx *context.Context) {
 		}
 	}
 
+	// Extracted from ViewIssue so the pane handler (IssuePane) can reuse the
+	// full issue data loading without duplicating ~700 lines of setup code.
+	prepareIssueViewData(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	issue, ok := ctx.Data["Issue"].(*issues_model.Issue)
+	if !ok {
+		ctx.ServerError("ViewIssue: missing issue data", nil)
+		return
+	}
+	ctx.Data["OpenGraphTitle"] = issue.Title
+	ctx.Data["OpenGraphURL"] = issue.HTMLURL()
+	ctx.Data["OpenGraphDescription"] = issue.Content
+	ctx.Data["OpenGraphImageURL"] = issue.SummaryCardURL()
+	ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.issues.summary_card_alt", issue.Title, issue.Repo.FullName())
+
+	ctx.HTML(http.StatusOK, tplIssueView)
+}
+
+// prepareIssueViewData loads all data needed to render an issue view.
+// Shared by ViewIssue (full page) and IssuePane (side drawer in the dependency board).
+func prepareIssueViewData(ctx *context.Context) {
 	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrIssueNotExist(err) {
@@ -2102,11 +2160,6 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["RefEndName"] = git.RefName(issue.Ref).ShortName()
 	ctx.Data["NewPinAllowed"] = pinAllowed
 	ctx.Data["PinEnabled"] = setting.Repository.Issue.MaxPinned != 0
-	ctx.Data["OpenGraphTitle"] = issue.Title
-	ctx.Data["OpenGraphURL"] = issue.HTMLURL()
-	ctx.Data["OpenGraphDescription"] = issue.Content
-	ctx.Data["OpenGraphImageURL"] = issue.SummaryCardURL()
-	ctx.Data["OpenGraphImageAltText"] = ctx.Tr("repo.issues.summary_card_alt", issue.Title, issue.Repo.FullName())
 	ctx.Data["IsBlocked"] = ctx.Doer != nil && user_model.IsBlockedMultiple(ctx, []int64{issue.PosterID, issue.Repo.OwnerID}, ctx.Doer.ID)
 
 	prepareHiddenCommentType(ctx)
@@ -2126,8 +2179,6 @@ func ViewIssue(ctx *context.Context) {
 		return
 	}
 	ctx.Data["Tags"] = tags
-
-	ctx.HTML(http.StatusOK, tplIssueView)
 }
 
 // checkBlockedByIssues return canRead and notPermitted

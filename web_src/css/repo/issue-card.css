@@ -38,3 +38,36 @@
   justify-content: end;
   flex-wrap: wrap;
 }
+
+.issue-card-pr-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.pr-badge-open {
+  background: var(--color-green-badge-bg);
+  color: var(--color-green-badge);
+}
+
+.pr-badge-closed {
+  background: var(--color-red-badge-bg);
+  color: var(--color-red-badge);
+}
+
+.pr-badge-merged {
+  background: var(--color-purple-badge-bg);
+  color: var(--color-purple-badge);
+}
+
+.pr-badge-draft {
+  background: var(--color-grey-badge-bg);
+  color: var(--color-grey-badge);
+}

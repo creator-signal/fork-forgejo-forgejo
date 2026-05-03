@@ -11,6 +11,8 @@ import {showTemporaryTooltip} from '../modules/tippy.js';
 import {confirmModal} from './comp/ConfirmModal.js';
 import {showErrorToast} from '../modules/toast.js';
 import {request, POST, GET} from '../modules/fetch.js';
+// Indirection so the dependency board pane can intercept reloads and refresh itself instead.
+import {requestPageReload} from '../modules/page-reload.js';
 import '../htmx.js';
 import {initTab} from '../modules/tab.ts';
 import {initGlobalShowModal} from './show-modal.ts';
@@ -41,7 +43,8 @@ export function initFootLanguageMenu() {
   async function linkLanguageAction() {
     const $this = $(this);
     await GET($this.data('url'));
-    window.location.reload();
+    // Pane intercepts this via setPageReloadFn; falls back to window.location.reload() otherwise.
+    requestPageReload();
   }
 
   $('.language-menu a[lang]').on('click', linkLanguageAction);
@@ -90,7 +93,8 @@ async function fetchActionDoRequest(actionElem, url, opt) {
       if (redirect) {
         fetchActionDoRedirect(redirect);
       } else {
-        window.location.reload();
+        // Pane intercepts reloads so edits inside the drawer don't close it.
+        requestPageReload();
       }
       return;
     } else if (resp.status >= 400 && resp.status < 500) {
@@ -417,7 +421,13 @@ export function initGlobalLinkActions() {
         const response = await POST($this.data('url'), {data: postData});
         if (response.ok) {
           const data = await response.json();
-          window.location.href = data.redirect;
+          // Use fetchActionDoRedirect for real navigation; fall back to indirection
+          // so the pane can refresh itself when actions happen inside it.
+          if (data.redirect) {
+            fetchActionDoRedirect(data.redirect);
+          } else {
+            requestPageReload();
+          }
         }
       },
     }).modal('show');

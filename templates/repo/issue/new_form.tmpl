@@ -1,7 +1,8 @@
 {{if .Flash}}
 {{template "base/alert" .}}
 {{end}}
-<form class="issue-content ui comment form form-fetch-action" id="new-issue" action="{{.Link}}" method="post">
+{{/* Form action carries "blocks" so the POST handler can wire the dependency */}}
+<form class="issue-content ui comment form form-fetch-action" id="new-issue" action="{{.Link}}{{if .blocks}}?blocks={{.blocks}}{{end}}" method="post">
 	<div class="issue-content-left">
 		<div class="ui comments">
 			<div class="comment">
@@ -151,4 +152,6 @@
 		{{end}}
 	</div>
 	<input type="hidden" name="redirect_after_creation" value="{{.redirect_after_creation}}">
+	{{/* Hidden field ensures "blocks" survives form submission even if the URL param is stripped */}}
+	<input type="hidden" name="blocks" value="{{.blocks}}">
 </form>

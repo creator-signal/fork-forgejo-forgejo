@@ -296,6 +296,8 @@ class ComboMarkdownEditor {
 
   setupTableInserter() {
     const newTableModal = this.container.querySelector('dialog[data-modal-name="new-markdown-table"]');
+    // Pane may not contain table inserter modal; guard prevents NPE on .querySelector calls below.
+    if (!newTableModal) return;
     newTableModal.setAttribute('data-markdown-table-modal-id', this.elementIdSuffix);
     document.body.append(newTableModal); // Contains form elements, avoid conflict with form of comment editor.
 
@@ -332,6 +334,8 @@ class ComboMarkdownEditor {
 
   setupLinkInserter() {
     const newLinkModal = this.container.querySelector('dialog[data-modal-name="new-markdown-link"]');
+    // Pane may not contain link inserter modal; guard prevents NPE.
+    if (!newLinkModal) return;
     newLinkModal.setAttribute('data-markdown-link-modal-id', this.elementIdSuffix);
     const textarea = document.getElementById(`_combo_markdown_editor_${this.elementIdSuffix}`);
     document.body.append(newLinkModal); // Contains form elements, avoid conflict with form of comment editor.
@@ -651,6 +655,10 @@ export async function initComboMarkdownEditor(container, options = {}) {
   }
   if (!container) {
     throw new Error('initComboMarkdownEditor: container is null');
+  }
+  // Prevent double-initialization when the pane re-renders into an already-initialized container.
+  if (container._giteaComboMarkdownEditor) {
+    return container._giteaComboMarkdownEditor;
   }
   const editor = new ComboMarkdownEditor(container, options);
   await editor.init();

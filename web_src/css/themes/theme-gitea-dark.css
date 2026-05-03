@@ -178,6 +178,12 @@
   --color-orange-badge: #f2711c;
   --color-orange-badge-bg: #f2711c1a;
   --color-orange-badge-hover-bg: #f2711c4d;
+  --color-purple-badge: #a333c8;
+  --color-purple-badge-bg: #a333c81a;
+  --color-purple-badge-hover-bg: #a333c84d;
+  --color-grey-badge: #697077;
+  --color-grey-badge-bg: #6970771a;
+  --color-grey-badge-hover-bg: #6970774d;
   /* target-based colors */
   --color-body: #1c1f25;
   --color-box-header: #1a1d1f;

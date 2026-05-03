@@ -117,6 +117,30 @@ func init() {
 	db.RegisterModel(new(IssueDependency))
 }
 
+// LoadIssueDependencies batch-loads all dependencies for the given issues in a single query.
+// Avoids N+1 queries when the board needs dependency data for every issue at once.
+func LoadIssueDependencies(ctx context.Context, issueIDs []int64) (map[int64][]int64, error) {
+	if len(issueIDs) == 0 {
+		return make(map[int64][]int64), nil
+	}
+	var deps []struct {
+		IssueID      int64
+		DependencyID int64
+	}
+	if err := db.GetEngine(ctx).
+		Table("issue_dependency").
+		Cols("issue_id, dependency_id").
+		In("issue_id", issueIDs).
+		Find(&deps); err != nil {
+		return nil, err
+	}
+	result := make(map[int64][]int64, len(issueIDs))
+	for _, d := range deps {
+		result[d.IssueID] = append(result[d.IssueID], d.DependencyID)
+	}
+	return result, nil
+}
+
 // DependencyType Defines Dependency Type Constants
 type DependencyType int
 

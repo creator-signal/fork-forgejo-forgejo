@@ -196,6 +196,12 @@
   --color-orange-badge: #ea580c;
   --color-orange-badge-bg: #ea580c22;
   --color-orange-badge-hover-bg: #ea580c44;
+  --color-purple-badge: #9333ea;
+  --color-purple-badge-bg: #9333ea22;
+  --color-purple-badge-hover-bg: #9333ea44;
+  --color-grey-badge: #6e7681;
+  --color-grey-badge-bg: #6e768122;
+  --color-grey-badge-hover-bg: #6e768144;
   /* Colors for thin elements: octicons, text, borders */
   --thin-lightness: 0.68;
   --regular-chroma: 0.19;

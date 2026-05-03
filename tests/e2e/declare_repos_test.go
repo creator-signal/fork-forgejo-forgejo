@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
@@ -20,8 +21,11 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/indexer/stats"
 	"forgejo.org/modules/optional"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
 	issue_service "forgejo.org/services/issue"
+	pull_service "forgejo.org/services/pull"
+	commitstatus_service "forgejo.org/services/repository/commitstatus"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/services/wiki"
 	"forgejo.org/tests"
@@ -50,11 +54,97 @@ func DeclareGitRepos(t *testing.T) func() {
 		issue := &issues_model.Issue{
 			RepoID:      repo.ID,
 			PosterID:    user.ID,
+			Poster:      user,
 			Title:       title,
 			Content:     content,
 			CreatedUnix: now.Add(-age),
 		}
 		require.NoError(t, issue_service.NewIssue(db.DefaultContext, repo, issue, nil, nil, nil))
+	}
+
+	// Helpers for creating test data in the dependency board e2e repo.
+	postIssueWithMilestone := func(repo *repo_model.Repository, user *user_model.User, age int64, title, content string, milestoneID int64) *issues_model.Issue {
+		issue := &issues_model.Issue{
+			RepoID:      repo.ID,
+			PosterID:    user.ID,
+			Poster:      user,
+			Title:       title,
+			Content:     content,
+			MilestoneID: milestoneID,
+			CreatedUnix: now.Add(-age),
+		}
+		require.NoError(t, issue_service.NewIssue(db.DefaultContext, repo, issue, nil, nil, nil))
+		return issue
+	}
+
+	createMilestone := func(repo *repo_model.Repository, name string) int64 {
+		m := &issues_model.Milestone{
+			RepoID: repo.ID,
+			Name:   name,
+		}
+		require.NoError(t, issues_model.NewMilestone(db.DefaultContext, m))
+		return m.ID
+	}
+
+	addDependency := func(user *user_model.User, blocked, blocker *issues_model.Issue) {
+		require.NoError(t, issues_model.CreateIssueDependency(db.DefaultContext, user, blocked, blocker))
+	}
+
+	createBranchWithChange := func(repo *repo_model.Repository, user *user_model.User, oldBranch, newBranch, filename, content string) string {
+		resp, err := files_service.ChangeRepoFiles(git.DefaultContext, repo, user, &files_service.ChangeRepoFilesOptions{
+			Files: []*files_service.ChangeRepoFile{{
+				Operation:     "update",
+				TreePath:      filename,
+				ContentReader: strings.NewReader(content),
+			}},
+			Message:   fmt.Sprintf("change %s on %s", filename, newBranch),
+			OldBranch: oldBranch,
+			NewBranch: newBranch,
+			Author: &files_service.IdentityOptions{
+				Name:  user.Name,
+				Email: user.Email,
+			},
+			Committer: &files_service.IdentityOptions{
+				Name:  user.Name,
+				Email: user.Email,
+			},
+			Dates: &files_service.CommitDateOptions{
+				Author:    time.Now(),
+				Committer: time.Now(),
+			},
+		})
+		require.NoError(t, err)
+		return resp.Commit.SHA
+	}
+
+	createPR := func(repo *repo_model.Repository, user *user_model.User, branch, title string) *issues_model.PullRequest {
+		pullIssue := &issues_model.Issue{
+			RepoID:      repo.ID,
+			PosterID:    user.ID,
+			Poster:      user,
+			Title:       title,
+			IsPull:      true,
+			CreatedUnix: now.Add(-50),
+		}
+		pr := &issues_model.PullRequest{
+			HeadRepoID: repo.ID,
+			BaseRepoID: repo.ID,
+			HeadBranch: branch,
+			BaseBranch: "main",
+			HeadRepo:   repo,
+			BaseRepo:   repo,
+			Type:       issues_model.PullRequestGitea,
+		}
+		require.NoError(t, pull_service.NewPullRequest(git.DefaultContext, repo, pullIssue, nil, nil, pr, nil))
+		return pr
+	}
+
+	setCommitStatus := func(repo *repo_model.Repository, user *user_model.User, sha string, state api.CommitStatusState, context string) {
+		require.NoError(t, commitstatus_service.CreateCommitStatus(db.DefaultContext, repo, user, sha, &git_model.CommitStatus{
+			State:     state,
+			TargetURL: "https://example.com/ci",
+			Context:   context,
+		}))
 	}
 
 	cleanupFunctions := []func(){
@@ -131,6 +221,61 @@ body:
 		}, []FileChanges{}, func(user *user_model.User, repo *repo_model.Repository) {
 			postIssue(repo, user, 450, "right issue", "an issue containing word right")
 			postIssue(repo, user, 150, "left issue", "an issue containing word left")
+		}),
+		// Declarative repo for dependency board e2e tests: 5 issues with a dependency
+		// chain and two milestones, enabling tests for column layout, highlighting,
+		// filtering, pane editing, and dependency creation.
+		newRepo(t, 11, "dependency-board-test", &tests.DeclarativeRepoOptions{
+			UnitConfig: optional.Some(map[unit_model.Type]convert.Conversion{
+				unit_model.TypeIssues: &repo_model.IssuesConfig{
+					EnableDependencies: true,
+				},
+				unit_model.TypePullRequests: &repo_model.PullRequestsConfig{
+					AllowMerge: true,
+				},
+			}),
+			EnabledUnits: optional.Some([]unit_model.Type{
+				unit_model.TypeCode,
+				unit_model.TypeIssues,
+				unit_model.TypePullRequests,
+			}),
+		}, []FileChanges{}, func(user *user_model.User, repo *repo_model.Repository) {
+			v1 := createMilestone(repo, "v1.0")
+			v2 := createMilestone(repo, "v2.0")
+
+			issueA := postIssueWithMilestone(repo, user, 500, "setup database", "initialize the database", v1)
+			issueB := postIssueWithMilestone(repo, user, 400, "build API", "create the API layer", v1)
+			issueC := postIssueWithMilestone(repo, user, 300, "add tests", "write test suite", v1)
+			issueD := postIssueWithMilestone(repo, user, 200, "write docs", "document the project", v2)
+			issueE := postIssueWithMilestone(repo, user, 100, "deploy", "deploy to production", v1)
+
+			addDependency(user, issueB, issueA)
+			addDependency(user, issueC, issueB)
+			addDependency(user, issueC, issueD)
+			addDependency(user, issueE, issueC)
+
+			prOpenSHA := createBranchWithChange(repo, user, "main", "pr-open-branch", "README.md", "# Open PR repo\nUpdated by open PR.")
+			prOpen := createPR(repo, user, "pr-open-branch", "implement feature X")
+			_ = prOpen
+			setCommitStatus(repo, user, prOpenSHA, api.CommitStatusSuccess, "ci/test")
+
+			prDraftSHA := createBranchWithChange(repo, user, "main", "pr-draft-branch", "README.md", "# Draft PR repo\nWork in progress.")
+			prDraft := createPR(repo, user, "pr-draft-branch", "WIP: refactor database layer")
+			_ = prDraft
+			setCommitStatus(repo, user, prDraftSHA, api.CommitStatusPending, "ci/test")
+
+			prMergedSHA := createBranchWithChange(repo, user, "main", "pr-merged-branch", "README.md", "# Merged PR repo\nFinal content.")
+			prMerged := createPR(repo, user, "pr-merged-branch", "fix login bug")
+			gitRepo, err := git.OpenRepository(git.DefaultContext, repo.RepoPath())
+			require.NoError(t, err)
+			require.NoError(t, pull_service.Merge(git.DefaultContext, prMerged, user, gitRepo, repo_model.MergeStyleMerge, prMerged.HeadCommitID, "merge PR", false))
+			gitRepo.Close()
+			setCommitStatus(repo, user, prMergedSHA, api.CommitStatusSuccess, "ci/test")
+
+			prClosedSHA := createBranchWithChange(repo, user, "main", "pr-closed-branch", "README.md", "# Closed PR repo\nRejected content.")
+			prClosed := createPR(repo, user, "pr-closed-branch", "remove deprecated API")
+			require.NoError(t, issue_service.ChangeStatus(db.DefaultContext, prClosed.Issue, user, "", true))
+			setCommitStatus(repo, user, prClosedSHA, api.CommitStatusFailure, "ci/test")
 		}),
 		newRepo(t, 2, "long-diff-test", nil, []FileChanges{{
 			Filename: "test-README.md",

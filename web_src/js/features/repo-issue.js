@@ -8,6 +8,8 @@ import {toAbsoluteUrl} from '../utils.js';
 import {initDropzone} from './common-global.js';
 import {POST, GET} from '../modules/fetch.js';
 import {showErrorToast} from '../modules/toast.js';
+// Indirection so the dependency board pane can intercept reloads and refresh itself instead.
+import {requestPageReload} from '../modules/page-reload.js';
 
 const {appSubUrl} = window.config;
 
@@ -28,7 +30,7 @@ export function reloadConfirmDraftComment() {
       break;
     }
   }
-  window.location.reload();
+  requestPageReload();
 }
 
 export function initRepoIssueTimeTracking() {
@@ -84,7 +86,7 @@ async function updateDeadline(deadlineString) {
     });
 
     if (response.ok) {
-      window.location.reload();
+      requestPageReload();
     } else {
       throw new Error('Invalid response');
     }
@@ -205,29 +207,15 @@ export function initRepoPullRequestUpdate() {
 
   pullUpdateButton.addEventListener('click', async function (e) {
     e.preventDefault();
-    const redirect = this.getAttribute('data-redirect');
     this.classList.add('is-loading');
-    let response;
     try {
-      response = await POST(this.getAttribute('data-do'));
+      await POST(this.getAttribute('data-do'));
     } catch (error) {
       console.error(error);
     } finally {
       this.classList.remove('is-loading');
     }
-    let data;
-    try {
-      data = await response?.json(); // the response is probably not a JSON
-    } catch (error) {
-      console.error(error);
-    }
-    if (data?.redirect) {
-      window.location.href = data.redirect;
-    } else if (redirect) {
-      window.location.href = redirect;
-    } else {
-      window.location.reload();
-    }
+    requestPageReload();
   });
 
   $('.update-button > .dropdown').dropdown({
@@ -336,7 +324,7 @@ export function initRepoIssueComments() {
     const isChecked = this.classList.contains('checked');
 
     await updateIssuesMeta(url, isChecked ? 'detach' : 'attach', issueId, id);
-    window.location.reload();
+    requestPageReload();
   });
 
   document.addEventListener('click', (e) => {
@@ -551,7 +539,7 @@ export function initRepoIssueWipToggle() {
       if (!response.ok) {
         throw new Error('Failed to toggle WIP status');
       }
-      window.location.reload();
+      requestPageReload();
     } catch (error) {
       console.error(error);
     }
@@ -608,7 +596,7 @@ export function initRepoIssueTitleEdit() {
           }
         }
       }
-      window.location.reload();
+      requestPageReload();
     } catch (error) {
       console.error(error);
       showErrorToast(error.message);

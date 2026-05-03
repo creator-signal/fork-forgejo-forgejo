@@ -1448,8 +1448,15 @@ func registerRoutes(m *web.Route) {
 
 	m.Group("/{username}/{reponame}", func() {
 		m.Group("", func() {
-			m.Get("/issues/posters", repo.IssuePosters) // it can't use {type:issues|pulls} because other routes like "/pulls/{index}" has higher priority
+			m.Get("/issues/posters", repo.IssuePosters)                           // it can't use {type:issues|pulls} because other routes like "/pulls/{index}" has higher priority
+			m.Get("/issues/dependency-board", repo.DependencyBoard)               // board HTML page
+			m.Get("/issues/dependency-board/data", repo.DependencyBoardData)      // JSON data for the Vue board component
+			m.Get("/issues/dependency-board/card/{id}", repo.DependencyBoardCard) // lazy-rendered card HTML
 			m.Get("/{type:^(issues|pulls)$}", repo.Issues)
+			m.Get("/{type:^(issues|pulls)$}/{index}/pane", repo.IssuePane) // side-drawer HTML for the dependency board
+			m.Get("/pulls/{index}/pane/files", repo.SetWhitespaceBehavior, repo.SetShowOutdatedComments, repo.PullPaneFiles)
+			m.Get("/pulls/{index}/pane/commits", repo.PullPaneCommits)  // commits HTML fragment for pane
+			m.Get("/pulls/{index}/pane/tab-data", repo.PullPaneTabData) // JSON tab counts for pane
 			m.Get("/{type:^(issues|pulls)$}/{index}", context.EnsureOrg(), repo.ViewIssue)
 			m.Group("/{type:^(issues|pulls)$}/{index}/content-history", func() {
 				m.Get("/overview", repo.GetContentHistoryOverview)

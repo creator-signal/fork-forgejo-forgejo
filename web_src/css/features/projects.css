@@ -75,6 +75,52 @@
   margin-right: auto !important;
 }
 
+/* Dependency board overrides the default centering because the board needs
+   the full horizontal space for its columns. */
+.dependency-board .project-column:first-child {
+  margin-left: 0 !important;
+}
+
+.dependency-board .project-column:last-child {
+  margin-right: 0 !important;
+}
+
+/* Fixed overlay drawer so the board doesn't reflow when the pane opens. */
+.issue-pane__header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-secondary);
+  flex-shrink: 0;
+}
+
+.issue-pane__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Place navbar links and filter controls on the same row to save vertical space. */
+.dep-board__navbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dep-board__navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dep-board__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .card-attachment-images {
   display: inline-block;
   white-space: nowrap;
@@ -105,4 +151,15 @@
 
 .card-ghost * {
   opacity: 0;
+}
+
+.issue-card.dep-board-dimmed {
+  opacity: var(--opacity-disabled);
+  filter: saturate(0.1);
+}
+.issue-card.dep-board-dimmed:hover {
+  opacity: calc(var(--opacity-disabled) + 0.15);
+}
+.issue-card.dep-board-selected {
+  background-color: var(--color-active);
 }

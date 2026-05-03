@@ -1,0 +1,50 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content repository dependency-board">
+	{{template "repo/header" .}}
+	<div class="ui container fluid padded">
+		<div class="dep-board__navbar-row">
+			<div class="dep-board__navbar-links">
+				{{template "repo/issue/navbar" .}}
+				<button id="dep-board-filter-hide-blocked" class="ui small toggle button">{{ctx.Locale.Tr "repo.issues.dependency_board.hide_blocked"}}</button>
+			</div>
+			<div class="dep-board__filters">
+				<select id="dep-board-filter-milestone" class="ui small dropdown">
+					<option value="">{{ctx.Locale.Tr "repo.issues.dependency_board.state_all"}}</option>
+					{{range .Milestones}}
+					<option value="{{.ID}}">{{.Name}}</option>
+					{{end}}
+				</select>
+				<div id="dep-board-filter-state" class="ui small basic buttons">
+					<button class="ui button active" data-value="">{{ctx.Locale.Tr "repo.issues.dependency_board.state_all"}}</button>
+					<button class="ui button" data-value="open">{{ctx.Locale.Tr "repo.issues.dependency_board.state_open"}}</button>
+					<button class="ui button" data-value="closed">{{ctx.Locale.Tr "repo.issues.dependency_board.state_closed"}}</button>
+				</div>
+			</div>
+		</div>
+		{{template "base/alert" .}}
+
+		<div id="issue-dependency-board"
+			data-repo-link="{{.RepoLink}}"
+			data-is-dependencies-enabled="{{.IsDependenciesEnabled}}"
+			data-locale-title="{{ctx.Locale.Tr "repo.issues.dependency_board.title"}}"
+			data-locale-no-dependencies="{{ctx.Locale.Tr "repo.issues.dependency_board.no_dependencies"}}"
+			data-locale-loading="{{ctx.Locale.Tr "repo.issues.dependency_board.loading"}}"
+			data-locale-depth="{{ctx.Locale.Tr "repo.issues.dependency_board.depth"}}"
+			data-locale-dependents="{{ctx.Locale.Tr "repo.issues.dependency_board.dependents"}}"
+			data-locale-cycle-warning="{{ctx.Locale.Tr "repo.issues.dependency_board.cycle_warning"}}"
+			data-locale-milestone="{{ctx.Locale.Tr "repo.issues.dependency_board.milestone"}}"
+			data-locale-state-open="{{ctx.Locale.Tr "repo.issues.dependency_board.state_open"}}"
+			data-locale-state-closed="{{ctx.Locale.Tr "repo.issues.dependency_board.state_closed"}}"
+			data-locale-state-all="{{ctx.Locale.Tr "repo.issues.dependency_board.state_all"}}"
+			data-locale-component-failed-to-load="{{ctx.Locale.Tr "repo.issues.dependency_board.component_failed_to_load"}}"
+			data-locale-filter-milestone="{{ctx.Locale.Tr "repo.issues.dependency_board.filter_milestone"}}"
+			data-locale-close-pane="{{ctx.Locale.Tr "repo.issues.dependency_board.close_pane"}}"
+			data-locale-loading-pane="{{ctx.Locale.Tr "repo.issues.dependency_board.loading_pane"}}"
+			data-locale-tab-conversation="{{ctx.Locale.Tr "repo.pulls.tab_conversation"}}"
+			data-locale-tab-commits="{{ctx.Locale.Tr "repo.pulls.tab_commits"}}"
+			data-locale-tab-files="{{ctx.Locale.Tr "repo.pulls.tab_files"}}"
+		>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

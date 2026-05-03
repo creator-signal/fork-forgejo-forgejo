@@ -843,7 +843,7 @@ func GetPullCommits(ctx *context.Context) {
 }
 
 // ViewPullCommits show commits for a pull request
-func ViewPullCommits(ctx *context.Context) {
+func preparePullCommitsData(ctx *context.Context) {
 	ctx.Data["PageIsPullList"] = true
 	ctx.Data["PageIsPullCommits"] = true
 
@@ -877,17 +877,22 @@ func ViewPullCommits(ctx *context.Context) {
 	ctx.Data["HasIssuesOrPullsWritePermission"] = ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull)
 	ctx.Data["IsIssuePoster"] = ctx.IsSigned && issue.IsPoster(ctx.Doer.ID)
 
-	// For PR commits page
 	PrepareBranchList(ctx)
 	if ctx.Written() {
 		return
 	}
 	getBranchData(ctx, issue)
+}
+
+func ViewPullCommits(ctx *context.Context) {
+	preparePullCommitsData(ctx)
+	if ctx.Written() {
+		return
+	}
 	ctx.HTML(http.StatusOK, tplPullCommits)
 }
 
-// ViewPullFiles render pull request changed files list page
-func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommit string, willShowSpecifiedCommitRange, willShowSpecifiedCommit bool) {
+func preparePullFilesData(ctx *context.Context, specifiedStartCommit, specifiedEndCommit string, willShowSpecifiedCommitRange, willShowSpecifiedCommit bool) {
 	ctx.Data["PageIsPullList"] = true
 	ctx.Data["PageIsPullFiles"] = true
 
@@ -1208,8 +1213,18 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		return
 	}
 	upload.AddUploadContext(ctx, "comment")
+}
 
+func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommit string, willShowSpecifiedCommitRange, willShowSpecifiedCommit bool) {
+	preparePullFilesData(ctx, specifiedStartCommit, specifiedEndCommit, willShowSpecifiedCommitRange, willShowSpecifiedCommit)
+	if ctx.Written() {
+		return
+	}
 	ctx.HTML(http.StatusOK, tplPullFiles)
+}
+
+func ViewPullFiles(ctx *context.Context) {
+	viewPullFiles(ctx, "", "", false, false)
 }
 
 func ViewPullFilesForSingleCommit(ctx *context.Context) {

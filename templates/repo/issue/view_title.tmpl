@@ -16,6 +16,10 @@
 			{{if not .Issue.IsPull}}
 			<a role="button" class="ui small primary button" href="{{.RepoLink}}/issues/new{{if .NewIssueChooseTemplate}}/choose{{end}}">{{ctx.Locale.Tr "repo.issues.new"}}</a>
 			{{end}}
+			{{if and (not .Issue.IsPull) .IsPaneMode}}
+			{{/* Only shown inside the pane so users can create a blocking issue without leaving the board */}}
+			<a role="button" class="ui small primary button" href="{{.RepoLink}}/issues/new{{if .NewIssueChooseTemplate}}/choose{{end}}?blocks={{.Issue.Index}}">{{ctx.Locale.Tr "repo.issues.dependency_board.create_blocking_issue"}}</a>
+			{{end}}
 		</div>
 	</div>
 	{{if $canEditIssueTitle}}

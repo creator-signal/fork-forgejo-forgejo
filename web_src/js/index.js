@@ -80,6 +80,7 @@ import {initDropdowns} from './modules/dropdown.ts';
 import {initGiteaFomantic} from './modules/fomantic.js';
 import {onDomReady} from './utils/dom.js';
 import {initRepoIssueList} from './features/repo-issue-list.js';
+import {initIssueDependencyBoard} from './features/issue-dependency-board.js'; // dependency board Vue app
 import {initCommonIssueListQuickGoto} from './features/common-issue-list.js';
 import {initRepoContributors} from './features/contributors.js';
 import {initRepoCodeFrequency} from './features/code-frequency.js';
@@ -166,6 +167,7 @@ onDomReady(() => {
   initRepoMigration();
   initRepoMigrationStatusChecker();
   initRepoProject();
+  initIssueDependencyBoard(); // mounts the Vue board component if on the dependency-board page
   initRepoPullRequestAllowMaintainerEdit();
   initRepoPullRequestReview();
   initRepoRelease();

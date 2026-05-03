@@ -18,12 +18,14 @@ import octiconChevronLeft from '../../public/assets/img/svg/octicon-chevron-left
 import octiconChevronRight from '../../public/assets/img/svg/octicon-chevron-right.svg';
 import octiconClock from '../../public/assets/img/svg/octicon-clock.svg';
 import octiconCode from '../../public/assets/img/svg/octicon-code.svg';
+import octiconCommentDiscussion from '../../public/assets/img/svg/octicon-comment-discussion.svg';
 import octiconColumns from '../../public/assets/img/svg/octicon-columns.svg';
 import octiconCopy from '../../public/assets/img/svg/octicon-copy.svg';
 import octiconDiffAdded from '../../public/assets/img/svg/octicon-diff-added.svg';
 import octiconDiffModified from '../../public/assets/img/svg/octicon-diff-modified.svg';
 import octiconDiffRemoved from '../../public/assets/img/svg/octicon-diff-removed.svg';
 import octiconDiffRenamed from '../../public/assets/img/svg/octicon-diff-renamed.svg';
+import octiconDiff from '../../public/assets/img/svg/octicon-diff.svg';
 import octiconDotFill from '../../public/assets/img/svg/octicon-dot-fill.svg';
 import octiconDownload from '../../public/assets/img/svg/octicon-download.svg';
 import octiconEye from '../../public/assets/img/svg/octicon-eye.svg';
@@ -46,6 +48,7 @@ import octiconItalic from '../../public/assets/img/svg/octicon-italic.svg';
 import octiconKebabHorizontal from '../../public/assets/img/svg/octicon-kebab-horizontal.svg';
 import octiconLightBulb from '../../public/assets/img/svg/octicon-light-bulb.svg';
 import octiconLink from '../../public/assets/img/svg/octicon-link.svg';
+import octiconLinkExternal from '../../public/assets/img/svg/octicon-link-external.svg';
 import octiconListOrdered from '../../public/assets/img/svg/octicon-list-ordered.svg';
 import octiconListUnordered from '../../public/assets/img/svg/octicon-list-unordered.svg';
 import octiconLock from '../../public/assets/img/svg/octicon-lock.svg';
@@ -97,11 +100,13 @@ const svgs = {
   'octicon-clock': octiconClock,
   'octicon-code': octiconCode,
   'octicon-columns': octiconColumns,
+  'octicon-comment-discussion': octiconCommentDiscussion,
   'octicon-copy': octiconCopy,
   'octicon-diff-added': octiconDiffAdded,
   'octicon-diff-modified': octiconDiffModified,
   'octicon-diff-removed': octiconDiffRemoved,
   'octicon-diff-renamed': octiconDiffRenamed,
+  'octicon-diff': octiconDiff,
   'octicon-dot-fill': octiconDotFill,
   'octicon-download': octiconDownload,
   'octicon-eye': octiconEye,
@@ -124,6 +129,7 @@ const svgs = {
   'octicon-kebab-horizontal': octiconKebabHorizontal,
   'octicon-light-bulb': octiconLightBulb,
   'octicon-link': octiconLink,
+  'octicon-link-external': octiconLinkExternal,
   'octicon-list-ordered': octiconListOrdered,
   'octicon-list-unordered': octiconListUnordered,
   'octicon-lock': octiconLock,

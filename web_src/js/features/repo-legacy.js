@@ -25,6 +25,8 @@ import {hideElem, showElem} from '../utils/dom.js';
 import {getComboMarkdownEditor, initComboMarkdownEditor} from './comp/ComboMarkdownEditor.js';
 import {attachRefIssueContextPopup} from './contextpopup.js';
 import {POST} from '../modules/fetch.js';
+// Indirection so the dependency board pane can intercept reloads and refresh itself instead.
+import {requestPageReload} from '../modules/page-reload.js';
 import {MarkdownQuote} from '@github/quote-selection';
 import {toAbsoluteUrl} from '../utils.js';
 import {initDropzone, initDisabledInputs} from './common-global.js';
@@ -60,7 +62,7 @@ export function initRepoCommentForm() {
         params.append('ref', selectedValue);
         try {
           await POST(form.getAttribute('action'), {data: params});
-          window.location.reload();
+          requestPageReload();
         } catch (error) {
           console.error(error);
         }
@@ -575,7 +577,8 @@ function preprocessFragment(context) {
   };
 }
 
-function initRepoIssueCommentEdit() {
+// Exported so the dependency board pane's initPane() can call it on freshly rendered HTML.
+export function initRepoIssueCommentEdit() {
   // Edit issue or comment content
   $(document).on('click', '.edit-content', onEditContent);
 
