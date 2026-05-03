@@ -92,27 +92,27 @@ func apiAuthentication(authMethod auth.Method) func(*context.APIContext) {
 	}
 }
 
-func apiAuthorization(ctx *context.APIContext) {
-	if hasScope, scope := ctx.Authentication.Scope().Get(); hasScope {
+func apiAuthorization(ctx permissions_context.PermissionsContext) {
+	if hasScope, scope := ctx.GetAuthentication().Scope().Get(); hasScope {
 		publicOnly, err := scope.PublicOnly()
 		if err != nil {
 			ctx.Error(http.StatusForbidden, "tokenRequiresScope", "parsing public resource scope failed: "+err.Error())
 			return
 		}
-		ctx.PublicOnly = publicOnly
+		ctx.SetPublicOnly(publicOnly)
 	}
 
-	reducer := ctx.Authentication.Reducer()
+	reducer := ctx.GetAuthentication().Reducer()
 	if reducer != nil {
-		ctx.Reducer = reducer
+		ctx.SetReducer(reducer)
 	} else {
 		// No Reducer will be populated if the auth method wasn't an PAT.  In this case, we populate `ctx.Reducer` so no
 		// nil checks are needed, and we respect the scope `PublicOnly()` so that it it's safe to just rely on
 		// `ctx.Reducer` to account for public-only access:
-		if ctx.PublicOnly {
-			ctx.Reducer = &authz.PublicReposAuthorizationReducer{}
+		if ctx.GetPublicOnly() {
+			ctx.SetReducer(&authz.PublicReposAuthorizationReducer{})
 		} else {
-			ctx.Reducer = &authz.AllAccessAuthorizationReducer{}
+			ctx.SetReducer(&authz.AllAccessAuthorizationReducer{})
 		}
 	}
 }
