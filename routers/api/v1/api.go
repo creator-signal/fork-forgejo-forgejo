@@ -751,11 +751,15 @@ func mustEnableIssuesOrPulls(ctx *context.APIContext) {
 }
 
 func mustEnableLocalIssuesIfIsIssue(ctx *context.APIContext) {
-	if ctx.Repo.Repository.UnitEnabled(ctx, unit.TypeIssues) {
+	internalMustEnableLocalIssuesIfIsIssue(ctx, ctx.ParamsInt64(":index"))
+}
+
+func internalMustEnableLocalIssuesIfIsIssue(ctx permissions_context.PermissionsContext, index int64) {
+	if ctx.GetRepository().UnitEnabled(ctx.GetContext(), unit.TypeIssues) {
 		return
 	}
 
-	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	issue, err := issues_model.GetIssueByIndex(ctx.GetContext(), ctx.GetRepository().ID, index)
 	if err != nil {
 		if issues_model.IsErrIssueNotExist(err) {
 			ctx.NotFound()
