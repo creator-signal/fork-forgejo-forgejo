@@ -779,10 +779,9 @@ func mustEnableWiki(ctx *context.APIContext) {
 	}
 }
 
-func mustNotBeArchived(ctx *context.APIContext) {
-	if ctx.Repo.Repository.IsArchived {
-		ctx.Error(http.StatusLocked, "RepoArchived", fmt.Errorf("%s is archived", ctx.Repo.Repository.LogString()))
-		return
+func mustNotBeArchived(ctx permissions_context.PermissionsContext) {
+	if ctx.GetRepository().IsArchived {
+		ctx.Error(http.StatusLocked, "RepoArchived", fmt.Errorf("%s is archived", ctx.GetRepository().LogString()))
 	}
 }
 
