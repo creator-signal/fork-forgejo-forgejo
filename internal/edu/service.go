@@ -59,6 +59,11 @@ type EducationalService interface {
 	GetInitForksTaskByCourse(ctx context.Context, courseID int64) (*InitForksTask, error)
 	GetInitForksTaskByID(ctx context.Context, id int64) (*InitForksTask, error)
 
+	// Distribute (assignment-level)
+	DistributeAssignment(ctx context.Context, assignmentID, doerID int64) (*DistributeTask, error)
+	GetDistributeTaskByAssignment(ctx context.Context, assignmentID int64) (*DistributeTask, error)
+	GetDistributeTaskByID(ctx context.Context, id int64) (*DistributeTask, error)
+
 	EnrollUser(ctx context.Context, opts EnrollUserOptions) error
 	GetEnrollments(ctx context.Context, courseID int64) ([]*CourseEnrollment, error)
 	RemoveEnrollment(ctx context.Context, courseID, userID int64) error
