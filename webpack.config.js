@@ -144,6 +144,9 @@ export default {
     list: [
         fileURLToPath(new URL('web_src/js/list.js', import.meta.url)),
     ],
+    refocus: [
+        fileURLToPath(new URL('web_src/js/refocus.js', import.meta.url)),
+    ],
     webcomponents: [
       fileURLToPath(new URL('web_src/js/webcomponents/index.js', import.meta.url)),
     ],
