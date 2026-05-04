@@ -86,6 +86,7 @@ type RepoForker interface {
 	RemoveCollaborator(ctx context.Context, repoID, userID int64) error
 	ProtectMainBranch(ctx context.Context, repoID int64, branchName string) error
 	GetRepositoryByOwnerAndName(ctx context.Context, ownerID int64, repoName string) (*repo_model.Repository, error)
+	BranchExists(ctx context.Context, repoID int64, branchName string) (bool, error)
 }
 
 // UserCreator abstracts user creation and lookup for import and bulk operations.
