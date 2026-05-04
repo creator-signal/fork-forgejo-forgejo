@@ -207,3 +207,51 @@ test('CalculateRelativeTimes', () => {
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
   expect(mock.textContent).toEqual('21 hours ago');
 });
+
+test('CalculateDurationFormat', () => {
+  // Compute expected strings via Intl so the test is locale-agnostic.
+  const fmt = (n, unit) => new Intl.NumberFormat(navigator.language, {
+    style: 'unit', unit, unitDisplay: 'long',
+  }).format(n);
+
+  const mock = document.createElement('relative-time');
+  document.body.append(mock);
+  mock.setAttribute('format', 'duration');
+
+  const now = Date.parse('2024-10-27T04:05:30+01:00');
+
+  // Server uptime of two months: must render as "2 months", not "2 months ago".
+  mock.setAttribute('datetime', '2024-08-25T01:00:00+02:00');
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
+  expect(mock.textContent).toEqual(fmt(2, 'month'));
+
+  // One year of uptime.
+  mock.setAttribute('datetime', '2023-08-25T01:00:00+02:00');
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
+  expect(mock.textContent).toEqual(fmt(1, 'year'));
+
+  // Several days.
+  mock.setAttribute('datetime', '2024-10-22T01:00:00+02:00');
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
+  expect(mock.textContent).toEqual(fmt(5, 'day'));
+
+  // Hours.
+  mock.setAttribute('datetime', '2024-10-27T01:05:00+01:00');
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
+  expect(mock.textContent).toEqual(fmt(3, 'hour'));
+
+  // Minutes.
+  mock.setAttribute('datetime', '2024-10-27T04:00:00+01:00');
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_MINUTE);
+  expect(mock.textContent).toEqual(fmt(5, 'minute'));
+
+  // Sub-minute durations should still be expressed as a duration, not "now".
+  mock.setAttribute('datetime', '2024-10-27T04:05:20+01:00');
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(HALF_MINUTE);
+  expect(mock.textContent).toEqual(fmt(10, 'second'));
+
+  // Future datetime should still produce a positive (absolute) duration.
+  mock.setAttribute('datetime', '2024-10-27T04:08:30+01:00');
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_MINUTE);
+  expect(mock.textContent).toEqual(fmt(3, 'minute'));
+});

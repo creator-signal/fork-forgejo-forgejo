@@ -19,6 +19,18 @@ const ABSOLUTE_DATETIME_FORMAT = new Intl.DateTimeFormat(navigator.language, {
 });
 const FALLBACK_DATETIME_FORMAT = new Intl.RelativeTimeFormat(navigator.language, {style: 'long'});
 
+const DURATION_FORMATTERS = {};
+function GetDurationFormatter(unit) {
+  if (!DURATION_FORMATTERS[unit]) {
+    DURATION_FORMATTERS[unit] = new Intl.NumberFormat(navigator.language, {
+      style: 'unit',
+      unit,
+      unitDisplay: 'long',
+    });
+  }
+  return DURATION_FORMATTERS[unit];
+}
+
 /**
  * A list of plural rules for all languages.
  * `plural_rules.go` defines the index for each of the 14 known plural rules.
@@ -93,6 +105,30 @@ function GetPluralizedStringOrFallback(key, n, unit) {
 }
 
 /**
+ * Format the difference between two dayjs UTC instants as a localized,
+ * absolute-value duration string (e.g. "2 months", "5 days") with no
+ * "ago"/"in" suffix. Returns [text, recommendedUpdateIntervalMs].
+ */
+function FormatAsDuration(nowJS, thenJS) {
+  if (nowJS.isBefore(thenJS)) [nowJS, thenJS] = [thenJS, nowJS];
+
+  const years = Math.floor(nowJS.diff(thenJS, 'year'));
+  if (years >= 1) return [GetDurationFormatter('year').format(years), ONE_DAY];
+  const months = Math.floor(nowJS.diff(thenJS, 'month'));
+  if (months >= 1) return [GetDurationFormatter('month').format(months), ONE_DAY];
+  const weeks = Math.floor(nowJS.diff(thenJS, 'week'));
+  if (weeks >= 1) return [GetDurationFormatter('week').format(weeks), ONE_DAY];
+  const days = Math.floor(nowJS.diff(thenJS, 'day'));
+  if (days >= 1) return [GetDurationFormatter('day').format(days), ONE_DAY];
+  const hours = Math.floor(nowJS.diff(thenJS, 'hour'));
+  if (hours >= 1) return [GetDurationFormatter('hour').format(hours), ONE_HOUR];
+  const minutes = Math.floor(nowJS.diff(thenJS, 'minute'));
+  if (minutes >= 1) return [GetDurationFormatter('minute').format(minutes), ONE_MINUTE];
+  const seconds = Math.max(Math.floor(nowJS.diff(thenJS, 'second')), 0);
+  return [GetDurationFormatter('second').format(seconds), HALF_MINUTE];
+}
+
+/**
  * Update the displayed text of the given relative-time DOM element with its
  * human-readable, localized relative time string.
  * Returns the recommended interval in milliseconds until the object should be updated again,
@@ -110,6 +146,12 @@ export function DoUpdateRelativeTime(object, now) {
   const thenJS = dayjs.utc(absoluteTime);
 
   object.setAttribute('data-tooltip-content', ABSOLUTE_DATETIME_FORMAT.format(thenJS.toDate()));
+
+  if (object.getAttribute('format') === 'duration') {
+    const [text, next] = FormatAsDuration(nowJS, thenJS);
+    object.textContent = text;
+    return next;
+  }
 
   if (nowJS.isBefore(thenJS)) {
     // Datetime is in the future.
@@ -188,7 +230,7 @@ export function DoUpdateRelativeTime(object, now) {
 }
 
 window.customElements.define('relative-time', class extends HTMLElement {
-  static observedAttributes = ['datetime'];
+  static observedAttributes = ['datetime', 'format'];
 
   alive = false;
   contentSpan = null;
@@ -217,7 +259,7 @@ window.customElements.define('relative-time', class extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'datetime' && oldValue !== newValue) this.update(false);
+    if ((name === 'datetime' || name === 'format') && oldValue !== newValue) this.update(false);
   }
 
   set textContent(value) {
