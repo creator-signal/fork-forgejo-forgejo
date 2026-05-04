@@ -3,12 +3,15 @@ package edu
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"forgejo.org/models/organization"
 	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 )
+
+var taskNameRegex = regexp.MustCompile(`^[a-z0-9_-]+$`)
 
 // CreateAssignmentOptions contains options for creating a new assignment.
 type CreateAssignmentOptions struct {
@@ -213,6 +216,43 @@ func NewService(repo Repository, forker RepoForker, users ...UserCreator) Educat
 func (s *service) CreateAssignment(ctx context.Context, opts CreateAssignmentOptions) (*Assignment, error) {
 	if opts.CourseID == 0 || opts.TaskName == "" || opts.Title == "" {
 		return nil, fmt.Errorf("course_id, task_name and title are required")
+	}
+	if !taskNameRegex.MatchString(opts.TaskName) {
+		return nil, ErrAssignmentTaskNameInvalid
+	}
+	if len(opts.TaskName) > 100 {
+		return nil, ErrAssignmentTaskNameInvalid
+	}
+	if opts.AllowedFilesGlob == "" {
+		return nil, ErrAllowedFilesGlobRequired
+	}
+
+	course, err := s.repo.GetCourseByID(ctx, opts.CourseID)
+	if err != nil {
+		return nil, fmt.Errorf("get course: %w", err)
+	}
+	if course == nil {
+		return nil, fmt.Errorf("course not found")
+	}
+	if course.TasksMasterRepoID == 0 {
+		return nil, ErrTasksMasterRepoNotSet
+	}
+
+	existing, err := s.repo.GetAssignmentByCourseAndTask(ctx, opts.CourseID, opts.TaskName)
+	if err != nil {
+		return nil, fmt.Errorf("check duplicate assignment: %w", err)
+	}
+	if existing != nil {
+		return nil, ErrAssignmentTaskNameInUse
+	}
+
+	branchName := "submits/" + opts.TaskName
+	exists, err := s.forker.BranchExists(ctx, course.TasksMasterRepoID, branchName)
+	if err != nil {
+		return nil, fmt.Errorf("check branch: %w", err)
+	}
+	if !exists {
+		return nil, ErrSubmitsBranchNotFound
 	}
 
 	a := &Assignment{
