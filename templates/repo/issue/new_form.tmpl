@@ -152,3 +152,11 @@
 	</div>
 	<input type="hidden" name="redirect_after_creation" value="{{.redirect_after_creation}}">
 </form>
+
+<div class="tw-hidden mentionableteams"
+    data-org="{{ $.MentionableTeamsOrg }}"
+    data-avatar="{{ $.MentionableTeamsOrgAvatar }}">
+    {{- range .MentionableTeams -}}
+        <div class="team" data-name="{{ .Name }}"></div>
+    {{- end -}}
+</div>
