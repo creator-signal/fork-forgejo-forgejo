@@ -373,6 +373,11 @@ td .commit-summary {
   background-color: var(--color-hover);
 }
 
+.repository .keyboard-selected {
+  background-color: var(--color-hover);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
 .repository.file.list #repo-files-table tr.has-parent a {
   display: inline-block;
   padding-top: 8px;

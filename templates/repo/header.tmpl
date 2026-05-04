@@ -92,13 +92,13 @@
 		{{if not (or .Repository.IsBeingCreated .Repository.IsBroken)}}
 			<div class="overflow-menu-items">
 				{{if .Permission.CanRead $.UnitTypeCode}}
-					<a class="{{if .PageIsViewCode}}active {{end}}item" href="{{.RepoLink}}{{if and (ne .BranchName .Repository.DefaultBranch) (not $.PageIsWiki)}}/src/{{.BranchNameSubURL}}{{end}}">
+					<a id="repo-code-tab" class="{{if .PageIsViewCode}}active {{end}}item" href="{{.RepoLink}}{{if and (ne .BranchName .Repository.DefaultBranch) (not $.PageIsWiki)}}/src/{{.BranchNameSubURL}}{{end}}">
 						{{svg "octicon-code"}} {{ctx.Locale.Tr "repo.code"}}
 					</a>
 				{{end}}
 
 				{{if .Permission.CanRead $.UnitTypeIssues}}
-					<a class="{{if .PageIsIssueList}}active {{end}}item" href="{{.RepoLink}}/issues">
+					<a id="repo-issues-tab" class="{{if .PageIsIssueList}}active {{end}}item" href="{{.RepoLink}}/issues">
 						{{svg "octicon-issue-opened"}} {{ctx.Locale.Tr "repo.issues"}}
 						{{if (.Repository.NumOpenIssues ctx)}}
 							<span class="ui small label">{{CountFmt (.Repository.NumOpenIssues ctx)}}</span>
@@ -113,7 +113,7 @@
 				{{end}}
 
 				{{if and .Repository.CanEnablePulls (.Permission.CanRead $.UnitTypePullRequests)}}
-					<a class="{{if .PageIsPullList}}active {{end}}item" href="{{.RepoLink}}/pulls">
+					<a id="repo-pull-requests-tab" class="{{if .PageIsPullList}}active {{end}}item" href="{{.RepoLink}}/pulls">
 						{{svg "octicon-git-pull-request"}} {{ctx.Locale.Tr "repo.pulls"}}
 						{{if (.Repository.NumOpenPulls ctx)}}
 							<span class="ui small label">{{CountFmt (.Repository.NumOpenPulls ctx)}}</span>
@@ -122,7 +122,7 @@
 				{{end}}
 
 				{{if and (not .UnitProjectsGlobalDisabled) (.Permission.CanRead $.UnitTypeProjects)}}
-					<a href="{{.RepoLink}}/projects" class="{{if .IsProjectsPage}}active {{end}}item">
+					<a id="repo-projects-tab" href="{{.RepoLink}}/projects" class="{{if .IsProjectsPage}}active {{end}}item">
 						{{svg "octicon-project"}} {{ctx.Locale.Tr "repo.project"}}
 						{{if .Repository.NumOpenProjects}}
 							<span class="ui small label">{{CountFmt .Repository.NumOpenProjects}}</span>
@@ -131,7 +131,7 @@
 				{{end}}
 
 				{{if and (.Permission.CanRead $.UnitTypeReleases) (not .IsEmptyRepo)}}
-					<a class="{{if or .PageIsReleaseList .PageIsTagList}}active {{end}}item" href="{{.RepoLink}}/releases">
+					<a id="repo-releases-tab" class="{{if or .PageIsReleaseList .PageIsTagList}}active {{end}}item" href="{{.RepoLink}}/releases">
 						{{svg "octicon-tag"}} {{ctx.Locale.Tr "repo.releases"}}
 						{{if .NumReleases}}
 							<span class="ui small label">{{CountFmt .NumReleases}}</span>
@@ -140,7 +140,7 @@
 				{{end}}
 
 				{{if .Permission.CanRead $.UnitTypePackages}}
-					<a href="{{.RepoLink}}/packages" class="{{if .IsPackagesPage}}active {{end}}item">
+					<a id="repo-packages-tab" href="{{.RepoLink}}/packages" class="{{if .IsPackagesPage}}active {{end}}item">
 						{{svg "octicon-package"}} {{ctx.Locale.Tr "packages.title"}}
 						{{if .NumPackages}}
 							<span class="ui small label">{{CountFmt .NumPackages}}</span>
@@ -149,7 +149,7 @@
 				{{end}}
 
 				{{if .Permission.CanRead $.UnitTypeWiki}}
-					<a class="{{if .PageIsWiki}}active {{end}}item" href="{{.RepoLink}}/wiki">
+					<a id="repo-wiki-tab" class="{{if .PageIsWiki}}active {{end}}item" href="{{.RepoLink}}/wiki">
 						{{svg "octicon-book"}} {{ctx.Locale.Tr "repo.wiki"}}
 					</a>
 				{{end}}
@@ -161,13 +161,13 @@
 				{{end}}
 
 				{{if and (.Permission.CanReadAny $.UnitTypeCode $.UnitTypePullRequests $.UnitTypeIssues $.UnitTypeReleases)}}
-					<a class="{{if .PageIsActivity}}active {{end}}item" href="{{.RepoLink}}/activity">
+					<a id="repo-activity-tab" class="{{if .PageIsActivity}}active {{end}}item" href="{{.RepoLink}}/activity">
 						{{svg "octicon-pulse"}} {{ctx.Locale.Tr "repo.activity"}}
 					</a>
 				{{end}}
 
 				{{if and .EnableActions (not .UnitActionsGlobalDisabled) (.Permission.CanRead $.UnitTypeActions)}}
-					<a class="{{if .PageIsActions}}active {{end}}item" href="{{.RepoLink}}/actions">
+					<a id="repo-actions-tab" class="{{if .PageIsActions}}active {{end}}item" href="{{.RepoLink}}/actions">
 						{{svg "octicon-play"}} {{ctx.Locale.Tr "actions.actions"}}
 						{{if .NumOpenActionRuns}}
 							<span class="ui small label">{{CountFmt .NumOpenActionRuns}}</span>
