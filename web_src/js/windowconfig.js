@@ -14,8 +14,41 @@ window.config = {
 	mermaidMaxSourceCharacters: parseInt(dataset.mermaidmaxsourcecharacters),
 	i18n: JSON.parse(dataset.i18n),
 };
-if(dataset.mentionValues){
-    window.config['mentionValues'] = JSON.parse(dataset.mentionValues)
-}
-
 window.config.pageData = window.config.pageData || {};
+window.addEventListener('load', function(){
+    const mentionValues = [];
+    const mentionKeys = ['key', 'value', 'name', 'avatar', 'fullname'];
+    document.querySelectorAll('.participants .participant').forEach((participant) => {
+      let mention_participant = {};
+      Object.entries(participant.dataset).forEach(([name, value]) => {
+        if(mentionKeys.includes(name)){
+          mention_participant[name] = value;
+        }
+      });
+      mentionValues.push(mention_participant);
+    });
+
+    document.querySelectorAll('.assignees .assignee').forEach((assignee) => {
+      let mention_assignee = {};
+      Object.entries(assignee.dataset).forEach(([name, value]) => {
+        if(mentionKeys.includes(name)){
+          mention_assignee[name] = value;
+        }
+      });
+      mentionValues.push(mention_assignee);
+    });
+
+    const teamorg = document.querySelector('.mentionableteams').dataset;
+    document.querySelectorAll('.mentionableteams .team').forEach((team) => {
+      mentionValues.push({
+        'key': teamorg['org'] + '/' + team.dataset['name'],
+        'value': teamorg['org'] + '/' + team.dataset['name'],
+        'name': teamorg['org'] + '/' + team.dataset['name'],
+        'avatar': teamorg['avatar']
+      });
+    });
+
+    if (mentionValues){
+      window.config['mentionValues'] = (mentionValues.length) ? mentionValues : null;
+    }
+});

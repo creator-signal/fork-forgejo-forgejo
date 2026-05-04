@@ -91,7 +91,6 @@ func Contexter() func(next http.Handler) http.Handler {
 				"AllLangs":       translation.AllLangs(),
 
 				"PasswordHashAlgorithms": hash.RecommendedHashAlgorithms,
-				"mentionValues": nil,
 				"i18n": i18n,
 			})
 			next.ServeHTTP(resp, ctx.Req)

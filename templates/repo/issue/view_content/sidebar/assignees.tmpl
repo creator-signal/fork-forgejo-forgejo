@@ -46,7 +46,13 @@
 		{{if .isExistingIssue}}
 			{{range .Issue.Assignees}}
 				<div class="item">
-					<a class="muted sidebar-item-link" href="{{$.RepoLink}}/{{if $.Issue.IsPull}}pulls{{else}}issues{{end}}?assignee={{.ID}}">
+					<a class="assignee muted sidebar-item-link"
+						href="{{$.RepoLink}}/{{if $.Issue.IsPull}}pulls{{else}}issues{{end}}?assignee={{.ID}}"
+						data-key="{{.Name}} {{.FullName}}"
+						data-value="{{.Name}}"
+						data-name="{{.Name}}"
+						data-fullname="{{.FullName}}"
+						data-avatar="{{.AvatarLink $.Context}}">
 						{{ctx.AvatarUtils.Avatar . 28 "tw-mr-2"}}{{.GetDisplayName}}
 					</a>
 				</div>

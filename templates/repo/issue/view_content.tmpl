@@ -173,6 +173,14 @@
 	<span class="no-content">{{ctx.Locale.Tr "repo.issues.no_content"}}</span>
 </div>
 
+<div class="tw-hidden mentionableteams"
+    data-org="{{ $.MentionableTeamsOrg }}"
+    data-avatar="{{ $.MentionableTeamsOrgAvatar }}">
+    {{- range .MentionableTeams -}}
+        <div class="team" data-name="{{ .Name }}"></div>
+    {{- end -}}
+</div>
+
 <div class="ui g-modal-confirm delete modal" id="delete-branch">
 	<div class="header">
 		{{svg "octicon-trash"}}
