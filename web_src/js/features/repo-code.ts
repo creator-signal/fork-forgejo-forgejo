@@ -6,6 +6,7 @@ import {toAbsoluteUrl} from '../utils.js';
 
 export const singleAnchorRegex = /^#[Ln]([1-9][0-9]*)$/;
 export const rangeAnchorRegex = /^#[Ln]([1-9][0-9]*)-[Ln]?([1-9][0-9]*)$/;
+let goto_state = false;
 
 function changeHash(hash) {
   if (window.history.pushState) {
@@ -172,6 +173,12 @@ function keyboardSelector(up: boolean) {
   rows[cur].classList.remove('keyboard-selected');
 }
 
+function goto(query:string) {
+  if (!goto_state) return true;
+  document.querySelector<HTMLAnchorElement>(query)?.click();
+  return false;
+}
+
 export function initRepoCodeView() {
   if (document.querySelector('.code-view .lines-num')) {
     document.addEventListener('click', (e) => {
@@ -261,7 +268,10 @@ export function initRepoCodeView() {
       e.target.closest(
         'input, textarea, [contenteditable], .CodeMirror, .cm-editor',
       )
-    ) return;
+    ) {
+      goto_state = false;
+      return;
+    }
     switch (e.key) {
       case 'Enter':
         if (e.target.tagName !== 'BUTTON') {
@@ -271,13 +281,20 @@ export function initRepoCodeView() {
         }
         break;
       case 'a':
-        document.querySelector<HTMLAnchorElement>('#repo-actions-tab')?.click();
+        goto('#repo-actions-tab');
         break;
       case 'c':
-        document.querySelector<HTMLAnchorElement>('#repo-code-tab')?.click();
+        goto('#repo-code-tab');
         break;
+      case 'g':
+        if (goto_state) return;
+        goto_state = true;
+        setTimeout(() => {
+          goto_state = false;
+        }, 750);
+        return;
       case 'i':
-        document.querySelector<HTMLAnchorElement>('#repo-issues-tab')?.click();
+        goto('#repo-issues-tab');
         break;
       case 'j':
         (e.target as HTMLInputElement).blur();
@@ -288,17 +305,18 @@ export function initRepoCodeView() {
         keyboardSelector(true);
         break;
       case 'o':
-        document.querySelector<HTMLAnchorElement>('#repo-projects-tab')?.click();
+        goto('#repo-projects-tab');
         break;
       case 'p':
-        document.querySelector<HTMLAnchorElement>('#repo-pull-requests-tab')?.click();
+        goto('#repo-pull-requests-tab');
         break;
       case 'r':
-        document.querySelector<HTMLAnchorElement>('#repo-releases-tab')?.click();
+        goto('#repo-releases-tab');
         break;
       case 'w':
-        document.querySelector<HTMLAnchorElement>('#repo-wiki-tab')?.click();
+        goto('#repo-wiki-tab');
         break;
     }
+    goto_state = false;
   });
 }
