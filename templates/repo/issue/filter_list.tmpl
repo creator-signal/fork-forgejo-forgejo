@@ -41,6 +41,7 @@
 {{end}}
 
 <!-- Project -->
+{{if not .UnitProjectsGlobalDisabled}}
 <div class="list-header-project ui{{if not (or .OpenProjects .ClosedProjects)}} disabled{{end}} dropdown jump item">
 	<span class="text">
 		{{ctx.Locale.Tr "repo.issues.filter_project"}}
@@ -77,6 +78,7 @@
 		{{end}}
 	</div>
 </div>
+{{end}}
 
 <!-- Author -->
 <div class="list-header-author ui dropdown jump item user-remote-search" data-tooltip-content="{{ctx.Locale.Tr "repo.author_search_tooltip"}}"
