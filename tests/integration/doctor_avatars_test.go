@@ -10,15 +10,14 @@ import (
 	"image/png"
 	"testing"
 
+	cmd "forgejo.org/cmd"
 	"forgejo.org/models/db"
 	"forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	"forgejo.org/modules/test"
-	doctor "forgejo.org/services/doctor"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/require"
@@ -27,12 +26,6 @@ import (
 func TestPrecomputeUserAvatars(t *testing.T) {
 	defer tests.PrepareTestEnv(t, 1)()
 	var err error
-	tmpDir := t.TempDir()
-	defer test.MockVariableValue(&setting.Avatar.Storage.Type, setting.LocalStorageType)()
-	defer test.MockVariableValue(&setting.Avatar.Storage.Path, tmpDir)()
-	avatarStorage, err := storage.NewLocalStorage(t.Context(), &setting.Storage{Path: tmpDir})
-	require.NoError(t, err)
-	storage.Avatars = avatarStorage
 
 	// make the maximum uncached image size small, so that our test image is bigger than that
 	defer test.MockVariableValue(&setting.Avatar.MaxOriginSize, 3)()
@@ -53,7 +46,7 @@ func TestPrecomputeUserAvatars(t *testing.T) {
 	require.NoError(t, err)
 
 	// run the doctor command
-	err = doctor.GenerateResizedUserAvatars(storage.Avatars, setting.Avatar.MaxOriginSize)(ctx, log.GetLogger("doctor"), true)
+	err = cmd.RunAvatarResize(ctx, true, false)
 	require.NoError(t, err)
 
 	// the resized version of the avatar is now stored in the cache
@@ -64,12 +57,6 @@ func TestPrecomputeUserAvatars(t *testing.T) {
 func TestPrecomputeRepoAvatars(t *testing.T) {
 	defer tests.PrepareTestEnv(t, 1)()
 	var err error
-	tmpDir := t.TempDir()
-	defer test.MockVariableValue(&setting.RepoAvatar.Storage.Type, setting.LocalStorageType)()
-	defer test.MockVariableValue(&setting.RepoAvatar.Storage.Path, tmpDir)()
-	avatarStorage, err := storage.NewLocalStorage(t.Context(), &setting.Storage{Path: tmpDir})
-	require.NoError(t, err)
-	storage.RepoAvatars = avatarStorage
 	// make the maximum uncached image size small, so that our test image is bigger than that
 	defer test.MockVariableValue(&setting.Avatar.MaxOriginSize, 3)()
 
@@ -86,12 +73,29 @@ func TestPrecomputeRepoAvatars(t *testing.T) {
 	u.Avatar = avatarPath
 	err = repo.UpdateRepositoryCols(ctx, u, "avatar")
 	require.NoError(t, err)
+	// make sure there is no resized version of the avatar in the storage yet
+	storage.RepoAvatars.Delete(fmt.Sprintf("resized/64/%s", avatarPath))
+	_, err = storage.RepoAvatars.Stat(fmt.Sprintf("resized/64/%s", avatarPath))
+	require.Error(t, err)
 
 	// run the doctor command
-	err = doctor.GenerateResizedRepoAvatars(storage.RepoAvatars, setting.Avatar.MaxOriginSize)(ctx, log.GetLogger("doctor"), true)
+	err = cmd.RunAvatarResize(ctx, false, true)
 	require.NoError(t, err)
 
 	// the resized version of the avatar is now stored in the cache
 	_, err = storage.RepoAvatars.Stat(fmt.Sprintf("resized/64/%s", avatarPath))
 	require.NoError(t, err)
+}
+
+func TestPrecomputeAvatarsWithoutArgument(t *testing.T) {
+	defer tests.PrepareTestEnv(t, 1)()
+	var err error
+
+	ctx := db.DefaultContext
+
+	// run the doctor command
+	err = cmd.RunAvatarResize(ctx, false, false)
+
+	// there is an error because we didn't specify which avatars to resize
+	require.Error(t, err)
 }
