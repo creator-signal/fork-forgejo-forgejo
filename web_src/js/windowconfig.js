@@ -38,13 +38,13 @@ window.addEventListener('load', function(){
       mentionValues.push(mention_assignee);
     });
 
-    const teamorg = document.querySelector('.mentionableteams').dataset;
+    const teamorg = document.querySelector('.mentionableteams');
     document.querySelectorAll('.mentionableteams .team').forEach((team) => {
       mentionValues.push({
-        'key': teamorg['org'] + '/' + team.dataset['name'],
-        'value': teamorg['org'] + '/' + team.dataset['name'],
-        'name': teamorg['org'] + '/' + team.dataset['name'],
-        'avatar': teamorg['avatar']
+        'key': teamorg.dataset['org'] + '/' + team.dataset['name'],
+        'value': teamorg.dataset['org'] + '/' + team.dataset['name'],
+        'name': teamorg.dataset['org'] + '/' + team.dataset['name'],
+        'avatar': teamorg.dataset['avatar']
       });
     });
 
