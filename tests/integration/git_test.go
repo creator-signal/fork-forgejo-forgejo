@@ -201,12 +201,12 @@ func standardCommitAndPushTest(t *testing.T, dstPath string) (little, big string
 func lfsCommitAndPushTest(t *testing.T, dstPath string) (littleLFS, bigLFS string) {
 	t.Run("LFS", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		t.Cleanup(func() {
-			cleanupGlobalLFSHooks(dstPath)
-		})
+
+		err := git.NewCommand(git.DefaultContext, "config", "core.hooksPath", "$GIT/.hooks").AddArguments("--local").Run(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
 
 		prefix := "lfs-data-file-"
-		err := git.NewCommand(git.DefaultContext, "lfs").AddArguments("install").Run(&git.RunOpts{Dir: dstPath})
+		err = git.NewCommand(git.DefaultContext, "lfs").AddArguments("install").Run(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
 		_, _, err = git.NewCommand(git.DefaultContext, "lfs").AddArguments("track").AddDynamicArguments(prefix + "*").RunStdString(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
@@ -236,14 +236,7 @@ func lfsCommitAndPushTest(t *testing.T, dstPath string) (littleLFS, bigLFS strin
 		})
 	})
 
-	cleanupGlobalLFSHooks(dstPath)
 	return littleLFS, bigLFS
-}
-
-func cleanupGlobalLFSHooks(dstPath string) {
-	// lfs uninstall is used to clean up lfs hooks from core.hooksPath,
-	// leavging those hooks there could interfere with the git operations executed by the server
-	git.NewCommand(git.DefaultContext, "lfs").AddArguments("uninstall").Run(&git.RunOpts{Dir: dstPath})
 }
 
 func commitAndPushTest(t *testing.T, dstPath, prefix string) (little, big string) {
