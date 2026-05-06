@@ -46,14 +46,14 @@
 					{{if .SymlinkURL}}
 						<a class="ui mini basic button" href="{{$.SymlinkURL}}" data-kind="follow-symlink">{{ctx.Locale.Tr "repo.file_follow"}}</a>
 					{{end}}
-					<a class="ui mini basic button" href="{{$.RawFileLink}}">{{ctx.Locale.Tr "repo.file_raw"}}</a>
+					<a id="raw-btn" class="ui mini basic button" href="{{$.RawFileLink}}">{{ctx.Locale.Tr "repo.file_raw"}}</a>
 					{{if not .IsViewCommit}}
-						<a class="ui mini basic button" href="{{.RepoLink}}/src/commit/{{PathEscape .CommitID}}/{{PathEscapeSegments .TreePath}}">{{ctx.Locale.Tr "repo.file_permalink"}}</a>
+						<a id="permalink-btn" class="ui mini basic button" href="{{.RepoLink}}/src/commit/{{PathEscape .CommitID}}/{{PathEscapeSegments .TreePath}}">{{ctx.Locale.Tr "repo.file_permalink"}}</a>
 					{{end}}
 					{{if .IsRepresentableAsText}}
-						<a class="ui mini basic button" href="{{.RepoLink}}/blame/{{.BranchNameSubURL}}/{{PathEscapeSegments .TreePath}}">{{ctx.Locale.Tr "repo.blame"}}</a>
+						<a id="blame-btn" class="ui mini basic button" href="{{.RepoLink}}/blame/{{.BranchNameSubURL}}/{{PathEscapeSegments .TreePath}}">{{ctx.Locale.Tr "repo.blame"}}</a>
 					{{end}}
-					<a class="ui mini basic button" href="{{.RepoLink}}/commits/{{.BranchNameSubURL}}/{{PathEscapeSegments .TreePath}}">{{ctx.Locale.Tr "repo.file_history"}}</a>
+					<a  id="history-btn" class="ui mini basic button" href="{{.RepoLink}}/commits/{{.BranchNameSubURL}}/{{PathEscapeSegments .TreePath}}">{{ctx.Locale.Tr "repo.file_history"}}</a>
 					{{if .EscapeStatus.Escaped}}
 						<button class="ui mini basic button unescape-button tw-hidden">{{ctx.Locale.Tr "repo.unescape_control_characters"}}</button>
 						<button class="ui mini basic button escape-button">{{ctx.Locale.Tr "repo.escape_control_characters"}}</button>

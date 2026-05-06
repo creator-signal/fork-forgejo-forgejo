@@ -81,6 +81,9 @@ export function initUserShortcuts() {
       case 'a':
         goto('#repo-actions-tab');
         break;
+      case 'b':
+        document.querySelector<HTMLAnchorElement>('#blame-btn')?.click();
+        break;
       case 'c':
         goto('#repo-code-tab');
         break;
@@ -91,6 +94,9 @@ export function initUserShortcuts() {
           goto_state = false;
         }, 750);
         return;
+      case 'h':
+        document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
+        break;
       case 'i':
         goto('#repo-issues-tab');
         break;
@@ -108,9 +114,16 @@ export function initUserShortcuts() {
       case 'p':
         goto('#repo-pull-requests-tab');
         break;
+      case 'r':
+        if (goto('#repo-releases-tab')) {
+          document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
+        }
+        break;
       case 'w':
         goto('#repo-wiki-tab');
         break;
+      case 'y':
+        document.querySelector<HTMLAnchorElement>('#permalink-btn')?.click();
     }
     goto_state = false;
   });
