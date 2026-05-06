@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
+	"forgejo.org/modules/test"
 	repo_service "forgejo.org/services/repository"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ import (
 func TestGarbageCollectLFSMetaObjects(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 
-	setting.LFS.StartServer = true
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
 	err := storage.Init()
 	require.NoError(t, err)
 

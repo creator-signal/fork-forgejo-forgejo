@@ -5,13 +5,9 @@
 package actions
 
 import (
-	"archive/zip"
-	"compress/gzip"
-	"context"
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -28,18 +24,12 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/setting"
-	"forgejo.org/modules/storage"
 	"forgejo.org/modules/templates"
-	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/translation"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
-	"forgejo.org/routers/common"
 	actions_service "forgejo.org/services/actions"
 	app_context "forgejo.org/services/context"
-
-	"xorm.io/builder"
 )
 
 func RedirectToLatestAttempt(ctx *app_context.Context) {
@@ -173,6 +163,7 @@ type ViewRunInfo struct {
 	Title             string        `json:"title"`
 	TitleHTML         template.HTML `json:"titleHTML"`
 	Status            string        `json:"status"`
+	Description       string        `json:"description"`
 	CanCancel         bool          `json:"canCancel"`
 	CanApprove        bool          `json:"canApprove"` // the run needs an approval and the doer has permission to approve
 	CanRerun          bool          `json:"canRerun"`
@@ -203,8 +194,6 @@ type ViewJob struct {
 }
 
 type ViewCommit struct {
-	LocaleCommit   string     `json:"localeCommit"`
-	LocalePushedBy string     `json:"localePushedBy"`
 	LocaleWorkflow string     `json:"localeWorkflow"`
 	LocaleAllRuns  string     `json:"localeAllRuns"`
 	ShortSha       string     `json:"shortSHA"`
@@ -281,15 +270,28 @@ func getViewResponse(ctx *app_context.Context, req *ViewRequest, runIndex, jobIn
 
 	metas := ctx.Repo.Repository.ComposeMetas(ctx)
 
+	var runDescription string
+	if run.IsScheduledRun() {
+		runDescription = ctx.Locale.TrString("actions.runs.scheduled_description", run.CommitLink(),
+			base.ShortSha(run.CommitSHA))
+	} else if run.IsDispatchedRun() {
+		runDescription = ctx.Locale.TrString("actions.runs.workflow_dispatch_description", run.CommitLink(),
+			base.ShortSha(run.CommitSHA), run.TriggerUser.HomeLink(), run.TriggerUser.GetDisplayName())
+	} else {
+		runDescription = ctx.Locale.TrString("actions.runs.on_push_description", run.CommitLink(),
+			base.ShortSha(run.CommitSHA), run.TriggerUser.HomeLink(), run.TriggerUser.GetDisplayName())
+	}
+
 	resp.State.Run.Title = run.Title
 	resp.State.Run.TitleHTML = templates.RenderCommitMessage(ctx, run.Title, metas)
 	resp.State.Run.Link = run.Link()
 	resp.State.Run.CanApprove = run.NeedApproval && ctx.Repo.CanWrite(unit.TypeActions)
-	resp.State.Run.CanRerun = run.Status.IsDone() && ctx.Repo.CanWrite(unit.TypeActions)
+	resp.State.Run.CanRerun = run.CanBeRerun() && ctx.Repo.CanWrite(unit.TypeActions)
 	resp.State.Run.CanDeleteArtifact = run.Status.IsDone() && ctx.Repo.CanWrite(unit.TypeActions)
 	resp.State.Run.Jobs = make([]*ViewJob, 0, len(jobs)) // marshal to '[]' instead of 'null' in json
 	resp.State.Run.Status = run.Status.String()
 	resp.State.Run.PreExecutionError = actions_model.TranslatePreExecutionError(ctx.Locale, run)
+	resp.State.Run.Description = runDescription
 
 	// It's possible for the run to be marked with a finalized status (eg. failure) because of a  single job within the
 	// run; eg. one job fails, the run fails. But other jobs can still be running. The frontend RepoActionView uses the
@@ -302,11 +304,16 @@ func getViewResponse(ctx *app_context.Context, req *ViewRequest, runIndex, jobIn
 			// Ah, another job is still running. Keep the frontend polling enabled then.
 			done = false
 		}
+		canBeRerun, err := v.CanBeRerun(ctx)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, err.Error())
+			return nil
+		}
 		resp.State.Run.Jobs = append(resp.State.Run.Jobs, &ViewJob{
 			ID:       v.ID,
 			Name:     v.Name,
 			Status:   v.Status.String(),
-			CanRerun: v.Status.IsDone() && ctx.Repo.CanWrite(unit.TypeActions),
+			CanRerun: canBeRerun && ctx.Repo.CanWrite(unit.TypeActions),
 			Duration: v.Duration().String(),
 		})
 	}
@@ -332,8 +339,6 @@ func getViewResponse(ctx *app_context.Context, req *ViewRequest, runIndex, jobIn
 	}
 
 	resp.State.Run.Commit = ViewCommit{
-		LocaleCommit:   ctx.Locale.TrString("actions.runs.commit"),
-		LocalePushedBy: ctx.Locale.TrString("actions.runs.pushed_by"),
 		LocaleWorkflow: ctx.Locale.TrString("actions.runs.workflow"),
 		LocaleAllRuns:  ctx.Locale.TrString("actions.runs.all_runs_link"),
 		ShortSha:       base.ShortSha(run.CommitSHA),
@@ -486,112 +491,47 @@ func Rerun(ctx *app_context.Context) {
 		return
 	}
 
-	// can not rerun job when workflow is disabled
-	cfgUnit := ctx.Repo.Repository.MustGetUnit(ctx, unit.TypeActions)
-	cfg := cfgUnit.ActionsConfig()
-	if cfg.IsWorkflowDisabled(run.WorkflowID) {
-		ctx.JSONError(ctx.Locale.Tr("actions.workflow.disabled"))
-		return
-	}
-
-	// reset run's start and stop time when it is done
-	if run.Status.IsDone() {
-		run.PreviousDuration = run.Duration()
-		run.Started = 0
-		run.Stopped = 0
-		if err := actions_service.UpdateRun(ctx, run, "started", "stopped", "previous_duration"); err != nil {
-			ctx.Error(http.StatusInternalServerError, err.Error())
+	var rerunJobs []*actions_model.ActionRunJob
+	if jobIndexStr == "" { // Rerun the entire workflow.
+		rerunJobs, err = actions_service.RerunAllJobs(ctx, run)
+	} else { // Rerun a single job
+		job, _ := getRunJobs(ctx, runIndex, jobIndex)
+		if ctx.Written() {
 			return
 		}
+		rerunJobs, err = actions_service.RerunJob(ctx, job)
 	}
 
-	job, jobs := getRunJobs(ctx, runIndex, jobIndex)
-	if ctx.Written() {
-		return
-	}
-
-	if jobIndexStr == "" { // rerun all jobs
-		var redirectURL string
-		for _, j := range jobs {
-			// if the job has needs, it should be set to "blocked" status to wait for other jobs
-			shouldBlock := len(j.Needs) > 0
-			if err := rerunJob(ctx, j, shouldBlock); err != nil {
-				ctx.Error(http.StatusInternalServerError, err.Error())
-				return
-			}
-			if redirectURL == "" {
-				// ActionRunJob's `Attempt` field won't be updated to reflect the rerun until the job is picked by a
-				// runner. But we need to redirect the user somewhere; if they stay on the current attempt then the
-				// rerun's logs won't appear. So, we redirect to the upcoming new attempt and then we'll handle the
-				// weirdness in the UI if the attempt doesn't exist yet.
-				j.Attempt++ // note: this is intentionally not persisted
-				redirectURL, err = j.HTMLURL(ctx)
-				if err != nil {
-					ctx.Error(http.StatusInternalServerError, err.Error())
-					return
-				}
-			}
-		}
-
-		if redirectURL != "" {
-			ctx.JSON(http.StatusOK, &redirectObject{Redirect: redirectURL})
-		} else {
-			ctx.Error(http.StatusInternalServerError, "unable to determine redirectURL for job rerun")
-		}
-		return
-	}
-
-	rerunJobs := actions_service.GetAllRerunJobs(job, jobs)
-
-	var redirectURL string
-	for _, j := range rerunJobs {
-		// jobs other than the specified one should be set to "blocked" status
-		shouldBlock := j.JobID != job.JobID
-		if err := rerunJob(ctx, j, shouldBlock); err != nil {
-			ctx.Error(http.StatusInternalServerError, err.Error())
+	if err != nil {
+		if errors.Is(err, actions_service.ErrRerunWorkflowInvalid) ||
+			errors.Is(err, actions_service.ErrRerunWorkflowStillRunning) {
+			ctx.JSONError(ctx.Locale.Tr("actions.workflow.rerun_impossible"))
 			return
 		}
-		if j.JobID == job.JobID {
-			// see earlier comment about redirectURL, applicable here as well
-			j.Attempt++ // note: this is intentionally not persisted
-			redirectURL, err = j.HTMLURL(ctx)
-			if err != nil {
-				ctx.Error(http.StatusInternalServerError, err.Error())
-				return
-			}
+		if errors.Is(err, actions_service.ErrRerunWorkflowDisabled) {
+			ctx.JSONError(ctx.Locale.Tr("actions.workflow.disabled"))
+			return
 		}
+		if errors.Is(err, actions_service.ErrRerunJobStillRunning) {
+			ctx.JSONError(ctx.Locale.Tr("actions.workflow.job_rerun_impossible"))
+			return
+		}
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
 	}
 
-	if redirectURL != "" {
-		ctx.JSON(http.StatusOK, &redirectObject{Redirect: redirectURL})
-	} else {
-		ctx.Error(http.StatusInternalServerError, "unable to determine redirectURL for job rerun")
-	}
-}
-
-func rerunJob(ctx *app_context.Context, job *actions_model.ActionRunJob, shouldBlock bool) error {
-	status := job.Status
-	if !status.IsDone() {
-		return nil
+	if len(rerunJobs) == 0 {
+		ctx.Error(http.StatusInternalServerError, "no jobs were rerun")
+		return
 	}
 
-	job.TaskID = 0
-	job.Status = actions_model.StatusWaiting
-	if shouldBlock {
-		job.Status = actions_model.StatusBlocked
-	}
-	job.Started = 0
-	job.Stopped = 0
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		_, err := actions_service.UpdateRunJob(ctx, job, builder.Eq{"status": status}, "task_id", "status", "started", "stopped")
-		return err
-	}); err != nil {
-		return err
+	redirectURL, err := rerunJobs[0].HTMLURL(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
 	}
 
-	actions_service.CreateCommitStatus(ctx, job)
-	return nil
+	ctx.JSON(http.StatusOK, &redirectObject{Redirect: redirectURL})
 }
 
 func Logs(ctx *app_context.Context) {
@@ -647,40 +587,15 @@ func Logs(ctx *app_context.Context) {
 func Cancel(ctx *app_context.Context) {
 	runIndex := ctx.ParamsInt64("run")
 
-	_, jobs := getRunJobs(ctx, runIndex, -1)
-	if ctx.Written() {
-		return
-	}
-
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		for _, job := range jobs {
-			status := job.Status
-			if status.IsDone() {
-				continue
-			}
-			if job.TaskID == 0 {
-				job.Status = actions_model.StatusCancelled
-				job.Stopped = timeutil.TimeStampNow()
-				n, err := actions_service.UpdateRunJob(ctx, job, builder.Eq{"task_id": 0}, "status", "stopped")
-				if err != nil {
-					return err
-				}
-				if n == 0 {
-					return errors.New("job has changed, try again")
-				}
-				continue
-			}
-			if err := actions_service.StopTask(ctx, job.TaskID, actions_model.StatusCancelled); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
+	run, err := actions_model.GetRunByIndex(ctx, ctx.Repo.Repository.ID, runIndex)
+	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	actions_service.CreateCommitStatus(ctx, jobs...)
+	if err := actions_service.CancelRun(ctx, run); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	ctx.JSON(http.StatusOK, struct{}{})
 }
@@ -868,7 +783,6 @@ func ArtifactsDownloadView(ctx *app_context.Context) {
 		return
 	}
 
-	// if artifacts status is not uploaded-confirmed, treat it as not found
 	for _, art := range artifacts {
 		if art.Status != int64(actions_model.ArtifactStatusUploadConfirmed) {
 			ctx.Error(http.StatusNotFound, "artifact not found")
@@ -876,62 +790,9 @@ func ArtifactsDownloadView(ctx *app_context.Context) {
 		}
 	}
 
-	// Artifacts using the v4 backend are stored as a single combined zip file per artifact on the backend
-	// The v4 backend ensures ContentEncoding is set to "application/zip", which is not the case for the old backend
-	if len(artifacts) == 1 && artifacts[0].ArtifactName+".zip" == artifacts[0].ArtifactPath && artifacts[0].ContentEncoding == "application/zip" {
-		art := artifacts[0]
-		if setting.Actions.ArtifactStorage.MinioConfig.ServeDirect {
-			u, err := storage.ActionsArtifacts.URL(art.StoragePath, art.ArtifactPath, nil)
-
-			if u != nil && err == nil {
-				ctx.Redirect(u.String())
-				return
-			}
-		}
-		f, err := storage.ActionsArtifacts.Open(art.StoragePath)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
-		}
-		common.ServeContentByReadSeeker(ctx.Base, artifacts[0].ArtifactName+".zip", util.ToPointer(art.UpdatedUnix.AsTime()), f)
+	if err := actions_service.ServeArtifact(ctx.Base, artifacts); err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
-	}
-
-	// Artifacts using the v1-v3 backend are stored as multiple individual files per artifact on the backend
-	// Those need to be zipped for download
-	artifactName := artifacts[0].ArtifactName
-
-	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.zip; filename*=UTF-8''%s.zip", url.PathEscape(artifactName), artifactName))
-	writer := zip.NewWriter(ctx.Resp)
-	defer writer.Close()
-	for _, art := range artifacts {
-		f, err := storage.ActionsArtifacts.Open(art.StoragePath)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		var r io.ReadCloser
-		if art.ContentEncoding == "gzip" {
-			r, err = gzip.NewReader(f)
-			if err != nil {
-				ctx.Error(http.StatusInternalServerError, err.Error())
-				return
-			}
-		} else {
-			r = f
-		}
-		defer r.Close()
-
-		w, err := writer.Create(art.ArtifactPath)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
-		}
-		if _, err := io.Copy(w, r); err != nil {
-			ctx.Error(http.StatusInternalServerError, err.Error())
-			return
-		}
 	}
 }
 

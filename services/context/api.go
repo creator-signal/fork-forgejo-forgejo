@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	issues_model "forgejo.org/models/issues"
@@ -24,6 +25,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
 	web_types "forgejo.org/modules/web/types"
+	"forgejo.org/services/auth"
 	"forgejo.org/services/authz"
 
 	"code.forgejo.org/go-chi/cache"
@@ -35,9 +37,9 @@ type APIContext struct {
 
 	Cache cache.Cache
 
-	Doer        *user_model.User // current signed-in user
-	IsSigned    bool
-	IsBasicAuth bool
+	Doer           *user_model.User // current signed-in user
+	IsSigned       bool
+	Authentication auth.AuthenticationResult
 
 	ContextUser *user_model.User // the user which is being visited, in most cases it differs from Doer
 
@@ -450,23 +452,23 @@ func (ctx *APIContext) NotFoundOrServerError(logMsg string, errCheck func(error)
 
 // IsUserSiteAdmin returns true if current user is a site admin
 func (ctx *APIContext) IsUserSiteAdmin() bool {
+	if !ctx.Reducer.AllowAdminOverride() {
+		return false
+	}
 	return ctx.IsSigned && ctx.Doer.IsAdmin
 }
 
 // IsUserRepoAdmin returns true if current user is admin in current repo
 func (ctx *APIContext) IsUserRepoAdmin() bool {
+	if !ctx.Reducer.AllowAdminOverride() {
+		return false
+	}
 	return ctx.Repo.IsAdmin()
 }
 
 // IsUserRepoWriter returns true if current user has write privilege in current repo
 func (ctx *APIContext) IsUserRepoWriter(unitTypes []unit.Type) bool {
-	for _, unitType := range unitTypes {
-		if ctx.Repo.CanWrite(unitType) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(unitTypes, ctx.Repo.CanWrite)
 }
 
 // Returns true when the requests indicates that it accepts a Github response.

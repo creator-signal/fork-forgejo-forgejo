@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"maps"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -267,10 +268,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 
 	archived := ctx.FormBool("archived")
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	var total int
 	switch {
@@ -606,7 +604,7 @@ func retrieveProjects(ctx *context.Context, repo *repo_model.Repository) {
 		repoOwnerType = project_model.TypeOrganization
 	}
 	var err error
-	projects, err := db.Find[project_model.Project](ctx, project_model.SearchOptions{
+	repositoryProjects, err := db.Find[project_model.Project](ctx, project_model.SearchOptions{
 		ListOptions: db.ListOptionsAll,
 		RepoID:      repo.ID,
 		IsClosed:    optional.Some(false),
@@ -616,7 +614,7 @@ func retrieveProjects(ctx *context.Context, repo *repo_model.Repository) {
 		ctx.ServerError("GetProjects", err)
 		return
 	}
-	projects2, err := db.Find[project_model.Project](ctx, project_model.SearchOptions{
+	ownerProjects, err := db.Find[project_model.Project](ctx, project_model.SearchOptions{
 		ListOptions: db.ListOptionsAll,
 		OwnerID:     repo.OwnerID,
 		IsClosed:    optional.Some(false),
@@ -627,9 +625,10 @@ func retrieveProjects(ctx *context.Context, repo *repo_model.Repository) {
 		return
 	}
 
-	ctx.Data["OpenProjects"] = append(projects, projects2...)
+	ownerHasOpenProjects := len(ownerProjects) > 0
+	ctx.Data["OpenProjects"] = append(repositoryProjects, ownerProjects...)
 
-	projects, err = db.Find[project_model.Project](ctx, project_model.SearchOptions{
+	repositoryProjects, err = db.Find[project_model.Project](ctx, project_model.SearchOptions{
 		ListOptions: db.ListOptionsAll,
 		RepoID:      repo.ID,
 		IsClosed:    optional.Some(true),
@@ -639,7 +638,7 @@ func retrieveProjects(ctx *context.Context, repo *repo_model.Repository) {
 		ctx.ServerError("GetProjects", err)
 		return
 	}
-	projects2, err = db.Find[project_model.Project](ctx, project_model.SearchOptions{
+	ownerProjects, err = db.Find[project_model.Project](ctx, project_model.SearchOptions{
 		ListOptions: db.ListOptionsAll,
 		OwnerID:     repo.OwnerID,
 		IsClosed:    optional.Some(true),
@@ -650,7 +649,8 @@ func retrieveProjects(ctx *context.Context, repo *repo_model.Repository) {
 		return
 	}
 
-	ctx.Data["ClosedProjects"] = append(projects, projects2...)
+	ctx.Data["OwnerHasProjects"] = ownerHasOpenProjects || len(ownerProjects) > 0
+	ctx.Data["ClosedProjects"] = append(repositoryProjects, ownerProjects...)
 }
 
 // repoReviewerSelection items to bee shown
@@ -970,6 +970,14 @@ func NewIssue(ctx *context.Context) {
 
 	isProjectsEnabled := ctx.Repo.CanRead(unit.TypeProjects)
 	ctx.Data["IsProjectsEnabled"] = isProjectsEnabled
+
+	// Individuals always have projects unit enabled
+	isOwnerProjectsEnabled := true
+	if ctx.Repo.Owner.IsOrganization() {
+		isOwnerProjectsEnabled = ctx.Org.CanReadUnit(ctx, unit.TypeProjects)
+	}
+	ctx.Data["IsOwnerProjectsEnabled"] = isOwnerProjectsEnabled
+
 	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
 	upload.AddUploadContext(ctx, "comment")
 
@@ -985,7 +993,7 @@ func NewIssue(ctx *context.Context) {
 	}
 
 	projectID := ctx.FormInt64("project")
-	if projectID > 0 && isProjectsEnabled {
+	if projectID > 0 && (isProjectsEnabled || isOwnerProjectsEnabled) {
 		project, err := project_model.GetProjectByID(ctx, projectID)
 		if err != nil {
 			log.Error("GetProjectByID: %d: %v", projectID, err)
@@ -1014,9 +1022,7 @@ func NewIssue(ctx *context.Context) {
 
 	_, templateErrs := issue_service.GetTemplatesFromDefaultBranch(ctx.Repo.Repository, ctx.Repo.GitRepo)
 	templateLoaded, errs := setTemplateIfExists(ctx, issueTemplateKey, issueTemplateCandidates)
-	for k, v := range errs {
-		templateErrs[k] = v
-	}
+	maps.Copy(templateErrs, errs)
 	if ctx.Written() {
 		return
 	}
@@ -1280,9 +1286,9 @@ func NewIssuePost(ctx *context.Context) {
 	}
 
 	if projectID > 0 {
-		if !ctx.Repo.CanRead(unit.TypeProjects) {
+		if !ctx.Repo.CanRead(unit.TypeProjects) || (ctx.ContextUser.IsOrganization() && !ctx.Org.CanReadUnit(ctx, unit.TypeProjects)) {
 			// User must also be able to see the project.
-			ctx.Error(http.StatusBadRequest, "user hasn't permissions to read projects")
+			ctx.Error(http.StatusForbidden, "user doesn't have permissions to read projects")
 			return
 		}
 		if err := issues_model.IssueAssignOrRemoveProject(ctx, issue, ctx.Doer, projectID, 0); err != nil {
@@ -1481,7 +1487,8 @@ func ViewIssue(ctx *context.Context) {
 	}
 
 	ctx.Data["IsModerationEnabled"] = setting.Moderation.Enabled
-	ctx.Data["IsProjectsEnabled"] = ctx.Repo.CanRead(unit.TypeProjects)
+	isProjectsEnabled := ctx.Repo.CanRead(unit.TypeProjects)
+	ctx.Data["IsProjectsEnabled"] = isProjectsEnabled
 	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
 	upload.AddUploadContext(ctx, "comment")
 
@@ -1550,6 +1557,7 @@ func ViewIssue(ctx *context.Context) {
 	}
 	ctx.Data["Labels"] = labels
 
+	isOwnerProjectsEnabled := true
 	if repo.Owner.IsOrganization() {
 		orgLabels, err := issues_model.GetLabelsByOrgID(ctx, repo.Owner.ID, ctx.FormString("sort"), db.ListOptions{})
 		if err != nil {
@@ -1557,9 +1565,11 @@ func ViewIssue(ctx *context.Context) {
 			return
 		}
 		ctx.Data["OrgLabels"] = orgLabels
-
 		labels = append(labels, orgLabels...)
+
+		isOwnerProjectsEnabled = ctx.Org.CanReadUnit(ctx, unit.TypeProjects)
 	}
+	ctx.Data["IsOwnerProjectsEnabled"] = isOwnerProjectsEnabled
 
 	hasSelected := false
 	for i := range labels {
@@ -1573,7 +1583,9 @@ func ViewIssue(ctx *context.Context) {
 	// Check milestone and assignee.
 	if ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) {
 		RetrieveRepoMilestonesAndAssignees(ctx, repo)
-		retrieveProjects(ctx, repo)
+		if isProjectsEnabled || isOwnerProjectsEnabled {
+			retrieveProjects(ctx, repo)
+		}
 
 		if ctx.Written() {
 			return
@@ -1664,6 +1676,11 @@ func ViewIssue(ctx *context.Context) {
 
 	if err := issue.Comments.LoadReviews(ctx); err != nil {
 		ctx.ServerError("LoadReviews", err)
+		return
+	}
+
+	if err := issue.Comments.LoadResolveDoers(ctx); err != nil {
+		ctx.ServerError("LoadResolveDoers", err)
 		return
 	}
 
@@ -1804,10 +1821,6 @@ func ViewIssue(ctx *context.Context) {
 						participants = addParticipant(c.Poster, participants)
 					}
 				}
-			}
-			if err = comment.LoadResolveDoer(ctx); err != nil {
-				ctx.ServerError("LoadResolveDoer", err)
-				return
 			}
 		} else if comment.Type == issues_model.CommentTypePullRequestPush {
 			participants = addParticipant(comment.Poster, participants)
@@ -2190,7 +2203,7 @@ func getActionIssues(ctx *context.Context) issues_model.IssueList {
 		return nil
 	}
 	issueIDs := make([]int64, 0, 10)
-	for _, stringIssueID := range strings.Split(commaSeparatedIssueIDs, ",") {
+	for stringIssueID := range strings.SplitSeq(commaSeparatedIssueIDs, ",") {
 		issueID, err := strconv.ParseInt(stringIssueID, 10, 64)
 		if err != nil {
 			ctx.ServerError("ParseInt", err)
@@ -3682,7 +3695,7 @@ func updateAttachments(ctx *context.Context, item any, files []string) error {
 	if len(files) > 0 {
 		switch content := item.(type) {
 		case *issues_model.Issue:
-			err = issues_model.UpdateIssueAttachments(ctx, content.ID, files)
+			err = issues_model.UpdateIssueAttachments(ctx, content, files)
 		case *issues_model.Comment:
 			err = content.UpdateAttachments(ctx, files)
 		default:

@@ -70,7 +70,7 @@ func testViewRepo(t *testing.T) {
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	htmlDoc := NewHTMLParser(t, resp.Body)
-	files := htmlDoc.doc.Find("#repo-files-table  > TBODY > TR")
+	files := htmlDoc.doc.Find("#repo-files-table > tbody > tr:not(.commit-list)")
 
 	type file struct {
 		fileName   string
@@ -1039,7 +1039,7 @@ func TestRepoFilesList(t *testing.T) {
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		htmlDoc := NewHTMLParser(t, resp.Body)
-		filesList := htmlDoc.Find("#repo-files-table tbody tr").Map(func(_ int, s *goquery.Selection) string {
+		filesList := htmlDoc.Find("#repo-files-table tbody tr:not(.commit-list)").Map(func(_ int, s *goquery.Selection) string {
 			return s.AttrOr("data-entryname", "")
 		})
 
@@ -1079,7 +1079,7 @@ func TestRepoFollowSymlink(t *testing.T) {
 
 	t.Run("Normal", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		assertCase(t, "/user2/readme-test/src/branch/symlink/up/back/down/down/README.md", "/user2/readme-test/src/branch/symlink/down/side/../left/right/../reelmein", true)
+		assertCase(t, "/user2/readme-test/src/branch/symlink/up/back/down/down/README.md", "/user2/readme-test/src/branch/symlink/up/down/left/reelmein", true)
 	})
 
 	t.Run("Broken symlink", func(t *testing.T) {

@@ -108,8 +108,8 @@ func NewGithubDownloaderV3(ctx context.Context, baseURL string, getPullRequests,
 	downloader.SetContext(ctx)
 
 	if token != "" {
-		tokens := strings.Split(token, ",")
-		for _, token := range tokens {
+		tokens := strings.SplitSeq(token, ",")
+		for token := range tokens {
 			token = strings.TrimSpace(token)
 			ts := oauth2.StaticTokenSource(
 				&oauth2.Token{AccessToken: token},
@@ -182,6 +182,7 @@ func (g *GithubDownloaderV3) waitAndPickClient() {
 			timer.Stop()
 			return
 		case <-timer.C:
+			break
 		}
 
 		err := g.RefreshRate()
@@ -352,7 +353,6 @@ func (g *GithubDownloaderV3) convertGithubRelease(rel *github.RepositoryRelease)
 		r.Assets = append(r.Assets, &base.ReleaseAsset{
 			ID:            asset.GetID(),
 			Name:          asset.GetName(),
-			ContentType:   asset.ContentType,
 			Size:          asset.Size,
 			DownloadCount: asset.DownloadCount,
 			Created:       asset.CreatedAt.Time,

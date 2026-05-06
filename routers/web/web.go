@@ -6,6 +6,7 @@ package web
 
 import (
 	gocontext "context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -42,11 +43,13 @@ import (
 	"forgejo.org/routers/web/repo/badges"
 	repo_flags "forgejo.org/routers/web/repo/flags"
 	repo_setting "forgejo.org/routers/web/repo/setting"
+	shared_actions "forgejo.org/routers/web/shared/actions"
 	"forgejo.org/routers/web/shared/project"
 	"forgejo.org/routers/web/user"
 	user_setting "forgejo.org/routers/web/user/setting"
 	"forgejo.org/routers/web/user/setting/security"
 	auth_service "forgejo.org/services/auth"
+	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/lfs"
@@ -103,30 +106,54 @@ func optionsCorsHandler() func(next http.Handler) http.Handler {
 //
 // The Session plugin is expected to be executed second, in order to skip authentication
 // for users that have already signed in.
-func buildAuthGroup() *auth_service.Group {
-	group := auth_service.NewGroup()
-	group.Add(&auth_service.OAuth2{}) // FIXME: this should be removed and only applied in download and oauth related routers
-	group.Add(&auth_service.Basic{})  // FIXME: this should be removed and only applied in download and git/lfs routers
+func buildAuthGroup() *auth_method.Group {
+	group := auth_method.NewGroup()
+	group.Add(&auth_method.OAuth2{}) // FIXME: this should be removed and only applied in download and oauth related routers
+	group.Add(&auth_method.Basic{})  // FIXME: this should be removed and only applied in download and git/lfs routers
+
+	// FIXME: extracted from OAuth2 & Basic -- these methods have internal URL filters that should be moved into
+	// middlewares (if we can figure out the right way to do that), similar to the notes on OAuth2 & Basic above.
+	group.Add(&auth_method.AccessToken{})
+	group.Add(&auth_method.ActionRuntimeToken{})
+	group.Add(&auth_method.ActionTaskToken{})
 
 	if setting.Service.EnableReverseProxyAuth {
-		group.Add(&auth_service.ReverseProxy{}) // reverseproxy should before Session, otherwise the header will be ignored if user has login
+		group.Add(&auth_method.ReverseProxy{}) // reverseproxy should before Session, otherwise the header will be ignored if user has login
 	}
-	group.Add(&auth_service.Session{})
+	group.Add(&auth_method.Session{})
 
 	return group
 }
 
 func webAuth(authMethod auth_service.Method) func(*context.Context) {
 	return func(ctx *context.Context) {
-		ar, err := common.AuthShared(ctx.Base, ctx.Session, authMethod)
-		if err != nil {
-			log.Info("Failed to verify user: %v", err)
+		output := common.AuthShared(ctx.Base, ctx.Session, authMethod)
+		var ar auth_service.AuthenticationResult
+		switch v := output.(type) {
+		case *auth_service.AuthenticationSuccess:
+			ar = v.Result
+		case *auth_service.AuthenticationNotAttempted:
+			ar = &auth_service.UnauthenticatedResult{}
+		case *auth_service.AuthenticationAttemptedIncorrectCredential:
 			ctx.Error(http.StatusUnauthorized, ctx.Locale.TrString("auth.unauthorized_credentials", "https://codeberg.org/forgejo/forgejo/issues/2809"))
 			return
+		case *auth_service.AuthenticationError:
+			// Don't reveal the internal server error details to the user as they may contain sensitive details -- log
+			// the details, return a generic error.
+			log.Error("internal error during authentication: %v", v.Error)
+			ctx.ServerError("authentication error", errors.New("internal server error in authentication"))
+			return
+		default:
+			ctx.ServerError("authentication error", errors.New("unexpected result from common.AuthShared"))
+			return
 		}
-		ctx.Doer = ar.Doer
-		ctx.IsSigned = ar.Doer != nil
-		ctx.IsBasicAuth = ar.IsBasicAuth
+		if ar == nil {
+			ctx.ServerError("nil authentication result", errors.New("nil authentication result"))
+			return
+		}
+		ctx.Doer = ar.User()
+		ctx.IsSigned = ar.User() != nil
+		ctx.Authentication = ar
 		if ctx.Doer == nil {
 			// ensure the session uid is deleted
 			_ = ctx.Session.Delete("uid")
@@ -453,18 +480,24 @@ func registerRoutes(m *web.Route) {
 	addSettingsSecretsRoutes := func() {
 		m.Group("/secrets", func() {
 			m.Get("", repo_setting.Secrets)
-			m.Post("", web.Bind(forms.AddSecretForm{}), repo_setting.SecretsPost)
-			m.Post("/delete", repo_setting.SecretsDelete)
+			m.Post("", web.Bind(forms.CreateSecretForm{}), repo_setting.SecretsCreatePost)
+			m.Post("/{secret_id}/edit", web.Bind(forms.EditSecretForm{}), repo_setting.SecretsEditPost)
+			m.Post("/{secret_id}/delete", repo_setting.SecretsDeletePost)
 		})
 	}
 
 	addSettingsRunnersRoutes := func() {
 		m.Group("/runners", func() {
-			m.Get("", repo_setting.Runners)
-			m.Combo("/{runnerid}").Get(repo_setting.RunnersEdit).
-				Post(web.Bind(forms.EditRunnerForm{}), repo_setting.RunnersEditPost)
-			m.Post("/{runnerid}/delete", repo_setting.RunnerDeletePost)
-			m.Get("/reset_registration_token", repo_setting.ResetRunnerRegistrationToken)
+			m.Get("", shared_actions.RunnersList)
+			m.Combo("/new").
+				Get(shared_actions.RunnerCreate).
+				Post(web.Bind(forms.CreateRunnerForm{}), shared_actions.RunnerCreatePost)
+			m.Get("/{runnerid}", shared_actions.RunnerDetails)
+			m.Combo("/{runnerid}/edit").
+				Get(shared_actions.RunnerEdit).
+				Post(web.Bind(forms.EditRunnerForm{}), shared_actions.RunnerEditPost)
+			m.Post("/{runnerid}/delete", shared_actions.RunnerDeletePost)
+			m.Get("/reset_registration_token", shared_actions.RunnerResetRegistrationToken)
 		})
 	}
 
@@ -625,11 +658,16 @@ func registerRoutes(m *web.Route) {
 				m.Post("/{id}/revoke/{grantId}", user_setting.RevokeOAuth2Grant)
 			}, oauth2Enabled)
 
-			// access token applications
-			m.Combo("").Get(user_setting.Applications).
-				Post(web.Bind(forms.NewAccessTokenForm{}), user_setting.ApplicationsPost)
-			m.Post("/delete", user_setting.DeleteApplication)
-			m.Post("/regenerate", user_setting.RegenerateApplication)
+			// access token
+			m.Group("/tokens", func() {
+				m.Combo("/new").
+					Get(web.Bind(forms.NewAccessTokenGetForm{}), user_setting.AccessTokenCreate).
+					Post(web.Bind(forms.NewAccessTokenPostForm{}), user_setting.AccessTokenCreatePost)
+				m.Post("/delete", user_setting.DeleteAccessToken)
+				m.Post("/regenerate", user_setting.RegenerateAccessToken)
+			})
+
+			m.Get("", user_setting.Applications)
 		})
 
 		m.Combo("/keys").Get(user_setting.Keys).
@@ -825,6 +863,14 @@ func registerRoutes(m *web.Route) {
 			})
 			m.Post("/abuse_reports/act", admin.PerformAction)
 		}
+
+		if setting.Federation.Enabled {
+			m.Group("/federation", func() {
+				m.Get("/hosts", admin.FederationHosts)
+				m.Get("/users", admin.FederationUsers)
+				m.Get("/hosts/{id}", admin.FederationHost)
+			})
+		}
 	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 
@@ -858,6 +904,29 @@ func registerRoutes(m *web.Route) {
 				ctx.NotFound("", nil)
 			}
 		}
+	}
+
+	reqRepoOrOwnerProjectReader := func(ctx *context.Context) {
+		unitType := unit.TypeProjects
+		if ctx.ContextUser == nil || ctx.Doer == nil {
+			ctx.NotFound(unitType.String(), nil)
+			return
+		}
+
+		switch {
+		case ctx.ContextUser.IsIndividual():
+			if ctx.Doer.ID == ctx.ContextUser.ID || ctx.Doer.IsAdmin {
+				return
+			}
+		case ctx.ContextUser.IsOrganization():
+			if ctx.Org.Organization.UnitPermission(ctx, ctx.Doer, unitType) >= perm.AccessModeRead {
+				return
+			}
+		default:
+			ctx.NotFound(unitType.String(), nil)
+			return
+		}
+		reqRepoProjectsReader(ctx)
 	}
 
 	individualPermsChecker := func(ctx *context.Context) {
@@ -1153,7 +1222,7 @@ func registerRoutes(m *web.Route) {
 				})
 			})
 			m.Group("/actions", func() {
-				m.Get("", repo_setting.RedirectToDefaultSetting)
+				m.Get("", shared_actions.RedirectToDefaultSetting)
 				addSettingsRunnersRoutes()
 				addSettingsSecretsRoutes()
 				addSettingsVariablesRoutes()
@@ -1209,7 +1278,7 @@ func registerRoutes(m *web.Route) {
 		}
 		m.Group("/issues", func() {
 			m.Group("/new", func() {
-				m.Combo("").Get(context.RepoRef(), repo.NewIssue).
+				m.Combo("", context.EnsureOrg()).Get(context.RepoRef(), repo.NewIssue).
 					Post(web.Bind(forms.CreateIssueForm{}), repo.NewIssuePost)
 				m.Get("/choose", context.RepoRef(), repo.NewIssueChooseTemplate)
 			})
@@ -1255,7 +1324,7 @@ func registerRoutes(m *web.Route) {
 
 			m.Post("/labels", reqRepoIssuesOrPullsWriter, repo.UpdateIssueLabel)
 			m.Post("/milestone", reqRepoIssuesOrPullsWriter, repo.UpdateIssueMilestone)
-			m.Post("/projects", reqRepoIssuesOrPullsWriter, reqRepoProjectsReader, repo.UpdateIssueProject)
+			m.Post("/projects", reqRepoIssuesOrPullsWriter, context.EnsureOrg(), reqRepoOrOwnerProjectReader, repo.UpdateIssueProject)
 			m.Post("/assignee", reqRepoIssuesOrPullsWriter, repo.UpdateIssueAssignee)
 			m.Post("/request_review", reqRepoIssuesOrPullsReader, repo.UpdatePullReviewRequest)
 			m.Post("/dismiss_review", reqRepoAdmin, web.Bind(forms.DismissReviewForm{}), repo.DismissReview)
@@ -1381,7 +1450,7 @@ func registerRoutes(m *web.Route) {
 		m.Group("", func() {
 			m.Get("/issues/posters", repo.IssuePosters) // it can't use {type:issues|pulls} because other routes like "/pulls/{index}" has higher priority
 			m.Get("/{type:^(issues|pulls)$}", repo.Issues)
-			m.Get("/{type:^(issues|pulls)$}/{index}", repo.ViewIssue)
+			m.Get("/{type:^(issues|pulls)$}/{index}", context.EnsureOrg(), repo.ViewIssue)
 			m.Group("/{type:^(issues|pulls)$}/{index}/content-history", func() {
 				m.Get("/overview", repo.GetContentHistoryOverview)
 				m.Get("/list", repo.GetContentHistoryList)
@@ -1554,7 +1623,7 @@ func registerRoutes(m *web.Route) {
 
 		m.Get("/pulls/posters", repo.PullPosters)
 		m.Group("/pulls/{index}", func() {
-			m.Get("", repo.SetWhitespaceBehavior, repo.GetPullDiffStats, repo.ViewIssue)
+			m.Get("", repo.SetWhitespaceBehavior, repo.GetPullDiffStats, context.EnsureOrg(), repo.ViewIssue)
 			m.Get(".diff", repo.DownloadPullDiff)
 			m.Get(".patch", repo.DownloadPullPatch)
 			m.Group("/commits", func() {
@@ -1564,6 +1633,10 @@ func registerRoutes(m *web.Route) {
 					m.Get("", context.RepoRef(), repo.SetEditorconfigIfExists, repo.SetDiffViewStyle, repo.SetWhitespaceBehavior, repo.SetShowOutdatedComments, repo.ViewPullFilesForSingleCommit)
 					m.Post("/reviews/submit", context.RepoMustNotBeArchived(), web.Bind(forms.SubmitReviewForm{}), repo.SubmitReview)
 				})
+				m.Group("/{sha:([a-f0-9]{4,64})$}/notes", func() {
+					m.Post("", context.RepoMustNotBeArchived(), web.Bind(forms.CommitNotesForm{}), repo.SetCommitNotesPullRequest)
+					m.Post("/remove", context.RepoMustNotBeArchived(), repo.RemoveCommitNotesPullRequest)
+				}, reqSignIn, reqRepoCodeWriter)
 			})
 			m.Post("/merge", context.RepoMustNotBeArchived(), web.Bind(forms.MergePullRequestForm{}), context.EnforceQuotaWeb(quota_model.LimitSubjectSizeGitAll, context.QuotaTargetRepo), repo.MergePullRequest)
 			m.Post("/cancel_auto_merge", context.RepoMustNotBeArchived(), repo.CancelAutoMergePullRequest)
@@ -1626,8 +1699,8 @@ func registerRoutes(m *web.Route) {
 			m.Get("/commit/{sha:([a-f0-9]{4,64})$}", repo.SetEditorconfigIfExists, repo.SetDiffViewStyle, repo.SetWhitespaceBehavior, repo.Diff)
 			m.Get("/commit/{sha:([a-f0-9]{4,64})$}/load-branches-and-tags", repo.LoadBranchesAndTags)
 			m.Group("/commit/{sha:([a-f0-9]{4,64})$}/notes", func() {
-				m.Post("", web.Bind(forms.CommitNotesForm{}), repo.SetCommitNotes)
-				m.Post("/remove", repo.RemoveCommitNotes)
+				m.Post("", context.RepoMustNotBeArchived(), web.Bind(forms.CommitNotesForm{}), repo.SetCommitNotes)
+				m.Post("/remove", context.RepoMustNotBeArchived(), repo.RemoveCommitNotes)
 			}, reqSignIn, reqRepoCodeWriter)
 			m.Get("/cherry-pick/{sha:([a-f0-9]{4,64})$}", repo.SetEditorconfigIfExists, repo.CherryPick)
 		}, repo.MustBeNotEmpty, context.RepoRef(), reqRepoCodeReader)

@@ -27,7 +27,7 @@ func killRun(ctx context.Context, run *actions_model.ActionRun, newStatus action
 			if job.TaskID == 0 {
 				job.Status = newStatus
 				job.Stopped = timeutil.TimeStampNow()
-				_, err := actions_model.UpdateRunJobWithoutNotification(ctx, job, nil, "status", "stopped")
+				_, err := UpdateRunJob(ctx, job, nil, "status", "stopped")
 				if err != nil {
 					return err
 				}
@@ -97,11 +97,17 @@ func FailRunPreExecutionError(ctx context.Context, run *actions_model.ActionRun,
 
 // Perform pre-execution checks that would affect the ability for a job to reach an executing stage.
 func consistencyCheckRun(ctx context.Context, run *actions_model.ActionRun) error {
+	var jobs actions_model.ActionJobList
 	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
 	if err != nil {
 		return err
 	}
+	validJobIDs := jobs.GetJobIDs()
 	for _, job := range jobs {
+		if unknownJobIDs, ok := job.AllNeedsExist(validJobIDs); !ok {
+			return FailRunPreExecutionError(ctx, run, actions_model.ErrorCodeUnknownJobInNeeds,
+				[]any{job.JobID, strings.Join(unknownJobIDs, ", ")})
+		}
 		if stop, err := checkJobWillRevisit(ctx, job); err != nil {
 			return err
 		} else if stop {

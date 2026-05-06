@@ -171,6 +171,55 @@ func TestPackageContainer(t *testing.T) {
 				MakeRequest(t, req, http.StatusOK)
 			})
 		})
+
+		t.Run("No token issued if credentials are invalid", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL))
+			// Setting the header explicitly instead of using AddBasicAuth to supply an invalid password.
+			req.SetBasicAuth("user2", "very-invalid")
+			resp := MakeRequest(t, req, http.StatusUnauthorized)
+
+			assert.Equal(t, authenticate, resp.Header().Values("WWW-Authenticate"))
+		})
+
+		t.Run("Basic authentication", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL))
+			req.AddBasicAuth("does-not-exist")
+			resp := MakeRequest(t, req, http.StatusUnauthorized)
+
+			assert.Equal(t, authenticate, resp.Header().Values("WWW-Authenticate"))
+
+			req = NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL))
+			req.AddBasicAuth(user.Name)
+			resp = MakeRequest(t, req, http.StatusOK)
+
+			assert.Empty(t, resp.Header().Get("WWW-Authenticate"))
+		})
+
+		t.Run("Basic authentication w/ Authorized Integration", func(t *testing.T) {
+			ait := newAITester(t, func(ai *auth_model.AuthorizedIntegration) {
+				ai.Scope = auth_model.AccessTokenScopeReadPackage
+			})
+			defer ait.close()
+			token := ait.signedJWT()
+
+			req := NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL))
+			req.SetBasicAuth(user.Name, token)
+
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			tokenResponse := &TokenResponse{}
+			DecodeJSON(t, resp, &tokenResponse)
+
+			assert.NotEmpty(t, tokenResponse.Token)
+
+			req = NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL)).
+				AddTokenAuth(fmt.Sprintf("Bearer %s", tokenResponse.Token))
+			MakeRequest(t, req, http.StatusOK)
+		})
 	})
 
 	t.Run("DetermineSupport", func(t *testing.T) {
@@ -843,7 +892,7 @@ func TestPackageContainer(t *testing.T) {
 		url := fmt.Sprintf("%sv2/%s/parallel", setting.AppURL, user.Name)
 
 		var wg sync.WaitGroup
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			wg.Add(1)
 
 			content := []byte{byte(i)}

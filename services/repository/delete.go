@@ -13,6 +13,7 @@ import (
 	activities_model "forgejo.org/models/activities"
 	admin_model "forgejo.org/models/admin"
 	asymkey_model "forgejo.org/models/asymkey"
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
@@ -28,6 +29,7 @@ import (
 	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	actions_service "forgejo.org/services/actions"
@@ -36,9 +38,17 @@ import (
 	"xorm.io/builder"
 )
 
+type DeleteRepositoryOpts struct {
+	// Don't modify teams if they are attached to this repository.
+	IgnoreOrgTeams bool
+	// Keep migration-related beans. Should only be used to cleanup data to
+	// start another migration.
+	KeepMigrationBeans bool
+}
+
 // DeleteRepository deletes a repository for a user or organization.
 // make sure if you call this func to close open sessions (sqlite will otherwise get a deadlock)
-func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID int64, ignoreOrgTeams ...bool) error {
+func DeleteRepositoryDirectly(ctx context.Context, repoID int64, opts DeleteRepositoryOpts) error {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return err
@@ -73,7 +83,7 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 	// In case owner is a organization, we have to change repo specific teams
 	// if ignoreOrgTeams is not true
 	var org *user_model.User
-	if len(ignoreOrgTeams) == 0 || !ignoreOrgTeams[0] {
+	if !opts.IgnoreOrgTeams {
 		if org, err = user_model.GetUserByID(ctx, repo.OwnerID); err != nil {
 			return err
 		}
@@ -86,7 +96,7 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 	}
 	needRewriteKeysFile := len(deployKeys) > 0
 	for _, dKey := range deployKeys {
-		if err := models.DeleteDeployKey(ctx, doer, dKey.ID); err != nil {
+		if err := models.DeleteDeployKey(ctx, dKey.ID, repoID); err != nil {
 			return fmt.Errorf("deleteDeployKeys: %w", err)
 		}
 	}
@@ -171,9 +181,7 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		&repo_model.Release{RepoID: repoID},
 		&repo_model.RepoIndexerStatus{RepoID: repoID},
 		&repo_model.Redirect{RedirectRepoID: repoID},
-		&repo_model.RepoUnit{RepoID: repoID},
 		&repo_model.Star{RepoID: repoID},
-		&admin_model.Task{RepoID: repoID},
 		&repo_model.Watch{RepoID: repoID},
 		&webhook.Webhook{RepoID: repoID},
 		&secret_model.Secret{RepoID: repoID},
@@ -187,9 +195,19 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		&actions_model.ActionArtifact{RepoID: repoID},
 		&actions_model.ActionUser{RepoID: repoID},
 		&repo_model.RepoArchiveDownloadCount{RepoID: repoID},
-		&actions_model.ActionRunnerToken{RepoID: repoID},
+		&actions_model.ActionRunnerToken{RepoID: optional.Some(repoID)},
+		&auth_model.AccessTokenResourceRepo{RepoID: repoID},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %w", err)
+	}
+
+	if !opts.KeepMigrationBeans {
+		if err := db.DeleteBeans(ctx,
+			&admin_model.Task{RepoID: repoID},
+			&repo_model.RepoUnit{RepoID: repoID},
+		); err != nil {
+			return fmt.Errorf("deleteBeans: %w", err)
+		}
 	}
 
 	// Delete Pulls and related objects
@@ -197,13 +215,15 @@ func DeleteRepositoryDirectly(ctx context.Context, doer *user_model.User, repoID
 		return err
 	}
 
-	if cnt, err := sess.ID(repoID).Delete(&repo_model.Repository{}); err != nil {
-		return err
-	} else if cnt != 1 {
-		return repo_model.ErrRepoNotExist{
-			ID:        repoID,
-			OwnerName: "",
-			Name:      "",
+	if !opts.KeepMigrationBeans {
+		if cnt, err := sess.ID(repoID).Delete(&repo_model.Repository{}); err != nil {
+			return err
+		} else if cnt != 1 {
+			return repo_model.ErrRepoNotExist{
+				ID:        repoID,
+				OwnerName: "",
+				Name:      "",
+			}
 		}
 	}
 
@@ -488,7 +508,7 @@ func DeleteOwnerRepositoriesDirectly(ctx context.Context, owner *user_model.User
 			break
 		}
 		for _, repo := range repos {
-			if err := DeleteRepositoryDirectly(ctx, owner, repo.ID); err != nil {
+			if err := DeleteRepositoryDirectly(ctx, repo.ID, DeleteRepositoryOpts{}); err != nil {
 				return fmt.Errorf("unable to delete repository %s for %s[%d]. Error: %w", repo.Name, owner.Name, owner.ID, err)
 			}
 		}

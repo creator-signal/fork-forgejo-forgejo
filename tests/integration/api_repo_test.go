@@ -149,6 +149,7 @@ func TestAPISearchRepo(t *testing.T) {
 	org3 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 18})
 	user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 20})
 	orgUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 17})
+	actionsUser := user_model.NewActionsUser()
 
 	oldAPIDefaultNum := setting.API.DefaultPagingNum
 	defer func() {
@@ -265,6 +266,12 @@ func TestAPISearchRepo(t *testing.T) {
 			nil:   {count: 0},
 			user:  {count: 1, includesPrivate: true},
 			user4: {count: 1, includesPrivate: true},
+		}},
+		{name: "ForgejoActionsUser/UID", requestURL: fmt.Sprintf("/api/v1/repos/search?uid=%d", actionsUser.ID), expectedResults: expectedResults{
+			nil:         {count: 0},
+			actionsUser: {count: 0},
+			user:        {count: 0},
+			user4:       {count: 0},
 		}},
 	}
 
@@ -824,6 +831,75 @@ func testAPIRepoCreateConflict(t *testing.T, u *url.URL) {
 	})
 }
 
+func TestAPIRepoCreateDenied(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// This test verifies that `write:repository` is not a sufficient scope to create a repository.  If it was, then
+	// repo-specific access tokens would be able to create new repositories.
+	session := loginUser(t, "user2")
+	writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+	req := NewRequestWithJSON(t, "POST", "/api/v1/user/repos",
+		&api.CreateRepoOption{
+			Name: "my-new-repo",
+		}).
+		AddTokenAuth(writeToken)
+	MakeRequest(t, req, http.StatusForbidden)
+}
+
+func TestAPIRepoDelete(t *testing.T) {
+	t.Run("permitted to delete user repo w/ user scope", func(t *testing.T) {
+		defer tests.PrepareTestEnv(t)()
+		session := loginUser(t, "user2")
+		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
+		req := NewRequest(t, "DELETE", "/api/v1/repos/user2/repo2").
+			AddTokenAuth(writeToken)
+		MakeRequest(t, req, http.StatusNoContent)
+	})
+
+	t.Run("denied to delete user repo w/ org scope", func(t *testing.T) {
+		defer tests.PrepareTestEnv(t)()
+		session := loginUser(t, "user2")
+		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteOrganization)
+		req := NewRequest(t, "DELETE", "/api/v1/repos/user2/repo2").
+			AddTokenAuth(writeToken)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Contains(t, resp.Body.String(), "token does not have at least one of required scope(s): [write:user]")
+	})
+
+	t.Run("permitted to delete org repo w/ org scope", func(t *testing.T) {
+		defer tests.PrepareTestEnv(t)()
+		session := loginUser(t, "user2")
+		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteOrganization)
+		req := NewRequest(t, "DELETE", "/api/v1/repos/org3/repo3").
+			AddTokenAuth(writeToken)
+		MakeRequest(t, req, http.StatusNoContent)
+	})
+
+	t.Run("denied to delete org repo w/ user scope", func(t *testing.T) {
+		defer tests.PrepareTestEnv(t)()
+		session := loginUser(t, "user2")
+		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
+		req := NewRequest(t, "DELETE", "/api/v1/repos/org3/repo3").
+			AddTokenAuth(writeToken)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Contains(t, resp.Body.String(), "token does not have at least one of required scope(s): [write:organization]")
+	})
+
+	t.Run("denied with repo-specific", func(t *testing.T) {
+		defer tests.PrepareTestEnv(t)()
+		// limit ourselves to write:repository -- repo-specific access tokens can't be created with write:user
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeWriteRepository},
+			[]int64{2},
+		)
+		req := NewRequest(t, "DELETE", "/api/v1/repos/user2/repo2").
+			AddTokenAuth(repo2OnlyToken)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Contains(t, resp.Body.String(), "token does not have at least one of required scope(s): [write:user]")
+	})
+}
+
 func TestAPIRepoTransfer(t *testing.T) {
 	testCases := []struct {
 		ctxUserID      int64
@@ -881,7 +957,24 @@ func TestAPIRepoTransfer(t *testing.T) {
 
 	// cleanup
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: apiRepo.ID})
-	_ = repo_service.DeleteRepositoryDirectly(db.DefaultContext, user, repo.ID)
+	require.NoError(t, repo_service.DeleteRepositoryDirectly(db.DefaultContext, repo.ID, repo_service.DeleteRepositoryOpts{}))
+}
+
+// This test verifies that a repo-specific access token with `write:repository` scope is not a sufficient to transfer a
+// repository to another user.
+func TestAPIRepoTransferAccessTokenResources(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+		[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeWriteRepository},
+		[]int64{2},
+	)
+
+	req := NewRequestWithJSON(t, "POST", "/api/v1/repos/user2/repo2/transfer", &api.TransferRepoOption{
+		NewOwner: "org3",
+	}).AddTokenAuth(repo2OnlyToken)
+	resp := MakeRequest(t, req, http.StatusForbidden)
+	assert.Contains(t, resp.Body.String(), "user should be an owner or a collaborator with admin write")
 }
 
 func transfer(t *testing.T) *repo_model.Repository {
@@ -972,38 +1065,93 @@ func TestAPIRejectTransfer(t *testing.T) {
 func TestAPIGenerateRepo(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
+	templateRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 44})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	session := loginUser(t, user.Name)
-	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 
-	templateRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 44})
+	// write:repository scope is always required (logically, because we're writing inside the contents of a new
+	// repository) but the need for write:user or write:organization depends on the target owner, so we'll test those
+	// combinations.
 
-	// user
-	repo := new(api.Repository)
-	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/generate", templateRepo.OwnerName, templateRepo.Name), &api.GenerateRepoOption{
-		Owner:       user.Name,
-		Name:        "new-repo",
-		Description: "test generate repo",
-		Private:     false,
-		GitContent:  true,
-	}).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusCreated)
-	DecodeJSON(t, resp, repo)
+	t.Run("permitted to generate into user with user scope", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
 
-	assert.Equal(t, "new-repo", repo.Name)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser, auth_model.AccessTokenScopeWriteRepository)
+		repo := new(api.Repository)
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/generate", templateRepo.OwnerName, templateRepo.Name), &api.GenerateRepoOption{
+			Owner:       user.Name,
+			Name:        "new-repo",
+			Description: "test generate repo",
+			Private:     false,
+			GitContent:  true,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		DecodeJSON(t, resp, repo)
+		assert.Equal(t, "new-repo", repo.Name)
+	})
 
-	// org
-	req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/generate", templateRepo.OwnerName, templateRepo.Name), &api.GenerateRepoOption{
-		Owner:       "org3",
-		Name:        "new-repo",
-		Description: "test generate repo",
-		Private:     false,
-		GitContent:  true,
-	}).AddTokenAuth(token)
-	resp = MakeRequest(t, req, http.StatusCreated)
-	DecodeJSON(t, resp, repo)
+	t.Run("denied to generate into user without user scope", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
 
-	assert.Equal(t, "new-repo", repo.Name)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/generate", templateRepo.OwnerName, templateRepo.Name), &api.GenerateRepoOption{
+			Owner:       user.Name,
+			Name:        "new-repo",
+			Description: "test generate repo",
+			Private:     false,
+			GitContent:  true,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Contains(t, resp.Body.String(), "token requires scope write:user to create a repository owned by a user")
+	})
+
+	t.Run("permitted to generate into org with org scope", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteOrganization, auth_model.AccessTokenScopeWriteRepository)
+		repo := new(api.Repository)
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/generate", templateRepo.OwnerName, templateRepo.Name), &api.GenerateRepoOption{
+			Owner:       "org3",
+			Name:        "new-repo",
+			Description: "test generate repo",
+			Private:     false,
+			GitContent:  true,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		DecodeJSON(t, resp, repo)
+
+		assert.Equal(t, "new-repo", repo.Name)
+	})
+
+	t.Run("denied to generate into org without org scope", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/generate", templateRepo.OwnerName, templateRepo.Name), &api.GenerateRepoOption{
+			Owner:       "org3",
+			Name:        "new-repo",
+			Description: "test generate repo",
+			Private:     false,
+			GitContent:  true,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Contains(t, resp.Body.String(), "token requires scope write:organization to create a repository owned by a user")
+	})
+
+	t.Run("denied to generate without write:repository", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/generate", templateRepo.OwnerName, templateRepo.Name), &api.GenerateRepoOption{
+			Owner:       user.Name,
+			Name:        "new-repo",
+			Description: "test generate repo",
+			Private:     false,
+			GitContent:  true,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Contains(t, resp.Body.String(), "token does not have at least one of required scope(s): [write:repository]")
+	})
 }
 
 func TestAPIRepoGetReviewers(t *testing.T) {
@@ -1047,6 +1195,64 @@ func TestAPIViewRepoObjectFormat(t *testing.T) {
 	resp := MakeRequest(t, req, http.StatusOK)
 	DecodeJSON(t, resp, &repo)
 	assert.Equal(t, "sha1", repo.ObjectFormatName)
+}
+
+// TestAPIViewRepoWikiGitInfo tests wiki git information
+func TestAPIViewRepoWikiGitInfo(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	for _, test := range []struct {
+		name        string
+		user        string
+		repo        string
+		hasWiki     bool
+		hasContents bool
+	}{
+		{
+			name:        "wiki enabled, wiki contents",
+			user:        "user2",
+			repo:        "repo1",
+			hasWiki:     true,
+			hasContents: true,
+		},
+		{
+			name:        "wiki enabled, no wiki contents",
+			user:        "user5",
+			repo:        "repo4",
+			hasWiki:     true,
+			hasContents: false,
+		},
+		{
+			name:        "wiki disabled, no wiki contents",
+			user:        "user12",
+			repo:        "repo10",
+			hasWiki:     false,
+			hasContents: false,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			// get repo
+			url := fmt.Sprintf("/api/v1/repos/%s/%s", test.user, test.repo)
+			req := NewRequest(t, "GET", url)
+			resp := MakeRequest(t, req, http.StatusOK)
+			var repo api.Repository
+			DecodeJSON(t, resp, &repo)
+
+			// check repo
+			sshURL := fmt.Sprintf("ssh://%s@%s:%d/%s/%s.wiki.git",
+				setting.SSH.User, setting.SSH.Domain, setting.SSH.Port,
+				test.user, test.repo)
+			cloneURL := fmt.Sprintf("http://%s:%s/%s/%s.wiki.git",
+				setting.Domain, setting.HTTPPort,
+				test.user, test.repo)
+			assert.Equal(t, test.hasWiki, repo.HasWiki)
+			assert.Equal(t, test.hasContents, repo.HasWikiContents)
+			assert.Equal(t, sshURL, repo.WikiSSHURL)
+			assert.Equal(t, cloneURL, repo.WikiCloneURL)
+		})
+	}
 }
 
 func TestAPIRepoCommitPull(t *testing.T) {

@@ -191,7 +191,7 @@ func Milestones(ctx *context.Context) {
 			reposQuery = reposQuery[1 : len(reposQuery)-1]
 			// for each ID (delimiter ",") add to int to repoIDs
 
-			for _, rID := range strings.Split(reposQuery, ",") {
+			for rID := range strings.SplitSeq(reposQuery, ",") {
 				// Ensure nonempty string entries
 				if rID != "" && rID != "0" {
 					rIDint64, err := strconv.ParseInt(rID, 10, 64)
@@ -511,8 +511,6 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 	}
 
 	switch filterMode {
-	case issues_model.FilterModeAll:
-	case issues_model.FilterModeYourRepositories:
 	case issues_model.FilterModeAssign:
 		opts.AssigneeID = ctx.Doer.ID
 	case issues_model.FilterModeCreate:
@@ -534,10 +532,7 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 	opts.IsClosed = optional.Some(isShowClosed)
 
 	// Make sure page number is at least 1. Will be posted to ctx.Data.
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 	opts.Paginator = &db.ListOptions{
 		Page:     page,
 		PageSize: setting.UI.IssuePagingNum,
@@ -710,6 +705,9 @@ func ShowSSHKeys(ctx *context.Context) {
 
 	var buf bytes.Buffer
 	for i := range keys {
+		if keys[i].Type == asymkey_model.KeyTypePrincipal {
+			continue // Don't display SSH principals, only public keys
+		}
 		buf.WriteString(keys[i].OmitEmail())
 		buf.WriteString("\n")
 	}
@@ -846,7 +844,7 @@ func getUserIssueStats(ctx *context.Context, ctxUser *user_model.User, filterMod
 		openClosedOpts := opts.Copy()
 		switch filterMode {
 		case issues_model.FilterModeAll:
-			// no-op
+			break
 		case issues_model.FilterModeYourRepositories:
 			openClosedOpts.AllPublic = false
 		case issues_model.FilterModeAssign:

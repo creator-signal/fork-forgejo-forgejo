@@ -8,6 +8,8 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/container"
+	"forgejo.org/modules/timeutil"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
@@ -300,4 +302,203 @@ func TestRunHasOtherJobs(t *testing.T) {
 	has, err = RunHasOtherJobs(t.Context(), 791, jobs)
 	require.NoError(t, err)
 	assert.False(t, has)
+}
+
+func TestActionRunJobPrepareNextAttempt(t *testing.T) {
+	lastHandle := "original-handle"
+	job := ActionRunJob{ID: 46, Handle: lastHandle}
+
+	err := job.PrepareNextAttempt(StatusWaiting)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, lastHandle, job.Handle)
+	assert.NotEmpty(t, job.Handle)
+	assert.Equal(t, int64(1), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusWaiting, job.Status)
+
+	lastHandle = job.Handle
+	job.Started = timeutil.TimeStampNow()
+	job.Stopped = timeutil.TimeStampNow()
+	job.TaskID = int64(59)
+	job.Status = StatusFailure
+
+	err = job.PrepareNextAttempt(StatusBlocked)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, lastHandle, job.Handle)
+	assert.NotEmpty(t, job.Handle)
+	assert.Equal(t, int64(2), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusBlocked, job.Status)
+
+	lastHandle = job.Handle
+
+	// The job hasn't finished yet. Preparing a next attempt should not be possible. It should be left untouched.
+	err = job.PrepareNextAttempt(StatusWaiting)
+	require.ErrorContains(t, err, "cannot prepare next attempt because job 46 is active: blocked")
+
+	assert.Equal(t, lastHandle, job.Handle)
+	assert.Equal(t, int64(2), job.Attempt)
+	assert.Zero(t, job.Started)
+	assert.Zero(t, job.Stopped)
+	assert.Zero(t, job.TaskID)
+	assert.Equal(t, StatusBlocked, job.Status)
+}
+
+func TestIsRequestedByRunner(t *testing.T) {
+	sameHandle := "4a1ca0be-4470-486d-8504-89b4a5ac00cf"
+	differentHandle := "88423da3-67af-4f2d-9a92-a0db822697e9"
+	emptyHandle := ""
+
+	job := &ActionRunJob{ID: 422, Attempt: 5, Handle: sameHandle}
+
+	assert.True(t, job.IsRequestedByRunner(nil))
+	assert.True(t, job.IsRequestedByRunner(&sameHandle))
+	assert.False(t, job.IsRequestedByRunner(&differentHandle))
+	assert.False(t, job.IsRequestedByRunner(&emptyHandle))
+
+	// Old jobs that were created before the introduction of Handle do not have one.
+	emptyHandleJob := &ActionRunJob{ID: 422, Attempt: 5, Handle: ""}
+
+	assert.True(t, emptyHandleJob.IsRequestedByRunner(nil))
+	assert.True(t, emptyHandleJob.IsRequestedByRunner(&emptyHandle))
+
+	assert.False(t, emptyHandleJob.IsRequestedByRunner(&differentHandle))
+}
+
+func TestAllNeedsExist(t *testing.T) {
+	testCases := []struct {
+		name               string
+		job                ActionRunJob
+		existingJobIDs     container.Set[string]
+		expectedUnknownIDs []string
+		ok                 bool
+	}{
+		{
+			name:               "no needs",
+			job:                ActionRunJob{Needs: nil},
+			existingJobIDs:     container.Set[string]{},
+			expectedUnknownIDs: []string{},
+			ok:                 true,
+		},
+		{
+			name:               "empty needs",
+			job:                ActionRunJob{Needs: []string{}},
+			existingJobIDs:     container.Set[string]{},
+			expectedUnknownIDs: []string{},
+			ok:                 true,
+		},
+		{
+			name:               "satisfied needs",
+			job:                ActionRunJob{Needs: []string{"job1", "job2"}},
+			existingJobIDs:     container.SetOf("job2", "job1"),
+			expectedUnknownIDs: []string{},
+			ok:                 true,
+		},
+		{
+			name:               "unsatisfied needs",
+			job:                ActionRunJob{Needs: []string{"unknown", "job2"}},
+			existingJobIDs:     container.SetOf("job2", "job1"),
+			expectedUnknownIDs: []string{"unknown"},
+			ok:                 false,
+		},
+		{
+			name:               "comparison is case-sensitive",
+			job:                ActionRunJob{Needs: []string{"Job1", "job2"}},
+			existingJobIDs:     container.SetOf("job2", "job1"),
+			expectedUnknownIDs: []string{"Job1"},
+			ok:                 false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			unknownIDs, ok := testCase.job.AllNeedsExist(testCase.existingJobIDs)
+
+			assert.Equal(t, testCase.ok, ok)
+			assert.Equal(t, testCase.expectedUnknownIDs, unknownIDs)
+		})
+	}
+}
+
+func TestActionRunJob_CanBeRerun(t *testing.T) {
+	testCases := []struct {
+		name          string
+		job           ActionRunJob
+		canBeRerun    bool
+		expectedError string
+	}{
+		{
+			name:       "job with unknown status",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusUnknown},
+			canBeRerun: false,
+		},
+		{
+			name:       "successful job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusSuccess},
+			canBeRerun: true,
+		},
+		{
+			name:       "failed job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusFailure},
+			canBeRerun: true,
+		},
+		{
+			name:       "cancelled job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusCancelled},
+			canBeRerun: true,
+		},
+		{
+			name:       "skipped job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusSkipped},
+			canBeRerun: true,
+		},
+		{
+			name:       "waiting job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusWaiting},
+			canBeRerun: false,
+		},
+		{
+			name:       "blocked job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusSuccess}, Status: StatusBlocked},
+			canBeRerun: false,
+		},
+		{
+			name:          "ActionRun is nil",
+			job:           ActionRunJob{ID: 12, Run: nil, Status: StatusSuccess},
+			expectedError: "cannot load run 0 of job 12",
+		},
+		{
+			name:       "with busy run but completed job",
+			job:        ActionRunJob{Run: &ActionRun{Status: StatusRunning}, Status: StatusSuccess},
+			canBeRerun: true,
+		},
+		{
+			name: "with run that cannot be run",
+			job: ActionRunJob{
+				Run:    &ActionRun{Status: StatusRunning, PreExecutionErrorCode: ErrorCodeEventDetectionError},
+				Status: StatusSuccess,
+			},
+			canBeRerun: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := testCase.job.CanBeRerun(t.Context())
+
+			if testCase.expectedError == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, testCase.expectedError)
+			}
+
+			assert.Equal(t, testCase.canBeRerun, result)
+		})
+	}
 }

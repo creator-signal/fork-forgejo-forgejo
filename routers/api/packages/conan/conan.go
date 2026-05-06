@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
 	conan_model "forgejo.org/models/packages/conan"
@@ -119,9 +118,10 @@ func Authenticate(ctx *context.Context) {
 	}
 
 	// If there's an API scope, ensure it propagates.
-	scope, _ := ctx.Data.GetData()["ApiTokenScope"].(auth_model.AccessTokenScope)
+	scope := ctx.Authentication.Scope().ValueOrZeroValue()
+	exp := ctx.Authentication.ExpiresAt()
 
-	token, err := packages_service.CreateAuthorizationToken(ctx.Doer, scope)
+	token, err := packages_service.CreateAuthorizationToken(ctx.Doer, scope, exp)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return

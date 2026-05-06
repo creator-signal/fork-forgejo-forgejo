@@ -7,6 +7,7 @@ package unit
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -141,7 +142,7 @@ func DisabledRepoUnitsSet(v []Type) {
 
 // Get valid set of default repository units from settings
 func validateDefaultRepoUnits(defaultUnits, settingDefaultUnits []Type) []Type {
-	units := defaultUnits
+	units := slices.Clone(defaultUnits)
 
 	// Use setting if not empty
 	if len(settingDefaultUnits) > 0 {
@@ -247,22 +248,12 @@ func LoadUnitConfig() error {
 
 // UnitGlobalDisabled checks if unit type is global disabled
 func (u Type) UnitGlobalDisabled() bool {
-	for _, ud := range DisabledRepoUnitsGet() {
-		if u == ud {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(DisabledRepoUnitsGet(), u)
 }
 
 // CanBeDefault checks if the unit type can be a default repo unit
 func (u *Type) CanBeDefault() bool {
-	for _, nadU := range NotAllowedDefaultRepoUnits {
-		if *u == nadU {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(NotAllowedDefaultRepoUnits, *u)
 }
 
 // Unit is a section of one repository

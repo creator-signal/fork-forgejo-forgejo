@@ -215,6 +215,11 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 		return
 	}
 
+	if err := comments.LoadResolveDoers(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadResolveDoers", err)
+		return
+	}
+
 	var apiComments []*api.TimelineComment
 	for _, comment := range comments {
 		if comment.Type != issues_model.CommentTypeCode && isXRefCommentAccessible(ctx, ctx.Doer, comment, issue.RepoID, ctx.Reducer) {
@@ -418,7 +423,7 @@ func CreateIssueComment(ctx *context.APIContext) {
 		return
 	}
 
-	if issue.IsLocked && !ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) && !ctx.Doer.IsAdmin {
+	if issue.IsLocked && !ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) && !ctx.IsUserSiteAdmin() {
 		ctx.Error(http.StatusForbidden, "CreateIssueComment", errors.New(ctx.Locale.TrString("repo.issues.comment_on_locked")))
 		return
 	}

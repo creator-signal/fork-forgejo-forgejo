@@ -33,13 +33,16 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/jwtx"
 	"forgejo.org/modules/keying"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/testlogger"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers"
+	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/auth/source/remote"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/mailer"
@@ -47,6 +50,8 @@ import (
 	"forgejo.org/tests"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/golang-jwt/jwt/v5"
+	gouuid "github.com/google/uuid"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	goth_github "github.com/markbates/goth/providers/github"
@@ -471,14 +476,14 @@ func loginUserMaybeTOTP(t testing.TB, user *user_model.User, useTOTP bool) *Test
 }
 
 // token has to be unique this counter take care of
-var tokenCounter int64
+var tokenCounter atomic.Int64
 
 // getTokenForLoggedInUser returns a token for a logged in user.
 // The scope is an optional list of snake_case strings like the frontend form fields,
 // but without the "scope_" prefix.
 func getTokenForLoggedInUser(t testing.TB, session *TestSession, scopes ...auth.AccessTokenScope) string {
 	t.Helper()
-	accessTokenName := fmt.Sprintf("api-testing-token-%d", atomic.AddInt64(&tokenCounter, 1))
+	accessTokenName := fmt.Sprintf("api-testing-token-%d", tokenCounter.Add(1))
 	createApplicationSettingsToken(t, session, accessTokenName, scopes...)
 	token := assertAccessToken(t, session)
 	return token
@@ -487,12 +492,24 @@ func getTokenForLoggedInUser(t testing.TB, session *TestSession, scopes ...auth.
 // createApplicationSettingsToken creates a token with given name and scopes for the currently logged in user.
 // It will redirect to the application settings page.
 func createApplicationSettingsToken(t testing.TB, session *TestSession, name string, scopes ...auth.AccessTokenScope) {
+	require.NotEmpty(t, scopes, "attempted to create access token with no scopes, which is not valid")
+
 	urlValues := url.Values{}
 	urlValues.Add("name", name)
+	publicOnly := false
 	for _, scope := range scopes {
-		urlValues.Add("scope", string(scope))
+		if scope == auth.AccessTokenScopePublicOnly {
+			publicOnly = true
+		} else {
+			urlValues.Add("scope", string(scope))
+		}
 	}
-	req := NewRequestWithURLValues(t, "POST", "/user/settings/applications", urlValues)
+	if publicOnly {
+		urlValues.Add("resource", "public-only")
+	} else {
+		urlValues.Add("resource", "all")
+	}
+	req := NewRequestWithURLValues(t, "POST", "/user/settings/applications/tokens/new", urlValues)
 	resp := session.MakeRequest(t, req, http.StatusSeeOther)
 
 	// Log the flash values on failure
@@ -696,7 +713,7 @@ func logUnexpectedResponse(t testing.TB, recorder *httptest.ResponseRecorder) {
 		}
 
 		return
-	} else if len(respBytes) < 500 {
+	} else if len(respBytes) < 2048 {
 		// if body is short, just log the whole thing
 		t.Log("Response: ", string(respBytes))
 		return
@@ -766,4 +783,99 @@ func SortMailerMessages(msgs []*mailer.Message) {
 	slices.SortFunc(msgs, func(a, b *mailer.Message) int {
 		return strings.Compare(b.To, a.To)
 	})
+}
+
+type AuthorizedIntegrationTester struct {
+	t                       *testing.T
+	authorizedIntegration   *auth.AuthorizedIntegration
+	jwtSigningKey           jwtx.SigningKey
+	testServer              *httptest.Server
+	resetHTTPClient         func()
+	resetAllowLocalNetworks func()
+}
+
+func newAITester(t *testing.T, setupAI ...func(*auth.AuthorizedIntegration)) *AuthorizedIntegrationTester {
+	ait := &AuthorizedIntegrationTester{
+		t: t,
+	}
+
+	var jwtSigningKey jwtx.SigningKey
+	keyPath := filepath.Join(t.TempDir(), "jwt-rsa-2048.priv")
+	jwtSigningKey, err := jwtx.InitAsymmetricSigningKey(keyPath, "RS256")
+	require.NoError(t, err)
+	ait.jwtSigningKey = jwtSigningKey
+
+	ait.testServer = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/actions/.well-known/openid-configuration" {
+			retval := map[string]any{
+				"issuer":                                ait.authorizedIntegration.Issuer,
+				"jwks_uri":                              fmt.Sprintf("%s/.keys", ait.authorizedIntegration.Issuer),
+				"id_token_signing_alg_values_supported": []string{"RS256"},
+			}
+			err := json.NewEncoder(w).Encode(retval)
+			require.NoError(t, err)
+			return
+		}
+		if r.URL.Path == "/api/actions/.keys" {
+			jwk, err := ait.jwtSigningKey.ToJWK()
+			require.NoError(t, err)
+			jwk["use"] = "sig"
+			retval := map[string]any{
+				"keys": []map[string]string{jwk},
+			}
+			_ = json.NewEncoder(w).Encode(retval) // no error checking -- some tests abort read
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+
+	// trust TLS cert of our NewTLSServer  by inserting the test client for our test server in as the HTTP client to use
+	ait.resetHTTPClient = test.MockVariableValue(
+		&auth_method.GetAuthorizedIntegrationHTTPClient,
+		func() *http.Client {
+			return ait.testServer.Client()
+		})
+
+	ait.authorizedIntegration = &auth.AuthorizedIntegration{
+		UserID:   2,
+		Scope:    auth.AccessTokenScopeAll,
+		Issuer:   fmt.Sprintf("%s/api/actions", ait.testServer.URL),
+		Audience: fmt.Sprintf("https://forgejo.example.org/-/coolguy/authorized-integration/%s", gouuid.New().String()),
+		ClaimRules: &auth.ClaimRules{
+			Rules: []auth.ClaimRule{
+				{
+					Claim:      "custom-claim",
+					Comparison: auth.ClaimEqual,
+					Value:      "custom-claim-value",
+				},
+			},
+		},
+		ResourceAllRepos: true,
+	}
+	for _, setup := range setupAI {
+		setup(ait.authorizedIntegration)
+	}
+	_, err = db.GetEngine(t.Context()).Insert(ait.authorizedIntegration)
+	require.NoError(t, err)
+
+	ait.resetAllowLocalNetworks = test.MockVariableValue(&setting.AuthorizedIntegration.AllowLocalNetworks, true)
+
+	return ait
+}
+
+func (ait *AuthorizedIntegrationTester) signedJWT() string {
+	claims := jwt.MapClaims{
+		"iss":          ait.authorizedIntegration.Issuer,
+		"aud":          ait.authorizedIntegration.Audience,
+		"custom-claim": "custom-claim-value",
+	}
+	signedToken, err := ait.jwtSigningKey.JWT(claims)
+	require.NoError(ait.t, err)
+	return signedToken
+}
+
+func (ait *AuthorizedIntegrationTester) close() {
+	ait.resetAllowLocalNetworks()
+	ait.resetHTTPClient()
+	ait.testServer.Close()
 }

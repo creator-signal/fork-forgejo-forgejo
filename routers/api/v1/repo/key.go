@@ -104,7 +104,7 @@ func ListDeployKeys(ctx *context.APIContext) {
 			return
 		}
 		apiKeys[i] = convert.ToDeployKey(apiLink, keys[i])
-		if ctx.Doer.IsAdmin || ((ctx.Repo.Repository.ID == keys[i].RepoID) && (ctx.Doer.ID == ctx.Repo.Owner.ID)) {
+		if ctx.IsUserSiteAdmin() || ((ctx.Repo.Repository.ID == keys[i].RepoID) && (ctx.Doer.ID == ctx.Repo.Owner.ID)) {
 			apiKeys[i], _ = appendPrivateInformation(ctx, apiKeys[i], keys[i], ctx.Repo.Repository)
 		}
 	}
@@ -166,7 +166,7 @@ func GetDeployKey(ctx *context.APIContext) {
 
 	apiLink := composeDeployKeysAPILink(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
 	apiKey := convert.ToDeployKey(apiLink, key)
-	if ctx.Doer.IsAdmin || ((ctx.Repo.Repository.ID == key.RepoID) && (ctx.Doer.ID == ctx.Repo.Owner.ID)) {
+	if ctx.IsUserSiteAdmin() || ((ctx.Repo.Repository.ID == key.RepoID) && (ctx.Doer.ID == ctx.Repo.Owner.ID)) {
 		apiKey, _ = appendPrivateInformation(ctx, apiKey, key, ctx.Repo.Repository)
 	}
 	ctx.JSON(http.StatusOK, apiKey)
@@ -279,7 +279,7 @@ func DeleteDeploykey(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	if err := asymkey_service.DeleteDeployKey(ctx, ctx.Doer, ctx.ParamsInt64(":id")); err != nil {
+	if err := asymkey_service.DeleteDeployKey(ctx, ctx.ParamsInt64(":id"), ctx.Repo.Repository.ID); err != nil {
 		if asymkey_model.IsErrKeyAccessDenied(err) {
 			ctx.Error(http.StatusForbidden, "", "You do not have access to this key")
 		} else {

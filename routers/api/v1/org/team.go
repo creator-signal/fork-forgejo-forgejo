@@ -405,7 +405,7 @@ func GetTeamMembers(ctx *context.APIContext) {
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsOrganizationMember", err)
 		return
-	} else if !isMember && !ctx.Doer.IsAdmin {
+	} else if !isMember && !ctx.IsUserSiteAdmin() {
 		ctx.NotFound()
 		return
 	}
@@ -591,6 +591,7 @@ func GetTeamRepos(ctx *context.APIContext) {
 			// Due to the pagination of the API it doesn't make sense to skip it, as we wouldn't be giving the right
 			// number of results back to the API consumer.
 			ctx.Error(http.StatusInternalServerError, "InvalidAuthorizationReducer", "Repository was available from GetTeamRepositories, but not readable.")
+			return
 		}
 		repos[i] = convert.ToRepo(ctx, repo, permission)
 	}
@@ -822,7 +823,7 @@ func SearchTeam(ctx *context.APIContext) {
 	}
 
 	// Only admin is allowed to search for all teams
-	if !ctx.Doer.IsAdmin {
+	if !ctx.IsUserSiteAdmin() {
 		opts.UserID = ctx.Doer.ID
 	}
 

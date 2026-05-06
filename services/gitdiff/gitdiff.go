@@ -487,8 +487,8 @@ type Diff struct {
 }
 
 // LoadComments loads comments into each line
-func (diff *Diff) LoadComments(ctx context.Context, issue *issues_model.Issue, currentUser *user_model.User, showOutdatedComments bool) error {
-	allConversations, err := issues_model.FetchCodeConversations(ctx, issue, currentUser, showOutdatedComments)
+func (diff *Diff) LoadComments(ctx context.Context, issue *issues_model.Issue, currentUser *user_model.User, showOutdatedComments bool, headCommitID string) error {
+	allConversations, err := issues_model.FetchCodeConversations(ctx, issue, currentUser, showOutdatedComments, headCommitID)
 	if err != nil {
 		return err
 	}
@@ -524,10 +524,7 @@ func ParsePatch(ctx context.Context, maxLines, maxLineCharacters, maxFiles int, 
 
 	// OK let's set a reasonable buffer size.
 	// This should be at least the size of maxLineCharacters or 4096 whichever is larger.
-	readerSize := maxLineCharacters
-	if readerSize < 4096 {
-		readerSize = 4096
-	}
+	readerSize := max(maxLineCharacters, 4096)
 
 	input := bufio.NewReaderSize(reader, readerSize)
 	line, err := input.ReadString('\n')

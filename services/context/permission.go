@@ -5,13 +5,13 @@ package context
 
 import (
 	"net/http"
+	"slices"
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/modules/log"
-	"forgejo.org/services/authz"
 )
 
 // RequireRepoAdmin returns a middleware for requiring repository admin permission
@@ -47,10 +47,8 @@ func CanEnableEditor() func(ctx *Context) {
 // RequireRepoWriterOr returns a middleware for requiring repository write to one of the unit permission
 func RequireRepoWriterOr(unitTypes ...unit.Type) func(ctx *Context) {
 	return func(ctx *Context) {
-		for _, unitType := range unitTypes {
-			if ctx.Repo.CanWrite(unitType) {
-				return
-			}
+		if slices.ContainsFunc(unitTypes, ctx.Repo.CanWrite) {
+			return
 		}
 		ctx.NotFound(ctx.Req.URL.RequestURI(), nil)
 	}
@@ -85,10 +83,8 @@ func RequireRepoReader(unitType unit.Type) func(ctx *Context) {
 // RequireRepoReaderOr returns a middleware for requiring repository write to one of the unit permission
 func RequireRepoReaderOr(unitTypes ...unit.Type) func(ctx *Context) {
 	return func(ctx *Context) {
-		for _, unitType := range unitTypes {
-			if ctx.Repo.CanRead(unitType) {
-				return
-			}
+		if slices.ContainsFunc(unitTypes, ctx.Repo.CanRead) {
+			return
 		}
 		if log.IsTrace() {
 			var format string
@@ -128,12 +124,7 @@ func CheckRepoDelegateActionTrust(ctx *Context) bool {
 
 // CheckRepoScopedToken check whether personal access token has repo scope
 func CheckRepoScopedToken(ctx *Context, repo *repo_model.Repository, level auth_model.AccessTokenScopeLevel) {
-	if !ctx.IsBasicAuth || ctx.Data["IsApiToken"] != true {
-		return
-	}
-
-	scope, ok := ctx.Data["ApiTokenScope"].(auth_model.AccessTokenScope)
-	if ok { // it's a personal access token but not oauth2 token
+	if hasScope, scope := ctx.Authentication.Scope().Get(); hasScope {
 		var scopeMatched bool
 
 		requiredScopes := auth_model.GetRequiredScopes(level, auth_model.AccessTokenScopeCategoryRepository)
@@ -162,8 +153,7 @@ func CheckRepoScopedToken(ctx *Context, repo *repo_model.Repository, level auth_
 		}
 	}
 
-	reducer, ok := ctx.Data["ApiTokenReducer"].(authz.AuthorizationReducer)
-	if ok {
+	if reducer := ctx.Authentication.Reducer(); reducer != nil {
 		var accessMode perm.AccessMode
 		switch level {
 		case auth_model.Read:
@@ -181,6 +171,25 @@ func CheckRepoScopedToken(ctx *Context, repo *repo_model.Repository, level auth_
 			return
 		} else if actualAccessMode != accessMode {
 			ctx.Error(http.StatusForbidden)
+			return
+		}
+	}
+}
+
+func CheckRuntimeDeterminedScope(ctx *APIContext, scopeCategory auth_model.AccessTokenScopeCategory, level auth_model.AccessTokenScopeLevel, msg string) {
+	if hasScope, scope := ctx.Authentication.Scope().Get(); hasScope {
+		var scopeMatched bool
+
+		requiredScopes := auth_model.GetRequiredScopes(level, scopeCategory)
+
+		scopeMatched, err := scope.HasScope(requiredScopes...)
+		if err != nil {
+			ctx.ServerError("HasScope", err)
+			return
+		}
+
+		if !scopeMatched {
+			ctx.Error(http.StatusForbidden, "!scopeMatched", msg)
 			return
 		}
 	}

@@ -9,10 +9,16 @@ import (
 )
 
 // GetRunnerRegistrationToken returns a token to register global runners
+//
+// Deprecated: This operation has been deprecated in Forgejo 15. Use the web UI or RegisterRunner instead.
 func GetRunnerRegistrationToken(ctx *context.APIContext) {
 	// swagger:operation GET /admin/actions/runners/registration-token admin adminGetRunnerRegistrationToken
 	// ---
 	// summary: Get a runner registration token for registering global runners
+	// description: >
+	//   This operation has been deprecated in Forgejo 15.
+	//   Use the web UI or [`/admin/actions/runners`](#/admin/registerAdminRunner) instead.
+	// deprecated: true
 	// produces:
 	// - application/json
 	// parameters:
@@ -25,14 +31,14 @@ func GetRunnerRegistrationToken(ctx *context.APIContext) {
 
 // GetRegistrationToken returns the token to register global runners
 //
-// Deprecated: This operation has been deprecated in Forgejo 15. Use GetRunnerRegistrationToken instead.
+// Deprecated: This operation has been deprecated in Forgejo 15. Use the web UI or RegisterRunner instead.
 func GetRegistrationToken(ctx *context.APIContext) {
 	// swagger:operation GET /admin/runners/registration-token admin adminGetRegistrationToken
 	// ---
 	// summary: Get a runner registration token for registering global runners
 	// description: >
 	//   This operation has been deprecated in Forgejo 15.
-	//   Use [`/admin/actions/runners/registration-token`](#/admin/adminGetRunnerRegistrationToken) instead.
+	//   Use the web UI or [`/admin/actions/runners`](#/admin/registerAdminRunner) instead.
 	// deprecated: true
 	// produces:
 	// - application/json
@@ -98,6 +104,10 @@ func ListRunners(ctx *context.APIContext) {
 	// produces:
 	// - application/json
 	// parameters:
+	// - name: visible
+	//   in: query
+	//   description: whether to include all visible runners (true) or only those that are directly owned by the instance (false)
+	//   type: boolean
 	// - name: page
 	//   in: query
 	//   description: page number of results to return (1-based)

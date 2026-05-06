@@ -45,10 +45,19 @@ const (
 func RefCommits(ctx *context.Context) {
 	switch {
 	case len(ctx.Repo.TreePath) == 0:
+		ctx.Data["TreeNames"] = []string{}
 		Commits(ctx)
 	case ctx.Repo.TreePath == "search":
+		ctx.Data["TreeNames"] = []string{}
 		SearchCommits(ctx)
 	default:
+		treeNames := strings.Split(ctx.Repo.TreePath, "/")
+		paths := make([]string, len(treeNames))
+		for i := range treeNames {
+			paths[i] = strings.Join(treeNames[:i+1], "/")
+		}
+		ctx.Data["TreeNames"] = treeNames
+		ctx.Data["Paths"] = paths
 		FileHistory(ctx)
 	}
 }
@@ -68,10 +77,7 @@ func Commits(ctx *context.Context) {
 		return
 	}
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	pageSize := ctx.FormInt("limit")
 	if pageSize <= 0 {
@@ -241,10 +247,7 @@ func FileHistory(ctx *context.Context) {
 		return
 	}
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	commits, err := ctx.Repo.GitRepo.CommitsByFileAndRange(
 		git.CommitsByFileAndRangeOptions{
@@ -277,6 +280,9 @@ func FileHistory(ctx *context.Context) {
 			break
 		}
 	}
+
+	branchLink := ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchNameSubURL()
+	ctx.Data["BranchLink"] = branchLink
 
 	ctx.Data["Commits"] = git_model.ParseCommitsWithStatus(ctx, commits, ctx.Repo.Repository)
 
@@ -407,6 +413,7 @@ func Diff(ctx *context.Context) {
 	if err == nil {
 		ctx.Data["NoteCommit"] = note.Commit
 		ctx.Data["NoteAuthor"] = user_model.ValidateCommitWithEmail(ctx, note.Commit)
+		ctx.Data["NoteRaw"] = string(charset.ToUTF8WithFallback(note.Message, charset.ConvertOpts{}))
 		ctx.Data["NoteRendered"], err = markup.RenderCommitMessage(&markup.RenderContext{
 			Links: markup.Links{
 				Base:       ctx.Repo.RepoLink,
@@ -463,7 +470,7 @@ func RawDiff(ctx *context.Context) {
 	}
 }
 
-func SetCommitNotes(ctx *context.Context) {
+func setCommitNotes(ctx *context.Context, redirectURL string) {
 	form := web.GetForm(ctx).(*forms.CommitNotesForm)
 
 	commitID := ctx.Params(":sha")
@@ -474,10 +481,14 @@ func SetCommitNotes(ctx *context.Context) {
 		return
 	}
 
-	ctx.Redirect(fmt.Sprintf("%s/commit/%s", ctx.Repo.Repository.HTMLURL(), commitID))
+	ctx.Redirect(redirectURL)
 }
 
-func RemoveCommitNotes(ctx *context.Context) {
+func SetCommitNotes(ctx *context.Context) {
+	setCommitNotes(ctx, ctx.Repo.Repository.CommitLink(ctx.Params(":sha")))
+}
+
+func removeCommitNotes(ctx *context.Context, redirectURL string) {
 	commitID := ctx.Params(":sha")
 
 	err := git.RemoveNote(ctx, ctx.Repo.GitRepo, commitID)
@@ -486,5 +497,9 @@ func RemoveCommitNotes(ctx *context.Context) {
 		return
 	}
 
-	ctx.Redirect(fmt.Sprintf("%s/commit/%s", ctx.Repo.Repository.HTMLURL(), commitID))
+	ctx.Redirect(redirectURL)
+}
+
+func RemoveCommitNotes(ctx *context.Context) {
+	removeCommitNotes(ctx, ctx.Repo.Repository.CommitLink(ctx.Params(":sha")))
 }

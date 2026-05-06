@@ -138,8 +138,6 @@ func CheckInitRepository(ctx context.Context, owner, name, objectFormatName stri
 	// Init git bare new repository.
 	if err = git.InitRepository(ctx, repoPath, true, objectFormatName); err != nil {
 		return fmt.Errorf("git.InitRepository: %w", err)
-	} else if err = CreateDelegateHooks(repoPath); err != nil {
-		return fmt.Errorf("createDelegateHooks: %w", err)
 	}
 	return nil
 }
@@ -152,7 +150,7 @@ func InitializeLabels(ctx context.Context, id int64, labelTemplate string, isOrg
 	}
 
 	labels := make([]*issues_model.Label, len(list))
-	for i := 0; i < len(list); i++ {
+	for i := range list {
 		labels[i] = &issues_model.Label{
 			Name:        list[i].Name,
 			Exclusive:   list[i].Exclusive,

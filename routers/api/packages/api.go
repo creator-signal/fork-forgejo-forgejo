@@ -4,6 +4,7 @@
 package packages
 
 import (
+	"errors"
 	"net/http"
 	"regexp"
 	"strings"
@@ -39,48 +40,46 @@ import (
 	"forgejo.org/routers/api/packages/swift"
 	"forgejo.org/routers/api/packages/vagrant"
 	"forgejo.org/services/auth"
+	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/context"
 )
 
 func reqPackageAccess(accessMode perm.AccessMode) func(ctx *context.Context) {
 	return func(ctx *context.Context) {
-		if ctx.Data["IsApiToken"] == true {
-			scope, ok := ctx.Data["ApiTokenScope"].(auth_model.AccessTokenScope)
-			if ok { // it's a personal access token but not oauth2 token
-				scopeMatched := false
-				var err error
-				switch accessMode {
-				case perm.AccessModeRead:
-					scopeMatched, err = scope.HasScope(auth_model.AccessTokenScopeReadPackage)
-					if err != nil {
-						ctx.Error(http.StatusInternalServerError, "HasScope", err.Error())
-						return
-					}
-				case perm.AccessModeWrite:
-					scopeMatched, err = scope.HasScope(auth_model.AccessTokenScopeWritePackage)
-					if err != nil {
-						ctx.Error(http.StatusInternalServerError, "HasScope", err.Error())
-						return
-					}
-				}
-				if !scopeMatched {
-					ctx.Resp.Header().Set("WWW-Authenticate", `Basic realm="Gitea Package API"`)
-					ctx.Error(http.StatusUnauthorized, "reqPackageAccess", "user should have specific permission or be a site admin")
-					return
-				}
-
-				// check if scope only applies to public resources
-				publicOnly, err := scope.PublicOnly()
+		if hasScope, scope := ctx.Authentication.Scope().Get(); hasScope {
+			scopeMatched := false
+			var err error
+			switch accessMode {
+			case perm.AccessModeRead:
+				scopeMatched, err = scope.HasScope(auth_model.AccessTokenScopeReadPackage)
 				if err != nil {
-					ctx.Error(http.StatusForbidden, "tokenRequiresScope", "parsing public resource scope failed: "+err.Error())
+					ctx.Error(http.StatusInternalServerError, "HasScope", err.Error())
 					return
 				}
+			case perm.AccessModeWrite:
+				scopeMatched, err = scope.HasScope(auth_model.AccessTokenScopeWritePackage)
+				if err != nil {
+					ctx.Error(http.StatusInternalServerError, "HasScope", err.Error())
+					return
+				}
+			}
+			if !scopeMatched {
+				ctx.Resp.Header().Set("WWW-Authenticate", `Basic realm="Gitea Package API"`)
+				ctx.Error(http.StatusUnauthorized, "reqPackageAccess", "user should have specific permission or be a site admin")
+				return
+			}
 
-				if publicOnly {
-					if ctx.Package != nil && ctx.Package.Owner.Visibility.IsPrivate() {
-						ctx.Error(http.StatusForbidden, "reqToken", "token scope is limited to public packages")
-						return
-					}
+			// check if scope only applies to public resources
+			publicOnly, err := scope.PublicOnly()
+			if err != nil {
+				ctx.Error(http.StatusForbidden, "tokenRequiresScope", "parsing public resource scope failed: "+err.Error())
+				return
+			}
+
+			if publicOnly {
+				if ctx.Package != nil && ctx.Package.Owner.Visibility.IsPrivate() {
+					ctx.Error(http.StatusForbidden, "reqToken", "token scope is limited to public packages")
+					return
 				}
 			}
 		}
@@ -95,7 +94,14 @@ func reqPackageAccess(accessMode perm.AccessMode) func(ctx *context.Context) {
 
 func enforcePackagesQuota() func(ctx *context.Context) {
 	return func(ctx *context.Context) {
-		ok, err := quota_model.EvaluateForUser(ctx, ctx.Doer.ID, quota_model.LimitSubjectSizeAssetsPackagesAll)
+		// Evaluate quota against the package owner (org or user the package is pushed to),
+		// not the uploader (ctx.Doer). This enables org-level quota: all members uploading
+		// to an org consume from the org's quota group, not their own personal quota.
+		ownerID := ctx.Doer.ID
+		if ctx.Package != nil {
+			ownerID = ctx.Package.Owner.ID
+		}
+		ok, err := quota_model.EvaluateForUser(ctx, ownerID, quota_model.LimitSubjectSizeAssetsPackagesAll)
 		if err != nil {
 			log.Error("quota_model.EvaluateForUser: %v", err)
 			ctx.Error(http.StatusInternalServerError, "Error checking quota")
@@ -110,19 +116,71 @@ func enforcePackagesQuota() func(ctx *context.Context) {
 
 func verifyAuth(r *web.Route, authMethods []auth.Method) {
 	if setting.Service.EnableReverseProxyAuth {
-		authMethods = append(authMethods, &auth.ReverseProxy{})
+		authMethods = append(authMethods, &auth_method.ReverseProxy{})
 	}
-	authGroup := auth.NewGroup(authMethods...)
+	authGroup := auth_method.NewGroup(authMethods...)
 
 	r.Use(func(ctx *context.Context) {
-		var err error
-		ctx.Doer, err = authGroup.Verify(ctx.Req, ctx.Resp, ctx, ctx.Session)
-		if err != nil {
-			log.Info("Failed to verify user: %v", err)
+		output := authGroup.Verify(ctx.Req, ctx.Resp, ctx.Session)
+		var ar auth.AuthenticationResult
+		switch v := output.(type) {
+		case *auth.AuthenticationSuccess:
+			ar = v.Result
+		case *auth.AuthenticationNotAttempted:
+			ar = &auth.UnauthenticatedResult{}
+		case *auth.AuthenticationError:
+			ctx.ServerError("authentication error", v.Error)
+			return
+		case *auth.AuthenticationAttemptedIncorrectCredential:
 			ctx.Error(http.StatusUnauthorized, "authGroup.Verify")
 			return
+		default:
+			ctx.ServerError("Verify failed", errors.New("unexpected result from Method.Verify"))
+			return
 		}
+		if ar == nil {
+			ctx.ServerError("nil authentication result", errors.New("nil authentication result"))
+			return
+		}
+		ctx.Doer = ar.User()
 		ctx.IsSigned = ctx.Doer != nil
+		ctx.Authentication = ar
+	})
+}
+
+func verifyContainerAuth(r *web.Route, authMethods []auth.Method) {
+	if setting.Service.EnableReverseProxyAuth {
+		authMethods = append(authMethods, &auth_method.ReverseProxy{})
+	}
+	authGroup := auth_method.NewGroup(authMethods...)
+
+	r.Use(func(ctx *context.Context) {
+		output := authGroup.Verify(ctx.Req, ctx.Resp, ctx.Session)
+		var ar auth.AuthenticationResult
+		switch v := output.(type) {
+		case *auth.AuthenticationSuccess:
+			ar = v.Result
+		case *auth.AuthenticationNotAttempted:
+			ar = &auth.UnauthenticatedResult{}
+		case *auth.AuthenticationError:
+			ctx.ServerError("authentication error", v.Error)
+			return
+		case *auth.AuthenticationAttemptedIncorrectCredential:
+			log.Info("Failed to verify user: %v", v.Error)
+			container.APIUnauthorizedError(ctx)
+			ctx.Error(http.StatusUnauthorized, "authGroup.Verify")
+			return
+		default:
+			ctx.ServerError("Verify failed", errors.New("unexpected result from Method.Verify"))
+			return
+		}
+		if ar == nil {
+			ctx.ServerError("nil authentication result", errors.New("nil authentication result"))
+			return
+		}
+		ctx.Doer = ar.User()
+		ctx.IsSigned = ctx.Doer != nil
+		ctx.Authentication = ar
 	})
 }
 
@@ -134,11 +192,15 @@ func CommonRoutes() *web.Route {
 	r.Use(context.PackageContexter())
 
 	verifyAuth(r, []auth.Method{
-		&auth.OAuth2{},
-		&auth.Basic{},
+		&auth_method.OAuth2{},
+		&auth_method.Basic{},
+		&auth_method.AccessToken{},
+		&auth_method.ActionRuntimeToken{},
+		&auth_method.ActionTaskToken{},
 		&nuget.Auth{},
 		&conan.Auth{},
 		&chef.Auth{},
+		&auth_method.AuthorizedIntegration{},
 	})
 
 	r.Group("/{username}", func() {
@@ -368,11 +430,16 @@ func CommonRoutes() *web.Route {
 			})
 		}, reqPackageAccess(perm.AccessModeRead))
 		r.Group("/debian", func() {
-			r.Get("/repository.key", debian.GetRepositoryKey)
+			r.Group("/repository.key", func() {
+				r.Head("", debian.GetRepositoryKey)
+				r.Get("", debian.GetRepositoryKey)
+			})
 			r.Group("/dists/{distribution}", func() {
 				r.Get("/{filename}", debian.GetRepositoryFile)
+				r.Head("/{filename}", debian.CheckRepositoryFileExistence)
 				r.Get("/by-hash/{algorithm}/{hash}", debian.GetRepositoryFileByHash)
 				r.Group("/{component}/{architecture}", func() {
+					r.Head("/{filename}", debian.CheckRepositoryFileExistence)
 					r.Get("/{filename}", debian.GetRepositoryFile)
 					r.Get("/by-hash/{algorithm}/{hash}", debian.GetRepositoryFileByHash)
 				})
@@ -788,9 +855,17 @@ func ContainerRoutes() *web.Route {
 
 	r.Use(context.PackageContexter())
 
-	verifyAuth(r, []auth.Method{
-		&auth.Basic{},
+	verifyContainerAuth(r, []auth.Method{
+		&auth_method.Basic{},
+		&auth_method.AccessToken{},
+		&auth_method.ActionRuntimeToken{},
+		&auth_method.ActionTaskToken{},
 		&container.Auth{},
+		&auth_method.AuthorizedIntegration{
+			// `docker login` can't send a bearer token, so enable reading a token from the password field of
+			// `Authorization: Basic ...`.
+			PermitBasic: true,
+		},
 	})
 
 	r.Get("", container.ReqContainerAccess, container.DetermineSupport)
@@ -802,11 +877,11 @@ func ContainerRoutes() *web.Route {
 	r.Group("/{username}", func() {
 		r.Group("/{image}", func() {
 			r.Group("/blobs/uploads", func() {
-				r.Post("", container.InitiateUploadBlob)
+				r.Post("", enforcePackagesQuota(), container.InitiateUploadBlob)
 				r.Group("/{uuid}", func() {
 					r.Get("", container.GetUploadBlob)
-					r.Patch("", container.UploadBlob)
-					r.Put("", container.EndUploadBlob)
+					r.Patch("", enforcePackagesQuota(), container.UploadBlob)
+					r.Put("", enforcePackagesQuota(), container.EndUploadBlob)
 					r.Delete("", container.CancelUploadBlob)
 				})
 			}, reqPackageAccess(perm.AccessModeWrite))
@@ -816,7 +891,7 @@ func ContainerRoutes() *web.Route {
 				r.Delete("", reqPackageAccess(perm.AccessModeWrite), container.DeleteBlob)
 			})
 			r.Group("/manifests/{reference}", func() {
-				r.Put("", reqPackageAccess(perm.AccessModeWrite), container.UploadManifest)
+				r.Put("", reqPackageAccess(perm.AccessModeWrite), enforcePackagesQuota(), container.UploadManifest)
 				r.Head("", container.HeadManifest)
 				r.Get("", container.GetManifest)
 				r.Delete("", reqPackageAccess(perm.AccessModeWrite), container.DeleteManifest)
@@ -852,6 +927,10 @@ func ContainerRoutes() *web.Route {
 					return
 				}
 
+				enforcePackagesQuota()(ctx)
+				if ctx.Written() {
+					return
+				}
 				container.InitiateUploadBlob(ctx)
 				return
 			}
@@ -884,8 +963,16 @@ func ContainerRoutes() *web.Route {
 				if isGet {
 					container.GetUploadBlob(ctx)
 				} else if isPatch {
+					enforcePackagesQuota()(ctx)
+					if ctx.Written() {
+						return
+					}
 					container.UploadBlob(ctx)
 				} else if isPut {
+					enforcePackagesQuota()(ctx)
+					if ctx.Written() {
+						return
+					}
 					container.EndUploadBlob(ctx)
 				} else {
 					container.CancelUploadBlob(ctx)
@@ -935,6 +1022,10 @@ func ContainerRoutes() *web.Route {
 						return
 					}
 					if isPut {
+						enforcePackagesQuota()(ctx)
+						if ctx.Written() {
+							return
+						}
 						container.UploadManifest(ctx)
 					} else {
 						container.DeleteManifest(ctx)

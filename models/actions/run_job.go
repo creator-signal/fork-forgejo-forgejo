@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/util"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	gouuid "github.com/google/uuid"
 	"go.yaml.in/yaml/v3"
 	"xorm.io/builder"
 )
@@ -30,6 +31,7 @@ type ActionRunJob struct {
 	IsForkPullRequest bool
 	Name              string `xorm:"VARCHAR(255)"`
 	Attempt           int64
+	Handle            string `xorm:"unique"`
 	WorkflowPayload   []byte
 	JobID             string   `xorm:"VARCHAR(255)"` // job id in workflow, not job's id
 	Needs             []string `xorm:"JSON TEXT"`
@@ -108,6 +110,12 @@ func (job *ActionRunJob) LoadAttributes(ctx context.Context) error {
 	return job.Run.LoadAttributes(ctx)
 }
 
+// IsRequestedByRunner returns true if this attempt of this ActionRunJob was explicitly requested by the runner or if
+// the runner expressed no preference.
+func (job *ActionRunJob) IsRequestedByRunner(handle *string) bool {
+	return handle == nil || job.Handle == *handle
+}
+
 func (job *ActionRunJob) ItRunsOn(labels []string) bool {
 	if len(labels) == 0 || len(job.RunsOn) == 0 {
 		return false
@@ -115,6 +123,34 @@ func (job *ActionRunJob) ItRunsOn(labels []string) bool {
 	labelSet := make(container.Set[string])
 	labelSet.AddMultiple(labels...)
 	return labelSet.IsSubset(job.RunsOn)
+}
+
+func (job *ActionRunJob) PrepareNextAttempt(initialStatus Status) error {
+	if job.Status != StatusUnknown && !job.Status.IsDone() {
+		return fmt.Errorf("cannot prepare next attempt because job %d is active: %s", job.ID, job.Status.String())
+	}
+
+	job.Attempt++
+	job.Started = 0
+	job.Stopped = 0
+	job.TaskID = 0
+	job.Handle = gouuid.New().String()
+	job.Status = initialStatus
+
+	return nil
+}
+
+// CanBeRerun answers whether this ActionRunJob can be rerun. Returns true if it is done and the Run it belongs to
+// is valid. Returns false in all other cases.
+func (job *ActionRunJob) CanBeRerun(ctx context.Context) (bool, error) {
+	if err := job.LoadRun(ctx); err != nil {
+		return false, fmt.Errorf("cannot load run %d of job %d: %w", job.RunID, job.ID, err)
+	}
+
+	if !job.Run.IsValid() {
+		return false, nil
+	}
+	return job.Status.IsDone(), nil
 }
 
 func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {
@@ -314,4 +350,18 @@ func (job *ActionRunJob) EnableOpenIDConnect() (bool, error) {
 		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
 	}
 	return jobWorkflow.EnableOpenIDConnect, nil
+}
+
+// AllNeedsExist checks whether this ActionRunJob's Needs can theoretically be met by comparing them with the supplied
+// list of all job IDs that part of a particular workflow run. Returns the list of unknown job IDs found in Needs
+// alongside an indicator whether the check was successful.
+func (job *ActionRunJob) AllNeedsExist(allExistingJobIDs container.Set[string]) ([]string, bool) {
+	unknownJobIDs := []string{}
+	for _, need := range job.Needs {
+		if !allExistingJobIDs.Contains(need) {
+			unknownJobIDs = append(unknownJobIDs, need)
+		}
+	}
+
+	return unknownJobIDs, len(unknownJobIDs) == 0
 }

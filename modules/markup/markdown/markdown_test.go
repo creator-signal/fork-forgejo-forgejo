@@ -319,7 +319,7 @@ func TestTotal_RenderWiki(t *testing.T) {
 
 	answers := testAnswers(util.URLJoin(FullURL, "wiki"), util.URLJoin(FullURL, "wiki", "raw"))
 
-	for i := 0; i < len(sameCases); i++ {
+	for i := range sameCases {
 		line, err := markdown.RenderString(&markup.RenderContext{
 			Ctx: git.DefaultContext,
 			Links: markup.Links{
@@ -363,7 +363,7 @@ func TestTotal_RenderString(t *testing.T) {
 
 	answers := testAnswers(util.URLJoin(FullURL, "src", "master"), util.URLJoin(FullURL, "media", "master"))
 
-	for i := 0; i < len(sameCases); i++ {
+	for i := range sameCases {
 		line, err := markdown.RenderString(&markup.RenderContext{
 			Ctx: git.DefaultContext,
 			Links: markup.Links{
@@ -1487,4 +1487,36 @@ func TestCallout(t *testing.T) {
 	test("> [!WARNING]\n> Bad stuff is brewing here", `<blockquote class="attention-header attention-warning"><p class="attention-title"><strong class="attention-warning">Warning</strong></p>
 <p>Bad stuff is brewing here</p>
 </blockquote>`)
+}
+
+func TestCodeblockLanguageStripping(t *testing.T) {
+	test := func(input, expected string) {
+		buffer, err := markdown.RenderString(&markup.RenderContext{Ctx: git.DefaultContext}, input)
+		require.NoError(t, err)
+		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(string(buffer)))
+	}
+
+	// Unstripped
+	test(
+		"```rust\n"+
+			"fn main() {}\n"+
+			"```",
+		`<pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span></code></pre>`)
+
+	// Stripped
+	test(
+		"```rust,ignore\n"+
+			"fn main() {}\n"+
+			"```",
+		`<pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span></code></pre>`)
+
+	// No language identifier
+	test(
+		"```\n"+
+			"fn main() {}\n"+
+			"```",
+		`<pre class="code-block"><code class="chroma language-text display">fn main() {}
+</code></pre>`)
 }

@@ -104,6 +104,13 @@ func (run *ActionRun) Link() string {
 	return fmt.Sprintf("%s/actions/runs/%d", run.Repo.Link(), run.Index)
 }
 
+func (run *ActionRun) CommitLink() string {
+	if run.Repo == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s/commit/%s", run.Repo.Link(), run.CommitSHA)
+}
+
 // WorkflowPath returns the path in the git repo to the workflow file that this run was based on
 func (run *ActionRun) WorkflowPath() string {
 	if run.WorkflowDirectory == "" {
@@ -146,7 +153,9 @@ func (run *ActionRun) LoadAttributes(ctx context.Context) error {
 
 	if run.TriggerUser == nil {
 		u, err := user_model.GetPossibleUserByID(ctx, run.TriggerUserID)
-		if err != nil {
+		if user_model.IsErrUserNotExist(err) {
+			u = user_model.NewGhostUser()
+		} else if err != nil {
 			return err
 		}
 		run.TriggerUser = u
@@ -238,6 +247,41 @@ func (run *ActionRun) FindOuterWorkflowCall(ctx context.Context, innerCall *Acti
 		}
 	}
 	return nil, fmt.Errorf("no workflow call with ID %s found in run %d", parent, run.ID)
+}
+
+func (run *ActionRun) IsScheduledRun() bool {
+	return run.TriggerEvent == "schedule"
+}
+
+func (run *ActionRun) IsDispatchedRun() bool {
+	return run.TriggerEvent == "workflow_dispatch"
+}
+
+// IsValid indicates whether this ActionRun is valid and can be run.
+func (run *ActionRun) IsValid() bool {
+	return run.PreExecutionErrorCode == 0 && run.PreExecutionError == ""
+}
+
+// CanBeRerun indicates whether this ActionRun can be rerun.
+func (run *ActionRun) CanBeRerun() bool {
+	if !run.IsValid() {
+		return false
+	}
+	return run.Status.IsDone()
+}
+
+func (run *ActionRun) PrepareNextAttempt() error {
+	if run.Status != StatusUnknown && !run.Status.IsDone() {
+		return fmt.Errorf("cannot prepare next attempt because run %d is active: %s", run.ID, run.Status.String())
+	}
+
+	run.PreviousDuration = run.Duration()
+
+	run.Status = StatusWaiting
+	run.Started = 0
+	run.Stopped = 0
+
+	return nil
 }
 
 func actionsCountOpenCacheKey(repoID int64) string {
@@ -383,7 +427,8 @@ func InsertRunJobs(ctx context.Context, run *ActionRun, jobs []*jobparser.Single
 			name, _ = util.SplitStringAtByteN(job.Name, 255)
 			runsOn = job.RunsOn()
 		}
-		runJobs = append(runJobs, &ActionRunJob{
+
+		runJob := &ActionRunJob{
 			RunID:             run.ID,
 			RepoID:            run.RepoID,
 			OwnerID:           run.OwnerID,
@@ -394,8 +439,12 @@ func InsertRunJobs(ctx context.Context, run *ActionRun, jobs []*jobparser.Single
 			JobID:             id,
 			Needs:             needs,
 			RunsOn:            runsOn,
-			Status:            status,
-		})
+		}
+		if err := runJob.PrepareNextAttempt(status); err != nil {
+			return err
+		}
+
+		runJobs = append(runJobs, runJob)
 	}
 
 	if len(runJobs) > 0 {

@@ -33,7 +33,6 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/modules/web/middleware"
-	auth_service "forgejo.org/services/auth"
 	source_service "forgejo.org/services/auth/source"
 	"forgejo.org/services/auth/source/oauth2"
 	"forgejo.org/services/context"
@@ -112,16 +111,11 @@ const (
 	AccessTokenErrorCodeInvalidScope = "invalid_scope"
 )
 
-// AccessTokenError represents an error response specified in RFC 6749
+// AccessTokenErrorResponse represents an error response specified in RFC 6749
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-type AccessTokenError struct {
+type AccessTokenErrorResponse struct {
 	ErrorCode        AccessTokenErrorCode `json:"error" form:"error"`
 	ErrorDescription string               `json:"error_description"`
-}
-
-// Error returns the error message
-func (err AccessTokenError) Error() string {
-	return fmt.Sprintf("%s: %s", err.ErrorCode, err.ErrorDescription)
 }
 
 // errCallback represents a oauth2 callback error
@@ -154,10 +148,10 @@ type AccessTokenResponse struct {
 	IDToken      string    `json:"id_token,omitempty"`
 }
 
-func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, serverKey, clientKey jwtx.SigningKey) (*AccessTokenResponse, *AccessTokenError) {
+func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, serverKey, clientKey jwtx.SigningKey) (*AccessTokenResponse, *AccessTokenErrorResponse) {
 	if setting.OAuth2.InvalidateRefreshTokens {
 		if err := grant.IncreaseCounter(ctx); err != nil {
-			return nil, &AccessTokenError{
+			return nil, &AccessTokenErrorResponse{
 				ErrorCode:        AccessTokenErrorCodeInvalidGrant,
 				ErrorDescription: "cannot increase the grant counter",
 			}
@@ -174,7 +168,7 @@ func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, ser
 	}
 	signedAccessToken, err := accessToken.SignToken(serverKey)
 	if err != nil {
-		return nil, &AccessTokenError{
+		return nil, &AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 			ErrorDescription: "cannot sign token",
 		}
@@ -192,7 +186,7 @@ func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, ser
 	}
 	signedRefreshToken, err := refreshToken.SignToken(serverKey)
 	if err != nil {
-		return nil, &AccessTokenError{
+		return nil, &AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 			ErrorDescription: "cannot sign token",
 		}
@@ -203,7 +197,7 @@ func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, ser
 	if grant.ScopeContains("openid") {
 		app, err := auth.GetOAuth2ApplicationByID(ctx, grant.ApplicationID)
 		if err != nil {
-			return nil, &AccessTokenError{
+			return nil, &AccessTokenErrorResponse{
 				ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 				ErrorDescription: "cannot find application",
 			}
@@ -211,13 +205,13 @@ func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, ser
 		user, err := user_model.GetUserByID(ctx, grant.UserID)
 		if err != nil {
 			if user_model.IsErrUserNotExist(err) {
-				return nil, &AccessTokenError{
+				return nil, &AccessTokenErrorResponse{
 					ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 					ErrorDescription: "cannot find user",
 				}
 			}
 			log.Error("Error loading user: %v", err)
-			return nil, &AccessTokenError{
+			return nil, &AccessTokenErrorResponse{
 				ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 				ErrorDescription: "server error",
 			}
@@ -251,7 +245,7 @@ func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, ser
 			groups, err := getOAuthGroupsForUser(ctx, user, onlyPublicGroups)
 			if err != nil {
 				log.Error("Error getting groups: %v", err)
-				return nil, &AccessTokenError{
+				return nil, &AccessTokenErrorResponse{
 					ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 					ErrorDescription: "server error",
 				}
@@ -261,7 +255,7 @@ func newAccessTokenResponse(ctx go_context.Context, grant *auth.OAuth2Grant, ser
 
 		signedIDToken, err = idToken.SignToken(clientKey)
 		if err != nil {
-			return nil, &AccessTokenError{
+			return nil, &AccessTokenErrorResponse{
 				ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 				ErrorDescription: "cannot sign token",
 			}
@@ -288,8 +282,8 @@ type userInfoResponse struct {
 
 func ifOnlyPublicGroups(scopes string) bool {
 	scopes = strings.ReplaceAll(scopes, ",", " ")
-	scopesList := strings.Fields(scopes)
-	for _, scope := range scopesList {
+	scopesList := strings.FieldsSeq(scopes)
+	for scope := range scopesList {
 		if scope == "all" || scope == "read:organization" || scope == "read:admin" {
 			return false
 		}
@@ -299,7 +293,9 @@ func ifOnlyPublicGroups(scopes string) bool {
 
 // InfoOAuth manages request for userinfo endpoint
 func InfoOAuth(ctx *context.Context) {
-	if ctx.Doer == nil || ctx.Data["AuthedMethod"] != (&auth_service.OAuth2{}).Name() {
+	hasGrantScopes, grantScopes := ctx.Authentication.OAuth2GrantScopes().Get()
+
+	if ctx.Doer == nil || !hasGrantScopes {
 		ctx.Resp.Header().Set("WWW-Authenticate", `Bearer realm=""`)
 		ctx.PlainText(http.StatusUnauthorized, "no valid authorization")
 		return
@@ -313,17 +309,7 @@ func InfoOAuth(ctx *context.Context) {
 		Picture:  ctx.Doer.AvatarLink(ctx),
 	}
 
-	var token string
-	if auHead := ctx.Req.Header.Get("Authorization"); auHead != "" {
-		auths := strings.Fields(auHead)
-		if len(auths) == 2 && (auths[0] == "token" || strings.ToLower(auths[0]) == "bearer") {
-			token = auths[1]
-		}
-	}
-
-	_, grantScopes := auth_service.CheckOAuthAccessToken(ctx, token)
 	onlyPublicGroups := ifOnlyPublicGroups(grantScopes)
-
 	groups, err := getOAuthGroupsForUser(ctx, ctx.Doer, onlyPublicGroups)
 	if err != nil {
 		ctx.ServerError("Oauth groups for user", err)
@@ -429,11 +415,11 @@ func AuthorizeOAuth(ctx *context.Context) {
 	errs := binding.Errors{}
 	errs = form.Validate(ctx.Req, errs)
 	if len(errs) > 0 {
-		errstring := ""
+		var errstring strings.Builder
 		for _, e := range errs {
-			errstring += e.Error() + "\n"
+			errstring.WriteString(e.Error() + "\n")
 		}
-		ctx.ServerError("AuthorizeOAuth: Validate: ", fmt.Errorf("errors occurred during validation: %s", errstring))
+		ctx.ServerError("AuthorizeOAuth: Validate: ", fmt.Errorf("errors occurred during validation: %s", errstring.String()))
 		return
 	}
 
@@ -480,8 +466,7 @@ func AuthorizeOAuth(ctx *context.Context) {
 
 	// pkce support
 	switch form.CodeChallengeMethod {
-	case "S256":
-	case "plain":
+	case "S256", "plain":
 		if err := ctx.Session.Set("CodeChallengeMethod", form.CodeChallengeMethod); err != nil {
 			handleAuthorizeError(ctx, AuthorizeError{
 				ErrorCode:        ErrorCodeServerError,
@@ -712,7 +697,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 		if authType, authData, ok := strings.Cut(authHeader, " "); ok && strings.EqualFold(authType, "Basic") {
 			clientID, clientSecret, err := base.BasicAuthDecode(authData)
 			if err != nil {
-				handleAccessTokenError(ctx, AccessTokenError{
+				handleAccessTokenError(ctx, AccessTokenErrorResponse{
 					ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 					ErrorDescription: "cannot parse basic auth header",
 				})
@@ -720,7 +705,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 			}
 			// validate that any fields present in the form match the Basic auth header
 			if form.ClientID != "" && form.ClientID != clientID {
-				handleAccessTokenError(ctx, AccessTokenError{
+				handleAccessTokenError(ctx, AccessTokenErrorResponse{
 					ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 					ErrorDescription: "client_id in request body inconsistent with Authorization header",
 				})
@@ -728,7 +713,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 			}
 			form.ClientID = clientID
 			if form.ClientSecret != "" && form.ClientSecret != clientSecret {
-				handleAccessTokenError(ctx, AccessTokenError{
+				handleAccessTokenError(ctx, AccessTokenErrorResponse{
 					ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 					ErrorDescription: "client_secret in request body inconsistent with Authorization header",
 				})
@@ -744,7 +729,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 		var err error
 		clientKey, err = jwtx.CreateSigningKey(serverKey.SigningMethod().Alg(), []byte(form.ClientSecret))
 		if err != nil {
-			handleAccessTokenError(ctx, AccessTokenError{
+			handleAccessTokenError(ctx, AccessTokenErrorResponse{
 				ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 				ErrorDescription: "Error creating signing key",
 			})
@@ -758,7 +743,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 	case "authorization_code":
 		handleAuthorizationCode(ctx, form, serverKey, clientKey)
 	default:
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeUnsupportedGrantType,
 			ErrorDescription: "Only refresh_token or authorization_code grant type is supported",
 		})
@@ -768,7 +753,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey jwtx.SigningKey) {
 	app, err := auth.GetOAuth2ApplicationByClientID(ctx, form.ClientID)
 	if err != nil {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeInvalidClient,
 			ErrorDescription: fmt.Sprintf("cannot load client with client id: %q", form.ClientID),
 		})
@@ -783,7 +768,7 @@ func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, server
 		}
 		// "invalid_client ... Client authentication failed"
 		// https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeInvalidClient,
 			ErrorDescription: errorDescription,
 		})
@@ -792,16 +777,26 @@ func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, server
 
 	token, err := oauth2.ParseToken(form.RefreshToken, serverKey)
 	if err != nil {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
 			ErrorDescription: "unable to parse refresh token",
 		})
 		return
 	}
+
+	// Reject tokens that are not refresh tokens (e.g. access tokens submitted as refresh tokens)
+	if token.Type != oauth2.TypeRefreshToken {
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
+			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
+			ErrorDescription: "token is not a refresh token",
+		})
+		return
+	}
+
 	// get grant before increasing counter
 	grant, err := auth.GetOAuth2GrantByID(ctx, token.GrantID)
 	if err != nil || grant == nil {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeInvalidGrant,
 			ErrorDescription: "grant does not exist",
 		})
@@ -810,7 +805,7 @@ func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, server
 
 	// check if token got already used
 	if setting.OAuth2.InvalidateRefreshTokens && (grant.Counter != token.Counter || token.Counter == 0) {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
 			ErrorDescription: "token was already used",
 		})
@@ -828,7 +823,7 @@ func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, server
 func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey jwtx.SigningKey) {
 	app, err := auth.GetOAuth2ApplicationByClientID(ctx, form.ClientID)
 	if err != nil {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeInvalidClient,
 			ErrorDescription: fmt.Sprintf("cannot load client with client id: '%s'", form.ClientID),
 		})
@@ -839,14 +834,14 @@ func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, s
 		if form.ClientSecret == "" {
 			errorDescription = "invalid empty client secret"
 		}
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
 			ErrorDescription: errorDescription,
 		})
 		return
 	}
 	if form.RedirectURI != "" && !app.ContainsRedirectURI(form.RedirectURI) {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
 			ErrorDescription: "unexpected redirect URI",
 		})
@@ -854,7 +849,7 @@ func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, s
 	}
 	authorizationCode, err := auth.GetOAuth2AuthorizationByCode(ctx, form.Code)
 	if err != nil || authorizationCode == nil {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
 			ErrorDescription: "client is not authorized",
 		})
@@ -862,7 +857,7 @@ func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, s
 	}
 	// check if code verifier authorizes the client, PKCE support
 	if !authorizationCode.ValidateCodeChallenge(form.CodeVerifier) {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
 			ErrorDescription: "failed PKCE code challenge",
 		})
@@ -870,7 +865,7 @@ func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, s
 	}
 	// check if granted for this application
 	if authorizationCode.Grant.ApplicationID != app.ID {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeInvalidGrant,
 			ErrorDescription: "invalid grant",
 		})
@@ -878,7 +873,7 @@ func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, s
 	}
 	// remove token from database to deny duplicate usage
 	if err := authorizationCode.Invalidate(ctx); err != nil {
-		handleAccessTokenError(ctx, AccessTokenError{
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeInvalidRequest,
 			ErrorDescription: "cannot proceed your request",
 		})
@@ -892,7 +887,7 @@ func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, s
 	ctx.JSON(http.StatusOK, resp)
 }
 
-func handleAccessTokenError(ctx *context.Context, acErr AccessTokenError) {
+func handleAccessTokenError(ctx *context.Context, acErr AccessTokenErrorResponse) {
 	ctx.JSON(http.StatusBadRequest, acErr)
 }
 
@@ -1030,7 +1025,7 @@ func SignInOAuthCallback(ctx *context.Context) {
 			return
 		}
 		if err, ok := err.(*go_oauth2.RetrieveError); ok {
-			ctx.Flash.Error("OAuth2 RetrieveError: "+err.Error(), true)
+			ctx.Flash.Error("OAuth2 RetrieveError: " + err.Error())
 			ctx.Redirect(setting.AppSubURL + "/user/login")
 			return
 		}
@@ -1424,6 +1419,7 @@ func generateCodeChallenge(ctx *context.Context, provider string) (codeChallenge
 	case *openidConnect.Provider, *fitbit.Provider, *zoom.Provider:
 		// those providers forward the `code_verifier`
 		// a code_challenge can be generated
+		break
 	}
 
 	codeVerifier := util.CryptoRandomString(util.RandomStringHigh)

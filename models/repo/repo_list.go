@@ -188,6 +188,9 @@ type SearchRepoOptions struct {
 	OnlyShowRelevant bool
 	// Filters repositories based upon optional authorization restrictions.
 	AuthorizationReducer RepositoryAuthorizationReducer
+	// Retrieve multiple repositories by their owner name & repository name, similar to [GetRepositoryByOwnerAndName]
+	// but in bulk.
+	OwnerAndName [][2]string
 }
 
 // UserOwnedRepoCond returns user ownered repositories
@@ -313,23 +316,6 @@ func userOrgPublicRepoCond(userID int64) builder.Cond {
 	)
 }
 
-// userOrgPublicRepoCondPrivate returns the condition that one user could access all public repositories in private organizations
-func userOrgPublicRepoCondPrivate(userID int64) builder.Cond {
-	return builder.And(
-		builder.Eq{"`repository`.is_private": false},
-		builder.In("`repository`.owner_id",
-			builder.Select("`org_user`.org_id").
-				From("org_user").
-				Join("INNER", "`user`", "`user`.id = `org_user`.org_id").
-				Where(builder.Eq{
-					"`org_user`.uid":    userID,
-					"`user`.`type`":     user_model.UserTypeOrganization,
-					"`user`.visibility": structs.VisibleTypePrivate,
-				}),
-		),
-	)
-}
-
 // UserOrgPublicUnitRepoCond returns the condition that one user could access all public repositories in the special organization
 func UserOrgPublicUnitRepoCond(userID, orgID int64) builder.Cond {
 	return userOrgPublicRepoCond(userID).
@@ -375,33 +361,21 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 	}
 
 	// Restrict repositories to those the OwnerID owns or contributes to as per opts.Collaborate
-	if opts.OwnerID > 0 {
+	if opts.OwnerID != 0 {
 		accessCond := builder.NewCond()
 		if !opts.Collaborate.ValueOrZeroValue() {
 			accessCond = builder.Eq{"owner_id": opts.OwnerID}
 		}
 
 		if opts.Collaborate.ValueOrDefault(true) {
-			// A Collaboration is:
-
 			collaborateCond := builder.NewCond()
+
+			// A Collaboration is:
 			// 1. Repository we don't own
 			collaborateCond = collaborateCond.And(builder.Neq{"owner_id": opts.OwnerID})
-			// 2. But we can see because of:
-			{
-				userAccessCond := builder.NewCond()
-				// A. We have unit independent access
-				userAccessCond = userAccessCond.Or(UserAccessRepoCond("`repository`.id", opts.OwnerID))
-				// B. We are in a team for
-				if opts.UnitType == unit.TypeInvalid {
-					userAccessCond = userAccessCond.Or(UserOrgTeamRepoCond("`repository`.id", opts.OwnerID))
-				} else {
-					userAccessCond = userAccessCond.Or(userOrgTeamUnitRepoCond("`repository`.id", opts.OwnerID, opts.UnitType))
-				}
-				// C. Public repositories in organizations that we are member of
-				userAccessCond = userAccessCond.Or(userOrgPublicRepoCondPrivate(opts.OwnerID))
-				collaborateCond = collaborateCond.And(userAccessCond)
-			}
+			// 2. But we can have access to unit on the repo > AccessModeNone
+			collaborateCond = collaborateCond.And(UserAccessRepoCond("`repository`.id", opts.OwnerID))
+
 			if !opts.Private {
 				collaborateCond = collaborateCond.And(builder.Expr("owner_id NOT IN (SELECT org_id FROM org_user WHERE org_user.uid = ? AND org_user.is_public = ?)", opts.OwnerID, false))
 			}
@@ -427,7 +401,7 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 	if opts.Keyword != "" {
 		// separate keyword
 		subQueryCond := builder.NewCond()
-		for _, v := range strings.Split(opts.Keyword, ",") {
+		for v := range strings.SplitSeq(opts.Keyword, ",") {
 			if opts.TopicOnly {
 				subQueryCond = subQueryCond.Or(builder.Eq{"topic.name": strings.ToLower(v)})
 			} else {
@@ -442,7 +416,7 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 		keywordCond := builder.In("id", subQuery)
 		if !opts.TopicOnly {
 			likes := builder.NewCond()
-			for _, v := range strings.Split(opts.Keyword, ",") {
+			for v := range strings.SplitSeq(opts.Keyword, ",") {
 				likes = likes.Or(builder.Like{"lower_name", strings.ToLower(v)})
 
 				// If the string looks like "org/repo", match against that pattern too
@@ -522,6 +496,26 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 
 	if opts.AuthorizationReducer != nil {
 		cond = cond.And(opts.AuthorizationReducer.RepoReadAccessFilter())
+	}
+
+	if opts.OwnerAndName != nil {
+		if len(opts.OwnerAndName) > 0 {
+			// repository is indexed on `(owner_id, lower_name)`, but not on the `owner_name` field.  Plus the `owner_name`
+			// field isn't ToLower'd.  So this becomes a subquery:
+			subQuery := builder.Select("inner_repo.id").From("repository", "inner_repo").
+				Join("INNER", "`user`", "`user`.id = inner_repo.owner_id")
+			for _, ownerAndName := range opts.OwnerAndName {
+				subQuery.Or(builder.Eq{
+					"`user`.lower_name":     strings.ToLower(ownerAndName[0]),
+					"inner_repo.lower_name": strings.ToLower(ownerAndName[1]),
+				})
+			}
+			cond = cond.And(builder.In("id", subQuery))
+		} else {
+			// If opts.OwnerAndName is a non-nil, empty array, then we want to return zero repositories.  The loop to
+			// build the `Eq` conditions wouldn't occur, so we would have no filtering if this wasn't special-case'd.
+			cond = cond.And(builder.Eq{"1": "2"})
+		}
 	}
 
 	return cond
