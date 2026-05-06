@@ -5,6 +5,7 @@ package lfs
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -109,4 +110,33 @@ func TestAuthenticate(t *testing.T) {
 		cfg := iniCommon + v.cfg
 		t.Run(v.name, func(t *testing.T) { testAuthenticate(t, cfg) })
 	}
+}
+
+func TestUploadHandler_InvalidSizeReturnsEarly(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// UploadHandler must return 422 and stop when the size parameter is
+	// not a valid integer.
+	ctx, resp := contexttest.MockContext(t, "/user2/lfs-test.git/info/lfs/objects/oid/notanumber")
+	ctx.SetParams("oid", "a]]invalid-but-we-only-test-size-parsing")
+	ctx.SetParams("size", "notanumber")
+
+	UploadHandler(ctx)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	// Verify that only one status code was written.
+	assert.NotContains(t, resp.Body.String(), "Unprocessable Entity")
+}
+
+func TestUploadHandler_NegativeSizeReturnsEarly(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Negative size must be rejected by IsValid() and not reach auth/upload.
+	ctx, resp := contexttest.MockContext(t, "/user2/lfs-test.git/info/lfs/objects/oid/-1")
+	ctx.SetParams("oid", "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb")
+	ctx.SetParams("size", "-1")
+
+	UploadHandler(ctx)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 }

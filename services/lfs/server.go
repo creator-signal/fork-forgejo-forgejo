@@ -191,6 +191,7 @@ func BatchHandler(ctx *context.Context) {
 		}
 		if !ok {
 			writeStatusMessage(ctx, http.StatusRequestEntityTooLarge, "quota exceeded")
+			return
 		}
 	}
 
@@ -296,6 +297,7 @@ func UploadHandler(ctx *context.Context) {
 	var err error
 	if p.Size, err = strconv.ParseInt(ctx.Params("size"), 10, 64); err != nil {
 		writeStatusMessage(ctx, http.StatusUnprocessableEntity, err.Error())
+		return
 	}
 
 	if !p.IsValid() {
@@ -317,16 +319,16 @@ func UploadHandler(ctx *context.Context) {
 		return
 	}
 
-	if exists {
-		ok, err := quota_model.EvaluateForUser(ctx, ctx.Doer.ID, quota_model.LimitSubjectSizeGitLFS)
-		if err != nil {
-			log.Error("quota_model.EvaluateForUser: %v", err)
-			writeStatus(ctx, http.StatusInternalServerError)
-			return
-		}
-		if !ok {
-			writeStatusMessage(ctx, http.StatusRequestEntityTooLarge, "quota exceeded")
-		}
+	// Quota check must run for ALL uploads, not just the dedup path.
+	ok, err := quota_model.EvaluateForUser(ctx, ctx.Doer.ID, quota_model.LimitSubjectSizeGitLFS)
+	if err != nil {
+		log.Error("quota_model.EvaluateForUser: %v", err)
+		writeStatus(ctx, http.StatusInternalServerError)
+		return
+	}
+	if !ok {
+		writeStatusMessage(ctx, http.StatusRequestEntityTooLarge, "quota exceeded")
+		return
 	}
 
 	uploadOrVerify := func() error {
