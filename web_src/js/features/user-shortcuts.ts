@@ -1,3 +1,15 @@
+const Page = Object.freeze({
+  Actions: 0,
+  Code: 1,
+  Dashboard: 2,
+  Issues: 3,
+  Notifications: 4,
+  Projects: 5,
+  Pulls: 6,
+  Releases: 7,
+  Wiki: 8,
+});
+
 let goto_state = false;
 
 function keyboardSelector(up: boolean) {
@@ -49,9 +61,46 @@ function keyboardSelector(up: boolean) {
   rows[cur].classList.remove('keyboard-selected');
 }
 
-function goto(query: string) {
+function goto(page: (typeof Page)[keyof typeof Page]) {
   if (!goto_state) return true;
-  document.querySelector<HTMLAnchorElement>(query)?.click();
+  switch (page) {
+    case Page.Actions:
+      document.querySelector<HTMLAnchorElement>('#repo-actions-tab')?.click();
+      break;
+    case Page.Code:
+      document.querySelector<HTMLAnchorElement>('#repo-code-tab')?.click();
+      break;
+    case Page.Dashboard:
+      window.location.pathname = '/';
+      break;
+    case Page.Issues: {
+      const el = document.querySelector<HTMLAnchorElement>('#repo-issues-tab');
+      if (el) {
+        el.click();
+      } else window.location.pathname = '/issues';
+      break;
+    }
+    case Page.Notifications:
+      window.location.pathname = '/notifications';
+      break;
+    case Page.Projects:
+      document.querySelector<HTMLAnchorElement>('#repo-projects-tab')?.click();
+      break;
+    case Page.Pulls: {
+      const el = document.querySelector<HTMLAnchorElement>(
+        '#repo-pull-requests-tab',
+      );
+      if (el) {
+        el.click();
+      } else window.location.pathname = '/pulls';
+      break;
+    }
+    case Page.Releases:
+      document.querySelector<HTMLAnchorElement>('#repo-releases-tab')?.click();
+      break;
+    case Page.Wiki:
+      document.querySelector<HTMLAnchorElement>('#repo-wiki-tab')?.click();
+  }
   return false;
 }
 
@@ -79,13 +128,16 @@ export function initUserShortcuts() {
         }
         break;
       case 'a':
-        goto('#repo-actions-tab');
+        goto(Page.Actions);
         break;
       case 'b':
         document.querySelector<HTMLAnchorElement>('#blame-btn')?.click();
         break;
       case 'c':
-        goto('#repo-code-tab');
+        goto(Page.Code);
+        break;
+      case 'd':
+        goto(Page.Dashboard);
         break;
       case 'g':
         if (goto_state) return;
@@ -98,7 +150,7 @@ export function initUserShortcuts() {
         document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
         break;
       case 'i':
-        goto('#repo-issues-tab');
+        goto(Page.Issues);
         break;
       case 'j':
         (e.target as HTMLInputElement).blur();
@@ -108,19 +160,22 @@ export function initUserShortcuts() {
         (e.target as HTMLInputElement).blur();
         keyboardSelector(true);
         break;
+      case 'n':
+        goto(Page.Notifications);
+        break;
       case 'o':
-        goto('#repo-projects-tab');
+        goto(Page.Projects);
         break;
       case 'p':
-        goto('#repo-pull-requests-tab');
+        goto(Page.Pulls);
         break;
       case 'r':
-        if (goto('#repo-releases-tab')) {
+        if (goto(Page.Releases)) {
           document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
         }
         break;
       case 'w':
-        goto('#repo-wiki-tab');
+        goto(Page.Wiki);
         break;
       case 'y':
         document.querySelector<HTMLAnchorElement>('#permalink-btn')?.click();
