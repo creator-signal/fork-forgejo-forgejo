@@ -532,19 +532,22 @@ func RetryTx(ctx context.Context, config RetryConfig, f func(ctx context.Context
 		return false
 	}
 
+	// Accept `ErrNestedRetryTxFailure` as error to retry on, means that a nested
+	// RetryTx indicated to retry the whole transaction.
+	config.ErrorIs = append(config.ErrorIs, ErrNestedRetryTxFailure)
+
 	withinRetryTx, present := ctx.Value(nestedRetryTx).(bool)
 	if present && withinRetryTx {
 		// If a caller already started `RetryTx`, then we assume we don't have to actually perform retries here -- we
 		// can attempt the requested function once, and if an error is returned that matches the configured error list,
 		// we'll return that error + ErrNestedRetryTxFailure wrapping.
-		err := WithTx(ctx, f)
+		err := f(ctx)
 		if err == nil {
 			return nil
 		} else if matchError(err) {
 			return fmt.Errorf("nested RetryTx; internal Tx failed with error that won't be retried: %w %w", err, ErrNestedRetryTxFailure)
-		} else {
-			return err
 		}
+		return err
 	} else if InTransaction(ctx) {
 		return errors.New("unsupported operation: attempted to use RetryTx while already within a transaction")
 	} else if config.AttemptCount == 0 {
