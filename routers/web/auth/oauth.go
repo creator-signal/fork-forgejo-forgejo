@@ -882,6 +882,15 @@ func handleAuthorizationCode(ctx *context.Context, form forms.AccessTokenForm, s
 		})
 		return
 	}
+	// Per RFC 6749 §4.1.3, if redirect_uri was included in the authorization request,
+	// it MUST be identical to the value included in the token request.
+	if authorizationCode.RedirectURI != "" && form.RedirectURI != authorizationCode.RedirectURI {
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
+			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
+			ErrorDescription: "redirect_uri does not match the authorization request",
+		})
+		return
+	}
 	// check if granted for this application
 	if authorizationCode.Grant.ApplicationID != app.ID {
 		handleAccessTokenError(ctx, AccessTokenErrorResponse{
