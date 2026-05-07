@@ -147,8 +147,17 @@ func TestGetOAuth2GrantByID(t *testing.T) {
 func TestOAuth2Grant_IncreaseCounter(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	grant := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Grant{ID: 1, Counter: 1})
+
+	// First increment succeeds
 	require.NoError(t, grant.IncreaseCounter(db.DefaultContext))
 	assert.Equal(t, int64(2), grant.Counter)
+	unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Grant{ID: 1, Counter: 2})
+
+	// Simulate a stale grant (counter still 1): must fail (concurrent replay)
+	grant.Counter = 1
+	require.Error(t, grant.IncreaseCounter(db.DefaultContext), "stale counter must be rejected")
+
+	// Counter in DB should be unchanged
 	unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Grant{ID: 1, Counter: 2})
 }
 
