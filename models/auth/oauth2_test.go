@@ -283,6 +283,20 @@ func TestOAuth2AuthorizationCode_Invalidate(t *testing.T) {
 	unittest.AssertNotExistsBean(t, &auth_model.OAuth2AuthorizationCode{Code: "authcode"})
 }
 
+func TestOAuth2AuthorizationCode_Invalidate_DoubleUse(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	code := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2AuthorizationCode{Code: "authcode"})
+
+	// First invalidation should succeed
+	require.NoError(t, code.Invalidate(db.DefaultContext))
+	unittest.AssertNotExistsBean(t, &auth_model.OAuth2AuthorizationCode{Code: "authcode"})
+
+	// Second invalidation of the same code must fail (replay prevention)
+	err := code.Invalidate(db.DefaultContext)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "authorization code already used")
+}
+
 func TestOAuth2AuthorizationCode_TableName(t *testing.T) {
 	assert.Equal(t, "oauth2_authorization_code", new(auth_model.OAuth2AuthorizationCode).TableName())
 }
