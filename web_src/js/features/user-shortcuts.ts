@@ -11,32 +11,16 @@ const Page = Object.freeze({
 });
 
 let goto_state = false;
+const list = document.querySelector(`\
+#issue-list,\
+#notification_table,\
+#repo-files-table tbody,\
+.milestone-list,\
+.wiki-pages-list tbody\
+`);
 
 function keyboardSelector(up: boolean) {
-  const subpath = window.location.pathname.split('/')[3];
-  let query = '';
-  switch (subpath) {
-    case 'issues':
-    case 'pulls':
-      query = '#issue-list';
-      break;
-    case 'projects':
-      query = '.milestone-list';
-      break;
-    case 'src':
-      query = '#repo-files-table tbody';
-      break;
-    case 'wiki':
-      query = '.wiki-pages-list tbody';
-      break;
-    default:
-      if (window.location.pathname.split('/').length === 3) {
-        query = '#repo-files-table tbody';
-      } else return;
-  }
-  const rows = Array.from(
-    document.querySelector(query)?.children ?? [],
-  ) as HTMLElement[];
+  const rows = Array.from(list?.children ?? []) as HTMLElement[];
   if (rows.length === 0) return;
   const cur = rows.findIndex((row) =>
     row.classList.contains('keyboard-selected'),

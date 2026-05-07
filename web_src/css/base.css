@@ -1404,3 +1404,9 @@ table th[data-sortt-desc] .svg {
   gap: .25rem;
   min-width: 0;
 }
+
+.keyboard-selected {
+  background-color: var(--color-hover);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
