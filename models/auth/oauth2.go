@@ -413,10 +413,18 @@ func (code *OAuth2AuthorizationCode) GenerateRedirectURI(state string) (*url.URL
 	return redirect, err
 }
 
-// Invalidate deletes the auth code from the database to invalidate this code
+// Invalidate deletes the auth code from the database to invalidate this code.
+// It returns an error if the code was already invalidated (i.e., no rows were deleted),
+// which prevents authorization code replay attacks.
 func (code *OAuth2AuthorizationCode) Invalidate(ctx context.Context) error {
-	_, err := db.GetEngine(ctx).ID(code.ID).NoAutoCondition().Delete(code)
-	return err
+	affected, err := db.GetEngine(ctx).ID(code.ID).NoAutoCondition().Delete(code)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return fmt.Errorf("authorization code already used or does not exist")
+	}
+	return nil
 }
 
 // ValidateCodeChallenge validates the given verifier against the saved code challenge. This is part of the PKCE
