@@ -803,6 +803,16 @@ func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, server
 		return
 	}
 
+	// Ensure the refresh token's grant belongs to the requesting client.
+	// This prevents cross-client token usage (RFC 6749 Section 10.4).
+	if grant.ApplicationID != app.ID {
+		handleAccessTokenError(ctx, AccessTokenErrorResponse{
+			ErrorCode:        AccessTokenErrorCodeInvalidGrant,
+			ErrorDescription: "refresh token was not issued to this client",
+		})
+		return
+	}
+
 	// check if token got already used
 	if setting.OAuth2.InvalidateRefreshTokens && (grant.Counter != token.Counter || token.Counter == 0) {
 		handleAccessTokenError(ctx, AccessTokenErrorResponse{
