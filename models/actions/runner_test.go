@@ -29,7 +29,8 @@ func TestUpdateSecret(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, token, runner.Token)
 	assert.Regexp(t, "^[0-9a-f]{32}$", runner.TokenSalt)
-	assert.Equal(t, runner.TokenHash, auth_model.HashToken(token, runner.TokenSalt))
+	ok, _ := auth_model.VerifyHighEntropyToken(token, runner.TokenSalt, runner.TokenHash)
+	assert.True(t, ok)
 }
 
 func TestDeleteRunner(t *testing.T) {

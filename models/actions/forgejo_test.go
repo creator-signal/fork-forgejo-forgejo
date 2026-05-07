@@ -3,7 +3,6 @@
 package actions
 
 import (
-	"crypto/subtle"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
@@ -28,7 +27,8 @@ func TestActions_RegisterRunner_Token(t *testing.T) {
 	assert.Equal(t, name, runner.Name)
 	assert.True(t, runner.Ephemeral)
 
-	assert.Equal(t, 1, subtle.ConstantTimeCompare([]byte(runner.TokenHash), []byte(auth_model.HashToken(token, runner.TokenSalt))), "the token cannot be verified with the same method as routers/api/actions/runner/interceptor.go as of 8228751c55d6a4263f0fec2932ca16181c09c97d")
+	ok, _ := auth_model.VerifyHighEntropyToken(token, runner.TokenSalt, runner.TokenHash)
+	assert.True(t, ok, "token must be verifiable via VerifyHighEntropyToken")
 }
 
 // TestActions_RegisterRunner_TokenUpdate tests that a token's secret is updated
@@ -51,14 +51,10 @@ func TestActions_RegisterRunner_TokenUpdate(t *testing.T) {
 	after := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: recordID})
 
 	assert.Equal(t, before.UUID, after.UUID)
-	assert.NotEqual(t,
-		after.TokenHash, auth_model.HashToken(oldToken, after.TokenSalt),
-		"the old token can still be verified",
-	)
-	assert.Equal(t,
-		after.TokenHash, auth_model.HashToken(newToken, after.TokenSalt),
-		"the new token cannot be verified",
-	)
+	okOld, _ := auth_model.VerifyHighEntropyToken(oldToken, after.TokenSalt, after.TokenHash)
+	assert.False(t, okOld, "the old token must no longer verify")
+	okNew, _ := auth_model.VerifyHighEntropyToken(newToken, after.TokenSalt, after.TokenHash)
+	assert.True(t, okNew, "the new token must verify")
 }
 
 func TestActions_RegisterRunner_CreateWithLabels(t *testing.T) {
