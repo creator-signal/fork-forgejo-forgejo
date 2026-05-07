@@ -4,7 +4,6 @@ package actions
 
 import (
 	"context"
-	"crypto/subtle"
 	"fmt"
 
 	auth_model "forgejo.org/models/auth"
@@ -33,10 +32,8 @@ func RegisterRunner(ctx context.Context, ownerID, repoID int64, token string, la
 		//
 		// The runner exists, check if the rest of the token has changed.
 		//
-		mustUpdateSecret = subtle.ConstantTimeCompare(
-			[]byte(runner.TokenHash),
-			[]byte(auth_model.HashToken(token, runner.TokenSalt)),
-		) != 1
+		verified, _ := auth_model.VerifyHighEntropyToken(token, runner.TokenSalt, runner.TokenHash)
+		mustUpdateSecret = !verified
 	} else {
 		//
 		// The runner does not exist yet, create it

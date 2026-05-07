@@ -5,7 +5,6 @@ package actions
 
 import (
 	"context"
-	"crypto/subtle"
 	"fmt"
 	"time"
 
@@ -239,8 +238,7 @@ func GetRunningTaskByToken(ctx context.Context, token string) (*ActionTask, erro
 	}
 
 	for _, t := range tasks {
-		tempHash := auth_model.HashToken(token, t.TokenSalt)
-		if subtle.ConstantTimeCompare([]byte(t.TokenHash), []byte(tempHash)) == 1 {
+		if ok, _ := auth_model.VerifyHighEntropyToken(token, t.TokenSalt, t.TokenHash); ok {
 			if successfulTokenTaskCache != nil {
 				successfulTokenTaskCache.Add(token, t.ID)
 			}

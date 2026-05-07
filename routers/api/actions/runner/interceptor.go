@@ -5,7 +5,6 @@ package runner
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"strings"
 
@@ -40,12 +39,19 @@ var withRunner = connect.WithInterceptors(connect.UnaryInterceptorFunc(func(unar
 			}
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		if subtle.ConstantTimeCompare([]byte(runner.TokenHash), []byte(auth_model.HashToken(token, runner.TokenSalt))) != 1 {
+		ok, isLegacy := auth_model.VerifyHighEntropyToken(token, runner.TokenSalt, runner.TokenHash)
+		if !ok {
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unregistered runner"))
 		}
 
 		cols := []string{"last_online"}
 		runner.LastOnline = timeutil.TimeStampNow()
+		if isLegacy {
+			// Opportunistically upgrade to fast HMAC-SHA256 hash.
+			// Piggybacks on the UpdateRunner write that already happens every request.
+			runner.TokenHash = auth_model.HashHighEntropyToken(token, runner.TokenSalt)
+			cols = append(cols, "token_hash")
+		}
 		if methodName == "UpdateTask" || methodName == "UpdateLog" {
 			runner.LastActive = timeutil.TimeStampNow()
 			cols = append(cols, "last_active")
