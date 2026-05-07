@@ -20,7 +20,7 @@ import (
 func generateSaltedToken() (string, string, string, string) {
 	salt := util.CryptoRandomString(util.RandomStringMedium)
 	token := hex.EncodeToString(util.CryptoRandomBytes(20))
-	hash := auth_model.HashToken(token, salt)
+	hash := auth_model.HashHighEntropyToken(token, salt)
 	return token, salt, hash, token[len(token)-8:]
 }
 

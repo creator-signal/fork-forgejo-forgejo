@@ -187,7 +187,7 @@ func (r *ActionRunner) UpdateSecret(token string) error {
 
 	r.Token = token
 	r.TokenSalt = salt
-	r.TokenHash = auth_model.HashToken(token, salt)
+	r.TokenHash = auth_model.HashHighEntropyToken(token, salt)
 	return nil
 }
 
