@@ -494,6 +494,56 @@ func TestRefreshTokenInvalidation(t *testing.T) {
 	assert.Equal(t, "token was already used", parsedError.ErrorDescription)
 }
 
+func TestRefreshTokenCrossClientUsage(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Step 1: Obtain a refresh token via app 1 (confidential client)
+	req := NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+		"grant_type":    "authorization_code",
+		"client_id":     "da7da3ba-9a13-4167-856f-3899de0b0138",
+		"client_secret": "4MK8Na6R55smdCY0WuCCumZ6hjRPnGY5saWVRHHjJiA=",
+		"redirect_uri":  "a",
+		"code":          "authcode",
+		"code_verifier": "N1Zo9-8Rfwhkt68r1r29ty8YwIraXR8eh_1Qwxg7yQXsonBt",
+	})
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	type tokenResponse struct {
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int64  `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+	}
+	parsed := new(tokenResponse)
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), parsed))
+	assert.NotEmpty(t, parsed.RefreshToken)
+
+	// Step 2: Try to use the refresh token with app 2 (different client): must fail
+	req = NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+		"grant_type":    "refresh_token",
+		"client_id":     "ce5a1322-42a7-11ed-b878-0242ac120002",
+		"client_secret": "4MK8Na6R55smdCY0WuCCumZ6hjRPnGY5saWVRHHjJiA=",
+		"redirect_uri":  "b",
+		"refresh_token": parsed.RefreshToken,
+	})
+	resp = MakeRequest(t, req, http.StatusBadRequest)
+
+	var parsedError auth.AccessTokenError
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &parsedError))
+	assert.Equal(t, "invalid_grant", string(parsedError.ErrorCode))
+	assert.Equal(t, "refresh token was not issued to this client", parsedError.ErrorDescription)
+
+	// Step 3: Using the refresh token with the correct app 1 should still work
+	req = NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+		"grant_type":    "refresh_token",
+		"client_id":     "da7da3ba-9a13-4167-856f-3899de0b0138",
+		"client_secret": "4MK8Na6R55smdCY0WuCCumZ6hjRPnGY5saWVRHHjJiA=",
+		"redirect_uri":  "a",
+		"refresh_token": parsed.RefreshToken,
+	})
+	MakeRequest(t, req, http.StatusOK)
+}
+
 func TestSignInOAuthCallbackSignIn(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
