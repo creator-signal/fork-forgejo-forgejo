@@ -194,12 +194,45 @@ func TestAccessTokenExchange(t *testing.T) {
 	assert.Greater(t, len(parsed.RefreshToken), 10)
 }
 
+func TestAccessTokenExchangeRedirectURIMismatch(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// The auth code fixture has redirect_uri="a", but we send a different
+	// URI that is registered with the app ("https://example.com/xyzzy").
+	// Per RFC 6749 §4.1.3, this must be rejected.
+	req := NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+		"grant_type":    "authorization_code",
+		"client_id":     "da7da3ba-9a13-4167-856f-3899de0b0138",
+		"client_secret": "4MK8Na6R55smdCY0WuCCumZ6hjRPnGY5saWVRHHjJiA=",
+		"redirect_uri":  "https://example.com/xyzzy",
+		"code":          "authcode",
+		"code_verifier": "N1Zo9-8Rfwhkt68r1r29ty8YwIraXR8eh_1Qwxg7yQXsonBt",
+	})
+	resp := MakeRequest(t, req, http.StatusBadRequest)
+
+	var parsedError auth.AccessTokenError
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &parsedError))
+	assert.Equal(t, "unauthorized_client", string(parsedError.ErrorCode))
+	assert.Equal(t, "redirect_uri does not match the authorization request", parsedError.ErrorDescription)
+
+	// Using the correct redirect_uri ("a") should succeed
+	req = NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
+		"grant_type":    "authorization_code",
+		"client_id":     "da7da3ba-9a13-4167-856f-3899de0b0138",
+		"client_secret": "4MK8Na6R55smdCY0WuCCumZ6hjRPnGY5saWVRHHjJiA=",
+		"redirect_uri":  "a",
+		"code":          "authcode",
+		"code_verifier": "N1Zo9-8Rfwhkt68r1r29ty8YwIraXR8eh_1Qwxg7yQXsonBt",
+	})
+	MakeRequest(t, req, http.StatusOK)
+}
+
 func TestAccessTokenExchangeWithPublicClient(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	req := NewRequestWithValues(t, "POST", "/login/oauth/access_token", map[string]string{
 		"grant_type":    "authorization_code",
 		"client_id":     "ce5a1322-42a7-11ed-b878-0242ac120002",
-		"redirect_uri":  "http://127.0.0.1",
+		"redirect_uri":  "http://127.0.0.1/",
 		"code":          "authcodepublic",
 		"code_verifier": "N1Zo9-8Rfwhkt68r1r29ty8YwIraXR8eh_1Qwxg7yQXsonBt",
 	})
