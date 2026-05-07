@@ -506,16 +506,19 @@ func (grant *OAuth2Grant) GenerateNewAuthorizationCode(ctx context.Context, redi
 }
 
 // IncreaseCounter increases the counter and updates the grant
+// IncreaseCounter atomically increments the counter only if it still matches
+// the value loaded into this grant. Returns an error if the counter was already
+// changed by a concurrent request (refresh token replay).
 func (grant *OAuth2Grant) IncreaseCounter(ctx context.Context) error {
-	_, err := db.GetEngine(ctx).ID(grant.ID).Incr("counter").Update(new(OAuth2Grant))
+	affected, err := db.GetEngine(ctx).Where("id = ? AND counter = ?", grant.ID, grant.Counter).
+		Incr("counter").Update(new(OAuth2Grant))
 	if err != nil {
 		return err
 	}
-	updatedGrant, err := GetOAuth2GrantByID(ctx, grant.ID)
-	if err != nil {
-		return err
+	if affected == 0 {
+		return fmt.Errorf("grant counter changed unexpectedly (possible replay)")
 	}
-	grant.Counter = updatedGrant.Counter
+	grant.Counter++
 	return nil
 }
 
