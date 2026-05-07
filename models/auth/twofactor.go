@@ -94,7 +94,7 @@ func HashHighEntropyToken(token, salt string) string {
 // hash (prefixed "$hmac-sha256$"). Returns ok=true on match.
 // isLegacy is true when the stored hash was the legacy PBKDF2 format; callers
 // should opportunistically upgrade it when isLegacy is true.
-func VerifyHighEntropyToken(token, salt, hash string) (ok bool, isLegacy bool) {
+func VerifyHighEntropyToken(token, salt, hash string) (ok, isLegacy bool) {
 	if strings.HasPrefix(hash, "$hmac-sha256$") {
 		expected := HashHighEntropyToken(token, salt)
 		return subtle.ConstantTimeCompare([]byte(hash), []byte(expected)) == 1, false
