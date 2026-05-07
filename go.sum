@@ -42,8 +42,8 @@ code.forgejo.org/go-chi/captcha v1.0.2 h1:vyHDPXkpjDv8bLO9NqtWzZayzstD/WpJ5xwEkA
 code.forgejo.org/go-chi/captcha v1.0.2/go.mod h1:lxiPLcJ76UCZHoH31/Wbum4GUi2NgjfFZLrJkKv1lLE=
 code.forgejo.org/go-chi/session v1.0.4 h1:WQ1NaVxcCpxYwCliEGypKclZnOCjh3p1fk8XciJc62U=
 code.forgejo.org/go-chi/session v1.0.4/go.mod h1:+sSTiomM5C8AUPtxZyTENIbcTz22kcVottKO0lnmDRk=
-code.forgejo.org/xorm/xorm v1.3.9-forgejo.12 h1:EodlU2MGu/EeAdUpEOe+X4cU/qlnJol1ucJ0sHUCM1o=
-code.forgejo.org/xorm/xorm v1.3.9-forgejo.12/go.mod h1:ozQINrM8b7uYFMBB/w19nUTTLcda3RKTQ8HspocVKdg=
+code.forgejo.org/xorm/xorm v1.3.10-0.20260507170646-cbf5011c5712 h1:/9ti3IuSMFYVkja0heyPR6ktKHolhJWKuLbuioSQRpI=
+code.forgejo.org/xorm/xorm v1.3.10-0.20260507170646-cbf5011c5712/go.mod h1:oE3DxLETU9tVoTbmsECE1WFnzEVyyRNoQpT4cTFGmck=
 code.gitea.io/sdk/gitea v0.21.0 h1:69n6oz6kEVHRo1+APQQyizkhrZrLsTLXey9142pfkD4=
 code.gitea.io/sdk/gitea v0.21.0/go.mod h1:tnBjVhuKJCn8ibdyyhvUyxrR1Ca2KHEoTWoukNhXQPA=
 code.pfad.fr/check v1.1.0 h1:GWvjdzhSEgHvEHe2uJujDcpmZoySKuHQNrZMfzfO0bE=
