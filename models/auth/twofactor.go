@@ -5,11 +5,13 @@ package auth
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base32"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/keying"
@@ -74,6 +76,32 @@ func (t *TwoFactor) GenerateScratchToken() string {
 func HashToken(token, salt string) string {
 	tempHash := pbkdf2.Key([]byte(token), []byte(salt), 10000, 50, sha256.New)
 	return hex.EncodeToString(tempHash)
+}
+
+// HashHighEntropyToken hashes a cryptographically random (high-entropy) token
+// using HMAC-SHA256. The result is prefixed with "$hmac-sha256$" to distinguish
+// it from legacy PBKDF2 hashes produced by HashToken.
+// SECURITY: Use this only for high-entropy CSPRNG tokens (e.g. runner/task
+// tokens). Do NOT use it for user-supplied secrets — those need a slow KDF.
+func HashHighEntropyToken(token, salt string) string {
+	mac := hmac.New(sha256.New, []byte(salt))
+	_, _ = mac.Write([]byte(token))
+	return "$hmac-sha256$" + hex.EncodeToString(mac.Sum(nil))
+}
+
+// VerifyHighEntropyToken verifies token+salt against a stored hash that may be
+// either a legacy PBKDF2 hash (plain hex, no prefix) or a modern HMAC-SHA256
+// hash (prefixed "$hmac-sha256$"). Returns ok=true on match.
+// isLegacy is true when the stored hash was the legacy PBKDF2 format; callers
+// should opportunistically upgrade it when isLegacy is true.
+func VerifyHighEntropyToken(token, salt, hash string) (ok bool, isLegacy bool) {
+	if strings.HasPrefix(hash, "$hmac-sha256$") {
+		expected := HashHighEntropyToken(token, salt)
+		return subtle.ConstantTimeCompare([]byte(hash), []byte(expected)) == 1, false
+	}
+	// Legacy PBKDF2 path
+	expected := HashToken(token, salt)
+	return subtle.ConstantTimeCompare([]byte(hash), []byte(expected)) == 1, true
 }
 
 // VerifyScratchToken verifies if the specified scratch token is valid.
