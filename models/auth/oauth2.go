@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base32"
 	"encoding/base64"
 	"errors"
@@ -421,9 +422,9 @@ func (code *OAuth2AuthorizationCode) ValidateCodeChallenge(verifier string) bool
 		// base64url(SHA256(verifier)) see https://tools.ietf.org/html/rfc7636#section-4.6
 		h := sha256.Sum256([]byte(verifier))
 		hashedVerifier := base64.RawURLEncoding.EncodeToString(h[:])
-		return hashedVerifier == code.CodeChallenge
+		return subtle.ConstantTimeCompare([]byte(hashedVerifier), []byte(code.CodeChallenge)) == 1
 	case "plain":
-		return verifier == code.CodeChallenge
+		return subtle.ConstantTimeCompare([]byte(verifier), []byte(code.CodeChallenge)) == 1
 	case "":
 		return true
 	default:
