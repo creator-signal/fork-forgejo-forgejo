@@ -232,12 +232,33 @@ func TestOAuth2AuthorizationCode_ValidateCodeChallenge(t *testing.T) {
 	}
 	assert.False(t, code.ValidateCodeChallenge("foiwgjioriogeiogjerger"))
 
-	// test no code challenge
+	// test no PKCE at all (no challenge set, no verifier needed)
+	code = &auth_model.OAuth2AuthorizationCode{
+		CodeChallengeMethod: "",
+		CodeChallenge:       "",
+	}
+	assert.True(t, code.ValidateCodeChallenge(""))
+
+	// test PKCE required: challenge was set but verifier is empty
+	code = &auth_model.OAuth2AuthorizationCode{
+		CodeChallengeMethod: "S256",
+		CodeChallenge:       "CjvyTLSdR47G5zYenDA-eDWW4lRrO8yvjcWwbD_deOg",
+	}
+	assert.False(t, code.ValidateCodeChallenge(""), "PKCE required: S256 challenge set but empty verifier must be rejected")
+
+	code = &auth_model.OAuth2AuthorizationCode{
+		CodeChallengeMethod: "plain",
+		CodeChallenge:       "test123",
+	}
+	assert.False(t, code.ValidateCodeChallenge(""), "PKCE required: plain challenge set but empty verifier must be rejected")
+
+	// test challenge stored but method empty (malformed: should reject)
 	code = &auth_model.OAuth2AuthorizationCode{
 		CodeChallengeMethod: "",
 		CodeChallenge:       "foierjiogerogerg",
 	}
-	assert.True(t, code.ValidateCodeChallenge(""))
+	assert.False(t, code.ValidateCodeChallenge(""), "challenge present with empty method must be rejected")
+	assert.False(t, code.ValidateCodeChallenge("foierjiogerogerg"), "challenge present with empty method must be rejected even with matching verifier")
 }
 
 func TestOAuth2AuthorizationCode_GenerateRedirectURI(t *testing.T) {
