@@ -143,7 +143,9 @@ func DownloadHandler(ctx *context.Context) {
 	if len(filename) > 0 {
 		decodedFilename, err := base64.RawURLEncoding.DecodeString(filename)
 		if err == nil {
-			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+string(decodedFilename)+"\"")
+			name := string(decodedFilename)
+			backslashEscapedName := strings.ReplaceAll(strings.ReplaceAll(name, `\`, `\\`), `"`, `\"`) // \ -> \\, " -> \"
+			ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`, backslashEscapedName, url.PathEscape(name)))
 			ctx.Resp.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
 		}
 	}
