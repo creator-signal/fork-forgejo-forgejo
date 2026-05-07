@@ -415,8 +415,17 @@ func (code *OAuth2AuthorizationCode) Invalidate(ctx context.Context) error {
 	return err
 }
 
-// ValidateCodeChallenge validates the given verifier against the saved code challenge. This is part of the PKCE implementation.
+// ValidateCodeChallenge validates the given verifier against the saved code challenge. This is part of the PKCE
+// implementation. If a code challenge was set during authorization, a valid verifier MUST be provided.
 func (code *OAuth2AuthorizationCode) ValidateCodeChallenge(verifier string) bool {
+	// If no PKCE was used during authorization, no verifier is needed.
+	if code.CodeChallengeMethod == "" && code.CodeChallenge == "" {
+		return true
+	}
+	// A challenge was set but no verifier provided: reject outright, no comparison or hashing is required.
+	if verifier == "" {
+		return false
+	}
 	switch code.CodeChallengeMethod {
 	case "S256":
 		// base64url(SHA256(verifier)) see https://tools.ietf.org/html/rfc7636#section-4.6
@@ -425,10 +434,8 @@ func (code *OAuth2AuthorizationCode) ValidateCodeChallenge(verifier string) bool
 		return subtle.ConstantTimeCompare([]byte(hashedVerifier), []byte(code.CodeChallenge)) == 1
 	case "plain":
 		return subtle.ConstantTimeCompare([]byte(verifier), []byte(code.CodeChallenge)) == 1
-	case "":
-		return true
 	default:
-		// unsupported method -> return false
+		// unsupported or empty method with a non-empty challenge -> reject
 		return false
 	}
 }
