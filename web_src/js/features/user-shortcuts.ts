@@ -27,21 +27,20 @@ function keyboardSelector(up: boolean) {
   );
   if (cur === -1) {
     rows[0].classList.add('keyboard-selected');
-    rows[0].scrollIntoView({block: 'nearest'});
+    rows[0].querySelector('a')?.focus();
     return;
   }
-  const el = rows[cur];
+  let el = rows[cur];
   if (up) {
     if (el.previousElementSibling) {
-      el.previousElementSibling.classList.add('keyboard-selected');
-      el.previousElementSibling.scrollIntoView({block: 'nearest'});
-    } else return;
-  } else {
-    if (el.nextElementSibling) {
-      el.nextElementSibling.classList.add('keyboard-selected');
-      el.nextElementSibling.scrollIntoView({block: 'nearest'});
-    } else return;
+      el = el.previousElementSibling as HTMLElement;
+    }
+  } else if (el.nextElementSibling) {
+    el = el.nextElementSibling as HTMLElement;
   }
+  el.classList.add('keyboard-selected');
+  el.querySelector('a')?.focus();
+  if (rows[cur] === el) return;
   rows[cur].classList.remove('keyboard-selected');
 }
 
@@ -104,13 +103,6 @@ export function initUserShortcuts() {
       return;
     }
     switch (e.key) {
-      case 'Enter':
-        if (e.target.tagName !== 'BUTTON') {
-          document
-            .querySelector<HTMLAnchorElement>('.keyboard-selected a')
-            ?.click();
-        }
-        break;
       case 'a':
         goto(Page.Actions);
         break;
