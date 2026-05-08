@@ -75,6 +75,13 @@ func TestOAuth2Application_ContainsRedirect_Slash(t *testing.T) {
 	assert.False(t, app.ContainsRedirectURI("http://127.0.0.1/other"))
 }
 
+func TestOAuth2Application_ContainsRedirect_Normalization(t *testing.T) {
+	app := &auth_model.OAuth2Application{RedirectURIs: []string{"https://website.com"}}
+	assert.True(t, app.ContainsRedirectURI("https://website.com"))
+	assert.True(t, app.ContainsRedirectURI("https://webSITE.com"))  // ascii uppercase I
+	assert.False(t, app.ContainsRedirectURI("https://websİte.com")) // U+0130 as I, Latin Capital Letter I with Dot Above
+}
+
 func TestOAuth2Application_ValidateClientSecret(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	app := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Application{ID: 1})

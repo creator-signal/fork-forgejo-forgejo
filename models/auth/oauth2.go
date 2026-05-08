@@ -152,9 +152,9 @@ func (app *OAuth2Application) ContainsRedirectURI(redirectURI string) bool {
 	// https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 	// https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-12#section-3.1
 	contains := func(s string) bool {
-		s = strings.TrimSuffix(strings.ToLower(s), "/")
+		s = strings.TrimSuffix(util.ToUpperASCII(s), "/")
 		for _, u := range app.RedirectURIs {
-			if strings.TrimSuffix(strings.ToLower(u), "/") == s {
+			if strings.TrimSuffix(util.ToUpperASCII(u), "/") == s {
 				return true
 			}
 		}
