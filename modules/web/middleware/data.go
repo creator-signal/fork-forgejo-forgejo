@@ -51,7 +51,8 @@ func CommonTemplateContextData() ContextData {
 		"ShowRegistrationButton":        setting.Service.ShowRegistrationButton,
 		"ShowMilestonesDashboardPage":   setting.Service.ShowMilestonesDashboardPage,
 		"ShowFooterVersion":             setting.Other.ShowFooterVersion,
-		"DisableDownloadSourceArchives": setting.Repository.DisableDownloadSourceArchives,
+		"DisableDownloadSourceArchives":  setting.Repository.DisableDownloadSourceArchives,
+		"CloneURLRewriteToOrigin":        setting.Repository.CloneURLRewriteToOrigin,
 
 		"EnableSwagger":      setting.API.EnableSwagger,
 		"EnableOpenIDSignIn": setting.Service.EnableOpenIDSignIn,

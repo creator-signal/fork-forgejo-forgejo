@@ -17,6 +17,7 @@ export function toOriginUrl(urlStr) {
 
 window.customElements.define('origin-url', class extends HTMLElement {
   connectedCallback() {
-    this.textContent = toOriginUrl(this.getAttribute('data-url'));
+    const url = this.getAttribute('data-url');
+    this.textContent = window.config?.cloneURLRewriteToOrigin !== false ? toOriginUrl(url) : url;
   }
 });

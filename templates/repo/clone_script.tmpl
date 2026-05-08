@@ -38,7 +38,8 @@
 			} catch {}
 			return urlStr;
 		}
-		const link = toOriginUrl(btn.getAttribute('data-link'));
+		const rawLink = btn.getAttribute('data-link');
+		const link = window.config.cloneURLRewriteToOrigin ? toOriginUrl(rawLink) : rawLink;
 
 		for (const el of document.getElementsByClassName('js-clone-url')) {
 			el[el.nodeName === 'INPUT' ? 'value' : 'textContent'] = link;
