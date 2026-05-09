@@ -18,11 +18,44 @@ import (
 )
 
 // StopZombieTasks stops the task which have running status, but haven't been updated for a long time
+//
+// "Haven't been updated" alone is *not* enough evidence that a task is dead — under load the
+// runner's UpdateTask RPC for one specific task can stall for many minutes (large log payloads
+// piling up in the per-task reporter, the single clientM mutex serialising the whole pipeline,
+// or a hung TCP socket without an explicit per-call timeout) while the runner itself is still
+// happily executing the build and pinging the server through Ping/FetchTask. Killing such a
+// task here turns into the symptom we hit on long Qt/Chromium-style builds: the runner reports
+// SUCCESS at the end, but the server has already finalised the row as FAILURE and the runner
+// receives the bogus result back via UpdateTaskResponse.State.
+//
+// To avoid that false positive we cross-check the assigned runner's LastOnline. If the runner
+// itself was online within ZombieTaskTimeout, treat the task as still in progress and let the
+// reporter eventually complete or the EndlessTask reaper handle the truly endless case.
 func StopZombieTasks(ctx context.Context) error {
-	return stopTasks(ctx, actions_model.FindTaskOptions{
+	threshold := timeutil.TimeStamp(time.Now().Add(-setting.Actions.ZombieTaskTimeout).Unix())
+	tasks, err := db.Find[actions_model.ActionTask](ctx, actions_model.FindTaskOptions{
 		Status:        []actions_model.Status{actions_model.StatusRunning},
-		UpdatedBefore: timeutil.TimeStamp(time.Now().Add(-setting.Actions.ZombieTaskTimeout).Unix()),
+		UpdatedBefore: threshold,
 	})
+	if err != nil {
+		return fmt.Errorf("find zombie task candidates: %w", err)
+	}
+
+	live := make([]*actions_model.ActionTask, 0, len(tasks))
+	for _, task := range tasks {
+		runner := &actions_model.ActionRunner{}
+		has, err := db.GetEngine(ctx).ID(task.RunnerID).Get(runner)
+		if err != nil {
+			log.Warn("Cannot load runner %d for zombie task %d: %v", task.RunnerID, task.ID, err)
+		}
+		// No runner row, or the runner has not been seen since the zombie threshold:
+		// treat as a real zombie and add it to the kill list.
+		if !has || runner.LastOnline < threshold {
+			live = append(live, task)
+		}
+	}
+
+	return stopTasksList(ctx, live)
 }
 
 // StopEndlessTasks stops the tasks which have running status and continuous updates, but don't end for a long time
@@ -38,7 +71,13 @@ func stopTasks(ctx context.Context, opts actions_model.FindTaskOptions) error {
 	if err != nil {
 		return fmt.Errorf("find tasks: %w", err)
 	}
+	return stopTasksList(ctx, tasks)
+}
 
+// stopTasksList does the per-task termination work for an already-resolved
+// slice of tasks. Pulled out of stopTasks so StopZombieTasks can pre-filter
+// the candidate set with a runner-liveness check (see comment on StopZombieTasks).
+func stopTasksList(ctx context.Context, tasks []*actions_model.ActionTask) error {
 	jobs := make([]*actions_model.ActionRunJob, 0, len(tasks))
 	for _, task := range tasks {
 		if err := db.WithTx(ctx, func(ctx context.Context) error {

@@ -1,0 +1,14 @@
+# Two running jobs paired 1:1 with the tasks below — one served by the
+# alive runner, one by the dead runner. `updated` is set to a
+# year-2001 timestamp so the zombie reaper's UpdatedBefore filter
+# matches both unconditionally.
+-
+  id: 700
+  run_id: 950
+  status: 6 # running
+  updated: 981228409
+-
+  id: 701
+  run_id: 950
+  status: 6 # running
+  updated: 981228409

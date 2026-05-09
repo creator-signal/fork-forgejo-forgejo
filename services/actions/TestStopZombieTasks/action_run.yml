@@ -1,0 +1,12 @@
+# Single supporting run that owns both jobs in the zombie test.
+-
+  id: 950
+  title: "zombie-test-run"
+  owner_id: 2
+  repo_id: 63
+  workflow_id: "running.yaml"
+  index: 9501
+  trigger_event: "push"
+  is_fork_pull_request: false
+  trigger_user_id: 2
+  need_approval: false

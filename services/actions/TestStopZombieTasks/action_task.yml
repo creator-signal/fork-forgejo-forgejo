@@ -1,0 +1,47 @@
+# Two stale-looking running tasks. `updated` is far in the past so
+# StopZombieTasks's UpdatedBefore filter selects both. The actual
+# liveness signal we want the reaper to honour is whether the runner
+# itself recently reported in (LastOnline) — runner 1001 is bumped to
+# now() inside the test, runner 1002 stays at zero.
+-
+  id: 700
+  job_id: 700
+  attempt: 1
+  runner_id: 1001 # alive runner
+  status: 6 # running
+  started: 981228000
+  stopped: 0
+  repo_id: 4
+  owner_id: 1
+  commit_sha: 0000000000000000000000000000000000000000
+  is_fork_pull_request: false
+  token_hash: zombie700hashzombie700hashzombie700hashzombie700hashzombie700hashzombie700hashzombie700hashzombie7
+  token_salt: zombie70salt
+  token_last_eight: zombie70
+  log_filename: zombie/test/700.log
+  log_in_storage: false
+  log_length: 0
+  log_size: 0
+  log_expired: false
+  updated: 981228409
+-
+  id: 701
+  job_id: 701
+  attempt: 1
+  runner_id: 1002 # offline runner
+  status: 6 # running
+  started: 981228000
+  stopped: 0
+  repo_id: 4
+  owner_id: 1
+  commit_sha: 0000000000000000000000000000000000000000
+  is_fork_pull_request: false
+  token_hash: zombie701hashzombie701hashzombie701hashzombie701hashzombie701hashzombie701hashzombie701hashzombie7
+  token_salt: zombie71salt
+  token_last_eight: zombie71
+  log_filename: zombie/test/701.log
+  log_in_storage: false
+  log_length: 0
+  log_size: 0
+  log_expired: false
+  updated: 981228409
