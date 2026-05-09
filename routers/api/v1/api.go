@@ -1249,6 +1249,7 @@ func Routes() *web.Route {
 						m.Get("", repo.ListActionRuns)
 						m.Get("/{run_id}", repo.GetActionRun)
 						m.Get("/{run_id}/jobs", repo.ListActionRunJobs)
+						m.Get("/{run_id}/jobs/{job_index}/logs", repo.GetActionRunJobLogs)
 						m.Get("/{run_id}/artifacts", repo.ListActionRunArtifacts)
 					})
 

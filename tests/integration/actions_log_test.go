@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
@@ -154,6 +155,35 @@ jobs:
 						logTextLines[idx],
 					)
 				}
+
+				// Same content via the public REST API endpoint
+				// `GET /api/v1/repos/{owner}/{repo}/actions/runs/{run_id}/jobs/{job_index}/logs`
+				// (added by the same fork that ships the runner-online
+				// zombie reaper fix; lets external tooling — MCP
+				// servers, build-notifier sidecars, ad-hoc curl —
+				// pull job logs without scraping HTML or SSH-ing to
+				// the on-disk *.log.zst files).
+				dbTask, err := actions_model.GetTaskByID(t.Context(), task.Id)
+				require.NoError(t, err)
+				require.NoError(t, dbTask.LoadJob(t.Context()))
+				apiLogURL := fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs/1/logs", user2.Name, repo.Name, dbTask.Job.RunID)
+				apiReq := NewRequest(t, "GET", apiLogURL).AddTokenAuth(token)
+				apiResp := MakeRequest(t, apiReq, http.StatusOK)
+				assert.Equal(t, "text/plain; charset=utf-8", apiResp.Header().Get("Content-Type"))
+				assert.Equal(t, resp.Body.String(), apiResp.Body.String(),
+					"API endpoint must stream the same bytes as the web-UI logs route")
+
+				// out-of-range job_index → 404
+				badIdxReq := NewRequest(t, "GET",
+					fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs/9999/logs",
+						user2.Name, repo.Name, dbTask.Job.RunID)).AddTokenAuth(token)
+				MakeRequest(t, badIdxReq, http.StatusNotFound)
+
+				// non-existent run_id → 404
+				badRunReq := NewRequest(t, "GET",
+					fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/999999999/jobs/1/logs",
+						user2.Name, repo.Name)).AddTokenAuth(token)
+				MakeRequest(t, badRunReq, http.StatusNotFound)
 
 				resetFunc()
 			})

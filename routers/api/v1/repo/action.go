@@ -8,10 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	secret_model "forgejo.org/models/secret"
+	"forgejo.org/modules/actions"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
@@ -1097,6 +1099,117 @@ func ListActionRunJobs(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GetActionRunJobLogs streams the plain-text log of a single action job.
+func GetActionRunJobLogs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs/{job_index}/logs repository GetActionRunJobLogs
+	// ---
+	// summary: Get logs of a workflow run job
+	// description: |
+	//   Returns the plain-text log file for the latest attempt of the
+	//   specified job in a workflow run. The job is addressed by its
+	//   1-based index within the run (matching the order returned by
+	//   `/runs/{run_id}/jobs`), not by its database ID.
+	// produces:
+	// - text/plain
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: run_id
+	//   in: path
+	//   description: ID of the workflow run
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: job_index
+	//   in: path
+	//   description: 1-based index of the job within the run
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     description: the job log
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	run, err := actions_model.GetRunByID(ctx, ctx.ParamsInt64(":run_id"))
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetRunByID", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetRunByID", err)
+		}
+		return
+	}
+
+	// Action runs live in their own table; verify the requested run
+	// belongs to this repository before returning anything.
+	if ctx.Repo.Repository.ID != run.RepoID {
+		ctx.Error(http.StatusNotFound, "GetRunByID", util.ErrNotExist)
+		return
+	}
+
+	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetRunJobsByRunID", err)
+		return
+	}
+
+	jobIndex := ctx.ParamsInt64(":job_index")
+	if jobIndex < 1 || jobIndex > int64(len(jobs)) {
+		ctx.Error(http.StatusNotFound, "GetActionRunJobLogs", errors.New("job index out of range"))
+		return
+	}
+	job := jobs[jobIndex-1]
+	if job.TaskID == 0 {
+		ctx.Error(http.StatusNotFound, "GetActionRunJobLogs", errors.New("job has not started"))
+		return
+	}
+
+	// Latest attempt is what users want by default — addressing a
+	// specific historical attempt would require an extra path segment
+	// and is rarely useful for diagnostics.
+	task, err := actions_model.GetTaskByJobAttempt(ctx, job.ID, job.Attempt)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetTaskByJobAttempt", err)
+		return
+	}
+	if task.LogExpired {
+		ctx.Error(http.StatusNotFound, "GetActionRunJobLogs", errors.New("logs have been cleaned up"))
+		return
+	}
+
+	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "OpenLogs", err)
+		return
+	}
+	defer reader.Close()
+
+	workflowName := run.WorkflowID
+	if p := strings.Index(workflowName, "."); p > 0 {
+		workflowName = workflowName[0:p]
+	}
+	ctx.ServeContent(reader, &context.ServeHeaderOptions{
+		Filename:           fmt.Sprintf("%v-%v-%v.log", workflowName, job.Name, task.ID),
+		ContentLength:      &task.LogSize,
+		ContentType:        "text/plain",
+		ContentTypeCharset: "utf-8",
+		Disposition:        "inline",
+	})
+}
 // ListActionArtifacts list artifacts for a repository
 func ListActionArtifacts(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/artifacts repository ListActionArtifacts
