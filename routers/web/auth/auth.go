@@ -63,7 +63,7 @@ func autoSignIn(ctx *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	u, _, err := user_model.VerifyUserAuthorizationToken(ctx, authCookie, auth.LongTermAuthorization)
+	u, _, _, err := user_model.VerifyUserAuthorizationToken(ctx, authCookie, auth.LongTermAuthorization)
 	if err != nil {
 		return false, fmt.Errorf("VerifyUserAuthorizationToken: %w", err)
 	}
@@ -81,7 +81,7 @@ func autoSignIn(ctx *context.Context) (bool, error) {
 		return true, nil
 	}
 
-	u, _, err = user_model.VerifyUserAuthorizationToken(ctx, authCookie, auth.LongTermAuthorizationSSO)
+	u, authToken, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, authCookie, auth.LongTermAuthorizationSSO)
 	if err != nil {
 		return false, fmt.Errorf("VerifyUserAuthorizationToken (SSO): %w", err)
 	}
@@ -89,7 +89,12 @@ func autoSignIn(ctx *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	source, err := auth.GetSourceByID(ctx, u.LoginSource)
+	hasLoginSource, loginSourceID := authToken.LoginSourceID.Get()
+	if !hasLoginSource {
+		return false, nil
+	}
+
+	source, err := auth.GetSourceByID(ctx, loginSourceID)
 	if err != nil {
 		return false, fmt.Errorf("GetSourceByID: %w", err)
 	}
@@ -97,7 +102,10 @@ func autoSignIn(ctx *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	isSucceed = true // keep the cookie; the IdP bounce will replace it on success
+	if err := deleteToken(); err != nil {
+		return false, fmt.Errorf("deleteToken: %w", err)
+	}
+	isSucceed = true
 
 	ctx.Redirect(fmt.Sprintf("%s/user/oauth2/%s?prompt=none", setting.AppSubURL, url.PathEscape(source.Name)))
 	return true, nil
@@ -138,7 +146,7 @@ func RedirectAfterLogin(ctx *context.Context) {
 }
 
 func CheckAutoLogin(ctx *context.Context) bool {
-	// Set redirect_to before autoSignIn: the SSO LTA path writes its redirect from inside it.
+	// redirect_to must be set before autoSignIn so it survives the SSO IdP round-trip.
 	redirectTo := ctx.FormString("redirect_to")
 	if len(redirectTo) > 0 {
 		middleware.SetRedirectToCookie(ctx.Resp, redirectTo)
@@ -319,7 +327,13 @@ func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRe
 	if remember {
 		var err error
 		if ssoLTA, _ := ctx.Session.Get("twofaSSOLTA").(bool); ssoLTA {
-			err = ctx.SetSSOLTACookie(u)
+			sourceID, _ := ctx.Session.Get("twofaSSOLTASourceID").(int64)
+			if sourceID == 0 {
+				// twofaSSOLTASourceID must have been set alongside twofaSSOLTA in handleOAuth2SignIn.
+				log.Warn("2FA SSO LTA requested for user %d without a source ID; skipping remember-me cookie", u.ID)
+			} else {
+				err = ctx.SetSSOLTACookie(u, sourceID)
+			}
 		} else {
 			err = ctx.SetLTACookie(u)
 		}
@@ -338,6 +352,7 @@ func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRe
 		"twofaUid",
 		"twofaRemember",
 		"twofaSSOLTA",
+		"twofaSSOLTASourceID",
 		"twofaOpenID",
 		"linkAccount",
 	}, map[string]any{
@@ -704,7 +719,7 @@ func Activate(ctx *context.Context) {
 		return
 	}
 
-	user, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.UserActivation)
+	user, _, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.UserActivation)
 	if err != nil {
 		ctx.ServerError("VerifyUserAuthorizationToken", err)
 		return
@@ -778,7 +793,7 @@ func ActivatePost(ctx *context.Context) {
 		return
 	}
 
-	user, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.UserActivation)
+	user, _, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.UserActivation)
 	if err != nil {
 		ctx.ServerError("VerifyUserAuthorizationToken", err)
 		return
@@ -868,7 +883,7 @@ func ActivateEmail(ctx *context.Context) {
 	code := ctx.FormString("code")
 	emailStr := ctx.FormString("email")
 
-	u, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.EmailActivation(emailStr))
+	u, _, deleteToken, err := user_model.VerifyUserAuthorizationToken(ctx, code, auth.EmailActivation(emailStr))
 	if err != nil {
 		ctx.ServerError("VerifyUserAuthorizationToken", err)
 		return

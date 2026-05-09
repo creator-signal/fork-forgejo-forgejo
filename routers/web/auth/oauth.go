@@ -130,7 +130,8 @@ func (err errCallback) Error() string {
 
 func isOIDCSilentAuthFailure(code string) bool {
 	switch code {
-	case "login_required", "interaction_required", "account_selection_required", "consent_required":
+	// access_denied is non-standard for prompt=none but emitted by Keycloak and some Azure AD configurations.
+	case "login_required", "interaction_required", "account_selection_required", "consent_required", "access_denied":
 		return true
 	}
 	return false
@@ -1346,7 +1347,7 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 	// If this user is enrolled in 2FA and this source doesn't override it,
 	// we can't sign the user in just yet. Instead, redirect them to the 2FA authentication page.
 	if !needs2FA {
-		if err := ctx.SetSSOLTACookie(u); err != nil {
+		if err := ctx.SetSSOLTACookie(u, source.ID); err != nil {
 			ctx.ServerError("SetSSOLTACookie", err)
 			return
 		}
@@ -1431,9 +1432,10 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 	if err := updateSession(ctx,
 		[]string{"oauth_signin_silent"},
 		map[string]any{
-			"twofaUid":      u.ID,
-			"twofaRemember": true, // OAuth implies remember
-			"twofaSSOLTA":   true, // honored by handleSignInFull to issue the SSO variant
+			"twofaUid":            u.ID,
+			"twofaRemember":       true, // OAuth implies remember
+			"twofaSSOLTA":         true, // honored by handleSignInFull to issue the SSO variant
+			"twofaSSOLTASourceID": source.ID,
 		}); err != nil {
 		ctx.ServerError("updateSession", err)
 		return
