@@ -1951,7 +1951,7 @@ func TestSignUpViaOAuthWithNicknameAsUsername(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, "/", test.RedirectURL(resp))
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5678})
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: userGitLabUserID})
 	assert.Equal(t, "nickname", userAfterLogin.Name)
 }
 
@@ -1987,8 +1987,8 @@ func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, "/", test.RedirectURL(resp))
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5678})
-	assert.Equal(t, userAfterLogin.Name, userGitLabUserID)
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: userGitLabUserID})
+	assert.Equal(t, userGitLabUserID, userAfterLogin.Name)
 }
 
 func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
@@ -2023,7 +2023,7 @@ func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, "/", test.RedirectURL(resp))
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5678})
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: userGitLabUserID})
 	assert.Equal(t, "gitlabuser", userAfterLogin.Name)
 }
 
@@ -2059,7 +2059,7 @@ func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, "/", test.RedirectURL(resp))
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5678})
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: userGitLabUserID})
 	assert.Equal(t, "preferred_username", userAfterLogin.Name)
 }
 
@@ -2095,6 +2095,6 @@ func TestSignUpViaOAuthWithPreferredUsernameProcessesEmail(t *testing.T) {
 	req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", gitlabName))
 	resp := MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, "/", test.RedirectURL(resp))
-	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5678})
+	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: userGitLabUserID})
 	assert.Equal(t, "someotheremail", userAfterLogin.Name)
 }
