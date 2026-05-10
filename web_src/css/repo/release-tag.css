@@ -124,14 +124,14 @@
 
   :is(li:first-child, .start-gap + hr + li) {
     border-top: 1px solid var(--color-secondary);
-    border-top-left-radius: var(--border-radius);
-    border-top-right-radius: var(--border-radius);
+    border-top-left-radius: var(--border-radius); /* stylelint-disable-line logical-css/require-logical-properties */
+    border-top-right-radius: var(--border-radius); /* stylelint-disable-line logical-css/require-logical-properties */
   }
 
   :is(li:last-child, .start-gap) {
     border-bottom: 1px solid var(--color-secondary);
-    border-bottom-left-radius: var(--border-radius);
-    border-bottom-right-radius: var(--border-radius);
+    border-bottom-left-radius: var(--border-radius); /* stylelint-disable-line logical-css/require-logical-properties */
+    border-bottom-right-radius: var(--border-radius); /* stylelint-disable-line logical-css/require-logical-properties */
   }
 }
 

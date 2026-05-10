@@ -419,8 +419,8 @@ td .commit-summary {
 }
 
 .code-search + #repo-files-table {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  border-top-left-radius: 0; /* stylelint-disable-line logical-css/require-logical-properties */
+  border-top-right-radius: 0; /* stylelint-disable-line logical-css/require-logical-properties */
 }
 
 .view-raw {
@@ -940,13 +940,13 @@ citation-information .tab:not(.active) {
 }
 
 .repository.view.issue .comment-list .comment > .content > div:first-child {
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
+  border-top-left-radius: 4px; /* stylelint-disable-line logical-css/require-logical-properties */
+  border-top-right-radius: 4px; /* stylelint-disable-line logical-css/require-logical-properties */
 }
 
 .repository.view.issue .comment-list .comment > .content > div:last-child {
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
+  border-bottom-left-radius: 4px; /* stylelint-disable-line logical-css/require-logical-properties */
+  border-bottom-right-radius: 4px; /* stylelint-disable-line logical-css/require-logical-properties */
 }
 
 .repository.view.issue .comment-list .comment .comment-container {
@@ -2742,8 +2742,8 @@ tbody.commit-list {
 .repository .issue-content .issue-content-right .ui.grid .column.muted .text.black {
   border-color: var(--color-secondary);
   background: var(--color-menu);
-  border-top-left-radius: var(--border-radius);
-  border-top-right-radius: var(--border-radius);
+  border-top-left-radius: var(--border-radius); /* stylelint-disable-line logical-css/require-logical-properties */
+  border-top-right-radius: var(--border-radius); /* stylelint-disable-line logical-css/require-logical-properties */
 }
 .repository .issue-content .issue-content-right .ui.dropdown  .scrolling.menu {
   border-top: none;

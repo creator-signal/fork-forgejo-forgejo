@@ -20,8 +20,8 @@
   color: var(--color-text-dark);
   background: var(--color-body);
   border-color: var(--color-secondary);
-  border-top-left-radius: var(--border-radius);
-  border-top-right-radius: var(--border-radius);
+  border-top-left-radius: var(--border-radius); /* stylelint-disable-line logical-css/require-logical-properties */
+  border-top-right-radius: var(--border-radius); /* stylelint-disable-line logical-css/require-logical-properties */
   vertical-align: middle;
 }
 

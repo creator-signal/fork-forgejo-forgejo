@@ -538,8 +538,8 @@
   display: block !important; /* override fomantic .ui.form .error.message {display: none} */
   border: none !important;
   margin-bottom: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important; /* stylelint-disable-line logical-css/require-logical-properties */
+  border-bottom-right-radius: 0 !important; /* stylelint-disable-line logical-css/require-logical-properties */
   box-shadow: none !important;
   font-size: 85% !important;
   white-space: pre-wrap !important;
@@ -550,8 +550,8 @@
 .markup-block-error + pre {
   border-top: none !important;
   margin-top: 0 !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
+  border-top-left-radius: 0 !important; /* stylelint-disable-line logical-css/require-logical-properties */
+  border-top-right-radius: 0 !important; /* stylelint-disable-line logical-css/require-logical-properties */
 }
 
 .file-view.markup {
