@@ -1893,7 +1893,7 @@ func TestSignUpViaOAuthWithMissingUsername(t *testing.T) {
 	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
 	username := setting.OAuth2Client.Username
 	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "username"
+	setting.OAuth2Client.Username = "preferred_username"
 	defer func() {
 		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
 		setting.OAuth2Client.Username = username
@@ -2033,7 +2033,7 @@ func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
 	username := setting.OAuth2Client.Username
 	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "username"
+	setting.OAuth2Client.Username = "preferred_username"
 	defer func() {
 		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
 		setting.OAuth2Client.Username = username
@@ -2069,7 +2069,7 @@ func TestSignUpViaOAuthWithPreferredUsernameProcessesEmail(t *testing.T) {
 	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
 	username := setting.OAuth2Client.Username
 	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "username"
+	setting.OAuth2Client.Username = "preferred_username"
 	defer func() {
 		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
 		setting.OAuth2Client.Username = username
