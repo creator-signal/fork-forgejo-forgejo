@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
@@ -211,6 +212,95 @@ func TestAPIReleaseCreateToDefaultBranchOnExistingTag(t *testing.T) {
 	require.NoError(t, err)
 
 	createNewReleaseUsingAPI(t, token, owner, repo, "v0.0.1", "", "v0.0.1", "test")
+}
+
+// TestAPIReleaseCreateConcurrentSameTag locks down the contract that
+// concurrent POST /releases for the same tag never produces a generic
+// HTTP 500 — exactly one winner gets HTTP 201 (Created) and every loser
+// must get a clean HTTP 409 (Conflict). The production symptom this
+// regresses against was an empty-message 500 returned to a CI workflow
+// when its `git push <tag>` and follow-up `POST /releases` interleaved
+// with Forgejo's async push-worker (services/repository/push.go) which
+// also inserts a Release row (IsTag=true). Two windows were observable:
+//
+//   - the push-worker insert lands between the handler's GetRelease
+//     (routers/api/v1/repo/release.go:237) and the service's own
+//     IsReleaseExist re-check (services/release/release.go:141), in
+//     which case the service then attempts db.Insert and trips the
+//     UNIQUE(repo_id, tag_name) constraint at the SQL driver level;
+//   - or two API callers race each other through the same window.
+//
+// Either way the resulting xorm/driver "duplicate entry" error is NOT
+// recognised by repo_model.IsErrReleaseAlreadyExist, so the handler
+// falls through to ctx.Error(http.StatusInternalServerError, ...) which
+// in production mode strips the message and emits the body
+// {"message":"","url":".../api/swagger"} that the adbd CI workflow
+// observed.
+//
+// A clean fix returns 409 in BOTH windows. This test exercises the
+// caller-side race (N goroutines POST simultaneously for the same tag)
+// — much easier to reproduce deterministically than threading a real
+// async-push-worker into the test, while still hitting the same
+// service-layer code path.
+func TestAPIReleaseCreateConcurrentSameTag(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	session := loginUser(t, owner.LowerName)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+	gitRepo, err := gitrepo.OpenRepository(git.DefaultContext, repo)
+	require.NoError(t, err)
+	defer gitRepo.Close()
+
+	const tag = "v0.race-1"
+	require.NoError(t, gitRepo.CreateTag(tag, "master"))
+
+	const concurrent = 6
+	var wg sync.WaitGroup
+	statuses := make([]int, concurrent)
+	bodies := make([]string, concurrent)
+
+	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/releases", owner.Name, repo.Name)
+	for i := range concurrent {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			req := NewRequestWithJSON(t, "POST", urlStr, &api.CreateReleaseOption{
+				TagName: tag,
+				Title:   tag,
+				Note:    fmt.Sprintf("concurrent attempt %d", idx),
+				Target:  "master",
+			}).AddTokenAuth(token)
+			// Use NoExpectedStatus so MakeRequest doesn't fail the test
+			// for losers; we score the responses ourselves below.
+			resp := MakeRequest(t, req, NoExpectedStatus)
+			statuses[idx] = resp.Code
+			bodies[idx] = resp.Body.String()
+		}(i)
+	}
+	wg.Wait()
+
+	created, conflict, other := 0, 0, 0
+	for i, s := range statuses {
+		switch s {
+		case http.StatusCreated:
+			created++
+		case http.StatusConflict:
+			conflict++
+		default:
+			other++
+			t.Logf("attempt %d: status=%d body=%s", i, s, bodies[i])
+		}
+	}
+
+	// Exactly one writer must succeed; the rest must lose cleanly with
+	// 409 Conflict. A 500 (or any other status) means the duplicate
+	// path bubbled up unrecognised from xorm — that is the bug.
+	assert.Equal(t, 1, created, "exactly one POST should win with HTTP 201")
+	assert.Equal(t, concurrent-1, conflict, "every loser should get HTTP 409 Conflict, not 500")
+	assert.Equal(t, 0, other, "no response should be HTTP 500 or anything else")
 }
 
 func TestAPIReleaseCreateGivenInvalidTarget(t *testing.T) {

@@ -154,6 +154,20 @@ func CreateRelease(gitRepo *git.Repository, rel *repo_model.Release, msg string,
 	rel.Title, _ = util.SplitStringAtByteN(rel.Title, 255)
 	rel.LowerTagName = strings.ToLower(rel.TagName)
 	if err = db.Insert(gitRepo.Ctx, rel); err != nil {
+		// The IsReleaseExist check above is non-transactional, so a
+		// concurrent writer (parallel API caller, or the async
+		// push-tag worker in services/repository/push.go that creates
+		// an IsTag=true row for every newly-pushed tag) can land an
+		// insert between that check and this one and trip the
+		// (repo_id, tag_name) UNIQUE constraint here. Map any such
+		// race-induced duplicate to the typed ErrReleaseAlreadyExist
+		// so the API handler can decide between idempotent upgrade
+		// (push-worker case) and 409 Conflict (parallel API callers).
+		// Driver-agnostic detection: re-query and trust the existence
+		// check — if the row is now there, it's a duplicate.
+		if has2, err2 := repo_model.IsReleaseExist(gitRepo.Ctx, rel.RepoID, rel.TagName); err2 == nil && has2 {
+			return repo_model.ErrReleaseAlreadyExist{TagName: rel.TagName}
+		}
 		return err
 	}
 
