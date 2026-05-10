@@ -1957,7 +1957,7 @@ func TestSignUpViaOAuthWithNicknameAsUsername(t *testing.T) {
 
 func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	// enable auto-creation of accounts via OAuth2 with "nickname" username
+	// enable auto-creation of accounts via OAuth2 with "userid" username
 	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
 	username := setting.OAuth2Client.Username
 	setting.OAuth2Client.EnableAutoRegistration = true
@@ -1972,7 +1972,7 @@ func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
-	// The Goth User contains the nickname that'll be used as the Forgejo user's username
+	// The Goth User's UserID will be used as the Forgejo user's username
 	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
 		return goth.User{
 			Provider: gitlabName,
@@ -1993,7 +1993,7 @@ func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 
 func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	// enable auto-creation of accounts via OAuth2 with "nickname" username
+	// enable auto-creation of accounts via OAuth2 with "email" username
 	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
 	username := setting.OAuth2Client.Username
 	setting.OAuth2Client.EnableAutoRegistration = true
@@ -2008,7 +2008,7 @@ func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
-	// The Goth User contains the nickname that'll be used as the Forgejo user's username
+	// The Goth User's email local part will be used as the Forgejo user's username
 	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
 		return goth.User{
 			Provider: gitlabName,
@@ -2029,7 +2029,7 @@ func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 
 func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	// enable auto-creation of accounts via OAuth2 with "nickname" username
+	// enable auto-creation of accounts via OAuth2 with "preferred_username" username
 	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
 	username := setting.OAuth2Client.Username
 	setting.OAuth2Client.EnableAutoRegistration = true
@@ -2044,7 +2044,7 @@ func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
-	// The Goth User contains the nickname that'll be used as the Forgejo user's username
+	// The Goth User's preferred_username claim will be used as the Forgejo user's username
 	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
 		return goth.User{
 			Provider: gitlabName,
@@ -2065,7 +2065,7 @@ func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 
 func TestSignUpViaOAuthWithPreferredUsernameProcessesEmail(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	// enable auto-creation of accounts via OAuth2 with "nickname" username
+	// enable auto-creation of accounts via OAuth2 with "preferred_username" username
 	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
 	username := setting.OAuth2Client.Username
 	setting.OAuth2Client.EnableAutoRegistration = true
@@ -2080,7 +2080,7 @@ func TestSignUpViaOAuthWithPreferredUsernameProcessesEmail(t *testing.T) {
 	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
-	// The Goth User contains the nickname that'll be used as the Forgejo user's username
+	// The Goth User's preferred_username claim contains an "@" suffix that will be stripped
 	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
 		return goth.User{
 			Provider: gitlabName,
