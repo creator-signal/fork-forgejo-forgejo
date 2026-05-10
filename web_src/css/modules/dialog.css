@@ -6,7 +6,7 @@ dialog {
   align-items: center;
   justify-content: center;
   position: fixed;
-  text-align: left;
+  text-align: start;
   border: none;
   background: var(--color-body);
   box-shadow:
@@ -98,7 +98,7 @@ dialog .actions .ui.button {
   display: inline-flex;
   align-items: center;
   padding: 10px 12px;
-  margin-right: 0;
+  margin-inline-end: 0;
 }
 
 dialog .actions .ui.button.danger {
@@ -109,5 +109,5 @@ dialog .actions .ui.button.danger {
 }
 
 dialog .actions .ui.button .svg {
-  margin-right: 5px;
+  margin-inline-end: 5px;
 }
