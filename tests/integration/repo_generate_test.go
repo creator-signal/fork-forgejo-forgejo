@@ -17,11 +17,9 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
-	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
@@ -392,36 +390,28 @@ func TestRepoGenerateTemplatingSymlink(t *testing.T) {
 
 func TestRepoGenerateTemplatingSymlinkGlobFile(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		templateName := "my_template"
-		generatedName := "my_generated"
-
-		userName := "user1"
-		session := loginUser(t, userName)
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: userName})
-
-		template, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			Name:       optional.Some(templateName),
-			IsTemplate: optional.Some(true),
-			Files: optional.Some([]*files_service.ChangeRepoFile{
-				{
-					Operation:     "create",
-					TreePath:      ".forgejo/template",
-					ContentReader: strings.NewReader("/etc/passwd"),
-					Options:       files_service.RepoFileOptionMode(git.EntryModeSymlink),
-				},
-			}),
+		user := forgery.CreateUser(t, &forgery.CreateUserOptions{
+			IsAdmin: true, // required to see the detailed error message on the error response
 		})
-		defer f()
+		session := loginUser(t, user.Name)
+
+		template := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
+			IsTemplate: true,
+			Files: forgery.MapFS{
+				".forgejo/template": forgery.MapSymlink("/etc/passwd"),
+			},
+		})
 
 		// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
 		templateID := strconv.FormatInt(template.ID, 10)
+		generatedName := "my_generated"
 
 		resp := testRepoGenerateFailure(
 			t,
 			session,
 			templateID,
 			user.Name,
-			templateName,
+			template.Name,
 			user,
 			user,
 			generatedName,
