@@ -11,6 +11,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/cache"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 
@@ -691,4 +692,38 @@ func TestActionRunLoadAttributes(t *testing.T) {
 	}
 	require.NoError(t, run.LoadAttributes(t.Context()))
 	assert.Equal(t, "ghost", run.TriggerUser.LowerName)
+}
+
+func TestGetRunByID(t *testing.T) {
+	const (
+		existingRunID    = 0xdeadbeef
+		nonexistingRunID = 0xffffffff
+	)
+
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	_, err := db.GetEngine(t.Context()).Insert(ActionRun{
+		ID: existingRunID,
+	})
+	require.NoError(t, err)
+
+	// ActionRun exists
+
+	run, err := GetRunByID(t.Context(), existingRunID)
+	require.NoError(t, err)
+	assert.NotNil(t, run)
+
+	runOption, err := GetRunByIDOptional(t.Context(), existingRunID)
+	require.NoError(t, err)
+	assert.True(t, runOption.Has())
+
+	// ActionRun does not exist
+
+	run, err = GetRunByID(t.Context(), nonexistingRunID)
+	require.ErrorContains(t, err, "resource does not exist")
+	assert.Nil(t, run)
+
+	runOption, err = GetRunByIDOptional(t.Context(), nonexistingRunID)
+	require.NoError(t, err)
+	assert.Equal(t, optional.None[*ActionRun](), runOption)
 }
