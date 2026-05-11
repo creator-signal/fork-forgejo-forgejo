@@ -14,8 +14,6 @@ forgejo.org/models
 	IsErrMergeDivergingFastForwardOnly
 
 forgejo.org/models/auth
-	UpdateAuthorizedIntegration
-	UpdateAuthorizedIntegrationResourceRepos
 	WebAuthnCredentials
 
 forgejo.org/models/db
@@ -225,7 +223,6 @@ forgejo.org/routers/web/org
 	MustEnableProjects
 
 forgejo.org/services/auth
-	UpdateAuthorizedIntegration
 	RegisterInternalIssuerForTesting
 
 forgejo.org/services/context
