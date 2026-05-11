@@ -155,7 +155,15 @@ export function initUserShortcuts() {
         break;
       case 'y':
         document.querySelector<HTMLAnchorElement>('#permalink-btn')?.click();
+        break;
+      case 'Escape':
+        document.querySelector<HTMLDialogElement>('#shortcuts')?.close();
     }
     goto_state = false;
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '?' && e.shiftKey) {
+      document.querySelector<HTMLDialogElement>('#shortcuts')?.showModal();
+    }
   });
 }
