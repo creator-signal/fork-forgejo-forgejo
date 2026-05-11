@@ -44,7 +44,7 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/go-co-op/gocron v1.37.0
 	github.com/go-enry/go-enry/v2 v2.9.2
-	github.com/go-git/go-git/v5 v5.18.0
+	github.com/go-git/go-git/v5 v5.19.0
 	github.com/go-ldap/ldap/v3 v3.4.6
 	github.com/go-openapi/spec v0.20.14
 	github.com/go-sql-driver/mysql v1.9.1
@@ -67,7 +67,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.17.11
-	github.com/klauspost/cpuid/v2 v2.2.10
+	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/lib/pq v1.10.9
 	github.com/markbates/goth v1.80.0
 	github.com/mattn/go-isatty v0.0.20
@@ -90,7 +90,7 @@ require (
 	github.com/sassoftware/go-rpmutils v0.4.0
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3
 	github.com/shurcooL/vfsgen v0.0.0-20230704071429-0000e147ea92
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/ulikunitz/xz v0.5.15
 	github.com/urfave/cli/v2 v2.27.6
@@ -158,7 +158,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
-	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -172,7 +172,7 @@ require (
 	github.com/go-enry/go-oniguruma v1.2.1 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.8.0 // indirect
+	github.com/go-git/go-billy/v5 v5.9.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-openapi/jsonpointer v0.20.2 // indirect
 	github.com/go-openapi/jsonreference v0.20.4 // indirect
@@ -217,7 +217,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
-	github.com/pjbgf/sha1cd v0.3.2 // indirect
+	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
