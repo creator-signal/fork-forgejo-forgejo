@@ -201,9 +201,12 @@ func standardCommitAndPushTest(t *testing.T, dstPath string) (little, big string
 func lfsCommitAndPushTest(t *testing.T, dstPath string) (littleLFS, bigLFS string) {
 	t.Run("LFS", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
-		defer git.NewCommand(git.DefaultContext, "lfs").AddArguments("uninstall").Run(&git.RunOpts{Dir: dstPath})
+
+		err := git.NewCommand(git.DefaultContext, "config", "core.hooksPath", "$GIT/.hooks").AddArguments("--local").Run(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
+
 		prefix := "lfs-data-file-"
-		err := git.NewCommand(git.DefaultContext, "lfs").AddArguments("install").Run(&git.RunOpts{Dir: dstPath})
+		err = git.NewCommand(git.DefaultContext, "lfs").AddArguments("install").Run(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
 		_, _, err = git.NewCommand(git.DefaultContext, "lfs").AddArguments("track").AddDynamicArguments(prefix + "*").RunStdString(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
@@ -232,6 +235,7 @@ func lfsCommitAndPushTest(t *testing.T, dstPath string) (littleLFS, bigLFS strin
 			lockTest(t, dstPath)
 		})
 	})
+
 	return littleLFS, bigLFS
 }
 
@@ -856,6 +860,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			assert.False(t, prMsg.HasMerged)
 			assert.Contains(t, "Testing commit 1", prMsg.Body)
 			assert.Equal(t, commit, prMsg.Head.Sha)
+			assert.Equal(t, "user2/"+headBranch, prMsg.Head.Name)
 
 			_, _, err = git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments("HEAD:refs/for/master/test/" + headBranch).RunStdString(&git.RunOpts{Dir: dstPath})
 			require.NoError(t, err)
@@ -874,6 +879,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			prMsg = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr2.Index)(t)
 
 			assert.Equal(t, "user2/test/"+headBranch, pr2.HeadBranch)
+			assert.Equal(t, "user2/test/"+headBranch, prMsg.Head.Name)
 			assert.False(t, prMsg.HasMerged)
 		})
 
