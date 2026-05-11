@@ -4,6 +4,7 @@ import ActionRunStatus from './ActionRunStatus.vue';
 import ActionJobStepList from './ActionJobStepList.vue';
 import {toggleElem} from '../utils/dom.js';
 import {GET, POST, DELETE} from '../modules/fetch.js';
+import {showErrorToast} from '../modules/toast.js';
 
 export default {
   name: 'RepoActionView',
@@ -86,6 +87,7 @@ export default {
         canCancel: false,
         canApprove: false,
         canRerun: false,
+        canDelete: false,
         done: false,
         preExecutionError: '',
         jobs: [
@@ -235,6 +237,21 @@ export default {
         // never happen because the interval will have been disabled)
         this.loadJob();
       }
+    },
+
+    async deleteRun() {
+      if (!window.confirm(this.locale.confirmDelete)) {
+        return;
+      }
+
+      const response = await POST(`${this.run.link}/delete`);
+
+      if (response.ok) {
+        window.location.href = this.workflowURL;
+        return;
+      }
+
+      showErrorToast(this.locale.deleteError, {duration: 5000});
     },
 
     // cancel a run
@@ -474,6 +491,9 @@ export default {
           {{ locale.approve }}
         </button>
         <div class="action-info-summary-actions" v-else>
+          <button id="delete-run" class="ui basic small compact button red" @click="deleteRun()" v-if="run.canDelete">
+            {{ locale.delete }}
+          </button>
           <button class="ui basic small compact button red" @click="cancelRun()" v-if="canCancel">
             {{ locale.cancel }}
           </button>
@@ -638,7 +658,7 @@ export default {
   display: flex;
   align-items: center;
   gap: var(--button-spacing);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .action-info-summary-actions > button {
@@ -656,12 +676,12 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-left: 28px;
+  margin-inline-start: 28px;
 }
 
 @media (max-width: 767.98px) {
   .action-commit-summary {
-    margin-left: 0;
+    margin-inline-start: 0;
     margin-top: 8px;
   }
 }
@@ -675,7 +695,7 @@ export default {
   position: sticky;
   top: 12px;
   max-height: 100vh;
-  overflow-y: auto;
+  overflow-block: auto;
   background: var(--color-body);
   z-index: 2; /* above .job-info-header */
 }
@@ -701,12 +721,12 @@ export default {
 }
 
 .job-artifacts-list {
-  padding-left: 12px;
+  padding-inline-start: 12px;
   list-style: none;
 }
 
 .job-artifacts-icon {
-  padding-right: 3px;
+  padding-inline-end: 3px;
 }
 
 .job-brief-list {
@@ -827,7 +847,7 @@ export default {
 }
 
 .action-view-right .ui.dropdown.dark-dropdown .menu > .divider {
-  border-top-color: var(--color-console-menu-border);
+  border-block-start-color: var(--color-console-menu-border);
 }
 
 .action-view-right .ui.pointing.dropdown.dark-dropdown > .menu:not(.hidden)::after {

@@ -450,9 +450,16 @@ func reqSelfOrAdmin() func(ctx *context.APIContext) {
 	}
 }
 
-// reqAdmin user should be an owner or a collaborator with admin write of a repository, or site admin
-func reqAdmin() func(ctx *context.APIContext) {
+// reqAdmin user should be an owner or a collaborator with admin write of a repository, or site admin. If one or more
+// unitTypes are given, it also requires that at least one the respective unitTypes is enabled.
+func reqAdmin(unitTypes ...unit.Type) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
+		if len(unitTypes) > 0 && !slices.ContainsFunc(unitTypes, func(unitType unit.Type) bool {
+			return ctx.Repo.Repository.UnitEnabled(ctx, unitType)
+		}) {
+			ctx.NotFound()
+			return
+		}
 		if !ctx.IsUserRepoAdmin() && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden, "reqAdmin", "user should be an owner or a collaborator with admin write of a repository")
 			return
@@ -873,31 +880,28 @@ func Routes() *web.Route {
 		if setting.Federation.Enabled {
 			m.Get("/nodeinfo", misc.NodeInfo)
 			m.Group("/activitypub", func() {
-				m.Group("/user-id/{user-id}", func() {
-					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Person)
-					m.Post("/inbox",
-						activitypub.ReqHTTPSignature(),
-						bind(ap.Activity{}),
-						activitypub.PersonInbox)
-					m.Group("/activities/{activity-id}", func() {
-						m.Get("", activitypub.PersonActivityNote)
-						m.Get("/activity", activitypub.PersonActivity)
+				// The instance actor must always be fetchable without signatures
+				m.Get("/actor", activitypub.Actor)
+				m.Group("", func() {
+					m.Group("/actor", func() {
+						m.Post("/inbox", activitypub.ActorInbox)
+						m.Get("/outbox", activitypub.ActorOutbox)
 					})
-					m.Get("/outbox", activitypub.ReqHTTPSignature(), activitypub.PersonFeed)
-				}, context.UserIDAssignmentAPI(), checkTokenPublicOnly())
-				m.Group("/actor", func() {
-					m.Get("", activitypub.Actor)
-					m.Post("/inbox", activitypub.ReqHTTPSignature(), activitypub.ActorInbox)
-					m.Get("/outbox", activitypub.ActorOutbox)
-				})
-				m.Group("/repository-id/{repository-id}", func() {
-					m.Get("", activitypub.ReqHTTPSignature(), activitypub.Repository)
-					m.Post("/inbox",
-						bind(ap.Activity{}),
-						activitypub.ReqHTTPSignature(),
-						activitypub.RepositoryInbox)
-					m.Get("/outbox", activitypub.ReqHTTPSignature(), activitypub.RepositoryOutbox)
-				}, context.RepositoryIDAssignmentAPI())
+					m.Group("/user-id/{user-id}", func() {
+						m.Get("", activitypub.Person)
+						m.Post("/inbox", bind(ap.Activity{}), activitypub.PersonInbox)
+						m.Get("/outbox", activitypub.PersonFeed)
+						m.Group("/activities/{activity-id}", func() {
+							m.Get("", activitypub.PersonActivityNote)
+							m.Get("/activity", activitypub.PersonActivity)
+						})
+					}, context.UserIDAssignmentAPI(), checkTokenPublicOnly())
+					m.Group("/repository-id/{repository-id}", func() {
+						m.Get("", activitypub.Repository)
+						m.Post("/inbox", bind(ap.Activity{}), activitypub.RepositoryInbox)
+						m.Get("/outbox", activitypub.RepositoryOutbox)
+					}, context.RepositoryIDAssignmentAPI())
+				}, activitypub.ReqHTTPSignature())
 			}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryActivityPub))
 		}
 
@@ -1248,6 +1252,7 @@ func Routes() *web.Route {
 					m.Group("/runs", func() {
 						m.Get("", repo.ListActionRuns)
 						m.Get("/{run_id}", repo.GetActionRun)
+						m.Delete("/{run_id}", reqToken(), reqAdmin(unit.TypeActions), repo.DeleteActionRun)
 						m.Get("/{run_id}/jobs", repo.ListActionRunJobs)
 						m.Get("/{run_id}/artifacts", repo.ListActionRunArtifacts)
 					})
@@ -1692,6 +1697,11 @@ func Routes() *web.Route {
 					m.Combo("/emails").
 						Get(admin.ListUserEmails).
 						Delete(bind(api.DeleteEmailOption{}), admin.DeleteUserEmails)
+					m.Group("/tokens", func() {
+						m.Combo("").Get(admin.ListUserAccessTokens).
+							Post(bind(api.CreateAccessTokenOption{}), admin.CreateUserAccessToken)
+						m.Combo("/{id}").Delete(admin.DeleteUserAccessToken)
+					})
 					if setting.Quota.Enabled {
 						m.Group("/quota", func() {
 							m.Get("", admin.GetUserQuota)
