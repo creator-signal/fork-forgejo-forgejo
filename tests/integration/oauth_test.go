@@ -1855,23 +1855,16 @@ func TestSignInOAuthCallbackSignInRetrieveError(t *testing.T) {
 
 func TestSignUpViaOAuthWithMissingNickname(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	// enable auto-creation of accounts via OAuth2
-	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
-	username := setting.OAuth2Client.Username
-	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "nickname"
-	defer func() {
-		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
-		setting.OAuth2Client.Username = username
-	}()
+	// enable auto-creation of accounts via OAuth2 with "nickname" username
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.Username, "nickname")()
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
 	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
-	// The Goth User returned by the oauth2 integration is missing
-	// an email address, so we won't be able to automatically create a local account for it.
+	// The Goth User doesn't contain a nickname, redirected to link account
 	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
 		return goth.User{
 			Provider: gitlabName,
@@ -1889,23 +1882,16 @@ func TestSignUpViaOAuthWithMissingNickname(t *testing.T) {
 
 func TestSignUpViaOAuthWithMissingUsername(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	// enable auto-creation of accounts via OAuth2
-	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
-	username := setting.OAuth2Client.Username
-	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "preferred_username"
-	defer func() {
-		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
-		setting.OAuth2Client.Username = username
-	}()
+	// enable auto-creation of accounts via OAuth2 with "preferred_username" username
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.Username, "preferred_username")()
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
 	addAuthSource(t, authSourcePayloadGitLabCustom(gitlabName))
 	userGitLabUserID := "5678"
 
-	// The Goth User returned by the oauth2 integration is missing
-	// an email address, so we won't be able to automatically create a local account for it.
+	// The Goth User doesn't contain preferred_username, redirected to link account
 	defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
 		return goth.User{
 			Provider: gitlabName,
@@ -1922,14 +1908,8 @@ func TestSignUpViaOAuthWithMissingUsername(t *testing.T) {
 func TestSignUpViaOAuthWithNicknameAsUsername(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	// enable auto-creation of accounts via OAuth2 with "nickname" username
-	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
-	username := setting.OAuth2Client.Username
-	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "nickname"
-	defer func() {
-		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
-		setting.OAuth2Client.Username = username
-	}()
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.Username, "nickname")()
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
@@ -1958,14 +1938,8 @@ func TestSignUpViaOAuthWithNicknameAsUsername(t *testing.T) {
 func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	// enable auto-creation of accounts via OAuth2 with "userid" username
-	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
-	username := setting.OAuth2Client.Username
-	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "userid"
-	defer func() {
-		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
-		setting.OAuth2Client.Username = username
-	}()
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.Username, "userid")()
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
@@ -1994,14 +1968,8 @@ func TestSignUpViaOAuthWithUserIdAsUsername(t *testing.T) {
 func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	// enable auto-creation of accounts via OAuth2 with "email" username
-	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
-	username := setting.OAuth2Client.Username
-	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "email"
-	defer func() {
-		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
-		setting.OAuth2Client.Username = username
-	}()
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.Username, "email")()
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
@@ -2030,14 +1998,8 @@ func TestSignUpViaOAuthWithEmailAsUsername(t *testing.T) {
 func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	// enable auto-creation of accounts via OAuth2 with "preferred_username" username
-	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
-	username := setting.OAuth2Client.Username
-	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "preferred_username"
-	defer func() {
-		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
-		setting.OAuth2Client.Username = username
-	}()
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.Username, "preferred_username")()
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
@@ -2066,14 +2028,8 @@ func TestSignUpViaOAuthWithPreferredUsernameAsUsername(t *testing.T) {
 func TestSignUpViaOAuthWithPreferredUsernameProcessesEmail(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	// enable auto-creation of accounts via OAuth2 with "preferred_username" username
-	enableAutoRegistration := setting.OAuth2Client.EnableAutoRegistration
-	username := setting.OAuth2Client.Username
-	setting.OAuth2Client.EnableAutoRegistration = true
-	setting.OAuth2Client.Username = "preferred_username"
-	defer func() {
-		setting.OAuth2Client.EnableAutoRegistration = enableAutoRegistration
-		setting.OAuth2Client.Username = username
-	}()
+	defer test.MockVariableValue(&setting.OAuth2Client.EnableAutoRegistration, true)()
+	defer test.MockVariableValue(&setting.OAuth2Client.Username, "preferred_username")()
 
 	// OAuth2 authentication source GitLab
 	gitlabName := "gitlab"
