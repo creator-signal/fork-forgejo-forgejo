@@ -9,9 +9,9 @@ import (
 	"io"
 	"net/url"
 	"regexp"
-	"strings"
 
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
 
 	pep440 "github.com/aquasecurity/go-pep440-version"
@@ -107,14 +107,14 @@ func BuildCollectionFromArchive(r io.Reader) (*CollectionInfo, error) {
 		}
 
 		// Gather the metadata from manifest file. This is pretty much everything, except ansible version.
-		if strings.HasSuffix(header.FileInfo().Name(), "MANIFEST.json") {
+		if header.Name == "MANIFEST.json" {
 			manifestData, err = io.ReadAll(tarReader)
 			if err != nil {
 				return nil, util.NewSilentWrapErrorf(err, "Problem reading MANIFEST.json")
 			}
 		}
 		// Grab the required ansible version from the meta/runtime.yml file
-		if strings.HasSuffix(header.Name, "meta/runtime.yml") {
+		if header.Name == "meta/runtime.yml" {
 			runtimeData, err = io.ReadAll(tarReader)
 			if err != nil {
 				return nil, util.NewSilentWrapErrorf(err, "Problem reading meta/runtime.yml")

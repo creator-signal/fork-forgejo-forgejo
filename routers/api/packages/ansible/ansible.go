@@ -329,22 +329,25 @@ func ServeCollection(ctx *context.Context) {
 		Size     int    `json:"size"`
 	}
 	type AnsibleSpecificVersionResponseMetadata struct {
+		Authors      []string          `json:"authors"`
 		Dependencies map[string]string `json:"dependencies"`
 	}
 	type AnsibleSpecificVersionResponse struct {
-		Version    string                                   `json:"version"`
-		Href       string                                   `json:"href"`
-		URL        string                                   `json:"download_url"`
-		Namespace  AnsibleSpecificVersionResponseNamespace  `json:"namespace"`
-		Collection AnsibleSpecificVersionResponseCollection `json:"collection"`
-		Artifact   AnsibleSpecificVersionResponseArtifact   `json:"artifact"`
-		Metadata   AnsibleSpecificVersionResponseMetadata   `json:"metadata"`
+		Version         string                                   `json:"version"`
+		Href            string                                   `json:"href"`
+		URL             string                                   `json:"download_url"`
+		RequiresAnsible string                                   `json:"requires_ansible"`
+		Namespace       AnsibleSpecificVersionResponseNamespace  `json:"namespace"`
+		Collection      AnsibleSpecificVersionResponseCollection `json:"collection"`
+		Artifact        AnsibleSpecificVersionResponseArtifact   `json:"artifact"`
+		Metadata        AnsibleSpecificVersionResponseMetadata   `json:"metadata"`
 	}
 
 	ctx.JSON(http.StatusOK, AnsibleSpecificVersionResponse{
-		Version: pd.SemVer.String(),
-		Href:    fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/%v/", registryUsername, packageNamespace, packageName, pd.SemVer),
-		URL:     util.URLJoin(setting.AppURL, pd.VersionWebLink(), fmt.Sprintf("/files/%v/", fileDescriptor.File.ID)),
+		Version:         pd.SemVer.String(),
+		Href:            fmt.Sprintf("/api/packages/%v/ansible/v3/collections/%v/%v/versions/%v/", registryUsername, packageNamespace, packageName, pd.SemVer),
+		URL:             util.URLJoin(setting.AppURL, pd.VersionWebLink(), fmt.Sprintf("/files/%v/", fileDescriptor.File.ID)),
+		RequiresAnsible: pd.Metadata.(*ansible_module.CollectionInfo).RequiresAnsible,
 		Namespace: AnsibleSpecificVersionResponseNamespace{
 			Name: packageNamespace,
 			Hash: hex.EncodeToString(namespaceHashBuilder.Sum(nil)),
@@ -360,6 +363,7 @@ func ServeCollection(ctx *context.Context) {
 		},
 		Metadata: AnsibleSpecificVersionResponseMetadata{
 			Dependencies: pd.Metadata.(*ansible_module.CollectionInfo).Dependencies,
+			Authors:      pd.Metadata.(*ansible_module.CollectionInfo).Authors,
 		},
 	})
 }
