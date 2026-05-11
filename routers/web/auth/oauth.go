@@ -1062,7 +1062,7 @@ func SignInOAuthCallback(ctx *context.Context) {
 			if setting.OAuth2Client.Username == setting.OAuth2UsernameNickname && gothUser.NickName == "" {
 				missingFields = append(missingFields, "nickname")
 			} else if setting.OAuth2Client.Username == setting.OAuth2UsernamePreferredUsername && (gothUser.RawData["preferred_username"] == nil || gothUser.RawData["preferred_username"].(string) == "") {
-				missingFields = append(missingFields, "preferred_nickname")
+				missingFields = append(missingFields, "preferred_username")
 			}
 			if len(missingFields) > 0 {
 				// we don't have enough information to create an account automatically,
